@@ -1,8 +1,9 @@
 # Player Progression & Lifecycle #28 — Section 1: Introduction, Scope, Dependencies, Key Decisions
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — section-file PASS-1 (0H+2M) → AR-2 (3M cross-fix) → AR-3 convergence; APPROVED)
-**Version:** 0.2
+**Last Updated:** July 27, 2026 (v0.3 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
+**Last Updated (prior):** July 23, 2026 (v0.2 — section-file PASS-1 (0H+2M) → AR-2 (3M cross-fix) → AR-3 convergence; APPROVED)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -28,7 +29,9 @@ season boundary), regen/newgen production reusing #27's `RosterGenerator`-class 
 shared growth-input seam #29 (training) writes, and the #28-owned career-state persistence block.
 
 **Out of scope** (each its own spec): the youth-academy *structure* (facilities → intake quality) is
-**#42**; training-driven growth *input* is **#29** (a shared seam #28 defines, not a duplicate
+**#42**, and the **facility level it consumes is #53's** (ERR-028-002, at #53's approval — recorded so a
+reader does not attribute the facility model to #40, whose scope excludes it; #28's own out-of-scope
+position is unchanged either way); training-driven growth *input* is **#29** (a shared seam #28 defines, not a duplicate
 mutation — KD-2); valuations/price are **#31**; the day-advance loop and season-save composition
 that *drive* #28 are **#30** (#28 exposes the step; #30 invokes it — never the reverse). Where #28
 must reference a spec that does not exist yet (#29's producer), it does so through a **method input
@@ -101,4 +104,5 @@ precedent).
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial section from the converged supplement v0.3. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (0H+2M: M-1 age-model muddle → one BirthWorldDay-derived representation; M-2 per-club regen stream) → AR-2 (3M cross-fix regressions) → AR-3 convergence; APPROVED. See section-9 §9.3.1. |
+| 0.3 | 2026-07-27 | — | **ERR-028-002** (at #53's approval): the out-of-scope row records that the facility level #42 consumes is **#53's**, so a reader does not attribute the facility model to #40 (whose scope excludes it). #28's own out-of-scope position is unchanged. |
 #endregion

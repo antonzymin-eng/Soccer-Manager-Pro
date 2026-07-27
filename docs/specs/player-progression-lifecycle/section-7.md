@@ -1,8 +1,9 @@
 # Player Progression & Lifecycle #28 — Section 7: Future Extensions & Implementation Plan
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — section-file PASS-1 (0H+2M) → AR-2 (3M cross-fix) → AR-3 convergence; APPROVED)
-**Version:** 0.2
+**Last Updated:** July 27, 2026 (v0.3 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
+**Last Updated (prior):** July 23, 2026 (v0.2 — section-file PASS-1 (0H+2M) → AR-2 (3M cross-fix) → AR-3 convergence; APPROVED)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -43,7 +44,9 @@ identity.
   APPEND-only draw site; Stage-3.
 - **Nation/second-nationality / DOB modeling** for regens beyond the Stage-2 club/nation read — folds
   into #36 (national teams) / #47 (new-game setup) when those land.
-- **The #42 youth-academy structure** (facilities → intake quality) modulates regen quality via the
+- **The #42 youth-academy structure** (facilities → intake quality — the facility level itself is **#53**'s,
+  per ERR-028-002 at #53's approval; #42 consumes it as a value input and #28 stays out of scope for both)
+  modulates regen quality via the
   shared generation machinery — #42's concern; #28 provides the machinery, #42 the quality dial.
 - **Valuation** (age/PA → price) is #31; #28 exposes age/PA via `LifecycleViewModel`, #31 consumes it.
 
@@ -61,4 +64,5 @@ section-file stage.
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial future-extensions + T0–T3 implementation plan; Stage-3 deferrals; the #29 seam contract for #29's author. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (0H+2M: M-1 age-model muddle → one BirthWorldDay-derived representation; M-2 per-club regen stream) → AR-2 (3M cross-fix regressions) → AR-3 convergence; APPROVED. See section-9 §9.3.1. |
+| 0.3 | 2026-07-27 | — | **ERR-028-002** (at #53's approval): the #42 deferral names **#53** as the facility producer behind the academy structure. |
 #endregion

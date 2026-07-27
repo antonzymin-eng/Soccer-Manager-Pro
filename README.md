@@ -1,12 +1,12 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** July 27, 2026 (**Ten design supplements promoted to full section files at
-`IN REVIEW` — the pre-promotion backlog is empty.** #53, #35, #46, #36, #54, #47, #48, #50, #51 and
-#39 each gain an 11-file spec set with a recorded PASS-1 adversarial review; `SPEC_INDEX.md` now reads
-**43 APPROVED / 10 IN REVIEW / 0 NOT STARTED**. Docs only — no code, no `src/` change, no gate run —
-and **none claims `APPROVED`**, because lead-developer sign-off is a human authority. See VERSION
-HISTORY v1.36.)
+**Last Updated:** July 27, 2026, later same day (**The specification phase is CLOSED — all ten
+approved.** `SPEC_INDEX.md` reads **53 APPROVED / 0 IN REVIEW / 0 NOT STARTED**. Lead-developer sign-off
+granted on #53, #35, #46, #36, #54, #47, #48, #50, #51 and #39, with **23 back-props filed atomically**.
+Docs only — no code, no `src/` change, no gate run. **The finding that justified landing them together:**
+#30's pinned tick order was not implementable, because `ERR-030-007` had been filed twice at two separate
+approvals — a defect neither approval could have seen alone. See VERSION HISTORY v1.37.)
 **Last Updated (prior):** July 26, 2026 (**Root-doc reconciliation — this file re-based on the actual repo
 state.** It had been pinned at July 14, 2026 and **26 specs**: twelve days and seventeen approved
 specs stale, still describing `SNAPSHOT_SCHEMA_VERSION` 15 (actual **18**) and still listing the
@@ -222,21 +222,19 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 **Progress:** Implementation Phase (coding begun May 19, 2026)
 **Spec Phase Started:** February 2, 2026
 **Stage-0 Spec Phase Completed:** May 18, 2026 — all 20 Stage-0 specs APPROVED
-**Deliverables:** 43 APPROVED + 10 IN REVIEW specifications + 29 production assemblies in `src/`
+**Deliverables:** 53 APPROVED specifications + 29 production assemblies in `src/`
 
-**Summary (July 27, 2026):** `SPEC_INDEX.md` records **43 APPROVED / 10 IN REVIEW / 0 NOT STARTED** —
+**Summary (July 27, 2026):** `SPEC_INDEX.md` records **53 APPROVED / 0 IN REVIEW / 0 NOT STARTED — every spec in the registry is approved, and the specification phase is closed** —
 the Stage-0 set of 20, plus 23 Stage-1-forward and management-layer specs (#21–#34, #37, #38, and
 specs #40–#45, #49), plus the **ten promoted on July 27, 2026** (#53, #35, #46, #36, #54, #47, #48,
-#50, #51, #39), which emptied the pre-promotion backlog: every converged design supplement now has an
-11-file section set. All ten carry a recorded section-file PASS-1 adversarial review and stop at
-`IN REVIEW` deliberately — **lead-developer sign-off is a human authority and is not self-grantable**.
-A non-certifying Linux dotnet compile/test CI gate (`tools/dotnet-ci/`) compiles the entire `src/` tree
+#50, #51, #39), which emptied the pre-promotion backlog and were **approved the same day**, with their
+**23 back-props filed atomically**. A non-certifying Linux dotnet compile/test CI gate (`tools/dotnet-ci/`) compiles the entire `src/` tree
 and runs the full NUnit suite on every push; the quarantine list is empty.
 
-**Note the direction of travel.** The ten promotions add specification, not code — so **23 of the 53
-specs with a folder now have no `src/` assembly at all**. The specification frontier runs a long way
-ahead of the implementation by design, and the practical consequence is stated plainly below: a spec
-existing says nothing about a consumer existing.
+**Note the direction of travel — it is now the project's dominant fact.** The ten approvals add
+specification, not code, so **23 of the 53 APPROVED specs have no `src/` assembly at all**. *"The spec is
+APPROVED"* now says nothing whatsoever about whether code exists, and that is true of **43% of the
+registry**. What remains is implementation: see `path-to-playable-roadmap.md`.
 
 **A production match now plays.** Until July 26, 2026 every match finished 0–0 with the ball
 *identically motionless for the full 90 minutes* — a closed deadlock (no motion ⇒ no reception ⇒ no
@@ -327,8 +325,8 @@ host). `src/CLAUDE.md` (v2.40) governs all C# authoring.
 | 45 | Board & Ownership Dynamics | Jul 25 | ⏳ none |
 | 49 | Localization & Accessibility (seam + template contract) | Jul 23 | ⏳ none |
 
-**Promoted July 27, 2026 — `IN REVIEW`, awaiting sign-off** (11-file section sets with a recorded
-PASS-1 adversarial review; **none has an assembly**):
+**Approved July 27, 2026** (11-file section sets, each with a recorded PASS-1 adversarial review and its
+back-props filed atomically at the flip; **none has an assembly**):
 
 | # | Specification | FR prefix | Implementation |
 |---|---------------|-----------|----------------|
@@ -502,16 +500,13 @@ Note: Fixed64 Math Library (#9) has no `src/` tree — implementation deferred t
 
 ### Outstanding (as of July 26, 2026)
 
-**Specification phase:** ✅ **Authoring complete across the board** — `SPEC_INDEX.md`: **43 APPROVED /
-10 IN REVIEW / 0 NOT STARTED.** The July 27, 2026 promotion wave (#53, #35, #46, #36, #54, #47, #48,
-#50, #51, #39) emptied the pre-promotion backlog; the only candidate still without a supplement is
-**#52** (Multiplayer Transport), deliberately deferred behind the Stage-5 Fixed64 migration.
+**Specification phase:** ✅ **CLOSED** — `SPEC_INDEX.md`: **53 APPROVED / 0 IN REVIEW / 0 NOT STARTED.**
+The July 27, 2026 wave (#53, #35, #46, #36, #54, #47, #48, #50, #51, #39) was promoted **and approved**
+the same day, with sign-off granted and its 23 back-props filed atomically. The only candidate without a
+spec is **#52** (Multiplayer Transport), deliberately deferred behind the Stage-5 Fixed64 migration.
 
-**What remains on the specification side is sign-off, not authoring.** Each of the ten has its
-section-file PASS-1 adversarial review closed and its lead-developer R-01..R-05 sign-off open — a human
-authority that an agent cannot grant — with each spec's back-props landing atomically at the flip to
-APPROVED. **This does not block the critical path below**, which is implementation work against
-already-APPROVED specs.
+**Nothing on the specification side is outstanding. Everything outstanding is implementation** — and the
+gap is large: 23 of the 53 approved specs have no assembly.
 
 **The critical path is now `path-to-playable-roadmap.md`** — the shortest route to a build a person can
 sit down and play, against the PM-1 (playable match) / **PM-2 (playable season — the objective)** /
@@ -690,6 +685,25 @@ git push --tags
 ---
 
 ## VERSION HISTORY
+
+**v1.37 — July 27, 2026 (later same day)**
+- **All ten specs advanced `IN REVIEW → APPROVED`.** Lead-developer R-01..R-05 sign-off granted; the
+  **23 back-props filed and RESOLVED atomically with the flips** (`spec-error-log.md` v1.46), per each
+  spec's own promotion-pipeline step 6.
+- CURRENT STATUS: **53 APPROVED / 0 IN REVIEW / 0 NOT STARTED.** The specification phase is closed; the
+  only candidate without a spec is **#52**, deliberately deferred behind the Stage-5 Fixed64 migration.
+- **Landing the back-props together exposed a defect no single approval could have seen:** #30's pinned
+  day-advance tick order was **not implementable as written** — `ERR-030-007` had been filed **twice**
+  (#42's academy step, #32's scouting step, at two separate approvals), leaving two step 7s, two step 8s
+  and an orphaned `AdvanceDay` line in a sequence six approved specs cite by number. Reconciled in a new
+  #30 §3.3.1, which also resolved a conflict between two of this wave's own back-props.
+- Three entries correct **approved contracts** rather than pointers: ERR-048-001 (a contradiction between
+  two MUSTs inside #48 that would have surfaced as an assembly cycle), ERR-045-002 (a MUST delegating the
+  sacking decision to a spec containing no such rule), ERR-033-003 (a per-producer field replaced with a
+  producer-agnostic one, filed jointly by two specs).
+- **No code, no gate run, and no format version bumped today** — three entries are spec-text-first with a
+  named future bump, and #54's is decided to combine with #45's queued one.
+- The gap restated as the project's dominant fact: **23 of 53 APPROVED specs have no `src/` assembly**.
 
 **v1.36 — July 27, 2026**
 - **Ten design supplements promoted to full 11-file section sets at `IN REVIEW`** — #53 Club

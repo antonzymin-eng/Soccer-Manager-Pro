@@ -1,8 +1,9 @@
 # Staff & Backroom #34 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — section-file AR PASS-1; prior v0.1 initial)
-**Version:** 0.2
+**Last Updated:** July 27, 2026 (v0.3 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
+**Last Updated (prior):** July 23, 2026 (v0.2 — section-file AR PASS-1; prior v0.1 initial)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -43,7 +44,9 @@ FacetPermille(a):                                          # neutral (a = 10) =>
 
 **Sole-path discipline (FR-ST-015):** each projection is the **only** staff route into its consumer's
 modifier; #34 adds no second `MedicalModifier`/`CoachingModifier` source, so staff modulation never
-double-counts with #33 morale or #40 facilities (which reach those consumers by their own separate seams).
+double-counts with #33 morale or **#53 facilities** (which reach those consumers by their own separate
+seams). *(ERR-034-001, at #53's approval — re-attributed from #40, which funds facilities rather than
+owning their level.)*
 
 ## 3.2 The neutral baseline (FR-ST-004/005)
 
@@ -141,4 +144,5 @@ deterministically and atomically, and thereafter `ToCoachingModifier(headCoach)`
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial §3 (projections, neutral baseline + seeding, hiring, the #40 wage boundary, worked example), promoted from design supplement v0.4. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file AR PASS-1 (M): §3.1 `ToStaffMult` reads the **ChiefScout** slot (was a phantom "head of recruitment"); §3.4 `HireStaff` uses **replace semantics** — a hire replaces the always-filled role-slot occupant (displaced → unemployed), F5 is now a **defined-role** check (the old `DestinationRoleSlotFree` gate would always fail, since every slot is seeded). §3.3 seeding comment aligned to the 3 slots. |
+| 0.3 | 2026-07-27 | — | **ERR-034-001** (at #53's approval): same re-attribution at the §3 seam-composition note — *"#40 facilities"* → **#53 facilities**. |
 #endregion

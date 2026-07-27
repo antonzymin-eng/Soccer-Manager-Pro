@@ -1,8 +1,9 @@
 # Training System #29 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.3 — PASS-2 re-review; prior PASS-1 → AR-2 → AR-3; APPROVED)
-**Version:** 0.3
+**Last Updated:** July 27, 2026 (v0.4 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
+**Last Updated (prior):** July 23, 2026 (v0.3 — PASS-2 re-review; prior PASS-1 → AR-2 → AR-3; APPROVED)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -24,6 +25,13 @@
 **Single-owner attribute mutation**
 - **FR-TR-005** — #29 MUST write attributes **only** by populating #28's `TrainingInput`; it MUST NOT add a
   second attribute-mutation path (#28's `GrowthProjection` stays the sole writer, FR-PG-008).
+- **FR-TR-005a** *(ERR-029-003, at #53's approval)* — `ComputeTrainingInput` MUST accept the #53
+  **training-ground facility term as a SECOND root-assembled input**, alongside #34's `CoachingModifier`.
+  It MUST NOT be delivered by #53 returning a `TrainingInput`: FR-TR-005 makes #29 the **sole writer** of
+  that type, and a #53-returned one would be exactly the second path it forbids. The root assembles both
+  terms and passes them in; **#29's logic is unchanged and #28's type is untouched.** Neutral facilities
+  MUST yield the same result as today, so the addition is behaviour-neutral until a club upgrades.
+  ◑ Spec-text-first: the requirement lands at approval, the parameter at #29's Stage-3 tier.
 - **FR-TR-006** — `ComputeTrainingInput` MUST be pure and deterministic — no mutation, no RNG, no jitter —
   and MUST read **only** fields `AdvanceTrainingDay` does not mutate (`Focus`, the player's attributes, and
   the `CoachingModifier`). It MUST NOT read `Condition` / `TrainingFatigue` / `LastAdvancedWorldDay`. This
@@ -162,4 +170,5 @@ the latter accrues `Condition` + `TrainingFatigue`. See §3.
 | 0.1 | 2026-07-23 | — | Initial FR set (FR-TR-001..024), data structures, F1..F6. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | PASS-1 M-1 (single `Condition` cursor) / M-2 (no stream) folded from the supplement; AR-2/AR-3 clean; APPROVED. |
 | 0.3 | 2026-07-23 | — | PASS-2: +FR-TR-025 (regen/retire lifecycle) / FR-TR-026 (day-gap fail-loud); FR-TR-003 (focus single-source, schedule = derived view) / 006 (field-independence invariant) / 007 (#29-owned `deepTrainingEnabled`) / 019 (schedule not serialized); +F7. |
+| 0.4 | 2026-07-27 | — | **ERR-029-003** (at #53's approval): new **FR-TR-005a** — `ComputeTrainingInput` accepts #53's training-ground term as a **second root-assembled input**, alongside #34's `CoachingModifier`. Explicitly **not** delivered as a #53-returned `TrainingInput`, which FR-TR-005 forbids (#29 is that type's sole writer). Behaviour-neutral at neutral facilities; ◑ parameter at #29's Stage-3 tier. |
 #endregion

@@ -1,8 +1,9 @@
 # Personalities, Morale & Squad Dynamics #33 — Section 2: Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.3 — AR-2 fix pass; prior v0.2 AR-1, v0.1 initial)
-**Version:** 0.3
+**Last Updated:** July 27, 2026 (v0.4 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
+**Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fix pass; prior v0.2 AR-1, v0.1 initial)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -34,10 +35,10 @@
 | FR-HS-021 | Squad **chemistry** (a squad-level aggregate) is likewise a **derived read**, persisted **nowhere**. | MUST | KD-4 |
 | FR-HS-022 | Minimal mentoring is the **empty identity** (`MentoringPlan.None`). Deep-tier mentoring pairing/propagation defaults to #33's auto-derivation and is overridable by a **#34 staff-driven** routing seam — no #34 interface is built. | MUST | KD-5 |
 | FR-HS-023 | Morale reaches the match engine **only** through the read-only #27 attribute-projection seam; consumption is **deferred** (its own reviewed change). #33 owns no match-tick write. | MUST | KD-3 |
-| FR-HS-024 | #33 exposes read-only morale accessors for #31/#35/#45. **#46 is the only consumer that writes #33 morale** (man-management). All are **deferred** (FR-LW-031) — no interface built ahead of the producer/consumer. | MUST | KD-3 |
+| FR-HS-024 | #33 exposes read-only morale accessors for #31/#35/#45. **Amended by ERR-033-004 (at #46's approval): no consumer writes #33 morale, #46 included.** #46's man-management seam **is** the routed `ExternalDeltaPermille` (ERR-033-003), not a #46-callable mutator — the earlier wording invited a direct `MoralePermille` assignment, which would contradict FR-HS-002. All consumers remain **deferred** (FR-LW-031) — no interface built ahead of the producer/consumer. | MUST | KD-3 |
 | FR-HS-025 | Morale is a **projection OUT** of #33 — **no two-way coupling** with any consumer (avoids determinism-ordering fragility). | MUST | KD-3 |
 | FR-HS-026 | #33 state persists as an opaque, independently version-gated `HUMAN_SYSTEMS_SAVE_FORMAT_VERSION` sub-blob composed into #30's `SeasonSaveCodec` — **not** a `WORLD_STORE_FORMAT_VERSION` bump. Fail-loud on version mismatch / out-of-bounds length prefix / trailing bytes (F3/F5). Serialize-don't-regenerate. | MUST | KD-7 |
-| FR-HS-027 | Roster-membership lifecycle is in lockstep with #28's season-boundary churn: a regen inserts neutral `MoraleState.Create()`/`PersonalityProfile.Create()` for the fresh `PlayerId` and drops it from prior teammates' pairwise sets; a retirement removes the retiree's per-player + pairwise entries. Keyed by `PlayerId`, applied by the roster owner (#30). | MUST | KD-7 |
+| FR-HS-027 | **Extended by ERR-033-002 (at #35's approval): a routed input's pending source-side value is dropped with the player's entries** — otherwise an undelivered external delta outlives its subject and lands on whoever next holds that `PlayerId`. Roster-membership lifecycle is in lockstep with #28's season-boundary churn: a regen inserts neutral `MoraleState.Create()`/`PersonalityProfile.Create()` for the fresh `PlayerId` and drops it from prior teammates' pairwise sets; a retirement removes the retiree's per-player + pairwise entries. Keyed by `PlayerId`, applied by the roster owner (#30). | MUST | KD-7 |
 | FR-HS-028 | #33 **never** references #30 or `living-world`; the reference DAG (`root → {#30, #22, #33}`, `#33 → {#27, #16}`) is **acyclic**. | MUST | KD-1/KD-7 |
 
 ## 2.2 Data structures
@@ -83,8 +84,14 @@ public readonly struct HumanSystemsDayInput
     public readonly MatchDayResult Result;   // None | Win | Draw | Loss for this player's club that day (enum)
     public readonly int MinutesPlayed;       // [0, 120] — appearance signal (0 = did not feature)
     public readonly int BoardObjectiveDeltaPermille;   // [-1000,1000] committed board-state nudge (0 = neutral)
-    public static HumanSystemsDayInput Neutral =>      // a non-match day: no result, no minutes, no board delta
-        new(MatchDayResult.None, 0, 0);
+    // ERR-033-003 (filed JOINTLY by #35 and #46 at their approval). PRODUCER-AGNOSTIC, deliberately:
+    // the supplement proposed a per-producer `MediaDeltaPermille`, which does not survive a SECOND
+    // producer of the same quantity -- #46 would have needed a third field on an approved struct, and
+    // producer N a further one. The ROOT sums every producer's contribution and CLAMPS before it
+    // reaches #33, so #33 sees one already-bounded term and never learns who produced it.
+    public readonly int ExternalDeltaPermille;         // [-1000,1000] summed+clamped by the root (0 = neutral)
+    public static HumanSystemsDayInput Neutral =>      // a non-match day: no result, no minutes, no deltas
+        new(MatchDayResult.None, 0, 0, 0);
 }
 public enum MatchDayResult : byte { None = 0, Win, Draw, Loss }   // None = no fixture that day (default)
 ```
@@ -107,4 +114,5 @@ public enum MatchDayResult : byte { None = 0, Win, Draw, Loss }   // None = no f
 | 0.1 | 2026-07-23 | — | Initial §2 (FR-HS-001..028, data structures, F1..F7). Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1 (M): FR-HS-005/F4 fail-loud scoped to `PersonalityProfile` (MoraleState default is field-in-contract); added `HumanSystemsDayInput`/`MatchDayResult` structs. |
 | 0.3 | 2026-07-23 | — | AR-2 (L): FR-HS-020 states the mutuality rule; FR-HS-005 clarifies the enforced guard is at record insertion (the F6 no-op path caveat). |
+| 0.4 | 2026-07-27 | — | **ERR-033-003** (filed **jointly** by #35 and #46): `HumanSystemsDayInput` gains a **producer-agnostic** `ExternalDeltaPermille`, **summed across producers and clamped by the root**. Supersedes the supplement's per-producer `MediaDeltaPermille`, which would have needed a third field the moment a second producer arrived. **Transient struct — no `HUMAN_SYSTEMS_SAVE_FORMAT_VERSION` bump.** **ERR-033-004** (at #46's approval): FR-HS-024 corrected — **no consumer writes #33 morale, #46 included**; its seam *is* the routed delta. **ERR-033-002** (at #35's approval): FR-HS-027 extended so a pending routed delta is dropped with the player's entries. |
 #endregion

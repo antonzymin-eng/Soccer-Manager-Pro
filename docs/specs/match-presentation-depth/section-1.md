@@ -1,9 +1,10 @@
 # Match Presentation Depth #48 — Section 1: Introduction, Scope, Dependencies, Key Decisions
 
 **Created:** July 27, 2026
-**Last Updated:** July 27, 2026 (v0.1 — initial section-file set)
-**Version:** 0.1
-**Status:** IN REVIEW
+**Last Updated:** July 27, 2026 (v0.2 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
+**Last Updated (prior):** July 27, 2026 (v0.1 — initial section-file set)
+**Version:** 0.2
+**Status:** APPROVED
 
 ---
 
@@ -218,7 +219,10 @@ and #46's projectors. **Neither spec references the other**, and #48's default n
 forever for a headless run.
 
 `CueId` carries the same **APPEND-only ordinal stability** as the text intents, for the weaker but real
-reason that #51's catalogue will be keyed on it.
+reason that **the shell's `CueId → CueKey` mapping table** is keyed on it (ERR-048-001, at #51's approval:
+this originally said *#51's catalogue* would be keyed on it, which would have required the `#51 → #48`
+reference this same key decision forbids — #51's catalogue is keyed on its own `CueKey`, and the **shell**
+holds the mapping).
 
 ### KD-5 — #48 composes as a sibling of `match-viewer`, hosted by #38
 
@@ -287,4 +291,5 @@ first, and because it is the property that makes #48 safe to enable by default.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial §1 (scope with the content/trigger distinction stated in the out-of-scope table, dependencies + the doubly-inverted DAG, §1.4's verification findings — the built client layer, the missing post-match ledger reader, and the two already-answered questions — KD-1..KD-6 from supplement v0.6 plus **KD-7** promoted to its own decision, determinism posture). KD-7 is separated because *"neutral when on"* is the property that distinguishes #48 from every sibling and is what makes it safe to enable by default. Status IN REVIEW. |
+| 0.2 | 2026-07-27 | — | **ERR-048-001** (at #51's approval): KD-4's closing rationale corrected — the shell's `CueId → CueKey` mapping table is keyed on `CueId`, **not** #51's catalogue. See section-2. |
 #endregion

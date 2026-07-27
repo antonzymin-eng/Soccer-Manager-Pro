@@ -1,9 +1,10 @@
 # Media & Press Interactions #35 — Section 9: Approval Checklist
 
 **Created:** July 27, 2026
-**Last Updated:** July 27, 2026 (v0.2 — G1 CLOSED; PASS-1 + AR-2 recorded)
-**Version:** 0.2
-**Status:** IN REVIEW
+**Last Updated:** July 27, 2026 (v0.3 — APPROVED: R-01..R-05 sign-off granted; back-props filed atomically)
+**Last Updated (prior):** July 27, 2026 (v0.2 — G1 CLOSED; PASS-1 + AR-2 recorded)
+**Version:** 0.3
+**Status:** APPROVED
 
 ---
 
@@ -102,11 +103,11 @@
 
 | Gate | Owner | Status |
 |---|---|---|
-| **G0** — the §8.0 **prerequisite** (ERR-030-022, #30's tick-order reconciliation) lands, or its numbering is confirmed. | #30 owner / drafter | ⏳ **OPEN** — #35 cannot cite a defensible step number until it does |
+| **G0** — the §8.0 **prerequisite** (ERR-030-022, #30's tick-order reconciliation) lands, or its numbering is confirmed. | #30 owner / drafter | ✅ **CLOSED** — landed July 27, 2026 with the flip. #30 §3.3.1 records the reconciliation; #32 scouting → step 9, **#35 media expiry → step 10**, `AdvanceDay` → 12. #35 now cites a defensible number |
 | **G1** — section-file PASS-1 adversarial review + a fix pass, to convergence. | drafter | ✅ **CLOSED** — see §9.4.1 |
-| **G2** — file **ERR-049-001**, **ERR-033-003** (jointly with #46), **ERR-033-002**, **ERR-030-023** atomically with the status flip. | drafter | ⏳ **OPEN** — prepared and verified; back-props land **atomically with the flip** by design |
-| **G3** — lead-developer R-01..R-05 sign-off. | lead developer | ⏳ **OPEN** — a human authority, not self-grantable |
-| **G4** — `SPEC_INDEX.md` registry row + Registry-Changes entry, added at promotion. | drafter | ⏳ **OPEN** |
+| **G2** — file **ERR-049-001**, **ERR-033-003** (jointly with #46), **ERR-033-002**, **ERR-030-023** atomically with the status flip. | drafter | ✅ **CLOSED** — filed and RESOLVED July 27, 2026, atomically with the flip (`spec-error-log.md` v1.46) |
+| **G3** — lead-developer R-01..R-05 sign-off. | lead developer | ✅ **CLOSED** — R-01..R-05 granted by the lead developer, July 27, 2026 |
+| **G4** — `SPEC_INDEX.md` registry row + Registry-Changes entry, added at promotion. | drafter | ✅ **CLOSED** — row + Registry-Changes entry landed July 27, 2026 |
 
 **Not gating (deferred by design, recorded so they are not mistaken for omissions):** the `0x27` promotion
 (deep tier, first draw — FR-LW-031 forbids registering it earlier); the outer
@@ -164,7 +165,13 @@ nothing at approval" was inferable but unstated in the one table a reviewer chec
 
 ## 9.6 Decision
 
-**PENDING** — G1 closed (PASS-1 0H+8M+9L → AR-2 0H+0M+3L convergence, §9.4.1). G0 and G2–G4 remain open:
+**APPROVED — July 27, 2026.** Lead-developer **R-01..R-05 sign-off granted**, and the back-props filed and RESOLVED **atomically with the flip** per this spec's own promotion pipeline step 6: **ERR-049-001**, **ERR-033-003** (jointly with #46), **ERR-033-002**, **ERR-030-022**, **ERR-030-023** (`spec-error-log.md` v1.46). All 11 section files carry `Status: APPROVED`; the `SPEC_INDEX.md` row records the date.
+
+**What approval does and does not mean here.** It approves the **forward design** — the #21–#30 pre-T0 precedent — not an implementation: #35 has **no `src/` assembly**, and its §7 T-phase plan is the sequence for building one. Items listed as *not gating* above remain open by design and are named at their tiers.
+
+**The prior decision text is retained below, because the reasoning it records is what the sign-off was granted against.**
+
+**(prior, recorded at `IN REVIEW`)** — G1 closed (PASS-1 0H+8M+9L → AR-2 0H+0M+3L convergence, §9.4.1). G0 and G2–G4 remain open:
 G0 is another spec's defect that #35 cannot fix unilaterally, back-props land atomically with the status
 flip, sign-off is a human authority, and the registry row is added at promotion.
 
@@ -186,4 +193,5 @@ next producer regardless.
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial §9 (completeness, tag discipline, the §9.3 source-verified claims table, the five gates incl. the unusual G0 prerequisite gate, R-01..R-05). Status IN REVIEW. |
 | 0.2 | 2026-07-27 | — | G1 CLOSED: §9.4.1 records the section-file PASS-1 (0H+8M+9L, all resolved) and the AR-2 convergence sweep (0H+0M+3L). §9.1 completeness updated for FR-ME-010/015 and KD-10; §9.2 gained the band-boundary line; §9.3 gained the verified **`ERR-030-012`/`-013`-are-taken** row (the PASS-1 M-1 correction), the `FR-ME` prefix check, and the `SplitMix64`-is-not-shared row that the "minimal tier references nothing" claim rests on. G0 and G2–G4 remain open. |
+| 0.3 | 2026-07-27 | — | **`IN REVIEW → APPROVED`.** Lead-developer R-01..R-05 sign-off granted. Back-props **ERR-049-001**, **ERR-033-003** (jointly with #46), **ERR-033-002**, **ERR-030-022**, **ERR-030-023** filed and RESOLVED atomically with the flip (`spec-error-log.md` v1.46). Gates G2–G5 closed; §9.6 decision updated. All 11 section files flip to `Status: APPROVED`. |
 #endregion

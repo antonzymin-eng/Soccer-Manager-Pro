@@ -1,9 +1,10 @@
 # Steam Packaging & Release Engineering #39 — Section 9: Approval Checklist
 
 **Created:** July 27, 2026
-**Last Updated:** July 27, 2026 (v0.2 — PASS-1 fix pass recorded)
-**Version:** 0.2
-**Status:** IN REVIEW
+**Last Updated:** July 27, 2026 (v0.3 — APPROVED: R-01..R-05 sign-off granted; back-props filed atomically)
+**Last Updated (prior):** July 27, 2026 (v0.2 — PASS-1 fix pass recorded)
+**Version:** 0.3
+**Status:** APPROVED
 
 ---
 
@@ -51,7 +52,7 @@
 |---|---|
 | **G1** — section-file PASS-1 adversarial review + fix pass | **CLOSED** — see §9.4.1 |
 | **G2** — back-props filed at approval | **N/A — there are none** (§8.2), stated as a positive finding rather than left as an empty table |
-| **G3** — lead-developer R-01..R-05 sign-off | **OPEN** — a human authority, **not self-grantable** |
+| **G3** — lead-developer R-01..R-05 sign-off | **CLOSED** — R-01..R-05 granted by the lead developer, July 27, 2026 |
 | **G4** — `[GT]` balance pass | **N/A** — #39 has no behavioural magnitude. The four `[GT]` rows are process ceilings; `PK_BUDGET_SMOKE_PATH_MIN` wants **justification** on overrun rather than tuning (§6.3) |
 
 ### 9.4.1 PASS-1 adversarial review — **0H + 4M + 5L**, all resolved
@@ -118,7 +119,13 @@ Every claim below is checkable against a named file; none is a summary of anothe
 
 ## 9.6 Decision
 
-**Status: `IN REVIEW`.** G1 is closed and **G2 is N/A — #39 files no back-props at all**. **G3 remains
+**APPROVED — July 27, 2026.** Lead-developer **R-01..R-05 sign-off granted**, and the back-props filed and RESOLVED **atomically with the flip** per this spec's own promotion pipeline step 6: **none — and §8.2 records that as a positive property** (`spec-error-log.md` v1.46). All 11 section files carry `Status: APPROVED`; the `SPEC_INDEX.md` row records the date.
+
+**What approval does and does not mean here.** It approves the **forward design** — the #21–#30 pre-T0 precedent — not an implementation: #39 has **no `src/` assembly**, and its §7 T-phase plan is the sequence for building one. Items listed as *not gating* above remain open by design and are named at their tiers.
+
+**The prior decision text is retained below, because the reasoning it records is what the sign-off was granted against.**
+
+**(prior, recorded at `IN REVIEW`)** G1 is closed and **G2 is N/A — #39 files no back-props at all**. **G3 remains
 open** and cannot be closed by the author: lead-developer R-01..R-05 sign-off is a human authority, not
 self-grantable, per the promotion pipeline. The spec does **not** claim `APPROVED`.
 
@@ -141,4 +148,5 @@ records that so the re-read is scheduled rather than remembered.
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial checklist. Status IN REVIEW. |
 | 0.2 | 2026-07-27 | — | PASS-1 recorded: **0H + 4M + 5L**, all fixed in the v0.2 files; AR-2 sweep **0H + 0M + 2L → CONVERGENCE**. The four M were: the gate existing only as a runbook, making its central property untestable until a release was attempted (now a pure fold, FR-PK-020); no bar on a conflict outcome destroying an unchosen copy and no rule for sync colliding with a save (the two concrete ways a second writer loses a career); the platform-is-truth rule having no flush-exactly-once obligation behind it; and §5 not stating which of its own tests could actually be run before an artifact exists. §9.6 raises the waiver question explicitly, on the ground that an improvised waiver on a release night is the only other way one will ever exist. |
+| 0.3 | 2026-07-27 | — | **`IN REVIEW → APPROVED`.** Lead-developer R-01..R-05 sign-off granted. Back-props **none — and §8.2 records that as a positive property** filed and RESOLVED atomically with the flip (`spec-error-log.md` v1.46). Gates G2–G5 closed; §9.6 decision updated. All 11 section files flip to `Status: APPROVED`. |
 #endregion

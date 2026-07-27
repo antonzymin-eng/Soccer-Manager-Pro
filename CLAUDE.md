@@ -1,7 +1,37 @@
 # CLAUDE.md — Tactical Director
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 27, 2026 (**TEN DESIGN SUPPLEMENTS PROMOTED TO FULL SECTION FILES — the
+> **Last Updated:** July 27, 2026, later same day (**ALL TEN APPROVED — the specification phase is
+> CLOSED. `SPEC_INDEX.md`: 53 APPROVED / 0 IN REVIEW / 0 NOT STARTED.** Lead-developer R-01..R-05 sign-off
+> granted on #53, #35, #46, #36, #54, #47, #48, #50, #51 and #39, with the **23 back-props filed and
+> RESOLVED atomically with the flips** (`spec-error-log.md` v1.46) per each spec's own pipeline step 6.
+> **Docs only: no code, no `src/` change, no gate run, and no format version bumped today.**
+> **Landing the back-props together is what exposed the wave's most consequential defect, and filing them
+> one spec at a time never could have:** **#30's pinned day-advance tick order was not implementable as
+> written.** `ERR-030-007` had been filed **twice** — for #42's academy step and #32's scouting step, at
+> two separate approvals — leaving **two step 7s, two step 8s and an orphaned `AdvanceDay` line** in a
+> sequence **six approved specs cite by number**. Neither approval could have seen it alone. Reconciled
+> under **ERR-030-022** in a new §3.3.1 (#32 → 9, #35 media expiry → 10, #54 tenure → 11, `AdvanceDay` →
+> 12), which also had to resolve a **conflict between two of this wave's own back-props**: ERR-030-020
+> (#53) requires its step to precede its same-day consumers and says to renumber below it, while
+> ERR-030-022 requires the cited slots not to move — jointly unsatisfiable by inserting a new step 1.
+> **Resolved by numbering the facility step 0**; a step numbered zero is unusual, but a renumber that
+> silently invalidates six approved specs' citations is worse, and patching all six would edit approved
+> text for a numbering preference rather than a design need. **`ERR-030-009` is a duplicate too** (#45's
+> `JobSecurity` band; #44's availability filter) — both duplications preserved verbatim as frozen records
+> and documented as errata. **Three entries change approved contracts rather than pointers:**
+> **ERR-048-001** corrects a **contradiction between two MUSTs inside APPROVED #48** (FR-MP-025 forbids
+> `#51 → #48`; FR-MP-027 required #51's catalogue to be keyed on #48's `CueId` — jointly impossible, and
+> an assembly cycle waiting to happen); **ERR-045-002** re-points `FR-BD-012` from #30 to #54, closing a
+> MUST that delegated the sacking decision to a spec containing no such rule; **ERR-033-003** replaces a
+> per-producer morale field with a producer-agnostic one, **filed jointly by #35 and #46**. Three entries
+> are ◑ spec-text-first with a named future bump, and **#54's `SEASON_STATE_FORMAT_VERSION` bump is
+> decided to combine with #45's queued one** so saves face one refusal boundary rather than two. **Also
+> fixed in passing:** #30's `section-2.md` and `section-3.md` each carried **two bare `**Last Updated:**`
+> labels** with different content. **The consequence to carry forward:** with the spec phase closed,
+> **23 of 53 APPROVED specs have no `src/` assembly** — *"the spec is APPROVED"* now says nothing about
+> whether code exists, and that is true of 43% of the registry. Prior entry below.)
+> **Last Updated (prior):** July 27, 2026 (**TEN DESIGN SUPPLEMENTS PROMOTED TO FULL SECTION FILES — the
 > pre-promotion backlog is empty. Docs only: no code, no `src/` change, no gate run.** Every converged
 > `docs/tracking/*-design.md` supplement that lacked a spec folder now has an 11-file set at
 > `Status: IN REVIEW`: **#53** Club Infrastructure (`FR-IN`), **#35** Media & Press (`FR-ME`), **#46**
@@ -918,17 +948,23 @@
 
 **Current phase:** Stage 0+1 — Implementation, with the specification frontier now running ahead of the code.
 
-**Specifications:** `SPEC_INDEX.md` records **43 APPROVED / 10 IN REVIEW / 0 NOT STARTED**. The APPROVED set is the Stage-0 twenty (all APPROVED May 18, 2026) plus 23 Stage-1-forward and management-layer specs (#21–#34, #37, #38, #40–#45, #49). The **10 IN REVIEW** are the July 27, 2026 promotion wave — #53, #35, #46, #36, #54, #47, #48, #50, #51, #39 — which emptied the pre-promotion backlog: every converged design supplement now has an 11-file section set. Each has its section-file PASS-1 review closed and is **awaiting lead-developer R-01..R-05 sign-off, which is a human authority and not self-grantable**; back-props land atomically at the flip to APPROVED. The only candidate still without a supplement is **#52** (Multiplayer Transport), deliberately deferred behind the Stage-5 Fixed64 migration. Per `SPEC_INDEX.md`'s own rule a registry row lands only at promotion, so **`IN REVIEW` here means "authored and reviewed, not signed off"** — it does not mean a consumer exists, and neither does APPROVED (see the live gap below).
+**Specifications:** `SPEC_INDEX.md` records **53 APPROVED / 0 IN REVIEW / 0 NOT STARTED — every spec in the registry is approved.** The APPROVED set is the Stage-0 twenty (all APPROVED May 18, 2026) plus 23 Stage-1-forward and management-layer specs (#21–#34, #37, #38, #40–#45, #49). The last ten — #53, #35, #46, #36, #54, #47, #48, #50, #51, #39 — were promoted **and approved** on July 27, 2026, emptying the pre-promotion backlog and closing the specification phase entirely. The only candidate without a spec is **#52** (Multiplayer Transport), deliberately deferred behind the Stage-5 Fixed64 migration. **Approval approves the forward design, not an implementation** — see the live gap below, which is now the project's dominant fact.
 
 **Implementation:** `src/` holds **29 production assemblies**. Every Stage-0 spec is implemented except **#9 Fixed64** (deferred to Stage 5+ by design) and **#20 Code Standards** (a style guide, not a coded subsystem). A `MatchEngine` composition root wires the subsystems into the deterministic-sim 7-phase tick pipeline, and **a production match now plays** — the possession bootstrap (§5.Z Phase H, July 26, 2026) closed ERR-030-014, under which every match had been a 90-minute 0–0 deadlock with the ball never in motion.
 
-**The live gap just widened, and the widening is the point.** The ten July-27 promotions add **no code
-and no consumer** — they are section files. Counting them, **23 of the 53 specs with a folder have no
-`src/` assembly at all**: the 13 APPROVED ones below plus all ten new IN-REVIEW ones. The specification
-frontier now runs a long way ahead of the implementation, which is a deliberate posture (specify before
-coding) but makes one habit dangerous: **a spec folder existing says nothing about a consumer existing.**
+**The live gap is now the project's dominant fact.** With the specification phase closed, **23 of the 53
+APPROVED specs have no `src/` assembly at all** — the 13 listed below plus the ten approved on July 27.
+The specification frontier runs a long way ahead of the implementation, which is a deliberate posture
+(specify before coding), and it makes one habit dangerous: **"the spec is APPROVED" now says nothing
+whatsoever about whether code exists.** It is true of 43% of the registry.
 
-**The live gap:** **13 APPROVED specs have no assembly at all** — #29 Training, #31 Transfers, #32 Scouting, #33 Personalities/Morale, #34 Staff, #37 Analytics, #40 Finances, #41 Injuries, #42 Youth, #43 Competition Structure, #44 Discipline, #45 Board, #49 Localization. Sequencing for closing it is in `docs/tracking/path-to-playable-roadmap.md`. Treat "the spec is approved" as saying nothing about whether code exists — check `src/` before assuming a consumer is available.
+**The 23 with no assembly:** #29 Training, #31 Transfers, #32 Scouting, #33 Personalities/Morale,
+#34 Staff, #37 Analytics, #40 Finances, #41 Injuries, #42 Youth, #43 Competition Structure,
+#44 Discipline, #45 Board, #49 Localization — plus **#35, #36, #39, #46, #47, #48, #50, #51, #53, #54**.
+
+Sequencing for closing the gap is in `docs/tracking/path-to-playable-roadmap.md`, which is now the
+project's live critical path. **Check `src/` before assuming a consumer is available** — the assembly map
+above is the reliable index, not the spec registry.
 
 `src/CLAUDE.md` is the authoritative coding guide. Read it before writing any code.
 
@@ -945,7 +981,7 @@ Soccer-Manager-Pro/
 │   ├── planning/                   ← Master volumes I–IV, master development plan, best practices
 │   ├── design/ui-mockups/          ← Non-normative UI visual reference (not on any build path)
 │   ├── specs/
-│   │   ├── SPEC_INDEX.md           ← Canonical spec numbering and status — 53 folders (43 APPROVED, 10 IN REVIEW)
+│   │   ├── SPEC_INDEX.md           ← Canonical spec numbering and status — 53 folders, all APPROVED
 │   │   └── <spec-folder>/          ← One folder per spec; see SPEC_INDEX.md for the number↔folder map
 │   └── tracking/                   ← Progress, error log, file manifest, roadmaps, design supplements
 ├── src/                            ← Implementation (coding began May 19, 2026) — 29 production assemblies

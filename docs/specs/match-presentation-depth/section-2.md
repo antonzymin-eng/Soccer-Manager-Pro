@@ -1,9 +1,10 @@
 # Match Presentation Depth #48 — Section 2: Requirements, Data Structures, Failure Modes
 
 **Created:** July 27, 2026
-**Last Updated:** July 27, 2026 (v0.2 — PASS-1 fix pass)
-**Version:** 0.2
-**Status:** IN REVIEW
+**Last Updated:** July 27, 2026 (v0.3 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
+**Last Updated (prior):** July 27, 2026 (v0.2 — PASS-1 fix pass)
+**Version:** 0.3
+**Status:** APPROVED
 
 ---
 
@@ -59,7 +60,7 @@
 | FR-MP-024 | #48 MUST declare `ICueSink` **itself** and emit into it. #48 MUST NOT call a playback API directly, so #51's arrival is a **sink-implementation change** rather than a rewrite. | MUST | KD-4 |
 | FR-MP-025 | **#51 MUST NOT implement `ICueSink` and MUST NOT reference #48.** The **client shell** supplies the adapter. A Wave-8 spec must not become a Wave-7 dependency. | MUST | KD-4 |
 | FR-MP-026 | `ICueSink` MUST have a **no-op default**, so a headless run is valid forever. | MUST | KD-4 |
-| FR-MP-027 | `CueId` MUST carry the same **APPEND-only ordinal stability** as the text intents — #51's catalogue will be keyed on it. | MUST | KD-4 |
+| FR-MP-027 | `CueId` MUST carry the same **APPEND-only ordinal stability** as the text intents. **Corrected by ERR-048-001 (at #51's approval):** this previously read *"#51's catalogue will be keyed on it"* — which **cannot be true** without the `#51 → #48` reference FR-MP-025 forbids two rows above, and would have surfaced as an **assembly cycle** once both specs were implemented. `CueId` is **#48's semantic event identity**; **#51's catalogue is keyed on its own `CueKey`**; the **shell's `ICueSink` adapter holds the `CueId → CueKey` mapping**. The ordinal-stability requirement is **retained with a stronger rationale** — the shell's mapping table is keyed on `CueId`, so a renumber silently re-points cues. | MUST | KD-4 |
 
 **Composition and the thread boundary (KD-5)**
 
@@ -86,7 +87,9 @@
 // catalogue row AND mis-labels every existing export -- neither with a version gate.
 public enum CommentaryIntent : int { None = 0, /* goal, card, save, chance, … */ }
 
-// APPEND-only for the weaker but real reason that #51's catalogue will be keyed on it (FR-MP-027).
+// APPEND-only because the SHELL's CueId -> CueKey mapping table is keyed on it, so a renumber silently
+// re-points cues (FR-MP-027, as corrected by ERR-048-001). #51's catalogue is keyed on its OWN CueKey --
+// keying it on this type would be the #51 -> #48 reference FR-MP-025 forbids.
 public enum CueId : int { None = 0, /* crowd, whistle, impact, … */ }
 
 // One captured line. NATIVE VALUES ONLY -- no rendered string, no locale (FR-MP-011).
@@ -160,4 +163,5 @@ or pre-#51 run is expected to use it forever.
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial §2 (FR-MP-001..034, data structures, F1..F5) from supplement v0.6. Status IN REVIEW. |
 | 0.2 | 2026-07-27 | — | PASS-1 fixes. **M:** added **F2** with the guard placed at the **mapper**, not the sink — the sink's default is a no-op, so a `CueId` validity check living only there would be **silently absent in a headless run**, which is the default configuration. **M:** added **F3** — nothing said what #48 does with malformed observation input, and the two wrong answers are both natural: render a nonsense frame, or *sanitise* it and thereby hide a sim defect behind presentation. **M:** added **FR-MP-013** making `tick`'s presence in the selection key a requirement rather than a parenthetical; without it every occurrence of one intent for one agent picks the same variant for the whole match, which is the most visible possible regression in a commentary system. **L:** added F6/F7 (the second-tap and mutation-channel bars, as failure modes rather than only as FRs), the two *"not a failure mode"* notes, and wrote out `CommentaryLine`, `CommentarySlots`, `CommentaryFeedView`, `AnimationFrameView` and `ICueSink`, each annotated with the constraint that shapes it. |
+| 0.3 | 2026-07-27 | — | **ERR-048-001** (at #51's approval): **FR-MP-027 corrected.** It read *"#51's catalogue will be keyed on it"*, which **cannot be true** without the `#51 → #48` reference FR-MP-025 forbids two rows above — the two requirements were jointly impossible, and it would have surfaced as an **assembly cycle** once both specs were implemented. `CueId` is #48's semantic event identity; #51's catalogue is keyed on its own `CueKey`; the **shell** holds the mapping. Ordinal stability is **retained with a stronger rationale**. **Text-only: no #48 contract, code or test change.** |
 #endregion

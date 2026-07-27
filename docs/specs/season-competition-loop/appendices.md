@@ -1,8 +1,9 @@
 # Season & Competition Loop Specification #30 — Appendices
 
 **Created:** July 22, 2026
-**Last Updated:** July 25, 2026 (v0.3 — ERR-030-010 Appendix C venue correction, found at #30 T0)
-**Version:** 0.3
+**Last Updated:** July 27, 2026 (v0.4 — back-props ERR-030-017 (#47 conditional authored sub-blob) + ERR-030-019 (#50 `SaveOriginStamp` in the outer frame) landed atomically with the ten-spec approval wave; Appendix B's outer-frame description amended)
+**Last Updated (prior):** July 25, 2026 (v0.3 — ERR-030-010 Appendix C venue correction, found at #30 T0)
+**Version:** 0.4
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -56,9 +57,32 @@ The season block, in order (all via `CanonicalSerializer`; every length prefix v
 > make the sub-blob round-trip exact with no NaN gate.
 
 
-The outer `SeasonSaveCodec` frame nesting this block:
-`SEASON_SAVE_FORMAT_VERSION (u32) → matchPresent flag (u8) → [len u32]world → [len u32]season →
-([len u32]match iff matchPresent)`. Trailing bytes after the declared content ⇒ throw (F3).
+The outer `SeasonSaveCodec` frame nesting this block, **as amended by the July 27, 2026 approval wave**:
+
+`SEASON_SAVE_FORMAT_VERSION (u32) → SaveOriginStamp{ WorldGenerationVersion i32, BuildId i32 } →
+matchPresent flag (u8) → hasAuthoredDb flag (u8) → [len u32]world → [len u32]season →
+([len u32]match iff matchPresent) → ([len u32]authoredDb iff hasAuthoredDb)`
+
+Trailing bytes after the declared content ⇒ throw (F3).
+
+**`SaveOriginStamp` (ERR-030-019, at #50's approval)** sits in the **frame**, immediately after the
+version and **before any length-prefixed blob**. The placement is load-bearing rather than aesthetic:
+#50's classifier reads version fields **without parsing any sub-blob**, and a stamp inside the season
+block would force it to parse into one in order to classify — defeating the property that makes
+classification both cheap and safe. `WorldGenerationVersion` is the migration input; `BuildId` is
+**diagnostic only** and MUST NOT be a migration input, since migrating off a build number would make two
+builds sharing a format falsely incompatible. **This carries a `SEASON_SAVE_FORMAT_VERSION` bump at
+#50's T1** — pre-bump saves are rejected fail-loud, with no migration, which is the same posture the
+codec already takes.
+
+**The authored-database sub-blob (ERR-030-017, at #47's approval)** is written **only when
+`hasAuthoredDb`**. A generated game writes **no block at all — not an empty one**, which is what keeps a
+generated save byte-identical to pre-#47 rather than merely similar. The flag and the block's presence
+MUST agree in both directions, and a mismatch fails loud: a generated save carrying a stale authored
+block would load the wrong rosters as silently as an authored save missing its block would regenerate
+them. The frame does not parse the block (FR-ED-011); `AUTHORED_DB_SAVE_FORMAT_VERSION` is #47's.
+
+**Both additions are conditional or fixed-width, and neither touches the world, season or match blobs.**
 
 ## Appendix C — Worked 4-club round-robin schedule
 
@@ -106,4 +130,5 @@ is a **total order** — no two rows ever compare equal (FR-SN-007).
 | 0.1 | 2026-07-22 | — | Initial appendices: constant catalogue, season-state byte layout, worked 4-club schedule, tie-break worked example. |
 | 0.2 | 2026-07-22 | — | Section-file PASS-1: whole-round resolution (KD-9 / FR-SN-012/013a/013b / §3.4 / ManagedClubId), API-name corrections (`RunTick`→`MatchEnded`, `ResolveByClubId`), `uint` world-day, KD-collision + label reconciliation. See section-9 §9.3. |
 | 0.3 | 2026-07-25 | — | **ERR-030-010** (found at #30 T0 implementation): Appendix C rounds 1 and 4 venue-corrected — the table was hand-derived without §3.1's round-parity venue rule. Pairings unchanged, so the 12-ordered-pair completeness bullet is unaffected; justification (20-club venue distribution) recorded inline. |
+| 0.4 | 2026-07-27 | — | **ERR-030-019** (#50) + **ERR-030-017** (#47), landed atomically with the ten-spec approval wave. Appendix B's outer-frame description gains the `SaveOriginStamp` (`WorldGenerationVersion` + `BuildId`) immediately after the version field and **before any length-prefixed blob** — the placement is load-bearing, since #50's classifier must read the generation version without parsing a sub-blob, and `BuildId` is recorded as **diagnostic only** so it can never become a migration input; and the **conditional** authored-database sub-blob, written only when `hasAuthoredDb`, with the flag/blob agreement required in both directions and failing loud. The world, season and match blobs are byte-untouched by both. |
 #endregion
