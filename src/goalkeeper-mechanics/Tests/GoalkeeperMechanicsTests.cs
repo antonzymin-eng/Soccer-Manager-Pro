@@ -1,6 +1,7 @@
 // File:     src/goalkeeper-mechanics/Tests/GoalkeeperMechanicsTests.cs
 // Created:  2026-05-31
 // Modified: 2026-05-31
+// Modified: 2026-07-27 (§5.Z.17 / ERR-011-002: call sites renamed to the new state-machine parameter names)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §5, Code Standards #20
 // Purpose:  Unit tests for Goalkeeper Mechanics. T-5.1 unit tests from §5.
@@ -45,7 +46,7 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 
         // ── T-5.1.1-A  Resting → Set when ball enters attacking third ─────────
 
-        /// <summary>T-5.1.1-A: Resting → Set when ballInAttackingThird=true.</summary>
+        /// <summary>T-5.1.1-A: Resting → Set when ballThreateningOwnGoal=true.</summary>
         [Test]
         public void Resting_BallEntersAttackingThird_TransitionsToSet()
         {
@@ -63,8 +64,8 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
                 recoveryCooldownEndTick:0,
                 gkPosition:             Vector2.zero,
                 gkBaselineSlot:         Vector2.zero,
-                ballInAttackingThird:   true,
-                ballInDefensiveThird:   false);
+                ballThreateningOwnGoal: true,
+                ballSafelyUpfield:      false);
 
             Assert.AreEqual(GoalkeeperState.Set, result, "Resting should transition to Set when ball is in attacking third.");
         }
@@ -89,8 +90,8 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
                 recoveryCooldownEndTick:0,
                 gkPosition:             Vector2.zero,
                 gkBaselineSlot:         Vector2.zero,
-                ballInAttackingThird:   false,
-                ballInDefensiveThird:   false);
+                ballThreateningOwnGoal: false,
+                ballSafelyUpfield:      false);
 
             Assert.AreEqual(GoalkeeperState.Resting, result, "Resting should stay Resting when ball is not in attacking third.");
         }
@@ -117,8 +118,8 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
                 recoveryCooldownEndTick:0,
                 gkPosition:             Vector2.zero,
                 gkBaselineSlot:         Vector2.zero,
-                ballInAttackingThird:   true,
-                ballInDefensiveThird:   false);
+                ballThreateningOwnGoal: true,
+                ballSafelyUpfield:      false);
 
             Assert.AreEqual(GoalkeeperState.Anticipate, result, "Set should transition to Anticipate when anticipation score exceeds threshold.");
         }
@@ -145,8 +146,8 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
                 recoveryCooldownEndTick:0,
                 gkPosition:             Vector2.zero,
                 gkBaselineSlot:         Vector2.zero,
-                ballInAttackingThird:   true,
-                ballInDefensiveThird:   false);
+                ballThreateningOwnGoal: true,
+                ballSafelyUpfield:      false);
 
             Assert.AreEqual(GoalkeeperState.Rushing, result, "Set should transition to Rushing when rush intent exceeds commit threshold.");
         }
@@ -171,8 +172,8 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
                 recoveryCooldownEndTick:0,
                 gkPosition:             Vector2.zero,
                 gkBaselineSlot:         Vector2.zero,
-                ballInAttackingThird:   false,
-                ballInDefensiveThird:   false);
+                ballThreateningOwnGoal: false,
+                ballSafelyUpfield:      false);
 
             Assert.AreEqual(GoalkeeperState.Resting, result, "Set should revert to Resting when ball leaves attacking third.");
         }
@@ -197,8 +198,8 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
                 recoveryCooldownEndTick:0,
                 gkPosition:             Vector2.zero,
                 gkBaselineSlot:         Vector2.zero,
-                ballInAttackingThird:   true,
-                ballInDefensiveThird:   false);
+                ballThreateningOwnGoal: true,
+                ballSafelyUpfield:      false);
 
             Assert.AreEqual(GoalkeeperState.Diving, result, "Anticipate should transition to Diving when SaveIntent is committed.");
         }
@@ -225,8 +226,8 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
                 recoveryCooldownEndTick:0,
                 gkPosition:             Vector2.zero,
                 gkBaselineSlot:         Vector2.zero,
-                ballInAttackingThird:   false,
-                ballInDefensiveThird:   true);
+                ballThreateningOwnGoal: false,
+                ballSafelyUpfield:      true);
 
             Assert.AreEqual(GoalkeeperState.Distributing, result, "HandsOnBall should transition to Distributing when release tick is reached and DistributeIntent is set.");
         }
@@ -254,8 +255,8 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
                 recoveryCooldownEndTick:0,
                 gkPosition:             Vector2.zero,
                 gkBaselineSlot:         Vector2.zero,
-                ballInAttackingThird:   false,
-                ballInDefensiveThird:   true);
+                ballThreateningOwnGoal: false,
+                ballSafelyUpfield:      true);
 
             Assert.AreEqual(GoalkeeperState.Distributing, result,
                 "HandsOnBall must transition to Distributing after GK_HOLD_MAX_TICKS ticks have elapsed (6-second rule).");
@@ -284,8 +285,8 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
                 recoveryCooldownEndTick:cooldownEnd,
                 gkPosition:             new Vector2(52.5f, 34f),
                 gkBaselineSlot:         new Vector2(0f, 34f),   // far from baseline
-                ballInAttackingThird:   true,
-                ballInDefensiveThird:   false);
+                ballThreateningOwnGoal: true,
+                ballSafelyUpfield:      false);
 
             Assert.AreEqual(GoalkeeperState.Set, result, "Recovering should transition to Set when cooldown has elapsed.");
         }
@@ -310,8 +311,8 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
                 recoveryCooldownEndTick:0,
                 gkPosition:             Vector2.zero,
                 gkBaselineSlot:         Vector2.zero,
-                ballInAttackingThird:   true,
-                ballInDefensiveThird:   false);
+                ballThreateningOwnGoal: true,
+                ballSafelyUpfield:      false);
 
             Assert.AreEqual(GoalkeeperState.Diving, result, "OneOnOne should transition to Diving when SaveIntent is committed.");
         }
@@ -952,8 +953,8 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
                 recoveryCooldownEndTick:0,
                 gkPosition:             Vector2.zero,
                 gkBaselineSlot:         Vector2.zero,
-                ballInAttackingThird:   true,
-                ballInDefensiveThird:   false);
+                ballThreateningOwnGoal: true,
+                ballSafelyUpfield:      false);
 
             Assert.AreEqual(GoalkeeperState.Rushing, result,
                 "commitmentLevel above RushCommitThreshold should transition Set to Rushing.");
@@ -979,8 +980,8 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
                 recoveryCooldownEndTick:0,
                 gkPosition:             Vector2.zero,
                 gkBaselineSlot:         Vector2.zero,
-                ballInAttackingThird:   true,
-                ballInDefensiveThird:   false);
+                ballThreateningOwnGoal: true,
+                ballSafelyUpfield:      false);
 
             Assert.AreNotEqual(GoalkeeperState.Rushing, result,
                 "commitmentLevel at (not above) RushCommitThreshold must NOT transition to Rushing.");
@@ -1520,4 +1521,7 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 // |         |            |        | fixture surface) was CS0246 under Unity and the Linux gate alike   |
 // |         |            |        | despite the asmdef carrying the BallPhysics reference; the suite   |
 // |         |            |        | never compiled.                                                    |
+// | 1.3 | 2026-07-27 | — | ERR-011-002 fallout: 12 EvaluateTacticalTransition call sites renamed to    |
+// |     |            |   | ballThreateningOwnGoal/ballSafelyUpfield. Semantics preserved — the two sites|
+// |     |            |   | passing ballInDefensiveThird: true are HandsOnBall cases consulting neither flag.|
 #endregion

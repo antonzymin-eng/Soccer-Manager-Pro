@@ -1,6 +1,7 @@
 // File:     src/goalkeeper-mechanics/GoalkeeperConstants.cs
 // Created:  2026-05-28
 // Modified: 2026-06-14
+// Modified: 2026-07-27 (§5.Z.17: + [DERIVED] DegeneracyEpsilon, + [GT] DivePredictionHorizonS)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.4, KD-9, FR-GK-015, FR-GK-042, Code Standards #20
 // Purpose:  All numeric constants for the goalkeeper mechanics system. No magic literals in formula files.
@@ -52,6 +53,13 @@ namespace TacticalDirector.GoalkeeperMechanics
         #endregion
 
         #region Derived
+        /// <summary>
+        /// [DERIVED] Scalar epsilon for degenerate-component guards (avoids division by zero on a single
+        /// axis, where the squared form above is the wrong scale).
+        /// Formula: sqrt(DEGENERACY_EPSILON_SQ). Source constants: GoalkeeperConstants.DEGENERACY_EPSILON_SQ.
+        /// Consumed by the §3.3.4 dive-direction interception guard (ERR-011-003). §3.3.
+        /// </summary>
+        public static readonly float DegeneracyEpsilon = Mathf.Sqrt(DEGENERACY_EPSILON_SQ);
 
         /// <summary>
         /// [DERIVED] Physics frame duration in milliseconds.
@@ -162,6 +170,25 @@ namespace TacticalDirector.GoalkeeperMechanics
 
         /// <summary>[GT] Lateral XY displacement of reach centre along dive direction at end of dive phase (m). §3.3.4.</summary>
         public static readonly float DiveLaunchDisplacementM = Config.GetFloat("goalkeeper-mechanics", "DiveLaunchDisplacementM", 2.2f);
+
+        /// <summary>
+        /// [GT] Horizon (s) over which the §3.3.4 dive-direction interception extrapolates the ball to the
+        /// keeper's plane (ERR-011-003). Beyond it the linear model is not credible — the ball will be
+        /// touched, deflected or will bounce first — so the keeper dives at the ball's current lateral
+        /// position instead of at a stale extrapolation.
+        ///
+        /// Sized by the DIVE, not by the arming geometry. The slowest ball that can arm a save
+        /// (MatchEngineConstants.GkSaveTriggerRangeM 16.5 m at GkSaveTriggerMinBallSpeedMps 3 m/s) is
+        /// 5.5 s away, and extrapolating a straight line over 5.5 s of a football match is not credible;
+        /// a keeper does not dive at something five seconds away either. 2.0 s covers the whole regime in
+        /// which a dive is the right response — a 16.5 m shot at 8 m/s or faster, which is every shot
+        /// worth diving at — and falls back to the ball's current lateral position outside it, which is
+        /// never worse than the pre-ERR-011-003 zero. Raising it toward 5.5 s would NOT extend coverage;
+        /// it would only admit long extrapolations of balls that will have been touched first.
+        /// Config key [goalkeeper-mechanics] DivePredictionHorizonS.
+        /// </summary>
+        public static readonly float DivePredictionHorizonS =
+            Config.GetFloat("goalkeeper-mechanics", "DivePredictionHorizonS", 2.0f);
 
         /// <summary>[GT] Handling-attribute contribution to reach radius (m per unit norm). §3.3.4.</summary>
         public static readonly float ReachKHandling = Config.GetFloat("goalkeeper-mechanics", "ReachKHandling", 0.20f);
@@ -421,4 +448,8 @@ namespace TacticalDirector.GoalkeeperMechanics
 // | 1.1     | 2026-06-14 | —      | AR-6 L: Stage-0 declared-but-unconsumed doc-notes on GravityMps2 |
 // |         |            |        | (synthetic dive Z is a fixed parabola), PenaltyAreaDepthM, and   |
 // |         |            |        | WrongDirectionThresholdM (F-02 classification not yet wired).    |
+// | 1.2 | 2026-07-27 | — | §5.Z.17 / ERR-011-003. [DERIVED] DegeneracyEpsilon (scalar single-axis guard;|
+// |     |            |   | the squared form is the wrong scale for a component test) and [GT]        |
+// |     |            |   | DivePredictionHorizonS = 2.0 s, bounding the dive-direction interception to the|
+// |     |            |   | regime where a straight-line extrapolation is credible.                   |
 #endregion

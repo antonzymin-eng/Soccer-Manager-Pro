@@ -1335,6 +1335,72 @@ to break the stall would itself be untested — the never-compiled-surface trap)
 composed play that the hold counter never exceeds the cap, with an explicit non-vacuity assertion that
 the run actually put the ball in a keeper's hands.
 
+### 5.Z.17 The goalkeeper's save (July 27, 2026) — §5.Z.15's lever, measured and discharged
+
+§5.Z.15 recorded the next lever on the goal rate as *"the quality of the save, not its existence"*.
+That framing carries a premise: that saves happen and are merely poor. **They did not happen.**
+
+Measured over three full 90-minute matches with a new instrument — `GkSaveDiagnosticTests`, the first
+in this tree ever to report a goalkeeper statistic of any kind — the keepers made **zero** hand
+contacts with the ball across all six keeper-matches. "Save quality" was not a low number; it was
+undefined. Detail note: `docs/tracking/goalkeeper-save-pipeline-design.md`.
+
+The instrument reports the pipeline as a **funnel**, which is what localised it: `armed → SAVE
+committed → Anticipate → Diving → Airborne → contact → caught`. Every stage up to and including the
+dive fired at healthy rates — 14–41 SAVE commitments and 13–31 dives a match. The chain ended at
+contact, at exactly zero. Three defects, each independently sufficient (**ERR-011-002/003/004**):
+
+1. **The dive had no direction.** `ComputeDiveDirectionLateral`'s only non-zero branch is gated on
+   `SaveIntent.DeflectionTarget`, which the engine's sole producer sets `null`. Mean
+   `|diveDirectionLateral|` measured **0.000** across every dive ever launched; the envelope's closest
+   approach to the ball over a whole match was **2.75 m short**. Not a near miss — the keeper dived
+   straight up on the spot. The conflation is the cause: `DeflectionTarget` is where the keeper wants
+   to *put* the ball, not where it should *dive*.
+2. **A catch was arithmetically impossible.** `OnShotExecutedEvent` had zero callers anywhere, so
+   `reactionWindowAchieved` was permanently 0, capping quality at `0.70 × rawHandling` — a **measured
+   ceiling of 0.630** for a perfect keeper against `CatchThreshold` 0.78.
+3. **The keeper woke for the wrong end of the pitch and never stood down** — the §5.Z.12 per-side-pair
+   class again, plus an `Anticipate` state with no exit but a dive. Keepers held Anticipate for
+   **76–92%** of every match.
+
+Post-fix: dive direction 0.000 → **1.000**, best miss 2.75 m → **−0.07 m**, contacts **0 → 15**,
+Anticipate share 76–92% → **11–18%**. Locked by `match-engine-goalkeeper-saves` (#19 ScenarioRunner,
+Tier B, 4 seeds × 15 min, 56 s), whose predicates assert *reachability* stage by stage; **11 of its 12
+fail on the pre-fix engine**, two at exactly zero. Full gate green; no `SNAPSHOT_SCHEMA_VERSION`
+change, no new RNG stream or draw site, and no change to the draw order.
+
+**And the goal rate did not move at all: 15.3 → 15.3 per match, against football's ~2.7.** That is the
+result. Three genuine defects, each of which had to be fixed before a save was possible, are worth
+**nothing measurable** on the scoreline. **§5.Z.15's lever was real, is now spent, and was not where
+the mass is** — the same shape as §5.Z.9 and §5.Z.11, where the measurement refuted its own brief, and
+the reason the acceptance scenario deliberately pins no save percentage and no goal rate.
+
+Worth recording *how* that number was arrived at, because an earlier build of this pass published
+**14.0** on the identical seeds and would have let §5.Z.17 claim the keeper was worth about a goal a
+match. The difference was a single unit defect found in adversarial review — the shot was stamped in
+seconds against a §3.2 pipeline that is entirely milliseconds — and correcting it re-rolled every
+subsequent deflection. Three matches of a chaotic quantity does not resolve a one-goal difference. The
+claim this section makes is therefore the weaker, defensible one (*no detectable effect*), not the
+stronger one the first number happened to support.
+
+**Recorded, NOT fixed — and this is now the honest next lever.** The measurement that closed the save
+question opened a larger one on the shot side, verified against source and detailed in the note's §7:
+
+- **A shot essentially cannot miss.** Aim is hardcoded to `u ∈ {0.1, 0.9}`, i.e. **0.732 m inside the
+  post**, against ~2.25° of typical angular error where >5.73° is needed to miss — and the largest
+  live error multiplier, the pressure penalty, is hardcoded to zero in the engine's own adapter.
+- **There is no crossbar.** `BallCollision.CheckBoundaries` gates *every* boundary test, goals
+  included, behind `z < Ball.Diameter` (0.22 m), so a ball crossing the line airborne is neither a
+  goal nor out of play; and `ShotExecutor` never reads `finalDirection.z`, so the entire vertical half
+  of the placement and error model influences nothing. The goal is 7.32 m wide and of unbounded height.
+- **There are no blocked shots.** `BallCollisionHandler.OnAgentCollision` is called in production and
+  its body is an empty `TODO`. No agent deflects the ball by contact; posts are non-physical.
+
+In football roughly 30% of shots are blocked and 30% miss the target. Here both are approximately
+zero, which is a larger multiplier on the goal rate than anything a goalkeeper does. **A4a stays
+blocked, but the reason is now specific:** the residual is the shot-outcome distribution, not the
+keeper.
+
 ### 5.Z.8 What this unblocks
 
 `PM-1` ("watch a match") is no longer blocked by the engine. Roadmap **A4a** — the round-resolution

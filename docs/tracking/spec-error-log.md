@@ -2108,4 +2108,49 @@ root — so #53 fits seams that already existed and invents no design change to 
 
 ---
 
-*End of Spec Error Log v1.47 — July 27, 2026.*
+---
+
+## ERR-011-002 / ERR-011-003 / ERR-011-004: Goalkeeper Mechanics #11 — the save pipeline was unreachable in production
+
+**Filed:** July 27, 2026. **Status:** ✅ code-resolved same day; spec-text back-prop pending #11 owner
+sign-off. **Owner document:** `docs/tracking/goalkeeper-save-pipeline-design.md`; match-engine
+`§5.Z.17`.
+
+**How found.** Measurement, not review. `match-engine-design.md` §5.Z.15 recorded the next lever on the
+engine's goal rate as *"the quality of the goalkeeper's save"*. A new env-gated instrument
+(`GkSaveDiagnosticTests`, `TD_GK_DIAGNOSTIC=1`) walked the save pipeline as a funnel over three full
+90-minute matches and found the premise false: across all six keeper-matches the goalkeepers made
+**zero** hand contacts with the ball. Not poor saves — none. Three independent defects, each on its own
+sufficient to prevent a save.
+
+**Note on numbering:** `ERR-011-001` was taken in May 2026 by the `DOMAIN_TAG_GOALKEEPER` allocation.
+These ids were verified free against this log before assignment — the id-collision class the root
+`CLAUDE.md` records from the July-27 promotion wave.
+
+| ID | Target | Change |
+|---|---|---|
+| **ERR-011-002** | #11 §3.1 (state machine inputs + `Anticipate` transitions) | **The keeper woke for the wrong end of the pitch, and never stood down.** The orchestrator computed the third the keeper's own team **attacks** and passed it to a state-machine parameter documented as *"the attacking third from the perspective of the **opposing** team (i.e. threatening GK's goal)"* — opposite ends. The name `ballInAttackingThird` reads one way at the call site and the other inside the machine. Compounding it, `Anticipate` had **no exit** but a dive or a rush. Measured: keepers held Anticipate for **76–92% of every match**, entered for the wrong reason. Fixed per §5.Z.12 (*"a pair has two places that must agree; a mirror has one"*) as ONE signed distance to the keeper's own goal, with both predicates derived from it and renamed from the **keeper's** perspective (`ballThreateningOwnGoal` / `ballSafelyUpfield`); `Recovering → Resting` re-anchored to "play is at the far end"; new `Anticipate → Set` exit. Post-fix: **11–18%**. |
+| **ERR-011-003** | #11 §3.3.4 (dive direction) | **Every dive ever launched had lateral direction exactly 0.** `ComputeDiveDirectionLateral`'s only non-zero branch is gated on `SaveIntent.DeflectionTarget.HasValue`, and the engine's sole producer sets it `null` — so the reach envelope never displaced sideways and the keeper dived straight up on the spot. Measured: mean `\|diveDirectionLateral\|` = **0.000** across all six keepers; closest approach of the envelope to the ball over an entire match **2.75 m short**. The root cause is a conflation: `DeflectionTarget` is where the keeper wants to *put* the ball (§3.5.3), not where it should *dive*. Now derived from the ball — specifically the linear XY interception of where the ball **will cross the keeper's plane**, bounded by a new `[GT] DivePredictionHorizonS`; an explicit `DeflectionTarget` still wins. Post-fix: **1.000**, best miss **−0.07 m**, contacts **0 → 15**. |
+| **ERR-011-004** | #11 §3.2 (reaction pipeline entry) | **`OnShotExecutedEvent` had zero callers — in production or in tests.** `_shotDetectedTickMs` therefore stayed 0, the per-frame block that writes `ReactionWindowAchieved` is gated on it being > 0, and the window was permanently 0. Since §3.5.1 blends `quality = α·rawHandling + (1−α)·reactionWindowAchieved` with α = 0.70, that capped quality at `0.70 × rawHandling` — **measured ceiling 0.630** for a *perfect* keeper (Handling 20, zero noise, exact contact point) against `CatchThreshold` 0.78, so **a catch was arithmetically impossible** regardless of positioning, reach or dive accuracy. `MatchEngine.NotifyKeeperOfShot` now fires on the shot's CONTACT frame (§3.2.1 dates perception from the strike), routed to the keeper defending the goal the shooter attacks. The method also gains an attributes parameter: it is frequently the FIRST call of an episode, earlier than `CommitSaveIntent`, which is the only other writer of the per-GK attribute snapshot, so reading that snapshot would have dated the window off a keeper with zeroed Reflexes (the KD-P4 convention — the composition root owns the projection). |
+
+**Determinism impact: none.** No `SNAPSHOT_SCHEMA_VERSION` change (every field involved is already in
+the v19 GK block, and the state machine's inputs are recomputed each tactical tick), no new RNG stream,
+domain tag, subsystem ordinal or draw site, and — load-bearing — **no change to the draw order**: the
+fixes alter the *arguments* to existing draws, never how many are taken or in what sequence.
+
+**Test fallout, recorded because it is a recurring class.** `sim_goalkeeper_save_launch_executes_dive`
+had encoded the inverted predicate — it parked the ball at x = 75 precisely because that was what woke
+a team-0 keeper pre-fix. Re-anchored to x = 30 with its intent (reach Anticipate, launch one dive,
+miss, mutate no ball state) exactly preserved. This is the Phase-H *"21 existing tests updated — most
+encoded the old contract"* class.
+
+**What this does NOT close.** The §5.Z.15 lever is discharged and the goal rate did not move at all
+(15.3 → 15.3 per match). The residual is the shot side, recorded in the owner document §7 and not fixed here: shots
+that essentially cannot miss the goal (aim is 0.732 m inside the post, `finalDirection.z` is never
+read), **no crossbar** (`BallCollision.CheckBoundaries` gates every boundary test behind z < 0.22 m),
+and **no blocked shots** (`BallCollisionHandler.OnAgentCollision` is an empty `TODO` that production
+calls). Each belongs to a different APPROVED spec and needs its own pass.
+
+---
+
+*End of Spec Error Log v1.48 — July 27, 2026.*

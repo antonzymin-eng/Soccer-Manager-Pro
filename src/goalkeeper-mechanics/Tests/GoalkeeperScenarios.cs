@@ -1,6 +1,7 @@
 // File:     src/goalkeeper-mechanics/Tests/GoalkeeperScenarios.cs
 // Created:  2026-07-03
 // Modified: 2026-07-03
+// Modified: 2026-07-27 (§5.Z.17 / ERR-011-002: save-launch scenario re-anchored to a ball threatening the keeper's OWN goal)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §4.6.1 / §4.6.2 (10 Hz + 60 Hz orchestrator),
 //           Testing Strategy & Framework #19 §3.3.1 / §3.3.2 / Appendix A.1,
@@ -162,9 +163,17 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 
         private static BallState BuildBall()
         {
-            // x = 75 ≥ BallAttackingThirdXM (≈70) ⇒ in GK0's attacking third (drives Resting→Set→
-            // Anticipate); ~73 m from GK0 ⇒ unreachable by any dive.
-            return BallState.CreateAtPosition(new Vector3(75f, 20f, 0.11f));
+            // ERR-011-002 re-anchor. This was x = 75 — chosen because the pre-fix orchestrator drove
+            // Resting→Set→Anticipate off "the third the keeper's own team ATTACKS", so a ball 73 m from
+            // GK0 was what woke it up. That predicate was inverted; the scenario had encoded it.
+            //
+            // The scenario's INTENT is unchanged and is still exactly met: reach Anticipate, launch one
+            // dive, miss, mutate no ball state. Under the corrected predicate the keeper wakes when the
+            // ball threatens the goal it DEFENDS, so the ball moves into GK0's own defensive third —
+            // x = 30 ≤ 35 (PitchLengthM − BallAttackingThirdXM). It stays comfortably unreachable: GK0
+            // stands at (2, 34), so the ball is 28 m away in x alone, against a reach envelope of under
+            // 2 m plus at most DiveLaunchDisplacementM (2.2 m) of lateral travel.
+            return BallState.CreateAtPosition(new Vector3(30f, 20f, 0.11f));
         }
 
         private static readonly int[] GkAgentIds = { Gk0AgentId, Gk1AgentId };
@@ -301,4 +310,8 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 // |         |            |        | 10 Hz TacticalTick + 60 Hz Update orchestrators (previously    |
 // |         |            |        | zero executing coverage; the sub-system suite never instantiates|
 // |         |            |        | or ticks the orchestrator), observed via injected dependencies.|
+// | 1.1 | 2026-07-27 | — | ERR-011-002 fallout: sim_goalkeeper_save_launch_executes_dive placed the ball at|
+// |     |            |   | x = 75 to wake keeper 0, i.e. it had ENCODED the inverted predicate. Re-anchored|
+// |     |            |   | to x = 30 with the intent unchanged — the Phase-H "tests encoded the old|
+// |     |            |   | contract" class.                                                        |
 #endregion

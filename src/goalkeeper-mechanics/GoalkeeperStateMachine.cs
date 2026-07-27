@@ -1,6 +1,7 @@
 // File:     src/goalkeeper-mechanics/GoalkeeperStateMachine.cs
 // Created:  2026-05-28
 // Modified: 2026-05-28
+// Modified: 2026-07-27 (§5.Z.17 / ERR-011-002: parameters renamed from the KEEPER's perspective, new Anticipate → Set exit, Recovering → Resting re-anchored to the far third)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.1, Code Standards #20
 // Purpose:  Pure state evaluator for the GK state machine. Implements both the 10 Hz tactical
@@ -39,8 +40,13 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// <param name="recoveryCooldownEndTick">Tick at which recovery cooldown expires. §3.1.</param>
         /// <param name="gkPosition">Current GK XY position in metres. §3.1 / §3.3.0.</param>
         /// <param name="gkBaselineSlot">GK baseline slot from Positioning AI #12. §3.3.0.</param>
-        /// <param name="ballInAttackingThird">True if ball is in the attacking third from the perspective of the opposing team (i.e. threatening GK's goal). §3.1.</param>
-        /// <param name="ballInDefensiveThird">True if ball is in GK's own defensive third with own-team possession. §3.1.</param>
+        /// <param name="ballThreateningOwnGoal">True if the ball is in the third in front of the goal THIS
+        /// keeper defends. Named from the KEEPER's perspective, not a team's: the previous name
+        /// ("ballInAttackingThird") read as "my team's attacking third" at the call site and as "the
+        /// attacker's attacking third" here — opposite ends of the pitch — and the caller supplied the
+        /// former while this machine assumed the latter (ERR-011-002). §3.1.</param>
+        /// <param name="ballSafelyUpfield">True if the ball is in the far third, away from the goal this
+        /// keeper defends: play is at the other end and the keeper may stand down. §3.1.</param>
         public static GoalkeeperState EvaluateTacticalTransition(
             GoalkeeperState currentState,
             BallState ballState,
@@ -55,15 +61,15 @@ namespace TacticalDirector.GoalkeeperMechanics
             int recoveryCooldownEndTick,
             Vector2 gkPosition,
             Vector2 gkBaselineSlot,
-            bool ballInAttackingThird,
-            bool ballInDefensiveThird)
+            bool ballThreateningOwnGoal,
+            bool ballSafelyUpfield)
         {
             switch (currentState)
             {
                 case GoalkeeperState.Resting:
                 {
-                    // Resting → Set: ball enters attacking third (attacker-controlled possession per §3.1.1)
-                    if (ballInAttackingThird)
+                    // Resting → Set: the ball enters the third in front of the goal this keeper defends
+                    if (ballThreateningOwnGoal)
                     {
                         return GoalkeeperState.Set;
                     }
@@ -82,8 +88,8 @@ namespace TacticalDirector.GoalkeeperMechanics
                     {
                         return GoalkeeperState.Rushing;
                     }
-                    // Set → Resting: ball no longer in attacking third
-                    if (!ballInAttackingThird)
+                    // Set → Resting: the ball no longer threatens
+                    if (!ballThreateningOwnGoal)
                     {
                         return GoalkeeperState.Resting;
                     }
@@ -101,6 +107,14 @@ namespace TacticalDirector.GoalkeeperMechanics
                     if (hasRushIntent && rushCommitmentLevel > GoalkeeperConstants.RushCommitThreshold)
                     {
                         return GoalkeeperState.Rushing;
+                    }
+                    // Anticipate → Set: the threat has passed. ERR-011-002 — Anticipate previously had NO
+                    // exit but a dive or a rush, so a keeper that entered it never left: measured, keepers
+                    // held Anticipate for 76-92% of every match. Anticipate is a coiled, committed posture;
+                    // standing in it for eighty minutes is neither football nor what §3.1 describes.
+                    if (!ballThreateningOwnGoal)
+                    {
+                        return GoalkeeperState.Set;
                     }
                     return GoalkeeperState.Anticipate;
                 }
@@ -133,8 +147,16 @@ namespace TacticalDirector.GoalkeeperMechanics
                     {
                         return GoalkeeperState.Set;
                     }
-                    // Recovering → Resting: team possession in own defensive third
-                    if (ballInDefensiveThird)
+                    // Recovering → Resting: play is at the far end, so there is nothing to recover FOR.
+                    //
+                    // This is a deliberate CHANGE OF REGION, not just a rename (ERR-011-002). The old
+                    // parameter (`ballInDefensiveThird`) was computed as the keeper's OWN defensive
+                    // third — right for its name, but it made the keeper stand fully down while the ball
+                    // was in its own box, which is the same wrongness ERR-011-002 names on the entry
+                    // side. `Resting` is the stand-down state; the ball being at the OTHER end is what
+                    // licenses it. Note this transition stays reachable either way: `Recovering → Set`
+                    // above is gated on the recovery cooldown and baseline distance, not on the ball.
+                    if (ballSafelyUpfield)
                     {
                         return GoalkeeperState.Resting;
                     }
@@ -292,4 +314,12 @@ namespace TacticalDirector.GoalkeeperMechanics
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-28 | —      | Initial implementation. |
+// | 1.1 | 2026-07-27 | — | ERR-011-002. ballInAttackingThird/ballInDefensiveThird renamed|
+// |     |            |   | ballThreateningOwnGoal/ballSafelyUpfield — the old names read one way at the|
+// |     |            |   | call site and the opposite way here, and the caller supplied the former while|
+// |     |            |   | this machine assumed the latter. New Anticipate → Set exit (KD-S4): Anticipate|
+// |     |            |   | had NO exit but a dive or a rush, so keepers held it 76-92% of every match.|
+// |     |            |   | Recovering → Resting re-anchored to ballSafelyUpfield — a deliberate change of|
+// |     |            |   | REGION, recorded in the design note §4.3: standing fully down while the ball is|
+// |     |            |   | in your own box is the same wrongness ERR-011-002 names on the entry side.|
 #endregion
