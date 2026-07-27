@@ -1,7 +1,13 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** July 26, 2026 (**Root-doc reconciliation — this file re-based on the actual repo
+**Last Updated:** July 27, 2026 (**Ten design supplements promoted to full section files at
+`IN REVIEW` — the pre-promotion backlog is empty.** #53, #35, #46, #36, #54, #47, #48, #50, #51 and
+#39 each gain an 11-file spec set with a recorded PASS-1 adversarial review; `SPEC_INDEX.md` now reads
+**43 APPROVED / 10 IN REVIEW / 0 NOT STARTED**. Docs only — no code, no `src/` change, no gate run —
+and **none claims `APPROVED`**, because lead-developer sign-off is a human authority. See VERSION
+HISTORY v1.36.)
+**Last Updated (prior):** July 26, 2026 (**Root-doc reconciliation — this file re-based on the actual repo
 state.** It had been pinned at July 14, 2026 and **26 specs**: twelve days and seventeen approved
 specs stale, still describing `SNAPSHOT_SCHEMA_VERSION` 15 (actual **18**) and still listing the
 Unity 6 recertification and the FR-PO-052 perf baseline as outstanding — both of which completed
@@ -216,12 +222,21 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 **Progress:** Implementation Phase (coding begun May 19, 2026)
 **Spec Phase Started:** February 2, 2026
 **Stage-0 Spec Phase Completed:** May 18, 2026 — all 20 Stage-0 specs APPROVED
-**Deliverables:** 43 APPROVED specifications + 29 production assemblies in `src/`
+**Deliverables:** 43 APPROVED + 10 IN REVIEW specifications + 29 production assemblies in `src/`
 
-**Summary (July 26, 2026):** `SPEC_INDEX.md` records **43 APPROVED / 0 IN REVIEW / 0 NOT STARTED** —
+**Summary (July 27, 2026):** `SPEC_INDEX.md` records **43 APPROVED / 10 IN REVIEW / 0 NOT STARTED** —
 the Stage-0 set of 20, plus 23 Stage-1-forward and management-layer specs (#21–#34, #37, #38, and
-specs #40–#45, #49). A non-certifying Linux dotnet compile/test CI gate (`tools/dotnet-ci/`) compiles the
-entire `src/` tree and runs the full NUnit suite on every push; the quarantine list is empty.
+specs #40–#45, #49), plus the **ten promoted on July 27, 2026** (#53, #35, #46, #36, #54, #47, #48,
+#50, #51, #39), which emptied the pre-promotion backlog: every converged design supplement now has an
+11-file section set. All ten carry a recorded section-file PASS-1 adversarial review and stop at
+`IN REVIEW` deliberately — **lead-developer sign-off is a human authority and is not self-grantable**.
+A non-certifying Linux dotnet compile/test CI gate (`tools/dotnet-ci/`) compiles the entire `src/` tree
+and runs the full NUnit suite on every push; the quarantine list is empty.
+
+**Note the direction of travel.** The ten promotions add specification, not code — so **23 of the 53
+specs with a folder now have no `src/` assembly at all**. The specification frontier runs a long way
+ahead of the implementation by design, and the practical consequence is stated plainly below: a spec
+existing says nothing about a consumer existing.
 
 **A production match now plays.** Until July 26, 2026 every match finished 0–0 with the ball
 *identically motionless for the full 90 minutes* — a closed deadlock (no motion ⇒ no reception ⇒ no
@@ -312,10 +327,25 @@ host). `src/CLAUDE.md` (v2.40) governs all C# authoring.
 | 45 | Board & Ownership Dynamics | Jul 25 | ⏳ none |
 | 49 | Localization & Accessibility (seam + template contract) | Jul 23 | ⏳ none |
 
-**Design supplements awaiting promotion** (converged design notes in `docs/tracking/`, no spec folder
-and no `SPEC_INDEX.md` row yet — a row lands only at promotion to section files): **#35** Media & Press,
-**#36** National Teams, **#46** News/Inbox & Man-Management, **#47** New-Game Setup & DB Editor,
-**#48** Match Presentation Depth, **#50** Save Migration & Versioning, **#51** Audio & Sound Design.
+**Promoted July 27, 2026 — `IN REVIEW`, awaiting sign-off** (11-file section sets with a recorded
+PASS-1 adversarial review; **none has an assembly**):
+
+| # | Specification | FR prefix | Implementation |
+|---|---------------|-----------|----------------|
+| 53 | Club Infrastructure & Facilities | `FR-IN` | ⏳ none |
+| 35 | Media & Press Interactions | `FR-ME` | ⏳ none |
+| 46 | News, Inbox & Man-Management | `FR-NW` | ⏳ none |
+| 36 | National Teams & International | `FR-NT` | ⏳ none |
+| 54 | Manager Career, Reputation & Job Market | `FR-MC` | ⏳ none |
+| 47 | New-Game Setup & Database Editor | `FR-ED` | ⏳ none |
+| 48 | Match Presentation Depth | `FR-MP` | ⏳ none |
+| 50 | Save Migration & Versioning | `FR-MG` | ⏳ none |
+| 51 | Audio & Sound Design | `FR-AU` | ⏳ none |
+| 39 | Steam Packaging & Release Engineering | `FR-PK` | ⏳ none |
+
+**No design supplement now awaits promotion.** The only candidate spec without one is **#52**
+(Multiplayer Transport), deliberately deferred behind the Stage-5 Fixed64 migration — see
+`management-layer-spec-roadmap.md`.
 
 **Status Key:**
 - ⏳ Not started
@@ -472,9 +502,16 @@ Note: Fixed64 Math Library (#9) has no `src/` tree — implementation deferred t
 
 ### Outstanding (as of July 26, 2026)
 
-**Specification phase:** ✅ COMPLETE across the board — `SPEC_INDEX.md`: **43 APPROVED / 0 IN REVIEW /
-0 NOT STARTED.** Seven further numbers (#35, #36, #46, #47, #48, #50, #51) sit at converged
-design-supplement stage awaiting promotion.
+**Specification phase:** ✅ **Authoring complete across the board** — `SPEC_INDEX.md`: **43 APPROVED /
+10 IN REVIEW / 0 NOT STARTED.** The July 27, 2026 promotion wave (#53, #35, #46, #36, #54, #47, #48,
+#50, #51, #39) emptied the pre-promotion backlog; the only candidate still without a supplement is
+**#52** (Multiplayer Transport), deliberately deferred behind the Stage-5 Fixed64 migration.
+
+**What remains on the specification side is sign-off, not authoring.** Each of the ten has its
+section-file PASS-1 adversarial review closed and its lead-developer R-01..R-05 sign-off open — a human
+authority that an agent cannot grant — with each spec's back-props landing atomically at the flip to
+APPROVED. **This does not block the critical path below**, which is implementation work against
+already-APPROVED specs.
 
 **The critical path is now `path-to-playable-roadmap.md`** — the shortest route to a build a person can
 sit down and play, against the PM-1 (playable match) / **PM-2 (playable season — the objective)** /
@@ -653,6 +690,25 @@ git push --tags
 ---
 
 ## VERSION HISTORY
+
+**v1.36 — July 27, 2026**
+- **Ten design supplements promoted to full 11-file section sets at `IN REVIEW`** — #53 Club
+  Infrastructure, #35 Media & Press, #46 News/Inbox & Man-Management, #36 National Teams, #54 Manager
+  Career & Reputation, #47 New-Game Setup & DB Editor, #48 Match Presentation Depth, #50 Save Migration
+  & Versioning, #51 Audio & Sound Design, #39 Steam Packaging & Release. **The pre-promotion backlog is
+  now empty.** Docs only: no code, no `src/` change, no gate run.
+- CURRENT STATUS: **43 APPROVED / 10 IN REVIEW / 0 NOT STARTED** (was 43 / 0 / 0).
+- Each promotion carries a recorded section-file **PASS-1 adversarial review + fix pass** and an AR-2
+  sweep to convergence, and stops at `IN REVIEW` deliberately — **sign-off is a human authority and is
+  not self-grantable**, per each supplement's own promotion pipeline.
+- **The finding that generalises:** three supplements proposed `ERR-` ids that had already been filed,
+  because nothing cross-checks a *proposed* id against the error log — reassigned at promotion and
+  recorded. A supplement's id is a suggestion, not a reservation.
+- Restated the gap in its new form: **23 of the 53 specs with a folder have no `src/` assembly at all**
+  (the 13 APPROVED ones plus all ten new), so a spec existing still says nothing about a consumer
+  existing.
+- `management-layer-spec-roadmap.md` → v0.7: header status note only; the wave blocks were **left
+  intact** as the record of why each spec sits where it does.
 
 **v1.35 — July 26, 2026**
 - Root-doc reconciliation against the actual repo state; no code, spec, or tracking-doc change.

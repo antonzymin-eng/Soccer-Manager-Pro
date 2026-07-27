@@ -1,7 +1,47 @@
 # CLAUDE.md — Tactical Director
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 26, 2026, later same day (**FOUL & DISCIPLINE BALANCE PASS LANDED — §5.Z.9,
+> **Last Updated:** July 27, 2026 (**TEN DESIGN SUPPLEMENTS PROMOTED TO FULL SECTION FILES — the
+> pre-promotion backlog is empty. Docs only: no code, no `src/` change, no gate run.** Every converged
+> `docs/tracking/*-design.md` supplement that lacked a spec folder now has an 11-file set at
+> `Status: IN REVIEW`: **#53** Club Infrastructure (`FR-IN`), **#35** Media & Press (`FR-ME`), **#46**
+> News/Inbox & Man-Management (`FR-NW`), **#36** National Teams (`FR-NT`), **#54** Manager Career &
+> Reputation (`FR-MC`), **#47** New-Game Setup & DB Editor (`FR-ED`), **#48** Match Presentation Depth
+> (`FR-MP`), **#50** Save Migration & Versioning (`FR-MG`), **#51** Audio & Sound Design (`FR-AU`),
+> **#39** Steam Packaging & Release (`FR-PK`). `SPEC_INDEX.md` gains ten registry rows: **43 APPROVED /
+> 10 IN REVIEW / 0 NOT STARTED**. **Each carries a recorded section-file PASS-1 adversarial review + fix
+> pass and an AR-2 sweep to CONVERGENCE (§9.4.1), and each stops at `IN REVIEW` deliberately** — G1 is
+> closed, G2 (back-props) lands atomically at approval, and **G3, lead-developer R-01..R-05 sign-off, is
+> a human authority and is not self-grantable**, exactly as every supplement's own §12 pipeline states.
+> **The finding that generalises is an id-collision class, not a per-spec defect:** three supplements
+> (#35, #46, #53) proposed `ERR-` ids that had **already been filed** — #30's T2 landing filed rows the
+> same day those supplements were written, and nothing cross-checks a *proposed* id against
+> `spec-error-log.md` — so a supplement's id is a suggestion to re-verify at promotion, not a
+> reservation; reassigned to ERR-030-022/023, ERR-030-024 and ERR-029-003, each recorded as an M finding.
+> The other seven verified their ids free against the log **and** every spec folder, and say so.
+> **A second cross-wave pattern, recorded because ten repetitions is a process signal rather than ten
+> slips:** in all ten, the `[GT]` budget ceilings declared in §6.3 were missing from the Appendix A
+> catalogue — the #45 PASS-1 M-2 defect, reproduced independently each time, an artifact of §6 being
+> authored before the appendices with nothing walking back. **Findings worth carrying forward:** #51's
+> KD-1 resolves a genuine contradiction in **APPROVED** text (#48 forbids `#51 → #48` while FR-MP-027
+> requires #51's catalogue to be keyed on #48's `CueId` — jointly impossible, and it would have surfaced
+> as an assembly cycle after both were approved; ERR-048-001 corrects it, changes no code, and is
+> therefore the back-prop most likely to be deferred at the price of the next implementer building the
+> forbidden reference in good faith); #39's KD-2 inverts the release gate because **this repo's CI is
+> skip-open** — `unity-tests` is gated on a secret and reports success when it is absent, so a green
+> pipeline is compatible with nothing having been built or tested; and #50's KD-2 records that **rosters
+> are regenerated rather than saved**, so a format-only migrator would migrate 25 versions perfectly and
+> still hand the player a different squad. **Three specs file no back-props at all** (#48, #39, and the
+> #37/#44/#46 class), stated as evidence of correct layering rather than left as an empty table.
+> **Two numbers outside the roadmap's original #27–#51 range are promoted here for the first time:**
+> #53, because four APPROVED specs consume a facility model they all attribute to #40 whose scope
+> excludes it; and #54, because #45's `FR-BD-012` MUST names #30 as deciding a sacking and #30 contains
+> no such rule. **Deliberately NOT done:** no sign-off claimed, no back-prop filed, no `src/` touched,
+> no dotnet gate run (nothing compiled changed), and `management-layer-spec-roadmap.md`'s wave blocks
+> left intact — they are the reasoning that produced the order, and rewriting them in the past tense
+> would destroy the record of why each spec sits where it does. See `SPEC_INDEX.md` NOTES and the
+> roadmap v0.7 header note.)
+> **Last Updated (prior):** July 26, 2026, later same day (**FOUL & DISCIPLINE BALANCE PASS LANDED — §5.Z.9,
 > closing the §5.Z.7 item 1 finding that Phase H recorded as the most visible remaining unrealism in a
 > played match.** A match no longer empties itself of players: measured over one match-equivalent of
 > composed play, **480 → 21.0 fouls, 147 → 3.0 yellows and 75 → 1.0 red cards per 90 minutes** against a
@@ -878,9 +918,15 @@
 
 **Current phase:** Stage 0+1 — Implementation, with the specification frontier now running ahead of the code.
 
-**Specifications:** `SPEC_INDEX.md` records **43 APPROVED / 0 IN REVIEW / 0 NOT STARTED**. That is the Stage-0 set of 20 (all APPROVED May 18, 2026) plus 23 Stage-1-forward and management-layer specs (#21–#34, #37, #38, #40–#45, #49). Numbers with a converged design supplement but no spec folder yet (#35, #36, #46, #47, #48, #50, #51) are sequenced in `docs/tracking/management-layer-spec-roadmap.md`; per `SPEC_INDEX.md`'s own rule a registry row lands only at promotion to section files.
+**Specifications:** `SPEC_INDEX.md` records **43 APPROVED / 10 IN REVIEW / 0 NOT STARTED**. The APPROVED set is the Stage-0 twenty (all APPROVED May 18, 2026) plus 23 Stage-1-forward and management-layer specs (#21–#34, #37, #38, #40–#45, #49). The **10 IN REVIEW** are the July 27, 2026 promotion wave — #53, #35, #46, #36, #54, #47, #48, #50, #51, #39 — which emptied the pre-promotion backlog: every converged design supplement now has an 11-file section set. Each has its section-file PASS-1 review closed and is **awaiting lead-developer R-01..R-05 sign-off, which is a human authority and not self-grantable**; back-props land atomically at the flip to APPROVED. The only candidate still without a supplement is **#52** (Multiplayer Transport), deliberately deferred behind the Stage-5 Fixed64 migration. Per `SPEC_INDEX.md`'s own rule a registry row lands only at promotion, so **`IN REVIEW` here means "authored and reviewed, not signed off"** — it does not mean a consumer exists, and neither does APPROVED (see the live gap below).
 
 **Implementation:** `src/` holds **29 production assemblies**. Every Stage-0 spec is implemented except **#9 Fixed64** (deferred to Stage 5+ by design) and **#20 Code Standards** (a style guide, not a coded subsystem). A `MatchEngine` composition root wires the subsystems into the deterministic-sim 7-phase tick pipeline, and **a production match now plays** — the possession bootstrap (§5.Z Phase H, July 26, 2026) closed ERR-030-014, under which every match had been a 90-minute 0–0 deadlock with the ball never in motion.
+
+**The live gap just widened, and the widening is the point.** The ten July-27 promotions add **no code
+and no consumer** — they are section files. Counting them, **23 of the 53 specs with a folder have no
+`src/` assembly at all**: the 13 APPROVED ones below plus all ten new IN-REVIEW ones. The specification
+frontier now runs a long way ahead of the implementation, which is a deliberate posture (specify before
+coding) but makes one habit dangerous: **a spec folder existing says nothing about a consumer existing.**
 
 **The live gap:** **13 APPROVED specs have no assembly at all** — #29 Training, #31 Transfers, #32 Scouting, #33 Personalities/Morale, #34 Staff, #37 Analytics, #40 Finances, #41 Injuries, #42 Youth, #43 Competition Structure, #44 Discipline, #45 Board, #49 Localization. Sequencing for closing it is in `docs/tracking/path-to-playable-roadmap.md`. Treat "the spec is approved" as saying nothing about whether code exists — check `src/` before assuming a consumer is available.
 
@@ -899,7 +945,7 @@ Soccer-Manager-Pro/
 │   ├── planning/                   ← Master volumes I–IV, master development plan, best practices
 │   ├── design/ui-mockups/          ← Non-normative UI visual reference (not on any build path)
 │   ├── specs/
-│   │   ├── SPEC_INDEX.md           ← Canonical spec numbering and status — 43 folders, all APPROVED
+│   │   ├── SPEC_INDEX.md           ← Canonical spec numbering and status — 53 folders (43 APPROVED, 10 IN REVIEW)
 │   │   └── <spec-folder>/          ← One folder per spec; see SPEC_INDEX.md for the number↔folder map
 │   └── tracking/                   ← Progress, error log, file manifest, roadmaps, design supplements
 ├── src/                            ← Implementation (coding began May 19, 2026) — 29 production assemblies
@@ -1119,6 +1165,13 @@ converged, adversarially-reviewed design note that either (a) precedes promotion
 deliberately *not* a numbered spec (`match-engine-design.md` for the composition root is the canonical
 example). A supplement is not a spec: it does not appear in `SPEC_INDEX.md` and confers no approval status.
 Before designing anything, grep `docs/tracking/` — the surface likely already has one.
+
+**As of July 27, 2026 every class-(a) supplement has been promoted**, so a supplement you find in
+`docs/tracking/` is now either class (b) — a permanent governor, like `match-engine-design.md` — or the
+**pre-promotion history of a spec that already exists**. In the second case the spec folder wins: a
+supplement is frozen at its convergence and the section files carry the PASS-1 corrections made after it
+(three supplements' proposed `ERR-` ids, for instance, were already filed and were reassigned at
+promotion). Read the supplement for the *reasoning*; read the spec for the *contract*.
 
 ---
 
