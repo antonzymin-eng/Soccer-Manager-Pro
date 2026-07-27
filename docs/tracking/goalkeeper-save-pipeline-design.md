@@ -201,9 +201,22 @@ alter the *arguments* to existing draws, never how many are taken or in what seq
 | `dives-are-directed` | **0** of every dive ever launched | every dive |
 | `keeper-makes-hand-contact` | **0** over three FULL matches | > 0 |
 
-**11 of 12 predicates fail on the pre-fix engine**, two of them at exactly zero. The one that passes
-pre-fix (`dives-are-launched`) is deliberately retained: it is the predicate that would catch a
-regression re-breaking the *entry* to the pipeline rather than its middle, and it costs nothing.
+**11 of 12 predicates fail on the pre-fix engine**, three of them at exactly zero. This is not
+inferred from the earlier funnel runs — it was *executed*: the three production files were reverted to
+their pre-fix state (keeping only the read-only observation seam, so the instrument could still see
+in), the scenario was re-run, and it reported:
+
+```
+predicates_total=12  predicates_failed=11
+  keeper-is-notified-of-shots      shotsNotified=0
+  dives-are-directed               directedDives=0 of airborneEntries=22
+  keeper-makes-hand-contact        contacts=0 over 4 matches
+  keeper-does-not-live-in-anticipate ×8   anticipateShare=0.796 … 0.976  (ceiling 0.40)
+```
+
+The one that passes pre-fix (`dives-are-launched`, 22 entries) is deliberately retained: it is the
+predicate that would catch a regression re-breaking the *entry* to the pipeline rather than its
+middle, and it costs nothing.
 
 `dives-are-launched` is asserted over the corpus rather than per seed — measurement showed one of the
 four fifteen-minute windows contains no armed threat at either goal, which is legitimate football, not

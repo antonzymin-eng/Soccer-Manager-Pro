@@ -1,7 +1,62 @@
 # src/CLAUDE.md — Tactical Director Coding Guide
 
 > **Created:** May 19, 2026
-> **Last Updated:** July 27, 2026 (v2.42 — **Season & Competition Loop #30 T3 landed — the season-boundary
+> **Last Updated:** July 27, 2026 (v2.44 — **Goalkeeper save pipeline — the §5.Z.15 lever, measured and
+> discharged; three correctness defects fixed, and the goal rate barely moved.** §5.Z.15 recorded the next
+> lever on the engine's goal rate as *"the quality of the goalkeeper's save"*. That framing has a premise
+> inside it — that saves happen and are merely poor. **They did not happen:** measured over three full
+> 90-minute matches with a new instrument, the keepers made **zero** hand contacts with the ball across
+> all six keeper-matches. No instrument in this tree had ever reported a goalkeeper statistic of any kind,
+> which is why nothing noticed. New `src/match-engine/tests/GkSaveDiagnosticTests.cs` (env-gated
+> `TD_GK_DIAGNOSTIC=1`, assertion-free per the ERR-030-014 convention) reports the pipeline as a **funnel**
+> — `armed → SAVE committed → Anticipate → Diving → Airborne → contact → caught` — because a funnel
+> localises WHERE a chain breaks rather than only reporting its end empty; every stage up to and including
+> the dive fired healthily (14–41 commits, 13–31 dives a match) and the chain ended at contact, at exactly
+> zero. It reads through the new `MatchEngine.TestOnly_GoalkeeperState`, which uses the SAME public
+> `CaptureState` the v19 snapshot writer uses. Three defects, each independently sufficient:
+> **ERR-011-003** — the dive had no direction (`ComputeDiveDirectionLateral`'s only non-zero branch is
+> gated on `SaveIntent.DeflectionTarget`, which the sole producer sets `null`; measured mean
+> `|diveDirectionLateral|` = **0.000** across every dive ever launched, closest approach **2.75 m short**
+> over a whole match — the conflation is the cause, since `DeflectionTarget` is where the keeper wants to
+> PUT the ball, not where it should DIVE; now the linear XY interception of where the ball will cross the
+> keeper's plane, bounded by a new `[GT] DivePredictionHorizonS`). **ERR-011-004** — a catch was
+> **arithmetically impossible**: `OnShotExecutedEvent` had zero callers in production *or tests*, so
+> `reactionWindowAchieved` was permanently 0 and §3.5.1's `quality = 0.70·rawHandling + 0.30·reaction`
+> capped quality at a **measured 0.630** for a PERFECT keeper against `CatchThreshold` 0.78; new
+> `MatchEngine.NotifyKeeperOfShot` fires on the shot's CONTACT frame (§3.2.1 dates perception from the
+> strike), and the method now takes the attributes because it is frequently the first call of an episode,
+> earlier than `CommitSaveIntent` — the only other writer of that snapshot (KD-P4). **ERR-011-002** — the
+> keeper woke for the wrong end of the pitch and never stood down: the orchestrator computed the third the
+> keeper's own team ATTACKS and passed it to a parameter documented as the OPPOSING team's, and
+> `Anticipate` had no exit but a dive, so keepers held it **76–92% of every match**; fixed per §5.Z.12
+> (*"a pair has two places that must agree; a mirror has one"*) as one signed distance to the keeper's own
+> goal with both predicates renamed from the KEEPER's perspective, plus an `Anticipate → Set` exit.
+> **Measured effect:** dive direction 0.000 → **1.000**, best miss 2.75 m → **−0.71 m**, contacts
+> **0 → 12**, Anticipate share 76–92% → **12–19%** — and **goals per match 15.3 → 14.0**, against
+> football's ~2.7. **That last number is the result:** three genuine defects, each of which had to be
+> fixed before a save was possible at all, are worth about one goal a match. §5.Z.15's lever was real and
+> is now spent; it was not where the mass is — the same shape as §5.Z.9 and §5.Z.11, where the measurement
+> refuted its own brief. New acceptance scenario `match-engine-goalkeeper-saves` (#19 ScenarioRunner,
+> Tier B, 4 seeds × 15 min, 56 s) asserts **reachability** stage by stage and deliberately pins **no** save
+> percentage and **no** goal rate; **11 of its 12 predicates fail on the pre-fix engine** — verified by
+> executing it against reverted production files, not inferred — three of them at exactly zero.
+> **No `SNAPSHOT_SCHEMA_VERSION` change, no new RNG stream / domain tag / draw site, and no change to the
+> draw order** (the fixes alter the arguments to existing draws, never their number or sequence).
+> **Full dotnet gate: PASSED, 0 failures (match-engine 358 → 359 passed; SDK 8.0.129 via apt).**
+> Test fallout worth recording: `sim_goalkeeper_save_launch_executes_dive` had ENCODED the inverted
+> predicate (ball parked at x = 75 precisely because that woke a team-0 keeper pre-fix), re-anchored to
+> x = 30 with its intent preserved — the Phase-H *"tests encoded the old contract"* class.
+> **Recorded, NOT fixed — and now the honest next lever, each verified against source:** a shot
+> essentially **cannot miss** (aim hardcoded to 0.732 m inside the post; `ShotExecutor` never reads
+> `finalDirection.z`, so the whole vertical half of the placement and error model is inert); there is
+> **no crossbar** (`BallCollision.CheckBoundaries` gates EVERY boundary test, goals included, behind
+> `z < Ball.Diameter` = 0.22 m, so a ball crossing the line airborne is neither a goal nor out of play);
+> and there are **no blocked shots** (`BallCollisionHandler.OnAgentCollision` is called in production and
+> its body is an empty `TODO`; posts are non-physical). In football ~30% of shots are blocked and ~30%
+> miss the target — here both are approximately zero, a larger multiplier on the goal rate than anything
+> a keeper does. **A4a stays blocked, but the reason is now specific: the shot-outcome distribution.**
+> See `docs/tracking/goalkeeper-save-pipeline-design.md` + `match-engine-design.md` §5.Z.17.)
+> **Last Updated (prior):** July 27, 2026 (v2.42 — **Season & Competition Loop #30 T3 landed — the season-boundary
 > roll (roadmap A5); Phase A is complete and PM-2-sim is reached.** New `src/season-save/SeasonRollOutcome.cs`
 > (the boundary-roll producer record) + `SeasonLoop.cs` v1.1's `RollToNextSeason()`: the KD-6 restartable
 > transform — finalize the table → evaluate the board → (a') #43 / (b') #40 insertion points, declared and
@@ -2162,6 +2217,7 @@ Update this file when those items are resolved.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.44 | 2026-07-27 | —      | **Goalkeeper save pipeline — the §5.Z.15 lever, measured.** §5.Z.15 named the save's QUALITY as the next lever on the goal rate; measured, saves did not happen at all — **zero** hand contacts over three full matches, all six keeper-matches. New env-gated `GkSaveDiagnosticTests` reports the pipeline as a funnel (the first instrument in this tree to report any goalkeeper statistic) and localised the collapse at `contact`. Three defects, each independently sufficient: **ERR-011-003** the dive had no lateral direction (mean 0.000 across every dive ever launched; `DeflectionTarget` conflated "where to put the ball" with "where to dive" — now the ball's predicted crossing point, new `[GT] DivePredictionHorizonS`); **ERR-011-004** `OnShotExecutedEvent` had zero callers anywhere, pinning `reactionWindowAchieved` at 0 and capping quality at a measured **0.630** vs `CatchThreshold` 0.78, so a catch was **arithmetically impossible** (new `MatchEngine.NotifyKeeperOfShot` on the CONTACT frame; the method takes attributes per KD-P4); **ERR-011-002** the keeper woke for the wrong end of the pitch and `Anticipate` had no exit, so keepers held it 76–92% of every match (one signed distance to the keeper's own goal per §5.Z.12, both predicates renamed from the keeper's perspective, plus `Anticipate → Set`). Measured: dive direction 0.000 → 1.000, best miss 2.75 m → −0.71 m, contacts 0 → 12, Anticipate 76–92% → 12–19%, **goals/match 15.3 → 14.0** vs football's ~2.7 — the lever was real, is spent, and was worth ~1 goal. New `match-engine-goalkeeper-saves` acceptance scenario (Tier B, 4 seeds × 15 min, 56 s) asserts reachability, not a rate; **11 of 12 predicates fail pre-fix, verified by execution against reverted files**. No schema/RNG/draw-order change. Gate PASSED, match-engine 358 → 359. **Recorded NOT fixed, now the honest next lever:** shots essentially cannot miss (aim 0.732 m inside the post; `finalDirection.z` never read), **no crossbar** (every boundary test gated on z < 0.22 m), **no blocked shots** (`BallCollisionHandler.OnAgentCollision` is an empty TODO production calls). |
 | 2.43 | 2026-07-27 | —      | **Adversarial review over the A5 landing: 1H+3M+2L, all fixed.** **H:** `AdvanceDays` bounded the world clock only while a season was in progress; once complete it was unbounded, so walking the close season past the day the next season opens reached a career that could be neither played (season complete) nor rolled (derived calendar now in the past) — the clock only moves forward and the stuck state saved and reloaded cleanly. Reproduced end to end, then fixed by generalising the existing KD-4 guard through the same `ShiftCalendarToNextSeason` the roll uses (one derivation, two readers). **M-1:** the step (b) job-security arithmetic re-derived the pass/fail rule instead of calling `BoardObjective.IsMetBy`, putting a second copy of board policy on the composition root — moved to `BoardState.EvaluateAtSeasonEnd` (v1.2), so verdict, `IsOnTrack` and penalty share one predicate before #45 extends the objective model. **M-2:** `SecondSeason_DiffersFromTheFirst` asserted a disjunction whose table half is always true, making the schedule half — its whole point — unreachable; a perturbation that reused the OLD seed for `FixtureScheduler` (every season replaying the identical fixtures) left the suite green. **M-3:** a season saved AFTER the roll had no coverage, though the roll installs a schedule and calendar the codec has never seen and that failure mode already occurred once at T1. **L:** `EnginePlayedFixtures` / `MatchOutcomes` span the boundary and the former's doc still claimed per-season semantics. Three new locks, each proven non-vacuous by perturbing its own fix; season-save 258 → 261, full gate re-run green. **The second L was then fixed too:** `ShiftCalendarToNextSeason` moved to `SeasonCalendar.ShiftedToNextSeason` (v1.2) — pure calendar arithmetic on the type that owns calendars, which also drops two array copies and a redundant ascending re-validation (adding one constant to a strictly-ascending sequence provably preserves the ordering, so the private constructor is reached directly). What stays on the loop is `NextSeasonCalendar()`: the choice of the `[GT]` close season, bound once and read by both `AdvanceDays` and `RollToNextSeason`. Plus a positive-`breakDays` gate (at zero a single-round calendar reproduces itself) and an overflow gate. Season-save 261 → 263, gate green. |
 | 2.42 | 2026-07-27 | —      | **#30 T3 — the season-boundary roll (roadmap A5); Phase A complete, PM-2-sim reached.** New `SeasonRollOutcome.cs` + `SeasonLoop.cs` v1.1 `RollToNextSeason()`: the KD-6 restartable transform (finalize → board evaluate → (a')/(b') empty insertion points → derive seed → regenerate schedule → rebuild calendar → (d) empty → reset table), pure in the prior `SeasonState` so a boundary save restores to the same continuation and two careers agree on both seasons' tables. Compute-and-validate before any write; the throwing commit precedes the non-throwing one, so a refused roll changes nothing. `SeasonLoopConstants.cs` v1.3 (`SEASON_ROLL_SEED_DOMAIN`; `SeasonBreakDays` + two board deltas, the missed one charged per place short; `PositiveDayValue` read guard). `RoundResolutionModel.Mix` private → internal. New `tests/SeasonRollTests.cs` (18). Gate PASSED, 0 failures (season-save 240 → 258). **ERR-030-015** filed + resolved: §3.5 never rebuilt the `Calendar`, so a rolled season was permanently unplayable — invisible to any field-level assertion, caught only by playing a second season to completion (9 of 18 predicates fail pre-fix). `section-3.md` → v1.0. No `SEASON_STATE_FORMAT_VERSION` change. |
 | 2.41 | 2026-07-26 | —      | **Foul & discipline balance pass (§5.Z.9) — §5.Z.7 item 1 closed.** 480 → 21.0 fouls, 147 → 3.0 yellows, 75 → 1.0 reds per 90 minutes (football ~22 / ~3.5 / ~0.25); no team below eleven, where the pre-fix engine reduced teams to five to seven inside nine minutes. The measurement refuted the finding's own `[GT]`-threshold diagnosis: the qualifying-force distribution is bounded at ~2362 N, so the gate gives 480 fouls at 1200 N, 90 at 2000 N and **0 at 3000 N** — a cliff, not a dial. The missing term was the referee's judgement, because the model called every hard cross-team from-behind contact a foul while the engine produces seventeen per second. `MatchEngine.cs` v1.48: force-scaled `ComputeFoulCallProbability` + single-draw partition (`u ≥ p` waves on with no cooldown; `v = u / p` picks the card) ⇒ no new RNG stream, **no `SNAPSHOT_SCHEMA_VERSION` change**; strongest-wins candidate capture (KD-F4). `MatchEngineConstants.cs` v1.26: `[GT] FoulCallProbability` 0.015 (new), Yellow 0.35 → 0.16, Red 0.05 → 0.011, cooldown 60 → 180. Calibration needed a live run — the offline sweep's 0.025 measured 37.5, since fewer fouls mean fewer restarts and a *higher* contact rate. New `match-engine-discipline-plausible` acceptance scenario (9 of 10 predicates fail pre-fix), +8 unit locks, the env-gated `FoulRateDiagnosticTests` instrument, and `TestOnly_SetCollisionObserver`. Governed by `foul-discipline-balance-design.md` (AR-1/AR-2 design, AR-3 0H+3M code). Full gate PASSED, 0 failures (match-engine 333 → 342). Recorded not fixed: the contact rate itself. |

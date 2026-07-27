@@ -204,9 +204,22 @@ byte-identically, and rolls into a second season. **No UI yet, no Unity, no exte
 > **What that does and does not claim.** PM-2-sim is a statement about the *loop*, not about the quality of
 > what the loop simulates. Two things sit on top of it, both tracked and neither blocking it: the
 > round-resolution quick-sim's three parameters are still **provisional, not fitted** (A4a, whose corpus
-> cannot be trusted while the engine's goal rate runs ~4.7× football's — see `match-engine-design.md`
-> §5.Z.15), and the managed fixture, though it now genuinely plays (A4b), is not yet worth watching for
-> the same reason. A season is *playable and correct*; making it *convincing* is the next question.
+> cannot be trusted while the engine's goal rate runs several times football's — see
+> `match-engine-design.md` §5.Z.15 and **§5.Z.17**), and the managed fixture, though it now genuinely
+> plays (A4b), is not yet worth watching for the same reason. A season is *playable and correct*; making
+> it *convincing* is the next question.
+>
+> **§5.Z.17 (July 27, 2026) narrowed that question sharply, and it is worth reading before picking up
+> A4a.** §5.Z.15 named the goalkeeper's save as the next lever on the goal rate. Measured, the keepers
+> were making **no saves at all** — zero hand contacts over three full matches — for three independent
+> reasons, all now fixed. The goal rate moved **15.3 → 14.0** per match against football's ~2.7. So the
+> named lever was real, is now spent, and was worth about one goal. **The residual is the shot side, and
+> it is structural:** shots essentially cannot miss the goal (aim is hardcoded 0.732 m inside the post
+> and the vertical component of the aim is never read), there is **no crossbar** (every boundary test is
+> gated on the ball being below 0.22 m), and there are **no blocked shots**
+> (`BallCollisionHandler.OnAgentCollision` is an empty `TODO` that production calls). In football ~30% of
+> shots are blocked and ~30% miss; here both are approximately zero. **A4a's blocker is now specific: the
+> shot-outcome distribution, not the goalkeeper.**
 
 ### Phase B — Playable match client (Track C)
 
