@@ -62,8 +62,11 @@ namespace TacticalDirector.MatchAnalytics
         /// from the lossless every-tick ledger pump (§3.5).</summary>
         public const int TERRITORIAL_SAMPLE_STRIDE = 1;
 
-        /// <summary>[FIXED] Team count — two. Mirrors the engine's own squad model.</summary>
-        public const int TEAM_COUNT = 2;
+        /// <summary>[CROSS] Team count — two. Authoritative source:
+        /// <c>MatchEngineConstants.TEAM_COUNT</c>. Mirrored, not re-declared: this indexes the same
+        /// per-team arrays the engine fills, so a local copy is the parallel-surface trap — the two
+        /// would agree silently right up until the day they did not.</summary>
+        public const int TEAM_COUNT = MatchEngineConstants.TEAM_COUNT;
 
         // ── Record encodings the §3.2 routing table branches on ──────────────────────────────────
         // Mirrored rather than re-declared: the producer's own catalogue is the authority, so a
@@ -98,4 +101,9 @@ namespace TacticalDirector.MatchAnalytics
 // |         |            |        | 2. It indexes the same per-team arrays the engine fills, so a  |
 // |         |            |        | local copy is the parallel-surface trap: the two would agree   |
 // |         |            |        | silently until the day they did not.                           |
+// | 1.2     | 2026-07-27 | —      | + the B3 card / restart record-encoding [CROSS] mirrors, and   |
+// |         |            |        | the v1.1 TEAM_COUNT mirror RESTORED — a merge from main took   |
+// |         |            |        | the pre-AR literal back while leaving the v1.1 row claiming    |
+// |         |            |        | the mirror, which is the one shape nothing would have caught:  |
+// |         |            |        | both values are 2, so no test could fail on the difference.    |
 #endregion

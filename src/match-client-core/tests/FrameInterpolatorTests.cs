@@ -33,14 +33,9 @@ namespace TacticalDirector.MatchClientCore.Tests
             }
 
             return new LiveMatchFrame(
-                tick, ball, MatchEngineConstants.NO_POSSESSION, positions,
-                homeScore: 0, awayScore: 0, matchEnded: false,
-                agentCues: cues,
-                substitutionsUsed: new int[2],
-                period: MatchPeriod.FirstHalf,
-                lastRestart: RestartCue.None,
-                lastRestartTeam: MatchEngineConstants.NO_RESTART_TEAM,
-                lastRestartTick: 0UL);
+                tick, ball, MatchEngineConstants.NO_POSSESSION,
+                positions, cues, new int[2],
+                new Scoreline(0, 0), false, MatchPeriod.FirstHalf, RestartBanner.None);
         }
 
         private static LiveMatchFrame FlatFrame(ulong tick, Vector3 ball, Vector2 everyAgent) =>
@@ -178,9 +173,8 @@ namespace TacticalDirector.MatchClientCore.Tests
             var b = new LiveMatchFrame(
                 101UL, Vector3.zero, MatchEngineConstants.NO_POSSESSION,
                 new[] { new Vector2(11f, 11f), new Vector2(12f, 12f) },
-                0, 0, false,
-                new LiveAgentCue[2], new int[2], MatchPeriod.FirstHalf,
-                RestartCue.None, MatchEngineConstants.NO_RESTART_TEAM, 0UL);
+                new LiveAgentCue[2], new int[2],
+                new Scoreline(0, 0), false, MatchPeriod.FirstHalf, RestartBanner.None);
             var dst = new Vector2[Roster];
 
             FrameInterpolator.AgentsAt(a, b, 0.5f, dst);
@@ -228,4 +222,8 @@ namespace TacticalDirector.MatchClientCore.Tests
 // | 1.0     | 2026-07-27 | —      | Initial creation (P3): alpha derivation incl. playback-speed   |
 // |         |            |        | scaling and every degenerate input, linear ball/agent blending,|
 // |         |            |        | and the restart / substitution / roster-change snap paths.     |
+// | 1.1     | 2026-07-27 | —      | Builds frames through the 10-parameter LiveMatchFrame ctor     |
+// |         |            |        | (Scoreline + RestartBanner). P4 was authored in parallel       |
+// |         |            |        | against the 13-parameter loose-field shape the P1 AR-1 M-6     |
+// |         |            |        | restructure replaced — the same semantic merge conflict.       |
 #endregion
