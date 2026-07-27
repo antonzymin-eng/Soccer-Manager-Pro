@@ -1,6 +1,6 @@
 // File:     src/ui-framework/MatchFrameView.cs
 // Created:  2026-07-25
-// Modified: 2026-07-25
+// Modified: 2026-07-27 (P1 richer observation frame: agent cues, substitution counts, period, restart)
 // Author:   —
 // Spec:     UI / Client Framework #38 §2.2 (FR-UI-002/007/008, failure modes F1/F4),
 //           docs/tracking/ui-framework-t0-implementation-plan.md KD-U4, Code Standards #20
@@ -65,7 +65,21 @@ namespace TacticalDirector.UiFramework
         /// <summary>True once full time has fired.</summary>
         public readonly bool MatchEnded;
 
+        /// <summary>Which period the clock is in (P1 KD-P1-2).</summary>
+        public readonly MatchPeriod Period;
+
+        /// <summary>The most recent restart observed by the frame producer, or <see cref="RestartCue.None"/>.</summary>
+        public readonly RestartCue LastRestart;
+
+        /// <summary>Team (0/1) awarded <see cref="LastRestart"/>, or −1 when there is none.</summary>
+        public readonly int LastRestartTeam;
+
+        /// <summary>The tick <see cref="LastRestart"/> was applied on; 0 when none has been observed.</summary>
+        public readonly ulong LastRestartTick;
+
         private readonly ReadOnlyCollection<Vector2> _agentPositions;
+        private readonly ReadOnlyCollection<LiveAgentCue> _agentCues;
+        private readonly ReadOnlyCollection<int> _substitutionsUsed;
 
         /// <summary>
         /// Agent positions (x, y) in metres, indexed by roster index. Read-only over this view's own
@@ -74,8 +88,25 @@ namespace TacticalDirector.UiFramework
         public IReadOnlyList<Vector2> AgentPositions =>
             _agentPositions ?? EmptyPositions;
 
+        /// <summary>
+        /// Per-agent booking / sent-off / substitute cues, in lockstep with <see cref="AgentPositions"/>.
+        /// Copied and read-only for the same reason positions are (KD-U4). Empty on an empty view.
+        /// </summary>
+        public IReadOnlyList<LiveAgentCue> AgentCues =>
+            _agentCues ?? EmptyCues;
+
+        /// <summary>Substitutions used, indexed by team id. Empty on an empty view.</summary>
+        public IReadOnlyList<int> SubstitutionsUsed =>
+            _substitutionsUsed ?? EmptySubs;
+
         private static readonly ReadOnlyCollection<Vector2> EmptyPositions =
             new ReadOnlyCollection<Vector2>(new Vector2[0]);
+
+        private static readonly ReadOnlyCollection<LiveAgentCue> EmptyCues =
+            new ReadOnlyCollection<LiveAgentCue>(new LiveAgentCue[0]);
+
+        private static readonly ReadOnlyCollection<int> EmptySubs =
+            new ReadOnlyCollection<int>(new int[0]);
 
         /// <summary>An explicitly empty view — what the match screen renders before the first frame (F5).</summary>
         public static MatchFrameView Empty => default;
@@ -112,6 +143,33 @@ namespace TacticalDirector.UiFramework
             RequireFinite(frame.BallPosition.y, "BallPosition.y");
             RequireFinite(frame.BallPosition.z, "BallPosition.z");
 
+            // P1: the cue array is gated exactly as strictly as the positions it annotates. A frame
+            // whose cues and positions are different lengths cannot be drawn coherently, and finding
+            // that out in the render loop is the F1 failure this constructor exists to prevent.
+            LiveAgentCue[] cueSource = frame.AgentCues;
+            if (cueSource == null)
+            {
+                throw new ArgumentException("LiveMatchFrame.AgentCues is null.", nameof(frame));
+            }
+            if (cueSource.Length != source.Length)
+            {
+                throw new ArgumentException(
+                    "LiveMatchFrame carries " + Inv(cueSource.Length) + " agent cues but " +
+                    Inv(source.Length) + " agent positions.", nameof(frame));
+            }
+
+            int[] subsSource = frame.SubstitutionsUsed;
+            if (subsSource == null)
+            {
+                throw new ArgumentException("LiveMatchFrame.SubstitutionsUsed is null.", nameof(frame));
+            }
+            if (subsSource.Length != MatchEngineConstants.TEAM_COUNT)
+            {
+                throw new ArgumentException(
+                    "LiveMatchFrame carries " + Inv(subsSource.Length) + " substitution counts; expected " +
+                    Inv(MatchEngineConstants.TEAM_COUNT) + " (TEAM_COUNT).", nameof(frame));
+            }
+
             var copy = new Vector2[source.Length];
             for (int i = 0; i < source.Length; i++)
             {
@@ -120,14 +178,32 @@ namespace TacticalDirector.UiFramework
                 copy[i] = source[i];
             }
 
-            _hasFrame         = true;
-            Tick              = frame.Tick;
-            BallPosition      = frame.BallPosition;
-            PossessingAgentId = frame.PossessingAgentId;
-            HomeScore         = frame.HomeScore;
-            AwayScore         = frame.AwayScore;
-            MatchEnded        = frame.MatchEnded;
-            _agentPositions   = new ReadOnlyCollection<Vector2>(copy);
+            var cueCopy = new LiveAgentCue[cueSource.Length];
+            for (int i = 0; i < cueSource.Length; i++)
+            {
+                cueCopy[i] = cueSource[i];
+            }
+
+            var subsCopy = new int[subsSource.Length];
+            for (int i = 0; i < subsSource.Length; i++)
+            {
+                subsCopy[i] = subsSource[i];
+            }
+
+            _hasFrame          = true;
+            Tick               = frame.Tick;
+            BallPosition       = frame.BallPosition;
+            PossessingAgentId  = frame.PossessingAgentId;
+            HomeScore          = frame.HomeScore;
+            AwayScore          = frame.AwayScore;
+            MatchEnded         = frame.MatchEnded;
+            Period             = frame.Period;
+            LastRestart        = frame.LastRestart;
+            LastRestartTeam    = frame.LastRestartTeam;
+            LastRestartTick    = frame.LastRestartTick;
+            _agentPositions    = new ReadOnlyCollection<Vector2>(copy);
+            _agentCues         = new ReadOnlyCollection<LiveAgentCue>(cueCopy);
+            _substitutionsUsed = new ReadOnlyCollection<int>(subsCopy);
         }
 
         // Non-finite covers NaN AND ±Infinity: a NaN-only gate passes an infinity straight through to a
@@ -151,4 +227,9 @@ namespace TacticalDirector.UiFramework
 // | 1.0     | 2026-07-25 | —      | Initial creation (#38 T0): immutable match VM — array copied   |
 // |         |            |        | (never wrapped), SQUAD_SIZE / possession-id / score / finite   |
 // |         |            |        | gates, and an explicit Empty for the pre-first-frame case.     |
+// | 1.1     | 2026-07-27 | —      | P1 richer observation frame: + AgentCues / SubstitutionsUsed   |
+// |         |            |        | (both copied, never wrapped — same KD-U4 reasoning), Period    |
+// |         |            |        | and the latched last restart. Both new arrays are gated like   |
+// |         |            |        | positions: non-null, and lengths coherent with the positions   |
+// |         |            |        | array / TEAM_COUNT respectively.                               |
 #endregion

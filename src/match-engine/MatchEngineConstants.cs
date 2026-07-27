@@ -5,7 +5,8 @@
 // Modified: 2026-07-11 (engine substrate — match-length/halves model + SNAPSHOT_SCHEMA_VERSION 13 → 14)
 // Modified: 2026-07-14 (match-flow completion — restart/foul-card/offside/substitution/half-full-time constants; SNAPSHOT_SCHEMA_VERSION 14 → 15)
 // Modified: 2026-07-17 (#27 T1 AR-4, doc-only — STAGE0_NEUTRAL_* stale ERR-007 TODOs retired: production-unconsumed since T1, retained as the KD-P7 neutral-equivalence references)
-// Modified: 2026-07-18 (#27 T3 — NO_ROSTER_CLUB_ID sentinel + SNAPSHOT_SCHEMA_VERSION 15 → 16, v16 per-team roster reference)
+// Modified: 2026-07-27 (P1 richer observation frame: NO_RESTART_TEAM sentinel)
+// Modified (prior): 2026-07-18 (#27 T3 — NO_ROSTER_CLUB_ID sentinel + SNAPSHOT_SCHEMA_VERSION 15 → 16, v16 per-team roster reference)
 // Modified: 2026-07-22 (GK #11 / Heading #10 engine integration Phase 1 — +6 [GT] Stage-0 save/header trigger constants; no schema change)
 // Modified: 2026-07-26 (§5.Z Phase H — [FIXED] FIRST_HALF_KICKOFF_TEAM + [DERIVED] SECOND_HALF_KICKOFF_TEAM + [GT] LooseBallPickupRadiusM; no schema change)
 // Modified: 2026-07-26 (§5.Z.12: HomeLineXM/AwayLineXM collapsed to OutfieldKickoffLineXM; HOME_FACING_DEG/AWAY_FACING_DEG deleted — facing now mirrors)
@@ -65,6 +66,12 @@ namespace TacticalDirector.MatchEngine
         /// sentinel does not collide in practice. #27 T3 (squad-roster-reference-design.md, KD-T3-1);
         /// mirrors the −1 sentinel convention (<see cref="NO_POSSESSION"/>).</summary>
         public const int NO_ROSTER_CLUB_ID = -1;
+
+        /// <summary>[FIXED] Awarded-team sentinel for "no restart was applied this tick", reported by
+        /// <c>MatchEngine.RestartAwardedTeam</c> whenever <c>RestartAppliedThisTick</c> is
+        /// <c>RestartCue.None</c>. Presentation-only observation state (interactive Unity client
+        /// §5-P1 KD-P1-3); mirrors the −1 sentinel convention (<see cref="NO_POSSESSION"/>).</summary>
+        public const int NO_RESTART_TEAM = -1;
 
         /// <summary>[FIXED] Reason ordinal written into the Phase E PossessionChangedEvent (#17 ordinal
         /// 0x04) payload. Stage 0 has no possession-change reason taxonomy (a kick release, a first-touch
@@ -742,4 +749,9 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        |   LooseBallPickupRadiusM (the KD-H3 pickup reach, deliberately   |
 // |         |            |        |   separate from FIRST_TOUCH_ACCEPTANCE_RADIUS_M). No             |
 // |         |            |        |   SNAPSHOT_SCHEMA_VERSION change.                               |
+// | 1.27    | 2026-07-27 | —      | P1 richer observation frame: [FIXED] NO_RESTART_TEAM (−1)       |
+// |         |            |        | sentinel for MatchEngine.RestartAwardedTeam when no restart     |
+// |         |            |        | was applied this tick. Mirrors the NO_POSSESSION /              |
+// |         |            |        | NO_ROSTER_CLUB_ID sentinel convention. No                       |
+// |         |            |        | SNAPSHOT_SCHEMA_VERSION change.                                 |
 #endregion
