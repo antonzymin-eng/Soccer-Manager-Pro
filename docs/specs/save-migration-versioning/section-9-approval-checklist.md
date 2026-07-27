@@ -49,7 +49,7 @@
 | Gate | Status |
 |---|---|
 | **G1** — section-file PASS-1 adversarial review + fix pass | **CLOSED** — see §9.4.1 |
-| **G2** — back-props filed at approval (`ERR-030-019`, `ERR-027-003`) | **CLOSED** — filed and RESOLVED July 27, 2026, atomically with the flip (`spec-error-log.md` v1.46) |
+| **G2** — back-props filed at approval (`ERR-030-019`, `ERR-027-003`) | **CLOSED** — filed and RESOLVED July 27, 2026, atomically with the flip (`spec-error-log.md` v1.47) |
 | **G3** — lead-developer R-01..R-05 sign-off | **CLOSED** — R-01..R-05 granted by the lead developer, July 27, 2026 |
 | **G4** — `[GT]` balance pass | **N/A in the usual sense** — #50 has no behavioural magnitude to balance. The **supported floor** is a product decision (R-5), not a balance one, and is chosen knowing it is measured in retained generator code |
 
@@ -122,7 +122,7 @@ Every claim below is checkable against a named file; none is a summary of anothe
 
 ## 9.6 Decision
 
-**APPROVED — July 27, 2026.** Lead-developer **R-01..R-05 sign-off granted**, and the back-props filed and RESOLVED **atomically with the flip** per this spec's own promotion pipeline step 6: **ERR-030-019**, **ERR-027-003** (`spec-error-log.md` v1.46). All 11 section files carry `Status: APPROVED`; the `SPEC_INDEX.md` row records the date.
+**APPROVED — July 27, 2026.** Lead-developer **R-01..R-05 sign-off granted**, and the back-props filed and RESOLVED **atomically with the flip** per this spec's own promotion pipeline step 6: **ERR-030-019**, **ERR-027-003** (`spec-error-log.md` v1.47). All 11 section files carry `Status: APPROVED`; the `SPEC_INDEX.md` row records the date.
 
 **What approval does and does not mean here.** It approves the **forward design** — the #21–#30 pre-T0 precedent — not an implementation: #50 has **no `src/` assembly**, and its §7 T-phase plan is the sequence for building one. Items listed as *not gating* above remain open by design and are named at their tiers.
 
@@ -147,5 +147,5 @@ the original plan.
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial checklist. Status IN REVIEW. |
 | 0.2 | 2026-07-27 | — | PASS-1 recorded: **0H + 4M + 6L**, all fixed in the v0.2 files; AR-2 sweep **0H + 0M + 2L → CONVERGENCE**. The four M were the per-blob classification fold (a save carries many versions and nothing said how they combine), step isolation (stated as intent, enforced nowhere), the build-time completeness check (a risk sentence with no requirement behind it), and the T-phase ordering that would have added the generation stamp too late to classify any existing career. §9.6 puts KD-2's cost first as the reviewer question the rest of the spec depends on. |
-| 0.3 | 2026-07-27 | — | **`IN REVIEW → APPROVED`.** Lead-developer R-01..R-05 sign-off granted. Back-props **ERR-030-019**, **ERR-027-003** filed and RESOLVED atomically with the flip (`spec-error-log.md` v1.46). Gates G2–G5 closed; §9.6 decision updated. All 11 section files flip to `Status: APPROVED`. |
+| 0.3 | 2026-07-27 | — | **`IN REVIEW → APPROVED`.** Lead-developer R-01..R-05 sign-off granted. Back-props **ERR-030-019**, **ERR-027-003** filed and RESOLVED atomically with the flip (`spec-error-log.md` v1.47). Gates G2–G5 closed; §9.6 decision updated. All 11 section files flip to `Status: APPROVED`. |
 #endregion

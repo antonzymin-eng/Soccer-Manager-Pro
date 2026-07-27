@@ -4,7 +4,7 @@
 > **Last Updated:** July 27, 2026, later same day (**ALL TEN ADVANCED `IN REVIEW → APPROVED`.**
 > Lead-developer **R-01..R-05 sign-off granted** on #53, #35, #46, #36, #54, #47, #48, #50, #51 and #39,
 > and the **23 back-props filed and RESOLVED atomically with the flips** per each spec's own pipeline step
-> 6 (`spec-error-log.md` v1.46). **Count: 53 APPROVED / 0 IN REVIEW / 0 NOT STARTED — every spec in the
+> 6 (`spec-error-log.md` v1.47). **Count: 53 APPROVED / 0 IN REVIEW / 0 NOT STARTED — every spec in the
 > registry is now approved.** **The flip surfaced the wave's most consequential finding, which only
 > landing the back-props together could expose:** #30's pinned day-advance tick order **was not
 > implementable as written** — `ERR-030-007` had been filed **twice** (#42's academy step and #32's
@@ -495,7 +495,7 @@ consistent with #23 having been free to reserve and now promote.
 
 - **July 27, 2026 (later same day) — all ten advanced `IN REVIEW → APPROVED`.** Lead-developer
   R-01..R-05 sign-off granted, and the **23 back-props filed and RESOLVED atomically with the flips**
-  (`spec-error-log.md` v1.46) per each spec's own pipeline step 6. **Every spec in this registry is now
+  (`spec-error-log.md` v1.47) per each spec's own pipeline step 6. **Every spec in this registry is now
   APPROVED: 53 / 0 / 0.**
 
   **Landing the back-props together is what exposed the wave's most consequential defect**, and it would
@@ -506,6 +506,14 @@ consistent with #23 having been free to reserve and now promote.
   **ERR-030-022** in a new §3.3.1. `ERR-030-009` turns out to be a duplicate as well (#45's `JobSecurity`
   band; #44's availability filter). Both duplications are **preserved verbatim as frozen records** and
   documented as errata rather than rewritten.
+
+  **One id has since been reassigned, and the reason is the finding itself.** #46's projector seam was
+  filed as `ERR-030-015`, verified free against the log at authoring time. While the branch was open,
+  **#30's own T3 landing claimed `-015` on main** for the §3.5 calendar-rebuild fix — a High-severity
+  entry with code behind it. Main's claim has precedence, so the seam is now **`ERR-030-025`**. This is
+  the **fourth** instance of the collision class in one day and the first between a branch and main, and
+  it sharpens the rule: verifying an id free **at authoring is not sufficient**, because the log moves
+  underneath an open branch. **The check must be re-run at merge.**
 
   **A conflict between two of this wave's own back-props also had to be resolved at filing time.**
   `ERR-030-020` (#53) requires its step to precede every same-day consumer of a facility-derived input and

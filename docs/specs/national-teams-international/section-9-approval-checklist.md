@@ -95,7 +95,7 @@
 | Gate | Owner | Status |
 |---|---|---|
 | **G1** — section-file PASS-1 adversarial review + a fix pass, to convergence. | drafter | ✅ **CLOSED** — see §9.4.1 |
-| **G2** — file **ERR-030-016** atomically with the status flip. | drafter | ✅ **CLOSED** — filed and RESOLVED July 27, 2026, atomically with the flip (`spec-error-log.md` v1.46) |
+| **G2** — file **ERR-030-016** atomically with the status flip. | drafter | ✅ **CLOSED** — filed and RESOLVED July 27, 2026, atomically with the flip (`spec-error-log.md` v1.47) |
 | **G3** — lead-developer R-01..R-05 sign-off. | lead developer | ✅ **CLOSED** — R-01..R-05 granted by the lead developer, July 27, 2026 |
 | **G4** — `SPEC_INDEX.md` registry row + Registry-Changes entry, added at promotion. | drafter | ✅ **CLOSED** — row + Registry-Changes entry landed July 27, 2026 |
 
@@ -150,7 +150,7 @@ deliberately does not assert against.
 
 ## 9.6 Decision
 
-**APPROVED — July 27, 2026.** Lead-developer **R-01..R-05 sign-off granted**, and the back-props filed and RESOLVED **atomically with the flip** per this spec's own promotion pipeline step 6: **ERR-030-016** (`spec-error-log.md` v1.46). All 11 section files carry `Status: APPROVED`; the `SPEC_INDEX.md` row records the date.
+**APPROVED — July 27, 2026.** Lead-developer **R-01..R-05 sign-off granted**, and the back-props filed and RESOLVED **atomically with the flip** per this spec's own promotion pipeline step 6: **ERR-030-016** (`spec-error-log.md` v1.47). All 11 section files carry `Status: APPROVED`; the `SPEC_INDEX.md` row records the date.
 
 **What approval does and does not mean here.** It approves the **forward design** — the #21–#30 pre-T0 precedent — not an implementation: #36 has **no `src/` assembly**, and its §7 T-phase plan is the sequence for building one. Items listed as *not gating* above remain open by design and are named at their tiers.
 
@@ -181,5 +181,5 @@ placed inside #36's own suite so that whoever proposes *"just add the field"* fa
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial §9 (completeness, tag discipline, the §9.3 source-verified claims table, four gates plus the explicit note that #36 carries **no** prerequisite gate unlike #35, R-01..R-05). Status IN REVIEW. |
 | 0.2 | 2026-07-27 | — | G1 CLOSED: §9.4.1 records the section-file PASS-1 (0H+4M+6L, all resolved — clustered on the `NationPin` mechanism the supplement introduced late) and the AR-2 convergence sweep (0H+0M+3L, headed by pulling the re-key hook forward to T2). §9.1 completeness updated for KD-8 and FR-NT-010/011/012/017/030; §9.2 gained the `NT_WEIGHT_TOTAL` derivation lock and the save-visible `[GT]` caveat; §9.3 gained the `ISquadProvider`-declaration-site row, the `FixtureScheduler` signature row, the `ERR-030-016`-is-free check and the `FR-NT` prefix check. G2–G4 remain open. |
-| 0.3 | 2026-07-27 | — | **`IN REVIEW → APPROVED`.** Lead-developer R-01..R-05 sign-off granted. Back-props **ERR-030-016** filed and RESOLVED atomically with the flip (`spec-error-log.md` v1.46). Gates G2–G5 closed; §9.6 decision updated. All 11 section files flip to `Status: APPROVED`. |
+| 0.3 | 2026-07-27 | — | **`IN REVIEW → APPROVED`.** Lead-developer R-01..R-05 sign-off granted. Back-props **ERR-030-016** filed and RESOLVED atomically with the flip (`spec-error-log.md` v1.47). Gates G2–G5 closed; §9.6 decision updated. All 11 section files flip to `Status: APPROVED`. |
 #endregion

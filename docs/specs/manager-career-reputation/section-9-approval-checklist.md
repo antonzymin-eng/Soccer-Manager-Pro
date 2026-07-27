@@ -93,11 +93,11 @@
 | Gate | Owner | Status |
 |---|---|---|
 | **G1** — section-file PASS-1 adversarial review + a fix pass, to convergence. | drafter | ✅ **CLOSED** — see §9.4.1 |
-| **G2** — file **ERR-045-002** and **ERR-030-021** atomically with the status flip. | drafter | ✅ **CLOSED** — filed and RESOLVED July 27, 2026, atomically with the flip (`spec-error-log.md` v1.46) |
+| **G2** — file **ERR-045-002** and **ERR-030-021** atomically with the status flip. | drafter | ✅ **CLOSED** — filed and RESOLVED July 27, 2026, atomically with the flip (`spec-error-log.md` v1.47) |
 | **G3** — lead-developer R-01..R-05 sign-off. | lead developer | ✅ **CLOSED** — R-01..R-05 granted by the lead developer, July 27, 2026 |
 | **G4** — `SPEC_INDEX.md` registry row + Registry-Changes entry, added at promotion. | drafter | ✅ **CLOSED** — row + Registry-Changes entry landed July 27, 2026 |
 | **G5** — `management-layer-spec-roadmap.md` row + §3 scope sketch + §7 wave placement for **#54**, and `spec-plans/spec-54-manager-career-reputation.md` — the v0.2 gap-fill / v0.4 Amendment-01 precedent for adding a **new** candidate number. | drafter | ✅ **CLOSED** — roadmap v0.7 + registry row landed July 27, 2026 |
-| **G6** — **sequencing decision with #45's `ERR-030-009`**: whether ERR-030-021's `SEASON_STATE_FORMAT_VERSION` bump lands **combined** with the queued `JobSecurity` bump on the same block. | lead developer | ✅ **DECIDED — combine them**, recorded July 27, 2026 with the flip. Both bumps hit the **same** season block and both are `no-migration` refusals, so landing them separately would make existing saves unloadable **twice** for one block. The decision is recorded in FR-SN-013b and in `spec-error-log.md` v1.46; the bump itself remains ◑ at #54 T2 |
+| **G6** — **sequencing decision with #45's `ERR-030-009`**: whether ERR-030-021's `SEASON_STATE_FORMAT_VERSION` bump lands **combined** with the queued `JobSecurity` bump on the same block. | lead developer | ✅ **DECIDED — combine them**, recorded July 27, 2026 with the flip. Both bumps hit the **same** season block and both are `no-migration` refusals, so landing them separately would make existing saves unloadable **twice** for one block. The decision is recorded in FR-SN-013b and in `spec-error-log.md` v1.47; the bump itself remains ◑ at #54 T2 |
 
 **Not gating (deferred by design, recorded so they are not mistaken for omissions):** the outer
 `SEASON_SAVE_FORMAT_VERSION` bump (T2); the `_RESERVED_0x2E_` **promotion** to a named tag (only at the S3
@@ -151,7 +151,7 @@ decision turns on.
 
 ## 9.6 Decision
 
-**APPROVED — July 27, 2026.** Lead-developer **R-01..R-05 sign-off granted**, and the back-props filed and RESOLVED **atomically with the flip** per this spec's own promotion pipeline step 6: **ERR-045-002**, **ERR-030-021** (`spec-error-log.md` v1.46). All 11 section files carry `Status: APPROVED`; the `SPEC_INDEX.md` row records the date.
+**APPROVED — July 27, 2026.** Lead-developer **R-01..R-05 sign-off granted**, and the back-props filed and RESOLVED **atomically with the flip** per this spec's own promotion pipeline step 6: **ERR-045-002**, **ERR-030-021** (`spec-error-log.md` v1.47). All 11 section files carry `Status: APPROVED`; the `SPEC_INDEX.md` row records the date.
 
 **What approval does and does not mean here.** It approves the **forward design** — the #21–#30 pre-T0 precedent — not an implementation: #54 has **no `src/` assembly**, and its §7 T-phase plan is the sequence for building one. Items listed as *not gating* above remain open by design and are named at their tiers.
 
@@ -183,5 +183,5 @@ players face one refusal boundary or two.** That was surfaced before sign-off, n
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial §9 (completeness, tag discipline, the §9.3 source-verified claims table, six gates incl. the #54-specific G5 governance rows and G6 sequencing decision, R-01..R-05). Status IN REVIEW. |
 | 0.2 | 2026-07-27 | — | G1 CLOSED: §9.4.1 records the section-file PASS-1 (0H+5M+6L, all resolved — clustered on career-record coherence and the `EndReason` ordinal contract) and the AR-2 convergence sweep (0H+0M+3L). §9.1 completeness updated for KD-8 and FR-MC-014/015/018/019; §9.2 gained the no-stored-reputation-constant line; §9.3 gained the `ERR-045-001`-is-filed / `ERR-030-021`-is-free checks, the `FR-MC` prefix check, and the #26 CS0104 row. G2–G6 remain open. |
-| 0.3 | 2026-07-27 | — | **`IN REVIEW → APPROVED`.** Lead-developer R-01..R-05 sign-off granted. Back-props **ERR-045-002**, **ERR-030-021** filed and RESOLVED atomically with the flip (`spec-error-log.md` v1.46). Gates G2–G5 closed; §9.6 decision updated. All 11 section files flip to `Status: APPROVED`. |
+| 0.3 | 2026-07-27 | — | **`IN REVIEW → APPROVED`.** Lead-developer R-01..R-05 sign-off granted. Back-props **ERR-045-002**, **ERR-030-021** filed and RESOLVED atomically with the flip (`spec-error-log.md` v1.47). Gates G2–G5 closed; §9.6 decision updated. All 11 section files flip to `Status: APPROVED`. |
 #endregion

@@ -50,7 +50,7 @@
 | Gate | Status |
 |---|---|
 | **G1** — section-file PASS-1 adversarial review + fix pass | **CLOSED** — see §9.4.1 |
-| **G2** — back-props filed at approval (`ERR-048-001`, `ERR-038-004`) | **CLOSED** — filed and RESOLVED July 27, 2026, atomically with the flip (`spec-error-log.md` v1.46) |
+| **G2** — back-props filed at approval (`ERR-048-001`, `ERR-038-004`) | **CLOSED** — filed and RESOLVED July 27, 2026, atomically with the flip (`spec-error-log.md` v1.47) |
 | **G3** — lead-developer R-01..R-05 sign-off | **CLOSED** — R-01..R-05 granted by the lead developer, July 27, 2026 |
 | **G4** — `[GT]` balance pass | **OPEN, and it is a mix pass rather than a balance pass** — the default gains and the ducking envelopes want tuning against how the game actually **sounds**, which requires the Unity host (KD-5). It gates nothing: a wrong attenuation sounds wrong and cannot make a match play differently |
 
@@ -118,7 +118,7 @@ Every claim below is checkable against a named file; none is a summary of anothe
 
 ## 9.6 Decision
 
-**APPROVED — July 27, 2026.** Lead-developer **R-01..R-05 sign-off granted**, and the back-props filed and RESOLVED **atomically with the flip** per this spec's own promotion pipeline step 6: **ERR-048-001**, **ERR-038-004** (`spec-error-log.md` v1.46). All 11 section files carry `Status: APPROVED`; the `SPEC_INDEX.md` row records the date.
+**APPROVED — July 27, 2026.** Lead-developer **R-01..R-05 sign-off granted**, and the back-props filed and RESOLVED **atomically with the flip** per this spec's own promotion pipeline step 6: **ERR-048-001**, **ERR-038-004** (`spec-error-log.md` v1.47). All 11 section files carry `Status: APPROVED`; the `SPEC_INDEX.md` row records the date.
 
 **What approval does and does not mean here.** It approves the **forward design** — the #21–#30 pre-T0 precedent — not an implementation: #51 has **no `src/` assembly**, and its §7 T-phase plan is the sequence for building one. Items listed as *not gating* above remain open by design and are named at their tiers.
 
@@ -146,5 +146,5 @@ architectural one, and the trade should be made knowingly rather than by default
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial checklist. Status IN REVIEW. |
 | 0.2 | 2026-07-27 | — | PASS-1 recorded: **0H + 4M + 5L**, all fixed in the v0.2 files; AR-2 sweep **0H + 0M + 2L → CONVERGENCE**. The four M were the missing ducking-table well-formedness rule (a self-ducking row has no error and no recovery), the declined-ownership case having a risk but no requirement (the obvious fallback being the one outcome KD-3 exists to prevent), `NoCaption` being satisfiable by reflex without a justification requirement, and §6's over-simple "no loop path" classification, which omitted that `Play` runs on #48's tick thread and therefore has the one cadence that can slow the **simulation**. §9.6 puts ERR-048-001 first as the question #51 cannot settle alone. |
-| 0.3 | 2026-07-27 | — | **`IN REVIEW → APPROVED`.** Lead-developer R-01..R-05 sign-off granted. Back-props **ERR-048-001**, **ERR-038-004** filed and RESOLVED atomically with the flip (`spec-error-log.md` v1.46). Gates G2–G5 closed; §9.6 decision updated. All 11 section files flip to `Status: APPROVED`. |
+| 0.3 | 2026-07-27 | — | **`IN REVIEW → APPROVED`.** Lead-developer R-01..R-05 sign-off granted. Back-props **ERR-048-001**, **ERR-038-004** filed and RESOLVED atomically with the flip (`spec-error-log.md` v1.47). Gates G2–G5 closed; §9.6 decision updated. All 11 section files flip to `Status: APPROVED`. |
 #endregion

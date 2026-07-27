@@ -97,7 +97,7 @@
 | Gate | Owner | Status |
 |---|---|---|
 | **G1** — section-file PASS-1 adversarial review + a fix pass, to convergence. | drafter | ✅ **CLOSED** — see §9.4.1 |
-| **G2** — file **ERR-030-017** and **ERR-030-018** atomically with the status flip. | drafter | ✅ **CLOSED** — filed and RESOLVED July 27, 2026, atomically with the flip (`spec-error-log.md` v1.46) |
+| **G2** — file **ERR-030-017** and **ERR-030-018** atomically with the status flip. | drafter | ✅ **CLOSED** — filed and RESOLVED July 27, 2026, atomically with the flip (`spec-error-log.md` v1.47) |
 | **G3** — lead-developer R-01..R-05 sign-off. | lead developer | ✅ **CLOSED** — R-01..R-05 granted by the lead developer, July 27, 2026 |
 | **G4** — `SPEC_INDEX.md` registry row + Registry-Changes entry, added at promotion. | drafter | ✅ **CLOSED** — row + Registry-Changes entry landed July 27, 2026 |
 
@@ -151,7 +151,7 @@ definition FR-ED-021 exists to prevent, since the round-trip *is* the specificat
 
 ## 9.6 Decision
 
-**APPROVED — July 27, 2026.** Lead-developer **R-01..R-05 sign-off granted**, and the back-props filed and RESOLVED **atomically with the flip** per this spec's own promotion pipeline step 6: **ERR-030-017**, **ERR-030-018** (`spec-error-log.md` v1.46). All 11 section files carry `Status: APPROVED`; the `SPEC_INDEX.md` row records the date.
+**APPROVED — July 27, 2026.** Lead-developer **R-01..R-05 sign-off granted**, and the back-props filed and RESOLVED **atomically with the flip** per this spec's own promotion pipeline step 6: **ERR-030-017**, **ERR-030-018** (`spec-error-log.md` v1.47). All 11 section files carry `Status: APPROVED`; the `SPEC_INDEX.md` row records the date.
 
 **What approval does and does not mean here.** It approves the **forward design** — the #21–#30 pre-T0 precedent — not an implementation: #47 has **no `src/` assembly**, and its §7 T-phase plan is the sequence for building one. Items listed as *not gating* above remain open by design and are named at their tiers.
 
@@ -184,5 +184,5 @@ golden vector included.
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial §9 (completeness, tag discipline, the §9.3 source-verified claims table, four gates plus the explicit note that #47 carries **no** prerequisite gate and **no** `[GT]` balance pass — unusual in this wave — R-01..R-05). Status IN REVIEW. |
 | 0.2 | 2026-07-27 | — | G1 CLOSED: §9.4.1 records the section-file PASS-1 (0H+4M+7L, all resolved — clustered on the **load** side of KD-1, where the silent-wrong-world failure lives) and the AR-2 convergence sweep (0H+0M+3L). §9.1 completeness updated for KD-7 and FR-ED-010/020/021/026; §9.2 gained the no-`[GT]`-validation-constant line; §9.3 gained the `season-save`-references-`MatchEngine` row, both `SquadFileLoader` defect rows, the #49 `NamedSlotSet` row, the `ERR-030-017`/`-018`-are-free check and the `FR-ED` prefix check. G2–G4 remain open. |
-| 0.3 | 2026-07-27 | — | **`IN REVIEW → APPROVED`.** Lead-developer R-01..R-05 sign-off granted. Back-props **ERR-030-017**, **ERR-030-018** filed and RESOLVED atomically with the flip (`spec-error-log.md` v1.46). Gates G2–G5 closed; §9.6 decision updated. All 11 section files flip to `Status: APPROVED`. |
+| 0.3 | 2026-07-27 | — | **`IN REVIEW → APPROVED`.** Lead-developer R-01..R-05 sign-off granted. Back-props **ERR-030-017**, **ERR-030-018** filed and RESOLVED atomically with the flip (`spec-error-log.md` v1.47). Gates G2–G5 closed; §9.6 decision updated. All 11 section files flip to `Status: APPROVED`. |
 #endregion

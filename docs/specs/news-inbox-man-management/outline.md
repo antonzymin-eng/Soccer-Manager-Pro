@@ -60,7 +60,7 @@ inbox (#38).
 | ERR-033-003 | #33 — the producer-agnostic `ExternalDeltaPermille` (supersedes #35's `ERR-033-001`); filed jointly with #35 |
 | ERR-033-004 | #33 §3.3 / FR-HS-024 — *"#46's man-management seam"* **is** the routed field, not a mutator |
 | **ERR-030-024** | #30 step 3 — generalize the drain to iterate **every** external-delta producer |
-| ERR-030-015 | #30 §3.4 — the **match-item projector** null seam, filed in #46's own right |
+| ERR-030-025 | #30 §3.4 — the **match-item projector** null seam, filed in #46's own right |
 
 **The supplement's proposed `ERR-030-014` was already filed** (it is ERR-030-014, the match-engine
 playability defect found at #30's T2); PASS-1 verified this and reassigned it to `-024` (§9.4.1 M-1).

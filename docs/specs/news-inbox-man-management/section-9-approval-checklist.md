@@ -82,7 +82,7 @@
 - [x] **`ERR-030-014` is already FILED** — it is ERR-030-014 itself, the match-engine playability defect
       found while running #30's T2 calibration pilot on July 26, the same day this spec's supplement was
       written. The supplement proposed it for the drain generalization; reassigned to **`-024`**
-      (§9.4.1 M-1). **`ERR-030-015` is genuinely free.** *(`docs/tracking/spec-error-log.md`)*
+      (§9.4.1 M-1). **`ERR-030-025` is genuinely free.** *(`docs/tracking/spec-error-log.md`)*
 - [x] `ERR-033-003` / `-004` are free; `ERR-033-001` is deliberately **retired unused** in favour of
       `-003`, jointly with #35 (§8.2).
 - [x] `FR-NW-*` is **unclaimed** — verified by enumerating every `FR-[A-Z]{2,3}-` prefix in `docs/specs/`.
@@ -92,7 +92,7 @@
 | Gate | Owner | Status |
 |---|---|---|
 | **G1** — section-file PASS-1 adversarial review + a fix pass, to convergence. | drafter | ✅ **CLOSED** — see §9.4.1 |
-| **G2** — file **ERR-033-003** (jointly with #35), **ERR-033-004**, **ERR-030-024**, **ERR-030-015** atomically with the status flip. | drafter | ✅ **CLOSED** — filed and RESOLVED July 27, 2026, atomically with the flip (`spec-error-log.md` v1.46) |
+| **G2** — file **ERR-033-003** (jointly with #35), **ERR-033-004**, **ERR-030-024**, **ERR-030-025** atomically with the status flip. | drafter | ✅ **CLOSED** — filed and RESOLVED July 27, 2026, atomically with the flip (`spec-error-log.md` v1.47) |
 | **G3** — lead-developer R-01..R-05 sign-off. | lead developer | ✅ **CLOSED** — R-01..R-05 granted by the lead developer, July 27, 2026 |
 | **G4** — `SPEC_INDEX.md` registry row + Registry-Changes entry, added at promotion. | drafter | ✅ **CLOSED** — row + Registry-Changes entry landed July 27, 2026 |
 | **G5** — **coordination with #35**: ERR-033-003 must supersede #35's ERR-033-001 in whichever spec flips first, so the two never disagree about the field's name or arity. | drafter | ✅ **CLOSED** — roadmap v0.7 + registry row landed July 27, 2026 |
@@ -149,7 +149,7 @@ omission otherwise.
 
 ## 9.6 Decision
 
-**APPROVED — July 27, 2026.** Lead-developer **R-01..R-05 sign-off granted**, and the back-props filed and RESOLVED **atomically with the flip** per this spec's own promotion pipeline step 6: **ERR-033-003** (jointly with #35), **ERR-033-004**, **ERR-030-024**, **ERR-030-015** (`spec-error-log.md` v1.46). All 11 section files carry `Status: APPROVED`; the `SPEC_INDEX.md` row records the date.
+**APPROVED — July 27, 2026.** Lead-developer **R-01..R-05 sign-off granted**, and the back-props filed and RESOLVED **atomically with the flip** per this spec's own promotion pipeline step 6: **ERR-033-003** (jointly with #35), **ERR-033-004**, **ERR-030-024**, **ERR-030-025** (`spec-error-log.md` v1.47). All 11 section files carry `Status: APPROVED`; the `SPEC_INDEX.md` row records the date.
 
 **What approval does and does not mean here.** It approves the **forward design** — the #21–#30 pre-T0 precedent — not an implementation: #46 has **no `src/` assembly**, and its §7 T-phase plan is the sequence for building one. Items listed as *not gating* above remain open by design and are named at their tiers.
 
@@ -179,5 +179,5 @@ it is why both specs record it on both sides.
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial §9 (completeness, tag discipline, the §9.3 source-verified claims table, the five gates incl. the #35-coordination G5 and the explicit note that #46 does **not** carry #35's G0, R-01..R-05). Status IN REVIEW. |
 | 0.2 | 2026-07-27 | — | G1 CLOSED: §9.4.1 records the section-file PASS-1 (0H+5M+6L, all resolved) and the AR-2 convergence sweep (0H+0M+3L). §9.1 completeness updated for FR-NW-011/016/020; §9.2 records that #46 has **no** `[CROSS-PENDING]` region at all; §9.3 gained the verified **`ERR-030-014`-is-taken** row (the PASS-1 M-1 correction), the FR-HS-025 row that makes FR-NW-006 a MUST, the #37 rows, and the `FR-NW` prefix check. G2–G5 remain open. |
-| 0.3 | 2026-07-27 | — | **`IN REVIEW → APPROVED`.** Lead-developer R-01..R-05 sign-off granted. Back-props **ERR-033-003** (jointly with #35), **ERR-033-004**, **ERR-030-024**, **ERR-030-015** filed and RESOLVED atomically with the flip (`spec-error-log.md` v1.46). Gates G2–G5 closed; §9.6 decision updated. All 11 section files flip to `Status: APPROVED`. |
+| 0.3 | 2026-07-27 | — | **`IN REVIEW → APPROVED`.** Lead-developer R-01..R-05 sign-off granted. Back-props **ERR-033-003** (jointly with #35), **ERR-033-004**, **ERR-030-024**, **ERR-030-025** filed and RESOLVED atomically with the flip (`spec-error-log.md` v1.47). Gates G2–G5 closed; §9.6 decision updated. All 11 section files flip to `Status: APPROVED`. |
 #endregion

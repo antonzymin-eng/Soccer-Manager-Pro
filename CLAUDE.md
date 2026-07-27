@@ -4,7 +4,7 @@
 > **Last Updated:** July 27, 2026, later same day (**ALL TEN APPROVED — the specification phase is
 > CLOSED. `SPEC_INDEX.md`: 53 APPROVED / 0 IN REVIEW / 0 NOT STARTED.** Lead-developer R-01..R-05 sign-off
 > granted on #53, #35, #46, #36, #54, #47, #48, #50, #51 and #39, with the **23 back-props filed and
-> RESOLVED atomically with the flips** (`spec-error-log.md` v1.46) per each spec's own pipeline step 6.
+> RESOLVED atomically with the flips** (`spec-error-log.md` v1.47) per each spec's own pipeline step 6.
 > **Docs only: no code, no `src/` change, no gate run, and no format version bumped today.**
 > **Landing the back-props together is what exposed the wave's most consequential defect, and filing them
 > one spec at a time never could have:** **#30's pinned day-advance tick order was not implementable as

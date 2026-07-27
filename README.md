@@ -685,7 +685,7 @@ git push --tags
 
 **v1.37 — July 27, 2026 (later same day)**
 - **All ten specs advanced `IN REVIEW → APPROVED`.** Lead-developer R-01..R-05 sign-off granted; the
-  **23 back-props filed and RESOLVED atomically with the flips** (`spec-error-log.md` v1.46), per each
+  **23 back-props filed and RESOLVED atomically with the flips** (`spec-error-log.md` v1.47), per each
   spec's own promotion-pipeline step 6.
 - CURRENT STATUS: **53 APPROVED / 0 IN REVIEW / 0 NOT STARTED.** The specification phase is closed; the
   only candidate without a spec is **#52**, deliberately deferred behind the Stage-5 Fixed64 migration.

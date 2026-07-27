@@ -105,7 +105,7 @@
 |---|---|---|
 | **G0** — the §8.0 **prerequisite** (ERR-030-022, #30's tick-order reconciliation) lands, or its numbering is confirmed. | #30 owner / drafter | ✅ **CLOSED** — landed July 27, 2026 with the flip. #30 §3.3.1 records the reconciliation; #32 scouting → step 9, **#35 media expiry → step 10**, `AdvanceDay` → 12. #35 now cites a defensible number |
 | **G1** — section-file PASS-1 adversarial review + a fix pass, to convergence. | drafter | ✅ **CLOSED** — see §9.4.1 |
-| **G2** — file **ERR-049-001**, **ERR-033-003** (jointly with #46), **ERR-033-002**, **ERR-030-023** atomically with the status flip. | drafter | ✅ **CLOSED** — filed and RESOLVED July 27, 2026, atomically with the flip (`spec-error-log.md` v1.46) |
+| **G2** — file **ERR-049-001**, **ERR-033-003** (jointly with #46), **ERR-033-002**, **ERR-030-023** atomically with the status flip. | drafter | ✅ **CLOSED** — filed and RESOLVED July 27, 2026, atomically with the flip (`spec-error-log.md` v1.47) |
 | **G3** — lead-developer R-01..R-05 sign-off. | lead developer | ✅ **CLOSED** — R-01..R-05 granted by the lead developer, July 27, 2026 |
 | **G4** — `SPEC_INDEX.md` registry row + Registry-Changes entry, added at promotion. | drafter | ✅ **CLOSED** — row + Registry-Changes entry landed July 27, 2026 |
 
@@ -165,7 +165,7 @@ nothing at approval" was inferable but unstated in the one table a reviewer chec
 
 ## 9.6 Decision
 
-**APPROVED — July 27, 2026.** Lead-developer **R-01..R-05 sign-off granted**, and the back-props filed and RESOLVED **atomically with the flip** per this spec's own promotion pipeline step 6: **ERR-049-001**, **ERR-033-003** (jointly with #46), **ERR-033-002**, **ERR-030-022**, **ERR-030-023** (`spec-error-log.md` v1.46). All 11 section files carry `Status: APPROVED`; the `SPEC_INDEX.md` row records the date.
+**APPROVED — July 27, 2026.** Lead-developer **R-01..R-05 sign-off granted**, and the back-props filed and RESOLVED **atomically with the flip** per this spec's own promotion pipeline step 6: **ERR-049-001**, **ERR-033-003** (jointly with #46), **ERR-033-002**, **ERR-030-022**, **ERR-030-023** (`spec-error-log.md` v1.47). All 11 section files carry `Status: APPROVED`; the `SPEC_INDEX.md` row records the date.
 
 **What approval does and does not mean here.** It approves the **forward design** — the #21–#30 pre-T0 precedent — not an implementation: #35 has **no `src/` assembly**, and its §7 T-phase plan is the sequence for building one. Items listed as *not gating* above remain open by design and are named at their tiers.
 
@@ -193,5 +193,5 @@ next producer regardless.
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial §9 (completeness, tag discipline, the §9.3 source-verified claims table, the five gates incl. the unusual G0 prerequisite gate, R-01..R-05). Status IN REVIEW. |
 | 0.2 | 2026-07-27 | — | G1 CLOSED: §9.4.1 records the section-file PASS-1 (0H+8M+9L, all resolved) and the AR-2 convergence sweep (0H+0M+3L). §9.1 completeness updated for FR-ME-010/015 and KD-10; §9.2 gained the band-boundary line; §9.3 gained the verified **`ERR-030-012`/`-013`-are-taken** row (the PASS-1 M-1 correction), the `FR-ME` prefix check, and the `SplitMix64`-is-not-shared row that the "minimal tier references nothing" claim rests on. G0 and G2–G4 remain open. |
-| 0.3 | 2026-07-27 | — | **`IN REVIEW → APPROVED`.** Lead-developer R-01..R-05 sign-off granted. Back-props **ERR-049-001**, **ERR-033-003** (jointly with #46), **ERR-033-002**, **ERR-030-022**, **ERR-030-023** filed and RESOLVED atomically with the flip (`spec-error-log.md` v1.46). Gates G2–G5 closed; §9.6 decision updated. All 11 section files flip to `Status: APPROVED`. |
+| 0.3 | 2026-07-27 | — | **`IN REVIEW → APPROVED`.** Lead-developer R-01..R-05 sign-off granted. Back-props **ERR-049-001**, **ERR-033-003** (jointly with #46), **ERR-033-002**, **ERR-030-022**, **ERR-030-023** filed and RESOLVED atomically with the flip (`spec-error-log.md` v1.47). Gates G2–G5 closed; §9.6 decision updated. All 11 section files flip to `Status: APPROVED`. |
 #endregion
