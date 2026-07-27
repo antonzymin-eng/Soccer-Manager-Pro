@@ -22,6 +22,25 @@
 > Two findings are recorded but deliberately NOT fixed here: the process-static EventBus makes INTERLEAVED
 > engines diverge (latent since #17, invisible until a production event was finally published), and the foul
 > heuristic issues **7 red cards per 9 minutes** — see §5.Z.7. Prior entry below.)
+> **Last Updated:** July 26, 2026, later same day (v2.3 — **§5.Z.9 foul & discipline balance pass landed;
+> §5.Z.7 item 1 CLOSED.** A played match no longer sends seven players off every nine minutes: measured
+> **480 → 21 fouls, 147 → 3.0 yellows, 75 → 1.0 reds per 90 minutes**, against a football reference of
+> ~22 / ~3.5 / ~0.25. **The measurement refuted §5.Z.7's own diagnosis.** The qualifying-force distribution
+> is bounded at ~2362 N, so the threshold is a cliff not a dial — 480 fouls at 1200 N, 90 at 2000 N, **0 at
+> 3000 N** — and no cooldown rescues it. The missing term was the referee's judgement: the model called
+> *every* hard cross-team from-behind contact a foul while the engine produces **seventeen of them per
+> second**. Fixed with a force-scaled call probability
+> `p(F) = min(1, FoulCallProbability × F / threshold)` whose **single draw** also selects the card from
+> the rescaled remainder, so there is no new RNG stream and **no `SNAPSHOT_SCHEMA_VERSION` change**; a
+> wave-on arms no cooldown; and the consumer now keeps the **strongest** contact of a tick, since force
+> now decides the call. Calibration required a LIVE run — the offline sweep pointed at 0.025, which
+> measured 37.5 fouls, because giving 20× fewer fouls means 20× fewer restarts, so play runs on and the
+> contact count *rises*. New acceptance scenario `match-engine-discipline-plausible` (6 seeds × 9 min):
+> rate bands, **no team reduced below nine players** (per seed), cards a minority of fouls — **9 of its
+> 10 predicates fail on the pre-fix engine**. Plus 8 unit locks, the env-gated `FoulRateDiagnosticTests`
+> instrument, and the `TestOnly_SetCollisionObserver` seam that made the distribution observable.
+> **Recorded, not fixed: the contact rate itself** (17/second is not football — #12 spacing or #3's 60°
+> cone). See `docs/tracking/foul-discipline-balance-design.md`.)
 > **Last Updated (prior):** July 26, 2026 (v2.1 — **new §5.Z Phase H opened from ERR-030-014: the engine cannot
 > develop play.** Discovered by running roadmap item A4a's KD-8 Step 0 pilot from the season loop: a
 > production match's ball velocity is **identically zero for all 324 000 ticks**, no agent ever possesses
@@ -962,14 +981,13 @@ fixed while it was not.
 
 Two real findings surfaced by the landing that are deliberately out of scope, plus two carried forward.
 
-1. **The foul heuristic issues ~7 red cards per 9 minutes** (measured, consistently, across three seeds —
-   extrapolating, every player on the pitch would be dismissed inside a full match). `MatchFlowCollisionConsumer`'s
-   FROM_BEHIND high-force capture fires roughly every 4–5 seconds where real football fouls once every
-   ~3.5 minutes, so ordinary jostling is clearing `FOUL_MIN_FORCE_N`. This is a threshold/`[GT]` question —
-   `FOUL_MIN_FORCE_N`, `FoulCooldownTicks`, `RedCardProbability` — and setting those needs a foul-rate
-   target and a measurement pass, not a guess folded into a correctness fix. **It is the single most
-   visible remaining unrealism in a played match** and should be the next balance item. It does not block
-   play (Phase H's sent-off exclusions keep the possession loop alive), but it does degrade late-match play.
+1. **The foul heuristic issues ~7 red cards per 9 minutes** — **RESOLVED July 26, 2026, see §5.Z.9.**
+   (measured, consistently, across three seeds — extrapolating, every player on the pitch would be
+   dismissed inside a full match). `MatchFlowCollisionConsumer`'s FROM_BEHIND high-force capture fires
+   roughly every 4–5 seconds where real football fouls once every ~3.5 minutes, so ordinary jostling is
+   clearing `FOUL_MIN_FORCE_N`. This entry framed it as a threshold/`[GT]` question needing a foul-rate
+   target and a measurement pass. **The measurement pass ran and refuted the framing** — the threshold is
+   a cliff, not a dial. See §5.Z.9.
 2. **The process-static EventBus makes INTERLEAVED engines non-deterministic.** Ticking two engines
    `a.RunTick(); b.RunTick();` in one loop diverges at tick 1; run sequentially they are byte-identical
    (verified both ways). This is a latent property of #17 §3.2.1's mandated static bus — `ResetForNewMatch`
@@ -983,6 +1001,180 @@ Two real findings surfaced by the landing that are deliberately out of scope, pl
 4. **The `FR-PO-052` certified per-tick perf baseline** now describes an engine that did nothing and needs
    re-capturing on the pinned host (`cert-run-runbook.md`). The Linux gate's anchor is deliberately
    generous and still passes.
+
+### 5.Z.9 Foul & discipline balance pass (July 26, 2026) — §5.Z.7 item 1 CLOSED
+
+Detail: `docs/tracking/foul-discipline-balance-design.md` (converged; AR-1 1H+2M, AR-2 1M+2L,
+code AR-3 3M).
+
+**Measured, then fixed.** Over four seeds × 9 minutes of composed play, with an observer on every
+collision event:
+
+| | Before | After | Football |
+|---|---|---|---|
+| Fouls per 90 min | **480** | **21.0** | ~22 |
+| Yellow cards per 90 min | **147** | **3.0** | ~3.5 |
+| Red cards per 90 min | **75** | **1.0** | ~0.25 |
+| Players dismissed from one team, per 9 min | **up to 7** | 0 – 1 | — |
+
+**The finding the measurement produced is that §5.Z.7's own diagnosis was wrong.** The peak
+qualifying force distribution is bounded and narrow — p99 = 1175 N, max **2362 N**, because a
+collision impulse over `ContactDurationS` cannot exceed it. Replaying the production gate across a
+threshold ladder gives 480 fouls at 1200 N, 90 at 2000 N and **0 at 3000 N**: there is no threshold
+that yields ~22, and the values in between sit on the last thirty samples of a 130 000-tick run — a
+setting that would read as calibrated while actually being noise. A longer cooldown does not rescue
+it either (at 2000 N even a ten-second window still leaves 75).
+
+The gap was never a bigger number. The model said *every hard cross-team contact from behind is a
+foul*, and the engine produces **seventeen of those per second**. What was missing is the referee's
+judgement — a **probability**.
+
+**The change** (`foul-discipline-balance-design.md` KD-F1..KD-F5): a candidate that clears every
+existing gate is whistled with `p(F) = min(1, FoulCallProbability × F / FoulImpactForceThresholdN)`,
+so a harder challenge is likelier to be given but a hard contact is never automatically a foul. The
+**same single draw** decides the call and, on a call, the card severity from the rescaled remainder
+`v = u / p` — so there is no new RNG stream and **no `SNAPSHOT_SCHEMA_VERSION` change**. A wave-on
+arms no cooldown (arming it would swallow the genuine foul two ticks later), and the consumer now
+keeps the **strongest** contact of a tick rather than the first, since force now decides the call.
+`FoulCallProbability` = 0.015 `[GT]` (new), `YellowCardProbability` 0.35 → 0.16, `RedCardProbability`
+0.05 → 0.011, `FoulCooldownTicks` 60 → 180.
+
+**Calibration needed a live run, not the offline sweep**, and that generalises: the sweep pointed at
+0.025, where a real match measured 37.5 fouls per 90 min. Giving 20× fewer fouls means 20× fewer
+restarts, so play runs on and the qualifying-contact count *rose* from 36 000 to 129 000 over a
+comparable corpus. An offline gate replay finds the right shape cheaply; it never gives the value.
+
+**Acceptance:** `match-engine-discipline-plausible` (#19 ScenarioRunner, Tier B, 6 seeds × 9 min,
+~52 s) asserts foul/yellow/red rates in plausibility bands, that **no team is reduced below nine
+players** (per seed, not aggregated — one abandoned match must not average away), and that cards stay
+a minority of fouls. **Nine of its ten predicates fail on the pre-fix engine**, each by more than an
+order of magnitude. Plus 8 unit locks in `MatchEngineFoulCardTests` covering the probability shape,
+the wave-on leaving no trace, and strongest-wins capture driven through the real consumer.
+
+Committed with it: `FoulRateDiagnosticTests` (env-gated, `TD_FOUL_DIAGNOSTIC=1`) — the instrument,
+which replays the gate offline across a (threshold, cooldown, probability) ladder so one composed run
+yields the whole curve; and `MatchEngine.TestOnly_SetCollisionObserver`, the seam that makes the force
+distribution observable at all (the collision system takes exactly one consumer, and it is private).
+
+**Recorded, not fixed:** the *contact rate itself*. Seventeen hard cross-team from-behind contacts per
+second, on 20% of ticks, is not football — the refereeing model now sits plausibly on top of it, but
+the stream underneath is wrong, and it is the next thing to look at for match realism (most likely #12
+agent spacing or #3's 60° `BehindDotThreshold` cone). `FoulCallProbability` is a rate knob calibrated
+against *that* stream; if it changes, re-measure with the committed diagnostic.
+
+### 5.Z.10 Kickoff keeper placement (July 26, 2026) — both goals were unguarded for ninety minutes
+
+Found by running roadmap A4a's KD-8 Step 0 pilot after the §5.Z.9 balance pass. Step 0's own assertion
+now **passes** — the squad-strength extremes are distinguishable (mean margin +28.4 strong-at-home vs
++1.9 strong-away) — but its raw scorelines were not football:
+
+```
+strong-at-home:  home 15, 19, 21, 27, 31, 31, 32, 33, 36, 39   away 0 — every match
+strong-away:     home  0,  0,  2,  2,  2,  2,  2,  4,  4,  2   away 0 — every match
+```
+
+Two things wrong at once: an order-of-magnitude goal rate, and **the away team never scoring in twenty
+full matches.** Step 0 could not see either — it asserts only that the two buckets *differ*.
+
+**Root cause.** `InitializeKickoffState` placed every agent of a team on one x-line
+(`HomeLineXM` / `AwayLineXM` = 26.25 / 78.75), spread evenly across the pitch width by roster index.
+The keeper is index 0, so it got the first lateral slot: `y = WIDTH × 1/12 = 5.67`. Each keeper
+therefore began the match **26 m upfield of the goal it defends and 28 m off-centre** — on the
+touchline, nowhere near the goal mouth.
+
+That would be a cosmetic kickoff wrinkle if keepers moved. **They do not:** the Physics phase skips
+goalkeepers at Stage 0 (GK locomotion is Goalkeeper Mechanics #11), so boot placement *is* the
+keeper's position for the entire ninety minutes. Both goals stood completely unguarded, all match,
+in every match the engine has ever played.
+
+**The fix** is four lines: a keeper spawns at `(GkKickoffDepthM, WIDTH/2)` on the goal line it
+defends, mirrored for the away side by the existing `MirrorPitchIfAway` (so `(5.5, 34)` becomes
+`(99.5, 34)` — each keeper facing the pitch from its own line). `GkKickoffDepthM` is a `[CROSS]`
+mirror of `PositioningAIConstants.GK_DEPTH_M`, the resting depth #12's own `ComputeGkSlot` produces
+for a ball on the centre spot, so the boot placement and the positioning model agree by construction
+rather than drifting. Outfield placement is untouched.
+
+**Effect, measured at both scales — and the second scale is the important one.** In neutral 9-minute
+runs the away team began scoring immediately and the ball crossed the goal line it attacks for the
+first time (`min ball x` went from 8.2 to **−0.1**); scorelines went 1–0 / 0–0 to 1–1 / 1–0. But
+re-running the full Step 0 pilot (20 × 90 minutes) shows the fix is **necessary and nowhere near
+sufficient**:
+
+| bucket | home goals | away goals | mean margin |
+|---|---|---|---|
+| strong-at-home (+3 / −3) | 19 – 40 | **0 in all ten** | 25.3 (was 28.4) |
+| strong-away (−3 / +3) | 0 – 6 | 0 – 2 | 1.7 (was 1.9) |
+
+The away side did start scoring — in 3 of 20 matches, up from 0 of 20 — so the blocked path was real.
+But a **strong away team still averages 0.5 goals while a weak home team averages 2.2**, and the
+strong-at-home margin barely moved. Whatever produces that is structural and is NOT the keeper spawn.
+Recorded as its own finding in §5.Z.11.
+
+New locks in `MatchEngineMatchFlowTests`: each keeper stands off the goal line it defends and centred
+on the mouth, and the two keepers guard **opposite** ends — the second being the load-bearing one,
+since two keepers on one line is what the defect amounted to in effect.
+
+### 5.Z.11 Recorded, NOT fixed — a structural home/away scoring asymmetry, and a goal rate ~10× football's
+
+Two findings from the Step 0 re-run above. Both are measured, neither is diagnosed, and the second
+depends on the first.
+
+1. **Home/away asymmetry (severe).** Over 20 full matches with a ±6-point squad differential correctly
+   measured and applied, the home side scores 19–40 when strong and 0–6 when weak, while the away side
+   scores 0–2 in every configuration. A strong side is worth ~25 goals a match at home and ~0.5 away —
+   roughly a fiftyfold home advantage, where football's is about 0.3 goals. Strength is applied
+   correctly (`dSquad` measures ±6.0 as intended), and 9-minute NEUTRAL runs look roughly balanced
+   (ball in each attacking box 2.7% vs 1.9% of ticks, 1–1 and 1–0 scorelines), so the asymmetry either
+   compounds over a full match or is specific to the `ConfigureSquads` path — the two candidates a
+   measurement pass would separate. This is the project's recurring ERR-008-002 defect class (*"every
+   spec worked example and every AR-1 fixture used the home team"*) and should be attacked the same
+   way: measure per-team shots, final-third time and possession over a FULL match, not nine minutes.
+2. **Goal rate ~10× football's**, on top of the asymmetry. A stationary keeper is a collision body so
+   it deflects what hits it, but it cannot dive, close down, or narrow an angle. The honest next step
+   is Goalkeeper Mechanics #11 — already wired and snapshot-safe but **opt-in and default-off**
+   (`EnableGkHeading`), with "flip the default to on, take the digest rebaseline" already recorded as
+   its remaining work — plus GK locomotion, without which a committed `SaveIntent` has no body behind
+   it.
+
+**Step 0 does not catch either, and that is a gap in Step 0.** Its assertion is
+`strongHomeMargin > strongAwayMargin`, which 25.3 > 1.7 satisfies comfortably — so the pilot now
+**passes** while reporting 25–0 scorelines. It was designed to ask "is there signal?", not "is the
+signal football?". **A4a must stay blocked** regardless: fitting the round-resolution model's three
+parameters against 25–0 results would calibrate the quick-sim to reproduce a defect faithfully across
+a whole league, which is worse than not fitting it at all.
+
+### 5.Z.12 Per-side constant pairs removed from boot placement
+
+A follow-up to §5.Z.10 rather than a new defect: the keeper bug's *shape* was a Home/Away pair of
+constants stating one fact twice, and that shape is the common factor behind three defects in this
+engine's history — ERR-008-002 (away zone modifiers inverted), ERR-013-009/010 (`AttackingDirection`
+inverted) and the §5.Z.10 keeper spawn. A pair has two places that must agree; a mirror has one.
+
+`InitializeKickoffState` now writes each agent's position and facing **once**, in the acting team's
+own-half frame, and passes both through the mirror helpers the engine already uses everywhere else
+(`MirrorPitchIfAway` for the position, an affine point; `MirrorVelocityIfAway` for the facing, a free
+vector). Deleted: `HomeLineXM` / `AwayLineXM` → one `OutfieldKickoffLineXM`; `HOME_FACING_DEG` /
+`AWAY_FACING_DEG` → nothing at all, since a mirrored `+X` needs no degrees; and `FacingFromHeading`,
+now unused.
+
+Removing the trig also *strengthens* the property that helper existed for. Its doc explained that it
+special-cased the axis-aligned headings to keep `Mathf.Sin(180°) ≈ 8.7e-8` out of the deterministic
+snapshot; negating exact unit components cannot produce that fuzz in the first place.
+
+**This one is not behaviour-neutral, and deliberately so.** The x line is byte-identical
+(`105/4` mirrors exactly to `105×3/4`), but the away side's lateral spread now mirrors too
+(`y → WIDTH − y`) where both teams previously got the same `spreadY`. Boot state therefore differs
+and every digest moves from tick 1. What it does *not* change is anything durable: outfielders are
+moved onto real formation slots by the AI on the first stride tick, and the keeper is placed
+explicitly. All determinism tests are comparative (two same-seed runs), so none needed rebaselining;
+the full gate is green.
+
+Also fixed alongside, in the same de-duplication spirit — **ERR-008-016**: Decision Tree #8's zone
+bands were `0–35 / 35–65 / 65–105` under a `[DERIVED] — split pitch into thirds` tag, making the
+attacking third 40 m and the middle third 30 m. Both bounds now derive from the pitch length
+(`L/3`, `2L/3`). Equal thirds make the boundary pair **self-mirroring**, so the bands stop depending
+on attacking direction at all — the same duplication being removed one level up. Measured
+behaviour-neutral over two 9-minute composed runs.
 
 ### 5.Z.8 What this unblocks
 

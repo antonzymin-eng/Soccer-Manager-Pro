@@ -8,6 +8,9 @@
 // Modified: 2026-07-18 (#27 T3 — NO_ROSTER_CLUB_ID sentinel + SNAPSHOT_SCHEMA_VERSION 15 → 16, v16 per-team roster reference)
 // Modified: 2026-07-22 (GK #11 / Heading #10 engine integration Phase 1 — +6 [GT] Stage-0 save/header trigger constants; no schema change)
 // Modified: 2026-07-26 (§5.Z Phase H — [FIXED] FIRST_HALF_KICKOFF_TEAM + [DERIVED] SECOND_HALF_KICKOFF_TEAM + [GT] LooseBallPickupRadiusM; no schema change)
+// Modified: 2026-07-26 (§5.Z.12: HomeLineXM/AwayLineXM collapsed to OutfieldKickoffLineXM; HOME_FACING_DEG/AWAY_FACING_DEG deleted — facing now mirrors)
+// Modified: 2026-07-26 (§5.Z.10: + [CROSS] GkKickoffDepthM mirroring PositioningAIConstants.GK_DEPTH_M — the keeper's goal-line spawn depth)
+// Modified: 2026-07-26 (§5.Z.9 foul/discipline balance pass: + [GT] FoulCallProbability; Yellow 0.35 -> 0.16, Red 0.05 -> 0.011, FoulCooldownTicks 60 -> 180; no schema change. See docs/tracking/foul-discipline-balance-design.md)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.3, Code Standards #20
 // Purpose:  Constant catalogue for the match-engine composition root. Stage 0 Phase A holds the
@@ -50,13 +53,6 @@ namespace TacticalDirector.MatchEngine
         /// <summary>[FIXED] Resting ball-centre height above ground (ball radius), metres. Ball Physics #1 §1.2.</summary>
         public const float BALL_REST_HEIGHT_M = 0.11f;
 
-        /// <summary>[FIXED] Home-team kickoff heading: toward the away goal (+X), degrees.
-        /// A fixed kickoff orientation, not a tunable.</summary>
-        public const float HOME_FACING_DEG = 0f;
-
-        /// <summary>[FIXED] Away-team kickoff heading: toward the home goal (−X), degrees.
-        /// A fixed kickoff orientation, not a tunable.</summary>
-        public const float AWAY_FACING_DEG = 180f;
 
         /// <summary>[FIXED] Possessing-agent sentinel for "ball is loose" (no agent has possession).
         /// Mirrors the Decision Tree #8 MatchContext.PossessingAgentId convention (−1 = loose);
@@ -277,7 +273,30 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         public const int SECOND_HALF_KICKOFF_TEAM = (FIRST_HALF_KICKOFF_TEAM + 1) % TEAM_COUNT;
 
-        #endregion
+        // | 1.27    | 2026-07-26 | —      | §5.Z.9 foul & discipline balance pass. + [GT]                   |
+// |         |            |        | FoulCallProbability = 0.015 (the referee-judgement term the     |
+// |         |            |        | model lacked); YellowCardProbability 0.35 -> 0.16 and           |
+// |         |            |        | RedCardProbability 0.05 -> 0.011 (real-football ratios per      |
+// |         |            |        | ~22 fouls); FoulCooldownTicks 60 -> 180 (a restart takes        |
+// |         |            |        | several seconds; rate-neutral at the new call probability).     |
+// |         |            |        | FoulImpactForceThresholdN stays 1200 but is re-documented as    |
+// |         |            |        | the "hard enough to consider" gate, NOT the rate knob — the     |
+// |         |            |        | measured force distribution is bounded at ~2362 N, so the       |
+// |         |            |        | threshold is a cliff (480 fouls at 1200 N, 90 at 2000, 0 at     |
+// |         |            |        | 3000) and cannot carry a rate at all.                          |
+// | 1.28    | 2026-07-26 | —      | §5.Z.10: + [CROSS] GkKickoffDepthM, mirroring                    |
+// |         |            |        | PositioningAIConstants.GK_DEPTH_M (the resting depth #12's own  |
+// |         |            |        | ComputeGkSlot yields for a centre-spot ball), so the kickoff    |
+// |         |            |        | keeper spawn and the positioning model agree by construction    |
+// |         |            |        | instead of drifting apart.                                     |
+// | 1.29    | 2026-07-26 | —      | §5.Z.12 per-side pairs removed. HomeLineXM + AwayLineXM ->      |
+// |         |            |        | one OutfieldKickoffLineXM stated in the own-half frame (the     |
+// |         |            |        | away line is it mirrored); HOME_FACING_DEG + AWAY_FACING_DEG    |
+// |         |            |        | deleted outright, since facing is now MirrorVelocityIfAway of   |
+// |         |            |        | +X and needs no degrees. Each deleted pair stated one fact      |
+// |         |            |        | twice, which is the drift surface behind ERR-008-002,           |
+// |         |            |        | ERR-013-009/010 and the §5.Z.10 keeper spawn.                   |
+#endregion
 
         #region Derived
 
@@ -294,18 +313,20 @@ namespace TacticalDirector.MatchEngine
         public static readonly float KickoffBallYM = PITCH_WIDTH_M / 2f;
 
         /// <summary>
-        /// [DERIVED] Phase-A scaffold home-team line X = PITCH_LENGTH_M / 4 (own half), metres.
-        /// Placeholder only — replaced by formation slots in Phase D.
+        /// [DERIVED] Outfield kickoff line X = PITCH_LENGTH_M / 4, metres, expressed in the acting team's
+        /// OWN-HALF frame — the away side's line is this value mirrored, not a second constant.
         /// Source constants: MatchEngineConstants.PITCH_LENGTH_M.
+        ///
+        /// <para>Phase-A scaffolding: outfield agents are moved onto real formation slots by the AI phase
+        /// on the first stride tick, so this is a transient starting spread rather than a shape. It is
+        /// NOT the keeper's placement — see <see cref="GkKickoffDepthM"/> for why that distinction is
+        /// load-bearing (a keeper never moves at Stage 0).</para>
+        ///
+        /// <para>Replaced the former `HomeLineXM` / `AwayLineXM` pair, which stated the same distance
+        /// twice — once per side — and so had two places that had to agree. One own-half value mirrored
+        /// through <c>MirrorPitchIfAway</c> has one.</para>
         /// </summary>
-        public static readonly float HomeLineXM = PITCH_LENGTH_M / 4f;
-
-        /// <summary>
-        /// [DERIVED] Phase-A scaffold away-team line X = PITCH_LENGTH_M * 3 / 4 (own half), metres.
-        /// Placeholder only — replaced by formation slots in Phase D.
-        /// Source constants: MatchEngineConstants.PITCH_LENGTH_M.
-        /// </summary>
-        public static readonly float AwayLineXM = PITCH_LENGTH_M * 3f / 4f;
+        public static readonly float OutfieldKickoffLineXM = PITCH_LENGTH_M / 4f;
 
         /// <summary>
         /// [DERIVED] Highest EntityId in the match = SQUAD_SIZE − 1 (roster indices 0..SQUAD_SIZE−1
@@ -440,34 +461,73 @@ namespace TacticalDirector.MatchEngine
         public static readonly float LooseBallPickupRadiusM = Config.GetFloat("match-engine", "LooseBallPickupRadiusM", 1.0f);
 
         /// <summary>
+        /// [CROSS] Distance (m) from its own goal line at which a goalkeeper is spawned at kickoff,
+        /// centred on the goal mouth. Authoritative source:
+        /// <c>PositioningAIConstants.GK_DEPTH_M</c> (Positioning AI #12 §3.4 — the resting depth its
+        /// <c>ComputeGkSlot</c> produces for a ball at the centre spot), mirrored here read-only so the
+        /// boot placement and the positioning model agree instead of drifting.
+        ///
+        /// Load-bearing well past kickoff: the Physics phase skips goalkeepers at Stage 0 (GK locomotion
+        /// is Goalkeeper Mechanics #11), so a keeper stands where boot puts it for the entire match.
+        /// </summary>
+        public static readonly float GkKickoffDepthM =
+            TacticalDirector.PositioningAI.PositioningAIConstants.GK_DEPTH_M;
+
+        /// <summary>
         /// [GT] Minimum <c>ContactForceData.ForceMagnitude</c> (N) for a FROM_BEHIND agent-agent
-        /// collision to qualify as a candidate foul (design note §3). Set near the top of the
-        /// existing 500–1500 N fall/stumble literature band (<c>CollisionSystemConstants</c>) so
-        /// incidental jogging/shoulder contact cannot spuriously qualify. Illustrative pending a
-        /// balance pass (the #21 G2 precedent) — the contract under review is the wiring, not the
-        /// tuned magnitude.
+        /// collision to qualify as a CANDIDATE foul — the "hard enough for the referee to consider it"
+        /// gate (design note §3; balance pass `foul-discipline-balance-design.md` §4.1). Sits at the p99
+        /// of the measured cross-team from-behind force distribution, deliberately in the meaningful
+        /// part of the band rather than on its last few samples: the distribution is bounded at ~2400 N
+        /// (a collision impulse over <c>ContactDurationS</c> cannot exceed it), so a threshold chosen up
+        /// on the tail would read as calibrated while actually being noise. The foul RATE is carried by
+        /// <see cref="FoulCallProbability"/>, not by this value.
+        /// Config key [match-engine] FoulImpactForceThresholdN.
         /// </summary>
         public static readonly float FoulImpactForceThresholdN = Config.GetFloat("match-engine", "FoulImpactForceThresholdN", 1200f);
 
         /// <summary>
-        /// [GT] Probability band width [0,1) for a straight red card on a qualifying foul (design
-        /// note §3). Drawn from the <c>match-flow.card-severity</c> RNG stream: <c>[0, Red)</c> =
-        /// straight red, <c>[Red, Red+Yellow)</c> = yellow, else no card.
+        /// [GT] Probability that a candidate contact AT the force threshold is actually whistled — the
+        /// referee-judgement term (`foul-discipline-balance-design.md` KD-F1). The applied probability
+        /// scales with force, <c>p(F) = min(1, FoulCallProbability × F / FoulImpactForceThresholdN)</c>,
+        /// so a harder challenge is likelier to be given while a hard contact is never automatically a
+        /// foul.
+        ///
+        /// Calibrated (not guessed) against a ~22-fouls-per-90-minutes target, measured end-to-end on
+        /// real composed play rather than predicted: the offline sweep pointed at 0.025, a live run
+        /// measured 37.5 fouls per 90 minutes there (fewer restarts leave play running, which raises the
+        /// contact rate — the feedback the offline replay cannot model), and 0.015 lands on target.
+        /// It reads low because the engine currently generates ~17 hard cross-team from-behind contacts
+        /// per SECOND — a separate, recorded unrealism (design §7 item 1). If that contact rate changes,
+        /// re-measure with <c>FoulRateDiagnosticTests</c>; this value is only meaningful against it.
+        /// Config key [match-engine] FoulCallProbability.
         /// </summary>
-        public static readonly float RedCardProbability = Config.GetFloat("match-engine", "RedCardProbability", 0.05f);
+        public static readonly float FoulCallProbability = Config.GetFloat("match-engine", "FoulCallProbability", 0.015f);
 
         /// <summary>
-        /// [GT] Probability band width [0,1) for a yellow card on a qualifying foul (design note §3),
-        /// immediately after the <see cref="RedCardProbability"/> band.
+        /// [GT] Probability band width [0,1) for a straight red card on a WHISTLED foul (design note §3).
+        /// Read from the rescaled remainder of the single <c>match-flow.card-severity</c> draw that also
+        /// decided the call (KD-F2): <c>[0, Red)</c> = straight red, <c>[Red, Red+Yellow)</c> = yellow,
+        /// else no card. Set from the real-football ratio ~0.25 reds per ~22 fouls (KD-F5).
+        /// Config key [match-engine] RedCardProbability.
         /// </summary>
-        public static readonly float YellowCardProbability = Config.GetFloat("match-engine", "YellowCardProbability", 0.35f);
+        public static readonly float RedCardProbability = Config.GetFloat("match-engine", "RedCardProbability", 0.011f);
 
         /// <summary>
-        /// [GT] Ticks a qualifying foul suppresses further foul detection (design note §3) — a global
-        /// debounce so a sustained agent-agent overlap cannot generate a card every tick. 60 ticks = 1 s
-        /// at 60 Hz.
+        /// [GT] Probability band width [0,1) for a yellow card on a whistled foul (design note §3),
+        /// immediately after the <see cref="RedCardProbability"/> band. Set from the real-football ratio
+        /// ~3.5 bookings per ~22 fouls (KD-F5). Config key [match-engine] YellowCardProbability.
         /// </summary>
-        public static readonly int FoulCooldownTicks = Config.GetInt("match-engine", "FoulCooldownTicks", 60);
+        public static readonly float YellowCardProbability = Config.GetFloat("match-engine", "YellowCardProbability", 0.16f);
+
+        /// <summary>
+        /// [GT] Ticks a WHISTLED foul suppresses further foul detection (design note §3) — a global
+        /// debounce so one sustained tangle cannot be given twice. 180 ticks = 3 s at 60 Hz, which is
+        /// about how long the restart itself takes with the players still gathered; the previous 1 s was
+        /// thin. A waved-on candidate arms nothing (KD-F3), so this never suppresses a genuine foul that
+        /// follows a no-call. Config key [match-engine] FoulCooldownTicks.
+        /// </summary>
+        public static readonly int FoulCooldownTicks = Config.GetInt("match-engine", "FoulCooldownTicks", 180);
 
         // ── GK (#11) / Heading (#10) Stage-0 trigger heuristics ──────────────────────────
         // gk-heading-engine-integration-design.md §4. Conservative world-state gates that fire the

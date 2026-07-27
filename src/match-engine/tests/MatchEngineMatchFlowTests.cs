@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineMatchFlowTests.cs
 // Created:  2026-07-14
-// Modified: 2026-07-14
+// Modified: 2026-07-26 (§5.Z.10: kickoff keeper-placement locks — a keeper never moves at Stage 0, so boot placement is its position for the whole match)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-flow-completion-design.md) §7, Code Standards #20
 // Purpose:  Locks the half-time (ball reset, fires once) and full-time (gameplay freeze, fires once)
@@ -121,6 +121,74 @@ namespace TacticalDirector.MatchEngine
             engine.TestOnly_CheckMatchFlowTransitions(MatchEngineConstants.MATCH_TICKS_TOTAL);
             for (int i = 0; i < 20; i++) engine.RunTick();
             return engine.CurrentSnapshotDigest;
+        }
+
+        // ── Kickoff keeper placement (§5.Z.10) ────────────────────────────────────────
+
+        [Test]
+        public void Kickoff_EachKeeperStandsOnTheGoalLineItDefends()
+        {
+            // A keeper never moves at Stage 0 — the Physics phase skips goalkeepers (#11 owns GK
+            // locomotion) — so boot placement IS the keeper's position for the whole match. Under the
+            // original shared-line placement both keepers landed on the outfield kickoff line at the
+            // k = 0 lateral slot (26.25 / 78.75, y = 5.67): 26 m upfield of their own goal and 28 m
+            // off-centre, leaving BOTH goals unguarded for ninety minutes.
+            var engine = new MatchEngine(0x00C0FFEE5EEDBA11UL);
+
+            float mouthY = MatchEngineConstants.PITCH_WIDTH_M * 0.5f;
+            int keepersFound = 0;
+
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                if (!engine.TestOnly_IsGoalkeeper(i))
+                {
+                    continue;
+                }
+
+                keepersFound++;
+                Vector2 p = engine.TestOnly_AgentSnapshot(i).Position;
+                int team = engine.AgentTeamId(i);
+
+                // Team 0 attacks +X, so it DEFENDS x = 0; team 1 defends x = PITCH_LENGTH.
+                float expectedX = team == 0
+                    ? MatchEngineConstants.GkKickoffDepthM
+                    : MatchEngineConstants.PITCH_LENGTH_M - MatchEngineConstants.GkKickoffDepthM;
+
+                Assert.AreEqual(expectedX, p.x, 1e-3f,
+                    "team " + team + "'s keeper must stand off the goal line it defends, not on the "
+                    + "outfield kickoff line");
+                Assert.AreEqual(mouthY, p.y, 1e-3f,
+                    "team " + team + "'s keeper must be centred on the goal mouth");
+            }
+
+            Assert.AreEqual(MatchEngineConstants.TEAM_COUNT, keepersFound,
+                "exactly one keeper per team");
+        }
+
+        [Test]
+        public void Kickoff_KeepersGuardOppositeGoals()
+        {
+            // The load-bearing half of the placement: two keepers on the SAME goal line would leave one
+            // goal open all match, which is the shape the original defect took in effect.
+            var engine = new MatchEngine(0x00C0FFEE5EEDBA11UL);
+
+            float half = MatchEngineConstants.PITCH_LENGTH_M * 0.5f;
+            bool guardsLowEnd = false;
+            bool guardsHighEnd = false;
+
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                if (!engine.TestOnly_IsGoalkeeper(i))
+                {
+                    continue;
+                }
+
+                if (engine.TestOnly_AgentSnapshot(i).Position.x < half) guardsLowEnd = true;
+                else guardsHighEnd = true;
+            }
+
+            Assert.IsTrue(guardsLowEnd && guardsHighEnd,
+                "the two keepers must guard opposite ends; both on one line leaves a goal undefended");
         }
     }
 }

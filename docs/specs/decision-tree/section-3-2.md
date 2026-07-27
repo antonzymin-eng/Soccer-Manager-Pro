@@ -256,10 +256,21 @@ The zone modifier is a multiplier on the nominal `BaseUtility` constant. Agents 
 their attacking third should be encouraged to shoot and dribble; agents in their own
 third should be discouraged from risky actions and encouraged to clear possession.
 
-The agent's own zone is defined relative to their attacking direction:
-- `DEFENSIVE`: 0m – 35m from own goal line
-- `MIDFIELD`: 35m – 65m
-- `ATTACKING`: 65m – 105m
+The agent's own zone is defined relative to their attacking direction, as EQUAL thirds of the
+pitch length:
+- `DEFENSIVE`: 0m – 35m from own goal line (`PITCH_LENGTH / 3`)
+- `MIDFIELD`: 35m – 70m
+- `ATTACKING`: 70m – 105m (`PITCH_LENGTH × 2 / 3` – `PITCH_LENGTH`)
+
+**ERR-008-016 (July 26, 2026):** the upper bound was `65m`, which is neither a third of the pitch
+nor derivable from any stated formula — it made the attacking third 40 m and the middle third 30 m
+while the surrounding prose describes thirds, and the implementation's own constant carried a
+`[DERIVED] — split pitch into thirds` tag that its value contradicted. Both bounds are now
+`[DERIVED]` from the pitch length. A side effect worth recording: equal thirds make the boundary
+pair **self-mirroring** (`{L/3, 2L/3}` maps to itself under `x → L − x`), so a team's
+own-goal-relative bands no longer depend on which direction it attacks. The per-team recomputation
+mandated below is unchanged and still required — it is what measures the distance from the correct
+goal line, which is the actual ERR-008-002 defect.
 
 **Note:** These zones are ball-zone derived, not agent-zone derived. The ball's zone
 determines the tactical context, not the agent's current position. An agent who is
@@ -635,5 +646,6 @@ defence; SHOOT correctly takes over in the attacking third for capable finishers
 | 1.4 | June 11, 2026 | AI agent (audit AR-2) | ERR-008-002: §3.2.1.3 consumption note — zone modifiers read the team-relative `DecisionContext.BallZone` derived from `BallPosition.x`, not the shared home-perspective `MatchContext.BallZone` (away-team modifiers were inverted). |
 | 1.5 | July 10, 2026 | AI agent | ERR-008-012 back-prop (Dismarking AI #23 `APPROVED`): §3.2.2.1 gains the marked-pass-target multiplier anchor note — FM-DM-03 joins the external tactical multiplier product before the final clamp; #23 owns formula/constants/tests; `Off` = ×1.0 identity. |
 | 1.6 | July 23, 2026 | AI agent | ERR-008-013 back-prop (GK/Heading #11/#10 integration): a new `ScoreSave` scores the DT-emitted `ActionType.SAVE` at `U_BASE_SAVE`; SAVE is exempted from the §21 `PlayerTacticActionMultiplier` product (its `RoleWeightModifiers`/`TempoActionBias` tables are 7-wide, indexed by the action ordinal — scoring a=SAVE(7) without the exemption reads OOB; SAVE is not a tactic-modulated action). SAVE reaches the scorer only as the sole off-ball option (§3.1.13); the value is not load-bearing for selection. ERR-008-013 + the code own the behaviour. |
+| 1.7 | July 26, 2026 | AI agent | ERR-008-016: §3.2.1.3 zone bounds corrected to EQUAL thirds — `ATTACKING` starts at `70m` (`PITCH_LENGTH × 2 / 3`), not `65m`. The old pair made the attacking third 40 m and the middle third 30 m while the prose described thirds, and the implementation constant carried a `[DERIVED] — split pitch into thirds` tag its value contradicted. Both bounds are now derived from the pitch length. Recorded side effect: equal thirds are self-mirroring, so the bands no longer depend on attacking direction; the ERR-008-002 per-team recomputation is unchanged and still required. |
 | 1.3 | May 18, 2026 | AI agent (claude-sonnet-4-6) | ERR-008-001 fix (A-06 FAIL — coordinate system): rewrote `PitchGeometry` class from centered origin `(0,0) = centre of pitch` to authoritative corner-origin `(0,0,0) = corner of pitch` per Ball Physics #1 §1.2 and Appendix C. All goal `Vector2` constants replaced with `Vector3` constants using correct corner-origin values: `HOME_OPPONENT_GOAL_CENTRE (105, 34, 0)`, `HOME_OWN_GOAL_CENTRE (0, 34, 0)`, etc. `HALF_LENGTH_M`/`HALF_WIDTH_M` comments updated. Coordinate system comment corrected from "§2.2" to "§1.2 and Appendix C". Stale XC-NOTE (XC-GEOM-01) replaced with resolution verification. |
 

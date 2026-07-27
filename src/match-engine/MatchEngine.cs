@@ -33,6 +33,9 @@
 //           flag-on engine snapshot-safe. The Phase-1 durable-capture fail-loud guard is removed.)
 // Modified: 2026-07-23 (DT-emitted goalkeeper SAVE (ERR-008-013) + AR follow-up TestOnly_SaveCommittedForGk latch seam)
 // Modified: 2026-07-26 (§5.Z Phase H possession bootstrap — ERR-030-014: ApplyRestart(position, awardedTeam) + SelectRestartTaker (KD-H1), the boot kickoff award, RunLooseBallPickup (KD-H3), SelectLooseBallCollector (KD-H5), the Resolve PASS/SHOOT completion sweep (KD-H4 / ERR-008-015), and interrupt deferral while an executor is in flight. No schema change. See docs/tracking/match-engine-design.md §5.Z)
+// Modified: 2026-07-26 (§5.Z.12: boot placement collapsed to ONE own-half template mirrored for the away side — the HomeLineXM/AwayLineXM and HOME_/AWAY_FACING_DEG pairs are gone, along with FacingFromHeading. Away lateral spread mirrors, so digests move; behaviour is transient (the AI reslots outfielders at tick 6).)
+// Modified: 2026-07-26 (§5.Z.10 kickoff keeper placement: a keeper spawns on the goal line it DEFENDS, centred on the mouth, instead of on the outfield kickoff line — Stage-0 Physics skips GK locomotion, so boot placement stood for the whole match and both goals were unguarded. See docs/tracking/match-engine-design.md §5.Z.10)
+// Modified: 2026-07-26 (§5.Z.9 foul/discipline balance pass: referee-call probability partitioned out of the single card-severity draw (KD-F1/KD-F2), no-call arms no cooldown (KD-F3), strongest-wins candidate capture (KD-F4), + the TestOnly collision-observer measurement seam. No schema change. See docs/tracking/foul-discipline-balance-design.md)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -244,9 +247,22 @@ namespace TacticalDirector.MatchEngine
         // them immediately after (the sole reset — see the RunResolvePhase comment at the
         // UpdateCollisions call site). Not persisted cross-tick in any meaningful sense (always
         // false entering a tick's collision step), so NOT serialized.
-        private bool _foulCandidateFound;
-        private int  _foulCandidateOffender;
-        private int  _foulCandidateVictim;
+        private bool  _foulCandidateFound;
+        private int   _foulCandidateOffender;
+        private int   _foulCandidateVictim;
+        // Contact force (N) of the captured candidate — the input to the referee-call probability
+        // (foul-discipline-balance-design.md KD-F1). Same lifecycle as the three fields above, so
+        // likewise NOT serialized.
+        private float _foulCandidateForceN;
+
+        // Balance-measurement seam (design note §5.Z.9). An optional observer the
+        // MatchFlowCollisionConsumer forwards EVERY collision event to, BEFORE any of its gates —
+        // the only way to measure the force distribution the FoulImpactForceThresholdN gate sits on,
+        // since the consumer is a private nested class and the collision system takes exactly one
+        // consumer. Null in production and in every test that does not set it, so the cost is one
+        // null check per collision event and the behaviour is unchanged. Not serialized: it is an
+        // observation hook, not world state.
+        private ICollisionEventConsumer _collisionObserver;
 
         // RNG stream for card-severity draws (design note §3), registered at Boot on the injected
         // DeterministicRngService — the first host-owned draw site in match-engine (Phase A/C register
@@ -1060,18 +1076,41 @@ namespace TacticalDirector.MatchEngine
                     _teamIds[i]      = team;
                     _isGoalkeeper[i] = k == 0;
 
-                    float lineX = team == 0
-                        ? MatchEngineConstants.HomeLineXM
-                        : MatchEngineConstants.AwayLineXM;
-                    // Even lateral spread across the pitch width: k+1 of PLAYERS_PER_TEAM+1 gaps.
-                    float spreadY = MatchEngineConstants.PITCH_WIDTH_M
-                                  * (k + 1) / (MatchEngineConstants.PLAYERS_PER_TEAM + 1);
-                    float headingDeg = team == 0
-                        ? MatchEngineConstants.HOME_FACING_DEG
-                        : MatchEngineConstants.AWAY_FACING_DEG;
+                    // ONE own-half template, mirrored for the away side (§5.Z.12). Every position and
+                    // facing below is expressed in the acting team's own-half frame and passed through
+                    // the existing mirror helpers, so there is no Home/Away constant pair to keep in
+                    // agreement. That pairing is the shape behind three defects in this engine's history
+                    // — ERR-008-002 (away zone modifiers inverted), ERR-013-009/010 (AttackingDirection
+                    // inverted) and the §5.Z.10 keeper spawn — and a mirror has one place to be wrong
+                    // where a pair has two.
+                    //
+                    // The keeper stands on the goal line it DEFENDS, centred on the goal mouth, not on
+                    // the outfield line with everyone else. Load-bearing far beyond kickoff: the Physics
+                    // phase skips goalkeepers at Stage 0 (#11 owns GK locomotion), so wherever boot puts
+                    // a keeper is where it stands for the WHOLE match. Under the old shared-line
+                    // placement the keeper took the k = 0 lateral slot — 26 m upfield of its own goal and
+                    // 28 m off-centre — leaving BOTH goals unguarded for ninety minutes (§5.Z.10).
+                    //
+                    // Outfielders spread evenly across the width (k+1 of PLAYERS_PER_TEAM+1 gaps) on a
+                    // quarter-length line. Transient: the AI phase moves them onto real formation slots
+                    // on the first stride tick.
+                    Vector2 ownHalfSpawn = _isGoalkeeper[i]
+                        ? new Vector2(
+                            MatchEngineConstants.GkKickoffDepthM,
+                            MatchEngineConstants.PITCH_WIDTH_M * 0.5f)
+                        : new Vector2(
+                            MatchEngineConstants.OutfieldKickoffLineXM,
+                            MatchEngineConstants.PITCH_WIDTH_M
+                                * (k + 1) / (MatchEngineConstants.PLAYERS_PER_TEAM + 1));
 
+                    // Facing is a free vector, so it mirrors by negation rather than about the pitch
+                    // centre. Every team faces the goal it attacks: +X in its own frame. This also
+                    // removes the trig the former degrees-based helper needed — a pure negation of exact
+                    // unit components cannot introduce the floating-point fuzz (Mathf.Sin(180°) ≈ 8.7e-8)
+                    // that helper existed to special-case away from the deterministic snapshot.
                     _agents[i] = AgentState.CreateAtPosition(
-                        new Vector2(lineX, spreadY), FacingFromHeading(headingDeg));
+                        MirrorPitchIfAway(team, ownHalfSpawn),
+                        MirrorVelocityIfAway(team, new Vector2(1f, 0f)));
                     // #27 T1: the #2 locomotion attrs are a projection of the canonical record
                     // (all-neutral at boot ⇒ byte-identical to the pre-T1 CreateDefault() seed).
                     _attrs[i]  = PlayerAttributeProjection.ToAgentMovement(in _canonicalAttrs[i]);
@@ -1084,28 +1123,6 @@ namespace TacticalDirector.MatchEngine
             }
         }
 
-        /// <summary>
-        /// Converts a kickoff heading in degrees (project convention: +X = toward the away goal,
-        /// so 0° faces the away goal and 180° faces the home goal) into a unit facing direction.
-        /// Stage 0 kickoff headings are axis-aligned, so they map to exact unit vectors — this keeps
-        /// floating-point fuzz (e.g. <c>Mathf.Sin(180°)</c> ≈ 8.7e-8) out of the deterministic
-        /// snapshot. Non-cardinal headings (none at Stage 0) fall back to trig. Boot-only — not on
-        /// the hot path.
-        /// </summary>
-        private static Vector2 FacingFromHeading(float degrees)
-        {
-            if (degrees == 0f)
-            {
-                return new Vector2(1f, 0f);
-            }
-            if (degrees == 180f)
-            {
-                return new Vector2(-1f, 0f);
-            }
-
-            float rad = degrees * Mathf.Deg2Rad;
-            return new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
-        }
 
         // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -1610,17 +1627,50 @@ namespace TacticalDirector.MatchEngine
         /// (and applied — ball/possession already stomped by the time this returns).</summary>
         internal bool TestOnly_EvaluateAndApplyOffside(int toucher) => EvaluateAndApplyOffside(toucher);
 
+        /// <summary>Test-only seam: attaches an observer that receives every agent-agent / agent-ball
+        /// collision event the <see cref="MatchFlowCollisionConsumer"/> sees, before any of its foul
+        /// gates. Exists for the §5.Z.9 foul-rate balance measurement — the force distribution the
+        /// <c>FoulImpactForceThresholdN</c> gate sits on cannot otherwise be observed, because the
+        /// collision system accepts exactly one consumer and that consumer is private to this class.
+        /// Pass null to detach. Purely observational: an observer cannot influence the match.</summary>
+        internal void TestOnly_SetCollisionObserver(ICollisionEventConsumer observer) =>
+            _collisionObserver = observer;
+
+        /// <summary>
+        /// Test-only: a contact force (N) at which the referee-call probability saturates at 1, so a
+        /// candidate carrying it is whistled with certainty whatever the `[GT]` values are retuned to.
+        /// Deliberately far above the ~2400 N a real collision can produce — this is a test constant,
+        /// not a physical one, and it exists so that a retune of <c>FoulCallProbability</c> cannot
+        /// silently turn "this test injects a foul" into "this test injects a coin flip".
+        /// </summary>
+        internal const float CertainFoulForceN = 1e9f;
+
         /// <summary>Test-only seam: injects a foul candidate exactly as <see cref="MatchFlowCollisionConsumer"/>
         /// would, bypassing the need to engineer a real FROM_BEHIND high-force agent-agent collision.
         /// Call before <see cref="RunTick"/> — the value survives into that tick's <c>RunResolvePhase</c>
         /// (which resets it only via <c>ApplyFoulIfCaptured</c> consuming it, never pre-emptively) and is
-        /// applied in the normal Resolve-phase place (design note §3 test plan).</summary>
-        internal void TestOnly_InjectFoulCandidate(int offender, int victim)
+        /// applied in the normal Resolve-phase place (design note §3 test plan).
+        ///
+        /// <paramref name="forceN"/> defaults to <see cref="CertainFoulForceN"/>, so an injected candidate
+        /// IS a foul unless a test deliberately asks otherwise — which is what every caller predating the
+        /// referee-call probability (`foul-discipline-balance-design.md` KD-F1) means by injecting one.</summary>
+        internal void TestOnly_InjectFoulCandidate(int offender, int victim, float forceN = CertainFoulForceN)
         {
             _foulCandidateFound    = true;
             _foulCandidateOffender = offender;
             _foulCandidateVictim   = victim;
+            _foulCandidateForceN   = forceN;
         }
+
+        /// <summary>Test-only: the pure referee-call probability, for locking the KD-F1 shape directly.</summary>
+        internal static float TestOnly_FoulCallProbability(float forceN) => ComputeFoulCallProbability(forceN);
+
+        /// <summary>Test-only: the live foul-candidate consumer, so the KD-F4 strongest-wins capture rule
+        /// can be driven with synthetic collision events instead of engineered physics.</summary>
+        internal ICollisionEventConsumer TestOnly_FoulCandidateConsumer => _eventConsumer;
+
+        /// <summary>Test-only: the captured candidate's contact force (N); 0 when none is captured.</summary>
+        internal float TestOnly_FoulCandidateForceN => _foulCandidateFound ? _foulCandidateForceN : 0f;
 
         /// <summary>Test-only seam: runs the manager decision points exactly as RunAiPhase does —
         /// same gate, same live goalDiff/clock inputs — at an arbitrary <paramref name="decisionTick"/>,
@@ -3430,8 +3480,9 @@ namespace TacticalDirector.MatchEngine
             }
             _foulCandidateFound = false;
 
-            int offender = _foulCandidateOffender;
-            int victim   = _foulCandidateVictim;
+            int   offender = _foulCandidateOffender;
+            int   victim   = _foulCandidateVictim;
+            float forceN   = _foulCandidateForceN;
 
             // AR-9 M-1: a sent-off agent is not a participant in play — contact with (or by) one
             // cannot produce a foul, a card, or a restart. The physical collision itself still
@@ -3445,19 +3496,22 @@ namespace TacticalDirector.MatchEngine
             // a single gate avoids the sibling-drift class (PM AR-7 M-1), and this site also covers
             // the TestOnly_InjectFoulCandidate seam. Cost: a discarded candidate still consumed the
             // tick's single capture slot, shadowing a same-tick genuine foul — negligible (at most
-            // one 60 Hz tick's delay for an already-rare event). No cooldown is armed and no
-            // FoulCommittedEvent is published: a non-foul must not suppress or announce anything.
+            // one 60 Hz tick's delay for an already-rare event), and doubly so under the KD-F4
+            // strongest-wins rule, since a sent-off agent is held at rest by the forced stop and the
+            // FROM_BEHIND classifier needs BOTH participants moving, so it rarely raises a candidate
+            // at all. No cooldown is armed and no FoulCommittedEvent is published: a non-foul must
+            // not suppress or announce anything.
             if (_isSentOff[offender] || _isSentOff[victim])
             {
                 return;
             }
 
-            Vector2 victimPos = _agents[victim].Position;
-            Vector3 location  = new Vector3(victimPos.x, victimPos.y, 0f);
-
-            var foulEvt = new FoulCommittedEvent(offender, victim, location, foulKind: (byte)ContactType.FROM_BEHIND);
-            EventBus.Publish(in foulEvt);
-
+            // Referee judgement (foul-discipline-balance-design.md KD-F1/KD-F2). Reaching here means the
+            // contact was hard, from behind, cross-team, and both participants are on the pitch — a
+            // CANDIDATE, not yet a foul. Whether the whistle goes is a probability scaled by how hard the
+            // contact was. The draw happens BEFORE any observable effect, so a wave-on leaves no trace:
+            // no event, no card, no restart, and (KD-F3) no cooldown, since suppressing detection after a
+            // no-call would silently swallow the genuine foul two ticks later.
             if (_rng.Reserve(_cardSeverityStreamIndex, 1) != 0)
             {
                 throw new InvalidOperationException(
@@ -3475,7 +3529,26 @@ namespace TacticalDirector.MatchEngine
             _rng.CloseReservation(_cardSeverityStreamIndex);
 
             float u = (draw % 1_000_000UL) / 1_000_000f;
-            byte? drawnKind = DetermineCardKind(u);
+
+            float callProbability = ComputeFoulCallProbability(forceN);
+            if (u >= callProbability)
+            {
+                return; // Waved on.
+            }
+
+            // KD-F2: the same draw selects the card. Conditional on a call, u is uniform on
+            // [0, callProbability), so v = u / callProbability is uniform on [0,1) — the input
+            // DetermineCardKind's bands are defined against. One draw, two decisions, no second stream
+            // and no SNAPSHOT_SCHEMA_VERSION bump. callProbability > u >= 0 here, so it cannot be zero.
+            float v = u / callProbability;
+
+            Vector2 victimPos = _agents[victim].Position;
+            Vector3 location  = new Vector3(victimPos.x, victimPos.y, 0f);
+
+            var foulEvt = new FoulCommittedEvent(offender, victim, location, foulKind: (byte)ContactType.FROM_BEHIND);
+            EventBus.Publish(in foulEvt);
+
+            byte? drawnKind = DetermineCardKind(v);
 
             if (drawnKind.HasValue)
             {
@@ -3489,6 +3562,31 @@ namespace TacticalDirector.MatchEngine
             // Free kick to the victim's team at the foul location (design note §3); §5.Z Phase H awards
             // the taker to that team.
             ApplyRestart(victimPos, awardedTeam: _teamIds[victim]);
+        }
+
+        /// <summary>
+        /// Pure referee-call probability for a candidate contact of <paramref name="forceN"/> newtons
+        /// (`foul-discipline-balance-design.md` KD-F1): <c>min(1, FoulCallProbability × F / threshold)</c>.
+        /// At the threshold it equals <c>FoulCallProbability</c> and it rises linearly with force, so a
+        /// harder challenge is likelier to be given while a hard contact is never automatically a foul —
+        /// which the balance measurement showed it must not be, since the engine produces roughly
+        /// seventeen qualifying cross-team from-behind contacts per second.
+        ///
+        /// Separated from the draw so the shape is directly testable, mirroring
+        /// <see cref="DetermineCardKind"/>. Non-finite input maps to 0 (never call): the force comes from
+        /// the collision system, which sanitises, so this is a fail-closed guard rather than a live path —
+        /// and failing closed here means a missed foul, not a phantom one.
+        /// </summary>
+        private static float ComputeFoulCallProbability(float forceN)
+        {
+            if (!(forceN > 0f) || float.IsInfinity(forceN))
+            {
+                return 0f;
+            }
+
+            float scaled = MatchEngineConstants.FoulCallProbability
+                           * (forceN / MatchEngineConstants.FoulImpactForceThresholdN);
+            return scaled > 1f ? 1f : scaled;
         }
 
         /// <summary>
@@ -6083,7 +6181,12 @@ namespace TacticalDirector.MatchEngine
 
             public void OnCollisionEvent(in CollisionEvent evt)
             {
-                if (_engine._foulCandidateFound || _engine._foulCooldownRemaining > 0)
+                // Balance-measurement seam (§5.Z.9): forwarded BEFORE every gate, so an observer sees
+                // the whole population the gates select from — including the events suppressed by the
+                // cooldown, which is what makes the offline threshold sweep exact. Null in production.
+                _engine._collisionObserver?.OnCollisionEvent(in evt);
+
+                if (_engine._foulCooldownRemaining > 0)
                 {
                     return;
                 }
@@ -6106,9 +6209,21 @@ namespace TacticalDirector.MatchEngine
                     return;
                 }
 
+                // KD-F4: keep the STRONGEST candidate this tick, not the first. Force now drives the
+                // referee-call probability, so first-wins would let a marginal 1201 N contact shadow a
+                // 2300 N challenge in the same tick and systematically under-call the hardest fouls.
+                // Strictly-greater keeps the earlier of two equal contacts, so detection order (itself
+                // deterministic) still decides ties. Still at most one candidate per tick.
+                if (_engine._foulCandidateFound
+                    && foul.ForceMagnitude <= _engine._foulCandidateForceN)
+                {
+                    return;
+                }
+
                 _engine._foulCandidateFound    = true;
                 _engine._foulCandidateOffender = foul.InstigatorAgentID;
                 _engine._foulCandidateVictim   = foul.VictimAgentID;
+                _engine._foulCandidateForceN   = foul.ForceMagnitude;
             }
         }
 
@@ -6913,4 +7028,46 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | production callers); and OnPossessionChanged defers the        |
 // |         |            |        | interrupt while the new holder's own executor is in flight.    |
 // |         |            |        | No SNAPSHOT_SCHEMA_VERSION change.                             |
+// | 1.49    | 2026-07-26 | —      | §5.Z.9 foul & discipline balance pass. ApplyFoulIfCaptured now  |
+// |         |            |        | computes ComputeFoulCallProbability(F) = min(1, callP x F /     |
+// |         |            |        | threshold) and PARTITIONS the single existing card-severity     |
+// |         |            |        | draw: u >= p waves on (no event, card, restart or cooldown —    |
+// |         |            |        | KD-F3, since arming it would swallow the genuine foul two ticks |
+// |         |            |        | later), u < p whistles and takes the severity from v = u / p.   |
+// |         |            |        | No new RNG stream, no SNAPSHOT_SCHEMA_VERSION change.           |
+// |         |            |        | MatchFlowCollisionConsumer keeps the STRONGEST contact of a     |
+// |         |            |        | tick rather than the first (KD-F4 — force now decides the call, |
+// |         |            |        | so first-wins would under-call the hardest fouls); new          |
+// |         |            |        | _foulCandidateForceN joins the always-reset-within-the-tick     |
+// |         |            |        | candidate fields (not serialized). + TestOnly_SetCollisionObs-  |
+// |         |            |        | erver (the measurement seam), TestOnly_FoulCallProbability,     |
+// |         |            |        | TestOnly_FoulCandidateConsumer/ForceN, and an optional forceN   |
+// |         |            |        | on TestOnly_InjectFoulCandidate defaulting to certainty so      |
+// |         |            |        | every pre-existing injection test keeps its meaning. Measured   |
+// |         |            |        | 480 -> 21 fouls, 147 -> 3.0 yellows, 75 -> 1.0 reds per 90 min. |
+// | 1.50    | 2026-07-26 | —      | §5.Z.10 kickoff keeper placement. InitializeKickoffState put     |
+// |         |            |        | every agent of a team on one x-line spread across the width by   |
+// |         |            |        | roster index, so the keeper (index 0) took the first lateral     |
+// |         |            |        | slot: 26 m upfield of the goal it defends and 28 m off-centre.   |
+// |         |            |        | Stage-0 Physics SKIPS goalkeepers (#11 owns GK locomotion), so   |
+// |         |            |        | that was the keeper's position for the whole ninety minutes —    |
+// |         |            |        | both goals stood unguarded in every match the engine has ever    |
+// |         |            |        | played, and the KD-8 Step 0 pilot measured 15-39 goals a match.  |
+// |         |            |        | A keeper now spawns at (GkKickoffDepthM, WIDTH/2) on the line it |
+// |         |            |        | defends, mirrored for the away side through MirrorPitchIfAway.   |
+// |         |            |        | Outfield placement untouched.                                   |
+// | 1.51    | 2026-07-26 | —      | §5.Z.12 de-duplicated the per-side boot placement. Kickoff       |
+// |         |            |        | position and facing are now written ONCE in the acting team's    |
+// |         |            |        | own-half frame and passed through MirrorPitchIfAway /            |
+// |         |            |        | MirrorVelocityIfAway, so the HomeLineXM/AwayLineXM and           |
+// |         |            |        | HOME_FACING_DEG/AWAY_FACING_DEG pairs are deleted and            |
+// |         |            |        | FacingFromHeading (now unused) with them. A Home/Away pair is    |
+// |         |            |        | two places that must agree; a mirror is one — the shape behind   |
+// |         |            |        | ERR-008-002, ERR-013-009/010 and the §5.Z.10 keeper spawn.       |
+// |         |            |        | The x line is byte-identical (105/4 mirrors exactly to 105*3/4); |
+// |         |            |        | the away lateral spread now mirrors too (y -> WIDTH - y), so     |
+// |         |            |        | boot differs and every digest moves. Behaviourally transient:    |
+// |         |            |        | the AI reslots outfielders at the first stride and the keeper is |
+// |         |            |        | placed explicitly. Removing the trig also strengthens the        |
+// |         |            |        | determinism property FacingFromHeading special-cased for.        |
 #endregion

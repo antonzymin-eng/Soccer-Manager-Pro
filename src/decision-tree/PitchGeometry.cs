@@ -1,6 +1,6 @@
 // File:     src/decision-tree/PitchGeometry.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-07-26 (zone thirds derived from PitchLengthM and made EQUAL: AttackingZoneMinX 65 -> 2L/3 = 70, so "split pitch into thirds" is true and the bounds are self-mirroring)
 // Author:   —
 // Spec:     Decision Tree #8 §3.2.1.4, Code Standards #20
 // Purpose:  Static pitch geometry constants owned by the Decision Tree.
@@ -55,9 +55,27 @@ namespace TacticalDirector.DecisionTree
         public static readonly Vector2 AwayOwnGoalCentre = new Vector2(PitchLengthM, GoalCentreY);
 
         // ── Zone boundaries (x-axis) ──────────────────────────────────────────
-        // [DERIVED] — split pitch into thirds
-        public const float DefensiveZoneMaxX  = 35.0f;
-        public const float AttackingZoneMinX  = 65.0f;
+
+        /// <summary>
+        /// [DERIVED] Upper x bound of a team's defensive third, metres.
+        /// Formula: PitchLengthM / 3. Source constants: PitchGeometry.PitchLengthM.
+        /// </summary>
+        public const float DefensiveZoneMaxX = PitchLengthM / 3.0f;
+
+        /// <summary>
+        /// [DERIVED] Lower x bound of a team's attacking third, metres.
+        /// Formula: PitchLengthM * 2 / 3. Source constants: PitchGeometry.PitchLengthM.
+        ///
+        /// <para>Previously a hardcoded 65.0f while its sibling was a true third (35.0f), which made the
+        /// attacking third 40 m and the middle third 30 m — the tag said "split pitch into thirds" and the
+        /// value did not. Both bounds are now derived from the pitch length, so the thirds are equal and
+        /// track the pitch dimension instead of being magic numbers.</para>
+        ///
+        /// <para>Equal thirds also make the boundary pair SELF-MIRRORING — {L/3, 2L/3} maps to
+        /// {L − 2L/3, L − L/3} = {L/3, 2L/3} — so the zone bands no longer depend on which direction a
+        /// team attacks. See <see cref="ComputeFieldZone(float, int)"/>.</para>
+        /// </summary>
+        public const float AttackingZoneMinX = PitchLengthM * 2.0f / 3.0f;
 
         // ── Team-neutral API ──────────────────────────────────────────────────
 
@@ -97,12 +115,18 @@ namespace TacticalDirector.DecisionTree
         /// ("DEFENSIVE: 0–35m from own goal line"), so the classification mirrors for
         /// the away team (own goal line at x = 105). Note the home zone boundaries
         /// {35, 65} mirror to away cut points {40, 70} — mirroring the enum value of a
-        /// home-perspective zone is NOT equivalent (it misclassifies the 35–40 m and
-        /// 65–70 m bands); the zone must be recomputed from the position per team.
+        /// home-perspective zone is NOT equivalent — it is measured from the wrong goal
+        /// line — so the zone must be recomputed from the position per team.
         /// AR-2 H-2 (audit June 11, 2026): the shared home-perspective
         /// MatchContext.BallZone was previously consumed for both teams, inverting
         /// every zone modifier for away agents (away shots in range scored
         /// SHOOT_ZONE_DEF = 0.10 instead of SHOOT_ZONE_ATT = 1.00).
+        ///
+        /// <para>Now that the bounds are equal thirds the boundary pair is self-mirroring, so a
+        /// team's own-goal-relative bands are the same whichever direction it attacks — the
+        /// orientation-dependence the unequal 35/65 pair carried is gone. The per-team recomputation
+        /// below is still the contract: it is what measures the distance from the correct goal line,
+        /// and consuming the raw home-perspective value for an away agent remains the AR-2 H-2 bug.</para>
         /// </summary>
         public static FieldZone ComputeFieldZone(float posX, int teamId)
             => teamId == 0
@@ -130,4 +154,14 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   previously consumed by both teams (away modifiers inverted). Enum         |
 // |         |            |        |   mirroring is not exact (35/65 mirror to 40/70), hence recompute-per-team. |
 // |         |            |        |   L: ClampToPitch helper for INV-GEN-06 TargetPosition bounds.              |
+// | 1.2     | 2026-07-26 | —      | Zone thirds corrected and derived. AttackingZoneMinX was a hardcoded 65.0f  |
+// |         |            |        |   while its sibling was a true third (35.0f), so the "[DERIVED] split pitch |
+// |         |            |        |   into thirds" tag was false of the value: the attacking third measured 40 m |
+// |         |            |        |   and the middle third 30 m. Both bounds now derive from PitchLengthM        |
+// |         |            |        |   (L/3, 2L/3), giving equal thirds that track the pitch dimension.          |
+// |         |            |        |   Consequence: the pair becomes SELF-MIRRORING, so a team's own-goal-        |
+// |         |            |        |   relative bands no longer depend on which way it attacks. The v1.1 note    |
+// |         |            |        |   that "enum mirroring is not exact (35/65 mirror to 40/70)" no longer      |
+// |         |            |        |   holds — recompute-per-team stays the contract because it measures from    |
+// |         |            |        |   the correct goal line, which is the actual AR-2 H-2 defect.               |
 #endregion

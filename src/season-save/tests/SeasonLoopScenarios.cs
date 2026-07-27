@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonLoopScenarios.cs
 // Created:  2026-07-26
-// Modified: 2026-07-26
+// Modified: 2026-07-26 (retired the coincidence-prone managed-fixture-differs-from-the-model predicate; see the FR-SN-013b note)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §5.7 (the season-multi-fixture capstone), §3.3/§3.4,
 //           FR-SN-012/013b/026/030; Testing Strategy & Framework #19 §3.3.1/§3.3.3/§3.3.5/Appendix A.1/KD-8;
@@ -105,18 +105,25 @@ namespace TacticalDirector.SeasonSave.Tests
             //   * the engine path executed exactly once (EnginePlayedFixtures — a real observable, not an
             //     inference), while the whole quick-sim season above executed it zero times;
             //   * the round-mate's scoreline equals RoundResolutionModel's prediction EXACTLY, so the model
-            //     path is live and correctly keyed;
-            //   * the managed fixture's scoreline does NOT, so it did not come from the model.
-            // Residual, recorded rather than hidden: the third predicate would false-pass if a real match
-            // happened to produce the model's exact scoreline for this pinned seed. It is verified to differ
-            // at authoring time, and the first predicate is what makes the set conclusive on its own — a
-            // regression that quick-simmed everything would leave EnginePlayedFixtures at zero.
+            //     path is live and correctly keyed.
             //
-            // While ERR-030-014 is open the engine's side of that comparison is always 0–0 (a production
-            // match never puts the ball in motion), so today the third predicate reduces to "the model does
-            // not also predict 0–0 for this fixture". Deliberately NOT tightened to assert 0–0: pinning the
-            // current behaviour would turn a defect into a contract. Expect this predicate to become
-            // genuinely informative when A4b lands.
+            // RETIRED July 26, 2026 — a third predicate asserted that the managed fixture's scoreline does
+            // NOT equal the model's prediction, as a proxy for "it did not come from the model". The
+            // authoring comment already recorded its residual (it false-passes when a real match happens to
+            // reproduce the model's exact scoreline), and it has now false-FAILED for exactly that reason:
+            // once §5.Z Phase H made matches actually score, agreement on a low scoreline stopped being
+            // unlikely and became ordinary. A predicate whose failure rate is set by coincidence rather
+            // than by correctness is worse than no predicate — it trains the reader to re-seed around it.
+            //
+            // What is given up, stated rather than glossed: the retired proxy was the only check on
+            // "the engine ran, the counter incremented, and the table then took the model's number
+            // anyway". Nothing cheap covers that — SeasonLoop deliberately exposes no engine MatchResult
+            // (ERR-030-013: the producer record is loop-scoped), and proving it exactly would mean
+            // replaying the managed fixture through a second real MatchEngine, doubling this scenario's
+            // ~3.4-minute cost. EnginePlayedFixtures remains a REAL observable, not an inference, and it
+            // is what makes the routing split conclusive: a regression that quick-simmed everything
+            // leaves it at zero, and one that engine-played everything leaves the round-mate's scoreline
+            // no longer matching the model.
             EngineRoundObservations engineRound = RunOneEngineRound(context.RunSeed, league);
 
             context.Envelope.CheckEquals(
@@ -132,10 +139,6 @@ namespace TacticalDirector.SeasonSave.Tests
             context.Envelope.CheckTrue(
                 "unmanaged-fixture-matches-the-model", engineRound.UnmanagedMatchesModel,
                 "a non-managed fixture's scoreline did not match RoundResolutionModel's prediction");
-            context.Envelope.CheckTrue(
-                "managed-fixture-differs-from-the-model", engineRound.ManagedDiffersFromModel,
-                "the managed fixture's scoreline equalled the quick-sim prediction, so it was probably not "
-                    + "played through the engine");
             context.Envelope.CheckTrue(
                 "active-match-cleared", engineRound.ActiveMatchCleared,
                 "SeasonLoop.ActiveMatch was left non-null after the round completed");
@@ -240,18 +243,17 @@ namespace TacticalDirector.SeasonSave.Tests
                         league.ResolveByClubId(r.AwayClubId)),
                     fixtureDay);
 
-                bool matchesModel =
-                    predicted.HomeGoals == r.HomeGoals && predicted.AwayGoals == r.AwayGoals;
-
                 if (fixture.Involves(ManagedClubId))
                 {
                     obs.ManagedFound = true;
-                    obs.ManagedDiffersFromModel = !matchesModel;
                 }
                 else
                 {
+                    // Only the round-mate is compared against the model — the managed fixture's own
+                    // comparison was the retired coincidence-prone predicate (see the note above).
                     obs.UnmanagedFound = true;
-                    obs.UnmanagedMatchesModel = matchesModel;
+                    obs.UnmanagedMatchesModel =
+                        predicted.HomeGoals == r.HomeGoals && predicted.AwayGoals == r.AwayGoals;
                 }
             }
 
@@ -293,7 +295,6 @@ namespace TacticalDirector.SeasonSave.Tests
         {
             public bool ManagedFound;
             public bool UnmanagedFound;
-            public bool ManagedDiffersFromModel;
             public bool UnmanagedMatchesModel;
             public int EnginePlayedFixtures;
             public bool ActiveMatchCleared;
@@ -309,4 +310,14 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | determinism, and the FR-SN-013b routing split proven inside one      |
 // |         |            |        | round — the round-mate matching the model exactly while the managed  |
 // |         |            |        | fixture, played through a real MatchEngine, does not.                |
+// | 1.1     | 2026-07-26 | —      | Retired the `managed-fixture-differs-from-the-model` predicate. It asserted |
+// |         |            |        |   that a real match's scoreline differs from RoundResolutionModel's        |
+// |         |            |        |   prediction, as a proxy for engine routing. Its own authoring comment      |
+// |         |            |        |   recorded the residual (false-passes on coincidental agreement), and once  |
+// |         |            |        |   §5.Z Phase H made matches actually score it false-FAILED for exactly that |
+// |         |            |        |   reason — agreement on a low scoreline is ordinary, not unlikely. A        |
+// |         |            |        |   predicate whose failure rate is set by coincidence rather than by         |
+// |         |            |        |   correctness trains readers to re-seed around it. EnginePlayedFixtures     |
+// |         |            |        |   (a real counter) plus the round-mate's exact model match keep the routing |
+// |         |            |        |   split conclusive; what is given up is documented at the call site.        |
 #endregion
