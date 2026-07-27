@@ -1,6 +1,7 @@
 // File:     src/match-viewer/LiveMatchServer.cs
 // Created:  2026-07-15
 // Modified: 2026-07-16 (AR-7 fix pass: viewer clock rounds seconds before the minute split (L-3); post-Stop connection threads refused via a volatile shutdown flag + 503 (L-4))
+// Modified: 2026-07-27 (P1 AR-1 M-6: score reads follow LiveMatchFrame onto the Scoreline carrier; /frame JSON keys unchanged)
 // Author:   —
 // Spec:     Interactive match view (docs/tracking/interactive-match-view-design.md), Code Standards #20
 // Purpose:  A minimal loopback-only HTTP server (hand-rolled over TcpListener — no package
@@ -345,9 +346,9 @@ namespace TacticalDirector.MatchViewer
             sb.Append(',');
             AppendJsonInt(sb, "possession", frame.PossessingAgentId);
             sb.Append(',');
-            AppendJsonInt(sb, "homeScore", frame.HomeScore);
+            AppendJsonInt(sb, "homeScore", frame.Score.Home);
             sb.Append(',');
-            AppendJsonInt(sb, "awayScore", frame.AwayScore);
+            AppendJsonInt(sb, "awayScore", frame.Score.Away);
             sb.Append(',');
             AppendJsonBool(sb, "matchEnded", frame.MatchEnded);
             sb.Append(',');
@@ -628,4 +629,8 @@ poll();
 // |         |            |        | volatile _shuttingDown flag (set in Stop() before the listener   |
 // |         |            |        | closes, cleared on a fresh Start()) now makes Route() answer     |
 // |         |            |        | 503 instead of acting.                                           |
+// | 1.2     | 2026-07-27 | —      | P1 AR-1 M-6: the two score reads follow LiveMatchFrame's        |
+// |         |            |        | HomeScore / AwayScore into frame.Score.Home / .Away. The /frame |
+// |         |            |        | JSON keys are unchanged, so the browser viewer is untouched —   |
+// |         |            |        | the P1 fields it does not yet render are B6's job.              |
 #endregion

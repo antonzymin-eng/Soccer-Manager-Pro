@@ -1,6 +1,6 @@
 // File:     src/match-analytics/Tests/XgLocationModelTests.cs
 // Created:  2026-07-27
-// Modified: 2026-07-27
+// Modified: 2026-07-27 (AR-1 L-1: the heatmap-bin assertion re-anchored to a literal)
 // Author:   —
 // Spec:     Match Analytics & Statistics #37 §3.3 / §5 (T-AN-XG-*), Code Standards #20
 // Purpose:  Locks the xG location model. Because §3.3 contracts the model's SHAPE rather than its
@@ -181,10 +181,13 @@ namespace TacticalDirector.MatchAnalytics.Tests
             Assert.AreEqual(BallPhysics.BallPhysicsConstants.Pitch.GOAL_WIDTH, MatchAnalyticsConstants.GOAL_WIDTH_M);
             Assert.AreEqual(BallPhysics.BallPhysicsConstants.Pitch.LENGTH,     MatchAnalyticsConstants.PITCH_LENGTH_M);
             Assert.AreEqual(BallPhysics.BallPhysicsConstants.Pitch.WIDTH,      MatchAnalyticsConstants.PITCH_WIDTH_M);
-            Assert.AreEqual(
-                MatchAnalyticsConstants.HEATMAP_COLS * MatchAnalyticsConstants.HEATMAP_ROWS,
-                MatchAnalyticsConstants.HEATMAP_BINS_PER_TEAM,
-                "HEATMAP_BINS_PER_TEAM is [DERIVED] and must never be set independently");
+            // Asserted against a literal, not against COLS * ROWS — the constant is DEFINED as that
+            // product, so comparing the two is a tautology the compiler folds away (AR-1 L-1). A literal
+            // makes a grid resize a deliberate, visible edit here.
+            Assert.AreEqual(96, MatchAnalyticsConstants.HEATMAP_BINS_PER_TEAM,
+                "12 x 8 grid; if the grid was resized on purpose, update this literal");
+            Assert.AreEqual(MatchAnalyticsConstants.TEAM_COUNT, MatchEngine.MatchEngineConstants.TEAM_COUNT,
+                "TEAM_COUNT is a [CROSS] mirror, not a local declaration (AR-1 M-4)");
         }
     }
 }
@@ -196,4 +199,9 @@ namespace TacticalDirector.MatchAnalytics.Tests
 // |         |            |        | must preserve — distance/angle monotonicity, home/away         |
 // |         |            |        | mirror symmetry, totality over and beyond the pitch, purity,   |
 // |         |            |        | and the F1/F2 gates.                                           |
+// | 1.1     | 2026-07-27 | —      | AR-1 L-1: HEATMAP_BINS_PER_TEAM was asserted against COLS *    |
+// |         |            |        | ROWS — the expression it is DEFINED as, so the compiler folds  |
+// |         |            |        | both sides and the assertion holds for any grid. Pinned to a   |
+// |         |            |        | literal 96, plus a TEAM_COUNT-mirrors-the-engine assertion     |
+// |         |            |        | (M-4) that a local copy would fail.                            |
 #endregion

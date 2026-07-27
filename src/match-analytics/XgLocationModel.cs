@@ -48,11 +48,7 @@ namespace TacticalDirector.MatchAnalytics
             RequireFinite(shotOrigin.x, "shotOrigin.x");
             RequireFinite(shotOrigin.y, "shotOrigin.y");
 
-            if (attackingTeam >= MatchAnalyticsConstants.TEAM_COUNT)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(attackingTeam), attackingTeam, "attackingTeam must be 0 (attacks +x) or 1 (attacks −x).");
-            }
+            RequireTeam(attackingTeam);
 
             Vector2 goalCentre = GoalCentre(attackingTeam);
 
@@ -72,6 +68,7 @@ namespace TacticalDirector.MatchAnalytics
         /// </summary>
         public static Vector2 GoalCentre(byte attackingTeam)
         {
+            RequireTeam(attackingTeam);
             float x = attackingTeam == 0 ? MatchAnalyticsConstants.PITCH_LENGTH_M : 0f;
             return new Vector2(x, MatchAnalyticsConstants.PITCH_WIDTH_M * 0.5f);
         }
@@ -84,6 +81,10 @@ namespace TacticalDirector.MatchAnalytics
         /// </summary>
         public static float SubtendedGoalAngleDegrees(Vector2 shotOrigin, byte attackingTeam)
         {
+            RequireTeam(attackingTeam);
+            RequireFinite(shotOrigin.x, "shotOrigin.x");
+            RequireFinite(shotOrigin.y, "shotOrigin.y");
+
             Vector2 goalCentre = GoalCentre(attackingTeam);
             float half = MatchAnalyticsConstants.GOAL_WIDTH_M * 0.5f;
 
@@ -115,6 +116,18 @@ namespace TacticalDirector.MatchAnalytics
             return ez / (1f + ez);
         }
 
+        /// <summary>Shared by all three public entry points (AR-1 M-5): before this, only
+        /// <see cref="Evaluate"/> gated the team, so <c>GoalCentre(5)</c> silently answered with team 1's
+        /// geometry — two public methods on one model with opposite contracts.</summary>
+        private static void RequireTeam(byte attackingTeam)
+        {
+            if (attackingTeam >= MatchAnalyticsConstants.TEAM_COUNT)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(attackingTeam), attackingTeam, "attackingTeam must be 0 (attacks +x) or 1 (attacks −x).");
+            }
+        }
+
         private static void RequireFinite(float value, string what)
         {
             if (float.IsNaN(value) || float.IsInfinity(value))
@@ -131,4 +144,10 @@ namespace TacticalDirector.MatchAnalytics
 // |         |            |        | distance + subtended-goal-angle logit, F2 non-finite gate,     |
 // |         |            |        | overflow-safe logistic, [0,1] clamp. No live consumer at       |
 // |         |            |        | Stage 1 (KD-2 — the ledger carries no shot origin).            |
+// | 1.1     | 2026-07-27 | —      | AR-1 M-5: the team gate extracted to RequireTeam and applied   |
+// |         |            |        | at ALL THREE public entry points. Evaluate checked it;         |
+// |         |            |        | GoalCentre and SubtendedGoalAngleDegrees did not, so an        |
+// |         |            |        | out-of-range team silently scored against the away goal        |
+// |         |            |        | instead of failing loud — and both are public, so a caller     |
+// |         |            |        | reaching them directly bypassed the only gate that existed.    |
 #endregion

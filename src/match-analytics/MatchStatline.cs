@@ -22,6 +22,17 @@ namespace TacticalDirector.MatchAnalytics
     /// </summary>
     public readonly struct MatchStatline
     {
+        // Stored as _hasValue, not IsUnset, for the reason MatchFrameView documents at length: this is a
+        // struct, so `default(MatchStatline)` bypasses the constructor entirely and every field reads
+        // zero — including TeamId, which makes a zeroed struct claim to be a perfectly valid home
+        // statline. An `IsUnset` FIELD would default to false and report the zeroed struct as populated.
+        // The zero value has to mean "unset", so the field means "has value" (AR-1 M-1).
+        private readonly bool _hasValue;
+
+        /// <summary>True when this is a zeroed struct that never went through the constructor — not a
+        /// real all-zero statline. <see cref="MatchAnalyticsResult"/> refuses one.</summary>
+        public bool IsUnset => !_hasValue;
+
         /// <summary>Team this line describes (0 = home, 1 = away).</summary>
         public readonly byte TeamId;
 
@@ -94,6 +105,7 @@ namespace TacticalDirector.MatchAnalytics
                     "possessionSharePercent must be a finite value in [0, 100].");
             }
 
+            _hasValue = true;
             TeamId = teamId;
             Goals = goals;
             PossessionSharePercent = possessionSharePercent;
@@ -119,6 +131,10 @@ namespace TacticalDirector.MatchAnalytics
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
+// | 1.1     | 2026-07-27 | —      | AR-1 M-1: _hasValue discriminator — default(MatchStatline)     |
+// |         |            |        | passed the result's team-attribution gate, because a zeroed    |
+// |         |            |        | TeamId IS a valid home id. The MatchFrameView _hasFrame        |
+// |         |            |        | precedent, which this file should have followed from the start.|
 // | 1.0     | 2026-07-27 | —      | Initial creation (#37 T0): the immutable per-team basic        |
 // |         |            |        | statline with FR-AN-018 construction gates. Producer-gated     |
 // |         |            |        | stats (shots / passes / tackles / saves) deliberately absent   |

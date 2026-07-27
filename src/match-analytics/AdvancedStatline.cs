@@ -1,6 +1,6 @@
 // File:     src/match-analytics/AdvancedStatline.cs
 // Created:  2026-07-27
-// Modified: 2026-07-27
+// Modified: 2026-07-27 (AR-2: copy-then-validate the heatmap)
 // Author:   —
 // Spec:     Match Analytics & Statistics #37 §2.2 / §3.4 (FR-AN-015, F4), Code Standards #20
 // Purpose:  The immutable per-team advanced statline: territorial share, the positional heatmap bins,
@@ -28,6 +28,13 @@ namespace TacticalDirector.MatchAnalytics
     /// </summary>
     public readonly struct AdvancedStatline
     {
+        // See MatchStatline for why this is stored as "has value" rather than "is unset" (AR-1 M-1).
+        private readonly bool _hasValue;
+
+        /// <summary>True when this is a zeroed struct that never went through the constructor.
+        /// <see cref="MatchAnalyticsResult"/> refuses one.</summary>
+        public bool IsUnset => !_hasValue;
+
         /// <summary>Team this line describes (0 = home, 1 = away).</summary>
         public readonly byte TeamId;
 
@@ -103,17 +110,23 @@ namespace TacticalDirector.MatchAnalytics
                     nameof(heatmapBins));
             }
 
+            // Copy FIRST, then validate the copy. Reading the caller's array twice — once to check and
+            // once to copy — leaves the gate and the stored value looking at different reads, so a value
+            // that changed in between is validated and then not stored (or the reverse). The project has
+            // been here before at the same seam class (MatchReplay AR-3 M-1: validating a live handle
+            // instead of a snapshot), and one read is both stricter and cheaper.
             var copy = new int[heatmapBins.Length];
-            for (int i = 0; i < heatmapBins.Length; i++)
+            Array.Copy(heatmapBins, copy, heatmapBins.Length);
+            for (int i = 0; i < copy.Length; i++)
             {
-                if (heatmapBins[i] < 0)
+                if (copy[i] < 0)
                 {
                     throw new ArgumentException(
                         "heatmapBins[" + i + "] is negative — occupancy counts cannot be.", nameof(heatmapBins));
                 }
-                copy[i] = heatmapBins[i];
             }
 
+            _hasValue = true;
             TeamId = teamId;
             TerritorialPercent = territorialPercent;
             LiveXgAvailable = liveXgAvailable;
@@ -128,6 +141,11 @@ namespace TacticalDirector.MatchAnalytics
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
+// | 1.2     | 2026-07-27 | —      | AR-2: the heatmap is copied first and the COPY validated. The  |
+// |         |            |        | previous form read each caller element twice — once to check,  |
+// |         |            |        | once to store — so the gate and the stored value looked at     |
+// |         |            |        | different reads (the MatchReplay AR-3 M-1 seam class).         |
+// | 1.1     | 2026-07-27 | —      | AR-1 M-1: _hasValue discriminator (see MatchStatline v1.1).    |
 // | 1.0     | 2026-07-27 | —      | Initial creation (#37 T0): territorial share, copied heatmap   |
 // |         |            |        | bins, and the F4 xG-availability gate that refuses a non-zero  |
 // |         |            |        | total with no producer behind it.                              |

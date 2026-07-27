@@ -108,13 +108,13 @@ namespace TacticalDirector.MatchClientWeb
 
             sb.Append("\"ready\":true");
             Num(sb, ",\"tick\":", view.Tick);
-            Num(sb, ",\"homeScore\":", view.HomeScore);
-            Num(sb, ",\"awayScore\":", view.AwayScore);
+            Num(sb, ",\"homeScore\":", view.Score.Home);
+            Num(sb, ",\"awayScore\":", view.Score.Away);
             sb.Append(",\"matchEnded\":").Append(view.MatchEnded ? "true" : "false");
             sb.Append(",\"period\":\"").Append(view.Period).Append('"');
-            sb.Append(",\"lastRestart\":\"").Append(view.LastRestart).Append('"');
-            Num(sb, ",\"lastRestartTeam\":", view.LastRestartTeam);
-            Num(sb, ",\"lastRestartTick\":", view.LastRestartTick);
+            sb.Append(",\"lastRestart\":\"").Append(view.Restart.Cue).Append('"');
+            Num(sb, ",\"lastRestartTeam\":", view.Restart.AwardedTeam);
+            Num(sb, ",\"lastRestartTick\":", view.Restart.Tick);
             Num(sb, ",\"possessingAgentId\":", view.PossessingAgentId);
 
             sb.Append(",\"ball\":[");
@@ -432,4 +432,8 @@ namespace TacticalDirector.MatchClientWeb
 // | 1.0     | 2026-07-27 | —      | Initial creation (B6): the four routes and their privilege     |
 // |         |            |        | split, #38 frame + #37 report serialization, and fail-loud     |
 // |         |            |        | parsing (incl. the Enum.IsDefined guard).                      |
+// | 1.1     | 2026-07-27 | —      | Reads the score and restart through MatchFrameView's Scoreline |
+// |         |            |        | / RestartBanner carriers. B6 was authored in parallel against  |
+// |         |            |        | the loose-field shape the P1 AR-1 M-6 restructure replaced —   |
+// |         |            |        | a semantic merge conflict: textually clean, five CS1061s.      |
 #endregion
