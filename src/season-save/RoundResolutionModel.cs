@@ -212,7 +212,13 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>SplitMix64's finalizing mix — the key-derivation step function.</summary>
-        private static ulong Mix(ulong value)
+        /// <remarks>
+        /// <c>internal</c> rather than <c>private</c> so <see cref="SeasonLoop.DeriveNextSeasonSeed"/>
+        /// reuses this finalizer instead of carrying a second copy. SplitMix64 duplication ACROSS
+        /// assemblies is this project's accepted norm (four pre-existing copies, no shared helper on
+        /// `deterministic-sim`), but a second copy inside the same assembly would be plain drift.
+        /// </remarks>
+        internal static ulong Mix(ulong value)
         {
             unchecked  // Spec #16 §3.4.4: deliberate 64-bit wrap-around; not an overflow bug
             {

@@ -219,6 +219,70 @@ gate — §5-P0). This ordering front-loads everything the host block does *not*
   read-only value copies, **no** `SNAPSHOT_SCHEMA_VERSION` change, observer-neutrality re-locked).
 - Do this before rendering so the render layer targets the final frame shape once.
 
+#### P1 key decisions
+
+**KD-P1-1 — the engine exposes scalars; the frame does the aggregating.** Every new engine accessor is
+a read-only value copy in the established `AgentTeamId(i)` / `AgentIsGoalkeeper(i)` shape. No aggregate
+presentation type is declared in `match-engine`. This keeps the safety-critical assembly's public
+surface uniform and stops a View's preferred data shape from becoming an engine contract.
+
+**KD-P1-2 — match period is DERIVED, never stored.** `MatchEngine.CurrentPeriod` is a pure function of
+the two transition flags `CheckMatchFlowTransitions` already owns — `_matchEnded` and
+`_secondHalfStarted` — both of which the payload already serializes. So there is no new state, nothing
+added to the snapshot, and no schema change. It lives on the **engine**, not the streamer, because
+computing the half-time rule inside a presentation assembly would put a second copy of it in the tree:
+the parallel-surface trap (the PM AR-7 M-1 / `POSITION_COUNT` class).
+- It reports which transitions have **fired** rather than re-deriving them from `CurrentTick` against
+  `HALF_TIME_BOUNDARY_TICK`. That is the stronger form: the boundary constant then has exactly one
+  reader in the whole tree, the reported period can never disagree with what the engine actually did,
+  and because both flags round-trip through the payload it is correct after a restore for free.
+- The enum is `MatchPeriod`, deliberately **not** `MatchPhase` — `TacticalDirector.DecisionTree.MatchPhase`
+  already exists with an unrelated meaning (`OPEN_PLAY`…), and both types would be in scope together in
+  `match-engine`. This project has hit CS0104 on exactly this collision three times (`TacticTranslation`,
+  `PlayerAttributes`, and the §5.Z.9 foul-probability helper).
+- Three members only — `FirstHalf` / `SecondHalf` / `FullTime`. The Stage-0 halves model has **no break**:
+  `CheckMatchFlowTransitions` resets the ball at the boundary and play continues (FR-TP-019). A
+  `HalfTime` member would describe a state the engine cannot be in, and a View would render a pause that
+  never happens.
+
+**KD-P1-3 — the restart cue is a WITHIN-TICK engine flag that the streamer latches.** This is the
+load-bearing decision. The engine records the restart applied *during the current tick* and clears it at
+the top of the next, which is exactly the lifecycle of `_aiPhaseRanThisTick` and the §5.Z.9 foul-candidate
+triple. Consequences, all of them the point:
+- It is **not cross-tick state**, so the `SerializeWorldState` exclusion proof needs no new class, and
+  its current claim — *"no cross-tick gameplay state is excluded"* — stays true as written.
+- **No `SNAPSHOT_SCHEMA_VERSION` change**, so no digest rebaseline.
+- The cross-tick memory a HUD actually needs ("hold the banner for ~2 s after the whistle") lives in
+  `LiveMatchStreamer`, a presentation class with no determinism obligations at all.
+- Restore falls out correctly **by construction**: the engine has nothing to restore, and a fresh
+  streamer over a restored engine legitimately reports "no restart observed yet".
+
+  The rejected alternative was latching on the engine (`_lastRestartKind`/`_lastRestartTeam`/`_lastRestartTick`).
+  It would have introduced the engine's first non-serialized *cross-tick* field, forcing a new exclusion
+  class into that proof — for three values no gameplay path ever reads. Serializing them instead was
+  rejected for the mirror reason: a schema bump that moves every digest baseline, to persist a HUD banner.
+
+**KD-P1-4 — every restart declares its kind.** `ApplyRestart(position, awardedTeam)` gains a cue
+parameter, so each of the six restart sites states *what kind* of restart it is, exactly as §5.Z Phase H
+KD-H1 made each state *which team*. Without it a restart reaching the ball-placement primitive
+untyped would be reported to the View as whatever the previous restart was — the failure mode KD-H1
+already fixed once for the awarded team.
+
+**KD-P1-5 — a separate cue enum, not `RestartType`.** `RestartType` (Ball Physics #1) classifies
+**boundary exits** — `None`/`ThrowIn`/`GoalKick`/`Corner`/`KickOff` — and its ordinals carry an explicit
+STABILITY paragraph because they are embedded in the `RestartAwardedEvent` (0x19) payload the
+digest-load-bearing ledger serializes. Fouls and offside produce **free kicks**, which are not boundary
+exits and have no member there. Adding one would widen a digest-bearing domain owned by another spec to
+serve a presentation need. So `match-engine` declares its own `RestartCue`
+(`None`/`KickOff`/`ThrowIn`/`GoalKick`/`Corner`/`FreeKick`) and maps the physics enum into it at the one
+site that has one.
+
+**KD-P1-6 — per-agent cues travel as one array of one struct.** `LiveAgentCue` (yellow cards, sent-off,
+bench slot) rides beside the existing positions array rather than adding three parallel arrays to the
+frame signature. Future per-agent cues extend the struct instead of re-widening the frame — which is what
+"target the final frame shape once" has to mean in practice. `LiveAgentCue` is a **match-viewer** type,
+per KD-P1-1.
+
 ### P2 — Deterministic manager-command channel (host-free) — **the core new work**
 - `ManagerCommandQueue` + a **closed set of typed game commands** — `SetTeamTactic`,
   `SetPlayerTactic`, `Substitute` — each mapping onto exactly one **live, stride-safe** engine

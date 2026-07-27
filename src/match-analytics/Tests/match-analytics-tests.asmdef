@@ -1,0 +1,21 @@
+{
+    "name": "TacticalDirector.MatchAnalytics.Tests",
+    "rootNamespace": "TacticalDirector.MatchAnalytics.Tests",
+    "references": [
+        "TacticalDirector.MatchAnalytics",
+        "TacticalDirector.MatchEngine",
+        "TacticalDirector.BallPhysics",
+        "TacticalDirector.EventSystem"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
