@@ -1,8 +1,9 @@
 # Squad / Player Data Layer Specification #27 — Section 1: Introduction, Scope, Dependencies
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** July 27, 2026 (v0.2 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
+**Last Updated (prior):** July 22, 2026 (v0.1)
+**Version:** 0.2
 **Status:** APPROVED
 **Source:** `docs/tracking/squad-player-data-design.md` v0.6
 
@@ -14,7 +15,8 @@ This spec defines the **canonical player-data layer** — the source of truth fo
 rosters that the match engine seeds agents from. **In scope:** the canonical `PlayerAttributes` record
 (31 `int [1,20]` fields + `WeakFootRating [1,5]`) and its array/default helpers; the coarse
 `PlayerPosition` classification; the `PlayerRecord` identity + `Squad` club-roster container;
-deterministic `RosterGenerator`; the Stage-0 `SquadFileLoader` text import; and the `MatchEngine`
+deterministic `RosterGenerator` — whose **draw contract is save-visible without being saved**, see the
+note below; the Stage-0 `SquadFileLoader` text import; and the `MatchEngine`
 integration that consumes all of the above (the landed T1–T3 wiring, §7).
 
 **Out of scope (explicitly, per design supplement §0):** season progression, aging, retirement,
@@ -35,6 +37,24 @@ Inherits the project conventions verbatim: corner-origin pitch (Ball Physics #1 
 tag; deterministic RNG only (SplitMix64/HKDF-SipHash via #16 — no `System.Random`). Attributes use the
 `int [1,20]` scale stated in the pre-existing `PlayerAttributes`/`DtAgentAttributes` doc comments;
 `WeakFootRating` is a separate `[1,5]` scale (KD-2).
+
+### 1.2.1 The generation contract is save-visible without being saved (ERR-027-003, at #50's approval)
+
+**Rosters are regenerated from the world seed, not persisted.** `WorldStore.WorldSeed`'s own doc comment
+states it: *"Squads are not persisted, so resuming a career means calling
+`LeagueBootstrap.Generate(world.WorldSeed, season.ClubCount)`."* A career's entire playing population is
+therefore a function of **two saved integers and the generator's current code**.
+
+**The consequence, recorded here because it constrains what may be changed after ship:**
+`RosterGenerator`'s **draw order and per-player field budget**, `LeagueBootstrap`'s **club-name
+catalogue**, and its **strength ramp** are covered by **`WORLD_GENERATION_VERSION`** (#50 KD-2). Changing
+any of them post-ship requires a **version bump plus a generation migration** — because the same seed will
+otherwise silently produce a different league in every existing save.
+
+`LeagueBootstrapGoldenVectorTests` remains the **CI** guard, and it is the right guard for an *accidental*
+change: it fires when the output moves unintentionally. It says nothing about a **deliberate** change
+shipped in an update, which is precisely #50's domain. **This back-prop adds the runtime guard the golden
+vector never was**, and changes no #27 code, type or requirement.
 
 ## 1.3 Dependencies
 
@@ -106,4 +126,5 @@ snapshot roster reference, the distinct-squad restore re-projection, and proper 
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial section from supplement v0.6; documents the built-and-wired layer in present tense; KD-1..KD-8 carried from supplement §2. |
+| 0.2 | 2026-07-27 | — | **ERR-027-003** (at #50's approval): new **§1.2.1** records that the generation contract is **save-visible without being saved** — rosters are regenerated from the world seed, so `RosterGenerator`'s draw order and field budget, `LeagueBootstrap`'s catalogue and its strength ramp are covered by `WORLD_GENERATION_VERSION`, and changing any post-ship needs a version bump plus a generation migration. The golden vector stays the CI guard against an *accidental* change; this is the **runtime** guard it never was. No #27 code, type or requirement change. |
 #endregion

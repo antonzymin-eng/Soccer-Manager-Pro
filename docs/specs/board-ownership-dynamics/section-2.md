@@ -1,8 +1,9 @@
 # Board & Ownership Dynamics #45 — Section 2: Requirements, Data Structures, Failure Modes
 
 **Created:** July 25, 2026
-**Last Updated:** July 25, 2026 (v0.2 — section-file PASS-1 fix pass)
-**Version:** 0.2
+**Last Updated:** July 27, 2026 (v0.3 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
+**Last Updated (prior):** July 25, 2026 (v0.2 — section-file PASS-1 fix pass)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -18,7 +19,7 @@
 | FR-BD-003 | All #45 fields and formulas MUST be **integer per-mille**. No float MUST appear anywhere in #45 at any tier. | MUST | KD-1 |
 | FR-BD-004 | `BoardConfidence.ConfidencePermille` MUST be clamped to `[0, 1000]` at every write. | MUST | KD-1 |
 | FR-BD-005 | State MUST be created via the `Create()` / `Identity` factories; `default(OwnershipProfile)` (all dials `0`) MUST NOT be treated as a valid runtime value and MUST fail loud at any consuming seam (F4). | MUST | KD-4 |
-| FR-BD-005a | A club's `{BoardConfidence, OwnershipProfile}` MUST be inserted as a **pair**, both factory-built, and the **enforced** guard MUST be at **record insertion** — not only at the consuming seam. `default(BoardConfidence)` is field-in-*range* (`ConfidencePermille = 0`, `LastAdvancedWorldDay = 0`) and therefore cannot be caught by a range check, yet it is **semantically severe**: confidence `0` is the `Critical` band, so a default-constructed entry reads as *"dismissal imminent"*, and its `LastAdvancedWorldDay = 0` (not the sentinel) makes the F6 guard **no-op** a day-0 advance instead of failing loud. Insertion-time validation is what closes it. | MUST | KD-1/§1.6 |
+| FR-BD-005a | A club's `{BoardConfidence, OwnershipProfile}` MUST be inserted as a **pair**, both factory-built, and the **enforced** guard MUST be at **record insertion** — not only at the consuming seam. **Confirmed available MID-CAREER, not only at world genesis (ERR-045-002, at #54's approval):** #54's appointment path inserts a pair for a club the manager has just joined. If the store is in fact genesis-populated for every club, this reduces to a no-op and the confirmation stands as a recorded check rather than a change. `default(BoardConfidence)` is field-in-*range* (`ConfidencePermille = 0`, `LastAdvancedWorldDay = 0`) and therefore cannot be caught by a range check, yet it is **semantically severe**: confidence `0` is the `Critical` band, so a default-constructed entry reads as *"dismissal imminent"*, and its `LastAdvancedWorldDay = 0` (not the sentinel) makes the F6 guard **no-op** a day-0 advance instead of failing loud. Insertion-time validation is what closes it. | MUST | KD-1/§1.6 |
 
 **The daily advance**
 
@@ -35,7 +36,7 @@
 
 | FR | Requirement | Level | KD |
 |---|---|---|---|
-| FR-BD-012 | #45 MUST NOT expose a sacking API, and MUST NOT fire any event that terminates a manager. It supplies confidence; **#30 decides**. | MUST | KD-3 |
+| FR-BD-012 | #45 MUST NOT expose a sacking API, and MUST NOT fire any event that terminates a manager. It supplies confidence; **#54 decides** *(ERR-045-002, at #54's approval — this MUST previously named **#30**, which contains no sacking rule and never did; #45's own posture is unchanged and still correct, only the counterparty's identity was wrong. #30 supplies the seam and the ordering at its boundary roll (ERR-030-021); the decision is #54's).* | MUST | KD-3 |
 | FR-BD-013 | #45 MUST NOT write `BoardObjective`, the league table, or any #40 state. Effects propagate **one-directionally** via values #45 projects and its consumers read. | MUST | KD-2/KD-5 |
 | FR-BD-014 | #45 MUST NOT hold a copy of #30's objective or #40's budget; mirroring either would re-introduce the double truth KD-5 removes. | MUST | KD-6 |
 | FR-BD-015 | #45's assembly MUST reference neither #30, #33, `living-world`, `SeasonSave`, nor `MatchEngine`, **at any tier**. | MUST | KD-3 |
@@ -135,4 +136,5 @@ public enum JobSecurityBand : byte { Critical = 0, Insecure, Stable, Secure }
 |---|---|---|---|
 | 0.1 | 2026-07-25 | — | Initial §2 (FR-BD-001..030, data structures, F1..F7 incl. the deliberate F7 advance-vs-projection asymmetry) from supplement v0.3. Status IN REVIEW. |
 | 0.2 | 2026-07-25 | — | PASS-1 fixes (M+L): added **FR-BD-005a** + **F4a** — the `default(BoardConfidence)` zero-value trap was unaddressed, and it is *worse* than the `OwnershipProfile` one because every field is in range (so F1 cannot catch it) while confidence `0` means the `Critical` band and `LastAdvancedWorldDay = 0` no-ops the day-0 guard; enforced guard placed at record insertion per #33 FR-HS-005. FR-BD-026 reworded: `OwnershipProfile` is a `readonly struct`, so a takeover **replaces** it rather than mutating dials in place. |
+| 0.3 | 2026-07-27 | — | **ERR-045-002** (at #54's approval): **FR-BD-012 re-pointed from #30 to #54**. The MUST named #30 as deciding a sacking; #30 contains no such rule and never did. #45's own posture — no sacking API, no terminating event — is **unchanged and still correct**; only the counterparty's identity was wrong. FR-BD-005a additionally **confirms mid-career pair insertion**, which #54's appointment path depends on. |
 #endregion

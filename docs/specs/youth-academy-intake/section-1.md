@@ -1,8 +1,9 @@
 # Youth Academy & Intake #42 — Section 1: Introduction
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.1 — initial)
-**Version:** 0.1
+**Last Updated:** July 27, 2026 (v0.2 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
+**Last Updated (prior):** July 24, 2026 (v0.1 — initial)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -59,7 +60,7 @@ block — and **no second path** into any of them.
 `DAYS_PER_YEAR`), **#27** (`PlayerRecord` / `PlayerAttributes` / `Squad` shape + `CLUB_SQUAD_SIZE`),
 **#16** (the RNG service, the domain-tag namespace, and #41's `DeriveActionOrdinal` keyed-anchor idiom).
 
-**Value-input only (no assembly reference):** #34 staff quality, #40 facility spend — both arrive inside
+**Value-input only (no assembly reference):** #34 staff quality, **#53 youth-facility level** — both arrive inside
 `AcademyQuality`.
 
 **Downstream (consumers, deferred — no interface built, FR-LW-031):** #30 (applies `IntakeResult` /
@@ -140,4 +141,5 @@ living-world `world.text` refuse-before-draw precedent).
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial §1 (scope, out-of-scope seams, dependencies, KD-1..KD-8, determinism posture), promoted from design supplement v0.3. Status IN REVIEW. |
+| 0.2 | 2026-07-27 | — | **ERR-042-001** (at #53's approval): the value-input list re-attributed *"#40 facility spend"* → **#53 youth-facility level**. `AcademyQuality`'s shape, its `Neutral` identity and the root-assembly pattern are all unchanged. |
 #endregion

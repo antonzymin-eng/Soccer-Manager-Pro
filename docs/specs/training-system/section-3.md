@@ -1,8 +1,9 @@
 # Training System #29 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.3 — PASS-2 re-review; prior APPROVED)
-**Version:** 0.3
+**Last Updated:** July 27, 2026 (v0.4 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
+**Last Updated (prior):** July 23, 2026 (v0.3 — PASS-2 re-review; prior APPROVED)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -53,12 +54,16 @@ the human calls `SetFocus`. There is no batch boundary to serialize beyond the n
 
 ```
 ComputeTrainingInput(in TrainingState s, in PlayerAttributes a, in CoachingModifier coach,
+                     in FacilityModifier facilities,       # ERR-029-003 (#53) -- ROOT-ASSEMBLED, like coach
                      bool deepTrainingEnabled) -> TrainingInput:
     if not deepTrainingEnabled:                   # a #29-OWNED Stage-2/Stage-3 dial (NOT #28's curveEnabled)
         return TrainingInput.Neutral              # KD-8 — #28's growth byte-identical to no-training
     # Stage-3 deep: a DETERMINISTIC per-attribute growth contribution weighted by focus + coaching.
     # Reads ONLY s.Focus (+ a, coach) — never s.Condition / s.TrainingFatigue (FR-TR-006 invariant).
-    return BuildTrainingInput(s.Focus, a, coach)  # pure; no mutation of s; no RNG (FR-TR-006)
+    return BuildTrainingInput(s.Focus, a, coach, facilities)   # pure; no mutation of s; no RNG (FR-TR-006)
+    # `facilities` is #53's training-ground term, assembled BY THE ROOT and passed in -- never a
+    # TrainingInput returned by #53, which FR-TR-005 forbids (#29 is that type's sole writer).
+    # Neutral facilities => byte-identical to the pre-#53 result.
 ```
 
 `ComputeTrainingInput` is a **read** — it never mutates `s`. #30 gathers each player's result into the
@@ -115,4 +120,5 @@ maintained across the season boundary per FR-TR-025 (regen insert / retiree remo
 | 0.1 | 2026-07-23 | — | Initial algorithms. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Single `Condition` cursor; no-RNG model; APPROVED. |
 | 0.3 | 2026-07-23 | — | PASS-2: §3.1 day-gap fail-loud (F7) + `FATIGUE_DAILY_RECOVERY`; §3.2 `deepTrainingEnabled` param + field-independence invariant; §3.4 method renamed `ComputeInjuryRisk`; §3.5 rewritten to #28's batch `AdvanceDay(worldDay, in trainingInputs)` + FR-TR-025 lifecycle. |
+| 0.4 | 2026-07-27 | — | **ERR-029-003** (at #53's approval): §3.2's signature and body take the root-assembled `FacilityModifier`. No #29 logic change and no #28 type change. |
 #endregion

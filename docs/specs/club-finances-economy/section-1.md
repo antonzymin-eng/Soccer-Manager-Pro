@@ -1,8 +1,9 @@
 # Club Finances & Economy #40 — Section 1: Introduction, Scope, Dependencies, Key Decisions
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.1 — initial authoring)
-**Version:** 0.1
+**Last Updated:** July 27, 2026 (v0.2 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
+**Last Updated (prior):** July 23, 2026 (v0.1 — initial authoring)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -37,6 +38,13 @@ from the final table); the single ledger-mutation entry point `ApplyTransaction`
   invokes it at the season-boundary roll (never the reverse).
 - **The final league table itself, and promotion/relegation** — #30 owns table finalization; #43 (future)
   owns promotion/relegation; #40 reads the *result* (`finalTablePosition`, post-promotion) as an input.
+- **Club facilities — their levels, upgrade lifecycle and quality projections** — **#53** owns them
+  (ERR-040-002, at #53's approval). #40's role is **funding**: an upgrade is paid for through the existing
+  `ApplyTransaction` path like any other cash item, and #40 holds no facility state. This row exists
+  because **four approved specs (#34, #42, #28 and this one) pointed at #40 for a facility model #40's own
+  scope excludes** — the gap that caused #53 to be opened. **No #40 code, constraint, ledger or requirement
+  changes.** Note also that #53's `Stadium` capacity is the intended input for §7.2's deferred
+  matchday-attendance accrual, which remains #40's to calibrate.
 
 ## 1.3 Dependencies
 
@@ -166,4 +174,5 @@ data-structure sketch and no-contradiction with any KD:
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial. Status IN REVIEW. |
+| 0.2 | 2026-07-27 | — | **ERR-040-002** (at #53's approval): a new out-of-scope row records that **#53 owns facility state** and #40's role is **funding** via the existing `ApplyTransaction` path. Filed because **four approved specs pointed at #40 for a facility model its own scope excludes** — the gap that caused #53 to be opened. Names #53's `Stadium` capacity as the input for §7.2's deferred matchday accrual. **No #40 code, constraint, ledger or requirement change.** |
 #endregion

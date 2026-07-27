@@ -1,8 +1,9 @@
 # Personalities, Morale & Squad Dynamics #33 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — AR-1 fix pass; prior v0.1 initial)
-**Version:** 0.2
+**Last Updated:** July 27, 2026 (v0.3 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
+**Last Updated (prior):** July 23, 2026 (v0.2 — AR-1 fix pass; prior v0.1 initial)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -34,6 +35,10 @@ AdvanceHumanSystemsDay(ref MoraleState m, playerId, in PersonalityProfile p,
     m.LastAdvancedWorldDay := worldDay
 ```
 
+- `ComputeMoraleTarget` consumes `ExternalDeltaPermille` as an **additive term alongside**
+  `BoardObjectiveDeltaPermille` (ERR-033-003). `0` ⇒ the target is unchanged, so the field is
+  **behaviour-neutral until a non-zero delta is actually delivered** — and because it lives on a
+  **transient input struct**, it carries **no `HUMAN_SYSTEMS_SAVE_FORMAT_VERSION` bump**.
 - `ComputeMoraleTarget` blends the internal `EquilibriumPermille` set-point with committed-input deltas
   (a win nudges the target up, a benching nudges it down), scaled by the player's `Temperament` trait
   (a steadier temperament dampens the swing) — all integer per-mille, clamped `[0,1000]`. Its exact
@@ -70,8 +75,21 @@ intra-squad `StrengthPermille`) is derived the same way and stored nowhere.
 ## 3.3 Morale-value read accessors (FR-HS-023..025)
 
 `MoraleOf(in MoraleState) → int` is the read-only projection OUT (match via the #27 seam, #31/#35/#45 reads).
-No accessor mutates #33 state; there is no write path INTO #33 morale except #46's future man-management seam
-(deferred). This keeps the coupling one-directional and the determinism ordering simple.
+No accessor mutates #33 state. **There is no write path INTO #33 morale at all** — this keeps the coupling
+one-directional and the determinism ordering simple.
+
+**ERR-033-004 (at #46's approval) — what "#46's man-management seam" is, stated so the wrong reading is
+unavailable.** Earlier text called it a *future write path*, which invited an implementation in which #46
+assigns `MoralePermille` directly. That would **contradict FR-HS-002**, which makes #33 the sole writer of
+its own state. The seam **is the routed `ExternalDeltaPermille`** (ERR-033-003): #46 produces a bounded
+delta, the root sums and clamps it, and #33 applies it through `ComputeMoraleTarget` like any other
+committed input. **No behaviour change — this makes the only coherent reading the only available one.**
+
+**ERR-033-002 (at #35's approval) — roster-lifecycle lockstep extends to routed inputs.** FR-HS-027 drops a
+player's #33 entries at the season-boundary churn; a **producer-side pending delta** for a player who has
+just retired or been transferred must be dropped with them. Otherwise an undelivered delta outlives its
+subject and lands on whoever next holds that `PlayerId`. **The rule is what must exist, not where it is
+filed** — it may equivalently be stated producer-side.
 
 ## 3.4 The #22 read-surface assembly (KD-1 — the load-bearing path)
 
@@ -111,4 +129,5 @@ A save→restore here is field-identical (T-HS-DET-001). This is the KD-8 identi
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial §3 (`AdvanceHumanSystemsDay`, clique derivation, the #22 read-surface assembly + `SetPlayerEdgeMirror`, worked example). Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1 (M): clique rule made **mutual** (both directions > 600, matching #22). |
+| 0.3 | 2026-07-27 | — | **ERR-033-003 / -004 / -002**: §3.1 consumes `ExternalDeltaPermille` as an additive term (0 ⇒ unchanged, so behaviour-neutral until delivered); §3.3 states that there is **no write path into #33 morale at all** and that #46's man-management seam is the routed delta, closing the reading under which #46 would assign `MoralePermille` directly and contradict FR-HS-002; and records the roster-lifecycle drop rule for pending deltas. |
 #endregion

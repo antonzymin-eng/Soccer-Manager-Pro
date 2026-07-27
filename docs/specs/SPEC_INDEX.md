@@ -1,7 +1,54 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 25, 2026, later same day (**Board & Ownership Dynamics #45 authored + advanced
+> **Last Updated:** July 27, 2026, later same day (**ALL TEN ADVANCED `IN REVIEW → APPROVED`.**
+> Lead-developer **R-01..R-05 sign-off granted** on #53, #35, #46, #36, #54, #47, #48, #50, #51 and #39,
+> and the **23 back-props filed and RESOLVED atomically with the flips** per each spec's own pipeline step
+> 6 (`spec-error-log.md` v1.47). **Count: 53 APPROVED / 0 IN REVIEW / 0 NOT STARTED — every spec in the
+> registry is now approved.** **The flip surfaced the wave's most consequential finding, which only
+> landing the back-props together could expose:** #30's pinned day-advance tick order **was not
+> implementable as written** — `ERR-030-007` had been filed **twice** (#42's academy step and #32's
+> scouting step, at two different approvals), leaving **two step 7s, two step 8s and an orphaned
+> `AdvanceDay` line** in a sequence six approved specs cite **by number**. Reconciled under **ERR-030-022**
+> in a new §3.3.1, which also had to resolve a **conflict between two of this wave's own back-props**:
+> ERR-030-020 (#53) requires its step to precede its same-day consumers and says to renumber below it,
+> while ERR-030-022 requires the cited slots not to move — jointly unsatisfiable by inserting a new step 1.
+> Resolved by numbering the facility step **0**; a renumber that silently invalidates six specs' citations
+> is worse than an unusual number, and patching all six would edit approved text for a numbering
+> preference. `ERR-030-009` is **also** a duplicate (#45's `JobSecurity` band, #44's availability filter);
+> both duplications are preserved as frozen records and documented as errata. **Three other entries change
+> approved contracts rather than pointers:** **ERR-048-001** corrects a **contradiction between two MUSTs
+> inside APPROVED #48** (FR-MP-025 forbids `#51 → #48`; FR-MP-027 required #51's catalogue to be keyed on
+> #48's `CueId`) that would have surfaced as an assembly cycle; **ERR-045-002** re-points `FR-BD-012` from
+> #30 to #54, closing a MUST that delegated the sacking decision to a spec containing no such rule; and
+> **ERR-033-003** replaces a per-producer morale field with a producer-agnostic one, **filed jointly by #35
+> and #46** because the second producer arrived before the first was approved. **No code changed, no gate
+> was run, and no format version bumped today** — three entries are ◑ spec-text-first with their bump named
+> at a future T-phase, and #54's `SEASON_STATE_FORMAT_VERSION` bump is **decided to combine** with #45's
+> queued one so saves face one refusal boundary rather than two. Prior entry below.)
+> **Last Updated (prior):** July 27, 2026 (**TEN design supplements promoted to section files at `IN REVIEW` —
+> the largest single promotion in the project's history, and the one that empties the pre-promotion
+> backlog.** Every `docs/tracking/*-design.md` supplement that had converged but never been promoted now
+> has an 11-file spec set: **#53** Club Infrastructure & Facilities (`FR-IN`), **#35** Media & Press
+> Interactions (`FR-ME`), **#46** News, Inbox & Man-Management (`FR-NW`), **#36** National Teams &
+> International (`FR-NT`), **#54** Manager Career, Reputation & Job Market (`FR-MC`), **#47** New-Game
+> Setup & Database Editor (`FR-ED`), **#48** Match Presentation Depth (`FR-MP`), **#50** Save Migration &
+> Versioning (`FR-MG`), **#51** Audio & Sound Design (`FR-AU`), **#39** Steam Packaging & Release
+> Engineering (`FR-PK`). Each carries a recorded section-file **PASS-1 adversarial review + fix pass**
+> (§9.4.1) and an AR-2 sweep to CONVERGENCE. **Status is `IN REVIEW`, not `APPROVED`, for all ten:**
+> G1 is closed, but G2 (back-props) lands atomically at approval and **G3 — lead-developer R-01..R-05
+> sign-off — is a human authority and is not self-grantable**, per every supplement's own promotion
+> pipeline. **The single most consequential finding across the wave is an id-collision class:** three
+> supplements (#35, #46, #53) proposed `ERR-` ids that had **already been filed**, because #30's T2
+> implementation filed rows on the same day those supplements were written and nothing cross-checks a
+> proposed id against the log — reassigned to ERR-030-022/023 (#35), ERR-030-024 (#46) and ERR-029-003
+> (#53), each recorded as an M finding in its own §9.4.1. The remaining seven verified their ids free
+> **against the log and against every spec folder** rather than assuming, and say so. **Three specs file
+> no back-props at all** (#48, #39, and #37/#44/#46's positive-property class), which is stated as
+> evidence of correct layering rather than left as an empty table. Count: **43 APPROVED / 10 IN REVIEW /
+> 0 NOT STARTED** — counted from the registry table itself, since several historical header entries in
+> this chain disagree with it and with each other.)
+> **Last Updated (prior):** July 25, 2026, later same day (**Board & Ownership Dynamics #45 authored + advanced
 > `→ IN REVIEW → APPROVED`.** Wave 5's second spec — board confidence as persistent per-club state, ownership
 > profiles as dials on one code path, takeovers deferred to the deep tier. **KD-5** resolves a real
 > double-truth with #30: `BoardState.JobSecurity` becomes a **derived band** over #45's confidence rather
@@ -398,6 +445,16 @@
 | 32 | Scouting & Player Knowledge | `scouting-player-knowledge/` | 6¹ | APPROVED | Jul 24, 2026 |
 | 43 | Competition Structure | `competition-structure/` | 6¹ | APPROVED | Jul 24, 2026 |
 | 44 | Discipline & Suspensions | `discipline-suspensions/` | 6¹ | APPROVED | Jul 24, 2026 |
+| 53 | Club Infrastructure & Facilities | `club-infrastructure-facilities/` | 6¹ | APPROVED | Jul 27, 2026 |
+| 35 | Media & Press Interactions | `media-press-interactions/` | 6¹ | APPROVED | Jul 27, 2026 |
+| 46 | News, Inbox & Man-Management | `news-inbox-man-management/` | 6¹ | APPROVED | Jul 27, 2026 |
+| 36 | National Teams & International | `national-teams-international/` | 6¹ | APPROVED | Jul 27, 2026 |
+| 54 | Manager Career, Reputation & Job Market | `manager-career-reputation/` | 6¹ | APPROVED | Jul 27, 2026 |
+| 47 | New-Game Setup & Database Editor | `new-game-setup-db-editor/` | 6¹ | APPROVED | Jul 27, 2026 |
+| 48 | Match Presentation Depth | `match-presentation-depth/` | 6¹ | APPROVED | Jul 27, 2026 |
+| 50 | Save Migration & Versioning | `save-migration-versioning/` | 6¹ | APPROVED | Jul 27, 2026 |
+| 51 | Audio & Sound Design | `audio-sound-design/` | 6¹ | APPROVED | Jul 27, 2026 |
+| 39 | Steam Packaging & Release Engineering | `steam-packaging-release/` | 6¹ | APPROVED | Jul 27, 2026 |
 
 ¹ Priority 6 = Stage-1 forward (first spec authored after the Stage-0 set of 20 was complete); the 1–5 scale covered the Stage-0 spec set only.
 
@@ -435,6 +492,84 @@ consistent with #23 having been free to reserve and now promote.
 ---
 
 ## NOTES
+
+- **July 27, 2026 (later same day) — all ten advanced `IN REVIEW → APPROVED`.** Lead-developer
+  R-01..R-05 sign-off granted, and the **23 back-props filed and RESOLVED atomically with the flips**
+  (`spec-error-log.md` v1.47) per each spec's own pipeline step 6. **Every spec in this registry is now
+  APPROVED: 53 / 0 / 0.**
+
+  **Landing the back-props together is what exposed the wave's most consequential defect**, and it would
+  not have been visible filing them one spec at a time: **#30's pinned day-advance tick order was not
+  implementable as written.** `ERR-030-007` had been filed **twice** — for #42's academy step and #32's
+  scouting step, at two different approvals — so §3.3 carried **two step 7s, two step 8s and an orphaned
+  `AdvanceDay` comment line**, in a sequence six approved specs cite **by number**. Reconciled under
+  **ERR-030-022** in a new §3.3.1. `ERR-030-009` turns out to be a duplicate as well (#45's `JobSecurity`
+  band; #44's availability filter). Both duplications are **preserved verbatim as frozen records** and
+  documented as errata rather than rewritten.
+
+  **One id has since been reassigned, and the reason is the finding itself.** #46's projector seam was
+  filed as `ERR-030-015`, verified free against the log at authoring time. While the branch was open,
+  **#30's own T3 landing claimed `-015` on main** for the §3.5 calendar-rebuild fix — a High-severity
+  entry with code behind it. Main's claim has precedence, so the seam is now **`ERR-030-025`**. This is
+  the **fourth** instance of the collision class in one day and the first between a branch and main, and
+  it sharpens the rule: verifying an id free **at authoring is not sufficient**, because the log moves
+  underneath an open branch. **The check must be re-run at merge.**
+
+  **A conflict between two of this wave's own back-props also had to be resolved at filing time.**
+  `ERR-030-020` (#53) requires its step to precede every same-day consumer of a facility-derived input and
+  says to renumber below it; `ERR-030-022` requires that the slots approved specs cite by number not move.
+  Inserting a new step 1 cannot satisfy both. Resolved by numbering the facility step **0** — unusual, but
+  a renumber that silently invalidates six approved specs' citations is worse, and patching all six would
+  edit approved text to accommodate a numbering preference rather than a design need.
+
+  **Three entries change approved contracts rather than pointers.** **ERR-048-001** corrects a
+  **contradiction between two MUSTs inside APPROVED #48** — FR-MP-025 forbids `#51 → #48` while FR-MP-027
+  required #51's catalogue to be keyed on #48's `CueId`, which is jointly impossible and would have
+  surfaced as an assembly cycle once both were implemented. **ERR-045-002** re-points `FR-BD-012` from #30
+  to #54, closing a MUST that delegated the sacking decision to a spec containing no such rule.
+  **ERR-033-003** replaces a per-producer morale field with a producer-agnostic one, **filed jointly by
+  #35 and #46** because the second producer of that quantity arrived before the first was approved.
+
+  **No code changed, no gate was run, and no format version bumped today.** Three entries are ◑
+  spec-text-first with their bump named at a future T-phase, and #54's `SEASON_STATE_FORMAT_VERSION` bump
+  is **decided to combine** with #45's queued one on the same block, so existing saves face **one**
+  refusal boundary rather than two. **Approval approves the forward design, not an implementation** —
+  none of the ten has an `src/` assembly.
+
+- **July 27, 2026 — ten design supplements promoted `→ IN REVIEW` in one pass (#53, #35, #46, #36, #54,
+  #47, #48, #50, #51, #39).** This empties the pre-promotion backlog: every converged
+  `docs/tracking/*-design.md` supplement that lacked a spec folder now has an 11-file section set at
+  `Status: IN REVIEW`, authored per each supplement's own §12 promotion pipeline (author → PASS-1
+  adversarial review + fix pass → registry row → sign-off → APPROVED). Steps 1–4 are complete for all
+  ten; **step 5 is not, and cannot be**: lead-developer R-01..R-05 sign-off is a human authority and is
+  not self-grantable, so none of the ten claims `APPROVED` and each §9.6 says so explicitly.
+
+  **The finding worth recording at registry level is an id-collision class, not a per-spec defect.**
+  Three supplements (#35, #46, #53) proposed `ERR-` ids that were **already filed** — #30's T2
+  implementation landed rows on the same day those supplements were written, and nothing in the process
+  cross-checks a *proposed* id against `spec-error-log.md`. Reassigned to **ERR-030-022 / -023** (#35),
+  **ERR-030-024** (#46) and **ERR-029-003** (#53), each recorded as an M finding in its own §9.4.1. The
+  other seven verified their ids free against the log **and** against every spec folder before claiming
+  them, and say so in §8. A supplement's proposed id should be treated as a suggestion re-verified at
+  promotion, not as a reservation.
+
+  **A second cross-wave pattern, recorded because ten repetitions is a process signal rather than ten
+  slips:** in every one of the ten, the `[GT]` **budget ceilings declared in §6.3 were absent from the
+  Appendix A catalogue** — the #45 PASS-1 M-2 defect, reproduced independently each time. It is an
+  artifact of section-authoring order (§6 is written before the appendices, and nothing walks back), and
+  a future promotion should close the loop as a step rather than as a finding.
+
+  **Three of the ten file no back-props at approval** (#48, #39, and — from the prior wave — the
+  #37/#44/#46 class). Each states that as a **positive property**: a spec that consumes contracts rather
+  than amending them is one that sits correctly in the layer, and #39 in particular — the spec gating
+  the project's ability to ship — amends no approved text anywhere.
+
+  **Also promoted at this pass: two numbers that were never in the roadmap's original #27–#51 range.**
+  **#53** (Club Infrastructure & Facilities) exists because four APPROVED specs (#34, #42, #28, #40)
+  each consume a facility model and all attribute it to #40, whose scope excludes it; **#54** (Manager
+  Career, Reputation & Job Market) exists because #45's FR-BD-012 names #30 as deciding a sacking and
+  #30 contains no such rule. Both were reserved in `management-layer-spec-roadmap.md` and take registry
+  rows here for the first time.
 
 - **Pass Mechanics (#5):** Originally approved Feb 22, 2026 → suspended March 25, 2026 (19 audit findings) → re-approved May 6, 2026 after all 19 findings fixed (per `fix-manifest-pass-mechanics.md`) plus §3.3–§3.9 follow-up findings F-A01 / F-A02 resolved (option-3 hybrid: spinBase/spinMax columns added to §3.1.4; WINDUP_FRAMES/FOLLOWTHROUGH_FRAMES localized in §3.8.10). Re-review packet at `pass-mechanics/re-review-packet.md`.
 - **April 27, 2026 sign-off pass:** Agent Movement (#2), Shot Mechanics (#6), and Decision Tree (#8) all approved by lead developer. Decision Tree (#8) approved at "draft-level" quality gate; comprehensive audit candidate for follow-up before implementation.
