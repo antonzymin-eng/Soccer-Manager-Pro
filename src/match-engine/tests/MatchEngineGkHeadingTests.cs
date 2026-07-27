@@ -85,8 +85,14 @@ namespace TacticalDirector.MatchEngine
         [Test]
         public void EnableGkHeading_SetsTheFlag()
         {
+            // §5.Z.15: the default flipped OFF → ON. Goalkeeper Mechanics #11 was built, wired,
+            // snapshot-safe and switched off, so every match was played without a keeper who could
+            // attempt a save — a large part of a goal rate ~10x football's. Both toggles are locked
+            // here so a silent revert of the default fails.
             var engine = new MatchEngine(MatchSeed);
-            Assert.IsFalse(engine.TestOnly_GkHeadingEnabled, "Wiring is opt-in — default off (KD-11).");
+            Assert.IsTrue(engine.TestOnly_GkHeadingEnabled, "#11/#10 are ON by default since §5.Z.15.");
+            engine.DisableGkHeading();
+            Assert.IsFalse(engine.TestOnly_GkHeadingEnabled);
             engine.EnableGkHeading();
             Assert.IsTrue(engine.TestOnly_GkHeadingEnabled);
         }
@@ -102,7 +108,11 @@ namespace TacticalDirector.MatchEngine
             // invisible until §5.Z Phase H, because before it no production event was ever published (no
             // possession ever changed, and no goal was ever scored) — so an interleaved loop silently
             // worked. It now diverges on tick 1, which is a property of the shared bus, not of the engine.
+            // §5.Z.15 flipped the default to ON, so a test named FlagOff must now say so explicitly —
+            // otherwise it silently becomes a second flag-ON determinism test and its no-commit
+            // assertions stop meaning what they claim.
             var a = new MatchEngine(MatchSeed);
+            a.DisableGkHeading();
             var chainA = new byte[TickCount][];
             for (int i = 0; i < TickCount; i++)
             {
@@ -111,11 +121,12 @@ namespace TacticalDirector.MatchEngine
             }
 
             var b = new MatchEngine(MatchSeed);
+            b.DisableGkHeading();
             for (int i = 0; i < TickCount; i++)
             {
                 b.RunTick();
                 CollectionAssert.AreEqual(chainA[i], b.CurrentSnapshotDigest,
-                    $"Default (flag-off) engine must stay deterministic — diverged at tick {i + 1}.");
+                    $"A flag-off engine must stay deterministic — diverged at tick {i + 1}.");
             }
             Assert.IsFalse(a.TestOnly_LastCommittedSaveAttrs.HasValue,
                 "A flag-off engine must never commit a save intent.");
@@ -356,10 +367,88 @@ namespace TacticalDirector.MatchEngine
         public void FlagOff_DurableCapture_Succeeds()
         {
             var engine = new MatchEngine(MatchSeed);
+            engine.DisableGkHeading();   // §5.Z.15 — default is now ON; this test is about the OFF path.
             engine.RunTick();
             Assert.DoesNotThrow(() => engine.CaptureDurableHeader(),
-                "A default (flag-off) engine must still support the durable capture path.");
+                "A flag-off engine must still support the durable capture path.");
             Assert.DoesNotThrow(() => engine.CaptureDurablePayload());
+        }
+
+        // ── §5.Z.15 six-second rule (Laws of the Game, Law 12) ────────────────────────
+
+        [Test]
+        public void GoalkeeperHoldingTheBall_IsForcedToReleaseAtSixSeconds()
+        {
+            // The regression this locks is a MATCH STALL, not a rules detail. Making the keeper a live,
+            // mobile agent let it win possession, and nothing could make it give the ball up — measured,
+            // a keeper held the ball for 33.5% of one second half.
+            var engine = new MatchEngine(MatchSeed);
+            int keeper = FirstGoalkeeperAgent(engine);
+            Assert.GreaterOrEqual(keeper, 0, "fixture needs a goalkeeper");
+
+            // Possession is re-asserted at the TOP of every tick so ordinary play cannot take the ball
+            // away and leave the test measuring nothing — the release must come from the rule. The
+            // observation is made after RunTick and before the next re-assert, so the tick on which the
+            // rule fires is visible. Two things are locked, and the first is what makes it non-vacuous:
+            // the release must actually happen, and it must NOT happen before six seconds.
+            // The rule is a STALL BACKSTOP, and measured, healthy play never reaches it: a keeper
+            // distributes after ~54 ticks, well inside Law 12's 360. So this locks BOTH halves.
+            //
+            // (1) The release branch, driven directly through its own seam — otherwise the branch that
+            //     exists solely to break the stall would itself be untested.
+            engine.RunTick();
+            engine.TestOnly_SetPossession(keeper);
+
+            for (int i = 0; i < MatchEngineConstants.GkMaxHoldTicks - 1; i++)
+            {
+                engine.TestOnly_RunGoalkeeperReleaseRule();
+            }
+            Assert.AreEqual(keeper, engine.TestOnly_PossessingAgentId,
+                "the keeper must still hold the ball before Law 12's six seconds elapse.");
+            Assert.AreEqual(0, engine.TestOnly_GkReleaseCooldownRemaining);
+
+            engine.TestOnly_RunGoalkeeperReleaseRule();
+            Assert.AreNotEqual(keeper, engine.TestOnly_PossessingAgentId,
+                "the keeper must be forced to release the ball at six seconds (Law 12).");
+            Assert.Greater(engine.TestOnly_GkReleaseCooldownRemaining, 0,
+                "the re-collect cooldown must arm on release, or the keeper picks the ball straight back up.");
+        }
+
+        [Test]
+        public void GoalkeeperHold_NeverExceedsTheLawLimit_InComposedPlay()
+        {
+            // (2) The invariant over composed play — the counter running unbounded IS the stall that was
+            //     measured at 33.5% of a second half. Non-vacuous: the run is asserted to have actually
+            //     put the ball in a keeper's hands at some point.
+            var engine = new MatchEngine(MatchSeed);
+            int keeper = FirstGoalkeeperAgent(engine);
+            int maxHold = 0;
+
+            for (int i = 0; i < 4 * MatchEngineConstants.GkMaxHoldTicks; i++)
+            {
+                engine.TestOnly_SetPossession(keeper);
+                engine.RunTick();
+                if (engine.TestOnly_GkHoldTicks > maxHold)
+                {
+                    maxHold = engine.TestOnly_GkHoldTicks;
+                }
+                Assert.LessOrEqual(engine.TestOnly_GkHoldTicks, MatchEngineConstants.GkMaxHoldTicks,
+                    "a goalkeeper held the ball past Law 12's six seconds — the §5.Z.15 stall is back.");
+            }
+
+            Assert.Greater(maxHold, 0, "the run never had a keeper holding the ball — assertion was vacuous.");
+        }
+
+        private static int FirstGoalkeeperAgent(MatchEngine engine)
+        {
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                if (engine.AgentIsGoalkeeper(i))
+                {
+                    return i;
+                }
+            }
+            return -1;
         }
 
         private static readonly TacticalDirector.PlayerDatabase.PlayerAttributes NeutralCanonical =

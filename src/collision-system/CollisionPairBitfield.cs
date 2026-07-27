@@ -30,6 +30,31 @@ namespace TacticalDirector.CollisionSystem
             _bits3 = 0;
         }
 
+        /// <summary>
+        /// Reads the four backing words, for snapshot serialization of cross-tick contact state
+        /// (<see cref="CollisionSystem.CaptureContactState"/>). Order is w0..w3 = bits 0..255.
+        /// </summary>
+        public void CaptureWords(out ulong w0, out ulong w1, out ulong w2, out ulong w3)
+        {
+            w0 = _bits0;
+            w1 = _bits1;
+            w2 = _bits2;
+            w3 = _bits3;
+        }
+
+        /// <summary>
+        /// Restores the four backing words captured by <see cref="CaptureWords"/>. No validation is
+        /// possible or needed: every 256-bit pattern is a structurally valid pair set (bits above the
+        /// reachable pair index simply never match a query).
+        /// </summary>
+        public void RestoreWords(ulong w0, ulong w1, ulong w2, ulong w3)
+        {
+            _bits0 = w0;
+            _bits1 = w1;
+            _bits2 = w2;
+            _bits3 = w3;
+        }
+
         /// <summary>Returns true if the pair (lowId, highId) has already been processed.</summary>
         public bool IsSet(int lowId, int highId)
         {

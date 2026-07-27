@@ -247,6 +247,15 @@ namespace TacticalDirector.MatchEngine
         // them immediately after (the sole reset — see the RunResolvePhase comment at the
         // UpdateCollisions call site). Not persisted cross-tick in any meaningful sense (always
         // false entering a tick's collision step), so NOT serialized.
+        // §5.Z.15 six-second rule (Laws of the Game, Law 12). Making the keeper a live, mobile agent let
+        // it WIN possession — and nothing in the engine could make it give the ball up, because #11's
+        // distribution is not engine-driven and the Decision Tree has no keeper-distribution action.
+        // Measured: in one of four full matches a keeper held the ball for 33.5% of the second half,
+        // stalling the match. Cross-tick, so serialized at v19 alongside the collision contact set.
+        private int _gkHoldTicks;                 // ticks the current keeper has held the ball
+        private int _gkReleaseCooldownRemaining;  // ticks the just-released keeper may not re-collect
+        private int _gkReleasedAgentId;           // which keeper that is (NO_POSSESSION when idle)
+
         private bool  _foulCandidateFound;
         private int   _foulCandidateOffender;
         private int   _foulCandidateVictim;
@@ -672,7 +681,19 @@ namespace TacticalDirector.MatchEngine
             RefreshGkAgentIds();   // refreshed each drive too (ConfigureSquads / substitutions move the GK slot)
             _saveCommittedForGk         = new bool[GoalkeeperConstants.MaxGkAgents];
             _headerCommittedThisEpisode = new bool[MatchEngineConstants.SQUAD_SIZE];
-            _gkHeadingEnabled = false;
+            // §5.Z.15 — DEFAULT ON. Phase 2 serialized the GK/Heading cross-tick state at v18, which is
+            // what made a flag-on engine snapshot-safe, and recorded "flip the default to on, take the
+            // digest rebaseline" as the remaining work. This is that flip: a keeper that never attempts
+            // a save is a large part of a goal rate ~10x football's, and leaving Goalkeeper Mechanics
+            // #11 built, wired, tested and switched OFF meant every match was played without one.
+            // No absolute rebaseline is needed — every determinism test in this tree is comparative
+            // (two same-seed runs), and EnableGkHeading() remains for symmetry with DisableGkHeading().
+            _gkHeadingEnabled = true;
+
+            // §5.Z.15 six-second rule — idle at boot (no keeper holds the ball at kickoff).
+            _gkHoldTicks                = 0;
+            _gkReleaseCooldownRemaining = 0;
+            _gkReleasedAgentId          = MatchEngineConstants.NO_POSSESSION;
 
             InitializeAiSnapshots();
 
@@ -759,6 +780,17 @@ namespace TacticalDirector.MatchEngine
             // Perception publishes PerceptionRefreshEvent only on HandleForcedRefresh (not OnHeartbeat),
             // which the host does not call, so no perception registrar boot is required.
             TacticalDirector.DecisionTree.EventBusRegistrar.Initialize();
+
+            // §5.Z.15 — Heading (#10) / Goalkeeper (#11) producers. Both orchestrators publish through
+            // their own EventBusStub the moment they resolve an attempt (HeaderExecutedEvent 0x12 Tier B
+            // / HeaderAttemptFailedEvent 0x13 Tier C / SaveAttemptedEvent 0x14 / BallClaimedEvent 0x15 /
+            // DistributionExecutedEvent 0x16 / GoalkeeperRushEvent 0x17), and an unregistered ordinal
+            // throws. Missing until now purely because the flag defaulted OFF, so the publish path had
+            // never run inside the engine — flipping the default surfaced it on the first mistimed
+            // header (ERR_EVT_UNREGISTERED_ORDINAL out of HeadingMechanics.EmitFailedAttempt). Both
+            // carry the same idempotent s_registered guard as the three above.
+            TacticalDirector.HeadingMechanics.EventBusRegistrar.Initialize();
+            TacticalDirector.GoalkeeperMechanics.EventBusRegistrar.Initialize();
 
             // Phase E — subscribe the real cross-subsystem consumer: possession-changed → AI. Tier A
             // subscription MUST happen during the boot phase (#17 FR-EVT-020/021 — Subscribe throws
@@ -1843,6 +1875,23 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Test-only: the current authoritative possessing agent index (NO_POSSESSION = loose).</summary>
         internal int TestOnly_PossessingAgentId => _possessingAgentId;
 
+        /// <summary>Test-only (§5.Z.15): ticks the current goalkeeper has held the ball. The stall this
+        /// rule closes was exactly this counter running unbounded, so it is the value worth asserting —
+        /// observing possession alone cannot tell "the rule fired" from "an opponent took it".</summary>
+        internal int TestOnly_GkHoldTicks => _gkHoldTicks;
+
+        /// <summary>Test-only (§5.Z.15): remaining ticks the just-released keeper may not re-collect.</summary>
+        internal int TestOnly_GkReleaseCooldownRemaining => _gkReleaseCooldownRemaining;
+
+        /// <summary>
+        /// Test-only (§5.Z.15): runs the six-second rule once, exactly as the Resolve phase does. The rule
+        /// is a STALL BACKSTOP — measured, healthy play has a keeper distribute after ~54 ticks, well
+        /// inside Law 12's 360 — so a composed run never reaches the release branch and cannot lock it.
+        /// This seam drives that branch directly rather than leaving it untested, which is the
+        /// never-compiled-surface trap this project has hit repeatedly.
+        /// </summary>
+        internal void TestOnly_RunGoalkeeperReleaseRule() => EnforceGoalkeeperReleaseRule();
+
         /// <summary>Test-only: a copy of the authoritative MatchContext authored at the last Resolve
         /// (C4). Read after <see cref="RunTick"/> to assert possession / ball-zone authoring.</summary>
         internal MatchContext TestOnly_MatchContext => _matchContext;
@@ -2060,6 +2109,17 @@ namespace TacticalDirector.MatchEngine
         public void EnableGkHeading()
         {
             _gkHeadingEnabled = true;
+        }
+
+        /// <summary>
+        /// Turns Goalkeeper Mechanics (#11) / Heading Mechanics (#10) OFF for this engine. Since §5.Z.15
+        /// the default is ON, so this exists for tests that need the pre-integration behaviour and for a
+        /// host that wants it — the inverse of <see cref="EnableGkHeading"/>, and like it, intended to be
+        /// called once before ticking rather than toggled per tick.
+        /// </summary>
+        public void DisableGkHeading()
+        {
+            _gkHeadingEnabled = false;
         }
 
         /// <summary>Test-only (§7 projection proof): the <see cref="GoalkeeperAgentAttributes"/> the engine
@@ -3109,6 +3169,31 @@ namespace TacticalDirector.MatchEngine
                 _agents, _attrs, _perfs, _commands, _isGoalkeeper,
                 _isCollisionKnockdown, _collisionForces, dt, _clock.CurrentMatchTimeSeconds);
 
+            // GK LOCOMOTION (§5.Z.15). The batch seam above skips goalkeepers, and until now nothing
+            // moved them: boot placement WAS the keeper's position for the whole ninety minutes
+            // (§5.Z.10 found both goals unguarded for exactly this reason and fixed only the spawn).
+            // A keeper that cannot close down, narrow an angle or come for a cross is a large part of
+            // a goal rate ~10x football's.
+            //
+            // The command they need already exists: the Decision Tree runs for keepers like anyone
+            // else and dispatches MOVE_TO_POSITION at the #12-composed GK slot, which
+            // AnchorCalculator.ComputeGkSlot makes a function of ball position. Only the integration
+            // was missing, so this drives each keeper through the SAME per-agent Update the batch
+            // seam calls — no new locomotion model, and #2's documented batch contract is untouched.
+            // Spec #11 keeps what is genuinely its own: the dive, the save and the claim.
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                if (!_isGoalkeeper[i])
+                {
+                    continue;
+                }
+
+                _movement.Update(
+                    ref _agents[i], in _attrs[i], in _perfs[i], in _commands[i],
+                    dt, _clock.CurrentMatchTimeSeconds,
+                    _isCollisionKnockdown[i], _collisionForces[i]);
+            }
+
             // GK (#11) / Heading (#10) 60 Hz drive (design §3.4). After the ball + agents are integrated so
             // the orchestrators see the current world, and — since this is the Physics phase — strictly
             // before the Resolve-phase goal check (a committed save/header can deflect the ball first).
@@ -3228,6 +3313,10 @@ namespace TacticalDirector.MatchEngine
             // deadlock a few minutes after kickoff. Runs AFTER RunFirstTouch so a genuine reception always
             // wins; the two are disjoint by their speed gates in any case.
             RunLooseBallPickup();
+
+            // §5.Z.15 — Law 12's six-second rule. Runs AFTER the two possession-granting paths so a
+            // keeper that claims the ball this tick starts its count from this tick.
+            EnforceGoalkeeperReleaseRule();
 
             // C4 — author MatchContext last, so it reflects this tick's settled possession (a CONTACT
             // kick above released possession, or a D3 first touch) and ball kinematics. Read by the next
@@ -3388,6 +3477,63 @@ namespace TacticalDirector.MatchEngine
         /// <para>Both teams designate independently, so a resting ball is contested by the nearest player
         /// from each side. Deterministic and allocation-free.</para>
         /// </summary>
+        /// <summary>
+        /// Laws of the Game, Law 12: a goalkeeper may not control the ball with the hands for more than
+        /// six seconds. §5.Z.15 made the keeper a live agent that can WIN possession, and nothing in the
+        /// engine could make it give the ball back up — #11's distribution is not engine-driven and the
+        /// Decision Tree has no keeper-distribution action — so a keeper that claimed the ball held it
+        /// for the rest of the match (measured: 33.5% of one second half, in one of four full matches).
+        ///
+        /// The release is deliberately the smallest thing that is both correct and football-shaped: clear
+        /// possession, leaving the ball at rest at the keeper's feet, which is exactly the state
+        /// <see cref="RunLooseBallPickup"/> already handles. A short cooldown bars that same keeper from
+        /// being the collector, so the ball goes to an outfielder instead of looping straight back — the
+        /// shape of a throw-out or a goal kick. No new physics and no invented distribution model: when
+        /// #11's distribution is engine-driven it replaces this method's body, not its trigger.
+        /// </summary>
+        private void EnforceGoalkeeperReleaseRule()
+        {
+            if (_gkReleaseCooldownRemaining > 0)
+            {
+                _gkReleaseCooldownRemaining--;
+                if (_gkReleaseCooldownRemaining == 0)
+                {
+                    _gkReleasedAgentId = MatchEngineConstants.NO_POSSESSION;
+                }
+            }
+
+            int holder = _possessingAgentId;
+            if (holder == MatchEngineConstants.NO_POSSESSION || !_isGoalkeeper[holder])
+            {
+                _gkHoldTicks = 0;
+                return;
+            }
+
+            _gkHoldTicks++;
+            if (_gkHoldTicks < MatchEngineConstants.GkMaxHoldTicks)
+            {
+                return;
+            }
+
+            _possessingAgentId          = MatchEngineConstants.NO_POSSESSION;
+            _gkHoldTicks                = 0;
+            _gkReleasedAgentId          = holder;
+            _gkReleaseCooldownRemaining = MatchEngineConstants.GkReleaseCooldownTicks;
+        }
+
+        /// <summary>This team's goalkeeper, or <c>NO_POSSESSION</c> if it has none on the pitch.</summary>
+        private int FirstGoalkeeperOnTeam(int teamId)
+        {
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                if (_teamIds[i] == teamId && _isGoalkeeper[i])
+                {
+                    return i;
+                }
+            }
+            return MatchEngineConstants.NO_POSSESSION;
+        }
+
         private int SelectLooseBallCollector(int teamId)
         {
             // No _matchEnded term: RunAiPhase — the only path here — already returns before RunMechanicsAI
@@ -3412,13 +3558,25 @@ namespace TacticalDirector.MatchEngine
                 return MatchEngineConstants.NO_POSSESSION; // moving: the ordinary intercept path owns it
             }
 
+            // §5.Z.15/16: the keeper is never the designated loose-ball collector. The collector is
+            // "this team's nearest agent to the ball", and for a ball sitting in a team's own six-yard
+            // box that is always its keeper — so the keeper collected, was released by the six-second
+            // rule, was nearest again, and collected again. Measured, that loop held the ball for a
+            // THIRD of one second half and the six-second cap alone barely dented it (33.5% → 33.4%),
+            // because the defect is re-acquisition, not hold duration.
+            //
+            // A keeper claiming a ball that ARRIVES is untouched — that is First Touch #4 and #11's
+            // save, and it is what a keeper is for. What is removed is the keeper being sent to fetch a
+            // ball that has come to rest, which is not a thing keepers do and is the whole stall.
+            int gkRestricted = FirstGoalkeeperOnTeam(teamId);
+
             // The selection is the identical predicate the restart taker uses — "this team's nearest agent
             // to a point, excluding anyone sent off, ties to the lower roster index" — so it is expressed
             // ONCE, in SelectRestartTaker. Two copies of a participation scan is how the _isSentOff
             // exclusion came to be added one surface at a time over four review rounds (AR-8 M-1 first
             // touch, AR-9 M-1 the foul interpretation); the next participation rule must not have to find
             // every clone.
-            return SelectRestartTaker(ballPosXY, teamId);
+            return SelectRestartTaker(ballPosXY, teamId, gkRestricted);
         }
 
         /// <summary>
@@ -3440,14 +3598,18 @@ namespace TacticalDirector.MatchEngine
         /// participation rule — an injured agent, a taker serving a restart restriction — belongs HERE, in
         /// one place, and reaches both call sites.</para>
         /// </summary>
-        private int SelectRestartTaker(Vector2 position, int awardedTeam)
+        /// <param name="excludeAgentId">Optional agent barred from selection (default: none). Used by the
+        /// §5.Z.15 six-second release so the keeper that has just put the ball down cannot immediately
+        /// collect it again. A restart never passes this — every agent is eligible to take one.</param>
+        private int SelectRestartTaker(
+            Vector2 position, int awardedTeam, int excludeAgentId = MatchEngineConstants.NO_POSSESSION)
         {
             int   taker  = MatchEngineConstants.NO_POSSESSION;
             float bestSq = float.MaxValue;
 
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
-                if (_teamIds[i] != awardedTeam || _isSentOff[i])
+                if (_teamIds[i] != awardedTeam || _isSentOff[i] || i == excludeAgentId)
                 {
                     continue;
                 }
@@ -4440,6 +4602,22 @@ namespace TacticalDirector.MatchEngine
             WriteGoalkeeperState(buf, ref o, _goalkeeper.CaptureState());
             WriteHeadingState(buf, ref o, _heading.CaptureState());
 
+            // v19 — the collision system's contact-onset pair set (§5.Z.13). This is the ONLY
+            // cross-tick state that subsystem holds: without it, a restore mid-contact would treat
+            // every still-open contact as new and re-emit an onset event the uninterrupted run had
+            // already spent, diverging the foul stream and the digest chain.
+            CollisionContactState contacts = _collisionSystem.CaptureContactState();
+            CanonicalSerializer.WriteU64(buf, ref o, contacts.Word0);
+            CanonicalSerializer.WriteU64(buf, ref o, contacts.Word1);
+            CanonicalSerializer.WriteU64(buf, ref o, contacts.Word2);
+            CanonicalSerializer.WriteU64(buf, ref o, contacts.Word3);
+
+            // v19 — the §5.Z.15 six-second-rule state. Cross-tick and outcome-bearing: restoring with a
+            // zeroed hold count would hand a keeper a fresh six seconds on every load.
+            CanonicalSerializer.WriteI32(buf, ref o, _gkHoldTicks);
+            CanonicalSerializer.WriteI32(buf, ref o, _gkReleaseCooldownRemaining);
+            CanonicalSerializer.WriteI32(buf, ref o, _gkReleasedAgentId);
+
             payload.BytesWritten = o;
         }
 
@@ -4649,6 +4827,19 @@ namespace TacticalDirector.MatchEngine
 
             ReadGoalkeeperState(buf, ref o, _goalkeeper);
             ReadHeadingState(buf, ref o, _heading);
+
+            // v19 — collision contact-onset pair set (mirror of the writer's trailing block).
+            ulong contactW0 = CanonicalSerializer.ReadU64(buf, ref o);
+            ulong contactW1 = CanonicalSerializer.ReadU64(buf, ref o);
+            ulong contactW2 = CanonicalSerializer.ReadU64(buf, ref o);
+            ulong contactW3 = CanonicalSerializer.ReadU64(buf, ref o);
+            _collisionSystem.RestoreContactState(
+                new CollisionContactState(contactW0, contactW1, contactW2, contactW3));
+
+            // v19 — §5.Z.15 six-second-rule state (mirror of the writer).
+            _gkHoldTicks                = CanonicalSerializer.ReadI32(buf, ref o);
+            _gkReleaseCooldownRemaining = CanonicalSerializer.ReadI32(buf, ref o);
+            _gkReleasedAgentId          = CanonicalSerializer.ReadI32(buf, ref o);
 
             // Trailing region: the event ledger. RunSnapshotPhase appends the canonical event-ledger bytes
             // (EventBus.SerializeLedger — a 1-byte domain tag + u32 count, then any Tier A records) AFTER the
@@ -6090,6 +6281,25 @@ namespace TacticalDirector.MatchEngine
             public float ComputePressureScalar(Vector2 passerPosition, int passerTeamId) => 0f;
         }
 
+        /// <remarks>
+        /// TEAM-RELATIVITY (§5.Z.14 — ERR-006-001). Shot Mechanics #6 aims at ONE goal: its
+        /// <c>GoalGeometryProvider.Get()</c> returns <c>GoalLineX = PitchLength</c> unconditionally and
+        /// says so — "Assumes the attacking team is shooting toward X = PitchLength (right goal). Stage 1+
+        /// will supply attack direction from match context." <c>ShotPlacementResolver</c> is written to
+        /// match, down to <c>Mathf.Max(baseAimDirection.x, epsilon)</c>. Nothing ever supplied that
+        /// direction, so BOTH teams shot at x = 105 — team 1 shot at the goal it defends. Measured over
+        /// four full matches: team 0 scored 21, team 1 scored 0, on symmetric possession, passes and
+        /// attacking-third time (§5.Z.14). It is the ERR-008-002 / ERR-013-009 defect class again.
+        ///
+        /// The fix is this adapter, not #6: the boundary between the engine's world frame and #6's
+        /// canonical attack-+X frame is exactly here, and the engine already owns the mirror pair the
+        /// rest of the composition root uses. Per §5.Z.12 — "a pair has two places that must agree; a
+        /// mirror has one" — the away team's world state is mirrored INTO the canonical frame on the way
+        /// in and the resulting kick is mirrored back OUT, leaving every APPROVED #6 formula, constant
+        /// and test untouched. The mirror is a 180-degree rotation about Z, so the same negate-x-y rule
+        /// is correct for both velocity and spin (a proper rotation transforms a pseudovector exactly as
+        /// it transforms a vector).
+        /// </remarks>
         private sealed class ShotWorldAdapter : IShotBallSystem, IShotAgentQuery, IShotCollisionQuery
         {
             private readonly MatchEngine _engine;
@@ -6103,13 +6313,36 @@ namespace TacticalDirector.MatchEngine
 
             public void ApplyKick(ref BallState ball, Vector3 velocity, Vector3 spin, int agentId, float matchTime)
             {
-                BallCollision.ApplyKick(ref ball, velocity, spin, agentId, matchTime, logger: null);
+                // Canonical attack-+X frame → world frame. Both are free vectors, so both negate.
+                int team = _engine._teamIds[agentId];
+                BallCollision.ApplyKick(
+                    ref ball,
+                    MirrorVelocityIfAway(team, velocity),
+                    MirrorVelocityIfAway(team, spin),
+                    agentId, matchTime, logger: null);
                 _engine.ReleasePossessionOnKick(agentId);
             }
 
             public ShotAgentAttributes GetAttributes(int agentId) => _engine.BuildShotAttributes(agentId);
 
-            public ShotAgentState GetState(int agentId) => _engine.BuildShotState(agentId);
+            /// <summary>
+            /// The shooter's state in #6's canonical attack-+X frame. Position is an affine point,
+            /// velocity and facing are free vectors, so each takes its own mirror.
+            /// </summary>
+            public ShotAgentState GetState(int agentId)
+            {
+                ShotAgentState s = _engine.BuildShotState(agentId);
+                int team = _engine._teamIds[agentId];
+                if (team == 0)
+                {
+                    return s;
+                }
+
+                s.Position        = MirrorPitchIfAway(team, s.Position);
+                s.Velocity        = MirrorVelocityIfAway(team, s.Velocity);
+                s.FacingDirection = MirrorVelocityIfAway(team, s.FacingDirection);
+                return s;
+            }
 
             public bool GetAndClearTackleFlag(int agentId) => false;
 

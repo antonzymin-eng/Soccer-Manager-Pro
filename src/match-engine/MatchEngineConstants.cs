@@ -223,7 +223,13 @@ namespace TacticalDirector.MatchEngine
         /// arrays sit at boot-init values, so a flag-off engine round-trips this block as a deterministic no-op —
         /// the version bump is what moves the digest, and the contract is comparative round-trip determinism, not
         /// an absolute golden). The Phase-1 durable-capture fail-loud guard is removed with this change.</summary>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 18;
+        /// <para>v19 (§5.Z.13 contact-rate fix) appends the collision system's contact-onset pair set —
+        /// four u64 words of <c>CollisionPairBitfield</c>. That set is the collision system's ONLY
+        /// cross-tick state, and it became cross-tick with the fix: a <c>CollisionEvent</c> is now
+        /// emitted when a contact BEGINS rather than on every tick the overlap persists, so the
+        /// previous tick's pair set is the gate input. Omitting it would make a restore mid-contact
+        /// re-emit an onset the uninterrupted run had already spent.</para>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 19;
 
         /// <summary>[FIXED] On-disk match save-file framing version (match-save-file-design.md KD-1).
         /// The FIRST u32 of a <c>MatchSaveManager</c> save blob; a load with a mismatched value fails
@@ -247,6 +253,10 @@ namespace TacticalDirector.MatchEngine
         /// Mirrors <c>TestingStrategyConstants.MATCH_LENGTH_MINUTES</c> (an infrastructure assembly
         /// game code cannot reference — both derive independently from the Laws of the Game).</summary>
         public const int MATCH_LENGTH_MINUTES = 90;
+
+        /// <summary>[FIXED] Seconds a goalkeeper may control the ball before releasing it (Laws of the
+        /// Game, Law 12). A rule of the sport, not a tunable — see <see cref="GkMaxHoldTicks"/>.</summary>
+        public const float GK_MAX_HOLD_SECONDS = 6f;
 
         /// <summary>[FIXED] Six-yard-box depth from the goal line (Laws of the Game §1 — the goal
         /// area), metres. Used to place the Stage-0 goal-kick restart position (design note §5).</summary>
@@ -461,6 +471,28 @@ namespace TacticalDirector.MatchEngine
         public static readonly float LooseBallPickupRadiusM = Config.GetFloat("match-engine", "LooseBallPickupRadiusM", 1.0f);
 
         /// <summary>
+        /// [DERIVED] Ticks a goalkeeper may hold the ball before the engine forces a release — the Laws of
+        /// the Game (Law 12) six seconds, expressed at the 60 Hz physics rate. Derived rather than tuned
+        /// because it is a Law, not a balance lever.
+        /// Source constants: MatchEngineConstants.GK_MAX_HOLD_SECONDS,
+        /// DeterministicSimConstants.PHYSICS_TICK_HZ.
+        /// See <c>MatchEngine.EnforceGoalkeeperReleaseRule</c> and design note §5.Z.15.
+        /// </summary>
+        public const int GkMaxHoldTicks =
+            (int)(GK_MAX_HOLD_SECONDS
+                  * TacticalDirector.DeterministicSim.DeterministicSimConstants.PHYSICS_TICK_HZ);
+
+        /// <summary>
+        /// [GT] Ticks after a forced goalkeeper release during which THAT keeper may not be selected as the
+        /// loose-ball collector. Without it the keeper re-collects the ball it has just put down on the very
+        /// next tick and the stall re-arms; with it the ball falls to the nearest outfielder, which is the
+        /// shape of a throw-out. Long enough for a covering defender to close, short enough that the ball is
+        /// not abandoned. Config key [match-engine] GkReleaseCooldownTicks.
+        /// </summary>
+        public static readonly int GkReleaseCooldownTicks =
+            Config.GetInt("match-engine", "GkReleaseCooldownTicks", 120);
+
+        /// <summary>
         /// [CROSS] Distance (m) from its own goal line at which a goalkeeper is spawned at kickoff,
         /// centred on the goal mouth. Authoritative source:
         /// <c>PositioningAIConstants.GK_DEPTH_M</c> (Positioning AI #12 §3.4 — the resting depth its
@@ -494,15 +526,20 @@ namespace TacticalDirector.MatchEngine
         /// foul.
         ///
         /// Calibrated (not guessed) against a ~22-fouls-per-90-minutes target, measured end-to-end on
-        /// real composed play rather than predicted: the offline sweep pointed at 0.025, a live run
-        /// measured 37.5 fouls per 90 minutes there (fewer restarts leave play running, which raises the
-        /// contact rate — the feedback the offline replay cannot model), and 0.015 lands on target.
-        /// It reads low because the engine currently generates ~17 hard cross-team from-behind contacts
-        /// per SECOND — a separate, recorded unrealism (design §7 item 1). If that contact rate changes,
-        /// re-measure with <c>FoulRateDiagnosticTests</c>; this value is only meaningful against it.
+        /// real composed play rather than predicted.
+        ///
+        /// RE-CALIBRATED 2026-07-27 (§5.Z.13), 0.015 → 0.030, because the denominator moved: the
+        /// collision system now emits one <c>CollisionEvent</c> per CONTACT rather than one per tick of
+        /// a sustained overlap, which took cross-team from-behind contacts from 58/s to 0.5/s. The
+        /// previous value was explicitly documented as "only meaningful against" that stream, and left
+        /// unchanged it gave ~0.4 fouls per 90 minutes. Re-measured with <c>FoulRateDiagnosticTests</c>
+        /// exactly as that note instructed. Note the live-vs-sweep correction now runs the OTHER way
+        /// from §5.Z.9's: the sweep replays a stream produced at the near-zero shipped rate, so
+        /// restoring fouls adds restarts, which stops play and LOWERS the contact count — the live rate
+        /// lands at or a little under the sweep's prediction rather than above it.
         /// Config key [match-engine] FoulCallProbability.
         /// </summary>
-        public static readonly float FoulCallProbability = Config.GetFloat("match-engine", "FoulCallProbability", 0.015f);
+        public static readonly float FoulCallProbability = Config.GetFloat("match-engine", "FoulCallProbability", 0.030f);
 
         /// <summary>
         /// [GT] Probability band width [0,1) for a straight red card on a WHISTLED foul (design note §3).
