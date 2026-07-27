@@ -1,6 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-06-28 (Pressing #13 wiring AR — AttackingDirection inversion fix)
+// Modified: 2026-07-27  (B3: the #37 KD-7 read-only per-tick ledger tap)
 // Modified: 2026-06-29 (#21 T2 Pressing AI (#13) Phase-D writer — route TeamTactic.LineOfEngagement → PressingSnapshot)
 // Modified: 2026-06-29 (#21 T2 Defensive (#14) + Attacking (#15) Phase-D writers — route OffsideTrap / FocusPlay → snapshots)
 // Modified: 2026-06-29 (#21 T2 Positioning (#12) Phase-D writer — route TeamTactic.Width / DefensiveWidth → ContextModifierInputs; all three writers now closed)

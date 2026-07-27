@@ -1,6 +1,6 @@
 // File:     src/event-system/EventBus.cs
 // Created:  2026-05-30
-// Modified: 2026-06-27
+// Modified: 2026-07-27
 // Author:   —
 // Spec:     Event System #17 §3.2.1, §3.2.2, §4.4, Code Standards #20
 // Purpose:  Public static event bus. Publish/Subscribe entry points plus DrainTick,
@@ -456,4 +456,7 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | ERR_EVT_REGISTRATION_PHASE on a second match's Subscribe and leaks |
 // |         |            |        | handlers toward MaxHandlersPerEventType across runs. No change to  |
 // |         |            |        | the Publish/Subscribe/DrainTick hot paths.                         |
+// | 1.10    | 2026-07-27 | —      | CaptureTickLedger added — the public face of the #37 KD-7 tap,   |
+// |         |            |        | valid between DrainTick and OnTickBoundary. Read-only; no change |
+// |         |            |        | to Publish / Subscribe / DrainTick.                              |
 #endregion

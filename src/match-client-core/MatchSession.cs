@@ -1,6 +1,6 @@
 // File:     src/match-client-core/MatchSession.cs
 // Created:  2026-07-24
-// Modified: 2026-07-24
+// Modified: 2026-07-27
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §4/§5-P0/§6),
 //           Code Standards #20
@@ -148,4 +148,8 @@ namespace TacticalDirector.MatchClientCore
 // | 1.0     | 2026-07-24 | —      | Initial creation (P0): composition root — builds/wires engine  |
 // |         |            |        | + streamer + driver, installs the pre-tick hook, exposes the   |
 // |         |            |        | read (frames) and write (commands) surfaces + ServiceOnce.     |
+// | 1.1     | 2026-07-27 | —      | AttachTickObserver (B6): the client-side seam for the streamer's|
+// |         |            |        | post-tick observer. The factory receives the engine once and    |
+// |         |            |        | returns a READER built from it, so the session still exposes no |
+// |         |            |        | standing engine property and no mutation path.                  |
 #endregion

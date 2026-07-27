@@ -1,6 +1,6 @@
 // File:     src/event-system/EventLedger.cs
 // Created:  2026-05-30
-// Modified: 2026-06-15
+// Modified: 2026-07-27
 // Author:   —
 // Spec:     Event System #17 §3.2.3, §3.2.4, §3.2.5, §3.4.2, §4.4, Code Standards #20
 // Purpose:  Tier A/B ring buffer, typed dispatch infrastructure, and per-tick serialization.
@@ -501,4 +501,10 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | EventSystemConstants.ErrPrefixQueueOverflow / ErrPrefixOrdinal-    |
 // |         |            |        | Collision so the error codes are the single source of truth.      |
 // |         |            |        | Rendered text byte-identical; no functional change.               |
+// | 1.11    | 2026-07-27 | —      | #37 KD-7 observation tap: the FM-017-002 canonical-order walk    |
+// |         |            |        | extracted from SerializeLedger to BuildCanonicalOrder, so the    |
+// |         |            |        | digest bytes and the new read-only CaptureInto derive that order |
+// |         |            |        | once — a second copy is exactly how they would drift apart.      |
+// |         |            |        | CaptureInto consumes nothing and touches neither QueueCount nor  |
+// |         |            |        | the digest, so an observed match ticks byte-identically.         |
 #endregion

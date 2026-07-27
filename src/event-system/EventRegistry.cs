@@ -1,6 +1,6 @@
 // File:     src/event-system/EventRegistry.cs
 // Created:  2026-05-30
-// Modified: 2026-07-14  (v1.8 — match-flow completion: registered OffsideCalledEvent (0x18) /
+// Modified: 2026-07-27
 //           RestartAwardedEvent (0x19) / MatchPhaseChangedEvent (0x1A))
 // Author:   —
 // Spec:     Event System #17 §2.4.2, Appendix A, Code Standards #20
@@ -362,4 +362,10 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | MatchPhaseChangedEvent (all subsystemOrdinal = EventSystem, matching |
 // |         |            |        | the existing match-engine-authored rows; see docs/tracking/          |
 // |         |            |        | match-flow-completion-design.md §8).                                 |
+// | 1.9     | 2026-07-27 | —      | GetOrdinal<T>() promoted internal -> public so an observer (#37) |
+// |         |            |        | can branch on a captured record's ordinal without a parallel     |
+// |         |            |        | table of literals beside this registry. It now calls             |
+// |         |            |        | EnsureInitialized() FIRST: EventOrdinalCache<T> is a separate    |
+// |         |            |        | static-generic type, so a first caller would otherwise read 0    |
+// |         |            |        | for every type and silently match nothing.                       |
 #endregion

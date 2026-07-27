@@ -1,12 +1,12 @@
 // File:     src/match-client-core/MatchClientConstants.cs
 // Created:  2026-07-24
-// Modified: 2026-07-24
+// Modified: 2026-07-27
 // Author:   —
-// Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P0),
+// Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P0/§5-P3),
 //           Code Standards #20 (constant catalogue; no magic numbers)
-// Purpose:  Constant catalogue for the host-free interactive-client core. P0 pins the master-plan
-//           playback-speed set the UI presents (Pause is a streamer state, not a multiplier); camera
-//           and render-cue [GT] tuning land alongside their consumers at P3/P4.
+// Purpose:  Constant catalogue for the host-free interactive-client core: the master-plan
+//           playback-speed set the UI presents (Pause is a streamer state, not a multiplier), the P3
+//           interpolator snap distances, and the P3 follow-ball camera tuning.
 
 using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
 
@@ -115,4 +115,8 @@ namespace TacticalDirector.MatchClientCore
 // | 1.0     | 2026-07-24 | —      | Initial creation (P0): master-plan playback-speed set          |
 // |         |            |        | {1,3,5,10} as [GT] scalars via GameplayConfig. Camera /        |
 // |         |            |        | render-cue tuning deferred to P3/P4 with their consumers.      |
+// | 1.1     | 2026-07-27 | —      | P3 consumers landed, so their [GT] tuning lands with them: the  |
+// |         |            |        | two interpolator snap distances (restart / substitution        |
+// |         |            |        | discontinuities) and the five follow-ball camera rows (dead    |
+// |         |            |        | zone, exponential follow rate, view half-extents, overscan).   |
 #endregion
