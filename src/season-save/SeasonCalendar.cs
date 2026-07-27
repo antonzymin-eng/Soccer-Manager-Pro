@@ -170,6 +170,71 @@ namespace TacticalDirector.SeasonSave
         public bool SatisfiesCursorInvariant(uint currentWorldDay) =>
             IsSeasonComplete || _roundToDay[NextRoundIndex] >= currentWorldDay;
 
+        /// <summary>
+        /// This calendar's round spacing shifted forward into the next season (#30 §3.5 step (c′)): every
+        /// round day moves by one season length plus <paramref name="breakDays"/>, and the cursor returns
+        /// to round 0. The first round of the new season therefore lands exactly
+        /// <paramref name="breakDays"/> after the last round of this one.
+        /// <para>
+        /// <b>Shifting the shape, not rebuilding a linear calendar</b> (ERR-030-015). It keeps the
+        /// boundary roll a pure function of the season it is rolling (KD-6) AND preserves a non-uniform
+        /// schedule — a calendar with a mid-season break keeps that break next year instead of being
+        /// silently flattened. Adding one constant to a strictly-ascending sequence preserves strict
+        /// ascent, so the result needs no re-validation and is built through the private constructor
+        /// without a second array copy.
+        /// </para>
+        /// <para>
+        /// The caller supplies the close-season length rather than this type reading it, so the calendar
+        /// owns the arithmetic and the season loop owns the <c>[GT]</c> policy
+        /// (<c>SeasonLoopConstants.SeasonBreakDays</c>).
+        /// </para>
+        /// </summary>
+        /// <param name="breakDays">Calendar days between this season's last round and the next season's
+        /// first. Must be positive: at zero a single-round calendar would shift by nothing and reproduce
+        /// itself, giving a "next" season identical to this one.</param>
+        /// <exception cref="System.InvalidOperationException">This calendar maps no rounds.</exception>
+        /// <exception cref="System.ArgumentOutOfRangeException"><paramref name="breakDays"/> is zero, or
+        /// the shift would carry the final round past <c>uint.MaxValue</c>.</exception>
+        public SeasonCalendar ShiftedToNextSeason(uint breakDays)
+        {
+            if (_roundToDay == null || _roundToDay.Length == 0)
+            {
+                throw new System.InvalidOperationException(
+                    "Cannot roll a season whose calendar maps no rounds.");
+            }
+
+            if (breakDays == 0)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(breakDays), breakDays,
+                    "The close season must be at least one day, or the next season's calendar could "
+                    + "coincide with this one's.");
+            }
+
+            uint firstDay = _roundToDay[0];
+            uint lastDay = _roundToDay[_roundToDay.Length - 1];
+
+            // Season length measured end-to-end, plus the close season. Days are strictly ascending, so
+            // the subtraction cannot wrap and lastDay is the largest value in the mapping.
+            ulong period = (ulong)(lastDay - firstDay) + breakDays;
+
+            if ((ulong)lastDay + period > uint.MaxValue)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(breakDays), breakDays,
+                    $"Shifting the calendar forward by {period} days would carry the final round past "
+                    + "world-day uint.MaxValue.");
+            }
+
+            var days = new uint[_roundToDay.Length];
+            for (int i = 0; i < days.Length; i++)
+            {
+                days[i] = (uint)(_roundToDay[i] + period);
+            }
+
+            return new SeasonCalendar(0, days);
+        }
+
         /// <summary>Returns this calendar with the cursor advanced one round (the §3.4 tail step).</summary>
         /// <exception cref="System.InvalidOperationException">The season is already complete (F5).</exception>
         public SeasonCalendar AdvancedOneRound()
@@ -225,4 +290,13 @@ namespace TacticalDirector.SeasonSave
 // | 1.1     | 2026-07-25 | —      | AR pass 2 (doc): SatisfiesCursorInvariant's caller re-anchored to  |
 // |         |            |        | SeasonSaveManager.Load — SeasonLoop is a T2 type, and the          |
 // |         |            |        | predicate had no production caller until the FR-SN-011 gate landed.|
+// | 1.2     | 2026-07-27 | —      | #30 T3 AR: ShiftedToNextSeason — the §3.5 step (c′) calendar       |
+// |         |            |        | shift, moved here from SeasonLoop, where it was pure calendar      |
+// |         |            |        | arithmetic sitting on the composition root next to nothing else    |
+// |         |            |        | that understood round days. Owning it here also drops two array    |
+// |         |            |        | copies (RoundDaysCopy + Create's snapshot) and the redundant       |
+// |         |            |        | ascending re-validation: adding one constant to a strictly-        |
+// |         |            |        | ascending sequence provably preserves strict ascent, so the        |
+// |         |            |        | private constructor is reached directly. Plus a positive-breakDays |
+// |         |            |        | gate — at zero a single-round calendar reproduces itself.          |
 #endregion

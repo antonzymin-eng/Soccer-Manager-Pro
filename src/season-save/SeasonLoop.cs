@@ -261,7 +261,7 @@ namespace TacticalDirector.SeasonSave
                 // played (it is complete) and cannot be rolled (the derived calendar is now behind the
                 // clock), the world clock only moves forward, and the stuck state saves and reloads
                 // cleanly. Refusing the step that would cause it fails loud at the mistake instead.
-                uint openingDay = ShiftCalendarToNextSeason(_state.Calendar).NextFixtureDay();
+                uint openingDay = NextSeasonCalendar().NextFixtureDay();
                 if (endDay > openingDay)
                 {
                     throw new System.InvalidOperationException(
@@ -420,7 +420,7 @@ namespace TacticalDirector.SeasonSave
             // ── (c) regenerate ──────────────────────────────────────────────────────────────────
             ulong nextSeed = DeriveNextSeasonSeed(_state.Seed, _state.SeasonNumber);
             Fixture[] nextFixtures = FixtureScheduler.Generate(ClubIdsAscending(), nextSeed);
-            SeasonCalendar nextCalendar = ShiftCalendarToNextSeason(_state.Calendar);
+            SeasonCalendar nextCalendar = NextSeasonCalendar();
 
             // The KD-4 invariant is the one thing the roll cannot establish on its own: the calendar is
             // derived purely from the old one, so a client that advanced the world deep into the close
@@ -456,47 +456,17 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>
-        /// The next season's calendar: THIS season's round spacing, shifted forward by one season length
-        /// plus <see cref="SeasonLoopConstants.SeasonBreakDays"/>, with the cursor back at round 0.
+        /// The calendar the next season would open on: this season's round spacing shifted forward by
+        /// one season length plus the <c>[GT]</c> close season (§3.5 step (c′)).
         /// <para>
-        /// Shifting the whole shape rather than rebuilding a linear calendar is what keeps the roll a
-        /// pure function of the season (KD-6) AND preserves a non-uniform schedule: a calendar with a
-        /// mid-season break keeps that break next year instead of being silently flattened. The first
-        /// round of the new season lands exactly <c>SeasonBreakDays</c> after the last round of the old.
+        /// One derivation with two readers — <see cref="RollToNextSeason"/> installs it, and
+        /// <see cref="AdvanceDays"/> bounds the post-season clock by it. The arithmetic belongs to
+        /// <see cref="SeasonCalendar"/>; what lives here is only the choice of
+        /// <see cref="SeasonLoopConstants.SeasonBreakDays"/>, so that policy is bound in exactly one place.
         /// </para>
         /// </summary>
-        /// <exception cref="System.InvalidOperationException">The calendar maps no rounds, or the shift
-        /// would carry a round day past <c>uint.MaxValue</c>.</exception>
-        internal static SeasonCalendar ShiftCalendarToNextSeason(in SeasonCalendar calendar)
-        {
-            uint[] days = calendar.RoundDaysCopy();
-            if (days.Length == 0)
-            {
-                throw new System.InvalidOperationException(
-                    "Cannot roll a season whose calendar maps no rounds.");
-            }
-
-            uint firstDay = days[0];
-            uint lastDay = days[days.Length - 1];
-
-            // Season length measured end-to-end, plus the close season. Both terms are unsigned and the
-            // days are strictly ascending, so the subtraction cannot wrap.
-            ulong period = (ulong)(lastDay - firstDay) + SeasonLoopConstants.SeasonBreakDays;
-
-            if ((ulong)lastDay + period > uint.MaxValue)
-            {
-                throw new System.InvalidOperationException(
-                    $"Shifting the calendar forward by {period} days would carry the final round past "
-                    + "world-day uint.MaxValue.");
-            }
-
-            for (int i = 0; i < days.Length; i++)
-            {
-                days[i] = (uint)(days[i] + period);
-            }
-
-            return SeasonCalendar.Create(0, days);
-        }
+        private SeasonCalendar NextSeasonCalendar() =>
+            _state.Calendar.ShiftedToNextSeason(SeasonLoopConstants.SeasonBreakDays);
 
         /// <summary>
         /// The §3.5 <c>DeriveNextSeasonSeed</c>: the successor season's seed, from this season's seed and
@@ -762,7 +732,8 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | a refused roll leaves the season untouched. Plus the pure           |
 // |         |            |        | ShiftCalendarToNextSeason / DeriveNextSeasonSeed helpers,           |
 // |         |            |        | extracted so their branches are testable without driving a          |
-// |         |            |        | 380-fixture season to its boundary first.                          |
+// |         |            |        | 380-fixture season to its boundary first. (ShiftCalendarToNextSeason|
+// |         |            |        | moved to SeasonCalendar.ShiftedToNextSeason at v1.3 below.)         |
 // | 1.2     | 2026-07-27 | —      | #30 T3 AR: AdvanceDays now bounds the POST-season advance by the    |
 // |         |            |        | day the next season would open. Its KD-4 guard covered only the     |
 // |         |            |        | in-season case, so walking the close season past that day reached a |
@@ -772,4 +743,11 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | arithmetic moved to BoardState.EvaluateAtSeasonEnd (it had          |
 // |         |            |        | re-derived IsMetBy); EnginePlayedFixtures / MatchOutcomes docs      |
 // |         |            |        | corrected — both span the season boundary, which T3 made true.      |
+// | 1.3     | 2026-07-27 | —      | #30 T3 AR (L): the §3.5 step (c′) calendar shift moved to           |
+// |         |            |        | SeasonCalendar.ShiftedToNextSeason — it was pure calendar           |
+// |         |            |        | arithmetic on the composition root, next to nothing else that       |
+// |         |            |        | understood round days, and it copied the day array twice and        |
+// |         |            |        | re-validated an ordering it provably preserves. What stays here is  |
+// |         |            |        | NextSeasonCalendar(): the choice of the [GT] close season, bound in |
+// |         |            |        | one place and read by both AdvanceDays and RollToNextSeason.        |
 #endregion

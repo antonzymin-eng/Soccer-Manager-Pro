@@ -116,15 +116,15 @@ namespace TacticalDirector.SeasonSave.Tests
             }
         }
 
-        // ── The pure calendar shift ────────────────────────────────────────────────────────
+        // ── The pure calendar shift (SeasonCalendar.ShiftedToNextSeason) ──────────────────
 
         [Test]
-        public void ShiftCalendarToNextSeason_OpensExactlyOneBreakAfterTheOldFinale()
+        public void ShiftedToNextSeason_OpensExactlyOneBreakAfterTheOldFinale()
         {
             SeasonCalendar old = SeasonCalendar.Linear(roundCount: 6, firstRoundDay: 7, daysBetweenRounds: 7);
             uint oldLastDay = old.DayOfRound(5);
 
-            SeasonCalendar next = SeasonLoop.ShiftCalendarToNextSeason(old);
+            SeasonCalendar next = old.ShiftedToNextSeason(SeasonLoopConstants.SeasonBreakDays);
 
             Assert.AreEqual(oldLastDay + SeasonLoopConstants.SeasonBreakDays, next.DayOfRound(0));
             Assert.AreEqual(0, next.NextRoundIndex, "The new season starts at round 0.");
@@ -132,14 +132,14 @@ namespace TacticalDirector.SeasonSave.Tests
         }
 
         [Test]
-        public void ShiftCalendarToNextSeason_PreservesANonUniformSchedule()
+        public void ShiftedToNextSeason_PreservesANonUniformSchedule()
         {
             // A calendar with a mid-season break. Rebuilding a LINEAR calendar would silently flatten it;
             // shifting the shape keeps it, which is what makes the transform pure in the old season.
             var days = new uint[] { 10, 17, 24, 60, 67 };
             SeasonCalendar old = SeasonCalendar.Create(nextRoundIndex: days.Length, roundToDay: days);
 
-            SeasonCalendar next = SeasonLoop.ShiftCalendarToNextSeason(old);
+            SeasonCalendar next = old.ShiftedToNextSeason(SeasonLoopConstants.SeasonBreakDays);
 
             uint shift = next.DayOfRound(0) - old.DayOfRound(0);
             for (int i = 0; i < days.Length; i++)
@@ -147,6 +147,30 @@ namespace TacticalDirector.SeasonSave.Tests
                 Assert.AreEqual(days[i] + shift, next.DayOfRound(i),
                     $"Round {i} must keep its offset — the 36-day mid-season gap survives the roll.");
             }
+        }
+
+        [Test]
+        public void ShiftedToNextSeason_SingleRoundCalendar_StillMovesForward()
+        {
+            // The degenerate shape the season-length term contributes nothing to: with one round,
+            // (last - first) is zero, so the whole shift IS the close season. If breakDays were allowed
+            // to be zero this calendar would reproduce itself and the "next" season would be this one.
+            SeasonCalendar old = SeasonCalendar.Create(nextRoundIndex: 1, roundToDay: new uint[] { 40 });
+
+            SeasonCalendar next = old.ShiftedToNextSeason(SeasonLoopConstants.SeasonBreakDays);
+
+            Assert.AreEqual(40u + SeasonLoopConstants.SeasonBreakDays, next.DayOfRound(0));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => old.ShiftedToNextSeason(0));
+        }
+
+        [Test]
+        public void ShiftedToNextSeason_OverflowingTheDayRange_FailsLoud()
+        {
+            SeasonCalendar old = SeasonCalendar.Create(
+                nextRoundIndex: 2, roundToDay: new uint[] { uint.MaxValue - 10, uint.MaxValue - 1 });
+
+            Assert.Throws<System.ArgumentOutOfRangeException>(
+                () => old.ShiftedToNextSeason(SeasonLoopConstants.SeasonBreakDays));
         }
 
         // ── The pure seed derivation ───────────────────────────────────────────────────────
