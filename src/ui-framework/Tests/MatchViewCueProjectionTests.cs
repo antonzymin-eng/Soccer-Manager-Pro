@@ -168,6 +168,10 @@ namespace TacticalDirector.UiFramework.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => new RestartBanner(RestartCue.ThrowIn, -1, 1UL));
             Assert.Throws<ArgumentOutOfRangeException>(
                 () => new RestartBanner(RestartCue.ThrowIn, MatchEngineConstants.TEAM_COUNT, 1UL));
+
+            // AR-2: a cast-from-int cue clears the None check but names no restart kind, so a View would
+            // caption something that does not exist. Rejected rather than stored.
+            Assert.Throws<ArgumentOutOfRangeException>(() => new RestartBanner((RestartCue)99, 0, 1UL));
         }
 
         [Test]

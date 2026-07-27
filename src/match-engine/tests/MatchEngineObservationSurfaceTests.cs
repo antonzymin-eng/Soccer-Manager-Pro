@@ -1,6 +1,7 @@
 // File:     src/match-engine/tests/MatchEngineObservationSurfaceTests.cs
 // Created:  2026-07-27
-// Modified: 2026-07-27 (AR-1 M-2: the neutrality run now spans a real restart, and says so)
+// Modified: 2026-07-27 (AR-1 M-2: the neutrality run now spans a real restart, and says so.
+//           AR-2: the two participant-derived awarded teams — foul and offside — are locked.)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md) §5-P1,
 //           Code Standards #20
@@ -16,7 +17,10 @@ using NUnit.Framework;
 
 using UnityEngine;
 
+using TacticalDirector.AgentMovement;
 using TacticalDirector.BallPhysics;
+using TacticalDirector.DeterministicSim;
+using TacticalDirector.EventSystem;
 
 namespace TacticalDirector.MatchEngine
 {
@@ -200,6 +204,65 @@ namespace TacticalDirector.MatchEngine
             Assert.That(engine.RestartAppliedThisTick,
                 Is.EqualTo(RestartCue.GoalKick).Or.EqualTo(RestartCue.Corner).Or.EqualTo(RestartCue.KickOff),
                 "an exit over a goal line is a goal kick, a corner, or (between the posts) a goal");
+        }
+
+        /// <summary>
+        /// AR-2: the two `RestartCue.FreeKick` sites are the only ones whose awarded team is derived from
+        /// a PARTICIPANT rather than from geometry or a constant — and getting a participant-relative side
+        /// backwards is exactly how ERR-008-002 shipped. A free kick captioned for the offender rather
+        /// than the victim is the presentation-layer form of that defect, so it is asserted, not assumed.
+        /// </summary>
+        [Test]
+        public void InjectedFoul_ReportsAFreeKickCueForTheVictimsTeam()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            const int Offender = 0;    // home
+            const int Victim   = 12;   // away
+            Assert.AreNotEqual(engine.AgentTeamId(Offender), engine.AgentTeamId(Victim), "precondition");
+
+            var victimPos = new Vector2(40f, 20f);
+            engine.TestOnly_SetAgent(Victim, AgentState.CreateAtPosition(victimPos, new Vector2(1f, 0f)));
+            engine.TestOnly_SetCommand(Victim, MovementCommand.Stop(victimPos));
+            engine.TestOnly_InjectFoulCandidate(Offender, Victim);
+
+            engine.RunTick();
+
+            Assert.AreEqual(RestartCue.FreeKick, engine.RestartAppliedThisTick);
+            Assert.AreEqual(engine.AgentTeamId(Victim), engine.RestartAwardedTeam,
+                "a free kick goes to the team that was fouled, not the one that fouled");
+        }
+
+        /// <summary>
+        /// The other participant-derived award: an offside decision restarts for the DEFENDING team.
+        /// Same reasoning as the foul case above — and the mirror is what makes it a real check, since
+        /// "always team 1" would satisfy a home-toucher-only test.
+        /// </summary>
+        [Test]
+        public void Offside_ReportsAFreeKickCueForTheDefendingTeam()
+        {
+            foreach (int toucher in new[] { 1, 12 })   // a home attacker, then an away one
+            {
+                var engine = new MatchEngine(MatchSeed);
+                int attackingTeam = engine.AgentTeamId(toucher);
+
+                // Push the toucher beyond the far team's deepest defender so the geometry is a violation.
+                float offsideX = attackingTeam == 0
+                    ? MatchEngineConstants.PITCH_LENGTH_M - 2f
+                    : 2f;
+                engine.TestOnly_SetAgent(
+                    toucher, AgentState.CreateAtPosition(new Vector2(offsideX, 34f), new Vector2(1f, 0f)));
+
+                // OffsideCalledEvent's registered producer phase is Resolve; this direct seam call
+                // bypasses RunTick's phase progression, so the phase is set explicitly (the same shape
+                // MatchEngineOffsideTests uses).
+                EventBus.BeginPhase(PhaseId.Resolve);
+                bool violation = engine.TestOnly_EvaluateAndApplyOffside(toucher);
+
+                Assert.IsTrue(violation, "precondition: toucher " + toucher + " is offside");
+                Assert.AreEqual(RestartCue.FreeKick, engine.RestartAppliedThisTick);
+                Assert.AreEqual(1 - attackingTeam, engine.RestartAwardedTeam,
+                    "an offside restart is awarded to the defending team, not the offside attacker's");
+            }
         }
 
         // ── The property that makes the whole surface safe (observer neutrality) ─────────────────

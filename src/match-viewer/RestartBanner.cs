@@ -1,6 +1,6 @@
 // File:     src/match-viewer/RestartBanner.cs
 // Created:  2026-07-27
-// Modified: 2026-07-27
+// Modified: 2026-07-27 (AR-2: undefined-cue gate)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md) §5-P1 KD-P1-3,
 //           Code Standards #20
@@ -60,7 +60,8 @@ namespace TacticalDirector.MatchViewer
         /// <exception cref="ArgumentException"><paramref name="cue"/> is <see cref="RestartCue.None"/> —
         /// use <see cref="None"/> for that, so "no restart" has one representation rather than several
         /// with differing team and tick values.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">An unknown awarded team.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">An unknown awarded team, or a cue outside the
+        /// declared <see cref="RestartCue"/> roster.</exception>
         public RestartBanner(RestartCue cue, int awardedTeam, ulong tick)
         {
             if (cue == RestartCue.None)
@@ -68,6 +69,19 @@ namespace TacticalDirector.MatchViewer
                 throw new ArgumentException(
                     "Use RestartBanner.None for the no-restart case; this constructor records a real one.",
                     nameof(cue));
+            }
+            // A cast-from-int cue would pass the None check above and then be stored, so a View would
+            // caption a restart kind that does not exist. RestartCue is closed and the engine's own
+            // ToRestartCue warns on an unmapped RestartType — this is the receiving half of that gate.
+            // Enum.IsDefined reflects, which is banned on the 60 Hz path; this is not one. It runs only
+            // on a tick that actually had a restart (order 10 per 40 000), in presentation tooling whose
+            // own header records that the game-loop allocation rules do not apply. A `> FreeKick` range
+            // check would be allocation-free and WRONG: the enum is APPEND-only, so the next member added
+            // would be rejected by a bound nobody remembered to raise.
+            if (!Enum.IsDefined(typeof(RestartCue), cue))
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(cue), cue, "cue is not a declared RestartCue member.");
             }
             if (awardedTeam < 0 || awardedTeam >= MatchEngineConstants.TEAM_COUNT)
             {
@@ -88,4 +102,8 @@ namespace TacticalDirector.MatchViewer
 // |         |            |        | type, with AwardedTeam / Tick derived from the cue so the      |
 // |         |            |        | no-restart sentinel holds for default(RestartBanner) too — the |
 // |         |            |        | zero-default defect that had to be fixed twice as loose fields.|
+// | 1.1     | 2026-07-27 | —      | AR-2: refuses a cue outside the declared RestartCue roster. A  |
+// |         |            |        | cast-from-int passed the None check and was stored, so a View  |
+// |         |            |        | would caption a restart kind that does not exist — the         |
+// |         |            |        | receiving half of the gate ToRestartCue warns on.              |
 #endregion
