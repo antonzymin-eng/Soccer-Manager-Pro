@@ -1,7 +1,22 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** July 27, 2026, later same day (**The specification phase is CLOSED — all ten
+**Last Updated:** July 27, 2026, later same day (**Documentation sync pass — no code, no spec, no gate
+run.** Cross-referenced this file, `CLAUDE.md`, `src/CLAUDE.md`, `SPEC_INDEX.md`, and `docs/tracking/`
+against the actual repo state and found four discrepancies, all now corrected here and in the other root
+docs: (1) **Match Analytics #37 T0** (`src/match-analytics/` — value types + `XgLocationModel`) landed
+July 27 without updating this file or `CLAUDE.md`, so the assembly count (29 → **30**) and the
+"APPROVED with no assembly" count (23 → **22**) were both stale, and #37's status row here still read
+"none". (2) **Track C B1** (the interactive-Unity-client richer observation frame) landed the same way —
+already recorded in `path-to-playable-roadmap.md` but not folded into either root doc. (3)
+**`SNAPSHOT_SCHEMA_VERSION` was stale at 18**; the match-realism landing below (home/away asymmetry +
+contact-rate fixes) bumped it to **19** the same day. (4) The home/away-asymmetry / goal-rate OPEN ISSUES
+entry in `CLAUDE.md` was stale in the other direction — it described the asymmetry as an open blocker,
+but the root cause (`GoalGeometryProvider` always returning the same `GoalLineX`, so both teams shot at
+one goal) was found and fixed the same day; corrected there. `docs/tracking/file-manifest.md`'s
+"Current Specification Folders" table was separately found stuck at 26 rows since July 8, 2026 (missing
+the entire #27–#54 wave) and is fixed in the same pass. Prior entry below.)
+**Last Updated (prior):** July 27, 2026, later same day (**The specification phase is CLOSED — all ten
 approved.** `SPEC_INDEX.md` reads **53 APPROVED / 0 IN REVIEW / 0 NOT STARTED**. Lead-developer sign-off
 granted on #53, #35, #46, #36, #54, #47, #48, #50, #51 and #39, with **23 back-props filed atomically**.
 Docs only — no code, no `src/` change, no gate run. **The finding that justified landing them together:** #30's pinned tick order was not implementable, because `ERR-030-007` had been filed twice at two separate approvals — a defect neither approval could have seen alone. See VERSION HISTORY v1.37.)
@@ -220,7 +235,7 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 **Progress:** Implementation Phase (coding begun May 19, 2026)
 **Spec Phase Started:** February 2, 2026
 **Stage-0 Spec Phase Completed:** May 18, 2026 — all 20 Stage-0 specs APPROVED
-**Deliverables:** 53 APPROVED specifications + 29 production assemblies in `src/`
+**Deliverables:** 53 APPROVED specifications + 30 production assemblies in `src/`
 
 **Summary (July 27, 2026):** `SPEC_INDEX.md` records **53 APPROVED / 0 IN REVIEW / 0 NOT STARTED — every spec in the registry is approved, and the specification phase is closed** —
 the Stage-0 set of 20, plus 23 Stage-1-forward and management-layer specs (#21–#34, #37, #38, and
@@ -229,8 +244,8 @@ specs #40–#45, #49), plus the **ten promoted on July 27, 2026** (#53, #35, #46
 and runs the full NUnit suite on every push; the quarantine list is empty.
 
 **Note the direction of travel — it is now the project's dominant fact.** The ten approvals add
-specification, not code, so **23 of the 53 APPROVED specs have no `src/` assembly at all**. *"The spec is
-APPROVED"* now says nothing whatsoever about whether code exists, and that is true of **43% of the
+specification, not code, so **22 of the 53 APPROVED specs have no `src/` assembly at all**. *"The spec is
+APPROVED"* now says nothing whatsoever about whether code exists, and that is true of **~42% of the
 registry**. What remains is implementation: see `path-to-playable-roadmap.md`.
 
 **A production match now plays.** Until July 26, 2026 every match finished 0–0 with the ball
@@ -243,17 +258,18 @@ ticks (was 0%) and changing hands **262–298 times** (was 0), with the ball rea
 areas and goals scored. Locked by the `match-engine-play-develops` acceptance scenario — every
 predicate of which fails on the pre-fix engine.
 
-**The live gap: 13 APPROVED specs have no assembly at all** — #29 Training, #31 Transfers,
-and #32 Scouting, #33 Personalities/Morale, #34 Staff, #37 Analytics, #40 Finances, #41 Injuries,
-plus #42 Youth, #43 Competition Structure, #44 Discipline, #45 Board, #49 Localization. The
-specification frontier now runs well ahead of the code; `docs/tracking/path-to-playable-roadmap.md`
-sequences the shortest path to closing it.
+**The live gap: 12 APPROVED specs have no assembly at all** — #29 Training, #31 Transfers,
+and #32 Scouting, #33 Personalities/Morale, #34 Staff, #40 Finances, #41 Injuries,
+plus #42 Youth, #43 Competition Structure, #44 Discipline, #45 Board, #49 Localization. (#37 Match
+Analytics gained a `src/match-analytics/` T0 assembly on July 27, 2026 — value types + the
+`XgLocationModel`; no engine wiring yet.) The specification frontier now runs well ahead of the code;
+`docs/tracking/path-to-playable-roadmap.md` sequences the shortest path to closing it.
 
-**Current versions:** `SNAPSHOT_SCHEMA_VERSION` **18** · `SEASON_SAVE_FORMAT_VERSION` 2 ·
+**Current versions:** `SNAPSHOT_SCHEMA_VERSION` **19** · `SEASON_SAVE_FORMAT_VERSION` 2 ·
 `SEASON_STATE_FORMAT_VERSION` 1 · `MATCH_SAVE_FORMAT_VERSION` 1 · `WORLD_STORE_FORMAT_VERSION` 3.
 Unity target **6000.4.9f1 / DX11**, recertified July 19, 2026 (`certification-platform.md` v1.4
 `✅ PINNED` — both the determinism-KAT run and the FR-PO-052 perf baseline executed on the pinned
-host). `src/CLAUDE.md` (v2.40) governs all C# authoring.
+host). `src/CLAUDE.md` (v2.44) governs all C# authoring.
 
 **Total specification output:** ~5 MB+ across 400+ files (see `file-manifest.md`)
 
@@ -312,7 +328,7 @@ host). `src/CLAUDE.md` (v2.40) governs all C# authoring.
 | 32 | Scouting & Player Knowledge | Jul 24 | ⏳ none |
 | 33 | Personalities, Morale & Squad Dynamics | Jul 23 | ⏳ none |
 | 34 | Staff & Backroom | Jul 23 | ⏳ none |
-| 37 | Match Analytics & Statistics | Jul 22 | ⏳ none |
+| 37 | Match Analytics & Statistics | Jul 22 | 🔒 `src/match-analytics/` — **T0 only** (value types + `XgLocationModel`; no engine wiring, no aggregator) |
 | 38 | UI / Client Framework | Jul 22 | 🔒 `src/ui-framework/` — **T0 substrate only** (no screens, no UGUI binding) |
 | 40 | Club Finances & Economy | Jul 23 | ⏳ none |
 | 41 | Injuries & Medical | Jul 23 | ⏳ none |
@@ -350,16 +366,16 @@ back-props filed atomically at the flip; **none has an assembly**):
 - ✅ Approved
 - 🔒 Locked (implementation begun)
 
-**Locked (implementation begun) — 28 of 43 approved specs:** #1–#8, #10–#19, #21–#28, #30, #38.
+**Locked (implementation begun) — 29 of 53 approved specs:** #1–#8, #10–#19, #21–#28, #30, #37, #38.
 That is the full Stage-0 physics/AI/systems stack, the tactical layer (#21, #23–#26), the living world
-(#22), the squad data layer (#27), progression (#28, T0), the season loop (#30, T0–T2), and the UI
-framework substrate (#38, T0).
+(#22), the squad data layer (#27), progression (#28, T0), the season loop (#30, T0–T2), match analytics
+(#37, T0), and the UI framework substrate (#38, T0).
 
 **Not implemented by design:** Fixed64 Math Library #9 (deferred to Stage 5+ per §8.1) and Code
 Standards #20 (a style guide, not a coded subsystem).
 
-**Approved but not implemented — 13 specs:** #29, #31, #32, #33, #34, #37, #40, #41, #42, #43, #44,
-and #45, #49. No assembly exists for any of them.
+**Approved but not implemented — 12 specs:** #29, #31, #32, #33, #34, #40, #41, #42, #43, #44, #45, #49.
+No assembly exists for any of them.
 
 **Plus five unnumbered assemblies** (governed by design supplements, not specs): `match-engine`
 (the composition root), `match-viewer`, `match-client-core`, `match-client-unity`, `project-constants`.
@@ -460,7 +476,7 @@ Soccer-Manager-Pro/
 │       │   └── path-to-playable-roadmap.md       [Which code to land, in what order]
 │       ├── certification-platform.md   [Pinned host/engine tuple] + cert-run-runbook.md
 │       └── *-design.md                 [42 design supplements — see note below]
-├── src/                                [29 production assemblies — coding begun May 19, 2026]
+├── src/                                [30 production assemblies — coding begun May 19, 2026]
 │   ├── CLAUDE.md                       [Coding guide — read before writing code]
 │   ├── Physics:    ball-physics, agent-movement, collision-system, first-touch,
 │   │               pass-mechanics, shot-mechanics, heading-mechanics, goalkeeper-mechanics
@@ -468,7 +484,7 @@ Soccer-Manager-Pro/
 │   ├── AI:         decision-tree, perception-system
 │   ├── Foundations: deterministic-sim, event-system, project-constants
 │   ├── Data/loop:  player-database (#27), player-progression (#28), season-save (#30),
-│   │               tactical-instructions (#21 + #26), living-world (#22)
+│   │               tactical-instructions (#21 + #26), living-world (#22), match-analytics (#37, T0)
 │   ├── Client:     ui-framework (#38), match-viewer, match-client-core, match-client-unity
 │   ├── Infra:      performance-optimization (#18), testing-strategy (#19)
 │   └── match-engine/                   [Composition root — not a numbered spec]
@@ -479,9 +495,9 @@ Soccer-Manager-Pro/
 ```
 
 **Assembly names do not reliably match spec folder names.** #27 lives in `player-database`, #28 in
-`player-progression`, #30 in `season-save`, #38 in `ui-framework`; #23/#24/#25 live inside
-`positioning-ai` and #26 inside `tactical-instructions`. Consult the assembly map in
-[`CLAUDE.md`](CLAUDE.md#repo-structure) rather than inferring from the folder name.
+`player-progression`, #30 in `season-save`, #37 in `match-analytics` (folder `match-analytics-statistics/`), #38 in
+`ui-framework`; #23/#24/#25 live inside `positioning-ai` and #26 inside `tactical-instructions`. Consult the
+assembly map in [`CLAUDE.md`](CLAUDE.md#repo-structure) rather than inferring from the folder name.
 
 **On design supplements.** `docs/tracking/*-design.md` is a governance class of its own: a converged,
 adversarially-reviewed design note that either precedes promotion to a numbered spec, or permanently
@@ -503,7 +519,7 @@ the same day, with sign-off granted and its 23 back-props filed atomically. The 
 spec is **#52** (Multiplayer Transport), deliberately deferred behind the Stage-5 Fixed64 migration.
 
 **Nothing on the specification side is outstanding. Everything outstanding is implementation** — and the
-gap is large: 23 of the 53 approved specs have no assembly.
+gap is large: 22 of the 53 approved specs have no assembly.
 
 **The critical path is now `path-to-playable-roadmap.md`** — the shortest route to a build a person can
 sit down and play, against the PM-1 (playable match) / **PM-2 (playable season — the objective)** /
