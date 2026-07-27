@@ -1,7 +1,52 @@
 # src/CLAUDE.md — Tactical Director Coding Guide
 
 > **Created:** May 19, 2026
-> **Last Updated:** July 27, 2026 (v2.42 — **Season & Competition Loop #30 T3 landed — the season-boundary
+> **Last Updated:** July 27, 2026, later same day (v2.44 — **Match Analytics & Statistics #37 T0 landed —
+> path-to-playable roadmap item B2.** New host-free `TacticalDirector.MatchAnalytics` assembly
+> (`src/match-analytics/`), referenced by nothing in the simulation: four immutable value types
+> (`MatchStatline`, `AdvancedStatline`, `StatPoint`, `MatchAnalyticsResult`), all gated at construction
+> (FR-AN-018) and all arrays COPIED rather than wrapped (a `ReadOnlyCollection` over a producer's live
+> buffer is a window, not a snapshot — the `MatchReplay` AR-3 finding, applied here at authoring time
+> rather than found again the hard way). `AdvancedStatline` refuses a non-zero `XgSum` while
+> `LiveXgAvailable` is false (F4 — a fabricated xG total must not render identically to a measured one),
+> and `MatchAnalyticsResult` refuses statlines whose team ids are not `{home 0, away 1}`. Deliberately
+> absent per FR-AN-019: shots, shots on target, pass completion, tackles, saves — each waits on a
+> match-engine producer that does not exist yet (a field reporting a permanent zero is worse than no
+> field). `XgLocationModel` (§3.3, KD-2): pure, stateless, no RNG — distance + subtended-goal-angle
+> logit, F2 non-finite gate, overflow-safe logistic, `[0,1]` clamp; it has no live input at Stage 1 (the
+> match ledger carries no shot origin, only the crossing point) and says so, authored now to be consumed
+> unchanged once `ShotAttemptedEvent` lands. **Surfaced ERR-037-001** (resolved same commit): §4.1's
+> reference list omitted the Ball Physics reference that Appendix A's `[CROSS] GOAL_WIDTH_M` tag
+> requires — Appendix A wins, so `match-analytics.asmdef` references `TacticalDirector.BallPhysics`
+> directly and `MatchAnalyticsConstants.GOAL_WIDTH_M`/`PITCH_LENGTH_M`/`PITCH_WIDTH_M` mirror
+> `BallPhysicsConstants.Pitch` rather than re-declaring a third independent copy of 7.32 m (`match-viewer`
+> already holds a second, pre-existing, untouched). KD-4's reverse-reference invariant (nothing may
+> reference this new assembly) is now scanned mechanically via `MatchAnalyticsValueTypeTests`. 24 tests;
+> full dotnet gate PASSED, whole tree green. No `SNAPSHOT_SCHEMA_VERSION` change (no engine wiring at
+> T0). This gives spec #37 a `src/` assembly for the first time, moving the "APPROVED with no assembly"
+> count from 23 to 22 — reflected in this pass at the root `CLAUDE.md` and `README.md`, which had not
+> been updated when the code landed.)
+> **Last Updated (prior):** July 27, 2026, later same day (v2.43 — **Track C B1: richer observation frame
+> (interactive Unity client §5-P1) landed.** Extends the live match frame with cues a client View needs
+> that the browser floor skipped: per-agent booking/sent-off/substitute state, per-team substitutions
+> used, which period the clock is in, and the last restart (cue + team + tick) — carried through
+> `LiveMatchFrame` → #38's `MatchFrameView`. **No `SNAPSHOT_SCHEMA_VERSION` change and no digest
+> movement:** `AgentYellowCards`/`AgentIsSentOff`/`AgentBenchSlot`/`SubstitutionsUsed` are read-only
+> value copies in the established `AgentTeamId` shape; `CurrentPeriod` is derived from the
+> already-serialized `_matchEnded`/`_secondHalfStarted` rather than re-deriving
+> `HALF_TIME_BOUNDARY_TICK`, so the boundary rule keeps exactly one reader and survives a restore for
+> free; `RestartAppliedThisTick`/`RestartAwardedTeam` are WITHIN-TICK fields reset in `RunInputPhase`
+> beside `_aiPhaseRanThisTick` — not cross-tick state, so no new exclusion-proof class and no schema
+> bump, with the cross-tick memory a HUD needs latched by `LiveMatchStreamer` instead (which carries no
+> determinism obligation). `ApplyRestart` gains a `RestartCue` so every restart site declares its kind —
+> a presentation enum, deliberately NOT an extension of Ball Physics' `RestartType`, whose ordinals are
+> pinned by the `RestartAwardedEvent` digest payload. New `LiveAgentCue` struct (one struct, not three
+> parallel arrays). Tests +26 (match-engine 346 → 358, match-viewer 34 → 39, ui-framework 39 → 48); two
+> findings caught during development (an awarded-team int default reading as "team 0" against a `None`
+> cue on a booted engine, now ctor-initialised; a neutrality test that interleaved two engines against
+> the process-static EventBus, unrelated to observation). Full dotnet gate PASSED, whole tree green
+> (28 suites). Landed first in Phase B because every remaining Track C item consumes this frame shape.)
+> **Last Updated (prior):** July 27, 2026 (v2.42 — **Season & Competition Loop #30 T3 landed — the season-boundary
 > roll (roadmap A5); Phase A is complete and PM-2-sim is reached.** New `src/season-save/SeasonRollOutcome.cs`
 > (the boundary-roll producer record) + `SeasonLoop.cs` v1.1's `RollToNextSeason()`: the KD-6 restartable
 > transform — finalize the table → evaluate the board → (a') #43 / (b') #40 insertion points, declared and
