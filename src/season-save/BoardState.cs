@@ -1,6 +1,6 @@
 // File:     src/season-save/BoardState.cs
 // Created:  2026-07-25
-// Modified: 2026-07-25
+// Modified: 2026-07-27
 // Author:   —
 // Spec:     Season & Competition Loop #30 §2.2, §3.5 step (b), Appendix B row 11, FR-SN-014/015, KD-6;
 //           Code Standards #20

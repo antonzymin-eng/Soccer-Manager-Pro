@@ -177,9 +177,11 @@ namespace TacticalDirector.SeasonSave
         /// </para>
         /// <para>
         /// It also spans season boundaries: <see cref="RollToNextSeason"/> does not clear it, and
-        /// <see cref="MatchResult"/> carries no season number. Results stay ordered by strictly increasing
-        /// <c>WorldDay</c>, so a consumer separates seasons by bucketing on the boundary days
-        /// (<see cref="SeasonRollOutcome.NextFirstFixtureDay"/>) rather than by any field on the result.
+        /// <see cref="MatchResult"/> carries no season number. <c>WorldDay</c> is non-decreasing but NOT
+        /// strictly increasing — every fixture in a round is stamped with that round's single day — so a
+        /// consumer separates seasons by bucketing on the boundary days
+        /// (<see cref="SeasonRollOutcome.NextFirstFixtureDay"/>) rather than by any field on the result,
+        /// and must not treat <c>WorldDay</c> as a unique key.
         /// </para>
         /// </summary>
         public ReadOnlyCollection<MatchResult> MatchOutcomes => _outcomes.AsReadOnly();
@@ -750,4 +752,8 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | re-validated an ordering it provably preserves. What stays here is  |
 // |         |            |        | NextSeasonCalendar(): the choice of the [GT] close season, bound in |
 // |         |            |        | one place and read by both AdvanceDays and RollToNextSeason.        |
+// | 1.4     | 2026-07-27 | —      | #30 T3 AR pass 4 (doc): MatchOutcomes claimed results are ordered  |
+// |         |            |        | by STRICTLY increasing WorldDay. They are non-decreasing — a round |
+// |         |            |        | captures one worldDay and stamps every fixture in it with that —   |
+// |         |            |        | so a consumer must not use WorldDay as a unique key.                |
 #endregion

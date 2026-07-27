@@ -578,4 +578,12 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | uncovered paths: a season saved AFTER the roll (the likelier save  |
 // |         |            |        | point, and the codec had never been shown a rolled state), and     |
 // |         |            |        | AdvanceDays refusing to strand a career past the opening day.      |
+// | 1.2     | 2026-07-27 | —      | AR pass 4: the two calendar-shift tests repointed to               |
+// |         |            |        | SeasonCalendar.ShiftedToNextSeason, plus the two gates that move   |
+// |         |            |        | with it — a single-round calendar still moves forward (and a zero  |
+// |         |            |        | close season is refused, since at one round the season-length term |
+// |         |            |        | is zero and the calendar would reproduce itself), and a shift past |
+// |         |            |        | uint.MaxValue fails loud rather than wrapping to a plausible-      |
+// |         |            |        | looking calendar at the start of time. Each proven non-vacuous by  |
+// |         |            |        | disabling its own gate and watching exactly that test fail.        |
 #endregion

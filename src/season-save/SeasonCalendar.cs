@@ -1,6 +1,6 @@
 // File:     src/season-save/SeasonCalendar.cs
 // Created:  2026-07-25
-// Modified: 2026-07-25
+// Modified: 2026-07-27
 // Author:   —
 // Spec:     Season & Competition Loop #30 §2.2, §3.3 (cursor + day advance), Appendix B row 8,
 //           FR-SN-009/011, KD-4; Code Standards #20
