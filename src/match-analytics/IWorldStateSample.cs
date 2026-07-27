@@ -32,10 +32,24 @@ namespace TacticalDirector.MatchAnalytics
 
         /// <summary>Team of agent <paramref name="index"/> (0 = home, 1 = away), snapshotted at boot (KD-6).</summary>
         int AgentTeamId(int index);
+
+        /// <summary>
+        /// Whether agent <paramref name="index"/> is still participating.
+        ///
+        /// <para>Load-bearing for §3.4: a sent-off agent is deliberately left standing ON the pitch as
+        /// a collision body (match-engine §5.Z Phase H), so a heatmap that bins every slot
+        /// unconditionally would pour the rest of the match into whichever cell that player froze in
+        /// — one dismissal at 20′ dominates the grid. Excluding them is what keeps the map a picture
+        /// of where the match was played.</para>
+        /// </summary>
+        bool AgentIsActive(int index);
     }
 }
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-07-27 | —      | Initial creation (#37 T1): the §3.4 positional sample seam.    |
+// | 1.1     | 2026-07-27 | —      | AR-1 M-2: AgentIsActive added — without it the §3.4 binning    |
+// |         |            |        | loop kept sampling sent-off agents, who stay frozen on the     |
+// |         |            |        | pitch as collision bodies (§5.Z Phase H).                      |
 #endregion

@@ -21,14 +21,26 @@ namespace TacticalDirector.MatchClientWeb
     /// </summary>
     public static class MatchClientWebConstants
     {
+        #region Fixed
+
+        /// <summary>[FIXED] Maximum bytes read while looking for the end of an HTTP request line —
+        /// the hang guard against a client that never sends a terminator. Mirrors the spectator
+        /// viewer's guard; a request line longer than this is refused, not buffered.</summary>
+        public const int MAX_HTTP_REQUEST_LINE_BYTES = 8_192;
+
+        #endregion
+
         #region GT
 
         /// <summary>[GT] Loopback port the client binds by default. Config key [match-client-web] DefaultPort.</summary>
         public static readonly int DefaultPort = Config.GetInt("match-client-web", "DefaultPort", 8181);
 
         /// <summary>[GT] Browser poll interval (ms) for the frame endpoint. Config key
-        /// [match-client-web] FramePollIntervalMs. Well below the ~16 ms tick so the page always has
-        /// two distinct frames to interpolate between, and well above a busy-loop.</summary>
+        /// [match-client-web] FramePollIntervalMs. Deliberately much coarser than the ~16 ms tick:
+        /// every poll is its own connection on a <c>Connection: close</c> transport, and ~10 Hz reads
+        /// as continuous motion for a spectator view. It is NOT sized for interpolation — the page
+        /// draws the latest polled frame directly today (<c>browser-match-client-design.md</c> §2);
+        /// wiring <c>FrameInterpolator</c> would want a finer cadence than this.</summary>
         public static readonly int FramePollIntervalMs =
             Config.GetInt("match-client-web", "FramePollIntervalMs", 100);
 
@@ -54,15 +66,6 @@ namespace TacticalDirector.MatchClientWeb
             Config.GetInt("match-client-web", "RestartCaptionTicks", 180);
 
         #endregion
-
-        #region Fixed
-
-        /// <summary>[FIXED] Maximum bytes read while looking for the end of an HTTP request line —
-        /// the hang guard against a client that never sends a terminator. Mirrors the spectator
-        /// viewer's guard; a request line longer than this is refused, not buffered.</summary>
-        public const int MAX_HTTP_REQUEST_LINE_BYTES = 8_192;
-
-        #endregion
     }
 }
 
@@ -70,4 +73,8 @@ namespace TacticalDirector.MatchClientWeb
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-07-27 | —      | Initial creation (B6): port, poll cadences, canvas scale,      |
 // |         |            |        | restart-caption window and the request-line hang guard.        |
+// | 1.1     | 2026-07-27 | —      | AR-1 L: region order corrected to the mandated most-immutable- |
+// |         |            |        | first (Fixed before GT), and FramePollIntervalMs' doc fixed —  |
+// |         |            |        | it claimed 100 ms was "well below the ~16 ms tick" and sized   |
+// |         |            |        | for an interpolation the page does not do.                     |
 #endregion

@@ -57,14 +57,17 @@ namespace TacticalDirector.MatchAnalytics.Tests
     {
         private readonly Vector2[] _agents;
         private readonly int[]     _teams;
+        private readonly bool[]    _active;
 
         public FakeSample(Vector2 ball, int agentCount = 22)
         {
             BallPosition = ball;
             _agents = new Vector2[agentCount];
             _teams  = new int[agentCount];
+            _active = new bool[agentCount];
             for (int i = 0; i < agentCount; i++)
             {
+                _active[i] = true;
                 // Every agent parked on one interior cell per team, so heatmap assertions read a
                 // single known bin rather than a spread.
                 _teams[i]  = i < agentCount / 2 ? 0 : 1;
@@ -80,11 +83,16 @@ namespace TacticalDirector.MatchAnalytics.Tests
 
         public int AgentTeamId(int index) => _teams[index];
 
+        public bool AgentIsActive(int index) => _active[index];
+
         public void SetAgent(int index, Vector2 position, int team)
         {
             _agents[index] = position;
             _teams[index]  = team;
         }
+
+        /// <summary>Marks an agent dismissed — still on the pitch, no longer playing.</summary>
+        public void SendOff(int index) => _active[index] = false;
     }
 
     /// <summary>§3.1–§3.5 aggregation-core tests (see file header).</summary>
@@ -489,6 +497,82 @@ namespace TacticalDirector.MatchAnalytics.Tests
             Assert.Throws<ArgumentNullException>(() => agg.ObserveTick(null, new FakeSample(MidfieldBall), 1UL));
             Assert.Throws<ArgumentNullException>(() => agg.ObserveTick(new FakeTap(), null, 1UL));
         }
+
+        // ── AR-1 M-1: a tick that throws part-way through must not be silently survivable ────────
+
+        [Test]
+        public void PartiallyAppliedTick_LatchesAndRefusesEveryFurtherTick()
+        {
+            // The hole this locks: F6 checks tick CONTINUITY, which a half-applied tick satisfies —
+            // the guard advances before the tick's records are routed. So without the latch, a run
+            // that lost half of tick 1 kept counting from tick 2 and produced a statline that looks
+            // plausible and is wrong, which is the exact outcome F6 exists to prevent.
+            var agg    = new MatchAnalyticsAggregator();
+            var sample = new FakeSample(MidfieldBall);
+
+            agg.ObserveTick(new FakeTap(), sample, 0UL);
+
+            // Two records: a valid goal, then a foul naming an agent outside the roster (F1).
+            var bad = new FakeTap();
+            bad.Add(new GoalAwardedEvent(scorer: 0, assister: -1, scoringTeam: 0, ballPosition: At(90f, 34f)));
+            bad.Add(new FoulCommittedEvent(offender: 999, victim: 1, location: At(50f, 34f), foulKind: 0));
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => agg.ObserveTick(bad, sample, 1UL));
+
+            // The first record landed and the tick itself never completed — the state IS partial.
+            Assert.AreEqual(1, agg.Build().Home.Goals, "the record before the throw was applied");
+            Assert.AreEqual(1L, agg.ObservedTicks, "…and the tick was never counted");
+
+            // The lock: pumping on is refused, rather than compounding the partial tick.
+            Assert.Throws<InvalidOperationException>(
+                () => agg.ObserveTick(new FakeTap(), sample, 2UL),
+                "a consecutive tick after a partial one must be refused, not accepted");
+        }
+
+        [Test]
+        public void CleanTick_DoesNotLatch()
+        {
+            // Non-vacuity for the lock above: the latch must not fire on the ordinary path.
+            var agg    = new MatchAnalyticsAggregator();
+            var sample = new FakeSample(MidfieldBall);
+
+            for (ulong t = 0; t < 5UL; t++)
+            {
+                Assert.DoesNotThrow(() => agg.ObserveTick(new FakeTap(), sample, t));
+            }
+            Assert.AreEqual(5L, agg.ObservedTicks);
+        }
+
+        // ── AR-1 M-2: a dismissed agent stops contributing to the heatmap ───────────────────────
+
+        [Test]
+        public void SentOffAgent_StopsAccruingHeatmapSamples()
+        {
+            // A dismissed agent is left standing on the pitch as a collision body (§5.Z Phase H) and
+            // stops moving, so binning them would pour the rest of the match into one cell.
+            var agg    = new MatchAnalyticsAggregator();
+            var sample = new FakeSample(MidfieldBall);
+
+            for (ulong t = 0; t < 10UL; t++) { agg.ObserveTick(new FakeTap(), sample, t); }
+            long beforeRate = SumBins(agg, home: true) / 10L;
+
+            sample.SendOff(0);
+            for (ulong t = 10UL; t < 20UL; t++) { agg.ObserveTick(new FakeTap(), sample, t); }
+            long afterRate = (SumBins(agg, home: true) - beforeRate * 10L) / 10L;
+
+            Assert.AreEqual(11L, beforeRate, "eleven home agents binned per sampled tick");
+            Assert.AreEqual(10L, afterRate, "the dismissed agent must drop out of the sample");
+        }
+
+        private static long SumBins(MatchAnalyticsAggregator agg, bool home)
+        {
+            IReadOnlyList<int> bins = home
+                ? agg.Build().HomeAdvanced.HeatmapBins
+                : agg.Build().AwayAdvanced.HeatmapBins;
+            long total = 0;
+            foreach (int c in bins) { total += c; }
+            return total;
+        }
     }
 }
 
@@ -498,4 +582,8 @@ namespace TacticalDirector.MatchAnalytics.Tests
 // |         |            |        | tick-weighted possession incl. the loose bucket, §3.4          |
 // |         |            |        | territorial totality + heatmap binning, Build idempotence and  |
 // |         |            |        | snapshot semantics, and F1/F2/F3/F4/F5/F6.                     |
+// | 1.1     | 2026-07-27 | —      | AR-1 locks (+3): the partial-tick latch and its non-vacuity    |
+// |         |            |        | control, and a dismissed agent dropping out of the §3.4        |
+// |         |            |        | sample. Both fail against the pre-fix aggregator (verified by  |
+// |         |            |        | perturbing each fix); FakeSample gains SendOff.                |
 #endregion

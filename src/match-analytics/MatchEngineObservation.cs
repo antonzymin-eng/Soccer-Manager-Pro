@@ -73,6 +73,9 @@ namespace TacticalDirector.MatchAnalytics
 
         /// <inheritdoc />
         public int AgentTeamId(int index) => _engine.AgentTeamId(index);
+
+        /// <inheritdoc />
+        public bool AgentIsActive(int index) => !_engine.AgentIsSentOff(index);
     }
 }
 
@@ -80,4 +83,5 @@ namespace TacticalDirector.MatchAnalytics
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-07-27 | —      | Initial creation (#37 T1): the live-engine adapter for both    |
 // |         |            |        | aggregator seams.                                              |
+// | 1.1     | 2026-07-27 | —      | AR-1 M-2: AgentIsActive forwards the engine's sent-off flag.   |
 #endregion

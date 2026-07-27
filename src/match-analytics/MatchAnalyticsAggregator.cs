@@ -74,6 +74,10 @@ namespace TacticalDirector.MatchAnalytics
         private bool  _hasObserved;
         private ulong _lastObservedTick;
 
+        // Set for the duration of a tick's application and cleared only once the whole tick landed,
+        // so an exception part-way through leaves it set permanently (see ObserveTick).
+        private bool _faulted;
+
         /// <summary>Creates an empty aggregator. Reusable only via a fresh instance — a match's
         /// statistics are the whole state, so there is deliberately no Reset().</summary>
         public MatchAnalyticsAggregator()
@@ -102,6 +106,8 @@ namespace TacticalDirector.MatchAnalytics
         /// F6 — <paramref name="currentTick"/> is not consecutive with the last observed tick. A gap
         /// means the caller dropped a tick's records; counting on regardless would produce a statline
         /// that looks plausible and is wrong, which is precisely what fail-loud exists to prevent.
+        /// Also thrown when an earlier call failed part-way through a tick: the counts are incomplete
+        /// from that point on, so this aggregator refuses every subsequent tick.
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">F1 — a record names an out-of-range agent.</exception>
         /// <exception cref="ArgumentException">F2 — a sampled or recorded position is non-finite.</exception>
@@ -110,7 +116,17 @@ namespace TacticalDirector.MatchAnalytics
             if (tap == null) throw new ArgumentNullException(nameof(tap));
             if (sample == null) throw new ArgumentNullException(nameof(sample));
 
+            RequireNotFaulted();
             RequireConsecutive(currentTick);
+
+            // A tick is applied across several accumulators, so an F1/F2 throw part-way through
+            // leaves it HALF applied — some of its records counted, the rest lost, its possession
+            // tick un-accrued. F6 alone does not cover that: the consecutive-tick guard has already
+            // advanced, so the next tick would be accepted and the run would carry on producing a
+            // statline that looks plausible and is wrong — exactly what F6 exists to prevent. Once
+            // the lossless contract is broken the counts are not trustworthy, so the aggregator
+            // latches and refuses rather than continuing from a partial tick.
+            _faulted = true;
 
             int recordCount = tap.RecordCount;
             for (int i = 0; i < recordCount; i++)
@@ -127,6 +143,11 @@ namespace TacticalDirector.MatchAnalytics
             {
                 AccruePositional(sample);
             }
+
+            // Reached only when the WHOLE tick applied; any escape above leaves the flag set. No
+            // try/finally: a finally would clear it on the exception path too, which is the one
+            // path it exists for.
+            _faulted = false;
         }
 
         /// <summary>
@@ -146,6 +167,18 @@ namespace TacticalDirector.MatchAnalytics
         }
 
         // ── §3.5 F6 ──────────────────────────────────────────────────────────────────────────────
+
+        private void RequireNotFaulted()
+        {
+            if (_faulted)
+            {
+                throw new InvalidOperationException(
+                    "MatchAnalyticsAggregator.ObserveTick: a previous tick failed part-way through, " +
+                    "so this match's counts are incomplete and every further tick would compound a " +
+                    "statline that is silently wrong (#37 §3.5). Build() still returns what was " +
+                    "accumulated up to the failure; a new match needs a new aggregator.");
+            }
+        }
 
         private void RequireConsecutive(ulong currentTick)
         {
@@ -287,6 +320,11 @@ namespace TacticalDirector.MatchAnalytics
             int agentCount = sample.AgentCount;
             for (int i = 0; i < agentCount; i++)
             {
+                // A dismissed agent stays on the pitch as a collision body (§5.Z Phase H) and stops
+                // moving, so binning them would pile every remaining tick of the match into the one
+                // cell they froze in. They are no longer playing; the heatmap should not say they are.
+                if (!sample.AgentIsActive(i)) { continue; }
+
                 Vector2 pos = sample.AgentPosition(i);
                 RequireFinite(pos, "IWorldStateSample.AgentPosition");
 
@@ -361,6 +399,11 @@ namespace TacticalDirector.MatchAnalytics
         private static float Percent(long part, long whole)
         {
             if (whole <= 0L) return 0f;
+
+            // FR-CS-071 carve-out: `double` for the ratio only, never stored. A full match is
+            // ~324 000 ticks, past float's 24-bit integer-exact range, so `100f * part` would start
+            // rounding the numerator before the division and drift the share by a tenth of a point.
+            // The result is narrowed back to float immediately and reaches no sim path.
             return Mathf.Clamp((float)(100.0d * part / whole), 0f, 100f);
         }
 
@@ -411,4 +454,12 @@ namespace TacticalDirector.MatchAnalytics
 // | 1.0     | 2026-07-27 | —      | Initial creation (#37 T1): the KD-3 aggregation core — §3.1    |
 // |         |            |        | tick-weighted possession, the §3.2 routing table over the      |
 // |         |            |        | KD-7 tap, §3.4 territorial + heatmap binning, F1/F2/F3/F5/F6.  |
+// | 1.1     | 2026-07-27 | —      | AR-1 M-1: a tick that throws part-way through now LATCHES and  |
+// |         |            |        | refuses every further tick. F6 checks continuity, which a      |
+// |         |            |        | half-applied tick satisfies — the guard had already advanced,  |
+// |         |            |        | so the run carried on with some of that tick's records counted |
+// |         |            |        | and the rest lost. AR-1 M-2: dismissed agents are skipped in   |
+// |         |            |        | the §3.4 binning loop (they are frozen ON the pitch per §5.Z   |
+// |         |            |        | Phase H, so one red card dominated the heatmap thereafter).    |
+// |         |            |        | AR-1 L: FR-CS-071 justification recorded for Percent's double. |
 #endregion
