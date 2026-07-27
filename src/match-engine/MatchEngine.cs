@@ -39,6 +39,7 @@
 // Modified: 2026-07-26 (§5.Z.12: boot placement collapsed to ONE own-half template mirrored for the away side — the HomeLineXM/AwayLineXM and HOME_/AWAY_FACING_DEG pairs are gone, along with FacingFromHeading. Away lateral spread mirrors, so digests move; behaviour is transient (the AI reslots outfielders at tick 6).)
 // Modified: 2026-07-26 (§5.Z.10 kickoff keeper placement: a keeper spawns on the goal line it DEFENDS, centred on the mouth, instead of on the outfield kickoff line — Stage-0 Physics skips GK locomotion, so boot placement stood for the whole match and both goals were unguarded. See docs/tracking/match-engine-design.md §5.Z.10)
 // Modified: 2026-07-26 (§5.Z.9 foul/discipline balance pass: referee-call probability partitioned out of the single card-severity draw (KD-F1/KD-F2), no-call arms no cooldown (KD-F3), strongest-wins candidate capture (KD-F4), + the TestOnly collision-observer measurement seam. No schema change. See docs/tracking/foul-discipline-balance-design.md)
+// Modified: 2026-07-27 (§5.Z.17 goalkeeper save pipeline: NotifyKeeperOfShot opens #11's §3.2 reaction window on the shot CONTACT frame (ERR-011-004, stamped in MILLISECONDS); ClearSaveIntent called on the save-episode disarm so the engine and #11 latches cannot disagree; TestOnly_GoalkeeperState observation seam. No schema change. See docs/tracking/goalkeeper-save-pipeline-design.md)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -697,6 +698,25 @@ namespace TacticalDirector.MatchEngine
 
             // Keeper roster: GoalkeeperConstants.MaxGkAgents == TEAM_COUNT == 2, so keeper index == team id
             // (keeper t is team t's goalkeeper). _teamIds / _isGoalkeeper are boot-populated above.
+            //
+            // That equality is load-bearing and is NOT structurally guaranteed: MaxGkAgents is a `[GT]`
+            // read off GameplayConfig while TEAM_COUNT is a `[FIXED]` const, so a config file alone can
+            // break the identity. Everything keyed on it would then be silently wrong rather than loud —
+            // `NotifyKeeperOfShot` routes by `1 - shooterTeam`, `HostSaveDispatch` maps agent → keeper
+            // slot, and #11's own `TacticalTick` derives which goal a keeper defends from `gkIndex`
+            // (ERR-011-002). A keeper would defend the wrong end of the pitch, exactly the defect that
+            // fix removed. Gate it at boot instead: one config typo fails here, at the composition root
+            // that depends on it, instead of surfacing as inexplicable goalkeeping.
+            if (GoalkeeperConstants.MaxGkAgents != MatchEngineConstants.TEAM_COUNT)
+            {
+                throw new InvalidOperationException(
+                    "GoalkeeperConstants.MaxGkAgents (" + GoalkeeperConstants.MaxGkAgents.ToString(
+                        System.Globalization.CultureInfo.InvariantCulture)
+                    + ") must equal MatchEngineConstants.TEAM_COUNT ("
+                    + MatchEngineConstants.TEAM_COUNT.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    + "): the match engine keys keeper index directly on team id (#11 KD-1).");
+            }
+
             _gkAgentIds = new int[GoalkeeperConstants.MaxGkAgents];
             RefreshGkAgentIds();   // refreshed each drive too (ConfigureSquads / substitutions move the GK slot)
             _saveCommittedForGk         = new bool[GoalkeeperConstants.MaxGkAgents];
@@ -2684,7 +2704,16 @@ namespace TacticalDirector.MatchEngine
                         ctx.SaveAvailable = armed;
                         if (!armed)
                         {
+                            // One owner of "the episode is over". This latch and #11's own
+                            // _saveIntentActive used to have DIFFERENT lifetimes — #11 cleared only when
+                            // a dive resolved, this one clears as soon as the geometry lapses — so a
+                            // threat that armed, committed and then cleared before the keeper dived left
+                            // #11 armed indefinitely and fired at the next Anticipate: a dive at nothing.
+                            // Disarming both here keeps them from disagreeing (ClearSaveIntent is a no-op
+                            // while a dive is already in flight, so a live attempt still runs to its own
+                            // resolution).
                             _saveCommittedForGk[t] = false;
+                            _goalkeeper.ClearSaveIntent(t);
                         }
                     }
 
@@ -3431,9 +3460,16 @@ namespace TacticalDirector.MatchEngine
                 // The contact frame is the trigger, not the windup: §3.2.1 dates perception from the ball
                 // being struck. LastResult is only Completed once ApplyKick has run, and ContactFrame
                 // pins the frame it ran on, so the equality fires exactly once per shot.
+                //
+                // MILLISECONDS, deliberately not the `matchTime` seconds the executors take. #11's whole
+                // reaction pipeline is ms (`_shotDetectedTickMs` is compared against the
+                // `_clock.CurrentMatchTimeMs` that DriveGkHeadingPhysics feeds `_goalkeeper.Update`), so
+                // stamping it in seconds here would leave `elapsed` ~1000x too large, drive the §3.2.3
+                // late branch to a clamped 0, and reproduce EXACTLY the permanently-zero
+                // reactionWindowAchieved this fix exists to remove — a defect that looks fixed and is not.
                 if (_gkHeadingEnabled)
                 {
-                    NotifyKeeperOfShot(i, frameNumber, matchTime);
+                    NotifyKeeperOfShot(i, frameNumber, _clock.CurrentMatchTimeMs);
                 }
             }
 
@@ -7525,4 +7561,14 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | inline teamId guards in SetTeamTactic / SubstitutePlayer /      |
 // |         |            |        | ConfigureManager collapsed into GuardTeamId (message text       |
 // |         |            |        | unchanged) rather than adding a fourth copy.                    |
+// | 1.50 | 2026-07-27 | — | **§5.Z.17 goalkeeper save pipeline.** `NotifyKeeperOfShot` opens #11's §3.2|
+// |      |            |   | reaction window on the shot CONTACT frame (ERR-011-004) — the method had ZERO|
+// |      |            |   | callers anywhere, so reactionWindowAchieved was pinned at 0 and a catch was|
+// |      |            |   | arithmetically impossible. Stamped in MILLISECONDS (`_clock.CurrentMatchTimeMs`),|
+// |      |            |   | not the seconds the executors take: AR-2 caught the first landing passing seconds|
+// |      |            |   | into a pipeline that compares ms, which reproduced the permanently-zero window|
+// |      |            |   | while looking fixed. `ClearSaveIntent` called on the save-episode disarm so the|
+// |      |            |   | engine latch and #11's own cannot disagree. `TestOnly_GoalkeeperState` reads|
+// |      |            |   | through the public CaptureState the v19 writer uses. No schema/RNG/draw-order|
+// |      |            |   | change; flag-off byte-identical.                                        |
 #endregion

@@ -19,6 +19,18 @@
 //           the GK/Heading composition scenario proves the wiring runs and commits an intent. A match in
 //           which the goalkeepers never touch the ball satisfies every predicate of all three.
 //
+//           PATH NOTE: this scenario runs the NEUTRAL path (no ConfigureSquads), while the measured
+//           numbers published in §5.Z.17 came from the ConfigureSquads path, because that is the path a
+//           league match takes. The predicates below are path-invariant — every one of the three
+//           defects was geometric or arithmetic (a dive with no direction, a reaction window that no
+//           caller ever opened, a third-of-pitch predicate read from the wrong end), none of them a
+//           function of an attribute value — so the neutral path exercises them identically, and the
+//           pre-fix failure evidence in the design note §5 was itself executed against THIS scenario.
+//           What the neutral path does NOT cover is LineupSelector choosing the goalkeeper: a
+//           regression that seeded the GK slot from the wrong record would be invisible here. That is
+//           recorded as a named follow-up in the design note §7 rather than fixed by duplicating the
+//           roster builder that already exists in GkSaveDiagnosticTests.
+//
 //           These predicates are STRUCTURAL, not a rate pin. They assert that each stage of the save
 //           pipeline is reachable — the keeper is told about shots, wakes for the right end of the
 //           pitch, dives, dives in a direction, and makes contact — because every one of those was

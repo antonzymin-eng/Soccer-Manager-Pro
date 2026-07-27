@@ -453,6 +453,22 @@ namespace TacticalDirector.MatchEngine
 
         private static readonly TacticalDirector.PlayerDatabase.PlayerAttributes NeutralCanonical =
             TacticalDirector.PlayerDatabase.PlayerAttributes.CreateDefault();
+        /// <summary>
+        /// §5.Z.17 / ERR-011-002 coupling lock. The engine keys keeper index directly on team id, but
+        /// `MaxGkAgents` is a `[GT]` config read while `TEAM_COUNT` is `[FIXED]` — nothing structural
+        /// keeps them equal. If a future config or default breaks the identity, a keeper defends the
+        /// wrong end of the pitch (the exact ERR-011-002 defect), so the boot gate must fire.
+        /// </summary>
+        [Test]
+        public void KeeperIndexIsTeamId_CouplingHolds()
+        {
+            Assert.AreEqual(
+                MatchEngineConstants.TEAM_COUNT,
+                GoalkeeperMechanics.GoalkeeperConstants.MaxGkAgents,
+                "Keeper index == team id underpins NotifyKeeperOfShot, HostSaveDispatch and #11's "
+                + "own-goal derivation; MatchEngine's boot gate refuses a mismatch.");
+        }
+
     }
 }
 

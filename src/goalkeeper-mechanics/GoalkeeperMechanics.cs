@@ -2,6 +2,7 @@
 // Created:  2026-05-28
 // Modified: 2026-06-14
 // Modified: 2026-07-23 (GK/Heading engine-integration Phase 2: CaptureState/RestoreState snapshot seam over
+// Modified: 2026-07-27 (§5.Z.17 save pipeline: ComputeDiveDirectionLateral derives the dive from the ball's predicted crossing point (ERR-011-003); OnShotExecutedEvent takes the projected attributes (ERR-011-004, KD-S2); the state-machine wake predicates rebuilt as one signed distance to the keeper's OWN goal, read from gkIndex not attrs.TeamId (ERR-011-002, KD-S3); new ClearSaveIntent. See docs/tracking/goalkeeper-save-pipeline-design.md)
 //           the per-GK cross-tick arrays, for the Match Engine v18 save/restore path)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.1–§3.8, §4.6, KD-9, KD-12, KD-13, KD-15, KD-16, Code Standards #20
@@ -143,6 +144,38 @@ namespace TacticalDirector.GoalkeeperMechanics
             }
 
             _positioningContracts[gkIndex].GkBaselineSlot = gkBaselineSlot;
+        }
+
+        /// <summary>
+        /// Disarms an unconsumed <see cref="SaveIntent"/> for the specified GK — the episode ended without
+        /// a dive.
+        ///
+        /// <para>Exists because a save episode was tracked by TWO latches with different lifetimes: this
+        /// one clears only when a dive RESOLVES (Airborne → HandsOnBall/Recovering), while the composition
+        /// root's per-episode latch clears as soon as the arming geometry lapses. A threat that armed,
+        /// committed and then cleared before the keeper dived therefore left this flag set indefinitely,
+        /// and it would fire at the next <c>Anticipate</c> — a dive at nothing, taking the keeper off its
+        /// line for the whole dive duration with no shot incoming. One owner decides an episode is over;
+        /// this is how it tells the orchestrator.</para>
+        ///
+        /// <para>Deliberately a no-op while a dive is in flight: once the keeper is committed
+        /// (<c>Diving</c>/<c>Airborne</c>) the attempt must run to its own resolution, or the dive-launch
+        /// bookkeeping and the §3.5 contact path would be torn down underneath it.</para>
+        /// </summary>
+        /// <param name="gkIndex">Keeper index (== team id; KD-1).</param>
+        public void ClearSaveIntent(int gkIndex)
+        {
+            if ((uint)gkIndex >= (uint)GoalkeeperConstants.MaxGkAgents)
+            {
+                return;
+            }
+
+            if (_states[gkIndex] == GoalkeeperState.Diving || _states[gkIndex] == GoalkeeperState.Airborne)
+            {
+                return;
+            }
+
+            _saveIntentActive[gkIndex] = false;
         }
 
         /// <summary>
@@ -317,7 +350,6 @@ namespace TacticalDirector.GoalkeeperMechanics
                 }
 
                 AgentState agentState = agentStates[agentId];
-                GoalkeeperAgentAttributes attrs = _attrs[gkIndex];
                 GoalkeeperPositioningContract positioning = _positioningContracts[gkIndex];
 
                 // ERR-011-002 — how close the ball is to the goal THIS keeper defends.
@@ -334,7 +366,15 @@ namespace TacticalDirector.GoalkeeperMechanics
                 // signed distance to the keeper's own goal, and both predicates derived from it. Team 0
                 // defends x = 0 and team 1 defends x = PitchLengthM, the same convention
                 // GkHeadingIntentSource.SaveArmed and MatchEngine's goal detection use.
-                float ownGoalX = attrs.TeamId == 0 ? 0.0f : GoalkeeperConstants.PitchLengthM;
+                // Keeper index IS the team id (KD-1, MaxGkAgents == TEAM_COUNT == 2) — the invariant
+                // MatchEngine's RefreshGkAgentIds / HostSaveDispatch / NotifyKeeperOfShot all rely on.
+                // Read from gkIndex, NOT from attrs.TeamId: `_attrs` is written only by CommitSaveIntent
+                // and OnShotExecutedEvent, so before either has fired it is default(…) and TeamId is 0 for
+                // BOTH keepers — keeper 1 would take the team-0 branch and defend the goal it attacks.
+                // Verified: a ball at x = 100 (keeper 1's own six-yard box) left keeper 1 in Resting.
+                // Identity is a loop invariant here; reading it out of a mutable attribute snapshot made
+                // correctness depend on an unrelated write having already happened.
+                float ownGoalX = gkIndex == 0 ? 0.0f : GoalkeeperConstants.PitchLengthM;
                 float ballDistToOwnGoalM = Mathf.Abs(ballState.Position.x - ownGoalX);
 
                 // The third in front of the keeper's own goal: the ball is a threat.
@@ -897,7 +937,7 @@ namespace TacticalDirector.GoalkeeperMechanics
             // away (or laterally, vx ~ 0) gives a degenerate or negative time-to-plane; diving at an
             // extrapolation of it would send the keeper the wrong way, so fall back to the ball's
             // current lateral position, which is never worse than the pre-fix zero.
-            if (Mathf.Abs(vx) > GoalkeeperConstants.DEGENERACY_EPSILON && dx * vx > 0.0f)
+            if (Mathf.Abs(vx) > GoalkeeperConstants.DegeneracyEpsilon && dx * vx > 0.0f)
             {
                 float timeToPlaneS = dx / vx;
                 if (timeToPlaneS > 0.0f && timeToPlaneS <= GoalkeeperConstants.DivePredictionHorizonS)
@@ -981,4 +1021,16 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |         |            |        | per-GK cross-tick arrays into a GoalkeeperTickState view;          |
 // |         |            |        | RestoreState(in) copies them back into the live containers (the    |
 // |         |            |        | Match Engine v18 snapshot seam, the PressingTickState pattern).    |
+// | 1.7 | 2026-07-27 | — | **ERR-011-003** — ComputeDiveDirectionLateral returned 0 for every dive ever|
+// |     |            |   | launched (its only non-zero branch is gated on DeflectionTarget, which the sole|
+// |     |            |   | producer sets null); now the linear XY interception of the ball with the    |
+// |     |            |   | keeper's plane, bounded by DivePredictionHorizonS. **ERR-011-004** —        |
+// |     |            |   | OnShotExecutedEvent gains the attrs parameter (KD-S2) since it is usually an|
+// |     |            |   | episode's FIRST call and would otherwise date the §3.2 window off a zeroed  |
+// |     |            |   | snapshot. **ERR-011-002** — the wake predicates were a per-side constant pair|
+// |     |            |   | computing the keeper's own team's ATTACKING third; replaced by one signed   |
+// |     |            |   | distance to the goal the keeper DEFENDS, taken from gkIndex (KD-1) because  |
+// |     |            |   | _attrs is written only by CommitSaveIntent/OnShotExecutedEvent and reads    |
+// |     |            |   | TeamId = 0 for BOTH keepers before either fires. New ClearSaveIntent lets the|
+// |     |            |   | composition root end a save episode without tearing down a live dive.       |
 #endregion

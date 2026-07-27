@@ -1363,17 +1363,25 @@ contact, at exactly zero. Three defects, each independently sufficient (**ERR-01
    class again, plus an `Anticipate` state with no exit but a dive. Keepers held Anticipate for
    **76–92%** of every match.
 
-Post-fix: dive direction 0.000 → **1.000**, best miss 2.75 m → **−0.71 m**, contacts **0 → 12**,
-Anticipate share 76–92% → **12–19%**. Locked by `match-engine-goalkeeper-saves` (#19 ScenarioRunner,
+Post-fix: dive direction 0.000 → **1.000**, best miss 2.75 m → **−0.07 m**, contacts **0 → 15**,
+Anticipate share 76–92% → **11–18%**. Locked by `match-engine-goalkeeper-saves` (#19 ScenarioRunner,
 Tier B, 4 seeds × 15 min, 56 s), whose predicates assert *reachability* stage by stage; **11 of its 12
 fail on the pre-fix engine**, two at exactly zero. Full gate green; no `SNAPSHOT_SCHEMA_VERSION`
 change, no new RNG stream or draw site, and no change to the draw order.
 
-**And the goal rate barely moved: 15.3 → 14.0 per match, against football's ~2.7.** That is the
-result. Three genuine defects, each of which had to be fixed before a save was possible at all, are
-worth about one goal a match. **§5.Z.15's lever was real and is now spent; it was not where the mass
-is.** This is the same shape as §5.Z.9 and §5.Z.11 — the measurement refuted its own brief — and it is
-why the acceptance scenario deliberately pins no save percentage and no goal rate.
+**And the goal rate did not move at all: 15.3 → 15.3 per match, against football's ~2.7.** That is the
+result. Three genuine defects, each of which had to be fixed before a save was possible, are worth
+**nothing measurable** on the scoreline. **§5.Z.15's lever was real, is now spent, and was not where
+the mass is** — the same shape as §5.Z.9 and §5.Z.11, where the measurement refuted its own brief, and
+the reason the acceptance scenario deliberately pins no save percentage and no goal rate.
+
+Worth recording *how* that number was arrived at, because an earlier build of this pass published
+**14.0** on the identical seeds and would have let §5.Z.17 claim the keeper was worth about a goal a
+match. The difference was a single unit defect found in adversarial review — the shot was stamped in
+seconds against a §3.2 pipeline that is entirely milliseconds — and correcting it re-rolled every
+subsequent deflection. Three matches of a chaotic quantity does not resolve a one-goal difference. The
+claim this section makes is therefore the weaker, defensible one (*no detectable effect*), not the
+stronger one the first number happened to support.
 
 **Recorded, NOT fixed — and this is now the honest next lever.** The measurement that closed the save
 question opened a larger one on the shot side, verified against source and detailed in the note's §7:

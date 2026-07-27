@@ -212,8 +212,8 @@ byte-identically, and rolls into a second season. **No UI yet, no Unity, no exte
 > **§5.Z.17 (July 27, 2026) narrowed that question sharply, and it is worth reading before picking up
 > A4a.** §5.Z.15 named the goalkeeper's save as the next lever on the goal rate. Measured, the keepers
 > were making **no saves at all** — zero hand contacts over three full matches — for three independent
-> reasons, all now fixed. The goal rate moved **15.3 → 14.0** per match against football's ~2.7. So the
-> named lever was real, is now spent, and was worth about one goal. **The residual is the shot side, and
+> reasons, all now fixed. **The goal rate did not move: 15.3 → 15.3** per match against football's ~2.7.
+> So the named lever was real, is now spent, and is worth **nothing measurable** on the scoreline. **The residual is the shot side, and
 > it is structural:** shots essentially cannot miss the goal (aim is hardcoded 0.732 m inside the post
 > and the vertical component of the aim is never read), there is **no crossbar** (every boundary test is
 > gated on the ball being below 0.22 m), and there are **no blocked shots**

@@ -159,15 +159,23 @@ parameter (KD-S2).
 
 `src/goalkeeper-mechanics/GoalkeeperMechanics.cs`: one `ballDistToOwnGoalM`, with
 `ballThreateningOwnGoal` and `ballSafelyUpfield` derived from it (KD-S3).
-`src/goalkeeper-mechanics/GoalkeeperStateMachine.cs`: parameters renamed to match, `Recovering →
-Resting` re-anchored to `ballSafelyUpfield` (play is at the far end, so there is nothing to recover
-*for*), and the new `Anticipate → Set` exit (KD-S4).
+`src/goalkeeper-mechanics/GoalkeeperStateMachine.cs`: parameters renamed to match, and the new
+`Anticipate → Set` exit (KD-S4).
+
+`Recovering → Resting` is re-anchored to `ballSafelyUpfield`, and that is a **change of region, not a
+rename** — recorded explicitly because the old parameter was not simply mis-computed. `ballInDefensiveThird`
+evaluated the keeper's *own* defensive third, which is right for its name; the defect was that it sent
+the keeper to full stand-down while the ball was in its own box, the same wrongness ERR-011-002 names
+on the entry side. `Resting` is the stand-down state, and what licenses it is the ball being at the
+*other* end. The transition stays reachable under either reading — `Recovering → Set` is gated on the
+recovery cooldown and baseline distance, not on the ball — so this is a behaviour choice, made on
+football grounds, not a forced consequence of the fix.
 
 ### 4.4 Constants
 
 | Constant | Tag | Value | Why |
 |---|---|---|---|
-| `DEGENERACY_EPSILON` | `[DERIVED]` | `sqrt(DEGENERACY_EPSILON_SQ)` | scalar single-axis guard; the squared form is the wrong scale for a component test |
+| `DegeneracyEpsilon` | `[DERIVED]` | `sqrt(DEGENERACY_EPSILON_SQ)` | scalar single-axis guard; the squared form is the wrong scale for a component test |
 | `DivePredictionHorizonS` | `[GT]` | 2.0 s | bounds the linear interception model without gating any realistic shot |
 
 **No `SNAPSHOT_SCHEMA_VERSION` change.** Nothing new is serialized: `_diveDirectionLateral`,
@@ -195,8 +203,8 @@ alter the *arguments* to existing draws, never how many are taken or in what seq
 
 | Predicate | Pre-fix | Post-fix |
 |---|---|---|
-| `keeper-is-notified-of-shots` | **0** (no production caller existed) | 19–57 per match |
-| `keeper-does-not-live-in-anticipate` ×8 | **76–92%** vs a 40% ceiling | 12–19% |
+| `keeper-is-notified-of-shots` | **0** (no production caller existed) | 16–51 per match |
+| `keeper-does-not-live-in-anticipate` ×8 | **76–92%** vs a 40% ceiling | 10.9–17.6% |
 | `dives-are-launched` | passes | passes |
 | `dives-are-directed` | **0** of every dive ever launched | every dive |
 | `keeper-makes-hand-contact` | **0** over three FULL matches | > 0 |
@@ -228,18 +236,31 @@ there the risk was one abandoned match averaging away; here it is a small count 
 ## 6. Verification
 
 Full `tools/dotnet-ci/run-gate.sh`: **PASSED, 0 failures** (SDK 8.0.129 via apt).
-match-engine 358 → 360, goalkeeper-mechanics 54 → 55 passed.
+match-engine 358 → 360, goalkeeper-mechanics unchanged at 55 passed.
 
 Measured effect of the three fixes, same three seeds, full matches:
 
 | | pre-fix | post-fix |
 |---|---|---|
-| mean \|diveDirectionLateral\| | 0.000 | **1.000** |
-| best dive miss (m short) | 2.75 … 6.04 | **−0.71 … 0.38** |
-| hand contacts (6 keeper-matches) | **0** | **12** |
-| Anticipate share of match | 76–92% | **12–19%** |
-| shots notified to the keeper | 0 | 19–57 |
-| **goals per match** | 18, 16, 12 (mean 15.3) | 16, 9, 17 (mean **14.0**) |
+| mean \|diveDirectionLateral\| | 0.000 | **1.000** (every keeper, every match) |
+| best dive miss (m short) | 2.75 … 6.04 | **−0.07 … 0.09** |
+| hand contacts (6 keeper-matches) | **0** | **15** |
+| catches | 0 | **0** — see §7.5 |
+| Anticipate share of match | 76–92% | **10.9–17.6%** |
+| shots notified to the keeper | 0 | 16–51 per match |
+| **goals per match** | 18, 16, 12 (mean 15.3) | 18, 12, 16 (mean **15.3**) |
+
+**The goal rate did not move.** That is the result, and it is stated plainly because the alternative
+is to quote a delta the sample cannot support: three matches of a chaotic quantity is a small sample,
+and an earlier build of this pass measured 14.0 on the same seeds purely because one different
+deflection re-rolls everything downstream. The defensible claim is **no detectable effect on the goal
+rate**, against football's ~2.7 — not "worth about a goal a match", which is what an n=3 delta would
+have let this note say if it had stopped at the first number it liked.
+
+That makes the §5.Z.15 lever's disposal sharper, not weaker. Three defects that each independently
+made a save impossible are now fixed, the keeper dives correctly and its hands reach the ball fifteen
+times where they previously never did — **and the scoreline is unchanged**, because a keeper that
+touches the ball fifteen times cannot offset the shot-side defects in §7.1–§7.4. The mass is there.
 
 **The goal rate barely moved, and that is the headline result of this pass.** Three real defects, each
 of which had to be fixed for a save to be possible at all, are worth roughly one goal a match against
@@ -289,19 +310,27 @@ generated, scored and taken.
 
 ### 7.5 The reaction window is fed a signal it cannot use
 
-`ERR-011-004` wired the shot event and it fires (19–57 notifications a match), but
-`reactionWindowAchieved` still measures 0 at contact. It is not unwired — it is **incoherent**: the
-§3.2 pipeline is designed around "a shot is struck, the keeper reacts to *that* shot", while the
-engine's save trigger is "a loose ball is driving at my goal", which includes deflections, rebounds
-and passes. `_shotDetectedTickMs` is also never cleared, so a stale shot dates every later dive; mean
-elapsed-when-airborne measured ~2000 s. Dating the window from the moment the *episode* armed would
-make it coherent, but that changes #11 §3.2 semantics and belongs in its own pass.
+`ERR-011-004` wired the shot event and it fires (16–51 notifications a match), and the window is no
+longer *arithmetically* pinned at zero — measured, it reads 0.315 and 0.079 for two of six keepers and
+0.000 for the other four. But it is still **incoherent**, and the reason is structural rather than a
+wiring gap: the §3.2 pipeline is designed around "a shot is struck, the keeper reacts to *that* shot",
+while the engine's save trigger is "a loose ball is driving at my goal", which includes deflections,
+rebounds and passes. `_shotDetectedTickMs` is also never cleared, so a stale shot dates every later
+dive — mean elapsed-when-airborne measures **34–174 s**, i.e. most dives are timed against a shot from
+minutes ago. Dating the window from the moment the *episode* armed would make it coherent, but that
+changes #11 §3.2 semantics and belongs in its own pass.
 
-The consequence is the §5.Z.15 lever's remaining half, still open: with the window pinned at 0, quality
-is capped at `0.70 × rawHandling`, whose **measured ceiling is 0.630 for a perfect keeper** (Handling
-20, zero noise, exact contact point) against `CatchThreshold` 0.78. **A catch is still arithmetically
-impossible**; the best available band is Parried, and only for Handling ≥ 16. Contacts measured
-0.150–0.585 quality, i.e. mostly Spilled/Missed.
+The consequence is the §5.Z.15 lever's remaining half, still open. A catch is no longer arithmetically
+impossible (at a window of 0.315 a perfect keeper reaches 0.795 against `CatchThreshold` 0.78), but
+**no catch occurred in any of the six keeper-matches**: measured quality at contact is 0.357–0.567,
+below `CatchThreshold` 0.78 everywhere and below even `ParryThreshold` 0.55 in four of the five
+keepers that made contact. The realised outcomes are Spilled and Missed.
+
+Recorded as a caution for whoever takes this up: the window's units were wrong in this pass's own
+first landing — the shot was stamped in seconds against a pipeline that compares milliseconds, which
+reproduced a permanently-zero window while *looking* fixed. It was caught in adversarial review, not
+by any test, because nothing asserts the window's magnitude and the funnel's contact count rose either
+way. A pipeline whose only observable is a downstream count can hide an inert stage indefinitely.
 
 ### 7.6 Vestigial release-cooldown state
 
@@ -309,6 +338,19 @@ impossible**; the best available band is Parried, and only for Handling ≥ 16. 
 seam, but never read as an exclusion — `SelectLooseBallCollector` excludes the keeper unconditionally,
 superseding the cooldown that `GkReleaseCooldownTicks`'s own doc still describes. Live documentation
 drift on a surface any future keeper change will read.
+
+### 7.7 The acceptance scenario does not cover the `ConfigureSquads` path
+
+`match-engine-goalkeeper-saves` runs the neutral path; the §1.2 measurements came from the
+`ConfigureSquads` path, because that is the path a league match takes. This is sound for the three
+defects fixed here — each was geometric or arithmetic and none was a function of an attribute value,
+so the neutral path exercises them identically, and the §5 pre-fix evidence was executed against the
+scenario itself. What it leaves uncovered is **`LineupSelector` choosing the goalkeeper**: a
+regression that seeded the GK slot from the wrong record would satisfy every predicate here. Closing
+it means either lifting `GkSaveDiagnosticTests.BuildSquad` to a shared fixture or duplicating a
+position-coherent roster builder — the second is the parallel-surface trap, so the first is the route.
+Deliberately not done in this pass: adding a fifth, configured seed would change the corpus the §5
+pre-fix failure count was executed against, and re-earning that evidence is not free.
 
 ---
 
@@ -336,6 +378,11 @@ The honest next lever is **not** the goalkeeper. It is the shot-outcome distribu
 | Self-review-2 | 1 | `OnShotExecutedEvent` would have read a default attribute snapshot on the first call of an episode; caller now supplies it (KD-S2) |
 | Self-review-3 | 1 | `every-seed-produces-a-dive` was too strict — one quiet 15-min window legitimately has no armed threat; re-expressed over the corpus with the reasoning recorded |
 | Test-fallout | 1 | `sim_goalkeeper_save_launch_executes_dive` had encoded the inverted predicate (ball at x = 75 to wake GK0); re-anchored to x = 30 with intent preserved — the Phase-H "tests encoded the old contract" class |
+| AR-5 (hostile, whole surface) | 1L | **L:** `DEGENERACY_EPSILON` was declared ALL_CAPS while tagged `[DERIVED]` — ALL_CAPS is the `[FIXED]`-only convention (FR-CS-001), and every sibling in the `Derived` region is PascalCase; renamed `DegeneracyEpsilon` at its two use sites. Nothing else new: the pass re-walked the production diff, the instrument, the scenario, the six version histories, the meta integrity and the doc numbers, and found no High or Medium — **the review loop terminates here** |
+| AR-4 (hostile, whole surface) | 1M | **M:** the ERR-011-002 fix keys the keeper's own goal on `gkIndex == teamId`, but `MaxGkAgents` is a **`[GT]` read off `GameplayConfig`** while `TEAM_COUNT` is a `[FIXED]` const — nothing structural keeps them equal, and nothing anywhere asserted it. A config file alone could therefore reintroduce the wrong-end defect this pass exists to remove, silently. Gated at `MatchEngine` boot (the composition root that depends on it) plus a coupling lock, following the league-bootstrap `MaxRngStreams` precedent. Worth noting the fix *created* this exposure: the pre-fix code read `attrs.TeamId`, which was broken for a different reason and not index-coupled |
+| AR-3 (hostile, whole surface) | 1M + 1L | **M:** every one of the six production/test files this pass touched carried a stale `Modified:` header and **no version-history row** — FR-CS-056 and the project's own "append a version history entry to every modified file" rule, violated uniformly. The same class the #30 T1 review filed as its pass-3 finding. **L:** the diagnostic's funnel legend read `diving: entries into Diving (the dive was launched)` while that column reads **0 by construction** (Diving is entered and left inside one 60 Hz step, so no sample lands on it) — an instrument whose own legend invites the reader to conclude no dive was launched |
+| AR-2 (hostile, whole surface) | 1H + 2M | **H:** `NotifyKeeperOfShot` stamped the shot in **seconds** (`_clock.CurrentMatchTimeSeconds`) against a §3.2 pipeline that is entirely milliseconds and compares it to `_clock.CurrentMatchTimeMs` — so `elapsed` ran ~1000× large, the §3.2.3 late branch clamped to 0, and `reactionWindowAchieved` was **still permanently zero**: the ERR-011-004 fix looked landed and was inert. No test could have caught it (nothing asserts the window's magnitude, and the contact count rises either way). Fixing it changed the measured outcome enough to force §1.2/§5/§6/§7.5 to be re-measured and rewritten — including the headline, which moved from "worth about a goal a match" to **no detectable effect on the goal rate**. **M:** `Recovering → Resting` was re-anchored from the keeper's own defensive third to the far third — a deliberate change of region, not the rename §4.3 described it as; now recorded as a behaviour choice with its reasoning. **M:** `DivePredictionHorizonS`'s doc claimed it was "sized just above" a 5.5 s flight time while holding 2.0 s — a sizing rule contradicting its own value, which would have led a tuner to raise it |
+| AR-1 (hostile, whole surface) | 1H + 1M + 2L | **H:** the KD-S3 fix read the keeper's own goal from `attrs.TeamId`, but `_attrs` is only written by `CommitSaveIntent` / `OnShotExecutedEvent`, so before a keeper's first save episode BOTH keepers carried `TeamId = 0` and keeper 1 never woke for its own box — **verified by executing a probe** (ball at x = 100 ⇒ `gk0 Resting, gk1 Resting`), i.e. the fix reintroduced the exact per-side defect KD-S3 exists to remove. Now derived from `gkIndex` per #11 KD-1. **M:** the engine's `_saveCommittedForGk` latch and the orchestrator's `_saveIntentActive` could disagree on disarm; new `ClearSaveIntent` (no-op mid-dive) called from the disarm branch. **L:** `DEGENERACY_EPSILON` filed under `#region Fixed` though `[DERIVED]`; the acceptance scenario's neutral-vs-`ConfigureSquads` path gap (§7.7). Also repaired collateral damage from the ERR-renumber: a bulk rename had rewritten a pre-existing `ERR-011-001` citation in `GoalkeeperConstants.cs` |
 
 ---
 
@@ -343,4 +390,5 @@ The honest next lever is **not** the goalkeeper. It is the shot-outcome distribu
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| 1.0 | 2026-07-27 | — | Initial. Measures the §5.Z.15 goalkeeper lever and finds saves did not happen at all (0 contacts over 3 full matches). Fixes three correctness defects — ERR-011-003 the undirected dive, ERR-011-004 the unwired shot event, ERR-011-002 the inverted wake predicate plus the missing Anticipate exit. Contacts 0 → 12, dive direction 0.000 → 1.000, best miss 2.75 m → −0.71 m. Records that the goal rate moved only 15.3 → 14.0, and that the residual is the shot-side model (§7): shots that cannot miss, no crossbar, no blocks. |
+| 1.0 | 2026-07-27 | — | Initial. Measures the §5.Z.15 goalkeeper lever and finds saves did not happen at all (0 contacts over 3 full matches). Fixes three correctness defects — ERR-011-003 the undirected dive, ERR-011-004 the unwired shot event, ERR-011-002 the inverted wake predicate plus the missing Anticipate exit. Contacts 0 → 15, dive direction 0.000 → 1.000, best miss 2.75 m → −0.07 m. Records that the goal rate did NOT move (15.3 → 15.3), and that the residual is the shot-side model (§7): shots that cannot miss, no crossbar, no blocks. |
+| 1.1 | 2026-07-27 | — | Adversarial-review rounds AR-1..AR-5 (§9) applied. The consequential ones: AR-1 H (the KD-S3 fix read `attrs.TeamId`, default 0 for both keepers — now `gkIndex`), AR-2 H (the shot stamped in seconds against a millisecond pipeline, leaving the reaction window still pinned at 0; fixing it re-rolled the corpus and retired the 14.0 goals/match figure as n=3 noise — §1.2/§5/§6/§7.5 re-measured and rewritten, headline now "no detectable effect on the goal rate"), AR-4 M (boot gate + coupling lock on `MaxGkAgents == TEAM_COUNT`, the identity the fix made load-bearing). Plus §7.7 (the acceptance scenario's neutral-path scope note), the six FR-CS-056 version-history repairs, and the `DegeneracyEpsilon` rename. |

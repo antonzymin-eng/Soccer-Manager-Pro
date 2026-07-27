@@ -1,6 +1,7 @@
 // File:     src/goalkeeper-mechanics/Tests/GoalkeeperScenarios.cs
 // Created:  2026-07-03
 // Modified: 2026-07-03
+// Modified: 2026-07-27 (§5.Z.17 / ERR-011-002: save-launch scenario re-anchored to a ball threatening the keeper's OWN goal)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §4.6.1 / §4.6.2 (10 Hz + 60 Hz orchestrator),
 //           Testing Strategy & Framework #19 §3.3.1 / §3.3.2 / Appendix A.1,
@@ -309,4 +310,8 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 // |         |            |        | 10 Hz TacticalTick + 60 Hz Update orchestrators (previously    |
 // |         |            |        | zero executing coverage; the sub-system suite never instantiates|
 // |         |            |        | or ticks the orchestrator), observed via injected dependencies.|
+// | 1.1 | 2026-07-27 | — | ERR-011-002 fallout: sim_goalkeeper_save_launch_executes_dive placed the ball at|
+// |     |            |   | x = 75 to wake keeper 0, i.e. it had ENCODED the inverted predicate. Re-anchored|
+// |     |            |   | to x = 30 with the intent unchanged — the Phase-H "tests encoded the old|
+// |     |            |   | contract" class.                                                        |
 #endregion

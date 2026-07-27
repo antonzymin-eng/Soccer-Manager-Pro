@@ -1,6 +1,7 @@
 // File:     src/goalkeeper-mechanics/Tests/GoalkeeperMechanicsTests.cs
 // Created:  2026-05-31
 // Modified: 2026-05-31
+// Modified: 2026-07-27 (§5.Z.17 / ERR-011-002: call sites renamed to the new state-machine parameter names)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §5, Code Standards #20
 // Purpose:  Unit tests for Goalkeeper Mechanics. T-5.1 unit tests from §5.
@@ -1520,4 +1521,7 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 // |         |            |        | fixture surface) was CS0246 under Unity and the Linux gate alike   |
 // |         |            |        | despite the asmdef carrying the BallPhysics reference; the suite   |
 // |         |            |        | never compiled.                                                    |
+// | 1.3 | 2026-07-27 | — | ERR-011-002 fallout: 12 EvaluateTacticalTransition call sites renamed to    |
+// |     |            |   | ballThreateningOwnGoal/ballSafelyUpfield. Semantics preserved — the two sites|
+// |     |            |   | passing ballInDefensiveThird: true are HandsOnBall cases consulting neither flag.|
 #endregion

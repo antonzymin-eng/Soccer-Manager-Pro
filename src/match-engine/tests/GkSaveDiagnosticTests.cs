@@ -86,7 +86,10 @@ namespace TacticalDirector.MatchEngine
             report.AppendLine("  armed      : ticks the §4.1 SaveArmed geometry held (a loose ball driving at the goal)");
             report.AppendLine("  committed  : rising edges of the per-episode SAVE latch (the DT decided to save)");
             report.AppendLine("  anticipate : entries into GoalkeeperState.Anticipate (the only production gate to a dive)");
-            report.AppendLine("  diving     : entries into Diving   (the dive was launched)");
+            report.AppendLine("  diving     : entries into Diving   (reads 0 by construction — Diving is");
+            report.AppendLine("               entered and left inside one 60 Hz step, so no sample lands on");
+            report.AppendLine("               it; 'airborne' is the launch count. Do NOT read 0 here as 'no");
+            report.AppendLine("               dive was launched'.)");
             report.AppendLine("  airborne   : entries into Airborne (the reach envelope is live and testable)");
             report.AppendLine("  contact    : frames the ball fell inside the reach envelope");
             report.AppendLine("  caught     : entries into HandsOnBall (quality >= CatchThreshold)");
