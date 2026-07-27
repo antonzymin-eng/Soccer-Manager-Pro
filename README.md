@@ -374,8 +374,8 @@ That is the full Stage-0 physics/AI/systems stack, the tactical layer (#21, #23�
 **Not implemented by design:** Fixed64 Math Library #9 (deferred to Stage 5+ per §8.1) and Code
 Standards #20 (a style guide, not a coded subsystem).
 
-**Approved but not implemented — 12 specs:** #29, #31, #32, #33, #34, #40, #41, #42, #43, #44,
-#45, #49. No assembly exists for any of them.
+**Approved but not implemented — 12 specs:** #29, #31, #32, #33, #34, #40, #41, #42, #43, #44, #45, #49.
+No assembly exists for any of them.
 
 **Plus five unnumbered assemblies** (governed by design supplements, not specs): `match-engine`
 (the composition root), `match-viewer`, `match-client-core`, `match-client-unity`, `project-constants`.
@@ -495,10 +495,9 @@ Soccer-Manager-Pro/
 ```
 
 **Assembly names do not reliably match spec folder names.** #27 lives in `player-database`, #28 in
-`player-progression`, #30 in `season-save`, #37 in `match-analytics` (folder `match-analytics-statistics/`),
-#38 in `ui-framework`; #23/#24/#25 live inside `positioning-ai` and #26 inside `tactical-instructions`.
-Consult the assembly map in [`CLAUDE.md`](CLAUDE.md#repo-structure) rather than inferring from the folder
-name.
+`player-progression`, #30 in `season-save`, #37 in `match-analytics` (folder `match-analytics-statistics/`), #38 in
+`ui-framework`; #23/#24/#25 live inside `positioning-ai` and #26 inside `tactical-instructions`. Consult the
+assembly map in [`CLAUDE.md`](CLAUDE.md#repo-structure) rather than inferring from the folder name.
 
 **On design supplements.** `docs/tracking/*-design.md` is a governance class of its own: a converged,
 adversarially-reviewed design note that either precedes promotion to a numbered spec, or permanently
