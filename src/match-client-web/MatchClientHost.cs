@@ -90,18 +90,24 @@ namespace TacticalDirector.MatchClientWeb
         public void Dispatch(in ManagerIntent intent) => _dispatcher.Dispatch(in intent);
 
         /// <summary>
-        /// The statistics as of the last completed tick. Safe to call from any thread and at any
-        /// cadence — <c>Build()</c> is idempotent and consumes nothing, so a screen may poll it.
+        /// The statistics as of the last completed tick, together with the tick count they were
+        /// derived from. Safe to call from any thread and at any cadence — <c>Build()</c> is
+        /// idempotent and consumes nothing, so a screen may poll it.
+        ///
+        /// <para>Both values come out of ONE lock acquisition on purpose: read separately, the sim
+        /// thread can advance between them and a caller gets shares computed at tick N labelled with
+        /// tick N+1 — a small incoherence, but the kind that turns into a confusing bug report about
+        /// percentages that do not add up.</para>
         /// </summary>
-        public MatchAnalyticsResult BuildReport()
+        public MatchAnalyticsReport BuildReport()
         {
             lock (_analyticsGate)
             {
-                return _analytics.Build();
+                return new MatchAnalyticsReport(_analytics.Build(), _analytics.ObservedTicks);
             }
         }
 
-        /// <summary>Ticks observed so far — the denominator behind every share in the report.</summary>
+        /// <summary>Ticks observed so far. Prefer <see cref="BuildReport"/> when both are wanted.</summary>
         public long ObservedTicks
         {
             get { lock (_analyticsGate) { return _analytics.ObservedTicks; } }

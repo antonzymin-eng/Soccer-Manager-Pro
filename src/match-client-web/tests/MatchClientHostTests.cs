@@ -78,7 +78,11 @@ namespace TacticalDirector.MatchClientWeb.Tests
             var host = new MatchClientHost(MatchSetup.NeutralDemo(Seed));
             RunUntilObserved(host, 900);
 
-            var report = host.BuildReport();
+            MatchAnalyticsReport snapshot = host.BuildReport();
+            var report = snapshot.Result;
+            Assert.AreEqual(
+                host.ObservedTicks >= snapshot.ObservedTicks, true,
+                "The report's tick count is taken with the result, so it can only lag a later read.");
             Assert.Greater(
                 report.Home.PossessionSharePercent + report.Away.PossessionSharePercent, 0f,
                 "Non-vacuity: an observer that fired but routed nothing would still show no fault.");

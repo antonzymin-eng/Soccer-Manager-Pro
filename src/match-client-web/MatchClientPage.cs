@@ -121,6 +121,14 @@ namespace TacticalDirector.MatchClientWeb
             sb.Append("const FRAME_MS=").Append(MatchClientWebConstants.FramePollIntervalMs)
               .Append(",REPORT_MS=").Append(MatchClientWebConstants.ReportPollIntervalMs)
               .Append(",RESTART_TICKS=").Append(MatchClientWebConstants.RestartCaptionTicks).Append(";\n");
+
+            // Roster metadata is a boot constant, so it is baked in once rather than repeated in every
+            // frame payload. Read from the streamer rather than inferred from the roster index: index
+            // ordering is contiguous by construction today, but the spectator viewer's AR-1 L-3 finding
+            // was precisely a page that assumed contiguous team blocks, and goalkeeper identity cannot
+            // be derived from an index at all once a substitution has happened.
+            AppendIntArray(sb, "TEAM", streamer, i => streamer.TeamId(i));
+            AppendBoolArray(sb, "ISGK", streamer, i => streamer.IsGoalkeeper(i));
             sb.Append(@"
 const cv=document.getElementById('pitch'),cx=cv.getContext('2d');
 let latest=null;
@@ -146,9 +154,9 @@ function draw(f){
  pitch();
  if(!f||!f.ready)return;
  f.agents.forEach((a,i)=>{
-  const home=i<f.agents.length/2;
-  cx.beginPath();cx.arc(X(a.x),Y(a.y),5,0,Math.PI*2);
-  cx.fillStyle=a.off?'#4a4a4a':(home?'#5aa9e6':'#e6725a');cx.fill();
+  const home=(TEAM[i]??(i<f.agents.length/2?0:1))===0;
+  cx.beginPath();cx.arc(X(a.x),Y(a.y),ISGK[i]?6:5,0,Math.PI*2);
+  cx.fillStyle=a.off?'#4a4a4a':(ISGK[i]?'#c8d64a':(home?'#5aa9e6':'#e6725a'));cx.fill();
   if(i===f.possessingAgentId){cx.strokeStyle='#ffe27a';cx.lineWidth=2;cx.stroke();}
   if(a.yellow>0&&!a.off){cx.strokeStyle='#f0c674';cx.lineWidth=2;cx.stroke();}
   if(a.sub){cx.fillStyle='#dfe6ec';cx.fillRect(X(a.x)+6,Y(a.y)-8,3,3);}
@@ -228,6 +236,32 @@ setInterval(pollReport,REPORT_MS);
 pollFrame();pollReport();
 </script></body></html>");
             return sb.ToString();
+        }
+
+        private static void AppendIntArray(
+            StringBuilder sb, string name, LiveMatchStreamer streamer, System.Func<int, int> value)
+        {
+            sb.Append("const ").Append(name).Append("=[");
+            int n = streamer == null ? 0 : streamer.AgentCount;
+            for (int i = 0; i < n; i++)
+            {
+                if (i > 0) { sb.Append(','); }
+                sb.Append(value(i).ToString(CultureInfo.InvariantCulture));
+            }
+            sb.Append("];\n");
+        }
+
+        private static void AppendBoolArray(
+            StringBuilder sb, string name, LiveMatchStreamer streamer, System.Func<int, bool> value)
+        {
+            sb.Append("const ").Append(name).Append("=[");
+            int n = streamer == null ? 0 : streamer.AgentCount;
+            for (int i = 0; i < n; i++)
+            {
+                if (i > 0) { sb.Append(','); }
+                sb.Append(value(i) ? "true" : "false");
+            }
+            sb.Append("];\n");
         }
 
         private static string Fmt(float v) => v.ToString("0.###", CultureInfo.InvariantCulture);

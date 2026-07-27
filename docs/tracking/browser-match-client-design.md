@@ -5,7 +5,7 @@
 > names for the B6 renderer. It opens no numbered spec and changes no `SPEC_INDEX.md` row; it
 > permanently governs `src/match-client-web/`, exactly as `match-engine-design.md` governs the
 > composition root and `interactive-unity-client-design.md` governs the client core.
-> **Version:** 1.0
+> **Version:** 1.1
 > **Scope:** the PM-1 browser surface — one playable match a person can watch, adjust and read a
 > report on. Not the season screens (roadmap C3), not the UGUI skin (Unity P4–P6).
 
@@ -174,4 +174,5 @@ never a cross-run digest.
 
 | Version | Date | Notes |
 |---|---|---|
+| 1.1 | 2026-07-27 | **Self-review over the shipped code: 2 findings, both fixed.** (1) The page inferred team membership from `i < agents.length / 2`. Roster indices *are* contiguous by construction today, but the spectator viewer's own AR-1 L-3 finding was exactly a page assuming contiguous team blocks — and goalkeeper identity cannot be derived from an index at all once a substitution has happened. Roster metadata is now baked in once from `LiveMatchStreamer.TeamId` / `IsGoalkeeper` (what `LiveMatchServer` already does) and keepers render distinctly. (2) `/report` read the result and the tick count in two separate lock acquisitions, so the sim thread could advance between them and label shares computed at tick N with tick N+1. Both now come out of one acquisition as a `MatchAnalyticsReport` pair. |
 | 1.0 | 2026-07-27 | Initial creation, landed with the B6 code: KD-W1..KD-W9, the deliberate non-goals, and the test map. |

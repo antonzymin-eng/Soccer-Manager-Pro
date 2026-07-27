@@ -157,11 +157,12 @@ namespace TacticalDirector.MatchClientWeb
 
         private string ReportJson()
         {
-            var result = _host.BuildReport();
+            MatchAnalyticsReport report = _host.BuildReport();
+            var result = report.Result;
             var sb = new StringBuilder(1_024);
 
             sb.Append('{');
-            Num(sb, "\"observedTicks\":", _host.ObservedTicks);
+            Num(sb, "\"observedTicks\":", report.ObservedTicks);
 
             // A frozen report is worse than an absent one, so the fault is reported alongside the
             // numbers rather than left for a reader to infer from figures that stopped moving.
