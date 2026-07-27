@@ -1,15 +1,17 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
-// Modified: 2026-07-26
+// Modified: 2026-07-27
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (day advance / KD-2 tick order), §3.4 (playing a round /
-//           KD-9), §4.3 (the composition root), §4.6 (the #22 producer boundary / KD-3), §4.7 (CS0104);
-//           FR-SN-010/011/012/013/013a/013b/016/017/018/025/026/032/033/034; path-to-playable A4;
-//           Code Standards #20
+//           KD-9), §3.5 (season-boundary roll / KD-6), §4.3 (the composition root), §4.6 (the #22
+//           producer boundary / KD-3), §4.7 (CS0104);
+//           FR-SN-010/011/012/013/013a/013b/016/017/018/025/026/029/030/031/032/033/034;
+//           path-to-playable A4 + A5; Code Standards #20
 // Purpose:  The season composition root — the only writer of SeasonState (KD-7 / FR-SN-032). Advances the
 //           world one calendar day at a time in the KD-2 fixed order, resolves a whole round of fixtures,
-//           and hands #37/#38 a read-only view. Runs on the WORLD tick (FR-SN-025); the 10 Hz / 60 Hz
-//           match loops live entirely inside a managed fixture's MatchEngine and never drive this.
+//           rolls the season boundary into the next season, and hands #37/#38 a read-only view. Runs on
+//           the WORLD tick (FR-SN-025); the 10 Hz / 60 Hz match loops live entirely inside a managed
+//           fixture's MatchEngine and never drive this.
 //
 // Not on the 60 Hz hot path (§4.3), so allocation / new / exceptions are permitted — the
 // SeasonSaveManager / WorldStore precedent.
@@ -313,6 +315,239 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>
+        /// The season-boundary roll (§3.5 / FR-SN-029): finalize the table, evaluate the board, derive
+        /// the next season's seed, regenerate its schedule and calendar, and reset. Returns what the
+        /// board decided and what the new season starts from.
+        /// <para>
+        /// <b>KD-6 — one restartable transform.</b> The result is a pure function of the prior
+        /// <see cref="SeasonState"/> alone: the next seed derives from the current seed and season
+        /// number, the schedule from that seed, and the calendar by shifting THIS season's round spacing
+        /// forward by one season-length plus the close-season break. Nothing is drawn from a cursor and
+        /// nothing reads the wall clock, so a save taken either side of this call restores to the same
+        /// continuation, and rolling twice from the same prior state yields the same next state.
+        /// </para>
+        /// <para>
+        /// <b>Ordering is load-bearing.</b> Everything is computed and validated before anything is
+        /// written, and the one write that can fail (<c>BeginNextSeason</c>, which re-applies the
+        /// constructor's club-set and calendar-coverage gates) runs BEFORE the one that cannot
+        /// (<c>SetBoard</c>, whose value is pre-clamped into range). A refused roll therefore leaves the
+        /// season completely untouched, rather than half-rolled with a new board verdict against an old
+        /// schedule — the `ConfigureSquads` validate-both-before-write discipline.
+        /// </para>
+        /// <para>
+        /// <b>Insertion points (FR-SN-031), declared and empty.</b> (a') #43's promotion/relegation
+        /// transform and (b') #40's finance settlement sit between the board evaluation and the
+        /// regeneration, in that order, so budgets reflect the post-promotion division. They are
+        /// positions in this method, not interfaces — neither spec has code (FR-SN-034 / FR-LW-031).
+        /// (d) #28's age advance is the same: a documented position, empty until #28 T2.
+        /// </para>
+        /// </summary>
+        /// <exception cref="System.InvalidOperationException">
+        /// The season is not over (F5 — rounds remain, or a fixture in a resolved round was never
+        /// played), or the world clock has already passed the day the new season would open on, which
+        /// would install a state violating the KD-4 cursor invariant (FR-SN-011).
+        /// </exception>
+        public SeasonRollOutcome RollToNextSeason()
+        {
+            if (!_state.Calendar.IsSeasonComplete)
+            {
+                throw new System.InvalidOperationException(
+                    $"The season is not complete — round {_state.Calendar.NextRoundIndex} of "
+                    + $"{_state.Calendar.RoundCount} is still pending. Play every round before rolling (F5).");
+            }
+
+            RequireEveryFixturePlayed();
+
+            // ── (a) finalize ────────────────────────────────────────────────────────────────────
+            // The table is already final; what the roll needs from it is the managed club's position.
+            int finalPosition = _state.PositionOf(_state.ManagedClubId);
+
+            // ── (b) board pass/fail + job security ──────────────────────────────────────────────
+            BoardState board = _state.Board;
+            int target = board.Objective.TargetPositionOrBetter;
+            bool objectiveMet = board.Objective.IsMetBy(finalPosition);
+            int securityBefore = board.JobSecurityPerMille;
+            int securityAfter = EvaluateJobSecurity(securityBefore, finalPosition, target);
+
+            // ── (a') #43 promotion/relegation inserts HERE (FR-SN-031) — empty at Stage 2. ──────
+            // ── (b') #40 finance settlement inserts HERE (ERR-030-003) — empty at Stage 2. ──────
+
+            // ── (c) regenerate ──────────────────────────────────────────────────────────────────
+            ulong nextSeed = DeriveNextSeasonSeed(_state.Seed, _state.SeasonNumber);
+            Fixture[] nextFixtures = FixtureScheduler.Generate(ClubIdsAscending(), nextSeed);
+            SeasonCalendar nextCalendar = ShiftCalendarToNextSeason(_state.Calendar);
+
+            // The KD-4 invariant is the one thing the roll cannot establish on its own: the calendar is
+            // derived purely from the old one, so a client that advanced the world deep into the close
+            // season before rolling would get a schedule that opens in the past. Refusing here beats
+            // installing it and having SeasonLoop's own constructor reject the season on the next load.
+            if (!nextCalendar.SatisfiesCursorInvariant(_world.CurrentWorldTick))
+            {
+                throw new System.InvalidOperationException(
+                    $"The next season would open on world-day {nextCalendar.NextFixtureDay()} but the "
+                    + $"world is already on day {_world.CurrentWorldTick} — that violates the KD-4 cursor "
+                    + "invariant (FR-SN-011). Roll at the end of the season, then advance the world.");
+            }
+
+            // ── (d) #28 age advance inserts HERE — empty until #28 T2. ──────────────────────────
+
+            // ── (e) commit: schedule + table + season number + seed, then the board verdict ─────
+            int completedSeasonNumber = _state.SeasonNumber;
+            _state.BeginNextSeason(nextSeed, nextFixtures, nextCalendar);
+
+            // Cannot throw: EvaluateJobSecurity clamps into the range BoardState validates.
+            _state.SetBoard(board.WithJobSecurity(securityAfter));
+
+            return new SeasonRollOutcome(
+                completedSeasonNumber,
+                finalPosition,
+                target,
+                objectiveMet,
+                securityBefore,
+                securityAfter,
+                _state.SeasonNumber,
+                nextSeed,
+                nextCalendar.NextFixtureDay());
+        }
+
+        /// <summary>
+        /// The §3.5 step (b) job-security arithmetic, extracted pure so every branch is unit-testable
+        /// without driving a full season to its boundary first (the <see cref="ShouldPlayThroughEngine"/>
+        /// precedent — a branch reachable only through a 380-fixture run is a branch that ships untested).
+        /// <para>
+        /// Meeting the objective adds a flat amount; missing it subtracts per league position short, so
+        /// the penalty tracks how badly it was missed. The result is clamped into
+        /// <c>[0, JobSecurityScale]</c> — accumulated in <c>long</c> first, so a hostile <c>[GT]</c>
+        /// value cannot overflow the multiply into a positive number and read as a reward.
+        /// </para>
+        /// </summary>
+        internal static int EvaluateJobSecurity(int securityBefore, int finalPosition, int targetPosition)
+        {
+            long delta;
+            if (finalPosition <= targetPosition)
+            {
+                delta = SeasonLoopConstants.BoardJobSecurityMetDeltaPerMille;
+            }
+            else
+            {
+                long placesShort = finalPosition - targetPosition;
+                delta = -(long)SeasonLoopConstants.BoardJobSecurityMissedDeltaPerMille * placesShort;
+            }
+
+            long result = securityBefore + delta;
+
+            if (result < 0)
+            {
+                return 0;
+            }
+
+            return result > SeasonLoopConstants.JobSecurityScale
+                ? SeasonLoopConstants.JobSecurityScale
+                : (int)result;
+        }
+
+        /// <summary>
+        /// The next season's calendar: THIS season's round spacing, shifted forward by one season length
+        /// plus <see cref="SeasonLoopConstants.SeasonBreakDays"/>, with the cursor back at round 0.
+        /// <para>
+        /// Shifting the whole shape rather than rebuilding a linear calendar is what keeps the roll a
+        /// pure function of the season (KD-6) AND preserves a non-uniform schedule: a calendar with a
+        /// mid-season break keeps that break next year instead of being silently flattened. The first
+        /// round of the new season lands exactly <c>SeasonBreakDays</c> after the last round of the old.
+        /// </para>
+        /// </summary>
+        /// <exception cref="System.InvalidOperationException">The calendar maps no rounds, or the shift
+        /// would carry a round day past <c>uint.MaxValue</c>.</exception>
+        internal static SeasonCalendar ShiftCalendarToNextSeason(in SeasonCalendar calendar)
+        {
+            uint[] days = calendar.RoundDaysCopy();
+            if (days.Length == 0)
+            {
+                throw new System.InvalidOperationException(
+                    "Cannot roll a season whose calendar maps no rounds.");
+            }
+
+            uint firstDay = days[0];
+            uint lastDay = days[days.Length - 1];
+
+            // Season length measured end-to-end, plus the close season. Both terms are unsigned and the
+            // days are strictly ascending, so the subtraction cannot wrap.
+            ulong period = (ulong)(lastDay - firstDay) + SeasonLoopConstants.SeasonBreakDays;
+
+            if ((ulong)lastDay + period > uint.MaxValue)
+            {
+                throw new System.InvalidOperationException(
+                    $"Shifting the calendar forward by {period} days would carry the final round past "
+                    + "world-day uint.MaxValue.");
+            }
+
+            for (int i = 0; i < days.Length; i++)
+            {
+                days[i] = (uint)(days[i] + period);
+            }
+
+            return SeasonCalendar.Create(0, days);
+        }
+
+        /// <summary>
+        /// The §3.5 <c>DeriveNextSeasonSeed</c>: the successor season's seed, from this season's seed and
+        /// number through <see cref="SeasonLoopConstants.SEASON_ROLL_SEED_DOMAIN"/>.
+        /// <para>
+        /// Folding the season NUMBER in as well as the seed is what stops a career from cycling: seed
+        /// alone would make season N+1 a function of season N's seed only, so any repeat of a seed value
+        /// would replay a schedule the manager has already seen. The domain constant separates this
+        /// derivation from every draw made <i>inside</i> a season (<see cref="RoundResolutionModel"/>),
+        /// so a fixture's result cannot correlate with the next season's shape.
+        /// </para>
+        /// </summary>
+        public static ulong DeriveNextSeasonSeed(ulong seasonSeed, int seasonNumber)
+        {
+            unchecked  // Spec #16 §3.4.4: deliberate 64-bit wrap-around; not an overflow bug
+            {
+                // Cast through uint so a (structurally impossible) negative season number still mixes to
+                // a defined value rather than sign-extending into the high half.
+                ulong key = seasonSeed ^ ((ulong)(uint)seasonNumber * 0x9E3779B97F4A7C15UL);
+                return RoundResolutionModel.Mix(key ^ SeasonLoopConstants.SEASON_ROLL_SEED_DOMAIN);
+            }
+        }
+
+        /// <summary>
+        /// The club ids as the ascending array <see cref="FixtureScheduler.Generate"/> expects.
+        /// </summary>
+        private int[] ClubIdsAscending()
+        {
+            ReadOnlyCollection<int> ids = _state.ClubIds;
+            var array = new int[ids.Count];
+            for (int i = 0; i < ids.Count; i++)
+            {
+                array[i] = ids[i];
+            }
+
+            return array;
+        }
+
+        /// <summary>
+        /// F5's second half: a complete cursor is not on its own proof that every fixture was resolved.
+        /// No path through <see cref="AdvanceAndPlayNextRound"/> can leave one unplayed, but a restored
+        /// blob is only structurally validated, and rolling over an unplayed fixture would erase it
+        /// silently — the club would carry a table that never counted a match it was scheduled to play.
+        /// </summary>
+        private void RequireEveryFixturePlayed()
+        {
+            ReadOnlyCollection<Fixture> fixtures = _state.Fixtures;
+            for (int i = 0; i < fixtures.Count; i++)
+            {
+                if (!fixtures[i].Played)
+                {
+                    throw new System.InvalidOperationException(
+                        $"Fixture {i} (round {fixtures[i].RoundIndex}, {fixtures[i].HomeClubId} v "
+                        + $"{fixtures[i].AwayClubId}) was never played, so the season is not complete "
+                        + "even though the calendar cursor is at the end (F5).");
+                }
+            }
+        }
+
+        /// <summary>
         /// Encodes this loop's season state as the season sub-blob (§3.6). The world is snapshotted
         /// separately by <see cref="WorldStore.Snapshot"/>; <c>SeasonSaveManager.Save</c> is what frames
         /// the two (plus an optional in-progress match) into one file.
@@ -508,4 +743,15 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | whole-round resolution routed by RoundResolutionMode, the FR-SN-016 |
 // |         |            |        | producer record, the #44 availability-filter null seam, season      |
 // |         |            |        | sub-blob Snapshot/Restore, and the read-only SeasonViewModel.       |
+// | 1.1     | 2026-07-27 | —      | #30 T3 / roadmap A5: RollToNextSeason — the KD-6 restartable        |
+// |         |            |        | boundary transform (finalize → board evaluate → regenerate →        |
+// |         |            |        | reset), pure in the prior SeasonState so a save either side of it   |
+// |         |            |        | restores to the same continuation. The (a') #43 and (b') #40        |
+// |         |            |        | insertion points and (d) #28's age advance are declared positions,  |
+// |         |            |        | not interfaces. Everything is computed and validated before any     |
+// |         |            |        | write, and the throwing commit runs before the non-throwing one, so |
+// |         |            |        | a refused roll leaves the season untouched. Plus the pure           |
+// |         |            |        | EvaluateJobSecurity / ShiftCalendarToNextSeason / DeriveNextSeason- |
+// |         |            |        | Seed helpers, extracted so their branches are testable without      |
+// |         |            |        | driving a 380-fixture season to its boundary first.                 |
 #endregion

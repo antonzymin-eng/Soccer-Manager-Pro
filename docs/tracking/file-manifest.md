@@ -1,7 +1,28 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 26, 2026 (**Season & Competition Loop #30 T2 LANDED** — path-to-playable roadmap item
+**Last Updated:** July 27, 2026 (**Season & Competition Loop #30 T3 LANDED** — path-to-playable roadmap
+item **A5**, the season-boundary roll; with it Phase A is complete and **PM-2-sim is reached**.
+**New files:** `src/season-save/SeasonRollOutcome.cs` (the boundary-roll producer record — board verdict,
+job security before/after, what the next season starts from; session-scoped, deliberately not serialized
+per the ERR-030-013 posture); `src/season-save/tests/SeasonRollTests.cs` (18 tests). **Modified:**
+`src/season-save/SeasonLoop.cs` v1.1 (`RollToNextSeason` + the pure `EvaluateJobSecurity` /
+`ShiftCalendarToNextSeason` / `DeriveNextSeasonSeed` helpers); `src/season-save/SeasonLoopConstants.cs` v1.3
+(`[FIXED] SEASON_ROLL_SEED_DOMAIN`; `[GT] SeasonBreakDays` + the two board job-security deltas; the
+`PositiveDayValue` read guard); `src/season-save/RoundResolutionModel.cs` (`Mix` private → internal, so the
+seed derivation reuses one finalizer instead of carrying a second copy in the same assembly);
+`docs/specs/season-competition-loop/section-3.md` **v1.0** (ERR-030-015 — §3.5 gains step (c′), and the two
+stale `Version` header fields are consolidated); `docs/tracking/spec-error-log.md` v1.46;
+`docs/tracking/path-to-playable-roadmap.md` v0.8. **Full dotnet gate: PASSED, 0 failures (whole tree green;
+season-save 240 → 258 tests — 255 passed + the 3 env-gated calibration/diagnostic drivers skipped).**
+The landing filed **ERR-030-015**: §3.5's `RollToNextSeason` pseudocode regenerated `Fixtures` but never
+rebuilt `Calendar`, whose cursor sits at `RoundCount` because the season just ended — so a season rolled
+from the spec as written is *permanently unplayable*, and no assertion over the rolled state's fields would
+have noticed. Caught by the acceptance test playing a **second** season to completion; 9 of the suite's 18
+predicates fail against the pre-fix form. No `SEASON_STATE_FORMAT_VERSION` change (the calendar was already
+serialized). Prior entry below.)
+
+**Last Updated (prior):** July 26, 2026 (**Season & Competition Loop #30 T2 LANDED** — path-to-playable roadmap item
 A4, the day-advance loop + the round-resolution model. **New files:** `src/season-save/RoundResolutionMode.cs`,
 `RoundResolutionModel.cs`, `SeasonLoop.cs`; `src/match-engine/SquadRating.cs` (the public XI-mean rating seam
 over the internal `LineupSelector` — league-bootstrap AR-4 M-1's named A4 prerequisite);
@@ -1292,6 +1313,7 @@ Governed by `docs/tracking/ui-framework-t0-implementation-plan.md`.
 | `src/season-save/BoardState.cs` | #30 T0: the objective + integer per-mille job security (Appendix B row 11) |
 | `src/season-save/MatchResult.cs` | #30 T0: one fixture's outcome payload — the table write and the FR-SN-016 producer event |
 | `src/season-save/SeasonState.cs` | #30 T0: the whole serialized season surface (seed / season number / managed club / club set / the CONCRETE schedule per KD-5 / table / calendar / board); copy-then-validate coherence gates; KD-7 internal mutators (SeasonLoop is the only production writer) |
+| `src/season-save/SeasonRollOutcome.cs` | #30 T3: the boundary-roll producer record — completed/next season number, final vs target position, objective met, job security before/after, next seed + first fixture day. Session-scoped, not serialized (ERR-030-013 posture) |
 | `src/season-save/SeasonViewModel.cs` | #30 T0: the read-only observation surface for #37/#38 (FR-SN-033) — value copies |
 | `src/season-save/LeagueBootstrapConstants.cs` | A3: `[FIXED]` roster/strength/season seed domain separators + the roster stream identity; `[GT]` DefaultClubCount / MaxClubCount / LeagueStrengthSpread / calendar cadence (negative world-days refused at read) / the array-valued squad position template; `BuildSquadPositionTemplate()` expands it fail-loud |
 | `src/season-save/ClubNameCatalogue.cs` | A3: Stage-0 APPEND-only club names assigned by `ClubId` index (KD-3 — drawn from no stream, in no digest); ≥ `MaxClubCount` entries, test-locked for coverage + uniqueness |

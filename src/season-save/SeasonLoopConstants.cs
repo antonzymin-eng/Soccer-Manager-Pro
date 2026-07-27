@@ -1,9 +1,9 @@
 // File:     src/season-save/SeasonLoopConstants.cs
 // Created:  2026-07-25
-// Modified: 2026-07-25
+// Modified: 2026-07-27
 // Author:   —
 // Spec:     Season & Competition Loop #30 Appendix A (constant catalogue); §3.2 (points);
-//           §3.1.1 (permutation seed); Code Standards #20
+//           §3.1.1 (permutation seed); §3.5 (boundary roll); Code Standards #20
 // Purpose:  Constant catalogue for the season/competition loop (#30 Appendix A). Points values, the
 //           season-state sub-blob format version, and the identity-permutation seed sentinel. The
 //           [CROSS] determinism rows (DOMAIN_TAG_SEASON_LOOP / SUBSYSTEM_ORDINAL_SEASON_LOOP) are
@@ -79,6 +79,14 @@ namespace TacticalDirector.SeasonSave
         /// probability of even reaching 20 is ~1e-6).
         /// </summary>
         public const int MAX_GOALS_PER_SIDE = 20;
+
+        /// <summary>
+        /// [FIXED] Domain-separation constant for the next-season seed the boundary roll derives
+        /// (#30 §3.5 <c>DeriveNextSeasonSeed</c>, T3). Distinct from every round-resolution and
+        /// match-seed constant above, so a season's own seed cannot correlate with any draw made
+        /// <i>inside</i> that season — the successor seed is a different question from any fixture's.
+        /// </summary>
+        public const ulong SEASON_ROLL_SEED_DOMAIN = 0x3C6EF35F1B4D97A1UL;
         #endregion
 
         #region Cross
@@ -124,6 +132,36 @@ namespace TacticalDirector.SeasonSave
         /// Config key <c>[season-save] JobSecurityScale</c>.
         /// </summary>
         public static readonly int JobSecurityScale = Config.GetInt("season-save", "JobSecurityScale", 1000);
+
+        // ── Season-boundary roll (§3.5 / FR-SN-029; T3) ──────────────────────────────────────────
+
+        /// <summary>
+        /// [GT] Calendar days between a season's LAST round and the next season's FIRST round — the
+        /// close-season gap. Positive by requirement: at zero the new season's opening round would fall
+        /// on the day the old one ended, and the two calendars would be indistinguishable to the cursor.
+        /// Config key <c>[season-save] SeasonBreakDays</c>.
+        /// </summary>
+        public static readonly uint SeasonBreakDays = PositiveDayValue("SeasonBreakDays", 56);
+
+        /// <summary>
+        /// [GT] Job-security gained (per-mille) when the club MEETS the board's objective, applied once
+        /// at the boundary roll (§3.5 step (b)). Clamped into <see cref="JobSecurityScale"/> by
+        /// <see cref="BoardState"/>, so a run of good seasons saturates at fully secure rather than
+        /// accumulating credit without bound.
+        /// Config key <c>[season-save] BoardJobSecurityMetDeltaPerMille</c>.
+        /// </summary>
+        public static readonly int BoardJobSecurityMetDeltaPerMille =
+            Config.GetInt("season-save", "BoardJobSecurityMetDeltaPerMille", 150);
+
+        /// <summary>
+        /// [GT] Job-security lost (per-mille) <b>per league position short</b> of the objective. Scaling
+        /// by the shortfall rather than charging a flat penalty is the whole point: missing a top-half
+        /// target by one place is a different conversation from finishing bottom, and a flat rate would
+        /// make those identical. Clamped at zero (sacked) by <see cref="BoardState"/>.
+        /// Config key <c>[season-save] BoardJobSecurityMissedDeltaPerMille</c>.
+        /// </summary>
+        public static readonly int BoardJobSecurityMissedDeltaPerMille =
+            Config.GetInt("season-save", "BoardJobSecurityMissedDeltaPerMille", 120);
 
         // ── Round-resolution model (§3.4.1 / FR-SN-013a; league-bootstrap KD-7) ──────────────────
         //
@@ -176,6 +214,25 @@ namespace TacticalDirector.SeasonSave
         public static readonly float QuickSimLambdaMax =
             Config.GetFloat("season-save", "QuickSimLambdaMax", 6.0f);
         #endregion
+
+        /// <summary>
+        /// Reads a strictly-positive day-count <c>[GT]</c> value, refusing a non-positive one at the
+        /// point of READ rather than letting it wrap. <c>GameplayConfig</c> has no unsigned getter, so a
+        /// config file carrying <c>0</c> or a negative would otherwise become either a zero-length break
+        /// or ~4.29e9 days — the league-bootstrap AR-4 L finding, applied here at the sibling seam.
+        /// </summary>
+        /// <exception cref="System.InvalidOperationException">The configured value is not positive.</exception>
+        private static uint PositiveDayValue(string key, int fallback)
+        {
+            int value = Config.GetInt("season-save", key, fallback);
+            if (value <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    $"[season-save] {key} must be a positive number of days; got {value}.");
+            }
+
+            return (uint)value;
+        }
     }
 }
 
@@ -196,4 +253,12 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | registers no cursor stream (ERR-030-012). Plus the [FIXED] sub-    |
 // |         |            |        | stream / match-seed domains + MAX_GOALS_PER_SIDE cap, and the five |
 // |         |            |        | [GT] round-resolution rows A4a calibrates.                         |
+// | 1.3     | 2026-07-27 | —      | #30 T3 (boundary roll): [FIXED] SEASON_ROLL_SEED_DOMAIN — the      |
+// |         |            |        | next-season seed derives through its own domain so a season's seed |
+// |         |            |        | cannot correlate with any draw made inside it. Plus three [GT]     |
+// |         |            |        | rows — SeasonBreakDays (close-season gap, read through the new     |
+// |         |            |        | PositiveDayValue guard so a zero or negative config value fails    |
+// |         |            |        | loud instead of wrapping to ~4.29e9) and the two board            |
+// |         |            |        | job-security deltas, the missed one charged PER PLACE SHORT so     |
+// |         |            |        | missing by one is not the same conversation as finishing bottom.   |
 #endregion
