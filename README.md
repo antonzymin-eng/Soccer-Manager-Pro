@@ -4,14 +4,14 @@
 **Last Updated:** July 24, 2026 (**Documentation sync pass — this file had fallen 10 days behind two
 active work-streams.** (1) **Management-layer specification wave:** a new
 `docs/tracking/management-layer-spec-roadmap.md` (opened Jul 22) scopes the manager-facing/off-pitch
-half of the game as candidate specs #27–#50; fifteen are already authored and **APPROVED**: #27
-Squad/Player Data Layer (Jul 22, has real `src/` code), #28 Player Progression & Lifecycle (Jul 23),
-#29 Training System (Jul 23), #30 Season & Competition Loop (Jul 22), #31 Transfers, Contracts &
-Negotiation (Jul 23), #33 Personalities, Morale & Squad Dynamics (Jul 23), #34 Staff & Backroom (Jul
-23), #37 Match Analytics & Statistics (Jul 22), #38 UI/Client Framework — framework slice (Jul 22),
-#40 Club Finances & Economy (Jul 23), #41 Injuries & Medical (Jul 23), #49 Localization &
-Accessibility — seam slice (Jul 23). `SPEC_INDEX.md` now reads **38 APPROVED / 0 IN REVIEW / 0 NOT
-STARTED**; except for #27, none of these has `src/` code yet — spec-only, same stage the Stage-0 set
+half of the game as candidate specs #27–#50; fifteen are already authored and **APPROVED**: Squad/
+Player Data Layer #27 (Jul 22, has real `src/` code), Player Progression & Lifecycle #28 (Jul 23),
+Training System #29 (Jul 23), Season & Competition Loop #30 (Jul 22), Transfers, Contracts &
+Negotiation #31 (Jul 23), Personalities, Morale & Squad Dynamics #33 (Jul 23), Staff & Backroom #34
+(Jul 23), Match Analytics & Statistics #37 (Jul 22), UI/Client Framework #38 — framework slice (Jul
+22), Club Finances & Economy #40 (Jul 23), Injuries & Medical #41 (Jul 23), Localization &
+Accessibility #49 — seam slice (Jul 23). `SPEC_INDEX.md` now reads **38 APPROVED / 0 IN REVIEW / 0
+NOT STARTED**; except for #27, none of these has `src/` code yet — spec-only, same stage the Stage-0 set
 occupied before coding began. (2) On the match-engine side: GK (#11)/Heading (#10) engine integration
 reached **Phase 2** (cross-tick state serialization, `SNAPSHOT_SCHEMA_VERSION` 17 → 18), a closed-loop
 `#19 ScenarioRunner` scenario, and a DT-emitted goalkeeper `SAVE` action (`ERR-008-013`) — all landed
@@ -216,16 +216,16 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 **Progress:** Implementation Phase (coding begun May 19, 2026)
 **Spec Phase Started:** February 2, 2026
 **Spec Phase Completed:** May 18, 2026 — all 20 Stage-0 specs APPROVED; specification work has
-continued well past Stage 0 since — 18 further specs (#21–#27, #28–#31, #33, #34, #37, #38, #40,
-#41, #49) APPROVED between Jun 20 and Jul 23, 2026
+continued well past Stage 0 since — 18 further specs (#21–#27, #28–#31, #33, #34, #37, #38, #40, #41,
+and #49) APPROVED between Jun 20 and Jul 23, 2026
 **Deliverables:** 38 APPROVED specs total (see `SPEC_INDEX.md`); active `src/` implementation for
 specs #1–#8, #10–#19, #21–#27, plus the unnumbered Match Engine / Season Save composition roots.
 Specs #28–#41/#49 are specification-only (no `src/` code yet).
 
 **Summary (July 24, 2026):** All 20 Stage-0 specs APPROVED, plus 7 match-engine-wired Stage-1-forward
-specs — #21 Tactical Instructions, #22 Living World System, #23 Dismarking & Marker-Awareness AI,
-#24 Scripted Build-Up Structures, #25 Positional Rotations, #26 Tactical Presets & AI-Manager
-Selection, #27 Squad/Player Data Layer — all APPROVED and implemented. On top of that, **a
+specs — #21 Tactical Instructions, #22 Living World System, #23 Dismarking & Marker-Awareness AI, #24
+Scripted Build-Up Structures, #25 Positional Rotations, #26 Tactical Presets & AI-Manager Selection, #27
+Squad/Player Data Layer — all APPROVED and implemented. On top of that, **a
 management-layer specification wave** (`docs/tracking/management-layer-spec-roadmap.md`, opened Jul
 22) has produced 12 further APPROVED specs covering the manager-facing/off-pitch game — #28 Player
 Progression & Lifecycle, #29 Training System, #30 Season & Competition Loop, #31 Transfers, Contracts
