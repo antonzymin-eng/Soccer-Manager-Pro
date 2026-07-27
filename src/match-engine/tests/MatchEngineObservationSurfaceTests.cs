@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineObservationSurfaceTests.cs
 // Created:  2026-07-27
-// Modified: 2026-07-27
+// Modified: 2026-07-27 (AR-1 M-2: the neutrality run now spans a real restart, and says so)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md) §5-P1,
 //           Code Standards #20
@@ -213,7 +213,11 @@ namespace TacticalDirector.MatchEngine
         [Test]
         public void ReadingTheP1Surface_IsObserverNeutral()
         {
-            const int Ticks = 400;
+            // Long enough to reach a real restart (measured: the first lands near tick 3 900 on this
+            // seed). At 400 ticks this test never wrote _restartAppliedThisTick at all — it covered the
+            // read-only accessors and left the two NEW engine fields, the only new state P1 adds,
+            // entirely unexercised (AR-1 M-2). RunObserving asserts a restart was seen.
+            const int Ticks = 6000;
 
             // Each engine is constructed AND run to completion before the next is constructed. The
             // EventBus is process-static (#17 §3.2.1), so interleaving two engines' ticks diverges them
@@ -229,9 +233,11 @@ namespace TacticalDirector.MatchEngine
         private static byte[] RunObserving(int ticks)
         {
             var engine = new MatchEngine(MatchSeed);
+            bool sawRestart = false;
             for (int t = 0; t < ticks; t++)
             {
                 engine.RunTick();
+                if (engine.RestartAppliedThisTick != RestartCue.None) { sawRestart = true; }
 
                 // Touch every new accessor, exactly as the streamer does.
                 for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
@@ -246,6 +252,10 @@ namespace TacticalDirector.MatchEngine
                 _ = engine.RestartAppliedThisTick;
                 _ = engine.RestartAwardedTeam;
             }
+
+            Assert.IsTrue(sawRestart,
+                "no restart occurred in " + ticks + " ticks, so the two new engine fields were never " +
+                "written and this neutrality check would pass vacuously over them");
             return engine.CurrentSnapshotDigest;
         }
 
@@ -268,4 +278,9 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | within-tick restart cue (incl. the cleared-next-tick lock that |
 // |         |            |        | keeps it out of the snapshot, and per-kind cue locks), and the |
 // |         |            |        | observer-neutrality digest lock over the whole new surface.    |
+// | 1.1     | 2026-07-27 | —      | AR-1 M-2: the observer-neutrality run goes 400 -> 6000 ticks   |
+// |         |            |        | and asserts a restart was actually observed. At 400 ticks no   |
+// |         |            |        | restart occurs on this seed (the first lands near 3 900), so   |
+// |         |            |        | the test proved neutrality only for the accessors that never   |
+// |         |            |        | fired — precisely the ones a stray write would live in.        |
 #endregion

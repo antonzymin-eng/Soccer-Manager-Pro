@@ -28,6 +28,13 @@ namespace TacticalDirector.MatchAnalytics
     /// </summary>
     public readonly struct AdvancedStatline
     {
+        // See MatchStatline for why this is stored as "has value" rather than "is unset" (AR-1 M-1).
+        private readonly bool _hasValue;
+
+        /// <summary>True when this is a zeroed struct that never went through the constructor.
+        /// <see cref="MatchAnalyticsResult"/> refuses one.</summary>
+        public bool IsUnset => !_hasValue;
+
         /// <summary>Team this line describes (0 = home, 1 = away).</summary>
         public readonly byte TeamId;
 
@@ -114,6 +121,7 @@ namespace TacticalDirector.MatchAnalytics
                 copy[i] = heatmapBins[i];
             }
 
+            _hasValue = true;
             TeamId = teamId;
             TerritorialPercent = territorialPercent;
             LiveXgAvailable = liveXgAvailable;
@@ -128,6 +136,7 @@ namespace TacticalDirector.MatchAnalytics
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
+// | 1.1     | 2026-07-27 | —      | AR-1 M-1: _hasValue discriminator (see MatchStatline v1.1).    |
 // | 1.0     | 2026-07-27 | —      | Initial creation (#37 T0): territorial share, copied heatmap   |
 // |         |            |        | bins, and the F4 xG-availability gate that refuses a non-zero  |
 // |         |            |        | total with no producer behind it.                              |

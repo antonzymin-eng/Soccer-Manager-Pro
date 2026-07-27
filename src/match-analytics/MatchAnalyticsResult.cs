@@ -62,6 +62,13 @@ namespace TacticalDirector.MatchAnalytics
             StatPoint[] foulMap,
             StatPoint[] offsideMap)
         {
+            // Unset BEFORE team id: a zeroed struct has TeamId 0, so it would sail through the home
+            // side of the attribution check and report as a genuine 0–0 statline (AR-1 M-1).
+            RequireSet(home.IsUnset,         "home");
+            RequireSet(away.IsUnset,         "away");
+            RequireSet(homeAdvanced.IsUnset, "homeAdvanced");
+            RequireSet(awayAdvanced.IsUnset, "awayAdvanced");
+
             RequireTeam(home.TeamId,         0, "home");
             RequireTeam(away.TeamId,         1, "away");
             RequireTeam(homeAdvanced.TeamId, 0, "homeAdvanced");
@@ -75,6 +82,16 @@ namespace TacticalDirector.MatchAnalytics
             _goalMap    = CopyMap(goalMap,    nameof(goalMap));
             _foulMap    = CopyMap(foulMap,    nameof(foulMap));
             _offsideMap = CopyMap(offsideMap, nameof(offsideMap));
+        }
+
+        private static void RequireSet(bool isUnset, string what)
+        {
+            if (isUnset)
+            {
+                throw new ArgumentException(
+                    what + " is a default-constructed statline, not a populated one — an aggregator that " +
+                    "failed to fill it would otherwise render as a real all-zero line.", what);
+            }
         }
 
         private static void RequireTeam(byte actual, byte expected, string what)
@@ -101,6 +118,8 @@ namespace TacticalDirector.MatchAnalytics
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
+// | 1.1     | 2026-07-27 | —      | AR-1 M-1: refuses a default-constructed statline, which the    |
+// |         |            |        | team-attribution gate alone could not catch.                   |
 // | 1.0     | 2026-07-27 | —      | Initial creation (#37 T0): the per-match result — both teams'  |
 // |         |            |        | statlines plus copied goal / foul / offside maps, with a       |
 // |         |            |        | home-is-0 / away-is-1 coherence gate.                          |

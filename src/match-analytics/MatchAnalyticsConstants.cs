@@ -61,8 +61,10 @@ namespace TacticalDirector.MatchAnalytics
         /// from the lossless every-tick ledger pump (§3.5).</summary>
         public const int TERRITORIAL_SAMPLE_STRIDE = 1;
 
-        /// <summary>[FIXED] Team count — two. Mirrors the engine's own squad model.</summary>
-        public const int TEAM_COUNT = 2;
+        /// <summary>[CROSS] Team count. <c>MatchEngineConstants.TEAM_COUNT</c> is the authority;
+        /// mirrored read-only, never set here. Restating the literal would be the parallel-surface trap
+        /// ERR-037-001 was filed to avoid for <see cref="GOAL_WIDTH_M"/> (AR-1 M-4).</summary>
+        public const int TEAM_COUNT = TacticalDirector.MatchEngine.MatchEngineConstants.TEAM_COUNT;
     }
 }
 
@@ -71,4 +73,9 @@ namespace TacticalDirector.MatchAnalytics
 // | 1.0     | 2026-07-27 | —      | Initial creation (#37 T0): Appendix A catalogue — xG [GT]      |
 // |         |            |        | coefficients, pitch [CROSS] mirrors from Ball Physics #1, the  |
 // |         |            |        | heatmap grid and the territorial sample stride.                |
+// | 1.1     | 2026-07-27 | —      | AR-1 M-4: TEAM_COUNT is a [CROSS] mirror of                    |
+// |         |            |        | MatchEngineConstants.TEAM_COUNT rather than a local literal    |
+// |         |            |        | 2. It indexes the same per-team arrays the engine fills, so a  |
+// |         |            |        | local copy is the parallel-surface trap: the two would agree   |
+// |         |            |        | silently until the day they did not.                           |
 #endregion

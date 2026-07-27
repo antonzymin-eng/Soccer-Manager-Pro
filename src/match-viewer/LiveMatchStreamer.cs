@@ -1,7 +1,8 @@
 // File:     src/match-viewer/LiveMatchStreamer.cs
 // Created:  2026-07-15
 // Modified: 2026-07-27 (interactive Unity client §5-P1: captures the per-agent cues / substitution
-//           counts / derived period, and latches the engine's within-tick restart cue — KD-P1-3)
+//           counts / derived period, and latches the engine's within-tick restart cue — KD-P1-3,
+//           held in a single RestartBanner after AR-1 M-6)
 // Author:   —
 // Spec:     Interactive match view (docs/tracking/interactive-match-view-design.md) +
 //           interactive Unity client (docs/tracking/interactive-unity-client-design.md §4/§5-P0/§6),
@@ -63,11 +64,10 @@ namespace TacticalDirector.MatchViewer
         // P1 KD-P1-3 — the latched last restart. The engine reports a restart only for the tick it was
         // applied on (so it stays out of the snapshot entirely); this layer, which sees every tick, holds
         // the cross-tick memory a HUD needs. Written and read only inside CaptureFrame, itself only ever
-        // called under _tickGate, so these need no separate synchronisation; they reach other threads
-        // solely as immutable copies inside a published LiveMatchFrame.
-        private RestartCue _lastRestart     = RestartCue.None;
-        private int        _lastRestartTeam = MatchEngineConstants.NO_RESTART_TEAM;
-        private ulong      _lastRestartTick;
+        // called under _tickGate, so this needs no separate synchronisation; it reaches other threads
+        // solely as an immutable copy inside a published LiveMatchFrame. No initializer is needed and
+        // that is the point: default(RestartBanner) IS RestartBanner.None (AR-1 M-3).
+        private RestartBanner _lastRestart;
 
         private LiveMatchFrame? _latestFrame;
         private bool _paused;
@@ -250,9 +250,8 @@ namespace TacticalDirector.MatchViewer
             RestartCue restartThisTick = _engine.RestartAppliedThisTick;
             if (restartThisTick != RestartCue.None)
             {
-                _lastRestart     = restartThisTick;
-                _lastRestartTeam = _engine.RestartAwardedTeam;
-                _lastRestartTick = _engine.CurrentTick;
+                _lastRestart = new RestartBanner(
+                    restartThisTick, _engine.RestartAwardedTeam, _engine.CurrentTick);
             }
 
             return new LiveMatchFrame(
@@ -260,15 +259,12 @@ namespace TacticalDirector.MatchViewer
                 _engine.BallView.Position,
                 _engine.PossessingAgentId,
                 positions,
-                _engine.HomeScore,
-                _engine.AwayScore,
-                _engine.MatchEnded,
                 cues,
                 subsUsed,
+                new Scoreline(_engine.HomeScore, _engine.AwayScore),
+                _engine.MatchEnded,
                 _engine.CurrentPeriod,
-                _lastRestart,
-                _lastRestartTeam,
-                _lastRestartTick);
+                _lastRestart);
         }
 
         /// <summary>
@@ -480,4 +476,9 @@ namespace TacticalDirector.MatchViewer
 // |         |            |        | fields are written and read only inside CaptureFrame, itself   |
 // |         |            |        | only called from TickOnce under _tickGate, so they need no     |
 // |         |            |        | synchronisation of their own and escape only as struct copies. |
+// | 1.5     | 2026-07-27 | —      | P1 AR-1 M-6: the three latch fields collapse into a single     |
+// |         |            |        | RestartBanner. It carries no initializer on purpose — the      |
+// |         |            |        | banner derives its team and tick from its own cue, so the      |
+// |         |            |        | zeroed default already reads as "no restart" and there is no   |
+// |         |            |        | separate no-restart constant to keep in step with it.          |
 #endregion
