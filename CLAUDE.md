@@ -958,9 +958,7 @@ The specification frontier runs a long way ahead of the implementation, which is
 (specify before coding), and it makes one habit dangerous: **"the spec is APPROVED" now says nothing
 whatsoever about whether code exists.** It is true of 43% of the registry.
 
-**The 23 with no assembly:** #29 Training, #31 Transfers, #32 Scouting, #33 Personalities/Morale,
-#34 Staff, #37 Analytics, #40 Finances, #41 Injuries, #42 Youth, #43 Competition Structure,
-#44 Discipline, #45 Board, #49 Localization — plus **#35, #36, #39, #46, #47, #48, #50, #51, #53, #54**.
+**The 23 with no assembly:** #29 Training, #31 Transfers, #32 Scouting, #33 Personalities/Morale, #34 Staff, #37 Analytics, #40 Finances, #41 Injuries, #42 Youth, #43 Competition Structure, #44 Discipline, #45 Board, #49 Localization — plus the ten approved on July 27: #35, #36, #39, #46, #47, #48, #50, #51, #53, #54.
 
 Sequencing for closing the gap is in `docs/tracking/path-to-playable-roadmap.md`, which is now the
 project's live critical path. **Check `src/` before assuming a consumer is available** — the assembly map

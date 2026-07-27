@@ -4,9 +4,7 @@
 **Last Updated:** July 27, 2026, later same day (**The specification phase is CLOSED — all ten
 approved.** `SPEC_INDEX.md` reads **53 APPROVED / 0 IN REVIEW / 0 NOT STARTED**. Lead-developer sign-off
 granted on #53, #35, #46, #36, #54, #47, #48, #50, #51 and #39, with **23 back-props filed atomically**.
-Docs only — no code, no `src/` change, no gate run. **The finding that justified landing them together:**
-#30's pinned tick order was not implementable, because `ERR-030-007` had been filed twice at two separate
-approvals — a defect neither approval could have seen alone. See VERSION HISTORY v1.37.)
+Docs only — no code, no `src/` change, no gate run. **The finding that justified landing them together:** #30's pinned tick order was not implementable, because `ERR-030-007` had been filed twice at two separate approvals — a defect neither approval could have seen alone. See VERSION HISTORY v1.37.)
 **Last Updated (prior):** July 26, 2026 (**Root-doc reconciliation — this file re-based on the actual repo
 state.** It had been pinned at July 14, 2026 and **26 specs**: twelve days and seventeen approved
 specs stale, still describing `SNAPSHOT_SCHEMA_VERSION` 15 (actual **18**) and still listing the
@@ -226,8 +224,7 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 
 **Summary (July 27, 2026):** `SPEC_INDEX.md` records **53 APPROVED / 0 IN REVIEW / 0 NOT STARTED — every spec in the registry is approved, and the specification phase is closed** —
 the Stage-0 set of 20, plus 23 Stage-1-forward and management-layer specs (#21–#34, #37, #38, and
-specs #40–#45, #49), plus the **ten promoted on July 27, 2026** (#53, #35, #46, #36, #54, #47, #48,
-#50, #51, #39), which emptied the pre-promotion backlog and were **approved the same day**, with their
+specs #40–#45, #49), plus the **ten promoted on July 27, 2026** (#53, #35, #46, #36, #54, #47, #48, #50, #51, #39), which emptied the pre-promotion backlog and were **approved the same day**, with their
 **23 back-props filed atomically**. A non-certifying Linux dotnet compile/test CI gate (`tools/dotnet-ci/`) compiles the entire `src/` tree
 and runs the full NUnit suite on every push; the quarantine list is empty.
 
