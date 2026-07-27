@@ -73,6 +73,15 @@ namespace TacticalDirector.MatchEngine
         /// §5-P1 KD-P1-3); mirrors the −1 sentinel convention (<see cref="NO_POSSESSION"/>).</summary>
         public const int NO_RESTART_TEAM = -1;
 
+        /// <summary>[FIXED] <c>CardIssuedEvent.CardKind</c> value for a caution. The wire encoding of
+        /// the card severity a foul draws; named here so an observer (Match Analytics #37) reads the
+        /// same source the producer writes from rather than carrying a private 0/1 literal.</summary>
+        public const byte CARD_KIND_YELLOW = 0;
+
+        /// <summary>[FIXED] <c>CardIssuedEvent.CardKind</c> value for a dismissal (straight red, or a
+        /// second yellow promoted by <c>ApplyCardAndCheckSentOff</c>).</summary>
+        public const byte CARD_KIND_RED = 1;
+
         /// <summary>[FIXED] Reason ordinal written into the Phase E PossessionChangedEvent (#17 ordinal
         /// 0x04) payload. Stage 0 has no possession-change reason taxonomy (a kick release, a first-touch
         /// gain, and an interception all surface only as a holder change), so the host emits a single

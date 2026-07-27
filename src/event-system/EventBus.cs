@@ -76,6 +76,27 @@ namespace TacticalDirector.EventSystem
         }
 
         /// <summary>
+        /// Copies this tick's Tier A/B records into <paramref name="dst"/> in FM-017-002 canonical
+        /// order — the KD-7 read-only per-tick ledger tap Match Analytics #37 §4.3 consumes.
+        ///
+        /// <para>Read-only by construction: it consumes no record, resets no per-tick state, and
+        /// contributes nothing to the digest, so an observed match ticks byte-identically to an
+        /// unobserved one (FR-AN-017). Allocates 0 bytes — <paramref name="dst"/> is pre-allocated
+        /// and reused.</para>
+        ///
+        /// <para><b>Call between <see cref="DrainTick"/> and <see cref="OnTickBoundary"/></b> (i.e.
+        /// inside the Snapshot phase). Called later, the tick's queue is already reset and this
+        /// captures nothing — the loss is silent because the bus cannot distinguish "no records" from
+        /// "asked too late", which is why the match engine owns the call site rather than the client.</para>
+        /// </summary>
+        /// <exception cref="ArgumentNullException"><paramref name="dst"/> is null.</exception>
+        public static void CaptureTickLedger(TickLedgerSnapshot dst)
+        {
+            if (dst == null) throw new ArgumentNullException(nameof(dst));
+            EventLedger.CaptureInto(dst);
+        }
+
+        /// <summary>
         /// Called at end of Snapshot phase (after SerializeLedger).
         /// Resets per-tick state: queue pointers, intraPhaseDrawIndex counters, and the
         /// Tier C publication-count table (FR-EVT-025 / §4.4.3).

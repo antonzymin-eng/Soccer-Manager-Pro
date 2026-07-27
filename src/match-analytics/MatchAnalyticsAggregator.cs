@@ -1,0 +1,414 @@
+// File:     src/match-analytics/MatchAnalyticsAggregator.cs
+// Created:  2026-07-27
+// Modified: 2026-07-27
+// Author:   —
+// Spec:     Match Analytics & Statistics #37 §3.1–§3.5 (KD-3), FR-AN-003..012 / 016..018,
+//           Code Standards #20
+// Purpose:  The KD-3 aggregation core: pumped once per engine tick over the read-only ledger tap and
+//           positional sample, it accumulates every statistic #37 can derive today and projects them
+//           into the #38 view models on demand.
+
+using System;
+using System.Collections.Generic;
+
+using UnityEngine;
+
+using TacticalDirector.EventSystem;
+
+namespace TacticalDirector.MatchAnalytics
+{
+    /// <summary>
+    /// Accumulates one match's statistics from the two read-only taps (§3.5).
+    ///
+    /// <para><b>Two cadences, and the difference matters (§3.5).</b> Event consumption is
+    /// <b>lossless</b> — a skipped tick loses that tick's goal / foul / card / restart outright, so
+    /// <see cref="ObserveTick"/> refuses a non-consecutive tick (F6) rather than silently
+    /// under-counting. The positional accrual is a frequency estimate, so it MAY stride
+    /// (<see cref="MatchAnalyticsConstants.TERRITORIAL_SAMPLE_STRIDE"/>); the stride lives inside
+    /// <see cref="ObserveTick"/>, which is still called every tick, so it never trips F6.</para>
+    ///
+    /// <para><b>Read-only (FR-AN-001 / FR-AN-017).</b> Nothing here calls a mutating engine method, so
+    /// the match digest is identical whether or not analytics run — the <c>match-viewer</c>
+    /// observer-neutrality precedent.</para>
+    ///
+    /// <para><b>Forward-compatible (F5).</b> A Tier A ordinal this aggregator does not recognize is
+    /// ignored, so landing a new producer (§7.2's deferred `ShotAttemptedEvent` and friends) never
+    /// breaks an un-extended #37 — it just does not count yet.</para>
+    ///
+    /// <para>Single-threaded: the sim thread that ticks the engine is the thread that pumps this.</para>
+    /// </summary>
+    public sealed class MatchAnalyticsAggregator
+    {
+        /// <summary>Possession bucket for "no settled holder" (F3) — dead-ball and contested time.</summary>
+        private const int LooseBucket = MatchAnalyticsConstants.TEAM_COUNT;
+
+        private const int PossessionBuckets = MatchAnalyticsConstants.TEAM_COUNT + 1;
+
+        // ── §3.2 per-team tallies ────────────────────────────────────────────────────────────────
+        private readonly int[] _goals         = new int[MatchAnalyticsConstants.TEAM_COUNT];
+        private readonly int[] _fouls         = new int[MatchAnalyticsConstants.TEAM_COUNT];
+        private readonly int[] _yellowCards   = new int[MatchAnalyticsConstants.TEAM_COUNT];
+        private readonly int[] _redCards      = new int[MatchAnalyticsConstants.TEAM_COUNT];
+        private readonly int[] _offsides      = new int[MatchAnalyticsConstants.TEAM_COUNT];
+        private readonly int[] _corners       = new int[MatchAnalyticsConstants.TEAM_COUNT];
+        private readonly int[] _throwIns      = new int[MatchAnalyticsConstants.TEAM_COUNT];
+        private readonly int[] _goalKicks     = new int[MatchAnalyticsConstants.TEAM_COUNT];
+        private readonly int[] _substitutions = new int[MatchAnalyticsConstants.TEAM_COUNT];
+
+        // ── §3.1 possession accrual ──────────────────────────────────────────────────────────────
+        private readonly long[] _possessionTicks = new long[PossessionBuckets];
+        private long _observedTicks;
+        private int  _currentHolderBucket = LooseBucket;
+
+        // ── §3.4 positional accrual ──────────────────────────────────────────────────────────────
+        private readonly long[] _territorialSamples = new long[MatchAnalyticsConstants.TEAM_COUNT];
+        private readonly int[][] _heatmapBins;
+        private long _positionalSamples;
+
+        // ── §3.2 location maps ───────────────────────────────────────────────────────────────────
+        private readonly List<StatPoint> _goalMap    = new List<StatPoint>();
+        private readonly List<StatPoint> _foulMap    = new List<StatPoint>();
+        private readonly List<StatPoint> _offsideMap = new List<StatPoint>();
+
+        // ── F6 lossless-pump enforcement ─────────────────────────────────────────────────────────
+        private bool  _hasObserved;
+        private ulong _lastObservedTick;
+
+        /// <summary>Creates an empty aggregator. Reusable only via a fresh instance — a match's
+        /// statistics are the whole state, so there is deliberately no Reset().</summary>
+        public MatchAnalyticsAggregator()
+        {
+            _heatmapBins = new int[MatchAnalyticsConstants.TEAM_COUNT][];
+            for (int t = 0; t < MatchAnalyticsConstants.TEAM_COUNT; t++)
+            {
+                _heatmapBins[t] = AdvancedStatline.NewHeatmapGrid();
+            }
+        }
+
+        /// <summary>Ticks observed so far — the denominator of every possession share.</summary>
+        public long ObservedTicks => _observedTicks;
+
+        /// <summary>
+        /// Consumes one engine tick: routes that tick's ledger records, accrues a possession tick, and
+        /// — on stride ticks — accrues the positional sample (§3.5).
+        /// </summary>
+        /// <param name="tap">This tick's Tier A/B records, in canonical order.</param>
+        /// <param name="sample">This tick's positional world state.</param>
+        /// <param name="currentTick">
+        /// The engine tick being observed. Must be exactly one more than the previous call's.
+        /// </param>
+        /// <exception cref="ArgumentNullException">Either tap is null.</exception>
+        /// <exception cref="InvalidOperationException">
+        /// F6 — <paramref name="currentTick"/> is not consecutive with the last observed tick. A gap
+        /// means the caller dropped a tick's records; counting on regardless would produce a statline
+        /// that looks plausible and is wrong, which is precisely what fail-loud exists to prevent.
+        /// </exception>
+        /// <exception cref="ArgumentOutOfRangeException">F1 — a record names an out-of-range agent.</exception>
+        /// <exception cref="ArgumentException">F2 — a sampled or recorded position is non-finite.</exception>
+        public void ObserveTick(ITickLedgerTap tap, IWorldStateSample sample, ulong currentTick)
+        {
+            if (tap == null) throw new ArgumentNullException(nameof(tap));
+            if (sample == null) throw new ArgumentNullException(nameof(sample));
+
+            RequireConsecutive(currentTick);
+
+            int recordCount = tap.RecordCount;
+            for (int i = 0; i < recordCount; i++)
+            {
+                RouteRecord(tap, sample, i);
+            }
+
+            // §3.1 — every observed tick is attributed to whoever holds the ball AFTER this tick's
+            // transitions, i.e. the holder in effect for the span this tick opens.
+            _possessionTicks[_currentHolderBucket]++;
+            _observedTicks++;
+
+            if (currentTick % (ulong)MatchAnalyticsConstants.TERRITORIAL_SAMPLE_STRIDE == 0UL)
+            {
+                AccruePositional(sample);
+            }
+        }
+
+        /// <summary>
+        /// Projects the accumulators into the #38 view models. Idempotent and side-effect-free — the
+        /// accumulators are not consumed, so a live HUD may call this every render frame (§3.5).
+        /// </summary>
+        public MatchAnalyticsResult Build()
+        {
+            return new MatchAnalyticsResult(
+                BuildStatline(0),
+                BuildStatline(1),
+                BuildAdvanced(0),
+                BuildAdvanced(1),
+                _goalMap.ToArray(),
+                _foulMap.ToArray(),
+                _offsideMap.ToArray());
+        }
+
+        // ── §3.5 F6 ──────────────────────────────────────────────────────────────────────────────
+
+        private void RequireConsecutive(ulong currentTick)
+        {
+            if (_hasObserved && currentTick != _lastObservedTick + 1UL)
+            {
+                throw new InvalidOperationException(
+                    "MatchAnalyticsAggregator.ObserveTick: tick " + currentTick +
+                    " is not consecutive with the last observed tick " + _lastObservedTick +
+                    ". Event consumption is lossless (#37 §3.5) — pump once per engine tick.");
+            }
+
+            _hasObserved      = true;
+            _lastObservedTick = currentTick;
+        }
+
+        // ── §3.2 routing ─────────────────────────────────────────────────────────────────────────
+
+        private void RouteRecord(ITickLedgerTap tap, IWorldStateSample sample, int index)
+        {
+            byte ordinal = tap.RecordOrdinal(index);
+
+            // Ordinals come from the live #17 registry rather than a local table of literals, so this
+            // switch cannot drift out of step with Appendix A.
+            if (ordinal == EventRegistry.GetOrdinal<PossessionChangedEvent>())
+            {
+                // §3.1 known handler — drives holder state, not a tally.
+                PossessionChangedEvent evt = tap.ReadRecord<PossessionChangedEvent>(index);
+                _currentHolderBucket = ResolveHolderBucket(sample, evt.NewHolder);
+                return;
+            }
+
+            if (ordinal == EventRegistry.GetOrdinal<GoalAwardedEvent>())
+            {
+                GoalAwardedEvent evt = tap.ReadRecord<GoalAwardedEvent>(index);
+                int team = RequireTeam(evt.ScoringTeam, "GoalAwardedEvent.ScoringTeam");
+                _goals[team]++;
+                _goalMap.Add(MakePoint(team, evt.BallPosition, "GoalAwardedEvent.BallPosition"));
+                return;
+            }
+
+            if (ordinal == EventRegistry.GetOrdinal<FoulCommittedEvent>())
+            {
+                FoulCommittedEvent evt = tap.ReadRecord<FoulCommittedEvent>(index);
+                int team = TeamOfAgent(sample, evt.Offender, "FoulCommittedEvent.Offender");
+                _fouls[team]++;
+                _foulMap.Add(MakePoint(team, evt.Location, "FoulCommittedEvent.Location"));
+                return;
+            }
+
+            if (ordinal == EventRegistry.GetOrdinal<CardIssuedEvent>())
+            {
+                CardIssuedEvent evt = tap.ReadRecord<CardIssuedEvent>(index);
+                int team = TeamOfAgent(sample, evt.Recipient, "CardIssuedEvent.Recipient");
+                if (evt.CardKind == MatchAnalyticsConstants.CARD_KIND_RED)
+                {
+                    _redCards[team]++;
+                }
+                else
+                {
+                    _yellowCards[team]++;
+                }
+                return;
+            }
+
+            if (ordinal == EventRegistry.GetOrdinal<OffsideCalledEvent>())
+            {
+                OffsideCalledEvent evt = tap.ReadRecord<OffsideCalledEvent>(index);
+                int team = RequireTeam(evt.Team, "OffsideCalledEvent.Team");
+                _offsides[team]++;
+                _offsideMap.Add(MakePoint(team, evt.Location, "OffsideCalledEvent.Location"));
+                return;
+            }
+
+            if (ordinal == EventRegistry.GetOrdinal<RestartAwardedEvent>())
+            {
+                RestartAwardedEvent evt = tap.ReadRecord<RestartAwardedEvent>(index);
+                int team = RequireTeam(evt.AwardedTeam, "RestartAwardedEvent.AwardedTeam");
+                switch (evt.RestartKind)
+                {
+                    case MatchAnalyticsConstants.RESTART_KIND_THROW_IN:  _throwIns[team]++;  break;
+                    case MatchAnalyticsConstants.RESTART_KIND_GOAL_KICK: _goalKicks[team]++; break;
+                    case MatchAnalyticsConstants.RESTART_KIND_CORNER:    _corners[team]++;   break;
+                    // Kick-off and None carry no statline column; ignored by design, not by omission.
+                }
+                return;
+            }
+
+            if (ordinal == EventRegistry.GetOrdinal<SubstitutionEvent>())
+            {
+                SubstitutionEvent evt = tap.ReadRecord<SubstitutionEvent>(index);
+                int team = RequireTeam(evt.Team, "SubstitutionEvent.Team");
+                _substitutions[team]++;
+                return;
+            }
+
+            // MatchPhaseChangedEvent and every future producer land here: recognized-as-unrecognized.
+            // F5 — ignoring the record is what lets a new Tier A event ship without a lockstep #37
+            // change (§7.2). It is NOT a silent failure: nothing #37 reports depends on it yet.
+        }
+
+        // ── §3.1 possession ──────────────────────────────────────────────────────────────────────
+
+        private static int ResolveHolderBucket(IWorldStateSample sample, int newHolder)
+        {
+            // F3 — no settled holder. Attributed to neither team (and NOT dropped: the loose bucket is
+            // what makes the three shares sum to 100 instead of silently inflating the two teams').
+            if (newHolder < 0)
+            {
+                return LooseBucket;
+            }
+
+            return TeamOfAgent(sample, newHolder, "PossessionChangedEvent.NewHolder");
+        }
+
+        // ── §3.4 positional ──────────────────────────────────────────────────────────────────────
+
+        private void AccruePositional(IWorldStateSample sample)
+        {
+            Vector2 ball = sample.BallPosition;
+            RequireFinite(ball, "IWorldStateSample.BallPosition");
+
+            // Territorial dominance = play in the OPPONENT's half. Team 0 attacks +x, so it is
+            // credited past the halfway line; everything else falls to team 1.
+            //
+            // NOTE (#37 §3.4): the spec's prose says "team 0 when x > L/2, team 1 when x < L/2" while
+            // the sentence after it requires the split to be TOTAL ("no double-count, no gap"). Those
+            // two cannot both hold at exactly x == L/2. Totality is the load-bearing property — it is
+            // what makes territorial%[0] + territorial%[1] == 100 — so the strict `>` decides and the
+            // halfway line itself falls to team 1. See ERR-037-002.
+            if (ball.x > MatchAnalyticsConstants.PITCH_LENGTH_M * 0.5f)
+            {
+                _territorialSamples[0]++;
+            }
+            else
+            {
+                _territorialSamples[1]++;
+            }
+
+            int agentCount = sample.AgentCount;
+            for (int i = 0; i < agentCount; i++)
+            {
+                Vector2 pos = sample.AgentPosition(i);
+                RequireFinite(pos, "IWorldStateSample.AgentPosition");
+
+                int team = RequireTeam(sample.AgentTeamId(i), "IWorldStateSample.AgentTeamId");
+                int bin  = HeatmapBin(pos);
+                if (bin >= 0)
+                {
+                    _heatmapBins[team][bin]++;
+                }
+            }
+
+            _positionalSamples++;
+        }
+
+        /// <summary>
+        /// Fixed-grid cell containing <paramref name="position"/>, or −1 when it lies off the pitch.
+        ///
+        /// <para>Off-pitch is dropped rather than clamped: an agent momentarily over the touchline is
+        /// not occupying the touchline cell, and clamping would pile the whole margin onto the edge
+        /// bins and make every heatmap look like it has hot rails. It is not an error either — the
+        /// engine's own on-pitch bound is a soft one.</para>
+        /// </summary>
+        private static int HeatmapBin(Vector2 position)
+        {
+            int col = (int)(position.x / MatchAnalyticsConstants.PITCH_LENGTH_M
+                            * MatchAnalyticsConstants.HEATMAP_COLS);
+            int row = (int)(position.y / MatchAnalyticsConstants.PITCH_WIDTH_M
+                            * MatchAnalyticsConstants.HEATMAP_ROWS);
+
+            if (position.x < 0f || position.y < 0f) return -1;
+            if (col < 0 || col >= MatchAnalyticsConstants.HEATMAP_COLS) return -1;
+            if (row < 0 || row >= MatchAnalyticsConstants.HEATMAP_ROWS) return -1;
+
+            return row * MatchAnalyticsConstants.HEATMAP_COLS + col;
+        }
+
+        // ── Projection ───────────────────────────────────────────────────────────────────────────
+
+        private MatchStatline BuildStatline(int team)
+        {
+            return new MatchStatline(
+                teamId:                 (byte)team,
+                goals:                  _goals[team],
+                possessionSharePercent: Percent(_possessionTicks[team], _observedTicks),
+                fouls:                  _fouls[team],
+                yellowCards:            _yellowCards[team],
+                redCards:               _redCards[team],
+                offsides:               _offsides[team],
+                corners:                _corners[team],
+                throwIns:               _throwIns[team],
+                goalKicks:              _goalKicks[team],
+                substitutions:          _substitutions[team]);
+        }
+
+        private AdvancedStatline BuildAdvanced(int team)
+        {
+            return new AdvancedStatline(
+                teamId:             (byte)team,
+                territorialPercent: Percent(_territorialSamples[team], _positionalSamples),
+                // F4 / KD-2 — no shot-origin producer exists, so there is no live xG and the flag says
+                // so rather than a zero pretending to be a measurement.
+                liveXgAvailable:    false,
+                xgSum:              0f,
+                heatmapBins:        _heatmapBins[team]);
+        }
+
+        /// <summary>
+        /// <paramref name="part"/> as a percentage of <paramref name="whole"/>, clamped into the
+        /// [0, 100] the view models require. A zero denominator (nothing observed yet) yields 0 —
+        /// a HUD asking before kickoff gets an honest zero, not a NaN the statline would refuse.
+        /// </summary>
+        private static float Percent(long part, long whole)
+        {
+            if (whole <= 0L) return 0f;
+            return Mathf.Clamp((float)(100.0d * part / whole), 0f, 100f);
+        }
+
+        // ── Gates (F1 / F2) ──────────────────────────────────────────────────────────────────────
+
+        private static int TeamOfAgent(IWorldStateSample sample, int agentId, string what)
+        {
+            if (agentId < 0 || agentId >= sample.AgentCount)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(agentId), agentId,
+                    what + " is outside [0, " + sample.AgentCount + ") — F1.");
+            }
+
+            return RequireTeam(sample.AgentTeamId(agentId), what + " → AgentTeamId");
+        }
+
+        private static int RequireTeam(int team, string what)
+        {
+            if (team < 0 || team >= MatchAnalyticsConstants.TEAM_COUNT)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(team), team, what + " is not a known team (0 or 1) — F1.");
+            }
+
+            return team;
+        }
+
+        private static StatPoint MakePoint(int team, Vector3 location, string what)
+        {
+            RequireFinite(new Vector2(location.x, location.y), what);
+            return new StatPoint((byte)team, location.x, location.y);
+        }
+
+        private static void RequireFinite(Vector2 v, string what)
+        {
+            // Negated compare so NaN fails closed (the project's NaN-gate convention).
+            if (!(float.IsFinite(v.x) && float.IsFinite(v.y)))
+            {
+                throw new ArgumentException(what + " is not finite (" + v + ") — F2.", what);
+            }
+        }
+    }
+}
+
+#region VersionHistory
+// | Version | Date       | Author | Notes                                                          |
+// | 1.0     | 2026-07-27 | —      | Initial creation (#37 T1): the KD-3 aggregation core — §3.1    |
+// |         |            |        | tick-weighted possession, the §3.2 routing table over the      |
+// |         |            |        | KD-7 tap, §3.4 territorial + heatmap binning, F1/F2/F3/F5/F6.  |
+#endregion

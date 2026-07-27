@@ -310,16 +310,7 @@ namespace TacticalDirector.EventSystem
             // Build sorted index list for Tier A/B slots only, then sort by FM-017-002 key.
             // AR-9 M-1: stackalloc capped at compile-time MAX_QUEUE_SORT_INTS.
             Span<int> sortBuf = stackalloc int[EventSystemConstants.MAX_QUEUE_SORT_INTS];
-            int sortCount = 0;
-            // AR-6 L-1: tier comparison uses DeterminismTier enum values rather than the
-            // magic literals 0/1 (FR-CS-016). #16 §3.2 owns the enum and its byte ordinals.
-            for (int s = 0; s < QueueCount; s++)
-            {
-                byte tier = EventRegistry.GetTier(SlotMeta[s].EventTypeOrdinal);
-                if (tier == (byte)DeterminismTier.TierA || tier == (byte)DeterminismTier.TierB)
-                    sortBuf[sortCount++] = s;
-            }
-            InsertionSort(sortBuf.Slice(0, sortCount));
+            int sortCount = BuildCanonicalOrder(sortBuf);
 
             for (int i = 0; i < sortCount; i++)
             {
@@ -345,6 +336,58 @@ namespace TacticalDirector.EventSystem
             dst[countOffset + 3] = (byte)(count >> 24);
 
             return offset;
+        }
+
+        /// <summary>
+        /// Fills <paramref name="dst"/> with this tick's Tier A/B slot indices in FM-017-002 canonical
+        /// order and returns the count. Extracted so <see cref="SerializeLedger"/> and
+        /// <see cref="CaptureInto"/> derive that order once instead of carrying two copies of it —
+        /// the digest bytes and the #37 observation tap must see the same record sequence, and a
+        /// second copy of the walk is exactly how they would drift apart.
+        /// </summary>
+        internal static int BuildCanonicalOrder(Span<int> dst)
+        {
+            int sortCount = 0;
+            // AR-6 L-1: tier comparison uses DeterminismTier enum values rather than the
+            // magic literals 0/1 (FR-CS-016). #16 §3.2 owns the enum and its byte ordinals.
+            for (int s = 0; s < QueueCount; s++)
+            {
+                byte tier = EventRegistry.GetTier(SlotMeta[s].EventTypeOrdinal);
+                if (tier == (byte)DeterminismTier.TierA || tier == (byte)DeterminismTier.TierB)
+                    dst[sortCount++] = s;
+            }
+            InsertionSort(dst.Slice(0, sortCount));
+            return sortCount;
+        }
+
+        // ── CaptureInto: the #37 KD-7 read-only observation tap ──────────────────────
+
+        /// <summary>
+        /// Copies this tick's Tier A/B records into <paramref name="dst"/> in FM-017-002 canonical
+        /// order. Purely read-only with respect to the ledger: it consumes nothing, resets nothing,
+        /// and touches neither <see cref="QueueCount"/> nor the digest — so a match being observed
+        /// ticks byte-identically to one that is not (#37 FR-AN-017).
+        ///
+        /// <para>Valid between <see cref="DrainTick"/> and <see cref="OnTickBoundary"/>; afterwards
+        /// <see cref="QueueCount"/> is 0 and this captures nothing.</para>
+        /// </summary>
+        internal static void CaptureInto(TickLedgerSnapshot dst)
+        {
+            dst.Clear();
+
+            Span<int> sortBuf = stackalloc int[EventSystemConstants.MAX_QUEUE_SORT_INTS];
+            int sortCount = BuildCanonicalOrder(sortBuf);
+
+            for (int i = 0; i < sortCount; i++)
+            {
+                int slotIndex = sortBuf[i];
+                ref EventSlotMeta meta = ref SlotMeta[slotIndex];
+                int slotOffset = slotIndex * EventSystemConstants.MaxEventSlotBytes;
+
+                dst.Append(
+                    meta.EventTypeOrdinal,
+                    new ReadOnlySpan<byte>(PayloadBuffer, slotOffset, meta.StructSize));
+            }
         }
 
         // ── OnTickBoundary: reset per-tick state ─────────────────────────────────────

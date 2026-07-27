@@ -240,7 +240,27 @@ namespace TacticalDirector.EventSystem
         {
         }
 
-        internal static byte GetOrdinal<T>() where T : struct => EventOrdinalCache<T>.Ordinal;
+        /// <summary>
+        /// Returns the Appendix A event-type ordinal for <typeparamref name="T"/>.
+        ///
+        /// <para>Public so an observer (Match Analytics #37) can branch on the ordinals a captured
+        /// ledger record carries without maintaining a parallel table of literals beside this
+        /// registry — the class of duplication that drifts silently once one side is edited.</para>
+        ///
+        /// <para>Returns <c>0</c> for a type that was never registered through the typed
+        /// <c>RegisterRow&lt;T&gt;</c> path. Ordinal 0 is not a valid Appendix A row (rows begin at
+        /// 0x01), so an unregistered type simply never matches a captured record rather than
+        /// aliasing onto a real one.</para>
+        /// </summary>
+        public static byte GetOrdinal<T>() where T : struct
+        {
+            // EventOrdinalCache<T> is a separate static-generic type, so reading it does NOT run this
+            // type's initializer (see the EnsureInitialized remarks above). Without this call a first
+            // caller reads 0 for every type and silently matches nothing — the static-init-order trap
+            // this project has now hit three times (EventRegistry v1.4, PerceptionConstants v1.2).
+            EnsureInitialized();
+            return EventOrdinalCache<T>.Ordinal;
+        }
 
         /// <summary>Returns the tier byte (0=A, 1=B, 2=C) for the given ordinal. §2.4.2.</summary>
         internal static byte GetTier(byte ordinal) => s_rows[ordinal].Tier;
