@@ -12,6 +12,7 @@
 using System.Collections.Generic;
 
 using NUnit.Framework;
+using UnityEngine;
 
 using TacticalDirector.DecisionTree;
 using TacticalDirector.DeterministicSim;
@@ -27,7 +28,11 @@ namespace TacticalDirector.MatchEngine
     {
         private const ulong MatchSeed   = 0x0123456789ABCDEFUL;
         private const int   TickCount   = 30;
-        private const int   NewHolder   = 5;   // an outfielder that gains possession
+        // §5.Z Phase H: a booted engine awards the kickoff to the home agent nearest the centre spot,
+        // which is roster 5. NewHolder must therefore NOT be 5, or "script a possession gain" would be a
+        // no-op against the boot award and the transition-vs-baseline control would compare two identical
+        // runs. Roster 4 is a different home outfielder.
+        private const int   NewHolder   = 4;   // an outfielder that gains possession (never the boot taker)
         private const int   OtherAgent  = 16;  // an unrelated agent (different team) — a control
 
         /// <summary>
@@ -46,9 +51,22 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>An EXECUTING DecisionTree state with a dispatched action — the only state from which
-        /// NotifyInterrupt is observable (OnInterrupt transitions only from EXECUTING; §8 §3.7.2 row 6).</summary>
+        /// NotifyInterrupt is observable (OnInterrupt transitions only from EXECUTING; §8 §3.7.2 row 6).
+        ///
+        /// The dispatched action is a CONTINUOUS one (MOVE_TO_POSITION). §5.Z Phase H added the
+        /// orchestrator's PASS/SHOOT completion sweep (ERR-008-015: a tree parked in EXECUTING on a
+        /// pass/shot whose executor is idle is released to IDLE), so parking on the default action —
+        /// whose Type is PASS, ordinal 0 — would now be undone by that sweep in the same tick, before the
+        /// interrupt could be observed. A movement action is exempt from the sweep by §3.7.2's
+        /// continuous-action rule, so it isolates the interrupt exactly as before.</summary>
         private static DecisionTreeState ExecutingState() =>
-            new DecisionTreeState(state: (int)DtState.EXECUTING, lastAction: default, hasDispatchedAction: true);
+            new DecisionTreeState(
+                state: (int)DtState.EXECUTING,
+                lastAction: new AgentAction(
+                    agentId: 0, type: ActionType.MOVE_TO_POSITION, targetAgentId: -1,
+                    targetPosition: Vector2.zero, passParams: default, shotParams: default,
+                    utilityScore: 0f, heartbeatTick: 0),
+                hasDispatchedAction: true);
 
         /// <summary>
         /// Builds an engine, optionally scripts a one-shot possession gain by <paramref name="newHolder"/>
@@ -59,6 +77,7 @@ namespace TacticalDirector.MatchEngine
         private static List<byte[]> RunWithTransition(ulong seed, int ticks, int newHolder)
         {
             var engine = new MatchEngine(seed);
+            // Overrides the §5.Z Phase H boot kickoff award, so tick 1's Resolve settles on THIS holder.
             engine.TestOnly_SetPossession(newHolder); // settles in tick 1's Resolve → one PossessionChangedEvent
             var chain = new List<byte[]>(ticks);
             for (int i = 0; i < ticks; i++)
@@ -94,11 +113,13 @@ namespace TacticalDirector.MatchEngine
         public void NoPossessionChange_PublishesNothing_AndInterruptsNoDecisionTree()
         {
             var engine = new MatchEngine(MatchSeed);
-            engine.TestOnly_SetDecisionTreeState(NewHolder, ExecutingState());
 
-            // No TestOnly_SetPossession: possession stays NO_POSSESSION == the boot-seeded previous holder,
-            // so the Resolve-phase diff finds no change and publishes no event. With no AI on tick 1, an
-            // untouched EXECUTING DecisionTree is the proof that no possession-changed event was delivered.
+            // §5.Z Phase H: tick 1 is no longer a no-change tick — Boot awards the kickoff, so the first
+            // Resolve settles that award and publishes loose → taker. Run it first, THEN park the tree and
+            // run a second tick in which possession genuinely does not move (tick 2 is not an AI stride
+            // either, so nothing else can touch a DecisionTree).
+            engine.RunTick();
+            engine.TestOnly_SetDecisionTreeState(NewHolder, ExecutingState());
             engine.RunTick();
 
             Assert.AreEqual(DtState.EXECUTING, engine.TestOnly_DtState(NewHolder),

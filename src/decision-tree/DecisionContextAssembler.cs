@@ -1,6 +1,7 @@
 // File:     src/decision-tree/DecisionContextAssembler.cs
 // Created:  2026-05-29
 // Modified: 2026-06-14 (audit AR-3 fix pass)
+// Modified: 2026-07-26 (bare -1 loose-ball literal → DecisionTreeConstants.NoPossessorAgentId)
 // Author:   —
 // Spec:     Decision Tree #8 §2.2.4, §3.1.1, Code Standards #20
 // Purpose:  Step 2 of the 6-step pipeline. Assembles DecisionContext from the validated
@@ -41,7 +42,7 @@ namespace TacticalDirector.DecisionTree
             bool agentHasBall = matchContext.PossessingAgentId == agentId;
 
             PossessionState possessedByTeam;
-            if (matchContext.PossessingAgentId == -1)
+            if (matchContext.PossessingAgentId == DecisionTreeConstants.NoPossessorAgentId)
             {
                 possessedByTeam = PossessionState.CONTESTED;
             }
@@ -183,4 +184,7 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   AgentPosition sanitised against non-finite components (SanitiseXy) so corrupt |
 // |         |            |        |   position cannot seed NaN into generated TargetPositions; possessor-team split |
 // |         |            |        |   reads DecisionTreeConstants.HomeSquadAgentCount (was a bare literal 11).      |
+// | 1.4     | 2026-07-26 | —      | Bare -1 loose-ball literal replaced with the named              |
+// |         |            |        |   DecisionTreeConstants.NoPossessorAgentId sentinel             |
+// |         |            |        |   (behaviour-identical).                                        |
 #endregion

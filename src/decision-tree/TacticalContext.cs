@@ -1,6 +1,7 @@
 // File:     src/decision-tree/TacticalContext.cs
 // Created:  2026-05-29
 // Modified: 2026-07-23
+// Modified: 2026-07-26 (ERR-008-014 — + LooseBallCollector routing field, host-designated)
 // Author:   —
 // Spec:     Decision Tree #8 §2.2.6, new §3.2/§7.7, Tactical Instructions #21 §3.2, Code Standards #20
 // Purpose:  Team tactical instructions delivered to each agent's Decision Tree.
@@ -102,6 +103,27 @@ namespace TacticalDirector.DecisionTree
         /// </summary>
         public bool SaveAvailable;
 
+        /// <summary>
+        /// ERR-008-014 (match-engine design note §5.Z Phase H): true only for the ONE agent per team the
+        /// host has designated to go and collect a loose ball that has come to rest. When set,
+        /// <c>OptionGenerator</c> emits the collect as the SOLE off-ball option, so the designated player
+        /// commits instead of dithering — the same robustness pattern, and for the same reason, as
+        /// <see cref="SaveAvailable"/> (an action that MUST happen cannot be left to out-score a
+        /// competitor under composure noise).
+        ///
+        /// <para>Designated by <c>MatchEngine.RunMechanicsAI</c> rather than derived per-agent inside the
+        /// tree, because the decision is a TEAM-level role assignment from team state — the same class as
+        /// Pressing AI (#13) choosing one primary presser from the whole team snapshot — and, load-bearing,
+        /// because the host is the only layer that knows which agents are SENT OFF. A tree deferring to
+        /// "the nearest teammate" from perception alone will defer to a red-carded player, who is never
+        /// dispatched an action and so never moves; measured, that re-created the ERR-030-014 deadlock
+        /// with the ball lying 4 m from a frozen sent-off agent that eleven teammates were all waiting
+        /// for.</para>
+        ///
+        /// <para>Zero value <c>false</c> = identity (this agent is not the collector).</para>
+        /// </summary>
+        public bool LooseBallCollector;
+
         // ── Formation Slot ────────────────────────────────────────────────────
 
         /// <summary>
@@ -142,6 +164,7 @@ namespace TacticalDirector.DecisionTree
                 DismarkIntensity   = DismarkIntensity.Off,
                 RestDefenseSufficient = true,
                 SaveAvailable      = false,
+                LooseBallCollector = false,
                 _formationSlot     = formationSlot,
                 HasMarkDirective   = false,
                 HasAttackIntent    = false
@@ -207,4 +230,9 @@ namespace TacticalDirector.DecisionTree
 // | 1.8     | 2026-07-23 | —      | #11/#10 (ERR-008-013): + SaveAvailable routing field (zero value false =    |
 // |         |            |        |   identity; Stage0Default seeds false). Set only by MatchEngine under the   |
 // |         |            |        |   EnableGkHeading flag; gates the DT-emitted SAVE (sole off-ball option).   |
+// | 1.9     | 2026-07-26 | —      | ERR-008-014 (match-engine §5.Z Phase H): + LooseBallCollector |
+// |         |            |        |   routing field (zero value false = identity), set by         |
+// |         |            |        |   MatchEngine.RunMechanicsAI for the ONE agent per team       |
+// |         |            |        |   designated to collect a resting loose ball. Host-designated |
+// |         |            |        |   because only the host knows who is sent off.                |
 #endregion

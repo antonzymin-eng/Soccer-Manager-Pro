@@ -7,6 +7,7 @@
 // Modified: 2026-07-17 (#27 T1 AR-4, doc-only — STAGE0_NEUTRAL_* stale ERR-007 TODOs retired: production-unconsumed since T1, retained as the KD-P7 neutral-equivalence references)
 // Modified: 2026-07-18 (#27 T3 — NO_ROSTER_CLUB_ID sentinel + SNAPSHOT_SCHEMA_VERSION 15 → 16, v16 per-team roster reference)
 // Modified: 2026-07-22 (GK #11 / Heading #10 engine integration Phase 1 — +6 [GT] Stage-0 save/header trigger constants; no schema change)
+// Modified: 2026-07-26 (§5.Z Phase H — [FIXED] FIRST_HALF_KICKOFF_TEAM + [DERIVED] SECOND_HALF_KICKOFF_TEAM + [GT] LooseBallPickupRadiusM; no schema change)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.3, Code Standards #20
 // Purpose:  Constant catalogue for the match-engine composition root. Stage 0 Phase A holds the
@@ -262,6 +263,20 @@ namespace TacticalDirector.MatchEngine
         /// allowance). Design note §6.</summary>
         public const int MAX_SUBSTITUTIONS_PER_TEAM = 5;
 
+        /// <summary>
+        /// [FIXED] Team id awarded the FIRST-half kickoff. Stage 0 has no coin toss (that draw would need
+        /// its own registered RNG stream and buys nothing yet), so the home side kicks off — a fixed
+        /// convention, not a tunable. Match Engine design note §5.Z (Phase H).
+        /// </summary>
+        public const int FIRST_HALF_KICKOFF_TEAM = 0;
+
+        /// <summary>
+        /// [DERIVED] Team id awarded the SECOND-half kickoff = the side that did not kick off the first
+        /// half (Laws of the Game, Law 8). Derived so the two can never drift to the same team.
+        /// Source constants: MatchEngineConstants.FIRST_HALF_KICKOFF_TEAM, MatchEngineConstants.TEAM_COUNT.
+        /// </summary>
+        public const int SECOND_HALF_KICKOFF_TEAM = (FIRST_HALF_KICKOFF_TEAM + 1) % TEAM_COUNT;
+
         #endregion
 
         #region Derived
@@ -410,6 +425,19 @@ namespace TacticalDirector.MatchEngine
         /// Mid-scale placeholder pending the Stage-1 config loader.
         /// </summary>
         public static readonly float FIRST_TOUCH_MIN_BALL_SPEED_M_S = Config.GetFloat("match-engine", "FIRST_TOUCH_MIN_BALL_SPEED_M_S", 0.5f);
+
+        /// <summary>
+        /// [GT] Host reach (m) within which an agent claims a loose ball that has come to REST — the
+        /// <see cref="MatchEngine"/> loose-ball pickup (design note §5.Z Phase H, KD-H3). Deliberately a
+        /// separate constant from <see cref="FIRST_TOUCH_ACCEPTANCE_RADIUS_M"/>: that gate is the reach at
+        /// which an INCOMING ball counts as arriving (a First Touch #4 event, whose control-quality model
+        /// is a function of incoming velocity), whereas this is the reach at which a player standing over
+        /// a still ball simply has it. The two mechanics are disjoint by construction — pickup requires a
+        /// ball BELOW <see cref="FIRST_TOUCH_MIN_BALL_SPEED_M_S"/>, first touch requires it at or above —
+        /// so no ball can satisfy both, and they are tunable independently. Mid-scale placeholder pending
+        /// the Stage-1 config loader.
+        /// </summary>
+        public static readonly float LooseBallPickupRadiusM = Config.GetFloat("match-engine", "LooseBallPickupRadiusM", 1.0f);
 
         /// <summary>
         /// [GT] Minimum <c>ContactForceData.ForceMagnitude</c> (N) for a FROM_BEHIND agent-agent
@@ -610,4 +638,11 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | HeaderTriggerMinBallHeightM / HeaderTriggerPowerIntent /        |
 // |         |            |        | GkSaveTriggerRangeM / GkSaveTriggerMinBallSpeedMps /            |
 // |         |            |        | SaveTriggerClutchFirmness). No SNAPSHOT_SCHEMA_VERSION change.  |
+// | 1.26    | 2026-07-26 | —      | §5.Z Phase H possession bootstrap: + [FIXED]                    |
+// |         |            |        |   FIRST_HALF_KICKOFF_TEAM, + [DERIVED]                          |
+// |         |            |        |   SECOND_HALF_KICKOFF_TEAM (derived so the two halves cannot    |
+// |         |            |        |   drift to the same side, Law 8), + [GT]                         |
+// |         |            |        |   LooseBallPickupRadiusM (the KD-H3 pickup reach, deliberately   |
+// |         |            |        |   separate from FIRST_TOUCH_ACCEPTANCE_RADIUS_M). No             |
+// |         |            |        |   SNAPSHOT_SCHEMA_VERSION change.                               |
 #endregion

@@ -73,6 +73,65 @@ namespace TacticalDirector.DecisionTree.Tests
                     "SAVE must never be generated when a save is not available.");
         }
 
+        // ── ERR-008-014: the loose-ball collect is the sole off-ball option ───
+
+        [Test]
+        public void OffBallBranch_LooseBallCollector_YieldsExactlyOneInterceptOption()
+        {
+            // The designated collector must COMMIT. Measured on neutral attributes the collect scores
+            // ~0.35 against MOVE_TO_POSITION's ~0.21 — a gap of 0.14 that sits inside the +/-0.15
+            // composure-noise band, so leaving it to out-score the alternatives made the collector
+            // flip-flop between chasing the ball and returning to its slot, and play stopped with the
+            // ball lying untouched. Same must-happen shape, and same fix, as SAVE (AR-4).
+            DecisionContext ctx = BuildOffBallContext();
+            ctx.MatchContext.PossessingAgentId = DecisionTreeConstants.NoPossessorAgentId;
+            ctx.MatchContext.BallVelocity      = Vector3.zero;
+            ctx.TacticalContext.LooseBallCollector = true;
+
+            int count = OptionGenerator.GenerateOptions(in ctx, Buffer);
+
+            Assert.AreEqual(1, count, "The designated collector must have exactly one option.");
+            Assert.AreEqual(ActionType.INTERCEPT, Buffer[0].Type, "That sole option must be the collect.");
+            Assert.AreEqual(ctx.MatchContext.BallPosition, Buffer[0].TargetPosition,
+                "The collect targets the authoritative ball position — the host designated from ground " +
+                "truth, so a stale perceived position could send the collector to the wrong place.");
+        }
+
+        [Test]
+        public void OffBallBranch_NotTheCollector_GeneratesTheOrdinaryOffBallSet()
+        {
+            // Identity: an agent that is not the designated collector is unaffected, so a match in which
+            // no ball is ever loose-and-at-rest behaves exactly as it did pre-Phase-H.
+            DecisionContext ctx = BuildOffBallContext();
+            ctx.MatchContext.PossessingAgentId = DecisionTreeConstants.NoPossessorAgentId;
+            ctx.MatchContext.BallVelocity      = Vector3.zero;
+            // LooseBallCollector defaults false (Stage0Default).
+
+            int count = OptionGenerator.GenerateOptions(in ctx, Buffer);
+
+            bool hasMove = false;
+            for (int i = 0; i < count; i++)
+                if (Buffer[i].Type == ActionType.MOVE_TO_POSITION) { hasMove = true; break; }
+            Assert.IsTrue(hasMove, "A non-collector keeps its ordinary off-ball options.");
+        }
+
+        [Test]
+        public void InterceptNotGenerated_WhenSlowBallIsPossessed()
+        {
+            // The §3.1.9.1 minimum-ball-speed gate's real purpose, restated: teammates must not converge
+            // on a ball their own carrier is standing over (a carried ball is also slow). Chasing an
+            // opponent's carrier is PRESS's job. Only the LOOSE case is exempt, and it routes through the
+            // collector short-circuit above rather than through this path.
+            DecisionContext ctx = BuildOffBallContext();   // PossessingAgentId = 15 (possessed)
+            ctx.MatchContext.BallVelocity = Vector3.zero;
+
+            int count = OptionGenerator.GenerateOptions(in ctx, Buffer);
+
+            for (int i = 0; i < count; i++)
+                Assert.AreNotEqual(ActionType.INTERCEPT, Buffer[i].Type,
+                    "A slow POSSESSED ball must not generate an intercept.");
+        }
+
         // ── UT-03: No PASS when no visible teammates ──────────────────────────
 
         [Test]

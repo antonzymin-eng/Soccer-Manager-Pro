@@ -46,7 +46,17 @@ namespace TacticalDirector.MatchEngine
             BallState ball = engine.TestOnly_BallSnapshot;
             Assert.AreEqual(MatchEngineConstants.KickoffBallXM, ball.Position.x, 1e-4f);
             Assert.AreEqual(MatchEngineConstants.KickoffBallYM, ball.Position.y, 1e-4f);
-            Assert.AreEqual(MatchEngineConstants.NO_POSSESSION, engine.TestOnly_PossessingAgentId);
+
+            // §5.Z Phase H (KD-H1): the second-half kickoff is TAKEN, by the side that did not kick off
+            // the first half (Law 8). Pre-Phase-H this asserted NO_POSSESSION.
+            int taker = engine.TestOnly_PossessingAgentId;
+            Assert.AreNotEqual(MatchEngineConstants.NO_POSSESSION, taker,
+                "The second-half kickoff must be awarded to a taker.");
+            Assert.AreEqual(MatchEngineConstants.SECOND_HALF_KICKOFF_TEAM, engine.AgentTeamId(taker),
+                "The team that did not kick off the first half restarts the second.");
+            Assert.AreNotEqual(MatchEngineConstants.FIRST_HALF_KICKOFF_TEAM,
+                MatchEngineConstants.SECOND_HALF_KICKOFF_TEAM,
+                "The two halves must be kicked off by different teams.");
 
             // Move the ball away, then re-check at a later tick — the guard must prevent a second reset.
             engine.TestOnly_SetBall(BallState.CreateAtPosition(new Vector3(80f, 50f, MatchEngineConstants.BALL_REST_HEIGHT_M)));
