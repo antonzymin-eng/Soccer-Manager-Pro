@@ -7,6 +7,7 @@
 //           territorial sample cadence, and the pitch geometry the xG angle term needs.
 
 using TacticalDirector.BallPhysics;
+using TacticalDirector.MatchEngine;
 
 namespace TacticalDirector.MatchAnalytics
 {
@@ -63,6 +64,27 @@ namespace TacticalDirector.MatchAnalytics
 
         /// <summary>[FIXED] Team count — two. Mirrors the engine's own squad model.</summary>
         public const int TEAM_COUNT = 2;
+
+        // ── Record encodings the §3.2 routing table branches on ──────────────────────────────────
+        // Mirrored rather than re-declared: the producer's own catalogue is the authority, so a
+        // future re-encoding fails to compile here instead of silently re-labelling every card and
+        // restart in the statline.
+
+        /// <summary>[CROSS] <c>CardIssuedEvent.CardKind</c> value for a dismissal. Authoritative
+        /// source: <c>MatchEngineConstants.CARD_KIND_RED</c> (§3.2 card routing).</summary>
+        public const byte CARD_KIND_RED = MatchEngineConstants.CARD_KIND_RED;
+
+        /// <summary>[CROSS] <c>RestartAwardedEvent.RestartKind</c> value for a throw-in. Authoritative
+        /// source: Ball Physics #1 <c>RestartType.ThrowIn</c>.</summary>
+        public const byte RESTART_KIND_THROW_IN = (byte)RestartType.ThrowIn;
+
+        /// <summary>[CROSS] <c>RestartAwardedEvent.RestartKind</c> value for a goal kick.
+        /// Authoritative source: Ball Physics #1 <c>RestartType.GoalKick</c>.</summary>
+        public const byte RESTART_KIND_GOAL_KICK = (byte)RestartType.GoalKick;
+
+        /// <summary>[CROSS] <c>RestartAwardedEvent.RestartKind</c> value for a corner. Authoritative
+        /// source: Ball Physics #1 <c>RestartType.Corner</c>.</summary>
+        public const byte RESTART_KIND_CORNER = (byte)RestartType.Corner;
     }
 }
 

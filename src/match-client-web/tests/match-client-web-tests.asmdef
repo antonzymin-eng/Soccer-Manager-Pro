@@ -1,0 +1,26 @@
+{
+    "name": "TacticalDirector.MatchClientWeb.Tests",
+    "rootNamespace": "TacticalDirector.MatchClientWeb.Tests",
+    "references": [
+        "TacticalDirector.MatchClientWeb",
+        "TacticalDirector.MatchClientCore",
+        "TacticalDirector.UiFramework",
+        "TacticalDirector.MatchAnalytics",
+        "TacticalDirector.MatchViewer",
+        "TacticalDirector.MatchEngine",
+        "TacticalDirector.TacticalInstructions",
+        "TacticalDirector.PlayerDatabase",
+        "TacticalDirector.DeterministicSim"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

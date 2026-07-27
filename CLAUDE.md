@@ -1,6 +1,61 @@
 # CLAUDE.md — Tactical Director
 
 > **Created:** March 26, 2026, 11:00 PM PST
+> **Last Updated:** July 27, 2026, latest same day (**TRACK C PHASE B IS COMPLETE — B3, B4 and B6
+> landed and `PM-1` (a playable match) is REACHED.** A person can now open a browser on the running
+> client and watch a real match — live pitch, clock, score, period, restart captions — change a team's
+> mentality / pressing / passing and see it queued and applied on a tick boundary, substitute, pause /
+> resume / run at 1–10×, and read live statistics that keep serving after full time. **B3 (#37 T1)** is
+> the read-only per-tick ledger tap: a `TickLedgerSnapshot` the engine fills in the Snapshot phase,
+> **after `SerializeLedger` and before the bus resets the tick — the only moment the records both exist
+> and are identified with a tick** — copying rather than indexing the process-static ring, so
+> "current-tick scoped" is structural rather than documentary, and sized from `EventQueueCapacity` so
+> overflow is impossible by construction. It reuses `SerializeLedger`'s own canonical-order walk
+> (extracted to `EventLedger.BuildCanonicalOrder`), so the digest bytes and the observer cannot drift
+> apart; and the §3.2 routing table branches on `EventRegistry.GetOrdinal<T>()` rather than a local
+> ordinal table, so it cannot fall out of step with Appendix A. **`GetOrdinal` now calls
+> `EnsureInitialized()` first** — `EventOrdinalCache<T>` is a separate static-generic type, so a first
+> caller would otherwise read 0 for every type and silently match nothing: the static-init-order trap
+> this project has now hit three times. Surfaced **ERR-037-002** — §3.4 states the territorial split as
+> two strict inequalities and then requires it to be **total**; both cannot hold at exactly `x == L/2`,
+> which is not a limit case but where a kickoff parks the ball for many consecutive ticks. **B4 built
+> two of its three items and refused the third:** `FrameInterpolator` (speed-aware alpha, because at 3×
+> the same wall-clock covers three times the simulated time; and **snap-not-smooth across a
+> discontinuity** — a restart teleports the ball, a substitution swaps who occupies a roster slot, and
+> blending either draws a glide where the truth is a jump) and `FollowBallCamera` (dead-zone trailing,
+> `1 − e^(−rate·dt)` **proven** frame-rate-independent by step subdivision rather than asserted, and a
+> clamp that CENTRES when the view is wider than the pitch instead of returning whichever crossed bound
+> compared last). The third, a live-stats accumulator, **is #37's aggregator** — a second one would be
+> the parallel-surface trap. **B6's finding is that the obvious implementation was the wrong one:**
+> extending `LiveMatchServer` would have given the spectator surface a mutation channel, which is
+> exactly what ERR-038-001 and the interactive-client AR-1 H-2 rejected — the streamer holds the engine
+> and that server holds no engine reference *by construction*. So the mutating surface is a new
+> host-free assembly `src/match-client-web/` **above** `match-client-core`, with three routes carrying
+> three privileges (reads change nothing; `/playback` changes *when* ticks happen, never what is in
+> them, so it never enters the replay log; `/intent` alone mutates, and only through the tick-stamped
+> `ManagerCommandQueue`) — each asserted against the command queue rather than by inspection. Router
+> and transport are separate types, so every routing decision is a pure function under test and the
+> socket code decides nothing. It also needed a genuinely **new seam**: #37's every-tick contract cannot
+> ride the pre-tick hook, which is set-once, already taken by the command drain, and also fires from
+> `ServiceOnce()` where no tick advances — so `LiveMatchStreamer` gains a read-only
+> `SetPostTickObserver` that **disarms and latches** its first exception rather than killing the sim
+> thread (the pacing loop does not guard `TickOnce`, and a derived statistic must not be able to end a
+> match — nor be swallowed, since a frozen report reads as merely stale). Governed by the new
+> `docs/tracking/browser-match-client-design.md`. **Then the two mechanical layer guards failed, and
+> correctly:** both `NoOtherAssemblyReferencesMatchAnalytics` and `NoOtherAssemblyReferencesTheUiFramework`
+> were written as *"nothing references me"* while the invariant each names is *"no **sim** assembly
+> references me"* — the first legitimate consumer exposed the gap. Narrowed to a sanctioned-consumer
+> allow-list **plus** an explicit never-reference list naming every sim assembly, so growing the
+> allow-list to quiet a red test still fails: **stricter than before, not looser.** **Full dotnet gate:
+> PASSED, 0 failures** (match-analytics 24 → 54, match-client-core 22 → 45, new match-client-web 34).
+> **What PM-1 does NOT claim:** it is a statement about the client, not about the match it shows — the
+> engine's goal rate still runs ~4.7× football's and its home/away asymmetry ~50× football's home
+> advantage (§5.Z.11/§5.Z.15), both unchanged and neither blocking. Three PM-1 surfaces are
+> deliberately thin and recorded rather than dropped: team selection is `MatchSetup` in code (a
+> new-game screen is roadmap C4), `SetPlayerTactic` returns **501** rather than assembling a per-agent
+> tactic from ten defaults the manager never chose, and the post-match report is the live statistics
+> panel continuing after full time rather than a dedicated screen. **Next: Phase C — #44 discipline,
+> then the season and new-game screens; the objective is PM-2.** Prior entry below.)
 > **Last Updated:** July 27, 2026, later same day (**Documentation sync pass — no code, no spec, no gate
 > run.** Reconciled the root docs against two code landings that shipped earlier the same day (both on
 > `path-to-playable-roadmap.md` Track C/S and already recorded there and in `spec-error-log.md`, but never
@@ -1103,6 +1158,8 @@ Do not infer the mapping from the folder name:
 | `project-constants` | — | Shared `[GT]` config; read-only by all |
 | `match-engine` | — | **Composition root.** Not a numbered spec; governed by `docs/tracking/match-engine-design.md` |
 | `match-viewer`, `match-client-core`, `match-client-unity` | — | Presentation tooling / client seams; not numbered specs |
+| `match-analytics` | **#37** Match Analytics & Statistics | Presentation-layer derivation; no sim assembly may reference it |
+| `match-client-web` | — | **The PM-1 browser match client** (roadmap B6). Not a numbered spec; governed by `docs/tracking/browser-match-client-design.md`. The only assembly above BOTH `ui-framework` and `match-analytics` |
 
 **Rules:**
 - Each spec folder contains ONLY current-version files. No version suffixes in filenames. Git tracks history.

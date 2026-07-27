@@ -1304,6 +1304,51 @@ Governed by `docs/tracking/ui-framework-t0-implementation-plan.md`.
 
 ---
 
+### `src/match-analytics/` — Match Analytics & Statistics #37 (T0 July 27, 2026; T1 same day, roadmap B3)
+
+Presentation-layer derivation. Read-only over two taps (FR-AN-002); no sim assembly may reference it
+(KD-4, scanned mechanically). Registers no RNG stream, domain tag or `SubsystemOrdinal` (KD-5).
+
+| File | Purpose |
+|------|---------|
+| `match-analytics.asmdef` | `TacticalDirector.MatchAnalytics`; references EventSystem + MatchEngine + BallPhysics (the BallPhysics ref is ERR-037-001's resolution — Appendix A's `[CROSS]` tags require it) |
+| `MatchAnalyticsConstants.cs` | Appendix A: xG `[GT]` coefficients, pitch `[CROSS]` mirrors, heatmap grid, sample stride, and the card / restart record encodings mirrored from their producers |
+| `MatchStatline.cs` / `AdvancedStatline.cs` / `StatPoint.cs` / `MatchAnalyticsResult.cs` | The four immutable #38 view models; arrays copied, never wrapped; F1/F2/F4 gated at construction |
+| `XgLocationModel.cs` | The KD-2 pure two-term geometric model (shape is the contract, coefficients are `[GT]`) |
+| `ITickLedgerTap.cs` | **T1** — the KD-7 per-tick ledger seam (both sides specified, so the §3.2 routing table is drivable from authored records) |
+| `IWorldStateSample.cs` | **T1** — the §3.4 positional sample seam; narrower than the engine's observation surface on purpose |
+| `MatchEngineObservation.cs` | **T1** — the live-engine adapter implementing both seams (read-only forwards) |
+| `MatchAnalyticsAggregator.cs` | **T1** — the KD-3 core: §3.1 tick-weighted possession with an explicit loose bucket, the §3.2 routing table keyed on `EventRegistry.GetOrdinal<T>()`, §3.4 territorial + heatmap binning, F1/F2/F3/F4/F5/F6 |
+| `Tests/match-analytics-tests.asmdef` | `TacticalDirector.MatchAnalytics.Tests` (Editor-only) |
+| `Tests/XgLocationModelTests.cs` | T-AN-XG-* — the three §3.3 worked examples + the shape properties a Stage-2 refit must preserve |
+| `Tests/MatchAnalyticsValueTypeTests.cs` | View-model gates + the KD-4 reverse-reference scan (narrowed at B6 to a sanctioned-consumer allow-list **plus** an explicit never-reference list) |
+| `Tests/MatchAnalyticsAggregatorTests.cs` | **T1** — the §3.2 routing table row by row, possession weighting, §3.4 totality incl. the halfway-line boundary (ERR-037-002), Build idempotence/snapshot semantics, every failure mode |
+| `Tests/MatchAnalyticsObserverNeutralityTests.cs` | **T1** — T-AN-NEU-001 (digest unchanged, with a non-vacuity guard) + T-AN-DET-001 two-run determinism over a real match |
+
+---
+
+### `src/match-client-web/` — the PM-1 browser match client (roadmap B6, July 27, 2026)
+
+Not a numbered spec. Governed by `docs/tracking/browser-match-client-design.md`. The only assembly
+above BOTH `ui-framework` and `match-analytics`; host-free and CI-gated. Deliberately separate from
+`match-viewer`'s `LiveMatchServer`, whose playback-only invariant it must not weaken (ERR-038-001).
+
+| File | Purpose |
+|------|---------|
+| `match-client-web.asmdef` | `TacticalDirector.MatchClientWeb`; references MatchClientCore + UiFramework + MatchAnalytics + MatchViewer + MatchEngine + TacticalInstructions + ProjectConstants + DeterministicSim |
+| `MatchClientWebConstants.cs` | `[GT]` port, poll cadences, canvas scale, restart-caption window; `[FIXED]` request-line bound |
+| `MatchClientHost.cs` | KD-W1/W4 composition: `MatchSession` + the #38 projection + the intent dispatcher + the live #37 aggregator, pumped by a sim-thread post-tick observer under an analytics lock |
+| `MatchClientResponse.cs` | KD-W6 — the router/transport seam value |
+| `MatchClientRouter.cs` | KD-W2/W3/W7 — the four routes and their privilege split; #38 frame + #37 report serialization; fail-loud parsing incl. the `Enum.IsDefined` guard |
+| `MatchClientPage.cs` | KD-W9 — the self-contained page (pitch, HUD, playback, tactics, statistics); renders the view model, reads pitch geometry from the streamer |
+| `MatchClientServer.cs` | KD-W8 — loopback-only transport; decides nothing, delegates every route |
+| `tests/match-client-web-tests.asmdef` | `TacticalDirector.MatchClientWeb.Tests` (Editor-only) |
+| `tests/MatchClientRouterTests.cs` | Routing table + the privilege split asserted against the command queue + fail-loud parsing |
+| `tests/MatchClientHostTests.cs` | The every-tick pump over a really-running match (F6 self-checks it), `ServiceOnce` not advancing it, the disarm-and-latch fault path, intent delivery |
+| `tests/MatchClientServerTests.cs` | Real-loopback framing, routing, request-line bound, post-`Stop` refusal, rebind |
+
+---
+
 ### Season Save (`src/season-save/`) — unified season save-file root (not a numbered spec; `unified-season-save-design.md`)
 
 | File | Purpose |
