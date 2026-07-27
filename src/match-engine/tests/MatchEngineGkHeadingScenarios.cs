@@ -220,7 +220,10 @@ namespace TacticalDirector.MatchEngine
         // flag-off engine committed (expected false).
         private static bool FlagOffCommitsUnderStimulus(ulong seed, TriggerKind kind)
         {
-            var engine = new MatchEngine(seed);   // no EnableGkHeading()
+            // §5.Z.15 flipped the default to ON, so the contrast must now switch it OFF explicitly.
+            // The predicate itself is unchanged and still non-vacuous: the same stimulus commits above.
+            var engine = new MatchEngine(seed);
+            engine.DisableGkHeading();
             int agent = kind == TriggerKind.Header ? FirstOutfieldAgent(engine) : -1;
 
             for (int i = 0; i < 2 * DeterministicSimConstants.AI_PHASE_STRIDE; i++)

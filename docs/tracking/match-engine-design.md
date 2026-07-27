@@ -1176,6 +1176,165 @@ attacking third 40 m and the middle third 30 m. Both bounds now derive from the 
 on attacking direction at all — the same duplication being removed one level up. Measured
 behaviour-neutral over two 9-minute composed runs.
 
+### 5.Z.13 Contact rate (July 27, 2026) — §5.Z.9's recorded finding CLOSED, and its diagnosis refuted
+
+§5.Z.9 recorded the contact stream as "not football" and named two suspects: "#12 agent spacing or #3's
+60° `BehindDotThreshold` cone". Measured first (`MatchBalanceDiagnostic_ReportsContactStream`, which
+counts every agent-agent contact by type and cross-team-ness AND samples the pairwise-separation
+distribution once a second), **both are wrong**:
+
+| | Before | After | 
+|---|---|---|
+| agent-agent contacts | 94–112 / s | **2.5 / s** |
+| cross-team FROM_BEHIND | 26.6–58.2 / s | **0.5 / s** |
+| ticks with ≥1 qualifying | 35.9–70.9 % | **0.8 %** |
+| agent pairs closer than 0.85 m (the combined hitbox) | 1.3–1.5 % | 1.5 % — **unchanged** |
+| agent pairs ≥ 3 m apart | 97.5 % | 97.6 % — **unchanged** |
+
+Agents are **≥ 3 m apart 97.5% of the time** and only ~3.4 of the 231 pairs are touching at any instant.
+Spacing was never the problem, and neither was the cone. `ProcessAgentAgent` emitted a fresh
+`CollisionEvent` **every physics tick a pair overlapped** — so two players leaning on each other for one
+second produced sixty "contacts". ~3.4 sustained overlaps × 60 Hz is exactly the ~110/s observed.
+
+**The fix** is a contact-**onset** gate: a second `CollisionPairBitfield` records the pairs in contact on
+the previous tick, and a pair emits one event on the rising edge. The physical response — impulse,
+position correction, grounded/stumble — stays per-tick, because that is genuine physics and gating it
+would let agents sink into each other. Separating *the physics* from *the event* is the whole change.
+
+That set is the collision system's only cross-tick state, so it is captured through a new
+`CollisionContactState` carrier (the `PressingTickState` convention — typed carrier out, byte layout
+owned by the composition root) and serialized at **`SNAPSHOT_SCHEMA_VERSION` 18 → 19**. Without it a
+restore mid-contact would re-emit an onset the uninterrupted run had already spent.
+
+**The denominator moved, so the referee was re-calibrated**, exactly as §5.Z.9's own note instructed
+("if that contact rate changes, re-measure with `FoulRateDiagnosticTests`"). Left alone, 0.015 gave
+~0.4 fouls per 90 min. Re-measured on the committed ladder: 0.020 → 18, **0.030 → 24**, 0.040 → 35.
+`FoulCallProbability` 0.015 → **0.030**, and `match-engine-discipline-plausible` passes unchanged.
+Note the live-vs-sweep correction now runs the **opposite** way from §5.Z.9's: the sweep replays a stream
+generated at the near-zero shipped rate, so restoring fouls *adds* restarts, which stops play and lowers
+the contact count.
+
+**Recorded, not fixed:** 0.5 cross-team from-behind contacts/s is ~2700 per match, and ~3.4 pairs
+touching at any instant is perhaps 2–3× a real match. That residual *is* a #12/#3 balance question — but
+it is a factor of two, not the factor of fifty the per-tick re-emission was contributing.
+
+### 5.Z.14 The home/away scoring asymmetry (July 27, 2026) — §5.Z.11 item 1 CLOSED
+
+§5.Z.11 named the two candidates and the measurement that separates them: "the asymmetry either
+compounds over a FULL match or is specific to the `ConfigureSquads` path". `MatchBalanceDiagnostic`
+now runs **full 90-minute matches**, both configurations, attributing every column to the team it
+belongs to. Neither candidate survived: the asymmetry is present in **neutral** runs, present in
+**configured** runs, and present **from the first half** — so it is structural, and it does not compound.
+
+What the per-team columns showed is the whole diagnosis. Possession (1.8–2.4% each), passes (~700 each)
+and time in the third **each team attacks** (10–15% each) were **symmetric**. Two columns were not:
+
+- ball in the box each team attacks: team 0 **0.9–1.9%**, team 1 **0.2–0.4%**
+- ball x range: max **105.1–106.6** (past the goal line), min **2.1** — *the ball never reached x = 0*.
+
+Equal territory, one goal ever threatened. That is not a possession defect; it is an aiming defect.
+
+**Root cause — ERR-006-001.** `GoalGeometryProvider.Get()` returns `GoalLineX = PitchLength`
+unconditionally, and says so in its own doc: *"Assumes the attacking team is shooting toward
+X = PitchLength (right goal). Stage 1+ will supply attack direction from match context."* Nothing ever
+supplied it. `ShotPlacementResolver` is written to match, down to `Mathf.Max(baseAimDirection.x, ε)`.
+So **both teams shot at x = 105** — team 1 at the goal it defends, and any that went in were credited by
+the exit-half-space rule to team 0, inflating one side while zeroing the other. Decision Tree #8 is
+correctly team-relative (`GetOpponentGoalCentre(teamId)`), which is why team 1 *decided* to shoot in the
+right places and then kicked the ball the wrong way. This is the ERR-008-002 / ERR-013-009 class again.
+
+**The fix is the mirror, not a second goal.** Per §5.Z.12 — "a pair has two places that must agree; a
+mirror has one" — `ShotWorldAdapter` now maps the away team's world state **into** #6's canonical
+attack-+X frame on the way in (`MirrorPitchIfAway` for the position, `MirrorVelocityIfAway` for velocity
+and facing) and maps the resulting kick back **out** on `ApplyKick`. The mirror is a 180° rotation about
+Z, so the same negate-x-y rule is correct for velocity and for spin (a proper rotation transforms a
+pseudovector exactly as it transforms a vector). Every APPROVED #6 formula, constant and test is
+untouched, and the boundary sits in the composition root that already owns team-relativity.
+
+| | Before | After |
+|---|---|---|
+| scorelines (4 full matches) | 6–0, 10–0, 2–0, 3–0 | **6–6, 12–5, 2–6, 11–10** |
+| team 1 goals | **0** | 5, 5, 6, 10 |
+| ball min x | 2.1 | **−2.4** (crosses the goal line) |
+
+Team 1 now scores in every match and wins one.
+
+### 5.Z.15 Goalkeeper on, and mobile (July 27, 2026) — §5.Z.11 item 2
+
+Two things were true at once: Goalkeeper Mechanics **#11 was built, wired, snapshot-safe and switched
+OFF** (`EnableGkHeading`, default false, with "flip the default to on, take the digest rebaseline"
+recorded as its remaining work), and **keepers could not move** — §5.Z.10 fixed the *spawn* but left the
+note that the Physics phase skips goalkeepers, so boot placement was the keeper's position for ninety
+minutes. Every match was played without a keeper who could either attempt a save or close an angle.
+
+Both are now on. The default flips to ON (`DisableGkHeading()` added for the tests and hosts that want
+the old path), and `RunPhysicsPhase` drives each keeper through the **same** per-agent
+`AgentMovementSystem.Update` the batch seam calls. No new locomotion model was needed: the Decision Tree
+already runs for keepers and dispatches `MOVE_TO_POSITION` at the #12-composed GK slot, which
+`ComputeGkSlot` makes a function of ball position — only the integration was missing. #2's documented
+batch contract is untouched, and #11 keeps what is genuinely its own: the dive, the save, the claim.
+
+**Flipping the default surfaced a real wiring gap**, which is roadmap C5 exactly as predicted: the
+engine boots the Pass/Shot/DecisionTree `EventBusRegistrar`s but never the Heading/Goalkeeper ones, so
+the first mistimed header threw `ERR_EVT_UNREGISTERED_ORDINAL` out of `EmitFailedAttempt`. Invisible
+while the flag was off, because the publish path had never run. Both registrars now boot alongside the
+other three.
+
+**Goal rate — improved, NOT closed, and the honest number is the one below.** Over the same four full
+matches: **14.5 goals per match with the keeper absent → 12.75 with the keeper on and mobile.** Against
+football's ~2.7 that is still ~4.7×.
+
+Two things are worth stating plainly rather than rounding away. First, §5.Z.11's ~10× was measured on
+an engine where one side could not score at all; fixing that (§5.Z.14) *raised* the goal count before
+any of this lowered it, so "10× → 4.7×" is not a like-for-like improvement and should not be read as
+one. Second, an intermediate measurement of this work looked far better (≈ 4.25 per match) and was
+wrong: one of the four matches was stalled by §5.Z.16's keeper defect and was suppressing goals. The
+number above is post-fix and is the one to believe.
+
+So the item §5.Z.11 named — "flip #11 on, plus GK locomotion" — is now **done**, and it was worth doing
+(a keeper that can neither dive nor move is not a keeper), but it was not sufficient. What remains is
+the quality of the save, not its existence: the Stage-0 `SaveIntent` trigger is a conservative
+world-state heuristic, `GoalkeeperDiveKinematics` is a synthetic Stage-0 dive, and nothing narrows an
+angle or comes for a cross. **Recorded as the next lever on the goal rate**, ahead of further shot or
+finishing tuning — tuning the shooter against a keeper this rudimentary would fit the finishing model
+to the keeper's deficiencies.
+
+### 5.Z.16 The keeper stall, found by the same measurement pass
+
+Making the keeper a live, mobile agent gave it something it never had: the ability to **win**
+possession. Nothing in the engine could make it give the ball back up — #11's distribution is not
+engine-driven, and the Decision Tree has no keeper-distribution action. Measured with a GK-possession
+column added to the same driver, one of four full matches stalled: **team 1's keeper held the ball for
+33.5% of the second half** (0.0–0.1% in the three healthy matches), with the ball parked in one box and
+passes collapsing 358 → 117.
+
+**Two changes, and the measurement is what said the first one alone was not enough.** The Laws' own
+answer — **Law 12's six-second rule** — went in first: on expiry possession is cleared, leaving the ball
+at rest at the keeper's feet, exactly the state `RunLooseBallPickup` already handles. Re-measured, the
+stall barely moved: **33.5% → 33.4%**. The keeper was not holding one long possession; it was being
+*re-designated* as the loose-ball collector every time, because the collector is "this team's nearest
+agent to the ball" and for a ball sitting in a team's own six-yard box that is always the keeper. The
+defect was re-acquisition, not hold duration.
+
+So the keeper is also **never the designated loose-ball collector**. A keeper claiming a ball that
+*arrives* is untouched — that is First Touch #4 and #11's save, and it is what a keeper is for; what is
+removed is sending the keeper to fetch a ball that has come to rest, which is not a thing keepers do.
+Re-measured: **GK possession 0.0–0.1% across all four matches**, every match plays out, and the
+suppressed match's scoreline recovers from 1–0 to 12–6.
+
+Both are kept. The six-second rule is correct football and a genuine backstop; the collector exclusion
+is what actually closed this stall. No new physics and no invented distribution model: when #11's
+distribution becomes engine-driven it replaces the rule's body, not its trigger. `GkMaxHoldTicks` is
+`[DERIVED]` from `GK_MAX_HOLD_SECONDS` — a Law, not a balance lever. Serialized at v19 with the
+collision contact set, since a restore with a zeroed counter hands a keeper a fresh six seconds.
+
+**The rule is a backstop, and the tests say so.** Measured, healthy play has a keeper distribute after
+~54 ticks, well inside the 360 — so a composed run never reaches the release branch. Locking it needed
+two tests, not one: the branch itself driven through a `TestOnly_` seam (or the code that exists solely
+to break the stall would itself be untested — the never-compiled-surface trap), plus the invariant over
+composed play that the hold counter never exceeds the cap, with an explicit non-vacuity assertion that
+the run actually put the ball in a keeper's hands.
+
 ### 5.Z.8 What this unblocks
 
 `PM-1` ("watch a match") is no longer blocked by the engine. Roadmap **A4a** — the round-resolution

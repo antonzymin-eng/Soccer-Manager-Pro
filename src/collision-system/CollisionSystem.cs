@@ -31,6 +31,13 @@ namespace TacticalDirector.CollisionSystem
         private CollisionPairBitfield _processedPairs;
         private DeterministicRNG _rng;
 
+        // Contact-ONSET tracking (§3.4.1 — see the AGENT_AGENT emit gate in ProcessAgentAgent).
+        // A pair that stays in contact emits ONE CollisionEvent, on the tick the contact begins,
+        // not one per tick for as long as the overlap lasts. These are the ONLY cross-tick fields
+        // in this class, so they are the whole of its serializable state (CaptureContactState).
+        private CollisionPairBitfield _contactPairsThisTick;
+        private CollisionPairBitfield _contactPairsPrevTick;
+
         private readonly CollisionEvent[] _eventBuffer;
         private int _eventCount;
 
@@ -84,6 +91,28 @@ namespace TacticalDirector.CollisionSystem
             _pendingImpactForce = new float[n];
             _snapshots = new AgentPhysicalProperties[n];
             _snapshotValid = new bool[n];
+        }
+
+        /// <summary>
+        /// Captures the system's complete cross-tick state — the set of agent pairs in contact as of
+        /// the last <see cref="UpdateCollisions"/> call, which the contact-ONSET emit gate compares
+        /// the next tick against. Every other field is either injected, per-frame scratch cleared at
+        /// the top of <see cref="UpdateCollisions"/>, or reconstructed from the frame seed, so this is
+        /// provably the whole of the serializable surface.
+        /// </summary>
+        public CollisionContactState CaptureContactState()
+        {
+            _contactPairsThisTick.CaptureWords(out ulong w0, out ulong w1, out ulong w2, out ulong w3);
+            return new CollisionContactState(w0, w1, w2, w3);
+        }
+
+        /// <summary>
+        /// Restores the state captured by <see cref="CaptureContactState"/>, so a match resumed from a
+        /// snapshot mid-contact does not re-emit an onset event for a contact that was already open.
+        /// </summary>
+        public void RestoreContactState(in CollisionContactState state)
+        {
+            _contactPairsThisTick.RestoreWords(state.Word0, state.Word1, state.Word2, state.Word3);
         }
 
         /// <summary>
@@ -144,6 +173,10 @@ namespace TacticalDirector.CollisionSystem
             ulong frameSeed = matchSeed ^ (ulong)frameNumber ^ ((ulong)frameNumber << 32);
             _rng = new DeterministicRNG(frameSeed);
             _processedPairs.Clear();
+            // Roll the contact-onset window forward: what was in contact this tick becomes the
+            // previous tick's set, and the new set accumulates as the narrow phase confirms pairs.
+            _contactPairsPrevTick = _contactPairsThisTick;
+            _contactPairsThisTick.Clear();
             _eventCount = 0;
 
             // Clear per-frame output arrays.
@@ -366,9 +399,29 @@ namespace TacticalDirector.CollisionSystem
                 InstigatorPlayingBall = false
             };
 
-            RecordEvent(matchTime, CollisionType.AGENT_AGENT, id1, id2,
-                new Vector3(manifold.ContactPoint.x, manifold.ContactPoint.y, 0f),
-                response.ImpactForce, foulData);
+            // Contact-ONSET emit gate. The physical response above runs every tick the overlap
+            // persists — that is genuine physics and must not be gated, or agents would sink into
+            // each other. The EVENT is different: a CollisionEvent means "a contact happened", and
+            // two players leaning on each other for one second is ONE contact, not sixty.
+            //
+            // Measured before this gate (docs/tracking/match-engine-design.md §5.Z.13): 94-112
+            // agent-agent contact events per second, while only ~1.4% of the 231 agent pairs were
+            // within the ~0.84 m combined hitbox at any instant and agents were >= 3 m apart 97.5%
+            // of the time. The stream was not agents barging into each other; it was the same few
+            // sustained overlaps re-emitting at 60 Hz. §5.Z.9 had recorded the suspects as "#12
+            // agent spacing or #3's 60-degree BehindDotThreshold cone" — the separation histogram
+            // refutes both, and this is the actual producer.
+            int lo = id1 < id2 ? id1 : id2;
+            int hi = id1 < id2 ? id2 : id1;
+            bool wasInContact = _contactPairsPrevTick.IsSet(lo, hi);
+            _contactPairsThisTick.Set(lo, hi);
+
+            if (!wasInContact)
+            {
+                RecordEvent(matchTime, CollisionType.AGENT_AGENT, id1, id2,
+                    new Vector3(manifold.ContactPoint.x, manifold.ContactPoint.y, 0f),
+                    response.ImpactForce, foulData);
+            }
 
             return true;
         }
