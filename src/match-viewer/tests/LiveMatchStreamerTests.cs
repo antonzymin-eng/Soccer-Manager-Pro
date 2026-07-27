@@ -1,6 +1,7 @@
 // File:     src/match-viewer/tests/LiveMatchStreamerTests.cs
 // Created:  2026-07-15
-// Modified: 2026-07-15
+// Modified: 2026-07-27 (P1: the hand-built full-time frame carries the P1 fields. Cue/latch coverage
+//           lives in its own fixture — LiveMatchFrameCueTests.)
 // Author:   —
 // Spec:     Interactive match view (docs/tracking/interactive-match-view-design.md), Testing Strategy #19 (unit layer), Code Standards #20
 // Purpose:  Contract tests for LiveMatchStreamer: latest-frame handoff, observer neutrality
@@ -84,7 +85,13 @@ namespace TacticalDirector.MatchViewer.Tests
             Assert.IsFalse(streamer.IsPaused);
 
             var endedFrame = new LiveMatchFrame(
-                1UL, Vector3.zero, -1, new Vector2[MatchEngineConstants.SQUAD_SIZE], 0, 0, matchEnded: true);
+                1UL, Vector3.zero, -1, new Vector2[MatchEngineConstants.SQUAD_SIZE], 0, 0, matchEnded: true,
+                agentCues:         new LiveAgentCue[MatchEngineConstants.SQUAD_SIZE],
+                substitutionsUsed: new int[MatchEngineConstants.TEAM_COUNT],
+                period:            MatchPeriod.FullTime,
+                lastRestart:       RestartCue.None,
+                lastRestartTeam:   MatchEngineConstants.NO_RESTART_TEAM,
+                lastRestartTick:   0UL);
             streamer.ApplyCapturedFrame(endedFrame);
 
             Assert.IsTrue(streamer.IsPaused, "MatchEnded must auto-pause the streamer.");

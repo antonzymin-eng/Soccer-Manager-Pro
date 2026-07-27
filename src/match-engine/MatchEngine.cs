@@ -32,7 +32,10 @@
 //           latches + both orchestrators' in-flight arrays via CaptureState/RestoreState seams), making a
 //           flag-on engine snapshot-safe. The Phase-1 durable-capture fail-loud guard is removed.)
 // Modified: 2026-07-23 (DT-emitted goalkeeper SAVE (ERR-008-013) + AR follow-up TestOnly_SaveCommittedForGk latch seam)
-// Modified: 2026-07-26 (§5.Z Phase H possession bootstrap — ERR-030-014: ApplyRestart(position, awardedTeam) + SelectRestartTaker (KD-H1), the boot kickoff award, RunLooseBallPickup (KD-H3), SelectLooseBallCollector (KD-H5), the Resolve PASS/SHOOT completion sweep (KD-H4 / ERR-008-015), and interrupt deferral while an executor is in flight. No schema change. See docs/tracking/match-engine-design.md §5.Z)
+// Modified: 2026-07-27 (P1 richer observation frame — interactive-unity-client-design.md §5-P1: the
+//           per-agent discipline/substitution accessors, the derived CurrentPeriod, and the within-tick
+//           restart cue; ApplyRestart gains a RestartCue (KD-P1-4). No schema change.)
+// Modified (prior): 2026-07-26 (§5.Z Phase H possession bootstrap — ERR-030-014: ApplyRestart(position, awardedTeam) + SelectRestartTaker (KD-H1), the boot kickoff award, RunLooseBallPickup (KD-H3), SelectLooseBallCollector (KD-H5), the Resolve PASS/SHOOT completion sweep (KD-H4 / ERR-008-015), and interrupt deferral while an executor is in flight. No schema change. See docs/tracking/match-engine-design.md §5.Z)
 // Modified: 2026-07-26 (§5.Z.12: boot placement collapsed to ONE own-half template mirrored for the away side — the HomeLineXM/AwayLineXM and HOME_/AWAY_FACING_DEG pairs are gone, along with FacingFromHeading. Away lateral spread mirrors, so digests move; behaviour is transient (the AI reslots outfielders at tick 6).)
 // Modified: 2026-07-26 (§5.Z.10 kickoff keeper placement: a keeper spawns on the goal line it DEFENDS, centred on the mouth, instead of on the outfield kickoff line — Stage-0 Physics skips GK locomotion, so boot placement stood for the whole match and both goals were unguarded. See docs/tracking/match-engine-design.md §5.Z.10)
 // Modified: 2026-07-26 (§5.Z.9 foul/discipline balance pass: referee-call probability partitioned out of the single card-severity draw (KD-F1/KD-F2), no-call arms no cooldown (KD-F3), strongest-wins candidate capture (KD-F4), + the TestOnly collision-observer measurement seam. No schema change. See docs/tracking/foul-discipline-balance-design.md)
@@ -448,6 +451,16 @@ namespace TacticalDirector.MatchEngine
         private bool  _aiPhaseRanThisTick;
         private ulong _aiPhaseRunCount;
 
+        // P1 (interactive-unity-client-design.md §5-P1, KD-P1-3) — the restart applied during the
+        // CURRENT tick, for the presentation layer's HUD. Reset in RunInputPhase alongside
+        // _aiPhaseRanThisTick and written by ApplyRestart, so this is within-tick state, NOT
+        // cross-tick state: there is nothing here for the snapshot to carry, and the
+        // SerializeWorldState exclusion proof needs no new class. The cross-tick memory a HUD wants
+        // ("hold the banner for ~2 s") is latched by LiveMatchStreamer, which has no determinism
+        // obligations. No gameplay path reads either field.
+        private RestartCue _restartAppliedThisTick;
+        private int        _restartAwardedTeamThisTick;
+
         // ── Profiler markers ──────────────────────────────────────────────────────────
 
         private static readonly ProfilerMarker s_runTickMarker = new ProfilerMarker("MatchEngine.RunTick");
@@ -660,6 +673,13 @@ namespace TacticalDirector.MatchEngine
 
             _secondHalfStarted = false;
             _matchEnded        = false;
+
+            // P1 KD-P1-3 — the pre-first-tick value of the restart cue. RunInputPhase re-establishes
+            // this every tick, but a caller may observe a booted engine before the first RunTick, and
+            // the awarded-team field's zero default would otherwise read as "team 0" while the cue
+            // says None. Set here so "no restart" is a single coherent answer from boot onward.
+            _restartAppliedThisTick     = RestartCue.None;
+            _restartAwardedTeamThisTick = MatchEngineConstants.NO_RESTART_TEAM;
 
             // GK (#11) / Heading (#10) engine integration (gk-heading-engine-integration-design.md §3.1,
             // Phase 1). Construct both orchestrators + their stateless ball/RNG adapters, and register the
@@ -1178,11 +1198,7 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         public void SetTeamTactic(int teamId, in TeamTactic tactic)
         {
-            if (teamId < 0 || teamId >= MatchEngineConstants.TEAM_COUNT)
-            {
-                throw new System.ArgumentOutOfRangeException(
-                    nameof(teamId), teamId, "teamId must be 0 (home) or 1 (away).");
-            }
+            GuardTeamId(teamId);
             _pendingTeamTactics[teamId] = tactic;
         }
 
@@ -1231,11 +1247,7 @@ namespace TacticalDirector.MatchEngine
                 throw new System.InvalidOperationException(
                     "SubstitutePlayer: the match has ended (full time) — no further substitutions.");
             }
-            if (teamId < 0 || teamId >= MatchEngineConstants.TEAM_COUNT)
-            {
-                throw new System.ArgumentOutOfRangeException(
-                    nameof(teamId), teamId, "teamId must be 0 (home) or 1 (away).");
-            }
+            GuardTeamId(teamId);
             if (outSlotIndex < 0 || outSlotIndex >= MatchEngineConstants.SQUAD_SIZE)
             {
                 throw new System.ArgumentOutOfRangeException(
@@ -1499,11 +1511,7 @@ namespace TacticalDirector.MatchEngine
         /// <param name="profileOrdinal">Appendix A.2 archetype ordinal (AI mode; ignored for Human).</param>
         public void ConfigureManager(int teamId, ManagerMode mode, byte profileOrdinal = 0)
         {
-            if (teamId < 0 || teamId >= MatchEngineConstants.TEAM_COUNT)
-            {
-                throw new System.ArgumentOutOfRangeException(
-                    nameof(teamId), teamId, "teamId must be 0 (home) or 1 (away).");
-            }
+            GuardTeamId(teamId);
             if (mode != ManagerMode.Human && mode != ManagerMode.AI)
             {
                 throw new System.ArgumentOutOfRangeException(
@@ -1783,6 +1791,98 @@ namespace TacticalDirector.MatchEngine
 
         /// <summary>True once full time has fired (see <see cref="CheckMatchFlowTransitions"/>); AI/Physics/Resolve are frozen but the tick/snapshot loop keeps advancing.</summary>
         public bool MatchEnded => _matchEnded;
+
+        // ── P1 richer observation frame (interactive-unity-client-design.md §5-P1) ─────
+        // Read-only value copies in the same shape as AgentTeamId / AgentIsGoalkeeper above
+        // (KD-P1-1): the engine exposes scalars, and the presentation layer does the aggregating.
+        // Nothing below adds state to the engine except the two within-tick restart fields
+        // (KD-P1-3), so there is no SNAPSHOT_SCHEMA_VERSION change on this surface.
+
+        /// <summary>Yellow cards currently held by roster <paramref name="index"/> (0 or 1 — a second
+        /// yellow is promoted to a sending-off, and a substitution resets the slot's count).</summary>
+        public int AgentYellowCards(int index)
+        {
+            GuardRosterIndex(index);
+            return _yellowCards[index];
+        }
+
+        /// <summary>True when roster <paramref name="index"/> has been sent off. A sent-off agent stays a
+        /// physical body (collision/perception) but is excluded from every participation surface.</summary>
+        public bool AgentIsSentOff(int index)
+        {
+            GuardRosterIndex(index);
+            return _isSentOff[index];
+        }
+
+        /// <summary>The bench slot currently occupying pitch slot <paramref name="index"/>, or −1 when the
+        /// original starter is still on. A non-negative value is what a View draws a "substituted on"
+        /// marker from.</summary>
+        public int AgentBenchSlot(int index)
+        {
+            GuardRosterIndex(index);
+            return _activeBenchSlot[index];
+        }
+
+        /// <summary>Substitutions <paramref name="teamId"/> has used, in
+        /// [0, <c>MAX_SUBSTITUTIONS_PER_TEAM</c>].</summary>
+        public int SubstitutionsUsed(int teamId)
+        {
+            GuardTeamId(teamId);
+            return _substitutionsUsed[teamId];
+        }
+
+        /// <summary>
+        /// Which period of the match the clock is in (KD-P1-2). DERIVED per call from the two
+        /// transition flags <c>CheckMatchFlowTransitions</c> already owns and already serializes — no
+        /// new state, nothing added to the snapshot.
+        /// <para>It reports which transitions have <b>fired</b> rather than re-deriving them from
+        /// <see cref="CurrentTick"/> against <c>HALF_TIME_BOUNDARY_TICK</c>. That keeps the boundary rule
+        /// in exactly one place (a second copy of it is the parallel-surface trap), and it means the
+        /// reported period can never disagree with what the engine actually did — including after a
+        /// restore, since both flags round-trip through the payload.</para>
+        /// <para>Note there is no <c>HalfTime</c> value: the Stage-0 halves model has no interval
+        /// (FR-TP-019) — the ball is reset at the boundary and play continues on the next tick.</para>
+        /// </summary>
+        public MatchPeriod CurrentPeriod
+        {
+            get
+            {
+                if (_matchEnded)        { return MatchPeriod.FullTime; }
+                if (_secondHalfStarted) { return MatchPeriod.SecondHalf; }
+                return MatchPeriod.FirstHalf;
+            }
+        }
+
+        /// <summary>
+        /// The restart applied during the tick just run, or <see cref="RestartCue.None"/> (KD-P1-3).
+        /// <para><b>This is a WITHIN-TICK value</b>, cleared at the top of the next tick's Input phase —
+        /// the same lifecycle as <see cref="DidAiPhaseRunLastTick"/>. It is deliberately not latched
+        /// here: cross-tick memory of the last restart is the presentation layer's job
+        /// (<c>LiveMatchStreamer</c>), which keeps this off the snapshot entirely. A consumer that
+        /// samples less often than every tick will miss restarts, which is exactly why the streamer
+        /// latches on every tick and serves the latched value.</para>
+        /// <para>The boot kickoff is applied before the first tick and so is never reported here.
+        /// Tick 0 at 0–0 is unambiguously kickoff without a cue.</para>
+        /// </summary>
+        public RestartCue RestartAppliedThisTick => _restartAppliedThisTick;
+
+        /// <summary>Team (0/1) awarded the restart reported by <see cref="RestartAppliedThisTick"/>, or
+        /// <see cref="MatchEngineConstants.NO_RESTART_TEAM"/> (−1) when that is
+        /// <see cref="RestartCue.None"/>.</summary>
+        public int RestartAwardedTeam => _restartAwardedTeamThisTick;
+
+        /// <summary>Public-surface team-id guard (parallel to <see cref="GuardRosterIndex"/>). Shared by
+        /// <see cref="SetTeamTactic"/>, <see cref="SubstitutePlayer"/>, <see cref="ConfigureManager"/> and
+        /// <see cref="SubstitutionsUsed"/> — extracted when P1 would otherwise have added a fourth
+        /// verbatim copy of the same three lines. Message text is unchanged from those copies.</summary>
+        private static void GuardTeamId(int teamId)
+        {
+            if (teamId < 0 || teamId >= MatchEngineConstants.TEAM_COUNT)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(teamId), teamId, "teamId must be 0 (home) or 1 (away).");
+            }
+        }
 
         /// <summary>
         /// The match-seeded deterministic RNG owned by the composition root. Phase A registers
@@ -2173,6 +2273,10 @@ namespace TacticalDirector.MatchEngine
             // Reset per-tick observation state (the AI phase may or may not run this tick).
             _aiPhaseRanThisTick = false;
 
+            // P1 KD-P1-3: same lifecycle — a restart is reported only for the tick it was applied on.
+            _restartAppliedThisTick     = RestartCue.None;
+            _restartAwardedTeamThisTick = MatchEngineConstants.NO_RESTART_TEAM;
+
             // MatchClock.Advance() has already run inside RunTick, so CurrentTick is the tick
             // being processed (design note §2.4).
             EventBus.BeginTick((uint)_clock.CurrentTick);
@@ -2207,7 +2311,8 @@ namespace TacticalDirector.MatchEngine
                 // first half (Law 8), i.e. the away team — the boot kickoff is awarded to team 0.
                 ApplyRestart(
                     new Vector2(MatchEngineConstants.KickoffBallXM, MatchEngineConstants.KickoffBallYM),
-                    awardedTeam: MatchEngineConstants.SECOND_HALF_KICKOFF_TEAM);
+                    awardedTeam: MatchEngineConstants.SECOND_HALF_KICKOFF_TEAM,
+                    cue: RestartCue.KickOff);
 
                 var evt = new MatchPhaseChangedEvent(newPhase: 0, homeScore: _goals[0], awayScore: _goals[1]);
                 EventBus.Publish(in evt);
@@ -3389,7 +3494,7 @@ namespace TacticalDirector.MatchEngine
                 // Design note §5: throw-in / corner / goal-kick.
                 Vector2 ballXY = new Vector2(_ball.Position.x, _ball.Position.y);
                 (Vector2 position, int awardedTeam) = RestartResolver.Resolve(restart, ballXY, lastTouchTeam);
-                ApplyRestart(position, awardedTeam);
+                ApplyRestart(position, awardedTeam, ToRestartCue(restart));
 
                 var restartEvt = new RestartAwardedEvent(
                     restartKind: (byte)restart,
@@ -3417,7 +3522,26 @@ namespace TacticalDirector.MatchEngine
             // the CONCEDING team per Law 8 — the side that did not score restarts.
             ApplyRestart(
                 new Vector2(MatchEngineConstants.KickoffBallXM, MatchEngineConstants.KickoffBallYM),
-                awardedTeam: 1 - scoringTeam);
+                awardedTeam: 1 - scoringTeam,
+                cue: RestartCue.KickOff);
+        }
+
+        /// <summary>
+        /// P1 KD-P1-5 — maps the Ball Physics boundary-exit classification onto the presentation
+        /// <see cref="RestartCue"/>. Total over the four non-<c>None</c> members; <c>None</c> is
+        /// unreachable here (the caller returns early on it) and maps to <see cref="RestartCue.None"/>
+        /// rather than throwing, since this is observation state and must never be able to abort a tick.
+        /// </summary>
+        private static RestartCue ToRestartCue(RestartType restart)
+        {
+            switch (restart)
+            {
+                case RestartType.KickOff:  return RestartCue.KickOff;
+                case RestartType.ThrowIn:  return RestartCue.ThrowIn;
+                case RestartType.GoalKick: return RestartCue.GoalKick;
+                case RestartType.Corner:   return RestartCue.Corner;
+                default:                   return RestartCue.None;
+            }
         }
 
         /// <summary>
@@ -3446,14 +3570,27 @@ namespace TacticalDirector.MatchEngine
         /// agents-keep-positions minimalism this primitive already documented — so a taker may be some
         /// metres from the restart spot when they play it. A real restart ceremony (walk-to-ball, wall
         /// set-up, the taker's two-touch restriction) is Stage 1+.</para>
+        ///
+        /// <para><b>P1 KD-P1-4 — every restart declares its kind.</b> <paramref name="cue"/> is recorded
+        /// for the current tick only (<see cref="RestartAppliedThisTick"/>), so the presentation layer can
+        /// caption the restart. It has no gameplay effect whatsoever: nothing in the engine reads it back,
+        /// and the field is cleared at the top of the next tick. Requiring it as a parameter rather than
+        /// inferring it here is the same discipline KD-H1 applied to <paramref name="awardedTeam"/> — an
+        /// untyped restart reaching this primitive would be reported to a View as whatever the previous
+        /// restart was.</para>
         /// </summary>
         /// <param name="position">Restart position for the ball (pitch plane, m).</param>
         /// <param name="awardedTeam">Team id (0/1) awarded the restart; its nearest eligible agent takes it.</param>
-        private void ApplyRestart(Vector2 position, int awardedTeam)
+        /// <param name="cue">What kind of restart this is. Observation only — never read by gameplay.</param>
+        private void ApplyRestart(Vector2 position, int awardedTeam, RestartCue cue)
         {
             _ball = BallState.CreateAtPosition(new Vector3(
                 position.x, position.y, MatchEngineConstants.BALL_REST_HEIGHT_M));
             _possessingAgentId = SelectRestartTaker(position, awardedTeam);
+
+            // P1 KD-P1-3 — within-tick observation state; see the field declaration.
+            _restartAppliedThisTick     = cue;
+            _restartAwardedTeamThisTick = awardedTeam;
         }
 
         /// <summary>
@@ -3723,7 +3860,7 @@ namespace TacticalDirector.MatchEngine
 
             // Free kick to the victim's team at the foul location (design note §3); §5.Z Phase H awards
             // the taker to that team.
-            ApplyRestart(victimPos, awardedTeam: _teamIds[victim]);
+            ApplyRestart(victimPos, awardedTeam: _teamIds[victim], cue: RestartCue.FreeKick);
         }
 
         /// <summary>
@@ -4168,7 +4305,7 @@ namespace TacticalDirector.MatchEngine
             EventBus.Publish(in evt);
 
             // Indirect free kick to the DEFENDING team (§5.Z Phase H awards it a taker).
-            ApplyRestart(toucherPos, awardedTeam: defendingTeam);
+            ApplyRestart(toucherPos, awardedTeam: defendingTeam, cue: RestartCue.FreeKick);
             return true;
         }
 
@@ -7303,4 +7440,23 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | the AI reslots outfielders at the first stride and the keeper is |
 // |         |            |        | placed explicitly. Removing the trig also strengthens the        |
 // |         |            |        | determinism property FacingFromHeading special-cased for.        |
+// | 1.49    | 2026-07-27 | —      | P1 richer observation frame (interactive-unity-client-design    |
+// |         |            |        | §5-P1). Public: AgentYellowCards / AgentIsSentOff /             |
+// |         |            |        | AgentBenchSlot / SubstitutionsUsed (KD-P1-1, the AgentTeamId    |
+// |         |            |        | value-copy shape), CurrentPeriod (KD-P1-2 — derived from the    |
+// |         |            |        | already-serialized _matchEnded / _secondHalfStarted, so the     |
+// |         |            |        | HALF_TIME_BOUNDARY_TICK rule keeps exactly one reader), and     |
+// |         |            |        | RestartAppliedThisTick / RestartAwardedTeam. The latter two     |
+// |         |            |        | are WITHIN-TICK fields reset in RunInputPhase beside            |
+// |         |            |        | _aiPhaseRanThisTick (KD-P1-3), so they are not cross-tick       |
+// |         |            |        | state, the SerializeWorldState exclusion proof needs no new     |
+// |         |            |        | class, and there is NO SNAPSHOT_SCHEMA_VERSION change; the      |
+// |         |            |        | cross-tick latch a HUD needs lives in LiveMatchStreamer.        |
+// |         |            |        | ApplyRestart gains a RestartCue so every restart site declares  |
+// |         |            |        | its kind (KD-P1-4, the KD-H1 discipline for the awarded team);  |
+// |         |            |        | ToRestartCue maps Ball Physics' ordinal-stable RestartType      |
+// |         |            |        | rather than widening it (KD-P1-5). Also: the three verbatim     |
+// |         |            |        | inline teamId guards in SetTeamTactic / SubstitutePlayer /      |
+// |         |            |        | ConfigureManager collapsed into GuardTeamId (message text       |
+// |         |            |        | unchanged) rather than adding a fourth copy.                    |
 #endregion
