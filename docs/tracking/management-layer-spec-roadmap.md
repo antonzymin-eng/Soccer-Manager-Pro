@@ -13,6 +13,23 @@
 > **Governance note:** Candidate numbers here are **proposed, not reserved** — per `SPEC_INDEX.md`'s
 > own rule, registry rows (and the RESERVED-section reservation) land only when a design supplement
 > opens. Nothing in this file changes `SPEC_INDEX.md`.
+>
+> **Status note (July 27, 2026, later same day): the roadmap's job is done — authoring AND approval.**
+> All ten of the last promotions advanced `IN REVIEW → APPROVED` the same day, with their back-props
+> filed atomically, so **every candidate in §1 backed by a supplement is now an APPROVED spec**
+> (`SPEC_INDEX.md`: 53 / 0 / 0). The only candidate still without a supplement is **#52** (Multiplayer
+> Transport), deliberately deferred behind the Stage-5 Fixed64 migration. **What remains is
+> implementation, not specification** — see `path-to-playable-roadmap.md`, which is the live critical
+> path. Original note below.
+>
+> **Status note (July 27, 2026): the roadmap's authoring job is done.** Every candidate in §1 that had a
+> converged design supplement has been promoted to an 11-file section set and now holds a
+> `SPEC_INDEX.md` registry row — the last ten (#53, #35, #46, #36, #54, #47, #48, #50, #51, #39) landed
+> together on July 27, 2026 at `Status: IN REVIEW`. **What remains is sign-off, not authoring:** each of
+> the ten has its G1 PASS-1 review closed and its G3 lead-developer R-01..R-05 sign-off open, which is a
+> human authority and not self-grantable. The one candidate still without a supplement is **#52**
+> (Multiplayer Transport), deliberately deferred to Wave 9 behind the Stage-5 Fixed64 migration — so the
+> waves below are now a **record of the order things were authored in**, not a plan for work outstanding.
 
 ---
 
@@ -526,4 +543,6 @@ candidate).
 | v0.3 | July 22, 2026 | Adversarial-review consistency pass over the roadmap + `spec-plans/`: §2 critical-path spine corrected to include #33 (matched §7/README); §7 intra-wave order set producer-before-consumer (Wave 4 → #31, #34, #32; Wave 6 → #35, #46, #36); **#49 localization split into a Wave-1 seam+template contract tier + Wave-8 content tier** (mirrors #38) so text producers bind to the seam as they land; §6 gained a determinism-block-headroom note (next free `0x2E`/96; reserve `0x2E`–`0x2F`/96–97 slack); §1 footnote updated (#38 + #49 both split; stale §5 pointer fixed). |
 | v0.4 | July 24, 2026 | Amendment-01 additions folded in (the v0.2 gap-fill precedent): §1 rows #51 Audio & Sound Design (Wave 8) + #52 Multiplayer Transport & Deterministic Netcode (Wave 9, Stage-6 gated) with footnote ³; §7 Wave-8 #51 entry + new Wave-9 block. Governing document: `docs/planning/master-plan-amendment-01-audio-multiplayer-transport.md`; one-page plans at `spec-plans/spec-51-…`/`spec-52-…`. Neither declares an RNG stream (§6 block/headroom unchanged). |
 | v0.6 | July 26, 2026 | **Gap-fill additions #53 / #54** (the v0.2 / v0.4 precedent), surfaced while authoring the Wave-8 supplements. Both are opened on a stronger trigger than an unowned master-plan bullet — in each case **APPROVED specs already delegate to a producer that does not exist**: #34/#42/#28 consume a facility model they attribute to #40, whose scope excludes it (#53); and #45's MUST `FR-BD-012` assigns the sacking decision to #30, whose approved files contain no sacking text, over a save format in which an unemployed manager is structurally unrepresentable (#54). §1 rows + footnote ⁴, §3 scope sketches, §6 slack status (#53 draw-free and takes nothing; #54 the likely first claimant of `0x2E`/96 at S3, leaving `0x2F`/97 last), §7 placement (#53 Wave 5 — recorded as landing **after** its consumers, safe only because each was built neutral-value-input; #54 Wave 6, after #45). Governing supplements: `club-infrastructure-facilities-design.md`, `manager-career-reputation-design.md`. |
+| v0.8 | July 27, 2026 | **Approval complete.** All ten promotions advanced `IN REVIEW → APPROVED` the same day with their 23 back-props filed atomically; `SPEC_INDEX.md` reads **53 / 0 / 0**. Header status note extended. **The finding worth carrying into any future wave:** landing the back-props *together* is what exposed that #30's pinned tick order was not implementable — `ERR-030-007` had been filed twice at two different approvals, and neither approval could have seen it alone. A per-spec filing discipline that never reconciles the shared target accumulates exactly this class of defect. |
+| v0.7 | July 27, 2026 | **Promotion complete — status note added to the header; no plan content changed.** The last ten candidates with converged supplements (#53, #35, #46, #36, #54, #47, #48, #50, #51, #39) were promoted to 11-file section sets at `IN REVIEW` in one pass, so every §1 row backed by a supplement now holds a `SPEC_INDEX.md` registry row and the waves below become a record rather than a plan. **Deliberately NOT changed:** the wave blocks, the dependency graph, the §6 determinism block, and the per-spec scope sketches — they are the reasoning that produced the order, and rewriting them in the past tense would destroy the record of *why* each spec sits where it does. The only outstanding authoring candidate is **#52**, whose supplement stays deliberately unwritten until the Stage-5 Fixed64 migration (footnote ³). One promotion-time finding worth recording here because it is a **roadmap-process** matter rather than a per-spec one: three supplements proposed `ERR-` ids that had already been filed, since a supplement's proposed id is a suggestion rather than a reservation and nothing re-checks it — the promotions reassigned them and recorded the check, and a future supplement should verify its ids **at promotion**, not at authoring. |
 | v0.5 | July 24, 2026 | AR-3 completeness fixes: §3 scope sketches added for #51/#52 (v0.4 had added §1 rows without sketches, breaking the v0.2 rows+sketches precedent — §1 claimed #27–#52 while §3 stopped at #50); §6 no-RNG parenthetical extended to include #51/#52. |

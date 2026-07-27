@@ -1,8 +1,9 @@
 # Localization & Accessibility #49 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.3 — repeat AR-3 (1H+1L) fix pass; APPROVED)
-**Version:** 0.3
+**Last Updated:** July 27, 2026 (v0.4 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
+**Last Updated (prior):** July 23, 2026 (v0.3 — repeat AR-3 (1H+1L) fix pass; APPROVED)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -81,8 +82,14 @@
 - **FR-LC-019** — The a11y boundary MUST be a read-only presentation settings value (text scale / contrast
   / colourblind-safe palette / input assist) with no sim reference and no save impact. The option content +
   settings store are deferred to Wave 8.
-- **FR-LC-020** — `LocalizedTextRequest.SelectionDraw` MUST be the `ulong` value returned by
-  `DeterministicRngService.DrawReserved` (the `world.text` reservation), carried verbatim.
+- **FR-LC-020** *(generalized by ERR-049-001, at #35's approval)* — `LocalizedTextRequest.SelectionDraw`
+  MUST be **the producer's own deterministic, locale-independent selection value, carried verbatim**.
+  #22's `DeterministicRngService.DrawReserved` on the `world.text` reservation remains the named example
+  and **still satisfies this verbatim**. The original wording named one producer's RNG reservation on a
+  **producer-agnostic** seam, which contradicted §7.3's *"if they draw"*, FR-LC-013/014's producer-agnostic
+  core, and FR-LC-005 — and would have forced every later producer either to register an RNG stream it does
+  not need or to violate the requirement. #35, #46 and #48 all supply a **local keyed mix** with no stream,
+  no cursor and nothing serialized. **Contract-widening only: no #49 code, type or catalogue change.**
 
 ## 2.2 Data structures
 
@@ -160,4 +167,5 @@ public static class LivingWorldTextBoundary
 | 0.1 | 2026-07-23 | — | Initial FR set (FR-LC-001..020), data structures, failure modes F1–F6. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 fixes: H-1 generic core / per-producer boundary-adapter split (§2.2 core references nothing sim-side; §2.2.1 `LivingWorldTextBoundary`); M-1 FR-LC-008a construction-time roster-coverage invariant + F1/F5 rewrite + FR-LC-015 intent-value gate; L-1 `{score}` derived → AR-2 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-07-23 | — | Repeat AR-3 (1H+1L): H — `{score}` derivation moved to the boundary adapter (was leaking #22 formatting into the generic renderer); `NamedSlotSet` defined as immutable name→string; generic `Expand` is pure string substitution. L — clause lookup producer-scoped by `(Id.ProducerTag, CitationKind)`. See section-9 §9.3.1. |
+| 0.4 | 2026-07-27 | — | **ERR-049-001** (at #35's approval): **FR-LC-020 generalized** — `SelectionDraw` is *the producer's own deterministic, locale-independent selection value, carried verbatim*, with #22's `world.text` draw retained as the named example. The original wording named one producer's RNG reservation on a producer-agnostic seam, contradicting §7.3, FR-LC-013/014 and FR-LC-005 — and would have forced every later producer either to register an RNG stream it does not need or to violate the requirement. **Contract-widening only; no code, type or catalogue change.** Load-bearing for #35, #46 and #48. |
 #endregion

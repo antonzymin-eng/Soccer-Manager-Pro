@@ -1,10 +1,11 @@
 # Season & Competition Loop Specification #30 — Section 3: Algorithms
 
 **Created:** July 22, 2026
-**Last Updated:** July 25, 2026 (v0.8 — back-props ERR-030-008 board tick-order seam + ERR-030-009 JobSecurity derived band; prior v0.7 ERR-030-007 academy, v0.6 ERR-030-006 staff, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 0.8
-**Last Updated:** July 25, 2026 (v0.9 — ERR-030-010 §3.7 venue correction, found at #30 T0; prior v0.8 back-prop ERR-030-009 #44 availability-filter null seam in §3.4; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 0.9
+**Last Updated:** July 27, 2026, later same day (v1.1 — back-props ERR-030-016/-017/-019/-020/-021/-022/-023/-024/-025 landed atomically with the ten-spec approval wave. **`ERR-030-025` is a REASSIGNMENT: this spec's #46 projector seam was authored as `ERR-030-015`, which #30's own T3 landing (roadmap A5) claimed first on main for the §3.5 calendar-rebuild fix while this branch was open — the id-collision class the wave itself documented, recurring live. Main's claim has precedence; the seam moved to `-025`.** **New §3.3.1 records the tick-order reconciliation**: `ERR-030-007` had been filed twice, leaving two step 7s, two step 8s and an orphaned `AdvanceDay` line, so the pinned order was not implementable as written. Also fixed here: this file carried **two bare `**Last Updated:**` labels** claiming v0.8 and v0.9 with different content — the same header-drift class the project has recorded before, and one that made the file self-contradictory about its own currency.)
+**Last Updated (prior):** July 25, 2026 (v0.9 — ERR-030-010 §3.7 venue correction, found at #30 T0; prior v0.8 back-prop ERR-030-009 #44 availability-filter null seam in §3.4; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
+**Last Updated (prior):** July 25, 2026 (v0.8 — back-props ERR-030-008 board tick-order seam + ERR-030-009 JobSecurity derived band; prior v0.7 ERR-030-007 academy, v0.6 ERR-030-006 staff, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
+**Last Updated (prior):** July 27, 2026 (v1.0 — **ERR-030-015**: §3.5's boundary roll gains step (c′), the calendar rebuild it omitted, without which a rolled season is permanently unplayable; found at #30 T3. Also consolidates the TWO stale `Version` fields this header carried — the drift class `spec-error-log.md` v1.43 records. Prior v0.9 ERR-030-010 §3.7 venue correction; v0.8 back-props ERR-030-008/009; v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
+**Version:** 1.1
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -107,6 +108,12 @@ AdvanceToNextFixtureDay():
     # cursor is now AT the fixture day; the caller runs AdvanceAndPlayNextRound (§3.4)
 
 RunWorldTickInFixedOrder():                 # the KD-2 choke point — pinned order
+    # 0. facilities    (#53)  — NULL SEAM today (ERR-030-020 — AdvanceFacilityDay: upgrade-completion
+    #                           latch. Numbered ZERO, not inserted as a new "1": #53 must precede every
+    #                           same-day consumer of a facility-derived input (#29 step 2, #41 step 4,
+    #                           #42 step 7), and renumbering to achieve that would invalidate the step
+    #                           numbers six APPROVED specs and the frozen ERR log cite BY NUMBER. See
+    #                           the conflict note below)
     # 1. progression   (#28)  — NULL SEAM today (FR-SN-034)
     # 2. training      (#29)  — NULL SEAM today
     # 3. human-systems (#33)  — NULL SEAM today
@@ -127,13 +134,18 @@ RunWorldTickInFixedOrder():                 # the KD-2 choke point — pinned or
     # 8. board         (#45)  — NULL SEAM today (ERR-030-008 — the board-confidence day step:
     #                           one integer drift per modelled club, positioned after academy and before
     #                           the world-day tick. Goes live at #45's own T2, like #42's seam)
-    # 9. world day:     WorldStore.AdvanceDay()   <-- the only LIVE tick
-    # 7. scouting      (#32)  — NULL SEAM today (ERR-030-007 — a deep-tier position reservation: #32's
+    # 9. scouting      (#32)  — NULL SEAM today (ERR-030-022 renumbered this from the duplicate "7" the
+    #                           ERR-030-007 collision produced. A deep-tier position reservation: #32's
     #                           minimal tier is the fog-off omniscient identity (no assignment can exist),
     #                           so this seam is empty until the deep tier's daily assignment progress
-    #                           (`AdvanceScoutingDay`); positioned after staff so a scouting day reads the
-    #                           day's staff state (the ChiefScout doing the scouting), before the tick)
-    # 8. world day:     WorldStore.AdvanceDay()   <-- the only LIVE tick
+    #                           (`AdvanceScoutingDay`); its own rationale requires only "after staff",
+    #                           which 9 satisfies without moving any other slot)
+    # 10. media expiry (#35)  — NULL SEAM today (ERR-030-022 — the conference-window / pending-question
+    #                           expiry step. After scouting, before the world-day tick)
+    # 11. tenure       (#54)  — NULL SEAM today (ERR-030-021 — EvaluateTenure. Positioned after board
+    #                           (step 8) because it READS the day's board confidence; the terminating
+    #                           decision itself is #54's, not #30's)
+    # 12. world day:    WorldStore.AdvanceDay()   <-- the only LIVE tick
     WorldStore.AdvanceDay()
 ```
 
@@ -158,6 +170,35 @@ at a deep tier, and it costs one bounded integer drift per **modelled** club (th
 managed club only). With only the world-day tick live, a no-fixture day's advance is **byte-identical** to
 a bare `WorldStore.AdvanceDay()` (FR-SN-026 / KD-8).
 
+### 3.3.1 Tick-order reconciliation (ERR-030-022, July 27, 2026)
+
+**The order above was internally broken before this reconciliation**, and it was broken in the way a pinned
+sequence breaks: silently, by two independent back-props claiming the same slot. `ERR-030-007` was filed
+**twice** — once for #42's academy step and once for #32's scouting step — so the block carried **two step
+7s and two step 8s**, plus an orphaned `AdvanceDay` comment line at 9 followed by a second at 8. A reader
+implementing it verbatim could not have produced a defensible order, and every one of the six specs that
+cites a step by number was citing into an ambiguous list.
+
+Reconciled here: **#32 scouting moves to step 9** (its own stated rationale asks only for *"after staff"*,
+which 9 satisfies), the duplicate `AdvanceDay` line is deleted, **#35 media expiry is appended as 10**,
+**#54 tenure as 11**, and `AdvanceDay` becomes **12**. `FR-SN-034`'s enumeration is extended to match.
+
+**The conflict this reconciliation had to resolve, recorded because the resolution is a judgement:**
+`ERR-030-020` (#53 facilities) requires its step to precede every same-day consumer of a facility-derived
+input — steps 2, 4 and 7 — and says to renumber the steps below it. `ERR-030-022` (#35) requires that the
+slots approved specs cite **by number** not move. **Both cannot be satisfied by inserting a new step 1.**
+Resolved by numbering the facility step **0**: it precedes every consumer, and steps 1–8 keep the numbers
+#41, #31, #34, #42, #45 and #32 already cite — as does the frozen ERR log, whose historical entries cannot
+be re-dated. A step numbered 0 is unusual; **a renumber that silently invalidates six approved specs'
+citations is worse**, and the alternative — patching all six — would edit approved text to accommodate a
+numbering preference rather than a design need.
+
+**Errata recorded against this log's own history** (ERR-030-022, filed with #35): `ERR-030-007` was used
+for two different changes (#42's academy step, #32's scouting step) and `ERR-030-009` for two more (#45's
+`JobSecurity` band, #44's §3.4 availability filter). Both duplications are preserved as-filed — the
+historical entries are frozen records — and are noted here so a reader resolving an id against this
+section finds the ambiguity documented rather than discovering it.
+
 ## 3.4 Playing a round (FR-SN-012..013b / KD-9)
 
 A fixture-day resolves the **whole round** — every one of its `N/2` fixtures — and applies **all**
@@ -166,6 +207,14 @@ their results to the table. Resolving only a subset would leave the unplayed clu
 The managed club's fixture runs through the full `MatchEngine`; the rest through the round-resolution
 model (§3.4.1). The managed squad's resolve→configure path carries the **#44 availability-filter
 null seam** (ERR-030-009 — resolve → *filter* → configure; empty until #44 T2; FR-SN-013).
+
+**The filter seam admits more than one consumer** (ERR-030-016, filed at #36's approval): #44
+suspensions and #36 international call-ups both reduce the available squad at this point. **They compose
+order-independently *because both are removals*** — set intersection commutes — and that is stated here as
+a **property to preserve rather than an accident to rely on**: a future non-removal filter, one that adds
+or substitutes a player, would need an **explicit order** and cannot simply join the list. The composition
+also carries a shared obligation neither filter owns alone: a squad reduced **below a fieldable eleven by
+the composition** is a #44/#36/#30 concern at this seam, not either filter's private business.
 
 ```
 AdvanceAndPlayNextRound(squads: ISquadProvider):
@@ -179,6 +228,11 @@ AdvanceAndPlayNextRound(squads: ISquadProvider):
             result := ResolveRound(f)                    # §3.4.1 — deterministic (FR-SN-013a)
         Table.ApplyResult(result)              # (1) table  — FR-SN-013 order, every fixture
         EmitMatchOutcome(result)               # (2) event  — producer only (KD-3), one per fixture
+        # (2a) media conference QUEUE     (#35) — NULL SEAM (ERR-030-023). Empty until #35 T2.
+        # (2b) inbox match-item PROJECTOR (#46) — NULL SEAM (ERR-030-025). Empty until #46 T2.
+        #      SAME SITE, TWO SEAMS, deliberately: (2a) is a conference queue and (2b) is an item
+        #      projector. Sharing one hook would make #46's most basic item type depend on #35 being
+        #      approved; two null seams cost nothing and coalesce into one hook if both land.
         f.Played := true
     Calendar.NextRoundIndex := round + 1
 
@@ -216,12 +270,16 @@ final table results regardless of the order fixtures within a round are resolved
 RollToNextSeason():
     finalTable := Table.OrderedView()                 # (a) finalize
     Board.Evaluate(finalTable)                         # (b) board pass/fail + job-security
+    # (b'') <-- #54 EvaluateTenure inserts HERE (ERR-030-021) — after the board's verdict, which it
+    #           reads. #30 supplies the seam and the ordering; the TERMINATION DECISION IS #54's.
+    #           FR-BD-012 previously named #30 as deciding it; #30 contains no such rule and never did.
     # (a')  <-- #43 promotion/relegation transform inserts HERE (FR-SN-031), not built now
     # (b')  <-- #40 finance settlement inserts HERE (ERR-030-003) — after (a') so budgets reflect the
     #           post-promotion division; SettleFinances(financeState[club], position, clubCount, board)
     #           per club. NULL SEAM until #40 T2 wires it; #40 references #30 never (one-way #30 → #40).
     nextSeed := DeriveNextSeasonSeed(Seed, SeasonNumber)
     Fixtures := FixtureScheduler.Generate(ClubIds, nextSeed)   # (c) regenerate
+    Calendar := ShiftForwardOneSeason(Calendar)        # (c′) rebuild — see the correction note
     AdvanceAges()                                       # (d) #28 — NULL SEAM today
     Table := LeagueTable.Empty(ClubIds)                # (e) reset
     SeasonNumber++
@@ -231,10 +289,32 @@ RollToNextSeason():
 Each step mutates a well-defined slice of `SeasonState`; the whole transform is a pure function of
 the prior `SeasonState` + `nextSeed`, so a save taken mid-roll restores to the same continuation
 (restartable, FR-SN-029). #43's promotion/relegation is a transform inserted at (a'), between
-finalize and regenerate, leaving (a)/(b)/(c)/(d)/(e) unchanged (FR-SN-031). #40's finance settlement
+finalize and regenerate, leaving (a)/(b)/(c)/(c′)/(d)/(e) unchanged (FR-SN-031). #40's finance settlement
 (ERR-030-003, at #40's approval) is a NULL SEAM inserted at (b'), after (a') so budgets reflect the
 post-promotion division and before (c); it too leaves the surrounding steps unchanged and keeps the
 transform a pure function of `SeasonState + nextSeed` (per-club `ClubFinances` prior state carried in).
+
+**Correction note — step (c′) (ERR-030-015, filed at T3 implementation).** Versions of this block before
+v0.5 regenerated `Fixtures` but never touched `Calendar`, whose cursor sits at `RoundCount` (season
+complete) precisely because the season just ended. Implemented verbatim that produces a season that is
+**permanently unplayable**: `IsSeasonComplete` stays true, so `AdvanceToNextFixtureDay` throws F5 and
+`AdvanceAndPlayNextRound` throws, on every call for the rest of the career — the transform could not
+deliver FR-SN-029's multi-season continuity at all, and no assertion over the rolled state's *fields*
+would notice, since schedule, table, seed and season number are all exactly right.
+`ShiftForwardOneSeason` shifts the existing round→day mapping forward by one season length plus a
+`[GT] SeasonBreakDays` close season and returns the cursor to round 0, so the new season opens exactly
+one break after the old one's finale. Shifting the mapping rather than rebuilding a linear calendar is
+what keeps the transform pure (a clock-derived first day would make the roll depend on when the client
+happened to call it) and preserves a non-uniform schedule — a calendar with a mid-season gap keeps that
+gap next season instead of being flattened. The step sits after (c) so a future competition set that
+changes the round count regenerates the schedule first; it does not disturb (a')/(b').
+
+**Boundary condition on (c′).** Because the derived calendar is a function of the old one alone, a
+client that advanced the world deep into the close season before rolling would install a schedule
+opening in the past — a KD-4 / FR-SN-011 cursor-invariant violation. The roll refuses that fail-loud
+rather than installing it, and performs no write until every step is computed and validated, so a
+refused roll leaves the season untouched rather than carrying a committed board verdict against a
+schedule that was then rejected.
 
 ## 3.6 Season-state sub-blob codec (FR-SN-019..023)
 
@@ -314,4 +394,6 @@ by ascending `ClubId` (FR-SN-007 final key) — a total order.
 | 0.7 | 2026-07-24 | — | Back-prop ERR-030-007 (at #32 approval): §3.3 `RunWorldTickInFixedOrder` tick order gains the scouting null seam as step 7 (after staff so a scouting day reads the day's staff state, before the world-day tick; `AdvanceDay` → step 8); a deep-tier position reservation, empty at minimal (fog-off ⇒ no assignment; `AdvanceScoutingDay` no-ops). Prose + FR-SN-034 enumeration updated. |
 | 0.8 | 2026-07-24 | — | Back-prop ERR-030-009 (at #44 approval): §3.4 notes the #44 availability-filter null seam on the managed squad's resolve→configure path (empty until #44 T2; FR-SN-013). |
 | 0.9 | 2026-07-25 | — | **ERR-030-010** (a) §3.1 pseudocode binds `ring := ids` (it was used but never defined); (b) (found at #30 T0 implementation): the §3.7 worked schedule's rounds 1 and 4 venue-corrected to agree with §3.1's round-parity rule (which is authoritative and unchanged). |
+| 1.0 | 2026-07-27 | — | **ERR-030-015** (found at #30 T3 implementation / roadmap A5): §3.5's `RollToNextSeason` gains step **(c′) rebuild the calendar**. The prior block regenerated `Fixtures` but left `Calendar`'s cursor at `RoundCount`, so a season rolled from it was permanently unplayable — `AdvanceToNextFixtureDay` and `AdvanceAndPlayNextRound` both throw for the rest of the career, and the transform could not deliver FR-SN-029's multi-season continuity at all. Correction note + boundary-condition note added; (a')/(b') insertion points and every surrounding step unchanged. Also consolidated the two stale `Version` header fields. |
+| 1.1 | 2026-07-27 | — | **Nine back-props landed atomically with the ten-spec approval wave.** (Authored as `-015`..`-024`; **`-015` was reassigned to `-025`** because #30's own T3 landing claimed `-015` on main first — see the header.) **ERR-030-022** (#35) — new **§3.3.1 tick-order reconciliation**: `ERR-030-007` was filed twice (#42 academy, #32 scouting), so §3.3 carried **two step 7s and two step 8s** plus an orphaned `AdvanceDay` comment; #32 → step 9, #35 media expiry → 10, `AdvanceDay` → 12, duplicate line deleted. **ERR-030-020** (#53) — the facilities seam at **step 0**, numbered zero rather than inserted as a new 1 because it must precede its same-day consumers *and* the six approved specs citing steps 1–8 by number must not be invalidated; §3.3.1 records the conflict and the judgement. **ERR-030-021** (#54) — the tenure seam at step 11 (after board, which it reads) and the `(b'')` boundary insertion point in §3.5; the terminating decision is #54's, not #30's. **ERR-030-023** (#35) + **ERR-030-025** (#46) — the conference-queue and match-item-projector null seams at §3.4's `EmitMatchOutcome` site, deliberately **two seams at one site** so #46's basic item type does not depend on #35 being approved. **ERR-030-024** (#46) — the drain generalized to sum across every external-delta producer. **ERR-030-016** (#36) — §3.4's resolve→filter→configure seam records that it admits multiple consumers, that the current pair composes order-independently **because both are removals**, and that a non-removal filter would need an explicit order. **ERR-030-017** (#47) + **ERR-030-019** (#50) — the outer-frame amendments are recorded in Appendix B. **Also fixed:** the file's duplicate `**Last Updated:**` headers. **Not touched:** the duplicate v0.7/v0.8 history rows below — frozen records, noted as errata in §3.3.1 rather than rewritten. |
 #endregion

@@ -29,6 +29,40 @@ just `Evaluate` (M-5); and a tautological `COLS * ROWS` assertion the compiler f
 to a literal (L-1). **Full dotnet gate: PASSED, 0 failures, quarantine empty** (match-analytics 24,
 match-viewer 39, ui-framework 50, match-engine 358 + 3 env-gated skips). **Prior:** July 26, 2026
 (**Season & Competition Loop #30 T2 LANDED** — path-to-playable roadmap item
+**Last Updated:** July 27, 2026, later same day (**Documentation sync pass — no code, no spec change.**
+Two gaps found and fixed: (1) the "Current Specification Folders" table below had not been updated since
+July 8, 2026 and was stuck at 26 rows / "All 26 spec folders now exist," predating the entire #27–#54
+management-layer promotion wave (27 more spec folders now exist, all APPROVED per `SPEC_INDEX.md`) —
+rows added at folder+status granularity, pointing to `SPEC_INDEX.md` for full per-spec detail rather
+than duplicating it. (2) Two same-day code landings — **Match Analytics #37 T0** (`src/match-analytics/`,
+value types + `XgLocationModel`, ERR-037-001 resolved) and **Track C B1** (the interactive-Unity-client
+richer observation frame extending `LiveMatchFrame`/`MatchFrameView`, no `SNAPSHOT_SCHEMA_VERSION`
+change) — had landed without a corresponding manifest entry; both are recorded in
+`path-to-playable-roadmap.md` (items B1/B2, marked LANDED) and this pass folds them in here too. Root
+`CLAUDE.md` and `README.md` were reconciled in the same pass (assembly count 29 → 30; "APPROVED with no
+assembly" count 23 → 22). Prior entry below.)
+**Last Updated (prior):** July 27, 2026 (**Season & Competition Loop #30 T3 LANDED** — path-to-playable roadmap
+item **A5**, the season-boundary roll; with it Phase A is complete and **PM-2-sim is reached**.
+**New files:** `src/season-save/SeasonRollOutcome.cs` (the boundary-roll producer record — board verdict,
+job security before/after, what the next season starts from; session-scoped, deliberately not serialized
+per the ERR-030-013 posture); `src/season-save/tests/SeasonRollTests.cs` (18 tests). **Modified:**
+`src/season-save/SeasonLoop.cs` v1.1 (`RollToNextSeason` + the pure `EvaluateJobSecurity` /
+`ShiftCalendarToNextSeason` / `DeriveNextSeasonSeed` helpers); `src/season-save/SeasonLoopConstants.cs` v1.3
+(`[FIXED] SEASON_ROLL_SEED_DOMAIN`; `[GT] SeasonBreakDays` + the two board job-security deltas; the
+`PositiveDayValue` read guard); `src/season-save/RoundResolutionModel.cs` (`Mix` private → internal, so the
+seed derivation reuses one finalizer instead of carrying a second copy in the same assembly);
+`docs/specs/season-competition-loop/section-3.md` **v1.0** (ERR-030-015 — §3.5 gains step (c′), and the two
+stale `Version` header fields are consolidated); `docs/tracking/spec-error-log.md` v1.46;
+`docs/tracking/path-to-playable-roadmap.md` v0.8. **Full dotnet gate: PASSED, 0 failures (whole tree green;
+season-save 240 → 258 tests — 255 passed + the 3 env-gated calibration/diagnostic drivers skipped).**
+The landing filed **ERR-030-015**: §3.5's `RollToNextSeason` pseudocode regenerated `Fixtures` but never
+rebuilt `Calendar`, whose cursor sits at `RoundCount` because the season just ended — so a season rolled
+from the spec as written is *permanently unplayable*, and no assertion over the rolled state's fields would
+have noticed. Caught by the acceptance test playing a **second** season to completion; 9 of the suite's 18
+predicates fail against the pre-fix form. No `SEASON_STATE_FORMAT_VERSION` change (the calendar was already
+serialized). Prior entry below.)
+
+**Last Updated (prior):** July 26, 2026 (**Season & Competition Loop #30 T2 LANDED** — path-to-playable roadmap item
 A4, the day-advance loop + the round-resolution model. **New files:** `src/season-save/RoundResolutionMode.cs`,
 `RoundResolutionModel.cs`, `SeasonLoop.cs`; `src/match-engine/SquadRating.cs` (the public XI-mean rating seam
 over the internal `LineupSelector` — league-bootstrap AR-4 M-1's named A4 prerequisite);
@@ -1352,6 +1386,7 @@ Governed by `docs/tracking/ui-framework-t0-implementation-plan.md`.
 | `src/season-save/BoardState.cs` | #30 T0: the objective + integer per-mille job security (Appendix B row 11) |
 | `src/season-save/MatchResult.cs` | #30 T0: one fixture's outcome payload — the table write and the FR-SN-016 producer event |
 | `src/season-save/SeasonState.cs` | #30 T0: the whole serialized season surface (seed / season number / managed club / club set / the CONCRETE schedule per KD-5 / table / calendar / board); copy-then-validate coherence gates; KD-7 internal mutators (SeasonLoop is the only production writer) |
+| `src/season-save/SeasonRollOutcome.cs` | #30 T3: the boundary-roll producer record — completed/next season number, final vs target position, objective met, job security before/after, next seed + first fixture day. Session-scoped, not serialized (ERR-030-013 posture) |
 | `src/season-save/SeasonViewModel.cs` | #30 T0: the read-only observation surface for #37/#38 (FR-SN-033) — value copies |
 | `src/season-save/LeagueBootstrapConstants.cs` | A3: `[FIXED]` roster/strength/season seed domain separators + the roster stream identity; `[GT]` DefaultClubCount / MaxClubCount / LeagueStrengthSpread / calendar cadence (negative world-days refused at read) / the array-valued squad position template; `BuildSquadPositionTemplate()` expands it fail-loud |
 | `src/season-save/ClubNameCatalogue.cs` | A3: Stage-0 APPEND-only club names assigned by `ClubId` index (KD-3 — drawn from no stream, in no digest); ≥ `MaxClubCount` entries, test-locked for coverage + uniqueness |
@@ -1431,9 +1466,14 @@ hardcoded and illustrative.
 
 ## Current Specification Folders
 
-All 26 spec folders now exist in `docs/specs/` (20 Stage-0 + Stage-1 forward specs #21–#26; rows
-21/22 were missing from this table between their June 2026 promotions and July 8, 2026 —
-reconciled). Status reflects authoritative classification in `SPEC_INDEX.md`.
+All 53 spec folders now exist in `docs/specs/` (20 Stage-0 + 33 Stage-1-forward/management-layer
+specs #21–#54, spanning the full #21–#26 tactical wave, the #27–#49 management-layer waves, and the
+ten promoted July 27, 2026: #53, #35, #46, #36, #54, #47, #48, #50, #51, #39). This table was last
+reconciled at row 26 (July 8, 2026) and had not been updated through the #27–#54 promotion waves
+until this pass (July 27, 2026) — rows #27–54 below are added at folder+status granularity only;
+`SPEC_INDEX.md` is the authoritative source for full per-spec detail (FR prefix, approval date,
+back-prop history) and should be read alongside this table rather than have its content duplicated
+here. Status reflects authoritative classification in `SPEC_INDEX.md`.
 
 | # | Folder | Status |
 |---|--------|--------|
@@ -1463,6 +1503,33 @@ reconciled). Status reflects authoritative classification in `SPEC_INDEX.md`.
 | 24 | `docs/specs/build-up-structures/` | APPROVED (Jul 10, 2026) — 12 files; PASS-1 0H+3M+2L resolved Jul 8; back-props ERR-021-006/012-008 filed + landed at approval; append order pinned #23 → #24 → #25; FR-BU-001..016; KD-3 records the deliberate TransitionWon-gating refinement vs the supplement |
 | 25 | `docs/specs/positional-rotations/` | APPROVED (Jul 10, 2026) — 12 files; PASS-1 1H+1M+3L resolved Jul 8 + PASS-2 clean at H/M; Appendix A complete for all three `FormationFamily` members; back-props ERR-021-007/012-009 (incl. the #12 `SlotIndex` single-writer amendment) filed + landed at approval; FR-RO-001..018 |
 | 26 | `docs/specs/tactical-presets/` | APPROVED (Jul 10, 2026) — 12 files; PASS-1 0H+1M+2L resolved Jul 8; §8.2 fully closed (Bradley & Noakes 2013 verified Jul 10); no back-props (§2.3); engine-substrate gates carried forward upstream-owned; FR-TP-001..020 |
+| 27 | `docs/specs/squad-player-data/` | APPROVED (Jul 22, 2026) — implemented at `src/player-database/` |
+| 28 | `docs/specs/player-progression-lifecycle/` | APPROVED (Jul 23, 2026) — implemented at `src/player-progression/` (T0 only) |
+| 29 | `docs/specs/training-system/` | APPROVED (Jul 23, 2026) — no assembly |
+| 30 | `docs/specs/season-competition-loop/` | APPROVED (Jul 22, 2026) — implemented at `src/season-save/` (T0–T3; also hosts the league bootstrap + unified season save-file root) |
+| 31 | `docs/specs/transfers-contracts-negotiation/` | APPROVED (Jul 23, 2026) — no assembly |
+| 32 | `docs/specs/scouting-player-knowledge/` | APPROVED (Jul 24, 2026) — no assembly |
+| 33 | `docs/specs/personalities-morale-dynamics/` | APPROVED (Jul 23, 2026) — no assembly |
+| 34 | `docs/specs/staff-backroom/` | APPROVED (Jul 23, 2026) — no assembly |
+| 35 | `docs/specs/media-press-interactions/` | APPROVED (Jul 27, 2026) — no assembly |
+| 36 | `docs/specs/national-teams-international/` | APPROVED (Jul 27, 2026) — no assembly |
+| 37 | `docs/specs/match-analytics-statistics/` | APPROVED (Jul 22, 2026) — implemented at `src/match-analytics/` (T0 only, landed Jul 27, 2026) |
+| 38 | `docs/specs/ui-client-framework/` | APPROVED (Jul 22, 2026) — implemented at `src/ui-framework/` (T0 substrate only) |
+| 39 | `docs/specs/steam-packaging-release/` | APPROVED (Jul 27, 2026) — no assembly |
+| 40 | `docs/specs/club-finances-economy/` | APPROVED (Jul 23, 2026) — no assembly |
+| 41 | `docs/specs/injuries-medical/` | APPROVED (Jul 23, 2026) — no assembly |
+| 42 | `docs/specs/youth-academy-intake/` | APPROVED (Jul 24, 2026) — no assembly |
+| 43 | `docs/specs/competition-structure/` | APPROVED (Jul 24, 2026) — no assembly |
+| 44 | `docs/specs/discipline-suspensions/` | APPROVED (Jul 24, 2026) — no assembly |
+| 45 | `docs/specs/board-ownership-dynamics/` | APPROVED (Jul 25, 2026) — no assembly |
+| 46 | `docs/specs/news-inbox-man-management/` | APPROVED (Jul 27, 2026) — no assembly |
+| 47 | `docs/specs/new-game-setup-db-editor/` | APPROVED (Jul 27, 2026) — no assembly |
+| 48 | `docs/specs/match-presentation-depth/` | APPROVED (Jul 27, 2026) — no assembly |
+| 49 | `docs/specs/localization-accessibility/` | APPROVED (Jul 23, 2026) — no assembly |
+| 50 | `docs/specs/save-migration-versioning/` | APPROVED (Jul 27, 2026) — no assembly |
+| 51 | `docs/specs/audio-sound-design/` | APPROVED (Jul 27, 2026) — no assembly |
+| 53 | `docs/specs/club-infrastructure-facilities/` | APPROVED (Jul 27, 2026) — no assembly |
+| 54 | `docs/specs/manager-career-reputation/` | APPROVED (Jul 27, 2026) — no assembly |
 
 **Notes:**
 - Attacking AI (#15) files (May 17–18, 2026): `outline.md` (high-level v1.0), `outline-detailed.md` (v1.1), `adversarial-review-outline-detailed-v1.md`, `section-1.md` through `section-9-approval-checklist.md` + `appendices.md` (all at v0.2). `DOMAIN_TAG_ATTACKING_AI = 0x1B [CROSS: #16 §3.4]` (ERR-015-001 CLOSED May 18, 2026). Lead-developer R-01..R-05 signed May 18, 2026. Status: APPROVED.

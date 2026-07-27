@@ -1,8 +1,9 @@
 # Staff & Backroom #34 — Section 1: Introduction
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.1 — initial)
-**Version:** 0.1
+**Last Updated:** July 27, 2026 (v0.2 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
+**Last Updated (prior):** July 23, 2026 (v0.1 — initial)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -87,7 +88,9 @@ Reference DAG: `compositionRoot → {#30, #34}`, `#34 → {#41, #29, #33, #31, #
 - **KD-3 (projections into each consumer's own identity type).** #34's quality projections **return each
   consumer's pre-existing identity type**, so the neutral baseline is exactly that type's `Identity` and #34
   invents no multiplier convention. #34's projection is the **sole** staff path into each consumer (FR-MD /
-  FR-TR forbid a second path), so staff modulation cannot double-count with #33 morale or #40 facilities.
+  FR-TR forbid a second path), so staff modulation cannot double-count with #33 morale or **#53 facilities**.
+  *(ERR-034-001, at #53's approval: this read "#40 facilities". **#53** owns facility levels; #40 owns the
+  funding. The double-count rule is unchanged and still correct — only the producer's identity was wrong.)*
 - **KD-4 (persistence + determinism — one season-save sub-blob, draw-free scaffold).**
   `STAFF_SAVE_FORMAT_VERSION` [FIXED] = 1 opaque sub-blob composed into `SeasonSaveCodec` (the #41/#33
   precedent) — **not** a `WORLD_STORE_FORMAT_VERSION` bump. The scaffold is draw-free, so `0x26`/88 stays
@@ -122,4 +125,5 @@ draw-free (KD-4). This is the #40/#41/#31 off-pitch integer + world-tick posture
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial §1 (scope, out-of-scope seams, dependencies, KD-1..KD-8, determinism posture), promoted from design supplement v0.4. Status IN REVIEW. |
+| 0.2 | 2026-07-27 | — | **ERR-034-001** (at #53's approval): the double-count rule's third producer re-attributed *"#40 facilities"* → **#53**. #40 funds facilities; #53 owns their level. The rule itself is unchanged and was always correct — only the producer's identity was wrong. |
 #endregion
