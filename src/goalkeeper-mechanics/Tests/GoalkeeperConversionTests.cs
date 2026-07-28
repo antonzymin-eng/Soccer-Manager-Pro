@@ -77,15 +77,26 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
             return agents;
         }
 
-        private static BallState FarThreateningBall() =>
-            BallState.CreateAtPosition(new Vector3(30f, 20f, 0.11f));
+        // ERR-011-007 re-anchor (was a parked ball at (30, 20)): the §3.3.6 commit gate correctly
+        // HOLDS a dive against a ball that is not closing, so these locks drive a CLOSING ball —
+        // from (8, 30) at vx = −12 the predicted time-to-plane is 0.5 s, inside the 0.6 s
+        // full-need lead (|predictedY − gkY| = 4 m ≥ DiveLaunchDisplacementM), so the gate opens
+        // the first tactical tick a SaveIntent is live. The tests never integrate ball physics,
+        // so the geometry (and the gate's verdict) is constant; the ball stays 7.2 m from GK0,
+        // outside every reach envelope, keeping every run publish-free.
+        private static BallState FarThreateningBall()
+        {
+            BallState ball = BallState.CreateAtPosition(new Vector3(8f, 30f, 0.11f));
+            ball.Velocity = new Vector3(-12f, 0f, 0f);
+            return ball;
+        }
 
-        private static SaveIntent Intent() => new SaveIntent
+        private static SaveIntent Intent(int committedTick) => new SaveIntent
         {
             TargetHand = HandEnum.Right,
             ClutchFirmness = 0.6f,
             DeflectionTarget = null,
-            AttemptCommittedTick = 0
+            AttemptCommittedTick = committedTick
         };
 
         /// <summary>
@@ -117,7 +128,9 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 
                 if (t == commitAtTick)
                 {
-                    gk.CommitSaveIntent(Gk0, Intent(), MidAttrs());
+                    // The engine stamps AttemptCommittedTick with the tactical tick of the SAVE
+                    // decision (MatchEngine.HostSaveDispatch); the KD-CR5 window anchor reads it.
+                    gk.CommitSaveIntent(Gk0, Intent(commitAtTick), MidAttrs());
                 }
 
                 for (int f = 0; f < framesPerTick; f++)
@@ -222,7 +235,9 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
         {
             GoalkeeperMechanics gk = NewGk();
 
-            RunUntilDive(gk, armAtTick: 2, commitAtTick: 3, tacticalTicks: 5, out float armTimeMs);
+            // Commit two strides after the stamp has aged past requiredReactionMs (~179 ms at
+            // these attrs/speed), so the intent-commit anchor scores a healthy window.
+            RunUntilDive(gk, armAtTick: 2, commitAtTick: 5, tacticalTicks: 7, out float armTimeMs);
 
             GoalkeeperTickState s = gk.CaptureState();
             Assert.AreEqual(GoalkeeperState.Airborne, s.States[Gk0],
@@ -232,18 +247,20 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
             Assert.GreaterOrEqual(launchFrame, 0, "Precondition: a launch frame was recorded.");
 
             // The expected window, recomputed from the same pure §3.2 pipeline the orchestrator
-            // uses, anchored at the LAUNCH frame's match time.
-            float launchTimeMs = launchFrame * GoalkeeperConstants.FrameMs;
+            // uses, anchored at the INTENT COMMIT's tactical tick (ERR-011-007 / KD-CR5: under
+            // the held dive the launch is deliberate timing, not reaction).
+            float commitTimeMs = 5 * GoalkeeperConstants.MS_PER_SECOND
+                                   / GoalkeeperConstants.TickRateTacticalHz;
             float stamp = GoalkeeperReactionPipeline.ComputeShotDetectedTickMs(armTimeMs, MidAttrs());
             float required = GoalkeeperReactionPipeline.ComputeRequiredReactionMs(
                 attrs: MidAttrs(), ballSpeedMps: 20f, state: GoalkeeperState.Anticipate);
             float expected = GoalkeeperReactionPipeline.ComputeReactionWindowAchieved(
-                launchTimeMs - stamp, required);
+                commitTimeMs - stamp, required);
 
             float frozen = s.ContactStates[Gk0].ReactionWindowAchieved;
             Assert.AreEqual(expected, frozen, 1e-4f,
-                "The window must be computed at the dive COMMIT (§3.2.5's worked-example anchor), "
-                + "not at the contact frame (ERR-011-005).");
+                "The window must be anchored at the SAVE decision (SaveIntent.AttemptCommittedTick "
+                + "— ERR-011-007/KD-CR5), frozen at the launch frame, never the contact frame.");
             Assert.Greater(frozen, 0.3f,
                 "A promptly-committed dive must score a live window — the pre-fix per-frame "
                 + "anchor clamped this to ~0 for every realistic flight time.");
@@ -262,13 +279,70 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
         }
 
         [Test]
+        public void ReactionWindow_ShotStruckAfterCommit_AnchorsAtNextTickAfterStamp()
+        {
+            // The held-dive ordering (ERR-011-007/KD-CR5): the keeper commits FIRST, the shot is
+            // struck later and overwrites the stamp (ERR-011-006 — the newest shot is the live
+            // threat). The window must anchor at the first tactical tick after the NEW stamp —
+            // dating the older commit against it reads negative and clamps the window to 0, which
+            // is exactly the §5.Z.20 regression the anchor exists to prevent.
+            GoalkeeperMechanics gk = NewGk();
+
+            AgentState[] agents = BuildAgents();
+            BallState ball = FarThreateningBall();
+            float frameMs = GoalkeeperConstants.FrameMs;
+            int framesPerTick = GoalkeeperConstants.FramesPerTacticalTick;
+            float tacticalMs = GoalkeeperConstants.MS_PER_SECOND / GoalkeeperConstants.TickRateTacticalHz;
+
+            for (int t = 0; t < 7; t++)
+            {
+                gk.TacticalTick(t, agents, ball, GkAgentIds);
+
+                if (t == 2)
+                {
+                    gk.OnThreatArmed(Gk0, t * tacticalMs, 20f, MidAttrs());
+                }
+                if (t == 3)
+                {
+                    gk.CommitSaveIntent(Gk0, Intent(3), MidAttrs());
+                }
+                if (t == 4)
+                {
+                    // The real shot, struck AFTER the commit: overwrites the arming stamp.
+                    gk.OnShotExecutedEvent(Gk0, 400f, 24f, MidAttrs());
+                }
+
+                for (int f = 0; f < framesPerTick; f++)
+                {
+                    int frame = t * framesPerTick + f;
+                    gk.Update(frame, frame * frameMs, agents, ball, GkAgentIds);
+                }
+            }
+
+            GoalkeeperTickState s = gk.CaptureState();
+            float stamp = GoalkeeperReactionPipeline.ComputeShotDetectedTickMs(400f, MidAttrs());
+            float required = GoalkeeperReactionPipeline.ComputeRequiredReactionMs(
+                attrs: MidAttrs(), ballSpeedMps: 24f, state: GoalkeeperState.Anticipate);
+            float anchor = Mathf.Max(3f * tacticalMs, Mathf.Ceil(stamp / tacticalMs) * tacticalMs);
+            float expected = GoalkeeperReactionPipeline.ComputeReactionWindowAchieved(
+                anchor - stamp, required);
+
+            float frozen = s.ContactStates[Gk0].ReactionWindowAchieved;
+            Assert.AreEqual(expected, frozen, 1e-4f,
+                "A shot struck after the commit anchors at the first tactical tick after ITS stamp.");
+            Assert.Greater(frozen, 0.2f,
+                "A set, coiled keeper meeting a later shot must not be scored as if it committed "
+                + "seconds early.");
+        }
+
+        [Test]
         public void ReactionWindow_LateCommit_ScoresLowerThanPromptCommit()
         {
             // Same geometry, stamp planted much earlier relative to the commit: the dive
             // launches late against its required reaction time and must score lower — the
             // discrimination the window exists to provide.
             GoalkeeperMechanics prompt = NewGk();
-            RunUntilDive(prompt, armAtTick: 2, commitAtTick: 3, tacticalTicks: 5, out _);
+            RunUntilDive(prompt, armAtTick: 2, commitAtTick: 5, tacticalTicks: 7, out _);
             float promptWindow = prompt.CaptureState().ContactStates[Gk0].ReactionWindowAchieved;
 
             GoalkeeperMechanics late = NewGk();
@@ -288,4 +362,9 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 // |         |            |        | ERR-011-006 (stamp lifecycle: OnThreatArmed episode-onset seed,    |
 // |         |            |        | shot-stamp precedence, clear-on-disarm/resolution, mid-dive        |
 // |         |            |        | preservation), driven through the real 10 Hz + 60 Hz orchestrator. |
+// | 1.1     | 2026-07-28 | —      | gk-contact-rate (ERR-011-007) re-anchor: the driven ball CLOSES on |
+// |         |            |        | the keeper's plane inside the SS3.3.6 commit lead (a parked ball  |
+// |         |            |        | now correctly holds the dive); window expectations anchored at    |
+// |         |            |        | SaveIntent.AttemptCommittedTick (KD-CR5) with commits retimed so  |
+// |         |            |        | elapsed-at-commit brackets requiredReactionMs. Intent preserved.  |
 #endregion

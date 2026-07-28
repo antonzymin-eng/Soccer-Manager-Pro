@@ -2,6 +2,7 @@
 // Created:  2026-05-28
 // Modified: 2026-05-28
 // Modified: 2026-07-27 (§5.Z.17 / ERR-011-002: parameters renamed from the KEEPER's perspective, new Anticipate → Set exit, Recovering → Resting re-anchored to the far third)
+// Modified: 2026-07-28 (gk-contact-rate (ERR-011-007): Anticipate -> Diving gated on GoalkeeperDiveKinematics.ShouldCommitDive — a committed keeper holds its coiled posture until the dive envelope covers the ball arrival)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.1, Code Standards #20
 // Purpose:  Pure state evaluator for the GK state machine. Implements both the 10 Hz tactical
@@ -98,8 +99,18 @@ namespace TacticalDirector.GoalkeeperMechanics
 
                 case GoalkeeperState.Anticipate:
                 {
-                    // Anticipate → Diving: SaveIntent committed with valid target hand
-                    if (hasSaveIntent)
+                    // Anticipate → Diving: SaveIntent committed AND the ball's predicted
+                    // time-to-plane is inside the commit lead (ERR-011-007). The unconditional form
+                    // launched the dive at the first 10 Hz tick after SAVE committed, so against
+                    // measured shot flight times of ~0.9–1.6 s the 600 ms envelope had closed and
+                    // the keeper was on the ground before the ball arrived (the dive-early miss
+                    // class — measured 9 of 15 crossed threat episodes at baseline). A committed
+                    // keeper now HOLDS its coiled posture until the dive covers the arrival; a
+                    // ball already inside the lead dives immediately (close-range behaviour
+                    // unchanged), and a ball that stops closing disarms via the engine's
+                    // ClearSaveIntent path, so the hold cannot deadlock.
+                    if (hasSaveIntent
+                        && GoalkeeperDiveKinematics.ShouldCommitDive(gkPosition, in ballState))
                     {
                         return GoalkeeperState.Diving;
                     }
@@ -165,7 +176,11 @@ namespace TacticalDirector.GoalkeeperMechanics
 
                 case GoalkeeperState.OneOnOne:
                 {
-                    // OneOnOne → Diving: SaveIntent committed (1v1 dive path; KD-20 coefficients apply)
+                    // OneOnOne → Diving: SaveIntent committed (1v1 dive path; KD-20 coefficients apply).
+                    // Deliberately NOT gated on the ERR-011-007 commit lead: a 1v1 is close-range by
+                    // construction (ONE_VS_ONE_TRIGGER_RADIUS_M), so the ball is inside any lead the
+                    // gate could compute, and a smother must not wait on a plane-crossing prediction
+                    // whose geometry (attacker dribbling, not a struck ball) the predictor does not model.
                     if (hasSaveIntent)
                     {
                         return GoalkeeperState.Diving;
@@ -322,4 +337,9 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |     |            |   | Recovering → Resting re-anchored to ballSafelyUpfield — a deliberate change of|
 // |     |            |   | REGION, recorded in the design note §4.3: standing fully down while the ball is|
 // |     |            |   | in your own box is the same wrongness ERR-011-002 names on the entry side.|
+// | 1.6 | 2026-07-28 | — | gk-contact-rate (ERR-011-007): the Anticipate -> Diving row gates on the SS3.3.6|
+// |     |            |   | commit-to-arrival lead (measured baseline: 9 of 15 crossed threat episodes    |
+// |     |            |   | were dive-early with the envelope closed 456-2000 ms before the crossing;     |
+// |     |            |   | dive-late exactly 0). Close-range behaviour unchanged (inside-lead balls      |
+// |     |            |   | dive immediately); non-closing balls hold and disarm via ClearSaveIntent.     |
 #endregion

@@ -2,7 +2,7 @@
 
 **Created:** May 15, 2026
 **Last Updated:** July 10, 2026 (v0.6 — §3.7.1 Stage-1 pipeline amendments, back-props ERR-012-007/008/009)
-**Version:** 0.6
+**Version:** 0.7
 **Status:** APPROVED
 
 ---
@@ -172,20 +172,43 @@ agent's longitudinal distance from the line boundary exceeds
 ### 3.3.3 Goalkeeper Slot
 
 The GK is excluded from the line partition. The GK slot at Stage 0
-is:
+is (lateral term corrected by **ERR-012-010**, July 28, 2026):
 
 ```
 gkSlot.x = GK_DEPTH_M  + GK_ADVANCE_FACTOR * basisX(ball.x_clamped)
-gkSlot.y = PITCH_WIDTH_M / 2 + GK_LATERAL_FACTOR * basisY(ball.y)
+gain     = gkSlot.x / max(ball.x_clamped, gkSlot.x)        // ∈ (0, 1]
+gkSlot.y = PITCH_WIDTH_M / 2
+         + clamp((ball.y − PITCH_WIDTH_M / 2) * gain,
+                 −GK_LATERAL_CLAMP_M, +GK_LATERAL_CLAMP_M)
 ```
 
+The lateral term is the **ball-line point**: where the segment from
+the ball to the centre of the keeper's own goal crosses the
+keeper's depth, clamped inside the goal mouth (both `gkSlot.x`
+terms in the gain floor at a small positive depth so the ratio
+stays well-defined when the raw depth reaches zero; the value is
+numerical, not tunable). A central ball gives `gain × 0 = 0` —
+identical to the pre-correction slot, the common-case identity.
+
+The superseded form, `PITCH_WIDTH_M / 2 + GK_LATERAL_FACTOR ×
+basisY(ball.y)` with `GK_LATERAL_FACTOR = 2.0 m`, moved the keeper
+at most ±2 m across the whole 68 m width with a PITCH-anchored
+gain: no `[GT]` value of it expresses goal-anchored shot-line
+tracking (a factor large enough to track a close ball drags the
+keeper out of the mouth for a far one). Measured at
+`gk-contact-rate-design.md` §1.0, the lateral need at the goal-plane
+crossing ran 1.91–3.83 m against the dive's total coverage of
+~3.55 m — the keeper started episodes up to 2 m off the shot line.
+`GK_LATERAL_FACTOR` is therefore **retired, not retuned**
+(KD-CR4); its §6.1 row is replaced by `GK_LATERAL_CLAMP_M = 3.0 m`
+`[GT]` (inside the 3.66 m half-mouth, so the slot never leads the
+keeper past a post).
+
 `GK_DEPTH_M = 5.5 m` `[GT]`; `GK_ADVANCE_FACTOR = 8.0 m` `[GT]`;
-`GK_LATERAL_FACTOR = 2.0 m` `[GT]`. **All three promoted to `[GT]`
-(KD-13, May 18, 2026):** Goalkeeper Mechanics #11 reached `APPROVED`
-on May 18, 2026; these constants were promoted from `[EST]` → `[GT]`
-atomically with that transition per KD-13. The v0.1 / v0.2 text
-describing them as `[EST]` pending #11 `IN REVIEW` is superseded —
-#11 is now APPROVED and these values are locked as `[GT]` in §6.1.
+`GK_LATERAL_CLAMP_M = 3.0 m` `[GT]`. (KD-13, May 18, 2026: the GK
+constants were promoted `[EST]` → `[GT]` atomically with #11's
+`APPROVED` transition; ERR-012-010 replaces the lateral row within
+that same governance.)
 
 ## 3.4 Lane Occupation
 
@@ -639,3 +662,4 @@ that agent (§4.4.3).
 | 0.4 | May 18, 2026 | AI agent (adversarial-specs-review-run3) | Run 3 adversarial fix pass (FAIL-6): 11 body-text `[EST]` constants promoted to `[GT]` to match §6.1 catalogue (PHASE_LOOSE_VELOCITY_THRESHOLD, PHASE_HYSTERESIS_TICKS, OFFSET_RANGE_X_M, OFFSET_RANGE_Y_M, LINE_HYSTERESIS_M, LINE_DWELL_TICKS, LANE_HYSTERESIS_M, GK_DEPTH_M, GK_ADVANCE_FACTOR, GK_LATERAL_FACTOR, SPACING_MAX_PASSES); §3.3.3 GK prose updated to reflect #11 APPROVED (May 18, 2026) and [GT] promotion; §3.8 table-header corrected from "all [EST]" to "all [GT]"; Appendix A.N citations added to formula-context inline tags. |
 | 0.5 | June 13, 2026 | AI agent (dotnet-CI quarantine adjudication) | ERR-012-003 (dotnet-CI Linux gate, Positioning AI quarantine cluster): §3.5.1/§3.5.2/§3.5.3 double-counted `baseLateral[phase]`/`baseVertical[phase]` (in both the compactness scalar and the §3.5.2 numerator), so the phase baseline cancelled to a no-op (`base/(base·gain) = 1/gain`) — invisible because every worked example used `InPoss` (`base = 1.00`). Removed `base[phase]` from the §3.5.1 compactness scalars (now dynamic-gain products only); phase baseline contributes solely via the §3.5.2 numerator. `InPoss` §3.5.3 result unchanged. Production fix in `ContextModifier.cs` v1.1; locks tactical tests T-T-001/003/004/005 + T-U-063 directional invariant. |
 | 0.6 | July 10, 2026 | AI agent | Back-props ERR-012-007/008/009 (#23/#24/#25 `APPROVED` same day): new §3.7.1 records the Stage-1 pipeline amendments — build-up overlay stage (between ContextModifier and spacing), dismark offset stage (between spacing and pitch clamp, FR-DM-008), `RotationController` pre-composition position, and the `AgentPositioningData.SlotIndex` single-writer contract amendment (no longer immutable after `SeedFromFormation`; `RotationController` sole post-seed writer). All stages identity-no-op at zero-value dials; owning specs hold formulas/constants/tests. |
+| 0.7 | July 28, 2026 | AI agent (gk-contact-rate pass) | ERR-012-010: §3.3.3 GK slot lateral term corrected from the pitch-anchored `GK_LATERAL_FACTOR × basisY` form to the ball-line point clamped inside the goal mouth (`GK_LATERAL_CLAMP_M`); the superseded form is preserved in-place with the measured rationale. See `gk-contact-rate-design.md` §1.2/KD-CR3/KD-CR4. |

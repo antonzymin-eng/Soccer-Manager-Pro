@@ -276,11 +276,13 @@ namespace TacticalDirector.MatchEngine
         [Test]
         public void ReadingTheP1Surface_IsObserverNeutral()
         {
-            // Long enough to reach a real restart (measured: the first lands near tick 3 900 on this
-            // seed). At 400 ticks this test never wrote _restartAppliedThisTick at all — it covered the
+            // Long enough to reach a real restart (measured post-keeper-contact-pass: the first lands
+            // at tick 7 270 on this seed — the §5.Z.22 behaviour change moved it from the ~3 900 the
+            // 6 000-tick window was sized against, so the window is re-measured, not padded blind).
+            // At 400 ticks this test never wrote _restartAppliedThisTick at all — it covered the
             // read-only accessors and left the two NEW engine fields, the only new state P1 adds,
             // entirely unexercised (AR-1 M-2). RunObserving asserts a restart was seen.
-            const int Ticks = 6000;
+            const int Ticks = 8000;
 
             // Each engine is constructed AND run to completion before the next is constructed. The
             // EventBus is process-static (#17 §3.2.1), so interleaving two engines' ticks diverges them
@@ -346,4 +348,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | restart occurs on this seed (the first lands near 3 900), so   |
 // |         |            |        | the test proved neutrality only for the accessors that never   |
 // |         |            |        | fired — precisely the ones a stray write would live in.        |
+// | 1.2     | 2026-07-28 | —      | Keeper-contact pass (§5.Z.22): window 6000 -> 8000 ticks. The  |
+// |         |            |        | behaviour change moved this seed's first restart from ~3 900   |
+// |         |            |        | to a measured 7 270, so the M-2 non-vacuity guard tripped.     |
+// |         |            |        | Window re-measured against the new trajectory, guard intact.   |
 #endregion

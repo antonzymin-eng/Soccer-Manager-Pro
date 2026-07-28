@@ -6,8 +6,9 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 1.52
-**Updated:** July 28, 2026 (v1.52 — **ERR-008-017 filed + RESOLVED at the shot-volume pass.** #8 §3.2.3.1's U_SHOOT had NO distance term while `GoalOpeningScore` is scale-free and the §3.1.4.2 range gate is a cliff — within range a 34 m shot scored identically to a 10 m one, and measured shots clustered AT the range-gate boundary (means 30–34 m vs football's ~17; ~60% beyond 22 m). The formula gains a `DistanceQuality_SHOOT` hyperbolic-decay term (1.0 inside `[GT] SHOOT_SWEET_RANGE_M`, so every close-range calibration is bitwise untouched); the midfield long-shot machinery is recorded as production-unreachable dead surface (zone minimum 40 m vs range-gate maximum 35 m). No schema/RNG/draw-order change. Locked by the `match-engine-shot-speed` scenario's mean-shot-distance predicate — fails pre-fix at 30.0 vs 24.0, verified by execution. Prior update below.)
+**Version:** 1.53
+**Updated:** July 28, 2026 (v1.53 — **ERR-011-007 + ERR-012-010 filed + RESOLVED at the gk-contact-rate pass** (§5.Z.20 §7.1's residual — the keeper met ~a quarter of on-target shots and the uncontacted remainder held nearly all the surplus goals). Measured per episode at the ball's goal-plane crossing (new `GkContactRateDiagnosticTests`): of 15 crossed un-contacted threat episodes, **9 were dive-early** (the unconditional `Anticipate → Diving` row launched the dive at the first 10 Hz tick after SAVE committed, so the 600 ms envelope closed 456–2000 ms before the ball arrived; dive-late exactly 0), 3 no-dive, 3 lateral-miss — with the lateral need at the crossing (1.91–3.83 m) at or beyond the dive's ~3.55 m total coverage because #12 §3.3.3's pitch-anchored `GK_LATERAL_FACTOR × basisY` lateral term moved the keeper at most ±2 m over the whole 68 m width. **ERR-011-007**: new #11 §3.3.6 commit-to-arrival timing — the transition gates on predicted time-to-plane against a lateral-need-scaled commit lead (`[GT] DIVE_COMMIT_MIN_LEAD_FRAC`), sharing ONE crossing predictor with the §3.3.4 dive direction; §3.2.3's `elapsed` anchor refined to the keeper's first decision opportunity at/after the live stamp — `max(AttemptCommittedTick × 100 ms, the first tactical tick after the stamp)` — so neither the held launch (scored as sluggish) nor a shot struck after the commit (scored as seconds-early) re-clamps the window; the second ordering is COMMON under the hold and was found by the first full-corpus run. **ERR-012-010**: #12 §3.3.3's lateral term becomes the ball-line point clamped inside the goal mouth (`GK_LATERAL_CLAMP_M` replaces `GK_LATERAL_FACTOR`, retired not retuned — no value of a pitch-anchored gain expresses goal-anchored tracking). No schema/RNG/draw-order change (both mechanisms are pure functions of current tick state). Measured effect in the owner doc `gk-contact-rate-design.md` §6. Prior update below.)
+**Updated (prior):** July 28, 2026 (v1.52 — **ERR-008-017 filed + RESOLVED at the shot-volume pass.** #8 §3.2.3.1's U_SHOOT had NO distance term while `GoalOpeningScore` is scale-free and the §3.1.4.2 range gate is a cliff — within range a 34 m shot scored identically to a 10 m one, and measured shots clustered AT the range-gate boundary (means 30–34 m vs football's ~17; ~60% beyond 22 m). The formula gains a `DistanceQuality_SHOOT` hyperbolic-decay term (1.0 inside `[GT] SHOOT_SWEET_RANGE_M`, so every close-range calibration is bitwise untouched); the midfield long-shot machinery is recorded as production-unreachable dead surface (zone minimum 40 m vs range-gate maximum 35 m). No schema/RNG/draw-order change. Locked by the `match-engine-shot-speed` scenario's mean-shot-distance predicate — fails pre-fix at 30.0 vs 24.0, verified by execution. Prior update below.)
 **Updated (prior):** July 28, 2026 (v1.51 — **ERR-011-005 + ERR-011-006 filed + RESOLVED at the gk-catch-parry-conversion pass** (§5.Z.19's residual lever (c)). The §3.2.3 reaction window — 30% of the §3.5.1 handling-quality blend — was re-evaluated per frame, so the value consumed at contact was dated by the ball's whole FLIGHT time (the spec's own §3.2.5 worked example anchors it at the dive COMMIT); and the detection stamp was never cleared, so most dives were dated against shots struck 34–349 seconds earlier, with rebound/deflection episodes having no anchor at all. Fixed: the window computed once at the dive-launch frame and frozen (ERR-011-005), the stamp dying with its episode + an `OnThreatArmed` episode-onset fallback (ERR-011-006), and a KD-C3 `[GT]` recalibration inside the §3.4.3/§3.4.5 spec ranges. Measured (3 full matches, same seeds): contact windows 0.000 → 0.30–0.57, and the goal effect recorded in the owner doc's §6 table. No schema/RNG/draw-order change. Instruments that counted "shots" off stamp edges re-anchored to the new `TestOnly_ShotContacts` genuine-strike counter. Prior update below.)
 **Updated (prior):** July 28, 2026 (v1.50 — **ERR-008-016 + ERR-006-004 + ERR-001-005 filed + RESOLVED at the shot-speed & woodwork pass** (residual lever (b) of the shot-outcome distribution pass). #8 §3.5.3's PowerIntent — a product of two [0,1] fractions — pinned nearly every shot at its own 0.1 clamp floor, and #6's `V_FLOOR = 10` anchored a neutral full-power shot at ~16 m/s before reducers: composed, measured shot-tick means ran 6.9–10.3 m/s against football's ~20–25. PowerIntent becomes floor-plus-modulation (`[GT] POWER_INTENT_FLOOR` 0.65), `V_FLOOR` retunes 10 → 24 over two measured iterations, and — because football-pace shots move ~0.42 m/tick — the goal frame becomes PHYSICAL and precisely adjudicated: a swept six-cylinder segment test (`ApplySweptGoalFrameCollision`, `ApplyGoalPostCollision`'s first production caller — a discrete test tunnels a 0.12 m post) and crossing-point goal-line adjudication (the detected position is up to 0.42 m past the plane; a rising ball crossing UNDER the bar read as over it). Measured: means 14.7–16.1, maxima to 27.6, shots/match 59–70 → 31–45 (football ~25), goals/shot ROSE 0.14–0.25 → 0.38–0.42 — pace now exposes the keeper's conversion, residual lever (c), measured against real shot speeds for the first time. No schema/RNG/draw-order change. Acceptance `match-engine-shot-speed`: 5 of 7 predicates fail pre-fix, verified by execution. Prior update below.)
 **Updated (prior):** July 27, 2026, latest same day (v1.48 — **ERR-037-002 filed + RESOLVED at Match Analytics & Statistics #37 T1 implementation** (path-to-playable roadmap B3) — the second #37 error found by *code*, and the same class as ERR-030-011/-012/-013: a §3 rule whose two clauses cannot both hold. §3.4 states the territorial split as **two strict inequalities** (`x > L/2` for team 0, `x < L/2` for team 1) and then, one sentence later, requires the split to be **total** — *"no double-count, no gap"*. At exactly `x == L/2` two strict inequalities credit **neither** team, so the invariant `territorial%[0] + territorial%[1] == 100` breaks. Reachable on ordinary play rather than only in the limit: a kickoff parks the ball on the centre spot for many consecutive ticks with `x` exactly `52.5`. Resolved in favour of **totality** — the strict `>` decides and the halfway line falls to team 1 — because at a single sample point on a continuous axis the side of the line is arbitrary while losing samples is not. Locked by a boundary test that asserts the two shares sum to 100 for a ball sitting exactly on the line. No FR text change, no format-version change, no `DETERMINISM_DIGEST_VERSION` bump. Prior update below.)
@@ -2153,6 +2154,56 @@ that essentially cannot miss the goal (aim is 0.732 m inside the post, `finalDir
 read), **no crossbar** (`BallCollision.CheckBoundaries` gates every boundary test behind z < 0.22 m),
 and **no blocked shots** (`BallCollisionHandler.OnAgentCollision` is an empty `TODO` that production
 calls). Each belongs to a different APPROVED spec and needs its own pass.
+
+---
+
+## ERR-011-007 / ERR-012-010: the keeper contact rate — the dive launched the moment SAVE committed, and the GK slot could not track the shot line
+
+**Filed:** July 28, 2026. **Status:** ✅ code- and spec-resolved same day (#11 `section-3.md` v0.5; #12 `section-3.md` v0.7 + `section-6.md` v0.4).
+**Owner document:** `docs/tracking/gk-contact-rate-design.md`; match-engine `§5.Z.22`.
+
+**How found.** §5.Z.20 fixed the catch/parry conversion and measured its own residual: a contact
+almost always stops the shot, and the keeper contacted only ~a quarter of on-target shots — so the
+contact RATE bounded everything conversion could recover (goals/shot 0.19–0.26 vs football's
+~0.10). Its §7.1 anatomy was frame-aggregated; the new per-episode instrument
+(`GkContactRateDiagnosticTests`) classified every goalward threat episode at the ball's actual
+goal-plane crossing over 3 full matches: of 15 crossed un-contacted episodes, **9 dive-early**
+(dive over 456–2000 ms before the crossing), 3 no-dive, 3 lateral-miss, **0 dive-late** — the
+commit was never slow, always too eager; and the lateral need at the crossing ran 1.91–3.83 m
+against ~3.55 m of total dive coverage from a slot that moved the keeper at most ±2 m.
+
+**ERR-011-007 (the spec is the defect).** #11 §3.1.1's `Anticipate → Diving` row was
+unconditional on `SaveIntent`, so the dive — a fixed `DIVE_PHASE_DURATION_MS` (600 ms) envelope —
+launched at the first 10 Hz tick after the DT's SAVE and closed during the ball's 925–2006 ms
+flight. New §3.3.6: the transition gates on the ball's predicted time-to-plane against a commit
+lead scaled to the predicted lateral need (`clamp(need / DIVE_LAUNCH_DISPLACEMENT_M,
+DIVE_COMMIT_MIN_LEAD_FRAC, 1) × duration`), so the envelope reaches the predicted crossing offset
+as the ball arrives. The crossing predictor is extracted to ONE shared derivation
+(`GoalkeeperDiveKinematics.TryPredictPlaneCrossing`) consumed by both the §3.3.4 dive direction
+and the gate — direction and timing cannot drift apart. §3.2.3's frozen-window `elapsed` anchor is
+refined from the dive-launch frame to the keeper's FIRST DECISION OPPORTUNITY at/after the live
+stamp — `max(SaveIntent.AttemptCommittedTick × tacticalTickMs, ceil(stamp / tacticalTickMs) ×
+tacticalTickMs)`: under a held dive the launch is deliberate timing, not reaction (the launch
+anchor would have re-clamped the window ERR-011-005 fixed), and under the hold the shot is
+usually struck AFTER the intent commit and re-stamps the episode (ERR-011-006's overwrite), so
+the bare commit anchor read seconds-negative — the first full-corpus run measured the window
+collapsing to 0.000–0.084 before the max() form landed it back at 0.34–0.44. Pre-hold all three
+anchors coincide within a stride, so §5.Z.20's measured windows stay valid calibration. A ball that stops closing holds rather than diving at nothing; the engine's
+`ClearSaveIntent` disarm ends the episode, so the hold cannot deadlock.
+
+**ERR-012-010 (formula shape, not a retune).** #12 §3.3.3's `gkSlot.y = PITCH_WIDTH_M/2 +
+GK_LATERAL_FACTOR × basisY(ball.y)` anchored the lateral gain to PITCH width: ±2 m of travel over
+68 m, and no `[GT]` value fixes the shape (a factor tracking a close ball drags the keeper out of
+the mouth for a far one). The lateral term becomes the ball-line point — the segment from the
+ball to the keeper's own goal centre evaluated at the keeper's depth — clamped inside the goal
+mouth by `[GT] GK_LATERAL_CLAMP_M` (3.0 m < the 3.66 m half-mouth). `GK_LATERAL_FACTOR` is
+retired, not retuned (KD-CR4 — leaving it in place would be the parallel-surface trap). A central
+ball reproduces the pre-fix slot exactly, so the existing worked examples and unit locks hold.
+
+**Determinism surface.** Both mechanisms are pure functions of the current tick's ball state and
+keeper position: no new cross-tick state, **no `SNAPSHOT_SCHEMA_VERSION` change, no new RNG
+stream / domain tag / draw site, no draw-order change** — digests move for any match containing a
+save episode, as intended.
 
 ---
 

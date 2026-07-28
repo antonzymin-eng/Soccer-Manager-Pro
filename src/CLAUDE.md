@@ -1,7 +1,48 @@
 # src/CLAUDE.md — Tactical Director Coding Guide
 
 > **Created:** May 19, 2026
-> **Last Updated:** July 28, 2026, last entry of the day (v2.49 — **A4a Step 0 PASSED + calibration-driver
+> **Last Updated:** July 28, 2026, latest entry of the day (v2.50 — **Keeper contact rate — §5.Z.20
+> §7.1's residual, both named levers landed and measured; the goal-rate residual moves to conversion
+> AT contact.** **ERR-011-007** (`GoalkeeperDiveKinematics.cs` — `TryPredictPlaneCrossing` the ONE
+> crossing predictor shared by dive direction and timing, `ComputeDiveCommitLeadS`,
+> `ShouldCommitDive`; `GoalkeeperStateMachine.cs` — the `Anticipate → Diving` row gates on the
+> §3.3.6 commit-to-arrival lead, measured baseline 9 of 15 crossed threat episodes dive-early by
+> 456–2000 ms with dive-late exactly 0; `GoalkeeperMechanics.cs` — the frozen window's `elapsed`
+> anchors at the keeper's first decision opportunity at/after the live stamp, after the first
+> full-corpus run measured §5.Z.20's window collapsing to ~0 under the hold (the shot is usually
+> struck AFTER the intent commit and the ERR-011-006 overwrite re-stamps the episode);
+> `GoalkeeperConstants.cs` + `[GT] DiveCommitMinLeadFrac` = 0.25). **ERR-012-010**
+> (`AnchorCalculator.ComputeGkSlot` — the lateral term becomes the ball-line point clamped inside
+> the goal mouth; `PositioningAIConstants.GK_LATERAL_CLAMP_M` = 3.0 replaces `GK_LATERAL_FACTOR`,
+> retired not retuned; central ball is the exact pre-fix identity so every existing worked-example
+> lock holds). **Measured (3 full matches, `ConfigureSquads` path, same seeds): contact rate ~35% →
+> ~72%, catches 6 → 10, deep dive-early gone (residue 83–183 ms = the 10 Hz grid), window at contact
+> 0.34–0.44 — and goals 14 → 15, unchanged at n=3: the added contacts are marginal touches whose
+> parries/spills keep the ball alive, so the residual is conversion at contact (pointQuality lottery
+> + parry placement), recorded not fixed.** New `match-engine-keeper-contact` acceptance scenario
+> (**3 of 4 predicates fail pre-fix, verified by execution in a worktree at the pre-fix commit** —
+> heldCommits = 0 is structurally impossible pre-fix) + `GoalkeeperCommitGateTests` (11) + 4
+> ball-line GK-slot locks (`PositioningAITests`) + the `GoalkeeperConversionTests`/save-launch
+> re-anchor (a parked ball now correctly HOLDS — the Phase-H class, intent preserved; +1 lock for
+> the shot-after-commit anchor). New env-gated `GkContactRateDiagnosticTests` (the per-episode
+> anatomy instrument). **AR-4 (full-gate fallout, 2 failures — both instruments, neither a defect
+> in the landed mechanisms):** the shot instruments' end-of-tick `BallView` sampling broke the
+> moment the keeper actually contacts — a same-tick post-strike touch reversed the sampled
+> velocity, so the vx-sign goal attribution read a 13 m strike as **92.3 m** (`match-engine-shot-speed`
+> distMean 51.80 vs its 24.0 ceiling; the speed-mean floor had survived the same dilution by 0.08)
+> — fixed at the root with the strike-TIME `MatchEngine.TestOnly_LastShotStrikePosition/Velocity`
+> seam (captured beside the `_shotContacts` increment, post-ApplyKick before anything else moves
+> the ball; the WoodworkStrikes class, not serialized; `MatchEngine.cs` v1.55), consumed by the
+> scenario (v1.3) AND `ShotOutcomeDiagnosticTests` (v1.4), plus scenario windows 9 → 18 min/seed
+> (the §5.Z.21 AR-4 resize precedent — this pass thinned the 9-min windows to 3 strikes, a
+> per-sample lottery for a mean; predicates and bounds UNCHANGED, measured clean 11 strikes /
+> distMean 22.7 / speedMean 21.9); and `ReadingTheP1Surface_IsObserverNeutral`'s non-vacuity
+> window 6 000 → 8 000 ticks (this pass moved that seed's first restart ~3 900 → measured 7 270).
+> No `SNAPSHOT_SCHEMA_VERSION` change, no new RNG stream / domain tag / draw
+> site, no draw-order change. **Full dotnet gate: PASSED, 0 failures.** See
+> `docs/tracking/gk-contact-rate-design.md` + `match-engine-design.md` §5.Z.22 +
+> `spec-error-log.md` v1.53.)
+> **Last Updated (prior):** July 28, 2026, last entry of the day (v2.49 — **A4a Step 0 PASSED + calibration-driver
 > instrument fix.** The KD-8 Step 0 pilot, re-run on the post-§5.Z.21 tree, PASSES with fittable signal:
 > strong-at-home margin +7.100 / strong-away −4.700 over the 20 keyed matches — both ramp directions
 > separate, the §5.Z.11 venue asymmetry down to ~1.5× on margin. `RoundResolutionCalibrationHarnessTests`
@@ -2432,6 +2473,7 @@ Update this file when those items are resolved.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.50 | 2026-07-28 | —      | **Keeper contact rate (§5.Z.22) — ERR-011-007 + ERR-012-010.** `GoalkeeperDiveKinematics.cs` v1.2 (TryPredictPlaneCrossing / ComputeDiveCommitLeadS / ShouldCommitDive), `GoalkeeperStateMachine.cs` v1.6 (the gated Anticipate → Diving row + the OneOnOne deliberate-scope note), `GoalkeeperMechanics.cs` v1.9 (first-decision-opportunity window anchor; ComputeDiveDirectionLateral delegates to the shared predictor), `GoalkeeperConstants.cs` v1.4 (+DiveCommitMinLeadFrac), `AnchorCalculator.cs` v1.1 + `PositioningAIConstants.cs` (GK_LATERAL_CLAMP_M replaces GK_LATERAL_FACTOR). Tests: +GoalkeeperCommitGateTests (11), +4 GK-slot locks, GoalkeeperConversionTests v1.1 + GoalkeeperScenarios v1.3 re-anchors, +MatchEngineKeeperContactScenarios/Tests (3 of 4 predicates fail pre-fix by execution), +env-gated GkContactRateDiagnosticTests. AR-4 gate fallout (both instruments, not the mechanisms): strike-time TestOnly_LastShotStrike* seam (MatchEngine.cs v1.55) replaces end-of-tick BallView sampling in MatchEngineShotSpeedScenarios v1.3 + ShotOutcomeDiagnosticTests v1.4 (a same-tick post-strike touch reversed the sampled velocity — a 13 m strike attributed 92.3 m); scenario windows 9 → 18 min/seed; observer-neutrality window 6000 → 8000 ticks (first restart moved ~3900 → 7270). Measured: contact rate 35% → 72%, catches 6 → 10, goals 14 → 15 (unchanged at n=3 — residual moves to conversion at contact). No schema/RNG/draw-order change. Full gate: PASSED. |
 | 2.49 | 2026-07-28 | —      | **A4a Step 0 PASSED + calibration-driver instrument fix.** `RoundResolutionCalibrationHarnessTests` v1.1 — both env-gated drivers gain the `LogAssert.ignoreFailingMessages` wrapper (a playing match emits FM-08/FM-03 possession-race errors as ordinary match events, §5.Z Phase H; the first post-play pilot failed at teardown with every assertion green). Step 0 re-run: strong-at-home +7.100 / strong-away −4.700 over 20 keyed matches, rows byte-identical across runs — the corpus is fittable for the first time (`round-resolution-corpus.md` v0.3). Full gate: PASSED, 0 failures. |
 | 2.48 | 2026-07-28 | —      | **Shot volume — §5.Z.19's remaining lever (a) fixed, calibrated and measured.** ERR-008-017 (`UtilityScorer.cs` v1.12 — `ScoreShoot` gains `DistanceQuality_SHOOT`: 1.0 inside the sweet range, hyperbolic decay beyond; `U_SHOOT` previously had no distance term while `GoalOpeningScore` is scale-free, so measured shots clustered at the range-gate boundary, means 30–34 m vs football's ~17). `UtilityWeights.cs` v1.5 (`[GT] SHOOT_SWEET_RANGE_M` = 12, `[GT] SHOOT_DIST_FALLOFF_M` = 8 — the four-rung ladder refused count ≈ 25 AND mean ≤ 22 m jointly; distribution + goal-rate landing chosen). Spec §3.2.3.1/.3/.4 patched; midfield long-shot machinery recorded production-unreachable. Measured (3 full matches, same seeds): shots 34.7 → 17.7/match, long-shot share 60% → 30%, goals 8.0 → 4.7/match, scorelines 2-2 / 3-2 / 5-0. `match-engine-shot-speed` v1.2 mean-distance ceiling (fails pre-fix at 30.0, by execution) + 5 scorer locks (v1.6, one existing lock re-anchored intent-preserved) + `ShotOutcomeDiagnosticTests` v1.3 distance/churn dimensions + `MatchEngineShotOutcomeScenarios` v1.1 corpus resize (9 → 18 min/seed — the gate caught its goals-still-scored predicate at zero on the calibrated neutral path). No schema/RNG/draw-order change. Full gate: PASSED, 0 failures. |
 | 2.47 | 2026-07-28 | —      | **Keeper catch/parry conversion — §5.Z.19's residual lever (c) fixed, calibrated and measured.** ERR-011-005 (`GoalkeeperMechanics.cs` v1.8 — the §3.2.3 window computed once at the dive-launch frame and frozen, replacing the per-frame re-evaluation that dated the contact-consumed value by the ball's whole flight time) + ERR-011-006 (the detection stamp dies with its episode; new `OnThreatArmed` episode-onset fallback — the stamp is its own latch, no new state, no schema change). `MatchEngine.cs` v1.54 (armed-stride `OnThreatArmed` call + `TestOnly_ShotContacts` genuine-strike counter), `GoalkeeperConstants.cs` v1.3 (KD-C3 recalibration inside #11 spec ranges), instruments re-anchored (`MatchEngineShotSpeedScenarios` v1.1, `ShotOutcomeDiagnosticTests` v1.2, `GkSaveDiagnosticTests` v1.1), #11 `section-3.md` v0.4 spec patch. Measured (3 full matches, same seeds): window at contact 0.000 → 0.30–0.67, catches 1 → 6 of 15 contacts, goals/match 14.7 → 8.0, goals/shot 0.38–0.42 → 0.19–0.26. New `MatchEngineKeeperConversionScenarios`/`Tests` + `GoalkeeperConversionTests` (7). Full gate: PASSED, 0 failures (whole tree green; match-engine 360 → 366, goalkeeper-mechanics 55 → 62). |

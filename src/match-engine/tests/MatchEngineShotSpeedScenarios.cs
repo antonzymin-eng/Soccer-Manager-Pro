@@ -2,6 +2,7 @@
 // Created:  2026-07-28
 // Modified: 2026-07-28
 // Modified: 2026-07-28 (shot-volume pass: + mean-shot-distance-reaches-football-band predicate, ERR-008-017)
+// Modified: 2026-07-28 (keeper-contact pass: strike-time sampling via TestOnly_LastShotStrike*; 18 min/seed windows)
 // Author:   —
 // Spec:     Shot speed & physical woodwork design (docs/tracking/shot-speed-woodwork-design.md) §5;
 //           Match Engine design note §5.Z; Ball Physics #1 §3.1.10 (ERR-001-005);
@@ -48,9 +49,12 @@ namespace TacticalDirector.MatchEngine
 
         public const ulong ShotSpeedSeed = 0x0005107705107706UL;
 
-        /// <summary>32 400 ticks @ 60 Hz = 9 minutes per seed, two seeds — enough natural shots
-        /// (~6 per window at measured production) for speed floors without rate flakiness.</summary>
-        private const int NumTicks = 32400;
+        /// <summary>64 800 ticks @ 60 Hz = 18 minutes per seed, two seeds. Resized 9 → 18 min
+        /// with the keeper-contact pass (the shot-outcome scenario's AR-4 precedent): the
+        /// keeper-contact behaviour change thinned the 9-minute windows to ~3 strikes total,
+        /// which made the distance MEAN a per-sample lottery (one wide-angle strike moved it
+        /// several metres). 18-minute windows measure ~11 strikes across the corpus.</summary>
+        private const int NumTicks = 64800;
 
         private static readonly ulong[] Seeds =
         {
@@ -112,17 +116,18 @@ namespace TacticalDirector.MatchEngine
         {
             // ── 1. Natural-play speed floors + distance ceiling ─────────────────────────────────
             int totalShots = 0;
+            int samples = 0;
             float speedSum = 0f;
             float speedMax = 0f;
             float distSum = 0f;
             foreach (ulong seed in Seeds)
             {
-                PlayOne(seed, ref totalShots, ref speedSum, ref speedMax, ref distSum);
+                PlayOne(seed, ref totalShots, ref samples, ref speedSum, ref speedMax, ref distSum);
             }
 
             context.Envelope.CheckTrue("shots-are-taken", totalShots > 0, Inv(totalShots));
 
-            float mean = totalShots > 0 ? speedSum / totalShots : 0f;
+            float mean = samples > 0 ? speedSum / samples : 0f;
             context.Envelope.CheckTrue("shot-speed-mean-reaches-football-band",
                 mean >= ShotSpeedMeanFloorMps,
                 "mean=" + InvF(mean) + " floor=" + InvF(ShotSpeedMeanFloorMps));
@@ -134,7 +139,7 @@ namespace TacticalDirector.MatchEngine
             // at the RANGE-GATE boundary (measured mean 30–34 m over full matches vs football's
             // ~17). Distance is the discriminator, not count — over a 9-minute window the count
             // is noisy but the pre/post mean-distance gap is order-one (shot-volume-design KD-V5).
-            float distMean = totalShots > 0 ? distSum / totalShots : float.MaxValue;
+            float distMean = samples > 0 ? distSum / samples : float.MaxValue;
             context.Envelope.CheckTrue("mean-shot-distance-reaches-football-band",
                 distMean <= ShotDistanceMeanCeilingM,
                 "distMean=" + InvF(distMean) + " ceiling=" + InvF(ShotDistanceMeanCeilingM));
@@ -214,8 +219,8 @@ namespace TacticalDirector.MatchEngine
                 identical ? "digest chains identical over 3600 ticks" : "digest divergence");
         }
 
-        private static void PlayOne(ulong seed, ref int shots, ref float speedSum, ref float speedMax,
-            ref float distSum)
+        private static void PlayOne(ulong seed, ref int shots, ref int samples, ref float speedSum,
+            ref float speedMax, ref float distSum)
         {
             // The ConfigureSquads path — the SAME distribution the ShotOutcomeDiagnosticTests
             // instrument measures and the [GT] values were calibrated against (the neutral all-10
@@ -240,17 +245,26 @@ namespace TacticalDirector.MatchEngine
                 {
                     shots += contacts - prevContacts;
                     prevContacts = contacts;
-                    // Ball velocity after the tick containing the strike — the same sampling
-                    // moment the stamp-edge form used.
-                    float speed = engine.BallView.Velocity.magnitude;
+                    samples++;
+
+                    // STRIKE-TIME ball state via the TestOnly_LastShotStrike* seam — captured
+                    // beside the _shotContacts increment, post-ApplyKick and before any later
+                    // same-tick Resolve step. The earlier end-of-tick BallView sampling broke
+                    // under the keeper-contact pass: a defender or keeper within first-touch
+                    // reach of the strike redirects the ball in the SAME Resolve tick, which
+                    // diluted the speed sample (the mean floor survived by 0.08) and flipped
+                    // the vx-sign goal attribution (a measured 13 m strike read as 92.3 m).
+                    UnityEngine.Vector3 strikeVel = engine.TestOnly_LastShotStrikeVelocity;
+                    float speed = strikeVel.magnitude;
                     speedSum += speed;
                     if (speed > speedMax) speedMax = speed;
 
-                    // Distance from the strike point to the ATTACKED goal — the contact-tick
-                    // vx sign names the goal (both teams shoot; measuring against a fixed goal
-                    // would read a home-team shot toward x = 0 as ~70+ m and corrupt the mean).
-                    UnityEngine.Vector3 shotPos = engine.BallView.Position;
-                    float goalX = engine.BallView.Velocity.x >= 0f
+                    // Distance from the strike point to the ATTACKED goal — the strike
+                    // velocity's x-sign names the goal exactly (the aim point sits on the
+                    // attacked goal plane; both teams shoot, and measuring against a fixed
+                    // goal would read a shot toward x = 0 as ~70+ m and corrupt the mean).
+                    UnityEngine.Vector3 shotPos = engine.TestOnly_LastShotStrikePosition;
+                    float goalX = strikeVel.x >= 0f
                         ? MatchEngineConstants.PITCH_LENGTH_M : 0f;
                     float dy = shotPos.y - CentreY;
                     float dx = shotPos.x - goalX;
@@ -338,4 +352,16 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | predicate (24 m — pre-fix means 30–34 m are unreachable; the       |
 // |         |            |        | attacked goal named by the contact-tick vx sign, since measuring   |
 // |         |            |        | against a fixed goal corrupts the mean for the other team's shots).|
+// | 1.3     | 2026-07-28 | —      | Keeper-contact pass: sampling moved to the strike-TIME             |
+// |         |            |        | TestOnly_LastShotStrike* seam and the window resized 9 → 18        |
+// |         |            |        | min/seed. The end-of-tick BallView sampling broke once the keeper  |
+// |         |            |        | actually contacts: a same-tick touch after the strike reversed the |
+// |         |            |        | sampled velocity (a measured 13 m strike read as 92.3 m, mean      |
+// |         |            |        | 51.8) and diluted the speed mean to 0.08 above its floor; and the  |
+// |         |            |        | thinned 9-min windows held 3 strikes, a per-sample lottery. The    |
+// |         |            |        | predicates and their bounds are UNCHANGED — pre-fix shots cluster  |
+// |         |            |        | at the range gate (measured 30–34 m mean), which the 24 m ceiling  |
+// |         |            |        | still refuses, and the pre-fix 7–10 m/s speed band still cannot    |
+// |         |            |        | reach the floors. Measured post-fix: 11 strikes, distMean 22.7,    |
+// |         |            |        | speedMean 21.9, max 24.9.                                          |
 #endregion

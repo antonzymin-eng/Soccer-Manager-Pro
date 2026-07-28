@@ -2,6 +2,7 @@
 // Created:  2026-07-27
 // Modified: 2026-07-28 (shot-speed pass: + woodworkStrikes report line)
 // Modified: 2026-07-28 (shot-volume pass: + shot-distance distribution + possession-churn lines)
+// Modified: 2026-07-28 (keeper-contact pass: strike-time sampling via TestOnly_LastShotStrike*)
 // Author:   —
 // Spec:     Shot-outcome distribution design (docs/tracking/shot-outcome-distribution-design.md) §4;
 //           Match Engine design note §5.Z.17; path-to-playable roadmap A4a; Code Standards #20
@@ -119,16 +120,25 @@ namespace TacticalDirector.MatchEngine
                     m.Shots += contacts - prevContacts;
                     prevContacts = contacts;
                     lastShotTick = tick;
-                    float speed = engine.BallView.Velocity.magnitude;
+
+                    // Strike-TIME ball state via the TestOnly_LastShotStrike* seam, NOT the
+                    // end-of-tick BallView: a same-tick Resolve step after the strike (a first
+                    // touch by a nearby defender or keeper) can redirect or reverse the ball
+                    // before end-of-tick observation, which both dilutes the speed sample and
+                    // flips the x-velocity-sign goal attribution (measured under the
+                    // keeper-contact pass: a 13 m strike read as 92.3 m). The seam is captured
+                    // beside the _shotContacts increment — post-ApplyKick, pre-everything-else.
+                    UnityEngine.Vector3 strikeVel = engine.TestOnly_LastShotStrikeVelocity;
+                    float speed = strikeVel.magnitude;
                     m.ShotSpeedSum += speed;
                     if (speed < m.ShotSpeedMin) m.ShotSpeedMin = speed;
                     if (speed > m.ShotSpeedMax) m.ShotSpeedMax = speed;
 
                     // Shot-volume dimension: distance from the strike point to the ATTACKED goal
-                    // (the ball's x-velocity sign on the contact tick names the goal — the kick
-                    // has just been applied, so the ball is moving toward the target).
-                    UnityEngine.Vector3 shotPos = engine.BallView.Position;
-                    float goalX = engine.BallView.Velocity.x >= 0f ? MatchEngineConstants.PITCH_LENGTH_M : 0f;
+                    // (the strike velocity's x-sign names the goal — the aim point sits on the
+                    // attacked goal plane, so the sign is exact at strike time).
+                    UnityEngine.Vector3 shotPos = engine.TestOnly_LastShotStrikePosition;
+                    float goalX = strikeVel.x >= 0f ? MatchEngineConstants.PITCH_LENGTH_M : 0f;
                     float gy = MatchEngineConstants.PITCH_WIDTH_M * 0.5f;
                     float dist = (float)Math.Sqrt(
                         (shotPos.x - goalX) * (shotPos.x - goalX) + (shotPos.y - gy) * (shotPos.y - gy));
@@ -310,4 +320,10 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | (attacked goal named by the contact-tick vx sign) + possession settles +   |
 // |         |            |        | final-third entries + shots per third entry — the two dimensions the       |
 // |         |            |        | volume question turns on (selection eagerness vs possession churn).        |
+// | 1.4     | 2026-07-28 | —      | Keeper-contact pass: shot speed + distance sampled from the                |
+// |         |            |        | TestOnly_LastShotStrike* seam (strike-TIME ball state) instead of the      |
+// |         |            |        | end-of-tick BallView — a same-tick touch after the strike (common once the |
+// |         |            |        | keeper actually contacts) redirected the sampled velocity, diluting the    |
+// |         |            |        | speed distribution and flipping the vx-sign goal attribution (measured: a  |
+// |         |            |        | 13 m strike read as 92.3 m).                                               |
 #endregion

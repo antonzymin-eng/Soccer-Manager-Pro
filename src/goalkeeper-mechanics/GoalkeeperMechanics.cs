@@ -4,6 +4,7 @@
 // Modified: 2026-07-23 (GK/Heading engine-integration Phase 2: CaptureState/RestoreState snapshot seam over
 // Modified: 2026-07-27 (§5.Z.17 save pipeline: ComputeDiveDirectionLateral derives the dive from the ball's predicted crossing point (ERR-011-003); OnShotExecutedEvent takes the projected attributes (ERR-011-004, KD-S2); the state-machine wake predicates rebuilt as one signed distance to the keeper's OWN goal, read from gkIndex not attrs.TeamId (ERR-011-002, KD-S3); new ClearSaveIntent. See docs/tracking/goalkeeper-save-pipeline-design.md)
 // Modified: 2026-07-28 (gk-catch-parry-conversion: the §3.2.3 reaction window computed ONCE at the dive-launch frame and frozen for the contact (ERR-011-005 — the per-frame re-evaluation dated the contact-consumed value by the ball's whole flight time); the detection stamp dies with its episode (ERR-011-006 — cleared in ClearSaveIntent and at save resolution) and new OnThreatArmed seeds it at episode onset for threats with no shot event. See docs/tracking/gk-catch-parry-conversion-design.md)
+// Modified: 2026-07-28 (gk-contact-rate (ERR-011-007/KD-CR5): the frozen reaction window's elapsed anchors at SaveIntent.AttemptCommittedTick (under the held dive the launch is deliberate timing, not reaction); ComputeDiveDirectionLateral delegates its prediction to the shared TryPredictPlaneCrossing)
 //           the per-GK cross-tick arrays, for the Match Engine v18 save/restore path)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.1–§3.8, §4.6, KD-9, KD-12, KD-13, KD-15, KD-16, Code Standards #20
@@ -540,12 +541,37 @@ namespace TacticalDirector.GoalkeeperMechanics
                         // flight has reacted perfectly. A shot struck while already airborne
                         // (a rebound mid-dive) deliberately does NOT re-date the frozen value: the
                         // keeper committed before that ball existed.
+                        // ERR-011-007 / KD-CR5: with the held dive (the Anticipate → Diving commit
+                        // gate), the LAUNCH time is deliberate timing — a keeper that decides in
+                        // 200 ms and then waits for the ball has reacted perfectly, and scoring the
+                        // launch would re-break the window ERR-011-005 fixed. `elapsed` therefore
+                        // anchors at the keeper's FIRST DECISION OPPORTUNITY at or after the live
+                        // stamp: the intent's AttemptCommittedTick for a threat perceived before
+                        // the commit, or the first 10 Hz tactical tick after the stamp for a shot
+                        // struck once the keeper was already committed and coiled (the hold makes
+                        // this ordering common — the ERR-011-006 overwrite re-stamps the episode
+                        // with the newest shot, and dating the older commit against it would read
+                        // seconds-negative and clamp the window to 0, the §5.Z.20 regression in a
+                        // new coat). A set keeper re-reads the new trajectory at its next decision
+                        // tick, and the dive DIRECTION is computed at launch from the live
+                        // trajectory, so there is no misdirection window beyond that tick to
+                        // penalise. Pre-hold, commit and launch were one stride apart, which is
+                        // why §5.Z.20's measured windows (0.30–0.67) remain valid calibration.
+                        // A dive with no live intent (defensive; unreachable today) keeps the
+                        // launch anchor.
                         float launchWindow = 0.0f;
                         if (_shotDetectedTickMs[gkIndex] > 0.0f)
                         {
-                            float elapsedAtLaunch = currentMatchTimeMs - _shotDetectedTickMs[gkIndex];
+                            float tacticalMs = GoalkeeperConstants.MS_PER_SECOND
+                                             / GoalkeeperConstants.TickRateTacticalHz;
+                            float stampMs = _shotDetectedTickMs[gkIndex];
+                            float commitAnchorMs = _saveIntentActive[gkIndex]
+                                ? _saveIntents[gkIndex].AttemptCommittedTick * tacticalMs
+                                : currentMatchTimeMs;
+                            float firstTickAfterStampMs = Mathf.Ceil(stampMs / tacticalMs) * tacticalMs;
+                            float anchorMs = Mathf.Max(commitAnchorMs, firstTickAfterStampMs);
                             launchWindow = GoalkeeperReactionPipeline.ComputeReactionWindowAchieved(
-                                elapsedAtLaunch, _requiredReactionMs[gkIndex]);
+                                anchorMs - stampMs, _requiredReactionMs[gkIndex]);
                         }
                         _contactStates[gkIndex].ReactionWindowAchieved = launchWindow;
                         _telemetry.RecordSaveReactionWindow(
@@ -979,25 +1005,17 @@ namespace TacticalDirector.GoalkeeperMechanics
                 return Sign(targetDy);
             }
 
-            // Linear interception in the XY plane: the time for the ball to reach the keeper's x, then
-            // the ball's y at that time. Pure, allocation-free, and deterministic — no clock read and no
-            // draw, so it cannot perturb the RNG cursor or the digest beyond the dive it steers.
-            float dx = agentState.Position.x - ballState.Position.x;
-            float vx = ballState.Velocity.x;
-
+            // Linear interception in the XY plane — ONE derivation, shared with the ERR-011-007
+            // commit gate via GoalkeeperDiveKinematics.TryPredictPlaneCrossing, so the direction the
+            // dive takes and the moment it launches cannot drift apart (the §5.Z.12 mirror rule).
+            // A ball that is not closing falls back to its current lateral position, which is never
+            // worse than the pre-ERR-011-003 zero.
+            var gkXY = new Vector2(agentState.Position.x, agentState.Position.y);
             float predictedY = ballState.Position.y;
-
-            // Only extrapolate when the ball is actually closing on the keeper's plane. A ball moving
-            // away (or laterally, vx ~ 0) gives a degenerate or negative time-to-plane; diving at an
-            // extrapolation of it would send the keeper the wrong way, so fall back to the ball's
-            // current lateral position, which is never worse than the pre-fix zero.
-            if (Mathf.Abs(vx) > GoalkeeperConstants.DegeneracyEpsilon && dx * vx > 0.0f)
+            if (GoalkeeperDiveKinematics.TryPredictPlaneCrossing(
+                    gkXY, in ballState, out _, out float crossingY))
             {
-                float timeToPlaneS = dx / vx;
-                if (timeToPlaneS > 0.0f && timeToPlaneS <= GoalkeeperConstants.DivePredictionHorizonS)
-                {
-                    predictedY = ballState.Position.y + ballState.Velocity.y * timeToPlaneS;
-                }
+                predictedY = crossingY;
             }
 
             return Sign(predictedY - agentState.Position.y);
@@ -1097,4 +1115,9 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |     |            |   | OnThreatArmed seeds it at episode ONSET when none is live — the fallback    |
 // |     |            |   | anchor for rebounds/deflections with no #6 shot event; a live stamp always  |
 // |     |            |   | wins so it needs no edge-detection state. No draw-order/schema change.      |
+// | 1.9 | 2026-07-28 | — | gk-contact-rate (ERR-011-007/KD-CR5): the launch-frame window freeze anchors  |
+// |     |            |   | elapsed at the intent's AttemptCommittedTick (x 100 ms tactical) — pre-hold   |
+// |     |            |   | one stride from the launch anchor, so SS5.Z.20's measured windows stay valid; |
+// |     |            |   | ComputeDiveDirectionLateral now delegates to TryPredictPlaneCrossing (one     |
+// |     |            |   | derivation for direction AND timing).                                         |
 #endregion

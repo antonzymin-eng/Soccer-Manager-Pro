@@ -3,6 +3,7 @@
 // Modified: 2026-06-14
 // Modified: 2026-07-27 (§5.Z.17: + [DERIVED] DegeneracyEpsilon, + [GT] DivePredictionHorizonS)
 // Modified: 2026-07-28 (gk-catch-parry-conversion KD-C3 [GT] recalibration, all inside #11 §3.4 spec ranges)
+// Modified: 2026-07-28 (gk-contact-rate (ERR-011-007): + [GT] DiveCommitMinLeadFrac (the SS3.3.6 commit-lead floor))
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.4, KD-9, FR-GK-015, FR-GK-042, Code Standards #20
 // Purpose:  All numeric constants for the goalkeeper mechanics system. No magic literals in formula files.
@@ -190,6 +191,19 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// </summary>
         public static readonly float DivePredictionHorizonS =
             Config.GetFloat("goalkeeper-mechanics", "DivePredictionHorizonS", 2.0f);
+
+        /// <summary>
+        /// [GT] Floor on the ERR-011-007 dive-commit lead, as a fraction of the dive duration.
+        /// The commit lead scales with the predicted lateral need (a central ball needs almost no
+        /// displacement, so its ideal lead approaches zero); this floor keeps the commit from
+        /// degenerating to a zero-length dive against the 10 Hz decision grid — at 0.25 × 600 ms
+        /// the minimum lead is 150 ms, one-and-a-half tactical strides. Raising it makes every
+        /// dive earlier (recreating the pre-fix dive-early miss for central balls); lowering it
+        /// under ~0.17 (one stride) makes central commits quantisation-dominated.
+        /// Config key [goalkeeper-mechanics] DiveCommitMinLeadFrac. §3.3.4 / ERR-011-007.
+        /// </summary>
+        public static readonly float DiveCommitMinLeadFrac =
+            Config.GetFloat("goalkeeper-mechanics", "DiveCommitMinLeadFrac", 0.25f);
 
         /// <summary>[GT] Handling-attribute contribution to reach radius (m per unit norm). §3.3.4.</summary>
         public static readonly float ReachKHandling = Config.GetFloat("goalkeeper-mechanics", "ReachKHandling", 0.20f);
@@ -480,4 +494,5 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |     |            |   | HandlingBase 0.45→0.60 + HandlingKAttr 0.45→0.60 + CatchThreshold         |
 // |     |            |   | 0.78→0.74 (measured contact quality 0.29–0.60 could not reach the catch   |
 // |     |            |   | band through the fixed pointQuality lottery even with live windows).      |
+// | 1.4 | 2026-07-28 | — | gk-contact-rate (ERR-011-007): + [GT] DiveCommitMinLeadFrac = 0.25 (SS3.3.6). |
 #endregion

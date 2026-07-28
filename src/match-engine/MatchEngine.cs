@@ -44,6 +44,7 @@
 // Modified: 2026-07-27 (P1 richer observation frame + AR-1 L-3: discipline / period / restart accessors for a HUD, ApplyRestart declares its RestartCue, and the unmapped-RestartType arm warns under a gated diagnostic instead of reporting "no restart" in silence. Within-tick fields only — no SNAPSHOT_SCHEMA_VERSION change. See docs/tracking/interactive-unity-client-design.md §5-P1)
 // Modified: 2026-07-28 (shot-speed pass (KD-6): _prevTickBallPosition capture + swept goal-frame call in RunPhysicsPhase, crossing-point CheckBoundaries overload in CheckRestartAndApply, TestOnly_WoodworkStrikes. Within-tick + diagnostic state only — no SNAPSHOT_SCHEMA_VERSION change. See docs/tracking/shot-speed-woodwork-design.md)
 // Modified: 2026-07-28 (gk-catch-parry-conversion (ERR-011-006): the armed branch calls GoalkeeperMechanics.OnThreatArmed each stride — the episode-onset detection-stamp fallback, a no-op once stamped, so no new engine state; + TestOnly_ShotContacts genuine-strike diagnostic counter (the WoodworkStrikes class) counted where NotifyKeeperOfShot verifies the strike. No schema change. See docs/tracking/gk-catch-parry-conversion-design.md)
+// Modified: 2026-07-28 (keeper-contact pass: + TestOnly_LastShotStrikePosition/Velocity — the strike-TIME ball state, captured beside the _shotContacts increment (the WoodworkStrikes diagnostic class, not serialized), so instruments no longer sample end-of-tick BallView a same-tick touch may already have reversed. No schema change. See docs/tracking/gk-contact-rate-design.md)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -265,6 +266,17 @@ namespace TacticalDirector.MatchEngine
         // Diagnostic observation (the _woodworkStrikes class): genuine #6 shot CONTACTs this
         // match. NOT serialized; feeds no gameplay path.
         private int _shotContacts;
+
+        // Diagnostic observation (the _woodworkStrikes class): the ball's position/velocity at the
+        // instant the LAST genuine #6 strike was counted — captured beside _shotContacts++, i.e.
+        // immediately after that shot's ApplyKick and BEFORE any later same-tick Resolve step
+        // (another executor, a first touch, a restart) can move or redirect the ball. Instruments
+        // sampling end-of-tick BallView instead read a value a same-tick contact may already have
+        // reversed — the keeper-contact pass made such contacts common, which mis-attributed the
+        // attacked goal by velocity sign (measured: a 13 m strike read as 92.3 m). NOT serialized;
+        // feeds no gameplay path.
+        private Vector3 _lastShotStrikePosition;
+        private Vector3 _lastShotStrikeVelocity;
 
         // ── Match-flow completion (docs/tracking/match-flow-completion-design.md) ─────
         // Discipline: per-agent yellow-card count + sent-off flag, plus a global foul-detection
@@ -2003,6 +2015,18 @@ namespace TacticalDirector.MatchEngine
         /// threat episode (the ERR-011-006 arming stamps) as a shot.</summary>
         internal int TestOnly_ShotContacts => _shotContacts;
 
+        /// <summary>Test-only: the ball's position at the instant of the LAST genuine #6 strike
+        /// (captured beside the <see cref="TestOnly_ShotContacts"/> increment — post-ApplyKick,
+        /// before any later same-tick Resolve step can move the ball). Same diagnostic class:
+        /// not serialized, meaningless before the first strike.</summary>
+        internal Vector3 TestOnly_LastShotStrikePosition => _lastShotStrikePosition;
+
+        /// <summary>Test-only: the ball's velocity at the instant of the LAST genuine #6 strike —
+        /// the raw strike velocity, whose x-sign names the attacked goal (the aim point sits on
+        /// the attacked goal plane), immune to the same-tick touches that can reverse the ball
+        /// before end-of-tick observation. See <see cref="TestOnly_LastShotStrikePosition"/>.</summary>
+        internal Vector3 TestOnly_LastShotStrikeVelocity => _lastShotStrikeVelocity;
+
         /// <summary>
         /// Test-only seam: overwrites an agent's held movement command. The AI phase owns this at
         /// Phase D; B2 tests inject a WalkTo to exercise the movement seam. Not called by production.
@@ -3255,8 +3279,13 @@ namespace TacticalDirector.MatchEngine
             }
 
             // Diagnostic only — counted before any keeper routing so a shot at a keeper-less
-            // goal still counts as a shot.
+            // goal still counts as a shot. The strike-time ball state is captured HERE because
+            // this is the one moment it is unambiguously the shot: later steps of the same
+            // Resolve tick (a first touch, a keeper contact next tick notwithstanding, a
+            // restart) can move or reverse the ball before end-of-tick observation surfaces see it.
             _shotContacts++;
+            _lastShotStrikePosition = _ball.Position;
+            _lastShotStrikeVelocity = _ball.Velocity;
 
             // The keeper under threat is the one defending the goal the shooter attacks — i.e. the
             // OTHER team's. Derived from the shooter's team rather than from ball direction, so a
@@ -7755,4 +7784,11 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | not serialized) — the instruments that counted shots off ShotDetectedTickMs |
 // |         |            |        | edges would otherwise have counted every armed threat episode as a shot.    |
 // |         |            |        | No schema change.                                                           |
+// | 1.55    | 2026-07-28 | —      | Keeper-contact pass: + TestOnly_LastShotStrikePosition/Velocity — the       |
+// |         |            |        | ball's strike-time state captured beside the _shotContacts increment        |
+// |         |            |        | (post-ApplyKick, before any later same-tick Resolve step). The WoodworkStrikes |
+// |         |            |        | diagnostic class: not serialized, feeds no gameplay path. Added because the |
+// |         |            |        | keeper-contact pass made same-tick post-strike touches common enough that   |
+// |         |            |        | instruments sampling end-of-tick BallView mis-read strike speed and         |
+// |         |            |        | direction (a measured 13 m strike attributed 92.3 m by velocity sign).      |
 #endregion
