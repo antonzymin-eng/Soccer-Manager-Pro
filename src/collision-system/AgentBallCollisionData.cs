@@ -1,6 +1,6 @@
 // File:     src/collision-system/AgentBallCollisionData.cs
 // Created:  2026-05-25
-// Modified: 2026-05-25
+// Modified: 2026-07-27 (shot-outcome pass)
 // Author:   —
 // Spec:     Collision System #3 §3.3.4, §4.2.4, FR-03, Code Standards #20
 // Purpose:  Data passed to Ball Physics when agent-ball contact is detected.
@@ -19,6 +19,11 @@ namespace TacticalDirector.CollisionSystem
     {
         /// <summary>Contact point in world 3-D coordinates (m).</summary>
         public Vector3 ContactPoint;
+
+        /// <summary>Agent world-space position at moment of contact (m). The deflection normal is
+        /// derived from it (Ball Physics models the body as a vertical cylinder — shot-outcome
+        /// design KD-6); Z is ignored by the consumer.</summary>
+        public Vector3 AgentPosition;
 
         /// <summary>Agent velocity at moment of contact (m/s). Used for momentum transfer.</summary>
         public Vector3 AgentVelocity;
@@ -46,4 +51,6 @@ namespace TacticalDirector.CollisionSystem
 #region VersionHistory
 // | Version | Date       | Author | Notes          |
 // | 1.0     | 2026-05-25 | —      | Initial draft. |
+// | 1.1     | 2026-07-27 | —      | Shot-outcome design KD-6: + AgentPosition (deflection-normal input;         |
+// |         |            |        | populated by CollisionSystem.ProcessAgentBall from the snapshot).           |
 #endregion

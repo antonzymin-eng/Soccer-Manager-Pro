@@ -162,8 +162,6 @@ namespace TacticalDirector.BallPhysics.Tests
         [Test]
         public void OutOfBounds_BeyondTouchline_ReturnsTrue()
         {
-            // z must be below Ball.Diameter to satisfy the Stage 0 lowEnough gate
-            // (AR-1 H-3: BallStateMachine.IsOutOfBounds now mirrors CheckBoundaries).
             Vector3 pos = new Vector3(
                 52f,
                 BallPhysicsConstants.Pitch.WIDTH + BallPhysicsConstants.Ball.RADIUS + 0.01f,
@@ -179,17 +177,27 @@ namespace TacticalDirector.BallPhysics.Tests
         }
 
         [Test]
-        public void OutOfBounds_HighAboveTouchline_ReturnsFalse()
+        public void OutOfBounds_HighAboveTouchline_ReturnsTrue()
         {
-            // AR-1 H-3: high-flying ball over the touchline is NOT classified as out
-            // at Stage 0 — the z gate (z < Ball.Diameter) keeps it in play until it
-            // descends, matching CheckBoundaries.
+            // ERR-001-004 (shot-outcome design KD-5): a ball wholly crossing the touchline is out
+            // of play ON THE GROUND OR IN THE AIR (Law 9). This test previously encoded the old
+            // z < Diameter gate (asserted FALSE here) — the Phase-H "tests encoded the old
+            // contract" class; intent preserved, predicate inverted to the Laws.
             Vector3 pos = new Vector3(
                 52f,
                 BallPhysicsConstants.Pitch.WIDTH + 5f,
                 3f);
-            Assert.IsFalse(BallStateMachine.IsOutOfBounds(pos),
-                "High-flying ball over the touchline must stay in play at Stage 0 (z gate matches CheckBoundaries)");
+            Assert.IsTrue(BallStateMachine.IsOutOfBounds(pos),
+                "A ball wholly across the touchline is out of play in the air (Law 9)");
+        }
+
+        [Test]
+        public void OutOfBounds_HighAbovePitchInterior_ReturnsFalse()
+        {
+            // The KD-5 change removes the z gate on CROSSINGS, not on the interior: a high ball
+            // over the pitch is in play at any height.
+            Vector3 pos = new Vector3(52f, 34f, 30f);
+            Assert.IsFalse(BallStateMachine.IsOutOfBounds(pos));
         }
 
         // ── Locked states ────────────────────────────────────────────────────────

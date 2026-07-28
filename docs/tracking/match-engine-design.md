@@ -1401,6 +1401,53 @@ zero, which is a larger multiplier on the goal rate than anything a goalkeeper d
 blocked, but the reason is now specific:** the residual is the shot-outcome distribution, not the
 keeper.
 
+### 5.Z.18 The shot-outcome distribution (July 27, 2026) — §5.Z.17's residual, fixed and measured
+
+Owner document: `docs/tracking/shot-outcome-distribution-design.md` (KD-1..KD-8, the measured
+table, and the AR history). The four §5.Z.17 §7 defects are closed:
+
+- **ERR-006-002** — `ShotExecutor` now conforms to #6's own §3.5.6/§3.5.7: the intended aim is
+  the launch-tilted composition and `finalVelocity = finalDirection × kickSpeed`, so the vertical
+  half of the placement/error model is live for the first time.
+- **ERR-006-003** — the error cone is a cone: goal-plane displacement is `tan(err) × distance`
+  (the former mapping was a fixed 0.128 m/° at every range; the spec's own reference-anchored
+  value was 0.35 m/° at 20 m, which the tangent form reproduces exactly).
+- **ERR-001-004** — the `z < Diameter` gate is out of `CheckBoundaries` AND `IsOutOfBounds`
+  (Law 9/10): an airborne crossing is adjudicated at the crossing — goal under the bar, corner /
+  goal kick / throw-in otherwise. **The goal has a crossbar.**
+- **ERR-003-007** — `BallCollisionHandler.OnAgentCollision`'s TODO is live: fast balls deflect
+  off bodies via the new `BallCollision.ApplyAgentDeflection` (#1 §3.1.10.1 `BodyPartCoefficients`
+  — first consumer), gated Controlled-ball-out / sub-10 m/s-out, with the approaching-only
+  response as the **stateless** self-block guard (no cooldown state, no schema bump).
+- Plus: the `ShotWorldAdapter` pressure query went live (was hardcoded `0f`; reuses the
+  first-touch `PressureEvaluator` with the §5.Z.14 canonical-frame un-mirror), and
+  `MIN_GOAL_VISIBILITY` rose 0.05 → 0.12 so the #8 SHOOT gate can actually reject a walled-off
+  shot.
+
+**Measured (3 full matches, `ConfigureSquads` path, same seeds pre/post):** goals per match
+**15.3 → 12.3**, goals per shot **0.24–0.29 → 0.14–0.25**, fast-ball body contacts
+**0 → 560–612 per match**. Every previously-unreachable outcome class now occurs. **And the
+measurement names the remaining mass, which is NOT this pass's mechanisms:** shot volume
+(59–70 shots/match, ~2.5× football — a DT-selection/possession-churn property) and **shot speed**
+(measured means 7–10 m/s against football's ~25 — `VFloor`/`VCeiling`/`PowerIntent` shaping in
+#6/#8), which keeps shots on the ground (the new crossbar rarely bites at these speeds) and gives
+keepers easy contacts they still rarely hold (§5.Z.17 §7.5). Those, with the keeper's conversion,
+are the recorded next levers.
+
+Acceptance: `match-engine-shot-outcomes` (#19 ScenarioRunner, Tier B, 4 seeds × 9 min, ~59 s) —
+**3 of 8 predicates fail on the pre-fix engine, verified by executing the scenario in a worktree
+at the pre-fix commit**: the over-bar crossing adjudicated as *nothing* (`cue=None`), the
+under-bar airborne crossing scoring nothing, and deflections at exactly zero. Its determinism
+predicate runs its two engines **sequentially** — the first draft interleaved them and failed on
+the documented §5.Z.7 process-static-EventBus property. Unit locks: `ShotOutcomeBallPhysicsTests`
+(9), `BallCollisionHandlerTests` (3), `ShotPlacementResolverShotOutcomeTests` (5), plus the two
+inverted-contract tests (`Goal_AirborneCrossing_UnderTheBar_IsAGoal` + over-bar sibling;
+`OutOfBounds_HighAboveTouchline_ReturnsTrue`) — the Phase-H "tests encoded the old contract"
+class, intent preserved. Instrument: `ShotOutcomeDiagnosticTests` (env-gated
+`TD_SHOT_DIAGNOSTIC=1`, assertion-free). **No `SNAPSHOT_SCHEMA_VERSION` change, no new RNG
+stream / domain tag / draw site, no draw-order change**; digests move for any match containing a
+shot or an airborne crossing, as intended.
+
 ### 5.Z.8 What this unblocks
 
 `PM-1` ("watch a match") is no longer blocked by the engine. Roadmap **A4a** — the round-resolution
@@ -1483,6 +1530,7 @@ question Step 0 exists to ask.
 
 | Version | Date       | Author | Notes                                  |
 |---------|------------|--------|----------------------------------------|
+| 2.4     | 2026-07-27 | —      | **§5.Z.18 — the shot-outcome distribution (the §5.Z.17 residual) fixed and measured.** ERR-006-002 (`finalVelocity = finalDirection × kickSpeed` per #6's own §3.5.7; the §3.5.6 launch-tilt aim — the vertical half of the placement/error model live for the first time), ERR-006-003 (the error cone is a cone: `tan(err) × distance` at the goal plane), ERR-001-004 (the `z < Diameter` gate removed from `CheckBoundaries` + `IsOutOfBounds` — the goal has a crossbar, airborne crossings adjudicate at the crossing per Law 9/10), ERR-003-007 (`OnAgentCollision` live: `BallCollision.ApplyAgentDeflection`, `BodyPartCoefficients`' first consumer, stateless approaching-only self-block guard, `[GT] AgentDeflection.MinBallSpeedMps` = 10 re-anchored from measurement), the `ShotWorldAdapter` pressure query live (was `0f`; first-touch `PressureEvaluator` + §5.Z.14 un-mirror), `MIN_GOAL_VISIBILITY` 0.05 → 0.12. Measured: goals/match 15.3 → 12.3, goals/shot 0.24–0.29 → 0.14–0.25, fast-ball body contacts 0 → 560–612/match. New `match-engine-shot-outcomes` scenario (3 of 8 predicates fail pre-fix, by execution in a worktree at the pre-fix commit) + 17 unit locks + the `ShotOutcomeDiagnosticTests` instrument. Two tests inverted (encoded the old z-gate contract). No schema/RNG/draw-order change. Residual levers recorded: shot volume (~2.5× football), shot speed (~7–10 m/s means vs ~25), keeper conversion. Owner: `shot-outcome-distribution-design.md`. |
 | 2.2     | 2026-07-26 | —      | **§5.Z Phase H LANDED — ERR-030-014 closed; a production match now plays.** Five seams, four of them found by running the composed engine one after another (each visible only once the previous was fixed — §5.Z.6). KD-H1 restart taker award: `ApplyRestart(position, awardedTeam)` with every call site declaring its team (kickoff home / second half the other side per Law 8 / post-goal the conceding team / RestartResolver's award / offside the defenders / foul the victim's team); taker = nearest non-sent-off agent of that team, ties to lower index. New `[FIXED] FIRST_HALF_KICKOFF_TEAM` + `[DERIVED] SECOND_HALF_KICKOFF_TEAM`. KD-H2 assignment not imparted velocity (`ApplyKick` stays the sole motion producer). KD-H3 `RunLooseBallPickup` — a loose ball at REST is claimed by an agent within the new `[GT] LooseBallPickupRadiusM`, the exact speed-gate complement of `RunFirstTouch` so the two can never both fire. KD-H5 / **ERR-008-014** the DT loose-ball collect, emitted as the SOLE off-ball option for one host-designated collector per team (`TacticalContext.LooseBallCollector`; host-designated because only it knows who is sent off — a perception-derived "nearest teammate" rule deadlocked on a frozen red-carded agent). KD-H4 / **ERR-008-015** the PASS/SHOOT completion sweep — `NotifyActionComplete` had zero production callers, so every agent that passed or shot was frozen in EXECUTING for the rest of the match; plus `OnPossessionChanged` no longer interrupts a holder whose executor is still in flight. New acceptance scenario `match-engine-play-develops` (6 seeds × 9 min; every predicate fails pre-Phase-H, incl. `play-still-alive-at-final-tick`, which caught two of the four stalls) + `MatchEnginePossessionBootstrapTests` (11) + `OptionGeneratorTests` (+3). 21 existing tests updated — most encoded the "a restart clears possession" contract that made the deadlock possible. No `SNAPSHOT_SCHEMA_VERSION` change. **Full dotnet gate: PASSED, 0 failures (whole tree green).** Recorded NOT fixed (§5.Z.7): the foul heuristic's ~7 red cards per 9 minutes; the process-static EventBus's interleaved-engine divergence; #5's FM-08 Error-level log; the `FR-PO-052` perf baseline needing re-capture. |
 | 2.3     | 2026-07-20 | —      | **Phase G Phase-2 LANDED — distinct-squad re-projection (#27 T3 / KD-3).** New public `ISquadProvider` (`src/match-engine/ISquadProvider.cs`, the `ClubId → Squad` resolver) threaded into `RestoreFromSnapshot(…, ISquadProvider squads = null)`; `ReprojectDistinctSquads` replaces the Phase-1 distinct-squad fail-loud — neutral fast-path returns immediately, each team with a non-sentinel `_rosterClubId` resolves its roster (ClubId-check + `ValidateSquadSize`/`ValidateSelectedRecords`, both teams before any apply), re-runs `LineupSelector` + `PlayerAttributeProjection` for the base lineup (`ReprojectBaseLineup`, attribute arrays + the un-serialized bench GK flags `_benchIsGoalkeeper`; the serialized on-pitch `_isGoalkeeper` stays the restored value), then replays the substitutions the serialized `_activeBenchSlot` records (`ReprojectSubstitutions`, the attribute half of `SubstitutePlayer`). Fail-loud on absent provider / unresolvable ClubId (`NotSupportedException`) / mismatched returned ClubId (`InvalidOperationException`) (R4). `MatchEngineSnapshotRestoreTests` v1.1: distinct-squad G3 round-trip (base / mid-match sub / post-restore sub / post-restore keeper-for-keeper sub) + three provider fail-loud gates; new `TestOnly_BenchIsGoalkeeper` seam. No `SNAPSHOT_SCHEMA_VERSION` change. `MatchEngine.cs` v1.42. Full dotnet gate: PASSED, 0 failures (263 match-engine tests; whole tree green). Implementation finding folded in: `_benchIsGoalkeeper` is NOT serialized (only on-pitch `_isGoalkeeper` is), re-projected for post-restore keeper subs. Discovered out-of-scope (Phase-1 completeness follow-up, root `CLAUDE.md` OPEN ISSUES): a keeper-onto-outfield-slot substitution post-restore diverges via a Positioning-AI (#12) GK-flag-flip formation-slot interaction. See `snapshot-deserialize-design.md` v0.8. |
 | 2.2     | 2026-07-20 | —      | **Phase G Phase-1 COMPLETE — reader LANDED.** `DeserializeWorldState` (symmetric mirror of `SerializeWorldState`, restore-seam reconstruction, version-gate + event-ledger-boundary trailing guard) + the `RestoreState` counterparts (Pressing/Defensive/Attacking/Perception/Positioning + `MovementCommand.ReconstructFromSnapshot`) + the static `RestoreFromSnapshot` factory (fingerprint gate → boot + EventBus reset → deserialize → KD-3 distinct-squad fail-loud → digest-chain + clock restore) + `MatchEngineSnapshotRestoreTests` (G3 round-trip determinism + fail-loud guards). Findings folded in during landing: `_possessingAgentId`/`_prevPossessingAgentId` reconstructed from the restored MatchContext; the trailing guard made event-ledger-aware. No `SNAPSHOT_SCHEMA_VERSION` change. `MatchEngine.cs` v1.41. Full dotnet gate: PASSED, 0 failures (257 match-engine tests; whole tree green). See `snapshot-deserialize-design.md` v0.7. |

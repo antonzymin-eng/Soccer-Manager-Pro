@@ -422,25 +422,29 @@ public enum RestartType
 
 /// <summary>
 /// Checks if ball has left the field of play.
-/// Ball must ENTIRELY cross the line.
+/// Ball must ENTIRELY cross the line — on the ground or in the air (Law 9). A goal-line
+/// crossing between the posts and under the crossbar is a goal (Law 10); over the bar or
+/// wide of the posts is a corner / goal kick.
+/// ERR-001-004 (July 27, 2026): this pseudocode originally gated EVERY boundary test
+/// behind `z < DIAMETER` ("only detects ground-level exits"), under which a ball crossing
+/// the line airborne was neither a goal nor out of play — the goal was 7.32 m wide and of
+/// unbounded height, and an airborne touchline crossing played on. The Laws win; the gate
+/// is removed. Height alone never puts the ball out — only crossing a line does.
 /// </summary>
 public (bool isOut, RestartType restart) CheckBoundaries(BallState ball, int lastTouchTeamID)
 {
     float x = ball.Position.x;
     float y = ball.Position.y;
-    float z = ball.Position.z;
     float r = BallPhysicsConstants.Ball.RADIUS;
     
-    bool lowEnough = z < BallPhysicsConstants.Ball.DIAMETER;
-    
     // Touchlines
-    if (lowEnough && (y < -r || y > BallPhysicsConstants.Pitch.WIDTH + r))
+    if (y < -r || y > BallPhysicsConstants.Pitch.WIDTH + r)
     {
         return (true, RestartType.THROW_IN);
     }
     
     // Goal lines
-    if (lowEnough && x < -r)
+    if (x < -r)
     {
         if (IsInGoal(ball.Position, isHomeGoal: true))
         {
@@ -449,7 +453,7 @@ public (bool isOut, RestartType restart) CheckBoundaries(BallState ball, int las
         return (true, lastTouchTeamID == 0 ? RestartType.CORNER : RestartType.GOAL_KICK);
     }
     
-    if (lowEnough && x > BallPhysicsConstants.Pitch.LENGTH + r)
+    if (x > BallPhysicsConstants.Pitch.LENGTH + r)
     {
         if (IsInGoal(ball.Position, isHomeGoal: false))
         {

@@ -470,7 +470,10 @@ Gate condition:
          — must currently see the ball (prevents phantom shots)
   (3)  pass_distance_to_goal ≤ ShootingRange(AgentAttributes)    [§3.1.4.2]
   (4)  goal_visibility_score > MIN_GOAL_VISIBILITY                [§3.1.4.3]
-         — MIN_GOAL_VISIBILITY = 0.05 [GT]
+         — MIN_GOAL_VISIBILITY = 0.12 [GT]  (retuned 0.05 → 0.12, July 27, 2026, shot-outcome
+           design KD-7: at 0.05 it equalled the §3.2.3.2 step-5 GOAL_OPENING_MIN floor, so the
+           gate could only fire on the degenerate zero-arc return and a fully walled-off shot
+           was generated, scored and taken)
   (5)  MatchContext.Phase == OPEN_PLAY
          — no shooting on set pieces at Stage 0
 ```

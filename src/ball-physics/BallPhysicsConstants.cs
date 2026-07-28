@@ -1,6 +1,6 @@
 // File:     src/ball-physics/BallPhysicsConstants.cs
 // Created:  2026-05-24
-// Modified: 2026-06-09 (AR-7 fix pass)
+// Modified: 2026-07-27 (shot-outcome pass)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  All tunable and physical constants for ball physics simulation.
@@ -345,6 +345,30 @@ namespace TacticalDirector.BallPhysics
             public static readonly float ArmSpin = Config.GetFloat("ball-physics", "BodyPartRetention.ArmSpin", 0.30f);
         }
 
+        public static class AgentDeflection
+        {
+            /// <summary>
+            /// [GT] Minimum ball speed (m/s) at which an agent-ball contact deflects the ball
+            /// (BallCollision.ApplyAgentDeflection, wired via BallCollisionHandler.OnAgentCollision —
+            /// ERR-003-007). NOT a reception guard — receptions are protected geometrically (the
+            /// first-touch trigger reach, 1.0 m, is well outside the ~0.4 m combined hitbox, and a
+            /// ball cannot jump the gap in one 60 Hz tick below ~35 m/s), and a Controlled ball is
+            /// excluded outright. This gate exists so slow rolling balls in a crowd (and the
+            /// loose-ball collect approach) never ping-pong off shins; measured shot speeds run
+            /// ~12–21 m/s (shot-outcome design §4 baseline), driven passes up to 28 m/s — both
+            /// deflect, as football does. Shot-outcome design KD-6 (AR-3 re-anchored 18 → 10:
+            /// the assumed 20–35 m/s shot band was refuted by measurement).
+            /// </summary>
+            public static readonly float MinBallSpeedMps = Config.GetFloat("ball-physics", "AgentDeflection.MinBallSpeedMps", 10.0f);
+
+            /// <summary>
+            /// [FIXED] Minimum agent→ball separation (m) below which the deflection normal is
+            /// degenerate and the contact is a no-op (mirror of SpatialHashConstants
+            /// MIN_DISTANCE_EPSILON semantics at this seam). Shot-outcome design KD-6.
+            /// </summary>
+            public const float MIN_NORMAL_EPSILON = 1e-4f;
+        }
+
         public static class Logging
         {
             /// <summary>[GT] Interval between position snapshots (seconds). Ball Physics #1 §3.1.2.</summary>
@@ -391,4 +415,7 @@ namespace TacticalDirector.BallPhysics
 // |         |            |        | retagged [EST] → [DERIVED] (documented formula over [FIXED] inputs per      |
 // |         |            |        | FR-CS-021; hollow-sphere model caveat retained); class doc gains LAYOUT     |
 // |         |            |        | NOTE recording the domain-class-vs-tag-region deviation as intentional.     |
+// | 1.9     | 2026-07-27 | —      | Shot-outcome pass (design KD-6): new AgentDeflection block —       |
+// |         |            |        | [GT] MinBallSpeedMps (18.0; the blockable-vs-receivable dial) +   |
+// |         |            |        | [FIXED] MIN_NORMAL_EPSILON for the deflection normal.             |
 #endregion

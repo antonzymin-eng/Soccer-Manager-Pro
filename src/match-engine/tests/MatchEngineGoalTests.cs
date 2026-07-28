@@ -102,15 +102,34 @@ namespace TacticalDirector.MatchEngine
         }
 
         [Test]
-        public void Goal_AirborneCrossing_NotDetectedUntilGround()
+        public void Goal_AirborneCrossing_UnderTheBar_IsAGoal()
         {
-            // The Stage-0 z-gate is CheckBoundaries' own documented scope: a ball above
-            // Ball.Diameter is not classified as out, so no goal fires while it is airborne.
+            // ERR-001-004 (shot-outcome design KD-5): a ball crossing the goal line in the air,
+            // between the posts and under the 2.44 m bar, is a goal at the crossing (Law 10).
+            // This test previously encoded the old z < Diameter gate (asserted NO goal here) —
+            // the Phase-H "tests encoded the old contract" class; intent preserved, predicate
+            // inverted to the Laws.
             var engine = RunOneTickWithBallAt(new Vector3(
                 MatchEngineConstants.PITCH_LENGTH_M + 0.5f, GoalMouthY, 1.0f));
 
+            Assert.AreEqual(1, engine.TestOnly_Goals(0),
+                "An airborne crossing under the bar is a goal for the attacking (home) side");
+            Assert.AreEqual(0, engine.TestOnly_Goals(1));
+        }
+
+        [Test]
+        public void Goal_AirborneCrossing_OverTheBar_IsNotAGoal()
+        {
+            // The crossbar exists (KD-5): the same crossing above GOAL_HEIGHT is not a goal —
+            // it is adjudicated out of play (goal kick, home touched last on a fresh engine).
+            var engine = RunOneTickWithBallAt(new Vector3(
+                MatchEngineConstants.PITCH_LENGTH_M + 0.5f, GoalMouthY,
+                TacticalDirector.BallPhysics.BallPhysicsConstants.Pitch.GOAL_HEIGHT + 0.5f));
+
             Assert.AreEqual(0, engine.TestOnly_Goals(0));
             Assert.AreEqual(0, engine.TestOnly_Goals(1));
+            Assert.AreEqual(RestartCue.GoalKick, engine.RestartAppliedThisTick,
+                "Over the bar is out of play, adjudicated at the crossing");
         }
 
         [Test]

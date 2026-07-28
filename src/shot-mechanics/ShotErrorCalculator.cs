@@ -118,9 +118,13 @@ namespace TacticalDirector.ShotMechanics
         /// </summary>
         public static Vector2 ComputeErrorOffset(float errorMagnitudeDeg, Vector2 errorDirection)
         {
-            // Scale degrees to goal-relative displacement. §3.6.9.
-            // Mathf.Deg2Rad (= π/180 ≈ 0.01745) converts angular error to radian measure used as UV scale.
-            float scale = errorMagnitudeDeg * Mathf.Deg2Rad;
+            // Angular error as a tangent-plane offset (dimensionless, per metre of range) — §3.6.9
+            // as corrected by ERR-006-003: the consumer (ShotPlacementResolver.ApplyErrorOffset)
+            // multiplies by the shooter's range, so the goal-plane displacement is tan(err)×distance —
+            // a true error cone. The former ×Deg2Rad-as-UV-scale mapping made the displacement a
+            // fixed goal-fraction independent of distance, which silently shrank the cone at range
+            // (2.25° read as 0.287 m from ANY distance, where a cone gives 0.79 m at 20 m).
+            float scale = Mathf.Tan(errorMagnitudeDeg * Mathf.Deg2Rad);
             return errorDirection * scale;
         }
     }
@@ -137,4 +141,7 @@ namespace TacticalDirector.ShotMechanics
 // | 1.4     | 2026-06-01 | —      | AR-3 M-1: corrected provenance — multipliers are Wang/Jenkins  |
 // |         |            |        |   avalanche constants (0x9E3779B1, 0x85EBCA77), NOT Knuth-     |
 // |         |            |        |   Fibonacci ⌊2^32·φ⌋ (which would be 0x9E3779B9).               |
+// | 1.5     | 2026-07-27 | —      | ERR-006-003 (shot-outcome design KD-3): ComputeErrorOffset now |
+// |         |            |        |   returns tan(err) tangent offsets (per metre of range) so the |
+// |         |            |        |   error is a genuine cone; consumer multiplies by distance.    |
 #endregion

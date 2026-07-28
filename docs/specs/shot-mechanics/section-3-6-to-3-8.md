@@ -266,31 +266,38 @@ Error is applied as an offset in `(u, v)` goal-relative space, then converted ba
 a 3D world-space aim direction.
 
 ```
-// Step 1: Compute (u, v) offset
-Vector2 errorOffset = errorDirection × ErrorMagnitudeDeg × GOAL_RELATIVE_ERROR_SCALE;
-// GOAL_RELATIVE_ERROR_SCALE converts degrees to goal-mouth units; see §3.6.13
+// Step 1 (ERR-006-003 correction): compute the error as a TANGENT-PLANE offset —
+// dimensionless, per metre of range — so the goal-plane displacement scales with the
+// shooter's distance and the error cone is a genuine cone.
+Vector2 errorOffset = errorDirection × Mathf.Tan(ErrorMagnitudeDeg × Mathf.Deg2Rad);
 
-// Step 2: Apply offset to PlacementTarget (before clamping — clamping happens at §3.1)
-// Note: This (u, v) is NOT clamped to [0,1]. The error may push outside the goal mouth.
-// That is correct — a shot aimed at the corner and pushed by error may miss.
-Vector2 actualTarget = request.PlacementTarget + errorOffset;
+// Step 2: Displacement at the goal plane, in METRES: tan(err) × distance along the
+// hashed direction (u component → lateral / world Y at the goal line, v component →
+// vertical / world Z). Note: NOT clamped to the goal mouth. The error may push outside
+// it. That is correct — a shot aimed at the corner and pushed by error may miss.
+float distance = goalPlaneX − agentPosition.x;   // range to the goal plane
+Vector2 displacementM = errorOffset × distance;
 
-// Step 3: Convert actualTarget (u, v) back to world-space using §3.5 bilinear formula
-Vector3 actualTargetWorld =
-    goalMouthOrigin
-    + goalRightward × (actualTarget.x × GOAL_WIDTH)
-    + Vector3.up    × (actualTarget.y × GOAL_HEIGHT);
+// Step 3: Apply the displacement to the intended goal-plane target point (recovered by
+// projecting the §3.5.6 aim direction to the goal plane), clamped: laterally to
+// ±PlacementErrorHClampFraction × GOAL_WIDTH beyond the posts; vertically to
+// [0, max(baseTargetZ, PlacementErrorVClampFraction × GOAL_HEIGHT)] — the clamp bounds
+// what ERROR can add, never what the §3.3 launch model intended (a lofted strike's base
+// trajectory legitimately tops 1.5 × GOAL_HEIGHT at the goal plane).
 
-// Step 4: Re-derive aim direction from agent position to actualTargetWorld
-// (same as §3.5.6 but using actualTargetWorld instead of targetWorldPoint)
-Vector3 finalDirection = ComputeAimDirection(agentPosition, actualTargetWorld, launchAngleDeg);
+// Step 4: Re-derive aim direction from agent position to the adjusted target point
+Vector3 finalDirection = normalize(adjustedTargetWorld − agentPosition);
 ```
 
-**GOAL_RELATIVE_ERROR_SCALE** [GT] converts angular error degrees to goal-relative UV
-offset units. At a reference distance of 20m, 1° of angular error corresponds to
-approximately `0.35m / 7.32m ≈ 0.048 goal-width units`. This scale factor allows
-the error model to remain in intuitive angular units internally while producing
-physically correct spatial offsets. See Appendix B for derivation.
+**Historical note (ERR-006-003, July 27, 2026):** this section originally routed the error
+through a `GOAL_RELATIVE_ERROR_SCALE` [GT] constant calibrated at a **fixed 20 m reference**
+(1° ≈ `0.35m / 7.32m ≈ 0.048 goal-width units`) — a distance-independent offset that is
+"physically correct" only at exactly 20 m, silently shrinking the cone beyond it and widening
+it inside it; and the shipped implementation dropped even the reference anchoring, using
+`Deg2Rad` directly as a UV scale (0.128 m/° at every range — 2.7× smaller than the spec's own
+reference value). The tangent form above supersedes both: at 20 m it reproduces the spec's
+stated 0.35 m/° exactly, and it is correct at every other range. `GOAL_RELATIVE_ERROR_SCALE`
+is retired (no such constant ships).
 
 ---
 

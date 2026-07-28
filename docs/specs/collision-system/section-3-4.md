@@ -479,16 +479,24 @@ public static class BallCollisionHandler
     /// </summary>
     public static void OnAgentCollision(ref BallState ball, AgentBallCollisionData data)
     {
-        // Implementation in Ball Physics Spec #1, Section 3.1.10.1
-        // This spec defines the interface; Ball Physics defines the behavior
-        
-        // Deflection calculation:
+        // ERR-003-007 (July 27, 2026): the deferred entry point is chosen and LIVE —
+        // BallCollision.ApplyAgentDeflection(ref ball, data.AgentPosition, data.BodyPart)
+        // (Ball Physics #1 §3.1.10.1; BodyPartCoefficients gains its first consumer).
+        // This handler owns the DETECTION-side gates (shot-outcome design KD-6):
+        //   * a Controlled ball is possession, not a deflection — no call;
+        //   * ball speed below AgentDeflection.MinBallSpeedMps [GT] is left to the
+        //     first-touch control model (#4) — no call;
+        // Ball Physics owns the RESPONSE-side gates (separating contact and degenerate
+        // normal are no-ops — the stateless self-block guard) and the reflection +
+        // body-part retention model. Agent-velocity momentum transfer (the item-3 sketch
+        // below) remains a Stage-1 refinement: agent speeds are second-order against the
+        // gated ball speeds.
+        //
+        // Original deflection sketch (items 1/2/4 realised; 3 deferred):
         //   1. Get body part coefficients (speed retention, spin retention)
         //   2. Calculate deflection normal (from contact geometry)
-        //   3. Apply momentum transfer (agent velocity â†’ ball velocity)
+        //   3. Apply momentum transfer (agent velocity → ball velocity)   [Stage 1]
         //   4. Update ball spin based on contact angle
-        
-        // Placeholder for spec documentation â€” actual code in Ball Physics
     }
 }
 ```
