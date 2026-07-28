@@ -1,6 +1,7 @@
 // File:     src/match-engine/tests/MatchEngineShotOutcomeScenarios.cs
 // Created:  2026-07-27
 // Modified: 2026-07-27
+// Modified: 2026-07-28 (shot-volume pass: windows 9 -> 18 min per seed — the calibrated goal rate needs a longer corpus for the goals-still-scored reachability predicate; sanity ceiling rescaled to the new window length)
 // Author:   —
 // Spec:     Shot-outcome distribution design (docs/tracking/shot-outcome-distribution-design.md) §5;
 //           Match Engine design note §5.Z.17/§5.Z.18; Ball Physics #1 §3.1.10 (ERR-001-004,
@@ -47,10 +48,13 @@ namespace TacticalDirector.MatchEngine
 
         public const ulong ShotOutcomeSeed = 0x0005107705107705UL;
 
-        /// <summary>32 400 ticks @ 60 Hz = 9 minutes per seed, four seeds — the discipline-scenario
-        /// sizing: measured shot production (~40–75 per 90 min) puts 15–30 shots across the corpus,
-        /// enough for reachability floors without rate flakiness.</summary>
-        private const int NumTicks = 32400;
+        /// <summary>64 800 ticks @ 60 Hz = 18 minutes per seed, four seeds. Originally 9 minutes
+        /// (sized against ~40–75 shots per 90 min); the §5.Z.21 shot-volume pass roughly halved
+        /// shot production AND the goal rate (goals 8.0 → 4.7 per 90 min on the configured path,
+        /// lower still on this neutral path), and the 9-minute corpus produced zero goals — the
+        /// `goals-still-scored` reachability predicate needs a window long enough for the class
+        /// to occur at the calibrated rate (the keeper-conversion corpus-sizing lesson).</summary>
+        private const int NumTicks = 64800;
 
         private static readonly ulong[] Seeds =
         {
@@ -77,12 +81,13 @@ namespace TacticalDirector.MatchEngine
         private const float DeflectionMinResidualSpeedMps = 3.0f;
 
         /// <summary>
-        /// Sanity ceiling on mean goals per 9-minute window across the corpus. The pre-fix engine
-        /// measured ~15.3 goals per 90 minutes (~1.5 per window) with every miss class unreachable;
-        /// this is a LOOSE over-correction guard, not a calibration claim (§5.Z.17 rule) — it fails
-        /// the pre-fix engine while leaving generous room above football's ~0.27 per window.
+        /// Sanity ceiling on mean goals per 18-minute window across the corpus. The pre-fix engine
+        /// measured ~15.3 goals per 90 minutes (~3.1 per window at this length) with every miss
+        /// class unreachable; this is a LOOSE over-correction guard, not a calibration claim
+        /// (§5.Z.17 rule) — it fails the pre-fix engine while leaving generous room above
+        /// football's ~0.54 per window.
         /// </summary>
-        private const float MaxMeanGoalsPerWindow = 1.2f;
+        private const float MaxMeanGoalsPerWindow = 2.4f;
 
         // Owning specs: the outcome distribution runs through #6 (placement/error/velocity), #1
         // (boundary adjudication + deflection response), #3 (contact detection + routing), #8 (the
@@ -313,4 +318,11 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | deflect off bodies, goals still scored under a loose sanity        |
 // |         |            |        | ceiling the pre-fix ~15/match fails, two-run determinism. No       |
 // |         |            |        | rate bands (the §5.Z.17 rule).                                     |
+// | 1.1     | 2026-07-28 | —      | Shot-volume pass (§5.Z.21): windows 9 → 18 min per seed. The       |
+// |         |            |        | calibrated engine scores ~4.7/90 min (configured path; lower on    |
+// |         |            |        | this neutral path) and the 9-min corpus measured ZERO goals — the  |
+// |         |            |        | reachability predicate needs a window sized to the class's rate    |
+// |         |            |        | (the keeper-conversion corpus-sizing lesson). MaxMeanGoalsPerWindow |
+// |         |            |        | rescaled 1.2 → 2.4 for the doubled window (pre-fix ~3.1 still      |
+// |         |            |        | fails it — the discriminator is preserved).                        |
 #endregion

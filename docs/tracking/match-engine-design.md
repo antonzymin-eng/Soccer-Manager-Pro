@@ -1542,6 +1542,58 @@ Instrument fallout fixed with the pass: shot counting re-anchored from `ShotDete
 to the new `TestOnly_ShotContacts` genuine-strike counter (the arming stamps redefined a stamp
 edge as "a threat episode").
 
+### 5.Z.21 Shot volume (July 28, 2026) — §5.Z.19's remaining lever (a), the distance term U_SHOOT never had
+
+**The lever.** §5.Z.19 discharged roughly half the shot-volume excess as a side effect of real
+pace (59–70 → 31–45 shots/match; football ≈ 25) and named the remainder a DT-selection /
+possession-churn property. Measured first (`ShotOutcomeDiagnosticTests` v1.3 gains the two
+dimensions the question turns on — per-shot distance to the attacked goal, and possession-churn
+context): the finding is the DISTRIBUTION, not the count. Mean shot distance ran **30–34 m**
+against football's ~17, with ~60% of shots beyond 22 m — clustered AT the §3.1.4.2 range-gate
+boundary. Cause, verified against source (**ERR-008-017**): `U_SHOOT` contains **no distance
+term**, and `GoalOpeningScore` is scale-free by construction (goal arc and near-goal-blocker
+occlusion both shrink ~1/d), so within range a 34 m shot scored identically to a 10 m one —
+while football's P(goal | shot) falls ~tenfold over that span. The ERR-008-016 class: the
+formula omitted the strongest single predictor of shot value in the game it models.
+
+**The fix** (spec + code same commit): §3.2.3.1 gains a multiplicative `DistanceQuality_SHOOT`
+— 1.0 inside `[GT] SHOOT_SWEET_RANGE_M` (12 m; every close-range utility bitwise untouched, so
+the §5.Z.17–§5.Z.20 calibrations stand), hyperbolic decay `FALLOFF / (FALLOFF + (d − SWEET))`
+beyond. The range gate stays the hard cap: a preference, not a cliff — the ±0.15 composure-noise
+band still lets an adventurous agent occasionally take the 30 m shot, which is football.
+
+**Calibration refused half the design target, and that is the finding worth keeping.** The
+falloff ladder (3 full matches per rung, same seeds): FALLOFF 10 → 30 shots/match at 38%
+beyond 22 m, goals 9.0; 9 → 24.0 shots but 39% long and goals 7.7; **8 → 17.7 shots at 30%
+long, goals 4.7 — the closest this engine has ever measured to football's ~2.7, with
+football-shaped scorelines (2-2 / 3-2 / 5-0)**; 6 → 12.3. The two halves of the design target
+(count ≈ 25 AND mean distance ≤ 22 m) are not simultaneously reachable by this lever: once
+long shots correctly lose to passes, volume is bounded by close-chance CREATION, and at ~3×
+football's final-third churn almost no possession penetrates the box (0.05 shots per third
+entry vs football's ~0.2). FALLOFF = 8 chosen — the roadmap chain wants a goal rate that makes
+the A4a corpus worth fitting, and a football-shaped distribution at 18 shots serves that
+strictly better than a football-count 24 still dominated by range-boundary strikes.
+
+**Measured (3 full matches, same seeds pre/post):** shots 31/35/38 → **17/19/17**, mean shot
+distance 30–34 m → **16.5–27.1 m**, long-shot share 60% → 30%, goals 8.0 → **4.7**/match,
+goals/shot 0.19–0.26 → 0.24–0.29. Speed floors unaffected (the decay changes which shots are
+taken, not how they are struck). No schema/RNG/draw-order change.
+
+Acceptance: the `match-engine-shot-speed` scenario gains a mean-shot-distance ceiling (24 m)
+that **fails on the pre-fix engine at exactly 30.0, verified by execution before the scorer
+change landed**, + 5 `UtilityScorerTests` locks (sweet-range bitwise indifference, monotone
+decay + knee continuity, exact half-quality at SWEET + FALLOFF, the discriminating
+long-vs-close-vs-pass comparison, [GT] shape guards). One existing lock re-anchored with intent
+preserved (`ShootMidfield_LongShotsRaw12` compared a zone ratio at 28 m, where the decay pushes
+the suppressed branch into the UTILITY_FLOOR clamp — moved inside the sweet range), and the
+`match-engine-shot-outcomes` corpus resized 9 → 18 min/seed after the full gate caught its
+`goals-still-scored` reachability predicate failing at the calibrated rate (its 9-min
+neutral-path corpus measured zero goals — the keeper-conversion corpus-sizing lesson; the
+sanity ceiling rescaled with the window, still failing the pre-fix engine). Recorded,
+not fixed: the churn/creation residual above, and the midfield long-shot machinery
+(`LONG_SHOT_THRESHOLD`, `SHOOT_ZONE_MID_*`) being production-unreachable dead surface (zone
+minimum 40 m vs range-gate maximum 35 m). Owner: `docs/tracking/shot-volume-design.md`.
+
 ### 5.Z.8 What this unblocks
 
 `PM-1` ("watch a match") is no longer blocked by the engine. Roadmap **A4a** — the round-resolution
@@ -1624,6 +1676,7 @@ question Step 0 exists to ask.
 
 | Version | Date       | Author | Notes                                  |
 |---------|------------|--------|----------------------------------------|
+| 2.7     | 2026-07-28 | —      | **§5.Z.21 — shot volume (§5.Z.19's remaining lever (a)) fixed, calibrated and measured.** ERR-008-017: `U_SHOOT` had NO distance term while `GoalOpeningScore` is scale-free and the range gate is a cliff — measured shots clustered AT the range-gate boundary (means 30–34 m vs football's ~17, ~60% beyond 22 m). §3.2.3.1 gains `DistanceQuality_SHOOT` (1.0 inside `[GT] SHOOT_SWEET_RANGE_M` = 12, hyperbolic decay with `[GT] SHOOT_DIST_FALLOFF_M` = 8). The calibration ladder refused half the design target — count ≈ 25 AND mean ≤ 22 m are not jointly reachable while close-chance creation is churn-bounded — and the distribution + goal-rate landing was chosen: shots 34.7 → **17.7**/match, long-shot share 60% → 30%, **goals 8.0 → 4.7/match (closest ever to football's ~2.7)**, scorelines 2-2 / 3-2 / 5-0. `match-engine-shot-speed` gains the mean-distance ceiling (fails pre-fix at exactly 30.0, verified by execution) + 5 scorer locks. No schema/RNG/draw-order change. Owner: `shot-volume-design.md`. |
 | 2.6     | 2026-07-28 | —      | **§5.Z.20 — the keeper's catch/parry conversion (§5.Z.19's residual lever (c)) fixed, calibrated and measured.** ERR-011-005 (#11 §3.2.3 window anchored at the dive COMMIT and frozen — the per-frame re-evaluation dated the contact-consumed value by the ball's whole flight time), ERR-011-006 (the detection stamp dies with its episode + the `OnThreatArmed` episode-onset fallback for threats with no shot event — no new engine state, the stamp is the latch and is already in the v19 GK block), KD-C3 `[GT]` recalibration inside the #11 spec ranges over two measured full-match iterations. Measured (3 full matches, same seeds): window at contact 0.000 → 0.30–0.67, elapsed-when-airborne 85–349 s → ~0.3 s, catches 1 → 6 of 15 contacts, goals/match 14.7 → 8.0, **goals/shot 0.38–0.42 → 0.19–0.26**; scorelines 3-3 / 6-3 / 8-1. Residual bounded and recorded: the CONTACT RATE (~¼ of on-target shots met — #12 GK-slot positioning + commit timing) and shot volume. New `match-engine-keeper-conversion` scenario + `GoalkeeperConversionTests` (7); shot counting re-anchored to `TestOnly_ShotContacts`. No schema/RNG/draw-order change. Owner: `gk-catch-parry-conversion-design.md`. |
 | 2.5     | 2026-07-28 | —      | **§5.Z.19 — shot speed + the physical goal frame (the §5.Z.18 residual lever (b)) fixed and measured.** ERR-008-016 (#8 §3.5.3 PowerIntent floor-plus-modulation — the product form pinned nearly every shot at its own 0.1 clamp floor), ERR-006-004 (#6 `VFloor` 10 → 24 over two measured calibration iterations), ERR-001-005 (the goal frame physical: `ApplySweptGoalFrameCollision` six-cylinder segment test — `ApplyGoalPostCollision`'s first production caller; crossing-point goal-line adjudication via the `CheckBoundaries` prevPosition overload). Engine: `_prevTickBallPosition` within-tick capture + swept call in RunPhysicsPhase, crossing-point adjudication in CheckRestartAndApply, `TestOnly_WoodworkStrikes`. Measured: shot-tick means 6.9–10.3 → 14.7–16.1 m/s, maxima to 27.6, shots/match 59–70 → 31–45, goals/shot ROSE 0.14–0.25 → 0.38–0.42 (the keeper's conversion — lever (c) — now measured against real pace). New `match-engine-shot-speed` scenario (5 of 7 predicates fail pre-fix, verified by execution) + `SweptGoalFrameTests` (11) + PowerIntent locks (3). No schema/RNG/draw-order change. Owner: `shot-speed-woodwork-design.md`. |
 | 2.4     | 2026-07-27 | —      | **§5.Z.18 — the shot-outcome distribution (the §5.Z.17 residual) fixed and measured.** ERR-006-002 (`finalVelocity = finalDirection × kickSpeed` per #6's own §3.5.7; the §3.5.6 launch-tilt aim — the vertical half of the placement/error model live for the first time), ERR-006-003 (the error cone is a cone: `tan(err) × distance` at the goal plane), ERR-001-004 (the `z < Diameter` gate removed from `CheckBoundaries` + `IsOutOfBounds` — the goal has a crossbar, airborne crossings adjudicate at the crossing per Law 9/10), ERR-003-007 (`OnAgentCollision` live: `BallCollision.ApplyAgentDeflection`, `BodyPartCoefficients`' first consumer, stateless approaching-only self-block guard, `[GT] AgentDeflection.MinBallSpeedMps` = 10 re-anchored from measurement), the `ShotWorldAdapter` pressure query live (was `0f`; first-touch `PressureEvaluator` + §5.Z.14 un-mirror), `MIN_GOAL_VISIBILITY` 0.05 → 0.12. Measured: goals/match 15.3 → 12.3, goals/shot 0.24–0.29 → 0.14–0.25, fast-ball body contacts 0 → 560–612/match. New `match-engine-shot-outcomes` scenario (3 of 8 predicates fail pre-fix, by execution in a worktree at the pre-fix commit) + 17 unit locks + the `ShotOutcomeDiagnosticTests` instrument. Two tests inverted (encoded the old z-gate contract). No schema/RNG/draw-order change. Residual levers recorded: shot volume (~2.5× football), shot speed (~7–10 m/s means vs ~25), keeper conversion. Owner: `shot-outcome-distribution-design.md`. |

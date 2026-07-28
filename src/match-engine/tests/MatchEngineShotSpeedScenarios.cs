@@ -1,7 +1,7 @@
 // File:     src/match-engine/tests/MatchEngineShotSpeedScenarios.cs
 // Created:  2026-07-28
 // Modified: 2026-07-28
-// Modified: 2026-07-28 (gk-catch-parry-conversion: shot sampling re-anchored from ShotDetectedTickMs edges to the TestOnly_ShotContacts genuine-strike counter — the ERR-011-006 arming stamps would have folded slow threat episodes into the speed distribution the floors pin)
+// Modified: 2026-07-28 (shot-volume pass: + mean-shot-distance-reaches-football-band predicate, ERR-008-017)
 // Author:   —
 // Spec:     Shot speed & physical woodwork design (docs/tracking/shot-speed-woodwork-design.md) §5;
 //           Match Engine design note §5.Z; Ball Physics #1 §3.1.10 (ERR-001-005);
@@ -67,6 +67,13 @@ namespace TacticalDirector.MatchEngine
         /// 15.3–18.9; football-pace strikes clear 20 comfortably post-fix.</summary>
         private const float ShotSpeedMaxFloorMps = 20.0f;
 
+        /// <summary>Mean shot-distance ceiling (m) across the corpus — the shot-volume pass's
+        /// discriminator (ERR-008-017). Pre-fix means measure 30–34 m over full matches (shots
+        /// cluster at the range-gate boundary); football's mean is ~17 m. A 24 m ceiling is
+        /// unreachable pre-fix while leaving room over the calibrated post-fix band
+        /// (a reachability ceiling, not a pinned calibration band — the §5.Z.17 rule).</summary>
+        private const float ShotDistanceMeanCeilingM = 24.0f;
+
         // Frame-probe geometry (attack +X; away goal line at x = PITCH_LENGTH_M, mouth centre
         // y = PITCH_WIDTH_M / 2). Post axes sit OUTWARD of the 7.32 m inner-edge box by half the
         // post diameter; the crossbar axis sits ABOVE the 2.44 m lower edge by the same half.
@@ -103,13 +110,14 @@ namespace TacticalDirector.MatchEngine
 
         private static void RunShotSpeed(ScenarioContext context)
         {
-            // ── 1. Natural-play speed floors ────────────────────────────────────────────────────
+            // ── 1. Natural-play speed floors + distance ceiling ─────────────────────────────────
             int totalShots = 0;
             float speedSum = 0f;
             float speedMax = 0f;
+            float distSum = 0f;
             foreach (ulong seed in Seeds)
             {
-                PlayOne(seed, ref totalShots, ref speedSum, ref speedMax);
+                PlayOne(seed, ref totalShots, ref speedSum, ref speedMax, ref distSum);
             }
 
             context.Envelope.CheckTrue("shots-are-taken", totalShots > 0, Inv(totalShots));
@@ -121,6 +129,15 @@ namespace TacticalDirector.MatchEngine
             context.Envelope.CheckTrue("shot-speed-max-reaches-football-band",
                 speedMax >= ShotSpeedMaxFloorMps,
                 "max=" + InvF(speedMax) + " floor=" + InvF(ShotSpeedMaxFloorMps));
+
+            // Shot-volume pass (ERR-008-017): without a distance term in U_SHOOT, shots cluster
+            // at the RANGE-GATE boundary (measured mean 30–34 m over full matches vs football's
+            // ~17). Distance is the discriminator, not count — over a 9-minute window the count
+            // is noisy but the pre/post mean-distance gap is order-one (shot-volume-design KD-V5).
+            float distMean = totalShots > 0 ? distSum / totalShots : float.MaxValue;
+            context.Envelope.CheckTrue("mean-shot-distance-reaches-football-band",
+                distMean <= ShotDistanceMeanCeilingM,
+                "distMean=" + InvF(distMean) + " ceiling=" + InvF(ShotDistanceMeanCeilingM));
 
             // ── 2. Post strike rebounds into play (front face, dead on the post axis) ───────────
             // Contact at x = GoalLineX − (POST_DIAMETER/2 + Ball.RADIUS) ≈ −0.17 m before the
@@ -197,7 +214,8 @@ namespace TacticalDirector.MatchEngine
                 identical ? "digest chains identical over 3600 ticks" : "digest divergence");
         }
 
-        private static void PlayOne(ulong seed, ref int shots, ref float speedSum, ref float speedMax)
+        private static void PlayOne(ulong seed, ref int shots, ref float speedSum, ref float speedMax,
+            ref float distSum)
         {
             // The ConfigureSquads path — the SAME distribution the ShotOutcomeDiagnosticTests
             // instrument measures and the [GT] values were calibrated against (the neutral all-10
@@ -227,6 +245,16 @@ namespace TacticalDirector.MatchEngine
                     float speed = engine.BallView.Velocity.magnitude;
                     speedSum += speed;
                     if (speed > speedMax) speedMax = speed;
+
+                    // Distance from the strike point to the ATTACKED goal — the contact-tick
+                    // vx sign names the goal (both teams shoot; measuring against a fixed goal
+                    // would read a home-team shot toward x = 0 as ~70+ m and corrupt the mean).
+                    UnityEngine.Vector3 shotPos = engine.BallView.Position;
+                    float goalX = engine.BallView.Velocity.x >= 0f
+                        ? MatchEngineConstants.PITCH_LENGTH_M : 0f;
+                    float dy = shotPos.y - CentreY;
+                    float dx = shotPos.x - goalX;
+                    distSum += (float)Math.Sqrt(dx * dx + dy * dy);
                 }
             }
         }
@@ -306,4 +334,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | ShotDetectedTickMs edges — the ERR-011-006 arming stamps also fire |
 // |         |            |        | for slow threat episodes (≥ 3 m/s), which would have polluted the  |
 // |         |            |        | sampled speed distribution and broken the floor predicates.        |
+// | 1.2     | 2026-07-28 | —      | Shot-volume pass (ERR-008-017): + mean-shot-distance ceiling       |
+// |         |            |        | predicate (24 m — pre-fix means 30–34 m are unreachable; the       |
+// |         |            |        | attacked goal named by the contact-tick vx sign, since measuring   |
+// |         |            |        | against a fixed goal corrupts the mean for the other team's shots).|
 #endregion

@@ -2,6 +2,7 @@
 // Created:  2026-05-29
 // Modified: 2026-06-28 (#21 T2 mentality risk multiplier)
 // Modified: 2026-07-07 (cheap-item addition: rest-defense risk dampener)
+// Modified: 2026-07-28 (ERR-008-017 — ScoreShoot gains the DistanceQuality_SHOOT term (shot-volume design KD-V2/KD-V3))
 // Author:   —
 // Spec:     Decision Tree #8 §3.2, §3.4, new §3.2/§7.7, Tactical Instructions #21 §3.2, Code Standards #20
 // Purpose:  Step 4 of the 6-step pipeline. Applies the utility scoring model to each
@@ -41,15 +42,15 @@ namespace TacticalDirector.DecisionTree
             float u;
             switch (opt.Type)
             {
-                case ActionType.PASS:            u = ScorePass(ref opt, in ctx);      break;
-                case ActionType.SHOOT:           u = ScoreShoot(ref opt, in ctx);     break;
-                case ActionType.DRIBBLE:         u = ScoreDribble(ref opt, in ctx);   break;
-                case ActionType.HOLD:            u = ScoreHold(ref opt, in ctx);      break;
-                case ActionType.MOVE_TO_POSITION: u = ScoreMove(ref opt, in ctx);    break;
-                case ActionType.PRESS:           u = ScorePress(ref opt, in ctx);     break;
-                case ActionType.INTERCEPT:       u = ScoreIntercept(ref opt, in ctx); break;
-                case ActionType.SAVE:            u = ScoreSave(ref opt, in ctx);      break;
-                default:                         u = UtilityWeights.UTILITY_FLOOR;    break;
+                case ActionType.PASS: u = ScorePass(ref opt, in ctx); break;
+                case ActionType.SHOOT: u = ScoreShoot(ref opt, in ctx); break;
+                case ActionType.DRIBBLE: u = ScoreDribble(ref opt, in ctx); break;
+                case ActionType.HOLD: u = ScoreHold(ref opt, in ctx); break;
+                case ActionType.MOVE_TO_POSITION: u = ScoreMove(ref opt, in ctx); break;
+                case ActionType.PRESS: u = ScorePress(ref opt, in ctx); break;
+                case ActionType.INTERCEPT: u = ScoreIntercept(ref opt, in ctx); break;
+                case ActionType.SAVE: u = ScoreSave(ref opt, in ctx); break;
+                default: u = UtilityWeights.UTILITY_FLOOR; break;
             }
 
             // #21 §3.2/§3.3 (T2): team mentality risk multiplier, applied to every scored option
@@ -151,13 +152,13 @@ namespace TacticalDirector.DecisionTree
             float zoneM = GetZoneModifier(opt.Type, ctx.BallZone);
 
             // Shifted attribute form: (0.5 + A × 0.5)^exp
-            float visionFactor    = Mathf.Pow(0.5f + ctx.A_Vision  * 0.5f, UtilityWeights.PASS_VISION_EXP);
+            float visionFactor = Mathf.Pow(0.5f + ctx.A_Vision * 0.5f, UtilityWeights.PASS_VISION_EXP);
             float techniqueFactor = Mathf.Pow(0.5f + ctx.A_Passing * 0.5f, UtilityWeights.PASS_TECHNIQUE_EXP);
             float am = visionFactor * techniqueFactor;
 
             float contextM = opt.AdjustedPassLaneScore;
 
-            float p   = ctx.PressureScalar;
+            float p = ctx.PressureScalar;
             float risk = p * (1.0f - ctx.A_Passing) * UtilityWeights.PASS_RISK_COEFF;
 
             float baseU = UtilityWeights.U_BASE_PASS * zoneM;
@@ -194,7 +195,7 @@ namespace TacticalDirector.DecisionTree
                 zoneM = UtilityWeights.SHOOT_ZONE_DEF;
             }
 
-            float finishFactor   = Mathf.Pow(0.5f + ctx.A_Finishing * 0.5f, UtilityWeights.SHOOT_FINISHING_EXP);
+            float finishFactor = Mathf.Pow(0.5f + ctx.A_Finishing * 0.5f, UtilityWeights.SHOOT_FINISHING_EXP);
             float composureFactor = Mathf.Pow(0.5f + ctx.A_Composure * 0.5f, UtilityWeights.SHOOT_COMPOSURE_EXP);
             float am = finishFactor * composureFactor;
 
@@ -205,14 +206,26 @@ namespace TacticalDirector.DecisionTree
 
             // AR-2 M-3: §3.2.3.1 RiskPenalty_SHOOT = (1 − GoalOpeningScore) × P × coeff
             // (a blocked shot is the risk driver). Previous form used (1 − A_Finishing).
-            float p    = ctx.PressureScalar;
+            float p = ctx.PressureScalar;
             float risk = (1.0f - goalOpeningScore) * p * UtilityWeights.SHOOT_RISK_COEFF;
+
+            // §3.2.3.1 DistanceQuality_SHOOT (ERR-008-017 / shot-volume design KD-V2): 1.0 inside
+            // the sweet range, hyperbolic decay beyond it. GoalOpeningScore is scale-free (the
+            // goal arc and a near-goal blocker's occlusion both shrink ~1/d), so without this
+            // term a 34 m shot scored identically to a 10 m one and measured shots clustered at
+            // the range-gate boundary (means 30–34 m vs football's ~17). Direct-injection test
+            // options that never set DistanceToGoal read 0 ⇒ distQ = 1.0 (KD-V3 contract) —
+            // every pre-existing unit expectation stands unmodified.
+            float beyond = opt.DistanceToGoal - UtilityWeights.SHOOT_SWEET_RANGE_M;
+            float distQ = beyond <= 0.0f
+                ? 1.0f
+                : UtilityWeights.SHOOT_DIST_FALLOFF_M / (UtilityWeights.SHOOT_DIST_FALLOFF_M + beyond);
 
             float baseU = UtilityWeights.U_BASE_SHOOT * zoneM;
             float tactM = TacticalModifierResolver.Resolve(
                 ActionType.SHOOT, in ctx.TacticalContext, ctx.OpponentHasBall, 0.0f);
 
-            return baseU * am * goalOpeningScore * tactM * (1.0f - risk);
+            return baseU * am * goalOpeningScore * distQ * tactM * (1.0f - risk);
         }
 
         // ── §3.2.4 DRIBBLE ─────────────────────────────────────────────────────
@@ -223,12 +236,12 @@ namespace TacticalDirector.DecisionTree
 
             // Raw attribute form (no 0.5 shift per §3.2.4 design note)
             float dribblingFactor = Mathf.Pow(ctx.A_Dribbling, UtilityWeights.DRIBBLE_DRIBBLING_EXP);
-            float agilityFactor   = Mathf.Pow(ctx.A_Agility,   UtilityWeights.DRIBBLE_AGILITY_EXP);
+            float agilityFactor = Mathf.Pow(ctx.A_Agility, UtilityWeights.DRIBBLE_AGILITY_EXP);
             float am = dribblingFactor * agilityFactor;
 
             float contextM = opt.SpaceScore;
 
-            float p    = ctx.PressureScalar;
+            float p = ctx.PressureScalar;
             float risk = p * (1.0f - ctx.A_Dribbling) * UtilityWeights.DRIBBLE_RISK_COEFF;
 
             float baseU = UtilityWeights.U_BASE_DRIBBLE * zoneM;
@@ -246,7 +259,7 @@ namespace TacticalDirector.DecisionTree
 
             float composureFactor = Mathf.Pow(0.5f + ctx.A_Composure * 0.5f, UtilityWeights.HOLD_COMPOSURE_EXP);
 
-            float p    = ctx.PressureScalar;
+            float p = ctx.PressureScalar;
             float risk = p * UtilityWeights.HOLD_PRESSURE_COEFF;
 
             float baseU = UtilityWeights.U_BASE_HOLD * zoneM;
@@ -265,7 +278,7 @@ namespace TacticalDirector.DecisionTree
             float zoneM = GetZoneModifier(ActionType.MOVE_TO_POSITION, ctx.BallZone);
 
             float positioningFactor = Mathf.Pow(0.5f + ctx.A_Positioning * 0.5f, UtilityWeights.MOVE_POSITIONING_EXP);
-            float workRateFactor    = Mathf.Pow(0.5f + ctx.A_WorkRate    * 0.5f, UtilityWeights.MOVE_WORKRATE_EXP);
+            float workRateFactor = Mathf.Pow(0.5f + ctx.A_WorkRate * 0.5f, UtilityWeights.MOVE_WORKRATE_EXP);
             float am = positioningFactor * workRateFactor;
 
             // Distance modifier: urgency scales linearly to formation slot distance (§3.2.6)
@@ -320,8 +333,8 @@ namespace TacticalDirector.DecisionTree
 
             // §3.2.7.1: all three attributes use the shifted form (0.5 + A × 0.5)
             float aggressionFactor = Mathf.Pow(0.5f + ctx.A_Aggression * 0.5f, UtilityWeights.PRESS_AGGRESSION_EXP);
-            float workRateFactor   = Mathf.Pow(0.5f + ctx.A_WorkRate   * 0.5f, UtilityWeights.PRESS_WORKRATE_EXP);
-            float staminaFactor    = Mathf.Pow(0.5f + ctx.A_Stamina    * 0.5f, UtilityWeights.PRESS_STAMINA_EXP);
+            float workRateFactor = Mathf.Pow(0.5f + ctx.A_WorkRate * 0.5f, UtilityWeights.PRESS_WORKRATE_EXP);
+            float staminaFactor = Mathf.Pow(0.5f + ctx.A_Stamina * 0.5f, UtilityWeights.PRESS_STAMINA_EXP);
             float am = aggressionFactor * workRateFactor * staminaFactor;
 
             float contextM = opt.ProximityScore;
@@ -342,8 +355,8 @@ namespace TacticalDirector.DecisionTree
 
             // Anticipation: raw form (§3.2.8 — no 0.5 shift for Anticipation)
             // Pace: shifted form
-            float anticipationFactor = Mathf.Pow(ctx.A_Anticipation,              UtilityWeights.INTERCEPT_ANTICIPATION_EXP);
-            float paceFactor         = Mathf.Pow(0.5f + ctx.A_Pace * 0.5f,        UtilityWeights.INTERCEPT_PACE_EXP);
+            float anticipationFactor = Mathf.Pow(ctx.A_Anticipation, UtilityWeights.INTERCEPT_ANTICIPATION_EXP);
+            float paceFactor = Mathf.Pow(0.5f + ctx.A_Pace * 0.5f, UtilityWeights.INTERCEPT_PACE_EXP);
             float am = anticipationFactor * paceFactor;
 
             float contextM = opt.InterceptFeasibilityScore;
@@ -351,7 +364,7 @@ namespace TacticalDirector.DecisionTree
             // AR-2 M-6: §3.2.8.1 pressure term is (1 − P × INTERCEPT_PRESSURE_COEFF),
             // independent of Anticipation. The previous (1 − A_Anticipation) factor is
             // not in the spec formula.
-            float p    = ctx.PressureScalar;
+            float p = ctx.PressureScalar;
             float risk = p * UtilityWeights.INTERCEPT_PRESSURE_COEFF;
 
             float baseU = UtilityWeights.U_BASE_INTERCEPT * zoneM;
@@ -464,4 +477,8 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   as the sole off-ball option, so not load-bearing for selection); SAVE is   |
 // |         |            |        |   EXEMPTED from PlayerTacticActionMultiplier in ComputeUtility — its 7-wide  |
 // |         |            |        |   #21 tables are indexed by the action ordinal, so a=SAVE(7) would read OOB. |
+// | 1.12    | 2026-07-28 | —      | ERR-008-017 (shot-volume design KD-V2/KD-V3): ScoreShoot gains the           |
+// |         |            |        |   DistanceQuality_SHOOT factor — 1.0 inside SHOOT_SWEET_RANGE_M, hyperbolic  |
+// |         |            |        |   decay beyond (U_SHOOT previously had no distance term; measured shots      |
+// |         |            |        |   clustered at the range-gate boundary, means 30–34 m vs football's ~17).    |
 #endregion

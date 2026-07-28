@@ -2,6 +2,7 @@
 // Created:  2026-05-29
 // Modified: 2026-06-01
 // Modified: 2026-07-07 (cheap-item addition: rest-defense risk dampener test; half-spaces
+// Modified: 2026-07-28 (ERR-008-017 — DistanceQuality_SHOOT locks)
 //           test added then reverted after user review — see VersionHistory)
 // Author:   —
 // Spec:     Decision Tree #8 §5 (UT-US-01, UT-US-03, UT-05 through UT-09), §3.2.10, new §3.2/§7.7, Code Standards #20
@@ -86,7 +87,7 @@ namespace TacticalDirector.DecisionTree.Tests
             // Build off-ball context with 1 opponent within press range.
             // Score a PRESS option under HIGH pressing then under MEDIUM pressing.
             // Expected: ratio HIGH/MEDIUM ≈ PressingHighPressMod / 1.0 = 1.40 ± 10%.
-            DecisionContext ctxHigh   = BuildOffBallContext(PressingMode.HIGH);
+            DecisionContext ctxHigh = BuildOffBallContext(PressingMode.HIGH);
             DecisionContext ctxMedium = BuildOffBallContext(PressingMode.MEDIUM);
 
             // ProximityScore = 0.8: close opponent, well within range.
@@ -151,7 +152,7 @@ namespace TacticalDirector.DecisionTree.Tests
             for (int i = 0; i < 3; i++)
             {
                 if (Buffer[i].Type == ActionType.SHOOT) shootU = Buffer[i].BaseUtility;
-                if (Buffer[i].Type == ActionType.PASS)  passU  = Buffer[i].BaseUtility;
+                if (Buffer[i].Type == ActionType.PASS) passU = Buffer[i].BaseUtility;
             }
 
             Assert.Greater(shootU, passU, "SHOOT should dominate PASS in attacking third with open goal");
@@ -173,12 +174,12 @@ namespace TacticalDirector.DecisionTree.Tests
             float passU = 0.0f, dribbleU = 0.0f, holdU = 0.0f;
             for (int i = 0; i < 3; i++)
             {
-                if (Buffer[i].Type == ActionType.PASS)   passU    = Buffer[i].BaseUtility;
+                if (Buffer[i].Type == ActionType.PASS) passU = Buffer[i].BaseUtility;
                 if (Buffer[i].Type == ActionType.DRIBBLE) dribbleU = Buffer[i].BaseUtility;
-                if (Buffer[i].Type == ActionType.HOLD)   holdU    = Buffer[i].BaseUtility;
+                if (Buffer[i].Type == ActionType.HOLD) holdU = Buffer[i].BaseUtility;
             }
 
-            Assert.Greater(passU, holdU,    "PASS should dominate HOLD in defensive third");
+            Assert.Greater(passU, holdU, "PASS should dominate HOLD in defensive third");
             Assert.Greater(passU, dribbleU, "PASS should dominate DRIBBLE in defensive third");
         }
 
@@ -187,7 +188,7 @@ namespace TacticalDirector.DecisionTree.Tests
         [Test]
         public void HighPressure_ReducesPassAndHold()
         {
-            DecisionContext ctxLow  = BuildContext(0.5f, 0.5f, 0.0f);
+            DecisionContext ctxLow = BuildContext(0.5f, 0.5f, 0.0f);
             DecisionContext ctxHigh = BuildContext(0.5f, 0.5f, 1.0f);
 
             Buffer[0] = MakePass(0.8f, 0.8f, 15.0f);
@@ -298,7 +299,7 @@ namespace TacticalDirector.DecisionTree.Tests
             TacticalContext tc = ctx.TacticalContext;
             tc.DismarkIntensity = TacticalInstructions.DismarkIntensity.Aggressive;
             ctx.TacticalContext = tc;
-            ctx.A_Decisions    = 0.8f;
+            ctx.A_Decisions = 0.8f;
             ctx.A_Anticipation = 0.8f;
 
             var target = new Vector2(60f, 34f);
@@ -350,7 +351,7 @@ namespace TacticalDirector.DecisionTree.Tests
             TacticalContext tc = ctx.TacticalContext;
             tc.DismarkIntensity = TacticalInstructions.DismarkIntensity.Aggressive;
             ctx.TacticalContext = tc;
-            ctx.A_Decisions    = 0.0f;
+            ctx.A_Decisions = 0.0f;
             ctx.A_Anticipation = 0.0f;
 
             var target = new Vector2(60f, 34f);
@@ -395,8 +396,10 @@ namespace TacticalDirector.DecisionTree.Tests
         private static ActionOption MakePassTo(Vector2 targetPosition) =>
             new ActionOption
             {
-                Type = ActionType.PASS, PassLaneScore = 0.5f,
-                AdjustedPassLaneScore = 0.5f, IntendedDistance = 10.0f,
+                Type = ActionType.PASS,
+                PassLaneScore = 0.5f,
+                AdjustedPassLaneScore = 0.5f,
+                IntendedDistance = 10.0f,
                 TargetPosition = targetPosition
             };
 
@@ -404,7 +407,8 @@ namespace TacticalDirector.DecisionTree.Tests
         {
             return new FilteredView
             {
-                ObserverId = 0, FrameNumber = 1,
+                ObserverId = 0,
+                FrameNumber = 1,
                 VisibleTeammates = new PerceivedAgent[0],
                 VisibleOpponents = new[]
                 {
@@ -422,15 +426,16 @@ namespace TacticalDirector.DecisionTree.Tests
         {
             var mc = new MatchContext
             {
-                Phase     = MatchPhase.OPEN_PLAY,
-                BallZone  = FieldZone.MIDFIELD,
+                Phase = MatchPhase.OPEN_PLAY,
+                BallZone = FieldZone.MIDFIELD,
                 Possession = PossessionState.HOME_TEAM,
                 PossessingAgentId = 0
             };
             var tc = TacticalContext.Stage0Default(new Vector2(50f, 34f));
             var snap = new FilteredView
             {
-                ObserverId = 0, FrameNumber = 1,
+                ObserverId = 0,
+                FrameNumber = 1,
                 VisibleTeammates = new PerceivedAgent[0],
                 VisibleOpponents = new PerceivedAgent[0],
                 BlindSidePerceivedAgents = new PerceivedAgent[0]
@@ -438,53 +443,56 @@ namespace TacticalDirector.DecisionTree.Tests
 
             return new DecisionContext
             {
-                AgentId         = 0,
-                AgentTeamId     = 0,
-                CurrentFrame    = 1,
-                AgentHasBall    = true,
+                AgentId = 0,
+                AgentTeamId = 0,
+                CurrentFrame = 1,
+                AgentHasBall = true,
                 PossessedByTeam = PossessionState.HOME_TEAM,
-                AgentPosition   = new Vector2(52f, 34f),
+                AgentPosition = new Vector2(52f, 34f),
                 AgentFacingDirection = Vector2.right,
-                AgentState      = default,
-                A_Vision        = 0.5f,
-                A_Passing       = 0.5f,
-                A_Finishing     = finishing,
-                A_Dribbling     = 0.5f,
-                A_LongShots     = 0.5f,
-                A_Composure     = composure,
-                A_Decisions     = 0.5f,
-                A_Anticipation  = 0.5f,
-                A_Pace          = 0.5f,
-                A_Agility       = 0.5f,
-                A_WorkRate      = 0.5f,
-                A_Stamina       = 0.5f,
-                A_Aggression    = 0.5f,
-                A_Positioning   = 0.5f,
-                A_Crossing      = 0.5f,
-                MatchContext    = mc,
-                BallZone        = FieldZone.MIDFIELD,   // scorer reads the team-relative ctx field (AR-2 H-2)
+                AgentState = default,
+                A_Vision = 0.5f,
+                A_Passing = 0.5f,
+                A_Finishing = finishing,
+                A_Dribbling = 0.5f,
+                A_LongShots = 0.5f,
+                A_Composure = composure,
+                A_Decisions = 0.5f,
+                A_Anticipation = 0.5f,
+                A_Pace = 0.5f,
+                A_Agility = 0.5f,
+                A_WorkRate = 0.5f,
+                A_Stamina = 0.5f,
+                A_Aggression = 0.5f,
+                A_Positioning = 0.5f,
+                A_Crossing = 0.5f,
+                MatchContext = mc,
+                BallZone = FieldZone.MIDFIELD,   // scorer reads the team-relative ctx field (AR-2 H-2)
                 TacticalContext = tc,
-                PressureScalar  = pressure,
-                MatchSeed       = 0xABCDUL,
-                Snapshot        = snap,
+                PressureScalar = pressure,
+                MatchSeed = 0xABCDUL,
+                Snapshot = snap,
                 OpponentGoalCentre = new Vector2(105f, 34f),
-                OpponentGoalPostL  = new Vector2(105f, 30.34f),
-                OpponentGoalPostR  = new Vector2(105f, 37.66f)
+                OpponentGoalPostL = new Vector2(105f, 30.34f),
+                OpponentGoalPostR = new Vector2(105f, 37.66f)
             };
         }
 
         private static ActionOption MakePass(float lane, float adjusted, float dist) =>
             new ActionOption
             {
-                Type = ActionType.PASS, PassLaneScore = lane,
-                AdjustedPassLaneScore = adjusted, IntendedDistance = dist
+                Type = ActionType.PASS,
+                PassLaneScore = lane,
+                AdjustedPassLaneScore = adjusted,
+                IntendedDistance = dist
             };
 
         private static ActionOption MakeShoot(float opening, float distToGoal) =>
             new ActionOption
             {
                 Type = ActionType.SHOOT,
-                GoalOpeningScore = opening, DistanceToGoal = distToGoal,
+                GoalOpeningScore = opening,
+                DistanceToGoal = distToGoal,
                 DerivedContactZone = ContactZone.Centre
             };
 
@@ -504,57 +512,57 @@ namespace TacticalDirector.DecisionTree.Tests
         {
             var mc = new MatchContext
             {
-                Phase              = MatchPhase.OPEN_PLAY,
-                BallZone           = FieldZone.MIDFIELD,
-                Possession         = PossessionState.AWAY_TEAM,
-                PossessingAgentId  = 15
+                Phase = MatchPhase.OPEN_PLAY,
+                BallZone = FieldZone.MIDFIELD,
+                Possession = PossessionState.AWAY_TEAM,
+                PossessingAgentId = 15
             };
             var tc = TacticalContext.Stage0Default(new Vector2(50f, 34f));
             tc.Pressing = pressing;
             var snap = new FilteredView
             {
-                ObserverId               = 0,
-                FrameNumber              = 1,
-                VisibleTeammates         = new PerceivedAgent[0],
-                VisibleOpponents         = new PerceivedAgent[0],
+                ObserverId = 0,
+                FrameNumber = 1,
+                VisibleTeammates = new PerceivedAgent[0],
+                VisibleOpponents = new PerceivedAgent[0],
                 BlindSidePerceivedAgents = new PerceivedAgent[0]
             };
 
             return new DecisionContext
             {
-                AgentId              = 0,
-                AgentTeamId          = 0,
-                CurrentFrame         = 1,
-                AgentHasBall         = false,
-                PossessedByTeam      = PossessionState.AWAY_TEAM,
-                AgentPosition        = new Vector2(52f, 34f),
+                AgentId = 0,
+                AgentTeamId = 0,
+                CurrentFrame = 1,
+                AgentHasBall = false,
+                PossessedByTeam = PossessionState.AWAY_TEAM,
+                AgentPosition = new Vector2(52f, 34f),
                 AgentFacingDirection = Vector2.right,
-                AgentState           = default,
-                A_Vision             = 0.5f,
-                A_Passing            = 0.5f,
-                A_Finishing          = 0.5f,
-                A_Dribbling          = 0.5f,
-                A_LongShots          = 0.5f,
-                A_Composure          = 0.5f,
-                A_Decisions          = 0.5f,
-                A_Anticipation       = 0.5f,
-                A_Pace               = 0.5f,
-                A_Agility            = 0.5f,
-                A_WorkRate           = 0.5f,
-                A_Stamina            = 0.5f,
-                A_Aggression         = 0.5f,
-                A_Positioning        = 0.5f,
-                A_Crossing           = 0.5f,
-                MatchContext         = mc,
-                BallZone             = FieldZone.MIDFIELD,
-                OpponentHasBall      = true,   // home agent (team 0), AWAY_TEAM possesses
-                TacticalContext      = tc,
-                PressureScalar       = 0.0f,
-                MatchSeed            = 0xABCDUL,
-                Snapshot             = snap,
-                OpponentGoalCentre   = new Vector2(105f, 34f),
-                OpponentGoalPostL    = new Vector2(105f, 30.34f),
-                OpponentGoalPostR    = new Vector2(105f, 37.66f)
+                AgentState = default,
+                A_Vision = 0.5f,
+                A_Passing = 0.5f,
+                A_Finishing = 0.5f,
+                A_Dribbling = 0.5f,
+                A_LongShots = 0.5f,
+                A_Composure = 0.5f,
+                A_Decisions = 0.5f,
+                A_Anticipation = 0.5f,
+                A_Pace = 0.5f,
+                A_Agility = 0.5f,
+                A_WorkRate = 0.5f,
+                A_Stamina = 0.5f,
+                A_Aggression = 0.5f,
+                A_Positioning = 0.5f,
+                A_Crossing = 0.5f,
+                MatchContext = mc,
+                BallZone = FieldZone.MIDFIELD,
+                OpponentHasBall = true,   // home agent (team 0), AWAY_TEAM possesses
+                TacticalContext = tc,
+                PressureScalar = 0.0f,
+                MatchSeed = 0xABCDUL,
+                Snapshot = snap,
+                OpponentGoalCentre = new Vector2(105f, 34f),
+                OpponentGoalPostL = new Vector2(105f, 30.34f),
+                OpponentGoalPostR = new Vector2(105f, 37.66f)
             };
         }
 
@@ -592,16 +600,20 @@ namespace TacticalDirector.DecisionTree.Tests
             // 0.55 midfield modifier applies (§3.2.3.4: effective threshold raw ≥ 11).
             // Under the pre-fix raw-form comparison (0.579 < 0.75) the shot was
             // suppressed to SHOOT_ZONE_MID_SHORT = 0.05.
+            // Distance sits INSIDE the sweet range (ERR-008-017): the option's distance is
+            // incidental to this lock's intent (the shifted-form zone gate), and at the
+            // former 28 m the DistanceQuality decay pushed the suppressed branch into the
+            // UTILITY_FLOOR clamp, corrupting the pure zone-modifier ratio.
             DecisionContext ctx = BuildContext(0.5f, 0.5f, 0.0f);
-            ctx.BallZone   = FieldZone.MIDFIELD;
+            ctx.BallZone = FieldZone.MIDFIELD;
             ctx.A_LongShots = 11.0f / 19.0f;
 
-            Buffer[0] = MakeShoot(0.7f, 28.0f);
+            Buffer[0] = MakeShoot(0.7f, 10.0f);
             UtilityScorer.ScoreOptions(Buffer, 1, in ctx);
             float withLong = Buffer[0].BaseUtility;
 
             ctx.A_LongShots = 0.0f;   // raw 1 → shifted 0.5 < 0.75 ⇒ suppressed
-            Buffer[0] = MakeShoot(0.7f, 28.0f);
+            Buffer[0] = MakeShoot(0.7f, 10.0f);
             UtilityScorer.ScoreOptions(Buffer, 1, in ctx);
             float withoutLong = Buffer[0].BaseUtility;
 
@@ -633,6 +645,105 @@ namespace TacticalDirector.DecisionTree.Tests
             Assert.AreEqual(openNoPressure, openMaxPressure, 1e-5f,
                 "With a fully open goal, RiskPenalty_SHOOT = (1−1.0)×P×coeff = 0 at any pressure (§3.2.3.1)");
         }
+
+        // ── ERR-008-017 locks: DistanceQuality_SHOOT (shot-volume design KD-V2/KD-V3) ────
+
+        private float ScoreShootAt(float distToGoal, in DecisionContext ctx)
+        {
+            Buffer[0] = MakeShoot(0.7f, distToGoal);
+            UtilityScorer.ScoreOptions(Buffer, 1, in ctx);
+            return Buffer[0].BaseUtility;
+        }
+
+        [Test]
+        public void ShootDistance_InsideSweetRange_IsDistanceIndifferent()
+        {
+            // distQ = 1.0 for every d ≤ SHOOT_SWEET_RANGE_M, so utilities at 0 m (the KD-V3
+            // direct-injection default), mid-sweet and the knee itself are bitwise equal —
+            // which is also the proof that every pre-ERR-008-017 close-range calibration
+            // (§5.Z.17/§5.Z.19) is untouched.
+            DecisionContext ctx = BuildContext(0.5f, 0.5f, 0.0f);
+            ctx.BallZone = FieldZone.ATTACKING;
+
+            float atZero = ScoreShootAt(0.0f, in ctx);
+            float atMid = ScoreShootAt(UtilityWeights.SHOOT_SWEET_RANGE_M * 0.5f, in ctx);
+            float atKnee = ScoreShootAt(UtilityWeights.SHOOT_SWEET_RANGE_M, in ctx);
+
+            Assert.AreEqual(atZero, atMid, 0.0f, "inside the sweet range distance must be inert");
+            Assert.AreEqual(atZero, atKnee, 0.0f, "the knee point itself is inside the range (d ≤ SWEET)");
+        }
+
+        [Test]
+        public void ShootDistance_DecaysMonotonicallyBeyondSweetRange()
+        {
+            DecisionContext ctx = BuildContext(0.5f, 0.5f, 0.0f);
+            ctx.BallZone = FieldZone.ATTACKING;
+
+            float knee = ScoreShootAt(UtilityWeights.SHOOT_SWEET_RANGE_M, in ctx);
+            float mid1 = ScoreShootAt(18.0f, in ctx);
+            float mid2 = ScoreShootAt(26.0f, in ctx);
+            float far = ScoreShootAt(34.0f, in ctx);
+
+            Assert.Greater(knee, mid1, "utility must fall beyond the sweet range");
+            Assert.Greater(mid1, mid2, "decay must be monotone");
+            Assert.Greater(mid2, far, "decay must be monotone to the range-gate boundary");
+
+            // Continuity at the knee: an epsilon step beyond loses ~nothing.
+            float justBeyond = ScoreShootAt(UtilityWeights.SHOOT_SWEET_RANGE_M + 0.01f, in ctx);
+            Assert.AreEqual(knee, justBeyond, knee * 0.01f,
+                "distQ must be continuous at the knee (hyperbolic form, no cliff)");
+        }
+
+        [Test]
+        public void ShootDistance_HalfQuality_OneFalloffBeyondSweetRange()
+        {
+            // distQ(SWEET + FALLOFF) = FALLOFF / (FALLOFF + FALLOFF) = 0.5 exactly — the
+            // shape's defining point (the §3.2.3.1 worked derivation).
+            DecisionContext ctx = BuildContext(0.5f, 0.5f, 0.0f);
+            ctx.BallZone = FieldZone.ATTACKING;
+
+            float atKnee = ScoreShootAt(UtilityWeights.SHOOT_SWEET_RANGE_M, in ctx);
+            float atHalf = ScoreShootAt(
+                UtilityWeights.SHOOT_SWEET_RANGE_M + UtilityWeights.SHOOT_DIST_FALLOFF_M, in ctx);
+
+            Assert.AreEqual(atKnee * 0.5f, atHalf, atKnee * 1e-4f,
+                "one falloff length beyond the sweet range must score exactly half the knee utility");
+        }
+
+        [Test]
+        public void LongRangeOpenShot_LosesToModeratePass_CloseShotDoesNot()
+        {
+            // The discriminating comparison ERR-008-017 exists for: pre-fix an open 30 m shot
+            // (≈ 0.36 at neutral attributes) beat a moderate pass (≈ 0.24) and shots clustered
+            // at the range-gate boundary (measured means 30–34 m); post-fix the same long shot
+            // loses to that pass while the close shot still wins.
+            DecisionContext ctx = BuildContext(0.5f, 0.5f, 0.0f);
+            ctx.BallZone = FieldZone.ATTACKING;
+
+            Buffer[0] = MakePass(0.5f, 0.5f, 15.0f);
+            UtilityScorer.ScoreOptions(Buffer, 1, in ctx);
+            float moderatePass = Buffer[0].BaseUtility;
+
+            float longShot = ScoreShootAt(30.0f, in ctx);
+            float closeShot = ScoreShootAt(10.0f, in ctx);
+
+            Assert.Less(longShot, moderatePass,
+                "an open 30 m shot must LOSE to a moderate pass (pre-ERR-008-017 it won)");
+            Assert.Greater(closeShot, moderatePass,
+                "an open close-range shot must still beat the same pass");
+        }
+
+        [Test]
+        public void ShootDistanceConstants_ShapeGuards()
+        {
+            // The knee must sit strictly inside the un-bonused range gate, or the term never
+            // bites for low-LongShots shooters; both lengths must be positive for the
+            // hyperbolic form to be defined and bounded (0, 1].
+            Assert.Greater(UtilityWeights.SHOOT_SWEET_RANGE_M, 0.0f);
+            Assert.Greater(UtilityWeights.SHOOT_DIST_FALLOFF_M, 0.0f);
+            Assert.Less(UtilityWeights.SHOOT_SWEET_RANGE_M, UtilityWeights.BASE_SHOOT_RANGE,
+                "SHOOT_SWEET_RANGE_M must sit inside BASE_SHOOT_RANGE (§3.1.4.2) or the decay is unreachable");
+        }
     }
 }
 
@@ -654,4 +765,8 @@ namespace TacticalDirector.DecisionTree.Tests
 // | 1.5     | 2026-07-11 | —      | Dismarking #23 §3.4 (FM-DM-03) locks: exact 0.832 worked-example ratio;       |
 // |         |            |        |   Off-dial bitwise identity (FR-DM-012); zero-awareness passer no-penalty     |
 // |         |            |        |   (FR-DM-010); out-of-radius opponent no-penalty.                             |
+// | 1.6     | 2026-07-28 | —      | ERR-008-017 DistanceQuality_SHOOT locks: sweet-range distance indifference    |
+// |         |            |        |   (bitwise — proves close-range calibration untouched); monotone decay +      |
+// |         |            |        |   knee continuity; exact half-quality at SWEET + FALLOFF; the discriminating  |
+// |         |            |        |   long-vs-close-vs-pass comparison; [GT] shape guards.                        |
 #endregion

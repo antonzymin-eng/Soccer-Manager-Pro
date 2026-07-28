@@ -1,7 +1,7 @@
 // File:     src/match-engine/tests/ShotOutcomeDiagnosticTests.cs
 // Created:  2026-07-27
 // Modified: 2026-07-28 (shot-speed pass: + woodworkStrikes report line)
-// Modified: 2026-07-28 (gk-catch-parry-conversion: shots counted via TestOnly_ShotContacts, not ShotDetectedTickMs edges — the ERR-011-006 arming stamps also fire for slow threat episodes)
+// Modified: 2026-07-28 (shot-volume pass: + shot-distance distribution + possession-churn lines)
 // Author:   —
 // Spec:     Shot-outcome distribution design (docs/tracking/shot-outcome-distribution-design.md) §4;
 //           Match Engine design note §5.Z.17; path-to-playable roadmap A4a; Code Standards #20
@@ -123,7 +123,34 @@ namespace TacticalDirector.MatchEngine
                     m.ShotSpeedSum += speed;
                     if (speed < m.ShotSpeedMin) m.ShotSpeedMin = speed;
                     if (speed > m.ShotSpeedMax) m.ShotSpeedMax = speed;
+
+                    // Shot-volume dimension: distance from the strike point to the ATTACKED goal
+                    // (the ball's x-velocity sign on the contact tick names the goal — the kick
+                    // has just been applied, so the ball is moving toward the target).
+                    UnityEngine.Vector3 shotPos = engine.BallView.Position;
+                    float goalX = engine.BallView.Velocity.x >= 0f ? MatchEngineConstants.PITCH_LENGTH_M : 0f;
+                    float gy = MatchEngineConstants.PITCH_WIDTH_M * 0.5f;
+                    float dist = (float)Math.Sqrt(
+                        (shotPos.x - goalX) * (shotPos.x - goalX) + (shotPos.y - gy) * (shotPos.y - gy));
+                    m.ShotDistSum += dist;
+                    if (dist <= 11.5f) m.ShotsClose++;
+                    else if (dist <= 16.5f) m.ShotsBox++;
+                    else if (dist <= 22.0f) m.ShotsEdge++;
+                    else m.ShotsLong++;
                 }
+
+                // Possession-churn dimension: holder changes + attacking-third entries.
+                int holder = engine.PossessingAgentId;
+                if (holder != m.PrevHolder)
+                {
+                    if (holder >= 0) m.PossessionSettles++;
+                    m.PrevHolder = holder;
+                }
+                float bx = engine.BallView.Position.x;
+                bool inThird = bx >= MatchEngineConstants.PITCH_LENGTH_M * (2f / 3f)
+                               || bx <= MatchEngineConstants.PITCH_LENGTH_M / 3f;
+                if (inThird && !m.WasInFinalThird) m.FinalThirdEntries++;
+                m.WasInFinalThird = inThird;
 
                 // On-target: a goal-line plane CROSSING inside the mouth (counted once per crossing,
                 // not once per tick beyond the plane — pre-fix the ball can fly on past the line).
@@ -165,7 +192,11 @@ namespace TacticalDirector.MatchEngine
             {
                 report.AppendLine(Inv($"  shot-tick ball speed: min={m.ShotSpeedMin:F1} mean={m.ShotSpeedSum / m.Shots:F1} max={m.ShotSpeedMax:F1} m/s ")
                                 + Inv($"(deflection gate {TacticalDirector.BallPhysics.BallPhysicsConstants.AgentDeflection.MinBallSpeedMps:F1} m/s)"));
+                report.AppendLine(Inv($"  shot distance: mean={m.ShotDistSum / m.Shots:F1} m  ")
+                                + Inv($"<=11.5m={m.ShotsClose}  11.5-16.5m={m.ShotsBox}  16.5-22m={m.ShotsEdge}  >22m={m.ShotsLong}"));
             }
+            report.AppendLine(Inv($"  possessionSettles={m.PossessionSettles}  finalThirdEntries={m.FinalThirdEntries}  ")
+                            + Inv($"shots/thirdEntry={(m.FinalThirdEntries > 0 ? (float)m.Shots / m.FinalThirdEntries : 0f):F2}"));
             report.AppendLine();
         }
 
@@ -246,6 +277,17 @@ namespace TacticalDirector.MatchEngine
             public float ShotSpeedSum;
             public float ShotSpeedMin = float.MaxValue;
             public float ShotSpeedMax;
+
+            // Shot-volume dimension (v1.3): distance distribution + possession churn.
+            public float ShotDistSum;
+            public int ShotsClose;   // <= 11.5 m of goal centre
+            public int ShotsBox;     // 11.5–16.5 m (rest of the box depth)
+            public int ShotsEdge;    // 16.5–22 m
+            public int ShotsLong;    // > 22 m
+            public int PossessionSettles;
+            public int PrevHolder = -1;
+            public int FinalThirdEntries;
+            public bool WasInFinalThird;
         }
 
         private static string Inv(FormattableString s) => s.ToString(CultureInfo.InvariantCulture);
@@ -264,4 +306,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | (genuine #6 strikes) instead of ShotDetectedTickMs edges — the ERR-011-006 |
 // |         |            |        | arming stamps also fire for slow threat episodes, which would have         |
 // |         |            |        | inflated the shot count and polluted the speed distribution.               |
+// | 1.3     | 2026-07-28 | —      | Shot-volume pass: per-shot distance-to-attacked-goal distribution          |
+// |         |            |        | (attacked goal named by the contact-tick vx sign) + possession settles +   |
+// |         |            |        | final-third entries + shots per third entry — the two dimensions the       |
+// |         |            |        | volume question turns on (selection eagerness vs possession churn).        |
 #endregion

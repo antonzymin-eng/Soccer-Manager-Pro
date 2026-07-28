@@ -6,10 +6,21 @@
 U_SHOOT = BaseUtility_SHOOT
         × AttributeMultiplier_SHOOT
         × GoalOpeningScore
+        × DistanceQuality_SHOOT
         × (1 − RiskPenalty_SHOOT)
 
 clamped to [0.01, 1.0]
 ```
+
+> **ERR-008-017 correction (July 28, 2026):** the approved formula had NO distance term.
+> `GoalOpeningScore` is scale-free by construction (the goal arc and a near-goal blocker's
+> occlusion arc both shrink ~1/d), and the §3.1.4.2 range gate is a hard cliff — so within
+> range a 34 m shot scored identically to a 10 m one, while football's P(goal | shot) falls
+> roughly tenfold from 11 m to 30 m. Measured over full matches, shots clustered AT the
+> range-gate boundary (mean shot distance 30–34 m vs football's ~17; ~60% of shots beyond
+> 22 m). The formula omitted the strongest single predictor of shot value in the game it
+> models — the ERR-008-016 class. `DistanceQuality_SHOOT` is the utility-side shape of that
+> fact; see `docs/tracking/shot-volume-design.md`.
 
 **where:**
 
@@ -35,6 +46,20 @@ SHOOT_COMPOSURE_EXP   = 0.30 [GT]  — composure at point of shot: graded degrad
                                       below §3.2.5.1 for full split rationale vs HOLD (0.50).
 
 GoalOpeningScore = see §3.2.3.2
+
+DistanceQuality_SHOOT (ERR-008-017):
+  d = option.DistanceToGoal          // populated by the §3.1.4 generator; a direct-injection
+                                     // option that never sets it reads 0 ⇒ quality 1.0
+  DistanceQuality_SHOOT = 1.0                                       if d ≤ SHOOT_SWEET_RANGE_M
+                        = SHOOT_DIST_FALLOFF_M
+                          / (SHOOT_DIST_FALLOFF_M + (d − SHOOT_SWEET_RANGE_M))   otherwise
+
+SHOOT_SWEET_RANGE_M  = 12.0 [GT]   — inside it distance is indifferent (≈ penalty-spot band);
+                                     every pre-correction close-range utility is unchanged
+SHOOT_DIST_FALLOFF_M = 8.0 [GT]    — half-quality at SWEET + FALLOFF (20 m); continuous at the
+                                     knee, bounded (0, 1], monotone decreasing. Calibrated over a
+                                     measured falloff ladder (10 → 30 shots/match at 38% beyond
+                                     22 m; 8 → ~18 at 30%; 6 → ~12) — see shot-volume-design §6
 
 RiskPenalty_SHOOT = (1.0 − GoalOpeningScore) × P × SHOOT_RISK_COEFF
 SHOOT_RISK_COEFF  = 0.40 [GT]
@@ -164,6 +189,7 @@ shooting lane are not modelled at Stage 0. Flagged for Stage 1 refinement.
 Agent: Finishing=19, Composure=17
 BallZone: ATTACKING
 GoalOpeningScore = 0.757 (from §3.2.3.2 example)
+DistanceToGoal = 10.0 m ≤ SHOOT_SWEET_RANGE_M ⇒ DistanceQuality_SHOOT = 1.0   (ERR-008-017)
 PressureScalar P = 0.15
 
 A_Finishing = (19−1)/19 = 0.9474 → Shifted = 0.9737
@@ -175,13 +201,17 @@ AttributeMultiplier = 0.9737^0.50 × 0.9211^0.30
 GoalOpeningScore = 0.757
 RiskPenalty = (1−0.757) × 0.15 × 0.40 = 0.243 × 0.06 = 0.01458
 
-U_raw = 0.850 × 0.9613 × 0.757 × (1−0.01458)
+U_raw = 0.850 × 0.9613 × 0.757 × 1.0 × (1−0.01458)
       = 0.850 × 0.9613 = 0.8171
       = 0.8171 × 0.757 = 0.6185
       = 0.6185 × 0.98542 = 0.6095
 
 ScoredUtility = clamp(0.6095, 0.01, 1.0) = 0.610 ✓
 ```
+
+The distance is pinned inside the sweet range deliberately: the approved case's arithmetic is
+unchanged by ERR-008-017 (the term is exactly 1.0 there), so the pre-correction verification
+value stands.
 
 This is higher than the elite PASS score (0.541) in the same zone, correctly reflecting
 that a striker with a clear shot should prefer shooting. ✓
@@ -216,6 +246,14 @@ A moderate midfield shot by an average finishing midfielder: 0.200. A good pass 
 (0.50+) would correctly win; an adventurous agent with composure noise might still select
 this shot occasionally. Plausible. ✓
 
+> **ERR-008-017 note on Case B:** this example predates the distance term and its geometry is
+> production-unreachable through the §3.1.4 generator — a MIDFIELD-zone ball sits ≥ 40 m from
+> the goal (team-relative zone boundary at 65 m from own goal line) while the §3.1.4.2 range
+> gate caps at 20 + 15 = 35 m, so no generated option ever reaches this branch (recorded in
+> `shot-volume-design.md` §7.3). Retained as the historical verification of the non-distance
+> factors; at its nominal 40 m the distance term would multiply a further
+> 10 / (10 + 28) = 0.263, giving 0.053.
+
 ---
 
 ### 3.2.3.4 Range Gate Boundary Analysis
@@ -241,6 +279,14 @@ modifier provides the second. Three boundary conditions are documented:
    U_raw = 0.85 × 1.0 × AM × 0.05 × (1 − RiskPenalty). Even elite finisher (AM ≈ 0.96):
    U_raw ≈ 0.85 × 0.96 × 0.05 × 0.97 ≈ 0.040 → clamped to 0.040. The agent would prefer
    PASS (≈ 0.54). Correct: a fully blocked shot should be avoided. ✓
+
+4. **Agent at the range-gate boundary, open goal (ERR-008-017):** elite striker
+   (AM ≈ 0.96), GoalOpeningScore = 0.76, DistanceToGoal = 34 m (range gate max 35 for
+   LongShots = 20). DistanceQuality = 8 / (8 + 22) = 0.2667.
+   U_raw ≈ 0.85 × 0.96 × 0.76 × 0.2667 × 0.985 ≈ 0.163 — loses to a moderate pass (≈ 0.4+)
+   most of the time, while the ±0.15 composure-noise band still lets an adventurous agent
+   occasionally take the long shot. Pre-correction the same option scored ≈ 0.610 and beat
+   every pass — which is why measured shots clustered at the range boundary. ✓
 
 ---
 
