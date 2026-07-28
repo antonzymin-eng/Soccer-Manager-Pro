@@ -48,11 +48,52 @@ namespace TacticalDirector.ShotMechanics
         }
 
         /// <summary>
-        /// Applies a (u, v) error offset in goal-relative space and returns the updated aim direction.
-        /// Shot Mechanics #6 §3.6.8.
+        /// Converts PlacementTarget u to a world-space aim direction whose vertical comes from the
+        /// launch angle — the §3.5.6 composition: the horizontal unit vector toward the u target,
+        /// tilted upward by <paramref name="launchAngleDeg"/> in the vertical plane of the shot.
+        /// The placement v does NOT drive the vertical (§3.5.6 discards it; the launch-angle model
+        /// §3.3 owns elevation) — ERR-006-002 / shot-outcome design KD-2.
+        /// Shot Mechanics #6 §3.5.6.
+        /// </summary>
+        /// <param name="placementTarget">Goal-relative normalised target [0,1]²; only u is consumed.</param>
+        /// <param name="shooterPosition">Agent world-space position at INITIATING.</param>
+        /// <param name="launchAngleDeg">§3.3 launch angle (degrees above horizontal).</param>
+        /// <returns>Unit vector toward the u target at the launch elevation (Z-up).</returns>
+        public static Vector3 ComputeAimDirectionWithLaunchAngle(
+            Vector2 placementTarget,
+            Vector3 shooterPosition,
+            float launchAngleDeg)
+        {
+            GoalGeometry goal = GoalGeometryProvider.Get();
+
+            float targetY = goal.LeftPostY + placementTarget.x * goal.GoalWidth;
+            var   horizontal = new Vector2(goal.GoalLineX - shooterPosition.x,
+                                           targetY        - shooterPosition.y);
+            float dist = horizontal.magnitude;
+
+            if (dist < ShotMechanicsConstants.AimDirectionEpsilon)
+            {
+                Debug.LogWarning("[ShotMechanics] §3.5.6: shooter is at the goal line — using forward direction.");
+                return Vector3.forward;
+            }
+
+            Vector2 hu  = horizontal / dist;
+            float   rad = launchAngleDeg * Mathf.Deg2Rad;
+            float   cos = Mathf.Cos(rad);
+            // Unit by construction: (hu·cos)² summed with sin² = cos² + sin² = 1.
+            return new Vector3(hu.x * cos, hu.y * cos, Mathf.Sin(rad));
+        }
+
+        /// <summary>
+        /// Applies an angular error offset and returns the updated aim direction. The offset is the
+        /// tangent-plane form <c>errorDirection × tan(errorMagDeg·Deg2Rad)</c> (dimensionless,
+        /// per metre of range), so the displacement at the goal plane is
+        /// <c>tan(err) × distance</c> — a true error CONE that widens with range, not a fixed
+        /// goal-fraction (ERR-006-003 / shot-outcome design KD-3).
+        /// Shot Mechanics #6 §3.6.8/§3.6.9.
         /// </summary>
         /// <param name="baseAimDirection">Pre-error world-space aim direction (unit vector).</param>
-        /// <param name="errorOffset">Error offset in goal-relative (u, v) space.</param>
+        /// <param name="errorOffset">Angular error as tangent offsets (x → lateral, y → vertical).</param>
         /// <param name="shooterPosition">Agent world-space position.</param>
         /// <returns>Error-adjusted aim direction unit vector.</returns>
         public static Vector3 ApplyErrorOffset(
@@ -62,19 +103,24 @@ namespace TacticalDirector.ShotMechanics
         {
             GoalGeometry goal = GoalGeometryProvider.Get();
 
-            // Recover approximate intended (u, v) from base aim direction and reproject with error
+            // Recover the intended goal-plane target from the base aim direction and reproject with error
             float dist = Mathf.Max(goal.GoalLineX - shooterPosition.x, ShotMechanicsConstants.GoalLineDistanceFloor);
 
-            // Compute approximate u, v from base direction
+            // Compute approximate target point from base direction
             Vector3 baseTarget = shooterPosition + baseAimDirection * (dist / Mathf.Max(baseAimDirection.x, ShotMechanicsConstants.AimDirectionComponentEpsilon));
 
-            // Apply error offset in goal space: u → Y axis, v → Z axis
-            float newTargetY = Mathf.Clamp(baseTarget.y + errorOffset.x * goal.GoalWidth,
+            // Apply error in metres at the goal plane: tangent offset × range (KD-3).
+            // The vertical clamp preserves the launch model's own intent: under the §3.5.6
+            // composition baseTarget.z = tan(launch)·dist legitimately exceeds 1.5 × GoalHeight for
+            // lofted strikes, and clamping the BASE would silently flatten the launch model — the
+            // clamp bounds what ERROR can add, never what the launch intended (KD-3).
+            float newTargetY = Mathf.Clamp(baseTarget.y + errorOffset.x * dist,
                                            goal.LeftPostY  - goal.GoalWidth  * ShotMechanicsConstants.PlacementErrorHClampFraction,
                                            goal.RightPostY + goal.GoalWidth  * ShotMechanicsConstants.PlacementErrorHClampFraction);
-            float newTargetZ = Mathf.Clamp(baseTarget.z + errorOffset.y * goal.GoalHeight,
+            float newTargetZ = Mathf.Clamp(baseTarget.z + errorOffset.y * dist,
                                            0.0f,
-                                           goal.GoalHeight * ShotMechanicsConstants.PlacementErrorVClampFraction);
+                                           Mathf.Max(baseTarget.z,
+                                                     goal.GoalHeight * ShotMechanicsConstants.PlacementErrorVClampFraction));
 
             var   adjustedTarget = new Vector3(goal.GoalLineX, newTargetY, newTargetZ);
             Vector3 delta = adjustedTarget - shooterPosition;
@@ -95,4 +141,10 @@ namespace TacticalDirector.ShotMechanics
 // | 1.3     | 2026-05-28 | —      | L-1: 1e-4f epsilon literals (×2) → AimDirectionEpsilon constant.      |
 // | 1.4     | 2026-05-28 | —      | L-2: 0.1f/0.001f magic literals in ApplyErrorOffset → GoalLineDistanceFloor/  |
 // |         |            |        |   AimDirectionComponentEpsilon constants.                                  |
+// | 1.5     | 2026-07-27 | —      | Shot-outcome pass (ERR-006-002/003, design KD-2/KD-3). New                 |
+// |         |            |        |   ComputeAimDirectionWithLaunchAngle — the §3.5.6 composition (vertical    |
+// |         |            |        |   from launch angle, not from v). ApplyErrorOffset now applies the error   |
+// |         |            |        |   as tan(err)×distance at the goal plane (a true cone) instead of a fixed  |
+// |         |            |        |   goal-fraction, and the vertical clamp preserves a base target above      |
+// |         |            |        |   1.5×GoalHeight (bounds error, never the launch model's own intent).      |
 #endregion

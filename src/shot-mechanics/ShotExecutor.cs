@@ -1,6 +1,6 @@
 // File:     src/shot-mechanics/ShotExecutor.cs
 // Created:  2026-05-27
-// Modified: 2026-06-13
+// Modified: 2026-07-27  [v1.10]
 // Author:   —
 // Spec:     Shot Mechanics #6 §3.9, §4.1, §4.2, §4.3, §4.4, Code Standards #20
 // Purpose:  Sealed instance orchestrator for the five-state shot execution state machine:
@@ -337,8 +337,12 @@ namespace TacticalDirector.ShotMechanics
                 agentState.FacingDirection);
 
             // ── §3.5 — Pre-error aim direction ───────────────────────────────────────
-            _intendedAimDirection = ShotPlacementResolver.ComputeAimDirection(
-                request.PlacementTarget, agentState.Position);
+            // §3.5.6 composition (ERR-006-002 / shot-outcome KD-2): the horizontal unit toward the
+            // u target tilted by the §3.3 launch angle — the vertical comes from the launch model,
+            // not from the geometric line to the (u, v) point (which the former assembly discarded
+            // anyway, leaving the vertical half of the placement/error model inert).
+            _intendedAimDirection = ShotPlacementResolver.ComputeAimDirectionWithLaunchAngle(
+                request.PlacementTarget, agentState.Position, _launchAngleDeg);
 
             // Cache inputs needed at CONTACT for error recalculation
             _cachedAgentPosition = agentState.Position;
@@ -455,15 +459,15 @@ namespace TacticalDirector.ShotMechanics
             Vector3 finalDirection = ShotPlacementResolver.ApplyErrorOffset(
                 _intendedAimDirection, errorOffset, _cachedAgentPosition);
 
-            // §4.2.1: Construct final velocity vector — horizontal speed + launch angle
-            float   launchRad     = _launchAngleDeg * Mathf.Deg2Rad;
-            float   horizontalSpd = _kickSpeed * Mathf.Cos(launchRad);
-            float   verticalSpd   = _kickSpeed * Mathf.Sin(launchRad);
-            // Encode launch angle into Z while preserving XY direction from finalDirection.
-            // FM-04a: Guard against degenerate (near-zero) XY magnitude before normalize —
-            // happens only if shooter is exactly on the goal line (ApplyErrorOffset returned a
-            // delta with ~zero XY). Route through Invalid outcome rather than producing NaN
-            // and relying on the FM-04 post-hoc trap below.
+            // §3.5.7 / §3.9 step 9: finalVelocity = finalDirection × kickSpeed. The launch angle is
+            // already encoded in finalDirection's Z by the §3.5.6 composition at INITIATING, and the
+            // error model's vertical half rides finalDirection.z — the former cos/sin re-derivation
+            // discarded that Z and made vertical placement/error inert (ERR-006-002, shot-outcome
+            // design KD-1).
+            // FM-04a: Guard against degenerate (near-zero) XY magnitude — happens only if the
+            // shooter is exactly on the goal line (ApplyErrorOffset returned a delta with ~zero XY).
+            // Route through Invalid outcome rather than producing NaN and relying on the FM-04
+            // post-hoc trap below.
             Vector2 aimXY2 = new Vector2(finalDirection.x, finalDirection.y);
             if (aimXY2.sqrMagnitude < ShotMechanicsConstants.AimDirectionEpsilon
                                        * ShotMechanicsConstants.AimDirectionEpsilon)
@@ -473,11 +477,7 @@ namespace TacticalDirector.ShotMechanics
                 _state = ShotExecutionState.Idle;
                 return;
             }
-            Vector2 aimXY = aimXY2.normalized;
-            Vector3 finalVelocity = new Vector3(
-                aimXY.x * horizontalSpd,
-                aimXY.y * horizontalSpd,
-                verticalSpd);
+            Vector3 finalVelocity = finalDirection * _kickSpeed;
 
             // FM-04: Guard against NaN in assembled finalVelocity (direction × speed encoding).
             // Detects formula/arithmetic errors in lines above — not bad input (FM-05 catches NaN from
@@ -613,4 +613,9 @@ namespace TacticalDirector.ShotMechanics
 // | 1.9.1   | 2026-06-19 | —      | C0 AR-1 (L-1): ShotExecutionState gains an ORDINAL STABILITY note — its ordinals    |
 // |         |            |        | are captured into ShotExecutorState.State and become digest-load-bearing at C5      |
 // |         |            |        | (APPEND-only). Doc-only.                                                            |
+// | 1.10    | 2026-07-27 | —      | ERR-006-002 (shot-outcome design KD-1/KD-2): the intended aim now uses the §3.5.6   |
+// |         |            |        | composition (ComputeAimDirectionWithLaunchAngle — vertical from the launch model),  |
+// |         |            |        | and CONTACT assembles finalVelocity = finalDirection × kickSpeed per §3.5.7/§3.9    |
+// |         |            |        | step 9 — the former cos/sin re-derivation discarded finalDirection.z, leaving the   |
+// |         |            |        | vertical half of the placement/error model inert. FM-04a/FM-04 guards unchanged.    |
 #endregion

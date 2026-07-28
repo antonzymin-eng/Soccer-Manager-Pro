@@ -1,7 +1,21 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** July 27, 2026, later same day (**Documentation sync pass — no code, no spec, no gate
+**Last Updated:** July 27, 2026, latest same day (**Shot-outcome distribution pass — §5.Z.17's residual,
+the named A4a blocker, fixed and measured.** Shots can now miss (a genuine `tan(err) × distance` error
+cone, ERR-006-003, plus the vertical placement/error half made live per #6's own §3.5.6/§3.5.7 —
+ERR-006-002), **the goal has a crossbar** (the `z < 0.22 m` boundary gate removed per Law 9/10:
+airborne crossings adjudicate at the crossing — ERR-001-004), and **shots are blocked** (the empty-TODO
+agent-ball deflection is live via the new `BallCollision.ApplyAgentDeflection`, `BodyPartCoefficients`'
+first consumer — ERR-003-007), with the shot pressure query wired and the vacuous goal-visibility gate
+raised off its floor. Measured over three full matches, same seeds pre/post: **goals 15.3 → 12.3 per
+match, goals/shot 0.24–0.29 → 0.14–0.25, fast-ball body deflections 0 → 560–612 per match.** The
+remaining goal-rate mass is recorded, not fixed: shot volume (~2.5× football), shot speed (means
+7–10 m/s vs ~25), keeper conversion. New `match-engine-shot-outcomes` acceptance scenario — 3 of 8
+predicates fail on the pre-fix engine, verified by execution. Full dotnet gate PASSED; no
+`SNAPSHOT_SCHEMA_VERSION` change. See `docs/tracking/shot-outcome-distribution-design.md`. Prior entry
+below.)
+**Last Updated (prior):** July 27, 2026, later same day (**Documentation sync pass — no code, no spec, no gate
 run.** Cross-referenced this file, `CLAUDE.md`, `src/CLAUDE.md`, `SPEC_INDEX.md`, and `docs/tracking/`
 against the actual repo state and found four discrepancies, all now corrected here and in the other root
 docs: (1) **Match Analytics #37 T0** (`src/match-analytics/` — value types + `XgLocationModel`) landed

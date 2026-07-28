@@ -1,6 +1,6 @@
 // File:     src/collision-system/CollisionSystem.cs
 // Created:  2026-05-25
-// Modified: 2026-06-10  [v1.6]
+// Modified: 2026-07-27  [v1.8]
 // Author:   —
 // Spec:     Collision System #3 §3.4.1, §4.1.3, §4.4.4, Code Standards #20
 // Purpose:  Main collision system — orchestrates spatial hash, narrow phase, and response.
@@ -447,6 +447,7 @@ namespace TacticalDirector.CollisionSystem
             var data = new AgentBallCollisionData
             {
                 ContactPoint = contactPoint,
+                AgentPosition = snap.Position,
                 AgentVelocity = snap.Velocity,
                 BodyPart = BallPhysics.BodyPart.Torso,
                 AgentID = agentId,
@@ -543,4 +544,6 @@ namespace TacticalDirector.CollisionSystem
 // |         |            |        | ProfilerMarker's actual namespace is Unity.Profiling; the old using was CS0246 under    |
 // |         |            |        | Unity and the Linux compile gate alike, so this assembly could not have compiled        |
 // |         |            |        | in-engine. No functional change.                                                        |
+// | 1.8     | 2026-07-27 | —      | Shot-outcome design KD-6: ProcessAgentBall populates                        |
+// |         |            |        | AgentBallCollisionData.AgentPosition (the deflection-normal input).         |
 #endregion

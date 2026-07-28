@@ -1,6 +1,6 @@
 // File:     src/ball-physics/BallCollision.cs
 // Created:  2026-05-24
-// Modified: 2026-06-03 (AR-3 fix pass)
+// Modified: 2026-07-27 (shot-outcome pass)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Goal-post collision, boundary detection, possession evaluation, and kick
@@ -39,11 +39,57 @@ namespace TacticalDirector.BallPhysics
         }
 
         /// <summary>
+        /// Deflects the ball off an agent's body — the §3.1.10.1 agent-contact response
+        /// (ERR-003-007 / shot-outcome design KD-6), the entry point
+        /// <c>BallCollisionHandler.OnAgentCollision</c>'s TODO deferred. The agent is modelled as a
+        /// vertical cylinder, so the surface normal is planar: from the agent's centre (at ball
+        /// height) to the ball. Only an APPROACHING ball deflects (normal velocity &lt; 0) — on the
+        /// kick-release frame the ball moves away from the kicker, so a shooter can never block
+        /// their own shot, statelessly. The normal velocity component is reflected, total speed is
+        /// scaled by the body part's speed retention and spin by its spin retention
+        /// (<see cref="BodyPartCoefficients"/> — the §3.1.10.1 model; no separate restitution
+        /// constant is invented). Agent-velocity momentum transfer is a Stage-1 refinement
+        /// (agent speeds are second-order against shot speeds). Pure — no RNG, no logging state.
+        /// </summary>
+        /// <param name="ball">Ball state, modified in place.</param>
+        /// <param name="agentPosition">Agent world-space position (Z ignored — cylindrical body).</param>
+        /// <param name="bodyPart">Contacting body part (Stage 0 callers pass Torso).</param>
+        /// <returns>True when a deflection was applied; false for a separating or degenerate contact.</returns>
+        public static bool ApplyAgentDeflection(
+            ref BallState ball,
+            Vector3 agentPosition,
+            BodyPart bodyPart)
+        {
+            Vector3 normal = ball.Position
+                             - new Vector3(agentPosition.x, agentPosition.y, ball.Position.z);
+            float mag = normal.magnitude;
+            if (mag < BallPhysicsConstants.AgentDeflection.MIN_NORMAL_EPSILON)
+                return false;   // degenerate: ball at the agent's exact centre — no defined normal
+
+            normal /= mag;
+
+            float vn = Vector3.Dot(ball.Velocity, normal);
+            if (vn >= 0f)
+                return false;   // separating contact — the ball is already leaving the body
+
+            (float speedRetention, float spinRetention) = BodyPartCoefficients.Get(bodyPart);
+
+            // Reflect the normal component (planar normal ⇒ vertical velocity passes through the
+            // reflection unchanged), then scale the whole vector by the body's speed retention.
+            Vector3 reflected = ball.Velocity - 2f * vn * normal;
+            ball.Velocity        = reflected * speedRetention;
+            ball.AngularVelocity *= spinRetention;
+            return true;
+        }
+
+        /// <summary>
         /// Checks if the ball has left the field of play.
-        /// Ball must entirely cross the line. Stage 0: only detects ground-level exits
-        /// (z &lt; Ball.Diameter). Goals scored at height require a dedicated goal-volume
-        /// check at Stage 1+. <see cref="BallStateMachine.IsOutOfBounds"/> applies the
-        /// same z gate so the two predicates agree.
+        /// Ball must entirely cross the line — on the ground or IN THE AIR (Law 9; the former
+        /// z &lt; Ball.Diameter gate made an airborne crossing neither a goal nor out of play —
+        /// ERR-001-004 / shot-outcome design KD-5). A goal-line crossing between the posts and
+        /// under the crossbar is a goal (Law 10, <see cref="IsBetweenPostsUnderCrossbar"/>);
+        /// over the bar or wide of the posts is a corner / goal kick.
+        /// <see cref="BallStateMachine.IsOutOfBounds"/> applies the same predicate so the two agree.
         /// Corner-region precedence (Stage 0 simplification): when both the goal line and
         /// a touchline are crossed in the same frame, the touchline check runs first and
         /// classifies the exit as ThrowIn even though geometric reasoning would prefer
@@ -56,18 +102,15 @@ namespace TacticalDirector.BallPhysics
         {
             float x = ball.Position.x;
             float y = ball.Position.y;
-            float z = ball.Position.z;
             float r = BallPhysicsConstants.Ball.RADIUS;
 
-            bool lowEnough = z < BallPhysicsConstants.Ball.Diameter;
-
-            if (lowEnough && (y < -r || y > BallPhysicsConstants.Pitch.WIDTH + r))
+            if (y < -r || y > BallPhysicsConstants.Pitch.WIDTH + r)
                 return (true, RestartType.ThrowIn);
 
             // Home goal (x < −r): the Y/Z gates are identical to the away goal because
             // both goal mouths are centred at WIDTH/2 and capped at GOAL_HEIGHT; the X
             // half-space is what distinguishes them and the caller already verified it.
-            if (lowEnough && x < -r)
+            if (x < -r)
             {
                 if (IsBetweenPostsUnderCrossbar(ball.Position))
                     return (true, RestartType.KickOff);
@@ -75,7 +118,7 @@ namespace TacticalDirector.BallPhysics
             }
 
             // Away goal (x > LENGTH + r): see comment on home-goal branch above.
-            if (lowEnough && x > BallPhysicsConstants.Pitch.LENGTH + r)
+            if (x > BallPhysicsConstants.Pitch.LENGTH + r)
             {
                 if (IsBetweenPostsUnderCrossbar(ball.Position))
                     return (true, RestartType.KickOff);
@@ -246,4 +289,11 @@ namespace TacticalDirector.BallPhysics
 // |         |            |        | functional clamping stay outside the gates. L-4: parallel         |
 // |         |            |        | Debug.LogWarning added for spin clamping so the two symmetric     |
 // |         |            |        | clamp operations now have symmetric diagnostics.                  |
+// | 1.7     | 2026-07-27 | —      | Shot-outcome pass (ERR-001-004 / ERR-003-007, design KD-5/KD-6).  |
+// |         |            |        | CheckBoundaries drops the z < Diameter gate — an airborne line    |
+// |         |            |        | crossing is out per Law 9, and the goal-line branches adjudicate  |
+// |         |            |        | goal vs over/wide via IsBetweenPostsUnderCrossbar (Law 10). New   |
+// |         |            |        | ApplyAgentDeflection — the §3.1.10.1 agent-contact response       |
+// |         |            |        | (reflect approaching normal component; BodyPartCoefficients      |
+// |         |            |        | retention; separating/degenerate contact is a no-op).             |
 #endregion

@@ -141,7 +141,12 @@ namespace TacticalDirector.DecisionTree
         public const float CROSS_ANGLE_THRESHOLD    = 60.0f; // [GT] degrees; §3.1.3.4
         public const float THROUGH_BALL_VEL_THRESHOLD = 1.0f; // [GT] m/s; §3.1.3.4
 
-        public const float MIN_GOAL_VISIBILITY     = 0.05f; // [GT] minimum goal visibility for SHOOT
+        // [GT] Minimum goal visibility for SHOOT. Sits ABOVE GOAL_OPENING_MIN (the §3.2.3.2 step-5
+        // floor) by design: at the former 0.05 the two were equal, so the §3.1.4.1 gate could only
+        // fire on the degenerate zero-arc early return and a fully walled-off shot was generated,
+        // scored and taken (§5.Z.17 §7.4). At 0.12 a shooter whose goal arc is ≥ ~88% occluded
+        // holds / passes / dribbles instead — shot-outcome design KD-7.
+        public const float MIN_GOAL_VISIBILITY     = 0.12f;
         public const float BASE_SHOOT_RANGE        = 20.0f; // [GT] m; §3.1.4.2
         public const float LONGSHOT_RANGE_BONUS    = 15.0f; // [GT] m; §3.1.4.2
 

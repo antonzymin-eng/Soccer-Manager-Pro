@@ -1,6 +1,6 @@
 // File:     src/ball-physics/BallStateMachine.cs
 // Created:  2026-05-24
-// Modified: 2026-06-02
+// Modified: 2026-07-27 (shot-outcome pass)
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Pure state-transition logic for the ball state machine.
@@ -64,19 +64,15 @@ namespace TacticalDirector.BallPhysics
         }
 
         /// <summary>
-        /// Returns true if the ball has entirely crossed a pitch boundary line and is
-        /// low enough for the Stage 0 restart system to register the exit.
-        /// Stage 0 z gate (Position.z &lt; Ball.Diameter, 0.22 m) mirrors
-        /// BallCollision.CheckBoundaries so the state machine and the restart classifier
-        /// agree on what "out" means — a high-flying ball still over the pitch buffer is
-        /// neither transitioned to OutOfPlay here nor classified by CheckBoundaries.
-        /// Goal-volume detection at height is a Stage 1+ deliverable.
+        /// Returns true if the ball has entirely crossed a pitch boundary line — on the ground or
+        /// in the air (Law 9; ERR-001-004 removed the former z &lt; Ball.Diameter gate, under which
+        /// an airborne crossing was neither out of play here nor classified by
+        /// BallCollision.CheckBoundaries). Mirrors CheckBoundaries so the state machine and the
+        /// restart classifier agree on what "out" means; the goal/over-bar split is
+        /// CheckBoundaries' alone.
         /// </summary>
         public static bool IsOutOfBounds(Vector3 position)
         {
-            if (position.z >= BallPhysicsConstants.Ball.Diameter)
-                return false;
-
             float r = BallPhysicsConstants.Ball.RADIUS;
             return position.x < -r
                 || position.x > BallPhysicsConstants.Pitch.LENGTH + r
@@ -97,4 +93,7 @@ namespace TacticalDirector.BallPhysics
 // |         |            |        | silently transitioned to OutOfPlay while CheckBoundaries returns   |
 // |         |            |        | (false, None); the two definitions of "out" now agree. M-4:        |
 // |         |            |        | BallStateType members renamed to PascalCase.                       |
+// | 1.3     | 2026-07-27 | —      | ERR-001-004 (shot-outcome design KD-5): IsOutOfBounds drops the   |
+// |         |            |        | z < Diameter gate in the same commit as CheckBoundaries — the two |
+// |         |            |        | predicates are pinned to agree, and an airborne crossing is out.  |
 #endregion

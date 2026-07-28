@@ -1,5 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
+// Modified: 2026-07-27  (shot-outcome pass: live shot pressure query — ComputeOpponentPressureScalar)
 // Modified: 2026-07-27  (B3: the #37 KD-7 read-only per-tick ledger tap)
 // Modified: 2026-06-29 (#21 T2 Pressing AI (#13) Phase-D writer — route TeamTactic.LineOfEngagement → PressingSnapshot)
 // Modified: 2026-06-29 (#21 T2 Defensive (#14) + Attacking (#15) Phase-D writers — route OffsideTrap / FocusPlay → snapshots)
@@ -4465,6 +4466,30 @@ namespace TacticalDirector.MatchEngine
         /// incoming ball direction. The intended touch direction defaults to the agent's facing (no
         /// movement-target carrier at Stage 0; HasMovementTarget = false).
         /// </summary>
+        /// <summary>
+        /// The #4 §3.5 opponent-pressure scalar at an arbitrary world-space position for the given
+        /// team — the same evaluator + scratch-buffer pass <see cref="BuildFirstTouchContext"/>
+        /// runs for receptions, exposed for the shot adapter's §4.4.1 pressure query (shot-outcome
+        /// design KD-4). Both callers run inside the single-threaded Resolve phase (executors at
+        /// C3, first touch at C4), so the shared <see cref="_opponentScratch"/> cannot alias.
+        /// </summary>
+        private float ComputeOpponentPressureScalar(Vector2 positionXY, int teamId)
+        {
+            int opponentTeam = MatchEngineConstants.TEAM_COUNT - 1 - teamId; // 0 ↔ 1
+
+            for (int k = 0; k < MatchEngineConstants.PLAYERS_PER_TEAM; k++)
+            {
+                int oi = opponentTeam * MatchEngineConstants.PLAYERS_PER_TEAM + k;
+                _opponentScratch[k] = _agents[oi].Position;
+            }
+
+            PressureResult pressure = TacticalDirector.FirstTouch.PressureEvaluator.Evaluate(
+                positionXY,
+                new ReadOnlySpan<Vector2>(_opponentScratch, 0, MatchEngineConstants.PLAYERS_PER_TEAM));
+
+            return pressure.PressureScalar;
+        }
+
         private FirstTouchContext BuildFirstTouchContext(int i)
         {
             int teamId       = _teamIds[i];
@@ -6635,7 +6660,20 @@ namespace TacticalDirector.MatchEngine
 
             public bool GetAndClearTackleFlag(int agentId) => false;
 
-            public float ComputePressureScalar(Vector3 shooterPosition, int shooterTeamId) => 0f;
+            /// <summary>
+            /// The §4.4.1 pressure query, live (shot-outcome design KD-4 — this adapter's former
+            /// hardcoded 0f was the largest inert multiplier in the §3.6 error model). Reuses the
+            /// SAME first-touch PressureEvaluator pass the composition root already runs (Phase D
+            /// D3 InternalsVisibleTo) — the anti-parallel-surface choice. The shooter position
+            /// arrives in #6's canonical attack-+X frame (§5.Z.14), so it is mirrored back to
+            /// world space for the away team before evaluating (the mirror is involutive).
+            /// </summary>
+            public float ComputePressureScalar(Vector3 shooterPosition, int shooterTeamId)
+            {
+                Vector3 world = MirrorPitchIfAway(shooterTeamId, shooterPosition);
+                return _engine.ComputeOpponentPressureScalar(
+                    new Vector2(world.x, world.y), shooterTeamId);
+            }
         }
 
         // ── GK (#11) / Heading (#10) boundary adapter (gk-heading-engine-integration-design.md §3.2/§3.3) ──
@@ -7627,4 +7665,10 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | member added later would otherwise be reported to a View as     |
 // |         |            |        | "no restart" in total silence, and this mapper is exactly the   |
 // |         |            |        | place that silence would begin.                                 |
+// | 1.52    | 2026-07-27 | —      | Shot-outcome pass (design KD-4): ShotWorldAdapter.ComputePressureScalar |
+// |         |            |        | live (was the Stage-0 `0f` stub) via new ComputeOpponentPressureScalar  |
+// |         |            |        | — the same first-touch PressureEvaluator + _opponentScratch pass        |
+// |         |            |        | BuildFirstTouchContext runs (both callers single-threaded Resolve, no   |
+// |         |            |        | aliasing), with the §5.Z.14 canonical-frame un-mirror for the away      |
+// |         |            |        | shooter. No schema/RNG/draw-order change.                               |
 #endregion
