@@ -1,7 +1,27 @@
 # Round-Resolution Calibration Corpus — A4a
 
 > **Created:** July 26, 2026
-> **Status:** **STILL BLOCKED July 26, 2026 — Step 0 was re-run twice and now PASSES, but on scorelines that must not be fitted.** After the §5.Z.9 foul balance pass and the §5.Z.10 keeper-placement fix, the pilot's assertion (`strongHomeMargin > strongAwayMargin`) is satisfied — 25.3 vs 1.7 — so it no longer refuses. The raw results are nonetheless unfittable: **strong-at-home matches finish 19–40 to nil, and the away side scores 0–2 in every one of the twenty matches** regardless of which side carries the +3 strength. Full detail and the two findings behind it: `match-engine-design.md` **§5.Z.11** (a structural home/away asymmetry worth ~50× football's home advantage, and a goal rate ~10× football's). **A4a stays blocked, now for a different and more dangerous reason than before:** previously the corpus was all zeros and obviously useless, so nothing could be fitted by accident; now it is full of plausible-looking non-zero numbers, and fitting three parameters against 25–0 results would calibrate the quick-sim to reproduce the defect faithfully across a whole 380-fixture league. That is worse than not fitting at all. **This is also a gap in Step 0 itself** — it asks "is there signal?", not "is the signal football?" — recorded rather than patched, because the right fix is upstream. Everything below is the July-26 pre-Phase-H record, kept verbatim as the evidence trail.
+> **Status (current):** **STEP 0 PASSED July 28, 2026 — the corpus is worth fitting for the first time.**
+> Re-run after the §5.Z.17–§5.Z.21 match-realism chain (shot outcomes → shot speed + woodwork → keeper
+> catch/parry conversion → shot volume; engine goal rate on the diagnostic seeds now 4.7/match vs
+> football's ~2.7). Result over the same 20 keyed matches (spread = 3, dSquad ±6.0):
+> **strong-at-home mean margin +7.100, strong-away mean margin −4.700** — the ramp extremes separate
+> **in both directions**, upsets exist (the strong side LOSES 3–4 at away-weak's home in one row; a 5–8
+> thriller in another), and the §5.Z.11 home/away asymmetry that made the July-26 numbers unfittable
+> (25.3 vs 1.7 — the strong away side effectively never scored) has collapsed to a margin ratio of
+> ~1.5× (7.1 vs 4.7; football's home advantage is smaller still, recorded below as a fit caveat, not a
+> blocker). Full CSV in §1.b. Goals run hot for a ±6 mismatch (strong side 5.8–8.0/match) — expected:
+> ±6 is a third of the whole [1,20] scale; the near-balanced buckets the fit actually leans on sit at
+> the ~4.7/match diagnostic rate. **Instrument note:** the first post-play pilot run FAILED at teardown
+> with every assertion green — a PLAYING match emits FM-08/FM-03 possession-race errors as ordinary
+> match events (§5.Z Phase H), and this driver predates play developing; both env-gated drivers now
+> carry the same `LogAssert.ignoreFailingMessages` wrapper as every other engine-driving diagnostic
+> (harness tests v1.1), and the re-run with the fixed instrument reproduced the identical rows
+> (deterministic keyed seeds) and PASSED. **Next action: the corpus run + fit** (`TD_CALIBRATION_SAMPLES`
+> slices + `tools/round-resolution-fit.py`, ~1.4 h across four processes) — its own roadmap item.
+> The prior records below are kept verbatim as the evidence trail.
+>
+> **Status (superseded, July 26):** **STILL BLOCKED July 26, 2026 — Step 0 was re-run twice and now PASSES, but on scorelines that must not be fitted.** After the §5.Z.9 foul balance pass and the §5.Z.10 keeper-placement fix, the pilot's assertion (`strongHomeMargin > strongAwayMargin`) is satisfied — 25.3 vs 1.7 — so it no longer refuses. The raw results are nonetheless unfittable: **strong-at-home matches finish 19–40 to nil, and the away side scores 0–2 in every one of the twenty matches** regardless of which side carries the +3 strength. Full detail and the two findings behind it: `match-engine-design.md` **§5.Z.11** (a structural home/away asymmetry worth ~50× football's home advantage, and a goal rate ~10× football's). **A4a stays blocked, now for a different and more dangerous reason than before:** previously the corpus was all zeros and obviously useless, so nothing could be fitted by accident; now it is full of plausible-looking non-zero numbers, and fitting three parameters against 25–0 results would calibrate the quick-sim to reproduce the defect faithfully across a whole 380-fixture league. That is worse than not fitting at all. **This is also a gap in Step 0 itself** — it asks "is there signal?", not "is the signal football?" — recorded rather than patched, because the right fix is upstream. Everything below is the July-26 pre-Phase-H record, kept verbatim as the evidence trail.
 >
 > **Status (superseded, post-Phase-H):** **UNBLOCKED July 26, 2026 — the upstream defect is fixed; Step 0 is re-runnable.** The engine gap this document diagnosed (ERR-030-014) was closed the same day by match-engine §5.Z Phase H (roadmap A4b): a production match now kicks the ball (peak 16.2–17.2 m/s, was 0.00), holds possession 10.5–20.9% of ticks (was 0%), works into both penalty areas and scores. **Next action: re-run the Step 0 pilot below (~33 min).** Note it may still refuse — Phase H makes matches *play*, not necessarily *discriminate by squad strength*, and the latter is exactly what Step 0 asks; if the ramp extremes remain indistinguishable the answer is to raise `LeagueStrengthSpread`, not to fit three parameters to noise. Everything below is the July-26 pre-fix record, kept verbatim as the evidence trail.
 >
@@ -35,6 +55,33 @@ AR-5 review (M-4) precisely so this check would happen before the expensive run.
 Every one of the twenty full 90-minute matches finished **0–0**, at a rating differential of ±6 points on
 a `[1,20]` scale — an enormous gap, correctly measured and correctly applied to the rosters. The corpus
 carries no signal at all, and the reason is not the one Step 0 was written to catch.
+
+## 1.b Step 0 re-run, July 28, 2026 — PASSED
+
+Same 20 keyed matches (deterministic seeds, so the rows are reproducible in isolation), on the
+post-§5.Z.21 tree, ~33 min Release:
+
+| | strong-at-home | strong-away |
+|---|---|---|
+| Mean measured `dSquad` | +6.013 | −5.984 |
+| **Mean goal margin (home − away)** | **+7.100** | **−4.700** |
+| Strong-side goals/match | 8.0 | 5.8 |
+| Weak-side goals/match | 0.9 | 1.1 |
+| Upsets (strong side beaten) | 1 of 10 (3–4) | 0 of 10 (one 5–8 near-miss) |
+
+```
+strong-at-home (homeDelta +3, awayDelta −3):
+15-0  13-0  3-2  10-1  8-0  7-0  8-1  3-4  5-0  8-1
+strong-away (homeDelta −3, awayDelta +3):
+0-3  0-10  3-7  1-3  1-5  1-6  0-4  0-7  0-5  5-8
+```
+
+What changed since the July-26 record: the §5.Z.17–§5.Z.21 chain (every outcome class reachable;
+football-pace shots + a physical goal frame; the keeper's conversion live; the U_SHOOT distance
+term). The venue asymmetry is now a modifier on a strength signal instead of the signal itself.
+**Fit caveat, recorded:** the residual home-advantage factor (~1.5× on margin) is still above
+football's; the fit will absorb it into the model's home term, and if a later engine pass shrinks
+it the corpus must be re-captured (the KD-8 re-capture rule already says exactly this).
 
 ## 2. Why: the engine never puts the ball in motion
 
@@ -143,3 +190,5 @@ or determinism proofs, so the pinned Windows/Unity tuple is not required).
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-26 | — | Initial record. A4a's KD-8 Step 0 pilot executed and REFUSED to proceed: 20/20 engine matches 0–0 at ±6 measured `dSquad`. Characterised to root cause — the ball starts at rest, only a moving ball can be received, and only a possessing agent can kick, so a production match is a closed deadlock (ERR-030-014). Records the evidence, the blast radius, the minimal fix, and why that fix is not attempted inside A4. |
+| 0.2 | 2026-07-26 | — | Post-Phase-H / §5.Z.11 status updates (kept in the header chain): Step 0 re-runnable, then re-ran onto 25–0 scorelines — passing while unfittable (the home/away asymmetry). |
+| 0.3 | 2026-07-28 | — | **Step 0 PASSED** on the post-§5.Z.21 tree: margins +7.100 / −4.700, both directions separate, upsets present, the venue asymmetry down to ~1.5× on margin (§1.b). Instrument fix recorded (LogAssert wrapper — a playing match emits FM-08/FM-03 as ordinary events; harness tests v1.1). Next: the corpus slices + fit, its own roadmap item. |
