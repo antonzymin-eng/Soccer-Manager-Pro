@@ -4,7 +4,8 @@
     { "pattern": "^https://web\\.archive\\.org/" },
     { "pattern": "^https://github.com/.*/issues/" },
     { "pattern": "^https://www\\.fifa\\.com/" },
-    { "pattern": "^https://docs\\.unity3d\\.com/" }
+    { "pattern": "^https://docs\\.unity3d\\.com/" },
+    { "pattern": "^https://www\\.chrishecker\\.com/" }
   ],
   "timeout": "20s",
   "retryOn429": true,
