@@ -1,6 +1,6 @@
 // File:     src/match-analytics/Tests/MatchAnalyticsObserverNeutralityTests.cs
 // Created:  2026-07-27
-// Modified: 2026-07-27
+// Modified: 2026-07-28
 // Author:   —
 // Spec:     Match Analytics & Statistics #37 §4.3 / §4.4, FR-AN-016 / FR-AN-017 (T-AN-NEU-001,
 //           T-AN-DET-001), Code Standards #20
@@ -26,9 +26,12 @@ namespace TacticalDirector.MatchAnalytics.Tests
         private const ulong MatchSeed = 0x00A0FF1CE5EED37UL;
         private const int   Ticks     = 240;
 
-        /// <summary>30 seconds — long enough that possession has demonstrably changed hands several
-        /// times, so the liveness assertion below is not riding on a single early transition.</summary>
-        private const int   LivenessTicks = 1_800;
+        /// <summary>60 seconds — long enough that BOTH teams have demonstrably held possession.
+        /// Re-measured for the keeper contact-rate pass (§5.Z.22), which moved this seed's opening
+        /// trajectory: away possession now first accrues between ticks 1 800 and 2 400 (measured
+        /// 0.000% at 1 800 → 3.625% at 2 400; at 3 600 home 9.4% / away 3.4%), so the original
+        /// 30-second window rode on exactly the transition it was written not to ride on.</summary>
+        private const int   LivenessTicks = 3_600;
 
         /// <summary>Runs a match with analytics attached, returning the digest and the result.</summary>
         private static (byte[] digest, MatchAnalyticsResult result) RunObserved(ulong seed, int ticks)
@@ -91,8 +94,10 @@ namespace TacticalDirector.MatchAnalytics.Tests
             // The authored-record tests prove the routing table; this proves the WIRING — that real
             // ledger records survive the engine's capture, the canonical-order walk, and the adapter,
             // and that the KD-6 agentId→team map resolves them to both sides. Possession is the signal
-            // to assert on: play develops from kickoff and changes hands ~0.5×/s (§5.Z Phase H), so a
-            // 30-second window carries it comfortably, where fouls (~0.35/min) would be a coin flip.
+            // to assert on — where fouls (~0.35/min) would be a coin flip — but the window must carry
+            // BOTH teams' possession, and that is a measured property of the seed, not a rate estimate:
+            // the keeper contact-rate pass (§5.Z.22) moved this seed's away-possession onset past the
+            // original 30-second window (see the LivenessTicks doc for the measurement).
             (byte[] _, MatchAnalyticsResult r) = RunObserved(MatchSeed, LivenessTicks);
 
             Assert.Greater(
@@ -163,4 +168,9 @@ namespace TacticalDirector.MatchAnalytics.Tests
 // | 1.0     | 2026-07-27 | —      | Initial creation (#37 T1): T-AN-NEU-001 observer-neutrality    |
 // |         |            |        | digest lock (with a non-vacuity guard) and T-AN-DET-001        |
 // |         |            |        | two-run determinism, over a real 240-tick match.               |
+// | 1.1     | 2026-07-28 | —      | Liveness window re-measured 1 800 → 3 600 ticks: the keeper    |
+// |         |            |        | contact-rate pass (§5.Z.22) moved this seed's away-possession  |
+// |         |            |        | onset to ~tick 2 400 (was inside 1 800), so the 30 s window    |
+// |         |            |        | measured away possession at exactly 0. Assertions unchanged —  |
+// |         |            |        | the gk-contact-rate AR-4 window-re-measure class, third case.  |
 #endregion

@@ -1401,7 +1401,7 @@ Presentation-layer derivation. Read-only over two taps (FR-AN-002); no sim assem
 | `Tests/XgLocationModelTests.cs` | T-AN-XG-* — the three §3.3 worked examples + the shape properties a Stage-2 refit must preserve |
 | `Tests/MatchAnalyticsValueTypeTests.cs` | View-model gates + the KD-4 reverse-reference scan (narrowed at B6 to a sanctioned-consumer allow-list **plus** an explicit never-reference list) |
 | `Tests/MatchAnalyticsAggregatorTests.cs` | **T1** — the §3.2 routing table row by row, possession weighting, §3.4 totality incl. the halfway-line boundary (ERR-037-002), Build idempotence/snapshot semantics, every failure mode |
-| `Tests/MatchAnalyticsObserverNeutralityTests.cs` | **T1** — T-AN-NEU-001 (digest unchanged, with a non-vacuity guard) + T-AN-DET-001 two-run determinism over a real match |
+| `Tests/MatchAnalyticsObserverNeutralityTests.cs` | **T1** — T-AN-NEU-001 (digest unchanged, with a non-vacuity guard) + T-AN-DET-001 two-run determinism over a real match; liveness window re-measured 1 800 → 3 600 ticks (v1.1, gk-contact-rate AR-5) |
 
 ---
 
