@@ -1,7 +1,7 @@
 # Goalkeeper Mechanics Specification #11 — Section 3: Core Formulas, Algorithms, Pseudocode
 
 **Created:** May 16, 2026
-**Version:** 0.1
+**Version:** 0.4
 **Status:** DRAFT
 **Purpose:** Specify the formulas, algorithms, pseudocode, and
 constant catalogue that govern Goalkeeper Mechanics. All formulas
@@ -99,6 +99,24 @@ with `PERCEPTION_REFLEXES_SCALE = 0.30` `[GT]`. The exact #7 surface
 is pinned during implementation; the scale function is closed-form
 and parameter-based per KD-1.
 
+**Stamp lifecycle (ERR-011-006 correction, July 28, 2026).** The
+detection stamp lives exactly as long as the save episode it dates:
+it is cleared when the episode disarms without a dive and when a
+save attempt resolves. An un-cleared stamp dated later dives against
+shots struck minutes earlier (measured mean elapsed-when-airborne
+34–174 s), clamping §3.2.3's window to 0 for nearly every contact.
+Two producers write the stamp:
+
+1. `ShotExecutedEvent` — the precise anchor, `matchTimeMs` = the
+   strike frame, always overwriting (the newest shot is the live
+   threat);
+2. **threat-onset fallback** — save episodes with no #6 shot event
+   (deflections, rebounds, mis-hit passes driving at the goal) are
+   stamped at the moment the save-trigger geometry arms, through the
+   same §3.2.1/§3.2.2 formulas, ONLY when no stamp is live. A live
+   stamp always wins, so the fallback is idempotent within an
+   episode and needs no edge-detection state of its own.
+
 ### 3.2.2 `requiredReactionMs`
 
 ```
@@ -133,6 +151,21 @@ The two tolerances are distinct `[GT]` constants per KD-18.
 `REACTION_EARLY_TOLERANCE_MS` (late commits decay faster than early
 commits in real-world GK psychophysics; Williams & Burwitz 1993,
 Savelsbergh et al. 2002).
+
+**Evaluation anchor (ERR-011-005 correction, July 28, 2026).**
+`elapsedSinceShotMs` is evaluated ONCE, at the frame the dive
+commits (the dive-launch frame), and the resulting
+`reactionWindowAchieved` is frozen for the §3.5.1 contact blend to
+consume — exactly the moment §3.2.5's worked example scores ("the
+dive is already launched"). It is NOT re-evaluated per frame: a
+per-frame evaluation dates the value consumed at contact by the
+ball's whole flight time (400–1000 ms against a required of ~300 ms
+and a late tolerance under 200 ms), which clamps the window to 0
+for any shot slower than ~a third of a second of flight — a keeper
+that commits on time and meets the ball late in flight has reacted
+perfectly. A shot struck after the dive committed (a rebound
+mid-dive) does not re-date the frozen value: the keeper committed
+before that ball existed.
 
 ### 3.2.4 Telemetry-label assignment (KD-2)
 
@@ -898,3 +931,4 @@ standard rebound physics.
 | 0.1 | May 16, 2026 | initial draft | First v0.1 from outline v1.2; state machine (24 transitions), reaction pipeline, dive kinematics, §3.3.0 #12 consumer contract, master constants table (~70 rows / 8 subsections), handling-quality scalar with band-to-action mapping, cross-claim duel, rush dispatch, distribution generation, failed-save pipeline, boundary algorithms | self-pass-1 in `adversarial-review-section-files-v1.md` |
 | 0.2 | May 16, 2026 | pass-1 fix pass | Resolves AR-S1-H2 (spillVelocity Gaussian removed — KD-7 single-purpose-per-site); AR-S1-H3 (HANDLING_K_BALL_SPEED unit corrected `per m/s` → `dimensionless`); AR-S1-M1 (BALL_ATTACKING_THIRD_X_M citation corrected to Ball Physics #1 §1.2); AR-S1-M3 (Throwing/Kicking attribute consumption wired in §3.8.1; THROW_ACCURACY_COEFF + KICK_ACCURACY_COEFF added to §3.4.7); AR-S1-M4 (§3.6.1 collider-surface citations to #3 added); AR-S1-M5 (`Recovering → Set` trigger amended to OR); AR-S1-L2 (`ONE_VS_ONE_REACTION_COEFF` sign documented in §3.4.3); AR-S1-L3 (`DOMAIN_TAG_GOALKEEPER` source-column references `ERR-011-001` explicitly) | self-pass-2 self-critique on v0.2 yields no further findings |
 | 0.3 | June 14, 2026 | impl AR-3 fix pass | §3.3.1 / §3.3.4 lateral dive axis corrected X → Y. The goal mouth spans the Y axis (touchline-to-touchline) per §1.2, so `diveDirectionX = sign(targetHandX − gkX)` and the `reachCenter` X displacement dived the keeper toward/away from its own goal instead of across the goal mouth — shots placed wide in Y were unreachable. Now `diveDirectionY = sign(targetHandY − gkY)` and `reachCenter` displaces along Y with `gkPos.x` fixed. Same axis-error defect class as Ball Physics ERR-001-001 / Decision Tree ERR-008-003. Code: `GoalkeeperDiveKinematics.cs` v1.1, `GoalkeeperMechanics.cs` v1.4 | implementation adversarial review |
+| 0.4 | July 28, 2026 | gk-catch-parry-conversion pass | **ERR-011-005** — §3.2.3 gains its evaluation anchor: the window is computed ONCE at the dive-commit frame and frozen for the §3.5.1 contact blend (the anchor §3.2.5's worked example always described); the implementation's per-frame re-evaluation dated the contact-consumed value by the ball's whole flight time, clamping it to 0. **ERR-011-006** — §3.2.1 gains the stamp lifecycle: the detection stamp dies with its episode (cleared on disarm-without-dive and on save resolution; measured stale stamps dated dives against shots 34–174 s old), and save episodes with no #6 shot event (deflections, rebounds) are stamped by a threat-onset fallback through the same formulas, live-stamp-wins. §3.4.3 `[GT]` recalibration inside spec ranges (`REACTION_BASE_MS` 350 → 220, `REACTION_BALL_SPEED_COEFF` 8 → 3, tolerances 120/80 → 200/140): the engine's discrete commit pipeline lands at ~100–300 ms elapsed, which the human-continuous-time values scored as deep-early ⇒ window ≈ 0 for every dive the engine can produce. Code: `GoalkeeperMechanics.cs` v1.8, `GoalkeeperConstants.cs` v1.3, `MatchEngine.cs` (OnThreatArmed wiring). Header `Version` field (stale at 0.1 against this table since v0.2) consolidated. See `docs/tracking/gk-catch-parry-conversion-design.md` | implementation + measurement (funnel instrument, 3 full matches) |

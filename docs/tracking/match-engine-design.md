@@ -1495,6 +1495,53 @@ segment that fully crosses a post inside one tick, invisible to any discrete tes
 `OptionGeneratorTests` PowerIntent floor/ceiling/monotonicity (3). No new RNG stream / domain
 tag / draw site; digests move for any match containing a shot, as intended.
 
+### 5.Z.20 The keeper's catch/parry conversion (July 28, 2026) — §5.Z.19's residual lever (c)
+
+Owner document: `docs/tracking/gk-catch-parry-conversion-design.md` (KD-C1..KD-C5, the measured
+tables, the AR history). §5.Z.19 measured goals/shot RISING to 0.38–0.42 at real shot pace and
+named the keeper's conversion the dominant goal-rate term; §5.Z.17 §7.5 had recorded the reaction
+window as incoherent. The baseline measurement sharpened both: the §3.2.3 window — 30% of the
+§3.5.1 quality blend — read **0.000** at contact, with dives dated against shots struck
+**85–349 seconds** earlier, and one catch in three full matches.
+
+- **ERR-011-005** — the window was re-evaluated per frame, so the value the contact consumed was
+  dated by the ball's whole FLIGHT time; the spec's own §3.2.5 worked example scores the dive
+  COMMIT. Now computed once at the dive-launch frame and frozen into `GkContactState`.
+- **ERR-011-006** — the detection stamp was never cleared (stale-shot dating), and save episodes
+  with no #6 shot event (rebounds, deflections) had no anchor at all. The stamp now dies with its
+  episode (`ClearSaveIntent` + save resolution), and the new `OnThreatArmed` — called by the
+  engine each armed stride — seeds it at episode onset when none is live; a live stamp always
+  wins, so the stamp itself is the latch and **no new engine state exists** (already serialized
+  in the v19 GK block).
+- **KD-C3 `[GT]` recalibration, all inside the #11 §3.4.3/§3.4.5 spec ranges**, measured over two
+  full-match iterations: `ReactionBaseMs` 350 → 220, `ReactionBallSpeedCoeff` 8 → 3, tolerances
+  120/80 → 200/140 (the engine's discrete ~100–300 ms commit grid read as deep-early against the
+  human-continuous-time values); `HandlingBase`/`HandlingKAttr` 0.45 → 0.60 and `CatchThreshold`
+  0.78 → 0.74 (the Stage-0 pointQuality term is a fixed noise lottery — E ≈ 0.68, invariant under
+  every `[GT]`, blind to attributes, recorded in the owner doc §4.3 — and the old values could
+  not reach the catch band through it even with a perfect window).
+
+**Measured (3 full matches, `ConfigureSquads` path, same seeds pre/post):** reaction window at
+contact **0.000 → 0.30–0.67**, elapsed-when-airborne **85–349 s → ~0.3 s**, quality at contact
+0.36–0.50 → **0.41–0.79**, catches **1 → 6** of 15 contacts, goals per match **14.7 → 8.0**
+(13/13/18 → 6/9/9), **goals per shot 0.38–0.42 → 0.19–0.26** at 31–38 genuine strikes per match.
+Scorelines 8-5 / 7-6 / 13-5 → **3-3 / 6-3 / 8-1**. **No `SNAPSHOT_SCHEMA_VERSION` change, no new
+RNG stream / domain tag / draw site, no draw-order change.**
+
+**The measurement also bounds what is left of lever (c), and it is not conversion:** a contact
+almost always stops the shot, and the keeper contacts only ~a quarter of on-target shots — the
+CONTACT RATE (the #12 GK slot's lateral positioning and the commit-to-arrival timing, measured at
+1.7–4.6 m mean lateral offset while airborne) is the residual, recorded in the owner doc §7.1 as
+a behaviour change to APPROVED specs, not a `[GT]` dial. With shot volume (lever (a)) it bounds
+the remaining ~3× gap to football's ~2.7 goals/match.
+
+Acceptance: `match-engine-keeper-conversion` (#19 ScenarioRunner, Tier B, `ConfigureSquads` path)
+— the frozen dive window is alive, a contact converts to the parry band, the keeper holds a ball;
+plus the 7-lock `GoalkeeperConversionTests` unit fixture driven through the real orchestrator.
+Instrument fallout fixed with the pass: shot counting re-anchored from `ShotDetectedTickMs` edges
+to the new `TestOnly_ShotContacts` genuine-strike counter (the arming stamps redefined a stamp
+edge as "a threat episode").
+
 ### 5.Z.8 What this unblocks
 
 `PM-1` ("watch a match") is no longer blocked by the engine. Roadmap **A4a** — the round-resolution
@@ -1577,6 +1624,7 @@ question Step 0 exists to ask.
 
 | Version | Date       | Author | Notes                                  |
 |---------|------------|--------|----------------------------------------|
+| 2.6     | 2026-07-28 | —      | **§5.Z.20 — the keeper's catch/parry conversion (§5.Z.19's residual lever (c)) fixed, calibrated and measured.** ERR-011-005 (#11 §3.2.3 window anchored at the dive COMMIT and frozen — the per-frame re-evaluation dated the contact-consumed value by the ball's whole flight time), ERR-011-006 (the detection stamp dies with its episode + the `OnThreatArmed` episode-onset fallback for threats with no shot event — no new engine state, the stamp is the latch and is already in the v19 GK block), KD-C3 `[GT]` recalibration inside the #11 spec ranges over two measured full-match iterations. Measured (3 full matches, same seeds): window at contact 0.000 → 0.30–0.67, elapsed-when-airborne 85–349 s → ~0.3 s, catches 1 → 6 of 15 contacts, goals/match 14.7 → 8.0, **goals/shot 0.38–0.42 → 0.19–0.26**; scorelines 3-3 / 6-3 / 8-1. Residual bounded and recorded: the CONTACT RATE (~¼ of on-target shots met — #12 GK-slot positioning + commit timing) and shot volume. New `match-engine-keeper-conversion` scenario + `GoalkeeperConversionTests` (7); shot counting re-anchored to `TestOnly_ShotContacts`. No schema/RNG/draw-order change. Owner: `gk-catch-parry-conversion-design.md`. |
 | 2.5     | 2026-07-28 | —      | **§5.Z.19 — shot speed + the physical goal frame (the §5.Z.18 residual lever (b)) fixed and measured.** ERR-008-016 (#8 §3.5.3 PowerIntent floor-plus-modulation — the product form pinned nearly every shot at its own 0.1 clamp floor), ERR-006-004 (#6 `VFloor` 10 → 24 over two measured calibration iterations), ERR-001-005 (the goal frame physical: `ApplySweptGoalFrameCollision` six-cylinder segment test — `ApplyGoalPostCollision`'s first production caller; crossing-point goal-line adjudication via the `CheckBoundaries` prevPosition overload). Engine: `_prevTickBallPosition` within-tick capture + swept call in RunPhysicsPhase, crossing-point adjudication in CheckRestartAndApply, `TestOnly_WoodworkStrikes`. Measured: shot-tick means 6.9–10.3 → 14.7–16.1 m/s, maxima to 27.6, shots/match 59–70 → 31–45, goals/shot ROSE 0.14–0.25 → 0.38–0.42 (the keeper's conversion — lever (c) — now measured against real pace). New `match-engine-shot-speed` scenario (5 of 7 predicates fail pre-fix, verified by execution) + `SweptGoalFrameTests` (11) + PowerIntent locks (3). No schema/RNG/draw-order change. Owner: `shot-speed-woodwork-design.md`. |
 | 2.4     | 2026-07-27 | —      | **§5.Z.18 — the shot-outcome distribution (the §5.Z.17 residual) fixed and measured.** ERR-006-002 (`finalVelocity = finalDirection × kickSpeed` per #6's own §3.5.7; the §3.5.6 launch-tilt aim — the vertical half of the placement/error model live for the first time), ERR-006-003 (the error cone is a cone: `tan(err) × distance` at the goal plane), ERR-001-004 (the `z < Diameter` gate removed from `CheckBoundaries` + `IsOutOfBounds` — the goal has a crossbar, airborne crossings adjudicate at the crossing per Law 9/10), ERR-003-007 (`OnAgentCollision` live: `BallCollision.ApplyAgentDeflection`, `BodyPartCoefficients`' first consumer, stateless approaching-only self-block guard, `[GT] AgentDeflection.MinBallSpeedMps` = 10 re-anchored from measurement), the `ShotWorldAdapter` pressure query live (was `0f`; first-touch `PressureEvaluator` + §5.Z.14 un-mirror), `MIN_GOAL_VISIBILITY` 0.05 → 0.12. Measured: goals/match 15.3 → 12.3, goals/shot 0.24–0.29 → 0.14–0.25, fast-ball body contacts 0 → 560–612/match. New `match-engine-shot-outcomes` scenario (3 of 8 predicates fail pre-fix, by execution in a worktree at the pre-fix commit) + 17 unit locks + the `ShotOutcomeDiagnosticTests` instrument. Two tests inverted (encoded the old z-gate contract). No schema/RNG/draw-order change. Residual levers recorded: shot volume (~2.5× football), shot speed (~7–10 m/s means vs ~25), keeper conversion. Owner: `shot-outcome-distribution-design.md`. |
 | 2.2     | 2026-07-26 | —      | **§5.Z Phase H LANDED — ERR-030-014 closed; a production match now plays.** Five seams, four of them found by running the composed engine one after another (each visible only once the previous was fixed — §5.Z.6). KD-H1 restart taker award: `ApplyRestart(position, awardedTeam)` with every call site declaring its team (kickoff home / second half the other side per Law 8 / post-goal the conceding team / RestartResolver's award / offside the defenders / foul the victim's team); taker = nearest non-sent-off agent of that team, ties to lower index. New `[FIXED] FIRST_HALF_KICKOFF_TEAM` + `[DERIVED] SECOND_HALF_KICKOFF_TEAM`. KD-H2 assignment not imparted velocity (`ApplyKick` stays the sole motion producer). KD-H3 `RunLooseBallPickup` — a loose ball at REST is claimed by an agent within the new `[GT] LooseBallPickupRadiusM`, the exact speed-gate complement of `RunFirstTouch` so the two can never both fire. KD-H5 / **ERR-008-014** the DT loose-ball collect, emitted as the SOLE off-ball option for one host-designated collector per team (`TacticalContext.LooseBallCollector`; host-designated because only it knows who is sent off — a perception-derived "nearest teammate" rule deadlocked on a frozen red-carded agent). KD-H4 / **ERR-008-015** the PASS/SHOOT completion sweep — `NotifyActionComplete` had zero production callers, so every agent that passed or shot was frozen in EXECUTING for the rest of the match; plus `OnPossessionChanged` no longer interrupts a holder whose executor is still in flight. New acceptance scenario `match-engine-play-develops` (6 seeds × 9 min; every predicate fails pre-Phase-H, incl. `play-still-alive-at-final-tick`, which caught two of the four stalls) + `MatchEnginePossessionBootstrapTests` (11) + `OptionGeneratorTests` (+3). 21 existing tests updated — most encoded the "a restart clears possession" contract that made the deadlock possible. No `SNAPSHOT_SCHEMA_VERSION` change. **Full dotnet gate: PASSED, 0 failures (whole tree green).** Recorded NOT fixed (§5.Z.7): the foul heuristic's ~7 red cards per 9 minutes; the process-static EventBus's interleaved-engine divergence; #5's FM-08 Error-level log; the `FR-PO-052` perf baseline needing re-capture. |

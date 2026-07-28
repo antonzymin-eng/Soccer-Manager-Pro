@@ -1,6 +1,7 @@
 // File:     src/match-engine/tests/MatchEngineShotSpeedScenarios.cs
 // Created:  2026-07-28
 // Modified: 2026-07-28
+// Modified: 2026-07-28 (gk-catch-parry-conversion: shot sampling re-anchored from ShotDetectedTickMs edges to the TestOnly_ShotContacts genuine-strike counter — the ERR-011-006 arming stamps would have folded slow threat episodes into the speed distribution the floors pin)
 // Author:   —
 // Spec:     Shot speed & physical woodwork design (docs/tracking/shot-speed-woodwork-design.md) §5;
 //           Match Engine design note §5.Z; Ball Physics #1 §3.1.10 (ERR-001-005);
@@ -204,24 +205,28 @@ namespace TacticalDirector.MatchEngine
             // did not transfer). Recipe mirrors the diagnostic's BuildSquad.
             var engine = new MatchEngine(seed);
             engine.ConfigureSquads(BuildSquad(seed, clubId: 1), BuildSquad(seed, clubId: 2));
-            var lastShotMs = new float[] { -1f, -1f };
+
+            // Shots counted via the genuine #6-strike counter, NOT ShotDetectedTickMs edges: the
+            // gk-catch-parry-conversion pass (ERR-011-006) made the detection stamp ALSO seed at
+            // save-episode onset (rebounds, deflections, slow threats ≥ 3 m/s), so a stamp edge
+            // stopped meaning "a shot was struck" — sampling those edges would fold slow threat
+            // episodes into the speed distribution this scenario's floors pin.
+            int prevContacts = 0;
 
             for (int tick = 0; tick < NumTicks; tick++)
             {
                 engine.RunTick();
 
-                GoalkeeperMechanics.GoalkeeperTickState gk = engine.TestOnly_GoalkeeperState;
-                for (int t = 0; t < GoalkeeperMechanics.GoalkeeperConstants.MaxGkAgents; t++)
+                int contacts = engine.TestOnly_ShotContacts;
+                if (contacts != prevContacts)
                 {
-                    float ms = gk.ShotDetectedTickMs[t];
-                    if (ms > 0f && ms != lastShotMs[t])
-                    {
-                        lastShotMs[t] = ms;
-                        shots++;
-                        float speed = engine.BallView.Velocity.magnitude;
-                        speedSum += speed;
-                        if (speed > speedMax) speedMax = speed;
-                    }
+                    shots += contacts - prevContacts;
+                    prevContacts = contacts;
+                    // Ball velocity after the tick containing the strike — the same sampling
+                    // moment the stamp-edge form used.
+                    float speed = engine.BallView.Velocity.magnitude;
+                    speedSum += speed;
+                    if (speed > speedMax) speedMax = speed;
                 }
             }
         }
@@ -296,4 +301,9 @@ namespace TacticalDirector.MatchEngine
 // | 1.0     | 2026-07-28 | —      | Initial. Shot-speed reachability floors (pre-fix 7–10/15–19 band   |
 // |         |            |        | cannot reach them), front-face post + crossbar rebound probes, the |
 // |         |            |        | rising crossing-point adjudication probe, sequential determinism.  |
+// | 1.1     | 2026-07-28 | —      | gk-catch-parry-conversion: PlayOne counts shots via                |
+// |         |            |        | TestOnly_ShotContacts (genuine #6 strikes) instead of              |
+// |         |            |        | ShotDetectedTickMs edges — the ERR-011-006 arming stamps also fire |
+// |         |            |        | for slow threat episodes (≥ 3 m/s), which would have polluted the  |
+// |         |            |        | sampled speed distribution and broken the floor predicates.        |
 #endregion

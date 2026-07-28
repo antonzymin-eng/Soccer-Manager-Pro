@@ -43,6 +43,7 @@
 // Modified: 2026-07-27 (§5.Z.17 goalkeeper save pipeline: NotifyKeeperOfShot opens #11's §3.2 reaction window on the shot CONTACT frame (ERR-011-004, stamped in MILLISECONDS); ClearSaveIntent called on the save-episode disarm so the engine and #11 latches cannot disagree; TestOnly_GoalkeeperState observation seam. No schema change. See docs/tracking/goalkeeper-save-pipeline-design.md)
 // Modified: 2026-07-27 (P1 richer observation frame + AR-1 L-3: discipline / period / restart accessors for a HUD, ApplyRestart declares its RestartCue, and the unmapped-RestartType arm warns under a gated diagnostic instead of reporting "no restart" in silence. Within-tick fields only — no SNAPSHOT_SCHEMA_VERSION change. See docs/tracking/interactive-unity-client-design.md §5-P1)
 // Modified: 2026-07-28 (shot-speed pass (KD-6): _prevTickBallPosition capture + swept goal-frame call in RunPhysicsPhase, crossing-point CheckBoundaries overload in CheckRestartAndApply, TestOnly_WoodworkStrikes. Within-tick + diagnostic state only — no SNAPSHOT_SCHEMA_VERSION change. See docs/tracking/shot-speed-woodwork-design.md)
+// Modified: 2026-07-28 (gk-catch-parry-conversion (ERR-011-006): the armed branch calls GoalkeeperMechanics.OnThreatArmed each stride — the episode-onset detection-stamp fallback, a no-op once stamped, so no new engine state; + TestOnly_ShotContacts genuine-strike diagnostic counter (the WoodworkStrikes class) counted where NotifyKeeperOfShot verifies the strike. No schema change. See docs/tracking/gk-catch-parry-conversion-design.md)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -83,7 +84,7 @@ using CollisionSubsystem = TacticalDirector.CollisionSystem.CollisionSystem;
 // (TacticalDirector.PerceptionSystem.PerceptionSystem / TacticalDirector.DecisionTree.DecisionTree);
 // alias both so the bare names are unambiguous here (parallel to CollisionSubsystem).
 using PerceptionSubsystem = TacticalDirector.PerceptionSystem.PerceptionSystem;
-using DecisionTreeAI      = TacticalDirector.DecisionTree.DecisionTree;
+using DecisionTreeAI = TacticalDirector.DecisionTree.DecisionTree;
 
 namespace TacticalDirector.MatchEngine
 {
@@ -109,11 +110,11 @@ namespace TacticalDirector.MatchEngine
         // ── Deterministic infrastructure ──────────────────────────────────────────────
 
         private readonly DeterministicRngService _rng;
-        private readonly ulong                   _matchSeed;   // raw seed; UpdateCollisions self-seeds from it (C2)
-        private readonly MatchClock              _clock;
-        private readonly SnapshotCodec           _codec;
-        private readonly EnvironmentFingerprint  _fingerprint;
-        private readonly TickOrchestrator        _orchestrator;
+        private readonly ulong _matchSeed;   // raw seed; UpdateCollisions self-seeds from it (C2)
+        private readonly MatchClock _clock;
+        private readonly SnapshotCodec _codec;
+        private readonly EnvironmentFingerprint _fingerprint;
+        private readonly TickOrchestrator _orchestrator;
 
         // ── The #37 KD-7 read-only per-tick ledger tap ────────────────────────────────
         // Filled in the Snapshot phase (after SerializeLedger, before the bus resets the tick), and
@@ -135,11 +136,11 @@ namespace TacticalDirector.MatchEngine
         // executor injects are stateless over world state, so ONE adapter per family (Pass / Shot)
         // backs all 22 instances (the adapter methods take agentId). DecisionTree stays Phase D.
 
-        private readonly CollisionSubsystem            _collisionSystem;
-        private readonly ICollisionEventConsumer       _eventConsumer;   // MatchFlowCollisionConsumer (design note §3) — captures at most one foul candidate per tick
-        private readonly PassExecutor[]                _passExecutors;   // [SQUAD_SIZE]
-        private readonly ShotExecutor[]                _shotExecutors;   // [SQUAD_SIZE]
-        private readonly bool[]                        _stumbleScratch;  // UpdateCollisions stumbleOut sink (discarded — not a Stage-0 movement input, B4)
+        private readonly CollisionSubsystem _collisionSystem;
+        private readonly ICollisionEventConsumer _eventConsumer;   // MatchFlowCollisionConsumer (design note §3) — captures at most one foul candidate per tick
+        private readonly PassExecutor[] _passExecutors;   // [SQUAD_SIZE]
+        private readonly ShotExecutor[] _shotExecutors;   // [SQUAD_SIZE]
+        private readonly bool[] _stumbleScratch;  // UpdateCollisions stumbleOut sink (discarded — not a Stage-0 movement input, B4)
 
         // First touch (#4, Phase D D3). One stateless FirstTouchSystem instance + one adapter backing
         // both its IBallPhysicsSystem (writes _ball) and IAgentMovementSystem (Stage-0 dribbling no-op)
@@ -149,7 +150,7 @@ namespace TacticalDirector.MatchEngine
         // holds no cross-tick state — it writes only _ball (already serialized) and _possessingAgentId
         // (serialized via MatchContext.PossessingAgentId), so the snapshot schema is unchanged at D3.
         private readonly FirstTouchSystem _firstTouch;
-        private readonly Vector2[]        _opponentScratch;  // [PLAYERS_PER_TEAM]
+        private readonly Vector2[] _opponentScratch;  // [PLAYERS_PER_TEAM]
 
         // Authoritative ball possession: agent index [0–21], or NO_POSSESSION (−1) when loose.
         // Read by the executor adapters (IsBallPossessedBy); cleared on ApplyKick. Folded into
@@ -180,16 +181,16 @@ namespace TacticalDirector.MatchEngine
         // ball-prev arrays AND the DecisionTree state machine are cross-tick state that is NOT yet
         // serialized — same-seed-in-process determinism holds (both runs evolve identically), but
         // save/restore replay needs get/restore seams + serialization (deferred to D4; design note §6.5).
-        private readonly SpatialHashGrid     _perceptionGrid;
+        private readonly SpatialHashGrid _perceptionGrid;
         private readonly PerceptionSubsystem _perception;
-        private readonly DecisionTreeAI[]    _decisionTrees;     // [SQUAD_SIZE]
+        private readonly DecisionTreeAI[] _decisionTrees;     // [SQUAD_SIZE]
 
         // Per-agent AI input snapshots (§2.5). Stage-0 static (neutral attributes + Stage0Default
         // tactics), assembled once at boot; _hasPossession is the only per-tick-refreshed input.
         private readonly PerceptionAgentAttributes[] _perceptionAttrs;   // [SQUAD_SIZE]
-        private readonly DtAgentAttributes[]         _dtAttrs;           // [SQUAD_SIZE]
-        private readonly TacticalContext[]           _tacticalContexts;  // [SQUAD_SIZE]
-        private readonly bool[]                       _hasPossession;     // [SQUAD_SIZE]
+        private readonly DtAgentAttributes[] _dtAttrs;           // [SQUAD_SIZE]
+        private readonly TacticalContext[] _tacticalContexts;  // [SQUAD_SIZE]
+        private readonly bool[] _hasPossession;     // [SQUAD_SIZE]
 
         // ── Tactical Instructions (#21 T2 runtime activation) ─────────────────────────
         // Per-team manager tactic (the §3.1/§3.2 input layer). _pending is what SetTeamTactic writes;
@@ -261,6 +262,10 @@ namespace TacticalDirector.MatchEngine
         // the shot-outcome diagnostic; a restored match restarts the count at zero by design.
         private int _woodworkStrikes;
 
+        // Diagnostic observation (the _woodworkStrikes class): genuine #6 shot CONTACTs this
+        // match. NOT serialized; feeds no gameplay path.
+        private int _shotContacts;
+
         // ── Match-flow completion (docs/tracking/match-flow-completion-design.md) ─────
         // Discipline: per-agent yellow-card count + sent-off flag, plus a global foul-detection
         // cooldown (design note §3). Serialized at v15 (cross-tick, digest-load-bearing).
@@ -282,9 +287,9 @@ namespace TacticalDirector.MatchEngine
         private int _gkReleaseCooldownRemaining;  // ticks the just-released keeper may not re-collect
         private int _gkReleasedAgentId;           // which keeper that is (NO_POSSESSION when idle)
 
-        private bool  _foulCandidateFound;
-        private int   _foulCandidateOffender;
-        private int   _foulCandidateVictim;
+        private bool _foulCandidateFound;
+        private int _foulCandidateOffender;
+        private int _foulCandidateVictim;
         // Contact force (N) of the captured candidate — the input to the referee-call probability
         // (foul-discipline-balance-design.md KD-F1). Same lifecycle as the three fields above, so
         // likewise NOT serialized.
@@ -314,7 +319,7 @@ namespace TacticalDirector.MatchEngine
         // NOTE: the orchestrator class names collide with their own namespace names, so they are
         // fully qualified here and at construction (CS0118) — the same namespace-vs-type hazard the
         // projection design flagged. The interfaces / intent / attribute types are uniquely named.
-        private readonly TacticalDirector.HeadingMechanics.HeadingMechanics       _heading;
+        private readonly TacticalDirector.HeadingMechanics.HeadingMechanics _heading;
         private readonly TacticalDirector.GoalkeeperMechanics.GoalkeeperMechanics _goalkeeper;
         private readonly int _headingStreamIndex;
         private readonly int _goalkeeperStreamIndex;
@@ -361,14 +366,14 @@ namespace TacticalDirector.MatchEngine
         // registered producer phase for SubstitutionEvent). Capacity = every team's max subs, so it
         // can never overflow. Not cross-tick in any persisted sense (drained same tick it is filled,
         // whenever that tick next runs) — NOT serialized.
-        private readonly int[]  _pendingSubOutgoing;  // [MAX_SUBSTITUTIONS_PER_TEAM * TEAM_COUNT]
-        private readonly int[]  _pendingSubIncoming;
+        private readonly int[] _pendingSubOutgoing;  // [MAX_SUBSTITUTIONS_PER_TEAM * TEAM_COUNT]
+        private readonly int[] _pendingSubIncoming;
         private readonly byte[] _pendingSubTeam;
         private readonly byte[] _pendingSubReason;
         private int _pendingSubCount;
-        private readonly PlayerAttributes[][]   _benchAttrs;        // [TEAM_COUNT][SUBSTITUTES_PER_TEAM]
+        private readonly PlayerAttributes[][] _benchAttrs;        // [TEAM_COUNT][SUBSTITUTES_PER_TEAM]
         private readonly PerformanceContext[][] _benchPerfs;        // [TEAM_COUNT][SUBSTITUTES_PER_TEAM]
-        private readonly bool[][]               _benchIsGoalkeeper; // [TEAM_COUNT][SUBSTITUTES_PER_TEAM]
+        private readonly bool[][] _benchIsGoalkeeper; // [TEAM_COUNT][SUBSTITUTES_PER_TEAM]
         // #27 T1: canonical bench records (the _canonicalAttrs sibling; _benchAttrs is its #2
         // projection). Substitution copies the canonical record onto the outgoing slot and
         // re-projects every per-slot surface — see SubstitutePlayer. Fully qualified per KD-P6.
@@ -387,8 +392,8 @@ namespace TacticalDirector.MatchEngine
         // stored across ticks — they are recomputed each stride from the (stale) FilteredView +
         // this dwell state, so the dwell is the only new cross-tick surface.
         private readonly MarkingDwellState[] _markingDwell;         // [SQUAD_SIZE]
-        private readonly Vector2[]           _dismarkOppPosScratch; // [SQUAD_SIZE] perceived-opponent scratch
-        private readonly int[]               _dismarkOppIdScratch;  // [SQUAD_SIZE]
+        private readonly Vector2[] _dismarkOppPosScratch; // [SQUAD_SIZE] perceived-opponent scratch
+        private readonly int[] _dismarkOppIdScratch;  // [SQUAD_SIZE]
 
         // ── Build-Up Structures #24 per-team state (FR-BU-011) ────────────────────────
         // Committed hysteresis zone + post-regain suppression countdown, advanced once per team
@@ -414,12 +419,12 @@ namespace TacticalDirector.MatchEngine
         // NOTE (D4 follow-up): the per-team PositioningAITick hysteresis is cross-tick state NOT yet
         // serialized (same class as the D1 perception / DecisionTree internal state) — same-seed
         // in-process determinism holds; save/restore replay needs a get/restore seam (fold into D4).
-        private readonly PositioningAITick[]             _positioning;   // [TEAM_COUNT]
+        private readonly PositioningAITick[] _positioning;   // [TEAM_COUNT]
         private readonly PositioningPerceptionSnapshot[] _posSnapshots;  // [TEAM_COUNT]
         // Last ContextModifierInputs handed to each team's PositioningAITick.Tick this AI tick. Persisted
         // only so a test can read back the #21 Phase-D Width / DefensiveWidth routing (the modifier struct
         // is otherwise a transient per-tick input, not part of the serialized world state).
-        private readonly ContextModifierInputs[]         _posModifiers;  // [TEAM_COUNT]
+        private readonly ContextModifierInputs[] _posModifiers;  // [TEAM_COUNT]
 
         // Pressing (#13) → Defensive (#14) → Attacking (#15) chain (Phase D D2b). One INSTANCE + reused
         // input snapshot per team, ticked AFTER Positioning each AI tick (Pressing's per-agent PressRole
@@ -431,12 +436,12 @@ namespace TacticalDirector.MatchEngine
         // no Stage-0 TacticalContext carrier (PressingMode is a static team tactic) — it runs only to feed
         // PressRole to Defensive. NOTE (D4 follow-up): each tick's internal hysteresis is cross-tick state
         // NOT yet serialized (same class as the D1/D2a state) — fold the get/restore seams into D4.
-        private readonly PressingAITick[]    _pressing;       // [TEAM_COUNT]
-        private readonly PressingSnapshot[]  _pressSnapshots; // [TEAM_COUNT]
-        private readonly PassEventRing[]     _passRings;      // [TEAM_COUNT]
-        private readonly DefensiveAITick[]   _defensive;      // [TEAM_COUNT]
+        private readonly PressingAITick[] _pressing;       // [TEAM_COUNT]
+        private readonly PressingSnapshot[] _pressSnapshots; // [TEAM_COUNT]
+        private readonly PassEventRing[] _passRings;      // [TEAM_COUNT]
+        private readonly DefensiveAITick[] _defensive;      // [TEAM_COUNT]
         private readonly DefensiveSnapshot[] _defSnapshots;   // [TEAM_COUNT]
-        private readonly AttackingAITick[]   _attacking;      // [TEAM_COUNT]
+        private readonly AttackingAITick[] _attacking;      // [TEAM_COUNT]
         private readonly AttackingSnapshot[] _attackSnapshots;// [TEAM_COUNT]
 
         // ── World state (design note §2.3) ────────────────────────────────────────────
@@ -447,8 +452,8 @@ namespace TacticalDirector.MatchEngine
 
         private BallState _ball;
 
-        private readonly AgentState[]         _agents;       // [SQUAD_SIZE]
-        private readonly PlayerAttributes[]   _attrs;        // per-agent attribute snapshot (default)
+        private readonly AgentState[] _agents;       // [SQUAD_SIZE]
+        private readonly PlayerAttributes[] _attrs;        // per-agent attribute snapshot (default)
         private readonly PerformanceContext[] _perfs;        // per-agent form/context modifiers (neutral)
         // #27 T1 (projection design KD-P2/KD-P6): the canonical per-slot player record every per-spec
         // attribute surface projects from (PlayerAttributeProjection). Defaults to CreateDefault()
@@ -458,20 +463,20 @@ namespace TacticalDirector.MatchEngine
         // path, NOT serialized (same B3 exclusion class as _attrs; distinct-squad restore is the T3
         // roster-reference deliverable — KD-P10, see the exclusion proof in SerializeWorldState).
         private readonly TacticalDirector.PlayerDatabase.PlayerAttributes[] _canonicalAttrs; // [SQUAD_SIZE]
-        private readonly MovementCommand[]    _commands;     // per-agent held command (AI owns it at Phase D)
-        private readonly int[]                _teamIds;
-        private readonly bool[]               _isGoalkeeper;
+        private readonly MovementCommand[] _commands;     // per-agent held command (AI owns it at Phase D)
+        private readonly int[] _teamIds;
+        private readonly bool[] _isGoalkeeper;
 
         // Collision-feedback buffers (design note §3 one-tick-lag contract): the real two-input
         // movement seam {isCollisionKnockdown, collisionForce}. Written by the Resolve phase
         // (Phase C); consumed by movement here. Boot-seeded standing-at-rest (false / 0); cross-tick
         // state, serialized into the snapshot at B3.
-        private readonly bool[]  _isCollisionKnockdown;      // [SQUAD_SIZE]
+        private readonly bool[] _isCollisionKnockdown;      // [SQUAD_SIZE]
         private readonly float[] _collisionForces;           // [SQUAD_SIZE]
 
         // ── Phase A observation state (no gameplay effect) ────────────────────────────
 
-        private bool  _aiPhaseRanThisTick;
+        private bool _aiPhaseRanThisTick;
         private ulong _aiPhaseRunCount;
 
         // P1 (interactive-unity-client-design.md §5-P1, KD-P1-3) — the restart applied during the
@@ -482,7 +487,7 @@ namespace TacticalDirector.MatchEngine
         // ("hold the banner for ~2 s") is latched by LiveMatchStreamer, which has no determinism
         // obligations. No gameplay path reads either field.
         private RestartCue _restartAppliedThisTick;
-        private int        _restartAwardedTeamThisTick;
+        private int _restartAwardedTeamThisTick;
 
         // ── Profiler markers ──────────────────────────────────────────────────────────
 
@@ -508,8 +513,8 @@ namespace TacticalDirector.MatchEngine
             _matchSeed = matchSeed;
 
             // §4 step 5 — clock, codec, environment fingerprint.
-            _clock       = new MatchClock(0UL);
-            _codec       = new SnapshotCodec();
+            _clock = new MatchClock(0UL);
+            _codec = new SnapshotCodec();
             _fingerprint = EnvironmentFingerprint.CreateStage0Dev();
 
             // §4.8.2 runtime float-mode gate — read the live MXCSR on the sim thread at boot and reject a
@@ -523,14 +528,14 @@ namespace TacticalDirector.MatchEngine
             _movement = new AgentMovementSystem(DeterministicSimConstants.PHYSICS_TICK_HZ);
 
             // World-state + per-agent input buffers (pre-allocated once; hot path mutates by ref).
-            _agents               = new AgentState[MatchEngineConstants.SQUAD_SIZE];
-            _attrs                = new PlayerAttributes[MatchEngineConstants.SQUAD_SIZE];
-            _perfs                = new PerformanceContext[MatchEngineConstants.SQUAD_SIZE];
-            _commands             = new MovementCommand[MatchEngineConstants.SQUAD_SIZE];
-            _teamIds              = new int[MatchEngineConstants.SQUAD_SIZE];
-            _isGoalkeeper         = new bool[MatchEngineConstants.SQUAD_SIZE];
+            _agents = new AgentState[MatchEngineConstants.SQUAD_SIZE];
+            _attrs = new PlayerAttributes[MatchEngineConstants.SQUAD_SIZE];
+            _perfs = new PerformanceContext[MatchEngineConstants.SQUAD_SIZE];
+            _commands = new MovementCommand[MatchEngineConstants.SQUAD_SIZE];
+            _teamIds = new int[MatchEngineConstants.SQUAD_SIZE];
+            _isGoalkeeper = new bool[MatchEngineConstants.SQUAD_SIZE];
             _isCollisionKnockdown = new bool[MatchEngineConstants.SQUAD_SIZE];   // default false (standing at rest)
-            _collisionForces      = new float[MatchEngineConstants.SQUAD_SIZE];  // default 0    (standing at rest)
+            _collisionForces = new float[MatchEngineConstants.SQUAD_SIZE];  // default 0    (standing at rest)
 
             // #27 T1 — canonical player records default to all-neutral; every attribute surface below
             // is a projection of this array (allocated before InitializeKickoffState, its first reader).
@@ -544,11 +549,11 @@ namespace TacticalDirector.MatchEngine
             InitializeKickoffState();
 
             // §4 step 3 (cont.) — Resolve subsystems (Phase C C1). Kickoff ball is loose.
-            _possessingAgentId     = MatchEngineConstants.NO_POSSESSION;
+            _possessingAgentId = MatchEngineConstants.NO_POSSESSION;
             _prevPossessingAgentId = MatchEngineConstants.NO_POSSESSION; // Phase E — no transition at boot
-            _collisionSystem   = new CollisionSubsystem(MatchEngineConstants.SQUAD_SIZE);
-            _eventConsumer     = new MatchFlowCollisionConsumer(this);
-            _stumbleScratch    = new bool[MatchEngineConstants.SQUAD_SIZE];
+            _collisionSystem = new CollisionSubsystem(MatchEngineConstants.SQUAD_SIZE);
+            _eventConsumer = new MatchFlowCollisionConsumer(this);
+            _stumbleScratch = new bool[MatchEngineConstants.SQUAD_SIZE];
 
             // Match-flow completion (design note §3) — the first host-owned RNG draw site. Registered
             // once here; the entityId -1 sentinel matches the InteractionTextGenerator (#22) world-
@@ -572,25 +577,25 @@ namespace TacticalDirector.MatchEngine
             // (IBallPhysicsSystem writes _ball; IAgentMovementSystem is a Stage-0 dribbling no-op). The
             // opponent-position scratch buffer feeds the per-touch PressureEvaluator pass (one team).
             var firstTouchAdapter = new FirstTouchWorldAdapter(this);
-            _firstTouch      = new FirstTouchSystem(firstTouchAdapter, firstTouchAdapter);
+            _firstTouch = new FirstTouchSystem(firstTouchAdapter, firstTouchAdapter);
             _opponentScratch = new Vector2[MatchEngineConstants.PLAYERS_PER_TEAM];
 
             // §4 step 3 (cont.) — AI subsystems (Phase D D1). Perception gets its own broad-phase grid
             // (host-populated each AI tick). The per-agent AI input buffers are allocated once and the
             // Stage-0 static snapshots assembled now (needs the kickoff positions + team ids above).
-            _perceptionGrid   = new SpatialHashGrid();
-            _perception       = new PerceptionSubsystem(_perceptionGrid);
-            _perceptionAttrs  = new PerceptionAgentAttributes[MatchEngineConstants.SQUAD_SIZE];
-            _dtAttrs          = new DtAgentAttributes[MatchEngineConstants.SQUAD_SIZE];
+            _perceptionGrid = new SpatialHashGrid();
+            _perception = new PerceptionSubsystem(_perceptionGrid);
+            _perceptionAttrs = new PerceptionAgentAttributes[MatchEngineConstants.SQUAD_SIZE];
+            _dtAttrs = new DtAgentAttributes[MatchEngineConstants.SQUAD_SIZE];
             _tacticalContexts = new TacticalContext[MatchEngineConstants.SQUAD_SIZE];
-            _hasPossession    = new bool[MatchEngineConstants.SQUAD_SIZE];
+            _hasPossession = new bool[MatchEngineConstants.SQUAD_SIZE];
 
             // #23 — per-agent marking dwell (zero dwell / NoMarker) + the perceived-opponent
             // extraction scratch the marker search reads (zero alloc on the hot path). Allocated
             // BEFORE the positioning loop below: FillPositioningSnapshot reads them.
-            _markingDwell         = new MarkingDwellState[MatchEngineConstants.SQUAD_SIZE];
+            _markingDwell = new MarkingDwellState[MatchEngineConstants.SQUAD_SIZE];
             _dismarkOppPosScratch = new Vector2[MatchEngineConstants.SQUAD_SIZE];
-            _dismarkOppIdScratch  = new int[MatchEngineConstants.SQUAD_SIZE];
+            _dismarkOppIdScratch = new int[MatchEngineConstants.SQUAD_SIZE];
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
                 _markingDwell[i] = MarkingDwellState.Unmarked;
@@ -611,22 +616,22 @@ namespace TacticalDirector.MatchEngine
             // #21 T2: both teams start at the Balanced identity tactic (FR-TI-031) — behaviour-neutral
             // until a caller invokes SetTeamTactic before kickoff. _active is seeded directly (not via the
             // stride swap) so the very first AI stride already reads a valid tactic.
-            _activeTeamTactics  = new TeamTactic[MatchEngineConstants.TEAM_COUNT];
+            _activeTeamTactics = new TeamTactic[MatchEngineConstants.TEAM_COUNT];
             _pendingTeamTactics = new TeamTactic[MatchEngineConstants.TEAM_COUNT];
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
-                _activeTeamTactics[t]  = TeamTactic.Balanced;
+                _activeTeamTactics[t] = TeamTactic.Balanced;
                 _pendingTeamTactics[t] = TeamTactic.Balanced;
             }
 
             // #21 §3.3: every agent starts at the identity per-agent tactic (FR-TI-031) — behaviour-neutral
             // until a caller invokes SetPlayerTactic before kickoff. _active is seeded directly so the very
             // first AI stride already reads a valid per-agent tactic.
-            _activePlayerTactics  = new PlayerTactic[MatchEngineConstants.SQUAD_SIZE];
+            _activePlayerTactics = new PlayerTactic[MatchEngineConstants.SQUAD_SIZE];
             _pendingPlayerTactics = new PlayerTactic[MatchEngineConstants.SQUAD_SIZE];
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
-                _activePlayerTactics[i]  = PlayerTactic.Default(PlayerRole.Default);
+                _activePlayerTactics[i] = PlayerTactic.Default(PlayerRole.Default);
                 _pendingPlayerTactics[i] = PlayerTactic.Default(PlayerRole.Default);
             }
 
@@ -640,17 +645,17 @@ namespace TacticalDirector.MatchEngine
             _presetCatalogue = new TacticalDirector.TacticalInstructions.InCodeTacticPresetCatalogue();
 
             // Engine score state (v14): 0–0 at kickoff; no agent has held possession yet.
-            _goals             = new int[MatchEngineConstants.TEAM_COUNT];
+            _goals = new int[MatchEngineConstants.TEAM_COUNT];
             _lastHolderAgentId = MatchEngineConstants.NO_POSSESSION;
 
             // Match-flow completion (design note §2/§3/§6/§7): discipline, substitutions, match-flow
             // clock. Every array starts at its behaviour-neutral identity (no cards, no subs used, no
             // transition fired) — a match that never calls SubstitutePlayer and never triggers a foul
             // is unaffected.
-            _yellowCards            = new byte[MatchEngineConstants.SQUAD_SIZE];
-            _isSentOff              = new bool[MatchEngineConstants.SQUAD_SIZE];
-            _foulCooldownRemaining  = 0;
-            _activeBenchSlot        = new int[MatchEngineConstants.SQUAD_SIZE];
+            _yellowCards = new byte[MatchEngineConstants.SQUAD_SIZE];
+            _isSentOff = new bool[MatchEngineConstants.SQUAD_SIZE];
+            _foulCooldownRemaining = 0;
+            _activeBenchSlot = new int[MatchEngineConstants.SQUAD_SIZE];
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
                 _activeBenchSlot[i] = -1;
@@ -665,23 +670,23 @@ namespace TacticalDirector.MatchEngine
             int maxPendingSubs = MatchEngineConstants.MAX_SUBSTITUTIONS_PER_TEAM * MatchEngineConstants.TEAM_COUNT;
             _pendingSubOutgoing = new int[maxPendingSubs];
             _pendingSubIncoming = new int[maxPendingSubs];
-            _pendingSubTeam     = new byte[maxPendingSubs];
-            _pendingSubReason   = new byte[maxPendingSubs];
-            _pendingSubCount    = 0;
+            _pendingSubTeam = new byte[maxPendingSubs];
+            _pendingSubReason = new byte[maxPendingSubs];
+            _pendingSubCount = 0;
 
             // Bench roster (design note §6): a Stage-0 in-code source, mirroring the TeamTacticConfig
             // precedent — the on-disk loader is a Stage 1+ parser swap. Every slot defaults to the
             // neutral identity attributes/perf/GK-flag; a real per-competition bench is a config-loader
             // follow-up, not a Stage-0 requirement.
-            _benchAttrs          = new PlayerAttributes[MatchEngineConstants.TEAM_COUNT][];
-            _benchPerfs          = new PerformanceContext[MatchEngineConstants.TEAM_COUNT][];
-            _benchIsGoalkeeper   = new bool[MatchEngineConstants.TEAM_COUNT][];
+            _benchAttrs = new PlayerAttributes[MatchEngineConstants.TEAM_COUNT][];
+            _benchPerfs = new PerformanceContext[MatchEngineConstants.TEAM_COUNT][];
+            _benchIsGoalkeeper = new bool[MatchEngineConstants.TEAM_COUNT][];
             _benchCanonicalAttrs = new TacticalDirector.PlayerDatabase.PlayerAttributes[MatchEngineConstants.TEAM_COUNT][];
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
-                _benchAttrs[t]          = new PlayerAttributes[MatchEngineConstants.SUBSTITUTES_PER_TEAM];
-                _benchPerfs[t]          = new PerformanceContext[MatchEngineConstants.SUBSTITUTES_PER_TEAM];
-                _benchIsGoalkeeper[t]   = new bool[MatchEngineConstants.SUBSTITUTES_PER_TEAM];
+                _benchAttrs[t] = new PlayerAttributes[MatchEngineConstants.SUBSTITUTES_PER_TEAM];
+                _benchPerfs[t] = new PerformanceContext[MatchEngineConstants.SUBSTITUTES_PER_TEAM];
+                _benchIsGoalkeeper[t] = new bool[MatchEngineConstants.SUBSTITUTES_PER_TEAM];
                 _benchCanonicalAttrs[t] = new TacticalDirector.PlayerDatabase.PlayerAttributes[MatchEngineConstants.SUBSTITUTES_PER_TEAM];
                 for (int b = 0; b < MatchEngineConstants.SUBSTITUTES_PER_TEAM; b++)
                 {
@@ -695,13 +700,13 @@ namespace TacticalDirector.MatchEngine
             }
 
             _secondHalfStarted = false;
-            _matchEnded        = false;
+            _matchEnded = false;
 
             // P1 KD-P1-3 — the pre-first-tick value of the restart cue. RunInputPhase re-establishes
             // this every tick, but a caller may observe a booted engine before the first RunTick, and
             // the awarded-team field's zero default would otherwise read as "team 0" while the cue
             // says None. Set here so "no restart" is a single coherent answer from boot onward.
-            _restartAppliedThisTick     = RestartCue.None;
+            _restartAppliedThisTick = RestartCue.None;
             _restartAwardedTeamThisTick = MatchEngineConstants.NO_RESTART_TEAM;
 
             // GK (#11) / Heading (#10) engine integration (gk-heading-engine-integration-design.md §3.1,
@@ -715,7 +720,7 @@ namespace TacticalDirector.MatchEngine
                 "heading.mechanics", SubsystemOrdinals.HeadingMechanics, entityId: -1, streamVersion: 1);
             _goalkeeperStreamIndex = _rng.RegisterStream(
                 "goalkeeper.mechanics", SubsystemOrdinals.GoalkeeperMechanics, entityId: -1, streamVersion: 1);
-            _heading    = new TacticalDirector.HeadingMechanics.HeadingMechanics(gkHeadingWorld, gkHeadingWorld);
+            _heading = new TacticalDirector.HeadingMechanics.HeadingMechanics(gkHeadingWorld, gkHeadingWorld);
             _goalkeeper = new TacticalDirector.GoalkeeperMechanics.GoalkeeperMechanics(gkHeadingWorld, gkHeadingWorld);
 
             // Keeper roster: GoalkeeperConstants.MaxGkAgents == TEAM_COUNT == 2, so keeper index == team id
@@ -741,7 +746,7 @@ namespace TacticalDirector.MatchEngine
 
             _gkAgentIds = new int[GoalkeeperConstants.MaxGkAgents];
             RefreshGkAgentIds();   // refreshed each drive too (ConfigureSquads / substitutions move the GK slot)
-            _saveCommittedForGk         = new bool[GoalkeeperConstants.MaxGkAgents];
+            _saveCommittedForGk = new bool[GoalkeeperConstants.MaxGkAgents];
             _headerCommittedThisEpisode = new bool[MatchEngineConstants.SQUAD_SIZE];
             // §5.Z.15 — DEFAULT ON. Phase 2 serialized the GK/Heading cross-tick state at v18, which is
             // what made a flag-on engine snapshot-safe, and recorded "flip the default to on, take the
@@ -753,21 +758,21 @@ namespace TacticalDirector.MatchEngine
             _gkHeadingEnabled = true;
 
             // §5.Z.15 six-second rule — idle at boot (no keeper holds the ball at kickoff).
-            _gkHoldTicks                = 0;
+            _gkHoldTicks = 0;
             _gkReleaseCooldownRemaining = 0;
-            _gkReleasedAgentId          = MatchEngineConstants.NO_POSSESSION;
+            _gkReleasedAgentId = MatchEngineConstants.NO_POSSESSION;
 
             InitializeAiSnapshots();
 
             // §4 step 3 (cont.) — mechanics AI (Phase D D2). One Positioning AI (#12) instance + reused
             // perception snapshot per team; seed each from the kickoff formation so a valid slot exists
             // before the first AI read (the per-tick Tick() refreshes them — RunPositioningAI).
-            _positioning  = new PositioningAITick[MatchEngineConstants.TEAM_COUNT];
+            _positioning = new PositioningAITick[MatchEngineConstants.TEAM_COUNT];
             _posSnapshots = new PositioningPerceptionSnapshot[MatchEngineConstants.TEAM_COUNT];
             _posModifiers = new ContextModifierInputs[MatchEngineConstants.TEAM_COUNT];
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
-                _positioning[t]  = new PositioningAITick(
+                _positioning[t] = new PositioningAITick(
                     MatchEngineConstants.STAGE0_FORMATION, MatchEngineConstants.MaxEntityId);
                 _posSnapshots[t] = new PositioningPerceptionSnapshot(MatchEngineConstants.PLAYERS_PER_TEAM);
                 FillPositioningSnapshot(t, tickIndex: 0);
@@ -778,22 +783,22 @@ namespace TacticalDirector.MatchEngine
             // 22-agent snapshot per team. Pressing + Attacking take the PositioningAIView facade over this
             // team's Positioning instance; Attacking takes a Stage-0 balanced StyleProfile. Snapshots are
             // filled from world state each AI tick (RunMechanicsAI).
-            _pressing        = new PressingAITick[MatchEngineConstants.TEAM_COUNT];
-            _pressSnapshots  = new PressingSnapshot[MatchEngineConstants.TEAM_COUNT];
-            _passRings       = new PassEventRing[MatchEngineConstants.TEAM_COUNT];
-            _defensive       = new DefensiveAITick[MatchEngineConstants.TEAM_COUNT];
-            _defSnapshots    = new DefensiveSnapshot[MatchEngineConstants.TEAM_COUNT];
-            _attacking       = new AttackingAITick[MatchEngineConstants.TEAM_COUNT];
+            _pressing = new PressingAITick[MatchEngineConstants.TEAM_COUNT];
+            _pressSnapshots = new PressingSnapshot[MatchEngineConstants.TEAM_COUNT];
+            _passRings = new PassEventRing[MatchEngineConstants.TEAM_COUNT];
+            _defensive = new DefensiveAITick[MatchEngineConstants.TEAM_COUNT];
+            _defSnapshots = new DefensiveSnapshot[MatchEngineConstants.TEAM_COUNT];
+            _attacking = new AttackingAITick[MatchEngineConstants.TEAM_COUNT];
             _attackSnapshots = new AttackingSnapshot[MatchEngineConstants.TEAM_COUNT];
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
                 var posView = new PositioningAIView(_positioning[t]);
-                _passRings[t]      = new PassEventRing(MatchEngineConstants.STAGE0_PASS_EVENT_RING_CAPACITY);
-                _pressing[t]       = new PressingAITick(posView, _passRings[t], MatchEngineConstants.MaxEntityId);
+                _passRings[t] = new PassEventRing(MatchEngineConstants.STAGE0_PASS_EVENT_RING_CAPACITY);
+                _pressing[t] = new PressingAITick(posView, _passRings[t], MatchEngineConstants.MaxEntityId);
                 _pressSnapshots[t] = new PressingSnapshot();
-                _defensive[t]      = new DefensiveAITick(MatchEngineConstants.MaxEntityId);
-                _defSnapshots[t]   = new DefensiveSnapshot();
-                _attacking[t]      = new AttackingAITick(posView, StyleProfile.Possession, MatchEngineConstants.MaxEntityId);
+                _defensive[t] = new DefensiveAITick(MatchEngineConstants.MaxEntityId);
+                _defSnapshots[t] = new DefensiveSnapshot();
+                _attacking[t] = new AttackingAITick(posView, StyleProfile.Possession, MatchEngineConstants.MaxEntityId);
                 _attackSnapshots[t] = new AttackingSnapshot();
             }
 
@@ -1034,7 +1039,7 @@ namespace TacticalDirector.MatchEngine
             // engine un-re-projected (and the throwing factory discards it), mirroring ConfigureSquads'
             // validate-both-before-write rule so there is no half-re-projected intermediate.
             var resolved = new TacticalDirector.PlayerDatabase.Squad[MatchEngineConstants.TEAM_COUNT];
-            var plans    = new LineupPlan[MatchEngineConstants.TEAM_COUNT];
+            var plans = new LineupPlan[MatchEngineConstants.TEAM_COUNT];
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
                 if (_rosterClubId[t] == MatchEngineConstants.NO_ROSTER_CLUB_ID)
@@ -1068,7 +1073,7 @@ namespace TacticalDirector.MatchEngine
                 LineupPlan plan = LineupSelector.Select(squad, MatchEngineConstants.STAGE0_FORMATION);
                 ValidateSelectedRecords(t, squad, in plan);
                 resolved[t] = squad;
-                plans[t]    = plan;
+                plans[t] = plan;
             }
 
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
@@ -1098,11 +1103,11 @@ namespace TacticalDirector.MatchEngine
         {
             for (int k = 0; k < MatchEngineConstants.PLAYERS_PER_TEAM; k++)
             {
-                int i     = teamId * MatchEngineConstants.PLAYERS_PER_TEAM + k;
+                int i = teamId * MatchEngineConstants.PLAYERS_PER_TEAM + k;
                 int local = plan.StarterLocalIndices[k];
-                _canonicalAttrs[i]  = squad.GetPlayer(local).Attributes;
-                _attrs[i]           = PlayerAttributeProjection.ToAgentMovement(in _canonicalAttrs[i]);
-                _dtAttrs[i]         = PlayerAttributeProjection.ToDecisionTree(in _canonicalAttrs[i], teamId);
+                _canonicalAttrs[i] = squad.GetPlayer(local).Attributes;
+                _attrs[i] = PlayerAttributeProjection.ToAgentMovement(in _canonicalAttrs[i]);
+                _dtAttrs[i] = PlayerAttributeProjection.ToDecisionTree(in _canonicalAttrs[i], teamId);
                 _perceptionAttrs[i] = PlayerAttributeProjection.ToPerception(
                     in _canonicalAttrs[i], teamId, _perceptionAttrs[i].IsHalfTurned);
             }
@@ -1140,9 +1145,9 @@ namespace TacticalDirector.MatchEngine
                 {
                     continue;
                 }
-                _attrs[i]           = _benchAttrs[teamId][benchIndex];
-                _canonicalAttrs[i]  = _benchCanonicalAttrs[teamId][benchIndex];
-                _dtAttrs[i]         = PlayerAttributeProjection.ToDecisionTree(in _canonicalAttrs[i], teamId);
+                _attrs[i] = _benchAttrs[teamId][benchIndex];
+                _canonicalAttrs[i] = _benchCanonicalAttrs[teamId][benchIndex];
+                _dtAttrs[i] = PlayerAttributeProjection.ToDecisionTree(in _canonicalAttrs[i], teamId);
                 _perceptionAttrs[i] = PlayerAttributeProjection.ToPerception(
                     in _canonicalAttrs[i], teamId, _perceptionAttrs[i].IsHalfTurned);
             }
@@ -1167,7 +1172,7 @@ namespace TacticalDirector.MatchEngine
                 {
                     int i = team * MatchEngineConstants.PLAYERS_PER_TEAM + k;
 
-                    _teamIds[i]      = team;
+                    _teamIds[i] = team;
                     _isGoalkeeper[i] = k == 0;
 
                     // ONE own-half template, mirrored for the away side (§5.Z.12). Every position and
@@ -1207,8 +1212,8 @@ namespace TacticalDirector.MatchEngine
                         MirrorVelocityIfAway(team, new Vector2(1f, 0f)));
                     // #27 T1: the #2 locomotion attrs are a projection of the canonical record
                     // (all-neutral at boot ⇒ byte-identical to the pre-T1 CreateDefault() seed).
-                    _attrs[i]  = PlayerAttributeProjection.ToAgentMovement(in _canonicalAttrs[i]);
-                    _perfs[i]  = PerformanceContext.CreateNeutral();
+                    _attrs[i] = PlayerAttributeProjection.ToAgentMovement(in _canonicalAttrs[i]);
+                    _perfs[i] = PerformanceContext.CreateNeutral();
 
                     // Boot-time command: hold formation position. The AI phase (Phase D) replaces
                     // this on the first stride tick (tick 6); until then every agent holds (§3).
@@ -1325,8 +1330,8 @@ namespace TacticalDirector.MatchEngine
                 throw new System.InvalidOperationException("SubstitutePlayer: teamId has used all permitted substitutions.");
             }
 
-            _attrs[outSlotIndex]        = _benchAttrs[teamId][benchIndex];
-            _perfs[outSlotIndex]        = _benchPerfs[teamId][benchIndex];
+            _attrs[outSlotIndex] = _benchAttrs[teamId][benchIndex];
+            _perfs[outSlotIndex] = _benchPerfs[teamId][benchIndex];
             _isGoalkeeper[outSlotIndex] = _benchIsGoalkeeper[teamId][benchIndex];
             // #27 T1: the slot now holds a different PLAYER — copy the canonical bench record and
             // re-project the boot-seeded per-slot AI surfaces (#8 / #7), which are otherwise only
@@ -1360,8 +1365,8 @@ namespace TacticalDirector.MatchEngine
                 + teamId * MatchEngineConstants.SUBSTITUTES_PER_TEAM + benchIndex;
             _pendingSubOutgoing[_pendingSubCount] = outSlotIndex;
             _pendingSubIncoming[_pendingSubCount] = incomingId;
-            _pendingSubTeam[_pendingSubCount]     = (byte)teamId;
-            _pendingSubReason[_pendingSubCount]   = (byte)reason;
+            _pendingSubTeam[_pendingSubCount] = (byte)teamId;
+            _pendingSubReason[_pendingSubCount] = (byte)reason;
             _pendingSubCount++;
         }
 
@@ -1491,14 +1496,14 @@ namespace TacticalDirector.MatchEngine
         {
             for (int k = 0; k < MatchEngineConstants.PLAYERS_PER_TEAM; k++)
             {
-                int i     = teamId * MatchEngineConstants.PLAYERS_PER_TEAM + k;
+                int i = teamId * MatchEngineConstants.PLAYERS_PER_TEAM + k;
                 int local = plan.StarterLocalIndices[k];
                 _canonicalAttrs[i] = squad.GetPlayer(local).Attributes;
-                _attrs[i]          = PlayerAttributeProjection.ToAgentMovement(in _canonicalAttrs[i]);
-                _dtAttrs[i]        = PlayerAttributeProjection.ToDecisionTree(in _canonicalAttrs[i], teamId);
+                _attrs[i] = PlayerAttributeProjection.ToAgentMovement(in _canonicalAttrs[i]);
+                _dtAttrs[i] = PlayerAttributeProjection.ToDecisionTree(in _canonicalAttrs[i], teamId);
                 _perceptionAttrs[i] = PlayerAttributeProjection.ToPerception(
                     in _canonicalAttrs[i], teamId, _perceptionAttrs[i].IsHalfTurned);
-                _isGoalkeeper[i]   = plan.StarterIsGoalkeeper[k];
+                _isGoalkeeper[i] = plan.StarterIsGoalkeeper[k];
             }
             for (int b = 0; b < MatchEngineConstants.SUBSTITUTES_PER_TEAM; b++)
             {
@@ -1631,7 +1636,7 @@ namespace TacticalDirector.MatchEngine
         internal void TestOnly_SetCardSeverityStreamCursor(ulong rngCursor, ulong actionOrdinal)
         {
             RngStreamState s = _rng.GetStreamState(_cardSeverityStreamIndex);
-            s.RngCursor     = rngCursor;
+            s.RngCursor = rngCursor;
             s.ActionOrdinal = actionOrdinal;
             _rng.RestoreStream(_cardSeverityStreamIndex, in s);
         }
@@ -1643,7 +1648,7 @@ namespace TacticalDirector.MatchEngine
         internal void TestOnly_SetGoalkeeperStreamCursor(ulong rngCursor, ulong actionOrdinal)
         {
             RngStreamState s = _rng.GetStreamState(_goalkeeperStreamIndex);
-            s.RngCursor     = rngCursor;
+            s.RngCursor = rngCursor;
             s.ActionOrdinal = actionOrdinal;
             _rng.RestoreStream(_goalkeeperStreamIndex, in s);
         }
@@ -1738,10 +1743,10 @@ namespace TacticalDirector.MatchEngine
         /// referee-call probability (`foul-discipline-balance-design.md` KD-F1) means by injecting one.</summary>
         internal void TestOnly_InjectFoulCandidate(int offender, int victim, float forceN = CertainFoulForceN)
         {
-            _foulCandidateFound    = true;
+            _foulCandidateFound = true;
             _foulCandidateOffender = offender;
-            _foulCandidateVictim   = victim;
-            _foulCandidateForceN   = forceN;
+            _foulCandidateVictim = victim;
+            _foulCandidateForceN = forceN;
         }
 
         /// <summary>Test-only: the pure referee-call probability, for locking the KD-F1 shape directly.</summary>
@@ -1916,7 +1921,7 @@ namespace TacticalDirector.MatchEngine
         {
             get
             {
-                if (_matchEnded)        { return MatchPeriod.FullTime; }
+                if (_matchEnded) { return MatchPeriod.FullTime; }
                 if (_secondHalfStarted) { return MatchPeriod.SecondHalf; }
                 return MatchPeriod.FirstHalf;
             }
@@ -1988,6 +1993,15 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Test-only: cumulative post/crossbar strikes this match (shot-speed design
         /// KD-6 — diagnostic observation, not serialized, zero after a restore by design).</summary>
         internal int TestOnly_WoodworkStrikes => _woodworkStrikes;
+
+        /// <summary>Test-only: cumulative genuine #6 shot CONTACTs this match (the
+        /// <c>WoodworkStrikes</c> diagnostic class — not serialized, zero after a restore by
+        /// design). Counted where <c>NotifyKeeperOfShot</c> verifies the strike, BEFORE any
+        /// keeper routing, so it counts every completed shot regardless of who defends. Added
+        /// with the gk-catch-parry-conversion pass because the instruments that previously
+        /// counted shots off <c>ShotDetectedTickMs</c> edges would otherwise count every armed
+        /// threat episode (the ERR-011-006 arming stamps) as a shot.</summary>
+        internal int TestOnly_ShotContacts => _shotContacts;
 
         /// <summary>
         /// Test-only seam: overwrites an agent's held movement command. The AI phase owns this at
@@ -2248,11 +2262,11 @@ namespace TacticalDirector.MatchEngine
             {
                 SchemaVersion = live.SchemaVersion,
                 DigestVersion = live.DigestVersion,
-                Tick          = live.Tick,
-                Fingerprint   = live.Fingerprint,
-                Cursor        = live.Cursor,
+                Tick = live.Tick,
+                Fingerprint = live.Fingerprint,
+                Cursor = live.Cursor,
             };
-            Array.Copy(live.PrevSnapshotDigest,    0, copy.PrevSnapshotDigest,    0, DeterministicSimConstants.SHA256_BYTES);
+            Array.Copy(live.PrevSnapshotDigest, 0, copy.PrevSnapshotDigest, 0, DeterministicSimConstants.SHA256_BYTES);
             Array.Copy(live.CurrentSnapshotDigest, 0, copy.CurrentSnapshotDigest, 0, DeterministicSimConstants.SHA256_BYTES);
             return copy;
         }
@@ -2354,7 +2368,7 @@ namespace TacticalDirector.MatchEngine
             _aiPhaseRanThisTick = false;
 
             // P1 KD-P1-3: same lifecycle — a restart is reported only for the tick it was applied on.
-            _restartAppliedThisTick     = RestartCue.None;
+            _restartAppliedThisTick = RestartCue.None;
             _restartAwardedTeamThisTick = MatchEngineConstants.NO_RESTART_TEAM;
 
             // MatchClock.Advance() has already run inside RunTick, so CurrentTick is the tick
@@ -2609,9 +2623,9 @@ namespace TacticalDirector.MatchEngine
                 _perceptionAttrs[i] = PlayerAttributeProjection.ToPerception(
                     in _canonicalAttrs[i], teamId, isHalfTurned: false);
 
-                _dtAttrs[i]          = PlayerAttributeProjection.ToDecisionTree(in _canonicalAttrs[i], teamId);
+                _dtAttrs[i] = PlayerAttributeProjection.ToDecisionTree(in _canonicalAttrs[i], teamId);
                 _tacticalContexts[i] = TacticalContext.Stage0Default(_agents[i].Position);
-                _hasPossession[i]    = false;
+                _hasPossession[i] = false;
             }
         }
 
@@ -2655,11 +2669,11 @@ namespace TacticalDirector.MatchEngine
                 // #12 analogue of the #13 FillPressingSnapshot single-writer.
                 FillPositioningSnapshot(t, tacticalTick);
                 ContextModifierInputs modifiers = new ContextModifierInputs(
-                    scoreDiff:         0,
-                    teamMeanFatigue:   ComputeTeamMeanFatigue(t),
+                    scoreDiff: 0,
+                    teamMeanFatigue: ComputeTeamMeanFatigue(t),
                     tacticalIntensity: MatchEngineConstants.STAGE0_TACTICAL_INTENSITY,
-                    width:             _activeTeamTactics[t].Width,
-                    defensiveWidth:    _activeTeamTactics[t].DefensiveWidth);
+                    width: _activeTeamTactics[t].Width,
+                    defensiveWidth: _activeTeamTactics[t].DefensiveWidth);
                 _posModifiers[t] = modifiers;
                 _positioning[t].Tick(_posSnapshots[t], modifiers);
 
@@ -2717,7 +2731,7 @@ namespace TacticalDirector.MatchEngine
                     // (behaviour-neutral). The per-agent PlayerTactic (role / duty / individual instructions)
                     // is routed from the active per-agent config — the default identity tactic resolves to
                     // ×1.0 on every factor (FR-TI-031), so a default match stays byte-identical.
-                    ctx.Tempo        = tactic.Tempo;
+                    ctx.Tempo = tactic.Tempo;
                     ctx.PlayerTactic = _activePlayerTactics[i];
                     // #23 FR-DM-015: route the team's DismarkIntensity into the DecisionTree input
                     // (drives the §3.4 marked-pass-target penalty). Default Off ⇒ ×1.0 identity.
@@ -2725,8 +2739,8 @@ namespace TacticalDirector.MatchEngine
                     // Fully qualified: TacticTranslation now exists in BOTH DecisionTree (#8) and
                     // PressingAI (#13), and the match-engine references both, so the bare name is
                     // ambiguous (CS0104). These two are the #8 enum maps specifically.
-                    ctx.Pressing  = TacticalDirector.DecisionTree.TacticTranslation.ToPressingMode(tactic.Pressing);
-                    ctx.Passing   = TacticalDirector.DecisionTree.TacticTranslation.ToPassingStyle(tactic.Passing);
+                    ctx.Pressing = TacticalDirector.DecisionTree.TacticTranslation.ToPressingMode(tactic.Pressing);
+                    ctx.Passing = TacticalDirector.DecisionTree.TacticTranslation.ToPassingStyle(tactic.Passing);
 
                     // #21 §3.4: DefensiveLineDepth is the #14 MarkDirective output — #12/#14 remain the depth
                     // authority. The §3.4 recompute Clamp01(TeamTactic.DefensiveLine + MentalityLineBias) is
@@ -2735,8 +2749,8 @@ namespace TacticalDirector.MatchEngine
                     // authoritative depth source (no parallel surface). Balanced ⇒ 0.5 + 0.0 = 0.5, the prior
                     // STAGE0_DEFENSIVE_LINE_DEPTH, so a default match is unchanged (FR-TI-031).
                     ctx.DefensiveLineDepth = mark.OffensiveLineDepth;
-                    ctx.HasMarkDirective   = !teamHasPossession;
-                    ctx.HasAttackIntent    = HasActiveAttackIntent(_attacking[t].GetIntent(i));
+                    ctx.HasMarkDirective = !teamHasPossession;
+                    ctx.HasAttackIntent = HasActiveAttackIntent(_attacking[t].GetIntent(i));
                     // Cheap-item addition (new §3.2/§7.7): Positioning AI #12's rest-defense coverage
                     // check, computed once per team per stride, routed to every agent's context.
                     ctx.RestDefenseSufficient = _positioning[t].GetRestDefenseSufficient();
@@ -2755,7 +2769,21 @@ namespace TacticalDirector.MatchEngine
                         bool armed = GkHeadingIntentSource.SaveArmed(
                             t, in _ball.Position, in _ball.Velocity, loose);
                         ctx.SaveAvailable = armed;
-                        if (!armed)
+                        if (armed)
+                        {
+                            // ERR-011-006 (design KD-C2): seed the §3.2 detection stamp at the
+                            // episode's ONSET when no stamp is live — the fallback anchor for
+                            // threats with no shot event (deflections, rebounds, mis-hit passes).
+                            // A no-op after the episode's first call (the stamp itself is the
+                            // latch, serialized in the v19 GK block — no new cross-tick state),
+                            // and a true shot CONTACT's NotifyKeeperOfShot stamp, landing in the
+                            // prior Resolve phase, is already live by the time this runs, so the
+                            // precise strike anchor survives.
+                            _goalkeeper.OnThreatArmed(
+                                t, _clock.CurrentMatchTimeMs, _ball.Velocity.magnitude,
+                                PlayerAttributeProjection.ToGoalkeeper(in _canonicalAttrs[i], t, fatigue: 0f));
+                        }
+                        else
                         {
                             // One owner of "the episode is over". This latch and #11's own
                             // _saveIntentActive used to have DIFFERENT lifetimes — #11 cleared only when
@@ -2776,7 +2804,7 @@ namespace TacticalDirector.MatchEngine
                     // Stage0Default false, and the off-ball branch is byte-identical to pre-Phase-H.
                     ctx.LooseBallCollector = i == collector;
 
-                    _tacticalContexts[i]   = ctx;
+                    _tacticalContexts[i] = ctx;
                 }
             }
         }
@@ -2804,12 +2832,12 @@ namespace TacticalDirector.MatchEngine
             FormationSlotRecord[] formation =
                 PositioningAIConstants.GetFormationSlots(MatchEngineConstants.STAGE0_FORMATION);
 
-            snap.TickIndex      = tickIndex;
-            snap.BallPosition   = MirrorPitchIfAway(team, _ball.Position);
+            snap.TickIndex = tickIndex;
+            snap.BallPosition = MirrorPitchIfAway(team, _ball.Position);
             snap.BallVxFiltered = team == 0 ? _ball.Velocity.x : -_ball.Velocity.x;
 
             int owner = _possessingAgentId;
-            snap.PossessionOwnerEntityId  = owner;
+            snap.PossessionOwnerEntityId = owner;
             snap.PossessionOwnerIsOwnTeam = owner >= 0 && _teamIds[owner] == team;
 
             // #23/#24/#25 Phase-D writers (FR-DM-015 / FR-BU-012 / FR-RO-014): this fill is the sole
@@ -2817,12 +2845,12 @@ namespace TacticalDirector.MatchEngine
             // the exact identities, so a default match's composed slots are unchanged. The #24 zone
             // + suppression carriers were advanced by the RunMechanicsAI pre-pass (boot fill reads
             // the seeded zone + a closed window).
-            TeamTactic activeTactic  = _activeTeamTactics[team];
-            snap.DismarkIntensity    = activeTactic.DismarkIntensity;
-            snap.BuildUpStructure    = activeTactic.BuildUpStructure;
+            TeamTactic activeTactic = _activeTeamTactics[team];
+            snap.DismarkIntensity = activeTactic.DismarkIntensity;
+            snap.BuildUpStructure = activeTactic.BuildUpStructure;
             snap.BuildUpCommittedZone = _buildUpStates[team].CommittedZone;
-            snap.BuildUpSuppressed   = _buildUpStates[team].SuppressTicksRemaining > 0;
-            snap.RotationFreedom     = activeTactic.RotationFreedom;
+            snap.BuildUpSuppressed = _buildUpStates[team].SuppressTicksRemaining > 0;
+            snap.RotationFreedom = activeTactic.RotationFreedom;
 
             int activeOutfield = 0;
             for (int k = 0; k < MatchEngineConstants.PLAYERS_PER_TEAM; k++)
@@ -2831,11 +2859,11 @@ namespace TacticalDirector.MatchEngine
                 bool isGk = _isGoalkeeper[i];
 
                 snap.Agents[k] = new AgentPositioningData(
-                    entityId:     i,
-                    slotIndex:    k,
-                    position:     MirrorPitchIfAway(team, _agents[i].Position),
-                    isActive:     !_isSentOff[i],       // match-flow completion: red-carded agents excluded
-                    role:         formation[k].Role,
+                    entityId: i,
+                    slotIndex: k,
+                    position: MirrorPitchIfAway(team, _agents[i].Position),
+                    isActive: !_isSentOff[i],       // match-flow completion: red-carded agents excluded
+                    role: formation[k].Role,
                     isGoalkeeper: isGk);
 
                 if (!isGk) activeOutfield++;
@@ -2851,9 +2879,9 @@ namespace TacticalDirector.MatchEngine
                 // composer stage is gated off anyway.
                 if (activeTactic.DismarkIntensity == DismarkIntensity.Off || isGk)
                 {
-                    snap.HasMarker[k]       = false;
+                    snap.HasMarker[k] = false;
                     snap.MarkingPressure[k] = 0f;
-                    snap.MarkerPosition[k]  = Vector2.zero;
+                    snap.MarkerPosition[k] = Vector2.zero;
                 }
                 else
                 {
@@ -2865,13 +2893,13 @@ namespace TacticalDirector.MatchEngine
                         new ReadOnlySpan<int>(_dismarkOppIdScratch, 0, oppCount),
                         out _, out Vector2 markerPos, out float markerDist);
 
-                    snap.HasMarker[k]       = markerExists;
+                    snap.HasMarker[k] = markerExists;
                     snap.MarkingPressure[k] = MarkingPressureEvaluator.ComputePressure(
                         TacticalDirector.PositioningAI.Phase.InPoss, markerExists, markerDist,
                         _markingDwell[i].DwellTicks);
                     // Marker position mapped into the same canonical frame as agent positions —
                     // it is the agent's PERCEIVED marker (FR-DM-001/004), never ground truth.
-                    snap.MarkerPosition[k]  = markerExists
+                    snap.MarkerPosition[k] = markerExists
                         ? MirrorPitchIfAway(team, markerPos)
                         : Vector2.zero;
                 }
@@ -2891,7 +2919,7 @@ namespace TacticalDirector.MatchEngine
             for (int j = 0; j < view.VisibleOpponentsCount; j++)
             {
                 _dismarkOppPosScratch[n] = view.VisibleOpponents[j].PerceivedPosition;
-                _dismarkOppIdScratch[n]  = view.VisibleOpponents[j].AgentId;
+                _dismarkOppIdScratch[n] = view.VisibleOpponents[j].AgentId;
                 n++;
             }
             return n;
@@ -2910,9 +2938,9 @@ namespace TacticalDirector.MatchEngine
             PressingSnapshot snap = _pressSnapshots[team];
             int owner = _possessingAgentId;
 
-            snap.TickIndex           = tickIndex;
-            snap.BallPosition        = MirrorPitchIfAway(team, _ball.Position);
-            snap.BallVelocity        = MirrorVelocityIfAway(team, _ball.Velocity);
+            snap.TickIndex = tickIndex;
+            snap.BallPosition = MirrorPitchIfAway(team, _ball.Position);
+            snap.BallVelocity = MirrorVelocityIfAway(team, _ball.Velocity);
             snap.BallCarrierEntityId = owner;
             // The snapshot is built in the PRESSING team's canonical attack-+X frame, so the
             // pressing team's own attacking direction is the constant +X. PressingSnapshot's
@@ -2922,47 +2950,47 @@ namespace TacticalDirector.MatchEngine
             // ball-carrier's direction here (−X when the opponent holds the ball — i.e. exactly
             // when pressing is active) would double-invert those two, firing BackwardPass on
             // forward passes and rewarding retreating receivers.
-            snap.AttackingDirection  = new Vector2(1f, 0f);
-            snap.PossessionTeamId    = owner >= 0 ? _teamIds[owner] : MatchEngineConstants.NO_POSSESSION;
-            snap.PressingTeamId      = team;
+            snap.AttackingDirection = new Vector2(1f, 0f);
+            snap.PossessionTeamId = owner >= 0 ? _teamIds[owner] : MatchEngineConstants.NO_POSSESSION;
+            snap.PressingTeamId = team;
 
             // #21 §3.4 / FR-TI-017 (T2 Phase-D writer): route this team's active tactic line of
             // engagement into the Pressing AI (#13) input. PrimaryPressSelector scales its trigger
             // radius by TacticTranslation.PressTriggerRadiusScalar(LineOfEngagement). Default Balanced
             // ⇒ Standard ⇒ ×1.0, byte-identical to pre-#21 (the #13 analogue of the #8 RunMechanicsAI
             // single-writer). The snapshot is per-tick assembled, so this overwrites the ctor seed.
-            snap.LineOfEngagement    = _activeTeamTactics[team].LineOfEngagement;
+            snap.LineOfEngagement = _activeTeamTactics[team].LineOfEngagement;
 
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
                 bool isOwn = _teamIds[i] == team;
                 snap.Agents[i] = new PressingAgentSnapshot
                 {
-                    EntityId            = i,
-                    TeamId              = _teamIds[i],
-                    Position            = MirrorPitchIfAway(team, _agents[i].Position),
-                    Velocity            = MirrorVelocityIfAway(team, _agents[i].Velocity),
-                    Facing              = MirrorVelocityIfAway(team, _agents[i].FacingDirection),
-                    Fatigue             = 1f - _agents[i].AerobicPool,
+                    EntityId = i,
+                    TeamId = _teamIds[i],
+                    Position = MirrorPitchIfAway(team, _agents[i].Position),
+                    Velocity = MirrorVelocityIfAway(team, _agents[i].Velocity),
+                    Facing = MirrorVelocityIfAway(team, _agents[i].FacingDirection),
+                    Fatigue = 1f - _agents[i].AerobicPool,
                     // #27 T1 (projection design §3.5a / KD-P9): canonical FirstTouchAbility, every
                     // agent (no GK gate — KD-P5). Neutral record ⇒ 10 = the pre-T1 STAGE0 seed.
                     FirstTouchAttribute = PlayerAttributeProjection.FirstTouchAbility(in _canonicalAttrs[i]),
-                    LastTouchQuality    = 1f,   // perfect touch ⇒ no Stage-0 BadTouch trigger
-                    PostTouchBallSpeed  = 0f,
-                    IsGoalkeeper        = _isGoalkeeper[i],
-                    HasBall             = i == owner,
-                    IsActive            = !_isSentOff[i], // match-flow completion: red-carded agents excluded
-                    BaselineSlot        = isOwn ? _positioning[team].GetFormationSlot(i)
+                    LastTouchQuality = 1f,   // perfect touch ⇒ no Stage-0 BadTouch trigger
+                    PostTouchBallSpeed = 0f,
+                    IsGoalkeeper = _isGoalkeeper[i],
+                    HasBall = i == owner,
+                    IsActive = !_isSentOff[i], // match-flow completion: red-carded agents excluded
+                    BaselineSlot = isOwn ? _positioning[team].GetFormationSlot(i)
                                                 : MirrorPitchIfAway(team, _agents[i].Position),
-                    Line                = isOwn ? _positioning[team].GetLine(i) : LineId.Midfield,
+                    Line = isOwn ? _positioning[team].GetLine(i) : LineId.Midfield,
                     // Cheap-item addition (new §7.12): cover-shadow curve attributes, sourced from
                     // the same _dtAttrs the Decision Tree already reads — since #27 T1 these are
                     // canonical-record projections (real values under a configured squad; the
                     // no-squad default stays all-neutral), so they flow transitively with no
                     // separate projection row (projection design §1 "derived consumers").
                     DefensivePositioningAttribute = _dtAttrs[i].Positioning,
-                    PhysicalEffortAttribute       = (_dtAttrs[i].WorkRate + _dtAttrs[i].Pace + _dtAttrs[i].Stamina) / 3f,
-                    MentalSharpnessAttribute      = (_dtAttrs[i].Decisions + _dtAttrs[i].Anticipation) / 2f,
+                    PhysicalEffortAttribute = (_dtAttrs[i].WorkRate + _dtAttrs[i].Pace + _dtAttrs[i].Stamina) / 3f,
+                    MentalSharpnessAttribute = (_dtAttrs[i].Decisions + _dtAttrs[i].Anticipation) / 2f,
                 };
             }
         }
@@ -2983,12 +3011,12 @@ namespace TacticalDirector.MatchEngine
             Vector2 ballXY = new Vector2(_ball.Position.x, _ball.Position.y);
             Vector2 ballVelXY = new Vector2(_ball.Velocity.x, _ball.Velocity.y);
 
-            snap.TickIndex               = tickIndex;
-            snap.DefensiveTeamId         = team;
-            snap.BallPosition            = MirrorPitchIfAway(team, ballXY);
-            snap.BallVelocity            = MirrorVelocityIfAway(team, ballVelXY);
+            snap.TickIndex = tickIndex;
+            snap.DefensiveTeamId = team;
+            snap.BallPosition = MirrorPitchIfAway(team, ballXY);
+            snap.BallVelocity = MirrorVelocityIfAway(team, ballVelXY);
             snap.PossessionOwnerEntityId = owner;
-            snap.TeamPhase               = _positioning[team].GetPhase();
+            snap.TeamPhase = _positioning[team].GetPhase();
             // #21 §3.4 (resolves PASS-1 M-2): the authoritative defensive-line depth is the manager input
             // dial + the per-mentality additive bias, re-Clamp01'd — TeamTactic.DefensiveLine is INPUT ONLY,
             // never a parallel depth value. This is the single source #12/#14 (here) and #8 (via the #14
@@ -2997,11 +3025,11 @@ namespace TacticalDirector.MatchEngine
             // depth is recomputed every tick from the serialized dial + mentality, so it is never an
             // independently-restorable second surface (no divergence-on-restore; §3.4 serialization note).
             TeamTactic depthTactic = _activeTeamTactics[team];
-            snap.DefensiveLineDepth      = Mathf.Clamp01(
+            snap.DefensiveLineDepth = Mathf.Clamp01(
                 depthTactic.DefensiveLine
                 + TacticalDirector.DecisionTree.TacticTranslation.MentalityLineBias(depthTactic.Mentality));
-            snap.AgentCount              = MatchEngineConstants.SQUAD_SIZE;
-            snap.HasActivePrimaryPress   = _pressing[team].LastDirective.IsActive;
+            snap.AgentCount = MatchEngineConstants.SQUAD_SIZE;
+            snap.HasActivePrimaryPress = _pressing[team].LastDirective.IsActive;
 
             // #21 §3.4 / FR-TI-022 (T2 Phase-D writer): route this team's active tactic OffsideTrap
             // toggle into the Defensive AI (#14) input. Fully qualified because TacticTranslation now
@@ -3012,7 +3040,7 @@ namespace TacticalDirector.MatchEngine
             // behind a default-false toggle would not be behaviour-neutral; active consumption lands
             // with the §3.7.2 additive-request design at activation). The snapshot is per-tick
             // assembled, so this overwrites the class-field default each tick.
-            snap.OffsideTrapRequested    =
+            snap.OffsideTrapRequested =
                 TacticalDirector.DefensiveAI.TacticTranslation.OffsideTrapRequested(
                     _activeTeamTactics[team].OffsideTrap);
 
@@ -3020,7 +3048,7 @@ namespace TacticalDirector.MatchEngine
             // #14 MAN_MARK candidate radius (MarkAssigner scales DefensiveAIConstants.ManMarkCandidateRadiusM
             // by TacticTranslation.MarkRadiusScalar(MarkingOrientation)). Balanced ⇒ ×1.0, byte-identical
             // to pre-addition (FR-TI-031).
-            snap.MarkingOrientation      = _activeTeamTactics[team].MarkingOrientation;
+            snap.MarkingOrientation = _activeTeamTactics[team].MarkingOrientation;
 
             int gkEntity = MatchEngineConstants.NO_POSSESSION;
             Vector2 gkPos = Vector2.zero;
@@ -3030,7 +3058,7 @@ namespace TacticalDirector.MatchEngine
                 if (_isGoalkeeper[g])
                 {
                     gkEntity = g;
-                    gkPos    = MirrorPitchIfAway(team, _agents[g].Position);
+                    gkPos = MirrorPitchIfAway(team, _agents[g].Position);
                     break;
                 }
             }
@@ -3042,17 +3070,17 @@ namespace TacticalDirector.MatchEngine
                 bool isOwn = _teamIds[i] == team;
                 snap.Agents[i] = new DefensiveAgentSnapshot
                 {
-                    EntityId            = i,
-                    TeamId              = _teamIds[i],
-                    Position            = MirrorPitchIfAway(team, _agents[i].Position),
-                    Velocity            = MirrorVelocityIfAway(team, _agents[i].Velocity),
-                    IsActive            = !_isSentOff[i], // match-flow completion: red-carded agents excluded
-                    IsGoalkeeper        = _isGoalkeeper[i],
-                    HasBall             = i == owner,
-                    BaselineSlot        = isOwn ? _positioning[team].GetFormationSlot(i)
+                    EntityId = i,
+                    TeamId = _teamIds[i],
+                    Position = MirrorPitchIfAway(team, _agents[i].Position),
+                    Velocity = MirrorVelocityIfAway(team, _agents[i].Velocity),
+                    IsActive = !_isSentOff[i], // match-flow completion: red-carded agents excluded
+                    IsGoalkeeper = _isGoalkeeper[i],
+                    HasBall = i == owner,
+                    BaselineSlot = isOwn ? _positioning[team].GetFormationSlot(i)
                                                 : MirrorPitchIfAway(team, _agents[i].Position),
-                    Line                = isOwn ? _positioning[team].GetLine(i) : LineId.Midfield,
-                    PressRole           = _pressing[team].GetAssignment(i).Role,
+                    Line = isOwn ? _positioning[team].GetLine(i) : LineId.Midfield,
+                    PressRole = _pressing[team].GetAssignment(i).Role,
                     // #27 T1 (projection design §3.5a): canonical FirstTouchAbility (see the
                     // Pressing fill note). Stage-0 approximation: the true attribute stands in
                     // for a perceived estimate, exactly as the neutral placeholder did.
@@ -3075,14 +3103,14 @@ namespace TacticalDirector.MatchEngine
             int owner = _possessingAgentId;
             Vector2 ballXY = new Vector2(_ball.Position.x, _ball.Position.y);
 
-            snap.TickIndex           = tickIndex;
-            snap.AttackingTeamId     = team;
-            snap.BallPosition        = MirrorPitchIfAway(team, ballXY);
+            snap.TickIndex = tickIndex;
+            snap.AttackingTeamId = team;
+            snap.BallPosition = MirrorPitchIfAway(team, ballXY);
             snap.BallCarrierEntityId = owner;
             snap.BallCarrierPosition = owner >= 0
                 ? MirrorPitchIfAway(team, _agents[owner].Position)
                 : MirrorPitchIfAway(team, ballXY);
-            snap.TeamAttackAngle     = 0f;   // acting team attacks +X in its canonical frame
+            snap.TeamAttackAngle = 0f;   // acting team attacks +X in its canonical frame
 
             // #21 §3.3 / FR-TI-021 (T2 Phase-D writer): route this team's active tactic FocusPlay into
             // the Attacking AI (#15) input. The snapshot field is the #21 enum; the translation to a
@@ -3091,27 +3119,27 @@ namespace TacticalDirector.MatchEngine
             // a default match is byte-identical to pre-#21. The OverloadDetector flank-preference
             // consumption is deferred to the §5.6 / G2 balance pass; this writer connects the seam. The
             // snapshot is per-tick assembled, so this overwrites the auto-property zero-value each tick.
-            snap.FocusPlay           = _activeTeamTactics[team].FocusPlay;
+            snap.FocusPlay = _activeTeamTactics[team].FocusPlay;
 
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
                 bool isOwn = _teamIds[i] == team;
                 snap.Agents[i] = new AttackingAgentSnapshot(
-                    entityId:     i,
-                    teamId:       _teamIds[i],
-                    position:     MirrorPitchIfAway(team, _agents[i].Position),
+                    entityId: i,
+                    teamId: _teamIds[i],
+                    position: MirrorPitchIfAway(team, _agents[i].Position),
                     baselineSlot: isOwn ? _positioning[team].GetFormationSlot(i)
                                         : MirrorPitchIfAway(team, _agents[i].Position),
-                    line:         isOwn ? _positioning[team].GetLine(i) : LineId.Midfield,
+                    line: isOwn ? _positioning[team].GetLine(i) : LineId.Midfield,
                     isGoalkeeper: _isGoalkeeper[i],
-                    hasBall:      i == owner,
-                    isActive:     !_isSentOff[i], // match-flow completion: red-carded agents excluded
-                    // #27 T1 (projection design §3.8 / KD-P3): the one pre-normalized target —
-                    // canonical Pace/Dribbling ÷ ATTRIBUTE_MAX, so the neutral record ⇒ 0.5 =
-                    // the pre-T1 STAGE0_NEUTRAL_NORMALIZED seed.
-                    pace:         PlayerAttributeProjection.ToNormalized(_canonicalAttrs[i].Pace),
-                    stamina:      1f - _agents[i].AerobicPool,
-                    dribbling:    PlayerAttributeProjection.ToNormalized(_canonicalAttrs[i].Dribbling));
+                    hasBall: i == owner,
+                    isActive: !_isSentOff[i], // match-flow completion: red-carded agents excluded
+                                              // #27 T1 (projection design §3.8 / KD-P3): the one pre-normalized target —
+                                              // canonical Pace/Dribbling ÷ ATTRIBUTE_MAX, so the neutral record ⇒ 0.5 =
+                                              // the pre-T1 STAGE0_NEUTRAL_NORMALIZED seed.
+                    pace: PlayerAttributeProjection.ToNormalized(_canonicalAttrs[i].Pace),
+                    stamina: 1f - _agents[i].AerobicPool,
+                    dribbling: PlayerAttributeProjection.ToNormalized(_canonicalAttrs[i].Dribbling));
             }
         }
 
@@ -3141,7 +3169,7 @@ namespace TacticalDirector.MatchEngine
             if (team == 0) return p;
             return new Vector2(
                 MatchEngineConstants.PITCH_LENGTH_M - p.x,
-                MatchEngineConstants.PITCH_WIDTH_M  - p.y);
+                MatchEngineConstants.PITCH_WIDTH_M - p.y);
         }
 
         /// <summary>Vector3 overload of <see cref="MirrorPitchIfAway(int, Vector2)"/> preserving Z (height,
@@ -3151,7 +3179,7 @@ namespace TacticalDirector.MatchEngine
             if (team == 0) return p;
             return new Vector3(
                 MatchEngineConstants.PITCH_LENGTH_M - p.x,
-                MatchEngineConstants.PITCH_WIDTH_M  - p.y,
+                MatchEngineConstants.PITCH_WIDTH_M - p.y,
                 p.z);
         }
 
@@ -3225,6 +3253,10 @@ namespace TacticalDirector.MatchEngine
             {
                 return;
             }
+
+            // Diagnostic only — counted before any keeper routing so a shot at a keeper-less
+            // goal still counts as a shot.
+            _shotContacts++;
 
             // The keeper under threat is the one defending the goal the shooter attacks — i.e. the
             // OTHER team's. Derived from the shooter's team rather than from ball direction, so a
@@ -3310,8 +3342,8 @@ namespace TacticalDirector.MatchEngine
                 return;
             }
             RefreshGkAgentIds();
-            int   frameNumber = (int)_clock.CurrentTick;
-            float matchTimeS  = _clock.CurrentMatchTimeSeconds;
+            int frameNumber = (int)_clock.CurrentTick;
+            float matchTimeS = _clock.CurrentMatchTimeSeconds;
             float matchTimeMs = _clock.CurrentMatchTimeMs;
             _heading.Update(_agents, _ball, frameNumber, matchTimeS);
             _goalkeeper.Update(frameNumber, matchTimeMs, _agents, _ball, _gkAgentIds);
@@ -3356,11 +3388,11 @@ namespace TacticalDirector.MatchEngine
             float oppGoalX = t == 0 ? MatchEngineConstants.PITCH_LENGTH_M : 0f;
             var intent = new HeaderIntent
             {
-                PowerIntent          = MatchEngineConstants.HeaderTriggerPowerIntent,
-                ContactPointIntent   = Vector2.zero,
-                TargetIntent         = new Vector3(oppGoalX, MatchEngineConstants.PITCH_WIDTH_M / 2f, 0f),
+                PowerIntent = MatchEngineConstants.HeaderTriggerPowerIntent,
+                ContactPointIntent = Vector2.zero,
+                TargetIntent = new Vector3(oppGoalX, MatchEngineConstants.PITCH_WIDTH_M / 2f, 0f),
                 AttemptCommittedTick = (int)_clock.CurrentTacticalTick,
-                SetPieceContext      = SetPieceContext.OpenPlay,
+                SetPieceContext = SetPieceContext.OpenPlay,
             };
             HeadingAgentAttributes attrs =
                 PlayerAttributeProjection.ToHeading(in _canonicalAttrs[nearest], t, fatigue: 0f);
@@ -3476,8 +3508,8 @@ namespace TacticalDirector.MatchEngine
             // since the last tick — CurrentPhase is now Resolve, the registered producer phase.
             PublishPendingSubstitutions();
 
-            int   frameNumber = (int)_clock.CurrentTick;          // narrows safely at Stage 0 (~414 days @ 60 Hz)
-            float matchTime   = _clock.CurrentMatchTimeSeconds;
+            int frameNumber = (int)_clock.CurrentTick;          // narrows safely at Stage 0 (~414 days @ 60 Hz)
+            float matchTime = _clock.CurrentMatchTimeSeconds;
 
             // Match-flow completion (design note §3): the global foul-detection cooldown decrements
             // once per tick, before the collision step that would otherwise re-arm a foul this tick.
@@ -3498,14 +3530,14 @@ namespace TacticalDirector.MatchEngine
             // an invariant a TestOnly-injected candidate can rely on too (design note §3 test plan).
             _collisionSystem.UpdateCollisions(
                 _agents, _attrs, _teamIds, _isGoalkeeper,
-                knockdownOut:      _isCollisionKnockdown,
+                knockdownOut: _isCollisionKnockdown,
                 knockdownForceOut: _collisionForces,
-                stumbleOut:        _stumbleScratch,
-                ball:              ref _ball,
-                matchSeed:         _matchSeed,
-                frameNumber:       frameNumber,
-                matchTime:         matchTime,
-                eventConsumer:     _eventConsumer);
+                stumbleOut: _stumbleScratch,
+                ball: ref _ball,
+                matchSeed: _matchSeed,
+                frameNumber: frameNumber,
+                matchTime: matchTime,
+                eventConsumer: _eventConsumer);
 
             // Match-flow completion (design note §3): apply the (at most one) foul candidate the
             // consumer just captured — RNG-drawn severity, card issuance, sent-off, and a free kick.
@@ -3676,7 +3708,7 @@ namespace TacticalDirector.MatchEngine
                 var restartEvt = new RestartAwardedEvent(
                     restartKind: (byte)restart,
                     awardedTeam: (byte)awardedTeam,
-                    location:    new Vector3(position.x, position.y, MatchEngineConstants.BALL_REST_HEIGHT_M));
+                    location: new Vector3(position.x, position.y, MatchEngineConstants.BALL_REST_HEIGHT_M));
                 EventBus.Publish(in restartEvt);
                 return;
             }
@@ -3687,9 +3719,9 @@ namespace TacticalDirector.MatchEngine
             _goals[scoringTeam]++;
 
             var evt = new GoalAwardedEvent(
-                scorer:       _lastHolderAgentId,
-                assister:     -1,
-                scoringTeam:  (byte)scoringTeam,
+                scorer: _lastHolderAgentId,
+                assister: -1,
+                scoringTeam: (byte)scoringTeam,
                 ballPosition: _ball.Position);
             EventBus.Publish(in evt);
 
@@ -3713,10 +3745,10 @@ namespace TacticalDirector.MatchEngine
         {
             switch (restart)
             {
-                case RestartType.KickOff:  return RestartCue.KickOff;
-                case RestartType.ThrowIn:  return RestartCue.ThrowIn;
+                case RestartType.KickOff: return RestartCue.KickOff;
+                case RestartType.ThrowIn: return RestartCue.ThrowIn;
                 case RestartType.GoalKick: return RestartCue.GoalKick;
-                case RestartType.Corner:   return RestartCue.Corner;
+                case RestartType.Corner: return RestartCue.Corner;
                 default:
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                     // Observation code must never abort a tick, so this falls through rather than
@@ -3774,7 +3806,7 @@ namespace TacticalDirector.MatchEngine
             _possessingAgentId = SelectRestartTaker(position, awardedTeam);
 
             // P1 KD-P1-3 — within-tick observation state; see the field declaration.
-            _restartAppliedThisTick     = cue;
+            _restartAppliedThisTick = cue;
             _restartAwardedTeamThisTick = awardedTeam;
         }
 
@@ -3837,9 +3869,9 @@ namespace TacticalDirector.MatchEngine
                 return;
             }
 
-            _possessingAgentId          = MatchEngineConstants.NO_POSSESSION;
-            _gkHoldTicks                = 0;
-            _gkReleasedAgentId          = holder;
+            _possessingAgentId = MatchEngineConstants.NO_POSSESSION;
+            _gkHoldTicks = 0;
+            _gkReleasedAgentId = holder;
             _gkReleaseCooldownRemaining = MatchEngineConstants.GkReleaseCooldownTicks;
         }
 
@@ -3926,7 +3958,7 @@ namespace TacticalDirector.MatchEngine
         private int SelectRestartTaker(
             Vector2 position, int awardedTeam, int excludeAgentId = MatchEngineConstants.NO_POSSESSION)
         {
-            int   taker  = MatchEngineConstants.NO_POSSESSION;
+            int taker = MatchEngineConstants.NO_POSSESSION;
             float bestSq = float.MaxValue;
 
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
@@ -3940,7 +3972,7 @@ namespace TacticalDirector.MatchEngine
                 if (taker == MatchEngineConstants.NO_POSSESSION || distSq < bestSq)
                 {
                     bestSq = distSq;
-                    taker  = i;
+                    taker = i;
                 }
             }
 
@@ -3964,9 +3996,9 @@ namespace TacticalDirector.MatchEngine
             }
             _foulCandidateFound = false;
 
-            int   offender = _foulCandidateOffender;
-            int   victim   = _foulCandidateVictim;
-            float forceN   = _foulCandidateForceN;
+            int offender = _foulCandidateOffender;
+            int victim = _foulCandidateVictim;
+            float forceN = _foulCandidateForceN;
 
             // AR-9 M-1: a sent-off agent is not a participant in play — contact with (or by) one
             // cannot produce a foul, a card, or a restart. The physical collision itself still
@@ -4027,7 +4059,7 @@ namespace TacticalDirector.MatchEngine
             float v = u / callProbability;
 
             Vector2 victimPos = _agents[victim].Position;
-            Vector3 location  = new Vector3(victimPos.x, victimPos.y, 0f);
+            Vector3 location = new Vector3(victimPos.x, victimPos.y, 0f);
 
             var foulEvt = new FoulCommittedEvent(offender, victim, location, foulKind: (byte)ContactType.FROM_BEHIND);
             EventBus.Publish(in foulEvt);
@@ -4217,8 +4249,8 @@ namespace TacticalDirector.MatchEngine
             // v14 engine-substrate goal detection landed, but this method still hardcoded 0-0. Reading
             // the real score here is a one-line correction of that pre-existing latent bug, not new
             // scope — no other change in this method.
-            _matchContext.HomeScore        = _goals[0];
-            _matchContext.AwayScore        = _goals[1];
+            _matchContext.HomeScore = _goals[0];
+            _matchContext.AwayScore = _goals[1];
             _matchContext.MatchTimeSeconds = _clock.CurrentMatchTimeSeconds;
 
             _matchContext.PossessingAgentId = _possessingAgentId;
@@ -4240,7 +4272,7 @@ namespace TacticalDirector.MatchEngine
 
             _matchContext.BallPosition = new Vector2(_ball.Position.x, _ball.Position.y);
             _matchContext.BallVelocity = _ball.Velocity;
-            _matchContext.BallZone     = PitchGeometry.ComputeFieldZone(_ball.Position.x); // home-perspective only
+            _matchContext.BallZone = PitchGeometry.ComputeFieldZone(_ball.Position.x); // home-perspective only
         }
 
         /// <summary>
@@ -4294,8 +4326,8 @@ namespace TacticalDirector.MatchEngine
             // boundary is inclusive (distSq == acceptanceSq is in reach) via the first-candidate clause.
             float acceptanceSq = MatchEngineConstants.FIRST_TOUCH_ACCEPTANCE_RADIUS_M
                                * MatchEngineConstants.FIRST_TOUCH_ACCEPTANCE_RADIUS_M;
-            int   toucher = MatchEngineConstants.NO_POSSESSION;
-            float bestSq  = acceptanceSq;
+            int toucher = MatchEngineConstants.NO_POSSESSION;
+            float bestSq = acceptanceSq;
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
                 // AR-8 M-1: a sent-off agent no longer participates and must not receive the ball.
@@ -4321,7 +4353,7 @@ namespace TacticalDirector.MatchEngine
                 }
                 if (toucher == MatchEngineConstants.NO_POSSESSION || distSq < bestSq)
                 {
-                    bestSq  = distSq;
+                    bestSq = distSq;
                     toucher = i;
                 }
             }
@@ -4333,48 +4365,48 @@ namespace TacticalDirector.MatchEngine
             // Assemble the per-touch context, evaluate, and apply. ApplyTouchResult writes the displaced
             // ball state via the adapter; the host owns the possession transition from the outcome.
             FirstTouchContext context = BuildFirstTouchContext(toucher);
-            FirstTouchResult  result  = _firstTouch.EvaluateFirstTouch(context);
+            FirstTouchResult result = _firstTouch.EvaluateFirstTouch(context);
             _firstTouch.ApplyTouchResult(result, context);
 
             switch (result.PossessionOutcome)
             {
                 case TouchResult.Controlled:
-                {
-                    // Design note §4 — Stage-0 offside (reception-time approximation). At this point
-                    // _lastHolderAgentId still names the PREVIOUS tick's holder (the production
-                    // writer runs later in RunResolvePhase, after UpdateMatchContext), so this is
-                    // exactly "a genuine same-team pass reception, not an interception and not the
-                    // same agent re-touching a loose dribble".
-                    int newHolder = result.PossessingAgentID;
-                    bool isPassReception = _lastHolderAgentId >= 0
-                        && _teamIds[_lastHolderAgentId] == _teamIds[newHolder]
-                        && _lastHolderAgentId != newHolder;
-
-                    if (isPassReception && EvaluateAndApplyOffside(newHolder))
                     {
-                        // Violation: the assignment below is skipped (not undone) and ApplyRestart
-                        // already stomped ball/possession state (design note §4 point 3).
+                        // Design note §4 — Stage-0 offside (reception-time approximation). At this point
+                        // _lastHolderAgentId still names the PREVIOUS tick's holder (the production
+                        // writer runs later in RunResolvePhase, after UpdateMatchContext), so this is
+                        // exactly "a genuine same-team pass reception, not an interception and not the
+                        // same agent re-touching a loose dribble".
+                        int newHolder = result.PossessingAgentID;
+                        bool isPassReception = _lastHolderAgentId >= 0
+                            && _teamIds[_lastHolderAgentId] == _teamIds[newHolder]
+                            && _lastHolderAgentId != newHolder;
+
+                        if (isPassReception && EvaluateAndApplyOffside(newHolder))
+                        {
+                            // Violation: the assignment below is skipped (not undone) and ApplyRestart
+                            // already stomped ball/possession state (design note §4 point 3).
+                            break;
+                        }
+
+                        _possessingAgentId = newHolder;
                         break;
                     }
-
-                    _possessingAgentId = newHolder;
-                    break;
-                }
                 case TouchResult.Interception:
-                {
-                    // The intercepting opponent gains possession. At Stage 0 the interceptor id is
-                    // unresolved (ERR-004-002 spec gap — FirstTouchContext does not expose it), so
-                    // InterceptingAgentID is AGENT_ID_NONE. Map any unresolved / out-of-range id to
-                    // NO_POSSESSION explicitly rather than trusting the AGENT_ID_NONE == NO_POSSESSION
-                    // cross-assembly sentinel coincidence: the ball is loose, redirected toward the
-                    // opponent (§3.4.5), to be re-received on a later tick. A Stage-1 in-range
-                    // interceptor id is taken as-is.
-                    int interceptor = result.InterceptingAgentID;
-                    _possessingAgentId = interceptor >= 0 && interceptor < MatchEngineConstants.SQUAD_SIZE
-                        ? interceptor
-                        : MatchEngineConstants.NO_POSSESSION;
-                    break;
-                }
+                    {
+                        // The intercepting opponent gains possession. At Stage 0 the interceptor id is
+                        // unresolved (ERR-004-002 spec gap — FirstTouchContext does not expose it), so
+                        // InterceptingAgentID is AGENT_ID_NONE. Map any unresolved / out-of-range id to
+                        // NO_POSSESSION explicitly rather than trusting the AGENT_ID_NONE == NO_POSSESSION
+                        // cross-assembly sentinel coincidence: the ball is loose, redirected toward the
+                        // opponent (§3.4.5), to be re-received on a later tick. A Stage-1 in-range
+                        // interceptor id is taken as-is.
+                        int interceptor = result.InterceptingAgentID;
+                        _possessingAgentId = interceptor >= 0 && interceptor < MatchEngineConstants.SQUAD_SIZE
+                            ? interceptor
+                            : MatchEngineConstants.NO_POSSESSION;
+                        break;
+                    }
                 default:
                     // LOOSE_BALL / DEFLECTION — ball redirected but uncontrolled; possession stays loose.
                     _possessingAgentId = MatchEngineConstants.NO_POSSESSION;
@@ -4429,8 +4461,8 @@ namespace TacticalDirector.MatchEngine
 
             float radiusSq = MatchEngineConstants.LooseBallPickupRadiusM
                            * MatchEngineConstants.LooseBallPickupRadiusM;
-            int   claimer  = MatchEngineConstants.NO_POSSESSION;
-            float bestSq   = radiusSq;
+            int claimer = MatchEngineConstants.NO_POSSESSION;
+            float bestSq = radiusSq;
 
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
@@ -4447,7 +4479,7 @@ namespace TacticalDirector.MatchEngine
                 // Inclusive boundary via the first-candidate clause, matching the first-touch scan.
                 if (claimer == MatchEngineConstants.NO_POSSESSION || distSq < bestSq)
                 {
-                    bestSq  = distSq;
+                    bestSq = distSq;
                     claimer = i;
                 }
             }
@@ -4469,9 +4501,9 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         private bool EvaluateAndApplyOffside(int toucher)
         {
-            int toucherTeam    = _teamIds[toucher];
-            int defendingTeam  = 1 - toucherTeam;
-            float toucherX     = _agents[toucher].Position.x;
+            int toucherTeam = _teamIds[toucher];
+            int defendingTeam = 1 - toucherTeam;
+            float toucherX = _agents[toucher].Position.x;
 
             float lineX = OffsideEvaluator.ComputeOffsideLineX(
                 new ReadOnlySpan<AgentState>(_agents), new ReadOnlySpan<int>(_teamIds),
@@ -4485,8 +4517,8 @@ namespace TacticalDirector.MatchEngine
             Vector2 toucherPos = _agents[toucher].Position;
             var evt = new OffsideCalledEvent(
                 offendingAgentId: toucher,
-                team:             (byte)toucherTeam,
-                location:         new Vector3(toucherPos.x, toucherPos.y, 0f));
+                team: (byte)toucherTeam,
+                location: new Vector3(toucherPos.x, toucherPos.y, 0f));
             EventBus.Publish(in evt);
 
             // Indirect free kick to the DEFENDING team (§5.Z Phase H awards it a taker).
@@ -4531,7 +4563,7 @@ namespace TacticalDirector.MatchEngine
 
         private FirstTouchContext BuildFirstTouchContext(int i)
         {
-            int teamId       = _teamIds[i];
+            int teamId = _teamIds[i];
             int opponentTeam = MatchEngineConstants.TEAM_COUNT - 1 - teamId; // 0 ↔ 1
 
             // Fill the opponent-position scratch buffer (the whole opposing team, GK included).
@@ -4567,25 +4599,25 @@ namespace TacticalDirector.MatchEngine
             // Technique recorded in the projection design doc's version history). Neutral ⇒ 10 each.
             return new FirstTouchContext
             {
-                AgentID                   = i,
-                TeamID                    = teamId,
-                Technique                 = _canonicalAttrs[i].Technique,
-                FirstTouchAttribute       = PlayerAttributeProjection.FirstTouchAbility(in _canonicalAttrs[i]),
-                AgentPosition             = new Vector3(agentPosXY.x, agentPosXY.y, 0f),
-                AgentVelocity             = new Vector3(_agents[i].Velocity.x, _agents[i].Velocity.y, 0f),
-                AgentFacing               = facing3,
-                IntendedTouchDirection    = facing3,
-                HasMovementTarget         = false,
-                BallPosition              = _ball.Position,
-                BallVelocity              = _ball.Velocity,
-                BallHeight                = _ball.Position.z - FirstTouchConstants.BallRadius,
-                BallIsAirborne            = _ball.State == BallStateType.Airborne,
-                PressureScalar            = pressure.PressureScalar,
-                HasNearbyOpponent         = pressure.HasNearbyOpponent,
-                NearestOpponentDistance   = pressure.NearestOpponentDistance,
+                AgentID = i,
+                TeamID = teamId,
+                Technique = _canonicalAttrs[i].Technique,
+                FirstTouchAttribute = PlayerAttributeProjection.FirstTouchAbility(in _canonicalAttrs[i]),
+                AgentPosition = new Vector3(agentPosXY.x, agentPosXY.y, 0f),
+                AgentVelocity = new Vector3(_agents[i].Velocity.x, _agents[i].Velocity.y, 0f),
+                AgentFacing = facing3,
+                IntendedTouchDirection = facing3,
+                HasMovementTarget = false,
+                BallPosition = _ball.Position,
+                BallVelocity = _ball.Velocity,
+                BallHeight = _ball.Position.z - FirstTouchConstants.BallRadius,
+                BallIsAirborne = _ball.State == BallStateType.Airborne,
+                PressureScalar = pressure.PressureScalar,
+                HasNearbyOpponent = pressure.HasNearbyOpponent,
+                NearestOpponentDistance = pressure.NearestOpponentDistance,
                 NearestOpponentPositionXY = pressure.NearestOpponentPositionXY,
-                IsHalfTurnOriented        = isHalfTurn,
-                IsGoalkeeper              = _isGoalkeeper[i]
+                IsHalfTurnOriented = isHalfTurn,
+                IsGoalkeeper = _isGoalkeeper[i]
             };
         }
 
@@ -4712,10 +4744,10 @@ namespace TacticalDirector.MatchEngine
                 WriteAgentState(buf, ref o, in _agents[i]);
 
                 // Ancillary per-agent world state (not carried inside AgentState) — all cross-tick.
-                CanonicalSerializer.WriteI32 (buf, ref o, _teamIds[i]);
+                CanonicalSerializer.WriteI32(buf, ref o, _teamIds[i]);
                 CanonicalSerializer.WriteBool(buf, ref o, _isGoalkeeper[i]);
                 CanonicalSerializer.WriteBool(buf, ref o, _isCollisionKnockdown[i]);
-                CanonicalSerializer.WriteF32 (buf, ref o, _collisionForces[i]);
+                CanonicalSerializer.WriteF32(buf, ref o, _collisionForces[i]);
                 WriteMovementCommand(buf, ref o, in _commands[i]);
 
                 // C5 — per-agent Pass/Shot executor in-flight state via the C0 capture seam (value
@@ -4807,7 +4839,7 @@ namespace TacticalDirector.MatchEngine
             // engine-level FM-BU-03 settled-possession-team tracker the regain arming diffs against.
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
-                CanonicalSerializer.WriteU8 (buf, ref o, (byte)_buildUpStates[t].CommittedZone);
+                CanonicalSerializer.WriteU8(buf, ref o, (byte)_buildUpStates[t].CommittedZone);
                 CanonicalSerializer.WriteI32(buf, ref o, _buildUpStates[t].SuppressTicksRemaining);
             }
             CanonicalSerializer.WriteI32(buf, ref o, _settledPossessionTeam);
@@ -4831,9 +4863,9 @@ namespace TacticalDirector.MatchEngine
                 for (int r = 0; r < rot.PairCount; r++)
                 {
                     RotationPairState pair = rot.GetPairState(r);
-                    CanonicalSerializer.WriteI32 (buf, ref o, pair.TriggerDwellTicks);
+                    CanonicalSerializer.WriteI32(buf, ref o, pair.TriggerDwellTicks);
                     CanonicalSerializer.WriteBool(buf, ref o, pair.Rotated);
-                    CanonicalSerializer.WriteI32 (buf, ref o, pair.HoldTicksRemaining);
+                    CanonicalSerializer.WriteI32(buf, ref o, pair.HoldTicksRemaining);
                 }
             }
 
@@ -4844,9 +4876,9 @@ namespace TacticalDirector.MatchEngine
             // (T-TP-DET-003). Default Human zero-init is byte-stable across same-seed runs.
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
-                CanonicalSerializer.WriteU8 (buf, ref o, (byte)_managerStates[t].Mode);
-                CanonicalSerializer.WriteU8 (buf, ref o, _managerStates[t].ProfileOrdinal);
-                CanonicalSerializer.WriteU8 (buf, ref o, _managerStates[t].CurrentPresetOrdinal);
+                CanonicalSerializer.WriteU8(buf, ref o, (byte)_managerStates[t].Mode);
+                CanonicalSerializer.WriteU8(buf, ref o, _managerStates[t].ProfileOrdinal);
+                CanonicalSerializer.WriteU8(buf, ref o, _managerStates[t].CurrentPresetOrdinal);
                 CanonicalSerializer.WriteI32(buf, ref o, _managerStates[t].HoldIntervalsRemaining);
                 CanonicalSerializer.WriteI32(buf, ref o, _managerStates[t].LastDecisionTick);
             }
@@ -4867,7 +4899,7 @@ namespace TacticalDirector.MatchEngine
             // transition now feeds the digest chain.
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
-                CanonicalSerializer.WriteU8 (buf, ref o, _yellowCards[i]);
+                CanonicalSerializer.WriteU8(buf, ref o, _yellowCards[i]);
                 CanonicalSerializer.WriteBool(buf, ref o, _isSentOff[i]);
             }
             CanonicalSerializer.WriteI32(buf, ref o, _foulCooldownRemaining);
@@ -5021,11 +5053,11 @@ namespace TacticalDirector.MatchEngine
             {
                 _agents[i] = ReadAgentState(buf, ref o);
 
-                _teamIds[i]              = CanonicalSerializer.ReadI32 (buf, ref o);
-                _isGoalkeeper[i]         = CanonicalSerializer.ReadBool(buf, ref o);
+                _teamIds[i] = CanonicalSerializer.ReadI32(buf, ref o);
+                _isGoalkeeper[i] = CanonicalSerializer.ReadBool(buf, ref o);
                 _isCollisionKnockdown[i] = CanonicalSerializer.ReadBool(buf, ref o);
-                _collisionForces[i]      = CanonicalSerializer.ReadF32 (buf, ref o);
-                _commands[i]             = ReadMovementCommand(buf, ref o);
+                _collisionForces[i] = CanonicalSerializer.ReadF32(buf, ref o);
+                _commands[i] = ReadMovementCommand(buf, ref o);
 
                 PassExecutorState passState = ReadPassExecutorState(buf, ref o);
                 _passExecutors[i].RestoreState(in passState);
@@ -5048,7 +5080,7 @@ namespace TacticalDirector.MatchEngine
             // the possession producer runs) the invariant
             // _prevPossessingAgentId == _possessingAgentId == MatchContext.PossessingAgentId holds, so both
             // restore from the one serialized field.
-            _possessingAgentId     = _matchContext.PossessingAgentId;
+            _possessingAgentId = _matchContext.PossessingAgentId;
             _prevPossessingAgentId = _matchContext.PossessingAgentId;
 
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
@@ -5071,25 +5103,25 @@ namespace TacticalDirector.MatchEngine
 
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
-                _activeTeamTactics[t]  = ReadTeamTactic(buf, ref o);
+                _activeTeamTactics[t] = ReadTeamTactic(buf, ref o);
                 _pendingTeamTactics[t] = ReadTeamTactic(buf, ref o);
             }
 
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
-                _activePlayerTactics[i]  = ReadPlayerTactic(buf, ref o);
+                _activePlayerTactics[i] = ReadPlayerTactic(buf, ref o);
                 _pendingPlayerTactics[i] = ReadPlayerTactic(buf, ref o);
             }
 
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
-                _markingDwell[i].DwellTicks   = CanonicalSerializer.ReadI32(buf, ref o);
+                _markingDwell[i].DwellTicks = CanonicalSerializer.ReadI32(buf, ref o);
                 _markingDwell[i].LastMarkerId = CanonicalSerializer.ReadI32(buf, ref o);
             }
 
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
-                _buildUpStates[t].CommittedZone          = (BuildUpZone)CanonicalSerializer.ReadU8(buf, ref o);
+                _buildUpStates[t].CommittedZone = (BuildUpZone)CanonicalSerializer.ReadU8(buf, ref o);
                 _buildUpStates[t].SuppressTicksRemaining = CanonicalSerializer.ReadI32(buf, ref o);
             }
             _settledPossessionTeam = CanonicalSerializer.ReadI32(buf, ref o);
@@ -5101,11 +5133,11 @@ namespace TacticalDirector.MatchEngine
 
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
-                _managerStates[t].Mode                   = (ManagerMode)CanonicalSerializer.ReadU8(buf, ref o);
-                _managerStates[t].ProfileOrdinal         = CanonicalSerializer.ReadU8 (buf, ref o);
-                _managerStates[t].CurrentPresetOrdinal   = CanonicalSerializer.ReadU8 (buf, ref o);
+                _managerStates[t].Mode = (ManagerMode)CanonicalSerializer.ReadU8(buf, ref o);
+                _managerStates[t].ProfileOrdinal = CanonicalSerializer.ReadU8(buf, ref o);
+                _managerStates[t].CurrentPresetOrdinal = CanonicalSerializer.ReadU8(buf, ref o);
                 _managerStates[t].HoldIntervalsRemaining = CanonicalSerializer.ReadI32(buf, ref o);
-                _managerStates[t].LastDecisionTick       = CanonicalSerializer.ReadI32(buf, ref o);
+                _managerStates[t].LastDecisionTick = CanonicalSerializer.ReadI32(buf, ref o);
             }
 
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
@@ -5116,8 +5148,8 @@ namespace TacticalDirector.MatchEngine
 
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
-                _yellowCards[i] = CanonicalSerializer.ReadU8 (buf, ref o);
-                _isSentOff[i]   = CanonicalSerializer.ReadBool(buf, ref o);
+                _yellowCards[i] = CanonicalSerializer.ReadU8(buf, ref o);
+                _isSentOff[i] = CanonicalSerializer.ReadBool(buf, ref o);
             }
             _foulCooldownRemaining = CanonicalSerializer.ReadI32(buf, ref o);
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
@@ -5129,7 +5161,7 @@ namespace TacticalDirector.MatchEngine
                 _substitutionsUsed[t] = CanonicalSerializer.ReadI32(buf, ref o);
             }
             _secondHalfStarted = CanonicalSerializer.ReadBool(buf, ref o);
-            _matchEnded        = CanonicalSerializer.ReadBool(buf, ref o);
+            _matchEnded = CanonicalSerializer.ReadBool(buf, ref o);
 
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
@@ -5141,10 +5173,10 @@ namespace TacticalDirector.MatchEngine
             // (its StreamKey / SiteId / SubsystemOrdinal / etc. were reconstructed by the RegisterStream call
             // at boot), overwrite only the two cursor fields, and restore it — the mirror of the writer and of
             // the TestOnly_SetCardSeverityStreamCursor seam.
-            ulong cardCursor  = CanonicalSerializer.ReadU64(buf, ref o);
+            ulong cardCursor = CanonicalSerializer.ReadU64(buf, ref o);
             ulong cardOrdinal = CanonicalSerializer.ReadU64(buf, ref o);
             RngStreamState cardStreamRestore = _rng.GetStreamState(_cardSeverityStreamIndex);
-            cardStreamRestore.RngCursor     = cardCursor;
+            cardStreamRestore.RngCursor = cardCursor;
             cardStreamRestore.ActionOrdinal = cardOrdinal;
             _rng.RestoreStream(_cardSeverityStreamIndex, in cardStreamRestore);
 
@@ -5155,17 +5187,17 @@ namespace TacticalDirector.MatchEngine
             // the writer, so read unconditionally here — a flag-off save round-trips this as a no-op. The opt-in
             // flag is restored FIRST (mirror of the writer), so the restored engine resumes in the saved mode.
             _gkHeadingEnabled = CanonicalSerializer.ReadBool(buf, ref o);
-            ulong headCursor  = CanonicalSerializer.ReadU64(buf, ref o);
+            ulong headCursor = CanonicalSerializer.ReadU64(buf, ref o);
             ulong headOrdinal = CanonicalSerializer.ReadU64(buf, ref o);
             RngStreamState headStreamRestore = _rng.GetStreamState(_headingStreamIndex);
-            headStreamRestore.RngCursor     = headCursor;
+            headStreamRestore.RngCursor = headCursor;
             headStreamRestore.ActionOrdinal = headOrdinal;
             _rng.RestoreStream(_headingStreamIndex, in headStreamRestore);
 
-            ulong gkCursor  = CanonicalSerializer.ReadU64(buf, ref o);
+            ulong gkCursor = CanonicalSerializer.ReadU64(buf, ref o);
             ulong gkOrdinal = CanonicalSerializer.ReadU64(buf, ref o);
             RngStreamState gkStreamRestore = _rng.GetStreamState(_goalkeeperStreamIndex);
-            gkStreamRestore.RngCursor     = gkCursor;
+            gkStreamRestore.RngCursor = gkCursor;
             gkStreamRestore.ActionOrdinal = gkOrdinal;
             _rng.RestoreStream(_goalkeeperStreamIndex, in gkStreamRestore);
 
@@ -5190,9 +5222,9 @@ namespace TacticalDirector.MatchEngine
                 new CollisionContactState(contactW0, contactW1, contactW2, contactW3));
 
             // v19 — §5.Z.15 six-second-rule state (mirror of the writer).
-            _gkHoldTicks                = CanonicalSerializer.ReadI32(buf, ref o);
+            _gkHoldTicks = CanonicalSerializer.ReadI32(buf, ref o);
             _gkReleaseCooldownRemaining = CanonicalSerializer.ReadI32(buf, ref o);
-            _gkReleasedAgentId          = CanonicalSerializer.ReadI32(buf, ref o);
+            _gkReleasedAgentId = CanonicalSerializer.ReadI32(buf, ref o);
 
             // Trailing region: the event ledger. RunSnapshotPhase appends the canonical event-ledger bytes
             // (EventBus.SerializeLedger — a 1-byte domain tag + u32 count, then any Tier A records) AFTER the
@@ -5231,10 +5263,10 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Reads a <see cref="BallState"/> in the <see cref="WriteBallState"/> field order.</summary>
         private static void ReadBallState(byte[] buf, ref int o, ref BallState ball)
         {
-            ball.Position        = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
-            ball.Velocity        = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            ball.Position = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            ball.Velocity = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
             ball.AngularVelocity = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
-            ball.State           = (BallStateType)CanonicalSerializer.ReadI32(buf, ref o);
+            ball.State = (BallStateType)CanonicalSerializer.ReadI32(buf, ref o);
             ball.LastValidPosition = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
             ball.LastValidVelocity = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
         }
@@ -5245,26 +5277,26 @@ namespace TacticalDirector.MatchEngine
         {
             AgentState a = default;
 
-            a.Position        = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
-            a.Velocity        = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            a.Position = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            a.Velocity = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
             a.FacingDirection = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
 
-            a.CurrentState    = (AgentMovementState)CanonicalSerializer.ReadI32(buf, ref o);
-            a.PreviousState   = (AgentMovementState)CanonicalSerializer.ReadI32(buf, ref o);
-            a.TimeInState     = CanonicalSerializer.ReadF32(buf, ref o);
-            a.GroundedReason  = (GroundedReason)CanonicalSerializer.ReadI32(buf, ref o);
-            a.CollisionForce  = CanonicalSerializer.ReadF32(buf, ref o);
+            a.CurrentState = (AgentMovementState)CanonicalSerializer.ReadI32(buf, ref o);
+            a.PreviousState = (AgentMovementState)CanonicalSerializer.ReadI32(buf, ref o);
+            a.TimeInState = CanonicalSerializer.ReadF32(buf, ref o);
+            a.GroundedReason = (GroundedReason)CanonicalSerializer.ReadI32(buf, ref o);
+            a.CollisionForce = CanonicalSerializer.ReadF32(buf, ref o);
 
-            a.LeanAngle       = CanonicalSerializer.ReadF32(buf, ref o);
+            a.LeanAngle = CanonicalSerializer.ReadF32(buf, ref o);
             a.CurrentTurnRate = CanonicalSerializer.ReadF32(buf, ref o);
 
-            a.AerobicPool     = CanonicalSerializer.ReadF32(buf, ref o);
+            a.AerobicPool = CanonicalSerializer.ReadF32(buf, ref o);
             a.SprintReservoir = CanonicalSerializer.ReadF32(buf, ref o);
 
             a.LastValidPosition = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
             a.LastValidVelocity = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
-            a.LastValidFacing   = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
-            a.Speed             = CanonicalSerializer.ReadF32(buf, ref o);
+            a.LastValidFacing = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            a.Speed = CanonicalSerializer.ReadF32(buf, ref o);
 
             float t0 = CanonicalSerializer.ReadF32(buf, ref o);
             float t1 = CanonicalSerializer.ReadF32(buf, ref o);
@@ -5274,9 +5306,9 @@ namespace TacticalDirector.MatchEngine
             float t5 = CanonicalSerializer.ReadF32(buf, ref o);
             float t6 = CanonicalSerializer.ReadF32(buf, ref o);
             float t7 = CanonicalSerializer.ReadF32(buf, ref o);
-            int writeIndex    = CanonicalSerializer.ReadI32 (buf, ref o);
-            bool isLocked     = CanonicalSerializer.ReadBool(buf, ref o);
-            float lockUntil   = CanonicalSerializer.ReadF32 (buf, ref o);
+            int writeIndex = CanonicalSerializer.ReadI32(buf, ref o);
+            bool isLocked = CanonicalSerializer.ReadBool(buf, ref o);
+            float lockUntil = CanonicalSerializer.ReadF32(buf, ref o);
             var guardState = new OscillationGuardState(t0, t1, t2, t3, t4, t5, t6, t7, writeIndex, isLocked, lockUntil);
             a.OscillationGuard.RestoreState(in guardState);
 
@@ -5304,43 +5336,43 @@ namespace TacticalDirector.MatchEngine
 
             PassRequest req = new PassRequest
             {
-                AgentId          = CanonicalSerializer.ReadI32(buf, ref o),
-                PassType         = (PassType)CanonicalSerializer.ReadI32(buf, ref o),
-                CrossSubType     = (CrossSubType)CanonicalSerializer.ReadI32(buf, ref o),
-                TargetAgentId    = CanonicalSerializer.ReadI32(buf, ref o),
-                TargetPosition   = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                AgentId = CanonicalSerializer.ReadI32(buf, ref o),
+                PassType = (PassType)CanonicalSerializer.ReadI32(buf, ref o),
+                CrossSubType = (CrossSubType)CanonicalSerializer.ReadI32(buf, ref o),
+                TargetAgentId = CanonicalSerializer.ReadI32(buf, ref o),
+                TargetPosition = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
                 IntendedDistance = CanonicalSerializer.ReadF32(buf, ref o),
-                Urgency          = CanonicalSerializer.ReadF32(buf, ref o),
-                IsWeakFoot       = CanonicalSerializer.ReadBool(buf, ref o),
-                TeamId           = CanonicalSerializer.ReadI32(buf, ref o),
-                FrameNumber      = CanonicalSerializer.ReadI32(buf, ref o),
+                Urgency = CanonicalSerializer.ReadF32(buf, ref o),
+                IsWeakFoot = CanonicalSerializer.ReadBool(buf, ref o),
+                TeamId = CanonicalSerializer.ReadI32(buf, ref o),
+                FrameNumber = CanonicalSerializer.ReadI32(buf, ref o),
             };
 
             CrossSubType effectiveSubType = (CrossSubType)CanonicalSerializer.ReadI32(buf, ref o);
-            float kickSpeed      = CanonicalSerializer.ReadF32(buf, ref o);
+            float kickSpeed = CanonicalSerializer.ReadF32(buf, ref o);
             float launchAngleDeg = CanonicalSerializer.ReadF32(buf, ref o);
-            Vector3 spinVector       = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
-            Vector3 baseKickDir      = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
-            Vector3 aimPoint         = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
-            float leadDistance   = CanonicalSerializer.ReadF32(buf, ref o);
-            float cachedPassing  = CanonicalSerializer.ReadF32(buf, ref o);
-            float cachedFatigue  = CanonicalSerializer.ReadF32(buf, ref o);
-            float cachedBodyAng  = CanonicalSerializer.ReadF32(buf, ref o);
-            bool cachedIsWeak    = CanonicalSerializer.ReadBool(buf, ref o);
+            Vector3 spinVector = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            Vector3 baseKickDir = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            Vector3 aimPoint = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            float leadDistance = CanonicalSerializer.ReadF32(buf, ref o);
+            float cachedPassing = CanonicalSerializer.ReadF32(buf, ref o);
+            float cachedFatigue = CanonicalSerializer.ReadF32(buf, ref o);
+            float cachedBodyAng = CanonicalSerializer.ReadF32(buf, ref o);
+            bool cachedIsWeak = CanonicalSerializer.ReadBool(buf, ref o);
             int cachedWeakRating = CanonicalSerializer.ReadI32(buf, ref o);
-            int windupRemaining  = CanonicalSerializer.ReadI32(buf, ref o);
-            int followRemaining  = CanonicalSerializer.ReadI32(buf, ref o);
+            int windupRemaining = CanonicalSerializer.ReadI32(buf, ref o);
+            int followRemaining = CanonicalSerializer.ReadI32(buf, ref o);
 
             PassResult lastResult = new PassResult
             {
-                Outcome          = (PassOutcome)CanonicalSerializer.ReadI32(buf, ref o),
-                FinalVelocity    = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
-                FinalSpin        = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
-                AimPoint         = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
-                ErrorAngleDeg    = CanonicalSerializer.ReadF32(buf, ref o),
-                LeadDistance     = CanonicalSerializer.ReadF32(buf, ref o),
-                PassType         = (PassType)CanonicalSerializer.ReadI32(buf, ref o),
-                ContactFrame     = CanonicalSerializer.ReadI32(buf, ref o),
+                Outcome = (PassOutcome)CanonicalSerializer.ReadI32(buf, ref o),
+                FinalVelocity = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                FinalSpin = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                AimPoint = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                ErrorAngleDeg = CanonicalSerializer.ReadF32(buf, ref o),
+                LeadDistance = CanonicalSerializer.ReadF32(buf, ref o),
+                PassType = (PassType)CanonicalSerializer.ReadI32(buf, ref o),
+                ContactFrame = CanonicalSerializer.ReadI32(buf, ref o),
                 ContactMatchTime = CanonicalSerializer.ReadF32(buf, ref o),
             };
 
@@ -5357,53 +5389,53 @@ namespace TacticalDirector.MatchEngine
 
             ShotRequest req = new ShotRequest
             {
-                AgentId        = CanonicalSerializer.ReadI32(buf, ref o),
-                PowerIntent    = CanonicalSerializer.ReadF32(buf, ref o),
-                ContactZone    = (ContactZone)CanonicalSerializer.ReadI32(buf, ref o),
-                SpinIntent     = CanonicalSerializer.ReadF32(buf, ref o),
+                AgentId = CanonicalSerializer.ReadI32(buf, ref o),
+                PowerIntent = CanonicalSerializer.ReadF32(buf, ref o),
+                ContactZone = (ContactZone)CanonicalSerializer.ReadI32(buf, ref o),
+                SpinIntent = CanonicalSerializer.ReadF32(buf, ref o),
                 PlacementTarget = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
-                IsWeakFoot     = CanonicalSerializer.ReadBool(buf, ref o),
+                IsWeakFoot = CanonicalSerializer.ReadBool(buf, ref o),
                 DistanceToGoal = CanonicalSerializer.ReadF32(buf, ref o),
-                TeamId         = CanonicalSerializer.ReadI32(buf, ref o),
-                FrameNumber    = CanonicalSerializer.ReadI32(buf, ref o),
+                TeamId = CanonicalSerializer.ReadI32(buf, ref o),
+                FrameNumber = CanonicalSerializer.ReadI32(buf, ref o),
             };
 
-            float kickSpeed      = CanonicalSerializer.ReadF32(buf, ref o);
+            float kickSpeed = CanonicalSerializer.ReadF32(buf, ref o);
             float launchAngleDeg = CanonicalSerializer.ReadF32(buf, ref o);
-            Vector3 spinVector    = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
-            Vector3 intendedAim   = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            Vector3 spinVector = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            Vector3 intendedAim = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
 
             BodyMechanicsResult bodyMech = new BodyMechanicsResult
             {
-                Score                  = CanonicalSerializer.ReadF32(buf, ref o),
+                Score = CanonicalSerializer.ReadF32(buf, ref o),
                 ContactQualityModifier = CanonicalSerializer.ReadF32(buf, ref o),
-                StumbleTriggered       = CanonicalSerializer.ReadBool(buf, ref o),
+                StumbleTriggered = CanonicalSerializer.ReadBool(buf, ref o),
             };
 
             float weakFootErrMult = CanonicalSerializer.ReadF32(buf, ref o);
-            int windupFrames      = CanonicalSerializer.ReadI32(buf, ref o);
+            int windupFrames = CanonicalSerializer.ReadI32(buf, ref o);
             Vector3 cachedAgentPos = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
             float cachedFinishing = CanonicalSerializer.ReadF32(buf, ref o);
             float cachedLongShots = CanonicalSerializer.ReadF32(buf, ref o);
             float cachedComposure = CanonicalSerializer.ReadF32(buf, ref o);
-            float cachedFatigue   = CanonicalSerializer.ReadF32(buf, ref o);
-            int windupRemaining   = CanonicalSerializer.ReadI32(buf, ref o);
-            int followRemaining   = CanonicalSerializer.ReadI32(buf, ref o);
+            float cachedFatigue = CanonicalSerializer.ReadF32(buf, ref o);
+            int windupRemaining = CanonicalSerializer.ReadI32(buf, ref o);
+            int followRemaining = CanonicalSerializer.ReadI32(buf, ref o);
 
             ShotResult lastResult = new ShotResult
             {
-                Outcome            = (ShotOutcome)CanonicalSerializer.ReadI32(buf, ref o),
-                FinalVelocity      = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
-                FinalSpin          = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
-                IntendedDirection  = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
-                FinalDirection     = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
-                ErrorOffset        = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                Outcome = (ShotOutcome)CanonicalSerializer.ReadI32(buf, ref o),
+                FinalVelocity = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                FinalSpin = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                IntendedDirection = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                FinalDirection = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                ErrorOffset = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
                 BodyMechanicsScore = CanonicalSerializer.ReadF32(buf, ref o),
                 PowerPenaltyApplied = CanonicalSerializer.ReadF32(buf, ref o),
-                KickSpeed          = CanonicalSerializer.ReadF32(buf, ref o),
-                LaunchAngleDeg     = CanonicalSerializer.ReadF32(buf, ref o),
-                StumbleTriggered   = CanonicalSerializer.ReadBool(buf, ref o),
-                ContactFrame       = CanonicalSerializer.ReadI32(buf, ref o),
+                KickSpeed = CanonicalSerializer.ReadF32(buf, ref o),
+                LaunchAngleDeg = CanonicalSerializer.ReadF32(buf, ref o),
+                StumbleTriggered = CanonicalSerializer.ReadBool(buf, ref o),
+                ContactFrame = CanonicalSerializer.ReadI32(buf, ref o),
             };
 
             return new ShotExecutorState(
@@ -5425,29 +5457,29 @@ namespace TacticalDirector.MatchEngine
 
             PassRequest passParams = new PassRequest
             {
-                AgentId          = CanonicalSerializer.ReadI32(buf, ref o),
-                PassType         = (PassType)CanonicalSerializer.ReadI32(buf, ref o),
-                CrossSubType     = (CrossSubType)CanonicalSerializer.ReadI32(buf, ref o),
-                TargetAgentId    = CanonicalSerializer.ReadI32(buf, ref o),
-                TargetPosition   = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
+                AgentId = CanonicalSerializer.ReadI32(buf, ref o),
+                PassType = (PassType)CanonicalSerializer.ReadI32(buf, ref o),
+                CrossSubType = (CrossSubType)CanonicalSerializer.ReadI32(buf, ref o),
+                TargetAgentId = CanonicalSerializer.ReadI32(buf, ref o),
+                TargetPosition = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
                 IntendedDistance = CanonicalSerializer.ReadF32(buf, ref o),
-                Urgency          = CanonicalSerializer.ReadF32(buf, ref o),
-                IsWeakFoot       = CanonicalSerializer.ReadBool(buf, ref o),
-                TeamId           = CanonicalSerializer.ReadI32(buf, ref o),
-                FrameNumber      = CanonicalSerializer.ReadI32(buf, ref o),
+                Urgency = CanonicalSerializer.ReadF32(buf, ref o),
+                IsWeakFoot = CanonicalSerializer.ReadBool(buf, ref o),
+                TeamId = CanonicalSerializer.ReadI32(buf, ref o),
+                FrameNumber = CanonicalSerializer.ReadI32(buf, ref o),
             };
 
             ShotRequest shotParams = new ShotRequest
             {
-                AgentId        = CanonicalSerializer.ReadI32(buf, ref o),
-                PowerIntent    = CanonicalSerializer.ReadF32(buf, ref o),
-                ContactZone    = (ContactZone)CanonicalSerializer.ReadI32(buf, ref o),
-                SpinIntent     = CanonicalSerializer.ReadF32(buf, ref o),
+                AgentId = CanonicalSerializer.ReadI32(buf, ref o),
+                PowerIntent = CanonicalSerializer.ReadF32(buf, ref o),
+                ContactZone = (ContactZone)CanonicalSerializer.ReadI32(buf, ref o),
+                SpinIntent = CanonicalSerializer.ReadF32(buf, ref o),
                 PlacementTarget = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o)),
-                IsWeakFoot     = CanonicalSerializer.ReadBool(buf, ref o),
+                IsWeakFoot = CanonicalSerializer.ReadBool(buf, ref o),
                 DistanceToGoal = CanonicalSerializer.ReadF32(buf, ref o),
-                TeamId         = CanonicalSerializer.ReadI32(buf, ref o),
-                FrameNumber    = CanonicalSerializer.ReadI32(buf, ref o),
+                TeamId = CanonicalSerializer.ReadI32(buf, ref o),
+                FrameNumber = CanonicalSerializer.ReadI32(buf, ref o),
             };
 
             float utilityScore = CanonicalSerializer.ReadF32(buf, ref o);
@@ -5461,15 +5493,15 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Reads a <see cref="MatchContext"/> in the <see cref="WriteMatchContext"/> field order.</summary>
         private static void ReadMatchContext(byte[] buf, ref int o, ref MatchContext m)
         {
-            m.HomeScore         = CanonicalSerializer.ReadI32(buf, ref o);
-            m.AwayScore         = CanonicalSerializer.ReadI32(buf, ref o);
-            m.MatchTimeSeconds  = CanonicalSerializer.ReadF32(buf, ref o);
-            m.Possession        = (PossessionState)CanonicalSerializer.ReadI32(buf, ref o);
+            m.HomeScore = CanonicalSerializer.ReadI32(buf, ref o);
+            m.AwayScore = CanonicalSerializer.ReadI32(buf, ref o);
+            m.MatchTimeSeconds = CanonicalSerializer.ReadF32(buf, ref o);
+            m.Possession = (PossessionState)CanonicalSerializer.ReadI32(buf, ref o);
             m.PossessingAgentId = CanonicalSerializer.ReadI32(buf, ref o);
-            m.Phase             = (MatchPhase)CanonicalSerializer.ReadI32(buf, ref o);
-            m.BallPosition      = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
-            m.BallVelocity      = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
-            m.BallZone          = (FieldZone)CanonicalSerializer.ReadI32(buf, ref o);
+            m.Phase = (MatchPhase)CanonicalSerializer.ReadI32(buf, ref o);
+            m.BallPosition = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            m.BallVelocity = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+            m.BallZone = (FieldZone)CanonicalSerializer.ReadI32(buf, ref o);
         }
 
         /// <summary>Reads one team's Positioning AI (#12) hysteresis in the
@@ -5478,20 +5510,20 @@ namespace TacticalDirector.MatchEngine
         private static void ReadPositioningHysteresis(byte[] buf, ref int o, PositioningAITick tick)
         {
             HysteresisState live = tick.CaptureState();
-            HysteresisState src  = new HysteresisState(live.SquadSize);
+            HysteresisState src = new HysteresisState(live.SquadSize);
 
-            src.CurrentPhase    = (Phase)CanonicalSerializer.ReadI32(buf, ref o);
-            src.CandidatePhase  = (Phase)CanonicalSerializer.ReadI32(buf, ref o);
+            src.CurrentPhase = (Phase)CanonicalSerializer.ReadI32(buf, ref o);
+            src.CandidatePhase = (Phase)CanonicalSerializer.ReadI32(buf, ref o);
             src.PhaseDwellCount = CanonicalSerializer.ReadI32(buf, ref o);
 
             AgentHysteresisState[] agents = src.Agents;
             for (int i = 0; i < agents.Length; i++)
             {
-                agents[i].CurrentLine    = (LineId)CanonicalSerializer.ReadI32(buf, ref o);
-                agents[i].CandidateLine  = (LineId)CanonicalSerializer.ReadI32(buf, ref o);
+                agents[i].CurrentLine = (LineId)CanonicalSerializer.ReadI32(buf, ref o);
+                agents[i].CandidateLine = (LineId)CanonicalSerializer.ReadI32(buf, ref o);
                 agents[i].LineDwellCount = CanonicalSerializer.ReadI32(buf, ref o);
-                agents[i].CurrentLane    = (LaneId)CanonicalSerializer.ReadI32(buf, ref o);
-                agents[i].CandidateLane  = (LaneId)CanonicalSerializer.ReadI32(buf, ref o);
+                agents[i].CurrentLane = (LaneId)CanonicalSerializer.ReadI32(buf, ref o);
+                agents[i].CandidateLane = (LaneId)CanonicalSerializer.ReadI32(buf, ref o);
                 agents[i].LaneDwellCount = CanonicalSerializer.ReadI32(buf, ref o);
             }
 
@@ -5523,9 +5555,9 @@ namespace TacticalDirector.MatchEngine
             for (int r = 0; r < pairCount; r++)
             {
                 RotationPairState pair = default;
-                pair.TriggerDwellTicks  = CanonicalSerializer.ReadI32 (buf, ref o);
-                pair.Rotated            = CanonicalSerializer.ReadBool(buf, ref o);
-                pair.HoldTicksRemaining = CanonicalSerializer.ReadI32 (buf, ref o);
+                pair.TriggerDwellTicks = CanonicalSerializer.ReadI32(buf, ref o);
+                pair.Rotated = CanonicalSerializer.ReadBool(buf, ref o);
+                pair.HoldTicksRemaining = CanonicalSerializer.ReadI32(buf, ref o);
                 rot.RestorePairState(r, in pair);
             }
         }
@@ -5538,26 +5570,26 @@ namespace TacticalDirector.MatchEngine
             int cap = live.Roles.Capacity;
 
             PressTrigger trigger = default;
-            trigger.BadTouchDwell       = CanonicalSerializer.ReadI32(buf, ref o);
-            trigger.BadTouchRelease     = CanonicalSerializer.ReadI32(buf, ref o);
-            trigger.BackwardPassDwell   = CanonicalSerializer.ReadI32(buf, ref o);
+            trigger.BadTouchDwell = CanonicalSerializer.ReadI32(buf, ref o);
+            trigger.BadTouchRelease = CanonicalSerializer.ReadI32(buf, ref o);
+            trigger.BackwardPassDwell = CanonicalSerializer.ReadI32(buf, ref o);
             trigger.BackwardPassRelease = CanonicalSerializer.ReadI32(buf, ref o);
-            trigger.SidelineTrapDwell   = CanonicalSerializer.ReadI32(buf, ref o);
+            trigger.SidelineTrapDwell = CanonicalSerializer.ReadI32(buf, ref o);
             trigger.SidelineTrapRelease = CanonicalSerializer.ReadI32(buf, ref o);
-            trigger.WeakReceiverDwell   = CanonicalSerializer.ReadI32(buf, ref o);
+            trigger.WeakReceiverDwell = CanonicalSerializer.ReadI32(buf, ref o);
             trigger.WeakReceiverRelease = CanonicalSerializer.ReadI32(buf, ref o);
 
             int disengageDwell = CanonicalSerializer.ReadI32(buf, ref o);
-            int cooldownTicks  = CanonicalSerializer.ReadI32(buf, ref o);
+            int cooldownTicks = CanonicalSerializer.ReadI32(buf, ref o);
 
             RoleHysteresisState roles = new RoleHysteresisState(cap);
             float[] fatigue = new float[cap];
             for (int i = 0; i < cap; i++)
             {
-                roles.LastRole[i]    = (PressRole)CanonicalSerializer.ReadI32(buf, ref o);
+                roles.LastRole[i] = (PressRole)CanonicalSerializer.ReadI32(buf, ref o);
                 roles.PendingRole[i] = (PressRole)CanonicalSerializer.ReadI32(buf, ref o);
-                roles.RoleDwell[i]   = CanonicalSerializer.ReadI32(buf, ref o);
-                fatigue[i]           = CanonicalSerializer.ReadF32(buf, ref o);
+                roles.RoleDwell[i] = CanonicalSerializer.ReadI32(buf, ref o);
+                fatigue[i] = CanonicalSerializer.ReadF32(buf, ref o);
             }
 
             tick.RestoreState(new PressingTickState(roles, in trigger, disengageDwell, cooldownTicks, fatigue));
@@ -5571,8 +5603,8 @@ namespace TacticalDirector.MatchEngine
             int cap = live.Hysteresis.Length;
 
             OffsideLineState offside = default;
-            offside.CurrentLineDepth       = CanonicalSerializer.ReadF32(buf, ref o);
-            offside.StepUpDwellCounter     = CanonicalSerializer.ReadI32(buf, ref o);
+            offside.CurrentLineDepth = CanonicalSerializer.ReadF32(buf, ref o);
+            offside.StepUpDwellCounter = CanonicalSerializer.ReadI32(buf, ref o);
             offside.CooldownTicksRemaining = CanonicalSerializer.ReadI32(buf, ref o);
             offside.CoverGkZoneActiveTicks = CanonicalSerializer.ReadI32(buf, ref o);
 
@@ -5580,16 +5612,16 @@ namespace TacticalDirector.MatchEngine
             MarkAssignment[] prev = new MarkAssignment[cap];
             for (int i = 0; i < cap; i++)
             {
-                hyst[i].DwellCounter            = CanonicalSerializer.ReadI32(buf, ref o);
-                hyst[i].CandidateMode           = (MarkMode)CanonicalSerializer.ReadI32(buf, ref o);
+                hyst[i].DwellCounter = CanonicalSerializer.ReadI32(buf, ref o);
+                hyst[i].CandidateMode = (MarkMode)CanonicalSerializer.ReadI32(buf, ref o);
                 hyst[i].CandidateTargetEntityId = CanonicalSerializer.ReadI32(buf, ref o);
-                hyst[i].HoldTicks               = CanonicalSerializer.ReadI32(buf, ref o);
+                hyst[i].HoldTicks = CanonicalSerializer.ReadI32(buf, ref o);
 
-                prev[i].AgentEntityId      = CanonicalSerializer.ReadI32 (buf, ref o);
-                prev[i].Mode               = (MarkMode)CanonicalSerializer.ReadI32(buf, ref o);
-                prev[i].TargetEntityId     = CanonicalSerializer.ReadI32 (buf, ref o);
-                prev[i].TargetPosition     = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
-                prev[i].ValidThroughTick   = CanonicalSerializer.ReadI32 (buf, ref o);
+                prev[i].AgentEntityId = CanonicalSerializer.ReadI32(buf, ref o);
+                prev[i].Mode = (MarkMode)CanonicalSerializer.ReadI32(buf, ref o);
+                prev[i].TargetEntityId = CanonicalSerializer.ReadI32(buf, ref o);
+                prev[i].TargetPosition = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+                prev[i].ValidThroughTick = CanonicalSerializer.ReadI32(buf, ref o);
                 prev[i].OverriddenThisTick = CanonicalSerializer.ReadBool(buf, ref o);
                 prev[i].IsManuallyAssigned = CanonicalSerializer.ReadBool(buf, ref o);
             }
@@ -5606,19 +5638,19 @@ namespace TacticalDirector.MatchEngine
 
             TransitionHoldState transition = default;
             transition.TransitionHoldTick = CanonicalSerializer.ReadI32(buf, ref o);
-            transition.PrevPhase          = (Phase)CanonicalSerializer.ReadI32(buf, ref o);
+            transition.PrevPhase = (Phase)CanonicalSerializer.ReadI32(buf, ref o);
 
-            int dirTeamId       = CanonicalSerializer.ReadI32 (buf, ref o);
-            bool dirOverload    = CanonicalSerializer.ReadBool(buf, ref o);
-            Flank dirFlank      = (Flank)CanonicalSerializer.ReadI32(buf, ref o);
-            int dirHoldTick     = CanonicalSerializer.ReadI32 (buf, ref o);
+            int dirTeamId = CanonicalSerializer.ReadI32(buf, ref o);
+            bool dirOverload = CanonicalSerializer.ReadBool(buf, ref o);
+            Flank dirFlank = (Flank)CanonicalSerializer.ReadI32(buf, ref o);
+            int dirHoldTick = CanonicalSerializer.ReadI32(buf, ref o);
             AttackDirective directive = new AttackDirective(dirTeamId, dirOverload, dirFlank, dirHoldTick);
 
             AttackHysteresisState[] hyst = new AttackHysteresisState[cap];
             for (int i = 0; i < cap; i++)
             {
-                hyst[i].CurrentRole   = (AttackRole)CanonicalSerializer.ReadI32(buf, ref o);
-                hyst[i].DwellCounter  = CanonicalSerializer.ReadI32(buf, ref o);
+                hyst[i].CurrentRole = (AttackRole)CanonicalSerializer.ReadI32(buf, ref o);
+                hyst[i].DwellCounter = CanonicalSerializer.ReadI32(buf, ref o);
                 hyst[i].CandidateRole = (AttackRole)CanonicalSerializer.ReadI32(buf, ref o);
                 hyst[i].CandidateDwell = CanonicalSerializer.ReadI32(buf, ref o);
             }
@@ -5638,9 +5670,9 @@ namespace TacticalDirector.MatchEngine
             int[] latExpiry = new int[pairCap];
             for (int i = 0; i < pairCap; i++)
             {
-                latCounters[i]  = CanonicalSerializer.ReadI32 (buf, ref o);
+                latCounters[i] = CanonicalSerializer.ReadI32(buf, ref o);
                 latConfirmed[i] = CanonicalSerializer.ReadBool(buf, ref o);
-                latExpiry[i]    = CanonicalSerializer.ReadI32 (buf, ref o);
+                latExpiry[i] = CanonicalSerializer.ReadI32(buf, ref o);
             }
 
             int agentCap = live.ShoulderCheck.AgentCapacity;
@@ -5650,12 +5682,12 @@ namespace TacticalDirector.MatchEngine
             ShoulderCheckAnimData[] anim = new ShoulderCheckAnimData[agentCap];
             for (int i = 0; i < agentCap; i++)
             {
-                nextCheck[i]    = CanonicalSerializer.ReadI32 (buf, ref o);
-                windowExpiry[i] = CanonicalSerializer.ReadI32 (buf, ref o);
+                nextCheck[i] = CanonicalSerializer.ReadI32(buf, ref o);
+                windowExpiry[i] = CanonicalSerializer.ReadI32(buf, ref o);
                 windowActive[i] = CanonicalSerializer.ReadBool(buf, ref o);
-                anim[i].AgentId            = CanonicalSerializer.ReadI32 (buf, ref o);
-                anim[i].FireFrame          = CanonicalSerializer.ReadI32 (buf, ref o);
-                anim[i].CheckDirection     = CanonicalSerializer.ReadF32 (buf, ref o);
+                anim[i].AgentId = CanonicalSerializer.ReadI32(buf, ref o);
+                anim[i].FireFrame = CanonicalSerializer.ReadI32(buf, ref o);
+                anim[i].CheckDirection = CanonicalSerializer.ReadF32(buf, ref o);
                 anim[i].AnyEntityConfirmed = CanonicalSerializer.ReadBool(buf, ref o);
             }
 
@@ -5664,7 +5696,7 @@ namespace TacticalDirector.MatchEngine
             bool[] blindConfirmed = new bool[scPairCap];
             for (int i = 0; i < scPairCap; i++)
             {
-                blindLatency[i]   = CanonicalSerializer.ReadI32 (buf, ref o);
+                blindLatency[i] = CanonicalSerializer.ReadI32(buf, ref o);
                 blindConfirmed[i] = CanonicalSerializer.ReadBool(buf, ref o);
             }
 
@@ -5675,8 +5707,8 @@ namespace TacticalDirector.MatchEngine
             for (int i = 0; i < agentCount; i++)
             {
                 ballVisible[i] = CanonicalSerializer.ReadBool(buf, ref o);
-                ballPos[i]     = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
-                ballStale[i]   = CanonicalSerializer.ReadI32(buf, ref o);
+                ballPos[i] = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+                ballStale[i] = CanonicalSerializer.ReadI32(buf, ref o);
             }
 
             RecognitionLatencyState latency = new RecognitionLatencyState(latCounters, latConfirmed, latExpiry);
@@ -5687,26 +5719,26 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Reads a <see cref="TeamTactic"/> in the <see cref="WriteTeamTactic"/> (Appendix B) field order.</summary>
         private static TeamTactic ReadTeamTactic(byte[] buf, ref int o)
         {
-            Mentality mentality           = (Mentality)CanonicalSerializer.ReadI32(buf, ref o);
-            TacticFormation formation     = (TacticFormation)CanonicalSerializer.ReadI32(buf, ref o);
-            Tempo tempo                   = (Tempo)CanonicalSerializer.ReadI32(buf, ref o);
-            TacticWidth width             = (TacticWidth)CanonicalSerializer.ReadI32(buf, ref o);
-            TacticPassing passing         = (TacticPassing)CanonicalSerializer.ReadI32(buf, ref o);
-            TacticPressing pressing       = (TacticPressing)CanonicalSerializer.ReadI32(buf, ref o);
-            LineOfEngagement line         = (LineOfEngagement)CanonicalSerializer.ReadI32(buf, ref o);
-            float defensiveLine           = CanonicalSerializer.ReadF32(buf, ref o);
-            TacticDefWidth defWidth       = (TacticDefWidth)CanonicalSerializer.ReadI32(buf, ref o);
-            TransitionPlan transitionWon  = (TransitionPlan)CanonicalSerializer.ReadI32(buf, ref o);
+            Mentality mentality = (Mentality)CanonicalSerializer.ReadI32(buf, ref o);
+            TacticFormation formation = (TacticFormation)CanonicalSerializer.ReadI32(buf, ref o);
+            Tempo tempo = (Tempo)CanonicalSerializer.ReadI32(buf, ref o);
+            TacticWidth width = (TacticWidth)CanonicalSerializer.ReadI32(buf, ref o);
+            TacticPassing passing = (TacticPassing)CanonicalSerializer.ReadI32(buf, ref o);
+            TacticPressing pressing = (TacticPressing)CanonicalSerializer.ReadI32(buf, ref o);
+            LineOfEngagement line = (LineOfEngagement)CanonicalSerializer.ReadI32(buf, ref o);
+            float defensiveLine = CanonicalSerializer.ReadF32(buf, ref o);
+            TacticDefWidth defWidth = (TacticDefWidth)CanonicalSerializer.ReadI32(buf, ref o);
+            TransitionPlan transitionWon = (TransitionPlan)CanonicalSerializer.ReadI32(buf, ref o);
             TransitionPlan transitionLost = (TransitionPlan)CanonicalSerializer.ReadI32(buf, ref o);
-            bool offsideTrap              = CanonicalSerializer.ReadBool(buf, ref o);
+            bool offsideTrap = CanonicalSerializer.ReadBool(buf, ref o);
             TacticTriggerMask triggerMask = (TacticTriggerMask)CanonicalSerializer.ReadI32(buf, ref o);
-            FocusPlay focusPlay           = (FocusPlay)CanonicalSerializer.ReadI32(buf, ref o);
-            GkDistributionPolicy gkDist   = (GkDistributionPolicy)CanonicalSerializer.ReadI32(buf, ref o);
-            byte timeWasting              = CanonicalSerializer.ReadU8(buf, ref o);
-            MarkingOrientation marking    = (MarkingOrientation)CanonicalSerializer.ReadI32(buf, ref o);
-            DismarkIntensity dismark      = (DismarkIntensity)CanonicalSerializer.ReadI32(buf, ref o);
-            BuildUpStructure buildUp      = (BuildUpStructure)CanonicalSerializer.ReadI32(buf, ref o);
-            RotationFreedom rotation      = (RotationFreedom)CanonicalSerializer.ReadI32(buf, ref o);
+            FocusPlay focusPlay = (FocusPlay)CanonicalSerializer.ReadI32(buf, ref o);
+            GkDistributionPolicy gkDist = (GkDistributionPolicy)CanonicalSerializer.ReadI32(buf, ref o);
+            byte timeWasting = CanonicalSerializer.ReadU8(buf, ref o);
+            MarkingOrientation marking = (MarkingOrientation)CanonicalSerializer.ReadI32(buf, ref o);
+            DismarkIntensity dismark = (DismarkIntensity)CanonicalSerializer.ReadI32(buf, ref o);
+            BuildUpStructure buildUp = (BuildUpStructure)CanonicalSerializer.ReadI32(buf, ref o);
+            RotationFreedom rotation = (RotationFreedom)CanonicalSerializer.ReadI32(buf, ref o);
 
             return new TeamTactic(
                 mentality, formation, tempo, width, passing, pressing, line, defensiveLine, defWidth,
@@ -5718,16 +5750,16 @@ namespace TacticalDirector.MatchEngine
         private static PlayerTactic ReadPlayerTactic(byte[] buf, ref int o)
         {
             PlayerRole role = (PlayerRole)CanonicalSerializer.ReadI32(buf, ref o);
-            Duty duty       = (Duty)CanonicalSerializer.ReadI32(buf, ref o);
+            Duty duty = (Duty)CanonicalSerializer.ReadI32(buf, ref o);
 
-            InstrBias riskyPasses       = (InstrBias)CanonicalSerializer.ReadI32(buf, ref o);
-            InstrBias shootTendency     = (InstrBias)CanonicalSerializer.ReadI32(buf, ref o);
-            InstrBias dribbleTendency   = (InstrBias)CanonicalSerializer.ReadI32(buf, ref o);
-            InstrBias crossTendency     = (InstrBias)CanonicalSerializer.ReadI32(buf, ref o);
+            InstrBias riskyPasses = (InstrBias)CanonicalSerializer.ReadI32(buf, ref o);
+            InstrBias shootTendency = (InstrBias)CanonicalSerializer.ReadI32(buf, ref o);
+            InstrBias dribbleTendency = (InstrBias)CanonicalSerializer.ReadI32(buf, ref o);
+            InstrBias crossTendency = (InstrBias)CanonicalSerializer.ReadI32(buf, ref o);
             InstrBias positioningFreedom = (InstrBias)CanonicalSerializer.ReadI32(buf, ref o);
-            InstrBias closeDown         = (InstrBias)CanonicalSerializer.ReadI32(buf, ref o);
-            bool tightMarking           = CanonicalSerializer.ReadBool(buf, ref o);
-            int markTargetEntityId      = CanonicalSerializer.ReadI32(buf, ref o);
+            InstrBias closeDown = (InstrBias)CanonicalSerializer.ReadI32(buf, ref o);
+            bool tightMarking = CanonicalSerializer.ReadBool(buf, ref o);
+            int markTargetEntityId = CanonicalSerializer.ReadI32(buf, ref o);
             SetPieceDutyFlags setPieces = (SetPieceDutyFlags)CanonicalSerializer.ReadI32(buf, ref o);
 
             PlayerInstructions instructions = new PlayerInstructions(
@@ -5747,15 +5779,15 @@ namespace TacticalDirector.MatchEngine
             CanonicalSerializer.WriteI32(buf, ref o, (int)t.Duty);
 
             PlayerInstructions ins = t.Instructions;
-            CanonicalSerializer.WriteI32 (buf, ref o, (int)ins.RiskyPasses);
-            CanonicalSerializer.WriteI32 (buf, ref o, (int)ins.ShootTendency);
-            CanonicalSerializer.WriteI32 (buf, ref o, (int)ins.DribbleTendency);
-            CanonicalSerializer.WriteI32 (buf, ref o, (int)ins.CrossTendency);
-            CanonicalSerializer.WriteI32 (buf, ref o, (int)ins.PositioningFreedom);
-            CanonicalSerializer.WriteI32 (buf, ref o, (int)ins.CloseDown);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)ins.RiskyPasses);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)ins.ShootTendency);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)ins.DribbleTendency);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)ins.CrossTendency);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)ins.PositioningFreedom);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)ins.CloseDown);
             CanonicalSerializer.WriteBool(buf, ref o, ins.TightMarking);
-            CanonicalSerializer.WriteI32 (buf, ref o, ins.MarkTargetEntityId);
-            CanonicalSerializer.WriteI32 (buf, ref o, (int)ins.SetPieceRoles);
+            CanonicalSerializer.WriteI32(buf, ref o, ins.MarkTargetEntityId);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)ins.SetPieceRoles);
         }
 
         /// <summary>Serializes a <see cref="TeamTactic"/> in canonical (Appendix B) field order. Enum
@@ -5778,7 +5810,7 @@ namespace TacticalDirector.MatchEngine
             CanonicalSerializer.WriteI32(buf, ref o, (int)t.TriggerPressMask);
             CanonicalSerializer.WriteI32(buf, ref o, (int)t.FocusPlay);
             CanonicalSerializer.WriteI32(buf, ref o, (int)t.GkDistribution);
-            CanonicalSerializer.WriteU8 (buf, ref o, t.TimeWasting);
+            CanonicalSerializer.WriteU8(buf, ref o, t.TimeWasting);
             CanonicalSerializer.WriteI32(buf, ref o, (int)t.MarkingOrientation);
             // v12: the three #21 back-prop dials in the pinned Appendix B approval order
             // (#23 → #24 → #25), appended after MarkingOrientation so no prior offset moves.
@@ -5848,30 +5880,30 @@ namespace TacticalDirector.MatchEngine
 
             // Oscillation guard — private ring-buffer state via the B0 get/restore seam.
             OscillationGuardState g = a.OscillationGuard.GetState();
-            CanonicalSerializer.WriteF32 (buf, ref o, g.T0);
-            CanonicalSerializer.WriteF32 (buf, ref o, g.T1);
-            CanonicalSerializer.WriteF32 (buf, ref o, g.T2);
-            CanonicalSerializer.WriteF32 (buf, ref o, g.T3);
-            CanonicalSerializer.WriteF32 (buf, ref o, g.T4);
-            CanonicalSerializer.WriteF32 (buf, ref o, g.T5);
-            CanonicalSerializer.WriteF32 (buf, ref o, g.T6);
-            CanonicalSerializer.WriteF32 (buf, ref o, g.T7);
-            CanonicalSerializer.WriteI32 (buf, ref o, g.WriteIndex);
+            CanonicalSerializer.WriteF32(buf, ref o, g.T0);
+            CanonicalSerializer.WriteF32(buf, ref o, g.T1);
+            CanonicalSerializer.WriteF32(buf, ref o, g.T2);
+            CanonicalSerializer.WriteF32(buf, ref o, g.T3);
+            CanonicalSerializer.WriteF32(buf, ref o, g.T4);
+            CanonicalSerializer.WriteF32(buf, ref o, g.T5);
+            CanonicalSerializer.WriteF32(buf, ref o, g.T6);
+            CanonicalSerializer.WriteF32(buf, ref o, g.T7);
+            CanonicalSerializer.WriteI32(buf, ref o, g.WriteIndex);
             CanonicalSerializer.WriteBool(buf, ref o, g.IsLocked);
-            CanonicalSerializer.WriteF32 (buf, ref o, g.LockUntilTime);
+            CanonicalSerializer.WriteF32(buf, ref o, g.LockUntilTime);
         }
 
         /// <summary>Serializes the held <see cref="MovementCommand"/> field set in canonical order.
         /// Produced only on stride ticks but consumed every tick (§2.6), so it is cross-tick state.</summary>
         private static void WriteMovementCommand(byte[] buf, ref int o, in MovementCommand c)
         {
-            CanonicalSerializer.WriteF32 (buf, ref o, c.TargetPosition.x);
-            CanonicalSerializer.WriteF32 (buf, ref o, c.TargetPosition.y);
-            CanonicalSerializer.WriteI32 (buf, ref o, (int)c.DesiredState);
-            CanonicalSerializer.WriteI32 (buf, ref o, (int)c.DecelerationMode);
-            CanonicalSerializer.WriteI32 (buf, ref o, (int)c.FacingMode);
-            CanonicalSerializer.WriteF32 (buf, ref o, c.FacingTarget.x);
-            CanonicalSerializer.WriteF32 (buf, ref o, c.FacingTarget.y);
+            CanonicalSerializer.WriteF32(buf, ref o, c.TargetPosition.x);
+            CanonicalSerializer.WriteF32(buf, ref o, c.TargetPosition.y);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)c.DesiredState);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)c.DecelerationMode);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)c.FacingMode);
+            CanonicalSerializer.WriteF32(buf, ref o, c.FacingTarget.x);
+            CanonicalSerializer.WriteF32(buf, ref o, c.FacingTarget.y);
             CanonicalSerializer.WriteBool(buf, ref o, c.OverrideSafetyConstraints);
         }
 
@@ -5882,57 +5914,57 @@ namespace TacticalDirector.MatchEngine
         /// PhysicalProfile is excluded — it is recomputed on restore (§2.6).</summary>
         private static void WritePassExecutorState(byte[] buf, ref int o, in PassExecutorState s)
         {
-            CanonicalSerializer.WriteI32 (buf, ref o, s.State);
+            CanonicalSerializer.WriteI32(buf, ref o, s.State);
 
-            CanonicalSerializer.WriteI32 (buf, ref o, s.Request.AgentId);
-            CanonicalSerializer.WriteI32 (buf, ref o, (int)s.Request.PassType);
-            CanonicalSerializer.WriteI32 (buf, ref o, (int)s.Request.CrossSubType);
-            CanonicalSerializer.WriteI32 (buf, ref o, s.Request.TargetAgentId);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.Request.TargetPosition.x);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.Request.TargetPosition.y);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.Request.TargetPosition.z);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.Request.IntendedDistance);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.Request.Urgency);
+            CanonicalSerializer.WriteI32(buf, ref o, s.Request.AgentId);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)s.Request.PassType);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)s.Request.CrossSubType);
+            CanonicalSerializer.WriteI32(buf, ref o, s.Request.TargetAgentId);
+            CanonicalSerializer.WriteF32(buf, ref o, s.Request.TargetPosition.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.Request.TargetPosition.y);
+            CanonicalSerializer.WriteF32(buf, ref o, s.Request.TargetPosition.z);
+            CanonicalSerializer.WriteF32(buf, ref o, s.Request.IntendedDistance);
+            CanonicalSerializer.WriteF32(buf, ref o, s.Request.Urgency);
             CanonicalSerializer.WriteBool(buf, ref o, s.Request.IsWeakFoot);
-            CanonicalSerializer.WriteI32 (buf, ref o, s.Request.TeamId);
-            CanonicalSerializer.WriteI32 (buf, ref o, s.Request.FrameNumber);
+            CanonicalSerializer.WriteI32(buf, ref o, s.Request.TeamId);
+            CanonicalSerializer.WriteI32(buf, ref o, s.Request.FrameNumber);
 
-            CanonicalSerializer.WriteI32 (buf, ref o, (int)s.EffectiveSubType);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.KickSpeed);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LaunchAngleDeg);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.SpinVector.x);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.SpinVector.y);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.SpinVector.z);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.BaseKickDirection.x);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.BaseKickDirection.y);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.BaseKickDirection.z);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.AimPoint.x);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.AimPoint.y);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.AimPoint.z);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LeadDistance);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.CachedPassing);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.CachedFatigue);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.CachedBodyAngleDeg);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)s.EffectiveSubType);
+            CanonicalSerializer.WriteF32(buf, ref o, s.KickSpeed);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LaunchAngleDeg);
+            CanonicalSerializer.WriteF32(buf, ref o, s.SpinVector.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.SpinVector.y);
+            CanonicalSerializer.WriteF32(buf, ref o, s.SpinVector.z);
+            CanonicalSerializer.WriteF32(buf, ref o, s.BaseKickDirection.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.BaseKickDirection.y);
+            CanonicalSerializer.WriteF32(buf, ref o, s.BaseKickDirection.z);
+            CanonicalSerializer.WriteF32(buf, ref o, s.AimPoint.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.AimPoint.y);
+            CanonicalSerializer.WriteF32(buf, ref o, s.AimPoint.z);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LeadDistance);
+            CanonicalSerializer.WriteF32(buf, ref o, s.CachedPassing);
+            CanonicalSerializer.WriteF32(buf, ref o, s.CachedFatigue);
+            CanonicalSerializer.WriteF32(buf, ref o, s.CachedBodyAngleDeg);
             CanonicalSerializer.WriteBool(buf, ref o, s.CachedIsWeakFoot);
-            CanonicalSerializer.WriteI32 (buf, ref o, s.CachedWeakFootRating);
-            CanonicalSerializer.WriteI32 (buf, ref o, s.WindupFramesRemaining);
-            CanonicalSerializer.WriteI32 (buf, ref o, s.FollowThroughFramesRemaining);
+            CanonicalSerializer.WriteI32(buf, ref o, s.CachedWeakFootRating);
+            CanonicalSerializer.WriteI32(buf, ref o, s.WindupFramesRemaining);
+            CanonicalSerializer.WriteI32(buf, ref o, s.FollowThroughFramesRemaining);
 
-            CanonicalSerializer.WriteI32 (buf, ref o, (int)s.LastResult.Outcome);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalVelocity.x);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalVelocity.y);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalVelocity.z);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalSpin.x);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalSpin.y);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalSpin.z);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.AimPoint.x);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.AimPoint.y);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.AimPoint.z);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.ErrorAngleDeg);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.LeadDistance);
-            CanonicalSerializer.WriteI32 (buf, ref o, (int)s.LastResult.PassType);
-            CanonicalSerializer.WriteI32 (buf, ref o, s.LastResult.ContactFrame);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.ContactMatchTime);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)s.LastResult.Outcome);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.FinalVelocity.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.FinalVelocity.y);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.FinalVelocity.z);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.FinalSpin.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.FinalSpin.y);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.FinalSpin.z);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.AimPoint.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.AimPoint.y);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.AimPoint.z);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.ErrorAngleDeg);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.LeadDistance);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)s.LastResult.PassType);
+            CanonicalSerializer.WriteI32(buf, ref o, s.LastResult.ContactFrame);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.ContactMatchTime);
         }
 
         /// <summary>Serializes a <see cref="ShotExecutorState"/> (C0 capture) in canonical order, mirroring
@@ -5940,65 +5972,65 @@ namespace TacticalDirector.MatchEngine
         /// set (no recompute-on-restore exclusion, unlike Pass).</summary>
         private static void WriteShotExecutorState(byte[] buf, ref int o, in ShotExecutorState s)
         {
-            CanonicalSerializer.WriteI32 (buf, ref o, s.State);
+            CanonicalSerializer.WriteI32(buf, ref o, s.State);
 
-            CanonicalSerializer.WriteI32 (buf, ref o, s.Request.AgentId);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.Request.PowerIntent);
-            CanonicalSerializer.WriteI32 (buf, ref o, (int)s.Request.ContactZone);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.Request.SpinIntent);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.Request.PlacementTarget.x);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.Request.PlacementTarget.y);
+            CanonicalSerializer.WriteI32(buf, ref o, s.Request.AgentId);
+            CanonicalSerializer.WriteF32(buf, ref o, s.Request.PowerIntent);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)s.Request.ContactZone);
+            CanonicalSerializer.WriteF32(buf, ref o, s.Request.SpinIntent);
+            CanonicalSerializer.WriteF32(buf, ref o, s.Request.PlacementTarget.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.Request.PlacementTarget.y);
             CanonicalSerializer.WriteBool(buf, ref o, s.Request.IsWeakFoot);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.Request.DistanceToGoal);
-            CanonicalSerializer.WriteI32 (buf, ref o, s.Request.TeamId);
-            CanonicalSerializer.WriteI32 (buf, ref o, s.Request.FrameNumber);
+            CanonicalSerializer.WriteF32(buf, ref o, s.Request.DistanceToGoal);
+            CanonicalSerializer.WriteI32(buf, ref o, s.Request.TeamId);
+            CanonicalSerializer.WriteI32(buf, ref o, s.Request.FrameNumber);
 
-            CanonicalSerializer.WriteF32 (buf, ref o, s.KickSpeed);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LaunchAngleDeg);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.SpinVector.x);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.SpinVector.y);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.SpinVector.z);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.IntendedAimDirection.x);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.IntendedAimDirection.y);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.IntendedAimDirection.z);
+            CanonicalSerializer.WriteF32(buf, ref o, s.KickSpeed);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LaunchAngleDeg);
+            CanonicalSerializer.WriteF32(buf, ref o, s.SpinVector.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.SpinVector.y);
+            CanonicalSerializer.WriteF32(buf, ref o, s.SpinVector.z);
+            CanonicalSerializer.WriteF32(buf, ref o, s.IntendedAimDirection.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.IntendedAimDirection.y);
+            CanonicalSerializer.WriteF32(buf, ref o, s.IntendedAimDirection.z);
 
-            CanonicalSerializer.WriteF32 (buf, ref o, s.BodyMechanics.Score);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.BodyMechanics.ContactQualityModifier);
+            CanonicalSerializer.WriteF32(buf, ref o, s.BodyMechanics.Score);
+            CanonicalSerializer.WriteF32(buf, ref o, s.BodyMechanics.ContactQualityModifier);
             CanonicalSerializer.WriteBool(buf, ref o, s.BodyMechanics.StumbleTriggered);
 
-            CanonicalSerializer.WriteF32 (buf, ref o, s.WeakFootErrorMultiplier);
-            CanonicalSerializer.WriteI32 (buf, ref o, s.WindupFrames);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.CachedAgentPosition.x);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.CachedAgentPosition.y);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.CachedAgentPosition.z);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.CachedFinishing);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.CachedLongShots);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.CachedComposure);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.CachedFatigue);
-            CanonicalSerializer.WriteI32 (buf, ref o, s.WindupFramesRemaining);
-            CanonicalSerializer.WriteI32 (buf, ref o, s.FollowThroughFramesRemaining);
+            CanonicalSerializer.WriteF32(buf, ref o, s.WeakFootErrorMultiplier);
+            CanonicalSerializer.WriteI32(buf, ref o, s.WindupFrames);
+            CanonicalSerializer.WriteF32(buf, ref o, s.CachedAgentPosition.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.CachedAgentPosition.y);
+            CanonicalSerializer.WriteF32(buf, ref o, s.CachedAgentPosition.z);
+            CanonicalSerializer.WriteF32(buf, ref o, s.CachedFinishing);
+            CanonicalSerializer.WriteF32(buf, ref o, s.CachedLongShots);
+            CanonicalSerializer.WriteF32(buf, ref o, s.CachedComposure);
+            CanonicalSerializer.WriteF32(buf, ref o, s.CachedFatigue);
+            CanonicalSerializer.WriteI32(buf, ref o, s.WindupFramesRemaining);
+            CanonicalSerializer.WriteI32(buf, ref o, s.FollowThroughFramesRemaining);
 
-            CanonicalSerializer.WriteI32 (buf, ref o, (int)s.LastResult.Outcome);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalVelocity.x);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalVelocity.y);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalVelocity.z);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalSpin.x);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalSpin.y);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalSpin.z);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.IntendedDirection.x);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.IntendedDirection.y);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.IntendedDirection.z);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalDirection.x);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalDirection.y);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.FinalDirection.z);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.ErrorOffset.x);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.ErrorOffset.y);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.BodyMechanicsScore);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.PowerPenaltyApplied);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.KickSpeed);
-            CanonicalSerializer.WriteF32 (buf, ref o, s.LastResult.LaunchAngleDeg);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)s.LastResult.Outcome);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.FinalVelocity.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.FinalVelocity.y);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.FinalVelocity.z);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.FinalSpin.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.FinalSpin.y);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.FinalSpin.z);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.IntendedDirection.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.IntendedDirection.y);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.IntendedDirection.z);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.FinalDirection.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.FinalDirection.y);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.FinalDirection.z);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.ErrorOffset.x);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.ErrorOffset.y);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.BodyMechanicsScore);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.PowerPenaltyApplied);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.KickSpeed);
+            CanonicalSerializer.WriteF32(buf, ref o, s.LastResult.LaunchAngleDeg);
             CanonicalSerializer.WriteBool(buf, ref o, s.LastResult.StumbleTriggered);
-            CanonicalSerializer.WriteI32 (buf, ref o, s.LastResult.ContactFrame);
+            CanonicalSerializer.WriteI32(buf, ref o, s.LastResult.ContactFrame);
         }
 
         /// <summary>Serializes a <see cref="DecisionTreeState"/> (D0 capture) in canonical order — the
@@ -6008,60 +6040,60 @@ namespace TacticalDirector.MatchEngine
         /// _matchSeed and per-tick _optionBuffer are excluded — boot-deterministic / scratch (§2.6).</summary>
         private static void WriteDecisionTreeState(byte[] buf, ref int o, in DecisionTreeState s)
         {
-            CanonicalSerializer.WriteI32 (buf, ref o, s.State);
+            CanonicalSerializer.WriteI32(buf, ref o, s.State);
             CanonicalSerializer.WriteBool(buf, ref o, s.HasDispatchedAction);
 
             AgentAction a = s.LastAction;
-            CanonicalSerializer.WriteI32 (buf, ref o, a.AgentId);
-            CanonicalSerializer.WriteI32 (buf, ref o, (int)a.Type);
-            CanonicalSerializer.WriteI32 (buf, ref o, a.TargetAgentId);
-            CanonicalSerializer.WriteF32 (buf, ref o, a.TargetPosition.x);
-            CanonicalSerializer.WriteF32 (buf, ref o, a.TargetPosition.y);
+            CanonicalSerializer.WriteI32(buf, ref o, a.AgentId);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)a.Type);
+            CanonicalSerializer.WriteI32(buf, ref o, a.TargetAgentId);
+            CanonicalSerializer.WriteF32(buf, ref o, a.TargetPosition.x);
+            CanonicalSerializer.WriteF32(buf, ref o, a.TargetPosition.y);
 
-            CanonicalSerializer.WriteI32 (buf, ref o, a.PassParams.AgentId);
-            CanonicalSerializer.WriteI32 (buf, ref o, (int)a.PassParams.PassType);
-            CanonicalSerializer.WriteI32 (buf, ref o, (int)a.PassParams.CrossSubType);
-            CanonicalSerializer.WriteI32 (buf, ref o, a.PassParams.TargetAgentId);
-            CanonicalSerializer.WriteF32 (buf, ref o, a.PassParams.TargetPosition.x);
-            CanonicalSerializer.WriteF32 (buf, ref o, a.PassParams.TargetPosition.y);
-            CanonicalSerializer.WriteF32 (buf, ref o, a.PassParams.TargetPosition.z);
-            CanonicalSerializer.WriteF32 (buf, ref o, a.PassParams.IntendedDistance);
-            CanonicalSerializer.WriteF32 (buf, ref o, a.PassParams.Urgency);
+            CanonicalSerializer.WriteI32(buf, ref o, a.PassParams.AgentId);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)a.PassParams.PassType);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)a.PassParams.CrossSubType);
+            CanonicalSerializer.WriteI32(buf, ref o, a.PassParams.TargetAgentId);
+            CanonicalSerializer.WriteF32(buf, ref o, a.PassParams.TargetPosition.x);
+            CanonicalSerializer.WriteF32(buf, ref o, a.PassParams.TargetPosition.y);
+            CanonicalSerializer.WriteF32(buf, ref o, a.PassParams.TargetPosition.z);
+            CanonicalSerializer.WriteF32(buf, ref o, a.PassParams.IntendedDistance);
+            CanonicalSerializer.WriteF32(buf, ref o, a.PassParams.Urgency);
             CanonicalSerializer.WriteBool(buf, ref o, a.PassParams.IsWeakFoot);
-            CanonicalSerializer.WriteI32 (buf, ref o, a.PassParams.TeamId);
-            CanonicalSerializer.WriteI32 (buf, ref o, a.PassParams.FrameNumber);
+            CanonicalSerializer.WriteI32(buf, ref o, a.PassParams.TeamId);
+            CanonicalSerializer.WriteI32(buf, ref o, a.PassParams.FrameNumber);
 
-            CanonicalSerializer.WriteI32 (buf, ref o, a.ShotParams.AgentId);
-            CanonicalSerializer.WriteF32 (buf, ref o, a.ShotParams.PowerIntent);
-            CanonicalSerializer.WriteI32 (buf, ref o, (int)a.ShotParams.ContactZone);
-            CanonicalSerializer.WriteF32 (buf, ref o, a.ShotParams.SpinIntent);
-            CanonicalSerializer.WriteF32 (buf, ref o, a.ShotParams.PlacementTarget.x);
-            CanonicalSerializer.WriteF32 (buf, ref o, a.ShotParams.PlacementTarget.y);
+            CanonicalSerializer.WriteI32(buf, ref o, a.ShotParams.AgentId);
+            CanonicalSerializer.WriteF32(buf, ref o, a.ShotParams.PowerIntent);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)a.ShotParams.ContactZone);
+            CanonicalSerializer.WriteF32(buf, ref o, a.ShotParams.SpinIntent);
+            CanonicalSerializer.WriteF32(buf, ref o, a.ShotParams.PlacementTarget.x);
+            CanonicalSerializer.WriteF32(buf, ref o, a.ShotParams.PlacementTarget.y);
             CanonicalSerializer.WriteBool(buf, ref o, a.ShotParams.IsWeakFoot);
-            CanonicalSerializer.WriteF32 (buf, ref o, a.ShotParams.DistanceToGoal);
-            CanonicalSerializer.WriteI32 (buf, ref o, a.ShotParams.TeamId);
-            CanonicalSerializer.WriteI32 (buf, ref o, a.ShotParams.FrameNumber);
+            CanonicalSerializer.WriteF32(buf, ref o, a.ShotParams.DistanceToGoal);
+            CanonicalSerializer.WriteI32(buf, ref o, a.ShotParams.TeamId);
+            CanonicalSerializer.WriteI32(buf, ref o, a.ShotParams.FrameNumber);
 
-            CanonicalSerializer.WriteF32 (buf, ref o, a.UtilityScore);
-            CanonicalSerializer.WriteI32 (buf, ref o, a.HeartbeatTick);
+            CanonicalSerializer.WriteF32(buf, ref o, a.UtilityScore);
+            CanonicalSerializer.WriteI32(buf, ref o, a.HeartbeatTick);
         }
 
         /// <summary>Serializes the authoritative <see cref="MatchContext"/> in canonical order (C5).
         /// Enum fields (Possession / Phase / BallZone) are written as i32 ordinals.</summary>
         private static void WriteMatchContext(byte[] buf, ref int o, in MatchContext m)
         {
-            CanonicalSerializer.WriteI32 (buf, ref o, m.HomeScore);
-            CanonicalSerializer.WriteI32 (buf, ref o, m.AwayScore);
-            CanonicalSerializer.WriteF32 (buf, ref o, m.MatchTimeSeconds);
-            CanonicalSerializer.WriteI32 (buf, ref o, (int)m.Possession);
-            CanonicalSerializer.WriteI32 (buf, ref o, m.PossessingAgentId);
-            CanonicalSerializer.WriteI32 (buf, ref o, (int)m.Phase);
-            CanonicalSerializer.WriteF32 (buf, ref o, m.BallPosition.x);
-            CanonicalSerializer.WriteF32 (buf, ref o, m.BallPosition.y);
-            CanonicalSerializer.WriteF32 (buf, ref o, m.BallVelocity.x);
-            CanonicalSerializer.WriteF32 (buf, ref o, m.BallVelocity.y);
-            CanonicalSerializer.WriteF32 (buf, ref o, m.BallVelocity.z);
-            CanonicalSerializer.WriteI32 (buf, ref o, (int)m.BallZone);
+            CanonicalSerializer.WriteI32(buf, ref o, m.HomeScore);
+            CanonicalSerializer.WriteI32(buf, ref o, m.AwayScore);
+            CanonicalSerializer.WriteF32(buf, ref o, m.MatchTimeSeconds);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)m.Possession);
+            CanonicalSerializer.WriteI32(buf, ref o, m.PossessingAgentId);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)m.Phase);
+            CanonicalSerializer.WriteF32(buf, ref o, m.BallPosition.x);
+            CanonicalSerializer.WriteF32(buf, ref o, m.BallPosition.y);
+            CanonicalSerializer.WriteF32(buf, ref o, m.BallVelocity.x);
+            CanonicalSerializer.WriteF32(buf, ref o, m.BallVelocity.y);
+            CanonicalSerializer.WriteF32(buf, ref o, m.BallVelocity.z);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)m.BallZone);
         }
 
         /// <summary>Serializes one team's Positioning AI (#12) <see cref="HysteresisState"/> (D4) in
@@ -6123,11 +6155,11 @@ namespace TacticalDirector.MatchEngine
                 CanonicalSerializer.WriteF32(buf, ref o, cs.HandlingQualityScalar);
                 CanonicalSerializer.WriteF32(buf, ref o, cs.ContactPointError.x);
                 CanonicalSerializer.WriteF32(buf, ref o, cs.ContactPointError.y);
-                CanonicalSerializer.WriteU8 (buf, ref o, (byte)cs.HandChoice);
+                CanonicalSerializer.WriteU8(buf, ref o, (byte)cs.HandChoice);
                 CanonicalSerializer.WriteF32(buf, ref o, cs.ClutchFirmness);
 
                 SaveIntent si = s.SaveIntents[i];
-                CanonicalSerializer.WriteU8 (buf, ref o, (byte)si.TargetHand);
+                CanonicalSerializer.WriteU8(buf, ref o, (byte)si.TargetHand);
                 CanonicalSerializer.WriteF32(buf, ref o, si.ClutchFirmness);
                 bool hasDefl = si.DeflectionTarget.HasValue;
                 CanonicalSerializer.WriteBool(buf, ref o, hasDefl);
@@ -6150,7 +6182,7 @@ namespace TacticalDirector.MatchEngine
                 CanonicalSerializer.WriteBool(buf, ref o, s.RushIntentActive[i]);
 
                 DistributeIntent di = s.DistributeIntents[i];
-                CanonicalSerializer.WriteU8 (buf, ref o, (byte)di.DeliveryKind);
+                CanonicalSerializer.WriteU8(buf, ref o, (byte)di.DeliveryKind);
                 bool hasRcv = di.TargetReceiverId.HasValue;
                 CanonicalSerializer.WriteBool(buf, ref o, hasRcv);
                 if (hasRcv)
@@ -6196,27 +6228,27 @@ namespace TacticalDirector.MatchEngine
             GoalkeeperTickState live = tick.CaptureState();
             int cap = live.States.Length;
 
-            var states                  = new GoalkeeperState[cap];
-            var attrs                   = new GoalkeeperAgentAttributes[cap];
-            var contactStates           = new GkContactState[cap];
-            var saveIntents             = new SaveIntent[cap];
-            var saveIntentActive        = new bool[cap];
-            var rushIntents             = new RushIntent[cap];
-            var rushIntentActive        = new bool[cap];
-            var distributeIntents       = new DistributeIntent[cap];
-            var distributeIntentActive  = new bool[cap];
-            var positioningContracts    = new GoalkeeperPositioningContract[cap];
-            var diveLaunchFrames        = new int[cap];
-            var diveDurationFrames      = new int[cap];
-            var divePeakHandZ           = new float[cap];
-            var diveDirectionLateral    = new float[cap];
-            var rushLaunchMps           = new float[cap];
-            var rushInitialAttackerId   = new int[cap];
-            var shotDetectedTickMs      = new float[cap];
-            var requiredReactionMs      = new float[cap];
-            var shotEventPending        = new bool[cap];
-            var claimTick               = new int[cap];
-            var releaseTickEarliest     = new int[cap];
+            var states = new GoalkeeperState[cap];
+            var attrs = new GoalkeeperAgentAttributes[cap];
+            var contactStates = new GkContactState[cap];
+            var saveIntents = new SaveIntent[cap];
+            var saveIntentActive = new bool[cap];
+            var rushIntents = new RushIntent[cap];
+            var rushIntentActive = new bool[cap];
+            var distributeIntents = new DistributeIntent[cap];
+            var distributeIntentActive = new bool[cap];
+            var positioningContracts = new GoalkeeperPositioningContract[cap];
+            var diveLaunchFrames = new int[cap];
+            var diveDurationFrames = new int[cap];
+            var divePeakHandZ = new float[cap];
+            var diveDirectionLateral = new float[cap];
+            var rushLaunchMps = new float[cap];
+            var rushInitialAttackerId = new int[cap];
+            var shotDetectedTickMs = new float[cap];
+            var requiredReactionMs = new float[cap];
+            var shotEventPending = new bool[cap];
+            var claimTick = new int[cap];
+            var releaseTickEarliest = new int[cap];
             var recoveryCooldownEndTick = new int[cap];
 
             for (int i = 0; i < cap; i++)
@@ -6224,32 +6256,32 @@ namespace TacticalDirector.MatchEngine
                 states[i] = (GoalkeeperState)CanonicalSerializer.ReadU8(buf, ref o);
 
                 GoalkeeperAgentAttributes a = default;
-                a.Reflexes  = CanonicalSerializer.ReadF32(buf, ref o);
-                a.Handling  = CanonicalSerializer.ReadF32(buf, ref o);
+                a.Reflexes = CanonicalSerializer.ReadF32(buf, ref o);
+                a.Handling = CanonicalSerializer.ReadF32(buf, ref o);
                 a.Composure = CanonicalSerializer.ReadF32(buf, ref o);
-                a.Strength  = CanonicalSerializer.ReadF32(buf, ref o);
-                a.Aerial    = CanonicalSerializer.ReadF32(buf, ref o);
-                a.Balance   = CanonicalSerializer.ReadF32(buf, ref o);
-                a.OneVsOne  = CanonicalSerializer.ReadF32(buf, ref o);
-                a.Pace      = CanonicalSerializer.ReadF32(buf, ref o);
-                a.Throwing  = CanonicalSerializer.ReadF32(buf, ref o);
-                a.Kicking   = CanonicalSerializer.ReadF32(buf, ref o);
-                a.Fatigue   = CanonicalSerializer.ReadF32(buf, ref o);
-                a.TeamId    = CanonicalSerializer.ReadI32(buf, ref o);
+                a.Strength = CanonicalSerializer.ReadF32(buf, ref o);
+                a.Aerial = CanonicalSerializer.ReadF32(buf, ref o);
+                a.Balance = CanonicalSerializer.ReadF32(buf, ref o);
+                a.OneVsOne = CanonicalSerializer.ReadF32(buf, ref o);
+                a.Pace = CanonicalSerializer.ReadF32(buf, ref o);
+                a.Throwing = CanonicalSerializer.ReadF32(buf, ref o);
+                a.Kicking = CanonicalSerializer.ReadF32(buf, ref o);
+                a.Fatigue = CanonicalSerializer.ReadF32(buf, ref o);
+                a.TeamId = CanonicalSerializer.ReadI32(buf, ref o);
                 attrs[i] = a;
 
                 GkContactState cs = default;
-                cs.PredictedContactFrame  = CanonicalSerializer.ReadI32(buf, ref o);
-                cs.ActualContactFrame     = CanonicalSerializer.ReadI32(buf, ref o);
+                cs.PredictedContactFrame = CanonicalSerializer.ReadI32(buf, ref o);
+                cs.ActualContactFrame = CanonicalSerializer.ReadI32(buf, ref o);
                 cs.ReactionWindowAchieved = CanonicalSerializer.ReadF32(buf, ref o);
-                cs.HandlingQualityScalar  = CanonicalSerializer.ReadF32(buf, ref o);
-                cs.ContactPointError      = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
-                cs.HandChoice             = (HandEnum)CanonicalSerializer.ReadU8(buf, ref o);
-                cs.ClutchFirmness         = CanonicalSerializer.ReadF32(buf, ref o);
+                cs.HandlingQualityScalar = CanonicalSerializer.ReadF32(buf, ref o);
+                cs.ContactPointError = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+                cs.HandChoice = (HandEnum)CanonicalSerializer.ReadU8(buf, ref o);
+                cs.ClutchFirmness = CanonicalSerializer.ReadF32(buf, ref o);
                 contactStates[i] = cs;
 
                 SaveIntent si = default;
-                si.TargetHand     = (HandEnum)CanonicalSerializer.ReadU8(buf, ref o);
+                si.TargetHand = (HandEnum)CanonicalSerializer.ReadU8(buf, ref o);
                 si.ClutchFirmness = CanonicalSerializer.ReadF32(buf, ref o);
                 bool hasDefl = CanonicalSerializer.ReadBool(buf, ref o);
                 si.DeflectionTarget = hasDefl
@@ -6260,8 +6292,8 @@ namespace TacticalDirector.MatchEngine
                 saveIntentActive[i] = CanonicalSerializer.ReadBool(buf, ref o);
 
                 RushIntent ri = default;
-                ri.RushTarget           = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
-                ri.CommitmentLevel      = CanonicalSerializer.ReadF32(buf, ref o);
+                ri.RushTarget = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+                ri.CommitmentLevel = CanonicalSerializer.ReadF32(buf, ref o);
                 ri.AttemptCommittedTick = CanonicalSerializer.ReadI32(buf, ref o);
                 rushIntents[i] = ri;
                 rushIntentActive[i] = CanonicalSerializer.ReadBool(buf, ref o);
@@ -6270,9 +6302,9 @@ namespace TacticalDirector.MatchEngine
                 di.DeliveryKind = (DeliveryKind)CanonicalSerializer.ReadU8(buf, ref o);
                 bool hasRcv = CanonicalSerializer.ReadBool(buf, ref o);
                 di.TargetReceiverId = hasRcv ? CanonicalSerializer.ReadI32(buf, ref o) : (int?)null;
-                di.TargetPoint  = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
-                di.PowerIntent  = CanonicalSerializer.ReadF32(buf, ref o);
-                di.SpinIntent   = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+                di.TargetPoint = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+                di.PowerIntent = CanonicalSerializer.ReadF32(buf, ref o);
+                di.SpinIntent = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
                 distributeIntents[i] = di;
                 distributeIntentActive[i] = CanonicalSerializer.ReadBool(buf, ref o);
 
@@ -6280,17 +6312,17 @@ namespace TacticalDirector.MatchEngine
                 pc.GkBaselineSlot = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
                 positioningContracts[i] = pc;
 
-                diveLaunchFrames[i]        = CanonicalSerializer.ReadI32(buf, ref o);
-                diveDurationFrames[i]      = CanonicalSerializer.ReadI32(buf, ref o);
-                divePeakHandZ[i]           = CanonicalSerializer.ReadF32(buf, ref o);
-                diveDirectionLateral[i]    = CanonicalSerializer.ReadF32(buf, ref o);
-                rushLaunchMps[i]           = CanonicalSerializer.ReadF32(buf, ref o);
-                rushInitialAttackerId[i]   = CanonicalSerializer.ReadI32(buf, ref o);
-                shotDetectedTickMs[i]      = CanonicalSerializer.ReadF32(buf, ref o);
-                requiredReactionMs[i]      = CanonicalSerializer.ReadF32(buf, ref o);
-                shotEventPending[i]        = CanonicalSerializer.ReadBool(buf, ref o);
-                claimTick[i]               = CanonicalSerializer.ReadI32(buf, ref o);
-                releaseTickEarliest[i]     = CanonicalSerializer.ReadI32(buf, ref o);
+                diveLaunchFrames[i] = CanonicalSerializer.ReadI32(buf, ref o);
+                diveDurationFrames[i] = CanonicalSerializer.ReadI32(buf, ref o);
+                divePeakHandZ[i] = CanonicalSerializer.ReadF32(buf, ref o);
+                diveDirectionLateral[i] = CanonicalSerializer.ReadF32(buf, ref o);
+                rushLaunchMps[i] = CanonicalSerializer.ReadF32(buf, ref o);
+                rushInitialAttackerId[i] = CanonicalSerializer.ReadI32(buf, ref o);
+                shotDetectedTickMs[i] = CanonicalSerializer.ReadF32(buf, ref o);
+                requiredReactionMs[i] = CanonicalSerializer.ReadF32(buf, ref o);
+                shotEventPending[i] = CanonicalSerializer.ReadBool(buf, ref o);
+                claimTick[i] = CanonicalSerializer.ReadI32(buf, ref o);
+                releaseTickEarliest[i] = CanonicalSerializer.ReadI32(buf, ref o);
                 recoveryCooldownEndTick[i] = CanonicalSerializer.ReadI32(buf, ref o);
             }
 
@@ -6333,7 +6365,7 @@ namespace TacticalDirector.MatchEngine
                 CanonicalSerializer.WriteF32(buf, ref o, hi.TargetIntent.y);
                 CanonicalSerializer.WriteF32(buf, ref o, hi.TargetIntent.z);
                 CanonicalSerializer.WriteI32(buf, ref o, hi.AttemptCommittedTick);
-                CanonicalSerializer.WriteU8 (buf, ref o, (byte)hi.SetPieceContext);
+                CanonicalSerializer.WriteU8(buf, ref o, (byte)hi.SetPieceContext);
 
                 HeaderContactState hc = s.ContactStates[i];
                 CanonicalSerializer.WriteI32(buf, ref o, hc.JumpStartFrame);
@@ -6350,7 +6382,7 @@ namespace TacticalDirector.MatchEngine
                 CanonicalSerializer.WriteF32(buf, ref o, hc.PrevFrameFacingDirection.y);
 
                 CanonicalSerializer.WriteBool(buf, ref o, s.IntentActive[i]);
-                CanonicalSerializer.WriteI32 (buf, ref o, s.BallSnapshotFrames[i]);
+                CanonicalSerializer.WriteI32(buf, ref o, s.BallSnapshotFrames[i]);
 
                 HeadingAgentAttributes ha = s.AgentAttrs[i];
                 CanonicalSerializer.WriteI32(buf, ref o, ha.Heading);
@@ -6370,44 +6402,44 @@ namespace TacticalDirector.MatchEngine
             HeadingTickState live = tick.CaptureState();
             int cap = live.Intents.Length;
 
-            var intents            = new HeaderIntent[cap];
-            var contactStates      = new HeaderContactState[cap];
-            var intentActive       = new bool[cap];
+            var intents = new HeaderIntent[cap];
+            var contactStates = new HeaderContactState[cap];
+            var intentActive = new bool[cap];
             var ballSnapshotFrames = new int[cap];
-            var agentAttrs         = new HeadingAgentAttributes[cap];
+            var agentAttrs = new HeadingAgentAttributes[cap];
 
             for (int i = 0; i < cap; i++)
             {
                 HeaderIntent hi = default;
-                hi.PowerIntent        = CanonicalSerializer.ReadF32(buf, ref o);
+                hi.PowerIntent = CanonicalSerializer.ReadF32(buf, ref o);
                 hi.ContactPointIntent = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
-                hi.TargetIntent       = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+                hi.TargetIntent = new Vector3(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
                 hi.AttemptCommittedTick = CanonicalSerializer.ReadI32(buf, ref o);
-                hi.SetPieceContext    = (SetPieceContext)CanonicalSerializer.ReadU8(buf, ref o);
+                hi.SetPieceContext = (SetPieceContext)CanonicalSerializer.ReadU8(buf, ref o);
                 intents[i] = hi;
 
                 HeaderContactState hc = default;
-                hc.JumpStartFrame           = CanonicalSerializer.ReadI32(buf, ref o);
-                hc.PredictedContactFrame    = CanonicalSerializer.ReadI32(buf, ref o);
-                hc.IdealContactFrame        = CanonicalSerializer.ReadI32(buf, ref o);
-                hc.ActualContactFrame       = CanonicalSerializer.ReadI32(buf, ref o);
-                hc.TimingOffsetMs           = CanonicalSerializer.ReadF32(buf, ref o);
-                hc.ContactPointError        = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
-                hc.ContactQualityScalar     = CanonicalSerializer.ReadF32(buf, ref o);
-                hc.DisturbanceFactor        = CanonicalSerializer.ReadF32(buf, ref o);
-                hc.JumpReachM               = CanonicalSerializer.ReadF32(buf, ref o);
+                hc.JumpStartFrame = CanonicalSerializer.ReadI32(buf, ref o);
+                hc.PredictedContactFrame = CanonicalSerializer.ReadI32(buf, ref o);
+                hc.IdealContactFrame = CanonicalSerializer.ReadI32(buf, ref o);
+                hc.ActualContactFrame = CanonicalSerializer.ReadI32(buf, ref o);
+                hc.TimingOffsetMs = CanonicalSerializer.ReadF32(buf, ref o);
+                hc.ContactPointError = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+                hc.ContactQualityScalar = CanonicalSerializer.ReadF32(buf, ref o);
+                hc.DisturbanceFactor = CanonicalSerializer.ReadF32(buf, ref o);
+                hc.JumpReachM = CanonicalSerializer.ReadF32(buf, ref o);
                 hc.PrevFrameFacingDirection = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
                 contactStates[i] = hc;
 
-                intentActive[i]       = CanonicalSerializer.ReadBool(buf, ref o);
+                intentActive[i] = CanonicalSerializer.ReadBool(buf, ref o);
                 ballSnapshotFrames[i] = CanonicalSerializer.ReadI32(buf, ref o);
 
                 HeadingAgentAttributes ha = default;
-                ha.Heading  = CanonicalSerializer.ReadI32(buf, ref o);
+                ha.Heading = CanonicalSerializer.ReadI32(buf, ref o);
                 ha.Strength = CanonicalSerializer.ReadI32(buf, ref o);
-                ha.Balance  = CanonicalSerializer.ReadI32(buf, ref o);
-                ha.Fatigue  = CanonicalSerializer.ReadF32(buf, ref o);
-                ha.TeamId   = CanonicalSerializer.ReadI32(buf, ref o);
+                ha.Balance = CanonicalSerializer.ReadI32(buf, ref o);
+                ha.Fatigue = CanonicalSerializer.ReadF32(buf, ref o);
+                ha.TeamId = CanonicalSerializer.ReadI32(buf, ref o);
                 agentAttrs[i] = ha;
             }
 
@@ -6464,12 +6496,12 @@ namespace TacticalDirector.MatchEngine
                 CanonicalSerializer.WriteI32(buf, ref o, hyst[i].CandidateTargetEntityId);
                 CanonicalSerializer.WriteI32(buf, ref o, hyst[i].HoldTicks);
 
-                CanonicalSerializer.WriteI32 (buf, ref o, prev[i].AgentEntityId);
-                CanonicalSerializer.WriteI32 (buf, ref o, (int)prev[i].Mode);
-                CanonicalSerializer.WriteI32 (buf, ref o, prev[i].TargetEntityId);
-                CanonicalSerializer.WriteF32 (buf, ref o, prev[i].TargetPosition.x);
-                CanonicalSerializer.WriteF32 (buf, ref o, prev[i].TargetPosition.y);
-                CanonicalSerializer.WriteI32 (buf, ref o, prev[i].ValidThroughTick);
+                CanonicalSerializer.WriteI32(buf, ref o, prev[i].AgentEntityId);
+                CanonicalSerializer.WriteI32(buf, ref o, (int)prev[i].Mode);
+                CanonicalSerializer.WriteI32(buf, ref o, prev[i].TargetEntityId);
+                CanonicalSerializer.WriteF32(buf, ref o, prev[i].TargetPosition.x);
+                CanonicalSerializer.WriteF32(buf, ref o, prev[i].TargetPosition.y);
+                CanonicalSerializer.WriteI32(buf, ref o, prev[i].ValidThroughTick);
                 CanonicalSerializer.WriteBool(buf, ref o, prev[i].OverriddenThisTick);
                 CanonicalSerializer.WriteBool(buf, ref o, prev[i].IsManuallyAssigned);
             }
@@ -6484,10 +6516,10 @@ namespace TacticalDirector.MatchEngine
             CanonicalSerializer.WriteI32(buf, ref o, s.Transition.TransitionHoldTick);
             CanonicalSerializer.WriteI32(buf, ref o, (int)s.Transition.PrevPhase);
 
-            CanonicalSerializer.WriteI32 (buf, ref o, s.LastInPossDirective.TeamId);
+            CanonicalSerializer.WriteI32(buf, ref o, s.LastInPossDirective.TeamId);
             CanonicalSerializer.WriteBool(buf, ref o, s.LastInPossDirective.OverloadActive);
-            CanonicalSerializer.WriteI32 (buf, ref o, (int)s.LastInPossDirective.OverloadFlank);
-            CanonicalSerializer.WriteI32 (buf, ref o, s.LastInPossDirective.TransitionHoldTick);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)s.LastInPossDirective.OverloadFlank);
+            CanonicalSerializer.WriteI32(buf, ref o, s.LastInPossDirective.TransitionHoldTick);
 
             AttackHysteresisState[] hyst = s.Hysteresis;
             for (int i = 0; i < hyst.Length; i++)
@@ -6509,28 +6541,28 @@ namespace TacticalDirector.MatchEngine
             int pairCap = lat.PairCapacity;
             for (int i = 0; i < pairCap; i++)
             {
-                CanonicalSerializer.WriteI32 (buf, ref o, lat.LatencyCounters[i]);
+                CanonicalSerializer.WriteI32(buf, ref o, lat.LatencyCounters[i]);
                 CanonicalSerializer.WriteBool(buf, ref o, lat.Confirmed[i]);
-                CanonicalSerializer.WriteI32 (buf, ref o, lat.ExpiryCounters[i]);
+                CanonicalSerializer.WriteI32(buf, ref o, lat.ExpiryCounters[i]);
             }
 
             ShoulderCheckState sc = s.ShoulderCheck;
             int agentCap = sc.AgentCapacity;
             for (int i = 0; i < agentCap; i++)
             {
-                CanonicalSerializer.WriteI32 (buf, ref o, sc.NextCheckFrame[i]);
-                CanonicalSerializer.WriteI32 (buf, ref o, sc.WindowExpiryFrame[i]);
+                CanonicalSerializer.WriteI32(buf, ref o, sc.NextCheckFrame[i]);
+                CanonicalSerializer.WriteI32(buf, ref o, sc.WindowExpiryFrame[i]);
                 CanonicalSerializer.WriteBool(buf, ref o, sc.WindowActive[i]);
-                CanonicalSerializer.WriteI32 (buf, ref o, sc.AnimData[i].AgentId);
-                CanonicalSerializer.WriteI32 (buf, ref o, sc.AnimData[i].FireFrame);
-                CanonicalSerializer.WriteF32 (buf, ref o, sc.AnimData[i].CheckDirection);
+                CanonicalSerializer.WriteI32(buf, ref o, sc.AnimData[i].AgentId);
+                CanonicalSerializer.WriteI32(buf, ref o, sc.AnimData[i].FireFrame);
+                CanonicalSerializer.WriteF32(buf, ref o, sc.AnimData[i].CheckDirection);
                 CanonicalSerializer.WriteBool(buf, ref o, sc.AnimData[i].AnyEntityConfirmed);
             }
 
             int scPairCap = sc.PairCapacity;
             for (int i = 0; i < scPairCap; i++)
             {
-                CanonicalSerializer.WriteI32 (buf, ref o, sc.BlindSideLatency[i]);
+                CanonicalSerializer.WriteI32(buf, ref o, sc.BlindSideLatency[i]);
                 CanonicalSerializer.WriteBool(buf, ref o, sc.BlindSideConfirmed[i]);
             }
 
@@ -6538,9 +6570,9 @@ namespace TacticalDirector.MatchEngine
             for (int i = 0; i < agentCount; i++)
             {
                 CanonicalSerializer.WriteBool(buf, ref o, s.BallVisiblePrev[i]);
-                CanonicalSerializer.WriteF32 (buf, ref o, s.BallPerceivedPositionPrev[i].x);
-                CanonicalSerializer.WriteF32 (buf, ref o, s.BallPerceivedPositionPrev[i].y);
-                CanonicalSerializer.WriteI32 (buf, ref o, s.BallStalenessFramesPrev[i]);
+                CanonicalSerializer.WriteF32(buf, ref o, s.BallPerceivedPositionPrev[i].x);
+                CanonicalSerializer.WriteF32(buf, ref o, s.BallPerceivedPositionPrev[i].y);
+                CanonicalSerializer.WriteI32(buf, ref o, s.BallStalenessFramesPrev[i]);
             }
         }
 
@@ -6563,8 +6595,8 @@ namespace TacticalDirector.MatchEngine
         {
             return new PassAgentState
             {
-                Position        = _agents[i].Position,
-                Velocity        = _agents[i].Velocity,
+                Position = _agents[i].Position,
+                Velocity = _agents[i].Velocity,
                 FacingDirection = _agents[i].FacingDirection
             };
         }
@@ -6580,10 +6612,10 @@ namespace TacticalDirector.MatchEngine
         {
             return new ShotAgentState
             {
-                Position        = new Vector3(_agents[i].Position.x, _agents[i].Position.y, 0f),
-                Velocity        = new Vector3(_agents[i].Velocity.x, _agents[i].Velocity.y, 0f),
+                Position = new Vector3(_agents[i].Position.x, _agents[i].Position.y, 0f),
+                Velocity = new Vector3(_agents[i].Velocity.x, _agents[i].Velocity.y, 0f),
                 FacingDirection = _agents[i].FacingDirection,
-                CurrentState    = _agents[i].CurrentState
+                CurrentState = _agents[i].CurrentState
             };
         }
 
@@ -6691,8 +6723,8 @@ namespace TacticalDirector.MatchEngine
                     return s;
                 }
 
-                s.Position        = MirrorPitchIfAway(team, s.Position);
-                s.Velocity        = MirrorVelocityIfAway(team, s.Velocity);
+                s.Position = MirrorPitchIfAway(team, s.Position);
+                s.Velocity = MirrorVelocityIfAway(team, s.Velocity);
                 s.FacingDirection = MirrorVelocityIfAway(team, s.FacingDirection);
                 return s;
             }
@@ -6819,10 +6851,10 @@ namespace TacticalDirector.MatchEngine
                     return;
                 }
 
-                _engine._foulCandidateFound    = true;
+                _engine._foulCandidateFound = true;
                 _engine._foulCandidateOffender = foul.InstigatorAgentID;
-                _engine._foulCandidateVictim   = foul.VictimAgentID;
-                _engine._foulCandidateForceN   = foul.ForceMagnitude;
+                _engine._foulCandidateVictim = foul.VictimAgentID;
+                _engine._foulCandidateForceN = foul.ForceMagnitude;
             }
         }
 
@@ -6895,9 +6927,9 @@ namespace TacticalDirector.MatchEngine
                     PlayerAttributeProjection.ToGoalkeeper(in _engine._canonicalAttrs[agentId], teamId, fatigue: 0f);
                 var intent = new SaveIntent
                 {
-                    TargetHand           = HandEnum.Either,
-                    ClutchFirmness       = MatchEngineConstants.SaveTriggerClutchFirmness,
-                    DeflectionTarget     = null,
+                    TargetHand = HandEnum.Either,
+                    ClutchFirmness = MatchEngineConstants.SaveTriggerClutchFirmness,
+                    DeflectionTarget = null,
                     AttemptCommittedTick = (int)_engine._clock.CurrentTacticalTick,
                 };
                 _engine._goalkeeper.CommitSaveIntent(teamId, intent, attrs);
@@ -7714,5 +7746,13 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | before ball integration; ApplySweptGoalFrameCollision after it (the goal    |
 // |         |            |        | frame is physical — ERR-001-005); CheckRestartAndApply adjudicates at the   |
 // |         |            |        | interpolated crossing (KD-5); TestOnly_WoodworkStrikes diagnostic counter.  |
+// |         |            |        | No schema change.                                                           |
+// | 1.54    | 2026-07-28 | —      | gk-catch-parry-conversion (ERR-011-006): the armed keeper branch calls      |
+// |         |            |        | OnThreatArmed each stride — the episode-onset detection-stamp fallback for  |
+// |         |            |        | threats with no #6 shot event; a no-op once stamped (the stamp itself is    |
+// |         |            |        | the latch, already serialized in the v19 GK block ⇒ no new engine state).   |
+// |         |            |        | + TestOnly_ShotContacts genuine-strike counter (the WoodworkStrikes class,  |
+// |         |            |        | not serialized) — the instruments that counted shots off ShotDetectedTickMs |
+// |         |            |        | edges would otherwise have counted every armed threat episode as a shot.    |
 // |         |            |        | No schema change.                                                           |
 #endregion

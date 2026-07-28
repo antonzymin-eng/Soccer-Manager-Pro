@@ -1,6 +1,7 @@
 // File:     src/match-engine/tests/ShotOutcomeDiagnosticTests.cs
 // Created:  2026-07-27
 // Modified: 2026-07-28 (shot-speed pass: + woodworkStrikes report line)
+// Modified: 2026-07-28 (gk-catch-parry-conversion: shots counted via TestOnly_ShotContacts, not ShotDetectedTickMs edges — the ERR-011-006 arming stamps also fire for slow threat episodes)
 // Author:   —
 // Spec:     Shot-outcome distribution design (docs/tracking/shot-outcome-distribution-design.md) §4;
 //           Match Engine design note §5.Z.17; path-to-playable roadmap A4a; Code Standards #20
@@ -99,7 +100,7 @@ namespace TacticalDirector.MatchEngine
             engine.TestOnly_SetCollisionObserver(observer);
 
             var m = new Tally();
-            var prevShotMs = new float[] { -1f, -1f };
+            int prevContacts = 0;
             int lastShotTick = int.MinValue;
             float prevBallX = engine.BallView.Position.x;
             int prevHome = 0, prevAway = 0;
@@ -109,20 +110,19 @@ namespace TacticalDirector.MatchEngine
                 observer.CurrentBallSpeed = engine.BallView.Velocity.magnitude;
                 engine.RunTick();
 
-                GoalkeeperMechanics.GoalkeeperTickState gk = engine.TestOnly_GoalkeeperState;
-                for (int t = 0; t < GoalkeeperMechanics.GoalkeeperConstants.MaxGkAgents; t++)
+                // Genuine #6 strikes via TestOnly_ShotContacts, NOT ShotDetectedTickMs edges —
+                // the gk-catch-parry-conversion pass (ERR-011-006) made the detection stamp also
+                // seed at save-episode onset, so a stamp edge stopped meaning "a shot was struck".
+                int contacts = engine.TestOnly_ShotContacts;
+                if (contacts != prevContacts)
                 {
-                    float ms = gk.ShotDetectedTickMs[t];
-                    if (ms > 0f && ms != prevShotMs[t])
-                    {
-                        prevShotMs[t] = ms;
-                        m.Shots++;
-                        lastShotTick = tick;
-                        float speed = engine.BallView.Velocity.magnitude;
-                        m.ShotSpeedSum += speed;
-                        if (speed < m.ShotSpeedMin) m.ShotSpeedMin = speed;
-                        if (speed > m.ShotSpeedMax) m.ShotSpeedMax = speed;
-                    }
+                    m.Shots += contacts - prevContacts;
+                    prevContacts = contacts;
+                    lastShotTick = tick;
+                    float speed = engine.BallView.Velocity.magnitude;
+                    m.ShotSpeedSum += speed;
+                    if (speed < m.ShotSpeedMin) m.ShotSpeedMin = speed;
+                    if (speed > m.ShotSpeedMax) m.ShotSpeedMax = speed;
                 }
 
                 // On-target: a goal-line plane CROSSING inside the mouth (counted once per crossing,
@@ -260,4 +260,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | after the KD-1..KD-7 fixes. Asserts nothing (ERR-030-014 lesson).  |
 // | 1.1     | 2026-07-28 | —      | Shot-speed pass: + woodworkStrikes report line (TestOnly_WoodworkStrikes — |
 // |         |            |        | the KD-6 diagnostic counter).                                              |
+// | 1.2     | 2026-07-28 | —      | gk-catch-parry-conversion: shots counted via TestOnly_ShotContacts         |
+// |         |            |        | (genuine #6 strikes) instead of ShotDetectedTickMs edges — the ERR-011-006 |
+// |         |            |        | arming stamps also fire for slow threat episodes, which would have         |
+// |         |            |        | inflated the shot count and polluted the speed distribution.               |
 #endregion

@@ -3,6 +3,7 @@
 // Modified: 2026-06-14
 // Modified: 2026-07-23 (GK/Heading engine-integration Phase 2: CaptureState/RestoreState snapshot seam over
 // Modified: 2026-07-27 (§5.Z.17 save pipeline: ComputeDiveDirectionLateral derives the dive from the ball's predicted crossing point (ERR-011-003); OnShotExecutedEvent takes the projected attributes (ERR-011-004, KD-S2); the state-machine wake predicates rebuilt as one signed distance to the keeper's OWN goal, read from gkIndex not attrs.TeamId (ERR-011-002, KD-S3); new ClearSaveIntent. See docs/tracking/goalkeeper-save-pipeline-design.md)
+// Modified: 2026-07-28 (gk-catch-parry-conversion: the §3.2.3 reaction window computed ONCE at the dive-launch frame and frozen for the contact (ERR-011-005 — the per-frame re-evaluation dated the contact-consumed value by the ball's whole flight time); the detection stamp dies with its episode (ERR-011-006 — cleared in ClearSaveIntent and at save resolution) and new OnThreatArmed seeds it at episode onset for threats with no shot event. See docs/tracking/gk-catch-parry-conversion-design.md)
 //           the per-GK cross-tick arrays, for the Match Engine v18 save/restore path)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.1–§3.8, §4.6, KD-9, KD-12, KD-13, KD-15, KD-16, Code Standards #20
@@ -33,38 +34,38 @@ namespace TacticalDirector.GoalkeeperMechanics
         private readonly IGoalkeeperBallSystem _ballSystem;
         private readonly IGoalkeeperRngService _rng;
         private readonly GoalkeeperCrossClaimDuel _crossClaimDuel;
-        private readonly GoalkeeperTelemetry   _telemetry;
+        private readonly GoalkeeperTelemetry _telemetry;
 
         // ── Per-GK state arrays (pre-allocated; indexed by [0, MaxGkAgents)) ────────
 
-        private readonly GoalkeeperState[]             _states;
-        private readonly GoalkeeperAgentAttributes[]   _attrs;
-        private readonly GkContactState[]              _contactStates;
-        private readonly SaveIntent[]                  _saveIntents;
-        private readonly bool[]                        _saveIntentActive;
-        private readonly RushIntent[]                  _rushIntents;
-        private readonly bool[]                        _rushIntentActive;
-        private readonly DistributeIntent[]            _distributeIntents;
-        private readonly bool[]                        _distributeIntentActive;
+        private readonly GoalkeeperState[] _states;
+        private readonly GoalkeeperAgentAttributes[] _attrs;
+        private readonly GkContactState[] _contactStates;
+        private readonly SaveIntent[] _saveIntents;
+        private readonly bool[] _saveIntentActive;
+        private readonly RushIntent[] _rushIntents;
+        private readonly bool[] _rushIntentActive;
+        private readonly DistributeIntent[] _distributeIntents;
+        private readonly bool[] _distributeIntentActive;
         private readonly GoalkeeperPositioningContract[] _positioningContracts;
 
         // Dive state
-        private readonly int[]   _diveLaunchFrames;
-        private readonly int[]   _diveDurationFrames;
+        private readonly int[] _diveLaunchFrames;
+        private readonly int[] _diveDurationFrames;
         private readonly float[] _divePeakHandZ;
         private readonly float[] _diveDirectionLateral;
         private readonly float[] _rushLaunchMps;
-        private readonly int[]   _rushInitialAttackerId;
+        private readonly int[] _rushInitialAttackerId;
 
         // Shot reaction state
         private readonly float[] _shotDetectedTickMs;
         private readonly float[] _requiredReactionMs;
-        private readonly bool[]  _shotEventPending;
+        private readonly bool[] _shotEventPending;
 
         // Hold-rule state
-        private readonly int[]  _claimTick;
-        private readonly int[]  _releaseTickEarliest;
-        private readonly int[]  _recoveryCooldownEndTick;
+        private readonly int[] _claimTick;
+        private readonly int[] _releaseTickEarliest;
+        private readonly int[] _recoveryCooldownEndTick;
 
         // ── Profiler Markers ─────────────────────────────────────────────────────────
 
@@ -85,48 +86,48 @@ namespace TacticalDirector.GoalkeeperMechanics
             IGoalkeeperBallSystem ballSystem,
             IGoalkeeperRngService rng)
         {
-            _ballSystem     = ballSystem;
-            _rng            = rng;
+            _ballSystem = ballSystem;
+            _rng = rng;
             _crossClaimDuel = new GoalkeeperCrossClaimDuel();
-            _telemetry      = new GoalkeeperTelemetry();
+            _telemetry = new GoalkeeperTelemetry();
 
             int maxGks = GoalkeeperConstants.MaxGkAgents;
 
-            _states                 = new GoalkeeperState[maxGks];
-            _attrs                  = new GoalkeeperAgentAttributes[maxGks];
-            _contactStates          = new GkContactState[maxGks];
-            _saveIntents            = new SaveIntent[maxGks];
-            _saveIntentActive       = new bool[maxGks];
-            _rushIntents            = new RushIntent[maxGks];
-            _rushIntentActive       = new bool[maxGks];
-            _distributeIntents      = new DistributeIntent[maxGks];
+            _states = new GoalkeeperState[maxGks];
+            _attrs = new GoalkeeperAgentAttributes[maxGks];
+            _contactStates = new GkContactState[maxGks];
+            _saveIntents = new SaveIntent[maxGks];
+            _saveIntentActive = new bool[maxGks];
+            _rushIntents = new RushIntent[maxGks];
+            _rushIntentActive = new bool[maxGks];
+            _distributeIntents = new DistributeIntent[maxGks];
             _distributeIntentActive = new bool[maxGks];
-            _positioningContracts   = new GoalkeeperPositioningContract[maxGks];
+            _positioningContracts = new GoalkeeperPositioningContract[maxGks];
 
-            _diveLaunchFrames       = new int[maxGks];
-            _diveDurationFrames     = new int[maxGks];
-            _divePeakHandZ          = new float[maxGks];
-            _diveDirectionLateral   = new float[maxGks];
-            _rushLaunchMps          = new float[maxGks];
-            _rushInitialAttackerId  = new int[maxGks];
+            _diveLaunchFrames = new int[maxGks];
+            _diveDurationFrames = new int[maxGks];
+            _divePeakHandZ = new float[maxGks];
+            _diveDirectionLateral = new float[maxGks];
+            _rushLaunchMps = new float[maxGks];
+            _rushInitialAttackerId = new int[maxGks];
 
-            _shotDetectedTickMs     = new float[maxGks];
-            _requiredReactionMs     = new float[maxGks];
-            _shotEventPending       = new bool[maxGks];
+            _shotDetectedTickMs = new float[maxGks];
+            _requiredReactionMs = new float[maxGks];
+            _shotEventPending = new bool[maxGks];
 
-            _claimTick              = new int[maxGks];
-            _releaseTickEarliest    = new int[maxGks];
+            _claimTick = new int[maxGks];
+            _releaseTickEarliest = new int[maxGks];
             _recoveryCooldownEndTick = new int[maxGks];
 
             // Sentinel init
             for (int i = 0; i < maxGks; i++)
             {
-                _diveLaunchFrames[i]        = -1;
-                _claimTick[i]               = -1;
-                _releaseTickEarliest[i]      = int.MaxValue;
-                _recoveryCooldownEndTick[i]  = 0;
-                _rushInitialAttackerId[i]   = -1;
-                _contactStates[i]           = GkContactState.CreateNew();
+                _diveLaunchFrames[i] = -1;
+                _claimTick[i] = -1;
+                _releaseTickEarliest[i] = int.MaxValue;
+                _recoveryCooldownEndTick[i] = 0;
+                _rushInitialAttackerId[i] = -1;
+                _contactStates[i] = GkContactState.CreateNew();
             }
         }
 
@@ -176,6 +177,48 @@ namespace TacticalDirector.GoalkeeperMechanics
             }
 
             _saveIntentActive[gkIndex] = false;
+
+            // ERR-011-006: the detection stamp dies with its episode. Before this, the stamp was
+            // NEVER cleared, so a shot from a previous episode dated every later dive — measured
+            // mean elapsed-when-airborne ran 34–174 SECONDS, clamping the §3.2.3 window to 0 for
+            // nearly every contact. The mid-dive guard above protects a live attempt's stamp.
+            _shotDetectedTickMs[gkIndex] = 0.0f;
+            _requiredReactionMs[gkIndex] = 0.0f;
+        }
+
+        /// <summary>
+        /// Seeds the §3.2 detection stamp at the ONSET of a save episode when no stamp is live —
+        /// the fallback anchor for threats that have no <see cref="OnShotExecutedEvent"/> producer
+        /// (deflections, rebounds, mis-hit passes driving at the goal). A live stamp always wins:
+        /// after the first call of an episode this is a no-op until <see cref="ClearSaveIntent"/>
+        /// or a save resolution clears the stamp, so the caller may invoke it every armed tick with
+        /// no edge-detection state of its own — the stamp itself is the latch, and it is already
+        /// serialized (v19 GK block). A true shot CONTACT still overwrites via
+        /// <see cref="OnShotExecutedEvent"/>: the newest shot is the live threat, and its strike
+        /// anchor is more precise than the arming time. ERR-011-006 / design KD-C2.
+        /// </summary>
+        /// <param name="gkIndex">Keeper index (== team id; KD-1).</param>
+        /// <param name="matchTimeMs">Match time (ms) at which the threat geometry armed.</param>
+        /// <param name="ballSpeedMps">Ball speed (m/s) at arming.</param>
+        /// <param name="attrs">The keeper's projected attributes for this episode.</param>
+        public void OnThreatArmed(
+            int gkIndex, float matchTimeMs, float ballSpeedMps, GoalkeeperAgentAttributes attrs)
+        {
+            if ((uint)gkIndex >= (uint)GoalkeeperConstants.MaxGkAgents)
+            {
+                return;
+            }
+
+            if (_shotDetectedTickMs[gkIndex] > 0.0f)
+            {
+                return;
+            }
+
+            _attrs[gkIndex] = attrs;
+            _shotDetectedTickMs[gkIndex] =
+                GoalkeeperReactionPipeline.ComputeShotDetectedTickMs(matchTimeMs, attrs);
+            _requiredReactionMs[gkIndex] =
+                GoalkeeperReactionPipeline.ComputeRequiredReactionMs(attrs, ballSpeedMps, _states[gkIndex]);
         }
 
         /// <summary>
@@ -203,8 +246,8 @@ namespace TacticalDirector.GoalkeeperMechanics
                 return;
             }
 
-            _attrs[gkIndex]              = attrs;
-            _shotEventPending[gkIndex]   = true;
+            _attrs[gkIndex] = attrs;
+            _shotEventPending[gkIndex] = true;
             _shotDetectedTickMs[gkIndex] =
                 GoalkeeperReactionPipeline.ComputeShotDetectedTickMs(shotMatchTimeMs, attrs);
             _requiredReactionMs[gkIndex] =
@@ -222,12 +265,12 @@ namespace TacticalDirector.GoalkeeperMechanics
                 return;
             }
 
-            _saveIntents[gkIndex]      = intent;
+            _saveIntents[gkIndex] = intent;
             _saveIntentActive[gkIndex] = true;
-            _attrs[gkIndex]            = attrs;
-            _contactStates[gkIndex]    = GkContactState.CreateNew();
-            _contactStates[gkIndex].HandChoice       = intent.TargetHand;
-            _contactStates[gkIndex].ClutchFirmness   = intent.ClutchFirmness;
+            _attrs[gkIndex] = attrs;
+            _contactStates[gkIndex] = GkContactState.CreateNew();
+            _contactStates[gkIndex].HandChoice = intent.TargetHand;
+            _contactStates[gkIndex].ClutchFirmness = intent.ClutchFirmness;
         }
 
         /// <summary>
@@ -241,10 +284,10 @@ namespace TacticalDirector.GoalkeeperMechanics
                 return;
             }
 
-            _rushIntents[gkIndex]      = intent;
+            _rushIntents[gkIndex] = intent;
             _rushIntentActive[gkIndex] = true;
-            _attrs[gkIndex]            = attrs;
-            _rushLaunchMps[gkIndex]    = GoalkeeperRushDispatch.ComputeRushLaunchMps(attrs);
+            _attrs[gkIndex] = attrs;
+            _rushLaunchMps[gkIndex] = GoalkeeperRushDispatch.ComputeRushLaunchMps(attrs);
             // Lock the attacker the rush commits against (current ball holder) so a later
             // F-08 interception abort fires only on possession passing to a THIRD party (KD-15).
             _rushInitialAttackerId[gkIndex] = _ballSystem.GetBallPossessorId();
@@ -261,7 +304,7 @@ namespace TacticalDirector.GoalkeeperMechanics
                 return;
             }
 
-            _distributeIntents[gkIndex]      = intent;
+            _distributeIntents[gkIndex] = intent;
             _distributeIntentActive[gkIndex] = true;
         }
 
@@ -297,27 +340,27 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// </summary>
         public void RestoreState(in GoalkeeperTickState state)
         {
-            Array.Copy(state.States,                  _states,                  _states.Length);
-            Array.Copy(state.Attrs,                   _attrs,                   _attrs.Length);
-            Array.Copy(state.ContactStates,           _contactStates,           _contactStates.Length);
-            Array.Copy(state.SaveIntents,             _saveIntents,             _saveIntents.Length);
-            Array.Copy(state.SaveIntentActive,        _saveIntentActive,        _saveIntentActive.Length);
-            Array.Copy(state.RushIntents,             _rushIntents,             _rushIntents.Length);
-            Array.Copy(state.RushIntentActive,        _rushIntentActive,        _rushIntentActive.Length);
-            Array.Copy(state.DistributeIntents,       _distributeIntents,       _distributeIntents.Length);
-            Array.Copy(state.DistributeIntentActive,  _distributeIntentActive,  _distributeIntentActive.Length);
-            Array.Copy(state.PositioningContracts,    _positioningContracts,    _positioningContracts.Length);
-            Array.Copy(state.DiveLaunchFrames,        _diveLaunchFrames,        _diveLaunchFrames.Length);
-            Array.Copy(state.DiveDurationFrames,      _diveDurationFrames,      _diveDurationFrames.Length);
-            Array.Copy(state.DivePeakHandZ,           _divePeakHandZ,           _divePeakHandZ.Length);
-            Array.Copy(state.DiveDirectionLateral,    _diveDirectionLateral,    _diveDirectionLateral.Length);
-            Array.Copy(state.RushLaunchMps,           _rushLaunchMps,           _rushLaunchMps.Length);
-            Array.Copy(state.RushInitialAttackerId,   _rushInitialAttackerId,   _rushInitialAttackerId.Length);
-            Array.Copy(state.ShotDetectedTickMs,      _shotDetectedTickMs,      _shotDetectedTickMs.Length);
-            Array.Copy(state.RequiredReactionMs,      _requiredReactionMs,      _requiredReactionMs.Length);
-            Array.Copy(state.ShotEventPending,        _shotEventPending,        _shotEventPending.Length);
-            Array.Copy(state.ClaimTick,               _claimTick,               _claimTick.Length);
-            Array.Copy(state.ReleaseTickEarliest,     _releaseTickEarliest,     _releaseTickEarliest.Length);
+            Array.Copy(state.States, _states, _states.Length);
+            Array.Copy(state.Attrs, _attrs, _attrs.Length);
+            Array.Copy(state.ContactStates, _contactStates, _contactStates.Length);
+            Array.Copy(state.SaveIntents, _saveIntents, _saveIntents.Length);
+            Array.Copy(state.SaveIntentActive, _saveIntentActive, _saveIntentActive.Length);
+            Array.Copy(state.RushIntents, _rushIntents, _rushIntents.Length);
+            Array.Copy(state.RushIntentActive, _rushIntentActive, _rushIntentActive.Length);
+            Array.Copy(state.DistributeIntents, _distributeIntents, _distributeIntents.Length);
+            Array.Copy(state.DistributeIntentActive, _distributeIntentActive, _distributeIntentActive.Length);
+            Array.Copy(state.PositioningContracts, _positioningContracts, _positioningContracts.Length);
+            Array.Copy(state.DiveLaunchFrames, _diveLaunchFrames, _diveLaunchFrames.Length);
+            Array.Copy(state.DiveDurationFrames, _diveDurationFrames, _diveDurationFrames.Length);
+            Array.Copy(state.DivePeakHandZ, _divePeakHandZ, _divePeakHandZ.Length);
+            Array.Copy(state.DiveDirectionLateral, _diveDirectionLateral, _diveDirectionLateral.Length);
+            Array.Copy(state.RushLaunchMps, _rushLaunchMps, _rushLaunchMps.Length);
+            Array.Copy(state.RushInitialAttackerId, _rushInitialAttackerId, _rushInitialAttackerId.Length);
+            Array.Copy(state.ShotDetectedTickMs, _shotDetectedTickMs, _shotDetectedTickMs.Length);
+            Array.Copy(state.RequiredReactionMs, _requiredReactionMs, _requiredReactionMs.Length);
+            Array.Copy(state.ShotEventPending, _shotEventPending, _shotEventPending.Length);
+            Array.Copy(state.ClaimTick, _claimTick, _claimTick.Length);
+            Array.Copy(state.ReleaseTickEarliest, _releaseTickEarliest, _releaseTickEarliest.Length);
             Array.Copy(state.RecoveryCooldownEndTick, _recoveryCooldownEndTick, _recoveryCooldownEndTick.Length);
         }
 
@@ -398,21 +441,21 @@ namespace TacticalDirector.GoalkeeperMechanics
                 Vector2 gkXY = new Vector2(agentState.Position.x, agentState.Position.y);
 
                 GoalkeeperState newState = GoalkeeperStateMachine.EvaluateTacticalTransition(
-                    currentState:           _states[gkIndex],
-                    ballState:              ballState,
-                    hasSaveIntent:          _saveIntentActive[gkIndex],
-                    hasRushIntent:          _rushIntentActive[gkIndex],
-                    hasDistributeIntent:    _distributeIntentActive[gkIndex],
-                    anticipationScore:      anticipationScore,
-                    rushCommitmentLevel:    rushCommitmentLevel,
-                    currentTick:            currentTick,
-                    claimTick:              _claimTick[gkIndex],
-                    releaseTickEarliest:    _releaseTickEarliest[gkIndex],
+                    currentState: _states[gkIndex],
+                    ballState: ballState,
+                    hasSaveIntent: _saveIntentActive[gkIndex],
+                    hasRushIntent: _rushIntentActive[gkIndex],
+                    hasDistributeIntent: _distributeIntentActive[gkIndex],
+                    anticipationScore: anticipationScore,
+                    rushCommitmentLevel: rushCommitmentLevel,
+                    currentTick: currentTick,
+                    claimTick: _claimTick[gkIndex],
+                    releaseTickEarliest: _releaseTickEarliest[gkIndex],
                     recoveryCooldownEndTick: _recoveryCooldownEndTick[gkIndex],
-                    gkPosition:             gkXY,
-                    gkBaselineSlot:         positioning.GkBaselineSlot,
+                    gkPosition: gkXY,
+                    gkBaselineSlot: positioning.GkBaselineSlot,
                     ballThreateningOwnGoal: ballThreateningOwnGoal,
-                    ballSafelyUpfield:      ballSafelyUpfield);
+                    ballSafelyUpfield: ballSafelyUpfield);
 
                 // Forced release telemetry
                 if (_states[gkIndex] == GoalkeeperState.HandsOnBall &&
@@ -472,35 +515,41 @@ namespace TacticalDirector.GoalkeeperMechanics
                 bool shotEventDetected = _shotEventPending[gkIndex];
                 _shotEventPending[gkIndex] = false;
 
-                // ── Per-frame reaction window update ──────────────────────────────────
-                float reactionWindowAchieved = 0.0f;
-                if (gkState == GoalkeeperState.Anticipate || gkState == GoalkeeperState.Diving || gkState == GoalkeeperState.Airborne)
-                {
-                    if (_shotDetectedTickMs[gkIndex] > 0.0f)
-                    {
-                        float elapsed = currentMatchTimeMs - _shotDetectedTickMs[gkIndex];
-                        reactionWindowAchieved = GoalkeeperReactionPipeline.ComputeReactionWindowAchieved(
-                            elapsed, _requiredReactionMs[gkIndex]);
-
-                        _contactStates[gkIndex].ReactionWindowAchieved = reactionWindowAchieved;
-
-                        ReactionLabel reactionLabel = GoalkeeperReactionPipeline.ComputeReactionLabel(reactionWindowAchieved);
-                        _telemetry.RecordSaveReactionWindow(reactionWindowAchieved, reactionLabel);
-                    }
-                }
-
                 // ── Dive kinematics (Diving / Airborne) ──────────────────────────────
                 bool handBallContactOccurred = false;
-                float handlingQualityScalar  = 0.0f;
-                bool groundReEntry           = false;
+                float handlingQualityScalar = 0.0f;
+                bool groundReEntry = false;
 
                 if (gkState == GoalkeeperState.Diving)
                 {
                     // Transition Diving → Airborne: launch impulse applied this frame
                     if (_diveLaunchFrames[gkIndex] < 0)
                     {
-                        _diveLaunchFrames[gkIndex]   = currentFrame;
+                        _diveLaunchFrames[gkIndex] = currentFrame;
                         _diveDurationFrames[gkIndex] = GoalkeeperDiveKinematics.ComputeDiveDurationFrames();
+
+                        // ERR-011-005: the §3.2.3 window scores the COMMIT — computed once, on the
+                        // frame the dive launches, and FROZEN for the contact to consume. The prior
+                        // form recomputed it every frame while Anticipate/Diving/Airborne, so the
+                        // value the contact read was dated by the ball's whole FLIGHT time: elapsed
+                        // at contact runs 400–1000 ms against a required of ~300 ms and a late
+                        // tolerance well under that, clamping the window to 0 for any shot that
+                        // takes longer than ~a third of a second to arrive. The spec's own §3.2.5
+                        // worked example evaluates the window at the moment "the dive is already
+                        // launched" — a keeper that commits on time and meets the ball late in
+                        // flight has reacted perfectly. A shot struck while already airborne
+                        // (a rebound mid-dive) deliberately does NOT re-date the frozen value: the
+                        // keeper committed before that ball existed.
+                        float launchWindow = 0.0f;
+                        if (_shotDetectedTickMs[gkIndex] > 0.0f)
+                        {
+                            float elapsedAtLaunch = currentMatchTimeMs - _shotDetectedTickMs[gkIndex];
+                            launchWindow = GoalkeeperReactionPipeline.ComputeReactionWindowAchieved(
+                                elapsedAtLaunch, _requiredReactionMs[gkIndex]);
+                        }
+                        _contactStates[gkIndex].ReactionWindowAchieved = launchWindow;
+                        _telemetry.RecordSaveReactionWindow(
+                            launchWindow, GoalkeeperReactionPipeline.ComputeReactionLabel(launchWindow));
 
                         // Compute timing jitter via draw-site
                         float jitterGaussian = _rng.NextGaussian(
@@ -522,7 +571,7 @@ namespace TacticalDirector.GoalkeeperMechanics
 
                 if (gkState == GoalkeeperState.Airborne)
                 {
-                    int launchFrame    = _diveLaunchFrames[gkIndex];
+                    int launchFrame = _diveLaunchFrames[gkIndex];
                     int durationFrames = _diveDurationFrames[gkIndex];
 
                     float handZ = GoalkeeperDiveKinematics.ComputeHandPathZ(
@@ -536,7 +585,7 @@ namespace TacticalDirector.GoalkeeperMechanics
                     {
                         // Check if ball is within reach envelope
                         float reachRadius = GoalkeeperDiveKinematics.ComputeReachRadius(_attrs[gkIndex]);
-                        Vector3 gkPos3    = agentState.Position;
+                        Vector3 gkPos3 = agentState.Position;
                         Vector3 reachCenter = GoalkeeperDiveKinematics.ComputeReachCenter(
                             gkPos3, currentFrame, launchFrame, durationFrames,
                             _diveDirectionLateral[gkIndex], handZ);
@@ -575,18 +624,18 @@ namespace TacticalDirector.GoalkeeperMechanics
                             // offset here would saturate pointQuality to 0 (divisor is 0.05 m) and
                             // make clean catches/parries unreachable.
                             handlingQualityScalar = GoalkeeperHandlingQuality.Compute(
-                                attrs:                  _attrs[gkIndex],
-                                handContactActual:      ballState.Position,
-                                targetHandContact:      ballState.Position,
-                                ballSpeedMps:           ballState.Velocity.magnitude,
+                                attrs: _attrs[gkIndex],
+                                handContactActual: ballState.Position,
+                                targetHandContact: ballState.Position,
+                                ballSpeedMps: ballState.Velocity.magnitude,
                                 reactionWindowAchieved: _contactStates[gkIndex].ReactionWindowAchieved,
-                                state:                  gkState,
-                                handlingScaleNoise:     handlingNoiseRaw,
-                                pointErrorNoise:        pointNoise,
-                                handlingLabel:          out HandlingQualityLabel handlingLabel);
+                                state: gkState,
+                                handlingScaleNoise: handlingNoiseRaw,
+                                pointErrorNoise: pointNoise,
+                                handlingLabel: out HandlingQualityLabel handlingLabel);
 
                             _contactStates[gkIndex].HandlingQualityScalar = handlingQualityScalar;
-                            _contactStates[gkIndex].ActualContactFrame     = currentFrame;
+                            _contactStates[gkIndex].ActualContactFrame = currentFrame;
 
                             _telemetry.RecordSaveHandlingQuality(handlingQualityScalar, handlingLabel);
                             _telemetry.RecordSaveOutcome(handlingLabel);
@@ -597,20 +646,20 @@ namespace TacticalDirector.GoalkeeperMechanics
 
                             SaveAttemptedEvent saveEvt = new SaveAttemptedEvent
                             {
-                                AgentId                = agentId,
-                                MatchTimeMs            = currentMatchTimeMs,
-                                HandlingQualityScalar  = handlingQualityScalar,
-                                HandlingLabel          = handlingLabel,
+                                AgentId = agentId,
+                                MatchTimeMs = currentMatchTimeMs,
+                                HandlingQualityScalar = handlingQualityScalar,
+                                HandlingLabel = handlingLabel,
                                 ReactionWindowAchieved = _contactStates[gkIndex].ReactionWindowAchieved,
-                                ReactionLabel          = rLabel,
-                                IncomingBallState      = ballState,
-                                ContactPointError      = _contactStates[gkIndex].ContactPointError,
-                                FailureCause           = handlingLabel == HandlingQualityLabel.Missed
+                                ReactionLabel = rLabel,
+                                IncomingBallState = ballState,
+                                ContactPointError = _contactStates[gkIndex].ContactPointError,
+                                FailureCause = handlingLabel == HandlingQualityLabel.Missed
                                                             ? FailureCause.MissedContact
                                                             : default,
-                                HandContactPosition    = reachCenter,
-                                HandUsed               = _contactStates[gkIndex].HandChoice,
-                                ContactBodyPart        = BodyPartEnum.Hand
+                                HandContactPosition = reachCenter,
+                                HandUsed = _contactStates[gkIndex].HandChoice,
+                                ContactBodyPart = BodyPartEnum.Hand
                             };
 
                             EventBusStub.Publish(in saveEvt);
@@ -619,18 +668,18 @@ namespace TacticalDirector.GoalkeeperMechanics
                             if (handlingQualityScalar >= GoalkeeperConstants.CatchThreshold)
                             {
                                 _ballSystem.SetPossessor(agentId);
-                                _claimTick[gkIndex]            = currentFrame / GoalkeeperConstants.FramesPerTacticalTick;
-                                _releaseTickEarliest[gkIndex]   = _claimTick[gkIndex] + 1;
+                                _claimTick[gkIndex] = currentFrame / GoalkeeperConstants.FramesPerTacticalTick;
+                                _releaseTickEarliest[gkIndex] = _claimTick[gkIndex] + 1;
 
                                 BallClaimedEvent claimEvt = new BallClaimedEvent
                                 {
-                                    AgentId               = agentId,
-                                    MatchTimeMs           = currentMatchTimeMs,
+                                    AgentId = agentId,
+                                    MatchTimeMs = currentMatchTimeMs,
                                     HandlingQualityScalar = handlingQualityScalar,
-                                    ClaimType             = ClaimType.ShotCatch,
-                                    ClaimPosition         = reachCenter,
-                                    ContactBodyPart       = BodyPartEnum.Hand,
-                                    ContestedDuelId       = -1
+                                    ClaimType = ClaimType.ShotCatch,
+                                    ClaimPosition = reachCenter,
+                                    ContactBodyPart = BodyPartEnum.Hand,
+                                    ContestedDuelId = -1
                                 };
 
                                 EventBusStub.Publish(in claimEvt);
@@ -667,9 +716,9 @@ namespace TacticalDirector.GoalkeeperMechanics
                 }
 
                 // ── Rush update ───────────────────────────────────────────────────────
-                bool rushBallIntercepted            = false;
-                bool attackerWithinOneVsOneRadius   = false;
-                bool gkWithinSmotherRadius          = false;
+                bool rushBallIntercepted = false;
+                bool attackerWithinOneVsOneRadius = false;
+                bool gkWithinSmotherRadius = false;
 
                 if (gkState == GoalkeeperState.Rushing)
                 {
@@ -694,13 +743,13 @@ namespace TacticalDirector.GoalkeeperMechanics
                     {
                         GoalkeeperRushEvent rushEvt = new GoalkeeperRushEvent
                         {
-                            AgentId        = agentId,
-                            MatchTimeMs    = currentMatchTimeMs,
-                            RushPhase      = RushPhase.Aborted,
-                            AbortReason    = AbortReason.BallIntercepted,
-                            RushTarget     = _rushIntents[gkIndex].RushTarget,
-                            GkPosition     = gkMutablePos,
-                            RushLaunchMps  = _rushLaunchMps[gkIndex]
+                            AgentId = agentId,
+                            MatchTimeMs = currentMatchTimeMs,
+                            RushPhase = RushPhase.Aborted,
+                            AbortReason = AbortReason.BallIntercepted,
+                            RushTarget = _rushIntents[gkIndex].RushTarget,
+                            GkPosition = gkMutablePos,
+                            RushLaunchMps = _rushLaunchMps[gkIndex]
                         };
                         EventBusStub.Publish(in rushEvt);
                         _telemetry.RecordRushAbort(AbortReason.BallIntercepted);
@@ -747,29 +796,29 @@ namespace TacticalDirector.GoalkeeperMechanics
                 if (gkState == GoalkeeperState.Smothered)
                 {
                     Vector3 gkBodyPos = agentState.Position;
-                    float   smotherReach = GoalkeeperConstants.GkSaveVolumeRadiusM;
-                    float   smotherDistSq = (ballState.Position - gkBodyPos).sqrMagnitude;
+                    float smotherReach = GoalkeeperConstants.GkSaveVolumeRadiusM;
+                    float smotherDistSq = (ballState.Position - gkBodyPos).sqrMagnitude;
 
                     if (smotherDistSq <= smotherReach * smotherReach)
                     {
                         handBallContactOccurred = true;
-                        handlingQualityScalar   = GoalkeeperConstants.CatchThreshold; // claim
+                        handlingQualityScalar = GoalkeeperConstants.CatchThreshold; // claim
                         _contactStates[gkIndex].HandlingQualityScalar = handlingQualityScalar;
-                        _contactStates[gkIndex].ActualContactFrame    = currentFrame;
+                        _contactStates[gkIndex].ActualContactFrame = currentFrame;
 
                         _ballSystem.SetPossessor(agentId);
-                        _claimTick[gkIndex]           = currentFrame / GoalkeeperConstants.FramesPerTacticalTick;
-                        _releaseTickEarliest[gkIndex]  = _claimTick[gkIndex] + 1;
+                        _claimTick[gkIndex] = currentFrame / GoalkeeperConstants.FramesPerTacticalTick;
+                        _releaseTickEarliest[gkIndex] = _claimTick[gkIndex] + 1;
 
                         BallClaimedEvent smotherClaim = new BallClaimedEvent
                         {
-                            AgentId               = agentId,
-                            MatchTimeMs           = currentMatchTimeMs,
+                            AgentId = agentId,
+                            MatchTimeMs = currentMatchTimeMs,
                             HandlingQualityScalar = handlingQualityScalar,
-                            ClaimType             = ClaimType.OneOnOne,
-                            ClaimPosition         = gkBodyPos,
-                            ContactBodyPart       = BodyPartEnum.Body,
-                            ContestedDuelId       = -1
+                            ClaimType = ClaimType.OneOnOne,
+                            ClaimPosition = gkBodyPos,
+                            ContactBodyPart = BodyPartEnum.Body,
+                            ContestedDuelId = -1
                         };
                         EventBusStub.Publish(in smotherClaim);
                         _telemetry.RecordBallClaim(ClaimType.OneOnOne);
@@ -780,7 +829,7 @@ namespace TacticalDirector.GoalkeeperMechanics
                         // close-down (contact, quality below MIN_HANDLING_QUALITY) so the Smothered
                         // state machine routes to Recovering rather than stalling. No claim emitted.
                         handBallContactOccurred = true;
-                        handlingQualityScalar   = 0.0f;
+                        handlingQualityScalar = 0.0f;
                     }
                 }
 
@@ -798,9 +847,9 @@ namespace TacticalDirector.GoalkeeperMechanics
                         targetPointClamped: out bool targetClamped);
 
                     if (receiverWarning) _telemetry.WarnDistributionTargetReceiverMissing(agentId);
-                    if (targetClamped)   _telemetry.WarnDistributionTargetPointClamped(agentId);
+                    if (targetClamped) _telemetry.WarnDistributionTargetPointClamped(agentId);
 
-                    float windupMs      = GoalkeeperDistribution.ComputeWindupMs(distIntent.DeliveryKind);
+                    float windupMs = GoalkeeperDistribution.ComputeWindupMs(distIntent.DeliveryKind);
                     float accuracyCoeff = GoalkeeperDistribution.ComputeAccuracyCoeff(distIntent.DeliveryKind, _attrs[gkIndex]);
                     Vector3 releasePoint = GoalkeeperDistribution.ComputeReleasePoint(agentState.Position, distIntent.DeliveryKind);
 
@@ -811,16 +860,16 @@ namespace TacticalDirector.GoalkeeperMechanics
 
                     DistributionExecutedEvent distEvt = new DistributionExecutedEvent
                     {
-                        AgentId          = agentId,
-                        MatchTimeMs      = currentMatchTimeMs,
-                        DeliveryKind     = distIntent.DeliveryKind,
-                        ReleasePoint     = releasePoint,
+                        AgentId = agentId,
+                        MatchTimeMs = currentMatchTimeMs,
+                        DeliveryKind = distIntent.DeliveryKind,
+                        ReleasePoint = releasePoint,
                         // DistributeIntent.TargetReceiverId is int? (null = zone-targeted);
                         // the event field is int with sentinel -1 for zone (v1.2 AR-2 row).
                         TargetReceiverId = distIntent.TargetReceiverId ?? -1,
-                        TargetPoint      = distIntent.TargetPoint,
+                        TargetPoint = distIntent.TargetPoint,
                         EmittedPowerIntent = emittedPower,
-                        WindupMs         = windupMs
+                        WindupMs = windupMs
                     };
 
                     EventBusStub.Publish(in distEvt);
@@ -838,15 +887,15 @@ namespace TacticalDirector.GoalkeeperMechanics
 
                 // ── Physics state transition ──────────────────────────────────────────
                 _states[gkIndex] = GoalkeeperStateMachine.EvaluatePhysicsTransition(
-                    currentState:                 gkState,
-                    handBallContactOccurred:      handBallContactOccurred,
-                    handlingQualityScalar:         handlingQualityScalar,
-                    groundReEntry:                groundReEntry,
-                    distributionReleaseReached:    distributionReleaseReached,
-                    rushBallIntercepted:           rushBallIntercepted,
-                    attackerWithinOneVsOneRadius:  attackerWithinOneVsOneRadius,
-                    gkWithinSmotherRadius:         gkWithinSmotherRadius,
-                    shotEventDetected:             shotEventDetected);
+                    currentState: gkState,
+                    handBallContactOccurred: handBallContactOccurred,
+                    handlingQualityScalar: handlingQualityScalar,
+                    groundReEntry: groundReEntry,
+                    distributionReleaseReached: distributionReleaseReached,
+                    rushBallIntercepted: rushBallIntercepted,
+                    attackerWithinOneVsOneRadius: attackerWithinOneVsOneRadius,
+                    gkWithinSmotherRadius: gkWithinSmotherRadius,
+                    shotEventDetected: shotEventDetected);
 
                 // ── Recovery cooldown tracking ────────────────────────────────────────
                 if (_states[gkIndex] == GoalkeeperState.Recovering &&
@@ -873,6 +922,11 @@ namespace TacticalDirector.GoalkeeperMechanics
                     if (saveResolved)
                     {
                         _saveIntentActive[gkIndex] = false;
+                        // ERR-011-006: the stamp dies with the episode it dated (the resolution
+                        // twin of the ClearSaveIntent clearing — a resolved dive must not leave a
+                        // stamp behind to mis-date the NEXT episode's dive).
+                        _shotDetectedTickMs[gkIndex] = 0.0f;
+                        _requiredReactionMs[gkIndex] = 0.0f;
                     }
                 }
 
@@ -1033,4 +1087,14 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |     |            |   | _attrs is written only by CommitSaveIntent/OnShotExecutedEvent and reads    |
 // |     |            |   | TeamId = 0 for BOTH keepers before either fires. New ClearSaveIntent lets the|
 // |     |            |   | composition root end a save episode without tearing down a live dive.       |
+// | 1.8 | 2026-07-28 | — | **ERR-011-005** — the §3.2.3 reaction window is computed ONCE, at the frame |
+// |     |            |   | the dive launches, and FROZEN into GkContactState for the contact to consume|
+// |     |            |   | (the §3.2.5 worked-example anchor: the window scores the COMMIT). The prior |
+// |     |            |   | per-frame re-evaluation dated the contact-consumed value by the ball's whole|
+// |     |            |   | flight time, clamping it to ~0 for every realistic shot. **ERR-011-006** — |
+// |     |            |   | the detection stamp dies with its episode: ClearSaveIntent and the save-    |
+// |     |            |   | resolution branch clear it (stale stamps measured 34–174 s old), and the new|
+// |     |            |   | OnThreatArmed seeds it at episode ONSET when none is live — the fallback    |
+// |     |            |   | anchor for rebounds/deflections with no #6 shot event; a live stamp always  |
+// |     |            |   | wins so it needs no edge-detection state. No draw-order/schema change.      |
 #endregion
