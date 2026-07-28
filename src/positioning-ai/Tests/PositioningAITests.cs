@@ -425,6 +425,65 @@ namespace TacticalDirector.PositioningAI.Tests
         }
 
         // ──────────────────────────────────────────────────────────────────────
+        // T-U-020a..d: GK slot ball-line lateral term (ERR-012-010)
+        // ──────────────────────────────────────────────────────────────────────
+
+        [Test]
+        public void AnchorCalculator_GkSlot_BallLine_TracksTowardNearPost()
+        {
+            // Ball 16 m out, 14 m wide of centre (y = 20). gkX = 5.5 + 8 × (16 − 52.5)/52.5
+            //   = 5.5 − 5.562 ≈ −0.062 → floored to MinBallLineDepthM (0.5) in the gain.
+            // gain = 0.5 / 16 = 0.03125; lateral = (20 − 34) × 0.03125 = −0.4375.
+            var ball = new Vector3(16f, 20f, 0f);
+            Vector2 gk = AnchorCalculator.ComputeGkSlot(ball);
+            Assert.That(gk.y, Is.LessThan(34f), "The slot must track toward the ball's side.");
+
+            // Closer ball, same lateral offset: the goal-anchored gain GROWS as the ball closes —
+            // the property the retired pitch-anchored GK_LATERAL_FACTOR form could not express.
+            var closer = new Vector3(8f, 20f, 0f);
+            Vector2 gkCloser = AnchorCalculator.ComputeGkSlot(closer);
+            Assert.That(34f - gkCloser.y, Is.GreaterThan(34f - gk.y),
+                "A closing ball must pull the keeper further toward the shot line.");
+        }
+
+        [Test]
+        public void AnchorCalculator_GkSlot_Lateral_ClampedInsideGoalMouth()
+        {
+            // Ball on the keeper's own doorstep, parked on the touchline: raw ball-line tracking
+            // would follow it 34 m wide; the clamp holds the slot inside the mouth.
+            var ball = new Vector3(3f, 0f, 0f);
+            Vector2 gk = AnchorCalculator.ComputeGkSlot(ball);
+            Assert.That(gk.y, Is.EqualTo(34f - PositioningAIConstants.GK_LATERAL_CLAMP_M).Within(1e-4f),
+                "The lateral term clamps at GK_LATERAL_CLAMP_M — the slot never leads the keeper past a post.");
+        }
+
+        [Test]
+        public void AnchorCalculator_GkSlot_CentralBall_IsExactPreFixIdentity()
+        {
+            // A central ball (y = 34) zeroes the lateral term regardless of gain — the identity
+            // the pre-ERR-012-010 worked examples pin (T-U-001 asserts (5.5, 34.0) directly).
+            var ball = new Vector3(30f, 34f, 0f);
+            Vector2 gk = AnchorCalculator.ComputeGkSlot(ball);
+            Assert.That(gk.y, Is.EqualTo(34f).Within(1e-5f));
+        }
+
+        [Test]
+        public void AnchorCalculator_GkSlot_FarWideBall_BarelyMovesKeeper()
+        {
+            // Ball near halfway, fully wide: the goal-anchored gain is small at range, so the
+            // keeper holds near the centre instead of chasing the ball's y across the mouth.
+            var ball = new Vector3(50f, 0f, 0f);
+            Vector2 gk = AnchorCalculator.ComputeGkSlot(ball);
+            Assert.That(System.Math.Abs(gk.y - 34f), Is.LessThan(GK_FarBallLateralBoundM),
+                "At range the ball-line point sits near goal centre.");
+        }
+
+        /// <summary>Loose upper bound (m) on the far-ball lateral offset in T-U-020d — at 50 m the
+        /// ball-line gain is gkX/50 ≈ 0.10, so a full-width ball moves the slot ≈ 3.5 m raw,
+        /// clamped to 3.0; the assertion checks it stays at the clamp or under.</summary>
+        private const float GK_FarBallLateralBoundM = 3.05f;
+
+        // ──────────────────────────────────────────────────────────────────────
         // T-U-021: RoleId enum alignment — values are stable and match pull-factor indexing
         // ──────────────────────────────────────────────────────────────────────
         [Test]

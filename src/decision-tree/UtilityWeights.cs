@@ -2,6 +2,7 @@
 // Created:  2026-05-29
 // Modified: 2026-05-29
 // Modified: 2026-07-28 (ERR-008-016 — + POWER_INTENT_FLOOR [GT] (shot-speed design KD-1))
+// Modified: 2026-07-28 (ERR-008-017 — + SHOOT_SWEET_RANGE_M / SHOOT_DIST_FALLOFF_M [GT] (shot-volume design KD-V2))
 // Author:   —
 // Spec:     Decision Tree #8 §3.2.11, Code Standards #20
 // Purpose:  Authoritative constant catalogue for the utility scoring model.
@@ -20,37 +21,37 @@ namespace TacticalDirector.DecisionTree
         // ── Universal ──────────────────────────────────────────────────────────────
 
         /// <summary>[DERIVED] Minimum scored utility after clamping. Guarantees every option has positive appeal. Decision Tree #8 §3.2.1.5.</summary>
-        public const float UTILITY_FLOOR   = 0.01f;
+        public const float UTILITY_FLOOR = 0.01f;
 
         /// <summary>[DERIVED] Maximum scored utility after clamping. Perfect conditions cap. Decision Tree #8 §3.2.1.5.</summary>
         public const float UTILITY_CEILING = 1.00f;
 
         // ── Zone Modifiers ─────────────────────────────────────────────────────────
 
-        public const float PASS_ZONE_DEF   = 1.05f;  // [GT] pass urgency in own third
-        public const float PASS_ZONE_MID   = 1.00f;  // [GT] neutral baseline
-        public const float PASS_ZONE_ATT   = 0.90f;  // [GT] passing less dominant in attack
+        public const float PASS_ZONE_DEF = 1.05f;  // [GT] pass urgency in own third
+        public const float PASS_ZONE_MID = 1.00f;  // [GT] neutral baseline
+        public const float PASS_ZONE_ATT = 0.90f;  // [GT] passing less dominant in attack
 
-        public const float SHOOT_ZONE_ATT      = 1.00f;  // [GT] full baseline in attacking third
+        public const float SHOOT_ZONE_ATT = 1.00f;  // [GT] full baseline in attacking third
         public const float SHOOT_ZONE_MID_LONG = 0.55f;  // [GT] long shot midfield modifier
         public const float SHOOT_ZONE_MID_SHORT = 0.05f; // [GT] near-suppression for no long shot
-        public const float SHOOT_ZONE_DEF      = 0.10f;  // [GT] strong discouragement from own half
+        public const float SHOOT_ZONE_DEF = 0.10f;  // [GT] strong discouragement from own half
 
         public const float DRIBBLE_ZONE_DEF = 0.70f; // [GT] dangerous in own third
         public const float DRIBBLE_ZONE_MID = 1.00f; // [GT] neutral
         public const float DRIBBLE_ZONE_ATT = 1.10f; // [GT] mildly encouraged in attack
 
-        public const float HOLD_ZONE_DEF   = 1.25f;  // [GT] safe in own third
-        public const float HOLD_ZONE_MID   = 1.00f;  // [GT] neutral
-        public const float HOLD_ZONE_ATT   = 0.80f;  // [GT] waste of attacking opportunity
+        public const float HOLD_ZONE_DEF = 1.25f;  // [GT] safe in own third
+        public const float HOLD_ZONE_MID = 1.00f;  // [GT] neutral
+        public const float HOLD_ZONE_ATT = 0.80f;  // [GT] waste of attacking opportunity
 
-        public const float MOVE_ZONE_DEF   = 1.00f;  // [GT] positional duty unchanged by zone (§3.2.1.3)
-        public const float MOVE_ZONE_MID   = 1.00f;  // [GT]
-        public const float MOVE_ZONE_ATT   = 1.00f;  // [GT]
+        public const float MOVE_ZONE_DEF = 1.00f;  // [GT] positional duty unchanged by zone (§3.2.1.3)
+        public const float MOVE_ZONE_MID = 1.00f;  // [GT]
+        public const float MOVE_ZONE_ATT = 1.00f;  // [GT]
 
-        public const float PRESS_ZONE_DEF  = 0.80f;  // [GT] pressing from deep exposes space
-        public const float PRESS_ZONE_MID  = 1.00f;  // [GT] neutral
-        public const float PRESS_ZONE_ATT  = 1.20f;  // [GT] high press encouraged in attack
+        public const float PRESS_ZONE_DEF = 0.80f;  // [GT] pressing from deep exposes space
+        public const float PRESS_ZONE_MID = 1.00f;  // [GT] neutral
+        public const float PRESS_ZONE_ATT = 1.20f;  // [GT] high press encouraged in attack
 
         public const float INTERCEPT_ZONE_DEF = 1.10f; // [GT] most valuable defensively
         public const float INTERCEPT_ZONE_MID = 1.00f; // [GT] neutral
@@ -58,42 +59,42 @@ namespace TacticalDirector.DecisionTree
 
         // ── Base Utility Nominals ───────────────────────────────────────────────────
 
-        public const float U_BASE_PASS      = 0.60f;  // [GT] primary positive action
-        public const float U_BASE_SHOOT     = 0.85f;  // [GT] highest ceiling; zone-gated
-        public const float U_BASE_DRIBBLE   = 0.45f;  // [GT] creative outlet; deliberately secondary
-        public const float U_BASE_HOLD      = 0.28f;  // [GT] fallback; must be lowest baseline
-        public const float U_BASE_MOVE      = 0.40f;  // [GT] positional duty; moderate urgency
-        public const float U_BASE_PRESS     = 0.50f;  // [GT] active defence; moderate baseline
+        public const float U_BASE_PASS = 0.60f;  // [GT] primary positive action
+        public const float U_BASE_SHOOT = 0.85f;  // [GT] highest ceiling; zone-gated
+        public const float U_BASE_DRIBBLE = 0.45f;  // [GT] creative outlet; deliberately secondary
+        public const float U_BASE_HOLD = 0.28f;  // [GT] fallback; must be lowest baseline
+        public const float U_BASE_MOVE = 0.40f;  // [GT] positional duty; moderate urgency
+        public const float U_BASE_PRESS = 0.50f;  // [GT] active defence; moderate baseline
         public const float U_BASE_INTERCEPT = 0.55f;  // [GT] best active defensive action
         // [GT] SAVE base utility (ERR-008-013). NOT load-bearing for selection — SAVE is the SOLE
         // off-ball option when TacticalContext.SaveAvailable (OptionGenerator), so it is always
         // selected regardless of this value; it only feeds AgentAction.UtilityScore / DecisionMadeEvent.
-        public const float U_BASE_SAVE      = 1.00f;
+        public const float U_BASE_SAVE = 1.00f;
 
         // ── Attribute Exponents ─────────────────────────────────────────────────────
 
-        public const float PASS_VISION_EXP      = 0.30f;  // [GT] lane quality reading
-        public const float PASS_TECHNIQUE_EXP   = 0.40f;  // [GT] passing execution accuracy
-        public const float SHOOT_FINISHING_EXP  = 0.50f;  // [GT] shot execution; steeper curve
-        public const float SHOOT_COMPOSURE_EXP  = 0.30f;  // [EST] discrete-event composure; Beilock & Carr (2001)
+        public const float PASS_VISION_EXP = 0.30f;  // [GT] lane quality reading
+        public const float PASS_TECHNIQUE_EXP = 0.40f;  // [GT] passing execution accuracy
+        public const float SHOOT_FINISHING_EXP = 0.50f;  // [GT] shot execution; steeper curve
+        public const float SHOOT_COMPOSURE_EXP = 0.30f;  // [EST] discrete-event composure; Beilock & Carr (2001)
         public const float DRIBBLE_DRIBBLING_EXP = 0.40f; // [GT] core dribbling skill
-        public const float DRIBBLE_AGILITY_EXP  = 0.30f;  // [GT] directional change speed
-        public const float HOLD_COMPOSURE_EXP   = 0.50f;  // [GT] sustained-state composure gate
+        public const float DRIBBLE_AGILITY_EXP = 0.30f;  // [GT] directional change speed
+        public const float HOLD_COMPOSURE_EXP = 0.50f;  // [GT] sustained-state composure gate
         public const float MOVE_POSITIONING_EXP = 0.40f;  // [GT] positional commitment
-        public const float MOVE_WORKRATE_EXP    = 0.30f;  // [GT] running effort
+        public const float MOVE_WORKRATE_EXP = 0.30f;  // [GT] running effort
         public const float PRESS_AGGRESSION_EXP = 0.30f;  // [GT] pressing intent
-        public const float PRESS_WORKRATE_EXP   = 0.30f;  // [GT] pressing engine
-        public const float PRESS_STAMINA_EXP    = 0.20f;  // [GT] capacity to press
+        public const float PRESS_WORKRATE_EXP = 0.30f;  // [GT] pressing engine
+        public const float PRESS_STAMINA_EXP = 0.20f;  // [GT] capacity to press
         public const float INTERCEPT_ANTICIPATION_EXP = 0.50f; // [EST] interceptive timing; Müller & Abernethy (2006)
-        public const float INTERCEPT_PACE_EXP   = 0.30f;  // [GT] speed to intercept point
+        public const float INTERCEPT_PACE_EXP = 0.30f;  // [GT] speed to intercept point
 
         // ── Risk Penalty Coefficients ───────────────────────────────────────────────
 
-        public const float PASS_RISK_COEFF      = 0.30f;  // [GT] passing risk under pressure
-        public const float SHOOT_RISK_COEFF     = 0.40f;  // [GT] shot blocked = possession lost
-        public const float DRIBBLE_RISK_COEFF   = 0.35f;  // [GT] dribble tackle = possession lost
+        public const float PASS_RISK_COEFF = 0.30f;  // [GT] passing risk under pressure
+        public const float SHOOT_RISK_COEFF = 0.40f;  // [GT] shot blocked = possession lost
+        public const float DRIBBLE_RISK_COEFF = 0.35f;  // [GT] dribble tackle = possession lost
         public const float INTERCEPT_PRESSURE_COEFF = 0.20f; // [GT] pressure reduces intercept read
-        public const float HOLD_PRESSURE_COEFF  = 0.50f;  // [GT] pressure reduces HOLD appeal
+        public const float HOLD_PRESSURE_COEFF = 0.50f;  // [GT] pressure reduces HOLD appeal
 
         // ── Context Score Thresholds and Distances ──────────────────────────────────
 
@@ -103,22 +104,22 @@ namespace TacticalDirector.DecisionTree
         /// LongShots ≥ 11 (§3.2.3.4 derives this explicitly; comparing the raw
         /// normalised A against 0.75 — the AR-2 M-4 defect — required raw ≥ 16).
         /// </summary>
-        public const float LONG_SHOT_THRESHOLD  = 0.75f;
-        public const float GOAL_OPENING_MIN     = 0.05f;  // [GT] minimum goal opening score floor
-        public const float BLOCKER_RADIUS_M     = 0.50f;  // [GT] outfield player body width in shot lane
-        public const float GK_BLOCKER_RADIUS_M  = 1.50f;  // [GT] goalkeeper effective blocking radius
+        public const float LONG_SHOT_THRESHOLD = 0.75f;
+        public const float GOAL_OPENING_MIN = 0.05f;  // [GT] minimum goal opening score floor
+        public const float BLOCKER_RADIUS_M = 0.50f;  // [GT] outfield player body width in shot lane
+        public const float GK_BLOCKER_RADIUS_M = 1.50f;  // [GT] goalkeeper effective blocking radius
         public const float GK_PROXIMITY_TO_GOAL = 6.00f;  // [GT] distance from goal line to classify as GK
-        public const float GOAL_MIN_SHOT_DIST   = 1.00f;  // [GT] minimum dist to count as blocker
+        public const float GOAL_MIN_SHOT_DIST = 1.00f;  // [GT] minimum dist to count as blocker
 
-        public const float MOVE_URGENCY_DIST_M  = 15.0f;  // [GT] full urgency distance for MOVE
-        public const float MOVE_DIST_MIN        = 0.10f;  // [GT] minimum distance modifier floor
-        public const float MOVE_PRESS_SUPPRESSION_DIST   = 6.0f;  // [GT] proximity threshold for MOVE suppression
+        public const float MOVE_URGENCY_DIST_M = 15.0f;  // [GT] full urgency distance for MOVE
+        public const float MOVE_DIST_MIN = 0.10f;  // [GT] minimum distance modifier floor
+        public const float MOVE_PRESS_SUPPRESSION_DIST = 6.0f;  // [GT] proximity threshold for MOVE suppression
         public const float MOVE_PRESS_SUPPRESSION_FACTOR = 0.60f; // [GT] multiplier applied to MOVE when opponent is close
 
         // ── Phase Modifiers ─────────────────────────────────────────────────────────
 
-        public const float MOVE_PHASE_OWN_TEAM  = 0.70f;  // [GT] delay repositioning in possession
-        public const float MOVE_PHASE_OPPONENT  = 1.25f;  // [GT] urgent to recover shape without ball
+        public const float MOVE_PHASE_OWN_TEAM = 0.70f;  // [GT] delay repositioning in possession
+        public const float MOVE_PHASE_OPPONENT = 1.25f;  // [GT] urgent to recover shape without ball
         public const float MOVE_PHASE_CONTESTED = 1.00f;  // [DERIVED] neutral baseline
 
         // ── Tactical Pressing Modifiers ─────────────────────────────────────────────
@@ -132,14 +133,14 @@ namespace TacticalDirector.DecisionTree
         // ── Option Generation Constants ─────────────────────────────────────────────
         // Constants referenced in §3.1; catalogued here per §3.2.1.6.
 
-        public const float PASS_LANE_WIDTH_HALF    = 0.8f;  // [GT] half-width of pass lane corridor (m)
-        public const float PASS_LANE_DIVISOR       = 3.0f;  // [GT] interceptors in lane → score=0
-        public const float MIN_PASS_LANE_SCORE     = 0.05f; // [GT] adjusted lane score floor
-        public const float GOAL_DIR_MIN_MODIFIER   = 0.5f;  // [GT] backward-pass direction penalty floor
+        public const float PASS_LANE_WIDTH_HALF = 0.8f;  // [GT] half-width of pass lane corridor (m)
+        public const float PASS_LANE_DIVISOR = 3.0f;  // [GT] interceptors in lane → score=0
+        public const float MIN_PASS_LANE_SCORE = 0.05f; // [GT] adjusted lane score floor
+        public const float GOAL_DIR_MIN_MODIFIER = 0.5f;  // [GT] backward-pass direction penalty floor
 
-        public const float SHORT_PASS_MAX_DISTANCE  = 15.0f; // [GT] m; §3.1.3.4
+        public const float SHORT_PASS_MAX_DISTANCE = 15.0f; // [GT] m; §3.1.3.4
         public const float MEDIUM_PASS_MAX_DISTANCE = 30.0f; // [GT] m; §3.1.3.4
-        public const float CROSS_ANGLE_THRESHOLD    = 60.0f; // [GT] degrees; §3.1.3.4
+        public const float CROSS_ANGLE_THRESHOLD = 60.0f; // [GT] degrees; §3.1.3.4
         public const float THROUGH_BALL_VEL_THRESHOLD = 1.0f; // [GT] m/s; §3.1.3.4
 
         // [GT] Minimum goal visibility for SHOOT. Sits ABOVE GOAL_OPENING_MIN (the §3.2.3.2 step-5
@@ -147,9 +148,9 @@ namespace TacticalDirector.DecisionTree
         // fire on the degenerate zero-arc early return and a fully walled-off shot was generated,
         // scored and taken (§5.Z.17 §7.4). At 0.12 a shooter whose goal arc is ≥ ~88% occluded
         // holds / passes / dribbles instead — shot-outcome design KD-7.
-        public const float MIN_GOAL_VISIBILITY     = 0.12f;
-        public const float BASE_SHOOT_RANGE        = 20.0f; // [GT] m; §3.1.4.2
-        public const float LONGSHOT_RANGE_BONUS    = 15.0f; // [GT] m; §3.1.4.2
+        public const float MIN_GOAL_VISIBILITY = 0.12f;
+        public const float BASE_SHOOT_RANGE = 20.0f; // [GT] m; §3.1.4.2
+        public const float LONGSHOT_RANGE_BONUS = 15.0f; // [GT] m; §3.1.4.2
 
         // [GT] PowerIntent floor for SHOOT (§3.5.3, ERR-008-016 / shot-speed design KD-1). The
         // former clamp(goalOpening × A_Finishing, 0.1, 1.0) is a product of two [0,1] factors —
@@ -158,17 +159,30 @@ namespace TacticalDirector.DecisionTree
         // means 7–10 m/s vs football's ~25). A deliberate shot is always struck hard; opening ×
         // finishing modulates the TOP band above this floor, preserving the old formula's
         // direction (a better opening and a better finisher still strike harder, up to 1.0).
-        public const float POWER_INTENT_FLOOR      = 0.65f;
+        public const float POWER_INTENT_FLOOR = 0.65f;
 
-        public const float MIN_DRIBBLE_SPACE       = 0.10f; // [GT] minimum space score to generate DRIBBLE
-        public const float DRIBBLE_THREAT_RADIUS   = 2.0f;  // [GT] m; opponent proximity for space scoring
-        public const float DRIBBLE_LOOKAHEAD_M     = 5.0f;  // [GT] m; look-ahead target distance
+        // [GT] SHOOT distance-quality knee + falloff (§3.2.3.1 DistanceQuality_SHOOT,
+        // ERR-008-017 / shot-volume design KD-V2). U_SHOOT previously had NO distance term while
+        // the range gate is a cliff at 20 + A_LongShots × 15 m — within range a 34 m shot scored
+        // identically to a 10 m one, and measured shots clustered AT the range boundary (means
+        // 30–34 m over full matches vs football's ~17; ~60% of shots beyond 22 m). distQ(d) = 1
+        // for d ≤ SWEET (every close-range utility byte-identical to pre-fix), then
+        // FALLOFF / (FALLOFF + (d − SWEET)) — continuous at the knee, bounded (0,1], monotone.
+        // Football's P(goal|shot) falls ~10× from 11 m to 30 m; this is the utility-side shape
+        // of that fact, calibrated against the measured shots/match + mean-distance bands
+        // (shot-volume design §6).
+        public const float SHOOT_SWEET_RANGE_M = 12.0f;
+        public const float SHOOT_DIST_FALLOFF_M = 8.0f;
 
-        public const float PRESS_TRIGGER_DISTANCE  = 8.0f;  // [GT] m; maximum distance for PRESS generation
-        public const float PRESS_STAMINA_MINIMUM   = 0.20f; // [GT] AerobicPool threshold for PRESS gate
+        public const float MIN_DRIBBLE_SPACE = 0.10f; // [GT] minimum space score to generate DRIBBLE
+        public const float DRIBBLE_THREAT_RADIUS = 2.0f;  // [GT] m; opponent proximity for space scoring
+        public const float DRIBBLE_LOOKAHEAD_M = 5.0f;  // [GT] m; look-ahead target distance
+
+        public const float PRESS_TRIGGER_DISTANCE = 8.0f;  // [GT] m; maximum distance for PRESS generation
+        public const float PRESS_STAMINA_MINIMUM = 0.20f; // [GT] AerobicPool threshold for PRESS gate
 
         public const float INTERCEPT_MIN_BALL_SPEED = 1.0f; // [GT] m/s; ball must be moving for INTERCEPT
-        public const float MAX_INTERCEPT_TIME      = 1.5f;  // [GT] s; maximum look-ahead for intercept geometry
+        public const float MAX_INTERCEPT_TIME = 1.5f;  // [GT] s; maximum look-ahead for intercept geometry
         /// <summary>
         /// [EST] First-order drag decay coefficient (s⁻¹) for the §3.1.9.2 intercept
         /// trajectory approximation: v(t) = v₀·e^(−kt). Retagged from [CROSS] (AR-2 L /
@@ -178,7 +192,7 @@ namespace TacticalDirector.DecisionTree
         /// copy, so [CROSS] violated the tag rules. Error bounds: §3.1.9.2 (≤6.9% at
         /// 30 m/s over 1.5 s). Stage 1: replace with BallPhysics.ProjectPosition(t).
         /// </summary>
-        public const float DRAG_APPROX             = 0.3f;
+        public const float DRAG_APPROX = 0.3f;
 
         // URGENCY_PRESSURE_SCALE: lives in TacticalWeights.UrgencyPressureScale (the
         // consumed surface; §3.4.7). The unconsumed duplicate previously declared
@@ -221,4 +235,6 @@ namespace TacticalDirector.DecisionTree
 // | 1.4     | 2026-07-28 | —      | ERR-008-016 (shot-speed design KD-1): + POWER_INTENT_FLOOR [GT] = 0.65 —    |
 // |         |            |        | the §3.5.3 floor a deliberate shot is always struck at; opening ×           |
 // |         |            |        | finishing modulates the band above it.                                      |
+// | 1.5     | 2026-07-28 | —      | ERR-008-017 (shot-volume design KD-V2): + SHOOT_SWEET_RANGE_M [GT] = 12 +   |
+// |         |            |        | SHOOT_DIST_FALLOFF_M [GT] = 10 — the DistanceQuality_SHOOT knee + falloff.  |
 #endregion

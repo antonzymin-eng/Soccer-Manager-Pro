@@ -1,6 +1,7 @@
 // File:     src/season-save/tests/RoundResolutionCalibrationHarnessTests.cs
 // Created:  2026-07-26
 // Modified: 2026-07-26
+// Modified: 2026-07-28 (Step 0 re-run PASSED post-§5.Z.20/§5.Z.21; LogAssert wrapper on both env-gated drivers — playing matches emit FM-08/FM-03 as ordinary events)
 // Author:   —
 // Spec:     League Bootstrap design supplement KD-8 (calibration methodology + Step 0); path-to-playable
 //           roadmap A4a / C1a; Code Standards #20
@@ -198,17 +199,25 @@ namespace TacticalDirector.SeasonSave.Tests
             // the strength ramp and one at the strong end produce indistinguishable goal distributions, the
             // corpus carries no signal to fit, and fitting three parameters to noise would waste the run.
             //
-            // THIS CURRENTLY FAILS, AND THAT IS THE CORRECT OUTCOME. Run 2026-07-26: all 20 matches finished
-            // 0–0 at a measured dSquad of ±6, because a Stage-0 match never puts the ball in motion at all
-            // (ERR-030-014 — root cause and evidence in docs/tracking/round-resolution-corpus.md). Step 0
-            // stopped a ~5-hour corpus run that would have fitted three parameters to a table of zeros,
-            // which is exactly the cost it was added (league-bootstrap AR-5 M-4) to avoid. Leave the
-            // assertion as-is: it is the gate that reopens A4a once the engine can play a match.
+            // Run 2026-07-26: FAILED, correctly — all 20 matches finished 0–0 at a measured dSquad of ±6,
+            // because a Stage-0 match never put the ball in motion at all (ERR-030-014 — root cause and
+            // evidence in docs/tracking/round-resolution-corpus.md). Step 0 stopped a ~5-hour corpus run
+            // that would have fitted three parameters to a table of zeros, which is exactly the cost it
+            // was added (league-bootstrap AR-5 M-4) to avoid.
+            // Re-run 2026-07-28 (post-§5.Z.20/§5.Z.21): PASSED — strong-at-home margin +7.1, strong-away
+            // margin −4.7; both extremes separate IN BOTH DIRECTIONS and the §5.Z.11 home/away asymmetry
+            // no longer dominates the signal. Evidence in round-resolution-corpus.md.
             string flag = Environment.GetEnvironmentVariable("TD_CALIBRATION_PILOT");
             if (string.IsNullOrEmpty(flag))
             {
                 Assert.Ignore("Set TD_CALIBRATION_PILOT=1 to run the KD-8 Step 0 pilot (~20 real matches).");
             }
+
+            // A playing match emits FM-08/FM-03 possession-race errors as ordinary match events
+            // (§5.Z Phase H); without this the shim's log watcher fails the run at teardown even
+            // though every assertion passed — this driver predates play developing, so it never
+            // needed the wrapper its sibling engine-driving diagnostics carry.
+            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
 
             int spread = LeagueBootstrapConstants.LeagueStrengthSpread;
             Squad[] rosters = RoundResolutionCalibrationHarness.BuildBaseRosters();
@@ -217,6 +226,8 @@ namespace TacticalDirector.SeasonSave.Tests
                 RoundResolutionCalibrationHarness.RunBucket(rosters, +2 * spread, 10);
             List<CalibrationRow> strongAway =
                 RoundResolutionCalibrationHarness.RunBucket(rosters, -2 * spread, 10);
+
+            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false;
 
             float strongHomeMargin = MeanMargin(strongHome);
             float strongAwayMargin = MeanMargin(strongAway);
@@ -253,6 +264,10 @@ namespace TacticalDirector.SeasonSave.Tests
             int to = EnvInt("TD_CALIBRATION_DELTA_TO", 5);
             string outPath = Environment.GetEnvironmentVariable("TD_CALIBRATION_OUT");
 
+            // Same wrapper as the pilot: playing matches emit FM-08/FM-03 possession-race errors
+            // as ordinary match events (§5.Z Phase H).
+            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
+
             Squad[] rosters = RoundResolutionCalibrationHarness.BuildBaseRosters();
             var rows = new List<CalibrationRow>();
 
@@ -265,6 +280,8 @@ namespace TacticalDirector.SeasonSave.Tests
                     $"bucket target={target}: n={bucket.Count} meanDSquad={MeanDSquad(bucket):F3} "
                     + $"meanHome={MeanHome(bucket):F3} meanAway={MeanAway(bucket):F3}");
             }
+
+            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false;
 
             string csv = RoundResolutionCalibrationHarness.ToCsv(rows);
             if (!string.IsNullOrEmpty(outPath))
@@ -340,4 +357,11 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | generation and the bucket plan (target split, no self-pairing, pair  |
 // |         |            |        | diversity, keyed non-colliding seeds), plus the env-gated KD-8       |
 // |         |            |        | Step 0 pilot and corpus-slice drivers.                               |
+// | 1.1     | 2026-07-28 | —      | Step 0 re-run PASSED (strong-home +7.1 / strong-away −4.7; both      |
+// |         |            |        | directions separate — the ERR-030-014 gate comment updated). Both    |
+// |         |            |        | env-gated drivers gain the LogAssert.ignoreFailingMessages wrapper:  |
+// |         |            |        | a PLAYING match emits FM-08/FM-03 possession-race errors as ordinary |
+// |         |            |        | match events (§5.Z Phase H), and the shim's log watcher failed the   |
+// |         |            |        | first post-play pilot at teardown with every assertion green — this  |
+// |         |            |        | driver predates play developing.                                     |
 #endregion

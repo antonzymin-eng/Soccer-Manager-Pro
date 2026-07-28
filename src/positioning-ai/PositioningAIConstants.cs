@@ -1,6 +1,6 @@
 // File: src/positioning-ai/PositioningAIConstants.cs
 // Created:  2026-05-29
-// Modified: 2026-07-10
+// Modified: 2026-07-28 (ERR-012-010: GK_LATERAL_FACTOR retired -> GK_LATERAL_CLAMP_M, the ball-line lateral clamp)
 // Author:   —
 // Spec: #12 Positioning AI §6.1, Appendix B, new §3.5/§7.13 rest-defense coverage (cheap-item addition)
 // Purpose: Single constant catalogue for Spec #12. All scalars, formation tables, and lookup arrays.
@@ -164,8 +164,14 @@ namespace TacticalDirector.PositioningAI
         /// <summary>[GT] GK longitudinal advance factor per unit basisX. Appendix A.10. #11 APPROVED 2026-05-18.</summary>
         public const float GK_ADVANCE_FACTOR = 8.0f;
 
-        /// <summary>[GT] GK lateral offset factor per unit basisY. Appendix A.11. #11 APPROVED 2026-05-18.</summary>
-        public const float GK_LATERAL_FACTOR = 2.0f;
+        /// <summary>
+        /// [GT] Lateral bound (m) of the GK slot off goal centre — the clamp on the ERR-012-010
+        /// ball-line lateral term. 3.0 m sits inside the 3.66 m half-mouth so the slot never leads
+        /// the keeper past a post. Replaces GK_LATERAL_FACTOR (retired, not retuned: no value of a
+        /// pitch-width-anchored gain expresses ball-line tracking — gk-contact-rate-design.md
+        /// KD-CR4). Appendix A.11. §3.3.3.
+        /// </summary>
+        public const float GK_LATERAL_CLAMP_M = 3.0f;
 
         // ── Stage 0 squad size ──────────────────────────────────────────────────
 

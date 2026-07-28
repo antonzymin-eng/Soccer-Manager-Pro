@@ -1,6 +1,7 @@
 // File:     src/match-engine/tests/GkSaveDiagnosticTests.cs
 // Created:  2026-07-27
 // Modified: 2026-07-27
+// Modified: 2026-07-28 (gk-catch-parry-conversion: stamp edges relabelled episodesStamped — the ERR-011-006 arming fallback stamps episodes with no #6 shot event, so an edge no longer means "a shot was struck")
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §5.Z.15 / §5.Z.17;
 //           Goalkeeper Mechanics #11 §3.1–§3.5; path-to-playable roadmap A4a; Code Standards #20
@@ -165,6 +166,10 @@ namespace TacticalDirector.MatchEngine
                     // Is the §3.2 reaction pipeline actually being fed? Separates "OnShotExecutedEvent
                     // is never called" (shotDetected stays 0) from "it is called but the keeper reacts
                     // so late the window scores 0" — two very different defects with the same symptom.
+                    // NOTE (gk-catch-parry-conversion / ERR-011-006): a stamp edge now means "a threat
+                    // EPISODE was stamped" — the arming fallback stamps episodes with no #6 shot
+                    // event — so this counts episodes, not strikes; genuine strikes are
+                    // engine.TestOnly_ShotContacts.
                     float shotDetected = gk.ShotDetectedTickMs[t];
                     if (shotDetected > 0f && shotDetected != f[t].LastShotDetectedMs)
                     {
@@ -188,10 +193,10 @@ namespace TacticalDirector.MatchEngine
                     {
                         switch (s)
                         {
-                            case GoalkeeperState.Anticipate:  f[t].Anticipate++; break;
-                            case GoalkeeperState.Diving:      f[t].Diving++;     break;
-                            case GoalkeeperState.Airborne:    f[t].Airborne++;   break;
-                            case GoalkeeperState.HandsOnBall: f[t].Caught++;     break;
+                            case GoalkeeperState.Anticipate: f[t].Anticipate++; break;
+                            case GoalkeeperState.Diving: f[t].Diving++; break;
+                            case GoalkeeperState.Airborne: f[t].Airborne++; break;
+                            case GoalkeeperState.HandsOnBall: f[t].Caught++; break;
                             default: break;
                         }
                         prevState[t] = s;
@@ -206,6 +211,12 @@ namespace TacticalDirector.MatchEngine
                         f[t].QualitySum += gk.ContactStates[t].HandlingQualityScalar;
                         f[t].ReactionSum += gk.ContactStates[t].ReactionWindowAchieved;
                         prevContactFrame[t] = cf;
+
+                        // Per-contact position in the match — sizes the acceptance corpus
+                        // (a 15-min window predicate is only honest if contacts occur in it).
+                        report.AppendLine(Inv($"    contact gk{t} @tick {tick} ({tick / TicksPerSecond / 60f:F1} min)  ")
+                                        + Inv($"q={gk.ContactStates[t].HandlingQualityScalar:F3} ")
+                                        + Inv($"rw={gk.ContactStates[t].ReactionWindowAchieved:F3}"));
                     }
 
                     // WHY a dive misses. Reproduces the orchestrator's own reach test each Airborne
@@ -259,7 +270,7 @@ namespace TacticalDirector.MatchEngine
 
                 // On-target: the ball crossing the goal-line plane inside the frame. Counted for the
                 // ATTACKING team, i.e. against the keeper defending that line.
-                if (ballPos.x <= 0f && InGoalMouth(ballPos))    f[0].ConcededOnTarget++;
+                if (ballPos.x <= 0f && InGoalMouth(ballPos)) f[0].ConcededOnTarget++;
                 if (ballPos.x >= MatchEngineConstants.PITCH_LENGTH_M && InGoalMouth(ballPos)) f[1].ConcededOnTarget++;
 
                 if (engine.HomeScore != prevHome) { f[1].GoalsConceded += engine.HomeScore - prevHome; prevHome = engine.HomeScore; }
@@ -307,7 +318,7 @@ namespace TacticalDirector.MatchEngine
                 }
 
                 report.AppendLine(
-                    Inv($"  gk {t} reaction pipeline: shotsNotified={x.ShotsNotified}  ")
+                    Inv($"  gk {t} reaction pipeline: episodesStamped={x.ShotsNotified}  ")
                     + Inv($"meanRequired={(x.ShotsNotified > 0 ? x.RequiredReactionSum / x.ShotsNotified : 0f):F0} ms  ")
                     + Inv($"meanElapsedWhenAirborne={(x.AirborneElapsedSamples > 0 ? x.AirborneElapsedSum / x.AirborneElapsedSamples : 0f):F0} ms"));
 
@@ -393,8 +404,8 @@ namespace TacticalDirector.MatchEngine
 
         private static string Band(float q)
         {
-            if (q >= GoalkeeperConstants.CatchThreshold)   return "Caught";
-            if (q >= GoalkeeperConstants.ParryThreshold)   return "Parried";
+            if (q >= GoalkeeperConstants.CatchThreshold) return "Caught";
+            if (q >= GoalkeeperConstants.ParryThreshold) return "Parried";
             if (q >= GoalkeeperConstants.DeflectThreshold) return "Deflected";
             return "Spilled/Missed";
         }
@@ -486,4 +497,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | the arithmetic ceiling on handling quality, which decides whether  |
 // |         |            |        | the remaining work is [GT] tuning or a correctness fix. Asserts    |
 // |         |            |        | nothing (the ERR-030-014 lesson).                                  |
+// | 1.1     | 2026-07-28 | —      | gk-catch-parry-conversion: the reaction-pipeline stamp-edge count  |
+// |         |            |        | relabelled episodesStamped (the ERR-011-006 arming fallback stamps |
+// |         |            |        | episodes with no #6 shot event); genuine strikes are               |
+// |         |            |        | engine.TestOnly_ShotContacts.                                      |
 #endregion

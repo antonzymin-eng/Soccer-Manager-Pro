@@ -163,17 +163,23 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 
         private static BallState BuildBall()
         {
-            // ERR-011-002 re-anchor. This was x = 75 — chosen because the pre-fix orchestrator drove
-            // Resting→Set→Anticipate off "the third the keeper's own team ATTACKS", so a ball 73 m from
-            // GK0 was what woke it up. That predicate was inverted; the scenario had encoded it.
+            // ERR-011-002 re-anchor (was x = 75, encoding the inverted wake predicate), then
+            // ERR-011-007 re-anchor: the ball must be CLOSING on the keeper's plane inside the
+            // §3.3.6 commit lead, or the commit gate correctly HOLDS the dive and this scenario's
+            // dive-launch predicate would be starved by its own stimulus (a parked ball is not a
+            // save situation under the corrected transition). The scenario never integrates ball
+            // physics, so the closing geometry is constant: from (8, 30) at vx = −12 the predicted
+            // time-to-plane is (2 − 8)/(−12) = 0.5 s, inside the 0.6 s full-need lead
+            // (|predictedY − gkY| = 4 m ≥ DiveLaunchDisplacementM), so the gate opens immediately.
             //
-            // The scenario's INTENT is unchanged and is still exactly met: reach Anticipate, launch one
-            // dive, miss, mutate no ball state. Under the corrected predicate the keeper wakes when the
-            // ball threatens the goal it DEFENDS, so the ball moves into GK0's own defensive third —
-            // x = 30 ≤ 35 (PitchLengthM − BallAttackingThirdXM). It stays comfortably unreachable: GK0
-            // stands at (2, 34), so the ball is 28 m away in x alone, against a reach envelope of under
-            // 2 m plus at most DiveLaunchDisplacementM (2.2 m) of lateral travel.
-            return BallState.CreateAtPosition(new Vector3(30f, 20f, 0.11f));
+            // The scenario's INTENT is unchanged and is still exactly met: reach Anticipate, launch
+            // one dive, miss, mutate no ball state. The ball stays comfortably unreachable: GK0
+            // stands at (2, 34), the ball 7.2 m away, against a reach envelope of under 2 m plus at
+            // most DiveLaunchDisplacementM (2.2 m) of lateral travel. x = 8 ≤ 35 keeps it inside
+            // GK0's defensive third (threatening ⇒ Resting → Set → Anticipate).
+            BallState ball = BallState.CreateAtPosition(new Vector3(8f, 30f, 0.11f));
+            ball.Velocity = new Vector3(-12f, 0f, 0f);
+            return ball;
         }
 
         private static readonly int[] GkAgentIds = { Gk0AgentId, Gk1AgentId };
@@ -314,4 +320,7 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 // |     |            |   | x = 75 to wake keeper 0, i.e. it had ENCODED the inverted predicate. Re-anchored|
 // |     |            |   | to x = 30 with the intent unchanged — the Phase-H "tests encoded the old|
 // |     |            |   | contract" class.                                                        |
+// | 1.3 | 2026-07-28 | — | gk-contact-rate (ERR-011-007) re-anchor: the scenario ball CLOSES on the    |
+// |     |            |   | keeper's plane inside the SS3.3.6 commit lead (a parked ball now correctly |
+// |     |            |   | holds the dive, starving the dive-launch predicate). Intent preserved.     |
 #endregion

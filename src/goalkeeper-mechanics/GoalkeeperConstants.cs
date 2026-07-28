@@ -2,6 +2,8 @@
 // Created:  2026-05-28
 // Modified: 2026-06-14
 // Modified: 2026-07-27 (§5.Z.17: + [DERIVED] DegeneracyEpsilon, + [GT] DivePredictionHorizonS)
+// Modified: 2026-07-28 (gk-catch-parry-conversion KD-C3 [GT] recalibration, all inside #11 §3.4 spec ranges)
+// Modified: 2026-07-28 (gk-contact-rate (ERR-011-007): + [GT] DiveCommitMinLeadFrac (the SS3.3.6 commit-lead floor))
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.4, KD-9, FR-GK-015, FR-GK-042, Code Standards #20
 // Purpose:  All numeric constants for the goalkeeper mechanics system. No magic literals in formula files.
@@ -190,6 +192,19 @@ namespace TacticalDirector.GoalkeeperMechanics
         public static readonly float DivePredictionHorizonS =
             Config.GetFloat("goalkeeper-mechanics", "DivePredictionHorizonS", 2.0f);
 
+        /// <summary>
+        /// [GT] Floor on the ERR-011-007 dive-commit lead, as a fraction of the dive duration.
+        /// The commit lead scales with the predicted lateral need (a central ball needs almost no
+        /// displacement, so its ideal lead approaches zero); this floor keeps the commit from
+        /// degenerating to a zero-length dive against the 10 Hz decision grid — at 0.25 × 600 ms
+        /// the minimum lead is 150 ms, one-and-a-half tactical strides. Raising it makes every
+        /// dive earlier (recreating the pre-fix dive-early miss for central balls); lowering it
+        /// under ~0.17 (one stride) makes central commits quantisation-dominated.
+        /// Config key [goalkeeper-mechanics] DiveCommitMinLeadFrac. §3.3.4 / ERR-011-007.
+        /// </summary>
+        public static readonly float DiveCommitMinLeadFrac =
+            Config.GetFloat("goalkeeper-mechanics", "DiveCommitMinLeadFrac", 0.25f);
+
         /// <summary>[GT] Handling-attribute contribution to reach radius (m per unit norm). §3.3.4.</summary>
         public static readonly float ReachKHandling = Config.GetFloat("goalkeeper-mechanics", "ReachKHandling", 0.20f);
 
@@ -221,23 +236,32 @@ namespace TacticalDirector.GoalkeeperMechanics
 
         // ── §3.4.3 Reaction-Pipeline Constants ───────────────────────────────────────
 
-        /// <summary>[GT] Baseline required reaction time (ms). §3.2.</summary>
-        public static readonly float ReactionBaseMs = Config.GetFloat("goalkeeper-mechanics", "ReactionBaseMs", 350f);
+        /// <summary>[GT] Baseline required reaction time (ms). §3.2. 350 → 220 (spec range [200, 500]),
+        /// gk-catch-parry-conversion KD-C3: the engine's commit pipeline (strike → perception stamp →
+        /// AI stride → tactical dive launch) lands at ~100–300 ms elapsed, which a 350 ms anchor scored
+        /// as a deep-early commit ⇒ window ≈ 0 for every dive the engine can actually produce.</summary>
+        public static readonly float ReactionBaseMs = Config.GetFloat("goalkeeper-mechanics", "ReactionBaseMs", 220f);
 
         /// <summary>[GT] Reflexes-attribute reduction of required reaction time (ms per unit norm). §3.2.</summary>
         public static readonly float ReactionReflexesCoeff = Config.GetFloat("goalkeeper-mechanics", "ReactionReflexesCoeff", 100f);
 
-        /// <summary>[GT] Ball-speed penalty on required reaction time (ms per m/s above reference). §3.2.</summary>
-        public static readonly float ReactionBallSpeedCoeff = Config.GetFloat("goalkeeper-mechanics", "ReactionBallSpeedCoeff", 8f);
+        /// <summary>[GT] Ball-speed penalty on required reaction time (ms per m/s above reference). §3.2.
+        /// 8 → 3 (spec range [3, 18]), gk-catch-parry-conversion KD-C3: at 8, a 27 m/s shot added
+        /// +72 ms required against a fixed ~200 ms commit grid — every fast-shot dive read "early".</summary>
+        public static readonly float ReactionBallSpeedCoeff = Config.GetFloat("goalkeeper-mechanics", "ReactionBallSpeedCoeff", 3f);
 
         /// <summary>[GT] Ball-speed reference (m/s) above which speed penalty applies. §3.2.</summary>
         public static readonly float ReactionBallSpeedRefMps = Config.GetFloat("goalkeeper-mechanics", "ReactionBallSpeedRefMps", 18f);
 
-        /// <summary>[GT] Early-reaction tolerance (ms) before reactionWindowAchieved decays. §3.2 / KD-18.</summary>
-        public static readonly float ReactionEarlyToleranceMs = Config.GetFloat("goalkeeper-mechanics", "ReactionEarlyToleranceMs", 120f);
+        /// <summary>[GT] Early-reaction tolerance (ms) before reactionWindowAchieved decays. §3.2 / KD-18.
+        /// 120 → 200 (spec range max), gk-catch-parry-conversion KD-C3: the 10 Hz decision grid
+        /// quantizes commits by ±100 ms, which the old tolerance turned into a timing lottery.</summary>
+        public static readonly float ReactionEarlyToleranceMs = Config.GetFloat("goalkeeper-mechanics", "ReactionEarlyToleranceMs", 200f);
 
-        /// <summary>[GT] Late-reaction tolerance (ms); numerically smaller than early (late commits decay faster). §3.2 / KD-18.</summary>
-        public static readonly float ReactionLateToleranceMs = Config.GetFloat("goalkeeper-mechanics", "ReactionLateToleranceMs", 80f);
+        /// <summary>[GT] Late-reaction tolerance (ms); numerically smaller than early (late commits decay faster). §3.2 / KD-18.
+        /// 80 → 140 (spec range max), gk-catch-parry-conversion KD-C3 — same grid-quantization reason,
+        /// late side; stays below the early tolerance so KD-18's asymmetry is preserved.</summary>
+        public static readonly float ReactionLateToleranceMs = Config.GetFloat("goalkeeper-mechanics", "ReactionLateToleranceMs", 140f);
 
         /// <summary>[GT] reactionWindowAchieved threshold above which label = Reflexive (telemetry only; KD-2). §3.2.</summary>
         public static readonly float ReflexiveLabelThreshold = Config.GetFloat("goalkeeper-mechanics", "ReflexiveLabelThreshold", 0.75f);
@@ -294,11 +318,18 @@ namespace TacticalDirector.GoalkeeperMechanics
 
         // ── §3.4.5 Handling-Quality Constants ────────────────────────────────────────
 
-        /// <summary>[GT] Baseline handling-quality factor (attribute-independent floor). §3.5.</summary>
-        public static readonly float HandlingBase = Config.GetFloat("goalkeeper-mechanics", "HandlingBase", 0.45f);
+        /// <summary>[GT] Baseline handling-quality factor (attribute-independent floor). §3.5.
+        /// 0.45 → 0.60 (spec range [0.20, 0.70]), gk-catch-parry-conversion KD-C3: with the
+        /// Stage-0 contact anchors equal, pointQuality is a fixed noise lottery (E ≈ 0.68) no
+        /// attribute can move, so the neutral attrFactor of 0.675 left measured contact quality
+        /// at 0.29–0.60 — below the catch band even with a perfect reaction window.</summary>
+        public static readonly float HandlingBase = Config.GetFloat("goalkeeper-mechanics", "HandlingBase", 0.60f);
 
-        /// <summary>[GT] Handling-attribute contribution coefficient. §3.5.</summary>
-        public static readonly float HandlingKAttr = Config.GetFloat("goalkeeper-mechanics", "HandlingKAttr", 0.45f);
+        /// <summary>[GT] Handling-attribute contribution coefficient. §3.5.
+        /// 0.45 → 0.60 (spec range [0.20, 0.70]), gk-catch-parry-conversion KD-C3 — raised WITH
+        /// the base so Handling separates keepers more, not less (poor 0.63, neutral 0.90,
+        /// elite 1.20 before the speed/point factors).</summary>
+        public static readonly float HandlingKAttr = Config.GetFloat("goalkeeper-mechanics", "HandlingKAttr", 0.60f);
 
         /// <summary>[GT] Ball-speed penalty coefficient (dimensionless; formula divides by ref). §3.5.</summary>
         public static readonly float HandlingKBallSpeed = Config.GetFloat("goalkeeper-mechanics", "HandlingKBallSpeed", 0.025f);
@@ -318,8 +349,11 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// <summary>[GT] Blend weight for rawHandling vs reactionWindowAchieved in final quality scalar. §3.5 / KD-2.</summary>
         public static readonly float HandlingReactionBlendAlpha = Config.GetFloat("goalkeeper-mechanics", "HandlingReactionBlendAlpha", 0.70f);
 
-        /// <summary>[GT] handlingQualityScalar threshold at or above which the GK catches the ball. §3.5 / KD-21.</summary>
-        public static readonly float CatchThreshold = Config.GetFloat("goalkeeper-mechanics", "CatchThreshold", 0.78f);
+        /// <summary>[GT] handlingQualityScalar threshold at or above which the GK catches the ball. §3.5 / KD-21.
+        /// 0.78 → 0.74 (spec range [0.65, 0.90]), gk-catch-parry-conversion KD-C3: against the
+        /// fixed pointQuality lottery, 0.78 kept catches a tail event even for elite keepers with
+        /// a live reaction window.</summary>
+        public static readonly float CatchThreshold = Config.GetFloat("goalkeeper-mechanics", "CatchThreshold", 0.74f);
 
         /// <summary>[GT] handlingQualityScalar threshold at or above which the GK parries. §3.5 / KD-21.</summary>
         public static readonly float ParryThreshold = Config.GetFloat("goalkeeper-mechanics", "ParryThreshold", 0.55f);
@@ -452,4 +486,13 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |     |            |   | the squared form is the wrong scale for a component test) and [GT]        |
 // |     |            |   | DivePredictionHorizonS = 2.0 s, bounding the dive-direction interception to the|
 // |     |            |   | regime where a straight-line extrapolation is credible.                   |
+// | 1.3 | 2026-07-28 | — | gk-catch-parry-conversion KD-C3 recalibration, measured over full matches |
+// |     |            |   | and all inside the #11 §3.4.3/§3.4.5 spec ranges: ReactionBaseMs 350→220, |
+// |     |            |   | ReactionBallSpeedCoeff 8→3, tolerances 120/80→200/140 (the engine's       |
+// |     |            |   | discrete ~100–300 ms commit grid read as deep-early against the           |
+// |     |            |   | human-continuous-time values ⇒ window ≈ 0 for every producible dive);     |
+// |     |            |   | HandlingBase 0.45→0.60 + HandlingKAttr 0.45→0.60 + CatchThreshold         |
+// |     |            |   | 0.78→0.74 (measured contact quality 0.29–0.60 could not reach the catch   |
+// |     |            |   | band through the fixed pointQuality lottery even with live windows).      |
+// | 1.4 | 2026-07-28 | — | gk-contact-rate (ERR-011-007): + [GT] DiveCommitMinLeadFrac = 0.25 (SS3.3.6). |
 #endregion
