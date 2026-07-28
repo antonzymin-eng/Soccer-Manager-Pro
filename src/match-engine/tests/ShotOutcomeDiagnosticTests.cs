@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/ShotOutcomeDiagnosticTests.cs
 // Created:  2026-07-27
-// Modified: 2026-07-27
+// Modified: 2026-07-28 (shot-speed pass: + woodworkStrikes report line)
 // Author:   —
 // Spec:     Shot-outcome distribution design (docs/tracking/shot-outcome-distribution-design.md) §4;
 //           Match Engine design note §5.Z.17; path-to-playable roadmap A4a; Code Standards #20
@@ -160,6 +160,7 @@ namespace TacticalDirector.MatchEngine
             report.AppendLine(Inv($"seed 0x{seed:X16}   final {engine.HomeScore}-{engine.AwayScore}"));
             report.AppendLine(Inv($"  shots={m.Shots}  goals={m.Goals}  goals/shot={(m.Shots > 0 ? (float)m.Goals / m.Shots : 0f):F2}"));
             report.AppendLine(Inv($"  onTargetCrossings={m.OnTargetCrossings}  offTargetExits={m.OffTargetExits}  fastBallContacts={m.BlockedContacts}  (allFastContacts={observer.TotalFastContacts})"));
+            report.AppendLine(Inv($"  woodworkStrikes={engine.TestOnly_WoodworkStrikes}"));
             if (m.Shots > 0)
             {
                 report.AppendLine(Inv($"  shot-tick ball speed: min={m.ShotSpeedMin:F1} mean={m.ShotSpeedSum / m.Shots:F1} max={m.ShotSpeedMax:F1} m/s ")
@@ -257,4 +258,6 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | instrument reported shots, on/off-target shares or blocked         |
 // |         |            |        | contacts. Reports the full distribution per match, before and      |
 // |         |            |        | after the KD-1..KD-7 fixes. Asserts nothing (ERR-030-014 lesson).  |
+// | 1.1     | 2026-07-28 | —      | Shot-speed pass: + woodworkStrikes report line (TestOnly_WoodworkStrikes — |
+// |         |            |        | the KD-6 diagnostic counter).                                              |
 #endregion

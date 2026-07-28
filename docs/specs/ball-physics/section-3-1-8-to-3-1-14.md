@@ -408,6 +408,22 @@ public void ApplyGoalPostCollision(
 }
 ```
 
+**Detection — the swept frame test (ERR-001-005, July 28, 2026).** The response above shipped
+with no production detection path: nothing tested the ball against the frame, so the goal was
+non-physical and `ApplyGoalPostCollision` had zero callers. Detection cannot be a discrete
+per-tick position test — at shot speeds the ball moves ~0.42 m per 60 Hz tick, so a segment can
+enter and exit a post's combined contact radius (POST_DIAMETER/2 + Ball.RADIUS ≈ 0.17 m) within
+one tick and the test tunnels. `ApplySweptGoalFrameCollision(ref ball, prevPosition)` tests the
+ball-centre segment of the current tick's integration against the six frame cylinders — per
+goal, two vertical posts (axes half a post diameter OUTWARD of the 7.32 m inner-edge box, capped
+z ∈ [0, GOAL_HEIGHT + POST_DIAMETER]) and one horizontal crossbar (axis half a post diameter
+ABOVE the 2.44 m lower edge, capped between the post axes) — inflated by the ball radius. The
+earliest parametric hit places the ball at the contact point and applies the response above
+against the normal from the closest point on the struck cylinder's axis. Gates: a `Controlled`
+ball never deflects; a degenerate segment or one starting inside the contact radius is a no-op
+(the prior tick handled the approach — no repeated-deflection loop); an X-band prefilter skips
+the cylinder tests away from the goal lines. Pure, drawless, no cross-tick state.
+
 ### 3.1.10.3 Boundary Detection
 
 ```csharp
@@ -430,23 +446,32 @@ public enum RestartType
 /// the line airborne was neither a goal nor out of play — the goal was 7.32 m wide and of
 /// unbounded height, and an airborne touchline crossing played on. The Laws win; the gate
 /// is removed. Height alone never puts the ball out — only crossing a line does.
+/// ERR-001-005 (July 28, 2026): goal-line adjudication originally tested the DETECTED
+/// position, which at shot speeds is up to ~0.42 m past the plane (one 60 Hz tick at
+/// 25 m/s) — a rising ball that crossed UNDER the bar could read as over it. The overload
+/// takes the ball's pre-integration position and evaluates the posts/bar box at the
+/// segment's interpolated crossing of the out-plane (t clamped to [0, 1]; a degenerate
+/// segment falls back to the detected position). Per-position callers
+/// (BallStateMachine.IsOutOfBounds) keep the position-only form — out-NESS is identical
+/// under both, only the goal-vs-over/wide classification refines.
 /// </summary>
-public (bool isOut, RestartType restart) CheckBoundaries(BallState ball, int lastTouchTeamID)
+public (bool isOut, RestartType restart) CheckBoundaries(
+    BallState ball, Vector3 prevPosition, int lastTouchTeamID)
 {
     float x = ball.Position.x;
     float y = ball.Position.y;
     float r = BallPhysicsConstants.Ball.RADIUS;
     
-    // Touchlines
+    // Touchlines (no height/crossing refinement — a throw-in is a throw-in at any height)
     if (y < -r || y > BallPhysicsConstants.Pitch.WIDTH + r)
     {
         return (true, RestartType.THROW_IN);
     }
     
-    // Goal lines
+    // Goal lines — adjudicated at the segment's crossing of the out-plane (ERR-001-005)
     if (x < -r)
     {
-        if (IsInGoal(ball.Position, isHomeGoal: true))
+        if (IsInGoal(InterpolateToPlane(prevPosition, ball.Position, -r), isHomeGoal: true))
         {
             return (true, RestartType.KICKOFF);
         }
@@ -455,7 +480,8 @@ public (bool isOut, RestartType restart) CheckBoundaries(BallState ball, int las
     
     if (x > BallPhysicsConstants.Pitch.LENGTH + r)
     {
-        if (IsInGoal(ball.Position, isHomeGoal: false))
+        if (IsInGoal(InterpolateToPlane(prevPosition, ball.Position,
+                                        BallPhysicsConstants.Pitch.LENGTH + r), isHomeGoal: false))
         {
             return (true, RestartType.KICKOFF);
         }
@@ -475,6 +501,17 @@ private bool IsInGoal(Vector3 position, bool isHomeGoal)
     bool underCrossbar = position.z < BallPhysicsConstants.Pitch.GOAL_HEIGHT;
     
     return withinPosts && underCrossbar;
+}
+
+// ERR-001-005: the segment's crossing point of the vertical plane x = planeX, t clamped
+// to [0, 1] — a degenerate segment (|dx| < epsilon) or a prev already beyond the plane
+// degenerates to the detected position, the pre-ERR-001-005 behaviour.
+private Vector3 InterpolateToPlane(Vector3 prev, Vector3 pos, float planeX)
+{
+    float dx = pos.x - prev.x;
+    if (abs(dx) < EPSILON) return pos;
+    float t = clamp01((planeX - prev.x) / dx);
+    return prev + t * (pos - prev);
 }
 ```
 
@@ -1065,6 +1102,7 @@ public void Validation_DetectsNaN_AndRecovers()
 | 2.6 | Mar 2, 2026 | AI | Fixed §3.1.14 hysteresis test positions to match v2.2+ threshold constants |
 | 2.7 | Apr 20, 2026 | AI | H-04-C: Added Step 4.5 — ROLLING spin decay via UpdateRollingSpinDecay(); C-02: Added defensive comment to default: case clarifying Velocity is not cleared for OUT_OF_PLAY |
 | 2.8 | Jun 9, 2026 | AI | ERR-001-001: §3.1.8.1 bounce normal Vector3.up (Unity +Y) → new Vector3(0,0,1) — pseudocode contradicted the §1.2 Z-up coordinate system and Appendix B's "vertical" v_n definition. ERR-001-002: J_t_required gains the rotational-coupling divisor (1 + m·r²/I = 2.5). Both errors were faithfully implemented in src/ball-physics and fixed there in the same commit (AR-7 H-1 / M-1). |
+| 2.9 | Jul 28, 2026 | AI | ERR-001-005 (shot-speed & woodwork design KD-4/KD-5): §3.1.10.3 goal-line adjudication moves to the segment's interpolated crossing of the out-plane (the detected position is up to ~0.42 m past the plane at shot speeds); §3.1.10.2 gains the swept frame detection paragraph — `ApplySweptGoalFrameCollision`, the six-cylinder segment test that finally calls `ApplyGoalPostCollision` in production (a discrete test tunnels a 0.12 m post at shot speeds). |
 
 ---
 

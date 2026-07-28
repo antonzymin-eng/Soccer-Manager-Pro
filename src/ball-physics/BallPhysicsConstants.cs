@@ -1,6 +1,7 @@
 // File:     src/ball-physics/BallPhysicsConstants.cs
 // Created:  2026-05-24
 // Modified: 2026-07-27 (shot-outcome pass)
+// Modified: 2026-07-28 (shot-speed pass: new GoalFrame block (KD-4 swept-frame geometry))
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  All tunable and physical constants for ball physics simulation.
@@ -374,6 +375,56 @@ namespace TacticalDirector.BallPhysics
             /// <summary>[GT] Interval between position snapshots (seconds). Ball Physics #1 §3.1.2.</summary>
             public static readonly float SnapshotInterval = Config.GetFloat("ball-physics", "Logging.SnapshotInterval", 1.0f);
         }
+
+        /// <summary>
+        /// Physical goal-frame geometry for the swept post/crossbar collision
+        /// (<c>BallCollision.ApplySweptGoalFrameCollision</c> — ERR-001-005 / shot-speed design
+        /// KD-4). All rows are [DERIVED] from the IFAB Pitch constants: goal WIDTH is measured
+        /// between the posts' INNER edges and GOAL_HEIGHT is to the crossbar's LOWER edge, so the
+        /// cylinder AXES sit half a post diameter outward/upward of those datum lines — the same
+        /// conventions <c>IsBetweenPostsUnderCrossbar</c> already relies on.
+        /// </summary>
+        public static class GoalFrame
+        {
+            /// <summary>
+            /// [DERIVED] Ball-centre-to-frame-axis contact radius (m) for the swept segment test.
+            /// Formula: Pitch.POST_DIAMETER / 2 + Ball.RADIUS. Shot-speed design KD-4.
+            /// Source constants: Pitch.POST_DIAMETER, Ball.RADIUS.
+            /// </summary>
+            public static readonly float SweptTestRadius = Pitch.POST_DIAMETER * 0.5f + Ball.RADIUS;
+
+            /// <summary>
+            /// [DERIVED] Lateral offset (m) of each post AXIS from the goal-mouth centre line.
+            /// Formula: Pitch.GOAL_WIDTH / 2 + Pitch.POST_DIAMETER / 2 (IFAB: width between inner
+            /// edges). Source constants: Pitch.GOAL_WIDTH, Pitch.POST_DIAMETER.
+            /// </summary>
+            public static readonly float PostAxisOffsetY =
+                Pitch.GOAL_WIDTH * 0.5f + Pitch.POST_DIAMETER * 0.5f;
+
+            /// <summary>
+            /// [DERIVED] Height (m) of the crossbar AXIS. Formula: Pitch.GOAL_HEIGHT +
+            /// Pitch.POST_DIAMETER / 2 (IFAB: height to the bar's lower edge).
+            /// Source constants: Pitch.GOAL_HEIGHT, Pitch.POST_DIAMETER.
+            /// </summary>
+            public static readonly float BarAxisZ = Pitch.GOAL_HEIGHT + Pitch.POST_DIAMETER * 0.5f;
+
+            /// <summary>
+            /// [DERIVED] Top (m) of the post cylinders' capped extent (the bar's upper edge).
+            /// Formula: Pitch.GOAL_HEIGHT + Pitch.POST_DIAMETER.
+            /// Source constants: Pitch.GOAL_HEIGHT, Pitch.POST_DIAMETER.
+            /// </summary>
+            public static readonly float FrameTopZ = Pitch.GOAL_HEIGHT + Pitch.POST_DIAMETER;
+
+            /// <summary>
+            /// [GT] Half-width (m) of the X band around each goal-line plane inside which the
+            /// six-cylinder swept test runs at all — a cheap prefilter that skips the test for the
+            /// overwhelming majority of ticks. Must exceed the per-tick ball displacement at the
+            /// fastest kick (VAbsoluteMax / 60 ≈ 0.58 m) plus SweptTestRadius, so a segment that
+            /// could touch the frame is never prefiltered out. Shot-speed design KD-4.
+            /// </summary>
+            public static readonly float SweptPrefilterBandM =
+                Config.GetFloat("ball-physics", "GoalFrame.SweptPrefilterBandM", 1.0f);
+        }
     }
 }
 
@@ -418,4 +469,7 @@ namespace TacticalDirector.BallPhysics
 // | 1.9     | 2026-07-27 | —      | Shot-outcome pass (design KD-6): new AgentDeflection block —       |
 // |         |            |        | [GT] MinBallSpeedMps (18.0; the blockable-vs-receivable dial) +   |
 // |         |            |        | [FIXED] MIN_NORMAL_EPSILON for the deflection normal.             |
+// | 1.10    | 2026-07-28 | —      | Shot-speed pass (design KD-4): new GoalFrame block — SweptTestRadius/       |
+// |         |            |        | PostAxisOffsetY/BarAxisZ/FrameTopZ [DERIVED] + SweptPrefilterBandM [GT]     |
+// |         |            |        | for BallCollision.ApplySweptGoalFrameCollision (ERR-001-005).               |
 #endregion

@@ -1448,6 +1448,53 @@ class, intent preserved. Instrument: `ShotOutcomeDiagnosticTests` (env-gated
 stream / domain tag / draw site, no draw-order change**; digests move for any match containing a
 shot or an airborne crossing, as intended.
 
+### 5.Z.19 Shot speed and the physical goal frame (July 28, 2026) — §5.Z.18's residual lever (b)
+
+Owner document: `docs/tracking/shot-speed-woodwork-design.md` (KD-1..KD-7, the measured table,
+the AR history). §5.Z.18 measured shot-tick speed means of 7–10 m/s against football's ~20–25
+and named `VFloor`/`VCeiling` × `PowerIntent` shaping as the lever. Two structural causes
+composed, and fixing them made a third defect load-bearing:
+
+- **ERR-008-016** — #8 §3.5.3's `PowerIntent = clamp(goalOpening × A_Finishing, 0.1, 1.0)` is a
+  product of two [0,1] factors, so nearly every shot pinned at the formula's own 0.1 clamp floor
+  — the engine's strikers were tapping at 10–30% power. Now floor-plus-modulation
+  (`[GT] POWER_INTENT_FLOOR` = 0.65): a deliberate shot is always struck hard; opening ×
+  finishing modulates the top band (an elite finisher with an open goal reaches exactly 1.0).
+- **ERR-006-004** — #6's `VFloor` 10 → **24** over two measured calibration iterations (the
+  formula multiplies the ceiling span by attrFraction AND powerIntent, so the anchor, not the
+  span, must carry the base pace; at 10 a neutral FULL-power vBase capped at ~16 m/s before
+  reducers). `VCeiling`/`VAbsoluteMin` unchanged; A.1.4's stacked-penalty visibility preserved.
+- **ERR-001-005** — at football pace the ball moves ~0.42 m per tick, so the goal frame became
+  physical and precisely adjudicated: `BallCollision.ApplySweptGoalFrameCollision` (the tick's
+  movement segment against six capped cylinders, earliest hit wins — a discrete test tunnels a
+  0.12 m post; **`ApplyGoalPostCollision` finally has a production caller**), and
+  `CheckBoundaries` gains a `prevPosition` overload adjudicating goal-line crossings at the
+  segment's interpolated plane crossing (the detected position is up to 0.42 m past the plane —
+  pre-fix a rising ball crossing UNDER the bar read as over it). Engine wiring is
+  capture-before-integrate / collide-after-integrate in the Physics phase;
+  `_prevTickBallPosition` is WITHIN-tick (the `RestartAppliedThisTick` class), so **no
+  `SNAPSHOT_SCHEMA_VERSION` change**; the woodwork counter is diagnostic observation (the
+  `AiPhaseRunCount` class).
+
+**Measured (3 full matches, `ConfigureSquads` path, same seeds pre/post):** shot-tick means
+**6.9–10.3 → 14.7–16.1 m/s**, maxima **15.3–18.9 → 23.3–27.6**; shots per match **59–70 →
+31–45** (football ~25 — pace changes the possession economy, fewer but real attempts);
+off-target exits roughly doubled; woodwork strikes 0 (structural) → **1 / 0 / 5 per match**
+(football ~0.5–1 — the right order of magnitude). **Goals per shot ROSE, 0.14–0.25 →
+0.38–0.42** (goals 12.3 → 14.7 per match): a
+football-pace shot beats this keeper far more often than a roller — the catch/parry conversion
+(§5.Z.17 §7.5, residual lever (c)) is now measured against real shot speeds for the first time
+and is the clear next lever, alongside shot volume (lever (a), unchanged at ~2× football).
+
+Acceptance: `match-engine-shot-speed` (#19 ScenarioRunner, Tier B, 2 seeds × 9 min + scripted
+frame probes, ~46 s) — **5 of 7 predicates fail on the pre-fix engine, verified by executing the
+scenario against the unmodified tree before the fix landed** (speed floors unreachable at
+mean 7.39 / max 12.50; both frame probes adjudicated as exits; the rising crossing misread as a
+goal kick). Unit locks: `SweptGoalFrameTests` (11 — headlined by the tunneling discriminator: a
+segment that fully crosses a post inside one tick, invisible to any discrete test) +
+`OptionGeneratorTests` PowerIntent floor/ceiling/monotonicity (3). No new RNG stream / domain
+tag / draw site; digests move for any match containing a shot, as intended.
+
 ### 5.Z.8 What this unblocks
 
 `PM-1` ("watch a match") is no longer blocked by the engine. Roadmap **A4a** — the round-resolution
@@ -1530,6 +1577,7 @@ question Step 0 exists to ask.
 
 | Version | Date       | Author | Notes                                  |
 |---------|------------|--------|----------------------------------------|
+| 2.5     | 2026-07-28 | —      | **§5.Z.19 — shot speed + the physical goal frame (the §5.Z.18 residual lever (b)) fixed and measured.** ERR-008-016 (#8 §3.5.3 PowerIntent floor-plus-modulation — the product form pinned nearly every shot at its own 0.1 clamp floor), ERR-006-004 (#6 `VFloor` 10 → 24 over two measured calibration iterations), ERR-001-005 (the goal frame physical: `ApplySweptGoalFrameCollision` six-cylinder segment test — `ApplyGoalPostCollision`'s first production caller; crossing-point goal-line adjudication via the `CheckBoundaries` prevPosition overload). Engine: `_prevTickBallPosition` within-tick capture + swept call in RunPhysicsPhase, crossing-point adjudication in CheckRestartAndApply, `TestOnly_WoodworkStrikes`. Measured: shot-tick means 6.9–10.3 → 14.7–16.1 m/s, maxima to 27.6, shots/match 59–70 → 31–45, goals/shot ROSE 0.14–0.25 → 0.38–0.42 (the keeper's conversion — lever (c) — now measured against real pace). New `match-engine-shot-speed` scenario (5 of 7 predicates fail pre-fix, verified by execution) + `SweptGoalFrameTests` (11) + PowerIntent locks (3). No schema/RNG/draw-order change. Owner: `shot-speed-woodwork-design.md`. |
 | 2.4     | 2026-07-27 | —      | **§5.Z.18 — the shot-outcome distribution (the §5.Z.17 residual) fixed and measured.** ERR-006-002 (`finalVelocity = finalDirection × kickSpeed` per #6's own §3.5.7; the §3.5.6 launch-tilt aim — the vertical half of the placement/error model live for the first time), ERR-006-003 (the error cone is a cone: `tan(err) × distance` at the goal plane), ERR-001-004 (the `z < Diameter` gate removed from `CheckBoundaries` + `IsOutOfBounds` — the goal has a crossbar, airborne crossings adjudicate at the crossing per Law 9/10), ERR-003-007 (`OnAgentCollision` live: `BallCollision.ApplyAgentDeflection`, `BodyPartCoefficients`' first consumer, stateless approaching-only self-block guard, `[GT] AgentDeflection.MinBallSpeedMps` = 10 re-anchored from measurement), the `ShotWorldAdapter` pressure query live (was `0f`; first-touch `PressureEvaluator` + §5.Z.14 un-mirror), `MIN_GOAL_VISIBILITY` 0.05 → 0.12. Measured: goals/match 15.3 → 12.3, goals/shot 0.24–0.29 → 0.14–0.25, fast-ball body contacts 0 → 560–612/match. New `match-engine-shot-outcomes` scenario (3 of 8 predicates fail pre-fix, by execution in a worktree at the pre-fix commit) + 17 unit locks + the `ShotOutcomeDiagnosticTests` instrument. Two tests inverted (encoded the old z-gate contract). No schema/RNG/draw-order change. Residual levers recorded: shot volume (~2.5× football), shot speed (~7–10 m/s means vs ~25), keeper conversion. Owner: `shot-outcome-distribution-design.md`. |
 | 2.2     | 2026-07-26 | —      | **§5.Z Phase H LANDED — ERR-030-014 closed; a production match now plays.** Five seams, four of them found by running the composed engine one after another (each visible only once the previous was fixed — §5.Z.6). KD-H1 restart taker award: `ApplyRestart(position, awardedTeam)` with every call site declaring its team (kickoff home / second half the other side per Law 8 / post-goal the conceding team / RestartResolver's award / offside the defenders / foul the victim's team); taker = nearest non-sent-off agent of that team, ties to lower index. New `[FIXED] FIRST_HALF_KICKOFF_TEAM` + `[DERIVED] SECOND_HALF_KICKOFF_TEAM`. KD-H2 assignment not imparted velocity (`ApplyKick` stays the sole motion producer). KD-H3 `RunLooseBallPickup` — a loose ball at REST is claimed by an agent within the new `[GT] LooseBallPickupRadiusM`, the exact speed-gate complement of `RunFirstTouch` so the two can never both fire. KD-H5 / **ERR-008-014** the DT loose-ball collect, emitted as the SOLE off-ball option for one host-designated collector per team (`TacticalContext.LooseBallCollector`; host-designated because only it knows who is sent off — a perception-derived "nearest teammate" rule deadlocked on a frozen red-carded agent). KD-H4 / **ERR-008-015** the PASS/SHOOT completion sweep — `NotifyActionComplete` had zero production callers, so every agent that passed or shot was frozen in EXECUTING for the rest of the match; plus `OnPossessionChanged` no longer interrupts a holder whose executor is still in flight. New acceptance scenario `match-engine-play-develops` (6 seeds × 9 min; every predicate fails pre-Phase-H, incl. `play-still-alive-at-final-tick`, which caught two of the four stalls) + `MatchEnginePossessionBootstrapTests` (11) + `OptionGeneratorTests` (+3). 21 existing tests updated — most encoded the "a restart clears possession" contract that made the deadlock possible. No `SNAPSHOT_SCHEMA_VERSION` change. **Full dotnet gate: PASSED, 0 failures (whole tree green).** Recorded NOT fixed (§5.Z.7): the foul heuristic's ~7 red cards per 9 minutes; the process-static EventBus's interleaved-engine divergence; #5's FM-08 Error-level log; the `FR-PO-052` perf baseline needing re-capture. |
 | 2.3     | 2026-07-20 | —      | **Phase G Phase-2 LANDED — distinct-squad re-projection (#27 T3 / KD-3).** New public `ISquadProvider` (`src/match-engine/ISquadProvider.cs`, the `ClubId → Squad` resolver) threaded into `RestoreFromSnapshot(…, ISquadProvider squads = null)`; `ReprojectDistinctSquads` replaces the Phase-1 distinct-squad fail-loud — neutral fast-path returns immediately, each team with a non-sentinel `_rosterClubId` resolves its roster (ClubId-check + `ValidateSquadSize`/`ValidateSelectedRecords`, both teams before any apply), re-runs `LineupSelector` + `PlayerAttributeProjection` for the base lineup (`ReprojectBaseLineup`, attribute arrays + the un-serialized bench GK flags `_benchIsGoalkeeper`; the serialized on-pitch `_isGoalkeeper` stays the restored value), then replays the substitutions the serialized `_activeBenchSlot` records (`ReprojectSubstitutions`, the attribute half of `SubstitutePlayer`). Fail-loud on absent provider / unresolvable ClubId (`NotSupportedException`) / mismatched returned ClubId (`InvalidOperationException`) (R4). `MatchEngineSnapshotRestoreTests` v1.1: distinct-squad G3 round-trip (base / mid-match sub / post-restore sub / post-restore keeper-for-keeper sub) + three provider fail-loud gates; new `TestOnly_BenchIsGoalkeeper` seam. No `SNAPSHOT_SCHEMA_VERSION` change. `MatchEngine.cs` v1.42. Full dotnet gate: PASSED, 0 failures (263 match-engine tests; whole tree green). Implementation finding folded in: `_benchIsGoalkeeper` is NOT serialized (only on-pitch `_isGoalkeeper` is), re-projected for post-restore keeper subs. Discovered out-of-scope (Phase-1 completeness follow-up, root `CLAUDE.md` OPEN ISSUES): a keeper-onto-outfield-slot substitution post-restore diverges via a Positioning-AI (#12) GK-flag-flip formation-slot interaction. See `snapshot-deserialize-design.md` v0.8. |

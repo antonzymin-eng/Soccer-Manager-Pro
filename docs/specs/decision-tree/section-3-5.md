@@ -187,13 +187,22 @@ ShotRequest request = new ShotRequest
     AgentId = context.AgentState.AgentId,
 
     // ── Field: PowerIntent ─────────────────────────────────────────────────
-    // Type: float [0.0, 1.0] (Shot Mechanics VR-02)
+    // Type: float [POWER_INTENT_FLOOR, 1.0] (Shot Mechanics VR-02 range [0, 1] respected)
     // Source: AgentAction.Payload.PowerIntent
-    //   Derived in GenerateOptions §3.1 from the SHOOT utility score.
-    //   Mapping: PowerIntent = clamp(GoalOpeningScore × A_Finishing_norm, 0.1f, 1.0f)
-    //   High GoalOpeningScore + high Finishing → high power intent (commit to shot).
-    //   Low GoalOpeningScore → agent reduces power to increase placement precision.
-    //   Minimum 0.1f: prevents zero-power shots from being generated.
+    //   Derived in GenerateOptions §3.1 from the SHOOT candidate's goal opening.
+    //   Mapping (ERR-008-016, July 28, 2026): PowerIntent = clamp(
+    //       POWER_INTENT_FLOOR
+    //       + (1 − POWER_INTENT_FLOOR) × GoalOpeningScore × A_Finishing_norm,
+    //       POWER_INTENT_FLOOR, 1.0f)
+    //   [GT] POWER_INTENT_FLOOR (UtilityWeights, initial 0.65 — measurement-calibrated).
+    //   High GoalOpeningScore + high Finishing → full power (top of the band, up to 1.0).
+    //   RETIRED FORM: clamp(GoalOpeningScore × A_Finishing_norm, 0.1f, 1.0f) — a product
+    //   of two [0,1] factors (A_Finishing_norm ≈ 0.47 for a neutral 10; GoalOpeningScore
+    //   typically 0.2–0.6 under pressure) that pinned nearly every generated shot at its
+    //   own 0.1 clamp floor, composing with #6 §3.2 into measured shot-tick speeds of
+    //   7–10 m/s against football's ~20–25. Its rationale ("low opening → reduce power
+    //   for placement") inverted the game it models: a deliberate competitive shot is
+    //   essentially always struck hard; occlusion argues for PLACEMENT, not a soft tap.
     //   The power/accuracy trade-off curve is owned by Shot Mechanics §3.2.
     PowerIntent = context.SelectedAction.Payload.PowerIntent,
 

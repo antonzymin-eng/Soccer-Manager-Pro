@@ -1,6 +1,7 @@
 // File:     src/shot-mechanics/ShotMechanicsConstants.cs
 // Created:  2026-05-27
 // Modified: 2026-05-28
+// Modified: 2026-07-28 (ERR-006-004 — VFloor 10 → 20 by measurement (shot-speed design KD-2))
 // Author:   —
 // Spec:     Shot Mechanics #6 §3.2–§3.9, §6.1, Code Standards #20
 // Purpose:  All constants for the shot mechanics system. No magic literals in formula code.
@@ -75,8 +76,14 @@ namespace TacticalDirector.ShotMechanics
 
         // ── §3.2 Velocity Model ─────────────────────────────────────────────────────
 
-        /// <summary>[GT] Velocity floor: minimum kick speed before contact zone / fatigue modifiers (m/s). §3.2.</summary>
-        public static readonly float VFloor = Config.GetFloat("shot-mechanics", "VFloor", 10.0f);
+        /// <summary>[GT] Velocity floor: minimum kick speed before contact zone / fatigue modifiers
+        /// (m/s). §3.2. Retuned 10 → 20 by measurement (ERR-006-004 / shot-speed design KD-2): at
+        /// 10, a neutral player's FULL-power vBase capped at ~16 m/s before reducers, composing
+        /// with the #8 PowerIntent defect into measured shot-tick means of 7–10 m/s against
+        /// football's ~25. At 20 a neutral shot lands ~17–19 after typical reducers; an elite
+        /// clean strike reaches ~33 (VCeiling unchanged). Appendix A.1.4's stacked-penalty
+        /// visibility is preserved (worst stack ≈ 8.8 m/s, still above VAbsoluteMin 8).</summary>
+        public static readonly float VFloor = Config.GetFloat("shot-mechanics", "VFloor", 24.0f);
 
         /// <summary>[GT] Velocity ceiling: maximum kick speed at KickPower=20, PowerIntent=1.0 (m/s). §3.2.</summary>
         public static readonly float VCeiling = Config.GetFloat("shot-mechanics", "VCeiling", 35.0f);
@@ -410,4 +417,8 @@ namespace TacticalDirector.ShotMechanics
 // |         |            |        |   ErrorDirectionMatchSeed (0), StationaryRunUpScore (0.5f) GT constants.               |
 // | 1.7     | 2026-06-01 | —      | AR-3 L-2: AimDirectionEpsilon XML doc notes squared-magnitude comparison (effective       |
 // |         |            |        |   1e-8) to prevent future re-scaling errors.                                            |
+// | 1.8     | 2026-07-28 | —      | ERR-006-004 (shot-speed design KD-2): VFloor 10 → 20 — at 10 a neutral      |
+// |         |            |        | full-power vBase capped at ~16 m/s before reducers (measured shot-tick      |
+// |         |            |        | means 7–10 m/s). VCeiling/VAbsoluteMin/VAbsoluteMax unchanged (A.1.4        |
+// |         |            |        | stacked-penalty visibility preserved).                                      |
 #endregion
