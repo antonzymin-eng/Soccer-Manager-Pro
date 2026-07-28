@@ -1,6 +1,7 @@
 // File:     src/decision-tree/UtilityWeights.cs
 // Created:  2026-05-29
 // Modified: 2026-05-29
+// Modified: 2026-07-28 (ERR-008-016 — + POWER_INTENT_FLOOR [GT] (shot-speed design KD-1))
 // Author:   —
 // Spec:     Decision Tree #8 §3.2.11, Code Standards #20
 // Purpose:  Authoritative constant catalogue for the utility scoring model.
@@ -150,6 +151,15 @@ namespace TacticalDirector.DecisionTree
         public const float BASE_SHOOT_RANGE        = 20.0f; // [GT] m; §3.1.4.2
         public const float LONGSHOT_RANGE_BONUS    = 15.0f; // [GT] m; §3.1.4.2
 
+        // [GT] PowerIntent floor for SHOOT (§3.5.3, ERR-008-016 / shot-speed design KD-1). The
+        // former clamp(goalOpening × A_Finishing, 0.1, 1.0) is a product of two [0,1] factors —
+        // A_Finishing ≈ 0.47 for a neutral 10 and goalOpening typically 0.2–0.6 — so nearly every
+        // shot pinned at the 0.1 clamp floor and left the boot at 10–30% power (measured shot-tick
+        // means 7–10 m/s vs football's ~25). A deliberate shot is always struck hard; opening ×
+        // finishing modulates the TOP band above this floor, preserving the old formula's
+        // direction (a better opening and a better finisher still strike harder, up to 1.0).
+        public const float POWER_INTENT_FLOOR      = 0.65f;
+
         public const float MIN_DRIBBLE_SPACE       = 0.10f; // [GT] minimum space score to generate DRIBBLE
         public const float DRIBBLE_THREAT_RADIUS   = 2.0f;  // [GT] m; opponent proximity for space scoring
         public const float DRIBBLE_LOOKAHEAD_M     = 5.0f;  // [GT] m; look-ahead target distance
@@ -208,4 +218,7 @@ namespace TacticalDirector.DecisionTree
 // | 1.3     | 2026-07-23 | —      | ERR-008-013: + U_BASE_SAVE (= UTILITY_CEILING). Not load-bearing for          |
 // |         |            |        |   selection (SAVE is the sole off-ball option when available); feeds only      |
 // |         |            |        |   AgentAction.UtilityScore / DecisionMadeEvent.                                |
+// | 1.4     | 2026-07-28 | —      | ERR-008-016 (shot-speed design KD-1): + POWER_INTENT_FLOOR [GT] = 0.65 —    |
+// |         |            |        | the §3.5.3 floor a deliberate shot is always struck at; opening ×           |
+// |         |            |        | finishing modulates the band above it.                                      |
 #endregion

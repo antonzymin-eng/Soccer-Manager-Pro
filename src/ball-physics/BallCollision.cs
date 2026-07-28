@@ -1,6 +1,7 @@
 // File:     src/ball-physics/BallCollision.cs
 // Created:  2026-05-24
 // Modified: 2026-07-27 (shot-outcome pass)
+// Modified: 2026-07-28 (shot-speed pass: swept goal-frame collision + crossing-point adjudication (ERR-001-005))
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Goal-post collision, boundary detection, possession evaluation, and kick
@@ -83,13 +84,163 @@ namespace TacticalDirector.BallPhysics
         }
 
         /// <summary>
+        /// Swept physical goal-frame collision (ERR-001-005 / shot-speed design KD-4) — the
+        /// entry that finally gives <see cref="ApplyGoalPostCollision"/> a production caller.
+        /// Tests the ball-centre SEGMENT <paramref name="prevPosition"/> → <c>ball.Position</c>
+        /// against the six frame cylinders (two posts + one crossbar per goal), each inflated by
+        /// the ball radius (<see cref="BallPhysicsConstants.GoalFrame.SweptTestRadius"/>): at
+        /// football shot speeds the ball moves ~0.42 m per 60 Hz tick, so a discrete per-tick
+        /// position test TUNNELS straight through a 0.12 m post — the segment test cannot. On the
+        /// EARLIEST parametric hit the ball centre is placed at the contact parameter and the
+        /// existing restitution/spin-retention response runs against the normal from the closest
+        /// point on the struck cylinder's axis. Gates: a <c>Controlled</c> ball never deflects (a
+        /// possessed ball is driven at the holder's feet — the ApplyAgentDeflection precedent);
+        /// a degenerate segment is a no-op; an X-band prefilter
+        /// (<see cref="BallPhysicsConstants.GoalFrame.SweptPrefilterBandM"/>) skips the cylinder
+        /// tests when the segment is nowhere near a goal line. Pure — no RNG, no logging state.
+        /// </summary>
+        /// <param name="ball">Ball state, modified in place on a hit.</param>
+        /// <param name="prevPosition">Ball centre at the start of this tick's integration.</param>
+        /// <returns>True when a frame strike was applied; false otherwise.</returns>
+        public static bool ApplySweptGoalFrameCollision(ref BallState ball, Vector3 prevPosition)
+        {
+            if (ball.State == BallStateType.Controlled)
+                return false;
+
+            Vector3 d = ball.Position - prevPosition;
+            if (d.sqrMagnitude < BallPhysicsConstants.AgentDeflection.MIN_NORMAL_EPSILON
+                                 * BallPhysicsConstants.AgentDeflection.MIN_NORMAL_EPSILON)
+                return false;   // degenerate: the ball did not move this tick
+
+            float band = BallPhysicsConstants.GoalFrame.SweptPrefilterBandM;
+            float xMin = Mathf.Min(prevPosition.x, ball.Position.x);
+            float xMax = Mathf.Max(prevPosition.x, ball.Position.x);
+
+            bool bestFound = false;
+            float bestT = float.MaxValue;
+            Vector3 bestAxisPoint = default;
+
+            // Test the near goal(s) only — the prefilter makes the common mid-pitch tick free.
+            if (xMin <= band)
+                TestGoalFrame(prevPosition, d, goalLineX: 0f, ref bestFound, ref bestT, ref bestAxisPoint);
+            if (xMax >= BallPhysicsConstants.Pitch.LENGTH - band)
+                TestGoalFrame(prevPosition, d, goalLineX: BallPhysicsConstants.Pitch.LENGTH,
+                              ref bestFound, ref bestT, ref bestAxisPoint);
+
+            if (!bestFound)
+                return false;
+
+            Vector3 contactPoint = prevPosition + bestT * d;
+            ball.Position = contactPoint;
+            ApplyGoalPostCollision(ref ball, contactPoint, bestAxisPoint, logger: null, matchTime: 0f);
+            return true;
+        }
+
+        /// <summary>Tests one goal's two posts + crossbar against the segment, keeping the
+        /// earliest hit. Post axes are vertical at y = centreY ± PostAxisOffsetY, capped
+        /// z ∈ [0, FrameTopZ]; the bar axis runs along y between the post axes at
+        /// z = BarAxisZ.</summary>
+        private static void TestGoalFrame(
+            Vector3 p0, Vector3 d, float goalLineX,
+            ref bool found, ref float bestT, ref Vector3 bestAxisPoint)
+        {
+            float centreY = BallPhysicsConstants.Pitch.WIDTH * 0.5f;
+            float offY    = BallPhysicsConstants.GoalFrame.PostAxisOffsetY;
+            float radius  = BallPhysicsConstants.GoalFrame.SweptTestRadius;
+
+            // Two posts: infinite cylinder in the XY plane, capped in z.
+            for (int s = -1; s <= 1; s += 2)
+            {
+                float axisY = centreY + s * offY;
+                if (TrySegmentCircle2D(
+                        p0.x, p0.y, d.x, d.y, goalLineX, axisY, radius, out float t))
+                {
+                    float z = p0.z + t * d.z;
+                    if (z >= 0f && z <= BallPhysicsConstants.GoalFrame.FrameTopZ && t < bestT)
+                    {
+                        found = true;
+                        bestT = t;
+                        bestAxisPoint = new Vector3(goalLineX, axisY, p0.z + t * d.z);
+                    }
+                }
+            }
+
+            // Crossbar: infinite cylinder in the XZ plane, capped in y between the post axes.
+            float barZ = BallPhysicsConstants.GoalFrame.BarAxisZ;
+            if (TrySegmentCircle2D(
+                    p0.x, p0.z, d.x, d.z, goalLineX, barZ, radius, out float tBar))
+            {
+                float y = p0.y + tBar * d.y;
+                if (y >= centreY - offY && y <= centreY + offY && tBar < bestT)
+                {
+                    found = true;
+                    bestT = tBar;
+                    bestAxisPoint = new Vector3(goalLineX, p0.y + tBar * d.y, barZ);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Earliest parametric intersection t ∈ [0, 1] of the 2-D segment (a0,b0) + t·(da,db)
+        /// with the circle centred (ca,cb) of radius <paramref name="r"/> — the cylinder test
+        /// projected onto the plane perpendicular to its axis. Returns false when the segment
+        /// starts INSIDE the circle (the ball is already overlapping the frame — no crossing to
+        /// resolve; the previous tick's test handled the approach) or never reaches it.
+        /// </summary>
+        private static bool TrySegmentCircle2D(
+            float a0, float b0, float da, float db, float ca, float cb, float r, out float t)
+        {
+            t = 0f;
+            float fa = a0 - ca;
+            float fb = b0 - cb;
+            float aa = da * da + db * db;
+            if (aa <= 0f)
+                return false;   // no planar motion — cannot cross the circle
+
+            float bb = 2f * (fa * da + fb * db);
+            float cc = fa * fa + fb * fb - r * r;
+            if (cc < 0f)
+                return false;   // starts inside — see summary
+
+            float disc = bb * bb - 4f * aa * cc;
+            if (disc < 0f)
+                return false;
+
+            float sqrtDisc = Mathf.Sqrt(disc);
+            float t0 = (-bb - sqrtDisc) / (2f * aa);
+            if (t0 < 0f || t0 > 1f)
+                return false;
+
+            t = t0;
+            return true;
+        }
+
+        /// <summary>
+        /// Checks if the ball has left the field of play, adjudicating goal-line crossings at the
+        /// DETECTED position. Prefer the <paramref name="prevPosition"/> overload where a movement
+        /// segment exists (ERR-001-005): at 25 m/s the detected position is up to ~0.42 m past the
+        /// plane, which misclassifies a rising ball around the crossbar. This overload remains for
+        /// per-position callers (<see cref="BallStateMachine.IsOutOfBounds"/> keeps the same
+        /// out-NESS contract — the two predicates still agree on what is out; only the
+        /// goal-vs-over/wide classification refines under the segment overload).
+        /// </summary>
+        public static (bool isOut, RestartType restart) CheckBoundaries(
+            BallState ball,
+            int lastTouchTeamID)
+        {
+            return CheckBoundaries(ball, ball.Position, lastTouchTeamID);
+        }
+
+        /// <summary>
         /// Checks if the ball has left the field of play.
         /// Ball must entirely cross the line — on the ground or IN THE AIR (Law 9; the former
         /// z &lt; Ball.Diameter gate made an airborne crossing neither a goal nor out of play —
         /// ERR-001-004 / shot-outcome design KD-5). A goal-line crossing between the posts and
-        /// under the crossbar is a goal (Law 10, <see cref="IsBetweenPostsUnderCrossbar"/>);
-        /// over the bar or wide of the posts is a corner / goal kick.
-        /// <see cref="BallStateMachine.IsOutOfBounds"/> applies the same predicate so the two agree.
+        /// under the crossbar is a goal (Law 10, <see cref="IsBetweenPostsUnderCrossbar"/>),
+        /// evaluated at the segment's interpolated CROSSING of the out-plane rather than at the
+        /// detected (overshot) position (ERR-001-005 / shot-speed design KD-5 — at 25 m/s the
+        /// difference is up to ~0.2 m of height, exactly the band around the crossbar); over the
+        /// bar or wide of the posts is a corner / goal kick.
         /// Corner-region precedence (Stage 0 simplification): when both the goal line and
         /// a touchline are crossed in the same frame, the touchline check runs first and
         /// classifies the exit as ThrowIn even though geometric reasoning would prefer
@@ -98,6 +249,7 @@ namespace TacticalDirector.BallPhysics
         /// </summary>
         public static (bool isOut, RestartType restart) CheckBoundaries(
             BallState ball,
+            Vector3 prevPosition,
             int lastTouchTeamID)
         {
             float x = ball.Position.x;
@@ -112,7 +264,7 @@ namespace TacticalDirector.BallPhysics
             // half-space is what distinguishes them and the caller already verified it.
             if (x < -r)
             {
-                if (IsBetweenPostsUnderCrossbar(ball.Position))
+                if (IsBetweenPostsUnderCrossbar(InterpolateToPlane(prevPosition, ball.Position, -r)))
                     return (true, RestartType.KickOff);
                 return (true, lastTouchTeamID == 0 ? RestartType.Corner : RestartType.GoalKick);
             }
@@ -120,12 +272,28 @@ namespace TacticalDirector.BallPhysics
             // Away goal (x > LENGTH + r): see comment on home-goal branch above.
             if (x > BallPhysicsConstants.Pitch.LENGTH + r)
             {
-                if (IsBetweenPostsUnderCrossbar(ball.Position))
+                if (IsBetweenPostsUnderCrossbar(InterpolateToPlane(
+                        prevPosition, ball.Position, BallPhysicsConstants.Pitch.LENGTH + r)))
                     return (true, RestartType.KickOff);
                 return (true, lastTouchTeamID == 1 ? RestartType.Corner : RestartType.GoalKick);
             }
 
             return (false, RestartType.None);
+        }
+
+        /// <summary>
+        /// The segment's crossing point of the vertical plane x = <paramref name="planeX"/>,
+        /// with t clamped to [0, 1] — a prev already beyond the plane (a rebound landing outside
+        /// and re-crossing, or a position-only caller passing prev == pos) degenerates to the
+        /// detected position, the pre-ERR-001-005 behaviour.
+        /// </summary>
+        private static Vector3 InterpolateToPlane(Vector3 prev, Vector3 pos, float planeX)
+        {
+            float dx = pos.x - prev.x;
+            if (Mathf.Abs(dx) < BallPhysicsConstants.AgentDeflection.MIN_NORMAL_EPSILON)
+                return pos;
+            float t = Mathf.Clamp01((planeX - prev.x) / dx);
+            return prev + t * (pos - prev);
         }
 
         private static bool IsBetweenPostsUnderCrossbar(Vector3 position)
@@ -296,4 +464,12 @@ namespace TacticalDirector.BallPhysics
 // |         |            |        | ApplyAgentDeflection — the §3.1.10.1 agent-contact response       |
 // |         |            |        | (reflect approaching normal component; BodyPartCoefficients      |
 // |         |            |        | retention; separating/degenerate contact is a no-op).             |
+// | 1.8     | 2026-07-28 | —      | Shot-speed pass (ERR-001-005, design KD-4/KD-5): ApplySweptGoalFrame-       |
+// |         |            |        | Collision — segment-vs-six-cylinder test (posts + crossbars, inflated by    |
+// |         |            |        | ball radius; a discrete test tunnels a 0.12 m post at shot speeds), first   |
+// |         |            |        | production caller of ApplyGoalPostCollision. CheckBoundaries gains a        |
+// |         |            |        | prevPosition overload adjudicating goal-line crossings at the interpolated  |
+// |         |            |        | crossing point (detected position is up to ~0.42 m past the plane); the     |
+// |         |            |        | position-only overload delegates with prev == pos (IsOutOfBounds contract   |
+// |         |            |        | unchanged — out-ness identical, only goal-vs-over/wide refines).            |
 #endregion

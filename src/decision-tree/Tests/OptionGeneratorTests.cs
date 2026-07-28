@@ -132,6 +132,60 @@ namespace TacticalDirector.DecisionTree.Tests
                     "A slow POSSESSED ball must not generate an intercept.");
         }
 
+        // ── ERR-008-016: PowerIntent floor-plus-modulation (shot-speed design KD-1) ──
+
+        [Test]
+        public void Shoot_PowerIntent_NeverBelowTheFloor()
+        {
+            // The pre-fix product form pinned nearly every shot at its own 0.1 clamp floor
+            // (goalOpening × A_Finishing ≤ ~0.3 for a neutral player under any occlusion),
+            // composing into measured shot speeds of 7–10 m/s. The floor is the contract:
+            // a deliberate shot is always struck hard.
+            DecisionContext ctx = BuildShootingContext(finishing: 0.5f);
+            ActionOption shoot = GetShootOption(in ctx);
+            Assert.GreaterOrEqual(shoot.PowerIntent, UtilityWeights.POWER_INTENT_FLOOR,
+                "PowerIntent must never fall below the §3.5.3 floor");
+        }
+
+        [Test]
+        public void Shoot_PowerIntent_OpenGoalEliteFinisher_ReachesFullPower()
+        {
+            // goalOpening = 1.0 (no blockers) × A_Finishing = 1.0 ⇒ floor + (1 − floor) = 1.0
+            // exactly — the top of the old formula's direction is preserved.
+            DecisionContext ctx = BuildShootingContext(finishing: 1.0f);
+            ActionOption shoot = GetShootOption(in ctx);
+            Assert.AreEqual(1.0f, shoot.PowerIntent, 1e-5f,
+                "an elite finisher with an open goal strikes at full power");
+        }
+
+        [Test]
+        public void Shoot_PowerIntent_BetterFinisherStrikesHarder()
+        {
+            // Monotonicity above the floor: same opening, higher finishing ⇒ higher intent.
+            DecisionContext lo = BuildShootingContext(finishing: 0.3f);
+            DecisionContext hi = BuildShootingContext(finishing: 0.9f);
+            Assert.Greater(GetShootOption(in hi).PowerIntent, GetShootOption(in lo).PowerIntent,
+                "opening × finishing must still modulate the band above the floor");
+        }
+
+        private static DecisionContext BuildShootingContext(float finishing)
+        {
+            DecisionContext ctx = BuildPossessionContext();
+            ctx.AgentPosition = new Vector2(92.0f, 34.0f);        // in range, open arc
+            ctx.AgentState.Position = ctx.AgentPosition;
+            ctx.A_Finishing = finishing;
+            return ctx;
+        }
+
+        private static ActionOption GetShootOption(in DecisionContext ctx)
+        {
+            int count = OptionGenerator.GenerateOptions(in ctx, Buffer);
+            for (int i = 0; i < count; i++)
+                if (Buffer[i].Type == ActionType.SHOOT) return Buffer[i];
+            Assert.Fail("expected a SHOOT candidate from the shooting context");
+            return default;
+        }
+
         // ── UT-03: No PASS when no visible teammates ──────────────────────────
 
         [Test]
@@ -448,4 +502,6 @@ namespace TacticalDirector.DecisionTree.Tests
 // |         |            |        |   §5 spec requirements.                                                   |
 // | 1.2     | 2026-06-11 | —      | Audit AR-2: M-9 proximity-cap lock (binding Decisions cap selects        |
 // |         |            |        |   closest-first per §3.1.3.6); INV-GEN-06 dribble-clamp lock.             |
+// | 1.4     | 2026-07-28 | —      | ERR-008-016 locks: PowerIntent never below POWER_INTENT_FLOOR, open-goal    |
+// |         |            |        | elite finisher = 1.0 exactly, monotone in finishing.                        |
 #endregion

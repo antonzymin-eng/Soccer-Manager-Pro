@@ -42,6 +42,7 @@
 // Modified: 2026-07-26 (§5.Z.9 foul/discipline balance pass: referee-call probability partitioned out of the single card-severity draw (KD-F1/KD-F2), no-call arms no cooldown (KD-F3), strongest-wins candidate capture (KD-F4), + the TestOnly collision-observer measurement seam. No schema change. See docs/tracking/foul-discipline-balance-design.md)
 // Modified: 2026-07-27 (§5.Z.17 goalkeeper save pipeline: NotifyKeeperOfShot opens #11's §3.2 reaction window on the shot CONTACT frame (ERR-011-004, stamped in MILLISECONDS); ClearSaveIntent called on the save-episode disarm so the engine and #11 latches cannot disagree; TestOnly_GoalkeeperState observation seam. No schema change. See docs/tracking/goalkeeper-save-pipeline-design.md)
 // Modified: 2026-07-27 (P1 richer observation frame + AR-1 L-3: discipline / period / restart accessors for a HUD, ApplyRestart declares its RestartCue, and the unmapped-RestartType arm warns under a gated diagnostic instead of reporting "no restart" in silence. Within-tick fields only — no SNAPSHOT_SCHEMA_VERSION change. See docs/tracking/interactive-unity-client-design.md §5-P1)
+// Modified: 2026-07-28 (shot-speed pass (KD-6): _prevTickBallPosition capture + swept goal-frame call in RunPhysicsPhase, crossing-point CheckBoundaries overload in CheckRestartAndApply, TestOnly_WoodworkStrikes. Within-tick + diagnostic state only — no SNAPSHOT_SCHEMA_VERSION change. See docs/tracking/shot-speed-woodwork-design.md)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -247,6 +248,18 @@ namespace TacticalDirector.MatchEngine
         // held the ball — the scoring TEAM is classified by geometry (which goal), never by this
         // field. Serialized at v14. −1 until any agent first holds possession.
         private int _lastHolderAgentId;
+
+        // ── Shot-speed / woodwork pass (docs/tracking/shot-speed-woodwork-design.md) ──
+        // The ball's position at the top of THIS tick's Physics phase, before integration —
+        // WITHIN-TICK state (written every Physics phase, consumed by the swept goal-frame test
+        // and the Resolve-phase crossing-point adjudication the same tick, never read across
+        // ticks; the RestartAppliedThisTick class). NOT serialized — no schema impact (KD-6).
+        private Vector3 _prevTickBallPosition;
+
+        // Cumulative post/crossbar strikes this match — DIAGNOSTIC OBSERVATION ONLY (the
+        // AiPhaseRunCount class): not serialized, not digest-load-bearing, not restored. Read by
+        // the shot-outcome diagnostic; a restored match restarts the count at zero by design.
+        private int _woodworkStrikes;
 
         // ── Match-flow completion (docs/tracking/match-flow-completion-design.md) ─────
         // Discipline: per-agent yellow-card count + sent-off flag, plus a global foul-detection
@@ -1972,6 +1985,10 @@ namespace TacticalDirector.MatchEngine
         /// to assert the physics seam mutated it).</summary>
         internal BallState TestOnly_BallSnapshot => _ball;
 
+        /// <summary>Test-only: cumulative post/crossbar strikes this match (shot-speed design
+        /// KD-6 — diagnostic observation, not serialized, zero after a restore by design).</summary>
+        internal int TestOnly_WoodworkStrikes => _woodworkStrikes;
+
         /// <summary>
         /// Test-only seam: overwrites an agent's held movement command. The AI phase owns this at
         /// Phase D; B2 tests inject a WalkTo to exercise the movement seam. Not called by production.
@@ -3364,10 +3381,28 @@ namespace TacticalDirector.MatchEngine
             // Fixed 60 Hz timestep in SECONDS (design note §3 / step B1); never wall-clock.
             float dt = DeterministicSimConstants.FrameSeconds;
 
+            // ERR-001-005 / shot-speed design KD-6 — capture the ball's pre-integration position.
+            // WITHIN-TICK state (the RestartAppliedThisTick class): written here at the top of every
+            // Physics phase, consumed by the swept frame test below and the Resolve-phase
+            // crossing-point adjudication the same tick, never read across ticks — so it is NOT
+            // serialized and needs no exclusion-proof entry beyond this note.
+            _prevTickBallPosition = _ball.Position;
+
             // Ball: a null logger drops matchTime (the logger is its sole consumer — design note B2),
             // so no allocation and no non-load-bearing time enters the digest. No wind at Stage 0.
             BallPhysicsCore.UpdateBallPhysics(
                 ref _ball, dt, SurfaceType.GrassDry, Vector3.zero, logger: null, matchTime: 0f);
+
+            // ERR-001-005 / KD-4 — the goal frame is physical: a ball whose movement segment meets
+            // a post or the crossbar rebounds (restitution + spin retention) instead of flying
+            // through a 0.12 m cylinder the discrete per-tick test tunnels past at shot speeds.
+            // Runs immediately after the ball integrates so the Resolve-phase boundary check sees
+            // the post-rebound, in-play position. The counter is diagnostic observation only
+            // (the AiPhaseRunCount class — not serialized, not digest-load-bearing).
+            if (BallCollision.ApplySweptGoalFrameCollision(ref _ball, _prevTickBallPosition))
+            {
+                _woodworkStrikes++;
+            }
 
             // Match-flow completion (design note §3): a sent-off agent is frozen — forced to a stop
             // command every tick, overriding whatever the last AI dispatch left held (they will never
@@ -3621,7 +3656,11 @@ namespace TacticalDirector.MatchEngine
             // is assumed. A true last-toucher tracker is a Stage-1+ refinement (it needs a
             // physical-contact event this engine does not yet consume).
             int lastTouchTeam = _lastHolderAgentId >= 0 ? _teamIds[_lastHolderAgentId] : 0;
-            (bool isOut, RestartType restart) = BallCollision.CheckBoundaries(_ball, lastTouchTeam);
+            // ERR-001-005 / shot-speed design KD-5: the segment overload adjudicates a goal-line
+            // crossing at the interpolated crossing point rather than the detected position (up to
+            // ~0.42 m past the plane at shot speeds — the band around the crossbar).
+            (bool isOut, RestartType restart) =
+                BallCollision.CheckBoundaries(_ball, _prevTickBallPosition, lastTouchTeam);
             if (!isOut || restart == RestartType.None)
             {
                 return;
@@ -7671,4 +7710,9 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | BuildFirstTouchContext runs (both callers single-threaded Resolve, no   |
 // |         |            |        | aliasing), with the §5.Z.14 canonical-frame un-mirror for the away      |
 // |         |            |        | shooter. No schema/RNG/draw-order change.                               |
+// | 1.53    | 2026-07-28 | —      | Shot-speed pass (design KD-6): _prevTickBallPosition (within-tick) captured |
+// |         |            |        | before ball integration; ApplySweptGoalFrameCollision after it (the goal    |
+// |         |            |        | frame is physical — ERR-001-005); CheckRestartAndApply adjudicates at the   |
+// |         |            |        | interpolated crossing (KD-5); TestOnly_WoodworkStrikes diagnostic counter.  |
+// |         |            |        | No schema change.                                                           |
 #endregion

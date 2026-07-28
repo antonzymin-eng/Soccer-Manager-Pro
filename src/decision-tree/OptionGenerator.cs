@@ -2,6 +2,7 @@
 // Created:  2026-05-29
 // Modified: 2026-05-29
 // Modified: 2026-07-26 (ERR-008-014 — loose-ball collect emitted as the SOLE off-ball option for the host-designated collector)
+// Modified: 2026-07-28 (ERR-008-016 — PowerIntent floor-plus-modulation (shot-speed design KD-1))
 // Author:   —
 // Spec:     Decision Tree #8 §3.1, Code Standards #20
 // Purpose:  Step 3 of the 6-step pipeline. Generates all eligible ActionOption
@@ -307,8 +308,19 @@ namespace TacticalDirector.DecisionTree
             float goalOpeningScore = ComputeGoalOpeningScore(in ctx, distToGoal);
             if (goalOpeningScore < UtilityWeights.MIN_GOAL_VISIBILITY) return count;
 
-            // PowerIntent (§3.5.3): clamp(GoalOpeningScore × A_Finishing, 0.1, 1.0)
-            float powerIntent = Mathf.Clamp(goalOpeningScore * ctx.A_Finishing, 0.1f, 1.0f);
+            // PowerIntent (§3.5.3, ERR-008-016): floor-plus-modulation. The former
+            // clamp(goalOpening × A_Finishing, 0.1, 1.0) pinned nearly every shot at its own 0.1
+            // clamp floor (a product of two [0,1] factors, one of which is ≈ 0.47 for a neutral
+            // player), which composed with #6's velocity assembly into measured shot speeds of
+            // 7–10 m/s against football's ~25. A deliberate shot is always struck hard; the
+            // opening × finishing product now modulates the band ABOVE the floor, keeping the old
+            // direction (better opening + better finisher ⇒ harder strike, up to 1.0). The clamp
+            // is retained as the VR-02 range guarantee (the expression cannot leave [floor, 1] for
+            // in-range inputs; NaN hygiene falls to the pre-dispatch FM-DT assertions as before).
+            float powerIntent = Mathf.Clamp(
+                UtilityWeights.POWER_INTENT_FLOOR
+                + (1.0f - UtilityWeights.POWER_INTENT_FLOOR) * goalOpeningScore * ctx.A_Finishing,
+                UtilityWeights.POWER_INTENT_FLOOR, 1.0f);
 
             // PlacementTarget: aim toward far post based on agent position relative to goal centre
             float agentGoalRelY = ctx.AgentPosition.y - ctx.OpponentGoalCentre.y;
@@ -762,4 +774,8 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   out of momentum. Sole-option per the §3.1.13 SAVE precedent.  |
 // |         |            |        |   The §3.1.9.1 minimum-ball-speed gate is deliberately          |
 // |         |            |        |   UNCHANGED (its comment records why loosening it was refused). |
+// | 1.5     | 2026-07-28 | —      | ERR-008-016 (shot-speed design KD-1): PowerIntent = clamp(FLOOR +           |
+// |         |            |        | (1−FLOOR) × goalOpening × A_Finishing, FLOOR, 1) — the former product of    |
+// |         |            |        | two [0,1] fractions pinned nearly every shot at the 0.1 clamp floor         |
+// |         |            |        | (measured shot-tick means 7–10 m/s vs football ~25).                        |
 #endregion

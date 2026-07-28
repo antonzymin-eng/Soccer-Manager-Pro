@@ -10,7 +10,7 @@ Sections 1–8 and Section 9 (Approval Checklist), these appendices satisfy all 
 requirements for formal approval of Specification #6 of 20.
 
 **Created:** February 23, 2026, 11:59 PM PST
-**Version:** 1.0
+**Version:** 1.1 (July 28, 2026 — ERR-006-004: `V_FLOOR` 10 → 24 by measurement; A.1 value rows, the V_CEILING check arithmetic, and A.1.4's worked stacked-penalty figures updated. Formula and sensitivity derivations unchanged.)
 **Status:** DRAFT — Awaiting Lead Developer Review
 **Author:** Claude (AI) with Anton (Lead Developer)
 **Specification Number:** 6 of 20 (Stage 0 — Physics Foundation)
@@ -107,16 +107,22 @@ V_BASE = V_FLOOR + (EffectiveAttribute / ATTR_MAX) × (V_CEILING − V_FLOOR) ×
 
 **Component derivation:**
 
-- `V_FLOOR = 10.0 m/s` [GT]: The physical lower bound on any valid shot. A ball kicked
-  with PowerIntent > 0 must at minimum exceed a typical goalkeeper's reflex reach (≈8 m/s).
-  10.0 m/s is chosen as a round, conservative estimate above that physical threshold.
+- `V_FLOOR = 24.0 m/s` [GT] (ERR-006-004, July 28, 2026 — retuned 10 → 24 by measurement):
+  the anchor a deliberate shot starts from before attributes, power intent and the
+  §3.2.5–§3.2.8 reducers act. The original 10.0 ("a round, conservative estimate above a
+  keeper's ≈8 m/s reflex reach") made the (V_CEILING − V_FLOOR) span carry the whole
+  distance to football pace — but the formula multiplies that span by BOTH attrFraction
+  and PowerIntent, so a neutral player's full-power vBase capped at ~16 m/s and measured
+  shot-tick means ran 6.9–10.3 m/s against football's ~20–25. At 24, measured means land
+  14.7–16.1 (maxima 23–28) after the reducers. Calibrated in two iterations against the
+  `ShotOutcomeDiagnosticTests` instrument (shot-speed & woodwork design KD-2/§4).
 
 - `V_CEILING = 35.0 m/s`: Derived from [LEES-1998] and validated against StatsBomb Open
   Data elite shot observations. Represents a world-class player achieving maximum
   foot-to-ball velocity transfer on a perfect instep contact. At `EffectiveAttribute = 20`
   (maximum) and `PowerIntent = 1.0`:
   ```
-  V_BASE = 10.0 + (20/20) × (35 − 10) × 1.0 = 10.0 + 25.0 = 35.0 m/s ✓
+  V_BASE = 24.0 + (20/20) × (35 − 24) × 1.0 = 24.0 + 11.0 = 35.0 m/s ✓
   ```
 
 - `ATTR_MAX = 20.0`: Design authority from Master Vol 2 §PlayerAttributes. Fixed.
@@ -157,23 +163,28 @@ not by the same absolute amount. This is consistent with physical force-output d
 
 #### A.1.4 V_FLOOR vs. V_ABSOLUTE_MIN Design Decision
 
-`V_FLOOR` (10.0) is the formula minimum before secondary modifiers. It is where V_BASE
-starts when PowerIntent > 0. `V_ABSOLUTE_MIN` (8.0) is the post-modifier safety clamp.
+`V_FLOOR` (24.0 — ERR-006-004, retuned from 10.0) is the formula minimum before secondary
+modifiers. It is where V_BASE starts when PowerIntent > 0. `V_ABSOLUTE_MIN` (8.0) is the
+post-modifier safety clamp.
 
-Rationale for the two-tier design: consider a weak-foot shot at PowerIntent 0.1 with full
-fatigue and poor body mechanics. Each modifier degrades from V_FLOOR:
+Rationale for the two-tier design: consider a weak-foot shot at the §3.5.3 PowerIntent
+floor with full fatigue and poor body mechanics. Each modifier degrades from V_FLOOR
+(worked at the retuned values; ERR-008-016 raised the PowerIntent floor to 0.65, so 0.1
+is no longer reachable — the stacked case below uses the floor):
 
 ```
-V_BASE = 10.0 + (10/20) × 25 × 0.1 = 10.0 + 1.25 = 11.25 m/s
-After WeakFoot (×0.80):    9.00 m/s
-After Fatigue  (×0.80):    7.20 m/s → below V_ABSOLUTE_MIN
-Final (clamped):           8.00 m/s
+V_BASE = 24.0 + (10/20) × 11 × 0.65 = 24.0 + 3.58 = 27.58 m/s
+After WeakFoot (×0.80):        22.06 m/s
+After Fatigue  (×0.80):        17.65 m/s
+After ContactQuality (×0.70):  12.35 m/s → well above V_ABSOLUTE_MIN
+Final (unclamped):             12.35 m/s
 ```
 
-If `V_ABSOLUTE_MIN` were set equal to `V_FLOOR`, this stacked-penalty case would clamp
-too aggressively and mask the effect of weak foot + fatigue. Setting `V_ABSOLUTE_MIN` 2
-m/s below V_FLOOR gives the modifier chain room to act while still protecting
-`Ball.ApplyKick()` from receiving dangerous near-zero velocities.
+If `V_ABSOLUTE_MIN` were set equal to `V_FLOOR`, a fully-stacked penalty case would clamp
+too aggressively and mask the effect of the modifier chain. Keeping `V_ABSOLUTE_MIN` well
+below the worst realistic stack preserves the chain's visibility (the retune WIDENS that
+margin: pre-retune the stacked case actually reached the clamp; post-retune it never
+does) while still protecting `Ball.ApplyKick()` from dangerous near-zero velocities.
 
 ---
 
