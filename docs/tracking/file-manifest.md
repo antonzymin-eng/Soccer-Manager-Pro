@@ -1,7 +1,29 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 27, 2026 (**Path-to-playable Track C: B1 richer observation frame + B2 Match Analytics
+**Last Updated:** July 31, 2026 (**Training System #29 Stage-2 core — adversarial-review AR-1 fix pass over the
+July-30 landing (2H + 5M + 4L, all closed).** **New files:** `src/training-system/ClubTrainingBlock.cs` v1.0
+(the per-club `PlayerId`-keyed container — the FR-TR-025 insert/remove lifecycle, the FR-TR-023 `SetFocus`
+command, the routed slot-2 advance; ascending-id ordering rather than a `Dictionary`, so iteration order is a
+function of content), `TrainingSchedule.cs` v1.0 (the FR-TR-003 derived read-only focus view — no stored copy,
+not serialized), `TrainingViewModel.cs` v1.0 (FR-TR-022 / KD-7 value copies), `tests/TrainingNeutralityTests.cs`
+v1.0 (T-TR-NEU-001/002 — the KD-8 identity proven through #28's real `GrowthProjection`),
+`tests/ClubTrainingBlockTests.cs` v1.0, `tests/TrainingSystemConstantsTests.cs` v1.0, plus the 17 Unity `.meta`
+sidecars the branch was missing (the meta-integrity CI check was failing). **Modified:**
+`src/training-system/TrainingStep.cs` v1.1 (**H-1** — `ComputeTrainingInput`, the pure FR-TR-004 slot-1 read
+returning #28's `TrainingInput`, absent from the landing; **M-1** — the never-advanced sentinel refused as a
+`worldDay` ahead of every write, a double-accrual proven by execution in the review; **M-3** — the focus
+switch statements replaced by catalogue-table reads; **L-1/L-3** — the §3.1 `ApplyCoach` identity hook and a
+`long` risk accumulator), `TrainingSystemConstants.cs` v1.1 (**M-2** — the nine `[GT]` scalars ALL_CAPS `const`
+→ PascalCase `static readonly` off `Config.GetInt/GetFloat("training-system", …)`, plus the Appendix A focus
+tables and four named own-attribute weight rows), `TrainingState.cs` v1.1, `TrainingFocus.cs` /
+`CoachingModifier.cs` / `InjuryRiskContribution.cs` v1.1 (**L-4** — `Author:` headers),
+`tests/TrainingStepTests.cs` v1.1 (**M-5** — T-TR-DET-001 / COA-001 / CON-002 and two misleadingly-named
+tests fixed), both asmdefs (`ProjectConstants` on production per ERR-029-004; `PlayerProgression` on tests),
+`docs/specs/training-system/section-4.md` v0.4 (the **ERR-029-004** back-prop),
+`docs/tracking/spec-error-log.md` v1.54, `src/CLAUDE.md` v2.51, root `CLAUDE.md`. Tests 7 → 41.
+**Full dotnet gate: PASSED, 0 failures.** No RNG stream, no domain tag, no schema change.)
+**Last Updated (prior):** July 27, 2026 (**Path-to-playable Track C: B1 richer observation frame + B2 Match Analytics
 #37 T0 LANDED, then an adversarial-review fix pass over both (0H + 6M + 3L, all fixed).** **New assembly:**
 `src/match-analytics/` (`TacticalDirector.MatchAnalytics`) — `match-analytics.asmdef`,
 `MatchAnalyticsConstants.cs`, `XgLocationModel.cs`, `StatPoint.cs`, `MatchStatline.cs`,
@@ -1405,6 +1427,35 @@ Presentation-layer derivation. Read-only over two taps (FR-AN-002); no sim assem
 
 ---
 
+### `src/training-system/` — Training System #29 Stage-2 core (July 30, 2026; AR-1 fix pass July 31, 2026)
+
+World-tick only — never the 10 Hz / 60 Hz match loops (FR-TR-001). Registers **no** RNG stream and
+allocates no domain tag or `SubsystemOrdinal` (FR-TR-008 / KD-6; `_RESERVED_0x21_` / 83 stay reserved
+per ERR-029-001). Wired into nothing yet: #30 is the future driver of every entry point below.
+**Deferred by design:** `TrainingSaveCodec.cs` (the §4.2 "(T1)" file — the `TRAINING_SAVE_FORMAT_VERSION`
+sub-blob under #30's season save) and §3.2's Stage-3 deep `BuildTrainingInput` weighting, together with
+the FR-TR-005a #53 facility parameter that only it could read.
+
+| File | Purpose |
+|------|---------|
+| `training-system.asmdef` | `TacticalDirector.TrainingSystem`; references PlayerDatabase (#27) + PlayerProgression (#28) + DeterministicSim (#16) + ProjectConstants (**ERR-029-004** — the FR-CS-019 `[GT]` config surface). No MatchEngine / LivingWorld / season-save reference (FR-TR-013 / FR-TR-024) |
+| `TrainingSystemConstants.cs` | Appendix A catalogue. `[FIXED]` rows ALL_CAPS `const`; every `[GT]` scalar PascalCase `static readonly` off `Config.GetInt/GetFloat("training-system", …)`; the two per-focus tables are ordinal-indexed arrays (array-table carve-out) |
+| `TrainingFocus.cs` | The six-member focus enum; ordinals are future save-format surface |
+| `TrainingState.cs` | The §2.2 per-player state (focus / condition / training-fatigue / idempotency cursor). `Create` seeds the never-advanced sentinel — `default(TrainingState)` is not a valid runtime state (the day-0 trap) |
+| `ClubTrainingBlock.cs` | The per-club `PlayerId`-keyed container (§2.2 / §4.3): FR-TR-025 insert/remove lifecycle, FR-TR-023 `SetFocus` (F4 fail-loud on the enum, F2 refusal on an unknown player), the routed slot-2 advance, and ascending-`PlayerId` iteration so order is a function of content, not of insert/remove history |
+| `TrainingSchedule.cs` | The FR-TR-003 derived read-only focus VIEW over the block — no stored copy, not separately serialized (FR-TR-019) |
+| `TrainingViewModel.cs` | The FR-TR-022 / KD-7 observer projection for #31/#38 (value copies; the cursor is deliberately not projected) |
+| `CoachingModifier.cs` | The KD-3 identity routing seam until Staff & Backroom #34 produces one (ERR-029-002, deferred to #34 T3) |
+| `InjuryRiskContribution.cs` | The KD-5 read-only risk input #41 pulls; #29 owns no injury model |
+| `TrainingStep.cs` | The two FR-TR-004 entry points — the pure `ComputeTrainingInput` (slot-1; returns #28's `TrainingInput`, `deepTrainingEnabled`-gated to `Neutral` at Stage-2) and the mutating `AdvanceTrainingDay` (slot-2; F6 idempotency, F7 gap + sentinel fail-loud) — plus `ProjectMatchEntryFatigue` (§3.3) and `ComputeInjuryRisk` (§3.4) |
+| `tests/training-system-tests.asmdef` | `TacticalDirector.TrainingSystem.Tests` (Editor-only); references TrainingSystem + PlayerDatabase + PlayerProgression |
+| `tests/TrainingStepTests.cs` | T-TR-DET-001/003/004/005, FAT-001/003, CON-001/002, COA-001, INJ-001, plus the AR-1 sentinel and overflow regression locks |
+| `tests/TrainingNeutralityTests.cs` | T-TR-NEU-001/002 — the KD-8 identity, proven through #28's real `GrowthProjection` over 401 days for every focus |
+| `tests/ClubTrainingBlockTests.cs` | T-TR-LIFE-001 + T-TR-FAIL-003 — lifecycle no-leak across a season roll, `SetFocus` refusals, the schedule view reading through, observer copies, deterministic ordering |
+| `tests/TrainingSystemConstantsTests.cs` | Focus-table coverage (length == `TrainingFocus` member count), the Appendix A magnitudes and the reviewed shapes |
+
+---
+
 ### `src/match-client-web/` — the PM-1 browser match client (roadmap B6, July 27, 2026)
 
 Not a numbered spec. Governed by `docs/tracking/browser-match-client-design.md`. The only assembly
@@ -1572,7 +1623,7 @@ here. Status reflects authoritative classification in `SPEC_INDEX.md`.
 | 26 | `docs/specs/tactical-presets/` | APPROVED (Jul 10, 2026) — 12 files; PASS-1 0H+1M+2L resolved Jul 8; §8.2 fully closed (Bradley & Noakes 2013 verified Jul 10); no back-props (§2.3); engine-substrate gates carried forward upstream-owned; FR-TP-001..020 |
 | 27 | `docs/specs/squad-player-data/` | APPROVED (Jul 22, 2026) — implemented at `src/player-database/` |
 | 28 | `docs/specs/player-progression-lifecycle/` | APPROVED (Jul 23, 2026) — implemented at `src/player-progression/` (T0 only) |
-| 29 | `docs/specs/training-system/` | APPROVED (Jul 23, 2026) — no assembly |
+| 29 | `docs/specs/training-system/` | APPROVED (Jul 23, 2026) — implemented at `src/training-system/` (Stage-2 core; T1 save codec + Stage-3 deep growth input deferred) |
 | 30 | `docs/specs/season-competition-loop/` | APPROVED (Jul 22, 2026) — implemented at `src/season-save/` (T0–T3; also hosts the league bootstrap + unified season save-file root) |
 | 31 | `docs/specs/transfers-contracts-negotiation/` | APPROVED (Jul 23, 2026) — no assembly |
 | 32 | `docs/specs/scouting-player-knowledge/` | APPROVED (Jul 24, 2026) — no assembly |

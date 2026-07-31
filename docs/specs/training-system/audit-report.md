@@ -9,6 +9,20 @@ shipped tests executed (all pass); two findings proven by execution, not inferen
 
 **Verdict: 2 High · 5 Medium · 4 Low — does NOT pass. The Highs gate.**
 
+> **FIX-PASS STATUS (July 31, 2026):** all 11 findings addressed in one commit on
+> `claude/adversarial-review-spec-29-q3qwh4`; tests 7 → 41; full dotnet gate PASSED, 0 failures; the
+> meta-integrity check is clean. H-2 took option **(a)** — the Stage-2 surface was completed
+> (`ClubTrainingBlock` / `TrainingSchedule` / `TrainingViewModel`), with the tracking-doc updates the
+> finding also required. Two deliberate deviations from the suggested fixes are recorded inline in the
+> code: `ComputeTrainingInput` with the dial ON returns `Neutral` rather than throwing (FR-TR-007's
+> contract concerns the OFF state, and a #30 integration that sets the dial early must not crash — the
+> Stage-3 deferral is doc-noted and a test pins the identity so it fails deliberately when Stage-3
+> lands), and L-2's `= default` is impossible without reordering the spec's pinned parameter order
+> (C# CS1737), so the deviation is doc-noted instead. One spec back-prop filed and resolved: **ERR-029-004**
+> (§4.1's reference list omitted `ProjectConstants`; `section-4.md` v0.4, `spec-error-log.md` v1.54).
+> **Per the review convention this cycle stays OPEN until a full re-review of the entire assembly —
+> not the diff — surfaces no new High or Medium finding.**
+
 ---
 
 ## High
@@ -200,4 +214,5 @@ Per the review convention, the cycle is open: after fixes land, a full re-review
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 1.0 | 2026-07-31 | — | AR-1 over commit `1ee1dd0`: 2H+5M+4L. M-1/M-4 proven by execution. Cycle open. |
+| 1.1 | 2026-07-31 | — | Fix-pass status recorded (header note): all 11 findings addressed in one commit; H-2 took option (a); two deviations doc-noted in code (dial-on returns `Neutral` rather than throwing; L-2 blocked by CS1737); ERR-029-004 filed + resolved. Tests 7 → 41, full gate PASSED. Findings text unchanged — this row records the response, not a re-review. Cycle remains OPEN pending the full re-review. |
 #endregion

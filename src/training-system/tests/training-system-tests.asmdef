@@ -4,6 +4,7 @@
     "references": [
         "TacticalDirector.TrainingSystem",
         "TacticalDirector.PlayerDatabase",
+        "TacticalDirector.PlayerProgression",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

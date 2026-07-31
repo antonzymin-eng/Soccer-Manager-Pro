@@ -1,7 +1,69 @@
 # CLAUDE.md — Tactical Director
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 28, 2026, latest entry of the day (**KEEPER CONTACT RATE — §5.Z.20 §7.1's
+> **Last Updated:** July 31, 2026 (**TRAINING SYSTEM #29 — ADVERSARIAL-REVIEW FIX PASS over the July-30
+> Stage-2 landing: 2H + 5M + 4L, ALL CLOSED; tests 7 → 41; full dotnet gate PASSED, 0 failures.**
+> `docs/specs/training-system/audit-report.md` (AR-1 over commit `1ee1dd0`) found the new
+> `src/training-system/` assembly shipped the supporting cast without the thing #29 exists for.
+> **H-1 — the growth seam was absent:** FR-TR-004 requires TWO entry points and only the mutating
+> `AdvanceTrainingDay` was built; the pure `ComputeTrainingInput` — which returns #28's `TrainingInput`
+> and is #29's ONLY route to attribute change (FR-TR-005, #28 stays the sole writer) — did not exist,
+> and the tell was in the asmdef: the assembly referenced `PlayerProgression` and **no line of code used
+> it**. Implemented per §3.2, gated by the #29-owned `deepTrainingEnabled` dial to exactly
+> `TrainingInput.Neutral`; the Stage-3 deep `BuildTrainingInput` weighting and the FR-TR-005a #53
+> facility parameter that only it could read are now **doc-noted deferrals rather than silent
+> omissions**. The KD-8 identity is proven where it actually matters: a 401-day run of #29's computed
+> input through #28's REAL `GrowthProjection` is byte-identical to the no-training path for every focus
+> (T-TR-NEU-001), and the daily step never touches a `PlayerAttributes` field (T-TR-NEU-002). **H-2 —
+> roughly half the Stage-2 MUST surface was missing with no declared slice**, so the review's option (a)
+> was taken and it is built: new `ClubTrainingBlock` (the per-club `PlayerId`-keyed container the
+> FR-TR-025 regen/retire lifecycle, the FR-TR-023 `SetFocus` command, the schedule view, the observer
+> and the T1 codec all attach to — without it, focus could never change after `Create` and every next
+> slice was blocked on a structure this one should have shaped), plus `TrainingSchedule` (the FR-TR-003
+> derived read-only view that reads THROUGH to the states, so a second stored copy cannot drift) and
+> `TrainingViewModel` (FR-TR-022 value copies). **The container's ordering is a correctness decision,
+> not a style one:** parallel lists in ascending `PlayerId` rather than a `Dictionary`, because a
+> dictionary's enumeration order is a function of insert/remove HISTORY — so two identically-seeded
+> careers that reached the same roster by different routes could iterate differently, which #29's
+> determinism requirement (FR-TR-008) forbids and #30's per-club batch build would silently inherit.
+> `SetFocus` keeps §2.3's deliberate asymmetry: an out-of-catalogue focus fails loud (F4, validated
+> FIRST — refused whether or not the player exists), an unknown player is a bounded refusal reported
+> through the return value (F2). **M-1, proven by execution in the review:** `AdvanceTrainingDay` never
+> excluded the never-advanced SENTINEL from the `worldDay` domain, so writing it into the cursor left an
+> advanced state indistinguishable from a fresh one — the same day accrued twice and any later, smaller
+> day rewound the cursor and accrued a third time, i.e. the day-0 double-accrual trap the sentinel
+> exists to prevent, re-armed at the opposite boundary and failing OPEN. Refused ahead of every check
+> and every write, locked from both a fresh and an already-advanced state. **M-2 → the pass's one spec
+> back-prop, ERR-029-004:** every `[GT]` scalar was ALL_CAPS `public const`, which inlines into
+> consumers and is structurally locked out of the FR-CS-019 config surface — the exact finding the #30
+> T0 pass burned down tree-wide a month earlier, reproduced in a catalogue authored after that fix. All
+> nine converted to PascalCase `static readonly` off `Config.GetInt/GetFloat("training-system", …)` with
+> the current literals as fallbacks (behaviour-neutral), and #29 §4.1's three-reference list — which
+> omits the `ProjectConstants` reference that conversion requires — corrected rather than deviated from
+> silently (`section-4.md` v0.4, `spec-error-log.md` v1.54). **M-3:** the twelve Appendix A focus
+> magnitudes moved out of two switch statements in formula code into ordinal-indexed catalogue tables
+> (values unchanged; array-table carve-out), with a coverage lock binding table length to the
+> `TrainingFocus` member count, plus four named weight rows for the two previously-implicit ×1
+> own-attribute sums that would otherwise have drifted apart silently. **M-4:** the 17 missing Unity
+> `.meta` sidecars generated — the branch was failing the meta-integrity CI check. **M-5:** the shipped
+> suite tested one day of the happy path, so it gained T-TR-DET-001 (the Appendix B three-day sequence
+> 7140/7280/7420 · 2100/2200/2300, then a value-copy save whose continuation equals the uninterrupted
+> run), T-TR-COA-001 and T-TR-CON-002, and two misleadingly-named tests were fixed rather than renamed
+> (the focus-rejection test now also drives `AdvanceTrainingDay`'s own validate branch through a
+> hand-corrupted state; the projection test asserts monotonicity at an INTERIOR point and Appendix B's
+> 0.23 instead of only its two clamped endpoints). **Lows:** the §3.1 `ApplyCoach` hook exists as a
+> named identity routing both deltas, so the coach is routed rather than accepted-and-ignored and #34
+> has exactly one insertion point (ERR-029-002); FR-TR-016's "defaulting to Identity" is recorded as a
+> deviation with its reason (C# forbids an optional parameter ahead of the required one the spec's own
+> parameter order places last — CS1737); the injury-risk sum accumulates in `long`, so an
+> out-of-contract fatigue can no longer wrap negative and report the most fatigued representable player
+> at ZERO risk; `Author:` headers added. **No RNG stream, no domain tag, no `SubsystemOrdinal`, no
+> schema version — #29 registers nothing (FR-TR-008 / KD-6) and is still wired into nothing**, so
+> nothing outside the new assembly can have moved. **What is still deliberately NOT built:** the T1
+> `TrainingSaveCodec` (the §4.2 file the spec itself marks "(T1)") and §3.2's Stage-3 deep growth
+> weighting. See `docs/specs/training-system/audit-report.md` + `src/CLAUDE.md` v2.51 +
+> `spec-error-log.md` v1.54. Prior entry below.)
+> **Last Updated (prior):** July 28, 2026, latest entry of the day (**KEEPER CONTACT RATE — §5.Z.20 §7.1's
 > residual, BOTH NAMED LEVERS LANDED, MEASURED; the goal-rate residual moves to conversion AT
 > contact.** Measured per episode at the ball's goal-plane crossing (new env-gated
 > `GkContactRateDiagnosticTests` — a frame aggregate cannot attribute position vs timing): of 15
@@ -1368,15 +1430,15 @@
 
 **Specifications:** `SPEC_INDEX.md` records **53 APPROVED / 0 IN REVIEW / 0 NOT STARTED — every spec in the registry is approved.** The APPROVED set is the Stage-0 twenty (all APPROVED May 18, 2026) plus 23 Stage-1-forward and management-layer specs (#21–#34, #37, #38, #40–#45, #49). The last ten — #53, #35, #46, #36, #54, #47, #48, #50, #51, #39 — were promoted **and approved** on July 27, 2026, emptying the pre-promotion backlog and closing the specification phase entirely. The only candidate without a spec is **#52** (Multiplayer Transport), deliberately deferred behind the Stage-5 Fixed64 migration. **Approval approves the forward design, not an implementation** — see the live gap below, which is now the project's dominant fact.
 
-**Implementation:** `src/` holds **30 production assemblies**. Every Stage-0 spec is implemented except **#9 Fixed64** (deferred to Stage 5+ by design) and **#20 Code Standards** (a style guide, not a coded subsystem). A `MatchEngine` composition root wires the subsystems into the deterministic-sim 7-phase tick pipeline, and **a production match now plays** — the possession bootstrap (§5.Z Phase H, July 26, 2026) closed ERR-030-014, under which every match had been a 90-minute 0–0 deadlock with the ball never in motion. **Match Analytics #37 T0 landed July 27, 2026** (`src/match-analytics/` — value types + the pure `XgLocationModel`; no engine wiring yet), giving it a `src/` assembly for the first time.
+**Implementation:** `src/` holds **31 production assemblies**. Every Stage-0 spec is implemented except **#9 Fixed64** (deferred to Stage 5+ by design) and **#20 Code Standards** (a style guide, not a coded subsystem). A `MatchEngine` composition root wires the subsystems into the deterministic-sim 7-phase tick pipeline, and **a production match now plays** — the possession bootstrap (§5.Z Phase H, July 26, 2026) closed ERR-030-014, under which every match had been a 90-minute 0–0 deadlock with the ball never in motion. **Match Analytics #37 T0 landed July 27, 2026** (`src/match-analytics/` — value types + the pure `XgLocationModel`; no engine wiring yet), giving it a `src/` assembly for the first time. **Training System #29's Stage-2 core landed July 30, 2026** (`src/training-system/` — the daily conditioning/fatigue step, the pure `ComputeTrainingInput` growth seam into #28, and the per-club `TrainingState` container; wired into nothing yet, with the T1 save codec and the Stage-3 deep growth weighting deferred), taking #29 off the no-assembly list.
 
-**The live gap is now the project's dominant fact.** With the specification phase closed, **22 of the 53
-APPROVED specs have no `src/` assembly at all** — the 12 listed below plus the ten approved on July 27.
+**The live gap is now the project's dominant fact.** With the specification phase closed, **21 of the 53
+APPROVED specs have no `src/` assembly at all** — the 11 listed below plus the ten approved on July 27.
 The specification frontier runs a long way ahead of the implementation, which is a deliberate posture
 (specify before coding), and it makes one habit dangerous: **"the spec is APPROVED" now says nothing
-whatsoever about whether code exists.** It is true of ~42% of the registry.
+whatsoever about whether code exists.** It is true of ~40% of the registry.
 
-**The 22 with no assembly:** #29 Training, #31 Transfers, #32 Scouting, #33 Personalities/Morale, #34 Staff, #40 Finances, #41 Injuries, #42 Youth, #43 Competition Structure, #44 Discipline, #45 Board, #49 Localization — plus the ten approved on July 27: #35, #36, #39, #46, #47, #48, #50, #51, #53, #54.
+**The 21 with no assembly:** #31 Transfers, #32 Scouting, #33 Personalities/Morale, #34 Staff, #40 Finances, #41 Injuries, #42 Youth, #43 Competition Structure, #44 Discipline, #45 Board, #49 Localization — plus the ten approved on July 27: #35, #36, #39, #46, #47, #48, #50, #51, #53, #54.
 
 Sequencing for closing the gap is in `docs/tracking/path-to-playable-roadmap.md`, which is now the
 project's live critical path. **Check `src/` before assuming a consumer is available** — the assembly map
@@ -1400,7 +1462,7 @@ Soccer-Manager-Pro/
 │   │   ├── SPEC_INDEX.md           ← Canonical spec numbering and status — 53 folders, all APPROVED
 │   │   └── <spec-folder>/          ← One folder per spec; see SPEC_INDEX.md for the number↔folder map
 │   └── tracking/                   ← Progress, error log, file manifest, roadmaps, design supplements
-├── src/                            ← Implementation (coding began May 19, 2026) — 30 production assemblies
+├── src/                            ← Implementation (coding began May 19, 2026) — 31 production assemblies
 │   ├── CLAUDE.md                   ← Coding guide (read before writing any code)
 │   └── <assembly>/                 ← See the assembly map below
 └── tools/
@@ -1423,6 +1485,7 @@ Do not infer the mapping from the folder name:
 | `living-world` | #22 | |
 | `player-database` | **#27** Squad / Player Data Layer | Name differs from the spec folder (`squad-player-data/`) |
 | `player-progression` | **#28** | T0 only — draw-free core, not engine-wired |
+| `training-system` | **#29** Training System | Stage-2 core only — the daily step + the `ComputeTrainingInput` seam into #28 + the per-club container; not engine- or #30-wired. T1 save codec and the Stage-3 deep growth weighting deferred |
 | `season-save` | **#30** Season & Competition Loop | Also hosts the league bootstrap and the unified season save-file root |
 | `match-analytics` | **#37** Match Analytics & Statistics | T0 only — value types + `XgLocationModel`; no engine wiring, no aggregator |
 | `ui-framework` | **#38** UI / Client Framework | T0 substrate only; no screens, no UGUI binding |

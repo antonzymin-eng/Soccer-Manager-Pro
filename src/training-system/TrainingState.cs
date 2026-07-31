@@ -1,6 +1,7 @@
 // File:     src/training-system/TrainingState.cs
 // Created:  2026-07-30
-// Modified: 2026-07-30
+// Modified: 2026-07-31
+// Author:   —
 // Spec:     Training System #29 §2.2; Code Standards #20
 // Purpose:  Serialized per-player training state owned exclusively by #29.
 
@@ -28,7 +29,7 @@ namespace TacticalDirector.TrainingSystem
             return new TrainingState
             {
                 Focus = focus,
-                Condition = TrainingSystemConstants.CONDITION_START,
+                Condition = TrainingSystemConstants.ConditionStart,
                 TrainingFatigue = 0,
                 LastAdvancedWorldDay = TrainingSystemConstants.TRAINING_NOT_ADVANCED_SENTINEL
             };
@@ -39,4 +40,7 @@ namespace TacticalDirector.TrainingSystem
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-07-30 | —      | Initial Stage-2 core.   |
+// | 1.1     | 2026-07-31 | —      | AR-1 M-2/L-4: the conditioning seed reads the renamed
+// |         |            |        | `TrainingSystemConstants.ConditionStart` (the [GT] rows moved to
+// |         |            |        | PascalCase `static readonly` off the config surface); `Author:` header. |
 #endregion

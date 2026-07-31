@@ -1,7 +1,52 @@
 # src/CLAUDE.md — Tactical Director Coding Guide
 
 > **Created:** May 19, 2026
-> **Last Updated:** July 28, 2026, latest entry of the day (v2.50 — **Keeper contact rate — §5.Z.20
+> **Last Updated:** July 31, 2026 (v2.51 — **Training System #29 Stage-2 core — AR-1 fix pass over the
+> July-30 landing (2H+5M+4L), all findings closed.** **H-1:** `TrainingStep.ComputeTrainingInput`
+> (§3.2 / FR-TR-004) — the pure slot-1 growth-input read that feeds #28's `TrainingInput` was never
+> built, so the assembly's whole reason to exist (and its otherwise-unused `PlayerProgression`
+> reference) was absent; it now returns exactly `TrainingInput.Neutral` under the #29-owned
+> `deepTrainingEnabled` dial, with the Stage-3 deep `BuildTrainingInput` weighting and the FR-TR-005a
+> #53 facility parameter recorded as explicit doc-noted deferrals rather than silent omissions. New
+> `TrainingNeutralityTests` proves the KD-8 identity where it matters — a 401-day run through #28's
+> real `GrowthProjection` on #29's computed input is byte-identical to the no-training path for every
+> focus (T-TR-NEU-001), and the daily step never touches a `PlayerAttributes` field (T-TR-NEU-002).
+> **H-2:** the missing half of the Stage-2 surface built rather than deferred — new
+> `ClubTrainingBlock` (the per-club `PlayerId`-keyed container the FR-TR-025 regen/retire lifecycle,
+> the FR-TR-023 `SetFocus` command, the schedule view, the observer and the T1 codec all attach to;
+> parallel lists kept in ascending-`PlayerId` order rather than a `Dictionary`, so iteration order is
+> a function of CONTENT and not of insert/remove history — FR-TR-008), `TrainingSchedule` (the
+> FR-TR-003 derived read-only focus view that reads THROUGH to the states, so a stored second copy
+> cannot drift) and `TrainingViewModel` (FR-TR-022 value copies). `SetFocus` keeps §2.3's deliberate
+> asymmetry: an out-of-catalogue focus fails loud (F4, validated first — refused whether or not the
+> player exists), an unknown player is a bounded refusal reported through the return value (F2).
+> `TrainingSaveCodec` stays the one §4.2 file marked "(T1)". **M-1 (proven by execution in the
+> review):** `AdvanceTrainingDay(worldDay = uint.MaxValue)` wrote the never-advanced SENTINEL into
+> the cursor, leaving an advanced state indistinguishable from fresh — the same day accrued twice and
+> any later, smaller day rewound the cursor and accrued again; the sentinel is now refused ahead of
+> every check and every write, locked from both a fresh and an already-advanced state. **M-2
+> (ERR-029-004, spec back-prop filed):** every `[GT]` scalar in `TrainingSystemConstants` was ALL_CAPS
+> `public const` — which inlines into consumers and is structurally locked out of the FR-CS-019 config
+> surface (the defect the #30 T0 pass already burned down tree-wide); all nine converted to PascalCase
+> `static readonly` off `Config.GetInt/GetFloat("training-system", …)` with the current literals as
+> fallbacks (behaviour-neutral), `[FIXED]` rows unchanged, and #29 §4.1's three-reference list
+> corrected to include `ProjectConstants`. **M-3:** the twelve Appendix A focus magnitudes moved out of
+> two switch statements in formula code into focus-ordinal-indexed catalogue tables (values unchanged;
+> array-table carve-out), with a coverage lock binding table length to the `TrainingFocus` member
+> count, plus four named weight rows for the two previously-implicit ×1 own-attribute sums. **M-4:**
+> the 17 missing Unity `.meta` sidecars generated (the branch was failing the meta-integrity check).
+> **M-5:** the shipped suite tested one day of the happy path — added T-TR-DET-001 (the Appendix B
+> three-day sequence 7140/7280/7420 · 2100/2200/2300, then a value-copy save whose continuation equals
+> the uninterrupted run), T-TR-COA-001, T-TR-CON-002, and fixed two misleadingly-named tests (the
+> focus-rejection test now also drives `AdvanceTrainingDay`'s own validate branch; the projection test
+> asserts monotonicity at an INTERIOR point and Appendix B's 0.23 rather than two clamped endpoints).
+> **Lows:** the §3.1 `ApplyCoach` identity hook now routes both deltas (so #34 has one insertion point
+> and the coach is not accepted-and-ignored); FR-TR-016's "defaulting to Identity" recorded as a
+> deviation with its CS1737 reason; the injury-risk sum accumulates in `long` so an out-of-contract
+> fatigue cannot wrap negative and report zero risk; `Author:` headers added to all files.
+> **Tests 7 → 41. Full dotnet gate: PASSED, 0 failures.** No RNG stream, no domain tag, no schema
+> change — #29 is still wired into nothing. Prior entry below.)
+> **Last Updated (prior):** July 28, 2026, latest entry of the day (v2.50 — **Keeper contact rate — §5.Z.20
 > §7.1's residual, both named levers landed and measured; the goal-rate residual moves to conversion
 > AT contact.** **ERR-011-007** (`GoalkeeperDiveKinematics.cs` — `TryPredictPlaneCrossing` the ONE
 > crossing predictor shared by dive direction and timing, `ComputeDiveCommitLeadS`,
@@ -1860,7 +1905,7 @@ src/
 │       ├── GrowthProjectionTests.cs     ← T-PG-DET-001/002 + ID-001/002: byte-exact growth/decline, value-copy save, age gap-independence
 │       └── RegenGeneratorTests.cs       ← T-PG-REG-001/003: regen determinism, exact budget, bounds, CA≤PA room-to-grow (test-local ordinal, KD-B)
 │
-└── tactical-instructions/             ← Spec #21  (T0 — bottom-of-graph data assembly; behaviour-neutral)
+├── tactical-instructions/             ← Spec #21  (T0 — bottom-of-graph data assembly; behaviour-neutral)
     │                                  │   References only project-constants (FR-TI-002); empty asmdef refs until that assembly exists.
     │                                  │   Seams into #8/#11–#15 land at T2–T3 (gated on match-engine Phase C/D + [GT] loader).
     ├── tactical-instructions.asmdef
@@ -1877,6 +1922,28 @@ src/
         ├── EnumOrdinalStabilityTests.cs   ← FR-TI-007 ordinal / bit-position / byte-backing locks (19 enums)
         ├── FactoryIdentityTests.cs        ← FR-TI-031 identity-factory + catalogue identity-row locks
         └── TacticPresetLibraryTests.cs    ← #26 T0: pinned ladder order + A.1 compositions + KD-7 identity discipline
+│
+└── training-system/                   ← Training System #29 (Stage-2 core; APPROVED spec)
+    │                                  │   References PlayerDatabase + PlayerProgression + DeterministicSim
+    │                                  │   + ProjectConstants (ERR-029-004). World-tick only, never the
+    │                                  │   match loops (FR-TR-001); no RNG stream (FR-TR-008 / KD-6).
+    │                                  │   T1 (TrainingSaveCodec) + the Stage-3 deep growth weighting deferred.
+    ├── training-system.asmdef
+    ├── TrainingSystemConstants.cs      ← Appendix A catalogue (Fixed/GT); [GT] scalars off Config, per-focus tables literal (array carve-out)
+    ├── TrainingFocus.cs                ← the persisted focus enum (ordinals are save-format surface)
+    ├── TrainingState.cs                ← per-player world-tick state (§2.2); Create seeds the never-advanced sentinel, never default
+    ├── ClubTrainingBlock.cs            ← the per-club PlayerId-keyed container: FR-TR-025 insert/remove, FR-TR-023 SetFocus, ascending-id deterministic order
+    ├── TrainingSchedule.cs             ← FR-TR-003 derived read-only focus VIEW (no stored copy, not serialized)
+    ├── TrainingViewModel.cs            ← FR-TR-022 / KD-7 observer projection (value copies)
+    ├── CoachingModifier.cs             ← KD-3 identity routing seam until Staff #34 produces one (ERR-029-002)
+    ├── InjuryRiskContribution.cs       ← KD-5 read-only risk input #41 pulls (#29 owns no injury model)
+    ├── TrainingStep.cs                 ← the two FR-TR-004 entry points: pure ComputeTrainingInput (slot-1, #28's TrainingInput) + mutating AdvanceTrainingDay (slot-2) + the fatigue/injury projections
+    └── tests/
+        ├── training-system-tests.asmdef
+        ├── TrainingStepTests.cs        ← T-TR-DET-001/003/004/005, FAT-001/003, CON-001/002, COA-001, INJ-001 + the sentinel regression locks
+        ├── TrainingNeutralityTests.cs  ← T-TR-NEU-001/002: dial-off ⇒ Neutral, and #28's growth byte-identical to the no-training path
+        ├── ClubTrainingBlockTests.cs   ← T-TR-LIFE-001 + T-TR-FAIL-003: lifecycle no-leak, SetFocus F4/F2, schedule view, observer copies
+        └── TrainingSystemConstantsTests.cs ← focus-table coverage (length == enum member count), Appendix A magnitudes + shapes
 ```
 
 **One folder per spec. One `.asmdef` per folder. Folder names match `docs/specs/` exactly.**
@@ -2478,6 +2545,7 @@ Update this file when those items are resolved.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.51 | 2026-07-31 | —      | **Training System #29 Stage-2 core — AR-1 fix pass (2H+5M+4L, all closed).** H-1: `TrainingStep.cs` v1.1 gains `ComputeTrainingInput` (§3.2 / FR-TR-004 — the pure slot-1 read returning #28's `TrainingInput`, `deepTrainingEnabled`-gated to `Neutral`; the Stage-3 `BuildTrainingInput` weighting and the FR-TR-005a #53 facility parameter doc-noted as deferrals), locked by new `TrainingNeutralityTests` (T-TR-NEU-001 runs 401 days through #28's real `GrowthProjection` — byte-identical to the no-training path for every focus; T-TR-NEU-002). H-2: new `ClubTrainingBlock.cs` (per-club `PlayerId`-keyed container — FR-TR-025 insert/remove, FR-TR-023 `SetFocus` with F4 fail-loud / F2 refusal, ascending-id deterministic order instead of a `Dictionary`), `TrainingSchedule.cs` (FR-TR-003 derived read-only view), `TrainingViewModel.cs` (FR-TR-022 value copies); `TrainingSaveCodec` stays the §4.2 "(T1)" deferral. M-1: the never-advanced sentinel refused as a `worldDay` ahead of every write (it re-armed "never advanced" and double-accrued — proven by execution), 2 regression locks. M-2 (**ERR-029-004** filed + resolved; `training-system/section-4.md` v0.4): `TrainingSystemConstants.cs` v1.1 — all nine `[GT]` scalars ALL_CAPS `const` → PascalCase `static readonly` off `Config.GetInt/GetFloat("training-system", …)`, asmdef gains `TacticalDirector.ProjectConstants`. M-3: the Appendix A focus tables moved from switch statements into the catalogue as ordinal-indexed arrays + four named own-attribute weight rows; `TrainingSystemConstantsTests` locks table length == `TrainingFocus` member count. M-4: 17 Unity `.meta` sidecars generated (`generate-missing-metas.sh`); integrity check clean. M-5: `TrainingStepTests.cs` v1.1 — +T-TR-DET-001 (Appendix B three-day sequence + value-copy save == uninterrupted run), +T-TR-COA-001, +T-TR-CON-002, and the two misleadingly-named tests fixed (the focus-rejection test drives `AdvanceTrainingDay`'s validate branch; the projection test asserts an interior monotonic point + Appendix B's 0.23). L-1 `ApplyCoach` identity hook routes both deltas (#34 / ERR-029-002); L-2 FR-TR-016's default recorded as a CS1737-forced deviation; L-3 injury-risk sum in `long`; L-4 `Author:` headers. Tests 7 → 41. Full gate: PASSED, 0 failures. No RNG stream / domain tag / schema change — #29 is wired into nothing. |
 | 2.50 | 2026-07-28 | —      | **Keeper contact rate (§5.Z.22) — ERR-011-007 + ERR-012-010.** `GoalkeeperDiveKinematics.cs` v1.2 (TryPredictPlaneCrossing / ComputeDiveCommitLeadS / ShouldCommitDive), `GoalkeeperStateMachine.cs` v1.6 (the gated Anticipate → Diving row + the OneOnOne deliberate-scope note), `GoalkeeperMechanics.cs` v1.9 (first-decision-opportunity window anchor; ComputeDiveDirectionLateral delegates to the shared predictor), `GoalkeeperConstants.cs` v1.4 (+DiveCommitMinLeadFrac), `AnchorCalculator.cs` v1.1 + `PositioningAIConstants.cs` (GK_LATERAL_CLAMP_M replaces GK_LATERAL_FACTOR). Tests: +GoalkeeperCommitGateTests (11), +4 GK-slot locks, GoalkeeperConversionTests v1.1 + GoalkeeperScenarios v1.3 re-anchors, +MatchEngineKeeperContactScenarios/Tests (3 of 4 predicates fail pre-fix by execution), +env-gated GkContactRateDiagnosticTests. AR-4 gate fallout (both instruments, not the mechanisms): strike-time TestOnly_LastShotStrike* seam (MatchEngine.cs v1.55) replaces end-of-tick BallView sampling in MatchEngineShotSpeedScenarios v1.3 + ShotOutcomeDiagnosticTests v1.4 (a same-tick post-strike touch reversed the sampled velocity — a 13 m strike attributed 92.3 m); scenario windows 9 → 18 min/seed; observer-neutrality window 6000 → 8000 ticks (first restart moved ~3900 → 7270). AR-5 CI-gate fallout on PR #282 (third instrument, same class): the #37 MatchAnalytics liveness window re-measured 1800 → 3600 ticks — this pass moved its seed's away-possession onset past 1800 (first accrual measured by 2400); assertions unchanged (`MatchAnalyticsObserverNeutralityTests` v1.1). Measured: contact rate 35% → 72%, catches 6 → 10, goals 14 → 15 (unchanged at n=3 — residual moves to conversion at contact). No schema/RNG/draw-order change. Full gate: PASSED. |
 | 2.49 | 2026-07-28 | —      | **A4a Step 0 PASSED + calibration-driver instrument fix.** `RoundResolutionCalibrationHarnessTests` v1.1 — both env-gated drivers gain the `LogAssert.ignoreFailingMessages` wrapper (a playing match emits FM-08/FM-03 possession-race errors as ordinary match events, §5.Z Phase H; the first post-play pilot failed at teardown with every assertion green). Step 0 re-run: strong-at-home +7.100 / strong-away −4.700 over 20 keyed matches, rows byte-identical across runs — the corpus is fittable for the first time (`round-resolution-corpus.md` v0.3). Full gate: PASSED, 0 failures. |
 | 2.48 | 2026-07-28 | —      | **Shot volume — §5.Z.19's remaining lever (a) fixed, calibrated and measured.** ERR-008-017 (`UtilityScorer.cs` v1.12 — `ScoreShoot` gains `DistanceQuality_SHOOT`: 1.0 inside the sweet range, hyperbolic decay beyond; `U_SHOOT` previously had no distance term while `GoalOpeningScore` is scale-free, so measured shots clustered at the range-gate boundary, means 30–34 m vs football's ~17). `UtilityWeights.cs` v1.5 (`[GT] SHOOT_SWEET_RANGE_M` = 12, `[GT] SHOOT_DIST_FALLOFF_M` = 8 — the four-rung ladder refused count ≈ 25 AND mean ≤ 22 m jointly; distribution + goal-rate landing chosen). Spec §3.2.3.1/.3/.4 patched; midfield long-shot machinery recorded production-unreachable. Measured (3 full matches, same seeds): shots 34.7 → 17.7/match, long-shot share 60% → 30%, goals 8.0 → 4.7/match, scorelines 2-2 / 3-2 / 5-0. `match-engine-shot-speed` v1.2 mean-distance ceiling (fails pre-fix at 30.0, by execution) + 5 scorer locks (v1.6, one existing lock re-anchored intent-preserved) + `ShotOutcomeDiagnosticTests` v1.3 distance/churn dimensions + `MatchEngineShotOutcomeScenarios` v1.1 corpus resize (9 → 18 min/seed — the gate caught its goals-still-scored predicate at zero on the calibrated neutral path). No schema/RNG/draw-order change. Full gate: PASSED, 0 failures. |
