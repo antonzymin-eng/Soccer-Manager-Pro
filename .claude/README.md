@@ -59,17 +59,21 @@ because a second copy of project policy drifts the moment either copy changes.
 
 Two things were established by execution in this environment, not assumed:
 
-1. **Skills hot-register; agent definitions may not.** Writing `.claude/skills/<name>/SKILL.md` made
-   the skill invocable immediately in the same session. Writing `.claude/agents/<name>.md` did **not**
-   make `subagent_type: <name>` resolvable in that session. The `advisor` skill therefore carries a
-   fallback dispatch path (built-in `Explore` type + `model: opus`, loading the persona from the same
-   agent file) so the council works whether or not registration has taken effect. Both paths read one
-   persona definition; there is no second copy.
+1. **Skills register immediately; agent definitions register on a delay.** Writing
+   `.claude/skills/<name>/SKILL.md` made the skill invocable at once. Writing
+   `.claude/agents/<name>.md` did **not** make `subagent_type: <name>` resolvable straight away — but
+   it did resolve later in the same session, with no restart, and with the frontmatter honoured
+   (`tools: Read, Grep, Glob` enforced; the advisor confirmed it held exactly those three and no
+   write or shell tool). So native dispatch is the normal route, and the `advisor` skill's fallback
+   path exists to cover the registration window and any environment where it does not take effect.
+   Both paths load one persona definition from the same file; there is no second copy.
 
-2. **The root `CLAUDE.md` is ~395 KB**, and subagents inherit project context. That is the reason the
-   council is two advisors rather than the six lenses originally scoped — the lenses were combined by
-   mindset, not dropped. Convene one advisor when the question is clearly one-sided; both is the
-   default only for work that lands code.
+2. **The root `CLAUDE.md` is ~395 KB**, and subagents inherit project context. This dominates the
+   cost of a convening: a measured advisor call spent ~449 K tokens across *two* tool uses — the
+   context, not the work. That is why the council is two advisors rather than the six lenses
+   originally scoped; the lenses were combined by mindset, not dropped. Convene one advisor when the
+   question is clearly one-sided, and reserve both for work that lands code. Scoping the prompt
+   ("read at most two files") measurably helps; inherited context does not shrink.
 
 ## Changing any of this
 

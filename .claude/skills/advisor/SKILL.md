@@ -32,7 +32,11 @@ stop. Do not run the council on a finished diff.
 
 ## Choosing who to convene
 
-Convening both costs roughly double. Pick deliberately.
+A convening is expensive, and not because of the thinking. Subagents inherit the ~395 KB root
+`CLAUDE.md`; one measured advisor call spent **~449 K tokens across two tool uses**. Convening both
+roughly doubles that. Pick deliberately, and **scope the prompt** — naming the two or three files
+that bear on the question, or capping reading outright, measurably cuts the work half. The inherited
+half does not shrink, so a vague question costs nearly as much as a sharp one and returns less.
 
 **Integrity alone** — the question is structural and no measurement is at stake: a new field, a new
 assembly reference, whether something needs a schema bump, where a rule should live, whether an
@@ -63,9 +67,10 @@ Two copies of an advisor's instructions would drift the first time either was ed
 request.
 
 **Path B — fallback, when Path A errors with `Agent type '…' not found`.** Repo-local agent
-definitions are not always registered in a running session — writing the file does not necessarily
-make the type resolvable until the session restarts. When that happens, dispatch to the built-in
-`Explore` type with `model: "opus"` and open the prompt with:
+definitions register on a **delay**: immediately after the file is written the type may not yet
+resolve, and it becomes available later in the same session without a restart. The fallback covers
+that window, and any environment where registration does not take effect at all. When Path A errors,
+dispatch to the built-in `Explore` type with `model: "opus"` and open the prompt with:
 
 > Read `.claude/agents/advisor-<lens>.md`. Ignore its YAML frontmatter. Adopt the persona defined in
 > its body completely for this task — it defines who you are, what you attack, the output shape you
