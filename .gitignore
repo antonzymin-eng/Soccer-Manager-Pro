@@ -1,5 +1,8 @@
-# Claude Code session artifacts
-.claude/
+# Claude Code session artifacts (settings.local.json, session state, caches).
+# `.claude/skills/` is the exception: project skills are deliberate, reviewed
+# tooling and are version-controlled like any other doc in this repo.
+.claude/*
+!.claude/skills/
 
 # Unity
 [Ll]ibrary/
