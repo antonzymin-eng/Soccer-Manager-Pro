@@ -1,5 +1,12 @@
-# Claude Code session artifacts
-.claude/
+# Claude Code local session artifacts (settings.local.json, session state, caches).
+# Deliberate, committed agent configuration is exempt — see .claude/README.md. The pattern must be
+# `.claude/*` rather than `.claude/`: with a trailing slash git never descends into the directory,
+# so the negations below would not apply and the config could not be tracked at all.
+.claude/*
+!.claude/README.md
+!.claude/advisors/
+!.claude/agents/
+!.claude/skills/
 
 # Unity
 [Ll]ibrary/
