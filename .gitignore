@@ -1,5 +1,11 @@
 # Claude Code session artifacts
 .claude/
+# ...except shared, reviewable project skills. Local/per-machine state
+# (settings.local.json, caches, shell snapshots) stays ignored by the rule above.
+!.claude/
+!.claude/skills/
+!.claude/skills/**
+.claude/settings.local.json
 
 # Unity
 [Ll]ibrary/
