@@ -1,7 +1,19 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 27, 2026 (**Path-to-playable Track C: B1 richer observation frame + B2 Match Analytics
+**Last Updated:** July 31, 2026 (**Project skills LANDED — tooling only; no `src/` change, no spec change, no
+gate run.** **New folder `.claude/skills/`** (project-scoped Claude Code skills, checked in because each
+encodes repo conventions that must version with them): `README.md` (derivation + observed repetition counts)
++ six `SKILL.md` files — `match-realism-pass/`, `snapshot-schema-bump/`, `err-file-and-backprop/`,
+`landing-close-out/`, `spec-promotion/`, `dotnet-gate/`. **Modified:** root `CLAUDE.md` (new Last-Updated
+entry, prior relabelled; `.claude/skills/` row added to the REPO STRUCTURE tree; new "Project skills"
+subsection under TRACKING DOCUMENTS) and this manifest. `adversarial-review` and `orientation` remain
+personal skills and are not duplicated. Note for the next manifest pass: the per-file tables below were
+already one landing behind at the time of this edit (they do not yet carry the §5.Z.21 shot-volume or
+§5.Z.22 keeper-contact file changes) — recorded, not reconciled here, since this pass touched no `src/`
+file. Prior update below.)
+
+**Last Updated (prior):** July 27, 2026 (**Path-to-playable Track C: B1 richer observation frame + B2 Match Analytics
 #37 T0 LANDED, then an adversarial-review fix pass over both (0H + 6M + 3L, all fixed).** **New assembly:**
 `src/match-analytics/` (`TacticalDirector.MatchAnalytics`) — `match-analytics.asmdef`,
 `MatchAnalyticsConstants.cs`, `XgLocationModel.cs`, `StatPoint.cs`, `MatchStatline.cs`,

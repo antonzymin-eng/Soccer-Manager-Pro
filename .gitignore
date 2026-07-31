@@ -1,5 +1,9 @@
-# Claude Code session artifacts
-.claude/
+# Claude Code session artifacts — local settings and transcripts stay out, but
+# .claude/skills/ is versioned: project skills encode this repo's conventions and
+# must travel with the code that defines them. (Written as `.claude/*` + a negation
+# because git cannot re-include a path under an excluded directory.)
+.claude/*
+!.claude/skills/
 
 # Unity
 [Ll]ibrary/

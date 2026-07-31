@@ -1,7 +1,29 @@
 # CLAUDE.md — Tactical Director
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 28, 2026, latest entry of the day (**KEEPER CONTACT RATE — §5.Z.20 §7.1's
+> **Last Updated:** July 31, 2026 (**PROJECT SKILLS LANDED — `.claude/skills/`, six workflow skills;
+> tooling only: no code, no spec, no `src/` change, no gate run.** The recurring workflows this repo
+> runs by hand are now Claude Code skills, checked into the repo rather than a personal skills
+> directory, because each encodes conventions that live here and version with them: **`match-realism-pass`**
+> (the §5.Z measure → localize → fix → calibrate → re-measure → lock loop, run 6 times in the
+> §5.Z.17–§5.Z.22 chain), **`snapshot-schema-bump`** (the cross-tick decision plus the
+> serializer/reader/pin/probe/round-trip checklist, over 19 bumps — two of which exist only to fix an
+> earlier omission), **`err-file-and-backprop`** (id allocation against the live log, the entry
+> template, spec-patch-in-the-same-commit), **`landing-close-out`** (the six-document sync),
+> **`spec-promotion`** (supplement → 11-file set → the G1/G2/G3 gates, with G3 flagged non-self-grantable),
+> and **`dotnet-gate`**. Each is derived from measured repetition in the last 200 commits, and each
+> carries the traps this project has actually hit — the id collisions (`ERR-030-015 → -025`), the v17
+> RNG-cursor hole, the instruments that broke because a pass moved the tick windows they hardcoded
+> (three in the keeper-contact pass alone, one of which escaped to CI), the `[GT]` §6.3 → Appendix A
+> gap that recurred in **all ten** promotions of the last wave, and the "offline sweep gives the
+> shape, never the value" calibration lesson. **Deliberately NOT duplicated:** `adversarial-review`
+> (40 of the last 200 commits) and `orientation` already exist as personal skills; the two new skills
+> that need a review step invoke them rather than restating them. **Recorded, not fixed:** this
+> header chain currently carries more than one bare `**Last Updated:**` label (the July-27 Track C
+> Phase B entry among them) — the self-contradiction this file has had corrected three times before;
+> left alone here because rewriting historical entries is a separate pass, and `landing-close-out`
+> now encodes the convention so it stops recurring. See `.claude/skills/README.md`. Prior entry below.)
+> **Last Updated (prior):** July 28, 2026, latest entry of the day (**KEEPER CONTACT RATE — §5.Z.20 §7.1's
 > residual, BOTH NAMED LEVERS LANDED, MEASURED; the goal-rate residual moves to conversion AT
 > contact.** Measured per episode at the ball's goal-plane crossing (new env-gated
 > `GkContactRateDiagnosticTests` — a frame aggregate cannot attribute position vs timing): of 15
@@ -1391,6 +1413,7 @@ above is the reliable index, not the spec registry.
 ```
 Soccer-Manager-Pro/
 ├── CLAUDE.md                       ← You are here. Read first. Always.
+├── .claude/skills/                 ← Project skills: the repo's recurring workflows (see its README)
 ├── README.md                       ← Project overview, status, documentation hierarchy
 ├── Assets/ Packages/ ProjectSettings/   ← Unity project shell (target editor 6000.4.9f1, DX11)
 ├── docs/
@@ -1627,6 +1650,17 @@ Before designing anything, grep `docs/tracking/` — the surface likely already 
 supplement is frozen at its convergence and the section files carry the PASS-1 corrections made after it
 (three supplements' proposed `ERR-` ids, for instance, were already filed and were reassigned at
 promotion). Read the supplement for the *reasoning*; read the spec for the *contract*.
+
+---
+
+### Project skills
+
+`.claude/skills/` holds project-scoped Claude Code skills for the workflows this repo runs
+repeatedly: `match-realism-pass`, `snapshot-schema-bump`, `err-file-and-backprop`,
+`landing-close-out`, `spec-promotion`, `dotnet-gate`. They are checked in rather than installed
+personally because each encodes conventions that live in this repo and must version with them. See
+`.claude/skills/README.md` for the derivation and the observed repetition counts. `adversarial-review`
+and `orientation` are personal skills and are deliberately not duplicated there.
 
 ---
 
