@@ -69,6 +69,14 @@ Each reviewer states which files/sections it read, so the full-coverage claim is
 
 If an execution environment is available, **run the code and its tests** rather than only reasoning about it. Executing reveals real failures that static reading rationalizes away. Static reasoning is the floor, not the ceiling. This applies to reviewers and fixers alike — a fixer that did not run the tests has not finished.
 
+The orchestrator resolves the command **once**, before dispatching, and puts the literal command in every brief — so reviewers and fixers all run the same gate and nobody has to guess:
+
+```bash
+~/.claude/skills/project-commands/scripts/project-commands.sh   # if the skill is installed
+```
+
+It reads the repo's manifests and lockfiles and reports install / lint / test plus any repo-local gate script, which beats every inferred command when present. In this repo that resolves to `tools/dotnet-ci/run-gate.sh`. If the skill is not installed, read the manifests yourself and still pass one explicit command down — a subagent left to guess will report the failure of its guess as a finding against your code.
+
 **Splitting a large scope.** If the artifact is too large for one reviewer to read in full, partition it across several Opus 5 reviewers *by file or section*, run them in parallel, and give each one the full text of its slice plus a map of the rest. Every line must be inside exactly one slice — a partition with a gap is a diff-only review wearing a costume. Assign at least one reviewer the **cross-slice seams**: the interfaces, shared state, and invariants that no single slice owns, which is precisely where partitioned review otherwise goes blind.
 
 ## The round loop
@@ -78,6 +86,23 @@ One round is: **review → triage → fix → verify.** Rounds repeat until the 
 **1. Review.** Dispatch fresh Opus 5 reviewer(s) over the full current scope (parallel slices if large). Each returns findings in the output format below.
 
 **2. Triage.** The orchestrator merges the reports: deduplicate findings that describe the same defect, assign each a stable ID (`H1`, `M3`, …) that persists across rounds, and resolve severity conflicts — arguing the case in one line and picking the higher tier, or escalating to Fable 5 per the rules above. It does not add findings of its own invention or drop one it finds inconvenient.
+
+Deciding whether two reports describe the same defect is judgement. Everything after that decision — minting and reusing IDs, deriving the tally, classifying each prior finding as resolved / still present / moved, tracking the round budget — is bookkeeping, and it degrades exactly where this loop is most valuable: round four, several parallel reviewers in, when the IDs have to still line up with what round one said. Hand the merged list to the ledger and let it do that part:
+
+```bash
+.claude/skills/adversarial-review/scripts/findings.py round <round.json>
+.claude/skills/adversarial-review/scripts/findings.py status
+```
+
+You supply a stable `key` per defect (that is the dedup decision, made by you); it assigns and reuses the ID. **An ID binds to the defect, not to its severity** — a finding re-rated Medium → High keeps `M1` rather than becoming `H2`, so the thread back to round 1 survives the re-rating. It renders the round report in the output format below, writes `.adversarial-review/round-N.json`, and returns the loop signal as its exit code:
+
+| Exit | Meaning |
+|---|---|
+| `0` | Loop complete — only Low findings, or none |
+| `1` | Gating findings open — continue to the next round |
+| `3` | Round budget exhausted with High still open — stop and report per the budget rule |
+
+The script never invents, rates, re-rates, or drops a finding, and it refuses duplicate keys rather than silently merging them — deduplication is yours to do first. If it is unavailable, do the bookkeeping by hand and count the tally twice.
 
 **3. Fix.** Dispatch fixers by tier:
 - **High → Opus 5**, first and on their own. Structural fixes move the ground under everything else, so they land before Medium/Low work begins.
@@ -175,6 +200,8 @@ Each reviewer returns findings in this shape; the orchestrator merges them into 
 ```
 
 If a severity tier is empty, omit its heading. When a full round produces only Low findings or none, state that the artifact passes and the loop is complete, and give the round count. Hold a high bar for that conclusion — do not reach it by looking away or by quietly downgrading a defect.
+
+The ledger script emits exactly this shape, so the tally, the IDs, and the prior-findings dispositions are derived rather than typed. A hand-written header that says "3 High" above four High findings discredits the whole round; deriving it removes the possibility. Reviewer subagents return findings in the per-finding shape above — the orchestrator assembles the round report.
 
 ## Dispatch briefs
 
