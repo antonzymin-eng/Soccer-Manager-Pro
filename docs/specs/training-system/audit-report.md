@@ -1,13 +1,14 @@
-# Training System #29 — Adversarial Review of the July 30 Code Landing (AR-1)
+# Training System #29 — Adversarial Review of the July 30 Code Landing (AR-1 → AR-2 CONVERGED)
 
 **Created:** July 31, 2026
-**Version:** 1.0
+**Version:** 1.2
 **Target:** commit `1ee1dd0` ("Training Sytem #29 Code by GPT-5.6 Terra") — `src/training-system/` (9 files)
 **Reviewer posture:** hostile external review per the project's adversarial-review convention; every file
 read in full; spec §2/§3/§4/§5 + Appendices cross-checked; full dotnet tree compiled (0 errors); the 7
 shipped tests executed (all pass); two findings proven by execution, not inference.
 
-**Verdict: 2 High · 5 Medium · 4 Low — does NOT pass. The Highs gate.**
+**Verdict (AR-1): 2 High · 5 Medium · 4 Low — did NOT pass. The Highs gated.**
+**Verdict (AR-2, post-fix): 0 High · 0 Medium · 0 Low — CONVERGENCE; the cycle is CLOSED (see the AR-2 section).**
 
 > **FIX-PASS STATUS (July 31, 2026):** all 11 findings addressed in one commit on
 > `claude/adversarial-review-spec-29-q3qwh4`; tests 7 → 41; full dotnet gate PASSED, 0 failures; the
@@ -210,9 +211,43 @@ the sentinel probe (M-1 reproduced), and `check-meta-integrity.sh` (M-4 reproduc
 Per the review convention, the cycle is open: after fixes land, a full re-review of the entire assembly
 (not the diff) runs again, until a complete pass yields no new High or Medium findings.
 
+## AR-2 — full re-review of the fixed assembly (July 31, 2026): 0H + 0M + 0L — CONVERGENCE, cycle CLOSED
+
+A complete fresh pass over every file in its post-fix state (commit `731a2a4`), not the diff: all 13
+`.cs` files (2,006 lines — the 6 production files, the 4 suites, and the 3 small value types) plus
+`training-system.asmdef` read in full; the ERR-029-004 row in `spec-error-log.md` and `section-4.md`
+v0.4 spot-verified (the id was genuinely free — 001/003 filed, 002 reserved by #34 §8 — and the §4.1
+reference list now carries `ProjectConstants` with the FR-CS-019 rationale).
+
+**Every AR-1 fix verified in place, against the spec rather than against the fix description:**
+the sentinel guard is the FIRST statement of `AdvanceTrainingDay` (ahead of the focus validation and
+every write, locked from both a fresh and an already-advanced state); `ComputeTrainingInput` is pure
+(read-purity locked), returns exactly `TrainingInput.Neutral` under both dial states with the dial-ON
+Stage-2 identity pinned by a deliberate tripwire test, and the 401-day T-TR-NEU-001 run drives #28's
+real `GrowthProjection` with a non-vacuity guard; the container keeps ascending-`PlayerId` parallel
+lists with `BinarySearch` membership (iteration order a function of content — verified by the
+insert-history-independence test), validates F4 before the F2 membership check in `SetFocus`, and
+writes back only on success; all nine `[GT]` scalars are PascalCase `static readonly` off
+`Config.GetInt/GetFloat("training-system", …)` with behaviour-neutral fallbacks matching the original
+literals, `[FIXED]` rows unchanged; the two focus tables carry the unchanged Appendix A magnitudes
+under a coverage lock binding length to the `TrainingFocus` member count; the injury-risk sum
+accumulates in `long` with an overflow lock; `ApplyCoach` routes both deltas; the schedule reads
+through to the states (verified by the view-taken-before-the-command test); headers carry `Author:`.
+The Appendix B arithmetic was re-derived independently (Fitness delta 120 + attribute bonus 20 ⇒
+7140/7280/7420/7560; fatigue +300 − 200 ⇒ 2100/2200/2300/2400; projection 2300/10000 = 0.23) and
+matches every asserted figure.
+
+**Re-executed, not trusted:** full-tree build via the CI generator (0 errors), the 41-test
+training-system suite (41/41 passed), `check-meta-integrity.sh` (clean — no missing / orphan /
+duplicate GUIDs), and the full `run-gate.sh` sweep re-run for this pass. No new findings at any
+severity. The two doc-noted deviations (dial-ON `Neutral` identity; the CS1737-forced absence of the
+FR-TR-016 default) are confirmed correct as recorded. **The AR cycle over the #29 Stage-2 landing is
+CLOSED.**
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 1.0 | 2026-07-31 | — | AR-1 over commit `1ee1dd0`: 2H+5M+4L. M-1/M-4 proven by execution. Cycle open. |
 | 1.1 | 2026-07-31 | — | Fix-pass status recorded (header note): all 11 findings addressed in one commit; H-2 took option (a); two deviations doc-noted in code (dial-on returns `Neutral` rather than throwing; L-2 blocked by CS1737); ERR-029-004 filed + resolved. Tests 7 → 41, full gate PASSED. Findings text unchanged — this row records the response, not a re-review. Cycle remains OPEN pending the full re-review. |
+| 1.2 | 2026-07-31 | — | AR-2: full re-review of the fixed assembly (all 13 files + asmdef + doc back-props, re-executed build/suite/meta/gate) — 0H+0M+0L, CONVERGENCE. Cycle CLOSED. |
 #endregion
