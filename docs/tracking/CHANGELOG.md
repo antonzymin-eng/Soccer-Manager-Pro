@@ -12,7 +12,32 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** July 28, 2026, latest entry of the day (**KEEPER CONTACT RATE — §5.Z.20 §7.1's
+> **Last Updated:** August 2, 2026 (**ERR-020-002 + ERR-020-003 filed, both OPEN — the assembly layer
+> taxonomy back-prop the `src/CLAUDE.md` split surfaced.**) Spec #20 §3.5.2 places **19 of the 31 assembly
+> folders now in `src/`**; the twelve unplaced are `living-world`, `match-analytics`, `match-client-core`,
+> `match-client-unity`, `match-client-web`, `match-engine`, `match-viewer`, `player-database`,
+> `player-progression`, `season-save`, `tactical-instructions`, `ui-framework`. FR-CS-046 is decided
+> relative to two layer memberships, so it currently decides nothing about ~39% of the tree — including
+> every reference into or out of the composition root, which is precisely the part still being built.
+> **ERR-020-002** proposes a ten-tier order (Foundation / Physics / Configuration / Mechanics / AI / Data /
+> Composition / Management / Presentation / Client, with Infrastructure out-of-band) covering all 31
+> folders, **derived from the `.asmdef` reference graph rather than folder names** and verified against the
+> whole graph before proposing: zero upward references, 29 intra-tier references all pre-existing and
+> acyclic. Adopting it therefore changes nothing that exists and constrains only future code, which is
+> both its value and why its cost is zero. It also retires §3.5.2's stale empty `UI (Stage 1+ — not
+> specified yet)` row (four UI/client assemblies exist; #38 is APPROVED) and strikes `code-standards` from
+> `src/CLAUDE.md`'s infrastructure table (no such folder; #20 is a style guide). **Spec #20 is deliberately
+> untouched** — layer membership is its authority and wants owner sign-off, and a wrong answer written into
+> the authority file is worse than a documented gap; the ⚠️ note in `src/CLAUDE.md` names the gap and now
+> cites the filing. The one call worth arguing with is `player-database` at tier 5 (above AI, below
+> Composition): no gameplay-layer assembly references it today, and seating it there is what keeps physics
+> and AI operating on struct parameters rather than squad rows. **ERR-020-003** (Low) came out of the same
+> verification: §3.5.2 draws `Physics ──► Mechanics ──► AI ──► UI` while the root `CLAUDE.md` states `AI →
+> Mechanics → Physics, never the reverse` — the same rule with opposite arrows and neither notation
+> labelled. The code follows the `CLAUDE.md` reading; no violation exists, so this is a notation fix, not a
+> behaviour one. `spec-error-log.md` → v1.54. Prior entry below.)
+
+> **Last Updated (prior):** July 28, 2026, latest entry of the day (**KEEPER CONTACT RATE — §5.Z.20 §7.1's
 > residual, BOTH NAMED LEVERS LANDED, MEASURED; the goal-rate residual moves to conversion AT
 > contact.** Measured per episode at the ball's goal-plane crossing (new env-gated
 > `GkContactRateDiagnosticTests` — a frame aggregate cannot attribute position vs timing): of 15

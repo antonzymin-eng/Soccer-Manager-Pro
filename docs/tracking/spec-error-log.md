@@ -6,8 +6,9 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 1.53
-**Updated:** July 28, 2026 (v1.53 — **ERR-011-007 + ERR-012-010 filed + RESOLVED at the gk-contact-rate pass** (§5.Z.20 §7.1's residual — the keeper met ~a quarter of on-target shots and the uncontacted remainder held nearly all the surplus goals). Measured per episode at the ball's goal-plane crossing (new `GkContactRateDiagnosticTests`): of 15 crossed un-contacted threat episodes, **9 were dive-early** (the unconditional `Anticipate → Diving` row launched the dive at the first 10 Hz tick after SAVE committed, so the 600 ms envelope closed 456–2000 ms before the ball arrived; dive-late exactly 0), 3 no-dive, 3 lateral-miss — with the lateral need at the crossing (1.91–3.83 m) at or beyond the dive's ~3.55 m total coverage because #12 §3.3.3's pitch-anchored `GK_LATERAL_FACTOR × basisY` lateral term moved the keeper at most ±2 m over the whole 68 m width. **ERR-011-007**: new #11 §3.3.6 commit-to-arrival timing — the transition gates on predicted time-to-plane against a lateral-need-scaled commit lead (`[GT] DIVE_COMMIT_MIN_LEAD_FRAC`), sharing ONE crossing predictor with the §3.3.4 dive direction; §3.2.3's `elapsed` anchor refined to the keeper's first decision opportunity at/after the live stamp — `max(AttemptCommittedTick × 100 ms, the first tactical tick after the stamp)` — so neither the held launch (scored as sluggish) nor a shot struck after the commit (scored as seconds-early) re-clamps the window; the second ordering is COMMON under the hold and was found by the first full-corpus run. **ERR-012-010**: #12 §3.3.3's lateral term becomes the ball-line point clamped inside the goal mouth (`GK_LATERAL_CLAMP_M` replaces `GK_LATERAL_FACTOR`, retired not retuned — no value of a pitch-anchored gain expresses goal-anchored tracking). No schema/RNG/draw-order change (both mechanisms are pure functions of current tick state). Measured effect in the owner doc `gk-contact-rate-design.md` §6. Prior update below.)
+**Version:** 1.54
+**Updated:** August 2, 2026 (v1.54 — **ERR-020-002 + ERR-020-003 filed, both OPEN, Code Standards #20 §3.5.2-owned.** Found while splitting `src/CLAUDE.md`, which reproduces the layer taxonomy: §3.5.2 places **19 of the 31 assemblies now in `src/`**, leaving the composition root, the management layer, the data layer, `tactical-instructions` and all four client assemblies outside the layer order — so FR-CS-046 decides nothing about ~39% of the tree, including every reference into or out of `match-engine`. ERR-020-002 proposes a **ten-tier order covering all 31 folders**, derived from the `.asmdef` reference graph rather than folder names and verified against it: **zero upward references**, 29 intra-tier references all pre-existing and acyclic — so adopting it changes nothing that exists and constrains only future code. It also retires the stale empty `UI (Stage 1+ — not specified yet)` row and strikes the `code-standards` phantom from `src/CLAUDE.md`'s infrastructure table. **Spec #20 is deliberately untouched:** layer membership is its authority and wants owner sign-off, and a wrong answer in the authority file is worse than a documented gap — the ⚠️ note in `src/CLAUDE.md` names the gap meanwhile. ERR-020-003 is the notation defect found by the same verification: §3.5.2 draws `Physics ──► Mechanics ──► AI` while the root `CLAUDE.md` states `AI → Mechanics → Physics, never the reverse` — same rule, opposite arrows, neither labelled. Code follows the `CLAUDE.md` reading; no violation exists. Prior update below.)
+**Updated (prior):** July 28, 2026 (v1.53 — **ERR-011-007 + ERR-012-010 filed + RESOLVED at the gk-contact-rate pass** (§5.Z.20 §7.1's residual — the keeper met ~a quarter of on-target shots and the uncontacted remainder held nearly all the surplus goals). Measured per episode at the ball's goal-plane crossing (new `GkContactRateDiagnosticTests`): of 15 crossed un-contacted threat episodes, **9 were dive-early** (the unconditional `Anticipate → Diving` row launched the dive at the first 10 Hz tick after SAVE committed, so the 600 ms envelope closed 456–2000 ms before the ball arrived; dive-late exactly 0), 3 no-dive, 3 lateral-miss — with the lateral need at the crossing (1.91–3.83 m) at or beyond the dive's ~3.55 m total coverage because #12 §3.3.3's pitch-anchored `GK_LATERAL_FACTOR × basisY` lateral term moved the keeper at most ±2 m over the whole 68 m width. **ERR-011-007**: new #11 §3.3.6 commit-to-arrival timing — the transition gates on predicted time-to-plane against a lateral-need-scaled commit lead (`[GT] DIVE_COMMIT_MIN_LEAD_FRAC`), sharing ONE crossing predictor with the §3.3.4 dive direction; §3.2.3's `elapsed` anchor refined to the keeper's first decision opportunity at/after the live stamp — `max(AttemptCommittedTick × 100 ms, the first tactical tick after the stamp)` — so neither the held launch (scored as sluggish) nor a shot struck after the commit (scored as seconds-early) re-clamps the window; the second ordering is COMMON under the hold and was found by the first full-corpus run. **ERR-012-010**: #12 §3.3.3's lateral term becomes the ball-line point clamped inside the goal mouth (`GK_LATERAL_CLAMP_M` replaces `GK_LATERAL_FACTOR`, retired not retuned — no value of a pitch-anchored gain expresses goal-anchored tracking). No schema/RNG/draw-order change (both mechanisms are pure functions of current tick state). Measured effect in the owner doc `gk-contact-rate-design.md` §6. Prior update below.)
 **Updated (prior):** July 28, 2026 (v1.52 — **ERR-008-017 filed + RESOLVED at the shot-volume pass.** #8 §3.2.3.1's U_SHOOT had NO distance term while `GoalOpeningScore` is scale-free and the §3.1.4.2 range gate is a cliff — within range a 34 m shot scored identically to a 10 m one, and measured shots clustered AT the range-gate boundary (means 30–34 m vs football's ~17; ~60% beyond 22 m). The formula gains a `DistanceQuality_SHOOT` hyperbolic-decay term (1.0 inside `[GT] SHOOT_SWEET_RANGE_M`, so every close-range calibration is bitwise untouched); the midfield long-shot machinery is recorded as production-unreachable dead surface (zone minimum 40 m vs range-gate maximum 35 m). No schema/RNG/draw-order change. Locked by the `match-engine-shot-speed` scenario's mean-shot-distance predicate — fails pre-fix at 30.0 vs 24.0, verified by execution. Prior update below.)
 **Updated (prior):** July 28, 2026 (v1.51 — **ERR-011-005 + ERR-011-006 filed + RESOLVED at the gk-catch-parry-conversion pass** (§5.Z.19's residual lever (c)). The §3.2.3 reaction window — 30% of the §3.5.1 handling-quality blend — was re-evaluated per frame, so the value consumed at contact was dated by the ball's whole FLIGHT time (the spec's own §3.2.5 worked example anchors it at the dive COMMIT); and the detection stamp was never cleared, so most dives were dated against shots struck 34–349 seconds earlier, with rebound/deflection episodes having no anchor at all. Fixed: the window computed once at the dive-launch frame and frozen (ERR-011-005), the stamp dying with its episode + an `OnThreatArmed` episode-onset fallback (ERR-011-006), and a KD-C3 `[GT]` recalibration inside the §3.4.3/§3.4.5 spec ranges. Measured (3 full matches, same seeds): contact windows 0.000 → 0.30–0.57, and the goal effect recorded in the owner doc's §6 table. No schema/RNG/draw-order change. Instruments that counted "shots" off stamp edges re-anchored to the new `TestOnly_ShotContacts` genuine-strike counter. Prior update below.)
 **Updated (prior):** July 28, 2026 (v1.50 — **ERR-008-016 + ERR-006-004 + ERR-001-005 filed + RESOLVED at the shot-speed & woodwork pass** (residual lever (b) of the shot-outcome distribution pass). #8 §3.5.3's PowerIntent — a product of two [0,1] fractions — pinned nearly every shot at its own 0.1 clamp floor, and #6's `V_FLOOR = 10` anchored a neutral full-power shot at ~16 m/s before reducers: composed, measured shot-tick means ran 6.9–10.3 m/s against football's ~20–25. PowerIntent becomes floor-plus-modulation (`[GT] POWER_INTENT_FLOOR` 0.65), `V_FLOOR` retunes 10 → 24 over two measured iterations, and — because football-pace shots move ~0.42 m/tick — the goal frame becomes PHYSICAL and precisely adjudicated: a swept six-cylinder segment test (`ApplySweptGoalFrameCollision`, `ApplyGoalPostCollision`'s first production caller — a discrete test tunnels a 0.12 m post) and crossing-point goal-line adjudication (the detected position is up to 0.42 m past the plane; a rising ball crossing UNDER the bar read as over it). Measured: means 14.7–16.1, maxima to 27.6, shots/match 59–70 → 31–45 (football ~25), goals/shot ROSE 0.14–0.25 → 0.38–0.42 — pace now exposes the keeper's conversion, residual lever (c), measured against real shot speeds for the first time. No schema/RNG/draw-order change. Acceptance `match-engine-shot-speed`: 5 of 7 predicates fail pre-fix, verified by execution. Prior update below.)
@@ -160,6 +161,8 @@ authoritative remediation backlog.
 | ERR-006-001 | Shot Mechanics #6 §3.5 / §4.1.1 resolves every shot against ONE goal. `GoalGeometryProvider.Get()` returns `GoalLineX = PitchLength` unconditionally and states the assumption in its own doc — *"Assumes the attacking team is shooting toward X = PitchLength (right goal). Stage 1+ will supply attack direction from match context"* — and `ShotPlacementResolver` is written to match (`Mathf.Max(goal.GoalLineX - shooterPosition.x, floor)`, `Mathf.Max(baseAimDirection.x, ε)`). No caller ever supplied that direction, so **both teams shot at x = 105**: the away side shot at the goal it defends, and any that went in were credited by the exit-half-space rule to the home side. Measured over four full 90-minute matches: **home 21 goals, away 0**, on symmetric possession (1.8–2.4% each), passes (~700 each) and time in the third each team attacks (10–15% each) — with the ball reaching x = 105+ and never once reaching x = 0. Decision Tree #8 is correctly team-relative (`PitchGeometry.GetOpponentGoalCentre(teamId)`), so the away side *decided* to shoot in the right places and then kicked the wrong way. Invisible to the suite because #6's own fixtures are all home-perspective — the ERR-008-002 / ERR-013-009 defect class the project has now hit four times. | **High** | 1 (+ every consumer of a played scoreline: A4a calibration, #30 quick-sim fitting, PM-1) | ✅ **Resolved July 27, 2026 (match-engine §5.Z.14).** Fixed at the composition root, not in #6: `MatchEngine.ShotWorldAdapter` maps the away team's shooter state INTO #6's canonical attack-+X frame (`MirrorPitchIfAway` for the position, `MirrorVelocityIfAway` for velocity and facing) and maps the resulting kick back OUT on `ApplyKick`. Per §5.Z.12 — "a pair has two places that must agree; a mirror has one" — this reuses the mirror the rest of the engine already uses rather than introducing a second hardcoded goal line, and leaves every APPROVED #6 formula, constant and test untouched. The mirror is a 180° rotation about Z, so the same negate-x-y rule is correct for velocity and for spin (a proper rotation transforms a pseudovector exactly as it transforms a vector). Measured after: scorelines 6–0/10–0/2–0/3–0 → **6–6/12–5/2–6/11–10**, the away side scoring in every match and winning one, ball min x 2.1 → −2.4. **#6's spec text is left as-is deliberately**: it is not wrong about its own scope, it is explicit that attack direction is the caller's to supply, and supplying it is exactly what this fix does. |
 | ERR-030-015 | Season & Competition Loop #30, found at **T3 implementation**: `section-3.md` §3.5's `RollToNextSeason` pseudocode regenerates `Fixtures`, resets `Table`, and advances `SeasonNumber`/`Seed`, but **never rebuilds `Calendar`** — whose cursor is at `RoundCount` precisely because the season just ended. Implemented verbatim, the roll yields a season that is permanently unplayable: `SeasonCalendar.IsSeasonComplete` stays true, so `AdvanceToNextFixtureDay` throws F5 and `AdvanceAndPlayNextRound` throws, on every call thereafter. The transform cannot deliver FR-SN-029's multi-season continuity as written, and no unit assertion over the rolled state's *fields* would notice — the schedule, table, seed and season number are all exactly right. | **High** | 1 | ✅ Resolved July 27, 2026 at #30 T3 (roadmap A5) — §3.5 gains step **(c′) rebuild the calendar**, between (c) regenerate and (d) age advance, leaving the surrounding steps and therefore FR-SN-031's (a')/(b') insertion points untouched. `SeasonLoop.ShiftCalendarToNextSeason` implements it by shifting the OLD calendar's day mapping forward by one season length plus a new `[GT] SeasonBreakDays` close season: the roll stays a pure function of the prior `SeasonState` (KD-6 — no clock read, no draw), the new season opens exactly one break after the old one's finale, and a non-uniform schedule keeps its shape instead of being silently flattened to linear. Caught by an acceptance test that plays a **second** season to completion; 9 of the suite's 18 predicates fail against the pre-fix form. No FR text change, no `SEASON_STATE_FORMAT_VERSION` change (the calendar was already serialized), no `DETERMINISM_DIGEST_VERSION` bump. |
 | ERR-041-001 | Injuries & Medical #41 back-prop: `DOMAIN_TAG_INJURIES_MEDICAL = 0x2A` + `SubsystemOrdinals.InjuriesMedical = 92` allocation needed in Deterministic Simulation #16 §3.4 (the `injuries.occurrence` world-tick sub-stream, siteId `injuries.occurrence`, `entityId = playerId`, position-independent keyed draws; #41 KD-1 / §5). | Medium | 1 | ◑ Spec-text allocated July 23, 2026 at #41 section-file approval — `deterministic-sim/section-3.md` §3.4 gains the `DOMAIN_TAG_INJURIES_MEDICAL = 0x2A` row (v1.0.11; value `0x2A` per roadmap §6, block skips `0x23`–`0x29` reserved for #31–#40). **Spec-text-first like ERR-030-001** (not code-first like ERR-022/027-001): the code const (`DeterministicSimConstants.DOMAIN_TAG_INJURIES_MEDICAL` / `SubsystemOrdinals.InjuriesMedical`) + the `injuries.occurrence` stream registration land at **#41 T2** with the first draw site (FR-LW-031 — no phantom stream). Pure namespace allocation; no `DETERMINISM_DIGEST_VERSION` bump. Fully resolves when the T2 code const lands. |
+| ERR-020-002 | Code Standards #20 §3.5.2's layer taxonomy places **19 of the 31 assemblies now in `src/`**. The 12 unplaced are `living-world`, `match-analytics`, `match-client-core`, `match-client-unity`, `match-client-web`, `match-engine`, `match-viewer`, `player-database`, `player-progression`, `season-save`, `tactical-instructions`, `ui-framework` — so FR-CS-046 ("references flow one direction only") is unenforceable for ~39% of the tree, including the composition root and every client assembly. The taxonomy also still carries `UI` as an empty "Stage 1+ — not specified yet" placeholder, though four UI/client assemblies exist. Separately, `src/CLAUDE.md`'s infrastructure table lists `code-standards` as an assembly; no such folder exists (#20 is a style guide). | Medium | 2 | 🟡 **Open — PROPOSAL filed August 2, 2026, awaiting owner sign-off.** A ten-tier order covering all 31 folders is proposed in the entry body and was verified against every `.asmdef` reference list: **zero upward references** — adopting it constrains future code only, and changes nothing that exists. Layer membership is #20's to decide, so no spec text was edited. |
+| ERR-020-003 | Code Standards #20 §3.5.2 draws the layer rule as `Physics ──► Mechanics ──► AI ──► UI`, while the root `CLAUDE.md` states the same rule as **AI → Mechanics → Physics, never the reverse**. The arrows point opposite ways. Both are defensible readings of their own notation (#20's arrow = "is available to"; CLAUDE.md's = "may reference"), and neither states which it means, so the two authoritative statements of the project's single most load-bearing architectural rule read as contradictory. | Low | 2 | 🟡 **Open — filed August 2, 2026.** Proposed fix: label the arrow in #20 §3.5.2 explicitly (`──► reads "may be referenced by"`) and add the reference-direction sentence verbatim beneath the diagram, so the two files state the rule in the same words. No behaviour change; the rule itself is not in dispute. |
 
 ---
 
@@ -2360,4 +2363,140 @@ rising crossing misread as a goal kick).
 ---
 
 *End of Spec Error Log v1.50 — July 28, 2026.*
+
+## ERR-020-002: Code Standards #20 §3.5.2 layer taxonomy places 19 of 31 assemblies — FR-CS-046 is unenforceable for the composition root, the management layer and every client assembly
+
+**Spec:** Code Standards #20
+**Section:** §3.5.2 Layer Order and Dependency Arrows (FR-CS-046, FR-CS-047)
+**Severity:** Medium
+**Detected During:** the `src/CLAUDE.md` split (August 2, 2026) — the taxonomy is reproduced there, and reproducing it required checking it against `src/`.
+**Status:** 🟡 **Open — PROPOSAL, awaiting owner sign-off.** No spec text has been changed.
+
+**Problem:** §3.5.2's box names 14 assemblies across three gameplay layers (Physics 8, Mechanics 4,
+AI 2) plus an empty `UI (Stage 1+ — not specified yet)` row. `src/CLAUDE.md` reproduces it and adds
+two assemblies as cross-cutting foundations (`deterministic-sim`, `event-system`) and four as
+infrastructure. `src/` now holds **31 assembly folders**. Twelve are placed nowhere:
+
+`living-world`, `match-analytics`, `match-client-core`, `match-client-unity`, `match-client-web`,
+`match-engine`, `match-viewer`, `player-database`, `player-progression`, `season-save`,
+`tactical-instructions`, `ui-framework`.
+
+FR-CS-046 says assembly references must flow in one direction only. A reference is legal or illegal
+only relative to two layer memberships, so for any reference touching one of those twelve — which
+includes **every reference into or out of the composition root** — FR-CS-046 currently decides
+nothing. That is ~39% of the tree, and it is the part still being actively built (path-to-playable
+Tracks S and C both land there), which is exactly when a direction rule earns its keep.
+
+Two smaller defects sit in the same place:
+
+- The `UI` row still reads *"Stage 1+ — not specified yet"*. Four UI/client assemblies exist
+  (`ui-framework`, `match-client-core`, `match-client-unity`, `match-client-web`), and #38 is
+  APPROVED. The placeholder is stale.
+- `src/CLAUDE.md`'s **infrastructure** table (a `src/CLAUDE.md` extension, not #20 text) lists
+  `code-standards` as an assembly. There is no `src/code-standards/` folder and there should not be
+  — #20 is a style guide. The row should be struck.
+
+**Root Cause:** §3.5.2 was authored against the Stage-0 physics/mechanics/AI tree, before the
+composition root, the management layer, the presentation layer and the clients existed. Nothing in
+the landing ritual requires a new assembly to claim a layer, so twelve assemblies were added over
+fourteen months without the taxonomy moving. This is the ordinary drift failure of a hand-maintained
+index — the same class as the `src/CLAUDE.md` file tree, which was retired to
+`docs/tracking/src-tree.md` and explicitly marked non-authoritative in the same pass.
+
+---
+
+### Proposed resolution — a ten-tier order covering all 31 folders
+
+**This is a proposal, not a decision.** Layer membership is #20's authority and per this project's
+convention wants owner sign-off. It is offered as something to approve or redraw, not to apply.
+
+The tiers below were **derived from the reference graph, not from folder names.** Every
+`src/*/*.asmdef` `references` list was read and the whole graph checked against the proposed order.
+
+| Tier | Assemblies | Why this tier |
+|---|---|---|
+| 0 **Foundation** | `project-constants`, `deterministic-sim`, `event-system` | Referenceable by everything; reference nothing but each other. Ratifies the cross-cutting-foundations paragraph `src/CLAUDE.md` already carries. |
+| 1 **Physics** | `ball-physics`, `agent-movement`, `collision-system`, `first-touch`, `pass-mechanics`, `shot-mechanics`, `heading-mechanics`, `goalkeeper-mechanics` | Unchanged from §3.5.2. |
+| 2 **Configuration** | `tactical-instructions` (#21) | Consumed by Mechanics (all four), AI (`decision-tree`) and everything above; references only `project-constants`. It cannot be a Mechanics member — `decision-tree` would then reference upward. **No Physics assembly references it**, so seating it above Physics is free and keeps the physics layer parameter-only. |
+| 3 **Mechanics** | `positioning-ai`, `pressing-ai`, `defensive-ai`, `attacking-ai` | Unchanged from §3.5.2. |
+| 4 **AI** | `decision-tree`, `perception-system` | Unchanged from §3.5.2. |
+| 5 **Data** | `player-database` (#27) | Referenced by `match-engine`, `player-progression`, `season-save`, `match-client-core` — and by **no gameplay-layer assembly**. Seating it above AI preserves that: physics and AI keep operating on struct parameters, not squad rows. This is the tier whose placement matters most, and the one most worth arguing with. |
+| 6 **Composition** | `match-engine` | References all four gameplay layers plus Data; the only assembly that does. Not a numbered spec — governed by `match-engine-design.md`. |
+| 7 **Management** | `living-world` (#22), `player-progression` (#28), `season-save` (#30) | Long-horizon state above a match. `season-save` → `match-engine` is downward; `season-save` → `living-world` is intra-tier. |
+| 8 **Presentation** | `match-viewer`, `match-analytics` (#37) | Derived-from-a-played-match. Ratifies the root `CLAUDE.md` rule that **no sim assembly may reference `match-analytics`** — currently true, and this tier is what would keep it true. |
+| 9 **Client** | `match-client-core`, `ui-framework` (#38), `match-client-unity`, `match-client-web` | Replaces the stale empty `UI` placeholder. Internal order (`match-client-core` → `ui-framework` → `match-client-web`) is intra-tier; see the caveat below. |
+| — **Infrastructure** | `performance-optimization` (#18), `testing-strategy` (#19) | Out-of-band: not in the order, and no tier may reference them at runtime. Unchanged from `src/CLAUDE.md`, minus the `code-standards` phantom row. |
+
+**Verification (before proposing, not after):** all 31 folders are covered, none proposed that does
+not exist, and across every `.asmdef` reference in the tree there are **zero upward references**
+under this order. Twenty-nine references are intra-tier, all of them already present today and all
+acyclic — the `pressing-ai` → `positioning-ai` precedent inside Mechanics establishes that intra-tier
+is permitted. Adopting the order therefore **changes nothing that exists**; it only constrains what
+can be written next. That is the whole value, and it is also why the cost of adopting it is zero.
+
+**Caveat the owner should rule on.** A flat tier permits intra-tier cycles, and two tiers now carry a
+real internal order (`match-client-core` → `ui-framework` → `match-client-web`; `season-save` →
+`living-world`). Either add "intra-tier references must remain acyclic" as a sentence, or split
+Client and Management into sub-ranks. The first is cheaper and sufficient today; the second is more
+precise and more brittle. Recommendation: the sentence.
+
+**Files Affected:**
+| File | Location | Change |
+|---|---|---|
+| `docs/specs/code-standards/section-3.md` | §3.5.2 box + arrow diagram | Replace the 3-layer box with the 10-tier order; retire the empty `UI` placeholder row; add the intra-tier-acyclicity sentence |
+| `src/CLAUDE.md` | `### Assembly Layer Taxonomy` | Re-reproduce the corrected taxonomy verbatim; delete the ⚠️ staleness note this entry supersedes; strike the `code-standards` infrastructure row |
+
+**Not done here, deliberately:** #20 §3.5.2 is untouched. Assigning twelve assemblies to layers is a
+design decision with a sign-off owner, and the wrong answer baked into the authority file is worse
+than a documented gap. The ⚠️ note in `src/CLAUDE.md` names the gap and points readers at the
+assembly map in the root `CLAUDE.md` meanwhile, so nobody is currently reading a wrong taxonomy as
+right.
+
+---
+
+## ERR-020-003: Code Standards #20 §3.5.2 and the root `CLAUDE.md` draw the reference-direction rule with arrows pointing opposite ways
+
+**Spec:** Code Standards #20
+**Section:** §3.5.2 Layer Order and Dependency Arrows (FR-CS-046)
+**Severity:** Low
+**Detected During:** ERR-020-002's graph verification (August 2, 2026) — checking references against the diagram required deciding which way its arrows point.
+**Status:** 🟡 Open — filed August 2, 2026
+
+**Problem:** §3.5.2 renders the rule as
+
+```
+        Physics ──► Mechanics ──► AI ──► UI
+        NO upward references permitted (FR-CS-046)
+```
+
+The root `CLAUDE.md` states the same rule as *"the reference-direction rule (**AI → Mechanics →
+Physics, never the reverse**)"*. The arrows run opposite ways, and neither file says what its arrow
+means. Both are self-consistent — #20's reads "is available to", `CLAUDE.md`'s reads "may reference"
+— but a reader who has seen one and then meets the other has to reconstruct which convention is in
+force, on the project's most load-bearing architectural rule. `src/CLAUDE.md` carries a third
+rendering (`### Reference Direction`).
+
+The actual code follows `CLAUDE.md`'s reading: `decision-tree` (AI) references `positioning-ai`
+(Mechanics) references `pass-mechanics` (Physics). No violation exists; this is a notation defect,
+not a behaviour one — which is why it is Low, and why it is worth fixing cheaply before someone
+resolves the ambiguity in the wrong direction in a review.
+
+**Root Cause:** the diagram was drawn as a layer *stack* (bottom-up), and the prose was written as a
+*dependency* chain (top-down). Neither labelled its axis.
+
+**Proposed resolution:** label the arrow in §3.5.2 — `──► reads "is available to"` — and add the root
+`CLAUDE.md` sentence verbatim beneath the diagram, so both files state the rule in the same words in
+addition to their own notation. Do not renumber or reverse the diagram: the layer stack reads
+correctly bottom-up and several specs cite it in that orientation.
+
+**Files Affected:**
+| File | Location | Change |
+|---|---|---|
+| `docs/specs/code-standards/section-3.md` | §3.5.2 arrow diagram | Label the arrow; add the reference-direction sentence verbatim |
+| `src/CLAUDE.md` | `### Reference Direction` | Cite #20 §3.5.2's labelled arrow so all three renderings agree |
+
+---
+
+*End of Spec Error Log v1.54 — August 2, 2026.*
+
 

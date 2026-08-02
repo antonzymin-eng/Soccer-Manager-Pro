@@ -288,7 +288,7 @@ promotion). Read the supplement for the *reasoning*; read the spec for the *cont
 > **When resolving an issue, move its entry to the resolved archive in the same
 > commit.** Do not re-inline entries into this file.
 
-**17 active** / 33 resolved.
+**18 active** / 33 resolved.
 
 - A played match has a structural home/away scoring asymmetry (~50× football's home advantage) and a goal rate ~10× football's — A4a stays BLOCKED
 - Injury / aging research alignment — design supplement OPENED, AR-converged, awaiting owner sign-off
@@ -307,3 +307,4 @@ promotion). Read the supplement for the *reasoning*; read the spec for the *cont
 - Approval tags created locally, not yet pushed
 - Fixed64 stage scope decision
 - Superseded files from old naming convention
+- Assembly layer taxonomy (Spec #20 §3.5.2) places 19 of 31 assemblies — ERR-020-002 proposal filed, awaiting owner sign-off

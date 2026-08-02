@@ -90,11 +90,23 @@ at runtime:
 > **Listed but absent from `src/`:** `code-standards` (Spec #20 is a style guide, not a
 > coded assembly).
 >
-> The table is reproduced verbatim from Spec #20 §3.5.2, which is the authority on layer
-> membership — so the fix is a back-prop to that spec, not an edit here. Assigning these
-> 12 to layers is a design decision requiring owner sign-off, not something to infer from
-> folder names. Until it lands, use the **assembly map in the root `CLAUDE.md`** as the
-> current index. The Reference Direction rule below is unaffected and still binding.
+> The layer table is reproduced verbatim from Spec #20 §3.5.2, which is the authority on
+> layer membership — so the fix is a back-prop to that spec, not an edit here. (The
+> infrastructure table below it is a `src/CLAUDE.md` extension, not #20 text; its
+> `code-standards` row is the phantom.) Assigning these 12 to layers is a design decision
+> requiring owner sign-off, not something to infer from folder names.
+>
+> **Filed as `ERR-020-002`** (August 2, 2026, 🟡 Open) with a proposed ten-tier order
+> covering all 31 folders, derived from the `.asmdef` reference graph and verified against
+> it — zero upward references, so adopting it changes nothing that exists. See
+> `docs/tracking/spec-error-log.md`. Until it is signed off, use the **assembly map in the
+> root `CLAUDE.md`** as the current index.
+>
+> The Reference Direction rule below is unaffected and still binding — but note
+> `ERR-020-003`: #20 §3.5.2 draws its arrows `Physics ──► Mechanics ──► AI` while the root
+> `CLAUDE.md` states `AI → Mechanics → Physics, never the reverse`. Same rule, opposite
+> notation, neither labelled. **The code follows the `CLAUDE.md` reading** — an assembly
+> may reference assemblies below it, never above.
 
 ### Reference Direction
 
