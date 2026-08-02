@@ -176,6 +176,10 @@ strong { color:var(--ink-1); font-weight:600; }
 .finding.sev-high .stripe { background:var(--neg); }
 .finding.sev-med  .stripe { background:var(--neu); }
 .finding.sev-low  .stripe { background:var(--info); }
+.finding.sev-done .stripe { background:var(--pos); }
+.finding.sev-done { opacity:.72; }
+.finding.sev-done .f-title { color:var(--ink-2); }
+.pill.done { color:var(--pos); background:var(--pos-tint); }
 .f-body { padding:var(--s-5) var(--s-6); }
 .f-top {
   display:flex; align-items:baseline; gap:var(--s-3);
@@ -334,21 +338,22 @@ td.num { font-family:var(--font-mono); font-variant-numeric:tabular-nums; white-
       What your Claude Code sessions on <strong>Soccer&nbsp;Manager&nbsp;Pro</strong> repeat, what they
       cost, and what should be encoded instead of re-derived. Every number below is
       <strong>measured</strong> from transcript <code>usage</code> fields and repo files — not estimated,
-      except where labelled. This page stays quiet when nothing crosses a threshold;
-      right now <strong>four findings</strong> have.
+      except where labelled. This page stays quiet when nothing crosses a threshold.
+      Four findings tripped on the first run; the <strong>CLAUDE.md split has since
+      landed</strong>, clearing two. <strong>Two remain.</strong>
     </p>
     <dl class="telemetry">
-      <div class="tcell is-alert">
-        <dt>Prefix before turn 1</dt>
-        <dd>203,750<small>tokens cached before you asked anything</small></dd>
+      <div class="tcell is-good">
+        <dt>CLAUDE.md — after split</dt>
+        <dd>5,282<small>was 97,632. −92,350 tokens per session</small></dd>
       </div>
       <div class="tcell is-alert">
-        <dt>CLAUDE.md</dt>
-        <dd>97,632<small>est. tokens, auto-loaded every session</small></dd>
+        <dt>src/CLAUDE.md</dt>
+        <dd>139,676<small>est. tokens, untouched — next</small></dd>
       </div>
       <div class="tcell">
-        <dt>Of that, durable rules</dt>
-        <dd>4.7%<small>4,548 tokens. The rest is history</small></dd>
+        <dt>Prefix, projected</dt>
+        <dd>~111k<small>was 203,750 measured. Next session confirms</small></dd>
       </div>
       <div class="tcell">
         <dt>This session</dt>
@@ -405,41 +410,48 @@ td.num { font-family:var(--font-mono); font-variant-numeric:tabular-nums; white-
         </div>
       </article>
 
-      <article class="finding sev-high">
+      <article class="finding sev-done">
         <div class="stripe"></div>
         <div class="f-body">
           <div class="f-top">
-            <span class="pill high">High</span>
-            <span class="f-title">CLAUDE.md is 95% history, 5% rules</span>
-            <span class="f-metric">97,632 tok</span>
+            <span class="pill done">Cleared</span>
+            <span class="f-title">CLAUDE.md was 95% history, 5% rules</span>
+            <span class="f-metric">97,632 → 5,282 tok</span>
           </div>
-          <p>The file splits cleanly into three parts, and only one of them is <em>rules</em>:
-          the "Last Updated" header chain is <strong>43%</strong> (~42,952 tokens, 54 entries),
-          OPEN ISSUES is <strong>51%</strong> (~50,132 tokens, 50 entries), and the actual durable
-          conventions — coordinate system, fatigue convention, constant tags, tick rates, the traps
-          table, the assembly map — are <strong>4.7%</strong> (~4,548 tokens). The header chain
-          duplicates information git already holds.</p>
-          <div class="evidence"><b>section split:</b> header_chain 42,952 · rules_body 4,548 ·
-            open_issues 50,132 &nbsp;|&nbsp; <b>proposed:</b> ~6,000 tokens after restructure
-            (rules + a 20-line index)</div>
+          <p>The file split cleanly into three parts, and only one was <em>rules</em>: the "Last
+          Updated" header chain at <strong>43%</strong> (~42,952 tokens, 54 entries), OPEN ISSUES
+          at <strong>51%</strong> (~50,132 tokens, 50 entries), and the durable conventions —
+          coordinate system, fatigue convention, constant tags, tick rates, the traps table, the
+          assembly map — at <strong>4.7%</strong>.</p>
+          <p><strong>Split on 31 July 2026.</strong> The chain moved to
+          <code>docs/tracking/CHANGELOG.md</code>, the entries to <code>open-issues.md</code> and
+          <code>open-issues-resolved.md</code>, and CLAUDE.md kept the rules plus a scannable
+          17-line index of active issues. The move was verified lossless before writing: all 50
+          entries present exactly once, zero rules lines lost, all durable conventions retained.</p>
+          <div class="evidence"><b>result:</b> 1,877 → 309 lines · 97,632 → 5,282 tokens ·
+            <b>−92,350 tokens per session start</b> · 8/8 rule sections intact</div>
         </div>
       </article>
 
-      <article class="finding sev-med">
+      <article class="finding sev-done">
         <div class="stripe"></div>
         <div class="f-body">
           <div class="f-top">
-            <span class="pill med">Medium</span>
-            <span class="f-title">18 resolved entries kept in the live rules file</span>
-            <span class="f-metric">18 / 50 entries</span>
+            <span class="pill done">Cleared</span>
+            <span class="f-title">Resolved entries kept in the live rules file</span>
+            <span class="f-metric">33 archived</span>
           </div>
-          <p>Just over a third of the OPEN ISSUES entries announce themselves as RESOLVED and are
-          then retained verbatim. The convention that produced this — preserving historical rows —
-          is a good one, but its home is an archive file, not the document loaded into every
-          session. Moving them changes nothing about the record and removes roughly 15k tokens
-          from every session start.</p>
-          <div class="evidence"><b>measured:</b> 50 top-level OPEN ISSUES bullets · 18 containing
-            "RESOLVED" · threshold trips above 25%</div>
+          <p>A third of the OPEN ISSUES entries announced themselves as resolved and were then
+          retained verbatim. The convention behind that — preserving historical rows — is a good
+          one; its home is an archive, not the document loaded into every session.</p>
+          <p>All 50 entries now live outside CLAUDE.md: <strong>17 active</strong> in
+          <code>open-issues.md</code>, <strong>33 closed</strong> in
+          <code>open-issues-resolved.md</code>, verbatim and un-deduplicated. Classification was
+          biased conservative — an ambiguous entry stayed active, because a stale active entry is
+          visible and gets re-filed whereas one wrongly archived is forgotten.</p>
+          <div class="evidence"><b>surfaced by the move:</b> three near-duplicate entry pairs
+            (Tactical-theory cross-reference ×2; the superseded Foul/card and
+            "cannot develop play" entries) are now visible in the index and worth a manual pass</div>
         </div>
       </article>
     </div>
@@ -604,8 +616,9 @@ td.num { font-family:var(--font-mono); font-variant-numeric:tabular-nums; white-
     <div class="sec-head">
       <p class="sec-kicker">Question three</p>
       <h2>Where the tokens go</h2>
-      <p>The prefix dominates. Adjust the two sliders to price the restructure against your own
-      working pattern — the per-token figures are measured, the volume is yours to set.</p>
+      <p>The prefix dominates. The first move has landed — adjust the sliders to price what it
+      saved against your own working pattern. Per-token figures are measured; the volume is
+      yours to set.</p>
     </div>
 
     <div class="calc">
@@ -620,13 +633,13 @@ td.num { font-family:var(--font-mono); font-variant-numeric:tabular-nums; white-
         </div>
       </div>
       <dl class="calc-out">
-        <div><dt>Now — prefix cost</dt><dd id="costNow">—</dd></div>
-        <div><dt>After restructure</dt><dd id="costAfter">—</dd></div>
+        <div><dt>Before the split</dt><dd id="costNow">—</dd></div>
+        <div><dt>After the split</dt><dd id="costAfter">—</dd></div>
         <div class="save"><dt>Saved per month</dt><dd id="costSaved">—</dd></div>
         <div class="save"><dt>Context returned</dt><dd id="ctxSaved">—</dd></div>
       </dl>
       <p class="calc-note">
-        Assumes <code>CLAUDE.md</code> 97,632 → 6,000 tokens and no change to the remaining
+        Uses the measured split: <code>CLAUDE.md</code> 97,632 → 5,282 tokens, with no change to the remaining
         ~106k of prefix (system prompt, tool schemas, skill descriptions). Opus 5 input at
         $5/MTok, cache write ×1.25 on the first turn, cache read ×0.10 thereafter. Output
         tokens excluded — the restructure does not change them.
@@ -641,12 +654,13 @@ td.num { font-family:var(--font-mono); font-variant-numeric:tabular-nums; white-
         </thead>
         <tbody>
           <tr>
-            <td><strong>Split CLAUDE.md.</strong> Rules stay; the 54-entry header chain moves to
-              <code>docs/tracking/CHANGELOG.md</code>; OPEN ISSUES moves to
-              <code>open-issues.md</code> with resolved entries archived alongside. Leave a
-              20-line index.</td>
-            <td class="num">97,632</td><td class="num">~6,000</td>
-            <td class="num" style="color:var(--pos)">~91,600 tok · $0.57</td>
+            <td><strong>Split CLAUDE.md.</strong> <span class="pill done" style="vertical-align:2px">Done
+              31 Jul</span> Rules stayed; the 54-entry header chain moved to
+              <code>docs/tracking/CHANGELOG.md</code>; all 50 OPEN ISSUES entries moved to
+              <code>open-issues.md</code> (17 active) and <code>open-issues-resolved.md</code>
+              (33 closed), leaving a 17-line index.</td>
+            <td class="num">97,632</td><td class="num">5,282</td>
+            <td class="num" style="color:var(--pos)">92,350 tok · $0.58</td>
           </tr>
           <tr>
             <td><strong>Same treatment for <code>src/CLAUDE.md</code>.</strong> Keep the coding
@@ -881,7 +895,7 @@ td.num { font-family:var(--font-mono); font-variant-numeric:tabular-nums; white-
 
   /* ---------- token calculator -------------------------------------- */
   var PRICE_IN = 5.0 / 1e6, W = 1.25, R = 0.10;
-  var PREFIX_NOW = 203750, CLAUDE_NOW = 97632, CLAUDE_AFTER = 6000;
+  var PREFIX_NOW = 203750, CLAUDE_NOW = 97632, CLAUDE_AFTER = 5282;
   var PREFIX_AFTER = PREFIX_NOW - (CLAUDE_NOW - CLAUDE_AFTER);
 
   var $ = function (id) { return document.getElementById(id); };
