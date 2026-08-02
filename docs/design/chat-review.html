@@ -339,21 +339,22 @@ td.num { font-family:var(--font-mono); font-variant-numeric:tabular-nums; white-
       cost, and what should be encoded instead of re-derived. Every number below is
       <strong>measured</strong> from transcript <code>usage</code> fields and repo files — not estimated,
       except where labelled. This page stays quiet when nothing crosses a threshold.
-      Four findings tripped on the first run; the <strong>CLAUDE.md split has since
-      landed</strong>, clearing two. <strong>Two remain.</strong>
+      Four findings tripped on the first run. <strong>Both splits have since landed</strong> —
+      the always-loaded rules went from ~237,300 to ~15,500 tokens. <strong>One remains</strong>,
+      and it is a stale measurement that clears itself next session.
     </p>
     <dl class="telemetry">
       <div class="tcell is-good">
         <dt>CLAUDE.md — after split</dt>
         <dd>5,282<small>was 97,632. −92,350 tokens per session</small></dd>
       </div>
-      <div class="tcell is-alert">
-        <dt>src/CLAUDE.md</dt>
-        <dd>139,676<small>est. tokens, untouched — next</small></dd>
+      <div class="tcell is-good">
+        <dt>src/CLAUDE.md — after split</dt>
+        <dd>10,215<small>was 139,676. −129,461 tokens</small></dd>
       </div>
       <div class="tcell">
         <dt>Prefix, projected</dt>
-        <dd>~111k<small>was 203,750 measured. Next session confirms</small></dd>
+        <dd>~82k<small>was 203,750 measured. Next session confirms</small></dd>
       </div>
       <div class="tcell">
         <dt>This session</dt>
@@ -392,21 +393,27 @@ td.num { font-family:var(--font-mono); font-variant-numeric:tabular-nums; white-
         </div>
       </article>
 
-      <article class="finding sev-high">
+      <article class="finding sev-done">
         <div class="stripe"></div>
         <div class="f-body">
           <div class="f-top">
-            <span class="pill high">High</span>
-            <span class="f-title">src/CLAUDE.md is ~139,676 tokens</span>
-            <span class="f-metric">139,676 tok</span>
+            <span class="pill done">Cleared</span>
+            <span class="f-title">src/CLAUDE.md was ~139,676 tokens</span>
+            <span class="f-metric">139,676 → 10,215 tok</span>
           </div>
-          <p>The coding guide is <em>larger than the root rules file</em> and loads whenever a
-          session touches <code>src/</code> — which is most coding sessions. Its own Assembly Layer
-          Taxonomy is documented as stale in <code>CLAUDE.md</code>, so a large share of what it
-          costs is also wrong. Same treatment as the root file: keep the conventions, move the
-          per-landing version history to <code>docs/tracking/</code>.</p>
-          <div class="evidence"><b>measured:</b> 558,703 chars ≈ 139,676 tokens (chars/4 estimate).
-            Combined with the root file: ~237,000 tokens of instructions.</div>
+          <p>The coding guide was <em>larger than the root rules file</em> and loaded whenever a
+          session touched <code>src/</code> — which is most coding sessions. Three things were
+          history rather than rules: the header chain, a 149-row VERSION HISTORY table, and a
+          685-line hand-maintained <code>src/</code> file tree duplicating
+          <code>file-manifest.md</code>.</p>
+          <p><strong>Split on 31 July 2026.</strong> Chain and version table moved to
+          <code>CHANGELOG-src.md</code>, the tree to <code>src-tree.md</code> (marked
+          non-authoritative), and all 19 rule sections stayed. Verified lossless: 149/149 version
+          rows, 667/667 tree lines, 22/22 headings retained.</p>
+          <div class="evidence"><b>result:</b> 2,630 → 651 lines · 139,676 → 10,215 tokens ·
+            <b>−129,461 per src/ session</b> &nbsp;|&nbsp; <b>taxonomy:</b> corrected staleness
+            note — accounts for 19 of 31 assemblies; 12 unlisted; back-prop to Spec #20 §3.5.2
+            still open</div>
         </div>
       </article>
 
@@ -663,11 +670,12 @@ td.num { font-family:var(--font-mono); font-variant-numeric:tabular-nums; white-
             <td class="num" style="color:var(--pos)">92,350 tok · $0.58</td>
           </tr>
           <tr>
-            <td><strong>Same treatment for <code>src/CLAUDE.md</code>.</strong> Keep the coding
-              conventions and the layer taxonomy — correcting the stale one while you are in
-              there; move the per-landing history out.</td>
-            <td class="num">139,676</td><td class="num">~12,000</td>
-            <td class="num" style="color:var(--pos)">~127,700 tok · $0.80</td>
+            <td><strong>Same treatment for <code>src/CLAUDE.md</code>.</strong>
+              <span class="pill done" style="vertical-align:2px">Done 31 Jul</span> Kept the 19
+              rule sections and the layer taxonomy, with an accurate staleness note; moved the
+              header chain, the 149-row version table, and the 685-line file tree out.</td>
+            <td class="num">139,676</td><td class="num">10,215</td>
+            <td class="num" style="color:var(--pos)">129,461 tok · $0.81</td>
           </tr>
           <tr>
             <td><strong>Grep, don't read.</strong> <code>spec-error-log.md</code> is 313&nbsp;KB
