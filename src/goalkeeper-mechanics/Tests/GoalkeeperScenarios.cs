@@ -82,12 +82,17 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
         {
             public int ApplyKickCount;
             public int SetPossessorCount;
+            public int ParkBallCount;
             public int GetBallPossessorIdCount;
 
             public void ApplyKick(Vector3 velocity, Vector3 spin, int agentId, float matchTimeMs)
                 => ApplyKickCount++;
 
             public void SetPossessor(int agentId) => SetPossessorCount++;
+
+            // ERR-011-008 — a claim is SetPossessor AND ParkBall; recorded separately so a scenario
+            // can prove the ball was actually arrested, not merely flagged.
+            public void ParkBall() => ParkBallCount++;
 
             // Ball is loose throughout the driven regime; -1 is the "no possessor" sentinel.
             public int GetBallPossessorId()
@@ -323,4 +328,5 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 // | 1.3 | 2026-07-28 | — | gk-contact-rate (ERR-011-007) re-anchor: the scenario ball CLOSES on the    |
 // |     |            |   | keeper's plane inside the SS3.3.6 commit lead (a parked ball now correctly |
 // |     |            |   | holds the dive, starving the dive-launch predicate). Intent preserved.     |
+// | 1.4     | 2026-08-03 | —      | ERR-011-008: RecordingBallSystem gains ParkBall (counted separately, so a scenario can prove the ball was arrested and not merely flagged). |
 #endregion
