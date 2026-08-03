@@ -1,7 +1,36 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** August 3, 2026 (**§5.Z.23 conversion at contact — ERR-011-008: a keeper's CATCH
+**Last Updated:** August 3, 2026, later same day (**Interactive Unity client P6 — the head-less
+closed-loop scenario LANDED, ahead of P4.** The client's input-determinism claim is now checked on
+every push rather than asserted. Two closed-loop scenarios on the #19 `ScenarioRunner`, booted through
+the real `MatchSession`: same `MatchSetup` + the same tick-stamped command log ⇒ digest-identical runs,
+and save@90 → restore → replay the post-90 log to tick 180 == the uninterrupted run. Landed before the
+Unity render skin for the reason the plan's §12 gives — `match-client-unity` is excluded from the
+`tools/dotnet-ci` shim, so **every P4/P5 line is invisible to CI** while this is not; the skin now
+arrives against an existing lock rather than ahead of one.
+
+**The phase needed three production additions before any scenario could be written**, because
+`MatchSession` could not be advanced head-lessly, saved, or restored: `TickOnce()` (driving the real
+streamer seam, and refusing fail-loud once paced playback has started — two threads through one engine
+is a data race), `CaptureSave()` (riding the `ServiceOnce` seam so it works running, paused and at full
+time, with the drained-empty-before-capture invariant now held by *ordering* rather than asserted), and
+`RestoreFrom()` (a session over a restored engine, re-applying no boot mutator). Plus
+`TickStampedCommandReplay` — the log-replay mechanism the reproducibility invariant is *defined*
+against, under which the log is a fixed point of its own replay.
+
+**The predicate that carries it is the control run.** Both scenarios would pass on a command channel
+that did nothing — a run reproducing itself says nothing about whether the commands are in the loop —
+so a third session with the same setup and **no commands** must DIVERGE, in a bounded window around
+the first command. That is the direct lesson of the capstone that asserted a match ticked while every
+match was a 90-minute 0–0 deadlock. The script drives all three live mutators across **both** teams.
+
+No engine behaviour changed; no schema, RNG-stream, domain-tag, draw-site or draw-order change. Gate
+not runnable in this environment (the network policy blocks the .NET SDK download); verified by
+exhaustive manual review and a project-generation run, and it runs in CI on the PR. **Prior entry
+below.**)
+
+**Last Updated (prior):** August 3, 2026 (**§5.Z.23 conversion at contact — ERR-011-008: a keeper's CATCH
 never stopped the ball.** #11 §3.5.2's catch branch is two statements — the possession record AND
 `ball.velocity = gkHandVelocity` ("parked at hand position") — and only the first was implemented.
 Possession here is a flag, not a kinematic constraint (the ball integrates unconditionally; the goal

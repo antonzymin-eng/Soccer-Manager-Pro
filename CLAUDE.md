@@ -321,6 +321,12 @@ evidence. The two that need a review step invoke `adversarial-review` rather tha
 - Advanced positional behaviors + game-model/AI-manager tactics — design supplements OPENED (candidate specs #23–#26) — all four promoted to specs and landed; REMAINDER: #26 §9.2 own-`[GT]` balance review
 - Living World (#22) season/world loop — slices 1–7 LANDED (incl. the KD-10 season composition root + the InteractionTextGenerator wired into it + deep-memory auto-cite + the opt-in arc-trigger evaluator / `world.arcs` sub-stream); upstream-gated services open
 - UI / Client Framework (#38) — T0 substrate LANDED; Wave-7 screens + the UGUI binding remain open
-- Presentation layer — minimal match viewer LANDED; interactive Unity client remains open
+- Presentation layer — minimal match viewer LANDED; interactive Unity client remains open. Its host-free
+  phases are now ALL complete: P0/P2 (July 24), P1/P3 (July 27), and **the head-less half of P6
+  (August 3)** — `MatchSession.TickOnce/CaptureSave/RestoreFrom`, `TickStampedCommandReplay`, and the
+  two §5-P6 closed-loop scenarios, which meet PM-1's determinism exit criterion. REMAINDER: **P4/P5 and
+  the on-host half of P6** — the Unity render skin, the UGUI shell, scene boot, 60 FPS, live tactical
+  input through a screen, and the FR-PO-052-class render-loop perf capture. All need the pinned host;
+  the host block itself cleared July 19, 2026, so the gap is unwritten code, not access
 - Approval tags created locally, not yet pushed
 - Assembly layer taxonomy (Spec #20 §3.5.2) places 19 of 31 assemblies — ERR-020-002 proposal filed, awaiting owner sign-off
