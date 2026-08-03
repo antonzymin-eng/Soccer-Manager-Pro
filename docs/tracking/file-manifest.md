@@ -6,9 +6,14 @@ gate run.** **New folder `.claude/skills/`** (project-scoped Claude Code skills,
 encodes repo conventions that must version with them): `README.md` (derivation + observed repetition counts)
 + six `SKILL.md` files — `match-realism-pass/`, `snapshot-schema-bump/`, `err-file-and-backprop/`,
 `landing-close-out/`, `spec-promotion/`, `dotnet-gate/`. **Modified:** root `CLAUDE.md` (new Last-Updated
-entry, prior relabelled; `.claude/skills/` row added to the REPO STRUCTURE tree; new "Project skills"
-subsection under TRACKING DOCUMENTS) and this manifest. `adversarial-review` and `orientation` remain
-personal skills and are not duplicated. Note for the next manifest pass: the per-file tables below were
+entry, prior relabelled; `.claude/` row added to the REPO STRUCTURE tree; new "Project skills and agent
+configuration" subsection under TRACKING DOCUMENTS) and this manifest. **Merged with `main` before
+landing:** PRs #283/#284 had independently added `.claude/README.md`, `advisors/invariants.md`, two
+`agents/advisor-*.md`, and the `adversarial-review` / `advisor` / `orchestrator` skills, so
+`adversarial-review` is now a **project** skill here and only `orientation` remains account-level. The
+`.gitignore` conflict resolved to main's negation set (a strict superset); `.claude/README.md`'s layout
+tree and boundary table were corrected — the tree had omitted `adversarial-review`, which main itself
+shipped. Note for the next manifest pass: the per-file tables below were
 already one landing behind at the time of this edit (they do not yet carry the §5.Z.21 shot-volume or
 §5.Z.22 keeper-contact file changes) — recorded, not reconciled here, since this pass touched no `src/`
 file. Prior update below.)

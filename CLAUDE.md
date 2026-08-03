@@ -17,8 +17,17 @@
 > (three in the keeper-contact pass alone, one of which escaped to CI), the `[GT]` §6.3 → Appendix A
 > gap that recurred in **all ten** promotions of the last wave, and the "offline sweep gives the
 > shape, never the value" calibration lesson. **Deliberately NOT duplicated:** `adversarial-review`
-> (40 of the last 200 commits) and `orientation` already exist as personal skills; the two new skills
-> that need a review step invoke them rather than restating them.
+> (40 of the last 200 commits) and `orientation` are invoked by the two new skills that need a review
+> step, never restated. **Merged with `main` before landing, which changed the `.claude/` story:**
+> PR #283 landed `adversarial-review` as a **project** skill and PR #284 added the advisor council +
+> roadmap orchestrator (`.claude/README.md`, `advisors/`, `agents/`, and the `advisor` /
+> `orchestrator` skills), so this directory now holds two kinds of thing — **agent patterns** that
+> change who does the work, and the six **workflow encodings** below that change how a recurring job
+> is done correctly. Only `orientation` remains account-level. The `.gitignore` negation both sides
+> needed was resolved to main's (a strict superset: `README.md`, `advisors/`, `agents/`, `skills/`),
+> and `.claude/README.md` is the single index of the directory — its layout tree had omitted
+> `adversarial-review`, which main itself shipped, and is corrected here along with the boundary
+> table that still called that skill account-level.
 > **THREE DEFECTS IN THIS FILE FIXED IN THE SAME PASS, all found by auditing it against the tree
 > rather than reading it:** (1) the header chain carried **five** bare `**Last Updated:**` labels —
 > the July-27 Track C Phase B, July-27 doc-sync, July-27 season-roll and July-26 root-doc entries all
@@ -1424,7 +1433,7 @@ above is the reliable index, not the spec registry.
 ```
 Soccer-Manager-Pro/
 ├── CLAUDE.md                       ← You are here. Read first. Always.
-├── .claude/skills/                 ← Project skills: the repo's recurring workflows (see its README)
+├── .claude/                        ← Agent config: advisor council, orchestrator, project skills (see its README)
 ├── README.md                       ← Project overview, status, documentation hierarchy
 ├── Assets/ Packages/ ProjectSettings/   ← Unity project shell (target editor 6000.4.9f1, DX11)
 ├── docs/
@@ -1663,14 +1672,25 @@ promotion). Read the supplement for the *reasoning*; read the spec for the *cont
 
 ---
 
-### Project skills
+### Project skills and agent configuration
 
-`.claude/skills/` holds project-scoped Claude Code skills for the workflows this repo runs
-repeatedly: `match-realism-pass`, `snapshot-schema-bump`, `err-file-and-backprop`,
-`landing-close-out`, `spec-promotion`, `dotnet-gate`. They are checked in rather than installed
-personally because each encodes conventions that live in this repo and must version with them. See
-`.claude/skills/README.md` for the derivation and the observed repetition counts. `adversarial-review`
-and `orientation` are personal skills and are deliberately not duplicated there.
+`.claude/` holds checked-in agent configuration — checked in rather than installed personally because
+each piece encodes conventions that live in this repo and must version with them. `.claude/README.md`
+is its index. Two kinds of thing live there:
+
+**Agent patterns** change *who* does the work: `advisor` (a two-advisor council convened **before**
+implementation, on Opus regardless of the session model), `orchestrator` (drives one
+path-to-playable roadmap item end to end), and `adversarial-review` (the **post**-implementation
+H/M/L review loop). Those three surfaces deliberately do not overlap — see the boundary table in
+`.claude/README.md`.
+
+**Workflow encodings** change *how* a recurring job is done correctly:
+`match-realism-pass`, `snapshot-schema-bump`, `err-file-and-backprop`, `landing-close-out`,
+`spec-promotion`, `dotnet-gate`. Each was derived from measured repetition in the last 200 commits
+and carries the traps this project has actually hit; `.claude/skills/README.md` records that
+evidence. The two that need a review step invoke `adversarial-review` rather than restating it.
+
+`orientation` is account-level, not in this repo.
 
 ---
 

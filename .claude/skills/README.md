@@ -20,10 +20,15 @@ invented: the counts below are from the last 200 commits.
 | `spec-promotion` | supplement → 11-file spec set → the three gates | 11 promotions, 10 in one day |
 | `dotnet-gate` | running and reporting the Linux compile/test gate | every landing |
 
-Two of this repo's most-repeated activities are already covered by personal skills and are
-deliberately **not** duplicated here: `adversarial-review` (40 of the last 200 commits) and
-`orientation`. `match-realism-pass` and `spec-promotion` invoke `adversarial-review` rather than
-restating it.
+The other most-repeated activity in this repo, `adversarial-review` (40 of the last 200 commits), is
+**not** restated here — `match-realism-pass` and `spec-promotion` invoke it. It landed as a project
+skill of its own in PR #283 and now lives at `.claude/skills/adversarial-review/`; `orientation`
+remains account-level. Either way the rule is the same: invoke, never re-describe.
+
+For the council and orchestrator patterns that share this directory — `advisor`, `orchestrator`, and
+the agent definitions under `.claude/agents/` — see `.claude/README.md`, which is the index of what
+`.claude/` contains. This file deliberately does not duplicate that list; it exists for the
+*derivation* evidence above, which is the part that justifies each skill existing at all.
 
 Several `docs/tracking/` documents are already skill-shaped prose runbooks — `cert-run-runbook.md`
 most clearly — and could be converted cheaply if that workflow starts recurring.
