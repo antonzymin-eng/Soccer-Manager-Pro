@@ -80,7 +80,7 @@ that anchor with a real certified number.
 ## Step 0 — Pre-flight: verify the host matches the pin
 
 On the certification host, confirm every row of `certification-platform.md`
-v1.3 before capturing anything. A mismatch on any row invalidates the run
+v1.4 (✅ PINNED, certified 2026-07-19) before capturing anything. A mismatch on any row invalidates the run
 (`EnvironmentFingerprint` mismatch → `ERR_DS_REPLAY_ENV_MISMATCH`, #16 §4.8).
 
 > **Note (2026-07-13):** `certification-platform.md` v1.3 bumped the target pin
@@ -97,6 +97,14 @@ v1.3 before capturing anything. A mismatch on any row invalidates the run
 > updated so a first cert run stamps the correct pin; it does NOT assert a
 > certified baseline exists (P1/P2 still block). Step 0 and Step 2 below cite the
 > new value.
+>
+> **Update (2026-08-03):** the two paragraphs above are retained as the July-13
+> record and are read correctly only at that date — both their "no cert run has
+> ever executed" and "P1/P2 still block" clauses were overtaken on **July 19,
+> 2026**, when the determinism-KAT run executed on the pinned host and flipped
+> `certification-platform.md` to v1.4 **✅ PINNED**. P1 and P2 are cleared (see
+> the table above); the Step 0 pre-flight below is now a re-run checklist, not a
+> first-run one.
 
 | Pin row | Required value | How to verify |
 |---------|---------------|---------------|
@@ -244,4 +252,14 @@ Stage 0+1 perf-gate).
 |         |            |        | against this file's own "FULLY CERTIFIED (2026-07-19)" status      |
 |         |            |        | header. Lead-in and both P1/P2 cells reworded to record both       |
 |         |            |        | prerequisites CLEARED 2026-07-19 against the certified v1.4 pin.   |
+|         |            |        | No prerequisite work performed; correction only, no cert re-run.   |
+| 1.5     | 2026-08-03 | —      | Docs-only correctness fix (staleness sweep): Step 0's pre-flight   |
+|         |            |        | instruction still said "confirm every row of certification-       |
+|         |            |        | platform.md v1.3" and framed the run as not-yet-executed against a |
+|         |            |        | target pin — stale against this file's own "FULLY CERTIFIED        |
+|         |            |        | (2026-07-19)" status header and the already-corrected v1.4 P1/P2   |
+|         |            |        | table. Updated to cite v1.4 (✅ PINNED, certified 2026-07-19).       |
+|         |            |        | The dated Step 0 blockquote note (2026-07-13) is left untouched —  |
+|         |            |        | it is a historical record of the v1.3 target-pin bump, correctly   |
+|         |            |        | dated to before the cert run it describes as not-yet-executed.     |
 |         |            |        | No prerequisite work performed; correction only, no cert re-run.   |

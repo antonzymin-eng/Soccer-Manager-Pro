@@ -301,17 +301,17 @@ runs when a snapshot crosses into a process, which is exactly this reader. The f
 `header.Fingerprint` against a **live** fingerprint as **step 0** of restore (KD-4), before any
 state is touched (`EnvironmentFingerprint.ValidateAgainst(live)` returns
 `ERR_DS_REPLAY_ENV_MISMATCH` on any field difference, `0` on match — a return code, so the factory
-checks it and refuses; it does not throw on its own). **Caveat (AR-3 L-1):** the gate is only as
-strong as the *live* fingerprint it compares against, and constructing a truthful live fingerprint
-requires reading the host's actual float mode — which is the same native MXCSR query below that
-stays host-blocked. Until that lands, Phase 1 can wire the call against the recorded / dev
-fingerprint factory (`CreateStage0Dev` / `CreateStage0MonoCertified`), where it functions as a
-self-consistency check (schema/tuple sanity), and it becomes a real float-mode gate only once the
-live source exists. The **native MXCSR query**
-(reading live float-mode flags) is the still-unbuilt half (native interop, host-blocked); this note
-**defines the seam and the call site** so that when the query lands it has a consumer, and does not
-build the query itself (that stays the root-`CLAUDE.md` host-blocked item). Fingerprint validation
-against a *recorded* tuple is buildable now and is included.
+checks it and refuses; it does not throw on its own). **Caveat (AR-3 L-1, as of this note's July 20,
+2026 AR-3 round):** the gate is only as strong as the *live* fingerprint it compares against, and
+constructing a truthful live fingerprint requires reading the host's actual float mode — which was,
+at that point, the same native MXCSR query below, still host-blocked. Until it landed, Phase 1 wired
+the call against the recorded / dev fingerprint factory (`CreateStage0Dev` / `CreateStage0MonoCertified`),
+where it functioned as a self-consistency check (schema/tuple sanity). **The native MXCSR query landed
+July 21–22, 2026** (native interop + the certified live read on the pinned host — see the Phase 3 update
+below; host-block cleared), so this seam now runs a real float-mode gate wherever the compiled plugin is
+loadable, not just the self-consistency check. This note defined the seam and the call site ahead of the
+query landing; fingerprint validation against a *recorded* tuple remains the fallback path off the pinned
+host (e.g. the Linux `dotnet-ci` gate) or without the compiled plugin.
 
 ### KD-7 — The payload is not fully self-describing: boot inputs are a separate input
 
@@ -465,8 +465,8 @@ This reader is the single dependency shared by the next tier of MVP work:
 - **Save/load an in-progress match** → calls `RestoreFromSnapshot` (Phase 1) + N1 on-disk format.
 - **Replay / rewind** → the digest-chain-continuous restore (KD-5) is exactly a rewind primitive.
 - **#27 T3 distinct-squad restore** → Phase 2 is its consumer (closes the last data-side item).
-- **#16 §4.8.2 MXCSR validation** → Phase 1 defines its seam (KD-6); the native query is its own
-  host-blocked half.
+- **#16 §4.8.2 MXCSR validation** → Phase 1 defined its seam (KD-6); the native query landed
+  July 21–22, 2026 (host-block cleared) and now runs a real gate through that seam.
 - **Career / season persistence** → N2 unified save reads both this payload and the living-world
   `WorldStore` composite through one file root.
 
@@ -490,6 +490,7 @@ the writer's exclusion proofs were written to prevent, now checked from the read
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.9 | 2026-08-03 | — | Docs-only correctness fix (staleness sweep): the KD-6 rationale (§3) and the §7 roadmap-relationship bullet still described the native MXCSR query as host-blocked / still-unbuilt, unlike the already-corrected §5 "Phase 3 is now complete" note. Reworded to record the query LANDED July 21–22, 2026 (native interop + certified live read; host-block cleared) and that the KD-6 seam now runs a real float-mode gate. No design content changed. |
 | 0.8 | 2026-07-20 | — | **Phase 2 LANDED — distinct-squad re-projection (#27 T3 / KD-3).** New `ISquadProvider` seam (`src/match-engine/ISquadProvider.cs`) threaded into `RestoreFromSnapshot(…, ISquadProvider squads = null)`. `ReprojectDistinctSquads` (`MatchEngine.cs` v1.42) replaces the Phase-1 fail-loud: neutral fast-path returns immediately; each distinct team resolves its roster (ClubId-check + size/record validation, both teams before any apply — the ConfigureSquads validate-both-before-write discipline), `ReprojectBaseLineup` re-runs `LineupSelector` + `PlayerAttributeProjection` for the base lineup (attribute arrays only; also re-projects the bench GK flags `_benchIsGoalkeeper`, a boot-constant NOT serialized — the on-pitch `_isGoalkeeper` stays the restored serialized value), and `ReprojectSubstitutions` replays the attribute half of each substitution the serialized `_activeBenchSlot` records. Fail-loud on absent provider / unresolvable ClubId / mismatched returned ClubId (R4). `MatchEngineSnapshotRestoreTests` v1.1: G3 round-trip for a distinct squad + mid-match substitution + post-restore substitution + post-restore keeper-for-keeper substitution, plus the three fail-loud provider gates. No `SNAPSHOT_SCHEMA_VERSION` change. **Full dotnet gate PASSED (263 match-engine tests; whole tree green).** Implementation-time finding folded in: `_benchIsGoalkeeper` is NOT serialized (only the on-pitch `_isGoalkeeper` is), so it must be re-projected for a post-restore substitution to bring a bench keeper on with the correct flag — added, locked by the keeper-for-keeper test. Also surfaced (out of scope, recorded above + in the root CLAUDE.md OPEN ISSUES): a post-restore substitution that FLIPS a slot's GK status (keeper → outfield slot, never done in realistic play) diverges via a Positioning-AI (#12) formation-slot interaction with the GK-flag flip — a Phase-1 snapshot-completeness edge, not a Phase-2 re-projection defect. Only Phase 3 (native MXCSR + on-disk fold) remains. |
 | 0.1 | 2026-07-20 | — | Initial design supplement. Scope (snapshot-deserialize / restore path), KD-1..KD-7, phased plan, risks, acceptance criteria, open questions. |
 | 0.2 | 2026-07-20 | — | **Self-adversarial review AR-1: 0H + 3M + 2L, all resolved.** M-1: v0.1 KD-4 had the factory validating the fingerprint (KD-6) but never said *when* relative to `ResetForNewMatch` / deserialize — a validation that runs after state is applied wastes the reject; ordered it as step-0-of-restore in KD-6 and O3, before any state mutation. M-2: v0.1 claimed Phase 1 "restores default matches exactly" but did not state that `_activeBenchSlot` is *always* serialized (v15) and therefore available to Phase 1 even though Phase 1 does not re-project — clarified in KD-3 that Phase 1 restores the slot value (so a neutral substituted match round-trips) and only the *attribute re-projection* waits for Phase 2. M-3: v0.1 did not address that `SerializeWorldState` omits the boot RNG seed / formation, so a payload alone cannot rebuild a tickable engine — added KD-7 + O1 (the payload is state, not boot constants). L-1: R1 originally implied the schema-version gate catches writer/reader drift; corrected — same-version drift is caught by the trailing-byte guard + G3, not the version gate. L-2: added the §0.1 restore-seam inventory table so the Phase-1 "add `RestoreState` counterparts" work is enumerated, not hand-waved. |
