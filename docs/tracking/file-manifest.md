@@ -1,7 +1,21 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 3, 2026 (**Project skills LANDED — tooling only; no `src/` change, no spec
+**Last Updated:** August 3, 2026 (**Two production assemblies were missing from this manifest
+entirely — `match-client-core` and `match-client-unity` — and are now inventoried.** Both landed in
+the interactive Unity client P0 pass (July 24, 2026), with `match-client-core` extended by P1/P3 on
+July 27; neither ever received a manifest section, so the file claimed to be an authoritative
+inventory while omitting the assembly that carries the live-match command channel. Found by diffing
+`src/*/` against the sections in this file. **New sections:** `src/match-client-core/` (20 rows — the
+host-free determinism-bearing core: `ILiveMatchMutations` + `MatchEngineMutations`, the
+`ManagerCommandKind`/`ManagerCommand`/`TickStampedCommand` value types, `ManagerCommandQueue`,
+`MatchClientDriver`, `MatchSetup`, `MatchSession`, the P3 `FrameInterpolator` + `FollowBallCamera`,
+and the seven test files) and `src/match-client-unity/` (2 rows — asmdef + README; scaffolded only,
+and excluded from the shim gate via `generate_projects.py`'s `SHIM_EXCLUDED_ASMDEFS`, so it is
+verifiable only on the pinned Unity host). **The production assembly count of 31 was already correct**
+and is unchanged — the count had been reconciled against `src/` while the section list had not.
+Doc-only; no `src/` change, no spec change, no gate run.)
+**Last Updated (prior):** August 3, 2026 (**Project skills LANDED — tooling only; no `src/` change, no spec
 change, no gate run.** **New:** six `SKILL.md` files under `.claude/skills/` — `match-realism-pass/`,
 `snapshot-schema-bump/`, `err-file-and-backprop/`, `landing-close-out/`, `spec-promotion/`,
 `dotnet-gate/` — plus `.claude/skills/README.md` (derivation + observed repetition counts from the last
@@ -1451,6 +1465,58 @@ Presentation-layer derivation. Read-only over two taps (FR-AN-002); no sim assem
 | `Tests/MatchAnalyticsValueTypeTests.cs` | View-model gates + the KD-4 reverse-reference scan (narrowed at B6 to a sanctioned-consumer allow-list **plus** an explicit never-reference list) |
 | `Tests/MatchAnalyticsAggregatorTests.cs` | **T1** — the §3.2 routing table row by row, possession weighting, §3.4 totality incl. the halfway-line boundary (ERR-037-002), Build idempotence/snapshot semantics, every failure mode |
 | `Tests/MatchAnalyticsObserverNeutralityTests.cs` | **T1** — T-AN-NEU-001 (digest unchanged, with a non-vacuity guard) + T-AN-DET-001 two-run determinism over a real match; liveness window re-measured 1 800 → 3 600 ticks (v1.1, gk-contact-rate AR-5) |
+
+---
+
+### `src/match-client-core/` — the interactive Unity client's host-free core (P0–P3, July 24–27, 2026)
+
+Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P0 … §5-P3).
+**Host-free and CI-gated** — this is the half of the interactive Unity client that carries every
+determinism-bearing concern (session, command channel, tick-stamped log, view-state math), split from
+the Unity-only skin precisely so it stays under `tools/dotnet-ci` on every push. Consumed by
+`ui-framework`, `match-client-web`, and (at P4+) `match-client-unity`.
+
+| File | Purpose |
+|------|---------|
+| `match-client-core.asmdef` | `TacticalDirector.MatchClientCore`; references MatchEngine + MatchViewer + DeterministicSim + TacticalInstructions + PlayerDatabase + ProjectConstants |
+| `MatchClientConstants.cs` | `[GT]` presentation/pacing catalogue — the master-plan playback speed set {1,3,5,10} as scalars. Nothing here feeds the sim or the snapshot digest |
+| `ILiveMatchMutations.cs` | The closed live-mutator surface the drain applies through, on the sim thread — the three stride-safe mutators only (§3-2). Producer and consumer both specified, so not a phantom interface |
+| `MatchEngineMutations.cs` | The one `ILiveMatchMutations` implementation over a real `MatchEngine`; a pure pass-through |
+| `ManagerCommandKind.cs` | The closed set of command kinds, each mapping onto exactly one live mutator. `None = 0` sentinel (v0.8 AR M-2) so a `default(ManagerCommand)` cannot silently stage a malformed tactic. No pause/speed kind — playback is presentation-only (§6.4) |
+| `ManagerCommand.cs` | Immutable value-type command discriminated by `Kind`; no per-command heap allocation on the enqueue path |
+| `TickStampedCommand.cs` | A command paired with the tick it was applied at. Reproducibility is defined against the sequence of these, not against human intent (§6.1/§6.3) |
+| `ManagerCommandQueue.cs` | Lock-guarded FIFO — View enqueues on the UI thread, driver drains on the sim thread at the top of a tick |
+| `MatchClientDriver.cs` | The deterministic drain, installed as the streamer's pre-tick hook via `MatchSession`. FIFO apply, per-batch tick-stamp, post-`MatchEnded` drop, `_logLock`-guarded snapshot-copy `Log`, and refused-command isolation so one bad command cannot kill the pacing thread (v0.8 AR) |
+| `MatchSetup.cs` | Immutable boot config applied once before kickoff through boot-only mutators; both-or-neither squad guard |
+| `MatchSession.cs` | Composition root — builds and wires engine + streamer + driver, installs the drain hook, exposes read = frames / write = commands / `ServiceOnce` |
+| `FrameInterpolator.cs` | **P3** — blends two captured `LiveMatchFrame`s for a 60 FPS renderer. Speed-aware alpha, and **snaps rather than smooths across a discontinuity** (a restart teleports the ball; a substitution swaps who occupies a roster slot) |
+| `FollowBallCamera.cs` | **P3** — dead zone, `1 − e^(−rate·dt)` smoothing proven frame-rate-independent by step subdivision, and a pitch clamp that centres when the view is wider than the pitch |
+| `tests/match-client-core-tests.asmdef` | `TacticalDirector.MatchClientCore.Tests` (Editor-only) |
+| `tests/RecordingMutations.cs` | Test double over `ILiveMatchMutations` |
+| `tests/ManagerCommandQueueTests.cs` | FIFO, thread-safe enqueue, the exactly-three-game-kinds §6.4 lock, default-command reject |
+| `tests/MatchClientDriverTests.cs` | Apply-order, per-batch tick-stamp, post-`MatchEnded` drop, two-runs-same-sequence log determinism, refused-command isolation |
+| `tests/MatchSessionTests.cs` | Neutral build, off-tick `ServiceOnce` drain through a real engine, GK-heading setup, both-or-neither squad guard |
+| `tests/FrameInterpolatorTests.cs` | **P3** — speed-aware alpha and the snap-across-discontinuity contract |
+| `tests/FollowBallCameraTests.cs` | **P3** — dead zone, frame-rate independence by step subdivision, pitch-clamp centring |
+
+---
+
+### `src/match-client-unity/` — the Unity-only render/UGUI skin (P4–P6, not yet built)
+
+Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P4 … §5-P6).
+**Scaffolded only — asmdef and README, no scripts.** It will hold the `MonoBehaviour` render/camera/HUD
+skin and the UGUI screens: types that need a Unity host (`Camera`, `SpriteRenderer`, `GameObject`, UGUI).
+It adds a skin over `match-client-core`, never engine-facing logic.
+
+**Excluded from the shim gate by design.** Listed in `tools/dotnet-ci/generate_projects.py`'s
+`SHIM_EXCLUDED_ASMDEFS`, so it is never generated, compiled, or referenced on Linux — it is verifiable
+only on the pinned Unity host (`certification-platform.md` v1.4, ✅ PINNED since July 19, 2026). This is
+the reason the determinism-bearing half lives in the host-free sibling above.
+
+| File | Purpose |
+|------|---------|
+| `match-client-unity.asmdef` | `TacticalDirector.MatchClientUnity`; references MatchClientCore + MatchViewer + MatchEngine |
+| `README.md` | Why the assembly is empty, the host-free/host split it encodes, and the shim-gate exclusion |
 
 ---
 
