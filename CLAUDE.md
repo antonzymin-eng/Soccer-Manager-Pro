@@ -78,7 +78,7 @@ Do not infer the mapping from the folder name:
 | `project-constants` | — | Shared `[GT]` config; read-only by all |
 | `match-engine` | — | **Composition root.** Not a numbered spec; governed by `docs/tracking/match-engine-design.md` |
 | `match-viewer`, `match-client-core`, `match-client-unity` | — | Presentation tooling / client seams; not numbered specs |
-| `match-client-web` | — | **The PM-1 browser match client** (roadmap B6). Not a numbered spec; governed by `docs/tracking/browser-match-client-design.md`. The only assembly above BOTH `ui-framework` and `match-analytics` |
+| `match-client-web` | — | The browser match client (roadmap B6). Not a numbered spec; governed by `docs/tracking/browser-match-client-design.md`. The only assembly above BOTH `ui-framework` and `match-analytics`. **NOT the shipping UI** — B6 was reversed to full Unity on Aug 3, 2026; retained as the host-free reference harness. Keep green, do not extend |
 
 **Rules:**
 - Each spec folder contains ONLY current-version files. No version suffixes in filenames. Git tracks history.
@@ -327,6 +327,16 @@ evidence. The two that need a review step invoke `adversarial-review` rather tha
   two §5-P6 closed-loop scenarios, which meet PM-1's determinism exit criterion. REMAINDER: **P4/P5 and
   the on-host half of P6** — the Unity render skin, the UGUI shell, scene boot, 60 FPS, live tactical
   input through a screen, and the FR-PO-052-class render-loop perf capture. All need the pinned host;
-  the host block itself cleared July 19, 2026, so the gap is unwritten code, not access
+  the host block itself cleared July 19, 2026, so the gap is unwritten code, not access.
+  **ESCALATED August 3, 2026 — owner reversed roadmap B6: the product ships this Unity client, not the
+  web-hosted viewer, so P4 is now the critical path rather than a later native target.** Two standing
+  rules, recorded in `interactive-unity-client-design.md` §12 and `path-to-playable-roadmap.md` §7/C2:
+  (1) **keep logic out of `MonoBehaviour`s** — the CI gate cannot compile `match-client-unity` and never
+  will, so every decision lives in gate-compiled `match-client-core`/`ui-framework` and the Unity types
+  only assign transforms and forward input; extending the Unity shim to fake `MonoBehaviour`/`GameObject`
+  is **explicitly refused**, since a lifecycle-free stand-in lets a dead render loop report green
+  (ERR-030-014's failure mode one layer up). (2) Budget a cert-host run **per P4/P5 landing**, not one at
+  the end. Note `PM-1`'s three screen-facing exit criteria are open again — they were demonstrated on a
+  surface that is no longer the product; its determinism criterion is met head-lessly and stays met
 - Approval tags created locally, not yet pushed
 - Assembly layer taxonomy (Spec #20 §3.5.2) places 19 of 31 assemblies — ERR-020-002 proposal filed, awaiting owner sign-off

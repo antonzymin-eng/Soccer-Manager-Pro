@@ -12,7 +12,61 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 3, 2026, latest same day (**INTERACTIVE UNITY CLIENT P6 — the head-less
+> **Last Updated:** August 3, 2026, latest same day (**OWNER DECISION — ROADMAP B6 REVERSED: the
+> product ships the FULL UNITY UI, not the web-hosted viewer.** Doc-only; no `.cs` changed. Recorded in
+> `path-to-playable-roadmap.md` v0.11 (§7 supersede note, C2 amended, risk register re-cut),
+> `interactive-unity-client-design.md` v0.11 (§12 status-change block), `browser-match-client-design.md`
+> v1.3 (standing status block), and this file's assembly map + OPEN ISSUES.
+>
+> **The July 25 B6 entry is preserved verbatim and is not wrong** — it decided *time to a playable
+> loop*, and it delivered that: PM-1 was reached July 27 on the browser surface. This decision is about
+> *what the game ships as*, which the B6 table never weighed. That distinction matters for reading the
+> record: the reversal is not a correction of a bad call.
+>
+> **Nothing is discarded, and nothing blocks P4 starting.** `src/match-client-unity/` is an asmdef and a
+> README — P4 was never begun, so there is no unwind. The entire substrate a UGUI skin binds is already
+> gate-compiled and needs no change: #38's view models and dispatchers, `MatchFrameView`,
+> `MatchViewModelSource`, `MatchTacticsDispatcher`, `NavigationShell`, `MatchSession`, the command
+> channel, `FrameInterpolator`, `FollowBallCamera`, and the P6 determinism locks. This is the
+> "renderer is a leaf" property #38's contract was written for, finally used in the direction it was
+> designed for. No art prerequisite either — §5-P4 is 2D-first, the pitch renders from the IFAB
+> `[FIXED]` geometry already in `MatchViewerConstants`, agents are primitives, sprites are polish.
+>
+> **`src/match-client-web/` (34 tests) is retained and reclassified: shipping surface → host-free
+> reference harness.** It is the only surface in the repo that exercises the whole read / playback /
+> intent loop in CI on every push, which `match-client-unity` structurally never can. That makes it the
+> regression net under the substrate the skin binds. Rule: **keep it green, do not extend it.** If it
+> ever becomes expensive to keep green, delete it deliberately — do not quarantine it into
+> `known-failures.txt`, which would leave a harness reporting green while proving nothing.
+>
+> **The one real cost is coverage, and the rule that bounds it is the entry worth carrying.** The CI
+> gate cannot compile a line of `match-client-unity` and never will — the Unity shim covers `Vector2`,
+> `Vector3`, `Mathf`, `Debug` and `Profiling`, value types and statics that can be reimplemented
+> honestly, and there is no honest head-less `MonoBehaviour`, `GameObject` or `Camera`. **Extending the
+> shim to fake them is explicitly REFUSED:** a lifecycle-free stand-in would let a render loop that never
+> runs report green, which is ERR-030-014's failure mode transplanted one layer up, and this project has
+> already paid for that lesson once at the cost of months of 0–0 matches. The mitigation is
+> architectural instead: **keep logic out of `MonoBehaviour`s** — every decision (what to draw, where the
+> camera goes, what a click means, which intent an input maps to) lives in gate-compiled
+> `match-client-core` / `ui-framework`, and the Unity types assign transforms and forward input with no
+> branch a test would want to reach. P3 already demonstrates the pattern. Then the uncovered surface is
+> *binding*, which a cert run genuinely verifies, rather than *behaviour*, which a cert run verifies only
+> along the paths someone thought to click. Second rule: budget a cert-host run **per P4/P5 landing**,
+> not one at the end — the host block cleared July 19, 2026, so that is scheduling, not access, and a
+> skin first exercised at the end is the never-compiled-surface trap this repo has hit seven times.
+>
+> **`PM-1` is now a split claim, and the roadmap says so rather than leaving the flag to be misread.**
+> Its determinism exit criterion is met head-lessly and stays met. Its other three criteria are
+> statements about a *screen*, and were demonstrated on a surface that is no longer the product — so
+> they are open again against the Unity client. PM-1-the-capability holds; "the Unity client plays a
+> match" is not yet true.
+>
+> **Also fixed, pre-existing:** `path-to-playable-roadmap.md`'s Version History had its header and
+> delimiter rows separated by a data row, so it did not render as a table at all, and its rows were out
+> of version order. Both corrected. The duplicated `v0.9` version number — two separate July 27 landings
+> — is left as found, since historical entries are not rewritten.)
+>
+> **Last Updated (prior):** August 3, 2026, latest same day (**INTERACTIVE UNITY CLIENT P6 — the head-less
 > closed-loop scenario LANDED, ahead of P4, and the ordering is the point.** `interactive-unity-client-design.md`
 > §12 recommended P6 before the render skin for one reason: `match-client-unity` is in
 > `generate_projects.py`'s `SHIM_EXCLUDED_ASMDEFS`, so **every P4/P5 line is invisible to

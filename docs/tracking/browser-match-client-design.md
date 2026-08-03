@@ -5,13 +5,39 @@
 > names for the B6 renderer. It opens no numbered spec and changes no `SPEC_INDEX.md` row; it
 > permanently governs `src/match-client-web/`, exactly as `match-engine-design.md` governs the
 > composition root and `interactive-unity-client-design.md` governs the client core.
-> **Version:** 1.2
-> **Scope:** the PM-1 browser surface — one playable match a person can watch, adjust and read a
+> **Version:** 1.3
+> **Scope:** the browser match surface — one playable match a person can watch, adjust and read a
 > report on. Not the season screens (roadmap C3), not the UGUI skin (Unity P4–P6).
 
 ---
 
+## ⚠ Standing status — READ FIRST (August 3, 2026)
+
+**This is no longer the shipping UI.** The owner reversed the roadmap's B6 decision on August 3, 2026:
+the product ships the **full Unity client** (roadmap §7 supersede note), not a web-hosted viewer.
+
+**What that changes here:** nothing in the design below is wrong, and nothing is being deleted.
+`src/match-client-web/` and its 34 tests are **retained and must stay green**, reclassified from
+*shipping surface* to **host-free reference harness** — it is the only surface in the repo that
+exercises the whole read / playback / intent loop in CI on every push, which the Unity client
+structurally never can (`match-client-unity` is in `SHIM_EXCLUDED_ASMDEFS`). That makes it the
+regression net under the substrate the UGUI skin binds, which is a real job, just not the one it was
+built for.
+
+**The rule that follows:** *keep it green, do not extend it.* New UI capability goes to Unity (P4–P6)
+and to the gate-compiled substrate beneath it (`match-client-core`, `ui-framework`) — not here. If a
+future change ever makes this surface expensive to keep green, delete it deliberately and say so;
+do not quarantine it into `known-failures.txt`, which would convert the regression net into a
+surface that reports green while proving nothing.
+
+This supplement continues to govern `src/match-client-web/` under that scope.
+
+---
+
 ## 0. Why this exists
+
+> Superseded as a *forward* rationale by the August 3 reversal above — retained verbatim because it
+> records why the assembly is shaped the way it is, and that reasoning still governs the code.
 
 The roadmap's §7 fork was decided on July 25, 2026: **option (b), extend the browser surface**,
 because it reaches PM-1 with no external blocker and because #38's view models make the renderer a
@@ -174,6 +200,7 @@ never a cross-run digest.
 
 | Version | Date | Notes |
 |---|---|---|
+| 1.3 | 2026-08-03 | **Owner reversed roadmap B6 — the product ships the full Unity client, not a web-hosted viewer.** Doc-only; no `.cs` changed, no design revised, nothing deleted. A standing status block is added at the top and §0's rationale is explicitly marked superseded-as-forward-reasoning but retained verbatim, because it still explains why the assembly is shaped the way it is (the KD-W1 argument that the mutating surface must live *above* `match-client-core` rather than inside `LiveMatchServer` is unaffected by which renderer ships — it turns on ERR-038-001 and the interactive-client AR-1 H-2, not on B6). **`src/match-client-web/` is retained and reclassified: shipping surface → host-free reference harness.** The justification is that it is the only surface in the repo exercising the full read/playback/intent loop in CI on every push, which `match-client-unity` structurally cannot (it is in `SHIM_EXCLUDED_ASMDEFS`, correctly — the Unity shim covers `Vector2`/`Vector3`/`Mathf`/`Debug`/`Profiling`, value types and statics, and has no honest stand-in for `MonoBehaviour`/`GameObject`/`Camera`). So it becomes the regression net under the substrate the UGUI skin binds. **Scope rule going forward: keep it green, do not extend it** — new UI capability goes to Unity P4–P6 and to the gate-compiled substrate beneath it. **Recorded as the failure mode to avoid:** if this surface ever becomes expensive to keep green, delete it deliberately rather than quarantining it into `known-failures.txt`, which would leave a harness that reports green while proving nothing. |
 | 1.2 | 2026-07-27 | **Adversarial review over the whole B3/B4/B6 landing (pass 1): 0H + 2M + 3L, all fixed; pass 2 clean.** Both Mediums are in the #37 aggregator rather than the client, and both were reproduced by executed probes before being reported. **M-1 — F6 had a hole on its own error paths.** `RequireConsecutive` advanced the tick cursor *before* the tick's records were routed, so an F1/F2 throw part-way through left the tick HALF applied — earlier records counted, later ones lost, the possession tick un-accrued — while the guard read as "tick fully observed" and accepted the next one. F6 checks *continuity*, which a half-applied tick satisfies; the run carried on producing a statline that looks plausible and is wrong, which is the exact outcome F6 exists to prevent. Masked in this client only because `InvokePostTickObserver` disarms on any exception, so it was invisible from B6 and live for any other consumer of the public type. Fixed by latching: the aggregator refuses every subsequent tick once one failed part-way, and says so. Moving the cursor write to the end would NOT have worked — a retried tick would double-count whatever landed before the throw. **M-2 — dismissed agents kept accruing heatmap samples.** §5.Z Phase H deliberately leaves a sent-off agent standing *on the pitch* as a collision body, and `IWorldStateSample` exposed no activity flag, so the binning loop poured every remaining tick into the cell they froze in — at the measured ~1.0 red per 90 min, ordinary play rather than an edge case. Latent only because nothing renders `HeatmapBins` yet, which is exactly why it was cheapest to fix before a #38 screen binds it; the seam gains `AgentIsActive`. **L:** catalogue region order (GT preceded Fixed, against the mandated most-immutable-first); `FramePollIntervalMs`' doc claimed 100 ms was "well below the ~16 ms tick" and sized for an interpolation this page does not do; `Percent`'s `double` lacked the FR-CS-071 justification comment (the choice is right — a full match exceeds float's integer-exact range — only the sign-off was missing). **A third candidate was investigated and NOT reported:** `HeatmapBin` casts to `int` before its range guards, but out-of-range conversions saturate to `int.MinValue` and the existing `col < 0` check catches them — verified by running it rather than assumed. Three new locks, each proven non-vacuous by perturbing its own fix. Full gate re-run PASSED, 0 failures (match-analytics 54 → 57). |
 | 1.1 | 2026-07-27 | **Self-review over the shipped code: 2 findings, both fixed.** (1) The page inferred team membership from `i < agents.length / 2`. Roster indices *are* contiguous by construction today, but the spectator viewer's own AR-1 L-3 finding was exactly a page assuming contiguous team blocks — and goalkeeper identity cannot be derived from an index at all once a substitution has happened. Roster metadata is now baked in once from `LiveMatchStreamer.TeamId` / `IsGoalkeeper` (what `LiveMatchServer` already does) and keepers render distinctly. (2) `/report` read the result and the tick count in two separate lock acquisitions, so the sim thread could advance between them and label shares computed at tick N with tick N+1. Both now come out of one acquisition as a `MatchAnalyticsReport` pair. |
 | 1.0 | 2026-07-27 | Initial creation, landed with the B6 code: KD-W1..KD-W9, the deliberate non-goals, and the test map. |

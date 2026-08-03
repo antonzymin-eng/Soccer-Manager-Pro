@@ -1,7 +1,20 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 3, 2026, later same day (**Interactive Unity client P6 — the head-less
+**Last Updated:** August 3, 2026, latest same day (**Owner decision — roadmap B6 reversed to the full
+Unity UI.** Doc-only; **no file added, removed, renamed or moved**, so no inventory row changes and the
+production assembly count stays 31. Modified tracking docs:
+`docs/tracking/path-to-playable-roadmap.md` → v0.11 (§7 supersede note, C2 amended, risk register
+re-cut, B6 row + PM-1 exit note reclassified, and a pre-existing broken Version-History table repaired),
+`docs/tracking/interactive-unity-client-design.md` → v0.11 (header UPDATE block + §12 status-change
+block), `docs/tracking/browser-match-client-design.md` → v1.3 (standing status block; §0 marked
+superseded-as-forward-reasoning, retained verbatim), plus `CLAUDE.md` (assembly-map `match-client-web`
+row + OPEN ISSUES presentation-layer entry) and `docs/tracking/CHANGELOG.md` (new head entry).
+**`src/match-client-web/` is retained**, reclassified from shipping surface to host-free reference
+harness — its 20 manifest rows are unchanged and still authoritative. No `src/` change, no spec change,
+no gate run.)
+
+**Last Updated (prior):** August 3, 2026, later same day (**Interactive Unity client P6 — the head-less
 closed-loop scenario.** New in `src/match-client-core/`: `TickStampedCommandReplay.cs` (the log-driven
 replay cursor + `FromTick` resume slice) and three test files —
 `tests/TickStampedCommandReplayTests.cs`, `tests/MatchClientClosedLoopScenarios.cs`,
