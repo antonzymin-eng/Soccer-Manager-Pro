@@ -635,6 +635,7 @@ td.num { font-family:var(--font-mono); font-variant-numeric:tabular-nums; white-
           <div class="f-top">
             <span class="pill high">High</span>
             <span class="f-title">The repo had no project skills at all</span>
+            <span class="f-metric">now 4 · resolved</span>
           </div>
           <p>Before this pass there was no <code>.claude/</code> directory. Ten global skills were
           available; none of them knew anything about this project. So 161 ERR filings, 41 gate
@@ -642,6 +643,12 @@ td.num { font-family:var(--font-mono); font-variant-numeric:tabular-nums; white-
           rules file, every time, by reading prose. That is the single largest source of both
           token spend and convention drift here — and it is why the four cards above matter more
           than any individual prompt fix.</p>
+          <p><strong>Resolved from two directions, 2 Aug 2026.</strong> This branch added
+          <code>chat-review</code>; <code>main</code> independently added
+          <code>adversarial-review</code>, <code>advisor</code> and <code>orchestrator</code> plus
+          <code>.claude/README.md</code> and an <code>agents/</code> set. Both branches also arrived
+          at the same <code>.gitignore</code> fix — <code>.claude/*</code> with negations, for the
+          same trailing-slash reason — which is decent evidence the diagnosis was right.</p>
         </div>
       </article>
 
@@ -650,17 +657,26 @@ td.num { font-family:var(--font-mono); font-variant-numeric:tabular-nums; white-
         <div class="f-body">
           <div class="f-top">
             <span class="pill med">Medium</span>
-            <span class="f-title">adversarial-review doesn't know this repo's obligations</span>
+            <span class="f-title">adversarial-review: execution rule landed, filing obligation still missing</span>
             <span class="f-metric">281 AR-1 rounds</span>
           </div>
           <p>The global skill terminates when a full pass surfaces no new High or Medium findings.
           The repo's convention — used across 52 design docs — is that an <em>L-only round closes
-          the cycle</em>, which is compatible but differently stated. The real gap is what the
+          the cycle</em>, which is compatible but differently stated. The real gap was what the
           global skill cannot know: that a finding against approved spec text obliges an
           <code>ERR-</code> filing and a back-prop, and that this repo's most expensive lesson is
-          <strong>verify by execution, not by inference</strong>. Add a project-scoped
-          <code>adversarial-review</code> that defers to the global skill for method and adds the
-          repo's filing obligations and the execution rule.</p>
+          <strong>verify by execution, not by inference</strong>.</p>
+          <p><strong>Half-resolved on <code>main</code>, 2 Aug 2026</strong>, by a project-scoped
+          <code>adversarial-review</code> written independently of this analysis. It carries the
+          execution rule outright — <em>"if an execution environment is available, run the code and
+          its tests rather than only reasoning about it… a fixer that did not run the tests has not
+          finished"</em> — and adds a 5-round budget with an honest-report-on-non-convergence rule.
+          <strong>Still open:</strong> the filing obligation. Grepping that skill for
+          <code>spec-error-log</code>, <code>ERR-0</code> and <code>back-prop</code> returns
+          <strong>zero hits</strong>, so a reviewer following it can find a defect in approved spec
+          text and never learn that this repo requires an <code>ERR-</code> entry for it. That is a
+          few lines to add, not a rewrite — and it is the half that the 161 existing filings depend
+          on.</p>
           <div class="evidence"><b>rounds recorded:</b> AR-1 ×281 · AR-2 ×236 · AR-3 ×143 · AR-4 ×97
             · AR-5 ×59 · deepest cycle AR-13</div>
         </div>

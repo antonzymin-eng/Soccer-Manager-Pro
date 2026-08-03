@@ -1,10 +1,15 @@
-# Claude Code session artifacts. Ignore everything under .claude/ by default —
-# shell snapshots, caches and per-machine history live here — then re-include
-# only the two things that are shared, reviewable project config.
+# Claude Code local session artifacts (settings.local.json, session state, caches).
+# Deliberate, committed agent configuration is exempt — see .claude/README.md. The pattern must be
+# `.claude/*` rather than `.claude/`: with a trailing slash git never descends into the directory,
+# so the negations below would not apply and the config could not be tracked at all.
 .claude/*
+!.claude/README.md
+!.claude/advisors/
+!.claude/agents/
 !.claude/skills/
 !.claude/settings.json
-# Personal overrides always stay local, even though settings.json is tracked.
+# Personal overrides always stay local, even though settings.json is tracked: settings.json is
+# team-wide config (the SessionStart chat-review hook), settings.local.json is per-machine.
 .claude/settings.local.json
 
 # Unity
@@ -27,6 +32,10 @@
 # it is a link, and committing it would double-track the whole src/ tree)
 /Assets/Scripts
 /Assets/Scripts.meta
+
+# Python bytecode from tools/
+__pycache__/
+*.py[cod]
 
 # OS
 .DS_Store
