@@ -1,7 +1,31 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 27, 2026 (**Path-to-playable Track C: B1 richer observation frame + B2 Match Analytics
+**Last Updated:** August 2, 2026, later same day (**Acyclicity clause + open-issues re-filing pass.**
+No new files, none removed. **Modified:** `src/CLAUDE.md` (`### Reference Direction` gains the intra-layer
+acyclicity paragraph — permitted references, prohibited cycles, with the Unity + `tools/dotnet-ci`
+`<ProjectReference>` enforcement noted); `docs/tracking/spec-error-log.md` (ERR-020-002's open question
+closed with the verbatim `FR-CS-046a` sentence; ERR-020-003 sharpened — `src/CLAUDE.md` is the only
+rendering that labels its arrow); `docs/tracking/open-issues.md` **18 → 10 active** and
+`open-issues-resolved.md` **33 → 41**, eight entries moved (six closed-but-unmoved, plus a duplicated pair
+archived canonical-first); `CLAUDE.md` OPEN ISSUES index regenerated from the active set. Entry bodies
+preserved byte-for-byte, asserted before write; the only additions are a dated status clause in each bold
+title and one italic *Re-filed* note. **No code, no spec text** — `docs/specs/code-standards/section-3.md`
+stays untouched pending owner sign-off on the tier order, which the same acyclicity sentence lands with.
+Prior entry below.)
+
+**Last Updated (prior):** August 2, 2026 (**ERR-020-002 + ERR-020-003 filed — assembly layer taxonomy back-prop.**
+No new files and no file removed; this entry records tracking-document version movement only.
+**Modified:** `docs/tracking/spec-error-log.md` → **v1.54** (two OPEN entries + two Error Index rows);
+`docs/tracking/open-issues.md` (one new active entry, 17 → **18 active** / 33 resolved);
+`docs/tracking/CHANGELOG.md` (new head entry); `CLAUDE.md` (OPEN ISSUES index line + count);
+`src/CLAUDE.md` (the ⚠️ taxonomy staleness note now cites `ERR-020-002`, distinguishes the verbatim
+#20 §3.5.2 layer table from the `src/CLAUDE.md` infrastructure-table extension that carries the
+`code-standards` phantom, and records `ERR-020-003`'s arrow-notation conflict with the binding reading).
+**No code, no spec text, no assembly change** — `docs/specs/code-standards/section-3.md` is deliberately
+untouched pending owner sign-off on the proposed ten-tier order. Prior entry below.)
+
+**Last Updated (prior):** July 27, 2026 (**Path-to-playable Track C: B1 richer observation frame + B2 Match Analytics
 #37 T0 LANDED, then an adversarial-review fix pass over both (0H + 6M + 3L, all fixed).** **New assembly:**
 `src/match-analytics/` (`TacticalDirector.MatchAnalytics`) — `match-analytics.asmdef`,
 `MatchAnalyticsConstants.cs`, `XgLocationModel.cs`, `StatPoint.cs`, `MatchStatline.cs`,
