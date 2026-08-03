@@ -12,7 +12,136 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 3, 2026, later same day (**§5.Z.23 — CONVERSION AT CONTACT: the recorded
+> **Last Updated:** August 3, 2026, latest same day (**OWNER DECISION — ROADMAP B6 REVERSED: the
+> product ships the FULL UNITY UI, not the web-hosted viewer.** Doc-only; no `.cs` changed. Recorded in
+> `path-to-playable-roadmap.md` v0.11 (§7 supersede note, C2 amended, risk register re-cut),
+> `interactive-unity-client-design.md` v0.11 (§12 status-change block), `browser-match-client-design.md`
+> v1.3 (standing status block), and this file's assembly map + OPEN ISSUES.
+>
+> **The July 25 B6 entry is preserved verbatim and is not wrong** — it decided *time to a playable
+> loop*, and it delivered that: PM-1 was reached July 27 on the browser surface. This decision is about
+> *what the game ships as*, which the B6 table never weighed. That distinction matters for reading the
+> record: the reversal is not a correction of a bad call.
+>
+> **Nothing is discarded, and nothing blocks P4 starting.** `src/match-client-unity/` is an asmdef and a
+> README — P4 was never begun, so there is no unwind. The entire substrate a UGUI skin binds is already
+> gate-compiled and needs no change: #38's view models and dispatchers, `MatchFrameView`,
+> `MatchViewModelSource`, `MatchTacticsDispatcher`, `NavigationShell`, `MatchSession`, the command
+> channel, `FrameInterpolator`, `FollowBallCamera`, and the P6 determinism locks. This is the
+> "renderer is a leaf" property #38's contract was written for, finally used in the direction it was
+> designed for. No art prerequisite either — §5-P4 is 2D-first, the pitch renders from the IFAB
+> `[FIXED]` geometry already in `MatchViewerConstants`, agents are primitives, sprites are polish.
+>
+> **`src/match-client-web/` (34 tests) is retained and reclassified: shipping surface → host-free
+> reference harness.** It is the only surface in the repo that exercises the whole read / playback /
+> intent loop in CI on every push, which `match-client-unity` structurally never can. That makes it the
+> regression net under the substrate the skin binds. Rule: **keep it green, do not extend it.** If it
+> ever becomes expensive to keep green, delete it deliberately — do not quarantine it into
+> `known-failures.txt`, which would leave a harness reporting green while proving nothing.
+>
+> **The one real cost is coverage, and the rule that bounds it is the entry worth carrying.** The CI
+> gate cannot compile a line of `match-client-unity` and never will — the Unity shim covers `Vector2`,
+> `Vector3`, `Mathf`, `Debug` and `Profiling`, value types and statics that can be reimplemented
+> honestly, and there is no honest head-less `MonoBehaviour`, `GameObject` or `Camera`. **Extending the
+> shim to fake them is explicitly REFUSED:** a lifecycle-free stand-in would let a render loop that never
+> runs report green, which is ERR-030-014's failure mode transplanted one layer up, and this project has
+> already paid for that lesson once at the cost of months of 0–0 matches. The mitigation is
+> architectural instead: **keep logic out of `MonoBehaviour`s** — every decision (what to draw, where the
+> camera goes, what a click means, which intent an input maps to) lives in gate-compiled
+> `match-client-core` / `ui-framework`, and the Unity types assign transforms and forward input with no
+> branch a test would want to reach. P3 already demonstrates the pattern. Then the uncovered surface is
+> *binding*, which a cert run genuinely verifies, rather than *behaviour*, which a cert run verifies only
+> along the paths someone thought to click. Second rule: budget a cert-host run **per P4/P5 landing**,
+> not one at the end — the host block cleared July 19, 2026, so that is scheduling, not access, and a
+> skin first exercised at the end is the never-compiled-surface trap this repo has hit seven times.
+>
+> **`PM-1` is now a split claim, and the roadmap says so rather than leaving the flag to be misread.**
+> Its determinism exit criterion is met head-lessly and stays met. Its other three criteria are
+> statements about a *screen*, and were demonstrated on a surface that is no longer the product — so
+> they are open again against the Unity client. PM-1-the-capability holds; "the Unity client plays a
+> match" is not yet true.
+>
+> **Also fixed, pre-existing:** `path-to-playable-roadmap.md`'s Version History had its header and
+> delimiter rows separated by a data row, so it did not render as a table at all, and its rows were out
+> of version order. Both corrected. The duplicated `v0.9` version number — two separate July 27 landings
+> — is left as found, since historical entries are not rewritten.)
+>
+> **Last Updated (prior):** August 3, 2026, latest same day (**INTERACTIVE UNITY CLIENT P6 — the head-less
+> closed-loop scenario LANDED, ahead of P4, and the ordering is the point.** `interactive-unity-client-design.md`
+> §12 recommended P6 before the render skin for one reason: `match-client-unity` is in
+> `generate_projects.py`'s `SHIM_EXCLUDED_ASMDEFS`, so **every P4/P5 line is invisible to
+> `tools/dotnet-ci`**, while §5-P6's scenario is head-less and checked on every push. Landing it first
+> means the render skin arrives against an existing determinism lock rather than ahead of one.
+>
+> **What §5-P6 asks for, and what it needed first.** The scenario is specified as "boot via
+> `MatchSession`, inject a scripted tick-stamped command sequence through the queue, assert (a) two runs
+> with the same `MatchSetup` + same sequence are digest-identical and (b) save@N → restore →
+> tick-to-N+K replaying the same post-N commands == uninterrupted run." Three of those verbs had no
+> composition-level surface: **`MatchSession` could not be advanced head-lessly** (`LiveMatchStreamer.TickOnce()`
+> is `internal` to `match-viewer` and the only public advance is the background pacing thread), **could
+> not be saved** (the P0 pass deferred "the durable save-capture body that rides the `ServiceOnce`
+> seam"), and **could not be restored** (the constructor always boot-configures a fresh engine). P6 is
+> therefore three small production additions plus the scenario, not the scenario alone.
+>
+> **`MatchSession` v1.2.** `TickOnce()` — the head-less deterministic advance — drives the **real**
+> streamer seam (`match-viewer/AssemblyInfo.cs` v1.1 grants `InternalsVisibleTo` `MatchClientCore`;
+> the seam stays internal to `match-viewer`, so nothing widens for the browser viewer). Routing through
+> the real seam rather than a parallel client-side tick path is what makes the scenario a proof about
+> the shipping composition: the pre-tick hook fires, the frame is captured, and the full-time auto-pause
+> applies exactly as under paced playback. It refuses fail-loud once `Start()` has been called — two
+> threads ticking one engine is a data race, and the streamer's own "never concurrently with the pacing
+> loop" contract was a comment until now. `CaptureSave()` rides the `ServiceOnce` seam, so it works
+> while running, paused and at full time; **§6.3's drained-empty-before-capture invariant is now held by
+> ORDERING** — one sim-thread pass under the tick gate drains and applies the queue and only then
+> encodes — rather than being asserted after the fact. An `Encode` fault is latched and rethrown to the
+> `CaptureSave` caller instead of escaping the pre-tick hook and killing the pacing thread (the
+> isolation posture `MatchClientDriver` already takes for a refused command); the handshake is
+> `Interlocked`/`Volatile` rather than a lock held across `ServiceOnce`, which would have set up the
+> opposite lock order against the tick gate. `RestoreFrom(blob, squads)` splits the constructor into a
+> static `BootEngine` plus an engine-agnostic wiring ctor, so a restored session re-applies **no** boot
+> mutator — `ConfigureSquads` throws on a ticked engine and re-staging tactics would overwrite restored
+> state.
+>
+> **`TickStampedCommandReplay` v1.0** is the mechanism §6.1's reproducibility invariant is defined
+> against. It enqueues each log entry immediately before the tick whose pre-tick `CurrentTick` equals
+> its `AppliedTick` — exactly where the original drain read the clock — so a replayed run re-stamps
+> identically and **the log is a fixed point of its own replay** (asserted). An out-of-order log and an
+> entry whose application point has already passed are both refused fail-loud, because silently skipping
+> either yields a run that is not the log's run while still reporting success.
+>
+> **The load-bearing predicate is the control run.** Both scenarios would pass on a command channel
+> that did nothing at all: a run reproducing itself is not evidence that the commands are in the loop.
+> So `match-client-command-log-replay` runs a **third** session with the same `MatchSetup` and **no
+> commands**, and requires it to DIVERGE, in a bounded window around the first command (min = the tick
+> after it is drained, max = two AI strides later) rather than merely "eventually". This is the direct
+> lesson of the 600-tick capstone that asserted tick count, cadence, finiteness and digest advance while
+> every match was a 90-minute 0–0 deadlock (ERR-030-014). The script is ten commands across **all three**
+> live mutators and **both teams**, straddling the save tick — a home-only script would have repeated
+> the #8 ERR-008-002 asymmetry mistake one layer up. `match-client-save-restore-replay` saves at tick 90
+> (deliberately command-free, and the scenario checks that emptiness rather than assuming it, because a
+> command at the save tick is in or out of the snapshot depending on drain order while carrying the same
+> stamp either way), restores, and replays the post-90 log to tick 180 against the uninterrupted run.
+>
+> **One predicate was deliberately not written.** A "queue is drained at capture" check inside the
+> scenario would be true there no matter which order the capture pass ran in — a vacuous pass dressed as
+> a guarantee. The §6.3 invariant is locked instead by a unit test that enqueues a command immediately
+> before `CaptureSave` and requires it back applied and logged.
+>
+> **Blast radius: nothing moved.** No engine behaviour changed — the client observes and drives
+> pre-existing public mutators only — so no tick-window instrument, per-90 rate band, or round-resolution
+> fit is perturbed, and the FR-PO-052 baseline is untouched (no per-tick work added on any existing
+> path). No `SNAPSHOT_SCHEMA_VERSION` change, no new RNG stream, domain tag or draw site, no draw-order
+> change. No ERR filed: nothing here contradicts an APPROVED spec.
+>
+> **Gate: NOT RUNNABLE in this environment.** The network policy blocks the .NET SDK download —
+> `curl https://dot.net/v1/dotnet-install.sh` returns a proxy 403 — the same constraint
+> `interactive-unity-client-design.md`'s own header records for the P0 landing. Verified instead by
+> exhaustive manual review against source, plus a `generate_projects.py` run confirming the new
+> `TacticalDirector.TestingStrategy` reference resolves and the test project is generated with it. The
+> gate runs in CI on the PR; the per-suite counts are not restated here because they were not measured.
+> **Prior entry below.**)
+>
+> **Last Updated (prior):** August 3, 2026, later same day (**§5.Z.23 — CONVERSION AT CONTACT: the recorded
 > premise was refuted, and the real defect is that a keeper's CATCH never stopped the ball.**
 > `gk-contact-rate-design.md` §7 item 1 recorded the goal-rate residual as *"marginal, end-of-envelope
 > touches whose parries and spills keep the ball alive in the box"*, naming the Stage-0 `pointQuality`

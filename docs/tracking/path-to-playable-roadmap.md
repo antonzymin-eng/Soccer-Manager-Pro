@@ -52,7 +52,11 @@ each rung has a different blocker profile.
 - A `MatchSetup` is producible from UI input (not hardcoded).
 - Live tactical change + substitution apply through the P2 tick-stamped command channel.
 - Post-match screen renders a `MatchAnalyticsResult` (#37).
-- The P6 closed-loop scenario passes: same `MatchSetup` + same command log ⇒ digest-identical runs.
+- ~~The P6 closed-loop scenario passes: same `MatchSetup` + same command log ⇒ digest-identical runs.~~
+  ✅ **MET 2026-08-03** — `match-client-command-log-replay` (plus a command-free control run that must
+  diverge, so the criterion cannot be satisfied by a channel that does nothing) and
+  `match-client-save-restore-replay`, both on the #19 `ScenarioRunner`, host-free and gate-checked.
+  Note this is the *determinism* criterion only: the three above it still need UI.
 
 ### PM-2 — **Playable Season**
 > Start a new game against a generated league, see a fixture list and a league table, advance
@@ -90,7 +94,8 @@ Non-trivial, and it changes the shape of the remaining work. Recorded so nothing
 | Lineup selection, attribute projection | `LineupSelector`, `PlayerAttributeProjection` | ✅ |
 | Watchable match (web) | `match-viewer/` — HTML replay + `LiveMatchServer` live viewer | ✅ observer-neutral, digest-locked |
 | **Manager command channel** | `src/match-client-core/` — `ManagerCommandQueue`, `MatchClientDriver`, tick-stamped log, `MatchSession` | ✅ **P0 + P2 landed 2026-07-24**, host-free, CI-gated |
-| Unity render skin | `src/match-client-unity/` | ⛔ asmdef only — P4–P6, host-gated |
+| **Input-determinism lock (the PM-1 exit criterion)** | `src/match-client-core/` — `MatchSession.TickOnce/CaptureSave/RestoreFrom`, `TickStampedCommandReplay`, the two §5-P6 closed-loop scenarios | ✅ **head-less half of P6 landed 2026-08-03**, host-free, CI-gated. Same `MatchSetup` + same log ⇒ digest-identical; save@N → restore → replay == uninterrupted; and a command-free control run must diverge |
+| Unity render skin | `src/match-client-unity/` | ⛔ asmdef only — P4–P5 + the on-host half of P6, host-gated |
 
 **The single most under-appreciated asset is `RosterGenerator`.** It means a playable league needs no
 database editor and no authored data — see C3. *(Realised July 25, 2026 as `LeagueBootstrap` — A3.)*
@@ -141,13 +146,25 @@ matches across varied squad strengths — at ~2.6 min each, ~200 matches ≈ **9
 This is parallelisable and run-once. **Budget it explicitly (A4a) rather than discovering it during
 A4.**
 
-### C2 — Unity host access is an external blocker on P4–P6, and there is a real fallback.
+### C2 — Unity host access is an external blocker on P4–P6, and it is back on the critical path.
 The `match-client-unity` README and `interactive-unity-client-design.md` both record it: no Unity host
-exists in the build/CI environment, so the render skin is verified only at a cert run. **But the
-browser surface already works** — `LiveMatchServer` streams live frames to a canvas page today, in
-CI, with no host. Extending that surface into the season UI reaches PM-1 and PM-2 **without a Unity
-host at all**, and the #38 framework contract (view models + dispatchers) is renderer-agnostic by
-design, so the UGUI skin later binds the same substrate. See the B6 decision point.
+exists in the build/CI environment, so the render skin is verified only at a cert run.
+
+**Amended August 3, 2026.** The fallback this constraint named was real and was taken — the browser
+surface reached PM-1 on July 27 with no host at all. The owner has since decided the shipping UI is
+Unity (see the B6 supersede note), so the fallback no longer removes the block; it only means the block
+was never allowed to stall the project, which is what a good fallback buys. Two facts now govern:
+
+1. **The host block is an access question, and access exists.** `certification-platform.md` v1.4
+   ✅ PINNED — the July 19, 2026 certification cleared it. What does *not* exist is a Unity host in
+   **CI**, and that is not going to change: `tools/dotnet-ci` is a Linux shim gate by construction.
+2. **So the exposure is coverage, not feasibility**, and it is bounded by how much logic sits in
+   `MonoBehaviour`s. Keep the render skin logic-free (B6 note) and the uncovered surface is binding
+   code, which a cert run genuinely does verify. Let logic leak into it and the uncovered surface is
+   behaviour, which a cert run verifies only for the paths someone thought to click.
+
+Budget a cert-host slot per P4/P5 landing rather than one at the end. A skin that is only exercised
+once, at the end, is the never-compiled-surface trap this repo has already hit seven times.
 
 ### C3 — No roster world exists — and `RosterGenerator` closes it without #47.
 Nothing today produces a league of clubs. The roadmap assigns this to **#47 (New-Game Setup & DB
@@ -230,7 +247,15 @@ byte-identically, and rolls into a second season. **No UI yet, no Unity, no exte
 | **B3** | ~~**#37 T1** — the read-only per-tick ledger tap + `MatchAnalyticsAggregator`~~ **LANDED July 27, 2026.** The KD-7 tap is a `TickLedgerSnapshot` the engine fills in the Snapshot phase, after `SerializeLedger` and before the bus resets the tick — **the only moment the records exist and the tick is identified**. It copies rather than indexing the ring, so "current-tick scoped" is structural, and it reuses `SerializeLedger`'s own canonical-order walk (extracted to `EventLedger.BuildCanonicalOrder`), so the digest bytes and the observer see one derivation. `MatchAnalyticsAggregator` implements §3.1–§3.4 with the §3.2 routing table keyed on `EventRegistry.GetOrdinal<T>()` (promoted public) rather than a local ordinal table — no parallel surface to drift. 30 new tests. Surfaced **ERR-037-002**. | #37 §7.1 T1 | host-free |
 | **B4** | ~~**Unity client P3** — frame interpolation, follow-ball camera, live-stats accumulator~~ **LANDED July 27, 2026** (two of three; see below). `FrameInterpolator` — speed-aware alpha (an interpolator handed the unscaled tick rate falls further behind the sim every frame at 3×) and blending that **snaps rather than smooths across a discontinuity**: a restart teleports the ball and a substitution swaps who occupies a roster slot, and blending either draws a glide where the truth is a jump. `FollowBallCamera` — dead zone, `1 − e^(−rate·dt)` smoothing (proven frame-rate-independent by step subdivision, not asserted), and a pitch clamp that **centres** when the view is wider than the pitch instead of oscillating between two impossible bounds. 23 new tests. **The third item is deliberately not built:** #37's aggregator (B3) *is* the live-stats accumulator, and a second one in `match-client-core` would be the parallel-surface trap — recorded here rather than silently dropped. | §5-P3 | host-free |
 | **B5** | ~~**#38 T0** — framework only~~ **LANDED July 25, 2026** (ahead of B1/B2; the table had not been updated). `NavigationShell`, `IViewModelSource<T>`, `ICommandDispatcher`, `ManagerIntent`, `MatchFrameView` + `MatchViewModelSource`, `MatchTacticsDispatcher`; 39 tests incl. the observer-neutrality digest lock and a mechanical reverse-reference scan. Filed **ERR-038-001/-002/-003**. | #38 (APPROVED) | host-free |
-| **B6** | ~~**Renderer — option (b), extend the browser surface**~~ **LANDED July 27, 2026**, governed by the new `browser-match-client-design.md`. **Not** an extension of `LiveMatchServer`, and that is the design: that server's playback-only invariant is load-bearing (the streamer holds the engine, the server holds no engine reference — *disjoint by construction*), and it is what ERR-038-001 and the interactive-client AR-1 H-2 both turn on. So the mutating surface is a new host-free assembly `src/match-client-web/` **above** `match-client-core`, and `match-viewer` keeps its invariant. Three routes, three privileges, asserted against the command queue rather than by inspection: reads cannot change a match; `/playback` changes *when* ticks happen, never what is in them, so it never enters the replay log; `/intent` is the only mutating route and goes through `ManagerCommandQueue`, landing on a tick boundary and in the tick-stamped record. Router and transport are separate types, so every routing decision is a pure function under test and the socket code decides nothing. 34 tests. | `browser-match-client-design.md` (§6 item 2) | host-free |
+| **B6** | ~~**Renderer — option (b), extend the browser surface**~~ **LANDED July 27, 2026**, governed by the new `browser-match-client-design.md`. **Not** an extension of `LiveMatchServer`, and that is the design: that server's playback-only invariant is load-bearing (the streamer holds the engine, the server holds no engine reference — *disjoint by construction*), and it is what ERR-038-001 and the interactive-client AR-1 H-2 both turn on. So the mutating surface is a new host-free assembly `src/match-client-web/` **above** `match-client-core`, and `match-viewer` keeps its invariant. Three routes, three privileges, asserted against the command queue rather than by inspection: reads cannot change a match; `/playback` changes *when* ticks happen, never what is in them, so it never enters the replay log; `/intent` is the only mutating route and goes through `ManagerCommandQueue`, landing on a tick boundary and in the tick-stamped record. Router and transport are separate types, so every routing decision is a pure function under test and the socket code decides nothing. 34 tests. **RECLASSIFIED August 3, 2026:** the owner reversed B6 to option (a), full Unity UI, so this is no longer the shipping surface — it is retained as the **host-free reference harness**, the only surface that exercises read/playback/intent end to end in CI. Keep it green; do not extend it. See §7's supersede note. | `browser-match-client-design.md` (§6 item 2) | host-free |
+
+> **August 3, 2026 — what the B6 reversal does to this milestone.** `PM-1` was reached, and reaching it
+> is not undone by changing the shipping renderer: what it proved is that the substrate under a renderer
+> is complete and correct, and that substrate is unchanged. But **`PM-1` is now demonstrated on a surface
+> that is not the product.** The honest statement is that PM-1-the-capability holds while
+> PM-1-*in-Unity* is a fresh claim that P4/P5 must re-establish on the pinned host, against the same four
+> exit criteria. Do not let the reached-flag below be read as "the Unity client plays a match" — it does
+> not exist yet.
 
 **Phase B exit — `PM-1`: REACHED July 27, 2026.** A person can open a browser on the running client
 and watch a real match with a live pitch, clock, score, period and restart captions; change a team's
@@ -333,6 +358,43 @@ is exactly what §7.2 of #38 says will happen anyway (*"the rendering is a view 
 substrate, exactly as `match-viewer`'s live HTML surface was"*). Take (a) when host access is
 available, not as a gate on playing the game.
 
+### SUPERSEDED August 3, 2026 — owner decision: **(a) full Unity UI**
+
+> The July 25 entry above is preserved verbatim per this project's convention; it is not wrong about
+> what it decided, it is no longer what is being built.
+
+**The forward UI target is the Unity client (P4–P6). The browser client is not the shipping surface.**
+This is an owner product decision, not a re-derivation from the table — (b)'s reasoning was about
+*time to a playable loop*, and it delivered that; the decision is about *what the game ships as*, which
+the table above never weighed.
+
+What the reversal actually costs and does not cost:
+
+- **No code is discarded.** `src/match-client-unity/` is an asmdef and a README — P4 was never started,
+  so there is nothing to unwind. `src/match-client-web/` (34 tests) is kept: it is the only surface that
+  can exercise the full read/playback/intent loop **in CI on every push**, which the Unity client
+  structurally cannot. It is reclassified from *shipping surface* to *host-free reference harness*.
+- **The substrate is renderer-agnostic and stays.** #38's view models and dispatchers, `MatchFrameView`,
+  `FrameInterpolator`, `FollowBallCamera`, `MatchSession` and the whole P0–P3 + head-less-P6 core are
+  in gate-compiled assemblies and are exactly what (a) binds. This is the "renderer is a leaf" property
+  the #38 contract was written for, now being used in the direction it was designed for.
+- **The host block returns to the critical path.** This is the real cost, and constraint C2 below is
+  amended for it. Every P4/P5 line is invisible to `tools/dotnet-ci` (`match-client-unity` is in
+  `SHIM_EXCLUDED_ASMDEFS`, correctly — the shim covers `Vector2`/`Vector3`/`Mathf`/`Debug`/`Profiling`,
+  value types and statics, not `MonoBehaviour`/`GameObject`/`Camera`, which have no honest head-less
+  stand-in). A fake `MonoBehaviour` that never receives a lifecycle would let a render loop that never
+  runs report green — the ERR-030-014 failure mode, one layer up. **Do not shim the engine to buy
+  coverage.**
+
+**The mitigation that follows from this, and the rule P4 is built under: keep logic out of
+`MonoBehaviour`s.** Everything that *decides* — what to draw, where the camera goes, how frames
+interpolate, what a click means, what an intent maps to — belongs in plain C# in `match-client-core` /
+`ui-framework`, where the gate compiles and tests it. `match-client-unity` should be a thin, logic-free
+adapter that assigns `transform.position`, instantiates prefabs, and forwards input events. Then the
+unverifiable surface is as small as the platform allows, and the host block costs coverage of *binding*
+rather than coverage of *behaviour*. P3 already demonstrates the pattern: the camera and interpolation
+math are host-free and test-locked in `match-client-core` today.
+
 ---
 
 ## 8. Dependency graph
@@ -389,7 +451,9 @@ which is now the critical path to **PM-1** and to any calibrated table:
 | The league strength spread is too small to move engine results, so the table is noise regardless of the quick-sim | **High (now TESTABLE — A4b landed)** | `league-bootstrap-design.md` KD-8 **Step 0**: a ~20-match pilot at the ramp extremes runs BEFORE the 9 h corpus; if the extremes are indistinguishable, raise `LeagueStrengthSpread` first rather than fit three parameters to noise |
 | A generation change silently invalidates every save (rosters are regenerated from the world seed, not persisted) | **High** | Pinned golden vector (`LeagueBootstrapGoldenVectorTests`, KD-10), verified non-vacuous; a generation change must re-pin in the same commit and is treated as save-breaking |
 | Spec-defect latency — T0s surface ERR-class findings against never-compiled specs (C5) | **High (certain)** | Expect 1–3 per landing; keep code-side adversarial review; file ERRs against spec text as the project already does |
-| Unity host access never materialises | Medium | B6 option (b) removes it from the critical path entirely |
+| ~~Unity host access never materialises~~ **Retired** — cleared July 19, 2026 (`certification-platform.md` v1.4 ✅ PINNED) | — | Superseded by the row below |
+| **The Unity render skin accumulates untested logic, because no CI gate can compile a line of it** (C2, B6 supersede) | **High** — the shipping UI is now Unity (owner decision, Aug 3, 2026), so this surface grows every landing | Keep `match-client-unity` a logic-free adapter: every decision lives in gate-compiled `match-client-core` / `ui-framework`, the `MonoBehaviour` only assigns transforms and forwards input. Budget a cert-host run **per P4/P5 landing**, not one at the end. Do NOT extend the Unity shim to fake `MonoBehaviour`/`GameObject` — a lifecycle-free stand-in makes a dead render loop report green (ERR-030-014's failure mode) |
+| The browser client (`src/match-client-web/`, 34 tests) rots now that it is not the shipping surface | Low | Keep it green as the host-free reference harness — it is the only surface that exercises read/playback/intent end to end in CI. If it is ever allowed to fail, delete it deliberately rather than quarantining it |
 | Phase B expands to chase the #37 §7.2 deferred producers | Medium | PM-1 ships possession/territory/score/heatmaps; producers are a separate match-engine change |
 | Save-migration debt accrues silently once PM-2 saves exist (C4) | Medium | Force the decision at the PM-2 exit gate |
 | #30 T2's fixed tick order gets re-pinned by later specs | **Low** | Already mitigated — ERR-030-002/004/006/007/008/009 pre-declared the null seams for #41/#31/#34/#32/#43/#44 |
@@ -414,8 +478,10 @@ which is now the critical path to **PM-1** and to any calibrated table:
 ## Version History
 
 | Version | Date | Change |
-| v0.9 | July 27, 2026 | **The shot-outcome distribution pass landed** (`shot-outcome-distribution-design.md` / `match-engine-design.md` §5.Z.18) — the specific blocker the v0.8 note named on A4a. Shots can miss (a true `tan(err)×distance` error cone + the vertical placement/error half made live), the goal has a crossbar (Law 9/10 airborne adjudication), shots are blocked (the agent-ball deflection is live), the shot pressure query is wired, and the goal-visibility gate can fire. Measured: **goals/match 15.3 → 12.3**, goals/shot 0.24–0.29 → 0.14–0.25, deflections 0 → 560–612/match. **A4a stays gated but the gate has moved:** the remaining goal-rate mass is shot VOLUME (59–70/match, ~2.5× football — DT selection / possession churn), shot SPEED (means 7–10 m/s vs ~25 — #6 `VFloor`/`VCeiling` × #8 `PowerIntent` shaping), and the keeper's catch/parry conversion. Those are the named next levers; each is a `[GT]`/selection balance pass with the measurement instruments now in place. |
 |---------|------|--------|
+| v0.11 | August 3, 2026 | **B6 REVERSED by owner decision — the shipping UI is the full Unity client, not the web-hosted viewer.** §7 gains a supersede note (the July 25 entry preserved verbatim), C2 is amended, and the risk register is re-cut: the "Unity host access never materialises" row is retired (cleared July 19, 2026, `certification-platform.md` v1.4 ✅ PINNED) and replaced by the risk that actually applies now — **the render skin accumulates untested logic because no CI gate can compile a line of it.** **Nothing is discarded:** `src/match-client-unity/` is an asmdef + README, so P4 was never started; `src/match-client-web/` (34 tests) is kept and reclassified from shipping surface to **host-free reference harness**, because it is the only surface that exercises read/playback/intent end to end in CI. **The substrate needs no change at all** — #38's view models and dispatchers, `MatchFrameView`, `FrameInterpolator`, `FollowBallCamera`, `MatchSession` and the head-less P6 locks are all gate-compiled and are exactly what a UGUI skin binds; this is the "renderer is a leaf" property #38 was written for, now used in the direction it was designed for. **The one real cost is coverage**, and the rule that bounds it is recorded in both §7 and C2: **keep logic out of `MonoBehaviour`s** — decisions live in `match-client-core`/`ui-framework` where the gate compiles them, and `match-client-unity` stays a logic-free adapter that assigns transforms and forwards input. Explicitly refused: extending the Unity shim to fake `MonoBehaviour`/`GameObject` to buy coverage — the shim covers value types and statics honestly, and a lifecycle-free stand-in would let a render loop that never runs report green, which is ERR-030-014's failure mode one layer up. Cert-host runs are to be budgeted **per P4/P5 landing**, not once at the end. Doc-only; no `.cs` changed. Also fixes a pre-existing structural defect in this table — the header/delimiter rows were separated by a data row, so it did not render as a table; the duplicated `v0.9` version number (two July 27 landings) is left as found, since historical entries are not rewritten. |
+| v0.10 | August 3, 2026 | **PM-1's determinism exit criterion is MET — the head-less half of the Unity client's P6 landed** (`interactive-unity-client-design.md` v0.10). Two closed-loop scenarios on the #19 `ScenarioRunner`, host-free and gate-checked every push: same `MatchSetup` + same tick-stamped log ⇒ digest-identical, and save@N → restore → replay the post-N log == the uninterrupted run. Ordering follows §12's argument — `match-client-unity` is shim-excluded, so P4/P5 are invisible to `tools/dotnet-ci` while this is not; the render skin now arrives against an existing determinism lock rather than ahead of one. **The finding worth carrying:** the phase description assumes three verbs `MatchSession` did not have — it could not be advanced head-lessly, saved, or restored — so P6 was three production additions (`TickOnce`, `CaptureSave` on the `ServiceOnce` seam, `RestoreFrom`) plus `TickStampedCommandReplay`, before any scenario could be written. **And the predicate that actually carries the criterion is the control run:** both scenarios pass on a command channel that does nothing, so a third command-free run must DIVERGE in a bounded window — the ERR-030-014 lesson applied to this layer. **PM-1's other three exit criteria are unchanged and still need UI** (a `MatchSetup` from UI input, live changes applied through the channel *from a screen*, a post-match `MatchAnalyticsResult` render); those are P4/P5 on the pinned host. Track-C inventory gains a row. |
+| v0.9 | July 27, 2026 | **The shot-outcome distribution pass landed** (`shot-outcome-distribution-design.md` / `match-engine-design.md` §5.Z.18) — the specific blocker the v0.8 note named on A4a. Shots can miss (a true `tan(err)×distance` error cone + the vertical placement/error half made live), the goal has a crossbar (Law 9/10 airborne adjudication), shots are blocked (the agent-ball deflection is live), the shot pressure query is wired, and the goal-visibility gate can fire. Measured: **goals/match 15.3 → 12.3**, goals/shot 0.24–0.29 → 0.14–0.25, deflections 0 → 560–612/match. **A4a stays gated but the gate has moved:** the remaining goal-rate mass is shot VOLUME (59–70/match, ~2.5× football — DT selection / possession churn), shot SPEED (means 7–10 m/s vs ~25 — #6 `VFloor`/`VCeiling` × #8 `PowerIntent` shaping), and the keeper's catch/parry conversion. Those are the named next levers; each is a `[GT]`/selection balance pass with the measurement instruments now in place. |
 | v0.9 | July 27, 2026 | **Phase B is complete and `PM-1` is REACHED.** B3 (#37 T1), B4 (Unity client P3) and B6 (the browser client) landed; the table's B5 row was corrected — #38 T0 had landed on July 25, ahead of B1/B2. **B3's tap is the design point:** it is filled in the Snapshot phase, after `SerializeLedger` and before the bus resets the tick — the only moment the records exist AND are identified with a tick — and it reuses `SerializeLedger`'s own canonical-order walk, so the digest bytes and the observer cannot drift apart. Surfaced **ERR-037-002** (§3.4 states the territorial split as two strict inequalities and then requires it to be total; both fail at exactly `x == L/2`, which a kickoff sits on for many consecutive ticks). **B4 built two of its three items and refused the third:** #37's aggregator already IS the live-stats accumulator, and a second one in `match-client-core` would be the parallel-surface trap. **B6's finding is that the obvious implementation was the wrong one:** extending `LiveMatchServer` would have handed the spectator surface a mutation channel, which is precisely what ERR-038-001 and the interactive-client AR-1 H-2 rejected; the mutating surface is a new assembly above `match-client-core` instead. It also needed a genuinely new seam — #37's every-tick contract cannot ride the pre-tick hook, which is set-once and also fires from `ServiceOnce()` where no tick advances — so `LiveMatchStreamer` gains a read-only post-tick observer that **disarms and latches** on failure rather than killing the sim thread. Governed by the new `browser-match-client-design.md`. Full gate green throughout; match-analytics 24 → 54, match-client-core 22 → 45, new match-client-web 34. **Next: Phase C (#44 discipline, then the season and new-game screens) — the objective, PM-2.** |
 | v0.8 | July 27, 2026 | **A5 LANDED — Phase A is complete and `PM-2-sim` is REACHED.** `SeasonLoop.RollToNextSeason()`: the KD-6 restartable boundary transform, pure in the prior `SeasonState`, with the (a') #43 / (b') #40 / (d) #28 insertion points declared and empty. Two careers from one seed now agree on both seasons' tables, and a save taken at the boundary restores to the same continuation. C5 held for the sixth consecutive landing — **ERR-030-015**: §3.5's pseudocode never rebuilt the calendar, so a season rolled from it was permanently unplayable; caught only by an acceptance test that plays a *second* season to completion. Season-save 240 → 263 tests, full gate green (including the adversarial-review pass over the landing: 1H+3M+2L, all fixed). **Next on this track: A4a is still gated — not on compute, but on the engine's goal rate (~4.7× football's), because a corpus fitted now would calibrate the quick-sim to reproduce that.** |
 | v0.7 | July 26, 2026 | **A4b LANDED — the match is playable; ERR-030-014 closed.** Five seams, four of them found by running the composed engine one after another (each invisible until the previous fix let play run further): the restart taker award, the loose-ball pickup, the DecisionTree loose-ball collect (ERR-008-014), the PASS/SHOOT completion sweep (ERR-008-015), and the interrupt deferral. Locked by the new `match-engine-play-develops` acceptance scenario, whose every predicate fails on the pre-fix engine. **A4a and PM-1 unblocked**; A4a is now the next item (re-run KD-8 Step 0, ~33 min — it may still refuse, since playing and discriminating by squad strength are different questions). New top balance item: the foul heuristic issues ~7 red cards per 9 minutes. See `match-engine-design.md` §5.Z. |

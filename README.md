@@ -1,7 +1,47 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** August 3, 2026 (**§5.Z.23 conversion at contact — ERR-011-008: a keeper's CATCH
+**Last Updated:** August 3, 2026, latest same day (**Owner decision — roadmap B6 reversed: the product
+ships the full Unity UI, not the web-hosted viewer.** Doc-only. `src/match-client-web/` is retained and
+reclassified as the host-free reference harness — the only surface exercising read/playback/intent in
+CI on every push — while `src/match-client-unity/` (asmdef + README; P4 never started) becomes the
+critical path. Nothing blocks P4: the whole substrate a UGUI skin binds is already gate-compiled and
+unchanged. Standing rule recorded in `interactive-unity-client-design.md` §12 and
+`path-to-playable-roadmap.md` §7/C2 — **keep logic out of `MonoBehaviour`s**, since the CI gate cannot
+compile that assembly and faking `MonoBehaviour` in the Unity shim is explicitly refused. `PM-1`'s three
+screen-facing exit criteria reopen against the Unity client; its determinism criterion is met head-lessly
+and stays met.)
+
+**Last Updated (prior):** August 3, 2026, later same day (**Interactive Unity client P6 — the head-less
+closed-loop scenario LANDED, ahead of P4.** The client's input-determinism claim is now checked on
+every push rather than asserted. Two closed-loop scenarios on the #19 `ScenarioRunner`, booted through
+the real `MatchSession`: same `MatchSetup` + the same tick-stamped command log ⇒ digest-identical runs,
+and save@90 → restore → replay the post-90 log to tick 180 == the uninterrupted run. Landed before the
+Unity render skin for the reason the plan's §12 gives — `match-client-unity` is excluded from the
+`tools/dotnet-ci` shim, so **every P4/P5 line is invisible to CI** while this is not; the skin now
+arrives against an existing lock rather than ahead of one.
+
+**The phase needed three production additions before any scenario could be written**, because
+`MatchSession` could not be advanced head-lessly, saved, or restored: `TickOnce()` (driving the real
+streamer seam, and refusing fail-loud once paced playback has started — two threads through one engine
+is a data race), `CaptureSave()` (riding the `ServiceOnce` seam so it works running, paused and at full
+time, with the drained-empty-before-capture invariant now held by *ordering* rather than asserted), and
+`RestoreFrom()` (a session over a restored engine, re-applying no boot mutator). Plus
+`TickStampedCommandReplay` — the log-replay mechanism the reproducibility invariant is *defined*
+against, under which the log is a fixed point of its own replay.
+
+**The predicate that carries it is the control run.** Both scenarios would pass on a command channel
+that did nothing — a run reproducing itself says nothing about whether the commands are in the loop —
+so a third session with the same setup and **no commands** must DIVERGE, in a bounded window around
+the first command. That is the direct lesson of the capstone that asserted a match ticked while every
+match was a 90-minute 0–0 deadlock. The script drives all three live mutators across **both** teams.
+
+No engine behaviour changed; no schema, RNG-stream, domain-tag, draw-site or draw-order change. Gate
+not runnable in this environment (the network policy blocks the .NET SDK download); verified by
+exhaustive manual review and a project-generation run, and it runs in CI on the PR. **Prior entry
+below.**)
+
+**Last Updated (prior):** August 3, 2026 (**§5.Z.23 conversion at contact — ERR-011-008: a keeper's CATCH
 never stopped the ball.** #11 §3.5.2's catch branch is two statements — the possession record AND
 `ball.velocity = gkHandVelocity` ("parked at hand position") — and only the first was implemented.
 Possession here is a flag, not a kinematic constraint (the ball integrates unconditionally; the goal
@@ -588,7 +628,15 @@ PM-3 (playable career) ladder. Phase A (season spine) is in progress:
 7. ⏳ **UI screens.** #38's T0 substrate exists; no screens and no UGUI binding. Of the screens the
    July-25 mockups cover, only Tactics and Squad have built data behind them — the rest are gated on
    #29/#31/#32/#34/#40, none of which have any `src/`.
-8. ⏳ **Interactive Unity client.** The browser-based live match viewer is the current floor.
+8. ⏳ **Interactive Unity client — now the shipping UI, and the next thing to build.** Roadmap B6 was
+   reversed by owner decision on Aug 3, 2026: the product ships the full Unity client, not the
+   web-hosted viewer. The browser client (`src/match-client-web/`) is retained as the **host-free
+   reference harness** — the only surface exercising the read/playback/intent loop in CI — and is the
+   current floor, but it is not the target. P0–P3 and the head-less half of P6 are done; **P4 (the 2D
+   render skin) is next, on the pinned host.** The standing rule for it: **keep logic out of
+   `MonoBehaviour`s** — the CI gate cannot compile `match-client-unity` and never will, so every
+   decision lives in gate-compiled `match-client-core` / `ui-framework`. See
+   `docs/tracking/interactive-unity-client-design.md` §12.
 
 **Operations / housekeeping:**
 9. ⏳ Push the approval tags (HTTP 403 branch-protection); run the squash-merge precondition check in
