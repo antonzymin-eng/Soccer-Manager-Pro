@@ -31,6 +31,23 @@ namespace TacticalDirector.GoalkeeperMechanics
         void SetPossessor(int agentId);
 
         /// <summary>
+        /// Arrests the ball in the keeper's hands on a successful claim — the SECOND half of
+        /// §3.5.2's catch branch (<c>ball.velocity = gkHandVelocity</c>, "parked at hand position"),
+        /// alongside <see cref="SetPossessor"/>. Zeroes linear and angular velocity.
+        /// <para>ERR-011-008: without this the claim sets a possession FLAG only. Possession is not a
+        /// kinematic constraint in this engine — the ball integrates unconditionally and the goal
+        /// check adjudicates on ball POSITION — so a "caught" shot flew on into the net (measured:
+        /// ball speed 11.1 m/s in, 10.8 m/s out, and 7 of 10 catches followed by a goal within 5 s).</para>
+        /// <para>Stage 0 reads <c>gkHandVelocity</c> as zero: the ball is at rest in the keeper's
+        /// frame. Carrying the hand's world velocity is a Stage-1 refinement (§7), as is holding the
+        /// ball at hand height rather than letting it settle. Deliberately does NOT enter
+        /// <c>BallStateType.Controlled</c> — no production path leaves that state except a kick, and
+        /// this engine has never produced a Controlled ball.</para>
+        /// Goalkeeper Mechanics #11 §3.5.2. Ball Physics #1 §3.1.
+        /// </summary>
+        void ParkBall();
+
+        /// <summary>
         /// Returns the current ball possessor agent ID, or -1 if the ball is loose.
         /// Ball Physics #1 §3.1.
         /// </summary>
@@ -41,4 +58,8 @@ namespace TacticalDirector.GoalkeeperMechanics
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-28 | —      | Initial implementation. |
+// | 1.1     | 2026-08-03 | —      | ERR-011-008: + ParkBall() — the ball-side half of §3.5.2's claim, |
+// |         |            |        | which had no seam (ApplyKick is a kick, and the possession flag  |
+// |         |            |        | alone leaves the ball travelling). See the conversion-at-contact |
+// |         |            |        | pass, docs/tracking/gk-conversion-at-contact-design.md.           |
 #endregion

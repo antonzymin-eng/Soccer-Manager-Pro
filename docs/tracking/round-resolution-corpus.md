@@ -1,7 +1,16 @@
 # Round-Resolution Calibration Corpus — A4a
 
 > **Created:** July 26, 2026
-> **Status (current):** **STEP 0 PASSED July 28, 2026 — the corpus is worth fitting for the first time.**
+> **Status (current):** **STEP 0 PASSED July 28, 2026 — the corpus is worth fitting for the first
+> time — but the goal rate has MOVED TWICE since that run, so Step 0 must be re-run before the
+> corpus.** §5.Z.22 (keeper contact rate, July 28) left it at 5.0/match, and **§5.Z.23 (conversion
+> at contact, August 3 — `ERR-011-008`, a keeper's claim never stopped the ball) took it to
+> 3.7/match**, the closest yet to football's ~2.7. A corpus fitted against the July-28 tree would
+> calibrate the quick-sim to a goal rate the engine no longer produces, across a whole 380-fixture
+> league. The pilot is ~33 min and the corpus ~1.4 h, so re-running Step 0 first is cheap insurance;
+> the recipe below is unchanged. Nothing about the July-28 result is retracted — it is superseded.
+>
+> **Original July-28 record follows.**
 > Re-run after the §5.Z.17–§5.Z.21 match-realism chain (shot outcomes → shot speed + woodwork → keeper
 > catch/parry conversion → shot volume; engine goal rate on the diagnostic seeds now 4.7/match vs
 > football's ~2.7). Result over the same 20 keyed matches (spread = 3, dSquad ±6.0):
@@ -192,3 +201,4 @@ or determinism proofs, so the pinned Windows/Unity tuple is not required).
 | 0.1 | 2026-07-26 | — | Initial record. A4a's KD-8 Step 0 pilot executed and REFUSED to proceed: 20/20 engine matches 0–0 at ±6 measured `dSquad`. Characterised to root cause — the ball starts at rest, only a moving ball can be received, and only a possessing agent can kick, so a production match is a closed deadlock (ERR-030-014). Records the evidence, the blast radius, the minimal fix, and why that fix is not attempted inside A4. |
 | 0.2 | 2026-07-26 | — | Post-Phase-H / §5.Z.11 status updates (kept in the header chain): Step 0 re-runnable, then re-ran onto 25–0 scorelines — passing while unfittable (the home/away asymmetry). |
 | 0.3 | 2026-07-28 | — | **Step 0 PASSED** on the post-§5.Z.21 tree: margins +7.100 / −4.700, both directions separate, upsets present, the venue asymmetry down to ~1.5× on margin (§1.b). Instrument fix recorded (LogAssert wrapper — a playing match emits FM-08/FM-03 as ordinary events; harness tests v1.1). Next: the corpus slices + fit, its own roadmap item. |
+| 0.4 | 2026-08-03 | — | Status amended: the goal rate moved again after the §5.Z.22 and §5.Z.23 passes (4.7 → 5.0 → **3.7**/match; §5.Z.23 = ERR-011-008, a keeper's claim never arrested the ball). Step 0 must be re-run before the corpus, or the fit calibrates the quick-sim to a rate the engine no longer produces. Recipe unchanged; the July-28 result is superseded, not retracted. |

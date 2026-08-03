@@ -12,7 +12,64 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 3, 2026 (**PROJECT SKILLS LANDED — six workflow skills under
+> **Last Updated:** August 3, 2026, later same day (**§5.Z.23 — CONVERSION AT CONTACT: the recorded
+> premise was refuted, and the real defect is that a keeper's CATCH never stopped the ball.**
+> `gk-contact-rate-design.md` §7 item 1 recorded the goal-rate residual as *"marginal, end-of-envelope
+> touches whose parries and spills keep the ball alive in the box"*, naming the Stage-0 `pointQuality`
+> lottery and parry placement as the levers. That premise had never been measured. The new per-contact
+> instrument (`GoalConversionDiagnosticTests`, env-gated `TD_CONVERSION_DIAGNOSTIC=1`, 3 full matches on
+> the §5.Z.20–§5.Z.22 seeds) measures ball speed the tick before each contact and at the end of it:
+> **parried 10.8 → 0.0, deflected 10.3 → 4.2, spilled 13.9 → 9.0, missed 9.5 → 9.5 — and caught
+> 11.1 → 10.8**, one tick of drag. **The parries and spills work; the catch does nothing to the ball**,
+> and **7 of 10 catches were followed by a goal within 5 s** (parries and spills: zero), with 14 of 15
+> goals following a keeper contact within 10 s. **ERR-011-008**: #11 §3.5.2's catch branch is TWO
+> statements — `Ball.SetPossessor(gkId)` **and** `ball.velocity = gkHandVelocity` ("parked at hand
+> position") — and only the first was implemented, at both the catch and the Stage-0 smother claim.
+> Possession is a FLAG in this engine, not a kinematic constraint (`RunPhysicsPhase` integrates the ball
+> unconditionally; `CheckRestartAndApply` adjudicates a goal on ball POSITION), so a claimed shot flew
+> on into the net with the keeper recorded as holding it. **§3.5.2's pseudocode body was correct** — the
+> contributing spec defect is §3.5's **Outputs** summary, which named `SetPossessor` alone for the catch,
+> and `IGoalkeeperBallSystem`, which exposed no seam for a park at all, so the omission was invisible
+> from both the summary and the interface. Fixed with `ParkBall()` at both claim sites; summary restated,
+> pseudocode untouched. **Measured (3 full matches, same seeds pre/post): caught-band exit speed
+> 10.8 → 0.0 m/s, goals from caught contacts 7 of 10 → 0 of 11, goals over the corpus 15 → 11
+> (5.0 → 3.7/match — the closest this engine has measured to football's ~2.7), scorelines
+> 2-2/2-0/6-3 → 1-0/2-2/4-2.** At n=3 a 1.3 goals/match delta sits only just above this chain's noise
+> bar; what carries it is that the mechanism's own signature (exit speed 10.8 → 0.0, band goals 7 → 0)
+> does not depend on the goal count at all. **No `SNAPSHOT_SCHEMA_VERSION` change, no new RNG stream /
+> domain tag / draw site, no draw-order change** — the park is a pure write to current-tick ball state.
+> Locked by `match-engine-keeper-claim` (#19 ScenarioRunner, Tier B, 2 seeds × 90 min — full-match
+> windows because a claim is rarer than a contact): **2 of 3 predicates fail on the pre-fix engine,
+> verified by executing the scenario in a worktree at `4b12954` — `travellingAfterClaim = 6 of 6` and
+> `concededWhileHolding = 5 of 6`** — plus `GoalkeeperClaimTests` (3: park XOR kick, per band).
+> **Both levers §5.Z.22 named are recorded NOT fixed, with evidence rather than intent.** The
+> `pointQuality` lottery is confirmed and quantified: quality 0.559 / 0.564 / 0.590 across *rising*
+> contact marginality with catch rate 43% / 38% / **50%** — blind AND inverted — and
+> `HandlingPointErrorSigmaM` provably cancels out of its own formula, a `[GT]` dial whose value cannot
+> matter at any setting. The geometry-aware form was **implemented and measured rather than argued
+> about**: it fixes the direction (0.261 / 0.255 / 0.150) and collapses the level to **zero catches and
+> zero parries** (goals 3.7 → 4.3/match), because mean contact marginality is 0.68 and no `[GT]` inside
+> #11's own ranges lifts the blend back over `CatchThreshold`'s 0.65 floor. **The ladder refuses; the
+> next action is a design decision, not a calibration run.** Parry placement stays out on evidence — it
+> produced zero goals in either corpus. **The creation residual is re-localized and is now a measured
+> stage rather than "possession churn":** 306.7 final-third entries per match (football ~110) but only
+> **20.0 penalty-box entries** (football ~45), and **0.68 shots per BOX entry, ABOVE football's ~0.55** —
+> so neither shot selection nor the box is the bound. The bottleneck is the single transition
+> **final third → penalty area, converting at 6.5% against football's ~40%**. Owner:
+> `docs/tracking/gk-conversion-at-contact-design.md`; match-engine §5.Z.23. **AR-1 (full-gate
+> fallout — one instrument, not the mechanism; the fourth instance of the §5.Z.22 AR-4 class):**
+> `match-engine-shot-speed`'s `mean-shot-distance` predicate failed at 29.77 vs its 24.0 m ceiling.
+> Three measurements settled it — the scenario **passes at the pre-fix commit**; the full-match
+> diagnostic reads 29.5 / 12.9 / 19.5 m across the standing seeds (**21.7 m pooled over 41 strikes**,
+> inside §5.Z.21's landed 16.5–27.1 m band, so no regression); and with everything else fixed the
+> same corpus reads **27.11 m at 18 min, 24.71 m at 45 min, inside the ceiling over full matches**.
+> **The shot-distance distribution is not stationary within a match** — early play is long-shot
+> dominated and close-range strikes accumulate as box penetration develops — and this pass amplified
+> that bias by removing a population of very-close-range REBOUND shots. Fixed in the ESTIMATOR
+> (corpus 2 → 4 seeds, windows 18 min → full matches); **predicates and bounds UNCHANGED**, since a
+> ceiling raised past the current reading would discriminate nothing. Full dotnet gate: **PASSED, 0 failures** (whole tree green, 30 assemblies; match-engine 376 → 376 with the failing shot-speed scenario now green (368 passed / 8 env-gated diagnostics skipped, up from 367 passed / 1 failed), goalkeeper-mechanics 78 passed; quarantine empty, so the full suite is enforced. Match-engine duration 26 m 6 s — up ~9 min, the cost of the new keeper-claim scenario (2 seeds × 90 min) and the shot-speed resize (4 seeds × 90 min); SDK 8.0.129 via apt))
+
+> **Last Updated (prior):** August 3, 2026 (**PROJECT SKILLS LANDED — six workflow skills under
 > `.claude/skills/`; tooling only: no code, no spec, no `src/` change, no gate run.** The recurring
 > workflows this repo runs by hand are now Claude Code skills, checked into the repo rather than a
 > personal skills directory, because each encodes conventions that live here and version with them:

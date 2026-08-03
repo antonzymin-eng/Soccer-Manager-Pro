@@ -35,6 +35,7 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
         {
             public void ApplyKick(Vector3 velocity, Vector3 spin, int agentId, float matchTimeMs) { }
             public void SetPossessor(int agentId) { }
+            public void ParkBall() { }
             public int GetBallPossessorId() => -1;
         }
 
@@ -367,4 +368,5 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
 // |         |            |        | now correctly holds the dive); window expectations anchored at    |
 // |         |            |        | SaveIntent.AttemptCommittedTick (KD-CR5) with commits retimed so  |
 // |         |            |        | elapsed-at-commit brackets requiredReactionMs. Intent preserved.  |
+// | 1.2     | 2026-08-03 | —      | ERR-011-008: SilentBallSystem implements the new ParkBall seam. |
 #endregion

@@ -1,7 +1,7 @@
 # Goalkeeper Mechanics Specification #11 — Section 3: Core Formulas, Algorithms, Pseudocode
 
 **Created:** May 16, 2026
-**Version:** 0.5
+**Version:** 0.6
 **Status:** DRAFT
 **Purpose:** Specify the formulas, algorithms, pseudocode, and
 constant catalogue that govern Goalkeeper Mechanics. All formulas
@@ -562,9 +562,25 @@ subsection prose.
 `reactionWindowAchieved` from §3.2; `clutchFirmness` from intent;
 current state.
 
-**Outputs.** `handlingQualityScalar ∈ [0, 1]`; one of `Ball.SetPossessor`
-(catch) or `Ball.ApplyKick` (parry / deflect / spill) or
+**Outputs.** `handlingQualityScalar ∈ [0, 1]`; exactly one ball-side
+action — `Ball.SetPossessor` **together with the velocity park**
+(catch — see §3.5.2; the claim is TWO effects, not one) or
+`Ball.ApplyKick` (parry / deflect / spill) or none at all beyond
 `SaveAttemptedEvent` with `failureCause` (miss); telemetry label.
+
+> **ERR-011-008 (August 3, 2026).** This summary previously read
+> *"one of `Ball.SetPossessor` (catch) or `Ball.ApplyKick` (…)"*,
+> naming only the possession record for the catch branch while
+> §3.5.2's body carries `ball.velocity = gkHandVelocity`. The
+> implementation followed the summary and omitted the park. Because
+> possession in the composition root is a FLAG and not a kinematic
+> constraint — the ball integrates unconditionally and the goal check
+> adjudicates on ball POSITION — a claimed shot kept its velocity and
+> crossed the line: measured over three full matches, ball speed
+> 11.1 m/s in and 10.8 m/s out of a catch, with 7 of 10 catches
+> followed by a goal within 5 s. The wording above now states the
+> catch's two effects so the summary cannot be read as the whole
+> contract. §3.5.2's body is unchanged — it was correct.
 
 ### 3.5.1 Per-component computation
 
@@ -613,10 +629,17 @@ single-purpose-per-site rule.
 
 ### 3.5.2 Band-to-action mapping (KD-21)
 
+Every contact resolves to **exactly one** ball-side action, and the
+catch branch's action is a PAIR of statements. Both are load-bearing:
+the possession record tells the agent layer who has the ball, and the
+velocity park is what actually stops it. Implementing only the first
+leaves a "claimed" ball still travelling at shot speed (ERR-011-008).
+
 ```
 if handlingQualityScalar >= CATCH_THRESHOLD:
     Ball.SetPossessor(gkId)
     ball.velocity = gkHandVelocity         // parked at hand position
+                                           // (ERR-011-008: NOT optional)
     label = Caught
 elif handlingQualityScalar >= PARRY_THRESHOLD:
     Ball.ApplyKick(parryVelocity(quality, clutchFirmness),
@@ -1002,3 +1025,4 @@ standard rebound physics.
 | 0.3 | June 14, 2026 | impl AR-3 fix pass | §3.3.1 / §3.3.4 lateral dive axis corrected X → Y. The goal mouth spans the Y axis (touchline-to-touchline) per §1.2, so `diveDirectionX = sign(targetHandX − gkX)` and the `reachCenter` X displacement dived the keeper toward/away from its own goal instead of across the goal mouth — shots placed wide in Y were unreachable. Now `diveDirectionY = sign(targetHandY − gkY)` and `reachCenter` displaces along Y with `gkPos.x` fixed. Same axis-error defect class as Ball Physics ERR-001-001 / Decision Tree ERR-008-003. Code: `GoalkeeperDiveKinematics.cs` v1.1, `GoalkeeperMechanics.cs` v1.4 | implementation adversarial review |
 | 0.4 | July 28, 2026 | gk-catch-parry-conversion pass | **ERR-011-005** — §3.2.3 gains its evaluation anchor: the window is computed ONCE at the dive-commit frame and frozen for the §3.5.1 contact blend (the anchor §3.2.5's worked example always described); the implementation's per-frame re-evaluation dated the contact-consumed value by the ball's whole flight time, clamping it to 0. **ERR-011-006** — §3.2.1 gains the stamp lifecycle: the detection stamp dies with its episode (cleared on disarm-without-dive and on save resolution; measured stale stamps dated dives against shots 34–174 s old), and save episodes with no #6 shot event (deflections, rebounds) are stamped by a threat-onset fallback through the same formulas, live-stamp-wins. §3.4.3 `[GT]` recalibration inside spec ranges (`REACTION_BASE_MS` 350 → 220, `REACTION_BALL_SPEED_COEFF` 8 → 3, tolerances 120/80 → 200/140): the engine's discrete commit pipeline lands at ~100–300 ms elapsed, which the human-continuous-time values scored as deep-early ⇒ window ≈ 0 for every dive the engine can produce. Code: `GoalkeeperMechanics.cs` v1.8, `GoalkeeperConstants.cs` v1.3, `MatchEngine.cs` (OnThreatArmed wiring). Header `Version` field (stale at 0.1 against this table since v0.2) consolidated. See `docs/tracking/gk-catch-parry-conversion-design.md` | implementation + measurement (funnel instrument, 3 full matches) |
 | 0.5 | July 28, 2026 | gk-contact-rate pass | **ERR-011-007** — commit-to-arrival timing: new §3.3.6 gates the `Anticipate → Diving` transition on the ball's predicted time-to-plane against a lateral-need-scaled commit lead, so the fixed 600 ms dive envelope covers the ball's ARRIVAL (measured baseline: dive-early in 9 of 15 crossed threat episodes, the dive over 456–2000 ms before the crossing, dive-late exactly 0). §3.1.1 row amended; §3.2.3's `elapsed` anchor refined launch-frame → `SaveIntent.AttemptCommittedTick` (under a held dive the launch is deliberate timing, not reaction — pre-hold the anchors were one stride apart, so §5.Z.20's measured windows stay valid). New `[GT] DIVE_COMMIT_MIN_LEAD_FRAC` (0.25) in §3.4.4. Code: `GoalkeeperDiveKinematics.cs` (TryPredictPlaneCrossing/ComputeDiveCommitLeadS/ShouldCommitDive — one predictor shared with the §3.3.4 dive direction), `GoalkeeperStateMachine.cs`, `GoalkeeperMechanics.cs`, `GoalkeeperConstants.cs`. See `docs/tracking/gk-contact-rate-design.md` | implementation + measurement (per-episode anatomy instrument, 3 full matches) |
+| 0.6 | August 3, 2026 | conversion-at-contact pass | **ERR-011-008** — §3.5's **Outputs** summary named only `Ball.SetPossessor` for the catch branch, while §3.5.2's body carries `ball.velocity = gkHandVelocity` ("parked at hand position"). The implementation followed the summary and omitted the park; because possession in the composition root is a FLAG rather than a kinematic constraint (the ball integrates unconditionally and the goal check adjudicates on ball POSITION), a claimed shot kept its velocity and crossed the line — measured over three full matches: ball speed 11.1 m/s in and **10.8 m/s out** of a catch, **7 of 10 catches followed by a goal within 5 s**, against parry 10.8 → 0.0 and deflect 10.3 → 4.2. §3.5's Outputs now states the catch's TWO effects and §3.5.2 gains the sentence that every contact resolves to exactly one ball-side action, the catch's being a pair. **§3.5.2's pseudocode body is unchanged — it was correct.** Code: `IGoalkeeperBallSystem.cs` v1.1 (+`ParkBall()`), `GoalkeeperMechanics.cs` v1.10 (both claim sites — §3.5.2 catch and the Stage-0 smother), `MatchEngine.cs` (adapter). See `docs/tracking/gk-conversion-at-contact-design.md` | implementation + measurement (per-contact fate instrument, 3 full matches); acceptance 2 of 3 predicates fail pre-fix, verified by execution |
