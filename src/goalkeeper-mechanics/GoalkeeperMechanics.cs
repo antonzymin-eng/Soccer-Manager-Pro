@@ -690,10 +690,14 @@ namespace TacticalDirector.GoalkeeperMechanics
 
                             EventBusStub.Publish(in saveEvt);
 
-                            // If caught: Ball.SetPossessor + BallClaimedEvent
+                            // If caught: §3.5.2's catch branch is TWO statements — the possession
+                            // record AND the velocity park ("parked at hand position"). ERR-011-008:
+                            // only the first was implemented, and possession is a flag here, not a
+                            // kinematic constraint, so a caught shot carried on into the goal.
                             if (handlingQualityScalar >= GoalkeeperConstants.CatchThreshold)
                             {
                                 _ballSystem.SetPossessor(agentId);
+                                _ballSystem.ParkBall();
                                 _claimTick[gkIndex] = currentFrame / GoalkeeperConstants.FramesPerTacticalTick;
                                 _releaseTickEarliest[gkIndex] = _claimTick[gkIndex] + 1;
 
@@ -832,7 +836,9 @@ namespace TacticalDirector.GoalkeeperMechanics
                         _contactStates[gkIndex].HandlingQualityScalar = handlingQualityScalar;
                         _contactStates[gkIndex].ActualContactFrame = currentFrame;
 
+                        // ERR-011-008 — a smother is a claim: park the ball as the catch branch does.
                         _ballSystem.SetPossessor(agentId);
+                        _ballSystem.ParkBall();
                         _claimTick[gkIndex] = currentFrame / GoalkeeperConstants.FramesPerTacticalTick;
                         _releaseTickEarliest[gkIndex] = _claimTick[gkIndex] + 1;
 
@@ -1120,4 +1126,13 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |     |            |   | one stride from the launch anchor, so SS5.Z.20's measured windows stay valid; |
 // |     |            |   | ComputeDiveDirectionLateral now delegates to TryPredictPlaneCrossing (one     |
 // |     |            |   | derivation for direction AND timing).                                         |
+// | 1.10    | 2026-08-03 | —      | ERR-011-008: both claim sites (the §3.5.2 catch and the |
+// |         |            |        | Stage-0 smother/1v1) now call _ballSystem.ParkBall()   |
+// |         |            |        | beside SetPossessor — §3.5.2's catch branch is TWO      |
+// |         |            |        | statements and only the possession record was written.  |
+// |         |            |        | Possession is a flag, not a kinematic constraint, so a  |
+// |         |            |        | claimed shot kept its velocity and entered the net      |
+// |         |            |        | (measured 11.1 m/s in, 10.8 m/s out; 7 of 10 catches    |
+// |         |            |        | conceding within 5 s). See                              |
+// |         |            |        | docs/tracking/gk-conversion-at-contact-design.md.       |
 #endregion

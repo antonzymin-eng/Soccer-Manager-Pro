@@ -310,8 +310,10 @@ evidence. The two that need a review step invoke `adversarial-review` rather tha
 > **When resolving an issue, move its entry to the resolved archive in the same
 > commit.** Do not re-inline entries into this file.
 
-**10 active** / 41 resolved. *Re-filed August 2, 2026 — eight entries archived (six closed-but-unmoved, plus a duplicated pair); three titles amended to lead with what remains open rather than what has landed.*
+**12 active** / 41 resolved. *Re-filed August 2, 2026 — eight entries archived (six closed-but-unmoved, plus a duplicated pair); three titles amended to lead with what remains open rather than what has landed.*
 
+- Conversion at contact — the CLAIM defect FIXED (ERR-011-008, §5.Z.23); REMAINDER: the `pointQuality` lottery is blocked on a design decision (measured: the geometry-aware form collapses catches to zero and no `[GT]` in range recovers them), and parry placement is unfixed but currently costless
+- Close-chance creation — the bottleneck is the final-third → penalty-area transition (6.5% vs football's ~40%); once in the box this engine already shoots ABOVE football's rate. Supersedes §5.Z.21's "possession churn" framing
 - Injury / aging research alignment — design supplement OPENED, AR-converged, awaiting owner sign-off
 - Foul/card heuristic issues ~7 red cards per 9 minutes of played football — the most visible unrealism in a match now that matches actually play
 - `EnvironmentFingerprint.floatModelHash` — hasher + §4.8.3 Mono mapping LANDED (Option A); §4.8.2 runtime MXCSR gate code LANDED (July 21, 2026); compiled plugin + certified live read LANDED July 22, 2026 (ERR-016-006) — REMAINDER: `SaveManager` still writes `Fingerprint = null`; load-bearing only where a real cert run reads a `SaveManager`-written save — no longer host-blocked (the certification host block cleared July 19, 2026 and the MXCSR plugin host block cleared July 22, 2026); the gap is unimplemented code, not host access

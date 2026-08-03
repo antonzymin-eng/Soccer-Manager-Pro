@@ -45,6 +45,7 @@
 // Modified: 2026-07-28 (shot-speed pass (KD-6): _prevTickBallPosition capture + swept goal-frame call in RunPhysicsPhase, crossing-point CheckBoundaries overload in CheckRestartAndApply, TestOnly_WoodworkStrikes. Within-tick + diagnostic state only — no SNAPSHOT_SCHEMA_VERSION change. See docs/tracking/shot-speed-woodwork-design.md)
 // Modified: 2026-07-28 (gk-catch-parry-conversion (ERR-011-006): the armed branch calls GoalkeeperMechanics.OnThreatArmed each stride — the episode-onset detection-stamp fallback, a no-op once stamped, so no new engine state; + TestOnly_ShotContacts genuine-strike diagnostic counter (the WoodworkStrikes class) counted where NotifyKeeperOfShot verifies the strike. No schema change. See docs/tracking/gk-catch-parry-conversion-design.md)
 // Modified: 2026-07-28 (keeper-contact pass: + TestOnly_LastShotStrikePosition/Velocity — the strike-TIME ball state, captured beside the _shotContacts increment (the WoodworkStrikes diagnostic class, not serialized), so instruments no longer sample end-of-tick BallView a same-tick touch may already have reversed. No schema change. See docs/tracking/gk-contact-rate-design.md)
+// Modified: 2026-08-03 (conversion-at-contact pass (ERR-011-008): GkHeadingWorldAdapter.ParkBall() — the ball-side half of #11 §3.5.2's claim, which had no seam (ApplyKick is a kick). Zeroes _ball.Velocity/AngularVelocity; no ball-state-machine transition, no RNG draw, no cross-tick state, so no SNAPSHOT_SCHEMA_VERSION change. A claimed shot previously kept its velocity and entered the net. See docs/tracking/gk-conversion-at-contact-design.md)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -6804,6 +6805,15 @@ namespace TacticalDirector.MatchEngine
             }
 
             public void SetPossessor(int agentId) => _engine._possessingAgentId = agentId;
+
+            /// <summary>ERR-011-008 — the ball-side half of #11 §3.5.2's claim. Writes only
+            /// <c>_ball</c> (already serialized); no ball-state-machine transition, no RNG draw, no
+            /// cross-tick state, so nothing new enters the snapshot.</summary>
+            public void ParkBall()
+            {
+                _engine._ball.Velocity = Vector3.zero;
+                _engine._ball.AngularVelocity = Vector3.zero;
+            }
 
             public int GetBallPossessorId() => _engine._possessingAgentId;
 

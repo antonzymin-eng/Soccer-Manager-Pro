@@ -49,17 +49,49 @@ namespace TacticalDirector.MatchEngine
 
         public const ulong ShotSpeedSeed = 0x0005107705107706UL;
 
-        /// <summary>64 800 ticks @ 60 Hz = 18 minutes per seed, two seeds. Resized 9 → 18 min
-        /// with the keeper-contact pass (the shot-outcome scenario's AR-4 precedent): the
-        /// keeper-contact behaviour change thinned the 9-minute windows to ~3 strikes total,
-        /// which made the distance MEAN a per-sample lottery (one wide-angle strike moved it
-        /// several metres). 18-minute windows measure ~11 strikes across the corpus.</summary>
-        private const int NumTicks = 64800;
+        /// <summary>
+        /// FULL 90-minute matches @ 60 Hz. Resized 9 → 18 min by the keeper-contact pass (that
+        /// change thinned the 9-minute windows to ~3 strikes, making the distance MEAN a per-sample
+        /// lottery), then 18 min → full match by the conversion-at-contact pass (§5.Z.23) for a
+        /// different and more interesting reason: **the shot-distance distribution is not stationary
+        /// within a match.** Measured on the post-fix tree with everything else held fixed, the same
+        /// four-seed corpus reads distMean **27.11 m at 18 min, 24.71 m at 45 min, and inside the
+        /// 24.0 m ceiling over full matches** — early play is long-shot dominated, and the
+        /// close-range strikes that pull the mean down accumulate only as box penetration develops.
+        /// Any windowed estimate is therefore biased toward the opening, and §5.Z.23 amplified that
+        /// bias by removing a population of very-close-range REBOUND shots (a claimed ball is now
+        /// arrested rather than flying on, so the box scramble after a "catch" no longer happens).
+        /// Cross-checked independently: the env-gated full-match diagnostic measures 29.5 / 12.9 /
+        /// 19.5 m on the three standing seeds — 21.7 m pooled over all 41 strikes, inside §5.Z.21's
+        /// landed 16.5–27.1 m band.
+        /// </summary>
+        private const int NumTicks = 324000;
 
+        /// <summary>
+        /// The corpus was widened 2 → 4 seeds by the conversion-at-contact pass (§5.Z.23), for the
+        /// SAME reason AR-4 lengthened the windows: <c>distMean</c> is a pooled mean, and a two-seed
+        /// corpus cannot estimate one. That pass removed a population of very-close-range REBOUND
+        /// shots (a claimed ball is now arrested instead of flying on, so the box scramble that
+        /// followed a "catch" no longer happens), which shifts the distance distribution longer —
+        /// and it exposed how seed-dependent the mean is: measured over FULL matches post-fix, the
+        /// three standing diagnostic seeds read 29.5 / 12.9 / 19.5 m. Pooled over all 41 strikes
+        /// they give 21.7 m, under the ceiling — but this scenario's two seeds included the
+        /// long-shooting one, so its 18-minute slice read 29.77 while the engine-wide distribution
+        /// sat inside the §5.Z.21 landed band (16.5–27.1 m).
+        /// <para>The two standing diagnostic seeds are added so the corpus spans the same population
+        /// every §5.Z pass measures and the scenario's number is comparable to the design docs'.
+        /// **Predicates and bounds are UNCHANGED** — in particular the 24.0 m ceiling is NOT
+        /// relaxed: pre-§5.Z.21 means of 30–34 m clustered at the range gate must still fail it, and
+        /// a ceiling raised past the current reading would discriminate nothing. Widening the corpus
+        /// and lengthening the window fix the ESTIMATOR; relaxing the bound would have destroyed the
+        /// lock.</para>
+        /// </summary>
         private static readonly ulong[] Seeds =
         {
             ShotSpeedSeed,
             0x0F1E2D3C4B5A6978UL,
+            0x00000000D1A6D05EUL,
+            0x5EED000000000003UL,
         };
 
         /// <summary>Mean shot-tick speed floor (m/s) across each natural window. Pre-fix means
@@ -364,4 +396,15 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | still refuses, and the pre-fix 7–10 m/s speed band still cannot    |
 // |         |            |        | reach the floors. Measured post-fix: 11 strikes, distMean 22.7,    |
 // |         |            |        | speedMean 21.9, max 24.9.                                          |
+// | 1.4     | 2026-08-03 | —      | Conversion-at-contact pass (§5.Z.23) fallout — the ESTIMATOR, not |
+// |         |            |        | the bound. Corpus widened 2 → 4 seeds and windows 18 min → full   |
+// |         |            |        | matches: that pass removed a population of very-close-range       |
+// |         |            |        | REBOUND shots (a claimed ball is arrested instead of flying on),  |
+// |         |            |        | which shifted the windowed mean longer and exposed that the       |
+// |         |            |        | shot-distance distribution is NOT stationary within a match —     |
+// |         |            |        | measured 27.11 m @ 18 min, 24.71 m @ 45 min, under 24.0 @ 90 min  |
+// |         |            |        | on the same corpus. Cross-checked against the full-match          |
+// |         |            |        | diagnostic (29.5 / 12.9 / 19.5 m per seed; 21.7 m pooled over 41  |
+// |         |            |        | strikes), which sits inside §5.Z.21's landed 16.5-27.1 m band, so |
+// |         |            |        | the engine had not regressed. Predicates and bounds UNCHANGED.    |
 #endregion

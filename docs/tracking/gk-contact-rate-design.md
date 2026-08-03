@@ -245,6 +245,22 @@ Full `tools/dotnet-ci/run-gate.sh`: see the §5.Z.22 landing record.
 
 ## 7. Recorded, NOT fixed
 
+> **Follow-up, August 3, 2026 (§5.Z.23 — `gk-conversion-at-contact-design.md`).** Item 1's *lever*
+> was right and its *explanation* was wrong, so the text below is preserved verbatim as the record
+> of what this pass concluded. The next pass measured it per contact before acting: ball speed
+> before → after a contact is **parried 10.8 → 0.0, deflected 10.3 → 4.2, spilled 13.9 → 9.0** —
+> the parries and spills stop the ball — **and caught 11.1 → 10.8**, one tick of drag, with **7 of
+> 10 catches followed by a goal within 5 s** and parries and spills producing none. The residual
+> was not what a marginal touch does; it was that a CLAIM never touched the ball at all
+> (**ERR-011-008** — #11 §3.5.2's catch branch is two statements and only `SetPossessor` was
+> implemented). Fixed; goals 5.0 → 3.7/match. Items 1's two named sub-levers survive as genuine but
+> re-ranked: the `pointQuality` lottery is confirmed blind **and inverted**, and its geometry-aware
+> form was implemented, measured (catches 11 → 0 at every in-range `[GT]`) and reverted — it is now
+> blocked on an owner design decision, not on effort; parry placement produced **zero** goals in
+> either corpus. Item 4 is re-localized: the bound is the final-third → penalty-area transition
+> (6.5% vs football's ~40%), not churn — once in the box this engine already shoots above
+> football's rate.
+
 1. **Conversion at contact is now the goal-rate residual, measured for the first time against a
    realistic contact rate.** A marginal, end-of-envelope touch parries or spills the ball LIVE
    into the box, and the goal count shows the chains that follow. Two named sub-levers:
@@ -280,4 +296,5 @@ Full `tools/dotnet-ci/run-gate.sh`: see the §5.Z.22 landing record.
 | 1.0 | 2026-07-28 | — | Implemented + measured. §1.0 baseline anatomy (9/15 dive-early — timing dominant); §2 KD-CR6 rewritten to the classifier-attribution form actually used; §3 the window-anchor regression iteration (AR-1); §6 measured table (contact rate 35% → 72%, catches 6 → 10, goals 14 → 15 — unchanged at n=3, residual moved to conversion at contact); §7 the conversion/parry-placement residue; §8 AR history to convergence. |
 | 1.1 | 2026-07-28 | — | AR-4 (full-gate fallout): the shot instruments' end-of-tick sampling replaced with the strike-time `TestOnly_LastShotStrike*` seam (a same-tick post-strike touch reversed the sampled velocity — a 13 m strike attributed 92.3 m); shot-speed scenario windows 9 → 18 min/seed; the P1 observer-neutrality window 6 000 → 8 000 ticks against this pass's measured first-restart shift (~3 900 → 7 270). Predicates and bounds unchanged throughout. |
 | 1.2 | 2026-07-28 | — | AR-5 (CI-gate fallout, found by the Linux gate on PR #282 — the third case of the AR-4 instrument class): the #37 MatchAnalytics liveness window no longer carried away possession on its seed (away onset measured moving past tick 1 800, first accrual by 2 400); window re-measured 1 800 → 3 600 ticks, assertions unchanged (`MatchAnalyticsObserverNeutralityTests` v1.1). |
+| 1.3 | 2026-08-03 | — | §7 forward-pointer to §5.Z.23 (`gk-conversion-at-contact-design.md`): item 1's lever was right and its explanation wrong — measured per contact, the parries and spills DO stop the ball (10.8 → 0.0) and the CATCH does not (11.1 → 10.8, 7 of 10 conceding), so the residual was ERR-011-008 (a claim never arrested the ball), not what a marginal touch does. Item 1's original text preserved verbatim; its two sub-levers re-ranked, and item 4 re-localized to the final-third → penalty-area transition. |
 #endregion
