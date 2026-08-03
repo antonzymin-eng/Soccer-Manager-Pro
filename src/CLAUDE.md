@@ -124,6 +124,15 @@ A Physics assembly MUST NOT import from Mechanics or AI; a Mechanics assembly MU
 import from AI. These prohibited import directions are enforced as build errors via
 `.asmdef` reference declarations (FR-CS-046).
 
+**Intra-layer references are permitted; intra-layer cycles are not.** An assembly MAY
+reference another in the same layer — `pressing-ai → positioning-ai` is the standing
+example — but the reference graph as a whole MUST remain acyclic. That is not merely
+convention: Unity rejects circular `.asmdef` references, and `tools/dotnet-ci` emits one
+`<ProjectReference>` per `.asmdef` reference, so a cycle fails the Linux compile gate too.
+The rule is written down because the enforcement is a build error whose message explains
+what broke but not why the constraint exists. It is stated here as a *layer* rule; the
+tier-order proposal in `ERR-020-002` restates it as a tier rule, unchanged in substance.
+
 For upward event notification (e.g., a physics event consumed by AI), use a struct
 event on the event bus — no direct assembly reference (FR-CS-047).
 

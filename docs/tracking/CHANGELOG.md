@@ -12,7 +12,38 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 2, 2026 (**ERR-020-002 + ERR-020-003 filed, both OPEN — the assembly layer
+> **Last Updated:** August 2, 2026, later same day (**Intra-layer acyclicity landed in `src/CLAUDE.md`;
+> `ERR-020-002`'s one open question closed; open-issues re-filing pass — 18 → 10 active.**) Two follow-ups
+> to the taxonomy filing. **(1) Acyclicity.** The proposal left one question for the owner: a flat tier
+> permits intra-tier cycles, and two tiers now carry a real internal order (`match-client-core` →
+> `ui-framework` → `match-client-web`; `season-save` → `living-world`). Sub-ranking Client and Management
+> was the alternative and was rejected as brittle — it would need re-cutting every time a client assembly
+> is added. The sentence is taken: *intra-layer references are permitted; intra-layer cycles are not*
+> (proposed as `FR-CS-046a`, a sub-clause of FR-CS-046 rather than a new FR, so nothing renumbers). It
+> documents an invariant **already enforced mechanically** — verified, not assumed: Unity rejects circular
+> `.asmdef` references, and `tools/dotnet-ci/generate_projects.py` emits one `<ProjectReference>` per
+> `.asmdef` reference (line 157), so a cycle fails the Linux compile gate too. It landed **now** in
+> `src/CLAUDE.md` `### Reference Direction`, where it binds under today's three-layer taxonomy and does not
+> wait on sign-off; §3.5.2 gains the same sentence when the tier order is signed off. `ERR-020-003` also
+> sharpened: `src/CLAUDE.md` is the only one of the three renderings that labels its arrow, so it is the
+> model for the fix rather than a fourth problem. **(2) Re-filing pass over `open-issues.md`** — the
+> second flagged item from the `CLAUDE.md` split, where a deliberately conservative classifier left
+> everything ambiguous in the active file. Eight entries archived: **six closed but never moved** (#18 and
+> #19 both APPROVED May 15, 2026 and stale by fourteen months, their own text already reading "superseded
+> above; entry retained for history"; ERR-030-014, resolved at §5.Z Phase H; the A4a blocker, superseded
+> by its own July-28 UPDATE four days after opening; the Fixed64 scope decision, a decision record rather
+> than an issue; the naming-convention reconciliation, complete May 6, 2026) **plus a duplicated pair** —
+> the tactical-theory entry appears twice, and diffing them showed the copies are not equivalent: one
+> predates the same-day CORRECTED/REVERTED review pass and still lists a test seam the item-(3) revert
+> removed. Both are archived, canonical first, superseded second, so the correction history survives.
+> **Three titles amended** to lead with what remains open rather than what has landed (`floatModelHash`,
+> GK/Heading Phase 1, and the #23–#26 supplements — all four of which are now approved specs, leaving only
+> #26's §9.2 `[GT]` balance review). **Bodies are preserved byte-for-byte** and asserted so before write;
+> the only additions are a dated status clause inside each bold title and one italic *Re-filed* note.
+> Where a title contradicted its own body — two did — the body wins and the note says which. Root
+> `CLAUDE.md`'s index regenerated from the active set: **10 active / 41 resolved**. Prior entry below.)
+
+> **Last Updated (prior):** August 2, 2026 (**ERR-020-002 + ERR-020-003 filed, both OPEN — the assembly layer
 > taxonomy back-prop the `src/CLAUDE.md` split surfaced.**) Spec #20 §3.5.2 places **19 of the 31 assembly
 > folders now in `src/`**; the twelve unplaced are `living-world`, `match-analytics`, `match-client-core`,
 > `match-client-unity`, `match-client-web`, `match-engine`, `match-viewer`, `player-database`,

@@ -288,23 +288,15 @@ promotion). Read the supplement for the *reasoning*; read the spec for the *cont
 > **When resolving an issue, move its entry to the resolved archive in the same
 > commit.** Do not re-inline entries into this file.
 
-**18 active** / 33 resolved.
+**10 active** / 41 resolved. *Re-filed August 2, 2026 — eight entries archived (six closed-but-unmoved, plus a duplicated pair); three titles amended to lead with what remains open rather than what has landed.*
 
-- A played match has a structural home/away scoring asymmetry (~50× football's home advantage) and a goal rate ~10× football's — A4a stays BLOCKED
 - Injury / aging research alignment — design supplement OPENED, AR-converged, awaiting owner sign-off
-- Match engine cannot develop play — every match is 0–0 (ERR-030-014). BLOCKS PM-1 and the A4a calibration; does NOT block PM-2-sim
 - Foul/card heuristic issues ~7 red cards per 9 minutes of played football — the most visible unrealism in a match now that matches actually play
-- `EnvironmentFingerprint.floatModelHash` — hasher + §4.8.3 Mono mapping LANDED (Option A); §4.8.2 runtime MXCSR gate code LANDED (July 21, 2026); compiled plugin + certified live read LANDED July 22, 2026 (ERR-016-006)
-- Goalkeeper Mechanics (#11) / Heading Mechanics (#10) engine integration — Phase 1 (opt-in) LANDED; the GK/Heading attribute projections now have a live consumer
-- Tactical-theory research cross-reference — four cheap-item additions LANDED
-- Advanced positional behaviors + game-model/AI-manager tactics — design supplements OPENED (candidate specs #23–#26)
-- Tactical-theory research cross-reference — four cheap-item additions LANDED
+- `EnvironmentFingerprint.floatModelHash` — hasher + §4.8.3 Mono mapping LANDED (Option A); §4.8.2 runtime MXCSR gate code LANDED (July 21, 2026); compiled plugin + certified live read LANDED July 22, 2026 (ERR-016-006) — REMAINDER: `SaveManager` still writes `Fingerprint = null`; load-bearing only at a certification run, which is host-blocked
+- Goalkeeper Mechanics (#11) / Heading Mechanics (#10) engine integration — Phase 1 (opt-in) LANDED; the GK/Heading attribute projections now have a live consumer — REMAINDER: `CollisionConsumer` AGENT_BALL duel fan-out, DT-emitted HEADER (ordinal 8 → composure-noise rebaseline), attribute-modulated save commit
+- Advanced positional behaviors + game-model/AI-manager tactics — design supplements OPENED (candidate specs #23–#26) — all four promoted to specs and landed; REMAINDER: #26 §9.2 own-`[GT]` balance review
 - Living World (#22) season/world loop — slices 1–7 LANDED (incl. the KD-10 season composition root + the InteractionTextGenerator wired into it + deep-memory auto-cite + the opt-in arc-trigger evaluator / `world.arcs` sub-stream); upstream-gated services open
 - UI / Client Framework (#38) — T0 substrate LANDED; Wave-7 screens + the UGUI binding remain open
 - Presentation layer — minimal match viewer LANDED; interactive Unity client remains open
-- Performance Optimization Strategy (#18) — IN REVIEW
-- Testing Strategy & Framework (#19) — IN REVIEW
 - Approval tags created locally, not yet pushed
-- Fixed64 stage scope decision
-- Superseded files from old naming convention
 - Assembly layer taxonomy (Spec #20 §3.5.2) places 19 of 31 assemblies — ERR-020-002 proposal filed, awaiting owner sign-off

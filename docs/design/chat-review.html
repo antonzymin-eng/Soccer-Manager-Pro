@@ -393,6 +393,87 @@ td.num { font-family:var(--font-mono); font-variant-numeric:tabular-nums; white-
         </div>
       </article>
 
+      <article class="finding sev-med">
+        <div class="stripe"></div>
+        <div class="f-body">
+          <div class="f-top">
+            <span class="pill med">Filed</span>
+            <span class="f-title">Layer taxonomy places 19 of 31 assemblies</span>
+            <span class="f-metric">12 unplaced · ~39% of tree</span>
+          </div>
+          <p>Spec&nbsp;#20 §3.5.2 is the authority on which layer an assembly belongs to, and
+          <code>FR-CS-046</code> ("references flow one direction only") is decided relative to two
+          layer memberships. Twelve assemblies are placed nowhere — including
+          <code>match-engine</code>, so the rule currently decides <em>nothing</em> about any
+          reference into or out of the composition root.</p>
+          <p><strong>ERR-020-002 filed 2 Aug 2026, open, awaiting sign-off.</strong> It proposes a
+          ten-tier order covering all 31 folders, derived from every <code>.asmdef</code> reference
+          list rather than from folder names and checked against the whole graph before being
+          written down: <strong>zero upward references</strong>. Adopting it changes nothing that
+          exists and constrains only future code. Spec&nbsp;#20 itself is deliberately untouched —
+          layer membership needs an owner's decision, and a wrong answer in the authority file is
+          worse than a documented gap. <strong>ERR-020-003</strong> rides along: §3.5.2 draws
+          <code>Physics&nbsp;──►&nbsp;Mechanics&nbsp;──►&nbsp;AI</code> while the root
+          <code>CLAUDE.md</code> states <code>AI&nbsp;→&nbsp;Mechanics&nbsp;→&nbsp;Physics, never
+          the reverse</code> — same rule, opposite arrows, neither labelled.</p>
+          <div class="evidence"><b>verified:</b> 31/31 folders covered · 0 upward references ·
+            29 intra-tier, all pre-existing and acyclic &nbsp;|&nbsp; <b>landed now:</b> the
+            intra-layer acyclicity clause in <code>src/CLAUDE.md</code>, which Unity and the
+            <code>dotnet-ci</code> gate already enforce as a build error</div>
+        </div>
+      </article>
+
+      <article class="finding sev-done">
+        <div class="stripe"></div>
+        <div class="f-body">
+          <div class="f-top">
+            <span class="pill done">Cleared</span>
+            <span class="f-title">Eight closed issues never left the active file</span>
+            <span class="f-metric">18 → 10 active</span>
+          </div>
+          <p>The CLAUDE.md split classified open issues conservatively — anything ambiguous stayed
+          active, on the reasoning that a stale visible entry gets re-filed while a wrongly archived
+          one is forgotten. The re-filing pass then read each against its owning source. Six were
+          closed and never moved: <strong>#18 and #19 were both APPROVED on 15 May 2026</strong> and
+          sat stale for fourteen months, their own text already reading "superseded above; entry
+          retained for history".</p>
+          <p>The duplicated pair was <em>not</em> a clean duplicate. Diffing the two copies showed
+          one predates a same-day CORRECTED/REVERTED review pass and still lists a test seam the
+          revert removed — so both are archived, canonical first, and the correction history
+          survives. Bodies are preserved byte-for-byte; the only additions are a dated status clause
+          in each title and one <em>Re-filed</em> note.</p>
+          <div class="evidence"><b>result:</b> 10 active / 41 resolved · 3 titles amended to lead
+            with what remains open · 2 titles that contradicted their own bodies corrected in the
+            body's favour</div>
+        </div>
+      </article>
+
+      <article class="finding sev-done">
+        <div class="stripe"></div>
+        <div class="f-body">
+          <div class="f-top">
+            <span class="pill done">Cleared</span>
+            <span class="f-title">The analyzer was reporting noise as findings</span>
+            <span class="f-metric">5 findings → 1</span>
+          </div>
+          <p>Running <code>chat-review.py</code> against its own session surfaced a defect in it.
+          It counted <em>harness-generated</em> user turns as user asks, producing
+          <em>"repeated ask, 5×: Continue from where you left off"</em> — a skill suggestion for a
+          message nobody types. It also flagged nine <code>Edit</code> calls inside one session as a
+          script candidate, when that is just the shape of that session's work.</p>
+          <p><strong>Three fixes.</strong> Harness turns are filtered before counting; a repeated
+          prompt or tool shape now needs <strong>two or more distinct sessions</strong> to count as
+          a habit; and the archive-hygiene check moved to <code>open-issues.md</code> — it was
+          previously reachable only when a rules file was oversized, so trimming the rules files had
+          silently disabled it. Rewritten to detect the signal that actually finds stale entries: a
+          <em>body</em> announcing closure under a <em>title</em> that does not.</p>
+          <div class="evidence"><b>regression-checked against the pre-cleanup file:</b> fires on
+            5 of the 8 stale entries plus the duplicate pair; silent on the cleaned file. The other
+            3 needed facts from outside the file (an error-log status, a spec registry row) and are
+            not detectable by any parser — stated rather than papered over</div>
+        </div>
+      </article>
+
       <article class="finding sev-done">
         <div class="stripe"></div>
         <div class="f-body">
@@ -412,8 +493,8 @@ td.num { font-family:var(--font-mono); font-variant-numeric:tabular-nums; white-
           rows, 667/667 tree lines, 22/22 headings retained.</p>
           <div class="evidence"><b>result:</b> 2,630 → 651 lines · 139,676 → 10,215 tokens ·
             <b>−129,461 per src/ session</b> &nbsp;|&nbsp; <b>taxonomy:</b> corrected staleness
-            note — accounts for 19 of 31 assemblies; 12 unlisted; back-prop to Spec #20 §3.5.2
-            still open</div>
+            note — accounts for 19 of 31 assemblies; 12 unlisted; back-prop now filed as
+            ERR-020-002 (above)</div>
         </div>
       </article>
 
@@ -433,7 +514,7 @@ td.num { font-family:var(--font-mono); font-variant-numeric:tabular-nums; white-
           <p><strong>Split on 31 July 2026.</strong> The chain moved to
           <code>docs/tracking/CHANGELOG.md</code>, the entries to <code>open-issues.md</code> and
           <code>open-issues-resolved.md</code>, and CLAUDE.md kept the rules plus a scannable
-          17-line index of active issues. The move was verified lossless before writing: all 50
+          scannable index of active issues. The move was verified lossless before writing: all 50
           entries present exactly once, zero rules lines lost, all durable conventions retained.</p>
           <div class="evidence"><b>result:</b> 1,877 → 309 lines · 97,632 → 5,282 tokens ·
             <b>−92,350 tokens per session start</b> · 8/8 rule sections intact</div>
@@ -451,14 +532,15 @@ td.num { font-family:var(--font-mono); font-variant-numeric:tabular-nums; white-
           <p>A third of the OPEN ISSUES entries announced themselves as resolved and were then
           retained verbatim. The convention behind that — preserving historical rows — is a good
           one; its home is an archive, not the document loaded into every session.</p>
-          <p>All 50 entries now live outside CLAUDE.md: <strong>17 active</strong> in
-          <code>open-issues.md</code>, <strong>33 closed</strong> in
-          <code>open-issues-resolved.md</code>, verbatim and un-deduplicated. Classification was
-          biased conservative — an ambiguous entry stayed active, because a stale active entry is
-          visible and gets re-filed whereas one wrongly archived is forgotten.</p>
-          <div class="evidence"><b>surfaced by the move:</b> three near-duplicate entry pairs
-            (Tactical-theory cross-reference ×2; the superseded Foul/card and
-            "cannot develop play" entries) are now visible in the index and worth a manual pass</div>
+          <p>All 50 entries now live outside CLAUDE.md, verbatim and un-deduplicated. The split
+          classified conservatively — an ambiguous entry stayed active, because a stale active entry
+          is visible and gets re-filed whereas one wrongly archived is forgotten. The re-filing pass
+          on 2 Aug then did exactly that, reading each against its owning source: <strong>10
+          active / 41 resolved</strong>.</p>
+          <div class="evidence"><b>correction:</b> the split reported "three near-duplicate entry
+            pairs" from a scan of index titles. Diffing the bodies found <b>one</b> true duplicate
+            pair — and the two copies were not equivalent, so both were archived rather than
+            merged. The other flagged entries were distinct items with overlapping subject matter</div>
         </div>
       </article>
     </div>
@@ -664,8 +746,8 @@ td.num { font-family:var(--font-mono); font-variant-numeric:tabular-nums; white-
             <td><strong>Split CLAUDE.md.</strong> <span class="pill done" style="vertical-align:2px">Done
               31 Jul</span> Rules stayed; the 54-entry header chain moved to
               <code>docs/tracking/CHANGELOG.md</code>; all 50 OPEN ISSUES entries moved to
-              <code>open-issues.md</code> (17 active) and <code>open-issues-resolved.md</code>
-              (33 closed), leaving a 17-line index.</td>
+              <code>open-issues.md</code> and <code>open-issues-resolved.md</code>, leaving a short
+              index (10 active / 41 resolved after the 2 Aug re-filing pass).</td>
             <td class="num">97,632</td><td class="num">5,282</td>
             <td class="num" style="color:var(--pos)">92,350 tok · $0.58</td>
           </tr>

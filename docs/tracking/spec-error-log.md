@@ -2434,11 +2434,28 @@ acyclic — the `pressing-ai` → `positioning-ai` precedent inside Mechanics es
 is permitted. Adopting the order therefore **changes nothing that exists**; it only constrains what
 can be written next. That is the whole value, and it is also why the cost of adopting it is zero.
 
-**Caveat the owner should rule on.** A flat tier permits intra-tier cycles, and two tiers now carry a
-real internal order (`match-client-core` → `ui-framework` → `match-client-web`; `season-save` →
-`living-world`). Either add "intra-tier references must remain acyclic" as a sentence, or split
-Client and Management into sub-ranks. The first is cheaper and sufficient today; the second is more
-precise and more brittle. Recommendation: the sentence.
+**Intra-tier acyclicity — decided, sentence included.** A flat tier permits intra-tier cycles, and
+two tiers now carry a real internal order (`match-client-core` → `ui-framework` →
+`match-client-web`; `season-save` → `living-world`). The alternative was sub-ranking Client and
+Management, which is more precise and more brittle — it would have to be re-cut every time a client
+assembly is added. The sentence is taken instead, and §3.5.2 gains it verbatim:
+
+> **Intra-layer references are permitted; intra-layer cycles are not.** An assembly MAY reference
+> another assembly in the same layer (`pressing-ai` → `positioning-ai` is the standing example), but
+> the assembly reference graph as a whole MUST remain acyclic (FR-CS-046a).
+
+This documents an invariant that is **already enforced mechanically**, verified rather than assumed:
+Unity rejects circular `.asmdef` references, and `tools/dotnet-ci/generate_projects.py` emits one
+`<ProjectReference>` per `.asmdef` reference (line 157), so a cycle also fails the Linux compile
+gate. Writing it down costs nothing and closes the gap between what the build enforces and what
+§3.5.2 says — a build error reports what broke, not why the constraint exists. The current graph is
+acyclic, so this too changes nothing that exists.
+
+`FR-CS-046a` is proposed as a sub-numbered clause of FR-CS-046 rather than a new FR, since it
+constrains the same rule's residue (what FR-CS-046 leaves undecided *within* a layer) and does not
+renumber anything. The same sentence has already landed in `src/CLAUDE.md` `### Reference Direction`
+as a layer rule, where it binds coding practice today under the existing three-layer taxonomy and
+does not wait on this proposal's sign-off.
 
 **Files Affected:**
 | File | Location | Change |
@@ -2474,7 +2491,9 @@ Physics, never the reverse**)"*. The arrows run opposite ways, and neither file 
 means. Both are self-consistent — #20's reads "is available to", `CLAUDE.md`'s reads "may reference"
 — but a reader who has seen one and then meets the other has to reconstruct which convention is in
 force, on the project's most load-bearing architectural rule. `src/CLAUDE.md` carries a third
-rendering (`### Reference Direction`).
+rendering (`### Reference Direction`) — and it is the only one of the three that **labels its
+notation** (*"`←` means 'is referenced by'"*), which is why it is the model for the fix below rather
+than a fourth problem.
 
 The actual code follows `CLAUDE.md`'s reading: `decision-tree` (AI) references `positioning-ai`
 (Mechanics) references `pass-mechanics` (Physics). No violation exists; this is a notation defect,

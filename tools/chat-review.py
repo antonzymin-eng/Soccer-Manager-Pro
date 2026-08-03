@@ -48,11 +48,29 @@ CACHE_READ_MULT = 0.10
 # ---------------------------------------------------------------------------
 THRESHOLDS = {
     "repeat_prompt_count": 3,        # same prompt shape N+ times => skill candidate
+    "min_sessions": 2,               # ...and in N+ DISTINCT sessions. A run inside one
+                                     # session is just the shape of that task, not a habit.
     "context_tokens": 60_000,        # per-session cached prefix this large => trim it
     "rules_file_tokens": 25_000,     # a single rules file this large => restructure
     "tool_repeat_count": 8,          # same tool+arg shape N+ times => script it
     "resolved_ratio": 0.25,          # >25% of open-issue entries say RESOLVED => archive
 }
+
+# Harness-generated user turns. These arrive with role=user but nobody typed them:
+# compaction resumes, interrupt markers, slash-command echoes, hook output. Counting
+# them produced "repeated ask, 5x: Continue from where you left off" — a skill
+# suggestion for a message the user cannot stop sending.
+HARNESS_PROMPT = re.compile(
+    r"^\s*(?:"
+    r"continue from where you left off"
+    r"|\[request interrupted"
+    r"|caveat: the messages below were generated"
+    r"|this session is being continued from a previous conversation"
+    r"|api error"
+    r"|\[no response requested\]"
+    r")",
+    re.I,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -175,7 +193,8 @@ def analyze_session(path: Path, rows: list[dict]) -> dict:
             if row.get("toolUseResult") is not None:
                 continue
             body = text_of(msg.get("content"))
-            if body and not body.startswith("<") and len(body) > 8:
+            if (body and not body.startswith("<") and len(body) > 8
+                    and not HARNESS_PROMPT.match(body)):
                 prompts.append(body)
 
         elif rtype == "assistant":
@@ -241,13 +260,46 @@ def measure_repo(repo: Path) -> dict:
                 "rules_body": round((j - i) / 4),
                 "open_issues": round((len(text) - j) / 4),
             }
-            issues = text[j:]
-            bullets = len(re.findall(r"^- \*\*", issues, re.M))
-            resolved = len(re.findall(r"RESOLVED", issues))
-            entry["open_issue_bullets"] = bullets
-            entry["resolved_mentions"] = resolved
             entry["last_updated_entries"] = len(re.findall(r"\*\*Last Updated", text[:i]))
         out["rules_files"].append(entry)
+
+    # Archive hygiene. This used to read CLAUDE.md's inlined OPEN ISSUES section;
+    # after the split that section is an index of titles, so the entries — and the
+    # staleness worth catching — live in docs/tracking/open-issues.md. Reading the
+    # index instead would report zero forever, which is worse than not checking.
+    p = repo / "docs/tracking/open-issues.md"
+    if p.exists():
+        issues = p.read_text(encoding="utf-8", errors="replace")
+        entries = re.split(r"(?m)^(?=- \*\*)", issues)[1:]
+        # A title announcing closure is the easy case and, in practice, the rare one:
+        # entries go stale precisely because nobody edited the title. The signal that
+        # actually finds them is a BODY that announces closure under a title that does
+        # not. Markers are deliberately narrow phrases, not bare "resolved" / "✅" —
+        # a live entry's body routinely reports sub-parts as resolved.
+        BODY_CLOSED = re.compile(
+            r"superseded above; entry retained for history"
+            r"|opened and closed"
+            r"|\bUNBLOCKED\b", re.I)
+        TITLE_CLOSED = re.compile(r"\b(RESOLVED|CLOSED|COMPLETE|DONE)\b", re.I)
+        contradicted, closed_titles, seen = [], 0, defaultdict(list)
+        for e in entries:
+            m = re.match(r"- \*\*(.+?)\*\*", e, re.S)
+            if not m:
+                continue
+            title = " ".join(m.group(1).split())
+            body = e[m.end():]
+            seen[re.sub(r"[^a-z0-9 ]", "", title.lower())[:120]].append(title)
+            if TITLE_CLOSED.search(title):
+                closed_titles += 1
+            elif BODY_CLOSED.search(body):
+                contradicted.append(title[:90])
+        out["open_issues"] = {
+            "path": "docs/tracking/open-issues.md",
+            "active_entries": len(entries),
+            "titles_announcing_closure": closed_titles,
+            "body_closed_title_not": contradicted,
+            "duplicate_titles": [v[0][:90] for v in seen.values() if len(v) > 1],
+        }
     return out
 
 
@@ -260,13 +312,19 @@ def build_findings(sessions: list[dict], repo: dict | None) -> list[dict]:
 
     # 1. Repeated prompt shapes across sessions => skill candidates.
     shapes: dict[str, list[str]] = defaultdict(list)
+    shape_sessions: dict[str, set] = defaultdict(set)
     for s in sessions:
         for p in s["prompts"]:
             k = shape_key(p)
             if k:
                 shapes[k].append(p[:200])
+                shape_sessions[k].add(s["session_id"])
     for key, examples in sorted(shapes.items(), key=lambda kv: -len(kv[1])):
         if len(examples) < THRESHOLDS["repeat_prompt_count"]:
+            continue
+        # A habit spans sessions. Three similar asks inside one session is one task
+        # being steered, which is not something a skill would have saved.
+        if len(shape_sessions[key]) < THRESHOLDS["min_sessions"]:
             continue
         findings.append({
             "id": f"repeat/{abs(hash(key)) % 10**6}",
@@ -298,11 +356,17 @@ def build_findings(sessions: list[dict], repo: dict | None) -> list[dict]:
 
     # 3. Repeated identical tool invocations => script it.
     agg: Counter = Counter()
+    tool_sessions: dict[str, set] = defaultdict(set)
     for s in sessions:
         for k, c in s["tools"].items():
             agg[k] += c
+            tool_sessions[k].add(s["session_id"])
     for key, count in agg.most_common(12):
         if count < THRESHOLDS["tool_repeat_count"]:
+            continue
+        # Same rule as prompt shapes: nine Edits inside one session is the shape of
+        # that session's work. A shape worth scripting comes back on another day.
+        if len(tool_sessions[key]) < THRESHOLDS["min_sessions"]:
             continue
         name, _, sig = key.partition("|")
         if not sig:
@@ -342,19 +406,50 @@ def build_findings(sessions: list[dict], repo: dict | None) -> list[dict]:
             "evidence": [json.dumps(sec)] if sec else [],
             "metric": entry["tokens_est"],
         })
-        # 5. Resolved entries retained in the always-loaded file.
-        bullets = entry.get("open_issue_bullets") or 0
-        resolved = entry.get("resolved_mentions") or 0
-        if bullets and resolved / max(bullets, 1) > THRESHOLDS["resolved_ratio"]:
+    # 5. Closed entries still sitting in the live open-issues file. Runs against
+    #    docs/tracking/open-issues.md regardless of rules-file size — it is a
+    #    tracking-hygiene check, and it was previously reachable only when the rules
+    #    file was oversized, so trimming the rules file silently disabled it.
+    oi = (repo or {}).get("open_issues")
+    if oi:
+        bullets, closed = oi["active_entries"], oi["titles_announcing_closure"]
+        if bullets and closed / bullets > THRESHOLDS["resolved_ratio"]:
             findings.append({
-                "id": f"resolved/{entry['path']}",
-                "category": "token-cost",
+                "id": "resolved/open-issues",
+                "category": "workflow",
                 "severity": "medium",
-                "title": f"{resolved} RESOLVED mentions across {bullets} open-issue entries",
-                "detail": "Resolved entries are history, not open issues. Archive them "
-                          "to a sibling file; git already preserves them verbatim.",
-                "evidence": [f"{entry['path']}: {bullets} bullets, {resolved} resolved"],
-                "metric": resolved,
+                "title": f"{closed} of {bullets} active entries have titles announcing closure",
+                "detail": "An entry whose own title says RESOLVED is history, not an open "
+                          "issue. Move it to open-issues-resolved.md in the commit that "
+                          "closes it; git preserves it verbatim either way.",
+                "evidence": [f"{oi['path']}: {bullets} active, {closed} announcing closure"],
+                "metric": closed,
+            })
+        stale = oi.get("body_closed_title_not") or []
+        if stale:
+            findings.append({
+                "id": "stale/open-issues",
+                "category": "workflow",
+                "severity": "medium",
+                "title": f"{len(stale)} active entries whose body says closed but title does not",
+                "detail": "The title is what the CLAUDE.md index shows, so a title that "
+                          "outlived its body misreports project state to every session. "
+                          "Re-read each against its owning source, then archive or retitle.",
+                "evidence": stale[:4],
+                "metric": len(stale),
+            })
+        dupes = oi.get("duplicate_titles") or []
+        if dupes:
+            findings.append({
+                "id": "dupe/open-issues",
+                "category": "workflow",
+                "severity": "low",
+                "title": f"{len(dupes)} duplicated open-issue titles",
+                "detail": "Two entries with the same title are usually one item filed "
+                          "twice — but diff them before merging: the copies may differ, "
+                          "and the later one may record a correction the earlier lacks.",
+                "evidence": dupes[:4],
+                "metric": len(dupes),
             })
 
     order = {"high": 0, "medium": 1, "low": 2}

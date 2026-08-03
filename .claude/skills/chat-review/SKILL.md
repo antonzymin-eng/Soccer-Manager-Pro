@@ -43,6 +43,15 @@ ant messages count-tokens --model claude-opus-5 \
 | `skill-candidate` | Draft a `SKILL.md` under `.claude/skills/<name>/`. Name the trigger conditions, not just the behavior — a skill that does not fire is worth nothing. |
 | `script-candidate` | Add to `tools/`, then reference it from the skill that should invoke it. |
 | `token-cost` | Propose the specific edit and quantify the saving before making it. |
+| `workflow` | Tracking-hygiene drift in `docs/tracking/open-issues.md` — a stale title, a duplicated entry. Re-read each against its owning source before acting; the analyzer detects the *shape*, not the truth. |
+
+**Two rules keep the noise down, and both were added after they misfired.** A repeated
+prompt shape or tool shape counts only if it spans **two or more distinct sessions** —
+nine `Edit` calls inside one session is the shape of that session's work, not a habit
+worth scripting. And harness-generated user turns (`Continue from where you left off.`,
+interrupt markers, compaction resumes, slash-command echoes) are excluded before
+counting; left in, they produced a skill suggestion for a message the user cannot stop
+sending.
 
 ## Report
 
