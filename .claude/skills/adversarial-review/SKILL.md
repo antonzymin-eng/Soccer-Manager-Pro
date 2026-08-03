@@ -209,6 +209,50 @@ When the defect is structural — the top-weighted architecture / maintainabilit
 
 **One limit stays.** A sweeping rewrite — one that reaches well beyond the unit the finding names, or changes a public contract other work depends on — is proposed to the user, not executed inside the loop. Decide its target shape with Fable 5, present it, and let the user call it. Everything short of that, this skill fixes in-loop under the tier routing above.
 
+## Repo obligation — a finding against approved text must be filed
+
+Everything above is general review practice. This section is specific to Tactical Director, and it
+is the step most easily missed: **in this repo a defect found in APPROVED spec text is not resolved
+by fixing the code.** The spec is the contract, `SPEC_INDEX.md` says so, and a code fix that leaves
+the approved text wrong has moved the contradiction rather than closed it. 161 `ERR-` entries exist
+because that rule has been enforced; skip it once and the log stops being trustworthy.
+
+**When it applies.** The finding contradicts, or is contradicted by, text in an APPROVED spec under
+`docs/specs/`. It does *not* apply to a defect wholly inside implementation detail the spec never
+constrains, or to an artifact that has no spec — most reviews file nothing.
+
+**What the fixer owes, at landing:**
+
+1. **An `ERR-` entry** in `docs/tracking/spec-error-log.md` — a summary row in the Error Index plus a
+   body entry. An unresolved finding files as `🟡 Open`; the log is the remediation backlog, not a
+   record of victories only, and filing without resolving is normal.
+2. **The spec text patched, or the entry saying why not.** If the spec is right and the code was
+   wrong, say that in the entry. If layer membership, a `[GT]` value, or anything else needs an
+   owner's decision, file `Open` and stop — do not write a guess into the authority file.
+3. **The landing ritual**, per the root `CLAUDE.md`: a `docs/tracking/CHANGELOG.md` header entry, a
+   `file-manifest.md` row, and a `src/CLAUDE.md` version bump if code changed.
+4. **Back-props named.** A fix with cross-spec consequences files them as their own `ERR-` entries
+   against the consuming specs, landing atomically at approval.
+
+**Allocating the id — grep, never read.** `spec-error-log.md` is over 300 KB; reading it whole to
+pick a number is the single most wasteful habit available here. Ids are `ERR-<spec>-<seq>`:
+
+```bash
+grep -rhoE "ERR-020-[0-9]{3}" docs/ src/ | sort -u | tail -1   # highest used; yours is +1
+```
+
+Search `docs/` **and** `src/`, not just the log. This repo has been bitten three times by a proposed
+id that had already been filed the same day — a design supplement's suggested id is a suggestion to
+re-verify, never a reservation.
+
+**Reviewers file nothing.** A reviewer names the obligation in its finding ("this contradicts #6
+§3.5; needs an `ERR-006-NNN`") and stops. The change that lands performs the ritual. A review that
+proposes work does not perform it.
+
+**On convergence:** this skill terminates when a full pass returns only Low findings or none, which
+is the same bar as this repo's "an L-only round closes the cycle" convention used across 52 design
+supplements. Report the round count as `AR-N` so it matches the surrounding documents.
+
 ## Staying honest
 
 A sharp tone is worthless if the findings are not real — venom plus fabrication is just noise. The rigor is the point; the edge only serves it. Hold the line on both sides:

@@ -652,12 +652,12 @@ td.num { font-family:var(--font-mono); font-variant-numeric:tabular-nums; white-
         </div>
       </article>
 
-      <article class="finding sev-med">
+      <article class="finding sev-done">
         <div class="stripe"></div>
         <div class="f-body">
           <div class="f-top">
-            <span class="pill med">Medium</span>
-            <span class="f-title">adversarial-review: execution rule landed, filing obligation still missing</span>
+            <span class="pill done">Cleared</span>
+            <span class="f-title">adversarial-review didn't know this repo's filing obligations</span>
             <span class="f-metric">281 AR-1 rounds</span>
           </div>
           <p>The global skill terminates when a full pass surfaces no new High or Medium findings.
@@ -671,12 +671,20 @@ td.num { font-family:var(--font-mono); font-variant-numeric:tabular-nums; white-
           execution rule outright — <em>"if an execution environment is available, run the code and
           its tests rather than only reasoning about it… a fixer that did not run the tests has not
           finished"</em> — and adds a 5-round budget with an honest-report-on-non-convergence rule.
-          <strong>Still open:</strong> the filing obligation. Grepping that skill for
-          <code>spec-error-log</code>, <code>ERR-0</code> and <code>back-prop</code> returns
-          <strong>zero hits</strong>, so a reviewer following it can find a defect in approved spec
-          text and never learn that this repo requires an <code>ERR-</code> entry for it. That is a
-          few lines to add, not a rewrite — and it is the half that the 161 existing filings depend
-          on.</p>
+          The filing obligation was absent — grepping that skill for <code>spec-error-log</code>,
+          <code>ERR-0</code> and <code>back-prop</code> returned <strong>zero hits</strong>, so a
+          reviewer following it could find a defect in approved spec text and never learn this repo
+          requires an <code>ERR-</code> entry for it.</p>
+          <p><strong>Closed 3 Aug 2026</strong> with a <em>Repo obligation</em> section: when it
+          applies (approved spec text only — most reviews file nothing), the four things a fixer owes
+          at landing, and the rule that <strong>reviewers name the obligation and file nothing</strong>
+          — the change that lands performs the ritual. It also carries the id-allocation grep, which
+          searches <code>docs/</code> <em>and</em> <code>src/</code> because this repo has been bitten
+          three times by a proposed id already filed the same day, and states that
+          <code>spec-error-log.md</code> at 300&nbsp;KB must never be read whole to pick a number.</p>
+          <div class="evidence"><b>verified:</b> the grep in the skill was executed before it was
+            written down — returns <code>ERR-020-003</code>, the correct highest id, and catches the
+            five files outside the log that also carry it</div>
           <div class="evidence"><b>rounds recorded:</b> AR-1 ×281 · AR-2 ×236 · AR-3 ×143 · AR-4 ×97
             · AR-5 ×59 · deepest cycle AR-13</div>
         </div>
