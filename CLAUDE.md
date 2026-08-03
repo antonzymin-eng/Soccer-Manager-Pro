@@ -18,11 +18,22 @@
 > gap that recurred in **all ten** promotions of the last wave, and the "offline sweep gives the
 > shape, never the value" calibration lesson. **Deliberately NOT duplicated:** `adversarial-review`
 > (40 of the last 200 commits) and `orientation` already exist as personal skills; the two new skills
-> that need a review step invoke them rather than restating them. **Recorded, not fixed:** this
-> header chain currently carries more than one bare `**Last Updated:**` label (the July-27 Track C
-> Phase B entry among them) — the self-contradiction this file has had corrected three times before;
-> left alone here because rewriting historical entries is a separate pass, and `landing-close-out`
-> now encodes the convention so it stops recurring. See `.claude/skills/README.md`. Prior entry below.)
+> that need a review step invoke them rather than restating them.
+> **THREE DEFECTS IN THIS FILE FIXED IN THE SAME PASS, all found by auditing it against the tree
+> rather than reading it:** (1) the header chain carried **five** bare `**Last Updated:**` labels —
+> the July-27 Track C Phase B, July-27 doc-sync, July-27 season-roll and July-26 root-doc entries all
+> kept the current label instead of `(prior)`, leaving the block self-contradictory about its own
+> currency (the defect this file has had corrected three times before, and which #30's `section-2.md`
+> / `section-3.md` hit independently); all four relabelled, entry text untouched. (2) The `src/`
+> assembly map listed **`match-analytics` twice** with different Notes — a row added by the July-27
+> doc-sync pass and a second added by the Track C B6 landing; merged into one row carrying both facts
+> (T0-only **and** the no-sim-assembly-may-reference-it layer guard). (3) The production assembly
+> count read **30** in both PROJECT IDENTITY and the REPO STRUCTURE tree; disk has **31** — the count
+> was never updated when `match-client-web` landed in B6, and that assembly *is* present in the map
+> table, so the table and the prose disagreed. **Verified unchanged:** the `53 APPROVED / 0 IN REVIEW
+> / 0 NOT STARTED` and `22 with no assembly` claims both re-derived from `SPEC_INDEX.md` registry rows
+> and the assemblies on disk — correct as written. `landing-close-out` now encodes the one-bare-label
+> convention so (1) stops recurring. See `.claude/skills/README.md`. Prior entry below.)
 > **Last Updated (prior):** July 28, 2026, latest entry of the day (**KEEPER CONTACT RATE — §5.Z.20 §7.1's
 > residual, BOTH NAMED LEVERS LANDED, MEASURED; the goal-rate residual moves to conversion AT
 > contact.** Measured per episode at the ball's goal-plane crossing (new env-gated
@@ -295,7 +306,7 @@
 > **A4a remains blocked — but the reason is now specific: the shot-outcome distribution, not the keeper.**
 > See `docs/tracking/goalkeeper-save-pipeline-design.md` + `match-engine-design.md` §5.Z.17 +
 > `spec-error-log.md` v1.48 + src/CLAUDE.md v2.44. Prior entry below.)
-> **Last Updated:** July 27, 2026, latest same day (**TRACK C PHASE B IS COMPLETE — B3, B4 and B6
+> **Last Updated (prior):** July 27, 2026, latest same day (**TRACK C PHASE B IS COMPLETE — B3, B4 and B6
 > landed and `PM-1` (a playable match) is REACHED.** A person can now open a browser on the running
 > client and watch a real match — live pitch, clock, score, period, restart captions — change a team's
 > mentality / pressing / passing and see it queued and applied on a tick boundary, substitute, pause /
@@ -350,7 +361,7 @@
 > tactic from ten defaults the manager never chose, and the post-match report is the live statistics
 > panel continuing after full time rather than a dedicated screen. **Next: Phase C — #44 discipline,
 > then the season and new-game screens; the objective is PM-2.** Prior entry below.)
-> **Last Updated:** July 27, 2026, later same day (**Documentation sync pass — no code, no spec, no gate
+> **Last Updated (prior):** July 27, 2026, later same day (**Documentation sync pass — no code, no spec, no gate
 > run.** Reconciled the root docs against two code landings that shipped earlier the same day (both on
 > `path-to-playable-roadmap.md` Track C/S and already recorded there and in `spec-error-log.md`, but never
 > folded into this file or `README.md`): **Match Analytics #37 T0** (roadmap item B2) gave that spec a
@@ -440,7 +451,7 @@
 > left intact — they are the reasoning that produced the order, and rewriting them in the past tense
 > would destroy the record of why each spec sits where it does. See `SPEC_INDEX.md` NOTES and the
 > roadmap v0.7 header note.)
-> **Last Updated:** July 27, 2026 (**SEASON-BOUNDARY ROLL LANDED — #30 T3 / path-to-playable A5.
+> **Last Updated (prior):** July 27, 2026 (**SEASON-BOUNDARY ROLL LANDED — #30 T3 / path-to-playable A5.
 > Phase A is complete and PM-2-sim — a playable season, the objective — is REACHED.** A career no longer
 > ends after one season: `SeasonLoop.RollToNextSeason()` finalizes the table, evaluates the board,
 > derives the next seed, regenerates the schedule and calendar, and resets — and two careers from one
@@ -553,7 +564,7 @@
 > thing to look at for match realism (most likely #12 agent spacing or #3's 60° `BehindDotThreshold`
 > cone). See `docs/tracking/foul-discipline-balance-design.md` + `match-engine-design.md` §5.Z.9 +
 > src/CLAUDE.md v2.41.)
-> **Last Updated:** July 26, 2026, latest same day (**ROOT-DOC RECONCILIATION — `CLAUDE.md` + `README.md`
+> **Last Updated (prior):** July 26, 2026, latest same day (**ROOT-DOC RECONCILIATION — `CLAUDE.md` + `README.md`
 > re-based on the actual repo state; no code, no spec, no tracking-doc change.** The two root documents had
 > drifted badly behind the tree they describe: this file's body still said *"All 20 Stage-0 specifications
 > are APPROVED, plus the first Stage-1 forward spec #21"* and *"Ball Physics (#1) and Agent Movement (#2)
@@ -1390,7 +1401,7 @@
 
 **Specifications:** `SPEC_INDEX.md` records **53 APPROVED / 0 IN REVIEW / 0 NOT STARTED — every spec in the registry is approved.** The APPROVED set is the Stage-0 twenty (all APPROVED May 18, 2026) plus 23 Stage-1-forward and management-layer specs (#21–#34, #37, #38, #40–#45, #49). The last ten — #53, #35, #46, #36, #54, #47, #48, #50, #51, #39 — were promoted **and approved** on July 27, 2026, emptying the pre-promotion backlog and closing the specification phase entirely. The only candidate without a spec is **#52** (Multiplayer Transport), deliberately deferred behind the Stage-5 Fixed64 migration. **Approval approves the forward design, not an implementation** — see the live gap below, which is now the project's dominant fact.
 
-**Implementation:** `src/` holds **30 production assemblies**. Every Stage-0 spec is implemented except **#9 Fixed64** (deferred to Stage 5+ by design) and **#20 Code Standards** (a style guide, not a coded subsystem). A `MatchEngine` composition root wires the subsystems into the deterministic-sim 7-phase tick pipeline, and **a production match now plays** — the possession bootstrap (§5.Z Phase H, July 26, 2026) closed ERR-030-014, under which every match had been a 90-minute 0–0 deadlock with the ball never in motion. **Match Analytics #37 T0 landed July 27, 2026** (`src/match-analytics/` — value types + the pure `XgLocationModel`; no engine wiring yet), giving it a `src/` assembly for the first time.
+**Implementation:** `src/` holds **31 production assemblies**. Every Stage-0 spec is implemented except **#9 Fixed64** (deferred to Stage 5+ by design) and **#20 Code Standards** (a style guide, not a coded subsystem). A `MatchEngine` composition root wires the subsystems into the deterministic-sim 7-phase tick pipeline, and **a production match now plays** — the possession bootstrap (§5.Z Phase H, July 26, 2026) closed ERR-030-014, under which every match had been a 90-minute 0–0 deadlock with the ball never in motion. **Match Analytics #37 T0 landed July 27, 2026** (`src/match-analytics/` — value types + the pure `XgLocationModel`; no engine wiring yet), giving it a `src/` assembly for the first time.
 
 **The live gap is now the project's dominant fact.** With the specification phase closed, **22 of the 53
 APPROVED specs have no `src/` assembly at all** — the 12 listed below plus the ten approved on July 27.
@@ -1423,7 +1434,7 @@ Soccer-Manager-Pro/
 │   │   ├── SPEC_INDEX.md           ← Canonical spec numbering and status — 53 folders, all APPROVED
 │   │   └── <spec-folder>/          ← One folder per spec; see SPEC_INDEX.md for the number↔folder map
 │   └── tracking/                   ← Progress, error log, file manifest, roadmaps, design supplements
-├── src/                            ← Implementation (coding began May 19, 2026) — 30 production assemblies
+├── src/                            ← Implementation (coding began May 19, 2026) — 31 production assemblies
 │   ├── CLAUDE.md                   ← Coding guide (read before writing any code)
 │   └── <assembly>/                 ← See the assembly map below
 └── tools/
@@ -1447,13 +1458,12 @@ Do not infer the mapping from the folder name:
 | `player-database` | **#27** Squad / Player Data Layer | Name differs from the spec folder (`squad-player-data/`) |
 | `player-progression` | **#28** | T0 only — draw-free core, not engine-wired |
 | `season-save` | **#30** Season & Competition Loop | Also hosts the league bootstrap and the unified season save-file root |
-| `match-analytics` | **#37** Match Analytics & Statistics | T0 only — value types + `XgLocationModel`; no engine wiring, no aggregator |
+| `match-analytics` | **#37** Match Analytics & Statistics | T0 only — value types + `XgLocationModel`; no engine wiring, no aggregator. Presentation-layer derivation: **no sim assembly may reference it** (guarded mechanically) |
 | `ui-framework` | **#38** UI / Client Framework | T0 substrate only; no screens, no UGUI binding |
 | `performance-optimization`, `testing-strategy` | #18, #19 | Infrastructure only — no game-loop types |
 | `project-constants` | — | Shared `[GT]` config; read-only by all |
 | `match-engine` | — | **Composition root.** Not a numbered spec; governed by `docs/tracking/match-engine-design.md` |
 | `match-viewer`, `match-client-core`, `match-client-unity` | — | Presentation tooling / client seams; not numbered specs |
-| `match-analytics` | **#37** Match Analytics & Statistics | Presentation-layer derivation; no sim assembly may reference it |
 | `match-client-web` | — | **The PM-1 browser match client** (roadmap B6). Not a numbered spec; governed by `docs/tracking/browser-match-client-design.md`. The only assembly above BOTH `ui-framework` and `match-analytics` |
 
 **Rules:**
