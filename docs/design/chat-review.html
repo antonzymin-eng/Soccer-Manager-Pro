@@ -1,0 +1,1256 @@
+<title>Chat Review — Soccer Manager Pro</title>
+
+<style>
+/* ===========================================================================
+   Tokens inherited from docs/design/ui-mockups/assets/tokens.css
+   ("touchline" analyst direction, chosen July 25 2026). Dark is the native
+   ground; the light set is derived from the same ramps so the viewer's theme
+   toggle stays legible in both directions.
+   ======================================================================== */
+:root {
+  --bg-0:#07090c; --bg-1:#0d1015; --bg-2:#14181f; --bg-3:#1c2129; --bg-4:#262c36;
+  --line-1:rgba(255,255,255,.06); --line-2:rgba(255,255,255,.10);
+  --line-3:rgba(255,255,255,.16); --line-4:rgba(255,255,255,.24);
+  --ink-1:#f4f6fa; --ink-2:#c1c7d2; --ink-3:#8a93a3; --ink-4:#5a6371;
+  --brand:#00ff88; --brand-deep:#00b462; --brand-tint:rgba(0,255,136,.10);
+  --brand-tint-2:rgba(0,255,136,.18);
+  --pos:#2ee572; --pos-tint:rgba(46,229,114,.12);
+  --neu:#f5b942; --neu-tint:rgba(245,185,66,.12);
+  --neg:#ff4d5a; --neg-tint:rgba(255,77,90,.12);
+  --info:#4aa8ff; --info-tint:rgba(74,168,255,.12);
+
+  --r-1:2px; --r-2:4px; --r-3:6px; --r-pill:999px;
+  --s-1:4px; --s-2:6px; --s-3:8px; --s-4:12px; --s-5:16px; --s-6:20px;
+  --s-7:24px; --s-8:32px; --s-9:40px; --s-10:56px; --s-12:96px;
+
+  --font-display:"Barlow Condensed","Oswald","Arial Narrow",
+                 "Helvetica Neue Condensed",sans-serif;
+  --font-mono:"JetBrains Mono","IBM Plex Mono",ui-monospace,
+              SFMono-Regular,Menlo,monospace;
+  --font-body:ui-sans-serif,-apple-system,"Segoe UI",Roboto,
+              "Helvetica Neue",sans-serif;
+  --shadow-2:0 4px 16px rgba(0,0,0,.45),0 1px 2px rgba(0,0,0,.6);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg-0:#eef0f4; --bg-1:#f7f8fa; --bg-2:#fff; --bg-3:#fff; --bg-4:#e8ebf0;
+    --line-1:rgba(7,9,12,.08); --line-2:rgba(7,9,12,.13);
+    --line-3:rgba(7,9,12,.20); --line-4:rgba(7,9,12,.30);
+    --ink-1:#0d1015; --ink-2:#333b47; --ink-3:#5a6371; --ink-4:#8a93a3;
+    --brand:#00794a; --brand-deep:#005c33; --brand-tint:rgba(0,121,74,.10);
+    --brand-tint-2:rgba(0,121,74,.16);
+    --pos:#0f8c43; --pos-tint:rgba(15,140,67,.12);
+    --neu:#9a6a00; --neu-tint:rgba(154,106,0,.14);
+    --neg:#c8202f; --neg-tint:rgba(200,32,47,.12);
+    --info:#0f62c4; --info-tint:rgba(15,98,196,.12);
+    --shadow-2:0 4px 16px rgba(7,9,12,.10),0 1px 2px rgba(7,9,12,.10);
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg-0:#eef0f4; --bg-1:#f7f8fa; --bg-2:#fff; --bg-3:#fff; --bg-4:#e8ebf0;
+  --line-1:rgba(7,9,12,.08); --line-2:rgba(7,9,12,.13);
+  --line-3:rgba(7,9,12,.20); --line-4:rgba(7,9,12,.30);
+  --ink-1:#0d1015; --ink-2:#333b47; --ink-3:#5a6371; --ink-4:#8a93a3;
+  --brand:#00794a; --brand-deep:#005c33; --brand-tint:rgba(0,121,74,.10);
+  --brand-tint-2:rgba(0,121,74,.16);
+  --pos:#0f8c43; --pos-tint:rgba(15,140,67,.12);
+  --neu:#9a6a00; --neu-tint:rgba(154,106,0,.14);
+  --neg:#c8202f; --neg-tint:rgba(200,32,47,.12);
+  --info:#0f62c4; --info-tint:rgba(15,98,196,.12);
+  --shadow-2:0 4px 16px rgba(7,9,12,.10),0 1px 2px rgba(7,9,12,.10);
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg-0:#07090c; --bg-1:#0d1015; --bg-2:#14181f; --bg-3:#1c2129; --bg-4:#262c36;
+  --line-1:rgba(255,255,255,.06); --line-2:rgba(255,255,255,.10);
+  --line-3:rgba(255,255,255,.16); --line-4:rgba(255,255,255,.24);
+  --ink-1:#f4f6fa; --ink-2:#c1c7d2; --ink-3:#8a93a3; --ink-4:#5a6371;
+  --brand:#00ff88; --brand-deep:#00b462; --brand-tint:rgba(0,255,136,.10);
+  --brand-tint-2:rgba(0,255,136,.18);
+  --pos:#2ee572; --pos-tint:rgba(46,229,114,.12);
+  --neu:#f5b942; --neu-tint:rgba(245,185,66,.12);
+  --neg:#ff4d5a; --neg-tint:rgba(255,77,90,.12);
+  --info:#4aa8ff; --info-tint:rgba(74,168,255,.12);
+  --shadow-2:0 4px 16px rgba(0,0,0,.45),0 1px 2px rgba(0,0,0,.6);
+  color-scheme: dark;
+}
+
+* { box-sizing:border-box; }
+body {
+  margin:0; background:var(--bg-0); color:var(--ink-2);
+  font-family:var(--font-body); font-size:15px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap { max-width:1140px; margin:0 auto; padding:0 var(--s-6) var(--s-12); }
+
+/* --- masthead ---------------------------------------------------------- */
+.mast {
+  border-bottom:1px solid var(--line-2);
+  background:
+    linear-gradient(180deg,var(--brand-tint) 0%,transparent 62%),
+    var(--bg-1);
+}
+.mast-inner { max-width:1140px; margin:0 auto; padding:var(--s-8) var(--s-6) var(--s-6); }
+.eyebrow {
+  font-family:var(--font-mono); font-size:11px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--brand); margin:0 0 var(--s-4);
+  display:flex; align-items:center; gap:var(--s-3); flex-wrap:wrap;
+}
+.eyebrow::before {
+  content:""; width:22px; height:2px; background:var(--brand); flex:none;
+}
+h1 {
+  font-family:var(--font-display); font-weight:700;
+  font-size:clamp(38px,7vw,72px); line-height:.94; letter-spacing:-.01em;
+  color:var(--ink-1); margin:0 0 var(--s-4); text-wrap:balance;
+  text-transform:uppercase;
+}
+.standfirst {
+  max-width:62ch; font-size:16px; color:var(--ink-2); margin:0 0 var(--s-7);
+}
+.standfirst strong { color:var(--ink-1); font-weight:600; }
+
+/* --- telemetry strip --------------------------------------------------- */
+.telemetry {
+  display:grid; gap:1px; background:var(--line-2);
+  grid-template-columns:repeat(auto-fit,minmax(168px,1fr));
+  border:1px solid var(--line-2); border-radius:var(--r-2); overflow:hidden;
+}
+.tcell { background:var(--bg-2); padding:var(--s-5) var(--s-5) var(--s-4); }
+.tcell dt {
+  font-family:var(--font-mono); font-size:10px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-3); margin:0 0 var(--s-2);
+}
+.tcell dd {
+  margin:0; font-family:var(--font-display); font-weight:700;
+  font-size:34px; line-height:1; color:var(--ink-1);
+  font-variant-numeric:tabular-nums;
+}
+.tcell dd small {
+  display:block; font-family:var(--font-body); font-weight:400; font-size:12px;
+  line-height:1.4; color:var(--ink-3); margin-top:var(--s-2);
+  letter-spacing:0; text-transform:none;
+}
+.tcell.is-alert dd { color:var(--neg); }
+.tcell.is-good dd { color:var(--pos); }
+
+/* --- sections ---------------------------------------------------------- */
+section { margin-top:var(--s-12); scroll-margin-top:var(--s-6); }
+.sec-head { border-top:1px solid var(--line-3); padding-top:var(--s-5); margin-bottom:var(--s-7); }
+.sec-kicker {
+  font-family:var(--font-mono); font-size:10px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--ink-3); margin:0 0 var(--s-3);
+}
+h2 {
+  font-family:var(--font-display); font-weight:700; text-transform:uppercase;
+  font-size:clamp(26px,4vw,40px); line-height:1.02; letter-spacing:-.005em;
+  color:var(--ink-1); margin:0 0 var(--s-3); text-wrap:balance;
+}
+.sec-head p { margin:0; max-width:70ch; color:var(--ink-2); }
+h3 {
+  font-family:var(--font-display); font-weight:600; text-transform:uppercase;
+  font-size:21px; letter-spacing:.01em; color:var(--ink-1);
+  margin:0 0 var(--s-2); line-height:1.15;
+}
+p { margin:0 0 var(--s-4); }
+p:last-child { margin-bottom:0; }
+a { color:var(--brand); text-decoration:none; border-bottom:1px solid var(--brand-tint-2); }
+a:hover { border-bottom-color:var(--brand); }
+code, .mono { font-family:var(--font-mono); font-size:.88em; }
+code {
+  background:var(--bg-3); border:1px solid var(--line-1);
+  border-radius:var(--r-1); padding:1px 5px; color:var(--ink-1);
+}
+strong { color:var(--ink-1); font-weight:600; }
+
+/* --- finding rows ------------------------------------------------------ */
+.ledger { display:flex; flex-direction:column; gap:var(--s-4); }
+.finding {
+  display:grid; grid-template-columns:3px 1fr; gap:0;
+  background:var(--bg-2); border:1px solid var(--line-1);
+  border-radius:var(--r-2); overflow:hidden;
+}
+.stripe { background:var(--ink-4); }
+.finding.sev-high .stripe { background:var(--neg); }
+.finding.sev-med  .stripe { background:var(--neu); }
+.finding.sev-low  .stripe { background:var(--info); }
+.finding.sev-done .stripe { background:var(--pos); }
+.finding.sev-done { opacity:.72; }
+.finding.sev-done .f-title { color:var(--ink-2); }
+.pill.done { color:var(--pos); background:var(--pos-tint); }
+.f-body { padding:var(--s-5) var(--s-6); }
+.f-top {
+  display:flex; align-items:baseline; gap:var(--s-3);
+  flex-wrap:wrap; margin-bottom:var(--s-3);
+}
+.pill {
+  font-family:var(--font-mono); font-size:10px; letter-spacing:.1em;
+  text-transform:uppercase; padding:2px 7px; border-radius:var(--r-pill);
+  border:1px solid currentColor; flex:none;
+}
+.pill.high { color:var(--neg); background:var(--neg-tint); }
+.pill.med  { color:var(--neu); background:var(--neu-tint); }
+.pill.low  { color:var(--info); background:var(--info-tint); }
+.pill.new  { color:var(--brand); background:var(--brand-tint); }
+.f-title { font-family:var(--font-display); font-weight:600; text-transform:uppercase;
+  font-size:19px; color:var(--ink-1); line-height:1.15; }
+.f-metric {
+  margin-left:auto; font-family:var(--font-mono); font-size:12px;
+  color:var(--ink-3); font-variant-numeric:tabular-nums; flex:none;
+}
+.evidence {
+  margin-top:var(--s-4); padding:var(--s-3) var(--s-4);
+  background:var(--bg-1); border-left:2px solid var(--line-3);
+  border-radius:0 var(--r-1) var(--r-1) 0;
+  font-family:var(--font-mono); font-size:12px; color:var(--ink-3);
+  overflow-x:auto;
+}
+.evidence b { color:var(--ink-2); font-weight:500; }
+
+/* --- skill cards ------------------------------------------------------- */
+.grid-2 { display:grid; gap:var(--s-5); grid-template-columns:repeat(auto-fit,minmax(330px,1fr)); }
+.card {
+  background:var(--bg-2); border:1px solid var(--line-1);
+  border-radius:var(--r-2); padding:var(--s-6);
+  display:flex; flex-direction:column; gap:var(--s-3);
+}
+.card-name {
+  font-family:var(--font-mono); font-size:14px; color:var(--brand);
+  letter-spacing:-.01em;
+}
+.card dl { margin:0; display:grid; grid-template-columns:auto 1fr; gap:var(--s-2) var(--s-4); font-size:13.5px; }
+.card dt {
+  font-family:var(--font-mono); font-size:10px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--ink-3); padding-top:4px; white-space:nowrap;
+}
+.card dd { margin:0; color:var(--ink-2); }
+.card-foot { margin-top:auto; padding-top:var(--s-3); border-top:1px solid var(--line-1); }
+
+button {
+  font-family:var(--font-mono); font-size:11.5px; letter-spacing:.06em;
+  text-transform:uppercase; cursor:pointer;
+  background:var(--brand-tint); color:var(--brand);
+  border:1px solid var(--brand-tint-2); border-radius:var(--r-2);
+  padding:var(--s-3) var(--s-5); transition:background .12s,border-color .12s;
+}
+button:hover { background:var(--brand-tint-2); border-color:var(--brand); }
+button:focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
+button[disabled] { opacity:.45; cursor:not-allowed; }
+
+/* --- calculator -------------------------------------------------------- */
+.calc { background:var(--bg-2); border:1px solid var(--line-2); border-radius:var(--r-3); overflow:hidden; }
+.calc-controls {
+  display:grid; gap:var(--s-6); padding:var(--s-6);
+  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  border-bottom:1px solid var(--line-2);
+}
+.ctl label {
+  display:flex; justify-content:space-between; align-items:baseline; gap:var(--s-3);
+  font-family:var(--font-mono); font-size:10px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:var(--s-3);
+}
+.ctl output {
+  font-family:var(--font-display); font-size:24px; font-weight:700;
+  color:var(--ink-1); letter-spacing:0; font-variant-numeric:tabular-nums;
+}
+input[type=range] { width:100%; accent-color:var(--brand); height:22px; }
+input[type=range]:focus-visible { outline:2px solid var(--brand); outline-offset:3px; }
+.calc-out { display:grid; gap:1px; background:var(--line-2); grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); }
+.calc-out div { background:var(--bg-3); padding:var(--s-5); }
+.calc-out dt {
+  font-family:var(--font-mono); font-size:10px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:var(--s-2);
+}
+.calc-out dd {
+  margin:0; font-family:var(--font-display); font-weight:700; font-size:30px;
+  line-height:1; color:var(--ink-1); font-variant-numeric:tabular-nums;
+}
+.calc-out .save dd { color:var(--pos); }
+.calc-note { padding:var(--s-4) var(--s-6); background:var(--bg-2); font-size:12.5px; color:var(--ink-3); }
+
+/* --- dropzone ---------------------------------------------------------- */
+.drop {
+  border:1px dashed var(--line-4); border-radius:var(--r-3);
+  padding:var(--s-9) var(--s-6); text-align:center; background:var(--bg-1);
+  transition:border-color .15s, background .15s;
+}
+.drop.over { border-color:var(--brand); background:var(--brand-tint); }
+.drop h3 { margin-bottom:var(--s-2); }
+.drop p { color:var(--ink-3); font-size:13.5px; max-width:56ch; margin-inline:auto; }
+#dropResult { margin-top:var(--s-5); }
+
+/* --- tables ------------------------------------------------------------ */
+.tablewrap { overflow-x:auto; border:1px solid var(--line-2); border-radius:var(--r-2); }
+table { border-collapse:collapse; width:100%; min-width:560px; font-size:13.5px; }
+th, td { text-align:left; padding:var(--s-4) var(--s-5); border-bottom:1px solid var(--line-1); vertical-align:top; }
+th {
+  font-family:var(--font-mono); font-size:10px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--ink-3); background:var(--bg-3);
+  border-bottom:1px solid var(--line-2); white-space:nowrap;
+}
+tbody tr:last-child td { border-bottom:0; }
+td.num { font-family:var(--font-mono); font-variant-numeric:tabular-nums; white-space:nowrap; }
+
+/* --- lesson list ------------------------------------------------------- */
+.lessons { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:var(--s-5); }
+.lessons li { display:grid; grid-template-columns:auto 1fr; gap:var(--s-5); align-items:start; }
+.lnum {
+  font-family:var(--font-mono); font-size:11px; color:var(--brand);
+  border:1px solid var(--brand-tint-2); background:var(--brand-tint);
+  border-radius:var(--r-1); padding:3px 7px; white-space:nowrap;
+  font-variant-numeric:tabular-nums;
+}
+.lessons h3 { margin-bottom:var(--s-1); }
+.lessons p { font-size:14px; }
+.rule {
+  display:block; margin-top:var(--s-2); padding-left:var(--s-4);
+  border-left:2px solid var(--brand-tint-2); color:var(--ink-1);
+  font-size:13.5px;
+}
+.rule b {
+  font-family:var(--font-mono); font-size:10px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--brand); display:block; margin-bottom:2px;
+}
+
+.foot {
+  margin-top:var(--s-12); padding-top:var(--s-5);
+  border-top:1px solid var(--line-2); font-size:12.5px; color:var(--ink-4);
+}
+.foot code { font-size:11.5px; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition:none !important; animation:none !important; }
+}
+@media (max-width:640px) {
+  .lessons li { grid-template-columns:1fr; gap:var(--s-2); }
+  .lnum { justify-self:start; }
+  .f-metric { margin-left:0; }
+}
+</style>
+
+<header class="mast">
+  <div class="mast-inner">
+    <p class="eyebrow">Claude Code session monitor <span class="mono" style="color:var(--ink-3)">· measured 31 Jul 2026 · 1 session, 39 turns</span></p>
+    <h1>Chat&nbsp;Review</h1>
+    <p class="standfirst">
+      What your Claude Code sessions on <strong>Soccer&nbsp;Manager&nbsp;Pro</strong> repeat, what they
+      cost, and what should be encoded instead of re-derived. Every number below is
+      <strong>measured</strong> from transcript <code>usage</code> fields and repo files — not estimated,
+      except where labelled. This page stays quiet when nothing crosses a threshold.
+      Four findings tripped on the first run. <strong>Both splits have since landed</strong> —
+      the always-loaded rules went from ~237,300 to ~15,500 tokens. <strong>One remains</strong>,
+      and it is a stale measurement that clears itself next session.
+    </p>
+    <dl class="telemetry">
+      <div class="tcell is-good">
+        <dt>CLAUDE.md — after split</dt>
+        <dd>5,282<small>was 97,632. −92,350 tokens per session</small></dd>
+      </div>
+      <div class="tcell is-good">
+        <dt>src/CLAUDE.md — after split</dt>
+        <dd>10,215<small>was 139,676. −129,461 tokens</small></dd>
+      </div>
+      <div class="tcell">
+        <dt>Prefix, projected</dt>
+        <dd>~82k<small>was 203,750 measured. Next session confirms</small></dd>
+      </div>
+      <div class="tcell">
+        <dt>This session</dt>
+        <dd>$26.51<small>39 turns at Opus 5 rates, with caching</small></dd>
+      </div>
+    </dl>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ==================== FINDINGS LEDGER ============================== -->
+  <section id="findings">
+    <div class="sec-head">
+      <p class="sec-kicker">Actionable now</p>
+      <h2>Findings</h2>
+      <p>Sorted by severity, then magnitude. Each one tripped a threshold in
+      <code>tools/chat-review.py</code>; nothing here is an observation for its own sake.</p>
+    </div>
+
+    <div class="ledger">
+      <article class="finding sev-high">
+        <div class="stripe"></div>
+        <div class="f-body">
+          <div class="f-top">
+            <span class="pill high">High</span>
+            <span class="f-title">203,750 tokens load before turn&nbsp;1</span>
+            <span class="f-metric">203,750 tok · $1.27</span>
+          </div>
+          <p>Every session pays to cache a prefix of roughly 204k tokens before doing any
+          work — at Opus&nbsp;5 input rates with the 1.25× cache-write multiplier that is
+          <strong>$1.27 per session start</strong>, then about 10% of it again on every
+          subsequent turn. <code>CLAUDE.md</code> alone is ~48% of that prefix.</p>
+          <div class="evidence"><b>from transcript:</b> cache_creation_input_tokens = 203750 ·
+            cache_creation.ephemeral_1h_input_tokens = 203750 · model = claude-opus-5</div>
+        </div>
+      </article>
+
+      <article class="finding sev-med">
+        <div class="stripe"></div>
+        <div class="f-body">
+          <div class="f-top">
+            <span class="pill med">Filed</span>
+            <span class="f-title">Layer taxonomy places 19 of 31 assemblies</span>
+            <span class="f-metric">12 unplaced · ~39% of tree</span>
+          </div>
+          <p>Spec&nbsp;#20 §3.5.2 is the authority on which layer an assembly belongs to, and
+          <code>FR-CS-046</code> ("references flow one direction only") is decided relative to two
+          layer memberships. Twelve assemblies are placed nowhere — including
+          <code>match-engine</code>, so the rule currently decides <em>nothing</em> about any
+          reference into or out of the composition root.</p>
+          <p><strong>ERR-020-002 filed 2 Aug 2026, open, awaiting sign-off.</strong> It proposes a
+          ten-tier order covering all 31 folders, derived from every <code>.asmdef</code> reference
+          list rather than from folder names and checked against the whole graph before being
+          written down: <strong>zero upward references</strong>. Adopting it changes nothing that
+          exists and constrains only future code. Spec&nbsp;#20 itself is deliberately untouched —
+          layer membership needs an owner's decision, and a wrong answer in the authority file is
+          worse than a documented gap. <strong>ERR-020-003</strong> rides along: §3.5.2 draws
+          <code>Physics&nbsp;──►&nbsp;Mechanics&nbsp;──►&nbsp;AI</code> while the root
+          <code>CLAUDE.md</code> states <code>AI&nbsp;→&nbsp;Mechanics&nbsp;→&nbsp;Physics, never
+          the reverse</code> — same rule, opposite arrows, neither labelled.</p>
+          <div class="evidence"><b>verified:</b> 31/31 folders covered · 0 upward references ·
+            29 intra-tier, all pre-existing and acyclic &nbsp;|&nbsp; <b>landed now:</b> the
+            intra-layer acyclicity clause in <code>src/CLAUDE.md</code>, which Unity and the
+            <code>dotnet-ci</code> gate already enforce as a build error</div>
+        </div>
+      </article>
+
+      <article class="finding sev-done">
+        <div class="stripe"></div>
+        <div class="f-body">
+          <div class="f-top">
+            <span class="pill done">Cleared</span>
+            <span class="f-title">Eight closed issues never left the active file</span>
+            <span class="f-metric">18 → 10 active</span>
+          </div>
+          <p>The CLAUDE.md split classified open issues conservatively — anything ambiguous stayed
+          active, on the reasoning that a stale visible entry gets re-filed while a wrongly archived
+          one is forgotten. The re-filing pass then read each against its owning source. Six were
+          closed and never moved: <strong>#18 and #19 were both APPROVED on 15 May 2026</strong> and
+          sat stale for fourteen months, their own text already reading "superseded above; entry
+          retained for history".</p>
+          <p>The duplicated pair was <em>not</em> a clean duplicate. Diffing the two copies showed
+          one predates a same-day CORRECTED/REVERTED review pass and still lists a test seam the
+          revert removed — so both are archived, canonical first, and the correction history
+          survives. Bodies are preserved byte-for-byte; the only additions are a dated status clause
+          in each title and one <em>Re-filed</em> note.</p>
+          <div class="evidence"><b>result:</b> 10 active / 41 resolved · 3 titles amended to lead
+            with what remains open · 2 titles that contradicted their own bodies corrected in the
+            body's favour</div>
+        </div>
+      </article>
+
+      <article class="finding sev-done">
+        <div class="stripe"></div>
+        <div class="f-body">
+          <div class="f-top">
+            <span class="pill done">Cleared</span>
+            <span class="f-title">The analyzer was reporting noise as findings</span>
+            <span class="f-metric">5 findings → 1</span>
+          </div>
+          <p>Running <code>chat-review.py</code> against its own session surfaced a defect in it.
+          It counted <em>harness-generated</em> user turns as user asks, producing
+          <em>"repeated ask, 5×: Continue from where you left off"</em> — a skill suggestion for a
+          message nobody types. It also flagged nine <code>Edit</code> calls inside one session as a
+          script candidate, when that is just the shape of that session's work.</p>
+          <p><strong>Three fixes.</strong> Harness turns are filtered before counting; a repeated
+          prompt or tool shape now needs <strong>two or more distinct sessions</strong> to count as
+          a habit; and the archive-hygiene check moved to <code>open-issues.md</code> — it was
+          previously reachable only when a rules file was oversized, so trimming the rules files had
+          silently disabled it. Rewritten to detect the signal that actually finds stale entries: a
+          <em>body</em> announcing closure under a <em>title</em> that does not.</p>
+          <div class="evidence"><b>regression-checked against the pre-cleanup file:</b> fires on
+            5 of the 8 stale entries plus the duplicate pair; silent on the cleaned file. The other
+            3 needed facts from outside the file (an error-log status, a spec registry row) and are
+            not detectable by any parser — stated rather than papered over</div>
+        </div>
+      </article>
+
+      <article class="finding sev-done">
+        <div class="stripe"></div>
+        <div class="f-body">
+          <div class="f-top">
+            <span class="pill done">Cleared</span>
+            <span class="f-title">src/CLAUDE.md was ~139,676 tokens</span>
+            <span class="f-metric">139,676 → 10,215 tok</span>
+          </div>
+          <p>The coding guide was <em>larger than the root rules file</em> and loaded whenever a
+          session touched <code>src/</code> — which is most coding sessions. Three things were
+          history rather than rules: the header chain, a 149-row VERSION HISTORY table, and a
+          685-line hand-maintained <code>src/</code> file tree duplicating
+          <code>file-manifest.md</code>.</p>
+          <p><strong>Split on 31 July 2026.</strong> Chain and version table moved to
+          <code>CHANGELOG-src.md</code>, the tree to <code>src-tree.md</code> (marked
+          non-authoritative), and all 19 rule sections stayed. Verified lossless: 149/149 version
+          rows, 667/667 tree lines, 22/22 headings retained.</p>
+          <div class="evidence"><b>result:</b> 2,630 → 651 lines · 139,676 → 10,215 tokens ·
+            <b>−129,461 per src/ session</b> &nbsp;|&nbsp; <b>taxonomy:</b> corrected staleness
+            note — accounts for 19 of 31 assemblies; 12 unlisted; back-prop now filed as
+            ERR-020-002 (above)</div>
+        </div>
+      </article>
+
+      <article class="finding sev-done">
+        <div class="stripe"></div>
+        <div class="f-body">
+          <div class="f-top">
+            <span class="pill done">Cleared</span>
+            <span class="f-title">CLAUDE.md was 95% history, 5% rules</span>
+            <span class="f-metric">97,632 → 5,282 tok</span>
+          </div>
+          <p>The file split cleanly into three parts, and only one was <em>rules</em>: the "Last
+          Updated" header chain at <strong>43%</strong> (~42,952 tokens, 54 entries), OPEN ISSUES
+          at <strong>51%</strong> (~50,132 tokens, 50 entries), and the durable conventions —
+          coordinate system, fatigue convention, constant tags, tick rates, the traps table, the
+          assembly map — at <strong>4.7%</strong>.</p>
+          <p><strong>Split on 31 July 2026.</strong> The chain moved to
+          <code>docs/tracking/CHANGELOG.md</code>, the entries to <code>open-issues.md</code> and
+          <code>open-issues-resolved.md</code>, and CLAUDE.md kept the rules plus a scannable
+          scannable index of active issues. The move was verified lossless before writing: all 50
+          entries present exactly once, zero rules lines lost, all durable conventions retained.</p>
+          <div class="evidence"><b>result:</b> 1,877 → 309 lines · 97,632 → 5,282 tokens ·
+            <b>−92,350 tokens per session start</b> · 8/8 rule sections intact</div>
+        </div>
+      </article>
+
+      <article class="finding sev-done">
+        <div class="stripe"></div>
+        <div class="f-body">
+          <div class="f-top">
+            <span class="pill done">Cleared</span>
+            <span class="f-title">Resolved entries kept in the live rules file</span>
+            <span class="f-metric">33 archived</span>
+          </div>
+          <p>A third of the OPEN ISSUES entries announced themselves as resolved and were then
+          retained verbatim. The convention behind that — preserving historical rows — is a good
+          one; its home is an archive, not the document loaded into every session.</p>
+          <p>All 50 entries now live outside CLAUDE.md, verbatim and un-deduplicated. The split
+          classified conservatively — an ambiguous entry stayed active, because a stale active entry
+          is visible and gets re-filed whereas one wrongly archived is forgotten. The re-filing pass
+          on 2 Aug then did exactly that, reading each against its owning source: <strong>10
+          active / 41 resolved</strong>.</p>
+          <div class="evidence"><b>correction:</b> the split reported "three near-duplicate entry
+            pairs" from a scan of index titles. Diffing the bodies found <b>one</b> true duplicate
+            pair — and the two copies were not equivalent, so both were archived rather than
+            merged. The other flagged entries were distinct items with overlapping subject matter</div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ==================== 1. SKILLS =================================== -->
+  <section id="skills">
+    <div class="sec-head">
+      <p class="sec-kicker">Question one</p>
+      <h2>What should be a skill</h2>
+      <p>Candidates ranked by how often the repo's own history shows the work being repeated.
+      A skill earns its place by being <em>triggered</em>, so each card names the trigger, not
+      just the behavior. Downloads give you a ready <code>SKILL.md</code> scaffold.</p>
+    </div>
+
+    <div class="grid-2">
+      <article class="card">
+        <p class="card-name">.claude/skills/landing-record/</p>
+        <h3>The landing ritual</h3>
+        <p>Four files move together at the end of every substantive change, in a specific format,
+        and the set is easy to under-do under time pressure.</p>
+        <dl>
+          <dt>Trigger</dt><dd>A code or spec change is about to be committed — before the commit, not after.</dd>
+          <dt>Context</dt><dd>Header-entry format and the "prior entry below" chaining rule; when <code>src/CLAUDE.md</code> takes a version bump; <code>file-manifest.md</code> row shape; whether the change files an <code>ERR-</code>; whether <code>SNAPSHOT_SCHEMA_VERSION</code> moved.</dd>
+          <dt>Evidence</dt><dd>58 commits touch <code>CLAUDE.md</code>; of those, 37 also touch <code>src/CLAUDE.md</code>, 34 <code>file-manifest.md</code>, 18 <code>spec-error-log.md</code>.</dd>
+        </dl>
+        <div class="card-foot"><button data-skill="landing-record">Download SKILL.md</button></div>
+      </article>
+
+      <article class="card">
+        <p class="card-name">.claude/skills/err-file/</p>
+        <h3>File an ERR without a collision</h3>
+        <p>The repo has already been bitten by this exact failure: three design supplements
+        proposed <code>ERR-</code> ids that had <em>already been filed</em> the same day, because
+        nothing cross-checks a proposed id against the log.</p>
+        <dl>
+          <dt>Trigger</dt><dd>A defect is found in an approved spec, or a code fix contradicts spec text.</dd>
+          <dt>Context</dt><dd>Grep <code>spec-error-log.md</code> <em>and</em> every spec folder for the next free id in the owning spec's range — never read the 313&nbsp;KB log whole. Entry format, back-prop obligation at approval, and the rule that a proposed id is a suggestion to re-verify, not a reservation.</dd>
+          <dt>Evidence</dt><dd>161 unique <code>ERR-NNN-NNN</code> ids filed; the collision class is documented in <code>CLAUDE.md</code> as an M-severity finding repeated three times.</dd>
+        </dl>
+        <div class="card-foot"><button data-skill="err-file">Download SKILL.md</button></div>
+      </article>
+
+      <article class="card">
+        <p class="card-name">.claude/skills/calibration-pass/</p>
+        <h3>Measure, ladder, land, lock</h3>
+        <p>The most distinctive workflow in this repo and the most repeated — and it carries
+        hard-won rules that are expensive to rediscover.</p>
+        <dl>
+          <dt>Trigger</dt><dd>Any "the engine's X is unrealistic" task: goal rate, foul rate, shot volume, keeper contacts.</dd>
+          <dt>Context</dt><dd>Build an env-gated diagnostic first (<code>TD_*_DIAGNOSTIC=1</code>); measure a baseline over full matches on fixed seeds; sweep the <code>[GT]</code> ladder; <strong>an offline sweep gives the shape, never the value</strong> — take the landing value from a live run; re-measure; lock with a scenario whose pre-fix failure is <em>verified by execution in a worktree at the pre-fix commit</em>, not inferred.</dd>
+          <dt>Evidence</dt><dd>8 distinct <code>TD_*</code> diagnostic instruments; 41 recorded full-gate runs; the foul pass measured 37.5 fouls/90 at the value its offline sweep recommended.</dd>
+        </dl>
+        <div class="card-foot"><button data-skill="calibration-pass">Download SKILL.md</button></div>
+      </article>
+
+      <article class="card">
+        <p class="card-name">.claude/skills/spec-promote/</p>
+        <h3>Supplement to 11-file spec set</h3>
+        <p>Ten specs were promoted in a single wave, each to an identical structure, each needing
+        the same registry and prefix bookkeeping.</p>
+        <dl>
+          <dt>Trigger</dt><dd>A converged <code>docs/tracking/*-design.md</code> is being promoted, or a new spec number is being reserved.</dd>
+          <dt>Context</dt><dd>The 11-file layout; <code>FR-</code> prefix allocation checked against every existing prefix (the proposed <code>FR-PR-</code> once collided with Pressing AI's); <code>SPEC_INDEX.md</code> row added <em>before</em> the folder; back-props filed atomically at approval; sign-off is a human authority and is not self-grantable.</dd>
+          <dt>Evidence</dt><dd>52 of 56 design supplements carry AR cycles; 53 specs in the registry, all approved.</dd>
+        </dl>
+        <div class="card-foot"><button data-skill="spec-promote">Download SKILL.md</button></div>
+      </article>
+    </div>
+
+    <p style="margin-top:var(--s-6);color:var(--ink-3);font-size:13.5px;max-width:72ch">
+      <strong style="color:var(--ink-2)">Not everything repeated should be a skill.</strong>
+      The full dotnet gate runs the same way 41 times over — that is a script
+      (<code>tools/gate.sh</code>: install SDK, run suite, assert the quarantine file is empty),
+      referenced <em>from</em> a skill rather than described in one. The distinction matters:
+      skills carry judgement, scripts carry keystrokes.
+    </p>
+  </section>
+
+  <!-- ==================== 2. IMPROVEMENTS ============================= -->
+  <section id="improve">
+    <div class="sec-head">
+      <p class="sec-kicker">Question two</p>
+      <h2>Improving what exists</h2>
+      <p>Four findings about the skills, scripts and workflows already in play.</p>
+    </div>
+
+    <div class="ledger">
+      <article class="finding sev-high">
+        <div class="stripe"></div>
+        <div class="f-body">
+          <div class="f-top">
+            <span class="pill high">High</span>
+            <span class="f-title">The repo had no project skills at all</span>
+            <span class="f-metric">now 4 · resolved</span>
+          </div>
+          <p>Before this pass there was no <code>.claude/</code> directory. Ten global skills were
+          available; none of them knew anything about this project. So 161 ERR filings, 41 gate
+          runs, 281 AR-1 rounds and 58 landing rituals were each re-derived from a 97.6k-token
+          rules file, every time, by reading prose. That is the single largest source of both
+          token spend and convention drift here — and it is why the four cards above matter more
+          than any individual prompt fix.</p>
+          <p><strong>Resolved from two directions, 2 Aug 2026.</strong> This branch added
+          <code>chat-review</code>; <code>main</code> independently added
+          <code>adversarial-review</code>, <code>advisor</code> and <code>orchestrator</code> plus
+          <code>.claude/README.md</code> and an <code>agents/</code> set. Both branches also arrived
+          at the same <code>.gitignore</code> fix — <code>.claude/*</code> with negations, for the
+          same trailing-slash reason — which is decent evidence the diagnosis was right.</p>
+        </div>
+      </article>
+
+      <article class="finding sev-done">
+        <div class="stripe"></div>
+        <div class="f-body">
+          <div class="f-top">
+            <span class="pill done">Cleared</span>
+            <span class="f-title">adversarial-review didn't know this repo's filing obligations</span>
+            <span class="f-metric">281 AR-1 rounds</span>
+          </div>
+          <p>The global skill terminates when a full pass surfaces no new High or Medium findings.
+          The repo's convention — used across 52 design docs — is that an <em>L-only round closes
+          the cycle</em>, which is compatible but differently stated. The real gap was what the
+          global skill cannot know: that a finding against approved spec text obliges an
+          <code>ERR-</code> filing and a back-prop, and that this repo's most expensive lesson is
+          <strong>verify by execution, not by inference</strong>.</p>
+          <p><strong>Half-resolved on <code>main</code>, 2 Aug 2026</strong>, by a project-scoped
+          <code>adversarial-review</code> written independently of this analysis. It carries the
+          execution rule outright — <em>"if an execution environment is available, run the code and
+          its tests rather than only reasoning about it… a fixer that did not run the tests has not
+          finished"</em> — and adds a 5-round budget with an honest-report-on-non-convergence rule.
+          The filing obligation was absent — grepping that skill for <code>spec-error-log</code>,
+          <code>ERR-0</code> and <code>back-prop</code> returned <strong>zero hits</strong>, so a
+          reviewer following it could find a defect in approved spec text and never learn this repo
+          requires an <code>ERR-</code> entry for it.</p>
+          <p><strong>Closed 3 Aug 2026</strong> with a <em>Repo obligation</em> section: when it
+          applies (approved spec text only — most reviews file nothing), the four things a fixer owes
+          at landing, and the rule that <strong>reviewers name the obligation and file nothing</strong>
+          — the change that lands performs the ritual. It also carries the id-allocation grep, which
+          searches <code>docs/</code> <em>and</em> <code>src/</code> because this repo has been bitten
+          three times by a proposed id already filed the same day, and states that
+          <code>spec-error-log.md</code> at 300&nbsp;KB must never be read whole to pick a number.</p>
+          <div class="evidence"><b>verified:</b> the grep in the skill was executed before it was
+            written down — returns <code>ERR-020-003</code>, the correct highest id, and catches the
+            five files outside the log that also carry it</div>
+          <div class="evidence"><b>rounds recorded:</b> AR-1 ×281 · AR-2 ×236 · AR-3 ×143 · AR-4 ×97
+            · AR-5 ×59 · deepest cycle AR-13</div>
+        </div>
+      </article>
+
+      <article class="finding sev-med">
+        <div class="stripe"></div>
+        <div class="f-body">
+          <div class="f-top">
+            <span class="pill med">Medium</span>
+            <span class="f-title">orientation Step 1 costs ~98k tokens on this repo</span>
+          </div>
+          <p>The <code>orientation</code> skill opens by reading the root rules file — sound
+          advice that happens to cost ~98,000 tokens here <em>before any work begins</em>. This is
+          not a defect in the skill; it is the interaction between a reasonable instruction and an
+          unreasonable file. Fixing the file (finding&nbsp;3) fixes the skill. Until then, a
+          project-scoped note telling orientation to read the rules index and load sections on
+          demand would recover most of it.</p>
+        </div>
+      </article>
+
+      <article class="finding sev-low">
+        <div class="stripe"></div>
+        <div class="f-body">
+          <div class="f-top">
+            <span class="pill low">Low</span>
+            <span class="f-title">tools/ scripts have no trigger mapping</span>
+            <span class="f-metric">4 scripts</span>
+          </div>
+          <p><code>budget-auditor.py</code>, <code>round-resolution-fit.py</code>,
+          <code>select-seed.py</code> and <code>run-perf-local.sh</code> all exist and all work.
+          Nothing tells a session <em>when</em> to reach for them, so they are found by grep if at
+          all. Naming each one's trigger condition inside the relevant skill is a few lines of
+          work that converts dormant tooling into used tooling.</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ==================== 3. TOKEN COST =============================== -->
+  <section id="cost">
+    <div class="sec-head">
+      <p class="sec-kicker">Question three</p>
+      <h2>Where the tokens go</h2>
+      <p>The prefix dominates. The first move has landed — adjust the sliders to price what it
+      saved against your own working pattern. Per-token figures are measured; the volume is
+      yours to set.</p>
+    </div>
+
+    <div class="calc">
+      <div class="calc-controls">
+        <div class="ctl">
+          <label for="sessions">Sessions per month <output id="sessionsOut">40</output></label>
+          <input type="range" id="sessions" min="5" max="200" step="5" value="40">
+        </div>
+        <div class="ctl">
+          <label for="turns">Turns per session <output id="turnsOut">30</output></label>
+          <input type="range" id="turns" min="5" max="120" step="5" value="30">
+        </div>
+      </div>
+      <dl class="calc-out">
+        <div><dt>Before the split</dt><dd id="costNow">—</dd></div>
+        <div><dt>After the split</dt><dd id="costAfter">—</dd></div>
+        <div class="save"><dt>Saved per month</dt><dd id="costSaved">—</dd></div>
+        <div class="save"><dt>Context returned</dt><dd id="ctxSaved">—</dd></div>
+      </dl>
+      <p class="calc-note">
+        Uses the measured split: <code>CLAUDE.md</code> 97,632 → 5,282 tokens, with no change to the remaining
+        ~106k of prefix (system prompt, tool schemas, skill descriptions). Opus 5 input at
+        $5/MTok, cache write ×1.25 on the first turn, cache read ×0.10 thereafter. Output
+        tokens excluded — the restructure does not change them.
+      </p>
+    </div>
+
+    <h3 style="margin-top:var(--s-8)">The three moves, in order of return</h3>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Move</th><th>From</th><th>To</th><th>Saved / session start</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Split CLAUDE.md.</strong> <span class="pill done" style="vertical-align:2px">Done
+              31 Jul</span> Rules stayed; the 54-entry header chain moved to
+              <code>docs/tracking/CHANGELOG.md</code>; all 50 OPEN ISSUES entries moved to
+              <code>open-issues.md</code> and <code>open-issues-resolved.md</code>, leaving a short
+              index (10 active / 41 resolved after the 2 Aug re-filing pass).</td>
+            <td class="num">97,632</td><td class="num">5,282</td>
+            <td class="num" style="color:var(--pos)">92,350 tok · $0.58</td>
+          </tr>
+          <tr>
+            <td><strong>Same treatment for <code>src/CLAUDE.md</code>.</strong>
+              <span class="pill done" style="vertical-align:2px">Done 31 Jul</span> Kept the 19
+              rule sections and the layer taxonomy, with an accurate staleness note; moved the
+              header chain, the 149-row version table, and the 685-line file tree out.</td>
+            <td class="num">139,676</td><td class="num">10,215</td>
+            <td class="num" style="color:var(--pos)">129,461 tok · $0.81</td>
+          </tr>
+          <tr>
+            <td><strong>Grep, don't read.</strong> <code>spec-error-log.md</code> is 313&nbsp;KB
+              and <code>file-manifest.md</code> 284&nbsp;KB; both get read whole during landings.
+              The <code>err-file</code> skill greps for the next free id instead.</td>
+            <td class="num">~149,000</td><td class="num">~2,000</td>
+            <td class="num" style="color:var(--pos)">per landing, not per session</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p style="margin-top:var(--s-5);color:var(--ink-3);font-size:13.5px;max-width:72ch">
+      One caveat worth keeping: rules-file token counts are <code>chars/4</code> estimates. The
+      prefix and per-turn figures are not — those come straight from the
+      <code>cache_creation_input_tokens</code> and <code>cache_read_input_tokens</code> fields
+      Claude Code writes to each transcript. For an exact file count, run
+      <code>ant messages count-tokens --model claude-opus-5 --message '{role: user, content: "@./CLAUDE.md"}'</code>.
+    </p>
+  </section>
+
+  <!-- ==================== 4. LESSONS ================================== -->
+  <section id="lessons">
+    <div class="sec-head">
+      <p class="sec-kicker">Question four</p>
+      <h2>Lessons worth carrying</h2>
+      <p>Drawn from the repo's own record. The first six are Soccer Manager Pro's; the last three
+      generalize to any simulation game. Each ends with the rule it implies.</p>
+    </div>
+
+    <ol class="lessons">
+      <li>
+        <span class="lnum">SMP-1</span>
+        <div>
+          <h3>A test suite can prove the composition runs and never ask whether it works</h3>
+          <p>Every match was 0–0 for months. The ball's velocity was identically zero for entire
+          90-minute matches, possession was never granted, and 321 match-engine tests passed
+          throughout. The capstone asserted tick count, cadence, finiteness, bounds and digest
+          advance — all true of a match in which nothing happens.</p>
+          <span class="rule"><b>Rule</b> Every composition root needs one acceptance test that
+          asserts the outcome the system exists to produce. "It ticks without throwing" is not
+          that test.</span>
+        </div>
+      </li>
+      <li>
+        <span class="lnum">SMP-2</span>
+        <div>
+          <h3>The measurement keeps refuting its own brief</h3>
+          <p>Three times the named lever was the wrong one. The foul rate was framed as a
+          threshold to tune; the threshold turned out to be a cliff, not a dial. "Save quality"
+          was framed as a low number; it was undefined, because the keeper made zero contacts.
+          The keeper pass then tripled contacts and moved goals by nothing at all.</p>
+          <span class="rule"><b>Rule</b> Instrument before fixing, and budget for the diagnosis
+          being wrong. A pass that refutes its own brief is a success, not a failure — but only
+          if it was built to measure rather than to confirm.</span>
+        </div>
+      </li>
+      <li>
+        <span class="lnum">SMP-3</span>
+        <div>
+          <h3>Fixes break instruments, and instrument breakage looks like mechanism breakage</h3>
+          <p>The keeper-contact pass passed its own gate, then failed on two test instruments and
+          a third in CI — none of them defects in the landed mechanisms. Post-strike touches became
+          common enough to break a sampler that read velocity at end-of-tick; a shifted first
+          restart broke a non-vacuity guard; a shifted possession onset broke a liveness window.</p>
+          <span class="rule"><b>Rule</b> When a change moves event frequency or timing, re-validate
+          every test whose sampling window or non-vacuity guard assumes the old distribution —
+          before running the full gate, not after it goes red.</span>
+        </div>
+      </li>
+      <li>
+        <span class="lnum">SMP-4</span>
+        <div>
+          <h3>Symmetric systems need mirrored examples</h3>
+          <p>Three home/away asymmetry defects shipped in the Decision Tree because every spec
+          worked example and every fixture used the home team. Away sides consumed a home-perspective
+          zone map for months.</p>
+          <span class="rule"><b>Rule</b> Any team-relative geometry gets a mirrored test. If the
+          spec has a worked example, it gets a mirrored worked example too.</span>
+        </div>
+      </li>
+      <li>
+        <span class="lnum">SMP-5</span>
+        <div>
+          <h3>"Approved" stopped meaning "exists"</h3>
+          <p>53 specs approved; 22 of them have no <code>src/</code> assembly. For 42% of the
+          registry, approval status says nothing about whether code exists — which is exactly the
+          proxy a reader reaches for.</p>
+          <span class="rule"><b>Rule</b> Track "has a consumer" as a separate column from
+          "approved", and put it where the approval status is read.</span>
+        </div>
+      </li>
+      <li>
+        <span class="lnum">SMP-6</span>
+        <div>
+          <h3>Code that has never compiled is not code</h3>
+          <p>Six spec test suites and one production assembly had never compiled — for months —
+          so every claim of the form "the suite enforces X" was unverifiable. A Linux compile/test
+          gate over the whole tree found eight such surfaces in its first run, and 30 genuine
+          failures in the first execution of 1,165 tests.</p>
+          <span class="rule"><b>Rule</b> Compile the entire tree on every push, from day one.
+          This one is already fixed here — keep it, and never let a suite be quarantined
+          in a way that can grow.</span>
+        </div>
+      </li>
+      <li>
+        <span class="lnum">GEN-1</span>
+        <div>
+          <h3>A playable build asks the only question a spec cannot</h3>
+          <p>Specs answer "is this correct?". Only a build answers "is this any good?". Reaching a
+          playable match surfaced a goal rate roughly ten times football's and a home/away asymmetry
+          around fifty times a real home advantage — both invisible while the work was specification.</p>
+          <span class="rule"><b>Rule</b> Get to a playable slice early and keep it playable, even
+          when the slice is embarrassing. It is the only instrument that measures fun.</span>
+        </div>
+      </li>
+      <li>
+        <span class="lnum">GEN-2</span>
+        <div>
+          <h3>Spec-ahead-of-code is a ratio to manage, not a virtue to maximize</h3>
+          <p>Specify-before-code demonstrably works here — the defect classes found are design
+          defects caught in review rather than bugs found in production. But the frontier ran to
+          42% unimplemented, and every unimplemented spec is a design decision that has not yet
+          met contact with a compiler.</p>
+          <span class="rule"><b>Rule</b> Cap the ratio. When approved-without-consumer passes a
+          threshold you set in advance, the next work item is implementation, not another spec.</span>
+        </div>
+      </li>
+      <li>
+        <span class="lnum">GEN-3</span>
+        <div>
+          <h3>Determinism discipline is cheap up front and expensive to retrofit</h3>
+          <p>Domain tags, subsystem ordinals, draw-site allocation and canonical serialization
+          order all had to be right before anything drew a random number. The places where that
+          discipline was applied late are exactly where the structural errors were filed.</p>
+          <span class="rule"><b>Rule</b> In any simulation intended to replay, save, or go
+          multiplayer, fix the RNG stream layout and serialization order before the first draw
+          site ships — not when the second one needs it.</span>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ==================== LIVE ANALYZER =============================== -->
+  <section id="analyze">
+    <div class="sec-head">
+      <p class="sec-kicker">Keep it live</p>
+      <h2>Analyze a session</h2>
+      <p>Drop a transcript from <code>~/.claude/projects/&lt;project&gt;/</code> to measure it here.
+      Parsing runs entirely in this page — nothing is uploaded, and there is no network call.</p>
+    </div>
+
+    <div class="drop" id="drop">
+      <h3>Drop a .jsonl session file</h3>
+      <p>Or <button type="button" id="pick" style="margin:var(--s-3) 0 0">choose a file</button></p>
+      <input type="file" id="file" accept=".jsonl,application/json" hidden>
+      <div id="dropResult"></div>
+    </div>
+
+    <p style="margin-top:var(--s-6);color:var(--ink-3);font-size:13.5px;max-width:72ch">
+      For the full picture across every session, run the committed analyzer — it reads the same
+      fields, applies the thresholds, and prints findings as JSON:
+      <br><code>python3 tools/chat-review.py --repo . --since 14</code>
+      <br>Or ask Claude Code for <code>/chat-review</code>, which runs it, reads the output, and
+      reports only what tripped.
+    </p>
+  </section>
+
+  <!-- ==================== WHAT ELSE =================================== -->
+  <section id="more">
+    <div class="sec-head">
+      <p class="sec-kicker">You asked what else belongs here</p>
+      <h2>Four additions</h2>
+    </div>
+    <div class="grid-2">
+      <article class="card">
+        <p class="card-name">quiet-by-default</p>
+        <h3>A monitor that mostly says nothing</h3>
+        <p>Every finding on this page is gated on a threshold in the analyzer, and a run that
+        trips nothing prints an empty list. That is deliberate: a dashboard with something to say
+        every day teaches its reader to stop looking. The thresholds are in one dictionary at the
+        top of <code>chat-review.py</code> — raise them when a finding stops being worth acting on.</p>
+      </article>
+      <article class="card">
+        <p class="card-name">repeat-shape detection</p>
+        <h3>Skill candidates that find themselves</h3>
+        <p>The analyzer normalizes each prompt — stripping ids, numbers, filenames and ERR codes —
+        and clusters the shapes. Three or more of the same shape emits a skill candidate with the
+        real prompts as evidence. That closes the loop: you never have to notice the repetition
+        yourself, which is the part humans are worst at.</p>
+      </article>
+      <article class="card">
+        <p class="card-name">gate-cost tracking</p>
+        <h3>What a full gate run actually costs</h3>
+        <p>Not built yet, and worth it: the analyzer already parses per-turn usage, so tagging the
+        turns that run the dotnet gate would give a cost-per-gate-run figure. With 41 recorded runs
+        and a suite that has grown from 1,165 tests, that number decides whether the gate belongs
+        on every push or on a pre-landing checkpoint.</p>
+      </article>
+      <article class="card">
+        <p class="card-name">decision log</p>
+        <h3>The one thing transcripts lose</h3>
+        <p>Sessions record what was done, never what was <em>considered and rejected</em> — and
+        this project's most valuable artifacts are exactly those: the rejected ends-swap, the
+        refused third live-stats accumulator, the Option-B outline killed as unsound. A three-line
+        rejected-alternatives note per landing would preserve the reasoning that the header chain
+        currently buries in prose.</p>
+      </article>
+    </div>
+  </section>
+
+  <p class="foot" style="margin-bottom:var(--s-4)">
+    <b style="color:var(--ink-2)">How this reaches you.</b> This page is static — it has no network
+    access and no model inside it, and it changes only when the HTML is edited and republished.
+    The live path is a <code>SessionStart</code> hook in <code>.claude/settings.json</code>: it runs
+    <code>tools/chat-review.py --hook</code> at session start and prints <em>nothing at all</em> when
+    no threshold trips. Measured cost: <b>0.27&nbsp;s</b> of startup, and ~140 tokens only on the
+    sessions where it does have something to say. Everything else is pull — ask, or run
+    <code>/chat-review</code>, or drop a transcript on the analyzer above.
+  </p>
+  <p class="foot" style="border-top:0;padding-top:0">
+    Generated from one session (39 turns) and the repo at
+    <code>claude/chat-monitoring-skill-optimization-q3i0uw</code>, 31 July 2026.
+    Session and cost figures are measured from transcript <code>usage</code> fields at Opus 5
+    rates; rules-file token counts are <code>chars/4</code> estimates.
+    Regenerate with <code>python3 tools/chat-review.py --repo .</code>;
+    republish to this same URL so the link survives.
+  </p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- token calculator -------------------------------------- */
+  var PRICE_IN = 5.0 / 1e6, W = 1.25, R = 0.10;
+  var PREFIX_NOW = 203750, CLAUDE_NOW = 97632, CLAUDE_AFTER = 5282;
+  var PREFIX_AFTER = PREFIX_NOW - (CLAUDE_NOW - CLAUDE_AFTER);
+
+  var $ = function (id) { return document.getElementById(id); };
+  var usd = function (n) {
+    return n >= 100 ? "$" + Math.round(n).toLocaleString()
+                    : "$" + n.toFixed(n < 10 ? 2 : 1);
+  };
+
+  function monthly(prefix, sessions, turns) {
+    // First turn writes the prefix; each later turn reads it.
+    var perSession = prefix * W + prefix * R * Math.max(turns - 1, 0);
+    return perSession * sessions * PRICE_IN;
+  }
+
+  function recalc() {
+    var s = +$("sessions").value, t = +$("turns").value;
+    $("sessionsOut").textContent = s;
+    $("turnsOut").textContent = t;
+    var now = monthly(PREFIX_NOW, s, t);
+    var after = monthly(PREFIX_AFTER, s, t);
+    $("costNow").textContent = usd(now);
+    $("costAfter").textContent = usd(after);
+    $("costSaved").textContent = usd(now - after);
+    $("ctxSaved").textContent = Math.round((CLAUDE_NOW - CLAUDE_AFTER) / 1000) + "k";
+  }
+  $("sessions").addEventListener("input", recalc);
+  $("turns").addEventListener("input", recalc);
+  recalc();
+
+  /* ---------- SKILL.md scaffolds ------------------------------------ */
+  var SCAFFOLDS = {
+    "landing-record": {
+      desc: "Apply this repo's landing ritual before committing a code or spec change — the CLAUDE.md header entry, spec-error-log filing, file-manifest rows, and src/CLAUDE.md version bump. Use when a substantive change is about to be committed, when the user says a change has landed, or when asked to record or document a landing.",
+      body: "# Landing record\n\nRun this **before** the commit, not after.\n\n## The four files\n\n1. **`CLAUDE.md`** — prepend a `**Last Updated:**` entry. Re-label the previous\n   entry `**Last Updated (prior):**`; the chain is the record and must not break.\n   State what landed, what was measured, and what was deliberately NOT done.\n2. **`docs/tracking/spec-error-log.md`** — only if the change contradicts approved\n   spec text. Use the `err-file` skill; do not assign an id by inspection.\n3. **`docs/tracking/file-manifest.md`** — a row per added or removed file.\n4. **`src/CLAUDE.md`** — version bump when the change touches `src/` conventions.\n\n## Checks before committing\n\n- Did `SNAPSHOT_SCHEMA_VERSION` move? If so, say why, and say whether the digest\n  moves for an unchanged input.\n- Was a new RNG stream, domain tag, or draw site added? If not, state that\n  explicitly — the absence is load-bearing.\n- Did the full gate run, and did the quarantine file stay empty?\n\n## Report\n\nOne paragraph: what landed, the measured effect, and what was left undone.\nDo not paste the diff.\n"
+    },
+    "err-file": {
+      desc: "File a spec-error-log entry with a collision-checked ERR id. Use when a defect is found in approved spec text, when a code fix contradicts a spec, or when the user asks to file an ERR or allocate an ERR id.",
+      body: "# File an ERR\n\n## Allocate the id — do not guess it\n\nA proposed id is a suggestion to re-verify, never a reservation. This repo has\nalready had three proposed ids collide with ids filed the same day.\n\n```bash\n# Highest id already used in the owning spec's range (NNN = spec number):\ngrep -ohE 'ERR-NNN-[0-9]{3}' docs/tracking/spec-error-log.md docs/specs/**/*.md \\\n  | sort -u | tail -1\n```\n\nGrep. Never read `spec-error-log.md` whole — it is over 300 KB and reading it\ncosts more than the entire task.\n\n## Write the entry\n\nMatch the format of neighbouring entries: the defect, the evidence that it is\nreal, the fix, and whether spec text was patched in the same commit. If the\nspec itself was the defect, say so plainly — that is the most useful kind of\nentry in the log.\n\n## Back-props\n\nIf the entry obliges a change in another spec, that change lands **atomically\nwith the approval**, not later. Record which spec owns the back-prop.\n"
+    },
+    "calibration-pass": {
+      desc: "Run a match-engine calibration pass: instrument, measure a baseline, sweep the [GT] ladder, land a value from a live run, re-measure, and lock with a pre-fix-failing scenario. Use for any task of the form 'the engine's X is unrealistic' — goal rate, foul rate, shot volume, keeper contacts, possession churn.",
+      body: "# Calibration pass\n\nThe order is not negotiable. Every step exists because skipping it has cost this\nproject a pass.\n\n## 1. Instrument first\n\nBuild an env-gated diagnostic (`TD_*_DIAGNOSTIC=1`) that reports the funnel, not\nthe endpoint. A funnel localizes *where* a chain breaks; an aggregate only tells\nyou it is empty. The keeper pass found its defect precisely because the funnel\nshowed every stage healthy up to contact, and contact at exactly zero.\n\n## 2. Measure a baseline\n\nFull matches, fixed seeds, recorded. Three matches minimum — and treat n=3 as\nn=3 when reading the result.\n\n## 3. Sweep the ladder offline\n\nReplay the gate across a `[GT]` ladder from one composed run. **This gives the\nshape of the curve and never the value.**\n\n## 4. Land the value from a live run\n\nThe offline sweep once recommended a foul probability that measured 37.5 fouls\nper 90 minutes live, because fewer fouls means fewer restarts, which means play\nruns on, which changes the denominator. Take the landing value from a real match.\n\n## 5. Re-measure on the same seeds\n\nReport pre/post on identical seeds, and report what did **not** move. A pass that\nchanges a mechanism and moves no outcome is a finding worth keeping.\n\n## 6. Lock it\n\nAdd a scenario whose predicates **fail on the pre-fix engine** — and verify that\nby executing it in a worktree at the pre-fix commit. Inferred pre-fix failure is\nnot evidence.\n\n## 7. Re-validate the instruments\n\nIf the change moved event frequency or timing, every test with a sampling window\nor a non-vacuity guard is now suspect. Check them before the full gate, not after\nit goes red.\n"
+    },
+    "spec-promote": {
+      desc: "Promote a converged design supplement to a full 11-file spec folder at IN REVIEW. Use when a docs/tracking/*-design.md has converged and is being promoted, or when reserving a new spec number or FR- prefix.",
+      body: "# Promote a supplement to a spec\n\n## Before the folder exists\n\n1. **Reserve the number in `SPEC_INDEX.md` first.** The registry row lands before\n   the folder, per that file's own rule.\n2. **Allocate the `FR-` prefix against every existing prefix**, not against\n   memory. A proposed `FR-PR-` once collided with Pressing AI's:\n\n   ```bash\n   grep -ohE '\\bFR-[A-Z]{2,3}-' docs/specs/**/*.md | sort -u\n   ```\n\n3. **Re-verify every proposed `ERR-` id** against `spec-error-log.md`. Ids\n   proposed in a supplement are frequently already filed by the time it is\n   promoted.\n\n## The 11-file set\n\nMirror an existing recent spec folder exactly. Sections 1–9 plus appendices plus\nthe approval checklist.\n\n## Stop at IN REVIEW\n\nBack-props land atomically at approval, and lead-developer sign-off is a human\nauthority — it is not self-grantable. A promotion pass ends at `IN REVIEW` and\nsays what remains open.\n"
+    }
+  };
+
+  function scaffold(name) {
+    var s = SCAFFOLDS[name];
+    return "---\nname: " + name + "\ndescription: " + s.desc + "\n---\n\n" + s.body;
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll("button[data-skill]"), function (btn) {
+    btn.addEventListener("click", function () {
+      var name = btn.getAttribute("data-skill");
+      var text = scaffold(name);
+      var label = btn.textContent;
+      if (window.claude && window.claude.downloads && window.claude.downloads.save) {
+        btn.disabled = true;
+        btn.textContent = "Saving…";
+        window.claude.downloads.save({ filename: name + ".SKILL.md", data: text })
+          .then(function () { btn.textContent = "Saved"; })
+          .catch(function () { btn.textContent = "Not saved"; })
+          .then(function () {
+            setTimeout(function () { btn.textContent = label; btn.disabled = false; }, 2200);
+          });
+      } else {
+        // No download capability granted — fall back to the clipboard.
+        var done = function (ok) {
+          btn.textContent = ok ? "Copied to clipboard" : "Copy failed";
+          setTimeout(function () { btn.textContent = label; }, 2200);
+        };
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(text).then(function () { done(true); },
+                                                   function () { done(false); });
+        } else { done(false); }
+      }
+    });
+  });
+
+  /* ---------- client-side transcript analyzer ------------------------ */
+  var STOP = { the:1, a:1, an:1, and:1, or:1, to:1, of:1, "in":1, "for":1, on:1,
+               is:1, it:1, "this":1, that:1, "with":1, please:1, can:1, you:1,
+               i:1, we:1, my:1, me:1 };
+
+  function normalize(s) {
+    return s.toLowerCase()
+      .replace(/\berr-\d{3}-\d{3}\b/g, "<err>")
+      .replace(/\bar-\d+\b/g, "<ar>")
+      .replace(/[a-z0-9_\-/.]+\.(cs|md|py|json|jsonl|html|sh)\b/g, "<file>")
+      .replace(/\b\d[\d,._]*\b/g, "<n>")
+      .replace(/[^a-z<>\s]/g, " ")
+      .split(/\s+/)
+      .filter(function (w) { return w.length > 2 && !STOP[w]; })
+      .join(" ");
+  }
+
+  function textOf(content) {
+    if (typeof content === "string") return content;
+    if (!Array.isArray(content)) return "";
+    return content.filter(function (b) { return b && b.type === "text"; })
+                  .map(function (b) { return b.text || ""; }).join("\n");
+  }
+
+  function analyze(raw) {
+    var u = { input: 0, output: 0, write: 0, read: 0 };
+    var turns = 0, firstWrite = 0, prompts = [], tools = {}, models = {};
+    raw.split("\n").forEach(function (line) {
+      line = line.trim();
+      if (!line) return;
+      var o;
+      try { o = JSON.parse(line); } catch (e) { return; }
+      if (o.type === "user" && o.toolUseResult == null) {
+        var body = textOf((o.message || {}).content);
+        if (body && body.charAt(0) !== "<" && body.length > 8) prompts.push(body);
+      } else if (o.type === "assistant") {
+        var m = o.message || {}, us = m.usage || {};
+        turns++;
+        models[m.model || "?"] = (models[m.model || "?"] || 0) + 1;
+        u.input += us.input_tokens || 0;
+        u.output += us.output_tokens || 0;
+        var cw = us.cache_creation_input_tokens || 0;
+        u.write += cw;
+        u.read += us.cache_read_input_tokens || 0;
+        if (!firstWrite && cw) firstWrite = cw;
+        if (Array.isArray(m.content)) {
+          m.content.forEach(function (b) {
+            if (b && b.type === "tool_use") {
+              tools[b.name] = (tools[b.name] || 0) + 1;
+            }
+          });
+        }
+      }
+    });
+    var cost = (u.input * PRICE_IN) + (u.write * PRICE_IN * W) +
+               (u.read * PRICE_IN * R) + (u.output * 25.0 / 1e6);
+
+    // Repeated prompt shapes.
+    var shapes = {};
+    prompts.forEach(function (p) {
+      var words = normalize(p).split(" ").filter(Boolean);
+      if (words.length < 3) return;
+      var key = words.slice().sort().filter(function (w, i, a) { return a.indexOf(w) === i; })
+                     .slice(0, 12).join(" ");
+      (shapes[key] = shapes[key] || []).push(p);
+    });
+    var repeats = Object.keys(shapes).map(function (k) { return shapes[k]; })
+      .filter(function (g) { return g.length >= 3; })
+      .sort(function (a, b) { return b.length - a.length; });
+
+    var topTools = Object.keys(tools).map(function (k) { return [k, tools[k]]; })
+      .sort(function (a, b) { return b[1] - a[1]; }).slice(0, 5);
+
+    return { u: u, turns: turns, firstWrite: firstWrite, cost: cost,
+             prompts: prompts.length, repeats: repeats, topTools: topTools,
+             models: Object.keys(models).join(", ") || "—" };
+  }
+
+  function num(n) { return n.toLocaleString(); }
+
+  function render(r, filename) {
+    var alertCls = r.firstWrite > 60000 ? " is-alert" : "";
+    var html =
+      '<dl class="telemetry" style="margin-top:var(--s-6);text-align:left">' +
+        '<div class="tcell' + alertCls + '"><dt>Prefix before turn 1</dt><dd>' + num(r.firstWrite) +
+          '<small>cache_creation_input_tokens</small></dd></div>' +
+        '<div class="tcell"><dt>Turns</dt><dd>' + num(r.turns) +
+          '<small>' + num(r.prompts) + ' prompts · ' + r.models + '</small></dd></div>' +
+        '<div class="tcell"><dt>Output tokens</dt><dd>' + num(r.u.output) +
+          '<small>cache read ' + num(r.u.read) + '</small></dd></div>' +
+        '<div class="tcell"><dt>Session cost</dt><dd>' + usd(r.cost) +
+          '<small>Opus 5 rates, with caching</small></dd></div>' +
+      '</dl>';
+
+    var findings = [];
+    if (r.firstWrite > 60000) {
+      findings.push('<b>Prefix over threshold.</b> ' + num(r.firstWrite) +
+        ' tokens cached before turn 1 — about ' +
+        usd(r.firstWrite * PRICE_IN * W) + ' to write, then ' +
+        usd(r.firstWrite * PRICE_IN * R) + ' per later turn.');
+    }
+    r.repeats.slice(0, 3).forEach(function (g) {
+      findings.push('<b>Repeated ask ×' + g.length + ' — skill candidate.</b> "' +
+        g[0].slice(0, 110).replace(/[<>&]/g, " ") + '…"');
+    });
+    if (r.topTools.length) {
+      findings.push('<b>Tool mix.</b> ' + r.topTools.map(function (t) {
+        return t[0] + " ×" + t[1];
+      }).join(" · "));
+    }
+
+    html += '<div class="evidence" style="margin-top:var(--s-5);text-align:left">' +
+            '<div style="color:var(--ink-2);margin-bottom:var(--s-2)">' +
+            filename.replace(/[<>&]/g, "") + '</div>' +
+            (findings.length
+              ? findings.map(function (f) { return "<div>· " + f + "</div>"; }).join("")
+              : "<div>Nothing crossed a threshold. Nothing to do.</div>") +
+            '</div>';
+    $("dropResult").innerHTML = html;
+  }
+
+  function handle(file) {
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      try { render(analyze(String(reader.result)), file.name); }
+      catch (e) {
+        $("dropResult").innerHTML =
+          '<div class="evidence" style="margin-top:var(--s-5)">Could not read that file. ' +
+          'Expected a Claude Code transcript in JSONL format — one JSON object per line.</div>';
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  var drop = $("drop"), fileInput = $("file");
+  $("pick").addEventListener("click", function () { fileInput.click(); });
+  fileInput.addEventListener("change", function () { handle(fileInput.files[0]); });
+  ["dragenter", "dragover"].forEach(function (ev) {
+    drop.addEventListener(ev, function (e) {
+      e.preventDefault(); drop.classList.add("over");
+    });
+  });
+  ["dragleave", "drop"].forEach(function (ev) {
+    drop.addEventListener(ev, function (e) {
+      e.preventDefault(); drop.classList.remove("over");
+    });
+  });
+  drop.addEventListener("drop", function (e) {
+    if (e.dataTransfer && e.dataTransfer.files) handle(e.dataTransfer.files[0]);
+  });
+})();
+</script>

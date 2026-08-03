@@ -11,6 +11,7 @@
 ```
 .claude/
 ├── README.md                        ← this file
+├── settings.json                    ← team-wide config; the SessionStart chat-review hook
 ├── advisors/
 │   └── invariants.md                ← routing table: trigger → question → authority
 ├── agents/
@@ -18,11 +19,15 @@
 │   └── advisor-evidence.md          ← tests · football realism · sequencing      (Opus, read-only)
 └── skills/
     ├── README.md                    ← why the six workflow skills below exist (repetition evidence)
+    │
+    │                                  ── agent patterns: who does the work ──
     ├── advisor/SKILL.md             ← /advisor      — convene and synthesize the council
     ├── orchestrator/SKILL.md        ← /orchestrator — drive one roadmap item to pushed
     ├── adversarial-review/SKILL.md  ← the post-implementation review loop, delegated across tiers
+    │   └── scripts/findings.py      ← deterministic round bookkeeping for that loop
+    ├── chat-review/SKILL.md         ← /chat-review  — session analysis; what should become a skill
     │
-    │                                  ── the recurring workflows, one skill each ──
+    │                                  ── workflow encodings: how a recurring job is done ──
     ├── match-realism-pass/SKILL.md   ← §5.Z measure → localize → calibrate → re-measure → lock
     ├── snapshot-schema-bump/SKILL.md ← cross-tick decision + serializer/reader/probe checklist
     ├── err-file-and-backprop/SKILL.md← ERR id allocation, entry shape, spec-patch-same-commit
@@ -31,9 +36,8 @@
     └── dotnet-gate/SKILL.md          ← run and report the Linux compile/test gate
 ```
 
-The first three are **agent patterns** — they change who does the work. The six below them are
-**workflow encodings** — they change how one person does a recurring job correctly. Both are skills;
-the distinction is only about what goes wrong without them.
+**Agent patterns** change who does the work; **workflow encodings** change how one person does a
+recurring job correctly. Both are skills — the distinction is only about what goes wrong without them.
 
 ## The two patterns
 

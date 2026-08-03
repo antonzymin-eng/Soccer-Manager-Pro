@@ -1,22 +1,54 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** July 31, 2026 (**Project skills LANDED — tooling only; no `src/` change, no spec change, no
-gate run.** **New folder `.claude/skills/`** (project-scoped Claude Code skills, checked in because each
-encodes repo conventions that must version with them): `README.md` (derivation + observed repetition counts)
-+ six `SKILL.md` files — `match-realism-pass/`, `snapshot-schema-bump/`, `err-file-and-backprop/`,
-`landing-close-out/`, `spec-promotion/`, `dotnet-gate/`. **Modified:** root `CLAUDE.md` (new Last-Updated
-entry, prior relabelled; `.claude/` row added to the REPO STRUCTURE tree; new "Project skills and agent
-configuration" subsection under TRACKING DOCUMENTS) and this manifest. **Merged with `main` before
-landing:** PRs #283/#284 had independently added `.claude/README.md`, `advisors/invariants.md`, two
-`agents/advisor-*.md`, and the `adversarial-review` / `advisor` / `orchestrator` skills, so
-`adversarial-review` is now a **project** skill here and only `orientation` remains account-level. The
-`.gitignore` conflict resolved to main's negation set (a strict superset); `.claude/README.md`'s layout
-tree and boundary table were corrected — the tree had omitted `adversarial-review`, which main itself
-shipped. Note for the next manifest pass: the per-file tables below were
+**Last Updated:** August 3, 2026 (**Project skills LANDED — tooling only; no `src/` change, no spec
+change, no gate run.** **New:** six `SKILL.md` files under `.claude/skills/` — `match-realism-pass/`,
+`snapshot-schema-bump/`, `err-file-and-backprop/`, `landing-close-out/`, `spec-promotion/`,
+`dotnet-gate/` — plus `.claude/skills/README.md` (derivation + observed repetition counts from the last
+200 commits). These are **workflow encodings**: they change how a recurring job is done, as distinct from
+the **agent patterns** (`advisor`, `orchestrator`, `adversarial-review`, `chat-review`) that main landed
+in parallel and that change who does the work. **Modified:** `CLAUDE.md` (`.claude/` row added to the
+REPO STRUCTURE tree; new "Project skills and agent configuration" subsection; **two defects fixed** —
+the duplicated `match-analytics` assembly-map row merged into one carrying both facts, and the production
+assembly count corrected **30 → 31**, `match-client-web` having landed in Track C B6 without the count
+following); `.claude/README.md` (layout tree now lists every skill on disk and groups the two kinds —
+it had omitted `adversarial-review`, `chat-review`, `settings.json` and the `scripts/` directory, all of
+which main itself shipped; the boundary table no longer calls `adversarial-review` account-level);
+`docs/tracking/CHANGELOG.md` (new head entry + **the third defect** — five bare `**Last Updated:**`
+labels relabelled `(prior)`, leaving exactly one, which is the self-contradiction this chain has had
+corrected three times before and which the split carried across verbatim); and this manifest.
+**Merged with `main` twice while open**, the second time across its documentation restructure: the
+`**Last Updated:**` chain moved out of `CLAUDE.md` into `docs/tracking/CHANGELOG.md` and OPEN ISSUES into
+`open-issues.md`, so this branch's `CLAUDE.md` edits were redistributed into the new structure rather
+than merged textually. `.gitignore` resolved to main's negation set (a strict superset) and has since
+gained main's `!.claude/settings.json`. Note for the next manifest pass: the per-file tables below were
 already one landing behind at the time of this edit (they do not yet carry the §5.Z.21 shot-volume or
 §5.Z.22 keeper-contact file changes) — recorded, not reconciled here, since this pass touched no `src/`
-file. Prior update below.)
+file. Prior entry below.)
+
+**Last Updated (prior):** August 2, 2026, later same day (**Acyclicity clause + open-issues re-filing pass.**
+No new files, none removed. **Modified:** `src/CLAUDE.md` (`### Reference Direction` gains the intra-layer
+acyclicity paragraph — permitted references, prohibited cycles, with the Unity + `tools/dotnet-ci`
+`<ProjectReference>` enforcement noted); `docs/tracking/spec-error-log.md` (ERR-020-002's open question
+closed with the verbatim `FR-CS-046a` sentence; ERR-020-003 sharpened — `src/CLAUDE.md` is the only
+rendering that labels its arrow); `docs/tracking/open-issues.md` **18 → 10 active** and
+`open-issues-resolved.md` **33 → 41**, eight entries moved (six closed-but-unmoved, plus a duplicated pair
+archived canonical-first); `CLAUDE.md` OPEN ISSUES index regenerated from the active set. Entry bodies
+preserved byte-for-byte, asserted before write; the only additions are a dated status clause in each bold
+title and one italic *Re-filed* note. **No code, no spec text** — `docs/specs/code-standards/section-3.md`
+stays untouched pending owner sign-off on the tier order, which the same acyclicity sentence lands with.
+Prior entry below.)
+
+**Last Updated (prior):** August 2, 2026 (**ERR-020-002 + ERR-020-003 filed — assembly layer taxonomy back-prop.**
+No new files and no file removed; this entry records tracking-document version movement only.
+**Modified:** `docs/tracking/spec-error-log.md` → **v1.54** (two OPEN entries + two Error Index rows);
+`docs/tracking/open-issues.md` (one new active entry, 17 → **18 active** / 33 resolved);
+`docs/tracking/CHANGELOG.md` (new head entry); `CLAUDE.md` (OPEN ISSUES index line + count);
+`src/CLAUDE.md` (the ⚠️ taxonomy staleness note now cites `ERR-020-002`, distinguishes the verbatim
+#20 §3.5.2 layer table from the `src/CLAUDE.md` infrastructure-table extension that carries the
+`code-standards` phantom, and records `ERR-020-003`'s arrow-notation conflict with the binding reading).
+**No code, no spec text, no assembly change** — `docs/specs/code-standards/section-3.md` is deliberately
+untouched pending owner sign-off on the proposed ten-tier order. Prior entry below.)
 
 **Last Updated (prior):** July 27, 2026 (**Path-to-playable Track C: B1 richer observation frame + B2 Match Analytics
 #37 T0 LANDED, then an adversarial-review fix pass over both (0H + 6M + 3L, all fixed).** **New assembly:**

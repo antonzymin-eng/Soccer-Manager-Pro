@@ -1,6 +1,7 @@
 ---
 name: adversarial-review
-description: Adversarially review drafted specifications and code — weighting architectural cleanliness, maintainability, and expandability highest, then hunting correctness bugs, edge cases, security holes, ambiguities, and contradictions with a hostile, assume-it-is-broken mindset. Runs as a delegated loop - review passes run on Opus 5 subagents (escalating to Fable 5 for especially difficult problems), High findings are fixed by Opus 5, Medium and Low by Sonnet 5, and every round of fixes is followed by a fresh full review - repeating until a pass surfaces only Low findings or none at all. Use this skill whenever code or a technical spec has just been drafted or revised and will be relied on — BOTH when the user explicitly asks to review, critique, "find bugs", "tear apart", "red-team", "poke holes in", or "check" something, AND automatically after each drafting or editing iteration in a build loop, even if the user never says the word "review". Critically, this skill re-reviews ALL current code/spec each pass, not just the latest edits.
+description: >-
+  Adversarially review drafted specifications and code — weighting architectural cleanliness, maintainability, and expandability highest, then hunting correctness bugs, edge cases, security holes, ambiguities, and contradictions with a hostile, assume-it-is-broken mindset. Runs as a delegated loop - review passes run on Opus 5 subagents (escalating to Fable 5 for especially difficult problems), High findings are fixed by Opus 5, Medium and Low by Sonnet 5, and every round of fixes is followed by a fresh full review - repeating until a pass surfaces only Low findings or none at all. Use this skill whenever code or a technical spec has just been drafted or revised and will be relied on — BOTH when the user explicitly asks to review, critique, "find bugs", "tear apart", "red-team", "poke holes in", or "check" something, AND automatically after each drafting or editing iteration in a build loop, even if the user never says the word "review". Critically, this skill re-reviews ALL current code/spec each pass, not just the latest edits. Prefer a narrower skill when the request names one — /review for a GitHub pull request, /security-review for a security-only pass over branch changes, /simplify for quality cleanups that are explicitly not bug-hunting. This skill is the one that both finds defects and drives them to fixed.
 ---
 
 # Adversarial Review
@@ -69,6 +70,14 @@ Each reviewer states which files/sections it read, so the full-coverage claim is
 
 If an execution environment is available, **run the code and its tests** rather than only reasoning about it. Executing reveals real failures that static reading rationalizes away. Static reasoning is the floor, not the ceiling. This applies to reviewers and fixers alike — a fixer that did not run the tests has not finished.
 
+The orchestrator resolves the command **once**, before dispatching, and puts the literal command in every brief — so reviewers and fixers all run the same gate and nobody has to guess:
+
+```bash
+~/.claude/skills/project-commands/scripts/project-commands.sh   # if the skill is installed
+```
+
+It reads the repo's manifests and lockfiles and reports install / lint / test plus any repo-local gate script, which beats every inferred command when present. In this repo that resolves to `tools/dotnet-ci/run-gate.sh`. If the skill is not installed, read the manifests yourself and still pass one explicit command down — a subagent left to guess will report the failure of its guess as a finding against your code.
+
 **Splitting a large scope.** If the artifact is too large for one reviewer to read in full, partition it across several Opus 5 reviewers *by file or section*, run them in parallel, and give each one the full text of its slice plus a map of the rest. Every line must be inside exactly one slice — a partition with a gap is a diff-only review wearing a costume. Assign at least one reviewer the **cross-slice seams**: the interfaces, shared state, and invariants that no single slice owns, which is precisely where partitioned review otherwise goes blind.
 
 ## The round loop
@@ -78,6 +87,23 @@ One round is: **review → triage → fix → verify.** Rounds repeat until the 
 **1. Review.** Dispatch fresh Opus 5 reviewer(s) over the full current scope (parallel slices if large). Each returns findings in the output format below.
 
 **2. Triage.** The orchestrator merges the reports: deduplicate findings that describe the same defect, assign each a stable ID (`H1`, `M3`, …) that persists across rounds, and resolve severity conflicts — arguing the case in one line and picking the higher tier, or escalating to Fable 5 per the rules above. It does not add findings of its own invention or drop one it finds inconvenient.
+
+Deciding whether two reports describe the same defect is judgement. Everything after that decision — minting and reusing IDs, deriving the tally, classifying each prior finding as resolved / still present / moved, tracking the round budget — is bookkeeping, and it degrades exactly where this loop is most valuable: round four, several parallel reviewers in, when the IDs have to still line up with what round one said. Hand the merged list to the ledger and let it do that part:
+
+```bash
+.claude/skills/adversarial-review/scripts/findings.py round <round.json>
+.claude/skills/adversarial-review/scripts/findings.py status
+```
+
+You supply a stable `key` per defect (that is the dedup decision, made by you); it assigns and reuses the ID. **An ID binds to the defect, not to its severity** — a finding re-rated Medium → High keeps `M1` rather than becoming `H2`, so the thread back to round 1 survives the re-rating. It renders the round report in the output format below, writes `.adversarial-review/round-N.json`, and returns the loop signal as its exit code:
+
+| Exit | Meaning |
+|---|---|
+| `0` | Loop complete — only Low findings, or none |
+| `1` | Gating findings open — continue to the next round |
+| `3` | Round budget exhausted with High still open — stop and report per the budget rule |
+
+The script never invents, rates, re-rates, or drops a finding, and it refuses duplicate keys rather than silently merging them — deduplication is yours to do first. If it is unavailable, do the bookkeeping by hand and count the tally twice.
 
 **3. Fix.** Dispatch fixers by tier:
 - **High → Opus 5**, first and on their own. Structural fixes move the ground under everything else, so they land before Medium/Low work begins.
@@ -176,6 +202,8 @@ Each reviewer returns findings in this shape; the orchestrator merges them into 
 
 If a severity tier is empty, omit its heading. When a full round produces only Low findings or none, state that the artifact passes and the loop is complete, and give the round count. Hold a high bar for that conclusion — do not reach it by looking away or by quietly downgrading a defect.
 
+The ledger script emits exactly this shape, so the tally, the IDs, and the prior-findings dispositions are derived rather than typed. A hand-written header that says "3 High" above four High findings discredits the whole round; deriving it removes the possibility. Reviewer subagents return findings in the per-finding shape above — the orchestrator assembles the round report.
+
 ## Dispatch briefs
 
 Give each subagent everything it needs and nothing that biases it. Reviewers get no fix history and no reassurance that the code was "already reviewed."
@@ -208,6 +236,50 @@ For each finding, apply the **smallest fix that fully resolves it** — a short 
 When the defect is structural — the top-weighted architecture / maintainability / expandability class — the smallest honest fix may *be* a restructure of that unit. Name it: the responsibilities to separate, the seam or abstraction to introduce, the target shape. Do not paper over a broken design with a local patch just to avoid saying "rewrite this" — that is the failure mode this skill exists to catch.
 
 **One limit stays.** A sweeping rewrite — one that reaches well beyond the unit the finding names, or changes a public contract other work depends on — is proposed to the user, not executed inside the loop. Decide its target shape with Fable 5, present it, and let the user call it. Everything short of that, this skill fixes in-loop under the tier routing above.
+
+## Repo obligation — a finding against approved text must be filed
+
+Everything above is general review practice. This section is specific to Tactical Director, and it
+is the step most easily missed: **in this repo a defect found in APPROVED spec text is not resolved
+by fixing the code.** The spec is the contract, `SPEC_INDEX.md` says so, and a code fix that leaves
+the approved text wrong has moved the contradiction rather than closed it. 161 `ERR-` entries exist
+because that rule has been enforced; skip it once and the log stops being trustworthy.
+
+**When it applies.** The finding contradicts, or is contradicted by, text in an APPROVED spec under
+`docs/specs/`. It does *not* apply to a defect wholly inside implementation detail the spec never
+constrains, or to an artifact that has no spec — most reviews file nothing.
+
+**What the fixer owes, at landing:**
+
+1. **An `ERR-` entry** in `docs/tracking/spec-error-log.md` — a summary row in the Error Index plus a
+   body entry. An unresolved finding files as `🟡 Open`; the log is the remediation backlog, not a
+   record of victories only, and filing without resolving is normal.
+2. **The spec text patched, or the entry saying why not.** If the spec is right and the code was
+   wrong, say that in the entry. If layer membership, a `[GT]` value, or anything else needs an
+   owner's decision, file `Open` and stop — do not write a guess into the authority file.
+3. **The landing ritual**, per the root `CLAUDE.md`: a `docs/tracking/CHANGELOG.md` header entry, a
+   `file-manifest.md` row, and a `src/CLAUDE.md` version bump if code changed.
+4. **Back-props named.** A fix with cross-spec consequences files them as their own `ERR-` entries
+   against the consuming specs, landing atomically at approval.
+
+**Allocating the id — grep, never read.** `spec-error-log.md` is over 300 KB; reading it whole to
+pick a number is the single most wasteful habit available here. Ids are `ERR-<spec>-<seq>`:
+
+```bash
+grep -rhoE "ERR-020-[0-9]{3}" docs/ src/ | sort -u | tail -1   # highest used; yours is +1
+```
+
+Search `docs/` **and** `src/`, not just the log. This repo has been bitten three times by a proposed
+id that had already been filed the same day — a design supplement's suggested id is a suggestion to
+re-verify, never a reservation.
+
+**Reviewers file nothing.** A reviewer names the obligation in its finding ("this contradicts #6
+§3.5; needs an `ERR-006-NNN`") and stops. The change that lands performs the ritual. A review that
+proposes work does not perform it.
+
+**On convergence:** this skill terminates when a full pass returns only Low findings or none, which
+is the same bar as this repo's "an L-only round closes the cycle" convention used across 52 design
+supplements. Report the round count as `AR-N` so it matches the surrounding documents.
 
 ## Staying honest
 
