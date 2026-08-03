@@ -70,6 +70,22 @@ home — a refused design, a dead surface, a negative result — it goes here.
 **8. `docs/tracking/path-to-playable-roadmap.md`** if the landing moved a roadmap item, and
 `SPEC_INDEX.md` if a spec's status changed.
 
+## Blast radius — check before you write the entry
+
+No document in the sync list covers this, and it is where the last several passes lost time. Before
+declaring the landing done, ask what *else* your change perturbed:
+
+- **Scenarios with hardcoded tick windows or per-90 rate bands.** Any behaviour change moves the tick
+  at which a given seed's events occur, which silently breaks instruments that were correct when
+  written. The keeper-contact pass broke three this way and one escaped to CI. The goal-rate-sensitive
+  locks are the usual casualties.
+- **Downstream calibration.** A goal-rate change invalidates any A4a round-resolution fit and needs
+  Step 0 re-run before the corpus. Say so in the entry either way.
+- **The `FR-PO-052` perf baseline**, if the change adds per-tick work. That is a certified-baseline
+  question on the pinned host, not something to settle on the Linux gate.
+
+Recording "checked, nothing moved" is a real outcome and worth one sentence.
+
 ## The gate line
 
 Every landing entry ends with the gate result, in the established form — for example:

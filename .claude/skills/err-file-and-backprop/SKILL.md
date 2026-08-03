@@ -30,16 +30,21 @@ were defective.
 grep -n "ERR-011-" docs/tracking/spec-error-log.md | tail
 ```
 
-This repo has hit collisions twice, and both times the proposed id had been written down in advance
-and filed by someone else in between:
+This repo has hit collisions repeatedly, and every time the proposed id had been written down in
+advance and claimed by someone else in between:
 
 - three design supplements proposed ids that had already been filed the same day the supplements were
   written, and had to be reassigned at promotion;
-- `ERR-030-015` collided live and became `ERR-030-025` during a merge.
+- `ERR-030-015` was verified free on a branch, then claimed on `main` by #30's own T3 landing while
+  that branch was still open — a **branch-vs-main** collision, which a check at authoring time cannot
+  catch;
+- the injury/aging note proposed `ERR-028-002..004` on July 26; `ERR-028-002` was filed at #53's
+  approval on July 27, so that whole range is stale and nothing has re-pointed it.
 
-So treat an id written in a design note as a *suggestion to re-verify*, never a reservation. Also
-check the spec folders themselves (`grep -rn "ERR-030-0" docs/specs/`) — a citation can exist in an
-approved spec before the log entry lands.
+Two consequences. Treat an id written in a design note as a *suggestion to re-verify*, never a
+reservation. And **re-verify at merge, not only at authoring** — the branch-vs-main case is invisible
+until you rebase. Also check the spec folders themselves (`grep -rn "ERR-030-0" docs/specs/`), since
+a citation can exist in an approved spec before the log entry lands.
 
 Two id conventions worth knowing: numbers are sometimes deliberately **skipped** to soft-reserve them
 for an in-flight cluster, and a duplicate that has already shipped in approved text stays **preserved
@@ -48,7 +53,15 @@ is a stronger constraint than tidiness.
 
 ## Step 2 — Write the entry in the log's shape
 
-Append the entry and follow the existing template exactly (copy `ERR-008-017` as the model):
+**The log has two surfaces per entry, and both must be updated.** Missing the first is easy, because
+the file is long enough that you land in the detail section and never scroll back:
+
+1. **A summary row in the `## Error Index` table near the top** — `| ID | Title | Severity | Files
+   Affected | Status |`. Severity is Major / Moderate / Medium; Status is a short phrase
+   (`Closed — fixed in …`, `Open — low priority`, or `◑` for spec-text-first entries whose code half
+   is deferred).
+2. **The full entry further down.** Append it and follow the existing template exactly (copy
+   `ERR-008-017` as the model):
 
 ```markdown
 ## ERR-NNN-NNN: <Spec name> #N §X.Y — <one-line statement of the defect>
