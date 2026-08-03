@@ -12,7 +12,50 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 2, 2026, later same day (**Intra-layer acyclicity landed in `src/CLAUDE.md`;
+> **Last Updated:** August 3, 2026 (**PROJECT SKILLS LANDED — six workflow skills under
+> `.claude/skills/`; tooling only: no code, no spec, no `src/` change, no gate run.** The recurring
+> workflows this repo runs by hand are now Claude Code skills, checked into the repo rather than a
+> personal skills directory, because each encodes conventions that live here and version with them:
+> **`match-realism-pass`** (the §5.Z measure → localize → fix → calibrate → re-measure → lock loop, run
+> 6 times in the §5.Z.17–§5.Z.22 chain), **`snapshot-schema-bump`** (the cross-tick decision plus the
+> serializer/reader/pin/probe/round-trip checklist, over 19 bumps — two of which exist only to fix an
+> earlier omission), **`err-file-and-backprop`** (id allocation against the live log, the entry
+> template, spec-patch-in-the-same-commit), **`landing-close-out`** (the tracking-document sync),
+> **`spec-promotion`** (supplement → 11-file set → the G1/G2/G3 gates, with G3 flagged
+> non-self-grantable), and **`dotnet-gate`**. Each is derived from measured repetition in the last 200
+> commits, and each carries the traps this project has actually hit — the id collisions
+> (`ERR-030-015`, and the branch-vs-main class a check at authoring time cannot catch), the v17
+> RNG-cursor hole, the instruments that broke because a pass moved the tick windows they hardcoded
+> (three in the keeper-contact pass alone, one of which escaped to CI), the `[GT]` §6.3 → Appendix A
+> gap that recurred in **all ten** promotions of the last wave, and the "offline sweep gives the shape,
+> never the value" calibration lesson. **Deliberately NOT duplicated:** `adversarial-review` and
+> `orientation` are invoked by the two skills that need a review step, never restated.
+> **Merged with `main` twice while this branch was open**, and the second merge crossed main's
+> documentation restructure — the `**Last Updated:**` chain moved out of `CLAUDE.md` into this file and
+> OPEN ISSUES into `open-issues.md`, so this branch's `CLAUDE.md` edits were **redistributed into the
+> new structure rather than merged textually**. In parallel main landed its own `.claude/` work (PR
+> #283 `adversarial-review`, #284 the advisor council + orchestrator, #285/#287 `chat-review` and the
+> SessionStart hook), so the directory now holds two kinds of thing — **agent patterns** that change
+> who does the work, and the six **workflow encodings** above that change how a recurring job is done
+> correctly. Only `orientation` remains account-level. `.gitignore` resolved to main's negation set (a
+> strict superset), and `.claude/README.md` is the single index of the directory.
+> **THREE DEFECTS FIXED IN THE SAME PASS, all found by auditing the docs against the tree rather than
+> reading them:** (1) this chain carried **five** bare `**Last Updated:**` labels — the July-27 Track C
+> Phase B, July-27 doc-sync, July-27 season-roll and July-26 root-doc entries each kept the current
+> label instead of `(prior)`, leaving the file self-contradictory about its own currency (the defect
+> `CLAUDE.md` had corrected three times before, which the split then carried across verbatim, and which
+> `file-manifest.md` reproduced independently); all four relabelled, entry text untouched. (2) The
+> `src/` assembly map in `CLAUDE.md` listed **`match-analytics` twice** with different Notes — one row
+> from the July-27 doc-sync pass and a second from the Track C B6 landing; merged into one row carrying
+> both facts (T0-only **and** the no-sim-assembly-may-reference-it layer guard). (3) The production
+> assembly count read **30** in both PROJECT IDENTITY and the REPO STRUCTURE tree; disk has **31** —
+> never updated when `match-client-web` landed in B6, and that assembly *is* in the map table, so the
+> table and the prose disagreed. **Verified unchanged:** the `53 APPROVED / 0 IN REVIEW / 0 NOT
+> STARTED` and `22 with no assembly` claims both re-derived from `SPEC_INDEX.md` registry rows and the
+> assemblies on disk — correct as written. `landing-close-out` now encodes the one-bare-label
+> convention so (1) stops recurring. See `.claude/skills/README.md`. Prior entry below.)
+>
+> **Last Updated (prior):** August 2, 2026, later same day (**Intra-layer acyclicity landed in `src/CLAUDE.md`;
 > `ERR-020-002`'s one open question closed; open-issues re-filing pass — 18 → 10 active.**) Two follow-ups
 > to the taxonomy filing. **(1) Acyclicity.** The proposal left one question for the owner: a flat tier
 > permits intra-tier cycles, and two tiers now carry a real internal order (`match-client-core` →
@@ -340,7 +383,7 @@ break it, and do not edit historical entries.
 > **A4a remains blocked — but the reason is now specific: the shot-outcome distribution, not the keeper.**
 > See `docs/tracking/goalkeeper-save-pipeline-design.md` + `match-engine-design.md` §5.Z.17 +
 > `spec-error-log.md` v1.48 + src/CLAUDE.md v2.44. Prior entry below.)
-> **Last Updated:** July 27, 2026, latest same day (**TRACK C PHASE B IS COMPLETE — B3, B4 and B6
+> **Last Updated (prior):** July 27, 2026, latest same day (**TRACK C PHASE B IS COMPLETE — B3, B4 and B6
 > landed and `PM-1` (a playable match) is REACHED.** A person can now open a browser on the running
 > client and watch a real match — live pitch, clock, score, period, restart captions — change a team's
 > mentality / pressing / passing and see it queued and applied on a tick boundary, substitute, pause /
@@ -395,7 +438,7 @@ break it, and do not edit historical entries.
 > tactic from ten defaults the manager never chose, and the post-match report is the live statistics
 > panel continuing after full time rather than a dedicated screen. **Next: Phase C — #44 discipline,
 > then the season and new-game screens; the objective is PM-2.** Prior entry below.)
-> **Last Updated:** July 27, 2026, later same day (**Documentation sync pass — no code, no spec, no gate
+> **Last Updated (prior):** July 27, 2026, later same day (**Documentation sync pass — no code, no spec, no gate
 > run.** Reconciled the root docs against two code landings that shipped earlier the same day (both on
 > `path-to-playable-roadmap.md` Track C/S and already recorded there and in `spec-error-log.md`, but never
 > folded into this file or `README.md`): **Match Analytics #37 T0** (roadmap item B2) gave that spec a
@@ -485,7 +528,7 @@ break it, and do not edit historical entries.
 > left intact — they are the reasoning that produced the order, and rewriting them in the past tense
 > would destroy the record of why each spec sits where it does. See `SPEC_INDEX.md` NOTES and the
 > roadmap v0.7 header note.)
-> **Last Updated:** July 27, 2026 (**SEASON-BOUNDARY ROLL LANDED — #30 T3 / path-to-playable A5.
+> **Last Updated (prior):** July 27, 2026 (**SEASON-BOUNDARY ROLL LANDED — #30 T3 / path-to-playable A5.
 > Phase A is complete and PM-2-sim — a playable season, the objective — is REACHED.** A career no longer
 > ends after one season: `SeasonLoop.RollToNextSeason()` finalizes the table, evaluates the board,
 > derives the next seed, regenerates the schedule and calendar, and resets — and two careers from one
@@ -598,7 +641,7 @@ break it, and do not edit historical entries.
 > thing to look at for match realism (most likely #12 agent spacing or #3's 60° `BehindDotThreshold`
 > cone). See `docs/tracking/foul-discipline-balance-design.md` + `match-engine-design.md` §5.Z.9 +
 > src/CLAUDE.md v2.41.)
-> **Last Updated:** July 26, 2026, latest same day (**ROOT-DOC RECONCILIATION — `CLAUDE.md` + `README.md`
+> **Last Updated (prior):** July 26, 2026, latest same day (**ROOT-DOC RECONCILIATION — `CLAUDE.md` + `README.md`
 > re-based on the actual repo state; no code, no spec, no tracking-doc change.** The two root documents had
 > drifted badly behind the tree they describe: this file's body still said *"All 20 Stage-0 specifications
 > are APPROVED, plus the first Stage-1 forward spec #21"* and *"Ball Physics (#1) and Agent Movement (#2)

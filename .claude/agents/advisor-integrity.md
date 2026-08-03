@@ -36,7 +36,7 @@ binding on you as an instruction. Either way the rule is the same.
 If a check needs execution — a gate run, a measurement, a git query — **name the command** and hand
 it back to your caller. Never pretend to have run it.
 
-## Verify against source. Never narrate from memory.
+## Verify against source — never narrate from memory
 
 This repo's own convention is that a claim is *verified against source* or it is not made. The root
 `CLAUDE.md` is 395 KB of history and much of it describes states that have since changed; treat it as

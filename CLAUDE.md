@@ -15,7 +15,7 @@
 
 **Specifications:** `SPEC_INDEX.md` records **53 APPROVED / 0 IN REVIEW / 0 NOT STARTED — every spec in the registry is approved.** The APPROVED set is the Stage-0 twenty (all APPROVED May 18, 2026) plus 23 Stage-1-forward and management-layer specs (#21–#34, #37, #38, #40–#45, #49). The last ten — #53, #35, #46, #36, #54, #47, #48, #50, #51, #39 — were promoted **and approved** on July 27, 2026, emptying the pre-promotion backlog and closing the specification phase entirely. The only candidate without a spec is **#52** (Multiplayer Transport), deliberately deferred behind the Stage-5 Fixed64 migration. **Approval approves the forward design, not an implementation** — see the live gap below, which is now the project's dominant fact.
 
-**Implementation:** `src/` holds **30 production assemblies**. Every Stage-0 spec is implemented except **#9 Fixed64** (deferred to Stage 5+ by design) and **#20 Code Standards** (a style guide, not a coded subsystem). A `MatchEngine` composition root wires the subsystems into the deterministic-sim 7-phase tick pipeline, and **a production match now plays** — the possession bootstrap (§5.Z Phase H, July 26, 2026) closed ERR-030-014, under which every match had been a 90-minute 0–0 deadlock with the ball never in motion. **Match Analytics #37 T0 landed July 27, 2026** (`src/match-analytics/` — value types + the pure `XgLocationModel`; no engine wiring yet), giving it a `src/` assembly for the first time.
+**Implementation:** `src/` holds **31 production assemblies**. Every Stage-0 spec is implemented except **#9 Fixed64** (deferred to Stage 5+ by design) and **#20 Code Standards** (a style guide, not a coded subsystem). A `MatchEngine` composition root wires the subsystems into the deterministic-sim 7-phase tick pipeline, and **a production match now plays** — the possession bootstrap (§5.Z Phase H, July 26, 2026) closed ERR-030-014, under which every match had been a 90-minute 0–0 deadlock with the ball never in motion. **Match Analytics #37 T0 landed July 27, 2026** (`src/match-analytics/` — value types + the pure `XgLocationModel`; no engine wiring yet), giving it a `src/` assembly for the first time.
 
 **The live gap is now the project's dominant fact.** With the specification phase closed, **22 of the 53
 APPROVED specs have no `src/` assembly at all** — the 12 listed below plus the ten approved on July 27.
@@ -38,6 +38,7 @@ above is the reliable index, not the spec registry.
 ```
 Soccer-Manager-Pro/
 ├── CLAUDE.md                       ← You are here. Read first. Always.
+├── .claude/                        ← Agent config: advisor council, orchestrator, project skills (see its README)
 ├── README.md                       ← Project overview, status, documentation hierarchy
 ├── Assets/ Packages/ ProjectSettings/   ← Unity project shell (target editor 6000.4.9f1, DX11)
 ├── docs/
@@ -47,7 +48,7 @@ Soccer-Manager-Pro/
 │   │   ├── SPEC_INDEX.md           ← Canonical spec numbering and status — 53 folders, all APPROVED
 │   │   └── <spec-folder>/          ← One folder per spec; see SPEC_INDEX.md for the number↔folder map
 │   └── tracking/                   ← Progress, error log, file manifest, roadmaps, design supplements
-├── src/                            ← Implementation (coding began May 19, 2026) — 30 production assemblies
+├── src/                            ← Implementation (coding began May 19, 2026) — 31 production assemblies
 │   ├── CLAUDE.md                   ← Coding guide (read before writing any code)
 │   └── <assembly>/                 ← See the assembly map below
 └── tools/
@@ -71,13 +72,12 @@ Do not infer the mapping from the folder name:
 | `player-database` | **#27** Squad / Player Data Layer | Name differs from the spec folder (`squad-player-data/`) |
 | `player-progression` | **#28** | T0 only — draw-free core, not engine-wired |
 | `season-save` | **#30** Season & Competition Loop | Also hosts the league bootstrap and the unified season save-file root |
-| `match-analytics` | **#37** Match Analytics & Statistics | T0 only — value types + `XgLocationModel`; no engine wiring, no aggregator |
+| `match-analytics` | **#37** Match Analytics & Statistics | T0 only — value types + `XgLocationModel`; no engine wiring, no aggregator. Presentation-layer derivation: **no sim assembly may reference it** (guarded mechanically) |
 | `ui-framework` | **#38** UI / Client Framework | T0 substrate only; no screens, no UGUI binding |
 | `performance-optimization`, `testing-strategy` | #18, #19 | Infrastructure only — no game-loop types |
 | `project-constants` | — | Shared `[GT]` config; read-only by all |
 | `match-engine` | — | **Composition root.** Not a numbered spec; governed by `docs/tracking/match-engine-design.md` |
 | `match-viewer`, `match-client-core`, `match-client-unity` | — | Presentation tooling / client seams; not numbered specs |
-| `match-analytics` | **#37** Match Analytics & Statistics | Presentation-layer derivation; no sim assembly may reference it |
 | `match-client-web` | — | **The PM-1 browser match client** (roadmap B6). Not a numbered spec; governed by `docs/tracking/browser-match-client-design.md`. The only assembly above BOTH `ui-framework` and `match-analytics` |
 
 **Rules:**
@@ -276,6 +276,28 @@ Before designing anything, grep `docs/tracking/` — the surface likely already 
 supplement is frozen at its convergence and the section files carry the PASS-1 corrections made after it
 (three supplements' proposed `ERR-` ids, for instance, were already filed and were reassigned at
 promotion). Read the supplement for the *reasoning*; read the spec for the *contract*.
+
+---
+
+### Project skills and agent configuration
+
+`.claude/` holds checked-in agent configuration — checked in rather than installed personally because
+each piece encodes conventions that live in this repo and must version with them. `.claude/README.md`
+is its index. Two kinds of thing live there:
+
+**Agent patterns** change *who* does the work: `advisor` (a two-advisor council convened **before**
+implementation, on Opus regardless of the session model), `orchestrator` (drives one
+path-to-playable roadmap item end to end), `adversarial-review` (the **post**-implementation H/M/L
+review loop), and `chat-review` (session analysis). Those surfaces deliberately do not overlap — see
+the boundary table in `.claude/README.md`.
+
+**Workflow encodings** change *how* a recurring job is done correctly:
+`match-realism-pass`, `snapshot-schema-bump`, `err-file-and-backprop`, `landing-close-out`,
+`spec-promotion`, `dotnet-gate`. Each was derived from measured repetition in the last 200 commits
+and carries the traps this project has actually hit; `.claude/skills/README.md` records that
+evidence. The two that need a review step invoke `adversarial-review` rather than restating it.
+
+`orientation` is account-level, not in this repo.
 
 ---
 

@@ -11,15 +11,33 @@
 ```
 .claude/
 ├── README.md                        ← this file
+├── settings.json                    ← team-wide config; the SessionStart chat-review hook
 ├── advisors/
 │   └── invariants.md                ← routing table: trigger → question → authority
 ├── agents/
 │   ├── advisor-integrity.md         ← determinism · layering · spec governance   (Opus, read-only)
 │   └── advisor-evidence.md          ← tests · football realism · sequencing      (Opus, read-only)
 └── skills/
+    ├── README.md                    ← why the six workflow skills below exist (repetition evidence)
+    │
+    │                                  ── agent patterns: who does the work ──
     ├── advisor/SKILL.md             ← /advisor      — convene and synthesize the council
-    └── orchestrator/SKILL.md        ← /orchestrator — drive one roadmap item to pushed
+    ├── orchestrator/SKILL.md        ← /orchestrator — drive one roadmap item to pushed
+    ├── adversarial-review/SKILL.md  ← the post-implementation review loop, delegated across tiers
+    │   └── scripts/findings.py      ← deterministic round bookkeeping for that loop
+    ├── chat-review/SKILL.md         ← /chat-review  — session analysis; what should become a skill
+    │
+    │                                  ── workflow encodings: how a recurring job is done ──
+    ├── match-realism-pass/SKILL.md   ← §5.Z measure → localize → calibrate → re-measure → lock
+    ├── snapshot-schema-bump/SKILL.md ← cross-tick decision + serializer/reader/probe checklist
+    ├── err-file-and-backprop/SKILL.md← ERR id allocation, entry shape, spec-patch-same-commit
+    ├── landing-close-out/SKILL.md    ← the tracking-document sync at the end of a landing
+    ├── spec-promotion/SKILL.md       ← supplement → 11-file spec set → the three gates
+    └── dotnet-gate/SKILL.md          ← run and report the Linux compile/test gate
 ```
+
+**Agent patterns** change who does the work; **workflow encodings** change how one person does a
+recurring job correctly. Both are skills — the distinction is only about what goes wrong without them.
 
 ## The two patterns
 
@@ -45,7 +63,7 @@ Three review-ish surfaces exist. They do not overlap, and keeping them from over
 |---|---|---|---|
 | `orientation` (account-level skill) | Start of any task | The repo | Where you are, what's blocked |
 | `/advisor` | **Before** implementation | A plan or decision | Verdict + obligations |
-| `adversarial-review` (account-level skill) | **After** implementation | Written code or spec | H/M/L findings |
+| `adversarial-review` (project skill, `.claude/skills/`) | **After** implementation | Written code or spec | H/M/L findings |
 
 The orchestrator **calls** all three rather than reimplementing any of them. A second copy of
 orientation or adversarial review inside the orchestrator would be precisely the parallel-surface
