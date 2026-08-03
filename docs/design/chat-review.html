@@ -969,7 +969,16 @@ td.num { font-family:var(--font-mono); font-variant-numeric:tabular-nums; white-
     </div>
   </section>
 
-  <p class="foot">
+  <p class="foot" style="margin-bottom:var(--s-4)">
+    <b style="color:var(--ink-2)">How this reaches you.</b> This page is static — it has no network
+    access and no model inside it, and it changes only when the HTML is edited and republished.
+    The live path is a <code>SessionStart</code> hook in <code>.claude/settings.json</code>: it runs
+    <code>tools/chat-review.py --hook</code> at session start and prints <em>nothing at all</em> when
+    no threshold trips. Measured cost: <b>0.27&nbsp;s</b> of startup, and ~140 tokens only on the
+    sessions where it does have something to say. Everything else is pull — ask, or run
+    <code>/chat-review</code>, or drop a transcript on the analyzer above.
+  </p>
+  <p class="foot" style="border-top:0;padding-top:0">
     Generated from one session (39 turns) and the repo at
     <code>claude/chat-monitoring-skill-optimization-q3i0uw</code>, 31 July 2026.
     Session and cost figures are measured from transcript <code>usage</code> fields at Opus 5

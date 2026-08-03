@@ -457,6 +457,49 @@ def build_findings(sessions: list[dict], repo: dict | None) -> list[dict]:
     return findings
 
 
+def emit_hook(findings: list[dict]) -> int:
+    """SessionStart hook output. Silence is the common case and the point.
+
+    Prints nothing at all when nothing tripped — no empty JSON, no "all clear".
+    A monitor that greets you every session trains you to ignore it, and the
+    standing instruction on this repo is to speak only when there is something
+    to act on.
+
+    When something did trip, the payload is deliberately small: one line per
+    finding, capped, with no evidence arrays and no session dump. The full
+    record is a `python3 tools/chat-review.py --repo .` away.
+    """
+    if not findings:
+        return 0
+
+    MAX = 5
+    shown, extra = findings[:MAX], max(0, len(findings) - MAX)
+    lines = [f"- [{f['severity']}] {f['category']}: {f['title']}" for f in shown]
+    if extra:
+        lines.append(f"- (+{extra} more, lower severity)")
+
+    n = len(findings)
+    headline = f"chat-review: {n} actionable finding{'s' if n != 1 else ''}"
+    top = findings[0]["title"]
+
+    print(json.dumps({
+        "systemMessage": f"{headline}. Top: {top}",
+        "suppressOutput": True,
+        "hookSpecificOutput": {
+            "hookEventName": "SessionStart",
+            "additionalContext": (
+                f"{headline} from tools/chat-review.py (thresholds tripped; this is "
+                "not a scheduled digest):\n" + "\n".join(lines) +
+                "\n\nDo not act on these unless the user asks, and do not re-raise a "
+                "finding they have already declined. Run `python3 "
+                "tools/chat-review.py --repo .` for the full record, or use the "
+                "chat-review skill."
+            ),
+        },
+    }))
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -465,6 +508,10 @@ def main() -> int:
     ap.add_argument("--repo", default=None, help="repo root, to measure rules files")
     ap.add_argument("--since", type=int, default=None, help="only sessions from last N days")
     ap.add_argument("--out", default=None, help="write JSON here instead of stdout")
+    ap.add_argument("--hook", action="store_true",
+                    help="SessionStart hook mode: print NOTHING when there is nothing "
+                         "actionable; otherwise print a compact Claude Code hook JSON "
+                         "payload. Never fails the session — errors exit 0 silently.")
     args = ap.parse_args()
 
     sessions = [analyze_session(p, rows)
@@ -493,6 +540,9 @@ def main() -> int:
         "sessions": [{k: v for k, v in s.items() if k != "prompts"} for s in sessions],
         "findings": findings,
     }
+
+    if args.hook:
+        return emit_hook(findings)
 
     payload = json.dumps(doc, indent=2)
     if args.out:

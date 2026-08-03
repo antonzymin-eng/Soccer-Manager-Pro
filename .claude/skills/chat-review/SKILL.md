@@ -32,6 +32,19 @@ ant messages count-tokens --model claude-opus-5 \
   --message '{role: user, content: "@./CLAUDE.md"}' --transform input_tokens -r
 ```
 
+## The SessionStart hook
+
+`.claude/settings.json` runs the analyzer in `--hook` mode at every session start.
+It prints **nothing at all** when no threshold trips — no empty JSON, no "all
+clear" — because a monitor that greets you every session trains you to ignore it.
+When something does trip it emits a one-line-per-finding summary (capped at five,
+no evidence arrays, no session dump) as `additionalContext`, plus a single
+`systemMessage` line for the user.
+
+The hook is a notice, not an instruction. Do not act on what it reports unless
+the user asks, and do not re-raise a finding they have already declined. To
+disable it, delete the `SessionStart` block or run `/hooks`.
+
 ## Read the output
 
 `findings[]` is sorted by severity then magnitude. Each carries `category`
