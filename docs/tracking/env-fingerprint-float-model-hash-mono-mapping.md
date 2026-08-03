@@ -2,7 +2,7 @@
 
 > **File:** docs/tracking/env-fingerprint-float-model-hash-mono-mapping.md
 > **Created:** 2026-07-19
-> **Status:** APPROVED — **Option A** selected (owner sign-off, July 19, 2026; §7). The §4.8.3/§5.5 spec edits and the live-host hasher (`FloatFlagTuple.ComputeHash` / `EnvironmentFingerprint.CreateStage0MonoCertified`) have landed. Host-blocked remainder: the §4.8.2 runtime MXCSR validation and the certified capture (needs the pinned Unity/Mono host).
+> **Status:** APPROVED — **Option A** selected (owner sign-off, July 19, 2026; §7). The §4.8.3/§5.5 spec edits and the live-host hasher (`FloatFlagTuple.ComputeHash` / `EnvironmentFingerprint.CreateStage0MonoCertified`) have landed. The §4.8.2 runtime MXCSR validation code landed July 21, 2026, and its certified capture on the pinned Unity/Mono host landed July 22, 2026 (`docs/specs/deterministic-sim/cert-runs/mxcsr-live-mode-cert-2026-07-22.md`) — no host-block remains. Remainder: `SaveManager` still writes `Fingerprint = null` (root `CLAUDE.md` OPEN ISSUES).
 > **Tracks:** ERR-016-006 (`docs/tracking/spec-error-log.md`); root `CLAUDE.md` OPEN ISSUES.
 > **Purpose:** Resolve how Deterministic Simulation #16 §4.8.3's `floatModelHash` tuple is populated under
 > the pinned Stage-0 **Mono** backend, so a live-host fingerprint can be computed without fabricating values.
@@ -75,9 +75,11 @@ is resolved: fields 1–4 have no defined, non-fabricated value under Mono.
 Latent, not live:
 - `SaveManager` writes the header `Fingerprint = null` (`src/deterministic-sim/SaveManager.cs`) — the
   fingerprint is not yet wired into the save path.
-- The fingerprint is load-bearing only at a real **certification run**, which is independently blocked: no
-  Unity host in the current environment, and `certification-platform.md` is `⏳ RECERT REQUIRED` after the
-  Unity 6 bump.
+- The fingerprint is load-bearing only at a real **certification run** reading a `SaveManager`-written save.
+  As of this proposal's July 19, 2026 sign-off, no Unity host was available and `certification-platform.md`
+  was `⏳ RECERT REQUIRED` after the Unity 6 bump; **both cleared the same day** — the platform-determinism
+  KAT run promoted `certification-platform.md` to v1.4 ✅ PINNED. The remaining gap is `SaveManager` itself,
+  not host access (root `CLAUDE.md` OPEN ISSUES).
 - Every current consumer uses `CreateStage0Dev()`, now honestly labelled a placeholder and assertable via
   `IsDevPlaceholder`.
 
@@ -147,12 +149,12 @@ owners prefer not to overload the native-compiler fields with Mono/RID values.
 3. **Golden vector — DONE (July 19, 2026).** The Stage-0 Mono tuple hash (test `compilerVersion` `6.13.0`)
    is pinned in `DeterministicSimTests` (`89f50a31…f343e7`), computed by an independent Python mirror of
    `CanonicalSerializer`, alongside determinism + per-field-sensitivity tests.
-4. **Still host-blocked (not in scope here):** (a) the §4.8.2 **runtime MXCSR validation** — querying the live
-   float-mode flags at match start and rejecting on mismatch — needs native interop on the pinned host (a
-   Stage-1+ engineering task); (b) the **certified capture** — supplying the real Mono runtime version and
-   running on the pinned Windows/Unity/Mono host (`cert-run-runbook.md` P2), which cannot run in the current
-   Linux/no-Unity environment. The recorded tuple already uses the pinned Stage-0 flag values, which is exactly
-   what the §4.8.2 check validates against.
+4. **No longer host-blocked — both landed:** (a) the §4.8.2 **runtime MXCSR validation** — the code landed
+   July 21, 2026 (native interop, `MxcsrValidator`/`MxcsrNative`), and the certified live read on the pinned
+   host landed July 22, 2026 (`docs/specs/deterministic-sim/cert-runs/mxcsr-live-mode-cert-2026-07-22.md`,
+   ERR-016-006); (b) the **FR-PO-052 certified capture** — the real Mono runtime version, captured on the
+   pinned Windows/Unity/Mono host, landed July 19, 2026 (`kickoff-multi-second.cert.md` v1.2). The recorded
+   tuple uses the pinned Stage-0 flag values, which is exactly what the §4.8.2 check validates against.
 
 ## 7. Sign-off
 
@@ -172,3 +174,4 @@ holds both roles). The §4.8.3/§5.5 edits and the live-host hasher landed the s
 |---------|------------|--------|--------------------------------------------------------------------------|
 | 0.1     | 2026-07-19 | —      | Initial proposal. Problem statement, options A/B/C, recommendation (A), deferred implementation plan, sign-off block. Tracks ERR-016-006. |
 | 0.2     | 2026-07-19 | —      | Option A APPROVED (owner sign-off). §4.8.3/§5.5 edits + the live-host hasher (`FloatFlagTuple.ComputeHash` / `CreateStage0MonoCertified`) + golden vector landed same day; §6 rewritten as a landing-status list; §7 signed. Host-blocked remainder: §4.8.2 runtime MXCSR validation + the certified capture. |
+| 0.3     | 2026-08-03 | —      | Docs-only correctness fix (staleness sweep): the Status header, §2, and §6 item 4 still described the §4.8.2 MXCSR validation and the FR-PO-052 certified capture as host-blocked. Both cleared before this file's own §6 items 1–3 were even written — the FR-PO-052 capture July 19, 2026 (same day as this proposal's sign-off) and the MXCSR code+capture July 21–22, 2026. Reworded to record both LANDED; the only remaining gap is `SaveManager` still writing `Fingerprint = null` (root `CLAUDE.md` OPEN ISSUES), which is unimplemented code, not a host block. No decision content changed. |

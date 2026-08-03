@@ -39,17 +39,19 @@ golden-vector corpora (#16 §9.5 #4 a/b/c) + the §5 determinism-tier locks pass
 unbuilt) — a guard that *enforces* the now-certified pin at replay time, not part of *proving* the bits
 exact. Buildable against the certified pin; also awaits a snapshot-deserialize/replay consumer path.
 
-The original prerequisites P1/P2 below cleared for the perf capture; they still gate the
-determinism-cert run:
+The original prerequisites P1/P2 below are now both cleared — the July 19, 2026
+determinism-cert run (and the same-day FR-PO-052 perf capture) is exactly the run they
+were gating:
 
 | # | Prerequisite | Why it blocks | Tracked in |
 |---|--------------|---------------|------------|
-| P1 | **Unity host to execute the harness** | *(Partially cleared 2026-07-13.)* The real harness now EXISTS: `StopwatchPerfHarness` + `MatchEngineCapstonePerfHarness` boot the real `MatchEngine` and Stopwatch-time each `RunTick` (superseding the synthetic `tools/perf-harness/run.sh` `p50=0.000` stub), and the Unity batch-mode command is now DEFINED (`src/CLAUDE.md` → "BUILD AND TEST COMMANDS"; Step 2 below). The harness runs on the Linux `dotnet-ci` gate as a non-certifying compile+execute proof. What remains: a **Unity host** to run that command so the capture executes under the pinned Mono runtime (folds into P2). | `src/CLAUDE.md` |
-| P2 | **Access to the pinned host** | A certified number MUST be captured on the exact tuple in `certification-platform.md` v1.3 (Unity 6000.4.9f1, DX11 — target pin, not yet certified). The Linux compile/test gate (`tools/dotnet-ci`) is explicitly NON-certifying — a number sourced from it would be a fabricated certification. | `certification-platform.md` |
+| P1 | **Unity host to execute the harness** | *(Cleared 2026-07-19.)* The real harness — `StopwatchPerfHarness` + `MatchEngineCapstonePerfHarness`, which boot the real `MatchEngine` and Stopwatch-time each `RunTick` (superseding the synthetic `tools/perf-harness/run.sh` `p50=0.000` stub) — was run against a genuine Unity host as part of the July 19, 2026 certification (commit `819f9d1`): both the FR-PO-052 100-run perf capture and the platform-determinism KAT executed there. The Linux `dotnet-ci` gate still runs the harness too, but only as a non-certifying compile+execute proof. | `src/CLAUDE.md` |
+| P2 | **Access to the pinned host** | *(Cleared 2026-07-19.)* The certified numbers were captured on the exact tuple recorded in `certification-platform.md` v1.4 — Windows 11 / Unity 6000.4.9f1 / DX11 / Mono / x64 / SSE4.2 / 1 worker / deterministic flags — superseding the v1.3 entry this row originally cited as a target pin, not yet certified. The Linux compile/test gate (`tools/dotnet-ci`) remains explicitly NON-certifying — a number sourced from it would be a fabricated certification. | `certification-platform.md` |
 
 Everything else — the platform pin, the corpus entry, the code seam, the
-capstone scenario, and the perf-gate wiring — is in place. When P1 and P2 clear,
-follow the steps below; no further scaffolding is required.
+capstone scenario, and the perf-gate wiring — is in place. With P1 and P2 both
+cleared, the steps below are executable as written for any re-run; no further
+scaffolding is required.
 
 ---
 
@@ -78,7 +80,7 @@ that anchor with a real certified number.
 ## Step 0 — Pre-flight: verify the host matches the pin
 
 On the certification host, confirm every row of `certification-platform.md`
-v1.3 before capturing anything. A mismatch on any row invalidates the run
+v1.4 (✅ PINNED, certified 2026-07-19) before capturing anything. A mismatch on any row invalidates the run
 (`EnvironmentFingerprint` mismatch → `ERR_DS_REPLAY_ENV_MISMATCH`, #16 §4.8).
 
 > **Note (2026-07-13):** `certification-platform.md` v1.3 bumped the target pin
@@ -95,6 +97,14 @@ v1.3 before capturing anything. A mismatch on any row invalidates the run
 > updated so a first cert run stamps the correct pin; it does NOT assert a
 > certified baseline exists (P1/P2 still block). Step 0 and Step 2 below cite the
 > new value.
+>
+> **Update (2026-08-03):** the two paragraphs above are retained as the July-13
+> record and are read correctly only at that date — both their "no cert run has
+> ever executed" and "P1/P2 still block" clauses were overtaken on **July 19,
+> 2026**, when the determinism-KAT run executed on the pinned host and flipped
+> `certification-platform.md` to v1.4 **✅ PINNED**. P1 and P2 are cleared (see
+> the table above); the Step 0 pre-flight below is now a re-run checklist, not a
+> first-run one.
 
 | Pin row | Required value | How to verify |
 |---------|---------------|---------------|
@@ -235,3 +245,21 @@ Stage 0+1 perf-gate).
 |         |            |        | batch-mode command; P1 row rewritten (harness exists; only a Unity |
 |         |            |        | host remains, folding into P2). Linux run of the harness is        |
 |         |            |        | NON-certifying; no certified number produced.                     |
+| 1.4     | 2026-08-03 | —      | Docs-only correctness fix: the Step 0 prerequisites lead-in and    |
+|         |            |        | P1/P2 table still said "cleared for the perf capture; they still  |
+|         |            |        | gate the determinism-cert run" and P2 still cited `certification-  |
+|         |            |        | platform.md` v1.3 as "target pin, not yet certified" — stale       |
+|         |            |        | against this file's own "FULLY CERTIFIED (2026-07-19)" status      |
+|         |            |        | header. Lead-in and both P1/P2 cells reworded to record both       |
+|         |            |        | prerequisites CLEARED 2026-07-19 against the certified v1.4 pin.   |
+|         |            |        | No prerequisite work performed; correction only, no cert re-run.   |
+| 1.5     | 2026-08-03 | —      | Docs-only correctness fix (staleness sweep): Step 0's pre-flight   |
+|         |            |        | instruction still said "confirm every row of certification-       |
+|         |            |        | platform.md v1.3" and framed the run as not-yet-executed against a |
+|         |            |        | target pin — stale against this file's own "FULLY CERTIFIED        |
+|         |            |        | (2026-07-19)" status header and the already-corrected v1.4 P1/P2   |
+|         |            |        | table. Updated to cite v1.4 (✅ PINNED, certified 2026-07-19).       |
+|         |            |        | The dated Step 0 blockquote note (2026-07-13) is left untouched —  |
+|         |            |        | it is a historical record of the v1.3 target-pin bump, correctly   |
+|         |            |        | dated to before the cert run it describes as not-yet-executed.     |
+|         |            |        | No prerequisite work performed; correction only, no cert re-run.   |

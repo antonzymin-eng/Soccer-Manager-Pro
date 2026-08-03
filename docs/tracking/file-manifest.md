@@ -1,6 +1,20 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
+**Last Updated:** August 3, 2026 (**Two production assemblies were missing from this manifest
+entirely — `match-client-core` and `match-client-unity` — and are now inventoried.** Both landed in
+the interactive Unity client P0 pass (July 24, 2026), with `match-client-core` extended by P1/P3 on
+July 27; neither ever received a manifest section, so the file claimed to be an authoritative
+inventory while omitting the assembly that carries the live-match command channel. Found by diffing
+`src/*/` against the sections in this file. **New sections:** `src/match-client-core/` (20 rows — the
+host-free determinism-bearing core: `ILiveMatchMutations` + `MatchEngineMutations`, the
+`ManagerCommandKind`/`ManagerCommand`/`TickStampedCommand` value types, `ManagerCommandQueue`,
+`MatchClientDriver`, `MatchSetup`, `MatchSession`, the P3 `FrameInterpolator` + `FollowBallCamera`,
+and the seven test files) and `src/match-client-unity/` (2 rows — asmdef + README; scaffolded only,
+and excluded from the shim gate via `generate_projects.py`'s `SHIM_EXCLUDED_ASMDEFS`, so it is
+verifiable only on the pinned Unity host). **The production assembly count of 31 was already correct**
+and is unchanged — the count had been reconciled against `src/` while the section list had not.
+Doc-only; no `src/` change, no spec change, no gate run.)
 **Last Updated:** August 3, 2026, later same day (**Conversion at contact (§5.Z.23) — ERR-011-008.** **New:** `src/goalkeeper-mechanics/Tests/GoalkeeperClaimTests.cs`, `src/match-engine/tests/GoalConversionDiagnosticTests.cs`, `src/match-engine/tests/MatchEngineKeeperClaimScenarios.cs` + `MatchEngineKeeperClaimTests.cs`, `docs/tracking/gk-conversion-at-contact-design.md`. **Modified:** `IGoalkeeperBallSystem.cs` v1.1 (+`ParkBall`), `GoalkeeperMechanics.cs` v1.10 (both claim sites), `MatchEngine.cs` v1.56 (adapter), `GoalkeeperScenarios.cs` v1.4 + `GoalkeeperConversionTests.cs` v1.2 (doubles), `docs/specs/goalkeeper-mechanics/section-3.md` v0.6, `spec-error-log.md` v1.55, `match-engine-design.md` v2.9, `MatchEngineShotSpeedScenarios.cs` v1.4 (AR-1 gate fallout — corpus 2 → 4 seeds, windows 18 min → full matches; predicates and bounds unchanged), `gk-contact-rate-design.md` v1.3 (§7 forward-pointer), `round-resolution-corpus.md` v0.4 (Step 0 must be re-run). Measured: goals 5.0 → 3.7/match; caught-band exit speed 10.8 → 0.0 m/s. No schema/RNG/draw-order change. **Prior entry below.**)
 
 **Last Updated (prior):** August 3, 2026 (**Project skills LANDED — tooling only; no `src/` change, no spec
@@ -1459,6 +1473,58 @@ Presentation-layer derivation. Read-only over two taps (FR-AN-002); no sim assem
 
 ---
 
+### `src/match-client-core/` — the interactive Unity client's host-free core (P0–P3, July 24–27, 2026)
+
+Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P0 … §5-P3).
+**Host-free and CI-gated** — this is the half of the interactive Unity client that carries every
+determinism-bearing concern (session, command channel, tick-stamped log, view-state math), split from
+the Unity-only skin precisely so it stays under `tools/dotnet-ci` on every push. Consumed by
+`ui-framework`, `match-client-web`, and (at P4+) `match-client-unity`.
+
+| File | Purpose |
+|------|---------|
+| `match-client-core.asmdef` | `TacticalDirector.MatchClientCore`; references MatchEngine + MatchViewer + DeterministicSim + TacticalInstructions + PlayerDatabase + ProjectConstants |
+| `MatchClientConstants.cs` | `[GT]` presentation/pacing catalogue — the master-plan playback speed set {1,3,5,10} as scalars. Nothing here feeds the sim or the snapshot digest |
+| `ILiveMatchMutations.cs` | The closed live-mutator surface the drain applies through, on the sim thread — the three stride-safe mutators only (§3-2). Producer and consumer both specified, so not a phantom interface |
+| `MatchEngineMutations.cs` | The one `ILiveMatchMutations` implementation over a real `MatchEngine`; a pure pass-through |
+| `ManagerCommandKind.cs` | The closed set of command kinds, each mapping onto exactly one live mutator. `None = 0` sentinel (v0.8 AR M-2) so a `default(ManagerCommand)` cannot silently stage a malformed tactic. No pause/speed kind — playback is presentation-only (§6.4) |
+| `ManagerCommand.cs` | Immutable value-type command discriminated by `Kind`; no per-command heap allocation on the enqueue path |
+| `TickStampedCommand.cs` | A command paired with the tick it was applied at. Reproducibility is defined against the sequence of these, not against human intent (§6.1/§6.3) |
+| `ManagerCommandQueue.cs` | Lock-guarded FIFO — View enqueues on the UI thread, driver drains on the sim thread at the top of a tick |
+| `MatchClientDriver.cs` | The deterministic drain, installed as the streamer's pre-tick hook via `MatchSession`. FIFO apply, per-batch tick-stamp, post-`MatchEnded` drop, `_logLock`-guarded snapshot-copy `Log`, and refused-command isolation so one bad command cannot kill the pacing thread (v0.8 AR) |
+| `MatchSetup.cs` | Immutable boot config applied once before kickoff through boot-only mutators; both-or-neither squad guard |
+| `MatchSession.cs` | Composition root — builds and wires engine + streamer + driver, installs the drain hook, exposes read = frames / write = commands / `ServiceOnce` |
+| `FrameInterpolator.cs` | **P3** — blends two captured `LiveMatchFrame`s for a 60 FPS renderer. Speed-aware alpha, and **snaps rather than smooths across a discontinuity** (a restart teleports the ball; a substitution swaps who occupies a roster slot) |
+| `FollowBallCamera.cs` | **P3** — dead zone, `1 − e^(−rate·dt)` smoothing proven frame-rate-independent by step subdivision, and a pitch clamp that centres when the view is wider than the pitch |
+| `tests/match-client-core-tests.asmdef` | `TacticalDirector.MatchClientCore.Tests` (Editor-only) |
+| `tests/RecordingMutations.cs` | Test double over `ILiveMatchMutations` |
+| `tests/ManagerCommandQueueTests.cs` | FIFO, thread-safe enqueue, the exactly-three-game-kinds §6.4 lock, default-command reject |
+| `tests/MatchClientDriverTests.cs` | Apply-order, per-batch tick-stamp, post-`MatchEnded` drop, two-runs-same-sequence log determinism, refused-command isolation |
+| `tests/MatchSessionTests.cs` | Neutral build, off-tick `ServiceOnce` drain through a real engine, GK-heading setup, both-or-neither squad guard |
+| `tests/FrameInterpolatorTests.cs` | **P3** — speed-aware alpha and the snap-across-discontinuity contract |
+| `tests/FollowBallCameraTests.cs` | **P3** — dead zone, frame-rate independence by step subdivision, pitch-clamp centring |
+
+---
+
+### `src/match-client-unity/` — the Unity-only render/UGUI skin (P4–P6, not yet built)
+
+Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P4 … §5-P6).
+**Scaffolded only — asmdef and README, no scripts.** It will hold the `MonoBehaviour` render/camera/HUD
+skin and the UGUI screens: types that need a Unity host (`Camera`, `SpriteRenderer`, `GameObject`, UGUI).
+It adds a skin over `match-client-core`, never engine-facing logic.
+
+**Excluded from the shim gate by design.** Listed in `tools/dotnet-ci/generate_projects.py`'s
+`SHIM_EXCLUDED_ASMDEFS`, so it is never generated, compiled, or referenced on Linux — it is verifiable
+only on the pinned Unity host (`certification-platform.md` v1.4, ✅ PINNED since July 19, 2026). This is
+the reason the determinism-bearing half lives in the host-free sibling above.
+
+| File | Purpose |
+|------|---------|
+| `match-client-unity.asmdef` | `TacticalDirector.MatchClientUnity`; references MatchClientCore + MatchViewer + MatchEngine |
+| `README.md` | Why the assembly is empty, the host-free/host split it encodes, and the shim-gate exclusion |
+
+---
+
 ### `src/match-client-web/` — the PM-1 browser match client (roadmap B6, July 27, 2026)
 
 Not a numbered spec. Governed by `docs/tracking/browser-match-client-design.md`. The only assembly
@@ -1536,7 +1602,7 @@ above BOTH `ui-framework` and `match-analytics`; host-free and CI-gated. Deliber
 | `docs/tracking/gk-conversion-at-contact-design.md` | Design supplement (v1.0, Aug 3, 2026 — **LANDED**) — the conversion-at-contact pass (§5.Z.23): the premise check that refuted `gk-contact-rate-design.md` §7 item 1 (per-contact ball speed in → out: parry 10.8 → 0.0, deflect 10.3 → 4.2, **catch 11.1 → 10.8**, with 7 of 10 catches conceding within 5 s), the `ERR-011-008` back-prop (§3.5.2's claim is TWO statements; only `SetPossessor` was implemented), KD-CC1..CC7, the probe that refused the geometry-aware `pointQuality` (catches 11 → 0 at every in-range `[GT]`), the measured result (goals 5.0 → 3.7/match), and the creation residual re-localized to the final-third → penalty-area transition (6.5% vs football's ~40%) |
 | `docs/tracking/gk-contact-rate-design.md` | Design supplement (v1.0, Jul 28, 2026 — **LANDED, AR converged**) — the keeper contact-rate pass (§5.Z.22): the per-episode anatomy (baseline 9 of 15 crossed episodes dive-early by 456–2000 ms), ERR-011-007 (#11 §3.3.6 commit-to-arrival gate + the first-decision-opportunity window anchor) + ERR-012-010 (#12 §3.3.3 ball-line GK slot) back-props, the measured result (contact rate 35% → 72%, catches 6 → 10, goals 14 → 15 unchanged at n=3), and the conversion-at-contact residual |
 | `docs/tracking/shot-volume-design.md` | Design supplement (v1.0, Jul 28, 2026 — **LANDED, AR-1..AR-4 converged**) — the shot-volume pass (§5.Z.21): the baseline distance/churn measurement (means 30–34 m, ~60% beyond 22 m), ERR-008-017 (`DistanceQuality_SHOOT`), the four-rung falloff ladder that refused half the design target (count ≈ 25 AND mean ≤ 22 m not jointly reachable — close-chance creation is churn-bounded), the FALLOFF = 8 distribution/goal-rate landing (shots 34.7 → 17.7, goals 8.0 → 4.7), and the recorded churn/creation + dead-midfield-branch residuals |
-| `docs/tracking/env-fingerprint-float-model-hash-mono-mapping.md` | Proposal (v0.2, Jul 19, 2026 — **APPROVED, Option A**) — resolved the #16 §4.8.3 `floatModelHash` tuple vs. the Stage-0 Mono pin (ERR-016-006); options A/B/C + owner sign-off. §4.8.3/§5.5 edits + live-host hasher landed same day; §4.8.2 runtime MXCSR validation + certified capture stay host-blocked |
+| `docs/tracking/env-fingerprint-float-model-hash-mono-mapping.md` | Proposal (v0.3, Jul 19–Aug 3, 2026 — **APPROVED, Option A**) — resolved the #16 §4.8.3 `floatModelHash` tuple vs. the Stage-0 Mono pin (ERR-016-006); options A/B/C + owner sign-off. §4.8.3/§5.5 edits + live-host hasher landed same day; §4.8.2 runtime MXCSR validation + the FR-PO-052 certified capture both LANDED (July 19–22, 2026) — no host-block remains; `SaveManager` still writing `Fingerprint = null` is the only open remainder (root `CLAUDE.md` OPEN ISSUES) |
 | `docs/tracking/stress-test-strategy.md` | Tier A/B/C spec stress-test probe strategy (v1.0, May 18, 2026) |
 | `docs/tracking/stress-reports/INDEX.md` | Index of all stress-test run reports |
 | `docs/tracking/stress-reports/2026-05-18-tier-a-run-1.md` | Tier A Run 1 report (May 18, 2026) — 3 FAIL, 2 WARN; all 3 FAILs resolved before Run 2 |

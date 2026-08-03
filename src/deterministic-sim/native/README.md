@@ -50,10 +50,13 @@ where the library is actually loadable, i.e. the pinned cert host. This is
 defense-in-depth over the already-certified pin (the determinism-KAT run is the
 proof that the bits are exact); it does not *replace* that proof.
 
-## Certified capture (host-blocked)
+## Certified capture — LANDED July 22, 2026
 
-The certified golden read (`0x1F80` on Windows 11 / Unity 6000.4.9f1 / Mono / x64)
-can only be captured and signed off on the pinned host — see
-`docs/tracking/cert-run-runbook.md`. Everything in this directory and the two
-managed files above is buildable and CI-green now; that golden capture folds into
-the next pinned-host cert run.
+The certified golden read was captured and signed off on the pinned host
+(Windows 11 / Unity 6000.4.9f1 / DX11 / Mono / x64): raw MXCSR `0x1FBF`; the
+DAZ/FTZ/RC mode fields match the Stage-0 pin (the low 6 bits are sticky
+exception status flags the §4.8.2 gate correctly masks out); `ValidateStage0FloatMode()`
+returned `Validated`. Evidence:
+`docs/specs/deterministic-sim/cert-runs/mxcsr-live-mode-cert-2026-07-22.md`.
+The `td_mxcsr.dll` plugin committed in this directory is the one built and used
+for that capture. No host-block remains on this gate.

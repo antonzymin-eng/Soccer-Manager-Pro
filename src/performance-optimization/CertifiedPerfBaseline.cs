@@ -33,13 +33,13 @@ namespace TacticalDirector.PerformanceOptimization
     {
         /// <summary>
         /// [FIXED] Stage 0 certification-platform pin token. Encodes the certification-platform.md
-        /// v1.3 target tuple: Windows 11 / Unity 6000.4.9f1 / DX11 / Mono / x64 / SSE4.2 / 1 worker /
+        /// v1.4 certified tuple: Windows 11 / Unity 6000.4.9f1 / DX11 / Mono / x64 / SSE4.2 / 1 worker /
         /// deterministic compiler flags. certification-platform.md is the source of truth; this token
         /// is the machine-readable form stamped into a certified <see cref="SessionManifest.PlatformPin"/>.
-        /// NOTE: the tuple this token encodes is ⏳ RECERT REQUIRED as of the July 13, 2026 Unity 6
-        /// version bump — no certification run has executed against it yet (see certification-platform.md
-        /// Status). The token is updated here so a future cert run stamps the correct pin; it does not
-        /// itself assert that a certified baseline exists.
+        /// NOTE: the tuple this token encodes was recertified on the pinned host July 19, 2026 (the
+        /// platform-determinism KAT run) — certification-platform.md is ✅ PINNED at v1.4. The token
+        /// itself does not assert that any individual baseline entry is certified; see the entry's own
+        /// <see cref="CertificationStatus"/>.
         /// </summary>
         public const string Stage0CertPlatformPin = "win11-unity6000.4.9f1-dx11-mono-x64-sse4.2-1w-detflags";
 

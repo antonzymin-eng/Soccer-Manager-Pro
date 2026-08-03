@@ -143,7 +143,7 @@ For the specific `.asmdef` references each assembly declares, read that spec's `
 
 ## BUILD AND TEST COMMANDS
 
-> **Note:** The certification platform is now pinned in `docs/tracking/certification-platform.md` v1.3 (Windows 11 / Unity 6000.4.9f1 / DX11 / Mono / x64 / SSE4.2 / 1 worker / deterministic compiler flags) but is **⏳ RECERT REQUIRED** — no certification run has executed against the Unity-6 tuple yet (`cert-run-runbook.md` P1/P2). The batch-mode command below is defined but requires a Unity host to execute; the Linux path (`dotnet-ci` gate) is the day-to-day compile/test gate.
+> **Note:** The certification platform is pinned in `docs/tracking/certification-platform.md` v1.4 (Windows 11 / Unity 6000.4.9f1 / DX11 / Mono / x64 / SSE4.2 / 1 worker / deterministic compiler flags) — **✅ PINNED**, certified July 19, 2026 (the platform-determinism KAT run, commit `819f9d1`; 44 passed / 0 failed / 4 documented Stage-0+1 deferral skips — `docs/specs/deterministic-sim/cert-runs/determinism-cert-2026-07-19.md`). The batch-mode command below runs on that pinned host; the Linux path (`dotnet-ci` gate) remains the day-to-day, non-certifying compile/test gate.
 
 **Format check (pre-commit gate):**
 ```bash

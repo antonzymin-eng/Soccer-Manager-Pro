@@ -10,6 +10,25 @@
 > this environment (the network policy blocks the .NET SDK download — the same "runs in CI on push"
 > constraint the tree records elsewhere); verified by exhaustive manual review + the `generate_projects.py`
 > exclusion confirmed to keep `match-client-unity` out of the shim walk while `match-client-core` stays in.
+>
+> **UPDATE 2026-08-03 — P1 and P3 also LANDED (2026-07-27); this header and §12 had not been synced.**
+> Both landed under the `path-to-playable-roadmap.md` Track-C rows (B1 and B4), which recorded them
+> correctly while this supplement continued to describe them as deferred. **P1** — commit `d0e8573`:
+> `MatchPeriod` (derived, KD-P1-2), `RestartCue` (KD-P1-5), `MatchEngine.CurrentPeriod` /
+> `RestartAppliedThisTick`, `ApplyRestart` declaring its cue (KD-P1-4), and `LiveAgentCue` /
+> `RestartBanner` in `match-viewer` (KD-P1-6), carried through `LiveMatchFrame` → `MatchFrameView`.
+> Within-tick fields only — **no `SNAPSHOT_SCHEMA_VERSION` change**, per KD-P1-3. **P3** — commit
+> `dfa506b`: `FrameInterpolator` (speed-aware alpha; snaps rather than smooths across a restart or
+> substitution discontinuity) and `FollowBallCamera` (dead zone, frame-rate-independent smoothing
+> proven by step subdivision, centring pitch clamp), 23 tests. **P3 landed two of three deliverables
+> by design:** the live-stats accumulator was deliberately not built, because #37's
+> `MatchAnalyticsAggregator` (roadmap B3) already is one and a second in `match-client-core` would be
+> the parallel-surface trap. Recorded, not silently dropped.
+>
+> **All host-free phases (P0–P3) are therefore complete.** What remains is P4–P6 — the Unity render
+> skin, the UGUI shell, and integration/cert — of which P6's head-less closed-loop scenario is
+> gate-verifiable and P4/P5 are verifiable only on the pinned host. That host block cleared with the
+> July 19, 2026 certification (`certification-platform.md` v1.4 ✅ PINNED).
 > No section files, no numbered spec.
 > Same governance class as `interactive-match-view-design.md` and `match-engine-design.md`.
 > **Governs (when implemented):** two new presentation assemblies — host-free `src/match-client-core/`
@@ -212,7 +231,7 @@ gate — §5-P0). This ordering front-loads everything the host block does *not*
   head-less test drive the identical composition, input path included. This is the "click Play Match"
   seam the browser design left to Stage-1 UI.
 
-### P1 — Richer observation frame (host-free)
+### P1 — Richer observation frame (host-free) — ✅ **LANDED 2026-07-27** (commit `d0e8573`, roadmap B1)
 - Extend the live frame with the cues a native View can show that the browser floor skipped:
   per-agent booking/sent-off state, active-substitution markers, current restart/phase. Requires a
   small read-only extension to the `MatchEngine` observation surface (same pattern as v1.24/v1.32 —
@@ -303,7 +322,7 @@ per KD-P1-1.
   ordering without a Unity host. (The live wall-clock path is reproducible only *via* the log, not
   from human intent — §6.1.)
 
-### P3 — Client-side view state & stats (host-free)
+### P3 — Client-side view state & stats (host-free) — ✅ **LANDED 2026-07-27** (commit `dfa506b`, roadmap B4; two of three by design — see the header UPDATE)
 - Frame interpolation math (render at 60 FPS between 10 Hz AI strides / 60 Hz physics — pure
   functions, unit-tested without Unity), follow-ball camera target math, and a minimal live-stats
   accumulator (possession %, shots, score) fed off the observation surface. All pure/testable.
@@ -487,15 +506,34 @@ render/Update loop to instrument.
 
 ## 12. Recommended next step
 
-Promote this note through one adversarial-review cycle to convergence (per project convention),
+~~Promote this note through one adversarial-review cycle to convergence (per project convention),
 then land **P0–P2 host-free** first — the foundation + the deterministic command channel — since
 that is the highest-risk, fully-testable core and needs no Unity host. The rendering skin (P4–P6)
-follows once the input/determinism core is locked and a cert-host slot is scheduled.
+follows once the input/determinism core is locked and a cert-host slot is scheduled.~~
+**DONE** — AR converged at AR-8; P0/P2 landed 2026-07-24, P1/P3 landed 2026-07-27.
+
+**Next step (2026-08-03): P6's head-less closed-loop scenario, before P4.** Both preconditions the
+original recommendation named are met — the input/determinism core is locked, and the cert-host slot
+is no longer hypothetical (the July 19, 2026 certification, `certification-platform.md` v1.4
+✅ PINNED, cleared the host block on P4–P6).
+
+The ordering argument is the shim gate. `match-client-unity` is in
+`generate_projects.py`'s `SHIM_EXCLUDED_ASMDEFS`, so **every P4/P5 line is invisible to
+`tools/dotnet-ci`** and verifiable only on the pinned host. §5-P6's scenario is the opposite: it is
+head-less, gate-verified on every push, and depends on nothing in P4/P5 — it asserts that two runs
+with the same `MatchSetup` + tick-stamped sequence are digest-identical, and that
+save@N → restore → replay equals an uninterrupted run. Landing it first means the render skin arrives
+against an existing determinism lock rather than ahead of one, which is the §9 testing strategy's own
+posture and the direct lesson of the capstone that asserted a match ticked while every match was a
+0–0 deadlock (ERR-030-014).
+
+P4 then follows on the host, with P5 and the on-host half of P6 after it.
 
 ## Version History
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.9 | 2026-08-03 | **Retroactive sync — P1 and P3 LANDED 2026-07-27; this supplement was never updated and had continued to describe both as deferred.** No design change and no new work: the landings are five weeks old and were recorded correctly in `path-to-playable-roadmap.md` (Track-C rows **B1** and **B4**) at the time. This row closes the drift between the two documents. **P1 (commit `d0e8573`, roadmap B1):** `MatchPeriod` (derived from the two transition flags, KD-P1-2), `RestartCue` as its own enum rather than widening the digest-bearing `RestartType` (KD-P1-5), `MatchEngine.CurrentPeriod` + `RestartAppliedThisTick`, `ApplyRestart` declaring its cue at all six restart sites (KD-P1-4), and `LiveAgentCue` + `RestartBanner` as `match-viewer` types (KD-P1-1/KD-P1-6), carried through `LiveMatchFrame` → `MatchFrameView`. The restart cue stayed a **within-tick** engine field per KD-P1-3, so the `SerializeWorldState` exclusion proof needed no new class and there was **no `SNAPSHOT_SCHEMA_VERSION` change** — the KD held as designed. **P3 (commit `dfa506b`, roadmap B4):** `FrameInterpolator` — speed-aware alpha (an interpolator handed the unscaled tick rate falls further behind the sim every frame at 3×) and blending that **snaps rather than smooths across a discontinuity**, since a restart teleports the ball and a substitution swaps who occupies a roster slot; `FollowBallCamera` — dead zone, `1 − e^(−rate·dt)` smoothing proven frame-rate-independent by step subdivision rather than asserted, and a pitch clamp that centres when the view is wider than the pitch instead of oscillating between two impossible bounds. 23 tests. **P3 landed two of three deliverables, by design:** the §5-P3 live-stats accumulator was deliberately not built — #37's `MatchAnalyticsAggregator` (roadmap B3) already is one, and a second in `match-client-core` would be the parallel-surface trap (the PM AR-7 M-1 / `POSITION_COUNT` class the plan cites elsewhere). Recorded rather than silently dropped. **Consequence: every host-free phase (P0–P3) is complete**; P4–P6 remain, and §12 is rewritten accordingly — its two stated preconditions are now both met, and it recommends P6's head-less closed-loop scenario ahead of P4 because `match-client-unity` sits in `SHIM_EXCLUDED_ASMDEFS` and P4/P5 are therefore invisible to `tools/dotnet-ci`. Doc-only commit; no `.cs` changed, so no gate run. |
 | 0.8 | 2026-07-24 | **AR pass over the P0 landing — 3 Medium fixed, doc Lows fixed (pass 1: 0H+2M+3L; pass 2: 0H+1M+0L; pass 3 clean → CONVERGED).** M (pass 1, `MatchClientDriver`): public `Driver.Log` aliased the live `List<T>` the sim thread appends to — a UI-thread read during a running match raced the appender; now every append + read is `_logLock`-guarded and `Log` returns a point-in-time snapshot copy (safe from any thread). M (pass 1, `ManagerCommandKind`/`ManagerCommand`/`ManagerCommandQueue`): `SetTeamTactic` was ordinal 0, so a `default(ManagerCommand)` silently mapped onto `SetTeamTactic(0, default(TeamTactic))` — staging a malformed (non-Balanced zero-value) tactic; added a `None = 0` sentinel (game kinds → 1/2/3), refused fail-loud at `Enqueue` and `Apply`. M (pass 2, `MatchClientDriver`): a command the engine refuses (bad index, sub over the cap / of an already-used or sent-off slot — all reachable via ordinary repeated UI subs; verified `SetPlayerTactic` / `SubstitutePlayer` fail loud) threw inside the pre-tick hook and killed the background pacing thread, silently freezing the match; the drain now isolates a failing command (dropped, not applied, not in `Log`, recorded in a new `FailedCommands` snapshot) so the batch and sim loop carry on (try/catch permitted on this presentation drain path per the streamer's carve-out). L: `ServiceOnce` doc caveat (intended for the paused/full-time path); `TickStampedCommand.AppliedTick` doc tightened (it is the pre-`RunTick` `CurrentTick` = tick N, the design's "top of tick N+1"). Locked by new tests (default-command reject at enqueue + apply; refused-command isolation with batch-continues + no-escape). No production behaviour change on the default/neutral path. |
 | 0.7 | 2026-07-24 | **P0 host-free foundations + the P2 deterministic command channel LANDED** (the §12 "land P0–P2 host-free first" recommendation). New assemblies: host-free `src/match-client-core/` (`TacticalDirector.MatchClientCore` — references match-engine + match-viewer + deterministic-sim + tactical-instructions + player-database + project-constants) and Unity-only `src/match-client-unity/` (asmdef + README only; the P4–P6 render skin). Core files: `MatchClientConstants` (master-plan speed set {1,3,5,10} as [GT] scalars), `ILiveMatchMutations` (the closed live-mutator surface — the three stride-safe mutators + tick/match-ended reads; producer + consumer both specified, so not a phantom) + `MatchEngineMutations` pass-through adapter, `ManagerCommandKind`/`ManagerCommand`/`TickStampedCommand` (value-type command + log entry, one factory+Apply path per live mutator; no playback kind per §6.4), `ManagerCommandQueue` (lock-guarded FIFO; UI-thread Enqueue / sim-thread internal DrainInto), `MatchClientDriver` (the `Service` drain = the pre-tick hook body: FIFO apply on the sim thread, per-batch tick-stamp, sim-side post-`MatchEnded` drop, ReadOnlyCollection log view; holds no engine reference — receives the mutation surface per call, §4), `MatchSetup` (immutable boot config; both-or-neither squads) + `MatchSession` (composition root — builds/wires engine+streamer+driver, installs the drain as the streamer pre-tick hook, exposes read=frames / write=commands / `ServiceOnce`). **`match-viewer` changes (§Governs):** `LiveMatchStreamer` gains the optional set-once pre-tick hook + `ServiceOnce()` (both serialized by a new `_tickGate` so the hook never interleaves with a tick; browser viewer installs no hook — playback-only invariant preserved by construction) and `MaxLiveSpeedMultiplier` default 8 → 10 so 10× is deliverable. **CI-gate deliverable:** `generate_projects.py` gains `SHIM_EXCLUDED_ASMDEFS = {TacticalDirector.MatchClientUnity}` so the Unity-only assembly is not shim-compiled (verified: it is not generated; `match-client-core` + its tests are). Head-less tests: `ManagerCommandQueueTests` (FIFO, thread-safe enqueue, the exactly-three-game-kinds §6.4 lock), `MatchClientDriverTests` (FIFO apply-order, per-batch tick-stamp, post-`MatchEnded` drop, two-runs-same-sequence log determinism), `MatchSessionTests` (neutral build + off-tick `ServiceOnce` drain through a real engine logging at tick 0, GK-heading setup, both-or-neither squad guard). Deferred as planned: P1 richer frame, P3 view-state/camera/interp math, P4–P6 Unity skin, and the durable save-capture body that rides the `ServiceOnce` seam. |
 | 0.1 | 2026-07-23 | Initial high-level implementation plan. Scopes the interactive Unity client (live rendering + input) as the next presentation surface above the `match-viewer` HTML-replay / live-browser floor. MVVM over the existing observer-neutral `LiveMatchStreamer` ViewModel; new engine-facing work confined to a deterministic, stride-committed manager-command channel (§6). Phased P0–P6 with P0–P3 host-free (shim-testable) and P4–P6 the cert-verified Unity skin. Not yet adversarially reviewed. |
