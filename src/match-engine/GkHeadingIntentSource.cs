@@ -47,11 +47,12 @@ namespace TacticalDirector.MatchEngine
         /// world-space point he should be committed to. Pure geometry — the caller owns the latch, the
         /// projection, the save-priority exclusion and the commit.
         ///
-        /// <para>The football judgement is <b>condition 3</b>, the last-man test: a keeper comes for a
-        /// ball only when no team-mate is nearer to it. That single condition covers both cases a keeper
-        /// actually comes for — the through-ball into the space behind the defence, and the attacker
-        /// running clean through (who HAS the ball, distance ≈ 0, but is unattended). It fails safe: with
-        /// a defender anywhere near the ball the keeper does not move.</para>
+        /// <para>The football judgement is <b>condition 3</b>: is anyone already between the ball and
+        /// the goal? A keeper comes out to <b>reduce the shooting angle</b>, and the only thing that
+        /// makes that unnecessary is a team-mate who is <i>goal-side</i> — already in the shot's path.
+        /// A defender chasing the carrier down, or trying to muscle him off the ball, is emphatically
+        /// <b>not</b> a reason to stay: the carrier still has a clear sight of goal, and closing the
+        /// angle is the keeper's job whether or not someone is snapping at the man's heels.</para>
         ///
         /// <para>For a loose ball the target is the solved meeting point, not the ball's current
         /// position. The target is LOCKED at commit (KD-15 / FR-GK-018), so aiming at where the ball is
@@ -65,8 +66,11 @@ namespace TacticalDirector.MatchEngine
         /// <param name="ballVelocity">Current ball velocity.</param>
         /// <param name="ballLoose">True when no agent possesses the ball.</param>
         /// <param name="ballHeldByKeeperTeam">True when the possessor is on the keeper's own team.</param>
-        /// <param name="nearestOutfieldTeammateDistM">Distance (m) from the ball to the nearest eligible
-        /// outfielder of the keeper's team, or <c>float.MaxValue</c> when the team has none on the pitch.</param>
+        /// <param name="hasGoalSideCover">True when a team-mate of the keeper is already between the ball
+        /// and the goal, inside the shot corridor — see <see cref="HasGoalSideCover"/>.</param>
+        /// <param name="rushCommitDistanceM">How far from his own goal THIS keeper comes out, from
+        /// <c>GoalkeeperRushDispatch.ComputeRushCommitDistanceM</c> (§3.7.0). The trigger's "when" is the
+        /// keeper's own attributes; this predicate only applies it geometrically.</param>
         /// <param name="rushSpeedMps">The keeper's rush speed from <c>ComputeRushLaunchMps</c> — the solve
         /// must race at the speed the keeper will actually run at, not a nominal one.</param>
         /// <param name="rushTarget">The point to lock into the <c>RushIntent</c>. Written on every path;
@@ -78,7 +82,8 @@ namespace TacticalDirector.MatchEngine
             in Vector3 ballVelocity,
             bool ballLoose,
             bool ballHeldByKeeperTeam,
-            float nearestOutfieldTeammateDistM,
+            bool hasGoalSideCover,
+            float rushCommitDistanceM,
             float rushSpeedMps,
             out Vector3 rushTarget)
         {
@@ -98,11 +103,11 @@ namespace TacticalDirector.MatchEngine
                 return false;
             }
 
-            // 3. The last-man test.
-            float gkDx = ballPosition.x - gkPosition.x;
-            float gkDy = ballPosition.y - gkPosition.y;
-            float gkDistToBall = Mathf.Sqrt(gkDx * gkDx + gkDy * gkDy);
-            if (nearestOutfieldTeammateDistM <= gkDistToBall)
+            // 3. Somebody is already in the shot's path. A goal-side team-mate is narrowing the angle
+            //    the keeper would be coming out to narrow, and two bodies converging on the same line
+            //    is how a keeper gets rounded. A CHASING defender is not this: the carrier still has a
+            //    clear sight of goal, and the keeper comes anyway.
+            if (hasGoalSideCover)
             {
                 return false;
             }
@@ -133,11 +138,88 @@ namespace TacticalDirector.MatchEngine
                 return false;
             }
 
-            // 6. The point the keeper would run to must be inside the area he actually sweeps. Applied
-            //    to the TARGET, not the ball, so a race solved to a meeting point out by the halfway
-            //    line is refused even when the ball is currently close.
+            // 6. THE trigger condition: is the ball inside the distance from his own goal at which THIS
+            //    keeper comes out? That distance is §3.7.0's attribute-driven answer — an aggressive,
+            //    composed sweeper-keeper commits from the edge of the area, a timid or spent one barely
+            //    leaves his line. Applied to the TARGET rather than the ball, so a race solved to a
+            //    meeting point out by the halfway line is refused even when the ball is currently close.
             float goalX = keeperTeam == 0 ? 0f : MatchEngineConstants.PITCH_LENGTH_M;
-            return Mathf.Abs(rushTarget.x - goalX) <= MatchEngineConstants.GkRushTriggerRangeM;
+            return Mathf.Abs(rushTarget.x - goalX) <= rushCommitDistanceM;
+        }
+
+        /// <summary>
+        /// §4.4: true when a team-mate of keeper <paramref name="keeperTeam"/> is <b>goal-side</b> of the
+        /// ball and inside the shot corridor — already standing in the path the keeper would be coming
+        /// out to block.
+        ///
+        /// <para>Two conditions, and the first is the one that matters. <b>Goal-side</b> means nearer the
+        /// defended goal line than the ball is, by <c>GkRushCoverGoalSideMarginM</c>. A defender level
+        /// with the carrier, or chasing him from behind, is therefore NOT cover — which is the point: a
+        /// recovering defender does not narrow the shooting angle, so the keeper still comes. Only a body
+        /// that is genuinely in front of the ball does.</para>
+        ///
+        /// <para><b>Inside the corridor</b> means within <c>GkRushCoverCorridorHalfWidthM</c> of the
+        /// segment from the ball to the centre of the defended goal — the line the shot would take. A
+        /// full-back stranded on the far touchline is goal-side of a ball in the centre and blocks
+        /// nothing; measuring perpendicular distance to the shot line rather than a plain Y band keeps
+        /// that honest for a ball out wide, where the two differ most.</para>
+        ///
+        /// <para>Goalkeepers and sent-off agents are excluded — the keeper is not his own cover, and a
+        /// frozen red-carded agent blocks nothing (the participation rule every scan in this engine
+        /// carries).</para>
+        /// </summary>
+        public static bool HasGoalSideCover(
+            int keeperTeam,
+            in Vector3 ballPosition,
+            AgentState[] agents, int[] teamIds, bool[] isGoalkeeper, bool[] isSentOff, int count)
+        {
+            float goalX = keeperTeam == 0 ? 0f : MatchEngineConstants.PITCH_LENGTH_M;
+            float goalY = MatchEngineConstants.PITCH_WIDTH_M * 0.5f;
+
+            float ballToGoalM = Mathf.Abs(ballPosition.x - goalX);
+
+            // The shot line: ball → goal centre. Degenerate when the ball is on the goal line itself,
+            // in which case nobody can be goal-side of it by a margin anyway.
+            float lineDx = goalX - ballPosition.x;
+            float lineDy = goalY - ballPosition.y;
+            float lineLenSq = lineDx * lineDx + lineDy * lineDy;
+            if (lineLenSq < MatchEngineConstants.GK_RUSH_SOLVE_EPSILON)
+            {
+                return false;
+            }
+            float lineLen = Mathf.Sqrt(lineLenSq);
+
+            float corridor = MatchEngineConstants.GkRushCoverCorridorHalfWidthM;
+
+            for (int i = 0; i < count; i++)
+            {
+                if (teamIds[i] != keeperTeam || isGoalkeeper[i] || isSentOff[i])
+                {
+                    continue;
+                }
+
+                Vector2 p = agents[i].Position;
+
+                // Goal-side by a margin — strictly in FRONT of the ball, not level with it.
+                if (Mathf.Abs(p.x - goalX) > ballToGoalM - MatchEngineConstants.GkRushCoverGoalSideMarginM)
+                {
+                    continue;
+                }
+
+                // Perpendicular distance to the ball → goal-centre line (the 2-D cross product over the
+                // segment length). The goal-side test above already bounds the along-line position, so
+                // the infinite-line distance is the right measure here.
+                float relX = p.x - ballPosition.x;
+                float relY = p.y - ballPosition.y;
+                float perpM = Mathf.Abs(relX * lineDy - relY * lineDx) / lineLen;
+
+                if (perpM <= corridor)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>

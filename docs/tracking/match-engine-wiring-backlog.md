@@ -74,19 +74,27 @@ The engine called `CommitSaveIntent` and only `CommitSaveIntent`.
 
 **Landed:** `MatchEngine.TryCommitRushIntents` (fired from `DriveGkHeadingTactical`, *before* the
 tactical tick — the rush is a 10 Hz state-machine input, unlike the 60 Hz-consumed header) over a
-new pure `GkHeadingIntentSource.RushArmed`. The predicate's whole football judgement is a **last-man
-test** — the keeper comes only when no team-mate is nearer the ball — which covers the through-ball
-and the unattended runner alike and fails safe; for a loose ball the locked target is an **intercept
-race solve**, not the ball's current position, because KD-15 locks the target at commit. Skipped
-whenever `SaveArmed` holds for the same keeper: a ball driving at the goal is a save, not a rush, and
-without that exclusion a shot would send the keeper charging out while the ERR-011-007 lead gate
-still held the dive. Deliberately **not** a Decision Tree action — `ActionType.SAVE = 7` is the last
-ordinal that fits the 3-bit composure-noise field, so an eighth would force the same digest
-rebaseline that defers W9. **No new engine state** (#11's own serialized `_rushIntentActive` is the
-latch, read through new `GetState` / `HasActiveRushIntent` accessors), so no schema bump.
+new pure `GkHeadingIntentSource.RushArmed`. **The keeper comes out to reduce the shooting angle**,
+and the predicate is built from that sentence: the only thing that keeps him home is a team-mate
+already **goal-side** of the ball inside the shot corridor — a defender merely *chasing* the carrier
+narrows nothing and does not stop him — while **how far** he comes out is #11 §3.7.0's
+attribute-driven `ComputeRushCommitDistanceM` (`OneVsOne` / `Composure` / fatigue), not an engine
+range. For a loose ball the locked target is an **intercept race solve**, not the ball's current
+position, because KD-15 locks the target at commit. Skipped whenever `SaveArmed` holds for the same
+keeper: a ball driving at the goal is a save, not a rush, and without that exclusion a shot would
+send the keeper charging out while the ERR-011-007 lead gate still held the dive. Deliberately
+**not** a Decision Tree action — `ActionType.SAVE = 7` is the last ordinal that fits the 3-bit
+composure-noise field, so an eighth would force the same digest rebaseline that defers W9. **No new
+engine state** (#11's own serialized `_rushIntentActive` is the latch, read through new `GetState` /
+`HasActiveRushIntent` accessors), so no schema bump.
 
-**What it surfaced: `ERR-011-009`.** A rush that REACHED its target had no exit — see §3 of the owner
-doc. Fixed spec-and-code in the same commit.
+**What it surfaced: two spec defects.** **`ERR-011-010`** — §3.7 delegated the rush DECISION to
+Decision Tree #8, which has no goalkeeper model and structurally cannot acquire one, so the condition
+belonged to nobody and the method sat uncalled for ten weeks; and because the "when" was delegated,
+the spec never said what a keeper is *deciding* either — **the first cut of this trigger guessed
+wrong**, using a last-man test that keeps the keeper home in exactly the situation he exists for.
+New §3.7.0 takes the decision back and states the model. **`ERR-011-009`** — a rush that REACHED its
+target had no exit. Both fixed spec-and-code in the same commit; see §3 of the owner doc.
 
 **Measurement NOT run.** No .NET SDK in the authoring environment (the agent proxy denies the
 installer), so neither the gate nor the new `GkRushDiagnosticTests` instrument executed. Owner doc
@@ -230,7 +238,7 @@ throughout; `[GT]` landings are frozen per KD-W1 until the final pass.
 
 | Order | Item | Rationale |
 |---|---|---|
-| 1 | ~~**W1** keeper rush trigger~~ ✅ **WIRED Aug 4, 2026** | Whole subsystem existed; a trigger-condition problem. Surfaced `ERR-011-009`. Its measurement is still owed. |
+| 1 | ~~**W1** keeper rush trigger~~ ✅ **WIRED Aug 4, 2026** | Whole subsystem existed; a trigger-condition problem. Surfaced `ERR-011-010` + `ERR-011-009`. Its measurement is still owed. |
 | 2 | **C1** the `InPoss` gate | Cheapest possible fix to the largest starvation. Unblocks phase-gated behaviour across #13/#14/#15 — including anything W-class we wire later. |
 | 3 | **W2** tackles | Three-link chain, all three links understood. High realism value; touches pass cancellation, so expect findings. |
 | 4 | **W4** keeper perception | Reuses tested occlusion. Upstream of all keeper behaviour, so it should precede any keeper calibration. |
@@ -264,5 +272,5 @@ next lever on close-chance creation and is large enough to want its own pass.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| 1.1 | 2026-08-04 | — | **W1 wired** (`docs/tracking/gk-rush-trigger-design.md`) — `CommitRushIntent` has a production caller for the first time. Surfaced and fixed `ERR-011-009` (a rush that reached its target had no §3.1.1 exit, so a swept loose ball stranded the keeper in `Rushing` for the rest of the match). Measurement not run — no .NET SDK in the authoring environment. Nine Class-A items remain; the next in sequence is **C1**, the `InPoss` gate. |
+| 1.1 | 2026-08-04 | — | **W1 wired** (`docs/tracking/gk-rush-trigger-design.md`) — `CommitRushIntent` has a production caller for the first time. Surfaced and fixed **two** spec defects: `ERR-011-010` (§3.7 delegated the rush decision to Decision Tree #8, which cannot make it — so the condition had no owner for ten weeks, and the spec never said what the keeper was deciding; new §3.7.0 states it, and the keeper comes out to REDUCE THE SHOOTING ANGLE, so a chasing defender does not keep him home and the distance is his own attributes) and `ERR-011-009` (a rush that reached its target had no §3.1.1 exit, so a swept loose ball stranded the keeper in `Rushing` for the rest of the match). Measurement not run — no .NET SDK in the authoring environment. Nine Class-A items remain; the next in sequence is **C1**, the `InPoss` gate. |
 | 1.0 | 2026-08-04 | — | Initial audit. Three-pass sweep over the 18 assemblies the match engine references; 10 Class-A dormant capabilities, 4 Class-B starved gates carried from §5.Z.24, 7 Class-C non-defects. Establishes KD-W1 (`[GT]` freeze) and KD-W2 (scope). |

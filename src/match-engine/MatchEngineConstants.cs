@@ -620,16 +620,26 @@ namespace TacticalDirector.MatchEngine
         public static readonly float SaveTriggerClutchFirmness = Config.GetFloat("match-engine", "SaveTriggerClutchFirmness", 0.8f);
 
         // ── Wiring backlog W1: the keeper rush trigger ────────────────────────────────────
-        // gk-rush-trigger-design.md §4. All FOUR are new dials for a surface that had no production
-        // caller at all (`CommitRushIntent`), so none of them is a KD-W1 retune — there was no prior
-        // value to freeze. Every default is a first plausible number, NOT a fitted one: they are the
-        // input to the single calibration pass the wiring backlog books after the board is clear, not
-        // its output. Do not cite any of them as measured.
+        // gk-rush-trigger-design.md §4. All are new dials for a surface that had no production caller
+        // at all (`CommitRushIntent`), so none of them is a KD-W1 retune — there was no prior value to
+        // freeze. Every default is a first plausible number, NOT a fitted one: they are the input to the
+        // single calibration pass the wiring backlog books after the board is clear, not its output. Do
+        // not cite any of them as measured.
+        //
+        // NOTE: how far the keeper comes out is NOT here. That is §3.7.0's attribute-driven
+        // `GoalkeeperRushDispatch.ComputeRushCommitDistanceM`, in #11's own catalogue, because the
+        // decision belongs to the keeper rather than to the engine's trigger geometry (ERR-011-010).
 
-        /// <summary>[GT] Distance (m) from the defended goal line within which the keeper may commit a
-        /// rush — applied to the rush TARGET, not the ball. Roughly the penalty area plus a stride: the
-        /// region a keeper actually sweeps. Config key [match-engine] GkRushTriggerRangeM.</summary>
-        public static readonly float GkRushTriggerRangeM = Config.GetFloat("match-engine", "GkRushTriggerRangeM", 22.0f);
+        /// <summary>[GT] How far in FRONT of the ball (m, along the goal-to-goal axis) a team-mate must
+        /// be to count as goal-side cover. A defender level with the carrier — or chasing him from
+        /// behind — is not cover: he narrows no shooting angle, so the keeper still comes out.
+        /// Config key [match-engine] GkRushCoverGoalSideMarginM.</summary>
+        public static readonly float GkRushCoverGoalSideMarginM = Config.GetFloat("match-engine", "GkRushCoverGoalSideMarginM", 2.0f);
+
+        /// <summary>[GT] Half-width (m) of the corridor around the ball → goal-centre line inside which a
+        /// goal-side team-mate counts as cover. A full-back stranded on the far touchline is goal-side of
+        /// a central ball and blocks nothing. Config key [match-engine] GkRushCoverCorridorHalfWidthM.</summary>
+        public static readonly float GkRushCoverCorridorHalfWidthM = Config.GetFloat("match-engine", "GkRushCoverCorridorHalfWidthM", 6.0f);
 
         /// <summary>[GT] Longest run (s, at the keeper's own rush speed) he will commit to — the single
         /// time budget applied to both trigger branches. For a loose ball it is exactly the intercept
@@ -803,8 +813,11 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | SNAPSHOT_SCHEMA_VERSION change.                                 |
 // | 1.28    | 2026-08-04 | —      | Wiring backlog W1 (the keeper rush trigger): + [FIXED]          |
 // |         |            |        | GK_RUSH_SOLVE_EPSILON (the intercept quadratic's branch guard)  |
-// |         |            |        | and 4 [GT] — GkRushTriggerRangeM / GkRushMaxInterceptS /        |
-// |         |            |        | GkRushMaxBallHeightM / GkRushCommitment. New dials for a        |
+// |         |            |        | and 5 [GT] — GkRushMaxInterceptS / GkRushMaxBallHeightM /       |
+// |         |            |        | GkRushCommitment / GkRushCoverGoalSideMarginM /                 |
+// |         |            |        | GkRushCoverCorridorHalfWidthM. How far the keeper comes out is  |
+// |         |            |        | deliberately NOT here — that is #11 §3.7.0's attribute-driven   |
+// |         |            |        | ComputeRushCommitDistanceM (ERR-011-010). New dials for a       |
 // |         |            |        | surface that had NO production caller, so not a KD-W1 retune;   |
 // |         |            |        | all four are un-calibrated and are the calibration pass's       |
 // |         |            |        | input. No SNAPSHOT_SCHEMA_VERSION change (#11's own already-    |

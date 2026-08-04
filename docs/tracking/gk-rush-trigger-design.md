@@ -3,14 +3,14 @@
 > **Created:** August 4, 2026
 > **Status:** DESIGN SUPPLEMENT — the same governance class as `match-engine-design.md`. Opens no
 > numbered spec and changes no `SPEC_INDEX.md` row. Files one cross-spec back-prop against
-> Goalkeeper Mechanics **#11** (`ERR-011-009`) — id verified free against `spec-error-log.md`
-> (last #11 entry was `ERR-011-008`) and against `docs/specs/` before assignment.
+> Goalkeeper Mechanics **#11** (`ERR-011-010`, `ERR-011-009`) — ids verified free against
+> `spec-error-log.md` (last #11 entry was `ERR-011-008`) and against `docs/specs/` before assignment.
 > **Owner document:** `docs/tracking/match-engine-wiring-backlog.md` **W1** (this is that item).
 > **Purpose:** `GoalkeeperMechanics.CommitRushIntent` has had zero production callers since it was
 > written. Everything downstream of it is built, tested and reachable; only the trigger condition
 > was missing, so every one-on-one in this engine has been a stationary keeper on his line waiting
-> to dive. This note is the trigger, the spec defect the wiring surfaced, and the measurement that
-> has **not yet been run**.
+> to dive. This note is the trigger, the two spec defects the wiring surfaced, and the measurement
+> that has **not yet been run**.
 
 ---
 
@@ -21,12 +21,12 @@ The backlog's own gate (`match-engine-wiring-backlog.md` §0, and the gate at th
 this is a wiring task, not a realism pass.* W1 is the canonical case. The consequence for this
 note's shape:
 
-- **No `[GT]` governing an existing subsystem is retuned.** KD-W1 holds. The five constants added
+- **No `[GT]` governing an existing subsystem is retuned.** KD-W1 holds. The eleven constants added
   below are *new dials for a previously dead surface* — there was no prior value to freeze — and
   every one of them is explicitly un-calibrated, waiting on the single calibration pass the backlog
   books after the wiring is complete.
-- **The deliverable is a live trigger plus whatever the wiring surfaces.** It surfaced one spec
-  defect, filed as `ERR-011-009` (§3).
+- **The deliverable is a live trigger plus whatever the wiring surfaces.** It surfaced two spec
+  defects, filed as `ERR-011-010` and `ERR-011-009` (§3).
 
 ---
 
@@ -78,11 +78,11 @@ same DT surface as `SAVE` and this call site becomes the fallback, not a paralle
 
 ```
 RushArmed(keeperTeam, gkPos, ballPos, ballVel, ballLoose, ballHeldByKeeperTeam,
-          nearestOutfieldDefenderDistM, rushSpeedMps) -> bool, out rushTarget
+          hasGoalSideCover, rushCommitDistanceM, rushSpeedMps) -> bool, out rushTarget
 
-1. our own player has the ball                      -> no rush
+1. our own player has the ball                       -> no rush
 2. ball above GkRushMaxBallHeightM                   -> no rush   (a claim, not a rush; W3)
-3. a team-mate is nearer the ball than the keeper    -> no rush   (the last-man test)
+3. hasGoalSideCover                                  -> no rush   (someone is already in the path)
 4. ball loose:
        solve the intercept race at rushSpeedMps;
        no solution                                   -> no rush
@@ -91,16 +91,46 @@ RushArmed(keeperTeam, gkPos, ballPos, ballVel, ballLoose, ballHeldByKeeperTeam,
        rushTarget = the ball
 5. |rushTarget - gkPos| > rushSpeedMps * GkRushMaxInterceptS
                                                      -> no rush   (one time budget, both branches)
-6. |rushTarget.x - ownGoalX| > GkRushTriggerRangeM    -> no rush
+6. |rushTarget.x - ownGoalX| > rushCommitDistanceM    -> no rush   (§3.7.0 — HIS distance)
 otherwise -> rush
+
+HasGoalSideCover(keeperTeam, ballPos, agents...) -> bool
+    any eligible team-mate (not the keeper, not sent off) who is
+      * nearer the defended goal than the ball by GkRushCoverGoalSideMarginM, AND
+      * within GkRushCoverCorridorHalfWidthM of the ball -> goal-centre line
 ```
 
-**Condition 3 is the whole football judgement, and it covers both cases a keeper actually comes for.**
-A through-ball into the space behind the defence is one the keeper takes only when he is the nearest
-player to it; an attacker running clean through has the ball (distance ≈ 0) but is *unattended*, so
-his chasing defender being nearer the ball than the keeper is exactly the signal that the keeper
-should stay. One condition, no case analysis, and it fails safe: with defenders anywhere near the
-ball the keeper does not move.
+**The keeper comes out to reduce the shooting angle.** Everything in conditions 3 and 6 follows from
+that one sentence, and the first cut of this trigger got both wrong by not starting from it.
+
+**Condition 3 — a chasing defender is not cover.** The first version used a *last-man* test: no rush
+unless the keeper was nearer the ball than any team-mate. That is wrong, and wrong in exactly the
+situation the keeper exists for. A defender recovering behind the carrier, or wrestling him for the
+ball, narrows **no** shooting angle — the carrier still has a clear sight of goal — so the keeper
+comes anyway. What genuinely makes the trip unnecessary is a team-mate who is already *goal-side*:
+in front of the ball, inside the corridor the shot would travel down. He is narrowing the angle, and
+two bodies converging on the same line is how a keeper gets rounded.
+
+The corridor is measured as perpendicular distance to the ball → goal-centre segment rather than a
+plain Y band, because the two differ most for a ball out wide — where a full-back stranded on the far
+touchline is technically goal-side and blocks nothing.
+
+**Condition 6 — the *when* is the keeper's, not a constant.** How far out he comes is
+`GoalkeeperRushDispatch.ComputeRushCommitDistanceM`, #11 §3.7.0:
+
+```
+clamp(RUSH_COMMIT_BASE_M
+      + RUSH_COMMIT_K_ONE_VS_ONE      · OneVsOne_norm
+      + RUSH_COMMIT_K_COMPOSURE       · Composure_norm
+      − RUSH_COMMIT_FATIGUE_PENALTY_M · fatigue,
+      RUSH_COMMIT_MIN_DISTANCE_M, RUSH_COMMIT_MAX_DISTANCE_M)
+```
+
+At the defaults that is 9 m for a `OneVsOne = 3`, `Composure = 3` keeper and 16 m for a
+`OneVsOne = 16`, `Composure = 12` one at 20% fatigue — an aggressive sweeper-keeper meets an
+unopposed carrier from inside the penalty spot, a timid one barely leaves his line. It lives in
+**#11's** catalogue, not the engine's, because it is a property of the keeper rather than of the
+engine's trigger geometry; that is `ERR-011-010`, §3.
 
 **Condition 5 is one rule, not two.** For the loose ball it is exactly the intercept cap — the solve
 places the meeting point at `rushSpeed × t` by construction, so a distance budget and a time budget
@@ -148,7 +178,24 @@ and fire it two ticks later against a target already stale.
 
 ---
 
-## 3. What the wiring surfaced — `ERR-011-009`
+## 3. What the wiring surfaced — `ERR-011-010` and `ERR-011-009`
+
+### 3.0 `ERR-011-010` — the rush decision had no owner
+
+§3.7's state entry read, in full: *"Decision Tree #8 `RushIntent` with `commitmentLevel >
+RUSH_COMMIT_THRESHOLD` at the 10 Hz tactical tick."* That is a delegation, and the delegate cannot
+accept it — #8 has no goalkeeper model and cannot acquire one without the composure-noise rebaseline
+(§2.1). So the condition belonged to nobody, which is the whole reason `CommitRushIntent` sat
+uncalled for ten weeks while everything below it was built, reviewed and tested.
+
+The second half of that defect is the football. Because the "when" was delegated, the spec never said
+what a keeper is *deciding*, and a call site cannot fill that gap by guessing — **this one guessed
+wrong on its first attempt**, refusing the rush whenever any team-mate was nearer the ball. §3.7.0 now
+states the model normatively: only a goal-side body is cover, and the distance is the keeper's own
+attributes. `OneVsOne` is consumed for the commit decision only; FR-GK-024's closed-form constraint
+on the 1v1 *save* formulas (§3.2 / §3.5) is untouched.
+
+### 3.1 `ERR-011-009` — a rush that reached its target had no exit
 
 **A rush that reaches its target has no exit.** #11 §3.1.1's transition table gives `Rushing` exactly
 three exits — `Smothered` (contact), `OneOnOne` (attacker inside the 1v1 radius), `Recovering` (F-08
@@ -185,14 +232,23 @@ defect it fixes.
 
 | Constant | Catalogue | Default | What it means |
 |---|---|---|---|
-| `GkRushTriggerRangeM` | `MatchEngineConstants` | 22.0 m | Max distance from the defended goal line at which a rush may be committed. Roughly the penalty area plus a stride — the region a keeper actually sweeps. |
+| `RushCommitBaseM` | `GoalkeeperConstants` | 8.0 m | §3.7.0. Commit distance before attributes. |
+| `RushCommitKOneVsOne` | `GoalkeeperConstants` | 8.0 m | §3.7.0. Metres per unit `OneVsOne_norm` — the dominant term; coming to meet a carrier *is* the one-on-one. |
+| `RushCommitKComposure` | `GoalkeeperConstants` | 4.0 m | §3.7.0. Metres per unit `Composure_norm` — leaving the goal empty is a nerve decision. |
+| `RushCommitFatiguePenaltyM` | `GoalkeeperConstants` | 3.0 m | §3.7.0. Metres lost per unit fatigue (0 = rested, 1 = spent). |
+| `RushCommitMinDistanceM` | `GoalkeeperConstants` | 4.0 m | §3.7.0. Floor — even the most reluctant keeper comes for a ball this close. |
+| `RushCommitMaxDistanceM` | `GoalkeeperConstants` | 22.0 m | §3.7.0. Ceiling — the furthest ANY keeper comes. Roughly the penalty area plus a stride. |
+| `GkRushCoverGoalSideMarginM` | `MatchEngineConstants` | 2.0 m | How far in FRONT of the ball a team-mate must be to count as cover. Level or behind is not cover. |
+| `GkRushCoverCorridorHalfWidthM` | `MatchEngineConstants` | 6.0 m | Half-width of the shot corridor around the ball → goal-centre line. |
 | `GkRushMaxInterceptS` | `MatchEngineConstants` | 2.0 s | The longest run the keeper will commit to — one budget, both branches (§2.2 condition 5). Also bounds the straight-line ball extrapolation the solve relies on. |
 | `GkRushMaxBallHeightM` | `MatchEngineConstants` | 2.5 m | Above this the ball is a cross to be claimed (backlog W3), not a ball to be swept. |
 | `GkRushCommitment` | `MatchEngineConstants` | 0.85 | The `RushIntent.CommitmentLevel` the Stage-0 trigger writes. Must exceed `RushCommitThreshold` (0.60) or the state machine ignores it. |
 | `RushTargetReachedRadiusM` | `GoalkeeperConstants` | 0.5 m | §3.1.1's new `Reached` rows. |
 
 Every value is a first plausible number, not a fitted one. They are `[GT]` and config-overridable, and
-they are the calibration pass's input, not its output.
+they are the calibration pass's input, not its output. Note where they live: **how far the keeper comes
+out is #11's**, because it is a property of the keeper; the cover geometry and the ball-height and
+time-budget guards are the **engine's**, because they are properties of the trigger.
 
 ---
 
@@ -200,7 +256,8 @@ they are the calibration pass's input, not its output.
 
 | Level | Test | What it pins |
 |---|---|---|
-| Pure | `GkRushTriggerTests` | Each predicate arm, **mirrored home and away** (the #8 `ERR-008-002` house rule — three home/away asymmetry defects shipped because every fixture used the home team). The intercept solve: reachable ball, unreachable ball moving away, ball already at the keeper. |
+| Pure | `GkRushTriggerTests` | Each predicate arm, **mirrored home and away** (the #8 `ERR-008-002` house rule — three home/away asymmetry defects shipped because every fixture used the home team). Including the case the first cut failed: a carrier with a defender **giving chase** still arms. The cover test itself: goal-side on the line is cover; chasing, level, or goal-side-but-wide is not; opponents / the keeper himself / sent-off agents are not. The intercept solve: reachable ball, unreachable ball moving away, ball already at the keeper. |
+| Pure | `GoalkeeperRushTests` (§3.7.0 arm) | The commit distance rises with `OneVsOne` and with `Composure`, **falls** with fatigue (0 = rested — an inversion this project has shipped before), and clamps both ways. |
 | Unit | `GoalkeeperMechanicsTests` (`StateMachinePhysicsTransitionTests`) | The two new `Reached` rows, and that `Reached` loses to contact / interception / the 1v1 trigger. |
 | Unit | `GoalkeeperMechanicsTests` | `ClearRushIntent` disarms an uncommitted intent and is inert mid-chain. |
 | Engine | `GkRushTriggerTests` (composed arm) | The whole chain through a real `MatchEngine`: an uncovered loose ball in the box commits exactly one rush and the keeper reaches `Rushing`; the same ball with a defender nearer it commits nothing. Both keepers. Positions are forced via the `TestOnly_SetAgent` / `TestOnly_ForceBallLoose` seams so the assertion does not depend on a formation developing the geometry. |
@@ -264,4 +321,5 @@ because this geometry is what it turns on.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.1 | 2026-08-04 | — | **Trigger model corrected at owner review, before any measurement.** The v1.0 predicate refused the rush whenever any team-mate was nearer the ball (a "last-man" test) — wrong in exactly the situation a keeper exists for, because **he comes out to reduce the shooting angle** and a defender chasing the carrier reduces none of it. Replaced by a **goal-side cover** test: only a team-mate already between the ball and the goal, inside the shot corridor, keeps him home. And the *when* is no longer an engine constant but #11 §3.7.0's attribute-driven `ComputeRushCommitDistanceM` (`OneVsOne` / `Composure` / fatigue) — filed as **`ERR-011-010`**, since §3.7 had delegated the decision to Decision Tree #8, which has no keeper model and structurally cannot acquire one, leaving the condition ownerless for ten weeks. `GkRushTriggerRangeM` retired (superseded by the per-keeper distance); +8 `[GT]`, six of them in #11's catalogue where the keeper's own decision belongs. |
 | 1.0 | 2026-08-04 | — | Initial. Wiring backlog W1: the keeper rush trigger. Pure `RushArmed` predicate (last-man test + intercept race) + `TryCommitRushIntents` composition-root commit, deliberately NOT routed through the DT (`ActionType` ordinal 8 overflows the 3-bit composure-noise field — the W9 deferral reason). No new engine state: #11's own serialized `_rushIntentActive` is the latch, read through two new accessors. Files `ERR-011-009` — #11 §3.1.1 gives a reached rush no exit, so a swept loose ball stranded the keeper in `Rushing` for the rest of the match. Five new un-calibrated `[GT]`s; KD-W1 holds. **Measurement not run — no .NET SDK in the authoring environment.** |

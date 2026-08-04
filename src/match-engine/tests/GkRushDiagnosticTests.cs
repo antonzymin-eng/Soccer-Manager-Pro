@@ -57,7 +57,9 @@ namespace TacticalDirector.MatchEngine
             report.AppendLine("=== Keeper rush anatomy (wiring backlog W1) ===");
             report.AppendLine(
                 Inv($"ticksPerMatch={TicksPerMatch}  seeds={Seeds.Length}  ")
-                + Inv($"triggerRange={MatchEngineConstants.GkRushTriggerRangeM:F1} m  ")
+                + Inv($"commitBase={GoalkeeperConstants.RushCommitBaseM:F1} m  ")
+                + Inv($"commitK1v1={GoalkeeperConstants.RushCommitKOneVsOne:F1}  ")
+                + Inv($"coverCorridor={MatchEngineConstants.GkRushCoverCorridorHalfWidthM:F1} m  ")
                 + Inv($"maxIntercept={MatchEngineConstants.GkRushMaxInterceptS:F1} s  ")
                 + Inv($"commitment={MatchEngineConstants.GkRushCommitment:F2}  ")
                 + Inv($"reachedRadius={GoalkeeperConstants.RushTargetReachedRadiusM:F2} m"));
@@ -69,6 +71,9 @@ namespace TacticalDirector.MatchEngine
             report.AppendLine("ended:rec : rush chains ending in Recovering — reached, aborted or failed");
             report.AppendLine("offLine   : ticks in Rushing/OneOnOne/Smothered");
             report.AppendLine("maxOut    : furthest the keeper got from his own goal line (m)");
+            report.AppendLine("            — compare against the §3.7.0 commit distance the keepers'");
+            report.AppendLine("            attributes produce: a maxOut far below it means the trigger is");
+            report.AppendLine("            arming only on balls already at the keeper's feet.");
             report.AppendLine();
 
             foreach (ulong seed in Seeds)

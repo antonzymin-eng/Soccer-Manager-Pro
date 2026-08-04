@@ -148,6 +148,61 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
                 "disarm must be inert once the keeper has set off");
         }
 
+        // ── §3.7.0 the commit distance is the KEEPER's decision (ERR-011-010) ────────────
+
+        /// <summary>The whole point of §3.7.0: when a keeper comes out is governed by his attributes,
+        /// not by a fixed range. A keeper who is good at one-on-ones comes out from further.</summary>
+        [Test]
+        public void RushCommitDistance_RisesWithOneVsOne()
+        {
+            float timid = GoalkeeperRushDispatch.ComputeRushCommitDistanceM(
+                AttrsWith(oneVsOne: 1f, composure: 10f, fatigue: 0f));
+            float bold = GoalkeeperRushDispatch.ComputeRushCommitDistanceM(
+                AttrsWith(oneVsOne: 20f, composure: 10f, fatigue: 0f));
+
+            Assert.Greater(bold, timid,
+                "OneVsOne is the attribute that names this decision — it must move the commit distance");
+        }
+
+        /// <summary>Leaving the goal empty is a nerve decision as much as a technical one.</summary>
+        [Test]
+        public void RushCommitDistance_RisesWithComposure()
+        {
+            float nervy = GoalkeeperRushDispatch.ComputeRushCommitDistanceM(
+                AttrsWith(oneVsOne: 10f, composure: 1f, fatigue: 0f));
+            float calm = GoalkeeperRushDispatch.ComputeRushCommitDistanceM(
+                AttrsWith(oneVsOne: 10f, composure: 20f, fatigue: 0f));
+
+            Assert.Greater(calm, nervy, "a composed keeper backs himself to come further");
+        }
+
+        /// <summary>0 = rested, 1 = spent (the project-wide convention — this has been found inverted
+        /// before). A tired keeper backs off rather than gambling on a sprint he cannot finish.</summary>
+        [Test]
+        public void RushCommitDistance_FallsWithFatigue()
+        {
+            float fresh = GoalkeeperRushDispatch.ComputeRushCommitDistanceM(
+                AttrsWith(oneVsOne: 14f, composure: 14f, fatigue: 0f));
+            float spent = GoalkeeperRushDispatch.ComputeRushCommitDistanceM(
+                AttrsWith(oneVsOne: 14f, composure: 14f, fatigue: 1f));
+
+            Assert.Less(spent, fresh, "fatigue must REDUCE the distance (0 = rested, 1 = fatigued)");
+        }
+
+        [Test]
+        public void RushCommitDistance_IsClampedBothWays()
+        {
+            float floor = GoalkeeperRushDispatch.ComputeRushCommitDistanceM(
+                AttrsWith(oneVsOne: 1f, composure: 1f, fatigue: 1f));
+            float ceiling = GoalkeeperRushDispatch.ComputeRushCommitDistanceM(
+                AttrsWith(oneVsOne: 20f, composure: 20f, fatigue: 0f));
+
+            Assert.GreaterOrEqual(floor, GoalkeeperConstants.RushCommitMinDistanceM,
+                "even the most reluctant keeper comes for a ball on his six-yard line");
+            Assert.LessOrEqual(ceiling, GoalkeeperConstants.RushCommitMaxDistanceM,
+                "no keeper leaves his goal further than the ceiling, whatever his attributes");
+        }
+
         // ── Bounds ───────────────────────────────────────────────────────────────────────
 
         [Test]
@@ -227,6 +282,15 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
             CommitmentLevel = 0.85f,
             AttemptCommittedTick = tick
         };
+
+        private static GoalkeeperAgentAttributes AttrsWith(float oneVsOne, float composure, float fatigue)
+        {
+            GoalkeeperAgentAttributes a = Attrs();
+            a.OneVsOne = oneVsOne;
+            a.Composure = composure;
+            a.Fatigue = fatigue;
+            return a;
+        }
 
         private static GoalkeeperAgentAttributes Attrs() => new GoalkeeperAgentAttributes
         {

@@ -18,11 +18,16 @@ break it, and do not edit historical entries.
 > was written, so every one-on-one this engine has ever played was a stationary keeper on his line —
 > the whole rush subsystem below the trigger (dispatch, `Rushing → OneOnOne → Smothered`, abort
 > reasons, telemetry, snapshot serialization) was built, tested and dead. `MatchEngine.TryCommitRushIntents`
-> is that caller, over a new pure `GkHeadingIntentSource.RushArmed`. **The predicate's entire football
-> judgement is one condition — the last-man test:** the keeper comes only when no team-mate is nearer
-> the ball, which covers the through-ball into space and the attacker running clean through alike (he
-> HAS the ball, distance ≈ 0, but is unattended), needs no case analysis, and fails safe. For a loose
-> ball the locked target is an **intercept-race solve** rather than the ball's current position,
+> is that caller, over a new pure `GkHeadingIntentSource.RushArmed`. **The predicate is built from one
+> sentence: a keeper comes out to REDUCE THE SHOOTING ANGLE.** So the only thing that keeps him home is
+> a team-mate already **goal-side** of the ball, inside the corridor the shot would travel down — a
+> defender merely *chasing* the carrier, or wrestling him for the ball, narrows nothing and does not
+> stop him. And **how far** he comes out is not an engine constant but the keeper's own attributes,
+> #11 §3.7.0's `ComputeRushCommitDistanceM` over `OneVsOne` / `Composure` / fatigue: ~9 m for a timid
+> keeper, ~16 m for an aggressive one at 20% fatigue. (This is the corrected model — the first cut used
+> a last-man test, refusing the rush whenever any team-mate was nearer the ball, which keeps the keeper
+> home in exactly the situation he exists for. Caught at owner review, before any measurement.) For a
+> loose ball the locked target is an **intercept-race solve** rather than the ball's current position,
 > because KD-15 locks the target at commit and a rolling ball is not where it was; the solve
 > self-guards, since a clearance outrunning the keeper has no positive root. Skipped whenever
 > `SaveArmed` holds for the same keeper — **a ball driving at the goal is a save, not a rush** — or a
@@ -34,7 +39,15 @@ break it, and do not edit historical entries.
 > `_rushIntentActive` is the per-episode latch, read through new `GetState`/`HasActiveRushIntent`
 > accessors rather than duplicated (two latches with different lifetimes for one episode is precisely
 > ERR-011-002's dive-at-nothing) — so **no `SNAPSHOT_SCHEMA_VERSION` change**. **What the wiring
-> surfaced: `ERR-011-009`.** #11 §3.1.1 gives `Rushing` three exits and `OneOnOne` two, and for a
+> surfaced, first: `ERR-011-010`.** §3.7's state entry delegated the rush DECISION to Decision Tree #8,
+> which has no goalkeeper model and structurally cannot acquire one — so the condition belonged to
+> nobody, which is the whole reason the method sat uncalled for ten weeks while everything below it was
+> built, reviewed and tested. And because the "when" was delegated, the spec never said what a keeper is
+> *deciding* either, a gap no call site can fill by guessing. New §3.7.0 takes the decision back (the
+> §3.3.6 move) and states it normatively on both halves: only a goal-side body is cover, and the
+> distance is his own attributes. `OneVsOne` is consumed for the commit DECISION only — FR-GK-024's
+> closed-form constraint on the 1v1 SAVE formulas is untouched. **And second: `ERR-011-009`.**
+> #11 §3.1.1 gives `Rushing` three exits and `OneOnOne` two, and for a
 > LOOSE ball **none of them can fire** — the 1v1 and smother triggers are false by construction with
 > no ball possessor, F-08 needs one, and §3.7.2's update converges on the locked target and stops
 > without overshooting — so a keeper who swept a loose ball would have stood over it in `Rushing` for
@@ -50,12 +63,15 @@ break it, and do not edit historical entries.
 > numbers**, and none were invented; the gate result for this landing is whatever the GitHub
 > `dotnet-compile-test` job reports, and no claim that a suite enforces anything may be cited before
 > then — that is this project's own never-compiled-surfaces hazard, and it is being named rather than
-> stepped in. Five new `[GT]`s (`GkRushTriggerRangeM` 22 m, `GkRushMaxInterceptS` 2 s,
-> `GkRushMaxBallHeightM` 2.5 m, `GkRushCommitment` 0.85, `RushTargetReachedRadiusM` 0.5 m) are all
-> first plausible numbers, not fitted ones; under KD-W1 they are **new dials for a dead surface**, not
-> retunes, and they are the calibration pass's input. Files: `MatchEngine.cs` v1.58,
+> stepped in. Eleven new `[GT]`s — six in #11's catalogue (the §3.7.0 commit-distance model plus
+> `RushTargetReachedRadiusM`) and five in the engine's (`GkRushMaxInterceptS`, `GkRushMaxBallHeightM`,
+> `GkRushCommitment`, and the two cover-geometry dials) — are all first plausible numbers, not fitted
+> ones; under KD-W1 they are **new dials for a dead surface**, not retunes, and they are the
+> calibration pass's input. Note where they live: how far the keeper comes out is **#11's**, because it
+> is a property of the keeper; the cover geometry and the guards are the **engine's**. Files: `MatchEngine.cs` v1.58,
 > `GkHeadingIntentSource.cs` v1.1, `MatchEngineConstants.cs` v1.28, `GoalkeeperMechanics.cs` v1.11,
-> `GoalkeeperStateMachine.cs` v1.7, `GoalkeeperConstants.cs` v1.5, new `GoalkeeperRushTests.cs` /
+> `GoalkeeperStateMachine.cs` v1.7, `GoalkeeperConstants.cs` v1.5, `GoalkeeperRushDispatch.cs` v1.1,
+> new `GoalkeeperRushTests.cs` /
 > `GkRushTriggerTests.cs` / `GkRushDiagnosticTests.cs`, new owner doc `gk-rush-trigger-design.md`,
 > spec #11 §3 v0.7, `spec-error-log.md` v1.56, `match-engine-wiring-backlog.md` v1.1. Next in the
 > backlog sequence: **C1**, the `InPoss` gate — the largest starvation on the board. Prior entry
