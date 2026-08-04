@@ -3,6 +3,7 @@
 // Modified: 2026-05-29
 // Modified: 2026-07-28 (ERR-008-016 — + POWER_INTENT_FLOOR [GT] (shot-speed design KD-1))
 // Modified: 2026-07-28 (ERR-008-017 — + SHOOT_SWEET_RANGE_M / SHOOT_DIST_FALLOFF_M [GT] (shot-volume design KD-V2))
+// Modified: 2026-08-04 (ERR-008-018 — + DRIBBLE_GOAL_DIR_MIN_MODIFIER [GT] (close-chance-creation design KD-CC2))
 // Author:   —
 // Spec:     Decision Tree #8 §3.2.11, Code Standards #20
 // Purpose:  Authoritative constant catalogue for the utility scoring model.
@@ -178,6 +179,27 @@ namespace TacticalDirector.DecisionTree
         public const float DRIBBLE_THREAT_RADIUS = 2.0f;  // [GT] m; opponent proximity for space scoring
         public const float DRIBBLE_LOOKAHEAD_M = 5.0f;  // [GT] m; look-ahead target distance
 
+        // [GT] DRIBBLE directional-to-goal modifier floor (§3.2.4.1 DirectionQuality_DRIBBLE,
+        // ERR-008-018 / close-chance-creation design KD-CC2). §3.1.5.2 chooses best_direction by
+        // FREE SPACE alone and closes with "No backward-sector penalty is applied to SpaceScore at
+        // generation time; the scoring stage applies directional-to-goal modifiers to the DRIBBLE
+        // utility" — but §3.2.4.1's formula has no such factor, and its cross-reference points at
+        // §3.2.2 (the PASS section), which is why the promised term never had a home. Measured in
+        // the final third over six full matches, DRIBBLE was the modal carrier action at 40% of
+        // decisions with a mean cosine to the goal of −0.30: the average dribble in the attacking
+        // third pointed AWAY from the goal, and the utility was identical either way. Same shape as
+        // the PASS GOAL_DIR_MIN_MODIFIER above — a directly-away dribble keeps this fraction of its
+        // utility, a directly-goalward one keeps all of it, linear in the cosine between.
+        //
+        // 0.80 is DELIBERATELY WEAKER than the 0.50 PASS floor, and the asymmetry is measured, not
+        // an oversight. Suppressing the dribble pushes the carrier onto HOLD (share 20% → 23% here,
+        // → 31% at floor 0.50), and HOLD has no timeout: a carrier with no pass, no shot and no
+        // dribble can hold indefinitely. At floors 0.50 and 0.65 one seed in six developed exactly
+        // that stall — mean final-third episode length 5.1 s → 28.6 s and 17.5 s respectively —
+        // while every seed at 0.80 stayed in the 4.5–5.6 s band. The floor cannot go lower until
+        // the HOLD stall is fixed; see close-chance-creation-design.md §7 item 2 and §8.
+        public const float DRIBBLE_GOAL_DIR_MIN_MODIFIER = 0.8f;
+
         public const float PRESS_TRIGGER_DISTANCE = 8.0f;  // [GT] m; maximum distance for PRESS generation
         public const float PRESS_STAMINA_MINIMUM = 0.20f; // [GT] AerobicPool threshold for PRESS gate
 
@@ -237,4 +259,9 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        | finishing modulates the band above it.                                      |
 // | 1.5     | 2026-07-28 | —      | ERR-008-017 (shot-volume design KD-V2): + SHOOT_SWEET_RANGE_M [GT] = 12 +   |
 // |         |            |        | SHOOT_DIST_FALLOFF_M [GT] = 10 — the DistanceQuality_SHOOT knee + falloff.  |
+// | 1.6     | 2026-08-04 | —      | ERR-008-018 (close-chance-creation design KD-CC2): + DRIBBLE_GOAL_DIR_MIN_ |
+// |         |            |        | MODIFIER [GT] = 0.80 — the §3.2.4.1 DirectionQuality_DRIBBLE floor. The    |
+// |         |            |        | value is deliberately WEAKER than the 0.50 PASS floor: suppressing the     |
+// |         |            |        | dribble pushes the carrier onto the timeout-free HOLD, and at floors 0.65  |
+// |         |            |        | and 0.50 one seed in six stalled (final-third episode 5.1 s -> 17.5/28.6). |
 #endregion

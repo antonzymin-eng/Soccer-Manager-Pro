@@ -14,8 +14,91 @@ break it, and do not edit historical entries.
 
 > **Last Updated:** August 4, 2026, latest same day (**P4a ADVERSARIAL-REVIEW PASS 2 — 1 High, 4 Medium fixed; run over the tilted-view revision's own output.** **H-1, and it is the pointed one:** `PitchCameraRig` decided where the camera goes and how it is angled, but said nothing about **how much of the pitch it sees** — so P4b would have chosen a field of view inside the `MonoBehaviour`. A framing decision, in the one place the CI gate cannot compile, sitting inside the deliverable whose entire purpose is keeping decisions out of there (§12 rule 1, the P4a/P4b split). `PitchCameraPose` gains `FieldOfViewDegrees` — the binding now assigns position, look-at and field of view, and picks nothing — `MatchClientConstants` gains `CameraVerticalFovDegrees`, and because two individually-legal dials can pair into a camera whose lowest ray never meets the ground, the bound is `tilt + fov/2 < 90` rather than two range checks. `PitchCameraRig.GroundExtentAlongTilt` attaches a number to the framing: near and far reach of visible ground, **deliberately asymmetric**, since a tilted camera sees a trapezoid and asserting symmetry is the mistake the test guards. **M-1:** §5-P4b instructed *both* cameras in a single bullet — the new rig placement and, in the same sentence, the deleted orthographic one — while the very next bullet said the orthographic assumption was wrong; the roadmap's B8 row carried only the stale half. The live instruction sheet for the next phase on the critical path contradicted itself. **M-2:** `PitchMarking`'s doc still sent the render skin to `ToView`, which would stand every marking upright in the world XY plane instead of laying it on the turf — and `ToView`/`ToPitch` turned out to have no production caller left at all after the revision (`ToView` was `ToWorld` with the height dropped, and the inverse a click needs is a ray intersection), so both are deleted and their tests re-anchored. **M-3:** `CameraLateralOffsetM` was the only camera dial with no validation, and it lands directly in the camera's world position — a non-finite value put the camera nowhere while every assertion about the aim point still passed. **M-4:** the tilted-view revision never appended version-history rows to `MatchClientConstants.cs` (v1.4) or `MatchRenderProjection.cs` (v1.2), so each file's newest row described constants and a `HeightScale` it no longer had, and three tracking documents cited versions the files themselves did not claim. The `// Modified:` date check did not catch it, because the previous row carried the same date. `match-client-core` 129 → 135; the two new locks verified non-vacuous by breaking them (symmetric ground extent fails 2, a fov dropped from the pose fails 1). **Full dotnet gate: PASSED, 0 failures** (whole tree green, 30 suites; match-client-core 129 → 135, match-engine 368 unchanged). **The sweep after the fixes found one more Medium, so this pass is NOT converged** — `PitchMarkingKind.Rectangle` still documented corner ordering as *not* guaranteed and told consumers to re-normalise, which is the exact contract pass 1's H-1 reversed: `PitchMarking.cs` was fixed then and the enum sitting beside it was not, so two files stated opposite contracts for one field, and the enum is the one a renderer switching on `Kind` reads first. Fixed; the guarantee is test-locked by `EveryRectangleArrivesWithItsCornersNormalised`, so the docs cannot silently drift from the code again. **Pass 3 then re-read the whole P4a surface and surfaced no High and no Medium — the loop is converged.** Two Lows fixed: `PitchCameraPose`'s header and class summary still described it as two values, and a test comment credited the wrong assertion with guarding the static-init-order defect. That second one is worth stating plainly, because the correction is counter-intuitive: asserting `CameraTiltDegrees > 0` does **not** catch a declaration reorder. By the time any test reads the field, static init has finished and it holds its real value whichever order it ran in. What catches it is re-evaluating the invariant itself on the finished values — a pair that is genuinely invalid fails there regardless of what the boot check saw. The guard was already present and correct; only the comment beside it was wrong. **Full dotnet gate on the converged tree: PASSED, 0 failures** (30 suites; match-client-core 135, match-engine 368 unchanged).)
 >
+> **Last Updated (prior):** August 4, 2026, later same day (**MATCH-ENGINE WIRING AUDIT — the code that
+> exists and never runs, and the `[GT]` freeze that follows from it.** Seven consecutive §5.Z passes
+> fitted constants against the composed engine. This audit asks what was *in* that engine, and the
+> answer is: less than the assembly graph suggests. Three passes over the 18 assemblies the match
+> engine references — a comment sweep for self-declared deferrals, a whole-tree production-caller
+> count over every `public` method, and manual triage of every candidate in source — found **10
+> Class-A dormant capabilities**. The two largest were invisible to the project's own tracking. **The
+> keeper never comes off his line**: `GoalkeeperMechanics.CommitRushIntent` has no production caller,
+> though everything downstream of it works (`GoalkeeperRushDispatch.UpdateRushFrame` moves the keeper
+> and writes back to the movement array; `Rushing → OneOnOne → Smothered` exists with abort reasons
+> and telemetry; the `RushIntent` is even serialized) — only the trigger is missing, so every 1v1 in
+> the game is a stationary keeper waiting to dive. **No player has ever made a tackle**: three
+> independent dormant links in one chain — `DefensiveAITick.GetTackleIntentRequests` is populated
+> every tick and read by nobody (its own class doc says integration is Stage 1, KD-16),
+> `GetAndClearTackleFlag` is hardcoded `=> false` in **both** engine collision adapters
+> (`MatchEngine.cs:6721`, `:6789`), and consequently `PassExecutor`'s §3.8.5 tackle-interrupt branch
+> and its `CancelReason.TackleInterrupt` outcome are unreachable code. No comment anywhere records
+> this one; only the call-graph pass found it. Also dormant: cross claims (`ResolveHandContactDuel`
+> intentionally not called, blocked on the same multi-agent contact feed as the already-filed
+> AGENT_BALL fan-out), the keeper's vision (`SaveArmed` is four lines of pure geometry while a
+> tested `OcclusionFilter` runs for every outfielder), the #13 BackwardPass press trigger
+> (`PassEventRing.Push` has no producer, so the ring the engine builds per team is permanently
+> empty), `BallStateType.Controlled` (no producer — possession is a flag, never a kinematic
+> constraint), and #26's kickoff preset selection (`ManagerAdaptation.ApplyKickoff` uncalled, so an
+> AI manager starts every match on the human baseline; only the mid-match ladder is wired).
+> **The method's blind spot is stated rather than hidden:** it detects *method-level* dormancy and is
+> structurally unable to see *gate-level* dormancy — a call site that runs but whose condition is
+> almost never true. One such is already measured (#12 commits `InPoss` on **9.5%** of final-third
+> samples, starving every phase-gated mechanism in #13/#14/#15), found by runtime instrumentation in
+> §5.Z.24 and by no static analysis, so the backlog carries four Class-B entries from that pass and
+> books a gate-firing instrument as its own item. **This backlog is a floor, not a ceiling.**
+> **KD-W1, the `[GT]` freeze:** do not land a constant governing an unwired subsystem. The hazard is
+> diagnostic, not just arithmetic — measured conversion of ~18% against football's ~11% reads as "the
+> shot model is too generous" when part of it is "no keeper has ever narrowed an angle and no
+> defender has ever tackled", and a pass aimed at the shot model would have left behind a `[GT]` that
+> later has to be un-tuned. Defect fixes, instruments and measurement continue freely; constants wait
+> for one calibration pass against the complete engine. **KD-W2** scopes this to the match engine —
+> the 22 approved specs with no assembly remain `path-to-playable-roadmap.md`'s problem. The §5.Z.23
+> `pointQuality` owner decision is **parked, not resolved**: the rush trigger changes the contact
+> geometry that decision turns on. New `docs/tracking/match-engine-wiring-backlog.md` v1.0. Read-only
+> audit — no `src/` change, no spec change, no gate run. **Prior entry below.**)
+
 > **Last Updated (prior):** August 4, 2026 (**Tilted-view revision — KD-P4a-2 (owner call).** P4a first shipped a flat top-down view with ball height faked by a sprite lift and a capped size ramp. The owner reversed it to an FM-style view — from above, **tilted back from vertical, slightly off centre** — since the ball only needs to be visible on and above the pitch, not scaled. The revision **deletes more than it adds**: with a tilted camera height is a real world axis, so `BallHeightViewOffsetPerMetre`, `BallHeightScalePerMetre` and `BallMaxHeightScale` are gone, along with `BallRenderModel.SpritePosition`/`SpriteRadius` and `MatchRenderProjection.HeightScale` — and with them the AR pass's M-5 finding and its 10 m saturation limitation, which stop existing rather than needing a retune. New: `PitchCameraRig`/`PitchCameraPose` (height, tilt-from-vertical, lateral offset — a placement is a decision, so it is gate-compiled, and the pose is two world points because `Quaternion` is not in the shim) and `PitchViewProjection.ToWorld`/`ToWorldGround`/`TryGroundHit`. **The one real cost is the click inverse:** screen position is no longer affine in pitch position, so `TryGroundHit` does a ray/ground-plane intersection; `Camera` is not in the shim, so the Unity side supplies the ray and the math stays gate-tested. Survivors, each for a reason — the **shadow** (under any tilt a lofted ball separates from the pitch point it is over, the one cue perspective cannot supply), the corner→centre re-origin (it is the ground plane), and `FollowBallCamera` (it decides *where* the camera looks). Two things recorded rather than left implicit: the engine's Y becomes the world's **Z** and its Z the world's **Y** — an axis swap, the same trap class as the corner origin, locked by its own test (seven tests fail if it is inverted) — and `FollowBallCamera`'s pitch clamp is now **approximate**, since it describes a rectangle of visible ground where a tilted view sees a trapezoid; kept deliberately, as its job is keeping the target near the pitch rather than exact framing. **Full dotnet gate: PASSED, 0 failures** (whole tree green; match-client-core 112 → 129, match-engine 368 unchanged — no sim source was touched). The entry was first written while the run was still in flight and recorded as *not yet reported*; this line replaces that provisional wording with the run's actual result.)
 >
+> **Last Updated (prior):** August 4, 2026 (**§5.Z.24 — CLOSE-CHANCE CREATION: the first premise in this
+> chain that survived its own check, one formula defect fixed, and the creation gap deliberately NOT
+> claimed.** §5.Z.23 §7 item 4 re-localized the creation residual to the final-third → penalty-area
+> stage (6.5% against football's ~40%) and named it a #8/#15 surface. Two premises were checked.
+> **The first SURVIVED — a first for this seven-pass chain**: the "306.7 final-third entries" figure
+> is a raw boundary-crossing count that a ball rattling across x = 35 would have inflated, but
+> re-counted with a 1 s exit dwell over six full matches it reads **311 episodes against 312 raw
+> crossings**, each averaging 5.1 s. The denominator was sound. The second premise located the stage
+> without naming a mechanism, and the instrument (`CloseChanceDiagnosticTests`, env-gated
+> `TD_CREATION_DIAGNOSTIC=1`) found two, both real: **nobody is in the box** — mean attacking
+> outfielders inside the penalty area while the ball is in the final third is **0.11**, with 92% of
+> samples at zero, and the deepest *composed target slot* is **22.8 m** from goal against a deepest
+> *attacker* at 22.2 m, so the players sit within 0.6 m of where they are told to be and are simply
+> never asked into the area — and **the carrier walks the ball back out**: DRIBBLE is the modal
+> attacking-third action at **40%** of heartbeat decisions with a mean cosine to the opponent goal of
+> **−0.302** and only 31% pointing goalward. **ERR-008-018** is the second half: #8 §3.1.5.2 picks the
+> dribble direction by free space alone and closes by delegating the correction to *"the scoring stage
+> (§3.2.2)"* — but §3.2.4.1, DRIBBLE's actual formula, has no directional factor and **§3.2.2 is the
+> PASS formula**, so the promised term was delegated to a section that does not own DRIBBLE and never
+> had a home. Same class as ERR-008-017. Fixed with `DirectionQuality_DRIBBLE`; measured cosine
+> **−0.302 → +0.006** and goalward share **31% → 49%**, moving on **all six seeds with no overlap**
+> between the pre- and post-fix distributions. The `[GT]` floor lands at **0.80** rather than the 0.50
+> that maximises the effect, because suppressing the dribble pushes the carrier onto HOLD — which has
+> no timeout — and at floors 0.65 and 0.50 one seed in six stalled outright (mean final-third episode
+> 5.1 s → 17.5 s / 28.6 s). **The creation funnel itself did not move and is not claimed**: box
+> occupancy 0.11 → 0.10, ball into the box 6% → 5% of episodes, passes into the box 1% → 0%, shots
+> 19.3 → 19.5, goals 3.67 → 3.50 — **the residual shot-count gap is NOT closed**. #15 §4.5.2's
+> run-target overlay was implemented, measured and **REFUSED**: it moves the committed RUNNER's target
+> from 80.9 m to 14.7 m from the attacked goal and moves box occupancy **down**, 0.11 → 0.08, because
+> a RUNNER's target is `carrier + 12 m` and the carrier is usually still in midfield. A pooled number
+> nearly carried a false creation claim — at floor 0.50 the corpus reads box occupancy 0.11 → 0.59,
+> but five of six seeds are flat and the whole movement is **one stalled match** contributing 32% of
+> samples; the acceptance scenario's box predicate failed post-fix, forced the per-seed breakdown, and
+> the claim was withdrawn and the predicate deleted rather than re-tuned. The residual is re-localized
+> and sharper than what it replaces: **#8 cannot pass to a place, only to a player** — §3.1.3 generates
+> one PASS candidate per visible teammate *at that teammate's current position*, so passes into the box
+> measured 1% at every rung of the ladder, including rungs where players did reach the box. Owner doc:
+> `docs/tracking/close-chance-creation-design.md`; match-engine §5.Z.24; `spec-error-log.md` v1.56.
+> Acceptance `match-engine-close-chance` — **2 of 3 predicates fail at `7fcd897` by execution**. No
+> schema / RNG / domain-tag / draw-site / draw-order change. Prior entry below.)
+
 > **Last Updated (prior):** August 4, 2026 (**P4a ADVERSARIAL-REVIEW PASS — 1 High, 5 Medium, 3 Low fixed;
 > the pass then re-run clean.** **H-1, and the one that would have shipped:** `PitchMarking.Rectangle`
 > took its two corners in whatever order it was given, and `PitchMarkings` builds the end boxes from
@@ -99,6 +182,8 @@ break it, and do not edit historical entries.
 > change, no engine-behaviour change** — the new cue is sampled from an existing read-only accessor.
 > **Full dotnet gate: PASSED, 0 failures** (whole tree green; all 30 suites reported) — `match-client-core` 65 → 103, `match-viewer` 39 → 41, `ui-framework` 50 (unchanged), `match-engine` 368 passed / 8 skipped (unchanged; no `match-engine` source is touched by this landing), every other suite unchanged. **Next: P4b on the pinned host** (roadmap row B8), which now binds a render model that is
 > already decided and already tested.)
+
+> **Last Updated (prior):** August 3, 2026, later same day (**§5.Z.23 — CONVERSION AT CONTACT: the recorded
 
 > **Last Updated (prior):** August 3, 2026, latest same day (**OWNER DECISION — ROADMAP B6 REVERSED: the
 > product ships the FULL UNITY UI, not the web-hosted viewer.** Doc-only; no `.cs` changed. Recorded in
