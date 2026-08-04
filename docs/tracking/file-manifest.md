@@ -1,7 +1,16 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 4, 2026, latest same day (**ERR-008-020 — the §3.1.3.3 pass-lane threat model
+**Last Updated:** August 4, 2026, latest same day (**ERR-008-020 adversarial review pass — 2 M, 1 L
+fixed; pass 2 clean.** **No new files.** **Modified:** `src/decision-tree/DecisionTree.cs` → v1.7
+(+ `HasSquadAttributeView`), `src/decision-tree/Tests/OptionGeneratorTests.cs` → v1.6 (computed-path
+P5 pivot + MIN/MAX midpoint invariant + constant-derived margins), `src/match-engine/MatchEngine.cs`
+→ v1.62 (+ `TestOnly_AllDtSquadAttributeViewsWired`), `src/match-engine/tests/MatchEngineSquadTests.cs`
+→ v1.4 (construction wiring lock), `CHANGELOG.md`, `CHANGELOG-src.md` → v2.62, `open-issues.md`, this
+manifest. Production delta = two read-only accessors; no schema/digest surface. **Gate NOT run — no
+.NET SDK in this environment.** **Prior entry below.**)
+
+**Last Updated (prior):** August 4, 2026, latest same day (**ERR-008-020 — the §3.1.3.3 pass-lane threat model
 (the judgment-proxy doctrine's template fix).** **No new files.** **Modified in `src/decision-tree/`:**
 `UtilityWeights.cs` → v1.7 (5 new `[GT]`s; `PASS_LANE_WIDTH_HALF` removed), `OptionGenerator.cs` → v1.6
 (`ComputeLaneThreat` + `PerceivedInterceptAbility`), `DecisionContext.cs` → v1.2 (+ `AllAgentAttributes`),

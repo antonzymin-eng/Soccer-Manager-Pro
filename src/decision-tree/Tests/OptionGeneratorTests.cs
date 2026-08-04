@@ -398,6 +398,33 @@ namespace TacticalDirector.DecisionTree.Tests
         }
 
         [Test]
+        public void PassLane_ComputedAverageDefender_IsWeightNeutral()
+        {
+            // AR-1 M-1: the pivot row above goes through the null-view guard and never
+            // runs the ability computation. This lock drives the COMPUTED path with a
+            // true league-average defender (Anticipation 10 + Pace 11 ⇒ mean01 = 0.5
+            // exactly) under a Vision-20 passer, so any deviation of the MIN..MAX
+            // midpoint from 1.0 — or any defect in the ability formula — surfaces here.
+            DtAgentAttributes[] attrs = BuildSquadAttributes();
+            float score = LaneScoreWithDefender(perp: 0.0f, attrs: attrs,
+                anticipation: 10, pace: 11, visionA: 1.0f);
+            Assert.AreEqual(1.0f - 1.0f / UtilityWeights.PASS_LANE_DIVISOR, score, 1e-4f,
+                "A computed league-average defender must be weight-neutral (doctrine P5).");
+        }
+
+        [Test]
+        public void PassLane_AbilityConstants_MidpointIsExactlyNeutral()
+        {
+            // §3.1.3.3 constants-table MUST: the MIN..MAX midpoint is 1.0 so the
+            // average defender neither loosens nor tightens passing. The declared
+            // ranges admit violating pairs, so the invariant needs its own lock.
+            Assert.AreEqual(1.0f,
+                (UtilityWeights.INTERCEPTOR_ABILITY_MIN + UtilityWeights.INTERCEPTOR_ABILITY_MAX) / 2.0f,
+                1e-6f,
+                "INTERCEPTOR_ABILITY_MIN/MAX must stay centred on 1.0 (P5 pivot).");
+        }
+
+        [Test]
         public void PassLane_ThreatIsContinuous_AcrossTheOldCorridorEdge()
         {
             // The pre-fix cliff: perp 0.79 m counted 1.0, perp 0.81 m counted 0.0 — a
@@ -412,6 +439,15 @@ namespace TacticalDirector.DecisionTree.Tests
                 "Threat must still decrease as the defender moves off the lane.");
         }
 
+        // AR-1 L: the expected elite-vs-poor lane-score gap for a full-fidelity passer
+        // and a lane-centre defender, derived from the constants rather than hardcoded:
+        // weights span MIN..MAX, so scores differ by (MAX − MIN) / DIVISOR (0.2667 at
+        // current values). Tests assert half of it so a legitimate [GT] retune shrinks
+        // the margin without false-failing, while a lost discrimination still fails.
+        private static float ExpectedSightedGap =>
+            (UtilityWeights.INTERCEPTOR_ABILITY_MAX - UtilityWeights.INTERCEPTOR_ABILITY_MIN)
+            / UtilityWeights.PASS_LANE_DIVISOR;
+
         [Test]
         public void PassLane_SightedPasser_RespectsEliteAndExploitsPoorDefender()
         {
@@ -420,7 +456,7 @@ namespace TacticalDirector.DecisionTree.Tests
                 anticipation: 20, pace: 20, visionA: 1.0f);
             float scorePoor  = LaneScoreWithDefender(perp: 0.0f, attrs: attrs,
                 anticipation: 1, pace: 1, visionA: 1.0f);
-            Assert.Less(scoreElite, scorePoor - 0.15f,
+            Assert.Less(scoreElite, scorePoor - ExpectedSightedGap * 0.5f,
                 "A Vision-20 passer must rate the lane through an elite defender markedly " +
                 "worse than the identical lane through a poor one.");
         }
@@ -461,7 +497,7 @@ namespace TacticalDirector.DecisionTree.Tests
             // examples shipped three asymmetry defects — CLAUDE.md trap table).
             float scoreElite = AwayLaneScoreWithDefender(anticipation: 20, pace: 20);
             float scorePoor  = AwayLaneScoreWithDefender(anticipation: 1, pace: 1);
-            Assert.Less(scoreElite, scorePoor - 0.15f,
+            Assert.Less(scoreElite, scorePoor - ExpectedSightedGap * 0.5f,
                 "The away-side lane must discriminate defender ability identically to the home side.");
         }
 
@@ -684,4 +720,9 @@ namespace TacticalDirector.DecisionTree.Tests
 // |         |            |        | (P5 pivot), no 2 cm cliff at the old 0.8 m edge, Vision-20 separates        |
 // |         |            |        | elite/poor defenders while Vision-1 barely does (P2), null attribute view   |
 // |         |            |        | is ability-neutral, and the discrimination case mirrored to the away side.  |
+// | 1.6     | 2026-08-04 | —      | ERR-008-020 AR-1: M-1 — the v1.5 pivot lock went through the null-view      |
+// |         |            |        | guard and never ran the ability computation; + the COMPUTED-path pivot      |
+// |         |            |        | (Ant 10/Pace 11 ⇒ mean01 = 0.5 exactly) and the MIN/MAX midpoint-is-1.0     |
+// |         |            |        | invariant lock. L — discrimination margins derived from the constants       |
+// |         |            |        | (ExpectedSightedGap × 0.5) instead of a hardcoded 0.15.                     |
 #endregion

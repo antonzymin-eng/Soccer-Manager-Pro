@@ -88,6 +88,14 @@ namespace TacticalDirector.DecisionTree
         /// </summary>
         public bool HasDispatchedAction => _hasDispatchedAction;
 
+        /// <summary>
+        /// True once <see cref="SetAllAgentAttributes"/> has wired a non-null squad attribute
+        /// view (ERR-008-020). Lets a host verify the §3.1.3.3 lane-threat model is reading
+        /// real opponent attributes rather than silently running the ability-neutral null
+        /// fallback — the gate-level-dormancy failure mode the wiring backlog documents.
+        /// </summary>
+        public bool HasSquadAttributeView => _allAgentAttributes != null;
+
         // ── Snapshot seam — Match Engine Phase D step D0 ─────────────────────────
 
         /// <summary>
@@ -311,4 +319,7 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   pattern as SetMatchSeed) storing the orchestrator's live squad attribute    |
 // |         |            |        |   array; threaded into Assemble for the §3.1.3.3 pass-lane threat model.      |
 // |         |            |        |   Injected dependency, not cross-tick state — excluded from CaptureState.     |
+// | 1.7     | 2026-08-04 | —      | ERR-008-020 AR-1 M-2: + HasSquadAttributeView (the HasDispatchedAction        |
+// |         |            |        |   precedent) so a host can detect the deliberately-silent null fallback —     |
+// |         |            |        |   the wiring-backlog gate-level-dormancy class.                               |
 #endregion

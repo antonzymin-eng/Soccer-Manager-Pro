@@ -12,7 +12,26 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 4, 2026, latest same day (**ERR-008-020 — the doctrine's template fix
+> **Last Updated:** August 4, 2026, latest same day (**ERR-008-020 adversarial review — 2 Medium,
+> 1 Low, all fixed; pass 2 clean.** Both Mediums are lessons in what a lock is worth when it doesn't
+> execute the thing it claims to lock. **M-1:** the landing's P5-pivot test asserted "an average
+> defender counts exactly 1.0" through the *null-attribute-view guard* — the ability computation it
+> exists to pin was never run for an average defender anywhere in the suite, so the spec's "MIN/MAX
+> midpoint MUST equal 1.0" invariant was enforced by nothing and a `[GT]` retune could break the
+> whole pivot-on-baseline argument silently. Now locked twice: a computed-path pivot (Anticipation
+> 10 + Pace 11, whose normalised mean is 0.5 *exactly*) and a constants midpoint invariant. **M-2:**
+> the engine wiring had no detector, and the model's null fallback is silent *by design* — dropping
+> the one `SetAllAgentAttributes` boot call would revert every match to attribute-blind lane pricing
+> with every test green, the wiring-backlog gate-level-dormancy class this repo documents as its top
+> defect shape. Now `DecisionTree.HasSquadAttributeView` + an engine `TestOnly` sweep +
+> `MatchEngineSquadTests` construction lock. **L:** the elite-vs-poor discrimination margins were a
+> hardcoded 0.15; now derived from the constants (half the true `(MAX−MIN)/DIVISOR` gap), so a
+> legitimate retune shrinks the margin instead of false-failing the suite. Production delta is two
+> read-only accessors — no digest, schema, RNG, or draw-order surface. Nine locks now cover the
+> model across two suites. **Gate still NOT runnable here (no .NET SDK); CI on this push is the
+> first compile.** Prior entry below.)
+
+> **Last Updated (prior):** August 4, 2026, latest same day (**ERR-008-020 — the doctrine's template fix
 > landed: the pass lane learns who the defender is, and a false "FIXED" claim is corrected.** First
 > fix under `football-judgment-proxy-review.md` §6, exactly as converged: #8 §3.1.3.3's binary 0.8 m
 > `is_interceptor` corridor — 2 cm of defender position stepped `PassLaneScore` by 0.33, and no

@@ -2046,6 +2046,23 @@ namespace TacticalDirector.MatchEngine
         /// <paramref name="teamId"/> is the keeper index (== team id, KD-1).</summary>
         internal GoalkeeperState TestOnly_GkState(int teamId) => _goalkeeper.GetState(teamId);
 
+        /// <summary>Test-only: true iff every DecisionTree holds the squad attribute view
+        /// (ERR-008-020 wiring lock). The §3.1.3.3 lane-threat model's null fallback is
+        /// deliberately silent — an unwired tree prices every defender as average without
+        /// throwing — so the wiring needs an explicit detector or its removal is invisible
+        /// (the wiring-backlog gate-level-dormancy class).</summary>
+        internal bool TestOnly_AllDtSquadAttributeViewsWired
+        {
+            get
+            {
+                for (int i = 0; i < _decisionTrees.Length; i++)
+                {
+                    if (!_decisionTrees[i].HasSquadAttributeView) return false;
+                }
+                return true;
+            }
+        }
+
         /// <summary>Test-only: the ball's position at the instant of the LAST genuine #6 strike
         /// (captured beside the <see cref="TestOnly_ShotContacts"/> increment — post-ApplyKick,
         /// before any later same-tick Resolve step can move the ball). Same diagnostic class:
@@ -8078,4 +8095,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | boot — the §3.1.3.3 pass-lane threat model's attribute view. Live array   |
 // |         |            |        | reference: SubstitutePlayer's _dtAttrs[slot] rewrite is visible without   |
 // |         |            |        | re-wiring. Injected dependency, not engine state — no schema change.      |
+// | 1.62    | 2026-08-04 | —      | ERR-008-020 AR-1 M-2: + TestOnly_AllDtSquadAttributeViewsWired — the      |
+// |         |            |        | lane model's null fallback is deliberately silent, so the boot wiring     |
+// |         |            |        | gets an explicit detector (gate-level-dormancy class). Locked by          |
+// |         |            |        | MatchEngineSquadTests.                                                    |
 #endregion
