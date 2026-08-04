@@ -14,7 +14,7 @@ Tests: `PitchCameraRigTests.cs` → v1.1, `MatchClientConstantsTests.cs` → v1.
 → v1.2. Plus, from the post-fix sweep, `PitchMarkingKind.cs` → v1.1 (its `Rectangle` member still documented
 corner ordering as NOT guaranteed — the contract pass 1's H-1 reversed in `PitchMarking.cs` alone).
 Pass 3 (converged — no High, no Medium): `PitchCameraPose.cs` → v1.2 and
-`MatchClientConstantsTests.cs` → v1.3, both doc/comment-only Lows.
+`MatchClientConstantsTests.cs` → v1.3, both doc/comment-only Lows. Gate re-run on the converged tree: PASSED.
 `match-client-core` 129 → 135; full dotnet gate PASSED, 0 failures. **No new assembly**, no `SNAPSHOT_SCHEMA_VERSION` change, no spec
 change. Production assembly count stays 31.)
 
