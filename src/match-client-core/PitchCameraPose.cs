@@ -4,7 +4,7 @@
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4a, §7
 //           "Rendering, camera, HUD", §12 rule 1), Code Standards #20
-// Purpose:  Where the camera sits and what it looks at, in world space — the resolved placement a
+// Purpose:  Where the camera sits, what it looks at, and how wide it sees — the resolved placement a
 //           binding assigns, carrying no rotation type so the CI shim's surface is enough.
 
 using UnityEngine;
@@ -12,7 +12,9 @@ using UnityEngine;
 namespace TacticalDirector.MatchClientCore
 {
     /// <summary>
-    /// A resolved camera placement: a world position and the world point it is aimed at.
+    /// A resolved camera placement: a world position, the world point it is aimed at, and the
+    /// vertical field of view — the three values Unity's <c>Camera</c> needs, so a binding assigns
+    /// them and decides nothing.
     ///
     /// <para><b>Why a look-at point rather than a rotation.</b> <c>Quaternion</c> is not in the CI
     /// shim's surface, and adding it to buy coverage is the same bargain §12 refuses for
@@ -61,4 +63,6 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | framing decision inside the MonoBehaviour the gate cannot       |
 // |         |            |        | compile. The pose is now everything Camera needs and nothing    |
 // |         |            |        | is left to decide on the far side of the boundary.              |
+// | 1.2     | 2026-08-04 | —      | AR pass 3 (L): the Purpose header and the class summary still   |
+// |         |            |        | described this as two values. Doc only.                        |
 #endregion

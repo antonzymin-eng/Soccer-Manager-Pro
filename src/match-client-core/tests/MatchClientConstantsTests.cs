@@ -123,11 +123,15 @@ namespace TacticalDirector.MatchClientCore.Tests
             Assert.Greater(MatchClientConstants.CameraTiltDegrees, 0f, "a zero tilt is the flat view this replaced");
             Assert.Less(MatchClientConstants.CameraTiltDegrees, 90f, "at 90 the camera is level with the turf");
 
-            // Non-zero matters as much as in-range: the tilt is read during CameraVerticalFovDegrees'
-            // own initialiser, and a static readonly field read before its source yields zero — the
-            // PerceptionConstants.BASE_FOV_HALF_ANGLE defect, which would make the pairing check
-            // below pass vacuously rather than fail.
             Assert.Greater(MatchClientConstants.CameraVerticalFovDegrees, 0f);
+
+            // This line, not the one above it, is the static-init guard — and only this shape of it
+            // works. CameraVerticalFovDegrees' initialiser reads CameraTiltDegrees, so a reorder that
+            // put the fov first would read the tilt as zero and pass the boot check vacuously (the
+            // PerceptionConstants.BASE_FOV_HALF_ANGLE defect). Asserting the tilt is non-zero would
+            // NOT catch that: by the time a test runs, static init has finished and the field reads
+            // its real value either way. Re-evaluating the invariant on the finished values does
+            // catch it, because a pair that is actually invalid fails here whatever happened at boot.
             Assert.Less(
                 MatchClientConstants.CameraTiltDegrees + MatchClientConstants.CameraVerticalFovDegrees * 0.5f,
                 90f, "the camera's lowest ray must still meet the ground");
@@ -154,4 +158,10 @@ namespace TacticalDirector.MatchClientCore.Tests
 // |         |            |        | read inside the fov's own initialiser, and a static readonly   |
 // |         |            |        | field read before its source yields zero, which would make the |
 // |         |            |        | pairing check pass vacuously instead of failing.               |
+// | 1.3     | 2026-08-04 | —      | AR pass 3 (L): the v1.2 comment credited the wrong assertion.   |
+// |         |            |        | A non-zero tilt assertion does NOT catch a reorder — static     |
+// |         |            |        | init has finished by the time a test reads the field, so it     |
+// |         |            |        | reads its real value either way. Re-evaluating the invariant    |
+// |         |            |        | on the finished values is what catches it. Comment only; the    |
+// |         |            |        | assertion that does the work was already there.                 |
 #endregion
