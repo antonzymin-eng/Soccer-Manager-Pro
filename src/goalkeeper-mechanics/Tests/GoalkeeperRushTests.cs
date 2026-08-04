@@ -1,6 +1,6 @@
 // File:     src/goalkeeper-mechanics/Tests/GoalkeeperRushTests.cs
 // Created:  2026-08-04
-// Modified: 2026-08-04
+// Modified: 2026-08-04 (CI: + using TacticalDirector.DeterministicSim — PhaseId lives there, not in EventSystem)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.1.1 / §3.7 (ERR-011-009), FR-GK-018, KD-15,
 //           Testing Strategy #19, Code Standards #20
@@ -21,6 +21,7 @@ using UnityEngine;
 
 using TacticalDirector.AgentMovement;
 using TacticalDirector.BallPhysics;
+using TacticalDirector.DeterministicSim;
 using TacticalDirector.EventSystem;
 
 namespace TacticalDirector.GoalkeeperMechanics.Tests
