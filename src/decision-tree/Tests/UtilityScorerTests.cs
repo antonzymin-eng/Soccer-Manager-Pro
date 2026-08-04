@@ -744,6 +744,140 @@ namespace TacticalDirector.DecisionTree.Tests
             Assert.Less(UtilityWeights.SHOOT_SWEET_RANGE_M, UtilityWeights.BASE_SHOOT_RANGE,
                 "SHOOT_SWEET_RANGE_M must sit inside BASE_SHOOT_RANGE (§3.1.4.2) or the decay is unreachable");
         }
+
+        // ── ERR-008-018 locks: DirectionQuality_DRIBBLE (close-chance-creation design KD-CC2) ──
+
+        /// <summary>A DRIBBLE option carrying an explicit unit direction. The context's agent sits at
+        /// (52, 34) with the opponent goal at (105, 34), so +X is exactly goalward.</summary>
+        private static ActionOption MakeDribbleToward(float space, Vector2 direction) =>
+            new ActionOption
+            {
+                Type = ActionType.DRIBBLE,
+                SpaceScore = space,
+                BestDribbleDirection = direction
+            };
+
+        private float ScoreDribbleToward(Vector2 direction, in DecisionContext ctx)
+        {
+            Buffer[0] = MakeDribbleToward(0.8f, direction);
+            UtilityScorer.ScoreOptions(Buffer, 1, in ctx);
+            return Buffer[0].BaseUtility;
+        }
+
+        [Test]
+        public void DribbleDirection_UnsetDirection_IsExactIdentity()
+        {
+            // The KD-V3 degenerate-input contract restated for ERR-008-018: an option that never
+            // sets BestDribbleDirection (every pre-existing direct-injection fixture in this file,
+            // via MakeDribble) must score EXACTLY as if the term were absent — i.e. identically to
+            // a straight-at-goal dribble, not at the perpendicular midpoint. This is the assertion
+            // that proves the other 20 tests in this fixture are untouched by the new factor.
+            DecisionContext ctx = BuildContext(0.5f, 0.5f, 0.0f);
+            ctx.BallZone = FieldZone.ATTACKING;
+
+            Buffer[0] = MakeDribble(0.8f);
+            UtilityScorer.ScoreOptions(Buffer, 1, in ctx);
+            float unset = Buffer[0].BaseUtility;
+
+            float goalward = ScoreDribbleToward(Vector2.right, in ctx);
+
+            Assert.AreEqual(goalward, unset, 0.0f,
+                "an unset BestDribbleDirection must resolve to the exact ×1.0 identity (KD-V3)");
+        }
+
+        [Test]
+        public void DribbleDirection_IsMonotoneInCosineToGoal()
+        {
+            DecisionContext ctx = BuildContext(0.5f, 0.5f, 0.0f);
+            ctx.BallZone = FieldZone.ATTACKING;
+
+            float goalward = ScoreDribbleToward(Vector2.right, in ctx);
+            float square = ScoreDribbleToward(Vector2.up, in ctx);
+            float retreating = ScoreDribbleToward(Vector2.left, in ctx);
+
+            Assert.Greater(goalward, square,
+                "a dribble at the goal must outscore a square one at equal space");
+            Assert.Greater(square, retreating,
+                "a square dribble must outscore one straight back at equal space");
+        }
+
+        [Test]
+        public void DribbleDirection_Retreating_ScoresExactlyTheFloorFractionOfGoalward()
+        {
+            // The shape's defining points: cosine +1 ⇒ ×1.0, cosine −1 ⇒ ×FLOOR, cosine 0 ⇒ the
+            // midpoint. SpaceScore is held equal across all three, so the ratio isolates the term.
+            DecisionContext ctx = BuildContext(0.5f, 0.5f, 0.0f);
+            ctx.BallZone = FieldZone.ATTACKING;
+
+            float goalward = ScoreDribbleToward(Vector2.right, in ctx);
+            float retreating = ScoreDribbleToward(Vector2.left, in ctx);
+            float square = ScoreDribbleToward(Vector2.up, in ctx);
+
+            float floor = UtilityWeights.DRIBBLE_GOAL_DIR_MIN_MODIFIER;
+            Assert.AreEqual(goalward * floor, retreating, goalward * 1e-4f,
+                "a directly-retreating dribble keeps exactly DRIBBLE_GOAL_DIR_MIN_MODIFIER of its utility");
+            Assert.AreEqual(goalward * (floor + (1.0f - floor) * 0.5f), square, goalward * 1e-4f,
+                "a square dribble sits exactly at the midpoint of the floor and 1.0");
+        }
+
+        [Test]
+        public void DribbleDirection_IsMirroredForTheAwayTeam()
+        {
+            // CLAUDE.md trap table, "Home-team-only worked examples": three home/away asymmetry
+            // defects (#8 ERR-008-002) shipped because every spec example and every fixture used the
+            // home team. DirectionQuality_DRIBBLE reads ctx.OpponentGoalCentre, which is already
+            // team-resolved upstream — but that is exactly the reasoning that failed last time, so
+            // the away side gets its own lock. An away agent attacks x = 0, so −X is goalward and
+            // the entire home/away pair must be an exact reflection.
+            DecisionContext home = BuildContext(0.5f, 0.5f, 0.0f);
+            home.BallZone = FieldZone.ATTACKING;
+
+            DecisionContext away = BuildContext(0.5f, 0.5f, 0.0f);
+            away.BallZone = FieldZone.ATTACKING;
+            away.AgentTeamId = 1;
+            away.AgentPosition = new Vector2(
+                PitchLengthM - home.AgentPosition.x, home.AgentPosition.y);
+            away.OpponentGoalCentre = new Vector2(0f, home.OpponentGoalCentre.y);
+            away.OpponentGoalPostL = new Vector2(0f, home.OpponentGoalPostL.y);
+            away.OpponentGoalPostR = new Vector2(0f, home.OpponentGoalPostR.y);
+
+            // Goalward for each side, then retreating for each side.
+            Assert.AreEqual(ScoreDribbleToward(Vector2.right, in home),
+                            ScoreDribbleToward(Vector2.left, in away), 1e-6f,
+                "a goalward dribble must score identically for the away team attacking x = 0");
+            Assert.AreEqual(ScoreDribbleToward(Vector2.left, in home),
+                            ScoreDribbleToward(Vector2.right, in away), 1e-6f,
+                "a retreating dribble must score identically for the away team");
+
+            // And the away side must actually be discriminating, not uniformly flat.
+            Assert.Greater(ScoreDribbleToward(Vector2.left, in away),
+                           ScoreDribbleToward(Vector2.right, in away),
+                "the away team's goalward dribble (−X) must outscore its retreating one");
+        }
+
+        /// <summary>Pitch length (m) — local to the away-mirror fixture, which has to place the away
+        /// agent at the reflection of the home agent's position.</summary>
+        private const float PitchLengthM = 105.0f;
+
+        [Test]
+        public void DribbleDirectionFloor_IsWeakerThanThePassFloor_AndInsideItsShapeBounds()
+        {
+            // The DRIBBLE floor is deliberately WEAKER (numerically higher) than §3.1.3.5's PASS
+            // floor, and the asymmetry is measured rather than incidental: suppressing the dribble
+            // pushes the carrier onto HOLD, which has no timeout, and at floors 0.50 and 0.65 one
+            // seed in six stalled with mean final-third episodes of 28.6 s and 17.5 s against a
+            // healthy 5.1 s (close-chance-creation-design.md §8). Until the HOLD stall is fixed the
+            // DRIBBLE floor must not be pushed down to the PASS floor — this assertion is what makes
+            // that a deliberate, reviewable decision rather than a drift.
+            Assert.Greater(UtilityWeights.DRIBBLE_GOAL_DIR_MIN_MODIFIER,
+                UtilityWeights.GOAL_DIR_MIN_MODIFIER,
+                "the DRIBBLE directional floor is intentionally weaker than the PASS one (HOLD-stall evidence)");
+
+            Assert.Greater(UtilityWeights.DRIBBLE_GOAL_DIR_MIN_MODIFIER, 0.0f,
+                "a zero floor would make a retreating dribble worthless rather than merely worse");
+            Assert.Less(UtilityWeights.DRIBBLE_GOAL_DIR_MIN_MODIFIER, 1.0f,
+                "1.0 disables the term entirely; above 1.0 would REWARD retreating");
+        }
     }
 }
 
@@ -769,4 +903,9 @@ namespace TacticalDirector.DecisionTree.Tests
 // |         |            |        |   (bitwise — proves close-range calibration untouched); monotone decay +      |
 // |         |            |        |   knee continuity; exact half-quality at SWEET + FALLOFF; the discriminating  |
 // |         |            |        |   long-vs-close-vs-pass comparison; [GT] shape guards.                        |
+// | 1.7     | 2026-08-04 | —      | ERR-008-018 DirectionQuality_DRIBBLE locks (close-chance-creation design      |
+// |         |            |        |   KD-CC2): unset-direction exact identity (the KD-V3 contract — also the      |
+// |         |            |        |   proof the other fixtures here are untouched); monotone in the cosine to     |
+// |         |            |        |   goal; exact floor / midpoint ratios; and the anchoring invariant that the   |
+// |         |            |        |   PASS and DRIBBLE directional floors do not silently diverge.                |
 #endregion

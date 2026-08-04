@@ -12,6 +12,47 @@ break it, and do not edit historical entries.
 
 ---
 
+> **Last Updated:** August 4, 2026 (**§5.Z.24 — CLOSE-CHANCE CREATION: the first premise in this
+> chain that survived its own check, one formula defect fixed, and the creation gap deliberately NOT
+> claimed.** §5.Z.23 §7 item 4 re-localized the creation residual to the final-third → penalty-area
+> stage (6.5% against football's ~40%) and named it a #8/#15 surface. Two premises were checked.
+> **The first SURVIVED — a first for this seven-pass chain**: the "306.7 final-third entries" figure
+> is a raw boundary-crossing count that a ball rattling across x = 35 would have inflated, but
+> re-counted with a 1 s exit dwell over six full matches it reads **311 episodes against 312 raw
+> crossings**, each averaging 5.1 s. The denominator was sound. The second premise located the stage
+> without naming a mechanism, and the instrument (`CloseChanceDiagnosticTests`, env-gated
+> `TD_CREATION_DIAGNOSTIC=1`) found two, both real: **nobody is in the box** — mean attacking
+> outfielders inside the penalty area while the ball is in the final third is **0.11**, with 92% of
+> samples at zero, and the deepest *composed target slot* is **22.8 m** from goal against a deepest
+> *attacker* at 22.2 m, so the players sit within 0.6 m of where they are told to be and are simply
+> never asked into the area — and **the carrier walks the ball back out**: DRIBBLE is the modal
+> attacking-third action at **40%** of heartbeat decisions with a mean cosine to the opponent goal of
+> **−0.302** and only 31% pointing goalward. **ERR-008-018** is the second half: #8 §3.1.5.2 picks the
+> dribble direction by free space alone and closes by delegating the correction to *"the scoring stage
+> (§3.2.2)"* — but §3.2.4.1, DRIBBLE's actual formula, has no directional factor and **§3.2.2 is the
+> PASS formula**, so the promised term was delegated to a section that does not own DRIBBLE and never
+> had a home. Same class as ERR-008-017. Fixed with `DirectionQuality_DRIBBLE`; measured cosine
+> **−0.302 → +0.006** and goalward share **31% → 49%**, moving on **all six seeds with no overlap**
+> between the pre- and post-fix distributions. The `[GT]` floor lands at **0.80** rather than the 0.50
+> that maximises the effect, because suppressing the dribble pushes the carrier onto HOLD — which has
+> no timeout — and at floors 0.65 and 0.50 one seed in six stalled outright (mean final-third episode
+> 5.1 s → 17.5 s / 28.6 s). **The creation funnel itself did not move and is not claimed**: box
+> occupancy 0.11 → 0.10, ball into the box 6% → 5% of episodes, passes into the box 1% → 0%, shots
+> 19.3 → 19.5, goals 3.67 → 3.50 — **the residual shot-count gap is NOT closed**. #15 §4.5.2's
+> run-target overlay was implemented, measured and **REFUSED**: it moves the committed RUNNER's target
+> from 80.9 m to 14.7 m from the attacked goal and moves box occupancy **down**, 0.11 → 0.08, because
+> a RUNNER's target is `carrier + 12 m` and the carrier is usually still in midfield. A pooled number
+> nearly carried a false creation claim — at floor 0.50 the corpus reads box occupancy 0.11 → 0.59,
+> but five of six seeds are flat and the whole movement is **one stalled match** contributing 32% of
+> samples; the acceptance scenario's box predicate failed post-fix, forced the per-seed breakdown, and
+> the claim was withdrawn and the predicate deleted rather than re-tuned. The residual is re-localized
+> and sharper than what it replaces: **#8 cannot pass to a place, only to a player** — §3.1.3 generates
+> one PASS candidate per visible teammate *at that teammate's current position*, so passes into the box
+> measured 1% at every rung of the ladder, including rungs where players did reach the box. Owner doc:
+> `docs/tracking/close-chance-creation-design.md`; match-engine §5.Z.24; `spec-error-log.md` v1.56.
+> Acceptance `match-engine-close-chance` — **2 of 3 predicates fail at `7fcd897` by execution**. No
+> schema / RNG / domain-tag / draw-site / draw-order change. Prior entry below.)
+
 > **Last Updated:** August 3, 2026, later same day (**§5.Z.23 — CONVERSION AT CONTACT: the recorded
 > premise was refuted, and the real defect is that a keeper's CATCH never stopped the ball.**
 > `gk-contact-rate-design.md` §7 item 1 recorded the goal-rate residual as *"marginal, end-of-envelope

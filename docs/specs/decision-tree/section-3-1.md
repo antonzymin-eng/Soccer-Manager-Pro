@@ -644,8 +644,21 @@ was assigned to the nearest sector but with up to ±22.5° angular error from a 
 sector boundary, vs. ±22.5° maximum in the 8-sector model. The 8-sector model
 eliminates the structural gap between sectors and reduces the worst-case angular
 error from ±67.5° (5-sector midpoints) to ±22.5°. No backward-sector penalty is
-applied to `SpaceScore` at generation time; the scoring stage (§3.2.2) applies
-directional-to-goal modifiers to the DRIBBLE utility.
+applied to `SpaceScore` at generation time; the scoring stage applies the
+directional-to-goal modifier to the DRIBBLE utility — `DirectionQuality_DRIBBLE`
+in §3.2.4.1.
+
+> **ERR-008-018 (August 3, 2026).** The cross-reference above previously pointed at
+> §3.2.2, which is the **PASS** utility formula; §3.2.4 is DRIBBLE's. The promised
+> modifier was therefore never given a home, and §3.2.4.1's formula shipped without
+> it. Because `SpaceScore` is direction-blind by construction and `best_direction`
+> is chosen by `argmax(space)`, a dribble away from goal scored exactly as well as
+> the same dribble at goal — and in the final third, where the free space is behind
+> the carrier, that is the direction the argmax picks. Measured over six full
+> matches, DRIBBLE was the modal carrier action in the attacking third (40% of
+> heartbeat decisions) with a mean cosine to the opponent goal of **−0.30**: the
+> average final-third dribble pointed away from the goal. `DirectionQuality_DRIBBLE`
+> is added to §3.2.4.1 in the same commit.
 
 ### 3.1.5.3 DribbleOption Construction
 
@@ -896,4 +909,5 @@ scoring is §3.2 (unchanged — it is an INTERCEPT), dispatch §3.5.
 | 1.1 | March 01, 2026 | Claude (AI) / Anton | Self-critique corrections. |
 | 1.1.1 | May 15, 2026 | Claude (AI) / Anton | Non-behavioral patch per ERR-012-002: §3.1.7.2 "Formation System (Spec #14)" → "Formation System (Positioning AI, Spec #12)". Single-token correction. Approval status preserved. |
 | 1.1.2 | May 17, 2026 | Claude (AI) / Anton | Non-behavioral patch per ERR-013-004: §3.1.8.1 "Fatigue System #13" → "Pressing AI #13". Single-token correction (current Spec #13 is Pressing AI; Fatigue System is a separate Stage-1 spec with no allocated number). Approval status preserved. |
+| 1.2 | August 4, 2026 | — | ERR-008-018 back-prop (close-chance-creation pass, §5.Z.24): §3.1.5.2's closing delegation pointed the DRIBBLE directional-to-goal modifier at **§3.2.2, the PASS formula**, so the promised term was never given a home and §3.2.4.1 shipped without it. Cross-reference corrected to §3.2.4.1 and the measured consequence recorded inline (final-third dribbles: 40% of carrier decisions, mean cosine to goal −0.30 over six full matches). Generation-stage behaviour is UNCHANGED — `best_direction` is still the free-space argmax; only the delegation target is corrected. |
 
