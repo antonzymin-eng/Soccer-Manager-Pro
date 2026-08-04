@@ -71,6 +71,38 @@ P4b), `path-to-playable-roadmap.md` → v0.12 (row B7 landed; B8–B10 opened), 
 
 **Last Updated (prior):** August 3, 2026 (**Two production assemblies were missing from this manifest
 
+**Last Updated:** August 4, 2026, latest same day (**`match-realism-pass` skill re-cut for wire-first —
+the calibration ladder moves behind a wiring gate, and the gate defers to the wiring backlog and
+KD-W1.** Tooling-only; **no file added, removed, renamed or moved**, so no inventory row changes and
+the production assembly count stays 31. No `src/` change, no spec change, no gate run. **Modified:**
+`.claude/skills/match-realism-pass/SKILL.md` (frontmatter description; new `## 0. The wiring gate` —
+chain enumeration, then six source-read checks with all six run rather than stopping at the first,
+plus a wiring branch — placed ahead of the premise check, which becomes §0.1; §2 cause 3 relabelled as
+the gate failing late; §3 opens on KD-W1's `[GT]` freeze and cites §5.Z.20 as the counterexample
+bounding the gate; §7 requires the recorded residual to be classified missing-stage vs mis-set-dial)
+and `.claude/skills/README.md` (the `match-realism-pass` derivation row). Grounded in existing measured
+record only — no new measurement was taken. **Merged with `main` across the wiring audit, which
+changed the skill rather than merely colliding with it:** check 0 now reads
+`match-engine-wiring-backlog.md` (10 Class-A dormant capabilities) instead of re-deriving; a new
+check 6 covers **gate-level dormancy**, the blind spot the audit names in exactly the static checks
+§0 listed (C1: #12 commits `InPoss` on 9.5% of final-third samples, found only by runtime
+instrumentation); and §3 defers to KD-W1, which is strictly stronger than this pass's own
+conditionality. §5.Z.24 corrects the skill's "every pass produced a partly-wrong brief" to seven of
+eight. **Adversarially reviewed before landing: 4 High / 3 Medium / 2 Low, all fixed**, the four High
+being a superlative refuted by §5.Z.20 (goals 14.7 → 8.0 from a `[GT]` recalibration, the chain's
+largest single movement), a "most passes should skip the ladder" claim contradicted by
+§5.Z.18/.19/.20/.21, a "stop at the first failing check" instruction contradicted by the gate's own
+two-gaps example, and the motivating evidence misattributed to §5.Z.15/.16 (whose wiring §5.Z.11
+item 2 had named in advance) instead of §5.Z.17/.23. **Chain repair, recorded not absorbed:** the
+merge region carried a pre-existing defect on `main` — an orphaned `**Last Updated:**` header for the
+"Two production assemblies" entry with no body (the real entry survives intact below as `(prior)`),
+plus B6 left bare — four bare labels where the chain permits one. Orphan deleted, B6 and the two
+August 4 entries relabelled `(prior)`; no entry body edited. **Prior entry below.**)
+
+**Last Updated (prior):** August 4, 2026, later same day (**Match-engine wiring audit — the built-but-unwired inventory.** **New:** `docs/tracking/match-engine-wiring-backlog.md` v1.0. **Modified:** `CLAUDE.md` (roadmaps table + the KD-W1 `[GT]` freeze beside the realism-pass convention), `open-issues.md`, `file-manifest.md`, `CHANGELOG.md`. Read-only audit — **no `src/` change, no spec change, no gate run** (no `.cs`, `.asmdef` or `tools/dotnet-ci` file moved). Found 10 Class-A dormant capabilities across the 18 assemblies the engine composes; the two largest are the keeper rush trigger (`CommitRushIntent` has no production caller, so every 1v1 is a stationary keeper on his line) and the tackle chain (`DefensiveAITick.GetTackleIntentRequests` is populated every tick and read by nobody, while `GetAndClearTackleFlag` is hardcoded `=> false` in **both** engine adapters — making #5 §3.8.5's tackle-interrupt branch unreachable, so no player has ever made a tackle). **Prior entry below.**)
+
+**Last Updated (prior):** August 4, 2026 (**Close-chance creation (§5.Z.24) — ERR-008-018.** **New:** `src/match-engine/tests/CloseChanceDiagnosticTests.cs`, `src/match-engine/tests/MatchEngineCloseChanceScenarios.cs` + `MatchEngineCloseChanceTests.cs`, `docs/tracking/close-chance-creation-design.md`. **Modified:** `UtilityScorer.cs` v1.13 (+`DirectionQuality_DRIBBLE` / `ComputeDribbleDirectionQuality`), `UtilityWeights.cs` v1.6 (+`DRIBBLE_GOAL_DIR_MIN_MODIFIER` `[GT]` = 0.80), `UtilityScorerTests.cs` v1.7 (+4 locks), `MatchEngine.cs` v1.57 (three measurement seams — `TestOnly_DtLastAction` / `TestOnly_AttackIntent` / `TestOnly_PositioningPhase` — plus the pointer comment recording the refused #15 run overlay), `docs/specs/decision-tree/section-3-1.md` v1.2 (§3.1.5.2 cross-reference corrected), `docs/specs/decision-tree/section-3-2.md` v1.8 + `section-3-2-3-to-3-2-9.md` (§3.2.4.1 formula + worked examples A/A′/B), `spec-error-log.md` v1.56, `match-engine-design.md` §5.Z.24, `open-issues.md`, `CLAUDE.md`. Measured: dribble cosine to goal −0.302 → +0.006 and goalward share 31% → 49% on all six seeds; the creation funnel itself did NOT move and is not claimed. No schema/RNG/draw-order change. **Prior entry below.**)
+
 **Last Updated (prior):** August 3, 2026, latest same day (**Owner decision — roadmap B6 reversed to the full
 Unity UI.** Doc-only; **no file added, removed, renamed or moved**, so no inventory row changes and the
 production assembly count stays 31. Modified tracking docs:

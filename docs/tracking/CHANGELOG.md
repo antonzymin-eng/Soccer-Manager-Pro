@@ -16,6 +16,77 @@ break it, and do not edit historical entries.
 >
 > **Last Updated (prior):** August 4, 2026, latest same day (**P4a ADVERSARIAL-REVIEW PASS 2 — 1 High, 4 Medium fixed; run over the tilted-view revision's own output.** **H-1, and it is the pointed one:** `PitchCameraRig` decided where the camera goes and how it is angled, but said nothing about **how much of the pitch it sees** — so P4b would have chosen a field of view inside the `MonoBehaviour`. A framing decision, in the one place the CI gate cannot compile, sitting inside the deliverable whose entire purpose is keeping decisions out of there (§12 rule 1, the P4a/P4b split). `PitchCameraPose` gains `FieldOfViewDegrees` — the binding now assigns position, look-at and field of view, and picks nothing — `MatchClientConstants` gains `CameraVerticalFovDegrees`, and because two individually-legal dials can pair into a camera whose lowest ray never meets the ground, the bound is `tilt + fov/2 < 90` rather than two range checks. `PitchCameraRig.GroundExtentAlongTilt` attaches a number to the framing: near and far reach of visible ground, **deliberately asymmetric**, since a tilted camera sees a trapezoid and asserting symmetry is the mistake the test guards. **M-1:** §5-P4b instructed *both* cameras in a single bullet — the new rig placement and, in the same sentence, the deleted orthographic one — while the very next bullet said the orthographic assumption was wrong; the roadmap's B8 row carried only the stale half. The live instruction sheet for the next phase on the critical path contradicted itself. **M-2:** `PitchMarking`'s doc still sent the render skin to `ToView`, which would stand every marking upright in the world XY plane instead of laying it on the turf — and `ToView`/`ToPitch` turned out to have no production caller left at all after the revision (`ToView` was `ToWorld` with the height dropped, and the inverse a click needs is a ray intersection), so both are deleted and their tests re-anchored. **M-3:** `CameraLateralOffsetM` was the only camera dial with no validation, and it lands directly in the camera's world position — a non-finite value put the camera nowhere while every assertion about the aim point still passed. **M-4:** the tilted-view revision never appended version-history rows to `MatchClientConstants.cs` (v1.4) or `MatchRenderProjection.cs` (v1.2), so each file's newest row described constants and a `HeightScale` it no longer had, and three tracking documents cited versions the files themselves did not claim. The `// Modified:` date check did not catch it, because the previous row carried the same date. `match-client-core` 129 → 135; the two new locks verified non-vacuous by breaking them (symmetric ground extent fails 2, a fov dropped from the pose fails 1). **Full dotnet gate: PASSED, 0 failures** (whole tree green, 30 suites; match-client-core 129 → 135, match-engine 368 unchanged). **The sweep after the fixes found one more Medium, so this pass is NOT converged** — `PitchMarkingKind.Rectangle` still documented corner ordering as *not* guaranteed and told consumers to re-normalise, which is the exact contract pass 1's H-1 reversed: `PitchMarking.cs` was fixed then and the enum sitting beside it was not, so two files stated opposite contracts for one field, and the enum is the one a renderer switching on `Kind` reads first. Fixed; the guarantee is test-locked by `EveryRectangleArrivesWithItsCornersNormalised`, so the docs cannot silently drift from the code again. **Pass 3 then re-read the whole P4a surface and surfaced no High and no Medium — the loop is converged.** Two Lows fixed: `PitchCameraPose`'s header and class summary still described it as two values, and a test comment credited the wrong assertion with guarding the static-init-order defect. That second one is worth stating plainly, because the correction is counter-intuitive: asserting `CameraTiltDegrees > 0` does **not** catch a declaration reorder. By the time any test reads the field, static init has finished and it holds its real value whichever order it ran in. What catches it is re-evaluating the invariant itself on the finished values — a pair that is genuinely invalid fails there regardless of what the boot check saw. The guard was already present and correct; only the comment beside it was wrong. **Full dotnet gate on the converged tree: PASSED, 0 failures** (30 suites; match-client-core 135, match-engine 368 unchanged).)
 >
+> **Last Updated:** August 4, 2026, latest same day (**`match-realism-pass` SKILL RE-CUT FOR WIRE-FIRST
+> — the calibration ladder moves behind a wiring gate, and the gate now defers to the wiring backlog
+> and KD-W1.** Tooling-only; no `.cs`, no spec, no assembly, no gate run. The skill encoded
+> measure → localize → ladder → land, which is the right shape only when the chain under the dial is
+> complete. Twice in the §5.Z chain a brief arrived asking for a *quality* that turned out to be
+> **undefined** because a stage was missing — **§5.Z.17** ("the quality of the save, not its
+> existence"; measured zero hand contacts across six keeper-matches, one cause being
+> `OnShotExecutedEvent` with zero callers anywhere) and **§5.Z.23 / ERR-011-008** (#11's catch coded to
+> one of its two spec statements, so a claimed ball flew on into the net).
+>
+> **New `## 0. The wiring gate`, ahead of the premise check (now §0.1).** It opens by requiring the
+> chain to be **enumerated from the observable backwards to the dial** out of the owning spec's §3 —
+> building that list is the hard part, since nobody had "the catch parks the ball" on a stage list
+> until §5.Z.23's instrument followed the ball after the contact — and falls back to §1's funnel when
+> the list cannot be written from source. Then six source-read checks, **all six run, every failure
+> reported**: multi-gap chains are not rare (§5.Z.15 found #11 switched off AND keepers skipped by the
+> physics phase; §5.Z.17 found three independently sufficient defects). Checks 1–5 are assembly
+> existence, composition-root construction + phase reach + **the flag state inside your own
+> instrument** (`DisableGkHeading()` is called in five places and §1 tells you to copy an exemplar),
+> live **read**-side consumer, spec §3 **body** vs Outputs summary, and Stage-0 placeholder. Checks 1
+> and 5 split on whether the brief names a spec or a symptom.
+>
+> **Merged with `main` across the wiring audit, which changed this skill rather than merely colliding
+> with it.** Three integrations: (a) **check 0 is now `match-engine-wiring-backlog.md`** — the audit
+> enumerated **10 Class-A dormant capabilities** by three systematic sweeps, so the gate reads that
+> board before re-deriving anything, and W1/W2 (the keeper never leaves his line, no player has ever
+> made a tackle) are cited as the standing examples; (b) **new check 6, gate-level dormancy**, which
+> the audit names as the explicit blind spot of exactly the static checks §0 had listed — a call site
+> that runs but whose condition is almost never true is invisible to all of checks 1–5, and C1 (#12
+> commits `InPoss` on **9.5%** of final-third samples) was found only by runtime instrumentation;
+> (c) **§3 now opens with KD-W1's `[GT]` freeze**, since the project-wide rule — no `[GT]` change
+> governing an unwired subsystem until the post-backlog calibration pass — is strictly stronger than
+> the per-chain conditionality this pass had written, and a skill that told the reader to calibrate
+> once *its* gate passed would have contradicted standing policy. §5.Z.24 also refutes a claim in the
+> skill's own opening — it is "the first premise in this chain that survived its own check" — so
+> "every one produced a partly-wrong brief" is corrected to seven of eight, and its **ERR-008-018**
+> joins ERR-008-017 as §2's second cause-1 instance.
+>
+> **The gate is a filter, not a verdict on calibration.** §5.Z.20 is cited in both §0 and §3 as the
+> standing counterexample: a `[GT]` recalibration inside #11's own §3.4.3/§3.4.5 ranges produced **the
+> largest single movement this chain has measured, goals per match 14.7 → 8.0**. It fixed two timing
+> defects in the same pass — so the gate would have had work to do there too — and its owner document
+> states those fixes alone were not sufficient, the old values "could not reach the catch band … even
+> with a perfect window", which is precisely the point: the dial was load-bearing independently of the
+> wiring. The stated rationale for wiring first is therefore **not** that it moves the number more, but
+> that a missing stage bounds the outcome at a level no dial can reach.
+>
+> **Two further edits.** §2's cause 3 (structurally unreachable / vacuous gate) is labelled **§0
+> failing late**. §7 requires the recorded residual to be **classified — missing stage or mis-set
+> dial** — because the next pass runs §0 against that sentence.
+>
+> **Adversarially reviewed before landing; the review is why this entry reads as it does.** Pass 1
+> raised 4 High: a superlative ("the largest movements came from a missing stage") that the chain's own
+> record **refutes** via §5.Z.20; "§3 is the step most passes should skip", contradicted by load-bearing
+> `[GT]` work in at least §5.Z.18/.19/.20/.21; "stop at the first check that fails", contradicted by the
+> two-gaps example the gate itself cites; and a **misattribution of the motivating evidence** — §5.Z.15
+> and §5.Z.16 were cited as calibration briefs that turned out to be wiring, when §5.Z.11 item 2 had
+> named that wiring in advance ("opt-in and default-off (`EnableGkHeading`) … plus GK locomotion") and
+> §5.Z.16 was never a brief at all. Passes 2–3 caught 3 more Medium, two of them introduced by the
+> pass-1 fixes; pass 4 was clean.
+>
+> **Chain repair, recorded rather than absorbed.** This merge's conflict region contained a
+> pre-existing defect on `main`: an **orphaned `**Last Updated:**` header** for §5.Z.23 with no body
+> and an unclosed parenthesis (the real §5.Z.23 entry survives intact below as `(prior)`), plus the B6
+> entry left bare when the audit entries were inserted above it — three bare labels where the chain
+> permits exactly one. The orphan is deleted and B6 relabelled `(prior)`; no entry body was edited.
+> This is the fourth time this chain has needed the same correction.
+>
+> Modified: `.claude/skills/match-realism-pass/SKILL.md` (frontmatter description + §0/§0.1/§2/§3/§7),
+> `.claude/skills/README.md` (derivation row), `file-manifest.md`, and this file. Prior entry below.)
+
 > **Last Updated (prior):** August 4, 2026, later same day (**MATCH-ENGINE WIRING AUDIT — the code that
 > exists and never runs, and the `[GT]` freeze that follows from it.** Seven consecutive §5.Z passes
 > fitted constants against the composed engine. This audit asks what was *in* that engine, and the
