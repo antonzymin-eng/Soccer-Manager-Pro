@@ -54,7 +54,7 @@ break it, and do not edit historical entries.
 >
 > **No `SNAPSHOT_SCHEMA_VERSION` change, no new RNG stream / domain tag / draw site, no draw-order
 > change, no engine-behaviour change** — the new cue is sampled from an existing read-only accessor.
-> **Full dotnet gate: 29 of 30 suites PASSED, 0 failures** — whole tree compiles; `match-client-core` 65 → 103, `match-viewer` 39 → 41, `ui-framework` 50 (unchanged), `season-save` 263, every other suite unchanged. The `match-engine` suite was still running when this entry was written and is recorded as **not yet reported** rather than assumed green; no `match-engine` source is touched by this landing. **Next: P4b on the pinned host** (roadmap row B8), which now binds a render model that is
+> **Full dotnet gate: PASSED, 0 failures** (whole tree green; all 30 suites reported) — `match-client-core` 65 → 103, `match-viewer` 39 → 41, `ui-framework` 50 (unchanged), `match-engine` 368 passed / 8 skipped (unchanged; no `match-engine` source is touched by this landing), every other suite unchanged. **Next: P4b on the pinned host** (roadmap row B8), which now binds a render model that is
 > already decided and already tested.)
 
 > **Last Updated (prior):** August 3, 2026, latest same day (**OWNER DECISION — ROADMAP B6 REVERSED: the
