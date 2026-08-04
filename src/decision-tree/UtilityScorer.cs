@@ -3,6 +3,7 @@
 // Modified: 2026-06-28 (#21 T2 mentality risk multiplier)
 // Modified: 2026-07-07 (cheap-item addition: rest-defense risk dampener)
 // Modified: 2026-07-28 (ERR-008-017 — ScoreShoot gains the DistanceQuality_SHOOT term (shot-volume design KD-V2/KD-V3))
+// Modified: 2026-08-04 (ERR-008-018 — ScoreDribble gains the DirectionQuality_DRIBBLE term (close-chance-creation design KD-CC2))
 // Author:   —
 // Spec:     Decision Tree #8 §3.2, §3.4, new §3.2/§7.7, Tactical Instructions #21 §3.2, Code Standards #20
 // Purpose:  Step 4 of the 6-step pipeline. Applies the utility scoring model to each
@@ -244,11 +245,50 @@ namespace TacticalDirector.DecisionTree
             float p = ctx.PressureScalar;
             float risk = p * (1.0f - ctx.A_Dribbling) * UtilityWeights.DRIBBLE_RISK_COEFF;
 
+            // §3.2.4.1 DirectionQuality_DRIBBLE (ERR-008-018 / close-chance-creation design KD-CC2):
+            // §3.1.5.2 picks best_direction by free space alone and defers the directional-to-goal
+            // modifier to this stage; the stage never had one. SpaceScore is direction-blind by
+            // construction (it measures only how clear a sector is), so without this factor a dribble
+            // back toward the halfway line scored exactly as well as the same dribble at goal — and in
+            // the final third, where the space IS behind the carrier, that is the direction the
+            // argmax picks. This suppresses the retreating dribble rather than redirecting it (the
+            // generator emits one option), which is precisely what §3.1.5.2 delegates here: the
+            // carrier is pushed onto its PASS / SHOOT / HOLD alternatives instead.
+            float dirQ = ComputeDribbleDirectionQuality(ref opt, in ctx);
+
             float baseU = UtilityWeights.U_BASE_DRIBBLE * zoneM;
             float tactM = TacticalModifierResolver.Resolve(
                 ActionType.DRIBBLE, in ctx.TacticalContext, ctx.OpponentHasBall, 0.0f);
 
-            return baseU * am * contextM * tactM * (1.0f - risk);
+            return baseU * am * contextM * dirQ * tactM * (1.0f - risk);
+        }
+
+        /// <summary>
+        /// DirectionQuality_DRIBBLE ∈ [DRIBBLE_GOAL_DIR_MIN_MODIFIER, 1.0]: the same linear-in-cosine
+        /// shape §3.1.3.5 already uses for the PASS goal-direction modifier, applied to the chosen
+        /// dribble direction. Straight at the opponent goal ⇒ 1.0; straight away ⇒ the floor.
+        ///
+        /// <para>A degenerate <see cref="ActionOption.BestDribbleDirection"/> — the zero vector, which
+        /// is what a direct-injection test option that never sets it carries — resolves to the exact
+        /// ×1.0 identity rather than to the mid-cosine value. That is the ERR-008-017 / KD-V3 contract
+        /// restated: an unset field must not silently reprice an option, so every pre-existing unit
+        /// expectation stands unmodified. Live options always carry a unit-length direction from
+        /// §3.1.5.2's sector scan.</para>
+        /// </summary>
+        private static float ComputeDribbleDirectionQuality(ref ActionOption opt, in DecisionContext ctx)
+        {
+            Vector2 dir = opt.BestDribbleDirection;
+            Vector2 toGoal = ctx.OpponentGoalCentre - ctx.AgentPosition;
+
+            float dirLen = dir.magnitude;
+            float goalLen = toGoal.magnitude;
+            if (!(dirLen > 1e-4f) || !(goalLen > 1e-4f)) return 1.0f;   // NaN-safe !(x > 0) form
+
+            float cosine = Vector2.Dot(dir / dirLen, toGoal / goalLen);
+            if (float.IsNaN(cosine)) return 1.0f;
+
+            return UtilityWeights.DRIBBLE_GOAL_DIR_MIN_MODIFIER
+                 + ((cosine + 1.0f) * 0.5f) * (1.0f - UtilityWeights.DRIBBLE_GOAL_DIR_MIN_MODIFIER);
         }
 
         // ── §3.2.5 HOLD ────────────────────────────────────────────────────────
@@ -481,4 +521,14 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   DistanceQuality_SHOOT factor — 1.0 inside SHOOT_SWEET_RANGE_M, hyperbolic  |
 // |         |            |        |   decay beyond (U_SHOOT previously had no distance term; measured shots      |
 // |         |            |        |   clustered at the range-gate boundary, means 30–34 m vs football's ~17).    |
+// | 1.13    | 2026-08-04 | —      | ERR-008-018 (close-chance-creation design KD-CC2/KD-CC4): ScoreDribble      |
+// |         |            |        |   gains the DirectionQuality_DRIBBLE factor — the §3.1.3.5 PASS shape,       |
+// |         |            |        |   linear in the cosine between the chosen dribble direction and the         |
+// |         |            |        |   direction to the opponent goal. §3.1.5.2 had delegated this modifier to   |
+// |         |            |        |   "the scoring stage (§3.2.2)" — the PASS section — so DRIBBLE's own        |
+// |         |            |        |   formula never received it and a dribble toward halfway scored exactly     |
+// |         |            |        |   as well as the same dribble at goal (measured: 40% of final-third         |
+// |         |            |        |   carrier decisions, mean cosine to goal −0.30 over six full matches). A    |
+// |         |            |        |   zero BestDribbleDirection resolves to the exact ×1.0 identity, so every   |
+// |         |            |        |   pre-existing direct-injection expectation is unchanged (KD-V3 restated).  |
 #endregion

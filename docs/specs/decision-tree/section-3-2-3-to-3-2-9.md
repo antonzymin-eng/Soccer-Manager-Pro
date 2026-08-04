@@ -298,6 +298,7 @@ modifier provides the second. Three boundary conditions are documented:
 U_DRIBBLE = BaseUtility_DRIBBLE
           × AttributeMultiplier_DRIBBLE
           × SpaceScore
+          × DirectionQuality_DRIBBLE
           × (1 − RiskPenalty_DRIBBLE)
 
 clamped to [0.01, 1.0]
@@ -318,9 +319,38 @@ DRIBBLE_AGILITY_EXP    = 0.30 [GT]  — directional change speed; secondary
 SpaceScore             = option.SpaceScore
                        ← populated in §3.1.5.2; range [0.0, 1.0]
 
+DirectionQuality_DRIBBLE
+  = DRIBBLE_GOAL_DIR_MIN_MODIFIER
+  + ((cosine + 1) / 2) × (1 − DRIBBLE_GOAL_DIR_MIN_MODIFIER)
+
+  cosine = dot(normalise(option.BestDirection),
+               normalise(OpponentGoalCentre − AgentPosition))     ∈ [−1, +1]
+
+DRIBBLE_GOAL_DIR_MIN_MODIFIER = 0.80 [GT]  — range (0.0, 1.0); 1.0 disables the term
+
 RiskPenalty_DRIBBLE    = P × (1.0 − A_Dribbling) × DRIBBLE_RISK_COEFF
 DRIBBLE_RISK_COEFF     = 0.35 [GT]
 ```
+
+**`DirectionQuality_DRIBBLE` (ERR-008-018):** the directional-to-goal modifier
+§3.1.5.2 delegates to this stage. It is the same linear-in-cosine shape §3.1.3.5
+already uses for PASS (`GOAL_DIR_MIN_MODIFIER`), and it carries the same floor, so
+the two directional modifiers in the tree do not disagree about how much a backward
+action is worth. Straight at the opponent goal ⇒ 1.0; straight away ⇒ the floor;
+perpendicular ⇒ the midpoint.
+
+This factor **suppresses** a retreating dribble; it does not redirect it. That is
+deliberate and is what §3.1.5.2's delegation means: the generator emits exactly one
+DRIBBLE candidate (the free-space argmax), so the only thing the scoring stage can
+do is decide how strongly that one candidate competes with the carrier's PASS /
+SHOOT / HOLD alternatives. Redirecting the dribble would require the generator to
+emit more than one direction, which §3.1.5.3 does not do at Stage 0.
+
+**Degenerate-input contract (KD-V3 restated, ERR-008-017 precedent):** an option
+whose `BestDirection` is the zero vector — the value a direct-injection test option
+that never sets the field carries — resolves to the exact ×1.0 identity, **not** to
+the perpendicular midpoint. An unset field must never silently reprice an option.
+Live options always carry a unit-length direction from §3.1.5.2's sector scan.
 
 **Raw form rationale for Dribbling and Agility:**
 Unlike passing attributes, Dribbling and Agility use the raw `A_x ^ exp` form (no shift
@@ -338,11 +368,12 @@ when `SpaceScore > 0.0`, so SpaceScore will always be > 0.0 in the scored candid
 
 ### 3.2.4.2 Numerical Verification
 
-**Case A: Skilled dribbler, open space, attacking zone**
+**Case A: Skilled dribbler, open space, attacking zone, running AT the goal**
 ```
 Agent: Dribbling=17, Agility=16
 BallZone: ATTACKING → ZoneModifier = 1.10
 SpaceScore = 0.90 (nearest opponent 1.8m away within 2.0m threat radius)
+BestDirection is 30° off the line to the opponent goal → cosine = cos 30° = 0.8660
 PressureScalar P = 0.20
 
 A_Dribbling = (17−1)/19 = 0.8421
@@ -352,25 +383,57 @@ BaseUtility = 0.45 × 1.10 = 0.495
 AttributeMultiplier = 0.8421^0.40 × 0.7895^0.30
                     = 0.9339 × 0.9322 = 0.8706
 SpaceScore = 0.90
+DirectionQuality = 0.80 + ((0.8660 + 1) / 2) × 0.20
+                 = 0.80 + 0.9330 × 0.20 = 0.9866
 RiskPenalty = 0.20 × (1−0.8421) × 0.35 = 0.20 × 0.1579 × 0.35 = 0.01105
 
-U_raw = 0.495 × 0.8706 × 0.90 × (1−0.01105)
+U_raw = 0.495 × 0.8706 × 0.90 × 0.9866 × (1−0.01105)
       = 0.495 × 0.8706 = 0.4309
       = 0.4309 × 0.90 = 0.3878
-      = 0.3878 × 0.98895 = 0.3836
+      = 0.3878 × 0.9866 = 0.3826
+      = 0.3826 × 0.98895 = 0.3784
 
-ScoredUtility = 0.384 ✓
+ScoredUtility = 0.378 ✓
 ```
 
 This is lower than a clean PASS option (0.54) — a skilled dribbler with space in the
 attacking third would still prefer a good pass option. This is correct; dribbling should
 be an option when passing lanes are blocked, not the automatic first choice. ✓
 
+**Case A′: the same agent, same space, dribbling straight BACK (ERR-008-018)**
+```
+Everything as Case A except BestDirection is 180° from the goal → cosine = −1.0
+
+DirectionQuality = 0.80 + ((−1.0 + 1) / 2) × 0.20 = 0.80 + 0 = 0.80
+
+U_raw = 0.4309 × 0.90 × 0.80 × 0.98895
+      = 0.3878 × 0.80 = 0.3103
+      = 0.3103 × 0.98895 = 0.3069
+
+ScoredUtility = 0.307 ✓
+```
+
+Case A and Case A′ are the whole point of the term: **before ERR-008-018 both scored
+0.384**, because nothing in the formula could tell them apart. They now differ by 23%
+(0.378 vs 0.307), which is enough to flip the choice wherever a comparable PASS, SHOOT
+or HOLD option sits between them — measured over six full matches, that moved the share
+of final-third dribbles pointing goalward from 31% to 49%.
+
+**Why the floor is 0.80 and not the PASS floor of 0.50.** A stronger floor separates the
+two cases further, and it was measured: at 0.50 the same corpus reads 82% goalward. It is
+not landed, because suppressing the dribble pushes the carrier onto HOLD (share 20% → 31%
+at that floor) and **HOLD has no timeout** — a carrier with no pass, no shot and no
+dribble can hold indefinitely. At floors 0.50 and 0.65 one seed in six stalled, with mean
+final-third episode length rising from a healthy 5.1 s to 28.6 s and 17.5 s respectively,
+while every seed at 0.80 stayed inside 4.5–5.6 s. The floor is therefore blocked on a
+defect in a different action, recorded in `close-chance-creation-design.md` §7 item 2. ✓
+
 **Case B: Poor dribbler, tight space, defensive zone**
 ```
 Agent: Dribbling=4, Agility=5
 BallZone: DEFENSIVE → ZoneModifier = 0.70
 SpaceScore = 0.40 (some space but limited)
+BestDirection perpendicular to the goal line of sight → cosine = 0.0
 PressureScalar P = 0.60
 
 A_Dribbling = (4−1)/19 = 0.1579
@@ -380,14 +443,16 @@ BaseUtility = 0.45 × 0.70 = 0.315
 AttributeMultiplier = 0.1579^0.40 × 0.2105^0.30
                     = 0.4638 × 0.5977 = 0.2772
 SpaceScore = 0.40
+DirectionQuality = 0.80 + ((0.0 + 1) / 2) × 0.20 = 0.90
 RiskPenalty = 0.60 × (1−0.1579) × 0.35 = 0.60 × 0.8421 × 0.35 = 0.1768
 
-U_raw = 0.315 × 0.2772 × 0.40 × (1−0.1768)
+U_raw = 0.315 × 0.2772 × 0.40 × 0.75 × (1−0.1768)
       = 0.315 × 0.2772 = 0.08732
       = 0.08732 × 0.40 = 0.03493
-      = 0.03493 × 0.8232 = 0.02875
+      = 0.03493 × 0.90 = 0.03144
+      = 0.03144 × 0.8232 = 0.02588
 
-ScoredUtility = clamp(0.02875, 0.01, 1.0) = 0.029 ✓
+ScoredUtility = clamp(0.02588, 0.01, 1.0) = 0.026 ✓
 ```
 
 A poor dribbler in defensive pressure correctly scores near the clamp floor. PASS, HOLD,
