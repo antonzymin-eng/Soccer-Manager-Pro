@@ -15,35 +15,64 @@ break it, and do not edit historical entries.
 > **Last Updated:** August 4, 2026 (**`match-realism-pass` SKILL RE-CUT FOR WIRE-FIRST — the calibration
 > ladder is now a conditional step behind a wiring gate.** Tooling-only; no `.cs`, no spec, no assembly,
 > no gate run. The skill encoded measure → localize → ladder → land, which is the right shape only when
-> the chain under the dial is complete. Under the project's actual position it usually is not: **22 of
-> 53 APPROVED specs have no `src/` assembly**, #37 and #28 are T0-only and unwired, and three passes in
-> the §5.Z chain — **§5.Z.15** (#11 built, wired, tested and switched OFF, keepers immobile because
-> `RunPhysicsPhase` skipped them), **§5.Z.16** (nothing could make a keeper give the ball back up), and
-> **§5.Z.23 / ERR-011-008** (#11's catch coded to one of its two spec statements) — were wiring
-> problems wearing a calibration brief.
+> the chain under the dial is complete. Under the project's actual position it often is not: **22 of
+> 53 APPROVED specs have no `src/` assembly**, #37 and #28 are T0-only and unwired, and twice in the
+> §5.Z chain a brief arrived asking for a *quality* that turned out to be **undefined** because a stage
+> was missing — **§5.Z.17** ("the quality of the save, not its existence"; measured zero hand contacts
+> across six keeper-matches, one cause being `OnShotExecutedEvent` with zero callers anywhere) and
+> **§5.Z.23 / ERR-011-008** (#11's catch coded to one of its two spec statements, so a claimed ball
+> flew on into the net).
 >
-> **New `## 0. The wiring gate`, ahead of the premise check**: five cheap source reads — (1) does an
-> assembly exist, against `CLAUDE.md`'s map and never `SPEC_INDEX.md`; (2) is the type constructed at
-> the composition root *and* reached by a phase, flag default included; (3) does the output have a live
-> **read**-side consumer (`OnShotExecutedEvent` had zero callers anywhere); (4) is the branch coded to
-> the whole of its spec §3 **body**, not its Outputs summary; (5) is the target a Stage-0 placeholder
-> for an unimplemented spec — the foul/card heuristic at ~7 reds per 9 min with **#44 having no
-> assembly** is the standing example. **A failed gate re-shapes the pass rather than stopping it**:
-> every step still applies except the ladder, and the landing must say *"this pass wired X; no `[GT]`
-> was moved."*
+> **New `## 0. The wiring gate`, ahead of the premise check (now §0.1).** It opens by requiring the
+> chain to be **enumerated from the observable backwards to the dial** out of the owning spec's §3 —
+> building that list is the hard part, since nobody had "the catch parks the ball" on a stage list
+> until §5.Z.23's instrument followed the ball after the contact — and falls back to §1's funnel when
+> the list cannot be written from source. Then five source-read checks, **all five run, every failure
+> reported**: two independent gaps in one chain is the normal case (§5.Z.15 found #11 switched off AND
+> keepers skipped by the physics phase; §5.Z.17 found three independently sufficient defects).
+> (1) does an assembly exist, against `CLAUDE.md`'s map and never `SPEC_INDEX.md`; (2) is the type
+> constructed at the composition root *and* reached by a phase, flag default included — plus assert
+> the flag **inside your own instrument**, since `DisableGkHeading()` is called in five places and an
+> exemplar copied with its `Disable*` setup reports a switched-off subsystem's zero as engine
+> behaviour; (3) does the output have a live **read**-side consumer; (4) is the branch coded to the
+> whole of its spec §3 **body**, not its Outputs summary; (5) is the target a Stage-0 placeholder for
+> an unimplemented spec — the foul/card heuristic at ~7 reds per 9 min with **#44 having no assembly**.
+> Checks 1 and 5 split on what the brief names: the spec (hand off to the roadmap) or a symptom a live
+> placeholder produces (measure, record, do not calibrate). **A failed gate re-shapes the pass rather
+> than stopping it**: every step still applies except the ladder, and the landing must say *"this pass
+> wired X; no `[GT]` was moved."*
 >
-> **Three consequential edits downstream of the gate.** §3 is retitled *"only if §0 passed"* and opens
-> by saying it is the step most passes should skip, because a ladder run over a chain with a missing
-> stage fits the dial to the gap and makes the correct later fix read as a regression. Its
-> ladder-refuses bullet now reads a refusal as **a wiring diagnosis until proven otherwise** — the
-> level is set upstream of the dial — citing §5.Z.23's geometry-aware `pointQuality` collapsing catches
-> and parries to zero against a 0.68 mean marginality that no in-range `[GT]` clears. §2's cause 3
-> (structurally unreachable / vacuous gate) is now labelled **§0 failing late**. And §7 requires the
-> recorded residual to be **classified — missing stage or mis-set dial** — because the next pass runs
-> §0 against that sentence, and a residual written as "tune X" when X is bounded upstream sends the
-> next pass straight to the ladder this gate exists to stop.
+> **The gate is a filter, not a verdict on calibration, and the record is explicit about that.**
+> §5.Z.20 is cited in both §0 and §3 as the standing counterexample: a `[GT]` recalibration inside
+> #11's own §3.4.3/§3.4.5 ranges produced **the largest single movement this chain has measured, goals
+> per match 14.7 → 8.0**. It fixed two timing defects in the same pass — so the gate would have had
+> work to do there too — and its owner document states those fixes alone were not sufficient, the old
+> values "could not reach the catch band … even with a perfect window", which is precisely the point:
+> the dial was load-bearing independently of the wiring. §5.Z.19 (`VFloor` 10 → 24) and §5.Z.18 (`MIN_GOAL_VISIBILITY` 0.05 → 0.12) are
+> named for the same reason. The stated rationale for wiring first is therefore **not** that it moves
+> the number more, but that a missing stage bounds the outcome at a level no dial can reach, so a
+> ladder underneath one measures the gap rather than the setting.
 >
-> Modified: `.claude/skills/match-realism-pass/SKILL.md` (frontmatter description + §0/§2/§3/§7),
+> **Three further edits downstream of the gate.** §3 is retitled *"once §0 has passed"* and conditioned
+> on the gate and nothing else. Its ladder-refuses bullet now reads a refusal as **a wiring diagnosis
+> until proven otherwise** — the level is set upstream of the dial — citing §5.Z.23's geometry-aware
+> `pointQuality` collapsing catches and parries to zero against a 0.68 mean marginality that no
+> in-range `[GT]` clears. §2's cause 3 (structurally unreachable / vacuous gate) is now labelled **§0
+> failing late**. And §7 requires the recorded residual to be **classified — missing stage or mis-set
+> dial** — because the next pass runs §0 against that sentence.
+>
+> **Adversarially reviewed before landing; the review is why the entry above reads as it does.** Pass 1
+> raised 4 High: a superlative ("the largest movements came from a missing stage") that the chain's own
+> record **refutes** via §5.Z.20; "§3 is the step most passes should skip", contradicted by load-bearing
+> `[GT]` work in at least §5.Z.18/.19/.20/.21; "stop at the first check that fails", contradicted by the
+> two-gaps example the gate itself cites; and a **misattribution of the motivating evidence** — §5.Z.15
+> and §5.Z.16 were cited as calibration briefs that turned out to be wiring, when §5.Z.11 item 2 had
+> named that wiring in advance ("opt-in and default-off (`EnableGkHeading`) … plus GK locomotion") and
+> §5.Z.16 was never a brief at all. The genuine instances are §5.Z.17 and §5.Z.23. All four fixed here,
+> with 3 Medium (chain enumeration, the `Disable*` instrument hazard, check-1/check-5 routing) and
+> 2 Low (§0.1 numbering, "subsystem" → chain in the frontmatter).
+>
+> Modified: `.claude/skills/match-realism-pass/SKILL.md` (frontmatter description + §0/§0.1/§2/§3/§7),
 > `.claude/skills/README.md` (derivation row: shape and repetition evidence restated, 6 passes → 7),
 > `file-manifest.md`, and this file. Prior entry below.)
 

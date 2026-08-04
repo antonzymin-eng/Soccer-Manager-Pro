@@ -1,33 +1,45 @@
 ---
 name: match-realism-pass
 description: >-
-  Run a match-engine realism pass end to end — gate on whether the subsystem is even fully wired,
-  measure a football-plausibility gap with an env-gated instrument, localize the defect, file the ERR
-  and patch spec + code together, calibrate the [GT] dials over a ladder only if the gate passed,
-  re-measure pre/post on identical seeds, and lock the result with a ScenarioRunner acceptance
-  scenario proven to fail at the pre-fix commit. Use this skill whenever work touches how
+  Run a match-engine realism pass end to end — gate on whether the whole chain under the target is
+  actually wired, measure a football-plausibility gap with an env-gated instrument, localize the
+  defect, file the ERR and patch spec + code together, calibrate the [GT] dials over a ladder once
+  the gate has passed, re-measure pre/post on identical seeds, and lock the result with a
+  ScenarioRunner acceptance scenario proven to fail at the pre-fix commit. Use this skill whenever work touches how
   football-plausible the simulation is: goal rate, shots, shot speed or distance, save/contact rate,
   fouls or cards, possession churn, scorelines, "the engine produces too many / too few X", any §5.Z
   numbered pass, any "measure the lever" or "calibrate" request against the match engine, and any
   follow-up on a recorded-not-fixed residual from a previous pass. Trigger it even when the user only
   names the symptom ("goals are too high", "keepers never save") without asking for a measurement
   pass — the wiring gate and the measure-first discipline are the whole point, and under this repo's
-  wire-first posture most targets turn out to be wiring tasks rather than calibration ones.
+  wire-first posture a target that looks like a mis-set dial is often a stage that was never wired.
 ---
 
 # Match Realism Pass
 
-This repo has run this pass seven times in two weeks (§5.Z.17 shot outcomes → .18 → .19 shot speed and
-woodwork → .20 keeper conversion → .21 shot volume → .22 keeper contact → .23 conversion at contact).
+This repo has run this pass seven times in eight days (§5.Z.17 shot outcomes → .18 → .19 shot speed and
+woodwork → .20 keeper conversion → .21 shot volume → .22 keeper contact → .23 conversion at contact —
+July 27 to August 3).
 Every one had the same shape, and every one produced a finding that the brief it started from was
 partly wrong. That is not bad luck — it is the method working. The discipline below exists so the pass
 measures before it believes, and so the result is attributable to the thing you changed.
 
-Three passes in the chain — §5.Z.15 (Goalkeeper Mechanics #11 was built, wired, tested and switched
-**off**, and keepers could not move), §5.Z.16 (nothing in the engine could make a keeper give the ball
-back up), §5.Z.23 (#11's catch branch was coded to half its spec text) — turned out not to be
-calibration problems at all. A stage of the chain was simply missing. **That is why this skill now
-opens with a wiring gate rather than with a measurement.**
+Twice, that partly-wrong brief was wrong in the same specific way: it arrived asking for a *quality*
+and the quality turned out to be **undefined**, because a stage of the chain was missing.
+**§5.Z.17** was briefed as "the quality of the save, not its existence" and measured zero hand
+contacts across six keeper-matches — one of its three causes was `OnShotExecutedEvent` with zero
+callers anywhere in the tree. **§5.Z.23** arrived on §5.Z.22's premise that the keeper's contacts
+were marginal touches, and found #11's catch branch coded to one of its two spec statements, so a
+claimed ball flew on into the net. Neither was a calibration problem, and a ladder run on either
+would have fitted a dial to a gap. **That is why this skill now opens with a wiring gate rather than
+with a measurement.**
+
+The gate is a filter, not a verdict on calibration. §5.Z.20 is the standing counterexample and it is
+the largest single movement this chain has measured: a `[GT]` recalibration inside #11's own spec
+ranges took goals per match **14.7 → 8.0**. It fixed two timing defects in the same pass — so the
+gate would have had work to do there too — and its owner document is explicit that those fixes alone
+were not enough, which is the point: the dial was load-bearing *independently* of the wiring. The
+gate exists to stop a *premature* ladder, not the ladder.
 
 Owner document: `docs/tracking/match-engine-design.md` (the §5.Z section chain). Each pass also gets
 its own supplement at `docs/tracking/<topic>-design.md`.
@@ -36,27 +48,55 @@ its own supplement at `docs/tracking/<topic>-design.md`.
 
 **Is every stage between the dial you would turn and the outcome you are measuring built,
 constructed, driven each tick, read by someone, and implemented to the whole of its spec text? If any
-one of them is not, this is a wiring task, not a realism pass, and the calibration ladder in §3 is
-premature.**
+one of them is not, the calibration ladder in §3 is premature.** What that makes the pass instead
+depends on which check failed, and the three routes are different work: **check 1** hands off to a
+spec's T0 landing and ends this skill's involvement; **check 5** measures, records, and calibrates
+nothing; **checks 2–4** are a wiring task, which is the branch the rest of §0 describes.
 
 This gate is first because the project's position makes that failure routine rather than rare. **22
 of 53 APPROVED specs have no `src/` assembly at all**, and several that do exist are wired only
 partially — T0 cores with no engine consumer, orchestrators behind opt-in flags, branches implemented
 to half their pseudocode. "The spec is APPROVED" says nothing whatsoever about whether code runs.
 
-Five checks, all cheap source reads. Stop at the first that fails.
+### First, enumerate the chain
+
+The five checks below are only as good as the list you run them against, and building that list is
+the hard part — nobody had "the catch parks the ball" on a stage list until §5.Z.23's instrument
+followed the ball *after* the contact. So write the chain out explicitly, **from the observable
+backwards to the dial**, sourced from the owning spec's §3 pipeline rather than from memory: for the
+keeper that is `threat armed → SAVE committed → dive launched → airborne → hand contact → band
+resolved → ball state written → restart adjudicated`. Name every stage, including the ones that are
+a single statement.
+
+If you cannot write that list from source, you do not yet know what to gate. Build §1's funnel
+instrument first — a funnel is a chain enumeration you can measure — and resume the gate with its
+stages.
+
+### Then the five checks
+
+All cheap source reads. **Run all five and report every failure.** Do not stop at the first — this
+chain has produced multi-gap passes more than once: §5.Z.15 found #11 switched off **and** keepers
+skipped by the physics phase, and §5.Z.17 found three independently sufficient defects
+(ERR-011-002/003/004). Stopping at the first means flipping a flag and then measuring a keeper that
+still cannot move.
 
 1. **Does an assembly exist at all?** Check `src/` against the assembly map in the root `CLAUDE.md` —
    not `SPEC_INDEX.md`, which records approval, not code. #37 Match Analytics and #28 Progression are
    T0-only and not engine-wired; #44 Discipline, #41 Injuries, #29 Training and nineteen others have
-   no assembly. If the brief names one of those, the deliverable is that spec's T0 landing off
-   `path-to-playable-roadmap.md`, and this skill is the wrong one.
+   no assembly. **If the brief names one of those specs** — "implement discipline", "wire up
+   injuries" — the deliverable is that spec's T0 landing off `path-to-playable-roadmap.md` and this
+   skill is the wrong one. A brief that names a *symptom* is check 5, not this one.
 2. **Is it constructed at the composition root, and does a phase actually reach it?** Grep
    `src/match-engine/MatchEngine.cs` for the type *and* for its flag. Both halves have failed here in
    the same pass: #11 was constructed, snapshot-safe and `EnableGkHeading`-gated **default false**
    until §5.Z.15 flipped it, and in that same pass keepers turned out to be skipped by
    `RunPhysicsPhase`, so boot placement was the keeper's position for ninety minutes. A subsystem the
    tick pipeline never reaches is not wired, however completely it is built.
+   **Then check the flag inside your own instrument.** `DisableGkHeading()` exists for the tests that
+   want the old path and is called in five places across `MatchEngineGkHeadingTests.cs` and
+   `MatchEngineGkHeadingScenarios.cs`. §1 tells you to copy an exemplar's shape; copy its `Disable*`
+   setup by accident and the instrument measures a switched-off subsystem and reports the zero as
+   engine behaviour. Assert the flag state in the fixture rather than assuming it.
 3. **Does the output have a live consumer?** Check the **read** side, never the write side.
    `OnShotExecutedEvent` had zero callers anywhere in the tree, which made a catch arithmetically
    impossible. A value that is computed and dropped measures as an absence, and an absence read as a
@@ -67,14 +107,16 @@ Five checks, all cheap source reads. Stop at the first that fails.
    into the net with the keeper recorded as holding it. The §3.5 Outputs summary named one statement;
    `IGoalkeeperBallSystem` exposed no seam for the other, so the omission was invisible from the
    interface as well as from the summary. Half a branch reads exactly like a badly-tuned one.
-5. **Is the thing you would tune a Stage-0 placeholder standing in for an unimplemented spec?** The
-   foul/card heuristic issues ~7 red cards per 9 minutes of played football, and **#44 Discipline has
-   no assembly**. Sweeping `[GT]`s there fits the dials to a stand-in that #44 will delete. Measure
-   it, record the number as the case for #44, and do not calibrate it.
+5. **Is the thing you would tune a Stage-0 placeholder standing in for an unimplemented spec?** This
+   is the check for a brief that names a symptom rather than a spec. The foul/card heuristic issues
+   ~7 red cards per 9 minutes of played football, and **#44 Discipline has no assembly** — so the
+   heuristic is live, the symptom is real, and sweeping its `[GT]`s fits the dials to a stand-in that
+   #44 will delete. Measure it, record the number against the owning `open-issues.md` entry and the
+   roadmap item that will replace the placeholder, and do not calibrate it.
 
-### When the gate fails
+### When checks 2–4 fail — the wiring branch
 
-The pass does not stop — it changes shape. **Everything in this skill still applies except §3.**
+The pass does not stop, it changes shape. **Everything in this skill still applies except §3.**
 Instrument (§1) so the missing stage is proven absent rather than assumed absent, localize (§2), land
 the wiring, re-measure pre/post on identical seeds (§4), lock it with an acceptance scenario (§5),
 sweep the fixed windows your change moved (§6), and close out (§7). Say explicitly in the commit and
@@ -82,19 +124,21 @@ the supplement: **this pass wired X; no `[GT]` was moved.** That sentence is wha
 delta attributable — a wiring landing and a calibration landing are not distinguishable after the
 fact from the numbers alone.
 
-Expect the wiring to move the numbers more than a ladder would. §5.Z.18 took goals per match
-**15.3 → 12.3** by making four outcome classes reachable at all — the goal had no crossbar, a
-collision TODO was still a TODO, and `ShotWorldAdapter`'s pressure query returned a hardcoded `0f`.
-§5.Z.23's catch-park took the corpus from 15 goals to 11 (5.0 → **3.7** per match, the closest this
-engine has measured to football's ~2.7) with **no `[GT]` touched at all**. The §5.Z Phase H
-possession bootstrap turned every match from a 90-minute 0–0 deadlock with the ball never in motion
-into a match that plays. The largest movements this chain has measured came from a missing stage, not
-from a wrong value.
+The reason to land the wiring first is not that it moves the number more — sometimes it does,
+sometimes a dial moves it more. It is that **a missing stage bounds the outcome at a level no dial
+can reach**, so a ladder run underneath one is measuring the gap and not the setting. §5.Z.18 took
+goals per match **15.3 → 12.3** by making four outcome classes reachable at all — the goal had no
+crossbar, a collision TODO was still a TODO, and `ShotWorldAdapter`'s pressure query returned a
+hardcoded `0f`. §5.Z.23's catch-park took the corpus from 15 goals to 11 (5.0 → **3.7** per match,
+the closest this engine has measured to football's ~2.7) with **no `[GT]` touched at all**. The §5.Z
+Phase H possession bootstrap turned every match from a 90-minute 0–0 deadlock with the ball never in
+motion into a match that plays. None of those was reachable by tuning.
 
-## Then the premise check
+## 0.1 The premise check
 
-The gate above is the mechanical half; this is the semantic half. A realism brief almost always
-arrives carrying a premise. §5.Z.15 named "the quality of the goalkeeper's save" as the next lever —
+§0 is the mechanical half; this is the semantic half, and it runs second because a premise about a
+stage that does not exist is not worth interrogating. A realism brief almost always arrives carrying
+a premise. §5.Z.15 named "the quality of the goalkeeper's save" as the next lever —
 and the keepers turned out to make **zero** hand contacts all match, so "save quality" was not a low
 number, it was undefined. §5.Z.22 assumed a contact stops a shot; tripling contacts left goals
 unchanged because the added contacts were marginal touches whose parries kept the ball alive.
@@ -148,12 +192,20 @@ not apply to it.
 When the spec text is itself the defect, patch the spec and the code **in the same commit** and file
 the ERR. Use the `err-file-and-backprop` skill for that step.
 
-## 3. Calibrate on a ladder — only if §0 passed — and report what the ladder refuses
+## 3. Calibrate on a ladder — once §0 has passed — and report what the ladder refuses
 
-**This step is conditional.** Under the wire-first posture it is the step most passes should skip: a
-ladder run over a chain with a missing stage produces a number that is fitted to the gap, and the
-correct later fix then reads as a regression against it. If §0 failed, go land the wiring, re-measure,
-and re-enter here only if a genuine dial is still mis-set afterwards.
+**This step is conditional on the gate, and on nothing else.** A ladder run over a chain with a
+missing stage produces a number fitted to the gap, so that the correct later fix reads as a
+regression against it — that is the only thing §0 is protecting against. If §0 failed, land the
+wiring, re-measure, and re-enter here.
+
+Once the chain is intact, do not flinch from the ladder: `[GT]` calibration has been load-bearing in
+most of this chain's passes and produced its largest single movement. §5.Z.20 took goals per match
+**14.7 → 8.0** with a recalibration inside #11's own §3.4.3/§3.4.5 spec ranges, and its owner
+document is explicit that the two timing defects fixed alongside it were not sufficient — the old
+values "could not reach the catch band … even with a perfect window." §5.Z.19 moved `VFloor` 10 → 24
+over two measured iterations; §5.Z.18 moved `MIN_GOAL_VISIBILITY` 0.05 → 0.12. A gate that talks you
+out of those is doing more damage than the premature ladder it exists to stop.
 
 `[GT]` values get chosen by running 3 full matches per rung on the same seeds, not by picking a
 plausible number. Two findings worth carrying in:

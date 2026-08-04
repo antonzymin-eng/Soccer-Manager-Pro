@@ -5,14 +5,21 @@
 ladder becomes a conditional step behind a new wiring gate.** Tooling-only; **no file added, removed,
 renamed or moved**, so no inventory row changes and the production assembly count stays 31. No `src/`
 change, no spec change, no gate run. **Modified:**
-`.claude/skills/match-realism-pass/SKILL.md` (frontmatter description; new `## 0. The wiring gate`
-with its five source-read checks and a "when the gate fails" branch, placed ahead of the premise
-check; §2 cause 3 relabelled as the gate failing late; §3 retitled *"only if §0 passed"* with its
-ladder-refuses bullet re-read as a wiring diagnosis; §7 now requires the recorded residual to be
-classified missing-stage vs mis-set-dial) and `.claude/skills/README.md` (the `match-realism-pass`
-derivation row — shape restated with the gate, 6 passes → 7, plus the three wiring-not-calibration
-instances §5.Z.15 / .16 / .23). Grounded in existing measured record only — no new measurement was
-taken for this change. **Prior entry below.**)
+`.claude/skills/match-realism-pass/SKILL.md` (frontmatter description; new `## 0. The wiring gate` —
+chain enumeration, then five source-read checks with all five run rather than stopping at the first,
+plus a "when the gate fails" branch — placed ahead of the premise check, which becomes §0.1; §2 cause
+3 relabelled as the gate failing late; §3 retitled *"once §0 has passed"* with its ladder-refuses
+bullet re-read as a wiring diagnosis and §5.Z.20 cited as the counterexample bounding the gate; §7 now
+requires the recorded residual to be classified missing-stage vs mis-set-dial) and
+`.claude/skills/README.md` (the `match-realism-pass` derivation row — shape restated with the gate,
+6 passes → 7, plus the two missing-stage instances §5.Z.17 / §5.Z.23). Grounded in existing measured
+record only — no new measurement was taken. **Adversarially reviewed before landing: 4 High / 3
+Medium / 2 Low, all fixed**, the four High being a superlative refuted by §5.Z.20 (goals 14.7 → 8.0
+from a `[GT]` recalibration, the chain's largest single movement), a "most passes should skip the
+ladder" claim contradicted by §5.Z.18/.19/.20/.21, a "stop at the first failing check" instruction
+contradicted by the gate's own two-gaps example, and the motivating evidence misattributed to
+§5.Z.15/.16 (whose wiring §5.Z.11 item 2 had named in advance) instead of §5.Z.17/.23. **Prior entry
+below.**)
 
 **Last Updated (prior):** August 3, 2026, latest same day (**Owner decision — roadmap B6 reversed to the full
 Unity UI.** Doc-only; **no file added, removed, renamed or moved**, so no inventory row changes and the
