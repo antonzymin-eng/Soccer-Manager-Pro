@@ -1,0 +1,68 @@
+// File:     src/match-client-core/PitchCameraPose.cs
+// Created:  2026-08-04
+// Modified: 2026-08-04
+// Author:   —
+// Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4a, §7
+//           "Rendering, camera, HUD", §12 rule 1), Code Standards #20
+// Purpose:  Where the camera sits, what it looks at, and how wide it sees — the resolved placement a
+//           binding assigns, carrying no rotation type so the CI shim's surface is enough.
+
+using UnityEngine;
+
+namespace TacticalDirector.MatchClientCore
+{
+    /// <summary>
+    /// A resolved camera placement: a world position, the world point it is aimed at, and the
+    /// vertical field of view — the three values Unity's <c>Camera</c> needs, so a binding assigns
+    /// them and decides nothing.
+    ///
+    /// <para><b>Why a look-at point rather than a rotation.</b> <c>Quaternion</c> is not in the CI
+    /// shim's surface, and adding it to buy coverage is the same bargain §12 refuses for
+    /// <c>MonoBehaviour</c>. Two points say everything the orientation needs to say, are trivially
+    /// assertable, and leave the Unity side calling <c>transform.LookAt</c> — binding, with no
+    /// decision in it.</para>
+    /// </summary>
+    public readonly struct PitchCameraPose
+    {
+        /// <summary>Camera position in world space (metres, centre-origin, +Y up).</summary>
+        public readonly Vector3 Position;
+
+        /// <summary>The world-space point the camera is aimed at — always on the ground plane.</summary>
+        public readonly Vector3 LookAt;
+
+        /// <summary>
+        /// Vertical field of view in degrees, for Unity's <c>Camera.fieldOfView</c> (which is the
+        /// vertical one).
+        ///
+        /// <para>It rides on the pose rather than being read from the catalogue by the binding for
+        /// the same reason everything else here does: how much pitch is in shot is a framing
+        /// decision, and §12 rule 1 keeps decisions out of the <c>MonoBehaviour</c>. Three
+        /// assignments — position, look-at, field of view — and the binding has chosen nothing.</para>
+        /// </summary>
+        public readonly float FieldOfViewDegrees;
+
+        /// <summary>Constructs a placement. Built by <see cref="PitchCameraRig"/>.</summary>
+        public PitchCameraPose(Vector3 position, Vector3 lookAt, float fieldOfViewDegrees)
+        {
+            Position           = position;
+            LookAt             = lookAt;
+            FieldOfViewDegrees = fieldOfViewDegrees;
+        }
+    }
+}
+
+#region VersionHistory
+// | Version | Date       | Author | Notes                                                          |
+// | 1.0     | 2026-08-04 | —      | Initial creation (tilted-view revision): the resolved camera    |
+// |         |            |        | placement as two world points, so no rotation type is needed —  |
+// |         |            |        | Quaternion is not in the shim, and widening it to buy coverage  |
+// |         |            |        | is the bargain §12 already refuses for MonoBehaviour.           |
+// | 1.1     | 2026-08-04 | —      | AR pass 2, H-1: + FieldOfViewDegrees. Position and look-at      |
+// |         |            |        | placed the camera but said nothing about how much it sees, so   |
+// |         |            |        | the binding would have chosen a field of view itself — a        |
+// |         |            |        | framing decision inside the MonoBehaviour the gate cannot       |
+// |         |            |        | compile. The pose is now everything Camera needs and nothing    |
+// |         |            |        | is left to decide on the far side of the boundary.              |
+// | 1.2     | 2026-08-04 | —      | AR pass 3 (L): the Purpose header and the class summary still   |
+// |         |            |        | described this as two values. Doc only.                        |
+#endregion

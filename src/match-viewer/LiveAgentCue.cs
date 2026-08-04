@@ -1,6 +1,6 @@
 // File:     src/match-viewer/LiveAgentCue.cs
 // Created:  2026-07-27
-// Modified: 2026-07-27
+// Modified: 2026-08-03
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md) §5-P1 KD-P1-6,
 //           Code Standards #20
@@ -37,12 +37,25 @@ namespace TacticalDirector.MatchViewer
         /// <summary>True when a substitute currently occupies this pitch slot.</summary>
         public bool IsSubstitute => BenchSlot >= 0;
 
+        /// <summary>
+        /// True when the agent currently in this pitch slot is a goalkeeper.
+        ///
+        /// <para><b>Why this is per-frame and not roster metadata.</b> The engine rewrites a slot's
+        /// goalkeeper flag when a substitution fills it (<c>MatchEngine.SubstitutePlayer</c> copies
+        /// the bench player's flag into the on-pitch array), so a keeper coming off for an outfield
+        /// player — or an outfield player for a keeper — moves which slot is the goalkeeper.
+        /// <c>LiveMatchStreamer</c> caches team ids once because they genuinely cannot change; this
+        /// flag can, so it rides the frame with the rest of the per-tick cues.</para>
+        /// </summary>
+        public readonly bool IsGoalkeeper;
+
         /// <summary>Constructs one agent's cue set.</summary>
-        public LiveAgentCue(int yellowCards, bool isSentOff, int benchSlot)
+        public LiveAgentCue(int yellowCards, bool isSentOff, int benchSlot, bool isGoalkeeper)
         {
-            YellowCards = yellowCards;
-            IsSentOff   = isSentOff;
-            BenchSlot   = benchSlot;
+            YellowCards  = yellowCards;
+            IsSentOff    = isSentOff;
+            BenchSlot    = benchSlot;
+            IsGoalkeeper = isGoalkeeper;
         }
     }
 }
@@ -51,4 +64,12 @@ namespace TacticalDirector.MatchViewer
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-07-27 | —      | Initial creation (P1 richer observation frame, KD-P1-6): the   |
 // |         |            |        | per-agent booking / sent-off / substitute cue set.             |
+// | 1.1     | 2026-08-03 | —      | P4a: + IsGoalkeeper, the first cue added via the KD-P1-6        |
+// |         |            |        | extension mechanism this struct was created for. It is here    |
+// |         |            |        | rather than in LiveMatchStreamer's boot-cached roster because  |
+// |         |            |        | a substitution rewrites the slot's goalkeeper flag, so the     |
+// |         |            |        | cached copy went stale the moment a keeper was substituted.    |
+// |         |            |        | The ctor gains a fourth parameter (no default: a producer that |
+// |         |            |        | forgets it must fail to compile, not silently report no        |
+// |         |            |        | keeper on the pitch).                                          |
 #endregion

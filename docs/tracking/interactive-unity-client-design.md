@@ -52,6 +52,15 @@
 > **budget a cert-host run per landing, not one at the end.** Note also that `PM-1`'s three
 > screen-facing exit criteria are open again here: they were demonstrated on a surface that is no longer
 > the product, while its determinism criterion is met head-lessly and stays met.
+>
+> **UPDATE 2026-08-03, later same day — P4 SPLIT into P4a / P4b, and P4a LANDED** (v0.12 row). The
+> split makes rule 1 above a phase boundary rather than a discipline: **P4a is every render
+> *decision*** — the corner-origin ⇄ centre-origin coordinate adapter, the IFAB marking catalogue as
+> shapes, the roster's shirt numbering, and the per-agent / ball draw states — all in gate-compiled
+> `match-client-core`; **P4b is the binding**, which is all that is left for the host. It surfaced
+> **KD-P4a-1**: the streamer's boot-time roster cache held goalkeeper flags that
+> `MatchEngine.SubstitutePlayer` rewrites, so a keeper substitution desynchronised it from the engine.
+> The flag now rides `LiveAgentCue` per tick, which also fixes the browser viewer.
 > No section files, no numbered spec.
 > Same governance class as `interactive-match-view-design.md` and `match-engine-design.md`.
 > **Governs (when implemented):** two new presentation assemblies — host-free `src/match-client-core/`
@@ -350,13 +359,156 @@ per KD-P1-1.
   functions, unit-tested without Unity), follow-ball camera target math, and a minimal live-stats
   accumulator (possession %, shots, score) fed off the observation surface. All pure/testable.
 
-### P4 — Unity render skin (host, cert-verified)
+### P4 — Unity render skin
+
+**Split into P4a / P4b on August 3, 2026, as the direct consequence of the §12 status-change rule
+"keep logic out of `MonoBehaviour`s".** The rule says every *decision* the render skin makes belongs
+in a gate-compiled assembly; the split makes that a phase boundary rather than a discipline. P4a is
+every render decision, host-free and gate-tested; P4b is the binding, which cannot be anything else.
+Sequencing P4a first means P4b arrives with nothing left to decide — the same argument that put P6's
+head-less scenario ahead of P4, applied one level down.
+
+#### P4a — Render model (host-free) — ✅ **LANDED 2026-08-03**
+- `PitchViewProjection` — the one documented adapter §7 "Coordinate mapping" requires, mapping the
+  engine's **corner-origin** metres (Ball Physics #1 §1.2) to a **centre-origin** view plane at
+  1 unit per metre, plus the inverse a pointer click needs and an on-pitch predicate. Centring is
+  what makes a home-end position and its away-end mirror differ only in sign, which is what makes
+  the mirrored assertions cheap to write.
+- `PitchMarkings` / `PitchMarking` / `PitchMarkingKind` — the 12-marking IFAB catalogue as shapes,
+  built from the **existing** `MatchViewerConstants` `[FIXED]` values (§7 "one source of truth for
+  markings across both Views"), both ends emitted from one loop over a sign so a marking cannot be
+  right at one end and wrong at the other. The centre-circle D-arc and the corner arcs are
+  deliberately absent: neither has a `[FIXED]` constant and the browser viewer draws neither, so
+  adding them would mean inventing geometry here and diverging the two Views.
+- `MatchRoster` — the match-**constant** per-slot data (team id, shirt number). The shirt-numbering
+  rule lives in `match-viewer`'s `RosterShirtNumbers`, which BOTH Views consume — the P4a landing had
+  reimplemented it in C# while leaving the browser viewer's inline `computeJersey` in place, and the
+  AR pass collapsed the two (see the AR row below).
+- `AgentRenderModel` / `BallRenderModel` / `MatchRenderProjection` — the resolved per-agent and ball
+  draw states: **world position** (from the P3 interpolator's buffer, because that is what is
+  actually being drawn) with every discrete cue (from the newest captured frame, because cues do not
+  interpolate), the possession ring, and the ball's ground shadow. Colour-free by design: a palette
+  has no correct answer a test could assert, and `UnityEngine.Color` is not in the shim's surface, so
+  the renderer maps `TeamId` and everything upstream of that is here.
+- `PitchCameraRig` / `PitchCameraPose` — where the camera goes: height, tilt **from vertical**, and
+  the lateral offset that makes the view slightly oblique. A placement is a decision, so it is here
+  rather than in the `MonoBehaviour` the gate cannot compile; the pose is two world points rather
+  than a rotation, because `Quaternion` is not in the shim and widening it to buy coverage is the
+  bargain §12 already refuses.
+- Render-cue `[GT]` sizes land with their consumers, as `MatchClientConstants` v1.0 said they would.
+
+#### P4a key decision — the view is tilted, not flat
+
+**KD-P4a-2 — a tilted perspective camera, and no faked height cues (owner call, August 4, 2026).**
+P4a first shipped a *flat* top-down view: a 2D plane at 1 unit per metre, with ball height suggested
+by lifting the sprite and growing it on a capped ramp. The owner reversed that to an FM-style view —
+**from above, tilted back from vertical, slightly off centre** — on the grounds that the ball only
+needs to be visible on and above the pitch, not scaled.
+
+The revision **removes more than it adds**, which is why it was taken before P4b rather than after.
+With a tilted camera, height is a genuine world axis: the ball is placed at `(x, height, z)` and the
+projection conveys altitude by itself. So `BallHeightViewOffsetPerMetre`, `BallHeightScalePerMetre`
+and `BallMaxHeightScale` are **deleted**, along with `BallRenderModel.SpritePosition` /
+`SpriteRadius` and `MatchRenderProjection.HeightScale` — and with them the AR pass's M-5 finding and
+its recorded 10 m saturation limitation, which stop existing rather than needing a retune.
+
+Three things survive the change, each for a stated reason. The **shadow** stays: under any tilt a
+lofted ball's screen position separates from the pitch point it is over, and that point is what every
+gameplay judgement was made against — it is the one cue perspective cannot supply. `PitchViewProjection`'s
+**corner→centre re-origin** stays: it is the ground plane, unchanged. And `FollowBallCamera` stays:
+it decides *where* the camera looks, which the tilt does not affect.
+
+**The one real cost is the click inverse.** `ToPitch` was a two-line subtraction; under a tilted
+perspective camera, screen position is no longer affine in pitch position, so `TryGroundHit` does a
+ray/ground-plane intersection instead. `Camera` is not in the shim and never will be, so the Unity
+side supplies the ray (`Camera.ScreenPointToRay`) and the math stays gate-tested on this side.
+
+**Two consequences recorded rather than left implicit.** The engine's Y axis (across the pitch)
+becomes the world's **Z**, and its Z (up) becomes the world's **Y** — an axis swap, which is the same
+class of trap as the corner-origin one and is locked by its own test. And `FollowBallCamera`'s pitch
+clamp describes an axis-aligned rectangle of visible ground, which is exact for a straight-down view
+and **approximate** for a tilted one (the real footprint is a trapezoid). The clamp's job is keeping
+the target near the pitch, not exact framing, so the approximation is kept deliberately.
+
+> **Amended 2026-08-04 (AR pass 2, AR-P4a2-H1).** The pose is **three** values, not the two this
+> decision first specified: `Position`, `LookAt` and `FieldOfViewDegrees`. Height and tilt place the
+> camera, but nothing said how much of the pitch it *sees* — so P4b would have picked a field of view
+> inside the `MonoBehaviour`, which is a framing decision in the one place the gate cannot compile.
+> That is the leak §12 rule 1 and the whole P4a/P4b split exist to close, and it was open in the
+> deliverable meant to close it. `CameraVerticalFovDegrees` is a `[GT]` bounded against the tilt
+> (`tilt + fov/2 < 90`, or the camera's lowest ray never meets the ground and the visible area is
+> unbounded), and `PitchCameraRig.GroundExtentAlongTilt` reports what it buys in metres of visible
+> pitch — deliberately asymmetric, because the trapezoid reaches further beyond the aim point than in
+> front of it. Aspect ratio stays with Unity: it is a property of the window, not a design choice.
+
+#### P4a key decision
+
+**KD-P4a-1 — the goalkeeper flag is per-frame, not roster metadata.** `LiveMatchStreamer` cached team
+ids *and* goalkeeper flags at construction under the comment "roster metadata never changes across a
+match". That is true of team ids — a bench player belongs to the team whose bench they sit on — and
+**false of goalkeeper flags**: `MatchEngine.SubstitutePlayer` copies the bench player's flag into the
+on-pitch slot, so substituting a keeper for an outfield player (or the reverse) moves which slot is
+the goalkeeper and the cache silently disagrees with the engine from that tick on. So
+`LiveAgentCue` gains `IsGoalkeeper` — the first cue added through the extension mechanism KD-P1-6
+created the struct for — sampled every tick beside the cards and bench slot it rides with, and
+`MatchRoster` deliberately holds **no** goalkeeper flag so the stale copy cannot be reintroduced. The
+streamer's `IsGoalkeeper(int)` accessor is kept and re-documented as boot-time only (a caller needs
+roster metadata before the first frame exists), and `LiveMatchServer` now reads the frame cue when
+there is a frame — which fixes the same defect in the browser harness, with no JSON or script change.
+The alternative, re-reading the engine from the accessor, is exactly the off-sim-thread tear-read the
+streamer's single-writer invariant exists to prevent.
+
+#### P4a adversarial-review pass — ✅ **2026-08-04, 1H + 5M + 3L fixed**
+
+Recorded here because one finding changes the **P4a → P4b contract**, not just the code.
+
+**AR-P4a-H1 — a rectangle's corners are normalised, and P4b may rely on it.** `PitchMarkings` builds
+each end box from its goal line *inwards*, so the away penalty area and away goal area were emitted
+with **descending X** while the home pair ascended. `PitchMarking.Rectangle` now normalises to
+`A = min`, `B = max`, so `B − A` is a usable extent for every rectangle. Without that, the binding
+would have had to decide whether to normalise — and a binding that took the corners as given draws
+exactly two of the five rectangles inverted, at one end only. That is #8 ERR-008-002's home/away
+asymmetry class, landing in a `MonoBehaviour` the gate can never compile, inside the type whose whole
+purpose is to leave the skin nothing to decide. Lines and goal mouths are deliberately **not**
+normalised (a line has direction; a goal mouth is post-to-post). The fixture had been hiding it:
+`AssertAreaBox` normalised with `Mathf.Min`/`Max` before asserting, so any corner order passed.
+
+The other four Mediums did not move the phase boundary: the render path gained the non-finite gate its
+sibling `MatchFrameView` already had (nothing upstream refuses one — `FrameInterpolator` propagates it
+by design); `HasBall` became the stored fact with the ring radius derived from it, so a `[GT]` size can
+no longer answer a question about the simulation; `MatchClientConstants` validates at boot instead of
+silently repairing a bad cap; two fabricated rationale figures were replaced with checked ones; and the
+shirt-numbering rule was collapsed to one implementation shared with the browser viewer.
+
+Re-reviewing the fixes surfaced two more, closed in the same pass: the new non-finite gate ran inside
+the write loop, which would have left the destination buffer half this frame and half the last behind
+a thrown exception — it now validates in its own pass, keeping `ProjectAgents` all-or-nothing — and
+M-4's boot validators were themselves unreachable from any test, so `MatchClientConstantsTests` drives
+them directly. Replacing an untestable repair branch with an untestable guard would have moved the
+problem rather than fixed it.
+
+#### P4b — Unity binding (host, cert-verified)
 - `MatchClientBehaviour : MonoBehaviour` (in `match-client-unity`) — the PlayerLoop host the project
-  currently lacks (src/CLAUDE.md "WHAT IS NOT HERE YET"): owns `MatchSession`, reads `TryGetLatestFrame` each
-  `Update`, drives rendering. Master plan Month 1-2: pitch (markings from the existing IFAB
-  `[FIXED]` geometry catalogue), agent sprites (team color + jersey + has-ball/pressing/sent-off
-  indicator), ball (sprite + shadow for height), follow-ball camera with smoothing/zoom.
-- 2D-first (sprites, orthographic camera) per the master plan; 3D is a later polish pass.
+  currently lacks (src/CLAUDE.md "WHAT IS NOT HERE YET"): owns `MatchSession`, reads
+  `TryGetLatestFrame` each `Update`, and renders. With P4a landed its whole job is binding —
+  instantiate one primitive per `PitchMarking` (rectangles arrive corner-normalised, so `B − A` is
+  the extent — see AR-P4a-H1) and place each on the ground plane via `PitchViewProjection.ToWorld`
+  at zero height; feed `FollowBallCamera`'s target to `PitchCameraRig.ComputePose` and assign the
+  three fields it returns — `Position`, `LookAt` (via `transform.LookAt`) and `FieldOfViewDegrees`
+  (`Camera.fieldOfView`); turn a click into a ray for `PitchViewProjection.TryGroundHit`; assign
+  `transform.position`/`localScale` from the `AgentRenderModel`s and the `BallRenderModel`; map
+  `TeamId` to a palette. It should contain no branch a test would want to reach.
+- **Perspective camera, tilted** (KD-P4a-2) — not the orthographic one an earlier draft assumed.
+  Markers and markings stay flat primitives on the ground plane; this is a 2.5D presentation, not a
+  3D one, and no art pipeline is implied. Shirt-number labels will need billboarding once markers
+  foreshorten.
+- **The camera is fully specified by the pose — pick nothing here.** Position, aim and field of view
+  all come from `PitchCameraRig`, deliberately: how much pitch is in shot is a framing decision, and
+  a framing decision chosen in a `MonoBehaviour` is a decision the gate cannot compile (§12 rule 1).
+  `PitchCameraRig.GroundExtentAlongTilt` reports what the configured field of view actually sees, in
+  metres of pitch, if a landing needs to argue about the framing. Aspect ratio is the one framing
+  input the core does not own, because it is a runtime property of the window rather than a design
+  choice.
 
 ### P5 — Unity UGUI shell (host, cert-verified)
 - The master plan's four screens: **Main Menu** (New Demo Match), **Tactics Setup** (formation /
@@ -553,10 +705,22 @@ posture and the direct lesson of the capstone that asserted a match ticked while
 **DONE — the head-less half of P6 LANDED 2026-08-03** (see the v0.10 Version History row). Both
 scenarios are in `src/match-client-core/tests/`, on the #19 `ScenarioRunner`, gate-checked every push.
 
-**Next step: P4 on the pinned host**, with P5 and the on-host half of P6 (scene boot, 60 FPS render,
+~~**Next step: P4 on the pinned host**, with P5 and the on-host half of P6 (scene boot, 60 FPS render,
 live tactical input through the UI, the FR-PO-052-class render-loop perf capture) after it. Nothing
 head-less is now blocking: the render skin arrives against an existing determinism lock, which is
-exactly what the ordering argument above was for.
+exactly what the ordering argument above was for.~~
+
+**DONE for its host-free half — P4 was split into P4a / P4b, and P4a LANDED 2026-08-03** (see the
+v0.12 Version History row and §5-P4). Rule 1 below says every decision the render skin makes belongs
+in a gate-compiled assembly; P4a is that rule turned into a phase, so it ran host-free ahead of the
+skin exactly as P6's head-less half did. It also surfaced KD-P4a-1 — a stale goalkeeper flag in the
+streamer's boot-time roster cache, which had been wrong in the browser viewer since P1 and would
+have been inherited wholesale by a Unity roster type.
+
+**Next step: P4b on the pinned host**, then P5 and the on-host half of P6 (scene boot, 60 FPS render,
+live tactical input through the UI, the FR-PO-052-class render-loop perf capture). P4b now binds a
+render model that is already decided and already tested, so what the host verifies is binding, which
+is precisely what §12 rule 1 was aiming at.
 
 ### Status change, August 3, 2026 — this plan is now the only UI track
 
@@ -616,6 +780,10 @@ is built to avoid.
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.15 | 2026-08-04 | **P4a adversarial-review pass 2 — 1 High, 4 Medium fixed; run over the tilted-view revision's own output.** **AR-P4a2-H1 (the one that matters):** the camera rig placed the camera but never said how much it *sees*, so P4b would have chosen a field of view inside the `MonoBehaviour` — a framing decision in the one place the CI gate cannot compile. The leak was in the deliverable built to close exactly that leak. `PitchCameraPose` gains `FieldOfViewDegrees`, `MatchClientConstants` gains `CameraVerticalFovDegrees` bounded *against the tilt* (`tilt + fov/2 < 90`, else the lowest ray never meets the ground), and `PitchCameraRig.GroundExtentAlongTilt` gives the framing a number — asymmetric near/far, because the trapezoid reaches further beyond the aim point than in front of it. KD-P4a-2 is amended in place; §5-P4b's job list now says "pick nothing here". **M-1:** §5-P4b instructed *both* cameras in one bullet — the new `PitchCameraRig` placement and, in the same sentence, the deleted orthographic one — while the bullet below it said the orthographic assumption was wrong. `path-to-playable-roadmap.md` B8 carried only the stale half. **M-2:** `PitchMarking`'s class doc still sent the render skin to `ToView` for markings that must lie on the ground plane (following it stands every marking upright in the world XY plane); `ToView`/`ToPitch` themselves had no production caller left after the revision and are deleted, their tests re-anchored onto `ToWorld`/`TryGroundHit`. **M-3:** `CameraLateralOffsetM` was the only camera dial with no validation and lands straight in the camera's world position — now `RequireFinite` (either sign is meaningful, so a range would be wrong). **M-4:** `MatchClientConstants.cs` and `MatchRenderProjection.cs` never got their v1.4/v1.2 version-history rows in the revision, so each file's newest row described content it no longer had while three documents cited versions the files did not claim. **Sweep after the fixes found one more Medium, so this pass is not converged:** `PitchMarkingKind.Rectangle` still documented corner ordering as *not* guaranteed and told consumers to re-normalise — the exact contract AR pass 1's H-1 reversed. `PitchMarking.cs` was fixed then and the enum beside it was not, so two files stated opposite contracts for one field, and the enum is what a renderer switching on `Kind` reads first. Fixed; the guarantee is test-locked by `EveryRectangleArrivesWithItsCornersNormalised`. `match-client-core` 129 → 135. **Full dotnet gate: PASSED, 0 failures** (30 suites). **Pass 3 then ran over the whole P4a surface and surfaced no High and no Medium — the loop is converged.** It found two Lows, both fixed: `PitchCameraPose`'s header and summary still described it as two values, and a test comment credited the wrong assertion with guarding the static-init-order defect (asserting the tilt is non-zero does NOT catch a reorder — by the time a test reads the field, static init has finished and it reads its real value either way; re-evaluating the invariant on the finished values is what catches it). **Full dotnet gate on the converged tree: PASSED, 0 failures** (30 suites; `match-client-core` 135, `match-engine` 368 unchanged). |
+| 0.14 | 2026-08-04 | **KD-P4a-2 — the view is TILTED, and the faked height cues are deleted (owner call).** P4a shipped a flat top-down view with ball height suggested by a sprite lift and a capped size ramp; the owner reversed it to an FM-style view from above, tilted back from vertical and slightly off centre, on the grounds that the ball only needs to be visible on and above the pitch. Taken **before P4b** because it changes a P4a contract and is cheap now, expensive later. **The revision removes more than it adds:** height becomes a real world axis, so `BallHeightViewOffsetPerMetre` / `BallHeightScalePerMetre` / `BallMaxHeightScale`, `BallRenderModel.SpritePosition` / `SpriteRadius` and `MatchRenderProjection.HeightScale` are all gone — and with them v0.13's M-5 finding and its recorded 10 m saturation limitation, which stop existing rather than needing a retune. **New:** `PitchCameraRig` / `PitchCameraPose` (height, tilt-from-vertical, lateral offset; a placement is a decision, so it is gate-compiled, and the pose is two world points because `Quaternion` is not in the shim) and `PitchViewProjection.ToWorld` / `ToWorldGround` / `TryGroundHit`. **The one real cost:** screen position is no longer affine in pitch position, so the click inverse becomes a ray/ground-plane intersection — `Camera` is not in the shim, so Unity supplies the ray and the math stays gate-tested. **Survivors, each for a reason:** the shadow (under any tilt a lofted ball separates from the pitch point it is over — the one cue perspective cannot supply), the corner→centre re-origin (it is the ground plane), and `FollowBallCamera` (it decides *where* the camera looks). **Recorded rather than left implicit:** the engine's Y becomes the world's Z and its Z the world's Y — an axis swap, the same trap class as the corner origin, locked by a test (inverting it fails seven) — and `FollowBallCamera`'s pitch clamp is now approximate, describing a rectangle of visible ground where a tilted view sees a trapezoid; kept deliberately, since its job is keeping the target near the pitch, not exact framing. §5-P4b's job list gains the camera placement and the click ray, and its "orthographic" note is corrected to a tilted perspective camera. |
+| 0.13 | 2026-08-04 | **P4a adversarial-review pass — 1 High, 5 Medium, 3 Low fixed; the pass then re-run clean.** §5 gains a P4a AR block and §5-P4b now states the one contract change. **AR-P4a-H1 (the phase-boundary one):** `PitchMarkings` builds each end box from its goal line *inwards*, so the away penalty area and away goal area were emitted with **descending X** while the home pair ascended, and `PitchMarking.Rectangle` documented no ordering. A binding taking `B − A` as an extent would have drawn exactly those two inverted — at one end only, in a `MonoBehaviour` the gate can never compile, inside the type whose purpose is to leave the skin nothing to decide. `Rectangle` now normalises (`A` = min, `B` = max) and P4b may rely on it; lines and goal mouths stay unnormalised by design. The fixture had laundered it (`AssertAreaBox` normalised with `Mathf.Min`/`Max` before asserting); it now reads `A`/`B` directly, and un-normalising the factory fails four tests. **M-2:** the render path had no non-finite gate while `MatchFrameView` refuses one fail-loud, and the doc excusing that said upstream already refused them — false, `FrameInterpolator` *propagates* a non-finite position by design. Ground positions are now refused; ball height keeps degrading gracefully, since a bad height still leaves a true ground position. **M-3:** `HasBall` is the stored fact and the ring radius derives from it, so a `[GT]` size cannot answer "who has the ball". **M-4:** boot-time validation replaces a silent cap repair, and the previously documented-only ring > marker invariant is enforced. **M-5:** two `[GT]` rationales carried fabricated figures (an uncapped 20 m ball is 2.8 m across, not "wider than the penalty area"); replaced with checked numbers plus the cap's real 10 m saturation point. **M-6:** the shirt-numbering rule was **duplicated, not moved** — the browser viewer's `computeJersey` was still live while three documents (this one included) said it had moved into `MatchRoster`; new `match-viewer/RosterShirtNumbers.cs` is now the single implementation both Views consume. **Lows:** a tautological test replaced, `FromStreamer`'s happy path covered, the ring/marker invariant enforced. **Full dotnet gate: PASSED, 0 failures** (whole tree green; all 30 suites reported, quarantine empty) — `match-client-core` 103 → 112, `match-viewer` 41 → 48, `ui-framework` 50 (unchanged), `match-engine` 368 passed / 8 skipped (unchanged; no `match-engine` source is touched by this pass), every other suite unchanged. No new compiler warnings — the five the tree reports are pre-existing CS0649s in `decision-tree`. No schema / RNG / domain-tag / draw-site / draw-order / engine-behaviour change. |
+| 0.12 | 2026-08-03 | **P4 SPLIT into P4a / P4b, and P4a LANDED — the render model, host-free.** The split is v0.11 rule 1 ("keep logic out of `MonoBehaviour`s") turned from a discipline into a phase boundary: P4a is every render *decision*, gate-compiled and test-locked in `match-client-core`; P4b is the binding, which cannot be anything else. Sequencing them in that order means P4b arrives with nothing left to decide — the same argument that put P6's head-less scenario ahead of P4, one level down. §5-P4 is rewritten into the two sub-phases with a new KD; §12's next step becomes P4b. **New:** `PitchViewProjection` (the §7 "Coordinate mapping" adapter — corner-origin metres ⇄ a centre-origin view plane at 1 unit per metre, plus the inverse a pointer click needs; centring is what makes a home position and its away mirror differ only in sign, which is why the mirror assertions are one line each); `PitchMarking`/`PitchMarkingKind`/`PitchMarkings` (the 12-marking IFAB catalogue as shapes, read from the **existing** `MatchViewerConstants` `[FIXED]` values per §7's one-source-of-truth rule, both ends emitted from one loop over a sign — the D-arc and corner arcs deliberately absent, since neither has a `[FIXED]` constant and adding them would invent geometry and diverge the two Views); `MatchRoster` (match-constant per-slot data, and the shirt-numbering rule moved out of the browser viewer's inline JavaScript); `AgentRenderModel`/`BallRenderModel`/`MatchRenderProjection` (positions from the P3 interpolator's buffer because that is what is being drawn, every discrete cue from the newest frame because cues do not interpolate; possession ring; the ball's shadow / height-lift / capped-scale cues). Colour-free by design — a palette has no correct answer a test could assert, and `UnityEngine.Color` is not in the shim's surface. **KD-P4a-1, the finding:** `LiveMatchStreamer` cached team ids *and* goalkeeper flags at construction under "roster metadata never changes across a match" — true of team ids, **false of goalkeeper flags**, which `MatchEngine.SubstitutePlayer` rewrites, so a keeper substitution silently desynchronised the cache from the engine (and had been drawing the keeper ring on the wrong player in the browser viewer since P1). `LiveAgentCue` gains `IsGoalkeeper` — the first cue added through the KD-P1-6 extension mechanism — sampled per tick; `MatchRoster` holds no goalkeeper flag at all so the stale copy cannot come back; the streamer's accessor is kept, re-documented as boot-time only; `LiveMatchServer` reads the frame cue when a frame exists, fixing the harness with no JSON or script change. Re-reading the engine from the accessor was rejected: that is the off-sim-thread tear-read the single-writer invariant exists to prevent. **No `SNAPSHOT_SCHEMA_VERSION` change, no new RNG stream / domain tag / draw site, no draw-order change, no engine-behaviour change** — the cue is sampled from an existing read-only accessor. `MatchClientConstants` v1.2 adds the render-cue `[GT]` sizes v1.0 deferred "to P3/P4 with their consumers". |
 | 0.11 | 2026-08-03 | **Owner reversed roadmap B6 — this plan is now the only UI track; the product ships this client, not the web-hosted viewer.** Doc-only; no `.cs` changed, no phase re-scoped, no design decision revisited. §12 gains a status-change block recording the three consequences for how P4 is built. **(1) The permanent one: the gate cannot see `match-client-unity` and never will**, so keep logic out of `MonoBehaviour`s — every decision (what to draw, where the camera goes, what a click means, which intent an input maps to) lives in gate-compiled `match-client-core`/`ui-framework`, and the Unity types assign transforms and forward input with no branch a test would want to reach. P3 already demonstrates the pattern (`FrameInterpolator`, `FollowBallCamera` are host-free and test-locked). **Explicitly refused: extending the Unity shim to fake `MonoBehaviour`/`GameObject`/`Camera` to buy coverage** — the shim reimplements value types and statics honestly, and a lifecycle-free stand-in would let a render loop that never runs report green, which is ERR-030-014's failure mode one layer up. That keeps the uncovered surface *binding* (which a cert run verifies) rather than *behaviour* (which it verifies only where someone thought to click). **(2)** Cert-host runs budgeted per P4/P5 landing rather than once at the end — the host block cleared July 19, 2026, so this is scheduling, not access, and a skin first exercised at the end is the never-compiled-surface trap this repo has hit seven times. **(3) `PM-1` must be re-established on this client:** its determinism criterion is met head-lessly and stays met, but its other three exit criteria are statements about a *screen* and were demonstrated on a surface that is no longer the product. **Nothing blocks P4 starting:** the whole substrate a UGUI skin binds — #38's view models and dispatchers, `MatchFrameView`, `MatchSession`, the command channel, the P6 determinism locks — is already gate-compiled and unchanged by the reversal, which is the "renderer is a leaf" property #38's contract was written for. No art prerequisite either: §5-P4 is 2D-first, the pitch renders from the IFAB `[FIXED]` geometry already in `MatchViewerConstants`, agents are primitives, and sprites are polish. |
 | 0.10 | 2026-08-03 | **The head-less half of P6 LANDED — §5-P6's closed-loop scenario, before P4, per the v0.9 §12 recommendation.** §12 rewritten (P6 struck through as DONE; next step is P4 on the pinned host). **What §5-P6 turned out to require first.** The phase is written as "boot via `MatchSession`, inject a scripted tick-stamped command sequence, assert (a) digest equality across two runs on the same setup + sequence and (b) save@N → restore → replay == uninterrupted". Three of those verbs had no composition-level surface: `MatchSession` could not be advanced head-lessly (`LiveMatchStreamer.TickOnce()` is `internal` to `match-viewer`; the only public advance is `Start()`'s pacing thread), could not be saved (P0 explicitly deferred "the durable save-capture body that rides the `ServiceOnce` seam"), and could not be restored (the constructor always boot-configures a fresh engine). So P6 is three production additions plus the scenario. **(1) `MatchSession.TickOnce()`** drives the REAL streamer seam — `match-viewer/AssemblyInfo.cs` v1.1 adds `InternalsVisibleTo("TacticalDirector.MatchClientCore")`, keeping the seam internal to `match-viewer` so nothing widens for the browser viewer. A parallel client-side tick path was rejected: routing through the real seam is what makes the scenario a proof about the *shipping* composition — hook, frame capture and full-time auto-pause all behave as under paced playback. `TickOnce()` throws once `Start()` has been called; the streamer's "never concurrently with the pacing loop" rule had been a comment, and two threads through one engine is a data race, so it is now a guard. **(2) `MatchSession.CaptureSave()`** rides the `ServiceOnce` seam, so it works running, paused and at full time (the AR-7 H-1 shape). §6.3's drained-empty-before-capture invariant is now held **by ordering** — one sim-thread pass under the tick gate drains and applies, then encodes — rather than asserted afterwards. An `Encode` fault is latched and rethrown to the `CaptureSave` caller rather than escaping the pre-tick hook and killing the pacing thread (the AR pass-2 isolation posture, applied to a second escape path). The handshake is `Interlocked`/`Volatile`, NOT a lock held across `ServiceOnce`, which would have created the opposite lock order against the tick gate — a latent deadlock the obvious implementation walks straight into. **(3) `MatchSession.RestoreFrom(blob, squads)`** splits the constructor into a static `BootEngine` + an engine-agnostic wiring ctor, so a restored session re-applies no boot mutator; it deliberately takes no `MatchSetup`, since `ConfigureSquads` throws on a ticked engine and re-staging tactics would overwrite restored state. Plus **`TickStampedCommandReplay`** — the mechanism §6.1's invariant is *defined* against, now written down: enqueue each entry immediately before the tick whose pre-tick `CurrentTick` equals its `AppliedTick`, which is exactly where the original drain read the clock, so the log is a fixed point of its own replay (asserted). Out-of-order logs and entries whose application point has passed are refused fail-loud; skipping either silently yields a run that is not the log's run while reporting success. **The scenarios, and the one predicate that carries them.** `match-client-command-log-replay` and `match-client-save-restore-replay`, owning specs {16,19,21}, under `SCENARIO_PATH_CROSS_SPEC_PREFIX`, in the composition root's own test assembly per the `MatchEngineCapstoneScenarios` precedent. Both would pass on a command channel that did nothing — a run reproducing itself proves nothing about whether the commands are in the loop — so a **third, command-free control run must DIVERGE**, in a bounded window around the first command rather than merely eventually. That is the direct lesson of ERR-030-014, and it is the predicate the phase actually rests on. The script is ten commands over all three live mutators and **both teams**, straddling the save tick; a home-only script would have repeated #8 ERR-008-002 one layer up. The save tick is deliberately command-free, and the scenario *checks* that rather than assuming it: a command at the save tick is inside or outside the snapshot depending on drain order within the capture pass while carrying the same stamp either way, which would make the resume-from-N+1 slice silently wrong. **Recorded as deliberately not written:** a "queue drained at capture" predicate inside the scenario. The replay leaves the queue empty at every tick boundary, so it would be true regardless of capture order — vacuous. §6.3 is locked instead by a unit test that enqueues a command immediately before `CaptureSave` and requires it back applied and logged. **Still open in P6:** the on-host half — scene boot, 60 FPS, live tactical input through the UI, the FR-PO-052-class render-loop perf capture — which needs P4/P5 first. No `SNAPSHOT_SCHEMA_VERSION` change, no new RNG stream / domain tag / draw site, no draw-order change, no engine-behaviour change at all. Gate not runnable in this environment (the network policy blocks the .NET SDK download, same as the P0 landing); verified by exhaustive manual review + a `generate_projects.py` run confirming the new `TestingStrategy` reference resolves. |
 | 0.9 | 2026-08-03 | **Retroactive sync — P1 and P3 LANDED 2026-07-27; this supplement was never updated and had continued to describe both as deferred.** No design change and no new work: the landings are five weeks old and were recorded correctly in `path-to-playable-roadmap.md` (Track-C rows **B1** and **B4**) at the time. This row closes the drift between the two documents. **P1 (commit `d0e8573`, roadmap B1):** `MatchPeriod` (derived from the two transition flags, KD-P1-2), `RestartCue` as its own enum rather than widening the digest-bearing `RestartType` (KD-P1-5), `MatchEngine.CurrentPeriod` + `RestartAppliedThisTick`, `ApplyRestart` declaring its cue at all six restart sites (KD-P1-4), and `LiveAgentCue` + `RestartBanner` as `match-viewer` types (KD-P1-1/KD-P1-6), carried through `LiveMatchFrame` → `MatchFrameView`. The restart cue stayed a **within-tick** engine field per KD-P1-3, so the `SerializeWorldState` exclusion proof needed no new class and there was **no `SNAPSHOT_SCHEMA_VERSION` change** — the KD held as designed. **P3 (commit `dfa506b`, roadmap B4):** `FrameInterpolator` — speed-aware alpha (an interpolator handed the unscaled tick rate falls further behind the sim every frame at 3×) and blending that **snaps rather than smooths across a discontinuity**, since a restart teleports the ball and a substitution swaps who occupies a roster slot; `FollowBallCamera` — dead zone, `1 − e^(−rate·dt)` smoothing proven frame-rate-independent by step subdivision rather than asserted, and a pitch clamp that centres when the view is wider than the pitch instead of oscillating between two impossible bounds. 23 tests. **P3 landed two of three deliverables, by design:** the §5-P3 live-stats accumulator was deliberately not built — #37's `MatchAnalyticsAggregator` (roadmap B3) already is one, and a second in `match-client-core` would be the parallel-surface trap (the PM AR-7 M-1 / `POSITION_COUNT` class the plan cites elsewhere). Recorded rather than silently dropped. **Consequence: every host-free phase (P0–P3) is complete**; P4–P6 remain, and §12 is rewritten accordingly — its two stated preconditions are now both met, and it recommends P6's head-less closed-loop scenario ahead of P4 because `match-client-unity` sits in `SHIM_EXCLUDED_ASMDEFS` and P4/P5 are therefore invisible to `tools/dotnet-ci`. Doc-only commit; no `.cs` changed, so no gate run. |
