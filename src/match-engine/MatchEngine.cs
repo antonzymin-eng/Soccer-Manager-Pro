@@ -48,6 +48,7 @@
 // Modified: 2026-08-03 (conversion-at-contact pass (ERR-011-008): GkHeadingWorldAdapter.ParkBall() — the ball-side half of #11 §3.5.2's claim, which had no seam (ApplyKick is a kick). Zeroes _ball.Velocity/AngularVelocity; no ball-state-machine transition, no RNG draw, no cross-tick state, so no SNAPSHOT_SCHEMA_VERSION change. A claimed shot previously kept its velocity and entered the net. See docs/tracking/gk-conversion-at-contact-design.md)
 // Modified: 2026-08-04 (wiring backlog W1 keeper rush trigger: TryCommitRushIntents gives GoalkeeperMechanics.CommitRushIntent its FIRST production caller — pure GkHeadingIntentSource.RushArmed/HasGoalSideCover geometry + #11 §3.7.0's attribute-driven commit distance (ERR-011-010) + the ClearRushIntent disarm, gated behind SaveArmed so a shot is still a dive. Deliberately NOT a DecisionTree action: ActionType ordinal 8 overflows the 3-bit composure-noise field (the W9 deferral reason). No new engine state ⇒ no SNAPSHOT_SCHEMA_VERSION change. See docs/tracking/gk-rush-trigger-design.md)
 // Modified: 2026-08-04 (W1 AR-1: RefreshGkAgentIds filters _isSentOff so a keeper sent off mid-rush stops; + TestOnly_DriveGkHeadingPhysics. See docs/tracking/gk-rush-trigger-design.md v1.2)
+// Modified: 2026-08-04 (W1 AR-2: RefreshGkAgentIds detects a CHANGE of keeper-slot occupant and calls GoalkeeperMechanics.ResetSlot — a substitute keeper was inheriting the dismissed keeper's locked RushIntent. No new state, no schema change. See docs/tracking/gk-rush-trigger-design.md v1.3)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -766,6 +767,12 @@ namespace TacticalDirector.MatchEngine
             }
 
             _gkAgentIds = new int[GoalkeeperConstants.MaxGkAgents];
+            // −1, not the allocator's 0: RefreshGkAgentIds now treats the standing value as the PREVIOUS
+            // occupant, and 0 is a valid agent id — leaving it would claim slot 0 was already keeper 0's.
+            for (int k = 0; k < _gkAgentIds.Length; k++)
+            {
+                _gkAgentIds[k] = -1;
+            }
             RefreshGkAgentIds();   // refreshed each drive too (ConfigureSquads / substitutions move the GK slot)
             _saveCommittedForGk = new bool[GoalkeeperConstants.MaxGkAgents];
             _headerCommittedThisEpisode = new bool[MatchEngineConstants.SQUAD_SIZE];
@@ -3372,31 +3379,53 @@ namespace TacticalDirector.MatchEngine
         /// tracked. Cheap (SQUAD_SIZE loop) and only runs under the flag after boot.</summary>
         private void RefreshGkAgentIds()
         {
+            // W1 AR-2 (H): resolve into a LOCAL first and compare against the standing value, because a
+            // change of occupant has to be detected, not just recorded. #11 indexes every per-keeper array
+            // by gkIndex — the TEAM (KD-1) — while this engine keys identity by roster slot, so "team 0's
+            // keeper" is a slot that can change hands mid-match: sent off here, a substitute keeper on in
+            // a DIFFERENT roster slot there (SubstitutePlayer refuses the sent-off slot itself, and it is
+            // reachable from the live client command path via ManagerCommand). Nothing inside #11 can see
+            // that happen. Left alone, the incoming keeper inherits the outgoing one's whole slot — most
+            // damagingly a live RushIntent whose target was LOCKED (KD-15) for a player who has left the
+            // pitch, which the Set → Rushing row then launches the substitute at.
+            //
+            // This is the second half of the sent-off fix below, not a separate concern: filtering a
+            // dismissed keeper out of the array is what turned his slot from self-resolving (#11 kept
+            // ticking him to the end of the run) into frozen-indefinitely, and frozen state is exactly
+            // what gets inherited. Freeze him AND disown the slot, or the fix trades a ghost sprint for a
+            // stale one.
+            //
+            // No new engine state: _gkAgentIds is itself the previous value, and it is reconstructed —
+            // never serialized — so restore re-derives the same ids and sees no change. Hence no
+            // SNAPSHOT_SCHEMA_VERSION bump.
+            // W1 AR-1 (M), unchanged: a SENT-OFF keeper is not on the pitch, and −1 is how this array
+            // says so. The engine's freeze for a red-carded agent is `_commands[i] = Stop`, which governs
+            // the MOVEMENT integration only — but #11's 60 Hz Rushing branch writes
+            // agentStates[agentId].Position directly, and it runs AFTER movement, so a keeper sent off
+            // mid-rush went on sprinting to his locked target. TacticalTick and Update both skip a −1
+            // entry, which IS the frozen semantics. The two 10 Hz consumers keep their own _isSentOff
+            // tests (now redundant, deliberately — they are free and they hold even if this array is ever
+            // read before a red card lands), and NotifyKeeperOfShot's own "a team with no keeper on the
+            // pitch (sent off) has none to notify" branch becomes true rather than aspirational.
             for (int k = 0; k < _gkAgentIds.Length; k++)
             {
-                _gkAgentIds[k] = -1;
-            }
-            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
-            {
-                // W1 AR-1 (M): a SENT-OFF keeper is not on the pitch, and −1 is how this array says so.
-                // The engine's freeze for a red-carded agent is `_commands[i] = Stop`, which governs the
-                // MOVEMENT integration only — but #11's 60 Hz Rushing branch writes
-                // agentStates[agentId].Position directly, and it runs AFTER movement, so a keeper sent
-                // off mid-rush went on sprinting to his locked target. Filtering here fixes it at the
-                // one place that decides whether #11 sees the keeper at all: TacticalTick and Update
-                // both skip a −1 entry, which IS the frozen semantics. The two 10 Hz consumers keep
-                // their own _isSentOff tests (now redundant, deliberately — they are free and they
-                // hold even if this array is ever read before a red card lands), and
-                // NotifyKeeperOfShot's own
-                // "a team with no keeper on the pitch (sent off) has none to notify" branch — which
-                // already assumed exactly this — becomes true rather than aspirational.
-                if (_isGoalkeeper[i] && !_isSentOff[i])
+                // LAST match wins, preserving the pre-AR-2 fill order exactly. It differs from first-wins
+                // only when a team has two un-dismissed keepers at once — reachable by substituting a
+                // bench keeper on for an outfielder — and quietly re-picking which of them #11 drives is
+                // not this fix's business.
+                int resolved = -1;
+                for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
                 {
-                    int t = _teamIds[i];
-                    if (t >= 0 && t < _gkAgentIds.Length)
+                    if (_isGoalkeeper[i] && !_isSentOff[i] && _teamIds[i] == k)
                     {
-                        _gkAgentIds[t] = i;
+                        resolved = i;
                     }
+                }
+
+                if (resolved != _gkAgentIds[k])
+                {
+                    _goalkeeper.ResetSlot(k);
+                    _gkAgentIds[k] = resolved;
                 }
             }
         }
@@ -8025,4 +8054,19 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | assert a committed rush actually MOVES the keeper (M) — the composed W1   |
 // |         |            |        | locks stopped at GkState == Rushing, which is equally true of an engine   |
 // |         |            |        | whose rush position write-back is discarded (#11 v1.4 H-2).               |
+// | 1.60    | 2026-08-04 | —      | W1 adversarial review pass 2. H: RefreshGkAgentIds resolves each slot     |
+// |         |            |        | into a local and compares it with the standing value, calling            |
+// |         |            |        | GoalkeeperMechanics.ResetSlot when the OCCUPANT changed. #11 indexes its  |
+// |         |            |        | per-keeper arrays by team (KD-1); this engine keys identity by roster     |
+// |         |            |        | slot; the two part company when a keeper is sent off and a bench keeper   |
+// |         |            |        | comes on in a different slot (SubstitutePlayer refuses the dismissed slot |
+// |         |            |        | itself, and the path is live from ManagerCommand). The substitute        |
+// |         |            |        | inherited a RushIntent whose target was locked for the man he replaced,   |
+// |         |            |        | and Set → Rushing launched him at it. This is the other half of v1.59's   |
+// |         |            |        | fix, not a separate one: filtering the dismissed keeper out is exactly    |
+// |         |            |        | what changed his slot from self-resolving to frozen, and frozen state is  |
+// |         |            |        | what gets inherited. _gkAgentIds is seeded to -1 at boot (0 is a valid    |
+// |         |            |        | agent id) and is reconstructed rather than serialized, so restore         |
+// |         |            |        | re-derives the same ids and sees no change ⇒ no schema bump. Selection   |
+// |         |            |        | still resolves LAST-match-wins, preserving the pre-AR-2 fill order.       |
 #endregion

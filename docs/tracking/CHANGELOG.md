@@ -12,7 +12,32 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 4, 2026, latest same day (**W1 adversarial review pass 1 — 1 High, 4
+> **Last Updated:** August 4, 2026, latest same day (**W1 adversarial review pass 2 — 1 High, 1
+> Medium, 3 Low.** The High is a seam defect, and it is the other half of pass 1's own fix rather than
+> a new subject. #11 indexes every per-keeper array by `gkIndex`, which is the **team** (KD-1); this
+> engine keys identity by **roster slot**. Those agree right up until the occupant of the keeper slot
+> changes — a keeper is sent off, and the reserve keeper comes on in a *different* slot, which is the
+> only shape the sequence can take because `SubstitutePlayer` refuses the dismissed slot itself. The
+> path is live from `ManagerCommand`, not hypothetical. Nothing inside #11 can observe the handover,
+> so the substitute inherited the slot whole: state, dive scratch, hold stamps, and a `RushIntent`
+> whose target was **locked at commit (KD-15) for a player who has left the pitch** — which the
+> `Set → Rushing` row then launched him at, making his first act on the field a sprint to a point
+> nobody chose for him. Pass 1's sent-off filter is what made this reachable: it changed the dismissed
+> keeper's slot from self-resolving (#11 kept ticking him to the end of his run) to frozen
+> indefinitely, and frozen state is precisely what gets inherited — a ghost sprint traded for a stale
+> one. Fixed by giving #11 a `ResetSlot` and having `RefreshGkAgentIds` detect a change of occupant,
+> so the slot's state belongs to whoever holds it. **No new engine state and no
+> `SNAPSHOT_SCHEMA_VERSION` bump**: `_gkAgentIds` *is* the previous value, and it is reconstructed
+> rather than serialized, so a restore re-derives it and sees no change. The constructor's sentinel
+> loop now runs through `ResetSlot` too — a fresh slot defined once instead of in a pair that must
+> agree (§5.Z.12). The Medium is a gap in my own last pass: the sent-off fix shipped with **nothing
+> asserting it**, so its return would have been silent; both locks are now in, mirrored home and away.
+> Three Lows recorded not fixed in `gk-rush-trigger-design.md` §7 — a comment in #11 that W1 falsified,
+> a redundant `_attrs` write on the rush path, and a state-machine comment that states the opposite of
+> the row order it describes. **Gate still NOT run — no .NET SDK in this environment, so none of this
+> has been compiled or executed.**)
+
+> **Last Updated (prior):** August 4, 2026, same day (**W1 adversarial review pass 1 — 1 High, 4
 > Medium, 4 Low, all fixed.** The High is the one worth naming: `RushArmed` bounded how LONG a run the
 > keeper would commit to and never how SHORT, so a keeper standing on the ball he had just swept
 > re-armed — and that is the *ordinary* end state of a sweep, not an edge case, because §5.Z.15/16

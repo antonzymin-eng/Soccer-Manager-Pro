@@ -556,6 +556,97 @@ namespace TacticalDirector.MatchEngine
                 "to is zero-length and RushArmed must refuse it");
         }
 
+        // ── Dismissal and slot ownership ─────────────────────────────────────────────────
+
+        /// <summary>W1 AR-2 (M): the AR-1 sent-off fix shipped with no lock at all. A red-carded keeper is
+        /// frozen by <c>_commands[i] = Stop</c>, which governs MOVEMENT — and #11's Rushing branch writes
+        /// the position itself, after movement, so before the fix a dismissed keeper kept sprinting to his
+        /// locked target. Nothing asserted it then and nothing would catch its return.</summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void ComposedEngine_KeeperSentOffMidRush_StopsDead(int keeperTeam)
+        {
+            var engine = new MatchEngine(0x0F1E2D3C4B5A6978UL);
+            PlaceFixture(engine, keeperTeam, coverOutFromGoalM: -1f);
+
+            int keeper = KeeperAgentId(engine, keeperTeam);
+            engine.TestOnly_DriveGkHeadingTactical();
+            engine.TestOnly_DriveGkHeadingTactical();
+            engine.TestOnly_DriveGkHeadingTactical();
+            Assert.AreEqual(GoalkeeperState.Rushing, engine.TestOnly_GkState(keeperTeam),
+                "fixture must be mid-rush before the red card");
+
+            engine.TestOnly_SetIsSentOff(keeper, true);
+            Vector2 atDismissal = engine.AgentView(keeper).Position;
+
+            for (int f = 0; f < 60; f++)
+            {
+                engine.TestOnly_DriveGkHeadingPhysics();
+            }
+
+            Assert.AreEqual(atDismissal.x, engine.AgentView(keeper).Position.x, 1e-4f,
+                "a sent-off keeper is off the pitch; nothing may move him, least of all a rush he can no " +
+                "longer be running");
+            Assert.AreEqual(atDismissal.y, engine.AgentView(keeper).Position.y, 1e-4f);
+        }
+
+        /// <summary>
+        /// W1 AR-2 (H): #11 indexes every per-keeper array by gkIndex — the TEAM — while the engine keys
+        /// identity by roster slot, so the occupant can change mid-match. The real sequence: keeper sent
+        /// off, bench keeper on in a DIFFERENT slot. Without <c>ResetSlot</c> the substitute inherits the
+        /// dismissed keeper's live RushIntent, target still locked (KD-15) to a point chosen for a player
+        /// who has left the field, and the <c>Set → Rushing</c> row launches him at it — his first act on
+        /// the pitch is to sprint somewhere nobody chose for him.
+        /// </summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void ComposedEngine_SubstituteKeeper_DoesNotInheritTheDismissedKeepersRush(int keeperTeam)
+        {
+            var engine = new MatchEngine(0x0F1E2D3C4B5A6978UL);
+            PlaceFixture(engine, keeperTeam, coverOutFromGoalM: -1f);
+
+            int keeper = KeeperAgentId(engine, keeperTeam);
+            engine.TestOnly_DriveGkHeadingTactical();
+            engine.TestOnly_DriveGkHeadingTactical();
+            engine.TestOnly_DriveGkHeadingTactical();
+            Assert.AreEqual(GoalkeeperState.Rushing, engine.TestOnly_GkState(keeperTeam),
+                "the inherited state has to be a live rush for the test to mean anything");
+            Assert.IsTrue(engine.TestOnly_GoalkeeperState.RushIntentActive[keeperTeam],
+                "and the intent has to be armed");
+
+            // Red card, then the reserve keeper on for an outfielder — SubstitutePlayer refuses the
+            // sent-off slot itself, so this is the only shape the real sequence can take.
+            engine.TestOnly_SetIsSentOff(keeper, true);
+            engine.TestOnly_SetBenchSlot(keeperTeam, 0, isGoalkeeper: true);
+
+            int outfielder = -1;
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                if (i != keeper && engine.AgentTeamId(i) == keeperTeam && !engine.AgentIsGoalkeeper(i))
+                {
+                    outfielder = i;
+                    break;
+                }
+            }
+            Assert.GreaterOrEqual(outfielder, 0, "fixture needs an outfielder to withdraw");
+
+            engine.SubstitutePlayer(keeperTeam, outfielder, 0, SubstitutionReason.Tactical);
+            Vector2 onArrival = engine.AgentView(outfielder).Position;
+
+            for (int f = 0; f < 60; f++)
+            {
+                engine.TestOnly_DriveGkHeadingPhysics();
+            }
+
+            Assert.AreEqual(onArrival.x, engine.AgentView(outfielder).Position.x, 1e-4f,
+                "the substitute keeper must not be dragged along a run committed by the man he replaced");
+            Assert.AreEqual(onArrival.y, engine.AgentView(outfielder).Position.y, 1e-4f);
+            Assert.IsFalse(engine.TestOnly_GoalkeeperState.RushIntentActive[keeperTeam],
+                "the slot belongs to whoever occupies it — a new occupant starts with no intent armed");
+            Assert.AreEqual(GoalkeeperState.Resting, engine.TestOnly_GkState(keeperTeam),
+                "and at the machine's own default state, not the dismissed keeper's frozen one");
+        }
+
         // ── Cross-catalogue invariant ────────────────────────────────────────────────────
 
         [Test]
@@ -655,4 +746,11 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | end-of-run did not turn the stall into a 3-tick churn. + the    |
 // |         |            |        | cross-catalogue GkRushCommitment > RushCommitThreshold          |
 // |         |            |        | invariant, which was recorded only in a doc comment.           |
+// | 1.2     | 2026-08-04 | —      | W1 AR-2. + the dismissal lock (H/A): AR-1's sent-off fix       |
+// |         |            |        | shipped with nothing asserting it, so its return would be      |
+// |         |            |        | silent. + the substitute-keeper lock (H/A): red card, bench    |
+// |         |            |        | keeper on for an outfielder, and the incoming keeper must NOT  |
+// |         |            |        | be dragged along the run his predecessor committed — #11 keys  |
+// |         |            |        | its state by team, the engine keys identity by roster slot,    |
+// |         |            |        | and the slot changed hands.                                    |
 #endregion

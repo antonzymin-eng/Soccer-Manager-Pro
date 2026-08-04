@@ -6,6 +6,7 @@
 // Modified: 2026-07-28 (gk-catch-parry-conversion: the §3.2.3 reaction window computed ONCE at the dive-launch frame and frozen for the contact (ERR-011-005 — the per-frame re-evaluation dated the contact-consumed value by the ball's whole flight time); the detection stamp dies with its episode (ERR-011-006 — cleared in ClearSaveIntent and at save resolution) and new OnThreatArmed seeds it at episode onset for threats with no shot event. See docs/tracking/gk-catch-parry-conversion-design.md)
 // Modified: 2026-07-28 (gk-contact-rate (ERR-011-007/KD-CR5): the frozen reaction window's elapsed anchors at SaveIntent.AttemptCommittedTick (under the held dive the launch is deliberate timing, not reaction); ComputeDiveDirectionLateral delegates its prediction to the shared TryPredictPlaneCrossing)
 // Modified: 2026-08-04 (wiring backlog W1 / ERR-011-009: ClearRushIntent + GetState/HasActiveRushIntent observation accessors give CommitRushIntent its first production caller; rushTargetReached ends a rush that ARRIVED — the loose-ball strand. See docs/tracking/gk-rush-trigger-design.md)
+// Modified: 2026-08-04 (W1 AR-2: + ResetSlot — the per-GK arrays are indexed by TEAM, and the agent occupying that slot can change mid-match (dismissal + substitute keeper), so the slot needs a way to be disowned. See docs/tracking/gk-rush-trigger-design.md v1.3)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.1–§3.8, §4.6, KD-9, KD-12, KD-13, KD-15, KD-16, Code Standards #20
 // Purpose:  Main 10 Hz + 60 Hz orchestrator. Manages per-GK state, dive kinematics, reaction pipeline,
@@ -120,15 +121,12 @@ namespace TacticalDirector.GoalkeeperMechanics
             _releaseTickEarliest = new int[maxGks];
             _recoveryCooldownEndTick = new int[maxGks];
 
-            // Sentinel init
+            // Sentinel init — via ResetSlot, so "a fresh slot" is defined in exactly ONE place.
+            // Duplicating the sentinels here and in ResetSlot is the §5.Z.12 pair-vs-mirror trap: two
+            // places that must agree, silently diverging the day a new per-GK field is added to one.
             for (int i = 0; i < maxGks; i++)
             {
-                _diveLaunchFrames[i] = -1;
-                _claimTick[i] = -1;
-                _releaseTickEarliest[i] = int.MaxValue;
-                _recoveryCooldownEndTick[i] = 0;
-                _rushInitialAttackerId[i] = -1;
-                _contactStates[i] = GkContactState.CreateNew();
+                ResetSlot(i);
             }
         }
 
@@ -218,6 +216,59 @@ namespace TacticalDirector.GoalkeeperMechanics
             }
 
             _rushIntentActive[gkIndex] = false;
+        }
+
+        /// <summary>
+        /// Returns this keeper slot to its constructor-fresh state: <c>Resting</c>, no intents, no dive or
+        /// rush scratch, no hold-rule stamps. Called by the constructor, and by the composition root when
+        /// the AGENT occupying the slot changes.
+        ///
+        /// <para><b>Why the composition root needs this (W1 AR-2).</b> Every array here is indexed by
+        /// <c>gkIndex</c>, which is the TEAM (KD-1) — not the player. The engine keys identity by roster
+        /// slot, so which agent is "team 0's keeper" can change mid-match: a keeper is sent off and a
+        /// substitute keeper comes on in a different roster slot. Without a reset, the incoming keeper
+        /// inherits the outgoing one's state wholesale — most damagingly an active <c>RushIntent</c> whose
+        /// target was locked (KD-15) for a player who is no longer on the pitch, which the
+        /// <c>Set → Rushing</c> row will happily launch him at. The slot's state belongs to whoever
+        /// occupies it, and nothing else in this class can observe that he has changed.</para>
+        ///
+        /// <para>Not a "clear intents" call — <see cref="ClearSaveIntent"/> / <see cref="ClearRushIntent"/>
+        /// are that, and both deliberately refuse to disarm a chain already in flight (FR-GK-018). This is
+        /// the opposite case: the flight belongs to nobody now, so it is ended unconditionally.</para>
+        /// </summary>
+        /// <param name="gkIndex">Keeper index (== team id; KD-1). Out-of-range indices are ignored.</param>
+        public void ResetSlot(int gkIndex)
+        {
+            if ((uint)gkIndex >= (uint)GoalkeeperConstants.MaxGkAgents)
+            {
+                return;
+            }
+
+            _states[gkIndex] = GoalkeeperState.Resting;
+            _attrs[gkIndex] = default;
+            _contactStates[gkIndex] = GkContactState.CreateNew();
+            _saveIntents[gkIndex] = default;
+            _saveIntentActive[gkIndex] = false;
+            _rushIntents[gkIndex] = default;
+            _rushIntentActive[gkIndex] = false;
+            _distributeIntents[gkIndex] = default;
+            _distributeIntentActive[gkIndex] = false;
+            _positioningContracts[gkIndex] = default;
+
+            _diveLaunchFrames[gkIndex] = -1;
+            _diveDurationFrames[gkIndex] = 0;
+            _divePeakHandZ[gkIndex] = 0.0f;
+            _diveDirectionLateral[gkIndex] = 0.0f;
+            _rushLaunchMps[gkIndex] = 0.0f;
+            _rushInitialAttackerId[gkIndex] = -1;
+
+            _shotDetectedTickMs[gkIndex] = 0.0f;
+            _requiredReactionMs[gkIndex] = 0.0f;
+            _shotEventPending[gkIndex] = false;
+
+            _claimTick[gkIndex] = -1;
+            _releaseTickEarliest[gkIndex] = int.MaxValue;
+            _recoveryCooldownEndTick[gkIndex] = 0;
         }
 
         /// <summary>
@@ -1257,4 +1308,15 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |      |            |   | so a swept ball left the keeper standing over it in Rushing for the rest  |
 // |      |            |   | of the match. Emits GoalkeeperRushEvent{Reached} — the RushPhase member   |
 // |      |            |   | that has existed since v1.0 and was never published.                      |
+// | 1.12 | 2026-08-04 | — | W1 AR-2 (H) — + ResetSlot, and the constructor's sentinel loop now calls   |
+// |      |            |   | it, so "a fresh slot" is defined once rather than in a pair that must     |
+// |      |            |   | agree (§5.Z.12). Every array in this class is indexed by gkIndex = TEAM   |
+// |      |            |   | (KD-1) while the engine keys identity by ROSTER SLOT, and the occupant    |
+// |      |            |   | can change mid-match: keeper sent off, substitute keeper on in a          |
+// |      |            |   | different slot. Nothing in here can observe that, so the incoming keeper  |
+// |      |            |   | inherited the outgoing one's whole slot — including a live RushIntent     |
+// |      |            |   | whose target was LOCKED (KD-15) for a player no longer on the pitch,      |
+// |      |            |   | which Set → Rushing then launched him at. Unconditional by design, and    |
+// |      |            |   | so NOT ClearRushIntent/ClearSaveIntent, which refuse to disarm a chain    |
+// |      |            |   | in flight (FR-GK-018): the flight belongs to nobody now.                  |
 #endregion
