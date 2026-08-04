@@ -237,6 +237,7 @@ pass-mechanics/
 | Never-compiled surfaces | Six consecutive spec test suites — and one *production* assembly (#8) — had never compiled; every "the suite enforces X" claim was unverifiable | The `tools/dotnet-ci` gate compiles the whole tree on every push. Never claim a suite enforces something without running it |
 | Tests that verify composition runs, not that it *works* | The 600-tick capstone asserted tick count, cadence, finiteness, bounds and digest advance — all true of a match in which nothing happens. Every match was a 0–0 deadlock with the ball never in motion for months (ERR-030-014) | Assert the *outcome* the system exists to produce, not just that it ticks without throwing |
 | Home-team-only worked examples | Three home/away asymmetry defects (#8 ERR-008-002) shipped because every spec example and every fixture used the home team | Mirror any team-relative geometry test to the away side |
+| Tuning a machine that is missing pieces | Seven §5.Z passes fitted `[GT]`s against an engine where the keeper never left his line and **no player could tackle** (`GetAndClearTackleFlag` hardcoded `false` in both adapters). The hazard is diagnostic, not arithmetic: 18%-vs-11% conversion reads as "the shot model is too generous" when part of it is "nobody narrows the angle" | **KD-W1** — do not land a `[GT]` governing an unwired subsystem. Check `match-engine-wiring-backlog.md` first. Measure and fix defects freely; constants wait for one calibration pass against the complete engine |
 
 ---
 
@@ -260,6 +261,7 @@ pass-mechanics/
 |----------|---------|
 | `management-layer-spec-roadmap.md` | *Which specs to author, in what order* — the #27–#51 management/off-pitch set, dependency graph, authoring waves |
 | `path-to-playable-roadmap.md` | *Which code to land, in what order, to reach a playable build* — Track S (simulation) vs Track C (client), and the quantified constraints that ordering must respect |
+| `match-engine-wiring-backlog.md` | *Which already-built match-engine code has no production caller* — the dormant-capability inventory (Aug 4, 2026), its wire-order, and **KD-W1** below. Match engine only; the 22 assembly-less specs stay with the roadmap above |
 
 ### Design supplements
 
@@ -310,9 +312,10 @@ evidence. The two that need a review step invoke `adversarial-review` rather tha
 > **When resolving an issue, move its entry to the resolved archive in the same
 > commit.** Do not re-inline entries into this file.
 
-**12 active** / 41 resolved. *Re-filed August 2, 2026 — eight entries archived (six closed-but-unmoved, plus a duplicated pair); three titles amended to lead with what remains open rather than what has landed.*
+**13 active** / 41 resolved. *Re-filed August 2, 2026 — eight entries archived (six closed-but-unmoved, plus a duplicated pair); three titles amended to lead with what remains open rather than what has landed. August 4, 2026 — the wiring-backlog entry added at the head.*
 
-- Conversion at contact — the CLAIM defect FIXED (ERR-011-008, §5.Z.23); REMAINDER: the `pointQuality` lottery is blocked on a design decision (measured: the geometry-aware form collapses catches to zero and no `[GT]` in range recovers them), and parry placement is unfixed but currently costless
+- **Match-engine wiring backlog — 10 built subsystems have no production caller, and the `[GT]` freeze (KD-W1) that follows.** Headline findings: the keeper never comes off his line (`CommitRushIntent` uncalled, though the whole rush subsystem below it works), and **no player has ever made a tackle** (`GetTackleIntentRequests` read by nobody + `GetAndClearTackleFlag` hardcoded `false` in both adapters ⇒ #5 §3.8.5's interrupt branch is unreachable). Full inventory and wire-order: `match-engine-wiring-backlog.md`
+- Conversion at contact — the CLAIM defect FIXED (ERR-011-008, §5.Z.23); REMAINDER: the `pointQuality` lottery is blocked on a design decision (measured: the geometry-aware form collapses catches to zero and no `[GT]` in range recovers them) — **PARKED August 4, 2026: the keeper rush trigger (wiring backlog W1) changes the contact geometry the decision turns on** — and parry placement is unfixed but currently costless
 - Close-chance creation — the DRIBBLE-direction defect FIXED (ERR-008-018, §5.Z.24: the average final-third dribble pointed AWAY from goal); REMAINDER: the funnel itself did not move — the ball still enters the box on 5% of final-third episodes, and the bound is now localized to #8 §3.1.3 generating PASS candidates only at a teammate's CURRENT POSITION, so the tree cannot pass to a place
 - Injury / aging research alignment — design supplement OPENED, AR-converged, awaiting owner sign-off
 - Foul/card heuristic issues ~7 red cards per 9 minutes of played football — the most visible unrealism in a match now that matches actually play

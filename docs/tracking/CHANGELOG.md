@@ -12,7 +12,49 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 4, 2026 (**§5.Z.24 — CLOSE-CHANCE CREATION: the first premise in this
+> **Last Updated:** August 4, 2026, later same day (**MATCH-ENGINE WIRING AUDIT — the code that
+> exists and never runs, and the `[GT]` freeze that follows from it.** Seven consecutive §5.Z passes
+> fitted constants against the composed engine. This audit asks what was *in* that engine, and the
+> answer is: less than the assembly graph suggests. Three passes over the 18 assemblies the match
+> engine references — a comment sweep for self-declared deferrals, a whole-tree production-caller
+> count over every `public` method, and manual triage of every candidate in source — found **10
+> Class-A dormant capabilities**. The two largest were invisible to the project's own tracking. **The
+> keeper never comes off his line**: `GoalkeeperMechanics.CommitRushIntent` has no production caller,
+> though everything downstream of it works (`GoalkeeperRushDispatch.UpdateRushFrame` moves the keeper
+> and writes back to the movement array; `Rushing → OneOnOne → Smothered` exists with abort reasons
+> and telemetry; the `RushIntent` is even serialized) — only the trigger is missing, so every 1v1 in
+> the game is a stationary keeper waiting to dive. **No player has ever made a tackle**: three
+> independent dormant links in one chain — `DefensiveAITick.GetTackleIntentRequests` is populated
+> every tick and read by nobody (its own class doc says integration is Stage 1, KD-16),
+> `GetAndClearTackleFlag` is hardcoded `=> false` in **both** engine collision adapters
+> (`MatchEngine.cs:6721`, `:6789`), and consequently `PassExecutor`'s §3.8.5 tackle-interrupt branch
+> and its `CancelReason.TackleInterrupt` outcome are unreachable code. No comment anywhere records
+> this one; only the call-graph pass found it. Also dormant: cross claims (`ResolveHandContactDuel`
+> intentionally not called, blocked on the same multi-agent contact feed as the already-filed
+> AGENT_BALL fan-out), the keeper's vision (`SaveArmed` is four lines of pure geometry while a
+> tested `OcclusionFilter` runs for every outfielder), the #13 BackwardPass press trigger
+> (`PassEventRing.Push` has no producer, so the ring the engine builds per team is permanently
+> empty), `BallStateType.Controlled` (no producer — possession is a flag, never a kinematic
+> constraint), and #26's kickoff preset selection (`ManagerAdaptation.ApplyKickoff` uncalled, so an
+> AI manager starts every match on the human baseline; only the mid-match ladder is wired).
+> **The method's blind spot is stated rather than hidden:** it detects *method-level* dormancy and is
+> structurally unable to see *gate-level* dormancy — a call site that runs but whose condition is
+> almost never true. One such is already measured (#12 commits `InPoss` on **9.5%** of final-third
+> samples, starving every phase-gated mechanism in #13/#14/#15), found by runtime instrumentation in
+> §5.Z.24 and by no static analysis, so the backlog carries four Class-B entries from that pass and
+> books a gate-firing instrument as its own item. **This backlog is a floor, not a ceiling.**
+> **KD-W1, the `[GT]` freeze:** do not land a constant governing an unwired subsystem. The hazard is
+> diagnostic, not just arithmetic — measured conversion of ~18% against football's ~11% reads as "the
+> shot model is too generous" when part of it is "no keeper has ever narrowed an angle and no
+> defender has ever tackled", and a pass aimed at the shot model would have left behind a `[GT]` that
+> later has to be un-tuned. Defect fixes, instruments and measurement continue freely; constants wait
+> for one calibration pass against the complete engine. **KD-W2** scopes this to the match engine —
+> the 22 approved specs with no assembly remain `path-to-playable-roadmap.md`'s problem. The §5.Z.23
+> `pointQuality` owner decision is **parked, not resolved**: the rush trigger changes the contact
+> geometry that decision turns on. New `docs/tracking/match-engine-wiring-backlog.md` v1.0. Read-only
+> audit — no `src/` change, no spec change, no gate run. **Prior entry below.**)
+
+> **Last Updated (prior):** August 4, 2026 (**§5.Z.24 — CLOSE-CHANCE CREATION: the first premise in this
 > chain that survived its own check, one formula defect fixed, and the creation gap deliberately NOT
 > claimed.** §5.Z.23 §7 item 4 re-localized the creation residual to the final-third → penalty-area
 > stage (6.5% against football's ~40%) and named it a #8/#15 surface. Two premises were checked.
