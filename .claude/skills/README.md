@@ -13,7 +13,7 @@ invented: the counts below are from the last 200 commits.
 
 | Skill | Encodes | Observed repetition |
 |---|---|---|
-| `match-realism-pass` | measure → localize → fix → calibrate → re-measure → lock | 6 passes (§5.Z.17–§5.Z.22) in ~2 weeks |
+| `match-realism-pass` | **wiring gate** → measure → localize → fix → calibrate *(only if the gate passed)* → re-measure → lock | 7 passes (§5.Z.17–§5.Z.23) in ~2 weeks; 3 of the chain (§5.Z.15, .16, .23) were wiring, not calibration |
 | `snapshot-schema-bump` | the cross-tick decision + serializer/reader/test checklist | 19 schema bumps, 2 of them fixing earlier omissions |
 | `err-file-and-backprop` | ERR id allocation, entry shape, spec-patch-same-commit | `spec-error-log.md` at v1.53; 2 live id collisions |
 | `landing-close-out` | the six-document sync at the end of a landing | every landing; one whole reconciliation pass caused by skipping it |

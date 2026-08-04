@@ -12,7 +12,42 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 3, 2026, latest same day (**OWNER DECISION — ROADMAP B6 REVERSED: the
+> **Last Updated:** August 4, 2026 (**`match-realism-pass` SKILL RE-CUT FOR WIRE-FIRST — the calibration
+> ladder is now a conditional step behind a wiring gate.** Tooling-only; no `.cs`, no spec, no assembly,
+> no gate run. The skill encoded measure → localize → ladder → land, which is the right shape only when
+> the chain under the dial is complete. Under the project's actual position it usually is not: **22 of
+> 53 APPROVED specs have no `src/` assembly**, #37 and #28 are T0-only and unwired, and three passes in
+> the §5.Z chain — **§5.Z.15** (#11 built, wired, tested and switched OFF, keepers immobile because
+> `RunPhysicsPhase` skipped them), **§5.Z.16** (nothing could make a keeper give the ball back up), and
+> **§5.Z.23 / ERR-011-008** (#11's catch coded to one of its two spec statements) — were wiring
+> problems wearing a calibration brief.
+>
+> **New `## 0. The wiring gate`, ahead of the premise check**: five cheap source reads — (1) does an
+> assembly exist, against `CLAUDE.md`'s map and never `SPEC_INDEX.md`; (2) is the type constructed at
+> the composition root *and* reached by a phase, flag default included; (3) does the output have a live
+> **read**-side consumer (`OnShotExecutedEvent` had zero callers anywhere); (4) is the branch coded to
+> the whole of its spec §3 **body**, not its Outputs summary; (5) is the target a Stage-0 placeholder
+> for an unimplemented spec — the foul/card heuristic at ~7 reds per 9 min with **#44 having no
+> assembly** is the standing example. **A failed gate re-shapes the pass rather than stopping it**:
+> every step still applies except the ladder, and the landing must say *"this pass wired X; no `[GT]`
+> was moved."*
+>
+> **Three consequential edits downstream of the gate.** §3 is retitled *"only if §0 passed"* and opens
+> by saying it is the step most passes should skip, because a ladder run over a chain with a missing
+> stage fits the dial to the gap and makes the correct later fix read as a regression. Its
+> ladder-refuses bullet now reads a refusal as **a wiring diagnosis until proven otherwise** — the
+> level is set upstream of the dial — citing §5.Z.23's geometry-aware `pointQuality` collapsing catches
+> and parries to zero against a 0.68 mean marginality that no in-range `[GT]` clears. §2's cause 3
+> (structurally unreachable / vacuous gate) is now labelled **§0 failing late**. And §7 requires the
+> recorded residual to be **classified — missing stage or mis-set dial** — because the next pass runs
+> §0 against that sentence, and a residual written as "tune X" when X is bounded upstream sends the
+> next pass straight to the ladder this gate exists to stop.
+>
+> Modified: `.claude/skills/match-realism-pass/SKILL.md` (frontmatter description + §0/§2/§3/§7),
+> `.claude/skills/README.md` (derivation row: shape and repetition evidence restated, 6 passes → 7),
+> `file-manifest.md`, and this file. Prior entry below.)
+
+> **Last Updated (prior):** August 3, 2026, latest same day (**OWNER DECISION — ROADMAP B6 REVERSED: the
 > product ships the FULL UNITY UI, not the web-hosted viewer.** Doc-only; no `.cs` changed. Recorded in
 > `path-to-playable-roadmap.md` v0.11 (§7 supersede note, C2 amended, risk register re-cut),
 > `interactive-unity-client-design.md` v0.11 (§12 status-change block), `browser-match-client-design.md`

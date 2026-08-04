@@ -1,7 +1,20 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 3, 2026, latest same day (**Owner decision — roadmap B6 reversed to the full
+**Last Updated:** August 4, 2026 (**`match-realism-pass` skill re-cut for wire-first — the calibration
+ladder becomes a conditional step behind a new wiring gate.** Tooling-only; **no file added, removed,
+renamed or moved**, so no inventory row changes and the production assembly count stays 31. No `src/`
+change, no spec change, no gate run. **Modified:**
+`.claude/skills/match-realism-pass/SKILL.md` (frontmatter description; new `## 0. The wiring gate`
+with its five source-read checks and a "when the gate fails" branch, placed ahead of the premise
+check; §2 cause 3 relabelled as the gate failing late; §3 retitled *"only if §0 passed"* with its
+ladder-refuses bullet re-read as a wiring diagnosis; §7 now requires the recorded residual to be
+classified missing-stage vs mis-set-dial) and `.claude/skills/README.md` (the `match-realism-pass`
+derivation row — shape restated with the gate, 6 passes → 7, plus the three wiring-not-calibration
+instances §5.Z.15 / .16 / .23). Grounded in existing measured record only — no new measurement was
+taken for this change. **Prior entry below.**)
+
+**Last Updated (prior):** August 3, 2026, latest same day (**Owner decision — roadmap B6 reversed to the full
 Unity UI.** Doc-only; **no file added, removed, renamed or moved**, so no inventory row changes and the
 production assembly count stays 31. Modified tracking docs:
 `docs/tracking/path-to-playable-roadmap.md` → v0.11 (§7 supersede note, C2 amended, risk register
