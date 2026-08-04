@@ -122,9 +122,11 @@ namespace TacticalDirector.MatchClientCore
 
         /// <summary>
         /// [GT] Camera height above the ground, metres. Config key [match-client] CameraHeightM.
-        /// With the tilt below this fixes how much pitch is in shot; the
-        /// <see cref="CameraViewHalfWidthM"/> / <see cref="CameraViewHalfHeightM"/> pair still bounds
-        /// where the camera may look (see their note on why that clamp is now approximate).
+        /// With <see cref="CameraTiltDegrees"/> and <see cref="CameraVerticalFovDegrees"/> it fixes
+        /// how much pitch is in shot — <see cref="PitchCameraRig.GroundExtentAlongTilt"/> reports the
+        /// result in metres. The <see cref="CameraViewHalfWidthM"/> /
+        /// <see cref="CameraViewHalfHeightM"/> pair separately bounds where the camera may look (see
+        /// their note on why that clamp is now approximate).
         /// </summary>
         public static readonly float CameraHeightM = RequireAtLeast(
             Config.GetFloat("match-client", "CameraHeightM", 38f), 1f, "CameraHeightM");

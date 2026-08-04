@@ -5,7 +5,8 @@
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4a, §7
 //           "Rendering, camera, HUD", §12 rule 1), Code Standards #20
 // Purpose:  Turns a follow-ball target in pitch metres into the camera's world placement — height,
-//           tilt back from vertical, and the lateral offset that makes the view slightly oblique.
+//           tilt back from vertical, the lateral offset that makes the view slightly oblique, and the
+//           field of view that decides how much pitch is in shot.
 
 using UnityEngine;
 

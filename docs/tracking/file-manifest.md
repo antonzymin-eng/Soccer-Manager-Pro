@@ -11,7 +11,9 @@ tilted-view revision never wrote**), `PitchViewProjection.cs` → v1.2 (`ToView`
 production caller survived the revision), `PitchMarking.cs` → v1.2 (doc: markings go on the ground plane via
 `ToWorld`, not the flat `ToView`), `MatchRenderProjection.cs` (**the v1.2 row the revision never wrote**).
 Tests: `PitchCameraRigTests.cs` → v1.1, `MatchClientConstantsTests.cs` → v1.2, `PitchViewProjectionTests.cs`
-→ v1.2. `match-client-core` 129 → 135. **No new assembly**, no `SNAPSHOT_SCHEMA_VERSION` change, no spec
+→ v1.2. Plus, from the post-fix sweep, `PitchMarkingKind.cs` → v1.1 (its `Rectangle` member still documented
+corner ordering as NOT guaranteed — the contract pass 1's H-1 reversed in `PitchMarking.cs` alone).
+`match-client-core` 129 → 135; full dotnet gate PASSED, 0 failures. **No new assembly**, no `SNAPSHOT_SCHEMA_VERSION` change, no spec
 change. Production assembly count stays 31.)
 
 **Last Updated (prior):** August 4, 2026 (**Tilted-view revision — KD-P4a-2, owner call.**

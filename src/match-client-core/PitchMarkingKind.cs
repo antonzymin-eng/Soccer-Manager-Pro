@@ -1,6 +1,6 @@
 // File:     src/match-client-core/PitchMarkingKind.cs
 // Created:  2026-08-03
-// Modified: 2026-08-03
+// Modified: 2026-08-04
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4a, §7
 //           "Reuse the geometry that already exists"), Code Standards #20
@@ -24,9 +24,13 @@ namespace TacticalDirector.MatchClientCore
         Line = 0,
 
         /// <summary>
-        /// An axis-aligned rectangle outline whose opposite corners are <c>A</c> and <c>B</c>.
-        /// <c>Radius</c> is unused. Corner ordering is not guaranteed — a consumer that needs
-        /// min/max should take component-wise min and max.
+        /// An axis-aligned rectangle outline from its <b>min</b> corner <c>A</c> to its <b>max</b>
+        /// corner <c>B</c>. <c>Radius</c> is unused.
+        ///
+        /// <para>The ordering IS guaranteed — <c>A.x &lt;= B.x</c> and <c>A.y &lt;= B.y</c>, so
+        /// <c>B - A</c> is a non-negative extent a renderer can use directly. Do not re-normalise
+        /// defensively; <see cref="PitchMarking.Rectangle"/> has already done it, which is what stops
+        /// the away-end boxes (built from their goal line inwards) from arriving inverted.</para>
         /// </summary>
         Rectangle = 1,
 
@@ -55,4 +59,10 @@ namespace TacticalDirector.MatchClientCore
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-08-03 | —      | Initial creation (P4a): the closed shape set the pitch-marking  |
 // |         |            |        | catalogue emits.                                               |
+// | 1.1     | 2026-08-04 | —      | AR pass 2 sweep: the Rectangle member still documented corner   |
+// |         |            |        | ordering as NOT guaranteed and told consumers to re-normalise  |
+// |         |            |        | — the exact contract AR pass 1's H-1 reversed. PitchMarking.cs |
+// |         |            |        | was fixed then and this file, beside it, was not, so the two   |
+// |         |            |        | stated opposite contracts for one field. The enum is the one a |
+// |         |            |        | renderer switching on Kind reads first.                        |
 #endregion
