@@ -1,7 +1,20 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 4, 2026, latest same day (**Tilted-view revision — KD-P4a-2, owner call.**
+**Last Updated:** August 4, 2026, latest same day (**P4a adversarial-review pass 2 — 1 High, 4 Medium fixed.**
+No new files. Modified in `src/match-client-core/`: `PitchCameraPose.cs` → v1.1 (**H-1**: + `FieldOfViewDegrees`
+— the rig placed the camera but never said how much it *sees*, so P4b would have chosen a field of view
+inside the `MonoBehaviour`, a framing decision where the gate cannot reach it), `PitchCameraRig.cs` → v1.1
+(+ `GroundExtentAlongTilt`), `MatchClientConstants.cs` → v1.5 (+ `CameraVerticalFovDegrees` bounded against
+the tilt, + `RequireFinite` for `CameraLateralOffsetM`, + `RequireFarRayMeetsGround`; **and the v1.4 row the
+tilted-view revision never wrote**), `PitchViewProjection.cs` → v1.2 (`ToView` / `ToPitch` deleted — no
+production caller survived the revision), `PitchMarking.cs` → v1.2 (doc: markings go on the ground plane via
+`ToWorld`, not the flat `ToView`), `MatchRenderProjection.cs` (**the v1.2 row the revision never wrote**).
+Tests: `PitchCameraRigTests.cs` → v1.1, `MatchClientConstantsTests.cs` → v1.2, `PitchViewProjectionTests.cs`
+→ v1.2. `match-client-core` 129 → 135. **No new assembly**, no `SNAPSHOT_SCHEMA_VERSION` change, no spec
+change. Production assembly count stays 31.)
+
+**Last Updated (prior):** August 4, 2026 (**Tilted-view revision — KD-P4a-2, owner call.**
 New in `src/match-client-core/`: `PitchCameraPose.cs` and `PitchCameraRig.cs` v1.0 + a
 `tests/PitchCameraRigTests.cs` v1.0. Modified: `PitchViewProjection.cs` → v1.1 (+ `ToWorld` /
 `ToWorldGround` / `TryGroundHit`; `ToViewGround` replaced), `BallRenderModel.cs` → v1.2 and

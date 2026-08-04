@@ -14,9 +14,10 @@ namespace TacticalDirector.MatchClientCore
 {
     /// <summary>
     /// One IFAB pitch marking, in <b>corner-origin pitch metres</b> (Ball Physics #1 §1.2) — the same
-    /// frame the engine reports positions in. A renderer projects each point through
-    /// <see cref="PitchViewProjection.ToView"/>; <see cref="Radius"/> needs no conversion, since the
-    /// view plane is 1 unit per metre.
+    /// frame the engine reports positions in. A renderer places each point on the ground plane
+    /// through <see cref="PitchViewProjection.ToWorld"/> at zero height — markings lie ON the turf,
+    /// so the height argument is what puts them there rather than standing upright in the world's XY
+    /// plane. <see cref="Radius"/> needs no conversion, since the world is 1 unit per metre.
     ///
     /// <para><b>Which fields are meaningful depends on <see cref="Kind"/></b>, and
     /// <see cref="PitchMarkingKind"/> documents each case. The alternative — a type per shape behind
@@ -108,4 +109,9 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | class, in a decision the CI gate cannot reach once it lives in |
 // |         |            |        | a MonoBehaviour. Lines and goal mouths stay unnormalised: a    |
 // |         |            |        | line has direction and a goal mouth is post-to-post.           |
+// | 1.2     | 2026-08-04 | —      | AR pass 2, M-2: the class doc still sent the render skin to     |
+// |         |            |        | ToView, the flat-view 2D mapping, for markings that must lie   |
+// |         |            |        | on the GROUND plane — following it would have stood every      |
+// |         |            |        | marking upright in the world XY plane. Now ToWorld at zero     |
+// |         |            |        | height. Doc only; no field, factory or value changed.          |
 #endregion

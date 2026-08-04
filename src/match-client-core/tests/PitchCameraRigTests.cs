@@ -135,6 +135,61 @@ namespace TacticalDirector.MatchClientCore.Tests
         }
 
         [Test]
+        public void ThePoseCarriesTheFieldOfView_SoTheBindingChoosesNothing()
+        {
+            // The whole reason the field of view is here: position + look-at + fov is everything
+            // Unity's Camera needs. If any one of them were left out, P4b would have to invent it
+            // inside the MonoBehaviour the gate cannot compile — §12 rule 1.
+            PitchCameraPose pose = PitchCameraRig.ComputePose(Centre);
+
+            Assert.AreEqual(MatchClientConstants.CameraVerticalFovDegrees, pose.FieldOfViewDegrees, Tolerance);
+            Assert.Greater(pose.FieldOfViewDegrees, 0f, "a zero field of view sees nothing");
+        }
+
+        [Test]
+        public void TheVisibleGroundIsATrapezoid_ReachingFurtherBeyondTheAimPointThanInFrontOfIt()
+        {
+            // Not symmetry, and asserting symmetry is the mistake this guards. The far ray meets the
+            // ground at a shallower angle, so it travels further before it gets there — which is the
+            // real reason CameraViewHalfHeightM is documented as approximate rather than exact.
+            PitchCameraRig.GroundExtentAlongTilt(out float near, out float far);
+
+            Assert.Greater(near, 0f, "the near edge must lie in front of the aim point");
+            Assert.Greater(far, near, "a tilted camera sees further beyond its aim point than in front of it");
+        }
+
+        [Test]
+        public void TheVisibleGroundMatchesTheConfiguredTiltAndFieldOfView()
+        {
+            // Pins the formula rather than just its shape: both edges are height × tan(angle from
+            // vertical), measured relative to the aim point.
+            float height  = MatchClientConstants.CameraHeightM;
+            float tilt    = MatchClientConstants.CameraTiltDegrees;
+            float halfFov = MatchClientConstants.CameraVerticalFovDegrees * 0.5f;
+            float aim     = height * Mathf.Tan(tilt * Mathf.Deg2Rad);
+
+            PitchCameraRig.GroundExtentAlongTilt(out float near, out float far);
+
+            Assert.AreEqual(aim - height * Mathf.Tan((tilt - halfFov) * Mathf.Deg2Rad), near, Tolerance);
+            Assert.AreEqual(height * Mathf.Tan((tilt + halfFov) * Mathf.Deg2Rad) - aim, far, Tolerance);
+        }
+
+        [Test]
+        public void TheCameraSeesAtLeastWhatTheClampAssumesItDoes()
+        {
+            // The clamp bounds the target by CameraViewHalfHeightM, which describes visible ground.
+            // Nothing ties that figure to the rig's height/tilt/fov, so this is the check that the
+            // two have not drifted into contradiction — a clamp permitting framing the camera cannot
+            // actually deliver would push the target off the visible pitch and nothing would say so.
+            PitchCameraRig.GroundExtentAlongTilt(out float near, out float far);
+
+            Assert.GreaterOrEqual(near, MatchClientConstants.CameraViewHalfHeightM,
+                "the camera sees less in front of its aim point than the clamp assumes");
+            Assert.GreaterOrEqual(far, MatchClientConstants.CameraViewHalfHeightM,
+                "the camera sees less beyond its aim point than the clamp assumes");
+        }
+
+        [Test]
         public void ADegenerateTarget_AimsAtTheCentreSpot()
         {
             Vector3 centreWorld = PitchViewProjection.ToWorld(Centre, 0f);
@@ -161,4 +216,11 @@ namespace TacticalDirector.MatchClientCore.Tests
 // |         |            |        | lateral offset introduces, both-ends tracking, the degenerate   |
 // |         |            |        | target, and the closing loop — a ray from the camera to its own |
 // |         |            |        | aim point must come back through TryGroundHit as the target.    |
+// | 1.1     | 2026-08-04 | —      | AR pass 2, H-1: + the field of view on the pose (the assertion  |
+// |         |            |        | that a binding is left with nothing to choose), + the ground    |
+// |         |            |        | extent — its formula, its ASYMMETRY (a tilted camera sees a     |
+// |         |            |        | trapezoid, and asserting symmetry is the mistake to guard),     |
+// |         |            |        | and the consistency check against CameraViewHalfHeightM, which  |
+// |         |            |        | the follow-ball clamp uses and which nothing otherwise ties to  |
+// |         |            |        | what the camera can actually see.                               |
 #endregion

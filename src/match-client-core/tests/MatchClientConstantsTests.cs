@@ -72,6 +72,38 @@ namespace TacticalDirector.MatchClientCore.Tests
         }
 
         [Test]
+        public void RequireFinite_TakesAnySign_ButRefusesNaNAndInfinity()
+        {
+            // The lateral offset picks a side, so a range check would be wrong — but "any sign" is
+            // not "any value", and this is the distinction.
+            Assert.AreEqual(5f, MatchClientConstants.RequireFinite(5f, "k"));
+            Assert.AreEqual(-5f, MatchClientConstants.RequireFinite(-5f, "k"), "either side is legal");
+            Assert.AreEqual(0f, MatchClientConstants.RequireFinite(0f, "k"), "dead centre is legal");
+
+            foreach (float bad in new[] { float.NaN, float.PositiveInfinity, float.NegativeInfinity })
+            {
+                Assert.Throws<InvalidOperationException>(
+                    () => MatchClientConstants.RequireFinite(bad, "CameraLateralOffsetM"), "value " + bad);
+            }
+        }
+
+        [Test]
+        public void RequireFarRayMeetsGround_RefusesAPairingThatPutsTheHorizonInShot()
+        {
+            // Each dial is individually legal here — 80° tilt and 60° fov both pass their own range
+            // checks — and together they aim the camera's lowest ray above the horizontal, where it
+            // never meets the ground. That is why this is a pairing check.
+            Assert.AreEqual(60f, MatchClientConstants.RequireFarRayMeetsGround(60f, 22f));
+
+            Assert.Throws<InvalidOperationException>(
+                () => MatchClientConstants.RequireFarRayMeetsGround(60f, 80f));
+            Assert.Throws<InvalidOperationException>(
+                () => MatchClientConstants.RequireFarRayMeetsGround(120f, 30f), "exactly 90 is refused");
+            Assert.Throws<InvalidOperationException>(
+                () => MatchClientConstants.RequireFarRayMeetsGround(float.NaN, 22f));
+        }
+
+        [Test]
         public void TheMessageNamesTheConfigKey_SoABootFailureIsActionable()
         {
             // It surfaces wrapped in a TypeInitializationException, where the inner message is all
@@ -90,6 +122,16 @@ namespace TacticalDirector.MatchClientCore.Tests
             Assert.GreaterOrEqual(MatchClientConstants.CameraHeightM, 1f);
             Assert.Greater(MatchClientConstants.CameraTiltDegrees, 0f, "a zero tilt is the flat view this replaced");
             Assert.Less(MatchClientConstants.CameraTiltDegrees, 90f, "at 90 the camera is level with the turf");
+
+            // Non-zero matters as much as in-range: the tilt is read during CameraVerticalFovDegrees'
+            // own initialiser, and a static readonly field read before its source yields zero — the
+            // PerceptionConstants.BASE_FOV_HALF_ANGLE defect, which would make the pairing check
+            // below pass vacuously rather than fail.
+            Assert.Greater(MatchClientConstants.CameraVerticalFovDegrees, 0f);
+            Assert.Less(
+                MatchClientConstants.CameraTiltDegrees + MatchClientConstants.CameraVerticalFovDegrees * 0.5f,
+                90f, "the camera's lowest ray must still meet the ground");
+            Assert.IsTrue(float.IsFinite(MatchClientConstants.CameraLateralOffsetM));
         }
     }
 }
@@ -104,4 +146,12 @@ namespace TacticalDirector.MatchClientCore.Tests
 // | 1.1     | 2026-08-04 | —      | Tilted-view revision: + RequireInRange (the camera tilt's      |
 // |         |            |        | bound), and the shipped-values check follows BallMaxHeightScale |
 // |         |            |        | out of the catalogue onto the camera rig's dials.              |
+// | 1.2     | 2026-08-04 | —      | AR pass 2, H-1/M-3: + RequireFinite (any sign, but not NaN or  |
+// |         |            |        | infinity — the lateral offset's check) and                      |
+// |         |            |        | RequireFarRayMeetsGround (two individually-legal dials that    |
+// |         |            |        | pair into a camera whose lowest ray never meets the ground).   |
+// |         |            |        | The shipped-values check also pins the tilt as NON-ZERO: it is |
+// |         |            |        | read inside the fov's own initialiser, and a static readonly   |
+// |         |            |        | field read before its source yields zero, which would make the |
+// |         |            |        | pairing check pass vacuously instead of failing.               |
 #endregion

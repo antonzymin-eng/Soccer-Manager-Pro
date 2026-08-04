@@ -28,39 +28,44 @@ namespace TacticalDirector.MatchClientCore.Tests
                 MatchEngineConstants.PITCH_LENGTH_M * 0.5f,
                 MatchEngineConstants.PITCH_WIDTH_M * 0.5f);
 
-            Vector2 view = PitchViewProjection.ToView(centre);
+            Vector3 world = PitchViewProjection.ToWorld(centre, 0f);
 
-            Assert.AreEqual(0f, view.x, Tolerance, "the centre spot is the view origin");
-            Assert.AreEqual(0f, view.y, Tolerance);
+            Assert.AreEqual(0f, world.x, Tolerance, "the centre spot is the world origin");
+            Assert.AreEqual(0f, world.z, Tolerance);
         }
 
         [Test]
         public void PitchOrigin_IsACorner_NotTheCentre()
         {
             // The recorded trap (root CLAUDE.md): a "pitch centre" origin assumption. Engine (0,0) is
-            // a corner, so it must project to a corner of the view rectangle — never to (0,0).
-            Vector2 view = PitchViewProjection.ToView(Vector2.zero);
+            // a corner, so it must project to a corner of the world rectangle — never to (0,0).
+            Vector3 world = PitchViewProjection.ToWorld(Vector2.zero, 0f);
 
-            Assert.AreEqual(-PitchViewProjection.HalfLengthM, view.x, Tolerance);
-            Assert.AreEqual(-PitchViewProjection.HalfWidthM, view.y, Tolerance);
+            Assert.AreEqual(-PitchViewProjection.HalfLengthM, world.x, Tolerance);
+            Assert.AreEqual(-PitchViewProjection.HalfWidthM, world.z, Tolerance);
         }
 
         [Test]
-        public void HomeAndAwayGoalCentres_MirrorAboutTheViewOrigin()
+        public void HomeAndAwayGoalCentres_MirrorAboutTheWorldOrigin()
         {
             float midY = MatchEngineConstants.PITCH_WIDTH_M * 0.5f;
 
-            Vector2 home = PitchViewProjection.ToView(new Vector2(0f, midY));
-            Vector2 away = PitchViewProjection.ToView(new Vector2(MatchEngineConstants.PITCH_LENGTH_M, midY));
+            Vector3 home = PitchViewProjection.ToWorld(new Vector2(0f, midY), 0f);
+            Vector3 away = PitchViewProjection.ToWorld(
+                new Vector2(MatchEngineConstants.PITCH_LENGTH_M, midY), 0f);
 
             Assert.AreEqual(-home.x, away.x, Tolerance,
-                "the two goal lines must differ only in sign — that symmetry is why the view is centred");
-            Assert.AreEqual(home.y, away.y, Tolerance);
+                "the two goal lines must differ only in sign — that symmetry is why the world is centred");
+            Assert.AreEqual(home.z, away.z, Tolerance);
         }
 
         [Test]
-        public void ToPitch_RoundTripsToView()
+        public void TryGroundHit_RoundTripsToWorld_OverTheWholePitch()
         {
+            // The forward/inverse pair. It replaces the old ToView/ToPitch round trip: those two were
+            // a second name for this same mapping with the height dropped, and deleting them left
+            // this as the only round trip — which is the point, since a mapping with two spellings
+            // is what drifts.
             var samples = new[]
             {
                 new Vector2(0f, 0f),
@@ -72,7 +77,10 @@ namespace TacticalDirector.MatchClientCore.Tests
 
             foreach (Vector2 pitch in samples)
             {
-                Vector2 back = PitchViewProjection.ToPitch(PitchViewProjection.ToView(pitch));
+                Vector3 above = PitchViewProjection.ToWorld(pitch, 40f);
+
+                Assert.IsTrue(PitchViewProjection.TryGroundHit(above, Vector3.down, out Vector2 back),
+                    "a ray straight down from above the pitch must reach it, at " + pitch);
 
                 Assert.AreEqual(pitch.x, back.x, Tolerance, "round trip lost X at " + pitch);
                 Assert.AreEqual(pitch.y, back.y, Tolerance, "round trip lost Y at " + pitch);
@@ -80,16 +88,16 @@ namespace TacticalDirector.MatchClientCore.Tests
         }
 
         [Test]
-        public void ToWorldGround_DropsHeight_AndAgreesWithToView()
+        public void ToWorldGround_DropsHeight_AndAgreesWithToWorld()
         {
             var ball = new Vector3(30f, 40f, 6.5f);
 
             Vector3 ground = PitchViewProjection.ToWorldGround(ball);
-            Vector2 planar = PitchViewProjection.ToView(new Vector2(ball.x, ball.y));
+            Vector3 flat   = PitchViewProjection.ToWorld(new Vector2(ball.x, ball.y), 0f);
 
-            Assert.AreEqual(planar.x, ground.x, Tolerance);
+            Assert.AreEqual(flat.x, ground.x, Tolerance);
             Assert.AreEqual(0f, ground.y, Tolerance, "a shadow sits ON the ground plane");
-            Assert.AreEqual(planar.y, ground.z, Tolerance,
+            Assert.AreEqual(flat.z, ground.z, Tolerance,
                 "height must not displace where the ball is over the pitch");
         }
 
@@ -207,10 +215,10 @@ namespace TacticalDirector.MatchClientCore.Tests
         [Test]
         public void ScaleIsOnePerMetre()
         {
-            Vector2 a = PitchViewProjection.ToView(new Vector2(10f, 20f));
-            Vector2 b = PitchViewProjection.ToView(new Vector2(17f, 20f));
+            Vector3 a = PitchViewProjection.ToWorld(new Vector2(10f, 20f), 0f);
+            Vector3 b = PitchViewProjection.ToWorld(new Vector2(17f, 20f), 0f);
 
-            Assert.AreEqual(7f, b.x - a.x, Tolerance, "seven metres apart must be seven view units apart");
+            Assert.AreEqual(7f, b.x - a.x, Tolerance, "seven metres apart must be seven world units apart");
         }
 
         [Test]
@@ -236,4 +244,11 @@ namespace TacticalDirector.MatchClientCore.Tests
 // |         |            |        | pass the old subtraction), scale-independence, off-pitch hits  |
 // |         |            |        | reported not clamped, every refusal case, and a both-ends round |
 // |         |            |        | trip. ToViewGround's test follows it to ToWorldGround.         |
+// | 1.2     | 2026-08-04 | —      | AR pass 2, M-2: the four ToView / ToPitch tests re-anchor onto |
+// |         |            |        | ToWorld and TryGroundHit, which cover the same origin shift,   |
+// |         |            |        | scale and round trip — the deleted pair was that mapping under |
+// |         |            |        | a second name. The round trip is now forward-and-inverse       |
+// |         |            |        | across five pitch positions rather than two spellings of the   |
+// |         |            |        | same subtraction agreeing with each other, which is a stronger |
+// |         |            |        | assertion than the one it replaces.                            |
 #endregion

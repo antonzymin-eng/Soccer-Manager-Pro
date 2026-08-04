@@ -36,6 +36,12 @@ namespace TacticalDirector.MatchClientCore
     /// the intent, not an error, and <see cref="ComputePose"/>'s tests assert the skew explicitly so
     /// nobody later "fixes" it.</para>
     ///
+    /// <para><b>Field of view belongs here too.</b> Where the camera is and how much it sees are one
+    /// framing decision, not two, and splitting them would leave the second half to be invented in
+    /// the <c>MonoBehaviour</c> the CI gate cannot compile — §12 rule 1. It travels on
+    /// <see cref="PitchCameraPose"/>; <see cref="GroundExtentAlongTilt"/> says what it buys, in
+    /// metres of visible pitch.</para>
+    ///
     /// <para>Pure and stateless: the caller owns the target (from <see cref="FollowBallCamera"/>) and
     /// gets back a placement. Nothing here reads a clock or reaches the simulation.</para>
     /// </summary>
@@ -64,7 +70,40 @@ namespace TacticalDirector.MatchClientCore
                 height,
                 lookAt.z - setback);
 
-            return new PitchCameraPose(position, lookAt);
+            return new PitchCameraPose(position, lookAt, MatchClientConstants.CameraVerticalFovDegrees);
+        }
+
+        /// <summary>
+        /// How far the visible ground reaches in front of and beyond the aim point, along the tilt
+        /// axis (world Z), in metres.
+        ///
+        /// <para><b>The two are not equal, and that is the point.</b> A tilted camera sees a
+        /// trapezoid, not a rectangle: the far edge is stretched by the shallower angle its ray meets
+        /// the ground at, so it lies further beyond the aim point than the near edge lies in front of
+        /// it. Both edges come from <c>height × tan(angle from vertical)</c> — the near edge at
+        /// <c>tilt − fov/2</c>, the far at <c>tilt + fov/2</c> — measured relative to the aim point at
+        /// <c>height × tan(tilt)</c>.</para>
+        ///
+        /// <para>Exposed so the framing has a number attached rather than a guess. It is what makes
+        /// the field of view assertable at all, and it is the honest version of what
+        /// <c>CameraViewHalfHeightM</c> approximates for the clamp (see that constant's note).</para>
+        /// </summary>
+        /// <param name="nearM">Distance from the aim point to the near edge of visible ground.</param>
+        /// <param name="farM">Distance from the aim point to the far edge.</param>
+        public static void GroundExtentAlongTilt(out float nearM, out float farM)
+        {
+            float height = MatchClientConstants.CameraHeightM;
+            float tilt   = MatchClientConstants.CameraTiltDegrees;
+            float halfFov = MatchClientConstants.CameraVerticalFovDegrees * 0.5f;
+
+            float aim = height * Mathf.Tan(tilt * Mathf.Deg2Rad);
+
+            // The near ray may point past the nadir (tilt < fov/2), in which case tan goes negative
+            // and the near edge is behind the point directly below the camera. That is a real view,
+            // not a degenerate one, and the subtraction below stays correct through it. The FAR ray
+            // is the one that must not reach 90°, and the catalogue refuses that pairing at boot.
+            nearM = aim - height * Mathf.Tan((tilt - halfFov) * Mathf.Deg2Rad);
+            farM  = height * Mathf.Tan((tilt + halfFov) * Mathf.Deg2Rad) - aim;
         }
 
         /// <summary>
@@ -99,4 +138,11 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | gate-compiled assembly rather than in the MonoBehaviour the CI  |
 // |         |            |        | gate can never see (§12 rule 1). Returns two world points, not  |
 // |         |            |        | a rotation: Quaternion is not in the shim's surface.            |
+// | 1.1     | 2026-08-04 | —      | AR pass 2, H-1: the rig placed the camera but never said how    |
+// |         |            |        | much it sees, so the field of view — as much a framing decision |
+// |         |            |        | as the height and the tilt — would have been chosen in the      |
+// |         |            |        | binding, exactly the leak the P4a/P4b split closes. It is now   |
+// |         |            |        | on the pose, and + GroundExtentAlongTilt gives it a number:     |
+// |         |            |        | the near and far reach of visible ground, asymmetric because a  |
+// |         |            |        | tilted camera sees a trapezoid.                                 |
 #endregion

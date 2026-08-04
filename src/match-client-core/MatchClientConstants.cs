@@ -6,7 +6,8 @@
 //           Code Standards #20 (constant catalogue; no magic numbers)
 // Purpose:  Constant catalogue for the host-free interactive-client core: the master-plan
 //           playback-speed set the UI presents (Pause is a streamer state, not a multiplier), the P3
-//           interpolator snap distances, the P3 follow-ball camera tuning, and the P4a render-cue sizes.
+//           interpolator snap distances, the P3 follow-ball camera tuning, the P4a camera rig
+//           (height, tilt, lateral offset, field of view), and the P4a render-cue sizes.
 
 using System;
 
@@ -149,9 +150,42 @@ namespace TacticalDirector.MatchClientCore
         /// camera dead-centre the two halves of the pitch project identically and the eye has no
         /// asymmetry to read depth from. It skews the effective tilt slightly — see
         /// <see cref="PitchCameraRig.EffectiveTiltDegrees"/>, which reports the real angle.</para>
+        ///
+        /// <para>Either sign is meaningful (the offset picks a side), so this is checked for
+        /// finiteness rather than range — but it IS checked. It is the one dial that lands directly
+        /// in the camera's world position, so a non-finite value here puts the camera nowhere while
+        /// every assertion about the aim point still passes.</para>
         /// </summary>
-        public static readonly float CameraLateralOffsetM =
-            Config.GetFloat("match-client", "CameraLateralOffsetM", 5f);
+        public static readonly float CameraLateralOffsetM = RequireFinite(
+            Config.GetFloat("match-client", "CameraLateralOffsetM", 5f), "CameraLateralOffsetM");
+
+        /// <summary>
+        /// [GT] Vertical field of view of the match camera, degrees. Config key [match-client]
+        /// CameraVerticalFovDegrees. Unity's <c>Camera.fieldOfView</c> is the vertical one, so this
+        /// is assigned to it directly.
+        ///
+        /// <para><b>Why the core owns this at all.</b> Height and tilt decide where the camera is;
+        /// the field of view decides how much of the pitch it sees, which is just as much a framing
+        /// decision. Leaving it out would mean P4b picking a number inside a <c>MonoBehaviour</c> —
+        /// a decision in the one place the CI gate cannot compile, which is precisely what §12
+        /// rule 1 and the P4a/P4b split exist to prevent. It rides on
+        /// <see cref="PitchCameraPose"/> so the binding assigns it and chooses nothing.</para>
+        ///
+        /// <para>The upper bound is not cosmetic: the camera's lowest ray leaves the ground entirely
+        /// once <c>tilt + fov/2</c> reaches 90°, which puts the horizon in shot and sends the far
+        /// edge of the visible ground to infinity. That pairing is enforced at boot.</para>
+        ///
+        /// <para>Declared after <see cref="CameraTiltDegrees"/> deliberately: the pairing check reads
+        /// that value, and a <c>static readonly</c> field initialises in textual order. Reading a
+        /// [GT] declared below would see zero and pass the check vacuously — the
+        /// <c>PerceptionConstants.BASE_FOV_HALF_ANGLE</c> defect, which has shipped in this project
+        /// three times.</para>
+        /// </summary>
+        public static readonly float CameraVerticalFovDegrees = RequireFarRayMeetsGround(
+            RequireInRange(
+                Config.GetFloat("match-client", "CameraVerticalFovDegrees", 60f), 1f, 170f,
+                "CameraVerticalFovDegrees"),
+            CameraTiltDegrees);
 
         #endregion
 
@@ -218,6 +252,46 @@ namespace TacticalDirector.MatchClientCore
         }
 
         /// <summary>
+        /// Returns <paramref name="value"/>, or throws when it is NaN or infinite. For a dial whose
+        /// sign is meaningful, so no range bounds it, but which still cannot be non-finite.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">The configured value is not finite.</exception>
+        internal static float RequireFinite(float value, string key)
+        {
+            if (!float.IsFinite(value))
+            {
+                throw new InvalidOperationException(
+                    "[match-client] " + key + " is " + Inv(value) + "; it must be a finite number.");
+            }
+
+            return value;
+        }
+
+        /// <summary>
+        /// Returns <paramref name="fovDegrees"/>, or throws when the camera's lowest ray
+        /// (<c>tilt + fov/2</c> from vertical) reaches or passes the horizontal. Past that the ray
+        /// never meets the ground: the horizon is in shot and the visible ground runs to infinity, so
+        /// no framing figure means anything. Two individually-legal dials can pair into it, which is
+        /// why this is a pairing check rather than two range checks.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">The pair puts the horizon in shot.</exception>
+        internal static float RequireFarRayMeetsGround(float fovDegrees, float tiltDegrees)
+        {
+            float farRay = tiltDegrees + fovDegrees * 0.5f;
+
+            if (!(farRay < 90f))
+            {
+                throw new InvalidOperationException(
+                    "[match-client] CameraTiltDegrees (" + Inv(tiltDegrees) +
+                    ") + CameraVerticalFovDegrees/2 (" + Inv(fovDegrees * 0.5f) + ") is " +
+                    Inv(farRay) + " degrees from vertical; it must stay under 90, or the camera's " +
+                    "lowest ray never meets the ground.");
+            }
+
+            return fovDegrees;
+        }
+
+        /// <summary>
         /// Returns <paramref name="value"/>, or throws when it does not exceed
         /// <paramref name="floor"/>. For invariants between two constants in this catalogue, which a
         /// per-key range check cannot express.
@@ -279,4 +353,28 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | than the penalty area"; a 0.25 m marker is ~9 px, not one);    |
 // |         |            |        | both replaced with checked numbers, and the cap's 10 m         |
 // |         |            |        | saturation limitation is now stated rather than left implicit. |
+// | 1.4     | 2026-08-04 | —      | Tilted-view revision (owner call): the three ball-height dials  |
+// |         |            |        | are GONE — BallHeightViewOffsetPerMetre, BallHeightScalePerMetre|
+// |         |            |        | and BallMaxHeightScale existed only to fake altitude on a flat  |
+// |         |            |        | plane, and a tilted camera conveys it for free. In their place  |
+// |         |            |        | the camera rig's dials: CameraHeightM, CameraTiltDegrees (from  |
+// |         |            |        | VERTICAL) and CameraLateralOffsetM, plus RequireInRange for the |
+// |         |            |        | tilt's bound. CameraViewHalfWidth/HalfHeightM keep their values |
+// |         |            |        | but are now documented as APPROXIMATE: they describe a          |
+// |         |            |        | rectangle of visible ground where a tilted view sees a          |
+// |         |            |        | trapezoid.                                                      |
+// |         |            |        | (Row written 2026-08-04 in the following AR pass — the v1.4     |
+// |         |            |        | edit landed without one, so v1.3 was left as the newest row     |
+// |         |            |        | while describing constants the file no longer had.)             |
+// | 1.5     | 2026-08-04 | —      | AR pass 2, H-1/M-3: + CameraVerticalFovDegrees. Height and tilt |
+// |         |            |        | placed the camera but nothing said how much it SEES, so P4b     |
+// |         |            |        | would have picked a field of view inside a MonoBehaviour — a    |
+// |         |            |        | framing decision in the one place the gate cannot compile,      |
+// |         |            |        | which is what the P4a/P4b split exists to prevent. Its bound is |
+// |         |            |        | paired with the tilt (tilt + fov/2 < 90, or the lowest ray      |
+// |         |            |        | never meets the ground and the visible area is unbounded).      |
+// |         |            |        | M-3: CameraLateralOffsetM was the only camera dial with no      |
+// |         |            |        | validation at all, and it lands straight in the camera's world  |
+// |         |            |        | position — now RequireFinite (either sign is meaningful, so a   |
+// |         |            |        | range would be wrong).                                          |
 #endregion

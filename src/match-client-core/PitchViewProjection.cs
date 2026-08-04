@@ -38,6 +38,14 @@ namespace TacticalDirector.MatchClientCore
     /// assertions in the tests cheap to write, and this repo has shipped three home/away asymmetry
     /// defects (#8 ERR-008-002) for want of them.</para>
     ///
+    /// <para><b>Two mappings, and they are inverses.</b> <see cref="ToWorld"/> places a pitch position
+    /// in the world; <see cref="TryGroundHit"/> brings a world-space ray back to a pitch position.
+    /// An earlier flat-view pair (<c>ToView</c>/<c>ToPitch</c>, both 2D) was kept alongside them
+    /// through the tilted-view revision and had no caller left: <c>ToView</c> was
+    /// <see cref="ToWorld"/> with the height dropped, and the inverse a click needs is a ray
+    /// intersection, not a subtraction. A second name for one mapping is the drift this class exists
+    /// to prevent, so they are gone.</para>
+    ///
     /// <para>Pure, stateless, allocation-free. The forward mappings do not gate their inputs —
     /// <see cref="MatchRenderProjection"/> refuses a non-finite position before it gets here, and
     /// re-checking would put a branch on the per-agent render path. <see cref="TryGroundHit"/> is the
@@ -51,16 +59,6 @@ namespace TacticalDirector.MatchClientCore
 
         /// <summary>Half the pitch's touchline-to-touchline extent (m) — the world-Z origin shift.</summary>
         public static float HalfWidthM => MatchEngineConstants.PITCH_WIDTH_M * 0.5f;
-
-        /// <summary>
-        /// Projects a pitch-plane position (corner-origin metres) onto the centre-origin ground
-        /// plane, as a 2D point. This is the plan-view pair with <see cref="ToPitch"/>; for something
-        /// a renderer positions, use <see cref="ToWorld"/>.
-        /// </summary>
-        public static Vector2 ToView(Vector2 pitchXY)
-        {
-            return new Vector2(pitchXY.x - HalfLengthM, pitchXY.y - HalfWidthM);
-        }
 
         /// <summary>
         /// Places a pitch position at a given height in the world frame: pitch X → world X, pitch Y →
@@ -82,15 +80,6 @@ namespace TacticalDirector.MatchClientCore
         public static Vector3 ToWorldGround(Vector3 pitchXYZ)
         {
             return new Vector3(pitchXYZ.x - HalfLengthM, 0f, pitchXYZ.y - HalfWidthM);
-        }
-
-        /// <summary>
-        /// Inverse of <see cref="ToView"/>: turns a ground-plane point back into corner-origin pitch
-        /// metres.
-        /// </summary>
-        public static Vector2 ToPitch(Vector2 viewXY)
-        {
-            return new Vector2(viewXY.x + HalfLengthM, viewXY.y + HalfWidthM);
         }
 
         /// <summary>
@@ -169,4 +158,12 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | (Vector3 → Vector2) is replaced by ToWorldGround; ToView /      |
 // |         |            |        | ToPitch stay as the plan-view pair. Camera is not in the CI     |
 // |         |            |        | shim, so the Unity side supplies the ray and decides nothing.   |
+// | 1.2     | 2026-08-04 | —      | AR pass 2, M-2: ToView / ToPitch DELETED. v1.1 kept them "as   |
+// |         |            |        | the plan-view pair" and the revision left them with no          |
+// |         |            |        | production caller — ToView was ToWorld with the height dropped, |
+// |         |            |        | and the inverse a click needs is TryGroundHit, not a            |
+// |         |            |        | subtraction. Two names for one mapping is precisely the drift   |
+// |         |            |        | this single-site class exists to prevent. Their tests re-anchor |
+// |         |            |        | onto ToWorld / ToWorldGround, which cover the same origin shift,|
+// |         |            |        | scale and round trip.                                           |
 #endregion

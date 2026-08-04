@@ -16,7 +16,7 @@ namespace TacticalDirector.MatchClientCore
     ///
     /// <para><b>Why a look-at point rather than a rotation.</b> <c>Quaternion</c> is not in the CI
     /// shim's surface, and adding it to buy coverage is the same bargain §12 refuses for
-    /// <c>MonoBehaviour</c>. Two points say everything the placement needs to say, are trivially
+    /// <c>MonoBehaviour</c>. Two points say everything the orientation needs to say, are trivially
     /// assertable, and leave the Unity side calling <c>transform.LookAt</c> — binding, with no
     /// decision in it.</para>
     /// </summary>
@@ -28,11 +28,23 @@ namespace TacticalDirector.MatchClientCore
         /// <summary>The world-space point the camera is aimed at — always on the ground plane.</summary>
         public readonly Vector3 LookAt;
 
+        /// <summary>
+        /// Vertical field of view in degrees, for Unity's <c>Camera.fieldOfView</c> (which is the
+        /// vertical one).
+        ///
+        /// <para>It rides on the pose rather than being read from the catalogue by the binding for
+        /// the same reason everything else here does: how much pitch is in shot is a framing
+        /// decision, and §12 rule 1 keeps decisions out of the <c>MonoBehaviour</c>. Three
+        /// assignments — position, look-at, field of view — and the binding has chosen nothing.</para>
+        /// </summary>
+        public readonly float FieldOfViewDegrees;
+
         /// <summary>Constructs a placement. Built by <see cref="PitchCameraRig"/>.</summary>
-        public PitchCameraPose(Vector3 position, Vector3 lookAt)
+        public PitchCameraPose(Vector3 position, Vector3 lookAt, float fieldOfViewDegrees)
         {
-            Position = position;
-            LookAt   = lookAt;
+            Position           = position;
+            LookAt             = lookAt;
+            FieldOfViewDegrees = fieldOfViewDegrees;
         }
     }
 }
@@ -43,4 +55,10 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | placement as two world points, so no rotation type is needed —  |
 // |         |            |        | Quaternion is not in the shim, and widening it to buy coverage  |
 // |         |            |        | is the bargain §12 already refuses for MonoBehaviour.           |
+// | 1.1     | 2026-08-04 | —      | AR pass 2, H-1: + FieldOfViewDegrees. Position and look-at      |
+// |         |            |        | placed the camera but said nothing about how much it sees, so   |
+// |         |            |        | the binding would have chosen a field of view itself — a        |
+// |         |            |        | framing decision inside the MonoBehaviour the gate cannot       |
+// |         |            |        | compile. The pose is now everything Camera needs and nothing    |
+// |         |            |        | is left to decide on the far side of the boundary.              |
 #endregion

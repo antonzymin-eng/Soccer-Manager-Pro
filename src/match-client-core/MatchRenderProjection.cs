@@ -218,4 +218,14 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | M-3: passes HasBall rather than a ring radius.                 |
 // |         |            |        | M-4: the cap-below-1 repair branch is gone; MatchClientConstants |
 // |         |            |        | refuses one at boot instead.                                   |
+// | 1.2     | 2026-08-04 | —      | Tilted-view revision (owner call): HeightScale is DELETED and   |
+// |         |            |        | positions are projected with ToWorld / ToWorldGround instead of |
+// |         |            |        | the flat view plane. The ball is placed at its real height on   |
+// |         |            |        | world Y and the camera conveys altitude, so no sprite lift and  |
+// |         |            |        | no size ramp are computed here at all; the shadow stays,        |
+// |         |            |        | because perspective cannot say which pitch point the ball is    |
+// |         |            |        | over. Ball HEIGHT keeps its graceful degradation from v1.1.     |
+// |         |            |        | (Row written 2026-08-04 in the following AR pass — the v1.2     |
+// |         |            |        | edit landed without one, leaving v1.1 as the newest row while   |
+// |         |            |        | describing a HeightScale the file no longer had.)               |
 #endregion
