@@ -12,7 +12,36 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 4, 2026, latest same day (**Football-judgment proxy review — the remediation
+> **Last Updated:** August 4, 2026, latest same day (**ERR-008-020 — the doctrine's template fix
+> landed: the pass lane learns who the defender is, and a false "FIXED" claim is corrected.** First
+> fix under `football-judgment-proxy-review.md` §6, exactly as converged: #8 §3.1.3.3's binary 0.8 m
+> `is_interceptor` corridor — 2 cm of defender position stepped `PassLaneScore` by 0.33, and no
+> defender attribute entered the judgment, so a Pace/Anticipation 1/1 defender priced a lane
+> identically to a 20/20 one — becomes a continuous per-opponent threat weight: linear falloff
+> (core 0.4 m [GT], zero at 1.2 m [GT], **ramp centred on the old cliff so integrated threat is
+> preserved and the neutral verification rows reproduce exactly** — doctrine P5, locked by test) ×
+> defender Anticipation+Pace ability (0.6–1.4 [GT], average ⇒ exactly 1.0) read through the passer's
+> **Vision as discrimination fidelity** (P2: `perceived = 1 + fidelity × (true − 1)`, floor 0.2 [GT]
+> — a Vision-1 passer reads everyone as near-average, which IS the pre-fix engine; §3.2.2's Vision
+> term untouched, P3 no double-count). Plumbing: `DecisionTree.SetAllAgentAttributes` boot seam (the
+> `SetMatchSeed` pattern) carries the engine's live `_dtAttrs` reference into `DecisionContext` —
+> substitutions visible through it; null view ⇒ ability-neutral, never an exception. Spec §3.1.3.3
+> rewritten (v1.3, worked example + verification table), shot lane §3.1.4.3 deferred with a scope
+> note (owner call), `spec-error-log.md` → v1.57, 6 `OptionGeneratorTests` locks incl. the away-side
+> mirror. No `SNAPSHOT_SCHEMA_VERSION` change (the view is an injected dependency, excluded from
+> `CaptureState`), no new RNG stream / domain tag / draw site, no draw-order change; digests move
+> for any match with a PASS candidate near a defender, as intended. **Blast radius recorded:** every
+> tick-window/rate-band instrument may shift on its seeds and cannot be checked here; the A4a
+> round-resolution fit needs its Step-0 re-check after the first measured corpus; FR-PO-052 adds no
+> allocation, only a few float ops per candidate. **Gate NOT run — no .NET SDK in this environment;
+> nothing compiled or executed; CI's dotnet gate on this push is the first compile.** **Separately,
+> a record correction:** the review file's §2 claim that ERR-008-019 (the long-shot cliff) was
+> "FIXED … gate green" is **false against both branches** — no log entry exists, the cliff is live
+> in `UtilityWeights.cs`/`UtilityScorer.cs` and the spec, and no branch carries a fix; the prior
+> session recorded a landing that never happened (the fabricated-claims trap). Review §2/§5
+> corrected, the finding re-opened (33 open again), the id soft-reserved. Prior entry below.)
+
+> **Last Updated (prior):** August 4, 2026, latest same day (**Football-judgment proxy review — the remediation
 > doctrine (§6) landed, doc-only.** The review file stops being identification-only: an owner session
 > converged the general approach before any of the 33 open findings gets a fix, and §6 records it so
 > each fix cites a principle instead of re-arguing the method up to 33 times. The frame is the owner's

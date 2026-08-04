@@ -1,5 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
+// Modified: 2026-08-04 (ERR-008-020: SetAllAgentAttributes(_dtAttrs) wired per DecisionTree at boot — the §3.1.3.3 pass-lane attribute view)
 // Modified: 2026-07-27  (shot-outcome pass: live shot pressure query — ComputeOpponentPressureScalar)
 // Modified: 2026-07-27  (B3: the #37 KD-7 read-only per-tick ledger tap)
 // Modified: 2026-06-29 (#21 T2 Pressing AI (#13) Phase-D writer — route TeamTactic.LineOfEngagement → PressingSnapshot)
@@ -843,6 +844,10 @@ namespace TacticalDirector.MatchEngine
             {
                 _decisionTrees[i] = new DecisionTreeAI(
                     i, movementController, matchSeed, _passExecutors[i], _shotExecutors[i], saveDispatch);
+                // ERR-008-020: the §3.1.3.3 pass-lane threat model reads opponents'
+                // Anticipation/Pace through this live array reference — substitutions
+                // (which rewrite _dtAttrs[slot]) are visible without re-wiring.
+                _decisionTrees[i].SetAllAgentAttributes(_dtAttrs);
             }
 
             // §4 step 2 (Phase E) — reset the process-static EventBus for THIS match before booting the
@@ -8069,4 +8074,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | agent id) and is reconstructed rather than serialized, so restore         |
 // |         |            |        | re-derives the same ids and sees no change ⇒ no schema bump. Selection   |
 // |         |            |        | still resolves LAST-match-wins, preserving the pre-AR-2 fill order.       |
+// | 1.61    | 2026-08-04 | —      | ERR-008-020: each DecisionTree gets SetAllAgentAttributes(_dtAttrs) at    |
+// |         |            |        | boot — the §3.1.3.3 pass-lane threat model's attribute view. Live array   |
+// |         |            |        | reference: SubstitutePlayer's _dtAttrs[slot] rewrite is visible without   |
+// |         |            |        | re-wiring. Injected dependency, not engine state — no schema change.      |
 #endregion

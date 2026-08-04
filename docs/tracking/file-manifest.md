@@ -1,7 +1,21 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 4, 2026, latest same day (**Football-judgment proxy review — §6 remediation doctrine.**
+**Last Updated:** August 4, 2026, latest same day (**ERR-008-020 — the §3.1.3.3 pass-lane threat model
+(the judgment-proxy doctrine's template fix).** **No new files.** **Modified in `src/decision-tree/`:**
+`UtilityWeights.cs` → v1.7 (5 new `[GT]`s; `PASS_LANE_WIDTH_HALF` removed), `OptionGenerator.cs` → v1.6
+(`ComputeLaneThreat` + `PerceivedInterceptAbility`), `DecisionContext.cs` → v1.2 (+ `AllAgentAttributes`),
+`DecisionContextAssembler.cs` → v1.5, `DecisionTree.cs` → v1.6 (+ `SetAllAgentAttributes`),
+`Tests/OptionGeneratorTests.cs` → v1.5 (6 new locks incl. the away mirror). **In `src/match-engine/`:**
+`MatchEngine.cs` → v1.61 (per-tree `_dtAttrs` wiring at boot). **Docs:**
+`docs/specs/decision-tree/section-3-1.md` → v1.3 (§3.1.3.3 rewritten; §3.1.4.3 scope note),
+`spec-error-log.md` → v1.57 (ERR-008-020 filed+resolved; two v1.56 header labels relabelled `(prior)`),
+`football-judgment-proxy-review.md` (§6.4 marked LANDED; §1/§2/§5 corrected — the ERR-008-019 "FIXED"
+claim was false, finding re-opened), `CLAUDE.md` (+ OPEN ISSUES entry, 13 → 14 active), `open-issues.md`,
+`CHANGELOG.md`, `CHANGELOG-src.md` → v2.61, `README.md`. No new assembly; production count stays 31.
+No `SNAPSHOT_SCHEMA_VERSION` change. **Gate NOT run — no .NET SDK in this environment.** **Prior entry below.**)
+
+**Last Updated (prior):** August 4, 2026, latest same day (**Football-judgment proxy review — §6 remediation doctrine.**
 **No new files; no code.** **Modified:** `docs/tracking/football-judgment-proxy-review.md` (new §6 — the
 owner-converged remediation doctrine: the recognition→decision→execution frame with its five flaw
 mitigations, principles P1–P5, the attribute ownership ledger, the formula-patch / mechanism /
