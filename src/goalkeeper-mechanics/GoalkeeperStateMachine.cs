@@ -3,6 +3,7 @@
 // Modified: 2026-05-28
 // Modified: 2026-07-27 (§5.Z.17 / ERR-011-002: parameters renamed from the KEEPER's perspective, new Anticipate → Set exit, Recovering → Resting re-anchored to the far third)
 // Modified: 2026-07-28 (gk-contact-rate (ERR-011-007): Anticipate -> Diving gated on GoalkeeperDiveKinematics.ShouldCommitDive — a committed keeper holds its coiled posture until the dive envelope covers the ball arrival)
+// Modified: 2026-08-04 (wiring backlog W1 / ERR-011-009: + rushTargetReached — Rushing -> Recovering and OneOnOne -> Recovering when the keeper arrives at the LOCKED rush target without contact; a reached rush previously had no exit at all)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.1, Code Standards #20
 // Purpose:  Pure state evaluator for the GK state machine. Implements both the 10 Hz tactical
@@ -209,6 +210,13 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// <param name="attackerWithinOneVsOneRadius">True if attacker with ball is within ONE_VS_ONE_TRIGGER_RADIUS_M. §3.7.</param>
         /// <param name="gkWithinSmotherRadius">True if GK is within SMOTHER_TRIGGER_RADIUS_M of attacker. §3.7.</param>
         /// <param name="shotEventDetected">True if ShotExecutedEvent was consumed this frame (Anticipate early trigger). §3.1.</param>
+        /// <param name="rushTargetReached">True if the GK has arrived within RUSH_TARGET_REACHED_RADIUS_M of the
+        /// LOCKED rush target without making contact — the run is finished (ERR-011-009). A completion, not an
+        /// abort: FR-GK-018 / KD-15 forbid ending a committed rush on the ball's trajectory, and this ends it on
+        /// the keeper's own arrival instead. Load-bearing because for a LOOSE ball neither the 1v1 nor the
+        /// smother trigger can fire at all (both require a ball possessor) and F-08 needs one too, so without
+        /// this row a swept ball left the keeper standing over it in <c>Rushing</c> for the rest of the
+        /// match. §3.1.1 / §3.7.2.</param>
         public static GoalkeeperState EvaluatePhysicsTransition(
             GoalkeeperState currentState,
             bool handBallContactOccurred,
@@ -218,7 +226,8 @@ namespace TacticalDirector.GoalkeeperMechanics
             bool rushBallIntercepted,
             bool attackerWithinOneVsOneRadius,
             bool gkWithinSmotherRadius,
-            bool shotEventDetected)
+            bool shotEventDetected,
+            bool rushTargetReached)
         {
             switch (currentState)
             {
@@ -291,6 +300,13 @@ namespace TacticalDirector.GoalkeeperMechanics
                     {
                         return GoalkeeperState.OneOnOne;
                     }
+                    // Rushing → Recovering: the locked target was reached without contact (ERR-011-009).
+                    // Lowest priority of the four, so a rush that arrives AND meets the ball resolves as
+                    // the contact it is.
+                    if (rushTargetReached)
+                    {
+                        return GoalkeeperState.Recovering;
+                    }
                     return GoalkeeperState.Rushing;
                 }
 
@@ -315,6 +331,14 @@ namespace TacticalDirector.GoalkeeperMechanics
                     if (gkWithinSmotherRadius)
                     {
                         return GoalkeeperState.Smothered;
+                    }
+                    // OneOnOne → Recovering: the locked target was reached without ever closing to a
+                    // smother (ERR-011-009). OneOnOne is reachable only from Rushing, so it inherits the
+                    // same strand: an attacker who takes the ball back out of the 1v1 radius leaves the
+                    // keeper with no exit but a SaveIntent that no producer will send.
+                    if (rushTargetReached)
+                    {
+                        return GoalkeeperState.Recovering;
                     }
                     return GoalkeeperState.OneOnOne;
                 }
@@ -342,4 +366,13 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |     |            |   | were dive-early with the envelope closed 456-2000 ms before the crossing;     |
 // |     |            |   | dive-late exactly 0). Close-range behaviour unchanged (inside-lead balls      |
 // |     |            |   | dive immediately); non-closing balls hold and disarm via ClearSaveIntent.     |
+// | 1.7 | 2026-08-04 | — | Wiring backlog W1 (ERR-011-009). New rushTargetReached parameter and the two |
+// |     |            |   | SS3.1.1 rows it drives: Rushing -> Recovering and OneOnOne -> Recovering on  |
+// |     |            |   | arrival at the LOCKED target without contact. Rushing had exactly three exits|
+// |     |            |   | (contact, the 1v1 radius, F-08) and OneOnOne two (SaveIntent, the smother    |
+// |     |            |   | radius) — and for a LOOSE ball the radius checks return false outright       |
+// |     |            |   | (CheckAttackerWithinRadius requires a possessor) while F-08 needs one, so a  |
+// |     |            |   | keeper who swept a loose ball had NO exit and stood over it in Rushing for   |
+// |     |            |   | the rest of the match. A completion, not an abort: FR-GK-018 / KD-15 remain  |
+// |     |            |   | untouched, since nothing about the ball's trajectory ends the rush.          |
 #endregion

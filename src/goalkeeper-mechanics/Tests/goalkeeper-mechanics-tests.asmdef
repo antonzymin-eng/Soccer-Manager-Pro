@@ -6,6 +6,7 @@
         "TacticalDirector.BallPhysics",
         "TacticalDirector.AgentMovement",
         "TacticalDirector.CollisionSystem",
+        "TacticalDirector.DeterministicSim",
         "TacticalDirector.EventSystem",
         "TacticalDirector.TestingStrategy",
         "UnityEngine.TestRunner",

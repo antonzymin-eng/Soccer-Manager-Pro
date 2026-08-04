@@ -4,6 +4,7 @@
 // Modified: 2026-07-27 (§5.Z.17: + [DERIVED] DegeneracyEpsilon, + [GT] DivePredictionHorizonS)
 // Modified: 2026-07-28 (gk-catch-parry-conversion KD-C3 [GT] recalibration, all inside #11 §3.4 spec ranges)
 // Modified: 2026-07-28 (gk-contact-rate (ERR-011-007): + [GT] DiveCommitMinLeadFrac (the SS3.3.6 commit-lead floor))
+// Modified: 2026-08-04 (wiring backlog W1 / ERR-011-009: + [GT] RushTargetReachedRadiusM (the SS3.1.1 rush-completion rows))
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.4, KD-9, FR-GK-015, FR-GK-042, Code Standards #20
 // Purpose:  All numeric constants for the goalkeeper mechanics system. No magic literals in formula files.
@@ -396,6 +397,51 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// <summary>[GT] Fatigue penalty on rush commit speed (m/s per unit fatigue). §3.7 / KD-8.</summary>
         public static readonly float RushCommitFatigueCoeff = Config.GetFloat("goalkeeper-mechanics", "RushCommitFatigueCoeff", 0.9f);
 
+        // §3.7.0 rush-commit distance (ERR-011-010). How far from his own goal the keeper will come to
+        // meet an unopposed carrier or a ball he can reach. This is the "when" #11 §3.7 delegated to
+        // Decision Tree #8, which has no keeper model and structurally cannot acquire one — the same
+        // shape as §3.3.6's dive-commit gate, which #11 took back for the same reason. Attribute-driven:
+        // a keeper who is good at one-on-ones and composed comes out early and from further; a timid or
+        // tired one stays near his line. ALL FIVE ARE UN-CALIBRATED — the rush subsystem had no
+        // production caller when they were written, so no measurement stands behind any of them.
+
+        /// <summary>[GT] Baseline rush-commit distance (m) from the keeper's own goal, before attributes.
+        /// The distance a keeper with zero OneVsOne and zero Composure will come out to. §3.7.0.</summary>
+        public static readonly float RushCommitBaseM = Config.GetFloat("goalkeeper-mechanics", "RushCommitBaseM", 8.0f);
+
+        /// <summary>[GT] Metres of extra rush-commit distance per unit normalised <c>OneVsOne</c>. The
+        /// dominant term: coming to meet a carrier IS the one-on-one, and this is the attribute that
+        /// names it. Consumed for the commit DECISION only — FR-GK-024's "no alternative formula path
+        /// exists for 1v1 saves" governs the §3.2 / §3.5 save formulas and is untouched. §3.7.0.</summary>
+        public static readonly float RushCommitKOneVsOne = Config.GetFloat("goalkeeper-mechanics", "RushCommitKOneVsOne", 8.0f);
+
+        /// <summary>[GT] Metres of extra rush-commit distance per unit normalised <c>Composure</c> —
+        /// leaving the goal empty is a nerve decision as much as a technical one. §3.7.0.</summary>
+        public static readonly float RushCommitKComposure = Config.GetFloat("goalkeeper-mechanics", "RushCommitKComposure", 4.0f);
+
+        /// <summary>[GT] Metres of rush-commit distance lost per unit fatigue (0 = rested, 1 = spent —
+        /// the project-wide convention). A tired keeper backs off rather than gambling on a sprint he
+        /// cannot finish; same sign as <c>RushCommitFatigueCoeff</c> on the launch speed. §3.7.0.</summary>
+        public static readonly float RushCommitFatiguePenaltyM = Config.GetFloat("goalkeeper-mechanics", "RushCommitFatiguePenaltyM", 3.0f);
+
+        /// <summary>[GT] Floor on the rush-commit distance (m). Even the most reluctant keeper comes for
+        /// a ball this close to his own goal. §3.7.0.</summary>
+        public static readonly float RushCommitMinDistanceM = Config.GetFloat("goalkeeper-mechanics", "RushCommitMinDistanceM", 4.0f);
+
+        /// <summary>[GT] Ceiling on the rush-commit distance (m) — the furthest from his goal ANY keeper
+        /// will come, whatever his attributes. Roughly the penalty area plus a stride. §3.7.0.</summary>
+        public static readonly float RushCommitMaxDistanceM = Config.GetFloat("goalkeeper-mechanics", "RushCommitMaxDistanceM", 22.0f);
+
+        /// <summary>
+        /// [GT] Distance (m) from the LOCKED rush target at which the run counts as finished — §3.1.1's
+        /// <c>Rushing → Recovering</c> / <c>OneOnOne → Recovering</c> rows (ERR-011-009). A completion,
+        /// NOT an abort: nothing about the ball's trajectory ends a committed rush (FR-GK-018 / KD-15);
+        /// only the keeper finishing the run he committed to does. Config key
+        /// [goalkeeper-mechanics] RushTargetReachedRadiusM. §3.7.2.
+        /// </summary>
+        public static readonly float RushTargetReachedRadiusM =
+            Config.GetFloat("goalkeeper-mechanics", "RushTargetReachedRadiusM", 0.5f);
+
         // ── §3.4.7 Distribution-Geometry Constants ───────────────────────────────────
 
         /// <summary>[GT] Release height for throw distributions (m above gkPosition.z). §3.8.</summary>
@@ -495,4 +541,8 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |     |            |   | 0.78→0.74 (measured contact quality 0.29–0.60 could not reach the catch   |
 // |     |            |   | band through the fixed pointQuality lottery even with live windows).      |
 // | 1.4 | 2026-07-28 | — | gk-contact-rate (ERR-011-007): + [GT] DiveCommitMinLeadFrac = 0.25 (SS3.3.6). |
+// | 1.5 | 2026-08-04 | — | Wiring backlog W1 (ERR-011-009): + [GT] RushTargetReachedRadiusM = 0.5 m. A |
+// |     |            |   | rush that REACHED its locked target had no exit in SS3.1.1, and for a loose |
+// |     |            |   | ball the 1v1/smother triggers cannot fire at all (they require a possessor),|
+// |     |            |   | so a swept ball stranded the keeper in Rushing for the rest of the match.   |
 #endregion

@@ -1,6 +1,7 @@
 // File:     src/goalkeeper-mechanics/GoalkeeperRushDispatch.cs
 // Created:  2026-05-28
 // Modified: 2026-05-28
+// Modified: 2026-08-04 (wiring backlog W1 / ERR-011-010: + §3.7.0 ComputeRushCommitDistanceM — how far from his own goal a keeper comes out, from his OneVsOne / Composure / fatigue. §3.7 had delegated the decision to Decision Tree #8, which has no keeper model and cannot acquire one, so it had no owner and CommitRushIntent sat uncalled. See docs/tracking/gk-rush-trigger-design.md)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.7, KD-15, Code Standards #20
 // Purpose:  Rush launch impulse and per-frame position update. Intent-staleness policy: rushTarget
@@ -31,6 +32,43 @@ namespace TacticalDirector.GoalkeeperMechanics
             return GoalkeeperConstants.RushLaunchBaseMps
                  + GoalkeeperConstants.RushLaunchKPace * attrs.PaceNorm
                  - GoalkeeperConstants.RushCommitFatigueCoeff * attrs.Fatigue;
+        }
+
+        /// <summary>
+        /// Computes how far from his own goal this keeper will come out (m) — the §3.7.0 rush-commit
+        /// distance (ERR-011-010).
+        ///
+        /// <para>§3.7's state entry delegated the rush DECISION to Decision Tree #8, which has no
+        /// goalkeeper model and structurally cannot acquire one, so the condition had no owner and
+        /// <c>CommitRushIntent</c> sat uncalled. #11 takes it back here, exactly as §3.3.6 took back the
+        /// dive-commit timing for the same reason.</para>
+        ///
+        /// <para>Formula: <c>RUSH_COMMIT_BASE_M + RUSH_COMMIT_K_ONE_VS_ONE · OneVsOne_norm
+        /// + RUSH_COMMIT_K_COMPOSURE · Composure_norm − RUSH_COMMIT_FATIGUE_PENALTY_M · fatigue</c>,
+        /// clamped to <c>[RUSH_COMMIT_MIN_DISTANCE_M, RUSH_COMMIT_MAX_DISTANCE_M]</c>. The keeper is the
+        /// only judge of when to leave his goal, so the decision is his attributes and nothing else: an
+        /// aggressive, composed sweeper-keeper commits from the edge of the area, a timid or spent one
+        /// barely leaves his line.</para>
+        ///
+        /// <para><c>OneVsOne</c> is consumed here for the commit DECISION. FR-GK-024 constrains the 1v1
+        /// SAVE (§3.2 <c>requiredReactionMs</c>, §3.5 <c>attrFactor</c>) to closed-form coefficients with
+        /// no alternative path; deciding whether to come out is not a save, and those two formulas are
+        /// untouched.</para>
+        /// §3.7.0. Goalkeeper Mechanics #11 §3.7.
+        /// </summary>
+        /// <param name="attrs">GK agent attributes (fatigue 0 = rested, 1 = spent). §3.7.0.</param>
+        /// <returns>Distance from the keeper's own goal (m) within which he will commit a rush.</returns>
+        public static float ComputeRushCommitDistanceM(GoalkeeperAgentAttributes attrs)
+        {
+            float distanceM = GoalkeeperConstants.RushCommitBaseM
+                            + GoalkeeperConstants.RushCommitKOneVsOne * attrs.OneVsOneNorm
+                            + GoalkeeperConstants.RushCommitKComposure * attrs.ComposureNorm
+                            - GoalkeeperConstants.RushCommitFatiguePenaltyM * attrs.Fatigue;
+
+            return Mathf.Clamp(
+                distanceM,
+                GoalkeeperConstants.RushCommitMinDistanceM,
+                GoalkeeperConstants.RushCommitMaxDistanceM);
         }
 
         /// <summary>
@@ -71,4 +109,14 @@ namespace TacticalDirector.GoalkeeperMechanics
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-05-28 | —      | Initial implementation. |
+// | 1.1     | 2026-08-04 | —      | Wiring backlog W1 (ERR-011-010): + ComputeRushCommitDistanceM,  |
+// |         |            |        | #11 §3.7.0. The WHEN of a rush — clamp(base + k1v1·OneVsOne +   |
+// |         |            |        | kComposure·Composure − fatiguePenalty·fatigue). §3.7 had        |
+// |         |            |        | delegated it to Decision Tree #8, which has no goalkeeper model |
+// |         |            |        | and structurally cannot acquire one (ActionType ordinal 8       |
+// |         |            |        | overflows the 3-bit composure-noise field), so the condition    |
+// |         |            |        | belonged to nobody and every one-on-one was a stationary keeper |
+// |         |            |        | on his line. Consumed for the commit DECISION only —           |
+// |         |            |        | FR-GK-024's closed-form constraint on the 1v1 SAVE formulas is  |
+// |         |            |        | untouched.                                                      |
 #endregion

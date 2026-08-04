@@ -9,7 +9,9 @@ authoritative remediation backlog.
 **Version:** 1.56
 **Updated:** August 4, 2026 (v1.56 — **ERR-008-018 filed + RESOLVED at the close-chance-creation pass** (§5.Z.24). #8 §3.1.5.2 picks a dribble direction by FREE SPACE alone and closes by delegating the correction — *"the scoring stage (§3.2.2) applies directional-to-goal modifiers to the DRIBBLE utility"* — but §3.2.4.1, DRIBBLE's actual formula, has no such factor, and §3.2.2 is the **PASS** formula, so the promised term was delegated to a section that does not own DRIBBLE and never had a home. Measured over six full matches: in the attacking third DRIBBLE is the modal carrier action at **40%** of decisions with a mean cosine to the opponent goal of **−0.302** and only 31% pointing goalward — the average final-third dribble points AWAY from the goal, and the utility was identical either way. Same class as ERR-008-017. Fixed with `DirectionQuality_DRIBBLE` in §3.2.4.1 (the §3.1.3.5 PASS shape), the cross-reference corrected, worked examples recomputed and a Case A′ added; the zero-`BestDirection` degenerate input resolves to the exact ×1.0 identity (KD-V3 restated), so all 22 pre-existing `UtilityScorerTests` are bitwise unchanged. Measured: cosine **−0.302 → +0.006**, goalward **31% → 49%**, moving on **all six seeds with no overlap** between pre- and post-fix distributions. The `[GT]` floor lands at **0.80** rather than the PASS floor of 0.50 because suppressing the dribble pushes the carrier onto HOLD, which has no timeout: at floors 0.65 and 0.50 one seed in six stalled (mean final-third episode 5.1 s → 17.5 s / 28.6 s). **The creation funnel itself did NOT move and is not claimed** (box occupancy 0.11 → 0.10, ball into box 6% → 5%, passes into box 1% → 0%) — the owner doc re-localizes it to #8 §3.1.3 generating PASS candidates only at a teammate's CURRENT POSITION, so the tree cannot pass to a place, only to a player. No schema/RNG/domain-tag/draw-site/draw-order change. Acceptance `match-engine-close-chance` — **2 of 3 predicates fail pre-fix, verified by execution at `7fcd897`**. Prior entry below.)
 
-**Updated:** August 3, 2026 (v1.55 — **ERR-011-008 filed + RESOLVED at the conversion-at-contact pass** (§5.Z.23), and it is the seventh consecutive realism pass whose brief's premise did not survive measurement. `gk-contact-rate-design.md` §7 item 1 recorded the residual as the Stage-0 `pointQuality` lottery and parry placement; the new per-contact instrument found that **the parries and spills work and the CATCH does not**. Ball speed the tick before a contact vs at the end of it: parried **10.8 → 0.0**, deflected 10.3 → 4.2, spilled 13.9 → 9.0 — and **caught 11.1 → 10.8**, one tick of drag, because §3.5.2's catch branch is TWO statements (the possession record AND `ball.velocity = gkHandVelocity`) and only the first was implemented. §3.5's **Outputs** summary is the contributing spec defect: it named `Ball.SetPossessor` alone for the catch, and `IGoalkeeperBallSystem` exposed no park seam, so the omission was invisible from the interface. Possession in this engine is a flag, not a kinematic constraint — the ball integrates unconditionally and the goal check adjudicates on POSITION — so **7 of 10 catches were followed by a goal within 5 s**, with 14 of 15 goals following a keeper contact within 10 s. Fixed with `ParkBall()` at both claim sites (catch + Stage-0 smother); §3.5.2's pseudocode body unchanged, because it was right. No schema/RNG/domain-tag/draw-site/draw-order change. Measured (3 full matches, same seeds): goals **15 → 11** over the corpus (5.0 → **3.7**/match — the closest this engine has measured to football's ~2.7), scorelines 2-2/2-0/6-3 → 1-0/2-2/4-2. Acceptance `match-engine-keeper-claim`: 2 of 3 predicates fail pre-fix, verified by execution (6 of 6 claims left the ball travelling; 5 of 6 held balls entered the keeper's own net). The `pointQuality` lottery is measured in detail and recorded NOT fixed — a probe of the geometry-aware form is reported in the owner doc §7. Prior update below.)
+**Updated:** August 4, 2026 (v1.56 — **ERR-011-009 + ERR-011-010 filed + RESOLVED at wiring backlog W1**, and they are the first entry in this log found by *wiring* rather than by measurement. `GoalkeeperMechanics.CommitRushIntent` had **zero production callers** since it was written, so every one-on-one this engine has ever played was a stationary keeper on his line; W1 gives it one. Reading the `Rushing` exits before switching the trigger on surfaced the defect: #11 §3.1.1 gives `Rushing` three exits and `OneOnOne` two, and for a LOOSE ball **none of them can fire** — the 1v1 and smother triggers are false by construction with no ball possessor, F-08 needs one, and §3.7.2's update converges on the locked target and stops. A keeper who swept a loose ball would have stood over it in `Rushing` for the rest of the match. Everything else anticipated the completion (`RushPhase.Reached` has been in the enum since v0.1 and was never emitted; §3.7.3 reserves `AbortReason.AttackerBeatGK`) — only the table that adjudicates state had no row. Fixed with two §3.1.1 rows + the §3.7.2 terminating check + `[GT] RUSH_TARGET_REACHED_RADIUS_M`; a **completion, not an abort**, so FR-GK-018 / KD-15 are untouched and it ranks below contact, F-08 and the 1v1 trigger. No schema / RNG / domain-tag / draw-site / draw-order change. **Deliberately unlike every entry above it, this one carries NO measured numbers**: the authoring environment has no .NET SDK and the agent proxy denies the installer, so neither the gate nor the new `GkRushDiagnosticTests` instrument was run — see `gk-rush-trigger-design.md` §6. Under KD-W1 the eleven new `[GT]`s are new dials for a dead surface, not retunes, and every one is un-calibrated. **ERR-011-010** is the deeper of the two and explains why the surface was dead for ten weeks: §3.7's state entry delegated the rush DECISION to Decision Tree #8, which has no goalkeeper model and structurally cannot acquire one, so the condition belonged to nobody. Because the "when" was delegated, the spec also never said what a keeper is *deciding* — and the first implementation of this trigger guessed wrong, refusing to send him whenever any team-mate was nearer the ball. That is not the model: **a keeper comes out to reduce the shooting angle**, and a defender chasing the carrier reduces nothing, so a last-man rule keeps him home in exactly the situation he exists for. New §3.7.0 takes the decision back (the §3.3.6 move) and is normative on both halves — only a GOAL-SIDE body in the shot corridor is cover, and how far out he comes is his own `OneVsOne` / `Composure` / fatigue. Prior update below.)
+
+**Updated (prior):** August 3, 2026 (v1.55 — **ERR-011-008 filed + RESOLVED at the conversion-at-contact pass** (§5.Z.23), and it is the seventh consecutive realism pass whose brief's premise did not survive measurement. `gk-contact-rate-design.md` §7 item 1 recorded the residual as the Stage-0 `pointQuality` lottery and parry placement; the new per-contact instrument found that **the parries and spills work and the CATCH does not**. Ball speed the tick before a contact vs at the end of it: parried **10.8 → 0.0**, deflected 10.3 → 4.2, spilled 13.9 → 9.0 — and **caught 11.1 → 10.8**, one tick of drag, because §3.5.2's catch branch is TWO statements (the possession record AND `ball.velocity = gkHandVelocity`) and only the first was implemented. §3.5's **Outputs** summary is the contributing spec defect: it named `Ball.SetPossessor` alone for the catch, and `IGoalkeeperBallSystem` exposed no park seam, so the omission was invisible from the interface. Possession in this engine is a flag, not a kinematic constraint — the ball integrates unconditionally and the goal check adjudicates on POSITION — so **7 of 10 catches were followed by a goal within 5 s**, with 14 of 15 goals following a keeper contact within 10 s. Fixed with `ParkBall()` at both claim sites (catch + Stage-0 smother); §3.5.2's pseudocode body unchanged, because it was right. No schema/RNG/domain-tag/draw-site/draw-order change. Measured (3 full matches, same seeds): goals **15 → 11** over the corpus (5.0 → **3.7**/match — the closest this engine has measured to football's ~2.7), scorelines 2-2/2-0/6-3 → 1-0/2-2/4-2. Acceptance `match-engine-keeper-claim`: 2 of 3 predicates fail pre-fix, verified by execution (6 of 6 claims left the ball travelling; 5 of 6 held balls entered the keeper's own net). The `pointQuality` lottery is measured in detail and recorded NOT fixed — a probe of the geometry-aware form is reported in the owner doc §7. Prior update below.)
 **Updated (prior):** August 2, 2026 (v1.54 — **ERR-020-002 + ERR-020-003 filed, both OPEN, Code Standards #20 §3.5.2-owned.** Found while splitting `src/CLAUDE.md`, which reproduces the layer taxonomy: §3.5.2 places **19 of the 31 assemblies now in `src/`**, leaving the composition root, the management layer, the data layer, `tactical-instructions` and all four client assemblies outside the layer order — so FR-CS-046 decides nothing about ~39% of the tree, including every reference into or out of `match-engine`. ERR-020-002 proposes a **ten-tier order covering all 31 folders**, derived from the `.asmdef` reference graph rather than folder names and verified against it: **zero upward references**, 29 intra-tier references all pre-existing and acyclic — so adopting it changes nothing that exists and constrains only future code. It also retires the stale empty `UI (Stage 1+ — not specified yet)` row and strikes the `code-standards` phantom from `src/CLAUDE.md`'s infrastructure table. **Spec #20 is deliberately untouched:** layer membership is its authority and wants owner sign-off, and a wrong answer in the authority file is worse than a documented gap — the ⚠️ note in `src/CLAUDE.md` names the gap meanwhile. ERR-020-003 is the notation defect found by the same verification: §3.5.2 draws `Physics ──► Mechanics ──► AI` while the root `CLAUDE.md` states `AI → Mechanics → Physics, never the reverse` — same rule, opposite arrows, neither labelled. Code follows the `CLAUDE.md` reading; no violation exists. Prior update below.)
 **Updated (prior):** July 28, 2026 (v1.53 — **ERR-011-007 + ERR-012-010 filed + RESOLVED at the gk-contact-rate pass** (§5.Z.20 §7.1's residual — the keeper met ~a quarter of on-target shots and the uncontacted remainder held nearly all the surplus goals). Measured per episode at the ball's goal-plane crossing (new `GkContactRateDiagnosticTests`): of 15 crossed un-contacted threat episodes, **9 were dive-early** (the unconditional `Anticipate → Diving` row launched the dive at the first 10 Hz tick after SAVE committed, so the 600 ms envelope closed 456–2000 ms before the ball arrived; dive-late exactly 0), 3 no-dive, 3 lateral-miss — with the lateral need at the crossing (1.91–3.83 m) at or beyond the dive's ~3.55 m total coverage because #12 §3.3.3's pitch-anchored `GK_LATERAL_FACTOR × basisY` lateral term moved the keeper at most ±2 m over the whole 68 m width. **ERR-011-007**: new #11 §3.3.6 commit-to-arrival timing — the transition gates on predicted time-to-plane against a lateral-need-scaled commit lead (`[GT] DIVE_COMMIT_MIN_LEAD_FRAC`), sharing ONE crossing predictor with the §3.3.4 dive direction; §3.2.3's `elapsed` anchor refined to the keeper's first decision opportunity at/after the live stamp — `max(AttemptCommittedTick × 100 ms, the first tactical tick after the stamp)` — so neither the held launch (scored as sluggish) nor a shot struck after the commit (scored as seconds-early) re-clamps the window; the second ordering is COMMON under the hold and was found by the first full-corpus run. **ERR-012-010**: #12 §3.3.3's lateral term becomes the ball-line point clamped inside the goal mouth (`GK_LATERAL_CLAMP_M` replaces `GK_LATERAL_FACTOR`, retired not retuned — no value of a pitch-anchored gain expresses goal-anchored tracking). No schema/RNG/draw-order change (both mechanisms are pure functions of current tick state). Measured effect in the owner doc `gk-contact-rate-design.md` §6. Prior update below.)
 **Updated (prior):** July 28, 2026 (v1.52 — **ERR-008-017 filed + RESOLVED at the shot-volume pass.** #8 §3.2.3.1's U_SHOOT had NO distance term while `GoalOpeningScore` is scale-free and the §3.1.4.2 range gate is a cliff — within range a 34 m shot scored identically to a 10 m one, and measured shots clustered AT the range-gate boundary (means 30–34 m vs football's ~17; ~60% beyond 22 m). The formula gains a `DistanceQuality_SHOOT` hyperbolic-decay term (1.0 inside `[GT] SHOOT_SWEET_RANGE_M`, so every close-range calibration is bitwise untouched); the midfield long-shot machinery is recorded as production-unreachable dead surface (zone minimum 40 m vs range-gate maximum 35 m). No schema/RNG/draw-order change. Locked by the `match-engine-shot-speed` scenario's mean-shot-distance predicate — fails pre-fix at 30.0 vs 24.0, verified by execution. Prior update below.)
@@ -166,6 +168,8 @@ authoritative remediation backlog.
 | ERR-041-001 | Injuries & Medical #41 back-prop: `DOMAIN_TAG_INJURIES_MEDICAL = 0x2A` + `SubsystemOrdinals.InjuriesMedical = 92` allocation needed in Deterministic Simulation #16 §3.4 (the `injuries.occurrence` world-tick sub-stream, siteId `injuries.occurrence`, `entityId = playerId`, position-independent keyed draws; #41 KD-1 / §5). | Medium | 1 | ◑ Spec-text allocated July 23, 2026 at #41 section-file approval — `deterministic-sim/section-3.md` §3.4 gains the `DOMAIN_TAG_INJURIES_MEDICAL = 0x2A` row (v1.0.11; value `0x2A` per roadmap §6, block skips `0x23`–`0x29` reserved for #31–#40). **Spec-text-first like ERR-030-001** (not code-first like ERR-022/027-001): the code const (`DeterministicSimConstants.DOMAIN_TAG_INJURIES_MEDICAL` / `SubsystemOrdinals.InjuriesMedical`) + the `injuries.occurrence` stream registration land at **#41 T2** with the first draw site (FR-LW-031 — no phantom stream). Pure namespace allocation; no `DETERMINISM_DIGEST_VERSION` bump. Fully resolves when the T2 code const lands. |
 | ERR-020-002 | Code Standards #20 §3.5.2's layer taxonomy places **19 of the 31 assemblies now in `src/`**. The 12 unplaced are `living-world`, `match-analytics`, `match-client-core`, `match-client-unity`, `match-client-web`, `match-engine`, `match-viewer`, `player-database`, `player-progression`, `season-save`, `tactical-instructions`, `ui-framework` — so FR-CS-046 ("references flow one direction only") is unenforceable for ~39% of the tree, including the composition root and every client assembly. The taxonomy also still carries `UI` as an empty "Stage 1+ — not specified yet" placeholder, though four UI/client assemblies exist. Separately, `src/CLAUDE.md`'s infrastructure table lists `code-standards` as an assembly; no such folder exists (#20 is a style guide). | Medium | 2 | 🟡 **Open — PROPOSAL filed August 2, 2026, awaiting owner sign-off.** A ten-tier order covering all 31 folders is proposed in the entry body and was verified against every `.asmdef` reference list: **zero upward references** — adopting it constrains future code only, and changes nothing that exists. Layer membership is #20's to decide, so no spec text was edited. |
 | ERR-011-008 | Goalkeeper Mechanics #11 §3.5.2 — **a keeper's CATCH never stopped the ball.** §3.5.2's body has always carried `ball.velocity = gkHandVelocity` ("parked at hand position"), but §3.5's **Outputs** summary named only `Ball.SetPossessor` for the catch branch, and the implementation followed the summary. Possession is a FLAG in this engine, not a kinematic constraint — `RunPhysicsPhase` integrates the ball unconditionally and `CheckRestartAndApply` adjudicates a goal on ball POSITION — so a claimed shot travelled on into the net with the keeper recorded as holding it. Measured over three full matches: ball speed **11.1 m/s in, 10.8 m/s out** of a catch (one tick of drag), against parry 10.8 → 0.0 and deflect 10.3 → 4.2; **7 of 10 catches followed by a goal within 5 s**, and 14 of 15 goals following a keeper contact within 10 s. The same omission is at the Stage-0 smother/1v1 claim. `IGoalkeeperBallSystem` offered no park seam at all, which is why the gap was invisible from the interface. | **High** | 4 | ✅ **Resolved August 3, 2026** (conversion-at-contact pass, §5.Z.23) — `ParkBall()` added to the seam and called at both claim sites; §3.5's Outputs restated to name the catch's two effects (§3.5.2's pseudocode body unchanged — it was correct). No schema / RNG / domain-tag / draw-site / draw-order change. Locked by `match-engine-keeper-claim`: **2 of 3 predicates fail pre-fix, verified by execution — 6 of 6 claims left the ball travelling, 5 of 6 held balls entered the keeper's own net.** Measured: goals 15 → 11 over the corpus (5.0 → 3.7/match). |
+| ERR-011-009 | Goalkeeper Mechanics #11 §3.1.1 / §3.7.2 — **a rush that REACHED its target had no exit.** §3.1.1 gives `Rushing` exactly three exits (hand contact, the 1v1 radius, F-08 interception) and `OneOnOne` two (`SaveIntent`, the smother radius). For a LOOSE ball **none of them can fire**: `existsAttackerWithBallWithinRadius` is false by construction with no possessor, F-08 needs one, and §3.7.2's per-frame update converges on the locked `rushTarget` and stops without overshooting. A keeper who swept a loose ball therefore stood over it in `Rushing` for the remainder of the match. The completion was anticipated everywhere except the table that adjudicates state — `RushPhase.Reached` has been in §2's enum since v0.1 and was never emitted, and §3.7.3 reserves `AbortReason.AttackerBeatGK` for the related case. **Latent, not live**, until wiring backlog W1: `CommitRushIntent` had no production caller, so no rush had ever run in a match. | **High** | 11 | ✅ **Resolved August 4, 2026** (wiring backlog W1) — two new §3.1.1 rows (`Rushing → Recovering`, `OneOnOne → Recovering`) on arrival within the new `[GT] RUSH_TARGET_REACHED_RADIUS_M` (§3.4.6), plus the terminating check in §3.7.2, emitting `GoalkeeperRushEvent { rushPhase: Reached }`. A **completion, not an abort** — FR-GK-018 / KD-15 untouched, since nothing about the ball's trajectory ends the rush, and it is ranked below contact, F-08 and the 1v1 trigger. No schema / RNG / domain-tag / draw-site / draw-order change. Locked by `GoalkeeperRushTests` (both keepers) and the four state-machine priority cases. **Measurement NOT run — no .NET SDK in the authoring environment; see the owner doc §6.** |
+| ERR-011-010 | Goalkeeper Mechanics #11 §3.7 — **the rush decision had no owner, so the whole subsystem never ran.** §3.7's state entry delegated the "when" of a rush entirely to Decision Tree #8. #8 has no goalkeeper model and **structurally cannot acquire one at Stage 0**: `ActionType.SAVE = 7` is the last ordinal that fits the 3-bit composure-noise field in §3.3.3's noise function, so a `RUSH` action would force a composure-noise digest rebaseline (the same cost that defers the DT-emitted HEADER). The condition therefore belonged to nobody, and `CommitRushIntent` had **no caller of any kind — production or test — from May 28 to August 4, 2026**. Every one-on-one in the engine's history was a stationary keeper on his line. Compounding it, the delegation left the *football* undefined too: nothing in the spec said what a keeper is deciding when he comes out. | **High** | 11 | ✅ **Resolved August 4, 2026** (wiring backlog W1) — new **§3.7.0** takes the decision back, the same move §3.3.6 made for dive-commit timing. Normative on two points: (1) a team-mate merely CHASING the carrier is **not** a reason to stay — a recovering defender narrows no shooting angle, and only a goal-side body inside the shot corridor does; (2) how far out the keeper comes is **his own attributes** — `clamp(RUSH_COMMIT_BASE_M + RUSH_COMMIT_K_ONE_VS_ONE·OneVsOne_norm + RUSH_COMMIT_K_COMPOSURE·Composure_norm − RUSH_COMMIT_FATIGUE_PENALTY_M·fatigue, min, max)`, six new `[GT]`s in §3.4.6, with a worked example. `OneVsOne` is consumed for the commit DECISION only — FR-GK-024's closed-form constraint on the §3.2 / §3.5 1v1 SAVE formulas is untouched. No schema / RNG / domain-tag / draw-site / draw-order change. **Measurement NOT run — no .NET SDK in the authoring environment; see the owner doc §6.** |
 | ERR-020-003 | Code Standards #20 §3.5.2 draws the layer rule as `Physics ──► Mechanics ──► AI ──► UI`, while the root `CLAUDE.md` states the same rule as **AI → Mechanics → Physics, never the reverse**. The arrows point opposite ways. Both are defensible readings of their own notation (#20's arrow = "is available to"; CLAUDE.md's = "may reference"), and neither states which it means, so the two authoritative statements of the project's single most load-bearing architectural rule read as contradictory. | Low | 2 | 🟡 **Open — filed August 2, 2026.** Proposed fix: label the arrow in #20 §3.5.2 explicitly (`──► reads "may be referenced by"`) and add the reference-direction sentence verbatim beneath the diagram, so the two files state the rule in the same words. No behaviour change; the rule itself is not in dispute. |
 
 ---
@@ -2213,6 +2217,138 @@ ball reproduces the pre-fix slot exactly, so the existing worked examples and un
 keeper position: no new cross-tick state, **no `SNAPSHOT_SCHEMA_VERSION` change, no new RNG
 stream / domain tag / draw site, no draw-order change** — digests move for any match containing a
 save episode, as intended.
+
+---
+
+## ERR-011-010: Goalkeeper Mechanics #11 §3.7 — the rush decision was delegated to a spec that cannot make it
+
+**Filed:** August 4, 2026 — at wiring backlog **W1**. **Status: RESOLVED** (same commit). Owner
+design supplement: `docs/tracking/gk-rush-trigger-design.md`.
+
+**The defect.** §3.7's state entry read, in full:
+
+> **State entry.** Decision Tree #8 `RushIntent` with `commitmentLevel > RUSH_COMMIT_THRESHOLD` at
+> the 10 Hz tactical tick.
+
+That is a delegation, not a decision, and the delegate cannot accept it. Decision Tree #8 has no
+goalkeeper model, and at Stage 0 it structurally cannot acquire one: `ActionType.SAVE = 7` is the
+**last ordinal that fits the 3-bit composure-noise field** in `ActionSelector.ComputeOptionNoise`
+(§3.3.3), so adding a `RUSH` action would overflow it and force a composure-noise digest rebaseline
+— exactly the cost that defers the DT-emitted HEADER (wiring backlog W9).
+
+So the condition belonged to nobody. `GoalkeeperMechanics.CommitRushIntent` had **no caller of any
+kind, production or test, from 28 May to 4 August 2026**, while everything downstream of it — the
+dispatch, the `Rushing → OneOnOne → Smothered` chain, the abort reasons, the telemetry, the snapshot
+serialization — was built, reviewed and tested. Every one-on-one in this engine's history was a
+stationary keeper waiting on his line.
+
+**The second half of the defect is the football.** Because the "when" was delegated, the spec never
+said what a keeper is *deciding*. That is not a gap a call site can fill by guessing, and the first
+implementation of this trigger guessed wrong: it refused to send the keeper whenever any team-mate
+was nearer the ball — a "last man" rule. That is not the model. **A keeper comes out to reduce the
+shooting angle**, and a defender chasing the carrier down, or wrestling him for the ball, reduces
+nothing: the carrier still has a clear sight of goal. Under a last-man rule the keeper stays home in
+precisely the situation he exists for.
+
+**Fix.** New **§3.7.0**, which takes the decision back into #11 — the same move §3.3.6 made for
+dive-commit timing, for the same reason. It is normative on two points:
+
+1. **Only a goal-side body is cover.** A team-mate between the ball and the goal, inside the shot
+   corridor, makes the trip unnecessary — partly because he is already narrowing the angle, partly
+   because two bodies converging on one line is how a keeper gets rounded. A chasing or level
+   defender is not cover. (The test itself lives in the composition root, which has the agent set;
+   §3.7.0 owns the distance.)
+2. **How far out he comes is his own attributes.** No fixed range:
+
+```
+rushCommitDistanceM = clamp(RUSH_COMMIT_BASE_M
+                            + RUSH_COMMIT_K_ONE_VS_ONE      · OneVsOne_norm
+                            + RUSH_COMMIT_K_COMPOSURE       · Composure_norm
+                            − RUSH_COMMIT_FATIGUE_PENALTY_M · fatigue,
+                            RUSH_COMMIT_MIN_DISTANCE_M, RUSH_COMMIT_MAX_DISTANCE_M)
+```
+
+An aggressive, composed sweeper-keeper commits from the edge of the area; a timid or spent one
+barely leaves his line. Fatigue is subtractive on the project convention (0 = rested, 1 = spent),
+the same sign as `RUSH_COMMIT_FATIGUE_COEFF` on the launch speed.
+
+**FR-GK-024 check.** `OneVsOne` is consumed here for the commit DECISION. FR-GK-024 constrains the
+1v1 **save** — §3.2 `requiredReactionMs`, §3.5 `attrFactor` — to closed-form coefficients with no
+alternative formula path. Deciding whether to come out is not a save, and neither formula is
+touched.
+
+**Scope of change.** No schema, RNG, domain-tag, draw-site or draw-order change. Spec: #11 §3.7
+state entry, new §3.7.0, six `[GT]`s in §3.4.6, §3.11 v0.7. Code:
+`GoalkeeperRushDispatch.ComputeRushCommitDistanceM`, `GoalkeeperConstants.cs` v1.5,
+`GkHeadingIntentSource.RushArmed` / `HasGoalSideCover`, `MatchEngine.TryCommitRushIntents`.
+
+**Verification status.** Locked by `GoalkeeperRushTests` (the distance rises with `OneVsOne` and
+`Composure`, falls with fatigue, and clamps both ways) and `GkRushTriggerTests` (a chasing defender
+is not cover and the keeper still arms; a goal-side one is and he does not; identical geometry arms
+for a bold keeper and refuses for a timid one). **None of it has been executed** — the authoring
+environment has no .NET SDK and the agent proxy denies the installer.
+
+---
+
+## ERR-011-009: Goalkeeper Mechanics #11 §3.1.1 — a rush that arrived had nowhere to go
+
+**Filed:** August 4, 2026 — at wiring backlog **W1**, the pass that gave
+`GoalkeeperMechanics.CommitRushIntent` its first production caller. **Status: RESOLVED** (same
+commit). Owner design supplement: `docs/tracking/gk-rush-trigger-design.md`; board item
+`docs/tracking/match-engine-wiring-backlog.md` W1.
+
+**How found.** Not by measurement — by wiring. The backlog's §5 sequence says each item is *"wire +
+fix whatever the wiring surfaces"*, and reading the `Rushing` exits before turning the trigger on
+surfaced this one on paper, which is the only reason it was not shipped as a live stall.
+
+**The defect.** §3.1.1 gives `Rushing` three exits and `OneOnOne` two:
+
+| From | To | Trigger | Fires for a loose ball? |
+|---|---|---|---|
+| `Rushing` | `Smothered` | hand-ball contact | only if the sweep makes contact |
+| `Rushing` | `OneOnOne` | attacker with ball inside `ONE_VS_ONE_TRIGGER_RADIUS_M` | **no** — the predicate requires a ball possessor |
+| `Rushing` | `Recovering` | F-08, possession passes to a third party | **no** — requires a possessor |
+| `OneOnOne` | `Diving` | `SaveIntent` committed | no producer sends one in this state |
+| `OneOnOne` | `Smothered` | GK inside `SMOTHER_TRIGGER_RADIUS_M` | **no** — same possessor requirement |
+
+Meanwhile §3.7.2's update walks `gkPos` toward the locked `rushTarget` and **stops there** — the
+implementation clamps the step so the keeper does not overshoot. So the terminal state of a sweep
+to an unpossessed ball is: keeper standing on the ball, in `Rushing`, forever. Everything else in
+the design anticipated a completion — `RushPhase` has carried a `Reached` member since v0.1 (never
+published), and §3.7.3 reserves `AbortReason.AttackerBeatGK` for the attacker-passes-the-keeper case
+(also never reachable) — but the one table that decides state had no row for it.
+
+**Why it is the spec, not the implementation.** The implementation follows §3.1.1 exactly. There is
+no transition to omit. The table is the artefact that is wrong, which is why the fix lands in the
+spec and the code in the same commit.
+
+**Fix.** Two §3.1.1 rows — `Rushing → Recovering` and `OneOnOne → Recovering` — triggered by the
+keeper arriving within a new `[GT] RUSH_TARGET_REACHED_RADIUS_M` (§3.4.6, default 0.5 m) of the
+locked target without contact, emitting `GoalkeeperRushEvent { rushPhase: Reached }`; plus the
+matching terminating check in §3.7.2's pseudocode.
+
+**This is a completion, not an abort.** FR-GK-018 and KD-15 forbid ending a committed rush on the
+basis of ball-trajectory changes, and nothing in the new rows reads the ball: they read the keeper's
+own arrival at a target he locked himself. The row is evaluated at the **lowest** priority of the
+`Rushing` exits, so a run that arrives *and* meets the ball still resolves as the `Smothered`
+contact it is, and F-08 still outranks it.
+
+**Recorded, NOT fixed.** `AbortReason.AttackerBeatGK` stays unreachable. Under the new rows a keeper
+whom the attacker has beaten terminates as `Reached` — the right state with the wrong label.
+Labelling it correctly needs the attacker's position inside `Update`, which is cheap (the initial
+attacker id is already stored), but it is a telemetry refinement and folding it in would make the
+state-machine change harder to review than the defect it fixes.
+
+**Scope of change.** No schema, RNG, domain-tag, draw-site or draw-order change. Code:
+`GoalkeeperStateMachine.cs` v1.7, `GoalkeeperMechanics.cs` v1.11, `GoalkeeperConstants.cs` v1.5.
+Spec: #11 §3.1.1 (two rows), §3.7.2 (the terminating check), §3.4.6 (the constant), §3.11 v0.7.
+
+**Verification status.** Locked by `GoalkeeperRushTests` (a swept loose ball leaves `Rushing`, both
+keepers) and four `GoalkeeperMechanicsTests` priority cases (arrival loses to contact, to F-08 and
+to the 1v1 trigger; `OneOnOne` ends on arrival). **None of it has been executed**: the authoring
+environment has no .NET SDK and the agent proxy denies the installer, so
+`tools/dotnet-ci/run-gate.sh` did not run locally. The gate result for this entry is whatever the
+GitHub `dotnet-compile-test` job reports.
 
 ---
 

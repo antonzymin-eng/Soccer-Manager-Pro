@@ -346,7 +346,8 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
                 rushBallIntercepted:           false,
                 attackerWithinOneVsOneRadius:  false,
                 gkWithinSmotherRadius:         false,
-                shotEventDetected:             false);
+                shotEventDetected:             false,
+                rushTargetReached:             false);
 
             Assert.AreEqual(GoalkeeperState.HandsOnBall, result, "Airborne should transition to HandsOnBall on clean catch (quality >= CatchThreshold).");
         }
@@ -368,7 +369,8 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
                 rushBallIntercepted:           false,
                 attackerWithinOneVsOneRadius:  false,
                 gkWithinSmotherRadius:         false,
-                shotEventDetected:             false);
+                shotEventDetected:             false,
+                rushTargetReached:             false);
 
             Assert.AreEqual(GoalkeeperState.Recovering, result, "Airborne should transition to Recovering when quality is below CatchThreshold.");
         }
@@ -388,7 +390,8 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
                 rushBallIntercepted:           false,
                 attackerWithinOneVsOneRadius:  false,
                 gkWithinSmotherRadius:         false,
-                shotEventDetected:             false);
+                shotEventDetected:             false,
+                rushTargetReached:             false);
 
             Assert.AreEqual(GoalkeeperState.Recovering, result, "Airborne should transition to Recovering on ground re-entry without contact.");
         }
@@ -408,7 +411,8 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
                 rushBallIntercepted:           false,
                 attackerWithinOneVsOneRadius:  false,
                 gkWithinSmotherRadius:         false,
-                shotEventDetected:             false);
+                shotEventDetected:             false,
+                rushTargetReached:             false);
 
             Assert.AreEqual(GoalkeeperState.Airborne, result, "Diving should transition to Airborne on first physics tick.");
         }
@@ -428,7 +432,8 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
                 rushBallIntercepted:           false,
                 attackerWithinOneVsOneRadius:  true,
                 gkWithinSmotherRadius:         false,
-                shotEventDetected:             false);
+                shotEventDetected:             false,
+                rushTargetReached:             false);
 
             Assert.AreEqual(GoalkeeperState.OneOnOne, result, "Rushing should transition to OneOnOne when attacker enters the 1v1 trigger radius.");
         }
@@ -448,7 +453,8 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
                 rushBallIntercepted:           false,
                 attackerWithinOneVsOneRadius:  false,
                 gkWithinSmotherRadius:         false,
-                shotEventDetected:             false);
+                shotEventDetected:             false,
+                rushTargetReached:             false);
 
             Assert.AreEqual(GoalkeeperState.Smothered, result, "Rushing should transition to Smothered on hand-ball contact.");
         }
@@ -468,7 +474,8 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
                 rushBallIntercepted:           false,
                 attackerWithinOneVsOneRadius:  false,
                 gkWithinSmotherRadius:         false,
-                shotEventDetected:             true);
+                shotEventDetected:             true,
+                rushTargetReached:             false);
 
             Assert.AreEqual(GoalkeeperState.Anticipate, result, "Set should transition to Anticipate when ShotExecutedEvent is detected.");
         }
@@ -1028,9 +1035,120 @@ namespace TacticalDirector.GoalkeeperMechanics.Tests
                 rushBallIntercepted:           false,
                 attackerWithinOneVsOneRadius:  false,
                 gkWithinSmotherRadius:         false,
-                shotEventDetected:             false);
+                shotEventDetected:             false,
+                rushTargetReached:             false);
 
             Assert.AreEqual(GoalkeeperState.Smothered, result, "Rushing + hand contact should transition to Smothered.");
+        }
+
+        // ── ERR-011-009  a rush that REACHED its target has an exit ───────────
+
+        /// <summary>ERR-011-009: Rushing → Recovering when the locked target is reached without contact.
+        /// Before this row a keeper who swept a LOOSE ball had no exit at all — the 1v1 and smother
+        /// checks both answer false for an unpossessed ball and F-08 needs a possessor — so he stood
+        /// over it in Rushing for the remainder of the match.</summary>
+        [Test]
+        public void Rushing_TargetReachedWithoutContact_TransitionsToRecovering()
+        {
+            GoalkeeperState result = GoalkeeperStateMachine.EvaluatePhysicsTransition(
+                currentState:                  GoalkeeperState.Rushing,
+                handBallContactOccurred:       false,
+                handlingQualityScalar:         0.0f,
+                groundReEntry:                 false,
+                distributionReleaseReached:    false,
+                rushBallIntercepted:           false,
+                attackerWithinOneVsOneRadius:  false,
+                gkWithinSmotherRadius:         false,
+                shotEventDetected:             false,
+                rushTargetReached:             true);
+
+            Assert.AreEqual(GoalkeeperState.Recovering, result,
+                "A rush that reached its locked target without contact must end (ERR-011-009).");
+        }
+
+        /// <summary>ERR-011-009: OneOnOne → Recovering on the same trigger. OneOnOne is reachable only
+        /// from Rushing and inherits the identical strand when the attacker takes the ball back out of
+        /// the smother radius.</summary>
+        [Test]
+        public void OneOnOne_TargetReachedWithoutSmother_TransitionsToRecovering()
+        {
+            GoalkeeperState result = GoalkeeperStateMachine.EvaluatePhysicsTransition(
+                currentState:                  GoalkeeperState.OneOnOne,
+                handBallContactOccurred:       false,
+                handlingQualityScalar:         0.0f,
+                groundReEntry:                 false,
+                distributionReleaseReached:    false,
+                rushBallIntercepted:           false,
+                attackerWithinOneVsOneRadius:  false,
+                gkWithinSmotherRadius:         false,
+                shotEventDetected:             false,
+                rushTargetReached:             true);
+
+            Assert.AreEqual(GoalkeeperState.Recovering, result,
+                "OneOnOne must also end on arrival at the locked target (ERR-011-009).");
+        }
+
+        /// <summary>ERR-011-009: arrival is the LOWEST-priority Rushing exit — a run that arrives AND
+        /// meets the ball is the contact it is, not a completion.</summary>
+        [Test]
+        public void Rushing_TargetReachedWithContact_ResolvesAsSmothered()
+        {
+            GoalkeeperState result = GoalkeeperStateMachine.EvaluatePhysicsTransition(
+                currentState:                  GoalkeeperState.Rushing,
+                handBallContactOccurred:       true,
+                handlingQualityScalar:         0.6f,
+                groundReEntry:                 false,
+                distributionReleaseReached:    false,
+                rushBallIntercepted:           false,
+                attackerWithinOneVsOneRadius:  false,
+                gkWithinSmotherRadius:         false,
+                shotEventDetected:             false,
+                rushTargetReached:             true);
+
+            Assert.AreEqual(GoalkeeperState.Smothered, result,
+                "Contact outranks arrival: a rush that reaches the ball is a smother, not a Reached completion.");
+        }
+
+        /// <summary>ERR-011-009: the F-08 interception still outranks arrival (KD-15 — it is the only
+        /// abort, and it must not be masked by the new completion row).</summary>
+        [Test]
+        public void Rushing_TargetReachedAndIntercepted_ResolvesAsInterceptionAbort()
+        {
+            GoalkeeperState result = GoalkeeperStateMachine.EvaluatePhysicsTransition(
+                currentState:                  GoalkeeperState.Rushing,
+                handBallContactOccurred:       false,
+                handlingQualityScalar:         0.0f,
+                groundReEntry:                 false,
+                distributionReleaseReached:    false,
+                rushBallIntercepted:           true,
+                attackerWithinOneVsOneRadius:  false,
+                gkWithinSmotherRadius:         false,
+                shotEventDetected:             false,
+                rushTargetReached:             true);
+
+            Assert.AreEqual(GoalkeeperState.Recovering, result,
+                "F-08 remains the abort; arrival must not mask it.");
+        }
+
+        /// <summary>ERR-011-009: the 1v1 trigger outranks arrival — a keeper who arrives with the
+        /// attacker on top of him is in a one-on-one, not finished.</summary>
+        [Test]
+        public void Rushing_TargetReachedWithAttackerInRadius_TransitionsToOneOnOne()
+        {
+            GoalkeeperState result = GoalkeeperStateMachine.EvaluatePhysicsTransition(
+                currentState:                  GoalkeeperState.Rushing,
+                handBallContactOccurred:       false,
+                handlingQualityScalar:         0.0f,
+                groundReEntry:                 false,
+                distributionReleaseReached:    false,
+                rushBallIntercepted:           false,
+                attackerWithinOneVsOneRadius:  true,
+                gkWithinSmotherRadius:         false,
+                shotEventDetected:             false,
+                rushTargetReached:             true);
+
+            Assert.AreEqual(GoalkeeperState.OneOnOne, result,
+                "The 1v1 trigger outranks arrival.");
         }
 
         // ── UpdateRushFrame does not overshoot target ─────────────────────────

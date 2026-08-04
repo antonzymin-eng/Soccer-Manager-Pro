@@ -40,10 +40,12 @@ Each row is `(from, to, trigger, tick-rate, source spec)`.
 | `Rushing` | `Smothered` | #3 hand-ball contact event during rush | 60 Hz | #3 / #11 §3.7 |
 | `Rushing` | `OneOnOne` | Attacker within `ONE_VS_ONE_TRIGGER_RADIUS_M` of GK during rush AND `BallState.PossessorId == attackerId` | 60 Hz | #11 §3.7 |
 | `Rushing` | `Recovering` | F-08 ball intercepted (`BallState.PossessorId` becomes non-GK and not the original attacker target) | 60 Hz | KD-15 / F-08 |
+| `Rushing` | `Recovering` | GK arrives within `RUSH_TARGET_REACHED_RADIUS_M` of the LOCKED `rushTarget` without contact — the run is finished; emit `GoalkeeperRushEvent { rushPhase: Reached }` (ERR-011-009). A **completion, not an abort**: FR-GK-018 / KD-15 forbid ending a committed rush on the ball's trajectory, and this ends it on the keeper's own arrival. Lowest priority of the four `Rushing` exits | 60 Hz | ERR-011-009 / §3.7.2 |
 | `Smothered` | `HandsOnBall` | Hand-ball contact resolves with `handlingQualityScalar ≥ CATCH_THRESHOLD` | 60 Hz | #11 §3.5 |
 | `Smothered` | `Recovering` | Hand-ball contact resolves with `handlingQualityScalar < CATCH_THRESHOLD` | 60 Hz | #11 §3.5 |
 | `OneOnOne` | `Diving` | Decision Tree #8 commits `SaveIntent` (1v1 dive path; KD-20 coefficients apply) | 10 Hz | #8 |
 | `OneOnOne` | `Smothered` | GK closes within `SMOTHER_TRIGGER_RADIUS_M` of attacker AND attacker shot pending | 60 Hz | #11 |
+| `OneOnOne` | `Recovering` | GK arrives within `RUSH_TARGET_REACHED_RADIUS_M` of the LOCKED `rushTarget` without ever closing to a smother (ERR-011-009). `OneOnOne` is reachable only from `Rushing` and inherits the identical gap | 60 Hz | ERR-011-009 / §3.7.2 |
 | `Resting` | `Resting` | Default holding state when ball is in own / middle thirds with own possession | 10 Hz | #11 |
 
 Iteration order is deterministic per #16 §3.2. With one GK per
@@ -509,6 +511,13 @@ mirrors this table.
 | `RUSH_LAUNCH_BASE_MPS` | `[GT]` | m/s | 4.5 | [3.0, 6.5] | §3.7 |
 | `RUSH_LAUNCH_K_PACE` | `[GT]` | m/s | 1.8 | [1.0, 3.0] | §3.7 |
 | `RUSH_COMMIT_FATIGUE_COEFF` | `[GT]` | m/s | 0.9 | [0.3, 1.8] | §3.7 / KD-8 |
+| `RUSH_COMMIT_BASE_M` | `[GT]` | m | 8.0 | [4.0, 14.0] | §3.7.0 (ERR-011-010) — baseline commit distance before attributes |
+| `RUSH_COMMIT_K_ONE_VS_ONE` | `[GT]` | m | 8.0 | [0.0, 14.0] | §3.7.0 — metres per unit `OneVsOne_norm`; the dominant term |
+| `RUSH_COMMIT_K_COMPOSURE` | `[GT]` | m | 4.0 | [0.0, 10.0] | §3.7.0 — metres per unit `Composure_norm` |
+| `RUSH_COMMIT_FATIGUE_PENALTY_M` | `[GT]` | m | 3.0 | [0.0, 8.0] | §3.7.0 — metres lost per unit fatigue (0 = rested) |
+| `RUSH_COMMIT_MIN_DISTANCE_M` | `[GT]` | m | 4.0 | [1.0, 8.0] | §3.7.0 — floor on the clamp |
+| `RUSH_COMMIT_MAX_DISTANCE_M` | `[GT]` | m | 22.0 | [10.0, 30.0] | §3.7.0 — ceiling on the clamp; the furthest ANY keeper comes |
+| `RUSH_TARGET_REACHED_RADIUS_M` | `[GT]` | m | 0.5 | [0.2, 1.5] | §3.7.2 / §3.1.1 (ERR-011-009) — the rush-completion rows. Un-calibrated: the whole rush subsystem had no production caller when this was added, so there is no measured value behind it |
 
 ### 3.4.7 Distribution-geometry constants
 
@@ -826,9 +835,88 @@ winner) while breaking ties with a tunable noise amplitude.
 
 ## 3.7 Rush / Sweep Dispatch (KD-15)
 
-**State entry.** Decision Tree #8 `RushIntent` with
+**State entry.** A `RushIntent` with
 `commitmentLevel > RUSH_COMMIT_THRESHOLD` at the 10 Hz tactical
-tick.
+tick. §3.7.0 owns the DECISION to raise one; the producer of the
+intent is the composition root (ERR-011-010 — this section formerly
+named Decision Tree #8 as the sole producer, which is what left the
+whole rush subsystem uncalled).
+
+### 3.7.0 Rush-commit decision (ERR-011-010)
+
+**Who decides.** This section formerly delegated the entire "when"
+to Decision Tree #8. #8 has no goalkeeper model, and structurally
+cannot acquire one at Stage 0: `ActionType.SAVE = 7` is the last
+ordinal that fits the 3-bit composure-noise field in §3.3.3's noise
+function, so a `RUSH` action would force a composure-noise digest
+rebaseline. The condition therefore had **no owner**, and
+`CommitRushIntent` had no caller of any kind from May 28 to
+August 4, 2026 — every one-on-one was a stationary keeper on his
+line. #11 takes the decision back here, exactly as §3.3.6 took back
+the dive-commit timing for the same reason.
+
+**What the keeper is deciding.** He comes out to **reduce the
+shooting angle**. Two things follow, and both are normative:
+
+1. **A team-mate merely CHASING the carrier is not a reason to
+   stay.** A recovering defender narrows no angle; the carrier still
+   has a clear sight of goal. Only a team-mate who is already
+   *goal-side* of the ball — between it and the goal, inside the
+   shot corridor — makes the trip unnecessary, and then only because
+   two bodies converging on one line is how a keeper gets rounded.
+   The goal-side test is the composition root's (it needs the agent
+   set, which §3.7 does not receive); §3.7.0 owns only the distance.
+2. **How far out he comes is his own attributes, and nothing else.**
+   No fixed range: an aggressive, composed sweeper-keeper commits
+   from the edge of the area; a timid or spent one barely leaves his
+   line.
+
+```
+rushCommitDistanceM =
+    clamp(RUSH_COMMIT_BASE_M
+          + RUSH_COMMIT_K_ONE_VS_ONE     · OneVsOne_norm
+          + RUSH_COMMIT_K_COMPOSURE      · Composure_norm
+          − RUSH_COMMIT_FATIGUE_PENALTY_M · fatigue,
+          RUSH_COMMIT_MIN_DISTANCE_M,
+          RUSH_COMMIT_MAX_DISTANCE_M)
+```
+
+Units: metres from the goal the keeper defends. `fatigue` is the
+project convention (0 = rested, 1 = spent), so its coefficient is
+subtractive — the same sign as `RUSH_COMMIT_FATIGUE_COEFF` on the
+launch speed in §3.7.1.
+
+*Worked example.* A keeper with `OneVsOne = 16`, `Composure = 12`,
+`fatigue = 0.2`, at the §3.4.6 defaults:
+`OneVsOne_norm = (16−1)/19 = 0.789`,
+`Composure_norm = (12−1)/19 = 0.579`, so
+`8.0 + 8.0·0.789 + 4.0·0.579 − 3.0·0.2 = 8.0 + 6.32 + 2.32 − 0.60 =
+16.04 m` — he comes to meet an unopposed carrier from just inside
+the penalty spot. The same keeper at `fatigue = 1.0` commits from
+13.6 m; a `OneVsOne = 3`, `Composure = 3` keeper commits from
+9.0 m rested.
+
+**Interaction with FR-GK-024.** `OneVsOne` is consumed here for the
+commit DECISION. FR-GK-024 constrains the 1v1 **save** — §3.2
+`requiredReactionMs` and §3.5 `attrFactor` — to closed-form
+coefficients with no alternative formula path. Deciding whether to
+come out is not a save, and neither of those formulas is touched.
+
+**Fatigue arm — no live input at Stage 0.** The worked example above
+exercises `RUSH_COMMIT_FATIGUE_PENALTY_M`, but every composition-root
+call site projects the keeper's attributes with `fatigue = 0`, so the
+term is identically zero in production and the arm is unreachable.
+This is recorded, not hidden: the constant is `[GT]` and MUST NOT be
+calibrated until a real fatigue value reaches the projection, because
+a dial with no input cannot be fitted (the KD-W1 hazard, one level
+down from an unwired subsystem). §3.7.1's
+`RUSH_COMMIT_FATIGUE_COEFF` on the launch speed has the same status.
+
+**Priority against §3.2.** A ball driving at the goal is a save, not
+a rush: the composition root suppresses the rush decision while its
+save geometry is armed for the same keeper. Without that, a shot
+would take the keeper out of `Anticipate` and into `Rushing` while
+§3.3.6's commit-lead gate was still holding the dive.
 
 ### 3.7.1 Launch impulse
 
@@ -867,6 +955,31 @@ on PhysicsFrame(currentFrame) while state == Rushing:
     if existsAttackerWithBallWithinRadius(ONE_VS_ONE_TRIGGER_RADIUS_M):
         state = OneOnOne
 ```
+
+**Rush completion (ERR-011-009).** The loop above has no terminating
+condition of its own, and the three §3.1.1 `Rushing` exits it feeds
+cannot fire for a LOOSE ball: `existsAttackerWithBallWithinRadius`
+is false by construction when there is no possessor, the hand-contact
+check needs a contact the sweep has not made, and F-08 needs a
+possessor too. `gkPos` meanwhile converges on `rushTarget` and stops
+(the update does not overshoot). A keeper who swept a loose ball
+therefore had **no exit at all** and stood over it for the remainder
+of the match. Add, as the loop's last check:
+
+```
+    // rush completion — the run the keeper committed to is finished
+    if |rushTarget - gkPos| <= RUSH_TARGET_REACHED_RADIUS_M:
+        state = Recovering
+        emit GoalkeeperRushEvent { rushPhase: Reached }
+```
+
+This is a **completion, not an abort**: §3.7.3's intent-staleness
+policy is about the ball, and nothing here reads the ball. It is
+evaluated at the lowest priority of the `Rushing` exits, so a run
+that arrives *and* meets the ball is the `Smothered` contact it is.
+The same check applies in `OneOnOne`, which is reachable only from
+`Rushing` and strands identically when the attacker carries the ball
+back out of `SMOTHER_TRIGGER_RADIUS_M`.
 
 ### 3.7.3 Rush abort policy (KD-15)
 
@@ -1026,3 +1139,5 @@ standard rebound physics.
 | 0.4 | July 28, 2026 | gk-catch-parry-conversion pass | **ERR-011-005** — §3.2.3 gains its evaluation anchor: the window is computed ONCE at the dive-commit frame and frozen for the §3.5.1 contact blend (the anchor §3.2.5's worked example always described); the implementation's per-frame re-evaluation dated the contact-consumed value by the ball's whole flight time, clamping it to 0. **ERR-011-006** — §3.2.1 gains the stamp lifecycle: the detection stamp dies with its episode (cleared on disarm-without-dive and on save resolution; measured stale stamps dated dives against shots 34–174 s old), and save episodes with no #6 shot event (deflections, rebounds) are stamped by a threat-onset fallback through the same formulas, live-stamp-wins. §3.4.3 `[GT]` recalibration inside spec ranges (`REACTION_BASE_MS` 350 → 220, `REACTION_BALL_SPEED_COEFF` 8 → 3, tolerances 120/80 → 200/140): the engine's discrete commit pipeline lands at ~100–300 ms elapsed, which the human-continuous-time values scored as deep-early ⇒ window ≈ 0 for every dive the engine can produce. Code: `GoalkeeperMechanics.cs` v1.8, `GoalkeeperConstants.cs` v1.3, `MatchEngine.cs` (OnThreatArmed wiring). Header `Version` field (stale at 0.1 against this table since v0.2) consolidated. See `docs/tracking/gk-catch-parry-conversion-design.md` | implementation + measurement (funnel instrument, 3 full matches) |
 | 0.5 | July 28, 2026 | gk-contact-rate pass | **ERR-011-007** — commit-to-arrival timing: new §3.3.6 gates the `Anticipate → Diving` transition on the ball's predicted time-to-plane against a lateral-need-scaled commit lead, so the fixed 600 ms dive envelope covers the ball's ARRIVAL (measured baseline: dive-early in 9 of 15 crossed threat episodes, the dive over 456–2000 ms before the crossing, dive-late exactly 0). §3.1.1 row amended; §3.2.3's `elapsed` anchor refined launch-frame → `SaveIntent.AttemptCommittedTick` (under a held dive the launch is deliberate timing, not reaction — pre-hold the anchors were one stride apart, so §5.Z.20's measured windows stay valid). New `[GT] DIVE_COMMIT_MIN_LEAD_FRAC` (0.25) in §3.4.4. Code: `GoalkeeperDiveKinematics.cs` (TryPredictPlaneCrossing/ComputeDiveCommitLeadS/ShouldCommitDive — one predictor shared with the §3.3.4 dive direction), `GoalkeeperStateMachine.cs`, `GoalkeeperMechanics.cs`, `GoalkeeperConstants.cs`. See `docs/tracking/gk-contact-rate-design.md` | implementation + measurement (per-episode anatomy instrument, 3 full matches) |
 | 0.6 | August 3, 2026 | conversion-at-contact pass | **ERR-011-008** — §3.5's **Outputs** summary named only `Ball.SetPossessor` for the catch branch, while §3.5.2's body carries `ball.velocity = gkHandVelocity` ("parked at hand position"). The implementation followed the summary and omitted the park; because possession in the composition root is a FLAG rather than a kinematic constraint (the ball integrates unconditionally and the goal check adjudicates on ball POSITION), a claimed shot kept its velocity and crossed the line — measured over three full matches: ball speed 11.1 m/s in and **10.8 m/s out** of a catch, **7 of 10 catches followed by a goal within 5 s**, against parry 10.8 → 0.0 and deflect 10.3 → 4.2. §3.5's Outputs now states the catch's TWO effects and §3.5.2 gains the sentence that every contact resolves to exactly one ball-side action, the catch's being a pair. **§3.5.2's pseudocode body is unchanged — it was correct.** Code: `IGoalkeeperBallSystem.cs` v1.1 (+`ParkBall()`), `GoalkeeperMechanics.cs` v1.10 (both claim sites — §3.5.2 catch and the Stage-0 smother), `MatchEngine.cs` (adapter). See `docs/tracking/gk-conversion-at-contact-design.md` | implementation + measurement (per-contact fate instrument, 3 full matches); acceptance 2 of 3 predicates fail pre-fix, verified by execution |
+| 0.7 | August 4, 2026 | wiring backlog W1 | **ERR-011-010** — **the rush decision had no owner.** §3.7's state entry delegated the entire "when" to Decision Tree #8, which has no goalkeeper model and structurally cannot acquire one (`ActionType.SAVE = 7` is the last ordinal fitting §3.3.3's 3-bit composure-noise field, so a `RUSH` action forces a digest rebaseline), so `CommitRushIntent` had **no caller of any kind** from May 28 to August 4, 2026 and every one-on-one was a stationary keeper on his line. New **§3.7.0** takes the decision back — the same move §3.3.6 made for dive timing. It is normative on two points: a team-mate merely CHASING the carrier is **not** a reason to stay (a recovering defender narrows no shooting angle — only a goal-side body in the shot corridor does), and how far out the keeper comes is **his own attributes**, `clamp(RUSH_COMMIT_BASE_M + RUSH_COMMIT_K_ONE_VS_ONE·OneVsOne_norm + RUSH_COMMIT_K_COMPOSURE·Composure_norm − RUSH_COMMIT_FATIGUE_PENALTY_M·fatigue, min, max)`, with six new `[GT]`s in §3.4.6 and a worked example. `OneVsOne` is consumed for the commit DECISION only; FR-GK-024's closed-form constraint on the 1v1 SAVE formulas (§3.2 / §3.5) is untouched. **ERR-011-009** — **a rush that REACHED its target had no exit.** §3.1.1 gave `Rushing` exactly three exits (contact, the 1v1 radius, F-08 interception) and `OneOnOne` two (`SaveIntent`, the smother radius). For a LOOSE ball none of them can fire: the 1v1 and smother triggers are false by construction without a possessor, F-08 needs one, and §3.7.2's update converges on the locked target and stops. A keeper who swept a loose ball therefore stood over it in `Rushing` for the rest of the match. The completion was anticipated everywhere except in the table that adjudicates state — `RushPhase.Reached` has existed in §2's enum since v0.1 and was never emitted, and §3.7.3 reserves `AbortReason.AttackerBeatGK` for the related case. Two new §3.1.1 rows (`Rushing → Recovering`, `OneOnOne → Recovering`) on arrival within the new `[GT] RUSH_TARGET_REACHED_RADIUS_M` (§3.4.6), plus the terminating check in §3.7.2. A **completion, not an abort** — FR-GK-018 / KD-15 are untouched, since nothing about the ball's trajectory ends the rush. Found by wiring the trigger: `CommitRushIntent` had never had a production caller, so no rush had ever run in a match. Code: `GoalkeeperStateMachine.cs` v1.7, `GoalkeeperMechanics.cs` v1.11, `GoalkeeperConstants.cs` v1.5, `MatchEngine.cs` v1.58 (the trigger itself). See `docs/tracking/gk-rush-trigger-design.md` | implementation; **measurement NOT run — no .NET SDK in the authoring environment** |
+| 0.8 | August 4, 2026 | W1 adversarial review pass 1 | Doc-only in this spec: §3.7.0 gains a **fatigue arm — no live input at Stage 0** paragraph. `RUSH_COMMIT_FATIGUE_PENALTY_M` (and §3.7.1's `RUSH_COMMIT_FATIGUE_COEFF`) multiply a value every composition-root projection hardcodes to zero, so both arms are structurally unreachable and MUST NOT be calibrated until fatigue reaches the projection — a dial with no input cannot be fitted. The worked example is left as written: it is correct arithmetic for the formula, and the new paragraph directly above says why production never reaches that branch. The review's other findings were engine-side (the trigger's missing minimum-run guard, the sent-off keeper freeze) and are recorded in `gk-rush-trigger-design.md` v1.2. | doc |

@@ -12,11 +12,129 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 4, 2026, latest same day (**MERGE — `main` into the P4a branch, and a version-number collision resolved.** PR #295 was un-mergeable. Three conflicts, **all in the "newest entry at top" chains** — this file, `CHANGELOG-src.md`, `file-manifest.md` — which is the expected class when two branches each prepend, and **no source conflict at all**: `main` had moved on in `decision-tree` and `match-engine` only, which the client assemblies do not touch. Resolved by **interleaving both sides chronologically by commit time** rather than picking a winner, so every entry from both branches survives verbatim, one `Last Updated:` per chain, everything below it `(prior)`. **The collision worth knowing about:** both branches independently allocated `CHANGELOG-src.md` **v2.53**. `main` owns it (close-chance §5.Z.24, already in trunk), so this branch's four entries renumbered up by one — P4a landing 2.53→**2.54**, AR pass 1 →**2.55**, tilted-view →**2.56**, AR pass 2/3 →**2.57** — in both the header chain and the VERSION HISTORY table. Nothing outside that file cited them (grep over `docs/`, `src/`, `README.md`). **A consequence to leave alone rather than "fix":** 2.54 is dated August 3 and sits above 2.53 dated August 4. The table is keyed on version, and version numbers record the order things land in trunk, which is not the order they were written — renumbering by date would mean renumbering an entry already merged. **One edit to content that arrived from `main`, made deliberately and recorded here rather than silently:** its chain tagged close-chance `v2.52` while its own VERSION HISTORY table gives that entry 2.53; left alone the merge would have put two `v2.52` tags in one chain — the duplicated-version hazard this project has a standing trap entry for — so the tag now agrees with the table it contradicted. **Deliberately NOT touched:** `main` carries a repeated §5.Z.23 entry in both changelog chains (both tagged v2.51), and the VERSION HISTORY table has six long-standing duplicate version ids (2.9, 2.10, 2.34, 2.36, 2.42, 2.44) — identical on both branches, so neither was introduced here. Deleting a historical entry during a conflict resolution is what these files forbid, and renumbering 150 rows of merged history is not a merge's job. **Verified mechanically, not by reading:** every line of both parents is accounted for in all three merged files — the only absences are the label relabels, the four renumbers, one deduplicated header, and five manifest rows where this branch's text is a superset of `main`'s (the `LiveAgentCue` row gained `IsGoalkeeper`; the client section headers moved P3→P4a and P4→P4b). Every P4a source file is byte-identical pre- and post-merge. No `src/` change in this merge.)
+> **Last Updated:** August 4, 2026, latest same day (**W1 adversarial review pass 2 — 1 High, 1
+> Medium, 3 Low.** The High is a seam defect, and it is the other half of pass 1's own fix rather than
+> a new subject. #11 indexes every per-keeper array by `gkIndex`, which is the **team** (KD-1); this
+> engine keys identity by **roster slot**. Those agree right up until the occupant of the keeper slot
+> changes — a keeper is sent off, and the reserve keeper comes on in a *different* slot, which is the
+> only shape the sequence can take because `SubstitutePlayer` refuses the dismissed slot itself. The
+> path is live from `ManagerCommand`, not hypothetical. Nothing inside #11 can observe the handover,
+> so the substitute inherited the slot whole: state, dive scratch, hold stamps, and a `RushIntent`
+> whose target was **locked at commit (KD-15) for a player who has left the pitch** — which the
+> `Set → Rushing` row then launched him at, making his first act on the field a sprint to a point
+> nobody chose for him. Pass 1's sent-off filter is what made this reachable: it changed the dismissed
+> keeper's slot from self-resolving (#11 kept ticking him to the end of his run) to frozen
+> indefinitely, and frozen state is precisely what gets inherited — a ghost sprint traded for a stale
+> one. Fixed by giving #11 a `ResetSlot` and having `RefreshGkAgentIds` detect a change of occupant,
+> so the slot's state belongs to whoever holds it. **No new engine state and no
+> `SNAPSHOT_SCHEMA_VERSION` bump**: `_gkAgentIds` *is* the previous value, and it is reconstructed
+> rather than serialized, so a restore re-derives it and sees no change. The constructor's sentinel
+> loop now runs through `ResetSlot` too — a fresh slot defined once instead of in a pair that must
+> agree (§5.Z.12). The Medium is a gap in my own last pass: the sent-off fix shipped with **nothing
+> asserting it**, so its return would have been silent; both locks are now in, mirrored home and away.
+> Three Lows recorded not fixed in `gk-rush-trigger-design.md` §7 — a comment in #11 that W1 falsified,
+> a redundant `_attrs` write on the rush path, and a state-machine comment that states the opposite of
+> the row order it describes. **Gate still NOT run — no .NET SDK in this environment, so none of this
+> has been compiled or executed.**)
+
+> **Last Updated (prior):** August 4, 2026, same day (**W1 adversarial review pass 1 — 1 High, 4
+> Medium, 4 Low, all fixed.** The High is the one worth naming: `RushArmed` bounded how LONG a run the
+> keeper would commit to and never how SHORT, so a keeper standing on the ball he had just swept
+> re-armed — and that is the *ordinary* end state of a sweep, not an edge case, because §5.Z.15/16
+> bars the keeper from collecting the loose ball he ran to. Traced through the real call order the
+> result is a zero-length rush every third tactical tick (`Set` → commit → `Anticipate` → `Rushing` →
+> target reached → `Recovering` → `Set`, the cooldown bypassed because `UpdateBaselineSlot` feeds the
+> keeper his own position), a keeper pinned to a dead ball, a `RushPhase.Reached` published every
+> cycle, and — the part that bites — never enough `Anticipate` dwell for §3.3.6's dive gate, so the
+> save path is suppressed while it runs. **`ERR-011-009` ended the stall; without this guard it became
+> a churn.** The fix reuses #11's own arrival radius rather than minting a twelfth `[GT]`: the commit
+> test and the arrival test must agree, and §5.Z.12's rule is that a pair has two places that must
+> agree where a mirror has one. Mediums: a keeper **sent off mid-rush kept sprinting** (the engine's
+> freeze is `_commands = Stop`, which governs the movement integration only, while #11's `Rushing`
+> branch writes position *after* it — `RefreshGkAgentIds` now filters `_isSentOff`, which is what
+> `NotifyKeeperOfShot`'s own comment already assumed); `RushCommitFatiguePenaltyM` is **structurally
+> dead**, since all four `ToGoalkeeper` call sites hardcode `fatigue: 0f`, so it is recorded
+> do-not-calibrate in both the spec and the design note rather than entering the calibration pass
+> looking live; **no test proved the keeper physically leaves his line** through a real engine (the
+> composed locks stopped at `GkState == Rushing`, which is equally true of an engine whose rush
+> position write-back is dropped — the #11 v1.4 H-2 defect), now fixed by a displacement test plus the
+> re-arm lock; and `GkHeadingIntentSource`'s v1.1 history row still documented the **rejected**
+> last-man model as current. Lows: the epsilon renamed `GK_RUSH_DEGENERACY_EPSILON` because it guards
+> three dimensionally different quantities, a `+4 [GT]` header corrected to 5, an orphaned header
+> continuation folded back, and the cross-catalogue `GkRushCommitment > RushCommitThreshold` invariant
+> — which keeps the whole trigger from going silently dead — now **asserted** instead of merely
+> commented. **Still not measured: no .NET SDK in this environment, so no gate run and no numbers.**)
+
+> **Last Updated (prior):** August 4, 2026, latest same day (**WIRING BACKLOG W1 LANDED — the goalkeeper
+> comes off his line for the first time, and the spec defect that discovery surfaced
+> (`ERR-011-009`).** `GoalkeeperMechanics.CommitRushIntent` had **zero production callers** since it
+> was written, so every one-on-one this engine has ever played was a stationary keeper on his line —
+> the whole rush subsystem below the trigger (dispatch, `Rushing → OneOnOne → Smothered`, abort
+> reasons, telemetry, snapshot serialization) was built, tested and dead. `MatchEngine.TryCommitRushIntents`
+> is that caller, over a new pure `GkHeadingIntentSource.RushArmed`. **The predicate is built from one
+> sentence: a keeper comes out to REDUCE THE SHOOTING ANGLE.** So the only thing that keeps him home is
+> a team-mate already **goal-side** of the ball, inside the corridor the shot would travel down — a
+> defender merely *chasing* the carrier, or wrestling him for the ball, narrows nothing and does not
+> stop him. And **how far** he comes out is not an engine constant but the keeper's own attributes,
+> #11 §3.7.0's `ComputeRushCommitDistanceM` over `OneVsOne` / `Composure` / fatigue: ~9 m for a timid
+> keeper, ~16 m for an aggressive one at 20% fatigue. (This is the corrected model — the first cut used
+> a last-man test, refusing the rush whenever any team-mate was nearer the ball, which keeps the keeper
+> home in exactly the situation he exists for. Caught at owner review, before any measurement.) For a
+> loose ball the locked target is an **intercept-race solve** rather than the ball's current position,
+> because KD-15 locks the target at commit and a rolling ball is not where it was; the solve
+> self-guards, since a clearance outrunning the keeper has no positive root. Skipped whenever
+> `SaveArmed` holds for the same keeper — **a ball driving at the goal is a save, not a rush** — or a
+> shot would send the keeper charging out while the ERR-011-007 commit-lead gate still held the dive,
+> regressing the whole §5.Z.17–§5.Z.22 save pipeline. Deliberately **not** routed through the Decision
+> Tree: `ActionType.SAVE = 7` is the last ordinal that fits the 3-bit composure-noise field, so a RUSH
+> action would force the same digest rebaseline that defers W9, turning the board's cheapest large
+> lever into its most expensive item. **No new engine state** — #11's own already-serialized
+> `_rushIntentActive` is the per-episode latch, read through new `GetState`/`HasActiveRushIntent`
+> accessors rather than duplicated (two latches with different lifetimes for one episode is precisely
+> ERR-011-002's dive-at-nothing) — so **no `SNAPSHOT_SCHEMA_VERSION` change**. **What the wiring
+> surfaced, first: `ERR-011-010`.** §3.7's state entry delegated the rush DECISION to Decision Tree #8,
+> which has no goalkeeper model and structurally cannot acquire one — so the condition belonged to
+> nobody, which is the whole reason the method sat uncalled for ten weeks while everything below it was
+> built, reviewed and tested. And because the "when" was delegated, the spec never said what a keeper is
+> *deciding* either, a gap no call site can fill by guessing. New §3.7.0 takes the decision back (the
+> §3.3.6 move) and states it normatively on both halves: only a goal-side body is cover, and the
+> distance is his own attributes. `OneVsOne` is consumed for the commit DECISION only — FR-GK-024's
+> closed-form constraint on the 1v1 SAVE formulas is untouched. **And second: `ERR-011-009`.**
+> #11 §3.1.1 gives `Rushing` three exits and `OneOnOne` two, and for a
+> LOOSE ball **none of them can fire** — the 1v1 and smother triggers are false by construction with
+> no ball possessor, F-08 needs one, and §3.7.2's update converges on the locked target and stops
+> without overshooting — so a keeper who swept a loose ball would have stood over it in `Rushing` for
+> the remainder of the match. Everything else anticipated the completion (`RushPhase.Reached` has been
+> in the enum since v0.1, never published; §3.7.3 reserves `AbortReason.AttackerBeatGK`, also
+> unreachable); only the table that adjudicates state had no row. Fixed spec-and-code in the same
+> commit: two §3.1.1 rows, the §3.7.2 terminating check, `[GT] RUSH_TARGET_REACHED_RADIUS_M`, and the
+> `Reached` event finally emitted — a **completion, not an abort**, ranked below contact, F-08 and the
+> 1v1 trigger, so FR-GK-018 / KD-15 are untouched. **The honest headline, and a deliberate break with
+> every §5.Z entry above: NOTHING HERE HAS BEEN EXECUTED.** The authoring environment has no .NET SDK
+> and the agent proxy denies `builds.dotnet.microsoft.com`, so `tools/dotnet-ci/run-gate.sh` did not
+> run and the new `GkRushDiagnosticTests` instrument is written-and-unrun. There are **no pre/post
+> numbers**, and none were invented; the gate result for this landing is whatever the GitHub
+> `dotnet-compile-test` job reports, and no claim that a suite enforces anything may be cited before
+> then — that is this project's own never-compiled-surfaces hazard, and it is being named rather than
+> stepped in. Eleven new `[GT]`s — six in #11's catalogue (the §3.7.0 commit-distance model plus
+> `RushTargetReachedRadiusM`) and five in the engine's (`GkRushMaxInterceptS`, `GkRushMaxBallHeightM`,
+> `GkRushCommitment`, and the two cover-geometry dials) — are all first plausible numbers, not fitted
+> ones; under KD-W1 they are **new dials for a dead surface**, not retunes, and they are the
+> calibration pass's input. Note where they live: how far the keeper comes out is **#11's**, because it
+> is a property of the keeper; the cover geometry and the guards are the **engine's**. Files: `MatchEngine.cs` v1.58,
+> `GkHeadingIntentSource.cs` v1.1, `MatchEngineConstants.cs` v1.28, `GoalkeeperMechanics.cs` v1.11,
+> `GoalkeeperStateMachine.cs` v1.7, `GoalkeeperConstants.cs` v1.5, `GoalkeeperRushDispatch.cs` v1.1,
+> new `GoalkeeperRushTests.cs` /
+> `GkRushTriggerTests.cs` / `GkRushDiagnosticTests.cs`, new owner doc `gk-rush-trigger-design.md`,
+> spec #11 §3 v0.7, `spec-error-log.md` v1.56, `match-engine-wiring-backlog.md` v1.1. Next in the
+> backlog sequence: **C1**, the `InPoss` gate — the largest starvation on the board. Prior entry
+> below.)
+
+> **Last Updated (prior):** August 4, 2026, latest same day (**MERGE — `main` into the P4a branch, and a version-number collision resolved.** PR #295 was un-mergeable. Three conflicts, **all in the "newest entry at top" chains** — this file, `CHANGELOG-src.md`, `file-manifest.md` — which is the expected class when two branches each prepend, and **no source conflict at all**: `main` had moved on in `decision-tree` and `match-engine` only, which the client assemblies do not touch. Resolved by **interleaving both sides chronologically by commit time** rather than picking a winner, so every entry from both branches survives verbatim, one `Last Updated:` per chain, everything below it `(prior)`. **The collision worth knowing about:** both branches independently allocated `CHANGELOG-src.md` **v2.53**. `main` owns it (close-chance §5.Z.24, already in trunk), so this branch's four entries renumbered up by one — P4a landing 2.53→**2.54**, AR pass 1 →**2.55**, tilted-view →**2.56**, AR pass 2/3 →**2.57** — in both the header chain and the VERSION HISTORY table. Nothing outside that file cited them (grep over `docs/`, `src/`, `README.md`). **A consequence to leave alone rather than "fix":** 2.54 is dated August 3 and sits above 2.53 dated August 4. The table is keyed on version, and version numbers record the order things land in trunk, which is not the order they were written — renumbering by date would mean renumbering an entry already merged. **One edit to content that arrived from `main`, made deliberately and recorded here rather than silently:** its chain tagged close-chance `v2.52` while its own VERSION HISTORY table gives that entry 2.53; left alone the merge would have put two `v2.52` tags in one chain — the duplicated-version hazard this project has a standing trap entry for — so the tag now agrees with the table it contradicted. **Deliberately NOT touched:** `main` carries a repeated §5.Z.23 entry in both changelog chains (both tagged v2.51), and the VERSION HISTORY table has six long-standing duplicate version ids (2.9, 2.10, 2.34, 2.36, 2.42, 2.44) — identical on both branches, so neither was introduced here. Deleting a historical entry during a conflict resolution is what these files forbid, and renumbering 150 rows of merged history is not a merge's job. **Verified mechanically, not by reading:** every line of both parents is accounted for in all three merged files — the only absences are the label relabels, the four renumbers, one deduplicated header, and five manifest rows where this branch's text is a superset of `main`'s (the `LiveAgentCue` row gained `IsGoalkeeper`; the client section headers moved P3→P4a and P4→P4b). Every P4a source file is byte-identical pre- and post-merge. No `src/` change in this merge.)
 >
 > **Last Updated (prior):** August 4, 2026, latest same day (**P4a ADVERSARIAL-REVIEW PASS 2 — 1 High, 4 Medium fixed; run over the tilted-view revision's own output.** **H-1, and it is the pointed one:** `PitchCameraRig` decided where the camera goes and how it is angled, but said nothing about **how much of the pitch it sees** — so P4b would have chosen a field of view inside the `MonoBehaviour`. A framing decision, in the one place the CI gate cannot compile, sitting inside the deliverable whose entire purpose is keeping decisions out of there (§12 rule 1, the P4a/P4b split). `PitchCameraPose` gains `FieldOfViewDegrees` — the binding now assigns position, look-at and field of view, and picks nothing — `MatchClientConstants` gains `CameraVerticalFovDegrees`, and because two individually-legal dials can pair into a camera whose lowest ray never meets the ground, the bound is `tilt + fov/2 < 90` rather than two range checks. `PitchCameraRig.GroundExtentAlongTilt` attaches a number to the framing: near and far reach of visible ground, **deliberately asymmetric**, since a tilted camera sees a trapezoid and asserting symmetry is the mistake the test guards. **M-1:** §5-P4b instructed *both* cameras in a single bullet — the new rig placement and, in the same sentence, the deleted orthographic one — while the very next bullet said the orthographic assumption was wrong; the roadmap's B8 row carried only the stale half. The live instruction sheet for the next phase on the critical path contradicted itself. **M-2:** `PitchMarking`'s doc still sent the render skin to `ToView`, which would stand every marking upright in the world XY plane instead of laying it on the turf — and `ToView`/`ToPitch` turned out to have no production caller left at all after the revision (`ToView` was `ToWorld` with the height dropped, and the inverse a click needs is a ray intersection), so both are deleted and their tests re-anchored. **M-3:** `CameraLateralOffsetM` was the only camera dial with no validation, and it lands directly in the camera's world position — a non-finite value put the camera nowhere while every assertion about the aim point still passed. **M-4:** the tilted-view revision never appended version-history rows to `MatchClientConstants.cs` (v1.4) or `MatchRenderProjection.cs` (v1.2), so each file's newest row described constants and a `HeightScale` it no longer had, and three tracking documents cited versions the files themselves did not claim. The `// Modified:` date check did not catch it, because the previous row carried the same date. `match-client-core` 129 → 135; the two new locks verified non-vacuous by breaking them (symmetric ground extent fails 2, a fov dropped from the pose fails 1). **Full dotnet gate: PASSED, 0 failures** (whole tree green, 30 suites; match-client-core 129 → 135, match-engine 368 unchanged). **The sweep after the fixes found one more Medium, so this pass is NOT converged** — `PitchMarkingKind.Rectangle` still documented corner ordering as *not* guaranteed and told consumers to re-normalise, which is the exact contract pass 1's H-1 reversed: `PitchMarking.cs` was fixed then and the enum sitting beside it was not, so two files stated opposite contracts for one field, and the enum is the one a renderer switching on `Kind` reads first. Fixed; the guarantee is test-locked by `EveryRectangleArrivesWithItsCornersNormalised`, so the docs cannot silently drift from the code again. **Pass 3 then re-read the whole P4a surface and surfaced no High and no Medium — the loop is converged.** Two Lows fixed: `PitchCameraPose`'s header and class summary still described it as two values, and a test comment credited the wrong assertion with guarding the static-init-order defect. That second one is worth stating plainly, because the correction is counter-intuitive: asserting `CameraTiltDegrees > 0` does **not** catch a declaration reorder. By the time any test reads the field, static init has finished and it holds its real value whichever order it ran in. What catches it is re-evaluating the invariant itself on the finished values — a pair that is genuinely invalid fails there regardless of what the boot check saw. The guard was already present and correct; only the comment beside it was wrong. **Full dotnet gate on the converged tree: PASSED, 0 failures** (30 suites; match-client-core 135, match-engine 368 unchanged).)
 >
-> **Last Updated:** August 4, 2026, latest same day (**`match-realism-pass` SKILL RE-CUT FOR WIRE-FIRST
+> **Last Updated (prior):** August 4, 2026, latest same day (**`match-realism-pass` SKILL RE-CUT FOR WIRE-FIRST
 > — the calibration ladder moves behind a wiring gate, and the gate now defers to the wiring backlog
 > and KD-W1.** Tooling-only; no `.cs`, no spec, no assembly, no gate run. The skill encoded
 > measure → localize → ladder → land, which is the right shape only when the chain under the dial is
