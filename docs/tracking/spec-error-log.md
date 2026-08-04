@@ -6,7 +6,9 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 1.55
+**Version:** 1.56
+**Updated:** August 4, 2026 (v1.56 — **ERR-008-018 filed + RESOLVED at the close-chance-creation pass** (§5.Z.24). #8 §3.1.5.2 picks a dribble direction by FREE SPACE alone and closes by delegating the correction — *"the scoring stage (§3.2.2) applies directional-to-goal modifiers to the DRIBBLE utility"* — but §3.2.4.1, DRIBBLE's actual formula, has no such factor, and §3.2.2 is the **PASS** formula, so the promised term was delegated to a section that does not own DRIBBLE and never had a home. Measured over six full matches: in the attacking third DRIBBLE is the modal carrier action at **40%** of decisions with a mean cosine to the opponent goal of **−0.302** and only 31% pointing goalward — the average final-third dribble points AWAY from the goal, and the utility was identical either way. Same class as ERR-008-017. Fixed with `DirectionQuality_DRIBBLE` in §3.2.4.1 (the §3.1.3.5 PASS shape), the cross-reference corrected, worked examples recomputed and a Case A′ added; the zero-`BestDirection` degenerate input resolves to the exact ×1.0 identity (KD-V3 restated), so all 22 pre-existing `UtilityScorerTests` are bitwise unchanged. Measured: cosine **−0.302 → +0.006**, goalward **31% → 49%**, moving on **all six seeds with no overlap** between pre- and post-fix distributions. The `[GT]` floor lands at **0.80** rather than the PASS floor of 0.50 because suppressing the dribble pushes the carrier onto HOLD, which has no timeout: at floors 0.65 and 0.50 one seed in six stalled (mean final-third episode 5.1 s → 17.5 s / 28.6 s). **The creation funnel itself did NOT move and is not claimed** (box occupancy 0.11 → 0.10, ball into box 6% → 5%, passes into box 1% → 0%) — the owner doc re-localizes it to #8 §3.1.3 generating PASS candidates only at a teammate's CURRENT POSITION, so the tree cannot pass to a place, only to a player. No schema/RNG/domain-tag/draw-site/draw-order change. Acceptance `match-engine-close-chance` — **2 of 3 predicates fail pre-fix, verified by execution at `7fcd897`**. Prior entry below.)
+
 **Updated:** August 3, 2026 (v1.55 — **ERR-011-008 filed + RESOLVED at the conversion-at-contact pass** (§5.Z.23), and it is the seventh consecutive realism pass whose brief's premise did not survive measurement. `gk-contact-rate-design.md` §7 item 1 recorded the residual as the Stage-0 `pointQuality` lottery and parry placement; the new per-contact instrument found that **the parries and spills work and the CATCH does not**. Ball speed the tick before a contact vs at the end of it: parried **10.8 → 0.0**, deflected 10.3 → 4.2, spilled 13.9 → 9.0 — and **caught 11.1 → 10.8**, one tick of drag, because §3.5.2's catch branch is TWO statements (the possession record AND `ball.velocity = gkHandVelocity`) and only the first was implemented. §3.5's **Outputs** summary is the contributing spec defect: it named `Ball.SetPossessor` alone for the catch, and `IGoalkeeperBallSystem` exposed no park seam, so the omission was invisible from the interface. Possession in this engine is a flag, not a kinematic constraint — the ball integrates unconditionally and the goal check adjudicates on POSITION — so **7 of 10 catches were followed by a goal within 5 s**, with 14 of 15 goals following a keeper contact within 10 s. Fixed with `ParkBall()` at both claim sites (catch + Stage-0 smother); §3.5.2's pseudocode body unchanged, because it was right. No schema/RNG/domain-tag/draw-site/draw-order change. Measured (3 full matches, same seeds): goals **15 → 11** over the corpus (5.0 → **3.7**/match — the closest this engine has measured to football's ~2.7), scorelines 2-2/2-0/6-3 → 1-0/2-2/4-2. Acceptance `match-engine-keeper-claim`: 2 of 3 predicates fail pre-fix, verified by execution (6 of 6 claims left the ball travelling; 5 of 6 held balls entered the keeper's own net). The `pointQuality` lottery is measured in detail and recorded NOT fixed — a probe of the geometry-aware form is reported in the owner doc §7. Prior update below.)
 **Updated (prior):** August 2, 2026 (v1.54 — **ERR-020-002 + ERR-020-003 filed, both OPEN, Code Standards #20 §3.5.2-owned.** Found while splitting `src/CLAUDE.md`, which reproduces the layer taxonomy: §3.5.2 places **19 of the 31 assemblies now in `src/`**, leaving the composition root, the management layer, the data layer, `tactical-instructions` and all four client assemblies outside the layer order — so FR-CS-046 decides nothing about ~39% of the tree, including every reference into or out of `match-engine`. ERR-020-002 proposes a **ten-tier order covering all 31 folders**, derived from the `.asmdef` reference graph rather than folder names and verified against it: **zero upward references**, 29 intra-tier references all pre-existing and acyclic — so adopting it changes nothing that exists and constrains only future code. It also retires the stale empty `UI (Stage 1+ — not specified yet)` row and strikes the `code-standards` phantom from `src/CLAUDE.md`'s infrastructure table. **Spec #20 is deliberately untouched:** layer membership is its authority and wants owner sign-off, and a wrong answer in the authority file is worse than a documented gap — the ⚠️ note in `src/CLAUDE.md` names the gap meanwhile. ERR-020-003 is the notation defect found by the same verification: §3.5.2 draws `Physics ──► Mechanics ──► AI` while the root `CLAUDE.md` states `AI → Mechanics → Physics, never the reverse` — same rule, opposite arrows, neither labelled. Code follows the `CLAUDE.md` reading; no violation exists. Prior update below.)
 **Updated (prior):** July 28, 2026 (v1.53 — **ERR-011-007 + ERR-012-010 filed + RESOLVED at the gk-contact-rate pass** (§5.Z.20 §7.1's residual — the keeper met ~a quarter of on-target shots and the uncontacted remainder held nearly all the surplus goals). Measured per episode at the ball's goal-plane crossing (new `GkContactRateDiagnosticTests`): of 15 crossed un-contacted threat episodes, **9 were dive-early** (the unconditional `Anticipate → Diving` row launched the dive at the first 10 Hz tick after SAVE committed, so the 600 ms envelope closed 456–2000 ms before the ball arrived; dive-late exactly 0), 3 no-dive, 3 lateral-miss — with the lateral need at the crossing (1.91–3.83 m) at or beyond the dive's ~3.55 m total coverage because #12 §3.3.3's pitch-anchored `GK_LATERAL_FACTOR × basisY` lateral term moved the keeper at most ±2 m over the whole 68 m width. **ERR-011-007**: new #11 §3.3.6 commit-to-arrival timing — the transition gates on predicted time-to-plane against a lateral-need-scaled commit lead (`[GT] DIVE_COMMIT_MIN_LEAD_FRAC`), sharing ONE crossing predictor with the §3.3.4 dive direction; §3.2.3's `elapsed` anchor refined to the keeper's first decision opportunity at/after the live stamp — `max(AttemptCommittedTick × 100 ms, the first tactical tick after the stamp)` — so neither the held launch (scored as sluggish) nor a shot struck after the commit (scored as seconds-early) re-clamps the window; the second ordering is COMMON under the hold and was found by the first full-corpus run. **ERR-012-010**: #12 §3.3.3's lateral term becomes the ball-line point clamped inside the goal mouth (`GK_LATERAL_CLAMP_M` replaces `GK_LATERAL_FACTOR`, retired not retuned — no value of a pitch-anchored gain expresses goal-anchored tracking). No schema/RNG/draw-order change (both mechanisms are pure functions of current tick state). Measured effect in the owner doc `gk-contact-rate-design.md` §6. Prior update below.)
@@ -2282,6 +2284,66 @@ every contact resolves to exactly one ball-side action). Measured effect, three 
 same seeds: goals **15 → 11** over the corpus (5.0 → **3.7**/match, the closest this engine has
 measured to football's ~2.7), scorelines 2-2 / 2-0 / 6-3 → **1-0 / 2-2 / 4-2**, goals-after-contact
 share 93% → 36%.
+
+---
+
+## ERR-008-018: Decision Tree #8 §3.2.4.1 — U_DRIBBLE had no directional term, and §3.1.5.2 promised it to the wrong section
+
+**Filed:** August 4, 2026 — at the close-chance-creation pass (§5.Z.24), against the residual
+§5.Z.23 §7 item 4 recorded. **Status: RESOLVED** (same commit). Owner design supplement:
+`docs/tracking/close-chance-creation-design.md`.
+
+**How found.** The creation instrument (`CloseChanceDiagnosticTests`, 6 full matches) measured what
+a ball carrier in the ATTACKING THIRD actually decides. DRIBBLE is the modal action at **40% of
+heartbeat decisions**, and the mean cosine between the chosen dribble direction and the direction to
+the opponent goal is **−0.302**, with only **31%** of dribbles pointing goalward at all — *the
+average dribble in the attacking third points away from the goal.* Negative on all six seeds
+(−0.211 to −0.448).
+
+**The defect is two-part and both parts are in the spec.** §3.1.5.2 selects
+`best_direction = argmax(space_in_dir)` — deliberately direction-blind, since `SpaceScore` measures
+only how clear a sector is — and closes by delegating the correction: *"No backward-sector penalty is
+applied to `SpaceScore` at generation time; the scoring stage (§3.2.2) applies directional-to-goal
+modifiers to the DRIBBLE utility."* But (a) **§3.2.4.1, DRIBBLE's actual scoring formula, has no such
+factor**, and (b) the cross-reference names **§3.2.2, which is the PASS formula** — so the promised
+term was delegated to a section that does not own DRIBBLE, and never had a home. The consequence is
+structural: a dribble toward halfway scored *identically* to the same dribble at goal, and in the
+final third — where the free space is behind the carrier — that is exactly what the argmax selects.
+Same class as ERR-008-017 (`U_SHOOT` had no distance term): a formula omitting the term it should be
+dominated by, in a system whose spec text says the term exists.
+
+**Fix (spec + code, same commit).** §3.2.4.1 gains a multiplicative `DirectionQuality_DRIBBLE` =
+`FLOOR + ((cosine + 1) / 2) × (1 − FLOOR)` over the cosine between the option's `BestDirection` and
+the direction to the opponent goal — the same linear-in-cosine shape §3.1.3.5 already uses for PASS.
+§3.1.5.2's cross-reference is corrected to §3.2.4.1. Worked examples A and B are recomputed and a new
+Case A′ is added, since the whole point of the term is that A and A′ (identical except direction)
+previously scored the same 0.384. **Degenerate-input contract (KD-V3 restated):** a zero
+`BestDirection` — what every direct-injection test option carries — resolves to the exact ×1.0
+identity, not the perpendicular midpoint, so all 22 pre-existing `UtilityScorerTests` are bitwise
+unchanged.
+
+**The `[GT]` is bounded by a defect in a different action, and that is deliberate.**
+`DRIBBLE_GOAL_DIR_MIN_MODIFIER` lands at **0.80**, weaker than the 0.50 PASS floor, because
+suppressing the dribble pushes the carrier onto HOLD — which has no timeout. HOLD share rises
+20% → 23% at 0.80 and → 31% at 0.50, and at floors 0.65 and 0.50 one seed in six stalled outright
+(mean final-third episode length 5.1 s → 17.5 s and 28.6 s). A unit lock asserts the DRIBBLE floor
+stays above the PASS floor with that evidence cited, so the asymmetry cannot drift back silently.
+The HOLD stall is recorded as the owner doc's §7 item 2.
+
+**Determinism impact: none to the machinery.** No `SNAPSHOT_SCHEMA_VERSION` change, no new RNG
+stream / domain tag / draw site, no draw-order change. Digests move for any match containing a
+dribble decision — a behaviour change, as intended. Locked by the `match-engine-close-chance`
+scenario (**2 of 3 predicates fail on the pre-fix engine, verified by executing the scenario in a
+worktree at `7fcd897`**: mean cosine −0.291 against a −0.10 bound, goalward share 0.306 against
+0.42) + 4 `UtilityScorerTests` locks.
+
+**Measured effect (6 full matches, identical seeds pre/post).** Mean dribble cosine
+**−0.302 → +0.006** and goalward share **31% → 49%**, moving on **all six seeds with no overlap
+between the pre- and post-fix distributions**. Carrier mix DRIBBLE 40% → 33%, HOLD 20% → 23%. **The
+close-chance funnel itself did not move** (box occupancy 0.11 → 0.10, ball into the box 6% → 5% of
+episodes, passes into the box 1% → 0%, shots 19.3 → 19.5, goals 3.67 → 3.50) and is explicitly not
+claimed — the owner doc §7 item 1 re-localizes it to #8 §3.1.3 generating PASS candidates only at a
+teammate's current position, so the tree cannot pass to a place, only to a player.
 
 ---
 

@@ -17,11 +17,12 @@ description: >-
 
 # Match Realism Pass
 
-This repo has run this pass seven times in eight days (§5.Z.17 shot outcomes → .18 → .19 shot speed and
-woodwork → .20 keeper conversion → .21 shot volume → .22 keeper contact → .23 conversion at contact —
-July 27 to August 3).
-Every one had the same shape, and every one produced a finding that the brief it started from was
-partly wrong. That is not bad luck — it is the method working. The discipline below exists so the pass
+This repo has run this pass eight times in nine days (§5.Z.17 shot outcomes → .18 → .19 shot speed and
+woodwork → .20 keeper conversion → .21 shot volume → .22 keeper contact → .23 conversion at contact →
+.24 close-chance creation — July 27 to August 4). Every one had the same shape, and **seven of the
+eight produced a finding that the brief they started from was partly wrong** — §5.Z.24 is the first
+whose premise survived its own check, and it survived because the pass re-measured it rather than
+assuming it. That is not bad luck, it is the method working. The discipline below exists so the pass
 measures before it believes, and so the result is attributable to the thing you changed.
 
 Twice, that partly-wrong brief was wrong in the same specific way: it arrived asking for a *quality*
@@ -51,16 +52,31 @@ constructed, driven each tick, read by someone, and implemented to the whole of 
 one of them is not, the calibration ladder in §3 is premature.** What that makes the pass instead
 depends on which check failed, and the three routes are different work: **check 1** hands off to a
 spec's T0 landing and ends this skill's involvement; **check 5** measures, records, and calibrates
-nothing; **checks 2–4** are a wiring task, which is the branch the rest of §0 describes.
+nothing; **checks 2–4 and 6** are a wiring task, which is the branch the rest of §0 describes.
 
 This gate is first because the project's position makes that failure routine rather than rare. **22
 of 53 APPROVED specs have no `src/` assembly at all**, and several that do exist are wired only
 partially — T0 cores with no engine consumer, orchestrators behind opt-in flags, branches implemented
 to half their pseudocode. "The spec is APPROVED" says nothing whatsoever about whether code runs.
 
+### Start at the wiring backlog
+
+`docs/tracking/match-engine-wiring-backlog.md` is the standing inventory of built-but-unwired
+surfaces, produced by three systematic sweeps (comment sweep, whole-tree production-caller count over
+every `public` method, manual triage) across the 18 assemblies the engine composes. It carries **10
+Class-A dormant capabilities**, and the two largest were invisible to the project's own tracking
+until that audit ran: **W1 — the keeper never comes off his line** (`CommitRushIntent` has no
+production caller, though everything downstream of it works, so every 1v1 is a stationary keeper
+waiting to dive) and **W2 — no player has ever made a tackle** (three dormant links in one chain, and
+no comment anywhere recorded it).
+
+If your target touches an entry on that board, the board has already done §0's work and named the
+fix. It is a **floor, not a ceiling** — §1.1 says so itself — so a clean board does not end the gate,
+but re-deriving what it already contains is wasted effort.
+
 ### First, enumerate the chain
 
-The five checks below are only as good as the list you run them against, and building that list is
+The checks below are only as good as the list you run them against, and building that list is
 the hard part — nobody had "the catch parks the ball" on a stage list until §5.Z.23's instrument
 followed the ball *after* the contact. So write the chain out explicitly, **from the observable
 backwards to the dial**, sourced from the owning spec's §3 pipeline rather than from memory: for the
@@ -72,11 +88,11 @@ If you cannot write that list from source, you do not yet know what to gate. Bui
 instrument first — a funnel is a chain enumeration you can measure — and resume the gate with its
 stages.
 
-### Then the five checks
+### Then the six checks
 
-All cheap source reads. **Run all five and report every failure.** Do not stop at the first — this
-chain has produced multi-gap passes more than once: §5.Z.15 found #11 switched off **and** keepers
-skipped by the physics phase, and §5.Z.17 found three independently sufficient defects
+Checks 1–5 are cheap source reads; check 6 needs a run. **Run all six and report every failure.**
+Do not stop at the first — this chain has produced multi-gap passes more than once: §5.Z.15 found
+#11 switched off **and** keepers skipped by the physics phase, and §5.Z.17 found three independently sufficient defects
 (ERR-011-002/003/004). Stopping at the first means flipping a flag and then measuring a keeper that
 still cannot move.
 
@@ -113,8 +129,19 @@ still cannot move.
    heuristic is live, the symptom is real, and sweeping its `[GT]`s fits the dials to a stand-in that
    #44 will delete. Measure it, record the number against the owning `open-issues.md` entry and the
    roadmap item that will replace the placeholder, and do not calibrate it.
+6. **Does the gate on that stage actually fire?** Checks 1–5 are all method-level — *nothing calls X*
+   — and the wiring backlog §1.1 names their shared blind spot outright: **gate-level dormancy**,
+   where the call site exists and executes but its condition is almost never true. Such a surface
+   looks perfectly wired to every check above it. The measured instance is C1 — **#12 commits
+   `InPoss` on 9.5% of final-third samples**, starving every phase-gated mechanism in #13/#14/#15 —
+   and it was found by runtime instrumentation during §5.Z.24, by no static analysis. So this check
+   costs a run: count how often each gate and trigger condition on your chain fires over a match, not
+   just whether its call site is reachable. A stage firing at 9.5% is not wired in any sense that
+   matters to a dial downstream of it. The general instrument for this is **W12** on the backlog and
+   is not built yet; until it is, instrument your own chain's gates as part of §1 and resume the gate
+   with the counts — the same fallback the chain-enumeration step above uses.
 
-### When checks 2–4 fail — the wiring branch
+### When checks 2–4 or 6 fail — the wiring branch
 
 The pass does not stop, it changes shape. **Everything in this skill still applies except §3.**
 Instrument (§1) so the missing stage is proven absent rather than assumed absent, localize (§2), land
@@ -178,6 +205,10 @@ found the cause in one of three places, and it is worth checking them in this or
 
 1. **A formula that omits the dominant term** — `U_SHOOT` had no distance term (ERR-008-017);
    `AssembleRiskScore` has no age term. Ask what the strongest real-world predictor is and grep for it.
+   ERR-008-018 is the same class with a twist worth knowing: #8 §3.1.5.2 *promised* the dribble's
+   directional term and delegated it to "the scoring stage (§3.2.2)" — but §3.2.2 is the PASS formula
+   and DRIBBLE's own §3.2.4.1 never had one, so the term was delegated to a section that does not own
+   it. A cross-reference is not an implementation; follow it to the named section and check.
 2. **A value consumed at the wrong time** — the reaction window was recomputed every frame, so what
    the contact consumed was dated by the ball's whole flight (ERR-011-005); the detection stamp was
    never cleared, dating dives against shots 85–349 *seconds* old (ERR-011-006).
@@ -194,13 +225,26 @@ the ERR. Use the `err-file-and-backprop` skill for that step.
 
 ## 3. Calibrate on a ladder — once §0 has passed — and report what the ladder refuses
 
-**This step is conditional on the gate, and on nothing else.** A ladder run over a chain with a
-missing stage produces a number fitted to the gap, so that the correct later fix reads as a
-regression against it — that is the only thing §0 is protecting against. If §0 failed, land the
-wiring, re-measure, and re-enter here.
+**Read `match-engine-wiring-backlog.md` KD-W1 before this step — as of August 4, 2026 it freezes it.**
+The rule is project-wide and stronger than this skill's own gate: *do not land a `[GT]` change
+governing a subsystem that is not fully wired; constants wait for the calibration pass that follows
+the backlog.* Defect fixes, instruments and measurement are explicitly unaffected and continue
+freely. So on the match engine today the ladder is closed until that pass, and the honest move when a
+brief asks for one is to say so and land the wiring item instead. Check whether KD-W1 is still in
+force before reading further — it lifts when the backlog is worked off.
 
-Once the chain is intact, do not flinch from the ladder: `[GT]` calibration has been load-bearing in
-most of this chain's passes and produced its largest single movement. §5.Z.20 took goals per match
+The hazard KD-W1 names is diagnostic, not arithmetic, and it is worth carrying even after the freeze
+lifts: measured conversion of ~18% against football's ~11% reads as "the shot model is too generous"
+when part of it is "no keeper has ever narrowed an angle and no defender has ever tackled." A pass
+aimed at the shot model would have chased the wrong lever and left a `[GT]` that later has to be
+un-tuned.
+
+**When the freeze does lift, this step is conditional on the gate and on nothing else.** A ladder run
+over a chain with a missing stage produces a number fitted to the gap, so that the correct later fix
+reads as a regression against it. If §0 failed, land the wiring, re-measure, and re-enter here.
+
+And then do not flinch from the ladder: `[GT]` calibration has been load-bearing in most of this
+chain's passes and produced its largest single movement. §5.Z.20 took goals per match
 **14.7 → 8.0** with a recalibration inside #11's own §3.4.3/§3.4.5 spec ranges, and its owner
 document is explicit that the two timing defects fixed alongside it were not sufficient — the old
 values "could not reach the catch band … even with a perfect window." §5.Z.19 moved `VFloor` 10 → 24
@@ -221,8 +265,10 @@ plausible number. Two findings worth carrying in:
   and collapsed catches and parries to **zero**, and no `[GT]` inside #11's ranges lifts the blend
   back over `CatchThreshold`'s 0.65 floor, because mean contact marginality is 0.68 — so the next
   action there is a design decision about the contact geometry upstream, explicitly **not** another
-  calibration run. Recording the refusal, and naming the upstream stage that bounds it, is more
-  valuable than hitting the number.
+  calibration run. That decision is now **parked rather than resolved**, and the reason is the point
+  of this whole section: W1's keeper rush trigger changes the contact geometry the decision turns on,
+  so answering it before the wiring lands would answer it against the wrong engine. Recording the
+  refusal, and naming the upstream stage that bounds it, is more valuable than hitting the number.
 
 Also check whether the threshold you are tuning is a **cliff rather than a dial**: the foul force
 threshold gave 480 fouls at 1200 N, 90 at 2000 N and 0 at 3000 N, with intermediate values living on

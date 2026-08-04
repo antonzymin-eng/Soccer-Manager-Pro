@@ -12,69 +12,159 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 4, 2026 (**`match-realism-pass` SKILL RE-CUT FOR WIRE-FIRST — the calibration
-> ladder is now a conditional step behind a wiring gate.** Tooling-only; no `.cs`, no spec, no assembly,
-> no gate run. The skill encoded measure → localize → ladder → land, which is the right shape only when
-> the chain under the dial is complete. Under the project's actual position it often is not: **22 of
-> 53 APPROVED specs have no `src/` assembly**, #37 and #28 are T0-only and unwired, and twice in the
-> §5.Z chain a brief arrived asking for a *quality* that turned out to be **undefined** because a stage
-> was missing — **§5.Z.17** ("the quality of the save, not its existence"; measured zero hand contacts
-> across six keeper-matches, one cause being `OnShotExecutedEvent` with zero callers anywhere) and
-> **§5.Z.23 / ERR-011-008** (#11's catch coded to one of its two spec statements, so a claimed ball
-> flew on into the net).
+> **Last Updated:** August 4, 2026, latest same day (**`match-realism-pass` SKILL RE-CUT FOR WIRE-FIRST
+> — the calibration ladder moves behind a wiring gate, and the gate now defers to the wiring backlog
+> and KD-W1.** Tooling-only; no `.cs`, no spec, no assembly, no gate run. The skill encoded
+> measure → localize → ladder → land, which is the right shape only when the chain under the dial is
+> complete. Twice in the §5.Z chain a brief arrived asking for a *quality* that turned out to be
+> **undefined** because a stage was missing — **§5.Z.17** ("the quality of the save, not its
+> existence"; measured zero hand contacts across six keeper-matches, one cause being
+> `OnShotExecutedEvent` with zero callers anywhere) and **§5.Z.23 / ERR-011-008** (#11's catch coded to
+> one of its two spec statements, so a claimed ball flew on into the net).
 >
 > **New `## 0. The wiring gate`, ahead of the premise check (now §0.1).** It opens by requiring the
 > chain to be **enumerated from the observable backwards to the dial** out of the owning spec's §3 —
 > building that list is the hard part, since nobody had "the catch parks the ball" on a stage list
 > until §5.Z.23's instrument followed the ball after the contact — and falls back to §1's funnel when
-> the list cannot be written from source. Then five source-read checks, **all five run, every failure
-> reported**: two independent gaps in one chain is the normal case (§5.Z.15 found #11 switched off AND
-> keepers skipped by the physics phase; §5.Z.17 found three independently sufficient defects).
-> (1) does an assembly exist, against `CLAUDE.md`'s map and never `SPEC_INDEX.md`; (2) is the type
-> constructed at the composition root *and* reached by a phase, flag default included — plus assert
-> the flag **inside your own instrument**, since `DisableGkHeading()` is called in five places and an
-> exemplar copied with its `Disable*` setup reports a switched-off subsystem's zero as engine
-> behaviour; (3) does the output have a live **read**-side consumer; (4) is the branch coded to the
-> whole of its spec §3 **body**, not its Outputs summary; (5) is the target a Stage-0 placeholder for
-> an unimplemented spec — the foul/card heuristic at ~7 reds per 9 min with **#44 having no assembly**.
-> Checks 1 and 5 split on what the brief names: the spec (hand off to the roadmap) or a symptom a live
-> placeholder produces (measure, record, do not calibrate). **A failed gate re-shapes the pass rather
-> than stopping it**: every step still applies except the ladder, and the landing must say *"this pass
-> wired X; no `[GT]` was moved."*
+> the list cannot be written from source. Then six source-read checks, **all six run, every failure
+> reported**: multi-gap chains are not rare (§5.Z.15 found #11 switched off AND keepers skipped by the
+> physics phase; §5.Z.17 found three independently sufficient defects). Checks 1–5 are assembly
+> existence, composition-root construction + phase reach + **the flag state inside your own
+> instrument** (`DisableGkHeading()` is called in five places and §1 tells you to copy an exemplar),
+> live **read**-side consumer, spec §3 **body** vs Outputs summary, and Stage-0 placeholder. Checks 1
+> and 5 split on whether the brief names a spec or a symptom.
 >
-> **The gate is a filter, not a verdict on calibration, and the record is explicit about that.**
-> §5.Z.20 is cited in both §0 and §3 as the standing counterexample: a `[GT]` recalibration inside
-> #11's own §3.4.3/§3.4.5 ranges produced **the largest single movement this chain has measured, goals
-> per match 14.7 → 8.0**. It fixed two timing defects in the same pass — so the gate would have had
-> work to do there too — and its owner document states those fixes alone were not sufficient, the old
-> values "could not reach the catch band … even with a perfect window", which is precisely the point:
-> the dial was load-bearing independently of the wiring. §5.Z.19 (`VFloor` 10 → 24) and §5.Z.18 (`MIN_GOAL_VISIBILITY` 0.05 → 0.12) are
-> named for the same reason. The stated rationale for wiring first is therefore **not** that it moves
-> the number more, but that a missing stage bounds the outcome at a level no dial can reach, so a
-> ladder underneath one measures the gap rather than the setting.
+> **Merged with `main` across the wiring audit, which changed this skill rather than merely colliding
+> with it.** Three integrations: (a) **check 0 is now `match-engine-wiring-backlog.md`** — the audit
+> enumerated **10 Class-A dormant capabilities** by three systematic sweeps, so the gate reads that
+> board before re-deriving anything, and W1/W2 (the keeper never leaves his line, no player has ever
+> made a tackle) are cited as the standing examples; (b) **new check 6, gate-level dormancy**, which
+> the audit names as the explicit blind spot of exactly the static checks §0 had listed — a call site
+> that runs but whose condition is almost never true is invisible to all of checks 1–5, and C1 (#12
+> commits `InPoss` on **9.5%** of final-third samples) was found only by runtime instrumentation;
+> (c) **§3 now opens with KD-W1's `[GT]` freeze**, since the project-wide rule — no `[GT]` change
+> governing an unwired subsystem until the post-backlog calibration pass — is strictly stronger than
+> the per-chain conditionality this pass had written, and a skill that told the reader to calibrate
+> once *its* gate passed would have contradicted standing policy. §5.Z.24 also refutes a claim in the
+> skill's own opening — it is "the first premise in this chain that survived its own check" — so
+> "every one produced a partly-wrong brief" is corrected to seven of eight, and its **ERR-008-018**
+> joins ERR-008-017 as §2's second cause-1 instance.
 >
-> **Three further edits downstream of the gate.** §3 is retitled *"once §0 has passed"* and conditioned
-> on the gate and nothing else. Its ladder-refuses bullet now reads a refusal as **a wiring diagnosis
-> until proven otherwise** — the level is set upstream of the dial — citing §5.Z.23's geometry-aware
-> `pointQuality` collapsing catches and parries to zero against a 0.68 mean marginality that no
-> in-range `[GT]` clears. §2's cause 3 (structurally unreachable / vacuous gate) is now labelled **§0
-> failing late**. And §7 requires the recorded residual to be **classified — missing stage or mis-set
+> **The gate is a filter, not a verdict on calibration.** §5.Z.20 is cited in both §0 and §3 as the
+> standing counterexample: a `[GT]` recalibration inside #11's own §3.4.3/§3.4.5 ranges produced **the
+> largest single movement this chain has measured, goals per match 14.7 → 8.0**. It fixed two timing
+> defects in the same pass — so the gate would have had work to do there too — and its owner document
+> states those fixes alone were not sufficient, the old values "could not reach the catch band … even
+> with a perfect window", which is precisely the point: the dial was load-bearing independently of the
+> wiring. The stated rationale for wiring first is therefore **not** that it moves the number more, but
+> that a missing stage bounds the outcome at a level no dial can reach.
+>
+> **Two further edits.** §2's cause 3 (structurally unreachable / vacuous gate) is labelled **§0
+> failing late**. §7 requires the recorded residual to be **classified — missing stage or mis-set
 > dial** — because the next pass runs §0 against that sentence.
 >
-> **Adversarially reviewed before landing; the review is why the entry above reads as it does.** Pass 1
+> **Adversarially reviewed before landing; the review is why this entry reads as it does.** Pass 1
 > raised 4 High: a superlative ("the largest movements came from a missing stage") that the chain's own
 > record **refutes** via §5.Z.20; "§3 is the step most passes should skip", contradicted by load-bearing
 > `[GT]` work in at least §5.Z.18/.19/.20/.21; "stop at the first check that fails", contradicted by the
 > two-gaps example the gate itself cites; and a **misattribution of the motivating evidence** — §5.Z.15
 > and §5.Z.16 were cited as calibration briefs that turned out to be wiring, when §5.Z.11 item 2 had
 > named that wiring in advance ("opt-in and default-off (`EnableGkHeading`) … plus GK locomotion") and
-> §5.Z.16 was never a brief at all. The genuine instances are §5.Z.17 and §5.Z.23. All four fixed here,
-> with 3 Medium (chain enumeration, the `Disable*` instrument hazard, check-1/check-5 routing) and
-> 2 Low (§0.1 numbering, "subsystem" → chain in the frontmatter).
+> §5.Z.16 was never a brief at all. Passes 2–3 caught 3 more Medium, two of them introduced by the
+> pass-1 fixes; pass 4 was clean.
+>
+> **Chain repair, recorded rather than absorbed.** This merge's conflict region contained a
+> pre-existing defect on `main`: an **orphaned `**Last Updated:**` header** for §5.Z.23 with no body
+> and an unclosed parenthesis (the real §5.Z.23 entry survives intact below as `(prior)`), plus the B6
+> entry left bare when the audit entries were inserted above it — three bare labels where the chain
+> permits exactly one. The orphan is deleted and B6 relabelled `(prior)`; no entry body was edited.
+> This is the fourth time this chain has needed the same correction.
 >
 > Modified: `.claude/skills/match-realism-pass/SKILL.md` (frontmatter description + §0/§0.1/§2/§3/§7),
-> `.claude/skills/README.md` (derivation row: shape and repetition evidence restated, 6 passes → 7),
-> `file-manifest.md`, and this file. Prior entry below.)
+> `.claude/skills/README.md` (derivation row), `file-manifest.md`, and this file. Prior entry below.)
+
+> **Last Updated (prior):** August 4, 2026, later same day (**MATCH-ENGINE WIRING AUDIT — the code that
+> exists and never runs, and the `[GT]` freeze that follows from it.** Seven consecutive §5.Z passes
+> fitted constants against the composed engine. This audit asks what was *in* that engine, and the
+> answer is: less than the assembly graph suggests. Three passes over the 18 assemblies the match
+> engine references — a comment sweep for self-declared deferrals, a whole-tree production-caller
+> count over every `public` method, and manual triage of every candidate in source — found **10
+> Class-A dormant capabilities**. The two largest were invisible to the project's own tracking. **The
+> keeper never comes off his line**: `GoalkeeperMechanics.CommitRushIntent` has no production caller,
+> though everything downstream of it works (`GoalkeeperRushDispatch.UpdateRushFrame` moves the keeper
+> and writes back to the movement array; `Rushing → OneOnOne → Smothered` exists with abort reasons
+> and telemetry; the `RushIntent` is even serialized) — only the trigger is missing, so every 1v1 in
+> the game is a stationary keeper waiting to dive. **No player has ever made a tackle**: three
+> independent dormant links in one chain — `DefensiveAITick.GetTackleIntentRequests` is populated
+> every tick and read by nobody (its own class doc says integration is Stage 1, KD-16),
+> `GetAndClearTackleFlag` is hardcoded `=> false` in **both** engine collision adapters
+> (`MatchEngine.cs:6721`, `:6789`), and consequently `PassExecutor`'s §3.8.5 tackle-interrupt branch
+> and its `CancelReason.TackleInterrupt` outcome are unreachable code. No comment anywhere records
+> this one; only the call-graph pass found it. Also dormant: cross claims (`ResolveHandContactDuel`
+> intentionally not called, blocked on the same multi-agent contact feed as the already-filed
+> AGENT_BALL fan-out), the keeper's vision (`SaveArmed` is four lines of pure geometry while a
+> tested `OcclusionFilter` runs for every outfielder), the #13 BackwardPass press trigger
+> (`PassEventRing.Push` has no producer, so the ring the engine builds per team is permanently
+> empty), `BallStateType.Controlled` (no producer — possession is a flag, never a kinematic
+> constraint), and #26's kickoff preset selection (`ManagerAdaptation.ApplyKickoff` uncalled, so an
+> AI manager starts every match on the human baseline; only the mid-match ladder is wired).
+> **The method's blind spot is stated rather than hidden:** it detects *method-level* dormancy and is
+> structurally unable to see *gate-level* dormancy — a call site that runs but whose condition is
+> almost never true. One such is already measured (#12 commits `InPoss` on **9.5%** of final-third
+> samples, starving every phase-gated mechanism in #13/#14/#15), found by runtime instrumentation in
+> §5.Z.24 and by no static analysis, so the backlog carries four Class-B entries from that pass and
+> books a gate-firing instrument as its own item. **This backlog is a floor, not a ceiling.**
+> **KD-W1, the `[GT]` freeze:** do not land a constant governing an unwired subsystem. The hazard is
+> diagnostic, not just arithmetic — measured conversion of ~18% against football's ~11% reads as "the
+> shot model is too generous" when part of it is "no keeper has ever narrowed an angle and no
+> defender has ever tackled", and a pass aimed at the shot model would have left behind a `[GT]` that
+> later has to be un-tuned. Defect fixes, instruments and measurement continue freely; constants wait
+> for one calibration pass against the complete engine. **KD-W2** scopes this to the match engine —
+> the 22 approved specs with no assembly remain `path-to-playable-roadmap.md`'s problem. The §5.Z.23
+> `pointQuality` owner decision is **parked, not resolved**: the rush trigger changes the contact
+> geometry that decision turns on. New `docs/tracking/match-engine-wiring-backlog.md` v1.0. Read-only
+> audit — no `src/` change, no spec change, no gate run. **Prior entry below.**)
+
+> **Last Updated (prior):** August 4, 2026 (**§5.Z.24 — CLOSE-CHANCE CREATION: the first premise in this
+> chain that survived its own check, one formula defect fixed, and the creation gap deliberately NOT
+> claimed.** §5.Z.23 §7 item 4 re-localized the creation residual to the final-third → penalty-area
+> stage (6.5% against football's ~40%) and named it a #8/#15 surface. Two premises were checked.
+> **The first SURVIVED — a first for this seven-pass chain**: the "306.7 final-third entries" figure
+> is a raw boundary-crossing count that a ball rattling across x = 35 would have inflated, but
+> re-counted with a 1 s exit dwell over six full matches it reads **311 episodes against 312 raw
+> crossings**, each averaging 5.1 s. The denominator was sound. The second premise located the stage
+> without naming a mechanism, and the instrument (`CloseChanceDiagnosticTests`, env-gated
+> `TD_CREATION_DIAGNOSTIC=1`) found two, both real: **nobody is in the box** — mean attacking
+> outfielders inside the penalty area while the ball is in the final third is **0.11**, with 92% of
+> samples at zero, and the deepest *composed target slot* is **22.8 m** from goal against a deepest
+> *attacker* at 22.2 m, so the players sit within 0.6 m of where they are told to be and are simply
+> never asked into the area — and **the carrier walks the ball back out**: DRIBBLE is the modal
+> attacking-third action at **40%** of heartbeat decisions with a mean cosine to the opponent goal of
+> **−0.302** and only 31% pointing goalward. **ERR-008-018** is the second half: #8 §3.1.5.2 picks the
+> dribble direction by free space alone and closes by delegating the correction to *"the scoring stage
+> (§3.2.2)"* — but §3.2.4.1, DRIBBLE's actual formula, has no directional factor and **§3.2.2 is the
+> PASS formula**, so the promised term was delegated to a section that does not own DRIBBLE and never
+> had a home. Same class as ERR-008-017. Fixed with `DirectionQuality_DRIBBLE`; measured cosine
+> **−0.302 → +0.006** and goalward share **31% → 49%**, moving on **all six seeds with no overlap**
+> between the pre- and post-fix distributions. The `[GT]` floor lands at **0.80** rather than the 0.50
+> that maximises the effect, because suppressing the dribble pushes the carrier onto HOLD — which has
+> no timeout — and at floors 0.65 and 0.50 one seed in six stalled outright (mean final-third episode
+> 5.1 s → 17.5 s / 28.6 s). **The creation funnel itself did not move and is not claimed**: box
+> occupancy 0.11 → 0.10, ball into the box 6% → 5% of episodes, passes into the box 1% → 0%, shots
+> 19.3 → 19.5, goals 3.67 → 3.50 — **the residual shot-count gap is NOT closed**. #15 §4.5.2's
+> run-target overlay was implemented, measured and **REFUSED**: it moves the committed RUNNER's target
+> from 80.9 m to 14.7 m from the attacked goal and moves box occupancy **down**, 0.11 → 0.08, because
+> a RUNNER's target is `carrier + 12 m` and the carrier is usually still in midfield. A pooled number
+> nearly carried a false creation claim — at floor 0.50 the corpus reads box occupancy 0.11 → 0.59,
+> but five of six seeds are flat and the whole movement is **one stalled match** contributing 32% of
+> samples; the acceptance scenario's box predicate failed post-fix, forced the per-seed breakdown, and
+> the claim was withdrawn and the predicate deleted rather than re-tuned. The residual is re-localized
+> and sharper than what it replaces: **#8 cannot pass to a place, only to a player** — §3.1.3 generates
+> one PASS candidate per visible teammate *at that teammate's current position*, so passes into the box
+> measured 1% at every rung of the ladder, including rungs where players did reach the box. Owner doc:
+> `docs/tracking/close-chance-creation-design.md`; match-engine §5.Z.24; `spec-error-log.md` v1.56.
+> Acceptance `match-engine-close-chance` — **2 of 3 predicates fail at `7fcd897` by execution**. No
+> schema / RNG / domain-tag / draw-site / draw-order change. Prior entry below.)
 
 > **Last Updated (prior):** August 3, 2026, latest same day (**OWNER DECISION — ROADMAP B6 REVERSED: the
 > product ships the FULL UNITY UI, not the web-hosted viewer.** Doc-only; no `.cs` changed. Recorded in

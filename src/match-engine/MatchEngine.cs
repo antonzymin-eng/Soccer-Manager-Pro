@@ -2142,6 +2142,12 @@ namespace TacticalDirector.MatchEngine
         /// scenario assert what the AI is actually DOING with the ball, not merely that it decided.</summary>
         internal ActionType TestOnly_DtLastActionType(int agentId) => _decisionTrees[agentId].LastAction.Type;
 
+        /// <summary>Test-only: the whole action the agent's DecisionTree last selected — type, target agent
+        /// and target position, plus the HeartbeatTick that stamps it. The type-only accessor above cannot
+        /// answer WHERE a decision pointed, which is what a creation instrument has to read to separate a
+        /// progressive pass from a square one, or a goalward dribble from a retreating one.</summary>
+        internal AgentAction TestOnly_DtLastAction(int agentId) => _decisionTrees[agentId].LastAction;
+
         /// <summary>Test-only: whether the agent's routed TacticalContext designates it this team's
         /// loose-ball collector (§5.Z Phase H KD-H5 / ERR-008-014).</summary>
         internal bool TestOnly_LooseBallCollector(int agentId) =>
@@ -2165,6 +2171,18 @@ namespace TacticalDirector.MatchEngine
 
         /// <summary>Test-only: the live per-team Attacking AI (#15) cross-tick state (D4 CaptureState seam).</summary>
         internal AttackingTickState TestOnly_AttackingState(int teamId) => _attacking[teamId].CaptureState();
+
+        /// <summary>Test-only: team <paramref name="teamId"/>'s Attacking AI (#15) intent for
+        /// <paramref name="agentId"/> at the last AI stride. The <c>HasAttackIntent</c> boolean carrier
+        /// collapses role AND run parameters to one bit; a creation instrument has to distinguish "no
+        /// runner was committed" from "a runner was committed and its target was shallow".</summary>
+        internal AttackIntent TestOnly_AttackIntent(int teamId, int agentId) =>
+            _attacking[teamId].GetIntent(agentId);
+
+        /// <summary>Test-only: team <paramref name="teamId"/>'s committed Positioning AI (#12) phase —
+        /// the gate that decides whether #15 emits run intents at all.</summary>
+        internal PositioningAI.Phase TestOnly_PositioningPhase(int teamId) =>
+            _positioning[teamId].GetPhase();
 
         /// <summary>Test-only: the live Perception (#7) cross-tick state (D4 CaptureState seam; single shared instance).</summary>
         internal PerceptionTickState TestOnly_PerceptionState() => _perception.CaptureState();
@@ -2733,6 +2751,14 @@ namespace TacticalDirector.MatchEngine
                     int i = t * MatchEngineConstants.PLAYERS_PER_TEAM + k;
 
                     Vector2 canonicalSlot = _positioning[t].GetFormationSlot(i);
+                    // NOTE (close-chance-creation design §4): #15 §4.5.2's run-target overlay on this
+                    // slot was implemented here, measured over 6 full matches, and deliberately NOT
+                    // landed — it MOVES ATTACKERS OUT OF THE BOX (mean attackers in the penalty area
+                    // 0.59 → 0.37 on identical seeds), because a RUNNER's target is carrier + 12 m and
+                    // the carrier is usually still in midfield, so the overlay replaces a forward's deep
+                    // formation slot with a shallower carrier-relative one. Do not re-derive it from the
+                    // spec text without reading that section first.
+                    //
                     // A sentinel slot (inactive agent — none at Stage 0) would corrupt under the 180°
                     // map (PITCH − (−∞) = +∞); fall back to the agent's own position in that case.
                     Vector2 worldSlot = PositioningAITick.IsSentinelSlot(canonicalSlot)
@@ -2843,6 +2869,7 @@ namespace TacticalDirector.MatchEngine
         {
             return intent.RunParameters.HasValue;
         }
+
 
         /// <summary>
         /// Fills team <paramref name="team"/>'s reused <see cref="PositioningPerceptionSnapshot"/> from
@@ -7801,4 +7828,14 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | keeper-contact pass made same-tick post-strike touches common enough that   |
 // |         |            |        | instruments sampling end-of-tick BallView mis-read strike speed and         |
 // |         |            |        | direction (a measured 13 m strike attributed 92.3 m by velocity sign).      |
+// | 1.57    | 2026-08-04 | —      | Close-chance creation (§5.Z.24). Three measurement seams for the creation  |
+// |         |            |        | instrument: TestOnly_DtLastAction (the whole selected action — the         |
+// |         |            |        | type-only accessor cannot answer WHERE a decision pointed),                |
+// |         |            |        | TestOnly_AttackIntent and TestOnly_PositioningPhase (the HasAttackIntent   |
+// |         |            |        | bool collapses role AND run parameters to one bit). Plus a pointer comment |
+// |         |            |        | at the slot-composition site recording that #15 §4.5.2's run-target        |
+// |         |            |        | overlay was implemented, measured and deliberately NOT landed — it moves   |
+// |         |            |        | attackers OUT of the box (mean 0.11 -> 0.08) because a RUNNER's target is  |
+// |         |            |        | carrier + 12 m and the carrier is usually still in midfield. No production |
+// |         |            |        | behaviour change in this file.                                             |
 #endregion

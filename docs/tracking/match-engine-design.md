@@ -1740,6 +1740,77 @@ bottleneck is the single stage **final third → penalty area, converting at 6.5
 ~40%**. A DT / attacking-AI surface and its own pass, now named with a measured stage instead of
 "possession churn".
 
+### 5.Z.24 Close-chance creation (August 4, 2026) — §5.Z.23 §7 item 4's residual, and the first premise in this chain that survived
+
+Owner document: `docs/tracking/close-chance-creation-design.md` (KD-CC1..CC8, the per-seed tables,
+the refused probe, the ladder, the AR history). §5.Z.23 re-localized the creation residual to the
+final-third → penalty-area stage, converting at 6.5% against football's ~40%, and named it a
+Decision Tree / Attacking AI surface.
+
+**Both of the brief's premises were checked. The first SURVIVED — a first for this chain.** The
+"306.7 final-third entries" figure is a raw boundary-crossing count, and a ball rattling across
+x = 35 would have inflated it and manufactured the 6.5%. Re-counted with a 1 s exit dwell over six
+full matches: **311 episodes against 312 raw crossings**, each averaging 5.1 s. The denominator was
+sound. The second premise — that the stage is "the bottleneck" — located the problem without naming
+a mechanism, and the instrument found two, both real:
+
+- **Nobody is in the box.** Mean attacking outfielders inside the penalty area while the ball is in
+  the final third: **0.11**, with **92%** of samples at zero. And the discriminator — the deepest
+  *composed target slot* is **22.8 m** from goal against a deepest *attacker* at 22.2 m. The players
+  are within 0.6 m of where they are told to be; they are **never asked into the box**.
+- **The carrier walks the ball back out.** DRIBBLE is the modal attacking-third action at **40%** of
+  heartbeat decisions, and its mean cosine to the opponent goal is **−0.302** with only 31% pointing
+  goalward at all.
+
+- **ERR-008-018** — #8 §3.1.5.2 picks `best_direction = argmax(space)` and closes by delegating the
+  correction to "the scoring stage (§3.2.2)", but §3.2.4.1 (DRIBBLE's actual formula) has no
+  directional factor and §3.2.2 is the **PASS** formula. The promised term was delegated to a
+  section that does not own DRIBBLE and never had a home, so a dribble toward halfway scored
+  identically to the same dribble at goal — and in the final third the free space is behind the
+  carrier. Fixed with `DirectionQuality_DRIBBLE`; the ERR-008-017 class exactly.
+
+**Measured (6 full matches, identical seeds pre/post):** mean dribble cosine **−0.302 → +0.006**,
+goalward share **31% → 49%**, DRIBBLE share 40% → 33%, HOLD 20% → 23% — **moving on all six seeds
+with no overlap between the pre- and post-fix distributions.**
+
+**The creation funnel itself did not move, and this pass does not claim it.** Box occupancy
+0.11 → 0.10, ball into the box 6% → 5% of episodes, passes into the box 1% → 0%, shots 19.3 → 19.5,
+goals 3.67 → 3.50. What the pass delivers is a formula defect fixed and a much sharper residual
+(below).
+
+**The `[GT]` is bounded by a defect in a different action.** `DRIBBLE_GOAL_DIR_MIN_MODIFIER` lands at
+**0.80**, weaker than the 0.50 PASS floor, because suppressing the dribble pushes the carrier onto
+HOLD — which has no timeout. At floors 0.65 and 0.50 one seed in six stalled outright (mean
+final-third episode 5.1 s → 17.5 s and 28.6 s). The ladder is monotone on every column, so 0.80 is a
+measured bound rather than a lucky sample.
+
+**#15 §4.5.2's run-target overlay was implemented, measured and REFUSED** (owner doc §4). It does
+what it says — the committed RUNNER's target moves from **80.9 m to 14.7 m** from the attacked goal —
+and box occupancy goes **down**, 0.11 → 0.08, because a RUNNER's target is `carrier + 12 m` and the
+carrier is usually still in midfield, so the overlay swaps a forward's deep slot for a shallower
+carrier-relative one. Its gate is open on 9.5% of final-third samples anyway (#12 commits `InPoss`
+that rarely, since `PossessionOwnerEntityId >= 0` is false for the whole flight of every pass). The
+code is reverted with a pointer comment at the composition site.
+
+**A pooled number nearly carried a false claim, and the acceptance scenario caught it.** At floor
+0.50 the corpus reads box occupancy 0.11 → **0.59** — the creation fix the brief asked for. Five of
+six seeds are flat; the whole movement is one **stalled** match reading 1.62 over 32% of all samples.
+The scenario's box predicate failed post-fix at 0.043, forced the per-seed breakdown, and the claim
+was withdrawn, the floor moved 0.50 → 0.80, and the predicate deleted rather than re-tuned.
+
+**No `SNAPSHOT_SCHEMA_VERSION` change, no new RNG stream / domain tag / draw site, no draw-order
+change** — the term is a pure function of current-tick option and context state. Acceptance:
+`match-engine-close-chance` (#19 ScenarioRunner, Tier B, 2 seeds × 90 min) — **2 of 3 predicates fail
+on the pre-fix engine, verified by executing the scenario in a worktree at `7fcd897`**: mean cosine
+−0.291 against a −0.10 bound and goalward share 0.306 against 0.42. Plus 4 `UtilityScorerTests`.
+
+**The residual is re-localized again, and it is sharper than what it replaces.** The ball does not
+enter the penalty area because **#8 cannot pass to a place, only to a player**: §3.1.3 generates one
+PASS candidate per visible teammate *at that teammate's current position*, so there is no
+pass-into-space, no through-ball-to-a-run and no cross-to-an-arriving-header. Passes into the box
+measured **1%** and stayed there at every rung of the ladder — including the rungs where players did
+reach the box. That is the next lever, and it is a §3.1.3 generator change, not a `[GT]`.
+
 ### 5.Z.8 What this unblocks
 
 `PM-1` ("watch a match") is no longer blocked by the engine. Roadmap **A4a** — the round-resolution
