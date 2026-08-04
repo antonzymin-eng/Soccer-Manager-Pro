@@ -148,12 +148,14 @@ namespace TacticalDirector.MatchEngine
             //    enough for the §3.3.6 dive gate. ERR-011-009 ended the stall; this stops it becoming a
             //    churn. Reuses #11's arrival radius rather than minting a twelfth [GT]: the commit test
             //    and the arrival test MUST agree, and a pair has two places that must agree where a
-            //    mirror has one (§5.Z.12).
+            //    mirror has one (§5.Z.12). The compare is `<=`, the exact complement of
+            //    RushTargetReached's own `<=`, so "he has arrived ⇒ he cannot re-arm" holds by
+            //    construction and not merely for almost every landing distance.
             // Fully qualified, no `using`: this assembly already has a documented CS0104 history
             // (five TacticTranslation types in match-engine scope, MatchEngine.cs v1.17/v1.19).
             float reachedR =
                 TacticalDirector.GoalkeeperMechanics.GoalkeeperConstants.RushTargetReachedRadiusM;
-            if (runDx * runDx + runDy * runDy < reachedR * reachedR)
+            if (runDx * runDx + runDy * runDy <= reachedR * reachedR)
             {
                 return false;
             }

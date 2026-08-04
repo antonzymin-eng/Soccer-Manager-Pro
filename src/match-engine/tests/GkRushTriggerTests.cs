@@ -500,14 +500,16 @@ namespace TacticalDirector.MatchEngine
             float startFromGoalM = Mathf.Abs(engine.AgentView(keeper).Position.x - GoalX(keeperTeam));
 
             // Three tactical drives reach Rushing (see the test above); then run the rush out at 60 Hz.
-            // 40 frames at RushLaunchBaseMps covers the 4 m from his line to the ball several times over.
+            // The run is 4 m and the SLOWEST possible rush (RushLaunchBaseMps at PaceNorm = 0) covers
+            // 0.075 m/frame, so arrival takes 47 frames — 120 completes it at any pace the roster
+            // produces, and frames after arrival are inert (Recovering has no physics row).
             engine.TestOnly_DriveGkHeadingTactical();
             engine.TestOnly_DriveGkHeadingTactical();
             engine.TestOnly_DriveGkHeadingTactical();
             Assert.AreEqual(GoalkeeperState.Rushing, engine.TestOnly_GkState(keeperTeam),
                 "fixture must reach Rushing before the run is measured");
 
-            for (int f = 0; f < 40; f++)
+            for (int f = 0; f < 120; f++)
             {
                 engine.TestOnly_DriveGkHeadingPhysics();
             }
