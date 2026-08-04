@@ -12,7 +12,78 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 4, 2026, later same day (**MATCH-ENGINE WIRING AUDIT — the code that
+> **Last Updated:** August 4, 2026, latest same day (**`match-realism-pass` SKILL RE-CUT FOR WIRE-FIRST
+> — the calibration ladder moves behind a wiring gate, and the gate now defers to the wiring backlog
+> and KD-W1.** Tooling-only; no `.cs`, no spec, no assembly, no gate run. The skill encoded
+> measure → localize → ladder → land, which is the right shape only when the chain under the dial is
+> complete. Twice in the §5.Z chain a brief arrived asking for a *quality* that turned out to be
+> **undefined** because a stage was missing — **§5.Z.17** ("the quality of the save, not its
+> existence"; measured zero hand contacts across six keeper-matches, one cause being
+> `OnShotExecutedEvent` with zero callers anywhere) and **§5.Z.23 / ERR-011-008** (#11's catch coded to
+> one of its two spec statements, so a claimed ball flew on into the net).
+>
+> **New `## 0. The wiring gate`, ahead of the premise check (now §0.1).** It opens by requiring the
+> chain to be **enumerated from the observable backwards to the dial** out of the owning spec's §3 —
+> building that list is the hard part, since nobody had "the catch parks the ball" on a stage list
+> until §5.Z.23's instrument followed the ball after the contact — and falls back to §1's funnel when
+> the list cannot be written from source. Then six source-read checks, **all six run, every failure
+> reported**: multi-gap chains are not rare (§5.Z.15 found #11 switched off AND keepers skipped by the
+> physics phase; §5.Z.17 found three independently sufficient defects). Checks 1–5 are assembly
+> existence, composition-root construction + phase reach + **the flag state inside your own
+> instrument** (`DisableGkHeading()` is called in five places and §1 tells you to copy an exemplar),
+> live **read**-side consumer, spec §3 **body** vs Outputs summary, and Stage-0 placeholder. Checks 1
+> and 5 split on whether the brief names a spec or a symptom.
+>
+> **Merged with `main` across the wiring audit, which changed this skill rather than merely colliding
+> with it.** Three integrations: (a) **check 0 is now `match-engine-wiring-backlog.md`** — the audit
+> enumerated **10 Class-A dormant capabilities** by three systematic sweeps, so the gate reads that
+> board before re-deriving anything, and W1/W2 (the keeper never leaves his line, no player has ever
+> made a tackle) are cited as the standing examples; (b) **new check 6, gate-level dormancy**, which
+> the audit names as the explicit blind spot of exactly the static checks §0 had listed — a call site
+> that runs but whose condition is almost never true is invisible to all of checks 1–5, and C1 (#12
+> commits `InPoss` on **9.5%** of final-third samples) was found only by runtime instrumentation;
+> (c) **§3 now opens with KD-W1's `[GT]` freeze**, since the project-wide rule — no `[GT]` change
+> governing an unwired subsystem until the post-backlog calibration pass — is strictly stronger than
+> the per-chain conditionality this pass had written, and a skill that told the reader to calibrate
+> once *its* gate passed would have contradicted standing policy. §5.Z.24 also refutes a claim in the
+> skill's own opening — it is "the first premise in this chain that survived its own check" — so
+> "every one produced a partly-wrong brief" is corrected to seven of eight, and its **ERR-008-018**
+> joins ERR-008-017 as §2's second cause-1 instance.
+>
+> **The gate is a filter, not a verdict on calibration.** §5.Z.20 is cited in both §0 and §3 as the
+> standing counterexample: a `[GT]` recalibration inside #11's own §3.4.3/§3.4.5 ranges produced **the
+> largest single movement this chain has measured, goals per match 14.7 → 8.0**. It fixed two timing
+> defects in the same pass — so the gate would have had work to do there too — and its owner document
+> states those fixes alone were not sufficient, the old values "could not reach the catch band … even
+> with a perfect window", which is precisely the point: the dial was load-bearing independently of the
+> wiring. The stated rationale for wiring first is therefore **not** that it moves the number more, but
+> that a missing stage bounds the outcome at a level no dial can reach.
+>
+> **Two further edits.** §2's cause 3 (structurally unreachable / vacuous gate) is labelled **§0
+> failing late**. §7 requires the recorded residual to be **classified — missing stage or mis-set
+> dial** — because the next pass runs §0 against that sentence.
+>
+> **Adversarially reviewed before landing; the review is why this entry reads as it does.** Pass 1
+> raised 4 High: a superlative ("the largest movements came from a missing stage") that the chain's own
+> record **refutes** via §5.Z.20; "§3 is the step most passes should skip", contradicted by load-bearing
+> `[GT]` work in at least §5.Z.18/.19/.20/.21; "stop at the first check that fails", contradicted by the
+> two-gaps example the gate itself cites; and a **misattribution of the motivating evidence** — §5.Z.15
+> and §5.Z.16 were cited as calibration briefs that turned out to be wiring, when §5.Z.11 item 2 had
+> named that wiring in advance ("opt-in and default-off (`EnableGkHeading`) … plus GK locomotion") and
+> §5.Z.16 was never a brief at all. Passes 2–3 caught 3 more Medium, two of them introduced by the
+> pass-1 fixes; pass 4 was clean.
+>
+> **Chain repair, recorded rather than absorbed.** This merge's conflict region contained a
+> pre-existing defect on `main`: an **orphaned `**Last Updated:**` header** for §5.Z.23 with no body
+> and an unclosed parenthesis (the real §5.Z.23 entry survives intact below as `(prior)`), plus the B6
+> entry left bare when the audit entries were inserted above it — three bare labels where the chain
+> permits exactly one. The orphan is deleted and B6 relabelled `(prior)`; no entry body was edited.
+> This is the fourth time this chain has needed the same correction.
+>
+> Modified: `.claude/skills/match-realism-pass/SKILL.md` (frontmatter description + §0/§0.1/§2/§3/§7),
+> `.claude/skills/README.md` (derivation row), `file-manifest.md`, and this file. Prior entry below.)
+
+> **Last Updated (prior):** August 4, 2026, later same day (**MATCH-ENGINE WIRING AUDIT — the code that
 > exists and never runs, and the `[GT]` freeze that follows from it.** Seven consecutive §5.Z passes
 > fitted constants against the composed engine. This audit asks what was *in* that engine, and the
 > answer is: less than the assembly graph suggests. Three passes over the 18 assemblies the match
@@ -95,8 +166,7 @@ break it, and do not edit historical entries.
 > Acceptance `match-engine-close-chance` — **2 of 3 predicates fail at `7fcd897` by execution**. No
 > schema / RNG / domain-tag / draw-site / draw-order change. Prior entry below.)
 
-> **Last Updated:** August 3, 2026, later same day (**§5.Z.23 — CONVERSION AT CONTACT: the recorded
-> **Last Updated:** August 3, 2026, latest same day (**OWNER DECISION — ROADMAP B6 REVERSED: the
+> **Last Updated (prior):** August 3, 2026, latest same day (**OWNER DECISION — ROADMAP B6 REVERSED: the
 > product ships the FULL UNITY UI, not the web-hosted viewer.** Doc-only; no `.cs` changed. Recorded in
 > `path-to-playable-roadmap.md` v0.11 (§7 supersede note, C2 amended, risk register re-cut),
 > `interactive-unity-client-design.md` v0.11 (§12 status-change block), `browser-match-client-design.md`
