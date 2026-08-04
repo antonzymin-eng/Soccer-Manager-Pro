@@ -484,6 +484,93 @@ namespace TacticalDirector.MatchEngine
             Assert.AreNotEqual(GoalkeeperState.Rushing, engine.TestOnly_GkState(keeperTeam));
         }
 
+        [TestCase(0)]
+        [TestCase(1)]
+        public void ComposedEngine_CommittedRush_MovesTheKeeperOffHisLineAndTerminates(int keeperTeam)
+        {
+            // W1 AR-1 (M): the two tests above stop at GkState == Rushing, which is true of an engine
+            // where UpdateRushFrame's position write-back is discarded — the exact defect #11 v1.4 H-2
+            // already fixed once. The claim W1 exists to make is that the keeper LEAVES HIS LINE, so
+            // assert the displacement, not the state. Drives the 60 Hz physics half as well, because
+            // the tactical drive alone only produces an intent.
+            var engine = new MatchEngine(0x0F1E2D3C4B5A6978UL);
+            PlaceFixture(engine, keeperTeam, coverOutFromGoalM: -1f);
+
+            int keeper = KeeperAgentId(engine, keeperTeam);
+            float startFromGoalM = Mathf.Abs(engine.AgentView(keeper).Position.x - GoalX(keeperTeam));
+
+            // Three tactical drives reach Rushing (see the test above); then run the rush out at 60 Hz.
+            // 40 frames at RushLaunchBaseMps covers the 4 m from his line to the ball several times over.
+            engine.TestOnly_DriveGkHeadingTactical();
+            engine.TestOnly_DriveGkHeadingTactical();
+            engine.TestOnly_DriveGkHeadingTactical();
+            Assert.AreEqual(GoalkeeperState.Rushing, engine.TestOnly_GkState(keeperTeam),
+                "fixture must reach Rushing before the run is measured");
+
+            for (int f = 0; f < 40; f++)
+            {
+                engine.TestOnly_DriveGkHeadingPhysics();
+            }
+
+            float endFromGoalM = Mathf.Abs(engine.AgentView(keeper).Position.x - GoalX(keeperTeam));
+            Assert.Greater(endFromGoalM, startFromGoalM + 1.0f,
+                "a committed rush must physically advance the keeper away from his own goal line — " +
+                "the whole point of W1, and true of neither the pre-W1 engine nor one whose rush " +
+                "position write-back is dropped");
+
+            Assert.AreNotEqual(GoalkeeperState.Rushing, engine.TestOnly_GkState(keeperTeam),
+                "the run must END once the locked target is reached (ERR-011-009) — for a LOOSE ball " +
+                "neither the 1v1 nor the smother trigger can fire and F-08 needs a possessor, so " +
+                "without the Reached row the keeper stands over the ball for the rest of the match");
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void ComposedEngine_SweptLooseBall_DoesNotReArmTheRushForever(int keeperTeam)
+        {
+            // W1 AR-1 (H): ERR-011-009 ended the STALL; this pins that it did not become a CHURN.
+            // A keeper who sweeps a loose ball cannot collect it (§5.Z.15/16 excludes him by role), so
+            // he ends the run standing over a live ball with every arming condition still true. Without
+            // RushArmed's minimum-run guard he re-commits a zero-length rush every third tactical tick
+            // — Set -> commit -> Anticipate -> Rushing -> reached -> Recovering -> Set — pinned to a
+            // dead ball, publishing a RushPhase.Reached each cycle and never holding Anticipate long
+            // enough for the §3.3.6 dive gate to fire.
+            var engine = new MatchEngine(0x0F1E2D3C4B5A6978UL);
+            PlaceFixture(engine, keeperTeam, coverOutFromGoalM: -1f);
+
+            // 30 tactical strides, each followed by a stride's worth of physics frames — long enough
+            // for ten full oscillation cycles if the guard is missing.
+            for (int t = 0; t < 30; t++)
+            {
+                engine.TestOnly_DriveGkHeadingTactical();
+                for (int f = 0; f < GoalkeeperConstants.FramesPerTacticalTick; f++)
+                {
+                    engine.TestOnly_DriveGkHeadingPhysics();
+                }
+            }
+
+            Assert.AreEqual(1, engine.TestOnly_RushCommitCount,
+                "exactly one rush for one ball: once the keeper has arrived, the run he would commit " +
+                "to is zero-length and RushArmed must refuse it");
+        }
+
+        // ── Cross-catalogue invariant ────────────────────────────────────────────────────
+
+        [Test]
+        public void GkRushCommitment_MustExceedTheStateMachinesRushCommitThreshold()
+        {
+            // W1 AR-1 (L): the engine writes GkRushCommitment into every RushIntent and #11's
+            // Set/Anticipate -> Rushing rows ignore any intent at or below RushCommitThreshold. The two
+            // live in DIFFERENT catalogues and are independently config-overridable, and the requirement
+            // was recorded only in a doc comment — so a config file could silently return the rush
+            // subsystem to the state W1 found it in (built, tested, never fires) with nothing failing.
+            Assert.Greater(
+                MatchEngineConstants.GkRushCommitment,
+                GoalkeeperConstants.RushCommitThreshold,
+                "a RushIntent at or below RushCommitThreshold is ignored by #11's state machine — " +
+                "the whole trigger goes silently dead");
+        }
+
         // ── Fixture ──────────────────────────────────────────────────────────────────────
 
         /// <summary>
@@ -557,4 +644,13 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | trigger, the intercept solve including the receding-clearance   |
 // |         |            |        | no-solution guard, and the composed predicate → commit →       |
 // |         |            |        | Rushing chain through a real MatchEngine.                      |
+// | 1.1     | 2026-08-04 | —      | W1 AR-1. + the composed DISPLACEMENT test (H/A): the prior     |
+// |         |            |        | composed locks stopped at GkState == Rushing, which is true of  |
+// |         |            |        | an engine whose rush position write-back is dropped — the #11   |
+// |         |            |        | v1.4 H-2 defect — so nothing proved the keeper leaves his line. |
+// |         |            |        | + the re-arm lock (H/A): 30 strides over a swept loose ball     |
+// |         |            |        | must produce exactly ONE commit, pinning that ERR-011-009's     |
+// |         |            |        | end-of-run did not turn the stall into a 3-tick churn. + the    |
+// |         |            |        | cross-catalogue GkRushCommitment > RushCommitThreshold          |
+// |         |            |        | invariant, which was recorded only in a doc comment.           |
 #endregion

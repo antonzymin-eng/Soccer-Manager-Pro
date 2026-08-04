@@ -1,6 +1,7 @@
 // File:     src/match-engine/GkHeadingIntentSource.cs
 // Created:  2026-07-22
 // Modified: 2026-08-04 (wiring backlog W1: + RushArmed / TrySolveRushIntercept — the keeper rush trigger geometry. See docs/tracking/gk-rush-trigger-design.md)
+// Modified: 2026-08-04 (ERR-011-010 + AR-1: goal-side cover replaces the rejected last-man test; + the minimum-run guard that stops a completed sweep re-arming. See docs/tracking/gk-rush-trigger-design.md)
 // Author:   —
 // Spec:     GK/Heading engine-integration design supplement
 //           (docs/tracking/gk-heading-engine-integration-design.md) §4; Code Standards #20
@@ -138,7 +139,26 @@ namespace TacticalDirector.MatchEngine
                 return false;
             }
 
-            // 6. THE trigger condition: is the ball inside the distance from his own goal at which THIS
+            // 6. A run the keeper has already finished is not a run. Without this the trigger re-arms
+            //    on the ball he is standing over — and that is the ORDINARY end state of a successful
+            //    sweep, not an edge case, because §5.Z.15/16 bars the keeper from collecting the loose
+            //    ball he ran to. He would then commit a zero-length rush every third tactical tick
+            //    (Set → commit → Anticipate → Rushing → target reached → Recovering → Set), pinned to a
+            //    dead ball, publishing a RushPhase.Reached every cycle and never holding Anticipate long
+            //    enough for the §3.3.6 dive gate. ERR-011-009 ended the stall; this stops it becoming a
+            //    churn. Reuses #11's arrival radius rather than minting a twelfth [GT]: the commit test
+            //    and the arrival test MUST agree, and a pair has two places that must agree where a
+            //    mirror has one (§5.Z.12).
+            // Fully qualified, no `using`: this assembly already has a documented CS0104 history
+            // (five TacticTranslation types in match-engine scope, MatchEngine.cs v1.17/v1.19).
+            float reachedR =
+                TacticalDirector.GoalkeeperMechanics.GoalkeeperConstants.RushTargetReachedRadiusM;
+            if (runDx * runDx + runDy * runDy < reachedR * reachedR)
+            {
+                return false;
+            }
+
+            // 7. THE trigger condition: is the ball inside the distance from his own goal at which THIS
             //    keeper comes out? That distance is §3.7.0's attribute-driven answer — an aggressive,
             //    composed sweeper-keeper commits from the edge of the area, a timid or spent one barely
             //    leaves his line. Applied to the TARGET rather than the ball, so a race solved to a
@@ -183,7 +203,7 @@ namespace TacticalDirector.MatchEngine
             float lineDx = goalX - ballPosition.x;
             float lineDy = goalY - ballPosition.y;
             float lineLenSq = lineDx * lineDx + lineDy * lineDy;
-            if (lineLenSq < MatchEngineConstants.GK_RUSH_SOLVE_EPSILON)
+            if (lineLenSq < MatchEngineConstants.GK_RUSH_DEGENERACY_EPSILON)
             {
                 return false;
             }
@@ -262,10 +282,10 @@ namespace TacticalDirector.MatchEngine
             float c = rx * rx + ry * ry;
 
             float t;
-            if (Mathf.Abs(a) < MatchEngineConstants.GK_RUSH_SOLVE_EPSILON)
+            if (Mathf.Abs(a) < MatchEngineConstants.GK_RUSH_DEGENERACY_EPSILON)
             {
                 // Ball speed equals rush speed: the quadratic degenerates to b·t + c = 0.
-                if (Mathf.Abs(b) < MatchEngineConstants.GK_RUSH_SOLVE_EPSILON)
+                if (Mathf.Abs(b) < MatchEngineConstants.GK_RUSH_DEGENERACY_EPSILON)
                 {
                     return false;
                 }
@@ -341,12 +361,29 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | MatchEngine.TryCommitSaveIntents / TryCommitHeaderIntents so the |
 // |         |            |        | "when" decision is unit-testable (cleaner-architecture pass).    |
 // | 1.1     | 2026-08-04 | —      | Wiring backlog W1: + RushArmed (§4.4) and TrySolveRushIntercept. |
-// |         |            |        | The trigger GoalkeeperMechanics.CommitRushIntent never had. The  |
-// |         |            |        | football judgement is one condition — no team-mate is nearer the |
-// |         |            |        | ball than the keeper — which covers the through-ball and the     |
-// |         |            |        | unattended runner alike and fails safe. The intercept solve      |
-// |         |            |        | exists because KD-15 locks the target at commit, so aiming at    |
-// |         |            |        | the ball's CURRENT position sends the keeper to where it was;    |
-// |         |            |        | it also self-guards, since a ball outrunning the keeper has no   |
-// |         |            |        | positive root and a clearance therefore cannot pull him out.     |
+// |         |            |        | The trigger GoalkeeperMechanics.CommitRushIntent never had.      |
+// |         |            |        | SUPERSEDED THE SAME DAY by v1.2 — this row's football judgement  |
+// |         |            |        | ("no team-mate is nearer the ball than the keeper", a last-man   |
+// |         |            |        | test) was REJECTED at owner review and no longer exists in this  |
+// |         |            |        | file. Read v1.2 for the model the code implements. What survives |
+// |         |            |        | from this row: the intercept solve, which exists because KD-15   |
+// |         |            |        | locks the target at commit, so aiming at the ball's CURRENT      |
+// |         |            |        | position sends the keeper to where it was; it also self-guards,  |
+// |         |            |        | since a ball outrunning the keeper has no positive root and a    |
+// |         |            |        | clearance therefore cannot pull him out.                         |
+// | 1.2     | 2026-08-04 | —      | ERR-011-010 — the trigger model corrected at owner review, and   |
+// |         |            |        | the AR-1 fixes on top. A keeper comes out to REDUCE THE SHOOTING |
+// |         |            |        | ANGLE, so the last-man test above is wrong in exactly the        |
+// |         |            |        | situation he exists for: a defender CHASING the carrier narrows  |
+// |         |            |        | no angle and must not keep him home. + HasGoalSideCover — only a |
+// |         |            |        | team-mate already between the ball and the goal, inside the shot |
+// |         |            |        | corridor, is cover. The WHEN moved out of this file entirely to  |
+// |         |            |        | #11 §3.7.0 (ComputeRushCommitDistanceM), because how far a       |
+// |         |            |        | keeper comes is a property of the keeper; RushArmed now only     |
+// |         |            |        | applies that distance geometrically. AR-1 H-1: + the minimum-run |
+// |         |            |        | guard (condition 6) — without it the predicate re-armed on the   |
+// |         |            |        | ball the keeper was standing over, which is the ordinary end     |
+// |         |            |        | state of a sweep, giving a 3-tick rush/recover churn. AR-1 L:    |
+// |         |            |        | GK_RUSH_SOLVE_EPSILON renamed GK_RUSH_DEGENERACY_EPSILON — one   |
+// |         |            |        | constant guarding three dimensionally different quantities.      |
 #endregion

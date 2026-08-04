@@ -12,7 +12,8 @@
 // Modified: 2026-07-26 (§5.Z.12: HomeLineXM/AwayLineXM collapsed to OutfieldKickoffLineXM; HOME_FACING_DEG/AWAY_FACING_DEG deleted — facing now mirrors)
 // Modified: 2026-07-26 (§5.Z.10: + [CROSS] GkKickoffDepthM mirroring PositioningAIConstants.GK_DEPTH_M — the keeper's goal-line spawn depth)
 // Modified: 2026-07-26 (§5.Z.9 foul/discipline balance pass: + [GT] FoulCallProbability; Yellow 0.35 -> 0.16, Red 0.05 -> 0.011, FoulCooldownTicks 60 -> 180; no schema change. See docs/tracking/foul-discipline-balance-design.md)
-// Modified: 2026-08-04 (wiring backlog W1 keeper rush trigger: + [FIXED] GK_RUSH_SOLVE_EPSILON + 4 [GT] GkRush* trigger constants; no schema change. See docs/tracking/gk-rush-trigger-design.md)
+// Modified: 2026-08-04 (wiring backlog W1 keeper rush trigger: + [FIXED] GK_RUSH_DEGENERACY_EPSILON + 5 [GT] GkRush* trigger constants; no schema change. See docs/tracking/gk-rush-trigger-design.md)
+// Modified: 2026-08-04 (W1 AR-1 L: GK_RUSH_SOLVE_EPSILON renamed GK_RUSH_DEGENERACY_EPSILON — it guards three dimensionally different quantities, not just the solve)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.3, Code Standards #20
 // Purpose:  Constant catalogue for the match-engine composition root. Stage 0 Phase A holds the
@@ -40,11 +41,18 @@ namespace TacticalDirector.MatchEngine
         /// <summary>[FIXED] Total players on the pitch (11 v 11). Match Engine design note §2.3.</summary>
         public const int SQUAD_SIZE = 22;
 
-        /// <summary>[FIXED] Degenerate-coefficient guard for the W1 rush-intercept quadratic — the
-        /// magnitude below which a coefficient is treated as zero rather than divided by. Numerical
-        /// guard, not a tunable: it selects which algebraic branch is well-conditioned.
+        /// <summary>[FIXED] Degeneracy guard for the W1 rush geometry — the magnitude below which a
+        /// quantity is treated as zero rather than divided by. Numerical guard, not a tunable: it
+        /// selects which algebraic branch is well-conditioned.
+        ///
+        /// <para>Deliberately ONE constant across three dimensionally different quantities, all in
+        /// <c>GkHeadingIntentSource</c>: the intercept quadratic's <c>a</c> (m²/s²) and <c>b</c> (m²/s)
+        /// coefficients, and the squared length (m²) of the ball → goal-centre line in
+        /// <c>HasGoalSideCover</c>. At Stage-0 pitch and speed scales 1e-6 is far below the noise floor
+        /// of all three, so a single value is honest; the name says degeneracy rather than "solve"
+        /// because a reader tuning it must know it governs more than the quadratic (W1 AR-1).</para>
         /// gk-rush-trigger-design.md §2.2.</summary>
-        public const float GK_RUSH_SOLVE_EPSILON = 1e-6f;
+        public const float GK_RUSH_DEGENERACY_EPSILON = 1e-6f;
 
         /// <summary>[FIXED] Number of teams in a match.</summary>
         public const int TEAM_COUNT = 2;
@@ -812,14 +820,20 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | NO_ROSTER_CLUB_ID sentinel convention. No                       |
 // |         |            |        | SNAPSHOT_SCHEMA_VERSION change.                                 |
 // | 1.28    | 2026-08-04 | —      | Wiring backlog W1 (the keeper rush trigger): + [FIXED]          |
-// |         |            |        | GK_RUSH_SOLVE_EPSILON (the intercept quadratic's branch guard)  |
+// |         |            |        | GK_RUSH_DEGENERACY_EPSILON (the rush geometry's branch guard)   |
 // |         |            |        | and 5 [GT] — GkRushMaxInterceptS / GkRushMaxBallHeightM /       |
 // |         |            |        | GkRushCommitment / GkRushCoverGoalSideMarginM /                 |
 // |         |            |        | GkRushCoverCorridorHalfWidthM. How far the keeper comes out is  |
 // |         |            |        | deliberately NOT here — that is #11 §3.7.0's attribute-driven   |
 // |         |            |        | ComputeRushCommitDistanceM (ERR-011-010). New dials for a       |
 // |         |            |        | surface that had NO production caller, so not a KD-W1 retune;   |
-// |         |            |        | all four are un-calibrated and are the calibration pass's       |
+// |         |            |        | all five are un-calibrated and are the calibration pass's       |
 // |         |            |        | input. No SNAPSHOT_SCHEMA_VERSION change (#11's own already-    |
 // |         |            |        | serialized _rushIntentActive is the latch).                     |
+// | 1.29    | 2026-08-04 | —      | W1 AR-1 (L): GK_RUSH_SOLVE_EPSILON renamed                      |
+// |         |            |        | GK_RUSH_DEGENERACY_EPSILON. Same value, same [FIXED] tag — the  |
+// |         |            |        | old name said "solve" while the constant also guards            |
+// |         |            |        | HasGoalSideCover's squared line length, so a reader tuning it   |
+// |         |            |        | could not see everything it governs. Doc now names all three    |
+// |         |            |        | quantities and their units. Header row corrected 4 -> 5 [GT].   |
 #endregion

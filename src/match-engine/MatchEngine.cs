@@ -47,6 +47,7 @@
 // Modified: 2026-07-28 (keeper-contact pass: + TestOnly_LastShotStrikePosition/Velocity — the strike-TIME ball state, captured beside the _shotContacts increment (the WoodworkStrikes diagnostic class, not serialized), so instruments no longer sample end-of-tick BallView a same-tick touch may already have reversed. No schema change. See docs/tracking/gk-contact-rate-design.md)
 // Modified: 2026-08-03 (conversion-at-contact pass (ERR-011-008): GkHeadingWorldAdapter.ParkBall() — the ball-side half of #11 §3.5.2's claim, which had no seam (ApplyKick is a kick). Zeroes _ball.Velocity/AngularVelocity; no ball-state-machine transition, no RNG draw, no cross-tick state, so no SNAPSHOT_SCHEMA_VERSION change. A claimed shot previously kept its velocity and entered the net. See docs/tracking/gk-conversion-at-contact-design.md)
 // Modified: 2026-08-04 (wiring backlog W1 keeper rush trigger: TryCommitRushIntents gives GoalkeeperMechanics.CommitRushIntent its FIRST production caller — pure GkHeadingIntentSource.RushArmed/HasGoalSideCover geometry + #11 §3.7.0's attribute-driven commit distance (ERR-011-010) + the ClearRushIntent disarm, gated behind SaveArmed so a shot is still a dive. Deliberately NOT a DecisionTree action: ActionType ordinal 8 overflows the 3-bit composure-noise field (the W9 deferral reason). No new engine state ⇒ no SNAPSHOT_SCHEMA_VERSION change. See docs/tracking/gk-rush-trigger-design.md)
+// Modified: 2026-08-04 (W1 AR-1: RefreshGkAgentIds filters _isSentOff so a keeper sent off mid-rush stops; + TestOnly_DriveGkHeadingPhysics. See docs/tracking/gk-rush-trigger-design.md v1.2)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -2415,6 +2416,14 @@ namespace TacticalDirector.MatchEngine
         /// committed intent in one deterministic step. No-op unless the wiring is enabled.</summary>
         internal void TestOnly_DriveGkHeadingTactical() => DriveGkHeadingTactical();
 
+        /// <summary>Test-only (§7): run the GK/Heading 60 Hz physics drive directly. The tactical twin
+        /// above only produces an INTENT; nothing observable happens until this runs, so a test that
+        /// asserts a committed rush actually moves the keeper — the one claim W1 exists to make — needs
+        /// both (W1 AR-1 M). Isolates the two orchestrators: it does NOT integrate movement, so it does
+        /// not exercise the movement-writes-then-rush-overwrites interaction recorded in
+        /// gk-rush-trigger-design.md §7 item 4. No-op unless the wiring is enabled.</summary>
+        internal void TestOnly_DriveGkHeadingPhysics() => DriveGkHeadingPhysics();
+
         // ── Phase callbacks (design note §2.4 / §3) ───────────────────────────────────
         // Each callback drives the EventBus phase lifecycle. Physics (B2) drives ball + agent-movement;
         // AI (D1) drives perception + decision tree; Resolve (Phase C) drives collision + executors +
@@ -3369,7 +3378,19 @@ namespace TacticalDirector.MatchEngine
             }
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
-                if (_isGoalkeeper[i])
+                // W1 AR-1 (M): a SENT-OFF keeper is not on the pitch, and −1 is how this array says so.
+                // The engine's freeze for a red-carded agent is `_commands[i] = Stop`, which governs the
+                // MOVEMENT integration only — but #11's 60 Hz Rushing branch writes
+                // agentStates[agentId].Position directly, and it runs AFTER movement, so a keeper sent
+                // off mid-rush went on sprinting to his locked target. Filtering here fixes it at the
+                // one place that decides whether #11 sees the keeper at all: TacticalTick and Update
+                // both skip a −1 entry, which IS the frozen semantics. The two 10 Hz consumers keep
+                // their own _isSentOff tests (now redundant, deliberately — they are free and they
+                // hold even if this array is ever read before a red card lands), and
+                // NotifyKeeperOfShot's own
+                // "a team with no keeper on the pitch (sent off) has none to notify" branch — which
+                // already assumed exactly this — becomes true rather than aspirational.
+                if (_isGoalkeeper[i] && !_isSentOff[i])
                 {
                     int t = _teamIds[i];
                     if (t >= 0 && t < _gkAgentIds.Length)
@@ -7992,4 +8013,16 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | _rushIntentActive is the latch, read via HasActiveRushIntent — so no       |
 // |         |            |        | SNAPSHOT_SCHEMA_VERSION change. + TestOnly_RushCommitCount /               |
 // |         |            |        | TestOnly_GkState (the WoodworkStrikes diagnostic class).                   |
+// | 1.59    | 2026-08-04 | —      | W1 adversarial review pass 1. M: RefreshGkAgentIds now filters _isSentOff.|
+// |         |            |        | A red-carded agent is frozen by _commands[i] = Stop, which governs the    |
+// |         |            |        | MOVEMENT integration only — and #11's 60 Hz Rushing branch writes         |
+// |         |            |        | agentStates[agentId].Position directly, AFTER it, so a keeper sent off    |
+// |         |            |        | mid-rush went on sprinting to his locked target. Fixed at the one place   |
+// |         |            |        | that decides whether #11 sees the keeper at all: a -1 entry makes both    |
+// |         |            |        | TacticalTick and Update skip him, which IS the frozen semantics, and      |
+// |         |            |        | NotifyKeeperOfShot's own "sent off => none to notify" branch becomes true |
+// |         |            |        | rather than aspirational. + TestOnly_DriveGkHeadingPhysics, so a test can |
+// |         |            |        | assert a committed rush actually MOVES the keeper (M) — the composed W1   |
+// |         |            |        | locks stopped at GkState == Rushing, which is equally true of an engine   |
+// |         |            |        | whose rush position write-back is discarded (#11 v1.4 H-2).               |
 #endregion

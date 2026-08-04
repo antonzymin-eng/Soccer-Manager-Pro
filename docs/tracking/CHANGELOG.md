@@ -12,7 +12,35 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 4, 2026, latest same day (**WIRING BACKLOG W1 LANDED — the goalkeeper
+> **Last Updated:** August 4, 2026, latest same day (**W1 adversarial review pass 1 — 1 High, 4
+> Medium, 4 Low, all fixed.** The High is the one worth naming: `RushArmed` bounded how LONG a run the
+> keeper would commit to and never how SHORT, so a keeper standing on the ball he had just swept
+> re-armed — and that is the *ordinary* end state of a sweep, not an edge case, because §5.Z.15/16
+> bars the keeper from collecting the loose ball he ran to. Traced through the real call order the
+> result is a zero-length rush every third tactical tick (`Set` → commit → `Anticipate` → `Rushing` →
+> target reached → `Recovering` → `Set`, the cooldown bypassed because `UpdateBaselineSlot` feeds the
+> keeper his own position), a keeper pinned to a dead ball, a `RushPhase.Reached` published every
+> cycle, and — the part that bites — never enough `Anticipate` dwell for §3.3.6's dive gate, so the
+> save path is suppressed while it runs. **`ERR-011-009` ended the stall; without this guard it became
+> a churn.** The fix reuses #11's own arrival radius rather than minting a twelfth `[GT]`: the commit
+> test and the arrival test must agree, and §5.Z.12's rule is that a pair has two places that must
+> agree where a mirror has one. Mediums: a keeper **sent off mid-rush kept sprinting** (the engine's
+> freeze is `_commands = Stop`, which governs the movement integration only, while #11's `Rushing`
+> branch writes position *after* it — `RefreshGkAgentIds` now filters `_isSentOff`, which is what
+> `NotifyKeeperOfShot`'s own comment already assumed); `RushCommitFatiguePenaltyM` is **structurally
+> dead**, since all four `ToGoalkeeper` call sites hardcode `fatigue: 0f`, so it is recorded
+> do-not-calibrate in both the spec and the design note rather than entering the calibration pass
+> looking live; **no test proved the keeper physically leaves his line** through a real engine (the
+> composed locks stopped at `GkState == Rushing`, which is equally true of an engine whose rush
+> position write-back is dropped — the #11 v1.4 H-2 defect), now fixed by a displacement test plus the
+> re-arm lock; and `GkHeadingIntentSource`'s v1.1 history row still documented the **rejected**
+> last-man model as current. Lows: the epsilon renamed `GK_RUSH_DEGENERACY_EPSILON` because it guards
+> three dimensionally different quantities, a `+4 [GT]` header corrected to 5, an orphaned header
+> continuation folded back, and the cross-catalogue `GkRushCommitment > RushCommitThreshold` invariant
+> — which keeps the whole trigger from going silently dead — now **asserted** instead of merely
+> commented. **Still not measured: no .NET SDK in this environment, so no gate run and no numbers.**)
+
+> **Last Updated (prior):** August 4, 2026, latest same day (**WIRING BACKLOG W1 LANDED — the goalkeeper
 > comes off his line for the first time, and the spec defect that discovery surfaced
 > (`ERR-011-009`).** `GoalkeeperMechanics.CommitRushIntent` had **zero production callers** since it
 > was written, so every one-on-one this engine has ever played was a stationary keeper on his line —

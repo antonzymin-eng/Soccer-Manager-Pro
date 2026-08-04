@@ -235,7 +235,7 @@ defect it fixes.
 | `RushCommitBaseM` | `GoalkeeperConstants` | 8.0 m | §3.7.0. Commit distance before attributes. |
 | `RushCommitKOneVsOne` | `GoalkeeperConstants` | 8.0 m | §3.7.0. Metres per unit `OneVsOne_norm` — the dominant term; coming to meet a carrier *is* the one-on-one. |
 | `RushCommitKComposure` | `GoalkeeperConstants` | 4.0 m | §3.7.0. Metres per unit `Composure_norm` — leaving the goal empty is a nerve decision. |
-| `RushCommitFatiguePenaltyM` | `GoalkeeperConstants` | 3.0 m | §3.7.0. Metres lost per unit fatigue (0 = rested, 1 = spent). |
+| `RushCommitFatiguePenaltyM` | `GoalkeeperConstants` | 3.0 m | §3.7.0. Metres lost per unit fatigue (0 = rested, 1 = spent). **Structurally unreachable today — see §7 item 6. Do not calibrate.** |
 | `RushCommitMinDistanceM` | `GoalkeeperConstants` | 4.0 m | §3.7.0. Floor — even the most reluctant keeper comes for a ball this close. |
 | `RushCommitMaxDistanceM` | `GoalkeeperConstants` | 22.0 m | §3.7.0. Ceiling — the furthest ANY keeper comes. Roughly the penalty area plus a stride. |
 | `GkRushCoverGoalSideMarginM` | `MatchEngineConstants` | 2.0 m | How far in FRONT of the ball a team-mate must be to count as cover. Level or behind is not cover. |
@@ -260,6 +260,9 @@ time-budget guards are the **engine's**, because they are properties of the trig
 | Pure | `GoalkeeperRushTests` (§3.7.0 arm) | The commit distance rises with `OneVsOne` and with `Composure`, **falls** with fatigue (0 = rested — an inversion this project has shipped before), and clamps both ways. |
 | Unit | `GoalkeeperMechanicsTests` (`StateMachinePhysicsTransitionTests`) | The two new `Reached` rows, and that `Reached` loses to contact / interception / the 1v1 trigger. |
 | Unit | `GoalkeeperMechanicsTests` | `ClearRushIntent` disarms an uncommitted intent and is inert mid-chain. |
+| Engine | `GkRushTriggerTests` (composed displacement, AR-1) | That the keeper **physically leaves his line** — start-vs-end distance from his own goal, after driving the 60 Hz half too. The state-only locks below are true of an engine whose rush position write-back is dropped (#11 v1.4 H-2), so they do not prove the one thing W1 exists to prove. Both keepers. |
+| Engine | `GkRushTriggerTests` (re-arm lock, AR-1) | 30 strides over a swept loose ball commit **exactly one** rush. `ERR-011-009` ended the stall; this pins that it did not become a 3-tick churn. Both keepers. |
+| Invariant | `GkRushTriggerTests` | `GkRushCommitment` > `RushCommitThreshold` across the two catalogues — the requirement that keeps the whole trigger from going silently dead, previously recorded only in a doc comment. |
 | Engine | `GkRushTriggerTests` (composed arm) | The whole chain through a real `MatchEngine`: an uncovered loose ball in the box commits exactly one rush and the keeper reaches `Rushing`; the same ball with a defender nearer it commits nothing. Both keepers. Positions are forced via the `TestOnly_SetAgent` / `TestOnly_ForceBallLoose` seams so the assertion does not depend on a formation developing the geometry. |
 | Instrument | `GkRushDiagnosticTests` (env-gated `TD_GK_DIAGNOSTIC=1`) | Rushes committed, launched, and how each terminated; keeper displacement from the goal line. Asserts nothing — the ERR-030-014 convention. |
 
@@ -313,7 +316,21 @@ because this geometry is what it turns on.
    keeper velocity.
 5. **`UpdateBaselineSlot` is fed the keeper's own current position**, not the #12 GK slot, so
    `Recovering → Set`'s at-baseline test is trivially true and the §3.3.0 positioning contract is
-   degenerate. Pre-existing, untouched here, and worth its own item.
+   degenerate. Pre-existing, untouched here, and worth its own item. **W1 makes it load-bearing**: it
+   is what bypasses `RecoveryCooldownTicks` after a rush completes, so the keeper returns to `Set` on
+   the very next tactical tick instead of standing down for the cooldown. The AR-1 minimum-run guard
+   (§2.2 condition 6) stops that becoming a re-arm loop, but the cooldown itself is still inert.
+
+6. **`RushCommitFatiguePenaltyM` cannot fire in production** (found at AR-1). Every one of the four
+   `PlayerAttributeProjection.ToGoalkeeper` call sites in `MatchEngine.cs` passes `fatigue: 0f`
+   (lines 2852, 3353, 3462, 7125), so the term is identically zero and §3.7.0's fatigue arm is
+   structurally dead. `GoalkeeperRushTests.RushCommitDistance_FallsWithFatigue` passes only because
+   it constructs attributes directly — it pins a formula arm production cannot reach. This is KD-W1
+   one level down: **do not calibrate this constant**; it is not a dial that does nothing *yet*, it
+   is a dial with no input. The pre-existing `RushCommitFatigueCoeff` on the launch speed (#11
+   §3.7.1) has exactly the same problem and the same instruction. Both become live the moment a real
+   fatigue value is threaded into the projection, which belongs with whatever pass wires fatigue —
+   not with this one.
 
 ---
 
@@ -321,5 +338,6 @@ because this geometry is what it turns on.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.2 | 2026-08-04 | — | **Adversarial review pass 1 — 1 High, 4 Medium, 4 Low, all fixed.** H: `RushArmed` had an upper bound on run length and no lower one, so a keeper standing on the ball he had just swept re-armed — the ORDINARY end state of a sweep, since §5.Z.15/16 bars him from collecting it — giving a zero-length rush every third tactical tick, a keeper pinned to a dead ball, a `RushPhase.Reached` per cycle, and no `Anticipate` dwell long enough to dive. New condition 6 reuses #11's own arrival radius rather than minting a twelfth `[GT]` (§5.Z.12: a pair has two places that must agree, a mirror has one). M: a keeper sent off mid-rush kept sprinting (the engine's freeze is `_commands = Stop`, which governs movement only, and #11's Rushing branch writes position after it) — `RefreshGkAgentIds` now filters `_isSentOff`, which is what `NotifyKeeperOfShot`'s own comment already assumed. M: `RushCommitFatiguePenaltyM` is structurally dead (§7 item 6). M: no test proved the keeper physically leaves his line through a real engine — added, with the re-arm lock. M: `GkHeadingIntentSource`'s v1.1 history row still documented the rejected last-man model as current. L: epsilon renamed `GK_RUSH_DEGENERACY_EPSILON` (it guards three dimensionally different quantities); `+4 [GT]` header corrected to 5; orphaned header continuation in `GoalkeeperMechanics.cs` folded back; the cross-catalogue `GkRushCommitment > RushCommitThreshold` invariant now asserted instead of merely commented. **Still not measured — see §6.** |
 | 1.1 | 2026-08-04 | — | **Trigger model corrected at owner review, before any measurement.** The v1.0 predicate refused the rush whenever any team-mate was nearer the ball (a "last-man" test) — wrong in exactly the situation a keeper exists for, because **he comes out to reduce the shooting angle** and a defender chasing the carrier reduces none of it. Replaced by a **goal-side cover** test: only a team-mate already between the ball and the goal, inside the shot corridor, keeps him home. And the *when* is no longer an engine constant but #11 §3.7.0's attribute-driven `ComputeRushCommitDistanceM` (`OneVsOne` / `Composure` / fatigue) — filed as **`ERR-011-010`**, since §3.7 had delegated the decision to Decision Tree #8, which has no keeper model and structurally cannot acquire one, leaving the condition ownerless for ten weeks. `GkRushTriggerRangeM` retired (superseded by the per-keeper distance); +8 `[GT]`, six of them in #11's catalogue where the keeper's own decision belongs. |
 | 1.0 | 2026-08-04 | — | Initial. Wiring backlog W1: the keeper rush trigger. Pure `RushArmed` predicate (last-man test + intercept race) + `TryCommitRushIntents` composition-root commit, deliberately NOT routed through the DT (`ActionType` ordinal 8 overflows the 3-bit composure-noise field — the W9 deferral reason). No new engine state: #11's own serialized `_rushIntentActive` is the latch, read through two new accessors. Files `ERR-011-009` — #11 §3.1.1 gives a reached rush no exit, so a swept loose ball stranded the keeper in `Rushing` for the rest of the match. Five new un-calibrated `[GT]`s; KD-W1 holds. **Measurement not run — no .NET SDK in the authoring environment.** |

@@ -1,12 +1,11 @@
 // File:     src/goalkeeper-mechanics/GoalkeeperMechanics.cs
 // Created:  2026-05-28
 // Modified: 2026-06-14
-// Modified: 2026-07-23 (GK/Heading engine-integration Phase 2: CaptureState/RestoreState snapshot seam over
+// Modified: 2026-07-23 (GK/Heading engine-integration Phase 2: CaptureState/RestoreState snapshot seam over the per-GK cross-tick arrays, for the Match Engine v18 save/restore path)
 // Modified: 2026-07-27 (§5.Z.17 save pipeline: ComputeDiveDirectionLateral derives the dive from the ball's predicted crossing point (ERR-011-003); OnShotExecutedEvent takes the projected attributes (ERR-011-004, KD-S2); the state-machine wake predicates rebuilt as one signed distance to the keeper's OWN goal, read from gkIndex not attrs.TeamId (ERR-011-002, KD-S3); new ClearSaveIntent. See docs/tracking/goalkeeper-save-pipeline-design.md)
 // Modified: 2026-07-28 (gk-catch-parry-conversion: the §3.2.3 reaction window computed ONCE at the dive-launch frame and frozen for the contact (ERR-011-005 — the per-frame re-evaluation dated the contact-consumed value by the ball's whole flight time); the detection stamp dies with its episode (ERR-011-006 — cleared in ClearSaveIntent and at save resolution) and new OnThreatArmed seeds it at episode onset for threats with no shot event. See docs/tracking/gk-catch-parry-conversion-design.md)
 // Modified: 2026-07-28 (gk-contact-rate (ERR-011-007/KD-CR5): the frozen reaction window's elapsed anchors at SaveIntent.AttemptCommittedTick (under the held dive the launch is deliberate timing, not reaction); ComputeDiveDirectionLateral delegates its prediction to the shared TryPredictPlaneCrossing)
 // Modified: 2026-08-04 (wiring backlog W1 / ERR-011-009: ClearRushIntent + GetState/HasActiveRushIntent observation accessors give CommitRushIntent its first production caller; rushTargetReached ends a rush that ARRIVED — the loose-ball strand. See docs/tracking/gk-rush-trigger-design.md)
-//           the per-GK cross-tick arrays, for the Match Engine v18 save/restore path)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.1–§3.8, §4.6, KD-9, KD-12, KD-13, KD-15, KD-16, Code Standards #20
 // Purpose:  Main 10 Hz + 60 Hz orchestrator. Manages per-GK state, dive kinematics, reaction pipeline,
