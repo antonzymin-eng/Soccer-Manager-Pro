@@ -12,7 +12,32 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 4, 2026, latest same day (**W1 adversarial review pass 2 — 1 High, 1
+> **Last Updated:** August 4, 2026, latest same day (**Football-judgment proxy review — the remediation
+> doctrine (§6) landed, doc-only.** The review file stops being identification-only: an owner session
+> converged the general approach before any of the 33 open findings gets a fix, and §6 records it so
+> each fix cites a principle instead of re-arguing the method up to 33 times. The frame is the owner's
+> **recognition → decision → execution** pattern — which is already the #7 → #8 → Mechanics/Physics
+> pipeline — with its five failure modes made into binding mitigations (stages degrade assessment
+> quality, never delete options; attributes enter a judgment once; decisions commit intent, not a
+> frozen coordinate — a spot where a teammate *will arrive* is a legitimate target, a lock on his
+> current position is not; coordination is signalled, not mind-read; calibration targets the chain).
+> Five principles: **P1** continuous-never-cliff (the ERR-008-019 shape, covering the pattern-(b)
+> findings), **P2** skill as *discrimination fidelity* — `perceived = neutral + fidelity × (true −
+> neutral)`, so a low-skill assessor sees everyone as average, which IS today's attribute-blind engine
+> (graceful degradation, no RNG in assessment), **P3** the attribute ownership ledger (Vision owns
+> on-ball recognition, Anticipation off-ball/predictive; **no new "play recognition" attribute** —
+> owner call), **P4** intent as a first-class object (pass-to-space, run-intent signals on the event
+> bus, set-piece routine targets — mechanism-class, design supplement first), **P5** calibrate
+> end-to-end, pivot on today's baseline, defer real `[GT]` tuning per KD-W1. The **template fix is
+> chosen but NOT implemented**: #8 §3.1.3.3 pass-lane interceptors become `distance_falloff ×
+> perceived(Anticipation+Pace)` through the passer's Vision fidelity; §3.2.2's Vision term is
+> untouched (it rewards vision generally, fidelity owns risk discrimination — no double-count); the
+> §3.1.4 shot lane deliberately deferred. Also recorded: the **pairwise playing-familiarity gap** —
+> #33's social graph and #2's per-player Stage-4 hooks exist, but nothing pairwise-on-pitch; the
+> natural third input to the run-signal handshake; candidate supplement. The review file also finally
+> enters `file-manifest.md` — it was never recorded at creation.)
+
+> **Last Updated (prior):** August 4, 2026, latest same day (**W1 adversarial review pass 2 — 1 High, 1
 > Medium, 3 Low.** The High is a seam defect, and it is the other half of pass 1's own fix rather than
 > a new subject. #11 indexes every per-keeper array by `gkIndex`, which is the **team** (KD-1); this
 > engine keys identity by **roster slot**. Those agree right up until the occupant of the keeper slot

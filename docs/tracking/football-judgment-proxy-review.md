@@ -1,7 +1,10 @@
 # Football-Judgment Proxy Review
 
 > **Created:** August 4, 2026
-> **Status:** FINDINGS LOG — identification only. No fixes applied in this pass; no `ERR-` ids
+> **Updated:** August 4, 2026 — §6 remediation doctrine added (owner-converged in session; see §6
+> provenance note). Findings §§2–5 unchanged.
+> **Status:** FINDINGS LOG (§§1–5, identification only) + REMEDIATION DOCTRINE (§6, the
+> owner-approved general approach each fix must cite). No fixes applied yet; no `ERR-` ids
 > allocated (allocation happens at fix time, per the `err-file-and-backprop` skill). Nothing in
 > this file has been through the spec-error-log's Filed/Status/Fix/Determinism-impact process.
 > **Scope:** All 53 APPROVED specs in `SPEC_INDEX.md`, read directly from `docs/specs/`, regardless
@@ -302,4 +305,137 @@ fresh in this pass, of which 24 total specs across both passes returned at least
 | Findings open | 33 |
 
 No fixes were applied in this pass. No `ERR-` ids were allocated. Prioritization and remediation are
-a separate, later step.
+a separate, later step — governed by §6 below.
+
+---
+
+## 6. Remediation doctrine
+
+> **Provenance:** converged with the owner in a working session on August 4, 2026, before any fix
+> landed. Recorded here so each individual fix cites the principle it applies instead of
+> re-litigating the approach up to 33 times. Every fix commit for a §2/§3 finding should name the
+> principles (P1–P5) it relies on in its design note or ERR entry.
+
+### 6.1 The organizing frame
+
+Every player action follows **Play recognition → Decision → Execution** (owner-stated, and already
+the project's Perception #7 → Decision Tree #8 → Mechanics/Physics pipeline). Worked example: a
+player receives the ball facing the opponent's half; he *recognizes* a teammate starting a run into
+space (Vision), *decides* to play it (Decisions/Composure, presence of opponents, body shape), and
+*executes* the pass into space (Passing/Technique, with Anticipation informing where the space will
+be). Each §2/§3 finding is a place where one of those stages was collapsed into bare geometry, a
+hard threshold, or silently omitted.
+
+The frame has known failure modes, each with a standing mitigation — these are binding on every fix:
+
+| Frame flaw | Standing mitigation |
+|---|---|
+| A stage implemented as a binary gate recreates the cliff defect one layer up (a missed recognition deletes the option; downstream attributes never consulted) | Stages degrade **assessment quality**, never delete options outright (P1, P2) |
+| The same attribute entering two stages double-counts silently | The attribute ownership ledger (P3) |
+| Decide-then-execute commits to a frozen snapshot — the pass is aimed at where things *were*. The flaw is not the ~100 ms latency (that is realistic reaction time); it is the lock onto a stale coordinate | Decisions output **intent** (P4). Coordinates are fine as targets *provided* the coordinate is "where a teammate will arrive," not a lock onto a player's current position |
+| Coordination is two-sided; a lone reader of moving obstacles cannot model it | Explicit signals — run-intent events, set-piece routine targets (P4) |
+| Sequential stage failure rates compound multiplicatively | Calibrate the end-to-end chain, not each link (P5) |
+
+### 6.2 The five principles
+
+**P1 — Continuous, never a cliff.** Every hard step-function on a continuous football judgment
+becomes a smooth blend (ramp, falloff, or probability), per the `ERR-008-019` precedent. A 1-point
+attribute difference or a 2 cm positional difference must never flip an outcome discretely. This
+alone covers the pattern-(b) findings: the stumble AND-gate (#6), the press fatigue ceiling (#13),
+the WEAK_RECEIVER trigger (#13), age bands and retirement (#28), offer thresholds (#31, #34),
+sacking bands (#54), the catch-vs-parry cutoff (#11).
+
+**P2 — Skill is discrimination fidelity, not a bonus.** Where an attribute enters a *recognition*
+or *assessment* judgment, it controls how **accurately** the actor perceives the true situation,
+blending toward the population-average as skill drops:
+
+```
+perceived_value = neutral + fidelity × (true_value − neutral)
+```
+
+with `fidelity` rising in the assessing attribute. A low-skill assessor sees everyone/everything as
+average — which is exactly the current attribute-blind behavior, so low skill degrades gracefully
+to today's engine rather than to something new. High skill sees the true picture and is
+*selectively* brave, not uniformly braver. No RNG enters assessment at this stage (deterministic
+mis-weighting, not noise; noise is a possible later layer and would need its own draw-ordering
+design). This is the fix shape for every attribute-blind proxy: pass-lane and shot-lane
+interceptors (#8), the first-touch interception radius (#4), press/cover selection (#13), the
+tackle-mode gate (#14), aerial duels (#10, #11).
+
+**P3 — One attribute, one stage (the ownership ledger).** Each judgment documents which attribute
+owns which stage, and an attribute enters a given judgment **once**. Ledger entries fixed so far
+(owner-confirmed):
+
+| Stage | Owner |
+|---|---|
+| On-ball play recognition (reading the current picture: who is dangerous, who is open) | **Vision** |
+| Off-ball / predictive recognition (where play *will* go: space, arrival points, interception) | **Anticipation** |
+| Decision under pressure (option choice, risk appetite) | **Decisions**, **Composure** |
+| Execution (delivering the chosen action) | Technical attributes (**Passing**, **Finishing**, **Dribbling**, …) + physical |
+
+No new "play recognition" attribute is added — **Vision is that attribute**; adding one would
+ripple through #27's data layer and every attribute-consuming spec for no modeling gain. This
+ledger is also the discharge path for the pattern-(d) findings ("declared for future use, never
+consumed"): consuming a declared attribute means finding its stage here first.
+
+**P4 — Intent is a first-class object.** Decisions target *intents*, not frozen entity
+coordinates. Three owner-agreed forms: (i) **pass-to-space** — a pass may target a pitch
+coordinate chosen as "where the teammate will arrive," which is the fix behind #8 §3.1.3's
+current-position-only candidate bound; (ii) **run signaling** — a runner emits an explicit
+run-intent (target point, start tick) on the event bus, consumed through the passer's recognition
+stage (gated by Vision), replacing one-sided mind-reading and ID-order run assignment (#15);
+(iii) **routine targets** — the same mechanism covers dead-ball situations, where a set-piece
+executor aims at areas/players from a routine rather than at a teammate's standing position.
+P4 items are **mechanism-class** (see §6.3): they need a design supplement, not a formula patch.
+
+**P5 — Calibrate the chain, pivot on today's baseline.** Every fix is tuned so that an
+average-attribute actor in the average situation reproduces ≈ today's behavior — the current match
+balance is the pivot, not a casualty. New constants land as first-guess `[GT]`s; real calibration
+waits for a complete-engine pass per **KD-W1** (`match-engine-wiring-backlog.md`). Calibration
+targets are **end-to-end outcome rates** (pass completion, chance creation), not per-stage rates —
+sequential stages compound, so per-stage realism can still produce absurd chain totals. Attribute
+profiles are differentiated by *how* they fail, not only how often: a 15-Passing/10-Vision player
+completes what he attempts but never sees the killer ball; a 15-Vision/10-Passing player attempts
+more line-breaking passes and misplaces some. Similar completion percentages, very different chance
+creation — that separation is the acceptance test that the stages are genuinely distinct.
+
+### 6.3 Finding classes and their process
+
+- **Formula-patch class** (most findings): fixable in place by P1–P3. Process per fix:
+  `err-file-and-backprop` (ERR id allocated at fix time), spec section + code patched in the same
+  commit, first-guess `[GT]`s, tests mirrored home/away plus attribute-extreme cases, calibration
+  deferred per P5/KD-W1.
+- **Mechanism class** (needs new coordination or data surfaces, P4 or new state): the #8
+  pass-to-space bound, #15 RUNNER assignment + run parameters, #36 positional-balance constraint,
+  #27 lineup-selector role fit. These get a design supplement first (`docs/tracking/*-design.md`
+  per the standing governance class), then implementation.
+- **Governance class**: #46 `TryTalkToPlayer`, where the spec actively *defends* the context-free
+  lookup — overturning it is an owner decision about the spec's stated design intent, not a patch.
+- **Management-layer findings** (#31, #34, #54, #43, #36, #27, #28): the three-stage frame does not
+  map literally (there is no "execution" of a sacking), but P1, P3, and P5 apply unchanged.
+
+### 6.4 First worked example (chosen, not yet implemented)
+
+**#8 §3.1.3.3 pass-lane interceptor test** — owner-selected as the template fix. Converged design:
+each opponent near the lane contributes `distance_falloff × perceived_ability`, where
+`distance_falloff` fades smoothly from 1.0 near the lane line to 0 at the corridor edge (P1), the
+defender's true ability scalar is built from his **Anticipation + Pace** (≈ 0.6–1.4 around
+average), and `perceived_ability` applies the passer's **Vision** as discrimination fidelity per
+P2's formula (Vision 1 ⇒ everyone looks average ⇒ today's behavior; Vision 20 ⇒ true picture).
+Lane score stays `1 − Σweights / PASS_LANE_DIVISOR`; an average defender dead-center still counts
+≈ 1.0 (P5). Vision's existing §3.2.2 PASS-utility term is unchanged — it rewards vision generally;
+the fidelity term owns risk discrimination only (P3, no double-count). Plumbing: the engine already
+holds every agent's `DtAgentAttributes`; the pipeline gains a read of opponent Anticipation/Pace —
+the perception system is untouched. The **shot-lane check (§3.1.4)** shares the geometry and is
+deliberately deferred to a follow-up fix (owner call, keep the template change small).
+
+### 6.5 Adjacent gap recorded (not a §2/§3 finding)
+
+**Pairwise playing familiarity does not exist anywhere in the design.** #33 owns a pairwise
+*social* relationship scalar (chemistry/cliques are derived reads over it); Agent Movement #2's
+`PerformanceContext` Stage-4 `ContextModifier` reserves per-player `TacticalFamiliarity` and
+`TeamChemistry` hooks — but nothing maps any of it into *match-sim pairwise* terms ("this passer
+reads this runner's movement faster"). It is the natural third input to P4's run-signal handshake
+(signal + passer Vision + passer↔runner familiarity) and needs a small design decision about
+ownership (#33's graph feeding #2's gateway, per-pair rather than per-player). Candidate design
+supplement; deliberately not designed here.
