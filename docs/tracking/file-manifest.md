@@ -1,7 +1,27 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 3, 2026, latest same day (**Interactive Unity client P4a — the host-free
+**Last Updated:** August 4, 2026 (**P4a adversarial-review pass — 1 High, 5 Medium, 3 Low fixed.**
+New: `src/match-viewer/RosterShirtNumbers.cs` v1.0 and `src/match-viewer/tests/RosterShirtNumbersTests.cs`
+v1.0 — the shirt-numbering rule had been *duplicated* (the browser viewer's inline `computeJersey`
+survived) while three documents claimed it had *moved* into `MatchRoster`; it now has one
+implementation both Views consume. Modified in `src/match-client-core/`: `PitchMarking.cs` → v1.1
+(**H-1**: `Rectangle` normalises its corners, so the away-end boxes stop arriving with descending X —
+a binding taking `B − A` as an extent would have drawn those two inverted while the home pair looked
+right), `MatchRenderProjection.cs` → v1.1 (**M-2** non-finite positions refused fail-loud, matching
+`MatchFrameView`; **M-3** passes `HasBall`; **M-4** the silent cap repair deleted),
+`AgentRenderModel.cs` → v1.1 (**M-3** the ring radius derives from `HasBall`, not the reverse),
+`MatchClientConstants.cs` → v1.3 (**M-4** boot-time range/invariant validation, covered by the new
+`tests/MatchClientConstantsTests.cs` v1.0 — an untestable guard replacing an untestable repair branch
+would have moved the problem, not fixed it; **M-5** two fabricated
+rationale figures replaced with checked ones), `BallRenderModel.cs` → v1.1 (**M-5**), `MatchRoster.cs`
+→ v1.1 (**M-6**), and the three `tests/` fixtures → v1.1. Modified in `src/match-viewer/`:
+`LiveMatchStreamer.cs` → v1.7 (boot-cached `ShirtNumber`), `LiveMatchServer.cs` → v1.4 (roster payload
+gains `"shirt"`; `computeJersey` deleted — a JSON key addition and a script change, unlike v1.3).
+**No new assembly**, no `SNAPSHOT_SCHEMA_VERSION` change, no spec change. Production assembly count
+stays 31.)
+
+**Last Updated (prior):** August 3, 2026, latest same day (**Interactive Unity client P4a — the host-free
 render model.** New in `src/match-client-core/`: `PitchViewProjection.cs`, `PitchMarkingKind.cs`,
 `PitchMarking.cs`, `PitchMarkings.cs`, `MatchRoster.cs`, `AgentRenderModel.cs`, `BallRenderModel.cs`,
 `MatchRenderProjection.cs`, and four test files — `tests/PitchViewProjectionTests.cs`,
@@ -1413,6 +1433,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/match-viewer/tests/MatchViewerTests.cs` | Frame cadence; on-pitch finiteness; bitwise two-run determinism; observer-neutrality digest lock; fail-loud guards; exporter structure/no-NaN locks |
 | `src/match-viewer/AssemblyInfo.cs` | `InternalsVisibleTo` the test assembly (the `LiveMatchStreamer.TickOnce` / `ApplyCapturedFrame` seams are internal). **v1.1 (P6, Aug 3, 2026):** + `InternalsVisibleTo("TacticalDirector.MatchClientCore")` so `MatchSession.TickOnce()` drives the REAL `TickOnce()` seam head-lessly rather than a parallel client-side tick path — the hook, the frame capture and the auto-pause rule then behave in the closed-loop scenario exactly as they do under paced playback. Nothing is widened for the browser viewer: the seam stays internal to `match-viewer` |
 | `src/match-viewer/LiveMatchFrame.cs` | One live-captured frame (July 15, 2026): tick / ball / possession / positions / `Scoreline` / `MatchEnded` — plus, since P1, per-agent `LiveAgentCue[]`, per-team substitution counts, the derived `MatchPeriod` and the latched `RestartBanner` |
+| `src/match-viewer/RosterShirtNumbers.cs` | **P4a AR M-6** — the one implementation of the Stage-0 shirt-numbering rule (per-team, 1-based, roster order), consumed by both `MatchRoster` and the browser viewer's `/frame` payload. In `match-viewer` because that is the lowest assembly both Views reach |
 | `src/match-viewer/LiveAgentCue.cs` | P1: the per-agent HUD cue — yellow cards, sent-off, active bench slot (`IsSubstitute` derived from the slot, so the two can never disagree). **P4a (v1.1): + `IsGoalkeeper`** — the first cue added through the KD-P1-6 extension mechanism, and here rather than in the streamer's boot cache because `MatchEngine.SubstitutePlayer` rewrites the slot's flag (KD-P4a-1) |
 | `src/match-viewer/Scoreline.cs` | P1 AR-1 M-6: the home/away score pair as one carrier; owns the non-negative gate, so a negative score is refused before it can reach a frame |
 | `src/match-viewer/RestartBanner.cs` | P1 AR-1 M-6: the latched restart (cue + awarded team + tick). Team and tick are DERIVED from the cue, so `default(RestartBanner)` reports `NO_RESTART_TEAM` / 0 rather than "home team, tick 0" |
@@ -1529,9 +1550,9 @@ the Unity-only skin precisely so it stays under `tools/dotnet-ci` on every push.
 | `FollowBallCamera.cs` | **P3** — dead zone, `1 − e^(−rate·dt)` smoothing proven frame-rate-independent by step subdivision, and a pitch clamp that centres when the view is wider than the pitch |
 | `PitchViewProjection.cs` | **P4a** — the one documented coordinate adapter (§7): engine corner-origin metres ⇄ a centre-origin view plane at 1 unit per metre, plus the inverse a pointer click needs and an on-pitch predicate. Centring is what makes a home position and its away mirror differ only in sign |
 | `PitchMarkingKind.cs` | **P4a** — the closed shape set a marking can be (`Line`/`Rectangle`/`Circle`/`Spot`/`GoalMouth`), so the render binding is an exhaustive switch that decides nothing |
-| `PitchMarking.cs` | **P4a** — one marking as a shape plus up to two points and a radius, in corner-origin metres; a named factory per shape so field meaning is stated at every construction site |
+| `PitchMarking.cs` | **P4a** — one marking as a shape plus up to two points and a radius, in corner-origin metres; a named factory per shape so field meaning is stated at every construction site. `Rectangle` normalises its corners (A = min, B = max) so the away-end boxes cannot reach a binding reversed (AR H-1) |
 | `PitchMarkings.cs` | **P4a** — the 12-marking IFAB catalogue, built from the **existing** `MatchViewerConstants` `[FIXED]` values (§7's one source of truth across both Views). Both ends emitted from one loop over a sign, so a marking cannot be right at one end and wrong at the other. D-arc and corner arcs deliberately absent — no `[FIXED]` constant exists for either |
-| `MatchRoster.cs` | **P4a** — match-**constant** per-slot data: team id and the slot-ordinal shirt number (the rule moved out of the browser viewer's inline JavaScript). Holds **no** goalkeeper flag by design — that one changes under substitution and rides the per-frame cue (KD-P4a-1) |
+| `MatchRoster.cs` | **P4a** — match-**constant** per-slot data: team id and the slot-ordinal shirt number, the latter delegated to `match-viewer`'s `RosterShirtNumbers` so the browser viewer shares one rule (AR M-6). Holds **no** goalkeeper flag by design — that one changes under substitution and rides the per-frame cue (KD-P4a-1) |
 | `AgentRenderModel.cs` | **P4a** — one agent's resolved draw state: team, shirt, view position, marker and possession-ring radii, live goalkeeper flag, cards, sent-off, substitute. Colour-free — a palette has no correct answer a test could assert |
 | `BallRenderModel.cs` | **P4a** — the ball's resolved draw state: shadow at the ground point, sprite lifted and grown with height, the raw engine height, and both radii |
 | `MatchRenderProjection.cs` | **P4a** — frame + interpolated positions → the draw states above. Positions from the P3 interpolator's buffer (what is actually drawn); every discrete cue from the newest frame (cues do not interpolate). Allocation-free; fail-loud on every shape mismatch |
@@ -1544,6 +1565,7 @@ the Unity-only skin precisely so it stays under `tools/dotnet-ci` on every push.
 | `tests/MatchClientClosedLoopScenarios.cs` | **P6** — the two §5-P6 cross-spec closed-loop scenarios (owning specs {16,19,21}, paths under `SCENARIO_PATH_CROSS_SPEC_PREFIX`). `match-client-command-log-replay`: script → log, log → digest-identical replay, log is a fixed point of its own replay, plus a **command-free control run that MUST diverge** in a bounded window — without it every predicate above would pass on a channel that did nothing. `match-client-save-restore-replay`: save@90 → restore → replay the post-90 log to tick 180 == the uninterrupted run |
 | `tests/MatchClientClosedLoopScenarioTests.cs` | **P6** — the two `sim_crossspec_*` executable entry points, asserting `ScenarioStatus.Passed` and surfacing the machine-readable diagnostics |
 | `tests/PitchViewProjectionTests.cs` | **P4a** — the corner-not-centre origin convention, the home/away mirror, the round trip, unit scale, and the on-pitch predicate |
+| `tests/MatchClientConstantsTests.cs` | **P4a AR M-4** — drives the catalogue's boot-time `[GT]` validators directly (`RequireAtLeast`, `RequireGreaterThan`), including the NaN case the naive `value < minimum` form would have let through. They are otherwise reachable only from a config file |
 | `tests/PitchMarkingsTests.cs` | **P4a** — count and determinism, the four common markings, **every end-specific marking mirrored exactly at the other end**, IFAB distances read back against `MatchViewerConstants`, and the unused-field-is-zero contract |
 | `tests/MatchRosterTests.cs` | **P4a** — per-team 1-based numbering (keeper on 1, asserted for **both** teams), uniqueness, an interleaved-order case that discriminates the rule from `index / 11`, copy semantics, argument guards |
 | `tests/MatchRenderProjectionTests.cs` | **P4a** — which source each field comes from (the positions-must-come-from-the-interpolator lock), the goalkeeper flag following a substitution, possession ringing mirrored to both teams, every shape guard, and the ball's shadow / lift / capped-scale cues |

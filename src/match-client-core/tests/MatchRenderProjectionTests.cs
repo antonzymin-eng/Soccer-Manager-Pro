@@ -1,6 +1,6 @@
 // File:     src/match-client-core/tests/MatchRenderProjectionTests.cs
 // Created:  2026-08-03
-// Modified: 2026-08-03
+// Modified: 2026-08-04
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4a),
 //           Testing Strategy #19, Code Standards #20
@@ -173,24 +173,107 @@ namespace TacticalDirector.MatchClientCore.Tests
         }
 
         [Test]
-        public void EveryAgentGetsTheConfiguredMarkerRadius()
+        public void TheMarkerAndRingRadii_AreBothPopulatedAndNotSwapped()
         {
-            LiveMatchFrame frame = Frame();
+            // Both are floats on the same struct, so a transposition compiles. What makes this able
+            // to fail is that the two constants differ and the ring is the larger — asserting the
+            // marker radius against its own constant alone would restate the assignment.
+            LiveMatchFrame frame = Frame(possessing: 2);
             var models = new AgentRenderModel[Roster];
 
             MatchRenderProjection.ProjectAgents(new Vector2[Roster], in frame, TwoPerTeam(), models);
 
             for (int i = 0; i < Roster; i++)
             {
-                Assert.AreEqual(MatchClientConstants.AgentMarkerRadiusM, models[i].MarkerRadius, Tolerance);
+                Assert.AreEqual(MatchClientConstants.AgentMarkerRadiusM, models[i].MarkerRadius, Tolerance, "slot " + i);
+                Assert.Greater(models[i].MarkerRadius, 0f, "an unassigned marker radius draws nothing");
+            }
+
+            Assert.Greater(models[2].PossessionRingRadius, models[2].MarkerRadius,
+                "a ring inside the marker it annotates is invisible");
+        }
+
+        [Test]
+        public void ThePossessionRingRadius_IsDerivedFromHasBall_NotStoredBesideIt()
+        {
+            // The ring size is a [GT] presentation value; "who has the ball" is a fact about the
+            // simulation. Deriving the radius from the flag keeps a config change from being able to
+            // answer that question — inverting the derivation would have let a zero ring radius
+            // report that nobody in the match had possession.
+            var withBall    = new AgentRenderModel(0, 0, 1, Vector2.zero, 0.7f, true,  false, 0, false, false);
+            var withoutBall = new AgentRenderModel(1, 0, 2, Vector2.zero, 0.7f, false, false, 0, false, false);
+
+            Assert.AreEqual(MatchClientConstants.PossessionRingRadiusM, withBall.PossessionRingRadius, Tolerance);
+            Assert.AreEqual(0f, withoutBall.PossessionRingRadius, Tolerance);
+        }
+
+        [Test]
+        public void ANonFiniteAgentPosition_IsRefused_RatherThanDrawn()
+        {
+            // Nothing upstream gates coordinates: FrameInterpolator treats a non-finite position as
+            // a discontinuity and SNAPS to it, propagating the NaN. MatchFrameView refuses one on
+            // the screen-facing path; the pitch-facing path must not be quieter, or a NaN reaches
+            // transform.position once P4b exists.
+            MatchRoster roster = TwoPerTeam();
+            var models = new AgentRenderModel[Roster];
+            LiveMatchFrame frame = Frame();
+
+            foreach (float bad in new[] { float.NaN, float.PositiveInfinity, float.NegativeInfinity })
+            {
+                var drawn = new Vector2[Roster];
+                drawn[2] = new Vector2(bad, 34f);
+                Assert.Throws<ArgumentException>(
+                    () => MatchRenderProjection.ProjectAgents(drawn, in frame, roster, models),
+                    "X = " + bad);
+
+                var drawnY = new Vector2[Roster];
+                drawnY[2] = new Vector2(52.5f, bad);
+                Assert.Throws<ArgumentException>(
+                    () => MatchRenderProjection.ProjectAgents(drawnY, in frame, roster, models),
+                    "Y = " + bad);
             }
         }
 
         [Test]
-        public void TheRingIsLargerThanTheMarkerItAnnotates()
+        public void ARefusedFrame_LeavesTheDestinationUntouched_NotHalfWritten()
         {
-            Assert.Greater(MatchClientConstants.PossessionRingRadiusM, MatchClientConstants.AgentMarkerRadiusM,
-                "a ring inside the marker is invisible");
+            // The guard runs as its own pass before any write. Checking inside the write loop would
+            // leave the slots before the bad one holding this frame and the rest holding the last —
+            // a half-written buffer behind a thrown exception, which is worse than either outcome.
+            MatchRoster roster = TwoPerTeam();
+            LiveMatchFrame frame = Frame();
+
+            var models = new AgentRenderModel[Roster];
+            for (int i = 0; i < Roster; i++)
+            {
+                models[i] = new AgentRenderModel(90 + i, 1, 9, Vector2.one, 1f, true, true, 2, true, true);
+            }
+
+            var drawn = new Vector2[Roster];
+            drawn[Roster - 1] = new Vector2(float.NaN, 34f);  // the LAST slot, so a partial write shows
+
+            Assert.Throws<ArgumentException>(
+                () => MatchRenderProjection.ProjectAgents(drawn, in frame, roster, models));
+
+            for (int i = 0; i < Roster; i++)
+            {
+                Assert.AreEqual(90 + i, models[i].RosterIndex,
+                    "slot " + i + " was overwritten before the frame was refused");
+            }
+        }
+
+        [Test]
+        public void ANonFiniteBallGroundPosition_IsRefused()
+        {
+            // Unlike a height, a ground position has no truthful fallback — there is no "where the
+            // ball is" left to draw, so it is refused rather than approximated.
+            foreach (float bad in new[] { float.NaN, float.PositiveInfinity, float.NegativeInfinity })
+            {
+                Assert.Throws<ArgumentException>(
+                    () => MatchRenderProjection.ProjectBall(new Vector3(bad, 34f, 1f)), "X = " + bad);
+                Assert.Throws<ArgumentException>(
+                    () => MatchRenderProjection.ProjectBall(new Vector3(52.5f, bad, 1f)), "Y = " + bad);
+            }
         }
 
         [Test]
@@ -198,7 +281,7 @@ namespace TacticalDirector.MatchClientCore.Tests
         {
             LiveMatchFrame frame = Frame();
             var models = new AgentRenderModel[Roster + 2];
-            models[Roster] = new AgentRenderModel(99, 1, 7, Vector2.one, 1f, 1f, true, 2, true, true);
+            models[Roster] = new AgentRenderModel(99, 1, 7, Vector2.one, 1f, true, true, 2, true, true);
 
             int written = MatchRenderProjection.ProjectAgents(new Vector2[Roster + 3], in frame, TwoPerTeam(), models);
 
@@ -298,14 +381,40 @@ namespace TacticalDirector.MatchClientCore.Tests
         [Test]
         public void ADegenerateHeight_DrawsTheBallOnTheGroundRatherThanNowhere()
         {
+            // Deliberately NOT symmetric with the ground-position gate above: a bad height still
+            // leaves a true ground position to draw the ball at, so it degrades instead of throwing.
+            Vector2 expectedGround = PitchViewProjection.ToView(new Vector2(20f, 50f));
+
             foreach (float height in new[] { float.NaN, float.PositiveInfinity, -3f })
             {
                 BallRenderModel ball = MatchRenderProjection.ProjectBall(new Vector3(20f, 50f, height));
 
+                Assert.AreEqual(expectedGround.x, ball.ShadowPosition.x, Tolerance, "height " + height);
+                Assert.AreEqual(expectedGround.y, ball.ShadowPosition.y, Tolerance, "height " + height);
                 Assert.AreEqual(ball.ShadowPosition, ball.SpritePosition, "height " + height);
                 Assert.AreEqual(MatchClientConstants.BallMarkerRadiusM, ball.SpriteRadius, Tolerance, "height " + height);
                 Assert.AreEqual(1f, MatchRenderProjection.HeightScale(height), Tolerance);
             }
+        }
+
+        [Test]
+        public void TheHeightScaleCap_IsReachedWhereItsDocumentedRationaleSaysItIs()
+        {
+            // The [GT] rationale in MatchClientConstants states a saturation point and a 20 m figure.
+            // Both were wrong once; this pins them to the shipped values so a retune cannot leave the
+            // justification behind again.
+            float saturation =
+                (MatchClientConstants.BallMaxHeightScale - 1f) / MatchClientConstants.BallHeightScalePerMetre;
+
+            Assert.AreEqual(10f, saturation, 1e-3f, "the documented 10 m saturation point");
+            Assert.AreEqual(
+                MatchClientConstants.BallMaxHeightScale,
+                MatchRenderProjection.HeightScale(saturation), Tolerance,
+                "the cap must bind exactly at the saturation point, not past it");
+            Assert.Less(
+                MatchRenderProjection.HeightScale(saturation - 1f),
+                MatchClientConstants.BallMaxHeightScale,
+                "and must not bind before it");
         }
     }
 }
@@ -316,4 +425,14 @@ namespace TacticalDirector.MatchClientCore.Tests
 // |         |            |        | live goalkeeper flag under substitution, possession ringing     |
 // |         |            |        | mirrored to both teams, the shape guards, and the ball's        |
 // |         |            |        | shadow / lift / capped-scale height cues.                       |
+// | 1.1     | 2026-08-04 | —      | AR pass M-2/M-3/M-5/L-7: + the non-finite gates for agent and  |
+// |         |            |        | ball ground positions (and the deliberate asymmetry with a     |
+// |         |            |        | degenerate HEIGHT, which still degrades rather than throwing), |
+// |         |            |        | + the ring-derives-from-HasBall lock, + a cap test pinning the |
+// |         |            |        | 10 m saturation point its [GT] rationale now states. The       |
+// |         |            |        | tautological EveryAgentGetsTheConfiguredMarkerRadius is        |
+// |         |            |        | replaced by one that can fail: the two radii are distinct and  |
+// |         |            |        | the ring is the larger, so a transposition is visible. + the    |
+// |         |            |        | all-or-nothing lock: a refused frame must leave the destination |
+// |         |            |        | untouched, not partly this frame and partly the last.           |
 #endregion

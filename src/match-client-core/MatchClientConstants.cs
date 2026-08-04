@@ -1,12 +1,14 @@
 // File:     src/match-client-core/MatchClientConstants.cs
 // Created:  2026-07-24
-// Modified: 2026-08-03
+// Modified: 2026-08-04
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P0/§5-P3/§5-P4a),
 //           Code Standards #20 (constant catalogue; no magic numbers)
 // Purpose:  Constant catalogue for the host-free interactive-client core: the master-plan
 //           playback-speed set the UI presents (Pause is a streamer state, not a multiplier), the P3
 //           interpolator snap distances, the P3 follow-ball camera tuning, and the P4a render-cue sizes.
+
+using System;
 
 using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
 
@@ -126,9 +128,11 @@ namespace TacticalDirector.MatchClientCore
         /// [GT] Radius (view units, 1 unit = 1 m) of an agent's marker. Config key [match-client]
         /// AgentMarkerRadiusM.
         ///
-        /// <para>Deliberately larger than a person: at the default camera half-extents the pitch is
-        /// ~52 m wide on screen, and a 0.25 m-radius dot is a pixel. This is a legibility figure, not
-        /// an anthropometric one — nothing in the simulation reads it.</para>
+        /// <para>Deliberately larger than a person: the default camera shows a 52 m span
+        /// (2 × <see cref="CameraViewHalfWidthM"/>), so on a 1920-px-wide view one metre is ~37 px
+        /// and a life-sized 0.25 m-radius marker is ~9 px across — a dot with no room for the shirt
+        /// number drawn inside it. This is a legibility figure, not an anthropometric one; nothing
+        /// in the simulation reads it.</para>
         /// </summary>
         public static readonly float AgentMarkerRadiusM =
             Config.GetFloat("match-client", "AgentMarkerRadiusM", 0.7f);
@@ -136,10 +140,12 @@ namespace TacticalDirector.MatchClientCore
         /// <summary>
         /// [GT] Radius (view units) of the ring drawn around the agent in possession. Config key
         /// [match-client] PossessionRingRadiusM. Must exceed <see cref="AgentMarkerRadiusM"/> or the
-        /// ring is hidden underneath the marker it annotates.
+        /// ring is hidden underneath the marker it annotates — enforced at boot rather than
+        /// documented, so a config that breaks it fails loud instead of drawing nothing.
         /// </summary>
-        public static readonly float PossessionRingRadiusM =
-            Config.GetFloat("match-client", "PossessionRingRadiusM", 1.2f);
+        public static readonly float PossessionRingRadiusM = RequireGreaterThan(
+            Config.GetFloat("match-client", "PossessionRingRadiusM", 1.2f),
+            AgentMarkerRadiusM, "PossessionRingRadiusM", "AgentMarkerRadiusM");
 
         /// <summary>[GT] Radius (view units) of the ball marker at ground level. Config key [match-client] BallMarkerRadiusM.</summary>
         public static readonly float BallMarkerRadiusM =
@@ -167,13 +173,65 @@ namespace TacticalDirector.MatchClientCore
 
         /// <summary>
         /// [GT] Ceiling on the height-derived ball scale. Config key [match-client] BallMaxHeightScale.
-        /// A goal kick reaches ~20 m; without a cap the ball would be drawn wider than the penalty
-        /// area at the top of its arc.
+        ///
+        /// <para>At the shipped values the ramp reaches this ceiling at
+        /// (<see cref="BallMaxHeightScale"/> − 1) ÷ <see cref="BallHeightScalePerMetre"/> = <b>10 m</b>,
+        /// and a goal kick peaks around 20 m — where an uncapped ramp would draw the ball at
+        /// 0.35 × 4 = 1.4 m radius, i.e. 2.8 m across. That is roughly two marker-widths and reads
+        /// as a beach ball rather than as height, which is what the cap is for. <b>Known limitation:
+        /// above 10 m the sprite stops growing, so the height cue saturates for the upper half of a
+        /// goal kick's arc</b> — the shadow separation (<see cref="BallHeightViewOffsetPerMetre"/>)
+        /// keeps conveying height past that point, and retuning the pair is a [GT] balance decision,
+        /// not a code one.</para>
+        ///
+        /// <para>Must be at least 1: a ceiling below 1 would shrink a grounded ball. Enforced at
+        /// boot, per the [GT] loader's fail-loud contract — a value that cannot mean what it says is
+        /// a config error, not something to silently repair into "no cap".</para>
         /// </summary>
-        public static readonly float BallMaxHeightScale =
-            Config.GetFloat("match-client", "BallMaxHeightScale", 2.5f);
+        public static readonly float BallMaxHeightScale = RequireAtLeast(
+            Config.GetFloat("match-client", "BallMaxHeightScale", 2.5f), 1f, "BallMaxHeightScale");
 
         #endregion
+
+        /// <summary>
+        /// Returns <paramref name="value"/>, or throws when it is below <paramref name="minimum"/>
+        /// (a non-finite value is below every minimum and so is refused too).
+        /// </summary>
+        /// <exception cref="InvalidOperationException">The configured value is out of range. It
+        /// surfaces as a <c>TypeInitializationException</c> at first use of this catalogue, which is
+        /// the same fail-at-boot shape <c>GameplayConfigFileLoader</c> gives an unparseable value.</exception>
+        internal static float RequireAtLeast(float value, float minimum, string key)
+        {
+            if (!(value >= minimum))
+            {
+                throw new InvalidOperationException(
+                    "[match-client] " + key + " is " + Inv(value) + "; it must be at least " +
+                    Inv(minimum) + ".");
+            }
+
+            return value;
+        }
+
+        /// <summary>
+        /// Returns <paramref name="value"/>, or throws when it does not exceed
+        /// <paramref name="floor"/>. For invariants between two constants in this catalogue, which a
+        /// per-key range check cannot express.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">The configured value breaks the invariant.</exception>
+        internal static float RequireGreaterThan(float value, float floor, string key, string floorKey)
+        {
+            if (!(value > floor))
+            {
+                throw new InvalidOperationException(
+                    "[match-client] " + key + " is " + Inv(value) + "; it must exceed " + floorKey +
+                    " (" + Inv(floor) + ").");
+            }
+
+            return value;
+        }
+
+        private static string Inv(float value) =>
+            value.ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
 }
 
@@ -190,4 +248,13 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | with their consumers" now have consumers — agent marker and    |
 // |         |            |        | possession-ring radii, ball marker radius, and the three ball-  |
 // |         |            |        | height cues (view offset per metre, scale per metre, scale cap).|
+// | 1.3     | 2026-08-04 | —      | AR pass M-4/M-5/L-9: boot-time validation replaces silent      |
+// |         |            |        | repair and undocumented "musts" — BallMaxHeightScale must be   |
+// |         |            |        | >= 1 and PossessionRingRadiusM must exceed AgentMarkerRadiusM, |
+// |         |            |        | both enforced, per the [GT] loader's fail-loud contract. The   |
+// |         |            |        | BallMaxHeightScale and AgentMarkerRadiusM rationales carried   |
+// |         |            |        | fabricated figures (a 20 m ball is 2.8 m across, not "wider    |
+// |         |            |        | than the penalty area"; a 0.25 m marker is ~9 px, not one);    |
+// |         |            |        | both replaced with checked numbers, and the cap's 10 m         |
+// |         |            |        | saturation limitation is now stated rather than left implicit. |
 #endregion

@@ -12,7 +12,46 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 3, 2026, latest same day (**INTERACTIVE UNITY CLIENT P4a LANDED — the
+> **Last Updated:** August 4, 2026 (**P4a ADVERSARIAL-REVIEW PASS — 1 High, 5 Medium, 3 Low fixed;
+> the pass then re-run clean.** **H-1, and the one that would have shipped:** `PitchMarking.Rectangle`
+> took its two corners in whatever order it was given, and `PitchMarkings` builds the end boxes from
+> their goal line *inwards* — so the away penalty area and away goal area arrived with **descending
+> X** while the home pair ascended. A P4b binding doing the obvious `B − A` would have drawn those two
+> inverted or invisible: the #8 ERR-008-002 home/away asymmetry class, landing in a `MonoBehaviour`
+> where the gate can never see it, in the very type whose purpose is to leave the skin nothing to
+> decide. Worse, the fixture *laundered* it — `AssertAreaBox` normalised with `Mathf.Min`/`Max` before
+> asserting, so any corner order passed. `Rectangle` now normalises (A = min, B = max), the helper
+> reads `A`/`B` directly, the mirror test states the rectangle pairing explicitly, and two new tests
+> pin it; verified non-vacuous by un-normalising the factory, which fails four tests.
+> **M-2:** the render path had **no non-finite gate** while its sibling `MatchFrameView` refuses one
+> fail-loud — and `ProjectBall`'s doc excused the omission with "the producers upstream refuse to
+> publish a non-finite coordinate at all", which is false: `LiveMatchStreamer` does not check, and
+> `FrameInterpolator` *deliberately propagates* a non-finite position (it reads as a discontinuity and
+> snaps to it). A NaN would have reached `transform.position`. Agent and ball **ground** positions are
+> now refused; ball **height** keeps its graceful degradation, because a bad height still leaves a
+> true ground position to draw at. **M-3:** `HasBall` was derived from `PossessionRingRadius > 0`, so
+> a `[GT]` config setting the ring radius to zero would have answered "nobody has the ball" for a
+> whole match — a fact about the simulation riding a presentation size. Inverted: `HasBall` is stored,
+> the radius derives. **M-4:** a `BallMaxHeightScale` below 1 was silently repaired into "no cap",
+> contradicting the `[GT]` loader's fail-loud contract in an untestable branch; it is now refused at
+> boot, along with the previously documented-only "the ring must exceed the marker" invariant, and the
+> repair branch is deleted. **M-5:** two `[GT]` rationales carried **fabricated figures** — an uncapped
+> 20 m ball is 2.8 m across, not "wider than the penalty area"/"the six-yard box", and a 0.25 m marker
+> is ~9 px at the default camera, not "a pixel". Replaced with checked numbers, plus the cap's real
+> 10 m saturation point, now pinned by a test. **M-6:** the shirt-numbering rule was **duplicated, not
+> moved** — the browser viewer's inline `computeJersey` was still there while the class doc, the
+> version history and the commit message all said it had moved into `MatchRoster`. New
+> `match-viewer/RosterShirtNumbers.cs` is now the one implementation; `LiveMatchStreamer` caches its
+> output, `LiveMatchServer` serves a `"shirt"` key, `computeJersey` is deleted, and the rule's tests
+> move down with the rule. **Lows:** a tautological marker-radius test replaced with one that can
+> fail, `MatchRoster.FromStreamer`'s happy path covered (it had only its null guard, so the only
+> production path into the type never ran), and the ring/marker invariant now enforced rather than
+> merely asserted against the fallbacks.
+> Two further defects surfaced while re-reviewing the fixes and were closed in the same pass: the M-2 gate initially ran *inside* the write loop, which would have left the destination half this frame and half the last behind a thrown exception (it now validates in a pass of its own, so the method stays all-or-nothing), and M-4's new validators were themselves unreachable from any test — replacing an untestable repair branch with an untestable guard would have moved the problem, so `MatchClientConstantsTests.cs` v1.0 drives them directly.
+> **Dotnet gate: the two changed suites PASS** — `match-client-core` 103 → 112, `match-viewer` 41 → 48, 0 failures, and the whole tree compiles with no new warnings. The **full** gate had not reported when this entry was written (a container restart killed the run mid-`match-engine`); it is recorded as **not yet reported** rather than assumed green. No `match-engine` source is touched by this pass. No `SNAPSHOT_SCHEMA_VERSION` change, no new RNG stream /
+> domain tag / draw site, no draw-order change, no engine-behaviour change.)
+>
+> **Last Updated (prior):** August 3, 2026, latest same day (**INTERACTIVE UNITY CLIENT P4a LANDED — the
 > host-free render model.** P4 is split into **P4a, every render *decision*, and P4b, the binding.**
 > That split is the August-3 owner-decision rule ("keep logic out of `MonoBehaviour`s") turned from a
 > discipline into a phase boundary, and the ordering argument is the one that already put P6's

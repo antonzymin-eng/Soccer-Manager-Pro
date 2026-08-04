@@ -1,6 +1,6 @@
 // File:     src/match-client-core/AgentRenderModel.cs
 // Created:  2026-08-03
-// Modified: 2026-08-03
+// Modified: 2026-08-04
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4a, §12
 //           rule 1), Code Standards #20
@@ -41,15 +41,28 @@ namespace TacticalDirector.MatchClientCore
         /// <summary>Position in the centre-origin view plane, already projected and already interpolated.</summary>
         public readonly Vector2 ViewPosition;
 
-        /// <summary>Marker radius in view units.</summary>
+        /// <summary>
+        /// Marker radius in view units. Stored rather than derived because a marker size is
+        /// legitimately a per-agent quantity — nothing today varies it, but a future skin might.
+        /// </summary>
         public readonly float MarkerRadius;
+
+        /// <summary>True when this agent is the one in possession of the ball.</summary>
+        public readonly bool HasBall;
 
         /// <summary>
         /// Radius of the possession ring in view units, or 0 when this agent is not in possession.
-        /// A zero means "draw no ring" — the renderer needs no separate boolean, and cannot draw a
+        /// A zero means "draw no ring", so the renderer needs no separate boolean and cannot draw a
         /// ring of a size nobody chose.
+        ///
+        /// <para><b>Derived from <see cref="HasBall"/>, not the other way round.</b> The two cannot
+        /// disagree either way, but only this direction keeps a question about the simulation —
+        /// "who has the ball" — independent of a [GT] presentation size. With the derivation
+        /// inverted, a config setting <c>PossessionRingRadiusM</c> to zero would have answered "no
+        /// one" for every agent in the match.</para>
         /// </summary>
-        public readonly float PossessionRingRadius;
+        public float PossessionRingRadius =>
+            HasBall ? MatchClientConstants.PossessionRingRadiusM : 0f;
 
         /// <summary>True when this slot is currently occupied by a goalkeeper (live, per-frame).</summary>
         public readonly bool IsGoalkeeper;
@@ -67,19 +80,16 @@ namespace TacticalDirector.MatchClientCore
         /// <summary>True when a substitute currently occupies this slot.</summary>
         public readonly bool IsSubstitute;
 
-        /// <summary>True when this agent is the one in possession of the ball.</summary>
-        public bool HasBall => PossessionRingRadius > 0f;
-
         /// <summary>
         /// Constructs one agent's draw state. Built by <see cref="MatchRenderProjection"/>.
         ///
-        /// <para><b>On the parameter list.</b> Three adjacent <c>int</c>s and two adjacent
+        /// <para><b>On the parameter list.</b> Three adjacent <c>int</c>s and three adjacent
         /// <c>bool</c>s is the transposable shape <c>LiveMatchFrame</c>'s AR-1 M-6 collapsed into
         /// carriers. It is left flat here because this type has exactly ONE production construction
         /// site — the projector — where a carrier would add a hop without removing a decision, and
-        /// because `MatchRenderProjectionTests` asserts every field against a distinct source value,
-        /// which is the guard the carriers were bought for. If a second construction site ever
-        /// appears, revisit that trade.</para>
+        /// because <c>MatchRenderProjectionTests</c> asserts every field against a distinct source
+        /// value, which is the guard the carriers were bought for. If a second construction site
+        /// ever appears, revisit that trade.</para>
         /// </summary>
         public AgentRenderModel(
             int rosterIndex,
@@ -87,22 +97,22 @@ namespace TacticalDirector.MatchClientCore
             int shirtNumber,
             Vector2 viewPosition,
             float markerRadius,
-            float possessionRingRadius,
+            bool hasBall,
             bool isGoalkeeper,
             int yellowCards,
             bool isSentOff,
             bool isSubstitute)
         {
-            RosterIndex          = rosterIndex;
-            TeamId               = teamId;
-            ShirtNumber          = shirtNumber;
-            ViewPosition         = viewPosition;
-            MarkerRadius         = markerRadius;
-            PossessionRingRadius = possessionRingRadius;
-            IsGoalkeeper         = isGoalkeeper;
-            YellowCards          = yellowCards;
-            IsSentOff            = isSentOff;
-            IsSubstitute         = isSubstitute;
+            RosterIndex  = rosterIndex;
+            TeamId       = teamId;
+            ShirtNumber  = shirtNumber;
+            ViewPosition = viewPosition;
+            MarkerRadius = markerRadius;
+            HasBall      = hasBall;
+            IsGoalkeeper = isGoalkeeper;
+            YellowCards  = yellowCards;
+            IsSentOff    = isSentOff;
+            IsSubstitute = isSubstitute;
         }
     }
 }
@@ -112,4 +122,10 @@ namespace TacticalDirector.MatchClientCore
 // | 1.0     | 2026-08-03 | —      | Initial creation (P4a): per-agent resolved draw state. HasBall  |
 // |         |            |        | is derived from the ring radius rather than stored, so the two  |
 // |         |            |        | cannot disagree.                                                |
+// | 1.1     | 2026-08-04 | —      | AR pass M-3: the HasBall/ring derivation is INVERTED. HasBall  |
+// |         |            |        | is now the stored fact and PossessionRingRadius derives from   |
+// |         |            |        | it. The two still cannot disagree, but a question about the    |
+// |         |            |        | simulation no longer depends on a [GT] presentation size — with|
+// |         |            |        | the old direction, a config setting PossessionRingRadiusM to   |
+// |         |            |        | zero answered "nobody has the ball" for the whole match.       |
 #endregion

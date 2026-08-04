@@ -3,6 +3,7 @@
 // Modified: 2026-07-16 (AR-7 fix pass: viewer clock rounds seconds before the minute split (L-3); post-Stop connection threads refused via a volatile shutdown flag + 503 (L-4))
 // Modified: 2026-07-27 (P1 AR-1 M-6: score reads follow LiveMatchFrame onto the Scoreline carrier; /frame JSON keys unchanged)
 // Modified: 2026-08-03 (P4a: the roster "gk" flag comes from the live frame cue, not the boot-time cache)
+// Modified: 2026-08-04 (P4a AR pass: the roster payload carries "shirt"; computeJersey deleted)
 // Author:   —
 // Spec:     Interactive match view (docs/tracking/interactive-match-view-design.md), Code Standards #20
 // Purpose:  A minimal loopback-only HTTP server (hand-rolled over TcpListener — no package
@@ -326,6 +327,11 @@ namespace TacticalDirector.MatchViewer
                 sb.Append('{');
                 AppendJsonInt(sb, "team", _streamer.TeamId(i));
                 sb.Append(',');
+                // Served rather than recomputed in the viewer script: RosterShirtNumbers is the one
+                // implementation of the numbering rule, and it is explicitly a Stage-0 placeholder
+                // that must change in exactly one place when players gain real numbers.
+                AppendJsonInt(sb, "shirt", _streamer.ShirtNumber(i));
+                sb.Append(',');
                 // The streamer's cached flag is boot-time and goes stale when a keeper is
                 // substituted, so prefer the frame's per-tick cue whenever there is a frame. Before
                 // kickoff there is none, and the boot flag is then exactly right.
@@ -544,15 +550,9 @@ function drawPitch(){
     ctx.restore();
   }
 }
-let jersey=null;
-function computeJersey(roster){
-  jersey=new Array(roster.length);const c={};
-  for(let i=0;i<roster.length;i++){const t=roster[i].team;c[t]=(c[t]||0)+1;jersey[i]=c[t];}
-}
 function drawFrame(data){
   drawPitch();
   if(!data.hasFrame){statusEl.textContent='waiting for kickoff…';return;}
-  if(!jersey||jersey.length!==data.roster.length)computeJersey(data.roster);
   const poss=data.possession;
   for(let i=0;i<data.roster.length;i++){
     const a=data.agents[i],x=px(a[0]),y=py(a[1]),r=data.roster[i];
@@ -561,7 +561,7 @@ function drawFrame(data){
     ctx.fillStyle=r.team===0?'#d1495b':'#3d7ea6';ctx.fill();
     ctx.strokeStyle=r.gk?'#ffd166':'rgba(0,0,0,0.55)';ctx.lineWidth=r.gk?3:1.5;ctx.stroke();
     ctx.fillStyle='#fff';ctx.font='9px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(String(jersey[i]),x,y);
+    ctx.fillText(String(r.shirt),x,y);
   }
   const b=data.ball;
   ctx.beginPath();ctx.arc(px(b[0]),py(b[1]),Math.max(1,BALL_R+b[2]*BALL_RZ),0,2*Math.PI);
@@ -645,4 +645,11 @@ poll();
 // |         |            |        | the streamer's boot-time flag before kickoff. Fixes a keeper    |
 // |         |            |        | ring drawn on the wrong player after a goalkeeper substitution. |
 // |         |            |        | JSON keys and the viewer script are unchanged.                  |
+// | 1.4     | 2026-08-04 | —      | P4a AR pass (M-6): the roster payload gains a "shirt" key and  |
+// |         |            |        | the viewer script's computeJersey is DELETED — it was a second |
+// |         |            |        | implementation of the shirt-numbering rule, living alongside   |
+// |         |            |        | MatchRoster's C# copy while three documents claimed the rule   |
+// |         |            |        | had MOVED into the latter. One rule (RosterShirtNumbers), one  |
+// |         |            |        | implementation, served to both Views. Unlike the v1.3 gk fix   |
+// |         |            |        | this IS a JSON key addition and a viewer-script change.        |
 #endregion

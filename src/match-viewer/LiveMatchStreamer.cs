@@ -3,6 +3,8 @@
 // Modified: 2026-07-27 (interactive Unity client §5-P1: captures the per-agent cues / substitution
 //           counts / derived period, and latches the engine's within-tick restart cue — KD-P1-3,
 //           held in a single RestartBanner after AR-1 M-6)
+// Modified: 2026-08-03 (P4a: CaptureFrame samples the live goalkeeper flag into LiveAgentCue)
+// Modified: 2026-08-04 (P4a AR pass: shirt numbers come from the shared RosterShirtNumbers rule)
 // Author:   —
 // Spec:     Interactive match view (docs/tracking/interactive-match-view-design.md) +
 //           interactive Unity client (docs/tracking/interactive-unity-client-design.md §4/§5-P0/§6),
@@ -49,6 +51,7 @@ namespace TacticalDirector.MatchViewer
         private readonly object _tickGate = new object();
         private readonly int[]  _teamIds;
         private readonly bool[] _isGoalkeeper;
+        private readonly int[]  _shirtNumbers;
 
         // Optional sim-thread hook run at the top of every tick, ahead of RunTick() (and by
         // ServiceOnce() off-tick). Null for the browser viewer, which supplies none — so its
@@ -112,6 +115,11 @@ namespace TacticalDirector.MatchViewer
                 _teamIds[i]      = engine.AgentTeamId(i);
                 _isGoalkeeper[i] = engine.AgentIsGoalkeeper(i);
             }
+
+            // Shirt numbers are slot ordinals derived from the team ids, so they are boot-constant
+            // for the same reason team ids are — the number belongs to the slot, and a substitution
+            // hands it to whoever fills that slot.
+            _shirtNumbers = RosterShirtNumbers.Assign(_teamIds);
         }
 
         /// <summary>Number of agents per frame (mirrors <c>MatchEngineConstants.SQUAD_SIZE</c>).</summary>
@@ -143,6 +151,16 @@ namespace TacticalDirector.MatchViewer
         {
             GuardRosterIndex(index);
             return _isGoalkeeper[index];
+        }
+
+        /// <summary>
+        /// Shirt number drawn on roster <paramref name="index"/>'s marker — 1-based within its team,
+        /// per <see cref="RosterShirtNumbers"/>, which is the one implementation of that rule.
+        /// </summary>
+        public int ShirtNumber(int index)
+        {
+            GuardRosterIndex(index);
+            return _shirtNumbers[index];
         }
 
         private static void GuardRosterIndex(int index)
@@ -588,4 +606,11 @@ namespace TacticalDirector.MatchViewer
 // |         |            |        | comment above it claimed "roster metadata never changes";      |
 // |         |            |        | true of team ids, false of goalkeeper flags, which a           |
 // |         |            |        | substitution rewrites (MatchEngine.SubstitutePlayer).          |
+// | 1.7     | 2026-08-04 | —      | P4a AR pass (M-6): + a boot-cached ShirtNumber(int) computed by |
+// |         |            |        | RosterShirtNumbers, so LiveMatchServer serves the number and   |
+// |         |            |        | the viewer script stops recomputing the rule in JavaScript.    |
+// |         |            |        | Unlike goalkeeper flags these ARE boot-constant: the number    |
+// |         |            |        | belongs to the slot, and a substitution hands it to whoever    |
+// |         |            |        | fills that slot. Also records the 2026-08-03 Modified line the |
+// |         |            |        | v1.6 landing left off the header.                              |
 #endregion

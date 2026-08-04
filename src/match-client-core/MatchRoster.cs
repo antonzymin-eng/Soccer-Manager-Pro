@@ -1,6 +1,6 @@
 // File:     src/match-client-core/MatchRoster.cs
 // Created:  2026-08-03
-// Modified: 2026-08-03
+// Modified: 2026-08-04
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4a),
 //           Code Standards #20
@@ -10,7 +10,6 @@
 
 using System;
 
-using TacticalDirector.MatchEngine;
 using TacticalDirector.MatchViewer;
 
 namespace TacticalDirector.MatchClientCore
@@ -26,11 +25,10 @@ namespace TacticalDirector.MatchClientCore
     /// <c>LiveAgentCue.IsGoalkeeper</c> on the current frame. Caching both together is what made the
     /// browser viewer draw the keeper ring on the wrong player after a goalkeeper substitution.</para>
     ///
-    /// <para><b>Shirt numbers are slot ordinals, not player identity.</b> Within each team, slots are
-    /// numbered 1..n in roster order. Stage 0 carries no shirt-number field on a player, and the
-    /// engine seeds each team's keeper at local index 0, so this gives the keeper the 1 shirt and
-    /// everyone else a stable, unique number — which is all a marker label needs. When player records
-    /// gain real numbers this is the one place that changes.</para>
+    /// <para><b>Shirt numbers are slot ordinals, not player identity</b>, assigned by
+    /// <see cref="RosterShirtNumbers"/> — which is the one implementation of that rule, shared with
+    /// the browser viewer so the two Views cannot drift. Stage 0 carries no shirt-number field on a
+    /// player; when player records gain real numbers, that class is the one place that changes.</para>
     ///
     /// <para>Built once at scene boot and held; it allocates, and is not on the render path.</para>
     /// </summary>
@@ -47,28 +45,21 @@ namespace TacticalDirector.MatchClientCore
         /// </summary>
         /// <param name="teamIds">Team id per roster slot; every entry must be in [0, TEAM_COUNT).</param>
         /// <exception cref="ArgumentNullException"><paramref name="teamIds"/> is null.</exception>
-        /// <exception cref="ArgumentException">An entry is not a valid team id. A renderer that
-        /// silently treated an out-of-range id as "home" would draw one team in two colours.</exception>
+        /// <exception cref="ArgumentException">An entry is not a valid team id (refused by
+        /// <see cref="RosterShirtNumbers.Assign"/>). A renderer that silently treated an
+        /// out-of-range id as "home" would draw one team in two colours.</exception>
         public MatchRoster(int[] teamIds)
         {
             if (teamIds == null) { throw new ArgumentNullException(nameof(teamIds)); }
 
-            _teamIds      = new int[teamIds.Length];
-            _shirtNumbers = new int[teamIds.Length];
+            // Assign first: it validates every team id, so an invalid roster is refused before this
+            // type holds a half-built copy of it.
+            _shirtNumbers = RosterShirtNumbers.Assign(teamIds);
 
-            var assigned = new int[MatchEngineConstants.TEAM_COUNT];
+            _teamIds = new int[teamIds.Length];
             for (int i = 0; i < teamIds.Length; i++)
             {
-                int teamId = teamIds[i];
-                if (teamId < 0 || teamId >= MatchEngineConstants.TEAM_COUNT)
-                {
-                    throw new ArgumentException(
-                        "teamIds[" + Inv(i) + "] is " + Inv(teamId) + "; expected [0, " +
-                        Inv(MatchEngineConstants.TEAM_COUNT) + ").", nameof(teamIds));
-                }
-
-                _teamIds[i]      = teamId;
-                _shirtNumbers[i] = ++assigned[teamId];
+                _teamIds[i] = teamIds[i];
             }
         }
 
@@ -114,9 +105,6 @@ namespace TacticalDirector.MatchClientCore
                     nameof(index), index, "index must be a roster slot in [0, AgentCount).");
             }
         }
-
-        private static string Inv(int value) =>
-            value.ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
 }
 
@@ -127,4 +115,9 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | on purpose; that one changes under substitution and rides the   |
 // |         |            |        | per-frame cue. The shirt-numbering rule moves here out of the   |
 // |         |            |        | browser viewer's inline JavaScript.                             |
+// | 1.1     | 2026-08-04 | —      | AR pass M-6: the shirt-numbering rule was DUPLICATED, not      |
+// |         |            |        | moved — the browser viewer's computeJersey still existed while |
+// |         |            |        | three documents claimed this type had taken it over. The rule  |
+// |         |            |        | now lives once, in match-viewer's RosterShirtNumbers, which    |
+// |         |            |        | both Views consume; this type delegates to it.                 |
 #endregion

@@ -10,15 +10,21 @@ gate-compiled `src/match-client-core/`: `PitchViewProjection` (the one documente
 centre-origin adapter, both directions; centring is what makes a home position and its away mirror
 differ only in sign), `PitchMarkings`/`PitchMarking`/`PitchMarkingKind` (the IFAB catalogue as shapes,
 read from the *existing* `MatchViewerConstants` `[FIXED]` values, both ends emitted from one loop over
-a sign), `MatchRoster` (match-constant per-slot data; the shirt-numbering rule moved out of the browser
-viewer's inline JavaScript), and `MatchRenderProjection` → `AgentRenderModel`/`BallRenderModel`
+a sign; rectangles arrive corner-normalised so a binding cannot draw the away boxes inverted),
+`MatchRoster` (match-constant per-slot data, with the shirt-numbering rule shared with the browser
+viewer through `RosterShirtNumbers`), and `MatchRenderProjection` → `AgentRenderModel`/`BallRenderModel`
 (positions from the P3 interpolator's buffer, discrete cues from the newest frame, possession ring,
 ball shadow/lift/capped scale). Colour-free by design — a palette has no correct answer a test could
 assert. **The finding (KD-P4a-1):** `LiveMatchStreamer` cached goalkeeper flags as immutable roster
 metadata, but `MatchEngine.SubstitutePlayer` rewrites them — so a keeper substitution had been drawing
 the keeper ring on the wrong player in the browser viewer since P1. The flag now rides `LiveAgentCue`
 per tick and `MatchRoster` deliberately holds none, which fixes both surfaces. No
-`SNAPSHOT_SCHEMA_VERSION` change, no engine-behaviour change. **Next: P4b on the pinned host.**)
+`SNAPSHOT_SCHEMA_VERSION` change, no engine-behaviour change. **Adversarially reviewed August 4,
+2026 — 1 High, 5 Medium, 3 Low fixed, then re-run clean:** the High was `PitchMarking.Rectangle`
+taking its corners in either order while `PitchMarkings` builds the end boxes goal-line-inwards, so
+the two away boxes arrived with descending X and a binding using `B − A` as an extent would have
+drawn exactly those two inverted — #8 ERR-008-002's home/away asymmetry class, in a `MonoBehaviour`
+the gate can never see. **Next: P4b on the pinned host.**)
 
 **Last Updated (prior):** August 3, 2026, latest same day (**Owner decision — roadmap B6 reversed: the product
 ships the full Unity UI, not the web-hosted viewer.** Doc-only. `src/match-client-web/` is retained and

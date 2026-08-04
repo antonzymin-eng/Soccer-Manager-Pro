@@ -1,6 +1,6 @@
 // File:     src/match-client-core/tests/PitchMarkingsTests.cs
 // Created:  2026-08-03
-// Modified: 2026-08-03
+// Modified: 2026-08-04
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4a, §7),
 //           Testing Strategy #19, Code Standards #20
@@ -85,20 +85,74 @@ namespace TacticalDirector.MatchClientCore.Tests
                 Assert.AreEqual(m[home].Kind, m[away].Kind, "pair " + pair + " differs in kind");
                 Assert.AreEqual(m[home].Radius, m[away].Radius, Tolerance, "pair " + pair + " differs in radius");
 
-                AssertMirrored(m[home].A, m[away].A, "pair " + pair + " point A");
-
                 // B is meaningful only for the two-point kinds; a spot leaves it zeroed, and a zero
                 // is not its own mirror. Assert it stays zeroed on both sides instead — the same
                 // property, for a field that carries no geometry.
                 if (m[home].Kind == PitchMarkingKind.Circle || m[home].Kind == PitchMarkingKind.Spot)
                 {
+                    AssertMirrored(m[home].A, m[away].A, "pair " + pair + " point A");
                     Assert.AreEqual(Vector2.zero, m[home].B, "pair " + pair + " home B should be zeroed");
                     Assert.AreEqual(Vector2.zero, m[away].B, "pair " + pair + " away B should be zeroed");
                     continue;
                 }
 
+                // A rectangle's corners are normalised (A = min, B = max), so mirroring about the
+                // halfway line swaps which corner carries which X while leaving Y where it is: the
+                // away box's MIN x is the mirror of the home box's MAX x. Asserting A⇄A here would
+                // be wrong, not merely weaker.
+                if (m[home].Kind == PitchMarkingKind.Rectangle)
+                {
+                    Assert.AreEqual(Length - m[home].B.x, m[away].A.x, Tolerance, "pair " + pair + " min X");
+                    Assert.AreEqual(Length - m[home].A.x, m[away].B.x, Tolerance, "pair " + pair + " max X");
+                    Assert.AreEqual(m[home].A.y, m[away].A.y, Tolerance, "pair " + pair + " min Y");
+                    Assert.AreEqual(m[home].B.y, m[away].B.y, Tolerance, "pair " + pair + " max Y");
+                    continue;
+                }
+
+                AssertMirrored(m[home].A, m[away].A, "pair " + pair + " point A");
                 AssertMirrored(m[home].B, m[away].B, "pair " + pair + " point B");
             }
+        }
+
+        [Test]
+        public void EveryRectangleArrivesWithItsCornersNormalised()
+        {
+            // The end-specific boxes are built from their goal line INWARDS, so the away pair is
+            // constructed with descending X. If PitchMarking.Rectangle stopped normalising, a
+            // renderer taking B − A as an extent would draw those two inverted while the home pair
+            // looked correct — the home/away asymmetry class of #8 ERR-008-002, one layer up. Every
+            // other assertion in this fixture would still pass, so this is the one that catches it.
+            int rectangles = 0;
+
+            foreach (PitchMarking marking in PitchMarkings.Build())
+            {
+                if (marking.Kind != PitchMarkingKind.Rectangle) { continue; }
+
+                rectangles++;
+                Assert.LessOrEqual(marking.A.x, marking.B.x, "rectangle X corners are not min/max: " + marking.A + " → " + marking.B);
+                Assert.LessOrEqual(marking.A.y, marking.B.y, "rectangle Y corners are not min/max: " + marking.A + " → " + marking.B);
+                Assert.Greater(marking.B.x - marking.A.x, 0f, "a rectangle with no width is not a marking");
+                Assert.Greater(marking.B.y - marking.A.y, 0f, "a rectangle with no height is not a marking");
+            }
+
+            // Boundary + two penalty areas + two goal areas. Named so a marking silently changing
+            // kind cannot make the loop above vacuously pass.
+            Assert.AreEqual(5, rectangles, "expected the boundary and the four end boxes");
+        }
+
+        [Test]
+        public void TheAwayEndBoxes_AreBuiltInwardsAndStillNormalise()
+        {
+            // The specific pair the normalisation exists for, asserted against the IFAB depth rather
+            // than against whatever Build() happened to emit.
+            PitchMarking[] m = PitchMarkings.Build();
+
+            Assert.AreEqual(Length - MatchViewerConstants.PenaltyAreaDepthM, m[5].A.x, Tolerance,
+                "the away penalty area's min X is its far edge, not its goal line");
+            Assert.AreEqual(Length, m[5].B.x, Tolerance);
+
+            Assert.AreEqual(Length - MatchViewerConstants.GoalAreaDepthM, m[7].A.x, Tolerance);
+            Assert.AreEqual(Length, m[7].B.x, Tolerance);
         }
 
         [Test]
@@ -176,10 +230,13 @@ namespace TacticalDirector.MatchClientCore.Tests
         {
             Assert.AreEqual(PitchMarkingKind.Rectangle, marking.Kind, what);
 
-            float minX = Mathf.Min(marking.A.x, marking.B.x);
-            float maxX = Mathf.Max(marking.A.x, marking.B.x);
-            float minY = Mathf.Min(marking.A.y, marking.B.y);
-            float maxY = Mathf.Max(marking.A.y, marking.B.y);
+            // Read A/B directly rather than through Mathf.Min/Max: normalising here would launder
+            // exactly the corner-ordering defect EveryRectangleArrivesWithItsCornersNormalised
+            // exists to catch, and this helper covers four of the five rectangles.
+            float minX = marking.A.x;
+            float maxX = marking.B.x;
+            float minY = marking.A.y;
+            float maxY = marking.B.y;
 
             float expectedNear = goalLineX;
             float expectedFar  = goalLineX + sign * depth;
@@ -197,4 +254,13 @@ namespace TacticalDirector.MatchClientCore.Tests
 // | 1.0     | 2026-08-03 | —      | Initial creation (P4a): count, determinism, the four common     |
 // |         |            |        | markings, both-ends mirror symmetry, IFAB distances against     |
 // |         |            |        | MatchViewerConstants, and the unused-field-is-zero contract.    |
+// | 1.1     | 2026-08-04 | —      | AR pass H-1: + EveryRectangleArrivesWithItsCornersNormalised   |
+// |         |            |        | and TheAwayEndBoxes_AreBuiltInwardsAndStillNormalise, and      |
+// |         |            |        | AssertAreaBox now reads A/B directly instead of through        |
+// |         |            |        | Mathf.Min/Max — that normalisation in the HELPER was what let  |
+// |         |            |        | the away boxes' descending corner order pass unnoticed. The    |
+// |         |            |        | mirror test states the rectangle pairing explicitly (away min  |
+// |         |            |        | X mirrors home max X), which A⇄A cannot express once corners   |
+// |         |            |        | are normalised. Verified non-vacuous: un-normalising the       |
+// |         |            |        | factory fails four tests in this fixture.                      |
 #endregion

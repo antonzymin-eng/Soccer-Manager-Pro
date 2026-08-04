@@ -1,6 +1,6 @@
 // File:     src/match-client-core/BallRenderModel.cs
 // Created:  2026-08-03
-// Modified: 2026-08-03
+// Modified: 2026-08-04
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4a
 //           "ball (sprite + shadow for height)"), Ball Physics #1 §1.2, Code Standards #20
@@ -20,8 +20,11 @@ namespace TacticalDirector.MatchClientCore
     /// — at the position every gameplay judgement was actually made against, which matters the
     /// moment a viewer tries to read whether a cross cleared a defender.</para>
     ///
-    /// <para>The scale is capped (<c>MatchClientConstants.BallMaxHeightScale</c>): a goal kick peaks
-    /// around 20 m, and an uncapped ramp would draw the ball wider than the six-yard box.</para>
+    /// <para>The scale is capped (<c>MatchClientConstants.BallMaxHeightScale</c>): at the 20 m apex
+    /// of a goal kick an uncapped ramp reaches 4×, drawing a 2.8 m-wide ball — roughly two agent
+    /// markers across, which reads as a beach ball rather than as height. The cap is reached at
+    /// 10 m, so above that the sprite stops growing and the shadow separation carries the cue
+    /// alone; see <c>BallMaxHeightScale</c> for that limitation.</para>
     /// </summary>
     public readonly struct BallRenderModel
     {
@@ -37,7 +40,12 @@ namespace TacticalDirector.MatchClientCore
         /// </summary>
         public readonly Vector2 SpritePosition;
 
-        /// <summary>Ball height above the ground, metres — as reported by the engine, not clamped.</summary>
+        /// <summary>
+        /// Ball height above the ground, metres — as reported by the engine, <b>not</b> clamped or
+        /// sanitised. A negative or non-finite value reaches this field verbatim even though
+        /// <see cref="SpritePosition"/> and <see cref="SpriteRadius"/> treat it as ground level, so
+        /// a consumer reading this for anything other than display must guard it itself.
+        /// </summary>
         public readonly float HeightM;
 
         /// <summary>Ball sprite radius in view units, already grown for height and capped.</summary>
@@ -67,4 +75,8 @@ namespace TacticalDirector.MatchClientCore
 // | Version | Date       | Author | Notes                                                          |
 // | 1.0     | 2026-08-03 | —      | Initial creation (P4a): shadow point, lifted sprite point, and  |
 // |         |            |        | the height-grown (capped) sprite radius.                        |
+// | 1.1     | 2026-08-04 | —      | AR pass M-5: the cap's stated rationale was numerically wrong  |
+// |         |            |        | ("wider than the six-yard box" — an uncapped 20 m ball is 2.8 m|
+// |         |            |        | across). Replaced with the real figures plus the 10 m          |
+// |         |            |        | saturation point, and HeightM is documented as unsanitised.    |
 #endregion
