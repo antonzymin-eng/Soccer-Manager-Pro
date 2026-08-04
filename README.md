@@ -1,7 +1,26 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** August 3, 2026, latest same day (**Owner decision — roadmap B6 reversed: the product
+**Last Updated:** August 3, 2026, latest same day (**Interactive Unity client P4a LANDED — the
+host-free render model, and P4 is split.** P4a is every render *decision*; P4b is the binding. That
+split turns the standing "keep logic out of `MonoBehaviour`s" rule from a discipline into a phase
+boundary, so what the pinned host is left to verify is binding — which a cert run genuinely checks —
+rather than behaviour, which it checks only along the paths someone thought to click. New in
+gate-compiled `src/match-client-core/`: `PitchViewProjection` (the one documented corner-origin ⇄
+centre-origin adapter, both directions; centring is what makes a home position and its away mirror
+differ only in sign), `PitchMarkings`/`PitchMarking`/`PitchMarkingKind` (the IFAB catalogue as shapes,
+read from the *existing* `MatchViewerConstants` `[FIXED]` values, both ends emitted from one loop over
+a sign), `MatchRoster` (match-constant per-slot data; the shirt-numbering rule moved out of the browser
+viewer's inline JavaScript), and `MatchRenderProjection` → `AgentRenderModel`/`BallRenderModel`
+(positions from the P3 interpolator's buffer, discrete cues from the newest frame, possession ring,
+ball shadow/lift/capped scale). Colour-free by design — a palette has no correct answer a test could
+assert. **The finding (KD-P4a-1):** `LiveMatchStreamer` cached goalkeeper flags as immutable roster
+metadata, but `MatchEngine.SubstitutePlayer` rewrites them — so a keeper substitution had been drawing
+the keeper ring on the wrong player in the browser viewer since P1. The flag now rides `LiveAgentCue`
+per tick and `MatchRoster` deliberately holds none, which fixes both surfaces. No
+`SNAPSHOT_SCHEMA_VERSION` change, no engine-behaviour change. **Next: P4b on the pinned host.**)
+
+**Last Updated (prior):** August 3, 2026, latest same day (**Owner decision — roadmap B6 reversed: the product
 ships the full Unity UI, not the web-hosted viewer.** Doc-only. `src/match-client-web/` is retained and
 reclassified as the host-free reference harness — the only surface exercising read/playback/intent in
 CI on every push — while `src/match-client-unity/` (asmdef + README; P4 never started) becomes the
@@ -632,10 +651,12 @@ PM-3 (playable career) ladder. Phase A (season spine) is in progress:
    reversed by owner decision on Aug 3, 2026: the product ships the full Unity client, not the
    web-hosted viewer. The browser client (`src/match-client-web/`) is retained as the **host-free
    reference harness** — the only surface exercising the read/playback/intent loop in CI — and is the
-   current floor, but it is not the target. P0–P3 and the head-less half of P6 are done; **P4 (the 2D
-   render skin) is next, on the pinned host.** The standing rule for it: **keep logic out of
-   `MonoBehaviour`s** — the CI gate cannot compile `match-client-unity` and never will, so every
-   decision lives in gate-compiled `match-client-core` / `ui-framework`. See
+   current floor, but it is not the target. P0–P3, the head-less half of P6, **and P4a (the render
+   model — coordinate adapter, IFAB marking catalogue, roster, per-agent and ball draw states)** are
+   done; **P4b (the Unity binding) is next, on the pinned host**, then P5 and P6's on-host half. P4 was
+   split on the standing rule for this surface: **keep logic out of `MonoBehaviour`s** — the CI gate
+   cannot compile `match-client-unity` and never will, so every decision lives in gate-compiled
+   `match-client-core` / `ui-framework`, and P4a is that rule made into a phase. See
    `docs/tracking/interactive-unity-client-design.md` §12.
 
 **Operations / housekeeping:**

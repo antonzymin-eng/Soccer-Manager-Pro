@@ -99,9 +99,12 @@ namespace TacticalDirector.MatchViewer
             _engine         = engine;
             _ticksPerSecond = ticksPerSecond;
 
-            // Roster metadata never changes across a match — captured once here so LiveMatchServer
-            // can render team/GK cues without ever holding a MatchEngine reference itself (§9.1 of
-            // the design note: the server and the engine must stay disjoint by construction).
+            // Captured once here so LiveMatchServer can render roster cues without ever holding a
+            // MatchEngine reference itself (§9.1 of the design note: the server and the engine must
+            // stay disjoint by construction). Team ids never change across a match — a bench player
+            // belongs to the team whose bench they sit on. The goalkeeper flags do NOT share that
+            // property (a substitution rewrites the slot's flag), so this copy is a boot-time
+            // snapshot only and the live flag rides LiveAgentCue.IsGoalkeeper on each frame.
             _teamIds      = new int[MatchEngineConstants.SQUAD_SIZE];
             _isGoalkeeper = new bool[MatchEngineConstants.SQUAD_SIZE];
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
@@ -127,7 +130,15 @@ namespace TacticalDirector.MatchViewer
             return _teamIds[index];
         }
 
-        /// <summary>True when roster <paramref name="index"/> is a goalkeeper.</summary>
+        /// <summary>
+        /// True when roster <paramref name="index"/> started the match as a goalkeeper.
+        ///
+        /// <para><b>Boot-time only.</b> Substituting a keeper for an outfield player (or the
+        /// reverse) moves which slot is the goalkeeper, and this array is not re-sampled. Use
+        /// <c>LiveAgentCue.IsGoalkeeper</c> from the current frame for the live answer; this
+        /// accessor exists for callers that need roster metadata before the first frame is
+        /// captured.</para>
+        /// </summary>
         public bool IsGoalkeeper(int index)
         {
             GuardRosterIndex(index);
@@ -323,7 +334,8 @@ namespace TacticalDirector.MatchViewer
                 cues[i]      = new LiveAgentCue(
                     _engine.AgentYellowCards(i),
                     _engine.AgentIsSentOff(i),
-                    _engine.AgentBenchSlot(i));
+                    _engine.AgentBenchSlot(i),
+                    _engine.AgentIsGoalkeeper(i));
             }
 
             var subsUsed = new int[MatchEngineConstants.TEAM_COUNT];
@@ -570,4 +582,10 @@ namespace TacticalDirector.MatchViewer
 // |         |            |        | banner derives its team and tick from its own cue, so the      |
 // |         |            |        | zeroed default already reads as "no restart" and there is no   |
 // |         |            |        | separate no-restart constant to keep in step with it.          |
+// | 1.6     | 2026-08-03 | —      | P4a: CaptureFrame samples AgentIsGoalkeeper into the new       |
+// |         |            |        | LiveAgentCue.IsGoalkeeper each tick, and the boot-cached       |
+// |         |            |        | _isGoalkeeper array is re-documented as boot-time only. The    |
+// |         |            |        | comment above it claimed "roster metadata never changes";      |
+// |         |            |        | true of team ids, false of goalkeeper flags, which a           |
+// |         |            |        | substitution rewrites (MatchEngine.SubstitutePlayer).          |
 #endregion

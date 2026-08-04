@@ -1,12 +1,12 @@
 // File:     src/match-client-core/MatchClientConstants.cs
 // Created:  2026-07-24
-// Modified: 2026-07-27
+// Modified: 2026-08-03
 // Author:   —
-// Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P0/§5-P3),
+// Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P0/§5-P3/§5-P4a),
 //           Code Standards #20 (constant catalogue; no magic numbers)
 // Purpose:  Constant catalogue for the host-free interactive-client core: the master-plan
 //           playback-speed set the UI presents (Pause is a streamer state, not a multiplier), the P3
-//           interpolator snap distances, and the P3 follow-ball camera tuning.
+//           interpolator snap distances, the P3 follow-ball camera tuning, and the P4a render-cue sizes.
 
 using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
 
@@ -107,6 +107,73 @@ namespace TacticalDirector.MatchClientCore
             Config.GetFloat("match-client", "CameraOverscanM", 3f);
 
         #endregion
+
+        #region GT — P4a render-cue sizing (§5-P4a / §7 "Rendering, camera, HUD")
+
+        /// <summary>
+        /// [GT] Radius (m) of a filled pitch spot — the centre spot and the two penalty spots. Config
+        /// key [match-client] MarkingSpotRadiusM.
+        ///
+        /// <para>Presentation, not Law 1: IFAB fixes where the spots are (and
+        /// <c>MatchViewerConstants.PenaltySpotDistanceM</c> carries that as [FIXED]) but describes
+        /// them only as "marks", so how big to draw one is a legibility choice like every other row
+        /// in this region.</para>
+        /// </summary>
+        public static readonly float MarkingSpotRadiusM =
+            Config.GetFloat("match-client", "MarkingSpotRadiusM", 0.2f);
+
+        /// <summary>
+        /// [GT] Radius (view units, 1 unit = 1 m) of an agent's marker. Config key [match-client]
+        /// AgentMarkerRadiusM.
+        ///
+        /// <para>Deliberately larger than a person: at the default camera half-extents the pitch is
+        /// ~52 m wide on screen, and a 0.25 m-radius dot is a pixel. This is a legibility figure, not
+        /// an anthropometric one — nothing in the simulation reads it.</para>
+        /// </summary>
+        public static readonly float AgentMarkerRadiusM =
+            Config.GetFloat("match-client", "AgentMarkerRadiusM", 0.7f);
+
+        /// <summary>
+        /// [GT] Radius (view units) of the ring drawn around the agent in possession. Config key
+        /// [match-client] PossessionRingRadiusM. Must exceed <see cref="AgentMarkerRadiusM"/> or the
+        /// ring is hidden underneath the marker it annotates.
+        /// </summary>
+        public static readonly float PossessionRingRadiusM =
+            Config.GetFloat("match-client", "PossessionRingRadiusM", 1.2f);
+
+        /// <summary>[GT] Radius (view units) of the ball marker at ground level. Config key [match-client] BallMarkerRadiusM.</summary>
+        public static readonly float BallMarkerRadiusM =
+            Config.GetFloat("match-client", "BallMarkerRadiusM", 0.35f);
+
+        /// <summary>
+        /// [GT] View-plane offset applied to the ball sprite per metre of ball height, along the
+        /// view's +Y axis. Config key [match-client] BallHeightViewOffsetPerMetre.
+        ///
+        /// <para>A top-down 2D view has nowhere to put Z, so height is drawn as separation between
+        /// the ball sprite and its ground shadow — the shadow stays on the pitch point the ball is
+        /// actually over, which is the position every gameplay judgement was made against.</para>
+        /// </summary>
+        public static readonly float BallHeightViewOffsetPerMetre =
+            Config.GetFloat("match-client", "BallHeightViewOffsetPerMetre", 0.5f);
+
+        /// <summary>
+        /// [GT] Extra ball-marker scale per metre of ball height. Config key [match-client]
+        /// BallHeightScalePerMetre. The 2D analogue of the browser viewer's
+        /// <c>BallRadiusPerMetreHeightPx</c> cue, expressed as a multiplier rather than pixels
+        /// because the Unity view has no fixed pixels-per-metre.
+        /// </summary>
+        public static readonly float BallHeightScalePerMetre =
+            Config.GetFloat("match-client", "BallHeightScalePerMetre", 0.15f);
+
+        /// <summary>
+        /// [GT] Ceiling on the height-derived ball scale. Config key [match-client] BallMaxHeightScale.
+        /// A goal kick reaches ~20 m; without a cap the ball would be drawn wider than the penalty
+        /// area at the top of its arc.
+        /// </summary>
+        public static readonly float BallMaxHeightScale =
+            Config.GetFloat("match-client", "BallMaxHeightScale", 2.5f);
+
+        #endregion
     }
 }
 
@@ -119,4 +186,8 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | two interpolator snap distances (restart / substitution        |
 // |         |            |        | discontinuities) and the five follow-ball camera rows (dead    |
 // |         |            |        | zone, exponential follow rate, view half-extents, overscan).   |
+// | 1.2     | 2026-08-03 | —      | P4a render model: the render-cue sizes v1.0 deferred "to P3/P4 |
+// |         |            |        | with their consumers" now have consumers — agent marker and    |
+// |         |            |        | possession-ring radii, ball marker radius, and the three ball-  |
+// |         |            |        | height cues (view offset per metre, scale per metre, scale cap).|
 #endregion

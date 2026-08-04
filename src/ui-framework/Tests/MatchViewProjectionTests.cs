@@ -3,6 +3,7 @@
 // Modified: 2026-07-27 (P1: gate probes routed through a local Frame helper; CaptureFrom samples the
 //           P1 surface, now via the Scoreline / RestartBanner carriers. The P1 gates get their own
 //           fixture — MatchViewCueProjectionTests.)
+// Modified: 2026-08-03 (P4a: the CaptureFrom cue sample carries the engine's live AgentIsGoalkeeper)
 // Author:   —
 // Spec:     UI / Client Framework #38 §3.1 / §3.4 / §5.1 (T-UI-MATCHVIEW-001/002, T-UI-FAIL-001/002,
 //           T-UI-LAYER-002, FR-UI-002/005/006/007/008/015/016), Code Standards #20
@@ -221,7 +222,8 @@ namespace TacticalDirector.UiFramework.Tests
             {
                 positions[i] = engine.AgentView(i).Position;
                 cues[i]      = new LiveAgentCue(
-                    engine.AgentYellowCards(i), engine.AgentIsSentOff(i), engine.AgentBenchSlot(i));
+                    engine.AgentYellowCards(i), engine.AgentIsSentOff(i), engine.AgentBenchSlot(i),
+                    engine.AgentIsGoalkeeper(i));
             }
 
             var subs = new int[MatchEngineConstants.TEAM_COUNT];
@@ -281,4 +283,6 @@ namespace TacticalDirector.UiFramework.Tests
 // |         |            |        | extending the frame costs one line here rather than one per    |
 // |         |            |        | probe. NegativeScore_Throws now tests Scoreline directly — the |
 // |         |            |        | gate moved there, so a negative score cannot reach a frame.    |
+// | 1.2     | 2026-08-03 | —      | P4a: the CaptureFrom cue sample carries the engine's live       |
+// |         |            |        | AgentIsGoalkeeper into the new LiveAgentCue field (KD-P4a-1).   |
 #endregion

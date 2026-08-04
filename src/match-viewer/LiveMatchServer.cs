@@ -2,6 +2,7 @@
 // Created:  2026-07-15
 // Modified: 2026-07-16 (AR-7 fix pass: viewer clock rounds seconds before the minute split (L-3); post-Stop connection threads refused via a volatile shutdown flag + 503 (L-4))
 // Modified: 2026-07-27 (P1 AR-1 M-6: score reads follow LiveMatchFrame onto the Scoreline carrier; /frame JSON keys unchanged)
+// Modified: 2026-08-03 (P4a: the roster "gk" flag comes from the live frame cue, not the boot-time cache)
 // Author:   —
 // Spec:     Interactive match view (docs/tracking/interactive-match-view-design.md), Code Standards #20
 // Purpose:  A minimal loopback-only HTTP server (hand-rolled over TcpListener — no package
@@ -325,7 +326,13 @@ namespace TacticalDirector.MatchViewer
                 sb.Append('{');
                 AppendJsonInt(sb, "team", _streamer.TeamId(i));
                 sb.Append(',');
-                AppendJsonBool(sb, "gk", _streamer.IsGoalkeeper(i));
+                // The streamer's cached flag is boot-time and goes stale when a keeper is
+                // substituted, so prefer the frame's per-tick cue whenever there is a frame. Before
+                // kickoff there is none, and the boot flag is then exactly right.
+                bool isGoalkeeper = hasFrame && i < frame.AgentCues.Length
+                    ? frame.AgentCues[i].IsGoalkeeper
+                    : _streamer.IsGoalkeeper(i);
+                AppendJsonBool(sb, "gk", isGoalkeeper);
                 sb.Append('}');
             }
             sb.Append(']');
@@ -633,4 +640,9 @@ poll();
 // |         |            |        | HomeScore / AwayScore into frame.Score.Home / .Away. The /frame |
 // |         |            |        | JSON keys are unchanged, so the browser viewer is untouched —   |
 // |         |            |        | the P1 fields it does not yet render are B6's job.              |
+// | 1.3     | 2026-08-03 | —      | P4a: the roster payload's "gk" flag reads the current frame's   |
+// |         |            |        | LiveAgentCue.IsGoalkeeper when a frame exists, falling back to  |
+// |         |            |        | the streamer's boot-time flag before kickoff. Fixes a keeper    |
+// |         |            |        | ring drawn on the wrong player after a goalkeeper substitution. |
+// |         |            |        | JSON keys and the viewer script are unchanged.                  |
 #endregion

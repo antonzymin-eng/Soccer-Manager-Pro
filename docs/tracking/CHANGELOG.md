@@ -12,7 +12,52 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 3, 2026, latest same day (**OWNER DECISION — ROADMAP B6 REVERSED: the
+> **Last Updated:** August 3, 2026, latest same day (**INTERACTIVE UNITY CLIENT P4a LANDED — the
+> host-free render model.** P4 is split into **P4a, every render *decision*, and P4b, the binding.**
+> That split is the August-3 owner-decision rule ("keep logic out of `MonoBehaviour`s") turned from a
+> discipline into a phase boundary, and the ordering argument is the one that already put P6's
+> head-less scenario ahead of P4: land the decisions where `tools/dotnet-ci` can compile and test them,
+> and what is left for the pinned host is binding — which a cert run genuinely verifies — rather than
+> behaviour, which it verifies only along the paths someone thought to click.
+>
+> **What landed** (all in gate-compiled `src/match-client-core/`): `PitchViewProjection`, the single
+> documented coordinate adapter §7 requires — engine **corner-origin** metres ⇄ a **centre-origin**
+> view plane at 1 unit per metre, plus the inverse a pointer click needs. Centring is not cosmetic:
+> it makes a home-end position and its away-end mirror differ only in sign, which is what turns the
+> mirrored assertions this repo's #8 ERR-008-002 history demands into one line each.
+> `PitchMarkings`/`PitchMarking`/`PitchMarkingKind`, the IFAB catalogue as shapes, read from the
+> **existing** `MatchViewerConstants` `[FIXED]` values rather than restated (§7's one-source-of-truth
+> rule across both Views), with both ends emitted from one loop over a sign so a marking cannot be
+> right at one end and wrong at the other. `MatchRoster`, the match-constant per-slot data — and the
+> shirt-numbering rule finally out of the browser viewer's inline JavaScript and into gate-tested C#.
+> `MatchRenderProjection` → `AgentRenderModel`/`BallRenderModel`: positions from the P3 interpolator's
+> buffer because that is what is actually being drawn, every discrete cue from the newest captured
+> frame because cues do not interpolate, the possession ring, and the ball's shadow / height-lift /
+> capped-scale cues. Colour-free by design — a palette has no correct answer a test could assert.
+>
+> **Deliberately not built:** the D-arc and the corner arcs. Neither has a `[FIXED]` constant and the
+> browser viewer draws neither, so adding them would mean inventing geometry here and diverging the two
+> Views. Recorded rather than silently dropped.
+>
+> **The finding, KD-P4a-1 — a stale cache older than this pass.** `LiveMatchStreamer` cached team ids
+> *and* goalkeeper flags at construction under "roster metadata never changes across a match". True of
+> team ids; **false of goalkeeper flags**, which `MatchEngine.SubstitutePlayer` rewrites — so a keeper
+> substituted for an outfield player moves which slot is the goalkeeper and the cache has silently
+> disagreed with the engine ever since, drawing the keeper ring on the wrong player in the browser
+> viewer since P1. A Unity roster type built on the same accessor would have inherited it wholesale,
+> which is the argument for doing the render model before the skin rather than after. `LiveAgentCue`
+> gains `IsGoalkeeper` — the first cue added through the extension mechanism KD-P1-6 created the struct
+> for — sampled every tick; `MatchRoster` holds no goalkeeper flag at all so the stale copy cannot come
+> back; `LiveMatchServer` reads the frame cue, fixing the harness with no JSON key and no viewer-script
+> change. Re-reading the engine from the accessor was rejected: that is the off-sim-thread tear-read the
+> streamer's single-writer invariant exists to prevent, and the reason it was cached to begin with.
+>
+> **No `SNAPSHOT_SCHEMA_VERSION` change, no new RNG stream / domain tag / draw site, no draw-order
+> change, no engine-behaviour change** — the new cue is sampled from an existing read-only accessor.
+> **Full dotnet gate: 29 of 30 suites PASSED, 0 failures** — whole tree compiles; `match-client-core` 65 → 103, `match-viewer` 39 → 41, `ui-framework` 50 (unchanged), `season-save` 263, every other suite unchanged. The `match-engine` suite was still running when this entry was written and is recorded as **not yet reported** rather than assumed green; no `match-engine` source is touched by this landing. **Next: P4b on the pinned host** (roadmap row B8), which now binds a render model that is
+> already decided and already tested.)
+
+> **Last Updated (prior):** August 3, 2026, latest same day (**OWNER DECISION — ROADMAP B6 REVERSED: the
 > product ships the FULL UNITY UI, not the web-hosted viewer.** Doc-only; no `.cs` changed. Recorded in
 > `path-to-playable-roadmap.md` v0.11 (§7 supersede note, C2 amended, risk register re-cut),
 > `interactive-unity-client-design.md` v0.11 (§12 status-change block), `browser-match-client-design.md`
