@@ -89,6 +89,13 @@ namespace TacticalDirector.MatchClientCore
         /// [GT] Half-width (m) of the visible area along the pitch's long axis. Config key
         /// [match-client] CameraViewHalfWidthM. The target is clamped so the view never runs past the
         /// pitch by more than <see cref="CameraOverscanM"/>.
+        ///
+        /// <para><b>Approximate since the camera gained a tilt.</b> This pair describes an
+        /// axis-aligned rectangle of visible ground, which is exactly right for a straight-down view
+        /// and only roughly right for a tilted one — the real footprint is a trapezoid, deeper at the
+        /// far edge. The clamp's job is keeping the target near the pitch rather than computing exact
+        /// framing, so the approximation is kept deliberately rather than complicating
+        /// <see cref="FollowBallCamera"/>'s pure 2D math with a projection.</para>
         /// </summary>
         public static readonly float CameraViewHalfWidthM =
             Config.GetFloat("match-client", "CameraViewHalfWidthM", 26f);
@@ -107,6 +114,44 @@ namespace TacticalDirector.MatchClientCore
         /// </summary>
         public static readonly float CameraOverscanM =
             Config.GetFloat("match-client", "CameraOverscanM", 3f);
+
+        #endregion
+
+        #region GT — P4a camera rig (§5-P4a / §7 "Rendering, camera, HUD")
+
+        /// <summary>
+        /// [GT] Camera height above the ground, metres. Config key [match-client] CameraHeightM.
+        /// With the tilt below this fixes how much pitch is in shot; the
+        /// <see cref="CameraViewHalfWidthM"/> / <see cref="CameraViewHalfHeightM"/> pair still bounds
+        /// where the camera may look (see their note on why that clamp is now approximate).
+        /// </summary>
+        public static readonly float CameraHeightM = RequireAtLeast(
+            Config.GetFloat("match-client", "CameraHeightM", 38f), 1f, "CameraHeightM");
+
+        /// <summary>
+        /// [GT] Camera tilt measured FROM VERTICAL, degrees. Config key [match-client]
+        /// CameraTiltDegrees. 0° is straight down; larger values lie the view flatter.
+        ///
+        /// <para>Kept modest on purpose: past roughly 40° the pitch stops reading as a tactical
+        /// plan-view and starts reading as broadcast footage, where the far half of the field
+        /// compresses into a band and relative positions get hard to judge. Must stay under 90°,
+        /// where the camera would be level with the turf and the ground plane would vanish — that
+        /// bound is enforced at boot rather than documented.</para>
+        /// </summary>
+        public static readonly float CameraTiltDegrees = RequireInRange(
+            Config.GetFloat("match-client", "CameraTiltDegrees", 22f), 0f, 89f, "CameraTiltDegrees");
+
+        /// <summary>
+        /// [GT] Sideways offset of the camera from directly behind its target, metres. Config key
+        /// [match-client] CameraLateralOffsetM.
+        ///
+        /// <para>The "slightly off-centre" part of the framing, and it does real work: with the
+        /// camera dead-centre the two halves of the pitch project identically and the eye has no
+        /// asymmetry to read depth from. It skews the effective tilt slightly — see
+        /// <see cref="PitchCameraRig.EffectiveTiltDegrees"/>, which reports the real angle.</para>
+        /// </summary>
+        public static readonly float CameraLateralOffsetM =
+            Config.GetFloat("match-client", "CameraLateralOffsetM", 5f);
 
         #endregion
 
@@ -151,46 +196,6 @@ namespace TacticalDirector.MatchClientCore
         public static readonly float BallMarkerRadiusM =
             Config.GetFloat("match-client", "BallMarkerRadiusM", 0.35f);
 
-        /// <summary>
-        /// [GT] View-plane offset applied to the ball sprite per metre of ball height, along the
-        /// view's +Y axis. Config key [match-client] BallHeightViewOffsetPerMetre.
-        ///
-        /// <para>A top-down 2D view has nowhere to put Z, so height is drawn as separation between
-        /// the ball sprite and its ground shadow — the shadow stays on the pitch point the ball is
-        /// actually over, which is the position every gameplay judgement was made against.</para>
-        /// </summary>
-        public static readonly float BallHeightViewOffsetPerMetre =
-            Config.GetFloat("match-client", "BallHeightViewOffsetPerMetre", 0.5f);
-
-        /// <summary>
-        /// [GT] Extra ball-marker scale per metre of ball height. Config key [match-client]
-        /// BallHeightScalePerMetre. The 2D analogue of the browser viewer's
-        /// <c>BallRadiusPerMetreHeightPx</c> cue, expressed as a multiplier rather than pixels
-        /// because the Unity view has no fixed pixels-per-metre.
-        /// </summary>
-        public static readonly float BallHeightScalePerMetre =
-            Config.GetFloat("match-client", "BallHeightScalePerMetre", 0.15f);
-
-        /// <summary>
-        /// [GT] Ceiling on the height-derived ball scale. Config key [match-client] BallMaxHeightScale.
-        ///
-        /// <para>At the shipped values the ramp reaches this ceiling at
-        /// (<see cref="BallMaxHeightScale"/> − 1) ÷ <see cref="BallHeightScalePerMetre"/> = <b>10 m</b>,
-        /// and a goal kick peaks around 20 m — where an uncapped ramp would draw the ball at
-        /// 0.35 × 4 = 1.4 m radius, i.e. 2.8 m across. That is roughly two marker-widths and reads
-        /// as a beach ball rather than as height, which is what the cap is for. <b>Known limitation:
-        /// above 10 m the sprite stops growing, so the height cue saturates for the upper half of a
-        /// goal kick's arc</b> — the shadow separation (<see cref="BallHeightViewOffsetPerMetre"/>)
-        /// keeps conveying height past that point, and retuning the pair is a [GT] balance decision,
-        /// not a code one.</para>
-        ///
-        /// <para>Must be at least 1: a ceiling below 1 would shrink a grounded ball. Enforced at
-        /// boot, per the [GT] loader's fail-loud contract — a value that cannot mean what it says is
-        /// a config error, not something to silently repair into "no cap".</para>
-        /// </summary>
-        public static readonly float BallMaxHeightScale = RequireAtLeast(
-            Config.GetFloat("match-client", "BallMaxHeightScale", 2.5f), 1f, "BallMaxHeightScale");
-
         #endregion
 
         /// <summary>
@@ -225,6 +230,23 @@ namespace TacticalDirector.MatchClientCore
                 throw new InvalidOperationException(
                     "[match-client] " + key + " is " + Inv(value) + "; it must exceed " + floorKey +
                     " (" + Inv(floor) + ").");
+            }
+
+            return value;
+        }
+
+        /// <summary>
+        /// Returns <paramref name="value"/>, or throws when it falls outside
+        /// [<paramref name="minimum"/>, <paramref name="maximum"/>].
+        /// </summary>
+        /// <exception cref="InvalidOperationException">The configured value is out of range.</exception>
+        internal static float RequireInRange(float value, float minimum, float maximum, string key)
+        {
+            if (!(value >= minimum) || !(value <= maximum))
+            {
+                throw new InvalidOperationException(
+                    "[match-client] " + key + " is " + Inv(value) + "; it must be within [" +
+                    Inv(minimum) + ", " + Inv(maximum) + "].");
             }
 
             return value;

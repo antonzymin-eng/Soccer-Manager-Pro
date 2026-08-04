@@ -17,7 +17,7 @@ viewer through `RosterShirtNumbers`), and `MatchRenderProjection` → `AgentRend
 ball shadow/lift/capped scale). Colour-free by design — a palette has no correct answer a test could
 assert. **The finding (KD-P4a-1):** `LiveMatchStreamer` cached goalkeeper flags as immutable roster
 metadata, but `MatchEngine.SubstitutePlayer` rewrites them — so a keeper substitution had been drawing
-the keeper ring on the wrong player in the browser viewer since P1. The flag now rides `LiveAgentCue`
+the keeper ring on the wrong player in the browser viewer since P1. **The view was then revised to a tilted, slightly off-centre perspective camera (KD-P4a-2)** — which deletes the faked ball-height cues and their three `[GT]` dials, since a tilted camera conveys altitude by itself, and adds a ray/ground-plane click inverse in their place. The keeper flag now rides `LiveAgentCue`
 per tick and `MatchRoster` deliberately holds none, which fixes both surfaces. No
 `SNAPSHOT_SCHEMA_VERSION` change, no engine-behaviour change. **Adversarially reviewed August 4,
 2026 — 1 High, 5 Medium, 3 Low fixed, then re-run clean:** the High was `PitchMarking.Rectangle`

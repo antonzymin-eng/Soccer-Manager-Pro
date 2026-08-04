@@ -1,12 +1,12 @@
 // File:     src/match-client-core/PitchViewProjection.cs
 // Created:  2026-08-03
-// Modified: 2026-08-03
+// Modified: 2026-08-04
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4a, §7
 //           "Coordinate mapping"), Ball Physics #1 §1.2 (corner-origin frame), Code Standards #20
 // Purpose:  The one documented adapter between the engine's corner-origin pitch metres and the
-//           client's centre-origin view plane, in both directions. Host-free so the mapping — and
-//           its inverse, which turns a click back into a pitch position — is gate-tested.
+//           client's centre-origin world, in both directions — including the ray/ground-plane
+//           intersection a pointer click needs under a tilted camera. Host-free so it is gate-tested.
 
 using UnityEngine;
 
@@ -22,34 +22,40 @@ namespace TacticalDirector.MatchClientCore
     /// <c>LiveMatchFrame</c>, every camera target from <see cref="FollowBallCamera"/>, and every
     /// marking from <see cref="PitchMarkings"/> is in this frame.</para>
     ///
-    /// <para><b>View frame (the output).</b> Centre-origin, one view unit per metre, +X along the
-    /// pitch's length and +Y across its width — so the pitch spans [−52.5, +52.5] × [−34, +34] and
-    /// the centre spot sits on the origin. The scale is deliberately 1:1: a renderer that wants the
-    /// pitch bigger moves the camera, and keeping metres as the unit means an on-screen distance can
-    /// be reasoned about against the engine's own constants without a conversion in the way.</para>
+    /// <para><b>World frame (the output).</b> Unity's convention — <b>+X along the pitch's length,
+    /// +Z across its width, +Y up</b> — centred on the centre spot, at one world unit per metre. So
+    /// the pitch is the rectangle [−52.5, +52.5] × [−34, +34] on the <b>y = 0 ground plane</b>, and
+    /// ball height is a genuine third axis rather than something faked.</para>
     ///
-    /// <para><b>Why re-origin at all, rather than passing metres straight through.</b> "Wrong
-    /// coordinate origin" is one of this project's recorded recurring traps, and the defence is a
-    /// single conversion site rather than an assumption repeated at every call. Centring also makes
-    /// the frame symmetric about both axes, so a home-end position and its away-end mirror differ
-    /// only in sign — which is what makes the mirrored assertions in the tests cheap to write, and
-    /// this repo has shipped three home/away asymmetry defects (#8 ERR-008-002) for want of them.</para>
+    /// <para><b>Note the axis swap.</b> The engine's Y (across the pitch) becomes the world's Z, and
+    /// the engine's Z (up) becomes the world's Y. Getting that backwards lays the pitch on its side,
+    /// which is exactly why the conversion lives at one site with a round-trip test rather than being
+    /// written out at each call — "wrong coordinate origin" is already one of this project's recorded
+    /// recurring traps, and an axis swap is the same trap wearing a different hat.</para>
     ///
-    /// <para>Pure, stateless, allocation-free. Inputs are not gated: a <c>LiveMatchFrame</c> is
-    /// NaN-gated where it is produced and again at <c>MatchFrameView</c>, and re-checking here would
-    /// put a branch on the per-agent render path to catch something two layers have already
-    /// refused. Non-finite in, non-finite out.</para>
+    /// <para><b>Why centre-origin.</b> It makes the frame symmetric about both axes, so a home-end
+    /// position and its away-end mirror differ only in sign — which is what makes the mirrored
+    /// assertions in the tests cheap to write, and this repo has shipped three home/away asymmetry
+    /// defects (#8 ERR-008-002) for want of them.</para>
+    ///
+    /// <para>Pure, stateless, allocation-free. The forward mappings do not gate their inputs —
+    /// <see cref="MatchRenderProjection"/> refuses a non-finite position before it gets here, and
+    /// re-checking would put a branch on the per-agent render path. <see cref="TryGroundHit"/> is the
+    /// exception: it takes a ray from outside this assembly and reports failure rather than
+    /// producing a garbage pitch position.</para>
     /// </summary>
     public static class PitchViewProjection
     {
-        /// <summary>Half the pitch's goal-to-goal extent (m) — the X origin shift.</summary>
+        /// <summary>Half the pitch's goal-to-goal extent (m) — the world-X origin shift.</summary>
         public static float HalfLengthM => MatchEngineConstants.PITCH_LENGTH_M * 0.5f;
 
-        /// <summary>Half the pitch's touchline-to-touchline extent (m) — the Y origin shift.</summary>
+        /// <summary>Half the pitch's touchline-to-touchline extent (m) — the world-Z origin shift.</summary>
         public static float HalfWidthM => MatchEngineConstants.PITCH_WIDTH_M * 0.5f;
 
         /// <summary>
-        /// Projects a pitch-plane position (corner-origin metres) into the centre-origin view plane.
+        /// Projects a pitch-plane position (corner-origin metres) onto the centre-origin ground
+        /// plane, as a 2D point. This is the plan-view pair with <see cref="ToPitch"/>; for something
+        /// a renderer positions, use <see cref="ToWorld"/>.
         /// </summary>
         public static Vector2 ToView(Vector2 pitchXY)
         {
@@ -57,24 +63,79 @@ namespace TacticalDirector.MatchClientCore
         }
 
         /// <summary>
-        /// Projects the ground point beneath a ball position into the view plane. The Z component is
-        /// dropped here on purpose — height is a separate render cue (<see cref="BallRenderModel"/>),
-        /// not a displacement of where the ball actually is.
+        /// Places a pitch position at a given height in the world frame: pitch X → world X, pitch Y →
+        /// world Z, and <paramref name="heightM"/> → world Y. This is what a renderer assigns to
+        /// <c>transform.position</c>.
         /// </summary>
-        public static Vector2 ToViewGround(Vector3 pitchXYZ)
+        /// <param name="pitchXY">Position in the pitch plane, corner-origin metres.</param>
+        /// <param name="heightM">Height above the turf in metres; 0 is on the ground.</param>
+        public static Vector3 ToWorld(Vector2 pitchXY, float heightM)
         {
-            return new Vector2(pitchXYZ.x - HalfLengthM, pitchXYZ.y - HalfWidthM);
+            return new Vector3(pitchXY.x - HalfLengthM, heightM, pitchXY.y - HalfWidthM);
         }
 
         /// <summary>
-        /// Inverse of <see cref="ToView"/>: turns a view-plane point back into corner-origin pitch
-        /// metres. This is the direction a pointer click travels — a screen position becomes a world
-        /// position becomes a pitch position — so it exists now, with the forward mapping and its
-        /// round-trip test, rather than being re-derived by whoever first wires up input.
+        /// Places the ground point beneath a ball position — the pitch point it is actually over,
+        /// with its height discarded — on the world's ground plane. This is where the shadow goes,
+        /// and it is the position every gameplay judgement was made against.
+        /// </summary>
+        public static Vector3 ToWorldGround(Vector3 pitchXYZ)
+        {
+            return new Vector3(pitchXYZ.x - HalfLengthM, 0f, pitchXYZ.y - HalfWidthM);
+        }
+
+        /// <summary>
+        /// Inverse of <see cref="ToView"/>: turns a ground-plane point back into corner-origin pitch
+        /// metres.
         /// </summary>
         public static Vector2 ToPitch(Vector2 viewXY)
         {
             return new Vector2(viewXY.x + HalfLengthM, viewXY.y + HalfWidthM);
+        }
+
+        /// <summary>
+        /// Intersects a world-space ray with the ground plane and reports where it lands in pitch
+        /// metres. This is the direction a pointer click travels: a screen point becomes a ray
+        /// (Unity's <c>Camera.ScreenPointToRay</c>), and the ray becomes a pitch position here.
+        ///
+        /// <para><b>Why a ray rather than an inverse offset.</b> Under the tilted camera the client
+        /// uses, screen position is not an affine function of pitch position — the same pixel maps to
+        /// a different metre depending on depth. A subtraction cannot express that; a ray/plane
+        /// intersection can, and it is pure math, so it stays on this side of the boundary where the
+        /// CI gate can test it. <c>Camera</c> itself is not in the shim and never will be, so the
+        /// Unity side supplies the ray and decides nothing.</para>
+        /// </summary>
+        /// <param name="rayOrigin">Ray origin in world space (the camera's position).</param>
+        /// <param name="rayDirection">Ray direction in world space. Need not be normalised.</param>
+        /// <param name="pitchXY">Where the ray meets the ground plane, in corner-origin metres.</param>
+        /// <returns>
+        /// False — with <paramref name="pitchXY"/> set to <c>Vector2.zero</c> — when the ray cannot
+        /// meet the ground ahead of its origin: a non-finite input, a direction parallel to the
+        /// ground, or a hit behind the origin (looking up, or a camera below the turf). The result is
+        /// NOT required to be on the pitch: a click past the touchline is a real answer, and
+        /// <see cref="IsOnPitch"/> is the separate question.
+        /// </returns>
+        public static bool TryGroundHit(Vector3 rayOrigin, Vector3 rayDirection, out Vector2 pitchXY)
+        {
+            pitchXY = Vector2.zero;
+
+            if (!IsFinite(rayOrigin) || !IsFinite(rayDirection)) { return false; }
+
+            // Ground plane is y = 0, so the parameter along the ray is where its Y reaches zero.
+            // A zero (or denormal) Y direction is a ray running parallel to the turf: no intersection
+            // exists, and dividing would hand back an infinity dressed up as a position.
+            if (rayDirection.y == 0f) { return false; }
+
+            float t = -rayOrigin.y / rayDirection.y;
+            if (!float.IsFinite(t) || t <= 0f) { return false; }
+
+            float worldX = rayOrigin.x + rayDirection.x * t;
+            float worldZ = rayOrigin.z + rayDirection.z * t;
+
+            if (!float.IsFinite(worldX) || !float.IsFinite(worldZ)) { return false; }
+
+            pitchXY = new Vector2(worldX + HalfLengthM, worldZ + HalfWidthM);
+            return true;
         }
 
         /// <summary>
@@ -87,6 +148,9 @@ namespace TacticalDirector.MatchClientCore
             return pitchXY.x >= 0f && pitchXY.x <= MatchEngineConstants.PITCH_LENGTH_M
                 && pitchXY.y >= 0f && pitchXY.y <= MatchEngineConstants.PITCH_WIDTH_M;
         }
+
+        private static bool IsFinite(Vector3 v) =>
+            float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
     }
 }
 
@@ -96,4 +160,13 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | mapping at 1 unit per metre, both directions, plus the         |
 // |         |            |        | on-pitch predicate. The single site §7 requires the mapping to |
 // |         |            |        | live at.                                                       |
+// | 1.1     | 2026-08-04 | —      | Tilted-view revision (owner call): the view is a 3D scene under |
+// |         |            |        | a tilted camera, not a flat plane, so height is a real axis.    |
+// |         |            |        | + ToWorld(pitch, height) and ToWorldGround — pitch X → world X, |
+// |         |            |        | pitch Y → world Z, height → world Y — and + TryGroundHit, the   |
+// |         |            |        | ray/ground-plane intersection a click needs now that screen     |
+// |         |            |        | position is no longer affine in pitch position. ToViewGround    |
+// |         |            |        | (Vector3 → Vector2) is replaced by ToWorldGround; ToView /      |
+// |         |            |        | ToPitch stay as the plan-view pair. Camera is not in the CI     |
+// |         |            |        | shim, so the Unity side supplies the ray and decides nothing.   |
 #endregion

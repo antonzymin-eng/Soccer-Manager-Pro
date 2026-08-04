@@ -1,7 +1,18 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 4, 2026 (**P4a adversarial-review pass — 1 High, 5 Medium, 3 Low fixed.**
+**Last Updated:** August 4, 2026, latest same day (**Tilted-view revision — KD-P4a-2, owner call.**
+New in `src/match-client-core/`: `PitchCameraPose.cs` and `PitchCameraRig.cs` v1.0 + a
+`tests/PitchCameraRigTests.cs` v1.0. Modified: `PitchViewProjection.cs` → v1.1 (+ `ToWorld` /
+`ToWorldGround` / `TryGroundHit`; `ToViewGround` replaced), `BallRenderModel.cs` → v1.2 and
+`AgentRenderModel.cs` → v1.2 (`ViewPosition` → `WorldPosition`), `MatchRenderProjection.cs` → v1.2
+(`HeightScale` deleted), `MatchClientConstants.cs` → v1.4 (the three ball-height dials removed, three
+camera-rig dials added), plus three test fixtures. A tilted camera makes height a real world axis, so
+the faked height cues and their `[GT]` dials are gone — the revision deletes more than it adds. **No
+new assembly**, no `SNAPSHOT_SCHEMA_VERSION` change, no spec change. Production assembly count stays
+31.)
+
+**Last Updated (prior):** August 4, 2026 (**P4a adversarial-review pass — 1 High, 5 Medium, 3 Low fixed.**
 New: `src/match-viewer/RosterShirtNumbers.cs` v1.0 and `src/match-viewer/tests/RosterShirtNumbersTests.cs`
 v1.0 — the shirt-numbering rule had been *duplicated* (the browser viewer's inline `computeJersey`
 survived) while three documents claimed it had *moved* into `MatchRoster`; it now has one
@@ -1565,6 +1576,9 @@ the Unity-only skin precisely so it stays under `tools/dotnet-ci` on every push.
 | `tests/MatchClientClosedLoopScenarios.cs` | **P6** — the two §5-P6 cross-spec closed-loop scenarios (owning specs {16,19,21}, paths under `SCENARIO_PATH_CROSS_SPEC_PREFIX`). `match-client-command-log-replay`: script → log, log → digest-identical replay, log is a fixed point of its own replay, plus a **command-free control run that MUST diverge** in a bounded window — without it every predicate above would pass on a channel that did nothing. `match-client-save-restore-replay`: save@90 → restore → replay the post-90 log to tick 180 == the uninterrupted run |
 | `tests/MatchClientClosedLoopScenarioTests.cs` | **P6** — the two `sim_crossspec_*` executable entry points, asserting `ScenarioStatus.Passed` and surfacing the machine-readable diagnostics |
 | `tests/PitchViewProjectionTests.cs` | **P4a** — the corner-not-centre origin convention, the home/away mirror, the round trip, unit scale, and the on-pitch predicate |
+| `PitchCameraPose.cs` | **P4a (KD-P4a-2)** — a resolved camera placement as two world points (position + look-at). No rotation type: `Quaternion` is not in the CI shim, and the Unity side calls `transform.LookAt` |
+| `PitchCameraRig.cs` | **P4a (KD-P4a-2)** — where the camera goes: height, tilt measured **from vertical**, and the lateral offset that makes the view oblique enough to read depth. Reports its own effective tilt, which the offset skews on purpose |
+| `tests/PitchCameraRigTests.cs` | **P4a (KD-P4a-2)** — placement, the tilt convention, the deliberate skew, both-ends tracking, and the closing loop: a ray from the camera to its own aim point must return the target through `TryGroundHit` |
 | `tests/MatchClientConstantsTests.cs` | **P4a AR M-4** — drives the catalogue's boot-time `[GT]` validators directly (`RequireAtLeast`, `RequireGreaterThan`), including the NaN case the naive `value < minimum` form would have let through. They are otherwise reachable only from a config file |
 | `tests/PitchMarkingsTests.cs` | **P4a** — count and determinism, the four common markings, **every end-specific marking mirrored exactly at the other end**, IFAB distances read back against `MatchViewerConstants`, and the unused-field-is-zero contract |
 | `tests/MatchRosterTests.cs` | **P4a** — per-team 1-based numbering (keeper on 1, asserted for **both** teams), uniqueness, an interleaved-order case that discriminates the rule from `index / 11`, copy semantics, argument guards |

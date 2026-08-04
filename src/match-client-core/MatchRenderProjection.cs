@@ -116,7 +116,7 @@ namespace TacticalDirector.MatchClientCore
                     i,
                     roster.TeamId(i),
                     roster.ShirtNumber(i),
-                    PitchViewProjection.ToView(pitchPositions[i]),
+                    PitchViewProjection.ToWorld(pitchPositions[i], 0f),
                     markerRadius,
                     i == possessing,
                     cue.IsGoalkeeper,
@@ -133,11 +133,16 @@ namespace TacticalDirector.MatchClientCore
         /// (normally <see cref="FrameInterpolator.BallAt"/>'s result), in corner-origin metres.
         ///
         /// <para><b>Height and ground position are handled differently, on purpose.</b> A non-finite
-        /// or negative HEIGHT is treated as ground level: a ball cannot be below the turf, the
-        /// ground position is still known and still true, and a NaN lift would put the sprite
-        /// nowhere while the shadow stayed correct. A non-finite GROUND position has no such
-        /// fallback — there is no "where the ball is" left to draw — so it is refused fail-loud, the
-        /// same gate <c>MatchFrameView</c>'s constructor applies on the screen-facing path.</para>
+        /// or negative HEIGHT places the ball on the turf: a ball cannot be below the ground, the
+        /// ground position is still known and still true, and dropping it there loses nothing a
+        /// viewer needed. A non-finite GROUND position has no such fallback — there is no "where the
+        /// ball is" left to draw — so it is refused fail-loud, the same gate
+        /// <c>MatchFrameView</c>'s constructor applies on the screen-facing path.</para>
+        ///
+        /// <para>No size or offset cue is computed here. The camera is tilted
+        /// (<see cref="PitchCameraRig"/>), so height is a real world axis and perspective conveys it;
+        /// the shadow supplies the one thing perspective cannot, which is the pitch point the ball is
+        /// over.</para>
         /// </summary>
         /// <exception cref="ArgumentException">The ball's X or Y is not finite.</exception>
         public static BallRenderModel ProjectBall(Vector3 pitchBallPosition)
@@ -149,36 +154,15 @@ namespace TacticalDirector.MatchClientCore
                     nameof(pitchBallPosition));
             }
 
-            Vector2 shadow = PitchViewProjection.ToViewGround(pitchBallPosition);
+            Vector3 shadow = PitchViewProjection.ToWorldGround(pitchBallPosition);
 
             float rawHeight = pitchBallPosition.z;
             float height    = float.IsFinite(rawHeight) && rawHeight > 0f ? rawHeight : 0f;
 
-            Vector2 sprite = new Vector2(
-                shadow.x,
-                shadow.y + height * MatchClientConstants.BallHeightViewOffsetPerMetre);
+            var world  = new Vector3(shadow.x, height, shadow.z);
+            float radius = MatchClientConstants.BallMarkerRadiusM;
 
-            float baseRadius = MatchClientConstants.BallMarkerRadiusM;
-            float scale      = HeightScale(height);
-
-            return new BallRenderModel(shadow, sprite, rawHeight, baseRadius * scale, baseRadius);
-        }
-
-        /// <summary>
-        /// Ball-sprite scale for a height in metres: 1 at ground level, growing by
-        /// <c>BallHeightScalePerMetre</c> per metre, capped at <c>BallMaxHeightScale</c>. Exposed
-        /// because it is the curve the tests assert against rather than one sampled value of it.
-        /// </summary>
-        public static float HeightScale(float heightM)
-        {
-            if (!float.IsFinite(heightM) || heightM <= 0f) { return 1f; }
-
-            // No defensive handling of a cap below 1 here: MatchClientConstants refuses one at boot,
-            // per the [GT] loader's fail-loud contract. Repairing it silently into "no cap" would
-            // have made a config typo look like a tuning choice.
-            return Mathf.Min(
-                1f + heightM * MatchClientConstants.BallHeightScalePerMetre,
-                MatchClientConstants.BallMaxHeightScale);
+            return new BallRenderModel(world, shadow, rawHeight, radius, radius);
         }
 
         // Non-finite covers NaN AND ±Infinity — the same gate MatchFrameView applies, and for the

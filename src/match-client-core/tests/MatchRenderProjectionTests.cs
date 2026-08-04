@@ -5,7 +5,7 @@
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4a),
 //           Testing Strategy #19, Code Standards #20
 // Purpose:  Locks the frame → draw-state projection: which source each field comes from, the
-//           possession ring, the ball's height cues, and every shape guard.
+//           possession ring, the ball's world placement and shadow, and every shape guard.
 
 using System;
 
@@ -67,9 +67,10 @@ namespace TacticalDirector.MatchClientCore.Tests
 
             MatchRenderProjection.ProjectAgents(drawn, in frame, TwoPerTeam(), models);
 
-            Vector2 expected = PitchViewProjection.ToView(new Vector2(30f, 20f));
-            Assert.AreEqual(expected.x, models[0].ViewPosition.x, Tolerance);
-            Assert.AreEqual(expected.y, models[0].ViewPosition.y, Tolerance);
+            Vector3 expected = PitchViewProjection.ToWorld(new Vector2(30f, 20f), 0f);
+            Assert.AreEqual(expected.x, models[0].WorldPosition.x, Tolerance);
+            Assert.AreEqual(expected.z, models[0].WorldPosition.z, Tolerance);
+            Assert.AreEqual(0f, models[0].WorldPosition.y, Tolerance, "agents stay on the ground plane");
         }
 
         [Test]
@@ -200,8 +201,8 @@ namespace TacticalDirector.MatchClientCore.Tests
             // simulation. Deriving the radius from the flag keeps a config change from being able to
             // answer that question — inverting the derivation would have let a zero ring radius
             // report that nobody in the match had possession.
-            var withBall    = new AgentRenderModel(0, 0, 1, Vector2.zero, 0.7f, true,  false, 0, false, false);
-            var withoutBall = new AgentRenderModel(1, 0, 2, Vector2.zero, 0.7f, false, false, 0, false, false);
+            var withBall    = new AgentRenderModel(0, 0, 1, Vector3.zero, 0.7f, true,  false, 0, false, false);
+            var withoutBall = new AgentRenderModel(1, 0, 2, Vector3.zero, 0.7f, false, false, 0, false, false);
 
             Assert.AreEqual(MatchClientConstants.PossessionRingRadiusM, withBall.PossessionRingRadius, Tolerance);
             Assert.AreEqual(0f, withoutBall.PossessionRingRadius, Tolerance);
@@ -246,7 +247,7 @@ namespace TacticalDirector.MatchClientCore.Tests
             var models = new AgentRenderModel[Roster];
             for (int i = 0; i < Roster; i++)
             {
-                models[i] = new AgentRenderModel(90 + i, 1, 9, Vector2.one, 1f, true, true, 2, true, true);
+                models[i] = new AgentRenderModel(90 + i, 1, 9, Vector3.one, 1f, true, true, 2, true, true);
             }
 
             var drawn = new Vector2[Roster];
@@ -281,7 +282,7 @@ namespace TacticalDirector.MatchClientCore.Tests
         {
             LiveMatchFrame frame = Frame();
             var models = new AgentRenderModel[Roster + 2];
-            models[Roster] = new AgentRenderModel(99, 1, 7, Vector2.one, 1f, true, true, 2, true, true);
+            models[Roster] = new AgentRenderModel(99, 1, 7, Vector3.one, 1f, true, true, 2, true, true);
 
             int written = MatchRenderProjection.ProjectAgents(new Vector2[Roster + 3], in frame, TwoPerTeam(), models);
 
@@ -321,101 +322,77 @@ namespace TacticalDirector.MatchClientCore.Tests
         // ── Ball ────────────────────────────────────────────────────────────────────────
 
         [Test]
-        public void AGroundedBall_DrawsItsSpriteOnItsShadow_AtUnitScale()
+        public void AGroundedBall_SitsOnItsOwnShadow()
         {
             BallRenderModel ball = MatchRenderProjection.ProjectBall(new Vector3(52.5f, 34f, 0f));
 
-            Assert.AreEqual(Vector2.zero, ball.ShadowPosition);
-            Assert.AreEqual(ball.ShadowPosition, ball.SpritePosition);
-            Assert.AreEqual(MatchClientConstants.BallMarkerRadiusM, ball.SpriteRadius, Tolerance);
+            Assert.AreEqual(Vector3.zero, ball.ShadowPosition, "the centre spot is the world origin");
+            Assert.AreEqual(ball.ShadowPosition, ball.WorldPosition);
+            Assert.AreEqual(MatchClientConstants.BallMarkerRadiusM, ball.Radius, Tolerance);
             Assert.AreEqual(MatchClientConstants.BallMarkerRadiusM, ball.ShadowRadius, Tolerance);
         }
 
         [Test]
         public void TheShadowStaysOnTheGroundPoint_WhateverTheHeight()
         {
-            Vector2 expected = PitchViewProjection.ToView(new Vector2(20f, 50f));
+            Vector3 expected = PitchViewProjection.ToWorld(new Vector2(20f, 50f), 0f);
 
             foreach (float height in new[] { 0f, 2f, 12f, 40f })
             {
                 BallRenderModel ball = MatchRenderProjection.ProjectBall(new Vector3(20f, 50f, height));
 
                 Assert.AreEqual(expected.x, ball.ShadowPosition.x, Tolerance, "height " + height);
-                Assert.AreEqual(expected.y, ball.ShadowPosition.y, Tolerance,
+                Assert.AreEqual(0f, ball.ShadowPosition.y, Tolerance, "a shadow is on the ground");
+                Assert.AreEqual(expected.z, ball.ShadowPosition.z, Tolerance,
                     "the shadow marks where the ball actually is; height must not move it");
             }
         }
 
         [Test]
-        public void HeightLiftsTheSpriteAlongYOnly_AndGrowsIt()
+        public void HeightLiftsTheBallOnTheWorldYAxis_WithoutMovingItOverThePitch()
         {
             BallRenderModel ball = MatchRenderProjection.ProjectBall(new Vector3(20f, 50f, 4f));
 
-            Assert.AreEqual(ball.ShadowPosition.x, ball.SpritePosition.x, Tolerance,
-                "the lift is vertical in the view plane; it must not shift the ball across the pitch");
-            Assert.AreEqual(
-                4f * MatchClientConstants.BallHeightViewOffsetPerMetre,
-                ball.SpritePosition.y - ball.ShadowPosition.y, Tolerance);
-            Assert.Greater(ball.SpriteRadius, ball.ShadowRadius);
+            Assert.AreEqual(ball.ShadowPosition.x, ball.WorldPosition.x, Tolerance,
+                "lifting the ball must not slide it across the pitch");
+            Assert.AreEqual(ball.ShadowPosition.z, ball.WorldPosition.z, Tolerance);
+            Assert.AreEqual(4f, ball.WorldPosition.y, Tolerance, "height IS the world Y axis now");
             Assert.AreEqual(4f, ball.HeightM, Tolerance, "the raw engine height is reported as-is");
         }
 
         [Test]
-        public void HeightScale_IsMonotonicAndCapped()
+        public void TheBallRadiusDoesNotVaryWithHeight()
         {
-            Assert.AreEqual(1f, MatchRenderProjection.HeightScale(0f), Tolerance);
-
-            float previous = 1f;
-            for (float h = 1f; h <= 60f; h += 1f)
+            // The flat-view model grew the ball with altitude to fake depth, which needed a cap and
+            // saturated at 10 m. A tilted camera supplies apparent size itself, so the radius is
+            // constant — this asserts the ramp is really gone rather than merely unused.
+            foreach (float height in new[] { 0f, 1f, 10f, 25f, 100f })
             {
-                float scale = MatchRenderProjection.HeightScale(h);
-                Assert.GreaterOrEqual(scale, previous, "scale fell going up at " + h);
-                Assert.LessOrEqual(scale, MatchClientConstants.BallMaxHeightScale + Tolerance,
-                    "the cap must hold at " + h);
-                previous = scale;
-            }
+                BallRenderModel ball = MatchRenderProjection.ProjectBall(new Vector3(30f, 30f, height));
 
-            Assert.AreEqual(MatchClientConstants.BallMaxHeightScale, MatchRenderProjection.HeightScale(1000f), Tolerance);
+                Assert.AreEqual(MatchClientConstants.BallMarkerRadiusM, ball.Radius, Tolerance, "height " + height);
+                Assert.AreEqual(ball.Radius, ball.ShadowRadius, Tolerance, "height " + height);
+            }
         }
 
         [Test]
-        public void ADegenerateHeight_DrawsTheBallOnTheGroundRatherThanNowhere()
+        public void ADegenerateHeight_PutsTheBallOnTheGroundRatherThanNowhere()
         {
-            // Deliberately NOT symmetric with the ground-position gate above: a bad height still
-            // leaves a true ground position to draw the ball at, so it degrades instead of throwing.
-            Vector2 expectedGround = PitchViewProjection.ToView(new Vector2(20f, 50f));
+            // Deliberately NOT symmetric with the ground-position gate below: a bad height still
+            // leaves a true ground position to draw at, so it degrades instead of throwing.
+            Vector3 expectedGround = PitchViewProjection.ToWorld(new Vector2(20f, 50f), 0f);
 
             foreach (float height in new[] { float.NaN, float.PositiveInfinity, -3f })
             {
                 BallRenderModel ball = MatchRenderProjection.ProjectBall(new Vector3(20f, 50f, height));
 
                 Assert.AreEqual(expectedGround.x, ball.ShadowPosition.x, Tolerance, "height " + height);
-                Assert.AreEqual(expectedGround.y, ball.ShadowPosition.y, Tolerance, "height " + height);
-                Assert.AreEqual(ball.ShadowPosition, ball.SpritePosition, "height " + height);
-                Assert.AreEqual(MatchClientConstants.BallMarkerRadiusM, ball.SpriteRadius, Tolerance, "height " + height);
-                Assert.AreEqual(1f, MatchRenderProjection.HeightScale(height), Tolerance);
+                Assert.AreEqual(expectedGround.z, ball.ShadowPosition.z, Tolerance, "height " + height);
+                Assert.AreEqual(ball.ShadowPosition, ball.WorldPosition, "height " + height);
+                Assert.AreEqual(MatchClientConstants.BallMarkerRadiusM, ball.Radius, Tolerance, "height " + height);
             }
         }
 
-        [Test]
-        public void TheHeightScaleCap_IsReachedWhereItsDocumentedRationaleSaysItIs()
-        {
-            // The [GT] rationale in MatchClientConstants states a saturation point and a 20 m figure.
-            // Both were wrong once; this pins them to the shipped values so a retune cannot leave the
-            // justification behind again.
-            float saturation =
-                (MatchClientConstants.BallMaxHeightScale - 1f) / MatchClientConstants.BallHeightScalePerMetre;
-
-            Assert.AreEqual(10f, saturation, 1e-3f, "the documented 10 m saturation point");
-            Assert.AreEqual(
-                MatchClientConstants.BallMaxHeightScale,
-                MatchRenderProjection.HeightScale(saturation), Tolerance,
-                "the cap must bind exactly at the saturation point, not past it");
-            Assert.Less(
-                MatchRenderProjection.HeightScale(saturation - 1f),
-                MatchClientConstants.BallMaxHeightScale,
-                "and must not bind before it");
-        }
     }
 }
 
@@ -435,4 +412,10 @@ namespace TacticalDirector.MatchClientCore.Tests
 // |         |            |        | the ring is the larger, so a transposition is visible. + the    |
 // |         |            |        | all-or-nothing lock: a refused frame must leave the destination |
 // |         |            |        | untouched, not partly this frame and partly the last.           |
+// | 1.2     | 2026-08-04 | —      | Tilted-view revision: agent and ball positions are asserted in |
+// |         |            |        | world space (engine Y → world Z, height → world Y). The four   |
+// |         |            |        | sprite-lift / height-scale / cap tests are GONE with the cues  |
+// |         |            |        | they covered, replaced by TheBallRadiusDoesNotVaryWithHeight — |
+// |         |            |        | which asserts the ramp is really absent rather than merely     |
+// |         |            |        | unused, since an unused ramp would pass every other test here. |
 #endregion

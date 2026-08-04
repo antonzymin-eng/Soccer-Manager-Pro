@@ -38,11 +38,14 @@ namespace TacticalDirector.MatchClientCore
         /// <summary>Shirt number on the marker (1-based within the team; see <see cref="MatchRoster"/>).</summary>
         public readonly int ShirtNumber;
 
-        /// <summary>Position in the centre-origin view plane, already projected and already interpolated.</summary>
-        public readonly Vector2 ViewPosition;
+        /// <summary>
+        /// Position in world space, already projected and already interpolated — on the ground plane
+        /// (world Y = 0), since agents do not leave the turf in the sim's model.
+        /// </summary>
+        public readonly Vector3 WorldPosition;
 
         /// <summary>
-        /// Marker radius in view units. Stored rather than derived because a marker size is
+        /// Marker radius in world units (1 unit = 1 m). Stored rather than derived because a marker size is
         /// legitimately a per-agent quantity — nothing today varies it, but a future skin might.
         /// </summary>
         public readonly float MarkerRadius;
@@ -51,7 +54,7 @@ namespace TacticalDirector.MatchClientCore
         public readonly bool HasBall;
 
         /// <summary>
-        /// Radius of the possession ring in view units, or 0 when this agent is not in possession.
+        /// Radius of the possession ring in world units, or 0 when this agent is not in possession.
         /// A zero means "draw no ring", so the renderer needs no separate boolean and cannot draw a
         /// ring of a size nobody chose.
         ///
@@ -95,7 +98,7 @@ namespace TacticalDirector.MatchClientCore
             int rosterIndex,
             int teamId,
             int shirtNumber,
-            Vector2 viewPosition,
+            Vector3 worldPosition,
             float markerRadius,
             bool hasBall,
             bool isGoalkeeper,
@@ -103,16 +106,16 @@ namespace TacticalDirector.MatchClientCore
             bool isSentOff,
             bool isSubstitute)
         {
-            RosterIndex  = rosterIndex;
-            TeamId       = teamId;
-            ShirtNumber  = shirtNumber;
-            ViewPosition = viewPosition;
-            MarkerRadius = markerRadius;
-            HasBall      = hasBall;
-            IsGoalkeeper = isGoalkeeper;
-            YellowCards  = yellowCards;
-            IsSentOff    = isSentOff;
-            IsSubstitute = isSubstitute;
+            RosterIndex   = rosterIndex;
+            TeamId        = teamId;
+            ShirtNumber   = shirtNumber;
+            WorldPosition = worldPosition;
+            MarkerRadius  = markerRadius;
+            HasBall       = hasBall;
+            IsGoalkeeper  = isGoalkeeper;
+            YellowCards   = yellowCards;
+            IsSentOff     = isSentOff;
+            IsSubstitute  = isSubstitute;
         }
     }
 }
@@ -128,4 +131,8 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | simulation no longer depends on a [GT] presentation size — with|
 // |         |            |        | the old direction, a config setting PossessionRingRadiusM to   |
 // |         |            |        | zero answered "nobody has the ball" for the whole match.       |
+// | 1.2     | 2026-08-04 | —      | Tilted-view revision (owner call): ViewPosition (Vector2, a    |
+// |         |            |        | flat view plane) becomes WorldPosition (Vector3, on the ground |
+// |         |            |        | plane) now that the scene has a real third axis and a tilted   |
+// |         |            |        | camera projects it.                                            |
 #endregion
