@@ -7,7 +7,8 @@
         "TacticalDirector.MatchViewer",
         "TacticalDirector.DeterministicSim",
         "TacticalDirector.TacticalInstructions",
-        "TacticalDirector.PlayerDatabase"
+        "TacticalDirector.PlayerDatabase",
+        "TacticalDirector.TestingStrategy"
     ],
     "includePlatforms": [
         "Editor"

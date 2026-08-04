@@ -6,6 +6,30 @@
 **Last Updated:** August 4, 2026 (**Close-chance creation (§5.Z.24) — ERR-008-018.** **New:** `src/match-engine/tests/CloseChanceDiagnosticTests.cs`, `src/match-engine/tests/MatchEngineCloseChanceScenarios.cs` + `MatchEngineCloseChanceTests.cs`, `docs/tracking/close-chance-creation-design.md`. **Modified:** `UtilityScorer.cs` v1.13 (+`DirectionQuality_DRIBBLE` / `ComputeDribbleDirectionQuality`), `UtilityWeights.cs` v1.6 (+`DRIBBLE_GOAL_DIR_MIN_MODIFIER` `[GT]` = 0.80), `UtilityScorerTests.cs` v1.7 (+4 locks), `MatchEngine.cs` v1.57 (three measurement seams — `TestOnly_DtLastAction` / `TestOnly_AttackIntent` / `TestOnly_PositioningPhase` — plus the pointer comment recording the refused #15 run overlay), `docs/specs/decision-tree/section-3-1.md` v1.2 (§3.1.5.2 cross-reference corrected), `docs/specs/decision-tree/section-3-2.md` v1.8 + `section-3-2-3-to-3-2-9.md` (§3.2.4.1 formula + worked examples A/A′/B), `spec-error-log.md` v1.56, `match-engine-design.md` §5.Z.24, `open-issues.md`, `CLAUDE.md`. Measured: dribble cosine to goal −0.302 → +0.006 and goalward share 31% → 49% on all six seeds; the creation funnel itself did NOT move and is not claimed. No schema/RNG/draw-order change. **Prior entry below.**)
 
 **Last Updated:** August 3, 2026 (**Two production assemblies were missing from this manifest
+**Last Updated:** August 3, 2026, latest same day (**Owner decision — roadmap B6 reversed to the full
+Unity UI.** Doc-only; **no file added, removed, renamed or moved**, so no inventory row changes and the
+production assembly count stays 31. Modified tracking docs:
+`docs/tracking/path-to-playable-roadmap.md` → v0.11 (§7 supersede note, C2 amended, risk register
+re-cut, B6 row + PM-1 exit note reclassified, and a pre-existing broken Version-History table repaired),
+`docs/tracking/interactive-unity-client-design.md` → v0.11 (header UPDATE block + §12 status-change
+block), `docs/tracking/browser-match-client-design.md` → v1.3 (standing status block; §0 marked
+superseded-as-forward-reasoning, retained verbatim), plus `CLAUDE.md` (assembly-map `match-client-web`
+row + OPEN ISSUES presentation-layer entry) and `docs/tracking/CHANGELOG.md` (new head entry).
+**`src/match-client-web/` is retained**, reclassified from shipping surface to host-free reference
+harness — its 20 manifest rows are unchanged and still authoritative. No `src/` change, no spec change,
+no gate run.)
+
+**Last Updated (prior):** August 3, 2026, later same day (**Interactive Unity client P6 — the head-less
+closed-loop scenario.** New in `src/match-client-core/`: `TickStampedCommandReplay.cs` (the log-driven
+replay cursor + `FromTick` resume slice) and three test files —
+`tests/TickStampedCommandReplayTests.cs`, `tests/MatchClientClosedLoopScenarios.cs`,
+`tests/MatchClientClosedLoopScenarioTests.cs`. Modified: `MatchSession.cs` → v1.2 (`TickOnce`,
+`CaptureSave`, `RestoreFrom`, `CurrentTick` / `MatchEnded` / `CurrentSnapshotDigest`),
+`tests/MatchSessionTests.cs`, `tests/match-client-core-tests.asmdef` (+ `TacticalDirector.TestingStrategy`),
+and `src/match-viewer/AssemblyInfo.cs` → v1.1 (`InternalsVisibleTo` `MatchClientCore`). No new assembly.
+See the `src/match-client-core/` and `src/match-viewer/` sections below for the per-file rows.)
+
+**Last Updated (prior):** August 3, 2026 (**Two production assemblies were missing from this manifest
 entirely — `match-client-core` and `match-client-unity` — and are now inventoried.** Both landed in
 the interactive Unity client P0 pass (July 24, 2026), with `match-client-core` extended by P1/P3 on
 July 27; neither ever received a manifest section, so the file claimed to be an authoritative
@@ -19,7 +43,8 @@ and excluded from the shim gate via `generate_projects.py`'s `SHIM_EXCLUDED_ASMD
 verifiable only on the pinned Unity host). **The production assembly count of 31 was already correct**
 and is unchanged — the count had been reconciled against `src/` while the section list had not.
 Doc-only; no `src/` change, no spec change, no gate run.)
-**Last Updated:** August 3, 2026, later same day (**Conversion at contact (§5.Z.23) — ERR-011-008.** **New:** `src/goalkeeper-mechanics/Tests/GoalkeeperClaimTests.cs`, `src/match-engine/tests/GoalConversionDiagnosticTests.cs`, `src/match-engine/tests/MatchEngineKeeperClaimScenarios.cs` + `MatchEngineKeeperClaimTests.cs`, `docs/tracking/gk-conversion-at-contact-design.md`. **Modified:** `IGoalkeeperBallSystem.cs` v1.1 (+`ParkBall`), `GoalkeeperMechanics.cs` v1.10 (both claim sites), `MatchEngine.cs` v1.56 (adapter), `GoalkeeperScenarios.cs` v1.4 + `GoalkeeperConversionTests.cs` v1.2 (doubles), `docs/specs/goalkeeper-mechanics/section-3.md` v0.6, `spec-error-log.md` v1.55, `match-engine-design.md` v2.9, `MatchEngineShotSpeedScenarios.cs` v1.4 (AR-1 gate fallout — corpus 2 → 4 seeds, windows 18 min → full matches; predicates and bounds unchanged), `gk-contact-rate-design.md` v1.3 (§7 forward-pointer), `round-resolution-corpus.md` v0.4 (Step 0 must be re-run). Measured: goals 5.0 → 3.7/match; caught-band exit speed 10.8 → 0.0 m/s. No schema/RNG/draw-order change. **Prior entry below.**)
+
+**Last Updated (prior):** August 3, 2026, later same day (**Conversion at contact (§5.Z.23) — ERR-011-008.** **New:** `src/goalkeeper-mechanics/Tests/GoalkeeperClaimTests.cs`, `src/match-engine/tests/GoalConversionDiagnosticTests.cs`, `src/match-engine/tests/MatchEngineKeeperClaimScenarios.cs` + `MatchEngineKeeperClaimTests.cs`, `docs/tracking/gk-conversion-at-contact-design.md`. **Modified:** `IGoalkeeperBallSystem.cs` v1.1 (+`ParkBall`), `GoalkeeperMechanics.cs` v1.10 (both claim sites), `MatchEngine.cs` v1.56 (adapter), `GoalkeeperScenarios.cs` v1.4 + `GoalkeeperConversionTests.cs` v1.2 (doubles), `docs/specs/goalkeeper-mechanics/section-3.md` v0.6, `spec-error-log.md` v1.55, `match-engine-design.md` v2.9, `MatchEngineShotSpeedScenarios.cs` v1.4 (AR-1 gate fallout — corpus 2 → 4 seeds, windows 18 min → full matches; predicates and bounds unchanged), `gk-contact-rate-design.md` v1.3 (§7 forward-pointer), `round-resolution-corpus.md` v0.4 (Step 0 must be re-run). Measured: goals 5.0 → 3.7/match; caught-band exit speed 10.8 → 0.0 m/s. No schema/RNG/draw-order change. **Prior entry below.**)
 
 **Last Updated (prior):** August 3, 2026 (**Project skills LANDED — tooling only; no `src/` change, no spec
 change, no gate run.** **New:** six `SKILL.md` files under `.claude/skills/` — `match-realism-pass/`,
@@ -1388,7 +1413,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/match-viewer/HtmlReplayExporter.cs` | Self-contained HTML canvas replay: pitch markings, home/away/GK/possession/ball-height cues, play/pause/scrub/speed + space toggle; InvariantCulture; fail-loud non-finite gate |
 | `src/match-viewer/tests/match-viewer-tests.asmdef` | Test assembly definition (EditMode; references match-viewer + match-engine + deterministic-sim + ball-physics + agent-movement) |
 | `src/match-viewer/tests/MatchViewerTests.cs` | Frame cadence; on-pitch finiteness; bitwise two-run determinism; observer-neutrality digest lock; fail-loud guards; exporter structure/no-NaN locks |
-| `src/match-viewer/AssemblyInfo.cs` | `InternalsVisibleTo` the test assembly (the `LiveMatchStreamer.TickOnce` / `ApplyCapturedFrame` seams are internal) |
+| `src/match-viewer/AssemblyInfo.cs` | `InternalsVisibleTo` the test assembly (the `LiveMatchStreamer.TickOnce` / `ApplyCapturedFrame` seams are internal). **v1.1 (P6, Aug 3, 2026):** + `InternalsVisibleTo("TacticalDirector.MatchClientCore")` so `MatchSession.TickOnce()` drives the REAL `TickOnce()` seam head-lessly rather than a parallel client-side tick path — the hook, the frame capture and the auto-pause rule then behave in the closed-loop scenario exactly as they do under paced playback. Nothing is widened for the browser viewer: the seam stays internal to `match-viewer` |
 | `src/match-viewer/LiveMatchFrame.cs` | One live-captured frame (July 15, 2026): tick / ball / possession / positions / `Scoreline` / `MatchEnded` — plus, since P1, per-agent `LiveAgentCue[]`, per-team substitution counts, the derived `MatchPeriod` and the latched `RestartBanner` |
 | `src/match-viewer/LiveAgentCue.cs` | P1: the per-agent HUD cue — yellow cards, sent-off, active bench slot (`IsSubstitute` derived from the slot, so the two can never disagree) |
 | `src/match-viewer/Scoreline.cs` | P1 AR-1 M-6: the home/away score pair as one carrier; owns the non-negative gate, so a negative score is refused before it can reach a frame |
@@ -1479,9 +1504,10 @@ Presentation-layer derivation. Read-only over two taps (FR-AN-002); no sim assem
 
 ---
 
-### `src/match-client-core/` — the interactive Unity client's host-free core (P0–P3, July 24–27, 2026)
+### `src/match-client-core/` — the interactive Unity client's host-free core (P0–P3 + P6, July 24 – August 3, 2026)
 
-Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P0 … §5-P3).
+Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P0 … §5-P3,
+plus the head-less half of §5-P6).
 **Host-free and CI-gated** — this is the half of the interactive Unity client that carries every
 determinism-bearing concern (session, command channel, tick-stamped log, view-state math), split from
 the Unity-only skin precisely so it stays under `tools/dotnet-ci` on every push. Consumed by
@@ -1499,14 +1525,18 @@ the Unity-only skin precisely so it stays under `tools/dotnet-ci` on every push.
 | `ManagerCommandQueue.cs` | Lock-guarded FIFO — View enqueues on the UI thread, driver drains on the sim thread at the top of a tick |
 | `MatchClientDriver.cs` | The deterministic drain, installed as the streamer's pre-tick hook via `MatchSession`. FIFO apply, per-batch tick-stamp, post-`MatchEnded` drop, `_logLock`-guarded snapshot-copy `Log`, and refused-command isolation so one bad command cannot kill the pacing thread (v0.8 AR) |
 | `MatchSetup.cs` | Immutable boot config applied once before kickoff through boot-only mutators; both-or-neither squad guard |
-| `MatchSession.cs` | Composition root — builds and wires engine + streamer + driver, installs the drain hook, exposes read = frames / write = commands / `ServiceOnce` |
+| `MatchSession.cs` | Composition root — builds and wires engine + streamer + driver, installs the drain hook, exposes read = frames / write = commands / `ServiceOnce`. **v1.2 (P6):** constructor split into a static `BootEngine` (boot-only mutators) + a private engine-agnostic wiring ctor, so `RestoreFrom(blob, squads)` can build a session over a RESTORED engine without re-applying boot mutators (`ConfigureSquads` would throw on a ticked engine; re-staging tactics would overwrite restored ones). Adds `TickOnce()` (the head-less deterministic advance, fail-loud against a `Start()`ed session), `CurrentTick` / `MatchEnded` / `CurrentSnapshotDigest` reads, and `CaptureSave()` — the durable capture riding the `ServiceOnce` seam, with §6.3's drained-empty-before-capture invariant held by ORDERING (drain, then capture, one sim-thread pass) and an `Encode` fault handed back to the caller instead of killing the pacing thread |
+| `TickStampedCommandReplay.cs` | **P6** — the log-driven replay cursor: enqueues each entry immediately before the tick whose pre-tick `CurrentTick` equals its `AppliedTick`, so the drain re-stamps it identically. `FromTick(log, n)` slices the resume tail for a save/restore round trip. Refuses an out-of-order log and an entry whose application point has already passed — silently skipping either would produce a run that is NOT the log's run while reporting success |
 | `FrameInterpolator.cs` | **P3** — blends two captured `LiveMatchFrame`s for a 60 FPS renderer. Speed-aware alpha, and **snaps rather than smooths across a discontinuity** (a restart teleports the ball; a substitution swaps who occupies a roster slot) |
 | `FollowBallCamera.cs` | **P3** — dead zone, `1 − e^(−rate·dt)` smoothing proven frame-rate-independent by step subdivision, and a pitch clamp that centres when the view is wider than the pitch |
-| `tests/match-client-core-tests.asmdef` | `TacticalDirector.MatchClientCore.Tests` (Editor-only) |
+| `tests/match-client-core-tests.asmdef` | `TacticalDirector.MatchClientCore.Tests` (Editor-only); gains `TacticalDirector.TestingStrategy` at P6 so the closed-loop scenarios run on the #19 `ScenarioRunner` |
 | `tests/RecordingMutations.cs` | Test double over `ILiveMatchMutations` |
 | `tests/ManagerCommandQueueTests.cs` | FIFO, thread-safe enqueue, the exactly-three-game-kinds §6.4 lock, default-command reject |
 | `tests/MatchClientDriverTests.cs` | Apply-order, per-batch tick-stamp, post-`MatchEnded` drop, two-runs-same-sequence log determinism, refused-command isolation |
-| `tests/MatchSessionTests.cs` | Neutral build, off-tick `ServiceOnce` drain through a real engine, GK-heading setup, both-or-neither squad guard |
+| `tests/MatchSessionTests.cs` | Neutral build, off-tick `ServiceOnce` drain through a real engine, GK-heading setup, both-or-neither squad guard. **P6:** `TickOnce` advance + pre-tick stamping, its fail-loud refusal to race a `Start()`ed pacing loop, the digest chain advancing, the §6.3 drained-empty-before-capture invariant (a command enqueued immediately before `CaptureSave` must come back applied and logged — the non-vacuous form of that lock), a paused capture, and `RestoreFrom` resuming at the saved tick with a fresh log |
+| `tests/TickStampedCommandReplayTests.cs` | **P6** — re-stamping at the recorded tick, the target-tick entry staying pending, incremental `AdvanceTo`, out-of-order and passed-application-point refusals, and `FromTick` validating the WHOLE log rather than just the slice |
+| `tests/MatchClientClosedLoopScenarios.cs` | **P6** — the two §5-P6 cross-spec closed-loop scenarios (owning specs {16,19,21}, paths under `SCENARIO_PATH_CROSS_SPEC_PREFIX`). `match-client-command-log-replay`: script → log, log → digest-identical replay, log is a fixed point of its own replay, plus a **command-free control run that MUST diverge** in a bounded window — without it every predicate above would pass on a channel that did nothing. `match-client-save-restore-replay`: save@90 → restore → replay the post-90 log to tick 180 == the uninterrupted run |
+| `tests/MatchClientClosedLoopScenarioTests.cs` | **P6** — the two `sim_crossspec_*` executable entry points, asserting `ScenarioStatus.Passed` and surfacing the machine-readable diagnostics |
 | `tests/FrameInterpolatorTests.cs` | **P3** — speed-aware alpha and the snap-across-discontinuity contract |
 | `tests/FollowBallCameraTests.cs` | **P3** — dead zone, frame-rate independence by step subdivision, pitch-clamp centring |
 
