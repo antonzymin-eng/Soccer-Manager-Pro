@@ -5,6 +5,7 @@
 // Modified: 2026-07-27 (§5.Z.17 save pipeline: ComputeDiveDirectionLateral derives the dive from the ball's predicted crossing point (ERR-011-003); OnShotExecutedEvent takes the projected attributes (ERR-011-004, KD-S2); the state-machine wake predicates rebuilt as one signed distance to the keeper's OWN goal, read from gkIndex not attrs.TeamId (ERR-011-002, KD-S3); new ClearSaveIntent. See docs/tracking/goalkeeper-save-pipeline-design.md)
 // Modified: 2026-07-28 (gk-catch-parry-conversion: the §3.2.3 reaction window computed ONCE at the dive-launch frame and frozen for the contact (ERR-011-005 — the per-frame re-evaluation dated the contact-consumed value by the ball's whole flight time); the detection stamp dies with its episode (ERR-011-006 — cleared in ClearSaveIntent and at save resolution) and new OnThreatArmed seeds it at episode onset for threats with no shot event. See docs/tracking/gk-catch-parry-conversion-design.md)
 // Modified: 2026-07-28 (gk-contact-rate (ERR-011-007/KD-CR5): the frozen reaction window's elapsed anchors at SaveIntent.AttemptCommittedTick (under the held dive the launch is deliberate timing, not reaction); ComputeDiveDirectionLateral delegates its prediction to the shared TryPredictPlaneCrossing)
+// Modified: 2026-08-04 (wiring backlog W1 / ERR-011-009: ClearRushIntent + GetState/HasActiveRushIntent observation accessors give CommitRushIntent its first production caller; rushTargetReached ends a rush that ARRIVED — the loose-ball strand. See docs/tracking/gk-rush-trigger-design.md)
 //           the per-GK cross-tick arrays, for the Match Engine v18 save/restore path)
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.1–§3.8, §4.6, KD-9, KD-12, KD-13, KD-15, KD-16, Code Standards #20
@@ -186,6 +187,63 @@ namespace TacticalDirector.GoalkeeperMechanics
             _shotDetectedTickMs[gkIndex] = 0.0f;
             _requiredReactionMs[gkIndex] = 0.0f;
         }
+
+        /// <summary>
+        /// Disarms an unconsumed <see cref="RushIntent"/> for the specified GK — the rush opportunity
+        /// lapsed before the keeper set off. The exact mirror of <see cref="ClearSaveIntent"/>, and it
+        /// exists for the same reason: <c>_rushIntentActive</c> clears only when the rush CHAIN resolves,
+        /// so an intent committed for a threat that then evaporated would sit armed indefinitely and fire
+        /// at some later <c>Set</c>/<c>Anticipate</c> — a sprint at nothing, taking the keeper off his line
+        /// with no ball to go to (the ERR-011-002 dive-at-nothing, one subsystem across).
+        ///
+        /// <para>Deliberately a NO-OP once the keeper is in the rush chain
+        /// (<c>Rushing</c>/<c>OneOnOne</c>/<c>Smothered</c>). FR-GK-018 / KD-15: a committed rush is not
+        /// abortable on the basis of ball-trajectory changes — the only abort is F-08 interception, which
+        /// the 60 Hz path adjudicates. Disarming here would be exactly the trajectory-driven abort the
+        /// intent-staleness policy forbids.</para>
+        /// </summary>
+        /// <param name="gkIndex">Keeper index (== team id; KD-1).</param>
+        public void ClearRushIntent(int gkIndex)
+        {
+            if ((uint)gkIndex >= (uint)GoalkeeperConstants.MaxGkAgents)
+            {
+                return;
+            }
+
+            GoalkeeperState state = _states[gkIndex];
+            if (state == GoalkeeperState.Rushing
+                || state == GoalkeeperState.OneOnOne
+                || state == GoalkeeperState.Smothered)
+            {
+                return;
+            }
+
+            _rushIntentActive[gkIndex] = false;
+        }
+
+        /// <summary>
+        /// Observation accessor: this keeper's current state-machine state. Read by the composition root's
+        /// rush trigger, which may commit only from the two states that have a <c>→ Rushing</c> row
+        /// (<c>Set</c>, <c>Anticipate</c>) — committing from <c>Recovering</c> would leave the intent armed
+        /// across the cooldown and launch it against an already-stale locked target. Out-of-range indices
+        /// answer <c>Resting</c>, the machine's own default.
+        /// </summary>
+        /// <param name="gkIndex">Keeper index (== team id; KD-1).</param>
+        public GoalkeeperState GetState(int gkIndex) =>
+            (uint)gkIndex < (uint)GoalkeeperConstants.MaxGkAgents
+                ? _states[gkIndex]
+                : GoalkeeperState.Resting;
+
+        /// <summary>
+        /// Observation accessor: whether a committed <see cref="RushIntent"/> is live for this keeper.
+        /// This flag IS the per-episode rush latch — set at <see cref="CommitRushIntent"/>, cleared when
+        /// the rush chain resolves — and it is already serialized (the v18 GK block), so the composition
+        /// root reads it rather than keeping a second latch of its own. Two latches for one episode, with
+        /// different lifetimes, is precisely the defect ERR-011-002 fixed on the save side.
+        /// </summary>
+        /// <param name="gkIndex">Keeper index (== team id; KD-1).</param>
+        public bool HasActiveRushIntent(int gkIndex) =>
+            (uint)gkIndex < (uint)GoalkeeperConstants.MaxGkAgents && _rushIntentActive[gkIndex];
 
         /// <summary>
         /// Seeds the §3.2 detection stamp at the ONSET of a save episode when no stamp is live —
@@ -749,6 +807,7 @@ namespace TacticalDirector.GoalkeeperMechanics
                 bool rushBallIntercepted = false;
                 bool attackerWithinOneVsOneRadius = false;
                 bool gkWithinSmotherRadius = false;
+                bool rushTargetReached = false;
 
                 if (gkState == GoalkeeperState.Rushing)
                 {
@@ -793,6 +852,13 @@ namespace TacticalDirector.GoalkeeperMechanics
 
                         gkWithinSmotherRadius = CheckAttackerWithinRadius(
                             gkMutablePos, ballState, GoalkeeperConstants.SmotherTriggerRadiusM);
+
+                        // ERR-011-009: the run is finished. Both radius checks above answer FALSE
+                        // outright for an unpossessed ball (CheckAttackerWithinRadius requires a
+                        // possessor) and F-08 needs one too, so a keeper sweeping a LOOSE ball had no
+                        // exit from Rushing at all — UpdateRushFrame stops dead at the locked target and
+                        // he stood over the ball for the rest of the match.
+                        rushTargetReached = RushTargetReached(gkMutablePos, _rushIntents[gkIndex].RushTarget);
                     }
                 }
 
@@ -811,6 +877,11 @@ namespace TacticalDirector.GoalkeeperMechanics
                             _rushIntents[gkIndex].RushTarget,
                             _rushLaunchMps[gkIndex]);
                         agentStates[agentId].Position = new Vector2(gkMutablePos.x, gkMutablePos.y);
+
+                        // ERR-011-009 — OneOnOne inherits Rushing's strand: an attacker who takes the
+                        // ball back out of the smother radius leaves the keeper here with no exit but a
+                        // SaveIntent no producer sends.
+                        rushTargetReached = RushTargetReached(gkMutablePos, _rushIntents[gkIndex].RushTarget);
                     }
 
                     gkWithinSmotherRadius = CheckAttackerWithinRadius(
@@ -927,7 +998,8 @@ namespace TacticalDirector.GoalkeeperMechanics
                     rushBallIntercepted: rushBallIntercepted,
                     attackerWithinOneVsOneRadius: attackerWithinOneVsOneRadius,
                     gkWithinSmotherRadius: gkWithinSmotherRadius,
-                    shotEventDetected: shotEventDetected);
+                    shotEventDetected: shotEventDetected,
+                    rushTargetReached: rushTargetReached);
 
                 // ── Recovery cooldown tracking ────────────────────────────────────────
                 if (_states[gkIndex] == GoalkeeperState.Recovering &&
@@ -960,6 +1032,29 @@ namespace TacticalDirector.GoalkeeperMechanics
                         _shotDetectedTickMs[gkIndex] = 0.0f;
                         _requiredReactionMs[gkIndex] = 0.0f;
                     }
+                }
+
+                // ── Rush completion (ERR-011-009) ─────────────────────────────────────
+                // Emitted only when the transition actually resolved on the arrival: a run that
+                // arrives AND meets the ball is a Smothered contact, not a Reached completion, and
+                // the state machine already ranks it that way.
+                if (rushTargetReached && newState == GoalkeeperState.Recovering
+                    && (gkState == GoalkeeperState.Rushing || gkState == GoalkeeperState.OneOnOne))
+                {
+                    GoalkeeperRushEvent reachedEvt = new GoalkeeperRushEvent
+                    {
+                        AgentId = agentId,
+                        MatchTimeMs = currentMatchTimeMs,
+                        RushPhase = RushPhase.Reached,
+                        // AbortReason deliberately unassigned: the field is meaningful only when
+                        // RushPhase == Aborted (§3.7.3), and the enum has no None member — its zero
+                        // ordinal is BallIntercepted, so writing it explicitly would read as an abort.
+                        RushTarget = _rushIntents[gkIndex].RushTarget,
+                        GkPosition = agentStates[agentId].Position,
+                        RushLaunchMps = _rushLaunchMps[gkIndex]
+                    };
+                    EventBusStub.Publish(in reachedEvt);
+                    _telemetry.RecordRushPhase(RushPhase.Reached);
                 }
 
                 // ── Clear rush intent once the rush chain is fully resolved ───────────
@@ -1025,6 +1120,19 @@ namespace TacticalDirector.GoalkeeperMechanics
             }
 
             return Sign(predictedY - agentState.Position.y);
+        }
+
+        /// <summary>
+        /// True when the keeper has arrived at the LOCKED rush target (ERR-011-009). Compared in the XY
+        /// plane: the target is a pitch point at z = 0 and the keeper's own Z is not modelled outside a
+        /// dive, so including Z would measure a height difference neither side controls.
+        /// </summary>
+        private static bool RushTargetReached(Vector3 gkPosition, Vector3 rushTarget)
+        {
+            float dx = rushTarget.x - gkPosition.x;
+            float dy = rushTarget.y - gkPosition.y;
+            float r = GoalkeeperConstants.RushTargetReachedRadiusM;
+            return dx * dx + dy * dy <= r * r;
         }
 
         /// <summary>Signum with an exact zero at zero — the dive direction is a discrete
@@ -1135,4 +1243,19 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |         |            |        | (measured 11.1 m/s in, 10.8 m/s out; 7 of 10 catches    |
 // |         |            |        | conceding within 5 s). See                              |
 // |         |            |        | docs/tracking/gk-conversion-at-contact-design.md.       |
+// | 1.11 | 2026-08-04 | — | Wiring backlog W1 (ERR-011-009) — CommitRushIntent had zero production   |
+// |      |            |   | callers since it was written, so every one-on-one in this engine was a    |
+// |      |            |   | stationary keeper on his line. Three additions give it one safely:        |
+// |      |            |   | ClearRushIntent (the exact mirror of ClearSaveIntent — an intent armed for|
+// |      |            |   | a threat that evaporated would otherwise fire at a later Anticipate as a  |
+// |      |            |   | sprint at nothing, and it is a NO-OP mid-chain because FR-GK-018 forbids  |
+// |      |            |   | a trajectory-driven abort); GetState/HasActiveRushIntent so the           |
+// |      |            |   | composition root reads #11's own already-serialized latch instead of      |
+// |      |            |   | keeping a second one with a different lifetime (the ERR-011-002 shape);   |
+// |      |            |   | and rushTargetReached, which ends a rush that ARRIVED. The last is a      |
+// |      |            |   | defect the wiring surfaced: for a LOOSE ball the 1v1 and smother checks   |
+// |      |            |   | return false outright (they require a possessor) and F-08 needs one too,  |
+// |      |            |   | so a swept ball left the keeper standing over it in Rushing for the rest  |
+// |      |            |   | of the match. Emits GoalkeeperRushEvent{Reached} — the RushPhase member   |
+// |      |            |   | that has existed since v1.0 and was never published.                      |
 #endregion

@@ -4,6 +4,7 @@
 // Modified: 2026-07-27 (§5.Z.17: + [DERIVED] DegeneracyEpsilon, + [GT] DivePredictionHorizonS)
 // Modified: 2026-07-28 (gk-catch-parry-conversion KD-C3 [GT] recalibration, all inside #11 §3.4 spec ranges)
 // Modified: 2026-07-28 (gk-contact-rate (ERR-011-007): + [GT] DiveCommitMinLeadFrac (the SS3.3.6 commit-lead floor))
+// Modified: 2026-08-04 (wiring backlog W1 / ERR-011-009: + [GT] RushTargetReachedRadiusM (the SS3.1.1 rush-completion rows))
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.4, KD-9, FR-GK-015, FR-GK-042, Code Standards #20
 // Purpose:  All numeric constants for the goalkeeper mechanics system. No magic literals in formula files.
@@ -396,6 +397,16 @@ namespace TacticalDirector.GoalkeeperMechanics
         /// <summary>[GT] Fatigue penalty on rush commit speed (m/s per unit fatigue). §3.7 / KD-8.</summary>
         public static readonly float RushCommitFatigueCoeff = Config.GetFloat("goalkeeper-mechanics", "RushCommitFatigueCoeff", 0.9f);
 
+        /// <summary>
+        /// [GT] Distance (m) from the LOCKED rush target at which the run counts as finished — §3.1.1's
+        /// <c>Rushing → Recovering</c> / <c>OneOnOne → Recovering</c> rows (ERR-011-009). A completion,
+        /// NOT an abort: nothing about the ball's trajectory ends a committed rush (FR-GK-018 / KD-15);
+        /// only the keeper finishing the run he committed to does. Config key
+        /// [goalkeeper-mechanics] RushTargetReachedRadiusM. §3.7.2.
+        /// </summary>
+        public static readonly float RushTargetReachedRadiusM =
+            Config.GetFloat("goalkeeper-mechanics", "RushTargetReachedRadiusM", 0.5f);
+
         // ── §3.4.7 Distribution-Geometry Constants ───────────────────────────────────
 
         /// <summary>[GT] Release height for throw distributions (m above gkPosition.z). §3.8.</summary>
@@ -495,4 +506,8 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |     |            |   | 0.78→0.74 (measured contact quality 0.29–0.60 could not reach the catch   |
 // |     |            |   | band through the fixed pointQuality lottery even with live windows).      |
 // | 1.4 | 2026-07-28 | — | gk-contact-rate (ERR-011-007): + [GT] DiveCommitMinLeadFrac = 0.25 (SS3.3.6). |
+// | 1.5 | 2026-08-04 | — | Wiring backlog W1 (ERR-011-009): + [GT] RushTargetReachedRadiusM = 0.5 m. A |
+// |     |            |   | rush that REACHED its locked target had no exit in SS3.1.1, and for a loose |
+// |     |            |   | ball the 1v1/smother triggers cannot fire at all (they require a possessor),|
+// |     |            |   | so a swept ball stranded the keeper in Rushing for the rest of the match.   |
 #endregion

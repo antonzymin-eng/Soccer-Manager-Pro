@@ -68,9 +68,31 @@ should run before the calibration pass, and belongs on this board as item **W12*
 Ordered by measured or expected impact on match realism. "Evidence" cites the declaration site; in
 every case the whole-tree production caller count is zero.
 
-### W1 — The goalkeeper never comes off his line
-**Evidence:** `goalkeeper-mechanics/GoalkeeperMechanics.cs:281` `CommitRushIntent`.
-The engine calls `CommitSaveIntent` and only `CommitSaveIntent` (`MatchEngine.cs:7001`).
+### W1 — The goalkeeper never comes off his line — ✅ **WIRED August 4, 2026**
+**Evidence (as filed):** `goalkeeper-mechanics/GoalkeeperMechanics.cs:281` `CommitRushIntent`.
+The engine called `CommitSaveIntent` and only `CommitSaveIntent`.
+
+**Landed:** `MatchEngine.TryCommitRushIntents` (fired from `DriveGkHeadingTactical`, *before* the
+tactical tick — the rush is a 10 Hz state-machine input, unlike the 60 Hz-consumed header) over a
+new pure `GkHeadingIntentSource.RushArmed`. The predicate's whole football judgement is a **last-man
+test** — the keeper comes only when no team-mate is nearer the ball — which covers the through-ball
+and the unattended runner alike and fails safe; for a loose ball the locked target is an **intercept
+race solve**, not the ball's current position, because KD-15 locks the target at commit. Skipped
+whenever `SaveArmed` holds for the same keeper: a ball driving at the goal is a save, not a rush, and
+without that exclusion a shot would send the keeper charging out while the ERR-011-007 lead gate
+still held the dive. Deliberately **not** a Decision Tree action — `ActionType.SAVE = 7` is the last
+ordinal that fits the 3-bit composure-noise field, so an eighth would force the same digest
+rebaseline that defers W9. **No new engine state** (#11's own serialized `_rushIntentActive` is the
+latch, read through new `GetState` / `HasActiveRushIntent` accessors), so no schema bump.
+
+**What it surfaced: `ERR-011-009`.** A rush that REACHED its target had no exit — see §3 of the owner
+doc. Fixed spec-and-code in the same commit.
+
+**Measurement NOT run.** No .NET SDK in the authoring environment (the agent proxy denies the
+installer), so neither the gate nor the new `GkRushDiagnosticTests` instrument executed. Owner doc
+`docs/tracking/gk-rush-trigger-design.md` §6 carries the command and the honest status.
+
+**Owner doc:** `docs/tracking/gk-rush-trigger-design.md`.
 
 Everything downstream of the trigger is built and works: `GoalkeeperRushDispatch.UpdateRushFrame`
 genuinely advances the keeper toward a locked target and writes the position back to the movement
@@ -78,8 +100,9 @@ array; the `Rushing → OneOnOne → Smothered` transitions exist with abort rea
 radius, a smother radius, and telemetry. The `RushIntent` is even serialized into the snapshot.
 Only the trigger condition is missing.
 
-**Consequence:** every one-on-one in the game is a stationary keeper on his line waiting to dive.
-This is the single most likely contributor to the conversion gap, and the cheapest to close.
+**Consequence (as filed):** every one-on-one in the game was a stationary keeper on his line waiting
+to dive. This was the single most likely contributor to the conversion gap, and the cheapest to
+close. Whether closing it moved the conversion gap is **unmeasured** — see above.
 
 ### W2 — No player has ever made a tackle
 **Evidence:** three independent dormant links in one chain.
@@ -207,7 +230,7 @@ throughout; `[GT]` landings are frozen per KD-W1 until the final pass.
 
 | Order | Item | Rationale |
 |---|---|---|
-| 1 | **W1** keeper rush trigger | Whole subsystem exists; a trigger-condition problem. Largest realism lever per unit of work. |
+| 1 | ~~**W1** keeper rush trigger~~ ✅ **WIRED Aug 4, 2026** | Whole subsystem existed; a trigger-condition problem. Surfaced `ERR-011-009`. Its measurement is still owed. |
 | 2 | **C1** the `InPoss` gate | Cheapest possible fix to the largest starvation. Unblocks phase-gated behaviour across #13/#14/#15 — including anything W-class we wire later. |
 | 3 | **W2** tackles | Three-link chain, all three links understood. High realism value; touches pass cancellation, so expect findings. |
 | 4 | **W4** keeper perception | Reuses tested occlusion. Upstream of all keeper behaviour, so it should precede any keeper calibration. |
@@ -241,4 +264,5 @@ next lever on close-chance creation and is large enough to want its own pass.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.1 | 2026-08-04 | — | **W1 wired** (`docs/tracking/gk-rush-trigger-design.md`) — `CommitRushIntent` has a production caller for the first time. Surfaced and fixed `ERR-011-009` (a rush that reached its target had no §3.1.1 exit, so a swept loose ball stranded the keeper in `Rushing` for the rest of the match). Measurement not run — no .NET SDK in the authoring environment. Nine Class-A items remain; the next in sequence is **C1**, the `InPoss` gate. |
 | 1.0 | 2026-08-04 | — | Initial audit. Three-pass sweep over the 18 assemblies the match engine references; 10 Class-A dormant capabilities, 4 Class-B starved gates carried from §5.Z.24, 7 Class-C non-defects. Establishes KD-W1 (`[GT]` freeze) and KD-W2 (scope). |

@@ -12,7 +12,56 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 4, 2026, latest same day (**`match-realism-pass` SKILL RE-CUT FOR WIRE-FIRST
+> **Last Updated:** August 4, 2026, latest same day (**WIRING BACKLOG W1 LANDED — the goalkeeper
+> comes off his line for the first time, and the spec defect that discovery surfaced
+> (`ERR-011-009`).** `GoalkeeperMechanics.CommitRushIntent` had **zero production callers** since it
+> was written, so every one-on-one this engine has ever played was a stationary keeper on his line —
+> the whole rush subsystem below the trigger (dispatch, `Rushing → OneOnOne → Smothered`, abort
+> reasons, telemetry, snapshot serialization) was built, tested and dead. `MatchEngine.TryCommitRushIntents`
+> is that caller, over a new pure `GkHeadingIntentSource.RushArmed`. **The predicate's entire football
+> judgement is one condition — the last-man test:** the keeper comes only when no team-mate is nearer
+> the ball, which covers the through-ball into space and the attacker running clean through alike (he
+> HAS the ball, distance ≈ 0, but is unattended), needs no case analysis, and fails safe. For a loose
+> ball the locked target is an **intercept-race solve** rather than the ball's current position,
+> because KD-15 locks the target at commit and a rolling ball is not where it was; the solve
+> self-guards, since a clearance outrunning the keeper has no positive root. Skipped whenever
+> `SaveArmed` holds for the same keeper — **a ball driving at the goal is a save, not a rush** — or a
+> shot would send the keeper charging out while the ERR-011-007 commit-lead gate still held the dive,
+> regressing the whole §5.Z.17–§5.Z.22 save pipeline. Deliberately **not** routed through the Decision
+> Tree: `ActionType.SAVE = 7` is the last ordinal that fits the 3-bit composure-noise field, so a RUSH
+> action would force the same digest rebaseline that defers W9, turning the board's cheapest large
+> lever into its most expensive item. **No new engine state** — #11's own already-serialized
+> `_rushIntentActive` is the per-episode latch, read through new `GetState`/`HasActiveRushIntent`
+> accessors rather than duplicated (two latches with different lifetimes for one episode is precisely
+> ERR-011-002's dive-at-nothing) — so **no `SNAPSHOT_SCHEMA_VERSION` change**. **What the wiring
+> surfaced: `ERR-011-009`.** #11 §3.1.1 gives `Rushing` three exits and `OneOnOne` two, and for a
+> LOOSE ball **none of them can fire** — the 1v1 and smother triggers are false by construction with
+> no ball possessor, F-08 needs one, and §3.7.2's update converges on the locked target and stops
+> without overshooting — so a keeper who swept a loose ball would have stood over it in `Rushing` for
+> the remainder of the match. Everything else anticipated the completion (`RushPhase.Reached` has been
+> in the enum since v0.1, never published; §3.7.3 reserves `AbortReason.AttackerBeatGK`, also
+> unreachable); only the table that adjudicates state had no row. Fixed spec-and-code in the same
+> commit: two §3.1.1 rows, the §3.7.2 terminating check, `[GT] RUSH_TARGET_REACHED_RADIUS_M`, and the
+> `Reached` event finally emitted — a **completion, not an abort**, ranked below contact, F-08 and the
+> 1v1 trigger, so FR-GK-018 / KD-15 are untouched. **The honest headline, and a deliberate break with
+> every §5.Z entry above: NOTHING HERE HAS BEEN EXECUTED.** The authoring environment has no .NET SDK
+> and the agent proxy denies `builds.dotnet.microsoft.com`, so `tools/dotnet-ci/run-gate.sh` did not
+> run and the new `GkRushDiagnosticTests` instrument is written-and-unrun. There are **no pre/post
+> numbers**, and none were invented; the gate result for this landing is whatever the GitHub
+> `dotnet-compile-test` job reports, and no claim that a suite enforces anything may be cited before
+> then — that is this project's own never-compiled-surfaces hazard, and it is being named rather than
+> stepped in. Five new `[GT]`s (`GkRushTriggerRangeM` 22 m, `GkRushMaxInterceptS` 2 s,
+> `GkRushMaxBallHeightM` 2.5 m, `GkRushCommitment` 0.85, `RushTargetReachedRadiusM` 0.5 m) are all
+> first plausible numbers, not fitted ones; under KD-W1 they are **new dials for a dead surface**, not
+> retunes, and they are the calibration pass's input. Files: `MatchEngine.cs` v1.58,
+> `GkHeadingIntentSource.cs` v1.1, `MatchEngineConstants.cs` v1.28, `GoalkeeperMechanics.cs` v1.11,
+> `GoalkeeperStateMachine.cs` v1.7, `GoalkeeperConstants.cs` v1.5, new `GoalkeeperRushTests.cs` /
+> `GkRushTriggerTests.cs` / `GkRushDiagnosticTests.cs`, new owner doc `gk-rush-trigger-design.md`,
+> spec #11 §3 v0.7, `spec-error-log.md` v1.56, `match-engine-wiring-backlog.md` v1.1. Next in the
+> backlog sequence: **C1**, the `InPoss` gate — the largest starvation on the board. Prior entry
+> below.)
+
+> **Last Updated (prior):** August 4, 2026, latest same day (**`match-realism-pass` SKILL RE-CUT FOR WIRE-FIRST
 > — the calibration ladder moves behind a wiring gate, and the gate now defers to the wiring backlog
 > and KD-W1.** Tooling-only; no `.cs`, no spec, no assembly, no gate run. The skill encoded
 > measure → localize → ladder → land, which is the right shape only when the chain under the dial is

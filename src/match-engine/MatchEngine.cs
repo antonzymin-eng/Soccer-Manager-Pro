@@ -46,6 +46,7 @@
 // Modified: 2026-07-28 (gk-catch-parry-conversion (ERR-011-006): the armed branch calls GoalkeeperMechanics.OnThreatArmed each stride — the episode-onset detection-stamp fallback, a no-op once stamped, so no new engine state; + TestOnly_ShotContacts genuine-strike diagnostic counter (the WoodworkStrikes class) counted where NotifyKeeperOfShot verifies the strike. No schema change. See docs/tracking/gk-catch-parry-conversion-design.md)
 // Modified: 2026-07-28 (keeper-contact pass: + TestOnly_LastShotStrikePosition/Velocity — the strike-TIME ball state, captured beside the _shotContacts increment (the WoodworkStrikes diagnostic class, not serialized), so instruments no longer sample end-of-tick BallView a same-tick touch may already have reversed. No schema change. See docs/tracking/gk-contact-rate-design.md)
 // Modified: 2026-08-03 (conversion-at-contact pass (ERR-011-008): GkHeadingWorldAdapter.ParkBall() — the ball-side half of #11 §3.5.2's claim, which had no seam (ApplyKick is a kick). Zeroes _ball.Velocity/AngularVelocity; no ball-state-machine transition, no RNG draw, no cross-tick state, so no SNAPSHOT_SCHEMA_VERSION change. A claimed shot previously kept its velocity and entered the net. See docs/tracking/gk-conversion-at-contact-design.md)
+// Modified: 2026-08-04 (wiring backlog W1 keeper rush trigger: TryCommitRushIntents gives GoalkeeperMechanics.CommitRushIntent its FIRST production caller — pure GkHeadingIntentSource.RushArmed geometry + the ClearRushIntent disarm, gated behind SaveArmed so a shot is still a dive. Deliberately NOT a DecisionTree action: ActionType ordinal 8 overflows the 3-bit composure-noise field (the W9 deferral reason). No new engine state ⇒ no SNAPSHOT_SCHEMA_VERSION change. See docs/tracking/gk-rush-trigger-design.md)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -267,6 +268,12 @@ namespace TacticalDirector.MatchEngine
         // Diagnostic observation (the _woodworkStrikes class): genuine #6 shot CONTACTs this
         // match. NOT serialized; feeds no gameplay path.
         private int _shotContacts;
+
+        // Diagnostic observation (the _woodworkStrikes class): RushIntents committed this match
+        // (wiring backlog W1). NOT serialized; feeds no gameplay path. The per-episode latch is
+        // #11's own already-serialized _rushIntentActive, NOT this counter — the whole point of
+        // reading #11's flag is that the engine keeps no rush state of its own.
+        private int _rushCommitCount;
 
         // Diagnostic observation (the _woodworkStrikes class): the ball's position/velocity at the
         // instant the LAST genuine #6 strike was counted — captured beside _shotContacts++, i.e.
@@ -2016,6 +2023,16 @@ namespace TacticalDirector.MatchEngine
         /// threat episode (the ERR-011-006 arming stamps) as a shot.</summary>
         internal int TestOnly_ShotContacts => _shotContacts;
 
+        /// <summary>Test-only: cumulative <c>RushIntent</c>s committed this match (wiring backlog W1 —
+        /// the <c>WoodworkStrikes</c> diagnostic class: not serialized, zero after a restore by design).
+        /// Before W1 this was structurally zero for every match ever played, because
+        /// <c>GoalkeeperMechanics.CommitRushIntent</c> had no production caller at all.</summary>
+        internal int TestOnly_RushCommitCount => _rushCommitCount;
+
+        /// <summary>Test-only: this keeper's current #11 state-machine state (wiring backlog W1).
+        /// <paramref name="teamId"/> is the keeper index (== team id, KD-1).</summary>
+        internal GoalkeeperState TestOnly_GkState(int teamId) => _goalkeeper.GetState(teamId);
+
         /// <summary>Test-only: the ball's position at the instant of the LAST genuine #6 strike
         /// (captured beside the <see cref="TestOnly_ShotContacts"/> increment — post-ApplyKick,
         /// before any later same-tick Resolve step can move the ball). Same diagnostic class:
@@ -3385,8 +3402,144 @@ namespace TacticalDirector.MatchEngine
                     _goalkeeper.UpdateBaselineSlot(k, _agents[agentId].Position);
                 }
             }
+            // Wiring backlog W1: the rush decision is a 10 Hz state-machine INPUT (the
+            // Set/Anticipate → Rushing rows read hasRushIntent), so it must be committed BEFORE the
+            // tactical tick or the keeper waits a whole stride with an already-stale locked target.
+            // The header trigger below is the opposite case — it is consumed at 60 Hz — which is why
+            // the two sit on either side of this call.
+            TryCommitRushIntents();
             _goalkeeper.TacticalTick((int)_clock.CurrentTick, _agents, _ball, _gkAgentIds);
             TryCommitHeaderIntents();
+        }
+
+        /// <summary>
+        /// Wiring backlog W1 (gk-rush-trigger-design.md §2) — the first production caller of
+        /// <c>GoalkeeperMechanics.CommitRushIntent</c>. Fires the §4.4 rush trigger for each keeper:
+        /// pure geometry in <see cref="GkHeadingIntentSource.RushArmed"/>, the latch and projection here.
+        ///
+        /// <para><b>Why this is not a Decision Tree action like SAVE.</b> <c>ActionType.SAVE = 7</c> is
+        /// the last ordinal that fits the 3-bit composure-noise field in
+        /// <c>ActionSelector.ComputeOptionNoise</c>; an eighth action overflows it and forces a
+        /// composure-noise digest rebaseline — exactly why the DT-emitted HEADER (backlog W9) is
+        /// deferred. Paying that cost here would turn the cheapest large realism lever on the board into
+        /// the most expensive item on it. So the rush follows the HEADER trigger's shape instead: a pure
+        /// predicate plus a composition-root commit, the <c>MatchFlowCollisionConsumer</c> heuristic-foul
+        /// precedent that GK/Heading design §4.3 already accepted. When W9 takes the rebaseline, RUSH
+        /// folds into the same DT surface as SAVE and this becomes the fallback, not a rival authority.</para>
+        ///
+        /// <para><b>No new engine state.</b> #11's own <c>_rushIntentActive</c> is the per-episode latch
+        /// and it is already serialized in the v18 GK block, so this reads it through
+        /// <c>HasActiveRushIntent</c> rather than keeping a second latch with a different lifetime — the
+        /// shape that produced ERR-011-002's dive-at-nothing on the save side. Hence no
+        /// SNAPSHOT_SCHEMA_VERSION change.</para>
+        /// </summary>
+        private void TryCommitRushIntents()
+        {
+            bool loose = _possessingAgentId == MatchEngineConstants.NO_POSSESSION;
+
+            for (int k = 0; k < _gkAgentIds.Length; k++)
+            {
+                int agentId = _gkAgentIds[k];
+                if (agentId < 0 || _isSentOff[agentId])
+                {
+                    continue;
+                }
+
+                // A ball driving at the goal is a SAVE, not a rush. Without this the two triggers
+                // compete for the same ball: a shot arms both, and because Anticipate → Rushing is
+                // evaluated while the ERR-011-007 commit-lead gate is still holding the dive, the keeper
+                // would charge out instead of diving — a straight regression of the §5.Z.17–§5.Z.22 save
+                // pipeline. Same pure predicate the DT-emitted SAVE gate uses, so the two cannot drift.
+                bool saveArmed = GkHeadingIntentSource.SaveArmed(
+                    k, in _ball.Position, in _ball.Velocity, loose);
+
+                bool armed = false;
+                Vector3 rushTarget = Vector3.zero;
+                GoalkeeperAgentAttributes attrs = default;
+
+                if (!saveArmed)
+                {
+                    attrs = PlayerAttributeProjection.ToGoalkeeper(
+                        in _canonicalAttrs[agentId], k, fatigue: 0f);
+
+                    // AgentState.Position is XY; the predicate reasons in the XY plane and the keeper's
+                    // own Z is not modelled outside a dive, so z = 0 is the honest lift.
+                    Vector3 gkPos = new Vector3(
+                        _agents[agentId].Position.x, _agents[agentId].Position.y, 0f);
+
+                    armed = GkHeadingIntentSource.RushArmed(
+                        k,
+                        in gkPos,
+                        in _ball.Position,
+                        in _ball.Velocity,
+                        loose,
+                        ballHeldByKeeperTeam: !loose && _teamIds[_possessingAgentId] == k,
+                        nearestOutfieldTeammateDistM: NearestOutfieldTeammateDistanceToBall(k),
+                        rushSpeedMps: GoalkeeperRushDispatch.ComputeRushLaunchMps(attrs),
+                        out rushTarget);
+                }
+
+                if (!armed)
+                {
+                    // The symmetric disarm (the ClearSaveIntent lesson): an intent committed for a
+                    // threat that then evaporated must not sit armed and fire at a later Anticipate.
+                    // #11 makes this a no-op once the keeper is in the rush chain, so a committed rush
+                    // still runs to its own resolution (FR-GK-018 — no trajectory-driven abort).
+                    _goalkeeper.ClearRushIntent(k);
+                    continue;
+                }
+
+                // KD-15: the target is locked at commit and never re-read, so one commit per episode.
+                if (_goalkeeper.HasActiveRushIntent(k))
+                {
+                    continue;
+                }
+
+                // Commit only from the two states that HAVE a → Rushing row. From Recovering the intent
+                // would sit armed across the cooldown and launch two ticks later at a stale target.
+                GoalkeeperState gkState = _goalkeeper.GetState(k);
+                if (gkState != GoalkeeperState.Set && gkState != GoalkeeperState.Anticipate)
+                {
+                    continue;
+                }
+
+                var intent = new RushIntent
+                {
+                    RushTarget = rushTarget,
+                    CommitmentLevel = MatchEngineConstants.GkRushCommitment,
+                    AttemptCommittedTick = (int)_clock.CurrentTacticalTick,
+                };
+                _goalkeeper.CommitRushIntent(k, intent, attrs);
+                _rushCommitCount++;
+            }
+        }
+
+        /// <summary>
+        /// Distance (m, XY) from the ball to the nearest eligible OUTFIELDER of team
+        /// <paramref name="teamId"/>, or <see cref="float.MaxValue"/> when the team has none on the
+        /// pitch. The input to W1's last-man test: the keeper comes only when no team-mate is nearer.
+        /// Sent-off agents are excluded — the participation rule every other scan in this engine carries
+        /// (a frozen red-carded agent is not going to deal with the ball, and treating him as cover is
+        /// how §5.Z Phase H re-created the deadlock).
+        /// </summary>
+        private float NearestOutfieldTeammateDistanceToBall(int teamId)
+        {
+            float bestSq = float.MaxValue;
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                if (_teamIds[i] != teamId || _isGoalkeeper[i] || _isSentOff[i])
+                {
+                    continue;
+                }
+                float dx = _agents[i].Position.x - _ball.Position.x;
+                float dy = _agents[i].Position.y - _ball.Position.y;
+                float dSq = dx * dx + dy * dy;
+                if (dSq < bestSq)
+                {
+                    bestSq = dSq;
+                }
+            }
+            return bestSq == float.MaxValue ? float.MaxValue : Mathf.Sqrt(bestSq);
         }
 
         /// <summary>GK/Heading 60 Hz physics drive (design §3.4): advance both orchestrators against the
@@ -7838,4 +7991,21 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | attackers OUT of the box (mean 0.11 -> 0.08) because a RUNNER's target is  |
 // |         |            |        | carrier + 12 m and the carrier is usually still in midfield. No production |
 // |         |            |        | behaviour change in this file.                                             |
+// | 1.58    | 2026-08-04 | —      | Wiring backlog W1 — the keeper rush trigger. TryCommitRushIntents is the   |
+// |         |            |        | FIRST production caller GoalkeeperMechanics.CommitRushIntent has ever had, |
+// |         |            |        | so until now every one-on-one in this engine was a stationary keeper on    |
+// |         |            |        | his line. Pure geometry in GkHeadingIntentSource.RushArmed (last-man test  |
+// |         |            |        | + an intercept-race solve that locks the MEETING point, since KD-15 locks  |
+// |         |            |        | the target at commit); NearestOutfieldTeammateDistanceToBall supplies the  |
+// |         |            |        | last-man input. Committed BEFORE _goalkeeper.TacticalTick (a 10 Hz state-  |
+// |         |            |        | machine input, unlike the 60 Hz-consumed header) and skipped whenever      |
+// |         |            |        | SaveArmed holds for the same keeper — otherwise a shot arms both triggers  |
+// |         |            |        | and the keeper charges out while the ERR-011-007 lead gate still holds the |
+// |         |            |        | dive, regressing the whole §5.Z.17–§5.Z.22 save pipeline. NOT a DT action: |
+// |         |            |        | ActionType.SAVE = 7 is the last ordinal that fits the 3-bit composure-     |
+// |         |            |        | noise field, so an eighth would force a digest rebaseline (the W9          |
+// |         |            |        | deferral reason). No new engine state — #11's own serialized               |
+// |         |            |        | _rushIntentActive is the latch, read via HasActiveRushIntent — so no       |
+// |         |            |        | SNAPSHOT_SCHEMA_VERSION change. + TestOnly_RushCommitCount /               |
+// |         |            |        | TestOnly_GkState (the WoodworkStrikes diagnostic class).                   |
 #endregion

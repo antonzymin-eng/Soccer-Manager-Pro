@@ -12,6 +12,7 @@
 // Modified: 2026-07-26 (§5.Z.12: HomeLineXM/AwayLineXM collapsed to OutfieldKickoffLineXM; HOME_FACING_DEG/AWAY_FACING_DEG deleted — facing now mirrors)
 // Modified: 2026-07-26 (§5.Z.10: + [CROSS] GkKickoffDepthM mirroring PositioningAIConstants.GK_DEPTH_M — the keeper's goal-line spawn depth)
 // Modified: 2026-07-26 (§5.Z.9 foul/discipline balance pass: + [GT] FoulCallProbability; Yellow 0.35 -> 0.16, Red 0.05 -> 0.011, FoulCooldownTicks 60 -> 180; no schema change. See docs/tracking/foul-discipline-balance-design.md)
+// Modified: 2026-08-04 (wiring backlog W1 keeper rush trigger: + [FIXED] GK_RUSH_SOLVE_EPSILON + 4 [GT] GkRush* trigger constants; no schema change. See docs/tracking/gk-rush-trigger-design.md)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.3, Code Standards #20
 // Purpose:  Constant catalogue for the match-engine composition root. Stage 0 Phase A holds the
@@ -38,6 +39,12 @@ namespace TacticalDirector.MatchEngine
 
         /// <summary>[FIXED] Total players on the pitch (11 v 11). Match Engine design note §2.3.</summary>
         public const int SQUAD_SIZE = 22;
+
+        /// <summary>[FIXED] Degenerate-coefficient guard for the W1 rush-intercept quadratic — the
+        /// magnitude below which a coefficient is treated as zero rather than divided by. Numerical
+        /// guard, not a tunable: it selects which algebraic branch is well-conditioned.
+        /// gk-rush-trigger-design.md §2.2.</summary>
+        public const float GK_RUSH_SOLVE_EPSILON = 1e-6f;
 
         /// <summary>[FIXED] Number of teams in a match.</summary>
         public const int TEAM_COUNT = 2;
@@ -612,6 +619,37 @@ namespace TacticalDirector.MatchEngine
         /// Config key [match-engine] SaveTriggerClutchFirmness.</summary>
         public static readonly float SaveTriggerClutchFirmness = Config.GetFloat("match-engine", "SaveTriggerClutchFirmness", 0.8f);
 
+        // ── Wiring backlog W1: the keeper rush trigger ────────────────────────────────────
+        // gk-rush-trigger-design.md §4. All FOUR are new dials for a surface that had no production
+        // caller at all (`CommitRushIntent`), so none of them is a KD-W1 retune — there was no prior
+        // value to freeze. Every default is a first plausible number, NOT a fitted one: they are the
+        // input to the single calibration pass the wiring backlog books after the board is clear, not
+        // its output. Do not cite any of them as measured.
+
+        /// <summary>[GT] Distance (m) from the defended goal line within which the keeper may commit a
+        /// rush — applied to the rush TARGET, not the ball. Roughly the penalty area plus a stride: the
+        /// region a keeper actually sweeps. Config key [match-engine] GkRushTriggerRangeM.</summary>
+        public static readonly float GkRushTriggerRangeM = Config.GetFloat("match-engine", "GkRushTriggerRangeM", 22.0f);
+
+        /// <summary>[GT] Longest run (s, at the keeper's own rush speed) he will commit to — the single
+        /// time budget applied to both trigger branches. For a loose ball it is exactly the intercept
+        /// cap, since the solve places the meeting point at rushSpeed × t; for an opponent carrying the
+        /// ball it is the same budget expressed as a distance, there being no race to solve. It also
+        /// bounds the straight-line ball extrapolation the solve relies on, the role
+        /// <c>DivePredictionHorizonS</c> plays for the §3.3.4 dive prediction.
+        /// Config key [match-engine] GkRushMaxInterceptS.</summary>
+        public static readonly float GkRushMaxInterceptS = Config.GetFloat("match-engine", "GkRushMaxInterceptS", 2.0f);
+
+        /// <summary>[GT] Ball height (m) above which a rush is refused — that ball is a cross to be
+        /// claimed (wiring backlog W3, not wired), not one to be swept.
+        /// Config key [match-engine] GkRushMaxBallHeightM.</summary>
+        public static readonly float GkRushMaxBallHeightM = Config.GetFloat("match-engine", "GkRushMaxBallHeightM", 2.5f);
+
+        /// <summary>[GT] CommitmentLevel [0,1] the Stage-0 rush trigger writes into the RushIntent. MUST
+        /// exceed <c>GoalkeeperConstants.RushCommitThreshold</c> (0.60) or #11's Set/Anticipate → Rushing
+        /// rows ignore the intent entirely. Config key [match-engine] GkRushCommitment.</summary>
+        public static readonly float GkRushCommitment = Config.GetFloat("match-engine", "GkRushCommitment", 0.85f);
+
         #endregion
     }
 }
@@ -763,4 +801,12 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | was applied this tick. Mirrors the NO_POSSESSION /              |
 // |         |            |        | NO_ROSTER_CLUB_ID sentinel convention. No                       |
 // |         |            |        | SNAPSHOT_SCHEMA_VERSION change.                                 |
+// | 1.28    | 2026-08-04 | —      | Wiring backlog W1 (the keeper rush trigger): + [FIXED]          |
+// |         |            |        | GK_RUSH_SOLVE_EPSILON (the intercept quadratic's branch guard)  |
+// |         |            |        | and 4 [GT] — GkRushTriggerRangeM / GkRushMaxInterceptS /        |
+// |         |            |        | GkRushMaxBallHeightM / GkRushCommitment. New dials for a        |
+// |         |            |        | surface that had NO production caller, so not a KD-W1 retune;   |
+// |         |            |        | all four are un-calibrated and are the calibration pass's       |
+// |         |            |        | input. No SNAPSHOT_SCHEMA_VERSION change (#11's own already-    |
+// |         |            |        | serialized _rushIntentActive is the latch).                     |
 #endregion

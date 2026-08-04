@@ -40,10 +40,12 @@ Each row is `(from, to, trigger, tick-rate, source spec)`.
 | `Rushing` | `Smothered` | #3 hand-ball contact event during rush | 60 Hz | #3 / #11 §3.7 |
 | `Rushing` | `OneOnOne` | Attacker within `ONE_VS_ONE_TRIGGER_RADIUS_M` of GK during rush AND `BallState.PossessorId == attackerId` | 60 Hz | #11 §3.7 |
 | `Rushing` | `Recovering` | F-08 ball intercepted (`BallState.PossessorId` becomes non-GK and not the original attacker target) | 60 Hz | KD-15 / F-08 |
+| `Rushing` | `Recovering` | GK arrives within `RUSH_TARGET_REACHED_RADIUS_M` of the LOCKED `rushTarget` without contact — the run is finished; emit `GoalkeeperRushEvent { rushPhase: Reached }` (ERR-011-009). A **completion, not an abort**: FR-GK-018 / KD-15 forbid ending a committed rush on the ball's trajectory, and this ends it on the keeper's own arrival. Lowest priority of the four `Rushing` exits | 60 Hz | ERR-011-009 / §3.7.2 |
 | `Smothered` | `HandsOnBall` | Hand-ball contact resolves with `handlingQualityScalar ≥ CATCH_THRESHOLD` | 60 Hz | #11 §3.5 |
 | `Smothered` | `Recovering` | Hand-ball contact resolves with `handlingQualityScalar < CATCH_THRESHOLD` | 60 Hz | #11 §3.5 |
 | `OneOnOne` | `Diving` | Decision Tree #8 commits `SaveIntent` (1v1 dive path; KD-20 coefficients apply) | 10 Hz | #8 |
 | `OneOnOne` | `Smothered` | GK closes within `SMOTHER_TRIGGER_RADIUS_M` of attacker AND attacker shot pending | 60 Hz | #11 |
+| `OneOnOne` | `Recovering` | GK arrives within `RUSH_TARGET_REACHED_RADIUS_M` of the LOCKED `rushTarget` without ever closing to a smother (ERR-011-009). `OneOnOne` is reachable only from `Rushing` and inherits the identical gap | 60 Hz | ERR-011-009 / §3.7.2 |
 | `Resting` | `Resting` | Default holding state when ball is in own / middle thirds with own possession | 10 Hz | #11 |
 
 Iteration order is deterministic per #16 §3.2. With one GK per
@@ -509,6 +511,7 @@ mirrors this table.
 | `RUSH_LAUNCH_BASE_MPS` | `[GT]` | m/s | 4.5 | [3.0, 6.5] | §3.7 |
 | `RUSH_LAUNCH_K_PACE` | `[GT]` | m/s | 1.8 | [1.0, 3.0] | §3.7 |
 | `RUSH_COMMIT_FATIGUE_COEFF` | `[GT]` | m/s | 0.9 | [0.3, 1.8] | §3.7 / KD-8 |
+| `RUSH_TARGET_REACHED_RADIUS_M` | `[GT]` | m | 0.5 | [0.2, 1.5] | §3.7.2 / §3.1.1 (ERR-011-009) — the rush-completion rows. Un-calibrated: the whole rush subsystem had no production caller when this was added, so there is no measured value behind it |
 
 ### 3.4.7 Distribution-geometry constants
 
@@ -868,6 +871,31 @@ on PhysicsFrame(currentFrame) while state == Rushing:
         state = OneOnOne
 ```
 
+**Rush completion (ERR-011-009).** The loop above has no terminating
+condition of its own, and the three §3.1.1 `Rushing` exits it feeds
+cannot fire for a LOOSE ball: `existsAttackerWithBallWithinRadius`
+is false by construction when there is no possessor, the hand-contact
+check needs a contact the sweep has not made, and F-08 needs a
+possessor too. `gkPos` meanwhile converges on `rushTarget` and stops
+(the update does not overshoot). A keeper who swept a loose ball
+therefore had **no exit at all** and stood over it for the remainder
+of the match. Add, as the loop's last check:
+
+```
+    // rush completion — the run the keeper committed to is finished
+    if |rushTarget - gkPos| <= RUSH_TARGET_REACHED_RADIUS_M:
+        state = Recovering
+        emit GoalkeeperRushEvent { rushPhase: Reached }
+```
+
+This is a **completion, not an abort**: §3.7.3's intent-staleness
+policy is about the ball, and nothing here reads the ball. It is
+evaluated at the lowest priority of the `Rushing` exits, so a run
+that arrives *and* meets the ball is the `Smothered` contact it is.
+The same check applies in `OneOnOne`, which is reachable only from
+`Rushing` and strands identically when the attacker carries the ball
+back out of `SMOTHER_TRIGGER_RADIUS_M`.
+
 ### 3.7.3 Rush abort policy (KD-15)
 
 The ONLY abort trigger is F-08 (`BallIntercepted`). Ball-trajectory
@@ -1026,3 +1054,4 @@ standard rebound physics.
 | 0.4 | July 28, 2026 | gk-catch-parry-conversion pass | **ERR-011-005** — §3.2.3 gains its evaluation anchor: the window is computed ONCE at the dive-commit frame and frozen for the §3.5.1 contact blend (the anchor §3.2.5's worked example always described); the implementation's per-frame re-evaluation dated the contact-consumed value by the ball's whole flight time, clamping it to 0. **ERR-011-006** — §3.2.1 gains the stamp lifecycle: the detection stamp dies with its episode (cleared on disarm-without-dive and on save resolution; measured stale stamps dated dives against shots 34–174 s old), and save episodes with no #6 shot event (deflections, rebounds) are stamped by a threat-onset fallback through the same formulas, live-stamp-wins. §3.4.3 `[GT]` recalibration inside spec ranges (`REACTION_BASE_MS` 350 → 220, `REACTION_BALL_SPEED_COEFF` 8 → 3, tolerances 120/80 → 200/140): the engine's discrete commit pipeline lands at ~100–300 ms elapsed, which the human-continuous-time values scored as deep-early ⇒ window ≈ 0 for every dive the engine can produce. Code: `GoalkeeperMechanics.cs` v1.8, `GoalkeeperConstants.cs` v1.3, `MatchEngine.cs` (OnThreatArmed wiring). Header `Version` field (stale at 0.1 against this table since v0.2) consolidated. See `docs/tracking/gk-catch-parry-conversion-design.md` | implementation + measurement (funnel instrument, 3 full matches) |
 | 0.5 | July 28, 2026 | gk-contact-rate pass | **ERR-011-007** — commit-to-arrival timing: new §3.3.6 gates the `Anticipate → Diving` transition on the ball's predicted time-to-plane against a lateral-need-scaled commit lead, so the fixed 600 ms dive envelope covers the ball's ARRIVAL (measured baseline: dive-early in 9 of 15 crossed threat episodes, the dive over 456–2000 ms before the crossing, dive-late exactly 0). §3.1.1 row amended; §3.2.3's `elapsed` anchor refined launch-frame → `SaveIntent.AttemptCommittedTick` (under a held dive the launch is deliberate timing, not reaction — pre-hold the anchors were one stride apart, so §5.Z.20's measured windows stay valid). New `[GT] DIVE_COMMIT_MIN_LEAD_FRAC` (0.25) in §3.4.4. Code: `GoalkeeperDiveKinematics.cs` (TryPredictPlaneCrossing/ComputeDiveCommitLeadS/ShouldCommitDive — one predictor shared with the §3.3.4 dive direction), `GoalkeeperStateMachine.cs`, `GoalkeeperMechanics.cs`, `GoalkeeperConstants.cs`. See `docs/tracking/gk-contact-rate-design.md` | implementation + measurement (per-episode anatomy instrument, 3 full matches) |
 | 0.6 | August 3, 2026 | conversion-at-contact pass | **ERR-011-008** — §3.5's **Outputs** summary named only `Ball.SetPossessor` for the catch branch, while §3.5.2's body carries `ball.velocity = gkHandVelocity` ("parked at hand position"). The implementation followed the summary and omitted the park; because possession in the composition root is a FLAG rather than a kinematic constraint (the ball integrates unconditionally and the goal check adjudicates on ball POSITION), a claimed shot kept its velocity and crossed the line — measured over three full matches: ball speed 11.1 m/s in and **10.8 m/s out** of a catch, **7 of 10 catches followed by a goal within 5 s**, against parry 10.8 → 0.0 and deflect 10.3 → 4.2. §3.5's Outputs now states the catch's TWO effects and §3.5.2 gains the sentence that every contact resolves to exactly one ball-side action, the catch's being a pair. **§3.5.2's pseudocode body is unchanged — it was correct.** Code: `IGoalkeeperBallSystem.cs` v1.1 (+`ParkBall()`), `GoalkeeperMechanics.cs` v1.10 (both claim sites — §3.5.2 catch and the Stage-0 smother), `MatchEngine.cs` (adapter). See `docs/tracking/gk-conversion-at-contact-design.md` | implementation + measurement (per-contact fate instrument, 3 full matches); acceptance 2 of 3 predicates fail pre-fix, verified by execution |
+| 0.7 | August 4, 2026 | wiring backlog W1 | **ERR-011-009** — **a rush that REACHED its target had no exit.** §3.1.1 gave `Rushing` exactly three exits (contact, the 1v1 radius, F-08 interception) and `OneOnOne` two (`SaveIntent`, the smother radius). For a LOOSE ball none of them can fire: the 1v1 and smother triggers are false by construction without a possessor, F-08 needs one, and §3.7.2's update converges on the locked target and stops. A keeper who swept a loose ball therefore stood over it in `Rushing` for the rest of the match. The completion was anticipated everywhere except in the table that adjudicates state — `RushPhase.Reached` has existed in §2's enum since v0.1 and was never emitted, and §3.7.3 reserves `AbortReason.AttackerBeatGK` for the related case. Two new §3.1.1 rows (`Rushing → Recovering`, `OneOnOne → Recovering`) on arrival within the new `[GT] RUSH_TARGET_REACHED_RADIUS_M` (§3.4.6), plus the terminating check in §3.7.2. A **completion, not an abort** — FR-GK-018 / KD-15 are untouched, since nothing about the ball's trajectory ends the rush. Found by wiring the trigger: `CommitRushIntent` had never had a production caller, so no rush had ever run in a match. Code: `GoalkeeperStateMachine.cs` v1.7, `GoalkeeperMechanics.cs` v1.11, `GoalkeeperConstants.cs` v1.5, `MatchEngine.cs` v1.58 (the trigger itself). See `docs/tracking/gk-rush-trigger-design.md` | implementation; **measurement NOT run — no .NET SDK in the authoring environment** |
