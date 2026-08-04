@@ -1,6 +1,6 @@
 // File:     src/ui-framework/Tests/MatchViewCueProjectionTests.cs
 // Created:  2026-07-27
-// Modified: 2026-07-27 (AR-1 M-3 / M-6: empty-view sentinel + banner-construction gates)
+// Modified: 2026-08-03 (P4a: cue constructions carry the new IsGoalkeeper argument)
 // Author:   —
 // Spec:     UI / Client Framework #38 §2.2 (FR-UI-002/007/008, failure modes F1/F4/F5) +
 //           interactive Unity client (docs/tracking/interactive-unity-client-design.md) §5-P1,
@@ -47,12 +47,12 @@ namespace TacticalDirector.UiFramework.Tests
         public void MutatingTheProducerCueArray_DoesNotChangeAProjectedView()
         {
             var cues = Cues();
-            cues[3] = new LiveAgentCue(1, false, -1);
+            cues[3] = new LiveAgentCue(1, false, -1, false);
             var frame = Frame(cues: cues);
             var view = new MatchFrameView(in frame);
 
             int before = view.AgentCues[3].YellowCards;
-            cues[3] = new LiveAgentCue(99, true, 7);     // the producer scribbles on its own array
+            cues[3] = new LiveAgentCue(99, true, 7, true);     // the producer scribbles on its own array
 
             Assert.AreEqual(before, view.AgentCues[3].YellowCards,
                 "the view copied the cue array; it must not alias the producer's buffer (F4)");
@@ -178,9 +178,9 @@ namespace TacticalDirector.UiFramework.Tests
         public void CueValues_SurviveTheProjection()
         {
             var cues = Cues();
-            cues[0] = new LiveAgentCue(1, false, -1);   // booked, still on, original starter
-            cues[1] = new LiveAgentCue(1, true, -1);    // sent off
-            cues[2] = new LiveAgentCue(0, false, 3);    // substitute from bench slot 3
+            cues[0] = new LiveAgentCue(1, false, -1, false);   // booked, still on, original starter
+            cues[1] = new LiveAgentCue(1, true, -1, false);    // sent off
+            cues[2] = new LiveAgentCue(0, false, 3, false);    // substitute from bench slot 3
             var frame = Frame(cues: cues);
 
             var view = new MatchFrameView(in frame);
@@ -219,4 +219,8 @@ namespace TacticalDirector.UiFramework.Tests
 // |         |            |        | found and fixed once) and RestartBanner_RefusesTheNoneCueAnd-  |
 // |         |            |        | AnUnknownTeam. Gate probes route through a local Frame helper  |
 // |         |            |        | so the carrier change cost one line, not one per probe.        |
+// | 1.2     | 2026-08-03 | —      | P4a: the five LiveAgentCue constructions carry the new         |
+// |         |            |        | IsGoalkeeper argument (KD-P4a-1). The scribble-on-the-         |
+// |         |            |        | producer-array case flips it too, so the copy lock covers the  |
+// |         |            |        | new field rather than only the ones it already had.            |
 #endregion

@@ -3,6 +3,76 @@
 **Created:** April 30, 2026  
 **Last Updated:** August 4, 2026, latest same day (**Wiring backlog W1 — the keeper rush trigger + ERR-011-009.** **New:** `src/goalkeeper-mechanics/Tests/GoalkeeperRushTests.cs`, `src/match-engine/tests/GkRushTriggerTests.cs`, `src/match-engine/tests/GkRushDiagnosticTests.cs`, `docs/tracking/gk-rush-trigger-design.md`. **Modified:** `MatchEngine.cs` v1.58 (`TryCommitRushIntents` — the first production caller `GoalkeeperMechanics.CommitRushIntent` has ever had), `GkHeadingIntentSource.cs` v1.1 (`RushArmed` + `HasGoalSideCover` + `TrySolveRushIntercept`), `GoalkeeperRushDispatch.cs` v1.1 (§3.7.0 `ComputeRushCommitDistanceM` — ERR-011-010), `MatchEngineConstants.cs` v1.28, `GoalkeeperMechanics.cs` v1.11, `GoalkeeperStateMachine.cs` v1.7, `GoalkeeperConstants.cs` v1.5, `GoalkeeperMechanicsTests.cs` (the new state-machine parameter + five ERR-011-009 priority cases), `docs/specs/goalkeeper-mechanics/section-3.md` v0.7 (new §3.7.0 + six §3.4.6 constants + the two §3.1.1 rows), `spec-error-log.md` v1.56, `match-engine-wiring-backlog.md` v1.1, `open-issues.md`, `CLAUDE.md`. No `SNAPSHOT_SCHEMA_VERSION` change (#11's own serialized `_rushIntentActive` is the latch). **Gate NOT run and no measurement taken — the authoring environment has no .NET SDK and the agent proxy denies the installer.** **Prior entry below.**)
 
+**Last Updated (prior):** August 4, 2026, latest same day (**P4a adversarial-review pass 2 — 1 High, 4 Medium fixed.**
+No new files. Modified in `src/match-client-core/`: `PitchCameraPose.cs` → v1.1 (**H-1**: + `FieldOfViewDegrees`
+— the rig placed the camera but never said how much it *sees*, so P4b would have chosen a field of view
+inside the `MonoBehaviour`, a framing decision where the gate cannot reach it), `PitchCameraRig.cs` → v1.1
+(+ `GroundExtentAlongTilt`), `MatchClientConstants.cs` → v1.5 (+ `CameraVerticalFovDegrees` bounded against
+the tilt, + `RequireFinite` for `CameraLateralOffsetM`, + `RequireFarRayMeetsGround`; **and the v1.4 row the
+tilted-view revision never wrote**), `PitchViewProjection.cs` → v1.2 (`ToView` / `ToPitch` deleted — no
+production caller survived the revision), `PitchMarking.cs` → v1.2 (doc: markings go on the ground plane via
+`ToWorld`, not the flat `ToView`), `MatchRenderProjection.cs` (**the v1.2 row the revision never wrote**).
+Tests: `PitchCameraRigTests.cs` → v1.1, `MatchClientConstantsTests.cs` → v1.2, `PitchViewProjectionTests.cs`
+→ v1.2. Plus, from the post-fix sweep, `PitchMarkingKind.cs` → v1.1 (its `Rectangle` member still documented
+corner ordering as NOT guaranteed — the contract pass 1's H-1 reversed in `PitchMarking.cs` alone).
+Pass 3 (converged — no High, no Medium): `PitchCameraPose.cs` → v1.2 and
+`MatchClientConstantsTests.cs` → v1.3, both doc/comment-only Lows. Gate re-run on the converged tree: PASSED.
+`match-client-core` 129 → 135; full dotnet gate PASSED, 0 failures. **No new assembly**, no `SNAPSHOT_SCHEMA_VERSION` change, no spec
+change. Production assembly count stays 31.)
+
+**Last Updated (prior):** August 4, 2026, later same day (**Match-engine wiring audit — the built-but-unwired inventory.** **New:** `docs/tracking/match-engine-wiring-backlog.md` v1.0. **Modified:** `CLAUDE.md` (roadmaps table + the KD-W1 `[GT]` freeze beside the realism-pass convention), `open-issues.md`, `file-manifest.md`, `CHANGELOG.md`. Read-only audit — **no `src/` change, no spec change, no gate run** (no `.cs`, `.asmdef` or `tools/dotnet-ci` file moved). Found 10 Class-A dormant capabilities across the 18 assemblies the engine composes; the two largest are the keeper rush trigger (`CommitRushIntent` has no production caller, so every 1v1 is a stationary keeper on his line) and the tackle chain (`DefensiveAITick.GetTackleIntentRequests` is populated every tick and read by nobody, while `GetAndClearTackleFlag` is hardcoded `=> false` in **both** engine adapters — making #5 §3.8.5's tackle-interrupt branch unreachable, so no player has ever made a tackle). **Prior entry below.**)
+
+**Last Updated (prior):** August 4, 2026 (**Tilted-view revision — KD-P4a-2, owner call.**
+New in `src/match-client-core/`: `PitchCameraPose.cs` and `PitchCameraRig.cs` v1.0 + a
+`tests/PitchCameraRigTests.cs` v1.0. Modified: `PitchViewProjection.cs` → v1.1 (+ `ToWorld` /
+`ToWorldGround` / `TryGroundHit`; `ToViewGround` replaced), `BallRenderModel.cs` → v1.2 and
+`AgentRenderModel.cs` → v1.2 (`ViewPosition` → `WorldPosition`), `MatchRenderProjection.cs` → v1.2
+(`HeightScale` deleted), `MatchClientConstants.cs` → v1.4 (the three ball-height dials removed, three
+camera-rig dials added), plus three test fixtures. A tilted camera makes height a real world axis, so
+the faked height cues and their `[GT]` dials are gone — the revision deletes more than it adds. **No
+new assembly**, no `SNAPSHOT_SCHEMA_VERSION` change, no spec change. Production assembly count stays
+31.)
+
+**Last Updated (prior):** August 4, 2026 (**Close-chance creation (§5.Z.24) — ERR-008-018.** **New:** `src/match-engine/tests/CloseChanceDiagnosticTests.cs`, `src/match-engine/tests/MatchEngineCloseChanceScenarios.cs` + `MatchEngineCloseChanceTests.cs`, `docs/tracking/close-chance-creation-design.md`. **Modified:** `UtilityScorer.cs` v1.13 (+`DirectionQuality_DRIBBLE` / `ComputeDribbleDirectionQuality`), `UtilityWeights.cs` v1.6 (+`DRIBBLE_GOAL_DIR_MIN_MODIFIER` `[GT]` = 0.80), `UtilityScorerTests.cs` v1.7 (+4 locks), `MatchEngine.cs` v1.57 (three measurement seams — `TestOnly_DtLastAction` / `TestOnly_AttackIntent` / `TestOnly_PositioningPhase` — plus the pointer comment recording the refused #15 run overlay), `docs/specs/decision-tree/section-3-1.md` v1.2 (§3.1.5.2 cross-reference corrected), `docs/specs/decision-tree/section-3-2.md` v1.8 + `section-3-2-3-to-3-2-9.md` (§3.2.4.1 formula + worked examples A/A′/B), `spec-error-log.md` v1.56, `match-engine-design.md` §5.Z.24, `open-issues.md`, `CLAUDE.md`. Measured: dribble cosine to goal −0.302 → +0.006 and goalward share 31% → 49% on all six seeds; the creation funnel itself did NOT move and is not claimed. No schema/RNG/draw-order change. **Prior entry below.**)
+
+**Last Updated (prior):** August 4, 2026 (**P4a adversarial-review pass — 1 High, 5 Medium, 3 Low fixed.**
+New: `src/match-viewer/RosterShirtNumbers.cs` v1.0 and `src/match-viewer/tests/RosterShirtNumbersTests.cs`
+v1.0 — the shirt-numbering rule had been *duplicated* (the browser viewer's inline `computeJersey`
+survived) while three documents claimed it had *moved* into `MatchRoster`; it now has one
+implementation both Views consume. Modified in `src/match-client-core/`: `PitchMarking.cs` → v1.1
+(**H-1**: `Rectangle` normalises its corners, so the away-end boxes stop arriving with descending X —
+a binding taking `B − A` as an extent would have drawn those two inverted while the home pair looked
+right), `MatchRenderProjection.cs` → v1.1 (**M-2** non-finite positions refused fail-loud, matching
+`MatchFrameView`; **M-3** passes `HasBall`; **M-4** the silent cap repair deleted),
+`AgentRenderModel.cs` → v1.1 (**M-3** the ring radius derives from `HasBall`, not the reverse),
+`MatchClientConstants.cs` → v1.3 (**M-4** boot-time range/invariant validation, covered by the new
+`tests/MatchClientConstantsTests.cs` v1.0 — an untestable guard replacing an untestable repair branch
+would have moved the problem, not fixed it; **M-5** two fabricated
+rationale figures replaced with checked ones), `BallRenderModel.cs` → v1.1 (**M-5**), `MatchRoster.cs`
+→ v1.1 (**M-6**), and the three `tests/` fixtures → v1.1. Modified in `src/match-viewer/`:
+`LiveMatchStreamer.cs` → v1.7 (boot-cached `ShirtNumber`), `LiveMatchServer.cs` → v1.4 (roster payload
+gains `"shirt"`; `computeJersey` deleted — a JSON key addition and a script change, unlike v1.3).
+**No new assembly**, no `SNAPSHOT_SCHEMA_VERSION` change, no spec change. Production assembly count
+stays 31.)
+
+**Last Updated (prior):** August 3, 2026, latest same day (**Interactive Unity client P4a — the host-free
+render model.** New in `src/match-client-core/`: `PitchViewProjection.cs`, `PitchMarkingKind.cs`,
+`PitchMarking.cs`, `PitchMarkings.cs`, `MatchRoster.cs`, `AgentRenderModel.cs`, `BallRenderModel.cs`,
+`MatchRenderProjection.cs`, and four test files — `tests/PitchViewProjectionTests.cs`,
+`tests/PitchMarkingsTests.cs`, `tests/MatchRosterTests.cs`, `tests/MatchRenderProjectionTests.cs`.
+Modified: `MatchClientConstants.cs` → v1.2 (the render-cue `[GT]` sizes v1.0 deferred to their
+consumers), `src/match-viewer/LiveAgentCue.cs` → v1.1 (**+ `IsGoalkeeper`**, KD-P4a-1 — the flag is
+per-frame because a substitution rewrites it), `src/match-viewer/LiveMatchStreamer.cs` → v1.6 (samples
+it each tick; the boot cache re-documented as boot-time only), `src/match-viewer/LiveMatchServer.cs` →
+v1.3 (roster `gk` reads the frame cue), `src/match-viewer/tests/LiveMatchFrameCueTests.cs` → v1.2, and
+the two `src/ui-framework/Tests/` fixtures that construct a cue. **No new assembly**, no
+`SNAPSHOT_SCHEMA_VERSION` change, no spec change. Production assembly count stays 31. Tracking docs:
+`interactive-unity-client-design.md` → v0.12 (§5-P4 split into P4a/P4b + KD-P4a-1; §12 next step is
+P4b), `path-to-playable-roadmap.md` → v0.12 (row B7 landed; B8–B10 opened), plus `CLAUDE.md` and
+`CHANGELOG.md`/`CHANGELOG-src.md`.)
+
+**Last Updated (prior):** August 3, 2026 (**Two production assemblies were missing from this manifest
+
 **Last Updated (prior):** August 4, 2026, latest same day (**`match-realism-pass` skill re-cut for wire-first —
 the calibration ladder moves behind a wiring gate, and the gate defers to the wiring backlog and
 KD-W1.** Tooling-only; **no file added, removed, renamed or moved**, so no inventory row changes and
@@ -1446,7 +1516,8 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/match-viewer/tests/MatchViewerTests.cs` | Frame cadence; on-pitch finiteness; bitwise two-run determinism; observer-neutrality digest lock; fail-loud guards; exporter structure/no-NaN locks |
 | `src/match-viewer/AssemblyInfo.cs` | `InternalsVisibleTo` the test assembly (the `LiveMatchStreamer.TickOnce` / `ApplyCapturedFrame` seams are internal). **v1.1 (P6, Aug 3, 2026):** + `InternalsVisibleTo("TacticalDirector.MatchClientCore")` so `MatchSession.TickOnce()` drives the REAL `TickOnce()` seam head-lessly rather than a parallel client-side tick path — the hook, the frame capture and the auto-pause rule then behave in the closed-loop scenario exactly as they do under paced playback. Nothing is widened for the browser viewer: the seam stays internal to `match-viewer` |
 | `src/match-viewer/LiveMatchFrame.cs` | One live-captured frame (July 15, 2026): tick / ball / possession / positions / `Scoreline` / `MatchEnded` — plus, since P1, per-agent `LiveAgentCue[]`, per-team substitution counts, the derived `MatchPeriod` and the latched `RestartBanner` |
-| `src/match-viewer/LiveAgentCue.cs` | P1: the per-agent HUD cue — yellow cards, sent-off, active bench slot (`IsSubstitute` derived from the slot, so the two can never disagree) |
+| `src/match-viewer/RosterShirtNumbers.cs` | **P4a AR M-6** — the one implementation of the Stage-0 shirt-numbering rule (per-team, 1-based, roster order), consumed by both `MatchRoster` and the browser viewer's `/frame` payload. In `match-viewer` because that is the lowest assembly both Views reach |
+| `src/match-viewer/LiveAgentCue.cs` | P1: the per-agent HUD cue — yellow cards, sent-off, active bench slot (`IsSubstitute` derived from the slot, so the two can never disagree). **P4a (v1.1): + `IsGoalkeeper`** — the first cue added through the KD-P1-6 extension mechanism, and here rather than in the streamer's boot cache because `MatchEngine.SubstitutePlayer` rewrites the slot's flag (KD-P4a-1) |
 | `src/match-viewer/Scoreline.cs` | P1 AR-1 M-6: the home/away score pair as one carrier; owns the non-negative gate, so a negative score is refused before it can reach a frame |
 | `src/match-viewer/RestartBanner.cs` | P1 AR-1 M-6: the latched restart (cue + awarded team + tick). Team and tick are DERIVED from the cue, so `default(RestartBanner)` reports `NO_RESTART_TEAM` / 0 rather than "home team, tick 0" |
 | `src/match-viewer/LiveMatchStreamer.cs` | Real-time-paced `MatchEngine` tick loop (July 15, 2026); lock-protected latest-frame handoff; pause/resume/speed; full-time auto-pause; optional sim-thread pre-tick hook. Owns the P1 cross-tick restart latch — deliberately here, not in the engine, so nothing about it reaches the snapshot (KD-P1-3) |
@@ -1535,9 +1606,9 @@ Presentation-layer derivation. Read-only over two taps (FR-AN-002); no sim assem
 
 ---
 
-### `src/match-client-core/` — the interactive Unity client's host-free core (P0–P3 + P6, July 24 – August 3, 2026)
+### `src/match-client-core/` — the interactive Unity client's host-free core (P0–P4a + P6, July 24 – August 3, 2026)
 
-Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P0 … §5-P3,
+Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P0 … §5-P4a,
 plus the head-less half of §5-P6).
 **Host-free and CI-gated** — this is the half of the interactive Unity client that carries every
 determinism-bearing concern (session, command channel, tick-stamped log, view-state math), split from
@@ -1560,6 +1631,14 @@ the Unity-only skin precisely so it stays under `tools/dotnet-ci` on every push.
 | `TickStampedCommandReplay.cs` | **P6** — the log-driven replay cursor: enqueues each entry immediately before the tick whose pre-tick `CurrentTick` equals its `AppliedTick`, so the drain re-stamps it identically. `FromTick(log, n)` slices the resume tail for a save/restore round trip. Refuses an out-of-order log and an entry whose application point has already passed — silently skipping either would produce a run that is NOT the log's run while reporting success |
 | `FrameInterpolator.cs` | **P3** — blends two captured `LiveMatchFrame`s for a 60 FPS renderer. Speed-aware alpha, and **snaps rather than smooths across a discontinuity** (a restart teleports the ball; a substitution swaps who occupies a roster slot) |
 | `FollowBallCamera.cs` | **P3** — dead zone, `1 − e^(−rate·dt)` smoothing proven frame-rate-independent by step subdivision, and a pitch clamp that centres when the view is wider than the pitch |
+| `PitchViewProjection.cs` | **P4a** — the one documented coordinate adapter (§7): engine corner-origin metres ⇄ a centre-origin view plane at 1 unit per metre, plus the inverse a pointer click needs and an on-pitch predicate. Centring is what makes a home position and its away mirror differ only in sign |
+| `PitchMarkingKind.cs` | **P4a** — the closed shape set a marking can be (`Line`/`Rectangle`/`Circle`/`Spot`/`GoalMouth`), so the render binding is an exhaustive switch that decides nothing |
+| `PitchMarking.cs` | **P4a** — one marking as a shape plus up to two points and a radius, in corner-origin metres; a named factory per shape so field meaning is stated at every construction site. `Rectangle` normalises its corners (A = min, B = max) so the away-end boxes cannot reach a binding reversed (AR H-1) |
+| `PitchMarkings.cs` | **P4a** — the 12-marking IFAB catalogue, built from the **existing** `MatchViewerConstants` `[FIXED]` values (§7's one source of truth across both Views). Both ends emitted from one loop over a sign, so a marking cannot be right at one end and wrong at the other. D-arc and corner arcs deliberately absent — no `[FIXED]` constant exists for either |
+| `MatchRoster.cs` | **P4a** — match-**constant** per-slot data: team id and the slot-ordinal shirt number, the latter delegated to `match-viewer`'s `RosterShirtNumbers` so the browser viewer shares one rule (AR M-6). Holds **no** goalkeeper flag by design — that one changes under substitution and rides the per-frame cue (KD-P4a-1) |
+| `AgentRenderModel.cs` | **P4a** — one agent's resolved draw state: team, shirt, view position, marker and possession-ring radii, live goalkeeper flag, cards, sent-off, substitute. Colour-free — a palette has no correct answer a test could assert |
+| `BallRenderModel.cs` | **P4a** — the ball's resolved draw state: shadow at the ground point, sprite lifted and grown with height, the raw engine height, and both radii |
+| `MatchRenderProjection.cs` | **P4a** — frame + interpolated positions → the draw states above. Positions from the P3 interpolator's buffer (what is actually drawn); every discrete cue from the newest frame (cues do not interpolate). Allocation-free; fail-loud on every shape mismatch |
 | `tests/match-client-core-tests.asmdef` | `TacticalDirector.MatchClientCore.Tests` (Editor-only); gains `TacticalDirector.TestingStrategy` at P6 so the closed-loop scenarios run on the #19 `ScenarioRunner` |
 | `tests/RecordingMutations.cs` | Test double over `ILiveMatchMutations` |
 | `tests/ManagerCommandQueueTests.cs` | FIFO, thread-safe enqueue, the exactly-three-game-kinds §6.4 lock, default-command reject |
@@ -1568,14 +1647,22 @@ the Unity-only skin precisely so it stays under `tools/dotnet-ci` on every push.
 | `tests/TickStampedCommandReplayTests.cs` | **P6** — re-stamping at the recorded tick, the target-tick entry staying pending, incremental `AdvanceTo`, out-of-order and passed-application-point refusals, and `FromTick` validating the WHOLE log rather than just the slice |
 | `tests/MatchClientClosedLoopScenarios.cs` | **P6** — the two §5-P6 cross-spec closed-loop scenarios (owning specs {16,19,21}, paths under `SCENARIO_PATH_CROSS_SPEC_PREFIX`). `match-client-command-log-replay`: script → log, log → digest-identical replay, log is a fixed point of its own replay, plus a **command-free control run that MUST diverge** in a bounded window — without it every predicate above would pass on a channel that did nothing. `match-client-save-restore-replay`: save@90 → restore → replay the post-90 log to tick 180 == the uninterrupted run |
 | `tests/MatchClientClosedLoopScenarioTests.cs` | **P6** — the two `sim_crossspec_*` executable entry points, asserting `ScenarioStatus.Passed` and surfacing the machine-readable diagnostics |
+| `tests/PitchViewProjectionTests.cs` | **P4a** — the corner-not-centre origin convention, the home/away mirror, the round trip, unit scale, and the on-pitch predicate |
+| `PitchCameraPose.cs` | **P4a (KD-P4a-2)** — a resolved camera placement as two world points (position + look-at). No rotation type: `Quaternion` is not in the CI shim, and the Unity side calls `transform.LookAt` |
+| `PitchCameraRig.cs` | **P4a (KD-P4a-2)** — where the camera goes: height, tilt measured **from vertical**, and the lateral offset that makes the view oblique enough to read depth. Reports its own effective tilt, which the offset skews on purpose |
+| `tests/PitchCameraRigTests.cs` | **P4a (KD-P4a-2)** — placement, the tilt convention, the deliberate skew, both-ends tracking, and the closing loop: a ray from the camera to its own aim point must return the target through `TryGroundHit` |
+| `tests/MatchClientConstantsTests.cs` | **P4a AR M-4** — drives the catalogue's boot-time `[GT]` validators directly (`RequireAtLeast`, `RequireGreaterThan`), including the NaN case the naive `value < minimum` form would have let through. They are otherwise reachable only from a config file |
+| `tests/PitchMarkingsTests.cs` | **P4a** — count and determinism, the four common markings, **every end-specific marking mirrored exactly at the other end**, IFAB distances read back against `MatchViewerConstants`, and the unused-field-is-zero contract |
+| `tests/MatchRosterTests.cs` | **P4a** — per-team 1-based numbering (keeper on 1, asserted for **both** teams), uniqueness, an interleaved-order case that discriminates the rule from `index / 11`, copy semantics, argument guards |
+| `tests/MatchRenderProjectionTests.cs` | **P4a** — which source each field comes from (the positions-must-come-from-the-interpolator lock), the goalkeeper flag following a substitution, possession ringing mirrored to both teams, every shape guard, and the ball's shadow / lift / capped-scale cues |
 | `tests/FrameInterpolatorTests.cs` | **P3** — speed-aware alpha and the snap-across-discontinuity contract |
 | `tests/FollowBallCameraTests.cs` | **P3** — dead zone, frame-rate independence by step subdivision, pitch-clamp centring |
 
 ---
 
-### `src/match-client-unity/` — the Unity-only render/UGUI skin (P4–P6, not yet built)
+### `src/match-client-unity/` — the Unity-only render/UGUI skin (P4b–P6, not yet built)
 
-Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P4 … §5-P6).
+Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P4b … §5-P6).
 **Scaffolded only — asmdef and README, no scripts.** It will hold the `MonoBehaviour` render/camera/HUD
 skin and the UGUI screens: types that need a Unity host (`Camera`, `SpriteRenderer`, `GameObject`, UGUI).
 It adds a skin over `match-client-core`, never engine-facing logic.

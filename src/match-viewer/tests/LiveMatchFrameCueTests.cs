@@ -43,6 +43,50 @@ namespace TacticalDirector.MatchViewer.Tests
                 Assert.AreEqual(engine.AgentYellowCards(i), frame.AgentCues[i].YellowCards, "agent " + i);
                 Assert.AreEqual(engine.AgentIsSentOff(i),   frame.AgentCues[i].IsSentOff,   "agent " + i);
                 Assert.AreEqual(engine.AgentBenchSlot(i),   frame.AgentCues[i].BenchSlot,   "agent " + i);
+                Assert.AreEqual(engine.AgentIsGoalkeeper(i), frame.AgentCues[i].IsGoalkeeper, "agent " + i);
+            }
+        }
+
+        [Test]
+        public void TheCueConstructorMapsItsArgumentsPositionally()
+        {
+            // Two ints and two bools: the shape AR-1 M-6 called out on LiveMatchFrame's ctor, here at
+            // four parameters where collapsing them into carriers would cost more than it buys. The
+            // cheap defence is to assert the mapping once, so a transposed pair fails here rather
+            // than as a sent-off keeper somewhere on screen.
+            var cue = new LiveAgentCue(yellowCards: 1, isSentOff: false, benchSlot: 5, isGoalkeeper: true);
+
+            Assert.AreEqual(1, cue.YellowCards);
+            Assert.IsFalse(cue.IsSentOff);
+            Assert.AreEqual(5, cue.BenchSlot);
+            Assert.IsTrue(cue.IsSubstitute);
+            Assert.IsTrue(cue.IsGoalkeeper);
+        }
+
+        [Test]
+        public void AGoalkeeperSubstitution_MovesTheFrameCue_WhileTheBootAccessorGoesStale()
+        {
+            // The defect the per-frame flag exists for. A default engine's bench players are all
+            // outfielders, so substituting a keeper off leaves that slot no longer a goalkeeper —
+            // and the streamer's boot-time roster cache cannot know. Run for BOTH teams: a home-only
+            // check would pass on an implementation that only ever re-sampled team 0.
+            for (int team = 0; team < MatchEngineConstants.TEAM_COUNT; team++)
+            {
+                var engine   = new MatchEngine.MatchEngine(Seed);
+                var streamer = new LiveMatchStreamer(engine);
+                int keeperSlot = team * MatchEngineConstants.PLAYERS_PER_TEAM;
+
+                LiveMatchFrame before = streamer.TickOnce();
+                Assert.IsTrue(before.AgentCues[keeperSlot].IsGoalkeeper, "team " + team + " starts with a keeper");
+
+                engine.SubstitutePlayer(team, keeperSlot, benchIndex: 0, SubstitutionReason.Tactical);
+                LiveMatchFrame after = streamer.TickOnce();
+
+                Assert.IsFalse(engine.AgentIsGoalkeeper(keeperSlot), "team " + team + ": the engine moved the flag");
+                Assert.IsFalse(after.AgentCues[keeperSlot].IsGoalkeeper,
+                    "team " + team + ": the frame cue must follow the engine, not the boot snapshot");
+                Assert.IsTrue(streamer.IsGoalkeeper(keeperSlot),
+                    "team " + team + ": the boot accessor is documented as boot-time and is expected to be stale here");
             }
         }
 
@@ -149,4 +193,9 @@ namespace TacticalDirector.MatchViewer.Tests
 // |         |            |        | three loose frame fields. The no-restart case now asserts the  |
 // |         |            |        | NO_RESTART_TEAM sentinel rather than a bare 0, which the       |
 // |         |            |        | loose-field form could not distinguish from the home team.     |
+// | 1.2     | 2026-08-03 | —      | P4a: the lockstep test also asserts the new cue                 |
+// |         |            |        | IsGoalkeeper against the live engine; + a ctor field-mapping    |
+// |         |            |        | guard (two ints and two bools) and the substitution test that   |
+// |         |            |        | shows the cue following the engine while the streamer's         |
+// |         |            |        | boot-time accessor goes stale — run for both teams.             |
 #endregion

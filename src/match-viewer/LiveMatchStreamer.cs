@@ -3,6 +3,8 @@
 // Modified: 2026-07-27 (interactive Unity client §5-P1: captures the per-agent cues / substitution
 //           counts / derived period, and latches the engine's within-tick restart cue — KD-P1-3,
 //           held in a single RestartBanner after AR-1 M-6)
+// Modified: 2026-08-03 (P4a: CaptureFrame samples the live goalkeeper flag into LiveAgentCue)
+// Modified: 2026-08-04 (P4a AR pass: shirt numbers come from the shared RosterShirtNumbers rule)
 // Author:   —
 // Spec:     Interactive match view (docs/tracking/interactive-match-view-design.md) +
 //           interactive Unity client (docs/tracking/interactive-unity-client-design.md §4/§5-P0/§6),
@@ -49,6 +51,7 @@ namespace TacticalDirector.MatchViewer
         private readonly object _tickGate = new object();
         private readonly int[]  _teamIds;
         private readonly bool[] _isGoalkeeper;
+        private readonly int[]  _shirtNumbers;
 
         // Optional sim-thread hook run at the top of every tick, ahead of RunTick() (and by
         // ServiceOnce() off-tick). Null for the browser viewer, which supplies none — so its
@@ -99,9 +102,12 @@ namespace TacticalDirector.MatchViewer
             _engine         = engine;
             _ticksPerSecond = ticksPerSecond;
 
-            // Roster metadata never changes across a match — captured once here so LiveMatchServer
-            // can render team/GK cues without ever holding a MatchEngine reference itself (§9.1 of
-            // the design note: the server and the engine must stay disjoint by construction).
+            // Captured once here so LiveMatchServer can render roster cues without ever holding a
+            // MatchEngine reference itself (§9.1 of the design note: the server and the engine must
+            // stay disjoint by construction). Team ids never change across a match — a bench player
+            // belongs to the team whose bench they sit on. The goalkeeper flags do NOT share that
+            // property (a substitution rewrites the slot's flag), so this copy is a boot-time
+            // snapshot only and the live flag rides LiveAgentCue.IsGoalkeeper on each frame.
             _teamIds      = new int[MatchEngineConstants.SQUAD_SIZE];
             _isGoalkeeper = new bool[MatchEngineConstants.SQUAD_SIZE];
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
@@ -109,6 +115,11 @@ namespace TacticalDirector.MatchViewer
                 _teamIds[i]      = engine.AgentTeamId(i);
                 _isGoalkeeper[i] = engine.AgentIsGoalkeeper(i);
             }
+
+            // Shirt numbers are slot ordinals derived from the team ids, so they are boot-constant
+            // for the same reason team ids are — the number belongs to the slot, and a substitution
+            // hands it to whoever fills that slot.
+            _shirtNumbers = RosterShirtNumbers.Assign(_teamIds);
         }
 
         /// <summary>Number of agents per frame (mirrors <c>MatchEngineConstants.SQUAD_SIZE</c>).</summary>
@@ -127,11 +138,29 @@ namespace TacticalDirector.MatchViewer
             return _teamIds[index];
         }
 
-        /// <summary>True when roster <paramref name="index"/> is a goalkeeper.</summary>
+        /// <summary>
+        /// True when roster <paramref name="index"/> started the match as a goalkeeper.
+        ///
+        /// <para><b>Boot-time only.</b> Substituting a keeper for an outfield player (or the
+        /// reverse) moves which slot is the goalkeeper, and this array is not re-sampled. Use
+        /// <c>LiveAgentCue.IsGoalkeeper</c> from the current frame for the live answer; this
+        /// accessor exists for callers that need roster metadata before the first frame is
+        /// captured.</para>
+        /// </summary>
         public bool IsGoalkeeper(int index)
         {
             GuardRosterIndex(index);
             return _isGoalkeeper[index];
+        }
+
+        /// <summary>
+        /// Shirt number drawn on roster <paramref name="index"/>'s marker — 1-based within its team,
+        /// per <see cref="RosterShirtNumbers"/>, which is the one implementation of that rule.
+        /// </summary>
+        public int ShirtNumber(int index)
+        {
+            GuardRosterIndex(index);
+            return _shirtNumbers[index];
         }
 
         private static void GuardRosterIndex(int index)
@@ -323,7 +352,8 @@ namespace TacticalDirector.MatchViewer
                 cues[i]      = new LiveAgentCue(
                     _engine.AgentYellowCards(i),
                     _engine.AgentIsSentOff(i),
-                    _engine.AgentBenchSlot(i));
+                    _engine.AgentBenchSlot(i),
+                    _engine.AgentIsGoalkeeper(i));
             }
 
             var subsUsed = new int[MatchEngineConstants.TEAM_COUNT];
@@ -570,4 +600,17 @@ namespace TacticalDirector.MatchViewer
 // |         |            |        | banner derives its team and tick from its own cue, so the      |
 // |         |            |        | zeroed default already reads as "no restart" and there is no   |
 // |         |            |        | separate no-restart constant to keep in step with it.          |
+// | 1.6     | 2026-08-03 | —      | P4a: CaptureFrame samples AgentIsGoalkeeper into the new       |
+// |         |            |        | LiveAgentCue.IsGoalkeeper each tick, and the boot-cached       |
+// |         |            |        | _isGoalkeeper array is re-documented as boot-time only. The    |
+// |         |            |        | comment above it claimed "roster metadata never changes";      |
+// |         |            |        | true of team ids, false of goalkeeper flags, which a           |
+// |         |            |        | substitution rewrites (MatchEngine.SubstitutePlayer).          |
+// | 1.7     | 2026-08-04 | —      | P4a AR pass (M-6): + a boot-cached ShirtNumber(int) computed by |
+// |         |            |        | RosterShirtNumbers, so LiveMatchServer serves the number and   |
+// |         |            |        | the viewer script stops recomputing the rule in JavaScript.    |
+// |         |            |        | Unlike goalkeeper flags these ARE boot-constant: the number    |
+// |         |            |        | belongs to the slot, and a substitution hands it to whoever    |
+// |         |            |        | fills that slot. Also records the 2026-08-03 Modified line the |
+// |         |            |        | v1.6 landing left off the header.                              |
 #endregion

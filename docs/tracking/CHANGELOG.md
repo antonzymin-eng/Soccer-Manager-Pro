@@ -130,6 +130,10 @@ break it, and do not edit historical entries.
 > backlog sequence: **C1**, the `InPoss` gate — the largest starvation on the board. Prior entry
 > below.)
 
+> **Last Updated (prior):** August 4, 2026, latest same day (**MERGE — `main` into the P4a branch, and a version-number collision resolved.** PR #295 was un-mergeable. Three conflicts, **all in the "newest entry at top" chains** — this file, `CHANGELOG-src.md`, `file-manifest.md` — which is the expected class when two branches each prepend, and **no source conflict at all**: `main` had moved on in `decision-tree` and `match-engine` only, which the client assemblies do not touch. Resolved by **interleaving both sides chronologically by commit time** rather than picking a winner, so every entry from both branches survives verbatim, one `Last Updated:` per chain, everything below it `(prior)`. **The collision worth knowing about:** both branches independently allocated `CHANGELOG-src.md` **v2.53**. `main` owns it (close-chance §5.Z.24, already in trunk), so this branch's four entries renumbered up by one — P4a landing 2.53→**2.54**, AR pass 1 →**2.55**, tilted-view →**2.56**, AR pass 2/3 →**2.57** — in both the header chain and the VERSION HISTORY table. Nothing outside that file cited them (grep over `docs/`, `src/`, `README.md`). **A consequence to leave alone rather than "fix":** 2.54 is dated August 3 and sits above 2.53 dated August 4. The table is keyed on version, and version numbers record the order things land in trunk, which is not the order they were written — renumbering by date would mean renumbering an entry already merged. **One edit to content that arrived from `main`, made deliberately and recorded here rather than silently:** its chain tagged close-chance `v2.52` while its own VERSION HISTORY table gives that entry 2.53; left alone the merge would have put two `v2.52` tags in one chain — the duplicated-version hazard this project has a standing trap entry for — so the tag now agrees with the table it contradicted. **Deliberately NOT touched:** `main` carries a repeated §5.Z.23 entry in both changelog chains (both tagged v2.51), and the VERSION HISTORY table has six long-standing duplicate version ids (2.9, 2.10, 2.34, 2.36, 2.42, 2.44) — identical on both branches, so neither was introduced here. Deleting a historical entry during a conflict resolution is what these files forbid, and renumbering 150 rows of merged history is not a merge's job. **Verified mechanically, not by reading:** every line of both parents is accounted for in all three merged files — the only absences are the label relabels, the four renumbers, one deduplicated header, and five manifest rows where this branch's text is a superset of `main`'s (the `LiveAgentCue` row gained `IsGoalkeeper`; the client section headers moved P3→P4a and P4→P4b). Every P4a source file is byte-identical pre- and post-merge. No `src/` change in this merge.)
+>
+> **Last Updated (prior):** August 4, 2026, latest same day (**P4a ADVERSARIAL-REVIEW PASS 2 — 1 High, 4 Medium fixed; run over the tilted-view revision's own output.** **H-1, and it is the pointed one:** `PitchCameraRig` decided where the camera goes and how it is angled, but said nothing about **how much of the pitch it sees** — so P4b would have chosen a field of view inside the `MonoBehaviour`. A framing decision, in the one place the CI gate cannot compile, sitting inside the deliverable whose entire purpose is keeping decisions out of there (§12 rule 1, the P4a/P4b split). `PitchCameraPose` gains `FieldOfViewDegrees` — the binding now assigns position, look-at and field of view, and picks nothing — `MatchClientConstants` gains `CameraVerticalFovDegrees`, and because two individually-legal dials can pair into a camera whose lowest ray never meets the ground, the bound is `tilt + fov/2 < 90` rather than two range checks. `PitchCameraRig.GroundExtentAlongTilt` attaches a number to the framing: near and far reach of visible ground, **deliberately asymmetric**, since a tilted camera sees a trapezoid and asserting symmetry is the mistake the test guards. **M-1:** §5-P4b instructed *both* cameras in a single bullet — the new rig placement and, in the same sentence, the deleted orthographic one — while the very next bullet said the orthographic assumption was wrong; the roadmap's B8 row carried only the stale half. The live instruction sheet for the next phase on the critical path contradicted itself. **M-2:** `PitchMarking`'s doc still sent the render skin to `ToView`, which would stand every marking upright in the world XY plane instead of laying it on the turf — and `ToView`/`ToPitch` turned out to have no production caller left at all after the revision (`ToView` was `ToWorld` with the height dropped, and the inverse a click needs is a ray intersection), so both are deleted and their tests re-anchored. **M-3:** `CameraLateralOffsetM` was the only camera dial with no validation, and it lands directly in the camera's world position — a non-finite value put the camera nowhere while every assertion about the aim point still passed. **M-4:** the tilted-view revision never appended version-history rows to `MatchClientConstants.cs` (v1.4) or `MatchRenderProjection.cs` (v1.2), so each file's newest row described constants and a `HeightScale` it no longer had, and three tracking documents cited versions the files themselves did not claim. The `// Modified:` date check did not catch it, because the previous row carried the same date. `match-client-core` 129 → 135; the two new locks verified non-vacuous by breaking them (symmetric ground extent fails 2, a fov dropped from the pose fails 1). **Full dotnet gate: PASSED, 0 failures** (whole tree green, 30 suites; match-client-core 129 → 135, match-engine 368 unchanged). **The sweep after the fixes found one more Medium, so this pass is NOT converged** — `PitchMarkingKind.Rectangle` still documented corner ordering as *not* guaranteed and told consumers to re-normalise, which is the exact contract pass 1's H-1 reversed: `PitchMarking.cs` was fixed then and the enum sitting beside it was not, so two files stated opposite contracts for one field, and the enum is the one a renderer switching on `Kind` reads first. Fixed; the guarantee is test-locked by `EveryRectangleArrivesWithItsCornersNormalised`, so the docs cannot silently drift from the code again. **Pass 3 then re-read the whole P4a surface and surfaced no High and no Medium — the loop is converged.** Two Lows fixed: `PitchCameraPose`'s header and class summary still described it as two values, and a test comment credited the wrong assertion with guarding the static-init-order defect. That second one is worth stating plainly, because the correction is counter-intuitive: asserting `CameraTiltDegrees > 0` does **not** catch a declaration reorder. By the time any test reads the field, static init has finished and it holds its real value whichever order it ran in. What catches it is re-evaluating the invariant itself on the finished values — a pair that is genuinely invalid fails there regardless of what the boot check saw. The guard was already present and correct; only the comment beside it was wrong. **Full dotnet gate on the converged tree: PASSED, 0 failures** (30 suites; match-client-core 135, match-engine 368 unchanged).)
+>
 > **Last Updated (prior):** August 4, 2026, latest same day (**`match-realism-pass` SKILL RE-CUT FOR WIRE-FIRST
 > — the calibration ladder moves behind a wiring gate, and the gate now defers to the wiring backlog
 > and KD-W1.** Tooling-only; no `.cs`, no spec, no assembly, no gate run. The skill encoded
@@ -243,6 +247,8 @@ break it, and do not edit historical entries.
 > geometry that decision turns on. New `docs/tracking/match-engine-wiring-backlog.md` v1.0. Read-only
 > audit — no `src/` change, no spec change, no gate run. **Prior entry below.**)
 
+> **Last Updated (prior):** August 4, 2026 (**Tilted-view revision — KD-P4a-2 (owner call).** P4a first shipped a flat top-down view with ball height faked by a sprite lift and a capped size ramp. The owner reversed it to an FM-style view — from above, **tilted back from vertical, slightly off centre** — since the ball only needs to be visible on and above the pitch, not scaled. The revision **deletes more than it adds**: with a tilted camera height is a real world axis, so `BallHeightViewOffsetPerMetre`, `BallHeightScalePerMetre` and `BallMaxHeightScale` are gone, along with `BallRenderModel.SpritePosition`/`SpriteRadius` and `MatchRenderProjection.HeightScale` — and with them the AR pass's M-5 finding and its 10 m saturation limitation, which stop existing rather than needing a retune. New: `PitchCameraRig`/`PitchCameraPose` (height, tilt-from-vertical, lateral offset — a placement is a decision, so it is gate-compiled, and the pose is two world points because `Quaternion` is not in the shim) and `PitchViewProjection.ToWorld`/`ToWorldGround`/`TryGroundHit`. **The one real cost is the click inverse:** screen position is no longer affine in pitch position, so `TryGroundHit` does a ray/ground-plane intersection; `Camera` is not in the shim, so the Unity side supplies the ray and the math stays gate-tested. Survivors, each for a reason — the **shadow** (under any tilt a lofted ball separates from the pitch point it is over, the one cue perspective cannot supply), the corner→centre re-origin (it is the ground plane), and `FollowBallCamera` (it decides *where* the camera looks). Two things recorded rather than left implicit: the engine's Y becomes the world's **Z** and its Z the world's **Y** — an axis swap, the same trap class as the corner origin, locked by its own test (seven tests fail if it is inverted) — and `FollowBallCamera`'s pitch clamp is now **approximate**, since it describes a rectangle of visible ground where a tilted view sees a trapezoid; kept deliberately, as its job is keeping the target near the pitch rather than exact framing. **Full dotnet gate: PASSED, 0 failures** (whole tree green; match-client-core 112 → 129, match-engine 368 unchanged — no sim source was touched). The entry was first written while the run was still in flight and recorded as *not yet reported*; this line replaces that provisional wording with the run's actual result.)
+>
 > **Last Updated (prior):** August 4, 2026 (**§5.Z.24 — CLOSE-CHANCE CREATION: the first premise in this
 > chain that survived its own check, one formula defect fixed, and the creation gap deliberately NOT
 > claimed.** §5.Z.23 §7 item 4 re-localized the creation residual to the final-third → penalty-area
@@ -283,6 +289,92 @@ break it, and do not edit historical entries.
 > `docs/tracking/close-chance-creation-design.md`; match-engine §5.Z.24; `spec-error-log.md` v1.56.
 > Acceptance `match-engine-close-chance` — **2 of 3 predicates fail at `7fcd897` by execution**. No
 > schema / RNG / domain-tag / draw-site / draw-order change. Prior entry below.)
+
+> **Last Updated (prior):** August 4, 2026 (**P4a ADVERSARIAL-REVIEW PASS — 1 High, 5 Medium, 3 Low fixed;
+> the pass then re-run clean.** **H-1, and the one that would have shipped:** `PitchMarking.Rectangle`
+> took its two corners in whatever order it was given, and `PitchMarkings` builds the end boxes from
+> their goal line *inwards* — so the away penalty area and away goal area arrived with **descending
+> X** while the home pair ascended. A P4b binding doing the obvious `B − A` would have drawn those two
+> inverted or invisible: the #8 ERR-008-002 home/away asymmetry class, landing in a `MonoBehaviour`
+> where the gate can never see it, in the very type whose purpose is to leave the skin nothing to
+> decide. Worse, the fixture *laundered* it — `AssertAreaBox` normalised with `Mathf.Min`/`Max` before
+> asserting, so any corner order passed. `Rectangle` now normalises (A = min, B = max), the helper
+> reads `A`/`B` directly, the mirror test states the rectangle pairing explicitly, and two new tests
+> pin it; verified non-vacuous by un-normalising the factory, which fails four tests.
+> **M-2:** the render path had **no non-finite gate** while its sibling `MatchFrameView` refuses one
+> fail-loud — and `ProjectBall`'s doc excused the omission with "the producers upstream refuse to
+> publish a non-finite coordinate at all", which is false: `LiveMatchStreamer` does not check, and
+> `FrameInterpolator` *deliberately propagates* a non-finite position (it reads as a discontinuity and
+> snaps to it). A NaN would have reached `transform.position`. Agent and ball **ground** positions are
+> now refused; ball **height** keeps its graceful degradation, because a bad height still leaves a
+> true ground position to draw at. **M-3:** `HasBall` was derived from `PossessionRingRadius > 0`, so
+> a `[GT]` config setting the ring radius to zero would have answered "nobody has the ball" for a
+> whole match — a fact about the simulation riding a presentation size. Inverted: `HasBall` is stored,
+> the radius derives. **M-4:** a `BallMaxHeightScale` below 1 was silently repaired into "no cap",
+> contradicting the `[GT]` loader's fail-loud contract in an untestable branch; it is now refused at
+> boot, along with the previously documented-only "the ring must exceed the marker" invariant, and the
+> repair branch is deleted. **M-5:** two `[GT]` rationales carried **fabricated figures** — an uncapped
+> 20 m ball is 2.8 m across, not "wider than the penalty area"/"the six-yard box", and a 0.25 m marker
+> is ~9 px at the default camera, not "a pixel". Replaced with checked numbers, plus the cap's real
+> 10 m saturation point, now pinned by a test. **M-6:** the shirt-numbering rule was **duplicated, not
+> moved** — the browser viewer's inline `computeJersey` was still there while the class doc, the
+> version history and the commit message all said it had moved into `MatchRoster`. New
+> `match-viewer/RosterShirtNumbers.cs` is now the one implementation; `LiveMatchStreamer` caches its
+> output, `LiveMatchServer` serves a `"shirt"` key, `computeJersey` is deleted, and the rule's tests
+> move down with the rule. **Lows:** a tautological marker-radius test replaced with one that can
+> fail, `MatchRoster.FromStreamer`'s happy path covered (it had only its null guard, so the only
+> production path into the type never ran), and the ring/marker invariant now enforced rather than
+> merely asserted against the fallbacks.
+> Two further defects surfaced while re-reviewing the fixes and were closed in the same pass: the M-2 gate initially ran *inside* the write loop, which would have left the destination half this frame and half the last behind a thrown exception (it now validates in a pass of its own, so the method stays all-or-nothing), and M-4's new validators were themselves unreachable from any test — replacing an untestable repair branch with an untestable guard would have moved the problem, so `MatchClientConstantsTests.cs` v1.0 drives them directly.
+> **Full dotnet gate: PASSED, 0 failures** (whole tree green; all 30 suites reported, quarantine empty) — `match-client-core` 103 → 112, `match-viewer` 41 → 48, `ui-framework` 50 (unchanged), `match-engine` 368 passed / 8 skipped (unchanged; no `match-engine` source is touched by this pass), every other suite unchanged. No new compiler warnings — the five the tree reports are pre-existing CS0649s in `decision-tree`. No `SNAPSHOT_SCHEMA_VERSION` change, no new RNG stream /
+> domain tag / draw site, no draw-order change, no engine-behaviour change.)
+>
+> **Last Updated (prior):** August 3, 2026, latest same day (**INTERACTIVE UNITY CLIENT P4a LANDED — the
+> host-free render model.** P4 is split into **P4a, every render *decision*, and P4b, the binding.**
+> That split is the August-3 owner-decision rule ("keep logic out of `MonoBehaviour`s") turned from a
+> discipline into a phase boundary, and the ordering argument is the one that already put P6's
+> head-less scenario ahead of P4: land the decisions where `tools/dotnet-ci` can compile and test them,
+> and what is left for the pinned host is binding — which a cert run genuinely verifies — rather than
+> behaviour, which it verifies only along the paths someone thought to click.
+>
+> **What landed** (all in gate-compiled `src/match-client-core/`): `PitchViewProjection`, the single
+> documented coordinate adapter §7 requires — engine **corner-origin** metres ⇄ a **centre-origin**
+> view plane at 1 unit per metre, plus the inverse a pointer click needs. Centring is not cosmetic:
+> it makes a home-end position and its away-end mirror differ only in sign, which is what turns the
+> mirrored assertions this repo's #8 ERR-008-002 history demands into one line each.
+> `PitchMarkings`/`PitchMarking`/`PitchMarkingKind`, the IFAB catalogue as shapes, read from the
+> **existing** `MatchViewerConstants` `[FIXED]` values rather than restated (§7's one-source-of-truth
+> rule across both Views), with both ends emitted from one loop over a sign so a marking cannot be
+> right at one end and wrong at the other. `MatchRoster`, the match-constant per-slot data — and the
+> shirt-numbering rule finally out of the browser viewer's inline JavaScript and into gate-tested C#.
+> `MatchRenderProjection` → `AgentRenderModel`/`BallRenderModel`: positions from the P3 interpolator's
+> buffer because that is what is actually being drawn, every discrete cue from the newest captured
+> frame because cues do not interpolate, the possession ring, and the ball's shadow / height-lift /
+> capped-scale cues. Colour-free by design — a palette has no correct answer a test could assert.
+>
+> **Deliberately not built:** the D-arc and the corner arcs. Neither has a `[FIXED]` constant and the
+> browser viewer draws neither, so adding them would mean inventing geometry here and diverging the two
+> Views. Recorded rather than silently dropped.
+>
+> **The finding, KD-P4a-1 — a stale cache older than this pass.** `LiveMatchStreamer` cached team ids
+> *and* goalkeeper flags at construction under "roster metadata never changes across a match". True of
+> team ids; **false of goalkeeper flags**, which `MatchEngine.SubstitutePlayer` rewrites — so a keeper
+> substituted for an outfield player moves which slot is the goalkeeper and the cache has silently
+> disagreed with the engine ever since, drawing the keeper ring on the wrong player in the browser
+> viewer since P1. A Unity roster type built on the same accessor would have inherited it wholesale,
+> which is the argument for doing the render model before the skin rather than after. `LiveAgentCue`
+> gains `IsGoalkeeper` — the first cue added through the extension mechanism KD-P1-6 created the struct
+> for — sampled every tick; `MatchRoster` holds no goalkeeper flag at all so the stale copy cannot come
+> back; `LiveMatchServer` reads the frame cue, fixing the harness with no JSON key and no viewer-script
+> change. Re-reading the engine from the accessor was rejected: that is the off-sim-thread tear-read the
+> streamer's single-writer invariant exists to prevent, and the reason it was cached to begin with.
+>
+> **No `SNAPSHOT_SCHEMA_VERSION` change, no new RNG stream / domain tag / draw site, no draw-order
+> change, no engine-behaviour change** — the new cue is sampled from an existing read-only accessor.
+> **Full dotnet gate: PASSED, 0 failures** (whole tree green; all 30 suites reported) — `match-client-core` 65 → 103, `match-viewer` 39 → 41, `ui-framework` 50 (unchanged), `match-engine` 368 passed / 8 skipped (unchanged; no `match-engine` source is touched by this landing), every other suite unchanged. **Next: P4b on the pinned host** (roadmap row B8), which now binds a render model that is
+> already decided and already tested.)
+
+> **Last Updated (prior):** August 3, 2026, later same day (**§5.Z.23 — CONVERSION AT CONTACT: the recorded
 
 > **Last Updated (prior):** August 3, 2026, latest same day (**OWNER DECISION — ROADMAP B6 REVERSED: the
 > product ships the FULL UNITY UI, not the web-hosted viewer.** Doc-only; no `.cs` changed. Recorded in
