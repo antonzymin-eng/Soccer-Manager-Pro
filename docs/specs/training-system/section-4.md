@@ -1,8 +1,9 @@
 # Training System #29 — Section 4: Architecture
 
 **Created:** July 23, 2026
-**Last Updated:** August 6, 2026 (v0.4 — ERR-029-004: §4.4.1 pins the sub-blob byte layout at #29 T1)
-**Version:** 0.4
+**Last Updated:** August 6, 2026 (v0.5 — ERR-029-005: §4.4.1's layout gains the leading
+TRAINING_SAVE_MAGIC, without which the #41 block decodes here silently; AR pass 1)
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -75,6 +76,7 @@ here as normative:
 
 ```
 EncodeTraining(perClubStates) -> bytes:
+    WriteU32(TRAINING_SAVE_MAGIC)                         # names the format, not just its generation
     WriteU32(TRAINING_SAVE_FORMAT_VERSION)
     WriteCount(perClubStates.Count)                       # overflow-safe (fail loud on corrupt count, F5)
     for club in perClubStates (ascending ClubId):
@@ -89,6 +91,7 @@ EncodeTraining(perClubStates) -> bytes:
     # NO RNG cursor block — #29 registers no stream (KD-6 / ERR-029-001)
 
 DecodeTraining(bytes) -> perClubStates:
+    magic   = ReadU32(); if magic != TRAINING_SAVE_MAGIC: throw                     # ERR-029-005
     version = ReadU32(); if version != TRAINING_SAVE_FORMAT_VERSION: throw          # F3
     clubCount = ReadCount()                                # overflow-safe bound guard (F5)
     for i in [0, clubCount):
@@ -104,11 +107,22 @@ DecodeTraining(bytes) -> perClubStates:
     if bytesRemaining != 0: throw                          # trailing-byte guard, F5
 ```
 
-Three properties the layout carries, each of which is a MUST:
+Four properties the layout carries, each of which is a MUST:
 
+- **The block names its own format.** `TRAINING_SAVE_MAGIC` is written first, and decode MUST refuse a
+  block that does not carry it (**ERR-029-005**). The version field cannot do this job: every sub-blob
+  format in the save stack — this one, `MEDICAL_SAVE_FORMAT_VERSION`, `SEASON_STATE_FORMAT_VERSION`,
+  `MATCH_SAVE_FORMAT_VERSION`, `PROGRESSION_SAVE_FORMAT_VERSION` — sits at version 1, so a version gate
+  distinguishes one *generation* of a format from the next and never one format from another. #41's
+  medical block is the acute case, because this section deliberately gave the two blocks the same byte
+  shape: without the magic each codec decodes the other's bytes cleanly and completely, and a severity
+  tier arrives as a training focus while a recovery counter arrives as a conditioning cursor, with no
+  gate tripped anywhere in the file. Deliberately not an RNG domain tag — those name draw domains, and a
+  save-format identifier must be free to change independently of one.
 - **`ClubId` is written.** Grouping by club without naming one leaves club identity carried by list order
   across a save boundary — an implicit agreement with a sibling sub-blob this codec is forbidden to read
-  (KD-7 blob independence). Four bytes per club buys a self-describing block and a duplicate check.
+  (KD-2 blob independence, `unified-season-save-design.md` — that document's KD-7 is the codec/disk-I/O
+  split, a different decision). Four bytes per club buys a self-describing block and a duplicate check.
 - **Order is not state.** The block is a map keyed by `(ClubId, PlayerId)` (FR-TR-019), so encode
   **canonicalizes** to ascending keys — two equal state sets MUST produce identical bytes whatever roster
   order the caller holds them in — and decode MUST require that order, so a corrupt blob cannot smuggle in
@@ -124,5 +138,6 @@ Three properties the layout carries, each of which is a MUST:
 | 0.1 | 2026-07-23 | — | Initial architecture. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | APPROVED. |
 | 0.3 | 2026-07-23 | — | PASS-2: §4.3 cites #28's batch `AdvanceDay` + curveEnabled coupling; `TrainingSchedule.cs` file comment = derived view (not serialized). |
+| 0.5 | 2026-08-06 | — | **ERR-029-005** (AR pass 1 over the T1 landing): §4.4.1's layout gains a leading `TRAINING_SAVE_MAGIC`, and decode MUST refuse a block without it. v0.4 relied on the version field to gate the block, but every sub-blob format in the save stack is at version 1 — a version gate separates generations of one format, never one format from another. v0.4 had just made this block #41's exact byte shape, so each codec decoded the other's bytes completely and silently: injury tiers read back as training focuses, recovery counters as conditioning cursors, every gate green. Also corrects the `ClubId` bullet's `KD-7 blob independence` citation to `KD-2`. |
 | 0.4 | 2026-08-06 | — | **ERR-029-004** (at #29 T1): new **§4.4.1** pins the `TRAINING_SAVE_FORMAT_VERSION` byte layout, which v0.3 never wrote down. Adds the `ClubId` field (club identity must not be positional), the canonical ascending-key rule (order is not state), and the explicit non-gate on `[GT]` bands at decode. |
 #endregion

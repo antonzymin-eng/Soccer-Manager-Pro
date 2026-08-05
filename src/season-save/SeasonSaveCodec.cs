@@ -49,17 +49,24 @@ namespace TacticalDirector.SeasonSave
         /// training blob, the #41 medical blob, and an optional match save blob. Presence keys on
         /// <paramref name="matchBlobOrNull"/> being <c>null</c> (KD-8): null ⇒ no match (flag 0, no
         /// match block); non-null ⇒ the bytes are written after the medical block (flag 1). Fail-loud on
-        /// a null <paramref name="worldBlob"/>, <paramref name="seasonBlob"/>,
-        /// <paramref name="trainingBlob"/> or <paramref name="medicalBlob"/> — a season save always
-        /// carries all four (KD-3 / FR-SN-019 / FR-TR-018 / FR-MD-017). The buffer is sized exactly to
-        /// the content; see <see cref="Decode"/> for the inverse (kept adjacent so a layout change is
-        /// edited in one place — R1).
+        /// a null <paramref name="worldBlob"/> or <paramref name="seasonBlob"/>, or an unbound
+        /// <paramref name="training"/> / <paramref name="medical"/> — a season save always carries all
+        /// four (KD-3 / FR-SN-019 / FR-TR-018 / FR-MD-017). The buffer is sized exactly to the content;
+        /// see <see cref="Decode"/> for the inverse (kept adjacent so a layout change is edited in one
+        /// place — R1).
+        /// <para>
+        /// <b>The two new blocks are typed, not bare <c>byte[]</c>.</b> They have the same byte shape as
+        /// each other, so a transposition in this parameter list produced a file that framed, decoded
+        /// and reloaded without a single throw (ERR-029-005 / ERR-041-009). The leading magic in each
+        /// block now catches it at load; <see cref="TrainingBlock"/> / <see cref="MedicalBlock"/> catch
+        /// it at compile time, which is where a positional mistake should die.
+        /// </para>
         /// </summary>
         public static byte[] Encode(
             byte[] worldBlob,
             byte[] seasonBlob,
-            byte[] trainingBlob,
-            byte[] medicalBlob,
+            in TrainingBlock training,
+            in MedicalBlock medical,
             byte[] matchBlobOrNull)
         {
             if (worldBlob == null)
@@ -74,18 +81,23 @@ namespace TacticalDirector.SeasonSave
                     "A season save always carries a season-state blob (FR-SN-019).");
             }
 
+            // The wrappers' constructors reject a null, but `default(TrainingBlock)` skips the
+            // constructor entirely and reads Bytes == null — the same hole `default(ClubTrainingStates)`
+            // opens one layer down, and closed here the same way.
+            byte[] trainingBlob = training.Bytes;
             if (trainingBlob == null)
             {
-                throw new ArgumentNullException(nameof(trainingBlob),
+                throw new ArgumentNullException(nameof(training),
                     "A season save always carries a training block — an empty one is a zero-club " +
-                    "block, not a null (FR-TR-018).");
+                    "block, not a null or a default(TrainingBlock) (FR-TR-018).");
             }
 
+            byte[] medicalBlob = medical.Bytes;
             if (medicalBlob == null)
             {
-                throw new ArgumentNullException(nameof(medicalBlob),
+                throw new ArgumentNullException(nameof(medical),
                     "A season save always carries a medical block — an empty one is a zero-club " +
-                    "block, not a null (FR-MD-017).");
+                    "block, not a null or a default(MedicalBlock) (FR-MD-017).");
             }
 
             bool hasMatch = matchBlobOrNull != null;
@@ -236,4 +248,8 @@ namespace TacticalDirector.SeasonSave
 // | 1.2     | 2026-08-06 | —      | #29/#41 T1: the frame gains the training and medical sub-blobs   |
 // |         |            |        | between the season block and the optional match block; both are  |
 // |         |            |        | mandatory (an empty set is a zero-club block, not a null).       |
+// | 1.3     | 2026-08-06 | —      | ERR-029-005 / ERR-041-009 (AR pass 1, H): the training and       |
+// |         |            |        | medical parameters become TrainingBlock / MedicalBlock. The two  |
+// |         |            |        | payloads are byte-shape-identical, so transposing them in a list |
+// |         |            |        | of five byte[] framed, decoded and reloaded without a throw.     |
 #endregion

@@ -3,7 +3,8 @@
 // Modified: 2026-08-06
 // Author:   —
 // Spec:     Injuries & Medical #41 §2.2 (the persisted medical block), §4.2 / §4.4 (the sub-blob codec),
-//           FR-MD-017/018/019, F1/F3/F4/F5; ERR-041-008 (the §4.4 layout's missing club id);
+//           FR-MD-017/018/019, F1/F3/F4/F5; ERR-041-008 (the §4.4 layout's missing club id) and
+//           ERR-041-009 (the leading magic, without which #29's block decodes here silently);
 //           Deterministic Simulation #16 §3.2.4.1 (CanonicalSerializer); Code Standards #20
 // Purpose:  Pure byte codec for the #41 medical sub-blob — one opaque, independently version-gated block
 //           under #30's season save. Encodes the per-club per-player InjuryState map in canonical key
@@ -23,6 +24,7 @@ namespace TacticalDirector.InjuriesMedical
     /// club's per-player <see cref="InjuryState"/>.
     /// <para><b>Layout</b> (§4.4 as corrected by ERR-041-008):</para>
     /// <code>
+    /// u32  MEDICAL_SAVE_MAGIC         ("MEDL")
     /// u32  MEDICAL_SAVE_FORMAT_VERSION
     /// u32  clubCount
     /// per club, ascending ClubId:
@@ -36,11 +38,20 @@ namespace TacticalDirector.InjuriesMedical
     ///         u32  lastAdvancedWorldDay
     /// </code>
     /// <para>
+    /// <b>The block says which format it is.</b> The leading
+    /// <see cref="InjuriesMedicalConstants.MEDICAL_SAVE_MAGIC"/> is not decoration: every sub-blob
+    /// format in the save stack sits at version 1, and the #29 training block has this block's exact
+    /// byte shape, so without a magic each codec decodes the other's bytes cleanly and silently — a
+    /// training focus arrives as an injury tier and a conditioning cursor as a recovery counter, with
+    /// no gate tripped anywhere. A version gate cannot catch that; it distinguishes generations of one
+    /// format, never one format from another. See ERR-041-009 / ERR-029-005.
+    /// </para>
+    /// <para>
     /// <b>The club id is written, not implied by position.</b> §4.4's sketch grouped the blocks by club
     /// without naming one, so club identity would be carried only by list order across a save boundary —
-    /// an implicit agreement with a sibling blob this codec is forbidden to read (KD-7 blob
-    /// independence). Four bytes per club buys a self-describing block and a duplicate check
-    /// (ERR-041-008).
+    /// an implicit agreement with a sibling blob this codec is forbidden to read (KD-2 blob
+    /// independence, unified-season-save-design.md §KD-2). Four bytes per club buys a self-describing
+    /// block and a duplicate check (ERR-041-008).
     /// </para>
     /// <para>
     /// <b>Order is not state.</b> The block is a map keyed by <c>(clubId, playerId)</c>, so
@@ -90,9 +101,10 @@ namespace TacticalDirector.InjuriesMedical
                 throw new ArgumentNullException(nameof(clubs));
             }
 
-            int[] clubOrder = CanonicalOrder(ClubIdsOf(clubs), "club id");
+            int[] clubOrder = SaveBlobFramingHelpers.CanonicalOrder(
+                ClubIdsOf(clubs), "medical", "club id", "FR-MD-025");
 
-            int size = 4 + 4;   // version + clubCount
+            int size = 4 + 4 + 4;   // magic + version + clubCount
             for (int i = 0; i < clubs.Length; i++)
             {
                 size += BytesPerClubHeader + clubs[i].Count * BytesPerPlayer;
@@ -101,13 +113,15 @@ namespace TacticalDirector.InjuriesMedical
             byte[] buf = new byte[size];
             int o = 0;
 
+            CanonicalSerializer.WriteU32(buf, ref o, InjuriesMedicalConstants.MEDICAL_SAVE_MAGIC);
             CanonicalSerializer.WriteU32(buf, ref o, InjuriesMedicalConstants.MEDICAL_SAVE_FORMAT_VERSION);
             CanonicalSerializer.WriteU32(buf, ref o, (uint)clubs.Length);
 
             for (int c = 0; c < clubOrder.Length; c++)
             {
                 ClubInjuryStates club = clubs[clubOrder[c]];
-                int[] playerOrder = CanonicalOrder(RequireBound(club), "player id");
+                int[] playerOrder = SaveBlobFramingHelpers.CanonicalOrder(
+                    RequireBound(club), "medical", "player id", "FR-MD-025");
 
                 CanonicalSerializer.WriteI32(buf, ref o, club.ClubId);
                 CanonicalSerializer.WriteU32(buf, ref o, (uint)club.Count);
@@ -148,6 +162,8 @@ namespace TacticalDirector.InjuriesMedical
         /// ascending club id with each club's players in ascending player id.
         /// <para>
         /// Fail-loud (throws) on: a null blob; a
+        /// <see cref="InjuriesMedicalConstants.MEDICAL_SAVE_MAGIC"/> mismatch (these bytes are some
+        /// other format — checked first, since a foreign block can carry a matching version); a
         /// <see cref="InjuriesMedicalConstants.MEDICAL_SAVE_FORMAT_VERSION"/> mismatch (F3 — no Stage-0
         /// migration); a truncated read or a length prefix that would read past the blob (F5); club or
         /// player ids that are not strictly ascending (a duplicate or reordered key, which
@@ -177,7 +193,24 @@ namespace TacticalDirector.InjuriesMedical
             int len = blob.Length;
             int o = 0;
 
-            Require(o, 4, len, "format version");
+            // The magic is checked BEFORE the version, because a foreign block can easily carry a
+            // matching version (every sub-blob format in the stack is at version 1) and the resulting
+            // "version 1 == version 1, proceed" is exactly the silent mis-decode this gate exists to
+            // stop. Naming the observed magic in the message turns a mystery corruption into "you
+            // handed me the training block" (ERR-041-009).
+            SaveBlobFramingHelpers.Require(o, 4, len, "Medical save", "format magic");
+            uint magic = CanonicalSerializer.ReadU32(blob, ref o);
+            if (magic != InjuriesMedicalConstants.MEDICAL_SAVE_MAGIC)
+            {
+                throw new InvalidOperationException(
+                    "Medical save magic 0x" + magic.ToString("X8") + " != expected 0x" +
+                    InjuriesMedicalConstants.MEDICAL_SAVE_MAGIC.ToString("X8") +
+                    " — these bytes are not a #41 medical block. A block of another sub-blob format " +
+                    "(the #29 training block has this block's exact byte shape) would otherwise decode " +
+                    "cleanly and silently.");
+            }
+
+            SaveBlobFramingHelpers.Require(o, 4, len, "Medical save", "format version");
             uint format = CanonicalSerializer.ReadU32(blob, ref o);
             if (format != InjuriesMedicalConstants.MEDICAL_SAVE_FORMAT_VERSION)
             {
@@ -187,27 +220,30 @@ namespace TacticalDirector.InjuriesMedical
                     " — no cross-version migration at Stage 0 (F3).");
             }
 
-            int clubCount = ReadCount(blob, ref o, len, BytesPerClubHeader, "club");
+            int clubCount = SaveBlobFramingHelpers.ReadCount(
+                blob, ref o, len, BytesPerClubHeader, "Medical save", "club");
             var clubs = new ClubInjuryStates[clubCount];
             long previousClubId = long.MinValue;
 
             for (int c = 0; c < clubCount; c++)
             {
-                Require(o, 4, len, "club id");
+                SaveBlobFramingHelpers.Require(o, 4, len, "Medical save", "club id");
                 int clubId = CanonicalSerializer.ReadI32(blob, ref o);
-                RequireAscending(clubId, ref previousClubId, "club id", c);
+                SaveBlobFramingHelpers.RequireAscending(clubId, ref previousClubId, "Medical save", "club id", c);
 
-                int playerCount = ReadCount(blob, ref o, len, BytesPerPlayer, "player");
+                int playerCount = SaveBlobFramingHelpers.ReadCount(
+                    blob, ref o, len, BytesPerPlayer, "Medical save", "player");
                 var playerIds = new int[playerCount];
                 var states = new InjuryState[playerCount];
                 long previousPlayerId = long.MinValue;
 
                 for (int p = 0; p < playerCount; p++)
                 {
-                    Require(o, BytesPerPlayer, len, "player medical state");
+                    SaveBlobFramingHelpers.Require(o, BytesPerPlayer, len, "Medical save", "player medical state");
 
                     int playerId = CanonicalSerializer.ReadI32(blob, ref o);
-                    RequireAscending(playerId, ref previousPlayerId, "player id in club " + clubId, p);
+                    SaveBlobFramingHelpers.RequireAscending(
+                        playerId, ref previousPlayerId, "Medical save", "player id in club " + clubId, p);
 
                     var severity = (InjurySeverity)CanonicalSerializer.ReadU8(blob, ref o);
                     RequireDefinedSeverity(severity, playerId);
@@ -309,89 +345,6 @@ namespace TacticalDirector.InjuriesMedical
                     "incoherent state.");
             }
         }
-
-        // Returns the indices of `keys` in ascending key order, refusing duplicates. Sorting here is
-        // what makes the bytes canonical: the block is a map keyed by id (FR-MD-018), so the caller's
-        // roster order is not part of the state and must not be part of the bytes. A duplicate key IS a
-        // defect — there is no defined winner — so it throws rather than being deduplicated.
-        private static int[] CanonicalOrder(int[] keys, string what)
-        {
-            int n = keys.Length;
-            var sorted = new int[n];
-            var order = new int[n];
-            for (int i = 0; i < n; i++)
-            {
-                sorted[i] = keys[i];
-                order[i] = i;
-            }
-
-            Array.Sort(sorted, order);
-
-            for (int i = 1; i < n; i++)
-            {
-                if (sorted[i] == sorted[i - 1])
-                {
-                    throw new ArgumentException(
-                        "Duplicate " + what + " " + sorted[i] + " in the medical save set — a " +
-                        "duplicate key has no defined winner (FR-MD-025).");
-                }
-            }
-
-            return order;
-        }
-
-        // Decode-side mirror of the CanonicalOrder guarantee. `previous` is a long so that the first
-        // comparison can start below int.MinValue without a separate "is this the first?" flag.
-        private static void RequireAscending(int value, ref long previous, string what, int index)
-        {
-            if (value <= previous)
-            {
-                throw new InvalidOperationException(
-                    "Medical save " + what + " at index " + index + " is " + value +
-                    ", which does not exceed the preceding " + previous +
-                    " — the block is written in strictly ascending key order; corrupt save.");
-            }
-
-            previous = value;
-        }
-
-        // Reads a u32 length prefix and refuses a count whose elements could not possibly be backed by
-        // the bytes that remain. The bound is expressed in ELEMENTS (`remaining / bytesPerElement`)
-        // rather than as a byte product, because that product can overflow int for a large blob and a
-        // crafted count and wrap back to a small positive value that slips past a byte-wise guard.
-        // `bytesPerElement` is the element's MINIMUM width (a club header for a club, which may then
-        // carry zero players), so the bound is conservative and never rejects a well-formed blob — the
-        // WorldStateSerializer.ReadCount / SeasonStateCodec posture.
-        private static int ReadCount(byte[] blob, ref int o, int total, int bytesPerElement, string what)
-        {
-            Require(o, 4, total, what + " count");
-            uint raw = CanonicalSerializer.ReadU32(blob, ref o);
-            int maxCount = (total - o) / bytesPerElement;
-            if (raw > (uint)maxCount)
-            {
-                throw new InvalidOperationException(
-                    "Medical save " + what + " count " + raw + " exceeds the " + maxCount +
-                    " element(s) the " + (total - o) + " remaining byte(s) at offset " + o +
-                    " could hold — corrupt save.");
-            }
-
-            return (int)raw;
-        }
-
-        private static void Require(int offset, int need, int total, string what)
-        {
-            // Overflow-safe (the MatchSaveCodec / SeasonSaveCodec posture): compare against
-            // (total - offset) rather than (offset + need), since a corrupt length prefix can push
-            // `need` near int.MaxValue and `offset + need` would wrap negative and slip past the guard.
-            // `offset` is always in [0, total] here (every read is guarded), so `total - offset` is a
-            // safe non-negative int.
-            if (need < 0 || offset > total || need > total - offset)
-            {
-                throw new InvalidOperationException(
-                    "Medical save blob truncated reading " + what + " (need " + need +
-                    " byte(s) at offset " + offset + " of " + total + ").");
-            }
-        }
     }
 }
 
@@ -401,4 +354,16 @@ namespace TacticalDirector.InjuriesMedical
 // |         |            |        | SAVE_FORMAT_VERSION sub-blob, canonical key order, the overflow-   |
 // |         |            |        | safe ReadCount bound, the F1 coherence gate on BOTH sides, and the |
 // |         |            |        | trailing-byte guard. Layout corrected by ERR-041-008.              |
+// | 1.1     | 2026-08-06 | —      | ERR-041-009 (AR pass 1, H): the block gains a leading MEDICAL_     |
+// |         |            |        | SAVE_MAGIC, checked before the version. Without it the #29         |
+// |         |            |        | training block — same byte shape, same version 1 — decoded here    |
+// |         |            |        | cleanly and silently, turning focuses into injury tiers.           |
+// | 1.2     | 2026-08-06 | —      | Review fix (L): the class doc's blob-independence citation         |
+// |         |            |        | corrected from "KD-7" to KD-2 (unified-season-save-design.md       |
+// |         |            |        | §KD-2) — that document's KD-7 is "codec split from disk I/O", a    |
+// |         |            |        | different decision. Review fix (M): CanonicalOrder /               |
+// |         |            |        | RequireAscending / ReadCount / Require moved to the new shared     |
+// |         |            |        | TacticalDirector.DeterministicSim.SaveBlobFramingHelpers — this    |
+// |         |            |        | file and TrainingSaveCodec were byte-identical duplicates of those |
+// |         |            |        | four helpers with nothing mechanical keeping them in sync.         |
 #endregion

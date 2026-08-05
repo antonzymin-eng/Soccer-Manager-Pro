@@ -60,6 +60,13 @@ namespace TacticalDirector.SeasonSave
 
         private string TempPath(string name) => Path.Combine(_tempDir, name);
 
+        // "This season tracks no training / medical state" — said explicitly, because Save requires it
+        // to be said. A default that let a caller stay silent is what would make a T2 omission look
+        // exactly like an unwired game (see SeasonSaveManager.Save's null guards).
+        private static ClubTrainingStates[] NoTraining => Array.Empty<ClubTrainingStates>();
+
+        private static ClubInjuryStates[] NoMedical => Array.Empty<ClubInjuryStates>();
+
         // ── World fixtures (mirror WorldStoreTests.PopulatedStore) ──────────────────
 
         private static SpawnCause Cause(uint worldTick) =>
@@ -139,7 +146,7 @@ namespace TacticalDirector.SeasonSave
             WorldStore world = PopulatedStore();
             SeasonState season = MidSeasonState();
             string path = TempPath("season.save");
-            SeasonSaveManager.Save(world, season, matchOrNull: null, path);
+            SeasonSaveManager.Save(world, season, matchOrNull: null, path, NoTraining, NoMedical);
             Assert.IsTrue(File.Exists(path), "Save must produce the destination file atomically.");
 
             // Capture is non-mutating, so the saved store itself is a valid uninterrupted reference.
@@ -174,7 +181,7 @@ namespace TacticalDirector.SeasonSave
             Assert.AreEqual(1, world.Arcs.ArcCount, "only PopulatedStore's manual arc exists; the trigger has not fired yet");
 
             string path = TempPath("season-flagon.save");
-            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path);
+            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical);
 
             // Uninterrupted reference: the saved (non-mutated) world advances one day and fires.
             world.AdvanceDay();
@@ -212,7 +219,7 @@ namespace TacticalDirector.SeasonSave
             Assert.AreEqual((ulong)n, match.CurrentTick);
 
             string path = TempPath("season-match.save");
-            SeasonSaveManager.Save(world, season, match, path);
+            SeasonSaveManager.Save(world, season, match, path, NoTraining, NoMedical);
             Assert.IsTrue(File.Exists(path));
 
             // Reference chains from the saved (non-mutated) objects.
@@ -288,7 +295,7 @@ namespace TacticalDirector.SeasonSave
             // never touches the (absent) match, returning a null Match.
             WorldStore world = PopulatedStore();
             string path = TempPath("nomatch-provider.save");
-            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path);
+            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical);
 
             SeasonSaveContents contents = SeasonSaveManager.Load(path, Provider(DistinctSquad(1)));
             Assert.IsNull(contents.Match,
@@ -309,7 +316,7 @@ namespace TacticalDirector.SeasonSave
         {
             WorldStore world = PopulatedStore();
             string path = TempPath("corrupt.save");
-            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path);
+            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical);
 
             byte[] bytes = File.ReadAllBytes(path);
             File.WriteAllBytes(path, new ArraySegment<byte>(bytes, 0, bytes.Length / 2).ToArray());
@@ -327,7 +334,7 @@ namespace TacticalDirector.SeasonSave
             match.ConfigureSquads(DistinctSquad(1), DistinctSquad(2));
             for (int i = 0; i < 30; i++) match.RunTick();
             string path = TempPath("distinct.save");
-            SeasonSaveManager.Save(world, MidSeasonState(), match, path);
+            SeasonSaveManager.Save(world, MidSeasonState(), match, path, NoTraining, NoMedical);
 
             Assert.Throws<NotSupportedException>(
                 () => SeasonSaveManager.Load(path),
@@ -338,7 +345,7 @@ namespace TacticalDirector.SeasonSave
         public void Save_NullWorld_Throws()
         {
             Assert.Throws<ArgumentNullException>(
-                () => SeasonSaveManager.Save(null, MidSeasonState(), matchOrNull: null, TempPath("x.save")));
+                () => SeasonSaveManager.Save(null, MidSeasonState(), matchOrNull: null, TempPath("x.save"), NoTraining, NoMedical));
         }
 
         [Test]
@@ -348,7 +355,7 @@ namespace TacticalDirector.SeasonSave
             // than write a file that Load could not reconstruct a season from.
             Assert.Throws<ArgumentNullException>(
                 () => SeasonSaveManager.Save(
-                    PopulatedStore(), null, matchOrNull: null, TempPath("x.save")));
+                    PopulatedStore(), null, matchOrNull: null, TempPath("x.save"), NoTraining, NoMedical));
         }
 
         [Test]
@@ -356,10 +363,10 @@ namespace TacticalDirector.SeasonSave
         {
             WorldStore world = PopulatedStore();
             string path = TempPath("overwrite.save");
-            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path);
+            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical);
 
             world.AdvanceDay();
-            Assert.DoesNotThrow(() => SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path),
+            Assert.DoesNotThrow(() => SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical),
                 "Re-saving over an existing file must atomically replace it (File.Replace), not throw.");
             Assert.IsFalse(File.Exists(path + ".tmp"), "The temp file must not survive a successful save.");
         }
@@ -463,9 +470,11 @@ namespace TacticalDirector.SeasonSave
         {
             // Today nothing constructs #29/#41 state (both assemblies are inert until T2), so this is
             // the shape of EVERY save written right now. It must be an empty set, not a null and not an
-            // absent block — otherwise the day T2 wires the producers is a second frame bump.
+            // absent block — otherwise the day T2 wires the producers is a second frame bump. Note the
+            // caller SAYS "no training state" with NoTraining/NoMedical; Save has no default that would
+            // let it stay silent, because silence and real-state-dropped look identical on reload.
             string path = TempPath("no-training.season");
-            SeasonSaveManager.Save(PopulatedStore(), MidSeasonState(), matchOrNull: null, path);
+            SeasonSaveManager.Save(PopulatedStore(), MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical);
 
             SeasonSaveContents got = SeasonSaveManager.Load(path);
 
@@ -475,28 +484,117 @@ namespace TacticalDirector.SeasonSave
             Assert.AreEqual(0, got.MedicalClubs.Length);
         }
 
+        [Test]
+        public void Save_NullTrainingOrMedicalClubs_Throws()
+        {
+            // The parameters are required and null is NOT the empty set. If null quietly meant "empty",
+            // then at T2 a call site that omitted a season's conditioning, focus and injury history
+            // would compile, save, and load back as empty arrays — indistinguishable from a game that
+            // never had any. Nothing would throw and no assertion could fire. The `season` parameter is
+            // required for exactly this reason (FR-SN-019); these are no more optional than it is.
+            Assert.Throws<ArgumentNullException>(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    null, NoMedical),
+                "A null training set must fail loud — say Array.Empty to mean empty (FR-TR-018).");
+
+            Assert.Throws<ArgumentNullException>(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    NoTraining, null),
+                "A null medical set must fail loud — say Array.Empty to mean empty (FR-MD-017).");
+        }
+
+        [Test]
+        public void SaveLoad_TransposedTrainingAndMedicalBlocks_FailLoud()
+        {
+            // The defect this landing's AR pass caught (ERR-029-005 / ERR-041-009). The #29 and #41
+            // blocks have the SAME byte shape and both sat at format version 1, so each codec decoded
+            // the other's bytes cleanly and silently: an injury tier arrived as a training focus, a
+            // recovery counter as a conditioning cursor, with no gate tripped anywhere in the file.
+            // TrainingBlock / MedicalBlock now make the transposition a build error at Encode, so this
+            // test has to fake it by putting the wrong BYTES in a correctly-typed wrapper — which is
+            // what a hand-edited or third-party-written file would look like. The leading magic is the
+            // only thing standing between that file and a silently corrupted squad.
+            byte[] trainingBytes = TrainingSaveCodec.Encode(new[]
+            {
+                new ClubTrainingStates(
+                    7,
+                    new[] { 100 },
+                    new[]
+                    {
+                        new TrainingState
+                        {
+                            Focus = TrainingFocus.Fitness,
+                            Condition = 6543,
+                            TrainingFatigue = 1234,
+                            LastAdvancedWorldDay = 19,
+                        },
+                    }),
+            });
+
+            byte[] medicalBytes = MedicalSaveCodec.Encode(new[]
+            {
+                new ClubInjuryStates(
+                    7,
+                    new[] { 100 },
+                    new[]
+                    {
+                        new InjuryState
+                        {
+                            Severity = InjurySeverity.Moderate,
+                            RecoveryRemaining = 21,
+                            InjuryCount = 4,
+                            LastAdvancedWorldDay = 19,
+                        },
+                    }),
+            });
+
+            Assert.AreEqual(trainingBytes.Length, medicalBytes.Length,
+                "the two blocks really are the same byte shape — that is why the magic is load-bearing");
+
+            byte[] transposed = SeasonSaveCodec.Encode(
+                PopulatedStore().Snapshot(),
+                SeasonStateCodec.Encode(MidSeasonState()),
+                new TrainingBlock(medicalBytes),   // <- the medical bytes, in the training slot
+                new MedicalBlock(trainingBytes),
+                matchBlobOrNull: null);
+
+            SeasonSaveBlobs blobs = SeasonSaveCodec.Decode(transposed);
+
+            Assert.Throws<InvalidOperationException>(
+                () => TrainingSaveCodec.Decode(blobs.TrainingBlob),
+                "a medical block in the training slot must be refused by its magic, not decoded as " +
+                "six players' training focuses");
+            Assert.Throws<InvalidOperationException>(
+                () => MedicalSaveCodec.Decode(blobs.MedicalBlob),
+                "and the same in the other direction");
+        }
+
         // ── SeasonSaveCodec (in-memory) ─────────────────────────────────────────────
 
         // The frame treats every sub-blob as opaque, so these codec tests use short distinguishable
         // stand-ins rather than real #29/#41 blocks — the point is the framing, not the payloads.
-        private static byte[] TrainingStub => new byte[] { 0xA1, 0xA2 };
+        private static readonly byte[] TrainingStubBytes = { 0xA1, 0xA2 };
 
-        private static byte[] MedicalStub => new byte[] { 0xB1, 0xB2, 0xB3 };
+        private static readonly byte[] MedicalStubBytes = { 0xB1, 0xB2, 0xB3 };
+
+        private static TrainingBlock TrainingStub => new TrainingBlock(TrainingStubBytes);
+
+        private static MedicalBlock MedicalStub => new MedicalBlock(MedicalStubBytes);
 
         [Test]
         public void Codec_RoundTrips_WithMatch()
         {
             byte[] worldBlob = new byte[] { 1, 2, 3, 4, 5 };
             byte[] seasonBlob = new byte[] { 6, 6 };
-            byte[] trainingBlob = TrainingStub;
-            byte[] medicalBlob = MedicalStub;
             byte[] matchBlob = new byte[] { 9, 8, 7 };
             SeasonSaveBlobs got = SeasonSaveCodec.Decode(
-                SeasonSaveCodec.Encode(worldBlob, seasonBlob, trainingBlob, medicalBlob, matchBlob));
+                SeasonSaveCodec.Encode(worldBlob, seasonBlob, TrainingStub, MedicalStub, matchBlob));
             CollectionAssert.AreEqual(worldBlob, got.WorldBlob);
             CollectionAssert.AreEqual(seasonBlob, got.SeasonBlob);
-            CollectionAssert.AreEqual(trainingBlob, got.TrainingBlob);
-            CollectionAssert.AreEqual(medicalBlob, got.MedicalBlob);
+            CollectionAssert.AreEqual(TrainingStubBytes, got.TrainingBlob);
+            CollectionAssert.AreEqual(MedicalStubBytes, got.MedicalBlob);
             CollectionAssert.AreEqual(matchBlob, got.MatchBlob);
         }
 
@@ -505,15 +603,13 @@ namespace TacticalDirector.SeasonSave
         {
             byte[] worldBlob = new byte[] { 42, 42, 42 };
             byte[] seasonBlob = new byte[] { 7 };
-            byte[] trainingBlob = TrainingStub;
-            byte[] medicalBlob = MedicalStub;
             SeasonSaveBlobs got = SeasonSaveCodec.Decode(
                 SeasonSaveCodec.Encode(
-                    worldBlob, seasonBlob, trainingBlob, medicalBlob, matchBlobOrNull: null));
+                    worldBlob, seasonBlob, TrainingStub, MedicalStub, matchBlobOrNull: null));
             CollectionAssert.AreEqual(worldBlob, got.WorldBlob);
             CollectionAssert.AreEqual(seasonBlob, got.SeasonBlob);
-            CollectionAssert.AreEqual(trainingBlob, got.TrainingBlob);
-            CollectionAssert.AreEqual(medicalBlob, got.MedicalBlob);
+            CollectionAssert.AreEqual(TrainingStubBytes, got.TrainingBlob);
+            CollectionAssert.AreEqual(MedicalStubBytes, got.MedicalBlob);
             Assert.IsNull(got.MatchBlob, "A null match blob must round-trip to a null MatchBlob (KD-3).");
         }
 
@@ -533,7 +629,7 @@ namespace TacticalDirector.SeasonSave
                 world.AdvanceDay();
             }
 
-            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path);
+            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical);
 
             Assert.Throws<InvalidOperationException>(() => SeasonSaveManager.Load(path),
                 "A season whose next fixture day is behind the restored world day must be rejected (F4).");
@@ -557,7 +653,7 @@ namespace TacticalDirector.SeasonSave
                 done.AdvanceCursorOneRound();
             }
 
-            SeasonSaveManager.Save(world, done, matchOrNull: null, path);
+            SeasonSaveManager.Save(world, done, matchOrNull: null, path, NoTraining, NoMedical);
 
             SeasonSaveContents got = SeasonSaveManager.Load(path);
             Assert.IsTrue(got.Season.Calendar.IsSeasonComplete,
@@ -576,7 +672,8 @@ namespace TacticalDirector.SeasonSave
             byte[] medicalBlob = { 5, 5, 5, 5, 5, 5 }; // 6 bytes
             byte[] matchBlob = { 3, 3, 3 };            // 3 bytes
             byte[] blob = SeasonSaveCodec.Encode(
-                worldBlob, seasonBlob, trainingBlob, medicalBlob, matchBlob);
+                worldBlob, seasonBlob, new TrainingBlock(trainingBlob), new MedicalBlock(medicalBlob),
+                matchBlob);
 
             int o = 0;
             Assert.AreEqual(SeasonSaveConstants.SEASON_SAVE_FORMAT_VERSION,
@@ -608,8 +705,8 @@ namespace TacticalDirector.SeasonSave
                 SeasonSaveCodec.Encode(
                     Array.Empty<byte>(),
                     Array.Empty<byte>(),
-                    Array.Empty<byte>(),
-                    Array.Empty<byte>(),
+                    new TrainingBlock(Array.Empty<byte>()),
+                    new MedicalBlock(Array.Empty<byte>()),
                     matchBlobOrNull: null));
             Assert.AreEqual(0, got.WorldBlob.Length);
             Assert.AreEqual(0, got.SeasonBlob.Length);
@@ -625,8 +722,8 @@ namespace TacticalDirector.SeasonSave
                 () => SeasonSaveCodec.Encode(
                     worldBlob: null,
                     seasonBlob: new byte[] { 1 },
-                    trainingBlob: TrainingStub,
-                    medicalBlob: MedicalStub,
+                    training: TrainingStub,
+                    medical: MedicalStub,
                     matchBlobOrNull: new byte[] { 1 }));
         }
 
@@ -634,25 +731,37 @@ namespace TacticalDirector.SeasonSave
         public void Codec_NullTrainingOrMedicalBlob_Throws()
         {
             // Unlike the match, these two blocks are MANDATORY: "no training state" is an empty block,
-            // not an absent one. A null here is a caller bug (the manager substitutes the empty set),
-            // and accepting it would need a presence flag for a case that cannot arise.
+            // not an absent one. A null here is a caller bug (the manager encodes the empty set), and
+            // accepting it would need a presence flag for a case that cannot arise.
+            Assert.Throws<ArgumentNullException>(() => new TrainingBlock(null),
+                "A null training block must fail loud at the wrapper (FR-TR-018).");
+            Assert.Throws<ArgumentNullException>(() => new MedicalBlock(null),
+                "A null medical block must fail loud at the wrapper (FR-MD-017).");
+        }
+
+        [Test]
+        public void Codec_DefaultTrainingOrMedicalBlock_Throws()
+        {
+            // `default(TrainingBlock)` skips the wrapper's constructor and reads Bytes == null, the
+            // same hole `default(ClubTrainingStates)` opens one layer down. Encode has to close it, or
+            // the type-safety the wrapper buys evaporates for anyone who writes `default`.
             Assert.Throws<ArgumentNullException>(
                 () => SeasonSaveCodec.Encode(
                     worldBlob: new byte[] { 1 },
                     seasonBlob: new byte[] { 1 },
-                    trainingBlob: null,
-                    medicalBlob: MedicalStub,
+                    training: default,
+                    medical: MedicalStub,
                     matchBlobOrNull: null),
-                "A null training block must fail loud (FR-TR-018).");
+                "An unbound default(TrainingBlock) must fail loud, not encode as an empty block.");
 
             Assert.Throws<ArgumentNullException>(
                 () => SeasonSaveCodec.Encode(
                     worldBlob: new byte[] { 1 },
                     seasonBlob: new byte[] { 1 },
-                    trainingBlob: TrainingStub,
-                    medicalBlob: null,
+                    training: TrainingStub,
+                    medical: default,
                     matchBlobOrNull: null),
-                "A null medical block must fail loud (FR-MD-017).");
+                "An unbound default(MedicalBlock) must fail loud, not encode as an empty block.");
         }
 
         [Test]

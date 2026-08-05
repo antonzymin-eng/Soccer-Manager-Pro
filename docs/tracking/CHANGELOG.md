@@ -12,7 +12,45 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 6, 2026 (**#29 / #41 T1 — the two save codecs, composed into #30's season
+> **Last Updated:** August 6, 2026, later same day (**Adversarial review over the #29/#41 T1 landing —
+> 2 High, 2 Medium, 3 Low, all fixed.** The headline is a defect that exists *because* ERR-029-004
+> succeeded. Pinning #29's byte layout to match #41's made the two blocks byte-for-byte the same shape,
+> and **every sub-blob format in the save stack sits at version 1** — `TRAINING_SAVE_FORMAT_VERSION`,
+> `MEDICAL_SAVE_FORMAT_VERSION`, `SEASON_STATE_FORMAT_VERSION`, `MATCH_SAVE_FORMAT_VERSION`,
+> `PROGRESSION_SAVE_FORMAT_VERSION`. A version gate therefore separates one *generation* of a format
+> from the next and **never one format from another**, so each codec decoded the other's bytes cleanly,
+> completely and silently: severity tiers arrived as training focuses, recovery counters as conditioning
+> cursors, injury counts as training fatigue, every gate green and no trailing byte. Proven by executing
+> a byte-exact model of both formats in **both directions** before the fix — the reverse case is a squad
+> on Fitness/Technical focus with a healthy `Condition` reading back as a squad carrying
+> Moderate/Serious injuries with thousands of recovery days, F1 coherence satisfied throughout. The
+> trigger, transposing two arguments in `SeasonSaveCodec.Encode`'s list of five consecutive `byte[]`,
+> had no compile-time signal either. **Fixed in two layers** (`ERR-029-005` / `ERR-041-009`): each block
+> now writes a self-identifying `*_SAVE_MAGIC` first and refuses a foreign one on decode, and the
+> frame's two confusable parameters become the typed `TrainingBlock` / `MedicalBlock`, making the
+> transposition a build error. Deliberately **not** an RNG domain tag — those name draw domains and must
+> stay free to change independently of a save format. The general rule is now a MUST in both §4.4
+> sections: **a format version is not a format identifier.** Second High, same shape one layer up:
+> `SeasonSaveManager.Save`'s `trainingClubs`/`medicalClubs` defaulted to null-meaning-empty, so at T2 a
+> call site omitting them would compile, save, and load back empty arrays indistinguishable from an
+> unwired game — a season of conditioning and injury history gone with nothing thrown and no assertion
+> able to fire. Both are now required and reject null; `Array.Empty` is how a caller *says* "no training
+> state". **Mediums:** `TrainingSaveCodec.Encode` had no encode-side value gates while its sibling did
+> and documented why, so it could write a file its own `Decode` refuses (an unloadable save is data
+> loss); and the two codecs' framing helpers — `CanonicalOrder`, `RequireAscending`, `ReadCount`,
+> `Require` — were duplicated verbatim on day one, which is how the first Medium arose in the first
+> place, so they are hoisted to `SaveBlobFramingHelpers` in `deterministic-sim`. The three older codecs
+> keep their own copies: retrofitting them is scope this pass did not take. **Lows:** a `Value: 2` in a
+> constant whose value is 3, a "three sub-blobs" that is now five, two stale file-header Purpose blocks,
+> a `KD-7 blob independence` citation that should be `KD-2` (KD-7 is the codec/disk-I/O split), and each
+> sibling suite testing only half the ordering gate the other tested. **No format-version bump and no
+> `SEASON_SAVE_FORMAT_VERSION` bump:** neither sub-blob format has ever been written to a real save
+> (nothing constructs either state set until T2), and the *frame* layout is untouched — only the
+> contents of two blocks the frame treats as opaque. **STILL NO GATE RUN** — no .NET SDK in the
+> authoring environment, installer still 403 at the proxy. Everything above, including the fixes, is
+> written and unexecuted apart from the format cross-decode, which was proven outside C#.)
+
+> **Last Updated (prior):** August 6, 2026 (**#29 / #41 T1 — the two save codecs, composed into #30's season
 > save.** `TrainingSaveCodec` (`TRAINING_SAVE_FORMAT_VERSION` = 1) and `MedicalSaveCodec`
 > (`MEDICAL_SAVE_FORMAT_VERSION` = 1), each an opaque independently version-gated sub-blob, now ride in
 > the season frame between the season block and the optional match block —

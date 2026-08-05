@@ -447,6 +447,7 @@ src/
 │   ├── RngStreamState.cs              ← mutable struct: StreamKey/RngCursor/ActionOrdinal (ulong), BudgetRemaining/DeclaredBudget/DrawIndex (int), SiteId (string), StreamVersion (ushort), SubsystemOrdinal, EntityId; ClearReservation()
 │   ├── MatchClock.cs                  ← sealed class: CurrentTick / CurrentTacticalTick / CurrentMatchTimeMs / IsAiStrideTick; Advance() / RestoreFromSnapshot(tick) — no System.DateTime (FR-CS-042)
 │   ├── DeterministicRngService.cs     ← sealed class: HKDF-SHA256 key derivation + SipHash-2-4-64 per-draw hash; RegisterStream / Reserve / DrawReserved / CloseReservation / Skip / RestoreStream; zero-allocation hot path (stackalloc Span<byte>)
+│   ├── SaveBlobFramingHelpers.cs      ← static class: the framing helpers #29's and #41's sub-blob codecs share — CanonicalOrder (ascending keys over a COPY, duplicates throw), RequireAscending, ReadCount (bound in ELEMENTS, not an overflowable byte product), Require (overflow-safe). Hoisted at the T1 AR pass; the three older codecs keep their own copies
 │   ├── CanonicalSerializer.cs         ← static class: §3.2.4.1 Write/Read for all wire types; FloatUintUnion explicit-layout struct (AR-1 H-1/H-2: no BitConverter allocs); −0.0→+0.0 normalization; Tier B NaN→0x7FC00000
 │   ├── SnapshotHeader.cs              ← sealed class: SchemaVersion / DigestVersion / Tick / PrevSnapshotDigest[32] / CurrentSnapshotDigest[32] / Fingerprint / Cursor; Initialize()
 │   ├── SnapshotPayload.cs             ← sealed class: pre-allocated PayloadBytes[MaxSnapshotBytes] / BytesWritten / Reset()
@@ -625,6 +626,8 @@ src/
 │   ├── League.cs                      ← A3: the immutable bootstrap product; IS the ISquadProvider; CreateSeason → SeasonState (KD-9)
 │   ├── LeagueBootstrap.cs             ← A3: worldSeed → N clubs × 25 position-coherent players (KD-4 derivations, KD-5 strength ramp, KD-6 template)
 │   ├── SeasonSaveConstants.cs         ← [FIXED] SEASON_SAVE_FORMAT_VERSION = 2 (a fourth format version; KD-4)
+│   ├── TrainingBlock.cs               ← typed handle on the #29 sub-blob's bytes at the frame boundary (ERR-029-005): the two blocks are byte-shape-identical, so transposing them in Encode's five byte[] had no compile-time signal
+│   ├── MedicalBlock.cs                ← the #41 counterpart (ERR-041-009)
 │   ├── SeasonSaveBlobs.cs             ← deframe result: World + Season + Training + Medical (all always) + MatchBlob (null if no match) — five opaque sub-blobs (KD-2/KD-3)
 │   ├── SeasonSaveCodec.cs             ← pure static: Encode(world, season, training, medical, matchOrNull) / Decode → v3 frame + matchPresent flag + 5 length-prefixed opaque blocks; overflow-safe bounds + fail-loud (KD-7/KD-8)
 │   ├── SeasonSaveContents.cs          ← Load result: reconstructed WorldStore (never null) + nullable MatchEngine

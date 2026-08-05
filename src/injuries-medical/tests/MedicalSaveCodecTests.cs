@@ -3,16 +3,18 @@
 // Modified: 2026-08-06
 // Author:   —
 // Spec:     Injuries & Medical #41 §4.4 (the sub-blob codec), §5, FR-MD-017/018/019, F1/F3/F4/F5;
-//           ERR-041-008; Code Standards #20
+//           ERR-041-008, ERR-041-009; Code Standards #20
 // Purpose:  Unit tests for MedicalSaveCodec — the round-trip field-identity FR-MD-018 demands, the
 //           canonical key order that makes the bytes deterministic, and every fail-loud gate (version,
-//           bounds, ordering, severity contract, the F1 coherence rule on BOTH sides, trailing bytes).
+//           bounds, ordering, severity contract, the F1 coherence rule on BOTH sides, trailing bytes)
+//           — plus the format-magic gate, proven here against a real #29 block in both directions.
 
 using System;
 
 using NUnit.Framework;
 
 using TacticalDirector.DeterministicSim;
+using TacticalDirector.TrainingSystem;
 
 namespace TacticalDirector.InjuriesMedical.Tests
 {
@@ -117,7 +119,8 @@ namespace TacticalDirector.InjuriesMedical.Tests
         public void RoundTrip_EmptySet_IsAWellFormedBlock()
         {
             byte[] blob = MedicalSaveCodec.Encode(Array.Empty<ClubInjuryStates>());
-            Assert.AreEqual(8, blob.Length, "an empty block is exactly the version + a zero club count");
+            Assert.AreEqual(12, blob.Length,
+                "an empty block is exactly the magic + the version + a zero club count");
             Assert.AreEqual(0, MedicalSaveCodec.Decode(blob).Length);
         }
 
@@ -130,9 +133,9 @@ namespace TacticalDirector.InjuriesMedical.Tests
             const int BytesPerPlayer = 4 + 1 + 4 + 4 + 4;
             byte[] blob = MedicalSaveCodec.Encode(TwoClubs());
 
-            Assert.AreEqual(4 + 4 + (2 * (4 + 4)) + (4 * BytesPerPlayer), blob.Length,
-                "the medical block is the version, the club count, two club headers and four player " +
-                "records — nothing else (FR-MD-007).");
+            Assert.AreEqual(4 + 4 + 4 + (2 * (4 + 4)) + (4 * BytesPerPlayer), blob.Length,
+                "the medical block is the magic, the version, the club count, two club headers and " +
+                "four player records — nothing else (FR-MD-007).");
         }
 
         // ── Canonical order ─────────────────────────────────────────────────────────
@@ -241,8 +244,8 @@ namespace TacticalDirector.InjuriesMedical.Tests
         {
             byte[] blob = MedicalSaveCodec.Encode(
                 new[] { Club(1, (5, State(InjurySeverity.Minor, 3, 1, 1u))) });
-            // version(4) + clubCount(4) + clubId(4) + playerCount(4) + playerId(4) = 20 ⇒ severity byte
-            blob[20] = (byte)InjurySeverity.None;   // healthy, but 3 recovery days still recorded
+            // magic(4) + version(4) + clubCount(4) + clubId(4) + playerCount(4) + playerId(4) = 24
+            blob[24] = (byte)InjurySeverity.None;   // healthy, but 3 recovery days still recorded
 
             Assert.Throws<InvalidOperationException>(() => MedicalSaveCodec.Decode(blob),
                 "an incoherent (severity, recovery) pair must fail loud, never be repaired (F1).");
@@ -257,10 +260,53 @@ namespace TacticalDirector.InjuriesMedical.Tests
         }
 
         [Test]
+        public void Decode_ATrainingBlock_FailsLoud_BothDirections_ERR041009()
+        {
+            // The defect in full, provable here because this assembly may reference #29 (the layer
+            // direction is #41 -> #29) while #29's own fixture cannot reference back. The two blocks
+            // have the SAME byte shape and both sit at format version 1, so before the magic each
+            // codec decoded the other's bytes completely and silently — no version mismatch, no
+            // undefined ordinal, no bound violation, no trailing byte. A squad on Fitness/Technical
+            // with a healthy Condition read back as a squad with Moderate/Serious injuries and
+            // thousands of recovery days, and injuries read back as training focuses.
+            var training = new[]
+            {
+                new ClubTrainingStates(
+                    7,
+                    new[] { 100, 300 },
+                    new[]
+                    {
+                        new TrainingState
+                        {
+                            Focus = TrainingFocus.Fitness,
+                            Condition = 6543,
+                            TrainingFatigue = 1234,
+                            LastAdvancedWorldDay = 19,
+                        },
+                        new TrainingState
+                        {
+                            Focus = TrainingFocus.Technical,
+                            Condition = 8000,
+                            TrainingFatigue = 40,
+                            LastAdvancedWorldDay = 19,
+                        },
+                    }),
+            };
+
+            byte[] trainingBytes = TrainingSaveCodec.Encode(training);
+            byte[] medicalBytes = MedicalSaveCodec.Encode(TwoClubs());
+
+            Assert.Throws<InvalidOperationException>(() => MedicalSaveCodec.Decode(trainingBytes),
+                "a #29 training block must be refused by the magic — every later gate would pass.");
+            Assert.Throws<InvalidOperationException>(() => TrainingSaveCodec.Decode(medicalBytes),
+                "and a #41 medical block must be refused by #29's magic, for the same reason.");
+        }
+
+        [Test]
         public void Decode_WrongFormatVersion_FailsLoud_F3()
         {
             byte[] blob = MedicalSaveCodec.Encode(TwoClubs());
-            int o = 0;
+            int o = 4;   // past the magic
             CanonicalSerializer.WriteU32(blob, ref o,
                 InjuriesMedicalConstants.MEDICAL_SAVE_FORMAT_VERSION + 1);
 
@@ -289,11 +335,25 @@ namespace TacticalDirector.InjuriesMedical.Tests
         }
 
         [Test]
-        public void Decode_OversizeClubCount_FailsLoud_WithoutOverAllocating()
+        public void Decode_OversizeClubCount_FailsLoud()
         {
+            // The overflow class the ReadCount bound exists for: a crafted count near uint.MaxValue must
+            // be refused against the bytes that remain. This proves the throw only — it does not measure
+            // allocation, so it is not by itself proof that no oversized array is ever allocated; that
+            // would need a memory-pressure assertion this suite does not attempt.
             byte[] blob = MedicalSaveCodec.Encode(TwoClubs());
-            int o = 4;
+            int o = 8;   // magic + version
             CanonicalSerializer.WriteU32(blob, ref o, uint.MaxValue);
+
+            Assert.Throws<InvalidOperationException>(() => MedicalSaveCodec.Decode(blob));
+        }
+
+        [Test]
+        public void Decode_OversizePlayerCount_FailsLoud()
+        {
+            byte[] blob = MedicalSaveCodec.Encode(new[] { Club(1, (5, State(InjurySeverity.Minor, 3, 1, 1u))) });
+            int o = 4 + 4 + 4 + 4;   // magic, version, clubCount, clubId
+            CanonicalSerializer.WriteU32(blob, ref o, 0x7FFFFFFFu);
 
             Assert.Throws<InvalidOperationException>(() => MedicalSaveCodec.Decode(blob));
         }
@@ -303,7 +363,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
         {
             byte[] blob = MedicalSaveCodec.Encode(
                 new[] { Club(1, (5, State(InjurySeverity.Minor, 3, 1, 1u))) });
-            blob[20] = 200;
+            blob[24] = 200;
 
             Assert.Throws<InvalidOperationException>(() => MedicalSaveCodec.Decode(blob));
         }
@@ -311,17 +371,17 @@ namespace TacticalDirector.InjuriesMedical.Tests
         [Test]
         public void Decode_NegativeRecoveryOrInjuryCount_FailsLoud()
         {
-            // version(4)+clubCount(4)+clubId(4)+playerCount(4)+playerId(4)+severity(1) = 21 ⇒ recovery
+            // magic(4)+version(4)+clubCount(4)+clubId(4)+playerCount(4)+playerId(4)+severity(1) = 25
             byte[] withBadRecovery = MedicalSaveCodec.Encode(
                 new[] { Club(1, (5, State(InjurySeverity.Minor, 3, 1, 1u))) });
-            int o = 21;
+            int o = 25;
             CanonicalSerializer.WriteI32(withBadRecovery, ref o, -1);
             Assert.Throws<InvalidOperationException>(() => MedicalSaveCodec.Decode(withBadRecovery),
                 "a negative recovery counter is structurally impossible, not a [GT] band violation.");
 
             byte[] withBadCount = MedicalSaveCodec.Encode(
                 new[] { Club(1, (5, State(InjurySeverity.Minor, 3, 1, 1u))) });
-            o = 25;   // ... + recovery(4) ⇒ the injury-count i32
+            o = 29;   // ... + recovery(4) ⇒ the injury-count i32
             CanonicalSerializer.WriteI32(withBadCount, ref o, -1);
             Assert.Throws<InvalidOperationException>(() => MedicalSaveCodec.Decode(withBadCount),
                 "a negative cumulative injury count is corrupt.");
@@ -331,8 +391,28 @@ namespace TacticalDirector.InjuriesMedical.Tests
         public void Decode_NonAscendingClubIds_FailsLoud()
         {
             byte[] blob = MedicalSaveCodec.Encode(new[] { Club(1), Club(2) });
-            int o = 8;                                          // version + clubCount ⇒ first club id
+            int o = 12;                                 // magic + version + clubCount ⇒ first club id
             CanonicalSerializer.WriteI32(blob, ref o, 5);       // 5 then 2 — no longer ascending
+
+            Assert.Throws<InvalidOperationException>(() => MedicalSaveCodec.Decode(blob));
+        }
+
+        [Test]
+        public void Decode_NonAscendingPlayerIds_FailsLoud()
+        {
+            // The player-id mirror of Decode_NonAscendingClubIds_FailsLoud above — the ascending gate
+            // applies at both levels of the block, and each level needs its own proof. Encode cannot
+            // produce this, so reaching it means the bytes were hand-edited or corrupted; it matters
+            // because a repeated key would give one player two states with no defined winner.
+            byte[] blob = MedicalSaveCodec.Encode(
+                new[]
+                {
+                    Club(1, (5, State(InjurySeverity.Minor, 3, 1, 1u)),
+                            (6, State(InjurySeverity.None, 0, 0, 2u))),
+                });
+
+            int o = 4 + 4 + 4 + 4 + 4;  // magic, version, clubCount, clubId, playerCount
+            CanonicalSerializer.WriteI32(blob, ref o, 9);   // first player id 5 -> 9, now above the second
 
             Assert.Throws<InvalidOperationException>(() => MedicalSaveCodec.Decode(blob));
         }
@@ -357,4 +437,12 @@ namespace TacticalDirector.InjuriesMedical.Tests
 // |         |            |        | survival, the no-RNG-cursor block-size lock, canonical-order       |
 // |         |            |        | determinism, the encode-side duplicate / unbound / F1 / F4 guards, |
 // |         |            |        | and the decode fail-loud gates (F1/F3/F4/F5).                      |
+// | 1.1     | 2026-08-06 | —      | Review fix (Low): added Decode_NonAscendingPlayerIds_FailsLoud (the|
+// |         |            |        | player-id mirror of the existing club-id test) and                 |
+// |         |            |        | Decode_OversizePlayerCount_FailsLoud (mirroring the sibling         |
+// |         |            |        | TrainingSaveCodecTests test of the same name, which this suite had |
+// |         |            |        | no equivalent of). Renamed                                         |
+// |         |            |        | Decode_OversizeClubCount_FailsLoud_WithoutOverAllocating to        |
+// |         |            |        | Decode_OversizeClubCount_FailsLoud — the body only ever asserted   |
+// |         |            |        | the throw, never the allocation claim in the old name.             |
 #endregion

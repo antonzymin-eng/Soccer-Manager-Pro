@@ -1,18 +1,20 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
-// Modified: 2026-08-06 (#29/#41 T1: the training and medical sub-blobs are composed in)
+// Modified: 2026-08-06 (#29/#41 T1: the training and medical sub-blobs are composed in; doc-drift fix)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-1 / KD-5..KD-8;
 //           Training System #29 §4.4 / FR-TR-018/019; Injuries & Medical #41 §4.4 / FR-MD-017/018;
 //           Match Engine design note §5 Phase G-Phase 3; Deterministic Simulation #16 §4.6.1.1
 //           (atomic-write contract); Living World #22 §4.6/§7.1; Code Standards #20
-// Purpose:  The season save-file root — writes a season (the living-world WorldStore composite plus an
-//           optional in-progress MatchEngine) to disk as one file and reconstructs both. This is the
-//           only assembly that may reference both match-engine and living-world (FR-LW-003 keeps them
-//           independent; the season root sits above both, like match-viewer over match-engine). Save
-//           captures both composites, encodes the season frame (SeasonSaveCodec), and writes atomically
-//           (temp -> fsync -> rename). Load reads the file, deframes it, and rebuilds the WorldStore
-//           (always) and the MatchEngine (only when the save carried a match).
+// Purpose:  The season save-file root — writes a season (the living-world WorldStore composite, the
+//           season state, the #29 per-club training states, and the #41 per-club medical states, plus
+//           an optional in-progress MatchEngine) to disk as one file and reconstructs all of them. This
+//           is the only assembly that may reference both match-engine and living-world (FR-LW-003 keeps
+//           them independent; the season root sits above both, like match-viewer over match-engine).
+//           Save captures every sub-blob, encodes the season frame (SeasonSaveCodec), and writes
+//           atomically (temp -> fsync -> rename). Load reads the file, deframes it, and rebuilds the
+//           WorldStore, the season state, and the training/medical states (always) plus the MatchEngine
+//           (only when the save carried a match).
 
 using System;
 using System.IO;
@@ -28,9 +30,11 @@ namespace TacticalDirector.SeasonSave
 {
     /// <summary>
     /// On-disk save/load for a season: one file carrying the living-world <see cref="WorldStore"/>
-    /// composite and, when a match is in progress, a running <see cref="MatchEngine.MatchEngine"/>
-    /// (unified-season-save-design.md). The two are nested as opaque, independently version-gated
-    /// sub-blobs (KD-2) — this root never parses either, it only frames/deframes and reconstructs.
+    /// composite, the <see cref="SeasonState"/>, the #29 per-club training states, and the #41 per-club
+    /// medical states — all four always present — and, when a match is in progress, a running
+    /// <see cref="MatchEngine.MatchEngine"/> (unified-season-save-design.md). These are nested as
+    /// opaque, independently version-gated sub-blobs (KD-2) — this root never parses any of them, it
+    /// only frames/deframes and reconstructs.
     ///
     /// Static (no injected state — the destination is a per-call path). Off the 60 Hz hot path, so the
     /// copy / blob allocations are fine (the <see cref="MatchSaveManager"/> / <c>WorldStore.Snapshot</c>
@@ -42,9 +46,9 @@ namespace TacticalDirector.SeasonSave
         private static readonly ProfilerMarker s_loadMarker = new ProfilerMarker("SeasonSave.Load");
 
         /// <summary>
-        /// Captures <paramref name="world"/>, <paramref name="season"/>, the #29 training and #41
-        /// medical state, and (when present) <paramref name="matchOrNull"/>, encodes the season frame,
-        /// and writes it to <paramref name="path"/> atomically (the §4.6.1.1 temp -> fsync -> rename
+        /// Captures <paramref name="world"/>, <paramref name="season"/>, <paramref name="trainingClubs"/>,
+        /// <paramref name="medicalClubs"/> and (when present) <paramref name="matchOrNull"/>, encodes
+        /// the season frame, and writes it to <paramref name="path"/> atomically (the §4.6.1.1 temp -> fsync -> rename
         /// contract). Every sub-blob is captured and the frame encoded BEFORE the file is opened (the
         /// <see cref="MatchSaveManager.Save"/> blob-before-file precedent, restated by FR-SN-021); no
         /// capture mutates its source, so a write failure leaves the live objects and any existing
@@ -56,10 +60,9 @@ namespace TacticalDirector.SeasonSave
         /// <param name="season">The season state to capture. Never null (FR-SN-019).</param>
         /// <param name="matchOrNull">The in-progress match, or null when there is none (KD-3).</param>
         /// <param name="path">The destination file.</param>
-        /// <param name="trainingClubs">The per-club #29 training states. <c>null</c> (the default) means
-        /// the empty set, which still writes a well-formed zero-club block — it does NOT omit the block.
-        /// That is the honest state today: nothing constructs #29 state until its T2 wiring, so every
-        /// save written now carries an empty training block rather than a special case (FR-TR-018).</param>
+        /// <param name="trainingClubs">The per-club #29 training states. REQUIRED, and never null: pass
+        /// <c>Array.Empty&lt;ClubTrainingStates&gt;()</c> to say "this season tracks no training state",
+        /// which still writes a well-formed zero-club block rather than omitting one (FR-TR-018).</param>
         /// <param name="medicalClubs">The per-club #41 medical states, on the same terms
         /// (FR-MD-017).</param>
         public static void Save(
@@ -67,8 +70,8 @@ namespace TacticalDirector.SeasonSave
             SeasonState season,
             MatchEngine.MatchEngine matchOrNull,
             string path,
-            ClubTrainingStates[] trainingClubs = null,
-            ClubInjuryStates[] medicalClubs = null)
+            ClubTrainingStates[] trainingClubs,
+            ClubInjuryStates[] medicalClubs)
         {
             if (world == null)
             {
@@ -80,6 +83,27 @@ namespace TacticalDirector.SeasonSave
                 throw new ArgumentNullException(nameof(season),
                     "A season save always carries a season state (FR-SN-019).");
             }
+            // These two are REQUIRED and reject null rather than defaulting to the empty set. A default
+            // of "null ⇒ empty" reads as a convenience, but what it actually means is that at T2 —
+            // when these arrays finally hold a season's worth of conditioning, focus and injury
+            // history — a call site that simply omits them still compiles, still saves, and still
+            // loads, returning empty arrays that are indistinguishable from an unwired game. Nothing
+            // throws and no assertion can fire: the state is just gone. The `season` parameter is
+            // required for exactly this reason (FR-SN-019); these are no more optional than it is.
+            // "This season tracks no training state" is a thing a caller says with Array.Empty, not a
+            // thing it says by staying silent.
+            if (trainingClubs == null)
+            {
+                throw new ArgumentNullException(nameof(trainingClubs),
+                    "Pass Array.Empty<ClubTrainingStates>() for a season that tracks no training " +
+                    "state — null is not the empty set (FR-TR-018).");
+            }
+            if (medicalClubs == null)
+            {
+                throw new ArgumentNullException(nameof(medicalClubs),
+                    "Pass Array.Empty<ClubInjuryStates>() for a season that tracks no medical state " +
+                    "— null is not the empty set (FR-MD-017).");
+            }
             if (string.IsNullOrEmpty(path))
             {
                 throw new ArgumentException("Save path must be non-empty.", nameof(path));
@@ -89,13 +113,11 @@ namespace TacticalDirector.SeasonSave
 
             byte[] worldBlob = world.Snapshot();
             byte[] seasonBlob = SeasonStateCodec.Encode(season);
-            byte[] trainingBlob = TrainingSaveCodec.Encode(
-                trainingClubs ?? Array.Empty<ClubTrainingStates>());
-            byte[] medicalBlob = MedicalSaveCodec.Encode(
-                medicalClubs ?? Array.Empty<ClubInjuryStates>());
+            var trainingBlock = new TrainingBlock(TrainingSaveCodec.Encode(trainingClubs));
+            var medicalBlock = new MedicalBlock(MedicalSaveCodec.Encode(medicalClubs));
             byte[] matchBlob = matchOrNull != null ? MatchSaveManager.Encode(matchOrNull) : null;
             byte[] blob = SeasonSaveCodec.Encode(
-                worldBlob, seasonBlob, trainingBlob, medicalBlob, matchBlob);
+                worldBlob, seasonBlob, in trainingBlock, in medicalBlock, matchBlob);
 
             string tempPath = path + ".tmp";
             try
@@ -220,4 +242,14 @@ namespace TacticalDirector.SeasonSave
 // | 1.4     | 2026-08-06 | —      | #29/#41 T1: Save gains the optional per-club training /       |
 // |         |            |        | medical state (null ⇒ the empty set, still a written block)   |
 // |         |            |        | and Load reconstructs both alongside the world and season.    |
+// | 1.5     | 2026-08-06 | —      | AR pass 1 (H): trainingClubs / medicalClubs become REQUIRED    |
+// |         |            |        | and reject null. Defaulting them to the empty set meant a T2  |
+// |         |            |        | call site could omit a season's training and injury history   |
+// |         |            |        | and still compile, save and load — silently, with nothing to  |
+// |         |            |        | distinguish the loss from an unwired game.                    |
+// | 1.6     | 2026-08-06 | —      | Doc-drift fix (no code change): the file-header Purpose block |
+// |         |            |        | and the class <summary> still described this file as writing |
+// |         |            |        | only the WorldStore composite plus an optional MatchEngine —  |
+// |         |            |        | stale since the #30 T1 season-state landing and now missing   |
+// |         |            |        | the #29/#41 training and medical states too. Both corrected.  |
 #endregion

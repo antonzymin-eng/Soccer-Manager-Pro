@@ -1,9 +1,9 @@
 # Injuries & Medical #41 — Section 4: Architecture
 
 **Created:** July 23, 2026
-**Last Updated:** August 6, 2026 (v0.2 — ERR-041-008: §4.4's layout gains the ClubId field and the
-canonical-order / both-sides-coherence rules, at #41 T1)
-**Version:** 0.2
+**Last Updated:** August 6, 2026 (v0.3 — ERR-041-009: §4.4's layout gains the leading
+MEDICAL_SAVE_MAGIC, without which the #29 block decodes here silently; AR pass 1)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -77,6 +77,7 @@ use. The codec never parses #30's other sub-blobs and vice-versa; #30's composin
 
 ```
 EncodeMedical(perClubStates) -> bytes:
+    WriteU32(MEDICAL_SAVE_MAGIC)                          # names the format, not just its generation
     WriteU32(MEDICAL_SAVE_FORMAT_VERSION)
     WriteCount(perClubStates.Count)                       # overflow-safe (fail loud on corrupt count, F5)
     for club in perClubStates (ascending ClubId):
@@ -91,6 +92,7 @@ EncodeMedical(perClubStates) -> bytes:
     # NO RNG cursor block — injuries.occurrence draws are position-independent keyed draws (KD-1/FR-MD-007)
 
 DecodeMedical(bytes) -> perClubStates:
+    magic   = ReadU32(); if magic != MEDICAL_SAVE_MAGIC: throw                     # ERR-041-009
     version = ReadU32(); if version != MEDICAL_SAVE_FORMAT_VERSION: throw          # F3
     count = ReadCount()                                     # overflow-safe bound guard (F5)
     for i in [0, count):
@@ -106,12 +108,22 @@ DecodeMedical(bytes) -> perClubStates:
     if bytesRemaining != 0: throw                            # trailing-byte guard, F5
 ```
 
-Three properties the layout carries, each of which is a MUST (**ERR-041-008**, at #41 T1 — the v0.1
-sketch above carried none of them explicitly):
+Four properties the layout carries, each of which is a MUST (**ERR-041-008** and **ERR-041-009**, at
+#41 T1 — the v0.1 sketch above carried none of them explicitly):
 
+- **The block names its own format.** `MEDICAL_SAVE_MAGIC` is written first, and decode MUST refuse a
+  block that does not carry it (**ERR-041-009**). The version field cannot do this job: every sub-blob
+  format in the save stack — this one, `TRAINING_SAVE_FORMAT_VERSION`, `SEASON_STATE_FORMAT_VERSION`,
+  `MATCH_SAVE_FORMAT_VERSION`, `PROGRESSION_SAVE_FORMAT_VERSION` — sits at version 1, so a version gate
+  distinguishes one *generation* of a format from the next and never one format from another. The #29
+  training block is the acute case, because ERR-029-004 deliberately made it the same byte shape as this
+  one: without the magic each codec decodes the other's bytes cleanly and completely, and a severity
+  tier arrives as a training focus while a recovery counter arrives as a conditioning cursor, with no
+  gate tripped anywhere in the file.
 - **`ClubId` is written.** Grouping by club without naming one leaves club identity carried by list order
   across a save boundary — an implicit agreement with a sibling sub-blob this codec is forbidden to read
-  (KD-7 blob independence). Four bytes per club buys a self-describing block and a duplicate check.
+  (KD-2 blob independence, `unified-season-save-design.md` — that document's KD-7 is the codec/disk-I/O
+  split, a different decision). Four bytes per club buys a self-describing block and a duplicate check.
 - **Order is not state.** The block is a map keyed by `(ClubId, PlayerId)` (FR-MD-018), so encode
   **canonicalizes** to ascending keys — two equal state sets MUST produce identical bytes whatever roster
   order the caller holds them in — and decode MUST require that order. A duplicate key at encode fails
@@ -140,4 +152,5 @@ stream-independence property #22's `world.text` and #28's `player-progression.re
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial architecture: assembly, file layout, seam contracts, save codec, stream registration. Status IN REVIEW. |
 | 0.2 | 2026-08-06 | — | **ERR-041-008** (at #41 T1): §4.4's `MEDICAL_SAVE_FORMAT_VERSION` layout gains `WriteI32(club.ClubId)` — v0.1 grouped the blocks by club without naming one, leaving club identity carried by list order across a save boundary, which is an implicit agreement with a sibling sub-blob this codec may not read. Also pins the canonical ascending-key rule, the negative-counter refusals, and the requirement that the F1 coherence gate run on encode as well as decode. |
+| 0.3 | 2026-08-06 | — | **ERR-041-009** (AR pass 1 over the T1 landing): §4.4's layout gains a leading `MEDICAL_SAVE_MAGIC`, and decode MUST refuse a block without it. v0.2 relied on the version field to gate the block, but every sub-blob format in the save stack is at version 1 — a version gate separates generations of one format, never one format from another. ERR-029-004 had just made the #29 training block this block's exact byte shape, so each codec decoded the other's bytes completely and silently: injury tiers read back as training focuses, recovery counters as conditioning cursors, every gate green. Also corrects the ERR-041-008 bullet's `KD-7 blob independence` citation to `KD-2` (`unified-season-save-design.md` KD-7 is the codec/disk-I/O split). |
 #endregion

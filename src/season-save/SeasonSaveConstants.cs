@@ -1,11 +1,14 @@
 // File:     src/season-save/SeasonSaveConstants.cs
 // Created:  2026-07-22
-// Modified: 2026-08-06 (#29/#41 T1: SEASON_SAVE_FORMAT_VERSION 2 -> 3)
+// Modified: 2026-08-06 (#29/#41 T1: SEASON_SAVE_FORMAT_VERSION 2 -> 3; doc-drift fix on the same)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) KD-4; Code Standards #20
 // Purpose:  Constant catalogue for the season save-file frame. Holds the season-frame format version —
-//           a fourth version, distinct from every version the frame nests (the two snapshot schema
-//           versions, MATCH_SAVE_FORMAT_VERSION, and WORLD_STORE_FORMAT_VERSION).
+//           distinct from every version the frame nests: WORLD_STORE_FORMAT_VERSION,
+//           SEASON_STATE_FORMAT_VERSION, TRAINING_SAVE_FORMAT_VERSION, and MEDICAL_SAVE_FORMAT_VERSION
+//           at the sub-blob level, MATCH_SAVE_FORMAT_VERSION for the optional match block, and — a
+//           level deeper still — the two snapshot schema versions nested inside the world and match
+//           blobs.
 
 namespace TacticalDirector.SeasonSave
 {
@@ -17,12 +20,16 @@ namespace TacticalDirector.SeasonSave
         #region Fixed
         /// <summary>
         /// [FIXED] The season save-file FRAMING version — the outermost format version in the save
-        /// stack (KD-4). It gates only the season frame (the <c>matchPresent</c> flag + the three
-        /// length-prefixed sub-blobs); the inner versions ride inside their own sub-blobs and are
-        /// re-checked by <see cref="TacticalDirector.LivingWorld.WorldStore.Restore"/> /
-        /// <see cref="SeasonStateCodec.Decode"/> / <c>MatchSaveCodec.Decode</c> themselves. A mismatch
-        /// fails loud on load — no cross-version migration at Stage 0. Bump only on a season-frame
-        /// layout change. Value: 2.
+        /// stack (KD-4). It gates only the season frame (the <c>matchPresent</c> flag + the five
+        /// length-prefixed sub-blobs — the living-world composite, the season state, the #29 training
+        /// block, the #41 medical block, and the optional match block); the inner versions ride inside
+        /// their own sub-blobs and are re-checked by
+        /// <see cref="TacticalDirector.LivingWorld.WorldStore.Restore"/> /
+        /// <see cref="SeasonStateCodec.Decode"/> /
+        /// <see cref="TacticalDirector.TrainingSystem.TrainingSaveCodec.Decode"/> /
+        /// <see cref="TacticalDirector.InjuriesMedical.MedicalSaveCodec.Decode"/> /
+        /// <c>MatchSaveCodec.Decode</c> themselves. A mismatch fails loud on load — no cross-version
+        /// migration at Stage 0. Bump only on a season-frame layout change. Value: 3.
         /// <para>
         /// <b>1 → 2 at #30 T1 (FR-SN-020).</b> The frame gained the season-state sub-blob between the
         /// world and match blocks (#30 Appendix B). The world blob
@@ -54,4 +61,9 @@ namespace TacticalDirector.SeasonSave
 // | 1.2     | 2026-08-06 | —      | #29/#41 T1 (FR-TR-018 / FR-MD-017): 2 -> 3 — the frame gained    |
 // |         |            |        | the training and medical sub-blobs between the season block and  |
 // |         |            |        | the optional match block; the other three stay byte-untouched.   |
+// | 1.3     | 2026-08-06 | —      | Doc-drift fix (no code/value change): the SEASON_SAVE_FORMAT_    |
+// |         |            |        | VERSION summary still said "Value: 2" and "three sub-blobs", and |
+// |         |            |        | its <see cref> list omitted TrainingSaveCodec.Decode /           |
+// |         |            |        | MedicalSaveCodec.Decode; the file-header Purpose block named     |
+// |         |            |        | only three of the five nested versions. Both corrected.          |
 #endregion

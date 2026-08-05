@@ -3,7 +3,8 @@
 // Modified: 2026-08-06
 // Author:   —
 // Spec:     Training System #29 §2.2 (the persisted training block), §4.2 / §4.4 (the sub-blob codec),
-//           FR-TR-018/019, F3/F5; ERR-029-004 (the §4.4 layout that was never pinned);
+//           FR-TR-018/019, F3/F5; ERR-029-004 (the §4.4 layout that was never pinned) and
+//           ERR-029-005 (the leading magic, without which #41's block decodes here silently);
 //           Deterministic Simulation #16 §3.2.4.1 (CanonicalSerializer); Code Standards #20
 // Purpose:  Pure byte codec for the #29 training sub-blob — one opaque, independently version-gated
 //           block under #30's season save. Encodes the per-club per-player TrainingState map in
@@ -28,6 +29,7 @@ namespace TacticalDirector.TrainingSystem
     /// the same shape with #41's four fields):
     /// </para>
     /// <code>
+    /// u32  TRAINING_SAVE_MAGIC        ("TRNG")
     /// u32  TRAINING_SAVE_FORMAT_VERSION
     /// u32  clubCount
     /// per club, ascending ClubId:
@@ -41,11 +43,20 @@ namespace TacticalDirector.TrainingSystem
     ///         u32  lastAdvancedWorldDay
     /// </code>
     /// <para>
+    /// <b>The block says which format it is.</b> The leading
+    /// <see cref="TrainingSystemConstants.TRAINING_SAVE_MAGIC"/> is not decoration: every sub-blob
+    /// format in the save stack sits at version 1, and the #41 medical block has this block's exact
+    /// byte shape, so without a magic each codec decodes the other's bytes cleanly and silently — an
+    /// injury tier arrives as a training focus and a recovery counter as a conditioning cursor, with
+    /// no gate tripped anywhere. A version gate cannot catch that; it distinguishes generations of one
+    /// format, never one format from another. See ERR-029-005 / ERR-041-009.
+    /// </para>
+    /// <para>
     /// <b>The club id is written, not implied by position.</b> #41's §4.4 sketch grouped the blocks by
     /// club without naming one, which leaves club identity carried only by list order across a save
     /// boundary — an implicit agreement with a sibling blob that the codec is explicitly forbidden to
-    /// read (KD-2 blob independence). Four bytes per club buys a self-describing block and a duplicate
-    /// check. See ERR-029-004 / ERR-041-008.
+    /// read (KD-2 blob independence, unified-season-save-design.md §KD-2). Four bytes per club buys a
+    /// self-describing block and a duplicate check. See ERR-029-004 / ERR-041-008.
     /// </para>
     /// <para>
     /// <b>Order is not state.</b> The block is a map keyed by <c>(clubId, playerId)</c>, so
@@ -82,6 +93,10 @@ namespace TacticalDirector.TrainingSystem
         /// <exception cref="ArgumentException">Two clubs share a club id, or two players within one club
         /// share a player id — a duplicate key has no defined winner and is a roster-lifecycle bug
         /// (FR-TR-025), never silently resolved.</exception>
+        /// <exception cref="InvalidOperationException">A state being encoded carries an undefined
+        /// <see cref="TrainingFocus"/> ordinal, or a negative <see cref="TrainingState.TrainingFatigue"/>
+        /// — both are contracts <see cref="Decode"/> itself refuses, so writing either would produce a
+        /// file no load of it could accept.</exception>
         public static byte[] Encode(ClubTrainingStates[] clubs)
         {
             if (clubs == null)
@@ -89,9 +104,10 @@ namespace TacticalDirector.TrainingSystem
                 throw new ArgumentNullException(nameof(clubs));
             }
 
-            int[] clubOrder = CanonicalOrder(ClubIdsOf(clubs), "club id");
+            int[] clubOrder = SaveBlobFramingHelpers.CanonicalOrder(
+                ClubIdsOf(clubs), "training", "club id", "FR-TR-025");
 
-            int size = 4 + 4;   // version + clubCount
+            int size = 4 + 4 + 4;   // magic + version + clubCount
             for (int i = 0; i < clubs.Length; i++)
             {
                 size += BytesPerClubHeader + clubs[i].Count * BytesPerPlayer;
@@ -100,13 +116,15 @@ namespace TacticalDirector.TrainingSystem
             byte[] buf = new byte[size];
             int o = 0;
 
+            CanonicalSerializer.WriteU32(buf, ref o, TrainingSystemConstants.TRAINING_SAVE_MAGIC);
             CanonicalSerializer.WriteU32(buf, ref o, TrainingSystemConstants.TRAINING_SAVE_FORMAT_VERSION);
             CanonicalSerializer.WriteU32(buf, ref o, (uint)clubs.Length);
 
             for (int c = 0; c < clubOrder.Length; c++)
             {
                 ClubTrainingStates club = clubs[clubOrder[c]];
-                int[] playerOrder = CanonicalOrder(RequireBound(club), "player id");
+                int[] playerOrder = SaveBlobFramingHelpers.CanonicalOrder(
+                    RequireBound(club), "training", "player id", "FR-TR-025");
 
                 CanonicalSerializer.WriteI32(buf, ref o, club.ClubId);
                 CanonicalSerializer.WriteU32(buf, ref o, (uint)club.Count);
@@ -114,9 +132,16 @@ namespace TacticalDirector.TrainingSystem
                 for (int p = 0; p < playerOrder.Length; p++)
                 {
                     int index = playerOrder[p];
+                    int playerId = club.PlayerIds[index];
                     TrainingState state = club.States[index];
 
-                    CanonicalSerializer.WriteI32(buf, ref o, club.PlayerIds[index]);
+                    // The focus and fatigue gates run on the WAY OUT as well as the way in. A codec
+                    // that only validates on decode will happily write a state no decode of it could
+                    // accept — and the failure then surfaces at load, one session away from the bug.
+                    RequireDefinedFocus(state.Focus, playerId);
+                    RequireNonNegativeFatigue(state.TrainingFatigue, playerId);
+
+                    CanonicalSerializer.WriteI32(buf, ref o, playerId);
                     CanonicalSerializer.WriteU8(buf, ref o, (byte)state.Focus);
                     CanonicalSerializer.WriteI32(buf, ref o, state.Condition);
                     CanonicalSerializer.WriteI32(buf, ref o, state.TrainingFatigue);
@@ -140,6 +165,8 @@ namespace TacticalDirector.TrainingSystem
         /// in ascending club id with each club's players in ascending player id.
         /// <para>
         /// Fail-loud (throws) on: a null blob; a
+        /// <see cref="TrainingSystemConstants.TRAINING_SAVE_MAGIC"/> mismatch (these bytes are some
+        /// other format — checked first, since a foreign block can carry a matching version); a
         /// <see cref="TrainingSystemConstants.TRAINING_SAVE_FORMAT_VERSION"/> mismatch (F3 — no Stage-0
         /// migration); a truncated read or a length prefix that would read past the blob (F5); club or
         /// player ids that are not strictly ascending (a duplicate or reordered key, which
@@ -171,7 +198,24 @@ namespace TacticalDirector.TrainingSystem
             int len = blob.Length;
             int o = 0;
 
-            Require(o, 4, len, "format version");
+            // The magic is checked BEFORE the version, because a foreign block can easily carry a
+            // matching version (every sub-blob format in the stack is at version 1) and the resulting
+            // "version 1 == version 1, proceed" is exactly the silent mis-decode this gate exists to
+            // stop. Naming the observed magic in the message turns a mystery corruption into "you
+            // handed me the medical block" (ERR-029-005).
+            SaveBlobFramingHelpers.Require(o, 4, len, "Training save", "format magic");
+            uint magic = CanonicalSerializer.ReadU32(blob, ref o);
+            if (magic != TrainingSystemConstants.TRAINING_SAVE_MAGIC)
+            {
+                throw new InvalidOperationException(
+                    "Training save magic 0x" + magic.ToString("X8") + " != expected 0x" +
+                    TrainingSystemConstants.TRAINING_SAVE_MAGIC.ToString("X8") +
+                    " — these bytes are not a #29 training block. A block of another sub-blob format " +
+                    "(the #41 medical block has this block's exact byte shape) would otherwise decode " +
+                    "cleanly and silently.");
+            }
+
+            SaveBlobFramingHelpers.Require(o, 4, len, "Training save", "format version");
             uint format = CanonicalSerializer.ReadU32(blob, ref o);
             if (format != TrainingSystemConstants.TRAINING_SAVE_FORMAT_VERSION)
             {
@@ -181,51 +225,44 @@ namespace TacticalDirector.TrainingSystem
                     " — no cross-version migration at Stage 0 (F3).");
             }
 
-            int clubCount = ReadCount(blob, ref o, len, BytesPerClubHeader, "club");
+            int clubCount = SaveBlobFramingHelpers.ReadCount(
+                blob, ref o, len, BytesPerClubHeader, "Training save", "club");
             var clubs = new ClubTrainingStates[clubCount];
             long previousClubId = long.MinValue;
 
             for (int c = 0; c < clubCount; c++)
             {
-                Require(o, 4, len, "club id");
+                SaveBlobFramingHelpers.Require(o, 4, len, "Training save", "club id");
                 int clubId = CanonicalSerializer.ReadI32(blob, ref o);
-                RequireAscending(clubId, ref previousClubId, "club id", c);
+                SaveBlobFramingHelpers.RequireAscending(clubId, ref previousClubId, "Training save", "club id", c);
 
-                int playerCount = ReadCount(blob, ref o, len, BytesPerPlayer, "player");
+                int playerCount = SaveBlobFramingHelpers.ReadCount(
+                    blob, ref o, len, BytesPerPlayer, "Training save", "player");
                 var playerIds = new int[playerCount];
                 var states = new TrainingState[playerCount];
                 long previousPlayerId = long.MinValue;
 
                 for (int p = 0; p < playerCount; p++)
                 {
-                    Require(o, BytesPerPlayer, len, "player training state");
+                    SaveBlobFramingHelpers.Require(o, BytesPerPlayer, len, "Training save", "player training state");
 
                     int playerId = CanonicalSerializer.ReadI32(blob, ref o);
-                    RequireAscending(playerId, ref previousPlayerId, "player id in club " + clubId, p);
+                    SaveBlobFramingHelpers.RequireAscending(
+                        playerId, ref previousPlayerId, "Training save", "player id in club " + clubId, p);
 
-                    byte focus = CanonicalSerializer.ReadU8(blob, ref o);
-                    if (!TrainingSystemConstants.IsDefinedFocus((TrainingFocus)focus))
-                    {
-                        throw new InvalidOperationException(
-                            "Training save player " + playerId + " has focus ordinal " + focus +
-                            " — not a defined TrainingFocus; corrupt save.");
-                    }
+                    var focus = (TrainingFocus)CanonicalSerializer.ReadU8(blob, ref o);
+                    RequireDefinedFocus(focus, playerId);
 
                     int condition = CanonicalSerializer.ReadI32(blob, ref o);
                     int trainingFatigue = CanonicalSerializer.ReadI32(blob, ref o);
-                    if (trainingFatigue < 0)
-                    {
-                        throw new InvalidOperationException(
-                            "Training save player " + playerId + " has training fatigue " +
-                            trainingFatigue + " — the accumulator's floor is 0 (§2.2); corrupt save.");
-                    }
+                    RequireNonNegativeFatigue(trainingFatigue, playerId);
 
                     uint lastAdvancedWorldDay = CanonicalSerializer.ReadU32(blob, ref o);
 
                     playerIds[p] = playerId;
                     states[p] = new TrainingState
                     {
-                        Focus = (TrainingFocus)focus,
+                        Focus = focus,
                         Condition = condition,
                         TrainingFatigue = trainingFatigue,
                         LastAdvancedWorldDay = lastAdvancedWorldDay,
@@ -275,86 +312,27 @@ namespace TacticalDirector.TrainingSystem
             return club.PlayerIds;
         }
 
-        // Returns the indices of `keys` in ascending key order, refusing duplicates. Sorting here is
-        // what makes the bytes canonical: the block is a map keyed by id (FR-TR-019), so the caller's
-        // roster order is not part of the state and must not be part of the bytes. A duplicate key IS a
-        // defect — there is no defined winner — so it throws rather than being deduplicated.
-        private static int[] CanonicalOrder(int[] keys, string what)
+        // Both gates run on the WAY OUT (Encode) as well as the way IN (Decode) — see the comment at the
+        // Encode call site. A codec that only validates on decode will happily write a state no decode
+        // of it could accept, and the failure then surfaces at load, one session away from the bug.
+
+        private static void RequireDefinedFocus(TrainingFocus focus, int playerId)
         {
-            int n = keys.Length;
-            var sorted = new int[n];
-            var order = new int[n];
-            for (int i = 0; i < n; i++)
-            {
-                sorted[i] = keys[i];
-                order[i] = i;
-            }
-
-            Array.Sort(sorted, order);
-
-            for (int i = 1; i < n; i++)
-            {
-                if (sorted[i] == sorted[i - 1])
-                {
-                    throw new ArgumentException(
-                        "Duplicate " + what + " " + sorted[i] + " in the training save set — a " +
-                        "duplicate key has no defined winner (FR-TR-025).");
-                }
-            }
-
-            return order;
-        }
-
-        // Decode-side mirror of the CanonicalOrder guarantee. `previous` is a long so that the first
-        // comparison can start below int.MinValue without a separate "is this the first?" flag.
-        private static void RequireAscending(int value, ref long previous, string what, int index)
-        {
-            if (value <= previous)
+            if (!TrainingSystemConstants.IsDefinedFocus(focus))
             {
                 throw new InvalidOperationException(
-                    "Training save " + what + " at index " + index + " is " + value +
-                    ", which does not exceed the preceding " + previous +
-                    " — the block is written in strictly ascending key order; corrupt save.");
+                    "Training save player " + playerId + " has focus ordinal " + (byte)focus +
+                    " — not a defined TrainingFocus; corrupt save.");
             }
-
-            previous = value;
         }
 
-        // Reads a u32 length prefix and refuses a count whose elements could not possibly be backed by
-        // the bytes that remain. The bound is expressed in ELEMENTS (`remaining / bytesPerElement`)
-        // rather than as a byte product, because that product can overflow int for a large blob and a
-        // crafted count and wrap back to a small positive value that slips past a byte-wise guard.
-        // `bytesPerElement` is the element's MINIMUM width (a club header for a club, which may then
-        // carry zero players), so the bound is conservative and never rejects a well-formed blob — the
-        // WorldStateSerializer.ReadCount / SeasonStateCodec posture.
-        private static int ReadCount(byte[] blob, ref int o, int total, int bytesPerElement, string what)
+        private static void RequireNonNegativeFatigue(int trainingFatigue, int playerId)
         {
-            Require(o, 4, total, what + " count");
-            uint raw = CanonicalSerializer.ReadU32(blob, ref o);
-            int maxCount = (total - o) / bytesPerElement;
-            if (raw > (uint)maxCount)
+            if (trainingFatigue < 0)
             {
                 throw new InvalidOperationException(
-                    "Training save " + what + " count " + raw + " exceeds the " + maxCount +
-                    " element(s) the " + (total - o) + " remaining byte(s) at offset " + o +
-                    " could hold — corrupt save.");
-            }
-
-            return (int)raw;
-        }
-
-        private static void Require(int offset, int need, int total, string what)
-        {
-            // Overflow-safe (the MatchSaveCodec / SeasonSaveCodec posture): compare against
-            // (total - offset) rather than (offset + need), since a corrupt length prefix can push
-            // `need` near int.MaxValue and `offset + need` would wrap negative and slip past the guard.
-            // `offset` is always in [0, total] here (every read is guarded), so `total - offset` is a
-            // safe non-negative int.
-            if (need < 0 || offset > total || need > total - offset)
-            {
-                throw new InvalidOperationException(
-                    "Training save blob truncated reading " + what + " (need " + need +
-                    " byte(s) at offset " + offset + " of " + total + ").");
+                    "Training save player " + playerId + " has training fatigue " + trainingFatigue +
+                    " — the accumulator's floor is 0 (§2.2); corrupt save.");
             }
         }
     }
@@ -366,4 +344,17 @@ namespace TacticalDirector.TrainingSystem
 // |         |            |        | FORMAT_VERSION sub-blob, canonical key order, the overflow-safe    |
 // |         |            |        | ReadCount bound, the ascending-key decode gate, and the trailing-  |
 // |         |            |        | byte guard. Layout pinned by ERR-029-004.                          |
+// | 1.1     | 2026-08-06 | —      | ERR-029-005 (AR pass 1, H): the block gains a leading TRAINING_    |
+// |         |            |        | SAVE_MAGIC, checked before the version. Without it the #41 medical |
+// |         |            |        | block — same byte shape, same version 1 — decoded here cleanly and |
+// |         |            |        | silently, turning injury tiers into training focuses.              |
+// | 1.2     | 2026-08-06 | —      | Review fix (M): Encode now runs the same focus-ordinal and         |
+// |         |            |        | non-negative-fatigue gates Decode already ran, so a caller cannot  |
+// |         |            |        | write a state its own Decode would refuse (RequireDefinedFocus /   |
+// |         |            |        | RequireNonNegativeFatigue, shared by both directions). Review fix  |
+// |         |            |        | (M): CanonicalOrder / RequireAscending / ReadCount / Require moved |
+// |         |            |        | to the new shared TacticalDirector.DeterministicSim.               |
+// |         |            |        | SaveBlobFramingHelpers — this file and MedicalSaveCodec were byte- |
+// |         |            |        | identical duplicates of those four helpers with nothing mechanical |
+// |         |            |        | keeping them in sync.                                              |
 #endregion

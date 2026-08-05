@@ -3,10 +3,11 @@
 // Modified: 2026-08-06
 // Author:   —
 // Spec:     Training System #29 §4.4 (the sub-blob codec), §5 T-TR-FAIL-001, FR-TR-018/019, F3/F5;
-//           ERR-029-004; Code Standards #20
+//           ERR-029-004, ERR-029-005; Code Standards #20
 // Purpose:  Unit tests for TrainingSaveCodec — the round-trip field-identity FR-TR-019 demands, the
 //           canonical key order that makes the bytes deterministic, and every fail-loud gate (version,
-//           bounds, ordering, focus contract, trailing bytes).
+//           bounds, ordering, focus contract, trailing bytes) on BOTH sides — plus the format-magic
+//           gate that stops a same-shaped foreign block decoding here as training state.
 
 using System;
 
@@ -120,7 +121,8 @@ namespace TacticalDirector.TrainingSystem.Tests
             // The state of the game today: #29 is inert, so every save carries this. It must be a legal
             // block, not a special case the frame has to flag.
             byte[] blob = TrainingSaveCodec.Encode(Array.Empty<ClubTrainingStates>());
-            Assert.AreEqual(8, blob.Length, "an empty block is exactly the version + a zero club count");
+            Assert.AreEqual(12, blob.Length,
+                "an empty block is exactly the magic + the version + a zero club count");
             Assert.AreEqual(0, TrainingSaveCodec.Decode(blob).Length);
         }
 
@@ -221,6 +223,32 @@ namespace TacticalDirector.TrainingSystem.Tests
             Assert.Throws<ArgumentNullException>(() => TrainingSaveCodec.Encode(null));
         }
 
+        // ── The focus/fatigue gates, on the way OUT as well as in ──────────────────────
+
+        [Test]
+        public void Encode_NegativeTrainingFatigue_FailsLoud()
+        {
+            // A codec that validates only on decode will happily write a file no load of it can accept,
+            // and the failure then surfaces a session later, far from the bug that produced it. Decode
+            // already refuses a negative training-fatigue accumulator (§2.2's structural floor) — Encode
+            // must refuse the same value rather than write it and let the contradiction surface at load.
+            Assert.Throws<InvalidOperationException>(
+                () => TrainingSaveCodec.Encode(
+                    new[] { Club(1, (5, State(TrainingFocus.Rest, 1, -1, 1u))) }),
+                "a negative training-fatigue accumulator is structurally impossible, not a [GT] band " +
+                "violation, and Decode refuses it — Encode must refuse it too.");
+        }
+
+        [Test]
+        public void Encode_UndefinedFocusOrdinal_FailsLoud()
+        {
+            // Decode already refuses a focus ordinal outside TrainingFocus — Encode must refuse the same
+            // ordinal rather than let (TrainingFocus)200 reach disk as a value no Decode of it can accept.
+            Assert.Throws<InvalidOperationException>(
+                () => TrainingSaveCodec.Encode(
+                    new[] { Club(1, (5, State((TrainingFocus)200, 1, 1, 1u))) }));
+        }
+
         // ── Fail-loud decode gates ──────────────────────────────────────────────────
 
         [Test]
@@ -230,10 +258,30 @@ namespace TacticalDirector.TrainingSystem.Tests
         }
 
         [Test]
+        public void Decode_ForeignMagic_FailsLoud_NotSilentlyReinterpreted()
+        {
+            // ERR-029-005. Every sub-blob format in the save stack sits at version 1, so the version
+            // gate can only tell one GENERATION of this format from the next — never this format from
+            // another. The #41 medical block is the acute case: identical byte shape, identical
+            // version, so before the magic it decoded here in full and in silence, every gate green,
+            // with severities arriving as focuses and recovery counters as conditioning cursors. This
+            // fixture can't reference #41 (the layer direction is #41 -> #29), so it stands in a block
+            // that is byte-for-byte a valid training block except for the leading tag — which is
+            // exactly what a foreign block of the same shape is.
+            byte[] blob = TrainingSaveCodec.Encode(TwoClubs());
+            int o = 0;
+            CanonicalSerializer.WriteU32(blob, ref o, 0x4D45444Cu);   // "MEDL"
+
+            Assert.Throws<InvalidOperationException>(() => TrainingSaveCodec.Decode(blob),
+                "a block carrying another format's magic must be refused outright — the bytes past " +
+                "the tag are a perfectly well-formed training block, which is the whole danger.");
+        }
+
+        [Test]
         public void Decode_WrongFormatVersion_FailsLoud_TTRFAIL001()
         {
             byte[] blob = TrainingSaveCodec.Encode(TwoClubs());
-            int o = 0;
+            int o = 4;   // past the magic
             CanonicalSerializer.WriteU32(blob, ref o,
                 TrainingSystemConstants.TRAINING_SAVE_FORMAT_VERSION + 1);
 
@@ -264,12 +312,14 @@ namespace TacticalDirector.TrainingSystem.Tests
         }
 
         [Test]
-        public void Decode_OversizeClubCount_FailsLoud_WithoutOverAllocating()
+        public void Decode_OversizeClubCount_FailsLoud()
         {
             // The overflow class the ReadCount bound exists for: a crafted count near uint.MaxValue must
-            // be refused against the bytes that remain, not turned into a multi-gigabyte allocation.
+            // be refused against the bytes that remain. This proves the throw only — it does not measure
+            // allocation, so it is not by itself proof that no oversized array is ever allocated; that
+            // would need a memory-pressure assertion this suite does not attempt.
             byte[] blob = TrainingSaveCodec.Encode(TwoClubs());
-            int o = 4;
+            int o = 8;   // magic + version
             CanonicalSerializer.WriteU32(blob, ref o, uint.MaxValue);
 
             Assert.Throws<InvalidOperationException>(() => TrainingSaveCodec.Decode(blob));
@@ -279,8 +329,20 @@ namespace TacticalDirector.TrainingSystem.Tests
         public void Decode_OversizePlayerCount_FailsLoud()
         {
             byte[] blob = TrainingSaveCodec.Encode(new[] { Club(1, (5, State(TrainingFocus.Rest, 1, 1, 1u))) });
-            int o = 4 + 4 + 4;   // version, clubCount, clubId
+            int o = 4 + 4 + 4 + 4;   // magic, version, clubCount, clubId
             CanonicalSerializer.WriteU32(blob, ref o, 0x7FFFFFFFu);
+
+            Assert.Throws<InvalidOperationException>(() => TrainingSaveCodec.Decode(blob));
+        }
+
+        [Test]
+        public void Decode_NonAscendingClubIds_FailsLoud()
+        {
+            // The club-id mirror of Decode_NonAscendingPlayerIds_FailsLoud below — the ascending gate
+            // applies at both levels of the block, and each level needs its own proof.
+            byte[] blob = TrainingSaveCodec.Encode(new[] { Club(1), Club(2) });
+            int o = 12;                                  // magic + version + clubCount ⇒ first club id
+            CanonicalSerializer.WriteI32(blob, ref o, 5);        // 5 then 2 — no longer ascending
 
             Assert.Throws<InvalidOperationException>(() => TrainingSaveCodec.Decode(blob));
         }
@@ -289,8 +351,8 @@ namespace TacticalDirector.TrainingSystem.Tests
         public void Decode_UndefinedFocusOrdinal_FailsLoud()
         {
             byte[] blob = TrainingSaveCodec.Encode(new[] { Club(1, (5, State(TrainingFocus.Rest, 1, 1, 1u))) });
-            // version(4) + clubCount(4) + clubId(4) + playerCount(4) + playerId(4) = 20 ⇒ the focus byte
-            blob[20] = 200;
+            // magic(4) + version(4) + clubCount(4) + clubId(4) + playerCount(4) + playerId(4) = 24
+            blob[24] = 200;
 
             Assert.Throws<InvalidOperationException>(() => TrainingSaveCodec.Decode(blob),
                 "a focus ordinal outside the enum must fail loud, never clamp to Balanced (F4).");
@@ -300,8 +362,8 @@ namespace TacticalDirector.TrainingSystem.Tests
         public void Decode_NegativeTrainingFatigue_FailsLoud()
         {
             byte[] blob = TrainingSaveCodec.Encode(new[] { Club(1, (5, State(TrainingFocus.Rest, 1, 1, 1u))) });
-            // ... + focus(1) + condition(4) = 25 ⇒ the training-fatigue i32
-            int o = 25;
+            // ... + focus(1) + condition(4) = 29 ⇒ the training-fatigue i32
+            int o = 29;
             CanonicalSerializer.WriteI32(blob, ref o, -1);
 
             Assert.Throws<InvalidOperationException>(() => TrainingSaveCodec.Decode(blob),
@@ -320,7 +382,7 @@ namespace TacticalDirector.TrainingSystem.Tests
                             (6, State(TrainingFocus.Fitness, 2, 2, 2u))),
                 });
 
-            int o = 4 + 4 + 4 + 4;      // version, clubCount, clubId, playerCount
+            int o = 4 + 4 + 4 + 4 + 4;  // magic, version, clubCount, clubId, playerCount
             CanonicalSerializer.WriteI32(blob, ref o, 9);   // first player id 5 -> 9, now above the second
 
             Assert.Throws<InvalidOperationException>(() => TrainingSaveCodec.Decode(blob));
@@ -348,4 +410,12 @@ namespace TacticalDirector.TrainingSystem.Tests
 // |         |            |        | survival, canonical-order determinism, the encode-side duplicate   |
 // |         |            |        | and unbound guards, and the decode fail-loud gates (F3/F5 + the    |
 // |         |            |        | focus and fatigue contracts).                                      |
+// | 1.1     | 2026-08-06 | —      | Review fix (M): added Encode_NegativeTrainingFatigue_FailsLoud and |
+// |         |            |        | Encode_UndefinedFocusOrdinal_FailsLoud, proving the new encode-side |
+// |         |            |        | gates refuse what Decode already refused. Review fix (Low): added  |
+// |         |            |        | Decode_NonAscendingClubIds_FailsLoud, the club-id mirror of the    |
+// |         |            |        | existing player-id test. Renamed                                   |
+// |         |            |        | Decode_OversizeClubCount_FailsLoud_WithoutOverAllocating to        |
+// |         |            |        | Decode_OversizeClubCount_FailsLoud — the body only ever asserted   |
+// |         |            |        | the throw, never the allocation claim in the old name.             |
 #endregion

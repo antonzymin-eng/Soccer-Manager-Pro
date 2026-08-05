@@ -1,7 +1,26 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 6, 2026 (**#29/#41 T1 — the two save codecs and the season-frame composition.**
+**Last Updated:** August 6, 2026, later same day (**AR pass over the #29/#41 T1 landing — 2 High, 2
+Medium, 3 Low, all fixed.**
+**New:** `src/deterministic-sim/SaveBlobFramingHelpers.cs` v1.0 (the four framing helpers both new
+codecs had duplicated verbatim), `src/season-save/TrainingBlock.cs` v1.0 + `MedicalBlock.cs` v1.0 (the
+typed frame handles that make a training/medical transposition a build error) — + their three `.meta`.
+**Modified:** `TrainingSystemConstants.cs` + `InjuriesMedicalConstants.cs` (each gains a `*_SAVE_MAGIC`
+`[FIXED]`), `TrainingSaveCodec.cs` v1.1 + `MedicalSaveCodec.cs` v1.1 (magic written and checked first;
+helpers hoisted; #29 gains the encode-side focus/fatigue gates its sibling already had),
+`SeasonSaveCodec.cs` v1.3 (`Encode` takes `in TrainingBlock` / `in MedicalBlock`),
+`SeasonSaveManager.cs` v1.6 (the two per-club parameters become REQUIRED and reject null),
+`SeasonSaveConstants.cs` v1.3 + `SeasonLoop.cs` v1.5 (doc drift), all three season-save test files
+(`SeasonSaveManagerTests.cs`, `SeasonLoopTests.cs`, `SeasonRollTests.cs` — every `Save` call site now
+says `Array.Empty` explicitly), and both codec suites (offsets shifted past the magic; the cross-decode,
+encode-gate and mirror-ordering tests added).
+**Specs:** `training-system/section-4.md` v0.5 (§4.4.1 gains the magic + a fourth MUST),
+`injuries-medical/section-4.md` v0.3 (§4.4 the same); `spec-error-log.md` v1.62 (**ERR-029-005**,
+**ERR-041-009**); `CHANGELOG.md`, `CHANGELOG-src.md` v2.71, `src-tree.md`, `CLAUDE.md`.
+**Still no gate run** — no .NET SDK; the cross-decode defect was proven outside C#.)
+
+**Last Updated (prior):** August 6, 2026 (**#29/#41 T1 — the two save codecs and the season-frame composition.**
 **New:** `src/training-system/TrainingSaveCodec.cs` v1.0, `src/training-system/ClubTrainingStates.cs` v1.0,
 `src/training-system/tests/TrainingSaveCodecTests.cs` v1.0,
 `src/injuries-medical/MedicalSaveCodec.cs` v1.0, `src/injuries-medical/ClubInjuryStates.cs` v1.0,
@@ -1360,6 +1379,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/deterministic-sim/RngStreamState.cs` | Mutable struct: StreamKey/RngCursor/ActionOrdinal (ulong), BudgetRemaining/DeclaredBudget/DrawIndex (int), SiteId (string), StreamVersion (ushort), SubsystemOrdinal (int), EntityId (int); ClearReservation() |
 | `src/deterministic-sim/MatchClock.cs` | Sealed class: CurrentTick / CurrentTacticalTick (÷AI_PHASE_STRIDE) / CurrentMatchTimeMs (×FrameMs) / CurrentMatchTimeSeconds (×FrameSeconds; B1 seconds-clock) / IsAiStrideTick; Advance(); RestoreFromSnapshot(tick) for replay step 5 — no System.DateTime (FR-CS-042) |
 | `src/deterministic-sim/DeterministicRngService.cs` | Sealed class: HKDF-SHA256 key derivation at construction; SipHash-2-4-64 per-draw hash; RegisterStream / Reserve / DrawReserved / CloseReservation / Skip / RestoreStream; zero-alloc hot path (stackalloc Span<byte>[21]; AR-1 H-3) |
+| `src/deterministic-sim/SaveBlobFramingHelpers.cs` | Static class: the framing helpers the #29 and #41 sub-blob codecs share — `CanonicalOrder` (ascending key order over a COPY, duplicate keys throw), `RequireAscending` (the decode-side mirror), `ReadCount` (bound expressed in ELEMENTS, not a byte product that can overflow int), `Require` (overflow-safe, compares against `total - offset`). Hoisted at the T1 AR pass: the two codecs had duplicated all four verbatim on day one, and the first thing that drift produced was one codec gaining encode-side value gates the other lacked. The three older codecs (`MatchSaveCodec`, `SeasonSaveCodec`, `SeasonStateCodec`) keep their own `Require`/`ReadCount` copies — retrofitting them was deliberately out of scope |
 | `src/deterministic-sim/CanonicalSerializer.cs` | Static class: §3.2.4.1 Write/Read for bool, u8/i8, u16/i16, u32/i32, u64/i64, f32 (−0.0→+0.0), f32TierB (NaN→0x7FC00000), f64, f64TierB (NaN→0x7FF8000000000000; corpus F-09), strings, bytes, optional tags; FloatUintUnion explicit-layout struct (AR-1 H-1/H-2: eliminates BitConverter.GetBytes heap alloc) |
 | `src/deterministic-sim/SnapshotHeader.cs` | Sealed class: SchemaVersion (u32) / DigestVersion (u16) / Tick (u64) / PrevSnapshotDigest[32] / CurrentSnapshotDigest[32] / Fingerprint / Cursor; Initialize(tick, prevDigest, fingerprint) |
 | `src/deterministic-sim/SnapshotPayload.cs` | Sealed class: pre-allocated PayloadBytes[MaxSnapshotBytes] / BytesWritten; Reset() |
@@ -1888,8 +1908,10 @@ above BOTH `ui-framework` and `match-analytics`; host-free and CI-gated. Deliber
 |------|---------|
 | `src/season-save/season-save.asmdef` | `TacticalDirector.SeasonSave` — the composition/persistence root ABOVE both match-engine and living-world (references MatchEngine + LivingWorld + DeterministicSim); the only assembly that may see both blobs, resolving FR-LW-003 |
 | `src/season-save/SeasonSaveConstants.cs` | `[FIXED] SEASON_SAVE_FORMAT_VERSION = 2` — the outermost format version, distinct from the snapshot schema versions + MATCH_SAVE_FORMAT_VERSION + WORLD_STORE_FORMAT_VERSION + SEASON_STATE_FORMAT_VERSION (KD-4); bumped 1 → 2 at #30 T1 when the frame gained the season sub-blob (FR-SN-020) |
-| `src/season-save/SeasonSaveBlobs.cs` | Deframe result: `WorldBlob` + `SeasonBlob` (both always) + `MatchBlob` (null if no in-progress match) — three opaque byte sub-blobs (KD-2/KD-3, FR-SN-019) |
-| `src/season-save/SeasonSaveCodec.cs` | Pure static frame codec: `Encode(worldBlob, seasonBlob, trainingBlob, medicalBlob, matchBlobOrNull)` / `Decode(byte[]) → SeasonSaveBlobs` — a SEASON_SAVE_FORMAT_VERSION-gated frame (v3) + matchPresent flag + five length-prefixed opaque sub-blobs, four mandatory and the match optional (each keeps its own version gate); overflow-safe `Require` bound + fail-loud on null/version/flag/length/trailing (KD-7/KD-8) |
+| `src/season-save/SeasonSaveBlobs.cs` | Deframe result: `WorldBlob` + `SeasonBlob` + `TrainingBlob` + `MedicalBlob` (all always) + `MatchBlob` (null if no in-progress match) — five opaque byte sub-blobs (KD-2/KD-3, FR-SN-019, FR-TR-018, FR-MD-017) |
+| `src/season-save/TrainingBlock.cs` | Typed handle on the #29 sub-blob's bytes at the frame boundary (ERR-029-005). Exists so `SeasonSaveCodec.Encode` cannot be handed the medical block in the training slot — the two payloads are byte-shape-identical, so a positional mistake had no compile-time signal in a list of five `byte[]`. Rejects null; `Encode` separately rejects `default(TrainingBlock)`, which skips the constructor |
+| `src/season-save/MedicalBlock.cs` | The #41 counterpart to `TrainingBlock` (ERR-041-009) |
+| `src/season-save/SeasonSaveCodec.cs` | Pure static frame codec: `Encode(worldBlob, seasonBlob, in TrainingBlock, in MedicalBlock, matchBlobOrNull)` / `Decode(byte[]) → SeasonSaveBlobs` — a SEASON_SAVE_FORMAT_VERSION-gated frame (v3) + matchPresent flag + five length-prefixed opaque sub-blobs, four mandatory and the match optional (each keeps its own version gate); overflow-safe `Require` bound + fail-loud on null/version/flag/length/trailing (KD-7/KD-8) |
 | `src/season-save/SeasonStateCodec.cs` | #30 T1: pure static season-state sub-blob codec — `Encode(SeasonState)` / `Decode(byte[]) → SeasonState` over the #30 Appendix B layout (version gate; seed/seasonNumber/managedClubId; club set; the serialized schedule per KD-5; calendar cursor per KD-4; table in ClubId order; board), SEASON_STATE_FORMAT_VERSION-gated; overflow-safe element-wise length bounds, trailing-byte guard, serialized-vs-derived goal-difference coherence check, and decode-through-the-validating-constructors (FR-SN-019/022/023) |
 | `src/season-save/SeasonSaveContents.cs` | `Load` result: reconstructed `WorldStore` + `SeasonState` (both never null) + nullable `MatchEngine` |
 | `src/season-save/SeasonSaveManager.cs` | Static: `Save(world, season, matchOrNull, path)` (capture all three → Encode → atomic temp→fsync→rename) / `Load(path, ISquadProvider = null, ArcCanonSource = null) → SeasonSaveContents` (Decode → WorldStore.Restore + SeasonStateCodec.Decode +, when present, MatchSaveManager.Restore) — KD-1/KD-5/KD-6/KD-8, FR-SN-021 |
@@ -1968,7 +1990,7 @@ handoff) remains open.
 | `MedicalStep.cs` | §3.1 `AdvanceMedicalDay` (recovery THEN draw; the KD-6 entry-state gate; F1/F4/F6/F7), §3.1.1 `DeriveActionOrdinal` (fixed-radix bijection), the keyed `DrawOccurrence` (domain tag → playerId → ordinal, each through a SplitMix64 finalizer), §3.2 `ClassifySeverityFromDraw` (same draw, integer cross-multiply), §3.4 `AssembleRiskScore`, FR-MD-023 `IsAvailable` |
 | `InjuriesMedicalConstants.cs` | Appendix A: `[FIXED]` versions / sentinel / per-mille denominators / draw-purpose radix, `[DERIVED]` `OccurrenceDrawDenom` (a property, so it cannot capture 0 from an init-order race), `[CROSS]` `DomainTagInjuriesMedical` + `InjuryRiskMax` (mirrored from #29, ERR-041-003 — not a second config key), `[GT]` tiers + weights, and the robustness table calibrated so §3.6's `mean 14 ⇒ 400` is exact |
 | `ClubInjuryStates.cs` | One club's persisted medical block, on #29's `ClubTrainingStates` terms |
-| `MedicalSaveCodec.cs` | The `MEDICAL_SAVE_FORMAT_VERSION` sub-blob (§4.4 as corrected by ERR-041-008 — the club id is written, not positional). Canonical ascending keys; the **F1 coherence gate runs on encode as well as decode**, so the codec cannot write a file no load of it accepts; no RNG cursor block (KD-1 / FR-MD-007) |
+| `MedicalSaveCodec.cs` | The `MEDICAL_SAVE_FORMAT_VERSION` sub-blob (§4.4 as corrected by ERR-041-008 — the club id is written, not positional — and ERR-041-009 — the block leads with `MEDICAL_SAVE_MAGIC`, because every sub-blob format in the stack is at version 1 and #29's block has this one's exact byte shape, so a version gate cannot tell them apart). Canonical ascending keys; the **F1 coherence gate runs on encode as well as decode**, so the codec cannot write a file no load of it accepts; no RNG cursor block (KD-1 / FR-MD-007) |
 | `tests/injuries-medical-tests.asmdef` | `TacticalDirector.InjuriesMedical.Tests` (Editor-only) |
 | `tests/MedicalStepTests.cs` | §3.6 pinned term by term; T-MD-DET-001/003/005/006/007/009, T-MD-ORD-001 (heal-and-reinjure cannot share a call), T-MD-SEV-001/002, T-MD-REC-001, T-MD-MOD-001/002, T-MD-NEU-001/002, T-MD-AVAIL-001, T-MD-FAT-001 (the `#29 → #41` seam, driving the real producer), T-MD-FAIL-004/006 |
 | `tests/MedicalSaveCodecTests.cs` | Round-trip field identity (FR-MD-018), every severity tier surviving the byte, the block-size assertion that fails if an RNG cursor is ever added (FR-MD-007), order-independence, and the F1/F3/F4/F5 gates on both sides |
