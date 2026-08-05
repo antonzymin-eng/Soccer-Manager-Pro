@@ -12,7 +12,106 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 5, 2026, end of same day (**ERR-008-019 — the full-range
+> **Last Updated:** August 6, 2026, later same day (**#29/#41 T1 gate run — PASSED. The two save
+> codecs, the three new types and the frame change compiled for the first time; all 58 new tests
+> executed and passed.** PR #300, CI run 397, head `9a7f703`. Build 0 errors (5 warnings, not shown to
+> be new); `TrainingSystem.Tests` **52/52**, `InjuriesMedical.Tests` **66/66**, 0 skipped in either;
+> `SeasonSave.Tests` **267 passed / 3 skipped / 270**, carrying the 7 new `SeasonSaveManagerTests`.
+> Whole-tree gate PASSED with the quarantine empty, `MatchEngine.Tests` 420/430 unchanged.
+>
+> **Nothing needed a fix.** Zero compile errors and zero test failures on the first run, exactly as at
+> the T0 gate — and that is the whole result for three things the last two landings changed and had no
+> way to check: the `in TrainingBlock` / `in MedicalBlock` signature change at every
+> `SeasonSaveCodec.Encode` call site, the byte offsets throughout both codec suites after the leading
+> `*_SAVE_MAGIC` shifted every one of them, and `SaveBlobFramingHelpers` under `TreatWarningsAsErrors`.
+>
+> **What the run retires:** the "no gate run" caveat on both T1 entries below. The adversarial review
+> in particular was written end to end against code that had never been compiled, including the
+> two-layer fix for the mutual-decode defect — whose load-time half, the `*_SAVE_MAGIC` gate, had been
+> exercised only by a byte-exact Python model and never by a compiler refusing a foreign block. Those
+> claims now hold by execution.
+>
+> **Worth recording about the run itself:** it took 36 minutes with the other ten checks long green,
+> which reads as a hung job from outside. It was not — `MatchEngine.Tests` alone runs **35 m 30 s**,
+> and the quarantine being empty means the full suite was enforced rather than a report-only subset.
+> The authoring environment still has no .NET SDK, the installer still 403 at the proxy, so CI remains
+> the only compiler available for this work.)
+
+> **Last Updated (prior):** August 6, 2026, later same day (**Adversarial review over the #29/#41 T1 landing —
+> 2 High, 2 Medium, 3 Low, all fixed.** The headline is a defect that exists *because* ERR-029-004
+> succeeded. Pinning #29's byte layout to match #41's made the two blocks byte-for-byte the same shape,
+> and **every sub-blob format in the save stack sits at version 1** — `TRAINING_SAVE_FORMAT_VERSION`,
+> `MEDICAL_SAVE_FORMAT_VERSION`, `SEASON_STATE_FORMAT_VERSION`, `MATCH_SAVE_FORMAT_VERSION`,
+> `PROGRESSION_SAVE_FORMAT_VERSION`. A version gate therefore separates one *generation* of a format
+> from the next and **never one format from another**, so each codec decoded the other's bytes cleanly,
+> completely and silently: severity tiers arrived as training focuses, recovery counters as conditioning
+> cursors, injury counts as training fatigue, every gate green and no trailing byte. Proven by executing
+> a byte-exact model of both formats in **both directions** before the fix — the reverse case is a squad
+> on Fitness/Technical focus with a healthy `Condition` reading back as a squad carrying
+> Moderate/Serious injuries with thousands of recovery days, F1 coherence satisfied throughout. The
+> trigger, transposing two arguments in `SeasonSaveCodec.Encode`'s list of five consecutive `byte[]`,
+> had no compile-time signal either. **Fixed in two layers** (`ERR-029-005` / `ERR-041-009`): each block
+> now writes a self-identifying `*_SAVE_MAGIC` first and refuses a foreign one on decode, and the
+> frame's two confusable parameters become the typed `TrainingBlock` / `MedicalBlock`, making the
+> transposition a build error. Deliberately **not** an RNG domain tag — those name draw domains and must
+> stay free to change independently of a save format. The general rule is now a MUST in both §4.4
+> sections: **a format version is not a format identifier.** Second High, same shape one layer up:
+> `SeasonSaveManager.Save`'s `trainingClubs`/`medicalClubs` defaulted to null-meaning-empty, so at T2 a
+> call site omitting them would compile, save, and load back empty arrays indistinguishable from an
+> unwired game — a season of conditioning and injury history gone with nothing thrown and no assertion
+> able to fire. Both are now required and reject null; `Array.Empty` is how a caller *says* "no training
+> state". **Mediums:** `TrainingSaveCodec.Encode` had no encode-side value gates while its sibling did
+> and documented why, so it could write a file its own `Decode` refuses (an unloadable save is data
+> loss); and the two codecs' framing helpers — `CanonicalOrder`, `RequireAscending`, `ReadCount`,
+> `Require` — were duplicated verbatim on day one, which is how the first Medium arose in the first
+> place, so they are hoisted to `SaveBlobFramingHelpers` in `deterministic-sim`. The three older codecs
+> keep their own copies: retrofitting them is scope this pass did not take. **Lows:** a `Value: 2` in a
+> constant whose value is 3, a "three sub-blobs" that is now five, two stale file-header Purpose blocks,
+> a `KD-7 blob independence` citation that should be `KD-2` (KD-7 is the codec/disk-I/O split), and each
+> sibling suite testing only half the ordering gate the other tested. **No format-version bump and no
+> `SEASON_SAVE_FORMAT_VERSION` bump:** neither sub-blob format has ever been written to a real save
+> (nothing constructs either state set until T2), and the *frame* layout is untouched — only the
+> contents of two blocks the frame treats as opaque. **STILL NO GATE RUN** — no .NET SDK in the
+> authoring environment, installer still 403 at the proxy. Everything above, including the fixes, is
+> written and unexecuted apart from the format cross-decode, which was proven outside C#.)
+
+> **Last Updated (prior):** August 6, 2026 (**#29 / #41 T1 — the two save codecs, composed into #30's season
+> save.** `TrainingSaveCodec` (`TRAINING_SAVE_FORMAT_VERSION` = 1) and `MedicalSaveCodec`
+> (`MEDICAL_SAVE_FORMAT_VERSION` = 1), each an opaque independently version-gated sub-blob, now ride in
+> the season frame between the season block and the optional match block —
+> `SEASON_SAVE_FORMAT_VERSION` **2 → 3**. Both are **mandatory** rather than presence-flagged: unlike a
+> match, training and medical state has no "absent" case, only an empty one, which each codec writes as
+> a well-formed zero-club block. That choice is what stops T2 needing a second frame bump the day the
+> producers are wired.
+>
+> **Order is not state.** The blocks are maps keyed by `(ClubId, PlayerId)`, so encode canonicalizes to
+> ascending keys and decode requires them. Two equal state sets therefore produce identical bytes
+> whatever roster order the caller holds them in — a save written after a squad-list reshuffle is
+> byte-identical to one written before — and a duplicate key fails loud at encode rather than reaching
+> the file with no defined winner.
+>
+> **Two ERRs filed and resolved, spec + code same commit.** **ERR-029-004:** #29 §4.4 described the
+> sub-blob's posture and never a field of its layout, while #41 §4.4 pinned its own in full — and F3
+> refuses every cross-version migration, so the first written layout is the format permanently. New
+> §4.4.1 pins it. **ERR-041-008:** #41 §4.4's layout groups blocks by club without naming one, so club
+> identity would cross a save boundary by list order alone — an implicit agreement with a sibling
+> sub-blob its own KD-7 forbids this codec to read. `ClubId` is now written in both specs and both
+> codecs. Both entries also fix their §2.3 **F3** row, which named `ArgumentException` while citing the
+> `MatchSaveCodec` posture — and that codec throws `InvalidOperationException`.
+>
+> **Deliberately not done:** T2. Nothing constructs either state set yet, so `SeasonSaveManager.Save`
+> substitutes the empty set and every save written today carries two empty blocks. The #30 tick-order
+> slots, the `IsAvailable` read into squad selection and the FR-TR-025 / FR-MD-025 roster handoff stay
+> open. Also unchanged: `[GT]` bands are gated on neither codec's decode — enforcing `ConditionMax` or
+> `RecoveryMax` at load would turn a designer's ceiling edit into data loss across every existing save.
+>
+> **NO GATE RUN.** The authoring environment still has no .NET SDK (the installer is still 403 at the
+> proxy), so two production codecs, two container types, the frame change and ~40 new tests are written
+> and never compiled — the same posture the T0 landing shipped under, and the same one CI retired for it
+> on push. `tools/dotnet-ci/generate_projects.py` runs clean (64 projects, every asmdef reference
+> resolved) and `tools/unity-ci/check-meta-integrity.sh` passes.)
+
+> **Last Updated (prior):** August 5, 2026, end of same day (**ERR-008-019 — the full-range
 > digest-invariance claim is RETRACTED (adversarial review over the landing).** Documentation
 > only: no formula, constant, test or behaviour change, and the code is byte-identical to the
 > entry below. The argument recorded in five places — "any generator-reachable MIDFIELD SHOOT

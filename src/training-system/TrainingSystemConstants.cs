@@ -33,7 +33,23 @@ namespace TacticalDirector.TrainingSystem
     {
         #region Fixed
 
-        /// <summary>[FIXED] The #29 sub-blob version (KD-7 / FR-TR-018). Independently gated from every other format version. Declared now, consumed at T1.</summary>
+        /// <summary>
+        /// [FIXED] The #29 sub-blob's leading self-identifying tag — ASCII <c>"TRNG"</c>, written
+        /// before <see cref="TRAINING_SAVE_FORMAT_VERSION"/> (ERR-029-005).
+        /// <para>
+        /// <b>Why a magic and not just the version.</b> Every sub-blob format in the save stack —
+        /// this one, <c>MEDICAL_SAVE_FORMAT_VERSION</c>, <c>SEASON_STATE_FORMAT_VERSION</c>,
+        /// <c>MATCH_SAVE_FORMAT_VERSION</c>, <c>PROGRESSION_SAVE_FORMAT_VERSION</c> — is currently at
+        /// version 1, so a version gate cannot tell one format from another; it only tells one
+        /// generation of the SAME format from the next. The #29 and #41 blocks are the acute case
+        /// because their layouts are byte-for-byte the same shape, so each decodes the other's bytes
+        /// cleanly and silently. The magic is what makes the block say which format it is, rather than
+        /// relying on the frame having handed it to the right reader.
+        /// </para>
+        /// </summary>
+        public const uint TRAINING_SAVE_MAGIC = 0x54524E47;   // 'T''R''N''G'
+
+        /// <summary>[FIXED] The #29 sub-blob version (KD-7 / FR-TR-018). Gates the generation of the format identified by <see cref="TRAINING_SAVE_MAGIC"/> — the magic says WHICH format, this says WHICH VERSION of it.</summary>
         public const uint TRAINING_SAVE_FORMAT_VERSION = 1;
 
         /// <summary>[FIXED] World-days per focus-selection cycle (Appendix A). Informational — the step itself is daily (KD-4, FR-TR-014); nothing in #29 batches on a week boundary.</summary>

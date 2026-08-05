@@ -13,12 +13,15 @@
 // Simulation-layer capstone (SeasonLoopScenarios.season-multi-fixture), where a ~2-minute real match is
 // idiomatic; asserting it here would put a full 90-minute simulation in the unit suite.
 
+using System;
 using System.Collections.ObjectModel;
 using System.IO;
 
 using NUnit.Framework;
 
+using TacticalDirector.InjuriesMedical;
 using TacticalDirector.LivingWorld;
+using TacticalDirector.TrainingSystem;
 
 namespace TacticalDirector.SeasonSave.Tests
 {
@@ -442,7 +445,8 @@ namespace TacticalDirector.SeasonSave.Tests
             string path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".tdsave");
             try
             {
-                SeasonSaveManager.Save(firstWorld, first.State, null, path);
+                SeasonSaveManager.Save(firstWorld, first.State, null,
+                    path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>());
                 SeasonSaveContents contents = SeasonSaveManager.Load(path, league);
                 var resumed = new SeasonLoop(
                     contents.World, contents.Season, RoundResolutionMode.QuickSimAll);

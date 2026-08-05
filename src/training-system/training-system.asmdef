@@ -4,6 +4,7 @@
     "references": [
         "TacticalDirector.PlayerDatabase",
         "TacticalDirector.PlayerProgression",
+        "TacticalDirector.DeterministicSim",
         "TacticalDirector.ProjectConstants"
     ],
     "includePlatforms": [],

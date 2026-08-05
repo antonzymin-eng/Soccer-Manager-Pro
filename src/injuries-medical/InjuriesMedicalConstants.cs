@@ -34,7 +34,23 @@ namespace TacticalDirector.InjuriesMedical
     {
         #region Fixed
 
-        /// <summary>[FIXED] The #41 sub-blob version (KD-7 / FR-MD-017). A season-save sub-blob, independently gated from every other format version. Declared now, consumed at T1.</summary>
+        /// <summary>
+        /// [FIXED] The #41 sub-blob's leading self-identifying tag — ASCII <c>"MEDL"</c>, written
+        /// before <see cref="MEDICAL_SAVE_FORMAT_VERSION"/> (ERR-041-009).
+        /// <para>
+        /// <b>Why a magic and not just the version.</b> Every sub-blob format in the save stack is
+        /// currently at version 1, so a version gate distinguishes one generation of the SAME format
+        /// from the next — never one format from another. The #29 and #41 blocks are the acute case:
+        /// their layouts are byte-for-byte the same shape, so each decodes the other's bytes cleanly
+        /// and silently. The magic makes the block say which format it is rather than trusting the
+        /// frame to have handed it to the right reader. Deliberately NOT
+        /// <c>DOMAIN_TAG_INJURIES_MEDICAL</c>: that tag names an RNG domain, and reusing it here would
+        /// tie a save-format identifier to a draw-keying concern that can change independently.
+        /// </para>
+        /// </summary>
+        public const uint MEDICAL_SAVE_MAGIC = 0x4D45444C;   // 'M''E''D''L'
+
+        /// <summary>[FIXED] The #41 sub-blob version (KD-7 / FR-MD-017). Gates the generation of the format identified by <see cref="MEDICAL_SAVE_MAGIC"/> — the magic says WHICH format, this says WHICH VERSION of it.</summary>
         public const uint MEDICAL_SAVE_FORMAT_VERSION = 1;
 
         /// <summary>

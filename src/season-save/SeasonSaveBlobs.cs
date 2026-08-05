@@ -1,25 +1,27 @@
 // File:     src/season-save/SeasonSaveBlobs.cs
 // Created:  2026-07-22
-// Modified: 2026-07-25 (#30 T1: the third sub-blob)
+// Modified: 2026-08-06 (#29/#41 T1: the fourth and fifth sub-blobs)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) KD-2 / KD-7 / §4;
-//           Season & Competition Loop #30 Appendix B (frame), FR-SN-019; Code Standards #20
-// Purpose:  The deframe result of a season save blob: the three opaque sub-blobs (the living-world
-//           composite, the season state, and — when present — the match save). Pure bytes; the codec
-//           never reconstructs objects (that is SeasonSaveManager), so it stays free of match-engine /
-//           living-world / season-state types.
+//           Season & Competition Loop #30 Appendix B (frame), FR-SN-019; Training System #29 FR-TR-018;
+//           Injuries & Medical #41 FR-MD-017; Code Standards #20
+// Purpose:  The deframe result of a season save blob: the five opaque sub-blobs (the living-world
+//           composite, the season state, the #29 training block, the #41 medical block, and — when
+//           present — the match save). Pure bytes; the codec never reconstructs objects (that is
+//           SeasonSaveManager), so it stays free of match-engine / living-world / season-state types.
 
 namespace TacticalDirector.SeasonSave
 {
     /// <summary>
-    /// The three byte sub-blobs a season save carries (unified-season-save-design.md KD-2 + #30
-    /// FR-SN-019): the living-world composite (<see cref="WorldBlob"/>, always present), the season
-    /// state (<see cref="SeasonBlob"/>, always present — a season save always has a season), and the
-    /// match save (<see cref="MatchBlob"/>, <c>null</c> when the season had no in-progress match —
-    /// KD-3). Produced by <see cref="SeasonSaveCodec.Decode"/>; <see cref="SeasonSaveManager"/>
-    /// reconstructs the actual <c>WorldStore</c> / <see cref="SeasonState"/> / <c>MatchEngine</c> from
-    /// them. Kept opaque so the codec never parses any blob's internals (each keeps its own version
-    /// gate).
+    /// The five byte sub-blobs a season save carries (unified-season-save-design.md KD-2 + #30
+    /// FR-SN-019 + #29 FR-TR-018 + #41 FR-MD-017): the living-world composite
+    /// (<see cref="WorldBlob"/>), the season state (<see cref="SeasonBlob"/>), the #29 training block
+    /// (<see cref="TrainingBlob"/>) and the #41 medical block (<see cref="MedicalBlob"/>) — all four
+    /// always present — and the match save (<see cref="MatchBlob"/>, <c>null</c> when the season had no
+    /// in-progress match — KD-3). Produced by <see cref="SeasonSaveCodec.Decode"/>;
+    /// <see cref="SeasonSaveManager"/> reconstructs the actual <c>WorldStore</c> /
+    /// <see cref="SeasonState"/> / training + medical state / <c>MatchEngine</c> from them. Kept opaque
+    /// so the codec never parses any blob's internals (each keeps its own version gate).
     /// </summary>
     public readonly struct SeasonSaveBlobs
     {
@@ -30,15 +32,32 @@ namespace TacticalDirector.SeasonSave
         /// the match, a season save always carries a season (FR-SN-019/021).</summary>
         public readonly byte[] SeasonBlob;
 
+        /// <summary>The #29 training block
+        /// (<see cref="TacticalDirector.TrainingSystem.TrainingSaveCodec.Encode"/>). Never null; a game
+        /// tracking no training state carries a well-formed zero-club block (FR-TR-018).</summary>
+        public readonly byte[] TrainingBlob;
+
+        /// <summary>The #41 medical block
+        /// (<see cref="TacticalDirector.InjuriesMedical.MedicalSaveCodec.Encode"/>). Never null; a game
+        /// tracking no medical state carries a well-formed zero-club block (FR-MD-017).</summary>
+        public readonly byte[] MedicalBlob;
+
         /// <summary>The match save blob (<c>MatchSaveManager.Encode</c>), or <c>null</c> if the season
         /// had no in-progress match (KD-3).</summary>
         public readonly byte[] MatchBlob;
 
         /// <summary>Constructs the deframed sub-blobs.</summary>
-        public SeasonSaveBlobs(byte[] worldBlob, byte[] seasonBlob, byte[] matchBlob)
+        public SeasonSaveBlobs(
+            byte[] worldBlob,
+            byte[] seasonBlob,
+            byte[] trainingBlob,
+            byte[] medicalBlob,
+            byte[] matchBlob)
         {
             WorldBlob = worldBlob;
             SeasonBlob = seasonBlob;
+            TrainingBlob = trainingBlob;
+            MedicalBlob = medicalBlob;
             MatchBlob = matchBlob;
         }
     }
@@ -48,4 +67,6 @@ namespace TacticalDirector.SeasonSave
 // | Version | Date       | Author | Notes                                                            |
 // | 1.0     | 2026-07-22 | —      | Initial implementation.                                          |
 // | 1.1     | 2026-07-25 | —      | #30 T1: gains SeasonBlob (always present) — the third sub-blob.   |
+// | 1.2     | 2026-08-06 | —      | #29/#41 T1: gains TrainingBlob + MedicalBlob (both always        |
+// |         |            |        | present) — the fourth and fifth sub-blobs.                        |
 #endregion

@@ -13,11 +13,14 @@
 // (the same reasoning as SeasonLoopTests: the real-engine path is proven in the Simulation-layer
 // capstone, and putting a 90-minute match in the unit suite would buy nothing this file asserts).
 
+using System;
 using System.IO;
 
 using NUnit.Framework;
 
+using TacticalDirector.InjuriesMedical;
 using TacticalDirector.LivingWorld;
+using TacticalDirector.TrainingSystem;
 
 namespace TacticalDirector.SeasonSave.Tests
 {
@@ -337,7 +340,8 @@ namespace TacticalDirector.SeasonSave.Tests
             string path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".tdsave");
             try
             {
-                SeasonSaveManager.Save(world, interrupted.State, null, path);
+                SeasonSaveManager.Save(world, interrupted.State, null,
+                    path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>());
                 SeasonSaveContents contents = SeasonSaveManager.Load(path, league);
                 var resumed = new SeasonLoop(
                     contents.World, contents.Season, RoundResolutionMode.QuickSimAll);
@@ -372,7 +376,8 @@ namespace TacticalDirector.SeasonSave.Tests
             string path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".tdsave");
             try
             {
-                SeasonSaveManager.Save(world, loop.State, null, path);
+                SeasonSaveManager.Save(world, loop.State, null,
+                    path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>());
                 SeasonSaveContents contents = SeasonSaveManager.Load(path, league);
 
                 Assert.IsTrue(loop.State.FieldsEqual(contents.Season),

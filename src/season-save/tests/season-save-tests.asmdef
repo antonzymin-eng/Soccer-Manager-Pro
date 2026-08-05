@@ -7,6 +7,8 @@
         "TacticalDirector.LivingWorld",
         "TacticalDirector.DeterministicSim",
         "TacticalDirector.PlayerDatabase",
+        "TacticalDirector.TrainingSystem",
+        "TacticalDirector.InjuriesMedical",
         "TacticalDirector.TestingStrategy",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
