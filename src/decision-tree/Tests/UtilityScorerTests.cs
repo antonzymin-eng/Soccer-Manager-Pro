@@ -4,6 +4,8 @@
 // Modified: 2026-07-07 (cheap-item addition: rest-defense risk dampener test; half-spaces
 // Modified: 2026-07-28 (ERR-008-017 — DistanceQuality_SHOOT locks)
 //           test added then reverted after user review — see VersionHistory)
+// Modified: 2026-08-05 (ERR-008-019 — midfield long-shot ramp locks; M-4 lock refitted to raw 14)
+// Modified: 2026-08-05 (ERR-008-019 owner revision — full-range ramp locks: shifted-form lock at raw 10, endpoints-exact + strictly-monotone)
 // Author:   —
 // Spec:     Decision Tree #8 §5 (UT-US-01, UT-US-03, UT-05 through UT-09), §3.2.10, new §3.2/§7.7, Code Standards #20
 // Purpose:  Unit tests for UtilityScorer. Verifies utility floor/ceiling clamp,
@@ -591,35 +593,103 @@ namespace TacticalDirector.DecisionTree.Tests
                 "(AR-2 M-1: was keyed to the absolute AWAY_TEAM literal)");
         }
 
-        // ── AR-2 M-4 lock: midfield long-shot gate uses the SHIFTED form ──────
+        // ── AR-2 M-4 lock: midfield long-shot ramp uses the SHIFTED form ──────
 
         [Test]
-        public void ShootMidfield_LongShotsRaw12_GetsLongModifier()
+        public void ShootMidfield_RampRunsInShiftedForm()
         {
-            // Raw LongShots = 12 → A = 11/19 ≈ 0.579 → shifted ≈ 0.789 > 0.75 ⇒ the
-            // 0.55 midfield modifier applies (§3.2.3.4: effective threshold raw ≥ 11).
-            // Under the pre-fix raw-form comparison (0.579 < 0.75) the shot was
-            // suppressed to SHOOT_ZONE_MID_SHORT = 0.05.
-            // Distance sits INSIDE the sweet range (ERR-008-017): the option's distance is
-            // incidental to this lock's intent (the shifted-form zone gate), and at the
-            // former 28 m the DistanceQuality decay pushed the suppressed branch into the
-            // UTILITY_FLOOR clamp, corrupting the pure zone-modifier ratio.
+            // At the full-range half-width (0.25) the shifted-form ramp reduces to
+            // t = A_LongShots exactly: raw 10 → A = 9/19 ⇒ zoneM = SHORT + A × (LONG − SHORT)
+            // ≈ 0.287. Under the AR-2 M-4 raw-form defect (feeding raw A into the ramp)
+            // t = clamp01((A − 0.5) / 0.5) = 0 for any A ≤ 0.5, so raw 10 would be fully
+            // suppressed to SHORT — this remains the shifted-vs-raw regression lock under
+            // the ERR-008-019 owner-revised full-range ramp (the raw-12 and raw-14
+            // fixtures of earlier versions asserted band-edge values that no longer exist).
+            // Distance sits INSIDE the sweet range (ERR-008-017): at the former 28 m the
+            // DistanceQuality decay pushed the suppressed branch into the UTILITY_FLOOR
+            // clamp, corrupting the pure zone-modifier ratio.
+            float aRaw10 = 9.0f / 19.0f;
+            float raw10 = ScoreShootMidfieldAt(aRaw10);
+            float raw1 = ScoreShootMidfieldAt(0.0f);
+
+            float expectedZone = UtilityWeights.SHOOT_ZONE_MID_SHORT
+                + aRaw10 * (UtilityWeights.SHOOT_ZONE_MID_LONG - UtilityWeights.SHOOT_ZONE_MID_SHORT);
+            float expectedRatio = expectedZone / UtilityWeights.SHOOT_ZONE_MID_SHORT;
+            Assert.AreEqual(expectedRatio, raw10 / raw1, expectedRatio * 0.01f,
+                "Midfield long-shot ramp must run in the shifted attribute form — at the " +
+                "full-range half-width, t = A_LongShots exactly (§3.2.3.1); the raw form " +
+                "would suppress raw 10 to the SHORT endpoint");
+        }
+
+        // ── ERR-008-019 locks: midfield long-shot ramp (judgment-proxy doctrine P1/P5) ──
+
+        private float ScoreShootMidfieldAt(float aLongShots)
+        {
             DecisionContext ctx = BuildContext(0.5f, 0.5f, 0.0f);
             ctx.BallZone = FieldZone.MIDFIELD;
-            ctx.A_LongShots = 11.0f / 19.0f;
-
+            ctx.A_LongShots = aLongShots;
             Buffer[0] = MakeShoot(0.7f, 10.0f);
             UtilityScorer.ScoreOptions(Buffer, 1, in ctx);
-            float withLong = Buffer[0].BaseUtility;
+            return Buffer[0].BaseUtility;
+        }
 
-            ctx.A_LongShots = 0.0f;   // raw 1 → shifted 0.5 < 0.75 ⇒ suppressed
-            Buffer[0] = MakeShoot(0.7f, 10.0f);
-            UtilityScorer.ScoreOptions(Buffer, 1, in ctx);
-            float withoutLong = Buffer[0].BaseUtility;
+        [Test]
+        public void ShootMidfield_NoCliffAcrossOldThreshold()
+        {
+            // P1: one raw LongShots point across the old cliff (raw 10 → 11, shifted
+            // 0.737 → 0.763, straddling 0.75) must move the utility smoothly. Pre-fix
+            // the ratio here was exactly SHOOT_ZONE_MID_LONG / SHOOT_ZONE_MID_SHORT = 11.
+            float raw10 = ScoreShootMidfieldAt(9.0f / 19.0f);
+            float raw11 = ScoreShootMidfieldAt(10.0f / 19.0f);
 
-            float expectedRatio = UtilityWeights.SHOOT_ZONE_MID_LONG / UtilityWeights.SHOOT_ZONE_MID_SHORT;
-            Assert.AreEqual(expectedRatio, withLong / withoutLong, expectedRatio * 0.01f,
-                "Midfield long-shot gate must compare the shifted attribute form (§3.2.3.1)");
+            Assert.Less(raw11 / raw10, 2.0f,
+                "A 1-point LongShots difference must never step the midfield shot " +
+                "utility discretely (§3.2.3.1 ramp, ERR-008-019; pre-fix ratio was 11×)");
+            Assert.Greater(raw11, raw10,
+                "The ramp must still reward the higher attribute across the old cliff");
+        }
+
+        [Test]
+        public void ShootMidfield_RampMidpoint_IsExactMeanOfZoneEndpoints()
+        {
+            // P5 pivot: at shifted = LONG_SHOT_THRESHOLD exactly (A = 0.5, raw 10.5) the
+            // zone modifier is the exact SHORT/LONG midpoint — the ramp is centred on the
+            // old cliff, so the population-integrated modifier reproduces the old step's.
+            float atCentre = ScoreShootMidfieldAt(0.5f);
+            float atFloor = ScoreShootMidfieldAt(0.0f);   // shifted 0.5 ⇒ exact SHORT
+
+            float midpointZone =
+                (UtilityWeights.SHOOT_ZONE_MID_SHORT + UtilityWeights.SHOOT_ZONE_MID_LONG) * 0.5f;
+            float expectedRatio = midpointZone / UtilityWeights.SHOOT_ZONE_MID_SHORT;
+            Assert.AreEqual(expectedRatio, atCentre / atFloor, expectedRatio * 0.01f,
+                "At the ramp centre the midfield zone modifier must be the exact " +
+                "SHORT/LONG midpoint (§3.2.3.1, ERR-008-019 P5 pivot)");
+        }
+
+        [Test]
+        public void ShootMidfield_FullRangeRamp_EndpointsExact_AndStrictlyMonotone()
+        {
+            // Owner revision (full-range half-width 0.25): the ramp spans the entire
+            // attribute. The extremes anchor the old constants exactly — raw 1 scores
+            // as full SHORT, raw 20 as full LONG, so their ratio is the old step's
+            // LONG/SHORT — and EVERY intermediate raw point strictly increases the
+            // utility: no plateau anywhere (the pre-revision 0.05 half-width left
+            // raw 1–8 and raw 13–20 flat).
+            float raw1 = ScoreShootMidfieldAt(0.0f);
+            float raw20 = ScoreShootMidfieldAt(1.0f);
+            float endpointRatio = UtilityWeights.SHOOT_ZONE_MID_LONG / UtilityWeights.SHOOT_ZONE_MID_SHORT;
+            Assert.AreEqual(endpointRatio, raw20 / raw1, endpointRatio * 0.01f,
+                "The full-range ramp's extremes must reproduce the old SHORT/LONG endpoint pair");
+
+            float prev = raw1;
+            for (int raw = 2; raw <= 20; raw++)
+            {
+                float u = ScoreShootMidfieldAt((raw - 1) / 19.0f);
+                Assert.Greater(u, prev,
+                    "Every LongShots point must strictly increase midfield shot utility " +
+                    "under the full-range ramp — a flat step means a plateau came back");
+                prev = u;
+            }
         }
 
         // ── AR-2 M-3 lock: SHOOT risk driven by (1 − GoalOpeningScore) ─────────
@@ -908,4 +978,20 @@ namespace TacticalDirector.DecisionTree.Tests
 // |         |            |        |   proof the other fixtures here are untouched); monotone in the cosine to     |
 // |         |            |        |   goal; exact floor / midpoint ratios; and the anchoring invariant that the   |
 // |         |            |        |   PASS and DRIBBLE directional floors do not silently diverge.                |
+// | 1.8     | 2026-08-05 | —      | ERR-008-019 midfield long-shot ramp locks (judgment-proxy doctrine P1/P5):    |
+// |         |            |        |   no cliff across the old threshold (raw 10 vs 11 ratio < 2; pre-fix 11×);    |
+// |         |            |        |   exact SHORT/LONG midpoint at the ramp centre (the P5 pivot); endpoint       |
+// |         |            |        |   clamps reproduce the old constants exactly; monotone over raw 1–20. The     |
+// |         |            |        |   AR-2 M-4 shifted-form lock refitted raw 12 → raw 14 (raw 12 now lands      |
+// |         |            |        |   mid-ramp; raw 14 is past the ramp end AND still discriminates shifted vs    |
+// |         |            |        |   raw form, preserving the original regression intent).                       |
+// | 1.9     | 2026-08-05 | —      | ERR-008-019 owner revision (full-range half-width 0.25): the M-4 lock is now  |
+// |         |            |        |   ShootMidfield_RampRunsInShiftedForm (raw 10 computed-ratio; the raw form    |
+// |         |            |        |   suppresses raw 10 to SHORT, so the shifted-vs-raw discrimination intent     |
+// |         |            |        |   survives its third fixture); the endpoint/monotone lock is now              |
+// |         |            |        |   ShootMidfield_FullRangeRamp_EndpointsExact_AndStrictlyMonotone (raw 1/20    |
+// |         |            |        |   reproduce the old SHORT/LONG pair; every intermediate point STRICTLY        |
+// |         |            |        |   increases — the plateau-equality assertions of v1.8 are the exact opposite  |
+// |         |            |        |   of the owner's no-plateau instruction and are gone). No-cliff and midpoint  |
+// |         |            |        |   locks unchanged (both hold at any symmetric half-width).                    |
 #endregion

@@ -1,7 +1,45 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** August 4, 2026 (**ERR-008-020 — the first fix under the football-judgment
+**Last Updated:** August 5, 2026, end of same day (**ERR-008-019 — one recorded claim about the
+long-shot ramp was wrong and is withdrawn.** A review of yesterday's landing found that the note
+saying the change "moves no match digests" rested on a false assumption about how a player takes
+possession of the ball: it assumed the player must be within half a metre of it, when the engine
+actually hands possession to anyone within a metre of a stationary loose ball and leaves the ball
+where it is — and nothing pulls it back to him afterwards. That extra half-metre is enough for a
+shooter rated 19 (not only 20) to take a midfield shot, and at 19 the new ramp gives a slightly
+different number from the old step. So the change **can** alter match results on some seeds. That
+is fine — the wider ramp is what the owner asked for — but the "no effect on results" claim was
+not true and has been retracted everywhere it was recorded. Nothing else changed: no formula, no
+tunable, no test. One documentation fix went with it (the ramp's half-width is pinned at its
+maximum by a test, so the range its comment advertised was misleading). Gate not runnable in the
+authoring environment; CI runs it on push. Prior entry below.)
+
+**Last Updated (prior):** August 5, 2026, later same day (**ERR-008-019 owner revision — every Long Shots
+point now matters for midfield shooting.** At owner direction, the just-landed ramp widened from
+its initial 8–13 band to the full 1–20 attribute range: a rating of 1 keeps the full suppression,
+20 the full long-shot modifier, and every point in between moves the willingness smoothly — no
+plateaus. One tunable changed (`LONG_SHOT_RAMP_HALF_WIDTH` to its maximum 0.25); the formula, the
+midpoint anchor, and the population-average balance are untouched, and the change still moves no
+match digests (only a maximum-rated shooter can even generate a midfield shot, and for him the
+ramp equals the old value). Gate not runnable in the authoring environment; CI runs it on push.
+Prior entry below.)
+
+**Last Updated (prior):** August 5, 2026 (**ERR-008-019 — the second fix under the football-judgment
+remediation doctrine, and the closing of the review's founding finding.** Decision Tree #8
+§3.2.3.1's midfield long-shot gate — the original "11× jump for a 1-point attribute difference"
+cliff the whole judgment-proxy review was named after, whose earlier "FIXED" record proved false —
+is now a linear ramp in the same shifted attribute form, centred on the old threshold so endpoints
+and the population-integrated modifier are preserved (doctrine P1/P5; spec, code, ERR entry and
+five test locks in one commit; the soft-reserved id re-verified free at landing). The branch is
+production-unreachable in the only band the fix changes (the ramp differs from the old step only
+for LongShots values whose own range gate keeps the shooter ~5 m short of any midfield shot), so
+no digest moves; the fix lands anyway because a wrong-shaped model cannot be repaired by later
+tuning. Review tally: 2 fixed, 32 open.
+Gate not runnable in the authoring environment (no .NET SDK); CI runs it on push. Prior entry
+below.)
+
+**Last Updated (prior):** August 4, 2026 (**ERR-008-020 — the first fix under the football-judgment
 remediation doctrine.** The new `docs/tracking/football-judgment-proxy-review.md` swept all 53
 APPROVED specs for continuous football judgments collapsed into thresholds or bare geometry — 34
 findings across 24 specs — and its owner-converged §6 doctrine (P1 continuous-never-cliff, P2 skill

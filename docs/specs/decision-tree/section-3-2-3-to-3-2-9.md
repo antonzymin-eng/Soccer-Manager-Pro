@@ -22,6 +22,51 @@ clamped to [0.01, 1.0]
 > models — the ERR-008-016 class. `DistanceQuality_SHOOT` is the utility-side shape of that
 > fact; see `docs/tracking/shot-volume-design.md`.
 
+> **ERR-008-019 correction (August 5, 2026; half-width revised to full-range by owner
+> direction later the same day):** the approved midfield branch was a hard step — 0.55
+> strictly above `LONG_SHOT_THRESHOLD`, 0.05 at or below it — so one raw LongShots
+> point (10 → 11) jumped the zone modifier **11×**. This is the founding instance of
+> the football-judgment proxy review's pattern (b) (a continuous football judgment
+> collapsed into a single-attribute cliff; `football-judgment-proxy-review.md` §2,
+> doctrine P1). The step is now a linear ramp in the same shifted form, centred on the
+> old threshold with half-width `LONG_SHOT_RAMP_HALF_WIDTH`. At the owner-directed
+> full-range value (0.25) the ramp spans the entire attribute — raw 1 is exactly the
+> SHORT endpoint, raw 20 exactly the LONG endpoint, and every point between moves the
+> modifier ≈ 0.026 — so no plateau exists anywhere and a 1-point difference can never
+> flip the outcome discretely. The midpoint sits at the old cliff and the
+> uniform-population mean stays 0.30, so the aggregate pivot is preserved at any
+> symmetric half-width (doctrine P5). No other factor enters: long-shot inclination is
+> the shooter's own execution capability, not a recognition judgment, so no fidelity
+> term applies (doctrine P2/P3 not in scope).
+> **Digest invariance is NOT established for the full-range form (corrected August 5,
+> 2026, at the adversarial review over this landing).** The argument recorded here
+> originally placed the shooter within the 0.5 m `ControlRadius` of Ball Physics #1
+> §3.1.11.1 `CheckPossession` — but that is not how this engine grants possession. The
+> production paths are (a) `MatchEngine.RunLooseBallPickup` (§5.Z Phase H, KD-H3), which
+> grants possession to the nearest eligible agent within
+> `MatchEngineConstants.LooseBallPickupRadiusM` = **1.0 m** of a loose ball at rest and
+> leaves the ball where it lies, and (b) the first-touch path
+> (`FIRST_TOUCH_ACCEPTANCE_RADIUS_M` = 1.0 m). After the grant **no rule re-anchors the
+> ball to the holder or releases possession on separation** — the ball moves only via
+> kicks, collisions and first touch, the holder moves freely under dispatched `MoveTo`
+> commands, and the executors' only entry check is the possession id (`PassExecutor`
+> FM-01 `IsBallPossessedBy`) — so holder–ball separation at a decision tick is not
+> bounded by 0.5 m and reaches 1.0 m through the pickup path alone. **Corrected bound:**
+> a ball at rest at x → 70⁻ (MIDFIELD per the ERR-008-016 equal thirds) with the holder
+> up to 1.0 m goal-side puts the shooter just above **34.0 m** from the goal centre
+> (x = 105) — **inside** raw 19's §3.1.4.2 range gate `20 + A × 15` = 34.21 m at
+> A = 18/19. At raw 19 the full-range ramp gives
+> `zoneM = 0.05 + (18/19) × 0.5 ≈ 0.524` against the old step's 0.55, so a generated
+> option **can** score differently: the earlier "no digest moves on any seed" claim is
+> **retracted** for the full-range form. The ramp is behaviour-visible today through the
+> loose-ball-pickup possession path, and its visible band widens further if the range
+> gate or the zone geometry changes. The behaviour change itself is owner-intended (the
+> full-range instruction), not an artefact of this correction; the formula, the
+> constants, the P5 pivot and every test lock are unaffected. The superseded narrow ramp
+> (half-width 0.05) **survives** the corrected premise — it differs from the old step
+> only at `A_LongShots` ≤ 0.6, whose range gate caps at 29.0 m, still disjoint from the
+> corrected > 34.0 m bound.
+
 **where:**
 
 ```
@@ -31,11 +76,31 @@ U_BASE_SHOOT_NOMINAL = 0.85 [GT]
 
 ZoneModifier_SHOOT:
   ATTACKING:  1.00
-  MIDFIELD:   0.55 [GT]  if (0.5 + A_LongShots × 0.5) > LONG_SHOT_THRESHOLD
-              0.05 [GT]  otherwise  (effectively suppresses shot)
+  MIDFIELD:   lerp(SHOOT_ZONE_MID_SHORT, SHOOT_ZONE_MID_LONG, t)     (ERR-008-019)
+              t = clamp01((shifted − (LONG_SHOT_THRESHOLD − LONG_SHOT_RAMP_HALF_WIDTH))
+                          / (2 × LONG_SHOT_RAMP_HALF_WIDTH))
+              shifted = 0.5 + A_LongShots × 0.5
   DEFENSIVE:  0.10 [GT]
 
-LONG_SHOT_THRESHOLD  = 0.75 [GT]   ← requires LongShots raw ≥ 15 for midfield shot viability
+SHOOT_ZONE_MID_LONG       = 0.55 [GT]   ← full long-shot midfield modifier (raw 20 exactly)
+SHOOT_ZONE_MID_SHORT      = 0.05 [GT]   ← full suppression (raw 1 exactly)
+LONG_SHOT_THRESHOLD       = 0.75 [GT]   ← ramp CENTRE, shifted form = the attribute
+                                          midpoint; the modifier is the exact SHORT/LONG
+                                          midpoint here (raw 10.5)
+LONG_SHOT_RAMP_HALF_WIDTH = 0.25 [GT]   ← shifted units; valid range (0, 0.25]. 0.25 is
+                                          the FULL-RANGE setting (owner-directed): the
+                                          ramp spans the whole shifted domain [0.5, 1.0],
+                                          so every raw point 1–20 moves the modifier
+                                          ≈ 0.026 with no plateau at either end — at this
+                                          value t reduces to A_LongShots exactly
+                                          (§3.2.3.4 item 2). (0, 0.25] is the FORMULA's
+                                          validity domain, not a free dial: the test
+                                          suite pins the full-range value through
+                                          ShootMidfield_FullRangeRamp_EndpointsExact_
+                                          AndStrictlyMonotone, which fails at any
+                                          half-width below 0.25 (the plateaus return),
+                                          so a retune downward is an owner decision that
+                                          must revisit that lock with it
 
 AttributeMultiplier_SHOOT = (0.5 + A_Finishing   × 0.5) ^ SHOOT_FINISHING_EXP
                           × (0.5 + A_Composure   × 0.5) ^ SHOOT_COMPOSURE_EXP
@@ -219,8 +284,10 @@ that a striker with a clear shot should prefer shooting. ✓
 **Verification Case B: Low-Finishing midfielder, midfield, Long Shots = 16**
 ```
 Agent: Finishing=7, Composure=11, LongShots=16
-BallZone: MIDFIELD → LongShots shifted = 0.5 + (15/19)×0.5 = 0.895 > 0.75 threshold
-ZoneModifier = 0.55
+BallZone: MIDFIELD → LongShots shifted = 0.5 + (15/19)×0.5 = 0.8947
+ramp t = (0.8947 − 0.5) / 0.5 = 0.7895   (full-range half-width 0.25 ⇒ t = A_LongShots)
+ZoneModifier = 0.05 + 0.7895 × 0.50 = 0.4447   (ERR-008-019 full-range ramp; the pre-ramp
+                                                step gave 0.55 here)
 
 GoalOpeningScore = 0.60 (moderate — distant, some blockers)
 PressureScalar P = 0.30
@@ -228,31 +295,35 @@ PressureScalar P = 0.30
 A_Finishing = (7−1)/19 = 0.3158 → Shifted = 0.6579
 A_Composure = (11−1)/19 = 0.5263 → Shifted = 0.7632
 
-BaseUtility = 0.85 × 0.55 = 0.4675
+BaseUtility = 0.85 × 0.4447 = 0.3780
 AttributeMultiplier = 0.6579^0.50 × 0.7632^0.30
                     = 0.8111 × 0.9246 = 0.7499
 GoalOpeningScore = 0.60
 RiskPenalty = (1−0.60) × 0.30 × 0.40 = 0.40 × 0.12 = 0.0480
 
-U_raw = 0.4675 × 0.7499 × 0.60 × (1−0.0480)
-      = 0.4675 × 0.7499 = 0.3506
-      = 0.3506 × 0.60 = 0.2104
-      = 0.2104 × 0.9520 = 0.2003
+U_raw = 0.3780 × 0.7499 × 0.60 × (1−0.0480)
+      = 0.3780 × 0.7499 = 0.2835
+      = 0.2835 × 0.60 = 0.1701
+      = 0.1701 × 0.9520 = 0.1619
 
-ScoredUtility = clamp(0.2003, 0.01, 1.0) = 0.200 ✓
+ScoredUtility = clamp(0.1619, 0.01, 1.0) = 0.162 ✓
 ```
 
-A moderate midfield shot by an average finishing midfielder: 0.200. A good pass option
-(0.50+) would correctly win; an adventurous agent with composure noise might still select
-this shot occasionally. Plausible. ✓
+A moderate midfield shot by an average finishing midfielder: 0.162 (0.200 under the
+pre-ramp step, whose 0.55 modifier this LongShots-16 agent no longer fully earns). A good
+pass option (0.50+) would correctly win; an adventurous agent with composure noise might
+still select this shot occasionally. Plausible. ✓
 
 > **ERR-008-017 note on Case B:** this example predates the distance term and its geometry is
-> production-unreachable through the §3.1.4 generator — a MIDFIELD-zone ball sits ≥ 40 m from
-> the goal (team-relative zone boundary at 65 m from own goal line) while the §3.1.4.2 range
-> gate caps at 20 + 15 = 35 m, so no generated option ever reaches this branch (recorded in
-> `shot-volume-design.md` §7.3). Retained as the historical verification of the non-distance
+> production-unreachable through the §3.1.4 generator — a MIDFIELD-zone ball sits > 35 m from
+> the goal line while the §3.1.4.2 range gate caps at 20 + 15 = 35 m, so no generated option
+> reaches this branch except in the razor-thin band where a maximum-LongShots carrier stands
+> goal-side of a ball just inside the zone boundary (recorded in `shot-volume-design.md`
+> §7.3). *(Corrected at ERR-008-019: this note originally said "≥ 40 m, boundary at 65 m" —
+> stale figures from before ERR-008-016 moved the boundary to the equal-thirds 70 m, two days
+> before this note was written.)* Retained as the historical verification of the non-distance
 > factors; at its nominal 40 m the distance term would multiply a further
-> 10 / (10 + 28) = 0.263, giving 0.053.
+> 10 / (10 + 28) = 0.263, giving 0.043.
 
 ---
 
@@ -265,15 +336,25 @@ modifier provides the second. Three boundary conditions are documented:
    Even an elite player barely scores above the HOLD floor (≈ 0.25) from their own third.
    This correctly suppresses shooting from deep. ✓
 
-2. **Agent in midfield, LongShots = 14 (Shifted = 0.868 < 0.875 threshold):**
-   Wait — threshold check: `(0.5 + A_LongShots × 0.5) > 0.75`.
-   LongShots=14 → A=(13/19)=0.684 → Shifted=0.842. `0.842 > 0.75` → YES, passes threshold.
-   LongShots=10 → A=(9/19)=0.474 → Shifted=0.737. `0.737 < 0.75` → FAILS, zone = 0.05.
-   **Therefore the effective LongShots threshold is raw ≥ 11 for midfield shots.** This
-   is lower than the outline suggested (≥ 15). Documented here as the authoritative
-   derivation. Outline's "raw ≥ 15" comment was imprecise — the threshold constant
-   `LONG_SHOT_THRESHOLD = 0.75` maps to raw ≥ 11, not raw ≥ 15. [GT] value is correct;
-   commentary in outline was not.
+2. **Agent in midfield — the full-range long-shot ramp (ERR-008-019, owner-revised to
+   full-range the same day; supersedes the former hard-threshold derivation):**
+   `shifted(raw) = 0.5 + ((raw − 1) / 19) × 0.5`, so one raw point = 0.5/19 ≈ 0.0263
+   shifted units. With `LONG_SHOT_THRESHOLD = 0.75` and `LONG_SHOT_RAMP_HALF_WIDTH = 0.25`
+   the ramp runs from shifted 0.50 (raw 1) to 1.00 (raw 20) — the whole domain — and
+   `t` reduces to `A_LongShots` exactly:
+   - Raw 1 → exactly `SHOOT_ZONE_MID_SHORT` (0.05); raw 20 → exactly `SHOOT_ZONE_MID_LONG`
+     (0.55). The extremes anchor the old constants; **no other rating is flat** — every
+     raw point moves the modifier by 0.50/19 ≈ 0.026 zone units.
+   - Ramp centre 0.75 ⇔ raw 10.5 → the exact SHORT/LONG midpoint 0.30; raw 10 → 0.287,
+     raw 11 → 0.313. Compare the former 0.05 → 0.55 jump at this exact boundary.
+   - The uniform-population mean is 0.30 — identical to the old step's — because the
+     ramp is symmetric about the attribute midpoint (doctrine P5 holds at any symmetric
+     half-width; the initial landing's 0.05 half-width had plateaus at raw ≤ 8 / ≥ 13,
+     removed by the owner's full-range direction).
+   The former derivation ("effective threshold raw ≥ 11"; the outline's "raw ≥ 15" was
+   already corrected to raw ≥ 11 in v1.0) described the pre-ramp step and is retained in
+   history only. The AR-2 M-4 finding — the comparison runs in the SHIFTED form, never the
+   raw normalised form — still applies verbatim to the ramp's input.
 
 3. **Agent in attacking zone, GoalOpeningScore = 0.05 (fully blocked):**
    U_raw = 0.85 × 1.0 × AM × 0.05 × (1 − RiskPenalty). Even elite finisher (AM ≈ 0.96):
