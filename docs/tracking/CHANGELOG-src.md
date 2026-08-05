@@ -14,7 +14,34 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** August 5, 2026, end of same day (v2.72 — **ERR-008-019 adversarial review:
+> **Last Updated:** August 5, 2026, latest same day (v2.73 — **ERR-008-021: the shot-lane
+> occlusion model.** `OptionGenerator.cs` v1.7 — `ComputeGoalOpeningScore` rewritten. The binary
+> wedge-containment test (an opponent's angular centre inside the goal arc ⇒ his WHOLE disc width
+> counted; outside ⇒ nothing at all) becomes the true angular **overlap** of the disc with the arc:
+> angles are measured about the arc's bisector, where the goal is exactly `[−halfArc, +halfArc]`
+> and the overlap is a plain interval intersection. Continuous by construction — no ramp constant,
+> no half-width `[GT]`, and the 0.01° `ArcOverlapToleranceDeg` the containment test needed is
+> deleted with it. New `PerceivedBlockAbility` scales the overlap by the blocker's
+> Anticipation/Positioning mean (→ 0.6..1.4, league-average exactly 1.0) blended toward neutral by
+> the SHOOTER's Vision fidelity; new `SignedAngleDeg` helper (computed inline rather than via
+> `Vector2.SignedAngle` — the sign convention is load-bearing, since it is what places the arc
+> symmetrically about its bisector). The **goalkeeper branch skips the ability term** and occludes
+> on geometry alone: #11 owns keeper shot-stopping. A null `AllAgentAttributes` view reads every
+> blocker as 1.0 — the pre-fix geometry-only occlusion, so an unwired host is unaffected.
+> `UtilityWeights.cs` v1.11 — + `SHOT_BLOCKER_ABILITY_MIN`/`MAX` `[GT]` = 0.6/1.4;
+> `LANE_VISION_FIDELITY_FLOOR` redocumented as ONE dial shared by both lane judgments (fidelity
+> belongs to the assessor's Vision, not to what is assessed, so a second copy would be a parallel
+> surface). `Tests/OptionGeneratorTests.cs` v1.7 — 9 locks: the P5 pivot on both the null-view and
+> the COMPUTED path (Anticipation 10 / Positioning 11 ⇒ mean01 = 0.5 exactly), the MIN/MAX-midpoint
+> invariant, no cliff across the post direction, the straddling blocker now occluding what his body
+> covers, Vision-20 vs Vision-1 discrimination, null-view neutrality, the GK exemption, and the
+> away mirror. New seams: none crossing an assembly boundary — the attribute view was already
+> plumbed by ERR-008-020, and `A_Vision` was already on `DecisionContext`. No schema / RNG /
+> domain-tag / draw-site / draw-order change; digest invariance **not** claimed (the model is live
+> on every generated shot). **No gate run — no .NET SDK in the authoring environment.** Prior entry
+> below.)
+
+> **Last Updated (prior):** August 5, 2026, end of same day (v2.72 — **ERR-008-019 adversarial review:
 > one XML doc corrected; the digest-invariance CLAIM retracted.** Code and tests are unchanged —
 > the compiled surface is byte-identical to v2.71 — so this entry records a documentation landing.
 > `UtilityWeights.cs` v1.10: `LONG_SHOT_RAMP_HALF_WIDTH`'s doc gave a valid range of "> 0 and
@@ -1697,6 +1724,7 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.73 | 2026-08-05 | —      | **ERR-008-021 (judgment-proxy doctrine §6.4 follow-up): the #8 shot-lane occlusion model.** `OptionGenerator.cs` v1.7 — `ComputeGoalOpeningScore`'s binary wedge-containment test (angular centre inside the goal arc ⇒ the WHOLE disc width; outside ⇒ nothing) becomes the true angular OVERLAP of the disc with the arc, measured about the arc's bisector (continuous by construction; the 0.01° `ArcOverlapToleranceDeg` epsilon deleted with the test it served). + `PerceivedBlockAbility` (Anticipation+Positioning → 0.6..1.4, blended toward 1.0 by the shooter's Vision fidelity) and `SignedAngleDeg`. Goalkeeper branch skips the ability term (#11 owns keeper shot-stopping); null attribute view ⇒ geometry-only, as before. `UtilityWeights.cs` v1.11 (+ `SHOT_BLOCKER_ABILITY_MIN/MAX` `[GT]` = 0.6/1.4; `LANE_VISION_FIDELITY_FLOOR` redocumented as the shared P2 dial). `Tests/OptionGeneratorTests.cs` v1.7 (9 locks incl. the computed-path P5 pivot, the GK exemption and the away mirror; a reference implementation of both models confirms 5 of the 8 evaluable-pre-fix locks FAIL on the old one — continuity, straddle, home discrimination, low-Vision separation, away mirror — while the two pivot rows and null-view neutrality pass pre-fix by construction). P5 exact — old rectangle and new trapezoid both integrate to `4h·halfArc`. No schema/RNG/domain-tag/draw-site/draw-order change; digest invariance NOT claimed. **No gate run — no .NET SDK.** |
 | 2.72 | 2026-08-05 | —      | **ERR-008-019 adversarial review — documentation only; the compiled surface is byte-identical to v2.71.** `UtilityWeights.cs` v1.10: `LONG_SHOT_RAMP_HALF_WIDTH`'s XML doc stated a valid range of (0, 0.25] that the suite forbids below 0.25 — `ShootMidfield_FullRangeRamp_EndpointsExact_AndStrictlyMonotone` fails at any smaller half-width (the end plateaus return, which the owner's no-plateau instruction ruled out); the doc now records that (0, 0.25] is the FORMULA's validity domain, not a free dial, and that a retune downward must revisit that lock. Recorded with it (spec + tracking, no code): the landing's **"no digest moves on any seed" claim is RETRACTED for the full-range form** — it assumed a 0.5 m possession radius, while the engine grants possession via `RunLooseBallPickup` (KD-H3, 1.0 m, ball left where it lies) and the 1.0 m first-touch path with no re-anchoring afterwards, so a MIDFIELD ball at x → 70⁻ reaches just above 34.0 m — inside raw 19's 34.21 m range gate, where the ramp gives ≈ 0.524 vs the step's 0.55. Behaviour change owner-intended; the narrow-ramp predecessor's argument survives (29.0 m, disjoint). **No gate run — no .NET SDK.** |
 | 2.71 | 2026-08-05 | —      | **ERR-008-019 owner revision: full-range ramp.** `UtilityWeights.cs` v1.9 (`LONG_SHOT_RAMP_HALF_WIDTH` 0.05 → 0.25 — the ramp spans the whole attribute; raw 1 exactly SHORT, raw 20 exactly LONG, ≈ 0.026/point, no plateaus; P5 mean 0.30 preserved), `UtilityScorer.cs` v1.15 (comment only), `Tests/UtilityScorerTests.cs` v1.9 (shifted-form lock at raw 10; endpoints-exact + strictly-monotone replaces the plateau lock; no-cliff + midpoint unchanged). Digest-invariant: only raw 20 reaches a MIDFIELD SHOOT and there ramp = step. **No gate run — no .NET SDK.** |
 | 2.70 | 2026-08-05 | —      | **ERR-008-019 (judgment-proxy doctrine P1/P5): the #8 §3.2.3.1 midfield long-shot cliff → linear ramp.** `UtilityScorer.cs` v1.14 (`ScoreShoot` MIDFIELD branch: `Lerp`/`InverseLerp` ramp over the shifted form, replacing the 11×-step ternary), `UtilityWeights.cs` v1.8 (+ `[GT] LONG_SHOT_RAMP_HALF_WIDTH` = 0.05; `LONG_SHOT_THRESHOLD` redocumented as ramp centre, value unchanged), `Tests/UtilityScorerTests.cs` v1.8 (4 new locks — no-cliff raw 10 vs 11, exact SHORT/LONG midpoint at the centre (P5 pivot), endpoint clamps, monotone raw 1–20 — and the AR-2 M-4 lock refitted raw 12 → 14). Branch production-unreachable through the §3.1.4 generator (ERR-008-017) ⇒ no digest moves; no schema/RNG/domain-tag/draw-site/draw-order change. **No gate run — no .NET SDK in the authoring environment.** |

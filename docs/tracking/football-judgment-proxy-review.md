@@ -1,7 +1,24 @@
 # Football-Judgment Proxy Review
 
 > **Created:** August 4, 2026
-> **Updated:** August 5, 2026, even later same day — **ERR-008-019's digest-invariance claim
+> **Updated:** August 5, 2026, latest same day — **the §6.4 shot-lane follow-up LANDED as
+> `ERR-008-021`**, discharging the deferral the ERR-008-020 template fix opened. #8 §3.1.4.3 /
+> §3.2.3.2's occlusion test held the pass lane's two defects rather than one: an opponent
+> contributed his **whole** angular width when his angular centre fell inside the goal arc and
+> **nothing at all** when it fell outside — a defender standing squarely across the near post scored
+> the shooter a *fully open goal*, and 4 cm of lateral position stepped `GoalOpeningScore` by 0.41
+> (0.595 → 1.000) — and the width was body radius alone, so blocker identity never entered the read.
+> Fixed to the true angular **overlap** of the blocking disc with the goal arc (continuous by
+> construction — P1 needed no ramp constant here) scaled by the blocker's Anticipation/Positioning
+> ability read through the shooter's Vision fidelity (P2, sharing §3.1.3.3's floor as one dial). The
+> **goalkeeper is exempt from the ability term** — #11 §3.5/§3.7.0 owns keeper shot-stopping, so
+> pricing it here too would charge the shooter twice (P3). P5 holds *exactly*: the old rectangle and
+> the new trapezoid both integrate to `4h·halfArc` over a uniformly-placed blocker. **Digest
+> invariance is not claimed** — the model is live on every generated shot. 9 test locks — 5 of the 8 that can be evaluated
+> against the old model fail on it; gate NOT runnable in the authoring environment. **The 34-finding tally is unchanged**: the shot lane was
+> never itemized as its own §2/§3 finding — it surfaced in §6.4 at the -020 landing — so 32 itemized
+> findings remain open.
+> **Updated (prior):** August 5, 2026, even later same day — **ERR-008-019's digest-invariance claim
 > RETRACTED for the full-range form** at the adversarial review over the landing (documentation
 > only; formula, constants and the four test locks untouched). The argument assumed a 0.5 m
 > possession radius; the engine's production paths are `RunLooseBallPickup` (§5.Z Phase H, KD-H3,
@@ -29,10 +46,12 @@
 > **Updated (prior):** August 4, 2026 — §6 remediation doctrine added (owner-converged in session;
 > see §6 provenance note). Findings §§2–5 unchanged.
 > **Status:** FINDINGS LOG (§§1–5) + REMEDIATION DOCTRINE (§6, the owner-approved general
-> approach each fix must cite). Remediation is underway: 2 of 34 findings fixed
-> (`ERR-008-020` August 4, `ERR-008-019` August 5 — both through the spec-error-log's full
-> Filed/Status/Fix/Determinism-impact process), 32 open. `ERR-` ids for the rest are allocated
-> at fix time, per the `err-file-and-backprop` skill.
+> approach each fix must cite). Remediation is underway: **three fixes landed** — `ERR-008-020`
+> (August 4), `ERR-008-019` (August 5) and `ERR-008-021` (August 5, the §6.4 shot-lane follow-up) —
+> all through the spec-error-log's full Filed/Status/Fix/Determinism-impact process. Two of the
+> three close an itemized finding, so **32 of the 34 itemized findings remain open**; -021 discharges
+> a deferral opened by -020 rather than closing a numbered finding of its own. `ERR-` ids for the
+> rest are allocated at fix time, per the `err-file-and-backprop` skill.
 > **Scope:** All 53 APPROVED specs in `SPEC_INDEX.md`, read directly from `docs/specs/`, regardless
 > of whether a `src/` assembly exists yet for that spec.
 
@@ -112,6 +131,22 @@ this pattern — FRs and formulas).
   passing lane). No defender attribute (anticipation, pace) enters the interception-likelihood
   calculation, so a slow, poor-anticipation defender scores as equally threatening an interceptor as
   a fast, high-anticipation one standing in the identical spot. Pattern (a).
+  **FIXED — landed August 4, 2026 as `ERR-008-020`**, the doctrine's template fix (§6.4).
+- **§3.1.4.3 / §3.2.3.2 SHOT lane occlusion test** — *not itemized in the original sweep*; it
+  surfaced in §6.4 as the geometry the template fix deliberately left behind, and is recorded here
+  at its landing so the #8 record is complete. It held **both** of the pass lane's defects.
+  Pattern (b): the occlusion test was *containment*, not overlap — an opponent contributed his whole
+  angular blocking width when his angular centre fell inside the goal arc and exactly nothing when it
+  fell outside, so a defender standing squarely across the near post scored the shooter a **fully
+  open goal**, a defender a centimetre the other side scored a width half of which lay behind the
+  post, and 4 cm of lateral position stepped `GoalOpeningScore` by 0.41. Pattern (a): the width was
+  body radius alone, so blocker identity never entered the shooter's read of the goal.
+  **FIXED — landed August 5, 2026 as `ERR-008-021`**: true angular overlap (P1, continuous by
+  construction — no ramp constant needed) × Anticipation/Positioning ability read through the
+  shooter's Vision fidelity (P2, sharing §3.1.3.3's floor as one dial), goalkeeper exempt from the
+  ability term because #11 owns keeper shot-stopping (P3). P5 holds exactly — the old rectangle and
+  the new trapezoid integrate identically over a uniformly-placed blocker. Digest invariance **not**
+  claimed: the model is live on every generated shot. Gate NOT runnable in the authoring environment.
 - **§3.1.8, §3.2.7.1 PRESS trigger** — decided by "am I the closest teammate to the ball-carrier,"
   with no risk term (cover behind the presser, whether pressing opens a passing lane). Structurally
   identical to Pressing AI #13's own primary-press-selection defect (§3 below) — the same judgment
@@ -484,8 +519,56 @@ Lane score stays `1 − Σweights / PASS_LANE_DIVISOR`; an average defender dead
 ≈ 1.0 (P5). Vision's existing §3.2.2 PASS-utility term is unchanged — it rewards vision generally;
 the fidelity term owns risk discrimination only (P3, no double-count). Plumbing: the engine already
 holds every agent's `DtAgentAttributes`; the pipeline gains a read of opponent Anticipation/Pace —
-the perception system is untouched. The **shot-lane check (§3.1.4)** shares the geometry and is
-deliberately deferred to a follow-up fix (owner call, keep the template change small).
+the perception system is untouched. The **shot-lane check (§3.1.4)** shares the geometry and was
+deliberately deferred to a follow-up fix (owner call, keep the template change small) —
+**that deferral is discharged: see §6.4.1.**
+
+#### 6.4.1 The shot-lane follow-up (LANDED August 5, 2026 as `ERR-008-021`)
+
+**#8 §3.1.4.3 / §3.2.3.2 goal-visibility occlusion** — the geometry §6.4 held back. Reading it out
+found the pass lane's defect *twice over*, and the containment half was the more damaging:
+
+- **Containment, not overlap (P1).** Step 4 counted an opponent's occlusion only when his angular
+  *centre* lay inside the goal arc, and then counted his **entire** width. A defender whose centre
+  sat a hair outside the post direction therefore contributed **exactly zero** — the shooter read a
+  *fully open goal* with a man across his near post — while one a centimetre the other side
+  contributed a full width, half of it behind the post and blocking nothing. On the suite's fixture,
+  4 cm of lateral position moved `GoalOpeningScore` from 0.595 to 1.000. The score prices the SHOOT
+  candidate (§3.2.3.1), gates its existence (§3.1.4.1) and drives `PowerIntent` (§3.5.3), so the
+  discontinuity reached shot selection, shot value and shot speed alike.
+- **Attribute blindness (P2).** The width was `2·atan(radius/distance)` — body radius alone.
+
+Converged fix: the contribution is the true angular **overlap** of the blocking disc with the goal
+arc. Unlike -019 and -020 this needed **no ramp constant, no half-width `[GT]` and no tolerance
+epsilon** — the intersection is continuous by construction, and is simultaneously the geometrically
+honest answer, so the over-blocking and the under-blocking are fixed by the same stroke as the cliff.
+The overlap is scaled by the blocker's **Anticipation + Positioning** ability
+(`SHOT_BLOCKER_ABILITY_MIN/MAX` = 0.6/1.4, league-average exactly 1.0) read through the shooter's
+**Vision** as discrimination fidelity — reusing `LANE_VISION_FIDELITY_FLOOR` rather than declaring a
+second one, since fidelity is a property of the assessor and a duplicate would be a parallel surface
+rather than a parameter. The **goalkeeper is exempt from the ability term** and occludes on geometry
+alone (P3): #11 §3.5's save model and §3.7.0's rush — which *sets* this geometry — own his
+shot-stopping, so pricing it here as well would charge the shooter twice for one keeper.
+
+**P5 is exact here, not approximate.** Over a uniformly-placed blocker the pre-fix rule integrated a
+rectangle of area `4h·halfArc`; the overlap integrates a trapezoid of area `4h·halfArc`, for every
+disc width and arc. With the ability midpoint at exactly 1.0 the attribute axis is neutral too, so
+the fix redistributes occlusion from a step to a slope and from anonymous bodies to identified ones
+without opening or closing the goal on average.
+
+**Digest invariance is not claimed** (the -019 lesson applied at authoring time): this model is live
+on every SHOOT candidate the generator produces and moves for any blocker who is not both exactly
+average and wholly inside the arc. 9 `OptionGeneratorTests` locks, including the P5 pivot on the
+*computed* path as well as the null-view path, the GK exemption proved by moving the keeper's
+attributes between the extremes, and the away mirror. A reference implementation of both models
+confirms 5 of the 8 evaluable-pre-fix locks fail on the old one; the three that pass pre-fix are the
+two P5 pivot rows and null-view neutrality, by construction. Gate NOT runnable in the authoring
+environment.
+
+Two items **recorded, not fixed**: `IsInShotPath`'s corridor end-bounds (a near-end step at 1.0 m and
+an exclusive far bound that drops a keeper exactly on his line — front-of vs behind the goal line is
+a physical fact, not a football judgment, so P1 does not obviously reach it), and §3.2.10's constant
+catalogue, which five consecutive #8 landings have now left behind.
 
 ### 6.5 Adjacent gap recorded (not a §2/§3 finding)
 

@@ -6,8 +6,10 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 1.63
-**Updated:** August 5, 2026, even later same day (v1.63 — **ERR-008-019 invariance claim corrected (adversarial review over the landing): "no digest moves on any seed" is RETRACTED for the full-range form.** Documentation only — no formula, constant, test or behaviour changes; the code and the four test locks stand. The recorded argument was false-premised: it placed the shooter inside Ball Physics #1 §3.1.11.1 `CheckPossession`'s 0.5 m `ControlRadius`, but that is not how this engine grants possession. The production paths are `MatchEngine.RunLooseBallPickup` (§5.Z Phase H, KD-H3), which grants possession to the nearest eligible agent within `MatchEngineConstants.LooseBallPickupRadiusM` = **1.0 m** of a loose ball at rest and **leaves the ball where it lies**, and the first-touch path (`FIRST_TOUCH_ACCEPTANCE_RADIUS_M` = 1.0 m); after the grant **nothing re-anchors the ball to the holder or releases possession on separation** — the holder moves freely under dispatched `MoveTo` commands and the executors' only entry check is the possession id (`PassExecutor` FM-01 `IsBallPossessedBy`). So holder–ball separation at a decision tick reaches 1.0 m, and a MIDFIELD ball at x → 70⁻ with the holder goal-side puts the shooter just above **34.0 m** — **inside** raw 19's §3.1.4.2 range gate (20 + (18/19) × 15 = 34.21 m), where the full-range ramp gives 0.05 + (18/19) × 0.5 ≈ **0.524** against the old step's 0.55. A generated option can score differently, so invariance is **not established** and is likely false on seeds realizing that state; the behaviour change is owner-intended, not an accident. The **superseded** v1.61 narrow-ramp argument survives the corrected premise (it differs from the step only at A_LongShots ≤ 0.6, range gate capping at 29.0 m — still disjoint from > 34.0 m) and is left as historical chain. Also recorded (Low): `LONG_SHOT_RAMP_HALF_WIDTH`'s documented (0, 0.25] range is the FORMULA's validity domain, not a free dial — `ShootMidfield_FullRangeRamp_EndpointsExact_AndStrictlyMonotone` fails at any half-width below 0.25, so a retune downward must revisit that lock. Surfaces corrected: #8 §3.2.3.1 + `section-3-2.md` v1.11, this log's index row and ERR-008-019 entry, `football-judgment-proxy-review.md`, `open-issues.md`, `CLAUDE.md`; `UtilityWeights.cs` v1.10 XML doc. **Gate NOT run — no .NET SDK in the authoring environment.** Prior entry below.)
+**Version:** 1.64
+**Updated:** August 5, 2026, latest same day (v1.64 — **ERR-008-021 filed + RESOLVED: the third fix under the football-judgment proxy review's remediation doctrine, and the discharge of the deferral ERR-008-020 opened.** #8 §3.1.4.3/§3.2.3.2's shot lane carried the SAME two defects the pass lane did, which is why §6.4 named it as the follow-up. **(a) A containment cliff:** an opponent contributed his *whole* angular blocking width when his angular centre fell inside the goal arc and **exactly nothing** when it fell outside — so a defender standing squarely across the near post scored a **fully open goal**, one a centimetre the other side scored a width half of which lay behind the post, and 4 cm of lateral position stepped `GoalOpeningScore` by **0.41** on the fixture the suite now uses (0.595 → 1.000). **(b) Attribute blindness:** the width was body radius alone, so a defender who neither reads the shot nor gets his body into its line shut the goal off exactly as hard as one who does. Found by review, not measurement — a structural property of the formula, read from spec + code. Fixed per doctrine: **P1** — the contribution is now the true angular OVERLAP of the blocking disc with the goal arc, which is continuous *by construction* (no ramp constant, no tolerance epsilon) and is also the geometrically honest answer, so the over- and under-blocking go with the cliff; **P2** — the overlap is scaled by the blocker's Anticipation/Positioning ability (`SHOT_BLOCKER_ABILITY_MIN/MAX` 0.6–1.4 `[GT]`, league-average exactly 1.0) read through the SHOOTER's Vision fidelity, reusing §3.1.3.3's floor as ONE dial because fidelity belongs to the assessor, not to what he assesses; **P3** — the **goalkeeper is exempt from the ability term** and occludes on geometry alone, because #11 §3.5/§3.7.0 owns keeper shot-stopping and pricing it here too would charge the shooter twice for one keeper. **P5 holds exactly, not approximately:** over a uniformly-placed blocker the old rectangle and the new trapezoid both integrate to `4h·halfArc`, for every disc width and every arc — so the fix redistributes occlusion from a step to a slope without opening or closing the goal on average, and the ability midpoint leaves the attribute axis neutral too. **Digest invariance is NOT claimed** — the model is live on every shot the engine generates and moves on any blocker who is not exactly average or not wholly inside the arc; the behaviour change is the point. No schema / RNG / domain-tag / draw-site / draw-order change. 9 new `OptionGeneratorTests` locks incl. the GK-exemption proof and the away-side mirror; a reference implementation of both models confirms **5 of the 8 evaluable against the old model fail on it** (the three that pass pre-fix are the two P5 pivot rows and null-view neutrality, by construction). **Gate NOT run — no .NET SDK in the authoring environment; nothing in this landing has been compiled or executed.** Prior entry below.)
+
+**Updated (prior):** August 5, 2026, even later same day (v1.63 — **ERR-008-019 invariance claim corrected (adversarial review over the landing): "no digest moves on any seed" is RETRACTED for the full-range form.** Documentation only — no formula, constant, test or behaviour changes; the code and the four test locks stand. The recorded argument was false-premised: it placed the shooter inside Ball Physics #1 §3.1.11.1 `CheckPossession`'s 0.5 m `ControlRadius`, but that is not how this engine grants possession. The production paths are `MatchEngine.RunLooseBallPickup` (§5.Z Phase H, KD-H3), which grants possession to the nearest eligible agent within `MatchEngineConstants.LooseBallPickupRadiusM` = **1.0 m** of a loose ball at rest and **leaves the ball where it lies**, and the first-touch path (`FIRST_TOUCH_ACCEPTANCE_RADIUS_M` = 1.0 m); after the grant **nothing re-anchors the ball to the holder or releases possession on separation** — the holder moves freely under dispatched `MoveTo` commands and the executors' only entry check is the possession id (`PassExecutor` FM-01 `IsBallPossessedBy`). So holder–ball separation at a decision tick reaches 1.0 m, and a MIDFIELD ball at x → 70⁻ with the holder goal-side puts the shooter just above **34.0 m** — **inside** raw 19's §3.1.4.2 range gate (20 + (18/19) × 15 = 34.21 m), where the full-range ramp gives 0.05 + (18/19) × 0.5 ≈ **0.524** against the old step's 0.55. A generated option can score differently, so invariance is **not established** and is likely false on seeds realizing that state; the behaviour change is owner-intended, not an accident. The **superseded** v1.61 narrow-ramp argument survives the corrected premise (it differs from the step only at A_LongShots ≤ 0.6, range gate capping at 29.0 m — still disjoint from > 34.0 m) and is left as historical chain. Also recorded (Low): `LONG_SHOT_RAMP_HALF_WIDTH`'s documented (0, 0.25] range is the FORMULA's validity domain, not a free dial — `ShootMidfield_FullRangeRamp_EndpointsExact_AndStrictlyMonotone` fails at any half-width below 0.25, so a retune downward must revisit that lock. Surfaces corrected: #8 §3.2.3.1 + `section-3-2.md` v1.11, this log's index row and ERR-008-019 entry, `football-judgment-proxy-review.md`, `open-issues.md`, `CLAUDE.md`; `UtilityWeights.cs` v1.10 XML doc. **Gate NOT run — no .NET SDK in the authoring environment.** Prior entry below.)
 
 **Updated (prior):** August 5, 2026, later same day (v1.62 — **ERR-008-019 owner revision: the long-shot ramp widened to the FULL attribute range.** The owner directed the scaling to span the whole LongShots range rather than the initial 8–13 band; since the metres-based §3.1.4.2 range gate already scales raw 1–20, the instruction lands on the §3.2.3.1 zone-modifier ramp. One-value change — `LONG_SHOT_RAMP_HALF_WIDTH` 0.05 → 0.25, its maximum valid value: the ramp spans the whole shifted domain, `t` reduces to `A_LongShots`, raw 1 is exactly 0.05 and raw 20 exactly 0.55, and every raw point between moves the modifier ≈ 0.026 — no plateau anywhere. P5 still holds (midpoint at the old cliff; uniform-population mean 0.30 under step, narrow ramp, and full ramp alike). Digest invariance survives in tighter form: only raw 20 can generate a MIDFIELD SHOOT (35.0 m range vs ≥ ~34.5 m needed; raw 19 caps at 34.2 m) and there the ramp equals the old step — no digest moves. Spec §3.2.3.1/§3.2.3.4 re-derived, Case B recomputed 0.200 → 0.162, `section-3-2.md` v1.10; tests refitted (shifted-form lock at raw 10; endpoints-exact + strictly-monotone replaces the plateau assertions, which were the exact opposite of the instruction). **Gate NOT run — no .NET SDK in the authoring environment.** Prior entry below.)
 
@@ -190,6 +192,7 @@ authoritative remediation backlog.
 | ERR-041-002 | Injuries & Medical #41, found at **T0 implementation**: `section-2.md` §2.2 and `section-3.md` §3.1 specify the occurrence draw as `rng.DrawKeyed(STREAM_INJURIES_OCCURRENCE, entityId: playerId, actionOrdinal: …, drawIndex: 0)` against a `DeterministicRngService` parameter. **No such API exists.** #16's service exposes only the branch-safe reservation trio (`Reserve` / `DrawReserved` / `CloseReservation` / `Skip`), whose draw value is keyed on an `ActionOrdinal` the service itself increments inside `Reserve` — there is no overload that accepts a caller-supplied action ordinal, and the field is private. So the signature cannot be implemented, and the one shape that could be (register a stream, then `Reserve`/`DrawReserved` per player-day) is **cursor-positioned**, which §3.1/KD-1 of the same spec forbids: the whole design rests on the draw being reproducible from `(playerId, worldDay, purpose)` alone so that FR-MD-007 can serialize no cursor at all. The same §4-architecture-sketch-contradicts-another-section class as ERR-030-012 / ERR-037-001 / ERR-038-002. | Low | 2 | ✅ Resolved August 5, 2026 at #41 T0 — **KD-1's keyed requirement wins; the `DrawKeyed` call is the defect.** The draw is realized as a local keyed derivation (`MedicalStep.DrawOccurrence`): `DomainTagInjuriesMedical` folded in first, then `playerId`, then the `(worldDay, purpose)` action ordinal, each through a SplitMix64 finalizer, reduced into `[0, OccurrenceDrawDenom)`. This is the #30 `RoundResolutionModel.FixtureKey` / `LeagueBootstrap` precedent — the project's established way to take a position-independent draw — and it satisfies FR-MD-005/006/007 in substance: domain-separated, keyed, and with nothing to persist. Consequences: `AdvanceMedicalDay` takes `ulong worldSeed` in place of the `DeterministicRngService rng` parameter (the seed is the only service input a keyed draw needs, and it is already readable from `WorldStore.WorldSeed` per roadmap A3), and no stream is registered — so FR-MD-027's stream-independence property holds vacuously rather than by test. Locked by `MedicalStepTests.Draw_IsPositionIndependent_TTMDDET003` and `TwoPlayersOnTheSameDay_DoNotInfluenceEachOther`. §2.2/§3.1 signatures to be re-anchored at the next #41 revision; no FR text change, no format-version change, no `DETERMINISM_DIGEST_VERSION` bump. |
 | ERR-041-003 | Injuries & Medical #41, found at **T0 adversarial review**: Appendix A tags `INJURY_RISK_MAX` **`[GT]`** in #41's own catalogue, while §3.4 requires the assembled risk to be on **the same scale** as #29's `InjuryRiskContribution.RiskScore` (it passes through with weight 1) and derives `OCCURRENCE_DRAW_DENOM` from it, so the draw is taken on that scale too. Both cannot hold. A `[GT]` row means an independently tunable value with its own config key — `[injuries-medical] InjuryRiskMax` alongside #29 Appendix A's `[training-system] InjuryRiskMax` — and setting one without the other silently rescales every occurrence probability while #29's clamped maximum quietly stops meaning "certain occurrence", with nothing in either system able to notice. The T0 landing initially implemented both rows literally and added an equality test between them, which made it worse rather than better: the gate runs with `GameplayConfigHolder` unbound, so both sides returned their design-time fallback and the assertion passed no matter what a config file said — a lock wired to nothing. Same class as ERR-037-001 (a tag and an architecture list that cannot both be honoured). | Low | 2 | ✅ Resolved August 5, 2026 at #41 T0 (AR pass 1) — **§3.4's shared-scale requirement wins; the `[GT]` tag is the defect.** `InjuriesMedicalConstants.InjuryRiskMax` moves to the `Cross` region as `[CROSS: #29 Appendix A]`, mirroring `TrainingSystemConstants.InjuryRiskMax` directly (the single-consumer routing rule — mirror the source spec's catalogue, not `ProjectConstants`). One owner, one config key; the mirror-fidelity test now holds by construction, which is the point of the `[CROSS]` tag rather than a weakness of the test. `OccurrenceDrawDenom` stays `[DERIVED]` off the mirror and remains a property rather than a field, since a `Derived`-region field would initialise before the `Cross`-region field it reads and silently capture 0. #41's Appendix A row to be re-tagged `[CROSS]` at the next #41 revision. **Recorded, not fixed (a balance decision, not a defect):** both specs mandate their own robustness mitigation over the same three #27 physical attributes (#29 §3.4 and #41 §3.4/FR-MD-015), so a player's robustness is priced in twice and #29's saturated maximum can never reach #41's ceiling — pinned as an explicit assertion in `MedicalStepTests` so the balance pass inherits the fact rather than rediscovering it. No FR text change, no format-version change. |
 | ERR-008-019 | Decision Tree #8 §3.2.3.1 — the midfield `ZoneModifier_SHOOT` was a hard step on one attribute: 0.55 strictly above `LONG_SHOT_THRESHOLD` (shifted LongShots), 0.05 at/below — an **11× jump across one raw attribute point** (10 → 11). The football-judgment proxy review's *founding* pattern-(b) finding, and the id whose original "FIXED" record was verified false at the ERR-008-020 landing (soft-reserved since; re-verified free here). | Moderate | 4 | ✅ **Resolved August 5, 2026** (spec §3.2.3.1/§3.2.3.4 + `UtilityScorer`/`UtilityWeights`, same commit; doctrine P1/P5) — linear ramp in the unchanged shifted form, centred on the old threshold with new `[GT] LONG_SHOT_RAMP_HALF_WIDTH`, **owner-revised same day from 0.05 to the full-range 0.25**: raw 1 exactly 0.05, raw 20 exactly 0.55, every raw point between moves the modifier ≈ 0.026 — no plateau anywhere (`t` reduces to `A_LongShots`); exact midpoint at the old cliff and uniform-population mean 0.30 preserved (P5 pivot, locked by test). **Digest invariance NOT established** (claim retracted August 5, 2026 at the adversarial review over the landing — the original argument assumed a 0.5 m possession radius; the engine's production path is `RunLooseBallPickup`'s **1.0 m** KD-H3 radius, which leaves the ball where it lies, and nothing re-anchors it afterwards): a MIDFIELD ball at x → 70⁻ with the holder 1.0 m goal-side reaches just above 34.0 m, inside raw 19's range gate (34.21 m), where the ramp gives ≈ 0.524 against the step's 0.55 — so a generated option **can** score differently. Behaviour change owner-intended; the narrow-ramp (0.05) predecessor's disjoint-bands argument survives (29.0 m vs > 34.0 m). 4 `UtilityScorerTests` locks (shifted-form, no-cliff, exact midpoint, endpoints-exact + strictly-monotone). **Gate NOT run — no .NET SDK in the authoring environment.** |
+| ERR-008-021 | Decision Tree #8 §3.1.4.3 / §3.2.3.2 — the shot-lane occlusion test was the pass lane's twin defect, deferred at the ERR-008-020 landing by owner call and closed here. An opponent contributed his **whole** blocking width if his angular centre fell inside the goal arc and **nothing at all** if it fell outside: a defender across the near post scored a fully open goal, and 4 cm of lateral position stepped `GoalOpeningScore` by 0.41 (0.595 → 1.000). The width was body radius alone, so blocker identity never entered the shooter's read of the goal. | Moderate | 3 | ✅ **Resolved August 5, 2026** (spec §3.1.4.3 + §3.2.3.2 + `OptionGenerator`/`UtilityWeights`, same commit; doctrine P1/P2/P3/P5) — the contribution is the true angular OVERLAP of the disc with the goal arc (continuous by construction) × the blocker's Anticipation/Positioning ability (`SHOT_BLOCKER_ABILITY_MIN/MAX` 0.6–1.4 `[GT]`, average exactly 1.0) read through the shooter's Vision fidelity (§3.1.3.3's floor, shared as one dial). **Goalkeeper exempt from the ability term** — #11 owns keeper shot-stopping (P3). P5 exact: old rectangle and new trapezoid both integrate to `4h·halfArc` over a uniformly-placed blocker. Digest invariance **not claimed** — the model is live on every generated shot. 9 `OptionGeneratorTests` locks incl. the GK exemption and the away mirror. **Gate NOT run — no .NET SDK in the authoring environment.** |
 
 ---
 
@@ -2439,6 +2442,127 @@ every contact resolves to exactly one ball-side action). Measured effect, three 
 same seeds: goals **15 → 11** over the corpus (5.0 → **3.7**/match, the closest this engine has
 measured to football's ~2.7), scorelines 2-2 / 2-0 / 6-3 → **1-0 / 2-2 / 4-2**, goals-after-contact
 share 93% → 36%.
+
+---
+
+## ERR-008-021: Decision Tree #8 §3.1.4.3 / §3.2.3.2 — a defender standing across the near post scored a fully open goal
+
+**Filed:** August 5, 2026 — the third fix landed under the football-judgment proxy review's
+remediation doctrine (`football-judgment-proxy-review.md` §6; doctrine P1/P2/P3/P5 are the fix's
+design authority). **Status: RESOLVED** (same commit). Owner doc:
+`docs/tracking/football-judgment-proxy-review.md` (§2 finding for #8; §6.4 named this as the
+follow-up when the ERR-008-020 template fix was deliberately kept small).
+
+**Id provenance.** `ERR-008-021` verified free at this landing: zero `## ERR-008-021` entries in
+this log and zero citations anywhere in `docs/specs/` or `src/` before this commit.
+
+**How found.** By review, not measurement — the same sweep that produced ERR-008-019 and -020.
+§6.4 recorded the shot lane as sharing the pass lane's geometry and deferred it by owner call; this
+landing discharges that deferral. Reading it out, the shot lane turned out to carry the pass lane's
+*two* defects rather than one, and the containment defect is the worse of them:
+
+- **(a) A containment cliff — and it was wrong in both directions at once.** §3.2.3.2 step 4 counted
+  an opponent's occlusion only when his angular *centre* lay inside the goal arc, and then counted
+  his **entire** angular width. So a defender whose centre sat a hair outside the post direction
+  contributed **exactly zero** — the shooter read a *fully open goal* while a man stood squarely
+  across his near post — and one a centimetre the other side contributed a full width, half of which
+  lay behind the post and blocked nothing. On the fixture the test suite now uses (shooter 15 m out
+  on the centre line, one blocker 5 m in front), 4 cm of lateral defender position stepped
+  `GoalOpeningScore` from **0.595 to 1.000**. That score both prices the SHOOT candidate (§3.2.3.1,
+  a direct multiplicand of `U_SHOOT`) and gates its existence (§3.1.4.1 condition 4), and it drives
+  `PowerIntent` (§3.5.3), so the discontinuity reached shot selection, shot value and shot speed.
+- **(b) Attribute blindness.** The width was `2 × atan(radius / distance)` — body radius alone.
+  A defender who neither reads the shot nor gets his body into its line shut the goal off exactly as
+  hard as one who does. This is §2's recorded pattern-(a) finding, verbatim, transposed to the goal.
+
+Both are structural properties of the formula, read directly from spec + code
+(`OptionGenerator.ComputeGoalOpeningScore`). **No measurement instrument was run for this landing**
+(no .NET SDK in the authoring environment — the ERR-008-020 / ERR-011-009 constraint), and none was
+required to establish either defect. The 0.595 → 1.000 step above is computed from the formula, not
+observed in a match.
+
+**Fix (spec + code, same commit).** §3.2.3.2 steps 3–4 rewritten; §3.1.4.3 states the shape and
+delegates the derivation, so the two sections cannot drift.
+
+- **Overlap, not containment (doctrine P1).** Step 3 now yields an angular *interval*
+  `[centre ± halfWidth]` rather than a scalar width, and step 4 intersects it with the goal arc
+  `[−halfArc, +halfArc]` measured about the arc's own bisector. This is continuous **by
+  construction** — unlike ERR-008-019 and -020 it needs no ramp constant, no half-width `[GT]` and
+  no tolerance epsilon (the 0.01° epsilon the containment test required is deleted with it) — and it
+  is simultaneously the geometrically honest answer, so the over-blocking and under-blocking go with
+  the cliff rather than needing separate fixes.
+- **Ability (doctrine P2).** The overlap is scaled by the blocker's `Anticipation`/`Positioning`
+  mean mapped to `[GT] SHOT_BLOCKER_ABILITY_MIN/MAX` = 0.6/1.4. Anticipation is reading the shot
+  early enough to move (the ledger's off-ball/predictive recognition row); Positioning is getting the
+  body into its *line* rather than merely near it. The league-average blocker lands at exactly 1.0,
+  so he occludes precisely the bare geometric arc.
+- **Vision as discrimination fidelity (doctrine P2), on ONE dial.** `perceived = 1 + fidelity ×
+  (true − 1)` with `fidelity = LANE_VISION_FIDELITY_FLOOR (0.2) + 0.8 × A_Vision(shooter)` — the
+  §3.1.3.3 constant, deliberately **not** duplicated. Fidelity is a property of the assessor's
+  Vision, not of the thing assessed, so a second copy would be a parallel surface (the v1.2 lesson
+  that removed the duplicated `UtilityWeights`/`TacticalWeights` constants), not a second parameter.
+  A Vision-1 shooter reads every blocker as near-average — which IS the pre-fix engine.
+- **The goalkeeper is exempt from the ability term (doctrine P3).** He occludes on geometry alone,
+  at his own larger radius. Keeper shot-stopping quality belongs to Goalkeeper Mechanics #11 — its
+  §3.5 save model, and its §3.7.0 rush (wiring backlog W1, August 4), which *sets* the very geometry
+  this function measures. Pricing it here as well would charge the shooter twice for one keeper.
+  Locked by a test that moves the keeper's attributes between the extremes and asserts the score
+  does not move.
+- **Not changed:** steps 1, 2 and 5; `IsInShotPath`'s corridor; `BLOCKER_RADIUS`,
+  `GK_BLOCKER_RADIUS`, `GK_PROXIMITY_TO_GOAL`, `GOAL_MIN_SHOT_DISTANCE`, `GOAL_OPENING_MIN`,
+  `MIN_GOAL_VISIBILITY`; and §3.2.3.1's `U_SHOOT` formula, which consumes the score unchanged.
+
+**Calibration (doctrine P5) — exact, not approximate.** Over a blocker whose angular centre `c` is
+uniformly distributed, the pre-fix rule contributed a rectangle (full width `2h` for `|c| ≤ halfArc`,
+zero outside) of area `4h·halfArc`. The overlap contributes a symmetric trapezoid: `2h` for
+`|c| ≤ |halfArc − h|`, falling linearly to zero at `|c| = halfArc + h`. Its area is `4h·halfArc` for
+**every** `h` and `halfArc`, including `h > halfArc`. Combined with the ability midpoint of exactly
+1.0 over a uniform attribute population, the fix leaves the population-mean occlusion untouched on
+both axes — it redistributes from a step to a slope and from anonymous bodies to identified ones.
+The two new `[GT]`s are first-guess values; real calibration waits for a complete-engine pass per
+**KD-W1** (`match-engine-wiring-backlog.md`).
+
+**Determinism impact: none to the machinery.** No `SNAPSHOT_SCHEMA_VERSION` change (the attribute
+view is the injected dependency ERR-008-020 already added, not cross-tick state), no new RNG stream /
+domain tag / draw site, no draw-order change — the model is a pure function of the tick's snapshot
+plus static attributes. **Digest invariance is NOT claimed and is false:** unlike ERR-008-019's
+latent branch, this model is live on every SHOOT candidate the generator produces, and it moves for
+any blocker who is not both exactly league-average and wholly inside the goal arc. The behaviour
+change is the point of the fix. Locked by 9 `OptionGeneratorTests` (v1.7): the P5 pivot on the
+null-view path AND on the computed path (Anticipation 10 / Positioning 11 ⇒ `mean01` = 0.5 exactly,
+so the ability formula is actually executed — the ERR-008-020 AR-1 M-1 lesson, applied at authoring
+time rather than at review), the MIN/MAX-midpoint invariant, no cliff across the post direction, the
+straddling blocker now occluding what his body covers, Vision-20 separating elite from poor blockers
+while Vision-1 barely does, null-view neutrality, the GK exemption, and the discrimination case
+mirrored to the away side (the home-team-only-example trap). A reference implementation of both the
+old and new models, run over all nine, confirms **5 of the 8 evaluable against the old model FAIL on
+it** — continuity (step 0.405 against the asserted < 0.05), the straddling blocker (1.000, not
+< 1.0), home discrimination, the low-Vision separation (the pre-fix gap is exactly zero) and the
+away mirror. The other three — both P5 pivot rows and null-view neutrality — pass pre-fix by
+construction, which is what a pivot row is for; the ninth, the MIN/MAX-midpoint invariant, cannot be
+evaluated pre-fix because the constants are new. **Gate NOT run — no .NET
+SDK in this environment; nothing in this landing has been compiled or executed.**
+
+**Recorded, not fixed (two items, both pre-existing and both out of this fix's scope):**
+
+1. **`IsInShotPath`'s corridor ends are still hard bounds.** The near bound excludes a blocker inside
+   `GOAL_MIN_SHOT_DIST` = 1.0 m of the shooter, where the occlusion angle is enormous, so it steps
+   from zero to a total block across 2 cm; the far bound is strictly `proj < distToGoal`, which
+   drops a keeper standing exactly on his line on the shot axis. Left alone deliberately: front-of-
+   versus behind-the-goal-line is a physical fact rather than a football judgment, so doctrine P1
+   does not obviously reach it, and the near bound is a self-exclusion guard whose right shape is a
+   separate question. Neither is reachable-and-wrong often enough to justify widening this commit.
+   Noted while reading it: **§3.1.4.3 and §3.2.3.2 describe this same test differently** — §3.1.4.3
+   defines `IsInShotPath` as a projection along the shot axis (which is what the code implements),
+   while §3.2.3.2 step 3 writes it as a plain `opponentDist < GOAL_MIN_SHOT_DISTANCE` distance
+   check. They disagree for any opponent off the shot axis. Pre-existing, untouched here, and it
+   belongs with whichever pass settles the corridor's shape rather than with this one.
+2. **§3.2.10's constant catalogue does not carry these constants** — nor `POWER_INTENT_FLOOR`
+   (ERR-008-016), `SHOOT_SWEET_RANGE_M`/`SHOOT_DIST_FALLOFF_M` (-017), `DRIBBLE_GOAL_DIR_MIN_MODIFIER`
+   (-018), `LONG_SHOT_RAMP_HALF_WIDTH` (-019) or the pass-lane set (-020). Five consecutive landings
+   have defined constants in their own §3 subsection tables and left that catalogue behind, so its
+   "Total constants: 58" summary is now wrong by at least nine. Following the established practice
+   here rather than half-correcting it; the catalogue needs one reconciliation pass of its own.
 
 ---
 

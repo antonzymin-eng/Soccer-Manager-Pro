@@ -8,6 +8,7 @@
 // Modified: 2026-08-05 (ERR-008-019 — + LONG_SHOT_RAMP_HALF_WIDTH [GT]; LONG_SHOT_THRESHOLD redocumented as the ramp centre)
 // Modified: 2026-08-05 (ERR-008-019 owner revision — LONG_SHOT_RAMP_HALF_WIDTH 0.05 → 0.25: full-range ramp, no plateaus)
 // Modified: 2026-08-05 (ERR-008-019 AR — LONG_SHOT_RAMP_HALF_WIDTH XML doc: the (0, 0.25] range is the formula's validity domain; the suite pins 0.25)
+// Modified: 2026-08-05 (ERR-008-021 — shot-lane block model: + SHOT_BLOCKER_ABILITY_MIN/MAX [GT]; LANE_VISION_FIDELITY_FLOOR redocumented as the shared P2 dial)
 // Author:   —
 // Spec:     Decision Tree #8 §3.2.11, Code Standards #20
 // Purpose:  Authoritative constant catalogue for the utility scoring model.
@@ -141,6 +142,23 @@ namespace TacticalDirector.DecisionTree
         public const float GK_PROXIMITY_TO_GOAL = 6.00f;  // [GT] distance from goal line to classify as GK
         public const float GOAL_MIN_SHOT_DIST = 1.00f;  // [GT] minimum dist to count as blocker
 
+        // ── Shot-lane block model (§3.1.4.3 / §3.2.3.2, ERR-008-021 / doctrine P1+P2) ──
+        // The blocked arc was the blocker's FULL angular width whenever its angular centre
+        // fell inside the goal arc and exactly zero otherwise — a containment cliff at the
+        // post direction — and the width was body radius alone, so a statuesque defender
+        // shut the goal off exactly as hard as one who reads the shot and gets across.
+        // Replaced by the true angular OVERLAP of the blocking disc with the goal arc
+        // (continuous by construction, and integrating to the identical occlusion over a
+        // uniformly-placed blocker — the doctrine P5 pivot) scaled by the blocker's
+        // perceived blocking ability. See PASS_LANE_* above for the same model on the
+        // pass lane; the two judgments share the P2 fidelity dial and nothing else.
+
+        /// <summary>[GT] Shot-blocking ability scalar at Anticipation+Positioning mean = 0 (raw 1/1). §3.2.3.2, ERR-008-021.</summary>
+        public const float SHOT_BLOCKER_ABILITY_MIN = 0.6f;
+
+        /// <summary>[GT] Shot-blocking ability scalar at Anticipation+Positioning mean = 1 (raw 20/20). Midpoint of MIN..MAX is exactly 1.0 so the league-average blocker occludes exactly the geometric arc — the P5 pivot. §3.2.3.2, ERR-008-021.</summary>
+        public const float SHOT_BLOCKER_ABILITY_MAX = 1.4f;
+
         public const float MOVE_URGENCY_DIST_M = 15.0f;  // [GT] full urgency distance for MOVE
         public const float MOVE_DIST_MIN = 0.10f;  // [GT] minimum distance modifier floor
         public const float MOVE_PRESS_SUPPRESSION_DIST = 6.0f;  // [GT] proximity threshold for MOVE suppression
@@ -185,7 +203,7 @@ namespace TacticalDirector.DecisionTree
         /// <summary>[GT] Interception-ability scalar at Anticipation+Pace mean = 1 (raw 20/20). Midpoint of MIN..MAX is exactly 1.0 so the league-average defender is weight-neutral. §3.1.3.3, ERR-008-020.</summary>
         public const float INTERCEPTOR_ABILITY_MAX = 1.4f;
 
-        /// <summary>[GT] Vision-fidelity floor: at Vision raw 1 the passer resolves this fraction of a defender's true ability deviation from average (doctrine P2 — low Vision degrades to the attribute-blind read, it never invents information). §3.1.3.3, ERR-008-020.</summary>
+        /// <summary>[GT] Vision-fidelity floor: at Vision raw 1 the on-ball player resolves this fraction of an opponent's true ability deviation from average (doctrine P2 — low Vision degrades to the attribute-blind read, it never invents information). ONE dial for both lane judgments: fidelity is a property of the assessor's Vision, not of what he is assessing, so the pass lane (§3.1.3.3) and the shot lane (§3.2.3.2) share it. §3.1.3.3, ERR-008-020; §3.2.3.2, ERR-008-021.</summary>
         public const float LANE_VISION_FIDELITY_FLOOR = 0.2f;
 
         public const float PASS_LANE_DIVISOR = 3.0f;  // [GT] summed lane threat → score=0
@@ -340,4 +358,12 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        | ruled out). Doc now records that (0, 0.25] is the FORMULA's validity      |
 // |         |            |        | domain, not a free dial, and that a retune below 0.25 must revisit that   |
 // |         |            |        | lock in the same change.                                                  |
+// | 1.11    | 2026-08-05 | —      | ERR-008-021 (judgment-proxy doctrine §6.4 follow-up — the shot lane, the  |
+// |         |            |        | geometry ERR-008-020 deliberately left behind): + SHOT_BLOCKER_ABILITY_   |
+// |         |            |        | MIN/MAX [GT] = 0.6/1.4 (Anticipation+Positioning, midpoint exactly 1.0    |
+// |         |            |        | so the average blocker occludes the bare geometric arc — P5 pivot).       |
+// |         |            |        | LANE_VISION_FIDELITY_FLOOR redocumented as ONE shared P2 dial for both    |
+// |         |            |        | lane judgments — fidelity belongs to the assessor's Vision, not to what   |
+// |         |            |        | is being assessed, so a second copy would be a parallel surface, not a    |
+// |         |            |        | second parameter. No value changed.                                       |
 #endregion

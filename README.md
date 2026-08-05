@@ -1,7 +1,28 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** August 5, 2026, end of same day (**ERR-008-019 — one recorded claim about the
+**Last Updated:** August 5, 2026, latest same day (**ERR-008-021 — a defender standing across the
+near post used to count for nothing.** When a player decides whether a shot is on, he estimates how
+much of the goal he can actually see. The old rule asked one yes/no question of each opponent in the
+way — *is the middle of his body between the two posts, from where I am standing?* — and if the
+answer was yes it blocked out his whole width, and if no it blocked out nothing at all. So a
+defender a few centimetres the wrong side of that line vanished from the calculation entirely, and
+the shooter saw a completely open goal with a man standing squarely in front of his near post. Four
+centimetres of defender movement could swing the shooter's read of the goal from 60% open to 100%
+open — and that number decides whether he shoots at all, how good he thinks the chance is, and how
+hard he hits it. The rule now measures how much of the goal each opponent's body *actually* covers,
+which removes the jump and, incidentally, is simply the correct answer. Two related things also
+changed: a defender's own qualities now matter — someone who reads the shot early and gets his body
+into its line blocks more of the goal than someone who does neither — and how accurately the shooter
+judges that depends on his own vision, so a poor reader of the game sees every defender as roughly
+average, which is exactly how the game behaved before. The goalkeeper is deliberately left out of
+that: his shot-stopping is already modelled elsewhere, and counting it twice would make him better
+than he is. Average defenders in average positions block exactly what they blocked before, so match
+balance is not shifted — the change redistributes rather than tightens. Nine tests lock the new
+behaviour, three of which fail on the old rule. **Not compiled or run here — this environment has no
+.NET toolchain; CI compiles on push.** **Prior entry below.**)
+
+**Last Updated (prior):** August 5, 2026, end of same day (**ERR-008-019 — one recorded claim about the
 long-shot ramp was wrong and is withdrawn.** A review of yesterday's landing found that the note
 saying the change "moves no match digests" rested on a false assumption about how a player takes
 possession of the ball: it assumed the player must be within half a metre of it, when the engine

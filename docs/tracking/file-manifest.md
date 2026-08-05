@@ -1,7 +1,26 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 5, 2026, end of same day (**ERR-008-019 — the full-range
+**Last Updated:** August 5, 2026, latest same day (**ERR-008-021 — the #8 shot-lane occlusion
+model. No new files.** **Modified:** `src/decision-tree/OptionGenerator.cs` v1.7
+(`ComputeGoalOpeningScore` rewritten: the binary wedge-containment test → the true angular overlap
+of the blocking disc with the goal arc, measured about the arc's bisector; + `PerceivedBlockAbility`
+(Anticipation+Positioning → 0.6..1.4, blended toward 1.0 by the shooter's Vision fidelity) and
+`SignedAngleDeg`; GK branch skips the ability term; the `ArcOverlapToleranceDeg` epsilon deleted
+with the test it served), `src/decision-tree/UtilityWeights.cs` v1.11 (+ `SHOT_BLOCKER_ABILITY_MIN`
+/`MAX` `[GT]` = 0.6/1.4; `LANE_VISION_FIDELITY_FLOOR` redocumented as the one P2 dial shared by both
+lane judgments), `src/decision-tree/Tests/OptionGeneratorTests.cs` v1.7 (9 new locks incl. the
+computed-path P5 pivot, the GK exemption and the away mirror),
+`docs/specs/decision-tree/section-3-1.md` v1.4 (§3.1.4.3 rewritten; the v1.3 shot-lane deferral
+scope note discharged), `docs/specs/decision-tree/section-3-2-3-to-3-2-9.md` (§3.2.3.2 steps 3–4
+rewritten + correction blockquote + constants table + P5 integration proof + verification table +
+the worked example recomputed with an elite/Vision-1 pair), `spec-error-log.md` v1.64 (head + entry
++ index row), `football-judgment-proxy-review.md` (header, §2 finding, new §6.4.1), `open-issues.md`,
+`CLAUDE.md`, `CHANGELOG.md`, `CHANGELOG-src.md` v2.73, `README.md`. No schema / RNG / domain-tag /
+draw-site / draw-order change; digest invariance NOT claimed (the model is live on every generated
+shot). **Gate NOT run — no .NET SDK in the authoring environment.** **Prior entry below.**)
+
+**Last Updated (prior):** August 5, 2026, end of same day (**ERR-008-019 — the full-range
 digest-invariance claim retracted at the adversarial review over the landing. No new files; no
 behaviour change.** **Modified:** `src/decision-tree/UtilityWeights.cs` v1.10 (XML doc only —
 `LONG_SHOT_RAMP_HALF_WIDTH`'s advertised (0, 0.25] range is the formula's validity domain, not a

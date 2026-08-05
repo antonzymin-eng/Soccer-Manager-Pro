@@ -11,8 +11,8 @@ selected downstream. All attribute references are cross-referenced to `PlayerAtt
 as DT requirements pending Spec #20 master attribute registry.
 
 **Created:** March 01, 2026, 3:30 PM PST
-**Updated:** August 4, 2026 (v1.3 — ERR-008-020: §3.1.3.3 rewritten to the continuous, attribute-weighted lane-threat model; §3.1.4.3 gains the shot-lane deferral scope note)
-**Version:** 1.3
+**Updated:** August 5, 2026 (v1.4 — ERR-008-021: §3.1.4.3's shot lane adopts the §3.1.3.3 model; the v1.3 deferral scope note is discharged)
+**Version:** 1.4
 **Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate; see §9 approval checklist). v1.1.1 (May 15, 2026): ERR-012-002 stale spec ref correction (§3.1.7.2 "Spec #14" → "Positioning AI, Spec #12"). v1.1.2 (May 17, 2026): ERR-013-004 stale spec name correction (§3.1.8.1 "Fatigue System #13" → "Pressing AI #13"). Both are single-token non-behavioral patches; no formula, contract, or pipeline change. Approval status preserved.
 **Specification Number:** 8 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -566,8 +566,11 @@ zone modifier table (SHOOT midfield modifier = 0.5; attacking modifier = 1.0).
 
 ### 3.1.4.3 Goal Visibility Assessment
 
-Goal visibility is a proxy for how open the shooting lane is. It uses the same geometric
-lane check as §3.1.3.3 but targets the goal rather than a teammate.
+Goal visibility is a proxy for how open the shooting lane is. It applies the same
+continuous, attribute-weighted lane model as §3.1.3.3, but targets the goal *mouth*
+rather than a teammate: an opponent's contribution is the angular **overlap** of his
+blocking disc with the goal arc, scaled by how well he can actually get across the shot,
+read through the shooter's Vision (ERR-008-021).
 
 ```
 // Goal is modelled as a line segment: left_post to right_post
@@ -584,9 +587,9 @@ blocked_goal_arc  = 0.0
 
 // For each visible opponent between agent and goal line:
 foreach O in VisibleOpponents where IsInShotPath(O):
-    // Compute angular width that opponent O occludes of the goal
-    O_blocking_angle = AngularOcclusionOf(O, goal_left, goal_right, AgentPosition)
-    blocked_goal_arc += O_blocking_angle
+    // Angular OVERLAP of O's blocking disc with the goal arc, scaled by O's
+    // perceived blocking ability. Full derivation and constants: §3.2.3.2.
+    blocked_goal_arc += BlockedArcContribution(O)
 
 unblocked_goal_arc = Max(total_goal_arc − blocked_goal_arc, 0.0)
 GoalVisibilityScore = unblocked_goal_arc / total_goal_arc    // [0.0, 1.0]
@@ -596,10 +599,26 @@ GoalVisibilityScore = unblocked_goal_arc / total_goal_arc    // [0.0, 1.0]
 axis of the shot, not the pass lane model). Identical in concept to §3.1.3.3 but
 the target is the goal plane rather than a teammate position.
 
-> **ERR-008-020 scope note:** §3.1.3.3's continuous attribute-weighted threat model
-> deliberately does NOT extend to this check yet — the shot lane retains the binary
-> angular-occlusion model above. Deferred as its own follow-up fix per the
-> football-judgment proxy review §6.4 (owner call: keep the template change small).
+**ERR-008-021 — the §3.1.3.3 model extended to the shot lane** (the follow-up deferred at
+the ERR-008-020 landing per football-judgment proxy review §6.4, now closed). The
+per-opponent contribution is defined in full in **§3.2.3.2**; this section states only its
+shape, so the two cannot drift:
+
+- **Overlap, not containment (doctrine P1).** The pre-fix rule counted an opponent's
+  *whole* blocking width if his angular centre fell inside the goal arc and *nothing* at
+  all if it fell outside — a cliff at the post direction, wrong in both directions at
+  once: a blocker standing squarely across the near post scored zero, while one just
+  inside the post scored a width half of which lay outside the goal. The contribution is
+  now the true angular intersection of the disc with the arc, which is continuous by
+  construction and needs no ramp constant or tolerance epsilon.
+- **Ability, read through Vision (doctrine P2).** The overlap is scaled by the opponent's
+  `Anticipation`/`Positioning` blocking ability, blended toward the population average by
+  the shooter's `Vision` fidelity. The league-average blocker scales by exactly 1.0, so he
+  occludes precisely the bare geometric arc (the doctrine P5 pivot).
+- **The goalkeeper is exempt from the ability term (doctrine P3).** He occludes on
+  geometry alone, at his own larger radius. Keeper shot-stopping quality belongs to
+  Goalkeeper Mechanics #11 — its §3.5 save model, and its §3.7.0 rush, which *sets* this
+  geometry — so pricing it here as well would charge the shooter twice for one keeper.
 
 `GoalVisibilityScore` is stored in the `ShootOption` and consumed by §3.2.2 (SHOOT
 utility formula: `GoalOpeningScore` field).
@@ -971,4 +990,5 @@ scoring is §3.2 (unchanged — it is an INTERCEPT), dispatch §3.5.
 | 1.1.2 | May 17, 2026 | Claude (AI) / Anton | Non-behavioral patch per ERR-013-004: §3.1.8.1 "Fatigue System #13" → "Pressing AI #13". Single-token correction (current Spec #13 is Pressing AI; Fatigue System is a separate Stage-1 spec with no allocated number). Approval status preserved. |
 | 1.2 | August 4, 2026 | — | ERR-008-018 back-prop (close-chance-creation pass, §5.Z.24): §3.1.5.2's closing delegation pointed the DRIBBLE directional-to-goal modifier at **§3.2.2, the PASS formula**, so the promised term was never given a home and §3.2.4.1 shipped without it. Cross-reference corrected to §3.2.4.1 and the measured consequence recorded inline (final-third dribbles: 40% of carrier decisions, mean cosine to goal −0.30 over six full matches). Generation-stage behaviour is UNCHANGED — `best_direction` is still the free-space argmax; only the delegation target is corrected. |
 | 1.3 | August 4, 2026 | — | ERR-008-020 (football-judgment proxy review §6.4 — the doctrine's template fix; spec + code, same commit). §3.1.3.3 rewritten: the binary 0.8 m `is_interceptor` corridor (a 2 cm positional cliff, blind to defender identity) becomes a continuous per-opponent threat weight — linear positional falloff (core 0.4 m [GT], zero at 1.2 m [GT]; ramp centred on the old cliff so integrated threat is preserved) × the defender's Anticipation/Pace ability (0.6–1.4 [GT], average ⇒ exactly 1.0) read through the passer's Vision fidelity (floor 0.2 [GT] — doctrine P2, low Vision degrades to the attribute-blind read). `PASS_LANE_WIDTH_HALF` removed; lane floor, endpoint margin, and `PASS_LANE_DIVISOR` unchanged. §3.1.4.3 gains the scope note deferring the shot lane to a follow-up. Consumers: `UtilityWeights.cs` v1.7, `OptionGenerator.cs` v1.6, `DecisionContext(.Assembler).cs`, `DecisionTree.cs` v1.6, `MatchEngine.cs` v1.61 (the attribute-view wiring). |
+| 1.4 | August 5, 2026 | — | ERR-008-021 (the v1.3 deferral, now closed; spec + code, same commit). §3.1.4.3's shot lane adopts the §3.1.3.3 model, and the scope note deferring it is replaced by the shape of the fix. Two defects, the same two the pass lane had: the wedge-containment test counted an opponent's WHOLE blocking width when his angular centre fell inside the goal arc and nothing at all when it fell outside (a cliff at the post direction — ~0.41 of GoalOpeningScore across 4 cm on the §5 fixture, and a defender across the near post scoring a fully open goal), and the width was body radius alone, blind to whether the man could actually get across the shot. Now: the true angular OVERLAP of the disc with the arc (continuous by construction; integrates to the identical occlusion over a uniformly-placed blocker — P5) × the blocker's Anticipation/Positioning ability (`SHOT_BLOCKER_ABILITY_MIN/MAX` 0.6–1.4 [GT], average ⇒ exactly 1.0) read through the SHOOTER's Vision fidelity (the §3.1.3.3 dial, deliberately shared — P2). Goalkeeper exempt from the ability term (P3 — #11 §3.5/§3.7.0 owns keeper shot-stopping). Authoritative derivation: §3.2.3.2. Consumers: `UtilityWeights.cs` v1.11, `OptionGenerator.cs` v1.7, `OptionGeneratorTests.cs` v1.7. |
 
