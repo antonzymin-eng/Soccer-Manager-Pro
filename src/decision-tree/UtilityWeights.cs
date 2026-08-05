@@ -7,6 +7,7 @@
 // Modified: 2026-08-04 (ERR-008-020 — pass-lane threat model: PASS_LANE_WIDTH_HALF → CORE_HALF_WIDTH/FALLOFF_END + INTERCEPTOR_ABILITY_MIN/MAX + LANE_VISION_FIDELITY_FLOOR)
 // Modified: 2026-08-05 (ERR-008-019 — + LONG_SHOT_RAMP_HALF_WIDTH [GT]; LONG_SHOT_THRESHOLD redocumented as the ramp centre)
 // Modified: 2026-08-05 (ERR-008-019 owner revision — LONG_SHOT_RAMP_HALF_WIDTH 0.05 → 0.25: full-range ramp, no plateaus)
+// Modified: 2026-08-05 (ERR-008-019 AR — LONG_SHOT_RAMP_HALF_WIDTH XML doc: the (0, 0.25] range is the formula's validity domain; the suite pins 0.25)
 // Author:   —
 // Spec:     Decision Tree #8 §3.2.11, Code Standards #20
 // Purpose:  Authoritative constant catalogue for the utility scoring model.
@@ -121,6 +122,13 @@ namespace TacticalDirector.DecisionTree
         /// modifier by ≈ 0.026 — no plateau at either end; raw 1 is exactly
         /// SHOOT_ZONE_MID_SHORT and raw 20 exactly SHOOT_ZONE_MID_LONG. Must be > 0
         /// and ≤ 0.25 (the ramp must stay inside the shifted form's [0.5, 1.0] range).
+        /// That range is the FORMULA's validity domain, not a free dial: the test suite
+        /// pins the full-range value through
+        /// UtilityScorerTests.ShootMidfield_FullRangeRamp_EndpointsExact_AndStrictlyMonotone,
+        /// which fails at any half-width below 0.25 because the end plateaus return —
+        /// the lock deliberately encodes the owner's no-plateau instruction. A retune
+        /// below 0.25 is therefore an owner decision that must revisit that lock in the
+        /// same change.
         /// Centred on LONG_SHOT_THRESHOLD = the attribute midpoint, so the
         /// population-mean modifier over a uniform attribute is 0.30 at ANY symmetric
         /// half-width — the doctrine P5 pivot holds at this value too. §3.2.3.1,
@@ -324,4 +332,12 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        | every raw point 1–20 moves the modifier ≈ 0.026, no plateau at either      |
 // |         |            |        | end. Still centred on the attribute midpoint, so the uniform-population    |
 // |         |            |        | mean stays 0.30 (P5 holds at any symmetric half-width).                    |
+// | 1.10    | 2026-08-05 | —      | ERR-008-019 adversarial review (doc only; no value changes):               |
+// |         |            |        | LONG_SHOT_RAMP_HALF_WIDTH's XML doc stated a valid range of (0, 0.25]     |
+// |         |            |        | that the suite forbids below 0.25 — ShootMidfield_FullRangeRamp_          |
+// |         |            |        | EndpointsExact_AndStrictlyMonotone fails at any smaller half-width (the   |
+// |         |            |        | end plateaus return, which is what the owner's no-plateau instruction     |
+// |         |            |        | ruled out). Doc now records that (0, 0.25] is the FORMULA's validity      |
+// |         |            |        | domain, not a free dial, and that a retune below 0.25 must revisit that   |
+// |         |            |        | lock in the same change.                                                  |
 #endregion

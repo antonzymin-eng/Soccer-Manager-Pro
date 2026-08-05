@@ -1,7 +1,26 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 5, 2026, even later same day (**ERR-008-019 owner revision — the
+**Last Updated:** August 5, 2026, end of same day (**ERR-008-019 — the full-range
+digest-invariance claim retracted at the adversarial review over the landing. No new files; no
+behaviour change.** **Modified:** `src/decision-tree/UtilityWeights.cs` v1.10 (XML doc only —
+`LONG_SHOT_RAMP_HALF_WIDTH`'s advertised (0, 0.25] range is the formula's validity domain, not a
+free dial; the suite pins 0.25 through
+`ShootMidfield_FullRangeRamp_EndpointsExact_AndStrictlyMonotone`),
+`docs/specs/decision-tree/section-3-2-3-to-3-2-9.md` (the §3.2.3.1 invariance passage rewritten to
+the corrected argument + the constant-block annotation),
+`docs/specs/decision-tree/section-3-2.md` v1.11 (§3.2.13 row + header),
+`docs/tracking/spec-error-log.md` v1.63 (new head entry, an appended paragraph on the ERR-008-019
+entry, and the index row), `docs/tracking/football-judgment-proxy-review.md` (head chain + the §2
+#8 entry), `docs/tracking/open-issues.md`, `CLAUDE.md` (OPEN ISSUES clause),
+`docs/tracking/CHANGELOG.md`, `docs/tracking/CHANGELOG-src.md` v2.72, `README.md`. The correction:
+possession is granted by `RunLooseBallPickup` at **1.0 m** (KD-H3) and by the 1.0 m first-touch
+path — not the 0.5 m `ControlRadius` the claim assumed — and nothing re-anchors the ball
+afterwards, so a raw-19 MIDFIELD shot is marginally generator-reachable (> 34.0 m vs a 34.21 m
+gate) and there ramp ≈ 0.524 ≠ step 0.55. Behaviour change owner-intended; no formula, constant or
+test changed. **No gate run — no .NET SDK in the authoring environment.**)
+
+**Last Updated (prior):** August 5, 2026, even later same day (**ERR-008-019 owner revision — the
 long-shot ramp widened to the full attribute range. No new files.** **Modified:**
 `src/decision-tree/UtilityWeights.cs` v1.9 (`LONG_SHOT_RAMP_HALF_WIDTH` 0.05 → 0.25 — full-range;
 raw 1 exactly SHORT, raw 20 exactly LONG, no plateaus; P5 mean preserved),

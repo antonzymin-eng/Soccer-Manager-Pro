@@ -12,7 +12,37 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 5, 2026, even later same day (**ERR-008-019 owner revision — the
+> **Last Updated:** August 5, 2026, end of same day (**ERR-008-019 — the full-range
+> digest-invariance claim is RETRACTED (adversarial review over the landing).** Documentation
+> only: no formula, constant, test or behaviour change, and the code is byte-identical to the
+> entry below. The argument recorded in five places — "any generator-reachable MIDFIELD SHOOT
+> needs ≥ ~34.5 m of range, and only raw 20's gate reaches it, where ramp = step" — rested on the
+> shooter sitting within Ball Physics #1 §3.1.11.1 `CheckPossession`'s **0.5 m** `ControlRadius`.
+> That is not a production possession-granting path in this engine. The two that are:
+> `MatchEngine.RunLooseBallPickup` (§5.Z Phase H, KD-H3), which grants possession to the nearest
+> eligible agent within `MatchEngineConstants.LooseBallPickupRadiusM` = **1.0 m** of a loose ball
+> at rest and **leaves the ball where it lies**, and the first-touch path
+> (`FIRST_TOUCH_ACCEPTANCE_RADIUS_M` = 1.0 m). After the grant **nothing re-anchors the ball to
+> the holder or releases possession on separation** — the holder moves freely under dispatched
+> `MoveTo` commands and the executors' only entry check is the possession id — so separation at a
+> decision tick reaches 1.0 m. Corrected: a MIDFIELD ball at x → 70⁻ with the holder goal-side
+> puts the shooter just above **34.0 m**, **inside** raw 19's range gate (20 + (18/19) × 15 =
+> 34.21 m), where the full-range ramp gives ≈ **0.524** against the old step's 0.55. A generated
+> option can score differently, so invariance is **not established** and is likely false on seeds
+> realizing that state. **The behaviour change itself is owner-directed and intended** — this
+> retracts a claim, not a decision; P5 (uniform-population mean 0.30), all four test locks and the
+> worked examples stand. The superseded narrow ramp (half-width 0.05) **survives** the corrected
+> premise: its band caps at 29.0 m, still disjoint from > 34.0 m — the 0.5 m premise error is
+> smaller than that margin and larger than the full-range form's 0.3 m one, which is exactly why
+> one claim holds and the other fails. Also fixed (Low): `LONG_SHOT_RAMP_HALF_WIDTH`'s XML doc
+> advertised a (0, 0.25] range the suite forbids below 0.25 — that range is the formula's validity
+> domain, not a free dial (`UtilityWeights.cs` v1.10). Surfaces synced: #8 §3.2.3.1 +
+> `section-3-2.md` v1.11, `spec-error-log.md` v1.63 (head + entry + index row),
+> `football-judgment-proxy-review.md`, `open-issues.md`, `CLAUDE.md`, `CHANGELOG-src.md` v2.72,
+> `file-manifest.md`, `README.md`. **Gate NOT run — no .NET SDK in the authoring environment; CI
+> compiles on push.** Prior entry below.)
+
+> **Last Updated (prior):** August 5, 2026, even later same day (**ERR-008-019 owner revision — the
 > long-shot ramp widened to the FULL attribute range.** The owner directed the scaling to run
 > over the whole LongShots range, not the initial 8–13 band; the metres-based §3.1.4.2 range
 > gate already scales raw 1–20, so the instruction lands on the §3.2.3.1 zone-modifier ramp.

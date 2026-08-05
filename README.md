@@ -1,7 +1,21 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** August 5, 2026, later same day (**ERR-008-019 owner revision — every Long Shots
+**Last Updated:** August 5, 2026, end of same day (**ERR-008-019 — one recorded claim about the
+long-shot ramp was wrong and is withdrawn.** A review of yesterday's landing found that the note
+saying the change "moves no match digests" rested on a false assumption about how a player takes
+possession of the ball: it assumed the player must be within half a metre of it, when the engine
+actually hands possession to anyone within a metre of a stationary loose ball and leaves the ball
+where it is — and nothing pulls it back to him afterwards. That extra half-metre is enough for a
+shooter rated 19 (not only 20) to take a midfield shot, and at 19 the new ramp gives a slightly
+different number from the old step. So the change **can** alter match results on some seeds. That
+is fine — the wider ramp is what the owner asked for — but the "no effect on results" claim was
+not true and has been retracted everywhere it was recorded. Nothing else changed: no formula, no
+tunable, no test. One documentation fix went with it (the ramp's half-width is pinned at its
+maximum by a test, so the range its comment advertised was misleading). Gate not runnable in the
+authoring environment; CI runs it on push. Prior entry below.)
+
+**Last Updated (prior):** August 5, 2026, later same day (**ERR-008-019 owner revision — every Long Shots
 point now matters for midfield shooting.** At owner direction, the just-landed ramp widened from
 its initial 8–13 band to the full 1–20 attribute range: a rating of 1 keeps the full suppression,
 20 the full long-shot modifier, and every point in between moves the willingness smoothly — no

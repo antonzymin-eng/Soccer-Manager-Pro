@@ -38,15 +38,34 @@ clamped to [0.01, 1.0]
 > symmetric half-width (doctrine P5). No other factor enters: long-shot inclination is
 > the shooter's own execution capability, not a recognition judgment, so no fidelity
 > term applies (doctrine P2/P3 not in scope).
-> **Digest invariance (the precise argument, full-range form):** any generator-reachable
-> MIDFIELD SHOOT needs ≥ ~34.5 m of range (ball x < 70 per the ERR-008-016 equal
-> thirds; the agent within the 0.5 m possession radius of it; goal centre at x = 105),
-> and the §3.1.4.2 range gate `20 + A × 15` reaches that only at raw 20 (A = 1 →
-> 35.0 m; raw 19 caps at 34.2 m). At raw 20 the full-range ramp evaluates to exactly
-> `SHOOT_ZONE_MID_LONG` — the same value the old step produced — so no generated option
-> ever scores differently and no digest moves. The branch is exercised by direct
-> injection, and the ramp becomes behaviour-visible if the range gate or zone geometry
-> ever changes.
+> **Digest invariance is NOT established for the full-range form (corrected August 5,
+> 2026, at the adversarial review over this landing).** The argument recorded here
+> originally placed the shooter within the 0.5 m `ControlRadius` of Ball Physics #1
+> §3.1.11.1 `CheckPossession` — but that is not how this engine grants possession. The
+> production paths are (a) `MatchEngine.RunLooseBallPickup` (§5.Z Phase H, KD-H3), which
+> grants possession to the nearest eligible agent within
+> `MatchEngineConstants.LooseBallPickupRadiusM` = **1.0 m** of a loose ball at rest and
+> leaves the ball where it lies, and (b) the first-touch path
+> (`FIRST_TOUCH_ACCEPTANCE_RADIUS_M` = 1.0 m). After the grant **no rule re-anchors the
+> ball to the holder or releases possession on separation** — the ball moves only via
+> kicks, collisions and first touch, the holder moves freely under dispatched `MoveTo`
+> commands, and the executors' only entry check is the possession id (`PassExecutor`
+> FM-01 `IsBallPossessedBy`) — so holder–ball separation at a decision tick is not
+> bounded by 0.5 m and reaches 1.0 m through the pickup path alone. **Corrected bound:**
+> a ball at rest at x → 70⁻ (MIDFIELD per the ERR-008-016 equal thirds) with the holder
+> up to 1.0 m goal-side puts the shooter just above **34.0 m** from the goal centre
+> (x = 105) — **inside** raw 19's §3.1.4.2 range gate `20 + A × 15` = 34.21 m at
+> A = 18/19. At raw 19 the full-range ramp gives
+> `zoneM = 0.05 + (18/19) × 0.5 ≈ 0.524` against the old step's 0.55, so a generated
+> option **can** score differently: the earlier "no digest moves on any seed" claim is
+> **retracted** for the full-range form. The ramp is behaviour-visible today through the
+> loose-ball-pickup possession path, and its visible band widens further if the range
+> gate or the zone geometry changes. The behaviour change itself is owner-intended (the
+> full-range instruction), not an artefact of this correction; the formula, the
+> constants, the P5 pivot and every test lock are unaffected. The superseded narrow ramp
+> (half-width 0.05) **survives** the corrected premise — it differs from the old step
+> only at `A_LongShots` ≤ 0.6, whose range gate caps at 29.0 m, still disjoint from the
+> corrected > 34.0 m bound.
 
 **where:**
 
@@ -74,7 +93,14 @@ LONG_SHOT_RAMP_HALF_WIDTH = 0.25 [GT]   ← shifted units; valid range (0, 0.25]
                                           so every raw point 1–20 moves the modifier
                                           ≈ 0.026 with no plateau at either end — at this
                                           value t reduces to A_LongShots exactly
-                                          (§3.2.3.4 item 2)
+                                          (§3.2.3.4 item 2). (0, 0.25] is the FORMULA's
+                                          validity domain, not a free dial: the test
+                                          suite pins the full-range value through
+                                          ShootMidfield_FullRangeRamp_EndpointsExact_
+                                          AndStrictlyMonotone, which fails at any
+                                          half-width below 0.25 (the plateaus return),
+                                          so a retune downward is an owner decision that
+                                          must revisit that lock with it
 
 AttributeMultiplier_SHOOT = (0.5 + A_Finishing   × 0.5) ^ SHOOT_FINISHING_EXP
                           × (0.5 + A_Composure   × 0.5) ^ SHOOT_COMPOSURE_EXP

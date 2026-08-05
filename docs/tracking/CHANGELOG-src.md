@@ -14,7 +14,26 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** August 5, 2026, even later same day (v2.71 — **ERR-008-019 owner revision:
+> **Last Updated:** August 5, 2026, end of same day (v2.72 — **ERR-008-019 adversarial review:
+> one XML doc corrected; the digest-invariance CLAIM retracted.** Code and tests are unchanged —
+> the compiled surface is byte-identical to v2.71 — so this entry records a documentation landing.
+> `UtilityWeights.cs` v1.10: `LONG_SHOT_RAMP_HALF_WIDTH`'s doc gave a valid range of "> 0 and
+> ≤ 0.25", but `UtilityScorerTests.ShootMidfield_FullRangeRamp_EndpointsExact_AndStrictlyMonotone`
+> fails at **any** half-width below 0.25 — the end plateaus return, which is exactly what the
+> owner's no-plateau instruction ruled out. The doc now records that (0, 0.25] is the FORMULA's
+> validity domain rather than a free dial, and that a retune downward must revisit that lock in
+> the same change. Recorded with it, in the spec and tracking chain rather than in code: the
+> landing's **"no digest moves on any seed" claim is retracted for the full-range form** — it
+> assumed the shooter sat inside a 0.5 m possession radius, whereas the engine grants possession
+> through `MatchEngine.RunLooseBallPickup` (§5.Z Phase H, KD-H3, `LooseBallPickupRadiusM` = 1.0 m,
+> ball left where it lies) and the 1.0 m first-touch path, with nothing re-anchoring the ball to
+> the holder afterwards, so a MIDFIELD ball at x → 70⁻ reaches just above 34.0 m — inside raw 19's
+> range gate (34.21 m), where the ramp gives ≈ 0.524 against the step's 0.55. The behaviour change
+> is owner-intended; the superseded narrow ramp's disjoint-bands argument survives (29.0 m).
+> `spec-error-log.md` v1.63, `section-3-2.md` v1.11. **No gate run: no .NET SDK in the authoring
+> environment; CI compiles on push.** Prior entry below.)
+
+> **Last Updated (prior):** August 5, 2026, even later same day (v2.71 — **ERR-008-019 owner revision:
 > the long-shot ramp goes full-range.** `UtilityWeights.cs` v1.9: `LONG_SHOT_RAMP_HALF_WIDTH`
 > 0.05 → 0.25 (its maximum valid value — the ramp spans the whole shifted domain [0.5, 1.0], so
 > `t` reduces to `A_LongShots`: raw 1 exactly SHORT, raw 20 exactly LONG, ≈ 0.026 per raw point,
@@ -1678,6 +1697,7 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.72 | 2026-08-05 | —      | **ERR-008-019 adversarial review — documentation only; the compiled surface is byte-identical to v2.71.** `UtilityWeights.cs` v1.10: `LONG_SHOT_RAMP_HALF_WIDTH`'s XML doc stated a valid range of (0, 0.25] that the suite forbids below 0.25 — `ShootMidfield_FullRangeRamp_EndpointsExact_AndStrictlyMonotone` fails at any smaller half-width (the end plateaus return, which the owner's no-plateau instruction ruled out); the doc now records that (0, 0.25] is the FORMULA's validity domain, not a free dial, and that a retune downward must revisit that lock. Recorded with it (spec + tracking, no code): the landing's **"no digest moves on any seed" claim is RETRACTED for the full-range form** — it assumed a 0.5 m possession radius, while the engine grants possession via `RunLooseBallPickup` (KD-H3, 1.0 m, ball left where it lies) and the 1.0 m first-touch path with no re-anchoring afterwards, so a MIDFIELD ball at x → 70⁻ reaches just above 34.0 m — inside raw 19's 34.21 m range gate, where the ramp gives ≈ 0.524 vs the step's 0.55. Behaviour change owner-intended; the narrow-ramp predecessor's argument survives (29.0 m, disjoint). **No gate run — no .NET SDK.** |
 | 2.71 | 2026-08-05 | —      | **ERR-008-019 owner revision: full-range ramp.** `UtilityWeights.cs` v1.9 (`LONG_SHOT_RAMP_HALF_WIDTH` 0.05 → 0.25 — the ramp spans the whole attribute; raw 1 exactly SHORT, raw 20 exactly LONG, ≈ 0.026/point, no plateaus; P5 mean 0.30 preserved), `UtilityScorer.cs` v1.15 (comment only), `Tests/UtilityScorerTests.cs` v1.9 (shifted-form lock at raw 10; endpoints-exact + strictly-monotone replaces the plateau lock; no-cliff + midpoint unchanged). Digest-invariant: only raw 20 reaches a MIDFIELD SHOOT and there ramp = step. **No gate run — no .NET SDK.** |
 | 2.70 | 2026-08-05 | —      | **ERR-008-019 (judgment-proxy doctrine P1/P5): the #8 §3.2.3.1 midfield long-shot cliff → linear ramp.** `UtilityScorer.cs` v1.14 (`ScoreShoot` MIDFIELD branch: `Lerp`/`InverseLerp` ramp over the shifted form, replacing the 11×-step ternary), `UtilityWeights.cs` v1.8 (+ `[GT] LONG_SHOT_RAMP_HALF_WIDTH` = 0.05; `LONG_SHOT_THRESHOLD` redocumented as ramp centre, value unchanged), `Tests/UtilityScorerTests.cs` v1.8 (4 new locks — no-cliff raw 10 vs 11, exact SHORT/LONG midpoint at the centre (P5 pivot), endpoint clamps, monotone raw 1–20 — and the AR-2 M-4 lock refitted raw 12 → 14). Branch production-unreachable through the §3.1.4 generator (ERR-008-017) ⇒ no digest moves; no schema/RNG/domain-tag/draw-site/draw-order change. **No gate run — no .NET SDK in the authoring environment.** |
 | 2.69 | 2026-08-05 | —      | **#29/#41 GATE RUN — PASSED, first compile of both assemblies.** PR #299, CI run 394, head `ddbbe58`. Build 0 errors (5 warnings). `TrainingSystem.Tests` **27/27**, `InjuriesMedical.Tests` **40/40**, 0 skipped in either; whole-tree gate PASSED, quarantine empty, `MatchEngine.Tests` 420/430 unchanged. Retires the "no gate run" caveat on v2.65–v2.68 and turns five review passes' "the suite locks X" claims — all written against never-compiled code — into execution-verified ones. **No fix was needed to get green:** zero compile errors, zero failures, first run. Confirms specifically: Appendix B day by day, #41 §3.6 term by term, keyed-draw separation, and AR pass 5's hand-computed occurrence-probability literals (231/0/431 per-mille) — derived in Python against an uncompilable tree, now agreed by the compiler, so the balance-pass baseline is real. Authoring environment still has no .NET SDK (installer still 403 at the proxy, re-checked); CI remains the only compiler. |

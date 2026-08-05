@@ -1,7 +1,19 @@
 # Football-Judgment Proxy Review
 
 > **Created:** August 4, 2026
-> **Updated:** August 5, 2026, later same day — ERR-008-019 owner revision: the long-shot ramp
+> **Updated:** August 5, 2026, even later same day — **ERR-008-019's digest-invariance claim
+> RETRACTED for the full-range form** at the adversarial review over the landing (documentation
+> only; formula, constants and the four test locks untouched). The argument assumed a 0.5 m
+> possession radius; the engine's production paths are `RunLooseBallPickup` (§5.Z Phase H, KD-H3,
+> `LooseBallPickupRadiusM` = **1.0 m**, ball left where it lies) and first touch (1.0 m), and
+> nothing re-anchors the ball to the holder or drops possession on separation afterwards. A
+> MIDFIELD ball at x → 70⁻ with the holder 1.0 m goal-side therefore reaches just above **34.0 m**
+> — inside raw 19's range gate (34.21 m), where the full-range ramp gives ≈ 0.524 against the old
+> step's 0.55 — so a generated option **can** score differently. The behaviour change is
+> owner-intended; the superseded narrow ramp's disjoint-bands argument survives (its band caps
+> at 29.0 m, still disjoint from the corrected bound). Gate NOT runnable in the authoring
+> environment.
+> **Updated (prior):** August 5, 2026, later same day — ERR-008-019 owner revision: the long-shot ramp
 > widened to the FULL attribute range (`LONG_SHOT_RAMP_HALF_WIDTH` 0.05 → 0.25, its maximum
 > valid value) — raw 1 exactly 0.05, raw 20 exactly 0.55, every point between moves the
 > modifier ≈ 0.026, no plateaus. P5 holds (same midpoint, same uniform-population mean 0.30);
@@ -78,9 +90,18 @@ this pattern — FRs and formulas).
   ≈ 0.026, no plateau anywhere (doctrine P1; the midpoint sits at the old cliff and the
   uniform-population mean stays 0.30, so the P5 pivot holds; P2/P3 deliberately not in scope —
   long-shot inclination is the shooter's own execution capability, not a recognition judgment).
-  Still digest-invariant: only raw 20's range gate (35.0 m) reaches the ≥ ~34.5 m a MIDFIELD
-  SHOOT requires, and there the full-range ramp equals the old step — no generated option ever
-  scores differently; gate NOT runnable in the authoring environment.
+  **Digest invariance NOT established for the full-range form** — the claim originally recorded
+  here was retracted at the same-day adversarial review over the landing. It assumed the shooter
+  sat within a 0.5 m possession radius; the engine's production possession-granting paths are
+  `MatchEngine.RunLooseBallPickup` (§5.Z Phase H, KD-H3 — `LooseBallPickupRadiusM` = **1.0 m**,
+  and the ball is left where it lies) and the first-touch path (1.0 m), with no rule re-anchoring
+  the ball to the holder or releasing possession on separation afterwards. So a MIDFIELD ball at
+  x → 70⁻ with the holder 1.0 m goal-side reaches just above **34.0 m**, inside raw 19's range
+  gate (20 + (18/19) × 15 = 34.21 m), where the ramp gives ≈ **0.524** against the old step's
+  0.55 — a generated option can score differently, and the ramp is behaviour-visible today
+  through the pickup path. The behaviour change is owner-intended; the superseded narrow ramp
+  (0.05) survives the corrected premise (its band caps at 29.0 m, still disjoint from > 34.0 m).
+  Gate NOT runnable in the authoring environment.
   *History:* **CORRECTION (August 4, 2026): the "FIXED as `ERR-008-019`" status this entry originally
   carried was false.** Verified against both this branch and `origin/main` at the ERR-008-020
   landing: no `ERR-008-019` entry existed in `spec-error-log.md`, the `LONG_SHOT_THRESHOLD = 0.75`
