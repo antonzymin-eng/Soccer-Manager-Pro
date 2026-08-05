@@ -12,7 +12,32 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 6, 2026, later same day (**Adversarial review over the #29/#41 T1 landing —
+> **Last Updated:** August 6, 2026, later same day (**#29/#41 T1 gate run — PASSED. The two save
+> codecs, the three new types and the frame change compiled for the first time; all 58 new tests
+> executed and passed.** PR #300, CI run 397, head `9a7f703`. Build 0 errors (5 warnings, not shown to
+> be new); `TrainingSystem.Tests` **52/52**, `InjuriesMedical.Tests` **66/66**, 0 skipped in either;
+> `SeasonSave.Tests` **267 passed / 3 skipped / 270**, carrying the 7 new `SeasonSaveManagerTests`.
+> Whole-tree gate PASSED with the quarantine empty, `MatchEngine.Tests` 420/430 unchanged.
+>
+> **Nothing needed a fix.** Zero compile errors and zero test failures on the first run, exactly as at
+> the T0 gate — and that is the whole result for three things the last two landings changed and had no
+> way to check: the `in TrainingBlock` / `in MedicalBlock` signature change at every
+> `SeasonSaveCodec.Encode` call site, the byte offsets throughout both codec suites after the leading
+> `*_SAVE_MAGIC` shifted every one of them, and `SaveBlobFramingHelpers` under `TreatWarningsAsErrors`.
+>
+> **What the run retires:** the "no gate run" caveat on both T1 entries below. The adversarial review
+> in particular was written end to end against code that had never been compiled, including the
+> two-layer fix for the mutual-decode defect — whose load-time half, the `*_SAVE_MAGIC` gate, had been
+> exercised only by a byte-exact Python model and never by a compiler refusing a foreign block. Those
+> claims now hold by execution.
+>
+> **Worth recording about the run itself:** it took 36 minutes with the other ten checks long green,
+> which reads as a hung job from outside. It was not — `MatchEngine.Tests` alone runs **35 m 30 s**,
+> and the quarantine being empty means the full suite was enforced rather than a report-only subset.
+> The authoring environment still has no .NET SDK, the installer still 403 at the proxy, so CI remains
+> the only compiler available for this work.)
+
+> **Last Updated (prior):** August 6, 2026, later same day (**Adversarial review over the #29/#41 T1 landing —
 > 2 High, 2 Medium, 3 Low, all fixed.** The headline is a defect that exists *because* ERR-029-004
 > succeeded. Pinning #29's byte layout to match #41's made the two blocks byte-for-byte the same shape,
 > and **every sub-blob format in the save stack sits at version 1** — `TRAINING_SAVE_FORMAT_VERSION`,
