@@ -12,7 +12,43 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 5, 2026, later same day (**#29/#41 gate run — PASSED. Both assemblies
+> **Last Updated:** August 6, 2026 (**#29 / #41 T1 — the two save codecs, composed into #30's season
+> save.** `TrainingSaveCodec` (`TRAINING_SAVE_FORMAT_VERSION` = 1) and `MedicalSaveCodec`
+> (`MEDICAL_SAVE_FORMAT_VERSION` = 1), each an opaque independently version-gated sub-blob, now ride in
+> the season frame between the season block and the optional match block —
+> `SEASON_SAVE_FORMAT_VERSION` **2 → 3**. Both are **mandatory** rather than presence-flagged: unlike a
+> match, training and medical state has no "absent" case, only an empty one, which each codec writes as
+> a well-formed zero-club block. That choice is what stops T2 needing a second frame bump the day the
+> producers are wired.
+>
+> **Order is not state.** The blocks are maps keyed by `(ClubId, PlayerId)`, so encode canonicalizes to
+> ascending keys and decode requires them. Two equal state sets therefore produce identical bytes
+> whatever roster order the caller holds them in — a save written after a squad-list reshuffle is
+> byte-identical to one written before — and a duplicate key fails loud at encode rather than reaching
+> the file with no defined winner.
+>
+> **Two ERRs filed and resolved, spec + code same commit.** **ERR-029-004:** #29 §4.4 described the
+> sub-blob's posture and never a field of its layout, while #41 §4.4 pinned its own in full — and F3
+> refuses every cross-version migration, so the first written layout is the format permanently. New
+> §4.4.1 pins it. **ERR-041-008:** #41 §4.4's layout groups blocks by club without naming one, so club
+> identity would cross a save boundary by list order alone — an implicit agreement with a sibling
+> sub-blob its own KD-7 forbids this codec to read. `ClubId` is now written in both specs and both
+> codecs. Both entries also fix their §2.3 **F3** row, which named `ArgumentException` while citing the
+> `MatchSaveCodec` posture — and that codec throws `InvalidOperationException`.
+>
+> **Deliberately not done:** T2. Nothing constructs either state set yet, so `SeasonSaveManager.Save`
+> substitutes the empty set and every save written today carries two empty blocks. The #30 tick-order
+> slots, the `IsAvailable` read into squad selection and the FR-TR-025 / FR-MD-025 roster handoff stay
+> open. Also unchanged: `[GT]` bands are gated on neither codec's decode — enforcing `ConditionMax` or
+> `RecoveryMax` at load would turn a designer's ceiling edit into data loss across every existing save.
+>
+> **NO GATE RUN.** The authoring environment still has no .NET SDK (the installer is still 403 at the
+> proxy), so two production codecs, two container types, the frame change and ~40 new tests are written
+> and never compiled — the same posture the T0 landing shipped under, and the same one CI retired for it
+> on push. `tools/dotnet-ci/generate_projects.py` runs clean (64 projects, every asmdef reference
+> resolved) and `tools/unity-ci/check-meta-integrity.sh` passes.)
+
+> **Last Updated (prior):** August 5, 2026, later same day (**#29/#41 gate run — PASSED. Both assemblies
 > compiled for the first time; all 67 of their tests executed and passed.** PR #299, CI run 394, head
 > `ddbbe58`. Build 0 errors; `TrainingSystem.Tests` 27/27, `InjuriesMedical.Tests` 40/40, 0 skipped in
 > either; whole-tree gate PASSED with the quarantine empty, `MatchEngine.Tests` 420/430 unchanged.

@@ -1,9 +1,9 @@
 # Training System #29 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** July 27, 2026 (v0.4 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
-**Last Updated (prior):** July 23, 2026 (v0.3 — PASS-2 re-review; prior PASS-1 → AR-2 → AR-3; APPROVED)
-**Version:** 0.4
+**Last Updated:** August 6, 2026 (v0.5 — ERR-029-004: §2.3 F3's exception type corrected to match the posture it cites)
+**Last Updated (prior):** July 27, 2026 (v0.4 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -158,7 +158,7 @@ the latter accrues `Condition` + `TrainingFatigue`. See §3.
 |---|---|---|
 | **F1** | A daily delta would push `Condition`/`TrainingFatigue` past its bound | Clamped at the bound, deterministic (the #28 F1 ceiling precedent). |
 | **F2** | `SetFocus` targets a player not in the club roster | Refused / no-op (bounded — the roster is authoritative). |
-| **F3** | `TRAINING_SAVE_FORMAT_VERSION` mismatch on restore | **Fail loud** (`ArgumentException`), the `MatchSaveCodec` posture. |
+| **F3** | `TRAINING_SAVE_FORMAT_VERSION` mismatch on restore | **Fail loud** (`InvalidOperationException`), the `MatchSaveCodec` posture — corrected from `ArgumentException` at #29 T1 (ERR-029-004): the cited posture throws `InvalidOperationException`, which is not an `ArgumentException`, so the two halves of this row contradicted each other. Framing corruption is a state fault in the bytes, not a bad argument. |
 | **F4** | An out-of-contract `TrainingFocus` / `TrainingInput` reaches a consuming seam | **Fail loud** — an invalid value is a bug, not silently clamped (FR-TR-021). |
 | **F5** | Corrupt length prefix (out-of-bounds) or trailing bytes in the block | **Fail loud** (overflow-safe bound; the `WorldStateSerializer.ReadCount` posture). |
 | **F6** | `AdvanceTrainingDay` invoked twice for one world day (`worldDay <= LastAdvanced`) | Idempotent no-op guarded by `LastAdvancedWorldDay` — a mid-week save→restore→re-run does not double-accrue. |
@@ -170,5 +170,6 @@ the latter accrues `Condition` + `TrainingFatigue`. See §3.
 | 0.1 | 2026-07-23 | — | Initial FR set (FR-TR-001..024), data structures, F1..F6. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | PASS-1 M-1 (single `Condition` cursor) / M-2 (no stream) folded from the supplement; AR-2/AR-3 clean; APPROVED. |
 | 0.3 | 2026-07-23 | — | PASS-2: +FR-TR-025 (regen/retire lifecycle) / FR-TR-026 (day-gap fail-loud); FR-TR-003 (focus single-source, schedule = derived view) / 006 (field-independence invariant) / 007 (#29-owned `deepTrainingEnabled`) / 019 (schedule not serialized); +F7. |
+| 0.5 | 2026-08-06 | — | **ERR-029-004** (at #29 T1): §2.3 **F3** said `ArgumentException` while citing the `MatchSaveCodec` posture, which throws `InvalidOperationException` — the row contradicted itself, and an implementer honouring the type would have diverged from every sibling codec. Corrected to `InvalidOperationException`. |
 | 0.4 | 2026-07-27 | — | **ERR-029-003** (at #53's approval): new **FR-TR-005a** — `ComputeTrainingInput` accepts #53's training-ground term as a **second root-assembled input**, alongside #34's `CoachingModifier`. Explicitly **not** delivered as a #53-returned `TrainingInput`, which FR-TR-005 forbids (#29 is that type's sole writer). Behaviour-neutral at neutral facilities; ◑ parameter at #29's Stage-3 tier. |
 #endregion

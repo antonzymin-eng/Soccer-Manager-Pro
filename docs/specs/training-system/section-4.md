@@ -1,8 +1,8 @@
 # Training System #29 — Section 4: Architecture
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.3 — PASS-2 re-review; prior APPROVED)
-**Version:** 0.3
+**Last Updated:** August 6, 2026 (v0.4 — ERR-029-004: §4.4.1 pins the sub-blob byte layout at #29 T1)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -66,10 +66,63 @@ No RNG stream (KD-6). The `TrainingSaveCodec` blob is an opaque, independently v
 format-version bump is coordinated at #29 T1. Fail-loud gates per F3/F5. All state serialized via #16's
 `CanonicalSerializer` (bitwise round-trip); `serialize, don't regenerate`.
 
+### 4.4.1 The `TRAINING_SAVE_FORMAT_VERSION` block layout (ERR-029-004)
+
+The byte layout below was **not pinned until #29 T1** — v0.3 of this section described the blob's framing
+posture but never its fields, while the sibling #41 §4.4 pinned its own. A format with no cross-version
+migration (F3) and no written layout is one an independent reader can only guess at, so it is recorded
+here as normative:
+
+```
+EncodeTraining(perClubStates) -> bytes:
+    WriteU32(TRAINING_SAVE_FORMAT_VERSION)
+    WriteCount(perClubStates.Count)                       # overflow-safe (fail loud on corrupt count, F5)
+    for club in perClubStates (ascending ClubId):
+        WriteI32(club.ClubId)                             # written, NOT implied by list position
+        WriteCount(club.PlayerCount)
+        for (playerId, state) in club (PlayerId ascending):
+            WriteI32(playerId)
+            WriteByte((byte)state.Focus)
+            WriteI32(state.Condition)
+            WriteI32(state.TrainingFatigue)
+            WriteU32(state.LastAdvancedWorldDay)
+    # NO RNG cursor block — #29 registers no stream (KD-6 / ERR-029-001)
+
+DecodeTraining(bytes) -> perClubStates:
+    version = ReadU32(); if version != TRAINING_SAVE_FORMAT_VERSION: throw          # F3
+    clubCount = ReadCount()                                # overflow-safe bound guard (F5)
+    for i in [0, clubCount):
+        clubId = ReadI32(); if not strictly ascending: throw                        # duplicate/reordered key
+        playerCount = ReadCount()
+        for j in [0, playerCount):
+            playerId = ReadI32(); if not strictly ascending: throw
+            focus = (TrainingFocus)ReadByte(); if not defined: throw                # F4
+            condition = ReadI32()
+            trainingFatigue = ReadI32(); if < 0: throw                              # structural floor, §2.2
+            lastAdvanced = ReadU32()
+            ... reconstruct TrainingState ...
+    if bytesRemaining != 0: throw                          # trailing-byte guard, F5
+```
+
+Three properties the layout carries, each of which is a MUST:
+
+- **`ClubId` is written.** Grouping by club without naming one leaves club identity carried by list order
+  across a save boundary — an implicit agreement with a sibling sub-blob this codec is forbidden to read
+  (KD-7 blob independence). Four bytes per club buys a self-describing block and a duplicate check.
+- **Order is not state.** The block is a map keyed by `(ClubId, PlayerId)` (FR-TR-019), so encode
+  **canonicalizes** to ascending keys — two equal state sets MUST produce identical bytes whatever roster
+  order the caller holds them in — and decode MUST require that order, so a corrupt blob cannot smuggle in
+  a duplicate key. A duplicate key at encode fails loud: there is no defined winner.
+- **`[GT]` bands are NOT gated on decode.** `Condition`'s `[CONDITION_MIN, CONDITION_MAX]` band and
+  `TRAINING_FATIGUE_MAX` are tunable, and enforcing them at load would turn a designer's ceiling change
+  into data loss across every existing save. Only structurally impossible values (a negative fatigue
+  accumulator, an undefined focus ordinal) are refused. The band belongs to the day step's clamp (F1).
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial architecture. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | APPROVED. |
 | 0.3 | 2026-07-23 | — | PASS-2: §4.3 cites #28's batch `AdvanceDay` + curveEnabled coupling; `TrainingSchedule.cs` file comment = derived view (not serialized). |
+| 0.4 | 2026-08-06 | — | **ERR-029-004** (at #29 T1): new **§4.4.1** pins the `TRAINING_SAVE_FORMAT_VERSION` byte layout, which v0.3 never wrote down. Adds the `ClubId` field (club identity must not be positional), the canonical ascending-key rule (order is not state), and the explicit non-gate on `[GT]` bands at decode. |
 #endregion

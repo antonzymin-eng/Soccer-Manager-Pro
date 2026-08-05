@@ -625,8 +625,8 @@ src/
 │   ├── League.cs                      ← A3: the immutable bootstrap product; IS the ISquadProvider; CreateSeason → SeasonState (KD-9)
 │   ├── LeagueBootstrap.cs             ← A3: worldSeed → N clubs × 25 position-coherent players (KD-4 derivations, KD-5 strength ramp, KD-6 template)
 │   ├── SeasonSaveConstants.cs         ← [FIXED] SEASON_SAVE_FORMAT_VERSION = 2 (a fourth format version; KD-4)
-│   ├── SeasonSaveBlobs.cs             ← deframe result: WorldBlob (always) + MatchBlob (null if no match) — two opaque sub-blobs (KD-2/KD-3)
-│   ├── SeasonSaveCodec.cs             ← pure static: Encode(worldBlob, matchBlobOrNull) / Decode → version-gated frame + matchPresent flag + 2 length-prefixed opaque blocks; overflow-safe bounds + fail-loud (KD-7/KD-8)
+│   ├── SeasonSaveBlobs.cs             ← deframe result: World + Season + Training + Medical (all always) + MatchBlob (null if no match) — five opaque sub-blobs (KD-2/KD-3)
+│   ├── SeasonSaveCodec.cs             ← pure static: Encode(world, season, training, medical, matchOrNull) / Decode → v3 frame + matchPresent flag + 5 length-prefixed opaque blocks; overflow-safe bounds + fail-loud (KD-7/KD-8)
 │   ├── SeasonSaveContents.cs          ← Load result: reconstructed WorldStore (never null) + nullable MatchEngine
 │   ├── SeasonSaveManager.cs           ← static: Save(world, matchOrNull, path) (capture both → Encode → atomic temp→fsync→rename) / Load(path, ISquadProvider = null) → SeasonSaveContents (KD-1/KD-5/KD-6/KD-8)
 │   └── tests/
@@ -682,10 +682,10 @@ src/
 │       ├── GrowthProjectionTests.cs     ← T-PG-DET-001/002 + ID-001/002: byte-exact growth/decline, value-copy save, age gap-independence
 │       └── RegenGeneratorTests.cs       ← T-PG-REG-001/003: regen determinism, exact budget, bounds, CA≤PA room-to-grow (test-local ordinal, KD-B)
 │
-├── training-system/                   ← Training System #29 (T0, Aug 5 2026; APPROVED spec)
-│   │                                    │   References PlayerProgression + PlayerDatabase + ProjectConstants (§4.1).
+├── training-system/                   ← Training System #29 (T0 Aug 5 2026, T1 Aug 6 2026; APPROVED spec)
+│   │                                    │   References PlayerProgression + PlayerDatabase + DeterministicSim + ProjectConstants (§4.1).
 │   │                                    │   World-tick conditioning/fatigue; DRAW-FREE (FR-TR-008) — 0x21/83 stay reserved.
-│   │                                    │   INERT: nothing constructs it. T1 (save codec) / T2 (#30 slot wiring) deferred.
+│   │                                    │   T1 landed (save codec, composed into #30's frame). Nothing PRODUCES state yet: T2 (#30 slot wiring) deferred.
 │   ├── training-system.asmdef
 │   ├── AssemblyInfo.cs                  ← InternalsVisibleTo the test assembly (the own-attribute terms are internal)
 │   ├── TrainingSystemConstants.cs       ← Appendix A catalogue; no RNG constant (KD-6)
@@ -695,17 +695,20 @@ src/
 │   ├── CoachingModifier.cs              ← KD-3 staff seam (empty at T0, so Identity is safely default)
 │   ├── InjuryRiskContribution.cs        ← KD-5 read-only scalar #41 consumes (FR-TR-017)
 │   ├── TrainingViewModel.cs             ← KD-7 value-copy observer for #31/#38
+│   ├── ClubTrainingStates.cs            ← one club's persisted block: club id + the parallel id/state arrays, bound once
+│   ├── TrainingSaveCodec.cs             ← §4.4.1 TRAINING_SAVE_FORMAT_VERSION sub-blob (T1); canonical ascending keys, fail-loud both ways
 │   ├── TrainingStep.cs                  ← §3.1 AdvanceTrainingDay / §3.2 ComputeTrainingInput / §3.3 ProjectMatchEntryFatigue / §3.4 ComputeInjuryRisk / FR-TR-023 SetFocus
 │   └── tests/
 │       ├── training-system-tests.asmdef
 │       ├── TrainingStepTests.cs         ← Appendix B day by day + T-TR-DET/NEU/FAT/CON/COA/INJ
 │       ├── TrainingScheduleTests.cs     ← view-not-copy, parallel-array guard, T-TR-FAIL-003
+│       ├── TrainingSaveCodecTests.cs     ← round-trip field identity, every focus ordinal, order-independence, T-TR-FAIL-001
 │       └── TrainingSystemConstantsTests.cs ← catalogue invariants (table coverage, bound order, Rest nets negative)
 │
-├── injuries-medical/                  ← Injuries & Medical #41 (T0, Aug 5 2026; APPROVED spec)
+├── injuries-medical/                  ← Injuries & Medical #41 (T0 Aug 5 2026, T1 Aug 6 2026; APPROVED spec)
 │   │                                    │   References TrainingSystem + PlayerDatabase + DeterministicSim + ProjectConstants (§4.1).
 │   │                                    │   ONE keyed draw, no registered stream (KD-1 / ERR-041-002) ⇒ nothing but InjuryState persists.
-│   │                                    │   INERT: nothing constructs it. T1 (save codec) / T2 (#30 slot + availability read) deferred.
+│   │                                    │   T1 landed (save codec, composed into #30's frame). Nothing PRODUCES state yet: T2 (#30 slot + availability read) deferred.
 │   ├── injuries-medical.asmdef
 │   ├── AssemblyInfo.cs                  ← InternalsVisibleTo the test assembly (the keyed draw is internal)
 │   ├── InjuriesMedicalConstants.cs      ← Appendix A catalogue; [CROSS] DomainTagInjuriesMedical = 0x2A (no SubsystemOrdinal — no stream)
@@ -714,10 +717,13 @@ src/
 │   ├── MatchLoad.cs                     ← FR-MD-010 caller-supplied input; HardContacts is deep-tier, weighted 0 at Stage 2
 │   ├── MedicalModifier.cs               ← KD-5 staff seam, per-mille ints with an EXPLICIT Identity (default fails loud, FR-MD-016)
 │   ├── MedicalViewModel.cs              ← KD-8 value-copy observer; Available derives through MedicalStep.IsAvailable
+│   ├── ClubInjuryStates.cs              ← one club's persisted block, on #29's ClubTrainingStates terms
+│   ├── MedicalSaveCodec.cs              ← §4.4 MEDICAL_SAVE_FORMAT_VERSION sub-blob (T1); ClubId written (ERR-041-008), F1 gate on BOTH sides
 │   ├── MedicalStep.cs                   ← §3.1 AdvanceMedicalDay (recovery THEN draw, KD-6 entry gate) / DeriveActionOrdinal / DrawOccurrence / §3.2 ClassifySeverityFromDraw / §3.4 AssembleRiskScore / IsAvailable
 │   └── tests/
 │       ├── injuries-medical-tests.asmdef
 │       ├── MedicalStepTests.cs          ← §3.6 term by term + T-MD-DET/ORD/SEV/REC/MOD/NEU/AVAIL/FAIL
+│       ├── MedicalSaveCodecTests.cs      ← round-trip field identity, every severity tier, the no-RNG-cursor block-size lock, F1/F3/F4/F5
 │       └── InjuriesMedicalConstantsTests.cs ← catalogue invariants, the [CROSS] tag mirror, the #29/#41 shared-scale lock
 │
 └── tactical-instructions/             ← Spec #21  (T0 — bottom-of-graph data assembly; behaviour-neutral)

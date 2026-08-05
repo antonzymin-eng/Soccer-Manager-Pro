@@ -14,7 +14,37 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** August 5, 2026, later same day (v2.69 — **#29/#41 GATE RUN — PASSED. The two
+> **Last Updated:** August 6, 2026 (v2.70 — **#29 / #41 T1: the two save codecs and their composition
+> into #30's season save.** New `src/training-system/TrainingSaveCodec.cs` + `ClubTrainingStates.cs` and
+> `src/injuries-medical/MedicalSaveCodec.cs` + `ClubInjuryStates.cs`; the season frame gains both blocks
+> and `SEASON_SAVE_FORMAT_VERSION` goes **2 → 3**. `season-save.asmdef` gains references to both
+> assemblies (the one-way `#30 → #29/#41` composition #29 §4.1 / #41 §4.1 specify), and
+> `training-system.asmdef` gains `DeterministicSim` for `CanonicalSerializer` — a reference §4.1 already
+> declared but T0 had no use for.
+>
+> **The container types earn their place.** `ClubTrainingStates` / `ClubInjuryStates` bind a club id and
+> its parallel id/state arrays once, at construction, for the reason `TrainingSchedule.TrySetFocus`
+> exists: every club in a generated league has the same squad size, so a codec API taking ids and states
+> as separate arguments accepts one club's ids beside another club's states without tripping a length
+> check, and then persists the wrong club's players silently.
+>
+> **Canonical order.** Encode sorts to ascending `(ClubId, PlayerId)` — on a copy, so a live roster array
+> is never reordered under whatever else holds it — and decode requires strictly ascending keys. Equal
+> state sets therefore produce equal bytes regardless of caller order, `encode ∘ decode` is a fixed
+> point, and a duplicate key fails loud at encode instead of reaching a file with no defined winner.
+>
+> **What is deliberately NOT validated on decode:** `Condition`, `TrainingFatigue` and
+> `RecoveryRemaining` against their `[GT]` ceilings. Enforcing a tunable bound at load means a designer
+> lowering `ConditionMax` in config turns every existing save into an unloadable file — a tuning edit
+> causing data loss. Only structurally impossible values are refused (negative accumulators and counters,
+> undefined focus/severity ordinals) plus #41's F1 coherence rule, which runs on **encode as well as
+> decode** so the codec cannot write a file no load of it accepts.
+>
+> ERR-029-004 and ERR-041-008 filed and resolved, spec + code same commit; see `spec-error-log.md` v1.61.
+> **NO GATE RUN** — still no .NET SDK in the authoring environment, installer still 403 at the proxy. The
+> csproj generator runs clean (64 projects) and meta integrity passes; CI on push is the gate.)
+
+> **Last Updated (prior):** August 5, 2026, later same day (v2.69 — **#29/#41 GATE RUN — PASSED. The two
 > assemblies compiled for the first time, and all 67 of their tests executed and passed.** PR #299,
 > CI run 394, head `ddbbe58`. Build succeeded, **0 errors** (5 warnings, unattributed in the retrieved
 > log window and not shown to be new). `TacticalDirector.TrainingSystem.Tests` **27 passed / 0 failed /
@@ -1646,6 +1676,7 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.70 | 2026-08-06 | —      | **#29/#41 T1 — the two save codecs, composed into #30's season save.** `TrainingSaveCodec` (`TRAINING_SAVE_FORMAT_VERSION` = 1) + `ClubTrainingStates`, `MedicalSaveCodec` (`MEDICAL_SAVE_FORMAT_VERSION` = 1) + `ClubInjuryStates`; `SeasonSaveCodec` frames both between the season block and the optional match block, `SEASON_SAVE_FORMAT_VERSION` **2 → 3**, `SeasonSaveBlobs`/`SeasonSaveContents` gain the two fields and `SeasonSaveManager.Save` gains two optional per-club parameters (null ⇒ the empty set, which still writes a well-formed zero-club block — the blocks are mandatory, not presence-flagged, so T2 needs no second frame bump). Encode canonicalizes to ascending `(ClubId, PlayerId)` on a copy; decode requires that order; `[GT]` ceilings are gated on neither side, only structural impossibilities and #41's F1 coherence rule — which runs on encode too. `season-save.asmdef` +`TrainingSystem`/`InjuriesMedical`; `training-system.asmdef` +`DeterministicSim`. **ERR-029-004** (#29 §4.4 pinned no byte layout at all) and **ERR-041-008** (#41 §4.4's layout never writes the club id, so club identity crossed a save boundary positionally) filed + resolved, spec + code same commit, each also correcting its §2.3 F3 exception type. **No gate run: no .NET SDK, installer still 403 at the proxy.** |
 | 2.69 | 2026-08-05 | —      | **#29/#41 GATE RUN — PASSED, first compile of both assemblies.** PR #299, CI run 394, head `ddbbe58`. Build 0 errors (5 warnings). `TrainingSystem.Tests` **27/27**, `InjuriesMedical.Tests` **40/40**, 0 skipped in either; whole-tree gate PASSED, quarantine empty, `MatchEngine.Tests` 420/430 unchanged. Retires the "no gate run" caveat on v2.65–v2.68 and turns five review passes' "the suite locks X" claims — all written against never-compiled code — into execution-verified ones. **No fix was needed to get green:** zero compile errors, zero failures, first run. Confirms specifically: Appendix B day by day, #41 §3.6 term by term, keyed-draw separation, and AR pass 5's hand-computed occurrence-probability literals (231/0/431 per-mille) — derived in Python against an uncompilable tree, now agreed by the compiler, so the balance-pass baseline is real. Authoring environment still has no .NET SDK (installer still 403 at the proxy, re-checked); CI remains the only compiler. |
 | 2.68 | 2026-08-05 | —      | **AR pass 5 over #29/#41 — 2 Medium, 3 Low.** M-1 `MedicalStepTests.cs` v1.3: nothing measured the daily occurrence PROBABILITY the wired system would produce, because every occurrence test forces the outcome with a risk the producer chain cannot reach (`InjuryRiskMax × 4`; #29 clamps at the ceiling and #41 subtracts again). Driven end to end at today's `[GT]`s: a fresh regen is **23% likely to be injured on day 0**, half-fatigued is **43%/day**, and the **default Balanced focus converges on exactly 0 forever** (its load equals `FatigueDailyRecovery`, so fatigue never accrues and the conditioning shortfall reaches zero). Two to three orders of magnitude out at both ends. Not retuned — inert subsystem, KD-W1 — so the numbers are locked by a characterization test and the rescaling lever (the shared `InjuryRiskMax` ceiling) is named. M-2 `TrainingStepTests.cs` v1.3: T-TR-NEU-001's own assertion is vacuous — `TrainingInput` is an empty struct — and the v1.2 comment named that cause only for FR-TR-006, so KD-8 behaviour-neutrality read as locked when it is not. Lows: `MedicalStep.cs` v1.3 (`DrawOccurrence` refuses a non-positive denominator — a *negative* ceiling made the modulo a no-op and yielded a signed garbage draw that still classified; `AssignRecoveryDays` refuses the `None` tier, whose 0 days the F1 floor would raise to 1 against `Severity == None`), `TrainingSystemConstants.cs` v1.2 (a production doc cited a test method name in another assembly). **No gate run: no .NET SDK, installer blocked by network policy.** |
 | 2.67 | 2026-08-05 | —      | **The #29/#41 review's Low tier cleared — nine findings, all documentation-integrity, zero behaviour change** (the compiled surface is byte-identical to v2.62). Seven of the nine were stale claims left behind by the High/Medium fixes themselves: `TrainingStep.cs` v1.2 + `TrainingSystemConstants.cs` v1.1 (both robustness-weight docs still said #29's and #41's terms were "tuned independently" — the claim AR pass 2 falsified, recorded until now only in a test comment; `InjuryRiskMax` still described itself as one of two catalogue values checked for equality, the design H-1 deleted; the §3.3 zero-ceiling comment said "refuse" of a branch that returns the rested value). `MedicalStep.cs` v1.2 (two `<exception>` docs still described the v1.0 zero-only modifier gate after v1.1 widened it to non-positive on both fields; `RobustnessMitigation` now states it is the *second* term over #29's attributes). `InjuriesMedicalConstants.cs` v1.2 (the `[CROSS]` mirror asserted a spec back-prop without naming **ERR-041-003** as its tracking id; the type doc credited the per-mille split to a pre-commit pass its own history does not record). Both catalogue test fixtures v1.1/v1.2 now state that they pin **design-time fallbacks, not a bound config** — the distinction H-1 turned on. `MedicalStepTests.cs` v1.2 (T-MD-MOD-001 had the computed value in NUnit's `expected` slot). `TrainingScheduleTests.cs` v1.2 (header still described a read-only VIEW and a method named `SetFocus`). And four files edited in the v2.62 commit had **no version-history row at all** — `MedicalModifier.cs` v1.1/v1.2, `TrainingState.cs`, `TrainingViewModel.cs`, `AssemblyInfo.cs` — each claiming to be untouched since initial implementation; rows written retroactively and marked as such, as `TrainingStepTests.cs` v1.2 corrects v1.1's row by appending rather than editing. **Still no gate run: no .NET SDK, installer blocked by network policy.** |

@@ -1,8 +1,9 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
-// Modified: 2026-07-25 (#30 T1 AR: Load enforces the KD-4 cursor invariant, FR-SN-011 / F4)
+// Modified: 2026-08-06 (#29/#41 T1: the training and medical sub-blobs are composed in)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-1 / KD-5..KD-8;
+//           Training System #29 §4.4 / FR-TR-018/019; Injuries & Medical #41 §4.4 / FR-MD-017/018;
 //           Match Engine design note §5 Phase G-Phase 3; Deterministic Simulation #16 §4.6.1.1
 //           (atomic-write contract); Living World #22 §4.6/§7.1; Code Standards #20
 // Purpose:  The season save-file root — writes a season (the living-world WorldStore composite plus an
@@ -18,8 +19,10 @@ using System.IO;
 
 using Unity.Profiling;
 
+using TacticalDirector.InjuriesMedical;
 using TacticalDirector.LivingWorld;
 using TacticalDirector.MatchEngine;
+using TacticalDirector.TrainingSystem;
 
 namespace TacticalDirector.SeasonSave
 {
@@ -39,18 +42,33 @@ namespace TacticalDirector.SeasonSave
         private static readonly ProfilerMarker s_loadMarker = new ProfilerMarker("SeasonSave.Load");
 
         /// <summary>
-        /// Captures <paramref name="world"/>, <paramref name="season"/>, and (when present)
-        /// <paramref name="matchOrNull"/>, encodes the season frame, and writes it to
-        /// <paramref name="path"/> atomically (the §4.6.1.1 temp -> fsync -> rename contract). Every
-        /// sub-blob is captured and the frame encoded BEFORE the file is opened (the
+        /// Captures <paramref name="world"/>, <paramref name="season"/>, the #29 training and #41
+        /// medical state, and (when present) <paramref name="matchOrNull"/>, encodes the season frame,
+        /// and writes it to <paramref name="path"/> atomically (the §4.6.1.1 temp -> fsync -> rename
+        /// contract). Every sub-blob is captured and the frame encoded BEFORE the file is opened (the
         /// <see cref="MatchSaveManager.Save"/> blob-before-file precedent, restated by FR-SN-021); no
         /// capture mutates its source, so a write failure leaves the live objects and any existing
         /// destination untouched (KD-8 / AR-2 L-1). Pass <c>null</c> for
         /// <paramref name="matchOrNull"/> when the season has no in-progress match (KD-3); the
         /// <paramref name="season"/> is never optional (FR-SN-019).
         /// </summary>
+        /// <param name="world">The living-world store to capture. Never null.</param>
+        /// <param name="season">The season state to capture. Never null (FR-SN-019).</param>
+        /// <param name="matchOrNull">The in-progress match, or null when there is none (KD-3).</param>
+        /// <param name="path">The destination file.</param>
+        /// <param name="trainingClubs">The per-club #29 training states. <c>null</c> (the default) means
+        /// the empty set, which still writes a well-formed zero-club block — it does NOT omit the block.
+        /// That is the honest state today: nothing constructs #29 state until its T2 wiring, so every
+        /// save written now carries an empty training block rather than a special case (FR-TR-018).</param>
+        /// <param name="medicalClubs">The per-club #41 medical states, on the same terms
+        /// (FR-MD-017).</param>
         public static void Save(
-            WorldStore world, SeasonState season, MatchEngine.MatchEngine matchOrNull, string path)
+            WorldStore world,
+            SeasonState season,
+            MatchEngine.MatchEngine matchOrNull,
+            string path,
+            ClubTrainingStates[] trainingClubs = null,
+            ClubInjuryStates[] medicalClubs = null)
         {
             if (world == null)
             {
@@ -71,8 +89,13 @@ namespace TacticalDirector.SeasonSave
 
             byte[] worldBlob = world.Snapshot();
             byte[] seasonBlob = SeasonStateCodec.Encode(season);
+            byte[] trainingBlob = TrainingSaveCodec.Encode(
+                trainingClubs ?? Array.Empty<ClubTrainingStates>());
+            byte[] medicalBlob = MedicalSaveCodec.Encode(
+                medicalClubs ?? Array.Empty<ClubInjuryStates>());
             byte[] matchBlob = matchOrNull != null ? MatchSaveManager.Encode(matchOrNull) : null;
-            byte[] blob = SeasonSaveCodec.Encode(worldBlob, seasonBlob, matchBlob);
+            byte[] blob = SeasonSaveCodec.Encode(
+                worldBlob, seasonBlob, trainingBlob, medicalBlob, matchBlob);
 
             string tempPath = path + ".tmp";
             try
@@ -111,12 +134,14 @@ namespace TacticalDirector.SeasonSave
 
         /// <summary>
         /// Reads the season save file at <paramref name="path"/>, deframes it, and reconstructs the
-        /// living-world <see cref="WorldStore"/> and the <see cref="SeasonState"/> (both always) and the
+        /// living-world <see cref="WorldStore"/>, the <see cref="SeasonState"/> and the per-club #29
+        /// training / #41 medical state (all always — the last two possibly empty) and the
         /// in-progress <see cref="MatchEngine.MatchEngine"/> (only when the save carried a match —
         /// otherwise <see cref="SeasonSaveContents.Match"/> is null, KD-3). Fail-loud: a missing /
         /// unreadable file surfaces the IO exception; a corrupt / version-mismatched / trailing-byte
         /// season frame throws from <see cref="SeasonSaveCodec.Decode"/>; a corrupt inner blob throws
-        /// from <see cref="WorldStore.Restore"/> / <see cref="SeasonStateCodec.Decode"/> / the match
+        /// from <see cref="WorldStore.Restore"/> / <see cref="SeasonStateCodec.Decode"/> /
+        /// <see cref="TrainingSaveCodec.Decode"/> / <see cref="MedicalSaveCodec.Decode"/> / the match
         /// restore path; a season whose next fixture day is already behind the restored world day throws
         /// here (the KD-4 cursor invariant, FR-SN-011 / F4 — the only cross-blob coherence rule, and this
         /// root is the only layer holding both blobs); and a distinct-squad match save
@@ -146,6 +171,8 @@ namespace TacticalDirector.SeasonSave
 
             WorldStore world = WorldStore.Restore(blobs.WorldBlob, canon);
             SeasonState season = SeasonStateCodec.Decode(blobs.SeasonBlob);
+            ClubTrainingStates[] trainingClubs = TrainingSaveCodec.Decode(blobs.TrainingBlob);
+            ClubInjuryStates[] medicalClubs = MedicalSaveCodec.Decode(blobs.MedicalBlob);
 
             // FR-SN-011 (MUST) / F4: the KD-4 cursor invariant is the one coherence rule that spans the
             // world and season blobs, so it can only be checked HERE — the two codecs each see one blob,
@@ -167,7 +194,7 @@ namespace TacticalDirector.SeasonSave
                 ? MatchSaveManager.Restore(blobs.MatchBlob, squads)
                 : null;
 
-            return new SeasonSaveContents(world, season, match);
+            return new SeasonSaveContents(world, season, trainingClubs, medicalClubs, match);
         }
 
         private static void TryDelete(string path)
@@ -190,4 +217,7 @@ namespace TacticalDirector.SeasonSave
 // | 1.3     | 2026-07-25 | —      | #30 T1 AR pass 2: Load enforces the KD-4 cursor invariant     |
 // |         |            |        | (FR-SN-011 MUST / F4) — the one coherence rule spanning the   |
 // |         |            |        | world and season blobs, so only this root can check it.       |
+// | 1.4     | 2026-08-06 | —      | #29/#41 T1: Save gains the optional per-club training /       |
+// |         |            |        | medical state (null ⇒ the empty set, still a written block)   |
+// |         |            |        | and Load reconstructs both alongside the world and season.    |
 #endregion

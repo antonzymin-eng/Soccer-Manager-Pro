@@ -1,6 +1,6 @@
 // File:     src/season-save/SeasonSaveConstants.cs
 // Created:  2026-07-22
-// Modified: 2026-07-25 (#30 T1: SEASON_SAVE_FORMAT_VERSION 1 -> 2)
+// Modified: 2026-08-06 (#29/#41 T1: SEASON_SAVE_FORMAT_VERSION 2 -> 3)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) KD-4; Code Standards #20
 // Purpose:  Constant catalogue for the season save-file frame. Holds the season-frame format version —
@@ -30,8 +30,17 @@ namespace TacticalDirector.SeasonSave
         /// byte-untouched by that change — only the frame around them moved, which is exactly what
         /// this version gates. A v1 file is rejected fail-loud (no migration at Stage 0).
         /// </para>
+        /// <para>
+        /// <b>2 → 3 at #29/#41 T1 (FR-TR-018 / FR-MD-017).</b> The frame gained two further sub-blobs —
+        /// the training block (<c>TRAINING_SAVE_FORMAT_VERSION</c>) and the medical block
+        /// (<c>MEDICAL_SAVE_FORMAT_VERSION</c>) — between the season block and the optional match block.
+        /// Both are always present (an empty block is a zero-club block, not an absent one), so the
+        /// optional match block stays last and keeps its presence flag. Every pre-existing blob is
+        /// byte-untouched by that change; only the frame around them moved. A v2 file is rejected
+        /// fail-loud.
+        /// </para>
         /// </summary>
-        public const uint SEASON_SAVE_FORMAT_VERSION = 2;
+        public const uint SEASON_SAVE_FORMAT_VERSION = 3;
         #endregion
     }
 }
@@ -42,4 +51,7 @@ namespace TacticalDirector.SeasonSave
 // | 1.1     | 2026-07-25 | —      | #30 T1 (FR-SN-020): SEASON_SAVE_FORMAT_VERSION 1 -> 2 — the      |
 // |         |            |        | frame gained the season-state sub-blob between the world and     |
 // |         |            |        | match blocks; both of those blobs stay byte-untouched.           |
+// | 1.2     | 2026-08-06 | —      | #29/#41 T1 (FR-TR-018 / FR-MD-017): 2 -> 3 — the frame gained    |
+// |         |            |        | the training and medical sub-blobs between the season block and  |
+// |         |            |        | the optional match block; the other three stay byte-untouched.   |
 #endregion

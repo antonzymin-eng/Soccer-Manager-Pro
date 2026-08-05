@@ -6,6 +6,8 @@
         "TacticalDirector.LivingWorld",
         "TacticalDirector.DeterministicSim",
         "TacticalDirector.PlayerDatabase",
+        "TacticalDirector.TrainingSystem",
+        "TacticalDirector.InjuriesMedical",
         "TacticalDirector.ProjectConstants"
     ],
     "includePlatforms": [],

@@ -1,8 +1,9 @@
 # Injuries & Medical #41 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.3
+**Last Updated:** August 6, 2026 (v0.4 — ERR-041-008: §2.3 F3's exception type corrected to match the posture it cites)
+**Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -191,7 +192,7 @@ construction are pure reads over an `InjuryState` value. See §3.
 |---|---|---|
 | **F1** | `InjuryState` coherence violated — `RecoveryRemaining > 0` while `Severity == None`, or `RecoveryRemaining == 0` while `Severity != None`, reaching a consuming seam | **Fail loud** — an invalid combination is a bug, not silently repaired (the #27 `SquadFileLoader` / #28 F4 precedent, FR-MD-021 sibling). |
 | **F2** | `AdvanceMedicalDay` (or any consuming seam) invoked for a `playerId` with no `InjuryState` (a regen never inserted per FR-MD-025) | **Fail loud** — a missing state is a roster-lifecycle bug (the day-0 hazard), never defaulted. |
-| **F3** | `MEDICAL_SAVE_FORMAT_VERSION` mismatch on restore | **Fail loud** (`ArgumentException`), the `MatchSaveCodec` posture. |
+| **F3** | `MEDICAL_SAVE_FORMAT_VERSION` mismatch on restore | **Fail loud** (`InvalidOperationException`), the `MatchSaveCodec` posture — corrected from `ArgumentException` at #41 T1 (ERR-041-008), for the reason recorded in #29 §2.3 F3. |
 | **F4** | An out-of-contract `InjurySeverity` value reaches a consuming seam | **Fail loud** — an invalid enum value is a bug, not silently clamped. |
 | **F5** | Corrupt length prefix (out-of-bounds) or trailing bytes in the medical block | **Fail loud** (overflow-safe bound; the `WorldStateSerializer.ReadCount` posture). |
 | **F6** | `AdvanceMedicalDay` invoked twice for one world day (`worldDay <= LastAdvanced`) | Idempotent no-op guarded by `LastAdvancedWorldDay` — a mid-recovery save→restore→re-run does not double-decrement or double-draw. |
@@ -203,4 +204,5 @@ construction are pure reads over an `InjuryState` value. See §3.
 | 0.1 | 2026-07-23 | — | Initial FR set (FR-MD-001..027), data structures, F1..F7. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1 (1M): integer-arithmetic fix — `MedicalModifier` now per-mille int multipliers with an explicit `Identity` (default() invalid → F4 fail-loud); FR-MD-014 recovery-speed applied to assigned tier-days (not a per-tick multiply); FR-MD-016 zero-modifier fail-loud. |
 | 0.3 | 2026-07-23 | — | AR-2 (1M): FR-MD-008 now mandates the fixed `DRAW_PURPOSE_RADIX` in `DeriveActionOrdinal` (append-parity — the growing purpose count as radix would shift prior ordinals). |
+| 0.4 | 2026-08-06 | — | **ERR-041-008** (at #41 T1): §2.3 **F3**'s exception type corrected from `ArgumentException` to `InvalidOperationException`, matching the `MatchSaveCodec` posture the same row cites (the #29 §2.3 F3 sibling correction). |
 #endregion

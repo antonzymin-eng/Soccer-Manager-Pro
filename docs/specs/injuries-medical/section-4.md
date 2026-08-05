@@ -1,8 +1,9 @@
 # Injuries & Medical #41 — Section 4: Architecture
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.1 — initial authoring)
-**Version:** 0.1
+**Last Updated:** August 6, 2026 (v0.2 — ERR-041-008: §4.4's layout gains the ClubId field and the
+canonical-order / both-sides-coherence rules, at #41 T1)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -78,7 +79,8 @@ use. The codec never parses #30's other sub-blobs and vice-versa; #30's composin
 EncodeMedical(perClubStates) -> bytes:
     WriteU32(MEDICAL_SAVE_FORMAT_VERSION)
     WriteCount(perClubStates.Count)                       # overflow-safe (fail loud on corrupt count, F5)
-    for club in perClubStates (deterministic club order):
+    for club in perClubStates (ascending ClubId):
+        WriteI32(club.ClubId)                             # written, NOT implied by list position
         WriteCount(club.PlayerCount)
         for (playerId, state) in club (PlayerId ascending):
             WriteI32(playerId)
@@ -92,16 +94,33 @@ DecodeMedical(bytes) -> perClubStates:
     version = ReadU32(); if version != MEDICAL_SAVE_FORMAT_VERSION: throw          # F3
     count = ReadCount()                                     # overflow-safe bound guard (F5)
     for i in [0, count):
+        clubId = ReadI32(); if not strictly ascending: throw                       # duplicate/reordered key
         playerCount = ReadCount()
         for j in [0, playerCount):
-            playerId = ReadI32()
+            playerId = ReadI32(); if not strictly ascending: throw
             severity = (InjurySeverity)ReadByte(); if not defined: throw           # F4
-            recoveryRemaining = ReadI32(); injuryCount = ReadI32()
+            recoveryRemaining = ReadI32(); injuryCount = ReadI32(); if either < 0: throw
             lastAdvanced = ReadU32()
             if (recoveryRemaining > 0) != (severity != InjurySeverity.None): throw # F1 coherence gate
             ... reconstruct InjuryState ...
     if bytesRemaining != 0: throw                            # trailing-byte guard, F5
 ```
+
+Three properties the layout carries, each of which is a MUST (**ERR-041-008**, at #41 T1 — the v0.1
+sketch above carried none of them explicitly):
+
+- **`ClubId` is written.** Grouping by club without naming one leaves club identity carried by list order
+  across a save boundary — an implicit agreement with a sibling sub-blob this codec is forbidden to read
+  (KD-7 blob independence). Four bytes per club buys a self-describing block and a duplicate check.
+- **Order is not state.** The block is a map keyed by `(ClubId, PlayerId)` (FR-MD-018), so encode
+  **canonicalizes** to ascending keys — two equal state sets MUST produce identical bytes whatever roster
+  order the caller holds them in — and decode MUST require that order. A duplicate key at encode fails
+  loud: there is no defined winner.
+- **The F1 coherence gate runs on ENCODE as well as decode**, and `[GT]` bands are gated on neither. A
+  codec validating only on decode writes files no load of it can accept, surfacing the bug a session
+  later; conversely, enforcing `RECOVERY_MAX` at load would turn a designer's ceiling change into data
+  loss across every existing save. Only structurally impossible values (a negative day counter or injury
+  count, an undefined severity ordinal) and the F1 contradiction are refused.
 
 Fail-loud gates per F1/F3/F4/F5 (the `MatchSaveCodec` / `WorldStateSerializer.ReadCount` posture). All
 fields serialized via #16's `CanonicalSerializer` (bitwise round-trip); **serialize, don't regenerate**.
@@ -120,4 +139,5 @@ stream-independence property #22's `world.text` and #28's `player-progression.re
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial architecture: assembly, file layout, seam contracts, save codec, stream registration. Status IN REVIEW. |
+| 0.2 | 2026-08-06 | — | **ERR-041-008** (at #41 T1): §4.4's `MEDICAL_SAVE_FORMAT_VERSION` layout gains `WriteI32(club.ClubId)` — v0.1 grouped the blocks by club without naming one, leaving club identity carried by list order across a save boundary, which is an implicit agreement with a sibling sub-blob this codec may not read. Also pins the canonical ascending-key rule, the negative-counter refusals, and the requirement that the F1 coherence gate run on encode as well as decode. |
 #endregion
