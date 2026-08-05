@@ -64,6 +64,35 @@ namespace TacticalDirector.MatchEngine
 
             return LineupSelector.StartingElevenMean(squad, MatchEngineConstants.STAGE0_FORMATION);
         }
+
+        /// <summary>
+        /// Whether <paramref name="squad"/> can field the Stage-0 formation at all — enough players for
+        /// the starters and bench, and an eligible player for every starter slot's required position
+        /// (KD-L3).
+        /// <para>
+        /// <b>Why a probe rather than letting the caller catch.</b> #30's availability filter (#41
+        /// FR-MD-023) removes injured players before rating or configuring, and an injury list can
+        /// leave a club position-incomplete — every goalkeeper out, say — at which point both
+        /// <see cref="StartingElevenMean"/> and <c>ConfigureSquads</c> refuse and the season stops.
+        /// The filter's answer is to press the least-injured back into service until the club can play,
+        /// and to do that it has to be able to ask the question without treating a thrown exception as
+        /// control flow.
+        /// </para>
+        /// <para>
+        /// Pure and allocating, like <see cref="StartingElevenMean"/> — boot / season cadence only.
+        /// </para>
+        /// </summary>
+        /// <param name="squad">A club roster.</param>
+        /// <exception cref="System.ArgumentNullException"><paramref name="squad"/> is null.</exception>
+        public static bool CanFieldStartingEleven(Squad squad)
+        {
+            if (squad == null)
+            {
+                throw new System.ArgumentNullException(nameof(squad));
+            }
+
+            return LineupSelector.CanSelect(squad, MatchEngineConstants.STAGE0_FORMATION);
+        }
     }
 }
 
@@ -73,4 +102,9 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | rating seam over the internal LineupSelector, so season-save's     |
 // |         |            |        | round-resolution model reuses the engine's own selection rather    |
 // |         |            |        | than growing a parallel one (league-bootstrap KD-7 / AR-4 M-1).    |
+// | 1.1     | 2026-08-06 | —      | #41 T2: + CanFieldStartingEleven, the viability probe #30's        |
+// |         |            |        | availability filter needs. An injury list can leave a club         |
+// |         |            |        | position-incomplete, at which point selection refuses and the      |
+// |         |            |        | season stops; the filter presses the least-injured back in until   |
+// |         |            |        | the club can play, which needs to ask rather than catch.           |
 #endregion

@@ -1,7 +1,34 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 6, 2026, latest same day (**#29/#41 T1 GATE RUN — PASSED. No file
+**Last Updated:** August 6, 2026, latest same day (**#29/#41 T2 — the wiring. Both subsystems now
+produce state; `PlayerCareerStates` is the #30-side owner T1 was missing.**
+
+**New:** `src/season-save/PlayerCareerStates.cs` v1.0 (+ `.meta`),
+`src/season-save/tests/PlayerCareerStatesTests.cs` v1.0, `src/season-save/tests/SeasonLoopCareerTests.cs`
+v1.0, `src/season-save/tests/CareerTestRoster.cs` v1.0,
+`src/match-engine/tests/MatchEngineEntryFatigueTests.cs` v1.0 (all + `.meta`).
+
+**Modified:** `src/season-save/SeasonLoop.cs` v1.5 → **v1.6** (the optional career/provider pair, slots
+2 and 4 live on the pre-increment world day, the FR-MD-023 availability filter at the ERR-030-009
+resolve→filter→configure position on both resolution paths, #29's match-entry fatigue into the engine
+boot, and the (d′) FR-TR-025 / FR-MD-025 roster reconciliation before `RollToNextSeason`'s commits);
+`src/match-engine/MatchEngine.cs` v1.63 → **v1.64** (the four-argument `ConfigureSquads` seeding
+`AerobicPool = 1 − fatigue`; null ⇒ rested ⇒ byte-identical); `src/match-engine/SquadRating.cs` v1.0 →
+**v1.1** and `src/match-engine/LineupSelector.cs` v1.1 → **v1.2** (`CanFieldStartingEleven` /
+`CanSelect`, the viability probe the depleted-squad press-back-in loop needs — a player-count rule
+cannot see that a squad has eighteen fit outfielders and no goalkeeper); `docs/tracking/CHANGELOG.md`,
+`docs/tracking/CHANGELOG-src.md` v2.76, `docs/tracking/spec-error-log.md` v1.67 (ERR-029-006 +
+ERR-041-010), `docs/tracking/path-to-playable-roadmap.md` (D2/D3), `CLAUDE.md` (OPEN ISSUES + the
+assembly map), `README.md`, `docs/tracking/training-system-design.md`,
+`docs/tracking/injuries-medical-design.md`, this file.
+
+No `SNAPSHOT_SCHEMA_VERSION` change (the aerobic reservoir was already serialized — proven by a
+save/restore round-trip), no format bump, no new RNG stream / domain tag / draw site / draw-order
+change. **NO GATE RUN** — the authoring environment still has no .NET SDK and the installer is still
+403 at the proxy; CI on push is the gate.)
+
+**Last Updated (prior):** August 6, 2026, latest same day (**#29/#41 T1 GATE RUN — PASSED. No file
 changes; this entry records the run and retires the "no gate run" caveat carried by the two entries
 below it.** PR #300, CI run 397, head `9a7f703`. Build succeeded 0 errors; `TrainingSystem.Tests`
 **52/52** (+25 `TrainingSaveCodecTests`), `InjuriesMedical.Tests` **66/66** (+26

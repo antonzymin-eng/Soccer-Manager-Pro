@@ -12,7 +12,86 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 6, 2026, later same day (**#29/#41 T1 gate run — PASSED. The two save
+> **Last Updated:** August 6, 2026, later same day (**#29/#41 T2 LANDED — the two subsystems now
+> PRODUCE state. `PlayerCareerStates` is the #30-side owner T1 was missing: at T1 both codecs existed
+> and nothing constructed a state set for them to encode, so every save carried two empty blocks.**
+>
+> **What is live.** `src/season-save/PlayerCareerStates.cs` holds both per-club sets keyed by
+> `(ClubId, PlayerId)` and is the single place #30 calls either subsystem from. `SeasonLoop` takes it
+> and its squad provider as an optional PAIR and drives: **slot 2** (`TrainingStep.AdvanceTrainingDay`)
+> and **slot 4** (`MedicalStep.AdvanceMedicalDay`) in the KD-2 order, both taking the world day BEFORE
+> step 9's increment; the **FR-MD-023 availability filter** at the pre-declared ERR-030-009
+> resolve→filter→configure position, on the quick-sim path as well as the engine one (#44's suspension
+> view joins the same call); **#29's §3.3 match-entry fatigue** into a new four-argument
+> `MatchEngine.ConfigureSquads`, seeded onto each starter's `AerobicPool` as `1 − fatigue`; and the
+> **FR-TR-025 / FR-MD-025 roster reconciliation** at a new (d′) position in `RollToNextSeason`, before
+> the commits so a refused roll leaves the career untouched too.
+>
+> **Behaviour-neutral on the defaults, and that is a property rather than a hope.** Every player starts
+> on `Balanced`, whose daily load equals `FatigueDailyRecovery` **exactly**, so the training-fatigue
+> accumulator never leaves 0, the projection hands the engine an all-rested array, and a match booted
+> through the wiring is digest-identical to one booted without it — locked both ways
+> (`AllZeroFatigue_IsDigestIdenticalToTheTwoArgumentOverload` and its counterpart
+> `NonZeroFatigue_ReachesTheSimulation`, which asserts on POSITION because the reservoir is itself
+> serialized and a digest would move even for a seam that were written and never read). The world tick
+> stays byte-identical to a bare `WorldStore.AdvanceDay` (FR-SN-026): neither day step touches the
+> world.
+>
+> **#41's occurrence draw ships DISARMED (FR-MD-027), on measurement rather than caution.** The fifth
+> AR pass over T0 measured the daily probability through the real producer chain: ~23% for a freshly
+> inserted player on his first day, ~43% half-fatigued, and exactly 0 forever on the default focus —
+> two to three orders of magnitude out in both directions. KD-W1 forbids re-tuning ahead of the balance
+> pass, so T2 wires the path and leaves the dial off; everything downstream of an injury (the filter,
+> the depleted-squad press-back-in, the views) is live and tested against directly-constructed injured
+> states, so arming it is a one-argument change. Both dial positions are locked — "off injures nobody"
+> is satisfiable by a step that is never called, so the armed path is proven to reach the draw.
+>
+> **Two ERRs filed: ERR-029-006 and ERR-041-010** — the same finding in both siblings. The T2 seam text
+> names #28 APIs and types `TacticalDirector.PlayerProgression` does not expose: §3.5/§4.3's batch
+> `#28.AdvanceDay(worldDay, in trainingInputs)` (only the per-player `AdvanceDayForPlayer` exists, and
+> #28's own slot-1 wiring is roadmap D1), and both FR-TR-025 and FR-MD-025's `RegenResult` /
+> `RetirementResult`. The handoff half is resolved in substance by reconciling against the roster #30
+> already holds — the same contract, keyed the same way, which starts inserting exactly the regens the
+> moment #28 T2 produces them. **Slot 1 stays a null seam deliberately**: gathering a batch for a
+> consumer with neither the API nor a call site is the phantom class this project refuses, and
+> `ComputeTrainingInput` returns `Neutral` on both branches regardless.
+>
+> **Recorded, not fixed (the next pass starts here).** #41 §3.5 sources `MatchLoad` from "#30's fixture
+> result"; #30 has no per-player appearance record, `AppearanceLoadWeight` is a non-zero `[GT]` (150),
+> and neither sub-blob may carry a counter for it. `MatchLoad.None` is passed — inert while the dial is
+> off, since `AssembleRiskScore` sits inside the `occurrenceEnabled` branch. Recomputing appearances
+> from the fixture list is **not** equivalent: the availability filter changes who actually played, so
+> a recompute diverges precisely in the seasons injuries matter. It needs a persisted home and a format
+> decision, and it is due with the balance pass.
+>
+> **One design decision worth naming.** The availability filter needed a depleted-squad rule, and the
+> obvious one — back-fill to a player count — is wrong: selection refuses a *position-incomplete*
+> squad outright (KD-L3), so eighteen fit outfielders and no goalkeeper stops the season. The rule is
+> instead "press the least-injured back in until the club can field the formation", asked of the
+> engine's own selector through a new `SquadRating.CanFieldStartingEleven` / `LineupSelector.CanSelect`
+> probe rather than answered by a second selection rule in `season-save` (the parallel-surface trap
+> `SquadRating` exists to avoid). In the limit that is the whole squad — exactly the unfiltered
+> behaviour — so the filter can never leave a club worse off than having no filter at all.
+>
+> **Determinism.** No `SNAPSHOT_SCHEMA_VERSION` change (the aerobic reservoir was already serialized —
+> proven by a save/restore round-trip rather than asserted). No `SEASON_SAVE_FORMAT_VERSION` change and
+> no sub-blob format bump: T2 fills blocks whose layout T1 pinned. **No new RNG stream, no new domain
+> tag, no new draw site, no draw-order change** — #41's keyed occurrence draw is the one T0 already
+> allocated, and it is reached only when the dial is armed.
+>
+> **Blast radius, checked.** No scenario with a hardcoded tick window or per-90 band is touched: with
+> no career wired every path is unchanged, and with one wired on the defaults the match digest chain is
+> identical. No A4a round-resolution re-fit is implied — the quick-sim's rating input only moves once a
+> club actually has injured players, which requires the dial. No `FR-PO-052` question: the two day
+> steps run on the world tick, not the 60 Hz path, and `ConfigureSquads` gained one array read per
+> starter at boot.
+>
+> **NO GATE RUN.** The authoring environment still has no .NET SDK and the installer is still 403 at
+> the agent proxy, so `PlayerCareerStates`, the two new probes, the `ConfigureSquads` overload and all
+> four new suites are written and unexecuted. CI on push is the gate — the same posture as T0 and T1,
+> both of which then came back green on the first run.)
+
+> **Last Updated (prior):** August 6, 2026, later same day (**#29/#41 T1 gate run — PASSED. The two save
 > codecs, the three new types and the frame change compiled for the first time; all 58 new tests
 > executed and passed.** PR #300, CI run 397, head `9a7f703`. Build 0 errors (5 warnings, not shown to
 > be new); `TrainingSystem.Tests` **52/52**, `InjuriesMedical.Tests` **66/66**, 0 skipped in either;

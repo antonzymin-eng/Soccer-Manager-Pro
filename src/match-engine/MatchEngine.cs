@@ -51,6 +51,7 @@
 // Modified: 2026-08-04 (wiring backlog W1 keeper rush trigger: TryCommitRushIntents gives GoalkeeperMechanics.CommitRushIntent its FIRST production caller — pure GkHeadingIntentSource.RushArmed/HasGoalSideCover geometry + #11 §3.7.0's attribute-driven commit distance (ERR-011-010) + the ClearRushIntent disarm, gated behind SaveArmed so a shot is still a dive. Deliberately NOT a DecisionTree action: ActionType ordinal 8 overflows the 3-bit composure-noise field (the W9 deferral reason). No new engine state ⇒ no SNAPSHOT_SCHEMA_VERSION change. See docs/tracking/gk-rush-trigger-design.md)
 // Modified: 2026-08-04 (W1 AR-1: RefreshGkAgentIds filters _isSentOff so a keeper sent off mid-rush stops; + TestOnly_DriveGkHeadingPhysics. See docs/tracking/gk-rush-trigger-design.md v1.2)
 // Modified: 2026-08-04 (W1 AR-2: RefreshGkAgentIds detects a CHANGE of keeper-slot occupant and calls GoalkeeperMechanics.ResetSlot — a substitute keeper was inheriting the dismissed keeper's locked RushIntent. No new state, no schema change. See docs/tracking/gk-rush-trigger-design.md v1.3)
+// Modified: 2026-08-06 (#29 T2 match-boot fatigue seam: a four-argument ConfigureSquads overload taking each squad's per-local-index match-entry fatigue (#29 §3.3 / KD-1), seeded onto each starter's AerobicPool as 1 − fatigue. The reservoir is already the engine's live-fatigue quantity and already serialized, so no schema change; null ⇒ rested ⇒ byte-identical to the two-argument form.)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -970,7 +971,7 @@ namespace TacticalDirector.MatchEngine
         /// persists it alongside the payload; an on-disk boot-header is revisited at the save-file root).</param>
         /// <param name="squads">Resolver for the club rosters a distinct-squad match loaded (#27 T3 / KD-3).
         /// Required (non-null, resolving every referenced <c>ClubId</c>) when the snapshot was taken after
-        /// <see cref="ConfigureSquads"/>; ignored for a neutral / unconfigured-squad match. Must return the
+        /// <c>ConfigureSquads</c>; ignored for a neutral / unconfigured-squad match. Must return the
         /// SAME rosters the saved match loaded — see <see cref="ISquadProvider"/>.</param>
         public static MatchEngine RestoreFromSnapshot(
             in SnapshotHeader header, SnapshotPayload payload, ulong matchSeed, ISquadProvider squads = null)
@@ -1050,7 +1051,7 @@ namespace TacticalDirector.MatchEngine
         /// <c>_perceptionAttrs</c> / bench attrs are NOT serialized), so a distinct-squad match cannot be
         /// restored faithfully without its rosters back. Both teams' resolved squads are resolved,
         /// ClubId-checked, size-checked, lineup-selected, and record-validated BEFORE any is applied (the
-        /// <see cref="ConfigureSquads"/> validate-both-before-write discipline); then the base lineup is
+        /// <c>ConfigureSquads</c> validate-both-before-write discipline); then the base lineup is
         /// re-projected and the substitution swaps the serialized <c>_activeBenchSlot</c> records are
         /// replayed. The neutral / unconfigured-squad path (both <c>_rosterClubId == NO_ROSTER_CLUB_ID</c>)
         /// returns immediately and needs no provider. Fails loud on an absent provider, an unresolvable
@@ -1465,6 +1466,53 @@ namespace TacticalDirector.MatchEngine
             TacticalDirector.PlayerDatabase.Squad homeSquad,
             TacticalDirector.PlayerDatabase.Squad awaySquad)
         {
+            ConfigureSquads(homeSquad, awaySquad, null, null);
+        }
+
+        /// <summary>
+        /// <see cref="ConfigureSquads(TacticalDirector.PlayerDatabase.Squad,TacticalDirector.PlayerDatabase.Squad)"/>,
+        /// plus each squad's per-player <b>match-entry fatigue</b> — the #29 §3.3 / KD-1 boot seam.
+        /// <para>
+        /// A player does not always arrive at kickoff rested: a week of heavy training leaves a
+        /// world-tick fatigue accumulator behind, and #29 projects it to a starting-fatigue offset in
+        /// <c>[0,1]</c> on the project convention (<b>0 = fully rested, 1 = fully fatigued</b>). The
+        /// offset lands on the agent's aerobic reservoir as <c>AerobicPool = 1 − fatigue</c>, which is
+        /// the single quantity every downstream projection already reads as live fatigue
+        /// (<c>PlayerAttributeProjection.ToPass/ToShot/ToHeading/ToGoalkeeper</c>) and which locomotion
+        /// already drains from — so this seeds the existing reservoir rather than adding a second
+        /// fatigue concept. It is serialized (the reservoir always was), so a boot-fatigued match
+        /// round-trips through a save with no schema change.
+        /// </para>
+        /// <para>
+        /// The arrays are indexed by <b>squad-local roster index</b>, not by <c>PlayerId</c> and not by
+        /// team slot: the lineup selection decides which locals start, and only a starter occupies an
+        /// agent slot. A bench player's entry fatigue is therefore accepted and unused — a substitute
+        /// inherits the outgoing player's reservoir, which is the engine's existing behaviour and not
+        /// something this seam changes.
+        /// </para>
+        /// <para>
+        /// <c>null</c> for either array means "this side arrives rested", which is exactly the boot
+        /// value (<c>AerobicPool = 1</c>) — so the two-argument overload, and every existing call site
+        /// through it, is byte-identical to before this seam existed.
+        /// </para>
+        /// </summary>
+        /// <param name="homeSquad">Club squad for team 0 (home).</param>
+        /// <param name="awaySquad">Club squad for team 1 (away).</param>
+        /// <param name="homeEntryFatigue">Home per-local-index entry fatigue in <c>[0,1]</c>, or null for rested.</param>
+        /// <param name="awayEntryFatigue">Away per-local-index entry fatigue in <c>[0,1]</c>, or null for rested.</param>
+        /// <exception cref="System.ArgumentException">
+        /// An entry-fatigue array's length does not match its squad's player count, or carries a value
+        /// outside <c>[0,1]</c> or a NaN. Fail loud rather than clamp: the producer
+        /// (<c>TrainingStep.ProjectMatchEntryFatigue</c>) already clamps, so an out-of-range value here
+        /// means the array was built against a different squad — and a NaN would silently poison every
+        /// attribute projection that reads the reservoir without ever announcing itself.
+        /// </exception>
+        public void ConfigureSquads(
+            TacticalDirector.PlayerDatabase.Squad homeSquad,
+            TacticalDirector.PlayerDatabase.Squad awaySquad,
+            float[] homeEntryFatigue,
+            float[] awayEntryFatigue)
+        {
             if (homeSquad == null)
             {
                 throw new System.ArgumentNullException(nameof(homeSquad));
@@ -1478,6 +1526,8 @@ namespace TacticalDirector.MatchEngine
                 throw new System.InvalidOperationException(
                     "ConfigureSquads: pre-kickoff only — the match has already ticked (#27 T1).");
             }
+            ValidateEntryFatigue(0, homeSquad, homeEntryFatigue, nameof(homeEntryFatigue));
+            ValidateEntryFatigue(1, awaySquad, awayEntryFatigue, nameof(awayEntryFatigue));
             // Every fail-loud step for BOTH squads runs BEFORE any state is written, so a refused call
             // leaves the engine untouched — validating inside the per-team apply would let an invalid
             // away squad refuse only after the home squad had already landed (a half-applied
@@ -1491,8 +1541,8 @@ namespace TacticalDirector.MatchEngine
             LineupPlan awayPlan = LineupSelector.Select(awaySquad, MatchEngineConstants.STAGE0_FORMATION);
             ValidateSelectedRecords(0, homeSquad, in homePlan);
             ValidateSelectedRecords(1, awaySquad, in awayPlan);
-            ApplySquad(0, homeSquad, in homePlan);
-            ApplySquad(1, awaySquad, in awayPlan);
+            ApplySquad(0, homeSquad, in homePlan, homeEntryFatigue);
+            ApplySquad(1, awaySquad, in awayPlan, awayEntryFatigue);
             // #27 T3: record which roster each team loaded (the identity half of restore fidelity),
             // set only after both squads validated-and-applied so a refused call leaves the reference
             // at the sentinel (validate-before-write, matching the AR-1 M-1 both-squads rule above).
@@ -1500,7 +1550,7 @@ namespace TacticalDirector.MatchEngine
             _rosterClubId[1] = awaySquad.ClubId;
         }
 
-        /// <summary>Fail-loud gate on one squad's size — enough players for the starters + bench (see <see cref="ConfigureSquads"/>).</summary>
+        /// <summary>Fail-loud gate on one squad's size — enough players for the starters + bench (see <c>ConfigureSquads</c>).</summary>
         private static void ValidateSquadSize(int teamId, TacticalDirector.PlayerDatabase.Squad squad)
         {
             int needed = MatchEngineConstants.PLAYERS_PER_TEAM + MatchEngineConstants.SUBSTITUTES_PER_TEAM;
@@ -1514,7 +1564,7 @@ namespace TacticalDirector.MatchEngine
 
         /// <summary>Fail-loud bounds gate on every SELECTED consumed record — the plan chooses which
         /// 18 of the roster are consumed, so validation follows the selection, not a fixed prefix
-        /// (see <see cref="ConfigureSquads"/>).</summary>
+        /// (see <c>ConfigureSquads</c>).</summary>
         private static void ValidateSelectedRecords(
             int teamId, TacticalDirector.PlayerDatabase.Squad squad, in LineupPlan plan)
         {
@@ -1530,11 +1580,53 @@ namespace TacticalDirector.MatchEngine
             }
         }
 
+        /// <summary>Fail-loud gate on one squad's entry-fatigue array — length against the roster and
+        /// every value inside <c>[0,1]</c>, NaN included (see the four-argument
+        /// <see cref="ConfigureSquads(TacticalDirector.PlayerDatabase.Squad,TacticalDirector.PlayerDatabase.Squad,float[],float[])"/>).
+        /// A null array is "rested", the boot value, and is not an error.</summary>
+        private static void ValidateEntryFatigue(
+            int teamId,
+            TacticalDirector.PlayerDatabase.Squad squad,
+            float[] entryFatigue,
+            string parameterName)
+        {
+            if (entryFatigue == null)
+            {
+                return;
+            }
+
+            if (entryFatigue.Length != squad.Count)
+            {
+                throw new System.ArgumentException(
+                    $"ConfigureSquads: team {teamId} entry-fatigue array has {entryFatigue.Length} "
+                    + $"entries for a {squad.Count}-player squad; it is indexed by squad-local roster "
+                    + "index, so a length mismatch means it was built against a different squad.",
+                    parameterName);
+            }
+
+            for (int local = 0; local < entryFatigue.Length; local++)
+            {
+                // Written as a NOT of the in-range test so NaN — which compares false to everything —
+                // is refused rather than passing a pair of one-sided comparisons.
+                if (!(entryFatigue[local] >= 0f && entryFatigue[local] <= 1f))
+                {
+                    throw new System.ArgumentException(
+                        $"ConfigureSquads: team {teamId} squad player {local} entry fatigue "
+                        + $"= {entryFatigue[local]} is outside [0,1] (0 = rested, 1 = fully fatigued).",
+                        parameterName);
+                }
+            }
+        }
+
         /// <summary>Applies one validated squad to one team's on-pitch + bench slots through the
-        /// selected lineup (see <see cref="ConfigureSquads"/>). The per-slot goalkeeper flags come
-        /// from the selection (KD-L4), replacing the boot <c>k == 0</c> seed.</summary>
+        /// selected lineup (see <c>ConfigureSquads</c>). The per-slot goalkeeper flags come
+        /// from the selection (KD-L4), replacing the boot <c>k == 0</c> seed; a non-null
+        /// <paramref name="entryFatigue"/> seeds each starter's aerobic reservoir (#29 §3.3 / KD-1).</summary>
         private void ApplySquad(
-            int teamId, TacticalDirector.PlayerDatabase.Squad squad, in LineupPlan plan)
+            int teamId,
+            TacticalDirector.PlayerDatabase.Squad squad,
+            in LineupPlan plan,
+            float[] entryFatigue)
         {
             for (int k = 0; k < MatchEngineConstants.PLAYERS_PER_TEAM; k++)
             {
@@ -1546,6 +1638,14 @@ namespace TacticalDirector.MatchEngine
                 _perceptionAttrs[i] = PlayerAttributeProjection.ToPerception(
                     in _canonicalAttrs[i], teamId, _perceptionAttrs[i].IsHalfTurned);
                 _isGoalkeeper[i] = plan.StarterIsGoalkeeper[k];
+                if (entryFatigue != null)
+                {
+                    // The reservoir is the engine's one live-fatigue quantity, already serialized and
+                    // already read by every attribute projection — so seeding it is the whole seam. Not
+                    // guarded by a "!= 1f" check: writing 1f where 1f already sits is the same value,
+                    // and a conditional would only hide which path ran.
+                    _agents[i].AerobicPool = 1f - entryFatigue[local];
+                }
             }
             for (int b = 0; b < MatchEngineConstants.SUBSTITUTES_PER_TEAM; b++)
             {
@@ -8146,4 +8246,13 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | RestoreFromSnapshot gains step 3b ResyncGkAgentIdsAfterRestore (re-derive |
 // |         |            |        | WITHOUT reset — restored #11 state already belongs to the restored        |
 // |         |            |        | occupant). Live-path reset unchanged. gk-rush-trigger-design.md v1.4.     |
+// | 1.64    | 2026-08-06 | —      | #29 T2 match-boot fatigue seam (#29 §3.3 / §4.3 / KD-1): a four-argument  |
+// |         |            |        | ConfigureSquads overload taking each squad's per-local-index entry        |
+// |         |            |        | fatigue in [0,1], seeded onto the starter's AerobicPool as 1 − fatigue.   |
+// |         |            |        | The reservoir is the engine's existing live-fatigue quantity and is       |
+// |         |            |        | already serialized, so no SNAPSHOT_SCHEMA_VERSION change. null ⇒ rested   |
+// |         |            |        | ⇒ the boot value, so the two-argument overload and every existing call    |
+// |         |            |        | site stay byte-identical. Fails loud on a length mismatch or an           |
+// |         |            |        | out-of-[0,1]/NaN value — the producer already clamps, so either means the |
+// |         |            |        | array was built against a different squad.                                |
 #endregion

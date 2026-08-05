@@ -1,5 +1,6 @@
 // File:     src/match-engine/LineupSelector.cs
 // Created:  2026-07-19
+// Modified: 2026-08-06 (#41 T2: + CanSelect, the viability probe #30's availability filter loops on)
 // Author:   —
 // Spec:     Lineup Selection (Plan-3) design supplement (docs/tracking/lineup-selection-design.md);
 //           Squad/Player Data Layer #27 (KD-4 deferred PlayerPosition→slot mapping); Code Standards #20
@@ -200,6 +201,51 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
+        /// Whether <see cref="Select"/> would succeed for <paramref name="family"/> — the same greedy
+        /// walk, reporting instead of throwing.
+        /// <para>
+        /// It exists for #30's availability filter (#41 FR-MD-023), which removes injured players and
+        /// can leave a club position-incomplete; the filter presses the least-injured back in until the
+        /// club can play, and needs to ask that question repeatedly rather than treat a thrown
+        /// exception as a loop condition. Public consumers reach it through
+        /// <see cref="SquadRating.CanFieldStartingEleven"/>.
+        /// </para>
+        /// <para>
+        /// Deliberately re-walks <see cref="Select"/>'s starter loop rather than wrapping it in a
+        /// <c>try</c>: the two must agree, and the shared thing is <see cref="FindBest"/> plus
+        /// <see cref="RequiredPosition"/>, which is where the eligibility rule actually lives. The bench
+        /// check is the size gate <see cref="Select"/> applies, restated as a comparison.
+        /// </para>
+        /// </summary>
+        /// <param name="squad">The roster to test.</param>
+        /// <param name="family">The formation whose slots must be fillable.</param>
+        internal static bool CanSelect(Squad squad, FormationFamily family)
+        {
+            int starterCount = MatchEngineConstants.PLAYERS_PER_TEAM;
+            int benchCount = MatchEngineConstants.SUBSTITUTES_PER_TEAM;
+            if (squad.Count < starterCount + benchCount)
+            {
+                return false;
+            }
+
+            FormationSlotRecord[] slots = PositioningAIConstants.GetFormationSlots(family);
+            bool[] selected = new bool[squad.Count];
+            for (int s = 0; s < starterCount; s++)
+            {
+                FormationSlotRecord slot = slots[s];
+                int best = FindBest(squad, selected, matchPosition: true, required: RequiredPosition(in slot));
+                if (best < 0)
+                {
+                    return false;
+                }
+
+                selected[best] = true;
+            }
+
+            return true;
+        }
+
+        /// <summary>
         /// KD-L1: the coarse <see cref="PlayerPosition"/> a formation slot requires — its own goalkeeper
         /// flag, else its <c>DefaultLine</c> (Defense→Defender, Midfield→Midfielder, Attack→Forward).
         /// </summary>
@@ -232,4 +278,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | StartingElevenMean — the XI-mean rating the round-resolution   |
 // |         |            |        | model consumes, exposed publicly via SquadRating rather than   |
 // |         |            |        | re-implemented in season-save (the parallel-surface trap).      |
+// | 1.2     | 2026-08-06 | —      | #41 T2: + CanSelect — Select's starter walk reporting instead   |
+// |         |            |        | of throwing, for the availability filter's press-the-least-    |
+// |         |            |        | injured-back-in loop. An injury list can leave a club           |
+// |         |            |        | position-incomplete, which would otherwise stop the season.     |
 #endregion

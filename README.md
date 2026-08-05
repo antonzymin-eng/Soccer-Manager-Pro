@@ -1,7 +1,46 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** August 5, 2026, end of same day (**ERR-008-019 — one recorded claim about the
+**Last Updated:** August 6, 2026, latest same day (**Training and injuries are now wired into the
+career loop — for the first time, a saved season carries what players have actually been doing.**
+
+Two systems were built earlier this month but had no way to run: the code existed, the save format
+existed, and nothing anywhere created a player to run them on, so every save file wrote two empty
+blocks. That gap is closed. There is now a single object that owns every club's training and medical
+state, and the season loop calls into it once per day, in a fixed order — training first, injuries
+second, because the injury risk reads the conditioning that training just wrote. Injured players are
+filtered out of team selection, and each player's accumulated training fatigue now follows him into a
+match as a starting fatigue level.
+
+**Nothing about an existing game changes.** Every player starts on a balanced training programme,
+whose daily workload happens to exactly cancel the daily recovery, so nobody accumulates fatigue and
+every match plays out identically to before — checked in both directions, including a test that
+deliberately fatigues a side to confirm the new number really does reach the simulation rather than
+just being stored.
+
+**Injuries themselves are wired but switched off**, deliberately and on measurement rather than
+nerves. An earlier review measured what the current tuning would actually do: a new player would have
+roughly a one-in-four chance of being injured on his very first day, and a tired one nearly a
+one-in-two chance every day — while a player on the default programme would never be injured at all.
+Those numbers are two to three orders of magnitude away from real football, and the project's own
+rules say tuning waits until the whole chain is connected. So the plumbing is in and the tap is
+closed; turning it on later is a one-word change, and everything downstream of an injury is already
+built and tested.
+
+One design point worth recording: a club must never be unable to field a team. The obvious rule —
+"put injured players back if you drop below eighteen" — is wrong, because the team selector refuses a
+squad with no goalkeeper regardless of how many outfielders are fit. So the rule is instead "bring the
+least-injured back, one at a time, until the club can actually field a legal side", asked of the
+selector itself rather than guessed at.
+
+Two specification errors were filed: both systems' written plans referred to functions and data types
+in the player-progression system that do not exist yet, so one part of the wiring waits for that
+system's own turn. The gate could not run in the authoring environment (no .NET SDK available); CI
+runs it on push. This entry also skips over two same-day landings recorded in
+`docs/tracking/CHANGELOG.md` — the save codecs and their gate run — which never reached this file.
+Prior entry below.)
+
+**Last Updated (prior):** August 5, 2026, end of same day (**ERR-008-019 — one recorded claim about the
 long-shot ramp was wrong and is withdrawn.** A review of yesterday's landing found that the note
 saying the change "moves no match digests" rested on a false assumption about how a player takes
 possession of the ball: it assumed the player must be within half a metre of it, when the engine
