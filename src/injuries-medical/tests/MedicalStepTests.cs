@@ -6,7 +6,8 @@
 // Purpose:  T-MD-DET-001/003/005/006/007/009, T-MD-ORD-001, T-MD-SEV-001/002, T-MD-REC-001,
 //           T-MD-MOD-001/002, T-MD-NEU-001/002, T-MD-AVAIL-001, T-MD-FAT-001, T-MD-FAIL-004/006 — the
 //           §3.6 worked example, the KD-6 same-call gate, the keyed-draw properties, the #29 -> #41
-//           seam, and the fail-loud gates.
+//           seam, and the fail-loud gates. Plus one test carrying no spec id: the daily occurrence
+//           PROBABILITY through the real producer chain, recorded as the balance pass's baseline.
 
 using System;
 
@@ -384,6 +385,13 @@ namespace TacticalDirector.InjuriesMedical.Tests
             Assert.AreEqual(1, MedicalStep.AssignRecoveryDays(InjurySeverity.Minor, absurdPhysio),
                 "the floor of 1 is load-bearing: 0 assigned days would leave RecoveryRemaining == 0 " +
                 "while Severity != None, an F1 breach written straight into the save.");
+
+            // ...and the same floor inverts on the None tier, whose recovery-days are 0 by the F1
+            // invariant: floored to 1 it would write RecoveryRemaining == 1 against Severity == None.
+            // No caller passes None today (ClassifySeverityFromDraw cannot return it); the guard keeps
+            // that true for the next one rather than leaving a breach one call site away.
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => MedicalStep.AssignRecoveryDays(InjurySeverity.None, MedicalModifier.Identity));
         }
 
         [Test]
@@ -528,6 +536,88 @@ namespace TacticalDirector.InjuriesMedical.Tests
                 "producer's ceiling cannot reach the consumer's.");
         }
 
+        /// <summary>
+        /// The rate the wired system would actually produce, measured through the real #29 → #41 chain
+        /// and recorded as the balance pass's BEFORE numbers.
+        /// <para>
+        /// Every other occurrence test in this fixture hand-feeds <see cref="CertainOccurrenceRisk"/>
+        /// — <c>InjuryRiskMax × 4</c>, a value the producer chain cannot reach, since #29 clamps at the
+        /// ceiling and #41 then subtracts its own mitigation. So the fixture proves an injury happens
+        /// when one is forced and proves none happens with the dial off, and until this test it never
+        /// established what the wired system does at inputs a career actually produces. That is the
+        /// ERR-030-014 shape: a suite that asserts the machine runs rather than that it works.
+        /// </para>
+        /// <para>
+        /// <b>What it produces is not football.</b> The three numbers below are locked deliberately, so
+        /// the balance pass leaves a visible diff. They are NOT retuned here: #29 and #41 are inert (no
+        /// production caller constructs either), and KD-W1 forbids landing a <c>[GT]</c> that governs an
+        /// unwired subsystem. Recorded, not fixed — the ERR-041-003 posture.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void DailyOccurrenceProbability_ThroughTheRealChain_IsRecordedForTheBalancePass()
+        {
+            PlayerAttributes average = PlayerAttributes.CreateDefault();
+
+            // 1. The state #30 inserts for a regen at the season boundary — fully rested, perfectly
+            //    average, never trained a day. 231 per-mille is a 23% chance of being injured on his
+            //    FIRST day, and an expected ~4 days to first injury: ConditionStart (7000) sits 3000
+            //    below ConditionMax, and LowConditionRiskWeight carries that shortfall at weight 1 on
+            //    the very scale the draw denominator is derived from, so "not yet at peak" is priced
+            //    like "half dead".
+            Assert.AreEqual(231, DailyOccurrencePermille(TrainingState.Create(TrainingFocus.Balanced), average),
+                "a freshly inserted regen is 23% likely to be injured on day 0.");
+
+            // 2. The steady state of the DEFAULT focus. Balanced's daily load (200) exactly equals
+            //    FatigueDailyRecovery (200), so fatigue never accrues; conditioning climbs to the
+            //    ceiling in ~39 days and the shortfall term goes to zero. From then on the risk clamps
+            //    to 0 and STAYS there: on the default focus, with no matches, a player can never be
+            //    injured again. A subsystem whose default path emits exactly zero events is
+            //    indistinguishable from one that is switched off.
+            TrainingState peak = TrainingState.Create(TrainingFocus.Balanced);
+            peak.Condition = TrainingSystemConstants.ConditionMax;
+            peak.TrainingFatigue = 0;
+            Assert.AreEqual(0, DailyOccurrencePermille(peak, average),
+                "the default focus converges on a permanently injury-proof player.");
+
+            // 3. The other end, and the reason (2) is not simply "the weights are low": half of the
+            //    fatigue range is 43% per day. The two ends are three orders of magnitude apart in
+            //    expected time-to-injury, and the traverse between them is monotone — there is no
+            //    setting of these weights that makes both ends plausible while the risk scale and the
+            //    draw denominator are the same 10000.
+            TrainingState halfSpent = TrainingState.Create(TrainingFocus.Fitness);
+            halfSpent.Condition = TrainingSystemConstants.ConditionMax;
+            halfSpent.TrainingFatigue = TrainingSystemConstants.TrainingFatigueMax / 2;
+            Assert.AreEqual(431, DailyOccurrencePermille(halfSpent, average),
+                "and half-fatigued is 43% per day.");
+
+            // For scale: a real squad sees roughly one or two injuries per player per SEASON, so a
+            // plausible band for an average fit player is well under 1 per-mille per day. Every number
+            // above is two to three orders of magnitude out. The lever that rescales all of them
+            // without touching a single shape is the shared ceiling itself — InjuryRiskMax is both
+            // #29's risk clamp and, through OccurrenceDrawDenom, the draw's denominator (the [CROSS]
+            // mirror of ERR-041-003 is what makes it one dial rather than two). Recorded here as the
+            // balance pass's first lever, not asserted: that the two are equal is already true by
+            // construction and locked in InjuriesMedicalConstantsTests.
+        }
+
+        /// <summary>
+        /// The daily occurrence probability in per-mille, driven end to end: #29 computes the risk
+        /// scalar from the training state, #41 assembles it and compares against a draw uniform in
+        /// <c>[0, OccurrenceDrawDenom)</c>, so the probability IS the assembled risk over that
+        /// denominator.
+        /// </summary>
+        private static int DailyOccurrencePermille(in TrainingState training, in PlayerAttributes attributes)
+        {
+            int risk = MedicalStep.AssembleRiskScore(
+                TrainingStep.ComputeInjuryRisk(training, attributes),
+                MatchLoad.None,
+                attributes,
+                MedicalModifier.Identity);
+
+            return risk * 1000 / InjuriesMedicalConstants.OccurrenceDrawDenom;
+        }
+
         [Test]
         public void HardContacts_AreWeightedZeroAtStage2()
         {
@@ -608,4 +698,11 @@ namespace TacticalDirector.InjuriesMedical.Tests
 // | 1.2     | 2026-08-05 | —      | AR pass 4 (L): T-MD-MOD-001's second assertion had the computed    |
 // |         |            |        | value in NUnit's `expected` slot, so a failure would have reported |
 // |         |            |        | the two sides the wrong way round.                                 |
+// | 1.3     | 2026-08-05 | —      | AR pass 5 (M): + the daily-occurrence-probability characterization |
+// |         |            |        | driven through the real #29 -> #41 chain. Every other occurrence   |
+// |         |            |        | test here forces the outcome with a risk the producer cannot       |
+// |         |            |        | reach, so nothing measured what the wired system would do: a fresh |
+// |         |            |        | regen is 23% likely to be injured on day 0 and the DEFAULT focus   |
+// |         |            |        | converges on exactly 0 forever. Recorded, not retuned (KD-W1).     |
+// |         |            |        | (L): + the AssignRecoveryDays None-tier guard.                     |
 #endregion

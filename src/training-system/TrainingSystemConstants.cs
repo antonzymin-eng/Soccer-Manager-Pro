@@ -108,10 +108,9 @@ namespace TacticalDirector.TrainingSystem
         /// a player's robustness is priced into the occurrence probability twice and the two
         /// <c>[GT]</c> tables compose multiplicatively in effect. Each spec mandates its own term, so
         /// the duplication is spec-faithful rather than a defect — but it is a fact the balance pass
-        /// inherits, not one it should rediscover. Recorded under ERR-041-003 and pinned by
-        /// <c>MedicalStepTests.TrainingRiskFlowsFromTheProducerIntoTheOccurrenceRisk_TTMDFAT001</c>,
-        /// which asserts the consequence: #29's saturated maximum never reaches #41's ceiling, so
-        /// "maximum risk" here never means certain occurrence there.
+        /// inherits, not one it should rediscover. Recorded under <b>ERR-041-003</b>, and pinned by
+        /// assertion in #41's <c>MedicalStepTests</c>: #29's saturated maximum never reaches #41's
+        /// ceiling, so "maximum risk" here never means certain occurrence there.
         /// </para>
         /// Config key [training-system] RobustnessMitigationPerPoint.
         /// </summary>
@@ -184,4 +183,7 @@ namespace TacticalDirector.TrainingSystem
 // |         |            |        | checked for equality; it is now the sole owner of the scale.        |
 // |         |            |        | RobustnessMitigationPerPoint claimed #41's term was independently   |
 // |         |            |        | tuned — the two compound over the same attributes.                  |
+// | 1.2     | 2026-08-05 | —      | AR pass 5 (L): that same doc cited a test METHOD NAME in another    |
+// |         |            |        | assembly's suite — a rename restages the staleness pass 4 cleared.  |
+// |         |            |        | Cites the stable ERR id and the fixture instead.                    |
 #endregion

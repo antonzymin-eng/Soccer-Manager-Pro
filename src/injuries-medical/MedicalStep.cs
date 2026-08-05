@@ -69,6 +69,10 @@ namespace TacticalDirector.InjuriesMedical
         /// is non-positive (FR-MD-016 / F4); or <paramref name="worldDay"/> leaves a gap over the
         /// last-advanced day (F7) or is itself the never-advanced sentinel.
         /// </exception>
+        /// <exception cref="InvalidOperationException">
+        /// The draw denominator is not positive — propagated from <see cref="DrawOccurrence"/>; a
+        /// catalogue integrity failure, not a caller error.
+        /// </exception>
         public static void AdvanceMedicalDay(
             ref InjuryState state,
             int playerId,
@@ -269,8 +273,23 @@ namespace TacticalDirector.InjuriesMedical
         /// <param name="worldSeed">The career's world seed.</param>
         /// <param name="playerId">The player being evaluated.</param>
         /// <param name="actionOrdinal">The <c>(worldDay, purpose)</c> ordinal from <see cref="DeriveActionOrdinal"/>.</param>
+        /// <exception cref="InvalidOperationException">
+        /// <see cref="InjuriesMedicalConstants.OccurrenceDrawDenom"/> is not positive — a catalogue
+        /// integrity failure rather than a bad argument, and one only a config override can produce.
+        /// </exception>
         internal static int DrawOccurrence(ulong worldSeed, int playerId, ulong actionOrdinal)
         {
+            // The denominator is a [GT]-derived value and this is the one place it divides. Zero would
+            // throw on its own, but a NEGATIVE ceiling would not: the ulong cast turns it into ~2^64,
+            // the modulo becomes a no-op, and the int narrowing yields a signed garbage draw that the
+            // comparison downstream still happily classifies. #29 guards its own divisor for the same
+            // class of reason (§3.3), so refuse here rather than compute a plausible-looking wrong draw.
+            if (InjuriesMedicalConstants.OccurrenceDrawDenom <= 0)
+            {
+                throw new InvalidOperationException(
+                    "OccurrenceDrawDenom must be positive; it derives from the [GT] InjuryRiskMax ceiling (§3.4).");
+            }
+
             ulong h = Mix((ulong)InjuriesMedicalConstants.DomainTagInjuriesMedical ^ worldSeed);
             h = Mix(h ^ (ulong)(uint)playerId);
             h = Mix(h ^ actionOrdinal);
@@ -294,6 +313,7 @@ namespace TacticalDirector.InjuriesMedical
         /// <see cref="InjuriesMedicalConstants.OccurrenceDrawDenom"/> and no player is ever certain to
         /// be injured. Recorded under ERR-041-003 for the balance pass.
         /// </para>
+        /// </summary>
         /// <param name="attributes">The player's #27 attributes.</param>
         internal static int RobustnessMitigation(in PlayerAttributes attributes)
         {
@@ -310,10 +330,24 @@ namespace TacticalDirector.InjuriesMedical
         /// <c>Severity != None</c> — a direct F1 coherence breach written into the save.
         /// </para>
         /// </summary>
-        /// <param name="severity">The assigned severity tier.</param>
+        /// <param name="severity">The assigned severity tier; MUST NOT be <see cref="InjurySeverity.None"/>.</param>
         /// <param name="medical">The staff seam.</param>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// <paramref name="severity"/> is <see cref="InjurySeverity.None"/>. The floor below would turn
+        /// the None tier's 0 recovery-days into 1, inverting the very invariant it exists to protect:
+        /// <c>RecoveryRemaining == 1</c> with <c>Severity == None</c> is an F1 breach in the other
+        /// direction. Today the only caller passes a tier confirmed by
+        /// <see cref="ClassifySeverityFromDraw"/>, which never returns None; this keeps that true for
+        /// the next caller.
+        /// </exception>
         internal static int AssignRecoveryDays(InjurySeverity severity, in MedicalModifier medical)
         {
+            if (severity == InjurySeverity.None)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(severity), severity, "Recovery days are assigned only for a confirmed injury (F1).");
+            }
+
             long scaled = (long)InjuriesMedicalConstants.RecoveryDaysFor(severity)
                           * InjuriesMedicalConstants.MEDICAL_MODIFIER_IDENTITY_PERMILLE
                           / medical.RecoverySpeedMillMult;
@@ -441,4 +475,12 @@ namespace TacticalDirector.InjuriesMedical
 // |         |            |        | non-positive on both fields — a caller reading them would believe a |
 // |         |            |        | negative occurrence multiplier was accepted. RobustnessMitigation   |
 // |         |            |        | now states that it is the second term over #29's attributes.        |
+// | 1.3     | 2026-08-05 | —      | AR pass 5 (2L): DrawOccurrence refuses a non-positive denominator   |
+// |         |            |        | (zero threw on its own; a NEGATIVE ceiling did not — the ulong cast |
+// |         |            |        | made the modulo a no-op and yielded a signed garbage draw that      |
+// |         |            |        | still classified). AssignRecoveryDays refuses the None tier, whose  |
+// |         |            |        | 0 days the F1 floor would have raised to 1 against Severity None.   |
+// |         |            |        | Also repairs a REGRESSION shipped in v1.2: that pass appended a     |
+// |         |            |        | <para> to RobustnessMitigation's doc and dropped the closing        |
+// |         |            |        | </summary>, leaving malformed XML (CS1570 under a doc-file build).  |
 #endregion

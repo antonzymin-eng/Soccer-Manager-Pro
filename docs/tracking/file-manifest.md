@@ -1,7 +1,24 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 5, 2026, later same day (**The #29/#41 review's Low tier cleared — nine findings, no new
+**Last Updated:** August 5, 2026, later same day (**AR pass 5 over #29/#41 — 2 Medium, 3 Low. No new files.**
+**Modified:** `src/injuries-medical/tests/MedicalStepTests.cs` v1.3 (M-1 — + the daily-occurrence-probability
+characterization driven through the real #29 → #41 chain, and + the `AssignRecoveryDays` None-tier guard test.
+Every other occurrence test in that fixture forces the outcome with `InjuryRiskMax × 4`, a value the producer
+chain cannot reach, so nothing had measured what the wired system would do: a fresh regen is **23% likely to be
+injured on day 0**, half-fatigued is **43%/day**, and the **default Balanced focus converges on exactly 0
+forever**. Locked as the balance pass's before-numbers; not retuned, per KD-W1),
+`src/training-system/tests/TrainingStepTests.cs` v1.3 (M-2 — T-TR-NEU-001's assertion is itself vacuous, since
+`TrainingInput` is an empty struct; the v1.2 comment named that cause only for FR-TR-006, leaving KD-8
+behaviour-neutrality reading as locked when it is not), `src/injuries-medical/MedicalStep.cs` v1.3 (L —
+`DrawOccurrence` refuses a non-positive denominator, since a *negative* ceiling made the modulo a no-op and
+produced a signed garbage draw that still classified; `AssignRecoveryDays` refuses the `None` tier, whose 0 days
+the F1 floor would have raised to 1 against `Severity == None`), `src/training-system/TrainingSystemConstants.cs`
+v1.2 (L — a production doc cited a test method name in another assembly, restaging the staleness the prior pass
+cleared). `CLAUDE.md` OPEN ISSUES and `docs/tracking/CHANGELOG-src.md` v2.64 carry the recorded-not-fixed
+probability finding. **STILL NO GATE RUN** — no .NET SDK, installer blocked by network policy.)
+
+**Last Updated (prior):** August 5, 2026, later same day (**The #29/#41 review's Low tier cleared — nine findings, no new
 files, no deletions, and no behaviour change: every fix is a comment, an XML doc, a file header, a version-history
 row or an NUnit argument order.** Seven of the nine were stale claims left behind by the High/Medium fixes.
 **Modified:** `src/training-system/TrainingStep.cs` v1.2 and `src/training-system/TrainingSystemConstants.cs` v1.1

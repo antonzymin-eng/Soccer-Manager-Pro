@@ -184,14 +184,21 @@ namespace TacticalDirector.TrainingSystem.Tests
                     "with #29's own dial off, #28's growth must be byte-identical to the no-training path (KD-8).");
             }
 
-            // NOT TESTED, and deliberately not faked: FR-TR-006's field-independence invariant — that
-            // the slot-1 read touches only Focus/attributes/coach and never a field slot-2 mutates.
-            // #28's TrainingInput has no fields yet, so BOTH branches return Neutral and any comparison
-            // of two results is vacuously true no matter what the deep branch reads. A test shaped like
-            // that lock would enforce nothing while claiming the id. Nor is "ComputeTrainingInput does
-            // not mutate the state" worth asserting: the parameter is `in`, so the compiler already
-            // forbids it. The real lock lands with #29 T3, when BuildTrainingInput has an output that
-            // can differ.
+            // READ THE ASSERTION ABOVE AS A TYPE CHECK, NOT AS A LOCK. #28's TrainingInput is an EMPTY
+            // struct, so every instance of it is equal to every other and `AreEqual(Neutral, anything)`
+            // is true by construction — it cannot fail, and T-TR-NEU-001's behaviour-neutrality claim
+            // is therefore NOT enforced here. What the loop above does earn: it drives
+            // ComputeTrainingInput across all six focus ordinals and would catch a throw on a legal
+            // focus, and it becomes a real lock the moment TrainingInput gains its first field, with no
+            // edit. Saying which of those two it is matters, because behaviour-neutrality is the whole
+            // claim this T0 landing rests on.
+            //
+            // NOT TESTED for the same root reason, and deliberately not faked: FR-TR-006's
+            // field-independence invariant — that the slot-1 read touches only Focus/attributes/coach
+            // and never a field slot-2 mutates. Both branches return Neutral, so no comparison of two
+            // results can observe what the deep branch reads. Nor is "ComputeTrainingInput does not
+            // mutate the state" worth asserting: the parameter is `in`, so the compiler already forbids
+            // it. Both real locks land with #29 T3, when the output can differ.
         }
 
         [Test]
@@ -377,4 +384,10 @@ namespace TacticalDirector.TrainingSystem.Tests
 // |         |            |        | tautological in its turn (`in` forbids the mutation it asserted    |
 // |         |            |        | against), leaving only the comment naming what cannot yet be       |
 // |         |            |        | tested. Corrected by appending, not by editing the row.            |
+// | 1.3     | 2026-08-05 | —      | AR pass 5 (M): T-TR-NEU-001's own assertion is vacuous for the     |
+// |         |            |        | same root cause the v1.2 row gave for FR-TR-006 — TrainingInput is |
+// |         |            |        | an EMPTY struct, so AreEqual(Neutral, anything) cannot fail — and  |
+// |         |            |        | the comment named only the second half, leaving a reader to think  |
+// |         |            |        | KD-8 behaviour-neutrality was locked. It is not, and it is the     |
+// |         |            |        | claim this whole T0 landing rests on.                              |
 #endregion
