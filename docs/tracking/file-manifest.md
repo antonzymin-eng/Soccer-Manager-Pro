@@ -1,7 +1,21 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 5, 2026, latest same day (**ERR-008-019 — the #8 §3.2.3.1 midfield
+**Last Updated:** August 5, 2026, even later same day (**ERR-008-019 owner revision — the
+long-shot ramp widened to the full attribute range. No new files.** **Modified:**
+`src/decision-tree/UtilityWeights.cs` v1.9 (`LONG_SHOT_RAMP_HALF_WIDTH` 0.05 → 0.25 — full-range;
+raw 1 exactly SHORT, raw 20 exactly LONG, no plateaus; P5 mean preserved),
+`src/decision-tree/UtilityScorer.cs` v1.15 (comment only), `src/decision-tree/Tests/
+UtilityScorerTests.cs` v1.9 (shifted-form lock refitted to raw 10; endpoints-exact +
+strictly-monotone replaces the plateau lock), `docs/specs/decision-tree/section-3-2-3-to-3-2-9.md`
+(constants block, correction note, §3.2.3.4 full-range derivation, Case B recomputed 0.200 →
+0.162), `docs/specs/decision-tree/section-3-2.md` v1.10 (footnote ¹ + §3.2.13 row),
+`docs/tracking/spec-error-log.md` v1.62 (owner-revision note + index row), review file /
+`open-issues.md` / `CLAUDE.md` entries amended, `docs/tracking/CHANGELOG.md`,
+`docs/tracking/CHANGELOG-src.md` v2.71, `README.md`. Still digest-invariant (only raw 20 reaches a
+MIDFIELD SHOOT; there ramp = step). **No gate run — no .NET SDK in the authoring environment.**)
+
+**Last Updated (prior):** August 5, 2026, latest same day (**ERR-008-019 — the #8 §3.2.3.1 midfield
 long-shot cliff → linear ramp (judgment-proxy doctrine P1/P5). No new files.** **Modified:**
 `src/decision-tree/UtilityScorer.cs` v1.14 (MIDFIELD `ScoreShoot` branch: `Lerp`/`InverseLerp` ramp
 over the shifted form), `src/decision-tree/UtilityWeights.cs` v1.8 (+ `[GT]

@@ -14,7 +14,22 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** August 5, 2026, latest same day (v2.70 — **ERR-008-019: the #8 midfield
+> **Last Updated:** August 5, 2026, even later same day (v2.71 — **ERR-008-019 owner revision:
+> the long-shot ramp goes full-range.** `UtilityWeights.cs` v1.9: `LONG_SHOT_RAMP_HALF_WIDTH`
+> 0.05 → 0.25 (its maximum valid value — the ramp spans the whole shifted domain [0.5, 1.0], so
+> `t` reduces to `A_LongShots`: raw 1 exactly SHORT, raw 20 exactly LONG, ≈ 0.026 per raw point,
+> no plateaus; uniform-population mean stays 0.30, so the P5 pivot holds). `UtilityScorer.cs`
+> v1.15 (comment only — the formula is unchanged). `Tests/UtilityScorerTests.cs` v1.9: M-4 lock
+> refitted to `ShootMidfield_RampRunsInShiftedForm` (raw 10 computed ratio — the raw-form defect
+> suppresses raw 10 to SHORT, so the discrimination intent survives);
+> `ShootMidfield_FullRangeRamp_EndpointsExact_AndStrictlyMonotone` replaces the v1.8
+> plateau-equality lock (raw 1/20 reproduce the old SHORT/LONG pair; every intermediate point
+> STRICTLY increases); no-cliff and midpoint locks unchanged. Digest-invariant in tighter form:
+> only raw 20 can generate a MIDFIELD SHOOT (35.0 m vs ≥ ~34.5 m needed) and there ramp = step.
+> **No gate run: no .NET SDK in the authoring environment; CI compiles on push.** Prior entry
+> below.)
+
+> **Last Updated (prior):** August 5, 2026, latest same day (v2.70 — **ERR-008-019: the #8 midfield
 > long-shot cliff is a ramp.** `UtilityScorer.cs` v1.14: `ScoreShoot`'s `FieldZone.MIDFIELD` branch
 > replaces the hard ternary — `SHOOT_ZONE_MID_LONG` strictly above `LONG_SHOT_THRESHOLD`, `_SHORT`
 > at/below, an 11× step across one raw LongShots point — with
@@ -1663,6 +1678,7 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.71 | 2026-08-05 | —      | **ERR-008-019 owner revision: full-range ramp.** `UtilityWeights.cs` v1.9 (`LONG_SHOT_RAMP_HALF_WIDTH` 0.05 → 0.25 — the ramp spans the whole attribute; raw 1 exactly SHORT, raw 20 exactly LONG, ≈ 0.026/point, no plateaus; P5 mean 0.30 preserved), `UtilityScorer.cs` v1.15 (comment only), `Tests/UtilityScorerTests.cs` v1.9 (shifted-form lock at raw 10; endpoints-exact + strictly-monotone replaces the plateau lock; no-cliff + midpoint unchanged). Digest-invariant: only raw 20 reaches a MIDFIELD SHOOT and there ramp = step. **No gate run — no .NET SDK.** |
 | 2.70 | 2026-08-05 | —      | **ERR-008-019 (judgment-proxy doctrine P1/P5): the #8 §3.2.3.1 midfield long-shot cliff → linear ramp.** `UtilityScorer.cs` v1.14 (`ScoreShoot` MIDFIELD branch: `Lerp`/`InverseLerp` ramp over the shifted form, replacing the 11×-step ternary), `UtilityWeights.cs` v1.8 (+ `[GT] LONG_SHOT_RAMP_HALF_WIDTH` = 0.05; `LONG_SHOT_THRESHOLD` redocumented as ramp centre, value unchanged), `Tests/UtilityScorerTests.cs` v1.8 (4 new locks — no-cliff raw 10 vs 11, exact SHORT/LONG midpoint at the centre (P5 pivot), endpoint clamps, monotone raw 1–20 — and the AR-2 M-4 lock refitted raw 12 → 14). Branch production-unreachable through the §3.1.4 generator (ERR-008-017) ⇒ no digest moves; no schema/RNG/domain-tag/draw-site/draw-order change. **No gate run — no .NET SDK in the authoring environment.** |
 | 2.69 | 2026-08-05 | —      | **#29/#41 GATE RUN — PASSED, first compile of both assemblies.** PR #299, CI run 394, head `ddbbe58`. Build 0 errors (5 warnings). `TrainingSystem.Tests` **27/27**, `InjuriesMedical.Tests` **40/40**, 0 skipped in either; whole-tree gate PASSED, quarantine empty, `MatchEngine.Tests` 420/430 unchanged. Retires the "no gate run" caveat on v2.65–v2.68 and turns five review passes' "the suite locks X" claims — all written against never-compiled code — into execution-verified ones. **No fix was needed to get green:** zero compile errors, zero failures, first run. Confirms specifically: Appendix B day by day, #41 §3.6 term by term, keyed-draw separation, and AR pass 5's hand-computed occurrence-probability literals (231/0/431 per-mille) — derived in Python against an uncompilable tree, now agreed by the compiler, so the balance-pass baseline is real. Authoring environment still has no .NET SDK (installer still 403 at the proxy, re-checked); CI remains the only compiler. |
 | 2.68 | 2026-08-05 | —      | **AR pass 5 over #29/#41 — 2 Medium, 3 Low.** M-1 `MedicalStepTests.cs` v1.3: nothing measured the daily occurrence PROBABILITY the wired system would produce, because every occurrence test forces the outcome with a risk the producer chain cannot reach (`InjuryRiskMax × 4`; #29 clamps at the ceiling and #41 subtracts again). Driven end to end at today's `[GT]`s: a fresh regen is **23% likely to be injured on day 0**, half-fatigued is **43%/day**, and the **default Balanced focus converges on exactly 0 forever** (its load equals `FatigueDailyRecovery`, so fatigue never accrues and the conditioning shortfall reaches zero). Two to three orders of magnitude out at both ends. Not retuned — inert subsystem, KD-W1 — so the numbers are locked by a characterization test and the rescaling lever (the shared `InjuryRiskMax` ceiling) is named. M-2 `TrainingStepTests.cs` v1.3: T-TR-NEU-001's own assertion is vacuous — `TrainingInput` is an empty struct — and the v1.2 comment named that cause only for FR-TR-006, so KD-8 behaviour-neutrality read as locked when it is not. Lows: `MedicalStep.cs` v1.3 (`DrawOccurrence` refuses a non-positive denominator — a *negative* ceiling made the modulo a no-op and yielded a signed garbage draw that still classified; `AssignRecoveryDays` refuses the `None` tier, whose 0 days the F1 floor would raise to 1 against `Severity == None`), `TrainingSystemConstants.cs` v1.2 (a production doc cited a test method name in another assembly). **No gate run: no .NET SDK, installer blocked by network policy.** |

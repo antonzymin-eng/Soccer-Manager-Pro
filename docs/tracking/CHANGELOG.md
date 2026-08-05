@@ -12,7 +12,29 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 5, 2026, latest same day (**ERR-008-019 LANDED — the second fix under the
+> **Last Updated:** August 5, 2026, even later same day (**ERR-008-019 owner revision — the
+> long-shot ramp widened to the FULL attribute range.** The owner directed the scaling to run
+> over the whole LongShots range, not the initial 8–13 band; the metres-based §3.1.4.2 range
+> gate already scales raw 1–20, so the instruction lands on the §3.2.3.1 zone-modifier ramp.
+> One `[GT]` value: `LONG_SHOT_RAMP_HALF_WIDTH` 0.05 → **0.25**, its maximum valid value — the
+> ramp spans the whole shifted domain [0.5, 1.0] and `t` reduces to `A_LongShots` exactly.
+> Raw 1 is exactly 0.05, raw 20 exactly 0.55, and every raw point between moves the modifier
+> ≈ 0.026: **no plateau anywhere**. P5 survives the revision (the midpoint stays at the old
+> cliff and the uniform-population mean is 0.30 under the step, the narrow ramp, and the full
+> ramp alike), and so does digest invariance, in tighter form: the full ramp differs from the
+> step at every rating except raw 20 — and raw 20 (range 35.0 m) is the only rating whose
+> range gate reaches the ≥ ~34.5 m a MIDFIELD SHOOT requires (raw 19 caps at 34.2 m), where
+> the ramp equals the step. **Still no digest moves.** Spec: §3.2.3.1 constants + note,
+> §3.2.3.4 re-derived, Case B recomputed 0.200 → 0.162, `section-3-2.md` v1.10 footnote.
+> Code: `UtilityWeights.cs` v1.9 (the value), `UtilityScorer.cs` v1.15 (comment only — the
+> formula was built for this). Tests v1.9: the M-4 lock is now
+> `ShootMidfield_RampRunsInShiftedForm` (raw 10 computed ratio; the raw form suppresses raw 10
+> to SHORT) and `ShootMidfield_FullRangeRamp_EndpointsExact_AndStrictlyMonotone` replaces the
+> plateau-equality assertions, which were the exact opposite of the owner's instruction.
+> `spec-error-log.md` v1.62. **Gate NOT run — no .NET SDK in the authoring environment; CI
+> compiles on push.** Prior entry below.)
+
+> **Last Updated (prior):** August 5, 2026, latest same day (**ERR-008-019 LANDED — the second fix under the
 > football-judgment remediation doctrine, closing the review's founding finding.** #8 §3.2.3.1's
 > midfield `ZoneModifier_SHOOT` was a hard step on shifted LongShots — 0.55 strictly above
 > `LONG_SHOT_THRESHOLD`, 0.05 at or below, an **11× jump across one raw attribute point** — the

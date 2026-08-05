@@ -1,7 +1,17 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** August 5, 2026 (**ERR-008-019 — the second fix under the football-judgment
+**Last Updated:** August 5, 2026, later same day (**ERR-008-019 owner revision — every Long Shots
+point now matters for midfield shooting.** At owner direction, the just-landed ramp widened from
+its initial 8–13 band to the full 1–20 attribute range: a rating of 1 keeps the full suppression,
+20 the full long-shot modifier, and every point in between moves the willingness smoothly — no
+plateaus. One tunable changed (`LONG_SHOT_RAMP_HALF_WIDTH` to its maximum 0.25); the formula, the
+midpoint anchor, and the population-average balance are untouched, and the change still moves no
+match digests (only a maximum-rated shooter can even generate a midfield shot, and for him the
+ramp equals the old value). Gate not runnable in the authoring environment; CI runs it on push.
+Prior entry below.)
+
+**Last Updated (prior):** August 5, 2026 (**ERR-008-019 — the second fix under the football-judgment
 remediation doctrine, and the closing of the review's founding finding.** Decision Tree #8
 §3.2.3.1's midfield long-shot gate — the original "11× jump for a 1-point attribute difference"
 cliff the whole judgment-proxy review was named after, whose earlier "FIXED" record proved false —

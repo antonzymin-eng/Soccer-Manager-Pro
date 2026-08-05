@@ -5,6 +5,7 @@
 // Modified: 2026-07-28 (ERR-008-017 — ScoreShoot gains the DistanceQuality_SHOOT term (shot-volume design KD-V2/KD-V3))
 // Modified: 2026-08-04 (ERR-008-018 — ScoreDribble gains the DirectionQuality_DRIBBLE term (close-chance-creation design KD-CC2))
 // Modified: 2026-08-05 (ERR-008-019 — ScoreShoot midfield long-shot gate: hard threshold → linear ramp (judgment-proxy doctrine P1/P5))
+// Modified: 2026-08-05 (ERR-008-019 owner revision — comment updated for the full-range half-width; formula unchanged)
 // Author:   —
 // Spec:     Decision Tree #8 §3.2, §3.4, new §3.2/§7.7, Tactical Instructions #21 §3.2, Code Standards #20
 // Purpose:  Step 4 of the 6-step pipeline. Applies the utility scoring model to each
@@ -188,10 +189,11 @@ namespace TacticalDirector.DecisionTree
                 // _SHORT at or below it — stepped the zone modifier 11× (0.05 → 0.55) across one
                 // raw LongShots point. Now a linear ramp in the SHIFTED form (0.5 + A × 0.5 —
                 // AR-2 M-4's correction still applies), centred on the old threshold with
-                // half-width LONG_SHOT_RAMP_HALF_WIDTH, so the endpoints and the population-
-                // integrated modifier reproduce the old behaviour (P5 pivot): full _SHORT at
-                // raw ≤ 8, full _LONG at raw ≥ 13, the exact SHORT/LONG midpoint at the old
-                // cliff position.
+                // half-width LONG_SHOT_RAMP_HALF_WIDTH. At the owner-directed full-range value
+                // (0.25) the ramp spans the whole attribute: raw 1 is exactly _SHORT, raw 20
+                // exactly _LONG, and every raw point in between moves the modifier ≈ 0.026 —
+                // no plateaus. The exact SHORT/LONG midpoint sits at the old cliff position,
+                // so the uniform-population mean reproduces the old step's (P5 pivot).
                 float shifted = 0.5f + ctx.A_LongShots * 0.5f;
                 float t = Mathf.InverseLerp(
                     UtilityWeights.LONG_SHOT_THRESHOLD - UtilityWeights.LONG_SHOT_RAMP_HALF_WIDTH,
@@ -546,4 +548,8 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   the hard LONG_SHOT_THRESHOLD step that jumped the modifier 11× across     |
 // |         |            |        |   one raw attribute point. Ramp centred on the old cliff: endpoints and     |
 // |         |            |        |   the population-integrated modifier reproduce the old behaviour (P5).      |
+// | 1.15    | 2026-08-05 | —      | ERR-008-019 owner revision (comment only — the formula is unchanged): the   |
+// |         |            |        |   half-width [GT] moved to the full-range 0.25, so the branch comment now   |
+// |         |            |        |   describes the plateau-free full-attribute ramp rather than the 8.6–12.4   |
+// |         |            |        |   band.                                                                     |
 #endregion
