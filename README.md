@@ -1,7 +1,21 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** August 4, 2026 (**ERR-008-020 — the first fix under the football-judgment
+**Last Updated:** August 5, 2026 (**ERR-008-019 — the second fix under the football-judgment
+remediation doctrine, and the closing of the review's founding finding.** Decision Tree #8
+§3.2.3.1's midfield long-shot gate — the original "11× jump for a 1-point attribute difference"
+cliff the whole judgment-proxy review was named after, whose earlier "FIXED" record proved false —
+is now a linear ramp in the same shifted attribute form, centred on the old threshold so endpoints
+and the population-integrated modifier are preserved (doctrine P1/P5; spec, code, ERR entry and
+five test locks in one commit; the soft-reserved id re-verified free at landing). The branch is
+production-unreachable in the only band the fix changes (the ramp differs from the old step only
+for LongShots values whose own range gate keeps the shooter ~5 m short of any midfield shot), so
+no digest moves; the fix lands anyway because a wrong-shaped model cannot be repaired by later
+tuning. Review tally: 2 fixed, 32 open.
+Gate not runnable in the authoring environment (no .NET SDK); CI runs it on push. Prior entry
+below.)
+
+**Last Updated (prior):** August 4, 2026 (**ERR-008-020 — the first fix under the football-judgment
 remediation doctrine.** The new `docs/tracking/football-judgment-proxy-review.md` swept all 53
 APPROVED specs for continuous football judgments collapsed into thresholds or bare geometry — 34
 findings across 24 specs — and its owner-converged §6 doctrine (P1 continuous-never-cliff, P2 skill

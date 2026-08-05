@@ -6,8 +6,10 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 1.60
-**Updated:** August 5, 2026 (v1.60 — **ERR-041-001, ERR-041-002 and ERR-041-003 are now EXECUTION-VERIFIED.** All three were filed and resolved against code that had never been compiled; PR #299's gate run (CI 394, head `ddbbe58`) compiled both assemblies for the first time and ran their suites: `TrainingSystem.Tests` 27/27, `InjuriesMedical.Tests` 40/40, 0 skipped in either, whole-tree gate PASSED with an empty quarantine, and **no fix was needed to reach green**. That matters most for **ERR-041-002**, whose resolution replaced #41 §3.1's non-existent `rng.DrawKeyed` call with a local keyed SplitMix64 derivation: the draw-separation locks (adjacent player ids, adjacent world days, adjacent seeds) had never been executed, and the whole KD-1 position-independence argument rested on them. They pass. **ERR-041-001**'s `DOMAIN_TAG_INJURIES_MEDICAL = 0x2A` is verified distinct from all 15 other allocations, and **ERR-041-003**'s `[CROSS]` mirror compiles as a mirror rather than a second config key. Also now executed: #41 §3.6's worked example term by term, #29 Appendix B day by day, and the AR-5 occurrence-probability baseline (231/0/431 per-mille) whose literals had been hand-derived in Python against an unbuildable tree — the compiler agrees, so the recorded balance-pass numbers are real. No FR text change, no format-version change, no new entry. Prior entry below.)
+**Version:** 1.61
+**Updated:** August 5, 2026 (v1.61 — **ERR-008-019 filed + RESOLVED: the second fix under the football-judgment proxy review's remediation doctrine, and the closing of the review's founding finding.** #8 §3.2.3.1's midfield `ZoneModifier_SHOOT` was a hard step on shifted LongShots — 0.55 strictly above `LONG_SHOT_THRESHOLD`, 0.05 at or below it, an **11× jump across one raw attribute point** — the original pattern-(b) instance the whole review was named after, whose prior "FIXED … gate green" record was verified false at the ERR-008-020 landing (no log entry, cliff live, no branch carrying a fix); the id was soft-reserved there and re-verified free at this landing as required. Fixed per doctrine P1/P5: a linear ramp in the unchanged shifted form, centred on the old threshold with new `[GT] LONG_SHOT_RAMP_HALF_WIDTH` = 0.05 — full suppression at raw ≤ 8, full long-shot modifier at raw ≥ 13, the exact SHORT/LONG midpoint at the old cliff, so endpoints and the population-integrated modifier reproduce the old behaviour (the ERR-008-020 centred-ramp precedent, locked by test). P2/P3 deliberately out of scope: long-shot inclination is the shooter's own execution capability, not a recognition judgment — no fidelity term, no new attribute, no double-count. **The branch is production-unreachable in the only band the fix changes** (the ramp differs from the old step only at A_LongShots ≤ 0.6, whose §3.1.4.2 range gate caps at 29.0 m, while a generator-reachable MIDFIELD SHOOT needs ≥ ~34.5 m of range — disjoint bands, so no generated option ever scores differently; ERR-008-017's stale "≥ 40 m" reachability figure — pre-ERR-008-016 zone geometry — corrected in passing), so the cliff was latent and **no digest moves on any seed** — landed anyway per the standing wrong-shaped-model posture; the ramp goes live if the range gate or zone geometry ever changes. §3.2.3.4 item 2 re-derived as the ramp bands; Case B unchanged (past the ramp end). 4 new `UtilityScorerTests` locks + the AR-2 M-4 lock refitted raw 12 → raw 14 (mid-ramp now; raw 14 still discriminates shifted vs raw form). **Gate NOT run — no .NET SDK in the authoring environment.** Prior entry below.)
+
+**Updated (prior):** August 5, 2026 (v1.60 — **ERR-041-001, ERR-041-002 and ERR-041-003 are now EXECUTION-VERIFIED.** All three were filed and resolved against code that had never been compiled; PR #299's gate run (CI 394, head `ddbbe58`) compiled both assemblies for the first time and ran their suites: `TrainingSystem.Tests` 27/27, `InjuriesMedical.Tests` 40/40, 0 skipped in either, whole-tree gate PASSED with an empty quarantine, and **no fix was needed to reach green**. That matters most for **ERR-041-002**, whose resolution replaced #41 §3.1's non-existent `rng.DrawKeyed` call with a local keyed SplitMix64 derivation: the draw-separation locks (adjacent player ids, adjacent world days, adjacent seeds) had never been executed, and the whole KD-1 position-independence argument rested on them. They pass. **ERR-041-001**'s `DOMAIN_TAG_INJURIES_MEDICAL = 0x2A` is verified distinct from all 15 other allocations, and **ERR-041-003**'s `[CROSS]` mirror compiles as a mirror rather than a second config key. Also now executed: #41 §3.6's worked example term by term, #29 Appendix B day by day, and the AR-5 occurrence-probability baseline (231/0/431 per-mille) whose literals had been hand-derived in Python against an unbuildable tree — the compiler agrees, so the recorded balance-pass numbers are real. No FR text change, no format-version change, no new entry. Prior entry below.)
 
 **Updated (prior):** August 5, 2026 (v1.59 — **ERR-041-003 filed + RESOLVED at #41 T0's adversarial review**, and it is the third entry in this log found by *reviewing* code rather than by writing it. #41 Appendix A tags `INJURY_RISK_MAX` `[GT]` — an independently tunable value with its own config key — while §3.4 requires it to be the *same scale* as #29's `RiskScore` and derives the draw denominator from it. Both cannot hold, and the T0 landing implemented both rows literally: two config keys (`[training-system]` and `[injuries-medical]`) for one contract value, guarded by an equality test that was **vacuous under the only conditions it runs in** (the gate leaves `GameplayConfigHolder` unbound, so both sides return their fallback and the assertion passes whatever a config says). Resolved by re-tagging #41's row `[CROSS]` and mirroring #29's — the ERR-037-001 posture. **Recorded, not fixed:** the two specs mitigate on the same three physical attributes, so robustness is priced in twice across the layers and #29's maximum risk never means certain occurrence at #41; pinned as an explicit test assertion for the balance pass. The same review pass fixed two code defects that needed no ERR because no spec text was wrong — a `MedicalModifier` gate that caught only zero and not negative multipliers (a negative one silently disables injuries or one-days a Serious injury), and an F1 coherence check that structurally could not see a negative `RecoveryRemaining` — plus four tests that could not fail. Prior entry below.)
 
@@ -183,6 +185,7 @@ authoritative remediation backlog.
 | ERR-020-003 | Code Standards #20 §3.5.2 draws the layer rule as `Physics ──► Mechanics ──► AI ──► UI`, while the root `CLAUDE.md` states the same rule as **AI → Mechanics → Physics, never the reverse**. The arrows point opposite ways. Both are defensible readings of their own notation (#20's arrow = "is available to"; CLAUDE.md's = "may reference"), and neither states which it means, so the two authoritative statements of the project's single most load-bearing architectural rule read as contradictory. | Low | 2 | 🟡 **Open — filed August 2, 2026.** Proposed fix: label the arrow in #20 §3.5.2 explicitly (`──► reads "may be referenced by"`) and add the reference-direction sentence verbatim beneath the diagram, so the two files state the rule in the same words. No behaviour change; the rule itself is not in dispute. |
 | ERR-041-002 | Injuries & Medical #41, found at **T0 implementation**: `section-2.md` §2.2 and `section-3.md` §3.1 specify the occurrence draw as `rng.DrawKeyed(STREAM_INJURIES_OCCURRENCE, entityId: playerId, actionOrdinal: …, drawIndex: 0)` against a `DeterministicRngService` parameter. **No such API exists.** #16's service exposes only the branch-safe reservation trio (`Reserve` / `DrawReserved` / `CloseReservation` / `Skip`), whose draw value is keyed on an `ActionOrdinal` the service itself increments inside `Reserve` — there is no overload that accepts a caller-supplied action ordinal, and the field is private. So the signature cannot be implemented, and the one shape that could be (register a stream, then `Reserve`/`DrawReserved` per player-day) is **cursor-positioned**, which §3.1/KD-1 of the same spec forbids: the whole design rests on the draw being reproducible from `(playerId, worldDay, purpose)` alone so that FR-MD-007 can serialize no cursor at all. The same §4-architecture-sketch-contradicts-another-section class as ERR-030-012 / ERR-037-001 / ERR-038-002. | Low | 2 | ✅ Resolved August 5, 2026 at #41 T0 — **KD-1's keyed requirement wins; the `DrawKeyed` call is the defect.** The draw is realized as a local keyed derivation (`MedicalStep.DrawOccurrence`): `DomainTagInjuriesMedical` folded in first, then `playerId`, then the `(worldDay, purpose)` action ordinal, each through a SplitMix64 finalizer, reduced into `[0, OccurrenceDrawDenom)`. This is the #30 `RoundResolutionModel.FixtureKey` / `LeagueBootstrap` precedent — the project's established way to take a position-independent draw — and it satisfies FR-MD-005/006/007 in substance: domain-separated, keyed, and with nothing to persist. Consequences: `AdvanceMedicalDay` takes `ulong worldSeed` in place of the `DeterministicRngService rng` parameter (the seed is the only service input a keyed draw needs, and it is already readable from `WorldStore.WorldSeed` per roadmap A3), and no stream is registered — so FR-MD-027's stream-independence property holds vacuously rather than by test. Locked by `MedicalStepTests.Draw_IsPositionIndependent_TTMDDET003` and `TwoPlayersOnTheSameDay_DoNotInfluenceEachOther`. §2.2/§3.1 signatures to be re-anchored at the next #41 revision; no FR text change, no format-version change, no `DETERMINISM_DIGEST_VERSION` bump. |
 | ERR-041-003 | Injuries & Medical #41, found at **T0 adversarial review**: Appendix A tags `INJURY_RISK_MAX` **`[GT]`** in #41's own catalogue, while §3.4 requires the assembled risk to be on **the same scale** as #29's `InjuryRiskContribution.RiskScore` (it passes through with weight 1) and derives `OCCURRENCE_DRAW_DENOM` from it, so the draw is taken on that scale too. Both cannot hold. A `[GT]` row means an independently tunable value with its own config key — `[injuries-medical] InjuryRiskMax` alongside #29 Appendix A's `[training-system] InjuryRiskMax` — and setting one without the other silently rescales every occurrence probability while #29's clamped maximum quietly stops meaning "certain occurrence", with nothing in either system able to notice. The T0 landing initially implemented both rows literally and added an equality test between them, which made it worse rather than better: the gate runs with `GameplayConfigHolder` unbound, so both sides returned their design-time fallback and the assertion passed no matter what a config file said — a lock wired to nothing. Same class as ERR-037-001 (a tag and an architecture list that cannot both be honoured). | Low | 2 | ✅ Resolved August 5, 2026 at #41 T0 (AR pass 1) — **§3.4's shared-scale requirement wins; the `[GT]` tag is the defect.** `InjuriesMedicalConstants.InjuryRiskMax` moves to the `Cross` region as `[CROSS: #29 Appendix A]`, mirroring `TrainingSystemConstants.InjuryRiskMax` directly (the single-consumer routing rule — mirror the source spec's catalogue, not `ProjectConstants`). One owner, one config key; the mirror-fidelity test now holds by construction, which is the point of the `[CROSS]` tag rather than a weakness of the test. `OccurrenceDrawDenom` stays `[DERIVED]` off the mirror and remains a property rather than a field, since a `Derived`-region field would initialise before the `Cross`-region field it reads and silently capture 0. #41's Appendix A row to be re-tagged `[CROSS]` at the next #41 revision. **Recorded, not fixed (a balance decision, not a defect):** both specs mandate their own robustness mitigation over the same three #27 physical attributes (#29 §3.4 and #41 §3.4/FR-MD-015), so a player's robustness is priced in twice and #29's saturated maximum can never reach #41's ceiling — pinned as an explicit assertion in `MedicalStepTests` so the balance pass inherits the fact rather than rediscovering it. No FR text change, no format-version change. |
+| ERR-008-019 | Decision Tree #8 §3.2.3.1 — the midfield `ZoneModifier_SHOOT` was a hard step on one attribute: 0.55 strictly above `LONG_SHOT_THRESHOLD` (shifted LongShots), 0.05 at/below — an **11× jump across one raw attribute point** (10 → 11). The football-judgment proxy review's *founding* pattern-(b) finding, and the id whose original "FIXED" record was verified false at the ERR-008-020 landing (soft-reserved since; re-verified free here). | Moderate | 4 | ✅ **Resolved August 5, 2026** (spec §3.2.3.1/§3.2.3.4 + `UtilityScorer`/`UtilityWeights`, same commit; doctrine P1/P5) — linear ramp in the unchanged shifted form, centred on the old threshold with new `[GT] LONG_SHOT_RAMP_HALF_WIDTH` = 0.05: full 0.05 at raw ≤ 8, full 0.55 at raw ≥ 13, exact midpoint at the old cliff (P5 pivot, locked by test). Branch is production-unreachable in the only band the fix changes (the ramp differs from the old step only at A_LongShots ≤ 0.6, whose §3.1.4.2 range gate caps at 29.0 m, while a generator-reachable MIDFIELD SHOOT needs ≥ ~34.5 m of range — disjoint bands, so no generated option ever scores differently) ⇒ **no digest moves**; 4 new + 1 refitted `UtilityScorerTests` locks. **Gate NOT run — no .NET SDK in the authoring environment.** |
 
 ---
 
@@ -2432,6 +2435,82 @@ every contact resolves to exactly one ball-side action). Measured effect, three 
 same seeds: goals **15 → 11** over the corpus (5.0 → **3.7**/match, the closest this engine has
 measured to football's ~2.7), scorelines 2-2 / 2-0 / 6-3 → **1-0 / 2-2 / 4-2**, goals-after-contact
 share 93% → 36%.
+
+---
+
+## ERR-008-019: Decision Tree #8 §3.2.3.1 — the midfield long-shot gate jumped 11× across one raw attribute point
+
+**Filed:** August 5, 2026 — the second fix landed under the football-judgment proxy review's
+remediation doctrine (`football-judgment-proxy-review.md` §6; doctrine P1/P5 are the fix's design
+authority). **Status: RESOLVED** (same commit). Owner doc: `docs/tracking/football-judgment-proxy-review.md`
+(§2 finding; this is the review's *founding* instance — the pattern the whole sweep was named after).
+
+**Id provenance.** `ERR-008-019` was soft-reserved at the ERR-008-020 landing after that landing
+verified the review's original "FIXED … gate green" claim for this finding was **false against both
+branches** (no log entry, cliff live in `UtilityWeights.cs` / `UtilityScorer.cs` /
+`section-3-2-3-to-3-2-9.md`, no branch carrying a fix — the root `CLAUDE.md` fabricated-claims
+trap). Re-verified free at this landing as required: zero `## ERR-008-019` entries in this log and
+zero citations in `docs/specs/` before this commit.
+
+**How found.** By review, not measurement: the original judgment-proxy review pass over #8.
+Structural property, read directly from spec + code: §3.2.3.1's midfield branch of
+`ZoneModifier_SHOOT` was a hard step — `SHOOT_ZONE_MID_LONG` (0.55) strictly above
+`(0.5 + A_LongShots × 0.5) > LONG_SHOT_THRESHOLD` (0.75), `SHOOT_ZONE_MID_SHORT` (0.05) at or
+below it — verified against `UtilityScorer.ScoreShoot` (the ternary at the `FieldZone.MIDFIELD`
+branch). One raw LongShots point (10 → 11, shifted 0.737 → 0.763) stepped the zone modifier
+**11×**: the pattern-(b) shape (a continuous football judgment — "is this a viable long-shot
+position for *me*?" — collapsed into a single-attribute cliff). No measurement instrument was
+required (or possible for this branch — see the reachability note below).
+
+**Fix (spec + code, same commit).** §3.2.3.1's midfield branch rewritten to a linear ramp in the
+unchanged shifted form: `zoneM = lerp(SHORT, LONG, t)`,
+`t = clamp01((shifted − (THRESHOLD − HW)) / (2 × HW))` with new
+`[GT] LONG_SHOT_RAMP_HALF_WIDTH` = 0.05 (shifted units; valid range (0, 0.25]):
+
+- **Ramp (doctrine P1):** full `SHORT` at raw ≤ 8, full `LONG` at raw ≥ 13, largest per-raw-point
+  step ≈ 0.13 zone units — a 1-point attribute difference can never flip the outcome discretely.
+- **Pivot (doctrine P5):** the ramp is centred on the old threshold — at exactly 0.75 shifted the
+  modifier is the exact SHORT/LONG midpoint, the endpoints reproduce the old constants, and the
+  population-integrated modifier over a uniformly distributed attribute equals the old step's
+  (the ERR-008-020 centred-ramp precedent). Locked by test.
+- **Scope (doctrine P2/P3 deliberately not applied):** long-shot inclination is the shooter's own
+  execution capability, not a recognition of an external situation, so no fidelity term and no new
+  attribute enters; `A_LongShots` continues to enter SHOOT in exactly its existing places (this
+  zone modifier + the §3.1.4.2 range gate — no double-count introduced).
+- §3.2.3.4 item 2 re-derived as the ramp bands (superseding the "effective raw ≥ 11" hard-threshold
+  derivation, retained in history); §3.2.3.3 Case B (LongShots=16, shifted 0.895 ≥ the 0.80 ramp
+  end) is past the ramp and its arithmetic is unchanged; `section-3-2.md` §3.2.1.3 footnote ¹
+  updated; the AR-2 M-4 rule (compare the SHIFTED form, never the raw form) applies verbatim to
+  the ramp input.
+
+**Reachability (recorded, load-bearing for the impact claim — and the precise argument, which
+is tighter than ERR-008-017's).** ERR-008-017 recorded this branch as generator-unreachable via
+"a MIDFIELD-zone ball sits ≥ 40 m from the goal" — **that figure was stale when written**: the
+ERR-008-016 equal-thirds correction (two days earlier) moved the ATTACKING boundary to 70 m, so a
+MIDFIELD ball is > 35 m from the goal line, and because the zone classifies the *ball* while the
+range gate measures the *agent*, a maximum-LongShots carrier goal-side of a ball just inside the
+boundary can in principle generate a MIDFIELD SHOOT at ~34.5–35 m (agent within the 0.5 m
+possession radius; range cap 20 + A × 15 = 35 m at A = 1). The claim that survives is the one
+that matters for THIS fix: **the ramp differs from the old step only for shifted LongShots ≤ 0.80
+(A ≤ 0.6), whose range gate caps at 29.0 m — disjoint by 5.5 m from the ≥ ~34.5 m any reachable
+MIDFIELD SHOOT requires.** No state the generator can produce scores differently under the ramp.
+The Case B reachability note in `section-3-2-3-to-3-2-9.md` is corrected in this commit
+(housekeeping, the ERR-008-020 precedent). The cliff was therefore latent, not live — and the fix
+is landed anyway, per the project's standing posture (a wrong-shaped model cannot be repaired by
+later fitting, and the branch goes live the moment the range gate or zone geometry changes).
+KD-W1 is satisfied trivially: the new `[GT]` is a first-guess value on a currently unwired
+surface; calibration waits for the complete-engine pass like every other doctrine fix.
+
+**Determinism impact: none.** No `SNAPSHOT_SCHEMA_VERSION` change, no RNG stream / domain tag /
+draw site / draw order change — and, because the ramp-differs band and the generator-reachable
+band are disjoint (above), **no digest moves on any seed** (unlike ERR-008-020): the behaviour
+change is visible only to direct-injection paths. Locked by four new `UtilityScorerTests` (no-cliff across the old threshold — pre-fix ratio
+exactly 11×; exact SHORT/LONG midpoint at the ramp centre, the P5 pivot; endpoint clamps
+reproducing the old constants; monotonicity over raw 1–20) plus the refitted AR-2 M-4 lock
+(raw 12 → raw 14: past the ramp end AND still discriminating shifted vs raw form, preserving the
+original regression intent). No away-mirror case: the formula is attribute-only — `BallZone` is
+already team-relative upstream (ERR-008-002) and no geometry enters. **Gate NOT run — no .NET SDK
+in this environment; nothing in this landing has been compiled or executed.**
 
 ---
 

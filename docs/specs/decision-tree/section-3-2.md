@@ -11,8 +11,8 @@ reference for all utility constants; all [GT] constants must be implemented excl
 formulas.
 
 **Created:** March 01, 2026, 7:00 PM PST
-**Updated:** August 4, 2026 (v1.8 — ERR-008-018: `DirectionQuality_DRIBBLE` added to §3.2.4.1)
-**Version:** 1.8
+**Updated:** August 5, 2026 (v1.9 — ERR-008-019: the §3.2.3.1 midfield long-shot hard threshold is now a linear ramp)
+**Version:** 1.9
 **Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate; see §9 approval checklist)
 **Specification Number:** 8 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -290,16 +290,18 @@ DEFENSIVE modifier instead of 1.00). See §2.2.5 field note.
 | Action | DEF Zone | MID Zone | ATT Zone | Rationale |
 |--------|----------|----------|----------|-----------|
 | PASS | 1.05 [GT] | 1.00 | 0.90 [GT] | Passing is most critical and cautious in defence; slightly less urgent in attack where shot/dribble are preferred |
-| SHOOT | 0.10 [GT] | 0.55 [GT]¹ | 1.00 | Strongly discourage shots from own half; midfield long shots require Long Shots attribute gate (§3.2.3.1) |
+| SHOOT | 0.10 [GT] | 0.55 [GT]¹ | 1.00 | Strongly discourage shots from own half; midfield long shots scale with the Long Shots attribute ramp (§3.2.3.1) |
 | DRIBBLE | 0.70 [GT] | 1.00 | 1.10 [GT] | Dribbling in defence is risky; in attack it is a valid creative option |
 | HOLD | 1.25 [GT] | 1.00 | 0.80 [GT] | Holding is safest in defence; in attack an agent who only holds is wasting chance creation |
 | MOVE_TO_POSITION | 1.00 | 1.00 | 1.00 | Positional duty is constant regardless of ball zone — no zone incentive/penalty |
 | PRESS | 0.80 [GT] | 1.00 | 1.20 [GT] | Pressing from a defensive position can expose space; pressing high up the pitch is tactically sound |
 | INTERCEPT | 1.10 [GT] | 1.00 | 0.90 [GT] | Interception is most valuable defensively; in attack the agent should be creating, not chasing |
 
-¹ SHOOT midfield zone modifier (0.55) applies only when `A_LongShots > LONG_SHOT_THRESHOLD`
-(§3.2.3.1). Otherwise, the modifier is 0.05 [GT] — effectively suppressing midfield shots
-for players without long-shot ability.
+¹ SHOOT's midfield zone modifier ramps linearly with shifted Long Shots (ERR-008-019,
+§3.2.3.1): the full 0.55 at/above `LONG_SHOT_THRESHOLD + LONG_SHOT_RAMP_HALF_WIDTH`
+(raw ≥ 13), down to 0.05 [GT] at/below `LONG_SHOT_THRESHOLD − LONG_SHOT_RAMP_HALF_WIDTH`
+(raw ≤ 8) — suppressing midfield shots for players without long-shot ability, with no
+hard cliff at any attribute value (§3.2.3.4 item 2 derives the bands).
 
 **Application in formulas:**
 In each formula, `ZoneModifier` is read from this table using `DecisionContext.BallZone`.
@@ -647,6 +649,7 @@ defence; SHOOT correctly takes over in the attacking third for capable finishers
 | 1.5 | July 10, 2026 | AI agent | ERR-008-012 back-prop (Dismarking AI #23 `APPROVED`): §3.2.2.1 gains the marked-pass-target multiplier anchor note — FM-DM-03 joins the external tactical multiplier product before the final clamp; #23 owns formula/constants/tests; `Off` = ×1.0 identity. |
 | 1.6 | July 23, 2026 | AI agent | ERR-008-013 back-prop (GK/Heading #11/#10 integration): a new `ScoreSave` scores the DT-emitted `ActionType.SAVE` at `U_BASE_SAVE`; SAVE is exempted from the §21 `PlayerTacticActionMultiplier` product (its `RoleWeightModifiers`/`TempoActionBias` tables are 7-wide, indexed by the action ordinal — scoring a=SAVE(7) without the exemption reads OOB; SAVE is not a tactic-modulated action). SAVE reaches the scorer only as the sole off-ball option (§3.1.13); the value is not load-bearing for selection. ERR-008-013 + the code own the behaviour. |
 | 1.7 | July 26, 2026 | AI agent | ERR-008-016: §3.2.1.3 zone bounds corrected to EQUAL thirds — `ATTACKING` starts at `70m` (`PITCH_LENGTH × 2 / 3`), not `65m`. The old pair made the attacking third 40 m and the middle third 30 m while the prose described thirds, and the implementation constant carried a `[DERIVED] — split pitch into thirds` tag its value contradicted. Both bounds are now derived from the pitch length. Recorded side effect: equal thirds are self-mirroring, so the bands no longer depend on attacking direction; the ERR-008-002 per-team recomputation is unchanged and still required. |
+| 1.9 | August 5, 2026 | — | ERR-008-019 (football-judgment proxy review §2, doctrine P1/P5 — the review's founding finding, re-opened after its original "FIXED" record proved false): §3.2.3.1's midfield `ZoneModifier_SHOOT` hard threshold — 0.55 strictly above `LONG_SHOT_THRESHOLD`, 0.05 at/below, an 11× jump across one raw LongShots point — replaced by a linear ramp in the same shifted form, centred on the old threshold with new `[GT] LONG_SHOT_RAMP_HALF_WIDTH` = 0.05 (full SHORT at raw ≤ 8, full LONG at raw ≥ 13, exact midpoint at the old cliff — the P5 pivot; endpoints and population-integrated modifier preserved). §3.2.3.4 item 2 re-derived as the ramp bands; §3.2.1.3 footnote ¹ updated. Verification Case B (LongShots=16, past the ramp end) arithmetic unchanged. Branch is production-unreachable through the §3.1.4 generator (ERR-008-017's recorded 40 m zone / 35 m range-gate fact) so no digest moves; locked by four `UtilityScorerTests` (no-cliff, exact midpoint pivot, endpoint clamps, monotonicity) plus the refitted AR-2 M-4 shifted-form lock. |
 | 1.8 | August 4, 2026 | — | ERR-008-018 (close-chance-creation pass, §5.Z.24): §3.2.4.1 gains the multiplicative `DirectionQuality_DRIBBLE` factor — `FLOOR + ((cosine + 1) / 2) × (1 − FLOOR)` over the cosine between the option's `BestDirection` and the direction to the opponent goal, the same linear-in-cosine shape §3.1.3.5 uses for PASS. §3.1.5.2 had delegated exactly this modifier to "the scoring stage (§3.2.2)" — the PASS section — so DRIBBLE's own formula never received it, and a dribble toward halfway scored identically to the same dribble at goal (measured: 40% of final-third carrier decisions, mean cosine to goal −0.30). New `[GT] DRIBBLE_GOAL_DIR_MIN_MODIFIER` = 0.80, deliberately weaker than the 0.50 PASS floor because stronger suppression pushes the carrier onto the timeout-free HOLD and stalled 1 seed in 6. Worked examples A and B recomputed; new Case A′ (the same agent dribbling straight back) added, since A and A′ previously scored identically. Degenerate zero-`BestDirection` resolves to the exact ×1.0 identity (KD-V3 restated), so every pre-existing direct-injection expectation is unchanged. |
 | 1.3 | May 18, 2026 | AI agent (claude-sonnet-4-6) | ERR-008-001 fix (A-06 FAIL — coordinate system): rewrote `PitchGeometry` class from centered origin `(0,0) = centre of pitch` to authoritative corner-origin `(0,0,0) = corner of pitch` per Ball Physics #1 §1.2 and Appendix C. All goal `Vector2` constants replaced with `Vector3` constants using correct corner-origin values: `HOME_OPPONENT_GOAL_CENTRE (105, 34, 0)`, `HOME_OWN_GOAL_CENTRE (0, 34, 0)`, etc. `HALF_LENGTH_M`/`HALF_WIDTH_M` comments updated. Coordinate system comment corrected from "§2.2" to "§1.2 and Appendix C". Stale XC-NOTE (XC-GEOM-01) replaced with resolution verification. |
 

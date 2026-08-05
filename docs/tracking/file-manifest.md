@@ -1,7 +1,24 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 5, 2026, later same day (**#29/#41 GATE RUN — PASSED. No file changes; this
+**Last Updated:** August 5, 2026, latest same day (**ERR-008-019 — the #8 §3.2.3.1 midfield
+long-shot cliff → linear ramp (judgment-proxy doctrine P1/P5). No new files.** **Modified:**
+`src/decision-tree/UtilityScorer.cs` v1.14 (MIDFIELD `ScoreShoot` branch: `Lerp`/`InverseLerp` ramp
+over the shifted form), `src/decision-tree/UtilityWeights.cs` v1.8 (+ `[GT]
+LONG_SHOT_RAMP_HALF_WIDTH` = 0.05; `LONG_SHOT_THRESHOLD` redocumented as the ramp centre),
+`src/decision-tree/Tests/UtilityScorerTests.cs` v1.8 (4 new ramp locks; the AR-2 M-4 lock refitted
+raw 12 → 14), `docs/specs/decision-tree/section-3-2-3-to-3-2-9.md` (§3.2.3.1 ramp + ERR note with
+the disjoint-bands digest-invariance argument; §3.2.3.4 item 2 re-derived; Case B annotated
+unchanged and its ERR-008-017 reachability note's stale "≥ 40 m / 65 m boundary" figures
+corrected), `docs/specs/decision-tree/section-3-2.md` v1.9 (footnote ¹ + §3.2.13 row),
+`docs/specs/decision-tree/audit-report.md` (M-4 "locked by" citation refitted to the renamed
+test), `docs/tracking/spec-error-log.md` v1.61 (ERR-008-019 filed + RESOLVED; index row), `docs/tracking/football-judgment-proxy-review.md` (§1/§2/§5 — 2 fixed, 32
+open), `docs/tracking/open-issues.md`, `CLAUDE.md` (OPEN ISSUES index line),
+`docs/tracking/CHANGELOG.md`, `docs/tracking/CHANGELOG-src.md` v2.70, `README.md`. Branch is
+production-unreachable through the §3.1.4 generator ⇒ no digest moves. **No gate run — no .NET SDK
+in the authoring environment.**)
+
+**Last Updated (prior):** August 5, 2026, later same day (**#29/#41 GATE RUN — PASSED. No file changes; this
 entry records the run and retires the "no gate run" caveat carried by the four entries below it.**
 PR #299, CI run 394, head `ddbbe58`: build 0 errors (5 warnings), `TrainingSystem.Tests` **27 passed /
 0 failed / 0 skipped**, `InjuriesMedical.Tests` **40 passed / 0 failed / 0 skipped**, whole-tree gate

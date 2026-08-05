@@ -12,7 +12,30 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 5, 2026, later same day (**#29/#41 gate run — PASSED. Both assemblies
+> **Last Updated:** August 5, 2026, latest same day (**ERR-008-019 LANDED — the second fix under the
+> football-judgment remediation doctrine, closing the review's founding finding.** #8 §3.2.3.1's
+> midfield `ZoneModifier_SHOOT` was a hard step on shifted LongShots — 0.55 strictly above
+> `LONG_SHOT_THRESHOLD`, 0.05 at or below, an **11× jump across one raw attribute point** — the
+> original pattern-(b) cliff the whole judgment-proxy review was named after, and the finding whose
+> earlier "FIXED … gate green" record was verified false at the ERR-008-020 landing. Landed now
+> under the id soft-reserved for it, re-verified free as required. Fix per doctrine P1/P5: a linear
+> ramp in the unchanged shifted form, centred on the old threshold with new
+> `[GT] LONG_SHOT_RAMP_HALF_WIDTH` = 0.05 — full suppression at raw ≤ 8, full long-shot modifier at
+> raw ≥ 13, the exact SHORT/LONG midpoint at the old cliff, so endpoints and the
+> population-integrated modifier reproduce the old behaviour (the -020 centred-ramp precedent,
+> locked by test). P2/P3 deliberately out of scope: long-shot inclination is the shooter's own
+> execution capability, not a recognition judgment — no fidelity term, no new attribute. **The
+> branch is production-unreachable in the only band the fix changes** (the ramp differs from the old step only at A_LongShots ≤ 0.6, whose §3.1.4.2 range gate caps at 29.0 m, while a generator-reachable MIDFIELD SHOOT needs ≥ ~34.5 m of range — disjoint bands, so no generated option ever scores differently; ERR-008-017's stale "≥ 40 m" figure — written after the ERR-008-016 equal-thirds correction — fixed in passing), so the cliff was latent and **no digest moves on any seed** — no
+> scenario re-anchoring, unlike -020's blast-radius note; landed anyway per the standing
+> wrong-shaped-model posture. Spec (`section-3-2-3-to-3-2-9.md` §3.2.3.1 + §3.2.3.4 re-derived as
+> ramp bands; `section-3-2.md` v1.9 footnote) + code (`UtilityScorer.cs` v1.14,
+> `UtilityWeights.cs` v1.8) + 4 new `UtilityScorerTests` locks (no-cliff, exact midpoint pivot,
+> endpoint clamps, monotonicity) + the AR-2 M-4 lock refitted raw 12 → 14, same commit;
+> `spec-error-log.md` v1.61. Review tally: **2 fixed, 32 open.** No schema change, no new RNG
+> stream / domain tag / draw site, no draw-order change. **Gate NOT run — no .NET SDK in the
+> authoring environment; CI runs it on push.** Prior entry below.)
+
+> **Last Updated (prior):** August 5, 2026, later same day (**#29/#41 gate run — PASSED. Both assemblies
 > compiled for the first time; all 67 of their tests executed and passed.** PR #299, CI run 394, head
 > `ddbbe58`. Build 0 errors; `TrainingSystem.Tests` 27/27, `InjuriesMedical.Tests` 40/40, 0 skipped in
 > either; whole-tree gate PASSED with the quarantine empty, `MatchEngine.Tests` 420/430 unchanged.

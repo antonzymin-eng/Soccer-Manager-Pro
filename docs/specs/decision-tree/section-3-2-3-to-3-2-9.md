@@ -22,6 +22,26 @@ clamped to [0.01, 1.0]
 > models — the ERR-008-016 class. `DistanceQuality_SHOOT` is the utility-side shape of that
 > fact; see `docs/tracking/shot-volume-design.md`.
 
+> **ERR-008-019 correction (August 5, 2026):** the approved midfield branch was a hard
+> step — 0.55 strictly above `LONG_SHOT_THRESHOLD`, 0.05 at or below it — so one raw
+> LongShots point (10 → 11) jumped the zone modifier **11×**. This is the founding
+> instance of the football-judgment proxy review's pattern (b) (a continuous football
+> judgment collapsed into a single-attribute cliff; `football-judgment-proxy-review.md`
+> §2, doctrine P1). The step is now a linear ramp in the same shifted form, centred on
+> the old threshold with half-width `LONG_SHOT_RAMP_HALF_WIDTH`: the endpoints and the
+> population-integrated modifier reproduce the old behaviour (doctrine P5 pivot), and
+> a 1-point attribute difference can never flip the outcome discretely. No other factor
+> enters: long-shot inclination is the shooter's own execution capability, not a
+> recognition judgment, so no fidelity term applies (doctrine P2/P3 not in scope).
+> **Digest invariance (the precise argument):** the ramp differs from the old step only
+> for shifted LongShots ≤ 0.80 (A_LongShots ≤ 0.6), whose §3.1.4.2 range gate caps at
+> 20 + 0.6 × 15 = 29.0 m — while any generator-reachable MIDFIELD SHOOT needs ≥ ~34.5 m
+> of range (ball x < 70 per the ERR-008-016 equal thirds; the agent within the 0.5 m
+> possession radius of it; goal centre at x = 105). The two bands are disjoint by
+> 5.5 m, so no generated option ever scores differently and no digest moves. The branch
+> is exercised by direct injection, and the ramp becomes behaviour-visible if the range
+> gate or zone geometry ever changes.
+
 **where:**
 
 ```
@@ -31,11 +51,18 @@ U_BASE_SHOOT_NOMINAL = 0.85 [GT]
 
 ZoneModifier_SHOOT:
   ATTACKING:  1.00
-  MIDFIELD:   0.55 [GT]  if (0.5 + A_LongShots × 0.5) > LONG_SHOT_THRESHOLD
-              0.05 [GT]  otherwise  (effectively suppresses shot)
+  MIDFIELD:   lerp(SHOOT_ZONE_MID_SHORT, SHOOT_ZONE_MID_LONG, t)     (ERR-008-019)
+              t = clamp01((shifted − (LONG_SHOT_THRESHOLD − LONG_SHOT_RAMP_HALF_WIDTH))
+                          / (2 × LONG_SHOT_RAMP_HALF_WIDTH))
+              shifted = 0.5 + A_LongShots × 0.5
   DEFENSIVE:  0.10 [GT]
 
-LONG_SHOT_THRESHOLD  = 0.75 [GT]   ← requires LongShots raw ≥ 15 for midfield shot viability
+SHOOT_ZONE_MID_LONG       = 0.55 [GT]   ← full long-shot midfield modifier (raw ≥ 13)
+SHOOT_ZONE_MID_SHORT      = 0.05 [GT]   ← full suppression (raw ≤ 8)
+LONG_SHOT_THRESHOLD       = 0.75 [GT]   ← ramp CENTRE, shifted form; the modifier is the
+                                          exact SHORT/LONG midpoint here (raw 10.5)
+LONG_SHOT_RAMP_HALF_WIDTH = 0.05 [GT]   ← shifted units; valid range (0, 0.25].
+                                          0.05 spans raw ≈ 8.6–12.4 (§3.2.3.4 item 2)
 
 AttributeMultiplier_SHOOT = (0.5 + A_Finishing   × 0.5) ^ SHOOT_FINISHING_EXP
                           × (0.5 + A_Composure   × 0.5) ^ SHOOT_COMPOSURE_EXP
@@ -219,8 +246,9 @@ that a striker with a clear shot should prefer shooting. ✓
 **Verification Case B: Low-Finishing midfielder, midfield, Long Shots = 16**
 ```
 Agent: Finishing=7, Composure=11, LongShots=16
-BallZone: MIDFIELD → LongShots shifted = 0.5 + (15/19)×0.5 = 0.895 > 0.75 threshold
-ZoneModifier = 0.55
+BallZone: MIDFIELD → LongShots shifted = 0.5 + (15/19)×0.5 = 0.895 ≥ 0.80 ramp end
+ZoneModifier = 0.55   (full SHOOT_ZONE_MID_LONG — past the ERR-008-019 ramp end, so this
+                       example's arithmetic is unchanged by the ramp)
 
 GoalOpeningScore = 0.60 (moderate — distant, some blockers)
 PressureScalar P = 0.30
@@ -247,10 +275,13 @@ A moderate midfield shot by an average finishing midfielder: 0.200. A good pass 
 this shot occasionally. Plausible. ✓
 
 > **ERR-008-017 note on Case B:** this example predates the distance term and its geometry is
-> production-unreachable through the §3.1.4 generator — a MIDFIELD-zone ball sits ≥ 40 m from
-> the goal (team-relative zone boundary at 65 m from own goal line) while the §3.1.4.2 range
-> gate caps at 20 + 15 = 35 m, so no generated option ever reaches this branch (recorded in
-> `shot-volume-design.md` §7.3). Retained as the historical verification of the non-distance
+> production-unreachable through the §3.1.4 generator — a MIDFIELD-zone ball sits > 35 m from
+> the goal line while the §3.1.4.2 range gate caps at 20 + 15 = 35 m, so no generated option
+> reaches this branch except in the razor-thin band where a maximum-LongShots carrier stands
+> goal-side of a ball just inside the zone boundary (recorded in `shot-volume-design.md`
+> §7.3). *(Corrected at ERR-008-019: this note originally said "≥ 40 m, boundary at 65 m" —
+> stale figures from before ERR-008-016 moved the boundary to the equal-thirds 70 m, two days
+> before this note was written.)* Retained as the historical verification of the non-distance
 > factors; at its nominal 40 m the distance term would multiply a further
 > 10 / (10 + 28) = 0.263, giving 0.053.
 
@@ -265,15 +296,20 @@ modifier provides the second. Three boundary conditions are documented:
    Even an elite player barely scores above the HOLD floor (≈ 0.25) from their own third.
    This correctly suppresses shooting from deep. ✓
 
-2. **Agent in midfield, LongShots = 14 (Shifted = 0.868 < 0.875 threshold):**
-   Wait — threshold check: `(0.5 + A_LongShots × 0.5) > 0.75`.
-   LongShots=14 → A=(13/19)=0.684 → Shifted=0.842. `0.842 > 0.75` → YES, passes threshold.
-   LongShots=10 → A=(9/19)=0.474 → Shifted=0.737. `0.737 < 0.75` → FAILS, zone = 0.05.
-   **Therefore the effective LongShots threshold is raw ≥ 11 for midfield shots.** This
-   is lower than the outline suggested (≥ 15). Documented here as the authoritative
-   derivation. Outline's "raw ≥ 15" comment was imprecise — the threshold constant
-   `LONG_SHOT_THRESHOLD = 0.75` maps to raw ≥ 11, not raw ≥ 15. [GT] value is correct;
-   commentary in outline was not.
+2. **Agent in midfield — the long-shot ramp bands (ERR-008-019; supersedes the former
+   hard-threshold derivation):** `shifted(raw) = 0.5 + ((raw − 1) / 19) × 0.5`, so one raw
+   point = 0.5/19 ≈ 0.0263 shifted units. With `LONG_SHOT_THRESHOLD = 0.75` and
+   `LONG_SHOT_RAMP_HALF_WIDTH = 0.05`:
+   - Ramp start 0.70 ⇔ raw 8.6 → **raw ≤ 8 is fully suppressed** (zone = 0.05, as before).
+   - Ramp end 0.80 ⇔ raw 12.4 → **raw ≥ 13 gets the full 0.55**, e.g. LongShots=14 →
+     shifted 0.842 ≥ 0.80.
+   - Ramp centre 0.75 ⇔ raw 10.5 → the exact midpoint 0.30; raw 10 (shifted 0.737) → 0.234,
+     raw 11 (shifted 0.763) → 0.366. The largest step per raw point is ≈ 0.13 zone units —
+     continuous, versus the former 0.05 → 0.55 jump at this exact boundary.
+   The former derivation ("effective threshold raw ≥ 11"; the outline's "raw ≥ 15" was
+   already corrected to raw ≥ 11 in v1.0) described the pre-ramp step and is retained in
+   history only. The AR-2 M-4 finding — the comparison runs in the SHIFTED form, never the
+   raw normalised form — still applies verbatim to the ramp's input.
 
 3. **Agent in attacking zone, GoalOpeningScore = 0.05 (fully blocked):**
    U_raw = 0.85 × 1.0 × AM × 0.05 × (1 − RiskPenalty). Even elite finisher (AM ≈ 0.96):

@@ -5,6 +5,7 @@
 // Modified: 2026-07-28 (ERR-008-017 — + SHOOT_SWEET_RANGE_M / SHOOT_DIST_FALLOFF_M [GT] (shot-volume design KD-V2))
 // Modified: 2026-08-04 (ERR-008-018 — + DRIBBLE_GOAL_DIR_MIN_MODIFIER [GT] (close-chance-creation design KD-CC2))
 // Modified: 2026-08-04 (ERR-008-020 — pass-lane threat model: PASS_LANE_WIDTH_HALF → CORE_HALF_WIDTH/FALLOFF_END + INTERCEPTOR_ABILITY_MIN/MAX + LANE_VISION_FIDELITY_FLOOR)
+// Modified: 2026-08-05 (ERR-008-019 — + LONG_SHOT_RAMP_HALF_WIDTH [GT]; LONG_SHOT_THRESHOLD redocumented as the ramp centre)
 // Author:   —
 // Spec:     Decision Tree #8 §3.2.11, Code Standards #20
 // Purpose:  Authoritative constant catalogue for the utility scoring model.
@@ -101,12 +102,26 @@ namespace TacticalDirector.DecisionTree
         // ── Context Score Thresholds and Distances ──────────────────────────────────
 
         /// <summary>
-        /// [GT] Midfield long-shot viability threshold. Compared against the SHIFTED
-        /// attribute form (0.5 + A_LongShots × 0.5) per §3.2.3.1 — effective raw
-        /// LongShots ≥ 11 (§3.2.3.4 derives this explicitly; comparing the raw
-        /// normalised A against 0.75 — the AR-2 M-4 defect — required raw ≥ 16).
+        /// [GT] Midfield long-shot ramp CENTRE, in the SHIFTED attribute form
+        /// (0.5 + A_LongShots × 0.5) per §3.2.3.1 (the AR-2 M-4 correction — the raw
+        /// form required raw ≥ 16). ERR-008-019: no longer a hard gate. The midfield
+        /// zone modifier ramps linearly from SHOOT_ZONE_MID_SHORT at
+        /// (THRESHOLD − LONG_SHOT_RAMP_HALF_WIDTH) to SHOOT_ZONE_MID_LONG at
+        /// (THRESHOLD + LONG_SHOT_RAMP_HALF_WIDTH); at exactly THRESHOLD the modifier
+        /// is the exact SHORT/LONG midpoint (§3.2.3.4 derives the raw-attribute bands).
         /// </summary>
         public const float LONG_SHOT_THRESHOLD = 0.75f;
+
+        /// <summary>
+        /// [GT] Midfield long-shot ramp half-width, in shifted-attribute units
+        /// (one raw LongShots point ≈ 0.0263). 0.05 spans raw ≈ 8.6–12.4: full
+        /// suppression at raw ≤ 8, full long-shot modifier at raw ≥ 13. Must be > 0
+        /// and ≤ 0.25 (the ramp must stay inside the shifted form's [0.5, 1.0] range).
+        /// The ramp is centred on the old cliff so the population-integrated zone
+        /// modifier is preserved (judgment-proxy doctrine P5 pivot). §3.2.3.1,
+        /// ERR-008-019.
+        /// </summary>
+        public const float LONG_SHOT_RAMP_HALF_WIDTH = 0.05f;
         public const float GOAL_OPENING_MIN = 0.05f;  // [GT] minimum goal opening score floor
         public const float BLOCKER_RADIUS_M = 0.50f;  // [GT] outfield player body width in shot lane
         public const float GK_BLOCKER_RADIUS_M = 1.50f;  // [GT] goalkeeper effective blocking radius
@@ -295,4 +310,8 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        | the old cliff — integrated threat preserved) + INTERCEPTOR_ABILITY_MIN/    |
 // |         |            |        | MAX [GT] = 0.6/1.4 (Anticipation+Pace) + LANE_VISION_FIDELITY_FLOOR [GT]   |
 // |         |            |        | = 0.2 (doctrine P2 — Vision resolves ability deviation from average).      |
+// | 1.8     | 2026-08-05 | —      | ERR-008-019 (judgment-proxy doctrine P1/P5): + LONG_SHOT_RAMP_HALF_WIDTH   |
+// |         |            |        | [GT] = 0.05 (shifted units; ramp spans raw ≈ 8.6–12.4, centred on the old  |
+// |         |            |        | cliff so the integrated modifier is preserved — P5 pivot).                 |
+// |         |            |        | LONG_SHOT_THRESHOLD redocumented as the ramp centre; value unchanged.      |
 #endregion

@@ -4,6 +4,7 @@
 // Modified: 2026-07-07 (cheap-item addition: rest-defense risk dampener test; half-spaces
 // Modified: 2026-07-28 (ERR-008-017 — DistanceQuality_SHOOT locks)
 //           test added then reverted after user review — see VersionHistory)
+// Modified: 2026-08-05 (ERR-008-019 — midfield long-shot ramp locks; M-4 lock refitted to raw 14)
 // Author:   —
 // Spec:     Decision Tree #8 §5 (UT-US-01, UT-US-03, UT-05 through UT-09), §3.2.10, new §3.2/§7.7, Code Standards #20
 // Purpose:  Unit tests for UtilityScorer. Verifies utility floor/ceiling clamp,
@@ -591,35 +592,109 @@ namespace TacticalDirector.DecisionTree.Tests
                 "(AR-2 M-1: was keyed to the absolute AWAY_TEAM literal)");
         }
 
-        // ── AR-2 M-4 lock: midfield long-shot gate uses the SHIFTED form ──────
+        // ── AR-2 M-4 lock: midfield long-shot ramp uses the SHIFTED form ──────
 
         [Test]
-        public void ShootMidfield_LongShotsRaw12_GetsLongModifier()
+        public void ShootMidfield_LongShotsRaw14_GetsFullLongModifier()
         {
-            // Raw LongShots = 12 → A = 11/19 ≈ 0.579 → shifted ≈ 0.789 > 0.75 ⇒ the
-            // 0.55 midfield modifier applies (§3.2.3.4: effective threshold raw ≥ 11).
-            // Under the pre-fix raw-form comparison (0.579 < 0.75) the shot was
-            // suppressed to SHOOT_ZONE_MID_SHORT = 0.05.
+            // Raw LongShots = 14 → A = 13/19 ≈ 0.684 → shifted ≈ 0.842, at/above the
+            // ramp end (0.75 + 0.05 = 0.80) ⇒ the full 0.55 midfield modifier applies.
+            // Under a raw-form reading (0.684 feeds the ramp) the value sits below the
+            // ramp start (0.70) and the shot is fully suppressed to 0.05 — so this
+            // remains the AR-2 M-4 shifted-form regression lock under the ERR-008-019
+            // ramp (raw 12, the pre-ramp fixture, now lands mid-ramp; raw 14 keeps the
+            // exact endpoint ratio).
             // Distance sits INSIDE the sweet range (ERR-008-017): the option's distance is
-            // incidental to this lock's intent (the shifted-form zone gate), and at the
-            // former 28 m the DistanceQuality decay pushed the suppressed branch into the
-            // UTILITY_FLOOR clamp, corrupting the pure zone-modifier ratio.
+            // incidental to this lock's intent, and at the former 28 m the DistanceQuality
+            // decay pushed the suppressed branch into the UTILITY_FLOOR clamp, corrupting
+            // the pure zone-modifier ratio.
             DecisionContext ctx = BuildContext(0.5f, 0.5f, 0.0f);
             ctx.BallZone = FieldZone.MIDFIELD;
-            ctx.A_LongShots = 11.0f / 19.0f;
+            ctx.A_LongShots = 13.0f / 19.0f;
 
             Buffer[0] = MakeShoot(0.7f, 10.0f);
             UtilityScorer.ScoreOptions(Buffer, 1, in ctx);
             float withLong = Buffer[0].BaseUtility;
 
-            ctx.A_LongShots = 0.0f;   // raw 1 → shifted 0.5 < 0.75 ⇒ suppressed
+            ctx.A_LongShots = 0.0f;   // raw 1 → shifted 0.5, below the ramp start ⇒ suppressed
             Buffer[0] = MakeShoot(0.7f, 10.0f);
             UtilityScorer.ScoreOptions(Buffer, 1, in ctx);
             float withoutLong = Buffer[0].BaseUtility;
 
             float expectedRatio = UtilityWeights.SHOOT_ZONE_MID_LONG / UtilityWeights.SHOOT_ZONE_MID_SHORT;
             Assert.AreEqual(expectedRatio, withLong / withoutLong, expectedRatio * 0.01f,
-                "Midfield long-shot gate must compare the shifted attribute form (§3.2.3.1)");
+                "Midfield long-shot ramp must run in the shifted attribute form (§3.2.3.1)");
+        }
+
+        // ── ERR-008-019 locks: midfield long-shot ramp (judgment-proxy doctrine P1/P5) ──
+
+        private float ScoreShootMidfieldAt(float aLongShots)
+        {
+            DecisionContext ctx = BuildContext(0.5f, 0.5f, 0.0f);
+            ctx.BallZone = FieldZone.MIDFIELD;
+            ctx.A_LongShots = aLongShots;
+            Buffer[0] = MakeShoot(0.7f, 10.0f);
+            UtilityScorer.ScoreOptions(Buffer, 1, in ctx);
+            return Buffer[0].BaseUtility;
+        }
+
+        [Test]
+        public void ShootMidfield_NoCliffAcrossOldThreshold()
+        {
+            // P1: one raw LongShots point across the old cliff (raw 10 → 11, shifted
+            // 0.737 → 0.763, straddling 0.75) must move the utility smoothly. Pre-fix
+            // the ratio here was exactly SHOOT_ZONE_MID_LONG / SHOOT_ZONE_MID_SHORT = 11.
+            float raw10 = ScoreShootMidfieldAt(9.0f / 19.0f);
+            float raw11 = ScoreShootMidfieldAt(10.0f / 19.0f);
+
+            Assert.Less(raw11 / raw10, 2.0f,
+                "A 1-point LongShots difference must never step the midfield shot " +
+                "utility discretely (§3.2.3.1 ramp, ERR-008-019; pre-fix ratio was 11×)");
+            Assert.Greater(raw11, raw10,
+                "The ramp must still reward the higher attribute across the old cliff");
+        }
+
+        [Test]
+        public void ShootMidfield_RampMidpoint_IsExactMeanOfZoneEndpoints()
+        {
+            // P5 pivot: at shifted = LONG_SHOT_THRESHOLD exactly (A = 0.5, raw 10.5) the
+            // zone modifier is the exact SHORT/LONG midpoint — the ramp is centred on the
+            // old cliff, so the population-integrated modifier reproduces the old step's.
+            float atCentre = ScoreShootMidfieldAt(0.5f);
+            float atFloor = ScoreShootMidfieldAt(0.0f);   // shifted 0.5 ⇒ exact SHORT
+
+            float midpointZone =
+                (UtilityWeights.SHOOT_ZONE_MID_SHORT + UtilityWeights.SHOOT_ZONE_MID_LONG) * 0.5f;
+            float expectedRatio = midpointZone / UtilityWeights.SHOOT_ZONE_MID_SHORT;
+            Assert.AreEqual(expectedRatio, atCentre / atFloor, expectedRatio * 0.01f,
+                "At the ramp centre the midfield zone modifier must be the exact " +
+                "SHORT/LONG midpoint (§3.2.3.1, ERR-008-019 P5 pivot)");
+        }
+
+        [Test]
+        public void ShootMidfield_RampIsMonotoneAndClampsAtEndpoints()
+        {
+            // Endpoints reproduce the old constants exactly: raw ≤ 8 (shifted ≤ 0.70)
+            // scores as full SHORT; raw 20 as full LONG. Between them utility is
+            // non-decreasing in the attribute.
+            float raw8 = ScoreShootMidfieldAt(7.0f / 19.0f);    // shifted 0.684 < ramp start
+            float raw1 = ScoreShootMidfieldAt(0.0f);
+            Assert.AreEqual(raw1, raw8, raw1 * 1e-4f,
+                "Below the ramp start the modifier must equal SHOOT_ZONE_MID_SHORT exactly");
+
+            float raw20 = ScoreShootMidfieldAt(1.0f);
+            float raw14 = ScoreShootMidfieldAt(13.0f / 19.0f);  // shifted 0.842 > ramp end
+            Assert.AreEqual(raw20, raw14, raw20 * 1e-4f,
+                "Above the ramp end the modifier must equal SHOOT_ZONE_MID_LONG exactly");
+
+            float prev = 0.0f;
+            for (int raw = 1; raw <= 20; raw++)
+            {
+                float u = ScoreShootMidfieldAt((raw - 1) / 19.0f);
+                Assert.GreaterOrEqual(u, prev,
+                    "Midfield shot utility must be monotone non-decreasing in LongShots");
+                prev = u;
+            }
         }
 
         // ── AR-2 M-3 lock: SHOOT risk driven by (1 − GoalOpeningScore) ─────────
@@ -908,4 +983,11 @@ namespace TacticalDirector.DecisionTree.Tests
 // |         |            |        |   proof the other fixtures here are untouched); monotone in the cosine to     |
 // |         |            |        |   goal; exact floor / midpoint ratios; and the anchoring invariant that the   |
 // |         |            |        |   PASS and DRIBBLE directional floors do not silently diverge.                |
+// | 1.8     | 2026-08-05 | —      | ERR-008-019 midfield long-shot ramp locks (judgment-proxy doctrine P1/P5):    |
+// |         |            |        |   no cliff across the old threshold (raw 10 vs 11 ratio < 2; pre-fix 11×);    |
+// |         |            |        |   exact SHORT/LONG midpoint at the ramp centre (the P5 pivot); endpoint       |
+// |         |            |        |   clamps reproduce the old constants exactly; monotone over raw 1–20. The     |
+// |         |            |        |   AR-2 M-4 shifted-form lock refitted raw 12 → raw 14 (raw 12 now lands      |
+// |         |            |        |   mid-ramp; raw 14 is past the ramp end AND still discriminates shifted vs    |
+// |         |            |        |   raw form, preserving the original regression intent).                       |
 #endregion
