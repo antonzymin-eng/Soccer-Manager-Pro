@@ -12,7 +12,31 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 5, 2026, later same day (**Adversarial review over the #29/#41 T0 landing —
+> **Last Updated:** August 5, 2026, later same day (**#29/#41 gate run — PASSED. Both assemblies
+> compiled for the first time; all 67 of their tests executed and passed.** PR #299, CI run 394, head
+> `ddbbe58`. Build 0 errors; `TrainingSystem.Tests` 27/27, `InjuriesMedical.Tests` 40/40, 0 skipped in
+> either; whole-tree gate PASSED with the quarantine empty, `MatchEngine.Tests` 420/430 unchanged.
+>
+> **The PR had to be unblocked first, and the reason is worth recording:** #299 was conflicted against
+> `main`, and GitHub cannot construct the merge ref for a conflicted PR, so the `pull_request` workflow
+> never fired at all. The gate was not slow or flaky — it had never been *asked* to run. Merging `main`
+> resolved five chain-append conflicts (both branches prepending to "Last Updated" chains; both sides
+> kept everywhere) plus two genuine collisions, since the branches forked at `2.60`/`v1.56` and then
+> allocated the same numbers independently: `CHANGELOG-src` 2.61–2.64 (main's kept, this branch's
+> renumbered 2.65–2.68) and `spec-error-log` v1.57 (main's ERR-008-020 kept; ERR-041-002/003 became
+> v1.58/v1.59).
+>
+> **What the run retires:** every "the suite locks X" claim across the T0 landing and five adversarial
+> review passes was, until now, a claim about code that had never been compiled — the never-compiled
+> surface trap this file's own history records. No fix was needed to get green. Beyond compilation it
+> confirms Appendix B day by day, #41 §3.6 term by term, the keyed-draw separation, and AR pass 5's
+> hand-computed occurrence-probability baseline (231/0/431 per-mille), which had been derived by
+> mirroring the C# in Python against a tree that could not be built.
+>
+> The authoring environment still has no .NET SDK — the installer is still 403 at the agent proxy,
+> re-checked here — so CI remains the only compiler for this work.)
+
+> **Last Updated (prior):** August 5, 2026, later same day (**Adversarial review over the #29/#41 T0 landing —
 > 2 High, 4 Medium, 4 Low, all fixed; converged on pass 2.** Both Highs were the same shape: a design
 > that made a silent wrong answer reachable, guarded by a test that could not fail.
 >

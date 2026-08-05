@@ -1,7 +1,19 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 5, 2026, later same day (**AR pass 5 over #29/#41 — 2 Medium, 3 Low. No new files.**
+**Last Updated:** August 5, 2026, later same day (**#29/#41 GATE RUN — PASSED. No file changes; this
+entry records the run and retires the "no gate run" caveat carried by the four entries below it.**
+PR #299, CI run 394, head `ddbbe58`: build 0 errors (5 warnings), `TrainingSystem.Tests` **27 passed /
+0 failed / 0 skipped**, `InjuriesMedical.Tests` **40 passed / 0 failed / 0 skipped**, whole-tree gate
+PASSED with an empty quarantine, `MatchEngine.Tests` 420/430 unchanged. Both assemblies had never been
+compiled — the never-compiled-surface class this project has been bitten by before — and needed **no
+fix to reach green**: zero compile errors and zero failures on the first run. **Modified:** `CLAUDE.md`
+(the OPEN ISSUES entry's "neither assembly has ever been compiled" replaced with the run's result),
+`docs/tracking/CHANGELOG-src.md` v2.69, `docs/tracking/CHANGELOG.md`,
+`docs/tracking/spec-error-log.md` v1.60. The authoring environment still has no .NET SDK — the
+installer redirect is still 403 at the agent proxy, re-checked at this landing.)
+
+**Last Updated (prior):** August 5, 2026, later same day (**AR pass 5 over #29/#41 — 2 Medium, 3 Low. No new files.**
 **Modified:** `src/injuries-medical/tests/MedicalStepTests.cs` v1.3 (M-1 — + the daily-occurrence-probability
 characterization driven through the real #29 → #41 chain, and + the `AssignRecoveryDays` None-tier guard test.
 Every other occurrence test in that fixture forces the outcome with `InjuryRiskMax × 4`, a value the producer
