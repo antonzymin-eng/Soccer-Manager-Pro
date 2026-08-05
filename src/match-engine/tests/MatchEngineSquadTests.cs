@@ -3,6 +3,7 @@
 // Modified: 2026-07-18 (#27 T3 — roster-reference locks; the T1 KD-P7 all-default byte-identity lock superseded by KD-T3-2)
 // Modified: 2026-07-18 (#27 T3 post-landing code AR — observable-state behavioural-neutrality lock restored)
 // Modified: 2026-07-19 (#27 lineup selection Plan-3 — squads now position-coherent (KD-L5 layout); distinct-player routing follows selection (best-of-line → first slot); substitution forces the distinct record onto the bench; mis-ordered-GK lock (KD-L4))
+// Modified: 2026-08-04 (ERR-008-020 AR-1 M-2 — the DT squad-attribute-view wiring lock)
 // Author:   —
 // Spec:     Player-attribute projection design supplement §7/§7.1/§9 (KD-P7/KD-P10); Squad/Player
 //           Data Layer design supplement (#27) §4 T1/T3; squad-roster-reference-design.md (T3,
@@ -115,6 +116,22 @@ namespace TacticalDirector.MatchEngine
                 chain.Add(engine.CurrentSnapshotDigest);
             }
             return chain;
+        }
+
+        // ── ERR-008-020: the DT squad-attribute-view wiring lock ───────────────────────
+        // The §3.1.3.3 lane-threat model's null fallback is deliberately silent (an unwired
+        // tree prices every defender as ability-neutral without throwing), so the boot wiring
+        // needs an explicit detector — otherwise dropping the SetAllAgentAttributes call in a
+        // refactor reverts every match to attribute-blind lane pricing with all tests green
+        // (the wiring-backlog gate-level-dormancy class).
+
+        [Test]
+        public void Construction_WiresTheSquadAttributeViewIntoEveryDecisionTree()
+        {
+            var engine = new MatchEngine(MatchSeed);
+            Assert.IsTrue(engine.TestOnly_AllDtSquadAttributeViewsWired,
+                "Every DecisionTree must hold the live _dtAttrs view from construction — " +
+                "an unwired tree silently reverts §3.1.3.3 to attribute-blind lane pricing.");
         }
 
         // ── #27 T3 (KD-T3-2): the roster reference captures squad identity ─────────────
@@ -471,4 +488,7 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | forwards; fail-loud attribute/weak-foot gates use coherent      |
 // |         |            |        | squads so the bounds gate fires (not the position gate); added  |
 // |         |            |        | MisOrderedSquad_SelectsGoalkeeperForGkSlot_NotIndexZero (KD-L4).|
+// | 1.4     | 2026-08-04 | —      | ERR-008-020 AR-1 M-2: + Construction_WiresTheSquadAttributeView |
+// |         |            |        | IntoEveryDecisionTree — the lane model's null fallback is       |
+// |         |            |        | silent by design, so the boot wiring gets an explicit lock.     |
 #endregion

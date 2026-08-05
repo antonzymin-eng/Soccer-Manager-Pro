@@ -2,6 +2,7 @@
 // Created:  2026-05-29
 // Modified: 2026-06-14 (audit AR-3 fix pass)
 // Modified: 2026-07-26 (bare -1 loose-ball literal → DecisionTreeConstants.NoPossessorAgentId)
+// Modified: 2026-08-04 (ERR-008-020 — optional allAgentAttributes parameter → DecisionContext.AllAgentAttributes)
 // Author:   —
 // Spec:     Decision Tree #8 §2.2.4, §3.1.1, Code Standards #20
 // Purpose:  Step 2 of the 6-step pipeline. Assembles DecisionContext from the validated
@@ -33,7 +34,8 @@ namespace TacticalDirector.DecisionTree
             DtAgentAttributes attributes,
             AgentState agentState,
             float pressureScalar,
-            ulong matchSeed)
+            ulong matchSeed,
+            DtAgentAttributes[] allAgentAttributes = null)
         {
             int agentId   = snapshot.ObserverId;
             int teamId    = attributes.TeamId;
@@ -149,6 +151,8 @@ namespace TacticalDirector.DecisionTree
                 A_Positioning = (attributes.Positioning - minA) / norm,
                 A_Crossing    = (attributes.Crossing    - minA) / norm,
 
+                AllAgentAttributes = allAgentAttributes,
+
                 MatchContext      = matchContext,
                 TacticalContext   = tacticalContext,
                 PressureScalar    = pressureScalar,
@@ -187,4 +191,6 @@ namespace TacticalDirector.DecisionTree
 // | 1.4     | 2026-07-26 | —      | Bare -1 loose-ball literal replaced with the named              |
 // |         |            |        |   DecisionTreeConstants.NoPossessorAgentId sentinel             |
 // |         |            |        |   (behaviour-identical).                                        |
+// | 1.5     | 2026-08-04 | —      | ERR-008-020: optional allAgentAttributes parameter (default null ⇒          |
+// |         |            |        |   ability-neutral lane threat) copied into DecisionContext.AllAgentAttributes. |
 #endregion

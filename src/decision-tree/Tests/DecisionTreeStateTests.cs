@@ -1,6 +1,7 @@
 // File:     src/decision-tree/Tests/DecisionTreeStateTests.cs
 // Created:  2026-06-22
 // Modified: 2026-06-22
+// Modified: 2026-08-05 (field-count lock 10 → 11 — ERR-008-020's _allAgentAttributes, injected class; caught by CI on PR #298)
 // Author:   —
 // Spec:     Decision Tree #8 §3.7; Match Engine design note §2.6 (Phase D step D0); Code Standards #20
 // Purpose:  Locks the Phase D D0 DecisionTree snapshot seam: (1) a DecisionTreeState survives a
@@ -245,19 +246,21 @@ namespace TacticalDirector.DecisionTree.Tests
             // Mechanical coupling guard, the analogue of the B0 OscillationGuard BufferSize assert and the
             // C0 executor field-count locks: adding cross-tick state without extending DecisionTreeState /
             // CaptureState / RestoreState would silently drop it from the snapshot and diverge replay
-            // (§2.6 trap). 10 instance fields = 6 injected/identity (_movementController / _passExecutor /
-            // _shotExecutor / _saveDispatch (ERR-008-013) / _agentId / _matchSeed) + 1 scratch
-            // (_optionBuffer) + 3 captured cross-tick (_state / _lastAction / _hasDispatchedAction).
-            // _saveDispatch is an injected dependency (the GK save sink), NOT cross-tick state — the same
-            // legitimately-excluded class as the executors.
+            // (§2.6 trap). 11 instance fields = 7 injected/identity (_movementController / _passExecutor /
+            // _shotExecutor / _saveDispatch (ERR-008-013) / _allAgentAttributes (ERR-008-020) / _agentId /
+            // _matchSeed) + 1 scratch (_optionBuffer) + 3 captured cross-tick (_state / _lastAction /
+            // _hasDispatchedAction). _saveDispatch and _allAgentAttributes are injected dependencies (the
+            // GK save sink; the orchestrator's live squad attribute view, re-wired by the host at
+            // boot/restore like the seed), NOT cross-tick state — the same legitimately-excluded class as
+            // the executors.
             int fieldCount = typeof(DecisionTree)
                 .GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
                 .Length;
 
-            Assert.AreEqual(10, fieldCount,
+            Assert.AreEqual(11, fieldCount,
                 "DecisionTree instance field count changed. If you added cross-tick state, extend " +
                 "DecisionTreeState + CaptureState + RestoreState, then update this count (and confirm " +
-                "_matchSeed / _optionBuffer remain the only legitimately excluded fields).");
+                "the injected/scratch fields in the comment above remain the only excluded ones).");
         }
     }
 }
@@ -267,4 +270,10 @@ namespace TacticalDirector.DecisionTree.Tests
 // | 1.0     | 2026-06-22 | —      | Initial implementation — Phase D D0 DecisionTree snapshot-seam |
 // |         |            |        | round-trip + Capture/Restore identity + fresh-IDLE default +   |
 // |         |            |        | reflection field-count lock (silent-omission guard).          |
+// | 1.1     | 2026-08-05 | —      | Field-count lock 10 → 11: ERR-008-020's _allAgentAttributes    |
+// |         |            |        | (injected squad attribute view — the legitimately-excluded     |
+// |         |            |        | class, like _saveDispatch/the executors; excluded from         |
+// |         |            |        | CaptureState by design, host re-wires at boot/restore). Caught |
+// |         |            |        | by this guard on the PR #298 CI run — the landing updated the  |
+// |         |            |        | exclusion rationale but not this ledger.                       |
 #endregion

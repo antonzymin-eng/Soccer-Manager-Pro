@@ -4,6 +4,7 @@
 // Modified: 2026-07-28 (ERR-008-016 — + POWER_INTENT_FLOOR [GT] (shot-speed design KD-1))
 // Modified: 2026-07-28 (ERR-008-017 — + SHOOT_SWEET_RANGE_M / SHOOT_DIST_FALLOFF_M [GT] (shot-volume design KD-V2))
 // Modified: 2026-08-04 (ERR-008-018 — + DRIBBLE_GOAL_DIR_MIN_MODIFIER [GT] (close-chance-creation design KD-CC2))
+// Modified: 2026-08-04 (ERR-008-020 — pass-lane threat model: PASS_LANE_WIDTH_HALF → CORE_HALF_WIDTH/FALLOFF_END + INTERCEPTOR_ABILITY_MIN/MAX + LANE_VISION_FIDELITY_FLOOR)
 // Author:   —
 // Spec:     Decision Tree #8 §3.2.11, Code Standards #20
 // Purpose:  Authoritative constant catalogue for the utility scoring model.
@@ -134,8 +135,32 @@ namespace TacticalDirector.DecisionTree
         // ── Option Generation Constants ─────────────────────────────────────────────
         // Constants referenced in §3.1; catalogued here per §3.2.1.6.
 
-        public const float PASS_LANE_WIDTH_HALF = 0.8f;  // [GT] half-width of pass lane corridor (m)
-        public const float PASS_LANE_DIVISOR = 3.0f;  // [GT] interceptors in lane → score=0
+        // ── Pass-lane threat model (§3.1.3.3, ERR-008-020 / judgment-proxy doctrine P1+P2) ──
+        // The former single PASS_LANE_WIDTH_HALF = 0.8 m corridor counted every opponent
+        // inside it as exactly 1 interceptor and every opponent outside it as 0 — a 2 cm
+        // positional cliff, blind to who the defender is. Replaced by a continuous per-
+        // opponent threat weight: full weight inside the core corridor, linear falloff to
+        // zero at the outer edge, scaled by the defender's perceived interception ability.
+        // The ramp is centred on the old 0.8 m cliff (0.4 core + 0.8 m fade ⇒ the same
+        // integrated threat over a uniform defender position), so an average defender at
+        // an average position costs the lane what it cost before (doctrine P5 pivot).
+
+        /// <summary>[GT] Core corridor half-width (m): an opponent within this perpendicular distance of the pass line carries full positional threat. §3.1.3.3, ERR-008-020.</summary>
+        public const float PASS_LANE_CORE_HALF_WIDTH = 0.4f;
+
+        /// <summary>[GT] Outer threat edge (m): positional threat fades linearly from 1.0 at PASS_LANE_CORE_HALF_WIDTH to 0.0 here. Must exceed PASS_LANE_CORE_HALF_WIDTH. §3.1.3.3, ERR-008-020.</summary>
+        public const float PASS_LANE_FALLOFF_END = 1.2f;
+
+        /// <summary>[GT] Interception-ability scalar at Anticipation+Pace mean = 0 (raw 1/1). §3.1.3.3, ERR-008-020.</summary>
+        public const float INTERCEPTOR_ABILITY_MIN = 0.6f;
+
+        /// <summary>[GT] Interception-ability scalar at Anticipation+Pace mean = 1 (raw 20/20). Midpoint of MIN..MAX is exactly 1.0 so the league-average defender is weight-neutral. §3.1.3.3, ERR-008-020.</summary>
+        public const float INTERCEPTOR_ABILITY_MAX = 1.4f;
+
+        /// <summary>[GT] Vision-fidelity floor: at Vision raw 1 the passer resolves this fraction of a defender's true ability deviation from average (doctrine P2 — low Vision degrades to the attribute-blind read, it never invents information). §3.1.3.3, ERR-008-020.</summary>
+        public const float LANE_VISION_FIDELITY_FLOOR = 0.2f;
+
+        public const float PASS_LANE_DIVISOR = 3.0f;  // [GT] summed lane threat → score=0
         public const float MIN_PASS_LANE_SCORE = 0.05f; // [GT] adjusted lane score floor
         public const float GOAL_DIR_MIN_MODIFIER = 0.5f;  // [GT] backward-pass direction penalty floor
 
@@ -264,4 +289,10 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        | value is deliberately WEAKER than the 0.50 PASS floor: suppressing the     |
 // |         |            |        | dribble pushes the carrier onto the timeout-free HOLD, and at floors 0.65  |
 // |         |            |        | and 0.50 one seed in six stalled (final-third episode 5.1 s -> 17.5/28.6). |
+// | 1.7     | 2026-08-04 | —      | ERR-008-020 (judgment-proxy doctrine §6.4): pass-lane threat model.        |
+// |         |            |        | PASS_LANE_WIDTH_HALF (0.8 m binary corridor) removed; + PASS_LANE_CORE_    |
+// |         |            |        | HALF_WIDTH [GT] = 0.4 + PASS_LANE_FALLOFF_END [GT] = 1.2 (ramp centred on  |
+// |         |            |        | the old cliff — integrated threat preserved) + INTERCEPTOR_ABILITY_MIN/    |
+// |         |            |        | MAX [GT] = 0.6/1.4 (Anticipation+Pace) + LANE_VISION_FIDELITY_FLOOR [GT]   |
+// |         |            |        | = 0.2 (doctrine P2 — Vision resolves ability deviation from average).      |
 #endregion

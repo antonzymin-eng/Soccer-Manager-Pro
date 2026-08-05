@@ -11,8 +11,8 @@ selected downstream. All attribute references are cross-referenced to `PlayerAtt
 as DT requirements pending Spec #20 master attribute registry.
 
 **Created:** March 01, 2026, 3:30 PM PST
-**Updated:** May 17, 2026 (v1.1.2 patch — ERR-013-004: "Fatigue System #13" → "Pressing AI #13" at §3.1.8.1)
-**Version:** 1.1.2
+**Updated:** August 4, 2026 (v1.3 — ERR-008-020: §3.1.3.3 rewritten to the continuous, attribute-weighted lane-threat model; §3.1.4.3 gains the shot-lane deferral scope note)
+**Version:** 1.3
 **Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate; see §9 approval checklist). v1.1.1 (May 15, 2026): ERR-012-002 stale spec ref correction (§3.1.7.2 "Spec #14" → "Positioning AI, Spec #12"). v1.1.2 (May 17, 2026): ERR-013-004 stale spec name correction (§3.1.8.1 "Fatigue System #13" → "Pressing AI #13"). Both are single-token non-behavioral patches; no formula, contract, or pipeline change. Approval status preserved.
 **Specification Number:** 8 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -260,9 +260,19 @@ Absolute maximum is 10 (10 outfield teammates visible simultaneously).
 ### 3.1.3.3 Pass Lane Viability Check
 
 A pass lane is viable if a straight-line ball path from the agent to teammate `T` is not
-excessively obstructed by visible opponents.
+excessively threatened by visible opponents.
 
-**Geometric lane test:**
+> **ERR-008-020 (August 4, 2026 — football-judgment proxy review §6.4, the doctrine's
+> template fix).** The original form of this section counted every opponent inside a
+> single 0.8 m corridor as exactly one "interceptor" and every opponent outside it as
+> nothing — a 2 cm positional cliff (doctrine P1), and blind to who the defender is: a
+> slow, poor-anticipation defender blocked a lane exactly as hard as an elite one
+> (doctrine P2). Replaced by the continuous, attribute-weighted threat model below.
+> The worked verification table of the original ("1 interceptor → 0.67") survives as
+> the neutral row of the new table — an ability-neutral defender at lane centre still
+> costs exactly one threat unit (doctrine P5: today's balance is the pivot).
+
+**Per-opponent threat weight:**
 
 For each `PerceivedAgent O` in `PerceptionSnapshot.VisibleOpponents`:
 
@@ -277,38 +287,83 @@ t_proj_clamped = Clamp(t_proj, 0.0, 1.0)          // Only segment [0,1] is relev
 closest_point  = AgentPosition + t_proj_clamped × lane_vec
 perp_distance  = |O.PerceivedPosition − closest_point|
 
-// An opponent is an interceptor if within the lane width threshold
-is_interceptor(O) := perp_distance < PASS_LANE_WIDTH_HALF   // [GT] = 0.8m
-                     AND t_proj_clamped > 0.05               // Not behind the passer
-                     AND t_proj_clamped < 0.95               // Not past the target
+// Endpoint exclusion (unchanged): opponents effectively behind the passer or
+// past the target do not threaten the lane
+if t_proj_clamped ≤ PASS_LANE_ENDPOINT_MARGIN                 // [GT] = 0.05
+   OR t_proj_clamped ≥ 1.0 − PASS_LANE_ENDPOINT_MARGIN:  weight(O) = 0
+
+// Positional falloff: full threat inside the core corridor, linear fade to zero
+// at the outer edge (doctrine P1 — no cliff)
+falloff(O) = Clamp((PASS_LANE_FALLOFF_END − perp_distance)
+                   / (PASS_LANE_FALLOFF_END − PASS_LANE_CORE_HALF_WIDTH), 0.0, 1.0)
+
+// True interception ability from the defender's own attributes (units: none;
+// inputs raw [1,20], A_X = (raw − 1)/19 ∈ [0,1])
+ability_mean01  = 0.5 × (A_Anticipation(O) + A_Pace(O))
+true_ability(O) = INTERCEPTOR_ABILITY_MIN
+                  + (INTERCEPTOR_ABILITY_MAX − INTERCEPTOR_ABILITY_MIN) × ability_mean01
+
+// The passer's Vision as discrimination fidelity (doctrine P2): a low-Vision
+// passer reads every defender as near-average — he never invents information,
+// he fails to resolve it
+fidelity            = LANE_VISION_FIDELITY_FLOOR
+                      + (1.0 − LANE_VISION_FIDELITY_FLOOR) × A_Vision(passer)
+perceived_ability(O) = 1.0 + fidelity × (true_ability(O) − 1.0)
+
+weight(O) = falloff(O) × perceived_ability(O)
 ```
 
-**PASS_LANE_WIDTH_HALF = 0.8m [GT]:** Half-width of the lane corridor. An opponent
-centred in the lane at 0.8m from the line is close enough to credibly intercept.
-Range: (0.0, 2.0]. Increasing this makes the DT more conservative about attempting
-passes through traffic. Decreasing it makes the DT attempt passes through tighter gaps.
+**Constants:**
+
+| Constant | Value | Tag | Meaning |
+|---|---|---|---|
+| `PASS_LANE_CORE_HALF_WIDTH` | 0.4 m | [GT] | Full-threat corridor half-width. Range (0.0, `PASS_LANE_FALLOFF_END`). |
+| `PASS_LANE_FALLOFF_END` | 1.2 m | [GT] | Perpendicular distance at which positional threat reaches zero. Range (`PASS_LANE_CORE_HALF_WIDTH`, 3.0]. |
+| `INTERCEPTOR_ABILITY_MIN` | 0.6 | [GT] | Ability scalar at Anticipation/Pace raw 1/1. Range (0.0, 1.0]. |
+| `INTERCEPTOR_ABILITY_MAX` | 1.4 | [GT] | Ability scalar at raw 20/20. Range [1.0, 2.5). Midpoint of MIN..MAX MUST equal 1.0 so the league-average defender is weight-neutral. |
+| `LANE_VISION_FIDELITY_FLOOR` | 0.2 | [GT] | Fraction of ability deviation a Vision-1 passer still resolves. Range [0.0, 1.0). |
+| `PASS_LANE_ENDPOINT_MARGIN` | 0.05 | [GT] | Unchanged from the original model. |
+
+**Calibration note (doctrine P5):** the falloff ramp is deliberately centred on the
+original 0.8 m cliff — core 0.4 m + 0.8 m linear fade integrates to the same total
+threat over a uniformly distributed defender position as the old binary corridor, so
+the fix does not systematically loosen or tighten passing; it redistributes threat
+from a step to a slope. These are first-guess `[GT]`s: full calibration waits for a
+complete-engine pass per KD-W1 (`match-engine-wiring-backlog.md`).
 
 **Lane score formula:**
 
 ```
-interceptor_count = count of VisibleOpponents where is_interceptor(O) == true
+lane_threat = Σ weight(O) over VisibleOpponents
 
-PassLaneScore(T) = Clamp(1.0 − (interceptor_count / PASS_LANE_DIVISOR), 0.0, 1.0)
+PassLaneScore(T) = Clamp(1.0 − (lane_threat / PASS_LANE_DIVISOR), 0.0, 1.0)
 
 PASS_LANE_DIVISOR = 3.0 [GT]
 ```
 
-**PASS_LANE_DIVISOR = 3.0 [GT]:** Three interceptors in the lane → `PassLaneScore = 0.0`
-(blocked). Two interceptors → 0.33. One interceptor → 0.67. Clear lane → 1.0.
+**PASS_LANE_DIVISOR = 3.0 [GT]:** Summed lane threat of 3.0 → `PassLaneScore = 0.0`
+(blocked). The neutral-defender rows below reproduce the original integer table.
 
-**Verification (attribute extremes):**
+**Worked example.** Passer (Vision raw 20 ⇒ `A_Vision` = 1.0, `fidelity` = 1.0) at
+(52, 34) passing to (62, 34); defender at (57, 34.2) ⇒ `t_proj` = 0.5, `perp` = 0.2 m
+⇒ `falloff` = 1.0 (inside core). Defender Anticipation/Pace raw 20/20 ⇒
+`ability_mean01` = 1.0 ⇒ `true_ability` = 1.4 ⇒ `weight` = 1.4 ⇒
+`PassLaneScore` = 1 − 1.4/3 = **0.533**. The identical geometry with a raw-1/1
+defender gives `weight` = 0.6 ⇒ score **0.80**. The same two defenders read by a
+Vision-1 passer (`fidelity` = 0.2): weights 1.08 / 0.92 ⇒ scores 0.64 / 0.693 — the
+low-Vision passer barely tells them apart, which is the pre-fix behaviour.
 
-| Interceptors in Lane | PassLaneScore |
-|---------------------|---------------|
-| 0 | 1.00 (clear lane — full score) |
-| 1 | 0.67 (one player in path) |
-| 2 | 0.33 (congested; risky) |
-| 3+ | 0.00 (blocked) |
+**Verification:**
+
+| Scenario (defender at lane centre unless noted) | Weight | PassLaneScore |
+|---|---|---|
+| Clear lane | 0.0 | 1.00 |
+| 1 ability-neutral defender (the P5 pivot row — old "1 interceptor") | 1.00 | 0.67 |
+| 2 ability-neutral defenders | 2.00 | 0.33 |
+| 3+ ability-neutral defenders | ≥ 3.00 | 0.00 |
+| 1 elite defender (20/20), Vision-20 passer | 1.40 | 0.53 |
+| 1 poor defender (1/1), Vision-20 passer | 0.60 | 0.80 |
+| 1 neutral defender at perp 0.79 m / 0.81 m (old cliff edge) | 0.51 / 0.49 | 0.83 / 0.84 |
 
 **Lane floor:** If `PassLaneScore(T)` < `MIN_PASS_LANE_SCORE = 0.05`, this teammate is
 skipped entirely (no `PassOption` generated). The floor prevents generating candidates
@@ -540,6 +595,11 @@ GoalVisibilityScore = unblocked_goal_arc / total_goal_arc    // [0.0, 1.0]
 `IsInShotPath(O)` is true if opponent O is between the agent and the goal (along the
 axis of the shot, not the pass lane model). Identical in concept to §3.1.3.3 but
 the target is the goal plane rather than a teammate position.
+
+> **ERR-008-020 scope note:** §3.1.3.3's continuous attribute-weighted threat model
+> deliberately does NOT extend to this check yet — the shot lane retains the binary
+> angular-occlusion model above. Deferred as its own follow-up fix per the
+> football-judgment proxy review §6.4 (owner call: keep the template change small).
 
 `GoalVisibilityScore` is stored in the `ShootOption` and consumed by §3.2.2 (SHOOT
 utility formula: `GoalOpeningScore` field).
@@ -910,4 +970,5 @@ scoring is §3.2 (unchanged — it is an INTERCEPT), dispatch §3.5.
 | 1.1.1 | May 15, 2026 | Claude (AI) / Anton | Non-behavioral patch per ERR-012-002: §3.1.7.2 "Formation System (Spec #14)" → "Formation System (Positioning AI, Spec #12)". Single-token correction. Approval status preserved. |
 | 1.1.2 | May 17, 2026 | Claude (AI) / Anton | Non-behavioral patch per ERR-013-004: §3.1.8.1 "Fatigue System #13" → "Pressing AI #13". Single-token correction (current Spec #13 is Pressing AI; Fatigue System is a separate Stage-1 spec with no allocated number). Approval status preserved. |
 | 1.2 | August 4, 2026 | — | ERR-008-018 back-prop (close-chance-creation pass, §5.Z.24): §3.1.5.2's closing delegation pointed the DRIBBLE directional-to-goal modifier at **§3.2.2, the PASS formula**, so the promised term was never given a home and §3.2.4.1 shipped without it. Cross-reference corrected to §3.2.4.1 and the measured consequence recorded inline (final-third dribbles: 40% of carrier decisions, mean cosine to goal −0.30 over six full matches). Generation-stage behaviour is UNCHANGED — `best_direction` is still the free-space argmax; only the delegation target is corrected. |
+| 1.3 | August 4, 2026 | — | ERR-008-020 (football-judgment proxy review §6.4 — the doctrine's template fix; spec + code, same commit). §3.1.3.3 rewritten: the binary 0.8 m `is_interceptor` corridor (a 2 cm positional cliff, blind to defender identity) becomes a continuous per-opponent threat weight — linear positional falloff (core 0.4 m [GT], zero at 1.2 m [GT]; ramp centred on the old cliff so integrated threat is preserved) × the defender's Anticipation/Pace ability (0.6–1.4 [GT], average ⇒ exactly 1.0) read through the passer's Vision fidelity (floor 0.2 [GT] — doctrine P2, low Vision degrades to the attribute-blind read). `PASS_LANE_WIDTH_HALF` removed; lane floor, endpoint margin, and `PASS_LANE_DIVISOR` unchanged. §3.1.4.3 gains the scope note deferring the shot lane to a follow-up. Consumers: `UtilityWeights.cs` v1.7, `OptionGenerator.cs` v1.6, `DecisionContext(.Assembler).cs`, `DecisionTree.cs` v1.6, `MatchEngine.cs` v1.61 (the attribute-view wiring). |
 
