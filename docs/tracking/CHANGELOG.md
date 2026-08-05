@@ -111,6 +111,81 @@ break it, and do not edit historical entries.
 > on push. `tools/dotnet-ci/generate_projects.py` runs clean (64 projects, every asmdef reference
 > resolved) and `tools/unity-ci/check-meta-integrity.sh` passes.)
 
+> **Last Updated (prior):** August 5, 2026, end of same day (**ERR-008-019 — the full-range
+> digest-invariance claim is RETRACTED (adversarial review over the landing).** Documentation
+> only: no formula, constant, test or behaviour change, and the code is byte-identical to the
+> entry below. The argument recorded in five places — "any generator-reachable MIDFIELD SHOOT
+> needs ≥ ~34.5 m of range, and only raw 20's gate reaches it, where ramp = step" — rested on the
+> shooter sitting within Ball Physics #1 §3.1.11.1 `CheckPossession`'s **0.5 m** `ControlRadius`.
+> That is not a production possession-granting path in this engine. The two that are:
+> `MatchEngine.RunLooseBallPickup` (§5.Z Phase H, KD-H3), which grants possession to the nearest
+> eligible agent within `MatchEngineConstants.LooseBallPickupRadiusM` = **1.0 m** of a loose ball
+> at rest and **leaves the ball where it lies**, and the first-touch path
+> (`FIRST_TOUCH_ACCEPTANCE_RADIUS_M` = 1.0 m). After the grant **nothing re-anchors the ball to
+> the holder or releases possession on separation** — the holder moves freely under dispatched
+> `MoveTo` commands and the executors' only entry check is the possession id — so separation at a
+> decision tick reaches 1.0 m. Corrected: a MIDFIELD ball at x → 70⁻ with the holder goal-side
+> puts the shooter just above **34.0 m**, **inside** raw 19's range gate (20 + (18/19) × 15 =
+> 34.21 m), where the full-range ramp gives ≈ **0.524** against the old step's 0.55. A generated
+> option can score differently, so invariance is **not established** and is likely false on seeds
+> realizing that state. **The behaviour change itself is owner-directed and intended** — this
+> retracts a claim, not a decision; P5 (uniform-population mean 0.30), all four test locks and the
+> worked examples stand. The superseded narrow ramp (half-width 0.05) **survives** the corrected
+> premise: its band caps at 29.0 m, still disjoint from > 34.0 m — the 0.5 m premise error is
+> smaller than that margin and larger than the full-range form's 0.3 m one, which is exactly why
+> one claim holds and the other fails. Also fixed (Low): `LONG_SHOT_RAMP_HALF_WIDTH`'s XML doc
+> advertised a (0, 0.25] range the suite forbids below 0.25 — that range is the formula's validity
+> domain, not a free dial (`UtilityWeights.cs` v1.10). Surfaces synced: #8 §3.2.3.1 +
+> `section-3-2.md` v1.11, `spec-error-log.md` v1.63 (head + entry + index row),
+> `football-judgment-proxy-review.md`, `open-issues.md`, `CLAUDE.md`, `CHANGELOG-src.md` v2.72,
+> `file-manifest.md`, `README.md`. **Gate NOT run — no .NET SDK in the authoring environment; CI
+> compiles on push.** Prior entry below.)
+
+> **Last Updated (prior):** August 5, 2026, even later same day (**ERR-008-019 owner revision — the
+> long-shot ramp widened to the FULL attribute range.** The owner directed the scaling to run
+> over the whole LongShots range, not the initial 8–13 band; the metres-based §3.1.4.2 range
+> gate already scales raw 1–20, so the instruction lands on the §3.2.3.1 zone-modifier ramp.
+> One `[GT]` value: `LONG_SHOT_RAMP_HALF_WIDTH` 0.05 → **0.25**, its maximum valid value — the
+> ramp spans the whole shifted domain [0.5, 1.0] and `t` reduces to `A_LongShots` exactly.
+> Raw 1 is exactly 0.05, raw 20 exactly 0.55, and every raw point between moves the modifier
+> ≈ 0.026: **no plateau anywhere**. P5 survives the revision (the midpoint stays at the old
+> cliff and the uniform-population mean is 0.30 under the step, the narrow ramp, and the full
+> ramp alike), and so does digest invariance, in tighter form: the full ramp differs from the
+> step at every rating except raw 20 — and raw 20 (range 35.0 m) is the only rating whose
+> range gate reaches the ≥ ~34.5 m a MIDFIELD SHOOT requires (raw 19 caps at 34.2 m), where
+> the ramp equals the step. **Still no digest moves.** Spec: §3.2.3.1 constants + note,
+> §3.2.3.4 re-derived, Case B recomputed 0.200 → 0.162, `section-3-2.md` v1.10 footnote.
+> Code: `UtilityWeights.cs` v1.9 (the value), `UtilityScorer.cs` v1.15 (comment only — the
+> formula was built for this). Tests v1.9: the M-4 lock is now
+> `ShootMidfield_RampRunsInShiftedForm` (raw 10 computed ratio; the raw form suppresses raw 10
+> to SHORT) and `ShootMidfield_FullRangeRamp_EndpointsExact_AndStrictlyMonotone` replaces the
+> plateau-equality assertions, which were the exact opposite of the owner's instruction.
+> `spec-error-log.md` v1.62. **Gate NOT run — no .NET SDK in the authoring environment; CI
+> compiles on push.** Prior entry below.)
+
+> **Last Updated (prior):** August 5, 2026, latest same day (**ERR-008-019 LANDED — the second fix under the
+> football-judgment remediation doctrine, closing the review's founding finding.** #8 §3.2.3.1's
+> midfield `ZoneModifier_SHOOT` was a hard step on shifted LongShots — 0.55 strictly above
+> `LONG_SHOT_THRESHOLD`, 0.05 at or below, an **11× jump across one raw attribute point** — the
+> original pattern-(b) cliff the whole judgment-proxy review was named after, and the finding whose
+> earlier "FIXED … gate green" record was verified false at the ERR-008-020 landing. Landed now
+> under the id soft-reserved for it, re-verified free as required. Fix per doctrine P1/P5: a linear
+> ramp in the unchanged shifted form, centred on the old threshold with new
+> `[GT] LONG_SHOT_RAMP_HALF_WIDTH` = 0.05 — full suppression at raw ≤ 8, full long-shot modifier at
+> raw ≥ 13, the exact SHORT/LONG midpoint at the old cliff, so endpoints and the
+> population-integrated modifier reproduce the old behaviour (the -020 centred-ramp precedent,
+> locked by test). P2/P3 deliberately out of scope: long-shot inclination is the shooter's own
+> execution capability, not a recognition judgment — no fidelity term, no new attribute. **The
+> branch is production-unreachable in the only band the fix changes** (the ramp differs from the old step only at A_LongShots ≤ 0.6, whose §3.1.4.2 range gate caps at 29.0 m, while a generator-reachable MIDFIELD SHOOT needs ≥ ~34.5 m of range — disjoint bands, so no generated option ever scores differently; ERR-008-017's stale "≥ 40 m" figure — written after the ERR-008-016 equal-thirds correction — fixed in passing), so the cliff was latent and **no digest moves on any seed** — no
+> scenario re-anchoring, unlike -020's blast-radius note; landed anyway per the standing
+> wrong-shaped-model posture. Spec (`section-3-2-3-to-3-2-9.md` §3.2.3.1 + §3.2.3.4 re-derived as
+> ramp bands; `section-3-2.md` v1.9 footnote) + code (`UtilityScorer.cs` v1.14,
+> `UtilityWeights.cs` v1.8) + 4 new `UtilityScorerTests` locks (no-cliff, exact midpoint pivot,
+> endpoint clamps, monotonicity) + the AR-2 M-4 lock refitted raw 12 → 14, same commit;
+> `spec-error-log.md` v1.61. Review tally: **2 fixed, 32 open.** No schema change, no new RNG
+> stream / domain tag / draw site, no draw-order change. **Gate NOT run — no .NET SDK in the
+> authoring environment; CI runs it on push.** Prior entry below.)
+
 > **Last Updated (prior):** August 5, 2026, later same day (**#29/#41 gate run — PASSED. Both assemblies
 > compiled for the first time; all 67 of their tests executed and passed.** PR #299, CI run 394, head
 > `ddbbe58`. Build 0 errors; `TrainingSystem.Tests` 27/27, `InjuriesMedical.Tests` 40/40, 0 skipped in

@@ -1,7 +1,22 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 6, 2026, later same day (**AR pass over the #29/#41 T1 landing — 2 High, 2
+**Last Updated:** August 6, 2026, latest same day (**#29/#41 T1 GATE RUN — PASSED. No file
+changes; this entry records the run and retires the "no gate run" caveat carried by the two entries
+below it.** PR #300, CI run 397, head `9a7f703`. Build succeeded 0 errors; `TrainingSystem.Tests`
+**52/52** (+25 `TrainingSaveCodecTests`), `InjuriesMedical.Tests` **66/66** (+26
+`MedicalSaveCodecTests`), 0 skipped in either; `SeasonSave.Tests` **267 passed / 3 skipped / 270**,
+carrying the 7 new `SeasonSaveManagerTests`; whole-tree gate PASSED with the quarantine empty;
+`MatchEngine.Tests` 420/430 unchanged at 35 m 30 s, which is essentially the whole 36-minute job.
+Nothing needed a fix to get green — the load-bearing result for the three things the two entries below
+changed and could not check: the `in TrainingBlock` / `in MedicalBlock` signature change at every call
+site, the codec-suite byte offsets after the leading `*_SAVE_MAGIC` shifted all of them, and
+`SaveBlobFramingHelpers` under `TreatWarningsAsErrors`. **Modified:** `docs/tracking/CHANGELOG-src.md`
+v2.75, `docs/tracking/CHANGELOG.md`, `docs/tracking/spec-error-log.md` v1.66, `CLAUDE.md` (OPEN ISSUES
+#29/#41 entry), this file. Authoring environment still has no .NET SDK (installer still 403 at the
+proxy); CI on push remains the only compiler for this work.)
+
+**Last Updated (prior):** August 6, 2026, later same day (**AR pass over the #29/#41 T1 landing — 2 High, 2
 Medium, 3 Low, all fixed.**
 **New:** `src/deterministic-sim/SaveBlobFramingHelpers.cs` v1.0 (the four framing helpers both new
 codecs had duplicated verbatim), `src/season-save/TrainingBlock.cs` v1.0 + `MedicalBlock.cs` v1.0 (the
@@ -16,8 +31,8 @@ helpers hoisted; #29 gains the encode-side focus/fatigue gates its sibling alrea
 says `Array.Empty` explicitly), and both codec suites (offsets shifted past the magic; the cross-decode,
 encode-gate and mirror-ordering tests added).
 **Specs:** `training-system/section-4.md` v0.5 (§4.4.1 gains the magic + a fourth MUST),
-`injuries-medical/section-4.md` v0.3 (§4.4 the same); `spec-error-log.md` v1.62 (**ERR-029-005**,
-**ERR-041-009**); `CHANGELOG.md`, `CHANGELOG-src.md` v2.71, `src-tree.md`, `CLAUDE.md`.
+`injuries-medical/section-4.md` v0.3 (§4.4 the same); `spec-error-log.md` v1.65 (**ERR-029-005**,
+**ERR-041-009**); `CHANGELOG.md`, `CHANGELOG-src.md` v2.74, `src-tree.md`, `CLAUDE.md`.
 **Still no gate run** — no .NET SDK; the cross-decode defect was proven outside C#.)
 
 **Last Updated (prior):** August 6, 2026 (**#29/#41 T1 — the two save codecs and the season-frame composition.**
@@ -34,11 +49,61 @@ written block), `season-save.asmdef` (+`TrainingSystem`, +`InjuriesMedical`),
 `src/season-save/tests/SeasonSaveManagerTests.cs` v1.5.
 **Specs:** `training-system/section-4.md` v0.4 (new §4.4.1 — the layout #29 never pinned),
 `training-system/section-2.md` v0.5, `injuries-medical/section-4.md` v0.2 (§4.4 gains `ClubId`),
-`injuries-medical/section-2.md` v0.4; `spec-error-log.md` v1.61 (**ERR-029-004**, **ERR-041-008**);
-`CHANGELOG.md`, `CHANGELOG-src.md` v2.70, `src-tree.md`, `path-to-playable-roadmap.md`, `CLAUDE.md`.
+`injuries-medical/section-2.md` v0.4; `spec-error-log.md` v1.64 (**ERR-029-004**, **ERR-041-008**);
+`CHANGELOG.md`, `CHANGELOG-src.md` v2.73, `src-tree.md`, `path-to-playable-roadmap.md`, `CLAUDE.md`.
 (`README.md` untouched — no assembly count change; its "12 APPROVED specs have no assembly" lines were
 already stale before this landing and need their own sweep.) **NO GATE RUN** — still no .NET SDK in the authoring environment (installer still 403 at the
 proxy, re-checked); the csproj generator runs clean at 64 projects and meta integrity passes.)
+
+**Last Updated (prior):** August 5, 2026, end of same day (**ERR-008-019 — the full-range
+digest-invariance claim retracted at the adversarial review over the landing. No new files; no
+behaviour change.** **Modified:** `src/decision-tree/UtilityWeights.cs` v1.10 (XML doc only —
+`LONG_SHOT_RAMP_HALF_WIDTH`'s advertised (0, 0.25] range is the formula's validity domain, not a
+free dial; the suite pins 0.25 through
+`ShootMidfield_FullRangeRamp_EndpointsExact_AndStrictlyMonotone`),
+`docs/specs/decision-tree/section-3-2-3-to-3-2-9.md` (the §3.2.3.1 invariance passage rewritten to
+the corrected argument + the constant-block annotation),
+`docs/specs/decision-tree/section-3-2.md` v1.11 (§3.2.13 row + header),
+`docs/tracking/spec-error-log.md` v1.63 (new head entry, an appended paragraph on the ERR-008-019
+entry, and the index row), `docs/tracking/football-judgment-proxy-review.md` (head chain + the §2
+#8 entry), `docs/tracking/open-issues.md`, `CLAUDE.md` (OPEN ISSUES clause),
+`docs/tracking/CHANGELOG.md`, `docs/tracking/CHANGELOG-src.md` v2.72, `README.md`. The correction:
+possession is granted by `RunLooseBallPickup` at **1.0 m** (KD-H3) and by the 1.0 m first-touch
+path — not the 0.5 m `ControlRadius` the claim assumed — and nothing re-anchors the ball
+afterwards, so a raw-19 MIDFIELD shot is marginally generator-reachable (> 34.0 m vs a 34.21 m
+gate) and there ramp ≈ 0.524 ≠ step 0.55. Behaviour change owner-intended; no formula, constant or
+test changed. **No gate run — no .NET SDK in the authoring environment.**)
+
+**Last Updated (prior):** August 5, 2026, even later same day (**ERR-008-019 owner revision — the
+long-shot ramp widened to the full attribute range. No new files.** **Modified:**
+`src/decision-tree/UtilityWeights.cs` v1.9 (`LONG_SHOT_RAMP_HALF_WIDTH` 0.05 → 0.25 — full-range;
+raw 1 exactly SHORT, raw 20 exactly LONG, no plateaus; P5 mean preserved),
+`src/decision-tree/UtilityScorer.cs` v1.15 (comment only), `src/decision-tree/Tests/
+UtilityScorerTests.cs` v1.9 (shifted-form lock refitted to raw 10; endpoints-exact +
+strictly-monotone replaces the plateau lock), `docs/specs/decision-tree/section-3-2-3-to-3-2-9.md`
+(constants block, correction note, §3.2.3.4 full-range derivation, Case B recomputed 0.200 →
+0.162), `docs/specs/decision-tree/section-3-2.md` v1.10 (footnote ¹ + §3.2.13 row),
+`docs/tracking/spec-error-log.md` v1.62 (owner-revision note + index row), review file /
+`open-issues.md` / `CLAUDE.md` entries amended, `docs/tracking/CHANGELOG.md`,
+`docs/tracking/CHANGELOG-src.md` v2.71, `README.md`. Still digest-invariant (only raw 20 reaches a
+MIDFIELD SHOOT; there ramp = step). **No gate run — no .NET SDK in the authoring environment.**)
+
+**Last Updated (prior):** August 5, 2026, latest same day (**ERR-008-019 — the #8 §3.2.3.1 midfield
+long-shot cliff → linear ramp (judgment-proxy doctrine P1/P5). No new files.** **Modified:**
+`src/decision-tree/UtilityScorer.cs` v1.14 (MIDFIELD `ScoreShoot` branch: `Lerp`/`InverseLerp` ramp
+over the shifted form), `src/decision-tree/UtilityWeights.cs` v1.8 (+ `[GT]
+LONG_SHOT_RAMP_HALF_WIDTH` = 0.05; `LONG_SHOT_THRESHOLD` redocumented as the ramp centre),
+`src/decision-tree/Tests/UtilityScorerTests.cs` v1.8 (4 new ramp locks; the AR-2 M-4 lock refitted
+raw 12 → 14), `docs/specs/decision-tree/section-3-2-3-to-3-2-9.md` (§3.2.3.1 ramp + ERR note with
+the disjoint-bands digest-invariance argument; §3.2.3.4 item 2 re-derived; Case B annotated
+unchanged and its ERR-008-017 reachability note's stale "≥ 40 m / 65 m boundary" figures
+corrected), `docs/specs/decision-tree/section-3-2.md` v1.9 (footnote ¹ + §3.2.13 row),
+`docs/specs/decision-tree/audit-report.md` (M-4 "locked by" citation refitted to the renamed
+test), `docs/tracking/spec-error-log.md` v1.61 (ERR-008-019 filed + RESOLVED; index row), `docs/tracking/football-judgment-proxy-review.md` (§1/§2/§5 — 2 fixed, 32
+open), `docs/tracking/open-issues.md`, `CLAUDE.md` (OPEN ISSUES index line),
+`docs/tracking/CHANGELOG.md`, `docs/tracking/CHANGELOG-src.md` v2.70, `README.md`. Branch is
+production-unreachable through the §3.1.4 generator ⇒ no digest moves. **No gate run — no .NET SDK
+in the authoring environment.**)
 
 **Last Updated (prior):** August 5, 2026, later same day (**#29/#41 GATE RUN — PASSED. No file changes; this
 entry records the run and retires the "no gate run" caveat carried by the four entries below it.**

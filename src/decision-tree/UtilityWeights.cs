@@ -5,6 +5,9 @@
 // Modified: 2026-07-28 (ERR-008-017 — + SHOOT_SWEET_RANGE_M / SHOOT_DIST_FALLOFF_M [GT] (shot-volume design KD-V2))
 // Modified: 2026-08-04 (ERR-008-018 — + DRIBBLE_GOAL_DIR_MIN_MODIFIER [GT] (close-chance-creation design KD-CC2))
 // Modified: 2026-08-04 (ERR-008-020 — pass-lane threat model: PASS_LANE_WIDTH_HALF → CORE_HALF_WIDTH/FALLOFF_END + INTERCEPTOR_ABILITY_MIN/MAX + LANE_VISION_FIDELITY_FLOOR)
+// Modified: 2026-08-05 (ERR-008-019 — + LONG_SHOT_RAMP_HALF_WIDTH [GT]; LONG_SHOT_THRESHOLD redocumented as the ramp centre)
+// Modified: 2026-08-05 (ERR-008-019 owner revision — LONG_SHOT_RAMP_HALF_WIDTH 0.05 → 0.25: full-range ramp, no plateaus)
+// Modified: 2026-08-05 (ERR-008-019 AR — LONG_SHOT_RAMP_HALF_WIDTH XML doc: the (0, 0.25] range is the formula's validity domain; the suite pins 0.25)
 // Author:   —
 // Spec:     Decision Tree #8 §3.2.11, Code Standards #20
 // Purpose:  Authoritative constant catalogue for the utility scoring model.
@@ -101,12 +104,37 @@ namespace TacticalDirector.DecisionTree
         // ── Context Score Thresholds and Distances ──────────────────────────────────
 
         /// <summary>
-        /// [GT] Midfield long-shot viability threshold. Compared against the SHIFTED
-        /// attribute form (0.5 + A_LongShots × 0.5) per §3.2.3.1 — effective raw
-        /// LongShots ≥ 11 (§3.2.3.4 derives this explicitly; comparing the raw
-        /// normalised A against 0.75 — the AR-2 M-4 defect — required raw ≥ 16).
+        /// [GT] Midfield long-shot ramp CENTRE, in the SHIFTED attribute form
+        /// (0.5 + A_LongShots × 0.5) per §3.2.3.1 (the AR-2 M-4 correction — the raw
+        /// form required raw ≥ 16). ERR-008-019: no longer a hard gate. The midfield
+        /// zone modifier ramps linearly from SHOOT_ZONE_MID_SHORT at
+        /// (THRESHOLD − LONG_SHOT_RAMP_HALF_WIDTH) to SHOOT_ZONE_MID_LONG at
+        /// (THRESHOLD + LONG_SHOT_RAMP_HALF_WIDTH); at exactly THRESHOLD the modifier
+        /// is the exact SHORT/LONG midpoint (§3.2.3.4 derives the raw-attribute bands).
         /// </summary>
         public const float LONG_SHOT_THRESHOLD = 0.75f;
+
+        /// <summary>
+        /// [GT] Midfield long-shot ramp half-width, in shifted-attribute units.
+        /// 0.25 is the FULL-RANGE setting (owner-directed, August 5, 2026 — supersedes
+        /// the initial 0.05 landing value): the ramp spans the entire shifted domain
+        /// [0.5, 1.0], so every raw LongShots point from 1 to 20 moves the zone
+        /// modifier by ≈ 0.026 — no plateau at either end; raw 1 is exactly
+        /// SHOOT_ZONE_MID_SHORT and raw 20 exactly SHOOT_ZONE_MID_LONG. Must be > 0
+        /// and ≤ 0.25 (the ramp must stay inside the shifted form's [0.5, 1.0] range).
+        /// That range is the FORMULA's validity domain, not a free dial: the test suite
+        /// pins the full-range value through
+        /// UtilityScorerTests.ShootMidfield_FullRangeRamp_EndpointsExact_AndStrictlyMonotone,
+        /// which fails at any half-width below 0.25 because the end plateaus return —
+        /// the lock deliberately encodes the owner's no-plateau instruction. A retune
+        /// below 0.25 is therefore an owner decision that must revisit that lock in the
+        /// same change.
+        /// Centred on LONG_SHOT_THRESHOLD = the attribute midpoint, so the
+        /// population-mean modifier over a uniform attribute is 0.30 at ANY symmetric
+        /// half-width — the doctrine P5 pivot holds at this value too. §3.2.3.1,
+        /// ERR-008-019.
+        /// </summary>
+        public const float LONG_SHOT_RAMP_HALF_WIDTH = 0.25f;
         public const float GOAL_OPENING_MIN = 0.05f;  // [GT] minimum goal opening score floor
         public const float BLOCKER_RADIUS_M = 0.50f;  // [GT] outfield player body width in shot lane
         public const float GK_BLOCKER_RADIUS_M = 1.50f;  // [GT] goalkeeper effective blocking radius
@@ -295,4 +323,21 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        | the old cliff — integrated threat preserved) + INTERCEPTOR_ABILITY_MIN/    |
 // |         |            |        | MAX [GT] = 0.6/1.4 (Anticipation+Pace) + LANE_VISION_FIDELITY_FLOOR [GT]   |
 // |         |            |        | = 0.2 (doctrine P2 — Vision resolves ability deviation from average).      |
+// | 1.8     | 2026-08-05 | —      | ERR-008-019 (judgment-proxy doctrine P1/P5): + LONG_SHOT_RAMP_HALF_WIDTH   |
+// |         |            |        | [GT] = 0.05 (shifted units; ramp spans raw ≈ 8.6–12.4, centred on the old  |
+// |         |            |        | cliff so the integrated modifier is preserved — P5 pivot).                 |
+// |         |            |        | LONG_SHOT_THRESHOLD redocumented as the ramp centre; value unchanged.      |
+// | 1.9     | 2026-08-05 | —      | ERR-008-019 owner revision: LONG_SHOT_RAMP_HALF_WIDTH 0.05 → 0.25 — the    |
+// |         |            |        | full-range setting. The ramp spans the whole shifted domain [0.5, 1.0]:    |
+// |         |            |        | every raw point 1–20 moves the modifier ≈ 0.026, no plateau at either      |
+// |         |            |        | end. Still centred on the attribute midpoint, so the uniform-population    |
+// |         |            |        | mean stays 0.30 (P5 holds at any symmetric half-width).                    |
+// | 1.10    | 2026-08-05 | —      | ERR-008-019 adversarial review (doc only; no value changes):               |
+// |         |            |        | LONG_SHOT_RAMP_HALF_WIDTH's XML doc stated a valid range of (0, 0.25]     |
+// |         |            |        | that the suite forbids below 0.25 — ShootMidfield_FullRangeRamp_          |
+// |         |            |        | EndpointsExact_AndStrictlyMonotone fails at any smaller half-width (the   |
+// |         |            |        | end plateaus return, which is what the owner's no-plateau instruction     |
+// |         |            |        | ruled out). Doc now records that (0, 0.25] is the FORMULA's validity      |
+// |         |            |        | domain, not a free dial, and that a retune below 0.25 must revisit that   |
+// |         |            |        | lock in the same change.                                                  |
 #endregion

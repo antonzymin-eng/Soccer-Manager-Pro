@@ -1,16 +1,38 @@
 # Football-Judgment Proxy Review
 
 > **Created:** August 4, 2026
-> **Updated:** August 4, 2026, latest same day — the §6.4 template fix LANDED as `ERR-008-020`;
+> **Updated:** August 5, 2026, even later same day — **ERR-008-019's digest-invariance claim
+> RETRACTED for the full-range form** at the adversarial review over the landing (documentation
+> only; formula, constants and the four test locks untouched). The argument assumed a 0.5 m
+> possession radius; the engine's production paths are `RunLooseBallPickup` (§5.Z Phase H, KD-H3,
+> `LooseBallPickupRadiusM` = **1.0 m**, ball left where it lies) and first touch (1.0 m), and
+> nothing re-anchors the ball to the holder or drops possession on separation afterwards. A
+> MIDFIELD ball at x → 70⁻ with the holder 1.0 m goal-side therefore reaches just above **34.0 m**
+> — inside raw 19's range gate (34.21 m), where the full-range ramp gives ≈ 0.524 against the old
+> step's 0.55 — so a generated option **can** score differently. The behaviour change is
+> owner-intended; the superseded narrow ramp's disjoint-bands argument survives (its band caps
+> at 29.0 m, still disjoint from the corrected bound). Gate NOT runnable in the authoring
+> environment.
+> **Updated (prior):** August 5, 2026, later same day — ERR-008-019 owner revision: the long-shot ramp
+> widened to the FULL attribute range (`LONG_SHOT_RAMP_HALF_WIDTH` 0.05 → 0.25, its maximum
+> valid value) — raw 1 exactly 0.05, raw 20 exactly 0.55, every point between moves the
+> modifier ≈ 0.026, no plateaus. P5 holds (same midpoint, same uniform-population mean 0.30);
+> still digest-invariant (only raw 20 can generate a MIDFIELD SHOOT, and there ramp = step).
+> **Updated (prior):** August 5, 2026 — the long-shot cliff GENUINELY FIXED this time, landed as
+> `ERR-008-019` (the soft-reserved id, re-verified free at landing): §3.2.3.1's midfield hard
+> threshold is now a linear ramp per doctrine P1/P5. §2/§5 updated — 2 fixed, 32 open. Note the
+> branch is production-unreachable in the only band the fix changes (the ramp differs from the old step only at A_LongShots ≤ 0.6, whose §3.1.4.2 range gate caps at 29.0 m, while a generator-reachable MIDFIELD SHOOT needs ≥ ~34.5 m of range — disjoint bands, so no generated option ever scores differently), so no digest moves; gate NOT runnable in the authoring environment.
+> **Updated (prior):** August 4, 2026, latest same day — the §6.4 template fix LANDED as `ERR-008-020`;
 > §2/§5 corrected: the "ERR-008-019 FIXED" status the prior session recorded was false (no log
 > entry, cliff still live, no branch carries a fix) — that finding is re-opened and its id
 > soft-reserved.
 > **Updated (prior):** August 4, 2026 — §6 remediation doctrine added (owner-converged in session;
 > see §6 provenance note). Findings §§2–5 unchanged.
-> **Status:** FINDINGS LOG (§§1–5, identification only) + REMEDIATION DOCTRINE (§6, the
-> owner-approved general approach each fix must cite). No fixes applied yet; no `ERR-` ids
-> allocated (allocation happens at fix time, per the `err-file-and-backprop` skill). Nothing in
-> this file has been through the spec-error-log's Filed/Status/Fix/Determinism-impact process.
+> **Status:** FINDINGS LOG (§§1–5) + REMEDIATION DOCTRINE (§6, the owner-approved general
+> approach each fix must cite). Remediation is underway: 2 of 34 findings fixed
+> (`ERR-008-020` August 4, `ERR-008-019` August 5 — both through the spec-error-log's full
+> Filed/Status/Fix/Determinism-impact process), 32 open. `ERR-` ids for the rest are allocated
+> at fix time, per the `err-file-and-backprop` skill.
 > **Scope:** All 53 APPROVED specs in `SPEC_INDEX.md`, read directly from `docs/specs/`, regardless
 > of whether a `src/` assembly exists yet for that spec.
 
@@ -21,8 +43,8 @@
 A single defect *shape*, first caught as `ERR-008-019` (Decision Tree #8's
 `ZoneModifier_SHOOT`, where a continuous football judgment — "is this a viable long-shot
 position?" — was implemented as one hard threshold on a raw attribute, producing an 11x output
-jump for a 1-point attribute difference; the id is soft-reserved — see the §2 correction: the fix
-this file originally recorded as landed never did). The same review pass that found ERR-008-019 also found
+jump for a 1-point attribute difference; landed August 5, 2026 under the reserved id — see §2,
+including the history of the false "FIXED" record it carried before that). The same review pass that found ERR-008-019 also found
 seven more instances of the same shape elsewhere in Decision Tree #8 and Goalkeeper Mechanics #11
 before this file existed to record them (§2 below). This document extends that pass across every
 other APPROVED spec.
@@ -59,14 +81,33 @@ this pattern — FRs and formulas).
 ### Spec #8 Decision Tree
 
 - **§3.2.3.1 `ZoneModifier_SHOOT`, midfield branch — `LONG_SHOT_THRESHOLD` hard cliff.**
-  **CORRECTION (August 4, 2026): the "FIXED as `ERR-008-019`" status this entry originally carried
-  was false.** Verified against both this branch and `origin/main` at the ERR-008-020 landing: no
-  `ERR-008-019` entry exists in `spec-error-log.md`, the `LONG_SHOT_THRESHOLD = 0.75` cliff is
-  still live in `UtilityWeights.cs` / `UtilityScorer.cs` and in `section-3-2-3-to-3-2-9.md`, and no
-  branch carries a fix — the prior session recorded a fix (and a green gate) that never landed
-  anywhere: the root `CLAUDE.md` fabricated-claims trap. **Status: OPEN.** The id `ERR-008-019`
-  stays soft-reserved for this fix (it is cited as the named precedent throughout this file) and
-  must be re-verified free at its own landing. Pattern (b).
+  **FIXED — landed August 5, 2026 as `ERR-008-019`** (the soft-reserved id, re-verified free at
+  landing per the correction below): the hard step — 0.55 strictly above the threshold, 0.05 at or
+  below, an 11× jump across one raw LongShots point — is now a linear ramp in the unchanged
+  shifted form, centred on the old threshold with `[GT] LONG_SHOT_RAMP_HALF_WIDTH` —
+  **owner-revised same day from 0.05 to the full-range 0.25**, so the ramp spans the entire
+  attribute: raw 1 exactly 0.05, raw 20 exactly 0.55, every raw point between moves the modifier
+  ≈ 0.026, no plateau anywhere (doctrine P1; the midpoint sits at the old cliff and the
+  uniform-population mean stays 0.30, so the P5 pivot holds; P2/P3 deliberately not in scope —
+  long-shot inclination is the shooter's own execution capability, not a recognition judgment).
+  **Digest invariance NOT established for the full-range form** — the claim originally recorded
+  here was retracted at the same-day adversarial review over the landing. It assumed the shooter
+  sat within a 0.5 m possession radius; the engine's production possession-granting paths are
+  `MatchEngine.RunLooseBallPickup` (§5.Z Phase H, KD-H3 — `LooseBallPickupRadiusM` = **1.0 m**,
+  and the ball is left where it lies) and the first-touch path (1.0 m), with no rule re-anchoring
+  the ball to the holder or releasing possession on separation afterwards. So a MIDFIELD ball at
+  x → 70⁻ with the holder 1.0 m goal-side reaches just above **34.0 m**, inside raw 19's range
+  gate (20 + (18/19) × 15 = 34.21 m), where the ramp gives ≈ **0.524** against the old step's
+  0.55 — a generated option can score differently, and the ramp is behaviour-visible today
+  through the pickup path. The behaviour change is owner-intended; the superseded narrow ramp
+  (0.05) survives the corrected premise (its band caps at 29.0 m, still disjoint from > 34.0 m).
+  Gate NOT runnable in the authoring environment.
+  *History:* **CORRECTION (August 4, 2026): the "FIXED as `ERR-008-019`" status this entry originally
+  carried was false.** Verified against both this branch and `origin/main` at the ERR-008-020
+  landing: no `ERR-008-019` entry existed in `spec-error-log.md`, the `LONG_SHOT_THRESHOLD = 0.75`
+  cliff was still live in `UtilityWeights.cs` / `UtilityScorer.cs` and in
+  `section-3-2-3-to-3-2-9.md`, and no branch carried a fix — the prior session recorded a fix (and
+  a green gate) that never landed anywhere: the root `CLAUDE.md` fabricated-claims trap. Pattern (b).
 - **§3.1.3.3 PASS lane "interceptor" test** — pure geometry (distance/angle of defenders to the
   passing lane). No defender attribute (anticipation, pace) enters the interception-likelihood
   calculation, so a slow, poor-anticipation defender scores as equally threatening an interceptor as
@@ -311,13 +352,12 @@ fresh in this pass, of which 24 total specs across both passes returned at least
 | Specs with ≥1 finding | 24 |
 | Specs with no findings | 29 |
 | Total findings recorded | 34 |
-| Findings fixed (`ERR-008-020`, the §3.1.3.3 template — August 4, 2026) | 1 |
-| Findings open | 33 |
+| Findings fixed (`ERR-008-020` §3.1.3.3 template, August 4; `ERR-008-019` §3.2.3.1 long-shot ramp, August 5) | 2 |
+| Findings open | 32 |
 
-*(Corrected August 4, 2026: this table originally counted the `ERR-008-019` long-shot fix as
-already landed. It never was — see the §2 correction. The one genuinely fixed finding is the
-§3.1.3.3 pass-lane template, landed as `ERR-008-020` under §6.4; ERR-008-019 is back among the
-33 open.)*
+*(Updated August 5, 2026: `ERR-008-019` — the long-shot cliff, this review's founding finding — is
+now genuinely landed; see §2. Corrected August 4, 2026: this table originally counted that same
+fix as already landed when it never was — the §2 history note records the false-claim episode.)*
 
 No fixes were applied in this pass. No `ERR-` ids were allocated. Prioritization and remediation are
 a separate, later step — governed by §6 below.
