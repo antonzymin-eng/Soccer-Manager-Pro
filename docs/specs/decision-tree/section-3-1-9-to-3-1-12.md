@@ -227,6 +227,12 @@ Step: Generate PASS candidates
     [O2 at perp_dist = 0.0m: interceptor_count = 1]
     PassLaneScore(T1) = 1.0 − (1 / 3.0) = 0.67
 
+    [ERR-008-020 note: §3.1.3.3 now computes a continuous threat weight, not a count.
+     This arithmetic still holds exactly for THIS example because O2 sits at perp 0.0 m
+     (falloff = 1.0) and the example assigns no attributes (ability-neutral ⇒ 1.0 — the
+     doctrine-P5 pivot row). Under the current model the weight ranges 0.6–1.4 with O2's
+     Anticipation/Pace as read through the passer's Vision fidelity; see §3.1.3.3 v1.3.]
+
     GoalDirectionCosine:
       pass_dir = Normalise(12, −4) = (0.949, −0.316)
       Dot((0.949, −0.316), (1, 0)) = 0.949
@@ -298,6 +304,7 @@ This option set is passed to `ScoreOptions()` (§3.2) for utility assignment.
 |---------|------|--------|---------|
 | 1.0 | March 01, 2026, 3:30 PM PST | Claude (AI) / Anton | Initial draft. Complete option generation for all 7 action types. Worked example verified numerically. Attribute dependency flags (ERR-011). |
 | 1.1 | March 01, 2026, 5:00 PM PST | Claude (AI) / Anton | Four fixes: (1) DRIBBLE expanded from 5-sector to 8-sector model — eliminates structural gaps, reduces worst-case angular error from ±67.5° to ±22.5°, blind angle analysis quantified. (2) INTERCEPT trajectory upgraded from linear to drag-adjusted approximation — integrates e^(−kt) decay from Ball Physics #1 drag constant [CROSS], error bounds tabulated (max 6.9% at 30 m/s over 1.5s). Magnus exclusion documented with consequence analysis. (3) PRESS_TRIGGER_DISTANCE given full sensitivity analysis — three degenerate case boundaries documented, three balance tests (BAL-PRESS-01/02/03) defined for Section 5. (4) Backward pass overvaluation fixed — GoalDirectionModifier added to PassOption construction, reducing backward pass AdjustedPassLaneScore to 0.50× of raw score; worked example updated to show correct ranking (T3 backward now correctly ranks below T1 forward despite cleaner lane). |
+| 1.2 | August 4, 2026 | — | ERR-008-020 annotation: the §3.1.11 worked example's T1 lane arithmetic (`interceptor_count = 1` ⇒ 0.67) is annotated rather than rewritten — it still holds exactly because O2 sits at perp 0.0 m and carries no attributes (the doctrine-P5 ability-neutral pivot); under the current §3.1.3.3 threat model the weight ranges 0.6–1.4 with the defender's Anticipation/Pace as read through the passer's Vision fidelity. |
 
 ---
 

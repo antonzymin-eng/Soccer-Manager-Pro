@@ -1,7 +1,56 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 4, 2026, latest same day (**Wiring backlog W1 — the keeper rush trigger + ERR-011-009.** **New:** `src/goalkeeper-mechanics/Tests/GoalkeeperRushTests.cs`, `src/match-engine/tests/GkRushTriggerTests.cs`, `src/match-engine/tests/GkRushDiagnosticTests.cs`, `docs/tracking/gk-rush-trigger-design.md`. **Modified:** `MatchEngine.cs` v1.58 (`TryCommitRushIntents` — the first production caller `GoalkeeperMechanics.CommitRushIntent` has ever had), `GkHeadingIntentSource.cs` v1.1 (`RushArmed` + `HasGoalSideCover` + `TrySolveRushIntercept`), `GoalkeeperRushDispatch.cs` v1.1 (§3.7.0 `ComputeRushCommitDistanceM` — ERR-011-010), `MatchEngineConstants.cs` v1.28, `GoalkeeperMechanics.cs` v1.11, `GoalkeeperStateMachine.cs` v1.7, `GoalkeeperConstants.cs` v1.5, `GoalkeeperMechanicsTests.cs` (the new state-machine parameter + five ERR-011-009 priority cases), `docs/specs/goalkeeper-mechanics/section-3.md` v0.7 (new §3.7.0 + six §3.4.6 constants + the two §3.1.1 rows), `spec-error-log.md` v1.56, `match-engine-wiring-backlog.md` v1.1, `open-issues.md`, `CLAUDE.md`. No `SNAPSHOT_SCHEMA_VERSION` change (#11's own serialized `_rushIntentActive` is the latch). **Gate NOT run and no measurement taken — the authoring environment has no .NET SDK and the agent proxy denies the installer.** **Prior entry below.**)
+**Last Updated:** August 5, 2026, later same day (**PR #298 first gate run — 1 failure fixed (the
+DecisionTree field-count snapshot-coverage guard, tripped by ERR-008-020's injected
+`_allAgentAttributes`).** **No new files.** **Modified:** `src/decision-tree/Tests/DecisionTreeStateTests.cs`
+→ v1.1 (count 10 → 11 + the field recorded in the injected/excluded ledger), `CHANGELOG.md`,
+`CHANGELOG-src.md` → v2.64, this manifest. No production change. Gate otherwise green by execution:
+`MatchEngine.Tests` 420/0/10 incl. the previously-red keeper-substitution round-trip (restore-resync
+fix confirmed); all nine lane-model locks pass first compile. **Prior entry below.**)
+
+**Last Updated (prior):** August 5, 2026 (**CI fix — restore determinism, main red at the W1 merge.** **No new
+files.** **Modified:** `src/match-engine/MatchEngine.cs` → v1.63 (`ResolveGkAgentId` extraction +
+`RestoreFromSnapshot` step 3b `ResyncGkAgentIdsAfterRestore` — the W1 AR-2 occupant-change `ResetSlot`
+fired on the boot-vs-restored flag delta and wiped just-restored #11 keeper state; digest diverged at
+tick N+1 in `RoundTrip_KeeperSubstitutedOntoOutfieldSlot_IsDeterministic`),
+`docs/tracking/gk-rush-trigger-design.md` → v1.4 (supersedes the v1.3 "restore sees no change" claim),
+`CHANGELOG.md`, `CHANGELOG-src.md` → v2.63, this manifest. No schema change; verified by the
+already-failing CI test — **gate not runnable locally (no .NET SDK)**. **Prior entry below.**)
+
+**Last Updated (prior):** August 4, 2026, latest same day (**ERR-008-020 adversarial review pass — 2 M, 1 L
+fixed; pass 2 clean.** **No new files.** **Modified:** `src/decision-tree/DecisionTree.cs` → v1.7
+(+ `HasSquadAttributeView`), `src/decision-tree/Tests/OptionGeneratorTests.cs` → v1.6 (computed-path
+P5 pivot + MIN/MAX midpoint invariant + constant-derived margins), `src/match-engine/MatchEngine.cs`
+→ v1.62 (+ `TestOnly_AllDtSquadAttributeViewsWired`), `src/match-engine/tests/MatchEngineSquadTests.cs`
+→ v1.4 (construction wiring lock), `CHANGELOG.md`, `CHANGELOG-src.md` → v2.62, `open-issues.md`, this
+manifest. Production delta = two read-only accessors; no schema/digest surface. **Gate NOT run — no
+.NET SDK in this environment.** **Prior entry below.**)
+
+**Last Updated (prior):** August 4, 2026, latest same day (**ERR-008-020 — the §3.1.3.3 pass-lane threat model
+(the judgment-proxy doctrine's template fix).** **No new files.** **Modified in `src/decision-tree/`:**
+`UtilityWeights.cs` → v1.7 (5 new `[GT]`s; `PASS_LANE_WIDTH_HALF` removed), `OptionGenerator.cs` → v1.6
+(`ComputeLaneThreat` + `PerceivedInterceptAbility`), `DecisionContext.cs` → v1.2 (+ `AllAgentAttributes`),
+`DecisionContextAssembler.cs` → v1.5, `DecisionTree.cs` → v1.6 (+ `SetAllAgentAttributes`),
+`Tests/OptionGeneratorTests.cs` → v1.5 (6 new locks incl. the away mirror). **In `src/match-engine/`:**
+`MatchEngine.cs` → v1.61 (per-tree `_dtAttrs` wiring at boot). **Docs:**
+`docs/specs/decision-tree/section-3-1.md` → v1.3 (§3.1.3.3 rewritten; §3.1.4.3 scope note),
+`spec-error-log.md` → v1.57 (ERR-008-020 filed+resolved; two v1.56 header labels relabelled `(prior)`),
+`football-judgment-proxy-review.md` (§6.4 marked LANDED; §1/§2/§5 corrected — the ERR-008-019 "FIXED"
+claim was false, finding re-opened), `CLAUDE.md` (+ OPEN ISSUES entry, 13 → 14 active), `open-issues.md`,
+`CHANGELOG.md`, `CHANGELOG-src.md` → v2.61, `README.md`. No new assembly; production count stays 31.
+No `SNAPSHOT_SCHEMA_VERSION` change. **Gate NOT run — no .NET SDK in this environment.** **Prior entry below.**)
+
+**Last Updated (prior):** August 4, 2026, latest same day (**Football-judgment proxy review — §6 remediation doctrine.**
+**No new files; no code.** **Modified:** `docs/tracking/football-judgment-proxy-review.md` (new §6 — the
+owner-converged remediation doctrine: the recognition→decision→execution frame with its five flaw
+mitigations, principles P1–P5, the attribute ownership ledger, the formula-patch / mechanism /
+governance finding classes, the §3.1.3.3 pass-lane template fix recorded as chosen-not-implemented, and
+the pairwise-familiarity gap), this manifest (the review file also gains its Tracking Documents row —
+it was never recorded at its August 4 creation), `CHANGELOG.md`. Doc-only: no `ERR-` allocated, no
+spec text touched, no gate run needed. **Prior entry below.**)
+
+**Last Updated (prior):** August 4, 2026, latest same day (**Wiring backlog W1 — the keeper rush trigger + ERR-011-009.** **New:** `src/goalkeeper-mechanics/Tests/GoalkeeperRushTests.cs`, `src/match-engine/tests/GkRushTriggerTests.cs`, `src/match-engine/tests/GkRushDiagnosticTests.cs`, `docs/tracking/gk-rush-trigger-design.md`. **Modified:** `MatchEngine.cs` v1.58 (`TryCommitRushIntents` — the first production caller `GoalkeeperMechanics.CommitRushIntent` has ever had), `GkHeadingIntentSource.cs` v1.1 (`RushArmed` + `HasGoalSideCover` + `TrySolveRushIntercept`), `GoalkeeperRushDispatch.cs` v1.1 (§3.7.0 `ComputeRushCommitDistanceM` — ERR-011-010), `MatchEngineConstants.cs` v1.28, `GoalkeeperMechanics.cs` v1.11, `GoalkeeperStateMachine.cs` v1.7, `GoalkeeperConstants.cs` v1.5, `GoalkeeperMechanicsTests.cs` (the new state-machine parameter + five ERR-011-009 priority cases), `docs/specs/goalkeeper-mechanics/section-3.md` v0.7 (new §3.7.0 + six §3.4.6 constants + the two §3.1.1 rows), `spec-error-log.md` v1.56, `match-engine-wiring-backlog.md` v1.1, `open-issues.md`, `CLAUDE.md`. No `SNAPSHOT_SCHEMA_VERSION` change (#11's own serialized `_rushIntentActive` is the latch). **Gate NOT run and no measurement taken — the authoring environment has no .NET SDK and the agent proxy denies the installer.** **Prior entry below.**)
 
 **Last Updated (prior):** August 4, 2026, latest same day (**P4a adversarial-review pass 2 — 1 High, 4 Medium fixed.**
 No new files. Modified in `src/match-client-core/`: `PitchCameraPose.cs` → v1.1 (**H-1**: + `FieldOfViewDegrees`
@@ -1746,6 +1795,7 @@ above BOTH `ui-framework` and `match-analytics`; host-free and CI-gated. Deliber
 | `docs/tracking/fix-manifest-pass-mechanics.md` | Pass Mechanics audit/fix closure tracking |
 | `docs/tracking/certification-platform.md` | Stage 0 host platform version pin (required before first Spec #16 certification run) |
 | `docs/tracking/file-manifest.md` | This manifest |
+| `docs/tracking/football-judgment-proxy-review.md` | **FINDINGS LOG + REMEDIATION DOCTRINE** (Aug 4, 2026) — the football-judgment proxy review: all 53 APPROVED specs read for the ERR-008-019 defect shape (a continuous football judgment collapsed into bare geometry, a hard threshold, or a small raw-attribute set); 34 findings across 24 specs (1 already fixed), 29 specs clean. §6 (added same day, owner-converged) is the remediation doctrine every fix must cite: P1 continuous-never-cliff, P2 skill-as-discrimination-fidelity, P3 the attribute ownership ledger (Vision = on-ball recognition; no new attribute), P4 intent-as-first-class-object (pass-to-space, run signaling, routine targets), P5 chain calibration pivoted on today's baseline (KD-W1); finding classes (formula-patch / mechanism / governance), the §3.1.3.3 pass-lane template fix (chosen, not yet implemented), and the pairwise-familiarity gap |
 | `docs/tracking/advanced-positional-behaviors-design.md` | Design supplement (v0.4, Jul 8, 2026 — PROMOTED) — dismarking, scripted build-up structures, positional rotations; promoted to specs #23–#25 (`dismarking-ai/`, `build-up-structures/`, `positional-rotations/`, all APPROVED Jul 10, 2026); superseded by the specs on deviation |
 | `docs/tracking/game-model-ai-manager-design.md` | Design supplement (v0.5, Jul 8, 2026 — PROMOTED) — tactical preset library + AI-manager selection/adaptation; promoted to spec #26 (`tactical-presets/`, APPROVED Jul 10, 2026); superseded by the spec on deviation |
 | `docs/tracking/league-bootstrap-design.md` | Design supplement (v1.1, Jul 25, 2026 — **A3 LANDED**) — the league bootstrap (club identity/naming, strength distribution, world-seed derivation) plus the roadmap-A4a round-resolution model shape and calibration methodology. Closes §6 item 1 of the path-to-playable roadmap; explicitly not #47 (no editor, no new data format) |

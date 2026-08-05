@@ -2,6 +2,7 @@
 // Created:  2026-05-29
 // Modified: 2026-06-22 (Phase D D1 AR — HasDispatchedAction accessor)
 // Modified: 2026-07-26 (ERR-008-015 — IsAwaitingExecutorCompletion, so the composition root can close the PASS/SHOOT lifecycle)
+// Modified: 2026-08-04 (ERR-008-020 — SetAllAgentAttributes boot seam threading the squad attribute view into Assemble)
 // Author:   —
 // Spec:     Decision Tree #8 §2.1.2, §3.6, §3.7, §4.1–4.3, Code Standards #20
 // Purpose:  Orchestrator-facing entry point. Runs the 6-step pipeline for one agent
@@ -44,6 +45,7 @@ namespace TacticalDirector.DecisionTree
         private readonly IDtSaveDispatch _saveDispatch;
         private readonly int _agentId;
         private ulong _matchSeed;
+        private DtAgentAttributes[] _allAgentAttributes;   // ERR-008-020; null ⇒ ability-neutral lane threat
 
         /// <summary>
         /// Creates the per-agent Decision Tree. The executors are this agent's
@@ -85,6 +87,14 @@ namespace TacticalDirector.DecisionTree
         /// pipeline actually produced a decision rather than aborting at the validation gate.
         /// </summary>
         public bool HasDispatchedAction => _hasDispatchedAction;
+
+        /// <summary>
+        /// True once <see cref="SetAllAgentAttributes"/> has wired a non-null squad attribute
+        /// view (ERR-008-020). Lets a host verify the §3.1.3.3 lane-threat model is reading
+        /// real opponent attributes rather than silently running the ability-neutral null
+        /// fallback — the gate-level-dormancy failure mode the wiring backlog documents.
+        /// </summary>
+        public bool HasSquadAttributeView => _allAgentAttributes != null;
 
         // ── Snapshot seam — Match Engine Phase D step D0 ─────────────────────────
 
@@ -158,7 +168,8 @@ namespace TacticalDirector.DecisionTree
             // ── Step 2: Assemble context (§2.2.4) ────────────────────────────
             DecisionContext ctx = DecisionContextAssembler.Assemble(
                 snapshot, matchContext, tacticalContext,
-                attributes, agentState, pressureScalar, _matchSeed);
+                attributes, agentState, pressureScalar, _matchSeed,
+                _allAgentAttributes);
 
             // §3.1.1.3: AgentHasBall=true + BallVisible=false is physically implausible
             // (FM-DT-09 — warning only; world state is authoritative).
@@ -257,6 +268,18 @@ namespace TacticalDirector.DecisionTree
         {
             _matchSeed = seed;
         }
+
+        /// <summary>
+        /// Wires the orchestrator's live all-agents attribute array (indexed by AgentId,
+        /// substitutions visible through it) for the §3.1.3.3 pass-lane threat model
+        /// (ERR-008-020). Boot-time seam, same pattern as <see cref="SetMatchSeed"/>.
+        /// Never wired ⇒ every opponent reads as ability-neutral (the pre-ERR-008-020
+        /// weighting) — acceptable for narrow tests, a wiring defect in a production host.
+        /// </summary>
+        public void SetAllAgentAttributes(DtAgentAttributes[] allAgents)
+        {
+            _allAgentAttributes = allAgents;
+        }
     }
 }
 
@@ -292,4 +315,11 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   root (the only layer that sees both tree and executors)      |
 // |         |            |        |   close the lifecycle without re-implementing the              |
 // |         |            |        |   continuous-vs-blocking rule.                                |
+// | 1.6     | 2026-08-04 | —      | ERR-008-020: + SetAllAgentAttributes(DtAgentAttributes[]) boot seam (same     |
+// |         |            |        |   pattern as SetMatchSeed) storing the orchestrator's live squad attribute    |
+// |         |            |        |   array; threaded into Assemble for the §3.1.3.3 pass-lane threat model.      |
+// |         |            |        |   Injected dependency, not cross-tick state — excluded from CaptureState.     |
+// | 1.7     | 2026-08-04 | —      | ERR-008-020 AR-1 M-2: + HasSquadAttributeView (the HasDispatchedAction        |
+// |         |            |        |   precedent) so a host can detect the deliberately-silent null fallback —     |
+// |         |            |        |   the wiring-backlog gate-level-dormancy class.                               |
 #endregion

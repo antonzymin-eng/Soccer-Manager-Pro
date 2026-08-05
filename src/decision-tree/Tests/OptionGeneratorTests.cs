@@ -1,6 +1,7 @@
 // File:     src/decision-tree/Tests/OptionGeneratorTests.cs
 // Created:  2026-05-29
 // Modified: 2026-06-01
+// Modified: 2026-08-04 (ERR-008-020 — §3.1.3.3 pass-lane threat model locks, home + away)
 // Author:   —
 // Spec:     Decision Tree #8 §5 (UT-OG-01 through UT-OG-07), Code Standards #20
 // Purpose:  Unit tests for OptionGenerator. Verifies all 7 action type gates,
@@ -380,6 +381,217 @@ namespace TacticalDirector.DecisionTree.Tests
             }
         }
 
+        // ── ERR-008-020: §3.1.3.3 pass-lane threat model ──────────────────────
+        // Geometry shared by all lane tests: passer at (52,34) → teammate at (62,34),
+        // one defender near the lane midpoint (57,34+perp). Mirrored away-side variant
+        // uses the leftward lane (62,34) → (52,34) per the home-team-only-example trap.
+
+        [Test]
+        public void PassLane_AverageDefender_AtLaneCentre_ScoresExactlyOneThreatUnit()
+        {
+            // Doctrine P5 pivot: an ability-neutral defender dead-centre in the lane
+            // costs exactly what one binary interceptor cost pre-ERR-008-020.
+            float score = LaneScoreWithDefender(perp: 0.0f, attrs: null,
+                anticipation: 10, pace: 10, visionA: 0.5f);
+            Assert.AreEqual(1.0f - 1.0f / UtilityWeights.PASS_LANE_DIVISOR, score, 1e-4f,
+                "A neutral defender at lane centre must count as exactly one threat unit.");
+        }
+
+        [Test]
+        public void PassLane_ComputedAverageDefender_IsWeightNeutral()
+        {
+            // AR-1 M-1: the pivot row above goes through the null-view guard and never
+            // runs the ability computation. This lock drives the COMPUTED path with a
+            // true league-average defender (Anticipation 10 + Pace 11 ⇒ mean01 = 0.5
+            // exactly) under a Vision-20 passer, so any deviation of the MIN..MAX
+            // midpoint from 1.0 — or any defect in the ability formula — surfaces here.
+            DtAgentAttributes[] attrs = BuildSquadAttributes();
+            float score = LaneScoreWithDefender(perp: 0.0f, attrs: attrs,
+                anticipation: 10, pace: 11, visionA: 1.0f);
+            Assert.AreEqual(1.0f - 1.0f / UtilityWeights.PASS_LANE_DIVISOR, score, 1e-4f,
+                "A computed league-average defender must be weight-neutral (doctrine P5).");
+        }
+
+        [Test]
+        public void PassLane_AbilityConstants_MidpointIsExactlyNeutral()
+        {
+            // §3.1.3.3 constants-table MUST: the MIN..MAX midpoint is 1.0 so the
+            // average defender neither loosens nor tightens passing. The declared
+            // ranges admit violating pairs, so the invariant needs its own lock.
+            Assert.AreEqual(1.0f,
+                (UtilityWeights.INTERCEPTOR_ABILITY_MIN + UtilityWeights.INTERCEPTOR_ABILITY_MAX) / 2.0f,
+                1e-6f,
+                "INTERCEPTOR_ABILITY_MIN/MAX must stay centred on 1.0 (P5 pivot).");
+        }
+
+        [Test]
+        public void PassLane_ThreatIsContinuous_AcrossTheOldCorridorEdge()
+        {
+            // The pre-fix cliff: perp 0.79 m counted 1.0, perp 0.81 m counted 0.0 — a
+            // 0.33 lane-score jump over 2 cm. The falloff must make that step small.
+            float scoreInside  = LaneScoreWithDefender(perp: 0.79f, attrs: null,
+                anticipation: 10, pace: 10, visionA: 0.5f);
+            float scoreOutside = LaneScoreWithDefender(perp: 0.81f, attrs: null,
+                anticipation: 10, pace: 10, visionA: 0.5f);
+            Assert.Less(Mathf.Abs(scoreOutside - scoreInside), 0.05f,
+                "2 cm of defender position must not step the lane score (ERR-008-020 cliff).");
+            Assert.Greater(scoreOutside, scoreInside,
+                "Threat must still decrease as the defender moves off the lane.");
+        }
+
+        // AR-1 L: the expected elite-vs-poor lane-score gap for a full-fidelity passer
+        // and a lane-centre defender, derived from the constants rather than hardcoded:
+        // weights span MIN..MAX, so scores differ by (MAX − MIN) / DIVISOR (0.2667 at
+        // current values). Tests assert half of it so a legitimate [GT] retune shrinks
+        // the margin without false-failing, while a lost discrimination still fails.
+        private static float ExpectedSightedGap =>
+            (UtilityWeights.INTERCEPTOR_ABILITY_MAX - UtilityWeights.INTERCEPTOR_ABILITY_MIN)
+            / UtilityWeights.PASS_LANE_DIVISOR;
+
+        [Test]
+        public void PassLane_SightedPasser_RespectsEliteAndExploitsPoorDefender()
+        {
+            DtAgentAttributes[] attrs = BuildSquadAttributes();
+            float scoreElite = LaneScoreWithDefender(perp: 0.0f, attrs: attrs,
+                anticipation: 20, pace: 20, visionA: 1.0f);
+            float scorePoor  = LaneScoreWithDefender(perp: 0.0f, attrs: attrs,
+                anticipation: 1, pace: 1, visionA: 1.0f);
+            Assert.Less(scoreElite, scorePoor - ExpectedSightedGap * 0.5f,
+                "A Vision-20 passer must rate the lane through an elite defender markedly " +
+                "worse than the identical lane through a poor one.");
+        }
+
+        [Test]
+        public void PassLane_LowVisionPasser_BarelySeparatesDefenders()
+        {
+            // Doctrine P2: Vision is discrimination fidelity. At the floor the passer
+            // reads every defender as near-average — today's attribute-blind behaviour.
+            DtAgentAttributes[] attrs = BuildSquadAttributes();
+            float sightedGap = LaneScoreWithDefender(0.0f, attrs, 1, 1, visionA: 1.0f)
+                             - LaneScoreWithDefender(0.0f, attrs, 20, 20, visionA: 1.0f);
+            float blindGap   = LaneScoreWithDefender(0.0f, attrs, 1, 1, visionA: 0.0f)
+                             - LaneScoreWithDefender(0.0f, attrs, 20, 20, visionA: 0.0f);
+            Assert.Greater(blindGap, 0.0f,
+                "Even at the fidelity floor a sliver of discrimination survives (floor > 0).");
+            Assert.Less(blindGap, sightedGap * 0.5f,
+                "A Vision-1 passer must separate elite from poor defenders far less than a Vision-20 one.");
+        }
+
+        [Test]
+        public void PassLane_NullAttributeView_IsAbilityNeutral()
+        {
+            // Unwired host / legacy context: every defender reads as 1.0 — the
+            // pre-ERR-008-020 weighting, continuous falloff only.
+            float scoreA = LaneScoreWithDefender(perp: 0.0f, attrs: null,
+                anticipation: 20, pace: 20, visionA: 1.0f);
+            float scoreB = LaneScoreWithDefender(perp: 0.0f, attrs: null,
+                anticipation: 1, pace: 1, visionA: 1.0f);
+            Assert.AreEqual(scoreA, scoreB, 1e-6f,
+                "Without an attribute view, defender identity must not affect the lane.");
+        }
+
+        [Test]
+        public void PassLane_AwayMirror_SightedPasserSeparatesDefenders()
+        {
+            // Away-team mirror of the discrimination case (home-team-only worked
+            // examples shipped three asymmetry defects — CLAUDE.md trap table).
+            float scoreElite = AwayLaneScoreWithDefender(anticipation: 20, pace: 20);
+            float scorePoor  = AwayLaneScoreWithDefender(anticipation: 1, pace: 1);
+            Assert.Less(scoreElite, scorePoor - ExpectedSightedGap * 0.5f,
+                "The away-side lane must discriminate defender ability identically to the home side.");
+        }
+
+        private static DtAgentAttributes[] BuildSquadAttributes()
+        {
+            var attrs = new DtAgentAttributes[22];
+            for (int i = 0; i < 22; i++)
+                attrs[i] = DtAgentAttributes.CreateDefault(teamId: i < 11 ? 0 : 1);
+            return attrs;
+        }
+
+        // Home-side lane fixture: passer 5 at (52,34) → teammate 7 at (62,34);
+        // defender 15 at (57, 34+perp). Returns the generated PASS option's PassLaneScore.
+        private static float LaneScoreWithDefender(
+            float perp, DtAgentAttributes[] attrs, int anticipation, int pace, float visionA)
+        {
+            DecisionContext ctx = BuildPossessionContext();
+            ctx.A_Vision = visionA;
+            if (attrs != null)
+            {
+                attrs[15].Anticipation = anticipation;
+                attrs[15].Pace         = pace;
+                ctx.AllAgentAttributes = attrs;
+            }
+            ctx.Snapshot.VisibleTeammatesCount = 1;
+            ctx.Snapshot.VisibleTeammates[0] = new PerceivedAgent
+            {
+                AgentId = 7,
+                PerceivedPosition = new Vector2(62.0f, 34.0f),
+                PerceivedVelocity = Vector2.zero,
+                ConfidenceScore = 1.0f
+            };
+            ctx.Snapshot.VisibleOpponentsCount = 1;
+            ctx.Snapshot.VisibleOpponents[0] = new PerceivedAgent
+            {
+                AgentId = 15,
+                PerceivedPosition = new Vector2(57.0f, 34.0f + perp),
+                PerceivedVelocity = Vector2.zero,
+                ConfidenceScore = 1.0f
+            };
+            return ExtractPassLaneScore(in ctx);
+        }
+
+        // Away-side mirror: passer 16 (team 1) at (62,34) facing left → teammate 18 at
+        // (52,34); home defender 3 at (57,34). Same lane length, opposite direction.
+        private static float AwayLaneScoreWithDefender(int anticipation, int pace)
+        {
+            DecisionContext ctx = BuildPossessionContext();
+            ctx.AgentId       = 16;
+            ctx.AgentTeamId   = 1;
+            ctx.A_Vision      = 1.0f;
+            ctx.AgentPosition = new Vector2(62.0f, 34.0f);
+            ctx.AgentFacingDirection = Vector2.left;
+            ctx.Snapshot.ObserverId  = 16;
+            ctx.MatchContext.PossessingAgentId = 16;
+            ctx.PossessedByTeam   = PossessionState.AWAY_TEAM;
+            ctx.OpponentGoalCentre = new Vector2(0.0f, 34.0f);
+            ctx.OpponentGoalPostL  = new Vector2(0.0f, 37.66f);
+            ctx.OpponentGoalPostR  = new Vector2(0.0f, 30.34f);
+
+            DtAgentAttributes[] attrs = BuildSquadAttributes();
+            attrs[3].Anticipation = anticipation;
+            attrs[3].Pace         = pace;
+            ctx.AllAgentAttributes = attrs;
+
+            ctx.Snapshot.VisibleTeammatesCount = 1;
+            ctx.Snapshot.VisibleTeammates[0] = new PerceivedAgent
+            {
+                AgentId = 18,
+                PerceivedPosition = new Vector2(52.0f, 34.0f),
+                PerceivedVelocity = Vector2.zero,
+                ConfidenceScore = 1.0f
+            };
+            ctx.Snapshot.VisibleOpponentsCount = 1;
+            ctx.Snapshot.VisibleOpponents[0] = new PerceivedAgent
+            {
+                AgentId = 3,
+                PerceivedPosition = new Vector2(57.0f, 34.0f),
+                PerceivedVelocity = Vector2.zero,
+                ConfidenceScore = 1.0f
+            };
+            return ExtractPassLaneScore(in ctx);
+        }
+
+        private static float ExtractPassLaneScore(in DecisionContext ctx)
+        {
+            int count = OptionGenerator.GenerateOptions(in ctx, Buffer);
+            for (int i = 0; i < count; i++)
+                if (Buffer[i].Type == ActionType.PASS)
+                    return Buffer[i].PassLaneScore;
+            Assert.Fail("Expected a PASS option to be generated for the lane fixture.");
+            return -1.0f;
+        }
+
         // ── Helpers ───────────────────────────────────────────────────────────
 
         private static DecisionContext BuildPossessionContext()
@@ -504,4 +716,13 @@ namespace TacticalDirector.DecisionTree.Tests
 // |         |            |        |   closest-first per §3.1.3.6); INV-GEN-06 dribble-clamp lock.             |
 // | 1.4     | 2026-07-28 | —      | ERR-008-016 locks: PowerIntent never below POWER_INTENT_FLOOR, open-goal    |
 // |         |            |        | elite finisher = 1.0 exactly, monotone in finishing.                        |
+// | 1.5     | 2026-08-04 | —      | ERR-008-020 locks: neutral-defender-at-centre = exactly one threat unit     |
+// |         |            |        | (P5 pivot), no 2 cm cliff at the old 0.8 m edge, Vision-20 separates        |
+// |         |            |        | elite/poor defenders while Vision-1 barely does (P2), null attribute view   |
+// |         |            |        | is ability-neutral, and the discrimination case mirrored to the away side.  |
+// | 1.6     | 2026-08-04 | —      | ERR-008-020 AR-1: M-1 — the v1.5 pivot lock went through the null-view      |
+// |         |            |        | guard and never ran the ability computation; + the COMPUTED-path pivot      |
+// |         |            |        | (Ant 10/Pace 11 ⇒ mean01 = 0.5 exactly) and the MIN/MAX midpoint-is-1.0     |
+// |         |            |        | invariant lock. L — discrimination margins derived from the constants       |
+// |         |            |        | (ExpectedSightedGap × 0.5) instead of a hardcoded 0.15.                     |
 #endregion

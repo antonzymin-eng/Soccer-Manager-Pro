@@ -14,7 +14,69 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** August 4, 2026 (v2.60 — **W1 adversarial review pass 2: 1 High, 1 Medium, 3 Low.**
+> **Last Updated:** August 5, 2026, later same day (v2.64 — **First real gate run for the session's
+> work (PR #298 CI): ONE failure, and it was the snapshot-coverage guard doing its job.**
+> `DecisionTreeStateTests.DecisionTree_InstanceFieldCount_MatchesCapturedSet` pins DecisionTree's
+> instance-field count so new cross-tick state cannot silently skip the snapshot; ERR-008-020's
+> `_allAgentAttributes` made it 11 and the landing updated the exclusion *rationale* but not this
+> *ledger*. Fixed: count 10 → 11, the field recorded in the injected/excluded class
+> (`DecisionTreeStateTests.cs` v1.1) — no production change, the exclusion decision itself was
+> already made and correct. **Everything else GREEN, and two execution-verified results land with
+> it:** `MatchEngine.Tests` 420 passed / 0 failed / 10 skipped (430 total, 35 m 22 s) — the
+> previously-failing `RoundTrip_KeeperSubstitutedOntoOutfieldSlot_IsDeterministic` now passes, so
+> the v2.63 restore-resync fix is confirmed by execution, and the new
+> `Construction_WiresTheSquadAttributeViewIntoEveryDecisionTree` lock passes; `DecisionTree.Tests`
+> 109 passed besides the guard — all nine ERR-008-020 lane-model locks (computed pivot, midpoint
+> invariant, cliff continuity, Vision discrimination, null-view neutrality, away mirror) pass on
+> their first-ever compile. Prior entry below.)
+
+> **Last Updated (prior):** August 5, 2026 (v2.63 — **CI fix: the W1 AR-2 occupant-change ResetSlot broke
+> restore determinism.** `MatchEngine.cs` v1.63: boot derives `_gkAgentIds` from the default flag
+> layout, `DeserializeWorldState` overwrites the flags, and the first post-restore
+> `RefreshGkAgentIds` misread the delta as a live occupant change — `ResetSlot` wiped just-restored
+> #11 state, and `RoundTrip_KeeperSubstitutedOntoOutfieldSlot_IsDeterministic` diverged at tick N+1
+> on `main` at the W1 merge. Fix: resolution loop → `ResolveGkAgentId`; `RestoreFromSnapshot` step
+> 3b `ResyncGkAgentIdsAfterRestore` (re-derive WITHOUT reset). Live-path reset unchanged; one
+> factory covers every restore path. Verified by the already-failing CI test; not runnable locally.
+> `gk-rush-trigger-design.md` v1.4. Prior entry below.)
+
+> **Last Updated (prior):** August 4, 2026 (v2.62 — **ERR-008-020 adversarial review pass: 2 Medium, 1 Low, all
+> fixed; pass 2 clean.** M-1 — the v1.5 P5-pivot lock proved nothing: it passed `attrs: null`, which
+> takes `PerceivedInterceptAbility`'s null-guard early return, so the ability computation was never
+> executed for an average defender anywhere in the suite, and the spec's "midpoint MUST equal 1.0"
+> invariant was enforced by nothing (the declared `[GT]` ranges admit violating pairs). Fixed:
+> `OptionGeneratorTests.cs` v1.6 + the COMPUTED-path pivot (Anticipation 10 + Pace 11 ⇒ mean01 = 0.5
+> exactly, Vision-20 so fidelity hides nothing, score = 2/3 within 1e-4) + the MIN/MAX
+> midpoint-is-1.0 constants invariant. M-2 — the engine wiring had no lock, and the null fallback is
+> silent BY DESIGN, so dropping the `SetAllAgentAttributes` call in a refactor would revert every
+> match to attribute-blind lane pricing with all tests green — the wiring-backlog
+> gate-level-dormancy class, this repo's documented top defect shape. Fixed: `DecisionTree.cs` v1.7
+> (+ `HasSquadAttributeView`, the `HasDispatchedAction` host-verification precedent),
+> `MatchEngine.cs` v1.62 (+ internal `TestOnly_AllDtSquadAttributeViewsWired`),
+> `MatchEngineSquadTests.cs` v1.4 (the construction wiring lock). L — the discrimination margins
+> were a hardcoded 0.15 with no derivation; now `ExpectedSightedGap × 0.5` derived from the
+> constants, so a legitimate `[GT]` retune shrinks the margin instead of false-failing. Production
+> change is two read-only accessors — no digest, schema, RNG, or draw-order surface. **Gate NOT
+> run — no .NET SDK in this environment.** Prior entry below.)
+
+> **Last Updated (prior):** August 4, 2026 (v2.61 — **ERR-008-020: the pass-lane threat model** (judgment-proxy
+> doctrine §6.4 template fix). `UtilityWeights.cs` v1.7 (`PASS_LANE_WIDTH_HALF` removed — zero
+> consumers remained; + `PASS_LANE_CORE_HALF_WIDTH`/`PASS_LANE_FALLOFF_END`/`INTERCEPTOR_ABILITY_MIN`/
+> `INTERCEPTOR_ABILITY_MAX`/`LANE_VISION_FIDELITY_FLOOR`, all first-guess `[GT]` per KD-W1).
+> `OptionGenerator.cs` v1.6 (`CountInterceptors` → `ComputeLaneThreat` + `PerceivedInterceptAbility`;
+> §3.1.4's `ComputeGoalOpeningScore` untouched — shot lane deferred). `DecisionContext.cs` v1.2
+> (+ `AllAgentAttributes`, nullable). `DecisionContextAssembler.cs` v1.5 (optional
+> `allAgentAttributes = null` parameter — existing call sites compile unchanged). `DecisionTree.cs`
+> v1.6 (+ `SetAllAgentAttributes` boot seam, the `SetMatchSeed` pattern; injected dependency,
+> excluded from `CaptureState`). `MatchEngine.cs` v1.61 (wires `_dtAttrs` per tree at construction —
+> the live reference makes `SubstitutePlayer`'s slot rewrite visible without re-wiring).
+> `OptionGeneratorTests.cs` v1.5 (6 locks: P5 pivot exact, no 2 cm cliff, Vision-20 vs Vision-1
+> discrimination, null-view neutrality, away mirror). Zero-alloc preserved: no new arrays, no
+> boxing, a few float ops per (candidate × opponent). No `SNAPSHOT_SCHEMA_VERSION` change, no new
+> RNG stream / domain tag / draw site, no draw-order change. **Gate NOT run — no .NET SDK in this
+> environment.** Prior entry below.)
+
+> **Last Updated (prior):** August 4, 2026 (v2.60 — **W1 adversarial review pass 2: 1 High, 1 Medium, 3 Low.**
 > H — **a substitute keeper inherited the dismissed keeper's rush.** #11 indexes every per-keeper array
 > by `gkIndex`, which is the TEAM (KD-1), while the engine keys identity by ROSTER SLOT — and the
 > occupant changes mid-match: keeper sent off, bench keeper on in a *different* slot (`SubstitutePlayer`
@@ -1466,6 +1528,10 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.64 | 2026-08-05 | —      | **PR #298 CI (first real gate run): 1 failure — the DecisionTree field-count snapshot-coverage guard, tripped by ERR-008-020's `_allAgentAttributes`.** `DecisionTreeStateTests.cs` v1.1: count 10 → 11, the field recorded in the injected/excluded class (like `_saveDispatch`/the executors — the exclusion decision was already made at the landing; the ledger wasn't). No production change. Execution-verified alongside: `MatchEngine.Tests` 420/0/10 incl. the previously-failing keeper-substitution round-trip (v2.63 fix confirmed) and the new wiring lock; all nine lane-model locks pass first compile. |
+| 2.63 | 2026-08-05 | —      | **CI fix — restore determinism (main red at the W1 merge).** `MatchEngine.cs` v1.63: v1.60's occupant-change `ResetSlot` fired on the boot-default-vs-restored goalkeeper-flag delta, wiping just-restored #11 state (`RoundTrip_KeeperSubstitutedOntoOutfieldSlot_IsDeterministic` digest split at tick N+1). Resolution loop extracted to `ResolveGkAgentId`; `RestoreFromSnapshot` gains step 3b `ResyncGkAgentIdsAfterRestore` — re-derive from restored flags WITHOUT reset (restored #11 state already belongs to the restored occupant). Live-path reset unchanged. No schema/RNG/draw-order change. Verified by the already-failing CI test; **gate not runnable locally (no .NET SDK)**. `gk-rush-trigger-design.md` → v1.4 (supersedes the false v1.3 "sees no change" claim). |
+| 2.62 | 2026-08-04 | —      | **ERR-008-020 adversarial review pass — 2 Medium, 1 Low fixed; pass 2 clean.** M-1: the P5-pivot lock went through the null-view guard and never ran the ability computation — `OptionGeneratorTests.cs` v1.6 adds the computed-path pivot (Ant 10/Pace 11 ⇒ mean01 = 0.5 exactly) and the `INTERCEPTOR_ABILITY_MIN/MAX` midpoint-is-1.0 invariant lock. M-2: the boot wiring had no detector and the null fallback is silent by design — `DecisionTree.cs` v1.7 (+ `HasSquadAttributeView`), `MatchEngine.cs` v1.62 (+ `TestOnly_AllDtSquadAttributeViewsWired`), `MatchEngineSquadTests.cs` v1.4 (construction wiring lock). L: discrimination margins derived from constants (`ExpectedSightedGap × 0.5`) instead of hardcoded 0.15. Production delta = two read-only accessors; no digest/schema/RNG/draw-order surface. **Gate NOT run — no .NET SDK in this environment.** |
+| 2.61 | 2026-08-04 | —      | **ERR-008-020 — the §3.1.3.3 pass-lane threat model** (the football-judgment doctrine's template fix; spec + code same commit). `UtilityWeights.cs` v1.7 (`PASS_LANE_WIDTH_HALF` removed; + 5 first-guess `[GT]`s: `PASS_LANE_CORE_HALF_WIDTH` 0.4 / `PASS_LANE_FALLOFF_END` 1.2 / `INTERCEPTOR_ABILITY_MIN` 0.6 / `INTERCEPTOR_ABILITY_MAX` 1.4 / `LANE_VISION_FIDELITY_FLOOR` 0.2). `OptionGenerator.cs` v1.6 (`CountInterceptors` → `ComputeLaneThreat`: per-opponent `falloff × perceived_ability`; + `PerceivedInterceptAbility` — Anticipation+Pace → 0.6..1.4 blended toward 1.0 by the passer's Vision fidelity; null attribute view ⇒ 1.0 = the old attribute-blind weighting; shot lane untouched). `DecisionContext.cs` v1.2 (+ nullable `AllAgentAttributes`). `DecisionContextAssembler.cs` v1.5 (optional trailing parameter, default null — legacy call sites unchanged). `DecisionTree.cs` v1.6 (+ `SetAllAgentAttributes` boot seam; excluded from `CaptureState`). `MatchEngine.cs` v1.61 (wires the live `_dtAttrs` reference per tree at construction). `OptionGeneratorTests.cs` v1.5 (6 locks incl. the away-side mirror). No schema / RNG / domain-tag / draw-site / draw-order change; zero-alloc preserved. **Gate NOT run — no .NET SDK in this environment.** |
 | 2.60 | 2026-08-04 | —      | **W1 adversarial review pass 2 — 1 High, 1 Medium, 3 Low.** `GoalkeeperMechanics.cs` v1.12 (H: + `ResetSlot`, and the constructor's sentinel loop now goes through it so "a fresh slot" is defined in one place rather than a pair that must agree — §5.Z.12). `MatchEngine.cs` v1.60 (H: `RefreshGkAgentIds` resolves each slot into a local, compares it with the standing value and calls `ResetSlot` when the OCCUPANT changed; `_gkAgentIds` seeded to −1 at boot because 0 is a valid agent id). The defect: #11 indexes every per-keeper array by `gkIndex` = TEAM (KD-1) while the engine keys identity by ROSTER SLOT, and the two part company when a keeper is sent off and a bench keeper comes on in a different slot — `SubstitutePlayer` refuses the dismissed slot itself, and the path is live from `ManagerCommand`. The substitute inherited a `RushIntent` whose target was locked (KD-15) for the man he replaced, and `Set → Rushing` launched him at it. It is the **other half of v2.55's own sent-off fix**: filtering the dismissed keeper out is exactly what turned his slot from self-resolving into frozen-indefinitely, and frozen state is what gets inherited. `GkRushTriggerTests.cs` v1.2 (M: v2.55's sent-off fix had no test at all — added, both keepers, plus the substitute-inheritance lock). L ×3 recorded not fixed (`gk-rush-trigger-design.md` §7 items 7–9): #11's stale `_attrs`-writers comment, `CommitRushIntent`'s unread `_attrs` write, and `GoalkeeperStateMachine`'s `Anticipate` comment claiming a rush-over-dive priority the rows do not implement. **No `SNAPSHOT_SCHEMA_VERSION` change** — `_gkAgentIds` is reconstructed, never serialized, so restore re-derives it and sees no occupant change. No RNG / draw-order change. **Gate NOT run — no .NET SDK in this environment.** |
 | 2.59 | 2026-08-04 | —      | **W1 adversarial review pass 1 — 1 High, 4 Medium, 4 Low, all fixed.** `GkHeadingIntentSource.cs` v1.2 (H: minimum-run guard, condition 6 — `RushArmed` bounded run length above and not below, so a keeper standing on a ball he had just swept re-armed every third tactical tick, the ordinary end of a sweep since §5.Z.15/16 bars him from collecting it; reuses `RushTargetReachedRadiusM` so the commit test and the arrival test cannot drift. L: epsilon renamed. M: v1.1 history row still described the REJECTED last-man model as current). `MatchEngine.cs` v1.59 (M: `RefreshGkAgentIds` filters `_isSentOff` — a keeper sent off mid-rush kept sprinting, because the `_commands = Stop` freeze governs movement only and #11's `Rushing` branch writes position after it; + `TestOnly_DriveGkHeadingPhysics`). `MatchEngineConstants.cs` v1.29 (L: `GK_RUSH_SOLVE_EPSILON` → `GK_RUSH_DEGENERACY_EPSILON`, three dimensionally different quantities; header `+4 [GT]` → 5). `GoalkeeperMechanics.cs` (L: orphaned header continuation folded back). `GkRushTriggerTests.cs` v1.1 (M: composed displacement lock — the prior composed locks stopped at `GkState == Rushing`, true of an engine whose rush position write-back is dropped, the #11 v1.4 H-2 defect; + the re-arm lock; + the cross-catalogue `GkRushCommitment > RushCommitThreshold` invariant). M recorded not fixed: `RushCommitFatiguePenaltyM` is structurally dead (all four `ToGoalkeeper` call sites pass `fatigue: 0f`) — do-not-calibrate, in #11 §3.7.0 and `gk-rush-trigger-design.md` §7 item 6. No schema / RNG / domain-tag / draw-order change. **Gate NOT run — no .NET SDK in this environment.** |
 | 2.58 | 2026-08-04 | —      | **Wiring backlog W1 — the keeper rush trigger + ERR-011-010 + ERR-011-009.** `MatchEngine.cs` v1.58 (`TryCommitRushIntents` — the first production caller `CommitRushIntent` has ever had — + `TestOnly_RushCommitCount`/`TestOnly_GkState`), `GkHeadingIntentSource.cs` v1.1 (pure `RushArmed` + `HasGoalSideCover` — a CHASING defender is not cover, so the keeper still comes out — + `TrySolveRushIntercept`), `GoalkeeperRushDispatch.cs` v1.1 (§3.7.0 `ComputeRushCommitDistanceM`: how far out he comes is his own OneVsOne/Composure/fatigue), `MatchEngineConstants.cs` v1.28 (+`[FIXED]` solve epsilon, +5 un-calibrated `[GT]`), `GoalkeeperMechanics.cs` v1.11 (`ClearRushIntent` + `GetState`/`HasActiveRushIntent` + the `Reached` completion), `GoalkeeperStateMachine.cs` v1.7 (two ERR-011-009 rows), `GoalkeeperConstants.cs` v1.5 (+`RushTargetReachedRadiusM` + the six §3.7.0 commit-distance `[GT]`s). New: `GoalkeeperRushTests.cs`, `GkRushTriggerTests.cs`, `GkRushDiagnosticTests.cs`. No `SNAPSHOT_SCHEMA_VERSION` change (#11's own serialized `_rushIntentActive` is the latch). **Gate NOT run — no .NET SDK in the authoring environment.** |

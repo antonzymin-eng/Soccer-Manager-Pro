@@ -12,7 +12,114 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 4, 2026, latest same day (**W1 adversarial review pass 2 — 1 High, 1
+> **Last Updated:** August 5, 2026, later same day (**PR #298's first gate run: one failure — the
+> snapshot-coverage guard, correctly — and two execution-verified confirmations.** The failure:
+> `DecisionTree_InstanceFieldCount_MatchesCapturedSet`, the reflection lock that pins DecisionTree's
+> field count so cross-tick state cannot silently skip the snapshot. ERR-008-020's
+> `_allAgentAttributes` made it 11; the landing had made (and documented) the exclusion decision —
+> injected dependency, host re-wires at boot/restore, the `_saveDispatch` class — but never updated
+> the guard's ledger. Fixed: count 10 → 11 + the field recorded in the excluded class; no production
+> change. **The confirmations, both by execution for the first time:** (1) `MatchEngine.Tests` 420
+> passed / 0 failed — `RoundTrip_KeeperSubstitutedOntoOutfieldSlot_IsDeterministic`, red on `main`
+> since the W1 merge, passes under the restore-resync fix; (2) all nine ERR-008-020 lane-model locks
+> and the engine wiring lock pass on their first-ever compile. Once this push goes green, the PR
+> carries a gate strictly better than `main`'s (which remains red until merged). Prior entry below.)
+
+> **Last Updated (prior):** August 5, 2026 (**CI fix — main went red at the W1 merge, and the cause was the
+> W1 AR-2 fix's own restore claim being false.** `RoundTrip_KeeperSubstitutedOntoOutfieldSlot_IsDeterministic`
+> failed on `main` at `ba04d49` (and on both prior W1-branch runs): digest diverged at tick 151, the
+> first post-restore tick. The v1.60 occupant-change fix argued `_gkAgentIds` needs no schema bump
+> because it is "reconstructed rather than serialized, so restore re-derives it and sees no change" —
+> half true. The boot-time derivation runs against the DEFAULT goalkeeper-flag layout;
+> `DeserializeWorldState` then overwrites the flags with the SAVED layout; and whenever the two
+> differ (this test substitutes a bench keeper onto an outfield slot at tick 50, saves at 150), the
+> first post-restore `RefreshGkAgentIds` misreads the flag delta as a live occupant change and
+> `ResetSlot`s #11 keeper state that was itself just restored — a wipe the uninterrupted run does
+> not perform at that tick, because its reset fired back at the substitution and its state evolved
+> since. Fixed in `MatchEngine.cs` v1.63: the keeper resolution extracted to `ResolveGkAgentId`,
+> and `RestoreFromSnapshot` gains **step 3b — `ResyncGkAgentIdsAfterRestore`**, re-deriving the map
+> from the restored flags **without** reset, since restored #11 per-slot state already belongs to
+> the restored occupant. The live-path reset — the actual substitute-inheritance fix — is unchanged;
+> this restores exactly the restore-transparency that existed before the reset was introduced. All
+> restore paths route through the one factory (`MatchSession.RestoreFrom` → `MatchSaveManager` →
+> `RestoreFromSnapshot`), so one fix covers all. Verification is the already-failing CI test; not
+> runnable locally (no .NET SDK). `gk-rush-trigger-design.md` v1.4 supersedes the v1.3 claim.
+> Prior entry below.)
+
+> **Last Updated (prior):** August 4, 2026, latest same day (**ERR-008-020 adversarial review — 2 Medium,
+> 1 Low, all fixed; pass 2 clean.** Both Mediums are lessons in what a lock is worth when it doesn't
+> execute the thing it claims to lock. **M-1:** the landing's P5-pivot test asserted "an average
+> defender counts exactly 1.0" through the *null-attribute-view guard* — the ability computation it
+> exists to pin was never run for an average defender anywhere in the suite, so the spec's "MIN/MAX
+> midpoint MUST equal 1.0" invariant was enforced by nothing and a `[GT]` retune could break the
+> whole pivot-on-baseline argument silently. Now locked twice: a computed-path pivot (Anticipation
+> 10 + Pace 11, whose normalised mean is 0.5 *exactly*) and a constants midpoint invariant. **M-2:**
+> the engine wiring had no detector, and the model's null fallback is silent *by design* — dropping
+> the one `SetAllAgentAttributes` boot call would revert every match to attribute-blind lane pricing
+> with every test green, the wiring-backlog gate-level-dormancy class this repo documents as its top
+> defect shape. Now `DecisionTree.HasSquadAttributeView` + an engine `TestOnly` sweep +
+> `MatchEngineSquadTests` construction lock. **L:** the elite-vs-poor discrimination margins were a
+> hardcoded 0.15; now derived from the constants (half the true `(MAX−MIN)/DIVISOR` gap), so a
+> legitimate retune shrinks the margin instead of false-failing the suite. Production delta is two
+> read-only accessors — no digest, schema, RNG, or draw-order surface. Nine locks now cover the
+> model across two suites. **Gate still NOT runnable here (no .NET SDK); CI on this push is the
+> first compile.** Prior entry below.)
+
+> **Last Updated (prior):** August 4, 2026, latest same day (**ERR-008-020 — the doctrine's template fix
+> landed: the pass lane learns who the defender is, and a false "FIXED" claim is corrected.** First
+> fix under `football-judgment-proxy-review.md` §6, exactly as converged: #8 §3.1.3.3's binary 0.8 m
+> `is_interceptor` corridor — 2 cm of defender position stepped `PassLaneScore` by 0.33, and no
+> defender attribute entered the judgment, so a Pace/Anticipation 1/1 defender priced a lane
+> identically to a 20/20 one — becomes a continuous per-opponent threat weight: linear falloff
+> (core 0.4 m [GT], zero at 1.2 m [GT], **ramp centred on the old cliff so integrated threat is
+> preserved and the neutral verification rows reproduce exactly** — doctrine P5, locked by test) ×
+> defender Anticipation+Pace ability (0.6–1.4 [GT], average ⇒ exactly 1.0) read through the passer's
+> **Vision as discrimination fidelity** (P2: `perceived = 1 + fidelity × (true − 1)`, floor 0.2 [GT]
+> — a Vision-1 passer reads everyone as near-average, which IS the pre-fix engine; §3.2.2's Vision
+> term untouched, P3 no double-count). Plumbing: `DecisionTree.SetAllAgentAttributes` boot seam (the
+> `SetMatchSeed` pattern) carries the engine's live `_dtAttrs` reference into `DecisionContext` —
+> substitutions visible through it; null view ⇒ ability-neutral, never an exception. Spec §3.1.3.3
+> rewritten (v1.3, worked example + verification table), shot lane §3.1.4.3 deferred with a scope
+> note (owner call), `spec-error-log.md` → v1.57, 6 `OptionGeneratorTests` locks incl. the away-side
+> mirror. No `SNAPSHOT_SCHEMA_VERSION` change (the view is an injected dependency, excluded from
+> `CaptureState`), no new RNG stream / domain tag / draw site, no draw-order change; digests move
+> for any match with a PASS candidate near a defender, as intended. **Blast radius recorded:** every
+> tick-window/rate-band instrument may shift on its seeds and cannot be checked here; the A4a
+> round-resolution fit needs its Step-0 re-check after the first measured corpus; FR-PO-052 adds no
+> allocation, only a few float ops per candidate. **Gate NOT run — no .NET SDK in this environment;
+> nothing compiled or executed; CI's dotnet gate on this push is the first compile.** **Separately,
+> a record correction:** the review file's §2 claim that ERR-008-019 (the long-shot cliff) was
+> "FIXED … gate green" is **false against both branches** — no log entry exists, the cliff is live
+> in `UtilityWeights.cs`/`UtilityScorer.cs` and the spec, and no branch carries a fix; the prior
+> session recorded a landing that never happened (the fabricated-claims trap). Review §2/§5
+> corrected, the finding re-opened (33 open again), the id soft-reserved. Prior entry below.)
+
+> **Last Updated (prior):** August 4, 2026, latest same day (**Football-judgment proxy review — the remediation
+> doctrine (§6) landed, doc-only.** The review file stops being identification-only: an owner session
+> converged the general approach before any of the 33 open findings gets a fix, and §6 records it so
+> each fix cites a principle instead of re-arguing the method up to 33 times. The frame is the owner's
+> **recognition → decision → execution** pattern — which is already the #7 → #8 → Mechanics/Physics
+> pipeline — with its five failure modes made into binding mitigations (stages degrade assessment
+> quality, never delete options; attributes enter a judgment once; decisions commit intent, not a
+> frozen coordinate — a spot where a teammate *will arrive* is a legitimate target, a lock on his
+> current position is not; coordination is signalled, not mind-read; calibration targets the chain).
+> Five principles: **P1** continuous-never-cliff (the ERR-008-019 shape, covering the pattern-(b)
+> findings), **P2** skill as *discrimination fidelity* — `perceived = neutral + fidelity × (true −
+> neutral)`, so a low-skill assessor sees everyone as average, which IS today's attribute-blind engine
+> (graceful degradation, no RNG in assessment), **P3** the attribute ownership ledger (Vision owns
+> on-ball recognition, Anticipation off-ball/predictive; **no new "play recognition" attribute** —
+> owner call), **P4** intent as a first-class object (pass-to-space, run-intent signals on the event
+> bus, set-piece routine targets — mechanism-class, design supplement first), **P5** calibrate
+> end-to-end, pivot on today's baseline, defer real `[GT]` tuning per KD-W1. The **template fix is
+> chosen but NOT implemented**: #8 §3.1.3.3 pass-lane interceptors become `distance_falloff ×
+> perceived(Anticipation+Pace)` through the passer's Vision fidelity; §3.2.2's Vision term is
+> untouched (it rewards vision generally, fidelity owns risk discrimination — no double-count); the
+> §3.1.4 shot lane deliberately deferred. Also recorded: the **pairwise playing-familiarity gap** —
+> #33's social graph and #2's per-player Stage-4 hooks exist, but nothing pairwise-on-pitch; the
+> natural third input to the run-signal handshake; candidate supplement. The review file also finally
+> enters `file-manifest.md` — it was never recorded at creation.)
+
+> **Last Updated (prior):** August 4, 2026, latest same day (**W1 adversarial review pass 2 — 1 High, 1
 > Medium, 3 Low.** The High is a seam defect, and it is the other half of pass 1's own fix rather than
 > a new subject. #11 indexes every per-keeper array by `gkIndex`, which is the **team** (KD-1); this
 > engine keys identity by **roster slot**. Those agree right up until the occupant of the keeper slot

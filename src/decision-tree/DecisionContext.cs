@@ -1,6 +1,7 @@
 // File:     src/decision-tree/DecisionContext.cs
 // Created:  2026-05-29
 // Modified: 2026-05-29
+// Modified: 2026-08-04 (ERR-008-020 — + AllAgentAttributes squad attribute view)
 // Author:   —
 // Spec:     Decision Tree #8 §2.2.4, §3.1.1, Code Standards #20
 // Purpose:  Internal struct aggregating all inputs for one agent's pipeline execution.
@@ -98,6 +99,18 @@ namespace TacticalDirector.DecisionTree
         public float A_Positioning;
         public float A_Crossing;
 
+        // ── Squad attribute view (ERR-008-020) ────────────────────────────────
+
+        /// <summary>
+        /// Read-only view of ALL agents' DT attributes, indexed by AgentId [0–21] —
+        /// the orchestrator's own live array (substitutions are visible through it).
+        /// Consumed by the §3.1.3.3 pass-lane threat model to read an opponent's
+        /// Anticipation/Pace. May be null (unwired host / legacy test context): every
+        /// opponent then reads as ability-neutral 1.0, which is exactly the
+        /// pre-ERR-008-020 attribute-blind weighting.
+        /// </summary>
+        public DtAgentAttributes[] AllAgentAttributes;
+
         // ── Match Context ─────────────────────────────────────────────────────
 
         public MatchContext MatchContext;
@@ -145,4 +158,6 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   MatchContext.BallZone reads); M-1 OpponentHasBall derived flag (§3.4.6     |
 // |         |            |        |   press urgency); PossessedByTeam doc corrected to absolute §2.2.5 enum      |
 // |         |            |        |   semantics (was claiming OWN_TEAM/OPPONENT perspective values).             |
+// | 1.2     | 2026-08-04 | —      | ERR-008-020: + AllAgentAttributes (nullable all-agents attribute view for   |
+// |         |            |        |   the §3.1.3.3 pass-lane threat model; null ⇒ ability-neutral).             |
 #endregion

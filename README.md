@@ -1,7 +1,22 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** August 3, 2026, latest same day (**Interactive Unity client P4a LANDED — the
+**Last Updated:** August 4, 2026 (**ERR-008-020 — the first fix under the football-judgment
+remediation doctrine.** The new `docs/tracking/football-judgment-proxy-review.md` swept all 53
+APPROVED specs for continuous football judgments collapsed into thresholds or bare geometry — 34
+findings across 24 specs — and its owner-converged §6 doctrine (P1 continuous-never-cliff, P2 skill
+as discrimination fidelity, P3 the attribute ownership ledger, P4 intent as a first-class object,
+P5 chain calibration pivoted on today's baseline) now governs every fix. The template landed same
+day: Decision Tree #8 §3.1.3.3's binary pass-lane interceptor corridor became a continuous,
+attribute-weighted threat model — a defender's Anticipation/Pace now prices the lane, read through
+the passer's Vision — with spec, code, ERR entry, and tests in one commit. Also corrected at that
+landing: the review's inherited claim that the ERR-008-019 long-shot cliff was already fixed was
+false — the finding is re-opened. Gate not runnable in the authoring environment (no .NET SDK);
+CI runs it on push. *Drift note: this file had also trailed the two August-4 W1 keeper-rush
+landings — see `docs/tracking/CHANGELOG.md` for those; they are not reconstructed here.* Prior
+entry below.)
+
+**Last Updated (prior):** August 3, 2026, latest same day (**Interactive Unity client P4a LANDED — the
 host-free render model, and P4 is split.** P4a is every render *decision*; P4b is the binding. That
 split turns the standing "keep logic out of `MonoBehaviour`s" rule from a discipline into a phase
 boundary, so what the pinned host is left to verify is binding — which a cert run genuinely checks —

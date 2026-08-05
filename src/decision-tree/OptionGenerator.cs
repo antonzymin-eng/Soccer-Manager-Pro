@@ -3,6 +3,7 @@
 // Modified: 2026-05-29
 // Modified: 2026-07-26 (ERR-008-014 — loose-ball collect emitted as the SOLE off-ball option for the host-designated collector)
 // Modified: 2026-07-28 (ERR-008-016 — PowerIntent floor-plus-modulation (shot-speed design KD-1))
+// Modified: 2026-08-04 (ERR-008-020 — CountInterceptors → ComputeLaneThreat: continuous falloff × Vision-read Anticipation/Pace ability)
 // Author:   —
 // Spec:     Decision Tree #8 §3.1, Code Standards #20
 // Purpose:  Step 3 of the 6-step pipeline. Generates all eligible ActionOption
@@ -186,9 +187,9 @@ namespace TacticalDirector.DecisionTree
             ActionOption[] buf,
             int count)
         {
-            // Pass lane viability (§3.1.3.3)
-            int interceptorCount = CountInterceptors(in ctx, tm.PerceivedPosition);
-            float passLaneScore = Mathf.Clamp01(1.0f - interceptorCount / UtilityWeights.PASS_LANE_DIVISOR);
+            // Pass lane viability (§3.1.3.3, ERR-008-020)
+            float laneThreat = ComputeLaneThreat(in ctx, tm.PerceivedPosition);
+            float passLaneScore = Mathf.Clamp01(1.0f - laneThreat / UtilityWeights.PASS_LANE_DIVISOR);
 
             // Goal-direction modifier (§3.1.3.5)
             Vector2 passDir = (tm.PerceivedPosition - ctx.AgentPosition).normalized;
@@ -222,11 +223,21 @@ namespace TacticalDirector.DecisionTree
             return count;
         }
 
-        private static int CountInterceptors(in DecisionContext ctx, Vector2 targetPos)
+        // §3.1.3.3 pass-lane threat (ERR-008-020, judgment-proxy doctrine §6.4). Each visible
+        // opponent near the lane contributes falloff × perceivedAbility instead of a binary
+        // 1-in / 0-out count: the falloff kills the 2 cm positional cliff at the old 0.8 m
+        // corridor edge (doctrine P1), and the ability term reads the defender's
+        // Anticipation/Pace through the passer's Vision fidelity (doctrine P2) — a slow,
+        // poor-anticipation defender no longer blocks a lane as hard as an elite one, but
+        // only a sharp-eyed passer fully exploits the difference.
+        private static float ComputeLaneThreat(in DecisionContext ctx, Vector2 targetPos)
         {
             Vector2 laneVec = targetPos - ctx.AgentPosition;
             float laneLen2  = laneVec.sqrMagnitude;
-            int interceptors = 0;
+            float threat    = 0.0f;
+
+            float fidelity = UtilityWeights.LANE_VISION_FIDELITY_FLOOR
+                + (1.0f - UtilityWeights.LANE_VISION_FIDELITY_FLOOR) * ctx.A_Vision;
 
             FilteredView snap = ctx.Snapshot;
             for (int i = 0; i < snap.VisibleOpponentsCount; i++)
@@ -239,15 +250,53 @@ namespace TacticalDirector.DecisionTree
                 Vector2 closest = ctx.AgentPosition + tClamped * laneVec;
                 float perpDist  = Vector2.Distance(oPos, closest);
 
-                if (perpDist < UtilityWeights.PASS_LANE_WIDTH_HALF
-                    && tClamped > UtilityWeights.PASS_LANE_ENDPOINT_MARGIN
-                    && tClamped < 1.0f - UtilityWeights.PASS_LANE_ENDPOINT_MARGIN)
+                if (tClamped <= UtilityWeights.PASS_LANE_ENDPOINT_MARGIN
+                    || tClamped >= 1.0f - UtilityWeights.PASS_LANE_ENDPOINT_MARGIN)
                 {
-                    interceptors++;
+                    continue;
                 }
+
+                float falloff = Mathf.Clamp01(
+                    (UtilityWeights.PASS_LANE_FALLOFF_END - perpDist)
+                    / (UtilityWeights.PASS_LANE_FALLOFF_END
+                       - UtilityWeights.PASS_LANE_CORE_HALF_WIDTH));
+                if (falloff <= 0.0f)
+                {
+                    continue;
+                }
+
+                threat += falloff * PerceivedInterceptAbility(
+                    in ctx, snap.VisibleOpponents[i].AgentId, fidelity);
             }
 
-            return interceptors;
+            return threat;
+        }
+
+        // The defender's true interception ability (Anticipation+Pace mean mapped to
+        // ABILITY_MIN..MAX; league-average ⇒ exactly 1.0), blended toward neutral by the
+        // passer's Vision fidelity — perceived = 1 + fidelity × (true − 1), doctrine P2.
+        // A null attribute view (unwired host / legacy test) reads every opponent as 1.0,
+        // which is the pre-ERR-008-020 attribute-blind weighting.
+        private static float PerceivedInterceptAbility(
+            in DecisionContext ctx, int opponentId, float fidelity)
+        {
+            DtAgentAttributes[] all = ctx.AllAgentAttributes;
+            if (all == null || opponentId < 0 || opponentId >= all.Length)
+            {
+                return 1.0f;
+            }
+
+            float aAnticipation = (all[opponentId].Anticipation - DecisionTreeConstants.AttributeNormMin)
+                / DecisionTreeConstants.AttributeNormRange;
+            float aPace = (all[opponentId].Pace - DecisionTreeConstants.AttributeNormMin)
+                / DecisionTreeConstants.AttributeNormRange;
+            float mean01 = 0.5f * (aAnticipation + aPace);
+
+            float trueAbility = UtilityWeights.INTERCEPTOR_ABILITY_MIN
+                + (UtilityWeights.INTERCEPTOR_ABILITY_MAX - UtilityWeights.INTERCEPTOR_ABILITY_MIN)
+                  * mean01;
+
+            return 1.0f + fidelity * (trueAbility - 1.0f);
         }
 
         // SPEC-DEVIATION NOTE (Stage 0, AR-2 L): §3.1.3.4 additionally gates CROSS on
@@ -778,4 +827,11 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        | (1−FLOOR) × goalOpening × A_Finishing, FLOOR, 1) — the former product of    |
 // |         |            |        | two [0,1] fractions pinned nearly every shot at the 0.1 clamp floor         |
 // |         |            |        | (measured shot-tick means 7–10 m/s vs football ~25).                        |
+// | 1.6     | 2026-08-04 | —      | ERR-008-020 (judgment-proxy doctrine §6.4): CountInterceptors →             |
+// |         |            |        | ComputeLaneThreat. Per-opponent weight = linear falloff (core 0.4 m,        |
+// |         |            |        | zero at 1.2 m — ramp centred on the old 0.8 m cliff, integrated threat      |
+// |         |            |        | preserved) × PerceivedInterceptAbility (Anticipation+Pace → 0.6..1.4,       |
+// |         |            |        | blended toward 1.0 by the passer's Vision fidelity). Null attribute view    |
+// |         |            |        | ⇒ ability 1.0 = the old attribute-blind weighting. §3.1.4's                 |
+// |         |            |        | ComputeGoalOpeningScore (shot lane) deliberately untouched (deferred).      |
 #endregion
