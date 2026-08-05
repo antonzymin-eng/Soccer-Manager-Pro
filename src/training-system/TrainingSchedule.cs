@@ -160,9 +160,10 @@ namespace TacticalDirector.TrainingSystem
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                                            |
-// | 1.0     | 2026-08-05 | —      | Initial implementation (#29 T0, FR-TR-003 view).                     |
-// | 1.1     | 2026-08-05 | —      | AR pass 1 (H): + TrySetFocus. The FR-TR-023 command moved here from  |
-// |         |            |        | TrainingStep, whose two-array signature let one club's ids be paired |
-// |         |            |        | with another club's states — same length, silent wrong-club write.   |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-08-05 | —      | Initial implementation (#29 T0, FR-TR-003 view).                   |
+// | 1.1     | 2026-08-05 | —      | AR pass 1 (H): + TrySetFocus. The FR-TR-023 command moved here     |
+// |         |            |        | from TrainingStep, whose two-array signature let one club's ids be |
+// |         |            |        | paired with another club's states — same length, silent            |
+// |         |            |        | wrong-club write.                                                  |
 #endregion

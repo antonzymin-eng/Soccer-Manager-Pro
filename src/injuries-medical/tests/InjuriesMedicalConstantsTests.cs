@@ -16,6 +16,18 @@ using TacticalDirector.TrainingSystem;
 
 namespace TacticalDirector.InjuriesMedical.Tests
 {
+    /// <summary>
+    /// Catalogue invariants for #41.
+    /// <para>
+    /// <b>What these guard, precisely:</b> every <c>[GT]</c> read below resolves to its design-time
+    /// FALLBACK, because <c>GameplayConfigHolder</c> is never bound in the gate. So they catch a bad
+    /// fallback — someone editing <c>RecoveryDaysPerTickBase</c> to 0, or a per-mille split that
+    /// leaves Serious unreachable — and they do <b>not</b> catch a config file that sets the same key
+    /// to the same bad value at run time. Nothing validates a bound config at Stage 2. Believing
+    /// otherwise is what made the original risk-scale equality test vacuous (ERR-041-003), so the
+    /// scope is stated here rather than left to be re-derived.
+    /// </para>
+    /// </summary>
     [TestFixture]
     public sealed class InjuriesMedicalConstantsTests
     {
@@ -156,9 +168,12 @@ namespace TacticalDirector.InjuriesMedical.Tests
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                            |
+// | Version | Date       | Author | Notes                                                              |
 // | 1.0     | 2026-08-05 | —      | Initial implementation (#41 T0).                                   |
-// | 1.1     | 2026-08-05 | —      | AR pass 1: the risk-scale check restated for the [CROSS] mirror     |
-// |         |            |        | (it was vacuous as an equality of two unbound config reads), and    |
-// |         |            |        | + the RecoveryDaysPerTickBase > 0 guard.                            |
+// | 1.1     | 2026-08-05 | —      | AR pass 1: the risk-scale check restated for the [CROSS] mirror    |
+// |         |            |        | (it was vacuous as an equality of two unbound config reads), plus  |
+// |         |            |        | the RecoveryDaysPerTickBase > 0 guard.                             |
+// | 1.2     | 2026-08-05 | —      | AR pass 4 (L): the fixture now states that it pins the design-time |
+// |         |            |        | fallbacks, not a bound config — the distinction ERR-041-003 turned |
+// |         |            |        | on, and unstated in a fixture whose whole subject is [GT] values.  |
 #endregion

@@ -1,7 +1,34 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 5, 2026, later same day (**Adversarial review over the #29/#41 T0 landing — 2 High,
+**Last Updated:** August 5, 2026, later same day (**The #29/#41 review's Low tier cleared — nine findings, no new
+files, no deletions, and no behaviour change: every fix is a comment, an XML doc, a file header, a version-history
+row or an NUnit argument order.** Seven of the nine were stale claims left behind by the High/Medium fixes.
+**Modified:** `src/training-system/TrainingStep.cs` v1.2 and `src/training-system/TrainingSystemConstants.cs` v1.1
+(both robustness-weight docs still said #29's and #41's mitigation terms were "tuned independently" — the claim AR
+pass 2 falsified, recorded until now only in a test comment and **ERR-041-003**; `InjuryRiskMax` still described
+itself as one of two catalogue values checked for equality, the design H-1 removed; the §3.3 zero-ceiling comment
+said "refuse" of a branch that returns the rested value), `src/injuries-medical/MedicalStep.cs` v1.2 (two
+`<exception>` docs still described the v1.0 zero-only modifier gate after v1.1 widened it to non-positive on both
+fields — a caller reading them would believe a negative occurrence multiplier was accepted; `RobustnessMitigation`
+now states it is the *second* term over the same three attributes),
+`src/injuries-medical/InjuriesMedicalConstants.cs` v1.2 (the `[CROSS]` mirror asserted a spec back-prop without
+naming **ERR-041-003** as its tracking id; the type doc credited the per-mille split to a pre-commit review pass its
+own history does not record), `src/injuries-medical/MedicalModifier.cs` v1.2, `src/training-system/TrainingState.cs`
+v1.2, `src/training-system/TrainingViewModel.cs` v1.2, `src/training-system/AssemblyInfo.cs` v1.2 (**all four were
+edited in the previous commit with no version-history row at all**, so each claimed to be untouched since initial
+implementation; rows written retroactively and marked as such — and `AssemblyInfo.cs`'s purpose header trimmed to
+the two sentences FR-CS-057 allows), `src/training-system/TrainingSchedule.cs` v1.2 (version-table formatting).
+Tests: `TrainingSystemConstantsTests.cs` v1.1 and `InjuriesMedicalConstantsTests.cs` v1.2 both now state that they
+pin **design-time fallbacks, not a bound config** — the distinction H-1 turned on, and unstated in the two fixtures
+whose entire subject is `[GT]` values; `MedicalStepTests.cs` v1.2 (T-MD-MOD-001 had the computed value in NUnit's
+`expected` slot, so a failure would have reported the two sides the wrong way round);
+`TrainingScheduleTests.cs` v1.2 (header still described a read-only VIEW and a method named `SetFocus`);
+`TrainingStepTests.cs` v1.2 (v1.1's own row described a state the file never shipped in — corrected by appending,
+not by editing the row). `docs/tracking/CHANGELOG-src.md` v2.63. **STILL NO GATE RUN** — no .NET SDK, installer
+blocked by network policy.)
+
+**Last Updated (prior):** August 5, 2026, later same day (**Adversarial review over the #29/#41 T0 landing — 2 High,
 4 Medium, 4 Low fixed; converged pass 2. No new files.** **Modified:** `src/injuries-medical/InjuriesMedicalConstants.cs`
 v1.1 (H-1 — `InjuryRiskMax` re-tagged `[GT]` → `[CROSS]`, mirroring `TrainingSystemConstants` rather than taking a
 second config key under `[injuries-medical]` for the one scale #41 §3.4 shares with #29; **ERR-041-003**),

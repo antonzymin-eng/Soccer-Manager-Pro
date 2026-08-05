@@ -44,6 +44,9 @@ namespace TacticalDirector.TrainingSystem
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                                  |
-// | 1.0     | 2026-08-05 | —      | Initial implementation (#29 T0, KD-7). |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-08-05 | —      | Initial implementation (#29 T0, KD-7).                             |
+// | 1.1     | 2026-08-05 | —      | AR pass 1 (H): the writer citation re-pointed from                 |
+// |         |            |        | TrainingStep.SetFocus to TrainingSchedule.TrySetFocus.             |
+// | 1.2     | 2026-08-05 | —      | AR pass 4 (L): v1.1 landed with no version row; recorded here.     |
 #endregion

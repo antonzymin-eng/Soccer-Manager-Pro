@@ -355,10 +355,12 @@ namespace TacticalDirector.InjuriesMedical.Tests
                 "KD-5: a no-staff game recovers in exactly the tier's recovery-days constant.");
 
             Assert.AreEqual(
+                3000 - 400,
                 MedicalStep.AssembleRiskScore(
                     new InjuryRiskContribution(3000), MatchLoad.None, WorkedExampleAttributes(),
                     MedicalModifier.Identity),
-                3000 - 400);
+                "the identity occurrence multiplier leaves the assembled score at #29's contribution " +
+                "less the mean-14 robustness row.");
         }
 
         [Test]
@@ -596,11 +598,14 @@ namespace TacticalDirector.InjuriesMedical.Tests
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                            |
+// | Version | Date       | Author | Notes                                                              |
 // | 1.0     | 2026-08-05 | —      | Initial implementation (#41 T0).                                   |
-// | 1.1     | 2026-08-05 | —      | AR pass 1 (M): dropped the DrawOccurrence position-independence     |
-// |         |            |        | test (a pure function of its arguments — it could not fail); the    |
-// |         |            |        | id moves to the two-player test, which drives AdvanceMedicalDay.    |
-// |         |            |        | + the #29 -> #41 seam test: the one cross-assembly contract in this |
-// |         |            |        | landing had no test at all.                                         |
+// | 1.1     | 2026-08-05 | —      | AR pass 1 (M): dropped the DrawOccurrence position-independence    |
+// |         |            |        | test (a pure function of its arguments — it could not fail); the   |
+// |         |            |        | id moves to the two-player test, which drives AdvanceMedicalDay.   |
+// |         |            |        | + the #29 -> #41 seam test: the one cross-assembly contract in     |
+// |         |            |        | this landing had no test at all.                                   |
+// | 1.2     | 2026-08-05 | —      | AR pass 4 (L): T-MD-MOD-001's second assertion had the computed    |
+// |         |            |        | value in NUnit's `expected` slot, so a failure would have reported |
+// |         |            |        | the two sides the wrong way round.                                 |
 #endregion

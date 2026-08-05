@@ -3,8 +3,9 @@
 // Modified: 2026-08-05
 // Author:   —
 // Spec:     Training System #29 §2.2 / FR-TR-003 / FR-TR-019 / FR-TR-023 (F2/F4); Code Standards #20
-// Purpose:  The schedule is a VIEW, not a stored copy — a focus written through SetFocus is visible
-//           through an already-open view — plus the parallel-array guard and T-TR-FAIL-003.
+// Purpose:  The handle stores no focus of its own — a focus written through TrySetFocus is visible
+//           through an already-open view — plus the parallel-array guard, the cross-club write the
+//           bound pair makes unreachable, and T-TR-FAIL-003.
 
 using System;
 
@@ -126,8 +127,10 @@ namespace TacticalDirector.TrainingSystem.Tests
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                            |
+// | Version | Date       | Author | Notes                                                             |
 // | 1.0     | 2026-08-05 | —      | Initial implementation (#29 T0).                                  |
-// | 1.1     | 2026-08-05 | —      | AR pass 1 (H): retargeted to TrainingSchedule.TrySetFocus, + the   |
-// |         |            |        | cross-club test that fails against the old two-array signature.    |
+// | 1.1     | 2026-08-05 | —      | AR pass 1 (H): retargeted to TrainingSchedule.TrySetFocus, + the  |
+// |         |            |        | cross-club test that fails against the old two-array signature.   |
+// | 1.2     | 2026-08-05 | —      | AR pass 4 (L): file header still described a read-only VIEW and a |
+// |         |            |        | method named SetFocus, both superseded by v1.1.                   |
 #endregion

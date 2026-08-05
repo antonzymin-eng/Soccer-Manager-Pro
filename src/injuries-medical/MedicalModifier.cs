@@ -50,6 +50,11 @@ namespace TacticalDirector.InjuriesMedical
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                                  |
-// | 1.0     | 2026-08-05 | —      | Initial implementation (#41 T0, KD-5). |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-08-05 | —      | Initial implementation (#41 T0, KD-5).                             |
+// | 1.1     | 2026-08-05 | —      | AR pass 1 (M): the contract widened from "a zero RecoverySpeed     |
+// |         |            |        | fails loud" to "both fields MUST be positive", matching the        |
+// |         |            |        | MedicalStep gate — a negative multiplier is the same trap with no  |
+// |         |            |        | crash to announce it.                                              |
+// | 1.2     | 2026-08-05 | —      | AR pass 4 (L): v1.1 landed with no version row; recorded here.     |
 #endregion

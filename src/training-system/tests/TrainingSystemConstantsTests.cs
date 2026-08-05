@@ -12,6 +12,17 @@ using NUnit.Framework;
 
 namespace TacticalDirector.TrainingSystem.Tests
 {
+    /// <summary>
+    /// Catalogue invariants for #29.
+    /// <para>
+    /// <b>What these guard, precisely:</b> every <c>[GT]</c> read below resolves to its design-time
+    /// FALLBACK, because <c>GameplayConfigHolder</c> is never bound in the gate. They catch a bad
+    /// fallback — a non-positive <c>TrainingFatigueMax</c>, a <c>ConditionStart</c> outside its
+    /// bounds — and they do <b>not</b> catch a config file setting the same key to the same bad value
+    /// at run time. Nothing validates a bound config at Stage 2 (ERR-041-003 is what mistaking the
+    /// two costs).
+    /// </para>
+    /// </summary>
     [TestFixture]
     public sealed class TrainingSystemConstantsTests
     {
@@ -86,6 +97,9 @@ namespace TacticalDirector.TrainingSystem.Tests
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                                  |
-// | 1.0     | 2026-08-05 | —      | Initial implementation (#29 T0).       |
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-08-05 | —      | Initial implementation (#29 T0).                                   |
+// | 1.1     | 2026-08-05 | —      | AR pass 4 (L): the fixture now states that it pins the design-time |
+// |         |            |        | fallbacks, not a bound config — the distinction ERR-041-003 turned |
+// |         |            |        | on, and unstated in a fixture whose whole subject is [GT] values.  |
 #endregion

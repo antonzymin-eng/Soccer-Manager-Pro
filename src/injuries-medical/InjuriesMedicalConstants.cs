@@ -21,8 +21,8 @@ namespace TacticalDirector.InjuriesMedical
     /// Stage-2/3 balance pass — the shapes and directions are the reviewed contract.
     /// <para>
     /// <b>Every value here is an integer</b> (FR-MD-014). Nothing in #41 is a float, which keeps the
-    /// whole system clear of float-mode / MXCSR sensitivity — the reason the AR-1 pass replaced the
-    /// original fractional severity split with the per-mille cross-multiply.
+    /// whole system clear of float-mode / MXCSR sensitivity — the reason the severity split is a
+    /// per-mille numerator resolved by cross-multiply rather than a fraction.
     /// </para>
     /// <para>
     /// The two tables are array-valued, and <c>GameplayConfig</c> has no array getter, so they stay
@@ -108,8 +108,13 @@ namespace TacticalDirector.InjuriesMedical
         /// <c>[training-system] InjuryRiskMax</c> — and setting one without the other silently rescales
         /// every occurrence probability while #29's maximum risk quietly stops meaning "certain". That
         /// is the duplicate-truth trap the <c>[CROSS]</c> routing rule exists to prevent (the
-        /// ERR-037-001 precedent). One owner, one key; #41's Appendix A row to be re-tagged
-        /// <c>[CROSS]</c> at the next revision.
+        /// ERR-037-001 precedent). One owner, one key.
+        /// </para>
+        /// <para>
+        /// The divergence from #41's Appendix A is filed and resolved as <b>ERR-041-003</b>
+        /// (<c>docs/tracking/spec-error-log.md</c>), which carries the back-prop re-tagging that row
+        /// <c>[CROSS]</c> at the spec's next revision. Do not "restore" the <c>[GT]</c> read here to
+        /// match the current spec text — read the ERR entry first.
         /// </para>
         /// </summary>
         public static readonly int InjuryRiskMax = TrainingSystemConstants.InjuryRiskMax;
@@ -216,10 +221,14 @@ namespace TacticalDirector.InjuriesMedical
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                                                  |
+// | Version | Date       | Author | Notes                                                               |
 // | 1.0     | 2026-08-05 | —      | Initial implementation (#41 T0): Appendix A catalogue.              |
 // | 1.1     | 2026-08-05 | —      | AR pass 1 (H): InjuryRiskMax re-tagged [GT] -> [CROSS], mirroring   |
-// |         |            |        | TrainingSystemConstants rather than taking a second config key       |
-// |         |            |        | ([injuries-medical] vs [training-system]) for one contract scale.    |
-// |         |            |        | ERR-041-003.                                                        |
+// |         |            |        | TrainingSystemConstants rather than taking a second config key      |
+// |         |            |        | ([injuries-medical] vs [training-system]) for one contract scale.   |
+// |         |            |        | ERR-041-003.                                                       |
+// | 1.2     | 2026-08-05 | —      | AR pass 4 (L): the InjuryRiskMax doc asserted a spec back-prop      |
+// |         |            |        | without naming the id that tracks it; the type doc credited the     |
+// |         |            |        | per-mille split to a pre-commit review pass this file's history     |
+// |         |            |        | does not record.                                                   |
 #endregion

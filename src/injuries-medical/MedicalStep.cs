@@ -64,10 +64,10 @@ namespace TacticalDirector.InjuriesMedical
         /// <param name="occurrenceEnabled">The KD-8 dial. Off reduces the step to recovery-only with no draw at all (FR-MD-027).</param>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="state"/> carries an undefined <see cref="InjurySeverity"/> (F4).</exception>
         /// <exception cref="ArgumentException">
-        /// <paramref name="state"/> is incoherent — recovery outstanding while healthy, or none while
-        /// injured (F1); <paramref name="medical"/> has a zero recovery-speed multiplier
-        /// (FR-MD-016 / F4); or <paramref name="worldDay"/> leaves a gap over the last-advanced day
-        /// (F7) or is itself the never-advanced sentinel.
+        /// <paramref name="state"/> is incoherent — recovery outstanding while healthy, none while
+        /// injured, negative, or above the ceiling (F1); either <paramref name="medical"/> multiplier
+        /// is non-positive (FR-MD-016 / F4); or <paramref name="worldDay"/> leaves a gap over the
+        /// last-advanced day (F7) or is itself the never-advanced sentinel.
         /// </exception>
         public static void AdvanceMedicalDay(
             ref InjuryState state,
@@ -170,7 +170,7 @@ namespace TacticalDirector.InjuriesMedical
         /// <param name="load">Caller-supplied match participation.</param>
         /// <param name="attributes">The player's #27 attributes (the robustness mitigation).</param>
         /// <param name="medical">The staff seam; ×1.0 at <see cref="MedicalModifier.Identity"/>.</param>
-        /// <exception cref="ArgumentException"><paramref name="medical"/> has a zero recovery-speed multiplier — the <c>default(MedicalModifier)</c> trap (FR-MD-016 / F4).</exception>
+        /// <exception cref="ArgumentException">Either <paramref name="medical"/> multiplier is non-positive — the <c>default(MedicalModifier)</c> trap, and the negative one that produces no crash to announce it (FR-MD-016 / F4).</exception>
         public static int AssembleRiskScore(
             in InjuryRiskContribution trainingRisk,
             in MatchLoad load,
@@ -283,7 +283,17 @@ namespace TacticalDirector.InjuriesMedical
         /// 2 derives it from the three existing physical attributes; a dedicated #27
         /// <c>InjuryProneness</c> field is a recorded deep-tier deferral, deliberately not built here
         /// so the minimal tier causes no #27 schema ripple.
-        /// </summary>
+        /// <para>
+        /// <b>This is the SECOND mitigation over those same three attributes.</b> #29's
+        /// <c>TrainingStep.ComputeInjuryRisk</c> has already subtracted its own before clamping and
+        /// publishing the scalar <see cref="AssembleRiskScore"/> passes through, so a robust player is
+        /// priced down twice and the two <c>[GT]</c> tables cannot be tuned independently. Both specs
+        /// mandate their term, so this is the contract rather than a defect — but it has a consequence
+        /// worth knowing before tuning: because #27 attributes floor at 1, this term is never zero, so
+        /// a risk score saturated at #29's ceiling still lands strictly below
+        /// <see cref="InjuriesMedicalConstants.OccurrenceDrawDenom"/> and no player is ever certain to
+        /// be injured. Recorded under ERR-041-003 for the balance pass.
+        /// </para>
         /// <param name="attributes">The player's #27 attributes.</param>
         internal static int RobustnessMitigation(in PlayerAttributes attributes)
         {
@@ -420,10 +430,15 @@ namespace TacticalDirector.InjuriesMedical
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                                                        |
+// | Version | Date       | Author | Notes                                                               |
 // | 1.0     | 2026-08-05 | —      | Initial implementation (#41 T0): §3.1–§3.4 + the keyed draw.        |
 // | 1.1     | 2026-08-05 | —      | AR pass 1 (2M): ValidateModifier widened to non-positive on BOTH    |
-// |         |            |        | fields (a negative multiplier silently disabled injuries or          |
-// |         |            |        | one-dayed a Serious one); ValidateState now rejects a negative       |
-// |         |            |        | RecoveryRemaining, which the iff check structurally could not see.   |
+// |         |            |        | fields (a negative multiplier silently disabled injuries or         |
+// |         |            |        | one-dayed a Serious one); ValidateState now rejects a negative      |
+// |         |            |        | RecoveryRemaining, which the iff check structurally could not see.  |
+// | 1.2     | 2026-08-05 | —      | AR pass 4 (L): the two <exception> docs still described the v1.0    |
+// |         |            |        | gate ("a zero recovery-speed multiplier") after v1.1 widened it to  |
+// |         |            |        | non-positive on both fields — a caller reading them would believe a |
+// |         |            |        | negative occurrence multiplier was accepted. RobustnessMitigation   |
+// |         |            |        | now states that it is the second term over #29's attributes.        |
 #endregion

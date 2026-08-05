@@ -366,10 +366,15 @@ namespace TacticalDirector.TrainingSystem.Tests
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                            |
+// | Version | Date       | Author | Notes                                                              |
 // | 1.0     | 2026-08-05 | —      | Initial implementation (#29 T0).                                   |
 // | 1.1     | 2026-08-05 | —      | AR pass 1 (M): T-TR-COA-001 re-pointed at the day step (it had     |
-// |         |            |        | asserted the identity function is the identity); the NEU-001        |
-// |         |            |        | field-independence assertion replaced with the purity check that    |
-// |         |            |        | IS assertable today, and the untestable half named in the test.     |
+// |         |            |        | asserted the identity function is the identity); the NEU-001       |
+// |         |            |        | field-independence assertion replaced with the purity check that   |
+// |         |            |        | IS assertable today, and the untestable half named in the test.    |
+// | 1.2     | 2026-08-05 | —      | AR pass 4 (L): v1.1's second clause describes a state this file    |
+// |         |            |        | never shipped in — AR pass 2 deleted that purity check as          |
+// |         |            |        | tautological in its turn (`in` forbids the mutation it asserted    |
+// |         |            |        | against), leaving only the comment naming what cannot yet be       |
+// |         |            |        | tested. Corrected by appending, not by editing the row.            |
 #endregion

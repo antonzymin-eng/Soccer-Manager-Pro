@@ -87,9 +87,14 @@ namespace TacticalDirector.TrainingSystem
 
         /// <summary>
         /// [GT] Risk-scalar clamp ceiling for <see cref="InjuryRiskContribution.RiskScore"/> (§3.4).
-        /// #41 assembles its occurrence risk on this same scale and compares its draw against it
-        /// (#41 §3.4 / Appendix A), so the two catalogues' values are equal by contract — a #41 test
-        /// asserts it rather than leaving the coupling to prose.
+        /// <para>
+        /// <b>This catalogue is the sole owner of the scale, and this is its only config key.</b> #41
+        /// assembles its occurrence risk on the same scale and derives its draw denominator from it
+        /// (#41 §3.4), so it <c>[CROSS]</c>-mirrors this field rather than declaring one of its own —
+        /// a second key under <c>[injuries-medical]</c> would let one side be set without the other,
+        /// silently rescaling every occurrence probability (ERR-041-003). Changing the value here
+        /// changes both sides at once, which is the property the mirror exists to give.
+        /// </para>
         /// Config key [training-system] InjuryRiskMax.
         /// </summary>
         public static readonly int InjuryRiskMax = Config.GetInt("training-system", "InjuryRiskMax", 10000);
@@ -97,8 +102,17 @@ namespace TacticalDirector.TrainingSystem
         /// <summary>
         /// [GT] Injury-risk mitigation per point of the player's mean robustness attribute
         /// (<c>Strength</c>/<c>Stamina</c>/<c>Balance</c>) — deterministic, never RNG (FR-TR-009).
-        /// #41 carries its own, separately-tuned mitigation term (#41 FR-MD-015); the two are
-        /// deliberately independent <c>[GT]</c>s over the same attributes, not one shared value.
+        /// <para>
+        /// <b>This value cannot be tuned in isolation.</b> #41 subtracts its own mitigation term, over
+        /// the same three attributes, from the scalar this one has already reduced (#41 FR-MD-015), so
+        /// a player's robustness is priced into the occurrence probability twice and the two
+        /// <c>[GT]</c> tables compose multiplicatively in effect. Each spec mandates its own term, so
+        /// the duplication is spec-faithful rather than a defect — but it is a fact the balance pass
+        /// inherits, not one it should rediscover. Recorded under ERR-041-003 and pinned by
+        /// <c>MedicalStepTests.TrainingRiskFlowsFromTheProducerIntoTheOccurrenceRisk_TTMDFAT001</c>,
+        /// which asserts the consequence: #29's saturated maximum never reaches #41's ceiling, so
+        /// "maximum risk" here never means certain occurrence there.
+        /// </para>
         /// Config key [training-system] RobustnessMitigationPerPoint.
         /// </summary>
         public static readonly int RobustnessMitigationPerPoint = Config.GetInt("training-system", "RobustnessMitigationPerPoint", 40);
@@ -163,6 +177,11 @@ namespace TacticalDirector.TrainingSystem
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                                                       |
-// | 1.0     | 2026-08-05 | —      | Initial implementation (#29 T0): Appendix A catalogue.      |
+// | Version | Date       | Author | Notes                                                               |
+// | 1.0     | 2026-08-05 | —      | Initial implementation (#29 T0): Appendix A catalogue.              |
+// | 1.1     | 2026-08-05 | —      | AR pass 4 (L): two docs corrected to the post-ERR-041-003 design.    |
+// |         |            |        | InjuryRiskMax still described itself as one of two catalogue values |
+// |         |            |        | checked for equality; it is now the sole owner of the scale.        |
+// |         |            |        | RobustnessMitigationPerPoint claimed #41's term was independently   |
+// |         |            |        | tuned — the two compound over the same attributes.                  |
 #endregion

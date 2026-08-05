@@ -175,9 +175,11 @@ namespace TacticalDirector.TrainingSystem
         /// <param name="state">The player's training state, read-only.</param>
         public static float ProjectMatchEntryFatigue(in TrainingState state)
         {
-            // A zero ceiling is only reachable through a hostile config override, but the arithmetic
-            // failure it causes is 0/0 = NaN, and a NaN reaching match boot would not fail loud — it
-            // would silently poison every downstream attribute projection. Refuse it here.
+            // A non-positive ceiling is only reachable through a config override, and
+            // TrainingSystemConstantsTests rejects it at the design-time fallback. What it would do
+            // here is 0/0 = NaN, and a NaN reaching match boot would not fail loud — it would silently
+            // poison every downstream attribute projection. Short-circuit to the RESTED end of the
+            // scale instead: not a refusal, a bounded wrong answer chosen over an unbounded one.
             if (TrainingSystemConstants.TrainingFatigueMax <= 0)
             {
                 return 0f;
@@ -224,10 +226,15 @@ namespace TacticalDirector.TrainingSystem
         /// The deterministic own-attribute injury mitigation (§3.4) — the mean of the three physical
         /// robustness attributes, weighted. Never RNG (FR-TR-009).
         /// <para>
-        /// #41 derives its own mitigation term from the same three attributes with its own <c>[GT]</c>
-        /// weights (#41 FR-MD-015). That is deliberate duplication of a *shape*, not of a value: the
-        /// two systems mitigate different quantities (a risk input versus an occurrence probability)
-        /// and are tuned independently.
+        /// <b>#41 mitigates again, on the same three attributes, downstream of this.</b> Its own
+        /// <c>[GT]</c> term (#41 FR-MD-015) is subtracted from the scalar this method has already
+        /// reduced, so robustness is priced into the occurrence probability twice and the two tables
+        /// are not independently tunable. Each spec mandates its own term, so the layering is
+        /// spec-faithful — but its consequence is load-bearing and easy to miss: the value returned
+        /// here can saturate <see cref="TrainingSystemConstants.InjuryRiskMax"/> while the risk #41
+        /// finally draws against still falls short of its ceiling, because the <c>[1,20]</c> attribute
+        /// floor guarantees #41 always subtracts at least its lowest row. Recorded under ERR-041-003
+        /// for the balance pass; do not tune this weight without re-reading #41's.
         /// </para>
         /// </summary>
         /// <param name="attributes">The player's #27 attributes.</param>
@@ -282,8 +289,12 @@ namespace TacticalDirector.TrainingSystem
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                                                            |
-// | 1.0     | 2026-08-05 | —      | Initial implementation (#29 T0): §3.1–§3.4.                          |
-// | 1.1     | 2026-08-05 | —      | AR pass 1 (H): SetFocus moved to TrainingSchedule.TrySetFocus — the   |
-// |         |            |        | two-array signature accepted one club's ids with another's states.   |
+// | Version | Date       | Author | Notes                                                               |
+// | 1.0     | 2026-08-05 | —      | Initial implementation (#29 T0): §3.1–§3.4.                         |
+// | 1.1     | 2026-08-05 | —      | AR pass 1 (H): SetFocus moved to TrainingSchedule.TrySetFocus — the  |
+// |         |            |        | two-array signature accepted one club's ids with another's states.  |
+// | 1.2     | 2026-08-05 | —      | AR pass 4 (L): RobustnessMitigation's doc said #41's term was tuned  |
+// |         |            |        | independently; it compounds on the same attributes (ERR-041-003).   |
+// |         |            |        | The §3.3 zero-ceiling comment said "refuse" of a branch that returns |
+// |         |            |        | the rested value.                                                   |
 #endregion
