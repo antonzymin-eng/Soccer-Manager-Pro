@@ -27,7 +27,7 @@ src/
 └── CLAUDE.md                       ← you are here
 ```
 
-**31 assembly folders.** The full annotated tree lives in
+**33 assembly folders.** The full annotated tree lives in
 `docs/tracking/src-tree.md`; the authoritative inventory is
 `docs/tracking/file-manifest.md`. Do not maintain a third copy here.
 
@@ -78,14 +78,14 @@ at runtime:
 
 
 > ⚠️ **This table is out of date and is not the current assembly index.**
-> It accounts for 19 of the 31 assembly folders now in `src/` — the 17 named in the
+> It accounts for 19 of the 33 assembly folders now in `src/` — the 17 named in the
 > layer tables plus `deterministic-sim` and `event-system`, covered as cross-cutting
 > foundations in the paragraph above.
 >
-> **Unlisted (12):** `living-world`, `match-analytics`, `match-client-core`,
-> `match-client-unity`, `match-client-web`, `match-engine`, `match-viewer`,
-> `player-database`, `player-progression`, `season-save`, `tactical-instructions`,
-> `ui-framework`.
+> **Unlisted (14):** `injuries-medical`, `living-world`, `match-analytics`,
+> `match-client-core`, `match-client-unity`, `match-client-web`, `match-engine`,
+> `match-viewer`, `player-database`, `player-progression`, `season-save`,
+> `tactical-instructions`, `training-system`, `ui-framework`.
 >
 > **Listed but absent from `src/`:** `code-standards` (Spec #20 is a style guide, not a
 > coded assembly).
@@ -97,7 +97,8 @@ at runtime:
 > requiring owner sign-off, not something to infer from folder names.
 >
 > **Filed as `ERR-020-002`** (August 2, 2026, 🟡 Open) with a proposed ten-tier order
-> covering all 31 folders, derived from the `.asmdef` reference graph and verified against
+> covering all 31 folders as of that date (the two August 5, 2026 additions are not in the
+> proposal and need placing with it), derived from the `.asmdef` reference graph and verified against
 > it — zero upward references, so adopting it changes nothing that exists. See
 > `docs/tracking/spec-error-log.md`. Until it is signed off, use the **assembly map in the
 > root `CLAUDE.md`** as the current index.

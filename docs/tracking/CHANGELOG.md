@@ -12,7 +12,57 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 4, 2026, latest same day (**W1 adversarial review pass 2 — 1 High, 1
+> **Last Updated:** August 5, 2026 (**#41 Injuries & Medical T0 landed — and #29 Training System T0
+> with it, because #41 could not be built without it.** The task was the next spec after #29 in code
+> implementation order; the roadmap's Phase D orders that as D2 #29 → D3 #41, and #41 §4.1 requires
+> a reference to `TacticalDirector.TrainingSystem` for the one type it reads — `InjuryRiskContribution`,
+> #29's already-published risk scalar (FR-TR-017 / FR-MD-009). That assembly did not exist. So #29 T0
+> landed as the declared prerequisite rather than as a half-built stub, and the pair went in together:
+> **two new host-free assemblies, `src/training-system/` and `src/injuries-medical/`, taking `src/` from
+> 31 to 33** and the assembly-less-APPROVED-spec count from 22 down to 20.
+>
+> **#29 T0** — `TrainingFocus`, `TrainingState` (+ the `Create`-not-`default` sentinel discipline),
+> `TrainingSchedule` as a genuine read-only VIEW over per-player focus rather than a stored copy
+> (FR-TR-003), `CoachingModifier`, `InjuryRiskContribution`, `TrainingViewModel`, the four `TrainingStep`
+> entry points (§3.1–§3.4) and the FR-TR-023 `SetFocus` command, plus the Appendix A catalogue. Appendix
+> B's Fitness week is reproduced day by day as a test, including its `ProjectMatchEntryFatigue = 0.23`.
+> No RNG anywhere: `_RESERVED_0x21_` / ordinal 83 stay reserved (KD-6).
+>
+> **#41 T0** — `InjurySeverity`, `InjuryState`, `MatchLoad`, `MedicalModifier` (explicit `Identity`, and
+> `default` fails loud — its zero is ×0 risk and a divide-by-zero recovery scale), `MedicalViewModel`,
+> `MedicalStep` (§3.1–§3.4: the recovery-then-draw day step, the keyed occurrence draw, the same-draw
+> severity bucketing, the risk assembly), and the Appendix A catalogue. §3.6's worked example is pinned
+> term by term — the risk assembly's 2900, the `draw 1500 ⇒ Minor` bucketing, the 7-day Minor tier — and
+> the robustness table is calibrated so `mean 14 ⇒ 400` is exact rather than approximately reproduced.
+>
+> **Two findings, both filed** (`spec-error-log.md` v1.57). **ERR-041-002** is the consequential one and
+> it is ERR-030-012's twin, reached independently from the same constraint: **#41 §2.2/§3.1 call
+> `rng.DrawKeyed(...)` on `DeterministicRngService`, and no such method exists.** #16 exposes only the
+> branch-safe reservation trio, whose draw value is keyed on an `ActionOrdinal` the service increments
+> inside `Reserve` — nothing accepts a caller-supplied ordinal. The one shape that *is* implementable
+> against today's API is cursor-positioned, which KD-1 of the same spec forbids: FR-MD-007 serializes no
+> cursor precisely because every draw must be reproducible from `(playerId, worldDay, purpose)` alone.
+> Resolved the way #30 resolved it — a local keyed SplitMix64 derivation, the
+> `RoundResolutionModel.FixtureKey` precedent — so `AdvanceMedicalDay` takes `ulong worldSeed` in place
+> of the service and registers no stream. **ERR-041-001 closes with it**: `DOMAIN_TAG_INJURIES_MEDICAL =
+> 0x2A` lands in `DeterministicSimConstants` at that first draw site; `SubsystemOrdinals.InjuriesMedical
+> = 92` is deliberately **not** allocated, because an ordinal with no registered stream behind it is the
+> zero-consumer phantom FR-LW-031 forbids.
+>
+> **Not done, and named rather than implied:** T1 (both save codecs and the `SeasonSaveCodec`
+> composition) and T2 (the #30 tick-order wiring, the availability read into squad selection, the
+> FR-MD-025 / FR-TR-025 roster-membership handoff) are untouched. Both assemblies are inert — nothing
+> constructs them, so the season loop is byte-identical to before this landing. #29's `ComputeTrainingInput`
+> returns `TrainingInput.Neutral` on both branches, because #28's type still has no fields to populate;
+> the deep branch is a marked seam, not a magnitude invented ahead of its consumer.
+>
+> **NO GATE RUN.** The authoring environment has no .NET SDK and the network policy blocks the
+> installer (`builds.dotnet.microsoft.com` → 403 at the proxy), so ~20 production files and 6 test files
+> across two new assemblies are **written and never compiled** — precisely the defect class
+> `tools/dotnet-ci` exists to catch. Every "the suite locks X" claim in this entry is a claim about test
+> code that has not executed. First CI run on push is the real gate.)
+
+> **Last Updated (prior):** August 4, 2026, latest same day (**W1 adversarial review pass 2 — 1 High, 1
 > Medium, 3 Low.** The High is a seam defect, and it is the other half of pass 1's own fix rather than
 > a new subject. #11 indexes every per-keeper array by `gkIndex`, which is the **team** (KD-1); this
 > engine keys identity by **roster slot**. Those agree right up until the occupant of the keeper slot

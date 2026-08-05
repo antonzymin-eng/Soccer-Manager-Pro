@@ -14,7 +14,35 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** August 4, 2026 (v2.60 — **W1 adversarial review pass 2: 1 High, 1 Medium, 3 Low.**
+> **Last Updated:** August 5, 2026 (v2.61 — **Two new host-free assemblies: `TacticalDirector.TrainingSystem`
+> (#29 T0) and `TacticalDirector.InjuriesMedical` (#41 T0). `src/` goes 31 → 33.** #41 was the target —
+> the next spec after #29 in the roadmap's Phase D implementation order — and #29 came with it because
+> #41 §4.1 requires a reference to it for `InjuryRiskContribution`, the one type it reads, and that
+> assembly did not exist. Building half of #29 to satisfy the reference would have been the phantom
+> class this project refuses, so the prerequisite landed whole.
+>
+> **Reference direction, both new assemblies downward-only:** `TrainingSystem → {PlayerProgression,
+> PlayerDatabase, ProjectConstants}` and `InjuriesMedical → {TrainingSystem, PlayerDatabase,
+> DeterministicSim, ProjectConstants}`. Neither references `MatchEngine`, `LivingWorld` or `SeasonSave`
+> (FR-TR-024 / FR-MD-026), so "#41 never draws on the match tick" is structural rather than a
+> convention: there is no match-engine type in scope to reach.
+>
+> **`DeterministicSimConstants.cs` v1.6** — `DOMAIN_TAG_INJURIES_MEDICAL = 0x2A` allocated at #41's
+> first draw site (ERR-041-001, now closed). No `SubsystemOrdinals.InjuriesMedical` mirror: #41
+> registers no cursor stream, and an ordinal with nothing behind it is FR-LW-031's zero-consumer
+> phantom — the ERR-030-012 posture, taken deliberately rather than by omission.
+>
+> **ERR-041-002** — `#41 §2.2/§3.1`'s `rng.DrawKeyed(...)` names an API `DeterministicRngService` does
+> not have, and the only implementable alternative against today's surface is cursor-positioned, which
+> #41 KD-1 forbids. The draw is a local keyed SplitMix64 derivation instead (the
+> `RoundResolutionModel.FixtureKey` / `LeagueBootstrap` precedent), so `AdvanceMedicalDay` takes
+> `ulong worldSeed` rather than the service. Filed and resolved in the same commit.
+>
+> **NO GATE RUN — no .NET SDK in the authoring environment and the network policy blocks the installer.**
+> ~20 production files and 6 test files across two new assemblies are written and never compiled. Treat
+> every test-based claim here as unexecuted until CI runs.)
+
+> **Last Updated (prior):** August 4, 2026 (v2.60 — **W1 adversarial review pass 2: 1 High, 1 Medium, 3 Low.**
 > H — **a substitute keeper inherited the dismissed keeper's rush.** #11 indexes every per-keeper array
 > by `gkIndex`, which is the TEAM (KD-1), while the engine keys identity by ROSTER SLOT — and the
 > occupant changes mid-match: keeper sent off, bench keeper on in a *different* slot (`SubstitutePlayer`
@@ -1466,6 +1494,7 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.61 | 2026-08-05 | —      | **#29 Training System T0 + #41 Injuries & Medical T0 — two new assemblies, `src/` 31 → 33.** NEW `src/training-system/` (`training-system.asmdef`, `AssemblyInfo.cs`, `TrainingFocus.cs`, `TrainingState.cs`, `TrainingSchedule.cs`, `CoachingModifier.cs`, `InjuryRiskContribution.cs`, `TrainingViewModel.cs`, `TrainingStep.cs`, `TrainingSystemConstants.cs` + `tests/` [`TrainingStepTests.cs`, `TrainingScheduleTests.cs`, `TrainingSystemConstantsTests.cs`, asmdef]). NEW `src/injuries-medical/` (`injuries-medical.asmdef`, `AssemblyInfo.cs`, `InjurySeverity.cs`, `InjuryState.cs`, `MatchLoad.cs`, `MedicalModifier.cs`, `MedicalViewModel.cs`, `MedicalStep.cs`, `InjuriesMedicalConstants.cs` + `tests/` [`MedicalStepTests.cs`, `InjuriesMedicalConstantsTests.cs`, asmdef]). `DeterministicSimConstants.cs` v1.6 (`DOMAIN_TAG_INJURIES_MEDICAL = 0x2A`, ERR-041-001 closed; no ordinal mirror). ERR-041-002 filed + resolved (the `DrawKeyed` API does not exist; keyed SplitMix64 derivation instead). T1 codecs and T2 wiring deliberately NOT done — both assemblies are inert, nothing constructs them. **No gate run: no .NET SDK available and the installer is blocked by network policy.** |
 | 2.60 | 2026-08-04 | —      | **W1 adversarial review pass 2 — 1 High, 1 Medium, 3 Low.** `GoalkeeperMechanics.cs` v1.12 (H: + `ResetSlot`, and the constructor's sentinel loop now goes through it so "a fresh slot" is defined in one place rather than a pair that must agree — §5.Z.12). `MatchEngine.cs` v1.60 (H: `RefreshGkAgentIds` resolves each slot into a local, compares it with the standing value and calls `ResetSlot` when the OCCUPANT changed; `_gkAgentIds` seeded to −1 at boot because 0 is a valid agent id). The defect: #11 indexes every per-keeper array by `gkIndex` = TEAM (KD-1) while the engine keys identity by ROSTER SLOT, and the two part company when a keeper is sent off and a bench keeper comes on in a different slot — `SubstitutePlayer` refuses the dismissed slot itself, and the path is live from `ManagerCommand`. The substitute inherited a `RushIntent` whose target was locked (KD-15) for the man he replaced, and `Set → Rushing` launched him at it. It is the **other half of v2.55's own sent-off fix**: filtering the dismissed keeper out is exactly what turned his slot from self-resolving into frozen-indefinitely, and frozen state is what gets inherited. `GkRushTriggerTests.cs` v1.2 (M: v2.55's sent-off fix had no test at all — added, both keepers, plus the substitute-inheritance lock). L ×3 recorded not fixed (`gk-rush-trigger-design.md` §7 items 7–9): #11's stale `_attrs`-writers comment, `CommitRushIntent`'s unread `_attrs` write, and `GoalkeeperStateMachine`'s `Anticipate` comment claiming a rush-over-dive priority the rows do not implement. **No `SNAPSHOT_SCHEMA_VERSION` change** — `_gkAgentIds` is reconstructed, never serialized, so restore re-derives it and sees no occupant change. No RNG / draw-order change. **Gate NOT run — no .NET SDK in this environment.** |
 | 2.59 | 2026-08-04 | —      | **W1 adversarial review pass 1 — 1 High, 4 Medium, 4 Low, all fixed.** `GkHeadingIntentSource.cs` v1.2 (H: minimum-run guard, condition 6 — `RushArmed` bounded run length above and not below, so a keeper standing on a ball he had just swept re-armed every third tactical tick, the ordinary end of a sweep since §5.Z.15/16 bars him from collecting it; reuses `RushTargetReachedRadiusM` so the commit test and the arrival test cannot drift. L: epsilon renamed. M: v1.1 history row still described the REJECTED last-man model as current). `MatchEngine.cs` v1.59 (M: `RefreshGkAgentIds` filters `_isSentOff` — a keeper sent off mid-rush kept sprinting, because the `_commands = Stop` freeze governs movement only and #11's `Rushing` branch writes position after it; + `TestOnly_DriveGkHeadingPhysics`). `MatchEngineConstants.cs` v1.29 (L: `GK_RUSH_SOLVE_EPSILON` → `GK_RUSH_DEGENERACY_EPSILON`, three dimensionally different quantities; header `+4 [GT]` → 5). `GoalkeeperMechanics.cs` (L: orphaned header continuation folded back). `GkRushTriggerTests.cs` v1.1 (M: composed displacement lock — the prior composed locks stopped at `GkState == Rushing`, true of an engine whose rush position write-back is dropped, the #11 v1.4 H-2 defect; + the re-arm lock; + the cross-catalogue `GkRushCommitment > RushCommitThreshold` invariant). M recorded not fixed: `RushCommitFatiguePenaltyM` is structurally dead (all four `ToGoalkeeper` call sites pass `fatigue: 0f`) — do-not-calibrate, in #11 §3.7.0 and `gk-rush-trigger-design.md` §7 item 6. No schema / RNG / domain-tag / draw-order change. **Gate NOT run — no .NET SDK in this environment.** |
 | 2.58 | 2026-08-04 | —      | **Wiring backlog W1 — the keeper rush trigger + ERR-011-010 + ERR-011-009.** `MatchEngine.cs` v1.58 (`TryCommitRushIntents` — the first production caller `CommitRushIntent` has ever had — + `TestOnly_RushCommitCount`/`TestOnly_GkState`), `GkHeadingIntentSource.cs` v1.1 (pure `RushArmed` + `HasGoalSideCover` — a CHASING defender is not cover, so the keeper still comes out — + `TrySolveRushIntercept`), `GoalkeeperRushDispatch.cs` v1.1 (§3.7.0 `ComputeRushCommitDistanceM`: how far out he comes is his own OneVsOne/Composure/fatigue), `MatchEngineConstants.cs` v1.28 (+`[FIXED]` solve epsilon, +5 un-calibrated `[GT]`), `GoalkeeperMechanics.cs` v1.11 (`ClearRushIntent` + `GetState`/`HasActiveRushIntent` + the `Reached` completion), `GoalkeeperStateMachine.cs` v1.7 (two ERR-011-009 rows), `GoalkeeperConstants.cs` v1.5 (+`RushTargetReachedRadiusM` + the six §3.7.0 commit-distance `[GT]`s). New: `GoalkeeperRushTests.cs`, `GkRushTriggerTests.cs`, `GkRushDiagnosticTests.cs`. No `SNAPSHOT_SCHEMA_VERSION` change (#11's own serialized `_rushIntentActive` is the latch). **Gate NOT run — no .NET SDK in the authoring environment.** |

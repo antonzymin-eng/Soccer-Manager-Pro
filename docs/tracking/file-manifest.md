@@ -1,7 +1,37 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 4, 2026, latest same day (**Wiring backlog W1 — the keeper rush trigger + ERR-011-009.** **New:** `src/goalkeeper-mechanics/Tests/GoalkeeperRushTests.cs`, `src/match-engine/tests/GkRushTriggerTests.cs`, `src/match-engine/tests/GkRushDiagnosticTests.cs`, `docs/tracking/gk-rush-trigger-design.md`. **Modified:** `MatchEngine.cs` v1.58 (`TryCommitRushIntents` — the first production caller `GoalkeeperMechanics.CommitRushIntent` has ever had), `GkHeadingIntentSource.cs` v1.1 (`RushArmed` + `HasGoalSideCover` + `TrySolveRushIntercept`), `GoalkeeperRushDispatch.cs` v1.1 (§3.7.0 `ComputeRushCommitDistanceM` — ERR-011-010), `MatchEngineConstants.cs` v1.28, `GoalkeeperMechanics.cs` v1.11, `GoalkeeperStateMachine.cs` v1.7, `GoalkeeperConstants.cs` v1.5, `GoalkeeperMechanicsTests.cs` (the new state-machine parameter + five ERR-011-009 priority cases), `docs/specs/goalkeeper-mechanics/section-3.md` v0.7 (new §3.7.0 + six §3.4.6 constants + the two §3.1.1 rows), `spec-error-log.md` v1.56, `match-engine-wiring-backlog.md` v1.1, `open-issues.md`, `CLAUDE.md`. No `SNAPSHOT_SCHEMA_VERSION` change (#11's own serialized `_rushIntentActive` is the latch). **Gate NOT run and no measurement taken — the authoring environment has no .NET SDK and the agent proxy denies the installer.** **Prior entry below.**)
+**Last Updated:** August 5, 2026 (**#29 Training System T0 + #41 Injuries & Medical T0 — two new assemblies.**
+**New assembly `src/training-system/` (`TacticalDirector.TrainingSystem`; references `PlayerProgression` +
+`PlayerDatabase` + `ProjectConstants`):** `training-system.asmdef`, `AssemblyInfo.cs` v1.0, `TrainingFocus.cs` v1.0,
+`TrainingState.cs` v1.0 (the `Create`-not-`default` sentinel discipline), `TrainingSchedule.cs` v1.0 (the FR-TR-003
+read-only VIEW — no stored focus copy, never serialized), `CoachingModifier.cs` v1.0 (KD-3 identity seam, empty at T0),
+`InjuryRiskContribution.cs` v1.0 (the KD-5 scalar #41 reads), `TrainingViewModel.cs` v1.0, `TrainingStep.cs` v1.0
+(§3.1 `AdvanceTrainingDay` / §3.2 `ComputeTrainingInput` / §3.3 `ProjectMatchEntryFatigue` / §3.4 `ComputeInjuryRisk`
++ the FR-TR-023 `SetFocus` command), `TrainingSystemConstants.cs` v1.0 (Appendix A), plus `tests/`
+(`training-system-tests.asmdef`, `TrainingStepTests.cs` v1.0 — Appendix B reproduced day by day —
+`TrainingScheduleTests.cs` v1.0, `TrainingSystemConstantsTests.cs` v1.0).
+**New assembly `src/injuries-medical/` (`TacticalDirector.InjuriesMedical`; references `TrainingSystem` +
+`PlayerDatabase` + `DeterministicSim` + `ProjectConstants`):** `injuries-medical.asmdef`, `AssemblyInfo.cs` v1.0,
+`InjurySeverity.cs` v1.0, `InjuryState.cs` v1.0, `MatchLoad.cs` v1.0, `MedicalModifier.cs` v1.0 (explicit `Identity`;
+`default` fails loud), `MedicalViewModel.cs` v1.0, `MedicalStep.cs` v1.0 (§3.1 `AdvanceMedicalDay` + §3.1.1
+`DeriveActionOrdinal` + the keyed `DrawOccurrence` + §3.2 `ClassifySeverityFromDraw` + §3.4 `AssembleRiskScore` +
+FR-MD-023 `IsAvailable`), `InjuriesMedicalConstants.cs` v1.0 (Appendix A), plus `tests/`
+(`injuries-medical-tests.asmdef`, `MedicalStepTests.cs` v1.0 — §3.6 pinned term by term —
+`InjuriesMedicalConstantsTests.cs` v1.0). **Plus the 30 Unity `.meta` sidecars** for both new trees.
+**Modified:** `src/deterministic-sim/DeterministicSimConstants.cs` v1.6 (`DOMAIN_TAG_INJURIES_MEDICAL = 0x2A` at
+#41's first draw site, ERR-041-001 closed; **no** `SubsystemOrdinals` mirror — no registered stream, the
+ERR-030-012 posture), `docs/tracking/spec-error-log.md` v1.57 (ERR-041-002 filed + resolved), `CLAUDE.md`
+(31 → 33 assemblies; the assembly-less-spec count 22 → 20; a new OPEN ISSUES entry), `src/CLAUDE.md`,
+`docs/tracking/CHANGELOG.md`, `docs/tracking/CHANGELOG-src.md` v2.61, `docs/tracking/path-to-playable-roadmap.md`
+(D2/D3), this file.
+**NO GATE RUN — the authoring environment has no .NET SDK and the network policy blocks the installer
+(`builds.dotnet.microsoft.com` → 403 at the proxy).** ~20 production files and 6 test files across two new
+assemblies are written and never compiled; the first CI run on push is the gate. No `SNAPSHOT_SCHEMA_VERSION`
+change, no format-version bump (both T0s declare their sub-blob versions but neither codec exists yet), and both
+assemblies are **inert** — nothing constructs either, so the season loop is byte-identical to before.)
+
+**Last Updated (prior):** August 4, 2026, latest same day (**Wiring backlog W1 — the keeper rush trigger + ERR-011-009.** **New:** `src/goalkeeper-mechanics/Tests/GoalkeeperRushTests.cs`, `src/match-engine/tests/GkRushTriggerTests.cs`, `src/match-engine/tests/GkRushDiagnosticTests.cs`, `docs/tracking/gk-rush-trigger-design.md`. **Modified:** `MatchEngine.cs` v1.58 (`TryCommitRushIntents` — the first production caller `GoalkeeperMechanics.CommitRushIntent` has ever had), `GkHeadingIntentSource.cs` v1.1 (`RushArmed` + `HasGoalSideCover` + `TrySolveRushIntercept`), `GoalkeeperRushDispatch.cs` v1.1 (§3.7.0 `ComputeRushCommitDistanceM` — ERR-011-010), `MatchEngineConstants.cs` v1.28, `GoalkeeperMechanics.cs` v1.11, `GoalkeeperStateMachine.cs` v1.7, `GoalkeeperConstants.cs` v1.5, `GoalkeeperMechanicsTests.cs` (the new state-machine parameter + five ERR-011-009 priority cases), `docs/specs/goalkeeper-mechanics/section-3.md` v0.7 (new §3.7.0 + six §3.4.6 constants + the two §3.1.1 rows), `spec-error-log.md` v1.56, `match-engine-wiring-backlog.md` v1.1, `open-issues.md`, `CLAUDE.md`. No `SNAPSHOT_SCHEMA_VERSION` change (#11's own serialized `_rushIntentActive` is the latch). **Gate NOT run and no measurement taken — the authoring environment has no .NET SDK and the agent proxy denies the installer.** **Prior entry below.**)
 
 **Last Updated (prior):** August 4, 2026, latest same day (**P4a adversarial-review pass 2 — 1 High, 4 Medium fixed.**
 No new files. Modified in `src/match-client-core/`: `PitchCameraPose.cs` → v1.1 (**H-1**: + `FieldOfViewDegrees`
@@ -1735,6 +1765,57 @@ above BOTH `ui-framework` and `match-analytics`; host-free and CI-gated. Deliber
 | `src/season-save/tests/SeasonStateTests.cs` | #30 T0: value-type contracts + the instance-field-count coupling guards across `SeasonState` and its five aggregates (a field added but omitted from the codec would otherwise pass the round-trip vacuously) |
 | `src/season-save/tests/LeagueBootstrapGoldenVectorTests.cs` | A3 AR-5 H-1: the PINNED golden vector for league generation — absolute expected season seed, strength deltas, spot identity/attribute values and an FNV-1a-64 digest over every field of every club and player. Rosters are regenerated from the world seed rather than persisted, so this is the only test that fails when generation moves; verified non-vacuous by perturbing `AttributeBaseMean` |
 | `src/season-save/tests/LeagueBootstrapTests.cs` | A3: two-run field-identical determinism, seed divergence, roster independence from league size, contiguous ids + globally unique `PlayerId`s, catalogue coverage/uniqueness, `MaxClubCount` vs `MaxRngStreams` coupling, strength-ramp endpoints/symmetry/permutation and its reach into the rosters, position coherence for every shipped formation **plus** an end-to-end `ConfigureSquads` run through the real engine (F6), every F1–F5 gate, and the `CreateSeason` handoff round-tripping through `SeasonStateCodec` |
+
+### `src/training-system/` — Training System #29 T0 (August 5, 2026; spec APPROVED July 23, 2026)
+
+Off-pitch world-tick layer. Host-free, gate-compiled. **Draw-free by design** — #29 registers no RNG stream
+and issues no random value (FR-TR-008 / KD-6), so `_RESERVED_0x21_` and `SubsystemOrdinals` 83 stay reserved
+in #16 §3.4. **Inert:** nothing constructs it — T1 (`TrainingSaveCodec`) and T2 (#30 slot-1/slot-2 wiring,
+the FR-TR-025 roster handoff) are open.
+
+| File | Purpose |
+|------|---------|
+| `training-system.asmdef` | `TacticalDirector.TrainingSystem`; references PlayerProgression + PlayerDatabase + ProjectConstants. No MatchEngine / LivingWorld / SeasonSave (FR-TR-024) |
+| `AssemblyInfo.cs` | `InternalsVisibleTo` the test assembly (the own-attribute terms and the `ApplyCoach` seam are internal) |
+| `TrainingFocus.cs` | The six-value focus enum; ordinals are APPEND-only (they index the `[GT]` tables and are persisted) |
+| `TrainingState.cs` | The §2.2 per-player state (focus / condition / training-fatigue / idempotency cursor) + `Create`, which seeds the never-advanced sentinel — `default` is NOT a valid runtime state (the day-0 trap) |
+| `TrainingSchedule.cs` | The FR-TR-003 read-only VIEW over a club's per-player `TrainingState.Focus`. Stores no focus copy and is never serialized; reads live, so a `SetFocus` write is visible through an open view |
+| `CoachingModifier.cs` | The KD-3 staff routing seam. Empty at T0, so `Identity` is safely `default` — the note records that the T3 landing which adds a per-mille field must convert it to an explicit factory at the same time |
+| `InjuryRiskContribution.cs` | The KD-5 read-only scalar #41 consumes (FR-TR-017). A value #41 pulls, not an interface #29 declares |
+| `TrainingViewModel.cs` | The KD-7 value-copy observer for #31/#38 |
+| `TrainingStep.cs` | §3.1 `AdvanceTrainingDay` (F6 idempotent, F7 gap fail-loud), §3.2 `ComputeTrainingInput` (FR-TR-006 field-independence — reads only fields slot-2 does not mutate), §3.3 `ProjectMatchEntryFatigue`, §3.4 `ComputeInjuryRisk`, and the FR-TR-023 `SetFocus` command (unknown player refused, undefined focus thrown) |
+| `TrainingSystemConstants.cs` | Appendix A: `[FIXED]` sub-blob version / sentinel / week length, `[GT]` cursor bounds + recovery + risk weights via the config loader, and the two per-focus tables as literals behind accessors (the array carve-out) |
+| `tests/training-system-tests.asmdef` | `TacticalDirector.TrainingSystem.Tests` (Editor-only) |
+| `tests/TrainingStepTests.cs` | Appendix B reproduced day by day (7140 / 2100 → 7420 / 2300 → the 0.23 projection), T-TR-DET-001/003/004/005, T-TR-NEU-001/002, T-TR-FAT-001/003, T-TR-CON-001/002, T-TR-COA-001, T-TR-INJ-001 |
+| `tests/TrainingScheduleTests.cs` | The view is not a copy; the parallel-array guard; T-TR-FAIL-003 (`SetFocus` refuse-vs-throw) |
+| `tests/TrainingSystemConstantsTests.cs` | Catalogue invariants: both tables cover every ordinal, bounds ordered, Rest nets negative against the passive recovery, undefined ordinal fails loud |
+
+---
+
+### `src/injuries-medical/` — Injuries & Medical #41 T0 (August 5, 2026; spec APPROVED July 23, 2026)
+
+Off-pitch world-tick layer, above #29. Host-free, gate-compiled. **One stochastic surface**, and it is a
+keyed derivation rather than a registered stream (KD-1 / ERR-041-002) — so nothing but `InjuryState` is
+persisted and a save taken immediately after a draw has nothing to lose (FR-MD-007). **Inert:** nothing
+constructs it — T1 (`MedicalSaveCodec`) and T2 (the #30 tick-order slot, the availability read, the
+FR-MD-025 roster handoff) are open.
+
+| File | Purpose |
+|------|---------|
+| `injuries-medical.asmdef` | `TacticalDirector.InjuriesMedical`; references TrainingSystem + PlayerDatabase + DeterministicSim + ProjectConstants. No MatchEngine reference — "#41 never draws on the match tick" is structural (FR-MD-011/026) |
+| `AssemblyInfo.cs` | `InternalsVisibleTo` the test assembly (the keyed draw and the robustness term are internal) |
+| `InjurySeverity.cs` | The Stage-2 tiers; `None = 0` is healthy, so a fresh state is available by construction. Ordinals APPEND-only (persisted as a byte) |
+| `InjuryState.cs` | The §2.2 per-player state (severity / recovery-remaining / injury count / idempotency cursor) + `Create`; `default` is NOT valid (day-0 trap) |
+| `MatchLoad.cs` | The FR-MD-010 caller-supplied participation input. `HardContacts` is the deep-tier KD-3 field, weighted zero at Stage 2 |
+| `MedicalModifier.cs` | The KD-5 staff seam as two per-mille ints with an EXPLICIT `Identity` — `default` means ×0 risk and a divide-by-zero recovery scale, and fails loud at the consuming seam (FR-MD-016) |
+| `MedicalViewModel.cs` | The KD-8 value-copy observer for #38; derives `Available` through `MedicalStep.IsAvailable` so observer and selection cannot disagree |
+| `MedicalStep.cs` | §3.1 `AdvanceMedicalDay` (recovery THEN draw; the KD-6 entry-state gate; F1/F4/F6/F7), §3.1.1 `DeriveActionOrdinal` (fixed-radix bijection), the keyed `DrawOccurrence` (domain tag → playerId → ordinal, each through a SplitMix64 finalizer), §3.2 `ClassifySeverityFromDraw` (same draw, integer cross-multiply), §3.4 `AssembleRiskScore`, FR-MD-023 `IsAvailable` |
+| `InjuriesMedicalConstants.cs` | Appendix A: `[FIXED]` versions / sentinel / per-mille denominators / draw-purpose radix, `[DERIVED]` `OccurrenceDrawDenom` (a property, so it cannot capture 0 from an init-order race), `[CROSS]` `DomainTagInjuriesMedical`, `[GT]` tiers + weights, and the robustness table calibrated so §3.6's `mean 14 ⇒ 400` is exact |
+| `tests/injuries-medical-tests.asmdef` | `TacticalDirector.InjuriesMedical.Tests` (Editor-only) |
+| `tests/MedicalStepTests.cs` | §3.6 pinned term by term; T-MD-DET-001/003/005/006/007/009, T-MD-ORD-001 (heal-and-reinjure cannot share a call), T-MD-SEV-001/002, T-MD-REC-001, T-MD-MOD-001/002, T-MD-NEU-001/002, T-MD-AVAIL-001, T-MD-FAIL-004/006 |
+| `tests/InjuriesMedicalConstantsTests.cs` | Catalogue invariants, the `[CROSS]` domain-tag mirror lock, and the #29/#41 shared-risk-scale assertion — the coupling §3.4 states in prose |
+
+---
 
 ## Tracking Documents
 

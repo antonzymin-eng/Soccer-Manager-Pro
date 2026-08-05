@@ -1,0 +1,19 @@
+{
+    "name": "TacticalDirector.InjuriesMedical",
+    "rootNamespace": "TacticalDirector.InjuriesMedical",
+    "references": [
+        "TacticalDirector.TrainingSystem",
+        "TacticalDirector.PlayerDatabase",
+        "TacticalDirector.DeterministicSim",
+        "TacticalDirector.ProjectConstants"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

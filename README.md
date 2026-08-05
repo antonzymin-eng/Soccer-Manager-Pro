@@ -339,7 +339,7 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 **Progress:** Implementation Phase (coding begun May 19, 2026)
 **Spec Phase Started:** February 2, 2026
 **Stage-0 Spec Phase Completed:** May 18, 2026 — all 20 Stage-0 specs APPROVED
-**Deliverables:** 53 APPROVED specifications + 30 production assemblies in `src/`
+**Deliverables:** 53 APPROVED specifications + 33 production assemblies in `src/`
 
 **Summary (July 27, 2026):** `SPEC_INDEX.md` records **53 APPROVED / 0 IN REVIEW / 0 NOT STARTED — every spec in the registry is approved, and the specification phase is closed** —
 the Stage-0 set of 20, plus 23 Stage-1-forward and management-layer specs (#21–#34, #37, #38, and
@@ -580,7 +580,7 @@ Soccer-Manager-Pro/
 │       │   └── path-to-playable-roadmap.md       [Which code to land, in what order]
 │       ├── certification-platform.md   [Pinned host/engine tuple] + cert-run-runbook.md
 │       └── *-design.md                 [42 design supplements — see note below]
-├── src/                                [30 production assemblies — coding begun May 19, 2026]
+├── src/                                [33 production assemblies — coding begun May 19, 2026]
 │   ├── CLAUDE.md                       [Coding guide — read before writing code]
 │   ├── Physics:    ball-physics, agent-movement, collision-system, first-touch,
 │   │               pass-mechanics, shot-mechanics, heading-mechanics, goalkeeper-mechanics

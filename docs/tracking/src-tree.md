@@ -682,6 +682,44 @@ src/
 │       ├── GrowthProjectionTests.cs     ← T-PG-DET-001/002 + ID-001/002: byte-exact growth/decline, value-copy save, age gap-independence
 │       └── RegenGeneratorTests.cs       ← T-PG-REG-001/003: regen determinism, exact budget, bounds, CA≤PA room-to-grow (test-local ordinal, KD-B)
 │
+├── training-system/                   ← Training System #29 (T0, Aug 5 2026; APPROVED spec)
+│   │                                    │   References PlayerProgression + PlayerDatabase + ProjectConstants (§4.1).
+│   │                                    │   World-tick conditioning/fatigue; DRAW-FREE (FR-TR-008) — 0x21/83 stay reserved.
+│   │                                    │   INERT: nothing constructs it. T1 (save codec) / T2 (#30 slot wiring) deferred.
+│   ├── training-system.asmdef
+│   ├── AssemblyInfo.cs                  ← InternalsVisibleTo the test assembly (the own-attribute terms are internal)
+│   ├── TrainingSystemConstants.cs       ← Appendix A catalogue; no RNG constant (KD-6)
+│   ├── TrainingFocus.cs                 ← the six-value focus enum (APPEND-only ordinals — indexed + persisted)
+│   ├── TrainingState.cs                 ← §2.2 per-player state + Create (never-advanced sentinel; default is NOT valid)
+│   ├── TrainingSchedule.cs              ← the FR-TR-003 read-only VIEW over per-player focus; stores nothing, never serialized
+│   ├── CoachingModifier.cs              ← KD-3 staff seam (empty at T0, so Identity is safely default)
+│   ├── InjuryRiskContribution.cs        ← KD-5 read-only scalar #41 consumes (FR-TR-017)
+│   ├── TrainingViewModel.cs             ← KD-7 value-copy observer for #31/#38
+│   ├── TrainingStep.cs                  ← §3.1 AdvanceTrainingDay / §3.2 ComputeTrainingInput / §3.3 ProjectMatchEntryFatigue / §3.4 ComputeInjuryRisk / FR-TR-023 SetFocus
+│   └── tests/
+│       ├── training-system-tests.asmdef
+│       ├── TrainingStepTests.cs         ← Appendix B day by day + T-TR-DET/NEU/FAT/CON/COA/INJ
+│       ├── TrainingScheduleTests.cs     ← view-not-copy, parallel-array guard, T-TR-FAIL-003
+│       └── TrainingSystemConstantsTests.cs ← catalogue invariants (table coverage, bound order, Rest nets negative)
+│
+├── injuries-medical/                  ← Injuries & Medical #41 (T0, Aug 5 2026; APPROVED spec)
+│   │                                    │   References TrainingSystem + PlayerDatabase + DeterministicSim + ProjectConstants (§4.1).
+│   │                                    │   ONE keyed draw, no registered stream (KD-1 / ERR-041-002) ⇒ nothing but InjuryState persists.
+│   │                                    │   INERT: nothing constructs it. T1 (save codec) / T2 (#30 slot + availability read) deferred.
+│   ├── injuries-medical.asmdef
+│   ├── AssemblyInfo.cs                  ← InternalsVisibleTo the test assembly (the keyed draw is internal)
+│   ├── InjuriesMedicalConstants.cs      ← Appendix A catalogue; [CROSS] DomainTagInjuriesMedical = 0x2A (no SubsystemOrdinal — no stream)
+│   ├── InjurySeverity.cs                ← Stage-2 tiers; None = 0 = healthy (APPEND-only ordinals — persisted as a byte)
+│   ├── InjuryState.cs                   ← §2.2 per-player state + Create (never-advanced sentinel; default is NOT valid)
+│   ├── MatchLoad.cs                     ← FR-MD-010 caller-supplied input; HardContacts is deep-tier, weighted 0 at Stage 2
+│   ├── MedicalModifier.cs               ← KD-5 staff seam, per-mille ints with an EXPLICIT Identity (default fails loud, FR-MD-016)
+│   ├── MedicalViewModel.cs              ← KD-8 value-copy observer; Available derives through MedicalStep.IsAvailable
+│   ├── MedicalStep.cs                   ← §3.1 AdvanceMedicalDay (recovery THEN draw, KD-6 entry gate) / DeriveActionOrdinal / DrawOccurrence / §3.2 ClassifySeverityFromDraw / §3.4 AssembleRiskScore / IsAvailable
+│   └── tests/
+│       ├── injuries-medical-tests.asmdef
+│       ├── MedicalStepTests.cs          ← §3.6 term by term + T-MD-DET/ORD/SEV/REC/MOD/NEU/AVAIL/FAIL
+│       └── InjuriesMedicalConstantsTests.cs ← catalogue invariants, the [CROSS] tag mirror, the #29/#41 shared-scale lock
+│
 └── tactical-instructions/             ← Spec #21  (T0 — bottom-of-graph data assembly; behaviour-neutral)
     │                                  │   References only project-constants (FR-TI-002); empty asmdef refs until that assembly exists.
     │                                  │   Seams into #8/#11–#15 land at T2–T3 (gated on match-engine Phase C/D + [GT] loader).

@@ -1,6 +1,6 @@
 // File:     src/deterministic-sim/DeterministicSimConstants.cs
 // Created:  2026-05-29
-// Modified: 2026-07-26 (DOMAIN_TAG_SEASON_LOOP = 0x22, ERR-030-001 at #30 T2's first draw site)
+// Modified: 2026-08-05 (DOMAIN_TAG_INJURIES_MEDICAL = 0x2A, ERR-041-001 at #41's first draw site)
 // Author:   —
 // Spec:     Deterministic Simulation #16 §3.4, §3.2.4.1, Code Standards #20
 // Purpose:  All numeric and string constants for the deterministic simulation system.
@@ -133,6 +133,25 @@ namespace TacticalDirector.DeterministicSim
         /// </para>
         /// </summary>
         public const byte DOMAIN_TAG_SEASON_LOOP = 0x22;
+
+        /// <summary>
+        /// [FIXED] Domain tag allocated for Injuries &amp; Medical #41 (FR-MD-005 — the
+        /// <c>injuries.occurrence</c> world-tick draws). §3.4; back-prop ERR-041-001, which promoted
+        /// the number spec-text-first at #41's approval and pinned the code const to land at #41's
+        /// first draw site. This is that site: #41's daily occurrence draw.
+        /// <para>
+        /// No <c>SubsystemOrdinals.InjuriesMedical</c> mirror lands with it. #41's draws are keyed on
+        /// <c>(playerId, worldDay, purpose)</c> and register no cursor stream (KD-1 / FR-MD-007), so a
+        /// subsystem ordinal — whose only job is to key a registered stream — would be a phantom
+        /// surface. This is exactly the #30 <c>DOMAIN_TAG_SEASON_LOOP</c> / ERR-030-012 precedent: tag
+        /// allocated, ordinal deliberately absent.
+        /// </para>
+        /// <para>
+        /// 0x23–0x29 remain the gaps reserved for #31/#32/#33/#34 and #40 (see the roadmap §6 block);
+        /// allocating 0x2A here rather than compacting keeps every spec-pinned number stable.
+        /// </para>
+        /// </summary>
+        public const byte DOMAIN_TAG_INJURIES_MEDICAL = 0x2A;
 
         // ── Error codes (u16; §3.4 / §3.10) ──────────────────────────────────────────
 
@@ -298,4 +317,8 @@ namespace TacticalDirector.DeterministicSim
 // | 1.5     | 2026-07-26 | —      | DOMAIN_TAG_SEASON_LOOP = 0x22 allocated at its first draw site       |
 // |         |            |        | (#30 T2's round-resolution key derivation), per ERR-030-001.        |
 // |         |            |        | 0x20 / 0x21 stay reserved gaps for #28 / #29 (#30 KD-5).            |
+// | 1.6     | 2026-08-05 | —      | DOMAIN_TAG_INJURIES_MEDICAL = 0x2A allocated at its first draw site  |
+// |         |            |        | (#41's daily occurrence draw), per ERR-041-001. No SubsystemOrdinals |
+// |         |            |        | mirror: #41 keys its draws and registers no cursor stream, the       |
+// |         |            |        | ERR-030-012 precedent. 0x23-0x29 stay reserved gaps.                 |
 #endregion
