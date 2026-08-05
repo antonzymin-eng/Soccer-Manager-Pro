@@ -14,7 +14,23 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** August 5, 2026 (v2.63 — **CI fix: the W1 AR-2 occupant-change ResetSlot broke
+> **Last Updated:** August 5, 2026, later same day (v2.64 — **First real gate run for the session's
+> work (PR #298 CI): ONE failure, and it was the snapshot-coverage guard doing its job.**
+> `DecisionTreeStateTests.DecisionTree_InstanceFieldCount_MatchesCapturedSet` pins DecisionTree's
+> instance-field count so new cross-tick state cannot silently skip the snapshot; ERR-008-020's
+> `_allAgentAttributes` made it 11 and the landing updated the exclusion *rationale* but not this
+> *ledger*. Fixed: count 10 → 11, the field recorded in the injected/excluded class
+> (`DecisionTreeStateTests.cs` v1.1) — no production change, the exclusion decision itself was
+> already made and correct. **Everything else GREEN, and two execution-verified results land with
+> it:** `MatchEngine.Tests` 420 passed / 0 failed / 10 skipped (430 total, 35 m 22 s) — the
+> previously-failing `RoundTrip_KeeperSubstitutedOntoOutfieldSlot_IsDeterministic` now passes, so
+> the v2.63 restore-resync fix is confirmed by execution, and the new
+> `Construction_WiresTheSquadAttributeViewIntoEveryDecisionTree` lock passes; `DecisionTree.Tests`
+> 109 passed besides the guard — all nine ERR-008-020 lane-model locks (computed pivot, midpoint
+> invariant, cliff continuity, Vision discrimination, null-view neutrality, away mirror) pass on
+> their first-ever compile. Prior entry below.)
+
+> **Last Updated (prior):** August 5, 2026 (v2.63 — **CI fix: the W1 AR-2 occupant-change ResetSlot broke
 > restore determinism.** `MatchEngine.cs` v1.63: boot derives `_gkAgentIds` from the default flag
 > layout, `DeserializeWorldState` overwrites the flags, and the first post-restore
 > `RefreshGkAgentIds` misread the delta as a live occupant change — `ResetSlot` wiped just-restored
@@ -1512,6 +1528,7 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.64 | 2026-08-05 | —      | **PR #298 CI (first real gate run): 1 failure — the DecisionTree field-count snapshot-coverage guard, tripped by ERR-008-020's `_allAgentAttributes`.** `DecisionTreeStateTests.cs` v1.1: count 10 → 11, the field recorded in the injected/excluded class (like `_saveDispatch`/the executors — the exclusion decision was already made at the landing; the ledger wasn't). No production change. Execution-verified alongside: `MatchEngine.Tests` 420/0/10 incl. the previously-failing keeper-substitution round-trip (v2.63 fix confirmed) and the new wiring lock; all nine lane-model locks pass first compile. |
 | 2.63 | 2026-08-05 | —      | **CI fix — restore determinism (main red at the W1 merge).** `MatchEngine.cs` v1.63: v1.60's occupant-change `ResetSlot` fired on the boot-default-vs-restored goalkeeper-flag delta, wiping just-restored #11 state (`RoundTrip_KeeperSubstitutedOntoOutfieldSlot_IsDeterministic` digest split at tick N+1). Resolution loop extracted to `ResolveGkAgentId`; `RestoreFromSnapshot` gains step 3b `ResyncGkAgentIdsAfterRestore` — re-derive from restored flags WITHOUT reset (restored #11 state already belongs to the restored occupant). Live-path reset unchanged. No schema/RNG/draw-order change. Verified by the already-failing CI test; **gate not runnable locally (no .NET SDK)**. `gk-rush-trigger-design.md` → v1.4 (supersedes the false v1.3 "sees no change" claim). |
 | 2.62 | 2026-08-04 | —      | **ERR-008-020 adversarial review pass — 2 Medium, 1 Low fixed; pass 2 clean.** M-1: the P5-pivot lock went through the null-view guard and never ran the ability computation — `OptionGeneratorTests.cs` v1.6 adds the computed-path pivot (Ant 10/Pace 11 ⇒ mean01 = 0.5 exactly) and the `INTERCEPTOR_ABILITY_MIN/MAX` midpoint-is-1.0 invariant lock. M-2: the boot wiring had no detector and the null fallback is silent by design — `DecisionTree.cs` v1.7 (+ `HasSquadAttributeView`), `MatchEngine.cs` v1.62 (+ `TestOnly_AllDtSquadAttributeViewsWired`), `MatchEngineSquadTests.cs` v1.4 (construction wiring lock). L: discrimination margins derived from constants (`ExpectedSightedGap × 0.5`) instead of hardcoded 0.15. Production delta = two read-only accessors; no digest/schema/RNG/draw-order surface. **Gate NOT run — no .NET SDK in this environment.** |
 | 2.61 | 2026-08-04 | —      | **ERR-008-020 — the §3.1.3.3 pass-lane threat model** (the football-judgment doctrine's template fix; spec + code same commit). `UtilityWeights.cs` v1.7 (`PASS_LANE_WIDTH_HALF` removed; + 5 first-guess `[GT]`s: `PASS_LANE_CORE_HALF_WIDTH` 0.4 / `PASS_LANE_FALLOFF_END` 1.2 / `INTERCEPTOR_ABILITY_MIN` 0.6 / `INTERCEPTOR_ABILITY_MAX` 1.4 / `LANE_VISION_FIDELITY_FLOOR` 0.2). `OptionGenerator.cs` v1.6 (`CountInterceptors` → `ComputeLaneThreat`: per-opponent `falloff × perceived_ability`; + `PerceivedInterceptAbility` — Anticipation+Pace → 0.6..1.4 blended toward 1.0 by the passer's Vision fidelity; null attribute view ⇒ 1.0 = the old attribute-blind weighting; shot lane untouched). `DecisionContext.cs` v1.2 (+ nullable `AllAgentAttributes`). `DecisionContextAssembler.cs` v1.5 (optional trailing parameter, default null — legacy call sites unchanged). `DecisionTree.cs` v1.6 (+ `SetAllAgentAttributes` boot seam; excluded from `CaptureState`). `MatchEngine.cs` v1.61 (wires the live `_dtAttrs` reference per tree at construction). `OptionGeneratorTests.cs` v1.5 (6 locks incl. the away-side mirror). No schema / RNG / domain-tag / draw-site / draw-order change; zero-alloc preserved. **Gate NOT run — no .NET SDK in this environment.** |

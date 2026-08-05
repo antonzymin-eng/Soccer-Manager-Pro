@@ -12,7 +12,20 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 5, 2026 (**CI fix — main went red at the W1 merge, and the cause was the
+> **Last Updated:** August 5, 2026, later same day (**PR #298's first gate run: one failure — the
+> snapshot-coverage guard, correctly — and two execution-verified confirmations.** The failure:
+> `DecisionTree_InstanceFieldCount_MatchesCapturedSet`, the reflection lock that pins DecisionTree's
+> field count so cross-tick state cannot silently skip the snapshot. ERR-008-020's
+> `_allAgentAttributes` made it 11; the landing had made (and documented) the exclusion decision —
+> injected dependency, host re-wires at boot/restore, the `_saveDispatch` class — but never updated
+> the guard's ledger. Fixed: count 10 → 11 + the field recorded in the excluded class; no production
+> change. **The confirmations, both by execution for the first time:** (1) `MatchEngine.Tests` 420
+> passed / 0 failed — `RoundTrip_KeeperSubstitutedOntoOutfieldSlot_IsDeterministic`, red on `main`
+> since the W1 merge, passes under the restore-resync fix; (2) all nine ERR-008-020 lane-model locks
+> and the engine wiring lock pass on their first-ever compile. Once this push goes green, the PR
+> carries a gate strictly better than `main`'s (which remains red until merged). Prior entry below.)
+
+> **Last Updated (prior):** August 5, 2026 (**CI fix — main went red at the W1 merge, and the cause was the
 > W1 AR-2 fix's own restore claim being false.** `RoundTrip_KeeperSubstitutedOntoOutfieldSlot_IsDeterministic`
 > failed on `main` at `ba04d49` (and on both prior W1-branch runs): digest diverged at tick 151, the
 > first post-restore tick. The v1.60 occupant-change fix argued `_gkAgentIds` needs no schema bump

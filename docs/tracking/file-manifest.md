@@ -1,7 +1,15 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 5, 2026 (**CI fix — restore determinism, main red at the W1 merge.** **No new
+**Last Updated:** August 5, 2026, later same day (**PR #298 first gate run — 1 failure fixed (the
+DecisionTree field-count snapshot-coverage guard, tripped by ERR-008-020's injected
+`_allAgentAttributes`).** **No new files.** **Modified:** `src/decision-tree/Tests/DecisionTreeStateTests.cs`
+→ v1.1 (count 10 → 11 + the field recorded in the injected/excluded ledger), `CHANGELOG.md`,
+`CHANGELOG-src.md` → v2.64, this manifest. No production change. Gate otherwise green by execution:
+`MatchEngine.Tests` 420/0/10 incl. the previously-red keeper-substitution round-trip (restore-resync
+fix confirmed); all nine lane-model locks pass first compile. **Prior entry below.**)
+
+**Last Updated (prior):** August 5, 2026 (**CI fix — restore determinism, main red at the W1 merge.** **No new
 files.** **Modified:** `src/match-engine/MatchEngine.cs` → v1.63 (`ResolveGkAgentId` extraction +
 `RestoreFromSnapshot` step 3b `ResyncGkAgentIdsAfterRestore` — the W1 AR-2 occupant-change `ResetSlot`
 fired on the boot-vs-restored flag delta and wiped just-restored #11 keeper state; digest diverged at
