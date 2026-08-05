@@ -12,7 +12,123 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 5, 2026, later same day (**PR #298's first gate run: one failure — the
+> **Last Updated:** August 5, 2026, later same day (**#29/#41 gate run — PASSED. Both assemblies
+> compiled for the first time; all 67 of their tests executed and passed.** PR #299, CI run 394, head
+> `ddbbe58`. Build 0 errors; `TrainingSystem.Tests` 27/27, `InjuriesMedical.Tests` 40/40, 0 skipped in
+> either; whole-tree gate PASSED with the quarantine empty, `MatchEngine.Tests` 420/430 unchanged.
+>
+> **The PR had to be unblocked first, and the reason is worth recording:** #299 was conflicted against
+> `main`, and GitHub cannot construct the merge ref for a conflicted PR, so the `pull_request` workflow
+> never fired at all. The gate was not slow or flaky — it had never been *asked* to run. Merging `main`
+> resolved five chain-append conflicts (both branches prepending to "Last Updated" chains; both sides
+> kept everywhere) plus two genuine collisions, since the branches forked at `2.60`/`v1.56` and then
+> allocated the same numbers independently: `CHANGELOG-src` 2.61–2.64 (main's kept, this branch's
+> renumbered 2.65–2.68) and `spec-error-log` v1.57 (main's ERR-008-020 kept; ERR-041-002/003 became
+> v1.58/v1.59).
+>
+> **What the run retires:** every "the suite locks X" claim across the T0 landing and five adversarial
+> review passes was, until now, a claim about code that had never been compiled — the never-compiled
+> surface trap this file's own history records. No fix was needed to get green. Beyond compilation it
+> confirms Appendix B day by day, #41 §3.6 term by term, the keyed-draw separation, and AR pass 5's
+> hand-computed occurrence-probability baseline (231/0/431 per-mille), which had been derived by
+> mirroring the C# in Python against a tree that could not be built.
+>
+> The authoring environment still has no .NET SDK — the installer is still 403 at the agent proxy,
+> re-checked here — so CI remains the only compiler for this work.)
+
+> **Last Updated (prior):** August 5, 2026, later same day (**Adversarial review over the #29/#41 T0 landing —
+> 2 High, 4 Medium, 4 Low, all fixed; converged on pass 2.** Both Highs were the same shape: a design
+> that made a silent wrong answer reachable, guarded by a test that could not fail.
+>
+> **H-1 — one contract value, two config keys, and a lock wired to nothing.** `InjuryRiskMax` was
+> declared `[GT]` in BOTH catalogues, under `[training-system]` and `[injuries-medical]`. #41 §3.4
+> passes #29's `RiskScore` through with weight 1 and compares it against a draw whose denominator is
+> derived from that ceiling, so setting one key without the other rescales every occurrence probability
+> and #29's clamped maximum stops meaning "certain". The equality test written to catch exactly that
+> passed unconditionally, because the gate leaves `GameplayConfigHolder` unbound and both sides return
+> their fallback. Fixed by re-tagging #41's row `[CROSS]` and mirroring #29's — **ERR-041-003**.
+>
+> **H-2 — a focus command that could write another club's player.** `TrainingStep.SetFocus(int[] ids,
+> TrainingState[] states, …)` took the pair as separate arguments and checked only that the lengths
+> matched — and every club in a generated league has the same squad size, so passing club A's ids with
+> club B's states resolved the player against A and wrote B. No exception, wrong player, wrong club,
+> and it would have persisted at T1. The command moves onto `TrainingSchedule.TrySetFocus`, which binds
+> the pair once at construction, so there is no argument a caller can supply to reach it. Locked by a
+> test that fails against the old signature.
+>
+> **The Mediums:** a `MedicalModifier` gate that rejected zero but not negative (a negative recovery
+> speed one-days a Serious injury; a negative occurrence multiplier clamps risk to zero and silently
+> ends injuries forever — and #34 is the declared future producer of both); an F1 coherence check that
+> structurally could not see a negative `RecoveryRemaining`, because "not recovering" and "healthy"
+> look identical to an iff; **four tests that could not fail** (asserting the identity function is the
+> identity, asserting a pure function is pure, and comparing two values that are equal by construction
+> — the documented repo trap, with FR ids on them claiming coverage they did not provide); and the one
+> cross-assembly contract in the whole landing — #29's `ComputeInjuryRisk` feeding #41's
+> `AssembleRiskScore` — having **no test at all**.
+>
+> **Pass 2 caught two regressions in pass 1's own fixes**, which is the reason the loop re-reads
+> everything rather than the diff: the replacement for one tautological test was *itself* tautological
+> (`in` parameters cannot be mutated, so "this read does not mutate" is a compile-time guarantee), and
+> the new seam test asserted something **false** — that #29's saturated maximum reaches #41's ceiling.
+> It does not, and finding out why is the more useful half: **both specs mitigate on the same three
+> physical attributes**, so a robust player is priced down twice and #41 always subtracts again on top
+> of #29's already-mitigated value. Spec-faithful, since each spec mandates its own term, but it
+> entangles the two `[GT]` tables and it means "maximum risk" never means certain occurrence. Recorded
+> as an explicit assertion so the balance pass inherits the fact instead of rediscovering it.
+>
+> Pass 3 over the full surface of both assemblies surfaced no new High or Medium. **Still no gate run**
+> — no .NET SDK, installer blocked by network policy — so every fix above is reviewed and unexecuted.)
+
+> **Last Updated (prior):** August 5, 2026 (**#41 Injuries & Medical T0 landed — and #29 Training System T0
+> with it, because #41 could not be built without it.** The task was the next spec after #29 in code
+> implementation order; the roadmap's Phase D orders that as D2 #29 → D3 #41, and #41 §4.1 requires
+> a reference to `TacticalDirector.TrainingSystem` for the one type it reads — `InjuryRiskContribution`,
+> #29's already-published risk scalar (FR-TR-017 / FR-MD-009). That assembly did not exist. So #29 T0
+> landed as the declared prerequisite rather than as a half-built stub, and the pair went in together:
+> **two new host-free assemblies, `src/training-system/` and `src/injuries-medical/`, taking `src/` from
+> 31 to 33** and the assembly-less-APPROVED-spec count from 22 down to 20.
+>
+> **#29 T0** — `TrainingFocus`, `TrainingState` (+ the `Create`-not-`default` sentinel discipline),
+> `TrainingSchedule` as a genuine read-only VIEW over per-player focus rather than a stored copy
+> (FR-TR-003), `CoachingModifier`, `InjuryRiskContribution`, `TrainingViewModel`, the four `TrainingStep`
+> entry points (§3.1–§3.4) and the FR-TR-023 `SetFocus` command, plus the Appendix A catalogue. Appendix
+> B's Fitness week is reproduced day by day as a test, including its `ProjectMatchEntryFatigue = 0.23`.
+> No RNG anywhere: `_RESERVED_0x21_` / ordinal 83 stay reserved (KD-6).
+>
+> **#41 T0** — `InjurySeverity`, `InjuryState`, `MatchLoad`, `MedicalModifier` (explicit `Identity`, and
+> `default` fails loud — its zero is ×0 risk and a divide-by-zero recovery scale), `MedicalViewModel`,
+> `MedicalStep` (§3.1–§3.4: the recovery-then-draw day step, the keyed occurrence draw, the same-draw
+> severity bucketing, the risk assembly), and the Appendix A catalogue. §3.6's worked example is pinned
+> term by term — the risk assembly's 2900, the `draw 1500 ⇒ Minor` bucketing, the 7-day Minor tier — and
+> the robustness table is calibrated so `mean 14 ⇒ 400` is exact rather than approximately reproduced.
+>
+> **Two findings, both filed** (`spec-error-log.md` v1.58). **ERR-041-002** is the consequential one and
+> it is ERR-030-012's twin, reached independently from the same constraint: **#41 §2.2/§3.1 call
+> `rng.DrawKeyed(...)` on `DeterministicRngService`, and no such method exists.** #16 exposes only the
+> branch-safe reservation trio, whose draw value is keyed on an `ActionOrdinal` the service increments
+> inside `Reserve` — nothing accepts a caller-supplied ordinal. The one shape that *is* implementable
+> against today's API is cursor-positioned, which KD-1 of the same spec forbids: FR-MD-007 serializes no
+> cursor precisely because every draw must be reproducible from `(playerId, worldDay, purpose)` alone.
+> Resolved the way #30 resolved it — a local keyed SplitMix64 derivation, the
+> `RoundResolutionModel.FixtureKey` precedent — so `AdvanceMedicalDay` takes `ulong worldSeed` in place
+> of the service and registers no stream. **ERR-041-001 closes with it**: `DOMAIN_TAG_INJURIES_MEDICAL =
+> 0x2A` lands in `DeterministicSimConstants` at that first draw site; `SubsystemOrdinals.InjuriesMedical
+> = 92` is deliberately **not** allocated, because an ordinal with no registered stream behind it is the
+> zero-consumer phantom FR-LW-031 forbids.
+>
+> **Not done, and named rather than implied:** T1 (both save codecs and the `SeasonSaveCodec`
+> composition) and T2 (the #30 tick-order wiring, the availability read into squad selection, the
+> FR-MD-025 / FR-TR-025 roster-membership handoff) are untouched. Both assemblies are inert — nothing
+> constructs them, so the season loop is byte-identical to before this landing. #29's `ComputeTrainingInput`
+> returns `TrainingInput.Neutral` on both branches, because #28's type still has no fields to populate;
+> the deep branch is a marked seam, not a magnitude invented ahead of its consumer.
+>
+> **NO GATE RUN.** The authoring environment has no .NET SDK and the network policy blocks the
+> installer (`builds.dotnet.microsoft.com` → 403 at the proxy), so 17 production files and 5 test files
+> across two new assemblies are **written and never compiled** — precisely the defect class
+> `tools/dotnet-ci` exists to catch. Every "the suite locks X" claim in this entry is a claim about test
+> code that has not executed. First CI run on push is the real gate.)
+> **Last Updated (prior):** August 5, 2026, later same day (**PR #298's first gate run: one failure — the
 > snapshot-coverage guard, correctly — and two execution-verified confirmations.** The failure:
 > `DecisionTree_InstanceFieldCount_MatchesCapturedSet`, the reflection lock that pins DecisionTree's
 > field count so cross-tick state cannot silently skip the snapshot. ERR-008-020's

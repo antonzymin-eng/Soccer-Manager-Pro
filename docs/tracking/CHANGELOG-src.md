@@ -14,7 +14,125 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** August 5, 2026, later same day (v2.64 — **First real gate run for the session's
+> **Last Updated:** August 5, 2026, later same day (v2.69 — **#29/#41 GATE RUN — PASSED. The two
+> assemblies compiled for the first time, and all 67 of their tests executed and passed.** PR #299,
+> CI run 394, head `ddbbe58`. Build succeeded, **0 errors** (5 warnings, unattributed in the retrieved
+> log window and not shown to be new). `TacticalDirector.TrainingSystem.Tests` **27 passed / 0 failed /
+> 0 skipped**; `TacticalDirector.InjuriesMedical.Tests` **40 passed / 0 failed / 0 skipped**. Whole-tree
+> gate PASSED with the quarantine empty, so the full suite was enforced; `MatchEngine.Tests` 420/430
+> (10 skipped) unchanged, and its 38-minute duration is what made the run take 39.
+>
+> **What this retires.** Every entry from v2.65 through v2.68 carries a "no gate run" caveat, and every
+> "the suite locks X" claim across five adversarial-review passes was a claim about code that had never
+> been compiled — the exact never-compiled-surface defect class `tools/dotnet-ci` exists to catch, and
+> the one the root `CLAUDE.md` names as a historical trap. Those claims now hold by execution. Nothing
+> in the landing needed a fix to get there: zero compile errors and zero test failures on the first run.
+>
+> **What it confirms specifically**, beyond "it builds": the Appendix B Fitness week reproduces day by
+> day (7140/2100 → 7280/2200 → 7420/2300, projection 0.23, day 104 → 7560/2400); #41 §3.6's worked
+> example lands term by term (risk 2900, draw 1500 ⇒ Minor, 7-day tier); the keyed SplitMix64 draw
+> separates adjacent player ids, days and seeds; and — the one I could least afford to be wrong about —
+> **AR pass 5's daily-occurrence-probability characterization passed with its hand-computed literals
+> intact** (231 / 0 / 431 per-mille). Those three numbers were derived by mirroring the C# arithmetic in
+> Python against an uncompilable tree; the compiler now agrees, so the recorded balance-pass baseline is
+> real rather than a plausible-looking derivation.
+>
+> The authoring environment still has no .NET SDK — the installer redirect is still 403 at the agent
+> proxy, re-checked at this landing — so CI remains the only compiler available for this work.)
+
+> **Last Updated (prior):** August 5, 2026, later same day (v2.68 — **AR pass 5 over #29/#41: 2 Medium, 3 Low.
+> The headline is a number nobody had measured — the daily injury probability the wired system would
+> actually produce.** Every occurrence test in #41's suite forces the outcome with
+> `CertainOccurrenceRisk() = InjuryRiskMax × 4`, a value the producer chain **cannot reach** (#29 clamps
+> at the ceiling, then #41 subtracts its own mitigation), and the one test that drives the real producer
+> asserted orderings and bounds only. So the suite proved an injury happens when forced and none happens
+> when disabled, and never established that the wired system produces any at a sane rate — the
+> ERR-030-014 shape exactly. Driven end to end at today's `[GT]`s: a **freshly inserted regen is 23%
+> likely to be injured on day 0** (`ConditionStart` is 3000 below `ConditionMax` and
+> `LowConditionRiskWeight` carries that shortfall at weight 1 on the same 10000 the draw denominator
+> derives from, so "not yet at peak" is priced like "half dead"); **half-fatigued is 43% per day**; and
+> the **DEFAULT Balanced focus converges on exactly 0, permanently** — its daily load equals
+> `FatigueDailyRecovery`, so fatigue never accrues and the shortfall term reaches zero in ~39 days. A
+> subsystem whose default path emits zero events is indistinguishable from one switched off. **Not
+> retuned** — both assemblies are inert and KD-W1 forbids landing a `[GT]` governing an unwired
+> subsystem — so the three numbers are locked by a characterization test that makes the balance pass
+> leave a visible diff, and the one lever that rescales all of them is named: the shared `InjuryRiskMax`
+> ceiling the `[CROSS]` mirror turned into a single dial. M-2: `T-TR-NEU-001`'s assertion is itself
+> vacuous — `TrainingInput` is an EMPTY struct, so `AreEqual(Neutral, anything)` cannot fail — and the
+> v1.2 comment named that root cause only for FR-TR-006, leaving a reader to believe KD-8
+> behaviour-neutrality was locked. It is the claim this whole T0 landing rests on. Lows:
+> `DrawOccurrence` now refuses a non-positive denominator (zero threw on its own; a **negative** ceiling
+> did not — the `ulong` cast made the modulo a no-op and produced a signed garbage draw that still
+> classified); `AssignRecoveryDays` refuses the `None` tier, whose 0 days the F1 floor would have raised
+> to 1 against `Severity == None`, inverting the invariant the floor exists to protect; and a production
+> doc cited a test METHOD NAME in another assembly, restaging the staleness v2.67 had just cleared.
+> **Still no gate run.**)
+
+> **Last Updated (prior):** August 5, 2026, later same day (v2.67 — **The #29/#41 review's Low tier cleared:
+> nine findings, all documentation-integrity, no behaviour change.** Every fix is a comment, an XML doc,
+> a file header, a version-history row or an NUnit argument order — the compiled surface is byte-identical
+> to v2.66. The tier is worth clearing because seven of the nine were *stale claims left behind by the
+> High and Medium fixes themselves*, and a stale claim in a doc is how the next reader re-derives the
+> defect that was just removed. The two docs on the robustness weights still said #29's and #41's terms
+> were "tuned independently" — the exact claim AR pass 2 falsified, recorded until now only in a test
+> comment and `ERR-041-003`; `TrainingSystemConstants.InjuryRiskMax` still described itself as one of two
+> catalogue values checked for equality, the design H-1 deleted; and `MedicalStep`'s two `<exception>`
+> docs still described the v1.0 zero-only modifier gate after v1.1 widened it to non-positive on both
+> fields, so a caller reading them would believe a negative occurrence multiplier was accepted. Also: the
+> `InjuryRiskMax` mirror asserted a spec back-prop without naming `ERR-041-003` as its tracking id; the
+> two catalogue fixtures now state that they pin **design-time fallbacks, not a bound config** — the
+> distinction H-1 turned on, and previously unstated in the two fixtures whose entire subject is `[GT]`
+> values; `ProjectMatchEntryFatigue`'s zero-ceiling comment said "refuse" of a branch that returns the
+> rested value; T-MD-MOD-001 had the computed value in NUnit's `expected` slot; and four files edited in
+> the v2.66 commit landed **with no version-history row at all** (`MedicalModifier.cs`, `TrainingState.cs`,
+> `TrainingViewModel.cs`, `AssemblyInfo.cs`), which is how a file comes to claim it is untouched since
+> initial implementation. `TrainingStepTests.cs` v1.1's own row described a state the file never shipped
+> in — corrected by appending v1.2, not by editing the row. **Still no gate run.**)
+
+> **Last Updated (prior):** August 5, 2026, later same day (v2.66 — **Adversarial review over the #29/#41 T0
+> landing: 2 High, 4 Medium, 4 Low fixed; converged pass 2.** H-1 `InjuriesMedicalConstants.cs` v1.1 —
+> `InjuryRiskMax` re-tagged `[GT]` → `[CROSS]`, mirroring `TrainingSystemConstants` instead of taking a
+> second config key for one contract scale (**ERR-041-003**). H-2 `TrainingSchedule.cs` v1.1 /
+> `TrainingStep.cs` v1.1 — the FR-TR-023 command moves to `TrainingSchedule.TrySetFocus`; the old
+> two-array signature accepted one club's ids with another club's states (same length ⇒ no guard fires)
+> and wrote the wrong club's player. M — `MedicalStep.cs` v1.1: `ValidateModifier` widened to
+> non-positive on both fields, `ValidateState` now rejects a negative `RecoveryRemaining` (the iff check
+> cannot see it), `ClassifySeverityFromDraw` gained its `draw < risk` precondition. Tests: four that
+> could not fail replaced or deleted, + the `#29 → #41` seam test the landing had no coverage for at
+> all, + the cross-club write lock, + the `RecoveryDaysPerTickBase > 0` guard. **Pass 2 found two
+> regressions in pass 1's fixes** — one replacement test was tautological in a new way, and the seam
+> test asserted a falsehood that turned out to be a real finding: both specs mitigate on the same three
+> physical attributes, so robustness is double-counted across the layers. Recorded as an assertion, not
+> silently corrected. **Still no gate run.**)
+
+> **Last Updated (prior):** August 5, 2026 (v2.65 — **Two new host-free assemblies: `TacticalDirector.TrainingSystem`
+> (#29 T0) and `TacticalDirector.InjuriesMedical` (#41 T0). `src/` goes 31 → 33.** #41 was the target —
+> the next spec after #29 in the roadmap's Phase D implementation order — and #29 came with it because
+> #41 §4.1 requires a reference to it for `InjuryRiskContribution`, the one type it reads, and that
+> assembly did not exist. Building half of #29 to satisfy the reference would have been the phantom
+> class this project refuses, so the prerequisite landed whole.
+>
+> **Reference direction, both new assemblies downward-only:** `TrainingSystem → {PlayerProgression,
+> PlayerDatabase, ProjectConstants}` and `InjuriesMedical → {TrainingSystem, PlayerDatabase,
+> DeterministicSim, ProjectConstants}`. Neither references `MatchEngine`, `LivingWorld` or `SeasonSave`
+> (FR-TR-024 / FR-MD-026), so "#41 never draws on the match tick" is structural rather than a
+> convention: there is no match-engine type in scope to reach.
+>
+> **`DeterministicSimConstants.cs` v1.6** — `DOMAIN_TAG_INJURIES_MEDICAL = 0x2A` allocated at #41's
+> first draw site (ERR-041-001, now closed). No `SubsystemOrdinals.InjuriesMedical` mirror: #41
+> registers no cursor stream, and an ordinal with nothing behind it is FR-LW-031's zero-consumer
+> phantom — the ERR-030-012 posture, taken deliberately rather than by omission.
+>
+> **ERR-041-002** — `#41 §2.2/§3.1`'s `rng.DrawKeyed(...)` names an API `DeterministicRngService` does
+> not have, and the only implementable alternative against today's surface is cursor-positioned, which
+> #41 KD-1 forbids. The draw is a local keyed SplitMix64 derivation instead (the
+> `RoundResolutionModel.FixtureKey` / `LeagueBootstrap` precedent), so `AdvanceMedicalDay` takes
+> `ulong worldSeed` rather than the service. Filed and resolved in the same commit.
+>
+> **NO GATE RUN — no .NET SDK in the authoring environment and the network policy blocks the installer.**
+> 17 production files and 5 test files across two new assemblies are written and never compiled. Treat
+> every test-based claim here as unexecuted until CI runs.)
+> **Last Updated (prior):** August 5, 2026, later same day (v2.64 — **First real gate run for the session's
 > work (PR #298 CI): ONE failure, and it was the snapshot-coverage guard doing its job.**
 > `DecisionTreeStateTests.DecisionTree_InstanceFieldCount_MatchesCapturedSet` pins DecisionTree's
 > instance-field count so new cross-tick state cannot silently skip the snapshot; ERR-008-020's
@@ -1528,6 +1646,11 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.69 | 2026-08-05 | —      | **#29/#41 GATE RUN — PASSED, first compile of both assemblies.** PR #299, CI run 394, head `ddbbe58`. Build 0 errors (5 warnings). `TrainingSystem.Tests` **27/27**, `InjuriesMedical.Tests` **40/40**, 0 skipped in either; whole-tree gate PASSED, quarantine empty, `MatchEngine.Tests` 420/430 unchanged. Retires the "no gate run" caveat on v2.65–v2.68 and turns five review passes' "the suite locks X" claims — all written against never-compiled code — into execution-verified ones. **No fix was needed to get green:** zero compile errors, zero failures, first run. Confirms specifically: Appendix B day by day, #41 §3.6 term by term, keyed-draw separation, and AR pass 5's hand-computed occurrence-probability literals (231/0/431 per-mille) — derived in Python against an uncompilable tree, now agreed by the compiler, so the balance-pass baseline is real. Authoring environment still has no .NET SDK (installer still 403 at the proxy, re-checked); CI remains the only compiler. |
+| 2.68 | 2026-08-05 | —      | **AR pass 5 over #29/#41 — 2 Medium, 3 Low.** M-1 `MedicalStepTests.cs` v1.3: nothing measured the daily occurrence PROBABILITY the wired system would produce, because every occurrence test forces the outcome with a risk the producer chain cannot reach (`InjuryRiskMax × 4`; #29 clamps at the ceiling and #41 subtracts again). Driven end to end at today's `[GT]`s: a fresh regen is **23% likely to be injured on day 0**, half-fatigued is **43%/day**, and the **default Balanced focus converges on exactly 0 forever** (its load equals `FatigueDailyRecovery`, so fatigue never accrues and the conditioning shortfall reaches zero). Two to three orders of magnitude out at both ends. Not retuned — inert subsystem, KD-W1 — so the numbers are locked by a characterization test and the rescaling lever (the shared `InjuryRiskMax` ceiling) is named. M-2 `TrainingStepTests.cs` v1.3: T-TR-NEU-001's own assertion is vacuous — `TrainingInput` is an empty struct — and the v1.2 comment named that cause only for FR-TR-006, so KD-8 behaviour-neutrality read as locked when it is not. Lows: `MedicalStep.cs` v1.3 (`DrawOccurrence` refuses a non-positive denominator — a *negative* ceiling made the modulo a no-op and yielded a signed garbage draw that still classified; `AssignRecoveryDays` refuses the `None` tier, whose 0 days the F1 floor would raise to 1 against `Severity == None`), `TrainingSystemConstants.cs` v1.2 (a production doc cited a test method name in another assembly). **No gate run: no .NET SDK, installer blocked by network policy.** |
+| 2.67 | 2026-08-05 | —      | **The #29/#41 review's Low tier cleared — nine findings, all documentation-integrity, zero behaviour change** (the compiled surface is byte-identical to v2.62). Seven of the nine were stale claims left behind by the High/Medium fixes themselves: `TrainingStep.cs` v1.2 + `TrainingSystemConstants.cs` v1.1 (both robustness-weight docs still said #29's and #41's terms were "tuned independently" — the claim AR pass 2 falsified, recorded until now only in a test comment; `InjuryRiskMax` still described itself as one of two catalogue values checked for equality, the design H-1 deleted; the §3.3 zero-ceiling comment said "refuse" of a branch that returns the rested value). `MedicalStep.cs` v1.2 (two `<exception>` docs still described the v1.0 zero-only modifier gate after v1.1 widened it to non-positive on both fields; `RobustnessMitigation` now states it is the *second* term over #29's attributes). `InjuriesMedicalConstants.cs` v1.2 (the `[CROSS]` mirror asserted a spec back-prop without naming **ERR-041-003** as its tracking id; the type doc credited the per-mille split to a pre-commit pass its own history does not record). Both catalogue test fixtures v1.1/v1.2 now state that they pin **design-time fallbacks, not a bound config** — the distinction H-1 turned on. `MedicalStepTests.cs` v1.2 (T-MD-MOD-001 had the computed value in NUnit's `expected` slot). `TrainingScheduleTests.cs` v1.2 (header still described a read-only VIEW and a method named `SetFocus`). And four files edited in the v2.62 commit had **no version-history row at all** — `MedicalModifier.cs` v1.1/v1.2, `TrainingState.cs`, `TrainingViewModel.cs`, `AssemblyInfo.cs` — each claiming to be untouched since initial implementation; rows written retroactively and marked as such, as `TrainingStepTests.cs` v1.2 corrects v1.1's row by appending rather than editing. **Still no gate run: no .NET SDK, installer blocked by network policy.** |
+| 2.66 | 2026-08-05 | —      | **Adversarial review over the #29/#41 T0 landing — 2 High, 4 Medium, 4 Low fixed, converged pass 2.** `InjuriesMedicalConstants.cs` v1.1 (H-1: `InjuryRiskMax` `[GT]` → `[CROSS]` mirror of #29 — two config keys for one contract scale, ERR-041-003). `TrainingSchedule.cs` v1.1 + `TrainingStep.cs` v1.1 (H-2: FR-TR-023 command moved to `TrySetFocus`; the two-array signature let one club's ids pair with another's states). `MedicalStep.cs` v1.1 (M: non-positive modifier gate, negative-`RecoveryRemaining` gate, `ClassifySeverityFromDraw` precondition). `MedicalModifier.cs` / `AssemblyInfo.cs` doc corrections. Tests v1.1 across all four suites: four could-not-fail tests replaced or deleted, + the `#29 → #41` seam test (the landing's one cross-assembly contract had zero coverage), + the cross-club write lock, + two catalogue guards. Pass 2 caught two regressions in pass 1's own fixes, one of which surfaced the double-mitigation finding now pinned by assertion. **No gate run: no .NET SDK available and the installer is blocked by network policy.** |
+| 2.65 | 2026-08-05 | —      | **#29 Training System T0 + #41 Injuries & Medical T0 — two new assemblies, `src/` 31 → 33.** NEW `src/training-system/` (`training-system.asmdef`, `AssemblyInfo.cs`, `TrainingFocus.cs`, `TrainingState.cs`, `TrainingSchedule.cs`, `CoachingModifier.cs`, `InjuryRiskContribution.cs`, `TrainingViewModel.cs`, `TrainingStep.cs`, `TrainingSystemConstants.cs` + `tests/` [`TrainingStepTests.cs`, `TrainingScheduleTests.cs`, `TrainingSystemConstantsTests.cs`, asmdef]). NEW `src/injuries-medical/` (`injuries-medical.asmdef`, `AssemblyInfo.cs`, `InjurySeverity.cs`, `InjuryState.cs`, `MatchLoad.cs`, `MedicalModifier.cs`, `MedicalViewModel.cs`, `MedicalStep.cs`, `InjuriesMedicalConstants.cs` + `tests/` [`MedicalStepTests.cs`, `InjuriesMedicalConstantsTests.cs`, asmdef]). `DeterministicSimConstants.cs` v1.6 (`DOMAIN_TAG_INJURIES_MEDICAL = 0x2A`, ERR-041-001 closed; no ordinal mirror). ERR-041-002 filed + resolved (the `DrawKeyed` API does not exist; keyed SplitMix64 derivation instead). T1 codecs and T2 wiring deliberately NOT done — both assemblies are inert, nothing constructs them. **No gate run: no .NET SDK available and the installer is blocked by network policy.** |
 | 2.64 | 2026-08-05 | —      | **PR #298 CI (first real gate run): 1 failure — the DecisionTree field-count snapshot-coverage guard, tripped by ERR-008-020's `_allAgentAttributes`.** `DecisionTreeStateTests.cs` v1.1: count 10 → 11, the field recorded in the injected/excluded class (like `_saveDispatch`/the executors — the exclusion decision was already made at the landing; the ledger wasn't). No production change. Execution-verified alongside: `MatchEngine.Tests` 420/0/10 incl. the previously-failing keeper-substitution round-trip (v2.63 fix confirmed) and the new wiring lock; all nine lane-model locks pass first compile. |
 | 2.63 | 2026-08-05 | —      | **CI fix — restore determinism (main red at the W1 merge).** `MatchEngine.cs` v1.63: v1.60's occupant-change `ResetSlot` fired on the boot-default-vs-restored goalkeeper-flag delta, wiping just-restored #11 state (`RoundTrip_KeeperSubstitutedOntoOutfieldSlot_IsDeterministic` digest split at tick N+1). Resolution loop extracted to `ResolveGkAgentId`; `RestoreFromSnapshot` gains step 3b `ResyncGkAgentIdsAfterRestore` — re-derive from restored flags WITHOUT reset (restored #11 state already belongs to the restored occupant). Live-path reset unchanged. No schema/RNG/draw-order change. Verified by the already-failing CI test; **gate not runnable locally (no .NET SDK)**. `gk-rush-trigger-design.md` → v1.4 (supersedes the false v1.3 "sees no change" claim). |
 | 2.62 | 2026-08-04 | —      | **ERR-008-020 adversarial review pass — 2 Medium, 1 Low fixed; pass 2 clean.** M-1: the P5-pivot lock went through the null-view guard and never ran the ability computation — `OptionGeneratorTests.cs` v1.6 adds the computed-path pivot (Ant 10/Pace 11 ⇒ mean01 = 0.5 exactly) and the `INTERCEPTOR_ABILITY_MIN/MAX` midpoint-is-1.0 invariant lock. M-2: the boot wiring had no detector and the null fallback is silent by design — `DecisionTree.cs` v1.7 (+ `HasSquadAttributeView`), `MatchEngine.cs` v1.62 (+ `TestOnly_AllDtSquadAttributeViewsWired`), `MatchEngineSquadTests.cs` v1.4 (construction wiring lock). L: discrimination margins derived from constants (`ExpectedSightedGap × 0.5`) instead of hardcoded 0.15. Production delta = two read-only accessors; no digest/schema/RNG/draw-order surface. **Gate NOT run — no .NET SDK in this environment.** |
