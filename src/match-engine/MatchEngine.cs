@@ -1,6 +1,7 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
 // Modified: 2026-08-04 (ERR-008-020: SetAllAgentAttributes(_dtAttrs) wired per DecisionTree at boot — the §3.1.3.3 pass-lane attribute view)
+// Modified: 2026-08-05 (CI fix — RestoreFromSnapshot step 3b ResyncGkAgentIdsAfterRestore: the W1 AR-2 occupant-change ResetSlot fired on the boot-vs-restored flag delta and wiped just-restored #11 state; see gk-rush-trigger-design.md v1.4)
 // Modified: 2026-07-27  (shot-outcome pass: live shot pressure query — ComputeOpponentPressureScalar)
 // Modified: 2026-07-27  (B3: the #37 KD-7 read-only per-tick ledger tap)
 // Modified: 2026-06-29 (#21 T2 Pressing AI (#13) Phase-D writer — route TeamTactic.LineOfEngagement → PressingSnapshot)
@@ -1018,6 +1019,14 @@ namespace TacticalDirector.MatchEngine
             // path (every _rosterClubId == NO_ROSTER_CLUB_ID — every match that never calls ConfigureSquads)
             // needs no provider and returns immediately.
             engine.ReprojectDistinctSquads(squads);
+
+            // Step 3b — re-derive the reconstructed keeper-slot map from the RESTORED flags, without
+            // ResetSlot. The boot in step 1 derived it from the default layout; the payload in step 3
+            // may carry a different one (keeper substituted onto an outfield slot, keeper sent off),
+            // and the first post-restore RefreshGkAgentIds would otherwise misread that delta as a
+            // live occupant change and wipe just-restored #11 state (CI:
+            // RoundTrip_KeeperSubstitutedOntoOutfieldSlot — digest diverged at tick N+1).
+            engine.ResyncGkAgentIdsAfterRestore();
 
             // Step 4 (KD-5) — continue the digest chain from the saved link so the next tick's digest matches
             // an uninterrupted run. The clock was restored to the saved tick inside DeserializeWorldState.
@@ -3418,8 +3427,14 @@ namespace TacticalDirector.MatchEngine
             // stale one.
             //
             // No new engine state: _gkAgentIds is itself the previous value, and it is reconstructed —
-            // never serialized — so restore re-derives the same ids and sees no change. Hence no
-            // SNAPSHOT_SCHEMA_VERSION bump.
+            // never serialized. Hence no SNAPSHOT_SCHEMA_VERSION bump. But reconstruction is NOT
+            // restore-transparent by itself: the boot-time derivation at construction runs against the
+            // DEFAULT flag layout, and DeserializeWorldState then overwrites _isGoalkeeper/_isSentOff
+            // with the saved layout — so when the two differ (a keeper substituted onto an outfield
+            // slot, CI: RoundTrip_KeeperSubstitutedOntoOutfieldSlot), the first post-restore refresh
+            // would misread the flag delta as a live occupant change and ResetSlot state that was
+            // itself just restored. RestoreFromSnapshot therefore calls
+            // ResyncGkAgentIdsAfterRestore (re-derive WITHOUT reset) after the payload is applied.
             // W1 AR-1 (M), unchanged: a SENT-OFF keeper is not on the pitch, and −1 is how this array
             // says so. The engine's freeze for a red-carded agent is `_commands[i] = Stop`, which governs
             // the MOVEMENT integration only — but #11's 60 Hz Rushing branch writes
@@ -3431,24 +3446,47 @@ namespace TacticalDirector.MatchEngine
             // pitch (sent off) has none to notify" branch becomes true rather than aspirational.
             for (int k = 0; k < _gkAgentIds.Length; k++)
             {
-                // LAST match wins, preserving the pre-AR-2 fill order exactly. It differs from first-wins
-                // only when a team has two un-dismissed keepers at once — reachable by substituting a
-                // bench keeper on for an outfielder — and quietly re-picking which of them #11 drives is
-                // not this fix's business.
-                int resolved = -1;
-                for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
-                {
-                    if (_isGoalkeeper[i] && !_isSentOff[i] && _teamIds[i] == k)
-                    {
-                        resolved = i;
-                    }
-                }
+                int resolved = ResolveGkAgentId(k);
 
                 if (resolved != _gkAgentIds[k])
                 {
                     _goalkeeper.ResetSlot(k);
                     _gkAgentIds[k] = resolved;
                 }
+            }
+        }
+
+        /// <summary>Resolves team <paramref name="k"/>'s current keeper agent from the live
+        /// <c>_isGoalkeeper</c>/<c>_isSentOff</c>/<c>_teamIds</c> surfaces; −1 if none on the pitch.
+        /// LAST match wins, preserving the pre-AR-2 fill order exactly — it differs from first-wins
+        /// only when a team has two un-dismissed keepers at once (reachable by substituting a bench
+        /// keeper on for an outfielder), and quietly re-picking which of them #11 drives is not this
+        /// code's business.</summary>
+        private int ResolveGkAgentId(int k)
+        {
+            int resolved = -1;
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                if (_isGoalkeeper[i] && !_isSentOff[i] && _teamIds[i] == k)
+                {
+                    resolved = i;
+                }
+            }
+            return resolved;
+        }
+
+        /// <summary>Re-derives <see cref="_gkAgentIds"/> from the RESTORED flag surfaces WITHOUT
+        /// <c>ResetSlot</c> (restore path only). The boot-time <see cref="RefreshGkAgentIds"/> ran
+        /// against the default flag layout; the payload then overwrote the flags, and treating that
+        /// delta as a live occupant change would wipe #11 per-slot state that was itself just
+        /// restored and already belongs to the restored occupant — which made a restore diverge from
+        /// the uninterrupted run at the first post-restore tick
+        /// (CI: RoundTrip_KeeperSubstitutedOntoOutfieldSlot, digest split at tick N+1).</summary>
+        private void ResyncGkAgentIdsAfterRestore()
+        {
+            for (int k = 0; k < _gkAgentIds.Length; k++)
+            {
+                _gkAgentIds[k] = ResolveGkAgentId(k);
             }
         }
 
@@ -8099,4 +8137,13 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | lane model's null fallback is deliberately silent, so the boot wiring     |
 // |         |            |        | gets an explicit detector (gate-level-dormancy class). Locked by          |
 // |         |            |        | MatchEngineSquadTests.                                                    |
+// | 1.63    | 2026-08-05 | —      | CI fix (main red at the W1 merge): v1.60's occupant-change ResetSlot      |
+// |         |            |        | broke restore determinism — boot derives _gkAgentIds from the DEFAULT     |
+// |         |            |        | flag layout, DeserializeWorldState overwrites the flags, and the first    |
+// |         |            |        | post-restore refresh misread the delta as a live occupant change,         |
+// |         |            |        | wiping just-restored #11 state (RoundTrip_KeeperSubstitutedOntoOutfield-  |
+// |         |            |        | Slot diverged at tick N+1). Resolution loop extracted to ResolveGkAgentId;|
+// |         |            |        | RestoreFromSnapshot gains step 3b ResyncGkAgentIdsAfterRestore (re-derive |
+// |         |            |        | WITHOUT reset — restored #11 state already belongs to the restored        |
+// |         |            |        | occupant). Live-path reset unchanged. gk-rush-trigger-design.md v1.4.     |
 #endregion

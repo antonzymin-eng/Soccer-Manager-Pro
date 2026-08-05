@@ -12,7 +12,28 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 4, 2026, latest same day (**ERR-008-020 adversarial review — 2 Medium,
+> **Last Updated:** August 5, 2026 (**CI fix — main went red at the W1 merge, and the cause was the
+> W1 AR-2 fix's own restore claim being false.** `RoundTrip_KeeperSubstitutedOntoOutfieldSlot_IsDeterministic`
+> failed on `main` at `ba04d49` (and on both prior W1-branch runs): digest diverged at tick 151, the
+> first post-restore tick. The v1.60 occupant-change fix argued `_gkAgentIds` needs no schema bump
+> because it is "reconstructed rather than serialized, so restore re-derives it and sees no change" —
+> half true. The boot-time derivation runs against the DEFAULT goalkeeper-flag layout;
+> `DeserializeWorldState` then overwrites the flags with the SAVED layout; and whenever the two
+> differ (this test substitutes a bench keeper onto an outfield slot at tick 50, saves at 150), the
+> first post-restore `RefreshGkAgentIds` misreads the flag delta as a live occupant change and
+> `ResetSlot`s #11 keeper state that was itself just restored — a wipe the uninterrupted run does
+> not perform at that tick, because its reset fired back at the substitution and its state evolved
+> since. Fixed in `MatchEngine.cs` v1.63: the keeper resolution extracted to `ResolveGkAgentId`,
+> and `RestoreFromSnapshot` gains **step 3b — `ResyncGkAgentIdsAfterRestore`**, re-deriving the map
+> from the restored flags **without** reset, since restored #11 per-slot state already belongs to
+> the restored occupant. The live-path reset — the actual substitute-inheritance fix — is unchanged;
+> this restores exactly the restore-transparency that existed before the reset was introduced. All
+> restore paths route through the one factory (`MatchSession.RestoreFrom` → `MatchSaveManager` →
+> `RestoreFromSnapshot`), so one fix covers all. Verification is the already-failing CI test; not
+> runnable locally (no .NET SDK). `gk-rush-trigger-design.md` v1.4 supersedes the v1.3 claim.
+> Prior entry below.)
+
+> **Last Updated (prior):** August 4, 2026, latest same day (**ERR-008-020 adversarial review — 2 Medium,
 > 1 Low, all fixed; pass 2 clean.** Both Mediums are lessons in what a lock is worth when it doesn't
 > execute the thing it claims to lock. **M-1:** the landing's P5-pivot test asserted "an average
 > defender counts exactly 1.0" through the *null-attribute-view guard* — the ability computation it

@@ -1,7 +1,16 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 4, 2026, latest same day (**ERR-008-020 adversarial review pass — 2 M, 1 L
+**Last Updated:** August 5, 2026 (**CI fix — restore determinism, main red at the W1 merge.** **No new
+files.** **Modified:** `src/match-engine/MatchEngine.cs` → v1.63 (`ResolveGkAgentId` extraction +
+`RestoreFromSnapshot` step 3b `ResyncGkAgentIdsAfterRestore` — the W1 AR-2 occupant-change `ResetSlot`
+fired on the boot-vs-restored flag delta and wiped just-restored #11 keeper state; digest diverged at
+tick N+1 in `RoundTrip_KeeperSubstitutedOntoOutfieldSlot_IsDeterministic`),
+`docs/tracking/gk-rush-trigger-design.md` → v1.4 (supersedes the v1.3 "restore sees no change" claim),
+`CHANGELOG.md`, `CHANGELOG-src.md` → v2.63, this manifest. No schema change; verified by the
+already-failing CI test — **gate not runnable locally (no .NET SDK)**. **Prior entry below.**)
+
+**Last Updated (prior):** August 4, 2026, latest same day (**ERR-008-020 adversarial review pass — 2 M, 1 L
 fixed; pass 2 clean.** **No new files.** **Modified:** `src/decision-tree/DecisionTree.cs` → v1.7
 (+ `HasSquadAttributeView`), `src/decision-tree/Tests/OptionGeneratorTests.cs` → v1.6 (computed-path
 P5 pivot + MIN/MAX midpoint invariant + constant-derived margins), `src/match-engine/MatchEngine.cs`
