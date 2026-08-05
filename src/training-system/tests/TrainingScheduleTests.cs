@@ -35,7 +35,7 @@ namespace TacticalDirector.TrainingSystem.Tests
 
             Assert.AreEqual(TrainingFocus.Balanced, schedule.FocusAt(0));
 
-            Assert.IsTrue(TrainingStep.SetFocus(ids, states, playerId: 10, focus: TrainingFocus.Physical));
+            Assert.IsTrue(schedule.TrySetFocus(playerId: 10, focus: TrainingFocus.Physical));
 
             // FR-TR-003: focus lives ONLY on TrainingState.Focus. If the view had copied it at
             // construction, this read would still say Balanced — and that stale copy is exactly the
@@ -86,20 +86,48 @@ namespace TacticalDirector.TrainingSystem.Tests
         public void SetFocus_RefusesUnknownPlayer_AndFailsLoudOnUndefinedFocus_TTRFAIL003()
         {
             (int[] ids, TrainingState[] states) = NewClub();
+            var schedule = new TrainingSchedule(ids, states);
 
             // F2 — an unknown player is refused, not thrown: a stale id from a UI must not crash a
             // career, and the roster is authoritative.
-            Assert.IsFalse(TrainingStep.SetFocus(ids, states, playerId: 999, focus: TrainingFocus.Fitness));
+            Assert.IsFalse(schedule.TrySetFocus(playerId: 999, focus: TrainingFocus.Fitness));
             Assert.AreEqual(TrainingFocus.Balanced, states[0].Focus, "a refused command mutates nothing.");
 
             // F4 — an undefined ordinal IS thrown: clamping it would persist a silently wrong focus.
             Assert.Throws<ArgumentOutOfRangeException>(
-                () => TrainingStep.SetFocus(ids, states, playerId: 10, focus: (TrainingFocus)200));
+                () => schedule.TrySetFocus(playerId: 10, focus: (TrainingFocus)200));
+        }
+
+        [Test]
+        public void TheCommandLivesOnTheHandle_SoTheWrittenStatesAreTheBoundPair()
+        {
+            // The defect this shape exists to prevent: two clubs of equal size (every generated club
+            // has the same squad size), a command taking the two arrays separately, and a caller that
+            // passes club A's ids with club B's states. It resolves the player against A and writes B
+            // — a different player, a different club, no exception, and it persists.
+            (int[] idsA, TrainingState[] statesA) = NewClub();
+            (int[] idsB, TrainingState[] statesB) = NewClub();
+            idsB[0] = 20;
+            idsB[1] = 21;
+            idsB[2] = 22;
+
+            var clubA = new TrainingSchedule(idsA, statesA);
+            var clubB = new TrainingSchedule(idsB, statesB);
+
+            Assert.IsTrue(clubA.TrySetFocus(10, TrainingFocus.Physical));
+
+            Assert.AreEqual(TrainingFocus.Physical, statesA[0].Focus);
+            Assert.AreEqual(TrainingFocus.Balanced, statesB[0].Focus,
+                "club B is untouched — there is no argument a caller could have supplied to reach it.");
+            Assert.IsFalse(clubB.TrySetFocus(10, TrainingFocus.Physical),
+                "club B does not have player 10; the command refuses rather than writing index 0.");
         }
     }
 }
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                            |
-// | 1.0     | 2026-08-05 | —      | Initial implementation (#29 T0). |
+// | 1.0     | 2026-08-05 | —      | Initial implementation (#29 T0).                                  |
+// | 1.1     | 2026-08-05 | —      | AR pass 1 (H): retargeted to TrainingSchedule.TrySetFocus, + the   |
+// |         |            |        | cross-club test that fails against the old two-array signature.    |
 #endregion

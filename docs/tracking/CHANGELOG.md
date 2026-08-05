@@ -12,7 +12,50 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 5, 2026 (**#41 Injuries & Medical T0 landed — and #29 Training System T0
+> **Last Updated:** August 5, 2026, later same day (**Adversarial review over the #29/#41 T0 landing —
+> 2 High, 4 Medium, 4 Low, all fixed; converged on pass 2.** Both Highs were the same shape: a design
+> that made a silent wrong answer reachable, guarded by a test that could not fail.
+>
+> **H-1 — one contract value, two config keys, and a lock wired to nothing.** `InjuryRiskMax` was
+> declared `[GT]` in BOTH catalogues, under `[training-system]` and `[injuries-medical]`. #41 §3.4
+> passes #29's `RiskScore` through with weight 1 and compares it against a draw whose denominator is
+> derived from that ceiling, so setting one key without the other rescales every occurrence probability
+> and #29's clamped maximum stops meaning "certain". The equality test written to catch exactly that
+> passed unconditionally, because the gate leaves `GameplayConfigHolder` unbound and both sides return
+> their fallback. Fixed by re-tagging #41's row `[CROSS]` and mirroring #29's — **ERR-041-003**.
+>
+> **H-2 — a focus command that could write another club's player.** `TrainingStep.SetFocus(int[] ids,
+> TrainingState[] states, …)` took the pair as separate arguments and checked only that the lengths
+> matched — and every club in a generated league has the same squad size, so passing club A's ids with
+> club B's states resolved the player against A and wrote B. No exception, wrong player, wrong club,
+> and it would have persisted at T1. The command moves onto `TrainingSchedule.TrySetFocus`, which binds
+> the pair once at construction, so there is no argument a caller can supply to reach it. Locked by a
+> test that fails against the old signature.
+>
+> **The Mediums:** a `MedicalModifier` gate that rejected zero but not negative (a negative recovery
+> speed one-days a Serious injury; a negative occurrence multiplier clamps risk to zero and silently
+> ends injuries forever — and #34 is the declared future producer of both); an F1 coherence check that
+> structurally could not see a negative `RecoveryRemaining`, because "not recovering" and "healthy"
+> look identical to an iff; **four tests that could not fail** (asserting the identity function is the
+> identity, asserting a pure function is pure, and comparing two values that are equal by construction
+> — the documented repo trap, with FR ids on them claiming coverage they did not provide); and the one
+> cross-assembly contract in the whole landing — #29's `ComputeInjuryRisk` feeding #41's
+> `AssembleRiskScore` — having **no test at all**.
+>
+> **Pass 2 caught two regressions in pass 1's own fixes**, which is the reason the loop re-reads
+> everything rather than the diff: the replacement for one tautological test was *itself* tautological
+> (`in` parameters cannot be mutated, so "this read does not mutate" is a compile-time guarantee), and
+> the new seam test asserted something **false** — that #29's saturated maximum reaches #41's ceiling.
+> It does not, and finding out why is the more useful half: **both specs mitigate on the same three
+> physical attributes**, so a robust player is priced down twice and #41 always subtracts again on top
+> of #29's already-mitigated value. Spec-faithful, since each spec mandates its own term, but it
+> entangles the two `[GT]` tables and it means "maximum risk" never means certain occurrence. Recorded
+> as an explicit assertion so the balance pass inherits the fact instead of rediscovering it.
+>
+> Pass 3 over the full surface of both assemblies surfaced no new High or Medium. **Still no gate run**
+> — no .NET SDK, installer blocked by network policy — so every fix above is reviewed and unexecuted.)
+
+> **Last Updated (prior):** August 5, 2026 (**#41 Injuries & Medical T0 landed — and #29 Training System T0
 > with it, because #41 could not be built without it.** The task was the next spec after #29 in code
 > implementation order; the roadmap's Phase D orders that as D2 #29 → D3 #41, and #41 §4.1 requires
 > a reference to `TacticalDirector.TrainingSystem` for the one type it reads — `InjuryRiskContribution`,
@@ -57,7 +100,7 @@ break it, and do not edit historical entries.
 > the deep branch is a marked seam, not a magnitude invented ahead of its consumer.
 >
 > **NO GATE RUN.** The authoring environment has no .NET SDK and the network policy blocks the
-> installer (`builds.dotnet.microsoft.com` → 403 at the proxy), so ~20 production files and 6 test files
+> installer (`builds.dotnet.microsoft.com` → 403 at the proxy), so 17 production files and 5 test files
 > across two new assemblies are **written and never compiled** — precisely the defect class
 > `tools/dotnet-ci` exists to catch. Every "the suite locks X" claim in this entry is a claim about test
 > code that has not executed. First CI run on push is the real gate.)

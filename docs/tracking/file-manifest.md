@@ -1,7 +1,34 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 5, 2026 (**#29 Training System T0 + #41 Injuries & Medical T0 — two new assemblies.**
+**Last Updated:** August 5, 2026, later same day (**Adversarial review over the #29/#41 T0 landing — 2 High,
+4 Medium, 4 Low fixed; converged pass 2. No new files.** **Modified:** `src/injuries-medical/InjuriesMedicalConstants.cs`
+v1.1 (H-1 — `InjuryRiskMax` re-tagged `[GT]` → `[CROSS]`, mirroring `TrainingSystemConstants` rather than taking a
+second config key under `[injuries-medical]` for the one scale #41 §3.4 shares with #29; **ERR-041-003**),
+`src/training-system/TrainingSchedule.cs` v1.1 + `src/training-system/TrainingStep.cs` v1.1 (H-2 — the FR-TR-023
+command moves to `TrainingSchedule.TrySetFocus`; the old `SetFocus(int[], TrainingState[], …)` signature accepted one
+club's ids with another club's states, same length so no guard fired, and wrote the wrong club's player),
+`src/injuries-medical/MedicalStep.cs` v1.1 (`ValidateModifier` widened to non-positive on BOTH multipliers;
+`ValidateState` now rejects a negative `RecoveryRemaining`, which the iff check structurally could not see;
+`ClassifySeverityFromDraw` gained its `draw < risk` precondition), `src/injuries-medical/MedicalModifier.cs` and
+`src/training-system/AssemblyInfo.cs` (doc corrections that were no longer true). Tests, all → v1.1:
+`TrainingStepTests.cs` (T-TR-COA-001 re-pointed at the day step — it had asserted the identity function is the
+identity; the NEU-001 field-independence claim deleted and the reason it cannot be tested yet written into the file
+rather than faked), `TrainingScheduleTests.cs` (retargeted to `TrySetFocus`, + the cross-club write lock that fails
+against the old signature), `MedicalStepTests.cs` (the `DrawOccurrence` position-independence test deleted — a pure
+function of its arguments, it could not fail; T-MD-DET-003 moves to the two-player test that drives
+`AdvanceMedicalDay`; **+ the `#29 → #41` seam test, the landing's one cross-assembly contract having had no coverage
+at all**), `InjuriesMedicalConstantsTests.cs` (the risk-scale check restated for the `[CROSS]` mirror — it was an
+equality of two unbound config reads and passed whatever a config said; + a `RecoveryDaysPerTickBase > 0` guard).
+`docs/tracking/spec-error-log.md` v1.58. **Pass 2 found two regressions in pass 1's own fixes** — a replacement test
+that was tautological in a new way (`in` parameters cannot be mutated, so the assertion was a compile-time
+guarantee), and a seam assertion that was **false**: #29's saturated maximum does not reach #41's ceiling, because
+both specs mitigate on the same three physical attributes and #41 subtracts again on top of #29's already-mitigated
+value. Spec-faithful but it double-counts robustness and entangles the two `[GT]` tables; recorded as an explicit
+test assertion for the balance pass rather than quietly corrected. **STILL NO GATE RUN** — no .NET SDK, installer
+blocked by network policy; every fix here is reviewed and unexecuted.)
+
+**Last Updated (prior):** August 5, 2026 (**#29 Training System T0 + #41 Injuries & Medical T0 — two new assemblies.**
 **New assembly `src/training-system/` (`TacticalDirector.TrainingSystem`; references `PlayerProgression` +
 `PlayerDatabase` + `ProjectConstants`):** `training-system.asmdef`, `AssemblyInfo.cs` v1.0, `TrainingFocus.cs` v1.0,
 `TrainingState.cs` v1.0 (the `Create`-not-`default` sentinel discipline), `TrainingSchedule.cs` v1.0 (the FR-TR-003
@@ -26,7 +53,7 @@ ERR-030-012 posture), `docs/tracking/spec-error-log.md` v1.57 (ERR-041-002 filed
 `docs/tracking/CHANGELOG.md`, `docs/tracking/CHANGELOG-src.md` v2.61, `docs/tracking/path-to-playable-roadmap.md`
 (D2/D3), this file.
 **NO GATE RUN — the authoring environment has no .NET SDK and the network policy blocks the installer
-(`builds.dotnet.microsoft.com` → 403 at the proxy).** ~20 production files and 6 test files across two new
+(`builds.dotnet.microsoft.com` → 403 at the proxy).** 17 production `.cs` and 5 test `.cs` across two new
 assemblies are written and never compiled; the first CI run on push is the gate. No `SNAPSHOT_SCHEMA_VERSION`
 change, no format-version bump (both T0s declare their sub-blob versions but neither codec exists yet), and both
 assemblies are **inert** — nothing constructs either, so the season loop is byte-identical to before.)
@@ -1779,15 +1806,15 @@ the FR-TR-025 roster handoff) are open.
 | `AssemblyInfo.cs` | `InternalsVisibleTo` the test assembly (the own-attribute terms and the `ApplyCoach` seam are internal) |
 | `TrainingFocus.cs` | The six-value focus enum; ordinals are APPEND-only (they index the `[GT]` tables and are persisted) |
 | `TrainingState.cs` | The §2.2 per-player state (focus / condition / training-fatigue / idempotency cursor) + `Create`, which seeds the never-advanced sentinel — `default` is NOT a valid runtime state (the day-0 trap) |
-| `TrainingSchedule.cs` | The FR-TR-003 read-only VIEW over a club's per-player `TrainingState.Focus`. Stores no focus copy and is never serialized; reads live, so a `SetFocus` write is visible through an open view |
+| `TrainingSchedule.cs` | The club-scoped handle over a club's per-player `TrainingState.Focus`: the reads, plus the one FR-TR-023 write (`TrySetFocus`). Stores no focus copy and is never serialized. Binding the id/state arrays once at construction is what stops a caller pairing one club's ids with another club's states — same length, silent wrong-club write (AR pass 1, H-2) |
 | `CoachingModifier.cs` | The KD-3 staff routing seam. Empty at T0, so `Identity` is safely `default` — the note records that the T3 landing which adds a per-mille field must convert it to an explicit factory at the same time |
 | `InjuryRiskContribution.cs` | The KD-5 read-only scalar #41 consumes (FR-TR-017). A value #41 pulls, not an interface #29 declares |
 | `TrainingViewModel.cs` | The KD-7 value-copy observer for #31/#38 |
-| `TrainingStep.cs` | §3.1 `AdvanceTrainingDay` (F6 idempotent, F7 gap fail-loud), §3.2 `ComputeTrainingInput` (FR-TR-006 field-independence — reads only fields slot-2 does not mutate), §3.3 `ProjectMatchEntryFatigue`, §3.4 `ComputeInjuryRisk`, and the FR-TR-023 `SetFocus` command (unknown player refused, undefined focus thrown) |
+| `TrainingStep.cs` | §3.1 `AdvanceTrainingDay` (F6 idempotent, F7 gap fail-loud), §3.2 `ComputeTrainingInput` (FR-TR-006 field-independence — reads only fields slot-2 does not mutate), §3.3 `ProjectMatchEntryFatigue`, §3.4 `ComputeInjuryRisk`. The FR-TR-023 command lives on `TrainingSchedule` |
 | `TrainingSystemConstants.cs` | Appendix A: `[FIXED]` sub-blob version / sentinel / week length, `[GT]` cursor bounds + recovery + risk weights via the config loader, and the two per-focus tables as literals behind accessors (the array carve-out) |
 | `tests/training-system-tests.asmdef` | `TacticalDirector.TrainingSystem.Tests` (Editor-only) |
 | `tests/TrainingStepTests.cs` | Appendix B reproduced day by day (7140 / 2100 → 7420 / 2300 → the 0.23 projection), T-TR-DET-001/003/004/005, T-TR-NEU-001/002, T-TR-FAT-001/003, T-TR-CON-001/002, T-TR-COA-001, T-TR-INJ-001 |
-| `tests/TrainingScheduleTests.cs` | The view is not a copy; the parallel-array guard; T-TR-FAIL-003 (`SetFocus` refuse-vs-throw) |
+| `tests/TrainingScheduleTests.cs` | The view is not a copy; the parallel-array guard; T-TR-FAIL-003 (`TrySetFocus` refuse-vs-throw); the cross-club write lock |
 | `tests/TrainingSystemConstantsTests.cs` | Catalogue invariants: both tables cover every ordinal, bounds ordered, Rest nets negative against the passive recovery, undefined ordinal fails loud |
 
 ---
@@ -1810,9 +1837,9 @@ FR-MD-025 roster handoff) are open.
 | `MedicalModifier.cs` | The KD-5 staff seam as two per-mille ints with an EXPLICIT `Identity` — `default` means ×0 risk and a divide-by-zero recovery scale, and fails loud at the consuming seam (FR-MD-016) |
 | `MedicalViewModel.cs` | The KD-8 value-copy observer for #38; derives `Available` through `MedicalStep.IsAvailable` so observer and selection cannot disagree |
 | `MedicalStep.cs` | §3.1 `AdvanceMedicalDay` (recovery THEN draw; the KD-6 entry-state gate; F1/F4/F6/F7), §3.1.1 `DeriveActionOrdinal` (fixed-radix bijection), the keyed `DrawOccurrence` (domain tag → playerId → ordinal, each through a SplitMix64 finalizer), §3.2 `ClassifySeverityFromDraw` (same draw, integer cross-multiply), §3.4 `AssembleRiskScore`, FR-MD-023 `IsAvailable` |
-| `InjuriesMedicalConstants.cs` | Appendix A: `[FIXED]` versions / sentinel / per-mille denominators / draw-purpose radix, `[DERIVED]` `OccurrenceDrawDenom` (a property, so it cannot capture 0 from an init-order race), `[CROSS]` `DomainTagInjuriesMedical`, `[GT]` tiers + weights, and the robustness table calibrated so §3.6's `mean 14 ⇒ 400` is exact |
+| `InjuriesMedicalConstants.cs` | Appendix A: `[FIXED]` versions / sentinel / per-mille denominators / draw-purpose radix, `[DERIVED]` `OccurrenceDrawDenom` (a property, so it cannot capture 0 from an init-order race), `[CROSS]` `DomainTagInjuriesMedical` + `InjuryRiskMax` (mirrored from #29, ERR-041-003 — not a second config key), `[GT]` tiers + weights, and the robustness table calibrated so §3.6's `mean 14 ⇒ 400` is exact |
 | `tests/injuries-medical-tests.asmdef` | `TacticalDirector.InjuriesMedical.Tests` (Editor-only) |
-| `tests/MedicalStepTests.cs` | §3.6 pinned term by term; T-MD-DET-001/003/005/006/007/009, T-MD-ORD-001 (heal-and-reinjure cannot share a call), T-MD-SEV-001/002, T-MD-REC-001, T-MD-MOD-001/002, T-MD-NEU-001/002, T-MD-AVAIL-001, T-MD-FAIL-004/006 |
+| `tests/MedicalStepTests.cs` | §3.6 pinned term by term; T-MD-DET-001/003/005/006/007/009, T-MD-ORD-001 (heal-and-reinjure cannot share a call), T-MD-SEV-001/002, T-MD-REC-001, T-MD-MOD-001/002, T-MD-NEU-001/002, T-MD-AVAIL-001, T-MD-FAT-001 (the `#29 → #41` seam, driving the real producer), T-MD-FAIL-004/006 |
 | `tests/InjuriesMedicalConstantsTests.cs` | Catalogue invariants, the `[CROSS]` domain-tag mirror lock, and the #29/#41 shared-risk-scale assertion — the coupling §3.4 states in prose |
 
 ---

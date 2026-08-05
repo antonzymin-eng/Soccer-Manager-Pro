@@ -4,8 +4,9 @@
 // Author:   —
 // Spec:     Injuries & Medical #41 §3.1–§3.4 + Appendices A/B/C; Code Standards #20
 // Purpose:  T-MD-DET-001/003/005/006/007/009, T-MD-ORD-001, T-MD-SEV-001/002, T-MD-REC-001,
-//           T-MD-MOD-001/002, T-MD-NEU-001/002, T-MD-AVAIL-001, T-MD-FAIL-004/006 — the §3.6 worked
-//           example, the KD-6 same-call gate, the keyed-draw properties, and the fail-loud gates.
+//           T-MD-MOD-001/002, T-MD-NEU-001/002, T-MD-AVAIL-001, T-MD-FAT-001, T-MD-FAIL-004/006 — the
+//           §3.6 worked example, the KD-6 same-call gate, the keyed-draw properties, the #29 -> #41
+//           seam, and the fail-loud gates.
 
 using System;
 
@@ -203,23 +204,6 @@ namespace TacticalDirector.InjuriesMedical.Tests
         // ── KD-1 — the keyed, position-independent draw ─────────────────────────────
 
         [Test]
-        public void Draw_IsPositionIndependent_TTMDDET003()
-        {
-            ulong ordinal = MedicalStep.DeriveActionOrdinal(213, InjuriesMedicalConstants.DRAW_PURPOSE_OCCURRENCE);
-            int direct = MedicalStep.DrawOccurrence(WorldSeed, PlayerId, ordinal);
-
-            // Draw a pile of other players and days first. A free-running cursor would have moved;
-            // a keyed draw cannot, because nothing about the key depends on what was drawn before.
-            for (int other = 0; other < 50; other++)
-            {
-                MedicalStep.DrawOccurrence(WorldSeed, other, ordinal);
-                MedicalStep.DrawOccurrence(WorldSeed, PlayerId, MedicalStep.DeriveActionOrdinal((uint)other, 0));
-            }
-
-            Assert.AreEqual(direct, MedicalStep.DrawOccurrence(WorldSeed, PlayerId, ordinal));
-        }
-
-        [Test]
         public void Draw_IsInRange_AndSeparatesNeighbouringKeys()
         {
             ulong ordinal = MedicalStep.DeriveActionOrdinal(213, 0);
@@ -293,7 +277,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
         }
 
         [Test]
-        public void TwoPlayersOnTheSameDay_DoNotInfluenceEachOther()
+        public void TwoPlayersOnTheSameDay_DoNotInfluenceEachOther_TTMDDET003()
         {
             var alone = InjuryState.Create();
             var interleaved = InjuryState.Create();
@@ -459,7 +443,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
         // ── The #29 boundary ────────────────────────────────────────────────────────
 
         [Test]
-        public void RiskRises_WithTrainingContributionAndMatchLoad_AndFallsWithRobustness_TTMDFAT001()
+        public void RiskAssembly_RisesWithTrainingAndLoad_AndFallsWithRobustness()
         {
             PlayerAttributes ordinary = WorkedExampleAttributes();
             PlayerAttributes robust = PlayerAttributes.CreateDefault();
@@ -482,6 +466,64 @@ namespace TacticalDirector.InjuriesMedical.Tests
             Assert.Greater(moreTraining, baseline, "#29's contribution passes through with weight 1.");
             Assert.Greater(moreMatches, baseline, "the Stage-2 match-load term.");
             Assert.Less(moreRobust, baseline, "the own-attribute mitigation, deterministic and never RNG.");
+        }
+
+        // ── The #29 → #41 seam (the reason both assemblies landed together) ─────────
+
+        [Test]
+        public void TrainingRiskFlowsFromTheProducerIntoTheOccurrenceRisk_TTMDFAT001()
+        {
+            // The one cross-assembly contract in this landing: #29 publishes the scalar (FR-TR-017),
+            // #41 consumes it read-only (FR-MD-009). Every other test here hand-builds an
+            // InjuryRiskContribution with a literal, which would not notice a scale or units mismatch
+            // between the producer and the consumer — so drive the real producer.
+            PlayerAttributes a = WorkedExampleAttributes();
+
+            TrainingState fresh = TrainingState.Create(TrainingFocus.Balanced);
+            fresh.Condition = TrainingSystemConstants.ConditionMax;
+            fresh.TrainingFatigue = 0;
+
+            TrainingState worn = TrainingState.Create(TrainingFocus.Fitness);
+            worn.Condition = TrainingSystemConstants.ConditionMax / 2;
+            worn.TrainingFatigue = TrainingSystemConstants.TrainingFatigueMax / 2;
+
+            int freshRisk = MedicalStep.AssembleRiskScore(
+                TrainingStep.ComputeInjuryRisk(fresh, a), MatchLoad.None, a, MedicalModifier.Identity);
+            int wornRisk = MedicalStep.AssembleRiskScore(
+                TrainingStep.ComputeInjuryRisk(worn, a), MatchLoad.None, a, MedicalModifier.Identity);
+
+            Assert.Greater(wornRisk, freshRisk,
+                "a tired, under-conditioned player must be at higher occurrence risk than a fresh one — " +
+                "if the two systems disagreed about the scale, this ordering is what would break.");
+
+            // Both ends of #29's clamped output must land inside the range #41 draws against, or the
+            // comparison in §3.1 is not on one scale (the coupling High-1 of AR pass 1 turned on).
+            Assert.GreaterOrEqual(freshRisk, 0);
+            Assert.LessOrEqual(wornRisk, InjuriesMedicalConstants.OccurrenceDrawDenom);
+
+            // The worst case a real player can reach — and the recorded fact that it does NOT saturate.
+            TrainingState wrecked = TrainingState.Create(TrainingFocus.Physical);
+            wrecked.Condition = TrainingSystemConstants.ConditionMin;
+            wrecked.TrainingFatigue = TrainingSystemConstants.TrainingFatigueMax;
+            PlayerAttributes frail = PlayerAttributes.CreateDefault();
+            frail.Strength = 1;
+            frail.Stamina = 1;
+            frail.Balance = 1;
+
+            int maxRisk = MedicalStep.AssembleRiskScore(
+                TrainingStep.ComputeInjuryRisk(wrecked, frail), MatchLoad.None, frail, MedicalModifier.Identity);
+
+            // BOTH layers mitigate on the SAME three physical attributes: #29 §3.4 subtracts its
+            // robustness term before clamping, then #41 §3.4 subtracts its own from the result. Each
+            // spec mandates its own term, so this is spec-faithful — but it means a player's
+            // robustness is priced in twice, the two [GT] tables cannot be tuned independently, and
+            // #29's saturated 'maximum risk' NEVER means certain occurrence at #41 (the [1,20]
+            // attribute floor guarantees #41 always subtracts at least its mean-1 row). Recorded here
+            // rather than left to be rediscovered during the balance pass.
+            Assert.Greater(maxRisk, 0, "the worst realistic player must still carry real risk.");
+            Assert.Less(maxRisk, InjuriesMedicalConstants.OccurrenceDrawDenom,
+                "double mitigation: #41 re-subtracts on attributes #29 already priced in, so the " +
+                "producer's ceiling cannot reach the consumer's.");
         }
 
         [Test]
@@ -524,6 +566,8 @@ namespace TacticalDirector.InjuriesMedical.Tests
 
             // #41 reads #27 attributes and #29's scalar; it writes neither, and it has no path to any
             // fatigue accumulator at all (FR-MD-009 — structurally, not by convention).
+            // As above in #29's suite: REDUNDANT with the compiler, since `attributes` is `in`. Kept as a
+            // guard on the signature, not as evidence about the body.
             Assert.AreEqual(copy.ToArray(), a.ToArray());
         }
 
@@ -553,5 +597,10 @@ namespace TacticalDirector.InjuriesMedical.Tests
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                            |
-// | 1.0     | 2026-08-05 | —      | Initial implementation (#41 T0). |
+// | 1.0     | 2026-08-05 | —      | Initial implementation (#41 T0).                                   |
+// | 1.1     | 2026-08-05 | —      | AR pass 1 (M): dropped the DrawOccurrence position-independence     |
+// |         |            |        | test (a pure function of its arguments — it could not fail); the    |
+// |         |            |        | id moves to the two-player test, which drives AdvanceMedicalDay.    |
+// |         |            |        | + the #29 -> #41 seam test: the one cross-assembly contract in this |
+// |         |            |        | landing had no test at all.                                         |
 #endregion

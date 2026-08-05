@@ -12,7 +12,7 @@ namespace TacticalDirector.TrainingSystem
     /// A read-only value-copy view of one player's training state (KD-7 / FR-TR-022), for #31 and #38.
     /// It carries no reference to the underlying <see cref="TrainingState"/>, so an observer cannot
     /// reach a mutation path — <see cref="TrainingStep.AdvanceTrainingDay"/> and
-    /// <see cref="TrainingStep.SetFocus"/> remain the only writers (FR-TR-004).
+    /// <see cref="TrainingSchedule.TrySetFocus"/> remain the only writers (FR-TR-004).
     /// </summary>
     public readonly struct TrainingViewModel
     {

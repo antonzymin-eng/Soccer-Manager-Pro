@@ -11,7 +11,7 @@ namespace TacticalDirector.TrainingSystem
     /// <summary>
     /// Per-player world-tick training state (§2.2). Mutated only by
     /// <see cref="TrainingStep.AdvanceTrainingDay"/> (the day step) and
-    /// <see cref="TrainingStep.SetFocus"/> (the focus command, FR-TR-023).
+    /// <see cref="TrainingSchedule.TrySetFocus"/> (the focus command, FR-TR-023).
     /// <para>
     /// <b><c>default(TrainingState)</c> is NOT a valid runtime state.</b> Its
     /// <see cref="LastAdvancedWorldDay"/> would be 0 — a legitimate world day — so the first advance
@@ -26,8 +26,8 @@ namespace TacticalDirector.TrainingSystem
     {
         /// <summary>
         /// The persistent training focus — the SINGLE source of truth (FR-TR-003). Changed only by
-        /// <see cref="TrainingStep.SetFocus"/>. <see cref="TrainingSchedule"/> is a read-only view over
-        /// this field across a club's players; it stores no copy of its own.
+        /// <see cref="TrainingSchedule.TrySetFocus"/>. <see cref="TrainingSchedule"/> is the club-scoped
+        /// handle over this field; it stores no copy of its own.
         /// </summary>
         public TrainingFocus Focus;
 

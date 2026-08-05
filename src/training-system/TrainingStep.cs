@@ -2,9 +2,10 @@
 // Created:  2026-08-05
 // Modified: 2026-08-05
 // Author:   —
-// Spec:     Training System #29 §3.1–§3.4 (FR-TR-004..017, FR-TR-021/023/026), F1/F2/F4/F6/F7; Code Standards #20
+// Spec:     Training System #29 §3.1–§3.4 (FR-TR-004..017, FR-TR-021/026), F1/F4/F6/F7; Code Standards #20
 // Purpose:  The four #29 entry points: the mutating daily world-day step, the pure growth-input read,
 //           the pure match-entry fatigue projection, and the pure injury-risk output #41 consumes.
+//           The FR-TR-023 focus command lives on TrainingSchedule, which owns the club-scoped pairing.
 
 using System;
 
@@ -19,9 +20,11 @@ namespace TacticalDirector.TrainingSystem
     /// (FR-TR-008/009 / KD-6), so every per-player variation is a function of the player's own
     /// attributes.
     /// <para>
-    /// <see cref="AdvanceTrainingDay"/> is the only mutating entry point (FR-TR-004) apart from the
-    /// <see cref="SetFocus"/> command; <see cref="ComputeTrainingInput"/>,
-    /// <see cref="ProjectMatchEntryFatigue"/> and <see cref="ComputeInjuryRisk"/> are pure reads.
+    /// <see cref="AdvanceTrainingDay"/> is the only mutating entry point here (FR-TR-004);
+    /// <see cref="ComputeTrainingInput"/>, <see cref="ProjectMatchEntryFatigue"/> and
+    /// <see cref="ComputeInjuryRisk"/> are pure reads. The other writer in this assembly is the
+    /// FR-TR-023 focus command, <see cref="TrainingSchedule.TrySetFocus"/>, which lives on the
+    /// club-scoped handle so its ids and states are provably the pair bound at construction.
     /// </para>
     /// </summary>
     public static class TrainingStep
@@ -207,42 +210,6 @@ namespace TacticalDirector.TrainingSystem
         }
 
         /// <summary>
-        /// The weekly focus command (FR-TR-023). Writes <see cref="TrainingState.Focus"/> — the single
-        /// source of truth — for one player of one club.
-        /// <para>
-        /// An unknown player is <b>refused</b> (returns false, no mutation): the roster is authoritative
-        /// and a stale id from a UI is not a crash (F2). An out-of-contract focus <b>fails loud</b>: an
-        /// undefined enum ordinal is a bug in the caller, and clamping it to Balanced would persist a
-        /// silently wrong focus into the save (F4 / FR-TR-021).
-        /// </para>
-        /// </summary>
-        /// <param name="playerIds">The club's player ids, in the club's deterministic roster order.</param>
-        /// <param name="states">The matching training states — the same parallel arrays <see cref="TrainingSchedule"/> views.</param>
-        /// <param name="playerId">The player whose focus is being set.</param>
-        /// <param name="focus">The new focus.</param>
-        /// <returns>True when the focus was written; false when the player is not on the club's roster.</returns>
-        /// <exception cref="ArgumentNullException">Either array is null.</exception>
-        /// <exception cref="ArgumentException">The arrays have different lengths.</exception>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref name="focus"/> is not a defined ordinal (F4 / FR-TR-021).</exception>
-        public static bool SetFocus(int[] playerIds, TrainingState[] states, int playerId, TrainingFocus focus)
-        {
-            if (!TrainingSystemConstants.IsDefinedFocus(focus))
-            {
-                throw new ArgumentOutOfRangeException(nameof(focus), focus, "Undefined TrainingFocus (F4 / FR-TR-021).");
-            }
-
-            var schedule = new TrainingSchedule(playerIds, states);
-            int index = schedule.IndexOf(playerId);
-            if (index < 0)
-            {
-                return false;   // unknown player — refused, not thrown (F2)
-            }
-
-            states[index].Focus = focus;
-            return true;
-        }
-
-        /// <summary>
         /// The deterministic own-attribute conditioning bonus (§3.1 step 1) — the mean of
         /// <c>WorkRate</c> and <c>Stamina</c>, weighted. Never RNG (FR-TR-009).
         /// </summary>
@@ -316,5 +283,7 @@ namespace TacticalDirector.TrainingSystem
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                            |
-// | 1.0     | 2026-08-05 | —      | Initial implementation (#29 T0): §3.1–§3.4 + the FR-TR-023 command. |
+// | 1.0     | 2026-08-05 | —      | Initial implementation (#29 T0): §3.1–§3.4.                          |
+// | 1.1     | 2026-08-05 | —      | AR pass 1 (H): SetFocus moved to TrainingSchedule.TrySetFocus — the   |
+// |         |            |        | two-array signature accepted one club's ids with another's states.   |
 #endregion

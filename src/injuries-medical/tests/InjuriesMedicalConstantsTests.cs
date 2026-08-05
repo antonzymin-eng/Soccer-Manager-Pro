@@ -82,13 +82,26 @@ namespace TacticalDirector.InjuriesMedical.Tests
         }
 
         [Test]
-        public void RiskScale_AgreesWithTrainingSystem()
+        public void RiskScale_MirrorsTrainingSystem_RatherThanDuplicatingIt()
         {
             // #29 produces InjuryRiskContribution.RiskScore on its own clamped scale and #41 passes it
-            // straight through with weight 1. If the two ceilings ever diverge, a maxed-out #29 risk
-            // stops meaning "certain occurrence" here and nothing else would notice.
+            // straight through with weight 1, so a divergence would silently rescale every occurrence
+            // probability. This assertion is TRUE BY CONSTRUCTION now, and that is the fix: the value
+            // is a [CROSS] mirror of #29's, not a second [GT] with its own config key. It was a real
+            // equality check before, and a useless one — the gate runs with GameplayConfigHolder
+            // unbound, so both sides returned their fallback and it passed whatever a config said.
+            // What it guards now is that nobody re-declares the mirror as an independent read.
             Assert.AreEqual(TrainingSystemConstants.InjuryRiskMax, InjuriesMedicalConstants.InjuryRiskMax,
-                "#41 §3.4 pins its risk scale to #29's; the two [GT] rows must hold the same value.");
+                "#41 §3.4 pins its risk scale to #29's; one owner, one config key (ERR-041-003).");
+        }
+
+        [Test]
+        public void RecoveryRate_IsPositive_OrEveryInjuryIsPermanent()
+        {
+            Assert.Greater(InjuriesMedicalConstants.RecoveryDaysPerTickBase, 0,
+                "a non-positive per-tick decrement means RecoveryRemaining never falls, so no injury " +
+                "ever ends and the career reaches a state nothing can recover from.");
+            Assert.Greater(InjuriesMedicalConstants.RecoveryMax, 0);
         }
 
         [Test]
@@ -144,5 +157,8 @@ namespace TacticalDirector.InjuriesMedical.Tests
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                            |
-// | 1.0     | 2026-08-05 | —      | Initial implementation (#41 T0). |
+// | 1.0     | 2026-08-05 | —      | Initial implementation (#41 T0).                                   |
+// | 1.1     | 2026-08-05 | —      | AR pass 1: the risk-scale check restated for the [CROSS] mirror     |
+// |         |            |        | (it was vacuous as an equality of two unbound config reads), and    |
+// |         |            |        | + the RecoveryDaysPerTickBase > 0 guard.                            |
 #endregion

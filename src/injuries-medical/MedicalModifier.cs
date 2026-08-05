@@ -14,8 +14,10 @@ namespace TacticalDirector.InjuriesMedical
     /// <para>
     /// <b><c>default(MedicalModifier)</c> is NOT a valid runtime value.</b> All-zero means ×0
     /// occurrence risk (nobody is ever injured) and a divide-by-zero recovery-days scale. Always use
-    /// <see cref="Identity"/>, which is an explicit factory for exactly that reason; a zero
-    /// <see cref="RecoverySpeedMillMult"/> reaching the consuming seam fails loud (F4 / FR-MD-016).
+    /// <see cref="Identity"/>, which is an explicit factory for exactly that reason. Both fields MUST
+    /// be <b>positive</b> — a non-positive value of either kind fails loud at the consuming seam
+    /// (F4 / FR-MD-016), because a negative multiplier is the same trap as a zero one but produces no
+    /// crash: it silently clamps risk to zero, or one-days a Serious injury.
     /// </para>
     /// <para>
     /// No #34 interface is built (FR-LW-031) — #34 becomes the producer of a non-identity value when

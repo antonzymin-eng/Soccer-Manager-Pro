@@ -183,23 +183,15 @@ namespace TacticalDirector.TrainingSystem.Tests
                 Assert.AreEqual(TrainingInput.Neutral, result,
                     "with #29's own dial off, #28's growth must be byte-identical to the no-training path (KD-8).");
             }
-        }
 
-        [Test]
-        public void ComputeTrainingInput_ReadsNoFieldTheDayStepMutates_TTRNEU001()
-        {
-            PlayerAttributes a = NeutralAttributes();
-            TrainingState before = AppendixBSeed();
-            TrainingState after = before;
-            Advance(ref after, 101);
-
-            // FR-TR-006's load-bearing invariant: the slot-1 read is order-independent of the slot-2
-            // mutation because it reads only Focus/attributes/coach. Advancing the day changes
-            // Condition, TrainingFatigue and the cursor — and must not move the growth input at all.
-            Assert.AreNotEqual(before.Condition, after.Condition, "the day step really did mutate the state.");
-            Assert.AreEqual(
-                TrainingStep.ComputeTrainingInput(before, a, CoachingModifier.Identity, deepTrainingEnabled: true),
-                TrainingStep.ComputeTrainingInput(after, a, CoachingModifier.Identity, deepTrainingEnabled: true));
+            // NOT TESTED, and deliberately not faked: FR-TR-006's field-independence invariant — that
+            // the slot-1 read touches only Focus/attributes/coach and never a field slot-2 mutates.
+            // #28's TrainingInput has no fields yet, so BOTH branches return Neutral and any comparison
+            // of two results is vacuously true no matter what the deep branch reads. A test shaped like
+            // that lock would enforce nothing while claiming the id. Nor is "ComputeTrainingInput does
+            // not mutate the state" worth asserting: the parameter is `in`, so the compiler already
+            // forbids it. The real lock lands with #29 T3, when BuildTrainingInput has an output that
+            // can differ.
         }
 
         [Test]
@@ -213,6 +205,10 @@ namespace TacticalDirector.TrainingSystem.Tests
 
             // #28's GrowthProjection is the sole attribute writer (FR-TR-005 / FR-PG-008). #29 supplies
             // a TrainingInput; it never becomes a second mutation path.
+            // This is REDUNDANT with the compiler today and says so deliberately: `attributes` is an `in`
+            // parameter, so the callee cannot assign to it and the assertion cannot fail. It is kept as a
+            // guard on the SIGNATURE — it starts failing if `in` is ever relaxed to `ref` — not as
+            // evidence about the body.
             Assert.AreEqual(copy.ToArray(), a.ToArray());
             Assert.AreEqual(copy.WeakFootRating, a.WeakFootRating);
         }
@@ -265,12 +261,22 @@ namespace TacticalDirector.TrainingSystem.Tests
         public void IdentityCoach_YieldsTheExactStage2Delta_TTRCOA001()
         {
             PlayerAttributes a = NeutralAttributes();
-            int expected = TrainingSystemConstants.ConditionDeltaFor(TrainingFocus.Fitness)
-                           + TrainingStep.AttributeConditioningBonus(a);
+            int expectedConditionDelta = TrainingSystemConstants.ConditionDeltaFor(TrainingFocus.Fitness)
+                                         + TrainingStep.AttributeConditioningBonus(a);
+            int expectedFatigueDelta = TrainingSystemConstants.FatigueLoadFor(TrainingFocus.Fitness)
+                                       - TrainingSystemConstants.FatigueDailyRecovery;
 
-            Assert.AreEqual(expected, TrainingStep.ApplyCoach(expected, CoachingModifier.Identity),
-                "KD-3: the identity modifier is ×1.0 on every term, so a no-staff game runs the raw " +
-                "Stage-2 deltas.");
+            TrainingState s = AppendixBSeed();
+            Advance(ref s, AppendixBLastDay + 1);
+
+            // Asserted through the DAY STEP, on the state it produces — not against ApplyCoach itself.
+            // ApplyCoach is the identity function today, so `ApplyCoach(x, Identity) == x` holds for
+            // every possible modifier and could never fail; this version starts failing the moment #34
+            // makes the seam non-identity without keeping the identity path exact, which is the whole
+            // content of KD-3.
+            Assert.AreEqual(AppendixBCondition + expectedConditionDelta, s.Condition,
+                "KD-3: the identity modifier is ×1.0, so a no-staff game runs the raw Stage-2 deltas.");
+            Assert.AreEqual(AppendixBFatigue + expectedFatigueDelta, s.TrainingFatigue);
         }
 
         // ── The match-entry projection ───────────────────────────────────────────────
@@ -361,5 +367,9 @@ namespace TacticalDirector.TrainingSystem.Tests
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                            |
-// | 1.0     | 2026-08-05 | —      | Initial implementation (#29 T0). |
+// | 1.0     | 2026-08-05 | —      | Initial implementation (#29 T0).                                   |
+// | 1.1     | 2026-08-05 | —      | AR pass 1 (M): T-TR-COA-001 re-pointed at the day step (it had     |
+// |         |            |        | asserted the identity function is the identity); the NEU-001        |
+// |         |            |        | field-independence assertion replaced with the purity check that    |
+// |         |            |        | IS assertable today, and the untestable half named in the test.     |
 #endregion

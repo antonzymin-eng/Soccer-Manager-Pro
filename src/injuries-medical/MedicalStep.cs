@@ -201,10 +201,21 @@ namespace TacticalDirector.InjuriesMedical
         /// a raised <c>[GT]</c> ceiling must not silently start overflowing.
         /// </para>
         /// </summary>
-        /// <param name="draw">The occurrence draw, already known to be below <paramref name="risk"/>.</param>
+        /// <param name="draw">The occurrence draw, which MUST already be below <paramref name="risk"/>.</param>
         /// <param name="risk">The assembled risk score the draw was compared against.</param>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// <paramref name="draw"/> is not below <paramref name="risk"/> — no occurrence was confirmed,
+        /// so there is no tier to classify. Without this the method answers <c>Serious</c> for any
+        /// draw at <c>risk == 0</c>, which is a plausible-looking wrong answer rather than a refusal.
+        /// </exception>
         public static InjurySeverity ClassifySeverityFromDraw(int draw, int risk)
         {
+            if (draw >= risk)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(draw), draw, "Severity is classified only for a CONFIRMED occurrence (draw < risk, §3.2).");
+            }
+
             long scaledDraw = (long)draw * InjuriesMedicalConstants.SEVERITY_PERMILLE_DENOM;
 
             if (scaledDraw < (long)risk * InjuriesMedicalConstants.SeverityMinorPermille)
@@ -314,6 +325,15 @@ namespace TacticalDirector.InjuriesMedical
                     nameof(state), state.Severity, "Undefined InjurySeverity on the advancing state (F4).");
             }
 
+            if (state.RecoveryRemaining < 0)
+            {
+                throw new ArgumentException(
+                    "InjuryState coherence violated: RecoveryRemaining is negative (F1). The iff check "
+                    + "below cannot catch this — a negative counter reads as 'not recovering', which "
+                    + "matches a healthy player exactly.",
+                    nameof(state));
+            }
+
             bool injured = state.Severity != InjurySeverity.None;
             if (injured != (state.RecoveryRemaining > 0))
             {
@@ -331,19 +351,27 @@ namespace TacticalDirector.InjuriesMedical
         }
 
         /// <summary>
-        /// The FR-MD-016 zero-value gate. <c>default(MedicalModifier)</c> is all-zero, which means ×0
-        /// occurrence risk and a divide-by-zero recovery-days scale; it is never a valid runtime value,
-        /// and the failure has to be loud because a silently-zero risk multiplier reads as "this game
-        /// has no injuries" rather than as a bug.
+        /// The FR-MD-016 zero-value gate, widened to non-positive on both fields.
+        /// <para>
+        /// <c>default(MedicalModifier)</c> is all-zero, which means ×0 occurrence risk and a
+        /// divide-by-zero recovery-days scale. <b>A negative multiplier is the same trap with the same
+        /// consequence and no crash to announce it:</b> a negative recovery speed makes the assigned
+        /// days negative, which the floor turns into a one-day Serious injury; a negative or zero
+        /// occurrence-risk multiplier drives the assembled risk below zero, which the clamp turns into
+        /// "nobody is ever injured again". #34 is the declared future producer of these values, so a
+        /// sign error there would ship a game with no injuries and a green suite. Neither is a value
+        /// this system can represent an intent for — an injury-proof squad is a risk input, not a ×0
+        /// staff multiplier — so both fail loud.
+        /// </para>
         /// </summary>
         /// <param name="medical">The modifier to check.</param>
         private static void ValidateModifier(in MedicalModifier medical)
         {
-            if (medical.RecoverySpeedMillMult == 0)
+            if (medical.OccurrenceRiskMillMult <= 0 || medical.RecoverySpeedMillMult <= 0)
             {
                 throw new ArgumentException(
-                    "MedicalModifier.RecoverySpeedMillMult must not be zero; use MedicalModifier.Identity, " +
-                    "never default(MedicalModifier) (FR-MD-016 / F4).",
+                    "MedicalModifier multipliers must both be positive per-mille values; use "
+                    + "MedicalModifier.Identity, never default(MedicalModifier) (FR-MD-016 / F4).",
                     nameof(medical));
             }
         }
@@ -393,5 +421,9 @@ namespace TacticalDirector.InjuriesMedical
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                        |
-// | 1.0     | 2026-08-05 | —      | Initial implementation (#41 T0): §3.1–§3.4 + the keyed draw. |
+// | 1.0     | 2026-08-05 | —      | Initial implementation (#41 T0): §3.1–§3.4 + the keyed draw.        |
+// | 1.1     | 2026-08-05 | —      | AR pass 1 (2M): ValidateModifier widened to non-positive on BOTH    |
+// |         |            |        | fields (a negative multiplier silently disabled injuries or          |
+// |         |            |        | one-dayed a Serious one); ValidateState now rejects a negative       |
+// |         |            |        | RecoveryRemaining, which the iff check structurally could not see.   |
 #endregion

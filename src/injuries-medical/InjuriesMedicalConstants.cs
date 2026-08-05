@@ -9,6 +9,7 @@
 using System;
 
 using TacticalDirector.DeterministicSim;
+using TacticalDirector.TrainingSystem;
 
 using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
 
@@ -77,7 +78,7 @@ namespace TacticalDirector.InjuriesMedical
         /// Deriving it rather than declaring a second number is what lets §3.1 compare the assembled
         /// risk score against the draw with no scale factor between them. It is a property, not a
         /// <c>static readonly</c> field, because a field in this region would initialise BEFORE the
-        /// <c>[GT]</c> field it reads and silently capture 0.
+        /// <c>Cross</c>-region field it reads and silently capture 0.
         /// </para>
         /// </summary>
         public static int OccurrenceDrawDenom => InjuryRiskMax;
@@ -93,6 +94,25 @@ namespace TacticalDirector.InjuriesMedical
         /// Deterministic Simulation #16 §3.4 (ERR-041-001). Value: 0x2A.
         /// </summary>
         public static readonly byte DomainTagInjuriesMedical = DeterministicSimConstants.DOMAIN_TAG_INJURIES_MEDICAL;
+
+        /// <summary>
+        /// [CROSS] The occurrence-risk clamp ceiling, and — through <see cref="OccurrenceDrawDenom"/> —
+        /// the keyed draw's range.
+        /// Authoritative source: <c>TrainingSystemConstants.InjuryRiskMax</c>. Training System #29
+        /// Appendix A; consumed here per #41 §3.4.
+        /// <para>
+        /// <b>Mirrored, not re-declared.</b> §3.4 passes #29's <c>RiskScore</c> through with weight 1 and
+        /// compares it directly against a draw in <c>[0, OccurrenceDrawDenom)</c>, so the two are one
+        /// scale by contract. Appendix A tags this <c>[GT]</c> in #41's own catalogue, which would give
+        /// it a second config key (<c>[injuries-medical] InjuryRiskMax</c>) independent of
+        /// <c>[training-system] InjuryRiskMax</c> — and setting one without the other silently rescales
+        /// every occurrence probability while #29's maximum risk quietly stops meaning "certain". That
+        /// is the duplicate-truth trap the <c>[CROSS]</c> routing rule exists to prevent (the
+        /// ERR-037-001 precedent). One owner, one key; #41's Appendix A row to be re-tagged
+        /// <c>[CROSS]</c> at the next revision.
+        /// </para>
+        /// </summary>
+        public static readonly int InjuryRiskMax = TrainingSystemConstants.InjuryRiskMax;
 
         #endregion
 
@@ -115,14 +135,6 @@ namespace TacticalDirector.InjuriesMedical
 
         /// <summary>[GT] Per-mille numerator classified <see cref="InjurySeverity.Moderate"/> (cumulative with Minor); the remainder is <see cref="InjurySeverity.Serious"/>. Minor + Moderate MUST be ≤ <see cref="SEVERITY_PERMILLE_DENOM"/> — a catalogue invariant. Config key [injuries-medical] SeverityModeratePermille.</summary>
         public static readonly int SeverityModeratePermille = Config.GetInt("injuries-medical", "SeverityModeratePermille", 300);
-
-        /// <summary>
-        /// [GT] Occurrence-risk clamp ceiling, and — through <see cref="OccurrenceDrawDenom"/> — the
-        /// draw's range. The same scale #29's <c>InjuryRiskContribution.RiskScore</c> uses (§3.4), so
-        /// the two catalogues' values are equal by contract; a test asserts it rather than leaving the
-        /// coupling to prose. Config key [injuries-medical] InjuryRiskMax.
-        /// </summary>
-        public static readonly int InjuryRiskMax = Config.GetInt("injuries-medical", "InjuryRiskMax", 10000);
 
         /// <summary>[GT] Integer weight on #29's already-published <c>InjuryRiskContribution.RiskScore</c> in the risk assembly (§3.4). Config key [injuries-medical] TrainingRiskPassthroughWeight.</summary>
         public static readonly int TrainingRiskPassthroughWeight = Config.GetInt("injuries-medical", "TrainingRiskPassthroughWeight", 1);
@@ -205,5 +217,9 @@ namespace TacticalDirector.InjuriesMedical
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                  |
-// | 1.0     | 2026-08-05 | —      | Initial implementation (#41 T0): Appendix A catalogue. |
+// | 1.0     | 2026-08-05 | —      | Initial implementation (#41 T0): Appendix A catalogue.              |
+// | 1.1     | 2026-08-05 | —      | AR pass 1 (H): InjuryRiskMax re-tagged [GT] -> [CROSS], mirroring   |
+// |         |            |        | TrainingSystemConstants rather than taking a second config key       |
+// |         |            |        | ([injuries-medical] vs [training-system]) for one contract scale.    |
+// |         |            |        | ERR-041-003.                                                        |
 #endregion
