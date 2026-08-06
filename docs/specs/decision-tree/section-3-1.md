@@ -11,8 +11,8 @@ selected downstream. All attribute references are cross-referenced to `PlayerAtt
 as DT requirements pending Spec #20 master attribute registry.
 
 **Created:** March 01, 2026, 3:30 PM PST
-**Updated:** August 5, 2026 (v1.4 — ERR-008-021: §3.1.4.3's shot lane adopts the §3.1.3.3 model; the v1.3 deferral scope note is discharged)
-**Version:** 1.4
+**Updated:** August 6, 2026 (v1.5 — ERR-008-022: §3.1.4.3's lane bound moves to the goal-line plane; the §3.2.2 delegation and the GoalVisibilityScore/GoalOpeningScore name split corrected)
+**Version:** 1.5
 **Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate; see §9 approval checklist). v1.1.1 (May 15, 2026): ERR-012-002 stale spec ref correction (§3.1.7.2 "Spec #14" → "Positioning AI, Spec #12"). v1.1.2 (May 17, 2026): ERR-013-004 stale spec name correction (§3.1.8.1 "Fatigue System #13" → "Pressing AI #13"). Both are single-token non-behavioral patches; no formula, contract, or pipeline change. Approval status preserved.
 **Specification Number:** 8 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -524,7 +524,7 @@ Gate condition:
   (2)  PerceptionSnapshot.BallVisible == true
          — must currently see the ball (prevents phantom shots)
   (3)  pass_distance_to_goal ≤ ShootingRange(AgentAttributes)    [§3.1.4.2]
-  (4)  goal_visibility_score > MIN_GOAL_VISIBILITY                [§3.1.4.3]
+  (4)  GoalOpeningScore > MIN_GOAL_VISIBILITY                     [§3.1.4.3]
          — MIN_GOAL_VISIBILITY = 0.12 [GT]  (retuned 0.05 → 0.12, July 27, 2026, shot-outcome
            design KD-7: at 0.05 it equalled the §3.2.3.2 step-5 GOAL_OPENING_MIN floor, so the
            gate could only fire on the degenerate zero-arc return and a fully walled-off shot
@@ -585,19 +585,32 @@ goal_right = MatchContext.OpponentGoalCentre + Vector2(0, +3.66)
 total_goal_arc    = AngularSpan(goal_left, goal_right, AgentPosition)    // degrees
 blocked_goal_arc  = 0.0
 
-// For each visible opponent between agent and goal line:
-foreach O in VisibleOpponents where IsInShotPath(O):
+// For each visible opponent, weighted by how far into the shooting lane he is:
+foreach O in VisibleOpponents:
     // Angular OVERLAP of O's blocking disc with the goal arc, scaled by O's
-    // perceived blocking ability. Full derivation and constants: §3.2.3.2.
+    // perceived blocking ability and by ShotPathWeight(O). Full derivation and
+    // constants: §3.2.3.2 (steps 3a–4).
     blocked_goal_arc += BlockedArcContribution(O)
 
 unblocked_goal_arc = Max(total_goal_arc − blocked_goal_arc, 0.0)
-GoalVisibilityScore = unblocked_goal_arc / total_goal_arc    // [0.0, 1.0]
+GoalOpeningScore = unblocked_goal_arc / total_goal_arc    // [0.0, 1.0]
 ```
 
-`IsInShotPath(O)` is true if opponent O is between the agent and the goal (along the
-axis of the shot, not the pass lane model). Identical in concept to §3.1.3.3 but
-the target is the goal plane rather than a teammate position.
+`ShotPathWeight(O)` is zero when O stands **past the opponent goal-line plane** or behind
+the shooter, and ramps from zero to one with his lane depth (§3.2.3.2 step 3a). Identical
+in concept to §3.1.3.3 but the target is the goal plane rather than a teammate position.
+
+> **ERR-008-022 (August 6, 2026).** The predicate this replaces, `IsInShotPath(O)`, bounded
+> the lane by `proj < distToGoalCentre` — a plane through the **centre spot**, perpendicular
+> to the shot. For any off-centre shooter that plane cuts diagonally across the goal mouth,
+> so the **far-post** blocker fell outside it and was silently discarded (measured on 100%
+> of 20,213 sampled in-range off-centre shooters), and a keeper on his line at goal centre
+> gave `proj == distToGoal` exactly and was dropped for *every* shooter position — the shot
+> read as a fully open goal. The mirror case admitted an opponent standing *behind* the goal
+> line, in the net, at the goalkeeper's larger radius. Since the far post is half of what a
+> shooter is aiming at, the ERR-008-021 overlap model above was being denied much of the
+> geometry it exists to price. Its near bound was likewise a hard predicate that flipped a
+> whole SHOOT decision on one centimetre (§3.2.3.2 correction (b)).
 
 **ERR-008-021 — the §3.1.3.3 model extended to the shot lane** (the follow-up deferred at
 the ERR-008-020 landing per football-judgment proxy review §6.4, now closed). The
@@ -620,8 +633,16 @@ shape, so the two cannot drift:
   Goalkeeper Mechanics #11 — its §3.5 save model, and its §3.7.0 rush, which *sets* this
   geometry — so pricing it here as well would charge the shooter twice for one keeper.
 
-`GoalVisibilityScore` is stored in the `ShootOption` and consumed by §3.2.2 (SHOOT
-utility formula: `GoalOpeningScore` field).
+`GoalOpeningScore` is stored in the `ShootOption` and consumed by **§3.2.3.1** (the SHOOT
+utility formula) via its `GoalOpeningScore` field; the value's own derivation is §3.2.3.2.
+It also gates option existence here (§3.1.4.1 condition 4, `MIN_GOAL_VISIBILITY`) and sets
+`PowerIntent` in §3.5.3.
+
+> **ERR-008-022:** this delegation formerly pointed at **§3.2.2, the PASS utility formula** —
+> the same defect as ERR-008-018, in the section that landed one day after it. The field is
+> also named `GoalVisibilityScore` in three places above and `GoalOpeningScore` everywhere
+> downstream; §3.2.3.2, the code, and the option struct all use `GoalOpeningScore`, so this
+> section is unified onto that name.
 
 ---
 
@@ -991,4 +1012,4 @@ scoring is §3.2 (unchanged — it is an INTERCEPT), dispatch §3.5.
 | 1.2 | August 4, 2026 | — | ERR-008-018 back-prop (close-chance-creation pass, §5.Z.24): §3.1.5.2's closing delegation pointed the DRIBBLE directional-to-goal modifier at **§3.2.2, the PASS formula**, so the promised term was never given a home and §3.2.4.1 shipped without it. Cross-reference corrected to §3.2.4.1 and the measured consequence recorded inline (final-third dribbles: 40% of carrier decisions, mean cosine to goal −0.30 over six full matches). Generation-stage behaviour is UNCHANGED — `best_direction` is still the free-space argmax; only the delegation target is corrected. |
 | 1.3 | August 4, 2026 | — | ERR-008-020 (football-judgment proxy review §6.4 — the doctrine's template fix; spec + code, same commit). §3.1.3.3 rewritten: the binary 0.8 m `is_interceptor` corridor (a 2 cm positional cliff, blind to defender identity) becomes a continuous per-opponent threat weight — linear positional falloff (core 0.4 m [GT], zero at 1.2 m [GT]; ramp centred on the old cliff so integrated threat is preserved) × the defender's Anticipation/Pace ability (0.6–1.4 [GT], average ⇒ exactly 1.0) read through the passer's Vision fidelity (floor 0.2 [GT] — doctrine P2, low Vision degrades to the attribute-blind read). `PASS_LANE_WIDTH_HALF` removed; lane floor, endpoint margin, and `PASS_LANE_DIVISOR` unchanged. §3.1.4.3 gains the scope note deferring the shot lane to a follow-up. Consumers: `UtilityWeights.cs` v1.7, `OptionGenerator.cs` v1.6, `DecisionContext(.Assembler).cs`, `DecisionTree.cs` v1.6, `MatchEngine.cs` v1.61 (the attribute-view wiring). |
 | 1.4 | August 5, 2026 | — | ERR-008-021 (the v1.3 deferral, now closed; spec + code, same commit). §3.1.4.3's shot lane adopts the §3.1.3.3 model, and the scope note deferring it is replaced by the shape of the fix. Two defects, the same two the pass lane had: the wedge-containment test counted an opponent's WHOLE blocking width when his angular centre fell inside the goal arc and nothing at all when it fell outside (a cliff at the post direction — ~0.41 of GoalOpeningScore across 4 cm on the §5 fixture, and a defender across the near post scoring a fully open goal), and the width was body radius alone, blind to whether the man could actually get across the shot. Now: the true angular OVERLAP of the disc with the arc (continuous by construction; integrates to the identical occlusion over a uniformly-placed blocker — P5) × the blocker's Anticipation/Positioning ability (`SHOT_BLOCKER_ABILITY_MIN/MAX` 0.6–1.4 [GT], average ⇒ exactly 1.0) read through the SHOOTER's Vision fidelity (the §3.1.3.3 dial, deliberately shared — P2). Goalkeeper exempt from the ability term (P3 — #11 §3.5/§3.7.0 owns keeper shot-stopping). Authoritative derivation: §3.2.3.2. Consumers: `UtilityWeights.cs` v1.11, `OptionGenerator.cs` v1.7, `OptionGeneratorTests.cs` v1.7. |
-
+| 1.5 | August 6, 2026 | — | ERR-008-022 (adversarial review over the ERR-008-021 landing; spec + code, same commit). §3.1.4.3's `IsInShotPath` bounded the shooting lane by the distance to the goal CENTRE — a plane that cuts diagonally across the goal mouth for any off-centre shooter, so the FAR-POST blocker was discarded (measured on 100% of 20,213 sampled in-range off-centre shooters) and a keeper on his line at goal centre was dropped for every shooter position, while an opponent standing BEHIND the goal line was admitted at the keeper's larger radius. Replaced by `ShotPathWeight`: bounded by the goal-line PLANE, and ramping in with lane depth rather than gating hard at `GOAL_MIN_SHOT_DIST` (which flipped a whole SHOOT decision on one centimetre). Derivation and constants: §3.2.3.2 steps 3a–4. Two cross-reference corrections in the same section: the closing delegation pointed at **§3.2.2, the PASS utility formula** (the ERR-008-018 defect verbatim, in text written one day after it) — corrected to §3.2.3.1; and the field was called `GoalVisibilityScore` here and `GoalOpeningScore` in §3.2.3.2, the option struct and the code — unified onto `GoalOpeningScore`. |

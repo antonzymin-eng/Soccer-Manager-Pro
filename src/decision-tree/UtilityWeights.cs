@@ -9,6 +9,7 @@
 // Modified: 2026-08-05 (ERR-008-019 owner revision — LONG_SHOT_RAMP_HALF_WIDTH 0.05 → 0.25: full-range ramp, no plateaus)
 // Modified: 2026-08-05 (ERR-008-019 AR — LONG_SHOT_RAMP_HALF_WIDTH XML doc: the (0, 0.25] range is the formula's validity domain; the suite pins 0.25)
 // Modified: 2026-08-05 (ERR-008-021 — shot-lane block model: + SHOT_BLOCKER_ABILITY_MIN/MAX [GT]; LANE_VISION_FIDELITY_FLOOR redocumented as the shared P2 dial)
+// Modified: 2026-08-06 (ERR-008-022 — + SHOT_BLOCKER_NEAR_FADE_M / GK_PROXIMITY_FADE_M [GT]: the two remaining shot-lane predicates become ramps)
 // Author:   —
 // Spec:     Decision Tree #8 §3.2.11, Code Standards #20
 // Purpose:  Authoritative constant catalogue for the utility scoring model.
@@ -139,8 +140,32 @@ namespace TacticalDirector.DecisionTree
         public const float GOAL_OPENING_MIN = 0.05f;  // [GT] minimum goal opening score floor
         public const float BLOCKER_RADIUS_M = 0.50f;  // [GT] outfield player body width in shot lane
         public const float GK_BLOCKER_RADIUS_M = 1.50f;  // [GT] goalkeeper effective blocking radius
-        public const float GK_PROXIMITY_TO_GOAL = 6.00f;  // [GT] distance from goal line to classify as GK
-        public const float GOAL_MIN_SHOT_DIST = 1.00f;  // [GT] minimum dist to count as blocker
+        public const float GK_PROXIMITY_TO_GOAL = 6.00f;  // [GT] distance from goal line at which a blocker reads as fully goalkeeper
+        public const float GOAL_MIN_SHOT_DIST = 1.00f;  // [GT] lane depth below which a blocker contributes nothing
+
+        /// <summary>
+        /// [GT] Depth (m) beyond GOAL_MIN_SHOT_DIST over which a blocker's occlusion ramps
+        /// from nothing to his full geometric share. The bound was a hard predicate: a
+        /// blocker at 0.995 m of lane depth left the goal fully open (score 1.000) and one
+        /// at 1.005 m shut it to the GOAL_OPENING_MIN floor (0.050) — below
+        /// MIN_GOAL_VISIBILITY, so one centimetre of his position also decided whether a
+        /// SHOOT option existed at all. Doctrine P1: continuous, never a cliff.
+        /// §3.1.4.3, ERR-008-022.
+        /// </summary>
+        public const float SHOT_BLOCKER_NEAR_FADE_M = 1.00f;
+
+        /// <summary>
+        /// [GT] Width (m) of the band beyond GK_PROXIMITY_TO_GOAL over which a blocker
+        /// reads as progressively less goalkeeper. The classification was a hard predicate
+        /// on distance to the goal line, so 2 cm of a defender's position flipped his
+        /// blocking radius 0.50 ⇒ 1.50 m and his exemption from the ability term together —
+        /// a measured GoalOpeningScore step of 0.768 ⇒ 0.311 at the 15 m fixture. Both
+        /// quantities now lerp on the same scalar. Absent a goalkeeper flag on
+        /// PerceivedAgent this proximity read stays a heuristic; making it continuous is
+        /// what stops the heuristic's boundary from being a decision cliff.
+        /// §3.2.3.2, ERR-008-022.
+        /// </summary>
+        public const float GK_PROXIMITY_FADE_M = 2.00f;
 
         // ── Shot-lane block model (§3.1.4.3 / §3.2.3.2, ERR-008-021 / doctrine P1+P2) ──
         // The blocked arc was the blocker's FULL angular width whenever its angular centre
@@ -366,4 +391,14 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        | lane judgments — fidelity belongs to the assessor's Vision, not to what   |
 // |         |            |        | is being assessed, so a second copy would be a parallel surface, not a    |
 // |         |            |        | second parameter. No value changed.                                       |
+// | 1.12    | 2026-08-06 | —      | ERR-008-022 (adversarial review over the -021 landing). Two [GT]s added,    |
+// |         |            |        | both ramp widths that turn a hard predicate into a slope (doctrine P1):     |
+// |         |            |        | SHOT_BLOCKER_NEAR_FADE_M = 1.0 m over GOAL_MIN_SHOT_DIST (which flipped     |
+// |         |            |        | GoalOpeningScore 1.000 → 0.050 across 1 cm of lane depth, and with 0.050    |
+// |         |            |        | sitting below MIN_GOAL_VISIBILITY also decided whether a SHOOT option       |
+// |         |            |        | existed), and GK_PROXIMITY_FADE_M = 2.0 m over GK_PROXIMITY_TO_GOAL         |
+// |         |            |        | (which flipped the blocking radius 0.50 ⇒ 1.50 m and the P3 ability         |
+// |         |            |        | exemption together — a measured 0.768 ⇒ 0.311 step over 2 cm). No           |
+// |         |            |        | existing value changed; GOAL_MIN_SHOT_DIST and GK_PROXIMITY_TO_GOAL are     |
+// |         |            |        | now ramp anchors rather than predicates.                                    |
 #endregion

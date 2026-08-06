@@ -224,12 +224,11 @@ public static class UtilityWeights
     public const float MOVE_PHASE_CONTESTED = 1.00f;  // Neutral
 
     // ── Tactical Pressing Modifiers ─────────────────────────────────────────────────
-    // Stage 0: all agents use MEDIUM (1.00) — both teams identical.
-    // Stage 1: Formation System will set PressingMode per team instruction.
-
-    public const float PRESS_TACTICAL_HIGH   = 1.40f; // [GT] High press instruction
-    public const float PRESS_TACTICAL_MEDIUM = 1.00f; // Stage 0 default for all agents
-    public const float PRESS_TACTICAL_LOW    = 0.60f; // [GT] Low press instruction
+    // ERR-008-022: PRESS_TACTICAL_HIGH/MEDIUM/LOW were DELETED from UtilityWeights.cs by
+    // the §3.4.7 audit (unconsumed duplicates of TacticalWeights, which §3.4.7 declares the
+    // exclusive owner of these values — the parallel-surface drift hazard). This catalogue
+    // went on declaring them, and a stale declaration in a normative catalogue is an
+    // instruction to re-add them. They live in TacticalWeights; see §3.4.7.
 
     // ── Constant Count Summary ──────────────────────────────────────────────────────
     // Total constants: 58 (increased from 52 in v1.0: +2 GK blocker, +2 MOVE suppression,
@@ -251,7 +250,7 @@ public static class UtilityWeights
     //   Priority 1 — tune after first playable build:
     //     U_BASE_* constants, ZONE_* modifiers, RISK_COEFF constants
     //   Priority 2 — tune after position role differentiation:
-    //     MOVE_PRESS_SUPPRESSION_*, PRESS_TACTICAL_*, PhaseModifiers
+    //     MOVE_PRESS_SUPPRESSION_*, TacticalWeights pressing modifiers, PhaseModifiers
     //   Priority 3 — tune with academic review target:
     //     All attribute EXP constants — flag for literature cross-check in §8.2
     //   Do not retune: UTILITY_FLOOR, UTILITY_CEILING (structural invariants)
@@ -393,15 +392,10 @@ worst option. The option set is passed to `SelectAction()` (§3.3).
 
 ## 3.2.13 Version History
 
-| Version | Date | Author | Changes |
-|---------|------|--------|---------|
-| 1.0 | March 01, 2026, 7:00 PM PST | Claude (AI) / Anton | Initial draft. Complete utility scoring for all 7 action types. Numerical verification for all 7 formulas. Cross-formula dominance analysis. Full UtilityWeights.cs constant catalogue (52 constants). Worked example from §3.1.11 extended through full scoring pass. Three design clarifications: (1) GoalOpeningScore gap — resolved via PitchGeometry static class (no Perception System amendment required). (2) MOVE_TO_POSITION Positioning attribute inversion — corrected from outline's `(1−A×0.4)` bug to `(0.5+A×0.5)^exp` positive form. (3) LongShots threshold derivation — outline's "raw ≥ 15" comment corrected to "raw ≥ 11" (matches LONG_SHOT_THRESHOLD = 0.75 constant). |
-| 1.2 | March 02, 2026, 12:00 PM PST | Claude (AI) / Anton | **Composure exponent split formalised.** Resolved architectural inconsistency between SHOOT_COMPOSURE_EXP (0.30) and HOLD_COMPOSURE_EXP (0.50). Values unchanged. Formal ⚠ DESIGN DECISION block inserted after §3.2.5.1 with three independent grounds: (1) discrete event vs. sustained state; (2) graded degradation vs. viability gate; (3) structural compensation for absent RiskPenalty in HOLD formula. Numerical comparison at Composure=10 and Composure=3 provided. Constant catalogue comments for both exponents rewritten with cross-references. SHOOT_COMPOSURE_EXP retag [EST]→[GT] (Beilock concave form confirmed but specific value is gameplay-tuned; DOI retained in comment). Exponent audit closed: all 14 exponents confirmed [GT] with concave form noted. |
-| 1.1 | March 01, 2026, 9:30 PM PST | Claude (AI) / Anton | Four weaknesses resolved: (1) **GK blocker radius** — replaced flat BLOCKER_RADIUS = 0.5m with GK-specific GK_BLOCKER_RADIUS = 1.5m for opponents within GK_PROXIMITY_TO_GOAL = 6.0m of goal line. Positional heuristic documented; Stage 1 replacement with AgentState.Role flag noted. (2) **MOVE vs PRESS imbalance** — added PressProximityPenalty term to MOVE formula: 40% reduction (factor 0.60) when nearest visible opponent ≤ 6.0m. Verified: dedicated pressers now select PRESS over MOVE at close range; positional players still prefer shape recovery. §3.2.6.2 rationale expanded. §3.2.6.3 Case C added. (3) **HOLD/PASS narrow margin** — U_BASE_HOLD raised 0.25 → 0.28; HOLD_PRESSURE_COEFF reduced 0.60 → 0.50. HOLD worst case raised from 0.057 → 0.079; margin over PASS worst case (0.064) doubled from 0.007 → 0.015. HOLD ceiling raised to 0.350, still below PASS normal (0.490+). Worked example HOLD score updated 0.236 → 0.272. (4) **[EST] citation expansion** — SHOOT_COMPOSURE_EXP: full Beilock & Carr (2001) DOI added. INTERCEPT_ANTICIPATION_EXP: updated to Müller & Abernethy (2006) with DOI. Stage 1 tuning roadmap added to UtilityWeights.cs summary. Constant count updated to 58. |
+The §3.2 version history is maintained in **`section-3-2.md` §3.2.13**, which is the single
+authoritative copy.
 
----
-
-*End of Section 3.2 — Option Scoring: Utility Model*
-
-*Decision Tree Specification #8 | Tactical Director — Specification #8 of 20 | Stage 0: Physics Foundation*
-*Next: Section 3.3 — Final Action Selection: Composure Model*
+> **ERR-008-022:** a second, divergent copy of this table lived here and had not been
+> updated since March 2026 — eleven §3.2 revisions, including four ERR back-props, were
+> absent from it. A stale duplicate of a version history is worse than no duplicate: it
+> reads as a complete record. Removed in favour of the pointer above.

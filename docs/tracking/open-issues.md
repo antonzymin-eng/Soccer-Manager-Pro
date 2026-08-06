@@ -45,21 +45,30 @@ history by the original convention; they were not merged.
   geometry alone (P3): #11 §3.5's save model and §3.7.0's rush — which *sets* the geometry this
   function measures — own his shot-stopping, so pricing it here too would charge the shooter twice
   for one keeper; locked by a test that moves the keeper between the attribute extremes and asserts
-  the score does not move. **P5 holds exactly, not approximately:** over a uniformly-placed blocker
-  the old rule integrates a rectangle of area `4h·halfArc` and the overlap a trapezoid of the same
-  area, for every disc width and arc, so the fix redistributes occlusion from a step to a slope and
-  from anonymous bodies to identified ones without opening or closing the goal on average. No
+  the score does not move. **P5 pivot:** over a uniformly-placed blocker the old rule
+  integrates a rectangle of area `4h·halfArc` and the overlap a trapezoid of the same area, so the
+  fix redistributes occlusion from a step to a slope and from anonymous bodies to identified ones
+  without opening or closing the goal on average. *(This originally read "for every disc width and
+  arc" — **corrected at ERR-008-022**: it is false above `h = halfArc`, where the old model's
+  per-opponent clamp saturates and the trapezoid does not, up to **2×**; that regime is any blocker
+  within ~2.7 m of a 20 m shooter. It was the stated reason no recalibration was needed; the reason
+  is withdrawn and the residual left for the balance pass.)* No
   schema / RNG / domain-tag / draw-site / draw-order change. **Digest invariance is NOT claimed and
   is false** — the -019 lesson applied while authoring rather than at review: this model is live on
   every SHOOT candidate the generator produces and moves for any blocker who is not both exactly
   average and wholly inside the arc, so a tick-window or rate-band instrument that trips at the
   first gate run should be checked against this before being read as a regression. 9
-  `OptionGeneratorTests` locks; a reference implementation of both models, run over all nine locks, confirms that **5 of the 8 evaluable against the old model FAIL on it** — continuity (step 0.405 against the asserted < 0.05), the straddling blocker (1.000, not < 1.0), home discrimination, the low-Vision separation (pre-fix gap exactly zero) and the away mirror; the two P5 pivot rows and null-view neutrality pass pre-fix by construction, and the MIN/MAX-midpoint invariant cannot be evaluated pre-fix because the constants are new. **Gate NOT run — no .NET SDK in the authoring environment.** **Recorded, not fixed:**
-  (a) `IsInShotPath`'s corridor end-bounds are still hard — a near-end step at `GOAL_MIN_SHOT_DIST`
-  = 1.0 m where the occlusion angle is enormous, and an exclusive far bound (`proj < distToGoal`)
-  that drops a keeper standing exactly on his line on the shot axis; left alone deliberately, since
-  in-front-of versus behind the goal line is a physical fact rather than a football judgment and P1
-  does not obviously reach it. (b) **§3.2.10's constant catalogue has now been left behind by five
+  `OptionGeneratorTests` locks; a reference implementation of both models, run over all ten locks, confirms that **5 of the 9 evaluable against the old model FAIL on it** — continuity (step 0.405 against the asserted < 0.05), the straddling blocker (1.000, not < 1.0), home discrimination, the low-Vision separation (pre-fix gap exactly zero) and the away mirror; the two P5 pivot rows and null-view neutrality pass pre-fix by construction, and the MIN/MAX-midpoint invariant cannot be evaluated pre-fix because the constants are new. **Gate NOT run — no .NET SDK in the authoring environment.** **Recorded, not fixed:**
+  (a) `IsInShotPath`'s corridor end-bounds — **FIXED at ERR-008-022 (August 6, 2026), and they were
+  the larger defect in this section.** The deferral reasoning above was wrong on its own terms: the
+  far bound was not a judgment collapsed into a threshold, it was **the wrong plane**. `proj <
+  distToGoal` describes a plane through the goal *centre*, which for any off-centre shooter cuts
+  diagonally across the goal mouth — it discarded the **far-post** blocker on **20,213 of 20,213**
+  sampled in-range off-centre shooters and dropped a keeper on his line at goal centre for *every*
+  shooter position (shooter (95,20) read a **completely open goal**), while admitting an opponent
+  standing *behind* the goal line at the keeper's radius. The near bound was a 0.95 step (1.000 →
+  0.050 across 1 cm, taking the SHOOT option with it), more than twice the cliff -021 removed. See
+  ERR-008-022. (b) **§3.2.10's constant catalogue has now been left behind by five
   consecutive #8 landings** (-016, -017, -018, -019, -020 and this one all defined their constants
   in their own §3 subsection tables), so its "Total constants: 58" summary is wrong by at least
   nine; it wants one reconciliation pass of its own rather than a sixth half-correction.

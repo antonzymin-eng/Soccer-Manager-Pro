@@ -12,7 +12,65 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 5, 2026, latest same day (**ERR-008-021 — the shot-lane occlusion
+> **Last Updated:** August 6, 2026 (**ERR-008-022 — the shot lane threw away the far post
+> before the occlusion model ever ran.** From the adversarial review over the ERR-008-021
+> landing, one day old, in three hostile passes. #8 §3.1.4.3's lane test bounded the shooting
+> lane by the distance to the goal **centre** — a plane that, for any shooter not on the goal's
+> centre line, cuts diagonally across the goal mouth. Measured: the **far-post** blocker was
+> discarded and the near-post one kept on **20,213 of 20,213** sampled in-range off-centre
+> shooters; a keeper standing on his line at goal centre gave `proj == distToGoal` exactly and
+> was dropped for *every* shooter position, so shooter (95,20) with a keeper in front read
+> **1.000, a completely open goal**; and the mirror case admitted an opponent standing *behind*
+> the goal line, in the net, at the keeper's 1.5 m radius. The far post is half of what a
+> shooter aims at, so ERR-008-021's whole reason for existing — pricing partial occlusion at
+> the posts — was being denied its geometry upstream. Two further hard predicates in the same
+> derivation turned out to be **larger cliffs than the one -021 removed**: `GOAL_MIN_SHOT_DIST`
+> stepped `GoalOpeningScore` 1.000 → 0.050 across one centimetre of lane depth, and since 0.050
+> sits below `MIN_GOAL_VISIBILITY` it deleted the SHOOT option with it; and the goalkeeper
+> classification stepped it 0.768 → 0.311 across 2 cm — a step -021 had *widened* to 0.551 by
+> making it attribute-dependent, three lines from the code it rewrote, unrecorded. All three
+> fixed: goal-line-plane bound, plus two new `[GT]` ramp widths (`SHOT_BLOCKER_NEAR_FADE_M` =
+> 1.0 m, `GK_PROXIMITY_FADE_M` = 2.0 m) turning the remaining predicates into slopes, with
+> `gkness` lerping the blocking radius and the P3 ability exemption together.
+>
+> **Three of the -021 landing's own verification claims were false** and are corrected in the
+> record rather than left standing. (1) The **P5 exactness** argument — "the old rectangle and
+> the new trapezoid integrate to `4h·halfArc` for every `h`, including `h > halfArc`" — is wrong
+> above `h = halfArc`, where the old model's per-opponent clamp saturates and the trapezoid does
+> not: measured **1.198×** at `h`=10°/`halfArc`=8.35° and **2.000×** at `h`=16.7°, reachable for
+> any blocker within ~2.7 m of a 20 m shooter. That claim was the stated reason no recalibration
+> was needed; the reason is withdrawn and the residual left for the balance pass (KD-W1).
+> (2) The **test count**: **10** locks, 9 evaluable, 5 fail / 4 pass — not "9 locks, 5 of 8",
+> published in six documents. (3) The **§3.2.3.2 worked example**: its opponent sat 4.5 m from
+> the goal line, so the algorithm classified him a **goalkeeper** and exempted him from the very
+> ability term the example demonstrated — every number in it, including the two new derived ones,
+> was unreachable. Re-derived with a genuine outfielder and re-expressed in corner-origin
+> coordinates (it was written in the abolished centre-origin frame).
+>
+> **The suite was inadequate to its own claim.** The over-blocking half of ERR-008-021 had **no
+> lock at all** — the only test reaching a partial overlap asserted `< 1.0` rather than the
+> value, so a mutant restoring the pre-fix full-width contribution **passed all ten locks**; 8 of
+> 12 plausible mutants survived. Every fixture put the shooter on the goal's centre line, which
+> made `bisector` and the post clipping untestable and the away "mirror" bit-identical to the
+> home case. And `ShotLane_NullAttributeView_IsAbilityNeutral` was a **tautology**: the helper's
+> own `if (attrs != null)` guard discards the differing arguments, so it asserted `f(x) == f(x)`
+> — the exact shape the ERR-008-020 review caught one landing earlier, in a commit that claimed
+> to have avoided it "at authoring time rather than at review". The pass-lane twin had it too.
+> Suite 10 → **15** locks, all six new ones asserting values or continuity rather than
+> inequalities.
+>
+> Spec §3.1.4.3 v1.5 + §3.2 v1.13 (which also writes the **v1.12 row ERR-008-021 never wrote** —
+> §3.2.3.2 was rewritten inside that section with no version-history entry) + `OptionGenerator.cs`
+> v1.8 / `UtilityWeights.cs` v1.12 / `DecisionTreeConstants.cs` v1.5 / `OptionGeneratorTests.cs`
+> v1.8, same commit. Three §8 documentation defects cleared alongside: §3.1.4.3 delegated
+> `GoalOpeningScore` to **§3.2.2, the PASS formula** (ERR-008-018 verbatim, in text written one
+> day after it); the field was named `GoalVisibilityScore` there and `GoalOpeningScore` everywhere
+> downstream; and a stale duplicate of the §3.2.13 version history, eleven revisions behind, was
+> removed in favour of a pointer. **Digest invariance NOT claimed** — every change is live on
+> generated shots. **Gate NOT run — no .NET SDK in the authoring environment**; every number above
+> is closed-form derivation cross-checked against a Python reference implementation of both models.)
+
+> **Last Updated (prior):** August 5, 2026, latest same day (**ERR-008-021 — the shot-lane occlusion
 > test told a defender across the near post from an open goal.** The §6.4 follow-up the
 > ERR-008-020 template fix deliberately deferred, now discharged; third fix under the
 > football-judgment proxy review's remediation doctrine. #8 §3.1.4.3 / §3.2.3.2's
@@ -62,11 +120,11 @@ break it, and do not edit historical entries.
 > claims, and the P5 integration argument says the *mean* should not move, so a trip is not expected;
 > it is also not ruled out, and a trip should be read against this landing before being read as a
 > regression.
-> Locked by **9 `OptionGeneratorTests`** (v1.7), including the P5 pivot on the *computed* path as
+> Locked by **10 `OptionGeneratorTests`** (v1.7), including the P5 pivot on the *computed* path as
 > well as the null-view path (Anticipation 10 / Positioning 11 ⇒ mean01 = 0.5 exactly — the
 > ERR-008-020 AR-1 M-1 lesson, applied while authoring instead of at review), the GK exemption
 > proved by moving the keeper's attributes between the extremes, and the away mirror. A reference
-> implementation of both models, run over all nine locks, confirms **5 of the 8 that can be
+> implementation of both models, run over all ten locks, confirms **5 of the 9 that can be
 > evaluated against the old model fail on it** — continuity (step 0.405 vs the asserted < 0.05),
 > the straddling blocker (1.000, not < 1.0), home discrimination, the low-Vision separation (the
 > pre-fix gap is exactly zero) and the away mirror. The remaining three — both P5 pivot rows and

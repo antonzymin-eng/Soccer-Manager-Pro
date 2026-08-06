@@ -5,6 +5,7 @@
 // Modified: 2026-07-28 (ERR-008-016 — PowerIntent floor-plus-modulation (shot-speed design KD-1))
 // Modified: 2026-08-04 (ERR-008-020 — CountInterceptors → ComputeLaneThreat: continuous falloff × Vision-read Anticipation/Pace ability)
 // Modified: 2026-08-05 (ERR-008-021 — shot lane: wedge-containment cliff → true angular overlap × Vision-read Anticipation/Positioning ability)
+// Modified: 2026-08-06 (ERR-008-022 — the lane's far bound moves to the goal-line plane; the near bound and the goalkeeper read become ramps)
 // Author:   —
 // Spec:     Decision Tree #8 §3.1, Code Standards #20
 // Purpose:  Step 3 of the 6-step pipeline. Generates all eligible ActionOption
@@ -355,7 +356,7 @@ namespace TacticalDirector.DecisionTree
             if (distToGoal > shootingRange) return count;
 
             // Goal visibility (§3.1.4.3)
-            float goalOpeningScore = ComputeGoalOpeningScore(in ctx, distToGoal);
+            float goalOpeningScore = ComputeGoalOpeningScore(in ctx);
             if (goalOpeningScore < UtilityWeights.MIN_GOAL_VISIBILITY) return count;
 
             // PowerIntent (§3.5.3, ERR-008-016): floor-plus-modulation. The former
@@ -420,7 +421,7 @@ namespace TacticalDirector.DecisionTree
         // Mechanics #11's to price (§3.5 save model, and the #11 §3.7.0 rush that sets
         // this very geometry); pricing it here too would charge the shooter twice for the
         // same keeper.
-        private static float ComputeGoalOpeningScore(in DecisionContext ctx, float distToGoal)
+        private static float ComputeGoalOpeningScore(in DecisionContext ctx)
         {
             Vector2 agentPos  = ctx.AgentPosition;
             Vector2 goalPostL = ctx.OpponentGoalPostL;
@@ -428,11 +429,6 @@ namespace TacticalDirector.DecisionTree
 
             float totalArc   = AngularSpan(agentPos, goalPostL, goalPostR);
             if (totalArc <= 0.0f) return 0.0f;   // degenerate: agent on the goal line
-
-            // Squared length below which the post directions are treated as opposed and the
-            // bisector as undefined. Named per the project magic-number rule; it is a
-            // degenerate-geometry guard, not a tunable.
-            const float BisectorDegenerateSqrLen = 1e-8f;
 
             Vector2 dirL = (goalPostL - agentPos).normalized;
             Vector2 dirR = (goalPostR - agentPos).normalized;
@@ -442,7 +438,10 @@ namespace TacticalDirector.DecisionTree
             // bisector degenerates only at a 180° arc — unreachable from anywhere a shot
             // is generated, but guarded rather than left to produce a zero vector.
             Vector2 bisector = dirL + dirR;
-            if (bisector.sqrMagnitude < BisectorDegenerateSqrLen) return 0.0f;  // as a zero arc
+            if (bisector.sqrMagnitude < DecisionTreeConstants.BisectorDegenerateSqrThreshold)
+            {
+                return 0.0f;   // as a zero arc
+            }
             bisector = bisector.normalized;
 
             float halfArc   = 0.5f * totalArc;
@@ -457,23 +456,29 @@ namespace TacticalDirector.DecisionTree
             {
                 Vector2 oPos = snap.VisibleOpponents[i].PerceivedPosition;
 
-                // Only opponents between agent and goal (§3.1.4.3 IsInShotPath)
-                if (!IsInShotPath(agentPos, ctx.OpponentGoalCentre, oPos,
-                    distToGoal, UtilityWeights.GOAL_MIN_SHOT_DIST)) continue;
+                // How much of this opponent's occlusion the lane admits at all
+                // (§3.1.4.3 ShotPathWeight): 0 behind the shooter or past the goal line,
+                // ramping to 1 with lane depth.
+                float laneWeight = ShotPathWeight(agentPos, ctx.OpponentGoalCentre, oPos,
+                    goalLineX, UtilityWeights.GOAL_MIN_SHOT_DIST);
+                if (laneWeight <= 0.0f) continue;
 
                 float dist = Vector2.Distance(agentPos, oPos);
-                if (dist < 0.001f) continue;
 
-                // §3.2.3.2 step 3 GK heuristic: distance to the GOAL LINE (X axis) —
-                // not to the goal centre, which misclassified a goal-line keeper
-                // positioned wide of centre as a 0.5 m outfield blocker (AR-2 M-7).
-                bool isGk = Mathf.Abs(oPos.x - goalLineX)
-                            <= UtilityWeights.GK_PROXIMITY_TO_GOAL;
-                float radius = isGk ? UtilityWeights.GK_BLOCKER_RADIUS_M
-                                    : UtilityWeights.BLOCKER_RADIUS_M;
+                // §3.2.3.2 GK read: distance to the GOAL LINE (X axis) — not to the goal
+                // centre, which misclassified a goal-line keeper positioned wide of centre
+                // as a 0.5 m outfield blocker (AR-2 M-7). A SCALAR, not a predicate: it
+                // lerps both the blocking radius and the P3 ability exemption, so the
+                // heuristic's boundary is a slope rather than the 0.768 ⇒ 0.311 step over
+                // 2 cm it was (ERR-008-022).
+                float gkness = 1.0f - Mathf.Clamp01(
+                    (Mathf.Abs(oPos.x - goalLineX) - UtilityWeights.GK_PROXIMITY_TO_GOAL)
+                    / UtilityWeights.GK_PROXIMITY_FADE_M);
+                float radius = Mathf.Lerp(UtilityWeights.BLOCKER_RADIUS_M,
+                                          UtilityWeights.GK_BLOCKER_RADIUS_M, gkness);
 
                 // The disc subtends [centre − halfWidth, centre + halfWidth]; intersect
-                // it with the goal arc [−halfArc, +halfArc] (§3.2.3.2 step 4).
+                // it with the goal arc [−halfArc, +halfArc].
                 Vector2 dirO    = (oPos - agentPos) / dist;
                 float halfWidth = Mathf.Atan2(radius, dist) * Mathf.Rad2Deg;
                 float centre    = SignedAngleDeg(bisector, dirO);
@@ -482,19 +487,22 @@ namespace TacticalDirector.DecisionTree
                               - Mathf.Max(centre - halfWidth, -halfArc);
                 if (overlap <= 0.0f) continue;
 
-                float ability = isGk
-                    ? 1.0f
-                    : PerceivedBlockAbility(in ctx, snap.VisibleOpponents[i].AgentId, fidelity);
+                // P3 ownership: the keeper's own shot-stopping is Goalkeeper Mechanics
+                // #11's to price, so the ability term fades out as gkness fades in.
+                float ability = Mathf.Lerp(
+                    PerceivedBlockAbility(in ctx, snap.VisibleOpponents[i].AgentId, fidelity),
+                    1.0f, gkness);
 
-                blockedArc += Mathf.Min(overlap * ability, totalArc);  // step 3 per-opponent clamp
+                blockedArc += Mathf.Min(overlap * ability * laneWeight, totalArc);
             }
 
-            blockedArc = Mathf.Min(blockedArc, totalArc);            // step 4 sum clamp
+            blockedArc = Mathf.Min(blockedArc, totalArc);
             float score = (totalArc - blockedArc) / totalArc;
 
-            // §3.2.3.2 step 5: floor at GOAL_OPENING_MIN ("a tiny gap always exists").
-            // With the floor inside the derivation, the §3.1.4.1 gate (4) rejects only
-            // the degenerate zero-arc case — as the spec intends.
+            // Floor at GOAL_OPENING_MIN ("a tiny gap always exists"). The floor (0.05)
+            // sits BELOW MIN_GOAL_VISIBILITY (0.12), so a fully occluded lane still fails
+            // the §3.1.4.1 gate (4) and generates no SHOOT — the floor bounds the score,
+            // it does not keep the option alive.
             return Mathf.Clamp(score, UtilityWeights.GOAL_OPENING_MIN, 1.0f);
         }
 
@@ -533,10 +541,11 @@ namespace TacticalDirector.DecisionTree
             return Mathf.Acos(Mathf.Clamp(Vector2.Dot(dirA, dirB), -1.0f, 1.0f)) * Mathf.Rad2Deg;
         }
 
-        // Signed angle from `from` to `to` in degrees, CCW-positive, in (−180, 180].
-        // Computed inline rather than via Vector2.SignedAngle so the shot-lane overlap
-        // depends on one arithmetic path we control (the sign convention is load-bearing:
-        // it is what places the goal arc symmetrically about its bisector).
+        // Signed angle from `from` to `to` in degrees, in (−180, 180]. Computed inline
+        // rather than via Vector2.SignedAngle so the shot-lane overlap depends on one
+        // arithmetic path we control. Which rotation sense counts as positive does NOT
+        // matter to the caller: the goal arc is symmetric about its bisector, so the
+        // overlap is an even function of this value.
         private static float SignedAngleDeg(Vector2 from, Vector2 to)
         {
             float cross = from.x * to.y - from.y * to.x;
@@ -544,12 +553,34 @@ namespace TacticalDirector.DecisionTree
             return Mathf.Atan2(cross, dot) * Mathf.Rad2Deg;
         }
 
-        private static bool IsInShotPath(Vector2 agentPos, Vector2 goalCentre,
-            Vector2 oppPos, float distToGoal, float minDist)
+        // The fraction of his occlusion an opponent contributes to the shot lane
+        // (§3.1.4.3). Two ERR-008-022 corrections to the boolean this replaces:
+        //
+        //   The far bound was `proj < distToGoal` — a plane through the GOAL CENTRE,
+        //   perpendicular to the shooting axis. For any off-centre shooter that plane
+        //   cuts diagonally across the goal mouth, so it discarded the FAR-POST blocker
+        //   while keeping the near-post one (measured: 100% of sampled off-centre
+        //   shooters), and it dropped a keeper standing on his line at goal centre for
+        //   every shooter position (proj == distToGoal exactly). Its mirror admitted an
+        //   opponent standing BEHIND the goal line — in the net — and handed him the
+        //   keeper's blocking radius. The bound is now the goal-line PLANE, which is the
+        //   surface the shot actually has to reach.
+        //
+        //   The near bound was a hard predicate that flipped a whole SHOOT decision on
+        //   one centimetre of blocker position (see SHOT_BLOCKER_NEAR_FADE_M). It now
+        //   ramps — doctrine P1.
+        private static float ShotPathWeight(Vector2 agentPos, Vector2 goalCentre,
+            Vector2 oppPos, float goalLineX, float minDist)
         {
+            float shooterToLine = goalLineX - agentPos.x;
+            float blockerToLine = goalLineX - oppPos.x;
+
+            if (shooterToLine * blockerToLine < 0.0f) return 0.0f;   // past the goal line
+            if (Mathf.Abs(blockerToLine) > Mathf.Abs(shooterToLine)) return 0.0f;  // behind the shooter
+
             Vector2 shotDir = (goalCentre - agentPos).normalized;
             float proj = Vector2.Dot(oppPos - agentPos, shotDir);
-            return proj > minDist && proj < distToGoal;
+            return Mathf.Clamp01((proj - minDist) / UtilityWeights.SHOT_BLOCKER_NEAR_FADE_M);
         }
 
         // ── §3.1.5 DRIBBLE ──────────────────────────────────────────────────────
@@ -924,4 +955,22 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        | the ability term: #11 owns keeper shot-stopping (P3, no double-count).      |
 // |         |            |        | + SignedAngleDeg; the ArcOverlapToleranceDeg epsilon the containment test   |
 // |         |            |        | needed is gone with it. Null attribute view ⇒ ability 1.0 = geometry only.  |
+// | 1.8     | 2026-08-06 | —      | ERR-008-022 (adversarial review over the -021 landing). IsInShotPath →      |
+// |         |            |        | ShotPathWeight. Far bound was a plane through the GOAL CENTRE, which cuts   |
+// |         |            |        | diagonally across the goal mouth for an off-centre shooter: it discarded    |
+// |         |            |        | the FAR-POST blocker on 100% of 20,213 sampled in-range off-centre          |
+// |         |            |        | shooters, dropped a keeper on his line at goal centre for EVERY shooter     |
+// |         |            |        | (proj == distToGoal exactly), and admitted an opponent behind the goal      |
+// |         |            |        | line at the keeper's radius. Now bounded by the goal-line plane. Near       |
+// |         |            |        | bound was a hard predicate flipping the score 1.000 → 0.050 (and the        |
+// |         |            |        | SHOOT option's existence) across 1 cm; now ramps over                       |
+// |         |            |        | SHOT_BLOCKER_NEAR_FADE_M. The isGk predicate flipped radius 0.5 ⇒ 1.5 m     |
+// |         |            |        | and the P3 ability exemption together (0.768 ⇒ 0.311 over 2 cm); now a      |
+// |         |            |        | scalar gkness lerping both over GK_PROXIMITY_FADE_M. Also: the              |
+// |         |            |        | BisectorDegenerateSqrLen local promoted to a tagged catalogue constant;     |
+// |         |            |        | the dead dist<0.001 guard removed (ShotPathWeight now proves dist > 1 m);   |
+// |         |            |        | the false 'sign convention is load-bearing' comment on SignedAngleDeg       |
+// |         |            |        | corrected (the overlap is even in that value); the stale gate-4 comment     |
+// |         |            |        | corrected — GOAL_OPENING_MIN 0.05 is BELOW MIN_GOAL_VISIBILITY 0.12, so a   |
+// |         |            |        | fully occluded lane does still fail the gate.                               |
 #endregion

@@ -1,7 +1,33 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 5, 2026, latest same day (**ERR-008-021 — the #8 shot-lane occlusion
+**Last Updated:** August 6, 2026 (**ERR-008-022 — the shot lane's far bound, near bound and
+goalkeeper read. No new files.** **Modified:** `src/decision-tree/OptionGenerator.cs` v1.8
+(`IsInShotPath` → `ShotPathWeight`: far bound moved from a plane through the goal CENTRE to the
+goal-line PLANE — the old one discarded the far-post blocker on 20,213 of 20,213 sampled in-range
+off-centre shooters and dropped a keeper on his line at goal centre for every shooter position,
+while admitting an opponent behind the goal line at the keeper's radius; near bound ramped rather
+than gated; `isGk` bool → `gkness` scalar lerping the blocking radius and the P3 ability exemption
+together; dead `dist < 0.001` guard removed; the false `SignedAngleDeg` "sign convention is
+load-bearing" comment and the stale gate-4 comment corrected),
+`src/decision-tree/UtilityWeights.cs` v1.12 (+ `SHOT_BLOCKER_NEAR_FADE_M` / `GK_PROXIMITY_FADE_M`
+`[GT]` = 1.0 m / 2.0 m), `src/decision-tree/DecisionTreeConstants.cs` v1.5
+(+ `[FIXED] BisectorDegenerateSqrThreshold` — was a named local in formula code, FR-CS-016),
+`src/decision-tree/Tests/OptionGeneratorTests.cs` v1.8 (**10 → 15 locks**: the partial-overlap test
+now asserts the closed-form value rather than `< 1.0` — a mutant restoring the pre-fix
+over-blocking had passed all ten; + off-centre shooter, far-post, behind-the-goal-line, and the two
+ramp-continuity sweeps; both `NullAttributeView` tautologies de-tautologised, pass lane included),
+`docs/specs/decision-tree/section-3-1.md` v1.5, `docs/specs/decision-tree/section-3-2.md` v1.13
+(which also writes the v1.12 row ERR-008-021 never wrote),
+`docs/specs/decision-tree/section-3-2-3-to-3-2-9.md` (§3.2.3.2 steps 3a–4, the corrected P5 claim,
+and the worked example re-derived with a genuine outfielder in corner-origin coordinates),
+`docs/specs/decision-tree/section-3-2-10-to-3-2-13.md` (the eleven-revisions-stale duplicate
+§3.2.13 version history removed; the phantom `PRESS_TACTICAL_*` catalogue block deleted),
+`docs/tracking/spec-error-log.md` v1.65, `docs/tracking/football-judgment-proxy-review.md` (§6.4.2),
+`CLAUDE.md`, `docs/tracking/open-issues.md`, `docs/tracking/CHANGELOG.md`,
+`docs/tracking/CHANGELOG-src.md` v2.74, `README.md`. **No gate run — no .NET SDK.**)
+
+**Last Updated (prior):** August 5, 2026, latest same day (**ERR-008-021 — the #8 shot-lane occlusion
 model. No new files.** **Modified:** `src/decision-tree/OptionGenerator.cs` v1.7
 (`ComputeGoalOpeningScore` rewritten: the binary wedge-containment test → the true angular overlap
 of the blocking disc with the goal arc, measured about the arc's bisector; + `PerceivedBlockAbility`

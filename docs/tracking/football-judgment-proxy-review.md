@@ -1,7 +1,21 @@
 # Football-Judgment Proxy Review
 
 > **Created:** August 4, 2026
-> **Updated:** August 5, 2026, latest same day — **the §6.4 shot-lane follow-up LANDED as
+> **Updated:** August 6, 2026 — **the adversarial review over the `ERR-008-021` landing LANDED as
+> `ERR-008-022`** (§6.4.2). It found that -021's overlap model was being fed by a lane test that
+> discarded the **far-post blocker on 100% of 20,213 sampled off-centre shooters** and dropped a
+> keeper standing on his line at goal centre for *every* shooter position — the far bound was a plane
+> through the goal **centre**, not the goal line — so the fix achieved substantially less than it
+> claimed. Two further hard predicates in the same derivation were larger cliffs than the one -021
+> removed: `GOAL_MIN_SHOT_DIST` (1.000 ⇒ 0.050 across 1 cm, taking the SHOOT option with it) and the
+> goalkeeper classification (0.768 ⇒ 0.311 across 2 cm, which -021 had widened to 0.551). All three
+> fixed. **Three of -021's own verification claims were false** and are corrected: the P5 exactness
+> argument (holds only for `h ≤ halfArc`; up to **2×** above it), the test count (**10** locks / 9
+> evaluable / 5 fail / 4 pass, not "9 / 5 of 8"), and the worked example (its opponent was classified
+> a goalkeeper, so every number in it was unreachable). The suite was inadequate too — a mutant
+> restoring the pre-fix over-blocking passed all ten locks, and the null-view lock was a tautology.
+> Suite now 15. Gate NOT runnable in the authoring environment. **32 itemized findings remain open.**
+> **Updated (prior):** August 5, 2026, latest same day — **the §6.4 shot-lane follow-up LANDED as
 > `ERR-008-021`**, discharging the deferral the ERR-008-020 template fix opened. #8 §3.1.4.3 /
 > §3.2.3.2's occlusion test held the pass lane's two defects rather than one: an opponent
 > contributed his **whole** angular width when his angular centre fell inside the goal arc and
@@ -14,7 +28,7 @@
 > **goalkeeper is exempt from the ability term** — #11 §3.5/§3.7.0 owns keeper shot-stopping, so
 > pricing it here too would charge the shooter twice (P3). P5 holds *exactly*: the old rectangle and
 > the new trapezoid both integrate to `4h·halfArc` over a uniformly-placed blocker. **Digest
-> invariance is not claimed** — the model is live on every generated shot. 9 test locks — 5 of the 8 that can be evaluated
+> invariance is not claimed** — the model is live on every generated shot. 10 test locks — 5 of the 9 that can be evaluated
 > against the old model fail on it; gate NOT runnable in the authoring environment. **The 34-finding tally is unchanged**: the shot lane was
 > never itemized as its own §2/§3 finding — it surfaced in §6.4 at the -020 landing — so 32 itemized
 > findings remain open.
@@ -550,25 +564,77 @@ rather than a parameter. The **goalkeeper is exempt from the ability term** and 
 alone (P3): #11 §3.5's save model and §3.7.0's rush — which *sets* this geometry — own his
 shot-stopping, so pricing it here as well would charge the shooter twice for one keeper.
 
-**P5 is exact here, not approximate.** Over a uniformly-placed blocker the pre-fix rule integrated a
-rectangle of area `4h·halfArc`; the overlap integrates a trapezoid of area `4h·halfArc`, for every
-disc width and arc. With the ability midpoint at exactly 1.0 the attribute axis is neutral too, so
-the fix redistributes occlusion from a step to a slope and from anonymous bodies to identified ones
-without opening or closing the goal on average.
+**P5 pivot.** Over a uniformly-placed blocker the pre-fix rule integrated a rectangle of area
+`4h·halfArc`; the overlap integrates a trapezoid of the same area. With the ability midpoint at
+exactly 1.0 the attribute axis is neutral too, so the fix redistributes occlusion from a step to a
+slope and from anonymous bodies to identified ones without opening or closing the goal on average.
+
+> **Corrected at ERR-008-022.** This paragraph originally read "for every disc width and arc" — it
+> is **false above `h = halfArc`**, where the old model's per-opponent clamp saturates its rectangle
+> at `4·halfArc²` and the trapezoid does not (measured 1.198× at `h`=10°/`halfArc`=8.35°, **2.000×**
+> at `h`=16.7°). That regime is a blocker inside roughly `d_goal × r / 3.66` of the shooter — ~2.7 m
+> at 20 m out — which is routine. The claim was the stated reason no recalibration was needed; the
+> reason is withdrawn and the residual left for the balance pass (KD-W1).
 
 **Digest invariance is not claimed** (the -019 lesson applied at authoring time): this model is live
 on every SHOOT candidate the generator produces and moves for any blocker who is not both exactly
-average and wholly inside the arc. 9 `OptionGeneratorTests` locks, including the P5 pivot on the
+average and wholly inside the arc. 10 `OptionGeneratorTests` locks, including the P5 pivot on the
 *computed* path as well as the null-view path, the GK exemption proved by moving the keeper's
 attributes between the extremes, and the away mirror. A reference implementation of both models
-confirms 5 of the 8 evaluable-pre-fix locks fail on the old one; the three that pass pre-fix are the
+confirms 5 of the 9 evaluable-pre-fix locks fail on the old one; the four that pass pre-fix are the
 two P5 pivot rows and null-view neutrality, by construction. Gate NOT runnable in the authoring
 environment.
 
-Two items **recorded, not fixed**: `IsInShotPath`'s corridor end-bounds (a near-end step at 1.0 m and
-an exclusive far bound that drops a keeper exactly on his line — front-of vs behind the goal line is
-a physical fact, not a football judgment, so P1 does not obviously reach it), and §3.2.10's constant
-catalogue, which five consecutive #8 landings have now left behind.
+Two items were **recorded, not fixed** at this landing: `IsInShotPath`'s corridor end-bounds, and
+§3.2.10's constant catalogue, which five consecutive #8 landings have now left behind. The first of
+those turned out to be the larger of the two defects in this whole section — see §6.4.2. The
+reasoning that deferred it ("front-of vs behind the goal line is a physical fact, not a football
+judgment, so P1 does not obviously reach it") was wrong on its own terms: the bound was not a
+judgment collapsed into a threshold, it was simply **the wrong plane**, and it was silently deleting
+the far half of the goal from the model this section had just built.
+
+#### 6.4.2 The adversarial review over the -021 landing (LANDED August 6, 2026 as `ERR-008-022`)
+
+Three hostile passes over the ERR-008-021 landing. Headline: **the fix achieved substantially less
+than it claimed**, because the lane test feeding it discarded much of the geometry the overlap model
+exists to price.
+
+- **(a) The far bound was a plane through the goal CENTRE**, not the goal line. For any off-centre
+  shooter it cuts diagonally across the goal mouth, so the **far-post** blocker was dropped and the
+  near-post one kept — on **20,213 of 20,213** sampled in-range off-centre shooters. A keeper on his
+  line at goal centre gave `proj == distToGoal` exactly and was dropped for **every** shooter
+  position: shooter (95,20) read **1.000, a completely open goal**. The mirror admitted an opponent
+  standing *behind* the goal line at the keeper's 1.5 m radius. Now bounded by the goal-line plane.
+- **(b) `GOAL_MIN_SHOT_DIST` was a 0.95 cliff** — 1.000 at 0.995 m of lane depth, 0.050 at 1.005 m,
+  and since 0.050 is below `MIN_GOAL_VISIBILITY` it also deleted the SHOOT option. More than twice
+  the step this section was opened to remove, in the same function. Now ramps (`[GT]
+  SHOT_BLOCKER_NEAR_FADE_M`).
+- **(c) The goalkeeper read was a predicate** whose boundary stepped `GoalOpeningScore` 0.768 ⇒ 0.311
+  across 2 cm — and ERR-008-021 *widened* its worst case to 0.551 by making it attribute-dependent,
+  three lines from the code it rewrote, unrecorded. Now a scalar `gkness` lerping the radius and the
+  P3 exemption together (`[GT] GK_PROXIMITY_FADE_M`).
+
+**Three of the -021 landing's own verification claims were false** and are corrected in the record:
+the P5 exactness argument (above), the test count (**10** locks / 9 evaluable / 5 fail / 4 pass, not
+"9 / 5 of 8"), and the §3.2.3.2 worked example — whose opponent sat 4.5 m from the goal line, so the
+algorithm classified him a **goalkeeper** and exempted him from the very ability term the example was
+demonstrating; all three of its numbers were unreachable.
+
+**The suite was also inadequate to its own claim.** The over-blocking half of ERR-008-021 had no lock
+at all — a mutant restoring the pre-fix full-width contribution passed all ten tests — 8 of 12
+plausible mutants survived, every fixture put the shooter on the goal's centre line (making
+`bisector` and the post clipping untestable, and the away "mirror" bit-identical to the home case),
+and `ShotLane_NullAttributeView_IsAbilityNeutral` was a **tautology**: the helper's own
+`if (attrs != null)` guard discards the differing arguments, so it asserted `f(x) == f(x)`. That is
+the same shape the ERR-008-020 review caught one landing earlier, and the -021 commit message claimed
+to have avoided it "at authoring time rather than at review". Suite now 15 locks; the pass-lane twin
+tautology is fixed too.
+
+**Still recorded, not fixed:** `MIN_GOAL_VISIBILITY` remains a hard predicate on option *existence*
+(what changed is that the opening now decays to it rather than jumping past it); the GK positional
+proxy still reads a deep defender as part-keeper; §3.2.10's constant catalogue is now six landings
+behind; and the P5 residual above waits for the balance pass. **The 34-finding tally is unchanged** —
+the shot lane was never itemized as its own §2/§3 finding, so **32 itemized findings remain open**.
 
 ### 6.5 Adjacent gap recorded (not a §2/§3 finding)
 
