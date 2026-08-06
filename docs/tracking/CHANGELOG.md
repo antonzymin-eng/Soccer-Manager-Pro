@@ -12,7 +12,70 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 6, 2026, later same day (**#29/#41 T2 LANDED — the two subsystems now
+> **Last Updated:** August 6, 2026, latest same day (**Adversarial review over the #29/#41 T2 landing —
+> 3 High, 4 Medium, 4 Low, all fixed; pass 2 clean.**
+>
+> **H1 — `PlayerCareerStates.FromBlocks` trusted an ordering invariant it never checked, and the failure
+> was silent state loss.** Every lookup in that type is a binary search over the per-club player ids.
+> `ForLeague` sorts; `FromBlocks` only checked that the two blocks agreed *with each other*, and
+> `ClubTrainingStates`' constructor imposes no order at all — so an unordered block (which the codecs
+> never produce but a public caller trivially can) made `IndexOfPlayer` miss a player who WAS carried,
+> and `SyncToRoster` then read that miss as "new" and overwrote his season of conditioning and injury
+> history with `Create()`. No exception, no assertion, indistinguishable from a fresh career. Now
+> refused, in the loop that was already walking the ids.
+>
+> **H2 — a mid-match save restored the wrong starting eleven.** The match is configured with the
+> availability-FILTERED squad; the snapshot records only each team's `ClubId`, so it cannot record
+> *which eighteen of the twenty-five*. Restoring through the raw provider handed
+> `ReprojectDistinctSquads` the full roster, it re-ran `LineupSelector` over a different candidate set,
+> and a different eleven's canonical attribute records landed on the pitch — ClubId matching, size gate
+> passing, every guard green, and the match silently diverging from the pre-save run. `SeasonSaveManager.Load`
+> now rebuilds the career from the medical block in the *same file* and re-applies the filter through an
+> `ISquadProvider` decorator, so restore re-selects from exactly the squad the match was configured with.
+> Latent today (needs the occurrence dial armed AND a mid-match save) but armed for the interactive
+> client, which is the current critical path. Locked by a 60-tick digest-chain continuation across the
+> save — the only way to see WHICH eleven came back, since the attribute records are re-derived rather
+> than serialized.
+>
+> **H3 — `LineupSelector.CanSelect` was a hand-copied second implementation of the selection walk.**
+> Two answers to "which eleven does this squad field", nothing keeping them in step, and no equivalence
+> test. The first rule added to `Select` — #44's ban filter is the near one — would have left
+> `CanSelect` answering the old question, and the availability filter's press-back-in loop would then
+> exit on a squad `ConfigureSquads` refuses. That is the parallel-surface trap `SquadRating`'s own doc
+> says it exists to prevent, reintroduced one file below it. Collapsed to one walk (`TrySelect`), with
+> `Select` and `CanSelect` as its two wrappers, plus an equivalence lock across five squad shapes and
+> all three formations — including the case a player-count rule cannot see: eighteen fit outfielders
+> and no goalkeeper.
+>
+> **The four Mediums.** (1) `RollToNextSeason` wrote the roster reconciliation *before*
+> `BeginNextSeason` — the one commit this method's own docs call fallible — so a refused roll left a
+> career reconciled against a season that never began, flatly contradicting the comment that claimed
+> the opposite. `SyncToRoster` now splits into `PrepareRosterSync` (pure, throws) + `CommitRosterSync`
+> (cannot fail), staged at (d′) and installed after (e); "refused ⇒ nothing moved" is now true of both
+> sides, which no single placement could achieve. (2) Nothing checked that the career covered the
+> season's clubs — a subset career constructed happily, advanced days happily, then threw from the
+> filter on fixture 3 of 10 with two results already applied to the table. The constructor now refuses
+> the pairing, the same argument that puts the KD-4 invariant there. (3) `ScheduleFor` handed out a
+> handle bound to arrays `SyncToRoster` replaces, so a screen caching it across a boundary lost every
+> focus change with `TrySetFocus` still returning `true`; a `RosterGeneration` counter makes that
+> detectable. (4) `TrainingBlocks()`/`MedicalBlocks()` returned live mutable state arrays through the
+> public `Career` property, making any holder a second writer of #29/#41 state — the single-writer
+> property `SeasonState` enforces with `internal` mutators, dropped. Both accessors are now `internal`,
+> with a `SeasonSaveManager.Save(SeasonLoop, match, path)` overload for external callers, and
+> `SeasonLoop.World` went `internal` for the same reason rather than widening the surface to serve it.
+>
+> **Lows:** the risk read is skipped when the occurrence dial is off (nothing consumes it); the
+> `SelectAvailable` summary no longer contradicts its own back-fill paragraph; the day steps now record
+> *why* they are not validate-all-then-write while the sync is (their per-day idempotency makes a retry
+> safe); and the boundary test covers insertion as well as removal.
+>
+> **Determinism unchanged by the pass**: no `SNAPSHOT_SCHEMA_VERSION` change, no format bump, no new RNG
+> stream / domain tag / draw site / draw-order change. **Still no gate run** — no .NET SDK, installer
+> still 403 at the proxy. Every finding above is static reasoning; the two things static reasoning is
+> worst at remain open, and both are now the first thing CI will answer: whether the six suites compile,
+> and whether the digest-continuation lock behaves as predicted.)
+
+> **Last Updated (prior):** August 6, 2026, later same day (**#29/#41 T2 LANDED — the two subsystems now
 > PRODUCE state. `PlayerCareerStates` is the #30-side owner T1 was missing: at T1 both codecs existed
 > and nothing constructed a state set for them to encode, so every save carried two empty blocks.**
 >

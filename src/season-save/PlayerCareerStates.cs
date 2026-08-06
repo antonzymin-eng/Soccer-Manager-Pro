@@ -67,6 +67,21 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>
+        /// Increments every time <see cref="SyncToRoster"/> replaces a club's arrays — the generation
+        /// stamp a cached <see cref="TrainingSchedule"/> is only valid for.
+        /// <para>
+        /// <b>Why this exists.</b> <see cref="ScheduleFor"/> hands out a handle that binds a club's
+        /// live id and state arrays by reference, and <see cref="SyncToRoster"/> replaces both arrays
+        /// wholesale. A schedule cached across a season boundary therefore writes into a detached array:
+        /// <c>TrySetFocus</c> returns <c>true</c>, nothing throws, and the manager's training
+        /// instruction is silently gone. A screen caching the handle is the obvious thing to write, so
+        /// the staleness needs to be detectable rather than merely documented — compare this against the
+        /// value read when the handle was acquired.
+        /// </para>
+        /// </summary>
+        public int RosterGeneration { get; private set; }
+
+        /// <summary>
         /// The #41 KD-8 dial (FR-MD-027). <b>Off by default, deliberately.</b>
         /// <para>
         /// The fifth adversarial-review pass over #41's T0 landing measured the daily occurrence
@@ -92,6 +107,32 @@ namespace TacticalDirector.SeasonSave
 
         /// <summary>The number of clubs carried.</summary>
         public int ClubCount => _clubIds.Count;
+
+        /// <summary>
+        /// Whether this career carries state for <paramref name="clubId"/> — the composition-time check
+        /// <see cref="SeasonLoop"/>'s constructor uses to refuse a career that does not cover the season
+        /// it is bound to.
+        /// <para>
+        /// Without it, a career built over a subset of the league constructs and advances days happily
+        /// (the day steps iterate the career's clubs, not the season's) and then throws from
+        /// <see cref="SelectAvailable"/> on fixture 3 of 10 — after two results have already been
+        /// applied to the table and marked played. Better to refuse the pairing than to half-resolve a
+        /// round.
+        /// </para>
+        /// </summary>
+        /// <param name="clubId">The club to look for.</param>
+        public bool CarriesClub(int clubId)
+        {
+            for (int c = 0; c < _clubIds.Count; c++)
+            {
+                if (_clubIds[c] == clubId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         /// <summary>
         /// A fresh career's state: <see cref="TrainingState.Create"/> on
@@ -244,6 +285,22 @@ namespace TacticalDirector.SeasonSave
                             + $"{t.PlayerIds[i]} and the medical block player {m.PlayerIds[i]}.",
                             nameof(medical));
                     }
+
+                    // EVERY lookup in this class is a binary search over these ids (IndexOfPlayer), so
+                    // ascending order is not a formatting preference — it is the precondition the whole
+                    // type runs on. Both codecs canonicalize and gate it, but ClubTrainingStates'
+                    // constructor does not, and this method is public: an out-of-order block would make
+                    // IndexOfPlayer miss a player who IS carried, and SyncToRoster would then read that
+                    // miss as "new" and overwrite his season of state with Create(). Silent, total, and
+                    // indistinguishable from a fresh career. ForLeague sorts; this checks.
+                    if (i > 0 && t.PlayerIds[i] <= t.PlayerIds[i - 1])
+                    {
+                        throw new ArgumentException(
+                            $"Club {t.ClubId}: player ids must be strictly ascending (entry {i} is "
+                            + $"{t.PlayerIds[i]} after {t.PlayerIds[i - 1]}). Every lookup here is a "
+                            + "binary search over them.",
+                            nameof(training));
+                    }
                 }
 
                 if (c > 0 && t.ClubId <= career._clubIds[c - 1])
@@ -270,13 +327,20 @@ namespace TacticalDirector.SeasonSave
         /// The #29 state as the per-club blocks <c>TrainingSaveCodec.Encode</c> takes — what
         /// <see cref="SeasonSaveManager.Save"/> is handed.
         /// <para>
-        /// The blocks <b>borrow</b> the live arrays rather than copying them (the
-        /// <see cref="ClubTrainingStates"/> posture), so a returned block reflects whatever this object
-        /// holds at the moment it is read. Encoding snapshots the bytes; do not retain a block across a
-        /// day advance and expect it to be stale.
+        /// <b><c>internal</c>, deliberately.</b> The blocks <b>borrow</b> the live arrays rather than
+        /// copying them (the <see cref="ClubTrainingStates"/> posture the codec needs), and
+        /// <c>ClubTrainingStates.States</c> is a public field — so a public accessor here would hand
+        /// every holder of <see cref="SeasonLoop.Career"/> a direct write into a player's
+        /// <c>Condition</c>, <c>TrainingFatigue</c> and idempotency cursor, bypassing
+        /// <c>TrainingStep.AdvanceTrainingDay</c> and <c>TrainingSchedule.TrySetFocus</c> — the only two
+        /// declared writers (FR-TR-004 / FR-TR-023). That is the single-writer property
+        /// <see cref="SeasonState"/> enforces by keeping its mutators <c>internal</c>, and it is
+        /// enforced here the same way. External callers save through
+        /// <see cref="SeasonSaveManager.Save(SeasonLoop,MatchEngine.MatchEngine,string)"/> and read
+        /// through <see cref="TrainingView"/>.
         /// </para>
         /// </summary>
-        public ClubTrainingStates[] TrainingBlocks()
+        internal ClubTrainingStates[] TrainingBlocks()
         {
             var blocks = new ClubTrainingStates[_clubIds.Count];
             for (int c = 0; c < blocks.Length; c++)
@@ -287,8 +351,8 @@ namespace TacticalDirector.SeasonSave
             return blocks;
         }
 
-        /// <summary>The #41 state as the per-club blocks <c>MedicalSaveCodec.Encode</c> takes, on the same borrowing terms as <see cref="TrainingBlocks"/>.</summary>
-        public ClubInjuryStates[] MedicalBlocks()
+        /// <summary>The #41 state as the per-club blocks <c>MedicalSaveCodec.Encode</c> takes, <c>internal</c> on the same borrowing / single-writer terms as <see cref="TrainingBlocks"/>.</summary>
+        internal ClubInjuryStates[] MedicalBlocks()
         {
             var blocks = new ClubInjuryStates[_clubIds.Count];
             for (int c = 0; c < blocks.Length; c++)
@@ -308,6 +372,14 @@ namespace TacticalDirector.SeasonSave
         /// which this method deliberately does not soften: a gap means the world clock was advanced
         /// around this loop, and silently accruing one day for a week that passed would be the quieter
         /// of two wrong answers.
+        /// </para>
+        /// <para>
+        /// <b>Not validate-all-then-write, unlike <see cref="SyncToRoster"/> — and that asymmetry is
+        /// deliberate.</b> A throw part-way through leaves the day half-advanced across clubs, which is
+        /// harmless here <i>because</i> of the F6 idempotency above: re-running the same day after
+        /// fixing the roster is a no-op for whoever already advanced and completes the rest. The sync
+        /// has no such property — it rebuilds arrays rather than stepping a cursor — so it must stage
+        /// everything before installing anything.
         /// </para>
         /// <para>
         /// <b>Behaviour-neutral on the defaults.</b> Every player starts on
@@ -393,8 +465,14 @@ namespace TacticalDirector.SeasonSave
                     int local = RequireLocalIndex(squad, _clubIds[c], ids[i]);
                     PlayerRecord record = squad.GetPlayer(local);
 
-                    InjuryRiskContribution risk =
-                        TrainingStep.ComputeInjuryRisk(in training[i], in record.Attributes);
+                    // The risk is an occurrence-draw input and nothing else, so with the dial off it is
+                    // read by nobody: #41's step only reaches AssembleRiskScore inside the
+                    // `wasAvailableAtEntry && occurrenceEnabled` branch. Computing it anyway would be a
+                    // per-player-per-day cost on every career today for a value that is discarded — and,
+                    // worse to read, would suggest the recovery countdown depends on it.
+                    InjuryRiskContribution risk = InjuryOccurrenceEnabled
+                        ? TrainingStep.ComputeInjuryRisk(in training[i], in record.Attributes)
+                        : InjuryRiskContribution.None;
 
                     MedicalStep.AdvanceMedicalDay(
                         ref injury[i],
@@ -442,6 +520,29 @@ namespace TacticalDirector.SeasonSave
         /// <exception cref="ArgumentNullException"><paramref name="squads"/> is null.</exception>
         /// <exception cref="ArgumentException">A held club cannot be resolved to a roster.</exception>
         public int SyncToRoster(ISquadProvider squads)
+        {
+            RosterSyncPlan plan = PrepareRosterSync(squads);
+            return CommitRosterSync(in plan);
+        }
+
+        /// <summary>
+        /// The computing half of <see cref="SyncToRoster"/>: resolves every club's roster and builds
+        /// its replacement arrays, writing nothing. Throws exactly where <see cref="SyncToRoster"/>
+        /// throws.
+        /// <para>
+        /// It is split out for <see cref="SeasonLoop.RollToNextSeason"/>, whose whole shape is
+        /// "compute and validate everything, then write". The roll has one write that can fail
+        /// (<c>BeginNextSeason</c>), so a sync that both computes and installs cannot be placed
+        /// anywhere in that method without some failure leaving a half-rolled career: before the
+        /// commits, a refused <c>BeginNextSeason</c> leaves a career reconciled against a season that
+        /// never began; after them, an unresolvable club leaves a rolled season with a stale career.
+        /// Staging here and installing after the last throwing write removes both.
+        /// </para>
+        /// </summary>
+        /// <param name="squads">The rosters to reconcile against.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="squads"/> is null.</exception>
+        /// <exception cref="ArgumentException">A held club cannot be resolved to a roster.</exception>
+        internal RosterSyncPlan PrepareRosterSync(ISquadProvider squads)
         {
             if (squads == null)
             {
@@ -494,14 +595,91 @@ namespace TacticalDirector.SeasonSave
                 nextInjury[c] = injury;
             }
 
-            for (int c = 0; c < clubs; c++)
+            return new RosterSyncPlan(RosterGeneration, nextIds, nextTraining, nextInjury, churn);
+        }
+
+        /// <summary>
+        /// The installing half of <see cref="SyncToRoster"/>: swaps in the arrays
+        /// <see cref="PrepareRosterSync"/> built and returns the churn count. <b>Cannot fail</b> on a
+        /// plan this career prepared and has not since re-synced, which is what makes it safe to run
+        /// after <see cref="SeasonLoop.RollToNextSeason"/>'s last throwing write.
+        /// </summary>
+        /// <param name="plan">A plan from <see cref="PrepareRosterSync"/> on this same career.</param>
+        /// <exception cref="ArgumentException">
+        /// The plan was prepared against a different career, or against this one before a later sync —
+        /// installing it would resurrect a stale roster over a newer one. A <c>default</c> plan is
+        /// refused the same way.
+        /// </exception>
+        internal int CommitRosterSync(in RosterSyncPlan plan)
+        {
+            if (plan.PlayerIds == null
+                || plan.PlayerIds.Length != _clubIds.Count
+                || plan.Generation != RosterGeneration)
             {
-                _playerIds[c] = nextIds[c];
-                _training[c] = nextTraining[c];
-                _injury[c] = nextInjury[c];
+                throw new ArgumentException(
+                    "This roster-sync plan was not prepared from this career's current state "
+                    + $"(plan generation {plan.Generation}, career generation {RosterGeneration}); "
+                    + "installing it would overwrite the current roster with a stale one.",
+                    nameof(plan));
             }
 
-            return churn;
+            for (int c = 0; c < _clubIds.Count; c++)
+            {
+                _playerIds[c] = plan.PlayerIds[c];
+                _training[c] = plan.Training[c];
+                _injury[c] = plan.Injury[c];
+            }
+
+            // Bumped unconditionally, not only when churn > 0: the arrays are replaced either way, so
+            // every previously handed-out TrainingSchedule is now detached whether or not the roster
+            // actually moved. A generation that only moved on churn would mark the no-churn case valid
+            // while the handle it validates writes into a discarded array.
+            RosterGeneration++;
+
+            return plan.Churn;
+        }
+
+        /// <summary>
+        /// A staged roster reconciliation: the replacement arrays <see cref="PrepareRosterSync"/> built,
+        /// plus the <see cref="RosterGeneration"/> they were built from so
+        /// <see cref="CommitRosterSync"/> can refuse a stale one.
+        /// </summary>
+        internal readonly struct RosterSyncPlan
+        {
+            /// <summary>The <see cref="RosterGeneration"/> this plan was prepared at.</summary>
+            internal readonly int Generation;
+
+            /// <summary>Per club, the reconciled ascending player ids. Null for a <c>default</c> plan.</summary>
+            internal readonly int[][] PlayerIds;
+
+            /// <summary>Per club, the reconciled training states.</summary>
+            internal readonly TrainingState[][] Training;
+
+            /// <summary>Per club, the reconciled medical states.</summary>
+            internal readonly InjuryState[][] Injury;
+
+            /// <summary>Entries inserted plus removed by this plan.</summary>
+            internal readonly int Churn;
+
+            /// <summary>Stages one reconciliation.</summary>
+            /// <param name="generation">The career's roster generation at preparation time.</param>
+            /// <param name="playerIds">Per-club reconciled player ids.</param>
+            /// <param name="training">Per-club reconciled training states.</param>
+            /// <param name="injury">Per-club reconciled medical states.</param>
+            /// <param name="churn">Entries inserted plus removed.</param>
+            internal RosterSyncPlan(
+                int generation,
+                int[][] playerIds,
+                TrainingState[][] training,
+                InjuryState[][] injury,
+                int churn)
+            {
+                Generation = generation;
+                PlayerIds = playerIds;
+                Training = training;
+                Injury = injury;
+                Churn = churn;
+            }
         }
 
         /// <summary>
@@ -520,8 +698,10 @@ namespace TacticalDirector.SeasonSave
 
         /// <summary>
         /// The squad-selection filter #30 applies between resolving a roster and configuring a match
-        /// (the ERR-030-009 resolve → filter → configure shape, which #44's suspension filter will share):
-        /// returns <paramref name="squad"/> with every injured player removed.
+        /// (the ERR-030-009 resolve → filter → configure shape, which #44's suspension filter will
+        /// share): returns the squad #30 will actually field. That is <paramref name="squad"/> with the
+        /// injured removed — <b>except</b> for whoever the depleted-squad rule below has to press back
+        /// in, which is nobody unless the injury list would otherwise stop the club playing.
         /// <para>
         /// <b>Returns the same instance when nothing is filtered</b>, so a career with no injuries — every
         /// career today, with the occurrence dial off — resolves through a reference-identical squad and
@@ -681,6 +861,13 @@ namespace TacticalDirector.SeasonSave
         /// The club-scoped FR-TR-023 focus command surface: a <see cref="TrainingSchedule"/> bound to
         /// this club's own id and state arrays, so a caller cannot pair one club's ids with another's
         /// states (the bind-once discipline the schedule exists for).
+        /// <para>
+        /// <b>The handle is invalidated by <see cref="SyncToRoster"/>, i.e. by every season boundary.</b>
+        /// It binds the live arrays by reference and the sync replaces them, so a schedule cached across
+        /// a roll writes into a discarded array — <c>TrySetFocus</c> returns <c>true</c> and the change
+        /// is lost with nothing to notice it. Acquire it per use, or capture
+        /// <see cref="RosterGeneration"/> alongside it and re-acquire when that value moves.
+        /// </para>
         /// </summary>
         /// <param name="clubId">The club.</param>
         /// <exception cref="ArgumentException">The club is not carried.</exception>
@@ -874,6 +1061,7 @@ namespace TacticalDirector.SeasonSave
                 }
             }
 
+
             throw new ArgumentException(
                 $"This career carries no state for club {clubId}.", nameof(clubId));
         }
@@ -895,4 +1083,24 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | FR-MD-023 availability filter with its depleted-squad back-fill,   |
 // |         |            |        | the §3.3 match-entry fatigue projection, and the cross-block       |
 // |         |            |        | coherence gate no codec can own.                                   |
+// | 1.1     | 2026-08-06 | —      | AR pass 1 (1H + 3M + 2L). **H:** FromBlocks now requires strictly  |
+// |         |            |        | ascending player ids. Every lookup here is a binary search, and    |
+// |         |            |        | the entry point is public over blocks whose constructor imposes    |
+// |         |            |        | no order — an unordered block made IndexOfPlayer miss a carried    |
+// |         |            |        | player, and SyncToRoster then read the miss as "new" and           |
+// |         |            |        | overwrote his season of state with Create(). Silent and total.     |
+// |         |            |        | **M:** TrainingBlocks/MedicalBlocks internal — they hand out the   |
+// |         |            |        | live arrays, so a public accessor made every holder of             |
+// |         |            |        | SeasonLoop.Career a second writer of #29/#41 state (FR-TR-004 /    |
+// |         |            |        | FR-TR-023); external callers save through the new                  |
+// |         |            |        | SeasonSaveManager.Save(SeasonLoop, …). **M:** SyncToRoster splits  |
+// |         |            |        | into PrepareRosterSync (pure, throws) + CommitRosterSync (cannot   |
+// |         |            |        | fail), so RollToNextSeason can stage before its one throwing       |
+// |         |            |        | commit and install after — otherwise SOME failure always left a    |
+// |         |            |        | half-rolled career. **M:** + RosterGeneration, bumped on every     |
+// |         |            |        | sync, because ScheduleFor's handle binds arrays the sync replaces  |
+// |         |            |        | and a cached schedule silently discards focus changes. **L:** the  |
+// |         |            |        | risk read is skipped with the dial off (nothing reads it); the     |
+// |         |            |        | SelectAvailable summary no longer contradicts its own back-fill;   |
+// |         |            |        | + CarriesClub for SeasonLoop's coverage gate.                      |
 #endregion

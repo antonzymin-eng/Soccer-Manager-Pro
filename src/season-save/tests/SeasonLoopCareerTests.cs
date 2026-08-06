@@ -72,6 +72,27 @@ namespace TacticalDirector.SeasonSave.Tests
         }
 
         [Test]
+        public void Constructor_RefusesACareerThatDoesNotCoverTheSeason()
+        {
+            // A career over a subset constructs, advances days and rolls seasons without complaint —
+            // the day steps iterate the CAREER's clubs, not the season's — and then throws from the
+            // availability filter part-way through a round, after earlier fixtures in that round have
+            // already been applied to the table and marked played. This is the only layer holding both,
+            // so it is the only layer that can refuse the pairing.
+            League league = FourClubLeague();
+            CareerTestRoster.MutableSquadProvider provider = ProviderOver(league);
+            int[] allClubs = league.ClubIds();
+            var subset = new int[allClubs.Length - 1];
+            System.Array.Copy(allClubs, subset, subset.Length);
+
+            PlayerCareerStates partial = PlayerCareerStates.ForLeague(provider, subset);
+
+            Assert.Throws<System.ArgumentException>(() => new SeasonLoop(
+                new WorldStore(ManagerId, WorldSeed), league.CreateSeason(0),
+                RoundResolutionMode.QuickSimAll, partial, provider));
+        }
+
+        [Test]
         public void AdvanceAndPlayNextRound_WithADifferentProvider_FailsLoud()
         {
             // Two providers would train one league and resolve fixtures against another, and every
@@ -239,10 +260,25 @@ namespace TacticalDirector.SeasonSave.Tests
             int departedId = before.GetPlayer(before.Count - 1).PlayerId;
             int carriedId = before.GetPlayer(0).PlayerId;
             int carriedCondition = career.TrainingView(0, carriedId).Condition;
+            int generationBefore = career.RosterGeneration;
 
-            // Stand in for #28's season-boundary churn, which is unwired (roadmap D1): one player
-            // leaves club 0's roster before the roll.
+            // Stand in for #28's season-boundary churn, which is unwired (roadmap D1): club 0 loses its
+            // last player (a retirement), and club 1 swaps its last player for a fresh id (a retirement
+            // AND a regen in one block). Both directions in one roll, because FR-TR-025 / FR-MD-025
+            // specify both and only removal was covered here before. A club cannot simply grow — the
+            // roster is already at CLUB_SQUAD_SIZE — which is itself why the swap is the honest shape.
             provider.Set(CareerTestRoster.Build(0, before.Count - 1));
+
+            Squad club1 = provider.ResolveByClubId(1);
+            var swappedLocals = new int[club1.Count];
+            for (int k = 0; k < swappedLocals.Length - 1; k++)
+            {
+                swappedLocals[k] = k;
+            }
+            swappedLocals[swappedLocals.Length - 1] = PlayerDatabaseConstants.CLUB_SQUAD_SIZE + 5;
+            int retiredFromClub1 = club1.GetPlayer(club1.Count - 1).PlayerId;
+            provider.Set(CareerTestRoster.Build(1, club1.Count, swappedLocals));
+            int regenId = provider.ResolveByClubId(1).GetPlayer(club1.Count - 1).PlayerId;
 
             loop.RollToNextSeason();
 
@@ -252,6 +288,25 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.Throws<System.ArgumentException>(() => career.MedicalView(0, departedId));
             Assert.AreEqual(carriedCondition, career.TrainingView(0, carriedId).Condition,
                 "A departure must not disturb anybody else's accrued state.");
+
+            Assert.AreEqual(club1.Count, career.TrainingBlocks()[1].Count,
+                "One out, one in — the block's size is unchanged.");
+            Assert.Throws<System.ArgumentException>(() => career.MedicalView(1, retiredFromClub1),
+                "The retiree's entry must be gone (FR-MD-025).");
+            Assert.AreEqual(
+                TrainingSystemConstants.ConditionStart,
+                career.TrainingView(1, regenId).Condition,
+                "A regen must arrive via TrainingState.Create — at ConditionStart, not at the "
+                + "season's worth of conditioning his predecessor had accrued (FR-TR-025).");
+            Assert.AreNotEqual(
+                TrainingSystemConstants.ConditionStart,
+                career.TrainingView(1, provider.ResolveByClubId(1).GetPlayer(0).PlayerId).Condition,
+                "Precondition for the assertion above: a CARRIED player is well past ConditionStart "
+                + "after a full season, so the regen's value is discriminating.");
+            Assert.IsTrue(career.IsAvailable(1, regenId));
+
+            Assert.Greater(career.RosterGeneration, generationBefore,
+                "The boundary replaced the arrays, so any cached TrainingSchedule is now detached.");
         }
 
         [Test]

@@ -1,7 +1,31 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 6, 2026, latest same day (**#29/#41 T2 — the wiring. Both subsystems now
+**Last Updated:** August 6, 2026, latest same day (**Adversarial review over the #29/#41 T2 landing —
+3 High, 4 Medium, 4 Low, all fixed; pass 2 clean.**
+
+**New:** `src/season-save/tests/SeasonSaveCareerRestoreTests.cs` v1.0 (+ `.meta`) — the
+`Save(SeasonLoop, …)` round trip and the restore-fidelity lock (a mid-match save whose squad was
+availability-filtered must restore the same eleven).
+
+**Modified:** `src/season-save/PlayerCareerStates.cs` v1.0 → **v1.1** (`FromBlocks` requires ascending
+player ids — H1; block accessors `internal`; `SyncToRoster` split into `PrepareRosterSync` /
+`CommitRosterSync`; + `RosterGeneration`, + `CarriesClub`); `src/season-save/SeasonLoop.cs` v1.6 →
+**v1.7** (career/season club-coverage gate; the roster reconciliation staged at (d′) and installed
+after (e); `World` `internal`); `src/season-save/SeasonSaveManager.cs` v1.6 → **v1.7** (`Load`
+re-applies the availability filter for an in-progress match — H2; + the `Save(SeasonLoop, match, path)`
+overload); `src/match-engine/LineupSelector.cs` v1.2 → **v1.3** (one `TrySelect` walk, `Select` and
+`CanSelect` as wrappers — H3); `src/match-engine/tests/LineupSelectorTests.cs` v1.0 → **v1.1** (the
+`CanSelect`/`Select` equivalence lock); `src/season-save/tests/PlayerCareerStatesTests.cs` and
+`src/season-save/tests/SeasonLoopCareerTests.cs` (the ordering, generation, staged-plan, club-coverage
+and regen-insertion locks); `docs/tracking/CHANGELOG.md`, `docs/tracking/CHANGELOG-src.md` v2.77,
+this file.
+
+No `SNAPSHOT_SCHEMA_VERSION` change, no format bump, no new RNG stream / domain tag / draw site /
+draw-order change. **NO GATE RUN** — still no .NET SDK and the installer is still 403 at the proxy;
+CI on push is the gate.)
+
+**Last Updated (prior):** August 6, 2026, latest same day (**#29/#41 T2 — the wiring. Both subsystems now
 produce state; `PlayerCareerStates` is the #30-side owner T1 was missing.**
 
 **New:** `src/season-save/PlayerCareerStates.cs` v1.0 (+ `.meta`),

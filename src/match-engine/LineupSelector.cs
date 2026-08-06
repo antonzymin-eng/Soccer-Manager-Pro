@@ -1,6 +1,6 @@
 // File:     src/match-engine/LineupSelector.cs
 // Created:  2026-07-19
-// Modified: 2026-08-06 (#41 T2: + CanSelect, the viability probe #30's availability filter loops on)
+// Modified: 2026-08-06 (#41 T2: + TrySelect — the one selection walk — with Select and CanSelect as its two wrappers; the viability probe #30's availability filter loops on)
 // Author:   —
 // Spec:     Lineup Selection (Plan-3) design supplement (docs/tracking/lineup-selection-design.md);
 //           Squad/Player Data Layer #27 (KD-4 deferred PlayerPosition→slot mapping); Code Standards #20
@@ -74,6 +74,29 @@ namespace TacticalDirector.MatchEngine
         /// </exception>
         public static LineupPlan Select(Squad squad, FormationFamily family)
         {
+            if (!TrySelect(squad, family, out LineupPlan plan, out string failure))
+            {
+                throw new ArgumentException(failure);
+            }
+
+            return plan;
+        }
+
+        /// <summary>
+        /// The single selection walk (KD-L1/KD-L2/KD-L3), reporting rather than throwing.
+        /// <see cref="Select"/> and <see cref="CanSelect"/> are both thin wrappers over it — there is
+        /// exactly ONE implementation of "which eleven does this squad field", which is the point: a
+        /// second copy would answer the old question the first time a selection rule changed, and
+        /// <c>SelectAvailable</c>'s press-back-in loop would then exit on a squad
+        /// <c>ConfigureSquads</c> refuses.
+        /// </summary>
+        /// <param name="squad">The full club roster.</param>
+        /// <param name="family">The formation whose slot positions the starters must fill.</param>
+        /// <param name="plan">The selected starters + bench; <c>default</c> when selection fails.</param>
+        /// <param name="failure">Why selection failed; <c>null</c> on success.</param>
+        internal static bool TrySelect(
+            Squad squad, FormationFamily family, out LineupPlan plan, out string failure)
+        {
             int starterCount = MatchEngineConstants.PLAYERS_PER_TEAM;
             int benchCount   = MatchEngineConstants.SUBSTITUTES_PER_TEAM;
             FormationSlotRecord[] slots = PositioningAIConstants.GetFormationSlots(family);
@@ -90,9 +113,11 @@ namespace TacticalDirector.MatchEngine
                 int best = FindBest(squad, selected, matchPosition: true, required: required);
                 if (best < 0)
                 {
-                    throw new ArgumentException(
+                    plan = default;
+                    failure =
                         $"LineupSelector: no eligible {required} for starter slot {s} (formation "
-                        + $"{family}) — the squad is position-incomplete for the required lineup (KD-L3).");
+                        + $"{family}) — the squad is position-incomplete for the required lineup (KD-L3).";
+                    return false;
                 }
                 selected[best]    = true;
                 starterLocal[s]   = best;
@@ -107,17 +132,21 @@ namespace TacticalDirector.MatchEngine
                 if (best < 0)
                 {
                     // Unreachable when the caller's size gate (Count >= starters + bench) has run, but
-                    // fail loud rather than emit a partial bench if Select is called directly.
-                    throw new ArgumentException(
+                    // report rather than emit a partial bench if this is called directly.
+                    plan = default;
+                    failure =
                         $"LineupSelector: only {n} players — too few to fill "
-                        + $"{starterCount} starters + {benchCount} bench slots.");
+                        + $"{starterCount} starters + {benchCount} bench slots.";
+                    return false;
                 }
                 selected[best]  = true;
                 benchLocal[b]   = best;
                 benchGk[b]      = squad.GetPlayer(best).Position == PlayerPosition.Goalkeeper;
             }
 
-            return new LineupPlan(starterLocal, benchLocal, starterGk, benchGk);
+            plan = new LineupPlan(starterLocal, benchLocal, starterGk, benchGk);
+            failure = null;
+            return true;
         }
 
         /// <summary>
@@ -201,8 +230,8 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
-        /// Whether <see cref="Select"/> would succeed for <paramref name="family"/> — the same greedy
-        /// walk, reporting instead of throwing.
+        /// Whether <see cref="Select"/> would succeed for <paramref name="family"/> — literally the
+        /// same walk (<see cref="TrySelect"/>), reporting instead of throwing.
         /// <para>
         /// It exists for #30's availability filter (#41 FR-MD-023), which removes injured players and
         /// can leave a club position-incomplete; the filter presses the least-injured back in until the
@@ -210,40 +239,11 @@ namespace TacticalDirector.MatchEngine
         /// exception as a loop condition. Public consumers reach it through
         /// <see cref="SquadRating.CanFieldStartingEleven"/>.
         /// </para>
-        /// <para>
-        /// Deliberately re-walks <see cref="Select"/>'s starter loop rather than wrapping it in a
-        /// <c>try</c>: the two must agree, and the shared thing is <see cref="FindBest"/> plus
-        /// <see cref="RequiredPosition"/>, which is where the eligibility rule actually lives. The bench
-        /// check is the size gate <see cref="Select"/> applies, restated as a comparison.
-        /// </para>
         /// </summary>
         /// <param name="squad">The roster to test.</param>
         /// <param name="family">The formation whose slots must be fillable.</param>
-        internal static bool CanSelect(Squad squad, FormationFamily family)
-        {
-            int starterCount = MatchEngineConstants.PLAYERS_PER_TEAM;
-            int benchCount = MatchEngineConstants.SUBSTITUTES_PER_TEAM;
-            if (squad.Count < starterCount + benchCount)
-            {
-                return false;
-            }
-
-            FormationSlotRecord[] slots = PositioningAIConstants.GetFormationSlots(family);
-            bool[] selected = new bool[squad.Count];
-            for (int s = 0; s < starterCount; s++)
-            {
-                FormationSlotRecord slot = slots[s];
-                int best = FindBest(squad, selected, matchPosition: true, required: RequiredPosition(in slot));
-                if (best < 0)
-                {
-                    return false;
-                }
-
-                selected[best] = true;
-            }
-
-            return true;
-        }
+        internal static bool CanSelect(Squad squad, FormationFamily family) =>
+            TrySelect(squad, family, out _, out _);
 
         /// <summary>
         /// KD-L1: the coarse <see cref="PlayerPosition"/> a formation slot requires — its own goalkeeper
@@ -282,4 +282,14 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | of throwing, for the availability filter's press-the-least-    |
 // |         |            |        | injured-back-in loop. An injury list can leave a club           |
 // |         |            |        | position-incomplete, which would otherwise stop the season.     |
+// | 1.3     | 2026-08-06 | —      | AR pass 1 (H): v1.2 shipped CanSelect as a hand-copied re-walk |
+// |         |            |        | of Select's starter loop — two implementations of "which       |
+// |         |            |        | eleven does this squad field", with nothing keeping them in    |
+// |         |            |        | step and no equivalence test. Any rule added to Select (a #44  |
+// |         |            |        | ban filter is the near one) would leave CanSelect answering    |
+// |         |            |        | the old question, and SelectAvailable's press-back-in loop     |
+// |         |            |        | would exit on a squad ConfigureSquads then refuses — the       |
+// |         |            |        | parallel-surface trap SquadRating exists to prevent. Collapsed |
+// |         |            |        | to ONE walk: internal TrySelect(out plan, out failure); Select |
+// |         |            |        | throws on false, CanSelect discards both.                      |
 #endregion

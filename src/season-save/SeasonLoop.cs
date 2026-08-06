@@ -151,6 +151,28 @@ namespace TacticalDirector.SeasonSave
                     careerOrNull == null ? nameof(careerOrNull) : nameof(careerSquadsOrNull));
             }
 
+            // The career must cover the season, and this is the only layer holding both — the same
+            // argument that puts the KD-4 cursor invariant on the two lines above. A career built over
+            // a subset would construct, advance days and roll seasons without complaint (the day steps
+            // iterate the CAREER's clubs, not the season's) and then throw from the availability filter
+            // part-way through a round, after earlier fixtures in that round had already been applied
+            // to the table and marked played. Refuse the pairing instead of half-resolving a round.
+            if (careerOrNull != null)
+            {
+                ReadOnlyCollection<int> seasonClubs = season.ClubIds;
+                for (int i = 0; i < seasonClubs.Count; i++)
+                {
+                    if (!careerOrNull.CarriesClub(seasonClubs[i]))
+                    {
+                        throw new System.ArgumentException(
+                            $"The career carries no state for club {seasonClubs[i]}, which plays in this "
+                            + "season. Build it over the season's whole club set "
+                            + "(PlayerCareerStates.ForLeague(squads, season.ClubIds)).",
+                            nameof(careerOrNull));
+                    }
+                }
+            }
+
             _world = world;
             _state = season;
             Mode = mode;
@@ -163,6 +185,19 @@ namespace TacticalDirector.SeasonSave
 
         /// <summary>The world's current calendar day (<c>WorldStore.CurrentWorldTick</c>).</summary>
         public uint CurrentWorldDay => _world.CurrentWorldTick;
+
+        /// <summary>
+        /// The day-advance substrate this loop drives — referenced, not owned (#22 owns its lifecycle).
+        /// <para>
+        /// <b><c>internal</c>, deliberately.</b> It exists for
+        /// <see cref="SeasonSaveManager.Save(SeasonLoop,MatchEngine.MatchEngine,string)"/>, which is in
+        /// this assembly and needs the store to snapshot it. Making it public would hand every caller
+        /// <c>WorldStore.AdvanceDay()</c>, which bypasses the KD-4 bounds AND the per-day career seams —
+        /// and the career then fails loud on the resulting day gap, correctly but a long way from the
+        /// call that caused it. The public read of the clock is <see cref="CurrentWorldDay"/>.
+        /// </para>
+        /// </summary>
+        internal WorldStore World => _world;
 
         /// <summary>True once every round has been played — the caller must run the boundary roll (#30 T3).</summary>
         public bool IsSeasonComplete => _state.Calendar.IsSeasonComplete;
@@ -453,6 +488,13 @@ namespace TacticalDirector.SeasonSave
         /// positions in this method, not interfaces — neither spec has code (FR-SN-034 / FR-LW-031).
         /// (d) #28's age advance is the same: a documented position, empty until #28 T2.
         /// </para>
+        /// <para>
+        /// <b>(d′) the FR-TR-025 / FR-MD-025 roster reconciliation is LIVE, and split in two.</b> It
+        /// reads the provider at (d′) — after #28's churn would have happened — but installs only after
+        /// (e)'s commits, because <c>BeginNextSeason</c> is the one write here that can fail and a
+        /// career reconciled against a season that never began is the same half-rolled state the
+        /// ordering above exists to prevent. Staging throws where the sync throws; installing cannot.
+        /// </para>
         /// </summary>
         /// <exception cref="System.InvalidOperationException">
         /// The season is not over (F5 — rounds remain, or a fixture in a resolved round was never
@@ -505,18 +547,16 @@ namespace TacticalDirector.SeasonSave
             }
 
             // ── (d) #28 age advance inserts HERE — empty until #28 T2. ──────────────────────────
-            // (d') the FR-TR-025 / FR-MD-025 roster-membership handoff, immediately after it: #28's
-            // regens and retirements are the roster change, and the career state reconciles to whatever
-            // roster the provider reports once they have been applied. It sits before the (e) commits
-            // and after the last thing that can refuse the roll, so a refused roll leaves both the
-            // season and the career untouched — and SyncToRoster is itself validate-all-then-write, so
-            // a provider that fails on the fifth club does not leave four clubs synced.
-            // The returned churn count is deliberately dropped: what a caller wants to know about a
-            // boundary is which players the career now carries, which is readable off Career itself —
-            // a count would be a second, weaker answer to the same question.
+            // (d′) the FR-TR-025 / FR-MD-025 roster-membership handoff, STAGED here and installed
+            // below. #28's regens and retirements are the roster change, so the reconciliation reads
+            // the provider at this point — after (d) — but it must not WRITE here: BeginNextSeason is
+            // the one commit in this method that can fail, and a career reconciled against a season
+            // that never began is exactly the half-rolled state this method's ordering exists to
+            // prevent. Staging is pure and throws where the sync throws; installing cannot fail.
+            PlayerCareerStates.RosterSyncPlan rosterSync = default;
             if (_career != null)
             {
-                _career.SyncToRoster(_careerSquads);
+                rosterSync = _career.PrepareRosterSync(_careerSquads);
             }
 
             // ── (e) commit: schedule + table + season number + seed, then the board verdict ─────
@@ -525,6 +565,15 @@ namespace TacticalDirector.SeasonSave
 
             // Cannot throw: EvaluateAtSeasonEnd returns an already-validated BoardState.
             _state.SetBoard(evaluated);
+
+            // The staged reconciliation installs last, after the final write that could have refused
+            // the roll. The returned churn count is deliberately dropped: what a caller wants to know
+            // about a boundary is which players the career now carries, which is readable off
+            // Career itself — a count would be a second, weaker answer to the same question.
+            if (_career != null)
+            {
+                _career.CommitRosterSync(in rosterSync);
+            }
 
             return new SeasonRollOutcome(
                 completedSeasonNumber,
@@ -922,4 +971,17 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | provider — two would train one league and play another, with      |
 // |         |            |        | every symptom a plausible result rather than a crash. Unwired     |
 // |         |            |        | (careerOrNull == null) is byte-identical to v1.5 throughout.      |
+// | 1.7     | 2026-08-06 | —      | T2 AR pass 1 (2M). The constructor now requires the career to     |
+// |         |            |        | carry every club in the season — this is the only layer holding   |
+// |         |            |        | both, the same argument that puts the KD-4 cursor invariant here, |
+// |         |            |        | and a career over a subset otherwise constructed happily and then |
+// |         |            |        | threw from the availability filter part-way through a round,      |
+// |         |            |        | after earlier fixtures had been applied to the table. And (d′)    |
+// |         |            |        | splits: the roster reconciliation is STAGED at (d′) and INSTALLED |
+// |         |            |        | after (e)'s commits. v1.6 wrote it before BeginNextSeason — the   |
+// |         |            |        | one commit this method's own docs call fallible — so a refused    |
+// |         |            |        | roll left a career reconciled against a season that never began,  |
+// |         |            |        | flatly contradicting the comment that claimed otherwise. Plus a   |
+// |         |            |        | public World accessor, so the new SeasonSaveManager.Save overload |
+// |         |            |        | can capture a whole season from the loop alone.                   |
 #endregion

@@ -199,6 +199,39 @@ namespace TacticalDirector.SeasonSave.Tests
                 PlayerCareerStates.FromBlocks(training, shortened));
         }
 
+        [Test]
+        public void FromBlocks_RefusesUnorderedPlayerIds()
+        {
+            // Every lookup in PlayerCareerStates is a binary search over these ids. The codecs
+            // canonicalize and gate the order, but ClubTrainingStates' constructor does not and this
+            // entry point is public — an out-of-order block would make IndexOfPlayer miss a player who
+            // IS carried, and SyncToRoster would then read the miss as "new" and overwrite a season of
+            // his state with Create(). Silent, total, and indistinguishable from a fresh career.
+            var ids = new[] { 5, 3, 9 };
+            var training = new[]
+            {
+                new ClubTrainingStates(
+                    0,
+                    ids,
+                    new[]
+                    {
+                        TrainingState.Create(TrainingFocus.Balanced),
+                        TrainingState.Create(TrainingFocus.Balanced),
+                        TrainingState.Create(TrainingFocus.Balanced),
+                    }),
+            };
+            var medical = new[]
+            {
+                new ClubInjuryStates(
+                    0,
+                    ids,
+                    new[] { InjuryState.Create(), InjuryState.Create(), InjuryState.Create() }),
+            };
+
+            Assert.Throws<System.ArgumentException>(
+                () => PlayerCareerStates.FromBlocks(training, medical));
+        }
+
         // ── the slot-2 training step ───────────────────────────────────────────────────────
 
         [Test]
@@ -609,6 +642,45 @@ namespace TacticalDirector.SeasonSave.Tests
 
             Assert.Throws<System.ArgumentException>(() =>
                 career.AdvanceTrainingDay(0u, provider, CoachingModifier.Identity));
+        }
+
+        [Test]
+        public void SyncToRoster_BumpsTheRosterGeneration_EvenWithNoChurn()
+        {
+            // ScheduleFor hands out a handle bound to the live arrays, and the sync REPLACES them — so
+            // a schedule cached across a boundary writes into a discarded array and TrySetFocus returns
+            // true with the change gone. The generation is what makes that detectable, and it has to
+            // move on a no-churn sync too: the arrays are replaced either way.
+            CareerTestRoster.MutableSquadProvider provider = TwoClubProvider();
+            PlayerCareerStates career = Fresh(provider);
+            int before = career.RosterGeneration;
+
+            Assert.AreEqual(0, career.SyncToRoster(provider), "Precondition: no churn.");
+            Assert.AreEqual(before + 1, career.RosterGeneration);
+        }
+
+        [Test]
+        public void CommitRosterSync_WithAStalePlan_FailsLoud()
+        {
+            // The staged form exists so RollToNextSeason can compute the sync before its one throwing
+            // commit and install it after. Installing a plan built against an older roster would
+            // resurrect it over the newer one — the very thing the staging is meant to avoid.
+            CareerTestRoster.MutableSquadProvider provider = TwoClubProvider();
+            PlayerCareerStates career = Fresh(provider);
+
+            PlayerCareerStates.RosterSyncPlan stale = career.PrepareRosterSync(provider);
+            career.SyncToRoster(provider);   // a later sync moves the generation on
+
+            Assert.Throws<System.ArgumentException>(() => career.CommitRosterSync(in stale));
+        }
+
+        [Test]
+        public void CommitRosterSync_WithADefaultPlan_FailsLoud()
+        {
+            PlayerCareerStates career = Fresh(TwoClubProvider());
+            PlayerCareerStates.RosterSyncPlan none = default;
+
+            Assert.Throws<System.ArgumentException>(() => career.CommitRosterSync(in none));
         }
 
         // ── the observer reads ─────────────────────────────────────────────────────────────
