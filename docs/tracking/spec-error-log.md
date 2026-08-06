@@ -2547,6 +2547,17 @@ Six new `OptionGeneratorTests` locks (closed-form overlap value, off-centre bise
 far-post, behind-the-goal-line, and the two ramp-continuity sweeps) plus the de-tautologised
 null-view pair, taking the shot-lane suite to **15**.
 
+**Suite adequacy, measured.** The H-finding above ("8 of 12 plausible mutants survived") is the kind
+of claim that needs re-measuring after the fix, not asserting. Re-run against the hardened suite:
+**12 of 12 killed.** Each of the twelve is a specific way this derivation could be wrong — pre-fix
+containment, no arc clipping, `bisector := shot direction`, either bound reverted, `gkness` back to a
+bool, the ability term or the P3 exemption removed, the Vision fidelity floor neutralised, an
+off-centre ability range, and the GK radius collapsed to the outfield one. The AR-2 centring defect
+below is itself killed by the near-depth sweep, which is how a continuity lock is supposed to behave.
+This is mutation testing of a faithful port of both the code and the assertions, **not** a run of the
+real NUnit suite — there is no .NET SDK here — so it establishes that the assertions discriminate,
+not that they compile.
+
 **Second review pass (AR-2, same day).** A hostile re-read of this fix found the two new ramps were
 **not centred on the predicates they replace** — `laneWeight` ran 1.0 → 2.0 m and `gkness` 6 → 8 m,
 i.e. entirely on one side. That is a systematic one-sided change in occlusion dressed as a continuity
