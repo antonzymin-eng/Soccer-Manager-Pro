@@ -630,6 +630,16 @@ the same shape the ERR-008-020 review caught one landing earlier, and the -021 c
 to have avoided it "at authoring time rather than at review". Suite now 15 locks; the pass-lane twin
 tautology is fixed too.
 
+**Second review pass (AR-2, same day).** A hostile re-read of this fix found the two new ramps were
+**not centred on the predicates they replace** — `laneWeight` ran 1.0 → 2.0 m and `gkness` 6 → 8 m,
+i.e. entirely on one side. That is a systematic one-sided change in occlusion dressed as a continuity
+fix, and it violates the same P5 pivot this entry criticises -021 for getting wrong: both ERR-008-019
+and ERR-008-020 explicitly centred their ramps on the old cliff so the population integral is
+preserved. Corrected to half-width either side (0.5 → 1.5 m and 5 → 7 m), so a blocker at exactly
+`GOAL_MIN_SHOT_DIST` now contributes half his occlusion and one at exactly `GK_PROXIMITY_TO_GOAL`
+reads half keeper. Every value lock is unchanged (all sit outside the ramp bands); the two continuity
+sweeps were re-ranged to span the centred bands.
+
 **Still recorded, not fixed:** `MIN_GOAL_VISIBILITY` remains a hard predicate on option *existence*
 (what changed is that the opening now decays to it rather than jumping past it); the GK positional
 proxy still reads a deep defender as part-keeper; §3.2.10's constant catalogue is now six landings

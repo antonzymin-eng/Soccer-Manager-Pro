@@ -231,8 +231,14 @@ ComputeGoalOpeningScore(agentPos, teamId, visibleOpponents[]):
    If shooterToLine_i × blockerToLine_i < 0: skip    // opponent is past the goal line
    If |blockerToLine_i| > |shooterToLine_i|:  skip   // opponent is behind the shooter
 
+   // The ramp is CENTRED on the old predicate — half its width either side — so a
+   // uniformly-placed blocker contributes the same integrated occlusion as before
+   // (the P5 pivot, and the shape ERR-008-019 and -020 both used). A ramp running
+   // from the threshold upward would be a one-sided reduction dressed as a
+   // continuity fix.
    proj_i       = Dot(O_i − agentPos, Normalise(goalCentre − agentPos))   // lane depth, m
-   laneWeight_i = Clamp01((proj_i − GOAL_MIN_SHOT_DISTANCE) / SHOT_BLOCKER_NEAR_FADE_M)
+   rampStart    = GOAL_MIN_SHOT_DISTANCE − SHOT_BLOCKER_NEAR_FADE_M / 2
+   laneWeight_i = Clamp01((proj_i − rampStart) / SHOT_BLOCKER_NEAR_FADE_M)
    If laneWeight_i == 0: skip                        // essentially on top of the shooter
 
    // 3b. GK read — a SCALAR, not a predicate (ERR-008-022 (c)). Stage 0 has no
@@ -240,8 +246,8 @@ ComputeGoalOpeningScore(agentPos, teamId, visibleOpponents[]):
    //     both the blocking radius and the P3 ability exemption, so the proxy's boundary
    //     is a slope. Stage 1: replace with an explicit AgentRole == GOALKEEPER flag.
    distToGoalLine_i = |O_i.x − goalPostL.x|
-   gkness_i         = 1 − Clamp01((distToGoalLine_i − GK_PROXIMITY_TO_GOAL)
-                                  / GK_PROXIMITY_FADE_M)
+   gkRampStart      = GK_PROXIMITY_TO_GOAL − GK_PROXIMITY_FADE_M / 2      // centred, as above
+   gkness_i         = 1 − Clamp01((distToGoalLine_i − gkRampStart) / GK_PROXIMITY_FADE_M)
    effectiveRadius_i = Lerp(BLOCKER_RADIUS, GK_BLOCKER_RADIUS, gkness_i)
 
    opponentDist_i = |O_i − agentPos|
@@ -389,8 +395,8 @@ never produce from either side.
 
 | Constant | Value | Tag | Meaning |
 |---|---|---|---|
-| `SHOT_BLOCKER_NEAR_FADE_M` | 1.0 m | [GT] | Lane depth beyond `GOAL_MIN_SHOT_DISTANCE` over which a blocker's occlusion ramps from nothing to his full geometric share (step 3a). |
-| `GK_PROXIMITY_FADE_M` | 2.0 m | [GT] | Width of the band beyond `GK_PROXIMITY_TO_GOAL` over which `gkness` falls from 1 to 0, lerping both the blocking radius and the P3 ability exemption (step 3b). |
+| `SHOT_BLOCKER_NEAR_FADE_M` | 1.0 m | [GT] | Full width of the lane-depth ramp, **centred on** `GOAL_MIN_SHOT_DISTANCE` (so 0.5 m → 1.5 m): a blocker's occlusion goes from nothing to his full geometric share across it (step 3a). |
+| `GK_PROXIMITY_FADE_M` | 2.0 m | [GT] | Full width of the goalkeeper-read ramp, **centred on** `GK_PROXIMITY_TO_GOAL` (so 5 m → 7 m from the goal line): `gkness` falls from 1 to 0 across it, lerping both the blocking radius and the P3 ability exemption (step 3b). |
 
 `BLOCKER_RADIUS`, `GK_BLOCKER_RADIUS`, `GK_PROXIMITY_TO_GOAL`, `GOAL_MIN_SHOT_DISTANCE`
 and `GOAL_OPENING_MIN` keep their values; ERR-008-022 changes what the last three *mean*
@@ -448,13 +454,17 @@ a *fully open* goal while a defender stood across the near post.
 
 and on the centre-line fixture, the two ramps ERR-008-022 introduces:
 
-| Blocker on the shooting axis, lane depth | 0.95 m | 1.05 m | 1.50 m | 1.85 m |
+| Blocker on the shooting axis, lane depth | 0.45 m | 0.55 m | 1.00 m | 1.35 m |
 |---|---|---|---|---|
 | GoalOpeningScore | 1.000 | 0.950 | 0.500 | 0.150 |
-| pre-fix | 1.000 | **0.050** (and no SHOOT option) | 0.050 | 0.050 |
+| pre-fix | 1.000 | 1.000 | **1.000, flipping to 0.050 and no SHOOT option at 1.005 m** | 0.050 |
 
-Maximum step per 5 cm across the GK read (blocker traversing x = 96.0 → 99.0 at y = 34.8):
-**0.013**, against **0.426** pre-fix.
+Both ramps are centred on the predicate they replace, so the midpoint of each reproduces the
+old boundary: at exactly `GOAL_MIN_SHOT_DISTANCE` a blocker now contributes half his occlusion,
+and at exactly `GK_PROXIMITY_TO_GOAL` he reads half goalkeeper.
+
+Maximum step per 5 cm across the GK read (blocker traversing x = 97.5 → 100.5 at y = 34.8, which
+spans the whole ramp): **0.011**, against **0.426** pre-fix.
 
 **Goalkeeper as blocker:** Stage 0 has no GK role flag, so the goalkeeper is identified by
 proximity to his own goal line. An opponent on the line reads as fully goalkeeper and is

@@ -144,8 +144,11 @@ namespace TacticalDirector.DecisionTree
         public const float GOAL_MIN_SHOT_DIST = 1.00f;  // [GT] lane depth below which a blocker contributes nothing
 
         /// <summary>
-        /// [GT] Depth (m) beyond GOAL_MIN_SHOT_DIST over which a blocker's occlusion ramps
-        /// from nothing to his full geometric share. The bound was a hard predicate: a
+        /// [GT] Full width (m) of the lane-depth ramp over which a blocker's occlusion goes
+        /// from nothing to his full geometric share. The ramp is CENTRED on
+        /// GOAL_MIN_SHOT_DIST (0.5 m → 1.5 m at this value), so a uniformly-placed blocker
+        /// contributes the same integrated occlusion as the predicate it replaces — the
+        /// doctrine P5 pivot, and the shape ERR-008-019 and ERR-008-020 both used. The bound was a hard predicate: a
         /// blocker at 0.995 m of lane depth left the goal fully open (score 1.000) and one
         /// at 1.005 m shut it to the GOAL_OPENING_MIN floor (0.050) — below
         /// MIN_GOAL_VISIBILITY, so one centimetre of his position also decided whether a
@@ -155,8 +158,9 @@ namespace TacticalDirector.DecisionTree
         public const float SHOT_BLOCKER_NEAR_FADE_M = 1.00f;
 
         /// <summary>
-        /// [GT] Width (m) of the band beyond GK_PROXIMITY_TO_GOAL over which a blocker
-        /// reads as progressively less goalkeeper. The classification was a hard predicate
+        /// [GT] Full width (m) of the goalkeeper-read ramp, CENTRED on GK_PROXIMITY_TO_GOAL
+        /// (5 m → 7 m from the goal line at this value — so a blocker exactly on the old
+        /// boundary now reads half keeper, preserving the P5 pivot). The classification was a hard predicate
         /// on distance to the goal line, so 2 cm of a defender's position flipped his
         /// blocking radius 0.50 ⇒ 1.50 m and his exemption from the ability term together —
         /// a measured GoalOpeningScore step of 0.768 ⇒ 0.311 at the 15 m fixture. Both

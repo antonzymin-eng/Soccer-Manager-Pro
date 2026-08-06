@@ -669,6 +669,8 @@ namespace TacticalDirector.DecisionTree.Tests
             // `halfArc := totalArc` (no clipping) gives 0.422963. The lock separates all
             // three, which the centre-line fixtures cannot.
             float score = OffCentreGoalOpening(alongAxisM: 5.0f, acrossAxisM: 1.0f);
+            // Closed form at today's [GT]s; a BLOCKER_RADIUS_M retune must recompute it,
+            // which is the intended signal rather than a brittleness.
             Assert.AreEqual(0.849389f, score, 1e-4f,
                 "The goal arc must be measured about its own bisector and clipped at the posts.");
         }
@@ -681,7 +683,12 @@ namespace TacticalDirector.DecisionTree.Tests
             // cuts diagonally across the goal mouth, so the FAR-POST blocker fell outside
             // it and was discarded — measured on 100% of sampled off-centre shooters,
             // which left this shot reading as a completely open goal (1.000).
-            float score = OffCentreGoalOpeningAt(new Vector2(105.0f, 37.66f));
+            // Post taken from the context rather than restated, so a change to the fixture's
+            // goal geometry moves the blocker with it instead of quietly turning this into a
+            // test of some other point on the goal line. (The expected value is a closed-form
+            // constant and would then need recomputing — which is the intended signal.)
+            DecisionContext ctx = BuildOffCentreShotContext();
+            float score = OffCentreGoalOpeningAt(ctx.OpponentGoalPostL);   // y = 37.66, the FAR post from (90,24)
             Assert.AreEqual(0.782157f, score, 1e-4f,
                 "A blocker on the goal line at the far post must occlude the goal.");
             Assert.Less(score, 1.0f,
@@ -695,7 +702,9 @@ namespace TacticalDirector.DecisionTree.Tests
             // BEHIND the goal line — in the net — and, being within GK_PROXIMITY_TO_GOAL,
             // handed him the goalkeeper's 1.5 m blocking radius. Nothing behind the plane
             // the shot has to reach can block it.
-            float score = OffCentreGoalOpeningAt(new Vector2(106.5f, 30.34f));
+            DecisionContext ctx = BuildOffCentreShotContext();
+            float score = OffCentreGoalOpeningAt(
+                new Vector2(ctx.OpponentGoalPostR.x + 1.5f, ctx.OpponentGoalPostR.y));
             Assert.AreEqual(1.0f, score, 1e-4f,
                 "An opponent behind the goal line cannot occlude the goal.");
         }
@@ -719,7 +728,7 @@ namespace TacticalDirector.DecisionTree.Tests
             float last = float.NaN;
             for (int i = 0; i <= 21; i++)
             {
-                float depth = 0.80f + 0.05f * i;
+                float depth = 0.30f + 0.05f * i;   // spans the ramp, centred on 1.00 m
                 float score = GoalOpeningWithBlockerAtDepth(depth);
                 if (!float.IsNaN(prev)) maxStep = Mathf.Max(maxStep, Mathf.Abs(score - prev));
                 prev = score;
@@ -743,7 +752,7 @@ namespace TacticalDirector.DecisionTree.Tests
             float prev = float.NaN;
             for (int i = 0; i <= 60; i++)
             {
-                float x = 96.0f + 0.05f * i;   // spans GK_PROXIMITY_TO_GOAL (x = 99.0)
+                float x = 97.5f + 0.05f * i;   // spans the ramp, centred on x = 99.0
                 float score = GoalOpeningWithBlockerAt(new Vector2(x, 34.8f));
                 if (!float.IsNaN(prev)) maxStep = Mathf.Max(maxStep, Mathf.Abs(score - prev));
                 prev = score;

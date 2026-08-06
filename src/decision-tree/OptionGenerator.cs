@@ -416,11 +416,13 @@ namespace TacticalDirector.DecisionTree
         //   overlap is now scaled by the blocker's Anticipation/Positioning ability, read
         //   through the shooter's own Vision as discrimination fidelity.
         //
-        // P3 (ownership ledger): the GOALKEEPER is deliberately exempt from the ability
-        // term and occludes on geometry alone. Keeper shot-stopping quality is Goalkeeper
+        // P3 (ownership ledger): the GOALKEEPER is exempt from the ability term and
+        // occludes on geometry alone. Keeper shot-stopping quality is Goalkeeper
         // Mechanics #11's to price (§3.5 save model, and the #11 §3.7.0 rush that sets
         // this very geometry); pricing it here too would charge the shooter twice for the
-        // same keeper.
+        // same keeper. Stage 0 has no GK role flag, so "is he the keeper" is a proximity
+        // read — and therefore a SCALAR (ERR-008-022): the exemption fades in with it
+        // rather than switching on at a boundary.
         private static float ComputeGoalOpeningScore(in DecisionContext ctx)
         {
             Vector2 agentPos  = ctx.AgentPosition;
@@ -472,7 +474,8 @@ namespace TacticalDirector.DecisionTree
                 // heuristic's boundary is a slope rather than the 0.768 ⇒ 0.311 step over
                 // 2 cm it was (ERR-008-022).
                 float gkness = 1.0f - Mathf.Clamp01(
-                    (Mathf.Abs(oPos.x - goalLineX) - UtilityWeights.GK_PROXIMITY_TO_GOAL)
+                    (Mathf.Abs(oPos.x - goalLineX)
+                     - (UtilityWeights.GK_PROXIMITY_TO_GOAL - 0.5f * UtilityWeights.GK_PROXIMITY_FADE_M))
                     / UtilityWeights.GK_PROXIMITY_FADE_M);
                 float radius = Mathf.Lerp(UtilityWeights.BLOCKER_RADIUS_M,
                                           UtilityWeights.GK_BLOCKER_RADIUS_M, gkness);
@@ -580,7 +583,14 @@ namespace TacticalDirector.DecisionTree
 
             Vector2 shotDir = (goalCentre - agentPos).normalized;
             float proj = Vector2.Dot(oppPos - agentPos, shotDir);
-            return Mathf.Clamp01((proj - minDist) / UtilityWeights.SHOT_BLOCKER_NEAR_FADE_M);
+
+            // The ramp is CENTRED on the old predicate (half its width either side), so a
+            // uniformly-placed blocker contributes the same integrated occlusion as before
+            // — the doctrine P5 pivot, and the shape ERR-008-019 and ERR-008-020 both used.
+            // A ramp running from the old threshold upward would have been a one-sided
+            // reduction dressed as a continuity fix.
+            float rampStart = minDist - 0.5f * UtilityWeights.SHOT_BLOCKER_NEAR_FADE_M;
+            return Mathf.Clamp01((proj - rampStart) / UtilityWeights.SHOT_BLOCKER_NEAR_FADE_M);
         }
 
         // ── §3.1.5 DRIBBLE ──────────────────────────────────────────────────────
@@ -973,4 +983,10 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        | corrected (the overlap is even in that value); the stale gate-4 comment     |
 // |         |            |        | corrected — GOAL_OPENING_MIN 0.05 is BELOW MIN_GOAL_VISIBILITY 0.12, so a   |
 // |         |            |        | fully occluded lane does still fail the gate.                               |
+// | 1.9     | 2026-08-06 | —      | ERR-008-022 AR-2: both new ramps RE-CENTRED on the predicate they replace   |
+// |         |            |        | (half-width either side) rather than running upward from it. As first       |
+// |         |            |        | landed they were a one-sided reduction in occlusion dressed as a            |
+// |         |            |        | continuity fix — the P5 pivot ERR-008-019 and -020 both observed. Value     |
+// |         |            |        | locks unchanged (all sit outside the ramp bands); the two continuity        |
+// |         |            |        | sweeps re-ranged to span the centred bands.                                |
 #endregion

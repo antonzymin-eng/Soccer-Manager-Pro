@@ -2547,6 +2547,16 @@ Six new `OptionGeneratorTests` locks (closed-form overlap value, off-centre bise
 far-post, behind-the-goal-line, and the two ramp-continuity sweeps) plus the de-tautologised
 null-view pair, taking the shot-lane suite to **15**.
 
+**Second review pass (AR-2, same day).** A hostile re-read of this fix found the two new ramps were
+**not centred on the predicates they replace** — `laneWeight` ran 1.0 → 2.0 m and `gkness` 6 → 8 m,
+i.e. entirely on one side. That is a systematic one-sided change in occlusion dressed as a continuity
+fix, and it violates the same P5 pivot this entry criticises -021 for getting wrong: both ERR-008-019
+and ERR-008-020 explicitly centred their ramps on the old cliff so the population integral is
+preserved. Corrected to half-width either side (0.5 → 1.5 m and 5 → 7 m), so a blocker at exactly
+`GOAL_MIN_SHOT_DIST` now contributes half his occlusion and one at exactly `GK_PROXIMITY_TO_GOAL`
+reads half keeper. Every value lock is unchanged (all sit outside the ramp bands); the two continuity
+sweeps were re-ranged to span the centred bands.
+
 **Digest invariance NOT claimed** — every change is live on generated shots. No schema / RNG /
 domain-tag / draw-site / draw-order change.
 
