@@ -190,8 +190,9 @@ namespace TacticalDirector.SeasonSave
         public SeasonViewModel View() => _state.View();
 
         /// <summary>
-        /// The season this loop drives — the object <c>SeasonSaveManager.Save(world, season, match, path)</c>
-        /// needs, and the one #38 binds richer screens to than <see cref="SeasonViewModel"/> carries.
+        /// The season this loop drives — the <c>season</c> argument
+        /// <see cref="SeasonSaveManager.Save"/> needs, and the one #38 binds richer screens to than
+        /// <see cref="SeasonViewModel"/> carries.
         /// <para>
         /// Exposing the object does <b>not</b> weaken FR-SN-032: every <see cref="SeasonState"/> mutator is
         /// <c>internal</c> to this assembly, so an outside caller holding this reference can only read.
@@ -756,4 +757,8 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | by STRICTLY increasing WorldDay. They are non-decreasing — a round |
 // |         |            |        | captures one worldDay and stamps every fixture in it with that —   |
 // |         |            |        | so a consumer must not use WorldDay as a unique key.                |
+// | 1.5     | 2026-08-06 | —      | Doc-only: the State summary quoted SeasonSaveManager.Save's four- |
+// |         |            |        | argument form, which #29/#41 T1 replaced. Points at the method     |
+// |         |            |        | instead, so the citation cannot go stale on the next signature     |
+// |         |            |        | change.                                                            |
 #endregion

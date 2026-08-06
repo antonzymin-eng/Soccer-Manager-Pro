@@ -5,6 +5,7 @@
         "TacticalDirector.TrainingSystem",
         "TacticalDirector.PlayerDatabase",
         "TacticalDirector.PlayerProgression",
+        "TacticalDirector.DeterministicSim",
         "TacticalDirector.ProjectConstants",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
