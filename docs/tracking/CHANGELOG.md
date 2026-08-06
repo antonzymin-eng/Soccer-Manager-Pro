@@ -68,7 +68,17 @@ break it, and do not edit historical entries.
 > downstream; and a stale duplicate of the §3.2.13 version history, eleven revisions behind, was
 > removed in favour of a pointer. **Digest invariance NOT claimed** — every change is live on
 > generated shots. **Gate NOT run — no .NET SDK in the authoring environment**; every number above
-> is closed-form derivation cross-checked against a Python reference implementation of both models.)
+> is closed-form derivation cross-checked against a Python reference implementation of both models.
+>
+> **AR-2, same day.** A second hostile pass over this fix found it committing the same class of
+> error it criticises: both new ramps ran entirely on ONE side of the predicate they replace
+> (1.0 → 2.0 m and 6 → 8 m), which is a systematic one-sided reduction in occlusion dressed as a
+> continuity fix. ERR-008-019 and ERR-008-020 both explicitly centred their ramps on the old cliff
+> so the population integral is preserved — the P5 pivot. Corrected to half-width either side
+> (0.5 → 1.5 m and 5 → 7 m), so a blocker at exactly `GOAL_MIN_SHOT_DIST` contributes half his
+> occlusion and one at exactly `GK_PROXIMITY_TO_GOAL` reads half keeper; both constants are now
+> ramp *centres* and their catalogue comments say so. Every value lock is unchanged — all sit
+> outside the ramp bands — and both continuity sweeps were re-ranged to span them.)
 
 > **Last Updated (prior):** August 5, 2026, latest same day (**ERR-008-021 — the shot-lane occlusion
 > test told a defender across the near post from an open goal.** The §6.4 follow-up the

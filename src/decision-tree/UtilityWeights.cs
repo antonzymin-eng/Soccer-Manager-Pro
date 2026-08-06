@@ -140,8 +140,8 @@ namespace TacticalDirector.DecisionTree
         public const float GOAL_OPENING_MIN = 0.05f;  // [GT] minimum goal opening score floor
         public const float BLOCKER_RADIUS_M = 0.50f;  // [GT] outfield player body width in shot lane
         public const float GK_BLOCKER_RADIUS_M = 1.50f;  // [GT] goalkeeper effective blocking radius
-        public const float GK_PROXIMITY_TO_GOAL = 6.00f;  // [GT] distance from goal line at which a blocker reads as fully goalkeeper
-        public const float GOAL_MIN_SHOT_DIST = 1.00f;  // [GT] lane depth below which a blocker contributes nothing
+        public const float GK_PROXIMITY_TO_GOAL = 6.00f;  // [GT] goalkeeper-read ramp CENTRE: distance from the goal line at which a blocker reads half keeper (ERR-008-022; was the hard classification threshold)
+        public const float GOAL_MIN_SHOT_DIST = 1.00f;  // [GT] lane-depth ramp CENTRE: depth at which a blocker contributes half his occlusion (ERR-008-022; was the hard skip threshold)
 
         /// <summary>
         /// [GT] Full width (m) of the lane-depth ramp over which a blocker's occlusion goes
