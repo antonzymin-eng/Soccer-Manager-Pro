@@ -6,8 +6,10 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 1.68
-**Updated:** August 6, 2026, latest same day (v1.68 — **ERR-008-022 filed + RESOLVED: the adversarial review over the ERR-008-021 landing.** #8 §3.1.4.3's shooting lane was bounded by a plane through the goal **CENTRE**, which for any off-centre shooter cuts diagonally across the goal mouth: it discarded the **far-post** blocker on **20,213 of 20,213** sampled in-range off-centre shooters, dropped a keeper standing on his line at goal centre for *every* shooter position (`proj == distToGoal` exactly — shooter (95,20) read a **completely open goal**), and admitted an opponent standing *behind* the goal line at the keeper's radius. ERR-008-021's overlap model was being denied much of the geometry it exists to price, so that landing achieved substantially less than it claimed. Two further hard predicates in the same derivation were **larger cliffs than the one -021 removed**: `GOAL_MIN_SHOT_DIST` stepped `GoalOpeningScore` 1.000 → 0.050 across 1 cm (and, 0.050 being below `MIN_GOAL_VISIBILITY`, deleted the SHOOT option with it), and the goalkeeper predicate stepped it 0.768 → 0.311 across 2 cm — which -021 had *widened* to 0.551, three lines from the code it rewrote, unrecorded. All three fixed: goal-line-plane bound + two new `[GT]` ramp widths (`SHOT_BLOCKER_NEAR_FADE_M` 1.0 m, `GK_PROXIMITY_FADE_M` 2.0 m), with `gkness` lerping the radius and the P3 exemption together. **Three -021 verification claims corrected as false:** the P5 exactness argument (holds only for `h ≤ halfArc`; up to **2×** above it — the stated reason no recalibration was needed, withdrawn), the test count ("9 locks / 5 of 8" → **10** / 9 evaluable / 5 fail / 4 pass), and the §3.2.3.2 worked example (its opponent sat 4.5 m from the goal line ⇒ classified a **goalkeeper** ⇒ exempt from the very ability term it demonstrated; all three numbers unreachable). **The suite was inadequate too** — the over-blocking half had no lock, a mutant restoring the pre-fix full width passed all ten, 8 of 12 mutants survived, and `NullAttributeView` was a **tautology** in both the pass and shot suites. Suite 10 → **15**. **Gate NOT run — no .NET SDK in the authoring environment.** Prior entry below.)
+**Version:** 1.69
+**Updated:** August 6, 2026, latest same day (v1.69 — **ERR-008-022's far-post lock was testing the NEAR post; the first real gate run caught it.** CI run 402 (PR #302, head `301c634`) compiled and executed this work for the first time. Build **0 errors**; `DecisionTree.Tests` **127 passed / 1 failed / 4 skipped**, every other suite green. The one failure — `ShotLane_FarPostBlocker_OccludesTheGoal`, expected 0.782157, got **0.728880** — was the test, not the model: it read `ctx.OpponentGoalPostL`, which in the home fixture is y = **30.34**, the post *nearer* a shooter at (90, 24). The pre-fix goal-centre-plane bound **kept** the near post and discarded only the far one, so the lock named for this entry's headline finding **would have passed against the broken model** — it was never a lock on the fix. Now selected by geometry (`FarPostFrom`) rather than by the `PostL`/`PostR` label, which carries opposite sides in this file's two fixtures. Expected value unchanged and now compiler-confirmed. The recorded **12 of 12** mutant kill accordingly overstates the far-bound mutant: the Python harness killed it, the committed test did not. Third hand-derived verification claim in the -021/-022 chain that execution falsified. Prior entry below.)
+
+**Updated (prior):** August 6, 2026, latest same day (v1.68 — **ERR-008-022 filed + RESOLVED: the adversarial review over the ERR-008-021 landing.** #8 §3.1.4.3's shooting lane was bounded by a plane through the goal **CENTRE**, which for any off-centre shooter cuts diagonally across the goal mouth: it discarded the **far-post** blocker on **20,213 of 20,213** sampled in-range off-centre shooters, dropped a keeper standing on his line at goal centre for *every* shooter position (`proj == distToGoal` exactly — shooter (95,20) read a **completely open goal**), and admitted an opponent standing *behind* the goal line at the keeper's radius. ERR-008-021's overlap model was being denied much of the geometry it exists to price, so that landing achieved substantially less than it claimed. Two further hard predicates in the same derivation were **larger cliffs than the one -021 removed**: `GOAL_MIN_SHOT_DIST` stepped `GoalOpeningScore` 1.000 → 0.050 across 1 cm (and, 0.050 being below `MIN_GOAL_VISIBILITY`, deleted the SHOOT option with it), and the goalkeeper predicate stepped it 0.768 → 0.311 across 2 cm — which -021 had *widened* to 0.551, three lines from the code it rewrote, unrecorded. All three fixed: goal-line-plane bound + two new `[GT]` ramp widths (`SHOT_BLOCKER_NEAR_FADE_M` 1.0 m, `GK_PROXIMITY_FADE_M` 2.0 m), with `gkness` lerping the radius and the P3 exemption together. **Three -021 verification claims corrected as false:** the P5 exactness argument (holds only for `h ≤ halfArc`; up to **2×** above it — the stated reason no recalibration was needed, withdrawn), the test count ("9 locks / 5 of 8" → **10** / 9 evaluable / 5 fail / 4 pass), and the §3.2.3.2 worked example (its opponent sat 4.5 m from the goal line ⇒ classified a **goalkeeper** ⇒ exempt from the very ability term it demonstrated; all three numbers unreachable). **The suite was inadequate too** — the over-blocking half had no lock, a mutant restoring the pre-fix full width passed all ten, 8 of 12 mutants survived, and `NullAttributeView` was a **tautology** in both the pass and shot suites. Suite 10 → **15**. **Gate NOT run — no .NET SDK in the authoring environment.** Prior entry below.)
 
 **Updated (prior):** August 5, 2026, latest same day (v1.67 — **ERR-008-021 filed + RESOLVED: the third fix under the football-judgment proxy review's remediation doctrine, and the discharge of the deferral ERR-008-020 opened.** #8 §3.1.4.3/§3.2.3.2's shot lane carried the SAME two defects the pass lane did, which is why §6.4 named it as the follow-up. **(a) A containment cliff:** an opponent contributed his *whole* angular blocking width when his angular centre fell inside the goal arc and **exactly nothing** when it fell outside — so a defender standing squarely across the near post scored a **fully open goal**, one a centimetre the other side scored a width half of which lay behind the post, and 4 cm of lateral position stepped `GoalOpeningScore` by **0.41** on the fixture the suite now uses (0.595 → 1.000). **(b) Attribute blindness:** the width was body radius alone, so a defender who neither reads the shot nor gets his body into its line shut the goal off exactly as hard as one who does. Found by review, not measurement — a structural property of the formula, read from spec + code. Fixed per doctrine: **P1** — the contribution is now the true angular OVERLAP of the blocking disc with the goal arc, which is continuous *by construction* (no ramp constant, no tolerance epsilon) and is also the geometrically honest answer, so the over- and under-blocking go with the cliff; **P2** — the overlap is scaled by the blocker's Anticipation/Positioning ability (`SHOT_BLOCKER_ABILITY_MIN/MAX` 0.6–1.4 `[GT]`, league-average exactly 1.0) read through the SHOOTER's Vision fidelity, reusing §3.1.3.3's floor as ONE dial because fidelity belongs to the assessor, not to what he assesses; **P3** — the **goalkeeper is exempt from the ability term** and occludes on geometry alone, because #11 §3.5/§3.7.0 owns keeper shot-stopping and pricing it here too would charge the shooter twice for one keeper. **P5 holds exactly, not approximately:** over a uniformly-placed blocker the old rectangle and the new trapezoid both integrate to `4h·halfArc`, for every disc width and every arc — so the fix redistributes occlusion from a step to a slope without opening or closing the goal on average, and the ability midpoint leaves the attribute axis neutral too. **Digest invariance is NOT claimed** — the model is live on every shot the engine generates and moves on any blocker who is not exactly average or not wholly inside the arc; the behaviour change is the point. No schema / RNG / domain-tag / draw-site / draw-order change. **10** new `OptionGeneratorTests` locks incl. the GK-exemption proof and the away-side mirror; a reference implementation of both models confirms **5 of the 9 evaluable against the old model fail on it** (the four that pass pre-fix are the two P5 pivot rows, null-view neutrality and the GK exemption, by construction). *(Counts corrected at ERR-008-022, which also found the null-view lock tautological and the over-blocking half unlocked.)* **Gate NOT run — no .NET SDK in the authoring environment; nothing in this landing has been compiled or executed.** Prior entry below.)
 
@@ -2558,16 +2560,53 @@ Six new `OptionGeneratorTests` locks (closed-form overlap value, off-centre bise
 far-post, behind-the-goal-line, and the two ramp-continuity sweeps) plus the de-tautologised
 null-view pair, taking the shot-lane suite to **15**.
 
-**Suite adequacy, measured.** The H-finding above ("8 of 12 plausible mutants survived") is the kind
-of claim that needs re-measuring after the fix, not asserting. Re-run against the hardened suite:
-**12 of 12 killed.** Each of the twelve is a specific way this derivation could be wrong — pre-fix
-containment, no arc clipping, `bisector := shot direction`, either bound reverted, `gkness` back to a
-bool, the ability term or the P3 exemption removed, the Vision fidelity floor neutralised, an
-off-centre ability range, and the GK radius collapsed to the outfield one. The AR-2 centring defect
-below is itself killed by the near-depth sweep, which is how a continuity lock is supposed to behave.
-This is mutation testing of a faithful port of both the code and the assertions, **not** a run of the
-real NUnit suite — there is no .NET SDK here — so it establishes that the assertions discriminate,
-not that they compile.
+**Suite adequacy, measured — and then corrected by the first real gate run.** The H-finding above
+("8 of 12 plausible mutants survived") is the kind of claim that needs re-measuring after the fix,
+not asserting. Re-run against the hardened suite, the Python port reported **12 of 12 killed**:
+pre-fix containment, no arc clipping, `bisector := shot direction`, either bound reverted, `gkness`
+back to a bool, the ability term or the P3 exemption removed, the Vision fidelity floor neutralised,
+an off-centre ability range, and the GK radius collapsed to the outfield one. That figure was
+recorded with the caveat that it was a port of both code and assertions, not a run of the real NUnit
+suite.
+
+**The caveat was load-bearing, and the port was wrong.** CI run 402 (PR #302, head `301c634`,
+August 6, 2026) compiled and executed this suite for the first time and failed
+`ShotLane_FarPostBlocker_OccludesTheGoal`: expected 0.782157, **got 0.728880**. The production model
+was correct; the *test* was not. It took the blocker position from `ctx.OpponentGoalPostL`, and this
+file's home fixture defines `OpponentGoalPostL` as y = **30.34** — the post *nearer* a shooter at
+(90, 24). The port had been pointed at y = 37.66. So:
+
+- The committed test placed its blocker at the **near** post while asserting the **far** post's
+  value, which is exactly why it failed.
+- Worse than a wrong constant: the near post was never the defect. The pre-fix goal-centre-plane
+  bound **kept** it (proj 15.998 < distToGoal 18.028) and discarded only the far one, so the test
+  named for this entry's headline finding **would have passed against the broken model**. It was not
+  a lock on the fix at all.
+- The "12 of 12" therefore overstates the far-bound mutant specifically: the harness killed it, the
+  committed test did not. The other eleven stand — CI passed the remaining 14 shot-lane locks and all
+  127 other `DecisionTree.Tests` cases on the same run.
+
+Fixed by selecting the far post from the **geometry** (`FarPostFrom`, the post further from the
+shooter) rather than from the `PostL`/`PostR` label, which does not carry a consistent side across
+this file's two fixtures — the home fixture's `PostL` is y = 30.34, the away fixture's is y = 37.66.
+The expected value 0.782157 is unchanged and is now confirmed against the compiler: the same model
+that reproduces CI's 0.728880 for the near post gives 0.782157 for the far one. `Assert.Less(score,
+1.0f)` is now a real anti-regression lock, since the old bound scored this shot a completely open
+goal.
+
+This is the third verification claim in the ERR-008-021/-022 chain that a compiler falsified, after
+the P5 exactness argument and the §3.2.3.2 worked example. The pattern is consistent and worth
+naming: every one of them was a hand-derived number that no execution had ever checked.
+
+**First gate run.** CI run 402, PR #302, head `301c634`, August 6, 2026. **Build succeeded, 0 errors**
+(5 warnings, not shown to be new). `DecisionTree.Tests` **127 passed / 1 failed / 4 skipped / 132
+total** — the single failure being the far-post fixture above. Every other suite green, including
+`BallPhysics` 104/104, `PositioningAI` 131/144 (13 skipped), `MatchClientCore` 135/135,
+`GoalkeeperMechanics` 94/121 (27 skipped), `InjuriesMedical` 66/66 and `TrainingSystem` 52/52. The
+job was then **cancelled** by the runner at 16:59:45, roughly two minutes after the last suite
+reported, so the cancellation cost no coverage; a separate "Unity asset hygiene" job had failed at
+16:54:17 on a transient Actions outage (`Failed to resolve action download info: Service
+Unavailable`) without reaching any repo check.
 
 **Second review pass (AR-2, same day).** A hostile re-read of this fix found the two new ramps were
 **not centred on the predicates they replace** — `laneWeight` ran 1.0 → 2.0 m and `gkness` 6 → 8 m,

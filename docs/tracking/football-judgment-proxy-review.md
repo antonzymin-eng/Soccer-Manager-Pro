@@ -630,6 +630,21 @@ the same shape the ERR-008-020 review caught one landing earlier, and the -021 c
 to have avoided it "at authoring time rather than at review". Suite now 15 locks; the pass-lane twin
 tautology is fixed too.
 
+**And the hardened suite's own headline lock was itself wrong — found by the first gate run, not by
+review.** CI run 402 (PR #302, August 6, 2026) compiled and executed this work for the first time.
+`ShotLane_FarPostBlocker_OccludesTheGoal` failed: expected 0.782157, got **0.728880**. The model was
+right; the test read `ctx.OpponentGoalPostL`, which the home fixture defines as y = 30.34 — the post
+*nearer* the (90, 24) shooter. Since the pre-fix goal-centre-plane bound **kept** the near post and
+discarded only the far one, the lock named for this section's headline finding would have **passed
+against the broken model**. The far post is now selected by geometry rather than by the `PostL`/
+`PostR` label, which carries opposite sides in the file's two fixtures. Three consequences worth
+carrying forward: the "12 of 12 mutants killed" figure overstates the far-bound mutant (the Python
+harness killed it, the committed test did not); this is the **third** hand-derived verification claim
+in the -021/-022 chain that execution falsified, after the P5 exactness argument and the §3.2.3.2
+worked example; and the common factor in all three is that no compiler had ever run them. The rest of
+the run was clean — build 0 errors, 127 of 128 `DecisionTree.Tests` passing, every other suite green
+— so the fix itself stands; it was the evidence for it that kept failing.
+
 **Second review pass (AR-2, same day).** A hostile re-read of this fix found the two new ramps were
 **not centred on the predicates they replace** — `laneWeight` ran 1.0 → 2.0 m and `gkness` 6 → 8 m,
 i.e. entirely on one side. That is a systematic one-sided change in occlusion dressed as a continuity

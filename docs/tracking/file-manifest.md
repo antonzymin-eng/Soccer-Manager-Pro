@@ -1,7 +1,12 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 6, 2026, latest same day (**ERR-008-022 — the shot lane's far bound, near bound and
+**Last Updated:** August 6, 2026, latest same day (**ERR-008-022 far-post lock corrected at the first
+gate run. No new files.** **Modified:** `src/decision-tree/Tests/OptionGeneratorTests.cs` v1.9 (+ the
+`FarPostFrom` geometry helper; the far-post lock no longer reads the `PostL`/`PostR` label), and this
+record set. Production code untouched. **CI run 402 (PR #302, head `301c634`) — the first execution of any of this work.** Build succeeded **0 errors** (5 warnings); `DecisionTree.Tests` **127 passed / 1 failed / 4 skipped / 132**, every other suite green. The failure was `ShotLane_FarPostBlocker_OccludesTheGoal` (expected 0.782157, got **0.728880**) and it was the TEST: it read `ctx.OpponentGoalPostL`, y = **30.34** in the home fixture — the post *nearer* the (90, 24) shooter. The pre-fix bound kept the near post and discarded only the far one, so the lock named for ERR-008-022's headline finding would have **passed against the broken model**. Now selected by geometry (`FarPostFrom`), not by the `PostL`/`PostR` label, which carries opposite sides in this file's two fixtures; expected value unchanged and compiler-confirmed. The recorded 12-of-12 mutant kill overstates the far-bound mutant accordingly — the harness killed it, the committed test did not. **Prior entry below.**)
+
+**Last Updated (prior):** August 6, 2026, latest same day (**ERR-008-022 — the shot lane's far bound, near bound and
 goalkeeper read. No new files.** **Modified:** `src/decision-tree/OptionGenerator.cs` v1.8
 (`IsInShotPath` → `ShotPathWeight`: far bound moved from a plane through the goal CENTRE to the
 goal-line PLANE — the old one discarded the far-post blocker on 20,213 of 20,213 sampled in-range

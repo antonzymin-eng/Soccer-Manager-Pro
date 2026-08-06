@@ -688,7 +688,14 @@ namespace TacticalDirector.DecisionTree.Tests
             // test of some other point on the goal line. (The expected value is a closed-form
             // constant and would then need recomputing — which is the intended signal.)
             DecisionContext ctx = BuildOffCentreShotContext();
-            float score = OffCentreGoalOpeningAt(ctx.OpponentGoalPostL);   // y = 37.66, the FAR post from (90,24)
+            // Selected by GEOMETRY, not by the PostL/PostR label. The two fixtures in this
+            // file use opposite L/R conventions (the home fixture's PostL is y = 30.34, the
+            // away fixture's is y = 37.66), and reading the label cost this test its whole
+            // purpose once already: it took PostL — the NEAR post from (90,24) — asserted
+            // the far post's value, and so failed CI. The near post was never the defect;
+            // the pre-fix bound KEPT it (proj 15.998 < distToGoal 18.028) and discarded only
+            // the far one, so the label version would have passed against the broken model.
+            float score = OffCentreGoalOpeningAt(FarPostFrom(in ctx));   // y = 37.66
             Assert.AreEqual(0.782157f, score, 1e-4f,
                 "A blocker on the goal line at the far post must occlude the goal.");
             Assert.Less(score, 1.0f,
@@ -908,6 +915,19 @@ namespace TacticalDirector.DecisionTree.Tests
             ctx.Snapshot.BallPerceivedPosition = ctx.AgentPosition;
             ctx.A_Vision = 0.5f;
             return ctx;
+        }
+
+        /// <summary>
+        /// The post further from the shooter — the one the pre-fix goal-centre-plane bound
+        /// discarded. Derived from the geometry rather than from the PostL/PostR label,
+        /// which does not carry a consistent side across this file's two fixtures.
+        /// </summary>
+        private static Vector2 FarPostFrom(in DecisionContext ctx)
+        {
+            return Vector2.Distance(ctx.AgentPosition, ctx.OpponentGoalPostL)
+                 > Vector2.Distance(ctx.AgentPosition, ctx.OpponentGoalPostR)
+                ? ctx.OpponentGoalPostL
+                : ctx.OpponentGoalPostR;
         }
 
         private static float OffCentreGoalOpeningAt(Vector2 blockerPos)
@@ -1269,4 +1289,11 @@ namespace TacticalDirector.DecisionTree.Tests
 // |         |            |        | against the computed one. Continuity tolerance 0.05 → 0.02 (measured        |
 // |         |            |        | 0.016); the GK fixture's x derived from GK_PROXIMITY_TO_GOAL; the away      |
 // |         |            |        | fixture's stale home BallPosition corrected.                                |
+// | 1.9     | 2026-08-06 | —      | ERR-008-022, first gate run (CI 402, PR #302): FarPostBlocker read     |
+// |         |            |        | OpponentGoalPostL — y = 30.34 in the home fixture, the NEAR post from  |
+// |         |            |        | (90,24) — while asserting the far post's 0.782157, so it failed on     |
+// |         |            |        | 0.728880. The pre-fix bound KEPT the near post, so the lock named for  |
+// |         |            |        | the headline finding would have passed against the broken model. Post  |
+// |         |            |        | now chosen by geometry (FarPostFrom); the PostL/PostR label carries    |
+// |         |            |        | opposite sides in this file's two fixtures. Production code untouched. |
 #endregion
