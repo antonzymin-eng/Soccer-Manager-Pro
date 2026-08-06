@@ -1,7 +1,20 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 6, 2026, latest same day (**#29/#41 T1 GATE RUN — PASSED. No file
+**Last Updated:** August 6, 2026, latest of all (**ERR-008-021 — the shot-lane occlusion ability
+weighting, the follow-up deferred at the ERR-008-020 landing.** No new files, no new assembly.
+**Modified:** `src/decision-tree/OptionGenerator.cs` v1.7 (outfield blocker occlusion ×
+`PerceivedInterceptAbility` through the shooter's Vision fidelity; GK arc stays geometric),
+`src/decision-tree/Tests/OptionGeneratorTests.cs` v1.7 (+6 locks incl. away mirror + GK exclusion),
+`docs/specs/decision-tree/section-3-1.md` v1.4, `docs/specs/decision-tree/section-3-2.md` v1.12,
+`docs/specs/decision-tree/section-3-2-3-to-3-2-9.md` (§3.2.3.2 step 3a + worked example + legacy
+example annotation), `docs/tracking/spec-error-log.md` v1.67 (ERR-008-021 filed + resolved),
+`docs/tracking/football-judgment-proxy-review.md`, `docs/tracking/open-issues.md`,
+`docs/tracking/CHANGELOG.md`, `docs/tracking/CHANGELOG-src.md` v2.76, `CLAUDE.md` (OPEN ISSUES
+football-judgment entry), `README.md`, this file. Zero new constants — the ERR-008-020 `[GT]`s are
+reused. Gate NOT runnable in the authoring environment; CI on push is the gate.)
+
+**Last Updated (prior):** August 6, 2026, latest same day (**#29/#41 T1 GATE RUN — PASSED. No file
 changes; this entry records the run and retires the "no gate run" caveat carried by the two entries
 below it.** PR #300, CI run 397, head `9a7f703`. Build succeeded 0 errors; `TrainingSystem.Tests`
 **52/52** (+25 `TrainingSaveCodecTests`), `InjuriesMedical.Tests` **66/66** (+26

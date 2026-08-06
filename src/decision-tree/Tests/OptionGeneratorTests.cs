@@ -2,6 +2,7 @@
 // Created:  2026-05-29
 // Modified: 2026-06-01
 // Modified: 2026-08-04 (ERR-008-020 — §3.1.3.3 pass-lane threat model locks, home + away)
+// Modified: 2026-08-06 (ERR-008-021 — §3.1.4.3 shot-lane blocker ability-weighting locks, home + away + GK exclusion)
 // Author:   —
 // Spec:     Decision Tree #8 §5 (UT-OG-01 through UT-OG-07), Code Standards #20
 // Purpose:  Unit tests for OptionGenerator. Verifies all 7 action type gates,
@@ -592,6 +593,156 @@ namespace TacticalDirector.DecisionTree.Tests
             return -1.0f;
         }
 
+        // ── ERR-008-021: §3.1.4.3/§3.2.3.2 shot-lane blocker ability weighting ──
+        // Geometry shared by the shot-lane tests: shooter at (92,34) → goal (105,34),
+        // one OUTFIELD blocker dead-centre on the shot line at (97,34) — 8 m off the
+        // goal line, safely outside the GK_PROXIMITY_TO_GOAL heuristic. The away
+        // mirror shoots leftward at the (0,34) goal per the home-team-only trap.
+
+        [Test]
+        public void ShotLane_ComputedAverageBlocker_MatchesNullViewArc()
+        {
+            // Doctrine P5 pivot, computed path (the ERR-008-020 AR-1 M-1 lesson):
+            // a true league-average blocker (Ant 10 + Pace 11 ⇒ mean01 = 0.5 exactly)
+            // under a Vision-20 shooter must occlude exactly the pre-fix geometric arc.
+            float neutral = ShotOpeningWithBlocker(attrs: BuildSquadAttributes(),
+                anticipation: 10, pace: 11, visionA: 1.0f);
+            float nullView = ShotOpeningWithBlocker(attrs: null,
+                anticipation: 10, pace: 11, visionA: 1.0f);
+            Assert.AreEqual(nullView, neutral, 1e-5f,
+                "A computed league-average blocker must occlude exactly the attribute-blind arc (P5).");
+        }
+
+        [Test]
+        public void ShotLane_SightedShooter_EliteBlockerOccludesMoreThanPoor()
+        {
+            float openElite = ShotOpeningWithBlocker(attrs: BuildSquadAttributes(),
+                anticipation: 20, pace: 20, visionA: 1.0f);
+            float openPoor  = ShotOpeningWithBlocker(attrs: BuildSquadAttributes(),
+                anticipation: 1, pace: 1, visionA: 1.0f);
+            Assert.Less(openElite, openPoor,
+                "A Vision-20 shooter must rate the goal more walled-off behind an elite " +
+                "blocker than behind a poor one in the identical spot.");
+        }
+
+        [Test]
+        public void ShotLane_LowVisionShooter_BarelySeparatesBlockers()
+        {
+            // Doctrine P2: at the fidelity floor the shooter reads every blocker as
+            // near-average — the pre-ERR-008-021 attribute-blind behaviour.
+            float sightedGap = ShotOpeningWithBlocker(BuildSquadAttributes(), 1, 1, visionA: 1.0f)
+                             - ShotOpeningWithBlocker(BuildSquadAttributes(), 20, 20, visionA: 1.0f);
+            float blindGap   = ShotOpeningWithBlocker(BuildSquadAttributes(), 1, 1, visionA: 0.0f)
+                             - ShotOpeningWithBlocker(BuildSquadAttributes(), 20, 20, visionA: 0.0f);
+            Assert.Greater(blindGap, 0.0f,
+                "Even at the fidelity floor a sliver of discrimination survives (floor > 0).");
+            Assert.Less(blindGap, sightedGap * 0.5f,
+                "A Vision-1 shooter must separate elite from poor blockers far less than a Vision-20 one.");
+        }
+
+        [Test]
+        public void ShotLane_NullAttributeView_IsAbilityNeutral()
+        {
+            // Unwired host / legacy context: every blocker reads as 1.0 — pre-fix arcs.
+            float openA = ShotOpeningWithBlocker(attrs: null,
+                anticipation: 20, pace: 20, visionA: 1.0f);
+            float openB = ShotOpeningWithBlocker(attrs: null,
+                anticipation: 1, pace: 1, visionA: 1.0f);
+            Assert.AreEqual(openA, openB, 1e-6f,
+                "Without an attribute view, blocker identity must not affect the opening.");
+        }
+
+        [Test]
+        public void ShotLane_GoalkeeperArc_IgnoresKeeperAttributes()
+        {
+            // Doctrine P3: the keeper's shot-stopping quality is priced once, at the
+            // #11 save — his occlusion arc must stay purely geometric.
+            float openElite = ShotOpeningWithBlockerAt(new Vector2(103.0f, 34.0f),
+                BuildSquadAttributes(), anticipation: 20, pace: 20, visionA: 1.0f);
+            float openPoor  = ShotOpeningWithBlockerAt(new Vector2(103.0f, 34.0f),
+                BuildSquadAttributes(), anticipation: 1, pace: 1, visionA: 1.0f);
+            Assert.AreEqual(openElite, openPoor, 1e-6f,
+                "A goal-line keeper's occlusion must not vary with his Anticipation/Pace (P3).");
+        }
+
+        [Test]
+        public void ShotLane_AwayMirror_SightedShooterSeparatesBlockers()
+        {
+            // Away-team mirror of the discrimination case (home-team-only worked
+            // examples shipped three asymmetry defects — CLAUDE.md trap table).
+            float openElite = AwayShotOpeningWithBlocker(anticipation: 20, pace: 20);
+            float openPoor  = AwayShotOpeningWithBlocker(anticipation: 1, pace: 1);
+            Assert.Less(openElite, openPoor,
+                "The away-side shot lane must discriminate blocker ability identically to the home side.");
+        }
+
+        // Home-side shot fixture: shooter 5 at (92,34) → goal (105,34); outfield
+        // blocker 15 dead-centre at (97,34). Returns the SHOOT option's GoalOpeningScore.
+        private static float ShotOpeningWithBlocker(
+            DtAgentAttributes[] attrs, int anticipation, int pace, float visionA)
+        {
+            return ShotOpeningWithBlockerAt(new Vector2(97.0f, 34.0f),
+                attrs, anticipation, pace, visionA);
+        }
+
+        private static float ShotOpeningWithBlockerAt(
+            Vector2 blockerPos, DtAgentAttributes[] attrs, int anticipation, int pace, float visionA)
+        {
+            DecisionContext ctx = BuildPossessionContext();
+            ctx.AgentPosition = new Vector2(92.0f, 34.0f);
+            ctx.AgentState.Position = ctx.AgentPosition;
+            ctx.A_Vision = visionA;
+            if (attrs != null)
+            {
+                attrs[15].Anticipation = anticipation;
+                attrs[15].Pace         = pace;
+                ctx.AllAgentAttributes = attrs;
+            }
+            ctx.Snapshot.VisibleOpponentsCount = 1;
+            ctx.Snapshot.VisibleOpponents[0] = new PerceivedAgent
+            {
+                AgentId = 15,
+                PerceivedPosition = blockerPos,
+                PerceivedVelocity = Vector2.zero,
+                ConfidenceScore = 1.0f
+            };
+            return GetShootOption(in ctx).GoalOpeningScore;
+        }
+
+        // Away-side mirror: shooter 16 (team 1) at (13,34) → goal (0,34); home
+        // outfield blocker 3 dead-centre at (8,34) — 8 m off the goal line.
+        private static float AwayShotOpeningWithBlocker(int anticipation, int pace)
+        {
+            DecisionContext ctx = BuildPossessionContext();
+            ctx.AgentId       = 16;
+            ctx.AgentTeamId   = 1;
+            ctx.A_Vision      = 1.0f;
+            ctx.AgentPosition = new Vector2(13.0f, 34.0f);
+            ctx.AgentState.Position = ctx.AgentPosition;
+            ctx.AgentFacingDirection = Vector2.left;
+            ctx.Snapshot.ObserverId  = 16;
+            ctx.MatchContext.PossessingAgentId = 16;
+            ctx.PossessedByTeam    = PossessionState.AWAY_TEAM;
+            ctx.OpponentGoalCentre = new Vector2(0.0f, 34.0f);
+            ctx.OpponentGoalPostL  = new Vector2(0.0f, 37.66f);
+            ctx.OpponentGoalPostR  = new Vector2(0.0f, 30.34f);
+
+            DtAgentAttributes[] attrs = BuildSquadAttributes();
+            attrs[3].Anticipation = anticipation;
+            attrs[3].Pace         = pace;
+            ctx.AllAgentAttributes = attrs;
+
+            ctx.Snapshot.VisibleOpponentsCount = 1;
+            ctx.Snapshot.VisibleOpponents[0] = new PerceivedAgent
+            {
+                AgentId = 3,
+                PerceivedPosition = new Vector2(8.0f, 34.0f),
+                PerceivedVelocity = Vector2.zero,
+                ConfidenceScore = 1.0f
+            };
+            return GetShootOption(in ctx).GoalOpeningScore;
+        }
+
         // ── Helpers ───────────────────────────────────────────────────────────
 
         private static DecisionContext BuildPossessionContext()
@@ -725,4 +876,9 @@ namespace TacticalDirector.DecisionTree.Tests
 // |         |            |        | (Ant 10/Pace 11 ⇒ mean01 = 0.5 exactly) and the MIN/MAX midpoint-is-1.0     |
 // |         |            |        | invariant lock. L — discrimination margins derived from the constants       |
 // |         |            |        | (ExpectedSightedGap × 0.5) instead of a hardcoded 0.15.                     |
+// | 1.7     | 2026-08-06 | —      | ERR-008-021 locks: computed league-average blocker occludes exactly the     |
+// |         |            |        | null-view arc (P5 pivot), Vision-20 shooter separates elite/poor blockers   |
+// |         |            |        | while Vision-1 barely does (P2), null attribute view is ability-neutral,    |
+// |         |            |        | goal-line keeper's arc ignores his attributes (P3 — no double-count with    |
+// |         |            |        | the #11 save), and the discrimination case mirrored to the away side.       |
 #endregion

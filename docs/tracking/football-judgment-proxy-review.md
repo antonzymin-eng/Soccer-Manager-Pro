@@ -1,7 +1,17 @@
 # Football-Judgment Proxy Review
 
 > **Created:** August 4, 2026
-> **Updated:** August 5, 2026, even later same day — **ERR-008-019's digest-invariance claim
+> **Updated:** August 6, 2026 — **the shot-lane follow-up deferred at the ERR-008-020 landing is
+> CLOSED, landed as `ERR-008-021`** (#8 §3.1.4.3/§3.2.3.2 step 3a): each OUTFIELD blocker's
+> occluded arc now scales by §3.1.3.3's Vision-read Anticipation/Pace `perceived_ability`
+> (doctrine P2) — no new constants, the ERR-008-020 `[GT]`s reused verbatim (one calibration
+> lever, KD-W1); the GOALKEEPER's arc stays purely geometric (doctrine P3 — keeper quality is
+> priced once, at the #11 save); neutral/null-view ability = 1.0 reproduces today's arcs exactly
+> (P5). Not one of the 34 itemized findings (it was ERR-008-020's deferred scope note), so the
+> §5 counts are unchanged. Digests move where a generated SHOOT has a non-neutral outfield
+> blocker in the path, as intended. Gate NOT runnable in the authoring environment; CI on push
+> is the gate.
+> **Updated (prior):** August 5, 2026, even later same day — **ERR-008-019's digest-invariance claim
 > RETRACTED for the full-range form** at the adversarial review over the landing (documentation
 > only; formula, constants and the four test locks untouched). The argument assumed a 0.5 m
 > possession radius; the engine's production paths are `RunLooseBallPickup` (§5.Z Phase H, KD-H3,
@@ -484,8 +494,10 @@ Lane score stays `1 − Σweights / PASS_LANE_DIVISOR`; an average defender dead
 ≈ 1.0 (P5). Vision's existing §3.2.2 PASS-utility term is unchanged — it rewards vision generally;
 the fidelity term owns risk discrimination only (P3, no double-count). Plumbing: the engine already
 holds every agent's `DtAgentAttributes`; the pipeline gains a read of opponent Anticipation/Pace —
-the perception system is untouched. The **shot-lane check (§3.1.4)** shares the geometry and is
-deliberately deferred to a follow-up fix (owner call, keep the template change small).
+the perception system is untouched. The **shot-lane check (§3.1.4)** shares the geometry and was
+deliberately deferred to a follow-up fix (owner call, keep the template change small) — **closed
+August 6, 2026 as `ERR-008-021`** (see the header entry above: outfield arcs × the same
+perceived-ability scalar, GK arc geometric per P3, no new constants).
 
 ### 6.5 Adjacent gap recorded (not a §2/§3 finding)
 

@@ -12,7 +12,31 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 6, 2026, later same day (**#29/#41 T1 gate run — PASSED. The two save
+> **Last Updated:** August 6, 2026, later again (**ERR-008-021 — the shot-lane follow-up deferred at
+> the ERR-008-020 landing, closed.** #8 §3.1.4.3/§3.2.3.2's goal-occlusion sum was attribute-blind:
+> every outfield blocker in the shot path occluded the same geometric arc whoever he was, so a
+> Pace/Anticipation 1/1 defender walled off the goal exactly as hard as a 20/20 one, and no shooter
+> attribute entered the read (pattern (a); already continuous in position, so no P1 cliff to kill).
+> Fixed per judgment-proxy doctrine P2/P3/P5 as §3.2.3.2 **step 3a**: each OUTFIELD blocker's arc ×
+> §3.1.3.3's `perceived_ability` (Anticipation/Pace → 0.6..1.4, read through the SHOOTER's Vision
+> fidelity) — **no new constants**, the ERR-008-020 `[GT]`s reused verbatim so one lever calibrates
+> both lanes at the eventual KD-W1 pass; the GOALKEEPER's arc stays purely geometric (P3 — keeper
+> quality is priced once, at the #11 save; `GK_BLOCKER_RADIUS` is an abstraction of coverage, not a
+> body). League-average / null-view ability = 1.0 reproduces today's arcs exactly (P5 pivot).
+> Spec + code same commit: `section-3-1.md` v1.4, `section-3-2.md` v1.12 (+ step 3a and its worked
+> example in `section-3-2-3-to-3-2-9.md`), `OptionGenerator.cs` v1.7, 6 new `OptionGeneratorTests`
+> locks (computed-average pivot = null-view arc exactly, Vision-20 vs Vision-1 discrimination,
+> null-view neutrality, GK-arc invariance, away mirror). Adjacent defect recorded-not-fixed:
+> §3.2.3.2's numerical example is in a legacy centre-origin frame and its blocker classifies as GK
+> under the section's own heuristic yet uses the outfield radius (annotated in place; its 0.757
+> feeds the §3.2.3.3 chain). No schema change, no new RNG stream / domain tag / draw site, no
+> draw-order change; digests move where a generated SHOOT has a non-neutral outfield blocker in the
+> path, as intended. Blast radius checked: no scenario band or tick-window instrument reads
+> `GoalOpeningScore` directly; goal-rate-sensitive locks may shift on affected seeds — CI will show
+> it. **Gate NOT runnable in the authoring environment (no .NET SDK; installer 403 at the proxy);
+> CI on push is the gate.** Prior entry below.)
+
+> **Last Updated (prior):** August 6, 2026, later same day (**#29/#41 T1 gate run — PASSED. The two save
 > codecs, the three new types and the frame change compiled for the first time; all 58 new tests
 > executed and passed.** PR #300, CI run 397, head `9a7f703`. Build 0 errors (5 warnings, not shown to
 > be new); `TrainingSystem.Tests` **52/52**, `InjuriesMedical.Tests` **66/66**, 0 skipped in either;

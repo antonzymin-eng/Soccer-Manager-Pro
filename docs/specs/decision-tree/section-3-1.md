@@ -11,8 +11,9 @@ selected downstream. All attribute references are cross-referenced to `PlayerAtt
 as DT requirements pending Spec #20 master attribute registry.
 
 **Created:** March 01, 2026, 3:30 PM PST
-**Updated:** August 4, 2026 (v1.3 — ERR-008-020: §3.1.3.3 rewritten to the continuous, attribute-weighted lane-threat model; §3.1.4.3 gains the shot-lane deferral scope note)
-**Version:** 1.3
+**Updated:** August 6, 2026 (v1.4 — ERR-008-021: §3.1.4.3's deferred shot-lane follow-up lands — outfield blocker occlusion is weighted by §3.1.3.3's Vision-read Anticipation/Pace `perceived_ability`; the goalkeeper's arc stays geometric per doctrine P3. Prior update below.)
+**Updated (prior):** August 4, 2026 (v1.3 — ERR-008-020: §3.1.3.3 rewritten to the continuous, attribute-weighted lane-threat model; §3.1.4.3 gains the shot-lane deferral scope note)
+**Version:** 1.4
 **Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate; see §9 approval checklist). v1.1.1 (May 15, 2026): ERR-012-002 stale spec ref correction (§3.1.7.2 "Spec #14" → "Positioning AI, Spec #12"). v1.1.2 (May 17, 2026): ERR-013-004 stale spec name correction (§3.1.8.1 "Fatigue System #13" → "Pressing AI #13"). Both are single-token non-behavioral patches; no formula, contract, or pipeline change. Approval status preserved.
 **Specification Number:** 8 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -586,6 +587,13 @@ blocked_goal_arc  = 0.0
 foreach O in VisibleOpponents where IsInShotPath(O):
     // Compute angular width that opponent O occludes of the goal
     O_blocking_angle = AngularOcclusionOf(O, goal_left, goal_right, AgentPosition)
+    // ERR-008-021: an OUTFIELD blocker's occlusion scales by the shooter's
+    // perceived read of his blocking ability — §3.1.3.3's perceived_ability(O)
+    // (Anticipation/Pace mapped to INTERCEPTOR_ABILITY_MIN..MAX, read through
+    // the shooter's Vision fidelity). The GOALKEEPER's arc stays geometric —
+    // see §3.2.3.2 step 3a.
+    if NOT IsLikelyGoalkeeper(O):
+        O_blocking_angle ×= perceived_ability(O)
     blocked_goal_arc += O_blocking_angle
 
 unblocked_goal_arc = Max(total_goal_arc − blocked_goal_arc, 0.0)
@@ -596,10 +604,22 @@ GoalVisibilityScore = unblocked_goal_arc / total_goal_arc    // [0.0, 1.0]
 axis of the shot, not the pass lane model). Identical in concept to §3.1.3.3 but
 the target is the goal plane rather than a teammate position.
 
-> **ERR-008-020 scope note:** §3.1.3.3's continuous attribute-weighted threat model
-> deliberately does NOT extend to this check yet — the shot lane retains the binary
-> angular-occlusion model above. Deferred as its own follow-up fix per the
-> football-judgment proxy review §6.4 (owner call: keep the template change small).
+> **ERR-008-021 (August 6, 2026 — the follow-up deferred at ERR-008-020's landing,
+> football-judgment proxy review §6.4).** The occlusion model above was already
+> continuous in position (no P1 cliff), but attribute-blind: a slow,
+> poor-anticipation defender walled off the goal exactly as hard as an elite one
+> standing in the identical spot (pattern (a)). Each **outfield** blocker's
+> occluded arc now scales by the same `perceived_ability(O)` scalar as the pass
+> lane — his Anticipation/Pace blocking ability read through the *shooter's*
+> Vision as discrimination fidelity (doctrine P2). No new constants: the
+> §3.1.3.3 `[GT]`s (`INTERCEPTOR_ABILITY_MIN/MAX`, `LANE_VISION_FIDELITY_FLOOR`)
+> are reused verbatim, keeping one calibration lever per KD-W1. The
+> **goalkeeper's** arc is deliberately NOT weighted: his shot-stopping quality is
+> priced once, at the #11 save resolution — weighting his occlusion here would
+> double-count it (doctrine P3), and `GK_BLOCKER_RADIUS` is already an
+> abstraction of coverage rather than a body. A league-average or
+> attribute-view-less blocker multiplies by exactly 1.0, so today's arcs are the
+> pivot (doctrine P5). Formula authority and step numbering: §3.2.3.2 step 3a.
 
 `GoalVisibilityScore` is stored in the `ShootOption` and consumed by §3.2.2 (SHOOT
 utility formula: `GoalOpeningScore` field).
@@ -971,4 +991,5 @@ scoring is §3.2 (unchanged — it is an INTERCEPT), dispatch §3.5.
 | 1.1.2 | May 17, 2026 | Claude (AI) / Anton | Non-behavioral patch per ERR-013-004: §3.1.8.1 "Fatigue System #13" → "Pressing AI #13". Single-token correction (current Spec #13 is Pressing AI; Fatigue System is a separate Stage-1 spec with no allocated number). Approval status preserved. |
 | 1.2 | August 4, 2026 | — | ERR-008-018 back-prop (close-chance-creation pass, §5.Z.24): §3.1.5.2's closing delegation pointed the DRIBBLE directional-to-goal modifier at **§3.2.2, the PASS formula**, so the promised term was never given a home and §3.2.4.1 shipped without it. Cross-reference corrected to §3.2.4.1 and the measured consequence recorded inline (final-third dribbles: 40% of carrier decisions, mean cosine to goal −0.30 over six full matches). Generation-stage behaviour is UNCHANGED — `best_direction` is still the free-space argmax; only the delegation target is corrected. |
 | 1.3 | August 4, 2026 | — | ERR-008-020 (football-judgment proxy review §6.4 — the doctrine's template fix; spec + code, same commit). §3.1.3.3 rewritten: the binary 0.8 m `is_interceptor` corridor (a 2 cm positional cliff, blind to defender identity) becomes a continuous per-opponent threat weight — linear positional falloff (core 0.4 m [GT], zero at 1.2 m [GT]; ramp centred on the old cliff so integrated threat is preserved) × the defender's Anticipation/Pace ability (0.6–1.4 [GT], average ⇒ exactly 1.0) read through the passer's Vision fidelity (floor 0.2 [GT] — doctrine P2, low Vision degrades to the attribute-blind read). `PASS_LANE_WIDTH_HALF` removed; lane floor, endpoint margin, and `PASS_LANE_DIVISOR` unchanged. §3.1.4.3 gains the scope note deferring the shot lane to a follow-up. Consumers: `UtilityWeights.cs` v1.7, `OptionGenerator.cs` v1.6, `DecisionContext(.Assembler).cs`, `DecisionTree.cs` v1.6, `MatchEngine.cs` v1.61 (the attribute-view wiring). |
+| 1.4 | August 6, 2026 | — | ERR-008-021 (the shot-lane follow-up deferred at ERR-008-020's landing; spec + code, same commit). §3.1.4.3: each OUTFIELD blocker's occluded arc is scaled by §3.1.3.3's `perceived_ability(O)` (Anticipation/Pace → `INTERCEPTOR_ABILITY_MIN..MAX`, read through the shooter's Vision fidelity — doctrine P2); the goalkeeper's arc stays purely geometric (doctrine P3 — keeper quality is priced once, at the #11 save). No new constants (KD-W1: one calibration lever); neutral/null-view ability = 1.0 ⇒ today's arcs exactly (doctrine P5). Formula authority: §3.2.3.2 step 3a. Consumers: `OptionGenerator.cs` v1.7, `OptionGeneratorTests.cs` v1.7. |
 

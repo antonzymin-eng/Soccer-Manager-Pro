@@ -4,6 +4,7 @@
 // Modified: 2026-07-26 (ERR-008-014 — loose-ball collect emitted as the SOLE off-ball option for the host-designated collector)
 // Modified: 2026-07-28 (ERR-008-016 — PowerIntent floor-plus-modulation (shot-speed design KD-1))
 // Modified: 2026-08-04 (ERR-008-020 — CountInterceptors → ComputeLaneThreat: continuous falloff × Vision-read Anticipation/Pace ability)
+// Modified: 2026-08-06 (ERR-008-021 — shot-lane follow-up: outfield blocker occlusion × the same Vision-read ability; GK arc stays geometric)
 // Author:   —
 // Spec:     Decision Tree #8 §3.1, Code Standards #20
 // Purpose:  Step 3 of the 6-step pipeline. Generates all eligible ActionOption
@@ -413,6 +414,11 @@ namespace TacticalDirector.DecisionTree
             Vector2 dirR = (goalPostR - agentPos).normalized;
             float goalLineX = goalPostL.x;
 
+            // ERR-008-021 (judgment-proxy doctrine §6.4 follow-up): the shooter's Vision
+            // as discrimination fidelity, exactly as in ComputeLaneThreat (doctrine P2).
+            float fidelity = UtilityWeights.LANE_VISION_FIDELITY_FLOOR
+                + (1.0f - UtilityWeights.LANE_VISION_FIDELITY_FLOOR) * ctx.A_Vision;
+
             float blockedArc = 0.0f;
             FilteredView snap = ctx.Snapshot;
             for (int i = 0; i < snap.VisibleOpponentsCount; i++)
@@ -445,6 +451,23 @@ namespace TacticalDirector.DecisionTree
                                     : UtilityWeights.BLOCKER_RADIUS_M;
 
                 float occlusionAngle = 2.0f * Mathf.Atan2(radius, dist) * Mathf.Rad2Deg;
+
+                // ERR-008-021 (§3.2.3.2 step 3a): an OUTFIELD blocker's occlusion is a
+                // proxy for "will he get his body in the way", so it scales by the same
+                // Vision-read Anticipation/Pace ability as the pass lane — a slow,
+                // poor-anticipation body no longer walls off the goal as hard as an
+                // elite one (doctrine P2; neutral/null-view ability = 1.0 keeps today's
+                // arc exactly, doctrine P5). The GOALKEEPER's arc stays purely
+                // geometric: his shot-stopping quality is priced once, at the #11 save
+                // (doctrine P3 — weighting his occlusion too would double-count it),
+                // and GK_BLOCKER_RADIUS_M is already an abstraction of coverage, not a
+                // body.
+                if (!isGk)
+                {
+                    occlusionAngle *= PerceivedInterceptAbility(
+                        in ctx, snap.VisibleOpponents[i].AgentId, fidelity);
+                }
+
                 blockedArc += Mathf.Min(occlusionAngle, totalArc);   // step 3 per-opponent clamp
             }
 
@@ -834,4 +857,9 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        | blended toward 1.0 by the passer's Vision fidelity). Null attribute view    |
 // |         |            |        | ⇒ ability 1.0 = the old attribute-blind weighting. §3.1.4's                 |
 // |         |            |        | ComputeGoalOpeningScore (shot lane) deliberately untouched (deferred).      |
+// | 1.7     | 2026-08-06 | —      | ERR-008-021 (the ERR-008-020 deferred shot-lane follow-up):                 |
+// |         |            |        | ComputeGoalOpeningScore scales each OUTFIELD blocker's occlusion arc by     |
+// |         |            |        | PerceivedInterceptAbility (same constants, no new [GT]s — one calibration   |
+// |         |            |        | lever, KD-W1). GK arc stays geometric (P3: keeper quality is priced once,   |
+// |         |            |        | at the #11 save). Neutral ability / null view ⇒ byte-identical arcs (P5).   |
 #endregion

@@ -18,7 +18,30 @@ history by the original convention; they were not merged.
 
 ---
 
-- **Football-judgment proxy review — 32 findings open across 24 specs; the §6 doctrine governs every fix; ERR-008-020 (template) and ERR-008-019 (the founding long-shot cliff, August 5) LANDED** — *opened August 4, 2026 (review + doctrine + template landing all same day); ERR-008-019 landed August 5, 2026.*
+- **Football-judgment proxy review — 32 findings open across 24 specs; the §6 doctrine governs every fix; ERR-008-020 (template), ERR-008-019 (the founding long-shot cliff, August 5) and ERR-008-021 (the deferred shot-lane follow-up, August 6) LANDED** — *opened August 4, 2026 (review + doctrine + template landing all same day); ERR-008-019 landed August 5, 2026; ERR-008-021 landed August 6, 2026.*
+  **ERR-008-021 LANDED August 6, 2026 — the shot-lane follow-up ERR-008-020 deferred, closed.**
+  #8 §3.1.4.3/§3.2.3.2's goal-occlusion sum was attribute-blind: every outfield blocker in the
+  shot path occluded the same geometric arc whoever he was (a Pace/Anticipation 1/1 defender
+  walled off the goal exactly as hard as a 20/20 one), and no shooter attribute entered the read
+  — pattern (a), with no P1 cliff (occlusion is already continuous in position). Fixed as
+  §3.2.3.2 **step 3a** (spec + code same commit): each OUTFIELD blocker's `blockedAngle` ×
+  §3.1.3.3's `perceived_ability` (Anticipation/Pace → `INTERCEPTOR_ABILITY_MIN..MAX`, read
+  through the SHOOTER's Vision fidelity — doctrine P2). **No new constants** — the ERR-008-020
+  `[GT]`s reused verbatim, so one lever calibrates the pass-lane and shot-lane reads together at
+  the eventual KD-W1 balance pass. The **goalkeeper's arc stays purely geometric** (doctrine P3:
+  keeper shot-stopping quality is priced once, at the #11 save — weighting his occlusion would
+  double-count it; `GK_BLOCKER_RADIUS` is an abstraction of coverage, not a body). League-average
+  / null-attribute-view ability = 1.0 reproduces today's arcs — and therefore today's SHOOT
+  generation set — exactly (P5 pivot). `section-3-1.md` v1.4, `section-3-2.md` v1.12,
+  `OptionGenerator.cs` v1.7, 6 new `OptionGeneratorTests` locks (computed-average pivot =
+  null-view arc exactly, Vision-20 vs Vision-1 discrimination, null-view neutrality, GK-arc
+  invariance under keeper attributes, away mirror). Adjacent defect recorded-not-fixed:
+  §3.2.3.2's numerical example is in a legacy centre-origin frame (the ERR-008-001 class,
+  surviving in an example) and its blocker classifies as GK under the section's own step-3
+  heuristic yet uses the outfield 0.5 m radius — annotated in place, left standing because its
+  0.757 feeds the approved §3.2.3.3 chain. No schema / RNG / draw-order change; digests move
+  where a generated SHOOT has a non-neutral outfield blocker in the path, as intended. **Gate NOT
+  run — no .NET SDK in the authoring environment; CI on push is the gate.**
   **ERR-008-019 LANDED August 5, 2026; owner-revised to the FULL-RANGE ramp later the same day** —
   the review's founding finding, under the id soft-reserved for it (re-verified free at landing):
   #8 §3.2.3.1's midfield `ZoneModifier_SHOOT` hard threshold (0.55 strictly above shifted-LongShots

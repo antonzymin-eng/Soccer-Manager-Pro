@@ -1,7 +1,18 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** August 5, 2026, end of same day (**ERR-008-019 — one recorded claim about the
+**Last Updated:** August 6, 2026 (**ERR-008-021 — a shot is now harder to take past a good defender
+than past a poor one.** The judgment-proxy review's third fix closes the follow-up deferred when the
+pass-lane template landed: the check that measures how much of the goal an opponent blocks out no
+longer treats every outfield body as the same obstacle — a blocker's Anticipation and Pace now scale
+his effective cover, read through the shooter's Vision, using the exact constants the pass lane
+already uses, so no new tuning dial was added. The goalkeeper's cover deliberately stays as pure
+geometry, because his shot-stopping quality is already priced at the save itself and counting it
+twice would double-punish shooters. An average or unknown blocker reproduces today's behaviour
+exactly. Spec and code landed in the same commit with six new test locks, including the away-side
+mirror. The gate cannot run in this environment; CI on push compiles and executes it.)
+
+**Last Updated (prior):** August 5, 2026, end of same day (**ERR-008-019 — one recorded claim about the
 long-shot ramp was wrong and is withdrawn.** A review of yesterday's landing found that the note
 saying the change "moves no match digests" rested on a false assumption about how a player takes
 possession of the ball: it assumed the player must be within half a metre of it, when the engine

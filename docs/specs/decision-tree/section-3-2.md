@@ -11,8 +11,9 @@ reference for all utility constants; all [GT] constants must be implemented excl
 formulas.
 
 **Created:** March 01, 2026, 7:00 PM PST
-**Updated:** August 5, 2026, later same day (v1.11 — ERR-008-019: the §3.2.3.1 full-range digest-invariance claim retracted at the adversarial review over the landing)
-**Version:** 1.11
+**Updated:** August 6, 2026 (v1.12 — ERR-008-021: §3.2.3.2 gains step 3a — outfield blocker occlusion × the shooter's Vision-read Anticipation/Pace `perceived_ability` (constants reused from §3.1.3.3, no new [GT]s); goalkeeper arc stays geometric (P3, priced at the #11 save); worked step-3a example added and the legacy centre-origin/GK-heuristic inconsistency of the §3.2.3.2 numerical example recorded. Prior update below.)
+**Updated (prior):** August 5, 2026, later same day (v1.11 — ERR-008-019: the §3.2.3.1 full-range digest-invariance claim retracted at the adversarial review over the landing)
+**Version:** 1.12
 **Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate; see §9 approval checklist)
 **Specification Number:** 8 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)

@@ -190,6 +190,22 @@ ComputeGoalOpeningScore(agentPos, teamId, visibleOpponents[]):
    effectiveRadius = isLikelyGoalkeeper ? GK_BLOCKER_RADIUS : BLOCKER_RADIUS
 
    blockedAngle = 2 × atan(effectiveRadius / opponentDist)
+
+3a. Weight the blocked angle by the shooter's read of the blocker (ERR-008-021):
+   // An OUTFIELD blocker's occlusion is a proxy for "will he get his body in the
+   // way", so it scales by the same perceived_ability(O) scalar as §3.1.3.3's
+   // pass lane — the blocker's Anticipation/Pace mapped to
+   // INTERCEPTOR_ABILITY_MIN..MAX [GT], read through the SHOOTER's Vision as
+   // discrimination fidelity (LANE_VISION_FIDELITY_FLOOR [GT]); all constants
+   // reused verbatim, no new [GT]s (KD-W1 — one calibration lever).
+   // The GOALKEEPER's arc is deliberately NOT weighted: his shot-stopping
+   // quality is priced once, at the #11 save resolution (doctrine P3 — weighting
+   // his occlusion here would double-count it), and GK_BLOCKER_RADIUS is already
+   // an abstraction of coverage, not a body. A league-average blocker (or any
+   // blocker under a null attribute view) multiplies by exactly 1.0, so today's
+   // arcs are the pivot (doctrine P5).
+   If NOT isLikelyGoalkeeper:
+       blockedAngle ×= perceived_ability(O)          // §3.1.3.3, ERR-008-020 form
    Clamp blockedAngle to [0.0, totalGoalAngle] to avoid over-blocking.
 
 4. Sum blocked angles from all opponents whose angular position overlaps the goal arc:
@@ -226,6 +242,34 @@ GoalOpeningScore = (0.4983 − 0.1211) / 0.4983 = 0.3772 / 0.4983 = 0.757
 
 ScoredGoalOpeningScore = clamp(0.757, 0.05, 1.0) = 0.757 ✓
 ```
+
+**Step 3a worked example (ERR-008-021)** — the same geometry, treating the blocker as
+outfield (as the example's 0.5 m radius does), with a Vision-20 shooter (`fidelity` = 1.0):
+
+```
+Blocker Anticipation/Pace raw 20/20 ⇒ perceived_ability = 1.4:
+  blockedAngle = 0.1211 × 1.4 = 0.1695 rad
+  GoalOpeningScore = (0.4983 − 0.1695) / 0.4983 = 0.660
+
+Blocker raw 1/1 ⇒ perceived_ability = 0.6:
+  blockedAngle = 0.1211 × 0.6 = 0.0727 rad
+  GoalOpeningScore = (0.4983 − 0.0727) / 0.4983 = 0.854
+
+The same two blockers read by a Vision-1 shooter (fidelity = 0.2 ⇒ abilities
+1.08 / 0.92): scores 0.738 / 0.776 — the low-Vision shooter barely tells them
+apart, which is the pre-fix behaviour. An ability-neutral blocker reproduces
+0.757 exactly (doctrine P5 pivot).
+```
+
+> **Legacy-example note (recorded at the ERR-008-021 landing, not fixed here):** the
+> numerical example above predates two later decisions and is preserved for the
+> §3.2.3.3 verification chain that consumes its 0.757: (i) its coordinates are in a
+> legacy centre-origin frame (goal line at x = 52.5, posts y = ±3.66), while the
+> implementation and Ball Physics #1 §1.2 use corner-origin (posts at y = 34 ± 3.66);
+> (ii) under step 3's own GK heuristic this blocker — 4.5 m from the goal line, inside
+> `GK_PROXIMITY_TO_GOAL` = 6.0 m — would classify as a goalkeeper (radius 1.5 m,
+> step 3a not applied), yet the example uses the outfield 0.5 m radius. The step 3a
+> demonstration above therefore reads the blocker as the example does (outfield).
 
 **Goalkeeper as blocker:** The goalkeeper is identified by a positional heuristic:
 any opponent within `GK_PROXIMITY_TO_GOAL = 6.0m` of their own goal line is treated
