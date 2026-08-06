@@ -19,6 +19,18 @@ history by the original convention; they were not merged.
 ---
 
 - **Football-judgment proxy review — 32 findings open across 24 specs; the §6 doctrine governs every fix; ERR-008-020 (template), ERR-008-019 (the founding long-shot cliff, August 5) and ERR-008-021 (the deferred shot-lane follow-up, August 6) LANDED** — *opened August 4, 2026 (review + doctrine + template landing all same day); ERR-008-019 landed August 5, 2026; ERR-008-021 landed August 6, 2026.*
+  **ERR-008-021 AR-1 (same day): 1 High, 7 Medium, 5 Low — all fixed.** The High: the landed P3
+  exemption keyed on the whole 6 m GK band, so every near-goal defender escaped the weighting —
+  inert exactly where shots are blocked — and all six original fixtures sat outside the band, so
+  no lock registered it. Now a single **GK candidate** (goal-line-nearest in band) is exempt;
+  every other blocker is weighted; radius stays per-band. Also corrected: the P5 "today's arcs
+  bit-for-bit" overclaim (exact only at ability midpoint raw 10/11 or null view; the all-default
+  10/10 squad reads ≈ 0.979 — the ERR-008-019 overclaim shape, one day later), margin-less and
+  vacuously-passable locks, the duplicated fidelity expression (hoisted), away mirrors running a
+  post assignment production never builds, the inverted Known-limitation direction, and the
+  §3.1.4.1 gate boundary (strict ">" per spec). `OptionGenerator.cs` v1.8,
+  `OptionGeneratorTests.cs` v1.8 (7 locks), `UtilityWeights.cs` v1.11 (doc), `section-3-1.md`
+  v1.5, `section-3-2.md` v1.13, `spec-error-log.md` v1.68. Gate still not runnable; CI on push.
   **ERR-008-021 LANDED August 6, 2026 — the shot-lane follow-up ERR-008-020 deferred, closed.**
   #8 §3.1.4.3/§3.2.3.2's goal-occlusion sum was attribute-blind: every outfield blocker in the
   shot path occluded the same geometric arc whoever he was (a Pace/Anticipation 1/1 defender

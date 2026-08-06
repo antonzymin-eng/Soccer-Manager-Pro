@@ -12,7 +12,29 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 6, 2026, later again (**ERR-008-021 — the shot-lane follow-up deferred at
+> **Last Updated:** August 6, 2026, latest (**ERR-008-021 AR-1 — the same-day adversarial review over
+> the shot-lane landing: 1 High, 7 Medium, 5 Low, all fixed.** The High: the landed P3 exemption
+> keyed on the 6 m GK band, not the goalkeeper — so EVERY near-goal defender escaped the new ability
+> weighting, leaving it inert precisely where shots are blocked (for a 10 m shot, most of the usable
+> path), and all six of the landing's fixtures sat 8 m off the goal line so no lock registered it.
+> Fixed to a single **GK candidate** (goal-line-nearest visible opponent within the band,
+> snapshot-order tie-break, independent of the shot-path filter); every other blocker — in the band
+> or not — is now weighted, while the radius stays per-band (the recorded §3.2.3.2 Stage-0
+> limitation), so neutral-case arcs are unchanged. Also corrected: the P5 "today's arcs bit-for-bit"
+> overclaim (exact only at the ability midpoint raw 10/11 or under a null view; the all-default
+> 10/10 squad reads ≈ 0.979 — the same overclaim shape retracted for ERR-008-019 a day earlier);
+> margin-less discrimination locks; three vacuously-passable equality locks; the Vision-fidelity
+> expression duplicated across both lanes (hoisted to `VisionFidelity`); both away mirrors running a
+> goal-post L/R assignment production never builds; the Known-limitation paragraph's inverted radius
+> consequence; and the §3.1.4.1 gate boundary (code generated at exactly `MIN_GOAL_VISIBILITY`
+> against the spec's strict ">"). New H-1 regression lock: an in-band defender who is not the
+> candidate IS weighted (keeper claims the slot from wide of the shot wedge). Surfaces:
+> `OptionGenerator.cs` v1.8, `OptionGeneratorTests.cs` v1.8 (7 shot-lane locks),
+> `UtilityWeights.cs` v1.11 (doc only), `section-3-1.md` v1.5, `section-3-2.md` v1.13,
+> `spec-error-log.md` v1.68. **Gate NOT runnable in the authoring environment; CI on push is the
+> gate.** Prior entry below.)
+
+> **Last Updated (prior):** August 6, 2026, later again (**ERR-008-021 — the shot-lane follow-up deferred at
 > the ERR-008-020 landing, closed.** #8 §3.1.4.3/§3.2.3.2's goal-occlusion sum was attribute-blind:
 > every outfield blocker in the shot path occluded the same geometric arc whoever he was, so a
 > Pace/Anticipation 1/1 defender walled off the goal exactly as hard as a 20/20 one, and no shooter

@@ -1,7 +1,18 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** August 6, 2026 (**ERR-008-021 — a shot is now harder to take past a good defender
+**Last Updated:** August 6, 2026, later same day (**ERR-008-021's same-day review caught the fix
+being switched off exactly where it matters.** The adversarial review over the shot-blocking change
+found that "don't weight the goalkeeper" had been implemented as "don't weight anyone within six
+metres of the goal line" — which is where most shot-blocking happens, so ordinary defenders making
+last-ditch blocks were still being treated as identical bodies. The exemption now applies to a
+single player, the one nearest the goal line (the keeper), and every other defender is weighted.
+The review also tightened the tests so a silently disabled feature can't stay green, and corrected
+an overclaim: an average-attribute defender reproduces the old behaviour almost exactly, not
+bit-for-bit. One High, seven Medium, five Low findings — all fixed. CI on push remains the
+compiler and test runner for this work.)
+
+**Last Updated (prior):** August 6, 2026 (**ERR-008-021 — a shot is now harder to take past a good defender
 than past a poor one.** The judgment-proxy review's third fix closes the follow-up deferred when the
 pass-lane template landed: the check that measures how much of the goal an opponent blocks out no
 longer treats every outfield body as the same obstacle — a blocker's Anticipation and Pace now scale

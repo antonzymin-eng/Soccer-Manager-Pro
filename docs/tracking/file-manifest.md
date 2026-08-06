@@ -1,7 +1,20 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 6, 2026, latest of all (**ERR-008-021 — the shot-lane occlusion ability
+**Last Updated:** August 6, 2026, after the AR pass (**ERR-008-021 AR-1 — 1 High, 7 Medium, 5 Low,
+all fixed.** No new files. **Modified:** `src/decision-tree/OptionGenerator.cs` v1.8 (single
+GK-candidate exemption replacing the band-wide one — H-1; `VisionFidelity` hoisted; gate boundary
+aligned to the spec's strict ">"), `src/decision-tree/Tests/OptionGeneratorTests.cs` v1.8 (+H-1
+lock, margins, anti-vacuity assertions, production post assignment in both away fixtures),
+`src/decision-tree/UtilityWeights.cs` v1.11 (doc only — the three shared `[GT]`s name their second
+consumer), `docs/specs/decision-tree/section-3-1.md` v1.5, `docs/specs/decision-tree/section-3-2.md`
+v1.13, `docs/specs/decision-tree/section-3-2-3-to-3-2-9.md` (step 3a single-candidate form +
+Known-limitation direction corrected), `docs/tracking/spec-error-log.md` v1.68,
+`docs/tracking/football-judgment-proxy-review.md`, `docs/tracking/open-issues.md`,
+`docs/tracking/CHANGELOG.md`, `docs/tracking/CHANGELOG-src.md` v2.77, `CLAUDE.md`, `README.md`,
+this file. Gate NOT runnable; CI on push is the gate.)
+
+**Last Updated (prior):** August 6, 2026, latest of all (**ERR-008-021 — the shot-lane occlusion ability
 weighting, the follow-up deferred at the ERR-008-020 landing.** No new files, no new assembly.
 **Modified:** `src/decision-tree/OptionGenerator.cs` v1.7 (outfield blocker occlusion ×
 `PerceivedInterceptAbility` through the shooter's Vision fidelity; GK arc stays geometric),
