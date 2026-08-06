@@ -12,7 +12,76 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 6, 2026, latest same day (**Adversarial review over the #29/#41 T2 landing —
+> **Last Updated:** August 6, 2026, latest same day (**Adversarial review passes 3–5 over the #29/#41 T2
+> landing — 1 High, 4 Medium, 7 Low, all fixed.** Three further passes after the pass-2 "clean" call, each
+> going at an axis the earlier ones had not: the unread spans of the four new suites, then the
+> resolution-mode axis across every test in the assembly, then the day-step producer read against #30's
+> fixture interleave. The second and third each found something the first two passes could not have seen
+> by reading harder — which is the honest lesson of this round: "converged" meant "converged on the axes
+> I had looked at".
+>
+> **H — the career-wired match boot had never executed anywhere.** Every test that wires a
+> `PlayerCareerStates` runs `QuickSimAll`; every `ManagedThroughEngine`/`FullEngine` test in `season-save`
+> builds the loop through the careerless three-argument constructor. So `SeasonLoop.PlayThroughEngine`'s
+> boot — the **sole production call site** of #29's match-entry-fatigue seam, and the only place the
+> ERR-030-009 availability filter meets a real `MatchEngine` — shipped with zero execution, which is
+> ERR-030-014's shape one layer up: a composition that runs green without doing the thing it exists to do.
+> Found by sweeping resolution modes, not by reading the code again. Fixed structurally rather than by
+> bolting on a slow test: `SeasonLoop.BootFixtureEngine` is extracted `internal`, which is exactly what
+> was done to `ShouldPlayThroughEngine` and for the reason that method's own comment already gave —
+> inline, the branch is reachable only by playing a full 90-minute match, and no suite in this assembly
+> pays that cost. Three `EnginePath_*` cases now cover the filter, the fatigue projection and the unwired
+> floor in milliseconds.
+>
+> **M1 — the entry-fatigue tests could not fail.** `MatchEngineEntryFatigueTests` probed indices where
+> squad-local and starter-slot coincide, because `CoherentSquad` lays positions out in slot order. Swap
+> `entryFatigue[local]` for `entryFatigue[k]` in `ApplySquad` and every assertion in the file still passes.
+> That is the one property the seam turns on, and the one #30's filter breaks deliberately — filtering
+> renumbers the locals. The new case puts the only goalkeeper at the last local, so slot 0 must map to
+> local 17 whatever the ratings say.
+>
+> **M2 — the single-writer fix was closed on one route and open on the other.** `FromBlocks` borrowed the
+> two state arrays, and the documented restore path hands it the very arrays `SeasonSaveManager.Load`
+> returns inside `SeasonSaveContents`; every holder of those contents was therefore writing into the
+> running career's `Condition`, `Severity` and idempotency cursors, past both day steps. Pass 1 had made
+> `TrainingBlocks`/`MedicalBlocks` internal for precisely this reason and stopped at the save side. Now
+> copied.
+>
+> **M3 — detectable is not prevented.** Pass 1 answered the stale-`ScheduleFor`-handle defect with a
+> `RosterGeneration` counter the caller is asked to compare. `ScheduleFor` is now `internal` and the
+> public focus surface is `PlayerCareerStates.TrySetFocus`, resolving the club fresh per call, because
+> this file argues two paragraphs elsewhere that binding must be structural — `TrainingSchedule` exists
+> for that reason. The counter stays; `CommitRosterSync` refuses a stale plan on it.
+>
+> **M4 — ERR-030-026, and the one worth remembering.** #30's KD-2 tick order pins nine day-slots and has
+> **no slot for playing the round**, because a round is a separate command. So where a fixture sits
+> relative to slot 2 (#29) and slot 4 (#41) is specified nowhere and, in the code, falls out of
+> `AdvanceToNextFixtureDay`'s loop condition — it stops on *reaching* the fixture day, so matchday's own
+> steps run after the round. That is right for #41's occurrence draw and **wrong for the recovery
+> countdown sharing the same atomic step**: a player whose recovery expires on matchday misses a fixture
+> he had served his time for, so every injury runs one matchday longer than its tier. Inert today (the
+> dial is off) and invisible to the suites either way. The cost was never today's behaviour — it is that
+> the balance pass would fit `RecoveryDaysPerTickBase` and every tier-day constant straight through an
+> unstated convention and absorb the bias permanently. Adopted rather than changed (splitting the halves
+> alters #41's step contract), documented at all three sites that determine it, and locked by a test.
+> Whether #41 should expose recovery and occurrence separately is deferred to the balance pass with owner
+> sign-off.
+>
+> **L (7):** `SeasonSaveManager`'s version rows ran 1.7-then-1.6 with two `Modified:` headers; `SeasonLoop`
+> v1.7 recorded a "public World accessor" that landed `internal`; both block types' docs disclaimed the
+> decode ordering `FromBlocks` now requires, so acting on them would make it refuse valid saves;
+> `CareerTestRoster.Build`'s summary named the wrong index; the quick-sim's omission of match-entry fatigue
+> is argued rather than silent; the `Save(SeasonLoop, …)` overload no longer recommends a cross-thread
+> `ActiveMatch` read; `Blocks_RoundTripThroughBothCodecs` asserted nothing about the medical block and held
+> for two sets of identical fresh states.
+>
+> **Deliberately not done:** no `SNAPSHOT_SCHEMA_VERSION` change, no format bump, no RNG stream / domain
+> tag / draw-site / draw-order change, and no behaviour change of any kind — the ERR-030-026 convention is
+> adopted as-is precisely so this pass stays behaviour-neutral. **NO GATE RUN** — still no .NET SDK in the
+> authoring environment (installer 403 at the proxy), so every claim here is static; CI on push is the
+> gate. Prior entry below.)
+
+> **Last Updated (prior):** August 6, 2026, latest same day (**Adversarial review over the #29/#41 T2 landing —
 > 3 High, 4 Medium, 4 Low, all fixed; pass 2 clean.**
 >
 > **H1 — `PlayerCareerStates.FromBlocks` trusted an ordering invariant it never checked, and the failure

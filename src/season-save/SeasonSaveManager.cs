@@ -1,9 +1,10 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
-// Modified: 2026-08-06 (#29/#41 T1: the training and medical sub-blobs are composed in; doc-drift fix)
-// Modified: 2026-08-06 (T2 AR pass 1: Load re-applies the #41 availability filter to the in-progress
-//           match's roster so restore re-selects the eleven that actually played; + a Save(SeasonLoop,
-//           match, path) overload so the career's block accessors can stay internal)
+// Modified: 2026-08-06 (#29/#41 T1: the training and medical sub-blobs are composed in; doc-drift fix.
+//           T2 AR pass 1: Load re-applies the #41 availability filter to the in-progress match's roster
+//           so restore re-selects the eleven that actually played; + a Save(SeasonLoop, match, path)
+//           overload so the career's block accessors can stay internal. AR pass 3: the overload's
+//           quiescence precondition.)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-1 / KD-5..KD-8;
 //           Training System #29 §4.4 / FR-TR-018/019; Injuries & Medical #41 §4.4 / FR-MD-017/018;
@@ -170,8 +171,19 @@ namespace TacticalDirector.SeasonSave
         /// </para>
         /// </summary>
         /// <param name="loop">The season loop to capture: its world, its season state, and its career.</param>
-        /// <param name="matchOrNull">The in-progress match, or null when there is none (KD-3). Pass
-        /// <see cref="SeasonLoop.ActiveMatch"/> when saving mid-match.</param>
+        /// <param name="matchOrNull">The in-progress match, or null when there is none (KD-3).
+        /// <b>Must be quiescent</b> — not being ticked while this call runs. Both this class and
+        /// <see cref="SeasonLoop"/> declare no thread safety, and <see cref="MatchSaveManager.Encode"/>
+        /// walks the whole engine field by field: encoding one mid-<c>RunTick</c> yields a blob mixing
+        /// pre- and post-tick state, which restores cleanly into a world the simulation never occupied
+        /// and diverges from there with every gate green.
+        /// <para>
+        /// <see cref="SeasonLoop.ActiveMatch"/> is <b>not</b> a safe source for this today: it is
+        /// non-null only inside the synchronous <see cref="SeasonLoop.AdvanceAndPlayNextRound"/> call
+        /// that is ticking it, so reading it at all means reading from another thread. A supported
+        /// mid-match save needs a seam that can stop the match between ticks first; until one exists,
+        /// pass an engine this caller owns and is not currently advancing.
+        /// </para></param>
         /// <param name="path">The destination file.</param>
         /// <exception cref="ArgumentNullException"><paramref name="loop"/> is null.</exception>
         public static void Save(SeasonLoop loop, MatchEngine.MatchEngine matchOrNull, string path)
@@ -357,6 +369,11 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | call site could omit a season's training and injury history   |
 // |         |            |        | and still compile, save and load — silently, with nothing to  |
 // |         |            |        | distinguish the loss from an unwired game.                    |
+// | 1.6     | 2026-08-06 | —      | Doc-drift fix (no code change): the file-header Purpose block |
+// |         |            |        | and the class <summary> still described this file as writing |
+// |         |            |        | only the WorldStore composite plus an optional MatchEngine —  |
+// |         |            |        | stale since the #30 T1 season-state landing and now missing   |
+// |         |            |        | the #29/#41 training and medical states too. Both corrected.  |
 // | 1.7     | 2026-08-06 | —      | AR pass 1 over T2 (H): Load now re-applies the #41            |
 // |         |            |        | availability filter when restoring an in-progress match. The  |
 // |         |            |        | match was configured with the FILTERED squad and the snapshot |
@@ -371,9 +388,16 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | PlayerCareerStates' block accessors being public — those hand  |
 // |         |            |        | out the live state arrays, and a public accessor makes every   |
 // |         |            |        | holder of SeasonLoop.Career a second writer of #29/#41 state.  |
-// | 1.6     | 2026-08-06 | —      | Doc-drift fix (no code change): the file-header Purpose block |
-// |         |            |        | and the class <summary> still described this file as writing |
-// |         |            |        | only the WorldStore composite plus an optional MatchEngine —  |
-// |         |            |        | stale since the #30 T1 season-state landing and now missing   |
-// |         |            |        | the #29/#41 training and medical states too. Both corrected.  |
+// | 1.8     | 2026-08-06 | —      | T2 AR pass 3 (2L). The Save(SeasonLoop, …) overload's match   |
+// |         |            |        | parameter documented "Pass SeasonLoop.ActiveMatch when saving |
+// |         |            |        | mid-match" — but ActiveMatch is non-null only INSIDE the       |
+// |         |            |        | synchronous AdvanceAndPlayNextRound that is ticking it, and   |
+// |         |            |        | both types declare no thread safety, so the documented use    |
+// |         |            |        | was a cross-thread walk of a live engine yielding a torn blob |
+// |         |            |        | that restores cleanly into a state the sim never occupied.    |
+// |         |            |        | Now states the quiescence precondition and withdraws the      |
+// |         |            |        | suggestion. Also: the version rows below 1.5 were 1.7 then    |
+// |         |            |        | 1.6, so reading the table bottom-up gave 1.6 as current, and  |
+// |         |            |        | the header carried two Modified lines against the convention  |
+// |         |            |        | of one matching the latest row. Both corrected.               |
 #endregion

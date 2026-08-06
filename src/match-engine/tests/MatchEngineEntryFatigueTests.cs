@@ -114,6 +114,64 @@ namespace TacticalDirector.MatchEngine
                 "The home side was passed null and must be untouched.");
         }
 
+        /// <summary>
+        /// A squad whose positions are laid out so that squad-local index and starter SLOT index cannot
+        /// coincide: the only goalkeeper is the LAST player on the roster, so lineup selection must map
+        /// pitch slot 0 to local <c>RequiredCount - 1</c>. Every attribute is the default, so ties break
+        /// on ascending PlayerId and the mapping is fully determined without this fixture re-deriving
+        /// the selector's preference order.
+        /// </summary>
+        private static Squad KeeperLastSquad(int clubId)
+        {
+            var players = new PlayerRecord[RequiredCount];
+            for (int k = 0; k < players.Length; k++)
+            {
+                PlayerRecord p = PlayerRecord.CreateDefault(
+                    clubId * PlayerDatabaseConstants.CLUB_SQUAD_SIZE + k);
+                // 0-5 forwards, 6-11 midfielders, 12-16 defenders, 17 the one goalkeeper — enough of
+                // each line for the Stage-0 formation, in the opposite order to the slot layout.
+                if (k == RequiredCount - 1)      p.Position = PlayerPosition.Goalkeeper;
+                else if (k >= 12)                p.Position = PlayerPosition.Defender;
+                else if (k >= 6)                 p.Position = PlayerPosition.Midfielder;
+                else                             p.Position = PlayerPosition.Forward;
+                players[k] = p;
+            }
+
+            return new Squad(clubId, players);
+        }
+
+        [Test]
+        public void EntryFatigue_IsIndexedBySquadLocal_NotByTeamSlot()
+        {
+            // Every other test here probes an index where local and slot happen to coincide, because
+            // CoherentSquad lays positions out in slot order — so all of them pass unchanged if
+            // ApplySquad reads entryFatigue[k] (the slot) instead of entryFatigue[local]. That is the
+            // one property this seam turns on, and it is the property #30's availability filter breaks
+            // on purpose: filtering renumbers the locals, so a filtered squad has no slot/local
+            // agreement at all. Here the only goalkeeper is the LAST local, so slot 0 must be local 17
+            // whatever the ratings are.
+            const int KeeperLocal = 17;
+            var engine = new MatchEngine(MatchSeed);
+            float[] home = Rested();
+            home[KeeperLocal] = 0.5f;   // the keeper, at the far end of the roster
+            home[0] = 0.25f;            // a forward who will NOT start in slot 0
+
+            engine.ConfigureSquads(KeeperLastSquad(1), KeeperLastSquad(2), home, null);
+
+            Assert.AreEqual(0.5f, engine.AgentView(0).AerobicPool, 1e-6f,
+                "Pitch slot 0 is the goalkeeper, who is squad-local " + KeeperLocal + " here. Reading "
+                + "the array by SLOT would take local 0's 0.25 and leave the reservoir at 0.75; not "
+                + "reading it at all would leave 1.0.");
+
+            // Exact comparison is right here: 0.5, 0.75 and 1.0 are all exactly representable, and the
+            // seam is a single subtraction from 1f. (Assert.AreNotEqual has no tolerance overload.)
+            for (int slot = 1; slot < MatchEngineConstants.PLAYERS_PER_TEAM; slot++)
+            {
+                Assert.AreNotEqual(0.5f, engine.AgentView(slot).AerobicPool,
+                    $"Slot {slot}: only the goalkeeper carried 0.5, so no outfield slot may show it.");
+            }
+        }
+
         // ── the neutrality floor ───────────────────────────────────────────────────────────
 
         [Test]
@@ -268,4 +326,13 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | reservoir mapping, per-team routing, the all-rested digest-        |
 // |         |            |        | identity floor AND its counterpart (a fatigued side must actually  |
 // |         |            |        | diverge), the save/restore round-trip, and the fail-loud gates.    |
+// | 1.1     | 2026-08-06 | —      | T2 AR pass 3 (M): + EntryFatigue_IsIndexedBySquadLocal_NotByTeam-  |
+// |         |            |        | Slot. Every v1.0 probe used CoherentSquad, which lays positions    |
+// |         |            |        | out in slot order, so local and slot coincided at every index      |
+// |         |            |        | asserted on — and the whole file passed unchanged if ApplySquad    |
+// |         |            |        | read entryFatigue[k] instead of entryFatigue[local]. That is the   |
+// |         |            |        | one property the seam turns on, and the one #30's availability     |
+// |         |            |        | filter breaks deliberately (filtering renumbers the locals). The   |
+// |         |            |        | new case puts the only goalkeeper at the LAST local, so slot 0     |
+// |         |            |        | must map to local 17 whatever the ratings say.                     |
 #endregion

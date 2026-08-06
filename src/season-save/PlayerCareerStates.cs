@@ -67,16 +67,20 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>
-        /// Increments every time <see cref="SyncToRoster"/> replaces a club's arrays — the generation
-        /// stamp a cached <see cref="TrainingSchedule"/> is only valid for.
+        /// Increments every time <see cref="CommitRosterSync"/> replaces the per-club arrays — i.e. once
+        /// per season boundary, whether or not the roster actually moved.
         /// <para>
-        /// <b>Why this exists.</b> <see cref="ScheduleFor"/> hands out a handle that binds a club's
-        /// live id and state arrays by reference, and <see cref="SyncToRoster"/> replaces both arrays
-        /// wholesale. A schedule cached across a season boundary therefore writes into a detached array:
-        /// <c>TrySetFocus</c> returns <c>true</c>, nothing throws, and the manager's training
-        /// instruction is silently gone. A screen caching the handle is the obvious thing to write, so
-        /// the staleness needs to be detectable rather than merely documented — compare this against the
-        /// value read when the handle was acquired.
+        /// <b>It is load-bearing for <see cref="CommitRosterSync"/></b>, which refuses a plan prepared at
+        /// a different generation: installing one would overwrite the current roster with a stale one.
+        /// That is the reason it must exist, and the reason it moves on a no-churn sync too — the arrays
+        /// are replaced either way.
+        /// </para>
+        /// <para>
+        /// It is <b>not</b> a staleness check any caller is asked to perform. The handle that could go
+        /// stale (<see cref="ScheduleFor"/>) is <c>internal</c> and the public focus command
+        /// (<see cref="TrySetFocus"/>) resolves fresh every call, so there is nothing outside this class
+        /// to invalidate. Read it, if you like, as a cheap "did the squad list change" signal for a
+        /// screen — but nothing depends on a caller remembering to.
         /// </para>
         /// </summary>
         public int RosterGeneration { get; private set; }
@@ -212,6 +216,14 @@ namespace TacticalDirector.SeasonSave
         /// truncated, or paired with another save's sibling, and every later step — the day advance, the
         /// availability read, the roster sync — would then be operating on two different squads.
         /// </para>
+        /// <para>
+        /// <b>The state arrays are COPIED, so the blocks passed in are not a back door into the career.</b>
+        /// <c>ClubTrainingStates.States</c> is a public field over a borrowed array, and the usual caller
+        /// hands in the very arrays <see cref="SeasonSaveManager.Load"/> returns inside
+        /// <see cref="SeasonSaveContents"/> — sharing them would make every holder of those contents a
+        /// second writer of #29/#41 state, which is precisely what <see cref="TrainingBlocks"/> being
+        /// <c>internal</c> prevents on the save side. The player-id arrays are shared; nothing mutates them.
+        /// </para>
         /// </summary>
         /// <param name="training">The decoded #29 blocks.</param>
         /// <param name="medical">The decoded #41 blocks.</param>
@@ -311,13 +323,28 @@ namespace TacticalDirector.SeasonSave
                         nameof(training));
                 }
 
-                // The player-id arrays are shared, not copied: the two blocks agree on them by the
-                // check above, and both codecs already canonicalized them ascending. The state arrays
-                // are the ones this type mutates, and each block owns its own.
+                // The player-id arrays are shared: they are never mutated here, the two blocks agree
+                // on them by the check above, and both codecs already canonicalized them ascending.
+                //
+                // The STATE arrays are copied, and that is not a defensive habit — it is the single-
+                // writer contract (FR-TR-004 / FR-TR-023 / FR-MD-003). ClubTrainingStates.States is a
+                // public field holding a borrowed array, and the blocks this method is called with are
+                // the ones SeasonSaveManager.Load hands straight back to its caller inside
+                // SeasonSaveContents. Sharing them would mean the documented restore path —
+                // FromBlocks(contents.TrainingClubs, contents.MedicalClubs) — leaves every holder of
+                // `contents` writing directly into the running career's Condition, Severity and
+                // idempotency cursors, bypassing both day steps. That is exactly the hole closed on the
+                // save side by keeping TrainingBlocks()/MedicalBlocks() internal; copying here closes
+                // the same hole on the load side, which is the only other route in.
+                var training = new TrainingState[t.Count];
+                Array.Copy(t.States, training, t.Count);
+                var injury = new InjuryState[m.Count];
+                Array.Copy(m.States, injury, m.Count);
+
                 career._clubIds.Add(t.ClubId);
                 career._playerIds.Add(t.PlayerIds);
-                career._training.Add(t.States);
-                career._injury.Add(m.States);
+                career._training.Add(training);
+                career._injury.Add(injury);
             }
 
             return career;
@@ -630,10 +657,10 @@ namespace TacticalDirector.SeasonSave
                 _injury[c] = plan.Injury[c];
             }
 
-            // Bumped unconditionally, not only when churn > 0: the arrays are replaced either way, so
-            // every previously handed-out TrainingSchedule is now detached whether or not the roster
-            // actually moved. A generation that only moved on churn would mark the no-churn case valid
-            // while the handle it validates writes into a discarded array.
+            // Bumped unconditionally, not only when churn > 0: the arrays are replaced either way, so a
+            // plan prepared before this call is stale either way. A generation that only moved on churn
+            // would accept a no-churn plan built against the PREVIOUS arrays and install it over the
+            // current ones — the exact overwrite the check exists to refuse.
             RosterGeneration++;
 
             return plan.Churn;
@@ -858,20 +885,53 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>
-        /// The club-scoped FR-TR-023 focus command surface: a <see cref="TrainingSchedule"/> bound to
-        /// this club's own id and state arrays, so a caller cannot pair one club's ids with another's
-        /// states (the bind-once discipline the schedule exists for).
+        /// The FR-TR-023 weekly focus command, resolved fresh against this career on every call.
+        /// Returns <c>false</c> for a player the club's roster does not carry (#29's F2 refusal — a
+        /// stale id from a screen is not a crash), <c>true</c> when the focus was written.
         /// <para>
-        /// <b>The handle is invalidated by <see cref="SyncToRoster"/>, i.e. by every season boundary.</b>
-        /// It binds the live arrays by reference and the sync replaces them, so a schedule cached across
-        /// a roll writes into a discarded array — <c>TrySetFocus</c> returns <c>true</c> and the change
-        /// is lost with nothing to notice it. Acquire it per use, or capture
-        /// <see cref="RosterGeneration"/> alongside it and re-acquire when that value moves.
+        /// <b>A command rather than a handle, deliberately.</b> The obvious shape here is "hand out a
+        /// <see cref="TrainingSchedule"/> and let the caller keep it", and it is wrong: the schedule
+        /// binds a club's id and state arrays BY REFERENCE, and <see cref="SyncToRoster"/> replaces both
+        /// wholesale at every season boundary. A screen that cached the handle across a roll — the
+        /// obvious thing to write — would then call <c>TrySetFocus</c>, get <c>true</c> back, and write
+        /// the manager's instruction into a discarded array. Nothing throws and nothing is logged; the
+        /// player simply trains Balanced all season.
+        /// </para>
+        /// <para>
+        /// A generation counter the caller is asked to compare would make that DETECTABLE, not
+        /// prevented — and this file argues elsewhere that binding must be structural rather than
+        /// documented, which is the whole reason <see cref="TrainingSchedule"/> exists at all. So the
+        /// handle is not handed out: this method builds a transient one over the CURRENT arrays and
+        /// discards it, which cannot be stale because it does not outlive the call. #29 keeps its
+        /// single declared writer (<c>TrainingSchedule.TrySetFocus</c>) — this is a lookup in front of
+        /// it, not a second one beside it.
+        /// </para>
+        /// </summary>
+        /// <param name="clubId">The club.</param>
+        /// <param name="playerId">The player whose focus is being set.</param>
+        /// <param name="focus">The new focus.</param>
+        /// <returns>True when written; false when the club's roster does not carry the player.</returns>
+        /// <exception cref="ArgumentException">The club is not carried by this career.</exception>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="focus"/> is not a defined ordinal (#29 F4 / FR-TR-021).</exception>
+        public bool TrySetFocus(int clubId, int playerId, TrainingFocus focus)
+        {
+            int club = RequireClub(clubId);
+            return new TrainingSchedule(_playerIds[club], _training[club]).TrySetFocus(playerId, focus);
+        }
+
+        /// <summary>
+        /// A <see cref="TrainingSchedule"/> over one club's live id and state arrays.
+        /// <para>
+        /// <b><c>internal</c>: the handle must not outlive the call that acquired it.</b> It binds both
+        /// arrays by reference and <see cref="SyncToRoster"/> replaces them, so a cached handle silently
+        /// discards writes — see <see cref="TrySetFocus"/>, which is the public surface and is a command
+        /// precisely so no caller can hold one. This exists for in-assembly use where the lifetime is
+        /// visibly bounded.
         /// </para>
         /// </summary>
         /// <param name="clubId">The club.</param>
         /// <exception cref="ArgumentException">The club is not carried.</exception>
-        public TrainingSchedule ScheduleFor(int clubId)
+        internal TrainingSchedule ScheduleFor(int clubId)
         {
             int club = RequireClub(clubId);
             return new TrainingSchedule(_playerIds[club], _training[club]);
@@ -1103,4 +1163,21 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | risk read is skipped with the dial off (nothing reads it); the     |
 // |         |            |        | SelectAvailable summary no longer contradicts its own back-fill;   |
 // |         |            |        | + CarriesClub for SeasonLoop's coverage gate.                      |
+// | 1.2     | 2026-08-06 | —      | AR pass 3 (2M). **M:** FromBlocks now COPIES the two state arrays  |
+// |         |            |        | instead of borrowing them. ClubTrainingStates.States is a public   |
+// |         |            |        | field over a borrowed array and the documented restore path feeds  |
+// |         |            |        | this the very arrays SeasonSaveManager.Load hands back inside      |
+// |         |            |        | SeasonSaveContents — so every holder of those contents was a       |
+// |         |            |        | second writer of #29/#41 state, straight past both day steps.      |
+// |         |            |        | v1.1 closed that hole on the SAVE route (internal accessors) and   |
+// |         |            |        | left it open on the only other route in. **M:** ScheduleFor goes   |
+// |         |            |        | internal and the public focus surface becomes TrySetFocus, a       |
+// |         |            |        | command that resolves the club fresh on every call. The handle     |
+// |         |            |        | binds arrays SyncToRoster replaces, so a screen caching it across  |
+// |         |            |        | a boundary got true back and wrote into a discarded array; v1.1's  |
+// |         |            |        | RosterGeneration made that DETECTABLE by a caller who remembered   |
+// |         |            |        | to check, which is the documented-not-enforced standard this file  |
+// |         |            |        | rejects everywhere else. RosterGeneration stays — CommitRosterSync |
+// |         |            |        | refuses a stale plan on it — but nothing outside now depends on a  |
+// |         |            |        | caller reading it.                                                 |
 #endregion

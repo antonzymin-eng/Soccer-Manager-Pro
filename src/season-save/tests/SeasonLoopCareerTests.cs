@@ -13,6 +13,7 @@ using NUnit.Framework;
 
 using TacticalDirector.InjuriesMedical;
 using TacticalDirector.LivingWorld;
+using TacticalDirector.MatchEngine;
 using TacticalDirector.PlayerDatabase;
 using TacticalDirector.TrainingSystem;
 
@@ -164,6 +165,63 @@ namespace TacticalDirector.SeasonSave.Tests
         }
 
         [Test]
+        public void DayAdvance_StopsBeforeTheFixtureDaysOwnSteps()
+        {
+            // ERR-030-026. KD-2 pins the order of the nine day-slots but has no slot for "play the
+            // round" — a round is a separate command — so where the fixture sits relative to slots 2
+            // and 4 is settled by AdvanceToNextFixtureDay's loop condition alone, and was written down
+            // nowhere. It stops on REACHING the fixture day, so matchday's own steps run after the
+            // round: right for #41's occurrence draw (an injury sustained in a match is drawn after it,
+            // which is what makes the FR-MD-010 MatchLoad term coherent once ERR-041-010(b) lands),
+            // wrong for the recovery countdown that shares the same atomic step — a player whose
+            // RecoveryRemaining hits 0 on matchday misses a match he had served his time for, so every
+            // injury runs one matchday long.
+            //
+            // Pinned here rather than left emergent, because the balance pass will fit the recovery
+            // tiers straight through this convention and would otherwise absorb the bias silently.
+            League league = FourClubLeague();
+            SeasonLoop loop = WiredLoop(
+                league, out WorldStore world, out PlayerCareerStates career,
+                out CareerTestRoster.MutableSquadProvider provider);
+
+            uint fixtureDay = loop.State.Calendar.NextFixtureDay();
+            Assert.Greater(fixtureDay, 0u, "Precondition: the opening round is not on day 0.");
+
+            loop.AdvanceToNextFixtureDay();
+
+            Assert.AreEqual(fixtureDay, world.CurrentWorldTick,
+                "The clock must sit ON the fixture day (§3.3).");
+
+            int playerId = provider.ResolveByClubId(league.ClubIds()[0]).GetPlayer(0).PlayerId;
+            Assert.AreEqual(
+                fixtureDay - 1u,
+                career.TrainingBlocks()[0].States[0].LastAdvancedWorldDay,
+                "The last day step run is the fixture day MINUS ONE — matchday's own steps 2 and 4 "
+                + "have not run when the round is played (ERR-030-026).");
+            Assert.AreEqual(
+                fixtureDay - 1u,
+                career.MedicalBlocks()[0].States[0].LastAdvancedWorldDay,
+                "…and the same for #41, which is where the one-matchday recovery bias comes from.");
+
+            // The consequence, made concrete: a player whose recovery would expire ON the fixture day
+            // is still unavailable for it, because his last decrement was the day before.
+            var injured = InjuryState.Create();
+            injured.Severity = InjurySeverity.Minor;
+            injured.RecoveryRemaining = 1;
+            career.SetMedicalState(league.ClubIds()[0], playerId, in injured);
+
+            Assert.IsFalse(career.IsAvailable(league.ClubIds()[0], playerId),
+                "One day of recovery outstanding at kickoff: unavailable for this round, because "
+                + "matchday's countdown runs after it (ERR-030-026).");
+
+            loop.AdvanceAndPlayNextRound(provider);
+            loop.AdvanceDays(1);   // the fixture day's own steps finally run
+
+            Assert.IsTrue(career.IsAvailable(league.ClubIds()[0], playerId),
+                "…and he is fit the moment matchday is processed — one round later than his tier says.");
+        }
+
+        [Test]
         public void DayAdvance_LeavesTheWorldByteIdenticalToABareAdvance()
         {
             // FR-SN-026 / KD-8: neither day step touches the WorldStore — they mutate only the career
@@ -205,6 +263,206 @@ namespace TacticalDirector.SeasonSave.Tests
             {
                 Assert.AreEqual(0f, fatigue[i], 0f);
             }
+        }
+
+        // ── the ENGINE path with a career wired ────────────────────────────────────────────
+        //
+        // Every other test in this fixture runs QuickSimAll, and every engine-mode test in this
+        // assembly constructs the loop without a career — so until these three landed, SeasonLoop's
+        // career-wired match boot (the sole production call site of #29's entry-fatigue seam, and the
+        // only place the availability filter meets a real MatchEngine) had never executed anywhere.
+        // They go through BootFixtureEngine rather than AdvanceAndPlayNextRound so the assertions cost
+        // milliseconds instead of a 90-minute match, which is why that seam is internal.
+
+        /// <summary>The first fixture of round 0, and the club playing at home in it.</summary>
+        private static Fixture FirstFixture(SeasonLoop loop) => loop.State.FixtureAt(0);
+
+        [Test]
+        public void EnginePath_SeedsMatchEntryFatigueOntoTheStartersItSelected()
+        {
+            League league = FourClubLeague();
+            var provider = new CareerTestRoster.MutableSquadProvider();
+            int[] clubIds = league.ClubIds();
+            for (int i = 0; i < clubIds.Length; i++)
+            {
+                provider.Set(CareerTestRoster.Build(clubIds[i], PlayerDatabaseConstants.CLUB_SQUAD_SIZE));
+            }
+
+            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, clubIds);
+            var world = new WorldStore(ManagerId, WorldSeed);
+            var loop = new SeasonLoop(
+                world, league.CreateSeason(0), RoundResolutionMode.FullEngine, career, provider);
+
+            Fixture fixture = FirstFixture(loop);
+            Squad home = provider.ResolveByClubId(fixture.HomeClubId);
+
+            // Fatigue only the SECOND half of the roster. The point is the index space: the array
+            // ConfigureSquads takes is keyed by squad-local roster index, NOT by team slot, and the
+            // selector fills the outfield slots from the highest-rated players — which in this fixture
+            // are the high locals, because Pace ramps with the roster slot. So if the seam ever read
+            // entryFatigue[slot] instead of entryFatigue[local], every starter would come up rested and
+            // this test fails. Nothing here re-derives which eleven is picked; the assertion holds for
+            // any selection that reaches past local 10, and a lineup that did not would be a different
+            // bug caught by LineupSelectorTests.
+            for (int local = 11; local < home.Count; local++)
+            {
+                Assert.IsTrue(
+                    career.TrySetFocus(fixture.HomeClubId, home.GetPlayer(local).PlayerId,
+                        TrainingFocus.Physical),
+                    "Precondition: the focus command must accept a player on the club's roster.");
+            }
+
+            // Seven days is the whole run-up to the first fixture — the KD-4 guard refuses to step past
+            // it — so this is the most training a club can bring to the opening round.
+            loop.AdvanceDays((int)LeagueBootstrapConstants.FirstRoundDay);
+
+            float[] projected = career.MatchEntryFatigue(home);
+            Assert.Greater(projected[home.Count - 1], 0f,
+                "Precondition: a week of Physical work must project non-zero match-entry fatigue.");
+            Assert.AreEqual(0f, projected[0], 0f,
+                "Precondition: a Balanced team-mate must still project zero.");
+
+            MatchEngine.MatchEngine engine = loop.BootFixtureEngine(in fixture, provider);
+
+            int fatiguedStarters = 0;
+            for (int slot = 0; slot < MatchEngineConstants.PLAYERS_PER_TEAM; slot++)
+            {
+                if (engine.AgentView(slot).AerobicPool < 1f)
+                {
+                    fatiguedStarters++;
+                }
+            }
+
+            Assert.Greater(fatiguedStarters, 0,
+                "No home starter arrived tired. The entry-fatigue array is keyed by squad-local roster "
+                + "index and the selected starters are drawn from the high locals, so a seam reading it "
+                + "by team slot — or not reading it at all — leaves every reservoir at the rested boot.");
+
+            for (int slot = MatchEngineConstants.PLAYERS_PER_TEAM;
+                 slot < 2 * MatchEngineConstants.PLAYERS_PER_TEAM; slot++)
+            {
+                Assert.AreEqual(1f, engine.AgentView(slot).AerobicPool, 0f,
+                    $"Away agent {slot}: the away club trained Balanced and must boot fully rested.");
+            }
+        }
+
+        [Test]
+        public void EnginePath_ConfiguresTheAvailabilityFilteredSquad()
+        {
+            // The filter's other half. ERR-030-009 puts it at resolve→filter→configure on BOTH
+            // resolution paths, and only the quick-sim one was ever executed: an engine fixture booted
+            // with the UNFILTERED roster would field injured players with nothing to notice it.
+            League league = FourClubLeague();
+            var provider = new CareerTestRoster.MutableSquadProvider();
+            int[] clubIds = league.ClubIds();
+            for (int i = 0; i < clubIds.Length; i++)
+            {
+                provider.Set(CareerTestRoster.Build(clubIds[i], PlayerDatabaseConstants.CLUB_SQUAD_SIZE));
+            }
+
+            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, clubIds);
+            var loop = new SeasonLoop(
+                new WorldStore(ManagerId, WorldSeed), league.CreateSeason(0),
+                RoundResolutionMode.FullEngine, career, provider);
+
+            Fixture fixture = FirstFixture(loop);
+            Squad home = provider.ResolveByClubId(fixture.HomeClubId);
+
+            // The seven best-rated players out, which is what makes the filtered eleven differ from the
+            // unfiltered one — the same construction SeasonSaveCareerRestoreTests uses.
+            for (int local = home.Count - 1; local >= home.Count - 7; local--)
+            {
+                var injured = InjuryState.Create();
+                injured.Severity = InjurySeverity.Serious;
+                injured.RecoveryRemaining = 60;
+                career.SetMedicalState(fixture.HomeClubId, home.GetPlayer(local).PlayerId, in injured);
+            }
+
+            Squad expected = career.SelectAvailable(home);
+            Assert.AreNotSame(home, expected, "Precondition: the filter must have removed somebody.");
+            Assert.AreNotEqual(
+                SquadRating.StartingElevenMean(home), SquadRating.StartingElevenMean(expected),
+                "Precondition: the filter must change WHICH eleven is selected, not merely drop players "
+                + "nobody was going to pick — otherwise the divergence assertion below is a coin toss.");
+
+            MatchEngine.MatchEngine booted = loop.BootFixtureEngine(in fixture, provider);
+
+            // The engine exposes no "which locals did you select"; the canonical attribute records are
+            // not serialized either, so a PRE-tick digest cannot tell two lineups apart — with no focus
+            // set every reservoir is 1.0 and the two boots are byte-identical at tick 0. The eleven only
+            // becomes observable by simulating: a different eleven moves differently. Same reason the
+            // restore-fidelity lock in SeasonSaveCareerRestoreTests continues 60 ticks.
+            const int Ticks = 60;
+            Squad away = provider.ResolveByClubId(fixture.AwayClubId);
+            ulong seed = RoundResolutionModel.MatchSeedFor(
+                in fixture, loop.State.Seed, loop.State.SeasonNumber);
+
+            var reference = new MatchEngine.MatchEngine(seed);
+            reference.ConfigureSquads(
+                expected, away, career.MatchEntryFatigue(expected), career.MatchEntryFatigue(away));
+
+            var unfiltered = new MatchEngine.MatchEngine(seed);
+            unfiltered.ConfigureSquads(home, away);
+
+            bool divergedFromUnfiltered = false;
+            for (int t = 0; t < Ticks; t++)
+            {
+                booted.RunTick();
+                reference.RunTick();
+                unfiltered.RunTick();
+
+                CollectionAssert.AreEqual(
+                    reference.CurrentSnapshotDigest, booted.CurrentSnapshotDigest,
+                    $"Tick {t + 1}: the engine path must configure the availability-FILTERED squad "
+                    + "(ERR-030-009), so it must track an engine configured with that squad by hand.");
+
+                divergedFromUnfiltered |= !BytesEqual(
+                    unfiltered.CurrentSnapshotDigest, booted.CurrentSnapshotDigest);
+            }
+
+            Assert.IsTrue(divergedFromUnfiltered,
+                "Precondition: filtered and unfiltered must be distinguishable within " + Ticks
+                + " ticks, or the assertion above is satisfied by a filter that did nothing.");
+        }
+
+        private static bool BytesEqual(byte[] a, byte[] b)
+        {
+            if (a.Length != b.Length)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < a.Length; i++)
+            {
+                if (a[i] != b[i])
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        [Test]
+        public void EnginePath_OnAnUnwiredLoop_BootsExactlyAsBefore()
+        {
+            // The neutrality floor for the branch above: with no career, BootFixtureEngine must pass
+            // null for both fatigue arrays and no filter, which is byte-for-byte the pre-T2 boot.
+            League league = FourClubLeague();
+            var loop = new SeasonLoop(
+                new WorldStore(ManagerId, WorldSeed), league.CreateSeason(0),
+                RoundResolutionMode.FullEngine);
+
+            Fixture fixture = FirstFixture(loop);
+            MatchEngine.MatchEngine booted = loop.BootFixtureEngine(in fixture, league);
+
+            var bare = new MatchEngine.MatchEngine(
+                RoundResolutionModel.MatchSeedFor(in fixture, loop.State.Seed, loop.State.SeasonNumber));
+            bare.ConfigureSquads(
+                league.ResolveByClubId(fixture.HomeClubId), league.ResolveByClubId(fixture.AwayClubId));
+
+            CollectionAssert.AreEqual(bare.CurrentSnapshotDigest, booted.CurrentSnapshotDigest,
+                "An unwired loop's engine boot must be identical to the two-argument ConfigureSquads.");
         }
 
         // ── a whole season with the career live ────────────────────────────────────────────
@@ -346,4 +604,17 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | the FR-SN-026 world-tick floor still holding, a whole season      |
 // |         |            |        | played with the career live, and the (d′) boundary reconciliation |
 // |         |            |        | including its refuse-cleanly path.                                |
+// | 1.1     | 2026-08-06 | —      | T2 AR passes 4-5 (1H + 1M). **H:** three EnginePath_* cases. Every |
+// |         |            |        | v1.0 test here ran QuickSimAll and every engine-mode test in this  |
+// |         |            |        | assembly builds the loop WITHOUT a career, so SeasonLoop's         |
+// |         |            |        | career-wired match boot — the sole production call site of #29's   |
+// |         |            |        | entry-fatigue seam, and the only place the ERR-030-009 filter      |
+// |         |            |        | meets a real MatchEngine — had never executed anywhere. They go    |
+// |         |            |        | through the new internal BootFixtureEngine so the cost is          |
+// |         |            |        | milliseconds rather than a 90-minute match, the same reason        |
+// |         |            |        | ShouldPlayThroughEngine was extracted. **M:** + DayAdvance_Stops-  |
+// |         |            |        | BeforeTheFixtureDaysOwnSteps, pinning ERR-030-026 — where the      |
+// |         |            |        | round sits among the KD-2 slots was settled by a loop condition    |
+// |         |            |        | and written down nowhere, and it makes every injury one matchday   |
+// |         |            |        | longer than its tier.                                             |
 #endregion

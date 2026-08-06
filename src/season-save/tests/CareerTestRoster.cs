@@ -43,15 +43,25 @@ namespace TacticalDirector.SeasonSave.Tests
         }
 
         /// <summary>
-        /// A squad of <paramref name="count"/> players for <paramref name="clubId"/>, whose player ids
-        /// are the <c>clubId * CLUB_SQUAD_SIZE + local</c> convention over
-        /// <paramref name="localIndices"/> when supplied, or <c>0..count-1</c> when not.
+        /// A squad of <paramref name="count"/> players for <paramref name="clubId"/>.
         /// <para>
-        /// Every attribute is mid-range except <c>Pace</c>, which ramps with the local index — enough for
-        /// lineup selection to have a strict preference order, so a test can injure the best players and
-        /// watch the rating move.
+        /// <b>Two indices, and only one of them is <paramref name="localIndices"/>.</b> Roster SLOT
+        /// <c>k</c> (0..count-1) decides the player's <see cref="PlayerPosition"/> (<see cref="PosFor"/>)
+        /// and his <c>Pace</c>; <paramref name="localIndices"/> decides only his <c>PlayerId</c>, as
+        /// <c>clubId * CLUB_SQUAD_SIZE + localIndices[k]</c>, defaulting to <c>k</c> when not supplied.
+        /// That split is what makes a one-out/one-in roster swap expressible — a club already at
+        /// CLUB_SQUAD_SIZE cannot simply grow — while keeping the squad position-coherent: substituting
+        /// an id at slot <c>k</c> leaves a player of the same position and rating in that slot.
+        /// </para>
+        /// <para>
+        /// Every attribute is mid-range except <c>Pace</c>, which ramps with the roster slot (saturating
+        /// at <c>ATTRIBUTE_MAX</c> beyond slot 19) — enough for lineup selection to have a strict
+        /// preference order, so a test can injure the best players and watch the rating move.
         /// </para>
         /// </summary>
+        /// <param name="clubId">The club these players belong to.</param>
+        /// <param name="count">How many players; must not exceed <c>CLUB_SQUAD_SIZE</c>.</param>
+        /// <param name="localIndices">Per-slot id suffixes, or null for <c>0..count-1</c>.</param>
         internal static Squad Build(int clubId, int count, int[] localIndices = null)
         {
             var players = new PlayerRecord[count];
@@ -120,4 +130,8 @@ namespace TacticalDirector.SeasonSave.Tests
 // | Version | Date       | Author | Notes                                                              |
 // | 1.0     | 2026-08-06 | —      | Initial (#29/#41 T2): the position-coherent squad builder and the  |
 // |         |            |        | mutable provider the roster-reconciliation tests need.             |
+// | 1.1     | 2026-08-06 | —      | T2 AR pass 3 (L, doc only): Build's summary said Pace ramps with   |
+// |         |            |        | "the local index", which is false whenever localIndices is         |
+// |         |            |        | supplied — position and rating follow the roster SLOT, and         |
+// |         |            |        | localIndices feeds only the PlayerId. Both indices now named.      |
 #endregion

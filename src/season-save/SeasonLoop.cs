@@ -1,9 +1,10 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
-// Modified: 2026-08-06 (#29/#41 T2: slots 2 and 4 go live over an optional PlayerCareerStates; the
-//           FR-MD-023 availability filter at the ERR-030-009 resolve→filter→configure position; #29's
-//           match-entry fatigue into the engine boot; the FR-TR-025 / FR-MD-025 roster reconciliation
-//           at the season boundary. Unwired is byte-identical.)
+// Modified: 2026-08-06 (#29/#41 T2 + its AR passes: slots 2 and 4 go live over an optional
+//           PlayerCareerStates; the FR-MD-023 availability filter at the ERR-030-009
+//           resolve→filter→configure position; #29's match-entry fatigue into the engine boot; the
+//           FR-TR-025 / FR-MD-025 roster reconciliation at the season boundary; and the round-vs-
+//           day-step order stated rather than emergent — ERR-030-026. Unwired is byte-identical.)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (day advance / KD-2 tick order), §3.4 (playing a round /
 //           KD-9), §3.5 (season-boundary roll / KD-6), §4.3 (the composition root), §4.6 (the #22
@@ -280,7 +281,7 @@ namespace TacticalDirector.SeasonSave
         /// The #29 training / #41 medical state this loop drives, or <c>null</c> when none is wired.
         /// <para>
         /// The surface a client reads a player's conditioning, focus and fitness through, the surface
-        /// the FR-TR-023 focus command is issued on (<c>ScheduleFor</c>), and the surface
+        /// the FR-TR-023 focus command is issued on (<c>TrySetFocus</c>), and the surface
         /// <see cref="SeasonSaveManager.Save"/>'s two block arguments come from
         /// (<c>TrainingBlocks()</c> / <c>MedicalBlocks()</c>). Exposed rather than proxied because
         /// every one of those is a read or a command the career state already validates for itself, and
@@ -293,6 +294,14 @@ namespace TacticalDirector.SeasonSave
         /// Advances the world one calendar day at a time, in the KD-2 fixed order, until the clock sits ON
         /// the next unplayed round's fixture day (§3.3 / FR-SN-010). Returns the number of days advanced —
         /// zero if the clock is already there.
+        /// <para>
+        /// <b>The fixture day's OWN day steps have not run when this returns</b> — the loop stops as soon
+        /// as the clock reaches the target, so the last tick executed is the one for <c>targetDay − 1</c>.
+        /// A round therefore resolves against career state advanced through the day BEFORE it, and
+        /// matchday's training and injury processing happens on the next advance, after the round.
+        /// See <see cref="RunWorldTickInFixedOrder"/> for why that is the intended order and what it
+        /// costs (ERR-030-026).
+        /// </para>
         /// </summary>
         /// <exception cref="System.InvalidOperationException">The season is complete, so there is no next
         /// fixture day; run the boundary roll first (F5).</exception>
@@ -392,6 +401,12 @@ namespace TacticalDirector.SeasonSave
         /// <exception cref="System.ArgumentException">A club in the round cannot be resolved to a squad
         /// (F6) — the #27 <see cref="ISquadProvider"/> fail-loud contract; or a career is wired and
         /// <paramref name="squads"/> is not the provider it was bound to.</exception>
+        /// <remarks>
+        /// With a career wired, this resolves against state advanced through the day BEFORE the fixture
+        /// day: <see cref="AdvanceToNextFixtureDay"/> stops on reaching the fixture day, so matchday's
+        /// own steps 2 and 4 run after the round. Deliberate — see
+        /// <see cref="RunWorldTickInFixedOrder"/> and ERR-030-026.
+        /// </remarks>
         public MatchResult[] AdvanceAndPlayNextRound(ISquadProvider squads)
         {
             if (squads == null)
@@ -713,6 +728,27 @@ namespace TacticalDirector.SeasonSave
         /// <c>LastAdvancedWorldDay</c> exactly one behind the clock between ticks, so a save taken here
         /// restores without a phantom gap.
         /// </para>
+        /// <para>
+        /// <b>Where the ROUND sits in this order is a decision, and KD-2 does not make it</b> — the slot
+        /// list has no slot for "play the round", because a round is resolved by a separate command
+        /// (<see cref="AdvanceAndPlayNextRound"/>) rather than by the day advance. What settles it is
+        /// <see cref="AdvanceToNextFixtureDay"/>'s loop condition: it stops the moment the clock REACHES
+        /// the fixture day, so the fixture day's own steps 2 and 4 run afterwards, on the next advance.
+        /// <b>The round is played, then matchday is processed.</b>
+        /// </para>
+        /// <para>
+        /// That is the right order for #41's occurrence draw — an injury sustained in a match must be
+        /// drawn after it, which is also what makes the FR-MD-010 <c>MatchLoad</c> term coherent once
+        /// ERR-041-010(b) gives it a per-player appearance record to read. It is the WRONG order for
+        /// #41's recovery countdown, which shares the same atomic step: a player whose
+        /// <c>RecoveryRemaining</c> reaches 0 on matchday has his decrement applied after the round, so
+        /// he misses a match he had served his time for, and every injury is effectively one matchday
+        /// longer than its assigned tier. Splitting the two halves would change #41's step contract, so
+        /// the bias is <b>accepted and pinned</b> rather than silently absorbed: filed as
+        /// <b>ERR-030-026</b> and locked by <c>DayAdvance_StopsBeforeTheFixtureDaysOwnSteps</c>, so the
+        /// balance pass fits the recovery tiers against a stated convention instead of an emergent one.
+        /// Inert today — the occurrence dial is off (FR-MD-027), so nobody is ever injured.
+        /// </para>
         /// </summary>
         private void RunWorldTickInFixedOrder()
         {
@@ -767,6 +803,15 @@ namespace TacticalDirector.SeasonSave
             Squad home = SelectAvailable(ResolveSquad(squads, fixture.HomeClubId));
             Squad away = SelectAvailable(ResolveSquad(squads, fixture.AwayClubId));
 
+            // #29's match-entry fatigue is deliberately NOT an input here, unlike the availability
+            // filter one line above. §3.4.1 keys this model on the rating differential alone, and the
+            // rating is a property of the squad, not of how tired it is — feeding fatigue in would be a
+            // change to the model, not a wiring gap. It is called out because the two are the same class
+            // of thing and the filter's own comment argues the opposite way for itself: a club missing
+            // four first-choice players is rated as such whether or not a human is watching, while a
+            // club that trained flat out all week is not. Inert today (Balanced projects exactly 0), and
+            // due with the balance pass that decides whether the quick-sim should model condition at all.
+            //
             // Each club's rating is recomputed per fixture rather than cached, so a club is re-rated once
             // per matchday (38 times a season). That is deliberate: a cache would be state this loop would
             // then have to invalidate on every squad change — transfers (#31), injuries (#41), progression
@@ -816,26 +861,18 @@ namespace TacticalDirector.SeasonSave
         /// two remain disjoint (FR-SN-025) — the world day does not advance during a match.
         /// </para>
         /// <para>
-        /// <b>The availability filter (ERR-030-009).</b> The flow is resolve → <i>filter</i> →
-        /// configure. #41's half is live at T2 (<see cref="SelectAvailable"/>, FR-MD-023); #44's
-        /// suspension view slots into the same call when it lands, which is why the position was
-        /// declared before either had code.
+        /// The boot — the ERR-030-009 availability filter, #29's match-entry fatigue, and the
+        /// <c>ConfigureSquads</c> call that consumes both — is <see cref="BootFixtureEngine"/>; what is
+        /// left here is the run loop and the result. See that method for why the split exists.
         /// </para>
         /// <para>
-        /// <b>Match-entry fatigue (#29 §3.3 / KD-1).</b> Projected from the training-fatigue accumulator
-        /// AFTER the filter, because the projection is indexed by the local roster index of the squad
-        /// actually configured — filtering renumbers those.
+        /// With a career wired this resolves against state advanced through the day BEFORE the fixture
+        /// day; matchday's own steps 2 and 4 run after the round (ERR-030-026).
         /// </para>
         /// </summary>
         private MatchResult PlayThroughEngine(in Fixture fixture, ISquadProvider squads, uint worldDay)
         {
-            // ── resolve → filter → configure (ERR-030-009); #44's suspension view joins at its T2. ──
-            Squad home = SelectAvailable(ResolveSquad(squads, fixture.HomeClubId));
-            Squad away = SelectAvailable(ResolveSquad(squads, fixture.AwayClubId));
-
-            ulong matchSeed = RoundResolutionModel.MatchSeedFor(in fixture, _state.Seed, _state.SeasonNumber);
-            var engine = new TacticalDirector.MatchEngine.MatchEngine(matchSeed);
-            engine.ConfigureSquads(home, away, MatchEntryFatigue(home), MatchEntryFatigue(away));
+            TacticalDirector.MatchEngine.MatchEngine engine = BootFixtureEngine(in fixture, squads);
 
             _activeMatch = engine;
             try
@@ -861,6 +898,39 @@ namespace TacticalDirector.SeasonSave
                 // engine reachable through ActiveMatch for the rest of the season.
                 _activeMatch = null;
             }
+        }
+
+        /// <summary>
+        /// The boot half of <see cref="PlayThroughEngine"/>, extracted: resolve → filter → project →
+        /// configure, returning a kicked-off-ready engine without running a tick of it.
+        /// <para>
+        /// <b>Extracted so it can be tested, for the reason <see cref="ShouldPlayThroughEngine"/> was.</b>
+        /// Inline, every decision here — the ERR-030-009 filter on BOTH clubs, #29's match-entry fatigue
+        /// projected AFTER that filter because filtering renumbers the local indices it is keyed by, and
+        /// the four-argument <c>ConfigureSquads</c> that consumes it — could only be reached by playing a
+        /// full 90-minute match, which no suite in this assembly does (the capstone owns that cost). So
+        /// the whole career-wired match-boot path shipped at T2 with no execution anywhere: the sole
+        /// production call site of the entry-fatigue seam, unrun. That is the ERR-030-014 shape, and this
+        /// seam is what lets a millisecond-scale test assert on the configured engine instead.
+        /// </para>
+        /// <para>
+        /// Draws no RNG of its own beyond seeding the engine, and mutates no season state, so calling it
+        /// and discarding the engine is free of side effects on this loop.
+        /// </para>
+        /// </summary>
+        /// <param name="fixture">The fixture to boot an engine for.</param>
+        /// <param name="squads">The provider the rosters resolve from.</param>
+        internal TacticalDirector.MatchEngine.MatchEngine BootFixtureEngine(
+            in Fixture fixture, ISquadProvider squads)
+        {
+            // ── resolve → filter → configure (ERR-030-009); #44's suspension view joins at its T2. ──
+            Squad home = SelectAvailable(ResolveSquad(squads, fixture.HomeClubId));
+            Squad away = SelectAvailable(ResolveSquad(squads, fixture.AwayClubId));
+
+            ulong matchSeed = RoundResolutionModel.MatchSeedFor(in fixture, _state.Seed, _state.SeasonNumber);
+            var engine = new TacticalDirector.MatchEngine.MatchEngine(matchSeed);
+            engine.ConfigureSquads(home, away, MatchEntryFatigue(home), MatchEntryFatigue(away));
+            return engine;
         }
 
         /// <summary>
@@ -981,7 +1051,24 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | after (e)'s commits. v1.6 wrote it before BeginNextSeason — the   |
 // |         |            |        | one commit this method's own docs call fallible — so a refused    |
 // |         |            |        | roll left a career reconciled against a season that never began,  |
-// |         |            |        | flatly contradicting the comment that claimed otherwise. Plus a   |
-// |         |            |        | public World accessor, so the new SeasonSaveManager.Save overload |
-// |         |            |        | can capture a whole season from the loop alone.                   |
+// |         |            |        | flatly contradicting the comment that claimed otherwise. Plus an  |
+// |         |            |        | INTERNAL World accessor, so the new SeasonSaveManager.Save        |
+// |         |            |        | overload can capture a whole season from the loop alone without   |
+// |         |            |        | handing every caller AdvanceDay() past the KD-4 bounds.           |
+// | 1.8     | 2026-08-06 | —      | T2 AR passes 3-5 (1M + 2L). **M (pass 5):** where the ROUND sits |
+// |         |            |        | in the KD-2 day order was settled by AdvanceToNextFixtureDay's   |
+// |         |            |        | loop condition and declared nowhere. It stops on REACHING the    |
+// |         |            |        | fixture day, so matchday's own steps 2 and 4 run after the round: |
+// |         |            |        | right for #41's occurrence draw, wrong for the recovery countdown |
+// |         |            |        | that shares its atomic step, which makes every injury one         |
+// |         |            |        | matchday longer than its tier. Splitting the halves would change |
+// |         |            |        | #41's contract, so the convention is stated on three methods,    |
+// |         |            |        | filed as ERR-030-026 and locked by a test — the balance pass now  |
+// |         |            |        | fits recovery tiers against a written rule, not an emergent one.  |
+// |         |            |        | **L:** the quick-sim's silence about match-entry fatigue is now   |
+// |         |            |        | an argued omission rather than an unremarked one (the filter one  |
+// |         |            |        | line above argues the opposite way for itself); the v1.7 row's    |
+// |         |            |        | "public World accessor" corrected to internal, which is what      |
+// |         |            |        | landed; Career's summary points at TrySetFocus, since ScheduleFor |
+// |         |            |        | is no longer the public focus surface.                            |
 #endregion

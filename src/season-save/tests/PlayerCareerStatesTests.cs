@@ -125,6 +125,17 @@ namespace TacticalDirector.SeasonSave.Tests
         {
             CareerTestRoster.MutableSquadProvider provider = TwoClubProvider();
             PlayerCareerStates career = Fresh(provider);
+
+            // Both blocks need something to distinguish, or "round-trips" is satisfied by two sets of
+            // identical fresh states. A non-default focus varies the #29 side; a directly-installed
+            // injury varies the #41 side, which nothing else would with the occurrence dial off.
+            Assert.IsTrue(career.TrySetFocus(0, FirstPlayerId(provider, 0), TrainingFocus.Physical));
+            var injured = InjuryState.Create();
+            injured.Severity = InjurySeverity.Moderate;
+            injured.RecoveryRemaining = 12;
+            injured.InjuryCount = 3;
+            career.SetMedicalState(1, FirstPlayerId(provider, 1), in injured);
+
             for (uint day = 0; day < 5; day++)
             {
                 AdvanceOneDay(career, day, provider);
@@ -143,14 +154,38 @@ namespace TacticalDirector.SeasonSave.Tests
                 ClubTrainingStates after = restored.TrainingBlocks()[c];
                 Assert.AreEqual(before.ClubId, after.ClubId);
                 Assert.AreEqual(before.Count, after.Count);
+
+                ClubInjuryStates medBefore = career.MedicalBlocks()[c];
+                ClubInjuryStates medAfter = restored.MedicalBlocks()[c];
+                Assert.AreEqual(medBefore.ClubId, medAfter.ClubId);
+                Assert.AreEqual(medBefore.Count, medAfter.Count);
+
                 for (int i = 0; i < before.Count; i++)
                 {
                     Assert.AreEqual(before.PlayerIds[i], after.PlayerIds[i]);
+                    Assert.AreEqual(before.States[i].Focus, after.States[i].Focus);
                     Assert.AreEqual(before.States[i].Condition, after.States[i].Condition);
                     Assert.AreEqual(
+                        before.States[i].TrainingFatigue, after.States[i].TrainingFatigue);
+                    Assert.AreEqual(
                         before.States[i].LastAdvancedWorldDay, after.States[i].LastAdvancedWorldDay);
+
+                    Assert.AreEqual(medBefore.PlayerIds[i], medAfter.PlayerIds[i]);
+                    Assert.AreEqual(medBefore.States[i].Severity, medAfter.States[i].Severity);
+                    Assert.AreEqual(
+                        medBefore.States[i].RecoveryRemaining, medAfter.States[i].RecoveryRemaining);
+                    Assert.AreEqual(medBefore.States[i].InjuryCount, medAfter.States[i].InjuryCount);
+                    Assert.AreEqual(
+                        medBefore.States[i].LastAdvancedWorldDay,
+                        medAfter.States[i].LastAdvancedWorldDay);
                 }
             }
+
+            Assert.AreEqual(TrainingFocus.Physical, restored.TrainingView(0, FirstPlayerId(provider, 0)).Focus,
+                "Precondition on the loop above: the two blocks must differ from a fresh career, or "
+                + "every assertion in it holds for two sets of identical Create() states.");
+            Assert.IsFalse(restored.IsAvailable(1, FirstPlayerId(provider, 1)),
+                "…and the medical side must carry a real injury across, not just an empty block.");
         }
 
         [Test]
@@ -314,8 +349,8 @@ namespace TacticalDirector.SeasonSave.Tests
             PlayerCareerStates career = Fresh(provider);
             Squad squad = provider.ResolveByClubId(0);
 
-            TrainingSchedule schedule = career.ScheduleFor(0);
-            Assert.IsTrue(schedule.TrySetFocus(squad.GetPlayer(0).PlayerId, TrainingFocus.Physical));
+            Assert.IsTrue(
+                career.TrySetFocus(0, squad.GetPlayer(0).PlayerId, TrainingFocus.Physical));
 
             for (uint day = 0; day < 14; day++)
             {
@@ -647,16 +682,58 @@ namespace TacticalDirector.SeasonSave.Tests
         [Test]
         public void SyncToRoster_BumpsTheRosterGeneration_EvenWithNoChurn()
         {
-            // ScheduleFor hands out a handle bound to the live arrays, and the sync REPLACES them — so
-            // a schedule cached across a boundary writes into a discarded array and TrySetFocus returns
-            // true with the change gone. The generation is what makes that detectable, and it has to
-            // move on a no-churn sync too: the arrays are replaced either way.
+            // The generation is what CommitRosterSync refuses a stale plan on, and it has to move on a
+            // no-churn sync too: the arrays are replaced either way, so a plan prepared beforehand is
+            // stale either way.
             CareerTestRoster.MutableSquadProvider provider = TwoClubProvider();
             PlayerCareerStates career = Fresh(provider);
             int before = career.RosterGeneration;
 
             Assert.AreEqual(0, career.SyncToRoster(provider), "Precondition: no churn.");
             Assert.AreEqual(before + 1, career.RosterGeneration);
+        }
+
+        [Test]
+        public void TrySetFocus_SurvivesASeasonBoundary_WhereACachedHandleWouldNot()
+        {
+            // The command exists instead of a public ScheduleFor for exactly this: a TrainingSchedule
+            // binds a club's id and state arrays BY REFERENCE, and SyncToRoster replaces both. A screen
+            // that cached the handle across a boundary — the obvious thing to write — would get true
+            // back from TrySetFocus and write into a discarded array, losing the manager's instruction
+            // with nothing to notice. Resolving fresh per call cannot go stale.
+            CareerTestRoster.MutableSquadProvider provider = TwoClubProvider();
+            PlayerCareerStates career = Fresh(provider);
+            int playerId = FirstPlayerId(provider, 0);
+
+            TrainingSchedule staleHandle = career.ScheduleFor(0);
+            career.SyncToRoster(provider);   // the boundary: both arrays replaced
+
+            // The handle now writes into a detached array and says it succeeded — this is the defect,
+            // asserted so the reason the command exists is visible rather than merely described.
+            Assert.IsTrue(staleHandle.TrySetFocus(playerId, TrainingFocus.Physical));
+            Assert.AreEqual(TrainingFocus.Balanced, career.TrainingView(0, playerId).Focus,
+                "A handle acquired before the sync must NOT be able to reach the career's state — if "
+                + "this ever passes through, the staleness has stopped being detectable at all.");
+
+            // The public surface, over the same boundary, works.
+            Assert.IsTrue(career.TrySetFocus(0, playerId, TrainingFocus.Physical));
+            Assert.AreEqual(TrainingFocus.Physical, career.TrainingView(0, playerId).Focus);
+        }
+
+        [Test]
+        public void TrySetFocus_RefusesAnUnknownPlayerAndAnUnknownClub()
+        {
+            CareerTestRoster.MutableSquadProvider provider = TwoClubProvider();
+            PlayerCareerStates career = Fresh(provider);
+
+            Assert.IsFalse(career.TrySetFocus(0, 999_999, TrainingFocus.Physical),
+                "A stale id from a screen is refused, not thrown (#29 F2).");
+            Assert.Throws<System.ArgumentException>(
+                () => career.TrySetFocus(9, FirstPlayerId(provider, 0), TrainingFocus.Physical),
+                "An unknown CLUB is a composition bug, not a stale id.");
+            Assert.Throws<System.ArgumentOutOfRangeException>(
+                () => career.TrySetFocus(0, FirstPlayerId(provider, 0), (TrainingFocus)99),
+                "An undefined focus ordinal fails loud rather than clamping (#29 F4 / FR-TR-021).");
         }
 
         [Test]
@@ -705,4 +782,15 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | steps with their idempotency / gap / ordering contracts, the        |
 // |         |            |        | occurrence dial in BOTH positions, the availability filter with     |
 // |         |            |        | its rating effect and back-fill, and the roster reconciliation.     |
+// | 1.1     | 2026-08-06 | —      | T2 AR pass 3 (1M + 1L). **M:** + TrySetFocus_SurvivesASeason-      |
+// |         |            |        | Boundary_WhereACachedHandleWouldNot and its refusal cases —        |
+// |         |            |        | ScheduleFor's handle is now internal and the public focus surface  |
+// |         |            |        | is a command that resolves fresh, so the staleness is prevented    |
+// |         |            |        | rather than merely detectable; the test asserts the stale handle   |
+// |         |            |        | still cannot reach the career, which is the reason the command     |
+// |         |            |        | exists. **L:** Blocks_RoundTripThroughBothCodecs verified one      |
+// |         |            |        | codec despite its name — no medical field and no Focus /           |
+// |         |            |        | TrainingFatigue — and with a fresh career its assertions held for  |
+// |         |            |        | two sets of identical Create() states anyway. Both blocks are now  |
+// |         |            |        | varied before encoding and every persisted field is compared.      |
 #endregion
