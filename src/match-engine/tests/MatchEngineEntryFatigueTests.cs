@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineEntryFatigueTests.cs
 // Created:  2026-08-06
+// Modified: 2026-08-06
 // Author:   —
 // Spec:     Training System #29 §3.3 / §4.3 (KD-1, the match-boot fatigue seam); path-to-playable D2
 //           (T2); Code Standards #20

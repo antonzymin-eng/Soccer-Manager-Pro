@@ -1,7 +1,37 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 6, 2026, latest same day (**Adversarial review over the #29/#41 T2 landing —
+**Last Updated:** August 6, 2026, latest same day (**Adversarial review passes 3–6 over the #29/#41 T2
+landing — 1 High, 5 Medium, 9 Low across the four, all fixed.** Passes 3–5 landed in `92baaa3` and that
+commit did **not** update this file; the entry below therefore covers passes 3–5 and pass 6 together,
+which is the honest record rather than two half-entries.
+
+**Modified (passes 3–5):** `src/season-save/SeasonLoop.cs` v1.7 → **v1.8** (`BootFixtureEngine`
+extracted `internal` — the career-wired match boot had never executed anywhere, the sole production
+call site of #29's entry-fatigue seam; + the ERR-030-026 round-vs-day-step convention stated at three
+sites); `src/season-save/PlayerCareerStates.cs` v1.1 → **v1.2** (`FromBlocks` COPIES the two state
+arrays; `ScheduleFor` `internal`, public focus surface is `TrySetFocus`);
+`src/season-save/SeasonSaveManager.cs` v1.7 → **v1.8** (the `Save(SeasonLoop, …)` quiescence
+precondition; header/version-row ordering); `src/season-save/tests/SeasonLoopCareerTests.cs` v1.0 →
+**v1.1** (three `EnginePath_*` cases + the ERR-030-026 lock);
+`src/match-engine/tests/MatchEngineEntryFatigueTests.cs` v1.0 → **v1.1** (the by-local-not-by-slot
+case); `src/season-save/tests/PlayerCareerStatesTests.cs` v1.0 → **v1.1** (the stale-handle lock);
+`src/season-save/tests/CareerTestRoster.cs` v1.0 → **v1.1** (doc);
+`src/training-system/ClubTrainingStates.cs` and `src/injuries-medical/ClubInjuryStates.cs` v1.0 →
+**v1.1** each (the "player order is not state" paragraph, false of the decoded form);
+`src/season-save/tests/season-save-tests.asmdef` (+ `TacticalDirector.AgentMovement`);
+`docs/tracking/spec-error-log.md` v1.68 (+ **ERR-030-026**).
+
+**Modified (pass 6):** `src/season-save/tests/PlayerCareerStatesTests.cs` v1.1 → **v1.2**
+(+ `FromBlocks_CopiesTheStateArrays_SoTheBlocksAreNotABackDoor` — pass 3's copy fix was the one of
+twelve with no enforcing test, so reverting the `Array.Copy` left every suite green);
+`src/season-save/SeasonSaveManager.cs` v1.8 → **v1.9** (the load-time filter decorator's
+shares-arrays justification, stale since pass 3); + the missing `// Modified:` header field
+(FR-CS-056/057) on the five files this landing created — `PlayerCareerStates.cs`,
+`CareerTestRoster.cs`, `SeasonLoopCareerTests.cs`, `PlayerCareerStatesTests.cs`,
+`MatchEngineEntryFatigueTests.cs`.
+
+**Prior entry — adversarial review pass 1 over the #29/#41 T2 landing —
 3 High, 4 Medium, 4 Low, all fixed; pass 2 clean.**
 
 **New:** `src/season-save/tests/SeasonSaveCareerRestoreTests.cs` v1.0 (+ `.meta`) — the

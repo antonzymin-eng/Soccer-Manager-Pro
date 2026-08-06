@@ -4,7 +4,8 @@
 //           T2 AR pass 1: Load re-applies the #41 availability filter to the in-progress match's roster
 //           so restore re-selects the eleven that actually played; + a Save(SeasonLoop, match, path)
 //           overload so the career's block accessors can stay internal. AR pass 3: the overload's
-//           quiescence precondition.)
+//           quiescence precondition. AR pass 6: the load-time filter decorator's stale
+//           shares-arrays-with-the-contents justification.)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-1 / KD-5..KD-8;
 //           Training System #29 §4.4 / FR-TR-018/019; Injuries & Medical #41 §4.4 / FR-MD-017/018;
@@ -303,9 +304,10 @@ namespace TacticalDirector.SeasonSave
         /// restore re-selects from the same squad the match was configured with. Load-time only; never
         /// persisted (the <c>squads</c> / <c>canon</c> precedent).
         /// <para>
-        /// It reads the career and never mutates it, so the throwaway instance <see cref="Load"/> builds
-        /// for this can safely share arrays with the blocks it hands back in
-        /// <see cref="SeasonSaveContents"/>.
+        /// It only reads the career, so the throwaway instance <see cref="Load"/> builds for this
+        /// cannot disturb the blocks handed back in <see cref="SeasonSaveContents"/> — and would not
+        /// reach them in any case, since <see cref="PlayerCareerStates.FromBlocks"/> copies the state
+        /// arrays rather than borrowing them.
         /// </para>
         /// <para>
         /// A roster that has drifted from the save — a squad player the save's career carries no state
@@ -400,4 +402,10 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | 1.6, so reading the table bottom-up gave 1.6 as current, and  |
 // |         |            |        | the header carried two Modified lines against the convention  |
 // |         |            |        | of one matching the latest row. Both corrected.               |
+// | 1.9     | 2026-08-06 | —      | T2 AR pass 6 (L, doc only): AvailabilityFilteredSquads        |
+// |         |            |        | justified its safety by "can safely share arrays with the     |
+// |         |            |        | blocks it hands back", which stopped being true at pass 3 —   |
+// |         |            |        | FromBlocks copies the state arrays now. The conclusion holds  |
+// |         |            |        | (the decorator only reads); the stated REASON would have told |
+// |         |            |        | a reader that FromBlocks still borrows.                       |
 #endregion

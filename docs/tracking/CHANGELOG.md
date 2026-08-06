@@ -12,7 +12,37 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 6, 2026, latest same day (**Adversarial review passes 3–5 over the #29/#41 T2
+> **Last Updated:** August 6, 2026, latest same day (**Adversarial review pass 6 over the #29/#41 T2
+> landing — 0 High, 1 Medium, 2 Low, all fixed.** After three consecutive passes that each found
+> something only by changing axis, this one picked four the earlier passes had not used, and the one that
+> paid was asking a different question entirely: *does each of the twelve fixes landed in passes 3–5 have
+> a test that fails without it?* Eleven do. The twelfth — pass 3's change making
+> `PlayerCareerStates.FromBlocks` **copy** the two state arrays instead of borrowing them — has none, so
+> reverting the `Array.Copy` leaves every suite green while reopening a silent-overwrite hole:
+> `ClubTrainingStates.States` is a public array field and `SeasonSaveContents` is a public struct, so a
+> caller holding a loaded save needs no internals access to rewrite a running career's conditioning and
+> injury state, straight past both day steps and both subsystems' declared single writers. That is the
+> same defect class as pass 1's ascending-ids High, on the same type, one route further in. Now locked by
+> a test that mutates through exactly that public surface. **The two Lows:** the load-time
+> `AvailabilityFilteredSquads` decorator still justified itself with "can safely share arrays with the
+> blocks it hands back" — true when written, false since pass 3, and a reader trusting it would conclude
+> `FromBlocks` borrows; and the five files this landing created carried no `// Modified:` header field
+> despite two or three version-history rows each (FR-CS-056/057 requires one, matching the latest row).
+> **Also closed a gap in the pass-3–5 commit itself:** `92baaa3` never updated `file-manifest.md`, so
+> this landing carries one combined passes-3–6 manifest entry rather than leaving a landing unrecorded.
+> **What the pass cleared, since three "clean" calls have now been wrong:** every new symbol's
+> compile-resolvability — including the `MatchEngine.MatchEngine` qualification, which I expected to be
+> CS0426 and is not, because the `using` directives sit at compilation-unit level rather than inside the
+> namespace declaration, so the enclosing-namespace walk reaches the namespace before the imported type;
+> hand-execution of the three new `EnginePath_*` cases against F442 and `CareerTestRoster`'s position
+> layout (ten of eleven home starters are drawn from locals ≥ 11, so the entry-fatigue assertion is not a
+> coin toss, and the filtered squad is exactly 18 and fieldable, so the back-fill never fires and the
+> divergence precondition is real); and repo hygiene — all five new files tracked with `.meta` siblings,
+> and no caller outside `season-save` touching the three surfaces that went `internal`. Nothing has been
+> compiled or executed at any point in this round: still no .NET SDK in the authoring environment, the
+> installer still 403 at the proxy, so CI on push remains the only compiler for all of it.)
+
+> **Last Updated (prior):** August 6, 2026, latest same day (**Adversarial review passes 3–5 over the #29/#41 T2
 > landing — 1 High, 4 Medium, 7 Low, all fixed.** Three further passes after the pass-2 "clean" call, each
 > going at an axis the earlier ones had not: the unread spans of the four new suites, then the
 > resolution-mode axis across every test in the assembly, then the day-step producer read against #30's

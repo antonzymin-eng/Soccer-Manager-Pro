@@ -1,5 +1,6 @@
 // File:     src/season-save/tests/SeasonLoopCareerTests.cs
 // Created:  2026-08-06
+// Modified: 2026-08-06
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (KD-2 tick order), §3.5 (the boundary), FR-SN-026;
 //           Training System #29 §3.5, FR-TR-004/025; Injuries & Medical #41 §3.5,

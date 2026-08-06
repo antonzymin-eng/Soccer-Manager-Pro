@@ -1,5 +1,6 @@
 // File:     src/season-save/tests/PlayerCareerStatesTests.cs
 // Created:  2026-08-06
+// Modified: 2026-08-06
 // Author:   —
 // Spec:     Training System #29 §3.1/§3.3/§3.5, FR-TR-004/016/023/025/026, F6/F7;
 //           Injuries & Medical #41 §3.1/§3.5, FR-MD-003/004/022/023/025/027, F2/F6/F7;
@@ -265,6 +266,42 @@ namespace TacticalDirector.SeasonSave.Tests
 
             Assert.Throws<System.ArgumentException>(
                 () => PlayerCareerStates.FromBlocks(training, medical));
+        }
+
+        [Test]
+        public void FromBlocks_CopiesTheStateArrays_SoTheBlocksAreNotABackDoor()
+        {
+            // ClubTrainingStates.States is a PUBLIC array field, and the documented restore path hands
+            // FromBlocks the very arrays SeasonSaveManager.Load returns inside the public
+            // SeasonSaveContents. Borrowing them would make every holder of that struct a second writer
+            // of #29/#41 state, straight past TrainingStep.AdvanceTrainingDay and
+            // MedicalStep.AdvanceMedicalDay — the only declared writers (FR-TR-004 / FR-TR-023 /
+            // FR-MD-003). Keeping TrainingBlocks()/MedicalBlocks() internal closes that on the SAVE
+            // route; this is the only other route in, and nothing else in either suite would notice if
+            // the copy went away.
+            CareerTestRoster.MutableSquadProvider provider = TwoClubProvider();
+            PlayerCareerStates source = Fresh(provider);
+            ClubTrainingStates[] training = source.TrainingBlocks();
+            ClubInjuryStates[] medical = source.MedicalBlocks();
+
+            PlayerCareerStates career = PlayerCareerStates.FromBlocks(training, medical);
+            int playerId = training[0].PlayerIds[0];
+            int condition = career.TrainingView(0, playerId).Condition;
+
+            // Exactly what a caller holding a SeasonSaveContents can do, with no internals access.
+            training[0].States[0].Condition = condition + 500;
+            var injured = InjuryState.Create();
+            injured.Severity = InjurySeverity.Serious;
+            injured.RecoveryRemaining = 40;
+            medical[0].States[0] = injured;
+
+            Assert.AreEqual(condition, career.TrainingView(0, playerId).Condition,
+                "FromBlocks must COPY the state arrays: the blocks it is handed are the ones Load "
+                + "returns inside SeasonSaveContents, so sharing them lets any holder of that struct "
+                + "rewrite a season of conditioning (FR-TR-004 / FR-TR-023).");
+            Assert.IsTrue(career.IsAvailable(0, playerId),
+                "…and the same on the #41 side: a borrowed array would let an outside holder install "
+                + "an injury without MedicalStep ever running (FR-MD-003).");
         }
 
         // ── the slot-2 training step ───────────────────────────────────────────────────────
@@ -793,4 +830,12 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | TrainingFatigue — and with a fresh career its assertions held for  |
 // |         |            |        | two sets of identical Create() states anyway. Both blocks are now  |
 // |         |            |        | varied before encoding and every persisted field is compared.      |
+// | 1.2     | 2026-08-06 | —      | T2 AR pass 6 (1M). + FromBlocks_CopiesTheStateArrays_SoTheBlocks-  |
+// |         |            |        | AreNotABackDoor. Pass 3 changed FromBlocks from borrowing the two  |
+// |         |            |        | state arrays to copying them — the single-writer hole on the LOAD  |
+// |         |            |        | route, the counterpart of the internal block accessors on the save |
+// |         |            |        | route — and nothing locked it: reverting the Array.Copy left every |
+// |         |            |        | suite green. Eleven of the twelve pass-3-5 fixes had an enforcing  |
+// |         |            |        | test; this was the twelfth, and it guards the same silent-overwrite|
+// |         |            |        | class as pass 1's ascending-ids High.                              |
 #endregion
