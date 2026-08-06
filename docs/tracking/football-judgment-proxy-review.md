@@ -642,8 +642,12 @@ carrying forward: the "12 of 12 mutants killed" figure overstates the far-bound 
 harness killed it, the committed test did not); this is the **third** hand-derived verification claim
 in the -021/-022 chain that execution falsified, after the P5 exactness argument and the §3.2.3.2
 worked example; and the common factor in all three is that no compiler had ever run them. The rest of
-the run was clean — build 0 errors, 127 of 128 `DecisionTree.Tests` passing, every other suite green
-— so the fix itself stands; it was the evidence for it that kept failing.
+the run was NOT clean, and the first version of this paragraph said it was. Build 0 errors and 127 of
+128 `DecisionTree.Tests` passing are real — the sweep ran to completion — but the gate job was
+cancelled at 16:59:45 before `run-gate.sh` reached its `Gate PASSED` line, and four hygiene checks
+(link check, spec hygiene, file manifest, `.meta` integrity) were cancelled without ever being given a
+runner. So the fix itself stands on measurement; it is the *gate* that has still never returned a
+verdict, and the correction in `0612bcc` has never been compiled at all.
 
 **Second review pass (AR-2, same day).** A hostile re-read of this fix found the two new ramps were
 **not centred on the predicates they replace** — `laneWeight` ran 1.0 → 2.0 m and `gkness` 6 → 8 m,
