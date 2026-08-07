@@ -1,7 +1,20 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** August 7, 2026 (**The game's four screens now have an official home in the
+**Last Updated:** August 7, 2026, evening (**The screens work was fully build-and-test verified the
+same day — and the check-up found two unrelated, pre-existing test failures on the main branch.**
+For weeks, work in this environment could not be compiled locally because the .NET installer's
+download sites are blocked; it turns out the standard Ubuntu package archive serves the same
+toolkit and installs cleanly, a discovery now written into the build instructions. With a real
+toolchain, the whole project was built (zero errors) and every test run: the new screens module
+passed all fifteen of its tests on first execution, and a guard test that polices which modules may
+touch the UI framework flagged the new module exactly as designed — it is now on the approved list.
+The one red area is the match engine's realism checks: two long-running scenario tests fail, and
+re-running exactly those two against the untouched main branch shows **they fail there identically**
+— they are the current state of the main branch (most likely fallout from this week's shot-geometry
+fixes), now logged as an open issue for the match-realism work, not something this change caused.
+Prior entry below.)
+**Last Updated (prior):** August 7, 2026 (**The game's four screens now have an official home in the
 code, ending a layering question that was blocking the user interface work.** The interactive
 client's screens — Main Menu, Tactics Setup, Match View, Post-Match Report — needed somewhere to
 live, and no existing module was allowed to hold them: the UI framework is deliberately forbidden

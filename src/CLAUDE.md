@@ -165,6 +165,13 @@ dotnet test
 ```bash
 bash tools/dotnet-ci/run-gate.sh
 ```
+
+> **Getting an SDK in a proxy-restricted remote session (verified August 7, 2026):** every dot.net
+> SDK host (`dot.net`, `builds.dotnet.microsoft.com`, `dotnetcli.azureedge.net`) returns 403 at the
+> agent proxy, but **`apt-get update && apt-get install -y dotnet-sdk-8.0` from the Ubuntu archive
+> works** (8.0.129 at the time of writing; the `apt-get update` first is required — the stale index
+> 404s). Weeks of landings recorded "no .NET SDK; CI on push is the only compiler" on the strength
+> of the installer block alone. Run the gate locally; do not default to CI-as-first-compiler.
 Generates plain .NET projects from the asmdefs (production `netstandard2.1` —
 Unity 2022.3's BCL surface; tests `net8.0`), compiles the whole tree against the
 `tools/dotnet-ci/UnityShim` UnityEngine shim, and runs every NUnit suite minus
