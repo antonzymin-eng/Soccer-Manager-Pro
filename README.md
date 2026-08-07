@@ -39,6 +39,27 @@ system's own turn. The gate could not run in the authoring environment (no .NET 
 runs it on push. This entry also skips over two same-day landings recorded in
 `docs/tracking/CHANGELOG.md` — the save codecs and their gate run — which never reached this file.
 Prior entry below.)
+**Last Updated (prior):** August 6, 2026, later same day (**ERR-008-021's same-day review caught the fix
+being switched off exactly where it matters.** The adversarial review over the shot-blocking change
+found that "don't weight the goalkeeper" had been implemented as "don't weight anyone within six
+metres of the goal line" — which is where most shot-blocking happens, so ordinary defenders making
+last-ditch blocks were still being treated as identical bodies. The exemption now applies to a
+single player, the one nearest the goal line (the keeper), and every other defender is weighted.
+The review also tightened the tests so a silently disabled feature can't stay green, and corrected
+an overclaim: an average-attribute defender reproduces the old behaviour almost exactly, not
+bit-for-bit. One High, seven Medium, five Low findings — all fixed. CI on push remains the
+compiler and test runner for this work.)
+
+**Last Updated (prior):** August 6, 2026 (**ERR-008-021 — a shot is now harder to take past a good defender
+than past a poor one.** The judgment-proxy review's third fix closes the follow-up deferred when the
+pass-lane template landed: the check that measures how much of the goal an opponent blocks out no
+longer treats every outfield body as the same obstacle — a blocker's Anticipation and Pace now scale
+his effective cover, read through the shooter's Vision, using the exact constants the pass lane
+already uses, so no new tuning dial was added. The goalkeeper's cover deliberately stays as pure
+geometry, because his shot-stopping quality is already priced at the save itself and counting it
+twice would double-punish shooters. An average or unknown blocker reproduces today's behaviour
+exactly. Spec and code landed in the same commit with six new test locks, including the away-side
+mirror. The gate cannot run in this environment; CI on push compiles and executes it.)
 
 **Last Updated (prior):** August 5, 2026, end of same day (**ERR-008-019 — one recorded claim about the
 long-shot ramp was wrong and is withdrawn.** A review of yesterday's landing found that the note

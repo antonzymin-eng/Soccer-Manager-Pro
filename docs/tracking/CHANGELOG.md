@@ -252,6 +252,62 @@ break it, and do not edit historical entries.
 > the agent proxy, so `PlayerCareerStates`, the two new probes, the `ConfigureSquads` overload and all
 > four new suites are written and unexecuted. CI on push is the gate — the same posture as T0 and T1,
 > both of which then came back green on the first run.)
+> **Last Updated (prior):** August 7, 2026 (**ERR-008-021 gate run — PASSED. The shot-lane weighting, the
+> AR-1 fixes and all 7 new locks compiled and executed for the first time.** PR #305, CI run 404,
+> head `3f207ee`. Build 0 errors (5 warnings, the known count); `DecisionTree.Tests` **120 passed /
+> 0 failed / 4 skipped / 124 total**, carrying the 7 `ShotLane_*` locks — including the H-1
+> regression lock (an in-band defender who is not the GK candidate IS weighted) and the exact
+> GK-arc pin. Whole-tree gate PASSED with the quarantine empty; **`MatchEngine.Tests` 420/430
+> unchanged**, so the intended digest movement tripped no goal-rate band or tick-window scenario —
+> the blast-radius caution in the two entries below resolves as "checked by execution, nothing
+> moved". Retires the "gate NOT runnable" caveats on both ERR-008-021 entries; CI on push remains
+> the only compiler for this work. Prior entry below.)
+
+> **Last Updated (prior):** August 6, 2026, latest (**ERR-008-021 AR-1 — the same-day adversarial review over
+> the shot-lane landing: 1 High, 7 Medium, 5 Low, all fixed.** The High: the landed P3 exemption
+> keyed on the 6 m GK band, not the goalkeeper — so EVERY near-goal defender escaped the new ability
+> weighting, leaving it inert precisely where shots are blocked (for a 10 m shot, most of the usable
+> path), and all six of the landing's fixtures sat 8 m off the goal line so no lock registered it.
+> Fixed to a single **GK candidate** (goal-line-nearest visible opponent within the band,
+> snapshot-order tie-break, independent of the shot-path filter); every other blocker — in the band
+> or not — is now weighted, while the radius stays per-band (the recorded §3.2.3.2 Stage-0
+> limitation), so neutral-case arcs are unchanged. Also corrected: the P5 "today's arcs bit-for-bit"
+> overclaim (exact only at the ability midpoint raw 10/11 or under a null view; the all-default
+> 10/10 squad reads ≈ 0.979 — the same overclaim shape retracted for ERR-008-019 a day earlier);
+> margin-less discrimination locks; three vacuously-passable equality locks; the Vision-fidelity
+> expression duplicated across both lanes (hoisted to `VisionFidelity`); both away mirrors running a
+> goal-post L/R assignment production never builds; the Known-limitation paragraph's inverted radius
+> consequence; and the §3.1.4.1 gate boundary (code generated at exactly `MIN_GOAL_VISIBILITY`
+> against the spec's strict ">"). New H-1 regression lock: an in-band defender who is not the
+> candidate IS weighted (keeper claims the slot from wide of the shot wedge). Surfaces:
+> `OptionGenerator.cs` v1.8, `OptionGeneratorTests.cs` v1.8 (7 shot-lane locks),
+> `UtilityWeights.cs` v1.11 (doc only), `section-3-1.md` v1.5, `section-3-2.md` v1.13,
+> `spec-error-log.md` v1.68. **Gate NOT runnable in the authoring environment; CI on push is the
+> gate.** Prior entry below.)
+
+> **Last Updated (prior):** August 6, 2026, later again (**ERR-008-021 — the shot-lane follow-up deferred at
+> the ERR-008-020 landing, closed.** #8 §3.1.4.3/§3.2.3.2's goal-occlusion sum was attribute-blind:
+> every outfield blocker in the shot path occluded the same geometric arc whoever he was, so a
+> Pace/Anticipation 1/1 defender walled off the goal exactly as hard as a 20/20 one, and no shooter
+> attribute entered the read (pattern (a); already continuous in position, so no P1 cliff to kill).
+> Fixed per judgment-proxy doctrine P2/P3/P5 as §3.2.3.2 **step 3a**: each OUTFIELD blocker's arc ×
+> §3.1.3.3's `perceived_ability` (Anticipation/Pace → 0.6..1.4, read through the SHOOTER's Vision
+> fidelity) — **no new constants**, the ERR-008-020 `[GT]`s reused verbatim so one lever calibrates
+> both lanes at the eventual KD-W1 pass; the GOALKEEPER's arc stays purely geometric (P3 — keeper
+> quality is priced once, at the #11 save; `GK_BLOCKER_RADIUS` is an abstraction of coverage, not a
+> body). League-average / null-view ability = 1.0 reproduces today's arcs exactly (P5 pivot).
+> Spec + code same commit: `section-3-1.md` v1.4, `section-3-2.md` v1.12 (+ step 3a and its worked
+> example in `section-3-2-3-to-3-2-9.md`), `OptionGenerator.cs` v1.7, 6 new `OptionGeneratorTests`
+> locks (computed-average pivot = null-view arc exactly, Vision-20 vs Vision-1 discrimination,
+> null-view neutrality, GK-arc invariance, away mirror). Adjacent defect recorded-not-fixed:
+> §3.2.3.2's numerical example is in a legacy centre-origin frame and its blocker classifies as GK
+> under the section's own heuristic yet uses the outfield radius (annotated in place; its 0.757
+> feeds the §3.2.3.3 chain). No schema change, no new RNG stream / domain tag / draw site, no
+> draw-order change; digests move where a generated SHOOT has a non-neutral outfield blocker in the
+> path, as intended. Blast radius checked: no scenario band or tick-window instrument reads
+> `GoalOpeningScore` directly; goal-rate-sensitive locks may shift on affected seeds — CI will show
+> it. **Gate NOT runnable in the authoring environment (no .NET SDK; installer 403 at the proxy);
+> CI on push is the gate.** Prior entry below.)
 
 > **Last Updated (prior):** August 6, 2026, later same day (**#29/#41 T1 gate run — PASSED. The two save
 > codecs, the three new types and the frame change compiled for the first time; all 58 new tests

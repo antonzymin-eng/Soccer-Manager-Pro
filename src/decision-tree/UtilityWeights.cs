@@ -8,6 +8,7 @@
 // Modified: 2026-08-05 (ERR-008-019 — + LONG_SHOT_RAMP_HALF_WIDTH [GT]; LONG_SHOT_THRESHOLD redocumented as the ramp centre)
 // Modified: 2026-08-05 (ERR-008-019 owner revision — LONG_SHOT_RAMP_HALF_WIDTH 0.05 → 0.25: full-range ramp, no plateaus)
 // Modified: 2026-08-05 (ERR-008-019 AR — LONG_SHOT_RAMP_HALF_WIDTH XML doc: the (0, 0.25] range is the formula's validity domain; the suite pins 0.25)
+// Modified: 2026-08-06 (ERR-008-021 AR-1 M-1 — doc only: INTERCEPTOR_ABILITY_MIN/MAX + LANE_VISION_FIDELITY_FLOOR now name their second consumer, the §3.2.3.2 step-3a shot-lane occlusion)
 // Author:   —
 // Spec:     Decision Tree #8 §3.2.11, Code Standards #20
 // Purpose:  Authoritative constant catalogue for the utility scoring model.
@@ -179,13 +180,13 @@ namespace TacticalDirector.DecisionTree
         /// <summary>[GT] Outer threat edge (m): positional threat fades linearly from 1.0 at PASS_LANE_CORE_HALF_WIDTH to 0.0 here. Must exceed PASS_LANE_CORE_HALF_WIDTH. §3.1.3.3, ERR-008-020.</summary>
         public const float PASS_LANE_FALLOFF_END = 1.2f;
 
-        /// <summary>[GT] Interception-ability scalar at Anticipation+Pace mean = 0 (raw 1/1). §3.1.3.3, ERR-008-020.</summary>
+        /// <summary>[GT] Interception/blocking-ability scalar at Anticipation+Pace mean = 0 (raw 1/1). Consumed by BOTH the pass lane (§3.1.3.3, ERR-008-020) and the shot-lane occlusion (§3.2.3.2 step 3a, ERR-008-021) — one calibration lever moves both lanes (KD-W1).</summary>
         public const float INTERCEPTOR_ABILITY_MIN = 0.6f;
 
-        /// <summary>[GT] Interception-ability scalar at Anticipation+Pace mean = 1 (raw 20/20). Midpoint of MIN..MAX is exactly 1.0 so the league-average defender is weight-neutral. §3.1.3.3, ERR-008-020.</summary>
+        /// <summary>[GT] Interception/blocking-ability scalar at Anticipation+Pace mean = 1 (raw 20/20). Midpoint of MIN..MAX is exactly 1.0 so the ability-midpoint defender is weight-neutral. Consumed by BOTH the pass lane (§3.1.3.3, ERR-008-020) and the shot-lane occlusion (§3.2.3.2 step 3a, ERR-008-021).</summary>
         public const float INTERCEPTOR_ABILITY_MAX = 1.4f;
 
-        /// <summary>[GT] Vision-fidelity floor: at Vision raw 1 the passer resolves this fraction of a defender's true ability deviation from average (doctrine P2 — low Vision degrades to the attribute-blind read, it never invents information). §3.1.3.3, ERR-008-020.</summary>
+        /// <summary>[GT] Vision-fidelity floor: at Vision raw 1 the reading agent (the passer in §3.1.3.3, the shooter in §3.1.4.3) resolves this fraction of an opponent's true ability deviation from average (doctrine P2 — low Vision degrades to the attribute-blind read, it never invents information). ERR-008-020; also the shot lane, ERR-008-021.</summary>
         public const float LANE_VISION_FIDELITY_FLOOR = 0.2f;
 
         public const float PASS_LANE_DIVISOR = 3.0f;  // [GT] summed lane threat → score=0
@@ -340,4 +341,10 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        | ruled out). Doc now records that (0, 0.25] is the FORMULA's validity      |
 // |         |            |        | domain, not a free dial, and that a retune below 0.25 must revisit that   |
 // |         |            |        | lock in the same change.                                                  |
+// | 1.11    | 2026-08-06 | —      | ERR-008-021 AR-1 M-1 (doc only; no value changes): INTERCEPTOR_ABILITY_    |
+// |         |            |        | MIN/MAX and LANE_VISION_FIDELITY_FLOOR now document their second          |
+// |         |            |        | consumer — the §3.2.3.2 step-3a shot-lane occlusion (ERR-008-021) — and   |
+// |         |            |        | the fidelity doc names "the reading agent" (passer OR shooter). These     |
+// |         |            |        | three [GT]s are deliberately shared: one calibration lever moves both     |
+// |         |            |        | lanes at the eventual KD-W1 balance pass.                                 |
 #endregion
