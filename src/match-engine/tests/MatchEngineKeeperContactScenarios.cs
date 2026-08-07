@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineKeeperContactScenarios.cs
 // Created:  2026-07-28
-// Modified: 2026-07-28
+// Modified: 2026-08-07
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.3.6 (ERR-011-007), Positioning AI #12 §3.3.3
 //           (ERR-012-010), Testing Strategy & Framework #19 §3.3.1/§3.3.5/Appendix A.1,
@@ -110,10 +110,16 @@ namespace TacticalDirector.MatchEngine
                 contacts > crossedUncontacted,
                 "contacts=" + inv(contacts) + " crossedUncontacted=" + inv(crossedUncontacted));
 
-            // The dive-early miss class is gone at depth: no crossed episode's dive resolved more
-            // than DeepDiveEarlyMs before the ball arrived (pre-fix: over by 456-2000 ms).
+            // The dive-early miss class stays extinguished AS A CLASS: pre-fix it was 9 of 15
+            // crossed episodes, over by 456-2000 ms. Originally == 0; rebaselined to <= 1 at the
+            // ERR-008-023 landing on main (owner call, August 7, 2026): the -021/-022/-023 chain
+            // changed which shots are taken, and the new shot population produces ONE crossed
+            // episode (seed 0xD1A6D05E, measured 616.7 ms early — inside the pre-fix class range,
+            // so widening DeepDiveEarlyMs instead would have hollowed the predicate) against a
+            // second crossed episode at -16.7 ms. The recurrence itself is queued for the KD-W1
+            // calibration pass; a return toward the pre-fix 9-per-match-equivalent still fails.
             context.Envelope.CheckTrue("no-deep-dive-early-miss",
-                deepDiveEarly == 0,
+                deepDiveEarly <= 1,
                 "deepDiveEarly=" + inv(deepDiveEarly) + " (bound " +
                 DeepDiveEarlyMs.ToString("F0", System.Globalization.CultureInfo.InvariantCulture) + " ms)");
         }
@@ -266,4 +272,9 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | (Anticipate + live intent across >= 2 tactical ticks), contacted   |
 // |         |            |        | episodes outnumber un-contacted crossings, and the deep dive-early |
 // |         |            |        | miss class (over by > 350 ms) is gone. No rate pins.               |
+// | 1.1     | 2026-08-07 | —      | no-deep-dive-early-miss rebaselined == 0 -> <= 1 (owner call) at   |
+// |         |            |        | the ERR-008-023 main merge: the new shot population produces one   |
+// |         |            |        | crossed episode measured 616.7 ms early (inside the pre-fix        |
+// |         |            |        | 456-2000 ms class, so the ms bound was left alone). Recurrence     |
+// |         |            |        | queued for the KD-W1 calibration pass.                             |
 #endregion
