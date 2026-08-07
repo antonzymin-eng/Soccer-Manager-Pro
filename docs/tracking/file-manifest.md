@@ -17,6 +17,42 @@ SDK, and `dot.net` / `builds.dotnet.microsoft.com` / `dotnetcli.azureedge.net` a
 agent proxy (the install script itself is reachable from GitHub raw, so the block is on the binaries),
 making CI on push the only compiler — the same caveat and the same resolution as #29/#41 T0 and T1.)
 
+**Last Updated (prior):** August 7, 2026 (**ERR-008-021 GATE RUN — PASSED. No file changes; this entry
+records the run and retires the "gate NOT runnable" caveats carried by the two entries below.**
+PR #305, CI run 404, head `3f207ee`. Build 0 errors (5 warnings, the known count);
+`DecisionTree.Tests` **120 passed / 0 failed / 4 skipped / 124 total** carrying the 7 `ShotLane_*`
+locks; whole-tree gate PASSED with the quarantine empty; `MatchEngine.Tests` 420/430 unchanged —
+the intended digest movement tripped no scenario band. **Modified:** `docs/tracking/CHANGELOG.md`,
+`docs/tracking/CHANGELOG-src.md` v2.78, `docs/tracking/spec-error-log.md` v1.69,
+`docs/tracking/open-issues.md`, `CLAUDE.md` (OPEN ISSUES football-judgment entry), this file.
+The authoring environment still has no .NET SDK; CI on push remains the only compiler.)
+
+**Last Updated (prior):** August 6, 2026, after the AR pass (**ERR-008-021 AR-1 — 1 High, 7 Medium, 5 Low,
+all fixed.** No new files. **Modified:** `src/decision-tree/OptionGenerator.cs` v1.8 (single
+GK-candidate exemption replacing the band-wide one — H-1; `VisionFidelity` hoisted; gate boundary
+aligned to the spec's strict ">"), `src/decision-tree/Tests/OptionGeneratorTests.cs` v1.8 (+H-1
+lock, margins, anti-vacuity assertions, production post assignment in both away fixtures),
+`src/decision-tree/UtilityWeights.cs` v1.11 (doc only — the three shared `[GT]`s name their second
+consumer), `docs/specs/decision-tree/section-3-1.md` v1.5, `docs/specs/decision-tree/section-3-2.md`
+v1.13, `docs/specs/decision-tree/section-3-2-3-to-3-2-9.md` (step 3a single-candidate form +
+Known-limitation direction corrected), `docs/tracking/spec-error-log.md` v1.68,
+`docs/tracking/football-judgment-proxy-review.md`, `docs/tracking/open-issues.md`,
+`docs/tracking/CHANGELOG.md`, `docs/tracking/CHANGELOG-src.md` v2.77, `CLAUDE.md`, `README.md`,
+this file. Gate NOT runnable; CI on push is the gate.)
+
+**Last Updated (prior):** August 6, 2026, latest of all (**ERR-008-021 — the shot-lane occlusion ability
+weighting, the follow-up deferred at the ERR-008-020 landing.** No new files, no new assembly.
+**Modified:** `src/decision-tree/OptionGenerator.cs` v1.7 (outfield blocker occlusion ×
+`PerceivedInterceptAbility` through the shooter's Vision fidelity; GK arc stays geometric),
+`src/decision-tree/Tests/OptionGeneratorTests.cs` v1.7 (+6 locks incl. away mirror + GK exclusion),
+`docs/specs/decision-tree/section-3-1.md` v1.4, `docs/specs/decision-tree/section-3-2.md` v1.12,
+`docs/specs/decision-tree/section-3-2-3-to-3-2-9.md` (§3.2.3.2 step 3a + worked example + legacy
+example annotation), `docs/tracking/spec-error-log.md` v1.67 (ERR-008-021 filed + resolved),
+`docs/tracking/football-judgment-proxy-review.md`, `docs/tracking/open-issues.md`,
+`docs/tracking/CHANGELOG.md`, `docs/tracking/CHANGELOG-src.md` v2.76, `CLAUDE.md` (OPEN ISSUES
+football-judgment entry), `README.md`, this file. Zero new constants — the ERR-008-020 `[GT]`s are
+reused. Gate NOT runnable in the authoring environment; CI on push is the gate.)
+
 **Last Updated (prior):** August 6, 2026, latest same day (**#29/#41 T1 GATE RUN — PASSED. No file
 changes; this entry records the run and retires the "no gate run" caveat carried by the two entries
 below it.** PR #300, CI run 397, head `9a7f703`. Build succeeded 0 errors; `TrainingSystem.Tests`
