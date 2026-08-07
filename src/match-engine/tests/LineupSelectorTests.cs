@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/LineupSelectorTests.cs
 // Created:  2026-07-19
+// Modified: 2026-08-06 (T2 AR pass 1: + the CanSelect/Select equivalence lock)
 // Author:   —
 // Spec:     Lineup Selection (Plan-3) design supplement (docs/tracking/lineup-selection-design.md);
 //           Code Standards #20
@@ -251,6 +252,87 @@ namespace TacticalDirector.MatchEngine
             raised.FromArray(all12);
             Assert.AreEqual(12f, LineupSelector.MeanAttribute(in raised), 1e-6f);
         }
+
+        // ── CanSelect must never disagree with Select (T2 AR pass 1) ──────────────────────
+
+        /// <summary>
+        /// The equivalence the availability filter's press-back-in loop rests on: its exit condition is
+        /// <c>CanSelect</c>, and what it hands to <c>ConfigureSquads</c> is adjudicated by
+        /// <c>Select</c>. If the two ever disagreed, the filter would stop pressing players in on a
+        /// squad the engine then refuses — so this asserts the agreement directly, across squads that
+        /// pass and squads that fail for each distinct reason.
+        /// </summary>
+        [TestCase(FormationFamily.F442)]
+        [TestCase(FormationFamily.F433)]
+        [TestCase(FormationFamily.F4231)]
+        public void CanSelect_AgreesWithSelect_OnEverySquadShape(FormationFamily family)
+        {
+            Squad[] cases =
+            {
+                CoherentSquad(18),                 // exactly enough, every line covered
+                CoherentSquad(25),                 // a full roster
+                CoherentSquad(17),                 // one short of the bench
+                CoherentSquad(11),                 // an XI with no bench at all
+                SquadFrom(                          // eighteen fit outfielders and NO goalkeeper
+                    P(PlayerPosition.Defender, 10), P(PlayerPosition.Defender, 10),
+                    P(PlayerPosition.Defender, 10), P(PlayerPosition.Defender, 10),
+                    P(PlayerPosition.Defender, 10), P(PlayerPosition.Midfielder, 10),
+                    P(PlayerPosition.Midfielder, 10), P(PlayerPosition.Midfielder, 10),
+                    P(PlayerPosition.Midfielder, 10), P(PlayerPosition.Midfielder, 10),
+                    P(PlayerPosition.Forward, 10), P(PlayerPosition.Forward, 10),
+                    P(PlayerPosition.Forward, 10), P(PlayerPosition.Forward, 10),
+                    P(PlayerPosition.Defender, 10), P(PlayerPosition.Midfielder, 10),
+                    P(PlayerPosition.Forward, 10), P(PlayerPosition.Defender, 10)),
+            };
+
+            foreach (Squad squad in cases)
+            {
+                bool canSelect = LineupSelector.CanSelect(squad, family);
+
+                bool selectSucceeded;
+                try
+                {
+                    LineupSelector.Select(squad, family);
+                    selectSucceeded = true;
+                }
+                catch (System.ArgumentException)
+                {
+                    selectSucceeded = false;
+                }
+
+                Assert.AreEqual(selectSucceeded, canSelect,
+                    $"CanSelect and Select disagreed on a {squad.Count}-player squad under {family} — "
+                    + "the availability filter's exit condition and the engine's own gate must be the "
+                    + "same question.");
+            }
+        }
+
+        /// <summary>A position-coherent roster of <paramref name="count"/>: GK, four defenders, four midfielders, two forwards, then a Def/Mid/Fwd cycle.</summary>
+        private static Squad CoherentSquad(int count)
+        {
+            var spec = new (PlayerPosition, int)[count];
+            for (int k = 0; k < count; k++)
+            {
+                PlayerPosition pos;
+                if (k == 0)       pos = PlayerPosition.Goalkeeper;
+                else if (k <= 4)  pos = PlayerPosition.Defender;
+                else if (k <= 8)  pos = PlayerPosition.Midfielder;
+                else if (k <= 10) pos = PlayerPosition.Forward;
+                else
+                {
+                    switch ((k - 11) % 3)
+                    {
+                        case 0:  pos = PlayerPosition.Defender; break;
+                        case 1:  pos = PlayerPosition.Midfielder; break;
+                        default: pos = PlayerPosition.Forward; break;
+                    }
+                }
+
+                spec[k] = (pos, 10);
+            }
+
+            return SquadFrom(spec);
+        }
     }
 }
 
@@ -261,4 +343,11 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | F442/F433/F4231, short-line fail-loud, best-remaining bench +  |
 // |         |            |        | bench GK flag, KD-L5 roster-order reproduction, mean rating,   |
 // |         |            |        | determinism.                                                   |
+// | 1.1     | 2026-08-06 | —      | T2 AR pass 1 (H): + CanSelect_AgreesWithSelect_OnEverySquad-   |
+// |         |            |        | Shape. CanSelect landed as a hand-copied re-walk of Select's   |
+// |         |            |        | starter loop with nothing keeping the two in step; it is now   |
+// |         |            |        | one walk (TrySelect), and this locks the equivalence the       |
+// |         |            |        | availability filter's exit condition rests on — including the  |
+// |         |            |        | case a player-count rule cannot see, eighteen fit outfielders  |
+// |         |            |        | and no goalkeeper.                                             |
 #endregion

@@ -32,6 +32,25 @@
 > against the old model fail on it; gate NOT runnable in the authoring environment. **The 34-finding tally is unchanged**: the shot lane was
 > never itemized as its own §2/§3 finding — it surfaced in §6.4 at the -020 landing — so 32 itemized
 > findings remain open.
+> **Updated:** August 6, 2026, later same day — **ERR-008-021 AR-1: 1 High, 7 Medium, 5 Low, all
+> fixed.** The High: the landed P3 exemption keyed on the whole 6 m GK band rather than the
+> goalkeeper, so every near-goal defender escaped the new weighting — inert precisely where shots
+> are blocked. Now a single **GK candidate** (goal-line-nearest in band) is exempt and every other
+> blocker is weighted (radius stays per-band). The P5 claim below is corrected the same way as
+> ERR-008-019's a day earlier: exact only at the ability midpoint (raw 10/11) or under a null
+> view — the all-default 10/10 profile reads ≈ 0.979, so the pivot is approximate, which is what
+> P5 ("≈ today's behavior") actually requires. See `spec-error-log.md` v1.68 for the full list.
+> **Updated (prior):** August 6, 2026 — **the shot-lane follow-up deferred at the ERR-008-020 landing is
+> CLOSED, landed as `ERR-008-021`** (#8 §3.1.4.3/§3.2.3.2 step 3a): each blocker's
+> occluded arc now scales by §3.1.3.3's Vision-read Anticipation/Pace `perceived_ability`
+> (doctrine P2) — no new constants, the ERR-008-020 `[GT]`s reused verbatim (one calibration
+> lever, KD-W1); the single GK candidate's arc stays purely geometric (doctrine P3 — keeper
+> quality is priced once, at the #11 save; single-candidate form per AR-1 H-1, see above);
+> ability-midpoint/null-view = 1.0 reproduces those arcs exactly
+> (P5). Not one of the 34 itemized findings (it was ERR-008-020's deferred scope note), so the
+> §5 counts are unchanged. Digests move where a generated SHOOT has a non-neutral
+> blocker in the path, as intended. Gate NOT runnable in the authoring environment; CI on push
+> is the gate.
 > **Updated (prior):** August 5, 2026, even later same day — **ERR-008-019's digest-invariance claim
 > RETRACTED for the full-range form** at the adversarial review over the landing (documentation
 > only; formula, constants and the four test locks untouched). The argument assumed a 0.5 m
@@ -664,6 +683,9 @@ sweeps were re-ranged to span the centred bands.
 proxy still reads a deep defender as part-keeper; §3.2.10's constant catalogue is now six landings
 behind; and the P5 residual above waits for the balance pass. **The 34-finding tally is unchanged** —
 the shot lane was never itemized as its own §2/§3 finding, so **32 itemized findings remain open**.
+deliberately deferred to a follow-up fix (owner call, keep the template change small) — **closed
+August 6, 2026 as `ERR-008-021`** (see the header entry above: outfield arcs × the same
+perceived-ability scalar, GK arc geometric per P3, no new constants).
 
 ### 6.5 Adjacent gap recorded (not a §2/§3 finding)
 

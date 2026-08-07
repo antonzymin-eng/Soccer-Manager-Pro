@@ -510,12 +510,67 @@ problem rather than fixed it.
   input the core does not own, because it is a runtime property of the window rather than a design
   choice.
 
-### P5 — Unity UGUI shell (host, cert-verified)
+### P5 — Unity UGUI shell
+
+**Split into P5a / P5b on August 7, 2026, for the reason that split P4.** §12 rule 1 says every
+decision the shell makes belongs in a gate-compiled assembly; P4a turned that rule into a phase and
+P4b arrived with nothing left to decide. The same argument applies here and had not been applied:
+"the UGUI shell" as one host-only phase would have put *when a control is available* and *what the
+speed buttons offer* inside `MonoBehaviour`s the gate cannot compile — which is exactly the leak
+AR-P4a2-H1 caught in the deliverable built to close that leak.
+
+#### P5a — shell decisions, host-free (gate-verified)
+
+**LANDED August 7, 2026.** Two decisions extracted out of the future binding:
+
+- **`PlaybackSpeedLadder`** (`match-client-core`) — the four `[GT]` multipliers as an *ordered*
+  ladder, plus the opening rung and the end behaviour. The catalogue held four independent dials; it
+  did not say they form a ladder, which one a match opens at, or what "faster" does at 10×.
+  Stepping **clamps rather than wraps**: a faster-click at the top that dropped the viewer to 1×
+  reads as a fault, not a limit. Pause is deliberately not a rung — it is a streamer state, and no
+  multiplier means "stopped" (0× is outside the streamer's legal range anyway).
+- **`MatchControlAvailability`** + **`MatchControlLockReason`** (`match-client-core`) — resolves
+  §5-P5's standing requirement that "the UI gates tactical input at full time so a click does not
+  silently no-op" into a value the binding reads. Three states (`AwaitingFirstFrame`, `Live`,
+  `FullTime`), each carrying *why* it is locked so the shell can explain a disabled control.
+  Two decisions inside it are worth naming because both are the kind a later tidy-up would reverse:
+  **saving stays enabled at full time** (§6.3 — a finished match is exactly when a viewer wants to
+  save, and `ServiceOnce()` exists so the capture needs no tick; locking it alongside the tactical
+  controls would make a completed match unsaveable), and **a frameless streamer does not resolve to
+  `Live`** — `TryGetLatestFrame`'s out-parameter on a false return is `default(LiveMatchFrame)`,
+  whose `MatchEnded` is *false*, so a `From` that read the frame unconditionally would report a match
+  that has not started as fully interactive.
+
+**One finding, and it is the §5-P0 cap note turned from prose into an assertion.** That note said
+`MatchViewerConstants.MaxLiveSpeedMultiplier` must be ≥ 10 so 10× is not refused — and nothing
+enforced it. `SetSpeedMultiplier` fail-louds on an out-of-range multiplier, so a cap configured below
+a step would have surfaced as *one speed button throwing mid-match while the other three worked*.
+`MatchClientConstants.RequireStreamerAcceptsSpeed` now pairs each speed against the streamer's own
+`[Min, Max]` at load, in the shape of the existing `RequireFarRayMeetsGround` cross-dial check, so
+the process refuses to start instead. Tests express the bounds relative to the cap rather than as
+literals, so a retune keeps them meaningful.
+
+**Deliberately NOT built here, and why (a layering decision the owner should make).** The four
+screens' **`ScreenId` catalogue and navigation graph** — Main Menu → Tactics Setup → Match View →
+Post-Match Report — has no correct home today. `ScreenId` lives in `ui-framework`, but FR-UI-010 is
+explicit that the framework hard-codes no screen, so a client's screen catalogue does not belong
+there; and `ui-framework` sits *above* `match-client-core`, so the catalogue cannot live in the core
+either. The remaining homes are `match-client-unity` (gate-invisible — wrong by rule 1) or a new
+assembly above `ui-framework`. That is the same question §6 item 2 of the roadmap already flags for
+C3's management screens, and it is not one to settle inside an implementation pass.
+
+#### P5b — Unity UGUI binding (host, cert-verified)
 - The master plan's four screens: **Main Menu** (New Demo Match), **Tactics Setup** (formation /
   team / player instructions — writing a `MatchSetup`), **Match View** (canvas + collapsible stats
   panel + the speed controls + in-match tactical-adjustment buttons wired to the P2 command queue),
   **Post-Match Report** (score + stats).
 - The in-match tactical buttons are the first UI producers of P2 commands — the input half of "done".
+- **Read enablement from `MatchControlAvailability`, and the speed buttons from
+  `PlaybackSpeedLadder`** — do not re-derive either in a `MonoBehaviour`. In particular, do not
+  delete a sim-side `_matchEnded` guard on the grounds that the UI now checks it: per §6.2 the UI
+  gate is a best-effort early-out that trails the sim by ≥ 1 frame, and the sim side is the
+  authority. Inverting those two leaves the best-effort half holding the invariant.
+- **Budget a cert-host run for this landing** (§7 / C2).
 
 ### P6 — Integration, cert & closed-loop scenario
 - A `#19 ScenarioRunner` cross-spec scenario: boot via `MatchSession`, inject a scripted
@@ -717,10 +772,22 @@ skin exactly as P6's head-less half did. It also surfaced KD-P4a-1 — a stale g
 streamer's boot-time roster cache, which had been wrong in the browser viewer since P1 and would
 have been inherited wholesale by a Unity roster type.
 
-**Next step: P4b on the pinned host**, then P5 and the on-host half of P6 (scene boot, 60 FPS render,
+~~**Next step: P4b on the pinned host**, then P5 and the on-host half of P6 (scene boot, 60 FPS render,
 live tactical input through the UI, the FR-PO-052-class render-loop perf capture). P4b now binds a
 render model that is already decided and already tested, so what the host verifies is binding, which
-is precisely what §12 rule 1 was aiming at.
+is precisely what §12 rule 1 was aiming at.~~
+
+**Amended August 7, 2026 — P5 was split the same way P4 was, and P5a LANDED** (see §5-P5 and the
+v0.16 row). The rule-1 argument that produced P4a applies to the shell's own decisions — which
+controls are live in which match state, and what the speed buttons offer — and those had not been
+extracted. They now live in `match-client-core`, gate-compiled and test-locked.
+
+**Next step: P4b on the pinned host**, then P5b and the on-host half of P6. Both remaining phases now
+bind surfaces that are already decided and already tested, so what the host verifies is binding —
+which is precisely what §12 rule 1 was aiming at. **The one open decision ahead of P5b is a layering
+question, not an implementation one:** where the four screens' `ScreenId` catalogue and navigation
+graph live, given FR-UI-010 forbids the framework and `ui-framework` sits above `match-client-core`
+(§5-P5a, and the same question as roadmap §6 item 2).
 
 ### Status change, August 3, 2026 — this plan is now the only UI track
 
@@ -779,6 +846,7 @@ is built to avoid.
 ## Version History
 
 | Version | Date | Notes |
+| 0.16 | 2026-08-07 | **P5 SPLIT into P5a / P5b, and P5a LANDED — the shell's decisions extracted host-free, exactly as P4a did for the render skin.** The split is §12 rule 1 applied to a phase that had not had it applied: "the UGUI shell" as one host-only phase puts *when a control is available* and *what the speed buttons offer* inside `MonoBehaviour`s the gate cannot compile, which is the leak AR-P4a2-H1 found in the deliverable built to close that leak. Landed in `match-client-core`: **`PlaybackSpeedLadder`** (the four `[GT]` multipliers as an ordered ladder — the catalogue held four independent dials and said nothing about order, opening rung, or end behaviour; stepping **clamps rather than wraps**, since a faster-click at 10× dropping the viewer to 1× reads as a fault rather than a limit; pause stays off the ladder because it is a streamer state and 0× is outside the streamer's legal range) and **`MatchControlAvailability`** + **`MatchControlLockReason`** (§5-P5's standing "the UI gates tactical input at full time so a click does not silently no-op", resolved into three states carrying *why* each is locked). **Two decisions inside the availability type are the kind a later tidy-up reverses, so both are test-locked:** saving stays enabled at full time (§6.3 — a finished match is when a viewer wants to save, and `ServiceOnce()` needs no tick; locking it with the tactical controls makes a completed match unsaveable), and a frameless streamer does **not** resolve to `Live` — `TryGetLatestFrame`'s out-parameter on a false return is `default(LiveMatchFrame)` whose `MatchEnded` is *false*, so a `From` reading the frame unconditionally would report a not-yet-started match as fully interactive. **The one finding is the §5-P0 cap note turned from prose into an assertion:** that note required `MaxLiveSpeedMultiplier ≥ 10` so 10× is not refused, and nothing enforced it — `SetSpeedMultiplier` fail-louds, so a cap below a step would have surfaced as *one speed button throwing mid-match while the other three worked*. `MatchClientConstants.RequireStreamerAcceptsSpeed` now pairs each speed against the streamer's `[Min, Max]` at load, in the shape of the existing `RequireFarRayMeetsGround` cross-dial check. **Deliberately not built, and recorded rather than silently dropped:** the four screens' `ScreenId` catalogue and navigation graph, which has no correct home — FR-UI-010 forbids the framework, and `ui-framework` sits *above* `match-client-core` so the core cannot hold it either; the remaining candidates are `match-client-unity` (gate-invisible, wrong by rule 1) or a new assembly. That is a layering decision for the owner and the same question roadmap §6 item 2 already flags for C3. **No `SNAPSHOT_SCHEMA_VERSION` change, no new RNG stream, domain tag or draw site, no draw-order change — nothing here reaches the sim.** No ERR filed: the cap gap was a missing enforcement of an existing design note, not a contradiction in it. **Blast radius checked: nothing moved.** No behaviour change reaches the engine, so no scenario tick window, per-90 rate band, A4a corpus fit or FR-PO-052 baseline is perturbed; `match-client-core` gains tests only. **Full dotnet gate NOT RUNNABLE in this environment** — no .NET SDK, and every SDK binary host (`dot.net`, `builds.dotnet.microsoft.com`, `dotnetcli.azureedge.net`) returns 403 at the agent proxy, so CI on push is the only compiler for this landing. Verified instead by manual review against the compile risks that matter here: type-name/filename match, brace balance, CS0104 collision sweep over the newly-imported `TacticalDirector.MatchViewer` namespace (12 public types, none colliding), `MatchViewerConstants` and the three frame value types confirmed public and `default`-constructible, `using`-group order, private-static-field `s_` naming (FR-CS-002), and `generate_projects.py` regenerated clean (64 csproj). `match-client-core` 135 → ~157 expected. |
 |---|---|---|
 | 0.15 | 2026-08-04 | **P4a adversarial-review pass 2 — 1 High, 4 Medium fixed; run over the tilted-view revision's own output.** **AR-P4a2-H1 (the one that matters):** the camera rig placed the camera but never said how much it *sees*, so P4b would have chosen a field of view inside the `MonoBehaviour` — a framing decision in the one place the CI gate cannot compile. The leak was in the deliverable built to close exactly that leak. `PitchCameraPose` gains `FieldOfViewDegrees`, `MatchClientConstants` gains `CameraVerticalFovDegrees` bounded *against the tilt* (`tilt + fov/2 < 90`, else the lowest ray never meets the ground), and `PitchCameraRig.GroundExtentAlongTilt` gives the framing a number — asymmetric near/far, because the trapezoid reaches further beyond the aim point than in front of it. KD-P4a-2 is amended in place; §5-P4b's job list now says "pick nothing here". **M-1:** §5-P4b instructed *both* cameras in one bullet — the new `PitchCameraRig` placement and, in the same sentence, the deleted orthographic one — while the bullet below it said the orthographic assumption was wrong. `path-to-playable-roadmap.md` B8 carried only the stale half. **M-2:** `PitchMarking`'s class doc still sent the render skin to `ToView` for markings that must lie on the ground plane (following it stands every marking upright in the world XY plane); `ToView`/`ToPitch` themselves had no production caller left after the revision and are deleted, their tests re-anchored onto `ToWorld`/`TryGroundHit`. **M-3:** `CameraLateralOffsetM` was the only camera dial with no validation and lands straight in the camera's world position — now `RequireFinite` (either sign is meaningful, so a range would be wrong). **M-4:** `MatchClientConstants.cs` and `MatchRenderProjection.cs` never got their v1.4/v1.2 version-history rows in the revision, so each file's newest row described content it no longer had while three documents cited versions the files did not claim. **Sweep after the fixes found one more Medium, so this pass is not converged:** `PitchMarkingKind.Rectangle` still documented corner ordering as *not* guaranteed and told consumers to re-normalise — the exact contract AR pass 1's H-1 reversed. `PitchMarking.cs` was fixed then and the enum beside it was not, so two files stated opposite contracts for one field, and the enum is what a renderer switching on `Kind` reads first. Fixed; the guarantee is test-locked by `EveryRectangleArrivesWithItsCornersNormalised`. `match-client-core` 129 → 135. **Full dotnet gate: PASSED, 0 failures** (30 suites). **Pass 3 then ran over the whole P4a surface and surfaced no High and no Medium — the loop is converged.** It found two Lows, both fixed: `PitchCameraPose`'s header and summary still described it as two values, and a test comment credited the wrong assertion with guarding the static-init-order defect (asserting the tilt is non-zero does NOT catch a reorder — by the time a test reads the field, static init has finished and it reads its real value either way; re-evaluating the invariant on the finished values is what catches it). **Full dotnet gate on the converged tree: PASSED, 0 failures** (30 suites; `match-client-core` 135, `match-engine` 368 unchanged). |
 | 0.14 | 2026-08-04 | **KD-P4a-2 — the view is TILTED, and the faked height cues are deleted (owner call).** P4a shipped a flat top-down view with ball height suggested by a sprite lift and a capped size ramp; the owner reversed it to an FM-style view from above, tilted back from vertical and slightly off centre, on the grounds that the ball only needs to be visible on and above the pitch. Taken **before P4b** because it changes a P4a contract and is cheap now, expensive later. **The revision removes more than it adds:** height becomes a real world axis, so `BallHeightViewOffsetPerMetre` / `BallHeightScalePerMetre` / `BallMaxHeightScale`, `BallRenderModel.SpritePosition` / `SpriteRadius` and `MatchRenderProjection.HeightScale` are all gone — and with them v0.13's M-5 finding and its recorded 10 m saturation limitation, which stop existing rather than needing a retune. **New:** `PitchCameraRig` / `PitchCameraPose` (height, tilt-from-vertical, lateral offset; a placement is a decision, so it is gate-compiled, and the pose is two world points because `Quaternion` is not in the shim) and `PitchViewProjection.ToWorld` / `ToWorldGround` / `TryGroundHit`. **The one real cost:** screen position is no longer affine in pitch position, so the click inverse becomes a ray/ground-plane intersection — `Camera` is not in the shim, so Unity supplies the ray and the math stays gate-tested. **Survivors, each for a reason:** the shadow (under any tilt a lofted ball separates from the pitch point it is over — the one cue perspective cannot supply), the corner→centre re-origin (it is the ground plane), and `FollowBallCamera` (it decides *where* the camera looks). **Recorded rather than left implicit:** the engine's Y becomes the world's Z and its Z the world's Y — an axis swap, the same trap class as the corner origin, locked by a test (inverting it fails seven) — and `FollowBallCamera`'s pitch clamp is now approximate, describing a rectangle of visible ground where a tilted view sees a trapezoid; kept deliberately, since its job is keeping the target near the pitch, not exact framing. §5-P4b's job list gains the camera placement and the click ray, and its "orthographic" note is corrected to a tilted perspective camera. |

@@ -15,7 +15,7 @@ break it, and do not edit historical entries.
 > **Last Updated:** August 7, 2026 (**ERR-008-023 — the ERR-008-022 landing scored ZERO GOALS; the acceptance scenario caught it.** CI run `31188688249` (PR #303, head `a2987be`) is the first run ever to reach `MatchEngine.Tests` on this branch — that suite takes **22 m 55 s**, against the 3 minutes run 402 survived before cancellation, so nothing had exercised the match engine here at all. It failed `sim_match_engine_shot_outcomes` on `goals-still-scored = 0`: four seeds x 18 minutes, 72 minutes of football, no goal. Cause: -022's own headline fix. The retired goal-centre-plane bound had discarded a goal-line keeper for **every** shooter position, so the keeper-only `GK_BLOCKER_RADIUS_M` = 1.5 m disc had never been exercised; it went live at -022 and removed **~42% of the goal arc on every shot** (1.000 -> 0.584 at 16 m, keeper alone). Fixed by retiring the disc — every blocker occludes with `BLOCKER_RADIUS_M`, keeper included, because reach beyond the body is shot-stopping and P3 assigns that to #11, which prices it at contact. `gkness` survives, lerping the P3 exemption alone. Suite 15 -> 16; a GK-read continuity lock that was about to become this file's third tautology of its class now carries live attributes. This is the P5 residual -022 recorded as *not fixed* under KD-W1.)
 
 > **Last Updated (prior):** August 6, 2026, latest same day (**ERR-008-022 far-post lock corrected — the
-> first gate run.** **CI run 402 (PR #302, head `301c634`) — the first execution of any of this work.** Build succeeded **0 errors** (5 warnings); `DecisionTree.Tests` **127 passed / 1 failed / 4 skipped / 132**, every other suite green — but **not a gate pass**: the `Compile + test` job was cancelled at 16:59:45, before `run-gate.sh` reached `Gate PASSED`, and four hygiene checks were cancelled without ever being assigned a runner (`spec-error-log.md` v1.70). The failure was `ShotLane_FarPostBlocker_OccludesTheGoal` (expected 0.782157, got **0.728880**) and it was the TEST: it read `ctx.OpponentGoalPostL`, y = **30.34** in the home fixture — the post *nearer* the (90, 24) shooter. The pre-fix bound kept the near post and discarded only the far one, so the lock named for ERR-008-022's headline finding would have **passed against the broken model**. Now selected by geometry (`FarPostFrom`), not by the `PostL`/`PostR` label, which carries opposite sides in this file's two fixtures; expected value unchanged and **not** compiler-confirmed — the run evaluated the old test and returned the near post's 0.728880, and `0612bcc` has never been compiled since. The recorded 12-of-12 mutant kill overstates the far-bound mutant accordingly — the harness killed it, the committed test did not. Prior entry below.)
+> first gate run.** **CI run 402 (PR #302, head `301c634`) — the first execution of any of this work.** Build succeeded **0 errors** (5 warnings); `DecisionTree.Tests` **127 passed / 1 failed / 4 skipped / 132**, every other suite green — but **not a gate pass**: the `Compile + test` job was cancelled at 16:59:45, before `run-gate.sh` reached `Gate PASSED`, and four hygiene checks were cancelled without ever being assigned a runner (`spec-error-log.md` v1.75). The failure was `ShotLane_FarPostBlocker_OccludesTheGoal` (expected 0.782157, got **0.728880**) and it was the TEST: it read `ctx.OpponentGoalPostL`, y = **30.34** in the home fixture — the post *nearer* the (90, 24) shooter. The pre-fix bound kept the near post and discarded only the far one, so the lock named for ERR-008-022's headline finding would have **passed against the broken model**. Now selected by geometry (`FarPostFrom`), not by the `PostL`/`PostR` label, which carries opposite sides in this file's two fixtures; expected value unchanged and **not** compiler-confirmed — the run evaluated the old test and returned the near post's 0.728880, and `0612bcc` has never been compiled since. The recorded 12-of-12 mutant kill overstates the far-bound mutant accordingly — the harness killed it, the committed test did not. Prior entry below.)
 
 > **Last Updated (prior):** August 6, 2026, latest same day (**ERR-008-022 — the shot lane threw away the far post
 > before the occlusion model ever ran.** From the adversarial review over the ERR-008-021
@@ -156,6 +156,377 @@ break it, and do not edit historical entries.
 > `football-judgment-proxy-review.md` (header, §2, new §6.4.1), `open-issues.md`, `CLAUDE.md`,
 > `CHANGELOG-src.md` v2.76, `file-manifest.md`, `README.md`. **Gate NOT run — no .NET SDK in the
 > authoring environment; CI compiles on push.** Prior entry below.)
+> **Last Updated (prior):** August 7, 2026 (**The #29/#41 T2 branch reached a compiler for the first time and
+> failed to build.** CI run 405 on PR #304 — the first run this branch has ever had — reported
+> `Build FAILED, 5 Error(s)`, all in `PlayerCareerStates.FromBlocks`. The adversarial-review pass-3 fix
+> that made `FromBlocks` copy its two state arrays rather than borrow them declared those locals
+> `training` and `injury`, inside a method whose own parameters are `training` and `medical`. C# does
+> not read that as shadowing: once a local of that name is declared anywhere in a block, the whole block
+> resolves the name to the local, so the four earlier uses of the *parameter* became CS0841
+> use-before-declaration errors and the declaration itself CS0136. Renamed to `trainingStates` /
+> `injuryStates`. The behaviour is exactly what six review passes described; the code had simply never
+> been compiled. **That is worth recording plainly**: the failure every "NO GATE RUN" caveat on this
+> landing anticipated arrived not as a wrong algorithm or a bad assumption but as a name collision — the
+> single cheapest class of defect a compiler catches, and one that careful reading demonstrably does not.
+> What run 405 did establish: `match-engine`, `training-system` and `injuries-medical` compiled, so the
+> four-argument `ConfigureSquads` fatigue seam, `SquadRating.CanFieldStartingEleven` and
+> `LineupSelector.TrySelect` are real. `season-save` failed, so its test project never built and both new
+> suites — including the pass-6 `FromBlocks` copy lock — are still unexecuted. Every symbol they touch has
+> now been hand-checked against its declaration for name, signature, accessibility and type, which is the
+> ceiling of what this environment can verify. The next run is the real answer.)
+
+> **Last Updated (prior):** August 6, 2026, latest same day (**Adversarial review pass 6 over the #29/#41 T2
+> landing — 0 High, 1 Medium, 2 Low, all fixed.** After three consecutive passes that each found
+> something only by changing axis, this one picked four the earlier passes had not used, and the one that
+> paid was asking a different question entirely: *does each of the twelve fixes landed in passes 3–5 have
+> a test that fails without it?* Eleven do. The twelfth — pass 3's change making
+> `PlayerCareerStates.FromBlocks` **copy** the two state arrays instead of borrowing them — has none, so
+> reverting the `Array.Copy` leaves every suite green while reopening a silent-overwrite hole:
+> `ClubTrainingStates.States` is a public array field and `SeasonSaveContents` is a public struct, so a
+> caller holding a loaded save needs no internals access to rewrite a running career's conditioning and
+> injury state, straight past both day steps and both subsystems' declared single writers. That is the
+> same defect class as pass 1's ascending-ids High, on the same type, one route further in. Now locked by
+> a test that mutates through exactly that public surface. **The two Lows:** the load-time
+> `AvailabilityFilteredSquads` decorator still justified itself with "can safely share arrays with the
+> blocks it hands back" — true when written, false since pass 3, and a reader trusting it would conclude
+> `FromBlocks` borrows; and the five files this landing created carried no `// Modified:` header field
+> despite two or three version-history rows each (FR-CS-056/057 requires one, matching the latest row).
+> **Also closed a gap in the pass-3–5 commit itself:** `92baaa3` never updated `file-manifest.md`, so
+> this landing carries one combined passes-3–6 manifest entry rather than leaving a landing unrecorded.
+> **What the pass cleared, since three "clean" calls have now been wrong:** every new symbol's
+> compile-resolvability — including the `MatchEngine.MatchEngine` qualification, which I expected to be
+> CS0426 and is not, because the `using` directives sit at compilation-unit level rather than inside the
+> namespace declaration, so the enclosing-namespace walk reaches the namespace before the imported type;
+> hand-execution of the three new `EnginePath_*` cases against F442 and `CareerTestRoster`'s position
+> layout (ten of eleven home starters are drawn from locals ≥ 11, so the entry-fatigue assertion is not a
+> coin toss, and the filtered squad is exactly 18 and fieldable, so the back-fill never fires and the
+> divergence precondition is real); and repo hygiene — all five new files tracked with `.meta` siblings,
+> and no caller outside `season-save` touching the three surfaces that went `internal`. Nothing has been
+> compiled or executed at any point in this round: still no .NET SDK in the authoring environment, the
+> installer still 403 at the proxy, so CI on push remains the only compiler for all of it.)
+
+> **Last Updated (prior):** August 6, 2026, latest same day (**Adversarial review passes 3–5 over the #29/#41 T2
+> landing — 1 High, 4 Medium, 7 Low, all fixed.** Three further passes after the pass-2 "clean" call, each
+> going at an axis the earlier ones had not: the unread spans of the four new suites, then the
+> resolution-mode axis across every test in the assembly, then the day-step producer read against #30's
+> fixture interleave. The second and third each found something the first two passes could not have seen
+> by reading harder — which is the honest lesson of this round: "converged" meant "converged on the axes
+> I had looked at".
+>
+> **H — the career-wired match boot had never executed anywhere.** Every test that wires a
+> `PlayerCareerStates` runs `QuickSimAll`; every `ManagedThroughEngine`/`FullEngine` test in `season-save`
+> builds the loop through the careerless three-argument constructor. So `SeasonLoop.PlayThroughEngine`'s
+> boot — the **sole production call site** of #29's match-entry-fatigue seam, and the only place the
+> ERR-030-009 availability filter meets a real `MatchEngine` — shipped with zero execution, which is
+> ERR-030-014's shape one layer up: a composition that runs green without doing the thing it exists to do.
+> Found by sweeping resolution modes, not by reading the code again. Fixed structurally rather than by
+> bolting on a slow test: `SeasonLoop.BootFixtureEngine` is extracted `internal`, which is exactly what
+> was done to `ShouldPlayThroughEngine` and for the reason that method's own comment already gave —
+> inline, the branch is reachable only by playing a full 90-minute match, and no suite in this assembly
+> pays that cost. Three `EnginePath_*` cases now cover the filter, the fatigue projection and the unwired
+> floor in milliseconds.
+>
+> **M1 — the entry-fatigue tests could not fail.** `MatchEngineEntryFatigueTests` probed indices where
+> squad-local and starter-slot coincide, because `CoherentSquad` lays positions out in slot order. Swap
+> `entryFatigue[local]` for `entryFatigue[k]` in `ApplySquad` and every assertion in the file still passes.
+> That is the one property the seam turns on, and the one #30's filter breaks deliberately — filtering
+> renumbers the locals. The new case puts the only goalkeeper at the last local, so slot 0 must map to
+> local 17 whatever the ratings say.
+>
+> **M2 — the single-writer fix was closed on one route and open on the other.** `FromBlocks` borrowed the
+> two state arrays, and the documented restore path hands it the very arrays `SeasonSaveManager.Load`
+> returns inside `SeasonSaveContents`; every holder of those contents was therefore writing into the
+> running career's `Condition`, `Severity` and idempotency cursors, past both day steps. Pass 1 had made
+> `TrainingBlocks`/`MedicalBlocks` internal for precisely this reason and stopped at the save side. Now
+> copied.
+>
+> **M3 — detectable is not prevented.** Pass 1 answered the stale-`ScheduleFor`-handle defect with a
+> `RosterGeneration` counter the caller is asked to compare. `ScheduleFor` is now `internal` and the
+> public focus surface is `PlayerCareerStates.TrySetFocus`, resolving the club fresh per call, because
+> this file argues two paragraphs elsewhere that binding must be structural — `TrainingSchedule` exists
+> for that reason. The counter stays; `CommitRosterSync` refuses a stale plan on it.
+>
+> **M4 — ERR-030-026, and the one worth remembering.** #30's KD-2 tick order pins nine day-slots and has
+> **no slot for playing the round**, because a round is a separate command. So where a fixture sits
+> relative to slot 2 (#29) and slot 4 (#41) is specified nowhere and, in the code, falls out of
+> `AdvanceToNextFixtureDay`'s loop condition — it stops on *reaching* the fixture day, so matchday's own
+> steps run after the round. That is right for #41's occurrence draw and **wrong for the recovery
+> countdown sharing the same atomic step**: a player whose recovery expires on matchday misses a fixture
+> he had served his time for, so every injury runs one matchday longer than its tier. Inert today (the
+> dial is off) and invisible to the suites either way. The cost was never today's behaviour — it is that
+> the balance pass would fit `RecoveryDaysPerTickBase` and every tier-day constant straight through an
+> unstated convention and absorb the bias permanently. Adopted rather than changed (splitting the halves
+> alters #41's step contract), documented at all three sites that determine it, and locked by a test.
+> Whether #41 should expose recovery and occurrence separately is deferred to the balance pass with owner
+> sign-off.
+>
+> **L (7):** `SeasonSaveManager`'s version rows ran 1.7-then-1.6 with two `Modified:` headers; `SeasonLoop`
+> v1.7 recorded a "public World accessor" that landed `internal`; both block types' docs disclaimed the
+> decode ordering `FromBlocks` now requires, so acting on them would make it refuse valid saves;
+> `CareerTestRoster.Build`'s summary named the wrong index; the quick-sim's omission of match-entry fatigue
+> is argued rather than silent; the `Save(SeasonLoop, …)` overload no longer recommends a cross-thread
+> `ActiveMatch` read; `Blocks_RoundTripThroughBothCodecs` asserted nothing about the medical block and held
+> for two sets of identical fresh states.
+>
+> **Deliberately not done:** no `SNAPSHOT_SCHEMA_VERSION` change, no format bump, no RNG stream / domain
+> tag / draw-site / draw-order change, and no behaviour change of any kind — the ERR-030-026 convention is
+> adopted as-is precisely so this pass stays behaviour-neutral. **NO GATE RUN** — still no .NET SDK in the
+> authoring environment (installer 403 at the proxy), so every claim here is static; CI on push is the
+> gate. Prior entry below.)
+
+> **Last Updated (prior):** August 6, 2026, latest same day (**Adversarial review over the #29/#41 T2 landing —
+> 3 High, 4 Medium, 4 Low, all fixed; pass 2 clean.**
+>
+> **H1 — `PlayerCareerStates.FromBlocks` trusted an ordering invariant it never checked, and the failure
+> was silent state loss.** Every lookup in that type is a binary search over the per-club player ids.
+> `ForLeague` sorts; `FromBlocks` only checked that the two blocks agreed *with each other*, and
+> `ClubTrainingStates`' constructor imposes no order at all — so an unordered block (which the codecs
+> never produce but a public caller trivially can) made `IndexOfPlayer` miss a player who WAS carried,
+> and `SyncToRoster` then read that miss as "new" and overwrote his season of conditioning and injury
+> history with `Create()`. No exception, no assertion, indistinguishable from a fresh career. Now
+> refused, in the loop that was already walking the ids.
+>
+> **H2 — a mid-match save restored the wrong starting eleven.** The match is configured with the
+> availability-FILTERED squad; the snapshot records only each team's `ClubId`, so it cannot record
+> *which eighteen of the twenty-five*. Restoring through the raw provider handed
+> `ReprojectDistinctSquads` the full roster, it re-ran `LineupSelector` over a different candidate set,
+> and a different eleven's canonical attribute records landed on the pitch — ClubId matching, size gate
+> passing, every guard green, and the match silently diverging from the pre-save run. `SeasonSaveManager.Load`
+> now rebuilds the career from the medical block in the *same file* and re-applies the filter through an
+> `ISquadProvider` decorator, so restore re-selects from exactly the squad the match was configured with.
+> Latent today (needs the occurrence dial armed AND a mid-match save) but armed for the interactive
+> client, which is the current critical path. Locked by a 60-tick digest-chain continuation across the
+> save — the only way to see WHICH eleven came back, since the attribute records are re-derived rather
+> than serialized.
+>
+> **H3 — `LineupSelector.CanSelect` was a hand-copied second implementation of the selection walk.**
+> Two answers to "which eleven does this squad field", nothing keeping them in step, and no equivalence
+> test. The first rule added to `Select` — #44's ban filter is the near one — would have left
+> `CanSelect` answering the old question, and the availability filter's press-back-in loop would then
+> exit on a squad `ConfigureSquads` refuses. That is the parallel-surface trap `SquadRating`'s own doc
+> says it exists to prevent, reintroduced one file below it. Collapsed to one walk (`TrySelect`), with
+> `Select` and `CanSelect` as its two wrappers, plus an equivalence lock across five squad shapes and
+> all three formations — including the case a player-count rule cannot see: eighteen fit outfielders
+> and no goalkeeper.
+>
+> **The four Mediums.** (1) `RollToNextSeason` wrote the roster reconciliation *before*
+> `BeginNextSeason` — the one commit this method's own docs call fallible — so a refused roll left a
+> career reconciled against a season that never began, flatly contradicting the comment that claimed
+> the opposite. `SyncToRoster` now splits into `PrepareRosterSync` (pure, throws) + `CommitRosterSync`
+> (cannot fail), staged at (d′) and installed after (e); "refused ⇒ nothing moved" is now true of both
+> sides, which no single placement could achieve. (2) Nothing checked that the career covered the
+> season's clubs — a subset career constructed happily, advanced days happily, then threw from the
+> filter on fixture 3 of 10 with two results already applied to the table. The constructor now refuses
+> the pairing, the same argument that puts the KD-4 invariant there. (3) `ScheduleFor` handed out a
+> handle bound to arrays `SyncToRoster` replaces, so a screen caching it across a boundary lost every
+> focus change with `TrySetFocus` still returning `true`; a `RosterGeneration` counter makes that
+> detectable. (4) `TrainingBlocks()`/`MedicalBlocks()` returned live mutable state arrays through the
+> public `Career` property, making any holder a second writer of #29/#41 state — the single-writer
+> property `SeasonState` enforces with `internal` mutators, dropped. Both accessors are now `internal`,
+> with a `SeasonSaveManager.Save(SeasonLoop, match, path)` overload for external callers, and
+> `SeasonLoop.World` went `internal` for the same reason rather than widening the surface to serve it.
+>
+> **Lows:** the risk read is skipped when the occurrence dial is off (nothing consumes it); the
+> `SelectAvailable` summary no longer contradicts its own back-fill paragraph; the day steps now record
+> *why* they are not validate-all-then-write while the sync is (their per-day idempotency makes a retry
+> safe); and the boundary test covers insertion as well as removal.
+>
+> **Determinism unchanged by the pass**: no `SNAPSHOT_SCHEMA_VERSION` change, no format bump, no new RNG
+> stream / domain tag / draw site / draw-order change. **Still no gate run** — no .NET SDK, installer
+> still 403 at the proxy. Every finding above is static reasoning; the two things static reasoning is
+> worst at remain open, and both are now the first thing CI will answer: whether the six suites compile,
+> and whether the digest-continuation lock behaves as predicted.)
+
+> **Last Updated (prior):** August 6, 2026, later same day (**#29/#41 T2 LANDED — the two subsystems now
+> PRODUCE state. `PlayerCareerStates` is the #30-side owner T1 was missing: at T1 both codecs existed
+> and nothing constructed a state set for them to encode, so every save carried two empty blocks.**
+>
+> **What is live.** `src/season-save/PlayerCareerStates.cs` holds both per-club sets keyed by
+> `(ClubId, PlayerId)` and is the single place #30 calls either subsystem from. `SeasonLoop` takes it
+> and its squad provider as an optional PAIR and drives: **slot 2** (`TrainingStep.AdvanceTrainingDay`)
+> and **slot 4** (`MedicalStep.AdvanceMedicalDay`) in the KD-2 order, both taking the world day BEFORE
+> step 9's increment; the **FR-MD-023 availability filter** at the pre-declared ERR-030-009
+> resolve→filter→configure position, on the quick-sim path as well as the engine one (#44's suspension
+> view joins the same call); **#29's §3.3 match-entry fatigue** into a new four-argument
+> `MatchEngine.ConfigureSquads`, seeded onto each starter's `AerobicPool` as `1 − fatigue`; and the
+> **FR-TR-025 / FR-MD-025 roster reconciliation** at a new (d′) position in `RollToNextSeason`, before
+> the commits so a refused roll leaves the career untouched too.
+>
+> **Behaviour-neutral on the defaults, and that is a property rather than a hope.** Every player starts
+> on `Balanced`, whose daily load equals `FatigueDailyRecovery` **exactly**, so the training-fatigue
+> accumulator never leaves 0, the projection hands the engine an all-rested array, and a match booted
+> through the wiring is digest-identical to one booted without it — locked both ways
+> (`AllZeroFatigue_IsDigestIdenticalToTheTwoArgumentOverload` and its counterpart
+> `NonZeroFatigue_ReachesTheSimulation`, which asserts on POSITION because the reservoir is itself
+> serialized and a digest would move even for a seam that were written and never read). The world tick
+> stays byte-identical to a bare `WorldStore.AdvanceDay` (FR-SN-026): neither day step touches the
+> world.
+>
+> **#41's occurrence draw ships DISARMED (FR-MD-027), on measurement rather than caution.** The fifth
+> AR pass over T0 measured the daily probability through the real producer chain: ~23% for a freshly
+> inserted player on his first day, ~43% half-fatigued, and exactly 0 forever on the default focus —
+> two to three orders of magnitude out in both directions. KD-W1 forbids re-tuning ahead of the balance
+> pass, so T2 wires the path and leaves the dial off; everything downstream of an injury (the filter,
+> the depleted-squad press-back-in, the views) is live and tested against directly-constructed injured
+> states, so arming it is a one-argument change. Both dial positions are locked — "off injures nobody"
+> is satisfiable by a step that is never called, so the armed path is proven to reach the draw.
+>
+> **Two ERRs filed: ERR-029-006 and ERR-041-010** — the same finding in both siblings. The T2 seam text
+> names #28 APIs and types `TacticalDirector.PlayerProgression` does not expose: §3.5/§4.3's batch
+> `#28.AdvanceDay(worldDay, in trainingInputs)` (only the per-player `AdvanceDayForPlayer` exists, and
+> #28's own slot-1 wiring is roadmap D1), and both FR-TR-025 and FR-MD-025's `RegenResult` /
+> `RetirementResult`. The handoff half is resolved in substance by reconciling against the roster #30
+> already holds — the same contract, keyed the same way, which starts inserting exactly the regens the
+> moment #28 T2 produces them. **Slot 1 stays a null seam deliberately**: gathering a batch for a
+> consumer with neither the API nor a call site is the phantom class this project refuses, and
+> `ComputeTrainingInput` returns `Neutral` on both branches regardless.
+>
+> **Recorded, not fixed (the next pass starts here).** #41 §3.5 sources `MatchLoad` from "#30's fixture
+> result"; #30 has no per-player appearance record, `AppearanceLoadWeight` is a non-zero `[GT]` (150),
+> and neither sub-blob may carry a counter for it. `MatchLoad.None` is passed — inert while the dial is
+> off, since `AssembleRiskScore` sits inside the `occurrenceEnabled` branch. Recomputing appearances
+> from the fixture list is **not** equivalent: the availability filter changes who actually played, so
+> a recompute diverges precisely in the seasons injuries matter. It needs a persisted home and a format
+> decision, and it is due with the balance pass.
+>
+> **One design decision worth naming.** The availability filter needed a depleted-squad rule, and the
+> obvious one — back-fill to a player count — is wrong: selection refuses a *position-incomplete*
+> squad outright (KD-L3), so eighteen fit outfielders and no goalkeeper stops the season. The rule is
+> instead "press the least-injured back in until the club can field the formation", asked of the
+> engine's own selector through a new `SquadRating.CanFieldStartingEleven` / `LineupSelector.CanSelect`
+> probe rather than answered by a second selection rule in `season-save` (the parallel-surface trap
+> `SquadRating` exists to avoid). In the limit that is the whole squad — exactly the unfiltered
+> behaviour — so the filter can never leave a club worse off than having no filter at all.
+>
+> **Determinism.** No `SNAPSHOT_SCHEMA_VERSION` change (the aerobic reservoir was already serialized —
+> proven by a save/restore round-trip rather than asserted). No `SEASON_SAVE_FORMAT_VERSION` change and
+> no sub-blob format bump: T2 fills blocks whose layout T1 pinned. **No new RNG stream, no new domain
+> tag, no new draw site, no draw-order change** — #41's keyed occurrence draw is the one T0 already
+> allocated, and it is reached only when the dial is armed.
+>
+> **Blast radius, checked.** No scenario with a hardcoded tick window or per-90 band is touched: with
+> no career wired every path is unchanged, and with one wired on the defaults the match digest chain is
+> identical. No A4a round-resolution re-fit is implied — the quick-sim's rating input only moves once a
+> club actually has injured players, which requires the dial. No `FR-PO-052` question: the two day
+> steps run on the world tick, not the 60 Hz path, and `ConfigureSquads` gained one array read per
+> starter at boot.
+>
+> **NO GATE RUN.** The authoring environment still has no .NET SDK and the installer is still 403 at
+> the agent proxy, so `PlayerCareerStates`, the two new probes, the `ConfigureSquads` overload and all
+> four new suites are written and unexecuted. CI on push is the gate — the same posture as T0 and T1,
+> both of which then came back green on the first run.)
+> **Last Updated (prior):** August 7, 2026 (**Unity client P5a — the UGUI shell's decisions extracted
+> host-free, and P5 split into P5a / P5b to make that a phase.** The split is §12 rule 1 applied to a
+> phase that had never had it applied: P4 was split on the argument that every decision the render
+> skin makes belongs in a gate-compiled assembly, and "the UGUI shell" as one host-only phase would
+> have put *when a control is available* and *what the speed buttons offer* inside `MonoBehaviour`s
+> the CI gate can never compile — the exact leak AR-P4a2-H1 found sitting inside the deliverable built
+> to close that leak. Landed in `match-client-core`: **`PlaybackSpeedLadder`**, the four `[GT]`
+> playback multipliers as an *ordered* ladder with the opening rung named and the end behaviour
+> decided — the catalogue held four independent dials and said nothing about which a match opens at or
+> what "faster" does at 10×; stepping **clamps rather than wraps**, because a faster-click at the top
+> that dropped the viewer to 1× reads as a fault rather than a limit, and pause stays off the ladder
+> because it is a streamer state, not a multiplier. And **`MatchControlAvailability`** +
+> **`MatchControlLockReason`**, which resolve §5-P5's standing requirement — "the UI gates tactical
+> input at full time so a click does not silently no-op" — into three states each carrying *why* it is
+> locked. **Two decisions inside that type are the kind a later tidy-up reverses, so both are
+> test-locked:** saving stays enabled at full time (§6.3 — a finished match is precisely when a viewer
+> wants to save, and the `ServiceOnce()` seam exists so the capture needs no tick; locking save
+> alongside the tactical controls would make a completed match unsaveable), and a frameless streamer
+> does **not** resolve to `Live` — `TryGetLatestFrame`'s out-parameter on a false return is
+> `default(LiveMatchFrame)`, whose `MatchEnded` is *false*, so a resolver reading the frame
+> unconditionally would report a match that has not started as fully interactive. The type also
+> documents at length that it is §6.2's **best-effort early-out and not the guarantee** — the sim side
+> reads the engine's live `_matchEnded` and is the authority — so that nobody later deletes a sim-side
+> guard on the grounds that the UI checks it, which would leave the trailing half holding the
+> invariant. **The one finding is the §5-P0 cap note turned from prose into an assertion:** that note
+> required `MatchViewerConstants.MaxLiveSpeedMultiplier ≥ 10` so 10× is not refused, and nothing
+> enforced it. Because `SetSpeedMultiplier` fail-louds rather than clamping, a cap configured below a
+> step would have surfaced as *one speed button throwing mid-match while the other three worked* — a
+> partial failure, which is harder to spot than a total one. `RequireStreamerAcceptsSpeed` now pairs
+> each speed against the streamer's `[Min, Max]` at load, in the shape of the existing
+> `RequireFarRayMeetsGround` cross-dial check, so the process refuses to start instead; the tests
+> express the bounds relative to the cap rather than as literals, so a retune keeps them meaningful.
+> **Recorded, not built — and it is a layering decision, not an omission:** the four screens'
+> `ScreenId` catalogue and navigation graph has no correct home today. FR-UI-010 is explicit that the
+> framework hard-codes no screen, so it does not belong in `ui-framework`; and `ui-framework` sits
+> *above* `match-client-core`, so the core cannot hold a `ScreenId` either. The remaining candidates
+> are `match-client-unity` (gate-invisible — wrong by rule 1) or a new assembly above `ui-framework`.
+> That is the same question roadmap §6 item 2 already flags for C3's management screens, and it wants
+> owner sign-off rather than an implementation-pass guess. **Determinism: no `SNAPSHOT_SCHEMA_VERSION`
+> change, no new RNG stream, domain tag, draw site or draw-order change — nothing in this landing
+> reaches the simulation.** No ERR filed: the cap gap was a missing *enforcement* of an existing design
+> note, not a contradiction in one. **Blast radius checked and nothing moved** — no behaviour change
+> reaches the engine, so no scenario tick window, no per-90 rate band, no A4a corpus fit and no
+> FR-PO-052 perf baseline is perturbed. **Full dotnet gate NOT RUNNABLE in this environment, and this
+> time the block was re-tested rather than assumed:** there is no .NET SDK, and every SDK binary host
+> — `dot.net`, `builds.dotnet.microsoft.com`, `dotnetcli.azureedge.net` — returns 403 at the agent
+> proxy, though the install script itself is reachable from GitHub raw, so the block is on the
+> binaries and not the script. CI on push is therefore the only compiler for this landing, exactly as
+> for #29/#41 T0 and T1. In place of the gate: type-name/filename match and brace balance on all five
+> new files, a CS0104 collision sweep over the newly-imported `TacticalDirector.MatchViewer`
+> namespace (12 public types, none colliding — this repo has paid for that one before with five
+> `TacticTranslation` types in scope at once), confirmation that `MatchViewerConstants` is public and
+> that `Scoreline`/`RestartBanner`/`LiveAgentCue`/`MatchPeriod` are `default`-constructible value
+> types, `using`-group order, the FR-CS-002 `s_` private-static-field rename, and
+> `generate_projects.py` regenerated clean at 64 csproj. `match-client-core` 135 → ~157 expected.)
+
+> **Last Updated (prior):** August 7, 2026 (**ERR-008-021 gate run — PASSED. The shot-lane weighting, the
+> AR-1 fixes and all 7 new locks compiled and executed for the first time.** PR #305, CI run 404,
+> head `3f207ee`. Build 0 errors (5 warnings, the known count); `DecisionTree.Tests` **120 passed /
+> 0 failed / 4 skipped / 124 total**, carrying the 7 `ShotLane_*` locks — including the H-1
+> regression lock (an in-band defender who is not the GK candidate IS weighted) and the exact
+> GK-arc pin. Whole-tree gate PASSED with the quarantine empty; **`MatchEngine.Tests` 420/430
+> unchanged**, so the intended digest movement tripped no goal-rate band or tick-window scenario —
+> the blast-radius caution in the two entries below resolves as "checked by execution, nothing
+> moved". Retires the "gate NOT runnable" caveats on both ERR-008-021 entries; CI on push remains
+> the only compiler for this work. Prior entry below.)
+
+> **Last Updated (prior):** August 6, 2026, latest (**ERR-008-021 AR-1 — the same-day adversarial review over
+> the shot-lane landing: 1 High, 7 Medium, 5 Low, all fixed.** The High: the landed P3 exemption
+> keyed on the 6 m GK band, not the goalkeeper — so EVERY near-goal defender escaped the new ability
+> weighting, leaving it inert precisely where shots are blocked (for a 10 m shot, most of the usable
+> path), and all six of the landing's fixtures sat 8 m off the goal line so no lock registered it.
+> Fixed to a single **GK candidate** (goal-line-nearest visible opponent within the band,
+> snapshot-order tie-break, independent of the shot-path filter); every other blocker — in the band
+> or not — is now weighted, while the radius stays per-band (the recorded §3.2.3.2 Stage-0
+> limitation), so neutral-case arcs are unchanged. Also corrected: the P5 "today's arcs bit-for-bit"
+> overclaim (exact only at the ability midpoint raw 10/11 or under a null view; the all-default
+> 10/10 squad reads ≈ 0.979 — the same overclaim shape retracted for ERR-008-019 a day earlier);
+> margin-less discrimination locks; three vacuously-passable equality locks; the Vision-fidelity
+> expression duplicated across both lanes (hoisted to `VisionFidelity`); both away mirrors running a
+> goal-post L/R assignment production never builds; the Known-limitation paragraph's inverted radius
+> consequence; and the §3.1.4.1 gate boundary (code generated at exactly `MIN_GOAL_VISIBILITY`
+> against the spec's strict ">"). New H-1 regression lock: an in-band defender who is not the
+> candidate IS weighted (keeper claims the slot from wide of the shot wedge). Surfaces:
+> `OptionGenerator.cs` v1.8, `OptionGeneratorTests.cs` v1.8 (7 shot-lane locks),
+> `UtilityWeights.cs` v1.11 (doc only), `section-3-1.md` v1.5, `section-3-2.md` v1.13,
+> `spec-error-log.md` v1.68. **Gate NOT runnable in the authoring environment; CI on push is the
+> gate.** Prior entry below.)
+
+> **Last Updated (prior):** August 6, 2026, later again (**ERR-008-021 — the shot-lane follow-up deferred at
+> the ERR-008-020 landing, closed.** #8 §3.1.4.3/§3.2.3.2's goal-occlusion sum was attribute-blind:
+> every outfield blocker in the shot path occluded the same geometric arc whoever he was, so a
+> Pace/Anticipation 1/1 defender walled off the goal exactly as hard as a 20/20 one, and no shooter
+> attribute entered the read (pattern (a); already continuous in position, so no P1 cliff to kill).
+> Fixed per judgment-proxy doctrine P2/P3/P5 as §3.2.3.2 **step 3a**: each OUTFIELD blocker's arc ×
+> §3.1.3.3's `perceived_ability` (Anticipation/Pace → 0.6..1.4, read through the SHOOTER's Vision
+> fidelity) — **no new constants**, the ERR-008-020 `[GT]`s reused verbatim so one lever calibrates
+> both lanes at the eventual KD-W1 pass; the GOALKEEPER's arc stays purely geometric (P3 — keeper
+> quality is priced once, at the #11 save; `GK_BLOCKER_RADIUS` is an abstraction of coverage, not a
+> body). League-average / null-view ability = 1.0 reproduces today's arcs exactly (P5 pivot).
+> Spec + code same commit: `section-3-1.md` v1.4, `section-3-2.md` v1.12 (+ step 3a and its worked
+> example in `section-3-2-3-to-3-2-9.md`), `OptionGenerator.cs` v1.7, 6 new `OptionGeneratorTests`
+> locks (computed-average pivot = null-view arc exactly, Vision-20 vs Vision-1 discrimination,
+> null-view neutrality, GK-arc invariance, away mirror). Adjacent defect recorded-not-fixed:
+> §3.2.3.2's numerical example is in a legacy centre-origin frame and its blocker classifies as GK
+> under the section's own heuristic yet uses the outfield radius (annotated in place; its 0.757
+> feeds the §3.2.3.3 chain). No schema change, no new RNG stream / domain tag / draw site, no
+> draw-order change; digests move where a generated SHOOT has a non-neutral outfield blocker in the
+> path, as intended. Blast radius checked: no scenario band or tick-window instrument reads
+> `GoalOpeningScore` directly; goal-rate-sensitive locks may shift on affected seeds — CI will show
+> it. **Gate NOT runnable in the authoring environment (no .NET SDK; installer 403 at the proxy);
+> CI on push is the gate.** Prior entry below.)
 
 > **Last Updated (prior):** August 6, 2026, later same day (**#29/#41 T1 gate run — PASSED. The two save
 > codecs, the three new types and the frame change compiled for the first time; all 58 new tests

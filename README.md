@@ -46,6 +46,86 @@ than he is. Average defenders in average positions block exactly what they block
 balance is not shifted — the change redistributes rather than tightens. Nine tests lock the new
 behaviour, three of which fail on the old rule. **Not compiled or run here — this environment has no
 .NET toolchain; CI compiles on push.** **Prior entry below.**)
+**Last Updated:** August 6, 2026, latest same day (**Training and injuries are now wired into the
+career loop — for the first time, a saved season carries what players have actually been doing.**
+
+Two systems were built earlier this month but had no way to run: the code existed, the save format
+existed, and nothing anywhere created a player to run them on, so every save file wrote two empty
+blocks. That gap is closed. There is now a single object that owns every club's training and medical
+state, and the season loop calls into it once per day, in a fixed order — training first, injuries
+second, because the injury risk reads the conditioning that training just wrote. Injured players are
+filtered out of team selection, and each player's accumulated training fatigue now follows him into a
+match as a starting fatigue level.
+
+**Nothing about an existing game changes.** Every player starts on a balanced training programme,
+whose daily workload happens to exactly cancel the daily recovery, so nobody accumulates fatigue and
+every match plays out identically to before — checked in both directions, including a test that
+deliberately fatigues a side to confirm the new number really does reach the simulation rather than
+just being stored.
+
+**Injuries themselves are wired but switched off**, deliberately and on measurement rather than
+nerves. An earlier review measured what the current tuning would actually do: a new player would have
+roughly a one-in-four chance of being injured on his very first day, and a tired one nearly a
+one-in-two chance every day — while a player on the default programme would never be injured at all.
+Those numbers are two to three orders of magnitude away from real football, and the project's own
+rules say tuning waits until the whole chain is connected. So the plumbing is in and the tap is
+closed; turning it on later is a one-word change, and everything downstream of an injury is already
+built and tested.
+
+One design point worth recording: a club must never be unable to field a team. The obvious rule —
+"put injured players back if you drop below eighteen" — is wrong, because the team selector refuses a
+squad with no goalkeeper regardless of how many outfielders are fit. So the rule is instead "bring the
+least-injured back, one at a time, until the club can actually field a legal side", asked of the
+selector itself rather than guessed at.
+
+Two specification errors were filed: both systems' written plans referred to functions and data types
+in the player-progression system that do not exist yet, so one part of the wiring waits for that
+system's own turn. The gate could not run in the authoring environment (no .NET SDK available); CI
+runs it on push. This entry also skips over two same-day landings recorded in
+`docs/tracking/CHANGELOG.md` — the save codecs and their gate run — which never reached this file.
+Prior entry below.)
+**Last Updated (prior):** August 7, 2026 (**The match screen's rules about what you can click, and when,
+are now written down in testable code rather than left for the Unity layer to invent.** The interactive
+client is built in two halves on purpose: everything that *decides* something lives in ordinary C# that
+the automated build compiles and tests on every push, and the Unity half only draws what it is told.
+That split was already done for the pitch view; it had not been done for the screen's controls, so this
+pass did it. Two things came out of it. First, the four playback speeds (1×, 3×, 5×, 10×) were four
+unrelated numbers in a settings file — nothing said they form a ladder, which one a match starts at, or
+what "faster" should do when you are already at the fastest. They are now an ordered ladder that stops
+at the top instead of wrapping around to the slowest, which would have looked like a bug. Second, and
+more useful: the rule that you cannot change tactics after the final whistle existed only as a sentence
+in a design document. It is now a value the screen reads, so a control that cannot do anything is shown
+as unavailable rather than quietly swallowing your click — and it deliberately keeps **saving** switched
+on after full time, since that is exactly when someone wants to save. One real gap turned up along the
+way: a note said the speed cap must allow 10×, but nothing checked it, and because the engine rejects an
+out-of-range speed rather than quietly capping it, a misconfigured setting would have shipped a 10×
+button that crashed mid-match while the other three worked fine. That is now checked at startup, so the
+game refuses to launch instead. Nothing here touches the simulation — no save-format change, no change
+to how matches play out. The build could not be run in this environment (the .NET installer is blocked
+by the network policy), so CI compiles it on push. Prior entry below — note it skips the August 6
+save-codec landing, which was recorded in the tracking documents but not here.)
+
+**Last Updated (prior):** August 6, 2026, later same day (**ERR-008-021's same-day review caught the fix
+being switched off exactly where it matters.** The adversarial review over the shot-blocking change
+found that "don't weight the goalkeeper" had been implemented as "don't weight anyone within six
+metres of the goal line" — which is where most shot-blocking happens, so ordinary defenders making
+last-ditch blocks were still being treated as identical bodies. The exemption now applies to a
+single player, the one nearest the goal line (the keeper), and every other defender is weighted.
+The review also tightened the tests so a silently disabled feature can't stay green, and corrected
+an overclaim: an average-attribute defender reproduces the old behaviour almost exactly, not
+bit-for-bit. One High, seven Medium, five Low findings — all fixed. CI on push remains the
+compiler and test runner for this work.)
+
+**Last Updated (prior):** August 6, 2026 (**ERR-008-021 — a shot is now harder to take past a good defender
+than past a poor one.** The judgment-proxy review's third fix closes the follow-up deferred when the
+pass-lane template landed: the check that measures how much of the goal an opponent blocks out no
+longer treats every outfield body as the same obstacle — a blocker's Anticipation and Pace now scale
+his effective cover, read through the shooter's Vision, using the exact constants the pass lane
+already uses, so no new tuning dial was added. The goalkeeper's cover deliberately stays as pure
+geometry, because his shot-stopping quality is already priced at the save itself and counting it
+twice would double-punish shooters. An average or unknown blocker reproduces today's behaviour
+exactly. Spec and code landed in the same commit with six new test locks, including the away-side
+mirror. The gate cannot run in this environment; CI on push compiles and executes it.)
 
 **Last Updated (prior):** August 5, 2026, end of same day (**ERR-008-019 — one recorded claim about the
 long-shot ramp was wrong and is withdrawn.** A review of yesterday's landing found that the note

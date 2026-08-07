@@ -1,6 +1,6 @@
 // File:     src/match-client-core/tests/MatchClientConstantsTests.cs
 // Created:  2026-08-04
-// Modified: 2026-08-04
+// Modified: 2026-08-07
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4a),
 //           Code Standards #20 §3.2.3 ([GT] loading), Testing Strategy #19
@@ -12,6 +12,7 @@ using System;
 using NUnit.Framework;
 
 using TacticalDirector.MatchClientCore;
+using TacticalDirector.MatchViewer;
 
 namespace TacticalDirector.MatchClientCore.Tests
 {
@@ -137,6 +138,36 @@ namespace TacticalDirector.MatchClientCore.Tests
                 90f, "the camera's lowest ray must still meet the ground");
             Assert.IsTrue(float.IsFinite(MatchClientConstants.CameraLateralOffsetM));
         }
+
+        [Test]
+        public void RequireStreamerAcceptsSpeed_AdmitsTheCapsOwnBoundaries()
+        {
+            float minimum = MatchViewerConstants.MinLiveSpeedMultiplier;
+            float maximum = MatchViewerConstants.MaxLiveSpeedMultiplier;
+
+            Assert.AreEqual(minimum, MatchClientConstants.RequireStreamerAcceptsSpeed(minimum, "k"));
+            Assert.AreEqual(maximum, MatchClientConstants.RequireStreamerAcceptsSpeed(maximum, "k"));
+        }
+
+        [Test]
+        public void RequireStreamerAcceptsSpeed_RefusesWhatTheStreamerWouldRefuse()
+        {
+            // Mirrors LiveMatchStreamer.SetSpeedMultiplier's own range test, so the two cannot drift:
+            // anything this admits, that method must accept. NaN is included because the !(x >= min)
+            // form is what catches it — a naive (x < min) would read NaN as in-range.
+            // Bounds are expressed relative to the cap rather than as literals, so the test states the
+            // invariant instead of restating today's [GT] values — a retuned cap keeps it meaningful.
+            foreach (float bad in new[]
+                     {
+                         MatchViewerConstants.MinLiveSpeedMultiplier - 1f,
+                         MatchViewerConstants.MaxLiveSpeedMultiplier + 1f,
+                         float.NaN,
+                     })
+            {
+                Assert.Throws<InvalidOperationException>(
+                    () => MatchClientConstants.RequireStreamerAcceptsSpeed(bad, "k"));
+            }
+        }
     }
 }
 
@@ -164,4 +195,8 @@ namespace TacticalDirector.MatchClientCore.Tests
 // |         |            |        | reads its real value either way. Re-evaluating the invariant    |
 // |         |            |        | on the finished values is what catches it. Comment only; the    |
 // |         |            |        | assertion that does the work was already there.                 |
+// | 1.4     | 2026-08-07 | —      | §5-P5 host-free half: + RequireStreamerAcceptsSpeed, the       |
+// |         |            |        | cross-catalogue pairing check that a playback speed is one the  |
+// |         |            |        | streamer will accept. Bounds are written relative to the cap    |
+// |         |            |        | rather than as literals, so a retune keeps the test meaningful. |
 #endregion

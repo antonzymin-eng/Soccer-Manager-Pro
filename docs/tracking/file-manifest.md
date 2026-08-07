@@ -6,7 +6,7 @@
 **Last Updated (prior):** August 6, 2026, latest same day (**ERR-008-022 far-post lock corrected at the first
 gate run. No new files.** **Modified:** `src/decision-tree/Tests/OptionGeneratorTests.cs` v1.9 (+ the
 `FarPostFrom` geometry helper; the far-post lock no longer reads the `PostL`/`PostR` label), and this
-record set. Production code untouched. **CI run 402 (PR #302, head `301c634`) — the first execution of any of this work.** Build succeeded **0 errors** (5 warnings); `DecisionTree.Tests` **127 passed / 1 failed / 4 skipped / 132**, every other suite green — but **not a gate pass**: the `Compile + test` job was cancelled at 16:59:45, before `run-gate.sh` reached `Gate PASSED`, and four hygiene checks were cancelled without ever being assigned a runner (`spec-error-log.md` v1.70). The failure was `ShotLane_FarPostBlocker_OccludesTheGoal` (expected 0.782157, got **0.728880**) and it was the TEST: it read `ctx.OpponentGoalPostL`, y = **30.34** in the home fixture — the post *nearer* the (90, 24) shooter. The pre-fix bound kept the near post and discarded only the far one, so the lock named for ERR-008-022's headline finding would have **passed against the broken model**. Now selected by geometry (`FarPostFrom`), not by the `PostL`/`PostR` label, which carries opposite sides in this file's two fixtures; expected value unchanged and **not** compiler-confirmed — the run evaluated the old test and returned the near post's 0.728880, and `0612bcc` has never been compiled since. The recorded 12-of-12 mutant kill overstates the far-bound mutant accordingly — the harness killed it, the committed test did not. **Prior entry below.**)
+record set. Production code untouched. **CI run 402 (PR #302, head `301c634`) — the first execution of any of this work.** Build succeeded **0 errors** (5 warnings); `DecisionTree.Tests` **127 passed / 1 failed / 4 skipped / 132**, every other suite green — but **not a gate pass**: the `Compile + test` job was cancelled at 16:59:45, before `run-gate.sh` reached `Gate PASSED`, and four hygiene checks were cancelled without ever being assigned a runner (`spec-error-log.md` v1.75). The failure was `ShotLane_FarPostBlocker_OccludesTheGoal` (expected 0.782157, got **0.728880**) and it was the TEST: it read `ctx.OpponentGoalPostL`, y = **30.34** in the home fixture — the post *nearer* the (90, 24) shooter. The pre-fix bound kept the near post and discarded only the far one, so the lock named for ERR-008-022's headline finding would have **passed against the broken model**. Now selected by geometry (`FarPostFrom`), not by the `PostL`/`PostR` label, which carries opposite sides in this file's two fixtures; expected value unchanged and **not** compiler-confirmed — the run evaluated the old test and returned the near post's 0.728880, and `0612bcc` has never been compiled since. The recorded 12-of-12 mutant kill overstates the far-bound mutant accordingly — the harness killed it, the committed test did not. **Prior entry below.**)
 
 **Last Updated (prior):** August 6, 2026, latest same day (**ERR-008-022 — the shot lane's far bound, near bound and
 goalkeeper read. No new files.** **Modified:** `src/decision-tree/OptionGenerator.cs` v1.8
@@ -52,6 +52,147 @@ the worked example recomputed with an elite/Vision-1 pair), `spec-error-log.md` 
 `CLAUDE.md`, `CHANGELOG.md`, `CHANGELOG-src.md` v2.76, `README.md`. No schema / RNG / domain-tag /
 draw-site / draw-order change; digest invariance NOT claimed (the model is live on every generated
 shot). **Gate NOT run — no .NET SDK in the authoring environment.** **Prior entry below.**)
+**Last Updated (prior):** August 7, 2026 (**Gate fix — CI run 405, this branch's first compile, failed.**
+
+**Modified:** `src/season-save/PlayerCareerStates.cs` v1.2 → **v1.3** — `FromBlocks`' copy locals renamed
+`training`/`injury` → `trainingStates`/`injuryStates`. The method's own parameters are `training` and
+`medical`, so the v1.2 locals produced 4x CS0841 + CS0136 rather than shadowing. No behaviour change.
+Plus `docs/tracking/CHANGELOG.md`, `docs/tracking/CHANGELOG-src.md` v2.83, this file.
+
+`season-save` failing meant `SeasonSave.Tests` never built, so both new suites are still unexecuted;
+`match-engine`, `training-system` and `injuries-medical` and their suites all compiled in the same run.)
+
+**Last Updated (prior):** August 6, 2026, latest same day (**Adversarial review passes 3–6 over the #29/#41 T2
+landing — 1 High, 5 Medium, 9 Low across the four, all fixed.** Passes 3–5 landed in `92baaa3` and that
+commit did **not** update this file; the entry below therefore covers passes 3–5 and pass 6 together,
+which is the honest record rather than two half-entries.
+
+**Modified (passes 3–5):** `src/season-save/SeasonLoop.cs` v1.7 → **v1.8** (`BootFixtureEngine`
+extracted `internal` — the career-wired match boot had never executed anywhere, the sole production
+call site of #29's entry-fatigue seam; + the ERR-030-026 round-vs-day-step convention stated at three
+sites); `src/season-save/PlayerCareerStates.cs` v1.1 → **v1.2** (`FromBlocks` COPIES the two state
+arrays; `ScheduleFor` `internal`, public focus surface is `TrySetFocus`);
+`src/season-save/SeasonSaveManager.cs` v1.7 → **v1.8** (the `Save(SeasonLoop, …)` quiescence
+precondition; header/version-row ordering); `src/season-save/tests/SeasonLoopCareerTests.cs` v1.0 →
+**v1.1** (three `EnginePath_*` cases + the ERR-030-026 lock);
+`src/match-engine/tests/MatchEngineEntryFatigueTests.cs` v1.0 → **v1.1** (the by-local-not-by-slot
+case); `src/season-save/tests/PlayerCareerStatesTests.cs` v1.0 → **v1.1** (the stale-handle lock);
+`src/season-save/tests/CareerTestRoster.cs` v1.0 → **v1.1** (doc);
+`src/training-system/ClubTrainingStates.cs` and `src/injuries-medical/ClubInjuryStates.cs` v1.0 →
+**v1.1** each (the "player order is not state" paragraph, false of the decoded form);
+`src/season-save/tests/season-save-tests.asmdef` (+ `TacticalDirector.AgentMovement`);
+`docs/tracking/spec-error-log.md` v1.68 (+ **ERR-030-026**).
+
+**Modified (pass 6):** `src/season-save/tests/PlayerCareerStatesTests.cs` v1.1 → **v1.2**
+(+ `FromBlocks_CopiesTheStateArrays_SoTheBlocksAreNotABackDoor` — pass 3's copy fix was the one of
+twelve with no enforcing test, so reverting the `Array.Copy` left every suite green);
+`src/season-save/SeasonSaveManager.cs` v1.8 → **v1.9** (the load-time filter decorator's
+shares-arrays justification, stale since pass 3); + the missing `// Modified:` header field
+(FR-CS-056/057) on the five files this landing created — `PlayerCareerStates.cs`,
+`CareerTestRoster.cs`, `SeasonLoopCareerTests.cs`, `PlayerCareerStatesTests.cs`,
+`MatchEngineEntryFatigueTests.cs`.
+
+**Prior entry — adversarial review pass 1 over the #29/#41 T2 landing —
+3 High, 4 Medium, 4 Low, all fixed; pass 2 clean.**
+
+**New:** `src/season-save/tests/SeasonSaveCareerRestoreTests.cs` v1.0 (+ `.meta`) — the
+`Save(SeasonLoop, …)` round trip and the restore-fidelity lock (a mid-match save whose squad was
+availability-filtered must restore the same eleven).
+
+**Modified:** `src/season-save/PlayerCareerStates.cs` v1.0 → **v1.1** (`FromBlocks` requires ascending
+player ids — H1; block accessors `internal`; `SyncToRoster` split into `PrepareRosterSync` /
+`CommitRosterSync`; + `RosterGeneration`, + `CarriesClub`); `src/season-save/SeasonLoop.cs` v1.6 →
+**v1.7** (career/season club-coverage gate; the roster reconciliation staged at (d′) and installed
+after (e); `World` `internal`); `src/season-save/SeasonSaveManager.cs` v1.6 → **v1.7** (`Load`
+re-applies the availability filter for an in-progress match — H2; + the `Save(SeasonLoop, match, path)`
+overload); `src/match-engine/LineupSelector.cs` v1.2 → **v1.3** (one `TrySelect` walk, `Select` and
+`CanSelect` as wrappers — H3); `src/match-engine/tests/LineupSelectorTests.cs` v1.0 → **v1.1** (the
+`CanSelect`/`Select` equivalence lock); `src/season-save/tests/PlayerCareerStatesTests.cs` and
+`src/season-save/tests/SeasonLoopCareerTests.cs` (the ordering, generation, staged-plan, club-coverage
+and regen-insertion locks); `docs/tracking/CHANGELOG.md`, `docs/tracking/CHANGELOG-src.md` v2.77,
+this file.
+
+No `SNAPSHOT_SCHEMA_VERSION` change, no format bump, no new RNG stream / domain tag / draw site /
+draw-order change. **NO GATE RUN** — still no .NET SDK and the installer is still 403 at the proxy;
+CI on push is the gate.)
+
+**Last Updated (prior):** August 6, 2026, latest same day (**#29/#41 T2 — the wiring. Both subsystems now
+produce state; `PlayerCareerStates` is the #30-side owner T1 was missing.**
+
+**New:** `src/season-save/PlayerCareerStates.cs` v1.0 (+ `.meta`),
+`src/season-save/tests/PlayerCareerStatesTests.cs` v1.0, `src/season-save/tests/SeasonLoopCareerTests.cs`
+v1.0, `src/season-save/tests/CareerTestRoster.cs` v1.0,
+`src/match-engine/tests/MatchEngineEntryFatigueTests.cs` v1.0 (all + `.meta`).
+
+**Modified:** `src/season-save/SeasonLoop.cs` v1.5 → **v1.6** (the optional career/provider pair, slots
+2 and 4 live on the pre-increment world day, the FR-MD-023 availability filter at the ERR-030-009
+resolve→filter→configure position on both resolution paths, #29's match-entry fatigue into the engine
+boot, and the (d′) FR-TR-025 / FR-MD-025 roster reconciliation before `RollToNextSeason`'s commits);
+`src/match-engine/MatchEngine.cs` v1.63 → **v1.64** (the four-argument `ConfigureSquads` seeding
+`AerobicPool = 1 − fatigue`; null ⇒ rested ⇒ byte-identical); `src/match-engine/SquadRating.cs` v1.0 →
+**v1.1** and `src/match-engine/LineupSelector.cs` v1.1 → **v1.2** (`CanFieldStartingEleven` /
+`CanSelect`, the viability probe the depleted-squad press-back-in loop needs — a player-count rule
+cannot see that a squad has eighteen fit outfielders and no goalkeeper); `docs/tracking/CHANGELOG.md`,
+`docs/tracking/CHANGELOG-src.md` v2.76, `docs/tracking/spec-error-log.md` v1.67 (ERR-029-006 +
+ERR-041-010), `docs/tracking/path-to-playable-roadmap.md` (D2/D3), `CLAUDE.md` (OPEN ISSUES + the
+assembly map), `README.md`, `docs/tracking/training-system-design.md`,
+`docs/tracking/injuries-medical-design.md`, this file.
+
+No `SNAPSHOT_SCHEMA_VERSION` change (the aerobic reservoir was already serialized — proven by a
+save/restore round-trip), no format bump, no new RNG stream / domain tag / draw site / draw-order
+change. **NO GATE RUN** — the authoring environment still has no .NET SDK and the installer is still
+403 at the proxy; CI on push is the gate.)
+**Last Updated (prior):** August 7, 2026 (**Unity client P5a — the UGUI shell's decisions extracted into
+`match-client-core`, and §5-P5 split into P5a / P5b to make that a phase.** New in
+`src/match-client-core/`: `PlaybackSpeedLadder.cs`, `MatchControlAvailability.cs`,
+`MatchControlLockReason.cs` (all v1.0), plus `tests/PlaybackSpeedLadderTests.cs` (11) and
+`tests/MatchControlAvailabilityTests.cs` (7). Modified: `MatchClientConstants.cs` v1.5 → v1.6 (the
+`RequireStreamerAcceptsSpeed` cross-catalogue pairing check, applied at all four speed initialisers,
++ `using TacticalDirector.MatchViewer;` — already an asmdef reference and already imported by three
+sibling files, so **no asmdef change and no new edge in the reference graph**) and
+`tests/MatchClientConstantsTests.cs` v1.3 → v1.4 (+2). `match-client-core` 135 → ~157 expected.
+**No new assembly**, no `SNAPSHOT_SCHEMA_VERSION` change, no new RNG stream / domain tag / draw site
+/ draw-order change, no spec status change, no ERR filed — the cap gap was a missing *enforcement* of
+an existing §5-P0 design note rather than a contradiction in one. **Gate NOT RUNNABLE here:** no .NET
+SDK, and `dot.net` / `builds.dotnet.microsoft.com` / `dotnetcli.azureedge.net` all return 403 at the
+agent proxy (the install script itself is reachable from GitHub raw, so the block is on the binaries),
+making CI on push the only compiler — the same caveat and the same resolution as #29/#41 T0 and T1.)
+
+**Last Updated (prior):** August 7, 2026 (**ERR-008-021 GATE RUN — PASSED. No file changes; this entry
+records the run and retires the "gate NOT runnable" caveats carried by the two entries below.**
+PR #305, CI run 404, head `3f207ee`. Build 0 errors (5 warnings, the known count);
+`DecisionTree.Tests` **120 passed / 0 failed / 4 skipped / 124 total** carrying the 7 `ShotLane_*`
+locks; whole-tree gate PASSED with the quarantine empty; `MatchEngine.Tests` 420/430 unchanged —
+the intended digest movement tripped no scenario band. **Modified:** `docs/tracking/CHANGELOG.md`,
+`docs/tracking/CHANGELOG-src.md` v2.78, `docs/tracking/spec-error-log.md` v1.69,
+`docs/tracking/open-issues.md`, `CLAUDE.md` (OPEN ISSUES football-judgment entry), this file.
+The authoring environment still has no .NET SDK; CI on push remains the only compiler.)
+
+**Last Updated (prior):** August 6, 2026, after the AR pass (**ERR-008-021 AR-1 — 1 High, 7 Medium, 5 Low,
+all fixed.** No new files. **Modified:** `src/decision-tree/OptionGenerator.cs` v1.8 (single
+GK-candidate exemption replacing the band-wide one — H-1; `VisionFidelity` hoisted; gate boundary
+aligned to the spec's strict ">"), `src/decision-tree/Tests/OptionGeneratorTests.cs` v1.8 (+H-1
+lock, margins, anti-vacuity assertions, production post assignment in both away fixtures),
+`src/decision-tree/UtilityWeights.cs` v1.11 (doc only — the three shared `[GT]`s name their second
+consumer), `docs/specs/decision-tree/section-3-1.md` v1.5, `docs/specs/decision-tree/section-3-2.md`
+v1.13, `docs/specs/decision-tree/section-3-2-3-to-3-2-9.md` (step 3a single-candidate form +
+Known-limitation direction corrected), `docs/tracking/spec-error-log.md` v1.68,
+`docs/tracking/football-judgment-proxy-review.md`, `docs/tracking/open-issues.md`,
+`docs/tracking/CHANGELOG.md`, `docs/tracking/CHANGELOG-src.md` v2.77, `CLAUDE.md`, `README.md`,
+this file. Gate NOT runnable; CI on push is the gate.)
+
+**Last Updated (prior):** August 6, 2026, latest of all (**ERR-008-021 — the shot-lane occlusion ability
+weighting, the follow-up deferred at the ERR-008-020 landing.** No new files, no new assembly.
+**Modified:** `src/decision-tree/OptionGenerator.cs` v1.7 (outfield blocker occlusion ×
+`PerceivedInterceptAbility` through the shooter's Vision fidelity; GK arc stays geometric),
+`src/decision-tree/Tests/OptionGeneratorTests.cs` v1.7 (+6 locks incl. away mirror + GK exclusion),
+`docs/specs/decision-tree/section-3-1.md` v1.4, `docs/specs/decision-tree/section-3-2.md` v1.12,
+`docs/specs/decision-tree/section-3-2-3-to-3-2-9.md` (§3.2.3.2 step 3a + worked example + legacy
+example annotation), `docs/tracking/spec-error-log.md` v1.67 (ERR-008-021 filed + resolved),
+`docs/tracking/football-judgment-proxy-review.md`, `docs/tracking/open-issues.md`,
+`docs/tracking/CHANGELOG.md`, `docs/tracking/CHANGELOG-src.md` v2.76, `CLAUDE.md` (OPEN ISSUES
+football-judgment entry), `README.md`, this file. Zero new constants — the ERR-008-020 `[GT]`s are
+reused. Gate NOT runnable in the authoring environment; CI on push is the gate.)
 
 **Last Updated (prior):** August 6, 2026, latest same day (**#29/#41 T1 GATE RUN — PASSED. No file
 changes; this entry records the run and retires the "no gate run" caveat carried by the two entries
@@ -1924,10 +2065,10 @@ Presentation-layer derivation. Read-only over two taps (FR-AN-002); no sim assem
 
 ---
 
-### `src/match-client-core/` — the interactive Unity client's host-free core (P0–P4a + P6, July 24 – August 3, 2026)
+### `src/match-client-core/` — the interactive Unity client's host-free core (P0–P4a + P5a + P6, July 24 – August 7, 2026)
 
 Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P0 … §5-P4a,
-plus the head-less half of §5-P6).
+§5-P5a, plus the head-less half of §5-P6).
 **Host-free and CI-gated** — this is the half of the interactive Unity client that carries every
 determinism-bearing concern (session, command channel, tick-stamped log, view-state math), split from
 the Unity-only skin precisely so it stays under `tools/dotnet-ci` on every push. Consumed by
@@ -1957,6 +2098,9 @@ the Unity-only skin precisely so it stays under `tools/dotnet-ci` on every push.
 | `AgentRenderModel.cs` | **P4a** — one agent's resolved draw state: team, shirt, view position, marker and possession-ring radii, live goalkeeper flag, cards, sent-off, substitute. Colour-free — a palette has no correct answer a test could assert |
 | `BallRenderModel.cs` | **P4a** — the ball's resolved draw state: shadow at the ground point, sprite lifted and grown with height, the raw engine height, and both radii |
 | `MatchRenderProjection.cs` | **P4a** — frame + interpolated positions → the draw states above. Positions from the P3 interpolator's buffer (what is actually drawn); every discrete cue from the newest frame (cues do not interpolate). Allocation-free; fail-loud on every shape mismatch |
+| `PlaybackSpeedLadder.cs` | **P5a** — the four `[GT]` playback multipliers as an *ordered* ladder plus the stepping semantics. The catalogue holds the dials; this holds the order, the opening rung (real time), and what a faster/slower click does at the ends — **clamps, never wraps**, since a faster-click at 10× dropping the viewer to 1× reads as a fault rather than a limit. Pause is deliberately not a rung: it is a streamer state, and 0× is outside the streamer's legal range |
+| `MatchControlAvailability.cs` | **P5a** — which match-view controls are live and why, as three states resolved from the latest frame (`AwaitingFirstFrame`/`Live`/`FullTime`). Resolves §5-P5's "the UI gates tactical input at full time so a click does not silently no-op". **Save stays enabled at full time** (§6.3 — `ServiceOnce()` needs no tick, and locking it would make a completed match unsaveable), and a frameless streamer does **not** resolve to `Live`, since `default(LiveMatchFrame).MatchEnded` is `false`. Documents at length that it is §6.2's best-effort early-out and **not** the sim-side guarantee |
+| `MatchControlLockReason.cs` | **P5a** — why a control is locked (`None = 0`/`AwaitingFirstFrame`/`MatchEnded`), so the shell can explain a disabled control instead of presenting a dead button. Zero-valued the way `ManagerCommandKind.None` and `IntentKind.None` are |
 | `tests/match-client-core-tests.asmdef` | `TacticalDirector.MatchClientCore.Tests` (Editor-only); gains `TacticalDirector.TestingStrategy` at P6 so the closed-loop scenarios run on the #19 `ScenarioRunner` |
 | `tests/RecordingMutations.cs` | Test double over `ILiveMatchMutations` |
 | `tests/ManagerCommandQueueTests.cs` | FIFO, thread-safe enqueue, the exactly-three-game-kinds §6.4 lock, default-command reject |
@@ -1970,6 +2114,8 @@ the Unity-only skin precisely so it stays under `tools/dotnet-ci` on every push.
 | `PitchCameraRig.cs` | **P4a (KD-P4a-2)** — where the camera goes: height, tilt measured **from vertical**, and the lateral offset that makes the view oblique enough to read depth. Reports its own effective tilt, which the offset skews on purpose |
 | `tests/PitchCameraRigTests.cs` | **P4a (KD-P4a-2)** — placement, the tilt convention, the deliberate skew, both-ends tracking, and the closing loop: a ray from the camera to its own aim point must return the target through `TryGroundHit` |
 | `tests/MatchClientConstantsTests.cs` | **P4a AR M-4** — drives the catalogue's boot-time `[GT]` validators directly (`RequireAtLeast`, `RequireGreaterThan`), including the NaN case the naive `value < minimum` form would have let through. They are otherwise reachable only from a config file |
+| `tests/PlaybackSpeedLadderTests.cs` | **P5a** — rung count, the ascending-order property `StepFaster` depends on, the opening rung, end-clamping in both directions, round-trip through `TryIndexOf`, refusal off either end, copy-not-view on `SnapshotRungs`, and the pairing assertion that every rung sits inside the streamer's `[Min, Max]` |
+| `tests/MatchControlAvailabilityTests.cs` | **P5a** — the three states, resolution from a live frame, the §6.3 save-survives-full-time lock, and the frameless-streamer-is-not-`Live` guard (the defect a `From` reading the frame unconditionally would have) |
 | `tests/PitchMarkingsTests.cs` | **P4a** — count and determinism, the four common markings, **every end-specific marking mirrored exactly at the other end**, IFAB distances read back against `MatchViewerConstants`, and the unused-field-is-zero contract |
 | `tests/MatchRosterTests.cs` | **P4a** — per-team 1-based numbering (keeper on 1, asserted for **both** teams), uniqueness, an interleaved-order case that discriminates the rule from `index / 11`, copy semantics, argument guards |
 | `tests/MatchRenderProjectionTests.cs` | **P4a** — which source each field comes from (the positions-must-come-from-the-interpolator lock), the goalkeeper flag following a substitution, possession ringing mirrored to both teams, every shape guard, and the ball's shadow / lift / capped-scale cues |

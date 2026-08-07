@@ -1,8 +1,8 @@
 // File:     src/match-client-core/MatchClientConstants.cs
 // Created:  2026-07-24
-// Modified: 2026-08-04
+// Modified: 2026-08-07
 // Author:   —
-// Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P0/§5-P3/§5-P4a),
+// Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P0/§5-P3/§5-P4a/§5-P5),
 //           Code Standards #20 (constant catalogue; no magic numbers)
 // Purpose:  Constant catalogue for the host-free interactive-client core: the master-plan
 //           playback-speed set the UI presents (Pause is a streamer state, not a multiplier), the P3
@@ -10,6 +10,8 @@
 //           (height, tilt, lateral offset, field of view), and the P4a render-cue sizes.
 
 using System;
+
+using TacticalDirector.MatchViewer;
 
 using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
 
@@ -28,16 +30,20 @@ namespace TacticalDirector.MatchClientCore
         #region GT — playback-speed set (master plan §3.4: Pause / 1× / 3× / 5× / 10×)
 
         /// <summary>[GT] Real-time playback multiplier (1×). Config key [match-client] Speed1x.</summary>
-        public static readonly float Speed1x = Config.GetFloat("match-client", "Speed1x", 1f);
+        public static readonly float Speed1x = RequireStreamerAcceptsSpeed(
+            Config.GetFloat("match-client", "Speed1x", 1f), "Speed1x");
 
         /// <summary>[GT] Fast playback multiplier (3×). Config key [match-client] Speed3x.</summary>
-        public static readonly float Speed3x = Config.GetFloat("match-client", "Speed3x", 3f);
+        public static readonly float Speed3x = RequireStreamerAcceptsSpeed(
+            Config.GetFloat("match-client", "Speed3x", 3f), "Speed3x");
 
         /// <summary>[GT] Faster playback multiplier (5×). Config key [match-client] Speed5x.</summary>
-        public static readonly float Speed5x = Config.GetFloat("match-client", "Speed5x", 5f);
+        public static readonly float Speed5x = RequireStreamerAcceptsSpeed(
+            Config.GetFloat("match-client", "Speed5x", 5f), "Speed5x");
 
-        /// <summary>[GT] Fastest playback multiplier (10×). Config key [match-client] Speed10x. Requires <c>MatchViewerConstants.MaxLiveSpeedMultiplier</c> ≥ 10 (§5-P0).</summary>
-        public static readonly float Speed10x = Config.GetFloat("match-client", "Speed10x", 10f);
+        /// <summary>[GT] Fastest playback multiplier (10×). Config key [match-client] Speed10x. Requires <c>MatchViewerConstants.MaxLiveSpeedMultiplier</c> ≥ 10 (§5-P0) — now enforced at load rather than left as prose.</summary>
+        public static readonly float Speed10x = RequireStreamerAcceptsSpeed(
+            Config.GetFloat("match-client", "Speed10x", 10f), "Speed10x");
 
         #endregion
 
@@ -328,6 +334,38 @@ namespace TacticalDirector.MatchClientCore
             return value;
         }
 
+        /// <summary>
+        /// Returns <paramref name="multiplier"/>, or throws when the streamer would refuse it — i.e.
+        /// when it falls outside [<c>MatchViewerConstants.MinLiveSpeedMultiplier</c>,
+        /// <c>MatchViewerConstants.MaxLiveSpeedMultiplier</c>].
+        ///
+        /// <para>A pairing check across two catalogues, in the shape of
+        /// <see cref="RequireFarRayMeetsGround"/>: each dial is individually legal, and it is the pair
+        /// that is wrong. <c>LiveMatchStreamer.SetSpeedMultiplier</c> already fail-louds on an
+        /// out-of-range multiplier, so without this the failure surfaces the first time a viewer
+        /// clicks that speed button, mid-match — and only that button, so a cap misconfigured to 5
+        /// ships a 10× control that throws and a 1×/3×/5× set that works. Checking at load turns "the
+        /// fastest button crashes during a match" into "the process refuses to start", which is the
+        /// §5-P0 note about the cap needing to be ≥ 10 turned from prose into an assertion.</para>
+        /// </summary>
+        /// <exception cref="InvalidOperationException">The streamer would reject the multiplier.</exception>
+        internal static float RequireStreamerAcceptsSpeed(float multiplier, string key)
+        {
+            float minimum = MatchViewerConstants.MinLiveSpeedMultiplier;
+            float maximum = MatchViewerConstants.MaxLiveSpeedMultiplier;
+
+            if (!(multiplier >= minimum) || !(multiplier <= maximum))
+            {
+                throw new InvalidOperationException(
+                    "[match-client] " + key + " is " + Inv(multiplier) +
+                    ", which LiveMatchStreamer.SetSpeedMultiplier would reject: [match-viewer] " +
+                    "MinLiveSpeedMultiplier/MaxLiveSpeedMultiplier admit only [" + Inv(minimum) +
+                    ", " + Inv(maximum) + "]. Raise the cap or lower the speed step.");
+            }
+
+            return multiplier;
+        }
+
         private static string Inv(float value) =>
             value.ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
@@ -379,4 +417,10 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | validation at all, and it lands straight in the camera's world  |
 // |         |            |        | position — now RequireFinite (either sign is meaningful, so a   |
 // |         |            |        | range would be wrong).                                          |
+// | 1.6     | 2026-08-07 | —      | §5-P5 host-free half: the four playback speeds are now paired-  |
+// |         |            |        | checked against the streamer's own [Min,Max] cap at load        |
+// |         |            |        | (RequireStreamerAcceptsSpeed). SetSpeedMultiplier already       |
+// |         |            |        | fail-louds, so a cap below a step used to surface as one speed  |
+// |         |            |        | button throwing mid-match while the others worked — the §5-P0   |
+// |         |            |        | "cap must be >= 10" note was prose with nothing enforcing it.   |
 #endregion

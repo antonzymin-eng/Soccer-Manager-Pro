@@ -4,6 +4,7 @@
     "references": [
         "TacticalDirector.SeasonSave",
         "TacticalDirector.MatchEngine",
+        "TacticalDirector.AgentMovement",
         "TacticalDirector.LivingWorld",
         "TacticalDirector.DeterministicSim",
         "TacticalDirector.PlayerDatabase",

@@ -29,10 +29,22 @@ namespace TacticalDirector.TrainingSystem
     /// is alive. Encoding takes a snapshot of the bytes, not of the arrays.
     /// </para>
     /// <para>
-    /// <b>Player order is not state.</b> The block is a map keyed by player id (FR-TR-019), so the codec
-    /// canonicalizes to ascending player id on encode; this type imposes no order of its own and a
-    /// decoded value may present its players in a different order than the one that was saved. What
-    /// round-trips field-identically is each player's <see cref="TrainingState"/>, keyed by his id.
+    /// <b>Player order is not state — but a DECODED block is nevertheless strictly ascending, and a
+    /// consumer depends on it.</b> The block is a map keyed by player id (FR-TR-019), so nothing here
+    /// is ordered by the order players were saved in; this type's own constructor imposes no order at
+    /// all. What is guaranteed is narrower and load-bearing: <see cref="TrainingSaveCodec.Encode"/>
+    /// canonicalizes to ascending player id and <see cref="TrainingSaveCodec.Decode"/> <i>gates</i> it
+    /// (<c>SaveBlobFramingHelpers.RequireAscending</c>), so every block that comes out of a save file is
+    /// strictly ascending.
+    /// <para>
+    /// <c>PlayerCareerStates.FromBlocks</c> in <c>season-save</c> relies on exactly that — every lookup
+    /// in that type is a binary search over these ids — and re-checks it, because this constructor is
+    /// public and a hand-built block would otherwise make a carried player un-findable and get his
+    /// season of state overwritten. <b>Do not relax the decode gate on the grounds that "order is not
+    /// state".</b> It is not state; it is a decoded-form invariant with a consumer.
+    /// </para>
+    /// <para>
+    /// What round-trips field-identically is each player's <see cref="TrainingState"/>, keyed by his id.
     /// </para>
     /// </summary>
     public readonly struct ClubTrainingStates
@@ -79,9 +91,12 @@ namespace TacticalDirector.TrainingSystem
         /// <summary>The number of players in the block. Zero for a <c>default</c> value.</summary>
         public int Count => PlayerIds == null ? 0 : PlayerIds.Length;
 
-        // No ToSchedule() convenience here. A TrainingSchedule over these same arrays is one line at the
-        // call site, and this assembly does not add a public member with no consumer — T2, which will
-        // actually hold both, is where that seam earns its place (the FR-LW-031 posture).
+        // No ToSchedule() convenience here, and T2 confirmed it should stay that way. The club-scoped
+        // bind belongs on whoever OWNS the arrays — season-save's PlayerCareerStates — and a second
+        // construction path from a block would reintroduce exactly the id/state pairing hazard
+        // TrainingSchedule exists to prevent. T2 went further still: it does not hand the handle out at
+        // all (PlayerCareerStates.TrySetFocus is a command), because a handle over borrowed arrays goes
+        // stale the moment the roster is reconciled.
     }
 }
 
@@ -89,4 +104,11 @@ namespace TacticalDirector.TrainingSystem
 // | Version | Date       | Author | Notes                                                              |
 // | 1.0     | 2026-08-06 | —      | Initial implementation (#29 T1): the per-club unit TrainingSave-   |
 // |         |            |        | Codec encodes, with the TrainingSchedule bind-once discipline.     |
+// | 1.1     | 2026-08-06 | —      | #29/#41 T2 AR pass 3 (L, doc only). "Player order is not state"    |
+// |         |            |        | read as licence to treat a decoded block's order as arbitrary,     |
+// |         |            |        | and it is not: Decode GATES ascending ids, and season-save's       |
+// |         |            |        | PlayerCareerStates.FromBlocks binary-searches them. Acting on the  |
+// |         |            |        | old wording — relaxing the gate — would make FromBlocks refuse     |
+// |         |            |        | valid saves. Now states which guarantee is which, and that the     |
+// |         |            |        | decoded form is an invariant with a named consumer.                |
 #endregion
