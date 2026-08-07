@@ -1,6 +1,6 @@
 // File:     src/ui-framework/Tests/MatchViewObserverNeutralityTests.cs
 // Created:  2026-07-25
-// Modified: 2026-07-25
+// Modified: 2026-08-07
 // Author:   —
 // Spec:     UI / Client Framework #38 §5.1 (T-UI-NEU-001, T-UI-LAYER-001, FR-UI-001/017),
 //           Code Standards #20
@@ -128,6 +128,7 @@ namespace TacticalDirector.UiFramework.Tests
             {
                 "ui-framework", "ui-framework-tests",           // itself
                 "match-client-web", "match-client-web-tests",   // roadmap B6 — the PM-1 browser client
+                "client-app", "client-app-tests",               // roadmap B9c — the screen catalogue / navigation graph (FR-UI-010 puts a concrete screen set above the framework)
             };
 
             var mustNeverReference = new HashSet<string>
@@ -189,4 +190,7 @@ namespace TacticalDirector.UiFramework.Tests
 // | 1.0     | 2026-07-25 | —      | Initial creation: T-UI-NEU-001 digest-chain neutrality (with a |
 // |         |            |        | non-vacuity guard) and T-UI-LAYER-001 reverse-reference scan   |
 // |         |            |        | with fail-loud root resolution + a scanned-count floor.        |
+// | 1.1     | 2026-08-07 | —      | client-app (+ its tests) added to the sanctioned renderers —   |
+// |         |            |        | roadmap B9c, the screen catalogue above the framework. The     |
+// |         |            |        | scan fired exactly as designed at the B9c landing's gate run.  |
 #endregion
