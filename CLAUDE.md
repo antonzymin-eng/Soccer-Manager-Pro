@@ -329,7 +329,14 @@ evidence. The two that need a review step invoke `adversarial-review` rather tha
 - Goalkeeper Mechanics (#11) / Heading Mechanics (#10) engine integration — Phase 1 (opt-in) LANDED; the GK/Heading attribute projections now have a live consumer — REMAINDER: `CollisionConsumer` AGENT_BALL duel fan-out, DT-emitted HEADER (ordinal 8 → composure-noise rebaseline), attribute-modulated save commit
 - Advanced positional behaviors + game-model/AI-manager tactics — design supplements OPENED (candidate specs #23–#26) — all four promoted to specs and landed; REMAINDER: #26 §9.2 own-`[GT]` balance review
 - Living World (#22) season/world loop — slices 1–7 LANDED (incl. the KD-10 season composition root + the InteractionTextGenerator wired into it + deep-memory auto-cite + the opt-in arc-trigger evaluator / `world.arcs` sub-stream); upstream-gated services open
-- UI / Client Framework (#38) — T0 substrate LANDED; Wave-7 screens + the UGUI binding remain open
+- UI / Client Framework (#38) — T0 substrate LANDED; Wave-7 screens + the UGUI binding remain open.
+  **A live governance question was surfaced by the August 7, 2026 P5a landing** and gates P5b: the
+  four screens' `ScreenId` catalogue and navigation graph has **no correct home**. FR-UI-010 is
+  explicit that the framework hard-codes no screen, so it does not belong in `ui-framework`; and
+  `ui-framework` sits *above* `match-client-core`, so the core cannot hold a `ScreenId` either. The
+  remaining candidates are `match-client-unity` (gate-invisible, wrong by §12 rule 1) or a new
+  assembly above `ui-framework`. Same shape as roadmap §6 item 2's C3 question — needs owner sign-off,
+  not an implementation-pass guess
 - Presentation layer — minimal match viewer LANDED; interactive Unity client remains open. Its host-free
   phases are now ALL complete: P0/P2 (July 24), P1/P3 (July 27), **the head-less half of P6
   (August 3)** — `MatchSession.TickOnce/CaptureSave/RestoreFrom`, `TickStampedCommandReplay`, and the
@@ -338,10 +345,21 @@ evidence. The two that need a review step invoke `adversarial-review` rather tha
   `PitchMarkings` (the IFAB catalogue as shapes, off the existing `[FIXED]` values),
   `MatchRoster`, and `MatchRenderProjection` → `AgentRenderModel`/`BallRenderModel`. P4 was split on
   the standing "keep logic out of `MonoBehaviour`s" rule: **P4a is every render decision, P4b is the
-  binding.** REMAINDER: **P4b/P5 and the on-host half of P6** — the Unity binding, the UGUI shell,
+  binding.** — and **P5a, the shell's decisions (August 7, 2026)**: `PlaybackSpeedLadder` (the four
+  `[GT]` playback multipliers as an *ordered* ladder — opening rung named, stepping clamps rather than
+  wraps, pause deliberately not a rung) and `MatchControlAvailability`/`MatchControlLockReason`
+  (§5-P5's "gate tactical input at full time so a click does not silently no-op", as three states
+  carrying why each is locked; **save stays enabled at full time** per §6.3, and a frameless streamer
+  does **not** resolve to Live, since `default(LiveMatchFrame).MatchEnded` is false). **P5 was split
+  P4a-style on the same rule: P5a is every shell decision, P5b is the binding.** Its one finding: the
+  §5-P0 note requiring `MaxLiveSpeedMultiplier ≥ 10` had nothing enforcing it, and because
+  `SetSpeedMultiplier` fail-louds rather than clamping, a cap below a step would have shipped a 10×
+  button that throws mid-match while 1×/3×/5× worked — now a load-time cross-catalogue pairing check.
+  REMAINDER: **P4b/P5b and the on-host half of P6** — the Unity binding, the UGUI shell,
   scene boot, 60 FPS, live tactical input through a screen, and the FR-PO-052-class render-loop perf
   capture. All need the pinned host; the host block itself cleared July 19, 2026, so the gap is
-  unwritten code, not access.
+  unwritten code, not access. **P5b additionally has one open layering decision ahead of it** — where
+  the four screens' `ScreenId` catalogue lives (see the #38 entry above).
   **ESCALATED August 3, 2026 — owner reversed roadmap B6: the product ships this Unity client, not the
   web-hosted viewer, so P4 is now the critical path rather than a later native target.** Two standing
   rules, recorded in `interactive-unity-client-design.md` §12 and `path-to-playable-roadmap.md` §7/C2:

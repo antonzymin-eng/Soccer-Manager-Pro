@@ -91,6 +91,22 @@ No `SNAPSHOT_SCHEMA_VERSION` change (the aerobic reservoir was already serialize
 save/restore round-trip), no format bump, no new RNG stream / domain tag / draw site / draw-order
 change. **NO GATE RUN** — the authoring environment still has no .NET SDK and the installer is still
 403 at the proxy; CI on push is the gate.)
+**Last Updated (prior):** August 7, 2026 (**Unity client P5a — the UGUI shell's decisions extracted into
+`match-client-core`, and §5-P5 split into P5a / P5b to make that a phase.** New in
+`src/match-client-core/`: `PlaybackSpeedLadder.cs`, `MatchControlAvailability.cs`,
+`MatchControlLockReason.cs` (all v1.0), plus `tests/PlaybackSpeedLadderTests.cs` (11) and
+`tests/MatchControlAvailabilityTests.cs` (7). Modified: `MatchClientConstants.cs` v1.5 → v1.6 (the
+`RequireStreamerAcceptsSpeed` cross-catalogue pairing check, applied at all four speed initialisers,
++ `using TacticalDirector.MatchViewer;` — already an asmdef reference and already imported by three
+sibling files, so **no asmdef change and no new edge in the reference graph**) and
+`tests/MatchClientConstantsTests.cs` v1.3 → v1.4 (+2). `match-client-core` 135 → ~157 expected.
+**No new assembly**, no `SNAPSHOT_SCHEMA_VERSION` change, no new RNG stream / domain tag / draw site
+/ draw-order change, no spec status change, no ERR filed — the cap gap was a missing *enforcement* of
+an existing §5-P0 design note rather than a contradiction in one. **Gate NOT RUNNABLE here:** no .NET
+SDK, and `dot.net` / `builds.dotnet.microsoft.com` / `dotnetcli.azureedge.net` all return 403 at the
+agent proxy (the install script itself is reachable from GitHub raw, so the block is on the binaries),
+making CI on push the only compiler — the same caveat and the same resolution as #29/#41 T0 and T1.)
+
 **Last Updated (prior):** August 7, 2026 (**ERR-008-021 GATE RUN — PASSED. No file changes; this entry
 records the run and retires the "gate NOT runnable" caveats carried by the two entries below.**
 PR #305, CI run 404, head `3f207ee`. Build 0 errors (5 warnings, the known count);
@@ -1998,10 +2014,10 @@ Presentation-layer derivation. Read-only over two taps (FR-AN-002); no sim assem
 
 ---
 
-### `src/match-client-core/` — the interactive Unity client's host-free core (P0–P4a + P6, July 24 – August 3, 2026)
+### `src/match-client-core/` — the interactive Unity client's host-free core (P0–P4a + P5a + P6, July 24 – August 7, 2026)
 
 Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P0 … §5-P4a,
-plus the head-less half of §5-P6).
+§5-P5a, plus the head-less half of §5-P6).
 **Host-free and CI-gated** — this is the half of the interactive Unity client that carries every
 determinism-bearing concern (session, command channel, tick-stamped log, view-state math), split from
 the Unity-only skin precisely so it stays under `tools/dotnet-ci` on every push. Consumed by
@@ -2031,6 +2047,9 @@ the Unity-only skin precisely so it stays under `tools/dotnet-ci` on every push.
 | `AgentRenderModel.cs` | **P4a** — one agent's resolved draw state: team, shirt, view position, marker and possession-ring radii, live goalkeeper flag, cards, sent-off, substitute. Colour-free — a palette has no correct answer a test could assert |
 | `BallRenderModel.cs` | **P4a** — the ball's resolved draw state: shadow at the ground point, sprite lifted and grown with height, the raw engine height, and both radii |
 | `MatchRenderProjection.cs` | **P4a** — frame + interpolated positions → the draw states above. Positions from the P3 interpolator's buffer (what is actually drawn); every discrete cue from the newest frame (cues do not interpolate). Allocation-free; fail-loud on every shape mismatch |
+| `PlaybackSpeedLadder.cs` | **P5a** — the four `[GT]` playback multipliers as an *ordered* ladder plus the stepping semantics. The catalogue holds the dials; this holds the order, the opening rung (real time), and what a faster/slower click does at the ends — **clamps, never wraps**, since a faster-click at 10× dropping the viewer to 1× reads as a fault rather than a limit. Pause is deliberately not a rung: it is a streamer state, and 0× is outside the streamer's legal range |
+| `MatchControlAvailability.cs` | **P5a** — which match-view controls are live and why, as three states resolved from the latest frame (`AwaitingFirstFrame`/`Live`/`FullTime`). Resolves §5-P5's "the UI gates tactical input at full time so a click does not silently no-op". **Save stays enabled at full time** (§6.3 — `ServiceOnce()` needs no tick, and locking it would make a completed match unsaveable), and a frameless streamer does **not** resolve to `Live`, since `default(LiveMatchFrame).MatchEnded` is `false`. Documents at length that it is §6.2's best-effort early-out and **not** the sim-side guarantee |
+| `MatchControlLockReason.cs` | **P5a** — why a control is locked (`None = 0`/`AwaitingFirstFrame`/`MatchEnded`), so the shell can explain a disabled control instead of presenting a dead button. Zero-valued the way `ManagerCommandKind.None` and `IntentKind.None` are |
 | `tests/match-client-core-tests.asmdef` | `TacticalDirector.MatchClientCore.Tests` (Editor-only); gains `TacticalDirector.TestingStrategy` at P6 so the closed-loop scenarios run on the #19 `ScenarioRunner` |
 | `tests/RecordingMutations.cs` | Test double over `ILiveMatchMutations` |
 | `tests/ManagerCommandQueueTests.cs` | FIFO, thread-safe enqueue, the exactly-three-game-kinds §6.4 lock, default-command reject |
@@ -2044,6 +2063,8 @@ the Unity-only skin precisely so it stays under `tools/dotnet-ci` on every push.
 | `PitchCameraRig.cs` | **P4a (KD-P4a-2)** — where the camera goes: height, tilt measured **from vertical**, and the lateral offset that makes the view oblique enough to read depth. Reports its own effective tilt, which the offset skews on purpose |
 | `tests/PitchCameraRigTests.cs` | **P4a (KD-P4a-2)** — placement, the tilt convention, the deliberate skew, both-ends tracking, and the closing loop: a ray from the camera to its own aim point must return the target through `TryGroundHit` |
 | `tests/MatchClientConstantsTests.cs` | **P4a AR M-4** — drives the catalogue's boot-time `[GT]` validators directly (`RequireAtLeast`, `RequireGreaterThan`), including the NaN case the naive `value < minimum` form would have let through. They are otherwise reachable only from a config file |
+| `tests/PlaybackSpeedLadderTests.cs` | **P5a** — rung count, the ascending-order property `StepFaster` depends on, the opening rung, end-clamping in both directions, round-trip through `TryIndexOf`, refusal off either end, copy-not-view on `SnapshotRungs`, and the pairing assertion that every rung sits inside the streamer's `[Min, Max]` |
+| `tests/MatchControlAvailabilityTests.cs` | **P5a** — the three states, resolution from a live frame, the §6.3 save-survives-full-time lock, and the frameless-streamer-is-not-`Live` guard (the defect a `From` reading the frame unconditionally would have) |
 | `tests/PitchMarkingsTests.cs` | **P4a** — count and determinism, the four common markings, **every end-specific marking mirrored exactly at the other end**, IFAB distances read back against `MatchViewerConstants`, and the unused-field-is-zero contract |
 | `tests/MatchRosterTests.cs` | **P4a** — per-team 1-based numbering (keeper on 1, asserted for **both** teams), uniqueness, an interleaved-order case that discriminates the rule from `index / 11`, copy semantics, argument guards |
 | `tests/MatchRenderProjectionTests.cs` | **P4a** — which source each field comes from (the positions-must-come-from-the-interpolator lock), the goalkeeper flag following a substitution, possession ringing mirrored to both teams, every shape guard, and the ball's shadow / lift / capped-scale cues |
