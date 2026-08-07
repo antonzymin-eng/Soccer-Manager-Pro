@@ -1,7 +1,17 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 6, 2026, after the AR pass (**ERR-008-021 AR-1 — 1 High, 7 Medium, 5 Low,
+**Last Updated:** August 7, 2026 (**ERR-008-021 GATE RUN — PASSED. No file changes; this entry
+records the run and retires the "gate NOT runnable" caveats carried by the two entries below.**
+PR #305, CI run 404, head `3f207ee`. Build 0 errors (5 warnings, the known count);
+`DecisionTree.Tests` **120 passed / 0 failed / 4 skipped / 124 total** carrying the 7 `ShotLane_*`
+locks; whole-tree gate PASSED with the quarantine empty; `MatchEngine.Tests` 420/430 unchanged —
+the intended digest movement tripped no scenario band. **Modified:** `docs/tracking/CHANGELOG.md`,
+`docs/tracking/CHANGELOG-src.md` v2.78, `docs/tracking/spec-error-log.md` v1.69,
+`docs/tracking/open-issues.md`, `CLAUDE.md` (OPEN ISSUES football-judgment entry), this file.
+The authoring environment still has no .NET SDK; CI on push remains the only compiler.)
+
+**Last Updated (prior):** August 6, 2026, after the AR pass (**ERR-008-021 AR-1 — 1 High, 7 Medium, 5 Low,
 all fixed.** No new files. **Modified:** `src/decision-tree/OptionGenerator.cs` v1.8 (single
 GK-candidate exemption replacing the band-wide one — H-1; `VisionFidelity` hoisted; gate boundary
 aligned to the spec's strict ">"), `src/decision-tree/Tests/OptionGeneratorTests.cs` v1.8 (+H-1

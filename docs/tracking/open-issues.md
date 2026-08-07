@@ -19,6 +19,12 @@ history by the original convention; they were not merged.
 ---
 
 - **Football-judgment proxy review — 32 findings open across 24 specs; the §6 doctrine governs every fix; ERR-008-020 (template), ERR-008-019 (the founding long-shot cliff, August 5) and ERR-008-021 (the deferred shot-lane follow-up, August 6) LANDED** — *opened August 4, 2026 (review + doctrine + template landing all same day); ERR-008-019 landed August 5, 2026; ERR-008-021 landed August 6, 2026.*
+  **ERR-008-021 + AR-1 are GATE-VERIFIED (PR #305, CI run 404, head `3f207ee`, August 7):** build
+  0 errors, `DecisionTree.Tests` **120 passed / 0 failed / 4 skipped / 124** carrying all 7
+  `ShotLane_*` locks, whole-tree gate PASSED with the quarantine empty, and `MatchEngine.Tests`
+  **420/430 unchanged** — the intended digest movement tripped no goal-rate band or tick-window
+  scenario, so the blast-radius caution below resolves as "checked by execution, nothing moved".
+  The "gate NOT run" caveats below are retired; CI on push remains the only compiler for this work.
   **ERR-008-021 AR-1 (same day): 1 High, 7 Medium, 5 Low — all fixed.** The High: the landed P3
   exemption keyed on the whole 6 m GK band, so every near-goal defender escaped the weighting —
   inert exactly where shots are blocked — and all six original fixtures sat outside the band, so

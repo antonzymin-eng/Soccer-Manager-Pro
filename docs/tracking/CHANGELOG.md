@@ -12,7 +12,18 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 6, 2026, latest (**ERR-008-021 AR-1 — the same-day adversarial review over
+> **Last Updated:** August 7, 2026 (**ERR-008-021 gate run — PASSED. The shot-lane weighting, the
+> AR-1 fixes and all 7 new locks compiled and executed for the first time.** PR #305, CI run 404,
+> head `3f207ee`. Build 0 errors (5 warnings, the known count); `DecisionTree.Tests` **120 passed /
+> 0 failed / 4 skipped / 124 total**, carrying the 7 `ShotLane_*` locks — including the H-1
+> regression lock (an in-band defender who is not the GK candidate IS weighted) and the exact
+> GK-arc pin. Whole-tree gate PASSED with the quarantine empty; **`MatchEngine.Tests` 420/430
+> unchanged**, so the intended digest movement tripped no goal-rate band or tick-window scenario —
+> the blast-radius caution in the two entries below resolves as "checked by execution, nothing
+> moved". Retires the "gate NOT runnable" caveats on both ERR-008-021 entries; CI on push remains
+> the only compiler for this work. Prior entry below.)
+
+> **Last Updated (prior):** August 6, 2026, latest (**ERR-008-021 AR-1 — the same-day adversarial review over
 > the shot-lane landing: 1 High, 7 Medium, 5 Low, all fixed.** The High: the landed P3 exemption
 > keyed on the 6 m GK band, not the goalkeeper — so EVERY near-goal defender escaped the new ability
 > weighting, leaving it inert precisely where shots are blocked (for a 10 m shot, most of the usable
