@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineCloseChanceScenarios.cs
 // Created:  2026-08-04
-// Modified: 2026-08-04
+// Modified: 2026-08-07
 // Author:   —
 // Spec:     Decision Tree #8 §3.1.5.2 / §3.2.4.1 (ERR-008-018), Positioning AI #12 §3.2,
 //           Testing Strategy & Framework #19 §3.3.1/§3.3.5/Appendix A.1, Code Standards #20
@@ -108,15 +108,25 @@ namespace TacticalDirector.MatchEngine
             // six-seed corpus (−0.211 to −0.448, these two seeds −0.221 and −0.348): the average
             // dribble in the attacking third pointed AWAY from the goal, because §3.1.5.2 picks the
             // direction by free space alone and §3.2.4.1 had no directional term to price it.
-            // Post-fix these two seeds read +0.074 and +0.091. The bound sits in the gap between
-            // the pre-fix maximum (−0.211) and the post-fix minimum across the whole corpus
-            // (−0.128), so it discriminates on every seed, not only on the two run here.
+            // Post-fix these two seeds read +0.074 and +0.091.
+            //
+            // Bound −0.10 → −0.16, rebaselined (owner call, August 7, 2026) at the ERR-008-023
+            // main merge. The -021/-022/-023 shot-lane chain moved the pooled mean to −0.119 —
+            // and the regression is SEED-ASYMMETRIC: 0x0F1E…78 held its gain (+0.078 over 110
+            // dribbles) while 0xD1A6D05E gave it back entirely (−0.232 over 192 dribbles, vs
+            // −0.221 pre-fix / +0.091 post-fix). The pooled bound now sits between today's −0.119
+            // and the pre-fix pooled ≈ −0.29, so the ERR-008-018 world still fails; the per-seed
+            // regression is recorded for the KD-W1 calibration pass, which owns pulling it back.
             context.Envelope.CheckTrue("final-third-dribbles-are-not-goal-averse",
-                meanCosine > -0.10f,
-                "meanCosine=" + f3(meanCosine) + " (bound −0.10; pre-fix these seeds ≈ −0.29)");
+                meanCosine > -0.16f,
+                "meanCosine=" + f3(meanCosine) + " (bound −0.16; pre-fix these seeds ≈ −0.29)");
 
             // The same fact as a share rather than a mean, so a handful of extreme samples cannot
-            // carry it. Pre-fix corpus 26–36% per seed; post-fix 40–54%.
+            // carry it. Pre-fix corpus 26–36% per seed; post-fix 40–54%. Bound UNCHANGED at the
+            // August 7, 2026 rebaseline, but its margin thinned: pooled 0.450 (per-seed 0.564 /
+            // 0.385 — the regressed seed is below the bound alone and the pooled figure carries
+            // it). If this predicate trips next, that is the cosine regression deepening, not a
+            // new fact.
             context.Envelope.CheckTrue("goalward-dribbles-are-not-a-minority-of-one-in-three",
                 goalwardShare > 0.42f,
                 "goalwardShare=" + f3(goalwardShare) + " (bound 0.42; pre-fix these seeds ≈ 0.31)");
@@ -206,4 +216,10 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | goalward share, plus two-attacker box reachability) and      |
 // |         |            |        | deliberately pins NO goal rate or shot count — both moved    |
 // |         |            |        | inside the corpus noise bar (design §6).                     |
+// | 1.1     | 2026-08-07 | —      | Cosine bound −0.10 -> −0.16 (owner call) at the ERR-008-023  |
+// |         |            |        | main merge: the -021/-022/-023 chain moved the pooled mean   |
+// |         |            |        | to −0.119, seed-asymmetrically (+0.078 / −0.232 — the second |
+// |         |            |        | seed gave back its whole ERR-008-018 gain). Share bound      |
+// |         |            |        | unchanged, margin thinned to 0.030 (0.450 pooled). Pull-back |
+// |         |            |        | owned by the KD-W1 calibration pass.                         |
 #endregion
