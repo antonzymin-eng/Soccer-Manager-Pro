@@ -24,8 +24,12 @@ python3 tools/chat-review.py --repo . --out /tmp/chat-review.json --since 14
 Flags: `--since N` (days), `--projects PATH` (defaults to `~/.claude/projects`),
 omit `--out` to print to stdout. No network and no model call — it reads the
 `usage` fields Claude Code already writes to each session's JSONL, so token and
-cost figures are **measured, not estimated**. The one exception is rules-file
-size, which is a `chars/4` estimate; for an exact count run:
+cost figures are **measured, not estimated** — including the cache-write TTL
+split, which matters more than it looks: 1-hour-TTL writes price at 2.0× input
+where 5-minute writes are 1.25×, and Claude Code sessions here write 1h. The
+script priced everything at 1.25 until August 3 and understated its own sessions
+by 27%. The one exception is rules-file size, which is a `chars/4` estimate; for
+an exact count run:
 
 ```bash
 ant messages count-tokens --model claude-opus-5 \

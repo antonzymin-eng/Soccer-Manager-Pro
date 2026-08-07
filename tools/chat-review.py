@@ -39,7 +39,13 @@ SCHEMA_VERSION = 1
 # Opus 5 pricing, $ per 1M tokens. Source: claude-api skill, cached 2026-06-24.
 PRICE_IN = 5.00
 PRICE_OUT = 25.00
-CACHE_WRITE_MULT = 1.25   # 5-minute TTL; 1h TTL is 2.0
+# Cache writes price by TTL, and the gap is large enough to matter: a session
+# whose writes are all 1h TTL costs 60% more to cache than the 5m rate implies.
+# Claude Code writes the split into usage.cache_creation, so measure it rather
+# than assuming — this file assumed 1.25 flat for its first three days and
+# understated its own sessions by ~27%.
+CACHE_WRITE_MULT_5M = 1.25
+CACHE_WRITE_MULT_1H = 2.00
 CACHE_READ_MULT = 0.10
 
 # ---------------------------------------------------------------------------
@@ -50,7 +56,10 @@ THRESHOLDS = {
     "repeat_prompt_count": 3,        # same prompt shape N+ times => skill candidate
     "min_sessions": 2,               # ...and in N+ DISTINCT sessions. A run inside one
                                      # session is just the shape of that task, not a habit.
-    "context_tokens": 60_000,        # per-session cached prefix this large => trim it
+    "rules_prefix_tokens": 20_000,   # ALL rules files together this large => split them.
+                                     # Gates on the controllable share, not the whole
+                                     # cached prefix — most of that prefix is harness,
+                                     # and no repo edit can shrink it.
     "rules_file_tokens": 25_000,     # a single rules file this large => restructure
     "tool_repeat_count": 8,          # same tool+arg shape N+ times => script it
     "resolved_ratio": 0.25,          # >25% of open-issue entries say RESOLVED => archive
@@ -214,9 +223,15 @@ def analyze_session(path: Path, rows: list[dict]) -> dict:
             for name, sig in tool_calls_of(msg.get("content")):
                 tools[(name, sig)] += 1
 
+    # Split cache writes by TTL. Anything the transcript did not classify is
+    # priced at the 5m rate — that is the documented default when no ttl is set,
+    # not a guess chosen to flatter the number.
+    w_1h = usage["cache_write_1h"]
+    w_5m = usage["cache_write"] - w_1h
     cost = (
         usage["input"] * PRICE_IN
-        + usage["cache_write"] * PRICE_IN * CACHE_WRITE_MULT
+        + w_1h * PRICE_IN * CACHE_WRITE_MULT_1H
+        + w_5m * PRICE_IN * CACHE_WRITE_MULT_5M
         + usage["cache_read"] * PRICE_IN * CACHE_READ_MULT
         + usage["output"] * PRICE_OUT
     ) / 1_000_000
@@ -337,21 +352,44 @@ def build_findings(sessions: list[dict], repo: dict | None) -> list[dict]:
             "metric": len(examples),
         })
 
-    # 2. Oversized cached prefix.
-    for s in sessions:
-        if s["context_tokens"] < THRESHOLDS["context_tokens"]:
-            continue
-        write_cost = s["context_tokens"] * PRICE_IN * CACHE_WRITE_MULT / 1e6
+    # 2. Rules files that dominate the part of the prefix this repo controls.
+    #
+    #    This used to gate on the whole cached prefix, which was wrong twice
+    #    over. The prefix is mostly harness — system prompt, tool schemas, MCP
+    #    definitions, the skills listing — none of which any repo edit can
+    #    shrink; on the session that exposed this, the rules files were 15.9k of
+    #    203.8k, under 8%. So the old threshold fired forever (the floor sits
+    #    above it) while the advice it printed, "trim the always-loaded rules
+    #    files", pointed at the one part that was already small. A monitor that
+    #    always fires and misattributes the cause is worse than silence.
+    #
+    #    Gate on the controllable share instead, and print the total only as
+    #    context so the attribution stays visible. Finding 4 catches ONE
+    #    oversized rules file; this catches many small ones summing large.
+    rules = (repo or {}).get("rules_files") or []
+    rules_total = sum(e["tokens_est"] for e in rules)
+    if rules and rules_total >= THRESHOLDS["rules_prefix_tokens"]:
+        biggest = max(rules, key=lambda e: e["tokens_est"])
+        prefixes = [s["context_tokens"] for s in sessions if s["context_tokens"]]
+        share = ""
+        if prefixes:
+            typical = max(prefixes)
+            share = (f" For scale, the largest measured session prefix was "
+                     f"{typical:,} tokens, so these files are ~"
+                     f"{round(100 * rules_total / typical)}% of it — the rest is "
+                     "harness (system prompt, tool schemas, skills listing) and "
+                     "no repo edit shrinks it.")
         findings.append({
-            "id": f"context/{s['session_id'][:8]}",
+            "id": "rules-prefix/total",
             "category": "token-cost",
-            "severity": "high" if s["context_tokens"] > 150_000 else "medium",
-            "title": f"{s['context_tokens']:,} tokens loaded before turn 1",
-            "detail": f"Session {s['session_id'][:8]} paid ${write_cost:.2f} to cache "
-                      "its prefix, then ~10% of that per later turn. Trim the "
-                      "always-loaded rules files.",
-            "evidence": [f"cache_creation_input_tokens={s['context_tokens']:,}"],
-            "metric": s["context_tokens"],
+            "severity": "medium",
+            "title": f"{len(rules)} rules files total ~{rules_total:,} tokens",
+            "detail": (f"Every session in this subtree loads all of them. The "
+                       f"largest is {biggest['path']} at ~{biggest['tokens_est']:,}."
+                       f"{share} Split or trim by content that is reference "
+                       "rather than rule."),
+            "evidence": [f"{e['path']}: ~{e['tokens_est']:,}" for e in rules],
+            "metric": rules_total,
         })
 
     # 3. Repeated identical tool invocations => script it.
@@ -525,7 +563,8 @@ def main() -> int:
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "pricing": {"model": "claude-opus-5", "input_per_mtok": PRICE_IN,
                     "output_per_mtok": PRICE_OUT,
-                    "cache_write_mult": CACHE_WRITE_MULT,
+                    "cache_write_mult_5m": CACHE_WRITE_MULT_5M,
+                    "cache_write_mult_1h": CACHE_WRITE_MULT_1H,
                     "cache_read_mult": CACHE_READ_MULT},
         "summary": {
             "sessions": len(sessions),
