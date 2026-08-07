@@ -1,6 +1,11 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
-// Modified: 2026-08-06 (#29/#41 T1: the training and medical sub-blobs are composed in; doc-drift fix)
+// Modified: 2026-08-06 (#29/#41 T1: the training and medical sub-blobs are composed in; doc-drift fix.
+//           T2 AR pass 1: Load re-applies the #41 availability filter to the in-progress match's roster
+//           so restore re-selects the eleven that actually played; + a Save(SeasonLoop, match, path)
+//           overload so the career's block accessors can stay internal. AR pass 3: the overload's
+//           quiescence precondition. AR pass 6: the load-time filter decorator's stale
+//           shares-arrays-with-the-contents justification.)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-1 / KD-5..KD-8;
 //           Training System #29 §4.4 / FR-TR-018/019; Injuries & Medical #41 §4.4 / FR-MD-017/018;
@@ -24,6 +29,7 @@ using Unity.Profiling;
 using TacticalDirector.InjuriesMedical;
 using TacticalDirector.LivingWorld;
 using TacticalDirector.MatchEngine;
+using TacticalDirector.PlayerDatabase;
 using TacticalDirector.TrainingSystem;
 
 namespace TacticalDirector.SeasonSave
@@ -155,6 +161,53 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>
+        /// Saves a whole season through its loop — the form an external caller uses, because
+        /// <see cref="PlayerCareerStates"/>'s block accessors are <c>internal</c> (they hand out the
+        /// live state arrays, and a public accessor would make every holder of
+        /// <see cref="SeasonLoop.Career"/> a second writer of #29/#41 state, defeating the FR-TR-004 /
+        /// FR-TR-023 single-writer contract).
+        /// <para>
+        /// A loop with no career wired writes the two well-formed zero-club blocks a pre-T2 save
+        /// carries — the same bytes <c>Array.Empty</c> produces through the long form.
+        /// </para>
+        /// </summary>
+        /// <param name="loop">The season loop to capture: its world, its season state, and its career.</param>
+        /// <param name="matchOrNull">The in-progress match, or null when there is none (KD-3).
+        /// <b>Must be quiescent</b> — not being ticked while this call runs. Both this class and
+        /// <see cref="SeasonLoop"/> declare no thread safety, and <see cref="MatchSaveManager.Encode"/>
+        /// walks the whole engine field by field: encoding one mid-<c>RunTick</c> yields a blob mixing
+        /// pre- and post-tick state, which restores cleanly into a world the simulation never occupied
+        /// and diverges from there with every gate green.
+        /// <para>
+        /// <see cref="SeasonLoop.ActiveMatch"/> is <b>not</b> a safe source for this today: it is
+        /// non-null only inside the synchronous <see cref="SeasonLoop.AdvanceAndPlayNextRound"/> call
+        /// that is ticking it, so reading it at all means reading from another thread. A supported
+        /// mid-match save needs a seam that can stop the match between ticks first; until one exists,
+        /// pass an engine this caller owns and is not currently advancing.
+        /// </para></param>
+        /// <param name="path">The destination file.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="loop"/> is null.</exception>
+        public static void Save(SeasonLoop loop, MatchEngine.MatchEngine matchOrNull, string path)
+        {
+            if (loop == null)
+            {
+                throw new ArgumentNullException(nameof(loop));
+            }
+
+            Save(
+                loop.World,
+                loop.State,
+                matchOrNull,
+                path,
+                loop.Career != null
+                    ? loop.Career.TrainingBlocks()
+                    : Array.Empty<ClubTrainingStates>(),
+                loop.Career != null
+                    ? loop.Career.MedicalBlocks()
+                    : Array.Empty<ClubInjuryStates>());
+        }
+
+        /// <summary>
         /// Reads the season save file at <paramref name="path"/>, deframes it, and reconstructs the
         /// living-world <see cref="WorldStore"/>, the <see cref="SeasonState"/> and the per-club #29
         /// training / #41 medical state (all always — the last two possibly empty) and the
@@ -170,6 +223,13 @@ namespace TacticalDirector.SeasonSave
         /// loaded without (or with an incomplete) <paramref name="squads"/> throws from the match restore
         /// factory (KD-6 / R4). The match restore's fingerprint + MXCSR float-mode gates run here
         /// unchanged (KD-5).
+        /// <para>
+        /// <b>A save carrying a match additionally cross-checks the two career blocks</b>
+        /// (<see cref="PlayerCareerStates.FromBlocks"/>), because the availability filter has to be
+        /// rebuilt from them — see the match branch below. So a file whose training and medical blocks
+        /// describe different squads is refused here rather than restoring a match against a career
+        /// nothing else would have validated. A save with no match is untouched by this.
+        /// </para>
         /// </summary>
         /// <param name="path">The season save file to read.</param>
         /// <param name="squads">The ClubId -> Squad resolver for a distinct-squad match save; ignored
@@ -212,11 +272,75 @@ namespace TacticalDirector.SeasonSave
                     world.CurrentWorldTick + ") — the KD-4 cursor invariant (FR-SN-011) is violated.");
             }
 
-            MatchEngine.MatchEngine match = blobs.MatchBlob != null
-                ? MatchSaveManager.Restore(blobs.MatchBlob, squads)
-                : null;
+            // The in-progress match was configured with the AVAILABILITY-FILTERED squad (#41 FR-MD-023,
+            // #29/#41 T2), and the snapshot records only each team's ClubId — it cannot record "which
+            // eighteen of the twenty-five". So restoring through the raw provider hands
+            // ReprojectDistinctSquads the FULL roster, it re-runs LineupSelector over a different
+            // candidate set, and the restored eleven is not the eleven that took the pitch: different
+            // canonical attribute records on every slot, every gate green (the ClubId matches, the size
+            // check passes), and the match then diverges from the pre-save run with nothing to announce
+            // it. Re-applying the same filter — from the medical state carried in THIS file, which is
+            // the state the match was configured against — reproduces the exact squad, so selection
+            // lands on the same eleven.
+            //
+            // Pass-through for a club the career does not carry, which is every club of every save
+            // written before T2 (both blocks empty): the decorator is then the identity and the restore
+            // is bit-for-bit what it was.
+            MatchEngine.MatchEngine match = null;
+            if (blobs.MatchBlob != null)
+            {
+                var career = PlayerCareerStates.FromBlocks(trainingClubs, medicalClubs);
+                ISquadProvider asConfigured = squads == null
+                    ? null
+                    : new AvailabilityFilteredSquads(squads, career);
+                match = MatchSaveManager.Restore(blobs.MatchBlob, asConfigured);
+            }
 
             return new SeasonSaveContents(world, season, trainingClubs, medicalClubs, match);
+        }
+
+        /// <summary>
+        /// An <see cref="ISquadProvider"/> that applies the #41 availability filter on the way out, so a
+        /// restore re-selects from the same squad the match was configured with. Load-time only; never
+        /// persisted (the <c>squads</c> / <c>canon</c> precedent).
+        /// <para>
+        /// It only reads the career, so the throwaway instance <see cref="Load"/> builds for this
+        /// cannot disturb the blocks handed back in <see cref="SeasonSaveContents"/> — and would not
+        /// reach them in any case, since <see cref="PlayerCareerStates.FromBlocks"/> copies the state
+        /// arrays rather than borrowing them.
+        /// </para>
+        /// <para>
+        /// A roster that has drifted from the save — a squad player the save's career carries no state
+        /// for — surfaces as the filter's own fail-loud rather than being waved through. That is the
+        /// right answer: the raw squad would restore a different eleven, silently, which is the whole
+        /// defect this decorator exists to close.
+        /// </para>
+        /// </summary>
+        private sealed class AvailabilityFilteredSquads : ISquadProvider
+        {
+            private readonly ISquadProvider _inner;
+            private readonly PlayerCareerStates _career;
+
+            internal AvailabilityFilteredSquads(ISquadProvider inner, PlayerCareerStates career)
+            {
+                _inner = inner;
+                _career = career;
+            }
+
+            /// <inheritdoc />
+            public Squad ResolveByClubId(int clubId)
+            {
+                Squad squad = _inner.ResolveByClubId(clubId);
+                if (squad == null || !_career.CarriesClub(clubId))
+                {
+                    // Null is the provider's own "unknown club" answer and the restore factory's
+                    // fail-loud input — do not turn it into an exception here, and do not filter a club
+                    // this save carries no medical state for.
+                    return squad;
+                }
+
+                return _career.SelectAvailable(squad);
+            }
         }
 
         private static void TryDelete(string path)
@@ -252,4 +376,36 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | only the WorldStore composite plus an optional MatchEngine —  |
 // |         |            |        | stale since the #30 T1 season-state landing and now missing   |
 // |         |            |        | the #29/#41 training and medical states too. Both corrected.  |
+// | 1.7     | 2026-08-06 | —      | AR pass 1 over T2 (H): Load now re-applies the #41            |
+// |         |            |        | availability filter when restoring an in-progress match. The  |
+// |         |            |        | match was configured with the FILTERED squad and the snapshot |
+// |         |            |        | records only each team's ClubId, so restoring through the raw  |
+// |         |            |        | provider re-ran LineupSelector over the full roster and put a  |
+// |         |            |        | DIFFERENT eleven's attribute records on the pitch — silently,  |
+// |         |            |        | every gate green. The filter is rebuilt from the medical state |
+// |         |            |        | in the same file, so the squad is reproduced exactly; a club   |
+// |         |            |        | the career does not carry (every club of every pre-T2 save)    |
+// |         |            |        | passes through unchanged. Also (M): a Save(SeasonLoop, match,  |
+// |         |            |        | path) overload, so external callers can save without           |
+// |         |            |        | PlayerCareerStates' block accessors being public — those hand  |
+// |         |            |        | out the live state arrays, and a public accessor makes every   |
+// |         |            |        | holder of SeasonLoop.Career a second writer of #29/#41 state.  |
+// | 1.8     | 2026-08-06 | —      | T2 AR pass 3 (2L). The Save(SeasonLoop, …) overload's match   |
+// |         |            |        | parameter documented "Pass SeasonLoop.ActiveMatch when saving |
+// |         |            |        | mid-match" — but ActiveMatch is non-null only INSIDE the       |
+// |         |            |        | synchronous AdvanceAndPlayNextRound that is ticking it, and   |
+// |         |            |        | both types declare no thread safety, so the documented use    |
+// |         |            |        | was a cross-thread walk of a live engine yielding a torn blob |
+// |         |            |        | that restores cleanly into a state the sim never occupied.    |
+// |         |            |        | Now states the quiescence precondition and withdraws the      |
+// |         |            |        | suggestion. Also: the version rows below 1.5 were 1.7 then    |
+// |         |            |        | 1.6, so reading the table bottom-up gave 1.6 as current, and  |
+// |         |            |        | the header carried two Modified lines against the convention  |
+// |         |            |        | of one matching the latest row. Both corrected.               |
+// | 1.9     | 2026-08-06 | —      | T2 AR pass 6 (L, doc only): AvailabilityFilteredSquads        |
+// |         |            |        | justified its safety by "can safely share arrays with the     |
+// |         |            |        | blocks it hands back", which stopped being true at pass 3 —   |
+// |         |            |        | FromBlocks copies the state arrays now. The conclusion holds  |
+// |         |            |        | (the decorator only reads); the stated REASON would have told |
+// |         |            |        | a reader that FromBlocks still borrows.                       |
 #endregion

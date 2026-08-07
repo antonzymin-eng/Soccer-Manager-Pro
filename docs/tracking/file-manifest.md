@@ -1,7 +1,97 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 7, 2026 (**Unity client P5a — the UGUI shell's decisions extracted into
+**Last Updated:** August 7, 2026 (**Gate fix — CI run 405, this branch's first compile, failed.**
+
+**Modified:** `src/season-save/PlayerCareerStates.cs` v1.2 → **v1.3** — `FromBlocks`' copy locals renamed
+`training`/`injury` → `trainingStates`/`injuryStates`. The method's own parameters are `training` and
+`medical`, so the v1.2 locals produced 4x CS0841 + CS0136 rather than shadowing. No behaviour change.
+Plus `docs/tracking/CHANGELOG.md`, `docs/tracking/CHANGELOG-src.md` v2.83, this file.
+
+`season-save` failing meant `SeasonSave.Tests` never built, so both new suites are still unexecuted;
+`match-engine`, `training-system` and `injuries-medical` and their suites all compiled in the same run.)
+
+**Last Updated (prior):** August 6, 2026, latest same day (**Adversarial review passes 3–6 over the #29/#41 T2
+landing — 1 High, 5 Medium, 9 Low across the four, all fixed.** Passes 3–5 landed in `92baaa3` and that
+commit did **not** update this file; the entry below therefore covers passes 3–5 and pass 6 together,
+which is the honest record rather than two half-entries.
+
+**Modified (passes 3–5):** `src/season-save/SeasonLoop.cs` v1.7 → **v1.8** (`BootFixtureEngine`
+extracted `internal` — the career-wired match boot had never executed anywhere, the sole production
+call site of #29's entry-fatigue seam; + the ERR-030-026 round-vs-day-step convention stated at three
+sites); `src/season-save/PlayerCareerStates.cs` v1.1 → **v1.2** (`FromBlocks` COPIES the two state
+arrays; `ScheduleFor` `internal`, public focus surface is `TrySetFocus`);
+`src/season-save/SeasonSaveManager.cs` v1.7 → **v1.8** (the `Save(SeasonLoop, …)` quiescence
+precondition; header/version-row ordering); `src/season-save/tests/SeasonLoopCareerTests.cs` v1.0 →
+**v1.1** (three `EnginePath_*` cases + the ERR-030-026 lock);
+`src/match-engine/tests/MatchEngineEntryFatigueTests.cs` v1.0 → **v1.1** (the by-local-not-by-slot
+case); `src/season-save/tests/PlayerCareerStatesTests.cs` v1.0 → **v1.1** (the stale-handle lock);
+`src/season-save/tests/CareerTestRoster.cs` v1.0 → **v1.1** (doc);
+`src/training-system/ClubTrainingStates.cs` and `src/injuries-medical/ClubInjuryStates.cs` v1.0 →
+**v1.1** each (the "player order is not state" paragraph, false of the decoded form);
+`src/season-save/tests/season-save-tests.asmdef` (+ `TacticalDirector.AgentMovement`);
+`docs/tracking/spec-error-log.md` v1.68 (+ **ERR-030-026**).
+
+**Modified (pass 6):** `src/season-save/tests/PlayerCareerStatesTests.cs` v1.1 → **v1.2**
+(+ `FromBlocks_CopiesTheStateArrays_SoTheBlocksAreNotABackDoor` — pass 3's copy fix was the one of
+twelve with no enforcing test, so reverting the `Array.Copy` left every suite green);
+`src/season-save/SeasonSaveManager.cs` v1.8 → **v1.9** (the load-time filter decorator's
+shares-arrays justification, stale since pass 3); + the missing `// Modified:` header field
+(FR-CS-056/057) on the five files this landing created — `PlayerCareerStates.cs`,
+`CareerTestRoster.cs`, `SeasonLoopCareerTests.cs`, `PlayerCareerStatesTests.cs`,
+`MatchEngineEntryFatigueTests.cs`.
+
+**Prior entry — adversarial review pass 1 over the #29/#41 T2 landing —
+3 High, 4 Medium, 4 Low, all fixed; pass 2 clean.**
+
+**New:** `src/season-save/tests/SeasonSaveCareerRestoreTests.cs` v1.0 (+ `.meta`) — the
+`Save(SeasonLoop, …)` round trip and the restore-fidelity lock (a mid-match save whose squad was
+availability-filtered must restore the same eleven).
+
+**Modified:** `src/season-save/PlayerCareerStates.cs` v1.0 → **v1.1** (`FromBlocks` requires ascending
+player ids — H1; block accessors `internal`; `SyncToRoster` split into `PrepareRosterSync` /
+`CommitRosterSync`; + `RosterGeneration`, + `CarriesClub`); `src/season-save/SeasonLoop.cs` v1.6 →
+**v1.7** (career/season club-coverage gate; the roster reconciliation staged at (d′) and installed
+after (e); `World` `internal`); `src/season-save/SeasonSaveManager.cs` v1.6 → **v1.7** (`Load`
+re-applies the availability filter for an in-progress match — H2; + the `Save(SeasonLoop, match, path)`
+overload); `src/match-engine/LineupSelector.cs` v1.2 → **v1.3** (one `TrySelect` walk, `Select` and
+`CanSelect` as wrappers — H3); `src/match-engine/tests/LineupSelectorTests.cs` v1.0 → **v1.1** (the
+`CanSelect`/`Select` equivalence lock); `src/season-save/tests/PlayerCareerStatesTests.cs` and
+`src/season-save/tests/SeasonLoopCareerTests.cs` (the ordering, generation, staged-plan, club-coverage
+and regen-insertion locks); `docs/tracking/CHANGELOG.md`, `docs/tracking/CHANGELOG-src.md` v2.77,
+this file.
+
+No `SNAPSHOT_SCHEMA_VERSION` change, no format bump, no new RNG stream / domain tag / draw site /
+draw-order change. **NO GATE RUN** — still no .NET SDK and the installer is still 403 at the proxy;
+CI on push is the gate.)
+
+**Last Updated (prior):** August 6, 2026, latest same day (**#29/#41 T2 — the wiring. Both subsystems now
+produce state; `PlayerCareerStates` is the #30-side owner T1 was missing.**
+
+**New:** `src/season-save/PlayerCareerStates.cs` v1.0 (+ `.meta`),
+`src/season-save/tests/PlayerCareerStatesTests.cs` v1.0, `src/season-save/tests/SeasonLoopCareerTests.cs`
+v1.0, `src/season-save/tests/CareerTestRoster.cs` v1.0,
+`src/match-engine/tests/MatchEngineEntryFatigueTests.cs` v1.0 (all + `.meta`).
+
+**Modified:** `src/season-save/SeasonLoop.cs` v1.5 → **v1.6** (the optional career/provider pair, slots
+2 and 4 live on the pre-increment world day, the FR-MD-023 availability filter at the ERR-030-009
+resolve→filter→configure position on both resolution paths, #29's match-entry fatigue into the engine
+boot, and the (d′) FR-TR-025 / FR-MD-025 roster reconciliation before `RollToNextSeason`'s commits);
+`src/match-engine/MatchEngine.cs` v1.63 → **v1.64** (the four-argument `ConfigureSquads` seeding
+`AerobicPool = 1 − fatigue`; null ⇒ rested ⇒ byte-identical); `src/match-engine/SquadRating.cs` v1.0 →
+**v1.1** and `src/match-engine/LineupSelector.cs` v1.1 → **v1.2** (`CanFieldStartingEleven` /
+`CanSelect`, the viability probe the depleted-squad press-back-in loop needs — a player-count rule
+cannot see that a squad has eighteen fit outfielders and no goalkeeper); `docs/tracking/CHANGELOG.md`,
+`docs/tracking/CHANGELOG-src.md` v2.76, `docs/tracking/spec-error-log.md` v1.67 (ERR-029-006 +
+ERR-041-010), `docs/tracking/path-to-playable-roadmap.md` (D2/D3), `CLAUDE.md` (OPEN ISSUES + the
+assembly map), `README.md`, `docs/tracking/training-system-design.md`,
+`docs/tracking/injuries-medical-design.md`, this file.
+
+No `SNAPSHOT_SCHEMA_VERSION` change (the aerobic reservoir was already serialized — proven by a
+save/restore round-trip), no format bump, no new RNG stream / domain tag / draw site / draw-order
+change. **NO GATE RUN** — the authoring environment still has no .NET SDK and the installer is still
+403 at the proxy; CI on push is the gate.)
+**Last Updated (prior):** August 7, 2026 (**Unity client P5a — the UGUI shell's decisions extracted into
 `match-client-core`, and §5-P5 split into P5a / P5b to make that a phase.** New in
 `src/match-client-core/`: `PlaybackSpeedLadder.cs`, `MatchControlAvailability.cs`,
 `MatchControlLockReason.cs` (all v1.0), plus `tests/PlaybackSpeedLadderTests.cs` (11) and
