@@ -1,7 +1,9 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 7, 2026 — **ERR-008-023 — the ERR-008-022 landing scored ZERO GOALS; the acceptance scenario caught it.** CI run `31188688249` (PR #303, head `a2987be`) is the first run ever to reach `MatchEngine.Tests` on this branch — that suite takes **22 m 55 s**, against the 3 minutes run 402 survived before cancellation, so nothing had exercised the match engine here at all. It failed `sim_match_engine_shot_outcomes` on `goals-still-scored = 0`: four seeds × 18 minutes, 72 minutes of football, no goal. Cause: -022's own headline fix. The retired goal-centre-plane bound had discarded a goal-line keeper for **every** shooter position, so the keeper-only `GK_BLOCKER_RADIUS_M` = 1.5 m disc had never been exercised; it went live at -022 and removed **~42% of the goal arc on every shot** (1.000 → 0.584 at 16 m, keeper alone). Fixed by retiring the disc — every blocker occludes with `BLOCKER_RADIUS_M`, keeper included, because reach beyond the body is shot-stopping and P3 assigns that to #11, which prices it at contact. `gkness` survives, lerping the P3 exemption alone. Suite 15 → 16; a GK-read continuity lock that was about to become this file's third tautology of its class now carries live attributes. This is the P5 residual -022 recorded as *not fixed* under KD-W1.
+**Last Updated:** August 7, 2026, later same day — **New assembly `src/client-app/` (`TacticalDirector.ClientApp`) — the client composition layer above `ui-framework` (roadmap B9c), resolving the P5a screen-catalogue layering question by owner decision.** **New files (7 + 9 `.meta`, incl. the two folder metas):** `src/client-app/client-app.asmdef` (references only `TacticalDirector.UiFramework`), `ClientAppConstants.cs` v1.0, `ClientScreens.cs` v1.0, `ClientScreenFlow.cs` v1.0, `tests/client-app-tests.asmdef` (`TacticalDirector.ClientApp.Tests`, Editor-only), `tests/ClientScreensTests.cs` v1.0 (3 tests), `tests/ClientScreenFlowTests.cs` v1.0 (12 tests). **No existing `src/` file modified** — nothing references the new assembly yet (`match-client-unity` gains the reference at P5b). **Modified (docs):** root `CLAUDE.md` (assembly count 33 → 34, new `client-app` assembly-map row, #38 + presentation + ERR-020-002 OPEN ISSUES entries), `src/CLAUDE.md` (34 folders; unlisted 14 → 15), `docs/tracking/CHANGELOG.md` + `CHANGELOG-src.md` (v2.80), `interactive-unity-client-design.md` v0.16 → v0.17 (§Governs, §5-P5a resolution block, §12), `path-to-playable-roadmap.md` v0.17 → v0.18 (B9b unblocked, B9c ✅ row), `docs/tracking/open-issues.md` (#38 entry), `README.md`, and this record set. No `SNAPSHOT_SCHEMA_VERSION` change, no new RNG stream / domain tag / draw site / draw-order change. Dotnet gate NOT runnable here (no .NET SDK; CI on push); `generate_projects.py` clean at 66 csproj, meta-integrity green.
+
+**Last Updated (prior):** August 7, 2026 — **ERR-008-023 — the ERR-008-022 landing scored ZERO GOALS; the acceptance scenario caught it.** CI run `31188688249` (PR #303, head `a2987be`) is the first run ever to reach `MatchEngine.Tests` on this branch — that suite takes **22 m 55 s**, against the 3 minutes run 402 survived before cancellation, so nothing had exercised the match engine here at all. It failed `sim_match_engine_shot_outcomes` on `goals-still-scored = 0`: four seeds × 18 minutes, 72 minutes of football, no goal. Cause: -022's own headline fix. The retired goal-centre-plane bound had discarded a goal-line keeper for **every** shooter position, so the keeper-only `GK_BLOCKER_RADIUS_M` = 1.5 m disc had never been exercised; it went live at -022 and removed **~42% of the goal arc on every shot** (1.000 → 0.584 at 16 m, keeper alone). Fixed by retiring the disc — every blocker occludes with `BLOCKER_RADIUS_M`, keeper included, because reach beyond the body is shot-stopping and P3 assigns that to #11, which prices it at contact. `gkness` survives, lerping the P3 exemption alone. Suite 15 → 16; a GK-read continuity lock that was about to become this file's third tautology of its class now carries live attributes. This is the P5 residual -022 recorded as *not fixed* under KD-W1.
 
 **Last Updated (prior):** August 6, 2026, latest same day (**ERR-008-022 far-post lock corrected at the first
 gate run. No new files.** **Modified:** `src/decision-tree/Tests/OptionGeneratorTests.cs` v1.9 (+ the
@@ -2162,6 +2164,26 @@ above BOTH `ui-framework` and `match-analytics`; host-free and CI-gated. Deliber
 | `tests/MatchClientRouterTests.cs` | Routing table + the privilege split asserted against the command queue + fail-loud parsing |
 | `tests/MatchClientHostTests.cs` | The every-tick pump over a really-running match (F6 self-checks it), `ServiceOnce` not advancing it, the disarm-and-latch fault path, intent delivery |
 | `tests/MatchClientServerTests.cs` | Real-loopback framing, routing, request-line bound, post-`Stop` refusal, rebind |
+
+---
+
+### `src/client-app/` — the client composition layer (roadmap B9c, August 7, 2026)
+
+Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P5a
+resolution / v0.17). The home of the four screens' `ScreenId` catalogue and navigation graph —
+above `ui-framework` because FR-UI-010 forbids the framework hard-coding a screen and composition
+lives above what it wires (the `match-engine` precedent). Host-free and CI-gated; the P5b binding
+navigates only through `ClientScreenFlow`'s five moves.
+
+| File | Purpose |
+|------|---------|
+| `client-app.asmdef` | `TacticalDirector.ClientApp`; references UiFramework only |
+| `ClientAppConstants.cs` | Four `[FIXED]` screen ids (1–4); 0 deliberately never allocated (zero-value safety) |
+| `ClientScreens.cs` | The ids as typed `ScreenId` values — the one place a screen identity is minted |
+| `ClientScreenFlow.cs` | The five-edge navigation graph as guarded moves over a privately-owned `NavigationShell`; catalogue-id validation refuses transposed registrations at construction |
+| `tests/client-app-tests.asmdef` | `TacticalDirector.ClientApp.Tests` (Editor-only) |
+| `tests/ClientScreensTests.cs` | Id distinctness, zero-value safety, constant wiring (3) |
+| `tests/ClientScreenFlowTests.cs` | Legal edges, illegal invocations fail-loud, the two Replace-vs-Push locks, reusability, transposition guard, registration identity (12) |
 
 ---
 

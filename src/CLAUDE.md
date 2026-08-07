@@ -27,7 +27,7 @@ src/
 └── CLAUDE.md                       ← you are here
 ```
 
-**33 assembly folders.** The full annotated tree lives in
+**34 assembly folders.** The full annotated tree lives in
 `docs/tracking/src-tree.md`; the authoritative inventory is
 `docs/tracking/file-manifest.md`. Do not maintain a third copy here.
 
@@ -78,11 +78,11 @@ at runtime:
 
 
 > ⚠️ **This table is out of date and is not the current assembly index.**
-> It accounts for 19 of the 33 assembly folders now in `src/` — the 17 named in the
+> It accounts for 19 of the 34 assembly folders now in `src/` — the 17 named in the
 > layer tables plus `deterministic-sim` and `event-system`, covered as cross-cutting
 > foundations in the paragraph above.
 >
-> **Unlisted (14):** `injuries-medical`, `living-world`, `match-analytics`,
+> **Unlisted (15):** `client-app`, `injuries-medical`, `living-world`, `match-analytics`,
 > `match-client-core`, `match-client-unity`, `match-client-web`, `match-engine`,
 > `match-viewer`, `player-database`, `player-progression`, `season-save`,
 > `tactical-instructions`, `training-system`, `ui-framework`.

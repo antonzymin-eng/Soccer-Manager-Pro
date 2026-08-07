@@ -15,7 +15,7 @@
 
 **Specifications:** `SPEC_INDEX.md` records **53 APPROVED / 0 IN REVIEW / 0 NOT STARTED — every spec in the registry is approved.** The APPROVED set is the Stage-0 twenty (all APPROVED May 18, 2026) plus 23 Stage-1-forward and management-layer specs (#21–#34, #37, #38, #40–#45, #49). The last ten — #53, #35, #46, #36, #54, #47, #48, #50, #51, #39 — were promoted **and approved** on July 27, 2026, emptying the pre-promotion backlog and closing the specification phase entirely. The only candidate without a spec is **#52** (Multiplayer Transport), deliberately deferred behind the Stage-5 Fixed64 migration. **Approval approves the forward design, not an implementation** — see the live gap below, which is now the project's dominant fact.
 
-**Implementation:** `src/` holds **33 production assemblies**. Every Stage-0 spec is implemented except **#9 Fixed64** (deferred to Stage 5+ by design) and **#20 Code Standards** (a style guide, not a coded subsystem). A `MatchEngine` composition root wires the subsystems into the deterministic-sim 7-phase tick pipeline, and **a production match now plays** — the possession bootstrap (§5.Z Phase H, July 26, 2026) closed ERR-030-014, under which every match had been a 90-minute 0–0 deadlock with the ball never in motion. **Match Analytics #37 T0 landed July 27, 2026** (`src/match-analytics/` — value types + the pure `XgLocationModel`; no engine wiring yet), giving it a `src/` assembly for the first time.
+**Implementation:** `src/` holds **34 production assemblies**. Every Stage-0 spec is implemented except **#9 Fixed64** (deferred to Stage 5+ by design) and **#20 Code Standards** (a style guide, not a coded subsystem). A `MatchEngine` composition root wires the subsystems into the deterministic-sim 7-phase tick pipeline, and **a production match now plays** — the possession bootstrap (§5.Z Phase H, July 26, 2026) closed ERR-030-014, under which every match had been a 90-minute 0–0 deadlock with the ball never in motion. **Match Analytics #37 T0 landed July 27, 2026** (`src/match-analytics/` — value types + the pure `XgLocationModel`; no engine wiring yet), giving it a `src/` assembly for the first time.
 
 **The live gap is now the project's dominant fact.** With the specification phase closed, **20 of the 53
 APPROVED specs have no `src/` assembly at all** — the 10 listed below plus the ten approved on July 27.
@@ -49,7 +49,7 @@ Soccer-Manager-Pro/
 │   │   ├── SPEC_INDEX.md           ← Canonical spec numbering and status — 53 folders, all APPROVED
 │   │   └── <spec-folder>/          ← One folder per spec; see SPEC_INDEX.md for the number↔folder map
 │   └── tracking/                   ← Progress, error log, file manifest, roadmaps, design supplements
-├── src/                            ← Implementation (coding began May 19, 2026) — 33 production assemblies
+├── src/                            ← Implementation (coding began May 19, 2026) — 34 production assemblies
 │   ├── CLAUDE.md                   ← Coding guide (read before writing any code)
 │   └── <assembly>/                 ← See the assembly map below
 └── tools/
@@ -82,6 +82,7 @@ Do not infer the mapping from the folder name:
 | `match-engine` | — | **Composition root.** Not a numbered spec; governed by `docs/tracking/match-engine-design.md` |
 | `match-viewer`, `match-client-core`, `match-client-unity` | — | Presentation tooling / client seams; not numbered specs |
 | `match-client-web` | — | The browser match client (roadmap B6). Not a numbered spec; governed by `docs/tracking/browser-match-client-design.md`. The only assembly above BOTH `ui-framework` and `match-analytics`. **NOT the shipping UI** — B6 was reversed to full Unity on Aug 3, 2026; retained as the host-free reference harness. Keep green, do not extend |
+| `client-app` | — | **The client composition layer** (roadmap B9c, Aug 7, 2026): the four screens' `ScreenId` catalogue + the `ClientScreenFlow` navigation graph, above `ui-framework` (its only reference). Not a numbered spec; governed by `docs/tracking/interactive-unity-client-design.md` (§5-P5a resolution / v0.17). Exists because FR-UI-010 forbids the framework hard-coding screens and `match-client-unity` is gate-invisible — the P5b binding navigates only through this assembly's five moves |
 
 **Rules:**
 - Each spec folder contains ONLY current-version files. No version suffixes in filenames. Git tracks history.
@@ -331,13 +332,15 @@ evidence. The two that need a review step invoke `adversarial-review` rather tha
 - Advanced positional behaviors + game-model/AI-manager tactics — design supplements OPENED (candidate specs #23–#26) — all four promoted to specs and landed; REMAINDER: #26 §9.2 own-`[GT]` balance review
 - Living World (#22) season/world loop — slices 1–7 LANDED (incl. the KD-10 season composition root + the InteractionTextGenerator wired into it + deep-memory auto-cite + the opt-in arc-trigger evaluator / `world.arcs` sub-stream); upstream-gated services open
 - UI / Client Framework (#38) — T0 substrate LANDED; Wave-7 screens + the UGUI binding remain open.
-  **A live governance question was surfaced by the August 7, 2026 P5a landing** and gates P5b: the
-  four screens' `ScreenId` catalogue and navigation graph has **no correct home**. FR-UI-010 is
-  explicit that the framework hard-codes no screen, so it does not belong in `ui-framework`; and
-  `ui-framework` sits *above* `match-client-core`, so the core cannot hold a `ScreenId` either. The
-  remaining candidates are `match-client-unity` (gate-invisible, wrong by §12 rule 1) or a new
-  assembly above `ui-framework`. Same shape as roadmap §6 item 2's C3 question — needs owner sign-off,
-  not an implementation-pass guess
+  **The governance question the August 7, 2026 P5a landing surfaced — where the four screens'
+  `ScreenId` catalogue and navigation graph live — was RESOLVED by owner decision later the same day
+  and LANDED as `src/client-app/`** (`TacticalDirector.ClientApp`, references only `ui-framework`;
+  roadmap B9c, `interactive-unity-client-design.md` v0.17). The `match-engine` composition-root
+  precedent carried it: FR-UI-010 makes a concrete screen set composition, not framework, and
+  composition lives above what it wires; `match-client-unity` was rejected as gate-invisible (§12
+  rule 1). Roadmap §6 item 2's C3 management screens inherit the same home by precedent. What
+  remains open of #38 is unchanged: the Wave-7 screens (each gated on its data spec having `src/`)
+  and the UGUI binding
 - Presentation layer — minimal match viewer LANDED; interactive Unity client remains open. Its host-free
   phases are now ALL complete: P0/P2 (July 24), P1/P3 (July 27), **the head-less half of P6
   (August 3)** — `MatchSession.TickOnce/CaptureSave/RestoreFrom`, `TickStampedCommandReplay`, and the
@@ -359,8 +362,9 @@ evidence. The two that need a review step invoke `adversarial-review` rather tha
   REMAINDER: **P4b/P5b and the on-host half of P6** — the Unity binding, the UGUI shell,
   scene boot, 60 FPS, live tactical input through a screen, and the FR-PO-052-class render-loop perf
   capture. All need the pinned host; the host block itself cleared July 19, 2026, so the gap is
-  unwritten code, not access. **P5b additionally has one open layering decision ahead of it** — where
-  the four screens' `ScreenId` catalogue lives (see the #38 entry above).
+  unwritten code, not access. **P5b's one open layering decision was resolved August 7, 2026** — the
+  four screens' `ScreenId` catalogue and navigation graph landed in the new `src/client-app/`
+  assembly (see the #38 entry above); nothing but the host is now ahead of P4b/P5b.
   **ESCALATED August 3, 2026 — owner reversed roadmap B6: the product ships this Unity client, not the
   web-hosted viewer, so P4 is now the critical path rather than a later native target.** Two standing
   rules, recorded in `interactive-unity-client-design.md` §12 and `path-to-playable-roadmap.md` §7/C2:
@@ -372,4 +376,4 @@ evidence. The two that need a review step invoke `adversarial-review` rather tha
   the end. Note `PM-1`'s three screen-facing exit criteria are open again — they were demonstrated on a
   surface that is no longer the product; its determinism criterion is met head-lessly and stays met
 - Approval tags created locally, not yet pushed
-- Assembly layer taxonomy (Spec #20 §3.5.2) places 19 of 33 assemblies — ERR-020-002 proposal filed, awaiting owner sign-off (the two August 5 additions, `training-system` and `injuries-medical`, are unplaced like the other 12)
+- Assembly layer taxonomy (Spec #20 §3.5.2) places 19 of 34 assemblies — ERR-020-002 proposal filed, awaiting owner sign-off (the two August 5 additions, `training-system` and `injuries-medical`, and the August 7 addition, `client-app`, are unplaced like the other 12)
