@@ -65,6 +65,31 @@ bash tools/dotnet-ci/run-gate.sh
 Requires the .NET 8 SDK and Python 3 (stdlib only). Generated `*.gen.csproj`,
 `*.gen.sln`, `bin/`, `obj/` are gitignored — never commit them.
 
+## Running in the Claude remote environment
+
+**The full gate runs in Claude's remote (cloud) sessions.** Verified August 7,
+2026: the Ubuntu archive carries the SDK, and the egress proxy allows it —
+
+```bash
+apt-get install -y dotnet-sdk-8.0    # Ubuntu 24.04 archive; verified 8.0.129
+bash tools/dotnet-ci/run-gate.sh
+```
+
+The `dot.net` install script and `packages.microsoft.com` are 403-blocked at the
+proxy, which is what earlier sessions hit before concluding "no .NET SDK in the
+authoring environment; CI on push is the only compiler." That conclusion was
+about the wrong host list: **`archive.ubuntu.com` is allowed**, and the distro
+SDK compiles the tree and runs every suite. Measured on that host: whole-tree
+build ~25 s, `MatchEngine.Tests` ~48 min (vs 37–38 min on the CI runner —
+per-suite durations differ, verdicts agree with CI run 419 exactly, including
+per-predicate failure values).
+
+Two caveats. (1) Still **non-certifying** — same as every Linux run; nothing
+here touches the pinned Windows/Unity tuple. (2) A *local* (desktop) Claude
+session is a different host with a different proxy policy; this note is verified
+for the remote container image only. If `apt-cache policy dotnet-sdk-8.0` shows
+a candidate, this path works.
+
 ## Shim fidelity rules
 
 - Shim members replicate **documented Unity semantics exactly** where the
@@ -83,3 +108,4 @@ Requires the .NET 8 SDK and Python 3 (stdlib only). Generated `*.gen.csproj`,
 |---|---|---|---|
 | 1.0 | 2026-06-12 | — | Initial gate: shim + generator + runner + quarantine; first-ever full suite execution. |
 | 1.1 | 2026-07-13 | — | Certification-pin citations updated to the `certification-platform.md` v1.3 target tuple (Unity 6000.4.9f1, DX11) — recert pending, not yet certified. The `generate_projects.py` / `UnityShim` technical claims about Unity's actual `netstandard2.1` BCL surface and `LangVersion 9.0` C# level are UNCHANGED and unverified against Unity 6 — see root `CLAUDE.md` OPEN ISSUES. |
+| 1.2 | 2026-08-07 | — | New "Running in the Claude remote environment" section: the full gate runs in Claude remote sessions via the Ubuntu-archive `dotnet-sdk-8.0` (verified 8.0.129 — build + full `MatchEngine.Tests`, verdicts matching CI run 419 exactly). The standing "no .NET SDK; installer 403" conclusion was scoped to the wrong hosts: `dot.net` is blocked, `archive.ubuntu.com` is not. |

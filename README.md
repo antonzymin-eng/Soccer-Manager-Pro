@@ -1,7 +1,21 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** August 6, 2026 (**ERR-008-022 — the same shot calculation was throwing away
+**Last Updated:** August 7, 2026 (**The main branch went red after the shot-fix chain merged; both
+failures are diagnosed, and the tests are re-anchored to the intended new behaviour.** This week's
+chain of shooting fixes changed which shots players take. Two long-running acceptance tests were
+still checking numbers measured against the old behaviour, and the first full test run on the merged
+main branch caught them both. One is genuinely news: on one of the two measured seeds, dribbling in
+the attacking third has drifted back to pointing away from goal — a regression the August 4 fix had
+removed, partially returned as a side effect of the shooting changes. The tests now hold the line at
+today's intended baseline, and the drift itself is queued for the planned calibration pass rather
+than patched quietly. Two working-practice discoveries came out of the diagnosis: the full test gate
+can be run inside Claude's remote sessions after all (the standard Ubuntu package archive carries
+the .NET SDK — earlier sessions had only tried the blocked Microsoft installer), and the CI log
+viewer's 5,000-line cap had been hiding one of the two failures from every previous session.
+Prior entry below.)
+
+**Last Updated (prior):** August 6, 2026 (**ERR-008-022 — the same shot calculation was throwing away
 half the goal before it started.** Yesterday's fix (ERR-008-021 below) taught the shooter to
 count a defender who stands *across* one of the posts rather than squarely between them. A
 hostile review of that fix found it was being handed the wrong list of defenders to count. The
@@ -46,7 +60,7 @@ than he is. Average defenders in average positions block exactly what they block
 balance is not shifted — the change redistributes rather than tightens. Nine tests lock the new
 behaviour, three of which fail on the old rule. **Not compiled or run here — this environment has no
 .NET toolchain; CI compiles on push.** **Prior entry below.**)
-**Last Updated:** August 6, 2026, latest same day (**Training and injuries are now wired into the
+**Last Updated (prior):** August 6, 2026, latest same day (**Training and injuries are now wired into the
 career loop — for the first time, a saved season carries what players have actually been doing.**
 
 Two systems were built earlier this month but had no way to run: the code existed, the save format
