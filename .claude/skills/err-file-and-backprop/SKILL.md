@@ -46,6 +46,20 @@ reservation. And **re-verify at merge, not only at authoring** — the branch-vs
 until you rebase. Also check the spec folders themselves (`grep -rn "ERR-030-0" docs/specs/`), since
 a citation can exist in an approved spec before the log entry lands.
 
+**Since August 7, 2026 the merge-time half is enforced mechanically.**
+`tools/spec-ci/check-id-collisions.sh` runs in CI's `spec-hygiene` job on every `pull_request` — the
+first moment both sides of a branch-vs-main race are visible — and fails on a duplicate ERR detail
+entry or Error Index row, along with the `DOMAIN_TAG` / `SubsystemOrdinals` / FR-id / FR-prefix and
+version-history namespaces. Run it locally before pushing:
+
+```bash
+bash tools/spec-ci/check-id-collisions.sh
+```
+
+That does not retire the manual check at Step 1 — the gate sees the id you *wrote*, not the one you
+are about to write, and it cannot tell you which free id to pick. It closes the case where you picked
+correctly and the log moved anyway.
+
 Two id conventions worth knowing: numbers are sometimes deliberately **skipped** to soft-reserve them
 for an in-flight cluster, and a duplicate that has already shipped in approved text stays **preserved
 verbatim as errata** rather than being silently renumbered — six approved specs citing a step number

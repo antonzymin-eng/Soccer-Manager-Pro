@@ -1,0 +1,54 @@
+# tools/spec-ci/known-id-collisions.txt
+# Created: August 7, 2026
+#
+# Baseline ledger (machine-readable) for tools/spec-ci/check-id-collisions.sh
+# checks (7) duplicate version-history rows and (8) multiple `**Version:**`
+# fields. Each line is a duplicate that ALREADY EXISTS in the tree; the gate
+# fails on anything not listed here.
+#
+# Format: <check>|<file>|<token>
+#
+# Why a baseline rather than a fix: the root CLAUDE.md rule is that a duplicate
+# already shipped in approved text stays preserved verbatim as errata rather
+# than being silently renumbered — six approved specs citing a number is a
+# stronger constraint than tidiness. Renumbering these rows is an owner call,
+# not an implementation-pass call. The blocking checks (1)-(6) need no baseline;
+# they are clean across the tree.
+#
+# Rules:
+#  - REMOVE a line in the same commit that reconciles its duplicate (the gate
+#    then enforces it forever). The gate warns about lines that no longer
+#    reproduce.
+#  - NEVER add a line to silence a duplicate YOUR branch introduced. That is
+#    precisely the PR #59 + PR #60 defect this gate exists to catch — reconcile
+#    by union and renumber the later row instead.
+#  - Regenerate with: bash tools/spec-ci/check-id-collisions.sh --emit-baseline
+#
+# Notes on specific entries:
+#  - season-competition-loop/section-3.md 0.7 / 0.8 are the live residue of the
+#    ERR-030-007-filed-twice case (spec-error-log.md, "The #30 tick-order
+#    reconciliation"): back-props landed at #42's and #32's approvals both took
+#    v0.7, and #45's and #44's both took v0.8. The step-number half was
+#    reconciled as ERR-030-022; the version rows were not.
+#  - CHANGELOG-src.md's six pairs are same-day supersede entries that re-use the
+#    prior version number rather than advancing it.
+#  - The five multi-version-field files are the same header-drift class recorded
+#    in spec-error-log.md's own v1.36 housekeeping note (that file once carried
+#    two `**Version:**` fields, both stale against the entry above them).
+multi-version-field|docs/specs/collision-system/section-2.md|2
+multi-version-field|docs/specs/first-touch/section-2.md|2
+multi-version-field|docs/specs/first-touch/section-6.md|2
+multi-version-field|docs/specs/first-touch/section-7.md|2
+multi-version-field|docs/specs/first-touch/section-8.md|2
+version-row|docs/specs/decision-tree/section-3-1.md|1.1
+version-row|docs/specs/positioning-ai/section-6.md|0.4
+version-row|docs/specs/season-competition-loop/section-3.md|0.7
+version-row|docs/specs/season-competition-loop/section-3.md|0.8
+version-row|docs/tracking/CHANGELOG-src.md|2.10
+version-row|docs/tracking/CHANGELOG-src.md|2.34
+version-row|docs/tracking/CHANGELOG-src.md|2.36
+version-row|docs/tracking/CHANGELOG-src.md|2.42
+version-row|docs/tracking/CHANGELOG-src.md|2.44
+version-row|docs/tracking/CHANGELOG-src.md|2.9
+version-row|docs/tracking/match-engine-design.md|2.2
+version-row|docs/tracking/path-to-playable-roadmap.md|0.9

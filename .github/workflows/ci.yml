@@ -119,6 +119,13 @@ jobs:
           done < <(find docs/specs -name '*.md')
           # Non-blocking for now — surface as warnings only.
           echo "Constant-tag warnings: $missing"
+      - name: Identifier collisions across numbered namespaces
+        # ERR ids, DOMAIN_TAG / SubsystemOrdinals values, FR ids and prefixes,
+        # and duplicate version-history rows. Runs on `pull_request`, which is
+        # the first moment a branch-vs-main id race is visible — an
+        # authoring-time check cannot see it (ERR-030-015 → ERR-030-025).
+        # See tools/spec-ci/README.md.
+        run: bash tools/spec-ci/check-id-collisions.sh
 
   file-manifest-check:
     name: File manifest sanity

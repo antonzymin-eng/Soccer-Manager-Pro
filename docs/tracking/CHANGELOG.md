@@ -12,7 +12,45 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 7, 2026 (**The #29/#41 T2 branch reached a compiler for the first time and
+> **Last Updated:** August 7, 2026, later same day (**An identifier-collision gate now runs on every
+> pull request — the id-collision class becomes mechanically detectable for the first time.** New:
+> `tools/spec-ci/check-id-collisions.sh`, `tools/spec-ci/known-id-collisions.txt`,
+> `tools/spec-ci/README.md`; `.github/workflows/ci.yml`'s `spec-hygiene` job gains a fifth step.
+> **Why on `pull_request` specifically:** all four recorded instances of this class share one property
+> — verifying an id free *at authoring* is not sufficient. `ERR-030-015` was verified free on a branch
+> and then claimed on `main` by #30's own T3 landing while that branch was still open (reassigned
+> `ERR-030-025`); an authoring-time check cannot see that race, and CI on a PR is the first moment both
+> sides are visible. **Eight blocking checks:** duplicate `## ERR-NNN-NNN` detail entries, duplicate
+> Error Index rows, two `DOMAIN_TAG_*` constants sharing a value, two `SubsystemOrdinals` sharing a
+> value, an `FR-XX-NNN` defined twice, an `FR-XX-` prefix defined by two spec folders, one version
+> number on two version-history rows, and more than one `**Version:**` field in a file. Checks 1–6 are
+> clean across the tree; 7–8 carry a 17-entry baseline. **Ninth check informational only** (24 ERR
+> detail entries have no Error Index row — all predate that convention). **The gate was proved to fail
+> before it was trusted:** each of the eight was run against an injected collision of its own class and
+> each failed with its own message, then passed again on restore — a check never observed to fail is
+> the ERR-030-014 lesson one layer up, and the first attempt at check 8 *did* silently miss because the
+> test file had zero `**Version:**` fields rather than one. **Two tunings were forced by measurement,
+> not foresight:** scoping the `DOMAIN_TAG` check to `public const byte` declarations (the constants
+> file's own version-history comments quote every tag they allocate, and an unscoped grep reports four
+> duplicates that do not exist), and requiring a date in column 2 of a version-history row (without it
+> the check reports 15 files, almost all of them numeric data tables whose first column is a decimal;
+> with it, every hit is genuine). **Recorded, not fixed — the baseline is a real finding, not
+> bookkeeping:** `season-competition-loop/section-3.md` carries **two v0.7 rows and two v0.8 rows**, the
+> live residue of the `ERR-030-007`-filed-twice case. The step-number half of that collision was
+> reconciled as `ERR-030-022`; the version rows never were, and nothing had looked. Six more pairs sit
+> in `CHANGELOG-src.md`, one in `match-engine-design.md`, one in `path-to-playable-roadmap.md`, one each
+> in `decision-tree/section-3-1.md` and `positioning-ai/section-6.md`, plus five files carrying two
+> `**Version:**` fields. **Baselined rather than renumbered deliberately** — the root `CLAUDE.md` rule
+> is that a duplicate already shipped in approved text is preserved verbatim as errata, so renumbering
+> is an owner call. **No `src/` change, no spec change, no ERR filed** (this is a tooling addition, not
+> a defect in an approved spec). No `SNAPSHOT_SCHEMA_VERSION` change, no new RNG stream / domain tag /
+> draw site, no draw-order change. **No dotnet gate run — no `.cs`, `.asmdef` or `tools/dotnet-ci` file
+> moved, and the authoring environment still has no .NET SDK.** Verified instead by executing the new
+> gate itself: green on the clean tree, and failing on all eight injected collisions. Blast radius
+> checked — no tick windows, rate bands, calibration fits or perf baselines are touched by a
+> grep-and-`uniq` script that reads files and writes none.)
+
+> **Last Updated (prior):** August 7, 2026 (**The #29/#41 T2 branch reached a compiler for the first time and
 > failed to build.** CI run 405 on PR #304 — the first run this branch has ever had — reported
 > `Build FAILED, 5 Error(s)`, all in `PlayerCareerStates.FromBlocks`. The adversarial-review pass-3 fix
 > that made `FromBlocks` copy its two state arrays rather than borrow them declared those locals

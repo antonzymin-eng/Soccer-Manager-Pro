@@ -1,7 +1,24 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 7, 2026 (**Gate fix — CI run 405, this branch's first compile, failed.**
+**Last Updated:** August 7, 2026, later same day (**Identifier-collision gate — new `tools/spec-ci/`.**
+
+**New:** `tools/spec-ci/check-id-collisions.sh` v1.0 (eight blocking checks over the ERR-id,
+`DOMAIN_TAG`, `SubsystemOrdinals`, FR-id, FR-prefix and version-history namespaces, plus one
+informational; `--emit-baseline` mode), `tools/spec-ci/known-id-collisions.txt` v1.0 (17-entry
+baseline of pre-existing duplicates, per-entry notes, shrinking-only), `tools/spec-ci/README.md` v1.0
+(the four recorded collision instances, the two measurement-forced tunings, the fail-injection
+verification, baseline discipline). **Modified:** `.github/workflows/ci.yml` (`spec-hygiene` job gains
+a fifth step), `CLAUDE.md` (OPEN ISSUES 14 → 15 active), `docs/tracking/CHANGELOG.md`, this file.
+
+Tooling only — **no `src/` change, no spec change, no ERR filed, no gate run** (no `.cs`, `.asmdef` or
+`tools/dotnet-ci` file moved; no .NET SDK in the authoring environment either). Verified by executing
+the new gate: green on the clean tree, and failing on an injected collision of each of the eight
+classes. Its first run is itself a finding — see the new OPEN ISSUES entry on duplicate version
+numbering, headed by #30 `section-3.md`'s two v0.7 and two v0.8 rows, the unreconciled residue of the
+`ERR-030-007`-filed-twice case.)
+
+**Last Updated (prior):** August 7, 2026 (**Gate fix — CI run 405, this branch's first compile, failed.**
 
 **Modified:** `src/season-save/PlayerCareerStates.cs` v1.2 → **v1.3** — `FromBlocks`' copy locals renamed
 `training`/`injury` → `trainingStates`/`injuryStates`. The method's own parameters are `training` and
@@ -1774,6 +1791,22 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `tools/dotnet-ci/UnityShim.TestTools/UnityShim.TestTools.csproj` | TestTools shim project (separate so production assemblies gain no NUnit reference) |
 | `tools/dotnet-ci/UnityShim.TestTools/LogAssert.cs` | UnityEngine.TestTools.LogAssert with UTF parity (unmet expectation / unexpected failing log fails the test) |
 | `tools/dotnet-ci/UnityShim.TestTools/LogAssertVerifyAttribute.cs` | Assembly-level NUnit ITestAction applying the log contract per test |
+
+---
+
+### `tools/spec-ci/` — Identifier-collision gate (August 7, 2026)
+
+> Runs in `.github/workflows/ci.yml`, job `spec-hygiene`, on `push` to `main` and every
+> `pull_request`. Pure bash/git/grep/awk — no Unity, no .NET, no network. Exists because every
+> recorded id collision here shares one property: verifying an id free *at authoring* is not
+> sufficient (`ERR-030-015` was verified free on a branch, then claimed on `main` while that branch
+> was still open). A PR run is the first moment both sides of that race are visible.
+
+| File | Purpose |
+|---|---|
+| `tools/spec-ci/check-id-collisions.sh` | The gate. Eight blocking checks — duplicate ERR detail entries / Error Index rows, `DOMAIN_TAG_*` value clash, `SubsystemOrdinals` value clash, duplicate `FR-XX-NNN` definition, `FR-XX-` prefix owned by two spec folders, one version number on two version-history rows, more than one `**Version:**` field — plus one informational (ERR detail entry with no index row). `--emit-baseline` regenerates the ledger |
+| `tools/spec-ci/known-id-collisions.txt` | Baseline ledger for checks 7–8 (17 pre-existing entries, `<check>\|<file>\|<token>`); shrinking-only, and its header forbids adding a line to silence a duplicate your own branch introduced |
+| `tools/spec-ci/README.md` | The four recorded collision instances and why an authoring-time check misses them; the two tunings measurement forced (scope `DOMAIN_TAG` to `public const byte` declarations; require a date in a version row's column 2); the fail-injection verification of all eight checks; baseline discipline |
 
 ---
 
