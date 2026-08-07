@@ -2,6 +2,7 @@
 // Created:  2026-05-29
 // Modified: 2026-06-14 (audit AR-3 fix pass)
 // Modified: 2026-07-26 (+ NoPossessorAgentId — names the loose-ball sentinel at the DecisionContextAssembler seam)
+// Modified: 2026-08-06 (ERR-008-022 AR-1 — + BisectorDegenerateSqrThreshold: was a named local in OptionGenerator)
 // Author:   —
 // Spec:     Decision Tree #8 §4.2, §3.7, Code Standards #20
 // Purpose:  Pipeline-level constants not owned by UtilityWeights, ComposureWeights,
@@ -82,6 +83,16 @@ namespace TacticalDirector.DecisionTree
         /// </summary>
         public const float FacingDegenerateSqrThreshold = 0.0001f;
 
+        /// <summary>
+        /// [FIXED] Squared-magnitude floor below which the sum of the two unit post
+        /// directions is treated as a degenerate bisector (a 180° goal arc, i.e. the
+        /// shooter standing on the goal line between the posts) and the goal is scored
+        /// as fully closed. Sits above Unity's own 1e-5 normalisation epsilon so the
+        /// guard fires before <c>normalized</c> silently returns a zero vector.
+        /// §3.2.3.2 (OptionGenerator). ERR-008-022 AR-1: was an inlined named local.
+        /// </summary>
+        public const float BisectorDegenerateSqrThreshold = 1e-8f;
+
         // ── Intercept Look-ahead Steps ────────────────────────────────────────
         // Decision Tree #8 §3.1.9.2
 
@@ -132,4 +143,9 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   DecisionContextAssembler's possessor-team classification      |
 // |         |            |        |   keys on (was a bare -1 literal). Cross-assembly sibling of    |
 // |         |            |        |   MatchEngineConstants.NO_POSSESSION.                           |
+// | 1.5     | 2026-08-06 | —      | ERR-008-022 AR-1: + [FIXED] BisectorDegenerateSqrThreshold = 1e-8. Was a    |
+// |         |            |        | named local inside OptionGenerator.ComputeGoalOpeningScore — a constant     |
+// |         |            |        | in formula code (FR-CS-016). Sits above Unity's 1e-5 normalisation          |
+// |         |            |        | epsilon so the degenerate-arc guard fires before `normalized` silently      |
+// |         |            |        | returns a zero vector.                                                      |
 #endregion

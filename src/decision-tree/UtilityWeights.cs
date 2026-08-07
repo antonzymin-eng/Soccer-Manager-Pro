@@ -8,7 +8,9 @@
 // Modified: 2026-08-05 (ERR-008-019 — + LONG_SHOT_RAMP_HALF_WIDTH [GT]; LONG_SHOT_THRESHOLD redocumented as the ramp centre)
 // Modified: 2026-08-05 (ERR-008-019 owner revision — LONG_SHOT_RAMP_HALF_WIDTH 0.05 → 0.25: full-range ramp, no plateaus)
 // Modified: 2026-08-05 (ERR-008-019 AR — LONG_SHOT_RAMP_HALF_WIDTH XML doc: the (0, 0.25] range is the formula's validity domain; the suite pins 0.25)
-// Modified: 2026-08-06 (ERR-008-021 AR-1 M-1 — doc only: INTERCEPTOR_ABILITY_MIN/MAX + LANE_VISION_FIDELITY_FLOOR now name their second consumer, the §3.2.3.2 step-3a shot-lane occlusion)
+// Modified: 2026-08-05 (ERR-008-021 — shot-lane block model: + SHOT_BLOCKER_ABILITY_MIN/MAX [GT]; LANE_VISION_FIDELITY_FLOOR redocumented as the shared P2 dial)
+// Modified: 2026-08-06 (ERR-008-022 — + SHOT_BLOCKER_NEAR_FADE_M / GK_PROXIMITY_FADE_M [GT]: the two remaining shot-lane predicates become ramps)
+// Modified: 2026-08-07 (ERR-008-023 — GK_BLOCKER_RADIUS_M RETIRED; BLOCKER_RADIUS_M now covers every blocker, keeper included)
 // Author:   —
 // Spec:     Decision Tree #8 §3.2.11, Code Standards #20
 // Purpose:  Authoritative constant catalogue for the utility scoring model.
@@ -137,10 +139,54 @@ namespace TacticalDirector.DecisionTree
         /// </summary>
         public const float LONG_SHOT_RAMP_HALF_WIDTH = 0.25f;
         public const float GOAL_OPENING_MIN = 0.05f;  // [GT] minimum goal opening score floor
-        public const float BLOCKER_RADIUS_M = 0.50f;  // [GT] outfield player body width in shot lane
-        public const float GK_BLOCKER_RADIUS_M = 1.50f;  // [GT] goalkeeper effective blocking radius
-        public const float GK_PROXIMITY_TO_GOAL = 6.00f;  // [GT] distance from goal line to classify as GK
-        public const float GOAL_MIN_SHOT_DIST = 1.00f;  // [GT] minimum dist to count as blocker
+        public const float BLOCKER_RADIUS_M = 0.50f;  // [GT] player body width in the shot lane — EVERY blocker, keeper included (ERR-008-023)
+        public const float GK_PROXIMITY_TO_GOAL = 6.00f;  // [GT] goalkeeper-read ramp CENTRE: distance from the goal line at which a blocker reads half keeper, for the P3 ability exemption only (ERR-008-022/-023; was the hard classification threshold)
+        public const float GOAL_MIN_SHOT_DIST = 1.00f;  // [GT] lane-depth ramp CENTRE: depth at which a blocker contributes half his occlusion (ERR-008-022; was the hard skip threshold)
+
+        /// <summary>
+        /// [GT] Full width (m) of the lane-depth ramp over which a blocker's occlusion goes
+        /// from nothing to his full geometric share. The ramp is CENTRED on
+        /// GOAL_MIN_SHOT_DIST (0.5 m → 1.5 m at this value), so a uniformly-placed blocker
+        /// contributes the same integrated occlusion as the predicate it replaces — the
+        /// doctrine P5 pivot, and the shape ERR-008-019 and ERR-008-020 both used. The bound was a hard predicate: a
+        /// blocker at 0.995 m of lane depth left the goal fully open (score 1.000) and one
+        /// at 1.005 m shut it to the GOAL_OPENING_MIN floor (0.050) — below
+        /// MIN_GOAL_VISIBILITY, so one centimetre of his position also decided whether a
+        /// SHOOT option existed at all. Doctrine P1: continuous, never a cliff.
+        /// §3.1.4.3, ERR-008-022.
+        /// </summary>
+        public const float SHOT_BLOCKER_NEAR_FADE_M = 1.00f;
+
+        /// <summary>
+        /// [GT] Full width (m) of the goalkeeper-read ramp, CENTRED on GK_PROXIMITY_TO_GOAL
+        /// (5 m → 7 m from the goal line at this value — so a blocker exactly on the old
+        /// boundary now reads half keeper, preserving the P5 pivot). The classification was a hard predicate
+        /// on distance to the goal line, so 2 cm of a defender's position flipped his
+        /// blocking radius 0.50 ⇒ 1.50 m and his exemption from the ability term together —
+        /// a measured GoalOpeningScore step of 0.768 ⇒ 0.311 at the 15 m fixture. Both
+        /// quantities now lerp on the same scalar. Absent a goalkeeper flag on
+        /// PerceivedAgent this proximity read stays a heuristic; making it continuous is
+        /// what stops the heuristic's boundary from being a decision cliff.
+        /// §3.2.3.2, ERR-008-022.
+        /// </summary>
+        public const float GK_PROXIMITY_FADE_M = 2.00f;
+
+        // ── Shot-lane block model (§3.1.4.3 / §3.2.3.2, ERR-008-021 / doctrine P1+P2) ──
+        // The blocked arc was the blocker's FULL angular width whenever its angular centre
+        // fell inside the goal arc and exactly zero otherwise — a containment cliff at the
+        // post direction — and the width was body radius alone, so a statuesque defender
+        // shut the goal off exactly as hard as one who reads the shot and gets across.
+        // Replaced by the true angular OVERLAP of the blocking disc with the goal arc
+        // (continuous by construction, and integrating to the identical occlusion over a
+        // uniformly-placed blocker — the doctrine P5 pivot) scaled by the blocker's
+        // perceived blocking ability. See PASS_LANE_* above for the same model on the
+        // pass lane; the two judgments share the P2 fidelity dial and nothing else.
+
+        /// <summary>[GT] Shot-blocking ability scalar at Anticipation+Positioning mean = 0 (raw 1/1). §3.2.3.2, ERR-008-021.</summary>
+        public const float SHOT_BLOCKER_ABILITY_MIN = 0.6f;
+
+        /// <summary>[GT] Shot-blocking ability scalar at Anticipation+Positioning mean = 1 (raw 20/20). Midpoint of MIN..MAX is exactly 1.0 so the league-average blocker occludes exactly the geometric arc — the P5 pivot. §3.2.3.2, ERR-008-021.</summary>
+        public const float SHOT_BLOCKER_ABILITY_MAX = 1.4f;
 
         public const float MOVE_URGENCY_DIST_M = 15.0f;  // [GT] full urgency distance for MOVE
         public const float MOVE_DIST_MIN = 0.10f;  // [GT] minimum distance modifier floor
@@ -180,13 +226,13 @@ namespace TacticalDirector.DecisionTree
         /// <summary>[GT] Outer threat edge (m): positional threat fades linearly from 1.0 at PASS_LANE_CORE_HALF_WIDTH to 0.0 here. Must exceed PASS_LANE_CORE_HALF_WIDTH. §3.1.3.3, ERR-008-020.</summary>
         public const float PASS_LANE_FALLOFF_END = 1.2f;
 
-        /// <summary>[GT] Interception/blocking-ability scalar at Anticipation+Pace mean = 0 (raw 1/1). Consumed by BOTH the pass lane (§3.1.3.3, ERR-008-020) and the shot-lane occlusion (§3.2.3.2 step 3a, ERR-008-021) — one calibration lever moves both lanes (KD-W1).</summary>
+        /// <summary>[GT] Interception-ability scalar at Anticipation+Pace mean = 0 (raw 1/1). §3.1.3.3, ERR-008-020.</summary>
         public const float INTERCEPTOR_ABILITY_MIN = 0.6f;
 
-        /// <summary>[GT] Interception/blocking-ability scalar at Anticipation+Pace mean = 1 (raw 20/20). Midpoint of MIN..MAX is exactly 1.0 so the ability-midpoint defender is weight-neutral. Consumed by BOTH the pass lane (§3.1.3.3, ERR-008-020) and the shot-lane occlusion (§3.2.3.2 step 3a, ERR-008-021).</summary>
+        /// <summary>[GT] Interception-ability scalar at Anticipation+Pace mean = 1 (raw 20/20). Midpoint of MIN..MAX is exactly 1.0 so the league-average defender is weight-neutral. §3.1.3.3, ERR-008-020.</summary>
         public const float INTERCEPTOR_ABILITY_MAX = 1.4f;
 
-        /// <summary>[GT] Vision-fidelity floor: at Vision raw 1 the reading agent (the passer in §3.1.3.3, the shooter in §3.1.4.3) resolves this fraction of an opponent's true ability deviation from average (doctrine P2 — low Vision degrades to the attribute-blind read, it never invents information). ERR-008-020; also the shot lane, ERR-008-021.</summary>
+        /// <summary>[GT] Vision-fidelity floor: at Vision raw 1 the on-ball player resolves this fraction of an opponent's true ability deviation from average (doctrine P2 — low Vision degrades to the attribute-blind read, it never invents information). ONE dial for both lane judgments: fidelity is a property of the assessor's Vision, not of what he is assessing, so the pass lane (§3.1.3.3) and the shot lane (§3.2.3.2) share it. §3.1.3.3, ERR-008-020; §3.2.3.2, ERR-008-021.</summary>
         public const float LANE_VISION_FIDELITY_FLOOR = 0.2f;
 
         public const float PASS_LANE_DIVISOR = 3.0f;  // [GT] summed lane threat → score=0
@@ -341,10 +387,26 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        | ruled out). Doc now records that (0, 0.25] is the FORMULA's validity      |
 // |         |            |        | domain, not a free dial, and that a retune below 0.25 must revisit that   |
 // |         |            |        | lock in the same change.                                                  |
-// | 1.11    | 2026-08-06 | —      | ERR-008-021 AR-1 M-1 (doc only; no value changes): INTERCEPTOR_ABILITY_    |
-// |         |            |        | MIN/MAX and LANE_VISION_FIDELITY_FLOOR now document their second          |
-// |         |            |        | consumer — the §3.2.3.2 step-3a shot-lane occlusion (ERR-008-021) — and   |
-// |         |            |        | the fidelity doc names "the reading agent" (passer OR shooter). These     |
-// |         |            |        | three [GT]s are deliberately shared: one calibration lever moves both     |
-// |         |            |        | lanes at the eventual KD-W1 balance pass.                                 |
+// | 1.11    | 2026-08-05 | —      | ERR-008-021 (judgment-proxy doctrine §6.4 follow-up — the shot lane, the  |
+// |         |            |        | geometry ERR-008-020 deliberately left behind): + SHOT_BLOCKER_ABILITY_   |
+// |         |            |        | MIN/MAX [GT] = 0.6/1.4 (Anticipation+Positioning, midpoint exactly 1.0    |
+// |         |            |        | so the average blocker occludes the bare geometric arc — P5 pivot).       |
+// |         |            |        | LANE_VISION_FIDELITY_FLOOR redocumented as ONE shared P2 dial for both    |
+// |         |            |        | lane judgments — fidelity belongs to the assessor's Vision, not to what   |
+// |         |            |        | is being assessed, so a second copy would be a parallel surface, not a    |
+// |         |            |        | second parameter. No value changed.                                       |
+// | 1.12    | 2026-08-06 | —      | ERR-008-022 (adversarial review over the -021 landing). Two [GT]s added,    |
+// |         |            |        | both ramp widths that turn a hard predicate into a slope (doctrine P1):     |
+// |         |            |        | SHOT_BLOCKER_NEAR_FADE_M = 1.0 m over GOAL_MIN_SHOT_DIST (which flipped     |
+// |         |            |        | GoalOpeningScore 1.000 → 0.050 across 1 cm of lane depth, and with 0.050    |
+// |         |            |        | sitting below MIN_GOAL_VISIBILITY also decided whether a SHOOT option       |
+// |         |            |        | existed), and GK_PROXIMITY_FADE_M = 2.0 m over GK_PROXIMITY_TO_GOAL         |
+// |         |            |        | (which flipped the blocking radius 0.50 ⇒ 1.50 m and the P3 ability         |
+// |         |            |        | exemption together — a measured 0.768 ⇒ 0.311 step over 2 cm). No           |
+// |         |            |        | existing value changed; GOAL_MIN_SHOT_DIST and GK_PROXIMITY_TO_GOAL are     |
+// |         |            |        | now ramp anchors rather than predicates.                                    |
+// | 1.13    | 2026-08-07 | —      | ERR-008-023. GK_BLOCKER_RADIUS_M (1.50f) RETIRED — the keeper occludes     |
+// |         |            |        | with BLOCKER_RADIUS_M like every other player; his reach is #11's under    |
+// |         |            |        | P3. BLOCKER_RADIUS_M and GK_PROXIMITY_TO_GOAL redocumented accordingly     |
+// |         |            |        | (the latter now anchors the ability exemption only). No value changed.     |
 #endregion

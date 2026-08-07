@@ -1,7 +1,58 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 7, 2026 (**Gate fix — CI run 405, this branch's first compile, failed.**
+**Last Updated:** August 7, 2026 — **ERR-008-023 — the ERR-008-022 landing scored ZERO GOALS; the acceptance scenario caught it.** CI run `31188688249` (PR #303, head `a2987be`) is the first run ever to reach `MatchEngine.Tests` on this branch — that suite takes **22 m 55 s**, against the 3 minutes run 402 survived before cancellation, so nothing had exercised the match engine here at all. It failed `sim_match_engine_shot_outcomes` on `goals-still-scored = 0`: four seeds × 18 minutes, 72 minutes of football, no goal. Cause: -022's own headline fix. The retired goal-centre-plane bound had discarded a goal-line keeper for **every** shooter position, so the keeper-only `GK_BLOCKER_RADIUS_M` = 1.5 m disc had never been exercised; it went live at -022 and removed **~42% of the goal arc on every shot** (1.000 → 0.584 at 16 m, keeper alone). Fixed by retiring the disc — every blocker occludes with `BLOCKER_RADIUS_M`, keeper included, because reach beyond the body is shot-stopping and P3 assigns that to #11, which prices it at contact. `gkness` survives, lerping the P3 exemption alone. Suite 15 → 16; a GK-read continuity lock that was about to become this file's third tautology of its class now carries live attributes. This is the P5 residual -022 recorded as *not fixed* under KD-W1.
+
+**Last Updated (prior):** August 6, 2026, latest same day (**ERR-008-022 far-post lock corrected at the first
+gate run. No new files.** **Modified:** `src/decision-tree/Tests/OptionGeneratorTests.cs` v1.9 (+ the
+`FarPostFrom` geometry helper; the far-post lock no longer reads the `PostL`/`PostR` label), and this
+record set. Production code untouched. **CI run 402 (PR #302, head `301c634`) — the first execution of any of this work.** Build succeeded **0 errors** (5 warnings); `DecisionTree.Tests` **127 passed / 1 failed / 4 skipped / 132**, every other suite green — but **not a gate pass**: the `Compile + test` job was cancelled at 16:59:45, before `run-gate.sh` reached `Gate PASSED`, and four hygiene checks were cancelled without ever being assigned a runner (`spec-error-log.md` v1.75). The failure was `ShotLane_FarPostBlocker_OccludesTheGoal` (expected 0.782157, got **0.728880**) and it was the TEST: it read `ctx.OpponentGoalPostL`, y = **30.34** in the home fixture — the post *nearer* the (90, 24) shooter. The pre-fix bound kept the near post and discarded only the far one, so the lock named for ERR-008-022's headline finding would have **passed against the broken model**. Now selected by geometry (`FarPostFrom`), not by the `PostL`/`PostR` label, which carries opposite sides in this file's two fixtures; expected value unchanged and **not** compiler-confirmed — the run evaluated the old test and returned the near post's 0.728880, and `0612bcc` has never been compiled since. The recorded 12-of-12 mutant kill overstates the far-bound mutant accordingly — the harness killed it, the committed test did not. **Prior entry below.**)
+
+**Last Updated (prior):** August 6, 2026, latest same day (**ERR-008-022 — the shot lane's far bound, near bound and
+goalkeeper read. No new files.** **Modified:** `src/decision-tree/OptionGenerator.cs` v1.8
+(`IsInShotPath` → `ShotPathWeight`: far bound moved from a plane through the goal CENTRE to the
+goal-line PLANE — the old one discarded the far-post blocker on 20,213 of 20,213 sampled in-range
+off-centre shooters and dropped a keeper on his line at goal centre for every shooter position,
+while admitting an opponent behind the goal line at the keeper's radius; near bound ramped rather
+than gated; `isGk` bool → `gkness` scalar lerping the blocking radius and the P3 ability exemption
+together; dead `dist < 0.001` guard removed; the false `SignedAngleDeg` "sign convention is
+load-bearing" comment and the stale gate-4 comment corrected),
+`src/decision-tree/UtilityWeights.cs` v1.12 (+ `SHOT_BLOCKER_NEAR_FADE_M` / `GK_PROXIMITY_FADE_M`
+`[GT]` = 1.0 m / 2.0 m), `src/decision-tree/DecisionTreeConstants.cs` v1.5
+(+ `[FIXED] BisectorDegenerateSqrThreshold` — was a named local in formula code, FR-CS-016),
+`src/decision-tree/Tests/OptionGeneratorTests.cs` v1.8 (**10 → 15 locks**: the partial-overlap test
+now asserts the closed-form value rather than `< 1.0` — a mutant restoring the pre-fix
+over-blocking had passed all ten; + off-centre shooter, far-post, behind-the-goal-line, and the two
+ramp-continuity sweeps; both `NullAttributeView` tautologies de-tautologised, pass lane included),
+`docs/specs/decision-tree/section-3-1.md` v1.5, `docs/specs/decision-tree/section-3-2.md` v1.13
+(which also writes the v1.12 row ERR-008-021 never wrote),
+`docs/specs/decision-tree/section-3-2-3-to-3-2-9.md` (§3.2.3.2 steps 3a–4, the corrected P5 claim,
+and the worked example re-derived with a genuine outfielder in corner-origin coordinates),
+`docs/specs/decision-tree/section-3-2-10-to-3-2-13.md` (the eleven-revisions-stale duplicate
+§3.2.13 version history removed; the phantom `PRESS_TACTICAL_*` catalogue block deleted),
+`docs/tracking/spec-error-log.md` v1.68, `docs/tracking/football-judgment-proxy-review.md` (§6.4.2),
+`CLAUDE.md`, `docs/tracking/open-issues.md`, `docs/tracking/CHANGELOG.md`,
+`docs/tracking/CHANGELOG-src.md` v2.77, `README.md`. **No gate run — no .NET SDK.**)
+
+**Last Updated (prior):** August 5, 2026, latest same day (**ERR-008-021 — the #8 shot-lane occlusion
+model. No new files.** **Modified:** `src/decision-tree/OptionGenerator.cs` v1.7
+(`ComputeGoalOpeningScore` rewritten: the binary wedge-containment test → the true angular overlap
+of the blocking disc with the goal arc, measured about the arc's bisector; + `PerceivedBlockAbility`
+(Anticipation+Positioning → 0.6..1.4, blended toward 1.0 by the shooter's Vision fidelity) and
+`SignedAngleDeg`; GK branch skips the ability term; the `ArcOverlapToleranceDeg` epsilon deleted
+with the test it served), `src/decision-tree/UtilityWeights.cs` v1.11 (+ `SHOT_BLOCKER_ABILITY_MIN`
+/`MAX` `[GT]` = 0.6/1.4; `LANE_VISION_FIDELITY_FLOOR` redocumented as the one P2 dial shared by both
+lane judgments), `src/decision-tree/Tests/OptionGeneratorTests.cs` v1.7 (9 new locks incl. the
+computed-path P5 pivot, the GK exemption and the away mirror),
+`docs/specs/decision-tree/section-3-1.md` v1.4 (§3.1.4.3 rewritten; the v1.3 shot-lane deferral
+scope note discharged), `docs/specs/decision-tree/section-3-2-3-to-3-2-9.md` (§3.2.3.2 steps 3–4
+rewritten + correction blockquote + constants table + P5 integration proof + verification table +
+the worked example recomputed with an elite/Vision-1 pair), `spec-error-log.md` v1.67 (head + entry
++ index row), `football-judgment-proxy-review.md` (header, §2 finding, new §6.4.1), `open-issues.md`,
+`CLAUDE.md`, `CHANGELOG.md`, `CHANGELOG-src.md` v2.76, `README.md`. No schema / RNG / domain-tag /
+draw-site / draw-order change; digest invariance NOT claimed (the model is live on every generated
+shot). **Gate NOT run — no .NET SDK in the authoring environment.** **Prior entry below.**)
+**Last Updated (prior):** August 7, 2026 (**Gate fix — CI run 405, this branch's first compile, failed.**
 
 **Modified:** `src/season-save/PlayerCareerStates.cs` v1.2 → **v1.3** — `FromBlocks`' copy locals renamed
 `training`/`injury` → `trainingStates`/`injuryStates`. The method's own parameters are `training` and

@@ -1,6 +1,51 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
+**Last Updated:** August 6, 2026 (**ERR-008-022 — the same shot calculation was throwing away
+half the goal before it started.** Yesterday's fix (ERR-008-021 below) taught the shooter to
+count a defender who stands *across* one of the posts rather than squarely between them. A
+hostile review of that fix found it was being handed the wrong list of defenders to count. The
+code decided who was "in the way" by asking whether an opponent stood nearer than the middle of
+the goal — which, if you are shooting from anywhere except dead centre, draws a diagonal line
+straight across the goalmouth. Everyone guarding the **far** post fell on the wrong side of it
+and was simply deleted. On every one of 20,213 off-centre shooting positions tested, the far-post
+defender was thrown away and the near-post one kept; a goalkeeper standing on his line in the
+middle of his goal was thrown away from *every* position tried, so a striker could look at a
+keeper directly in front of him and see a completely empty net. The mirror of the same mistake
+counted an opponent standing *behind* the goal, in the net, as a keeper blocking the shot. Two
+other yes/no switches in the same calculation turned out to be bigger cliffs than the one the
+earlier fix removed — one centimetre of a defender's position could take the shooter from
+"completely open goal" to "no shot on at all", and two centimetres could change whether the game
+thought a man was a goalkeeper or an outfielder, which doubles the space he blocks. All three are
+now gradual. Three things the earlier fix *claimed* to have verified turned out to be wrong and
+are corrected in the record rather than quietly dropped, including the argument that had been the
+stated reason the change needed no rebalancing. And the tests were weaker than advertised: a
+deliberately broken version of the code passed all ten of them, and one test compared a value
+with itself. The suite is now fifteen tests, all of which check the answer rather than merely
+that an answer appeared. Nothing here has been compiled or run — this environment has no .NET
+SDK — so every figure above comes from working the geometry out by hand against an independent
+reference implementation.)
+
+**Last Updated (prior):** August 5, 2026, latest same day (**ERR-008-021 — a defender standing across the
+near post used to count for nothing.** When a player decides whether a shot is on, he estimates how
+much of the goal he can actually see. The old rule asked one yes/no question of each opponent in the
+way — *is the middle of his body between the two posts, from where I am standing?* — and if the
+answer was yes it blocked out his whole width, and if no it blocked out nothing at all. So a
+defender a few centimetres the wrong side of that line vanished from the calculation entirely, and
+the shooter saw a completely open goal with a man standing squarely in front of his near post. Four
+centimetres of defender movement could swing the shooter's read of the goal from 60% open to 100%
+open — and that number decides whether he shoots at all, how good he thinks the chance is, and how
+hard he hits it. The rule now measures how much of the goal each opponent's body *actually* covers,
+which removes the jump and, incidentally, is simply the correct answer. Two related things also
+changed: a defender's own qualities now matter — someone who reads the shot early and gets his body
+into its line blocks more of the goal than someone who does neither — and how accurately the shooter
+judges that depends on his own vision, so a poor reader of the game sees every defender as roughly
+average, which is exactly how the game behaved before. The goalkeeper is deliberately left out of
+that: his shot-stopping is already modelled elsewhere, and counting it twice would make him better
+than he is. Average defenders in average positions block exactly what they blocked before, so match
+balance is not shifted — the change redistributes rather than tightens. Nine tests lock the new
+behaviour, three of which fail on the old rule. **Not compiled or run here — this environment has no
+.NET toolchain; CI compiles on push.** **Prior entry below.**)
 **Last Updated:** August 6, 2026, latest same day (**Training and injuries are now wired into the
 career loop — for the first time, a saved season carries what players have actually been doing.**
 

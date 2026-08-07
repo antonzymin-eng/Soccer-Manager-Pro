@@ -156,6 +156,54 @@ SHOOT_RISK_COEFF  = 0.40 [GT]
 agent's current position, accounting for opponents positioned in the shooting lane.
 It is computed by `ComputeGoalOpeningScore()`, a Decision Tree-owned function.
 
+> **ERR-008-021 correction (August 5, 2026)** — the shot-lane half of the football-judgment
+> proxy review's #8 finding, deferred at the ERR-008-020 landing (review §6.4, owner call:
+> keep the template change small) and closed here. Steps 3–4 below carried the same two
+> defects the pass lane did. **(a) A containment cliff:** an opponent counted his *entire*
+> blocking width if his angular centre fell inside the goal arc and *nothing at all* if it
+> fell outside — so a defender standing squarely across the near post scored zero, a
+> defender a centimetre the other side scored a width half of which lay behind the post,
+> and 4 cm of lateral position stepped the shooter's read of the goal by ~0.41 on the
+> §5 fixture. **(b) Attribute blindness:** the width was body radius alone, so a defender
+> who neither reads the shot nor gets his body into its line shut the goal off exactly as
+> hard as one who does. Step 3 now yields an angular *interval*; step 4 intersects it with
+> the goal arc (continuous by construction — no ramp constant, no tolerance epsilon) and
+> scales the result by the blocker's `Anticipation`/`Positioning` ability read through the
+> shooter's `Vision` fidelity (doctrine P1 + P2). The goalkeeper is exempt from the ability
+> term — #11 owns his shot-stopping (doctrine P3). Steps 1, 2 and 5 are untouched.
+
+> **ERR-008-022 correction (August 6, 2026)** — from the adversarial review over the
+> ERR-008-021 landing, which found the overlap model was being fed by a lane test that
+> discarded much of what it exists to price, and that two further hard predicates in the
+> same derivation were larger cliffs than the one -021 removed.
+>
+> **(a) The lane's far bound was the wrong plane.** §3.1.4.3 admitted an opponent when his
+> projection onto the shooting axis was less than the distance to the goal *centre* — a
+> plane through the centre spot, perpendicular to the shot. For any off-centre shooter
+> that plane cuts diagonally across the goal mouth, so the **far-post** blocker fell
+> outside it and was discarded while the near-post one was kept (measured: 100% of
+> 20,213 sampled in-range off-centre shooters), and a keeper standing on his line at goal
+> centre gave `proj == distToGoal` exactly and was dropped for *every* shooter position —
+> reading as a completely open goal. Its mirror admitted an opponent standing *behind* the
+> goal line, in the net, and handed him the goalkeeper's larger radius. The bound is now
+> the **goal-line plane**, which is the surface the shot has to reach.
+>
+> **(b) `GOAL_MIN_SHOT_DISTANCE` was a whole-decision cliff.** A blocker at 0.995 m of lane
+> depth left the goal fully open (1.000); at 1.005 m the opening fell to the
+> `GOAL_OPENING_MIN` floor (0.050) — which sits *below* `MIN_GOAL_VISIBILITY`, so one
+> centimetre of his position also decided whether a SHOOT option existed at all. More than
+> twice the step -021 was filed to remove, in the same function. It now ramps over
+> `SHOT_BLOCKER_NEAR_FADE_M`.
+>
+> **(c) The goalkeeper read was a predicate, so its boundary was a cliff.** Crossing
+> `GK_PROXIMITY_TO_GOAL` flipped the blocking radius 0.5 ⇒ 1.5 m *and* the P3 ability
+> exemption together: a measured `GoalOpeningScore` step of 0.768 ⇒ 0.311 over 2 cm, which
+> -021 had widened to 0.551 at its worst by making the step attribute-dependent. It is now
+> a scalar `gkness`. It lerped both quantities until **ERR-008-023 retired the keeper-only
+> radius entirely**, so today it lerps the P3 exemption alone. Absent a goalkeeper flag on the perceived
+> agent this stays a positional proxy (Stage 1 replaces it with an explicit role); making
+> it continuous is what stops the proxy's boundary from being a decision cliff.
+
 **Goal positions:** from `PitchGeometry` static class (§3.2.1.4).
 
 ```
@@ -170,59 +218,86 @@ ComputeGoalOpeningScore(agentPos, teamId, visibleOpponents[]):
    angleR = atan2(goalPostR.y − agentPos.y, goalPostR.x − agentPos.x)
    totalGoalAngle = |angleL − angleR|    // in radians
 
-3. For each visible opponent, compute their angular width subtended from agent pos:
-   // Outfield players are modelled as blocking discs of radius BLOCKER_RADIUS = 0.5m [GT]
-   // Goalkeepers are modelled with GK_BLOCKER_RADIUS = 1.5m [GT] to approximate their
-   // wider effective coverage (arm reach + lateral movement at Stage 0, where no
-   // GK-specific positioning logic exists).
-   //
-   // GK identification heuristic (Stage 0): an opponent whose PerceivedPosition is within
-   // GK_PROXIMITY_TO_GOAL (6.0m) of the opponent goal line is classified as goalkeeper.
-   // This is a positional proxy — no GoalkeeperId field exists at Stage 0.
-   // Stage 1: replace with explicit AgentRole == GOALKEEPER flag from AgentState.
-   //
-   opponentDist = |visibleOpponent.PerceivedPosition − agentPos|
-   If opponentDist < GOAL_MIN_SHOT_DISTANCE: skip (opponent is behind agent or too close)
+3. For each visible opponent, compute the angular interval his body subtends:
+   // EVERY player is modelled as a blocking disc of radius BLOCKER_RADIUS = 0.5m [GT],
+   // the goalkeeper included (ERR-008-023). A keeper's coverage beyond his own body —
+   // arm reach, the dive, lateral movement — is shot-stopping, which the P3 ownership
+   // ledger assigns to Goalkeeper Mechanics #11 (§3.5 save model, §3.7.0 rush) and which
+   // #11 already prices at contact. Charging it again in the shooter's read of the goal
+   // priced one keeper twice.
 
-   // Determine effective blocker radius
-   opponentDistToGoalLine = |visibleOpponent.PerceivedPosition.x − goalPostL.x|
-   isLikelyGoalkeeper = (opponentDistToGoalLine ≤ GK_PROXIMITY_TO_GOAL)
-   effectiveRadius = isLikelyGoalkeeper ? GK_BLOCKER_RADIUS : BLOCKER_RADIUS
+   // 3a. Lane admission — how much of this opponent's occlusion counts at all
+   //     (ERR-008-022 (a) + (b); §3.1.4.3 owns the same test). BOTH bounds are stated
+   //     against the GOAL-LINE PLANE, not against the distance to the goal centre.
+   shooterToLine_i = goalPostL.x − agentPos.x        // signed; attack direction
+   blockerToLine_i = goalPostL.x − O_i.x
+   If shooterToLine_i × blockerToLine_i < 0: skip    // opponent is past the goal line
+   If |blockerToLine_i| > |shooterToLine_i|:  skip   // opponent is behind the shooter
 
-   blockedAngle = 2 × atan(effectiveRadius / opponentDist)
+   // The ramp is CENTRED on the old predicate — half its width either side — so a
+   // uniformly-placed blocker contributes the same integrated occlusion as before
+   // (the P5 pivot, and the shape ERR-008-019 and -020 both used). A ramp running
+   // from the threshold upward would be a one-sided reduction dressed as a
+   // continuity fix.
+   proj_i       = Dot(O_i − agentPos, Normalise(goalCentre − agentPos))   // lane depth, m
+   rampStart    = GOAL_MIN_SHOT_DISTANCE − SHOT_BLOCKER_NEAR_FADE_M / 2
+   laneWeight_i = Clamp01((proj_i − rampStart) / SHOT_BLOCKER_NEAR_FADE_M)
+   If laneWeight_i == 0: skip                        // essentially on top of the shooter
 
-3a. Weight the blocked angle by the shooter's read of the blocker (ERR-008-021;
-    single-candidate form per its AR-1 H-1):
-   // A blocker's occlusion is a proxy for "will he get his body in the way", so
-   // it scales by the same perceived_ability(O) scalar as §3.1.3.3's pass lane —
-   // the blocker's Anticipation/Pace mapped to INTERCEPTOR_ABILITY_MIN..MAX [GT],
-   // read through the SHOOTER's Vision as discrimination fidelity
-   // (LANE_VISION_FIDELITY_FLOOR [GT]); all constants reused verbatim, no new
-   // [GT]s (KD-W1 — one calibration lever).
+   // 3b. GK read — a SCALAR, not a predicate (ERR-008-022 (c)). Stage 0 has no
+   //     GoalkeeperId field, so proximity to the goal line is the proxy; gkness lerps
+   //     the P3 ability exemption, so the proxy's boundary is a slope. It no longer
+   //     lerps a radius — see 3 above and ERR-008-023. Stage 1: replace with an
+   //     explicit AgentRole == GOALKEEPER flag.
+   distToGoalLine_i = |O_i.x − goalPostL.x|
+   gkRampStart      = GK_PROXIMITY_TO_GOAL − GK_PROXIMITY_FADE_M / 2      // centred, as above
+   gkness_i         = 1 − Clamp01((distToGoalLine_i − gkRampStart) / GK_PROXIMITY_FADE_M)
+
+   opponentDist_i = |O_i − agentPos|
+   halfWidth_i    = atan(BLOCKER_RADIUS / opponentDist_i)      // angular half-width, rad
+
+4. Blocked arc per opponent — the OVERLAP of his disc with the goal arc, scaled by his
+   perceived blocking ability (ERR-008-021; doctrine P1 + P2 + P3):
+
+   // Measure every angle about the goal arc's own bisector, where the arc is exactly
+   // the symmetric interval [−halfArc, +halfArc] and the overlap is a plain
+   // interval intersection. bisector = Normalise(dirToPostL + dirToPostR);
+   // halfArc = totalGoalAngle / 2. The bisector is undefined only for a 180° arc (the
+   // shooter standing on the goal line between the posts); guard it and score the goal
+   // as fully closed.
    //
-   // Exactly ONE opponent is exempt: the GK CANDIDATE — the goal-line-nearest
-   // visible opponent within GK_PROXIMITY_TO_GOAL (first in snapshot order on an
-   // exact tie; identified over ALL visible opponents, independent of the
-   // shot-path filter). His shot-stopping quality is priced once, at the #11
-   // save resolution (doctrine P3 — weighting his occlusion here would
-   // double-count it), and GK_BLOCKER_RADIUS is already an abstraction of
-   // coverage, not a body. Any OTHER opponent inside the band has no save
-   // resolution pricing him and IS weighted (his radius still follows the step-3
-   // band heuristic — see the Known-limitation paragraph below). The original
-   // band-wide exemption left every near-goal defender unweighted exactly where
-   // shots are blocked (AR-1 H-1).
-   //
-   // The multiplier is exactly 1.0 for a blocker at the ability midpoint
-   // (mean01 = 0.5, e.g. raw 10/11) or under a null attribute view; the
-   // all-default 10/10 profile reads ≈ 0.979 — today's arcs are the pivot
-   // approximately, exact at the midpoint and under a null view (doctrine P5).
-   If O is not the GK candidate:
-       blockedAngle ×= perceived_ability(O)          // §3.1.3.3, ERR-008-020 form
-   Clamp blockedAngle to [0.0, totalGoalAngle] to avoid over-blocking.
+   // SignedAngle(u, v) = atan2(u.x·v.y − u.y·v.x, u.x·v.x + u.y·v.y), returning
+   // radians in (−π, π]. WHICH rotation sense is positive does not matter here: the
+   // arc is symmetric about the bisector, so overlap_i is an even function of centre_i.
+   // All angles in this step are RADIANS.
+   centre_i  = SignedAngle(bisector, dirToOpponent_i)
+   overlap_i = Max( Min(centre_i + halfWidth_i, +halfArc)
+                  − Max(centre_i − halfWidth_i, −halfArc), 0.0 )
 
-4. Sum blocked angles from all opponents whose angular position overlaps the goal arc:
-   // Overlap test: opponent's angular centre is within [angleR, angleL]
-   totalBlockedAngle = Σ blockedAngle_i  (for overlapping opponents only)
+   // Blocking ability from the opponent's own attributes (units: none; inputs raw
+   // [1,20], A_X = (raw − 1)/19 ∈ [0,1]). Anticipation reads the shot early enough to
+   // move; Positioning is getting the body into its line rather than near it.
+   ability_mean01_i  = 0.5 × (A_Anticipation(O_i) + A_Positioning(O_i))
+   true_ability_i    = SHOT_BLOCKER_ABILITY_MIN
+                     + (SHOT_BLOCKER_ABILITY_MAX − SHOT_BLOCKER_ABILITY_MIN) × ability_mean01_i
+
+   // The SHOOTER's Vision as discrimination fidelity (doctrine P2), the same model and
+   // the same dial as §3.1.3.3 — fidelity is a property of the assessor, not of what he
+   // assesses, so LANE_VISION_FIDELITY_FLOOR is deliberately ONE constant for both.
+   fidelity            = LANE_VISION_FIDELITY_FLOOR
+                       + (1.0 − LANE_VISION_FIDELITY_FLOOR) × A_Vision(shooter)
+   perceived_ability_i = 1.0 + fidelity × (true_ability_i − 1.0)
+
+   // Doctrine P3 — the goalkeeper occludes on geometry alone (ability 1.0). His
+   // shot-stopping quality is Goalkeeper Mechanics #11's to price (§3.5 save model,
+   // §3.7.0 rush); charging it here as well would price one keeper twice. The exemption
+   // fades out with gkness_i on the same scalar as the radius (ERR-008-022 (c)).
+   effective_ability_i = Lerp(perceived_ability_i, 1.0, gkness_i)
+
+   blockedAngle_i = Min(overlap_i × effective_ability_i × laneWeight_i,
+                        totalGoalAngle)        // per-opponent clamp, unchanged
+
+   totalBlockedAngle = Σ blockedAngle_i
    totalBlockedAngle = min(totalBlockedAngle, totalGoalAngle)   // cannot exceed 100%
 
 5. Compute score:
@@ -231,79 +306,195 @@ ComputeGoalOpeningScore(agentPos, teamId, visibleOpponents[]):
    GOAL_OPENING_MIN = 0.05 [GT]   ← floor; a tiny gap always exists
 ```
 
-**Numerical example:**
+**Numerical example.** All coordinates **corner-origin** per Ball Physics #1 §1.2 — X 0–105
+goal-to-goal, Y 0–68 touchline-to-touchline, origin at the pitch corner. (The pre-ERR-008-022
+version of this example was written in the abolished centre-origin frame, and placed its
+opponent 4.5 m from the goal line — inside `GK_PROXIMITY_TO_GOAL`, so the algorithm classified
+him a goalkeeper and exempted him from the very ability term the example was demonstrating.
+Every number in it was unreachable.)
+
 ```
-Agent position: (40, 5) — right-of-centre, 12.5m from goal line
+Agent position: (92.5, 39.0) — 5 m left of the goal's centre line, 12.5 m from the goal line
 TeamId: 0 (home) — attacking +X
 
-goalPostL = (52.5, +3.66)
-goalPostR = (52.5, -3.66)
+goalPostL = (105.0, 37.66)      goalPostR = (105.0, 30.34)      goalCentre = (105.0, 34.0)
 
-angleL = atan2(3.66−5, 52.5−40) = atan2(−1.34, 12.5) = −0.1068 rad
-angleR = atan2(−3.66−5, 52.5−40) = atan2(−8.66, 12.5) = −0.6051 rad
-totalGoalAngle = |−0.1068 − (−0.6051)| = 0.4983 rad (≈ 28.5°)
+angleL = atan2(37.66−39.0, 105−92.5) = atan2(−1.34, 12.5) = −0.1068 rad
+angleR = atan2(30.34−39.0, 105−92.5) = atan2(−8.66, 12.5) = −0.6059 rad
+totalGoalAngle = |−0.1068 − (−0.6059)| = 0.4991 rad (≈ 28.60°)
 
-Visible opponent at (48, 3): directly in shooting lane
-  opponentDist = |(48−40, 3−5)| = |(8, −2)| = 8.25m
-  blockedAngle = 2 × atan(0.5 / 8.25) = 2 × 0.0606 = 0.1211 rad
-  Opponent angular centre = atan2(3−5, 48−40) = atan2(−2, 8) = −0.2450 rad
-  Within [−0.6051, −0.1068]? Yes → overlapping.
+bisector angle = (−0.1068 + −0.6059) / 2 = −0.35633 rad;  halfArc = 0.24954 rad
 
-totalBlockedAngle = 0.1211 rad
-GoalOpeningScore = (0.4983 − 0.1211) / 0.4983 = 0.3772 / 0.4983 = 0.757
+Visible opponent at (96.5, 37.5) — an OUTFIELDER in the shooting lane
+  Lane admission (step 3a):
+    shooterToLine = 105 − 92.5 = +12.5;  blockerToLine = 105 − 96.5 = +8.5
+    same sign ⇒ not past the goal line;  8.5 ≤ 12.5 ⇒ not behind the shooter
+    shotDir    = Normalise((12.5, −5.0)) = (0.92848, −0.37139)
+    proj       = Dot((4.0, −1.5), shotDir) = 4.2710 m
+    laneWeight = Clamp01((4.2710 − 1.0) / 1.0) = 1.000
 
-ScoredGoalOpeningScore = clamp(0.757, 0.05, 1.0) = 0.757 ✓
+  GK read (step 3b):
+    distToGoalLine = |96.5 − 105| = 8.5 m
+    gkness         = 1 − Clamp01((8.5 − 6.0) / 2.0) = 1 − 1 = 0.00   ← fully outfield
+    effectiveRadius = Lerp(0.5, 1.5, 0.00) = 0.50 m
+
+  opponentDist = |(4.0, −1.5)| = 4.2720 m
+  halfWidth    = atan(0.50 / 4.2720) = 0.1165 rad
+  centre       = atan2(−1.5, 4.0) − (−0.35633) = −0.35875 + 0.35633 = −0.0024 rad
+  overlap      = min(−0.0024+0.1165, +0.24954) − max(−0.0024−0.1165, −0.24954)
+               = 0.1141 − (−0.1189) = 0.2330 rad     ← disc lies wholly inside the arc,
+                                                        so overlap = the full 2×halfWidth
+
+  League-average blocker (Anticipation 10 / Positioning 11 ⇒ mean01 = 0.5):
+    true_ability      = 0.6 + 0.8 × 0.5 = 1.00 ⇒ perceived_ability = 1.00 at ANY Vision
+    effective_ability = Lerp(1.00, 1.0, 0.00) = 1.00
+    blockedAngle      = 0.2330 × 1.00 × 1.000 = 0.2330 rad
+
+totalBlockedAngle = 0.2330 rad
+GoalOpeningScore = (0.4991 − 0.2330) / 0.4991 = 0.2661 / 0.4991 = 0.533
+
+ScoredGoalOpeningScore = clamp(0.533, 0.05, 1.0) = 0.533 ✓
 ```
 
-**Step 3a worked example (ERR-008-021)** — the same geometry, treating the blocker as
-weighted (as the example's outfield 0.5 m radius implies; under the AR-1
-single-candidate rule he is weighted whenever any opponent sits nearer the goal
-line), with a Vision-20 shooter (`fidelity` = 1.0):
+**The same shot through an elite blocker (doctrine P2).** Identical geometry, opponent
+Anticipation 20 / Positioning 20, shooter Vision 20 (`A_Vision` = 1.0 ⇒ `fidelity` = 1.0):
 
 ```
-Blocker Anticipation/Pace raw 20/20 ⇒ perceived_ability = 1.4:
-  blockedAngle = 0.1211 × 1.4 = 0.1695 rad
-  GoalOpeningScore = (0.4983 − 0.1695) / 0.4983 = 0.660
-
-Blocker raw 1/1 ⇒ perceived_ability = 0.6:
-  blockedAngle = 0.1211 × 0.6 = 0.0727 rad
-  GoalOpeningScore = (0.4983 − 0.0727) / 0.4983 = 0.854
-
-The same two blockers read by a Vision-1 shooter (fidelity = 0.2 ⇒ abilities
-1.08 / 0.92): scores 0.738 / 0.776 — the low-Vision shooter barely tells them
-apart, which is the pre-fix behaviour. An ability-neutral blocker reproduces
-0.757 exactly (doctrine P5 pivot).
+true_ability = 0.6 + 0.8 × 1.0 = 1.40 ⇒ perceived_ability = effective_ability = 1.40
+blockedAngle = 0.2330 × 1.40 = 0.3262 rad
+GoalOpeningScore = (0.4991 − 0.3262) / 0.4991 = 0.346
 ```
 
-> **Legacy-example note (recorded at the ERR-008-021 landing, not fixed here):** the
-> numerical example above predates two later decisions and is preserved for the
-> §3.2.3.3 verification chain that consumes its 0.757: (i) its coordinates are in a
-> legacy centre-origin frame (goal line at x = 52.5, posts y = ±3.66), while the
-> implementation and Ball Physics #1 §1.2 use corner-origin (posts at y = 34 ± 3.66);
-> (ii) under step 3's own GK heuristic this blocker — 4.5 m from the goal line, inside
-> `GK_PROXIMITY_TO_GOAL` = 6.0 m — would classify as a goalkeeper (radius 1.5 m,
-> step 3a not applied), yet the example uses the outfield 0.5 m radius. The step 3a
-> demonstration above therefore reads the blocker as the example does (outfield).
+The same body in the same place, read by a Vision-1 shooter (`fidelity` = 0.2), gives
+`perceived_ability` = 1.08 and `GoalOpeningScore` = 0.496 — near the average-blocker
+answer of 0.533. Low Vision does not invent information; it fails to resolve it, which is
+exactly the pre-ERR-008-021 behaviour (doctrine P2).
 
-**Goalkeeper as blocker:** The goalkeeper is identified by a positional heuristic:
-any opponent within `GK_PROXIMITY_TO_GOAL = 6.0m` of their own goal line is treated
-as the goalkeeper and assigned a blocking radius of `GK_BLOCKER_RADIUS = 1.5m` rather
-than the outfield `BLOCKER_RADIUS = 0.5m`. This approximates the GK's effective coverage
-area (arm reach + lateral movement) without requiring a GK-specific role flag, which
-does not exist at Stage 0. The heuristic is conservative — a GK at their near post can
-cover 3–4m laterally from centre; 1.5m is the disc radius equivalent giving a 3m
-effective blocking diameter across the centre of the goal.
+**The clipping case — what the overlap form is for.** Move the same outfielder to
+`(96.748, 38.545)`: the same 4.272 m away, but now his angular centre sits *exactly* on the
+left-post direction (`centre` = +0.2495 rad = +halfArc), so half his disc stands across the
+post and half stands behind it.
 
-**Known limitation (Stage 0):** The heuristic misidentifies a defender who has tracked
-back inside the box as a goalkeeper. The consequence is **under**-estimating
-`GoalOpeningScore` by pricing him as a 1.5 m blocker instead of 0.5 m (the direction
-this paragraph originally stated backwards — corrected at the ERR-008-021 AR-1 pass,
-its M-7). Since ERR-008-021 (AR-1 form), the radius and the step-3a weighting split:
-the radius follows the band heuristic per opponent (this limitation), while the
-weighting exemption is restricted to the SINGLE goal-line-nearest opponent in the
-band, so a tracked-back defender is at least still ability-weighted. Stage 1 fix for
-both: replace the positional heuristic with `AgentState.Role == GOALKEEPER` when the
-Role field is added.
+```
+overlap = min(0.2495+0.1165, +0.24954) − max(0.2495−0.1165, −0.24954)
+        = 0.24954 − 0.1330 = 0.1165 rad      ← exactly half the disc, as the geometry says
+GoalOpeningScore = (0.4991 − 0.1165) / 0.4991 = 0.767
+```
+
+Pre-ERR-008-021 this same body scored **0.533** (his whole width charged, half of it behind
+the post) and one micron further out scored **1.000** (nothing charged, though he is standing
+squarely across the post). The correct answer, 0.767, is the one the shot-lane cliff could
+never produce from either side.
+
+**Constants (ERR-008-021):**
+
+| Constant | Value | Tag | Meaning |
+|---|---|---|---|
+| `SHOT_BLOCKER_ABILITY_MIN` | 0.6 | [GT] | Blocking-ability scalar at Anticipation/Positioning raw 1/1. Range (0.0, 1.0]. |
+| `SHOT_BLOCKER_ABILITY_MAX` | 1.4 | [GT] | Blocking-ability scalar at raw 20/20. Range [1.0, 2.5). Midpoint of MIN..MAX MUST equal 1.0 so the league-average blocker occludes exactly the geometric arc. |
+| `LANE_VISION_FIDELITY_FLOOR` | 0.2 | [GT] | Shared with §3.1.3.3 — see the note in step 4. Not re-declared here. |
+
+**Constants (ERR-008-022):**
+
+| Constant | Value | Tag | Meaning |
+|---|---|---|---|
+| `SHOT_BLOCKER_NEAR_FADE_M` | 1.0 m | [GT] | Full width of the lane-depth ramp, **centred on** `GOAL_MIN_SHOT_DISTANCE` (so 0.5 m → 1.5 m): a blocker's occlusion goes from nothing to his full geometric share across it (step 3a). |
+| `GK_PROXIMITY_FADE_M` | 2.0 m | [GT] | Full width of the goalkeeper-read ramp, **centred on** `GK_PROXIMITY_TO_GOAL` (so 5 m → 7 m from the goal line): `gkness` falls from 1 to 0 across it, lerping the P3 ability exemption (step 3b). It lerped a blocking radius too until ERR-008-023 retired that radius. |
+
+`BLOCKER_RADIUS`, `GK_PROXIMITY_TO_GOAL`, `GOAL_MIN_SHOT_DISTANCE`
+and `GOAL_OPENING_MIN` keep their values; ERR-008-022 changes what the last three *mean*
+(a ramp start and a ramp centre rather than three hard predicates), not what they are set to.
+
+**Calibration note (doctrine P5).** Over a blocker whose angular centre `c` is uniformly
+distributed, the pre-fix rule contributed a rectangle — full width `2h` for `|c| ≤ halfArc`,
+zero outside — of area `4h·halfArc`. The overlap contributes a symmetric trapezoid: `2h` for
+`|c| ≤ |halfArc − h|`, falling linearly to zero at `|c| = halfArc + h`, of area `4h·halfArc`.
+The two integrals are equal, so the fix redistributes occlusion from a step to a slope
+without systematically opening or closing the goal, and because the ability midpoint is
+exactly 1.0 a uniform attribute population leaves the mean untouched on that axis too.
+
+> **Correction (ERR-008-022, from the adversarial review over the -021 landing).** This
+> note originally claimed the equality held "for every `h` and every `halfArc`, including
+> `h > halfArc`". **It does not.** The pre-fix rule applied a per-opponent clamp to
+> `totalGoalAngle`, so for `h > halfArc` its rectangle saturates at `4·halfArc²`, not
+> `4h·halfArc`, while the trapezoid does not — the new model integrates to **up to twice**
+> the old occlusion there (measured 1.198× at `h` = 10°/`halfArc` = 8.35°, and 2.000× at
+> `h` = 16.7°). `h > halfArc` means a blocker inside roughly `d_goal × r / 3.66` of the
+> shooter — about 2.7 m at 20 m out, 3.4 m at 25 m, 6.2 m for a goalkeeper's radius at
+> 15 m — which is routine, not a corner. The equality holds for `h ≤ halfArc` and is the
+> P5 pivot **only there**. The original claim was the stated reason no recalibration was
+> required; that reason is withdrawn, and the residual is recorded for the balance pass
+> rather than tuned away here.
+
+These are first-guess `[GT]`s; real calibration waits for a complete-engine pass per
+**KD-W1** (`match-engine-wiring-backlog.md`).
+
+**Verification:**
+
+| Scenario (blocker 5 m in front of a shooter 15 m out, centred unless noted) | Blocked arc | GoalOpeningScore |
+|---|---|---|
+| Clear goal | 0.00° | 1.000 |
+| 1 ability-neutral outfielder (the P5 pivot row — the old geometry-only answer) | 11.42° | 0.584 |
+| 1 elite outfielder (20/20), Vision-20 shooter | 15.99° | 0.417 |
+| 1 poor outfielder (1/1), Vision-20 shooter | 6.85° | 0.750 |
+| The same elite/poor pair read by a Vision-1 shooter | 12.33° / 10.51° | 0.550 / 0.617 |
+| 1 neutral outfielder whose centre sits 2 cm inside / outside the post direction | 5.77° / 5.32° | 0.790 / 0.806 |
+| Goalkeeper 3 m off his line, any attributes | 14.25° | 0.480 |
+
+The last-but-one row is the ERR-008-021 defect measured on the fixture the test suite
+uses: pre-fix those two positions scored **0.595 and 1.000** — a 0.41 step in the
+shooter's read of the goal across 4 cm of defender position, with the outside case scoring
+a *fully open* goal while a defender stood across the near post.
+
+**Verification (ERR-008-022):** shooter at (90, 24) — 10 m off the goal's centre line,
+18.03 m out, `totalGoalAngle` = 19.41°:
+
+| Scenario | Blocked arc | GoalOpeningScore | Pre-fix |
+|---|---|---|---|
+| 1 neutral blocker on the goal line at the **far** post (105, 37.66) | 4.23° | 0.782 | **1.000** — discarded by the goal-centre far plane |
+| the same at the **near** post (105, 30.34) | 5.26° | 0.729 | 0.729 (admitted, unchanged) |
+| 1 blocker 1.5 m **behind** the goal line (106.5, 30.34) | 0.00° | 1.000 | admitted as a 1.5 m keeper on some geometries |
+
+and on the centre-line fixture, the two ramps ERR-008-022 introduces:
+
+| Blocker on the shooting axis, lane depth | 0.45 m | 0.55 m | 1.00 m | 1.35 m |
+|---|---|---|---|---|
+| GoalOpeningScore | 1.000 | 0.950 | 0.500 | 0.150 |
+| pre-fix | 1.000 | 1.000 | **1.000, flipping to 0.050 and no SHOOT option at 1.005 m** | 0.050 |
+
+Both ramps are centred on the predicate they replace, so the midpoint of each reproduces the
+old boundary: at exactly `GOAL_MIN_SHOT_DISTANCE` a blocker now contributes half his occlusion,
+and at exactly `GK_PROXIMITY_TO_GOAL` he reads half goalkeeper.
+
+Maximum step per 5 cm across the GK read (blocker traversing x = 97.5 → 100.5 at y = 34.8, which
+spans the whole ramp): **0.004** against **0.426** pre-fix, measured post-ERR-008-023 with an
+elite (20/20) blocker so the ability exemption — all the read now moves — is actually in play.
+Total swing across the ramp: 0.145. With an ability-neutral blocker the curve is pure geometry
+and the read moves nothing at all, which is why the lock carries live attributes.
+
+**Goalkeeper as blocker (ERR-008-023):** Stage 0 has no GK role flag, so the goalkeeper is
+identified by proximity to his own goal line. What that identification buys is the **P3
+ability exemption and nothing else** — he occludes with `BLOCKER_RADIUS = 0.5m`, the same
+body as any other player, fading to a fully-outfield read (ability included) over
+`GK_PROXIMITY_FADE_M` beyond `GK_PROXIMITY_TO_GOAL = 6.0m`.
+
+He was assigned a `GK_BLOCKER_RADIUS = 1.5m` disc until ERR-008-023, on the reasoning that it
+approximated his effective coverage (arm reach + lateral movement). That reasoning is a
+**shot-stopping** argument, and P3 assigns shot-stopping to Goalkeeper Mechanics #11 — which
+prices the dive at contact, so the shooter's read was charging him a second time for the same
+keeper. The constant was also never exercised: until ERR-008-022 fixed the lane bound, a
+goal-line keeper was discarded for every shooter position, so the 1.5 m disc went live for the
+first time at that landing and immediately removed **~42% of the goal arc on every shot**
+(1.000 ⇒ 0.584 at 16 m, keeper alone, before any outfield defender). The acceptance scenario
+caught it as `goals-still-scored = 0` across four seeds × 18 minutes.
+
+**Known limitation (Stage 0):** the proxy still reads a defender who has tracked back inside
+the box as part goalkeeper. What ERR-008-022 removes is not the misidentification but its
+*cliff*: the classification was a predicate, so crossing 6.0 m flipped the radius and the P3
+ability exemption together — 0.768 ⇒ 0.311 over 2 cm at the §5 fixture. It now lerps, so the
+misidentification degrades gracefully into a partly-keeper reading rather than switching a
+defender's identity on a centimetre. Stage 1 fix, unchanged: replace the positional proxy
+with `AgentState.Role == GOALKEEPER` when the Role field is added.
 
 **Teammate blocking:** Only `VisibleOpponents` are used as blockers. Teammates in the
 shooting lane are not modelled at Stage 0. Flagged for Stage 1 refinement.
@@ -316,7 +507,7 @@ shooting lane are not modelled at Stage 0. Flagged for Stage 1 refinement.
 ```
 Agent: Finishing=19, Composure=17
 BallZone: ATTACKING
-GoalOpeningScore = 0.757 (from §3.2.3.2 example)
+GoalOpeningScore = 0.757 (stipulated — a mostly clear sight of goal)
 DistanceToGoal = 10.0 m ≤ SHOOT_SWEET_RANGE_M ⇒ DistanceQuality_SHOOT = 1.0   (ERR-008-017)
 PressureScalar P = 0.15
 
@@ -343,6 +534,13 @@ value stands.
 
 This is higher than the elite PASS score (0.541) in the same zone, correctly reflecting
 that a striker with a clear shot should prefer shooting. ✓
+
+> **ERR-008-022 note:** the opening above formerly read "from the §3.2.3.2 example". It was
+> never sourced from there coherently — this case is titled *clear shot*, while the §3.2.3.2
+> example puts a defender squarely in the lane — and the -022 correction to that example
+> (its opponent was classified a goalkeeper, so every number in it was unreachable) moved
+> its result to 0.533. The value is now stipulated for this case and the arithmetic below is
+> unchanged.
 
 **Verification Case B: Low-Finishing midfielder, midfield, Long Shots = 16**
 ```
