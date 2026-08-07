@@ -189,14 +189,16 @@ public static class UtilityWeights
 
     public const float LONG_SHOT_THRESHOLD  = 0.75f;  // [GT] Shifted LongShots for midfield shot
     public const float GOAL_OPENING_MIN     = 0.05f;  // [GT] Minimum goal opening score floor
-    public const float BLOCKER_RADIUS_M     = 0.50f;  // [GT] Outfield player body width in shot lane.
+    public const float BLOCKER_RADIUS_M     = 0.50f;  // [GT] Player body width in the shot lane —
+                                                       //      EVERY blocker, keeper included
+                                                       //      (ERR-008-023).
                                                        //      Increasing widens shot lane suppression.
                                                        //      Safe tuning range: [0.30, 0.80].
-    public const float GK_BLOCKER_RADIUS_M  = 1.50f;  // [GT] Goalkeeper effective blocking radius.
-                                                       //      Approximates arm reach + lateral movement.
-                                                       //      GK identified by GK_PROXIMITY_TO_GOAL.
-                                                       //      Increasing reduces GoalOpeningScore near goal.
-                                                       //      Safe tuning range: [1.00, 2.50].
+                                                       // GK_BLOCKER_RADIUS_M (1.50f) RETIRED by
+                                                       // ERR-008-023: a keeper's reach beyond his
+                                                       // body is shot-stopping, which P3 assigns to
+                                                       // Goalkeeper Mechanics #11 and #11 prices at
+                                                       // contact. Do not reintroduce it here.
     public const float GK_PROXIMITY_TO_GOAL = 6.00f;  // [GT] Distance from goal line to classify as GK.
                                                        //      Stage 0 heuristic only — replace with
                                                        //      AgentState.Role == GOALKEEPER at Stage 1.

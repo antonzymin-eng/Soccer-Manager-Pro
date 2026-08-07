@@ -6,6 +6,7 @@
 // Modified: 2026-08-04 (ERR-008-020 — CountInterceptors → ComputeLaneThreat: continuous falloff × Vision-read Anticipation/Pace ability)
 // Modified: 2026-08-05 (ERR-008-021 — shot lane: wedge-containment cliff → true angular overlap × Vision-read Anticipation/Positioning ability)
 // Modified: 2026-08-06 (ERR-008-022 — the lane's far bound moves to the goal-line plane; the near bound and the goalkeeper read become ramps)
+// Modified: 2026-08-07 (ERR-008-023 — the keeper occludes with a BODY radius; his reach is #11's under P3. Fixes goals-still-scored = 0)
 // Author:   —
 // Spec:     Decision Tree #8 §3.1, Code Standards #20
 // Purpose:  Step 3 of the 6-step pipeline. Generates all eligible ActionOption
@@ -469,16 +470,23 @@ namespace TacticalDirector.DecisionTree
 
                 // §3.2.3.2 GK read: distance to the GOAL LINE (X axis) — not to the goal
                 // centre, which misclassified a goal-line keeper positioned wide of centre
-                // as a 0.5 m outfield blocker (AR-2 M-7). A SCALAR, not a predicate: it
-                // lerps both the blocking radius and the P3 ability exemption, so the
+                // as a 0.5 m outfield blocker (AR-2 M-7). A SCALAR, not a predicate, so the
                 // heuristic's boundary is a slope rather than the 0.768 ⇒ 0.311 step over
-                // 2 cm it was (ERR-008-022).
+                // 2 cm it was (ERR-008-022). It now lerps the P3 ability exemption ONLY.
                 float gkness = 1.0f - Mathf.Clamp01(
                     (Mathf.Abs(oPos.x - goalLineX)
                      - (UtilityWeights.GK_PROXIMITY_TO_GOAL - 0.5f * UtilityWeights.GK_PROXIMITY_FADE_M))
                     / UtilityWeights.GK_PROXIMITY_FADE_M);
-                float radius = Mathf.Lerp(UtilityWeights.BLOCKER_RADIUS_M,
-                                          UtilityWeights.GK_BLOCKER_RADIUS_M, gkness);
+
+                // ERR-008-023: every blocker occludes with the same BODY radius, keeper
+                // included. The keeper's reach beyond his body is shot-stopping, which P3
+                // assigns to Goalkeeper Mechanics #11 (§3.5/§3.7.0) and which #11 already
+                // prices at contact — charging it again here read it twice. The old
+                // keeper-only 1.5 m disc was never exercised: the pre-ERR-008-022 lane bound
+                // dropped a goal-line keeper for every shooter position, so it went live for
+                // the first time at that landing and removed ~42% of the goal arc on every
+                // shot, which is what took `goals-still-scored` to zero.
+                float radius = UtilityWeights.BLOCKER_RADIUS_M;
 
                 // The disc subtends [centre − halfWidth, centre + halfWidth]; intersect
                 // it with the goal arc [−halfArc, +halfArc].
@@ -989,4 +997,14 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        | continuity fix — the P5 pivot ERR-008-019 and -020 both observed. Value     |
 // |         |            |        | locks unchanged (all sit outside the ramp bands); the two continuity        |
 // |         |            |        | sweeps re-ranged to span the centred bands.                                |
+// | 1.10    | 2026-08-07 | —      | ERR-008-023 (acceptance-scenario regression from the -022 landing).        |
+// |         |            |        | ComputeGoalOpeningScore no longer lerps a keeper-only blocking radius:     |
+// |         |            |        | every blocker occludes with BLOCKER_RADIUS_M, the goalkeeper included.     |
+// |         |            |        | A keeper's reach beyond his body is shot-stopping, which P3 assigns to     |
+// |         |            |        | Goalkeeper Mechanics #11 and #11 already prices at contact — the read      |
+// |         |            |        | charged him twice. The 1.5 m disc had never been exercised (the pre-022    |
+// |         |            |        | lane bound discarded a goal-line keeper for every shooter position), so    |
+// |         |            |        | it went live at -022 and removed ~42% of the goal arc on every shot.       |
+// |         |            |        | sim_match_engine_shot_outcomes measured goals-still-scored = 0 over four   |
+// |         |            |        | seeds x 18 min. gkness survives, lerping the P3 exemption alone.           |
 #endregion

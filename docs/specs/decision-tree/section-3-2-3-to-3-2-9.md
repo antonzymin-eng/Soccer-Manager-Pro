@@ -199,7 +199,8 @@ It is computed by `ComputeGoalOpeningScore()`, a Decision Tree-owned function.
 > `GK_PROXIMITY_TO_GOAL` flipped the blocking radius 0.5 ⇒ 1.5 m *and* the P3 ability
 > exemption together: a measured `GoalOpeningScore` step of 0.768 ⇒ 0.311 over 2 cm, which
 > -021 had widened to 0.551 at its worst by making the step attribute-dependent. It is now
-> a scalar `gkness` that lerps both quantities. Absent a goalkeeper flag on the perceived
+> a scalar `gkness`. It lerped both quantities until **ERR-008-023 retired the keeper-only
+> radius entirely**, so today it lerps the P3 exemption alone. Absent a goalkeeper flag on the perceived
 > agent this stays a positional proxy (Stage 1 replaces it with an explicit role); making
 > it continuous is what stops the proxy's boundary from being a decision cliff.
 
@@ -218,10 +219,12 @@ ComputeGoalOpeningScore(agentPos, teamId, visibleOpponents[]):
    totalGoalAngle = |angleL − angleR|    // in radians
 
 3. For each visible opponent, compute the angular interval his body subtends:
-   // Outfield players are modelled as blocking discs of radius BLOCKER_RADIUS = 0.5m [GT]
-   // Goalkeepers are modelled with GK_BLOCKER_RADIUS = 1.5m [GT] to approximate their
-   // wider effective coverage (arm reach + lateral movement at Stage 0, where no
-   // GK-specific positioning logic exists).
+   // EVERY player is modelled as a blocking disc of radius BLOCKER_RADIUS = 0.5m [GT],
+   // the goalkeeper included (ERR-008-023). A keeper's coverage beyond his own body —
+   // arm reach, the dive, lateral movement — is shot-stopping, which the P3 ownership
+   // ledger assigns to Goalkeeper Mechanics #11 (§3.5 save model, §3.7.0 rush) and which
+   // #11 already prices at contact. Charging it again in the shooter's read of the goal
+   // priced one keeper twice.
 
    // 3a. Lane admission — how much of this opponent's occlusion counts at all
    //     (ERR-008-022 (a) + (b); §3.1.4.3 owns the same test). BOTH bounds are stated
@@ -243,15 +246,15 @@ ComputeGoalOpeningScore(agentPos, teamId, visibleOpponents[]):
 
    // 3b. GK read — a SCALAR, not a predicate (ERR-008-022 (c)). Stage 0 has no
    //     GoalkeeperId field, so proximity to the goal line is the proxy; gkness lerps
-   //     both the blocking radius and the P3 ability exemption, so the proxy's boundary
-   //     is a slope. Stage 1: replace with an explicit AgentRole == GOALKEEPER flag.
+   //     the P3 ability exemption, so the proxy's boundary is a slope. It no longer
+   //     lerps a radius — see 3 above and ERR-008-023. Stage 1: replace with an
+   //     explicit AgentRole == GOALKEEPER flag.
    distToGoalLine_i = |O_i.x − goalPostL.x|
    gkRampStart      = GK_PROXIMITY_TO_GOAL − GK_PROXIMITY_FADE_M / 2      // centred, as above
    gkness_i         = 1 − Clamp01((distToGoalLine_i − gkRampStart) / GK_PROXIMITY_FADE_M)
-   effectiveRadius_i = Lerp(BLOCKER_RADIUS, GK_BLOCKER_RADIUS, gkness_i)
 
    opponentDist_i = |O_i − agentPos|
-   halfWidth_i    = atan(effectiveRadius_i / opponentDist_i)   // angular half-width, rad
+   halfWidth_i    = atan(BLOCKER_RADIUS / opponentDist_i)      // angular half-width, rad
 
 4. Blocked arc per opponent — the OVERLAP of his disc with the goal arc, scaled by his
    perceived blocking ability (ERR-008-021; doctrine P1 + P2 + P3):
@@ -396,9 +399,9 @@ never produce from either side.
 | Constant | Value | Tag | Meaning |
 |---|---|---|---|
 | `SHOT_BLOCKER_NEAR_FADE_M` | 1.0 m | [GT] | Full width of the lane-depth ramp, **centred on** `GOAL_MIN_SHOT_DISTANCE` (so 0.5 m → 1.5 m): a blocker's occlusion goes from nothing to his full geometric share across it (step 3a). |
-| `GK_PROXIMITY_FADE_M` | 2.0 m | [GT] | Full width of the goalkeeper-read ramp, **centred on** `GK_PROXIMITY_TO_GOAL` (so 5 m → 7 m from the goal line): `gkness` falls from 1 to 0 across it, lerping both the blocking radius and the P3 ability exemption (step 3b). |
+| `GK_PROXIMITY_FADE_M` | 2.0 m | [GT] | Full width of the goalkeeper-read ramp, **centred on** `GK_PROXIMITY_TO_GOAL` (so 5 m → 7 m from the goal line): `gkness` falls from 1 to 0 across it, lerping the P3 ability exemption (step 3b). It lerped a blocking radius too until ERR-008-023 retired that radius. |
 
-`BLOCKER_RADIUS`, `GK_BLOCKER_RADIUS`, `GK_PROXIMITY_TO_GOAL`, `GOAL_MIN_SHOT_DISTANCE`
+`BLOCKER_RADIUS`, `GK_PROXIMITY_TO_GOAL`, `GOAL_MIN_SHOT_DISTANCE`
 and `GOAL_OPENING_MIN` keep their values; ERR-008-022 changes what the last three *mean*
 (a ramp start and a ramp centre rather than three hard predicates), not what they are set to.
 
@@ -464,15 +467,26 @@ old boundary: at exactly `GOAL_MIN_SHOT_DISTANCE` a blocker now contributes half
 and at exactly `GK_PROXIMITY_TO_GOAL` he reads half goalkeeper.
 
 Maximum step per 5 cm across the GK read (blocker traversing x = 97.5 → 100.5 at y = 34.8, which
-spans the whole ramp): **0.011**, against **0.426** pre-fix.
+spans the whole ramp): **0.004** against **0.426** pre-fix, measured post-ERR-008-023 with an
+elite (20/20) blocker so the ability exemption — all the read now moves — is actually in play.
+Total swing across the ramp: 0.145. With an ability-neutral blocker the curve is pure geometry
+and the read moves nothing at all, which is why the lock carries live attributes.
 
-**Goalkeeper as blocker:** Stage 0 has no GK role flag, so the goalkeeper is identified by
-proximity to his own goal line. An opponent on the line reads as fully goalkeeper and is
-assigned `GK_BLOCKER_RADIUS = 1.5m` rather than the outfield `BLOCKER_RADIUS = 0.5m`, which
-approximates the GK's effective coverage (arm reach + lateral movement); the read fades to
-fully-outfield over `GK_PROXIMITY_FADE_M` beyond `GK_PROXIMITY_TO_GOAL = 6.0m`. The radius is
-conservative — a GK at his near post can cover 3–4 m laterally from centre; 1.5 m is the disc
-radius equivalent giving a 3 m effective blocking diameter across the centre of the goal.
+**Goalkeeper as blocker (ERR-008-023):** Stage 0 has no GK role flag, so the goalkeeper is
+identified by proximity to his own goal line. What that identification buys is the **P3
+ability exemption and nothing else** — he occludes with `BLOCKER_RADIUS = 0.5m`, the same
+body as any other player, fading to a fully-outfield read (ability included) over
+`GK_PROXIMITY_FADE_M` beyond `GK_PROXIMITY_TO_GOAL = 6.0m`.
+
+He was assigned a `GK_BLOCKER_RADIUS = 1.5m` disc until ERR-008-023, on the reasoning that it
+approximated his effective coverage (arm reach + lateral movement). That reasoning is a
+**shot-stopping** argument, and P3 assigns shot-stopping to Goalkeeper Mechanics #11 — which
+prices the dive at contact, so the shooter's read was charging him a second time for the same
+keeper. The constant was also never exercised: until ERR-008-022 fixed the lane bound, a
+goal-line keeper was discarded for every shooter position, so the 1.5 m disc went live for the
+first time at that landing and immediately removed **~42% of the goal arc on every shot**
+(1.000 ⇒ 0.584 at 16 m, keeper alone, before any outfield defender). The acceptance scenario
+caught it as `goals-still-scored = 0` across four seeds × 18 minutes.
 
 **Known limitation (Stage 0):** the proxy still reads a defender who has tracked back inside
 the box as part goalkeeper. What ERR-008-022 removes is not the misidentification but its

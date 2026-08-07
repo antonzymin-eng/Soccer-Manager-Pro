@@ -3,6 +3,7 @@
 // Modified: 2026-06-01
 // Modified: 2026-08-04 (ERR-008-020 — §3.1.3.3 pass-lane threat model locks, home + away)
 // Modified: 2026-08-05 (ERR-008-021 — §3.2.3.2 shot-lane block model locks, home + away + the GK exemption)
+// Modified: 2026-08-07 (ERR-008-023 — keeper-body lock added; far-post value recomputed; GK-read sweep de-tautologised)
 // Author:   —
 // Spec:     Decision Tree #8 §5 (UT-OG-01 through UT-OG-07), Code Standards #20
 // Purpose:  Unit tests for OptionGenerator. Verifies all 7 action type gates,
@@ -695,8 +696,13 @@ namespace TacticalDirector.DecisionTree.Tests
             // the far post's value, and so failed CI. The near post was never the defect;
             // the pre-fix bound KEPT it (proj 15.998 < distToGoal 18.028) and discarded only
             // the far one, so the label version would have passed against the broken model.
+            // ERR-008-023 moved this value: the blocker stands ON the goal line, so the GK
+            // read saturates, and he used to occlude at the keeper-only 1.5 m disc (0.782157).
+            // Every blocker now occludes with the same 0.5 m body — half his disc falls inside
+            // the arc, so the closed form is (totalArc − halfWidth) / totalArc with
+            // halfWidth = atan(0.5 / 20.2878) = 1.4118° against a 19.4109° arc.
             float score = OffCentreGoalOpeningAt(FarPostFrom(in ctx));   // y = 37.66
-            Assert.AreEqual(0.782157f, score, 1e-4f,
+            Assert.AreEqual(0.927268f, score, 1e-4f,
                 "A blocker on the goal line at the far post must occlude the goal.");
             Assert.Less(score, 1.0f,
                 "The far post is part of the goal the shooter is aiming at.");
@@ -755,17 +761,36 @@ namespace TacticalDirector.DecisionTree.Tests
             // so 2 cm of a defender's position flipped his blocking radius 0.50 ⇒ 1.50 m
             // and his P3 ability exemption together. Measured old step per 5 cm at this
             // geometry: 0.426, against the 0.42 cliff ERR-008-021 was filed to remove.
+            //
+            // ERR-008-023 removed the radius half — every blocker now occludes with the same
+            // body — so the read's only remaining effect is the P3 ability exemption. The
+            // blocker MUST therefore carry live attributes: with the ability term neutral this
+            // sweep would compute one geometric curve, gkness would touch nothing, and the
+            // test would pass no matter what the read did. That is the tautology class this
+            // file has already had to fix twice (both NullAttributeView locks).
+            DtAgentAttributes[] attrs = BuildSquadAttributes();
+            attrs[15].Anticipation = 20;
+            attrs[15].Positioning  = 20;
+
             float maxStep = 0.0f;
             float prev = float.NaN;
+            float first = float.NaN;
+            float last = float.NaN;
             for (int i = 0; i <= 60; i++)
             {
                 float x = 97.5f + 0.05f * i;   // spans the ramp, centred on x = 99.0
-                float score = GoalOpeningWithBlockerAt(new Vector2(x, 34.8f));
+                float score = GoalOpeningWithBlockerAt(new Vector2(x, 34.8f), attrs);
+                if (float.IsNaN(first)) first = score;
                 if (!float.IsNaN(prev)) maxStep = Mathf.Max(maxStep, Mathf.Abs(score - prev));
                 prev = score;
+                last = score;
             }
             Assert.Less(maxStep, 0.05f,
                 "No 5 cm of blocker position may step the goal opening across the GK read.");
+            Assert.Greater(last - first, 0.05f,
+                "The sweep must actually cross the read — an elite blocker's ability is worth " +
+                "something at the outfield end and is exempted at the goal-line end, so a flat " +
+                "curve here means gkness is no longer wired to anything.");
         }
 
         // The elite-vs-poor opening gap for a full-fidelity shooter and a blocker whose
@@ -848,6 +873,34 @@ namespace TacticalDirector.DecisionTree.Tests
         }
 
         [Test]
+        public void ShotLane_Goalkeeper_OccludesWithABodyNotAReach()
+        {
+            // ERR-008-023. The same P3 ownership argument as the test above, applied to the
+            // other half of the keeper read: his REACH is shot-stopping too. #11 prices a
+            // dive at contact, so charging a 1.5 m disc here read it a second time.
+            //
+            // That disc had never been exercised — the pre-ERR-008-022 lane bound discarded a
+            // goal-line keeper for every shooter position, so it went live for the first time
+            // at that landing and removed ~42% of the goal arc on every shot in the game. The
+            // acceptance scenario caught it as `goals-still-scored = 0` over 72 minutes of
+            // football across four seeds.
+            //
+            // Keeper on his line at goal centre, shooter 15 m out on the axis. Closed form:
+            // halfArc = atan(3.66/15) = 13.7098°, halfWidth = atan(0.50/15) = 1.9091°, the
+            // disc sits wholly inside the arc so it occludes 2 × halfWidth of 2 × halfArc.
+            float score = GoalOpeningWithBlockerAt(new Vector2(105.0f, 34.0f));
+            Assert.AreEqual(0.860770f, score, 1e-4f,
+                "A keeper occludes with a body radius, the same as any other blocker.");
+
+            // Regression lock on the value itself, not just its formula: at the retired 1.5 m
+            // keeper disc this same shot read 0.583540. Anything near that is the reach model
+            // coming back.
+            Assert.Greater(score, 0.75f,
+                "A keeper standing on his line must not take ~42% of the goal arc — that is " +
+                "the reach model ERR-008-023 retired, and it scores zero goals per match.");
+        }
+
+        [Test]
         public void ShotLane_AwayMirror_SightedShooterSeparatesBlockers()
         {
             // Away-team mirror of the discrimination case (home-team-only worked examples
@@ -883,11 +936,14 @@ namespace TacticalDirector.DecisionTree.Tests
             return ExtractGoalOpeningScore(in ctx);
         }
 
-        // Home shooter, one ability-neutral blocker at an arbitrary pitch position.
-        private static float GoalOpeningWithBlockerAt(Vector2 blockerPos)
+        // Home shooter, one blocker at an arbitrary pitch position. `attrs` null ⇒ the
+        // ability term reads neutral (bare geometry); pass a view to exercise it.
+        private static float GoalOpeningWithBlockerAt(
+            Vector2 blockerPos, DtAgentAttributes[] attrs = null)
         {
             DecisionContext ctx = BuildShotContext();
             ctx.A_Vision = 0.5f;
+            ctx.AllAgentAttributes = attrs;
             ctx.Snapshot.VisibleOpponentsCount = 1;
             ctx.Snapshot.VisibleOpponents[0] = new PerceivedAgent
             {
@@ -955,8 +1011,9 @@ namespace TacticalDirector.DecisionTree.Tests
         }
 
         // Same shooter, but the blocker stands at GK_PROXIMITY_TO_GOAL / 2 off his own
-        // goal line — well inside the band where the GK read is saturated, so the larger
-        // radius applies in full and the P3 ability exemption is complete.
+        // goal line — well inside the band where the GK read is saturated, so the P3
+        // ability exemption is complete. (It once scaled a keeper-only blocking radius
+        // too; ERR-008-023 retired that, and the exemption is all the read now does.)
         private static float GoalOpeningWithKeeper(
             DtAgentAttributes[] attrs, int anticipation, int positioning)
         {
@@ -1296,4 +1353,12 @@ namespace TacticalDirector.DecisionTree.Tests
 // |         |            |        | the headline finding would have passed against the broken model. Post  |
 // |         |            |        | now chosen by geometry (FarPostFrom); the PostL/PostR label carries    |
 // |         |            |        | opposite sides in this file's two fixtures. Production code untouched. |
+// | 1.10    | 2026-08-07 | —      | ERR-008-023. + ShotLane_Goalkeeper_OccludesWithABodyNotAReach (closed   |
+// |         |            |        | form 0.860770; the retired 1.5 m disc scored this shot 0.583540).      |
+// |         |            |        | FarPostBlocker recomputed 0.782157 -> 0.927268 (its blocker stands on   |
+// |         |            |        | the goal line, so the GK read saturates). GoalkeeperRead continuity     |
+// |         |            |        | sweep given LIVE attributes: with the radius half of the read gone it   |
+// |         |            |        | moved only the ability term, so an ability-neutral blocker made the     |
+// |         |            |        | sweep pure geometry and the assertion vacuous — the third tautology of  |
+// |         |            |        | this class in this file. + a swing assertion so it cannot recur.        |
 #endregion

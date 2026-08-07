@@ -10,6 +10,7 @@
 // Modified: 2026-08-05 (ERR-008-019 AR — LONG_SHOT_RAMP_HALF_WIDTH XML doc: the (0, 0.25] range is the formula's validity domain; the suite pins 0.25)
 // Modified: 2026-08-05 (ERR-008-021 — shot-lane block model: + SHOT_BLOCKER_ABILITY_MIN/MAX [GT]; LANE_VISION_FIDELITY_FLOOR redocumented as the shared P2 dial)
 // Modified: 2026-08-06 (ERR-008-022 — + SHOT_BLOCKER_NEAR_FADE_M / GK_PROXIMITY_FADE_M [GT]: the two remaining shot-lane predicates become ramps)
+// Modified: 2026-08-07 (ERR-008-023 — GK_BLOCKER_RADIUS_M RETIRED; BLOCKER_RADIUS_M now covers every blocker, keeper included)
 // Author:   —
 // Spec:     Decision Tree #8 §3.2.11, Code Standards #20
 // Purpose:  Authoritative constant catalogue for the utility scoring model.
@@ -138,9 +139,8 @@ namespace TacticalDirector.DecisionTree
         /// </summary>
         public const float LONG_SHOT_RAMP_HALF_WIDTH = 0.25f;
         public const float GOAL_OPENING_MIN = 0.05f;  // [GT] minimum goal opening score floor
-        public const float BLOCKER_RADIUS_M = 0.50f;  // [GT] outfield player body width in shot lane
-        public const float GK_BLOCKER_RADIUS_M = 1.50f;  // [GT] goalkeeper effective blocking radius
-        public const float GK_PROXIMITY_TO_GOAL = 6.00f;  // [GT] goalkeeper-read ramp CENTRE: distance from the goal line at which a blocker reads half keeper (ERR-008-022; was the hard classification threshold)
+        public const float BLOCKER_RADIUS_M = 0.50f;  // [GT] player body width in the shot lane — EVERY blocker, keeper included (ERR-008-023)
+        public const float GK_PROXIMITY_TO_GOAL = 6.00f;  // [GT] goalkeeper-read ramp CENTRE: distance from the goal line at which a blocker reads half keeper, for the P3 ability exemption only (ERR-008-022/-023; was the hard classification threshold)
         public const float GOAL_MIN_SHOT_DIST = 1.00f;  // [GT] lane-depth ramp CENTRE: depth at which a blocker contributes half his occlusion (ERR-008-022; was the hard skip threshold)
 
         /// <summary>
@@ -405,4 +405,8 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        | exemption together — a measured 0.768 ⇒ 0.311 step over 2 cm). No           |
 // |         |            |        | existing value changed; GOAL_MIN_SHOT_DIST and GK_PROXIMITY_TO_GOAL are     |
 // |         |            |        | now ramp anchors rather than predicates.                                    |
+// | 1.13    | 2026-08-07 | —      | ERR-008-023. GK_BLOCKER_RADIUS_M (1.50f) RETIRED — the keeper occludes     |
+// |         |            |        | with BLOCKER_RADIUS_M like every other player; his reach is #11's under    |
+// |         |            |        | P3. BLOCKER_RADIUS_M and GK_PROXIMITY_TO_GOAL redocumented accordingly     |
+// |         |            |        | (the latter now anchors the ability exemption only). No value changed.     |
 #endregion
