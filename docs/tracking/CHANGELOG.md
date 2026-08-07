@@ -12,7 +12,63 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 7, 2026 (**ERR-008-021 gate run — PASSED. The shot-lane weighting, the
+> **Last Updated:** August 7, 2026 (**Unity client P5a — the UGUI shell's decisions extracted
+> host-free, and P5 split into P5a / P5b to make that a phase.** The split is §12 rule 1 applied to a
+> phase that had never had it applied: P4 was split on the argument that every decision the render
+> skin makes belongs in a gate-compiled assembly, and "the UGUI shell" as one host-only phase would
+> have put *when a control is available* and *what the speed buttons offer* inside `MonoBehaviour`s
+> the CI gate can never compile — the exact leak AR-P4a2-H1 found sitting inside the deliverable built
+> to close that leak. Landed in `match-client-core`: **`PlaybackSpeedLadder`**, the four `[GT]`
+> playback multipliers as an *ordered* ladder with the opening rung named and the end behaviour
+> decided — the catalogue held four independent dials and said nothing about which a match opens at or
+> what "faster" does at 10×; stepping **clamps rather than wraps**, because a faster-click at the top
+> that dropped the viewer to 1× reads as a fault rather than a limit, and pause stays off the ladder
+> because it is a streamer state, not a multiplier. And **`MatchControlAvailability`** +
+> **`MatchControlLockReason`**, which resolve §5-P5's standing requirement — "the UI gates tactical
+> input at full time so a click does not silently no-op" — into three states each carrying *why* it is
+> locked. **Two decisions inside that type are the kind a later tidy-up reverses, so both are
+> test-locked:** saving stays enabled at full time (§6.3 — a finished match is precisely when a viewer
+> wants to save, and the `ServiceOnce()` seam exists so the capture needs no tick; locking save
+> alongside the tactical controls would make a completed match unsaveable), and a frameless streamer
+> does **not** resolve to `Live` — `TryGetLatestFrame`'s out-parameter on a false return is
+> `default(LiveMatchFrame)`, whose `MatchEnded` is *false*, so a resolver reading the frame
+> unconditionally would report a match that has not started as fully interactive. The type also
+> documents at length that it is §6.2's **best-effort early-out and not the guarantee** — the sim side
+> reads the engine's live `_matchEnded` and is the authority — so that nobody later deletes a sim-side
+> guard on the grounds that the UI checks it, which would leave the trailing half holding the
+> invariant. **The one finding is the §5-P0 cap note turned from prose into an assertion:** that note
+> required `MatchViewerConstants.MaxLiveSpeedMultiplier ≥ 10` so 10× is not refused, and nothing
+> enforced it. Because `SetSpeedMultiplier` fail-louds rather than clamping, a cap configured below a
+> step would have surfaced as *one speed button throwing mid-match while the other three worked* — a
+> partial failure, which is harder to spot than a total one. `RequireStreamerAcceptsSpeed` now pairs
+> each speed against the streamer's `[Min, Max]` at load, in the shape of the existing
+> `RequireFarRayMeetsGround` cross-dial check, so the process refuses to start instead; the tests
+> express the bounds relative to the cap rather than as literals, so a retune keeps them meaningful.
+> **Recorded, not built — and it is a layering decision, not an omission:** the four screens'
+> `ScreenId` catalogue and navigation graph has no correct home today. FR-UI-010 is explicit that the
+> framework hard-codes no screen, so it does not belong in `ui-framework`; and `ui-framework` sits
+> *above* `match-client-core`, so the core cannot hold a `ScreenId` either. The remaining candidates
+> are `match-client-unity` (gate-invisible — wrong by rule 1) or a new assembly above `ui-framework`.
+> That is the same question roadmap §6 item 2 already flags for C3's management screens, and it wants
+> owner sign-off rather than an implementation-pass guess. **Determinism: no `SNAPSHOT_SCHEMA_VERSION`
+> change, no new RNG stream, domain tag, draw site or draw-order change — nothing in this landing
+> reaches the simulation.** No ERR filed: the cap gap was a missing *enforcement* of an existing design
+> note, not a contradiction in one. **Blast radius checked and nothing moved** — no behaviour change
+> reaches the engine, so no scenario tick window, no per-90 rate band, no A4a corpus fit and no
+> FR-PO-052 perf baseline is perturbed. **Full dotnet gate NOT RUNNABLE in this environment, and this
+> time the block was re-tested rather than assumed:** there is no .NET SDK, and every SDK binary host
+> — `dot.net`, `builds.dotnet.microsoft.com`, `dotnetcli.azureedge.net` — returns 403 at the agent
+> proxy, though the install script itself is reachable from GitHub raw, so the block is on the
+> binaries and not the script. CI on push is therefore the only compiler for this landing, exactly as
+> for #29/#41 T0 and T1. In place of the gate: type-name/filename match and brace balance on all five
+> new files, a CS0104 collision sweep over the newly-imported `TacticalDirector.MatchViewer`
+> namespace (12 public types, none colliding — this repo has paid for that one before with five
+> `TacticTranslation` types in scope at once), confirmation that `MatchViewerConstants` is public and
+> that `Scoreline`/`RestartBanner`/`LiveAgentCue`/`MatchPeriod` are `default`-constructible value
+> types, `using`-group order, the FR-CS-002 `s_` private-static-field rename, and
+> `generate_projects.py` regenerated clean at 64 csproj. `match-client-core` 135 → ~157 expected.)
+
+> **Last Updated (prior):** August 7, 2026 (**ERR-008-021 gate run — PASSED. The shot-lane weighting, the
 > AR-1 fixes and all 7 new locks compiled and executed for the first time.** PR #305, CI run 404,
 > head `3f207ee`. Build 0 errors (5 warnings, the known count); `DecisionTree.Tests` **120 passed /
 > 0 failed / 4 skipped / 124 total**, carrying the 7 `ShotLane_*` locks — including the H-1

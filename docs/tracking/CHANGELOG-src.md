@@ -14,7 +14,33 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** August 7, 2026 (v2.78 — **ERR-008-021 GATE RUN — PASSED.** PR #305, CI run 404,
+> **Last Updated:** August 7, 2026 (v2.79 — **Unity client P5a: the UGUI shell's decisions extracted
+> into `match-client-core`, host-free and gate-compilable.** Three new production files, two new test
+> files, one catalogue change. **`PlaybackSpeedLadder.cs` v1.0** — `RungCount`/`RealTimeIndex`/
+> `SlowestIndex`/`FastestIndex`/`MultiplierAt`/`StepFaster`/`StepSlower`/`IsRung`/`TryIndexOf`/
+> `SnapshotRungs` over a `private static readonly float[] s_rungs` built from the four
+> `MatchClientConstants` speeds in ascending order; `SnapshotRungs` clones, so a caller cannot reorder
+> the ladder through the array it is handed, and `StepFaster`/`StepSlower` clamp at the ends rather
+> than wrapping. **`MatchControlAvailability.cs` v1.0** — a `readonly struct` with
+> `TacticalInputEnabled`/`SubstitutionEnabled`/`PlaybackControlsEnabled`/`SaveEnabled`/`LockReason`,
+> a private constructor, three static factories (`AwaitingFirstFrame`/`Live`/`FullTime`) and
+> `From(bool hasFrame, in LiveMatchFrame frame)` — the seam a binding calls with `TryGetLatestFrame`'s
+> two out-values directly, so nothing is left to decide on the far side. `SubstitutionEnabled` is a
+> separate field from `TacticalInputEnabled` despite tracking it today, because the two diverge the
+> moment a substitution-window rule lands and a UI bound to one field for two controls could not
+> express that. **`MatchControlLockReason.cs` v1.0** — `None = 0`/`AwaitingFirstFrame`/`MatchEnded`,
+> zero-valued the way `ManagerCommandKind.None` and `IntentKind.None` are. **`MatchClientConstants.cs`
+> v1.5 → v1.6** — new `internal static RequireStreamerAcceptsSpeed(float, string)` pairing check,
+> applied at all four speed field initialisers; the file gains `using TacticalDirector.MatchViewer;`
+> (already an asmdef reference, and already imported by three sibling files, so no asmdef change and
+> no new edge in the reference graph). The helper reads only `MatchViewerConstants` statics and no
+> field of its own class, so it introduces no within-class static-init ordering hazard — the trap
+> AR-P4a2 caught on `CameraVerticalFovDegrees`. **Tests:** new `PlaybackSpeedLadderTests` (11) and
+> `MatchControlAvailabilityTests` (7), plus 2 appended to `MatchClientConstantsTests` (v1.3 → v1.4);
+> `match-client-core` 135 → ~157 expected. **Not compiled** — no .NET SDK in this environment and all
+> SDK binary hosts 403 at the proxy, so CI on push is the only compiler.)
+
+> **Last Updated (prior):** August 7, 2026 (v2.78 — **ERR-008-021 GATE RUN — PASSED.** PR #305, CI run 404,
 > head `3f207ee`. Build succeeded, **0 errors** (5 warnings — the same count every recent run
 > reports); `TacticalDirector.DecisionTree.Tests` **120 passed / 0 failed / 4 skipped / 124 total**
 > — the 7 `ShotLane_*` locks (v1.7 + v1.8, including the AR-1 H-1 regression lock and the exact
@@ -1809,6 +1835,7 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.79 | 2026-08-07 | —      | **Unity client P5a — the UGUI shell's decisions moved into `match-client-core`.** New: `PlaybackSpeedLadder.cs` v1.0 (the four `[GT]` playback multipliers as an ordered ladder — `MultiplierAt`/`StepFaster`/`StepSlower`/`TryIndexOf`/`SnapshotRungs`; clamps at the ends, clones on snapshot, `s_rungs` per FR-CS-002), `MatchControlAvailability.cs` v1.0 (a `readonly struct` with four enablement flags + `LockReason`, three static factories, and `From(bool hasFrame, in LiveMatchFrame frame)` taking `TryGetLatestFrame`'s out-values directly), `MatchControlLockReason.cs` v1.0 (`None = 0`/`AwaitingFirstFrame`/`MatchEnded`). Modified: `MatchClientConstants.cs` v1.5 → v1.6 — `RequireStreamerAcceptsSpeed` pairing check on all four speed initialisers, + `using TacticalDirector.MatchViewer;` (no asmdef change; already referenced and already imported by three sibling files). The helper reads only another class's statics, so it adds no within-class static-init ordering hazard. Tests: `PlaybackSpeedLadderTests` (11) + `MatchControlAvailabilityTests` (7) new, `MatchClientConstantsTests` v1.3 → v1.4 (+2); `match-client-core` 135 → ~157 expected. **Not compiled — no .NET SDK, SDK hosts 403 at the proxy; CI on push is the only compiler.** |
 | 2.78 | 2026-08-07 | —      | **ERR-008-021 GATE RUN — PASSED.** PR #305, CI run 404, head `3f207ee`. Build 0 errors (5 warnings, the known count); `DecisionTree.Tests` **120/124 passed, 4 skipped, 0 failed** — the 7 `ShotLane_*` locks, the `gk_candidate` pre-pass, `VisionFidelity` and the `<=` gate boundary all compiled and executed for the first time. Whole-tree gate PASSED, quarantine empty; `MatchEngine.Tests` **420/430 unchanged** — the intended digest movement tripped no scenario band (blast radius checked by execution). Retires the "no gate run" caveats on 2.76/2.77. No file changes. |
 | 2.77 | 2026-08-06 | —      | **ERR-008-021 AR-1 — 1 High, 7 Medium, 5 Low, all fixed.** H-1: the P3 exemption keyed on the whole 6 m GK band ⇒ every near-goal defender escaped the weighting (inert where shots are blocked); now a single GK candidate (goal-line-nearest in band, snapshot-order tie-break, `IsInShotPath`-independent pre-pass) is exempt, radius stays per-band, neutral arcs unchanged. `OptionGenerator.cs` v1.8 (+ `VisionFidelity` hoisted M-5; gate boundary `<` → `<=` per spec's strict ">" L-5), `OptionGeneratorTests.cs` v1.8 (+H-1 lock, M-3 margins, M-4 anti-vacuity incl. exact GK-arc pin, M-6 production post assignment in both away fixtures, L-2), `UtilityWeights.cs` v1.11 (doc only, M-1). P5 claim corrected to midpoint/null-view-exact (M-2). No value changes; no schema/RNG/draw-order change. **No gate run — no .NET SDK; CI on push.** |
 | 2.76 | 2026-08-06 | —      | **ERR-008-021 (judgment-proxy doctrine P2/P3/P5): the #8 shot-lane occlusion learns who is blocking — the follow-up deferred at ERR-008-020.** `OptionGenerator.cs` v1.7 (`ComputeGoalOpeningScore`: outfield blocker arc × `PerceivedInterceptAbility` through the shooter's Vision fidelity — the ERR-008-020 helper and `[GT]`s verbatim, zero new constants; GK-classified arc stays geometric per P3, priced once at the #11 save; neutral/null-view = byte-identical arcs, P5), `Tests/OptionGeneratorTests.cs` v1.7 (+6 locks: computed-average pivot = null-view arc exactly, Vision-20 vs Vision-1 discrimination, null-view neutrality, GK-arc invariance, away mirror). Spec same commit: `section-3-1.md` v1.4 (§3.1.4.3 model replaces the deferral note), `section-3-2.md` v1.12 + §3.2.3.2 step 3a with worked example; legacy centre-origin/GK-heuristic inconsistency of the §3.2.3.2 numerical example recorded-not-fixed. No schema / RNG / domain-tag / draw-site / draw-order change; digests move where a generated SHOOT has a non-neutral outfield blocker in the path, as intended. **No gate run — no .NET SDK; CI on push is the gate.** |

@@ -1,7 +1,28 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** August 6, 2026, later same day (**ERR-008-021's same-day review caught the fix
+**Last Updated:** August 7, 2026 (**The match screen's rules about what you can click, and when,
+are now written down in testable code rather than left for the Unity layer to invent.** The interactive
+client is built in two halves on purpose: everything that *decides* something lives in ordinary C# that
+the automated build compiles and tests on every push, and the Unity half only draws what it is told.
+That split was already done for the pitch view; it had not been done for the screen's controls, so this
+pass did it. Two things came out of it. First, the four playback speeds (1×, 3×, 5×, 10×) were four
+unrelated numbers in a settings file — nothing said they form a ladder, which one a match starts at, or
+what "faster" should do when you are already at the fastest. They are now an ordered ladder that stops
+at the top instead of wrapping around to the slowest, which would have looked like a bug. Second, and
+more useful: the rule that you cannot change tactics after the final whistle existed only as a sentence
+in a design document. It is now a value the screen reads, so a control that cannot do anything is shown
+as unavailable rather than quietly swallowing your click — and it deliberately keeps **saving** switched
+on after full time, since that is exactly when someone wants to save. One real gap turned up along the
+way: a note said the speed cap must allow 10×, but nothing checked it, and because the engine rejects an
+out-of-range speed rather than quietly capping it, a misconfigured setting would have shipped a 10×
+button that crashed mid-match while the other three worked fine. That is now checked at startup, so the
+game refuses to launch instead. Nothing here touches the simulation — no save-format change, no change
+to how matches play out. The build could not be run in this environment (the .NET installer is blocked
+by the network policy), so CI compiles it on push. Prior entry below — note it skips the August 6
+save-codec landing, which was recorded in the tracking documents but not here.)
+
+**Last Updated (prior):** August 6, 2026, later same day (**ERR-008-021's same-day review caught the fix
 being switched off exactly where it matters.** The adversarial review over the shot-blocking change
 found that "don't weight the goalkeeper" had been implemented as "don't weight anyone within six
 metres of the goal line" — which is where most shot-blocking happens, so ordinary defenders making
