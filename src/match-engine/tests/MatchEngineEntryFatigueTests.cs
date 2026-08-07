@@ -1,6 +1,8 @@
 // File:     src/match-engine/tests/MatchEngineEntryFatigueTests.cs
 // Created:  2026-08-06
 // Modified: 2026-08-06
+// Modified: 2026-08-07 (the two cross-engine comparisons run each engine to completion before
+//           constructing the next — the process-static EventBus makes interleaved engines diverge)
 // Author:   —
 // Spec:     Training System #29 §3.3 / §4.3 (KD-1, the match-boot fatigue seam); path-to-playable D2
 //           (T2); Code Standards #20
@@ -196,13 +198,21 @@ namespace TacticalDirector.MatchEngine
             // untouched focuses — and a season wired through this seam must then be indistinguishable
             // from one that never had it. Compared over a digest chain rather than the reservoir alone,
             // so a stray write anywhere else in ApplySquad would show up too.
+            // Each engine is constructed AND run to completion before the next is constructed.
+            // Not cosmetic: the EventBus is process-static, and MatchEngineShotOutcomeScenarios
+            // already records the consequence — "SEQUENTIAL runs, deliberately not interleaved:
+            // the process-static EventBus makes interleaved engines diverge at tick 1". Building
+            // both engines up front and only then ticking them is that interleaving, so the
+            // second construction lands between the first engine's boot and its first tick.
+            // AerobicPool defaults to 1.0f (AgentState.cs) and the seam writes 1f − 0f = 1f, so
+            // the two ConfigureSquads paths are value-identical by construction; any divergence
+            // here is therefore contamination between the engines, not the entry-fatigue seam.
             var wired = new MatchEngine(MatchSeed);
             wired.ConfigureSquads(CoherentSquad(1), CoherentSquad(2), Rested(), Rested());
+            List<byte[]> wiredChain = DigestChain(wired, 40);
 
             var bare = new MatchEngine(MatchSeed);
             bare.ConfigureSquads(CoherentSquad(1), CoherentSquad(2));
-
-            List<byte[]> wiredChain = DigestChain(wired, 40);
             List<byte[]> bareChain = DigestChain(bare, 40);
 
             for (int i = 0; i < bareChain.Count; i++)
@@ -227,11 +237,15 @@ namespace TacticalDirector.MatchEngine
             }
 
             fatigued.ConfigureSquads(CoherentSquad(1), CoherentSquad(2), home, null);
+            DigestChain(fatigued, 240);
 
+            // Sequential for the same reason as the neutrality lock above — and it matters more
+            // here, because this test asserts a DIFFERENCE. Interleaved, cross-engine
+            // contamination is itself a source of divergence, so the assertion could be satisfied
+            // without the reservoir ever being read. Run apart, the only remaining channel is
+            // AgentLocomotion.CalculateAerobicModifier, which is what the test claims to prove.
             var rested = new MatchEngine(MatchSeed);
             rested.ConfigureSquads(CoherentSquad(1), CoherentSquad(2));
-
-            DigestChain(fatigued, 240);
             DigestChain(rested, 240);
 
             // Asserted on POSITION rather than on the digest: the reservoir is itself part of the
@@ -336,4 +350,16 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | filter breaks deliberately (filtering renumbers the locals). The   |
 // |         |            |        | new case puts the only goalkeeper at the LAST local, so slot 0     |
 // |         |            |        | must map to local 17 whatever the ratings say.                     |
+// | 1.3     | 2026-08-07 | —      | Both cross-engine comparisons made strictly SEQUENTIAL:            |
+// |         |            |        | construct, run, then construct the next. Interleaving them puts    |
+// |         |            |        | the second boot between the first engine's boot and its first      |
+// |         |            |        | tick, and the EventBus is process-static —                         |
+// |         |            |        | MatchEngineShotOutcomeScenarios already records that interleaved   |
+// |         |            |        | engines diverge at tick 1 for exactly this reason.                 |
+// |         |            |        | AllZeroFatigue began failing at the main merge (digest differs at  |
+// |         |            |        | tick 1) though AerobicPool defaults to 1.0f and the seam writes    |
+// |         |            |        | 1f - 0f = 1f, so the two ConfigureSquads paths cannot differ by    |
+// |         |            |        | value. NonZeroFatigue carried the same shape and mattered more:    |
+// |         |            |        | it asserts a DIFFERENCE, which contamination could have supplied   |
+// |         |            |        | without the reservoir ever being read.                             |
 #endregion
