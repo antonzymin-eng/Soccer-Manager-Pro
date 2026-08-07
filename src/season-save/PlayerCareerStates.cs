@@ -1,6 +1,6 @@
 // File:     src/season-save/PlayerCareerStates.cs
 // Created:  2026-08-06
-// Modified: 2026-08-06
+// Modified: 2026-08-07
 // Author:   —
 // Spec:     Training System #29 §3.1/§3.3/§3.5, §4.3 (seam contracts), FR-TR-004/016/022/023/025;
 //           Injuries & Medical #41 §3.1/§3.5, §4.3, FR-MD-003/009/010/022/023/025/027;
@@ -337,15 +337,18 @@ namespace TacticalDirector.SeasonSave
                 // idempotency cursors, bypassing both day steps. That is exactly the hole closed on the
                 // save side by keeping TrainingBlocks()/MedicalBlocks() internal; copying here closes
                 // the same hole on the load side, which is the only other route in.
-                var training = new TrainingState[t.Count];
-                Array.Copy(t.States, training, t.Count);
-                var injury = new InjuryState[m.Count];
-                Array.Copy(m.States, injury, m.Count);
+                // Named for the STATE they hold, not the block they came from: `training` and
+                // `medical` are this method's own parameters, so a local of either name is a
+                // compile error (CS0136/CS0841), not a shadow.
+                var trainingStates = new TrainingState[t.Count];
+                Array.Copy(t.States, trainingStates, t.Count);
+                var injuryStates = new InjuryState[m.Count];
+                Array.Copy(m.States, injuryStates, m.Count);
 
                 career._clubIds.Add(t.ClubId);
                 career._playerIds.Add(t.PlayerIds);
-                career._training.Add(training);
-                career._injury.Add(injury);
+                career._training.Add(trainingStates);
+                career._injury.Add(injuryStates);
             }
 
             return career;
@@ -1181,4 +1184,13 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | rejects everywhere else. RosterGeneration stays — CommitRosterSync |
 // |         |            |        | refuses a stale plan on it — but nothing outside now depends on a  |
 // |         |            |        | caller reading it.                                                 |
+// | 1.3     | 2026-08-07 | —      | **Gate fix (CI run 405, the branch's first compile).** v1.2's      |
+// |         |            |        | copy-not-borrow change declared its locals `training` / `injury`   |
+// |         |            |        | inside FromBlocks, whose own PARAMETERS are `training` and         |
+// |         |            |        | `medical` — so C# read every earlier use of the parameter in that  |
+// |         |            |        | block as a use-before-declaration: 4x CS0841 plus CS0136 on the    |
+// |         |            |        | declaration itself. Renamed to `trainingStates` / `injuryStates`.  |
+// |         |            |        | Behaviour is exactly what v1.2 described; it had simply never been |
+// |         |            |        | compiled, which is what every "NO GATE RUN" note on this landing   |
+// |         |            |        | was warning about.                                                 |
 #endregion

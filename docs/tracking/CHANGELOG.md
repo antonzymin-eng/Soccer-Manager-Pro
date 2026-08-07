@@ -12,7 +12,26 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 6, 2026, latest same day (**Adversarial review pass 6 over the #29/#41 T2
+> **Last Updated:** August 7, 2026 (**The #29/#41 T2 branch reached a compiler for the first time and
+> failed to build.** CI run 405 on PR #304 — the first run this branch has ever had — reported
+> `Build FAILED, 5 Error(s)`, all in `PlayerCareerStates.FromBlocks`. The adversarial-review pass-3 fix
+> that made `FromBlocks` copy its two state arrays rather than borrow them declared those locals
+> `training` and `injury`, inside a method whose own parameters are `training` and `medical`. C# does
+> not read that as shadowing: once a local of that name is declared anywhere in a block, the whole block
+> resolves the name to the local, so the four earlier uses of the *parameter* became CS0841
+> use-before-declaration errors and the declaration itself CS0136. Renamed to `trainingStates` /
+> `injuryStates`. The behaviour is exactly what six review passes described; the code had simply never
+> been compiled. **That is worth recording plainly**: the failure every "NO GATE RUN" caveat on this
+> landing anticipated arrived not as a wrong algorithm or a bad assumption but as a name collision — the
+> single cheapest class of defect a compiler catches, and one that careful reading demonstrably does not.
+> What run 405 did establish: `match-engine`, `training-system` and `injuries-medical` compiled, so the
+> four-argument `ConfigureSquads` fatigue seam, `SquadRating.CanFieldStartingEleven` and
+> `LineupSelector.TrySelect` are real. `season-save` failed, so its test project never built and both new
+> suites — including the pass-6 `FromBlocks` copy lock — are still unexecuted. Every symbol they touch has
+> now been hand-checked against its declaration for name, signature, accessibility and type, which is the
+> ceiling of what this environment can verify. The next run is the real answer.)
+
+> **Last Updated (prior):** August 6, 2026, latest same day (**Adversarial review pass 6 over the #29/#41 T2
 > landing — 0 High, 1 Medium, 2 Low, all fixed.** After three consecutive passes that each found
 > something only by changing axis, this one picked four the earlier passes had not used, and the one that
 > paid was asking a different question entirely: *does each of the twelve fixes landed in passes 3–5 have

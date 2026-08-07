@@ -1,7 +1,17 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 6, 2026, latest same day (**Adversarial review passes 3–6 over the #29/#41 T2
+**Last Updated:** August 7, 2026 (**Gate fix — CI run 405, this branch's first compile, failed.**
+
+**Modified:** `src/season-save/PlayerCareerStates.cs` v1.2 → **v1.3** — `FromBlocks`' copy locals renamed
+`training`/`injury` → `trainingStates`/`injuryStates`. The method's own parameters are `training` and
+`medical`, so the v1.2 locals produced 4x CS0841 + CS0136 rather than shadowing. No behaviour change.
+Plus `docs/tracking/CHANGELOG.md`, `docs/tracking/CHANGELOG-src.md` v2.83, this file.
+
+`season-save` failing meant `SeasonSave.Tests` never built, so both new suites are still unexecuted;
+`match-engine`, `training-system` and `injuries-medical` and their suites all compiled in the same run.)
+
+**Last Updated (prior):** August 6, 2026, latest same day (**Adversarial review passes 3–6 over the #29/#41 T2
 landing — 1 High, 5 Medium, 9 Low across the four, all fixed.** Passes 3–5 landed in `92baaa3` and that
 commit did **not** update this file; the entry below therefore covers passes 3–5 and pass 6 together,
 which is the honest record rather than two half-entries.
