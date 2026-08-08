@@ -172,6 +172,14 @@ namespace TacticalDirector.SeasonSave
                             nameof(careerOrNull));
                     }
                 }
+
+                // The cursor-vs-clock rule at the COMPOSITION boundary (AR pass 6 M3), for the same
+                // reason the KD-4 check above runs here: a loop can be composed from a career and a
+                // world that never met a save file, and a desynchronised pair either silently skips
+                // every day step (cursor ahead — F6 reads the day as done) or wedges permanently
+                // (cursor lagging by >= 2 — F7 refuses the gap, and the steps run before the clock
+                // increment). The save root enforces the same rules at the file boundary.
+                careerOrNull.RequireCursorsWithinClock(world.CurrentWorldTick);
             }
 
             _world = world;
@@ -736,7 +744,7 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>
-        /// One calendar day, in the KD-2 pinned order (§3.3). Steps 2, 4 and 9 are live; every other
+        /// One calendar day, in the KD-2 pinned order (§3.3). Slots 2 and 4 and step 12 are live; every other
         /// step is a <b>documented position</b>, not an interface (FR-SN-034 / FR-LW-031) — each
         /// Wave-2+ spec slots into its pre-declared slot when it lands, so fixing the order now avoids a
         /// re-pin across all of them.
@@ -747,14 +755,14 @@ namespace TacticalDirector.SeasonSave
         /// without throwing anything.
         /// </para>
         /// <para>
-        /// With no career wired, only step 9 runs and a no-fixture day's advance is byte-identical to a
+        /// With no career wired, only step 12 runs and a no-fixture day's advance is byte-identical to a
         /// bare <see cref="WorldStore.AdvanceDay"/> (FR-SN-026 / KD-8) — which is exactly what the
         /// behaviour-neutral floor test asserts. With one wired it stays byte-identical <i>to the
         /// world</i>: neither day step touches <see cref="WorldStore"/>, they mutate only the career
         /// state, which is serialized in its own sub-blobs.
         /// </para>
         /// <para>
-        /// Both steps take the world day BEFORE step 9's increment — the day being lived, not the day
+        /// Both steps take the world day BEFORE step 12's increment — the day being lived, not the day
         /// being entered. That is what makes the first advance of a fresh world day 0 and keeps
         /// <c>LastAdvancedWorldDay</c> exactly one behind the clock between ticks, so a save taken here
         /// restores without a phantom gap.
@@ -1200,4 +1208,9 @@ namespace TacticalDirector.SeasonSave
 // | 1.14    | 2026-08-08 | —      | Balance-pass AR pass 5 (M5, doc only): a stale "every career   |
 // |         |            |        | until the dial is armed" sentence updated — the dial has been  |
 // |         |            |        | armed since the balance pass.                                  |
+// | 1.15    | 2026-08-08 | —      | Balance-pass AR pass 6 (M3 + L1): the constructor pairs the    |
+// |         |            |        | career against the world clock (RequireCursorsWithinClock)    |
+// |         |            |        | beside its KD-4 and coverage gates; three step-9 prose sites  |
+// |         |            |        | corrected to step 12 (step 9 is the #32 scouting null seam    |
+// |         |            |        | under pass 1's own renumbering).                              |
 #endregion

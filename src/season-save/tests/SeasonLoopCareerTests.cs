@@ -95,6 +95,33 @@ namespace TacticalDirector.SeasonSave.Tests
         }
 
         [Test]
+        public void Constructor_RefusesACareerOffTheWorldClock()
+        {
+            // AR pass 6 (M3): a loop can be composed from a career and a world that never met a
+            // save file, and the desynchronised pair either silently skips every day step (career
+            // ahead — F6 reads each day as done) or wedges permanently (career lagging by >= 2 —
+            // F7 refuses the gap and the steps run before the clock increment). The file boundary
+            // refused this while the composition boundary accepted it — the reviewer drove a career
+            // eleven days ahead through public API and watched seven world days of conditioning and
+            // seven armed draws silently skip.
+            League league = FourClubLeague();
+            CareerTestRoster.MutableSquadProvider provider = ProviderOver(league);
+            PlayerCareerStates career = PlayerCareerStates.ForLeague(
+                provider, league.ClubIds(), injuryOccurrenceEnabled: false);
+            for (uint day = 0; day < 5; day++)
+            {
+                career.AdvanceTrainingDay(day, provider, CoachingModifier.Identity);
+                career.AdvanceMedicalDay(day, WorldSeed, provider, MedicalModifier.Identity);
+            }
+
+            Assert.Throws<System.InvalidOperationException>(() => new SeasonLoop(
+                new WorldStore(ManagerId, WorldSeed), league.CreateSeason(0),
+                RoundResolutionMode.QuickSimAll, career, provider),
+                "a career five days ahead of a fresh world is refused at composition, not left to "
+                + "silently skip its day steps");
+        }
+
+        [Test]
         public void AdvanceAndPlayNextRound_WithADifferentProvider_FailsLoud()
         {
             // Two providers would train one league and resolve fixtures against another, and every
@@ -730,4 +757,7 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | and the regen fixture's suffix corrected off club 2's id range     |
 // |         |            |        | (the guard's first catch: this fixture had been creating a         |
 // |         |            |        | cross-club duplicate id since T2). Row added at pass 4 (rowless).  |
+// | 1.5     | 2026-08-08 | —      | Balance-pass AR pass 6 (M3): + Constructor_RefusesACareerOff-  |
+// |         |            |        | TheWorldClock — the composition-boundary lock on the pairing   |
+// |         |            |        | the file boundary already refused.                             |
 #endregion

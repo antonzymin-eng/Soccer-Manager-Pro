@@ -1,8 +1,9 @@
 # Injuries & Medical #41 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.3
+**Last Updated:** August 8, 2026 (v0.4 — balance-pass AR pass 6 M4: the ERR-041-012 sweep — T-MD-DET-004 / T-MD-NEU-003 / T-MD-SEV-001 restated off the phantom registered stream and its service reservation. Prior header below.)
+**Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -21,8 +22,9 @@ Tests land at T-phase; this is the acceptance contract.
   purpose)` reproduces the same occurrence outcome regardless of the order other players/days are drawn in
   a season — asserted by drawing the same triple via two different overall roster/day iteration orders and
   comparing outcomes.
-- **T-MD-DET-004** — No free-running cursor: the `injuries.occurrence` stream registers with no
-  `RngCursor`/`actionOrdinal` field in the serialized medical block (grep/schema-shape assertion) — FR-MD-007.
+- **T-MD-DET-004** — No free-running cursor: the serialized medical block carries no
+  `RngCursor`/`actionOrdinal` field (schema-shape assertion — there is no registered stream to hold one;
+  ERR-041-012) — FR-MD-007.
 - **T-MD-DET-005** — Idempotency: `AdvanceMedicalDay` for an already-advanced `worldDay` is a no-op
   (`LastAdvancedWorldDay` unchanged, `RecoveryRemaining`/`Severity`/`InjuryCount` unchanged) — F6.
 - **T-MD-DET-006** — **Day-0 boundary:** a state from `InjuryState.Create` (sentinel `LastAdvancedWorldDay =
@@ -50,9 +52,10 @@ Tests land at T-phase; this is the acceptance contract.
   any input (risk score, `MatchLoad`, attributes) — it reduces to the recovery countdown only — FR-MD-027.
 - **T-MD-NEU-002** — `InjuryState.Create()` yields `Severity = None`, `RecoveryRemaining = 0`, `InjuryCount
   = 0` — the Healthy identity.
-- **T-MD-NEU-003** — Registering the `injuries.occurrence` stream leaves every pre-existing stream's cursor
-  (`world.text`, `player-progression.regen`, `season-loop.season-events`, match-tick streams) byte-identical
-  across a full world-tick season run with and without #41 active (stream independence).
+- **T-MD-NEU-003** — Stream independence, vacuous by construction since ERR-041-012 (#41 registers
+  nothing): every pre-existing stream's cursor (`world.text`, `player-progression.regen`,
+  `season-loop.season-events`, match-tick streams) is byte-identical across a full world-tick season run
+  with and without #41 active.
 
 ## 5.4 Ordering & recovery/occurrence interaction (KD-6)
 
@@ -75,9 +78,9 @@ Tests land at T-phase; this is the acceptance contract.
 
 ## 5.6 Severity & recovery
 
-- **T-MD-SEV-001** — Severity bucketing consumes the **same** draw as the occurrence check — no second RNG
-  draw is issued for a Stage-2 occurrence (a draw-count assertion against the `DeterministicRngService`
-  reservation) — FR-MD-012.
+- **T-MD-SEV-001** — Severity bucketing consumes the **same** draw as the occurrence check — no second
+  keyed evaluation is issued for a Stage-2 occurrence (`ClassifySeverityFromDraw` takes the draw VALUE;
+  there is no service reservation to count against — ERR-041-012) — FR-MD-012.
 - **T-MD-SEV-002** — Bucketing boundaries via the integer cross-multiply (§3.2): a draw exactly at the
   Minor boundary (`draw × SEVERITY_PERMILLE_DENOM == risk × SEVERITY_MINOR_PERMILLE`) classifies **Moderate**
   (the `<` convention, not `<=`), mirroring the project's boundary-classification precedent; no float
@@ -145,4 +148,5 @@ Tests land at T-phase; this is the acceptance contract.
 | 0.1 | 2026-07-23 | — | Initial test plan (T-MD-*) + full FR-MD-001..027 traceability table. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1 (1M): +T-MD-MOD-002 (recovery-speed at assignment + floor-at-1) / +T-MD-FAIL-006 (zero `MedicalModifier` fails loud); T-MD-SEV-002 restated as the integer cross-multiply; traceability FR-MD-014/016 updated. |
 | 0.3 | 2026-07-23 | — | AR-2 (1M): +T-MD-DET-009 (fixed-radix append parity + bound guard); FR-MD-008 traceability; fixed a `FR-MD-007` typo. |
+| 0.4 | 2026-08-08 | — | **Balance-pass AR pass 6 (M4)**: three test descriptions still asserted against the registered `injuries.occurrence` stream / `DeterministicRngService` reservation that ERR-041-012 established never existed; restated against the keyed derivation the suites actually exercise. |
 #endregion

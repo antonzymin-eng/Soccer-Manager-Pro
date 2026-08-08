@@ -103,8 +103,11 @@ namespace TacticalDirector.SeasonSave
         /// <summary>Bits <paramref name="lo"/>..<paramref name="hi"/> inclusive, both in <c>[0, 31]</c> with <c>lo ≤ hi</c> guaranteed by the caller's window bound.</summary>
         private static uint WindowMask(int lo, int hi)
         {
+            // width <= 31 on every path: RequireValidWindow bounds hi <= window - shift <= 31, and
+            // lo == 0 only when shift >= 1 (AR pass 6 L2 — the old width >= 32 branch was
+            // unreachable dead defence no test could cover).
             int width = hi - lo + 1;
-            uint run = width >= 32 ? uint.MaxValue : (1u << width) - 1u;
+            uint run = (1u << width) - 1u;
             return run << lo;
         }
 
@@ -146,4 +149,7 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | ordering.                                                         |
 // | 1.1     | 2026-08-08 | —      | Balance-pass AR pass 5 (L4): RequireValidWindow reads the      |
 // |         |            |        | catalogued [FIXED] bound instead of a bare 31.                 |
+// | 1.2     | 2026-08-08 | —      | Balance-pass AR pass 6 (L2): WindowMask's unreachable          |
+// |         |            |        | width >= 32 branch deleted — RequireValidWindow bounds every   |
+// |         |            |        | path to width <= 31; the bound is stated where the shift is.   |
 #endregion

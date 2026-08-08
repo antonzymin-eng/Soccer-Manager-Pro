@@ -698,6 +698,33 @@ namespace TacticalDirector.SeasonSave
         }
 
         [Test]
+        public void Save_CursorLaggingTheClockByTwoOrMore_FailsLoud()
+        {
+            // AR pass 6 (M2): the mirror case is WORSE than ahead — the F7 gap refusal fires on every
+            // later advance and the day steps run before the clock increment, so the career wedges
+            // permanently while the file saves and reloads cleanly (demonstrated by the reviewer
+            // through public API). A legitimate save sits at worldTick − cursor ∈ {0, 1}; the
+            // sentinel (fresh state) is exempt, and the appearance anchor has no gap contract.
+            WorldStore laggedWorld = PopulatedStore();   // clock 2
+
+            var laggingTraining = TBlock(7, 100);
+            laggingTraining.States[0].LastAdvancedWorldDay = 0u;   // clock 2 → gap of 2
+            Assert.Throws<InvalidOperationException>(
+                () => SeasonSaveManager.Save(
+                    laggedWorld, MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    new[] { laggingTraining }, new[] { MBlock(7, 100) }, new[] { ABlock(7, 100) }),
+                "a training cursor two behind the clock wedges the career on the next advance (F7)");
+
+            var okTraining = TBlock(7, 100);
+            okTraining.States[0].LastAdvancedWorldDay = 1u;        // clock 2 → the legitimate lag of 1
+            Assert.DoesNotThrow(
+                () => SeasonSaveManager.Save(
+                    laggedWorld, MidSeasonState(), matchOrNull: null, TempPath("ok.season"),
+                    new[] { okTraining }, new[] { MBlock(7, 100) }, new[] { ABlock(7, 100) }),
+                "the pre-increment convention's lag of exactly one is the NORMAL saved state");
+        }
+
+        [Test]
         public void Load_FutureDatedCareerCursor_FailsLoud()
         {
             // The same rule at the layer a hand-edited or mispaired file actually arrives through.
@@ -846,20 +873,33 @@ namespace TacticalDirector.SeasonSave
         [Test]
         public void Load_WorldPastTheNextFixtureDay_FailsLoud()
         {
-            // FR-SN-011 (MUST) / F4: the KD-4 cursor invariant is the ONE coherence rule spanning the
-            // world and season blobs, so neither codec can check it — only this root, which holds both.
-            // MidSeasonState's cursor points at round 1 (day 12); advancing the world past it makes the
-            // pair incoherent, and T2's day-advance loop (which advances UP TO the next fixture day)
-            // would be undefined. Save does not check (the requirement is on restore), so the corruption
-            // must surface at Load.
-            string path = TempPath("cursor-behind.season");
+            // FR-SN-011 (MUST) / F4: the KD-4 cursor invariant is one of the two coherence rules
+            // spanning the world and season blobs, so neither codec can check it — only this root.
+            // Save now refuses this content too (AR pass 6 M1 — the gate's own doc had stated the
+            // never-write-what-Load-refuses rule while this very test recorded the asymmetry as
+            // intended), so the incoherent file is crafted through SeasonSaveCodec.Encode, exactly
+            // as the cursor-vs-clock Load test does.
             WorldStore world = PopulatedStore();
             for (int i = 0; i < 20; i++)
             {
                 world.AdvanceDay();
             }
 
-            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical, NoAppearance);
+            Assert.Throws<InvalidOperationException>(
+                () => SeasonSaveManager.Save(
+                    world, MidSeasonState(), matchOrNull: null, TempPath("cursor-behind.season"),
+                    NoTraining, NoMedical, NoAppearance),
+                "Save must refuse a world already past the season's next fixture day — Load refuses "
+                + "this file, and this root never writes what its own Load refuses.");
+
+            var emptyTraining = new TrainingBlock(TrainingSaveCodec.Encode(NoTraining));
+            var emptyMedical = new MedicalBlock(MedicalSaveCodec.Encode(NoMedical));
+            var emptyAppearance = new AppearanceBlock(AppearanceSaveCodec.Encode(NoAppearance));
+            byte[] frame = SeasonSaveCodec.Encode(
+                world.Snapshot(), SeasonStateCodec.Encode(MidSeasonState()),
+                in emptyTraining, in emptyMedical, in emptyAppearance, null);
+            string path = TempPath("cursor-behind.season");
+            File.WriteAllBytes(path, frame);
 
             Assert.Throws<InvalidOperationException>(() => SeasonSaveManager.Load(path),
                 "A season whose next fixture day is behind the restored world day must be rejected (F4).");
@@ -1208,4 +1248,9 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | future-dated-cursor refusals at Save (all three cursor kinds)  |
 // |         |            |        | and at Load (via a hand-crafted frame — what "hand-edited"     |
 // |         |            |        | means).                                                        |
+// | 1.10    | 2026-08-08 | —      | Balance-pass AR pass 6 (M1 + M2): Load_WorldPastTheNextFixture |
+// |         |            |        | Day rebuilt through SeasonSaveCodec.Encode (Save now refuses   |
+// |         |            |        | the content — and the test asserts THAT first); + the lagging- |
+// |         |            |        | cursor refusal with the lag-of-exactly-one PASS case (the     |
+// |         |            |        | pre-increment convention's normal saved state).               |
 #endregion

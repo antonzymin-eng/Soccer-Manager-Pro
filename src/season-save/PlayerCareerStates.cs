@@ -511,6 +511,61 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>
+        /// The cursor-vs-clock rule over the LIVE state (AR pass 6 M3) — the composition-boundary
+        /// twin of <c>SeasonSaveManager</c>'s block-level walk: a cursor AHEAD of the clock is
+        /// silently skipped by the F6 idempotency until the clock catches up; a cursor LAGGING by
+        /// two or more wedges the pairing permanently (F7 refuses the gap, and the day steps run
+        /// before the clock increment, so it can never close). The appearance anchor has no gap
+        /// contract and is ahead-checked only. Sentinels are exempt — a fresh state is coherent at
+        /// any clock.
+        /// </summary>
+        /// <param name="worldTick">The world clock the career is being paired with.</param>
+        /// <exception cref="InvalidOperationException">Any player's cursor is outside the coherent band.</exception>
+        internal void RequireCursorsWithinClock(uint worldTick)
+        {
+            for (int c = 0; c < _clubIds.Count; c++)
+            {
+                int[] ids = _playerIds[c];
+                TrainingState[] training = _training[c];
+                InjuryState[] injury = _injury[c];
+                AppearanceState[] appearance = _appearance[c];
+
+                for (int i = 0; i < ids.Length; i++)
+                {
+                    uint tDay = training[i].LastAdvancedWorldDay;
+                    if (tDay != TrainingSystemConstants.TRAINING_NOT_ADVANCED_SENTINEL
+                        && (tDay > worldTick || worldTick > tDay + 1))
+                    {
+                        throw new InvalidOperationException(
+                            $"Career/world pairing is incoherent: club {_clubIds[c]} player {ids[i]}'s "
+                            + $"training cursor ({tDay}) is "
+                            + (tDay > worldTick ? "ahead of" : "more than one day behind")
+                            + $" the world clock ({worldTick}).");
+                    }
+
+                    uint mDay = injury[i].LastAdvancedWorldDay;
+                    if (mDay != InjuriesMedicalConstants.MEDICAL_NOT_ADVANCED_SENTINEL
+                        && (mDay > worldTick || worldTick > mDay + 1))
+                    {
+                        throw new InvalidOperationException(
+                            $"Career/world pairing is incoherent: club {_clubIds[c]} player {ids[i]}'s "
+                            + $"medical cursor ({mDay}) is "
+                            + (mDay > worldTick ? "ahead of" : "more than one day behind")
+                            + $" the world clock ({worldTick}).");
+                    }
+
+                    if (appearance[i].BitsAsOfWorldDay > worldTick)
+                    {
+                        throw new InvalidOperationException(
+                            $"Career/world pairing is incoherent: club {_clubIds[c]} player {ids[i]}'s "
+                            + $"appearance anchor ({appearance[i].BitsAsOfWorldDay}) is ahead of the "
+                            + $"world clock ({worldTick}).");
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// The fixture-pair form (AR pass 3): BOTH clubs validated before EITHER is written — the
         /// validate-all-then-write discipline <see cref="RecordAppearances"/> keeps within a club,
         /// applied one level up. Without it, the away side's refusal landed after the home side's
@@ -604,12 +659,12 @@ namespace TacticalDirector.SeasonSave
         /// through this wiring is byte-identical to one booted without it until a focus is set.
         /// </para>
         /// </summary>
-        /// <param name="worldDay">The world day being advanced — #30's clock BEFORE its day-9 increment.</param>
+        /// <param name="worldDay">The world day being advanced — #30's clock BEFORE its step-12 increment.</param>
         /// <param name="squads">The rosters the attributes are read from; must match the state's roster (see <see cref="SyncToRoster"/>).</param>
         /// <param name="coach">The #34 staff seam; <see cref="CoachingModifier.Identity"/> until #34 lands.</param>
         /// <exception cref="ArgumentNullException"><paramref name="squads"/> is null.</exception>
         /// <exception cref="ArgumentException">A club or a held player id cannot be resolved against <paramref name="squads"/>, or #29 refuses the day.</exception>
-        public void AdvanceTrainingDay(uint worldDay, ISquadProvider squads, CoachingModifier coach)
+        internal void AdvanceTrainingDay(uint worldDay, ISquadProvider squads, CoachingModifier coach)
         {
             if (squads == null)
             {
@@ -651,13 +706,13 @@ namespace TacticalDirector.SeasonSave
         /// <c>HardContacts</c> stays 0 (deep-tier, KD-3).
         /// </para>
         /// </summary>
-        /// <param name="worldDay">The world day being advanced — #30's clock BEFORE its day-9 increment.</param>
+        /// <param name="worldDay">The world day being advanced — #30's clock BEFORE its step-12 increment.</param>
         /// <param name="worldSeed">The career's world seed (<c>WorldStore.WorldSeed</c>), the draw key's root — never a per-match seed.</param>
         /// <param name="squads">The rosters the attributes are read from; must match the state's roster.</param>
         /// <param name="medical">The #34 staff seam; <see cref="MedicalModifier.Identity"/> until #34 lands.</param>
         /// <exception cref="ArgumentNullException"><paramref name="squads"/> is null.</exception>
         /// <exception cref="ArgumentException">A club or a held player id cannot be resolved against <paramref name="squads"/>, or #41 refuses the day or the state.</exception>
-        public void AdvanceMedicalDay(
+        internal void AdvanceMedicalDay(
             uint worldDay, ulong worldSeed, ISquadProvider squads, MedicalModifier medical)
         {
             if (squads == null)
@@ -763,7 +818,7 @@ namespace TacticalDirector.SeasonSave
         /// <param name="squads">The rosters to reconcile against.</param>
         /// <exception cref="ArgumentNullException"><paramref name="squads"/> is null.</exception>
         /// <exception cref="ArgumentException">A held club cannot be resolved to a roster.</exception>
-        public int SyncToRoster(ISquadProvider squads)
+        internal int SyncToRoster(ISquadProvider squads)
         {
             RosterSyncPlan plan = PrepareRosterSync(squads);
             return CommitRosterSync(in plan);
@@ -1488,4 +1543,11 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | the dial is armed and the consequence was deliberately not     |
 // |         |            |        | added; #27/#28 attributes or #41 deep-tier own it); four       |
 // |         |            |        | stale dial-off sentences updated to the armed posture.         |
+// | 1.11    | 2026-08-08 | —      | Balance-pass AR pass 6 (M3): + RequireCursorsWithinClock — the |
+// |         |            |        | composition-boundary twin of the save root's walk, called by  |
+// |         |            |        | SeasonLoop's constructor; AdvanceTrainingDay/AdvanceMedicalDay |
+// |         |            |        | /SyncToRoster go internal (public bought nothing — the only   |
+// |         |            |        | callers are SeasonLoop and this assembly's tests — and handed |
+// |         |            |        | any Career holder the ability to drive the career off the     |
+// |         |            |        | world clock). Step-12 prose fixed (L1).                       |
 #endregion

@@ -7,7 +7,8 @@
 //           Match Engine design note §5 Phase G-Phase 3; Deterministic Simulation #16 §4.6.1.1
 //           (atomic-write contract); Living World #22 §4.6/§7.1; Code Standards #20
 // Purpose:  The season save-file root — writes a season (the living-world WorldStore composite, the
-//           season state, the #29 per-club training states, and the #41 per-club medical states, plus
+//           season state, the #29 per-club training states, the #41 per-club medical states, and the
+//           #30 per-club appearance records, plus
 //           an optional in-progress MatchEngine) to disk as one file and reconstructs all of them. This
 //           is the only assembly that may reference both match-engine and living-world (FR-LW-003 keeps
 //           them independent; the season root sits above both, like match-viewer over match-engine).
@@ -31,8 +32,8 @@ namespace TacticalDirector.SeasonSave
 {
     /// <summary>
     /// On-disk save/load for a season: one file carrying the living-world <see cref="WorldStore"/>
-    /// composite, the <see cref="SeasonState"/>, the #29 per-club training states, and the #41 per-club
-    /// medical states — all four always present — and, when a match is in progress, a running
+    /// composite, the <see cref="SeasonState"/>, the #29 per-club training states, the #41 per-club
+    /// medical states, and the #30 per-club appearance records — all five always present — and, when a match is in progress, a running
     /// <see cref="MatchEngine.MatchEngine"/> (unified-season-save-design.md). These are nested as
     /// opaque, independently version-gated sub-blobs (KD-2) — this root never parses any of them, it
     /// only frames/deframes and reconstructs.
@@ -122,6 +123,19 @@ namespace TacticalDirector.SeasonSave
             RequireCoherentCareerBlocks(trainingClubs, medicalClubs, appearanceClubs);
             RequireCareerCursorsWithinClock(
                 world.CurrentWorldTick, trainingClubs, medicalClubs, appearanceClubs);
+
+            // The FIRST cross-blob rule, symmetric at last (AR pass 6 M1): the KD-4 calendar-cursor
+            // invariant was Load-only, three lines above a gate whose own doc states the
+            // never-write-what-Load-refuses rule — so a caller who advanced the world past the
+            // pending round got a green save of a career that could never be loaded again.
+            if (!season.Calendar.SatisfiesCursorInvariant(world.CurrentWorldTick))
+            {
+                throw new InvalidOperationException(
+                    "Season save would be incoherent: the next fixture day (" +
+                    season.Calendar.NextFixtureDay() + ") is before the world day (" +
+                    world.CurrentWorldTick + ") — the KD-4 cursor invariant (FR-SN-011); Load " +
+                    "refuses this file, so Save must not write it.");
+            }
 
             using var _ = s_saveMarker.Auto();
 
@@ -230,17 +244,17 @@ namespace TacticalDirector.SeasonSave
         /// from <see cref="WorldStore.Restore"/> / <see cref="SeasonStateCodec.Decode"/> /
         /// <see cref="TrainingSaveCodec.Decode"/> / <see cref="MedicalSaveCodec.Decode"/> / the match
         /// restore path; a season whose next fixture day is already behind the restored world day throws
-        /// here (the KD-4 cursor invariant, FR-SN-011 / F4 — the only cross-blob coherence rule, and this
-        /// root is the only layer holding both blobs); and a distinct-squad match save
+        /// here (the KD-4 cursor invariant, FR-SN-011 / F4 — one of the TWO cross-blob coherence rules
+        /// this root owns, beside the career cursor-vs-clock rule, both enforced at Save and Load); and a distinct-squad match save
         /// loaded without (or with an incomplete) <paramref name="squads"/> throws from the match restore
         /// factory (KD-6 / R4). The match restore's fingerprint + MXCSR float-mode gates run here
         /// unchanged (KD-5).
         /// <para>
-        /// <b>A save carrying a match additionally cross-checks the two career blocks</b>
+        /// <b>A save carrying a match additionally cross-checks the three career blocks</b>
         /// (<see cref="PlayerCareerStates.FromBlocks"/>), because the availability filter has to be
-        /// rebuilt from them — see the match branch below. So a file whose training and medical blocks
-        /// describe different squads is refused here rather than restoring a match against a career
-        /// nothing else would have validated. A save with no match is untouched by this.
+        /// rebuilt from them — see the match branch below. So a file whose training, medical and
+        /// appearance blocks describe different squads is refused here rather than restoring a match
+        /// against a career nothing else would have validated. A save with no match is untouched by this.
         /// </para>
         /// </summary>
         /// <param name="path">The season save file to read.</param>
@@ -405,6 +419,17 @@ namespace TacticalDirector.SeasonSave
 
             for (int c = 0; c < t.Length; c++)
             {
+                // Duplicate club ids pair arbitrarily across the three unstably-sorted sets, so the
+                // gate's own diagnostics would name the wrong mismatch; refused by name here rather
+                // than left to the codecs downstream (AR pass 6 L5).
+                if (c > 0 && t[c].ClubId == t[c - 1].ClubId)
+                {
+                    throw new ArgumentException(
+                        $"The training set carries club {t[c].ClubId} twice — a club has exactly one "
+                        + "career block.",
+                        nameof(trainingClubs));
+                }
+
                 // A default-valued block NREs at the clones below; refuse it by name instead (AR
                 // pass 4 L1 — before this gate existed, the codecs produced the diagnosed refusal).
                 if (t[c].PlayerIds == null || t[c].States == null
@@ -501,13 +526,21 @@ namespace TacticalDirector.SeasonSave
                 for (int i = 0; i < trainingClubs[c].Count; i++)
                 {
                     uint day = trainingClubs[c].States[i].LastAdvancedWorldDay;
-                    if (day != TrainingSystemConstants.TRAINING_NOT_ADVANCED_SENTINEL && day > worldTick)
+                    if (day != TrainingSystemConstants.TRAINING_NOT_ADVANCED_SENTINEL
+                        && (day > worldTick || worldTick > day + 1))
                     {
+                        // Both directions (AR pass 6 M2): AHEAD means the F6 idempotency silently
+                        // skips the day step until the clock catches up; LAGGING by >= 2 is WORSE —
+                        // the F7 gap refusal fires on every later advance and, because the day steps
+                        // run before the clock increment, the career wedges permanently while saving
+                        // cleanly. A legitimate save sits at worldTick - day in {0, 1} (or the
+                        // sentinel); the appearance anchor below has no gap contract, so it is
+                        // ahead-checked only.
                         throw new InvalidOperationException(
                             $"Career save is incoherent: club {trainingClubs[c].ClubId} player "
-                            + $"{trainingClubs[c].PlayerIds[i]}'s training cursor ({day}) is ahead of "
-                            + $"the world clock ({worldTick}) — a mispaired or hand-edited save; that "
-                            + "player would silently skip the day step until the clock caught up.");
+                            + $"{trainingClubs[c].PlayerIds[i]}'s training cursor ({day}) is "
+                            + (day > worldTick ? "ahead of" : "more than one day behind")
+                            + $" the world clock ({worldTick}) — a mispaired or hand-edited save.");
                     }
                 }
             }
@@ -517,12 +550,14 @@ namespace TacticalDirector.SeasonSave
                 for (int i = 0; i < medicalClubs[c].Count; i++)
                 {
                     uint day = medicalClubs[c].States[i].LastAdvancedWorldDay;
-                    if (day != InjuriesMedicalConstants.MEDICAL_NOT_ADVANCED_SENTINEL && day > worldTick)
+                    if (day != InjuriesMedicalConstants.MEDICAL_NOT_ADVANCED_SENTINEL
+                        && (day > worldTick || worldTick > day + 1))
                     {
                         throw new InvalidOperationException(
                             $"Career save is incoherent: club {medicalClubs[c].ClubId} player "
-                            + $"{medicalClubs[c].PlayerIds[i]}'s medical cursor ({day}) is ahead of "
-                            + $"the world clock ({worldTick}).");
+                            + $"{medicalClubs[c].PlayerIds[i]}'s medical cursor ({day}) is "
+                            + (day > worldTick ? "ahead of" : "more than one day behind")
+                            + $" the world clock ({worldTick}).");
                     }
                 }
             }
@@ -631,4 +666,11 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | with the dial armed (demonstrated), the sibling cursors       |
 // |         |            |        | freeze a player silently — refused at Save AND Load. The      |
 // |         |            |        | coherence gate's paramName now names the OFFENDING set.       |
+// | 1.15    | 2026-08-08 | —      | Balance-pass AR pass 6 (M1 + M2 + L3 + L5): the KD-4 calendar  |
+// |         |            |        | invariant is checked at Save too (it was Load-only, three     |
+// |         |            |        | lines above a gate whose own doc states the never-write-what- |
+// |         |            |        | Load-refuses rule); the cursor gate refuses LAGGING #29/#41   |
+// |         |            |        | cursors (gap >= 2 wedges via F7 — demonstrated; ahead-only    |
+// |         |            |        | before); duplicate ClubIds refused by name in the coherence   |
+// |         |            |        | gate; header/summary docs mention the appearance block.       |
 #endregion

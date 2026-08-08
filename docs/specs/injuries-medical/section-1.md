@@ -1,8 +1,9 @@
 # Injuries & Medical #41 — Section 1: Introduction, Scope, Dependencies, Key Decisions
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.1 — initial authoring)
-**Version:** 0.1
+**Last Updated:** August 8, 2026 (v0.2 — balance-pass AR pass 6 M4, the ERR-041-012 sweep this section missed: KD-1 de-phantomed (the local keyed derivation, not a registered `injuries.occurrence` stream — which FR-MD-005/§4.5 already forbid, so this file contradicted its own §2 sibling), its closing clause re-anchored to the ERR-030-027 matchday-morning ordering, the §1.3 #16 row and §1.5/KD-8 restated off the retired stream)
+**Last Updated (prior):** July 23, 2026 (v0.1 — initial authoring)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -24,7 +25,7 @@ idempotency cursor); the world-tick `AdvanceMedicalDay` step (recovery countdown
 severity classification (Stage-2 fixed tiers; Stage-3 distribution-driven, deferred); the risk-score
 assembly from #29's output + recent match participation + #27 attributes; a read-only availability view for
 #30's squad selection; a read-only `MedicalViewModel` observer for #38; the persistent medical sub-blob
-under #30's season save; and the single `injuries.occurrence` world-tick RNG stream.
+under #30's season save; and the single keyed world-tick occurrence draw (a local SplitMix64 derivation — no registered RNG stream; ERR-041-012).
 
 **Out of scope (owned elsewhere, referenced as seams):**
 - **The fatigue accumulators themselves** — #29 owns the world-tick training-fatigue accumulator; the match
@@ -45,7 +46,7 @@ under #30's season save; and the single `injuries.occurrence` world-tick RNG str
 |---|---|---|
 | #27 Squad/Player Data | reads `PlayerRecord` / `PlayerAttributes` for a physical robustness term | #41 → #27 |
 | #29 Training System | reads the already-published `InjuryRiskContribution` output, read-only | #41 → #29 |
-| #16 Deterministic Sim | consumes the determinism namespace + the world-tick `DeterministicRngService` | #41 → #16 |
+| #16 Deterministic Sim | consumes the determinism namespace (SplitMix64 finalizers + the domain tag) keyed on the world seed — no `DeterministicRngService` stream (ERR-041-012) | #41 → #16 |
 | #30 Season & Competition Loop | #30's day-advance loop invokes `AdvanceMedicalDay` at a new reserved slot; reads the availability view for squad selection | #30 → #41 |
 | #34 Medical Staff (future) | supplies a non-identity `MedicalModifier` when it lands | #34 → #41 |
 | #38 UI/Client (future) | reads the `MedicalViewModel` observer (value copies) | #38 reads #41 |
@@ -58,12 +59,14 @@ interface into #29 beyond reading that value.
 ## 1.4 Key decisions
 
 - **KD-1 (single-clock, position-independent occurrence — the headline).** All #41 stochastic draws happen
-  on the **world tick**, on one dedicated `injuries.occurrence` stream registered on the world-tick
-  `DeterministicRngService` (the same service #22's `world.text` and #28's `player-progression.regen`
-  register on — seeded from the world seed, sub-streams independent). **The match tick NEVER draws for
-  #41.** Each daily occurrence draw is **position-independent / keyed**, not a free-running counter draw: it
-  is keyed on `(stream, entityId = playerId, ActionOrdinal derived deterministically from worldDay + a
-  draw-purpose ordinal)` — the off-pitch keyed-draw precedent (#28 regen keyed by `entityId = clubId`; #30
+  on the **world tick**, as a LOCAL KEYED DERIVATION off the world seed — SplitMix64 finalizers over
+  `DOMAIN_TAG_INJURIES_MEDICAL`, then `playerId`, then the action ordinal, reduced into the `[FIXED]`
+  denominator (§3.1.1). **No `DeterministicRngService` stream is registered and none may be** — a
+  registered stream is cursor-positioned, which FR-MD-006/007 forbid (ERR-041-012; this KD originally
+  required an `injuries.occurrence` registered stream and contradicted them). **The match tick NEVER
+  draws for #41.** Each daily occurrence draw is **position-independent / keyed**, not a free-running
+  counter draw: it is keyed on `(worldSeed, playerId, ActionOrdinal derived deterministically from
+  worldDay + a draw-purpose ordinal)` — the off-pitch keyed-draw precedent (#28 regen keyed by `entityId = clubId`; #30
   quick-sim keyed on `(seed, seasonNumber, roundIndex, homeClubId, awayClubId)`), **not** the match-tick
   free-running card-severity cursor. Consequence: there is **no free-running cursor to persist** — the same
   `(playerId, worldDay, purpose)` reproduces the same draw regardless of how many other players/days drew
@@ -71,8 +74,10 @@ interface into #29 beyond reading that value.
   **APPEND-only** (never renumbered), preserving replay parity across fail-loud paths. Match-incident
   injuries do **not** draw on the match tick either — the deep-tier per-fixture physical-load summary is a
   **read-only** ledger derivation (KD-3) fed as a world-tick occurrence *input*, never a match-tick draw
-  site; the fixture is played and its result/ledger read on the world-tick day that follows it, before the
-  next fixture's squad selection reads availability.
+  site. *(Ordering as revised at ERR-030-027: the occurrence draw runs on MATCHDAY MORNING, pre-round,
+  fed by the FR-MD-010 appearance window — which never contains the current day, so a match on day *d*
+  first feeds the draw on *d+1*; this clause originally described the retired play-then-process
+  convention ERR-030-026 recorded.)*
 
 - **KD-2 (fatigue reconciliation — read-only input, no double count).** #41 reads #29's already-published
   `InjuryRiskContribution` (FR-TR-017) read-only as one occurrence input, plus recent match participation
@@ -132,15 +137,14 @@ interface into #29 beyond reading that value.
   (#30).
 
 - **KD-8 (behaviour-neutral identity + stream independence).** #41's addition is neutral in three senses:
-  (a) **stream independence** — registering the `injuries.occurrence` sub-stream leaves every existing
-  stream's cursor byte-identical (the #22/#26/#29 sub-stream-independence precedent), so a world without
-  #41 active is unperturbed; (b) an `occurrenceEnabled` dial off reduces #41 to a recovery-only no-op (no
+  (a) **stream independence, vacuous by construction** — #41 registers nothing and holds no cursor
+  (ERR-041-012), so every existing stream's cursor is byte-identical with and without #41 active; (b) an `occurrenceEnabled` dial off reduces #41 to a recovery-only no-op (no
   draws); (c) `InjuryState` defaults to `Create()` = Healthy. The deep tier extends the fixed-tier / minutes
   / identity-staff surface, never rewrites it.
 
 ## 1.5 Determinism posture
 
-One stochastic surface only: the single, keyed, position-independent `injuries.occurrence` world-tick draw
+One stochastic surface only: the single, keyed, position-independent world-tick occurrence draw
 (KD-1). Everything else — the recovery countdown, the risk-score assembly, the severity bucketing derived
 from that same draw — is a deterministic integer projection. Save/restore is exact because every
 `InjuryState` field is serialized (KD-7) and there is no cursor to restore for the one stream that draws
@@ -150,4 +154,5 @@ from that same draw — is a deterministic integer projection. Save/restore is e
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial. Status IN REVIEW. |
+| 0.2 | 2026-08-08 | — | **Balance-pass AR pass 6 (M4)**: the ERR-041-012 de-phantoming reached this section — KD-1, §1.1's scope line, the §1.3 #16 dependency row, KD-8(a) and §1.5 all still required/described the registered `injuries.occurrence` stream that never existed and may not (contradicting FR-MD-005/§4.5 as re-anchored at D4), and KD-1's closing clause still described the ERR-030-026 play-then-process ordering ERR-030-027 retired. |
 #endregion

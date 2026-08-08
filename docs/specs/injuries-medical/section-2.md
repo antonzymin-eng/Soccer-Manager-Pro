@@ -1,11 +1,12 @@
 # Injuries & Medical #41 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** August 7, 2026, later same day (v0.6 — the balance pass D3/D4: FR-MD-027 re-stated as ARMED with a required construction argument (ERR-041-011); FR-MD-005 re-anchored off the phantom registered stream onto the keyed derivation (ERR-041-012, discharging ERR-041-002's deferred half))
+**Last Updated:** August 8, 2026 (v0.7 — balance-pass AR pass 6 M4: §2.2's signature de-phantomed — `rng` → `worldSeed, occurrenceEnabled`; the stale `MatchLoad` comment corrected. Prior header below.)
+**Last Updated (prior):** August 7, 2026, later same day (v0.6 — the balance pass D3/D4: FR-MD-027 re-stated as ARMED with a required construction argument (ERR-041-011); FR-MD-005 re-anchored off the phantom registered stream onto the keyed derivation (ERR-041-012, discharging ERR-041-002's deferred half))
 **Last Updated (prior):** August 7, 2026 (v0.5 — the balance pass D2 (ERR-041-010(b)): FR-MD-010 pins the `AppearanceDays` window unit — appearances in the `APPEARANCE_WINDOW_DAYS` `[GT]` window of days strictly before the draw day, never the current day (the ERR-030-027 pre-round ordering depends on the exclusion); the record itself is #30-owned)
 **Last Updated (prior):** August 6, 2026 (v0.4 — ERR-041-008: §2.3 F3's exception type corrected to match the posture it cites)
 **Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.6
+**Version:** 0.7
 **Status:** APPROVED
 
 ---
@@ -160,18 +161,20 @@ public struct InjuryState
                 LastAdvancedWorldDay = MEDICAL_NOT_ADVANCED_SENTINEL };
 }
 
-// The world-day step (KD-6, invoked at #30's new slot): recovery countdown THEN occurrence draw.
-// The ONLY #41 draw site. The draw is KEYED on (playerId, worldDay, purpose) — position-independent,
-// no free-running cursor (KD-1/§3). `rng` is the world-tick DeterministicRngService the key resolves
-// against.
+// The world-day step (KD-6, invoked at #30's slot 4): recovery countdown THEN occurrence draw.
+// The ONLY #41 draw site. The draw is KEYED on (worldSeed, playerId, worldDay, purpose) —
+// position-independent, no free-running cursor, no DeterministicRngService (KD-1/§3, ERR-041-012).
+// occurrenceEnabled is the FR-MD-027 dial: REQUIRED, never defaulted; disarmed, the step is the
+// recovery countdown and cursor advance alone.
 public static void AdvanceMedicalDay(ref InjuryState s, int playerId, in PlayerAttributes a,
                                       in InjuryRiskContribution trainingRisk, in MatchLoad recentMatchLoad,
-                                      in MedicalModifier medical, uint worldDay, DeterministicRngService rng);
+                                      in MedicalModifier medical, uint worldDay, ulong worldSeed,
+                                      bool occurrenceEnabled);
 
 // KD-2/KD-3 occurrence input from recent match participation, supplied by the caller (FR-MD-010) — #41
-// does not track this itself. Stage-2 minimal populates AppearanceDays (a count #30's fixture result
-// already tracks); the ledger-derived HardContacts field is the deep-tier KD-3 extension. Neutral
-// (all-zero) at Stage 2 = training-risk-only contribution.
+// does not track this itself. Stage-2 populates AppearanceDays from #30's per-player appearance record
+// (the ERR-041-010(b) APPR block — built BECAUSE no such count existed); the ledger-derived
+// HardContacts field is the deep-tier KD-3 extension. Neutral (all-zero) = training-risk-only.
 public readonly struct MatchLoad { public readonly int AppearanceDays; public readonly int HardContacts;
                                     public static MatchLoad None => default; }
 
@@ -194,7 +197,7 @@ public readonly struct MedicalViewModel { /* severity / recovery-remaining / inj
 ```
 
 The **medical block** persisted under `MEDICAL_SAVE_FORMAT_VERSION` is, per club: each player's
-`InjuryState` keyed by `PlayerId`. **No RNG cursor is serialized** — `injuries.occurrence` draws are
+`InjuryState` keyed by `PlayerId`. **No RNG cursor is serialized** — occurrence draws are
 position-independent keyed draws (FR-MD-007), so there is nothing beyond `InjuryState` to persist. The set
 tracks roster membership per FR-MD-025 (regen inserts, retiree removes).
 
@@ -221,5 +224,6 @@ construction are pure reads over an `InjuryState` value. See §3.
 | 0.3 | 2026-07-23 | — | AR-2 (1M): FR-MD-008 now mandates the fixed `DRAW_PURPOSE_RADIX` in `DeriveActionOrdinal` (append-parity — the growing purpose count as radix would shift prior ordinals). |
 | 0.4 | 2026-08-06 | — | **ERR-041-008** (at #41 T1): §2.3 **F3**'s exception type corrected from `ArgumentException` to `InvalidOperationException`, matching the `MatchSaveCodec` posture the same row cites (the #29 §2.3 F3 sibling correction). |
 | 0.5 | 2026-08-07 | — | **Balance pass D2 (ERR-041-010(b))**: FR-MD-010's `AppearanceDays` gains its unit — the count of days fielded in the `APPEARANCE_WINDOW_DAYS` `[GT]` window strictly BEFORE the draw day, never the current day (a match on day *d* first feeds the draw on *d+1*; #30's ERR-030-027 pre-round ordering depends on the exclusion). The record is #30-owned (its own `APPR` sub-blob), reaching #41 only as the caller-supplied value; the window `[GT]` is #41's because #41 owns what the input means. Previously the FR called `AppearanceDays` "a count #30's fixture result already tracks", which was false — no such record existed (that is what ERR-041-010(b) filed). |
+| 0.7 | 2026-08-08 | — | **Balance-pass AR pass 6 (M4)**: §2.2's normative `AdvanceMedicalDay` signature de-phantomed — it took the `DeterministicRngService rng` that never existed and could not express the required FR-MD-027 dial or the `worldSeed` key root declared 30 lines above it (the §3.1 v0.5 fix, which stopped one section short); the `MatchLoad` comment's "a count #30's fixture result already tracks" corrected (ERR-041-010(b) built the record because it did not). |
 | 0.6 | 2026-08-07 | — | **Balance pass D3/D4 (ERR-041-011 / ERR-041-012)**: FR-MD-027 ARMED — production constructs the dial ON, the argument is required-never-defaulted, the OFF identity stays supported and locked; FR-MD-005 re-anchored onto the keyed derivation (the `injuries.occurrence` registered stream never existed and may not — cursor-positioned, forbidden by FR-MD-006/007; ordinal 92 stays unallocated). (Rows 0.5/0.6 were appended out of order and swapped at the balance-pass AR pass 4 — the third table of this class in this landing chain.) |
 #endregion

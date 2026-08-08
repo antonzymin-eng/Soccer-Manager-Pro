@@ -1,8 +1,9 @@
 # Injuries & Medical #41 — Section 6: Performance & Cadence
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.1 — initial authoring)
-**Version:** 0.1
+**Last Updated:** August 8, 2026 (v0.2 — balance-pass AR pass 6 M4: §6.3's draw cost restated off the phantom `DeterministicRngService` call. Prior header below.)
+**Last Updated (prior):** July 23, 2026 (v0.1 — initial authoring)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -26,8 +27,8 @@ player. Serialization is linear in roster size, once per save.
 
 ## 6.3 The single draw's cost
 
-The `injuries.occurrence` draw is a single keyed hash evaluation (`DeriveActionOrdinal` + one
-`DeterministicRngService` draw) — no reservation loop, no per-evaluation branching cost beyond the
+The occurrence draw is a single keyed hash evaluation (`DeriveActionOrdinal` + three SplitMix64
+finalizer folds — no `DeterministicRngService` call; ERR-041-012) — no reservation loop, no per-evaluation branching cost beyond the
 `wasAvailableAtEntry` gate. This is strictly cheaper than the free-running-cursor pattern (no `Reserve`/
 `CloseReservation` bracket needed, since the draw is keyed rather than reserved against an advancing
 cursor).
@@ -41,4 +42,5 @@ at Stage 0/1; the FR-PO-052 per-tick gate is a match-loop concern and does not a
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial performance analysis: cadence, per-day cost, single-draw cost, budget. Status IN REVIEW. |
+| 0.2 | 2026-08-08 | — | **Balance-pass AR pass 6 (M4)**: §6.3 still costed the draw as a `DeterministicRngService` call; it is three SplitMix64 finalizer folds with no service involved (ERR-041-012). |
 #endregion
