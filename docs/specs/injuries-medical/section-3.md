@@ -1,7 +1,8 @@
 # Injuries & Medical #41 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026, even later same day (v0.12 — balance-pass AR pass 12 M3 + L3: §3.1's recovery countdown gains the non-positive-rate refusal; §3.1.1 pins the draw key's canonical spelling and its two sanctioned abbreviations)
+**Last Updated:** August 8, 2026, last entry of the day (v0.13 — balance-pass AR pass 13 M1: the guard class completed — RECOVERY_MAX ≥ 1 at the countdown site, the ceiling's positive side at the draw site)
+**Last Updated (prior):** August 8, 2026, even later same day (v0.12 — balance-pass AR pass 12 M3 + L3: §3.1's recovery countdown gains the non-positive-rate refusal; §3.1.1 pins the draw key's canonical spelling and its two sanctioned abbreviations)
 **Last Updated (prior):** August 8, 2026, still later same day (v0.10 — balance-pass AR pass 11 L3: the §3.2 guard mirrors all three lock predicates)
 **Last Updated (prior):** August 8, 2026, later same day (v0.9 — balance-pass AR pass 10 M1: §3.2 enforces the severity-split invariant at the classifying site)
 **Last Updated (prior):** August 8, 2026 (v0.8 — balance-pass AR pass 9 L4: §3.1's pseudocode gains the F8 sentinel-as-worldDay refusal the code has always enforced)
@@ -10,7 +11,7 @@
 **Last Updated (prior):** August 8, 2026 (v0.5 — AR pass 3: §3.1's signature de-phantomed — `rng` → `worldSeed, occurrenceEnabled`, the dial gated in step 2, §3.5's call updated; §3.1.1 gains the ERR-041-019 draw-key global-uniqueness contract)
 **Last Updated (prior):** August 7, 2026 (v0.4 — ERR-041-011 at the balance pass: §3.4 gains the normative-position `BASELINE_DAILY_RISK` term; the draw denominator decouples to the `[FIXED]` per-million `OCCURRENCE_DRAW_DENOM` with the `INJURY_RISK_MAX ≤ DENOM` invariant; §3.1's pseudocode re-anchored onto the keyed derivation (ERR-041-002/ERR-041-012); §3.6 re-derived (6600, + the congestion-clamp line))
 **Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.12
+**Version:** 0.13
 **Status:** APPROVED
 
 ---
@@ -54,10 +55,12 @@ AdvanceMedicalDay(ref InjuryState s, playerId, in PlayerAttributes a, in InjuryR
     #    assigned tier-days at injury time in step 2 — FR-MD-014 — so a fractional multiplier is never
     #    truncated against a base of 1).
     if s.Severity != InjurySeverity.None:
-        # Recovery-rate invariant, enforced HERE at the one countdown site (the §3.4 draw-site
-        # guard posture): RECOVERY_DAYS_PER_TICK_BASE is a [GT] config key and the catalogue lock
-        # only sees the fallback — non-positive, every injury is PERMANENT, silently (AR pass 12 M3).
-        if RECOVERY_DAYS_PER_TICK_BASE <= 0:
+        # Recovery invariants, enforced HERE at the one countdown site (the §3.4 draw-site
+        # guard posture): both are [GT] config keys and the catalogue locks only see the fallbacks —
+        # a non-positive rate makes every injury PERMANENT, silently (AR pass 12 M3); RECOVERY_MAX
+        # below 1 makes the §3.3 assignment clamp write RecoveryRemaining == 0 while injured, the F1
+        # breach the assignment floor exists to stop (AR pass 13 M1).
+        if RECOVERY_DAYS_PER_TICK_BASE <= 0 or RECOVERY_MAX < 1:
             throw InvalidOperationException      # catalogue/config integrity failure
         s.RecoveryRemaining = Clamp(s.RecoveryRemaining - RECOVERY_DAYS_PER_TICK_BASE, 0, RECOVERY_MAX)  # F1
         if s.RecoveryRemaining == 0:
@@ -108,11 +111,12 @@ across players or days, which is what makes the stream position-independent and 
 persist (FR-MD-006/007).
 
 **Spelling rule (AR pass 12, L3):** the draw key's canonical full spelling is
-`(worldSeed, playerId, actionOrdinal = worldDay × DRAW_PURPOSE_RADIX + purpose)`. Two abbreviations are
-sanctioned and mean the same key: `(playerId, worldDay, purpose)` — the varying components, the seed
-being career-constant (FR-MD-006's form) — and "keyed on `PlayerId` with no club term" where only the
-club-absence matters (FR-SQ-010's form). Any other spelling is a defect; three drifted spellings of this
-one key have already cost a sweep.
+`(worldSeed, playerId, actionOrdinal = worldDay × DRAW_PURPOSE_RADIX + purpose)`. Three abbreviations
+are sanctioned and mean the same key: `(worldSeed, playerId, worldDay, purpose)` — the ordinal expanded
+into its two components (the outline/§2.2/#16-row form, sanctioned at AR pass 13 L1); `(playerId,
+worldDay, purpose)` — the varying components, the seed being career-constant (FR-MD-006's form); and
+"keyed on `PlayerId` with no club term" where only the club-absence matters (FR-SQ-010's form). Any
+other spelling is a defect; three drifted spellings of this one key have already cost a sweep.
 
 **The full draw key is `(worldSeed, playerId, actionOrdinal)` — there is NO club term, so it requires
 `PlayerId` to be GLOBALLY unique across the career (ERR-041-019).** That is a stronger promise than #27
@@ -222,9 +226,10 @@ per-million scale, capped at `INJURY_RISK_MAX / OCCURRENCE_DRAW_DENOM` (1.6% at 
 `OCCURRENCE_DRAW_DENOM == INJURY_RISK_MAX` identity): the draw is `hash % denominator`, so the
 denominator determines the VALUE of every draw, not merely a threshold — a config-tunable denominator
 would re-roll every career's injury luck on a config edit, with the save recording nothing about which
-config produced it. Pinned, config edits move only thresholds. Invariant: `INJURY_RISK_MAX ≤
-OCCURRENCE_DRAW_DENOM`, enforced fail-loud at the draw site (a ceiling past the denominator would make
-a clamped risk mean "certain and then some").
+config produced it. Pinned, config edits move only thresholds. Invariant: `0 < INJURY_RISK_MAX ≤
+OCCURRENCE_DRAW_DENOM`, enforced fail-loud at the draw site on BOTH sides (a ceiling past the
+denominator would make a clamped risk mean "certain and then some"; a non-positive ceiling clamps every
+score to 0 and the ARMED dial injures nobody, forever, silently — AR pass 13 M1).
 
 ## 3.5 Composition at #30's day-advance loop (informative)
 
@@ -290,6 +295,7 @@ pass example used `AppearanceDays = 2` at weight 150 and no baseline, assembling
 | 0.8 | 2026-08-08 | — | **Balance-pass AR pass 9 (L4)**: §3.1's pseudocode gains the `worldDay == MEDICAL_NOT_ADVANCED_SENTINEL` refusal (**F8**, new in §2.3) that `MedicalStep.AdvanceMedicalDay` has enforced since T0 with no normative source — a production fail-loud with no spec row is the ERR-041-012 class inverted. Mirrored at the #29 sibling (`training-system` §2.3/§3.1) in the same commit — the folder-boundary lesson applied forward. |
 | 0.9 | 2026-08-08 | — | **Balance-pass AR pass 10 (M1)**: §3.2's pseudocode gains the fail-loud split-invariant guard at the classifying site — both numerators are `[GT]` config keys, the catalogue suite only sees the fallbacks (ERR-041-003's class), and a config summing to the denominator deleted the `Serious` tier silently. The §3.4 draw-site guard posture, at #41's other config-breakable invariant. |
 | 0.10 | 2026-08-08 | — | **Balance-pass AR pass 11 (L3)**: the §3.2 guard was ONE of the design-time lock's three predicates while both new comments called them two halves of one invariant — a negative `[GT]` numerator passed the sum guard and silently deleted its own tier (the pass-6 rule-at-one-boundary shape, inside the fix being verified). Non-negativity added; zero stays legal (an expressible empty-tier intent). |
-| 0.11 | 2026-08-08 | — | **Balance-pass AR pass 12 (M3)**: `RECOVERY_DAYS_PER_TICK_BASE` was the one `[GT]` in the landing whose design-time lock had NO runtime mirror — non-positive, the countdown never falls and every injury is permanent, silently, with the armed dial progressively injuring the whole league; §3.1 gains the fail-loud refusal at the countdown site (the §3.4 guard posture, fourth instance). |
+| 0.11 | 2026-08-08 | — | **Balance-pass AR pass 12 (M3)**: `RECOVERY_DAYS_PER_TICK_BASE` was the one `[GT]` in the landing whose design-time lock had NO runtime mirror *(claim corrected at v0.13 — two more sides were unmirrored)* — non-positive, the countdown never falls and every injury is permanent, silently, with the armed dial progressively injuring the whole league; §3.1 gains the fail-loud refusal at the countdown site (the §3.4 guard posture, fourth instance). |
 | 0.12 | 2026-08-08 | — | **Balance-pass AR pass 12 (L3)**: §3.1.1 pins the key's canonical spelling + the two sanctioned abbreviations — the key had accumulated three drifted spellings across two assemblies and two specs, and a sweep needs a rule, not a preference. *(Folded into the same pass as v0.11 — one bump per pass would have hidden the two distinct changes.)* |
+| 0.13 | 2026-08-08 | — | **Balance-pass AR pass 13 (M1 + L1)**: *(L1: the §3.1.1 spelling rule gains the 4-tuple as a third sanctioned expansion — three live sites already used it and the rule as written made them defects.)* v0.11's "the one `[GT]` whose lock had no runtime mirror" was FALSE — `RECOVERY_MAX` had none (below 1, the §3.3 assignment clamp's min exceeds its max and writes `RecoveryRemaining == 0` while injured — the F1 breach the floor's own doc names — surfacing a day later as data corruption blamed on the state), and `INJURY_RISK_MAX`'s guard was one-sided (non-positive: the armed dial injures nobody, forever, silently — the pass-12 failure shape itself). §3.1's countdown guard and §3.4's draw-site invariant now cover both. |
 #endregion

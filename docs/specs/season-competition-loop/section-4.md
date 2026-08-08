@@ -1,8 +1,9 @@
 # Season & Competition Loop Specification #30 — Section 4: Architecture
 
 **Created:** July 22, 2026
-**Last Updated:** July 26, 2026 (v0.3 — ERR-030-012 §4.5 keyed-not-cursor correction + ERR-030-013 §4.6 producer-record location, both found at #30 T2 implementation; prior v0.2 section-file PASS-1 reconciliation, §9.3)
-**Version:** 0.3
+**Last Updated:** August 8, 2026 (v0.4 — balance-pass AR pass 13 M3: §4 was three landings stale — §4.4's third signature copy deleted in favour of Appendix B, §4.3 gains the career pair + AdvanceDays, §4.2 the eight T1/T2/D2 files)
+**Last Updated (prior):** July 26, 2026 (v0.3 — ERR-030-012 §4.5 keyed-not-cursor correction + ERR-030-013 §4.6 producer-record location, both found at #30 T2 implementation; prior v0.2 section-file PASS-1 reconciliation, §9.3)
+**Version:** 0.4
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -54,6 +55,15 @@ src/season-save/
 ├── SeasonViewModel.cs            ← NEW: read-only surface for #37/#38
 ├── SeasonLoop.cs                 ← NEW: the composition root (sole writer; command API; Snapshot/Restore)
 ├── SeasonStateCodec.cs           ← NEW: the season sub-blob codec (§3.6) — pure, testable in memory
+├── PlayerCareerStates.cs         ← #29/#41 T2 (§2.2): the three parallel per-club career sets — the
+│                                    #30-side owner of both subsystems' state + the F8 cursor predicates
+├── AppearanceState.cs            ← balance pass D2 (§2.2 / Appendix B.1): the lazily-shifted day-bitmask
+├── ClubAppearanceStates.cs       ← balance pass D2: one club's appearance third of the career triple
+├── AppearanceWindow.cs           ← balance pass D2: the windowed read + the [1,31] runtime guard
+├── AppearanceSaveCodec.cs        ← balance pass D2: the APPR sub-blob codec (Appendix B.1)
+├── AppearanceBlock.cs            ← balance pass D2: the typed frame block (ERR-029-005's compile-time half)
+├── TrainingBlock.cs              ← #29/#41 T1: typed frame block for the #29 sub-blob
+├── MedicalBlock.cs               ← #29/#41 T1: typed frame block for the #41 sub-blob
 └── tests/
     ├── season-save-tests.asmdef  ← existing
     ├── FixtureSchedulerTests.cs  ← NEW
@@ -71,50 +81,28 @@ src/season-save/
 - `WorldStore _world` — the day-advance substrate (referenced, not owned; #22 owns its lifecycle).
 - `MatchEngine _activeMatch` — the in-progress fixture, or null between fixtures (KD-3 / KD-1
   matchPresent flag).
+- the optional **career PAIR** (since #29/#41 T2, §2.2): `PlayerCareerStates _career` + the
+  `ISquadProvider` it was bound to — half-supplied or later swapped is refused (§2.3 F7), and the
+  career's cursors are clock-checked at construction (F8).
 
-Public command API (the only mutation path, FR-SN-032): `AdvanceToNextFixtureDay()`,
-`AdvanceAndPlayNextRound(ISquadProvider)` (resolves the whole round, KD-9), `RollToNextSeason()`, plus
-read-only `View()` → `SeasonViewModel`
+Public command API (the only mutation path, FR-SN-032): `AdvanceToNextFixtureDay()`, `AdvanceDays(n)`
+(the bounded free-advance — refused past the season's last fixture day and past the next season's
+opening day, KD-4), `AdvanceAndPlayNextRound(ISquadProvider)` (resolves the whole round, KD-9),
+`RollToNextSeason()`, plus read-only `View()` → `SeasonViewModel`
 (FR-SN-033) and `Snapshot()` / `Restore(...)` for the season sub-blob. It is **not** on the 60 Hz hot
 path (§1.2 world-tick cadence), so allocation / `new` / exceptions are permitted — the
 `SeasonSaveManager` / `WorldStore` precedent.
 
-## 4.4 The `SeasonSaveManager` / `SeasonSaveCodec` signature change (FR-SN-019..021)
+## 4.4 The `SeasonSaveManager` / `SeasonSaveCodec` surface (FR-SN-019..021)
 
-Today (from source):
-
-```csharp
-// SeasonSaveManager.cs
-public static void Save(WorldStore world, MatchEngine matchOrNull, string path)
-public static SeasonSaveContents Load(string path, ISquadProvider squads = null)
-
-// SeasonSaveCodec.cs
-public static byte[] Encode(byte[] worldBlob, byte[] matchBlobOrNull)
-public static SeasonSaveBlobs Decode(byte[] blob)
-```
-
-After #30 (the season block is **always present**, unlike the optional match block):
-
-```csharp
-// SeasonSaveManager.cs
-public static void Save(WorldStore world, SeasonState season, MatchEngine matchOrNull, string path)
-public static SeasonSaveContents Load(string path, ISquadProvider squads = null)   // Contents gains .Season
-
-// SeasonSaveCodec.cs
-public static byte[] Encode(byte[] worldBlob, byte[] seasonBlob, byte[] matchBlobOrNull)
-public static SeasonSaveBlobs Decode(byte[] blob)   // SeasonSaveBlobs gains .SeasonBlob (always non-null)
-```
-
-`Save` captures all three blobs (`world.Snapshot()`, `SeasonStateCodec.Encode(season)`,
-`MatchSaveManager.Encode(matchOrNull)`) **before** opening the file — the existing blob-before-file /
-atomic temp→fsync→rename contract (§4.6.1.1) is unchanged; only a third length-prefixed block joins
-the frame. `SEASON_SAVE_FORMAT_VERSION` bumps **1 → 2** (the codec's own "bump only on a season-frame
-layout change" rule; adding a block is exactly one). The world and match sub-blobs stay opaque and
-byte-untouched — no `WORLD_STORE_FORMAT_VERSION` / `MATCH_SAVE_FORMAT_VERSION` change (FR-SN-020).
-
-**Frame layout (KD-1):** `SEASON_SAVE_FORMAT_VERSION → matchPresent flag → [len]world → [len]season →
-([len]match iff matchPresent)`. The `matchPresent` flag keeps its current meaning (a season between
-fixtures has a world + season but no match); the season block is unconditional.
+**The authoritative signature and frame layout live in FR-SN-021 (§2.1) and Appendix B / B.1 — this
+section deliberately no longer restates them.** *(AR pass 13 M3: this section held the THIRD copy of the
+signature — pass 11 corrected the §2 copy after "three landings and three parameters stale", and this
+copy plus its v1→2 frame text had drifted identically. A third copy is not re-synchronised; it is
+deleted — the parallel-surface rule applied to spec text.)* What this section keeps is the one
+architecture-level rule the frame does not state: `Save` captures every blob **before** opening the
+file — the blob-before-file / atomic temp→fsync→rename contract (§4.6.1.1) — and the world/match
+sub-blobs stay opaque and byte-untouched at every frame change (FR-SN-020).
 
 ## 4.5 RNG-stream registration (FR-SN-027 / KD-5)
 
@@ -179,4 +167,5 @@ fully-qualify `MatchEngine` and any `player-database` type that shares a bare na
 | 0.1 | 2026-07-22 | — | Initial architecture: SeasonSave-assembly extension, file layout, SeasonLoop root, the codec/manager signature change, RNG registration, the #22 producer boundary, CS0104 hazard. |
 | 0.2 | 2026-07-22 | — | Section-file PASS-1 reconciliation (whole-round KD-9 command/API rename, living-world-KD disambiguation, KD/FR label fixes). See section-9 §9.3. |
 | 0.3 | 2026-07-26 | — | **ERR-030-012** (found at T2 implementation): §4.5's registered cursor-positioned season stream contradicts §3.4.1's keyed-draw requirement (T-SN-CAL-003c order-independence). T2 realizes the sub-stream as a keyed derivation folding `DOMAIN_TAG_SEASON_LOOP` into the fixture key — that tag's first consumer, satisfying ERR-030-001 — and does NOT allocate `SubsystemOrdinals.SeasonLoop = 84` in code, since an ordinal with no registered stream is the FR-LW-031 phantom; ordinal 84 stays spec-reserved for the first cursor-positioned season event. **ERR-030-013** (same landing): §4.6's "records the `MatchResult` in `SeasonState`" is not implementable — §2.2 / Appendix B give `SeasonState` no outcome collection, and adding one would bump `SEASON_STATE_FORMAT_VERSION` for a payload FR-SN-017 forbids a consumer for; the producer record is loop-scoped and transient, the durable record is the serialized table. |
+| 0.4 | 2026-08-08 | — | **Balance-pass AR pass 13 (M3)**: §4 had been untouched through T1/T2/D2 and every AR pass while `src/CLAUDE.md` orders implementers to read it before coding — §4.4 held the THIRD copy of the Save/Encode signature (the class pass 11 fixed in §2), still showing four arguments, the v1→2 bump and a five-field frame against today's seven-argument Save, version 4 and eight-field frame; §4.3's state list had no career pair and no `AdvanceDays`; §4.2's layout missed all eight T1/T2/D2 files. §4.4's copy DELETED in favour of a pointer to Appendix B (a third copy is not re-synchronised); the rest brought current. |
 #endregion

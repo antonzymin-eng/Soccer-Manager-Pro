@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/MedicalStep.cs
 // Created:  2026-08-05
-// Modified: 2026-08-08 (AR pass 12 M3: the recovery-rate guard at the countdown site — v1.9)
+// Modified: 2026-08-08 (AR pass 13 M1+L6: the guard class completed — v1.10)
 // Author:   —
 // Spec:     Injuries & Medical #41 §3.1–§3.4 + Appendices A/B (FR-MD-003..016, FR-MD-023),
 //           F1/F4/F6/F7; Code Standards #20
@@ -70,10 +70,13 @@ namespace TacticalDirector.InjuriesMedical
         /// last-advanced day (F7) or is itself the never-advanced sentinel.
         /// </exception>
         /// <exception cref="InvalidOperationException">
-        /// A catalogue/config integrity failure, not a caller error: the draw denominator is not
-        /// positive (propagated from <see cref="DrawOccurrence"/>), or
-        /// <see cref="InjuriesMedicalConstants.RecoveryDaysPerTickBase"/> is non-positive — a
-        /// decrement of zero would make every injury permanent (AR pass 12 M3).
+        /// A catalogue/config integrity failure, not a caller error — one of the four consuming-site
+        /// guards fired: <see cref="InjuriesMedicalConstants.InjuryRiskMax"/> outside
+        /// <c>(0, OCCURRENCE_DRAW_DENOM]</c> (from <see cref="DrawOccurrence"/>);
+        /// <see cref="InjuriesMedicalConstants.RecoveryDaysPerTickBase"/> non-positive or
+        /// <see cref="InjuriesMedicalConstants.RecoveryMax"/> below 1 (the countdown site); or the
+        /// severity split negative / summing past the denominator (from
+        /// <see cref="ClassifySeverityFromDraw"/>).
         /// </exception>
         public static void AdvanceMedicalDay(
             ref InjuryState state,
@@ -126,11 +129,15 @@ namespace TacticalDirector.InjuriesMedical
                 // config at 0 (or negative) would otherwise make EVERY injury permanent, silently —
                 // the countdown never falls, Severity never returns to None, and the only symptom is
                 // the depleted-squad back-fill quietly fielding whole squads.
-                if (InjuriesMedicalConstants.RecoveryDaysPerTickBase <= 0)
+                if (InjuriesMedicalConstants.RecoveryDaysPerTickBase <= 0
+                    || InjuriesMedicalConstants.RecoveryMax < 1)
                 {
                     throw new InvalidOperationException(
-                        "RecoveryDaysPerTickBase must be positive — a non-positive decrement makes "
-                        + "every injury permanent; catalogue/config integrity failure (§3.1, Appendix A).");
+                        "RecoveryDaysPerTickBase must be positive and RecoveryMax at least 1 — a "
+                        + "non-positive decrement makes every injury permanent, and a RecoveryMax "
+                        + "below 1 makes the assignment clamp write RecoveryRemaining == 0 while "
+                        + "injured (an F1 breach into the live career, blamed one day later as data "
+                        + "corruption); catalogue/config integrity failure (§3.1, Appendix A).");
                 }
 
                 state.RecoveryRemaining = Clamp(
@@ -342,14 +349,17 @@ namespace TacticalDirector.InjuriesMedical
         {
             // The denominator is [FIXED] and positive by construction (ERR-041-011 retired the
             // [GT]-derived form whose negative-config trap the old guard existed for). What a config
-            // CAN still break is the invariant the decoupling introduced: a ceiling raised past the
-            // denominator makes a clamped risk mean "certain and then some", silently. One comparison
-            // at the one drawing site.
-            if (InjuriesMedicalConstants.InjuryRiskMax > InjuriesMedicalConstants.OCCURRENCE_DRAW_DENOM)
+            // CAN still break are the two invariants on the [GT] ceiling (AR pass 13 M1 widened the
+            // guard to both sides): raised past the denominator, a clamped risk means "certain and
+            // then some"; at zero or negative, every score clamps to 0 and the ARMED dial injures
+            // nobody, forever, silently. One comparison pair at the one drawing site.
+            if (InjuriesMedicalConstants.InjuryRiskMax <= 0
+                || InjuriesMedicalConstants.InjuryRiskMax > InjuriesMedicalConstants.OCCURRENCE_DRAW_DENOM)
             {
                 throw new InvalidOperationException(
-                    "InjuryRiskMax exceeds OCCURRENCE_DRAW_DENOM — the probability ceiling would pass " +
-                    "1; catalogue/config integrity failure (ERR-041-011, §3.4).");
+                    "InjuryRiskMax must be positive and no greater than OCCURRENCE_DRAW_DENOM — " +
+                    "non-positive, the armed dial injures nobody forever; past the denominator, the " +
+                    "probability ceiling passes 1; catalogue/config integrity failure (ERR-041-011, §3.4).");
             }
 
             ulong h = Mix((ulong)InjuriesMedicalConstants.DomainTagInjuriesMedical ^ worldSeed);
@@ -577,4 +587,11 @@ namespace TacticalDirector.InjuriesMedical
 // |         |            |        | runtime guard at the countdown site — the one [GT] in the landing |
 // |         |            |        | whose lock had no runtime mirror; at 0 every injury was permanent |
 // |         |            |        | silently (the DrawOccurrence posture, fourth instance).            |
+// | 1.10    | 2026-08-08 | —      | Balance-pass AR pass 13 (M1 + L6): the guard class COMPLETED —     |
+// |         |            |        | RecoveryMax < 1 joins the countdown guard (a degenerate clamp     |
+// |         |            |        | wrote RecoveryRemaining == 0 while injured — the F1 breach the    |
+// |         |            |        | floor's own doc names) and DrawOccurrence refuses a non-positive  |
+// |         |            |        | ceiling (armed dial injures nobody, forever, silently); the       |
+// |         |            |        | entry point's exception doc names the four real guards, not the   |
+// |         |            |        | retired denominator one.                                          |
 #endregion

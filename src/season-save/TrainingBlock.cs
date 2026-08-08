@@ -1,6 +1,6 @@
 // File:     src/season-save/TrainingBlock.cs
 // Created:  2026-08-06
-// Modified: 2026-08-06
+// Modified: 2026-08-08 (AR pass 13 L3: the pass-12 header addition rowed — v1.1)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §3 layout / KD-2;
 //           Training System #29 FR-TR-018; ERR-029-005; Code Standards #20
@@ -51,4 +51,7 @@ namespace TacticalDirector.SeasonSave
 // | 1.0     | 2026-08-06 | —      | ERR-029-005 (AR pass 1, H): the typed frame handle that makes a    |
 // |         |            |        | training/medical transposition a build error rather than a         |
 // |         |            |        | silently mis-decoded save.                                         |
+// | 1.1     | 2026-08-08 | —      | AR pass 12 L4 added the missing Modified: header field; AR pass    |
+// |         |            |        | 13 (L3) rows it — the addition had itself shipped rowless, the    |
+// |         |            |        | FR-CS-057 class recurring inside its own fix.                     |
 #endregion

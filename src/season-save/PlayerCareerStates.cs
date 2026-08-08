@@ -1,6 +1,6 @@
 // File:     src/season-save/PlayerCareerStates.cs
 // Created:  2026-08-06
-// Modified: 2026-08-08 (AR pass 11 L4: the draw key spelled one way — v1.13)
+// Modified: 2026-08-08 (AR pass 13 L2: the block counts — v1.14)
 // Author:   —
 // Spec:     Training System #29 §3.1/§3.3/§3.5, §4.3 (seam contracts), FR-TR-004/016/022/023/025;
 //           Injuries & Medical #41 §3.1/§3.5, §4.3, FR-MD-003/009/010/022/023/025/027;
@@ -254,11 +254,11 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>
-        /// Rebuilds a career's state from the two decoded save blocks — the counterpart of
+        /// Rebuilds a career's state from the three decoded save blocks — the counterpart of
         /// <see cref="TrainingBlocks"/> / <see cref="MedicalBlocks"/>, and what
         /// <see cref="SeasonSaveContents"/> is fed into after a load.
         /// <para>
-        /// <b>This is the one place the two blocks are checked against each other</b>, and the only
+        /// <b>This is the one place the three blocks are checked against each other</b>, and the only
         /// layer that can be: each codec sees one block and is forbidden to read the other (#29 §4.4 /
         /// #41 §4.4 blob independence), so "the training block and the medical block describe the same
         /// squads" is a coherence rule with no other owner — the same argument that puts the KD-4 cursor
@@ -1598,4 +1598,7 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | spellings across the uniqueness guard's doc, its throw message     |
 // |         |            |        | and #41 SS3.1.1; both local sites now name (worldSeed, playerId,   |
 // |         |            |        | actionOrdinal = worldDay x RADIX + purpose), matching the spec.    |
+// | 1.14    | 2026-08-08 | —      | Balance-pass AR pass 13 (L2, doc): FromBlocks' doc still counted   |
+// |         |            |        | "two" blocks — three since D2 (the pass-12-L1 stale-count class,  |
+// |         |            |        | one file over).                                                    |
 #endregion

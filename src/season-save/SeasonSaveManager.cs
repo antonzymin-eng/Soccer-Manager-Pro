@@ -1,7 +1,6 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
-// Modified: 2026-08-08 (AR pass 9 M1: the cursor walk delegates to PlayerCareerStates' shared
-//           predicates — v1.16)
+// Modified: 2026-08-08 (AR pass 13 L2: the block counts — v1.17)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-1 / KD-5..KD-8;
 //           Training System #29 §4.4 / FR-TR-018/019; Injuries & Medical #41 §4.4 / FR-MD-017/018;
@@ -191,8 +190,9 @@ namespace TacticalDirector.SeasonSave
         /// <see cref="SeasonLoop.Career"/> a second writer of #29/#41 state, defeating the FR-TR-004 /
         /// FR-TR-023 single-writer contract).
         /// <para>
-        /// A loop with no career wired writes the two well-formed zero-club blocks a pre-T2 save
-        /// carries — the same bytes <c>Array.Empty</c> produces through the long form.
+        /// A loop with no career wired writes the three well-formed zero-club career blocks a
+        /// careerless save carries — the same bytes <c>Array.Empty</c> produces through the long form.
+        /// (A literally pre-T2 FILE is a v3 frame, which F3 refuses outright.)
         /// </para>
         /// </summary>
         /// <param name="loop">The season loop to capture: its world, its season state, and its career.</param>
@@ -316,9 +316,9 @@ namespace TacticalDirector.SeasonSave
             // the state the match was configured against — reproduces the exact squad, so selection
             // lands on the same eleven.
             //
-            // Pass-through for a club the career does not carry, which is every club of every save
-            // written before T2 (both blocks empty): the decorator is then the identity and the restore
-            // is bit-for-bit what it was.
+            // Pass-through for a club the career does not carry, which is every club of every
+            // careerless save (all three career blocks empty — a literally pre-T2 v3 FILE is refused
+            // by F3): the decorator is then the identity and the restore is bit-for-bit what it was.
             MatchEngine.MatchEngine match = null;
             if (blobs.MatchBlob != null)
             {
@@ -655,4 +655,8 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | PlayerCareerStates' shared per-cursor statics — one rule, one    |
 // |         |            |        | owner; the local copy's medical-lag clause had no isolating      |
 // |         |            |        | case at Save or Load (deleting it left the suite green).         |
+// | 1.17    | 2026-08-08 | —      | Balance-pass AR pass 13 (L2, doc): two stale counts — "the two    |
+// |         |            |        | zero-club blocks" (three since D2) and "every save written        |
+// |         |            |        | before T2" (frame v4 refuses a pre-T2 file; the live case is a    |
+// |         |            |        | careerless save).                                                  |
 #endregion

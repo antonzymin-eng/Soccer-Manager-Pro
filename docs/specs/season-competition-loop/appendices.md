@@ -1,12 +1,13 @@
 # Season & Competition Loop Specification #30 — Appendices
 
 **Created:** July 22, 2026
-**Last Updated:** August 8, 2026 (v0.7 — balance-pass AR pass 11 M2: the cross-blob cursor rule stated in full in Appendix B)
+**Last Updated:** August 8, 2026, later same day (v0.8 — balance-pass AR pass 13 M4: Appendix A's frame-version row corrected 2 → 4 and the three #30-owned appearance constants catalogued)
+**Last Updated (prior):** August 8, 2026 (v0.7 — balance-pass AR pass 11 M2: the cross-blob cursor rule stated in full in Appendix B)
 **Last Updated (prior):** August 8, 2026 (v0.6 — **ERR-030-028**: new **B.1** pins the appearance sub-blob's byte layout field by field — it was specified in NO spec, existing only in `AppearanceSaveCodec.cs`'s own comment, while F3 makes the first written layout the format permanently (the ERR-029-004 class, on the block created one landing after that ERR was filed); + the four sibling MUSTs and the deliberate no-`[GT]`-gating-on-decode decision)
 **Last Updated (prior):** August 7, 2026 (v0.5 — the #29/#41 balance pass D2 (ERR-041-010(b)): Appendix B's outer-frame description gains the three mandatory career sub-blobs — the #29 training and #41 medical blocks (frame v2→3, landed at their T1 and previously unrecorded here) and the new #30 appearance block (frame v3→4), between the season block and the optional match block)
 **Last Updated (prior):** July 27, 2026 (v0.4 — back-props ERR-030-017 (#47 conditional authored sub-blob) + ERR-030-019 (#50 `SaveOriginStamp` in the outer frame) landed atomically with the ten-spec approval wave; Appendix B's outer-frame description amended)
 **Last Updated (prior):** July 25, 2026 (v0.3 — ERR-030-010 Appendix C venue correction, found at #30 T0)
-**Version:** 0.7
+**Version:** 0.8
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -19,8 +20,11 @@ precedent — the spec's contract is the shapes/directions, the `[GT]` numbers a
 
 | Constant | Tag | Value | Meaning |
 |---|---|---|---|
-| `SEASON_SAVE_FORMAT_VERSION` | `[FIXED]` | 2 | outer season-frame version (bumped 1 → 2; owned by `SeasonSaveConstants`) |
+| `SEASON_SAVE_FORMAT_VERSION` | `[FIXED]` | 4 | outer season-frame version (owned by `SeasonSaveConstants`) — 1 → 2 at #30 T1 (the season block), 2 → 3 at #29/#41 T1 (the training + medical blocks), 3 → 4 at the balance pass D2 (the appearance block; Appendix B). *(Row corrected at AR pass 13 M4 — it read 2 while Appendix B in this same file described the v4 frame.)* |
 | `SEASON_STATE_FORMAT_VERSION` | `[FIXED]` | 1 | the season sub-blob's own version (new) |
+| `APPEARANCE_SAVE_MAGIC` | `[FIXED]` | `"APPR"` | the appearance sub-blob's self-identifying leading tag (Appendix B.1; the ERR-029-005/ERR-041-009 rule — a format version is not a format identifier) |
+| `APPEARANCE_SAVE_FORMAT_VERSION` | `[FIXED]` | 1 | the appearance sub-blob's own version (Appendix B.1) |
+| `APPEARANCE_BITMASK_MAX_WINDOW_DAYS` | `[FIXED]` | 31 | the structural ceiling of the u32 appearance day-bitmask — `AppearanceWindow` fail-louds a configured window outside `[1, 31]` at the reading site, and #41's `APPEARANCE_WINDOW_DAYS` `[GT]` is bounded by it (its catalogue lock hard-codes the 31 because #41 sits below `season-save` and cannot read this constant). *(Catalogued at AR pass 13 M4 — load-bearing since D2, previously in no spec: ERR-030-028's class on a constant.)* |
 | `WIN_POINTS` | `[GT]` | 3 | points for a win |
 | `DRAW_POINTS` | `[GT]` | 1 | points for a draw |
 | `LOSS_POINTS` | `[GT]` | 0 | points for a loss |
@@ -197,4 +201,5 @@ is a **total order** — no two rows ever compare equal (FR-SN-007).
 | 0.5 | 2026-08-07 | — | **Balance pass D2 (ERR-041-010(b))**: Appendix B's frame gains the mandatory #29 training / #41 medical blocks (v2→3 — a T1 change this appendix had missed) and the #30 appearance block (v3→4): the per-player fielded-XI record supplying FR-MD-010's `MatchLoad`, #30-owned because neither sibling block may describe the other's domain. All three mandatory (career state has an empty case, never an absent one), typed at the Encode seam, magic-led per ERR-029-005/ERR-041-009. |
 | 0.6 | 2026-08-08 | — | **ERR-030-028** (balance-pass AR pass 5, M1): new **B.1** — the appearance sub-blob's byte layout pinned field by field (magic → version → clubCount → {clubId, playerCount} → {playerId, recentBits, bitsAsOfWorldDay}), the four MUSTs its siblings carry, and the deliberate no-`[GT]`-gating-on-decode decision. The layout had shipped into every v4 save while specified in no spec — F3 makes the first written layout the format permanently, the exact ERR-029-004 reasoning, missed on the very next block. |
 | 0.7 | 2026-08-08 | — | **Balance-pass AR pass 11 (M2)**: the cursor-vs-clock paragraph stated in FULL — the prior single sentence covered the appearance anchor's ahead direction at the save root only, while the enforced rule spans three cursor kinds, two directions and three boundaries (§2.3's new F8; one shared predicate set). |
+| 0.8 | 2026-08-08 | — | **Balance-pass AR pass 13 (M4)**: Appendix A still said `SEASON_SAVE_FORMAT_VERSION = 2` — the identical wrong value pass 5 M6 fixed in the manifest, left in the OWNING catalogue, contradicting Appendix B in the same file — and carried no rows for `APPEARANCE_SAVE_MAGIC` / `APPEARANCE_SAVE_FORMAT_VERSION` / `APPEARANCE_BITMASK_MAX_WINDOW_DAYS`, the last load-bearing (the `AppearanceWindow` runtime guard reads it; #41's lock hard-codes its value) and in NO spec anywhere — ERR-030-028's class on a constant, one appendix over from where that ERR landed. |
 #endregion
