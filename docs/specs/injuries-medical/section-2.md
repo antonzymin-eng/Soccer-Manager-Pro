@@ -1,9 +1,15 @@
 # Injuries & Medical #41 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** August 6, 2026 (v0.4 — ERR-041-008: §2.3 F3's exception type corrected to match the posture it cites)
+**Last Updated:** August 8, 2026, later (v0.10 — balance-pass AR pass 15 M2: FR-MD-014's assignment clause gains the RECOVERY_MAX ceiling the code has always applied)
+**Last Updated (prior):** August 8, 2026 (v0.9 — balance-pass AR pass 9 L4: new F8 — the sentinel itself is not a day; the refusal the code has always enforced gets its normative row)
+**Last Updated (prior):** August 8, 2026 (v0.8 — balance-pass AR pass 8 (L4 + L2): FR-MD-007 no longer names the `injuries.occurrence` stream that must never exist; rows 0.6/0.7 reordered ascending)
+**Last Updated (prior):** August 8, 2026 (v0.7 — balance-pass AR pass 6 M4: §2.2's signature de-phantomed — `rng` → `worldSeed, occurrenceEnabled`; the stale `MatchLoad` comment corrected. Prior header below.)
+**Last Updated (prior):** August 7, 2026, later same day (v0.6 — the balance pass D3/D4: FR-MD-027 re-stated as ARMED with a required construction argument (ERR-041-011); FR-MD-005 re-anchored off the phantom registered stream onto the keyed derivation (ERR-041-012, discharging ERR-041-002's deferred half))
+**Last Updated (prior):** August 7, 2026 (v0.5 — the balance pass D2 (ERR-041-010(b)): FR-MD-010 pins the `AppearanceDays` window unit — appearances in the `APPEARANCE_WINDOW_DAYS` `[GT]` window of days strictly before the draw day, never the current day (the ERR-030-027 pre-round ordering depends on the exclusion); the record itself is #30-owned)
+**Last Updated (prior):** August 6, 2026 (v0.4 — ERR-041-008: §2.3 F3's exception type corrected to match the posture it cites)
 **Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.4
+**Version:** 0.10
 **Status:** APPROVED
 
 ---
@@ -25,12 +31,16 @@
   occurrence cannot both happen from one call.
 
 **Determinism (KD-1)**
-- **FR-MD-005** — All #41 stochastic draws MUST occur on the world tick, on the single dedicated
-  `injuries.occurrence` stream; #41 MUST NOT draw on the match tick.
+- **FR-MD-005** — All #41 stochastic draws MUST occur on the world tick, via the single dedicated
+  keyed occurrence derivation (`DrawOccurrence`, domain-separated by `DOMAIN_TAG_INJURIES_MEDICAL`);
+  #41 MUST NOT draw on the match tick. *(Re-anchored at ERR-041-012, discharging ERR-041-002's deferred
+  half: no registered `DeterministicRngService` stream exists or may be added — a registered stream is
+  cursor-positioned, which FR-MD-006/007 forbid; `SubsystemOrdinals.InjuriesMedical = 92` stays
+  deliberately unallocated per FR-LW-031.)*
 - **FR-MD-006** — Each occurrence draw MUST be **position-independent / keyed** on `(playerId, worldDay,
   purpose)`; it MUST NOT depend on a free-running per-stream cursor or on the order in which other
   players/days were drawn.
-- **FR-MD-007** — No `RngStreamState` / cursor is serialized for `injuries.occurrence` — there is nothing to
+- **FR-MD-007** — No `RngStreamState` / cursor is serialized for the keyed occurrence derivation — there is nothing to
   persist, because a keyed draw is reproducible from its key alone (KD-1).
 - **FR-MD-008** — Draw-purpose ordinals (Appendix A) MUST be **APPEND-only**; an existing ordinal MUST NOT
   be renumbered or reused. The `DeriveActionOrdinal` bijection (§3.1.1) MUST use the **fixed**
@@ -42,9 +52,13 @@
 - **FR-MD-009** — #41 MUST read #29's `InjuryRiskContribution` read-only as one occurrence input; it MUST
   NOT read or mutate #29's `TrainingFatigue` accumulator or the match engine's `AerobicPool`.
 - **FR-MD-010** — `MatchLoad` is an occurrence input only, supplied by the caller (never computed or stored
-  by #41). Stage-2 populates `AppearanceDays` (a count #30's fixture result already tracks); the
-  ledger-derived `HardContacts` field is the deep-tier KD-3 extension. `MatchLoad.None` (all-zero) is the
-  identity — no match-load contribution.
+  by #41). Stage-2 populates `AppearanceDays` from #30's per-player appearance record (ERR-041-010(b)):
+  **the number of days the player was fielded in the `APPEARANCE_WINDOW_DAYS` `[GT]` window of days
+  strictly BEFORE the draw's world day — never the current day itself** (a match on day *d* first feeds
+  the draw on day *d+1*; #30 ERR-030-027 depends on this exclusion, since the draw runs pre-round). The
+  window length is #41's `[GT]` because #41 owns what the input means; #30 owns the record that supplies
+  it, which structurally bounds the window to `[1, 31]`. The ledger-derived `HardContacts` field is the
+  deep-tier KD-3 extension. `MatchLoad.None` (all-zero) is the identity — no match-load contribution.
 - **FR-MD-011** — #41 MUST NOT add a new match-engine producer or interface; any per-fixture physical-load
   derivation MUST be read-only over the already-emitted event ledger (KD-3).
 
@@ -59,8 +73,11 @@
 - **FR-MD-014** — The Stage-2 recovery countdown MUST be **linear and integer**: `RecoveryRemaining`
   decrements by the fixed integer `RECOVERY_DAYS_PER_TICK_BASE` (= 1) per world day while `Severity !=
   None`, clamped at `[0, RECOVERY_MAX]` (F1). Staff **recovery-speed** modulation MUST be applied to the
-  **assigned tier recovery-days at injury time** (`RecoveryRemaining = RecoveryDaysForTier[tier] × 1000 /
-  MedicalModifier.RecoverySpeedMillMult`, integer division — a faster physio assigns fewer total days),
+  **assigned tier recovery-days at injury time** (`RecoveryRemaining = Clamp(RecoveryDaysForTier[tier] ×
+  1000 / MedicalModifier.RecoverySpeedMillMult, 1, RECOVERY_MAX)`, integer division — a faster physio
+  assigns fewer total days; **floored at 1 AND ceilinged at `RECOVERY_MAX`** — the ceiling was stated
+  only on the countdown until AR pass 15 M2, while a below-average physio on the Serious tier takes the
+  raw division past it),
   **not** as a per-tick decrement multiplier (which, against a fixed integer base of 1, would truncate every
   non-integer multiplier to a no-op). All medical arithmetic MUST be integer — no float (the #28/#29
   integer-projection posture; keeps the system free of float-mode/MXCSR sensitivity).
@@ -117,10 +134,15 @@
 - **FR-MD-026** — The reference direction MUST stay one-way: `#30 → #41 → {#29, #27, #16}`; #41's assembly
   MUST NOT reference `MatchEngine`, `LivingWorld`, `SeasonSave`, or #30 itself. #29's / #27's assemblies stay
   schema-untouched.
-- **FR-MD-027** — Behaviour-neutral identity: with `occurrenceEnabled` off, `AdvanceMedicalDay` MUST reduce
-  to recovery-only (no draws, no new injuries); `InjuryState` MUST default to `Create()` = Healthy; and
-  registering the `injuries.occurrence` sub-stream MUST leave every existing stream's cursor byte-identical
-  (the #22/#26/#29 stream-independence precedent).
+- **FR-MD-027** — The occurrence dial. **ARMED at the balance pass (ERR-041-011): a production career is
+  constructed with `occurrenceEnabled` ON**, at rates measured in the football band by the season-scale
+  instrument (league ≈ 780 injuries/season on the 20-club bootstrap; starters ≈ 2.1, reserves ≈ 1.1,
+  squad unavailability ≈ 9%). The construction argument MUST be required, never defaulted — a default in
+  either position changes behaviour at every omitting call site with no diff the day it flips. The OFF
+  position stays supported and locked both ways: with `occurrenceEnabled` off, `AdvanceMedicalDay` MUST
+  reduce to recovery-only (no draws, no new injuries), and `InjuryState` MUST default to `Create()` =
+  Healthy. The stream-independence clause is vacuous by construction — no stream is registered
+  (FR-MD-005 as re-anchored; ERR-041-012).
 
 ## 2.2 Data structures
 
@@ -145,18 +167,20 @@ public struct InjuryState
                 LastAdvancedWorldDay = MEDICAL_NOT_ADVANCED_SENTINEL };
 }
 
-// The world-day step (KD-6, invoked at #30's new slot): recovery countdown THEN occurrence draw.
-// The ONLY #41 draw site. The draw is KEYED on (playerId, worldDay, purpose) — position-independent,
-// no free-running cursor (KD-1/§3). `rng` is the world-tick DeterministicRngService the key resolves
-// against.
+// The world-day step (KD-6, invoked at #30's slot 4): recovery countdown THEN occurrence draw.
+// The ONLY #41 draw site. The draw is KEYED on (worldSeed, playerId, worldDay, purpose) —
+// position-independent, no free-running cursor, no DeterministicRngService (KD-1/§3, ERR-041-012).
+// occurrenceEnabled is the FR-MD-027 dial: REQUIRED, never defaulted; disarmed, the step is the
+// recovery countdown and cursor advance alone.
 public static void AdvanceMedicalDay(ref InjuryState s, int playerId, in PlayerAttributes a,
                                       in InjuryRiskContribution trainingRisk, in MatchLoad recentMatchLoad,
-                                      in MedicalModifier medical, uint worldDay, DeterministicRngService rng);
+                                      in MedicalModifier medical, uint worldDay, ulong worldSeed,
+                                      bool occurrenceEnabled);
 
 // KD-2/KD-3 occurrence input from recent match participation, supplied by the caller (FR-MD-010) — #41
-// does not track this itself. Stage-2 minimal populates AppearanceDays (a count #30's fixture result
-// already tracks); the ledger-derived HardContacts field is the deep-tier KD-3 extension. Neutral
-// (all-zero) at Stage 2 = training-risk-only contribution.
+// does not track this itself. Stage-2 populates AppearanceDays from #30's per-player appearance record
+// (the ERR-041-010(b) APPR block — built BECAUSE no such count existed); the ledger-derived
+// HardContacts field is the deep-tier KD-3 extension. Neutral (all-zero) = training-risk-only.
 public readonly struct MatchLoad { public readonly int AppearanceDays; public readonly int HardContacts;
                                     public static MatchLoad None => default; }
 
@@ -179,7 +203,7 @@ public readonly struct MedicalViewModel { /* severity / recovery-remaining / inj
 ```
 
 The **medical block** persisted under `MEDICAL_SAVE_FORMAT_VERSION` is, per club: each player's
-`InjuryState` keyed by `PlayerId`. **No RNG cursor is serialized** — `injuries.occurrence` draws are
+`InjuryState` keyed by `PlayerId`. **No RNG cursor is serialized** — occurrence draws are
 position-independent keyed draws (FR-MD-007), so there is nothing beyond `InjuryState` to persist. The set
 tracks roster membership per FR-MD-025 (regen inserts, retiree removes).
 
@@ -197,6 +221,7 @@ construction are pure reads over an `InjuryState` value. See §3.
 | **F5** | Corrupt length prefix (out-of-bounds) or trailing bytes in the medical block | **Fail loud** (overflow-safe bound; the `WorldStateSerializer.ReadCount` posture). |
 | **F6** | `AdvanceMedicalDay` invoked twice for one world day (`worldDay <= LastAdvanced`) | Idempotent no-op guarded by `LastAdvancedWorldDay` — a mid-recovery save→restore→re-run does not double-decrement or double-draw. |
 | **F7** | `AdvanceMedicalDay` called with a **day gap** (`worldDay > LastAdvanced + 1`, post-sentinel) | **Fail loud** (`ArgumentException`) — a gap silently under-advances recovery and skips an occurrence evaluation; neither is clamped, defaulted, or batch-replayed (the FR-TR-026 posture). |
+| **F8** | `AdvanceMedicalDay` invoked with `worldDay == MEDICAL_NOT_ADVANCED_SENTINEL` itself | **Fail loud** (`ArgumentException`) — the sentinel is a reserved value, not a day; stored, the cursor would read back "never advanced" and re-arm the day-0 double-accrual trap F6 closes. |
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -205,4 +230,10 @@ construction are pure reads over an `InjuryState` value. See §3.
 | 0.2 | 2026-07-23 | — | AR-1 (1M): integer-arithmetic fix — `MedicalModifier` now per-mille int multipliers with an explicit `Identity` (default() invalid → F4 fail-loud); FR-MD-014 recovery-speed applied to assigned tier-days (not a per-tick multiply); FR-MD-016 zero-modifier fail-loud. |
 | 0.3 | 2026-07-23 | — | AR-2 (1M): FR-MD-008 now mandates the fixed `DRAW_PURPOSE_RADIX` in `DeriveActionOrdinal` (append-parity — the growing purpose count as radix would shift prior ordinals). |
 | 0.4 | 2026-08-06 | — | **ERR-041-008** (at #41 T1): §2.3 **F3**'s exception type corrected from `ArgumentException` to `InvalidOperationException`, matching the `MatchSaveCodec` posture the same row cites (the #29 §2.3 F3 sibling correction). |
+| 0.5 | 2026-08-07 | — | **Balance pass D2 (ERR-041-010(b))**: FR-MD-010's `AppearanceDays` gains its unit — the count of days fielded in the `APPEARANCE_WINDOW_DAYS` `[GT]` window strictly BEFORE the draw day, never the current day (a match on day *d* first feeds the draw on *d+1*; #30's ERR-030-027 pre-round ordering depends on the exclusion). The record is #30-owned (its own `APPR` sub-blob), reaching #41 only as the caller-supplied value; the window `[GT]` is #41's because #41 owns what the input means. Previously the FR called `AppearanceDays` "a count #30's fixture result already tracks", which was false — no such record existed (that is what ERR-041-010(b) filed). |
+| 0.6 | 2026-08-07 | — | **Balance pass D3/D4 (ERR-041-011 / ERR-041-012)**: FR-MD-027 ARMED — production constructs the dial ON, the argument is required-never-defaulted, the OFF identity stays supported and locked; FR-MD-005 re-anchored onto the keyed derivation (the `injuries.occurrence` registered stream never existed and may not — cursor-positioned, forbidden by FR-MD-006/007; ordinal 92 stays unallocated). (Rows 0.5/0.6 were appended out of order and swapped at the balance-pass AR pass 4 — the third table of this class in this landing chain.) |
+| 0.7 | 2026-08-08 | — | **Balance-pass AR pass 6 (M4)**: §2.2's normative `AdvanceMedicalDay` signature de-phantomed — it took the `DeterministicRngService rng` that never existed and could not express the required FR-MD-027 dial or the `worldSeed` key root declared 30 lines above it (the §3.1 v0.5 fix, which stopped one section short); the `MatchLoad` comment's "a count #30's fixture result already tracks" corrected (ERR-041-010(b) built the record because it did not). (Rows reordered ascending at AR pass 8 — the third recurrence in this table's own history.) |
+| 0.8 | 2026-08-08 | — | **Balance-pass AR pass 8 (L4 + L2)**: FR-MD-007's "for `injuries.occurrence`" → "for the keyed occurrence derivation" (true statement, phantom name); rows 0.6/0.7 reordered ascending — the third recurrence in this table's own history. |
+| 0.9 | 2026-08-08 | — | **Balance-pass AR pass 9 (L4)**: new **F8** — `AdvanceMedicalDay` invoked with the never-advanced sentinel as `worldDay` itself fails loud; enforced in code since T0 with no F-row (a fail-loud with no normative source). §3.1's pseudocode gains the guard in the same commit; mirrored at #29 §2.3/§3.1. |
+| 0.10 | 2026-08-08 | — | **Balance-pass AR pass 15 (M2)**: FR-MD-014 put the `[0, RECOVERY_MAX]` clamp on the COUNTDOWN and gave the assignment as a bare floored division, while the code has always ceilinged the assignment too — an implementer following the FR wrote `241+` for a slow physio on the Serious tier, refused by `ValidateState` the next day (the field's own declared range forbids it). The assignment clause now carries `Clamp(…, 1, RECOVERY_MAX)`. |
 #endregion

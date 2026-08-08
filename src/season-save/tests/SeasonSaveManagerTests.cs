@@ -1,7 +1,6 @@
 // File:     src/season-save/tests/SeasonSaveManagerTests.cs
 // Created:  2026-07-22
-// Modified: 2026-08-06 (#29/#41 T1: the frame carries the training and medical blocks; the round-trip
-//           asserts both resume field-identical alongside the world, season and match)
+// Modified: 2026-08-08 (AR pass 9 M1: the medical-only-lag isolating case at the Save boundary — v1.12)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §5 acceptance;
 //           Season & Competition Loop #30 FR-SN-019..023, Appendix B; Training System #29 FR-TR-018/019;
@@ -66,6 +65,8 @@ namespace TacticalDirector.SeasonSave
         private static ClubTrainingStates[] NoTraining => Array.Empty<ClubTrainingStates>();
 
         private static ClubInjuryStates[] NoMedical => Array.Empty<ClubInjuryStates>();
+
+        private static ClubAppearanceStates[] NoAppearance => Array.Empty<ClubAppearanceStates>();
 
         // ── World fixtures (mirror WorldStoreTests.PopulatedStore) ──────────────────
 
@@ -146,7 +147,7 @@ namespace TacticalDirector.SeasonSave
             WorldStore world = PopulatedStore();
             SeasonState season = MidSeasonState();
             string path = TempPath("season.save");
-            SeasonSaveManager.Save(world, season, matchOrNull: null, path, NoTraining, NoMedical);
+            SeasonSaveManager.Save(world, season, matchOrNull: null, path, NoTraining, NoMedical, NoAppearance);
             Assert.IsTrue(File.Exists(path), "Save must produce the destination file atomically.");
 
             // Capture is non-mutating, so the saved store itself is a valid uninterrupted reference.
@@ -181,7 +182,7 @@ namespace TacticalDirector.SeasonSave
             Assert.AreEqual(1, world.Arcs.ArcCount, "only PopulatedStore's manual arc exists; the trigger has not fired yet");
 
             string path = TempPath("season-flagon.save");
-            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical);
+            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical, NoAppearance);
 
             // Uninterrupted reference: the saved (non-mutated) world advances one day and fires.
             world.AdvanceDay();
@@ -219,7 +220,7 @@ namespace TacticalDirector.SeasonSave
             Assert.AreEqual((ulong)n, match.CurrentTick);
 
             string path = TempPath("season-match.save");
-            SeasonSaveManager.Save(world, season, match, path, NoTraining, NoMedical);
+            SeasonSaveManager.Save(world, season, match, path, NoTraining, NoMedical, NoAppearance);
             Assert.IsTrue(File.Exists(path));
 
             // Reference chains from the saved (non-mutated) objects.
@@ -295,7 +296,7 @@ namespace TacticalDirector.SeasonSave
             // never touches the (absent) match, returning a null Match.
             WorldStore world = PopulatedStore();
             string path = TempPath("nomatch-provider.save");
-            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical);
+            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical, NoAppearance);
 
             SeasonSaveContents contents = SeasonSaveManager.Load(path, Provider(DistinctSquad(1)));
             Assert.IsNull(contents.Match,
@@ -316,7 +317,7 @@ namespace TacticalDirector.SeasonSave
         {
             WorldStore world = PopulatedStore();
             string path = TempPath("corrupt.save");
-            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical);
+            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical, NoAppearance);
 
             byte[] bytes = File.ReadAllBytes(path);
             File.WriteAllBytes(path, new ArraySegment<byte>(bytes, 0, bytes.Length / 2).ToArray());
@@ -334,7 +335,7 @@ namespace TacticalDirector.SeasonSave
             match.ConfigureSquads(DistinctSquad(1), DistinctSquad(2));
             for (int i = 0; i < 30; i++) match.RunTick();
             string path = TempPath("distinct.save");
-            SeasonSaveManager.Save(world, MidSeasonState(), match, path, NoTraining, NoMedical);
+            SeasonSaveManager.Save(world, MidSeasonState(), match, path, NoTraining, NoMedical, NoAppearance);
 
             Assert.Throws<NotSupportedException>(
                 () => SeasonSaveManager.Load(path),
@@ -345,7 +346,7 @@ namespace TacticalDirector.SeasonSave
         public void Save_NullWorld_Throws()
         {
             Assert.Throws<ArgumentNullException>(
-                () => SeasonSaveManager.Save(null, MidSeasonState(), matchOrNull: null, TempPath("x.save"), NoTraining, NoMedical));
+                () => SeasonSaveManager.Save(null, MidSeasonState(), matchOrNull: null, TempPath("x.save"), NoTraining, NoMedical, NoAppearance));
         }
 
         [Test]
@@ -355,7 +356,7 @@ namespace TacticalDirector.SeasonSave
             // than write a file that Load could not reconstruct a season from.
             Assert.Throws<ArgumentNullException>(
                 () => SeasonSaveManager.Save(
-                    PopulatedStore(), null, matchOrNull: null, TempPath("x.save"), NoTraining, NoMedical));
+                    PopulatedStore(), null, matchOrNull: null, TempPath("x.save"), NoTraining, NoMedical, NoAppearance));
         }
 
         [Test]
@@ -363,10 +364,10 @@ namespace TacticalDirector.SeasonSave
         {
             WorldStore world = PopulatedStore();
             string path = TempPath("overwrite.save");
-            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical);
+            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical, NoAppearance);
 
             world.AdvanceDay();
-            Assert.DoesNotThrow(() => SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical),
+            Assert.DoesNotThrow(() => SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical, NoAppearance),
                 "Re-saving over an existing file must atomically replace it (File.Replace), not throw.");
             Assert.IsFalse(File.Exists(path + ".tmp"), "The temp file must not survive a successful save.");
         }
@@ -394,7 +395,7 @@ namespace TacticalDirector.SeasonSave
                             Focus = TrainingFocus.Tactical,
                             Condition = 6543,
                             TrainingFatigue = 1234,
-                            LastAdvancedWorldDay = 19,
+                            LastAdvancedWorldDay = 1,   // within the fixture world clock (2) — the M4 cursor gate
                         },
                         new TrainingState
                         {
@@ -419,20 +420,34 @@ namespace TacticalDirector.SeasonSave
                             Severity = InjurySeverity.Moderate,
                             RecoveryRemaining = 21,
                             InjuryCount = 4,
-                            LastAdvancedWorldDay = 19,
+                            LastAdvancedWorldDay = 1,   // within the fixture world clock (2) — the M4 cursor gate
                         },
                         new InjuryState
                         {
                             Severity = InjurySeverity.None,
                             RecoveryRemaining = 0,
                             InjuryCount = 1,
-                            LastAdvancedWorldDay = 19,
+                            LastAdvancedWorldDay = 1,   // within the fixture world clock (2) — the M4 cursor gate
                         },
                     }),
             };
 
+            // The appearance set must describe the same club/players as its siblings — Save gates the
+            // triple's coherence (AR pass 3), because an incoherent file is one FromBlocks refuses.
+            var appearance = new[]
+            {
+                new ClubAppearanceStates(
+                    7,
+                    new[] { 100, 300 },
+                    new[]
+                    {
+                        new AppearanceState { RecentBits = 0b101u, BitsAsOfWorldDay = 1 },
+                        default(AppearanceState),
+                    }),
+            };
+
             SeasonSaveManager.Save(
-                PopulatedStore(), MidSeasonState(), matchOrNull: null, path, training, medical);
+                PopulatedStore(), MidSeasonState(), matchOrNull: null, path, training, medical, appearance);
 
             SeasonSaveContents got = SeasonSaveManager.Load(path);
 
@@ -450,7 +465,7 @@ namespace TacticalDirector.SeasonSave
             Assert.AreEqual(TrainingFocus.Tactical, club.States[1].Focus);
             Assert.AreEqual(6543, club.States[1].Condition);
             Assert.AreEqual(1234, club.States[1].TrainingFatigue);
-            Assert.AreEqual(19u, club.States[1].LastAdvancedWorldDay);
+            Assert.AreEqual(1u, club.States[1].LastAdvancedWorldDay);
 
             Assert.AreEqual(1, got.MedicalClubs.Length, "one medical club must survive the file");
             ClubInjuryStates med = got.MedicalClubs[0];
@@ -459,7 +474,7 @@ namespace TacticalDirector.SeasonSave
             Assert.AreEqual(InjurySeverity.Moderate, med.States[0].Severity);
             Assert.AreEqual(21, med.States[0].RecoveryRemaining);
             Assert.AreEqual(4, med.States[0].InjuryCount);
-            Assert.AreEqual(19u, med.States[0].LastAdvancedWorldDay);
+            Assert.AreEqual(1u, med.States[0].LastAdvancedWorldDay);
             Assert.AreEqual(InjurySeverity.None, med.States[1].Severity);
             Assert.AreEqual(0, med.States[1].RecoveryRemaining);
             Assert.AreEqual(1, med.States[1].InjuryCount);
@@ -474,14 +489,16 @@ namespace TacticalDirector.SeasonSave
             // caller SAYS "no training state" with NoTraining/NoMedical; Save has no default that would
             // let it stay silent, because silence and real-state-dropped look identical on reload.
             string path = TempPath("no-training.season");
-            SeasonSaveManager.Save(PopulatedStore(), MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical);
+            SeasonSaveManager.Save(PopulatedStore(), MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical, NoAppearance);
 
             SeasonSaveContents got = SeasonSaveManager.Load(path);
 
             Assert.IsNotNull(got.TrainingClubs, "an unwired #29 must load as an empty set, not null");
             Assert.IsNotNull(got.MedicalClubs, "an unwired #41 must load as an empty set, not null");
+            Assert.IsNotNull(got.AppearanceClubs, "an unwired appearance record likewise (AR pass 3)");
             Assert.AreEqual(0, got.TrainingClubs.Length);
             Assert.AreEqual(0, got.MedicalClubs.Length);
+            Assert.AreEqual(0, got.AppearanceClubs.Length);
         }
 
         [Test]
@@ -495,14 +512,278 @@ namespace TacticalDirector.SeasonSave
             Assert.Throws<ArgumentNullException>(
                 () => SeasonSaveManager.Save(
                     PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
-                    null, NoMedical),
+                    null, NoMedical, NoAppearance),
                 "A null training set must fail loud — say Array.Empty to mean empty (FR-TR-018).");
 
             Assert.Throws<ArgumentNullException>(
                 () => SeasonSaveManager.Save(
                     PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
-                    NoTraining, null),
+                    NoTraining, null, NoAppearance),
                 "A null medical set must fail loud — say Array.Empty to mean empty (FR-MD-017).");
+
+            Assert.Throws<ArgumentNullException>(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    NoTraining, NoMedical, null),
+                "A null appearance set must fail loud on the same terms (#30 Appendix B) — its two " +
+                "siblings had this lock from T1 and it did not (AR pass 3).");
+        }
+
+        [Test]
+        public void Save_IncoherentCareerBlockTriple_FailsLoud()
+        {
+            // AR pass 3: Save could write a file its own documented restore path
+            // (PlayerCareerStates.FromBlocks) refuses on the coherence gate — the "Encode writes what
+            // Decode refuses" class the T1 AR filed against TrainingSaveCodec. One training club with
+            // zero medical/appearance clubs is exactly the file this suite itself used to write.
+            var oneTrainingClub = new[]
+            {
+                new ClubTrainingStates(
+                    7, new[] { 100 }, new[] { TrainingState.Create(TrainingFocus.Balanced) }),
+            };
+
+            Assert.Throws<ArgumentException>(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    oneTrainingClub, NoMedical, NoAppearance),
+                "a career triple whose sets disagree on the club set must be refused at Save");
+        }
+
+        private static ClubTrainingStates TBlock(int club, params int[] ids)
+        {
+            var states = new TrainingState[ids.Length];
+            for (int i = 0; i < states.Length; i++)
+            {
+                states[i] = TrainingState.Create(TrainingFocus.Balanced);
+            }
+
+            return new ClubTrainingStates(club, ids, states);
+        }
+
+        private static ClubInjuryStates MBlock(int club, params int[] ids)
+        {
+            var states = new InjuryState[ids.Length];
+            for (int i = 0; i < states.Length; i++)
+            {
+                states[i] = InjuryState.Create();
+            }
+
+            return new ClubInjuryStates(club, ids, states);
+        }
+
+        private static ClubAppearanceStates ABlock(int club, params int[] ids) =>
+            new ClubAppearanceStates(club, ids, new AppearanceState[ids.Length]);
+
+        [Test]
+        public void Save_CrossClubDuplicatePlayerId_FailsLoud()
+        {
+            // AR pass 4 (M1): the coherence gate's stated contract — never write a file FromBlocks
+            // refuses — was one predicate short of FromBlocks' actual refusal surface: ERR-041-019's
+            // global-id uniqueness, added to FromBlocks in the SAME commit as the gate. The
+            // reviewer demonstrated a two-club triple sharing one id saving cleanly and the
+            // documented restore path then refusing the loaded contents.
+            Assert.Throws<ArgumentException>(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    new[] { TBlock(0, 7), TBlock(1, 7) },
+                    new[] { MBlock(0, 7), MBlock(1, 7) },
+                    new[] { ABlock(0, 7), ABlock(1, 7) }),
+                "a cross-club duplicate PlayerId is refused at Save exactly as FromBlocks refuses "
+                + "it at load (ERR-041-019)");
+        }
+
+        [Test]
+        public void Save_DefaultCareerBlock_IsRefusedByName_NotByNullReference()
+        {
+            // AR pass 4 (L1): default(ClubTrainingStates) passed the gate's length checks and
+            // NullReferenceException'd at the clone — before the gate existed, the codecs produced
+            // the diagnosed ArgumentException. The refusal must name the cause again.
+            // The siblings are EMPTY constructed blocks so the walk gets past the count check and
+            // reaches the clone the null-guard protects (AR pass 5 M3: with 1-player siblings, the
+            // reverted code threw the same exception TYPE from the count branch — this test killed
+            // no mutant). The message assert pins WHICH branch refused.
+            var ex = Assert.Throws<ArgumentException>(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    new ClubTrainingStates[1],
+                    new[] { MBlock(0) },
+                    new[] { ABlock(0) }),
+                "a never-constructed block is refused by name, not by NullReferenceException");
+            Assert.That(ex.Message, Does.Contain("default value"),
+                "the refusal must come from the default-block branch, not a downstream mismatch");
+            Assert.AreEqual("trainingClubs", ex.ParamName,
+                "…and must name the OFFENDING set (AR pass 5 L10)");
+        }
+
+        [Test]
+        public void Save_CoherenceGate_RefusesEachDisagreementShape_AndAcceptsPermutedClubOrder()
+        {
+            // AR pass 4 (L2): only the set-length branch had a lock. Each remaining refusal branch,
+            // plus the documented club-order insensitivity as a PASS case — the codecs canonicalize
+            // at encode, so a caller may hand the three sets in different club orders.
+            Assert.Throws<ArgumentException>(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    new[] { TBlock(0, 7), TBlock(1, 30) },
+                    new[] { MBlock(0, 7), MBlock(2, 30) },
+                    new[] { ABlock(0, 7), ABlock(1, 30) }),
+                "same lengths, different club SET — refused");
+
+            Assert.Throws<ArgumentException>(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    new[] { TBlock(0, 7, 9) },
+                    new[] { MBlock(0, 7) },
+                    new[] { ABlock(0, 7) }),
+                "same club, different player COUNT — refused");
+
+            Assert.Throws<ArgumentException>(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    new[] { TBlock(0, 7) },
+                    new[] { MBlock(0, 8) },
+                    new[] { ABlock(0, 7) }),
+                "same club, same count, different player IDS — refused");
+
+            string path = TempPath("permuted.season");
+            Assert.DoesNotThrow(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
+                    new[] { TBlock(1, 30), TBlock(0, 7) },
+                    new[] { MBlock(0, 7), MBlock(1, 30) },
+                    new[] { ABlock(1, 30), ABlock(0, 7) }),
+                "the gate is order-insensitive on clubs — the codecs canonicalize at encode");
+
+            SeasonSaveContents got = SeasonSaveManager.Load(path);
+            Assert.AreEqual(2, got.TrainingClubs.Length,
+                "…and the permuted-order save loads back canonicalized");
+        }
+
+        [Test]
+        public void Save_FutureDatedCareerCursor_FailsLoud()
+        {
+            // AR pass 5 (M4): a per-player world-day cursor AHEAD of the world clock is a mispaired
+            // or hand-edited save. The appearance anchor is the acute case — with the dial armed,
+            // the slot-4 window read throws on every later day and the day steps run BEFORE the
+            // clock increment, so the career wedges PERMANENTLY while saving and reloading cleanly.
+            // The #29/#41 cursors fail the other way (silent per-player no-op). Checked at Save so
+            // this root never writes a file its own Load refuses.
+            WorldStore world = PopulatedStore();   // world clock sits at 2
+
+            var futureAppearance = new ClubAppearanceStates(
+                7, new[] { 100 },
+                new[] { new AppearanceState { RecentBits = 1u, BitsAsOfWorldDay = 500u } });
+            Assert.Throws<InvalidOperationException>(
+                () => SeasonSaveManager.Save(
+                    world, MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    new[] { TBlock(7, 100) }, new[] { MBlock(7, 100) }, new[] { futureAppearance }),
+                "a future-dated appearance anchor wedges the career; refuse it at the write");
+
+            var futureTraining = TBlock(7, 100);
+            futureTraining.States[0].LastAdvancedWorldDay = 500u;
+            Assert.Throws<InvalidOperationException>(
+                () => SeasonSaveManager.Save(
+                    world, MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    new[] { futureTraining }, new[] { MBlock(7, 100) }, new[] { ABlock(7, 100) }),
+                "a future-dated training cursor silently freezes the player out of the day step");
+
+            var futureMedical = MBlock(7, 100);
+            futureMedical.States[0].LastAdvancedWorldDay = 500u;
+            Assert.Throws<InvalidOperationException>(
+                () => SeasonSaveManager.Save(
+                    world, MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    new[] { TBlock(7, 100) }, new[] { futureMedical }, new[] { ABlock(7, 100) }),
+                "…and the medical cursor likewise");
+        }
+
+        [Test]
+        public void Save_DuplicateClubId_IsRefusedByName()
+        {
+            // AR pass 7 (L4): the pass-6 duplicate-ClubId refusal had no test. Without it the
+            // duplicate is still caught downstream (the codec's canonical order), so the risk is a
+            // MISLEADING diagnostic — the unstable sorts pair duplicate clubs arbitrarily and the
+            // gate would name a phantom mismatch. Message + paramName pinned, the pass-5 M3 shape.
+            var ex = Assert.Throws<ArgumentException>(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    new[] { TBlock(7, 100), TBlock(7, 101) },
+                    new[] { MBlock(7, 100), MBlock(7, 101) },
+                    new[] { ABlock(7, 100), ABlock(7, 101) }),
+                "a club appearing twice in the career triple is refused by name");
+            Assert.That(ex.Message, Does.Contain("twice"),
+                "the refusal must come from the duplicate-club branch, not a phantom mismatch");
+            Assert.AreEqual("trainingClubs", ex.ParamName);
+        }
+
+        [Test]
+        public void Save_CursorLaggingTheClockByTwoOrMore_FailsLoud()
+        {
+            // AR pass 6 (M2): the mirror case is WORSE than ahead — the F7 gap refusal fires on every
+            // later advance and the day steps run before the clock increment, so the career wedges
+            // permanently while the file saves and reloads cleanly (demonstrated by the reviewer
+            // through public API). A legitimate save sits at worldTick − cursor ∈ {0, 1}; the
+            // sentinel (fresh state) is exempt, and the appearance anchor has no gap contract.
+            WorldStore laggedWorld = PopulatedStore();   // clock 2
+
+            var laggingTraining = TBlock(7, 100);
+            laggingTraining.States[0].LastAdvancedWorldDay = 0u;   // clock 2 → gap of 2
+            Assert.Throws<InvalidOperationException>(
+                () => SeasonSaveManager.Save(
+                    laggedWorld, MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    new[] { laggingTraining }, new[] { MBlock(7, 100) }, new[] { ABlock(7, 100) }),
+                "a training cursor two behind the clock wedges the career on the next advance (F7)");
+
+            // Medical-only lag (AR pass 9 M1): the training cursor sits at the LEGITIMATE lag of 1,
+            // so only the medical predicate can refuse — pass 8's isolation lesson at the file
+            // boundary. Before the shared-owner collapse this predicate had no isolating case at
+            // Save or Load: deleting the medical gap clause left the whole suite green.
+            var okT = TBlock(7, 100);
+            okT.States[0].LastAdvancedWorldDay = 1u;               // clock 2 → legitimate lag of 1
+            var laggingMedical = MBlock(7, 100);
+            laggingMedical.States[0].LastAdvancedWorldDay = 0u;    // clock 2 → gap of 2
+            Assert.Throws<InvalidOperationException>(
+                () => SeasonSaveManager.Save(
+                    laggedWorld, MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    new[] { okT }, new[] { laggingMedical }, new[] { ABlock(7, 100) }),
+                "a medical cursor two behind the clock is refused on its own — the training cursor "
+                + "is in-band, so this throw can only come from the medical predicate");
+
+            var okTraining = TBlock(7, 100);
+            okTraining.States[0].LastAdvancedWorldDay = 1u;        // clock 2 → the legitimate lag of 1
+            Assert.DoesNotThrow(
+                () => SeasonSaveManager.Save(
+                    laggedWorld, MidSeasonState(), matchOrNull: null, TempPath("ok.season"),
+                    new[] { okTraining }, new[] { MBlock(7, 100) }, new[] { ABlock(7, 100) }),
+                "the pre-increment convention's lag of exactly one is the NORMAL saved state");
+        }
+
+        [Test]
+        public void Load_FutureDatedCareerCursor_FailsLoud()
+        {
+            // The same rule at the layer a hand-edited or mispaired file actually arrives through.
+            // Save now refuses this content, so the file is crafted through SeasonSaveCodec.Encode
+            // directly — exactly what "hand-edited" means.
+            WorldStore world = PopulatedStore();
+            var futureAppearance = new[]
+            {
+                new ClubAppearanceStates(
+                    7, new[] { 100 },
+                    new[] { new AppearanceState { RecentBits = 1u, BitsAsOfWorldDay = 500u } }),
+            };
+
+            var trainingBlock = new TrainingBlock(TrainingSaveCodec.Encode(new[] { TBlock(7, 100) }));
+            var medicalBlock = new MedicalBlock(MedicalSaveCodec.Encode(new[] { MBlock(7, 100) }));
+            var appearanceBlock = new AppearanceBlock(AppearanceSaveCodec.Encode(futureAppearance));
+            byte[] frame = SeasonSaveCodec.Encode(
+                world.Snapshot(), SeasonStateCodec.Encode(MidSeasonState()),
+                in trainingBlock, in medicalBlock, in appearanceBlock, null);
+
+            string path = TempPath("wedged.season");
+            File.WriteAllBytes(path, frame);
+
+            Assert.Throws<InvalidOperationException>(() => SeasonSaveManager.Load(path),
+                "a future-dated appearance anchor must be refused at load — undetected, the career "
+                + "cannot advance a single day and cannot be diagnosed from any later symptom");
         }
 
         [Test]
@@ -558,6 +839,7 @@ namespace TacticalDirector.SeasonSave
                 SeasonStateCodec.Encode(MidSeasonState()),
                 new TrainingBlock(medicalBytes),   // <- the medical bytes, in the training slot
                 new MedicalBlock(trainingBytes),
+                AppearanceStub,
                 matchBlobOrNull: null);
 
             SeasonSaveBlobs blobs = SeasonSaveCodec.Decode(transposed);
@@ -579,9 +861,13 @@ namespace TacticalDirector.SeasonSave
 
         private static readonly byte[] MedicalStubBytes = { 0xB1, 0xB2, 0xB3 };
 
+        private static readonly byte[] AppearanceStubBytes = { 0xC1, 0xC2, 0xC3, 0xC4 };
+
         private static TrainingBlock TrainingStub => new TrainingBlock(TrainingStubBytes);
 
         private static MedicalBlock MedicalStub => new MedicalBlock(MedicalStubBytes);
+
+        private static AppearanceBlock AppearanceStub => new AppearanceBlock(AppearanceStubBytes);
 
         [Test]
         public void Codec_RoundTrips_WithMatch()
@@ -590,11 +876,13 @@ namespace TacticalDirector.SeasonSave
             byte[] seasonBlob = new byte[] { 6, 6 };
             byte[] matchBlob = new byte[] { 9, 8, 7 };
             SeasonSaveBlobs got = SeasonSaveCodec.Decode(
-                SeasonSaveCodec.Encode(worldBlob, seasonBlob, TrainingStub, MedicalStub, matchBlob));
+                SeasonSaveCodec.Encode(
+                    worldBlob, seasonBlob, TrainingStub, MedicalStub, AppearanceStub, matchBlob));
             CollectionAssert.AreEqual(worldBlob, got.WorldBlob);
             CollectionAssert.AreEqual(seasonBlob, got.SeasonBlob);
             CollectionAssert.AreEqual(TrainingStubBytes, got.TrainingBlob);
             CollectionAssert.AreEqual(MedicalStubBytes, got.MedicalBlob);
+            CollectionAssert.AreEqual(AppearanceStubBytes, got.AppearanceBlob);
             CollectionAssert.AreEqual(matchBlob, got.MatchBlob);
         }
 
@@ -605,31 +893,46 @@ namespace TacticalDirector.SeasonSave
             byte[] seasonBlob = new byte[] { 7 };
             SeasonSaveBlobs got = SeasonSaveCodec.Decode(
                 SeasonSaveCodec.Encode(
-                    worldBlob, seasonBlob, TrainingStub, MedicalStub, matchBlobOrNull: null));
+                    worldBlob, seasonBlob, TrainingStub, MedicalStub, AppearanceStub,
+                    matchBlobOrNull: null));
             CollectionAssert.AreEqual(worldBlob, got.WorldBlob);
             CollectionAssert.AreEqual(seasonBlob, got.SeasonBlob);
             CollectionAssert.AreEqual(TrainingStubBytes, got.TrainingBlob);
             CollectionAssert.AreEqual(MedicalStubBytes, got.MedicalBlob);
+            CollectionAssert.AreEqual(AppearanceStubBytes, got.AppearanceBlob);
             Assert.IsNull(got.MatchBlob, "A null match blob must round-trip to a null MatchBlob (KD-3).");
         }
 
         [Test]
         public void Load_WorldPastTheNextFixtureDay_FailsLoud()
         {
-            // FR-SN-011 (MUST) / F4: the KD-4 cursor invariant is the ONE coherence rule spanning the
-            // world and season blobs, so neither codec can check it — only this root, which holds both.
-            // MidSeasonState's cursor points at round 1 (day 12); advancing the world past it makes the
-            // pair incoherent, and T2's day-advance loop (which advances UP TO the next fixture day)
-            // would be undefined. Save does not check (the requirement is on restore), so the corruption
-            // must surface at Load.
-            string path = TempPath("cursor-behind.season");
+            // FR-SN-011 (MUST) / F4: the KD-4 cursor invariant is one of the two coherence rules
+            // spanning the world and season blobs, so neither codec can check it — only this root.
+            // Save now refuses this content too (AR pass 6 M1 — the gate's own doc had stated the
+            // never-write-what-Load-refuses rule while this very test recorded the asymmetry as
+            // intended), so the incoherent file is crafted through SeasonSaveCodec.Encode, exactly
+            // as the cursor-vs-clock Load test does.
             WorldStore world = PopulatedStore();
             for (int i = 0; i < 20; i++)
             {
                 world.AdvanceDay();
             }
 
-            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical);
+            Assert.Throws<InvalidOperationException>(
+                () => SeasonSaveManager.Save(
+                    world, MidSeasonState(), matchOrNull: null, TempPath("cursor-behind.season"),
+                    NoTraining, NoMedical, NoAppearance),
+                "Save must refuse a world already past the season's next fixture day — Load refuses "
+                + "this file, and this root never writes what its own Load refuses.");
+
+            var emptyTraining = new TrainingBlock(TrainingSaveCodec.Encode(NoTraining));
+            var emptyMedical = new MedicalBlock(MedicalSaveCodec.Encode(NoMedical));
+            var emptyAppearance = new AppearanceBlock(AppearanceSaveCodec.Encode(NoAppearance));
+            byte[] frame = SeasonSaveCodec.Encode(
+                world.Snapshot(), SeasonStateCodec.Encode(MidSeasonState()),
+                in emptyTraining, in emptyMedical, in emptyAppearance, null);
+            string path = TempPath("cursor-behind.season");
+            File.WriteAllBytes(path, frame);
 
             Assert.Throws<InvalidOperationException>(() => SeasonSaveManager.Load(path),
                 "A season whose next fixture day is behind the restored world day must be rejected (F4).");
@@ -653,7 +956,7 @@ namespace TacticalDirector.SeasonSave
                 done.AdvanceCursorOneRound();
             }
 
-            SeasonSaveManager.Save(world, done, matchOrNull: null, path, NoTraining, NoMedical);
+            SeasonSaveManager.Save(world, done, matchOrNull: null, path, NoTraining, NoMedical, NoAppearance);
 
             SeasonSaveContents got = SeasonSaveManager.Load(path);
             Assert.IsTrue(got.Season.Calendar.IsSeasonComplete,
@@ -670,10 +973,11 @@ namespace TacticalDirector.SeasonSave
             byte[] seasonBlob = { 2, 2 };              // 2 bytes
             byte[] trainingBlob = { 4, 4, 4, 4 };      // 4 bytes
             byte[] medicalBlob = { 5, 5, 5, 5, 5, 5 }; // 6 bytes
+            byte[] appearanceBlob = { 6, 6, 6, 6, 6, 6, 6 }; // 7 bytes
             byte[] matchBlob = { 3, 3, 3 };            // 3 bytes
             byte[] blob = SeasonSaveCodec.Encode(
                 worldBlob, seasonBlob, new TrainingBlock(trainingBlob), new MedicalBlock(medicalBlob),
-                matchBlob);
+                new AppearanceBlock(appearanceBlob), matchBlob);
 
             int o = 0;
             Assert.AreEqual(SeasonSaveConstants.SEASON_SAVE_FORMAT_VERSION,
@@ -692,8 +996,11 @@ namespace TacticalDirector.SeasonSave
             Assert.AreEqual((uint)medicalBlob.Length, CanonicalSerializer.ReadU32(blob, ref o),
                 "frame field 6: the #41 MEDICAL block follows the training block (FR-MD-017)");
             o += medicalBlob.Length;
+            Assert.AreEqual((uint)appearanceBlob.Length, CanonicalSerializer.ReadU32(blob, ref o),
+                "frame field 7: the #30 APPEARANCE block follows the medical block (ERR-041-010(b))");
+            o += appearanceBlob.Length;
             Assert.AreEqual((uint)matchBlob.Length, CanonicalSerializer.ReadU32(blob, ref o),
-                "frame field 7: the MATCH block is last — it is the only optional one, so it stays at " +
+                "frame field 8: the MATCH block is last — it is the only optional one, so it stays at " +
                 "the end where a presence flag can govern it");
             Assert.AreEqual(blob.Length, o + matchBlob.Length, "no trailing bytes");
         }
@@ -707,11 +1014,13 @@ namespace TacticalDirector.SeasonSave
                     Array.Empty<byte>(),
                     new TrainingBlock(Array.Empty<byte>()),
                     new MedicalBlock(Array.Empty<byte>()),
+                    new AppearanceBlock(Array.Empty<byte>()),
                     matchBlobOrNull: null));
             Assert.AreEqual(0, got.WorldBlob.Length);
             Assert.AreEqual(0, got.SeasonBlob.Length);
             Assert.AreEqual(0, got.TrainingBlob.Length);
             Assert.AreEqual(0, got.MedicalBlob.Length);
+            Assert.AreEqual(0, got.AppearanceBlob.Length);
             Assert.IsNull(got.MatchBlob);
         }
 
@@ -724,6 +1033,7 @@ namespace TacticalDirector.SeasonSave
                     seasonBlob: new byte[] { 1 },
                     training: TrainingStub,
                     medical: MedicalStub,
+                    appearance: AppearanceStub,
                     matchBlobOrNull: new byte[] { 1 }));
         }
 
@@ -751,6 +1061,7 @@ namespace TacticalDirector.SeasonSave
                     seasonBlob: new byte[] { 1 },
                     training: default,
                     medical: MedicalStub,
+                    appearance: AppearanceStub,
                     matchBlobOrNull: null),
                 "An unbound default(TrainingBlock) must fail loud, not encode as an empty block.");
 
@@ -760,6 +1071,7 @@ namespace TacticalDirector.SeasonSave
                     seasonBlob: new byte[] { 1 },
                     training: TrainingStub,
                     medical: default,
+                    appearance: AppearanceStub,
                     matchBlobOrNull: null),
                 "An unbound default(MedicalBlock) must fail loud, not encode as an empty block.");
         }
@@ -774,7 +1086,8 @@ namespace TacticalDirector.SeasonSave
         public void Codec_WrongFormatVersion_FailsLoud()
         {
             byte[] blob = SeasonSaveCodec.Encode(
-                new byte[] { 1, 2 }, new byte[] { 3 }, TrainingStub, MedicalStub, matchBlobOrNull: null);
+                new byte[] { 1, 2 }, new byte[] { 3 }, TrainingStub, MedicalStub, AppearanceStub,
+                matchBlobOrNull: null);
             blob[0] ^= 0xFF; // corrupt the leading format-version u32
             Assert.Throws<InvalidOperationException>(() => SeasonSaveCodec.Decode(blob),
                 "A season format-version mismatch must fail loud (KD-4).");
@@ -783,14 +1096,15 @@ namespace TacticalDirector.SeasonSave
         [Test]
         public void Codec_PreT1FrameVersions_FailLoud()
         {
-            // FR-SN-020: the frame bumped 1 -> 2 when the season sub-blob landed, and 2 -> 3 when the
-            // #29/#41 blocks did. Each older layout, read as the current one, would deframe some later
-            // block as an earlier one — a v2 file's match blob would be deframed as a training block.
-            // Refused outright: there is no cross-version migration at Stage 0 (KD-4).
-            foreach (uint stale in new uint[] { 1u, 2u })
+            // FR-SN-020: the frame bumped 1 -> 2 when the season sub-blob landed, 2 -> 3 when the
+            // #29/#41 blocks did, and 3 -> 4 when the #30 appearance block did (ERR-041-010(b)). Each
+            // older layout, read as the current one, would deframe some later block as an earlier one —
+            // a v3 file's match blob would be deframed as an appearance block. Refused outright: there
+            // is no cross-version migration at Stage 0 (KD-4).
+            foreach (uint stale in new uint[] { 1u, 2u, 3u })
             {
                 byte[] blob = SeasonSaveCodec.Encode(
-                    new byte[] { 1, 2 }, new byte[] { 3 }, TrainingStub, MedicalStub,
+                    new byte[] { 1, 2 }, new byte[] { 3 }, TrainingStub, MedicalStub, AppearanceStub,
                     matchBlobOrNull: null);
                 int o = 0;
                 CanonicalSerializer.WriteU32(blob, ref o, stale);
@@ -803,7 +1117,8 @@ namespace TacticalDirector.SeasonSave
         public void Codec_BadMatchPresentFlag_FailsLoud()
         {
             byte[] blob = SeasonSaveCodec.Encode(
-                new byte[] { 1, 2 }, new byte[] { 3 }, TrainingStub, MedicalStub, matchBlobOrNull: null);
+                new byte[] { 1, 2 }, new byte[] { 3 }, TrainingStub, MedicalStub, AppearanceStub,
+                matchBlobOrNull: null);
             blob[4] = 2; // the matchPresent flag sits right after the u32 version
             Assert.Throws<InvalidOperationException>(() => SeasonSaveCodec.Decode(blob),
                 "A matchPresent flag other than 0/1 must fail loud (KD-8).");
@@ -813,7 +1128,7 @@ namespace TacticalDirector.SeasonSave
         public void Codec_OversizeWorldLength_FailsLoud()
         {
             byte[] blob = SeasonSaveCodec.Encode(
-                new byte[] { 1, 2, 3 }, new byte[] { 4 }, TrainingStub, MedicalStub,
+                new byte[] { 1, 2, 3 }, new byte[] { 4 }, TrainingStub, MedicalStub, AppearanceStub,
                 matchBlobOrNull: null);
             // The world length u32 sits at offset 5 (u32 version + u8 flag). Overwrite with a huge value.
             blob[5] = 0xFF; blob[6] = 0xFF; blob[7] = 0xFF; blob[8] = 0xFF;
@@ -825,7 +1140,7 @@ namespace TacticalDirector.SeasonSave
         public void Codec_TrailingBytes_FailsLoud()
         {
             byte[] blob = SeasonSaveCodec.Encode(
-                new byte[] { 1, 2 }, new byte[] { 9 }, TrainingStub, MedicalStub,
+                new byte[] { 1, 2 }, new byte[] { 9 }, TrainingStub, MedicalStub, AppearanceStub,
                 matchBlobOrNull: new byte[] { 3 });
             var padded = new byte[blob.Length + 1];
             Array.Copy(blob, padded, blob.Length);
@@ -837,7 +1152,7 @@ namespace TacticalDirector.SeasonSave
         public void Codec_TruncatedMatchBlock_FailsLoud()
         {
             byte[] blob = SeasonSaveCodec.Encode(
-                new byte[] { 1, 2 }, new byte[] { 9 }, TrainingStub, MedicalStub,
+                new byte[] { 1, 2 }, new byte[] { 9 }, TrainingStub, MedicalStub, AppearanceStub,
                 matchBlobOrNull: new byte[] { 3, 4, 5 });
             var chopped = new byte[blob.Length - 2];
             Array.Copy(blob, chopped, chopped.Length);
@@ -851,7 +1166,7 @@ namespace TacticalDirector.SeasonSave
             // The bound guard has to hold at the two NEW block boundaries too, not just the old ones:
             // an oversize training length must be refused rather than swallowing the medical block.
             byte[] blob = SeasonSaveCodec.Encode(
-                new byte[] { 1, 2 }, new byte[] { 9 }, TrainingStub, MedicalStub,
+                new byte[] { 1, 2 }, new byte[] { 9 }, TrainingStub, MedicalStub, AppearanceStub,
                 matchBlobOrNull: null);
 
             // version(4) + flag(1) + worldLen(4) + world(2) + seasonLen(4) + season(1) = 16
@@ -947,4 +1262,35 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | mandatory-block guards, the training bound guard, the v2      |
 // |         |            |        | frame rejection, and the two whole-file round-trips (state    |
 // |         |            |        | field-identical; unwired ⇒ empty sets, never null).           |
+// | 1.6     | 2026-08-07 | —      | Balance pass D2: frame v4 — AppearanceStub joins every codec case, |
+// |         |            |        | the frame-order lock gains field 7 (APPR), the stale-version loop  |
+// |         |            |        | adds v3, Save call sites carry the required appearance set.        |
+// | 1.7     | 2026-08-08 | —      | Balance-pass AR pass 3 (L3/L7): the null-appearance refusal joins  |
+// |         |            |        | its two siblings; the empty-sets lock asserts AppearanceClubs too; |
+// |         |            |        | + Save_IncoherentCareerBlockTriple_FailsLoud — the round-trip      |
+// |         |            |        | test itself had been writing a 1-training/1-medical/0-appearance   |
+// |         |            |        | file FromBlocks refuses, now coherent.                             |
+// | 1.8     | 2026-08-08 | —      | Balance-pass AR pass 4 (M1 + L1 + L2): Save_CrossClubDuplicate-    |
+// |         |            |        | PlayerId_FailsLoud (the gate's missing ERR-041-019 predicate);     |
+// |         |            |        | Save_DefaultCareerBlock refused by name, not NRE; every coherence  |
+// |         |            |        | refusal branch locked + the permuted-club-order PASS case.         |
+// | 1.9     | 2026-08-08 | —      | Balance-pass AR pass 5 (M3 + M4): the default-block refusal    |
+// |         |            |        | lock rebuilt to kill its mutant (empty siblings so the walk    |
+// |         |            |        | reaches the clone; message + paramName pinned — the reverted   |
+// |         |            |        | code threw the same TYPE from the count branch); + the         |
+// |         |            |        | future-dated-cursor refusals at Save (all three cursor kinds)  |
+// |         |            |        | and at Load (via a hand-crafted frame — what "hand-edited"     |
+// |         |            |        | means).                                                        |
+// | 1.10    | 2026-08-08 | —      | Balance-pass AR pass 6 (M1 + M2): Load_WorldPastTheNextFixture |
+// |         |            |        | Day rebuilt through SeasonSaveCodec.Encode (Save now refuses   |
+// |         |            |        | the content — and the test asserts THAT first); + the lagging- |
+// |         |            |        | cursor refusal with the lag-of-exactly-one PASS case (the     |
+// |         |            |        | pre-increment convention's normal saved state).               |
+// | 1.11    | 2026-08-08 | —      | Balance-pass AR pass 7 (L4): the duplicate-ClubId refusal gains   |
+// |         |            |        | its message+paramName lock — without it the unstable sorts pair  |
+// |         |            |        | duplicates arbitrarily and the gate names a phantom mismatch.    |
+// | 1.12    | 2026-08-08 | —      | Balance-pass AR pass 9 (M1): + the medical-only-lag case in      |
+// |         |            |        | Save_CursorLaggingTheClockByTwoOrMore_FailsLoud (training at the |
+// |         |            |        | legitimate lag of 1, medical at gap 2) — the shared medical-lag  |
+// |         |            |        | predicate now has an isolating case at the file boundary too.   |
 #endregion

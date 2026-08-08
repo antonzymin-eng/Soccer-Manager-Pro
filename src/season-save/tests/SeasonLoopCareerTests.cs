@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonLoopCareerTests.cs
 // Created:  2026-08-06
-// Modified: 2026-08-06
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (KD-2 tick order), §3.5 (the boundary), FR-SN-026;
 //           Training System #29 §3.5, FR-TR-004/025; Injuries & Medical #41 §3.5,
@@ -49,7 +49,7 @@ namespace TacticalDirector.SeasonSave.Tests
             out CareerTestRoster.MutableSquadProvider provider)
         {
             provider = ProviderOver(league);
-            career = PlayerCareerStates.ForLeague(provider, league.ClubIds());
+            career = PlayerCareerStates.ForLeague(provider, league.ClubIds(), injuryOccurrenceEnabled: false);
             world = new WorldStore(ManagerId, WorldSeed);
             return new SeasonLoop(
                 world, league.CreateSeason(0), RoundResolutionMode.QuickSimAll, career, provider);
@@ -62,7 +62,7 @@ namespace TacticalDirector.SeasonSave.Tests
         {
             League league = FourClubLeague();
             CareerTestRoster.MutableSquadProvider provider = ProviderOver(league);
-            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, league.ClubIds());
+            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, league.ClubIds(), injuryOccurrenceEnabled: false);
 
             Assert.Throws<System.ArgumentException>(() => new SeasonLoop(
                 new WorldStore(ManagerId, WorldSeed), league.CreateSeason(0),
@@ -87,11 +87,167 @@ namespace TacticalDirector.SeasonSave.Tests
             var subset = new int[allClubs.Length - 1];
             System.Array.Copy(allClubs, subset, subset.Length);
 
-            PlayerCareerStates partial = PlayerCareerStates.ForLeague(provider, subset);
+            PlayerCareerStates partial = PlayerCareerStates.ForLeague(provider, subset, injuryOccurrenceEnabled: false);
 
             Assert.Throws<System.ArgumentException>(() => new SeasonLoop(
                 new WorldStore(ManagerId, WorldSeed), league.CreateSeason(0),
                 RoundResolutionMode.QuickSimAll, partial, provider));
+        }
+
+        [Test]
+        public void Constructor_RefusesACareerOffTheWorldClock()
+        {
+            // AR pass 6 (M3): a loop can be composed from a career and a world that never met a
+            // save file, and the desynchronised pair either silently skips every day step (career
+            // ahead — F6 reads each day as done) or wedges permanently (career lagging by >= 2 —
+            // F7 refuses the gap and the steps run before the clock increment). The file boundary
+            // refused this while the composition boundary accepted it — the reviewer drove a career
+            // eleven days ahead through public API and watched seven world days of conditioning and
+            // seven armed draws silently skip.
+            League league = FourClubLeague();
+            CareerTestRoster.MutableSquadProvider provider = ProviderOver(league);
+            PlayerCareerStates career = PlayerCareerStates.ForLeague(
+                provider, league.ClubIds(), injuryOccurrenceEnabled: false);
+            for (uint day = 0; day < 5; day++)
+            {
+                career.AdvanceTrainingDay(day, provider, CoachingModifier.Identity);
+                career.AdvanceMedicalDay(day, WorldSeed, provider, MedicalModifier.Identity);
+            }
+
+            Assert.Throws<System.InvalidOperationException>(() => new SeasonLoop(
+                new WorldStore(ManagerId, WorldSeed), league.CreateSeason(0),
+                RoundResolutionMode.QuickSimAll, career, provider),
+                "a career five days ahead of a fresh world is refused at composition, not left to "
+                + "silently skip its day steps");
+        }
+
+        [Test]
+        public void Constructor_PairingGate_IsolatesEveryPredicate()
+        {
+            // AR pass 7 (M2): the pass-6 lock drove BOTH cursors ahead, so the training branch threw
+            // first and shadowed the other four predicates — deleting the medical, appearance and
+            // both lagging checks left the whole suite green (demonstrated with two mutants). One
+            // case per predicate, each reaching its branch and no earlier one; plus the lag-of-one
+            // PASS case, the pre-increment convention's normal state, mirroring the file boundary's.
+            League league = FourClubLeague();
+
+            // (a) medical-only ahead — the training cursor stays at the exempt sentinel.
+            CareerTestRoster.MutableSquadProvider pa = ProviderOver(league);
+            PlayerCareerStates medicalAhead = PlayerCareerStates.ForLeague(
+                pa, league.ClubIds(), injuryOccurrenceEnabled: false);
+            for (uint day = 0; day < 3; day++)
+            {
+                medicalAhead.AdvanceMedicalDay(day, WorldSeed, pa, MedicalModifier.Identity);
+            }
+
+            Assert.Throws<System.InvalidOperationException>(() => new SeasonLoop(
+                new WorldStore(ManagerId, WorldSeed), league.CreateSeason(0),
+                RoundResolutionMode.QuickSimAll, medicalAhead, pa),
+                "(a) a medical cursor ahead of the clock must be refused on its own");
+
+            // (a2) TRAINING-only ahead — the medical cursor stays at the exempt sentinel (AR pass
+            // 8: the pass-7 cases left the training predicate shadowed in BOTH directions — the
+            // original lock advanced both cursors together, so deleting the training branch
+            // entirely left the suite green; the first-evaluated predicate was the unlocked one).
+            CareerTestRoster.MutableSquadProvider pa2 = ProviderOver(league);
+            PlayerCareerStates trainingAhead = PlayerCareerStates.ForLeague(
+                pa2, league.ClubIds(), injuryOccurrenceEnabled: false);
+            for (uint day = 0; day < 3; day++)
+            {
+                trainingAhead.AdvanceTrainingDay(day, pa2, CoachingModifier.Identity);
+            }
+
+            Assert.Throws<System.InvalidOperationException>(() => new SeasonLoop(
+                new WorldStore(ManagerId, WorldSeed), league.CreateSeason(0),
+                RoundResolutionMode.QuickSimAll, trainingAhead, pa2),
+                "(a2) a training cursor ahead of the clock must be refused on its own");
+
+            // (b) appearance anchor ahead — both day-step cursors stay at their sentinels.
+            CareerTestRoster.MutableSquadProvider pb = ProviderOver(league);
+            PlayerCareerStates anchorAhead = PlayerCareerStates.ForLeague(
+                pb, league.ClubIds(), injuryOccurrenceEnabled: false);
+            int clubId = league.ClubIds()[0];
+            anchorAhead.RecordAppearances(
+                clubId, new[] { pb.ResolveByClubId(clubId).GetPlayer(0).PlayerId }, 5u);
+
+            Assert.Throws<System.InvalidOperationException>(() => new SeasonLoop(
+                new WorldStore(ManagerId, WorldSeed), league.CreateSeason(0),
+                RoundResolutionMode.QuickSimAll, anchorAhead, pb),
+                "(b) a future-dated appearance anchor must be refused on its own — it is the acute "
+                + "case (the slot-4 window read throws forever once the dial is armed)");
+
+            // (c) training lagging by >= 2 — the wedge direction (F7 refuses the gap forever).
+            CareerTestRoster.MutableSquadProvider pc = ProviderOver(league);
+            PlayerCareerStates lagging = PlayerCareerStates.ForLeague(
+                pc, league.ClubIds(), injuryOccurrenceEnabled: false);
+            lagging.AdvanceTrainingDay(0u, pc, CoachingModifier.Identity);
+            lagging.AdvanceMedicalDay(0u, WorldSeed, pc, MedicalModifier.Identity);
+            var laggedWorld = new WorldStore(ManagerId, WorldSeed);
+            laggedWorld.AdvanceDay();
+            laggedWorld.AdvanceDay();
+            laggedWorld.AdvanceDay();
+
+            Assert.Throws<System.InvalidOperationException>(() => new SeasonLoop(
+                laggedWorld, league.CreateSeason(0),
+                RoundResolutionMode.QuickSimAll, lagging, pc),
+                "(c) a cursor lagging the clock by three wedges the pairing permanently (F7)");
+
+            // (c3) TRAINING-only lag — medical sits at the legitimate lag of one, so this reaches
+            // the training-lag branch and no earlier one (AR pass 8, the (a2) twin).
+            CareerTestRoster.MutableSquadProvider pc3 = ProviderOver(league);
+            PlayerCareerStates trainingLagging = PlayerCareerStates.ForLeague(
+                pc3, league.ClubIds(), injuryOccurrenceEnabled: false);
+            trainingLagging.AdvanceTrainingDay(0u, pc3, CoachingModifier.Identity);
+            for (uint day = 0; day < 3; day++)
+            {
+                trainingLagging.AdvanceMedicalDay(day, WorldSeed, pc3, MedicalModifier.Identity);
+            }
+
+            var laggedWorld3 = new WorldStore(ManagerId, WorldSeed);
+            laggedWorld3.AdvanceDay();
+            laggedWorld3.AdvanceDay();
+            laggedWorld3.AdvanceDay();
+
+            Assert.Throws<System.InvalidOperationException>(() => new SeasonLoop(
+                laggedWorld3, league.CreateSeason(0),
+                RoundResolutionMode.QuickSimAll, trainingLagging, pc3),
+                "(c3) a training cursor lagging by three is refused on its own");
+
+            // (c2) MEDICAL-only lag — training sits at the legitimate lag of one, so this reaches
+            // the medical-lag branch and no earlier one.
+            CareerTestRoster.MutableSquadProvider pc2 = ProviderOver(league);
+            PlayerCareerStates medicalLagging = PlayerCareerStates.ForLeague(
+                pc2, league.ClubIds(), injuryOccurrenceEnabled: false);
+            for (uint day = 0; day < 3; day++)
+            {
+                medicalLagging.AdvanceTrainingDay(day, pc2, CoachingModifier.Identity);
+            }
+
+            medicalLagging.AdvanceMedicalDay(0u, WorldSeed, pc2, MedicalModifier.Identity);
+            var laggedWorld2 = new WorldStore(ManagerId, WorldSeed);
+            laggedWorld2.AdvanceDay();
+            laggedWorld2.AdvanceDay();
+            laggedWorld2.AdvanceDay();
+
+            Assert.Throws<System.InvalidOperationException>(() => new SeasonLoop(
+                laggedWorld2, league.CreateSeason(0),
+                RoundResolutionMode.QuickSimAll, medicalLagging, pc2),
+                "(c2) a medical cursor lagging by three is refused on its own");
+
+            // (d) the lag-of-exactly-one PASS case — every legitimately saved career sits here or
+            // at zero (the day steps take the pre-increment day).
+            CareerTestRoster.MutableSquadProvider pd = ProviderOver(league);
+            PlayerCareerStates normal = PlayerCareerStates.ForLeague(
+                pd, league.ClubIds(), injuryOccurrenceEnabled: false);
+            normal.AdvanceTrainingDay(0u, pd, CoachingModifier.Identity);
+            normal.AdvanceMedicalDay(0u, WorldSeed, pd, MedicalModifier.Identity);
+            var advancedWorld = new WorldStore(ManagerId, WorldSeed);
+            advancedWorld.AdvanceDay();
+
+            Assert.DoesNotThrow(() => new SeasonLoop(
+                advancedWorld, league.CreateSeason(0),
+                RoundResolutionMode.QuickSimAll, normal, pd),
+                "(d) the pre-increment convention's lag of exactly one is the NORMAL composed state");
         }
 
         [Test]
@@ -138,7 +294,7 @@ namespace TacticalDirector.SeasonSave.Tests
             // catches an off-by-one in either direction — four days, six days, or two steps per day —
             // without this fixture re-deriving #29's conditioning arithmetic and drifting from it.
             PlayerCareerStates reference =
-                PlayerCareerStates.ForLeague(provider, league.ClubIds());
+                PlayerCareerStates.ForLeague(provider, league.ClubIds(), injuryOccurrenceEnabled: false);
             for (uint day = 0; day < 5; day++)
             {
                 reference.AdvanceTrainingDay(day, provider, CoachingModifier.Identity);
@@ -168,18 +324,15 @@ namespace TacticalDirector.SeasonSave.Tests
         [Test]
         public void DayAdvance_StopsBeforeTheFixtureDaysOwnSteps()
         {
-            // ERR-030-026. KD-2 pins the order of the nine day-slots but has no slot for "play the
-            // round" — a round is a separate command — so where the fixture sits relative to slots 2
-            // and 4 is settled by AdvanceToNextFixtureDay's loop condition alone, and was written down
-            // nowhere. It stops on REACHING the fixture day, so matchday's own steps run after the
-            // round: right for #41's occurrence draw (an injury sustained in a match is drawn after it,
-            // which is what makes the FR-MD-010 MatchLoad term coherent once ERR-041-010(b) lands),
-            // wrong for the recovery countdown that shares the same atomic step — a player whose
-            // RecoveryRemaining hits 0 on matchday misses a match he had served his time for, so every
-            // injury runs one matchday long.
-            //
-            // Pinned here rather than left emergent, because the balance pass will fit the recovery
-            // tiers straight through this convention and would otherwise absorb the bias silently.
+            // ERR-030-026 → ERR-030-027. KD-2 pins the order of the nine day-slots but has no slot
+            // for "play the round" — a round is a separate command — so where the fixture sits
+            // relative to slots 2 and 4 had to be pinned, not left to fall out of a loop condition.
+            // The pinned convention: AdvanceToNextFixtureDay still stops on REACHING the fixture day
+            // WITHOUT running its steps, and AdvanceAndPlayNextRound runs them itself, PRE-round — so
+            // the recovery countdown lands before selection (a player who served his time plays
+            // today) and the occurrence draw sits on matchday morning, fed by the FR-MD-010
+            // appearance window, which never contains today. The post-round re-run of the same day
+            // inside the next advance must be a cursor no-op, or matchday would be lived twice.
             League league = FourClubLeague();
             SeasonLoop loop = WiredLoop(
                 league, out WorldStore world, out PlayerCareerStates career,
@@ -197,29 +350,49 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.AreEqual(
                 fixtureDay - 1u,
                 career.TrainingBlocks()[0].States[0].LastAdvancedWorldDay,
-                "The last day step run is the fixture day MINUS ONE — matchday's own steps 2 and 4 "
-                + "have not run when the round is played (ERR-030-026).");
+                "AdvanceToNextFixtureDay leaves matchday's own steps unrun — they belong to "
+                + "AdvanceAndPlayNextRound (ERR-030-027).");
             Assert.AreEqual(
                 fixtureDay - 1u,
                 career.MedicalBlocks()[0].States[0].LastAdvancedWorldDay,
-                "…and the same for #41, which is where the one-matchday recovery bias comes from.");
+                "…and the same for #41.");
 
-            // The consequence, made concrete: a player whose recovery would expire ON the fixture day
-            // is still unavailable for it, because his last decrement was the day before.
+            // The convention's consequence, made concrete: a player whose recovery expires ON the
+            // fixture day serves exactly his tier — the pre-round step heals him and he is available
+            // for the round his tier said he would make.
             var injured = InjuryState.Create();
             injured.Severity = InjurySeverity.Minor;
             injured.RecoveryRemaining = 1;
             career.SetMedicalState(league.ClubIds()[0], playerId, in injured);
 
             Assert.IsFalse(career.IsAvailable(league.ClubIds()[0], playerId),
-                "One day of recovery outstanding at kickoff: unavailable for this round, because "
-                + "matchday's countdown runs after it (ERR-030-026).");
+                "One day of recovery outstanding as the clock reaches matchday: still injured, "
+                + "because matchday's own step has not run yet.");
 
             loop.AdvanceAndPlayNextRound(provider);
-            loop.AdvanceDays(1);   // the fixture day's own steps finally run
 
             Assert.IsTrue(career.IsAvailable(league.ClubIds()[0], playerId),
-                "…and he is fit the moment matchday is processed — one round later than his tier says.");
+                "The pre-round day-step ran his last recovery day before selection — available for "
+                + "THIS round, not the next one (ERR-030-027).");
+            Assert.AreEqual(
+                fixtureDay,
+                career.MedicalBlocks()[0].States[0].LastAdvancedWorldDay,
+                "Matchday's own steps ran inside AdvanceAndPlayNextRound.");
+
+            // And matchday is lived exactly once: the next advance re-enters the same world day,
+            // whose career steps must be a cursor no-op — the training accumulator would otherwise
+            // accrue a second day of load for one calendar day.
+            int fatigueAfterRound = career.TrainingBlocks()[0].States[0].TrainingFatigue;
+            int conditionAfterRound = career.TrainingBlocks()[0].States[0].Condition;
+            loop.AdvanceDays(1);
+
+            Assert.AreEqual(fatigueAfterRound, career.TrainingBlocks()[0].States[0].TrainingFatigue,
+                "The post-round re-run of the fixture day's steps must be idempotent (F6) — a second "
+                + "accrual would live matchday twice.");
+            Assert.AreEqual(conditionAfterRound, career.TrainingBlocks()[0].States[0].Condition,
+                "…and the same for the conditioning cursor.");
+            Assert.AreEqual(fixtureDay + 1u, world.CurrentWorldTick,
+                "…while the clock itself still advances past matchday.");
         }
 
         [Test]
@@ -289,7 +462,7 @@ namespace TacticalDirector.SeasonSave.Tests
                 provider.Set(CareerTestRoster.Build(clubIds[i], PlayerDatabaseConstants.CLUB_SQUAD_SIZE));
             }
 
-            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, clubIds);
+            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, clubIds, injuryOccurrenceEnabled: false);
             var world = new WorldStore(ManagerId, WorldSeed);
             var loop = new SeasonLoop(
                 world, league.CreateSeason(0), RoundResolutionMode.FullEngine, career, provider);
@@ -361,7 +534,7 @@ namespace TacticalDirector.SeasonSave.Tests
                 provider.Set(CareerTestRoster.Build(clubIds[i], PlayerDatabaseConstants.CLUB_SQUAD_SIZE));
             }
 
-            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, clubIds);
+            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, clubIds, injuryOccurrenceEnabled: false);
             var loop = new SeasonLoop(
                 new WorldStore(ManagerId, WorldSeed), league.CreateSeason(0),
                 RoundResolutionMode.FullEngine, career, provider);
@@ -445,6 +618,61 @@ namespace TacticalDirector.SeasonSave.Tests
         }
 
         [Test]
+        public void EnginePath_HandsBackTheFilteredElevensIds()
+        {
+            // The AR pass-2 Medium's lock: the fielded XIs come OUT of the resolution
+            // (BootFixtureEngine's id-producing overload), derived from the same filtered squad
+            // instances the ConfigureSquads one statement below consumes — the loop's old second
+            // SelectAvailable walk was an unenforced agreement with that configuration. An injured
+            // starter must therefore be absent from the very ids the appearance record consumes.
+            League league = FourClubLeague();
+            var provider = new CareerTestRoster.MutableSquadProvider();
+            int[] clubIds = league.ClubIds();
+            for (int i = 0; i < clubIds.Length; i++)
+            {
+                provider.Set(CareerTestRoster.Build(clubIds[i], PlayerDatabaseConstants.CLUB_SQUAD_SIZE));
+            }
+
+            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, clubIds, injuryOccurrenceEnabled: false);
+            var loop = new SeasonLoop(
+                new WorldStore(ManagerId, WorldSeed), league.CreateSeason(0),
+                RoundResolutionMode.FullEngine, career, provider);
+
+            Fixture fixture = FirstFixture(loop);
+            Squad home = provider.ResolveByClubId(fixture.HomeClubId);
+
+            var injuredIds = new System.Collections.Generic.List<int>();
+            for (int local = home.Count - 1; local >= home.Count - 7; local--)
+            {
+                var injured = InjuryState.Create();
+                injured.Severity = InjurySeverity.Serious;
+                injured.RecoveryRemaining = 60;
+                career.SetMedicalState(fixture.HomeClubId, home.GetPlayer(local).PlayerId, in injured);
+                injuredIds.Add(home.GetPlayer(local).PlayerId);
+            }
+
+            loop.BootFixtureEngine(in fixture, provider, out int[] homeXi, out int[] awayXi);
+
+            int[] expectedHome = SquadRating.StartingElevenPlayerIds(career.SelectAvailable(home));
+            int[] expectedAway = SquadRating.StartingElevenPlayerIds(
+                career.SelectAvailable(provider.ResolveByClubId(fixture.AwayClubId)));
+            CollectionAssert.AreEqual(expectedHome, homeXi,
+                "the ids handed back are the filtered selector's eleven, in the selector's own order");
+            CollectionAssert.AreEqual(expectedAway, awayXi,
+                "…for the away side too (ERR-008-002's class: never home-only)");
+            for (int i = 0; i < injuredIds.Count; i++)
+            {
+                CollectionAssert.DoesNotContain(homeXi, injuredIds[i],
+                    "an injured player cannot be in the eleven the record will consume");
+            }
+
+            CollectionAssert.AreNotEquivalent(
+                SquadRating.StartingElevenPlayerIds(home), homeXi,
+                "precondition: the injuries genuinely changed the eleven — otherwise the exclusion "
+                + "assertions above are satisfied by a filter that did nothing");
+        }
+
+        [Test]
         public void EnginePath_OnAnUnwiredLoop_BootsExactlyAsBefore()
         {
             // The neutrality floor for the branch above: with no career, BootFixtureEngine must pass
@@ -486,9 +714,11 @@ namespace TacticalDirector.SeasonSave.Tests
 
             Assert.AreEqual(loop.State.Calendar.RoundCount, rounds);
 
-            // Every player advanced up to the last day the clock passed through — no gaps, no double
-            // accrual, across a season's worth of days and a whole league's worth of players.
-            uint lastLivedDay = world.CurrentWorldTick - 1u;
+            // Every player advanced up to the last day lived — no gaps, no double accrual, across a
+            // season's worth of days and a whole league's worth of players. The last command was
+            // AdvanceAndPlayNextRound, whose pre-round step lives the fixture day itself
+            // (ERR-030-027), so the cursors sit ON the clock rather than one behind it.
+            uint lastLivedDay = world.CurrentWorldTick;
             for (int c = 0; c < career.ClubCount; c++)
             {
                 ClubTrainingStates block = career.TrainingBlocks()[c];
@@ -521,6 +751,13 @@ namespace TacticalDirector.SeasonSave.Tests
             int carriedCondition = career.TrainingView(0, carriedId).Condition;
             int generationBefore = career.RosterGeneration;
 
+            // The THIRD state set's carry (AR pass 3): a directly-recorded appearance, because the
+            // carried player is not guaranteed a starter's bits from the season itself. Deleting
+            // the sync's `appearance[i] = heldAppearance[held]` line left every suite green before
+            // this — the pass-6 which-test-fails-if-reverted question, asked of the third set.
+            uint appearanceDay = loop.CurrentWorldDay;
+            career.RecordAppearances(0, new[] { carriedId }, appearanceDay);
+
             // Stand in for #28's season-boundary churn, which is unwired (roadmap D1): club 0 loses its
             // last player (a retirement), and club 1 swaps its last player for a fresh id (a retirement
             // AND a regen in one block). Both directions in one roll, because FR-TR-025 / FR-MD-025
@@ -534,7 +771,14 @@ namespace TacticalDirector.SeasonSave.Tests
             {
                 swappedLocals[k] = k;
             }
-            swappedLocals[swappedLocals.Length - 1] = PlayerDatabaseConstants.CLUB_SQUAD_SIZE + 5;
+            // The regen's suffix must map OUTSIDE every club's id range: this fixture's original
+            // CLUB_SQUAD_SIZE + 5 gave club 1 the id 1×N + (N+5) = 2×N + 5 — which IS club 2's
+            // local-5 player. The ERR-041-019 guard caught the fixture itself demonstrating the
+            // hazard it exists for: the "new allocator" that breaks the generator's accident was
+            // this test, and pre-guard it created two players sharing one id — and one occurrence
+            // draw — silently.
+            swappedLocals[swappedLocals.Length - 1] =
+                PlayerDatabaseConstants.CLUB_SQUAD_SIZE * ClubCount + 5;
             int retiredFromClub1 = club1.GetPlayer(club1.Count - 1).PlayerId;
             provider.Set(CareerTestRoster.Build(1, club1.Count, swappedLocals));
             int regenId = provider.ResolveByClubId(1).GetPlayer(club1.Count - 1).PlayerId;
@@ -547,6 +791,15 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.Throws<System.ArgumentException>(() => career.MedicalView(0, departedId));
             Assert.AreEqual(carriedCondition, career.TrainingView(0, carriedId).Condition,
                 "A departure must not disturb anybody else's accrued state.");
+
+            ClubAppearanceStates club0Appearance = career.AppearanceBlocks()[0];
+            int carriedIndex = System.Array.IndexOf(club0Appearance.PlayerIds, carriedId);
+            Assert.GreaterOrEqual(carriedIndex, 0);
+            Assert.AreEqual(appearanceDay, club0Appearance.States[carriedIndex].BitsAsOfWorldDay,
+                "The appearance record rides the boundary with its player (FR-MD-025's carry, third "
+                + "state set) — a dropped record silently zeroes the FR-MD-010 match-load term.");
+            Assert.AreNotEqual(0u, club0Appearance.States[carriedIndex].RecentBits,
+                "…and the recorded bit itself must survive, not just the anchor.");
 
             Assert.AreEqual(club1.Count, career.TrainingBlocks()[1].Count,
                 "One out, one in — the block's size is unchanged.");
@@ -618,4 +871,33 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | round sits among the KD-2 slots was settled by a loop condition    |
 // |         |            |        | and written down nowhere, and it makes every injury one matchday   |
 // |         |            |        | longer than its tier.                                             |
+// | 1.2     | 2026-08-07 | —      | Balance pass D1 (ERR-030-027): the DayAdvance lock rewritten to    |
+// |         |            |        | the pre-round convention — served-his-time plays THIS round, and   |
+// |         |            |        | matchday is lived exactly once (the conditioning cursor is the     |
+// |         |            |        | discriminating idempotency assertion; Balanced's net fatigue is 0).|
+// |         |            |        | ForLeague call sites declare the now-required dial explicitly.     |
+// | 1.3     | 2026-08-07 | —      | Balance-pass AR pass 2 (M): + EnginePath_HandsBackTheFiltered-     |
+// |         |            |        | ElevensIds — the id-producing BootFixtureEngine overload returns   |
+// |         |            |        | exactly the filtered selector's elevens (both sides), with injured |
+// |         |            |        | starters absent from the ids the appearance record consumes.       |
+// | 1.4     | 2026-08-08 | —      | Balance-pass AR pass 3 (M3 + the ERR-041-019 catch): the roll lock |
+// |         |            |        | records an appearance pre-roll and asserts anchor + bits post-roll |
+// |         |            |        | — the appearance carry finally has a failing-if-reverted test —    |
+// |         |            |        | and the regen fixture's suffix corrected off club 2's id range     |
+// |         |            |        | (the guard's first catch: this fixture had been creating a         |
+// |         |            |        | cross-club duplicate id since T2). Row added at pass 4 (rowless).  |
+// | 1.5     | 2026-08-08 | —      | Balance-pass AR pass 6 (M3): + Constructor_RefusesACareerOff-  |
+// |         |            |        | TheWorldClock — the composition-boundary lock on the pairing   |
+// |         |            |        | the file boundary already refused.                             |
+// | 1.6     | 2026-08-08 | —      | Balance-pass AR pass 7 (M2): the pass-6 pairing lock drove BOTH   |
+// |         |            |        | cursors ahead, so the training branch shadowed the other four    |
+// |         |            |        | predicates — two mutants deleted them with the suite green. Now  |
+// |         |            |        | one case per predicate (medical-ahead, anchor-ahead, lag>=2,     |
+// |         |            |        | medical-only lag) plus the lag-of-one PASS case.                 |
+// | 1.7     | 2026-08-08 | —      | Balance-pass AR pass 8 (M1): + the (a2) training-only-ahead and   |
+// |         |            |        | (c3) training-only-lag cases — pass 7's isolation claim was      |
+// |         |            |        | false for the two FIRST-evaluated predicates (the original lock  |
+// |         |            |        | drove both cursors together, so deleting the training branch     |
+// |         |            |        | left the suite green; demonstrated by mutation). Five predicates,|
+// |         |            |        | five isolating cases, one PASS case.                             |
 #endregion

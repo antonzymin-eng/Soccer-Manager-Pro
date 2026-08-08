@@ -1,8 +1,20 @@
 # Injuries & Medical #41 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.3
+**Last Updated:** August 8, 2026, third final entry (v0.16 — AR pass 16 L3: §3.3's own summary of the assignment aligned with the clamp)
+**Last Updated (prior):** August 8, 2026, second final entry (v0.15 — balance-pass AR pass 15 M1+M2: the §3.1 draw branch made atomic — fallible call before writes — and its assignment gains the RECOVERY_MAX ceiling the code has always applied)
+**Last Updated (prior):** August 8, 2026, final entry of the day (v0.14 — balance-pass AR pass 14 M1: the RECOVERY_MAX guard moved to §3.3's assignment step, the one site whose clamp can breach it)
+**Last Updated (prior):** August 8, 2026, last entry of the day (v0.13 — balance-pass AR pass 13 M1: the guard class completed — RECOVERY_MAX ≥ 1 at the countdown site, the ceiling's positive side at the draw site)
+**Last Updated (prior):** August 8, 2026, even later same day (v0.12 — balance-pass AR pass 12 M3 + L3: §3.1's recovery countdown gains the non-positive-rate refusal; §3.1.1 pins the draw key's canonical spelling and its two sanctioned abbreviations)
+**Last Updated (prior):** August 8, 2026, still later same day (v0.10 — balance-pass AR pass 11 L3: the §3.2 guard mirrors all three lock predicates)
+**Last Updated (prior):** August 8, 2026, later same day (v0.9 — balance-pass AR pass 10 M1: §3.2 enforces the severity-split invariant at the classifying site)
+**Last Updated (prior):** August 8, 2026 (v0.8 — balance-pass AR pass 9 L4: §3.1's pseudocode gains the F8 sentinel-as-worldDay refusal the code has always enforced)
+**Last Updated (prior):** August 8, 2026 (v0.7 — balance-pass AR pass 8: the missing v0.6 version row added (L1); the §3.1.1 transfer note separated from the radix rule it had been fused into (L5))
+**Last Updated (prior):** August 8, 2026 (v0.6 — balance-pass AR pass 4: §3.1.1 records the TRANSFER residual beside the club-term refusal it qualifies (the only cross-club handoff path today RESETS a moved player's career state — worse than the luck-change the refusal prices; #31's arrival obligation, recorded at the code site too); §3.2's overflow bound corrected to 1.6×10⁷ after the pass-1 headroom raise. This header was also STALE at v0.4 while the table below carried v0.5 — the header-drift class #30 §3's history records; pass 1's 1% → 1.6% edit also shipped without a bump, folded into v0.5's row note.)
+**Last Updated (prior):** August 8, 2026 (v0.5 — AR pass 3: §3.1's signature de-phantomed — `rng` → `worldSeed, occurrenceEnabled`, the dial gated in step 2, §3.5's call updated; §3.1.1 gains the ERR-041-019 draw-key global-uniqueness contract)
+**Last Updated (prior):** August 7, 2026 (v0.4 — ERR-041-011 at the balance pass: §3.4 gains the normative-position `BASELINE_DAILY_RISK` term; the draw denominator decouples to the `[FIXED]` per-million `OCCURRENCE_DRAW_DENOM` with the `INJURY_RISK_MAX ≤ DENOM` invariant; §3.1's pseudocode re-anchored onto the keyed derivation (ERR-041-002/ERR-041-012); §3.6 re-derived (6600, + the congestion-clamp line))
+**Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
+**Version:** 0.16
 **Status:** APPROVED
 
 ---
@@ -16,7 +28,17 @@ bucketing), so an occurrence day consumes exactly **one** draw total.
 
 ```
 AdvanceMedicalDay(ref InjuryState s, playerId, in PlayerAttributes a, in InjuryRiskContribution trainingRisk,
-                  in MatchLoad recentMatchLoad, in MedicalModifier medical, worldDay, rng):
+                  in MatchLoad recentMatchLoad, in MedicalModifier medical, worldDay, worldSeed,
+                  occurrenceEnabled):
+    # worldSeed: the CAREER's world seed (WorldStore.WorldSeed) — the draw key's root, never a
+    # per-match seed. occurrenceEnabled: the FR-MD-027 dial, a REQUIRED never-defaulted argument
+    # of the step itself (§2 FR-MD-027 as revised at the balance pass).
+    # F8 — the sentinel itself is not a day: refused outright, BEFORE the cursor checks.
+    # Stored, it would read back as "never advanced" and re-arm the day-0 double-accrual
+    # trap F6 exists to close.
+    if worldDay == MEDICAL_NOT_ADVANCED_SENTINEL:
+        throw ArgumentException                  # sentinel is a reserved value, not a day (F8)
+
     # F6/F7 idempotency — a day is advanced at most once. The sentinel is uint.MaxValue ("never
     # advanced"), NOT 0, so a legitimate world-day 0 cannot collide with the fresh-state value
     # (the day-0 double-accrual trap). InjuryState.Create seeds the sentinel.
@@ -36,24 +58,47 @@ AdvanceMedicalDay(ref InjuryState s, playerId, in PlayerAttributes a, in InjuryR
     #    assigned tier-days at injury time in step 2 — FR-MD-014 — so a fractional multiplier is never
     #    truncated against a base of 1).
     if s.Severity != InjurySeverity.None:
+        # Recovery-rate invariant, enforced HERE at the one countdown site (the §3.4 draw-site
+        # guard posture): a [GT] config key the catalogue lock only sees the fallback of — a
+        # non-positive rate makes every injury PERMANENT, silently (AR pass 12 M3). The RECOVERY_MAX
+        # half lives in §3.3's assignment step (moved at AR pass 14 M1 — here it was provably dead:
+        # the F1 entry gate refuses any injured state above RECOVERY_MAX and forces
+        # RecoveryRemaining >= 1 while injured, so the predicate cannot fire on this branch).
+        if RECOVERY_DAYS_PER_TICK_BASE <= 0:
+            throw InvalidOperationException      # catalogue/config integrity failure
         s.RecoveryRemaining = Clamp(s.RecoveryRemaining - RECOVERY_DAYS_PER_TICK_BASE, 0, RECOVERY_MAX)  # F1
         if s.RecoveryRemaining == 0:
             s.Severity = InjurySeverity.None      # recovered — but ineligible for a NEW occurrence
                                                    # until the NEXT AdvanceMedicalDay call (see above)
 
-    # 2. Occurrence draw — evaluated ONLY for a player healthy at call entry (§3.1 KD-6 guarantee).
-    if wasAvailableAtEntry:
+    # 2. Occurrence draw — evaluated ONLY for a player healthy at call entry (§3.1 KD-6 guarantee),
+    #    and ONLY with the FR-MD-027 dial armed: disarmed, the step is the recovery countdown and
+    #    the cursor advance alone (the FR-MD-027 identity).
+    if wasAvailableAtEntry and occurrenceEnabled:
         risk = AssembleRiskScore(trainingRisk, recentMatchLoad, a, medical)   # §3.4; in [0, INJURY_RISK_MAX]
         actionOrdinal = DeriveActionOrdinal(worldDay, DRAW_PURPOSE_OCCURRENCE)     # §3.1.1
-        draw = rng.DrawKeyed(STREAM_INJURIES_OCCURRENCE, entityId: playerId,
-                              actionOrdinal: actionOrdinal, drawIndex: 0)          # in [0, OCCURRENCE_DRAW_DENOM)
+        # ERR-041-002 (re-anchored at ERR-041-011): the draw is a LOCAL KEYED DERIVATION, not a
+        # registered-stream call — #16 exposes no keyed-draw API and a registered stream is
+        # cursor-positioned, which KD-1/FR-MD-007 forbid. DrawOccurrence folds
+        # DOMAIN_TAG_INJURIES_MEDICAL, then playerId, then actionOrdinal, each through a SplitMix64
+        # finalizer, reduced modulo the [FIXED] denominator:
+        draw = DrawOccurrence(worldSeed, playerId, actionOrdinal)                  # in [0, OCCURRENCE_DRAW_DENOM)
         if draw < risk:                            # occurrence — the SAME draw also classifies severity (§3.2)
             severity = ClassifySeverityFromDraw(draw, risk)                       # §3.2 — NO second draw
-            s.Severity           = severity
+            # RECOVERY_MAX >= 1 refused HERE, before ANY write (AR pass 14 M1 sited the guard; AR
+            # pass 15 M1 made the branch atomic — with Severity written first, the refusal itself
+            # left a half-injured career): a refused advance mutates nothing (the F7 standard).
+            if RECOVERY_MAX < 1:
+                throw InvalidOperationException  # catalogue/config integrity failure (§3.3)
             # staff recovery-speed applied ONCE here (integer), not per-tick (FR-MD-014). Floor at 1 so a
-            # confirmed injury always has >= 1 recovery-day — an aggressive multiplier must never divide the
-            # assigned days to 0, which would leave RecoveryRemaining == 0 while Severity != None (F1 breach):
-            s.RecoveryRemaining  = Max(1, RecoveryDaysForTier[severity] * 1000 / medical.RecoverySpeedMillMult)
+            # confirmed injury always has >= 1 recovery-day, ceiling at RECOVERY_MAX (AR pass 15 M2 —
+            # the ceiling was in the code and FR-MD-014's countdown clause but NOT in this normative
+            # step: an implementer following it wrote 241+ for a slow physio on the Serious tier,
+            # which ValidateState refuses the next day):
+            recoveryDays = Clamp(RecoveryDaysForTier[severity] * 1000 / medical.RecoverySpeedMillMult,
+                                 1, RECOVERY_MAX)
+            s.Severity           = severity
+            s.RecoveryRemaining  = recoveryDays
             s.InjuryCount       += 1
 
     # 3. Advance the idempotency cursor
@@ -76,7 +121,39 @@ DeriveActionOrdinal(worldDay, purpose) -> u64:
 A pure bijection from `(worldDay, purpose)` to a single `u64` — **not** an incrementing counter. Two calls
 with the same `(playerId, worldDay, purpose)` always resolve to the same draw regardless of call order
 across players or days, which is what makes the stream position-independent and gives it nothing to
-persist (FR-MD-006/007). The radix is the **FIXED** constant `DRAW_PURPOSE_RADIX` (Appendix A) — **not**
+persist (FR-MD-006/007).
+
+**Spelling rule (AR pass 12, L3):** the draw key's canonical full spelling is
+`(worldSeed, playerId, actionOrdinal = worldDay × DRAW_PURPOSE_RADIX + purpose)`. Three abbreviations
+are sanctioned and mean the same key: `(worldSeed, playerId, worldDay, purpose)` — the ordinal expanded
+into its two components (the outline/§2.2/#16-row form, sanctioned at AR pass 13 L1); `(playerId,
+worldDay, purpose)` — the varying components, the seed being career-constant (FR-MD-006's form); and
+"keyed on `PlayerId` with no club term" where only the club-absence matters (FR-SQ-010's form). Any
+other spelling is a defect; three drifted spellings of this one key have already cost a sweep.
+
+**The full draw key is `(worldSeed, playerId, actionOrdinal)` — there is NO club term, so it requires
+`PlayerId` to be GLOBALLY unique across the career (ERR-041-019).** That is a stronger promise than #27
+makes: the squad/player data layer scopes `PlayerId` uniqueness to a club (its KD-3), and #30's career
+state is keyed `(ClubId, PlayerId)` on exactly that premise. Two clubs carrying the same id would draw
+bit-identical injury luck on every world day forever — silent and indistinguishable from chance. Today's
+`RosterGenerator` allocation (`clubId × CLUB_SQUAD_SIZE + local`) happens to be globally unique, but that
+is an accident of one allocator, not a contract; the precondition is therefore enforced fail-loud at
+career construction and roster sync (`PlayerCareerStates`, the one layer that spans clubs), and any
+future id allocator (#42 youth intake, #31 transfers) MUST preserve it. Deliberately NOT fixed by adding
+`ClubId` to the key: the key is frozen by the same argument that pinned the denominator `[FIXED]` at
+ERR-041-011 — changing it re-rolls every career's injury luck — and a club term would additionally make a
+transferred player's luck change with his club, which FR-MD-006's "the player carries his medical
+identity" posture refuses.
+
+**Recorded, not fixed (AR pass 4):** the only cross-club handoff path that exists today —
+`PlayerCareerStates`' per-club roster reconciliation — does WORSE than change a moved player's luck: it
+resets his career state entirely (departure at the old club, `Create()` at the new one — conditioning,
+injury history and any active injury gone; he arrives fit). Inert while no allocator moves players
+between clubs, and deliberately not fixed here: carrying state across clubs is #31 Transfers' arrival
+obligation (ERR-041-019's global-id guarantee is what makes it implementable — one pre-pass keyed on the
+now-unique id), and the code site carries the same record.
+
+The radix is the **FIXED** constant `DRAW_PURPOSE_RADIX` (Appendix A) — **not**
 the current purpose count — so appending a Stage-3 purpose ordinal (`DRAW_PURPOSE_OCCURRENCE = 0` today; a
 future recurrence draw = 1, …) leaves **every existing** `(worldDay, Occurrence)` ordinal unchanged
 (`worldDay × RADIX + 0`), preserving cross-version replay/save parity. Using the growing purpose *count* as
@@ -88,11 +165,23 @@ MUST stay `< DRAW_PURPOSE_RADIX` (a catalogue invariant).
 
 ```
 ClassifySeverityFromDraw(draw, risk) -> InjurySeverity:
+    # Split invariant, enforced HERE at the one classifying site (the §3.4 draw-site guard posture):
+    # both numerators NON-NEGATIVE (zero is a deliberate empty tier; NEGATIVE silently deletes its
+    # tier through the same mechanism the sum bound stops), and their sum strictly <
+    # SEVERITY_PERMILLE_DENOM — both numerators are [GT] config keys, the catalogue suite only sees
+    # the fallbacks, and at a sum of exactly 1000 the second bucket's bound is this method's own
+    # precondition, so Serious would be silently unreachable (Appendix A).
+    if SEVERITY_MINOR_PERMILLE < 0 or SEVERITY_MODERATE_PERMILLE < 0:
+        throw InvalidOperationException          # catalogue/config integrity failure
+    if SEVERITY_MINOR_PERMILLE + SEVERITY_MODERATE_PERMILLE >= SEVERITY_PERMILLE_DENOM:
+        throw InvalidOperationException          # catalogue/config integrity failure
+
     # draw is already known to be < risk here (an occurrence was confirmed in §3.1). Bucket the SAME
     # draw value deterministically by FIXED proportions (Appendix A) — this is NOT a second RNG draw;
     # KD-1 draws exactly once per player per occurrence-eligible day. INTEGER cross-multiplication (no
-    # float division): draw/risk < n/1000  ⇔  draw*1000 < risk*n. Products are bounded well within int
-    # range (draw,risk <= INJURY_RISK_MAX = 10000 ⇒ <= 10^7); use a widening (long) product to be safe.
+    # float division): draw/risk < n/1000  ⇔  draw*1000 < risk*n. draw < risk <= INJURY_RISK_MAX here
+    # (an occurrence was confirmed), so products are bounded by INJURY_RISK_MAX × 1000 = 1.6 × 10^7 (10^7 before the balance-pass AR raised the ceiling to 16,000); the
+    # implementation widens to long so a raised [GT] ceiling cannot silently overflow (ERR-041-011).
     if draw * SEVERITY_PERMILLE_DENOM < risk * SEVERITY_MINOR_PERMILLE:
         return InjurySeverity.Minor
     elif draw * SEVERITY_PERMILLE_DENOM < risk * (SEVERITY_MINOR_PERMILLE + SEVERITY_MODERATE_PERMILLE):
@@ -111,10 +200,19 @@ under `deepMedicalEnabled` off (KD-4/FR-MD-013) — one code path, not a fork.
 day of `RecoveryRemaining` consumed per world day). Staff recovery-speed is **not** a per-tick multiplier
 (against a base of 1 an integer multiply would truncate every fractional rate to a no-op); instead
 `MedicalModifier.RecoverySpeedMillMult` scales the **assigned tier recovery-days once at injury time**
-(§3.1 step 2, floored at 1), so a faster physio assigns fewer total days and the countdown stays a clean
+(§3.1 step 2, clamped to `[1, RECOVERY_MAX]` — the third statement of this rule, aligned at AR pass 16 L3), so a faster physio assigns fewer total days and the countdown stays a clean
 integer 1/day. `MedicalModifier.Identity` is per-mille `1000` = ×1.0, so a no-staff game recovers in exactly
 the severity tier's recovery-days constant. No RNG and no float is involved in recovery — a deterministic
 integer countdown (FR-MD-014).
+
+**The `RECOVERY_MAX ≥ 1` invariant is enforced at the assignment** (AR pass 14 M1 — moved from §3.1's
+countdown guard, where the F1 entry gate makes it provably unreachable under any config): with
+`RECOVERY_MAX < 1` the assignment clamp's `value > max` arm would return `RECOVERY_MAX` — an
+F1-breaching value for a confirmed injury. `AssignRecoveryDays` fail-louds
+(`InvalidOperationException`, catalogue/config integrity) before the clamp, **and the §3.1 draw branch
+sequences that call before ANY state write** (AR pass 15 M1 — with `Severity` written first, the
+refusal itself left a half-injured career behind; prevention is the ordering's property, the guard
+alone only made the breach loud).
 
 ## 3.4 The risk-score assembly (`AssembleRiskScore`, pure)
 
@@ -123,19 +221,37 @@ AssembleRiskScore(in InjuryRiskContribution trainingRisk, in MatchLoad load, in 
                    in MedicalModifier medical) -> int:
     # All terms and weights are INTEGER (no float — FR-MD-014).
     risk = TRAINING_RISK_PASSTHROUGH_WEIGHT * trainingRisk.RiskScore        # #29's already-published scalar (weight = 1)
-         + APPEARANCE_LOAD_WEIGHT * load.AppearanceDays                    # Stage-2 match-load term
+         + APPEARANCE_LOAD_WEIGHT * load.AppearanceDays                    # Stage-2 match-load term (FR-MD-010 window count)
          + HARD_CONTACT_WEIGHT * load.HardContacts                         # 0 at Stage 2 (deep-tier only)
+         + BASELINE_DAILY_RISK                                             # exposure-independent floor (ERR-041-011)
          - RobustnessMitigation(a)                                         # deterministic, own-attribute
     risk = risk * medical.OccurrenceRiskMillMult / 1000                    # per-mille; ×1.0 at Identity (KD-5)
     return Clamp(risk, 0, INJURY_RISK_MAX)
 ```
 
+**`BASELINE_DAILY_RISK`'s position is normative** (ERR-041-011): it sits **inside the sum, before the
+mitigation**, so robustness discriminates the exposure-independent floor — a frail player's quiet week
+is riskier than an iron man's — and, because #27 attributes floor at 1 and the default magnitudes keep
+`BASELINE_DAILY_RISK` above the largest mitigation row, no valid-input player is ever injury-proof (the
+third absurdity the T0 fifth AR pass measured: the default focus converged on exactly-0-forever). It is
+the exposure-INDEPENDENT term: the research-alignment supplement's R-2 under-exposure arm must re-fit
+against it rather than add beside it, or the left tail is priced three times (its §10 concern).
+
 `RobustnessMitigation` is a fixed deterministic map over existing #27 physical attributes (e.g. `Strength` /
 `Stamina` / `Balance` — never RNG, FR-MD-015); a dedicated `InjuryProneness` attribute is a recorded deep-tier
 #27 append, not consumed here. `trainingRisk` is read-only (KD-2, FR-MD-009); `load` is a value the caller
-supplies (FR-MD-010) — #41 never tracks match participation itself. The result is clamped to the same
-`[0, INJURY_RISK_MAX]` scale the occurrence draw compares against (§3.1), so `OCCURRENCE_DRAW_DENOM ==
-INJURY_RISK_MAX` (Appendix A) and no extra scale factor is needed between the assembled score and the draw.
+supplies (FR-MD-010) — #41 never tracks match participation itself. The result is clamped to
+`[0, INJURY_RISK_MAX]`, and §3.1 tests `draw < risk` against a draw uniform in the **`[FIXED]`
+`OCCURRENCE_DRAW_DENOM` = 1,000,000** — so the assembled score IS the daily probability numerator on a
+per-million scale, capped at `INJURY_RISK_MAX / OCCURRENCE_DRAW_DENOM` (1.6% at today's values — the ceiling was raised 10000 → 16000 at the balance-pass AR so one appearance plus the baseline, 9,600, leaves the #29 and robustness terms real range instead of compressing them into the top 4% of the clamp; 16000 stays below #29's ~19,960 unclamped producer maximum, so the clamp still binds).
+**The denominator is deliberately DECOUPLED from the `[GT]` ceiling** (ERR-041-011, retiring the old
+`OCCURRENCE_DRAW_DENOM == INJURY_RISK_MAX` identity): the draw is `hash % denominator`, so the
+denominator determines the VALUE of every draw, not merely a threshold — a config-tunable denominator
+would re-roll every career's injury luck on a config edit, with the save recording nothing about which
+config produced it. Pinned, config edits move only thresholds. Invariant: `0 < INJURY_RISK_MAX ≤
+OCCURRENCE_DRAW_DENOM`, enforced fail-loud at the draw site on BOTH sides (a ceiling past the
+denominator would make a clamped risk mean "certain and then some"; a non-positive ceiling clamps every
+score to 0 and the ARMED dial injures nobody, forever, silently — AR pass 13 M1).
 
 ## 3.5 Composition at #30's day-advance loop (informative)
 
@@ -145,9 +261,10 @@ pins (after #28/#29/#33, before `WorldStore.AdvanceDay()`):
 ```
 for each playerId in club roster:
     trainingRisk    = TrainingSystem.ComputeInjuryRisk(trainingState[playerId], attrs[playerId])   # #29 read
-    recentMatchLoad = ... caller-supplied MatchLoad (Stage 2: AppearanceDays from #30's fixture result) ...
+    recentMatchLoad = ... caller-supplied MatchLoad (Stage 2: AppearanceDays from #30's per-player
+                          appearance record — the FR-MD-010 window count; ERR-041-010(b)) ...
     AdvanceMedicalDay(ref medicalState[playerId], playerId, attrs[playerId], trainingRisk,
-                       recentMatchLoad, medical, worldDay, rng)
+                       recentMatchLoad, medical, worldDay, worldSeed, occurrenceEnabled)
 ```
 
 Because this slot runs strictly after #29's own slot-2 `AdvanceTrainingDay` (per #30's KD-2 tick order),
@@ -157,15 +274,22 @@ per FR-MD-025 (regen insert / retiree remove).
 
 ## 3.6 Worked example
 
-Player 501, world day 205: `TrainingRiskContribution.RiskScore = 3000`, `MatchLoad.AppearanceDays = 2`
-(`APPEARANCE_LOAD_WEIGHT = 150`), mean robustness attribute `14` (`RobustnessMitigation(14) = 400`),
-`MedicalModifier.Identity`.
+Player 501, world day 205: `TrainingRiskContribution.RiskScore = 3000`, `MatchLoad.AppearanceDays = 0`
+(no match in the FR-MD-010 window), mean robustness attribute `14` (`RobustnessMitigation(14) = 400`),
+`BASELINE_DAILY_RISK = 4000`, `MedicalModifier.Identity`. *(Re-derived at ERR-041-011; the pre-balance-
+pass example used `AppearanceDays = 2` at weight 150 and no baseline, assembling 2900.)*
 
-- `risk = 1×3000 + 150×2 − 400 = 2900` (× `OccurrenceRiskMillMult 1000 / 1000` = unchanged; clamp within
-  `[0, 10000]` inactive).
-- Suppose `draw = 1500` (keyed on `(playerId=501, worldDay=205, purpose=Occurrence)`). Since `1500 < 2900`,
-  an occurrence is confirmed. Integer bucketing: `draw×1000 = 1_500_000` vs `risk×SEVERITY_MINOR_PERMILLE =
-  2900×600 = 1_740_000`; `1_500_000 < 1_740_000` ⇒ **Minor**. `RecoveryDaysForTier[Minor] = 7`; at
+- `risk = 1×3000 + 0 + 4000 − 400 = 6600` (× `OccurrenceRiskMillMult 1000 / 1000` = unchanged; clamp
+  within `[0, 16000]` inactive) — a 0.66%/day probability against the per-million draw. *(The same
+  player the week after two matches assembles `3000 + 2×5600 + 4000 − 400 = 17800`, which CLAMPS to
+  `INJURY_RISK_MAX = 16000`: a heavily-loaded congested week sits at the hard 1.6%/day ceiling —
+  what sits beyond the cap is the residual the research supplement's R-2 refit inherits. A formula
+  probe, not live Stage-0 behaviour: with `DaysBetweenRounds` = `APPEARANCE_WINDOW_DAYS` = 7 the
+  wired schedule never yields `AppearanceDays = 2` — that input arrives with #43's congested cup
+  calendars.)*
+- Suppose `draw = 3500` (keyed on `(playerId=501, worldDay=205, purpose=Occurrence)`). Since `3500 < 6600`,
+  an occurrence is confirmed. Integer bucketing: `draw×1000 = 3_500_000` vs `risk×SEVERITY_MINOR_PERMILLE =
+  6600×600 = 3_960_000`; `3_500_000 < 3_960_000` ⇒ **Minor**. `RecoveryDaysForTier[Minor] = 7`; at
   `RecoverySpeedMillMult = 1000`, `RecoveryRemaining = max(1, 7×1000/1000) = 7`.
 - `InjuryState`: `Severity = Minor`, `RecoveryRemaining = 7`, `InjuryCount += 1`, `LastAdvancedWorldDay =
   205`.
@@ -186,4 +310,17 @@ Player 501, world day 205: `TrainingRiskContribution.RiskScore = 3000`, `MatchLo
 | 0.1 | 2026-07-23 | — | Initial algorithms: `AdvanceMedicalDay`, action-ordinal derivation, severity bucketing, risk-score assembly, composition, worked example. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1 (1M): integer-arithmetic fix — no float division; integer per-mille severity bucketing; recovery-speed applied once at injury assignment (floored at 1 for F1 coherence); per-mille occurrence-risk mult; worked example redone in integer form. |
 | 0.3 | 2026-07-23 | — | AR-2 (1M): §3.1.1 `DeriveActionOrdinal` uses the fixed `DRAW_PURPOSE_RADIX` (was the growing purpose count, which broke cross-version replay parity on append) + a purpose bound guard. |
+| 0.4 | 2026-08-07 | — | **ERR-041-011 / ERR-041-012 (the balance pass)**: §3.4 formula gains `BASELINE_DAILY_RISK` inside the sum before the mitigation (position normative — robustness discriminates the floor; kills the exactly-0-forever default); the `OCCURRENCE_DRAW_DENOM == INJURY_RISK_MAX` identity retired — denominator `[FIXED]` at 1,000,000, ceiling stays the `[GT]` clamp (1.6%/day since the balance-pass AR raised it 10,000 → 16,000; this row originally said 1%/day and was corrected like its appendices counterpart), invariant enforced at the draw site; §3.1 pseudocode shows the real keyed derivation instead of the phantom `rng.DrawKeyed`; §3.2's bound note updated; §3.5 names the ERR-041-010(b) appearance record; §3.6 worked example re-derived (6600; congestion clamps at the ceiling). |
+| 0.5 | 2026-08-08 | — | **Balance-pass AR pass 3 (M5 + H1)**: §3.1's normative signature de-phantomed — `rng` (which the body never used) becomes `worldSeed, occurrenceEnabled`, and step 2 gates on `wasAvailableAtEntry and occurrenceEnabled` (FR-MD-027 is a required parameter of the step, so the algorithm that governs the armed subsystem now names the dial — the ERR-041-012 class recurring one section away); §3.5's composition call updated to match. **§3.1.1 gains the draw-key uniqueness contract (ERR-041-019)**: the key has no club term, so `PlayerId` must be GLOBALLY unique — stronger than #27's club-scoped KD-3 — enforced fail-loud at `PlayerCareerStates` construction/sync; a club term in the key is refused (re-rolls every career; a transfer would change a player's luck). v0.4's "1%/day" corrected in place to 1.6%. |
+| 0.6 | 2026-08-08 | — | **Balance-pass AR pass 4 (M4/M5/L6)**: §3.1.1 gains the transfer-reset RECORDED-NOT-FIXED residual beside the club-term refusal it qualifies; §3.2's overflow bound corrected to 1.6×10⁷; header currency repaired. (Row added at AR pass 8 — the v0.6 edit shipped rowless, the class this chain keeps meeting; pass 5's §3.6 congestion formula-probe note also rides under this version.) |
+| 0.7 | 2026-08-08 | — | **Balance-pass AR pass 8 (L1 + L5)**: the v0.6 row itself (added here — the version existed only in the header); the §3.1.1 paragraph break separating the pass-4 transfer note from the DRAW_PURPOSE_RADIX rule that had come to read as its continuation. |
+| 0.8 | 2026-08-08 | — | **Balance-pass AR pass 9 (L4)**: §3.1's pseudocode gains the `worldDay == MEDICAL_NOT_ADVANCED_SENTINEL` refusal (**F8**, new in §2.3) that `MedicalStep.AdvanceMedicalDay` has enforced since T0 with no normative source — a production fail-loud with no spec row is the ERR-041-012 class inverted. Mirrored at the #29 sibling (`training-system` §2.3/§3.1) in the same commit — the folder-boundary lesson applied forward. |
+| 0.9 | 2026-08-08 | — | **Balance-pass AR pass 10 (M1)**: §3.2's pseudocode gains the fail-loud split-invariant guard at the classifying site — both numerators are `[GT]` config keys, the catalogue suite only sees the fallbacks (ERR-041-003's class), and a config summing to the denominator deleted the `Serious` tier silently. The §3.4 draw-site guard posture, at #41's other config-breakable invariant. |
+| 0.10 | 2026-08-08 | — | **Balance-pass AR pass 11 (L3)**: the §3.2 guard was ONE of the design-time lock's three predicates while both new comments called them two halves of one invariant — a negative `[GT]` numerator passed the sum guard and silently deleted its own tier (the pass-6 rule-at-one-boundary shape, inside the fix being verified). Non-negativity added; zero stays legal (an expressible empty-tier intent). |
+| 0.11 | 2026-08-08 | — | **Balance-pass AR pass 12 (M3)**: `RECOVERY_DAYS_PER_TICK_BASE` was the one `[GT]` in the landing whose design-time lock had NO runtime mirror *(claim corrected at v0.13 — two more sides were unmirrored)* — non-positive, the countdown never falls and every injury is permanent, silently, with the armed dial progressively injuring the whole league; §3.1 gains the fail-loud refusal at the countdown site (the §3.4 guard posture, fourth instance). |
+| 0.12 | 2026-08-08 | — | **Balance-pass AR pass 12 (L3)**: §3.1.1 pins the key's canonical spelling + the two sanctioned abbreviations — the key had accumulated three drifted spellings across two assemblies and two specs, and a sweep needs a rule, not a preference. *(Folded into the same pass as v0.11 — one bump per pass would have hidden the two distinct changes.)* |
+| 0.13 | 2026-08-08 | — | **Balance-pass AR pass 13 (M1 + L1)** *(the RECOVERY_MAX half's placement corrected at v0.14 — the countdown site cannot reach it)*: *(L1: the §3.1.1 spelling rule gains the 4-tuple as a third sanctioned expansion — three live sites already used it and the rule as written made them defects.)* v0.11's "the one `[GT]` whose lock had no runtime mirror" was FALSE — `RECOVERY_MAX` had none (below 1, the §3.3 assignment clamp's min exceeds its max and writes `RecoveryRemaining == 0` while injured — the F1 breach the floor's own doc names — surfacing a day later as data corruption blamed on the state), and `INJURY_RISK_MAX`'s guard was one-sided (non-positive: the armed dial injures nobody, forever, silently — the pass-12 failure shape itself). §3.1's countdown guard and §3.4's draw-site invariant now cover both. |
+| 0.14 | 2026-08-08 | — | **Balance-pass AR pass 14 (M1)** *(its "fail-louds before the clamp" prevention claim corrected at v0.15 — the branch wrote Severity first)*: v0.13 placed the `RECOVERY_MAX < 1` refusal on the countdown branch, where it is PROVABLY DEAD — the F1 entry gate refuses any injured state above the ceiling and forces `RecoveryRemaining ≥ 1` while injured, so the predicate is unsatisfiable there under any config, while the breach it names happens on the mutually exclusive draw branch (demonstrated by model: a healthy player drawn injured gets `RecoveryRemaining == 0` written beside a severity, refused a day later as a state fault). Moved to §3.3's assignment step; §3.1's guard reverts to rate-only. A guard on a mutually-exclusive branch ships green precisely because it is unreachable — the pass-13 verification gap. |
+| 0.15 | 2026-08-08 | — | **Balance-pass AR pass 15 (M1 + M2)**: **M1** — the pass-14 guard fired AFTER `s.Severity` was written, making the draw branch the step's one partial-write throw site: the refusal itself left `RecoveryRemaining == 0` beside a fresh severity in the LIVE career, the exact breach being refused, surfacing a day later as a state-blaming fault (demonstrated by model; fixing the config did not recover the session). The branch is now atomic — fallible call first, three writes after — and the three prevention claims are corrected: prevention is the ORDERING's property. **M2** — §3.1's normative assignment had NO `RECOVERY_MAX` ceiling while the code has always clamped to it: an implementer following the step wrote 241+ for a below-average physio on the Serious tier, refused by `ValidateState` the next day and persisted happily by the codec. The ceiling was only in the two paragraphs pass 14 wrote — the normative step now carries `Clamp(…, 1, RECOVERY_MAX)` and FR-MD-014's assignment clause gains the ceiling. |
+| 0.16 | 2026-08-08 | — | **Balance-pass AR pass 16 (L3)**: §3.3's prose — the section that OWNS recovery-speed modulation — still said "floored at 1" after M2 swept the other two statements of the rule; the third aligned (the grep-boundary class, one clause short of the owning section). |
 #endregion

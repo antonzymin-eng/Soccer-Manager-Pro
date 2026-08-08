@@ -1,17 +1,20 @@
 # Training System #29 — Section 9: Approval Checklist
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.3 — PASS-2 hostile re-review 1H+6M+2L recorded in §9.3.1, all fixed →
+**Last Updated:** August 8, 2026 (v0.4 — the lint sweep: the §9 preamble tensed to since-landed)
+**Last Updated (prior):** July 23, 2026 (v0.3 — PASS-2 hostile re-review 1H+6M+2L recorded in §9.3.1, all fixed →
 re-converged; FR set 24 → 26; re-affirmed APPROVED)
-**Version:** 0.3
+**Version:** 0.4
 **Status:** APPROVED
 **Source:** `docs/tracking/training-system-design.md` v0.4
 
 ---
 
 Checklist entries are verified against real source; nothing is checked without a programmatically verifiable
-anchor (CLAUDE.md "Never fabricate verification values"). This is a **forward-design** spec — implementation
-gates are open by construction (nothing is built yet); review gates track the pipeline.
+anchor (CLAUDE.md "Never fabricate verification values"). Authored as a **forward-design** spec with the
+implementation gates open by construction; **since landed** — T0 (Aug 5), T1 (Aug 6), T2 (Aug 6) all live
+in `src/training-system/` + `src/season-save/` (currency corrected at the lint sweep, August 8, 2026);
+review gates track the pipeline.
 
 ## 9.1 Content gates
 
@@ -153,4 +156,5 @@ post-APPROVED sequence.
 | 0.1 | 2026-07-23 | — | Initial checklist. Content/consistency gates checked; review gates OPEN by construction. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Design-AR (1H+1M+2L) + PASS-1 (1M) → AR-2 → AR-3 recorded (§9.3.1); R-01..R-05 signed; §9.6 APPROVED. |
 | 0.3 | 2026-07-23 | — | PASS-2 hostile re-review (1H regen/retire lifecycle + 6M + 2L) → PASS-2 convergence; FR set 24 → 26 (FR-TR-025/026); R-02/R-03 + §9.6 updated; re-affirmed APPROVED. |
+| 0.4 | 2026-08-08 | — | **Lint sweep**: the §9 preamble still read "nothing is built yet" of a subsystem live at #30's slot 2 (the pass-13-L4 class, in the approval checklist). |
 #endregion

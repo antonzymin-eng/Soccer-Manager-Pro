@@ -1,7 +1,8 @@
 # Club Finances & Economy #40 — Appendices
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — AR-1 wage-semantics fix; prior v0.1 initial)
+**Last Updated:** August 8, 2026 (v0.2 — balance-pass AR pass 8 M2, the ERR-041-012 back-prop: the T-FN-NEU-003 comparator claimed #41 "does register a stream" — false since ERR-041-012; #41's occurrence draw registers nothing, same as #40's minimal tier)
+**Last Updated (prior):** July 23, 2026 (v0.2 — AR-1 wage-semantics fix; prior v0.1 initial)
 **Version:** 0.2
 **Status:** APPROVED
 
@@ -63,13 +64,14 @@ identity multiply changes nothing, T-FN-NEU-001). `ClubFinances.CreateInitial(st
 `{ Balance: startingBalance, TransferBudget: 0, WageBudget: 0, WageBillAggregate: 0, SeasonRevenueAccrued:
 0, FfpBalanceWindow: 0 }` — the pre-first-season identity (T-FN-NEU-002). Because the minimal tier registers
 **no** RNG stream at all (KD-2), reserving `_RESERVED_0x29_`/91 leaves every existing stream's cursor
-byte-identical **trivially** — a stronger property than #41's `injuries.occurrence` (which *does* register a
-stream, just one proven independent of every other) — there is nothing yet to be independent *of*
-(T-FN-NEU-003).
+byte-identical **trivially** — the same property #41's occurrence draw has for the same reason (since
+ERR-041-012, #41 also registers NO stream; this line originally claimed the opposite as its comparator)
+— there is nothing yet to be independent *of* (T-FN-NEU-003).
 
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial constant catalogue + worked examples (mid-season + mid-boundary-roll save/restore; behaviour-neutral identity). Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1 (1M): Appendix B mid-season example updated — wage transactions leave `Balance` unchanged. |
+| 0.2 | 2026-08-08 | — | **ERR-041-012 back-prop (balance-pass AR pass 8, M2)**: the Appendix C comparator asserted #41 registers an `injuries.occurrence` stream — a factual claim about a sibling spec that ERR-041-012 established as never-true; restated. |
 #endregion

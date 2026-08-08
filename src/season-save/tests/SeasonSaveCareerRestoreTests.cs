@@ -1,5 +1,6 @@
 // File:     src/season-save/tests/SeasonSaveCareerRestoreTests.cs
 // Created:  2026-08-06
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-3 / KD-6;
 //           Injuries & Medical #41 FR-MD-023; Squad/Player Data Layer #27 T3 (KD-T3-3, restore
@@ -67,7 +68,7 @@ namespace TacticalDirector.SeasonSave.Tests
         {
             League league = FourClubLeague();
             CareerTestRoster.MutableSquadProvider provider = ProviderOver(league);
-            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, league.ClubIds());
+            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, league.ClubIds(), injuryOccurrenceEnabled: false);
             var world = new WorldStore(ManagerId, WorldSeed);
             var loop = new SeasonLoop(
                 world, league.CreateSeason(0), RoundResolutionMode.QuickSimAll, career, provider);
@@ -82,7 +83,9 @@ namespace TacticalDirector.SeasonSave.Tests
 
             SeasonSaveContents contents = SeasonSaveManager.Load(path, provider);
             PlayerCareerStates restored =
-                PlayerCareerStates.FromBlocks(contents.TrainingClubs, contents.MedicalClubs);
+                PlayerCareerStates.FromBlocks(
+                    contents.TrainingClubs, contents.MedicalClubs, contents.AppearanceClubs,
+                    injuryOccurrenceEnabled: false);
 
             Assert.AreEqual(conditioned, restored.TrainingView(0, playerId).Condition,
                 "The loop overload must write the career the loop actually drives — not an empty block.");
@@ -102,6 +105,8 @@ namespace TacticalDirector.SeasonSave.Tests
             SeasonSaveContents contents = SeasonSaveManager.Load(path, league);
             Assert.AreEqual(0, contents.TrainingClubs.Length);
             Assert.AreEqual(0, contents.MedicalClubs.Length);
+            Assert.AreEqual(0, contents.AppearanceClubs.Length,
+                "the third mandatory block writes and loads as a well-formed empty set too (AR pass 3)");
         }
 
         // ── the restore-fidelity lock ──────────────────────────────────────────────────────
@@ -122,7 +127,7 @@ namespace TacticalDirector.SeasonSave.Tests
             CareerTestRoster.MutableSquadProvider provider = ProviderOver(league);
             provider.Set(CareerTestRoster.Build(0, PlayerDatabaseConstants.CLUB_SQUAD_SIZE));
 
-            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, league.ClubIds());
+            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, league.ClubIds(), injuryOccurrenceEnabled: false);
             Squad full = provider.ResolveByClubId(0);
             for (int local = full.Count - 1; local >= full.Count - 7; local--)
             {
@@ -189,4 +194,9 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | lock — a mid-match save whose squad was availability-filtered   |
 // |         |            |        | must restore the same eleven, not one re-selected from the      |
 // |         |            |        | unfiltered roster.                                              |
+// | 1.1     | 2026-08-07 | —      | Balance pass D2/D4: FromBlocks carries the appearance block and    |
+// |         |            |        | the now-required dial argument (false here — these locks isolate   |
+// |         |            |        | restore fidelity, not occurrence).                                 |
+// | 1.2     | 2026-08-08 | —      | Balance-pass AR pass 3 (L3): the unwired-loop empty-blocks lock    |
+// |         |            |        | asserts the appearance set too.                                    |
 #endregion

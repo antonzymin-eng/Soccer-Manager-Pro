@@ -1,16 +1,22 @@
 # Injuries & Medical #41 — Section 9: Approval Checklist
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — AR-1/AR-2/AR-3 recorded; R-01..R-05 signed; APPROVED)
-**Version:** 0.2
+**Last Updated:** August 8, 2026 (v0.6 — the lint sweep: the §9 preamble tensed to since-landed)
+**Last Updated (prior):** August 8, 2026, later same day (v0.5 — balance-pass AR pass 10 L5, relabelled v0.4 → v0.5 at pass 11 L1: the renumber commit was itself a versioned change and had claimed the same v0.4 the renumbered pass-9 row now holds — the pass-7 row had duplicated version 0.2; rows renumbered 0.3/0.4 and this chain relabelled to match)
+**Last Updated (prior):** August 8, 2026 (v0.4, as-published v0.3 — balance-pass AR pass 9 M2: the §9.1 KD-1 gate and the §9.6 Decision's T-phase list stop ordering the registration the spec forbids)
+**Last Updated (prior):** August 8, 2026 (v0.3, as-published v0.2 — balance-pass AR pass 7 M1: R-02's evidence phrase no longer signs off the phantom stream as verified)
+**Last Updated (prior):** July 23, 2026 (v0.2 — AR-1/AR-2/AR-3 recorded; R-01..R-05 signed; APPROVED)
+**Version:** 0.6
 **Status:** APPROVED
 **Source:** `docs/tracking/injuries-medical-design.md` v0.2
 
 ---
 
 Checklist entries are verified against real source; nothing is checked without a programmatically
-verifiable anchor (CLAUDE.md "Never fabricate verification values"). This is a **forward-design** spec —
-implementation gates are open by construction (nothing is built yet); review gates track the pipeline.
+verifiable anchor (CLAUDE.md "Never fabricate verification values"). Authored as a **forward-design**
+spec with the implementation gates open by construction; **since landed** — T0 (Aug 5), T1 (Aug 6), T2
+(Aug 6) and the balance pass that ARMED the occurrence dial (Aug 7) all live in `src/injuries-medical/`
++ `src/season-save/` (currency corrected at the lint sweep, August 8, 2026); review gates track the pipeline.
 
 ## 9.1 Content gates
 
@@ -20,8 +26,8 @@ implementation gates are open by construction (nothing is built yet); review gat
 - [x] KD scope stated: injury occurrence/severity/recovery on the world tick; the fatigue **accumulators**
       (#29/match engine), squad-selection consequences (#30), the medical-staff entity model (#34), and
       attribute decline from injury (#28) deferred to their owners (§1.2 / §7).
-- [x] KD-1 single-clock, position-independent occurrence (one stream, keyed draws, no free-running cursor,
-      nothing to persist) stated with the save-round-trip consequence.
+- [x] KD-1 single-clock, position-independent occurrence (one keyed derivation — no registered stream,
+      ERR-041-012 — no free-running cursor, nothing to persist) stated with the save-round-trip consequence.
 - [x] KD-2 read-only fatigue-input reconciliation (no shared counter, no write-back) + KD-8 behaviour-neutral
       identity stated.
 - [x] KD-6 #30 tick-order back-prop (ERR-030-002) + the recovery-before-occurrence ordering guarantee
@@ -73,7 +79,7 @@ implementation gates are open by construction (nothing is built yet); review gat
 | # | Review gate | Evidence | Status |
 |---|---|---|---|
 | R-01 | **Content completeness** — §1–§9 + appendices per the template | all files | ☑ |
-| R-02 | **Technical accuracy** — ONE `injuries.occurrence` stream, keyed/position-independent draws, no
+| R-02 | **Technical accuracy** — ONE keyed occurrence derivation (no registered stream — ERR-041-012), position-independent draws, no
         persisted cursor; the KD-6 entry-state-gated ordering guarantee; the risk-score assembly citing
         #29's real `InjuryRiskContribution` output; the day-0 sentinel + day-gap fail-loud; 27 FRs;
         constants one tag each, no `[EST]`; cited #27/#29/#30/#16 APIs verified; **integer-only arithmetic (AR-1)** | §2/§3/§4/App. A/B/C | ☑ |
@@ -90,11 +96,15 @@ implementation gates are open by construction (nothing is built yet); review gat
 ## 9.6 Decision
 
 **APPROVED — July 23, 2026.** Section files authored from the converged design supplement
-(`docs/tracking/injuries-medical-design.md` v0.2, design-AR 2M+2L → CONVERGENCE); section-file AR-1 (1M float→integer) → AR-2 (1M fixed-radix) → AR-3 CONVERGENCE; R-01..R-05 signed. `SPEC_INDEX.md` row 41 flipped `IN REVIEW → APPROVED`; the #16 `0x2A`/92 (ERR-041-001) and #30 tick-order (ERR-030-002) back-props landed atomically. This approves the **forward design** — the §7 T-phase plan (T0 value types → T1 save sub-blob → T2 wiring at #30's slot + stream registration → T3 deep tier) is the post-APPROVED implementation sequence.
+(`docs/tracking/injuries-medical-design.md` v0.2, design-AR 2M+2L → CONVERGENCE); section-file AR-1 (1M float→integer) → AR-2 (1M fixed-radix) → AR-3 CONVERGENCE; R-01..R-05 signed. `SPEC_INDEX.md` row 41 flipped `IN REVIEW → APPROVED`; the #16 `0x2A`/92 (ERR-041-001) and #30 tick-order (ERR-030-002) back-props landed atomically. This approves the **forward design** — the §7 T-phase plan (T0 value types → T1 save sub-blob → T2 wiring at #30's slot → T3 deep tier) is the post-APPROVED implementation sequence. *(The Decision as ratified in July named "stream registration" in the T2 item; ERR-041-012 retired the registered stream — the occurrence draw is a keyed SplitMix64 derivation, ordinal 92 deliberately unallocated — and the T2 that actually landed registered nothing.)*
 
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial checklist. Content/consistency/implementation gates open by construction; review gates NOT YET RUN. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1 (1M float→integer) / AR-2 (1M fixed-radix) / AR-3 CONVERGENCE recorded (§9.3.1); 9.1/9.4 gates checked; R-01..R-05 signed (§9.5); §9.6 APPROVED. |
+| 0.3 | 2026-08-08 | — | **Balance-pass AR pass 7 (M1)** *(row renumbered 0.2 → 0.3 at pass 10 L5 — it had shipped colliding with the July 23 row, leaving the pass-7 edit unaddressable by version)*: R-02 signed off "ONE `injuries.occurrence` stream" as verified evidence; restated to the keyed derivation (ERR-041-012). |
+| 0.4 | 2026-08-08 | — | **Balance-pass AR pass 9 (M2)** *(renumbered 0.3 → 0.4 with the row above)*: two residuals in the file pass 7 bumped for this class — the §9.1 content gate still ticked KD-1 as "one stream", and the §9.6 **Decision** still ratified a T-phase plan whose T2 item ordered "stream registration" (the pass-7 M1 wording, surviving in the approval that signs the plan off). Both re-anchored; the Decision keeps the ratified-as wording as an annotated frozen original. |
+| 0.5 | 2026-08-08 | — | **Balance-pass AR pass 10 (L5)**: rows renumbered 0.2 → 0.3 / 0.3 → 0.4 (the pass-7 edit had collided with the July 23 row, leaving it unaddressable by version) and the header chain relabelled. Recorded as its own version at pass 11 (L1) — the renumber had reused v0.4 in the header while the table's 0.4 described pass 9, relocating the duplicate-label defect from the table into the chain. |
+| 0.6 | 2026-08-08 | — | **Lint sweep**: the §9 preamble still read "nothing is built yet" of a subsystem whose dial is ARMED (the pass-13-L4 class, in the approval checklist). |
 #endregion

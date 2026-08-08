@@ -44,6 +44,18 @@
 
 ---
 
+## 0.b Standing caveat — the corpus predates injuries (August 7, 2026)
+
+The #29/#41 balance pass armed the occurrence dial (FR-MD-027): a career-wired season now removes
+injured players from selection, so the squad-strength distribution `RoundResolutionModel` resolves
+against is no longer the all-fit distribution every measurement in this corpus was (or will be)
+fitted on. The effect is bounded — ~9% of players unavailable at a matchday, starting XIs re-selected
+from the remainder — but it is systematic. **Recorded, deliberately not re-fitted here** (the
+evidence advisor's call at the balance pass): re-fitting the round-resolution constants belongs to
+their own calibration pass, run against the armed-career distribution, not smuggled into an injury
+landing. Until then, treat any A4a fit as conditioned on "no injuries" and re-check it when it is
+next used with a career wired.
+
 ## 1. What Step 0 is, and what it found
 
 KD-8 Step 0 exists because of a specific failure mode: *"if those two populations' goal distributions

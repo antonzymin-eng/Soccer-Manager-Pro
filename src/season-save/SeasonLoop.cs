@@ -1,10 +1,7 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
-// Modified: 2026-08-06 (#29/#41 T2 + its AR passes: slots 2 and 4 go live over an optional
-//           PlayerCareerStates; the FR-MD-023 availability filter at the ERR-030-009
-//           resolve→filter→configure position; #29's match-entry fatigue into the engine boot; the
-//           FR-TR-025 / FR-MD-025 roster reconciliation at the season boundary; and the round-vs-
-//           day-step order stated rather than emergent — ERR-030-026. Unwired is byte-identical.)
+// Modified: 2026-08-08 (AR pass 6: the constructor pairs the career against the world clock —
+//           v1.15; the pass 1-3 recording chain and the pass-5 doc fix are the rows below)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (day advance / KD-2 tick order), §3.4 (playing a round /
 //           KD-9), §3.5 (season-boundary roll / KD-6), §4.3 (the composition root), §4.6 (the #22
@@ -172,6 +169,14 @@ namespace TacticalDirector.SeasonSave
                             nameof(careerOrNull));
                     }
                 }
+
+                // The cursor-vs-clock rule at the COMPOSITION boundary (AR pass 6 M3), for the same
+                // reason the KD-4 check above runs here: a loop can be composed from a career and a
+                // world that never met a save file, and a desynchronised pair either silently skips
+                // every day step (cursor ahead — F6 reads the day as done) or wedges permanently
+                // (cursor lagging by >= 2 — F7 refuses the gap, and the steps run before the clock
+                // increment). The save root enforces the same rules at the file boundary.
+                careerOrNull.RequireCursorsWithinClock(world.CurrentWorldTick);
             }
 
             _world = world;
@@ -297,10 +302,9 @@ namespace TacticalDirector.SeasonSave
         /// <para>
         /// <b>The fixture day's OWN day steps have not run when this returns</b> — the loop stops as soon
         /// as the clock reaches the target, so the last tick executed is the one for <c>targetDay − 1</c>.
-        /// A round therefore resolves against career state advanced through the day BEFORE it, and
-        /// matchday's training and injury processing happens on the next advance, after the round.
-        /// See <see cref="RunWorldTickInFixedOrder"/> for why that is the intended order and what it
-        /// costs (ERR-030-026).
+        /// They run at the top of <see cref="AdvanceAndPlayNextRound"/>, pre-round (ERR-030-027), so a
+        /// round resolves against matchday-morning career state; the next day-advance's re-run of the
+        /// same day is a cursor no-op. See <see cref="RunWorldTickInFixedOrder"/>.
         /// </para>
         /// </summary>
         /// <exception cref="System.InvalidOperationException">The season is complete, so there is no next
@@ -402,10 +406,12 @@ namespace TacticalDirector.SeasonSave
         /// (F6) — the #27 <see cref="ISquadProvider"/> fail-loud contract; or a career is wired and
         /// <paramref name="squads"/> is not the provider it was bound to.</exception>
         /// <remarks>
-        /// With a career wired, this resolves against state advanced through the day BEFORE the fixture
-        /// day: <see cref="AdvanceToNextFixtureDay"/> stops on reaching the fixture day, so matchday's
-        /// own steps 2 and 4 run after the round. Deliberate — see
-        /// <see cref="RunWorldTickInFixedOrder"/> and ERR-030-026.
+        /// With a career wired, matchday's own career day-steps (slots 2 and 4) run HERE, before the
+        /// round is resolved — so a player whose recovery expires on matchday is available for it, and
+        /// the availability filter reads matchday-morning state, not yesterday's (ERR-030-027, closing
+        /// the half of ERR-030-026 deferred to the balance pass). The step is idempotent per day, so
+        /// the re-run inside the next day-advance's <see cref="RunWorldTickInFixedOrder"/> is a no-op
+        /// over the cursors.
         /// </remarks>
         public MatchResult[] AdvanceAndPlayNextRound(ISquadProvider squads)
         {
@@ -457,12 +463,42 @@ namespace TacticalDirector.SeasonSave
             }
 
             uint worldDay = _world.CurrentWorldTick;
+
+            // ERR-030-027: the fixture day's own career day-steps run BEFORE the round, in the same
+            // KD-2 slot order, over the WHOLE career — not just the round's clubs, or clubs without a
+            // fixture today would desynchronise from those with one. This is what makes the recovery
+            // countdown land on the correct side of the round (a player who served his time plays
+            // today), and it puts the occurrence draw on matchday MORNING: a player drawn injured now
+            // is filtered by SelectAvailable below, which is a training-ground knock before kickoff,
+            // not a match injury — match load reaches the draw through the FR-MD-010 appearance
+            // window, which never contains today. Runs after every guard above so a refused call
+            // cannot advance a cursor.
+            RunCareerDaySteps(worldDay);
+
             var results = new MatchResult[indices.Length];
 
             for (int i = 0; i < indices.Length; i++)
             {
                 Fixture fixture = _state.FixtureAt(indices[i]);
-                MatchResult result = ResolveFixture(in fixture, squads, worldDay);
+                MatchResult result = ResolveFixture(
+                    in fixture, squads, worldDay, out int[] homeXi, out int[] awayXi);
+
+                // ERR-041-010(b): the appearance record, written from the XIs the RESOLUTION ITSELF
+                // fielded — ResolveFixture hands back the ids it derived at its own filter+configure
+                // site (AR pass 2: a second SelectAvailable walk here was an unenforced agreement with
+                // the engine's configuration, of exactly the documented-not-structural class this file
+                // refuses elsewhere). Null XIs = no career wired = nothing to record. Placed BEFORE
+                // the pinned apply/emit/mark sequence (AR pass 1): it is the only fallible call in
+                // this block, and a throw after MarkFixturePlayed would strand the round — the fixture
+                // skipped by the unplayed-index filter on retry, the cursor never advancing, the
+                // season unrecoverable. The pair form (AR pass 3) validates BOTH clubs before writing
+                // EITHER, so a refused away side no longer leaves the home XI carrying an appearance
+                // for a fixture that was never applied.
+                if (_career != null)
+                {
+                    _career.RecordFixtureAppearances(
+                        fixture.HomeClubId, homeXi, fixture.AwayClubId, awayXi, worldDay);
+                }
 
                 // FR-SN-013's pinned order, for every fixture: (1) table, (2) event, then mark played.
                 _state.ApplyResult(in result);
@@ -705,7 +741,7 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>
-        /// One calendar day, in the KD-2 pinned order (§3.3). Steps 2, 4 and 9 are live; every other
+        /// One calendar day, in the KD-2 pinned order (§3.3). Slots 2 and 4 and step 12 are live; every other
         /// step is a <b>documented position</b>, not an interface (FR-SN-034 / FR-LW-031) — each
         /// Wave-2+ spec slots into its pre-declared slot when it lands, so fixing the order now avoids a
         /// re-pin across all of them.
@@ -716,44 +752,55 @@ namespace TacticalDirector.SeasonSave
         /// without throwing anything.
         /// </para>
         /// <para>
-        /// With no career wired, only step 9 runs and a no-fixture day's advance is byte-identical to a
+        /// With no career wired, only step 12 runs and a no-fixture day's advance is byte-identical to a
         /// bare <see cref="WorldStore.AdvanceDay"/> (FR-SN-026 / KD-8) — which is exactly what the
         /// behaviour-neutral floor test asserts. With one wired it stays byte-identical <i>to the
         /// world</i>: neither day step touches <see cref="WorldStore"/>, they mutate only the career
         /// state, which is serialized in its own sub-blobs.
         /// </para>
         /// <para>
-        /// Both steps take the world day BEFORE step 9's increment — the day being lived, not the day
+        /// Both steps take the world day BEFORE step 12's increment — the day being lived, not the day
         /// being entered. That is what makes the first advance of a fresh world day 0 and keeps
         /// <c>LastAdvancedWorldDay</c> exactly one behind the clock between ticks, so a save taken here
         /// restores without a phantom gap.
         /// </para>
         /// <para>
-        /// <b>Where the ROUND sits in this order is a decision, and KD-2 does not make it</b> — the slot
-        /// list has no slot for "play the round", because a round is resolved by a separate command
-        /// (<see cref="AdvanceAndPlayNextRound"/>) rather than by the day advance. What settles it is
-        /// <see cref="AdvanceToNextFixtureDay"/>'s loop condition: it stops the moment the clock REACHES
-        /// the fixture day, so the fixture day's own steps 2 and 4 run afterwards, on the next advance.
-        /// <b>The round is played, then matchday is processed.</b>
-        /// </para>
-        /// <para>
-        /// That is the right order for #41's occurrence draw — an injury sustained in a match must be
-        /// drawn after it, which is also what makes the FR-MD-010 <c>MatchLoad</c> term coherent once
-        /// ERR-041-010(b) gives it a per-player appearance record to read. It is the WRONG order for
-        /// #41's recovery countdown, which shares the same atomic step: a player whose
-        /// <c>RecoveryRemaining</c> reaches 0 on matchday has his decrement applied after the round, so
-        /// he misses a match he had served his time for, and every injury is effectively one matchday
-        /// longer than its assigned tier. Splitting the two halves would change #41's step contract, so
-        /// the bias is <b>accepted and pinned</b> rather than silently absorbed: filed as
-        /// <b>ERR-030-026</b> and locked by <c>DayAdvance_StopsBeforeTheFixtureDaysOwnSteps</c>, so the
-        /// balance pass fits the recovery tiers against a stated convention instead of an emergent one.
-        /// Inert today — the occurrence dial is off (FR-MD-027), so nobody is ever injured.
+        /// <b>Where the ROUND sits in this order was ERR-030-026's finding, and is now pinned rather
+        /// than emergent</b> — the slot list has no slot for "play the round", because a round is
+        /// resolved by a separate command (<see cref="AdvanceAndPlayNextRound"/>) rather than by the
+        /// day advance. <see cref="AdvanceToNextFixtureDay"/> still stops the moment the clock REACHES
+        /// the fixture day, but the fixture day's own slots no longer wait for the next
+        /// advance: <see cref="AdvanceAndPlayNextRound"/> runs them itself, pre-round, through the same
+        /// idempotent <see cref="RunCareerDaySteps"/> this method calls — so the re-run here is a
+        /// cursor no-op. <b>Matchday is processed, then the round is played</b> (ERR-030-027): the
+        /// recovery countdown lands before selection, so a player who served his time plays today, and
+        /// the occurrence draw moves to matchday morning, where match load reaches it through the
+        /// FR-MD-010 appearance window (which never contains today) instead of through a draw-after-
+        /// the-round convention. Locked by <c>DayAdvance_StopsBeforeTheFixtureDaysOwnSteps</c>.
         /// </para>
         /// </summary>
         private void RunWorldTickInFixedOrder()
         {
-            uint day = _world.CurrentWorldTick;
+            RunCareerDaySteps(_world.CurrentWorldTick);
 
+            // 12. world day    — LIVE (the only step outside RunCareerDaySteps).
+            _world.AdvanceDay();
+        }
+
+        /// <summary>
+        /// Slots 0–11 of the KD-2 day order for one world day (#30 §3.3 as reconciled by
+        /// ERR-030-022/-020) — everything except step 12's clock increment. Idempotent per day: both
+        /// live steps carry their own per-player cursor, so the second caller of the same day is a
+        /// no-op. Called from two places, deliberately:
+        /// <see cref="RunWorldTickInFixedOrder"/> (every advanced day) and
+        /// <see cref="AdvanceAndPlayNextRound"/> (the fixture day, pre-round — ERR-030-027).
+        /// </summary>
+        /// <param name="day">The world day being lived — the clock BEFORE step 12's increment.</param>
+        private void RunCareerDaySteps(uint day)
+        {
+            // 0. facilities    (#53) — NULL SEAM (ERR-030-020: the upgrade-completion latch; numbered
+            //                          zero so it precedes its same-day consumers without renumbering
+            //                          the slots six APPROVED specs cite by number)
             // 1. progression   (#28) — NULL SEAM (its T0 core is built but unwired; #28 T2 wires it
             //                          here, and #29's ComputeTrainingInput batch is gathered with it —
             //                          gathering a batch for a consumer that does not exist would be
@@ -781,8 +828,12 @@ namespace TacticalDirector.SeasonSave
             //                          LastIntakeWorldDay; live at #42's own T-phase)
             // 8. board         (#45) — NULL SEAM (ERR-030-008: one bounded integer drift per modelled
             //                          club; live at #45's own T-phase)
-            // 9. world day     — LIVE.
-            _world.AdvanceDay();
+            // 9. scouting      (#32) — NULL SEAM (ERR-030-022: deep-tier assignment progress; the
+            //                          minimal tier is the fog-off identity, so the seam is empty)
+            // 10. media expiry (#35) — NULL SEAM (ERR-030-022: conference-window / pending-question
+            //                          expiry; after scouting, before the world-day tick)
+            // 11. tenure       (#54) — NULL SEAM (ERR-030-021: EvaluateTenure — after board, whose
+            //                          confidence it reads; the terminating decision is #54's)
         }
 
         /// <summary>
@@ -790,18 +841,31 @@ namespace TacticalDirector.SeasonSave
         /// through the full engine under <see cref="RoundResolutionMode.ManagedThroughEngine"/>, every
         /// fixture through the engine under <see cref="RoundResolutionMode.FullEngine"/>, everything else
         /// through <see cref="RoundResolutionModel"/>.
+        /// <para>
+        /// <b>The fielded XIs come out of THIS method</b> (ERR-041-010(b), AR pass 2): each branch
+        /// derives them at its own filter/configure site — the engine branch inside
+        /// <see cref="BootFixtureEngine"/>, one statement from the <c>ConfigureSquads</c> that consumes
+        /// the same squad instances; the quick-sim branch from the very squads its rating reads — so
+        /// the appearance record cannot drift from what the resolution actually fielded. Null with no
+        /// career wired. When a manager-chosen XI lands (#38 Wave-7), the id derivation moves WITH the
+        /// configuration it sits beside, not in a distant caller.
+        /// </para>
         /// </summary>
-        private MatchResult ResolveFixture(in Fixture fixture, ISquadProvider squads, uint worldDay)
+        private MatchResult ResolveFixture(
+            in Fixture fixture, ISquadProvider squads, uint worldDay,
+            out int[] homeXi, out int[] awayXi)
         {
             bool managed = fixture.Involves(_state.ManagedClubId);
 
             if (ShouldPlayThroughEngine(Mode, managed))
             {
-                return PlayThroughEngine(in fixture, squads, worldDay);
+                return PlayThroughEngine(in fixture, squads, worldDay, out homeXi, out awayXi);
             }
 
             Squad home = SelectAvailable(ResolveSquad(squads, fixture.HomeClubId));
             Squad away = SelectAvailable(ResolveSquad(squads, fixture.AwayClubId));
+            homeXi = _career != null ? SquadRating.StartingElevenPlayerIds(home) : null;
+            awayXi = _career != null ? SquadRating.StartingElevenPlayerIds(away) : null;
 
             // #29's match-entry fatigue is deliberately NOT an input here, unlike the availability
             // filter one line above. §3.4.1 keys this model on the rating differential alone, and the
@@ -866,13 +930,18 @@ namespace TacticalDirector.SeasonSave
         /// left here is the run loop and the result. See that method for why the split exists.
         /// </para>
         /// <para>
-        /// With a career wired this resolves against state advanced through the day BEFORE the fixture
-        /// day; matchday's own steps 2 and 4 run after the round (ERR-030-026).
+        /// With a career wired this resolves against MATCHDAY-MORNING state: the fixture day's own
+        /// career day-steps have already run pre-round at the top of
+        /// <see cref="AdvanceAndPlayNextRound"/> (ERR-030-027), so the availability filter and the
+        /// entry-fatigue projection read the day being played, not yesterday.
         /// </para>
         /// </summary>
-        private MatchResult PlayThroughEngine(in Fixture fixture, ISquadProvider squads, uint worldDay)
+        private MatchResult PlayThroughEngine(
+            in Fixture fixture, ISquadProvider squads, uint worldDay,
+            out int[] homeXi, out int[] awayXi)
         {
-            TacticalDirector.MatchEngine.MatchEngine engine = BootFixtureEngine(in fixture, squads);
+            TacticalDirector.MatchEngine.MatchEngine engine =
+                BootFixtureEngine(in fixture, squads, out homeXi, out awayXi);
 
             _activeMatch = engine;
             try
@@ -923,9 +992,33 @@ namespace TacticalDirector.SeasonSave
         internal TacticalDirector.MatchEngine.MatchEngine BootFixtureEngine(
             in Fixture fixture, ISquadProvider squads)
         {
+            return BootFixtureEngine(in fixture, squads, out _, out _);
+        }
+
+        /// <summary>
+        /// The id-producing form (ERR-041-010(b), AR pass 2): the fielded XIs are derived HERE, from
+        /// the same filtered squad instances the <c>ConfigureSquads</c> one statement below consumes —
+        /// so the appearance record's source is the configuration site itself, and a future
+        /// manager-chosen XI changes both or neither. This overload IS the production path
+        /// (<see cref="PlayThroughEngine"/> calls it); the discarding form above exists for boot-only
+        /// assertions.
+        /// </summary>
+        /// <param name="fixture">The fixture to boot an engine for.</param>
+        /// <param name="squads">The provider the rosters resolve from.</param>
+        /// <param name="homeXi">The home club's fielded starting eleven, or null with no career wired.</param>
+        /// <param name="awayXi">The away club's fielded starting eleven, or null with no career wired.</param>
+        internal TacticalDirector.MatchEngine.MatchEngine BootFixtureEngine(
+            in Fixture fixture, ISquadProvider squads, out int[] homeXi, out int[] awayXi)
+        {
             // ── resolve → filter → configure (ERR-030-009); #44's suspension view joins at its T2. ──
             Squad home = SelectAvailable(ResolveSquad(squads, fixture.HomeClubId));
             Squad away = SelectAvailable(ResolveSquad(squads, fixture.AwayClubId));
+
+            // The XI derivation sits against the squads ConfigureSquads consumes. Today both go
+            // through the one LineupSelector walk (SquadRating is its public read); the colocation is
+            // what makes a future explicit-XI seam edit this method, not a distant record site.
+            homeXi = _career != null ? SquadRating.StartingElevenPlayerIds(home) : null;
+            awayXi = _career != null ? SquadRating.StartingElevenPlayerIds(away) : null;
 
             ulong matchSeed = RoundResolutionModel.MatchSeedFor(in fixture, _state.Seed, _state.SeasonNumber);
             var engine = new TacticalDirector.MatchEngine.MatchEngine(matchSeed);
@@ -954,9 +1047,9 @@ namespace TacticalDirector.SeasonSave
 
         /// <summary>
         /// The FR-MD-023 availability filter, applied between resolving a roster and using it. With no
-        /// career wired — and with one whose players are all fit, which is every career until the
-        /// occurrence dial is armed — this returns the same instance, so the resolved-and-configured
-        /// path is reference-identical to the pre-T2 one.
+        /// career wired — and with one whose players are all fit, the common case though no longer
+        /// every career (the dial has been ARMED since the balance pass) — this returns the same
+        /// instance, so the resolved-and-configured path is reference-identical to the pre-T2 one.
         /// <para>
         /// Applied to quick-simmed fixtures as well as engine ones: the quick-sim rates a club by the XI
         /// it would field, and a club missing four first-choice players should be rated as such whether
@@ -1071,4 +1164,50 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | "public World accessor" corrected to internal, which is what      |
 // |         |            |        | landed; Career's summary points at TrySetFocus, since ScheduleFor |
 // |         |            |        | is no longer the public focus surface.                            |
+// | 1.9     | 2026-08-07 | —      | Balance pass D1 (ERR-030-027): AdvanceAndPlayNextRound runs the   |
+// |         |            |        | fixture day's own career day-steps pre-round, through the new     |
+// |         |            |        | RunCareerDaySteps helper both callers share — slots 1-8 extracted |
+// |         |            |        | from RunWorldTickInFixedOrder, idempotent per day via the two     |
+// |         |            |        | live steps' own cursors, so the post-round re-run is a no-op.     |
+// |         |            |        | Closes the recovery half of ERR-030-026: a player whose recovery  |
+// |         |            |        | expires on matchday now plays it, tiers mean what they say, and   |
+// |         |            |        | the occurrence draw sits on matchday morning where the FR-MD-010  |
+// |         |            |        | appearance window (which never contains today) feeds it. Placed   |
+// |         |            |        | after every guard so a refused call advances no cursor. #41's     |
+// |         |            |        | step contract (FR-MD-022) is untouched — this is a #30 wiring     |
+// |         |            |        | decision, the cheaper shape the balance-pass council converged    |
+// |         |            |        | on over splitting the step and bumping the medical format.        |
+// | 1.10    | 2026-08-07 | —      | Balance pass D2 (ERR-041-010(b)): after each fixture resolves,    |
+// |         |            |        | RecordFieldedAppearances writes both clubs' fielded XIs into the  |
+// |         |            |        | career's appearance record via SquadRating.StartingElevenPlayer-  |
+// |         |            |        | Ids — the same single TrySelect walk, so the recorded eleven IS   |
+// |         |            |        | the fielded eleven on both resolution paths.                      |
+// | 1.11    | 2026-08-07 | —      | Balance-pass AR pass 1 (3L): RecordFieldedAppearances moves ABOVE |
+// |         |            |        | the apply/emit/mark sequence — the only fallible call in the      |
+// |         |            |        | block, and a throw after MarkFixturePlayed strands the round      |
+// |         |            |        | unrecoverably; RunCareerDaySteps' seam list renumbered to the     |
+// |         |            |        | spec's 0-12 order (slot 0 was missing, the tick was "9");         |
+// |         |            |        | PlayThroughEngine's summary no longer states the retired          |
+// |         |            |        | ERR-030-026 convention.                                           |
+// | 1.12    | 2026-08-07 | —      | Balance-pass AR pass 2 (M): the fielded XIs come OUT of           |
+// |         |            |        | ResolveFixture — the engine branch derives them inside            |
+// |         |            |        | BootFixtureEngine one statement from the ConfigureSquads that     |
+// |         |            |        | consumes the same squad instances, the quick-sim branch from the  |
+// |         |            |        | very squads its rating reads — replacing the loop's second        |
+// |         |            |        | SelectAvailable walk, which was an unenforced agreement with the  |
+// |         |            |        | engine's configuration (the documented-not-structural class).     |
+// |         |            |        | Slots 9-11 join the seam list. (Rows 1.11/1.12 were appended out  |
+// |         |            |        | of order and swapped at AR pass 3 — L2.)                          |
+// | 1.13    | 2026-08-08 | —      | Balance-pass AR pass 3 (L): the recording goes through the new    |
+// |         |            |        | RecordFixtureAppearances pair form — BOTH clubs validated before  |
+// |         |            |        | EITHER is written, so a refused away side no longer leaves the    |
+// |         |            |        | home XI carrying an appearance for a fixture never applied.       |
+// | 1.14    | 2026-08-08 | —      | Balance-pass AR pass 5 (M5, doc only): a stale "every career   |
+// |         |            |        | until the dial is armed" sentence updated — the dial has been  |
+// |         |            |        | armed since the balance pass.                                  |
+// | 1.15    | 2026-08-08 | —      | Balance-pass AR pass 6 (M3 + L1): the constructor pairs the    |
+// |         |            |        | career against the world clock (RequireCursorsWithinClock)    |
+// |         |            |        | beside its KD-4 and coverage gates; three step-9 prose sites  |
+// |         |            |        | corrected to step 12 (step 9 is the #32 scouting null seam    |
+// |         |            |        | under pass 1's own renumbering).                              |
 #endregion

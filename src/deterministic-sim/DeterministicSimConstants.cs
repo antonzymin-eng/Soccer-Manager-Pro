@@ -1,6 +1,6 @@
 // File:     src/deterministic-sim/DeterministicSimConstants.cs
 // Created:  2026-05-29
-// Modified: 2026-08-05 (DOMAIN_TAG_INJURIES_MEDICAL = 0x2A, ERR-041-001 at #41's first draw site)
+// Modified: 2026-08-08 (AR pass 9 M2 sweep: the 0x2A doc stops naming the retired stream — v1.7)
 // Author:   —
 // Spec:     Deterministic Simulation #16 §3.4, §3.2.4.1, Code Standards #20
 // Purpose:  All numeric and string constants for the deterministic simulation system.
@@ -135,8 +135,8 @@ namespace TacticalDirector.DeterministicSim
         public const byte DOMAIN_TAG_SEASON_LOOP = 0x22;
 
         /// <summary>
-        /// [FIXED] Domain tag allocated for Injuries &amp; Medical #41 (FR-MD-005 — the
-        /// <c>injuries.occurrence</c> world-tick draws). §3.4; back-prop ERR-041-001, which promoted
+        /// [FIXED] Domain tag allocated for Injuries &amp; Medical #41 (FR-MD-005 — the keyed
+        /// world-tick occurrence draws; no registered stream, ERR-041-012). §3.4; back-prop ERR-041-001, which promoted
         /// the number spec-text-first at #41's approval and pinned the code const to land at #41's
         /// first draw site. This is that site: #41's daily occurrence draw.
         /// <para>
@@ -321,4 +321,8 @@ namespace TacticalDirector.DeterministicSim
 // |         |            |        | (#41's daily occurrence draw), per ERR-041-001. No SubsystemOrdinals |
 // |         |            |        | mirror: #41 keys its draws and registers no cursor stream, the       |
 // |         |            |        | ERR-030-012 precedent. 0x23-0x29 stay reserved gaps.                 |
+// | 1.7     | 2026-08-08 | —      | Balance-pass AR pass 9 (M2 repo-wide sweep): the 0x2A tag's own  |
+// |         |            |        | doc still designated the draws "the injuries.occurrence          |
+// |         |            |        | world-tick draws" — the retired stream name as the live          |
+// |         |            |        | designation (ERR-041-012); re-anchored to the keyed derivation.  |
 #endregion

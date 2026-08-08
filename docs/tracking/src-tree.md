@@ -694,13 +694,13 @@ src/
 │   ├── TrainingSystemConstants.cs       ← Appendix A catalogue; no RNG constant (KD-6)
 │   ├── TrainingFocus.cs                 ← the six-value focus enum (APPEND-only ordinals — indexed + persisted)
 │   ├── TrainingState.cs                 ← §2.2 per-player state + Create (never-advanced sentinel; default is NOT valid)
-│   ├── TrainingSchedule.cs              ← the FR-TR-003 read-only VIEW over per-player focus; stores nothing, never serialized
+│   ├── TrainingSchedule.cs              ← the FR-TR-003 club-scoped focus handle: view + the FR-TR-023 TrySetFocus write (ERR-029-008); stores nothing, never serialized
 │   ├── CoachingModifier.cs              ← KD-3 staff seam (empty at T0, so Identity is safely default)
 │   ├── InjuryRiskContribution.cs        ← KD-5 read-only scalar #41 consumes (FR-TR-017)
 │   ├── TrainingViewModel.cs             ← KD-7 value-copy observer for #31/#38
 │   ├── ClubTrainingStates.cs            ← one club's persisted block: club id + the parallel id/state arrays, bound once
 │   ├── TrainingSaveCodec.cs             ← §4.4.1 TRAINING_SAVE_FORMAT_VERSION sub-blob (T1); canonical ascending keys, fail-loud both ways
-│   ├── TrainingStep.cs                  ← §3.1 AdvanceTrainingDay / §3.2 ComputeTrainingInput / §3.3 ProjectMatchEntryFatigue / §3.4 ComputeInjuryRisk / FR-TR-023 SetFocus
+│   ├── TrainingStep.cs                  ← §3.1 AdvanceTrainingDay / §3.2 ComputeTrainingInput / §3.3 ProjectMatchEntryFatigue / §3.4 ComputeInjuryRisk / the pure reads (the FR-TR-023 write lives on TrainingSchedule.TrySetFocus — ERR-029-008)
 │   └── tests/
 │       ├── training-system-tests.asmdef
 │       ├── TrainingStepTests.cs         ← Appendix B day by day + T-TR-DET/NEU/FAT/CON/COA/INJ

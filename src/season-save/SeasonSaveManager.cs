@@ -1,18 +1,14 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
-// Modified: 2026-08-06 (#29/#41 T1: the training and medical sub-blobs are composed in; doc-drift fix.
-//           T2 AR pass 1: Load re-applies the #41 availability filter to the in-progress match's roster
-//           so restore re-selects the eleven that actually played; + a Save(SeasonLoop, match, path)
-//           overload so the career's block accessors can stay internal. AR pass 3: the overload's
-//           quiescence precondition. AR pass 6: the load-time filter decorator's stale
-//           shares-arrays-with-the-contents justification.)
+// Modified: 2026-08-08 (AR pass 13 L2: the block counts — v1.17)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-1 / KD-5..KD-8;
 //           Training System #29 §4.4 / FR-TR-018/019; Injuries & Medical #41 §4.4 / FR-MD-017/018;
 //           Match Engine design note §5 Phase G-Phase 3; Deterministic Simulation #16 §4.6.1.1
 //           (atomic-write contract); Living World #22 §4.6/§7.1; Code Standards #20
 // Purpose:  The season save-file root — writes a season (the living-world WorldStore composite, the
-//           season state, the #29 per-club training states, and the #41 per-club medical states, plus
+//           season state, the #29 per-club training states, the #41 per-club medical states, and the
+//           #30 per-club appearance records, plus
 //           an optional in-progress MatchEngine) to disk as one file and reconstructs all of them. This
 //           is the only assembly that may reference both match-engine and living-world (FR-LW-003 keeps
 //           them independent; the season root sits above both, like match-viewer over match-engine).
@@ -36,8 +32,8 @@ namespace TacticalDirector.SeasonSave
 {
     /// <summary>
     /// On-disk save/load for a season: one file carrying the living-world <see cref="WorldStore"/>
-    /// composite, the <see cref="SeasonState"/>, the #29 per-club training states, and the #41 per-club
-    /// medical states — all four always present — and, when a match is in progress, a running
+    /// composite, the <see cref="SeasonState"/>, the #29 per-club training states, the #41 per-club
+    /// medical states, and the #30 per-club appearance records — all five always present — and, when a match is in progress, a running
     /// <see cref="MatchEngine.MatchEngine"/> (unified-season-save-design.md). These are nested as
     /// opaque, independently version-gated sub-blobs (KD-2) — this root never parses any of them, it
     /// only frames/deframes and reconstructs.
@@ -71,13 +67,16 @@ namespace TacticalDirector.SeasonSave
         /// which still writes a well-formed zero-club block rather than omitting one (FR-TR-018).</param>
         /// <param name="medicalClubs">The per-club #41 medical states, on the same terms
         /// (FR-MD-017).</param>
+        /// <param name="appearanceClubs">The per-club #30 appearance states, on the same terms —
+        /// REQUIRED, never null-meaning-empty (#30 Appendix B / ERR-041-010(b)).</param>
         public static void Save(
             WorldStore world,
             SeasonState season,
             MatchEngine.MatchEngine matchOrNull,
             string path,
             ClubTrainingStates[] trainingClubs,
-            ClubInjuryStates[] medicalClubs)
+            ClubInjuryStates[] medicalClubs,
+            ClubAppearanceStates[] appearanceClubs)
         {
             if (world == null)
             {
@@ -110,9 +109,32 @@ namespace TacticalDirector.SeasonSave
                     "Pass Array.Empty<ClubInjuryStates>() for a season that tracks no medical state " +
                     "— null is not the empty set (FR-MD-017).");
             }
+            if (appearanceClubs == null)
+            {
+                throw new ArgumentNullException(nameof(appearanceClubs),
+                    "Pass Array.Empty<ClubAppearanceStates>() for a season that tracks no appearance " +
+                    "record — null is not the empty set (#30 Appendix B).");
+            }
             if (string.IsNullOrEmpty(path))
             {
                 throw new ArgumentException("Save path must be non-empty.", nameof(path));
+            }
+
+            RequireCoherentCareerBlocks(trainingClubs, medicalClubs, appearanceClubs);
+            RequireCareerCursorsWithinClock(
+                world.CurrentWorldTick, trainingClubs, medicalClubs, appearanceClubs);
+
+            // The FIRST cross-blob rule, symmetric at last (AR pass 6 M1): the KD-4 calendar-cursor
+            // invariant was Load-only, three lines above a gate whose own doc states the
+            // never-write-what-Load-refuses rule — so a caller who advanced the world past the
+            // pending round got a green save of a career that could never be loaded again.
+            if (!season.Calendar.SatisfiesCursorInvariant(world.CurrentWorldTick))
+            {
+                throw new InvalidOperationException(
+                    "Season save would be incoherent: the next fixture day (" +
+                    season.Calendar.NextFixtureDay() + ") is before the world day (" +
+                    world.CurrentWorldTick + ") — the KD-4 cursor invariant (FR-SN-011); Load " +
+                    "refuses this file, so Save must not write it.");
             }
 
             using var _ = s_saveMarker.Auto();
@@ -121,9 +143,10 @@ namespace TacticalDirector.SeasonSave
             byte[] seasonBlob = SeasonStateCodec.Encode(season);
             var trainingBlock = new TrainingBlock(TrainingSaveCodec.Encode(trainingClubs));
             var medicalBlock = new MedicalBlock(MedicalSaveCodec.Encode(medicalClubs));
+            var appearanceBlock = new AppearanceBlock(AppearanceSaveCodec.Encode(appearanceClubs));
             byte[] matchBlob = matchOrNull != null ? MatchSaveManager.Encode(matchOrNull) : null;
             byte[] blob = SeasonSaveCodec.Encode(
-                worldBlob, seasonBlob, in trainingBlock, in medicalBlock, matchBlob);
+                worldBlob, seasonBlob, in trainingBlock, in medicalBlock, in appearanceBlock, matchBlob);
 
             string tempPath = path + ".tmp";
             try
@@ -167,8 +190,9 @@ namespace TacticalDirector.SeasonSave
         /// <see cref="SeasonLoop.Career"/> a second writer of #29/#41 state, defeating the FR-TR-004 /
         /// FR-TR-023 single-writer contract).
         /// <para>
-        /// A loop with no career wired writes the two well-formed zero-club blocks a pre-T2 save
-        /// carries — the same bytes <c>Array.Empty</c> produces through the long form.
+        /// A loop with no career wired writes the three well-formed zero-club career blocks a
+        /// careerless save carries — the same bytes <c>Array.Empty</c> produces through the long form.
+        /// (A literally pre-T2 FILE is a v3 frame, which F3 refuses outright.)
         /// </para>
         /// </summary>
         /// <param name="loop">The season loop to capture: its world, its season state, and its career.</param>
@@ -204,7 +228,10 @@ namespace TacticalDirector.SeasonSave
                     : Array.Empty<ClubTrainingStates>(),
                 loop.Career != null
                     ? loop.Career.MedicalBlocks()
-                    : Array.Empty<ClubInjuryStates>());
+                    : Array.Empty<ClubInjuryStates>(),
+                loop.Career != null
+                    ? loop.Career.AppearanceBlocks()
+                    : Array.Empty<ClubAppearanceStates>());
         }
 
         /// <summary>
@@ -218,17 +245,17 @@ namespace TacticalDirector.SeasonSave
         /// from <see cref="WorldStore.Restore"/> / <see cref="SeasonStateCodec.Decode"/> /
         /// <see cref="TrainingSaveCodec.Decode"/> / <see cref="MedicalSaveCodec.Decode"/> / the match
         /// restore path; a season whose next fixture day is already behind the restored world day throws
-        /// here (the KD-4 cursor invariant, FR-SN-011 / F4 — the only cross-blob coherence rule, and this
-        /// root is the only layer holding both blobs); and a distinct-squad match save
+        /// here (the KD-4 cursor invariant, FR-SN-011 / F4 — one of the TWO cross-blob coherence rules
+        /// this root owns, beside the career cursor-vs-clock rule, both enforced at Save and Load); and a distinct-squad match save
         /// loaded without (or with an incomplete) <paramref name="squads"/> throws from the match restore
         /// factory (KD-6 / R4). The match restore's fingerprint + MXCSR float-mode gates run here
         /// unchanged (KD-5).
         /// <para>
-        /// <b>A save carrying a match additionally cross-checks the two career blocks</b>
+        /// <b>A save carrying a match additionally cross-checks the three career blocks</b>
         /// (<see cref="PlayerCareerStates.FromBlocks"/>), because the availability filter has to be
-        /// rebuilt from them — see the match branch below. So a file whose training and medical blocks
-        /// describe different squads is refused here rather than restoring a match against a career
-        /// nothing else would have validated. A save with no match is untouched by this.
+        /// rebuilt from them — see the match branch below. So a file whose training, medical and
+        /// appearance blocks describe different squads is refused here rather than restoring a match
+        /// against a career nothing else would have validated. A save with no match is untouched by this.
         /// </para>
         /// </summary>
         /// <param name="path">The season save file to read.</param>
@@ -255,6 +282,7 @@ namespace TacticalDirector.SeasonSave
             SeasonState season = SeasonStateCodec.Decode(blobs.SeasonBlob);
             ClubTrainingStates[] trainingClubs = TrainingSaveCodec.Decode(blobs.TrainingBlob);
             ClubInjuryStates[] medicalClubs = MedicalSaveCodec.Decode(blobs.MedicalBlob);
+            ClubAppearanceStates[] appearanceClubs = AppearanceSaveCodec.Decode(blobs.AppearanceBlob);
 
             // FR-SN-011 (MUST) / F4: the KD-4 cursor invariant is the one coherence rule that spans the
             // world and season blobs, so it can only be checked HERE — the two codecs each see one blob,
@@ -272,6 +300,11 @@ namespace TacticalDirector.SeasonSave
                     world.CurrentWorldTick + ") — the KD-4 cursor invariant (FR-SN-011) is violated.");
             }
 
+            // The second cross-blob rule (AR pass 5 M4): see RequireCareerCursorsWithinClock. Enforced
+            // on load as well as save because a hand-edited or mispaired file arrives HERE.
+            RequireCareerCursorsWithinClock(
+                world.CurrentWorldTick, trainingClubs, medicalClubs, appearanceClubs);
+
             // The in-progress match was configured with the AVAILABILITY-FILTERED squad (#41 FR-MD-023,
             // #29/#41 T2), and the snapshot records only each team's ClubId — it cannot record "which
             // eighteen of the twenty-five". So restoring through the raw provider hands
@@ -283,20 +316,25 @@ namespace TacticalDirector.SeasonSave
             // the state the match was configured against — reproduces the exact squad, so selection
             // lands on the same eleven.
             //
-            // Pass-through for a club the career does not carry, which is every club of every save
-            // written before T2 (both blocks empty): the decorator is then the identity and the restore
-            // is bit-for-bit what it was.
+            // Pass-through for a club the career does not carry, which is every club of every
+            // careerless save (all three career blocks empty — a literally pre-T2 v3 FILE is refused
+            // by F3): the decorator is then the identity and the restore is bit-for-bit what it was.
             MatchEngine.MatchEngine match = null;
             if (blobs.MatchBlob != null)
             {
-                var career = PlayerCareerStates.FromBlocks(trainingClubs, medicalClubs);
+                // The dial position is irrelevant to this throwaway career — it only answers the
+                // availability read; no day step ever runs on it — but it is constructed at the
+                // production posture (armed, FR-MD-027) rather than encoding a stale default.
+                var career = PlayerCareerStates.FromBlocks(
+                    trainingClubs, medicalClubs, appearanceClubs, injuryOccurrenceEnabled: true);
                 ISquadProvider asConfigured = squads == null
                     ? null
                     : new AvailabilityFilteredSquads(squads, career);
                 match = MatchSaveManager.Restore(blobs.MatchBlob, asConfigured);
             }
 
-            return new SeasonSaveContents(world, season, trainingClubs, medicalClubs, match);
+            return new SeasonSaveContents(
+                world, season, trainingClubs, medicalClubs, appearanceClubs, match);
         }
 
         /// <summary>
@@ -346,6 +384,177 @@ namespace TacticalDirector.SeasonSave
         private static void TryDelete(string path)
         {
             try { File.Delete(path); } catch (Exception) { }
+        }
+
+        /// <summary>
+        /// The three career block sets must describe the SAME squads before they are written (AR
+        /// pass 3): without this, <c>Save</c> could write a file its own documented restore path —
+        /// <see cref="TacticalDirector.SeasonSave.PlayerCareerStates.FromBlocks"/> — refuses on its
+        /// coherence gate, the "Encode writes what Decode refuses" defect class the T1 AR filed
+        /// against <c>TrainingSaveCodec</c>. Order-insensitive on clubs (the codecs canonicalize at
+        /// encode), so it compares the sets by ascending ClubId, then each club's player ids
+        /// pairwise.
+        /// </summary>
+        private static void RequireCoherentCareerBlocks(
+            ClubTrainingStates[] trainingClubs,
+            ClubInjuryStates[] medicalClubs,
+            ClubAppearanceStates[] appearanceClubs)
+        {
+            if (trainingClubs.Length != medicalClubs.Length
+                || trainingClubs.Length != appearanceClubs.Length)
+            {
+                throw new ArgumentException(
+                    $"The training set carries {trainingClubs.Length} clubs, the medical set "
+                    + $"{medicalClubs.Length} and the appearance set {appearanceClubs.Length}; the "
+                    + "three describe one career and must agree — this file would be refused by "
+                    + "PlayerCareerStates.FromBlocks on load.",
+                    nameof(medicalClubs));
+            }
+
+            var t = (ClubTrainingStates[])trainingClubs.Clone();
+            var m = (ClubInjuryStates[])medicalClubs.Clone();
+            var a = (ClubAppearanceStates[])appearanceClubs.Clone();
+            Array.Sort(t, (x, y) => x.ClubId.CompareTo(y.ClubId));
+            Array.Sort(m, (x, y) => x.ClubId.CompareTo(y.ClubId));
+            Array.Sort(a, (x, y) => x.ClubId.CompareTo(y.ClubId));
+
+            for (int c = 0; c < t.Length; c++)
+            {
+                // Duplicate club ids pair arbitrarily across the three unstably-sorted sets, so the
+                // gate's own diagnostics would name the wrong mismatch; refused by name here rather
+                // than left to the codecs downstream (AR pass 6 L5).
+                if (c > 0 && t[c].ClubId == t[c - 1].ClubId)
+                {
+                    throw new ArgumentException(
+                        $"The training set carries club {t[c].ClubId} twice — a club has exactly one "
+                        + "career block.",
+                        nameof(trainingClubs));
+                }
+
+                // A default-valued block NREs at the clones below; refuse it by name instead (AR
+                // pass 4 L1 — before this gate existed, the codecs produced the diagnosed refusal).
+                if (t[c].PlayerIds == null || t[c].States == null
+                    || m[c].PlayerIds == null || m[c].States == null
+                    || a[c].PlayerIds == null || a[c].States == null)
+                {
+                    // The paramName names the OFFENDING set (AR pass 5 L10 — a defaulted training
+                    // block used to be reported as 'medicalClubs').
+                    string offender = t[c].PlayerIds == null || t[c].States == null
+                        ? nameof(trainingClubs)
+                        : m[c].PlayerIds == null || m[c].States == null
+                            ? nameof(medicalClubs)
+                            : nameof(appearanceClubs);
+                    throw new ArgumentException(
+                        $"Career block {c} is a default value, not a constructed one — a save cannot "
+                        + "carry blocks that were never populated.",
+                        offender);
+                }
+
+                if (t[c].ClubId != m[c].ClubId || t[c].ClubId != a[c].ClubId)
+                {
+                    throw new ArgumentException(
+                        $"The three career block sets disagree on the club set (training club "
+                        + $"{t[c].ClubId}, medical {m[c].ClubId}, appearance {a[c].ClubId} at "
+                        + $"ascending position {c}).",
+                        t[c].ClubId != m[c].ClubId ? nameof(medicalClubs) : nameof(appearanceClubs));
+                }
+
+                if (t[c].Count != m[c].Count || t[c].Count != a[c].Count)
+                {
+                    throw new ArgumentException(
+                        $"Club {t[c].ClubId}: the training set carries {t[c].Count} players, the "
+                        + $"medical set {m[c].Count}, the appearance set {a[c].Count}.",
+                        t[c].Count != m[c].Count ? nameof(medicalClubs) : nameof(appearanceClubs));
+                }
+
+                // Order-insensitive within the club too: the codecs canonicalize per-club order at
+                // Encode (each block's states travel WITH its own ids), so a caller may legitimately
+                // hand the three sets in different member orders — only the member SETS must agree.
+                var tIds = (int[])t[c].PlayerIds.Clone();
+                var mIds = (int[])m[c].PlayerIds.Clone();
+                var aIds = (int[])a[c].PlayerIds.Clone();
+                Array.Sort(tIds);
+                Array.Sort(mIds);
+                Array.Sort(aIds);
+                for (int i = 0; i < tIds.Length; i++)
+                {
+                    if (tIds[i] != mIds[i] || tIds[i] != aIds[i])
+                    {
+                        throw new ArgumentException(
+                            $"Club {t[c].ClubId}: the training set holds player {tIds[i]} where the "
+                            + $"medical set holds {mIds[i]} and the appearance set {aIds[i]} "
+                            + "(compared ascending) — the three sets describe different squads.",
+                            tIds[i] != mIds[i] ? nameof(medicalClubs) : nameof(appearanceClubs));
+                    }
+                }
+            }
+
+            // The ERR-041-019 half of FromBlocks' refusal surface (AR pass 4 M1): without this,
+            // Save still wrote a file the restore path refuses — a cross-club duplicate PlayerId —
+            // one predicate short of the gate's own stated contract, missed within a commit of the
+            // gate being written. Same walk, same message, one owner.
+            var clubIds = new int[t.Length];
+            var idSets = new int[t.Length][];
+            for (int c = 0; c < t.Length; c++)
+            {
+                clubIds[c] = t[c].ClubId;
+                idSets[c] = t[c].PlayerIds;
+            }
+
+            PlayerCareerStates.RequireGloballyUniquePlayerIds(clubIds, idSets, nameof(trainingClubs));
+        }
+
+        /// <summary>
+        /// The SECOND cross-blob coherence rule this root owns (AR pass 5 M4, beside FR-SN-011's
+        /// calendar cursor): no persisted per-player world-day cursor may sit AHEAD of the world
+        /// clock. A future-dated appearance anchor makes <c>AppearanceWindow.AppearanceDaysOn</c>
+        /// throw at slot 4 with the dial armed, and because the career day-steps run BEFORE
+        /// <c>WorldStore.AdvanceDay</c> the clock can never catch up — the career is wedged
+        /// permanently while saving and reloading cleanly. The sibling cursors fail the OTHER way
+        /// (a future-dated #29/#41 cursor is a silent per-player no-op until the clock catches up).
+        /// Three persisted cursors, two failure modes, one owner: the only layer holding the world
+        /// blob and the career blocks together. Checked at Save too, so this root never writes a
+        /// file its own Load refuses (the T1 AR's Encode/Decode-asymmetry rule).
+        /// </summary>
+        private static void RequireCareerCursorsWithinClock(
+            uint worldTick,
+            ClubTrainingStates[] trainingClubs,
+            ClubInjuryStates[] medicalClubs,
+            ClubAppearanceStates[] appearanceClubs)
+        {
+            // One predicate set, one owner (AR pass 9 M1): the per-cursor rules live on
+            // PlayerCareerStates beside the composition-boundary walk, so the two gates cannot
+            // drift — the RequireGloballyUniquePlayerIds shape. The three kinds iterate
+            // independently because the coherence gate accepts permuted club order per kind.
+            for (int c = 0; c < trainingClubs.Length; c++)
+            {
+                for (int i = 0; i < trainingClubs[c].Count; i++)
+                {
+                    PlayerCareerStates.RequireTrainingCursorWithinClock(
+                        worldTick, trainingClubs[c].ClubId, trainingClubs[c].PlayerIds[i],
+                        trainingClubs[c].States[i].LastAdvancedWorldDay, "Career save");
+                }
+            }
+
+            for (int c = 0; c < medicalClubs.Length; c++)
+            {
+                for (int i = 0; i < medicalClubs[c].Count; i++)
+                {
+                    PlayerCareerStates.RequireMedicalCursorWithinClock(
+                        worldTick, medicalClubs[c].ClubId, medicalClubs[c].PlayerIds[i],
+                        medicalClubs[c].States[i].LastAdvancedWorldDay, "Career save");
+                }
+            }
+
+            for (int c = 0; c < appearanceClubs.Length; c++)
+            {
+                for (int i = 0; i < appearanceClubs[c].Count; i++)
+                {
+                    PlayerCareerStates.RequireAppearanceAnchorWithinClock(
+                        worldTick, appearanceClubs[c].ClubId, appearanceClubs[c].PlayerIds[i],
+                        appearanceClubs[c].States[i].BitsAsOfWorldDay, "Career save");
+                }
+            }
         }
     }
 }
@@ -408,4 +617,46 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | FromBlocks copies the state arrays now. The conclusion holds  |
 // |         |            |        | (the decorator only reads); the stated REASON would have told |
 // |         |            |        | a reader that FromBlocks still borrows.                       |
+// | 1.10    | 2026-08-07 | —      | Balance pass D2 (ERR-041-010(b)): Save/Load carry the third   |
+// |         |            |        | (appearance) block on the same REQUIRED-never-null terms as   |
+// |         |            |        | its siblings; the match-restore career is rebuilt from all    |
+// |         |            |        | three; SeasonSaveContents gains AppearanceClubs.              |
+// | 1.11    | 2026-08-07 | —      | Balance pass D4: Load's throwaway filter career is constructed |
+// |         |            |        | at the armed production posture (the dial argument is now     |
+// |         |            |        | required; irrelevant to a read-only filter, but a literal     |
+// |         |            |        | false would encode a stale default).                          |
+// | 1.12    | 2026-08-08 | —      | Balance-pass AR pass 3 (L7): Save gates the career block       |
+// |         |            |        | triple's coherence (club sets + per-club player ids agree),   |
+// |         |            |        | because it could write a file its own documented restore path |
+// |         |            |        | (PlayerCareerStates.FromBlocks) refuses — the Encode-writes-  |
+// |         |            |        | what-Decode-refuses class the T1 AR filed against the codec.  |
+// |         |            |        | Also deletes v1.11's orphaned header fragment (AR pass 2).    |
+// | 1.13    | 2026-08-08 | —      | Balance-pass AR pass 4 (M1 + L1): the gate gains the           |
+// |         |            |        | ERR-041-019 half of FromBlocks' refusal surface (a cross-club |
+// |         |            |        | duplicate id still saved cleanly — the gate's own defect      |
+// |         |            |        | class, one predicate short, missed within a commit of the     |
+// |         |            |        | gate being written), and refuses a default block by name      |
+// |         |            |        | instead of NullReferenceException-ing at the clone.           |
+// | 1.14    | 2026-08-08 | —      | Balance-pass AR pass 5 (M4 + L10): the cursor-vs-clock gate —  |
+// |         |            |        | the SECOND cross-blob rule this root owns; a future-dated     |
+// |         |            |        | appearance anchor wedges the career permanently at slot 4     |
+// |         |            |        | with the dial armed (demonstrated), the sibling cursors       |
+// |         |            |        | freeze a player silently — refused at Save AND Load. The      |
+// |         |            |        | coherence gate's paramName now names the OFFENDING set.       |
+// | 1.15    | 2026-08-08 | —      | Balance-pass AR pass 6 (M1 + M2 + L3 + L5): the KD-4 calendar  |
+// |         |            |        | invariant is checked at Save too (it was Load-only, three     |
+// |         |            |        | lines above a gate whose own doc states the never-write-what- |
+// |         |            |        | Load-refuses rule); the cursor gate refuses LAGGING #29/#41   |
+// |         |            |        | cursors (gap >= 2 wedges via F7 — demonstrated; ahead-only    |
+// |         |            |        | before); duplicate ClubIds refused by name in the coherence   |
+// |         |            |        | gate; header/summary docs mention the appearance block.       |
+// | 1.16    | 2026-08-08 | —      | Balance-pass AR pass 9 (M1): RequireCareerCursorsWithinClock's   |
+// |         |            |        | three hand-copied predicate loops now delegate to                |
+// |         |            |        | PlayerCareerStates' shared per-cursor statics — one rule, one    |
+// |         |            |        | owner; the local copy's medical-lag clause had no isolating      |
+// |         |            |        | case at Save or Load (deleting it left the suite green).         |
+// | 1.17    | 2026-08-08 | —      | Balance-pass AR pass 13 (L2, doc): two stale counts — "the two    |
+// |         |            |        | zero-club blocks" (three since D2) and "every save written        |
+// |         |            |        | before T2" (frame v4 refuses a pre-T2 file; the live case is a    |
+// |         |            |        | careerless save).                                                  |
 #endregion

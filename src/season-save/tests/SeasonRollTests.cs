@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonRollTests.cs
 // Created:  2026-07-27
-// Modified: 2026-07-27
+// Modified: 2026-08-07
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.5 (season-boundary roll), FR-SN-029 (restartable
 //           transform), FR-SN-030 (two-run season determinism), FR-SN-031 (insertion points),
@@ -341,7 +341,8 @@ namespace TacticalDirector.SeasonSave.Tests
             try
             {
                 SeasonSaveManager.Save(world, interrupted.State, null,
-                    path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>());
+                    path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>(),
+                    Array.Empty<ClubAppearanceStates>());
                 SeasonSaveContents contents = SeasonSaveManager.Load(path, league);
                 var resumed = new SeasonLoop(
                     contents.World, contents.Season, RoundResolutionMode.QuickSimAll);
@@ -377,7 +378,8 @@ namespace TacticalDirector.SeasonSave.Tests
             try
             {
                 SeasonSaveManager.Save(world, loop.State, null,
-                    path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>());
+                    path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>(),
+                    Array.Empty<ClubAppearanceStates>());
                 SeasonSaveContents contents = SeasonSaveManager.Load(path, league);
 
                 Assert.IsTrue(loop.State.FieldsEqual(contents.Season),
@@ -591,4 +593,6 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | uint.MaxValue fails loud rather than wrapping to a plausible-      |
 // |         |            |        | looking calendar at the start of time. Each proven non-vacuous by  |
 // |         |            |        | disabling its own gate and watching exactly that test fail.        |
+// | 1.3     | 2026-08-07 | —      | Balance pass D2: the two Save call sites carry the required        |
+// |         |            |        | (empty) appearance set — frame v4.                                 |
 #endregion

@@ -1,0 +1,68 @@
+# tools/recurring-defect-lint.suppressions
+#
+# Created:  2026-08-08
+# Purpose:  The documented, deliberately-frozen residuals that recurring-defect-lint.py
+#           would otherwise re-raise on every run. A suppressed finding still prints —
+#           as INFO, with the reason below — so nothing disappears silently.
+#
+# Format:   <path-glob>:<regex>            # reason (must cite an ERR id, a pass, or a
+#                                          #  governance rule in CLAUDE.md)
+#
+# Rules for adding a line: a suppression is a claim that a finding is CORRECT AS IT
+# STANDS, not that it is unimportant. If the finding is real but deferred, leave it
+# unsuppressed and record it in open-issues.md instead.
+
+# --------------------------------------------------------------------------
+# Design supplements frozen at their convergence
+# --------------------------------------------------------------------------
+# Root CLAUDE.md, "Design supplements": a supplement is frozen at its convergence and
+# the section files carry the corrections made after it. All three tables below carry
+# the same July-23-2026 promotion-row inversion — the PROMOTED row (v0.3) was written
+# and appended before the AR row (v0.2) it records the outcome of, so the pre-promotion
+# tail reads v0.1 / v0.3 / v0.2. Rewriting it would rewrite published history.
+
+docs/tracking/injuries-medical-design.md:row v0\.3 is out of order after v0\.1   # CLAUDE.md "Design supplements" — frozen at convergence; the v0.1/v0.3/v0.2 promotion-row order, named in the balance-pass triage list
+docs/tracking/training-system-design.md:row v0\.2 is out of order after v0\.1   # same July-23 promotion-row inversion, #29's supplement (frozen at convergence)
+docs/tracking/training-system-design.md:row v0\.3 is out of order after v0\.2   # same July-23 promotion-row inversion, #29's supplement (frozen at convergence)
+docs/tracking/club-finances-economy-design.md:row v0\.2 is out of order after v0\.3   # same July-23 promotion-row inversion, #40's supplement (frozen at convergence)
+
+# --------------------------------------------------------------------------
+# Deterministic Sim #16 §3.5 — the two v1.0.14 rows
+# --------------------------------------------------------------------------
+# Two independent approval-wave back-props (ERR-043-001 at #43's approval, July 24;
+# ERR-045-001 at #45's approval, July 25) each added the same three reserved-ordinal
+# placeholder rows and each recorded itself as v1.0.14. Left as found: renumbering
+# either row would break the citations in #43's and #45's own approval records.
+
+docs/specs/deterministic-sim/section-3.md:duplicate version row v1\.0\.14   # two July-24/25 approval-wave back-props (ERR-043-001, ERR-045-001) collided on one patch number; left as found
+
+# --------------------------------------------------------------------------
+# PRE-ARMED — documented residuals the current scan scope does not reach
+# --------------------------------------------------------------------------
+# These match nothing today, deliberately. Class 2's population is docs/specs/**/*.md
+# plus docs/tracking/*-design.md, so the CHANGELOG tables are out of scope; the rules
+# are here so that widening the scope does not re-raise a collision the project has
+# already decided to leave alone. CHANGELOG-src.md v2.80 and v2.85 record both.
+
+docs/tracking/CHANGELOG-src.md:duplicate version row v2\.79   # CHANGELOG-src v2.80: two concurrent Aug-7 sessions (ERR-008-023 and client P5a) both took 2.79 — left as found per the no-edit rule
+docs/tracking/CHANGELOG-src.md:duplicate version row v2\.8[234]   # CHANGELOG-src v2.85: 2.82-2.84 were already in the table from the T2 review rounds when the chain's entry took 2.81 — left as found per the no-edit rule
+docs/specs/season-competition-loop/section-3.md:duplicate version row v0\.7 # ERR-030-022: ERR-030-007 was filed twice (#42's and #32's approvals) — the duplicate rows ARE the record of the double-filing §3.3.1 reconciles; renumbering breaks both approval records
+docs/specs/season-competition-loop/section-3.md:duplicate version row v0\.8 # ERR-030-022: same — ERR-030-008/-009 (#45) and ERR-030-009 (#44) each took v0.8; the reconciliation is §3.3.1, the rows stay as filed
+docs/specs/season-competition-loop/section-3.md:row v0\.7 is out of order # ERR-030-022: consequence of the recorded double-filing above
+docs/tracking/season-competition-loop-design.md:row v0\.[23] is out of order # Root CLAUDE.md 'Design supplements': frozen at convergence — the July promotion row precedes the AR rows it records, same inversion as the three suppressed above
+docs/tracking/training-system-design.md:row v0\.8 is out of order # Frozen supplement, same governance rule — the v0.8 row was appended at a later promotion event after the frozen v0.1/v0.3/v0.2 block
+src/season-save/SeasonSaveManager.cs:the two codecs # Reviewed at the lint sweep (Aug 8, 2026): refers to WorldStore.Restore + SeasonStateCodec w.r.t. the KD-4 calendar invariant — genuinely two
+src/season-save/tests/PlayerCareerStatesTests.cs:(both|the two) blocks # Reviewed: the round-trip test deliberately varies the #29/#41 pair; appearance round-trips in AppearanceRecordTests
+src/season-save/tests/SeasonSaveManagerTests.cs:the two blocks # Reviewed: the TRNG/MEDL mutual-decode hazard — those two ARE byte-shape-identical; APPR is not part of the claim
+src/injuries-medical/tests/MedicalSaveCodecTests.cs:the two blocks # Reviewed: same TRNG/MEDL mutual-decode context
+docs/specs/training-system/section-4.md:the two blocks # Reviewed: §4.4.1's magic rationale is about the #29/#41 byte-shape pair specifically
+docs/specs/season-competition-loop/section-7.md:nothing is built yet # The lint-sweep correction itself quotes the as-authored phrase inside its annotation
+docs/specs/news-inbox-man-management/section-8.md:empty until # Quotes ERR-030-024's row text about #35's seam — #35 has no assembly; true statement
+docs/specs/season-competition-loop/section-3.md:seam is empty until # #31/#34/#32 deep tiers are genuinely unbuilt (no assemblies) — true seam notes (the phrase wraps mid-line at :132)
+docs/specs/season-competition-loop/section-3.md:Empty until #(35|46) T2 # #35/#46 have no src/ assemblies — true seam notes
+docs/specs/season-competition-loop/section-3.md:NULL SEAM until #40 T2 # #40 has no src/ assembly — true seam note
+docs/specs/season-competition-loop/section-3.md:when they land # The pass-12 corrected clause — its list now names only unlanded specs, verified against the assembly map
+# SCOPE DECISION (AR pass 14 L3): lint_draw_key skips version-history rows entirely, but rows are
+# where this project's spelling record lives — the #27 §2 v0.3 row carried the last unsanctioned
+# spelling and was annotated in place instead. If a future pass narrows the exclusion to
+# CHANGELOG*/spec-error-log only, delete this comment.
