@@ -120,6 +120,8 @@ namespace TacticalDirector.SeasonSave
             }
 
             RequireCoherentCareerBlocks(trainingClubs, medicalClubs, appearanceClubs);
+            RequireCareerCursorsWithinClock(
+                world.CurrentWorldTick, trainingClubs, medicalClubs, appearanceClubs);
 
             using var _ = s_saveMarker.Auto();
 
@@ -283,6 +285,11 @@ namespace TacticalDirector.SeasonSave
                     world.CurrentWorldTick + ") — the KD-4 cursor invariant (FR-SN-011) is violated.");
             }
 
+            // The second cross-blob rule (AR pass 5 M4): see RequireCareerCursorsWithinClock. Enforced
+            // on load as well as save because a hand-edited or mispaired file arrives HERE.
+            RequireCareerCursorsWithinClock(
+                world.CurrentWorldTick, trainingClubs, medicalClubs, appearanceClubs);
+
             // The in-progress match was configured with the AVAILABILITY-FILTERED squad (#41 FR-MD-023,
             // #29/#41 T2), and the snapshot records only each team's ClubId — it cannot record "which
             // eighteen of the twenty-five". So restoring through the raw provider hands
@@ -404,10 +411,17 @@ namespace TacticalDirector.SeasonSave
                     || m[c].PlayerIds == null || m[c].States == null
                     || a[c].PlayerIds == null || a[c].States == null)
                 {
+                    // The paramName names the OFFENDING set (AR pass 5 L10 — a defaulted training
+                    // block used to be reported as 'medicalClubs').
+                    string offender = t[c].PlayerIds == null || t[c].States == null
+                        ? nameof(trainingClubs)
+                        : m[c].PlayerIds == null || m[c].States == null
+                            ? nameof(medicalClubs)
+                            : nameof(appearanceClubs);
                     throw new ArgumentException(
                         $"Career block {c} is a default value, not a constructed one — a save cannot "
                         + "carry blocks that were never populated.",
-                        nameof(medicalClubs));
+                        offender);
                 }
 
                 if (t[c].ClubId != m[c].ClubId || t[c].ClubId != a[c].ClubId)
@@ -416,7 +430,7 @@ namespace TacticalDirector.SeasonSave
                         $"The three career block sets disagree on the club set (training club "
                         + $"{t[c].ClubId}, medical {m[c].ClubId}, appearance {a[c].ClubId} at "
                         + $"ascending position {c}).",
-                        nameof(medicalClubs));
+                        t[c].ClubId != m[c].ClubId ? nameof(medicalClubs) : nameof(appearanceClubs));
                 }
 
                 if (t[c].Count != m[c].Count || t[c].Count != a[c].Count)
@@ -424,7 +438,7 @@ namespace TacticalDirector.SeasonSave
                     throw new ArgumentException(
                         $"Club {t[c].ClubId}: the training set carries {t[c].Count} players, the "
                         + $"medical set {m[c].Count}, the appearance set {a[c].Count}.",
-                        nameof(medicalClubs));
+                        t[c].Count != m[c].Count ? nameof(medicalClubs) : nameof(appearanceClubs));
                 }
 
                 // Order-insensitive within the club too: the codecs canonicalize per-club order at
@@ -444,7 +458,7 @@ namespace TacticalDirector.SeasonSave
                             $"Club {t[c].ClubId}: the training set holds player {tIds[i]} where the "
                             + $"medical set holds {mIds[i]} and the appearance set {aIds[i]} "
                             + "(compared ascending) — the three sets describe different squads.",
-                            nameof(medicalClubs));
+                            tIds[i] != mIds[i] ? nameof(medicalClubs) : nameof(appearanceClubs));
                     }
                 }
             }
@@ -462,6 +476,73 @@ namespace TacticalDirector.SeasonSave
             }
 
             PlayerCareerStates.RequireGloballyUniquePlayerIds(clubIds, idSets, nameof(trainingClubs));
+        }
+
+        /// <summary>
+        /// The SECOND cross-blob coherence rule this root owns (AR pass 5 M4, beside FR-SN-011's
+        /// calendar cursor): no persisted per-player world-day cursor may sit AHEAD of the world
+        /// clock. A future-dated appearance anchor makes <c>AppearanceWindow.AppearanceDaysOn</c>
+        /// throw at slot 4 with the dial armed, and because the career day-steps run BEFORE
+        /// <c>WorldStore.AdvanceDay</c> the clock can never catch up — the career is wedged
+        /// permanently while saving and reloading cleanly. The sibling cursors fail the OTHER way
+        /// (a future-dated #29/#41 cursor is a silent per-player no-op until the clock catches up).
+        /// Three persisted cursors, two failure modes, one owner: the only layer holding the world
+        /// blob and the career blocks together. Checked at Save too, so this root never writes a
+        /// file its own Load refuses (the T1 AR's Encode/Decode-asymmetry rule).
+        /// </summary>
+        private static void RequireCareerCursorsWithinClock(
+            uint worldTick,
+            ClubTrainingStates[] trainingClubs,
+            ClubInjuryStates[] medicalClubs,
+            ClubAppearanceStates[] appearanceClubs)
+        {
+            for (int c = 0; c < trainingClubs.Length; c++)
+            {
+                for (int i = 0; i < trainingClubs[c].Count; i++)
+                {
+                    uint day = trainingClubs[c].States[i].LastAdvancedWorldDay;
+                    if (day != TrainingSystemConstants.TRAINING_NOT_ADVANCED_SENTINEL && day > worldTick)
+                    {
+                        throw new InvalidOperationException(
+                            $"Career save is incoherent: club {trainingClubs[c].ClubId} player "
+                            + $"{trainingClubs[c].PlayerIds[i]}'s training cursor ({day}) is ahead of "
+                            + $"the world clock ({worldTick}) — a mispaired or hand-edited save; that "
+                            + "player would silently skip the day step until the clock caught up.");
+                    }
+                }
+            }
+
+            for (int c = 0; c < medicalClubs.Length; c++)
+            {
+                for (int i = 0; i < medicalClubs[c].Count; i++)
+                {
+                    uint day = medicalClubs[c].States[i].LastAdvancedWorldDay;
+                    if (day != InjuriesMedicalConstants.MEDICAL_NOT_ADVANCED_SENTINEL && day > worldTick)
+                    {
+                        throw new InvalidOperationException(
+                            $"Career save is incoherent: club {medicalClubs[c].ClubId} player "
+                            + $"{medicalClubs[c].PlayerIds[i]}'s medical cursor ({day}) is ahead of "
+                            + $"the world clock ({worldTick}).");
+                    }
+                }
+            }
+
+            for (int c = 0; c < appearanceClubs.Length; c++)
+            {
+                for (int i = 0; i < appearanceClubs[c].Count; i++)
+                {
+                    uint day = appearanceClubs[c].States[i].BitsAsOfWorldDay;
+                    if (day > worldTick)
+                    {
+                        throw new InvalidOperationException(
+                            $"Career save is incoherent: club {appearanceClubs[c].ClubId} player "
+                            + $"{appearanceClubs[c].PlayerIds[i]}'s appearance anchor ({day}) is ahead "
+                            + $"of the world clock ({worldTick}) — with the occurrence dial armed, the "
+                            + "slot-4 window read throws on every later day and the world clock can "
+                            + "never advance again (the career wedges while saving cleanly).");
+                    }
+                }
+            }
         }
     }
 }
@@ -544,4 +625,10 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | class, one predicate short, missed within a commit of the     |
 // |         |            |        | gate being written), and refuses a default block by name      |
 // |         |            |        | instead of NullReferenceException-ing at the clone.           |
+// | 1.14    | 2026-08-08 | —      | Balance-pass AR pass 5 (M4 + L10): the cursor-vs-clock gate —  |
+// |         |            |        | the SECOND cross-blob rule this root owns; a future-dated     |
+// |         |            |        | appearance anchor wedges the career permanently at slot 4     |
+// |         |            |        | with the dial armed (demonstrated), the sibling cursors       |
+// |         |            |        | freeze a player silently — refused at Save AND Load. The      |
+// |         |            |        | coherence gate's paramName now names the OFFENDING set.       |
 #endregion

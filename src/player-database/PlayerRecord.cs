@@ -1,8 +1,9 @@
 // File:     src/player-database/PlayerRecord.cs
 // Created:  2026-07-15
-// Modified: 2026-08-08 (AR pass 3 / ERR-041-019: the PlayerId global-uniqueness doc — no code change)
+// Modified: 2026-08-08 (AR pass 4 / ERR-027-004: the Purpose line cites the #27 back-prop — no code change)
 // Author:   —
-// Spec:     Squad/Player Data Layer design supplement (docs/tracking/squad-player-data-design.md) §3
+// Spec:     Squad / Player Data Layer #27 §2.2.3 / FR-SQ-008/010 (as amended by ERR-027-004);
+//           its pre-promotion design supplement §3 is history only (the spec folder wins)
 // Purpose:  One player's identity + attributes. PlayerId is club-scoped (KD-3) and globally unique
 //           across a career's clubs (ERR-027-004 / ERR-041-019); not the match-scoped agent roster
 //           index MatchEngine assigns per match.

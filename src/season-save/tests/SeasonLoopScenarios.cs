@@ -147,6 +147,10 @@ namespace TacticalDirector.SeasonSave.Tests
                 "the world day advanced while a match was being played — the world and match clocks must "
                     + "stay disjoint (FR-SN-025)");
             context.Envelope.CheckTrue(
+                "engine-injury-changed-the-eleven", engineRound.InjuryChangedTheEleven,
+                "precondition: the injured starter's absence must change WHICH eleven is selected, "
+                    + "or the two predicates below cannot distinguish a live filter from a dead one");
+            context.Envelope.CheckTrue(
                 "engine-fixture-records-the-filtered-eleven",
                 engineRound.EngineFixtureRecordedTheFilteredEleven,
                 "the ENGINE-resolved fixture's appearance record does not match the filtered "
@@ -259,6 +263,19 @@ namespace TacticalDirector.SeasonSave.Tests
 
             int[] expectedManagedXi = TacticalDirector.MatchEngine.SquadRating.StartingElevenPlayerIds(
                 career.SelectAvailable(league.ResolveByClubId(ManagedClubId)));
+
+            // Precondition (AR pass 5 L7): the injury must have CHANGED the eleven, or the two
+            // predicates below are satisfied by a filter that did nothing — the same guard the
+            // sibling suite carries. Sensitive to the pre-round day-step count only through
+            // RecoveryRemaining = 12 outliving the days to the first fixture; if the calendar
+            // moves, this fails loudly here rather than as a confusing exclusion failure.
+            bool injuryChangedTheEleven = false;
+            for (int i = 0; i < fitManagedXi.Length && !injuryChangedTheEleven; i++)
+            {
+                injuryChangedTheEleven = System.Array.IndexOf(expectedManagedXi, fitManagedXi[i]) < 0;
+            }
+
+            obs.InjuryChangedTheEleven = injuryChangedTheEleven;
             var recordedManagedXi = new System.Collections.Generic.List<int>();
             bool injuredStarterRecorded = false;
             ClubAppearanceStates[] blocks = career.AppearanceBlocks();
@@ -297,6 +314,9 @@ namespace TacticalDirector.SeasonSave.Tests
             foreach (MatchResult r in results)
             {
                 var fixture = new Fixture(r.RoundIndex, r.HomeClubId, r.AwayClubId);
+                // The prediction reads the UNFILTERED rosters while the loop rates filtered ones —
+                // sound here only because the single injury above sits on the MANAGED club, whose
+                // scoreline is deliberately not compared (AR pass 5 L7: stated, not assumed).
                 MatchResult predicted = RoundResolutionModel.Resolve(
                     in fixture,
                     season.Seed,
@@ -365,6 +385,7 @@ namespace TacticalDirector.SeasonSave.Tests
             public bool WorldDayUnchanged;
             public bool EngineFixtureRecordedTheFilteredEleven;
             public bool InjuredStarterUnrecorded;
+            public bool InjuryChangedTheEleven;
         }
     }
 }
@@ -394,4 +415,8 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | predicates assert the engine fixture records the FILTERED eleven  |
 // |         |            |        | and excludes an injured starter, on the one real match this       |
 // |         |            |        | scenario already pays for.                                        |
+// | 1.3     | 2026-08-08 | —      | Balance-pass AR pass 5 (L7): + the injury-changed-the-eleven   |
+// |         |            |        | precondition predicate (the sibling suite's guard), and the    |
+// |         |            |        | round-mate model comparison states its unfiltered-roster       |
+// |         |            |        | assumption instead of assuming it.                             |
 #endregion

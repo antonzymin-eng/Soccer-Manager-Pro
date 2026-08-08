@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/tests/MedicalStepTests.cs
 // Created:  2026-08-05
-// Modified: 2026-08-07
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Injuries & Medical #41 §3.1–§3.4 + Appendices A/B/C; Code Standards #20
 // Purpose:  T-MD-DET-001/003/005/006/007/009, T-MD-ORD-001, T-MD-SEV-001/002, T-MD-REC-001,
@@ -680,7 +680,10 @@ namespace TacticalDirector.InjuriesMedical.Tests
 
             // 5. Two matches in one window: congestion is PRICED (1.49%/day), no longer flattened
             //    into the cap — the AR pass-1 ceiling raise (10000 → 16000) is what bought this row
-            //    its own value instead of the clamp's.
+            //    its own value instead of the clamp's. FORMULA PROBE, not live behaviour (AR pass
+            //    5): with DaysBetweenRounds == AppearanceWindowDays == 7 the wired Stage-0 schedule
+            //    can never put two matches in one window — AppearanceDays is always 0 or 1 — so
+            //    this row exercises the term a congested cup calendar (#43) will reach, today.
             Assert.AreEqual(1491, DailyOccurrencePer100k(peak, average, new MatchLoad(2, 0)),
                 "a congested week prices at 1.49%/day — real congestion risk, not the clamp.");
 
@@ -841,4 +844,8 @@ namespace TacticalDirector.InjuriesMedical.Tests
 // | 1.6     | 2026-08-07 | —      | Balance-pass AR pass 2 (L, doc only): three "1%" ceiling residues |
 // |         |            |        | (MaxOccurrenceRisk, HotDay, the characterization summary) updated |
 // |         |            |        | to the 1.6% / ~60x figures the M3 headroom raise made current.    |
+// | 1.7     | 2026-08-08 | —      | Balance-pass AR pass 5 (L9, comment): the MatchLoad(2,0)       |
+// |         |            |        | congestion rows named as FORMULA PROBES — the Stage-0 cadence  |
+// |         |            |        | (DaysBetweenRounds == window == 7) cannot produce two matches  |
+// |         |            |        | in one window; that input arrives with #43's cup calendars.    |
 #endregion

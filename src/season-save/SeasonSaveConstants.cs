@@ -1,6 +1,6 @@
 // File:     src/season-save/SeasonSaveConstants.cs
 // Created:  2026-07-22
-// Modified: 2026-08-07 (balance pass D2: SEASON_SAVE_FORMAT_VERSION 3 -> 4 + the APPR magic/version)
+// Modified: 2026-08-08 (AR pass 5 L4: + the [FIXED] appearance bitmask window bound — v1.5)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) KD-4; Code Standards #20
 // Purpose:  Constant catalogue for the season save-file frame. Holds the season-frame format version —
@@ -66,6 +66,15 @@ namespace TacticalDirector.SeasonSave
 
         /// <summary>[FIXED] The #30 appearance sub-blob version. Gates the generation of the format identified by <see cref="APPEARANCE_SAVE_MAGIC"/>.</summary>
         public const uint APPEARANCE_SAVE_FORMAT_VERSION = 1;
+
+        /// <summary>
+        /// [FIXED] The structural ceiling of the appearance day-bitmask window, in world-days: bit 0
+        /// is the anchor day itself — which the FR-MD-010 window never counts — so a u32 mask can
+        /// answer a window of at most 31 PRIOR days. <c>AppearanceWindow.RequireValidWindow</c> reads
+        /// this; the <c>[GT]</c> <c>AppearanceWindowDays</c> must stay within it (AR pass 5 — the
+        /// bound was previously a bare literal at the guard and in its catalogue lock, free to drift).
+        /// </summary>
+        public const int APPEARANCE_BITMASK_MAX_WINDOW_DAYS = 31;
         #endregion
     }
 }
@@ -88,4 +97,8 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | mandatory #30 appearance sub-blob between the medical block and  |
 // |         |            |        | the optional match block; + APPEARANCE_SAVE_MAGIC ("APPR") and   |
 // |         |            |        | APPEARANCE_SAVE_FORMAT_VERSION = 1 (the ERR-029-005 rule).       |
+// | 1.5     | 2026-08-08 | —      | Balance-pass AR pass 5 (L4): + [FIXED]                          |
+// |         |            |        | APPEARANCE_BITMASK_MAX_WINDOW_DAYS = 31 — the bitmask's        |
+// |         |            |        | structural window bound, previously a bare literal at the     |
+// |         |            |        | AppearanceWindow guard and in its catalogue lock.             |
 #endregion

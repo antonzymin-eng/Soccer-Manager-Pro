@@ -1,7 +1,7 @@
 // File:     src/season-save/SeasonSaveCodec.cs
 // Created:  2026-07-22
-// Modified: 2026-08-08 (balance pass D2: the frame gains the #30 appearance sub-blob;
-//           SEASON_SAVE_FORMAT_VERSION 3 -> 4 per ERR-041-010(b))
+// Modified: 2026-08-08 (AR pass 4 doc fix: header/Encode docs catch up with the appearance
+//           sub-blob the D2 frame bump added — v1.5)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §3 layout / KD-2..KD-8;
 //           Season & Competition Loop #30 Appendix B (frame), FR-SN-019/020/023;

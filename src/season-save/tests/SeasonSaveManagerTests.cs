@@ -396,7 +396,7 @@ namespace TacticalDirector.SeasonSave
                             Focus = TrainingFocus.Tactical,
                             Condition = 6543,
                             TrainingFatigue = 1234,
-                            LastAdvancedWorldDay = 19,
+                            LastAdvancedWorldDay = 1,   // within the fixture world clock (2) — the M4 cursor gate
                         },
                         new TrainingState
                         {
@@ -421,14 +421,14 @@ namespace TacticalDirector.SeasonSave
                             Severity = InjurySeverity.Moderate,
                             RecoveryRemaining = 21,
                             InjuryCount = 4,
-                            LastAdvancedWorldDay = 19,
+                            LastAdvancedWorldDay = 1,   // within the fixture world clock (2) — the M4 cursor gate
                         },
                         new InjuryState
                         {
                             Severity = InjurySeverity.None,
                             RecoveryRemaining = 0,
                             InjuryCount = 1,
-                            LastAdvancedWorldDay = 19,
+                            LastAdvancedWorldDay = 1,   // within the fixture world clock (2) — the M4 cursor gate
                         },
                     }),
             };
@@ -442,7 +442,7 @@ namespace TacticalDirector.SeasonSave
                     new[] { 100, 300 },
                     new[]
                     {
-                        new AppearanceState { RecentBits = 0b101u, BitsAsOfWorldDay = 19 },
+                        new AppearanceState { RecentBits = 0b101u, BitsAsOfWorldDay = 1 },
                         default(AppearanceState),
                     }),
             };
@@ -466,7 +466,7 @@ namespace TacticalDirector.SeasonSave
             Assert.AreEqual(TrainingFocus.Tactical, club.States[1].Focus);
             Assert.AreEqual(6543, club.States[1].Condition);
             Assert.AreEqual(1234, club.States[1].TrainingFatigue);
-            Assert.AreEqual(19u, club.States[1].LastAdvancedWorldDay);
+            Assert.AreEqual(1u, club.States[1].LastAdvancedWorldDay);
 
             Assert.AreEqual(1, got.MedicalClubs.Length, "one medical club must survive the file");
             ClubInjuryStates med = got.MedicalClubs[0];
@@ -475,7 +475,7 @@ namespace TacticalDirector.SeasonSave
             Assert.AreEqual(InjurySeverity.Moderate, med.States[0].Severity);
             Assert.AreEqual(21, med.States[0].RecoveryRemaining);
             Assert.AreEqual(4, med.States[0].InjuryCount);
-            Assert.AreEqual(19u, med.States[0].LastAdvancedWorldDay);
+            Assert.AreEqual(1u, med.States[0].LastAdvancedWorldDay);
             Assert.AreEqual(InjurySeverity.None, med.States[1].Severity);
             Assert.AreEqual(0, med.States[1].RecoveryRemaining);
             Assert.AreEqual(1, med.States[1].InjuryCount);
@@ -599,13 +599,21 @@ namespace TacticalDirector.SeasonSave
             // AR pass 4 (L1): default(ClubTrainingStates) passed the gate's length checks and
             // NullReferenceException'd at the clone — before the gate existed, the codecs produced
             // the diagnosed ArgumentException. The refusal must name the cause again.
-            Assert.Throws<ArgumentException>(
+            // The siblings are EMPTY constructed blocks so the walk gets past the count check and
+            // reaches the clone the null-guard protects (AR pass 5 M3: with 1-player siblings, the
+            // reverted code threw the same exception TYPE from the count branch — this test killed
+            // no mutant). The message assert pins WHICH branch refused.
+            var ex = Assert.Throws<ArgumentException>(
                 () => SeasonSaveManager.Save(
                     PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
                     new ClubTrainingStates[1],
-                    new[] { MBlock(0, 7) },
-                    new[] { ABlock(0, 7) }),
+                    new[] { MBlock(0) },
+                    new[] { ABlock(0) }),
                 "a never-constructed block is refused by name, not by NullReferenceException");
+            Assert.That(ex.Message, Does.Contain("default value"),
+                "the refusal must come from the default-block branch, not a downstream mismatch");
+            Assert.AreEqual("trainingClubs", ex.ParamName,
+                "…and must name the OFFENDING set (AR pass 5 L10)");
         }
 
         [Test]
@@ -650,6 +658,72 @@ namespace TacticalDirector.SeasonSave
             SeasonSaveContents got = SeasonSaveManager.Load(path);
             Assert.AreEqual(2, got.TrainingClubs.Length,
                 "…and the permuted-order save loads back canonicalized");
+        }
+
+        [Test]
+        public void Save_FutureDatedCareerCursor_FailsLoud()
+        {
+            // AR pass 5 (M4): a per-player world-day cursor AHEAD of the world clock is a mispaired
+            // or hand-edited save. The appearance anchor is the acute case — with the dial armed,
+            // the slot-4 window read throws on every later day and the day steps run BEFORE the
+            // clock increment, so the career wedges PERMANENTLY while saving and reloading cleanly.
+            // The #29/#41 cursors fail the other way (silent per-player no-op). Checked at Save so
+            // this root never writes a file its own Load refuses.
+            WorldStore world = PopulatedStore();   // world clock sits at 2
+
+            var futureAppearance = new ClubAppearanceStates(
+                7, new[] { 100 },
+                new[] { new AppearanceState { RecentBits = 1u, BitsAsOfWorldDay = 500u } });
+            Assert.Throws<InvalidOperationException>(
+                () => SeasonSaveManager.Save(
+                    world, MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    new[] { TBlock(7, 100) }, new[] { MBlock(7, 100) }, new[] { futureAppearance }),
+                "a future-dated appearance anchor wedges the career; refuse it at the write");
+
+            var futureTraining = TBlock(7, 100);
+            futureTraining.States[0].LastAdvancedWorldDay = 500u;
+            Assert.Throws<InvalidOperationException>(
+                () => SeasonSaveManager.Save(
+                    world, MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    new[] { futureTraining }, new[] { MBlock(7, 100) }, new[] { ABlock(7, 100) }),
+                "a future-dated training cursor silently freezes the player out of the day step");
+
+            var futureMedical = MBlock(7, 100);
+            futureMedical.States[0].LastAdvancedWorldDay = 500u;
+            Assert.Throws<InvalidOperationException>(
+                () => SeasonSaveManager.Save(
+                    world, MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    new[] { TBlock(7, 100) }, new[] { futureMedical }, new[] { ABlock(7, 100) }),
+                "…and the medical cursor likewise");
+        }
+
+        [Test]
+        public void Load_FutureDatedCareerCursor_FailsLoud()
+        {
+            // The same rule at the layer a hand-edited or mispaired file actually arrives through.
+            // Save now refuses this content, so the file is crafted through SeasonSaveCodec.Encode
+            // directly — exactly what "hand-edited" means.
+            WorldStore world = PopulatedStore();
+            var futureAppearance = new[]
+            {
+                new ClubAppearanceStates(
+                    7, new[] { 100 },
+                    new[] { new AppearanceState { RecentBits = 1u, BitsAsOfWorldDay = 500u } }),
+            };
+
+            var trainingBlock = new TrainingBlock(TrainingSaveCodec.Encode(new[] { TBlock(7, 100) }));
+            var medicalBlock = new MedicalBlock(MedicalSaveCodec.Encode(new[] { MBlock(7, 100) }));
+            var appearanceBlock = new AppearanceBlock(AppearanceSaveCodec.Encode(futureAppearance));
+            byte[] frame = SeasonSaveCodec.Encode(
+                world.Snapshot(), SeasonStateCodec.Encode(MidSeasonState()),
+                in trainingBlock, in medicalBlock, in appearanceBlock, null);
+
+            string path = TempPath("wedged.season");
+            File.WriteAllBytes(path, frame);
+
+            Assert.Throws<InvalidOperationException>(() => SeasonSaveManager.Load(path),
+                "a future-dated appearance anchor must be refused at load — undetected, the career "
+                + "cannot advance a single day and cannot be diagnosed from any later symptom");
         }
 
         [Test]
@@ -1127,4 +1201,11 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | PlayerId_FailsLoud (the gate's missing ERR-041-019 predicate);     |
 // |         |            |        | Save_DefaultCareerBlock refused by name, not NRE; every coherence  |
 // |         |            |        | refusal branch locked + the permuted-club-order PASS case.         |
+// | 1.9     | 2026-08-08 | —      | Balance-pass AR pass 5 (M3 + M4): the default-block refusal    |
+// |         |            |        | lock rebuilt to kill its mutant (empty siblings so the walk    |
+// |         |            |        | reaches the clone; message + paramName pinned — the reverted   |
+// |         |            |        | code threw the same TYPE from the count branch); + the         |
+// |         |            |        | future-dated-cursor refusals at Save (all three cursor kinds)  |
+// |         |            |        | and at Load (via a hand-crafted frame — what "hand-edited"     |
+// |         |            |        | means).                                                        |
 #endregion

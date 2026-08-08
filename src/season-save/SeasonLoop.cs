@@ -1042,9 +1042,9 @@ namespace TacticalDirector.SeasonSave
 
         /// <summary>
         /// The FR-MD-023 availability filter, applied between resolving a roster and using it. With no
-        /// career wired — and with one whose players are all fit, which is every career until the
-        /// occurrence dial is armed — this returns the same instance, so the resolved-and-configured
-        /// path is reference-identical to the pre-T2 one.
+        /// career wired — and with one whose players are all fit, the common case though no longer
+        /// every career (the dial has been ARMED since the balance pass) — this returns the same
+        /// instance, so the resolved-and-configured path is reference-identical to the pre-T2 one.
         /// <para>
         /// Applied to quick-simmed fixtures as well as engine ones: the quick-sim rates a club by the XI
         /// it would field, and a club missing four first-choice players should be rated as such whether
@@ -1197,4 +1197,7 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | RecordFixtureAppearances pair form — BOTH clubs validated before  |
 // |         |            |        | EITHER is written, so a refused away side no longer leaves the    |
 // |         |            |        | home XI carrying an appearance for a fixture never applied.       |
+// | 1.14    | 2026-08-08 | —      | Balance-pass AR pass 5 (M5, doc only): a stale "every career   |
+// |         |            |        | until the dial is armed" sentence updated — the dial has been  |
+// |         |            |        | armed since the balance pass.                                  |
 #endregion

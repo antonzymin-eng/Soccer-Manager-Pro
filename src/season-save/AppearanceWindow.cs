@@ -1,6 +1,6 @@
 // File:     src/season-save/AppearanceWindow.cs
 // Created:  2026-08-07
-// Modified: 2026-08-07
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.4 / Appendix B (the appearance record, ERR-041-010(b));
 //           Injuries & Medical #41 FR-MD-010 (the AppearanceDays window unit); Code Standards #20
@@ -125,11 +125,13 @@ namespace TacticalDirector.SeasonSave
         private static int RequireValidWindow()
         {
             int window = InjuriesMedicalConstants.AppearanceWindowDays;
-            if (window < 1 || window > 31)
+            if (window < 1 || window > SeasonSaveConstants.APPEARANCE_BITMASK_MAX_WINDOW_DAYS)
             {
                 throw new InvalidOperationException(
-                    $"AppearanceWindowDays = {window} is outside [1, 31] — the u32 appearance bitmask "
-                    + "cannot represent a longer window (FR-MD-010); catalogue/config integrity failure.");
+                    $"AppearanceWindowDays = {window} is outside "
+                    + $"[1, {SeasonSaveConstants.APPEARANCE_BITMASK_MAX_WINDOW_DAYS}] — the u32 "
+                    + "appearance bitmask cannot represent a longer window (FR-MD-010); "
+                    + "catalogue/config integrity failure.");
             }
 
             return window;
@@ -142,4 +144,6 @@ namespace TacticalDirector.SeasonSave
 // | 1.0     | 2026-08-07 | —      | Initial implementation (balance pass D2, ERR-041-010(b)): record  |
 // |         |            |        | + windowed read, current day excluded per ERR-030-027's pre-round |
 // |         |            |        | ordering.                                                         |
+// | 1.1     | 2026-08-08 | —      | Balance-pass AR pass 5 (L4): RequireValidWindow reads the      |
+// |         |            |        | catalogued [FIXED] bound instead of a bare 31.                 |
 #endregion

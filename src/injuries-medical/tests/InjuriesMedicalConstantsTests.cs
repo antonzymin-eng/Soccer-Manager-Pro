@@ -107,6 +107,9 @@ namespace TacticalDirector.InjuriesMedical.Tests
             // this lock, this one did not): #30's AppearanceWindow reads the window through a u32
             // bitmask whose structural ceiling is 31, and refuses an out-of-range value at RUNTIME,
             // mid-season (InvalidOperationException). The catalogue must not be able to ship one.
+            // The 31 mirrors SeasonSaveConstants.APPEARANCE_BITMASK_MAX_WINDOW_DAYS — the [FIXED]
+            // bound the production guard reads. This assembly sits BELOW season-save, so the literal
+            // cannot be replaced by the constant here; AppearanceRecordTests locks the two together.
             Assert.That(InjuriesMedicalConstants.AppearanceWindowDays, Is.InRange(1, 31),
                 "FR-MD-010 / ERR-041-010(b): the appearance window must fit the u32 day-bitmask — " +
                 "a value outside [1, 31] fails at the first windowed read of a live season.");
@@ -205,4 +208,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
 // |         |            |        | catalogue invariant — the sibling of the denominator lock; an     |
 // |         |            |        | out-of-range window otherwise fails at the first windowed read of |
 // |         |            |        | a live season rather than in the catalogue suite.                 |
+// | 1.6     | 2026-08-08 | —      | Balance-pass AR pass 5 (L4, comment): the window lock's 31     |
+// |         |            |        | names its authority (SeasonSaveConstants' [FIXED] bound, which |
+// |         |            |        | this assembly sits below and cannot read).                     |
 #endregion

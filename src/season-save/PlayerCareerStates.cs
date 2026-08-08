@@ -355,7 +355,7 @@ namespace TacticalDirector.SeasonSave
                     throw new ArgumentException(
                         $"Club {t.ClubId}: the training block carries {t.Count} players, the medical "
                         + $"block {m.Count}, the appearance block {a.Count}.",
-                        nameof(medical));
+                        t.Count != m.Count ? nameof(medical) : nameof(appearance));
                 }
 
                 for (int i = 0; i < t.Count; i++)
@@ -366,7 +366,7 @@ namespace TacticalDirector.SeasonSave
                             $"Club {t.ClubId}, entry {i}: the training block holds player "
                             + $"{t.PlayerIds[i]}, the medical block player {m.PlayerIds[i]}, the "
                             + $"appearance block player {a.PlayerIds[i]}.",
-                            nameof(medical));
+                            t.PlayerIds[i] != m.PlayerIds[i] ? nameof(medical) : nameof(appearance));
                     }
 
                     // EVERY lookup in this class is a binary search over these ids (IndexOfPlayer), so
@@ -998,8 +998,16 @@ namespace TacticalDirector.SeasonSave
         /// </para>
         /// <para>
         /// It is stated as a policy here, in #30, because FR-MD-023 puts selection on this side of the
-        /// seam — #41 answers only "is he fit". Playing a half-fit player carries no penalty yet; that
-        /// consequence belongs with the balance pass that arms the dial.
+        /// seam — #41 answers only "is he fit".
+        /// </para>
+        /// <para>
+        /// <b>RECORDED, NOT FIXED (AR pass 5): fielding the injured is strictly FREE.</b> A player
+        /// pressed back in by this rule plays with unmodified attributes, CANNOT be re-injured (the
+        /// KD-6 entry gate — he was not available at entry, so the occurrence draw never evaluates
+        /// him), and his recovery is not extended. The balance pass armed the dial and deliberately
+        /// did not add the consequence: pricing diminished performance is #27/#28 attribute
+        /// territory and re-injury/extension is a #41 deep-tier rule, so the obligation lands with
+        /// whichever arrives first — not with #30's selection seam.
         /// </para>
         /// </summary>
         /// <param name="squad">The resolved roster.</param>
@@ -1038,7 +1046,7 @@ namespace TacticalDirector.SeasonSave
             if (availableCount == total)
             {
                 // Nothing to filter — hand back the same instance so the fit-squad path stays
-                // reference-identical, which is every club until the occurrence dial is armed.
+                // reference-identical, which is every fully-fit club (the common case; the dial has been ARMED since the balance pass).
                 return squad;
             }
 
@@ -1209,8 +1217,8 @@ namespace TacticalDirector.SeasonSave
         /// Production has exactly one writer of <see cref="InjuryState"/> —
         /// <c>MedicalStep.AdvanceMedicalDay</c> (FR-MD-003) — and this is not it. It exists because
         /// everything downstream of an injury (the availability filter, the back-fill, the view) has to
-        /// be provable while <see cref="InjuryOccurrenceEnabled"/> is off, and the alternative is
-        /// asserting on a subsystem the balance pass has not yet armed. <c>internal</c> so no production
+        /// be provable while <see cref="InjuryOccurrenceEnabled"/> is off — the isolation posture tests
+        /// still use, and used exclusively before the balance pass armed production. <c>internal</c> so no production
         /// call site outside this assembly can become a second writer.
         /// </para>
         /// </summary>
@@ -1474,4 +1482,10 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | transfer residual (M4 — a moved player's career state resets;      |
 // |         |            |        | #31's arrival obligation); the F6-mirror guard's comment states    |
 // |         |            |        | it is inert by construction and cannot be locked (L10).            |
+// | 1.10    | 2026-08-08 | —      | Balance-pass AR pass 5: FromBlocks' mismatch paramNames name   |
+// |         |            |        | the offending set (L10); the SelectAvailable doc carries the   |
+// |         |            |        | RECORDED-NOT-FIXED fielding-the-injured-is-free residual (M5 — |
+// |         |            |        | the dial is armed and the consequence was deliberately not     |
+// |         |            |        | added; #27/#28 attributes or #41 deep-tier own it); four       |
+// |         |            |        | stale dial-off sentences updated to the armed posture.         |
 #endregion

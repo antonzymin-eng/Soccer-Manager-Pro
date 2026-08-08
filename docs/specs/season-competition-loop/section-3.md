@@ -1,12 +1,13 @@
 # Season & Competition Loop Specification #30 — Section 3: Algorithms
 
 **Created:** July 22, 2026
-**Last Updated:** August 8, 2026 (v1.3 — balance-pass AR pass 4 header-currency fix: this header sat at v1.1 / July 27 while the table below carried v1.2 (Aug 7, ERR-030-027 — §3.3.2 pins the pre-round convention) and v1.3 (Aug 8, slots 2/4 marked LIVE) — two consecutive landings missed the bump, the exact drift class the v1.1 note below records this file fixing in itself.)
+**Last Updated:** August 8, 2026, later same day (v1.4 — balance-pass AR pass 5 M2: §3.4 caught up with the loop it describes — the filter seam is LIVE, `PlayThroughEngine` shows the filtered squads + entry fatigue + the XI derivation, and the appearance-record step appears at its load-bearing position. Prior header below.)
+**Last Updated (prior):** August 8, 2026 (v1.3 — balance-pass AR pass 4 header-currency fix: this header sat at v1.1 / July 27 while the table below carried v1.2 (Aug 7, ERR-030-027 — §3.3.2 pins the pre-round convention) and v1.3 (Aug 8, slots 2/4 marked LIVE) — two consecutive landings missed the bump, the exact drift class the v1.1 note below records this file fixing in itself.)
 **Last Updated (prior):** July 27, 2026, later same day (v1.1 — back-props ERR-030-016/-017/-019/-020/-021/-022/-023/-024/-025 landed atomically with the ten-spec approval wave. **`ERR-030-025` is a REASSIGNMENT: this spec's #46 projector seam was authored as `ERR-030-015`, which #30's own T3 landing (roadmap A5) claimed first on main for the §3.5 calendar-rebuild fix while this branch was open — the id-collision class the wave itself documented, recurring live. Main's claim has precedence; the seam moved to `-025`.** **New §3.3.1 records the tick-order reconciliation**: `ERR-030-007` had been filed twice, leaving two step 7s, two step 8s and an orphaned `AdvanceDay` line, so the pinned order was not implementable as written. Also fixed here: this file carried **two bare `**Last Updated:**` labels** claiming v0.8 and v0.9 with different content — the same header-drift class the project has recorded before, and one that made the file self-contradictory about its own currency.)
 **Last Updated (prior):** July 25, 2026 (v0.9 — ERR-030-010 §3.7 venue correction, found at #30 T0; prior v0.8 back-prop ERR-030-009 #44 availability-filter null seam in §3.4; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 25, 2026 (v0.8 — back-props ERR-030-008 board tick-order seam + ERR-030-009 JobSecurity derived band; prior v0.7 ERR-030-007 academy, v0.6 ERR-030-006 staff, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 27, 2026 (v1.0 — **ERR-030-015**: §3.5's boundary roll gains step (c′), the calendar rebuild it omitted, without which a rolled season is permanently unplayable; found at #30 T3. Also consolidates the TWO stale `Version` fields this header carried — the drift class `spec-error-log.md` v1.43 records. Prior v0.9 ERR-030-010 §3.7 venue correction; v0.8 back-props ERR-030-008/009; v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 1.3
+**Version:** 1.4
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -234,8 +235,10 @@ resolves the **whole round** — every one of its `N/2` fixtures — and applies
 their results to the table. Resolving only a subset would leave the unplayed clubs' rows undefined
 (the App. C 4-club round 0 = {10v13, 11v12}; playing only 10v13 never gives 11/12 a round-0 result).
 The managed club's fixture runs through the full `MatchEngine`; the rest through the round-resolution
-model (§3.4.1). The managed squad's resolve→configure path carries the **#44 availability-filter
-null seam** (ERR-030-009 — resolve → *filter* → configure; empty until #44 T2; FR-SN-013).
+model (§3.4.1). The resolve→*filter*→configure seam (ERR-030-009; FR-SN-013) is **LIVE**: #41's
+FR-MD-023 availability filter has occupied it since the #29/#41 T2 wiring, applied to **both** clubs
+of **every** fixture on **both** resolution paths (the engine boot and the quick-sim rating alike) —
+not only the managed squad. #44 suspensions and #36 call-ups join the same seam at their own T-phases.
 
 **The filter seam admits more than one consumer** (ERR-030-016, filed at #36's approval): #44
 suspensions and #36 international call-ups both reduce the available squad at this point. **They compose
@@ -252,9 +255,15 @@ AdvanceAndPlayNextRound(squads: ISquadProvider):
     if roundFixtures is empty: throw          # F5 — season complete; caller runs the boundary roll
     for f in roundFixtures:                    # ALL N/2 fixtures (FR-SN-012)
         if f.HomeClubId == ManagedClubId or f.AwayClubId == ManagedClubId:
-            result := PlayThroughEngine(f, squads)       # managed fixture — full MatchEngine
+            result, homeXi, awayXi := PlayThroughEngine(f, squads)   # managed fixture — full MatchEngine
         else:
-            result := ResolveRound(f)                    # §3.4.1 — deterministic (FR-SN-013a)
+            result, homeXi, awayXi := ResolveRound(f)                # §3.4.1 — deterministic (FR-SN-013a)
+        # The fielded XIs come OUT of the resolution itself (ERR-041-010(b), balance-pass AR pass 2:
+        # a second selection walk here was an unenforced agreement with the configuration), and the
+        # appearance record is written BEFORE the pinned apply/emit/mark sequence — it is the only
+        # fallible call in the block, and a throw after `f.Played := true` strands the round. Both
+        # clubs are validated before either is written (pair-atomic, AR pass 3).
+        RecordFixtureAppearances(f.HomeClubId, homeXi, f.AwayClubId, awayXi, worldDay)
         Table.ApplyResult(result)              # (1) table  — FR-SN-013 order, every fixture
         EmitMatchOutcome(result)               # (2) event  — producer only (KD-3), one per fixture
         # (2a) media conference QUEUE     (#35) — NULL SEAM (ERR-030-023). Empty until #35 T2.
@@ -267,11 +276,16 @@ AdvanceAndPlayNextRound(squads: ISquadProvider):
 
 PlayThroughEngine(f, squads):
     engine := new MatchEngine(...)             # SeasonLoop._activeMatch — restart-visible for save
-    engine.ConfigureSquads(squads.ResolveByClubId(f.HomeClubId),    # F6 fail-loud
-                           squads.ResolveByClubId(f.AwayClubId))
+    home := SelectAvailable(squads.ResolveByClubId(f.HomeClubId))   # resolve → FILTER (FR-MD-023) →
+    away := SelectAvailable(squads.ResolveByClubId(f.AwayClubId))   # configure; F6 fail-loud
+    homeXi := StartingElevenPlayerIds(home)    # the ids derived at the configuration site itself,
+    awayXi := StartingElevenPlayerIds(away)    # one statement from the ConfigureSquads consuming
+                                               # the same squad instances (AR pass 2)
+    engine.ConfigureSquads(home, away,
+                           MatchEntryFatigue(home), MatchEntryFatigue(away))   # #29 §3.3 projection
     while not engine.MatchEnded: engine.RunTick()   # the 10/60 Hz match loop — off the world tick
     return MatchResult{ f.HomeClubId, f.AwayClubId, engine.HomeScore, engine.AwayScore,
-                        f.RoundIndex, WorldStore.CurrentWorldTick }
+                        f.RoundIndex, WorldStore.CurrentWorldTick }, homeXi, awayXi
 ```
 
 The match runs on the 10 Hz/60 Hz loops (`MatchEngine.RunTick` to `MatchEnded` — the real engine
@@ -427,4 +441,5 @@ by ascending `ClubId` (FR-SN-007 final key) — a total order.
 | 1.1 | 2026-07-27 | — | **Nine back-props landed atomically with the ten-spec approval wave.** (Authored as `-015`..`-024`; **`-015` was reassigned to `-025`** because #30's own T3 landing claimed `-015` on main first — see the header.) **ERR-030-022** (#35) — new **§3.3.1 tick-order reconciliation**: `ERR-030-007` was filed twice (#42 academy, #32 scouting), so §3.3 carried **two step 7s and two step 8s** plus an orphaned `AdvanceDay` comment; #32 → step 9, #35 media expiry → 10, `AdvanceDay` → 12, duplicate line deleted. **ERR-030-020** (#53) — the facilities seam at **step 0**, numbered zero rather than inserted as a new 1 because it must precede its same-day consumers *and* the six approved specs citing steps 1–8 by number must not be invalidated; §3.3.1 records the conflict and the judgement. **ERR-030-021** (#54) — the tenure seam at step 11 (after board, which it reads) and the `(b'')` boundary insertion point in §3.5; the terminating decision is #54's, not #30's. **ERR-030-023** (#35) + **ERR-030-025** (#46) — the conference-queue and match-item-projector null seams at §3.4's `EmitMatchOutcome` site, deliberately **two seams at one site** so #46's basic item type does not depend on #35 being approved. **ERR-030-024** (#46) — the drain generalized to sum across every external-delta producer. **ERR-030-016** (#36) — §3.4's resolve→filter→configure seam records that it admits multiple consumers, that the current pair composes order-independently **because both are removals**, and that a non-removal filter would need an explicit order. **ERR-030-017** (#47) + **ERR-030-019** (#50) — the outer-frame amendments are recorded in Appendix B. **Also fixed:** the file's duplicate `**Last Updated:**` headers. **Not touched:** the duplicate v0.7/v0.8 history rows below — frozen records, noted as errata in §3.3.1 rather than rewritten. |
 | 1.2 | 2026-08-07 | — | **ERR-030-027** (the #29/#41 balance pass, closing the half of ERR-030-026 deferred to it): new **§3.3.2** pins where the round sits in the day order — the fixture day's own slots run at the top of `AdvanceAndPlayNextRound`, pre-round, so recovery lands before selection (tiers mean what they say) and the occurrence draw sits on matchday morning, fed by the FR-MD-010 appearance window (which never contains today). §3.3 pseudocode comment + §3.4 opening amended. #41's FR-MD-022 one-step contract untouched — this is a #30 wiring pin, chosen over splitting #41's step and bumping the medical format. |
 | 1.3 | 2026-08-08 | — | **Balance-pass AR pass 3 (L1)**: §3.3's slot list still marked slots 2 (#29) and 4 (#41) "NULL SEAM today" while §3.3.2 — added in the same v1.2 amendment — reasons entirely from their being live; both now marked LIVE (T2), citing §3.3.2. Doc-only. |
+| 1.4 | 2026-08-08 | — | **Balance-pass AR pass 5 (M2)**: §3.4 caught up with the loop it describes — the "null seam, empty until #44 T2" sentence retired (the ERR-030-009 seam has been LIVE via #41 FR-MD-023 since T2, both clubs, both paths); `PlayThroughEngine`'s pseudocode gains the filter + the #29 entry-fatigue projection + the XI derivation at the configuration site; `AdvanceAndPlayNextRound` gains the `RecordFixtureAppearances` step at its load-bearing position (before apply/emit/mark, pair-atomic). §3.4 had not been touched since v0.8 while three landings changed the code it specifies. |
 #endregion

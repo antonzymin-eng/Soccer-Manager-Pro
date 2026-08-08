@@ -47,6 +47,19 @@ namespace TacticalDirector.SeasonSave.Tests
         // ── the window arithmetic ──────────────────────────────────────────────────────────
 
         [Test]
+        public void TheWindow_FitsTheBitmaskBound()
+        {
+            // Ties the [GT] window to the [FIXED] structural bound the production guard reads
+            // (AR pass 5 L4 — the 31 was a bare literal at the guard and in the injuries-medical
+            // catalogue lock, which sits below this assembly and cannot read the constant).
+            Assert.That(InjuriesMedicalConstants.AppearanceWindowDays,
+                Is.InRange(1, SeasonSaveConstants.APPEARANCE_BITMASK_MAX_WINDOW_DAYS));
+            Assert.AreEqual(31, SeasonSaveConstants.APPEARANCE_BITMASK_MAX_WINDOW_DAYS,
+                "the bound IS the u32 mask's structure (bit 0 = the never-counted anchor day) — " +
+                "widening it means widening AppearanceState.RecentBits first");
+        }
+
+        [Test]
         public void FreshState_ReadsZeroOnAnyDay()
         {
             var state = default(AppearanceState);
@@ -704,4 +717,7 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | CONSUMED — a call-shape change that removes a resolve would       |
 // |         |            |        | otherwise leave the shift unfired and the lock passing vacuously, |
 // |         |            |        | including against the pre-fix loop it exists to kill.             |
+// | 1.5     | 2026-08-08 | —      | Balance-pass AR pass 5 (L4): + TheWindow_FitsTheBitmaskBound — |
+// |         |            |        | the [GT] window locked against the catalogued [FIXED] bound    |
+// |         |            |        | the production guard reads.                                    |
 #endregion

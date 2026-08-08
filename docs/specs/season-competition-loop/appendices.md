@@ -1,10 +1,11 @@
 # Season & Competition Loop Specification #30 — Appendices
 
 **Created:** July 22, 2026
-**Last Updated:** August 7, 2026 (v0.5 — the #29/#41 balance pass D2 (ERR-041-010(b)): Appendix B's outer-frame description gains the three mandatory career sub-blobs — the #29 training and #41 medical blocks (frame v2→3, landed at their T1 and previously unrecorded here) and the new #30 appearance block (frame v3→4), between the season block and the optional match block)
+**Last Updated:** August 8, 2026 (v0.6 — **ERR-030-028**: new **B.1** pins the appearance sub-blob's byte layout field by field — it was specified in NO spec, existing only in `AppearanceSaveCodec.cs`'s own comment, while F3 makes the first written layout the format permanently (the ERR-029-004 class, on the block created one landing after that ERR was filed); + the four sibling MUSTs and the deliberate no-`[GT]`-gating-on-decode decision)
+**Last Updated (prior):** August 7, 2026 (v0.5 — the #29/#41 balance pass D2 (ERR-041-010(b)): Appendix B's outer-frame description gains the three mandatory career sub-blobs — the #29 training and #41 medical blocks (frame v2→3, landed at their T1 and previously unrecorded here) and the new #30 appearance block (frame v3→4), between the season block and the optional match block)
 **Last Updated (prior):** July 27, 2026 (v0.4 — back-props ERR-030-017 (#47 conditional authored sub-blob) + ERR-030-019 (#50 `SaveOriginStamp` in the outer frame) landed atomically with the ten-spec approval wave; Appendix B's outer-frame description amended)
 **Last Updated (prior):** July 25, 2026 (v0.3 — ERR-030-010 Appendix C venue correction, found at #30 T0)
-**Version:** 0.5
+**Version:** 0.6
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -82,6 +83,39 @@ describe the other's domain). *(Note the `SaveOriginStamp` / `hasAuthoredDb` ele
 future amendments landing at #50/#47 T1; the frame in code today is
 `version → matchPresent → world → season → training → medical → appearance → [match]`.)*
 
+**B.1 The appearance sub-blob's byte layout (ERR-030-028, balance-pass AR pass 5).** Pinned here
+because **F3 refuses every cross-version migration, so the first written layout IS the format
+permanently** — the exact reasoning ERR-029-004 / ERR-041-008 recorded when the sibling #29/#41
+blocks got their layouts pinned, which this block shipped without (the same defect class, one landing
+later, on the block created by the landing that fixed it in the siblings):
+
+```
+EncodeAppearance(clubs) -> bytes            # canonicalized; DecodeAppearance is the exact inverse
+    WriteU32(APPEARANCE_SAVE_MAGIC)          # "APPR" — BEFORE the version (ERR-029-005: a version
+                                             # gates generations of ONE format, never one format
+                                             # from another; every sub-blob sits at version 1)
+    WriteU32(APPEARANCE_SAVE_FORMAT_VERSION) # 1
+    WriteU32(clubCount)
+    per club, ascending ClubId:              # canonical order — the block is a MAP, order is not state
+        WriteI32(clubId)                     # club identity is WRITTEN, never implied by list order
+                                             # (the ERR-041-008 rule: order-carried identity is an
+                                             # implicit agreement with a sibling blob KD-2 forbids)
+        WriteU32(playerCount)
+        per player, ascending PlayerId:
+            WriteI32(playerId)
+            WriteU32(recentBits)             # the day-bitmask (bit k = fielded on anchor − k)
+            WriteU32(bitsAsOfWorldDay)       # the anchor day bit 0 refers to
+```
+
+MUSTs, mirroring #29 §4.4 / #41 §4.4: the magic is checked before the version and a block without it
+is refused; keys are strictly ascending on decode (every career lookup is a binary search over them);
+trailing bytes after the declared content throw (F3); the coherence gates run on encode as well as
+decode, so the codec can never write a block its own decode refuses. **Deliberately NO `[GT]` gating
+on decode:** `recentBits` is structurally valid at any value — bits outside the configured window are
+dead weight the read masks off — and gating it against `AppearanceWindowDays` would turn a window
+retune into data loss (the ERR-029-004 rule). The cross-blob rule that the anchor may not sit ahead of
+the world clock is owned by the save root (`SeasonSaveManager`), the only layer holding both blobs.
+
 **`SaveOriginStamp` (ERR-030-019, at #50's approval)** sits in the **frame**, immediately after the
 version and **before any length-prefixed blob**. The placement is load-bearing rather than aesthetic:
 #50's classifier reads version fields **without parsing any sub-blob**, and a stamp inside the season
@@ -149,4 +183,5 @@ is a **total order** — no two rows ever compare equal (FR-SN-007).
 | 0.3 | 2026-07-25 | — | **ERR-030-010** (found at #30 T0 implementation): Appendix C rounds 1 and 4 venue-corrected — the table was hand-derived without §3.1's round-parity venue rule. Pairings unchanged, so the 12-ordered-pair completeness bullet is unaffected; justification (20-club venue distribution) recorded inline. |
 | 0.4 | 2026-07-27 | — | **ERR-030-019** (#50) + **ERR-030-017** (#47), landed atomically with the ten-spec approval wave. Appendix B's outer-frame description gains the `SaveOriginStamp` (`WorldGenerationVersion` + `BuildId`) immediately after the version field and **before any length-prefixed blob** — the placement is load-bearing, since #50's classifier must read the generation version without parsing a sub-blob, and `BuildId` is recorded as **diagnostic only** so it can never become a migration input; and the **conditional** authored-database sub-blob, written only when `hasAuthoredDb`, with the flag/blob agreement required in both directions and failing loud. The world, season and match blobs are byte-untouched by both. |
 | 0.5 | 2026-08-07 | — | **Balance pass D2 (ERR-041-010(b))**: Appendix B's frame gains the mandatory #29 training / #41 medical blocks (v2→3 — a T1 change this appendix had missed) and the #30 appearance block (v3→4): the per-player fielded-XI record supplying FR-MD-010's `MatchLoad`, #30-owned because neither sibling block may describe the other's domain. All three mandatory (career state has an empty case, never an absent one), typed at the Encode seam, magic-led per ERR-029-005/ERR-041-009. |
+| 0.6 | 2026-08-08 | — | **ERR-030-028** (balance-pass AR pass 5, M1): new **B.1** — the appearance sub-blob's byte layout pinned field by field (magic → version → clubCount → {clubId, playerCount} → {playerId, recentBits, bitsAsOfWorldDay}), the four MUSTs its siblings carry, and the deliberate no-`[GT]`-gating-on-decode decision. The layout had shipped into every v4 save while specified in no spec — F3 makes the first written layout the format permanently, the exact ERR-029-004 reasoning, missed on the very next block. |
 #endregion

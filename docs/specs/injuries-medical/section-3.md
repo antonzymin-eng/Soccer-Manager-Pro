@@ -220,7 +220,10 @@ pass example used `AppearanceDays = 2` at weight 150 and no baseline, assembling
   within `[0, 16000]` inactive) — a 0.66%/day probability against the per-million draw. *(The same
   player the week after two matches assembles `3000 + 2×5600 + 4000 − 400 = 17800`, which CLAMPS to
   `INJURY_RISK_MAX = 16000`: a heavily-loaded congested week sits at the hard 1.6%/day ceiling —
-  what sits beyond the cap is the residual the research supplement's R-2 refit inherits.)*
+  what sits beyond the cap is the residual the research supplement's R-2 refit inherits. A formula
+  probe, not live Stage-0 behaviour: with `DaysBetweenRounds` = `APPEARANCE_WINDOW_DAYS` = 7 the
+  wired schedule never yields `AppearanceDays = 2` — that input arrives with #43's congested cup
+  calendars.)*
 - Suppose `draw = 3500` (keyed on `(playerId=501, worldDay=205, purpose=Occurrence)`). Since `3500 < 6600`,
   an occurrence is confirmed. Integer bucketing: `draw×1000 = 3_500_000` vs `risk×SEVERITY_MINOR_PERMILLE =
   6600×600 = 3_960_000`; `3_500_000 < 3_960_000` ⇒ **Minor**. `RecoveryDaysForTier[Minor] = 7`; at

@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonInjuryRealismTests.cs
 // Created:  2026-08-07
-// Modified: 2026-08-07
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Injuries & Medical #41 §5 (the balance pass), FR-MD-027; Training System #29 §5;
 //           Season & Competition Loop #30 §3.3/§3.4; ERR-041-010(b) / ERR-030-027; Code Standards #20
@@ -333,11 +333,17 @@ namespace TacticalDirector.SeasonSave.Tests
             // ~250 draw-eligible days for a reserve; a starter's appearance term runs ~7 window-days
             // per round over 38 rounds. No clamp binds at these magnitudes, so halving a [GT] halves
             // its term here exactly.
+            // 250.0 is the only free estimate left (draw-eligible days for a reserve — the season
+            // length net of a small injured allowance); the round count and the window come from
+            // the constants they actually are, so a calendar or window retune MOVES this
+            // expectation instead of silently falsifying it (AR pass 5 L8).
             double denom = InjuriesMedicalConstants.OCCURRENCE_DRAW_DENOM;
+            double rounds = 2.0 * (LeagueBootstrapConstants.DefaultClubCount - 1);
+            double window = InjuriesMedicalConstants.AppearanceWindowDays;
             double reserve = 250.0 * baselineOnly / denom;
-            double starter = reserve + 38.0 * 7.0 * appearanceDelta / denom;
+            double starter = reserve + rounds * window * appearanceDelta / denom;
             double reserveHalfBaseline = 250.0 * (baselineOnly / 2.0) / denom;
-            double starterHalfAppearance = reserve + 38.0 * 7.0 * (appearanceDelta / 2.0) / denom;
+            double starterHalfAppearance = reserve + rounds * window * (appearanceDelta / 2.0) / denom;
 
             TestContext.WriteLine(
                 $"chain expectation: reserve {reserve:F2}, starter {starter:F2}; halved-baseline " +
@@ -391,4 +397,9 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | starter band-edge margin is ~0.03 by design (a wider band stops   |
 // |         |            |        | locking), so the effect-size claim moves onto halving-costs-at-   |
 // |         |            |        | least-0.5/0.3-injuries asserts that no band refit can erode.      |
+// | 1.3     | 2026-08-08 | —      | Balance-pass AR pass 5 (L8): the closed-form expectation reads |
+// |         |            |        | the round count and window from their constants — a calendar   |
+// |         |            |        | or window retune now MOVES the expectation instead of silently |
+// |         |            |        | falsifying it; 250 draw-eligible days stays the one documented |
+// |         |            |        | estimate.                                                      |
 #endregion
