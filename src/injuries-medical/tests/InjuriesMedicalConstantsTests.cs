@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/tests/InjuriesMedicalConstantsTests.cs
 // Created:  2026-08-05
-// Modified: 2026-08-08 (AR pass 9 L5: the severity-split lock goes strict — v1.7)
+// Modified: 2026-08-08 (AR pass 10 M1: the split lock documents its two-layer posture — v1.8)
 // Author:   —
 // Spec:     Injuries & Medical #41 Appendix A + §3.2/§3.4; Code Standards #20
 // Purpose:  Catalogue invariants — the per-mille split is well-formed, the tier table covers every
@@ -75,6 +75,12 @@ namespace TacticalDirector.InjuriesMedical.Tests
         [Test]
         public void SeverityPermilleSplit_IsWellFormed()
         {
+            // Design-time half of a two-layer invariant (AR pass 10 M1): this lock only ever sees
+            // the compile-time fallbacks because the gate runs config-unbound (ERR-041-003's class),
+            // so a shipped config summing past the denominator would sail through the suite. The
+            // runtime half lives in ClassifySeverityFromDraw, which fail-louds at the classifying
+            // site — the DrawOccurrence denominator-guard posture; like that guard, it is
+            // unreachable under the fallbacks and carries no reachability case by design.
             Assert.Greater(InjuriesMedicalConstants.SeverityMinorPermille, 0);
             Assert.Greater(InjuriesMedicalConstants.SeverityModeratePermille, 0);
             Assert.Less(
@@ -215,4 +221,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
 // | 1.7     | 2026-08-08 | —      | Balance-pass AR pass 9 (L5): LessOrEqual -> Less — the lock's  |
 // |         |            |        | own message already argued strictness while asserting the     |
 // |         |            |        | weaker bound (at sum == 1000 Serious is unreachable).         |
+// | 1.8     | 2026-08-08 | —      | Balance-pass AR pass 10 (M1, comment): the split lock is the   |
+// |         |            |        | DESIGN-TIME half only — the runtime guard now lives at the     |
+// |         |            |        | classifying site, unreachable under fallbacks by design.      |
 #endregion

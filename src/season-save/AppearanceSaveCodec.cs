@@ -1,6 +1,6 @@
 // File:     src/season-save/AppearanceSaveCodec.cs
 // Created:  2026-08-07
-// Modified: 2026-08-07
+// Modified: 2026-08-08 (AR pass 10 L6: the duplicate-key refusals cite the owning pin — v1.1)
 // Author:   —
 // Spec:     Season & Competition Loop #30 Appendix B (the appearance sub-blob, ERR-041-010(b));
 //           unified-season-save-design.md §3 / KD-2; ERR-029-005 / ERR-041-009 (the magic-before-
@@ -75,7 +75,7 @@ namespace TacticalDirector.SeasonSave
             }
 
             int[] clubOrder = SaveBlobFramingHelpers.CanonicalOrder(
-                ClubIdsOf(clubs), "appearance", "club id", "FR-MD-025");
+                ClubIdsOf(clubs), "appearance", "club id", "#30 Appendix B.1");
 
             int size = 4 + 4 + 4;   // magic + version + clubCount
             for (int i = 0; i < clubs.Length; i++)
@@ -94,7 +94,7 @@ namespace TacticalDirector.SeasonSave
             {
                 ClubAppearanceStates club = clubs[clubOrder[c]];
                 int[] playerOrder = SaveBlobFramingHelpers.CanonicalOrder(
-                    RequireBound(club), "appearance", "player id", "FR-MD-025");
+                    RequireBound(club), "appearance", "player id", "#30 Appendix B.1");
 
                 CanonicalSerializer.WriteI32(buf, ref o, club.ClubId);
                 CanonicalSerializer.WriteU32(buf, ref o, (uint)club.Count);
@@ -247,4 +247,8 @@ namespace TacticalDirector.SeasonSave
 // | 1.0     | 2026-08-07 | —      | Initial implementation (balance pass D2, ERR-041-010(b)): the     |
 // |         |            |        | APPR sub-blob — magic-before-version, canonical key order,        |
 // |         |            |        | trailing-byte guard, no [GT] gating on decode.                    |
+// | 1.1     | 2026-08-08 | —      | Balance-pass AR pass 10 (L6): the canonical-order refusals cite    |
+// |         |            |        | #30 Appendix B.1 — the APPR block's OWNING pin — not FR-MD-025,    |
+// |         |            |        | a sibling spec's id on a block #41 is forbidden to describe        |
+// |         |            |        | (KD-2/KD-7).                                                       |
 #endregion

@@ -1,12 +1,13 @@
 # Injuries & Medical #41 — Appendices
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026 (v0.7 — balance-pass AR pass 9 L5: the severity-split catalogue invariant is STRICT — ≤ at exactly 1000 makes Serious unreachable with the invariant satisfied)
+**Last Updated:** August 8, 2026, later same day (v0.8 — balance-pass AR pass 10 M1: the split invariant's Appendix A row records its runtime enforcement site)
+**Last Updated (prior):** August 8, 2026 (v0.7 — balance-pass AR pass 9 L5: the severity-split catalogue invariant is STRICT — ≤ at exactly 1000 makes Serious unreachable with the invariant satisfied)
 **Last Updated (prior):** August 8, 2026 (v0.6 — balance-pass AR pass 8 (L4): the DRAW_PURPOSE_OCCURRENCE row's "on `injuries.occurrence`" → "of the keyed occurrence derivation")
 **Last Updated (prior):** August 8, 2026 (v0.5 — balance-pass AR pass 7 M1: the ERR-041-012 sweep reaches the appendices — Appendix A no longer asserts the T2 stream registration §4.5 forbids, and Appendix C's T-MD-NEU-003 matches §5.5's restatement instead of contradicting it under the same test id)
 **Last Updated (prior):** August 7, 2026 (v0.4 — ERR-041-011 at the balance pass: Appendix A's `INJURY_RISK_MAX` re-tagged `[CROSS: #29 Appendix A]` (discharging ERR-041-003's standing back-prop), `OCCURRENCE_DRAW_DENOM` re-tagged `[FIXED]` 1,000,000 (decoupled), `APPEARANCE_LOAD_WEIGHT` refitted 150 → 5600 on the new scale, + `BASELINE_DAILY_RISK` 4000 and `APPEARANCE_WINDOW_DAYS` 7)
 **Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.7
+**Version:** 0.8
 **Status:** APPROVED
 
 ---
@@ -28,7 +29,7 @@ Stage-2/3 balance pass (the #21 G2 precedent); the shapes/directions are the rev
 | `RecoveryDaysForTier[Serious]` | 60 | [GT] | Fixed recovery-days constant for `InjurySeverity.Serious`. |
 | `SEVERITY_PERMILLE_DENOM` | 1000 | [FIXED] | Denominator for the integer per-mille severity bucketing (§3.2 uses `draw×DENOM < risk×numerator` — no float division). |
 | `SEVERITY_MINOR_PERMILLE` | 600 | [GT] | Per-mille numerator of the occurrence-draw range (below the risk threshold) classified `Minor` (§3.2). Equivalent to the 0.60 fraction, expressed as an integer to keep bucketing float-free. |
-| `SEVERITY_MODERATE_PERMILLE` | 300 | [GT] | Per-mille numerator classified `Moderate` (cumulative with Minor: 900); the remaining 100‰ is `Serious`. `SEVERITY_MINOR_PERMILLE + SEVERITY_MODERATE_PERMILLE` MUST be **<** `SEVERITY_PERMILLE_DENOM` (a catalogue invariant — strict: at a sum of exactly 1000 the §3.2 second bucket's bound `draw × DENOM < risk × 1000` is the method's own precondition and `Serious` becomes unreachable with the invariant "satisfied"). |
+| `SEVERITY_MODERATE_PERMILLE` | 300 | [GT] | Per-mille numerator classified `Moderate` (cumulative with Minor: 900); the remaining 100‰ is `Serious`. `SEVERITY_MINOR_PERMILLE + SEVERITY_MODERATE_PERMILLE` MUST be **<** `SEVERITY_PERMILLE_DENOM` (a catalogue invariant — strict: at a sum of exactly 1000 the §3.2 second bucket's bound `draw × DENOM < risk × 1000` is the method's own precondition and `Serious` becomes unreachable with the invariant "satisfied"). **Enforced fail-loud at the classifying site** (§3.2 — the `InjuryRiskMax ≤ OCCURRENCE_DRAW_DENOM` draw-site posture; both numerators are `[GT]` config keys and the catalogue suite only sees the fallbacks). |
 | `INJURY_RISK_MAX` | 16000 | [CROSS: #29 Appendix A] | Occurrence-risk-score clamp ceiling — mirrored read-only from `TrainingSystemConstants.InjuryRiskMax`, never a second config key (ERR-041-003: one owner, one key). Sets the daily probability CEILING `INJURY_RISK_MAX / OCCURRENCE_DRAW_DENOM` (1.6% today; raised 10000 → 16000 at the balance-pass AR — at 10000, baseline + one appearance = 9,600 compressed the #29 and robustness terms into ≤4% of the range for every player who played); MUST be ≤ `OCCURRENCE_DRAW_DENOM` (fail-loud at the draw site). |
 | `OCCURRENCE_DRAW_DENOM` | 1,000,000 | [FIXED] | The keyed draw's output range `[0, OCCURRENCE_DRAW_DENOM)` — per-million probability resolution. **DECOUPLED from `INJURY_RISK_MAX` at ERR-041-011** (the old `== INJURY_RISK_MAX` derivation is retired): the draw is `hash % denominator`, so a config-tunable denominator re-rolls every career's draws; pinned, config edits move only thresholds. |
 | `TRAINING_RISK_PASSTHROUGH_WEIGHT` | 1 | [GT] | Integer weight applied to #29's `InjuryRiskContribution.RiskScore` in the risk-score assembly (§3.4). Integer, not float (FR-MD-014). |
@@ -86,4 +87,5 @@ with or without #41 active (T-MD-NEU-003, as restated in §5.5).
 | 0.5 | 2026-08-08 | — | **Balance-pass AR pass 7 (M1)**: Appendix A asserted "the `injuries.occurrence` stream registration itself lands at #41 T2" while citing the anti-phantom FR; Appendix C defined T-MD-NEU-003 as the registration's independence while §5.5 (pass 6) had restated the same id as vacuous-by-construction — one test id, two contradictory definitions. Both re-anchored. |
 | 0.6 | 2026-08-08 | — | **Balance-pass AR pass 8 (L4)**: the `DRAW_PURPOSE_OCCURRENCE` row still anchored the ordinal "on `injuries.occurrence`" — a stream that must never exist — in the appendix pass 7 bumped for this class. |
 | 0.7 | 2026-08-08 | — | **Balance-pass AR pass 9 (L5)**: the severity-split invariant `Minor + Moderate ≤ DENOM` corrected to strict `<` — the same row states "the remaining 100‰ is Serious", and at a sum of exactly 1000 the §3.2 second bucket's bound is the method's own precondition, so `Serious` is unreachable with "≤" satisfied. Catalogue doc + lock (`Assert.Less`) corrected with it. |
+| 0.8 | 2026-08-08 | — | **Balance-pass AR pass 10 (M1)**: the split-invariant row records its runtime enforcement (`ClassifySeverityFromDraw` fail-louds at the classifying site — the draw-site guard posture); until now this was the only one of the three catalogue invariants with no production guard, and the only lock ran config-unbound. |
 #endregion

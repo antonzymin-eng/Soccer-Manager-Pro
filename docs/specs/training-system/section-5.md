@@ -1,8 +1,9 @@
 # Training System #29 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.3 — PASS-2 re-review; prior APPROVED)
-**Version:** 0.3
+**Last Updated:** August 8, 2026 (v0.4 — balance-pass AR pass 10 L4: T-TR-DET-006 names the existing F8 sentinel lock)
+**Last Updated (prior):** July 23, 2026 (v0.3 — PASS-2 re-review; prior APPROVED)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -24,6 +25,10 @@ Tests land at T-phase; this is the acceptance contract.
   — the sentinel does not collide with a legitimate day 0 (F6, the PASS-1 M-1 fix).
 - **T-TR-DET-005** — **Day gap fails loud:** `AdvanceTrainingDay(worldDay = last + 2)` throws
   `ArgumentException` (F7 / FR-TR-026) — the intervening day's accrual is never silently skipped.
+- **T-TR-DET-006** — **Sentinel-as-worldDay fails loud (F8):** `AdvanceTrainingDay(worldDay =
+  TRAINING_NOT_ADVANCED_SENTINEL)` throws `ArgumentException` — locked by
+  `TrainingStepTests.AdvancingTheSentinelDay_FailsLoud` (the lock predates its F8 row; id assigned at the
+  balance-pass AR pass 10, L4).
 
 ## 5.1a Roster-membership lifecycle (FR-TR-025)
 
@@ -71,4 +76,5 @@ Tests land at T-phase; this is the acceptance contract.
 | 0.1 | 2026-07-23 | — | Initial test plan. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Aligned to the single-cursor / no-RNG model; APPROVED. |
 | 0.3 | 2026-07-23 | — | PASS-2: +T-TR-DET-005 (day-gap fail-loud) + T-TR-LIFE-001 (regen/retire membership); DET-001 (schedule derived, not serialized) + NEU-001 (`deepTrainingEnabled` + batch `AdvanceDay`) realigned. |
+| 0.4 | 2026-08-08 | — | **Balance-pass AR pass 10 (L4)**: **T-TR-DET-006** — the F8 sentinel-as-worldDay refusal (pass 9) gets its §5 id, naming the `AdvancingTheSentinelDay_FailsLoud` lock that already executes it. |
 #endregion

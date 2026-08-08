@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/MedicalStep.cs
 // Created:  2026-08-05
-// Modified: 2026-08-08 (AR pass 9 L4: the sentinel refusal cites its new normative row F8 — v1.6)
+// Modified: 2026-08-08 (AR pass 10 M1: the severity-split guard at the classifying site — v1.7)
 // Author:   —
 // Spec:     Injuries & Medical #41 §3.1–§3.4 + Appendices A/B (FR-MD-003..016, FR-MD-023),
 //           F1/F4/F6/F7; Code Standards #20
@@ -222,12 +222,33 @@ namespace TacticalDirector.InjuriesMedical
         /// so there is no tier to classify. Without this the method answers <c>Serious</c> for any
         /// draw at <c>risk == 0</c>, which is a plausible-looking wrong answer rather than a refusal.
         /// </exception>
+        /// <exception cref="InvalidOperationException">
+        /// The <c>[GT]</c> severity numerators sum to <see cref="InjuriesMedicalConstants.SEVERITY_PERMILLE_DENOM"/>
+        /// or past it — the <c>Serious</c> tier would be unreachable; a catalogue/config integrity
+        /// failure rather than a bad argument (the <see cref="DrawOccurrence"/> guard posture).
+        /// </exception>
         public static InjurySeverity ClassifySeverityFromDraw(int draw, int risk)
         {
             if (draw >= risk)
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(draw), draw, "Severity is classified only for a CONFIRMED occurrence (draw < risk, §3.2).");
+            }
+
+            // The split invariant, enforced at the one site that classifies (the DrawOccurrence
+            // denominator-guard posture, AR pass 10 M1): both numerators are [GT] config-tunable and
+            // the catalogue suite only ever sees the fallbacks (the gate runs config-unbound —
+            // ERR-041-003's class), so a shipped config summing to the denominator or past it would
+            // otherwise delete the Serious tier silently — at a sum of exactly 1000 the second
+            // bucket's bound IS this method's own precondition. Strict, per Appendix A.
+            if (InjuriesMedicalConstants.SeverityMinorPermille
+                + InjuriesMedicalConstants.SeverityModeratePermille
+                >= InjuriesMedicalConstants.SEVERITY_PERMILLE_DENOM)
+            {
+                throw new InvalidOperationException(
+                    "SeverityMinorPermille + SeverityModeratePermille must be strictly below "
+                    + "SEVERITY_PERMILLE_DENOM — at or above it the Serious tier is unreachable; "
+                    + "catalogue/config integrity failure (§3.2, Appendix A).");
             }
 
             long scaledDraw = (long)draw * InjuriesMedicalConstants.SEVERITY_PERMILLE_DENOM;
@@ -514,4 +535,9 @@ namespace TacticalDirector.InjuriesMedical
 // | 1.6     | 2026-08-08 | —      | Balance-pass AR pass 9 (L4, message only): the sentinel-as-        |
 // |         |            |        | worldDay refusal had NO normative source — #41 SS2.3 gains F8 and  |
 // |         |            |        | SS3.1's pseudocode the guard line; the message cites F8, not F6.   |
+// | 1.7     | 2026-08-08 | —      | Balance-pass AR pass 10 (M1): the severity-split invariant gains   |
+// |         |            |        | its RUNTIME half — ClassifySeverityFromDraw fail-louds when the    |
+// |         |            |        | [GT] numerators sum to the denominator or past it (the             |
+// |         |            |        | DrawOccurrence guard posture; the catalogue lock only sees the     |
+// |         |            |        | fallbacks, ERR-041-003's class).                                   |
 #endregion

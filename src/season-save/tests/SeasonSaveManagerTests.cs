@@ -1,7 +1,6 @@
 // File:     src/season-save/tests/SeasonSaveManagerTests.cs
 // Created:  2026-07-22
 // Modified: 2026-08-08 (AR pass 9 M1: the medical-only-lag isolating case at the Save boundary — v1.12)
-//           suites are the rows below)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §5 acceptance;
 //           Season & Competition Loop #30 FR-SN-019..023, Appendix B; Training System #29 FR-TR-018/019;

@@ -1,9 +1,10 @@
 # Injuries & Medical #41 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026 (v0.4 — balance-pass AR pass 6 M4: the ERR-041-012 sweep — T-MD-DET-004 / T-MD-NEU-003 / T-MD-SEV-001 restated off the phantom registered stream and its service reservation. Prior header below.)
+**Last Updated:** August 8, 2026 (v0.5 — balance-pass AR pass 10 L4: T-MD-DET-010 names the existing F8 sentinel lock)
+**Last Updated (prior):** August 8, 2026 (v0.4 — balance-pass AR pass 6 M4: the ERR-041-012 sweep — T-MD-DET-004 / T-MD-NEU-003 / T-MD-SEV-001 restated off the phantom registered stream and its service reservation. Prior header below.)
 **Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.4
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -36,6 +37,10 @@ Tests land at T-phase; this is the acceptance contract.
   identical `u64` (`worldDay × DRAW_PURPOSE_RADIX`) whether `DRAW_PURPOSE_RADIX`-worth of purposes are
   defined or only one — i.e. adding a future purpose ordinal does **not** shift the occurrence key
   (FR-MD-008); a `purpose >= DRAW_PURPOSE_RADIX` fails the bound guard (§3.1.1).
+- **T-MD-DET-010** — **Sentinel-as-worldDay fails loud (F8):** `AdvanceMedicalDay(worldDay =
+  MEDICAL_NOT_ADVANCED_SENTINEL)` throws `ArgumentException` — locked by
+  `MedicalStepTests.AdvancingTheSentinelDay_FailsLoud` (the lock predates its F8 row; id assigned at the
+  balance-pass AR pass 10, L4).
 - **T-MD-DET-008** — **No match-tick draw path exists structurally** — #41's assembly references nothing in
   `MatchEngine`, and the match assembly references nothing in #41 (asmdef-shape assertion) — KD-1/KD-3.
 
@@ -149,4 +154,5 @@ Tests land at T-phase; this is the acceptance contract.
 | 0.2 | 2026-07-23 | — | AR-1 (1M): +T-MD-MOD-002 (recovery-speed at assignment + floor-at-1) / +T-MD-FAIL-006 (zero `MedicalModifier` fails loud); T-MD-SEV-002 restated as the integer cross-multiply; traceability FR-MD-014/016 updated. |
 | 0.3 | 2026-07-23 | — | AR-2 (1M): +T-MD-DET-009 (fixed-radix append parity + bound guard); FR-MD-008 traceability; fixed a `FR-MD-007` typo. |
 | 0.4 | 2026-08-08 | — | **Balance-pass AR pass 6 (M4)**: three test descriptions still asserted against the registered `injuries.occurrence` stream / `DeterministicRngService` reservation that ERR-041-012 established never existed; restated against the keyed derivation the suites actually exercise. |
+| 0.5 | 2026-08-08 | — | **Balance-pass AR pass 10 (L4)**: **T-MD-DET-010** — the F8 sentinel-as-worldDay refusal (pass 9) gets its §5 id, naming the `AdvancingTheSentinelDay_FailsLoud` lock that already executes it. |
 #endregion

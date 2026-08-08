@@ -1,9 +1,10 @@
 # Injuries & Medical #41 — Outline
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026 (v0.2 — balance-pass AR pass 7 M1: the KD-1 summary mirrored from §1's corrected text — it still carried the phantom stream)
+**Last Updated:** August 8, 2026 (v0.3 — balance-pass AR pass 10 L3: the §2 row's failure-mode range F1..F7 → F1..F8, stale since pass 9 added F8)
+**Last Updated (prior):** August 8, 2026 (v0.2 — balance-pass AR pass 7 M1: the KD-1 summary mirrored from §1's corrected text — it still carried the phantom stream)
 **Last Updated (prior):** July 23, 2026 (v0.1 — initial authoring from the converged design supplement)
-**Version:** 0.2
+**Version:** 0.3
 **Status:** APPROVED
 **Source:** `docs/tracking/injuries-medical-design.md` v0.2
 **FR prefix:** FR-MD · **Wave:** 2 · **Master-plan home:** §4.2
@@ -24,7 +25,7 @@ free-running cursor and nothing to persist beyond the injury state itself.
 | Section | Content |
 |---|---|
 | 1 | Introduction, scope, dependencies, key decisions KD-1..KD-8 |
-| 2 | Functional requirements FR-MD-001..027, data structures, failure modes F1..F7 |
+| 2 | Functional requirements FR-MD-001..027, data structures, failure modes F1..F8 |
 | 3 | Algorithms — `AdvanceMedicalDay` (recovery countdown then keyed occurrence draw), severity classification, the risk-score assembly, a worked example |
 | 4 | Architecture, assembly, file layout, reference direction |
 | 5 | Test plan (T-MD-*) + FR traceability |
@@ -61,4 +62,5 @@ free-running cursor and nothing to persist beyond the injury state itself.
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial outline from the converged design supplement. Status IN REVIEW. |
 | 0.2 | 2026-08-08 | — | **Balance-pass AR pass 7 (M1)**: the KD-1 summary still read "one `injuries.occurrence` world-tick stream" — the exact wording §1's KD-1 was corrected from at pass 6; mirrored. |
+| 0.3 | 2026-08-08 | — | **Balance-pass AR pass 10 (L3)**: the §2 row's failure-mode range went stale the moment pass 9 added F8; corrected F1..F7 → F1..F8. |
 #endregion
