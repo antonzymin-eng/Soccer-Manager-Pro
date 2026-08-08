@@ -105,6 +105,8 @@ namespace TacticalDirector.SeasonSave.Tests
             SeasonSaveContents contents = SeasonSaveManager.Load(path, league);
             Assert.AreEqual(0, contents.TrainingClubs.Length);
             Assert.AreEqual(0, contents.MedicalClubs.Length);
+            Assert.AreEqual(0, contents.AppearanceClubs.Length,
+                "the third mandatory block writes and loads as a well-formed empty set too (AR pass 3)");
         }
 
         // ── the restore-fidelity lock ──────────────────────────────────────────────────────
@@ -195,4 +197,6 @@ namespace TacticalDirector.SeasonSave.Tests
 // | 1.1     | 2026-08-07 | —      | Balance pass D2/D4: FromBlocks carries the appearance block and    |
 // |         |            |        | the now-required dial argument (false here — these locks isolate   |
 // |         |            |        | restore fidelity, not occurrence).                                 |
+// | 1.2     | 2026-08-08 | —      | Balance-pass AR pass 3 (L3): the unwired-loop empty-blocks lock    |
+// |         |            |        | asserts the appearance set too.                                    |
 #endregion

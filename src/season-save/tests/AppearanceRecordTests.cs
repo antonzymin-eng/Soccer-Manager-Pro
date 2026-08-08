@@ -18,6 +18,7 @@ using TacticalDirector.DeterministicSim;
 using TacticalDirector.InjuriesMedical;
 using TacticalDirector.LivingWorld;
 using TacticalDirector.MatchEngine;
+using TacticalDirector.PlayerDatabase;
 using TacticalDirector.TrainingSystem;
 
 namespace TacticalDirector.SeasonSave.Tests
@@ -410,6 +411,149 @@ namespace TacticalDirector.SeasonSave.Tests
                 "apply/emit/mark, so nothing was committed for it");
             Assert.AreEqual(round, loop.NextRoundIndex,
                 "the round cursor must not advance past a stranded fixture");
+
+            // AR pass 3 (L): the pair form validates BOTH clubs before writing EITHER, so the
+            // worst-ordered throw must leave the HOME side unwritten too — no phantom appearance
+            // for a match that was never applied.
+            ClubAppearanceStates homeBlock = BlockFor(career, first.HomeClubId);
+            for (int i = 0; i < homeBlock.Count; i++)
+            {
+                Assert.AreEqual(0u, homeBlock.States[i].RecentBits,
+                    "the home XI must not carry an appearance for the refused fixture");
+            }
+        }
+
+        [Test]
+        public void TheRecordedXi_ComesFromTheResolutionsOwnSquadInstance()
+        {
+            // The pass-2 Medium's DISCRIMINATING lock (AR pass 3, M4): the two locks recorded at pass
+            // 2 compute their expected XI through the same SelectAvailable walk the deleted code used,
+            // so both pass against the pre-fix loop. This one does not. Pre-fix, the recording
+            // re-resolved the club from the provider AFTER the resolution — so a provider whose
+            // roster shifts mid-round recorded an XI the match never fielded. Post-fix the ids come
+            // out of ResolveFixture itself, and this test fails at the pre-fix commit.
+            League league = FourClubLeague();
+            int[] clubIds = league.ClubIds();
+            var inner = new CareerTestRoster.MutableSquadProvider();
+            for (int i = 0; i < clubIds.Length; i++)
+            {
+                inner.Set(CareerTestRoster.Build(clubIds[i], PlayerDatabaseConstants.CLUB_SQUAD_SIZE));
+            }
+
+            int clubId = clubIds[0];
+            Squad rosterA = inner.ResolveByClubId(clubId);
+            int[] xiA = SquadRating.StartingElevenPlayerIds(rosterA);
+
+            // Roster B: the same 25 ids, with two same-position DEFENDER slots' ids swapped — one
+            // selected in A, one not — so B's eleven is a different ID SET over identical ratings.
+            int inSlot = -1, outSlot = -1;
+            for (int k = 0; k < rosterA.Count; k++)
+            {
+                if (CareerTestRoster.PosFor(k) != PlayerPosition.Defender)
+                {
+                    continue;
+                }
+
+                bool selected = Array.IndexOf(xiA, rosterA.GetPlayer(k).PlayerId) >= 0;
+                if (selected && inSlot < 0)
+                {
+                    inSlot = k;
+                }
+                else if (!selected && outSlot < 0)
+                {
+                    outSlot = k;
+                }
+            }
+
+            Assert.IsTrue(inSlot >= 0 && outSlot >= 0,
+                "precondition: a selected and an unselected defender slot must both exist");
+
+            var suffixes = new int[rosterA.Count];
+            for (int k = 0; k < suffixes.Length; k++)
+            {
+                suffixes[k] = k;
+            }
+
+            (suffixes[inSlot], suffixes[outSlot]) = (suffixes[outSlot], suffixes[inSlot]);
+            Squad rosterB = CareerTestRoster.Build(clubId, rosterA.Count, suffixes);
+            CollectionAssert.AreNotEquivalent(
+                xiA, SquadRating.StartingElevenPlayerIds(rosterB),
+                "precondition: B's eleven must be a different id set, or the shift is unobservable");
+
+            var provider = new ShiftingSquadProvider(inner, clubId, rosterB);
+            PlayerCareerStates career = PlayerCareerStates.ForLeague(
+                provider, clubIds, injuryOccurrenceEnabled: false);
+            var loop = new SeasonLoop(
+                new WorldStore(ManagerId, WorldSeed), league.CreateSeason(0),
+                RoundResolutionMode.QuickSimAll, career, provider);
+
+            loop.AdvanceToNextFixtureDay();
+            uint fixtureDay = loop.CurrentWorldDay;
+
+            // Armed, the fixture day resolves the poisoned club exactly three times: slot-2 training,
+            // slot-4 medical, then the round's own ResolveFixture — which sees roster A. Any LATER
+            // resolve (the deleted re-recording walk was one) sees roster B. If the loop's call shape
+            // changes, the identity assertion below fails visibly and this constant is re-fitted.
+            provider.Arm(resolvesBeforeShift: 3);
+            loop.AdvanceAndPlayNextRound(provider);
+
+            ClubAppearanceStates block = BlockFor(career, clubId);
+            var recorded = new System.Collections.Generic.List<int>();
+            for (int i = 0; i < block.Count; i++)
+            {
+                if (AppearanceWindow.AppearanceDaysOn(in block.States[i], fixtureDay + 1u) == 1)
+                {
+                    recorded.Add(block.PlayerIds[i]);
+                }
+            }
+
+            CollectionAssert.AreEquivalent(xiA, recorded,
+                "the record must carry the eleven the RESOLUTION fielded (roster A) — a re-resolve " +
+                "after the fact would have recorded roster B's eleven, who never played");
+        }
+
+        /// <summary>
+        /// Delegates to the inner provider until armed; from the (N+1)th armed resolve of the one
+        /// poisoned club onward, hands back a different roster. See the test above for why.
+        /// </summary>
+        private sealed class ShiftingSquadProvider : ISquadProvider
+        {
+            private readonly CareerTestRoster.MutableSquadProvider _inner;
+            private readonly int _club;
+            private readonly Squad _later;
+            private bool _armed;
+            private int _passThroughRemaining;
+
+            internal ShiftingSquadProvider(
+                CareerTestRoster.MutableSquadProvider inner, int club, Squad later)
+            {
+                _inner = inner;
+                _club = club;
+                _later = later;
+            }
+
+            internal void Arm(int resolvesBeforeShift)
+            {
+                _armed = true;
+                _passThroughRemaining = resolvesBeforeShift;
+            }
+
+            public Squad ResolveByClubId(int clubId)
+            {
+                Squad squad = _inner.ResolveByClubId(clubId);
+                if (!_armed || clubId != _club)
+                {
+                    return squad;
+                }
+
+                if (_passThroughRemaining > 0)
+                {
+                    _passThroughRemaining--;
+                    return squad;
+                }
+
+                return _later;
+            }
         }
 
         private static ClubAppearanceStates BlockFor(PlayerCareerStates career, int clubId)

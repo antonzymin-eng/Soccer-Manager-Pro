@@ -317,6 +317,74 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.IsTrue(career.IsAvailable(0, playerId),
                 "…and the same on the #41 side: a borrowed array would let an outside holder install "
                 + "an injury without MedicalStep ever running (FR-MD-003).");
+
+            // AR pass 3 (M2): the ID array is the worse back door — it holds the binary-search keys,
+            // so an aliased write breaks the strictly-ascending precondition FromBlocks just enforced
+            // and re-opens the pass-1 silent-overwrite High through the keys instead of the states.
+            training[0].PlayerIds[0] = int.MaxValue;
+            Assert.AreEqual(condition, career.TrainingView(0, playerId).Condition,
+                "FromBlocks must COPY the id arrays too: the original id must still resolve after a "
+                + "mutation through the handed-in block.");
+        }
+
+        [Test]
+        public void ACrossClubDuplicatePlayerId_IsRefusedAtEveryIdEntryPoint()
+        {
+            // ERR-041-019 (AR pass 3, the High): #41's armed occurrence draw is keyed on
+            // (worldSeed, playerId, worldDay) with NO club term, so two clubs carrying one id would
+            // draw bit-identical injury luck on every world day forever — and #27 promises id
+            // uniqueness only WITHIN a club. Today's generator formula is globally unique by
+            // accident of one allocator; this locks the precondition loud at all three id entry
+            // points, so the first allocator that breaks it (#42 intake, #31 transfers) fails at
+            // construction/sync instead of shipping two players who are always injured together.
+            var colliding = new int[PlayerDatabaseConstants.CLUB_SQUAD_SIZE];
+            for (int k = 0; k < colliding.Length; k++)
+            {
+                colliding[k] = k;
+            }
+
+            // Club 0, suffix CLUB_SQUAD_SIZE ⇒ id 0×N+N == club 1's first id (1×N+0).
+            colliding[colliding.Length - 1] = PlayerDatabaseConstants.CLUB_SQUAD_SIZE;
+
+            var provider = new CareerTestRoster.MutableSquadProvider();
+            provider.Set(CareerTestRoster.Build(
+                0, PlayerDatabaseConstants.CLUB_SQUAD_SIZE, colliding));
+            provider.Set(CareerTestRoster.Build(1, PlayerDatabaseConstants.CLUB_SQUAD_SIZE));
+
+            Assert.Throws<System.ArgumentException>(
+                () => PlayerCareerStates.ForLeague(provider, TwoClubs, injuryOccurrenceEnabled: false),
+                "construction must refuse a cross-club duplicate id");
+
+            CareerTestRoster.MutableSquadProvider clean = TwoClubProvider();
+            PlayerCareerStates career = Fresh(clean);
+            clean.Set(CareerTestRoster.Build(
+                0, PlayerDatabaseConstants.CLUB_SQUAD_SIZE, colliding));
+            Assert.Throws<System.ArgumentException>(
+                () => career.SyncToRoster(clean),
+                "the roster sync — the entry point a future allocator actually comes through — "
+                + "must refuse it too, in the validating half");
+
+            int sharedId = PlayerDatabaseConstants.CLUB_SQUAD_SIZE;
+            var training = new[]
+            {
+                new ClubTrainingStates(0, new[] { sharedId }, new[] { TrainingState.Create(TrainingFocus.Balanced) }),
+                new ClubTrainingStates(1, new[] { sharedId }, new[] { TrainingState.Create(TrainingFocus.Balanced) }),
+            };
+            var medical = new[]
+            {
+                new ClubInjuryStates(0, new[] { sharedId }, new[] { InjuryState.Create() }),
+                new ClubInjuryStates(1, new[] { sharedId }, new[] { InjuryState.Create() }),
+            };
+            var appearance = new[]
+            {
+                new ClubAppearanceStates(0, new[] { sharedId }, new AppearanceState[1]),
+                new ClubAppearanceStates(1, new[] { sharedId }, new AppearanceState[1]),
+            };
+
+            Assert.Throws<System.ArgumentException>(
+                () => PlayerCareerStates.FromBlocks(
+                    training, medical, appearance, injuryOccurrenceEnabled: false),
+                "the restore path must refuse a hand-edited or mispaired save the same way");
         }
 
         // ── the slot-2 training step ───────────────────────────────────────────────────────
@@ -419,9 +487,10 @@ namespace TacticalDirector.SeasonSave.Tests
         [Test]
         public void AdvanceMedicalDay_WithTheDialOff_NeverInjuresAnyone()
         {
-            // FR-MD-027's identity, and the reason T2 ships disarmed: at today's illustrative [GT]s the
-            // producer chain injures a fresh player with ~23% probability on his FIRST day, which is
-            // two orders of magnitude out and is the balance pass's to fix (KD-W1).
+            // FR-MD-027's identity — the dial-off half of the contract, still supported and locked
+            // after the balance pass ARMED the production posture (the 23%-first-day absurdity this
+            // comment used to cite is fixed: the fitted chain reads 0.63%/day for a regen, and the
+            // characterization suite in injuries-medical carries the full AFTER table).
             CareerTestRoster.MutableSquadProvider provider = TwoClubProvider();
             PlayerCareerStates career = Fresh(provider, occurrence: false);
 
@@ -857,4 +926,8 @@ namespace TacticalDirector.SeasonSave.Tests
 // | 1.3     | 2026-08-07 | —      | Balance pass D2/D4: FromBlocks call sites carry the third          |
 // |         |            |        | (appearance) block set and the now-required dial argument; the     |
 // |         |            |        | round trip covers the APPR codec; the copy lock keeps its shape.   |
+// | 1.4     | 2026-08-08 | —      | Balance-pass AR pass 3: + ACrossClubDuplicatePlayerId lock over    |
+// |         |            |        | all three id entry points (ERR-041-019); the FromBlocks copy lock  |
+// |         |            |        | extends to the ID arrays (M2); the dial-off comment no longer      |
+// |         |            |        | cites the fixed 23%-first-day absurdity as current (L5).           |
 #endregion

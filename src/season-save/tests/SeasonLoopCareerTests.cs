@@ -595,6 +595,13 @@ namespace TacticalDirector.SeasonSave.Tests
             int carriedCondition = career.TrainingView(0, carriedId).Condition;
             int generationBefore = career.RosterGeneration;
 
+            // The THIRD state set's carry (AR pass 3): a directly-recorded appearance, because the
+            // carried player is not guaranteed a starter's bits from the season itself. Deleting
+            // the sync's `appearance[i] = heldAppearance[held]` line left every suite green before
+            // this — the pass-6 which-test-fails-if-reverted question, asked of the third set.
+            uint appearanceDay = loop.CurrentWorldDay;
+            career.RecordAppearances(0, new[] { carriedId }, appearanceDay);
+
             // Stand in for #28's season-boundary churn, which is unwired (roadmap D1): club 0 loses its
             // last player (a retirement), and club 1 swaps its last player for a fresh id (a retirement
             // AND a regen in one block). Both directions in one roll, because FR-TR-025 / FR-MD-025
@@ -608,7 +615,14 @@ namespace TacticalDirector.SeasonSave.Tests
             {
                 swappedLocals[k] = k;
             }
-            swappedLocals[swappedLocals.Length - 1] = PlayerDatabaseConstants.CLUB_SQUAD_SIZE + 5;
+            // The regen's suffix must map OUTSIDE every club's id range: this fixture's original
+            // CLUB_SQUAD_SIZE + 5 gave club 1 the id 1×N + (N+5) = 2×N + 5 — which IS club 2's
+            // local-5 player. The ERR-041-019 guard caught the fixture itself demonstrating the
+            // hazard it exists for: the "new allocator" that breaks the generator's accident was
+            // this test, and pre-guard it created two players sharing one id — and one occurrence
+            // draw — silently.
+            swappedLocals[swappedLocals.Length - 1] =
+                PlayerDatabaseConstants.CLUB_SQUAD_SIZE * ClubCount + 5;
             int retiredFromClub1 = club1.GetPlayer(club1.Count - 1).PlayerId;
             provider.Set(CareerTestRoster.Build(1, club1.Count, swappedLocals));
             int regenId = provider.ResolveByClubId(1).GetPlayer(club1.Count - 1).PlayerId;
@@ -621,6 +635,15 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.Throws<System.ArgumentException>(() => career.MedicalView(0, departedId));
             Assert.AreEqual(carriedCondition, career.TrainingView(0, carriedId).Condition,
                 "A departure must not disturb anybody else's accrued state.");
+
+            ClubAppearanceStates club0Appearance = career.AppearanceBlocks()[0];
+            int carriedIndex = System.Array.IndexOf(club0Appearance.PlayerIds, carriedId);
+            Assert.GreaterOrEqual(carriedIndex, 0);
+            Assert.AreEqual(appearanceDay, club0Appearance.States[carriedIndex].BitsAsOfWorldDay,
+                "The appearance record rides the boundary with its player (FR-MD-025's carry, third "
+                + "state set) — a dropped record silently zeroes the FR-MD-010 match-load term.");
+            Assert.AreNotEqual(0u, club0Appearance.States[carriedIndex].RecentBits,
+                "…and the recorded bit itself must survive, not just the anchor.");
 
             Assert.AreEqual(club1.Count, career.TrainingBlocks()[1].Count,
                 "One out, one in — the block's size is unchanged.");

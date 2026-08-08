@@ -1,7 +1,6 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
-// Modified: 2026-08-07 (balance pass D2/D4: the appearance block on the same required-never-null
-//           terms; Load's filter career constructed at the armed posture.)
+// Modified: 2026-08-08 (AR pass 3: the career-block-triple coherence gate at Save — L7.)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-1 / KD-5..KD-8;
 //           Training System #29 §4.4 / FR-TR-018/019; Injuries & Medical #41 §4.4 / FR-MD-017/018;
@@ -119,6 +118,8 @@ namespace TacticalDirector.SeasonSave
             {
                 throw new ArgumentException("Save path must be non-empty.", nameof(path));
             }
+
+            RequireCoherentCareerBlocks(trainingClubs, medicalClubs, appearanceClubs);
 
             using var _ = s_saveMarker.Auto();
 
@@ -362,6 +363,80 @@ namespace TacticalDirector.SeasonSave
         {
             try { File.Delete(path); } catch (Exception) { }
         }
+
+        /// <summary>
+        /// The three career block sets must describe the SAME squads before they are written (AR
+        /// pass 3): without this, <c>Save</c> could write a file its own documented restore path —
+        /// <see cref="TacticalDirector.SeasonSave.PlayerCareerStates.FromBlocks"/> — refuses on its
+        /// coherence gate, the "Encode writes what Decode refuses" defect class the T1 AR filed
+        /// against <c>TrainingSaveCodec</c>. Order-insensitive on clubs (the codecs canonicalize at
+        /// encode), so it compares the sets by ascending ClubId, then each club's player ids
+        /// pairwise.
+        /// </summary>
+        private static void RequireCoherentCareerBlocks(
+            ClubTrainingStates[] trainingClubs,
+            ClubInjuryStates[] medicalClubs,
+            ClubAppearanceStates[] appearanceClubs)
+        {
+            if (trainingClubs.Length != medicalClubs.Length
+                || trainingClubs.Length != appearanceClubs.Length)
+            {
+                throw new ArgumentException(
+                    $"The training set carries {trainingClubs.Length} clubs, the medical set "
+                    + $"{medicalClubs.Length} and the appearance set {appearanceClubs.Length}; the "
+                    + "three describe one career and must agree — this file would be refused by "
+                    + "PlayerCareerStates.FromBlocks on load.",
+                    nameof(medicalClubs));
+            }
+
+            var t = (ClubTrainingStates[])trainingClubs.Clone();
+            var m = (ClubInjuryStates[])medicalClubs.Clone();
+            var a = (ClubAppearanceStates[])appearanceClubs.Clone();
+            Array.Sort(t, (x, y) => x.ClubId.CompareTo(y.ClubId));
+            Array.Sort(m, (x, y) => x.ClubId.CompareTo(y.ClubId));
+            Array.Sort(a, (x, y) => x.ClubId.CompareTo(y.ClubId));
+
+            for (int c = 0; c < t.Length; c++)
+            {
+                if (t[c].ClubId != m[c].ClubId || t[c].ClubId != a[c].ClubId)
+                {
+                    throw new ArgumentException(
+                        $"The three career block sets disagree on the club set (training club "
+                        + $"{t[c].ClubId}, medical {m[c].ClubId}, appearance {a[c].ClubId} at "
+                        + $"ascending position {c}).",
+                        nameof(medicalClubs));
+                }
+
+                if (t[c].Count != m[c].Count || t[c].Count != a[c].Count)
+                {
+                    throw new ArgumentException(
+                        $"Club {t[c].ClubId}: the training set carries {t[c].Count} players, the "
+                        + $"medical set {m[c].Count}, the appearance set {a[c].Count}.",
+                        nameof(medicalClubs));
+                }
+
+                // Order-insensitive within the club too: the codecs canonicalize per-club order at
+                // Encode (each block's states travel WITH its own ids), so a caller may legitimately
+                // hand the three sets in different member orders — only the member SETS must agree.
+                var tIds = (int[])t[c].PlayerIds.Clone();
+                var mIds = (int[])m[c].PlayerIds.Clone();
+                var aIds = (int[])a[c].PlayerIds.Clone();
+                Array.Sort(tIds);
+                Array.Sort(mIds);
+                Array.Sort(aIds);
+                for (int i = 0; i < tIds.Length; i++)
+                {
+                    if (tIds[i] != mIds[i] || tIds[i] != aIds[i])
+                    {
+                        throw new ArgumentException(
+                            $"Club {t[c].ClubId}: the training set holds player {tIds[i]} where the "
+                            + $"medical set holds {mIds[i]} and the appearance set {aIds[i]} "
+                            + "(compared ascending) — the three sets describe different squads.",
+                            nameof(medicalClubs));
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -431,4 +506,10 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | at the armed production posture (the dial argument is now     |
 // |         |            |        | required; irrelevant to a read-only filter, but a literal     |
 // |         |            |        | false would encode a stale default).                          |
+// | 1.12    | 2026-08-08 | —      | Balance-pass AR pass 3 (L7): Save gates the career block       |
+// |         |            |        | triple's coherence (club sets + per-club player ids agree),   |
+// |         |            |        | because it could write a file its own documented restore path |
+// |         |            |        | (PlayerCareerStates.FromBlocks) refuses — the Encode-writes-  |
+// |         |            |        | what-Decode-refuses class the T1 AR filed against the codec.  |
+// |         |            |        | Also deletes v1.11's orphaned header fragment (AR pass 2).    |
 #endregion

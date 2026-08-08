@@ -17,7 +17,11 @@ bucketing), so an occurrence day consumes exactly **one** draw total.
 
 ```
 AdvanceMedicalDay(ref InjuryState s, playerId, in PlayerAttributes a, in InjuryRiskContribution trainingRisk,
-                  in MatchLoad recentMatchLoad, in MedicalModifier medical, worldDay, rng):
+                  in MatchLoad recentMatchLoad, in MedicalModifier medical, worldDay, worldSeed,
+                  occurrenceEnabled):
+    # worldSeed: the CAREER's world seed (WorldStore.WorldSeed) — the draw key's root, never a
+    # per-match seed. occurrenceEnabled: the FR-MD-027 dial, a REQUIRED never-defaulted argument
+    # of the step itself (§2 FR-MD-027 as revised at the balance pass).
     # F6/F7 idempotency — a day is advanced at most once. The sentinel is uint.MaxValue ("never
     # advanced"), NOT 0, so a legitimate world-day 0 cannot collide with the fresh-state value
     # (the day-0 double-accrual trap). InjuryState.Create seeds the sentinel.
@@ -42,8 +46,10 @@ AdvanceMedicalDay(ref InjuryState s, playerId, in PlayerAttributes a, in InjuryR
             s.Severity = InjurySeverity.None      # recovered — but ineligible for a NEW occurrence
                                                    # until the NEXT AdvanceMedicalDay call (see above)
 
-    # 2. Occurrence draw — evaluated ONLY for a player healthy at call entry (§3.1 KD-6 guarantee).
-    if wasAvailableAtEntry:
+    # 2. Occurrence draw — evaluated ONLY for a player healthy at call entry (§3.1 KD-6 guarantee),
+    #    and ONLY with the FR-MD-027 dial armed: disarmed, the step is the recovery countdown and
+    #    the cursor advance alone (the FR-MD-027 identity).
+    if wasAvailableAtEntry and occurrenceEnabled:
         risk = AssembleRiskScore(trainingRisk, recentMatchLoad, a, medical)   # §3.4; in [0, INJURY_RISK_MAX]
         actionOrdinal = DeriveActionOrdinal(worldDay, DRAW_PURPOSE_OCCURRENCE)     # §3.1.1
         # ERR-041-002 (re-anchored at ERR-041-011): the draw is a LOCAL KEYED DERIVATION, not a
@@ -81,7 +87,21 @@ DeriveActionOrdinal(worldDay, purpose) -> u64:
 A pure bijection from `(worldDay, purpose)` to a single `u64` — **not** an incrementing counter. Two calls
 with the same `(playerId, worldDay, purpose)` always resolve to the same draw regardless of call order
 across players or days, which is what makes the stream position-independent and gives it nothing to
-persist (FR-MD-006/007). The radix is the **FIXED** constant `DRAW_PURPOSE_RADIX` (Appendix A) — **not**
+persist (FR-MD-006/007).
+
+**The full draw key is `(worldSeed, playerId, actionOrdinal)` — there is NO club term, so it requires
+`PlayerId` to be GLOBALLY unique across the career (ERR-041-019).** That is a stronger promise than #27
+makes: the squad/player data layer scopes `PlayerId` uniqueness to a club (its KD-3), and #30's career
+state is keyed `(ClubId, PlayerId)` on exactly that premise. Two clubs carrying the same id would draw
+bit-identical injury luck on every world day forever — silent and indistinguishable from chance. Today's
+`RosterGenerator` allocation (`clubId × CLUB_SQUAD_SIZE + local`) happens to be globally unique, but that
+is an accident of one allocator, not a contract; the precondition is therefore enforced fail-loud at
+career construction and roster sync (`PlayerCareerStates`, the one layer that spans clubs), and any
+future id allocator (#42 youth intake, #31 transfers) MUST preserve it. Deliberately NOT fixed by adding
+`ClubId` to the key: the key is frozen by the same argument that pinned the denominator `[FIXED]` at
+ERR-041-011 — changing it re-rolls every career's injury luck — and a club term would additionally make a
+transferred player's luck change with his club, which FR-MD-006's "the player carries his medical
+identity" posture refuses. The radix is the **FIXED** constant `DRAW_PURPOSE_RADIX` (Appendix A) — **not**
 the current purpose count — so appending a Stage-3 purpose ordinal (`DRAW_PURPOSE_OCCURRENCE = 0` today; a
 future recurrence draw = 1, …) leaves **every existing** `(worldDay, Occurrence)` ordinal unchanged
 (`worldDay × RADIX + 0`), preserving cross-version replay/save parity. Using the growing purpose *count* as
@@ -171,7 +191,7 @@ for each playerId in club roster:
     recentMatchLoad = ... caller-supplied MatchLoad (Stage 2: AppearanceDays from #30's per-player
                           appearance record — the FR-MD-010 window count; ERR-041-010(b)) ...
     AdvanceMedicalDay(ref medicalState[playerId], playerId, attrs[playerId], trainingRisk,
-                       recentMatchLoad, medical, worldDay, rng)
+                       recentMatchLoad, medical, worldDay, worldSeed, occurrenceEnabled)
 ```
 
 Because this slot runs strictly after #29's own slot-2 `AdvanceTrainingDay` (per #30's KD-2 tick order),
@@ -214,5 +234,6 @@ pass example used `AppearanceDays = 2` at weight 150 and no baseline, assembling
 | 0.1 | 2026-07-23 | — | Initial algorithms: `AdvanceMedicalDay`, action-ordinal derivation, severity bucketing, risk-score assembly, composition, worked example. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1 (1M): integer-arithmetic fix — no float division; integer per-mille severity bucketing; recovery-speed applied once at injury assignment (floored at 1 for F1 coherence); per-mille occurrence-risk mult; worked example redone in integer form. |
 | 0.3 | 2026-07-23 | — | AR-2 (1M): §3.1.1 `DeriveActionOrdinal` uses the fixed `DRAW_PURPOSE_RADIX` (was the growing purpose count, which broke cross-version replay parity on append) + a purpose bound guard. |
-| 0.4 | 2026-08-07 | — | **ERR-041-011 / ERR-041-012 (the balance pass)**: §3.4 formula gains `BASELINE_DAILY_RISK` inside the sum before the mitigation (position normative — robustness discriminates the floor; kills the exactly-0-forever default); the `OCCURRENCE_DRAW_DENOM == INJURY_RISK_MAX` identity retired — denominator `[FIXED]` at 1,000,000, ceiling stays the `[GT]` clamp (1%/day), invariant enforced at the draw site; §3.1 pseudocode shows the real keyed derivation instead of the phantom `rng.DrawKeyed`; §3.2's bound note updated; §3.5 names the ERR-041-010(b) appearance record; §3.6 worked example re-derived (6600; congestion clamps at the ceiling). |
+| 0.4 | 2026-08-07 | — | **ERR-041-011 / ERR-041-012 (the balance pass)**: §3.4 formula gains `BASELINE_DAILY_RISK` inside the sum before the mitigation (position normative — robustness discriminates the floor; kills the exactly-0-forever default); the `OCCURRENCE_DRAW_DENOM == INJURY_RISK_MAX` identity retired — denominator `[FIXED]` at 1,000,000, ceiling stays the `[GT]` clamp (1.6%/day since the balance-pass AR raised it 10,000 → 16,000; this row originally said 1%/day and was corrected like its appendices counterpart), invariant enforced at the draw site; §3.1 pseudocode shows the real keyed derivation instead of the phantom `rng.DrawKeyed`; §3.2's bound note updated; §3.5 names the ERR-041-010(b) appearance record; §3.6 worked example re-derived (6600; congestion clamps at the ceiling). |
+| 0.5 | 2026-08-08 | — | **Balance-pass AR pass 3 (M5 + H1)**: §3.1's normative signature de-phantomed — `rng` (which the body never used) becomes `worldSeed, occurrenceEnabled`, and step 2 gates on `wasAvailableAtEntry and occurrenceEnabled` (FR-MD-027 is a required parameter of the step, so the algorithm that governs the armed subsystem now names the dial — the ERR-041-012 class recurring one section away); §3.5's composition call updated to match. **§3.1.1 gains the draw-key uniqueness contract (ERR-041-019)**: the key has no club term, so `PlayerId` must be GLOBALLY unique — stronger than #27's club-scoped KD-3 — enforced fail-loud at `PlayerCareerStates` construction/sync; a club term in the key is refused (re-rolls every career; a transfer would change a player's luck). v0.4's "1%/day" corrected in place to 1.6%. |
 #endregion

@@ -433,8 +433,22 @@ namespace TacticalDirector.SeasonSave
                     }),
             };
 
+            // The appearance set must describe the same club/players as its siblings — Save gates the
+            // triple's coherence (AR pass 3), because an incoherent file is one FromBlocks refuses.
+            var appearance = new[]
+            {
+                new ClubAppearanceStates(
+                    7,
+                    new[] { 100, 300 },
+                    new[]
+                    {
+                        new AppearanceState { RecentBits = 0b101u, BitsAsOfWorldDay = 19 },
+                        default(AppearanceState),
+                    }),
+            };
+
             SeasonSaveManager.Save(
-                PopulatedStore(), MidSeasonState(), matchOrNull: null, path, training, medical, NoAppearance);
+                PopulatedStore(), MidSeasonState(), matchOrNull: null, path, training, medical, appearance);
 
             SeasonSaveContents got = SeasonSaveManager.Load(path);
 
@@ -482,8 +496,10 @@ namespace TacticalDirector.SeasonSave
 
             Assert.IsNotNull(got.TrainingClubs, "an unwired #29 must load as an empty set, not null");
             Assert.IsNotNull(got.MedicalClubs, "an unwired #41 must load as an empty set, not null");
+            Assert.IsNotNull(got.AppearanceClubs, "an unwired appearance record likewise (AR pass 3)");
             Assert.AreEqual(0, got.TrainingClubs.Length);
             Assert.AreEqual(0, got.MedicalClubs.Length);
+            Assert.AreEqual(0, got.AppearanceClubs.Length);
         }
 
         [Test]
@@ -505,6 +521,33 @@ namespace TacticalDirector.SeasonSave
                     PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
                     NoTraining, null, NoAppearance),
                 "A null medical set must fail loud — say Array.Empty to mean empty (FR-MD-017).");
+
+            Assert.Throws<ArgumentNullException>(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    NoTraining, NoMedical, null),
+                "A null appearance set must fail loud on the same terms (#30 Appendix B) — its two " +
+                "siblings had this lock from T1 and it did not (AR pass 3).");
+        }
+
+        [Test]
+        public void Save_IncoherentCareerBlockTriple_FailsLoud()
+        {
+            // AR pass 3: Save could write a file its own documented restore path
+            // (PlayerCareerStates.FromBlocks) refuses on the coherence gate — the "Encode writes what
+            // Decode refuses" class the T1 AR filed against TrainingSaveCodec. One training club with
+            // zero medical/appearance clubs is exactly the file this suite itself used to write.
+            var oneTrainingClub = new[]
+            {
+                new ClubTrainingStates(
+                    7, new[] { 100 }, new[] { TrainingState.Create(TrainingFocus.Balanced) }),
+            };
+
+            Assert.Throws<ArgumentException>(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    oneTrainingClub, NoMedical, NoAppearance),
+                "a career triple whose sets disagree on the club set must be refused at Save");
         }
 
         [Test]
@@ -973,4 +1016,9 @@ namespace TacticalDirector.SeasonSave
 // | 1.6     | 2026-08-07 | —      | Balance pass D2: frame v4 — AppearanceStub joins every codec case, |
 // |         |            |        | the frame-order lock gains field 7 (APPR), the stale-version loop  |
 // |         |            |        | adds v3, Save call sites carry the required appearance set.        |
+// | 1.7     | 2026-08-08 | —      | Balance-pass AR pass 3 (L3/L7): the null-appearance refusal joins  |
+// |         |            |        | its two siblings; the empty-sets lock asserts AppearanceClubs too; |
+// |         |            |        | + Save_IncoherentCareerBlockTriple_FailsLoud — the round-trip      |
+// |         |            |        | test itself had been writing a 1-training/1-medical/0-appearance   |
+// |         |            |        | file FromBlocks refuses, now coherent.                             |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/player-database/PlayerRecord.cs
 // Created:  2026-07-15
-// Modified: 2026-07-15
+// Modified: 2026-08-08 (AR pass 3 / ERR-041-019: the PlayerId global-uniqueness doc — no code change)
 // Author:   —
 // Spec:     Squad/Player Data Layer design supplement (docs/tracking/squad-player-data-design.md) §3
 // Purpose:  One player's identity + attributes. PlayerId is club-scoped (KD-3), not the match-scoped
@@ -13,7 +13,17 @@ namespace TacticalDirector.PlayerDatabase
     /// </summary>
     public struct PlayerRecord
     {
-        /// <summary>Club-scoped unique identifier. Design doc KD-3: <c>clubId * CLUB_SQUAD_SIZE + localIndex</c>.</summary>
+        /// <summary>
+        /// Club-scoped unique identifier (design doc KD-3: <c>clubId * CLUB_SQUAD_SIZE + localIndex</c>).
+        /// <para>
+        /// <b>A career needs more than KD-3 promises (ERR-041-019):</b> #41's armed occurrence draw is
+        /// keyed on <c>(worldSeed, PlayerId, worldDay)</c> with no club term, so ids must be GLOBALLY
+        /// unique across every club a career carries — two players sharing an id would draw identical
+        /// injury luck forever. Today's KD-3 formula happens to satisfy that; any future allocator
+        /// (#42 youth intake, #31 transfers) MUST preserve it, and <c>PlayerCareerStates</c> enforces
+        /// it fail-loud at construction and roster sync.
+        /// </para>
+        /// </summary>
         public int PlayerId;
 
         /// <summary>Given name.</summary>
@@ -50,4 +60,8 @@ namespace TacticalDirector.PlayerDatabase
 #region VersionHistory
 // | Version | Date       | Author | Notes                    |
 // | 1.0     | 2026-07-15 | —      | Initial implementation.  |
+// | 1.1     | 2026-08-08 | —      | Balance-pass AR pass 3 (H1, doc only — ERR-041-019): PlayerId's   |
+// |         |            |        | summary states the career-level GLOBAL-uniqueness requirement     |
+// |         |            |        | #41's club-less draw key imposes on top of KD-3's club scope,     |
+// |         |            |        | and where it is enforced. No code change.                         |
 #endregion

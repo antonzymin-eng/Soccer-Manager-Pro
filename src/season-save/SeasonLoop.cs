@@ -1,9 +1,10 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
-// Modified: 2026-08-07 (#29/#41 balance pass D1+D2: matchday's career day-steps run pre-round inside
-//           AdvanceAndPlayNextRound — ERR-030-027, closing the half of ERR-030-026 deferred to this
-//           pass; and the round records both clubs' fielded XIs into the #30 appearance record —
-//           ERR-041-010(b).)
+// Modified: 2026-08-08 (balance-pass AR passes 1-3 over the D1+D2 landing: recording moved above
+//           apply/emit/mark, then sourced from ResolveFixture's own ids via BootFixtureEngine's
+//           id-producing overload, then made pair-atomic via RecordFixtureAppearances — the
+//           ERR-041-010(b) record now cannot drift from, half-record, or strand the round it
+//           describes.)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (day advance / KD-2 tick order), §3.4 (playing a round /
 //           KD-9), §3.5 (season-boundary roll / KD-6), §4.3 (the composition root), §4.6 (the #22
@@ -485,11 +486,13 @@ namespace TacticalDirector.SeasonSave
                 // the pinned apply/emit/mark sequence (AR pass 1): it is the only fallible call in
                 // this block, and a throw after MarkFixturePlayed would strand the round — the fixture
                 // skipped by the unplayed-index filter on retry, the cursor never advancing, the
-                // season unrecoverable.
+                // season unrecoverable. The pair form (AR pass 3) validates BOTH clubs before writing
+                // EITHER, so a refused away side no longer leaves the home XI carrying an appearance
+                // for a fixture that was never applied.
                 if (_career != null)
                 {
-                    _career.RecordAppearances(fixture.HomeClubId, homeXi, worldDay);
-                    _career.RecordAppearances(fixture.AwayClubId, awayXi, worldDay);
+                    _career.RecordFixtureAppearances(
+                        fixture.HomeClubId, homeXi, fixture.AwayClubId, awayXi, worldDay);
                 }
 
                 // FR-SN-013's pinned order, for every fixture: (1) table, (2) event, then mark played.
@@ -1174,14 +1177,6 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | career's appearance record via SquadRating.StartingElevenPlayer-  |
 // |         |            |        | Ids — the same single TrySelect walk, so the recorded eleven IS   |
 // |         |            |        | the fielded eleven on both resolution paths.                      |
-// | 1.12    | 2026-08-07 | —      | Balance-pass AR pass 2 (M): the fielded XIs come OUT of           |
-// |         |            |        | ResolveFixture — the engine branch derives them inside            |
-// |         |            |        | BootFixtureEngine one statement from the ConfigureSquads that     |
-// |         |            |        | consumes the same squad instances, the quick-sim branch from the  |
-// |         |            |        | very squads its rating reads — replacing the loop's second        |
-// |         |            |        | SelectAvailable walk, which was an unenforced agreement with the  |
-// |         |            |        | engine's configuration (the documented-not-structural class).     |
-// |         |            |        | Slots 9-11 join the seam list.                                    |
 // | 1.11    | 2026-08-07 | —      | Balance-pass AR pass 1 (3L): RecordFieldedAppearances moves ABOVE |
 // |         |            |        | the apply/emit/mark sequence — the only fallible call in the      |
 // |         |            |        | block, and a throw after MarkFixturePlayed strands the round      |
@@ -1189,4 +1184,17 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | spec's 0-12 order (slot 0 was missing, the tick was "9");         |
 // |         |            |        | PlayThroughEngine's summary no longer states the retired          |
 // |         |            |        | ERR-030-026 convention.                                           |
+// | 1.12    | 2026-08-07 | —      | Balance-pass AR pass 2 (M): the fielded XIs come OUT of           |
+// |         |            |        | ResolveFixture — the engine branch derives them inside            |
+// |         |            |        | BootFixtureEngine one statement from the ConfigureSquads that     |
+// |         |            |        | consumes the same squad instances, the quick-sim branch from the  |
+// |         |            |        | very squads its rating reads — replacing the loop's second        |
+// |         |            |        | SelectAvailable walk, which was an unenforced agreement with the  |
+// |         |            |        | engine's configuration (the documented-not-structural class).     |
+// |         |            |        | Slots 9-11 join the seam list. (Rows 1.11/1.12 were appended out  |
+// |         |            |        | of order and swapped at AR pass 3 — L2.)                          |
+// | 1.13    | 2026-08-08 | —      | Balance-pass AR pass 3 (L): the recording goes through the new    |
+// |         |            |        | RecordFixtureAppearances pair form — BOTH clubs validated before  |
+// |         |            |        | EITHER is written, so a refused away side no longer leaves the    |
+// |         |            |        | home XI carrying an appearance for a fixture never applied.       |
 #endregion

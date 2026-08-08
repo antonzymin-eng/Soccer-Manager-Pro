@@ -1,6 +1,6 @@
 // File:     src/season-save/PlayerCareerStates.cs
 // Created:  2026-08-06
-// Modified: 2026-08-07
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Training System #29 §3.1/§3.3/§3.5, §4.3 (seam contracts), FR-TR-004/016/022/023/025;
 //           Injuries & Medical #41 §3.1/§3.5, §4.3, FR-MD-003/009/010/022/023/025/027;
@@ -211,7 +211,46 @@ namespace TacticalDirector.SeasonSave
                 career._appearance.Add(new AppearanceState[ids.Length]);
             }
 
+            RequireGloballyUniquePlayerIds(career._clubIds, career._playerIds, nameof(squads));
+
             return career;
+        }
+
+        /// <summary>
+        /// The #41 occurrence-draw key precondition, enforced at the one layer that spans clubs
+        /// (ERR-041-019, AR pass 3): the draw key is <c>(worldSeed, PlayerId, worldDay, purpose)</c>
+        /// with NO club term (#41 §3.1.1), but #27 promises <c>PlayerId</c> uniqueness only WITHIN a
+        /// club — this very class is keyed <c>(ClubId, PlayerId)</c> on that premise. Two clubs
+        /// carrying the same id would draw bit-identical injury luck on every world day forever,
+        /// with matching severities whenever their risks are close: silent, total, and
+        /// indistinguishable from chance. Safe today only because <c>RosterGenerator</c> happens to
+        /// allocate <c>clubId × CLUB_SQUAD_SIZE + local</c>; the moment another allocator exists
+        /// (#42 youth intake, #31 transfers) that accident ends, so the precondition fails loud here
+        /// rather than surfacing as two players who are always injured together.
+        /// </summary>
+        private static void RequireGloballyUniquePlayerIds(
+            IReadOnlyList<int> clubIds, IReadOnlyList<int[]> playerIds, string paramName)
+        {
+            var owner = new Dictionary<int, int>();
+            for (int c = 0; c < clubIds.Count; c++)
+            {
+                int[] ids = playerIds[c];
+                for (int i = 0; i < ids.Length; i++)
+                {
+                    if (owner.TryGetValue(ids[i], out int otherClub))
+                    {
+                        throw new ArgumentException(
+                            $"Player id {ids[i]} is carried by BOTH club {otherClub} and club "
+                            + $"{clubIds[c]}. #41's occurrence draw is keyed on (worldSeed, playerId, "
+                            + "worldDay) with no club term (#41 §3.1.1), so two players sharing an id "
+                            + "would draw identical injury luck forever. Player ids must be globally "
+                            + "unique across the career (ERR-041-019).",
+                            paramName);
+                    }
+
+                    owner.Add(ids[i], clubIds[c]);
+                }
+            }
         }
 
         /// <summary>
@@ -233,7 +272,10 @@ namespace TacticalDirector.SeasonSave
         /// hands in the very arrays <see cref="SeasonSaveManager.Load"/> returns inside
         /// <see cref="SeasonSaveContents"/> — sharing them would make every holder of those contents a
         /// second writer of #29/#41 state, which is precisely what <see cref="TrainingBlocks"/> being
-        /// <c>internal</c> prevents on the save side. The player-id arrays are shared; nothing mutates them.
+        /// <c>internal</c> prevents on the save side. The player-id arrays are copied for the same
+        /// reason (AR pass 3): they are the binary-search keys every lookup runs on, so an aliased
+        /// write to <c>contents.TrainingClubs[c].PlayerIds</c> would break the strictly-ascending
+        /// precondition this method just enforced.
         /// </para>
         /// </summary>
         /// <param name="training">The decoded #29 blocks.</param>
@@ -352,8 +394,11 @@ namespace TacticalDirector.SeasonSave
                         nameof(training));
                 }
 
-                // The player-id arrays are shared: they are never mutated here, the two blocks agree
-                // on them by the check above, and both codecs already canonicalized them ascending.
+                // The id array is copied too (AR pass 3): "never mutated HERE" was true and beside
+                // the point — ClubTrainingStates.PlayerIds is a public field over a mutable array,
+                // and an aliased caller writing contents.TrainingClubs[c].PlayerIds[i] would break
+                // the strictly-ascending precondition enforced twenty lines above, reopening the
+                // pass-1 silent-overwrite High through the keys instead of the states.
                 //
                 // The STATE arrays are copied, and that is not a defensive habit — it is the single-
                 // writer contract (FR-TR-004 / FR-TR-023 / FR-MD-003). ClubTrainingStates.States is a
@@ -374,13 +419,17 @@ namespace TacticalDirector.SeasonSave
                 Array.Copy(m.States, injuryStates, m.Count);
                 var appearanceStates = new AppearanceState[a.Count];
                 Array.Copy(a.States, appearanceStates, a.Count);
+                var playerIds = new int[t.Count];
+                Array.Copy(t.PlayerIds, playerIds, t.Count);
 
                 career._clubIds.Add(t.ClubId);
-                career._playerIds.Add(t.PlayerIds);
+                career._playerIds.Add(playerIds);
                 career._training.Add(trainingStates);
                 career._injury.Add(injuryStates);
                 career._appearance.Add(appearanceStates);
             }
+
+            RequireGloballyUniquePlayerIds(career._clubIds, career._playerIds, nameof(training));
 
             return career;
         }
@@ -456,12 +505,48 @@ namespace TacticalDirector.SeasonSave
         /// <exception cref="ArgumentException">The club or a fielded player is not carried by this career, or the day precedes an already-recorded appearance.</exception>
         internal void RecordAppearances(int clubId, int[] fieldedPlayerIds, uint worldDay)
         {
+            int club;
+            int[] indices = ValidateAppearanceWrite(clubId, fieldedPlayerIds, worldDay, out club);
+            WriteAppearances(club, indices, worldDay);
+        }
+
+        /// <summary>
+        /// The fixture-pair form (AR pass 3): BOTH clubs validated before EITHER is written — the
+        /// validate-all-then-write discipline <see cref="RecordAppearances"/> keeps within a club,
+        /// applied one level up. Without it, the away side's refusal landed after the home side's
+        /// write, leaving a home XI carrying an appearance for a fixture that was never applied,
+        /// emitted or marked played; the retry converges (the bit-OR is idempotent), but an
+        /// abandoned round kept the phantom.
+        /// </summary>
+        /// <param name="homeClubId">The home club.</param>
+        /// <param name="homeXi">The home fielded eleven.</param>
+        /// <param name="awayClubId">The away club.</param>
+        /// <param name="awayXi">The away fielded eleven.</param>
+        /// <param name="worldDay">The fixture day.</param>
+        /// <exception cref="ArgumentNullException">Either XI is null.</exception>
+        /// <exception cref="ArgumentException">Either club or any fielded player is not carried, or the day precedes an already-recorded appearance — in every case NOTHING has been written for EITHER club.</exception>
+        internal void RecordFixtureAppearances(
+            int homeClubId, int[] homeXi, int awayClubId, int[] awayXi, uint worldDay)
+        {
+            int home;
+            int[] homeIndices = ValidateAppearanceWrite(homeClubId, homeXi, worldDay, out home);
+            int away;
+            int[] awayIndices = ValidateAppearanceWrite(awayClubId, awayXi, worldDay, out away);
+
+            WriteAppearances(home, homeIndices, worldDay);
+            WriteAppearances(away, awayIndices, worldDay);
+        }
+
+        /// <summary>The validating half: resolves the club and every id, and pre-checks the day-regression refusal (AR pass 1 — <see cref="AppearanceWindow.Record"/> must not fire mid-write and leave a club half-recorded). Writes nothing.</summary>
+        private int[] ValidateAppearanceWrite(
+            int clubId, int[] fieldedPlayerIds, uint worldDay, out int club)
+        {
             if (fieldedPlayerIds == null)
             {
                 throw new ArgumentNullException(nameof(fieldedPlayerIds));
             }
 
-            int club = RequireClub(clubId);
+            club = RequireClub(clubId);
             int[] ids = _playerIds[club];
             AppearanceState[] states = _appearance[club];
 
@@ -470,9 +555,6 @@ namespace TacticalDirector.SeasonSave
             {
                 indices[i] = RequireIndexOfPlayer(ids, clubId, fieldedPlayerIds[i]);
 
-                // AppearanceWindow.Record's day-regression refusal is pre-checked here so it cannot
-                // fire mid-write and leave the club half-recorded (AR pass 1 — the validate-all
-                // promise was only half kept without this).
                 if (worldDay < states[indices[i]].BitsAsOfWorldDay)
                 {
                     throw new ArgumentException(
@@ -483,6 +565,13 @@ namespace TacticalDirector.SeasonSave
                 }
             }
 
+            return indices;
+        }
+
+        /// <summary>The writing half of the appearance record: cannot fail on validated indices.</summary>
+        private void WriteAppearances(int club, int[] indices, uint worldDay)
+        {
+            AppearanceState[] states = _appearance[club];
             for (int i = 0; i < indices.Length; i++)
             {
                 AppearanceWindow.Record(ref states[indices[i]], worldDay);
@@ -749,6 +838,12 @@ namespace TacticalDirector.SeasonSave
                 nextInjury[c] = injury;
                 nextAppearance[c] = appearance;
             }
+
+            // The ERR-041-019 precondition is re-checked here because the sync is the third id
+            // entry point (after ForLeague and FromBlocks) — and the one #42's youth intake and
+            // #31's transfers will actually come through. In the validating half, deliberately:
+            // CommitRosterSync's contract is "cannot fail on a plan this career prepared".
+            RequireGloballyUniquePlayerIds(_clubIds, nextIds, nameof(squads));
 
             return new RosterSyncPlan(
                 RosterGeneration, nextIds, nextTraining, nextInjury, nextAppearance, churn);
@@ -1349,4 +1444,13 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | no longer reads the appearance window with today's match already   |
 // |         |            |        | in the bits; + the three-parallel-state-sets ceiling note (a       |
 // |         |            |        | fourth set collapses this into a per-player career struct).        |
+// | 1.8     | 2026-08-08 | —      | Balance-pass AR pass 3 (H+M+L). H (ERR-041-019): cross-club        |
+// |         |            |        | PlayerId uniqueness enforced at all three id entry points          |
+// |         |            |        | (ForLeague, FromBlocks, PrepareRosterSync) — #41's occurrence      |
+// |         |            |        | draw has no club term, so a shared id means shared injury luck     |
+// |         |            |        | forever, and #27 only promises club-scoped uniqueness. M2:         |
+// |         |            |        | FromBlocks copies the ID arrays too (a public-field alias could    |
+// |         |            |        | break the ascending precondition just enforced). L6:               |
+// |         |            |        | RecordFixtureAppearances — both clubs validated before either is   |
+// |         |            |        | written, the per-club discipline one level up.                     |
 #endregion
