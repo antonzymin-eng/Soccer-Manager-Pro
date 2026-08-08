@@ -1,6 +1,6 @@
 // File:     src/defensive-ai/DefensiveAIConstants.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-30
 // Author:   —
 // Spec:     Defensive AI #14 §6.1, FR-DA-007, Code Standards #20 §4.2 FR-CS-025
 // Purpose:  Single constant catalogue for Spec #14. Contains all assignment thresholds,

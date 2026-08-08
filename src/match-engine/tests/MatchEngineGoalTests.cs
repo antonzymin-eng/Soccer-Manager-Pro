@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineGoalTests.cs
 // Created:  2026-07-11
-// Modified: 2026-07-14
+// Modified: 2026-07-15
 // Author:   —
 // Spec:     Match Engine design note (goal-detection substrate — the #26 §9.3 upstream
 //           deliverable); Match Engine design note (match-flow-completion — RestartResolver);

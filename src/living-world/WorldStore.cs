@@ -1,13 +1,10 @@
 // File:     src/living-world/WorldStore.cs
 // Created:  2026-07-03
-// Modified: 2026-07-24 (arc-triggers Low-1: IsMoreCitable delegates to MemoryEpisode.MoreSalientThan)
-// Modified: 2026-07-24 (arc-triggers Slice 2/E2: Snapshot/Restore serialize the world.arcs cursor +
+// Modified: 2026-07-25
 //           the KD-7 latch (WORLD_STORE_FORMAT_VERSION 2 → 3); the E1 flag-on fail-loud is dropped —
 //           a flag-on run now round-trips deterministically)
-// Modified: 2026-07-24 (arc-triggers Slice 1/E1: owns the ArcTriggerEvaluator (world.arcs stream) + a
 //           nullable ArcCanonSource seam; AdvanceDay passes canon per tick; SetArcCanon / a canon ctor
 //           overload / Restore(payload, canon) thread it; Snapshot fails loud on a flag-on run — E1)
-// Modified: 2026-07-03
 // Author:   —
 // Spec:     Living World System #22 §4.2 (KD-4), §4.5, §4.6, §7.1 (KD-10), FR-LW-019/022/023/027/032,
 //           Deterministic Simulation #16 §3.2.4.1, Code Standards #20

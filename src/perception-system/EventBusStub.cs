@@ -1,6 +1,6 @@
 // File:     src/perception-system/EventBusStub.cs
 // Created:  2026-05-28
-// Modified: 2026-05-30
+// Modified: 2026-06-12
 // Author:   —
 // Spec:     Perception System #7 §4.6.5, Event System #17 §3.2.1, Code Standards #20
 // Purpose:  Thin forwarding wrapper over EventBus. Replaces the Stage 0 no-op stub.

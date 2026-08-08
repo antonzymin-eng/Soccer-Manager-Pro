@@ -1,6 +1,6 @@
 // File:     src/decision-tree/EventBusRegistrar.cs
 // Created:  2026-05-30
-// Modified: 2026-05-30
+// Modified: 2026-06-11
 // Author:   —
 // Spec:     Decision Tree #8 §4.5, Event System #17 §3.7.4, Code Standards #20
 // Purpose:  Registers Decision Tree event types with EventRegistry at boot time.

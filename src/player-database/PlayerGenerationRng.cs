@@ -1,5 +1,6 @@
 // File:     src/player-database/PlayerGenerationRng.cs
 // Created:  2026-07-24
+// Modified: 2026-07-24
 // Author:   —
 // Spec:     Squad/Player Data Layer #27 §3 / Player Progression #28 §3.3; Deterministic Simulation #16 (RNG); Code Standards #20
 // Purpose:  Shared deterministic player-generation RNG helpers used by RosterGenerator (#27) and

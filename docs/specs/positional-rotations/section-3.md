@@ -1,8 +1,8 @@
 # Positional Rotations Specification #25 — Section 3: Formulas and Algorithms
 
 **Created:** July 8, 2026
-**Last Updated:** July 8, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** July 8, 2026 (v0.2 — PASS-1 fixes: M-1 phase hoisted to an outer freeze gate (predicate now pure geometry — v0.1 pseudocode reset dwell on phase exit, contradicting FR-RO-010); L-1 inequality ≤.)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---

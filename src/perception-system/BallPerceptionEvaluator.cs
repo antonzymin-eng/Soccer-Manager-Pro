@@ -1,6 +1,6 @@
 // File:     src/perception-system/BallPerceptionEvaluator.cs
 // Created:  2026-05-28
-// Modified: 2026-05-28
+// Modified: 2026-05-29
 // Author:   —
 // Spec:     Perception System #7 §3.5, Code Standards #20
 // Purpose:  Evaluates ball visibility: range check, FoV test, occlusion test (§3.5.1).

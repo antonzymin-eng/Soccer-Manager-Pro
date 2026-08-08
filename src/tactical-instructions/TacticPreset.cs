@@ -1,6 +1,6 @@
 // File:     src/tactical-instructions/TacticPreset.cs
 // Created:  2026-07-10
-// Modified: 2026-07-10
+// Modified: 2026-07-24
 // Author:   —
 // Spec:     Tactical Presets #26 §2.2.1 (FR-TP-001/014), Code Standards #20
 // Purpose:  An immutable named tactic bundle: Name + one TeamTactic + optional roster-indexed

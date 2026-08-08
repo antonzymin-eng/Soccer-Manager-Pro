@@ -1,5 +1,6 @@
 // File:     src/pressing-ai/PressingTickState.cs
 // Created:  2026-06-27
+// Modified: 2026-06-27
 // Author:   —
 // Spec:     Pressing AI #13 §3.2, §3.6; Match Engine design note §2.6 (Phase D D4 follow-up); Code Standards #20
 // Purpose:  Read-only view bundling a PressingAITick's cross-tick state (role hysteresis, trigger

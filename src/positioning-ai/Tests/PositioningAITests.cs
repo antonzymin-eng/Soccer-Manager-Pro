@@ -1,6 +1,6 @@
 // File: src/positioning-ai/Tests/PositioningAITests.cs
 // Created:  2026-05-29
-// Modified: 2026-06-01
+// Modified: 2026-06-13
 // Author:   —
 // Spec:     #12 Positioning AI §5.1
 // Purpose:  Unit, integration, determinism, and tactical-correctness tests for Positioning AI.

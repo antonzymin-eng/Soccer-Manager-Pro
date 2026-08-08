@@ -1,6 +1,6 @@
 // File:     src/goalkeeper-mechanics/GoalkeeperCrossClaimDuel.cs
 // Created:  2026-05-28
-// Modified: 2026-05-28
+// Modified: 2026-06-12
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.6, KD-14, Code Standards #20
 // Purpose:  Body-part determination (§3.6.1) and hand-contact duel resolution (§3.6.3).

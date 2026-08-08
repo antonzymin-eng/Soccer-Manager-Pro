@@ -2,7 +2,7 @@
 
 **Created:** May 17, 2026
 **Last Updated:** May 17, 2026
-**Version:** 0.1
+**Version:** 0.3
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 

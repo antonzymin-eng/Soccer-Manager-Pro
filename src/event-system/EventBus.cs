@@ -456,7 +456,7 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | ERR_EVT_REGISTRATION_PHASE on a second match's Subscribe and leaks |
 // |         |            |        | handlers toward MaxHandlersPerEventType across runs. No change to  |
 // |         |            |        | the Publish/Subscribe/DrainTick hot paths.                         |
-// | 1.10    | 2026-07-27 | —      | CaptureTickLedger added — the public face of the #37 KD-7 tap,   |
+// | 2.2     | 2026-07-27 | —      | CaptureTickLedger added — the public face of the #37 KD-7 tap,   |
 // |         |            |        | valid between DrainTick and OnTickBoundary. Read-only; no change |
 // |         |            |        | to Publish / Subscribe / DrainTick.                              |
 #endregion

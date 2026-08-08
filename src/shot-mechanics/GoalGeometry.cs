@@ -1,6 +1,6 @@
 // File:     src/shot-mechanics/GoalGeometry.cs
 // Created:  2026-05-28
-// Modified: 2026-05-28
+// Modified: 2026-06-01
 // Author:   —
 // Spec:     Shot Mechanics #6 §4.1.1, Code Standards #20
 // Purpose:  Value struct for goal geometry parameters (width, height, line position, post positions).

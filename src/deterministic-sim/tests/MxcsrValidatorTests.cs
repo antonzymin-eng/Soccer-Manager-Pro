@@ -1,5 +1,6 @@
 // File:     src/deterministic-sim/tests/MxcsrValidatorTests.cs
 // Created:  2026-07-21
+// Modified: 2026-07-21
 // Author:   —
 // Spec:     Deterministic Simulation #16 §4.8.2, §4.8.3, Code Standards #20
 // Purpose:  Pure-decode locks for MxcsrValidator (DAZ/FTZ/RC extraction + Stage-0 pin match). These

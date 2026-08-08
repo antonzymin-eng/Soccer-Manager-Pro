@@ -7668,7 +7668,7 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | trigger and the CoverShadow threat-progression term. Snapshot   |
 // |         |            |        | is in the pressing team's canonical attack-+X frame, so the     |
 // |         |            |        | field is the constant +X; dead CanonicalAttackDir helper removed|
-// | 1.17    | 2026-06-28 | —      | Build fix (CS0104): the #21 T2 Pressing AI (#13) seam added a   |
+// | 1.17.1  | 2026-06-28 | —      | Build fix (CS0104): the #21 T2 Pressing AI (#13) seam added a   |
 // |         |            |        | second public TacticTranslation (in PressingAI), and the match- |
 // |         |            |        | engine references both PressingAI and DecisionTree, so the two  |
 // |         |            |        | bare TacticTranslation.ToPressingMode/ToPassingStyle calls in   |
@@ -8067,7 +8067,7 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | production callers); and OnPossessionChanged defers the        |
 // |         |            |        | interrupt while the new holder's own executor is in flight.    |
 // |         |            |        | No SNAPSHOT_SCHEMA_VERSION change.                             |
-// | 1.49    | 2026-07-26 | —      | §5.Z.9 foul & discipline balance pass. ApplyFoulIfCaptured now  |
+// | 1.50.1  | 2026-07-26 | —      | §5.Z.9 foul & discipline balance pass. ApplyFoulIfCaptured now  |
 // |         |            |        | computes ComputeFoulCallProbability(F) = min(1, callP x F /     |
 // |         |            |        | threshold) and PARTITIONS the single existing card-severity     |
 // |         |            |        | draw: u >= p waves on (no event, card, restart or cooldown —    |
@@ -8084,7 +8084,7 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | on TestOnly_InjectFoulCandidate defaulting to certainty so      |
 // |         |            |        | every pre-existing injection test keeps its meaning. Measured   |
 // |         |            |        | 480 -> 21 fouls, 147 -> 3.0 yellows, 75 -> 1.0 reds per 90 min. |
-// | 1.50    | 2026-07-26 | —      | §5.Z.10 kickoff keeper placement. InitializeKickoffState put     |
+// | 1.50.2  | 2026-07-26 | —      | §5.Z.10 kickoff keeper placement. InitializeKickoffState put     |
 // |         |            |        | every agent of a team on one x-line spread across the width by   |
 // |         |            |        | roster index, so the keeper (index 0) took the first lateral     |
 // |         |            |        | slot: 26 m upfield of the goal it defends and 28 m off-centre.   |
@@ -8109,7 +8109,7 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | the AI reslots outfielders at the first stride and the keeper is |
 // |         |            |        | placed explicitly. Removing the trig also strengthens the        |
 // |         |            |        | determinism property FacingFromHeading special-cased for.        |
-// | 1.49    | 2026-07-27 | —      | P1 richer observation frame (interactive-unity-client-design    |
+// | 1.51.1  | 2026-07-27 | —      | P1 richer observation frame (interactive-unity-client-design    |
 // |         |            |        | §5-P1). Public: AgentYellowCards / AgentIsSentOff /             |
 // |         |            |        | AgentBenchSlot / SubstitutionsUsed (KD-P1-1, the AgentTeamId    |
 // |         |            |        | value-copy shape), CurrentPeriod (KD-P1-2 — derived from the    |
@@ -8128,7 +8128,7 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | inline teamId guards in SetTeamTactic / SubstitutePlayer /      |
 // |         |            |        | ConfigureManager collapsed into GuardTeamId (message text       |
 // |         |            |        | unchanged) rather than adding a fourth copy.                    |
-// | 1.50 | 2026-07-27 | — | **§5.Z.17 goalkeeper save pipeline.** `NotifyKeeperOfShot` opens #11's §3.2|
+// | 1.51.2 | 2026-07-27 | — | **§5.Z.17 goalkeeper save pipeline.** `NotifyKeeperOfShot` opens #11's §3.2|
 // |      |            |   | reaction window on the shot CONTACT frame (ERR-011-004) — the method had ZERO|
 // |      |            |   | callers anywhere, so reactionWindowAchieved was pinned at 0 and a catch was|
 // |      |            |   | arithmetically impossible. Stamped in MILLISECONDS (`_clock.CurrentMatchTimeMs`),|
@@ -8138,7 +8138,7 @@ namespace TacticalDirector.MatchEngine
 // |      |            |   | engine latch and #11's own cannot disagree. `TestOnly_GoalkeeperState` reads|
 // |      |            |   | through the public CaptureState the v19 writer uses. No schema/RNG/draw-order|
 // |      |            |   | change; flag-off byte-identical.                                        |
-// | 1.50    | 2026-07-27 | —      | P1 AR-1 L-3: ToRestartCue's default arm emits a gated           |
+// | 1.51.3  | 2026-07-27 | —      | P1 AR-1 L-3: ToRestartCue's default arm emits a gated           |
 // |         |            |        | LogWarning. It still falls through to RestartCue.None —         |
 // |         |            |        | observation code must never abort a tick — but a RestartType    |
 // |         |            |        | member added later would otherwise be reported to a View as     |

@@ -1,7 +1,7 @@
 # Goalkeeper Mechanics Specification #11 — Section 8: References, Citations, DOI Verification
 
 **Created:** May 16, 2026
-**Version:** 0.2
+**Version:** 0.3
 **Status:** DRAFT
 **Purpose:** Catalogue project documents, upstream specs, external
 academic references with DOI verification, and the typed

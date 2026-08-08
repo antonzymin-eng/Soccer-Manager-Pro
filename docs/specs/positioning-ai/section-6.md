@@ -1,8 +1,8 @@
 # Positioning AI Specification #12 — Section 6: Performance Analysis and Budgets
 
 **Created:** May 15, 2026
-**Last Updated:** May 18, 2026 (v0.3 — APPROVED: domain tag allocated, [EST] and GK constants promoted to [GT])
-**Version:** 0.4
+**Last Updated:** July 28, 2026 (v0.5 — ERR-012-010: `GK_LATERAL_FACTOR` row replaced by `GK_LATERAL_CLAMP_M`, §3.3.3 ball-line lateral term; see `gk-contact-rate-design.md` KD-CR3/KD-CR4)
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -121,8 +121,8 @@ TargetPosition` produced by #8 (which in turn reads #12's slot from
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
-| 0.4 | July 28, 2026 | AI agent (gk-contact-rate pass) | ERR-012-010: `GK_LATERAL_FACTOR` row replaced by `GK_LATERAL_CLAMP_M` (§3.3.3 ball-line lateral term; see `gk-contact-rate-design.md` KD-CR3/KD-CR4). |
 | 0.1 | May 15, 2026 | AI agent (claude/draft-positional-ai-specs-MOejb) | Initial section-file draft from `outline-detailed.md` v1.2. Constant catalogue published with all tags; outline-stage `[EST]` values flagged for Appendix A derivation. |
 | 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass. AR-S1-08 `FATIGUE_LATERAL_RELAX_M` removed (unused by any formula); AR-S1-11 GK constants demoted `[GT]` → `[EST]`; AR-S1-12 `LANE_EDGES_M` literal array added as `[DERIVED]`; AR-S1-06 `SPACING_MAX_PASSES = 4` added; `SENTINEL_NO_SLOT` added per AR-S1-07; AR-S1-20 §6.3 build-config disambiguated to "Editor playmode profiler"; §6.2 hot-path table updated for iterated spacing + post-spacing line/lane resolve. |
 | 0.3 | May 18, 2026 | AI agent (claude/review-phase-0-requirements-yMzh6) | APPROVED patch. ERR-012-001 resolved: `DOMAIN_TAG_POSITIONING_AI` promoted `[CROSS-PENDING]` → `[CROSS: #16 §3.4]` (value confirmed 0x17, allocated in #16 §3.4 v1.0.5). All 8 hysteresis/offset constants promoted `[EST]` → `[GT]` (Appendix A.1–A.8 derivations confirmed). OI-005 (KD-13): GK constants `GK_DEPTH_M`, `GK_ADVANCE_FACTOR`, `GK_LATERAL_FACTOR` promoted `[EST]` → `[GT]` atomically with #11 `APPROVED` transition. |
 | 0.4 | May 18, 2026 | AI agent (adversarial-specs-review-run3) | Run 3 fix: `SPACING_MAX_PASSES` promoted `[EST]` → `[GT]` (omitted from v0.3 batch; SPEC_INDEX.md claim "no `[EST]` remain" now accurate). |
+| 0.5 | July 28, 2026 | AI agent (gk-contact-rate pass) | ERR-012-010: `GK_LATERAL_FACTOR` row replaced by `GK_LATERAL_CLAMP_M` (§3.3.3 ball-line lateral term; see `gk-contact-rate-design.md` KD-CR3/KD-CR4). |

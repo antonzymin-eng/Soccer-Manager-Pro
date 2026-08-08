@@ -1,6 +1,6 @@
 // File:     src/shot-mechanics/ShotErrorCalculator.cs
 // Created:  2026-05-27
-// Modified: 2026-05-27
+// Modified: 2026-07-27
 // Author:   —
 // Spec:     Shot Mechanics #6 §3.6, Code Standards #20
 // Purpose:  Computes deterministic angular error: base error × power penalty × pressure penalty

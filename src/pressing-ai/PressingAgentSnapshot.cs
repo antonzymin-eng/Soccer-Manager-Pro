@@ -1,6 +1,6 @@
 // File:     src/pressing-ai/PressingAgentSnapshot.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-07-07
 // Author:   —
 // Spec:     Pressing AI #13 §4.2, Code Standards #20
 // Purpose:  Per-agent immutable snapshot provided to PressingAITick each tick.

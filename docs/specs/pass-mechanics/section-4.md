@@ -8,7 +8,7 @@ This section is the authoritative reference for boundary ownership and interface
 Implementers must not cross these boundaries without a formal amendment.
 
 **Created:** February 20, 2026, 9:00 PM PST
-**Version:** 1.0
+**Version:** 1.1
 **Status:** DRAFT — Awaiting Lead Developer Review
 **Specification Number:** 5 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)

@@ -1,8 +1,8 @@
 # Dismarking & Marker-Awareness AI Specification #23 — Section 3: Formulas and Algorithms
 
 **Created:** July 8, 2026
-**Last Updated:** July 8, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** July 8, 2026 (v0.2 — PASS-1 M-1: dwell-update site pinned to the per-agent perception pass; #12 consumption is one-stride-stale by design (the RestDefense same-tick analogy does not transfer to `FilteredView`-derived signals).)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---

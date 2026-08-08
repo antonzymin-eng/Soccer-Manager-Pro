@@ -1,6 +1,6 @@
 // File:     src/tactical-instructions/TacticPresetLibrary.cs
 // Created:  2026-07-10
-// Modified: 2026-07-10
+// Modified: 2026-07-24
 // Author:   —
 // Spec:     Tactical Presets #26 §2.2.2 (FR-TP-002/013), Appendix A.1 (pinned July 10, 2026),
 //           Code Standards #20

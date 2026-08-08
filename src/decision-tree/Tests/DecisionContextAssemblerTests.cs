@@ -1,5 +1,6 @@
 // File:     src/decision-tree/Tests/DecisionContextAssemblerTests.cs
 // Created:  2026-06-11
+// Modified: 2026-07-26
 // Author:   —
 // Spec:     Decision Tree #8 §2.2.4, §3.1.1, §3.2.1.3, Code Standards #20
 // Purpose:  Locks the audit AR-2 H-2 (team-relative BallZone) and M-1

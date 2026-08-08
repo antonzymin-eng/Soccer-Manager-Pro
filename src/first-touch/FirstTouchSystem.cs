@@ -1,6 +1,6 @@
 // File:     src/first-touch/FirstTouchSystem.cs
 // Created:  2026-05-25
-// Modified: 2026-06-10
+// Modified: 2026-06-12
 // Author:   —
 // Spec:     First Touch Mechanics #4 §4.4, §4.5, Code Standards #20
 // Purpose:  Orchestrates the first-touch evaluation and application pipeline.

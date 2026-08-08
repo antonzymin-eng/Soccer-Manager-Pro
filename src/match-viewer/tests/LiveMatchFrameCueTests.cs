@@ -1,6 +1,6 @@
 // File:     src/match-viewer/tests/LiveMatchFrameCueTests.cs
 // Created:  2026-07-27
-// Modified: 2026-07-27 (AR-1 M-6: latch assertions read the RestartBanner carrier)
+// Modified: 2026-08-03
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md) §5-P1,
 //           Testing Strategy #19 (unit layer), Code Standards #20

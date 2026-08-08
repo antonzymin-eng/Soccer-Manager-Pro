@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineMechanicsTests.cs
 // Created:  2026-06-22
+// Modified: 2026-06-26
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §5 Phase D (D2), Code Standards #20
 // Purpose:  Phase D step D2 tests — proves the mechanics AI feeds live decision-context inputs: the

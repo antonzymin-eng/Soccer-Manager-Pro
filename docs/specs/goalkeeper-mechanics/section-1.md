@@ -1,7 +1,7 @@
 # Goalkeeper Mechanics Specification #11 — Section 1: Purpose & Scope
 
 **Created:** May 16, 2026
-**Version:** 0.1
+**Version:** 0.3
 **Status:** DRAFT
 **Purpose:** Establish the scope of the Goalkeeper Mechanics
 specification, the out-of-scope items, the twenty-one pre-committed

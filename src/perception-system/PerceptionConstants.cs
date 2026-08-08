@@ -1,6 +1,6 @@
 // File:     src/perception-system/PerceptionConstants.cs
 // Created:  2026-05-28
-// Modified: 2026-06-12
+// Modified: 2026-06-13
 // Author:   —
 // Spec:     Perception System #7 §3.10, Code Standards #20
 // Purpose:  All numeric constants for the perception system. No magic literals in formula files.

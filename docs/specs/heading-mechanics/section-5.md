@@ -1,7 +1,7 @@
 # Heading Mechanics Specification #10 — Section 5: Test Plan
 
 **Created:** May 16, 2026
-**Version:** 0.1
+**Version:** 0.3
 **Status:** DRAFT
 **Purpose:** Define unit, integration, validation, and cross-spec
 conformance tests for Heading Mechanics #10. Test layout follows

@@ -1,8 +1,8 @@
 # Positioning AI Specification #12 — Section 1: Introduction, Scope, Dependencies, Key Decisions
 
 **Created:** May 15, 2026
-**Last Updated:** May 16, 2026 (v0.2 — PASS-1 adversarial fix pass)
-**Version:** 0.2
+**Last Updated:** May 18, 2026 (v0.3 — FAIL-4 fix (A-03): §1.3.2 ERR-012-001 block — `DOMAIN_TAG_POSITIONING_AI = 0x17 [CROSS-PENDING]` promoted to `[CROSS: #16 §3.4]`; ERR-012-001 resolved prose updated.)
+**Version:** 0.3
 **Status:** DRAFT (section-file authoring pass)
 
 ---

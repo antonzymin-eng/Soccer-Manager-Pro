@@ -1,6 +1,6 @@
 // File:     src/decision-tree/Tests/DispatcherTests.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-11
 // Author:   —
 // Spec:     Decision Tree #8 §3.5, Code Standards #20
 // Purpose:  Unit tests for ActionDispatcher movement routing. Verifies that HOLD,

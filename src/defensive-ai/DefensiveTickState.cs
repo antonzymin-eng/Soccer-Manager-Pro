@@ -1,5 +1,6 @@
 // File:     src/defensive-ai/DefensiveTickState.cs
 // Created:  2026-06-27
+// Modified: 2026-06-27
 // Author:   —
 // Spec:     Defensive AI #14 §3.3, §3.7; Match Engine design note §2.6 (Phase D D4 follow-up); Code Standards #20
 // Purpose:  Read-only view bundling a DefensiveAITick's cross-tick state (per-agent mark hysteresis,

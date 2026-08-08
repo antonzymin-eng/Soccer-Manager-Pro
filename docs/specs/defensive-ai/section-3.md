@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 3: Core Formulas and Algorithms
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.3 — PASS-2 adversarial review fix pass; two new issues resolved)
-**Version:** 0.3
+**Last Updated:** July 7, 2026 (v0.4 — Cheap-item addition (FR-TI-033): §3.3.3 Step 2 MAN_MARK candidate radius scaled by `MarkRadiusScalar(TeamTactic.MarkingOrientation)` — Balanced ⇒ ×1.00 identity, byte-identical to pre-addition. Implemented in `src/defensive-ai/TacticTranslation.cs` + `MarkAssigner.cs`.)
+**Version:** 0.4
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 

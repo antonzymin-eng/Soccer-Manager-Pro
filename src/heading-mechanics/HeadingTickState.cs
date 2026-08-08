@@ -1,5 +1,6 @@
 // File:     src/heading-mechanics/HeadingTickState.cs
 // Created:  2026-07-23
+// Modified: 2026-07-23
 // Author:   —
 // Spec:     Heading Mechanics #10 §2.2, §3.2–§3.9; gk-heading-engine-integration-design.md Phase 2;
 //           Match Engine design note §2.6 (snapshot seam); Code Standards #20

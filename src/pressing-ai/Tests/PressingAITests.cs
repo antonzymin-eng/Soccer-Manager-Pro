@@ -1,6 +1,6 @@
 // File:     src/pressing-ai/Tests/PressingAITests.cs
 // Created:  2026-05-31
-// Modified: 2026-06-13
+// Modified: 2026-06-15
 // Author:   —
 // Spec:     Pressing AI #13 §5, Code Standards #20
 // Purpose:  Unit tests for Pressing AI. T-U unit tests from §5.

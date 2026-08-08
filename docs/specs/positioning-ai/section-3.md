@@ -1,7 +1,7 @@
 # Positioning AI Specification #12 — Section 3: Core Formulas and Algorithms
 
 **Created:** May 15, 2026
-**Last Updated:** July 10, 2026 (v0.6 — §3.7.1 Stage-1 pipeline amendments, back-props ERR-012-007/008/009)
+**Last Updated:** July 28, 2026 (v0.7 — ERR-012-010: §3.3.3 GK slot lateral term corrected from the pitch-anchored `GK_LATERAL_FACTOR × basisY` form to the ball-line point clamped inside the goal mouth (`GK_LATERAL_CLAMP_M`); the superseded form is preserved in-place with the measured rationale. See `gk-contact-rate-design.md` §1.2/KD-CR3/KD-CR4.)
 **Version:** 0.7
 **Status:** APPROVED
 

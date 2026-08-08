@@ -1,8 +1,6 @@
 // File:     src/living-world/InteractionTextGenerator.cs
 // Created:  2026-07-02
-// Modified: 2026-07-24 (arc-triggers Slice 1: world.text entityId literal −1 → cataloged
-//           WORLD_STREAM_ENTITY_TEXT sentinel; behaviour-identical, distinct from world.arcs)
-// Modified: 2026-07-03 (slice-3 AR-1 L-3: DrawReserved-failure documented as a corruption abort)
+// Modified: 2026-07-24
 // Author:   —
 // Spec:     Living World System #22 §3.3 (KD-6), §3.6, FR-LW-011/012/013/016/020, Code Standards #20
 // Purpose:  Deterministic §3.3 surface-text generation: template selection draws from the dedicated
@@ -142,4 +140,7 @@ namespace TacticalDirector.LivingWorld
 // |         |            |        | branch documented as an internal-invariant corruption abort — |
 // |         |            |        | its CloseReservation cursor advance is deliberate (keeps the  |
 // |         |            |        | stream usable), not a normal pre-draw refusal.                |
+// | 1.2     | 2026-07-24 | —      | Arc-triggers Slice 1: world.text entityId literal −1 replaced |
+// |         |            |        | by the cataloged WORLD_STREAM_ENTITY_TEXT sentinel; behaviour- |
+// |         |            |        | identical, distinct from world.arcs.                          |
 #endregion

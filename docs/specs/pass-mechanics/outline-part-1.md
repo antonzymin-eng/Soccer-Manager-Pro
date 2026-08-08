@@ -3,7 +3,7 @@
 **Purpose:** Planning document for Pass Mechanics specification, establishing scope, structure, mathematical framework, and technical approach before full section drafting begins. This document defines what will be written, not yet how it will be implemented in detail.
 
 **Created:** February 19, 2026, 12:00 PM PST  
-**Version:** 1.0  
+**Version:** 1.1  
 **Status:** Awaiting Approval  
 **Specification Number:** 5 of 20 (Stage 0)  
 **Estimated Effort:** ~35 hours (larger than First Touch due to pass type taxonomy complexity)  
@@ -482,4 +482,3 @@ EventBus.Publish(new PassAttemptEvent { AgentID, PassType, TargetPosition, Frame
 **Recovery philosophy:** Prefer graceful degradation over crash. Maintain determinism even in error paths (same error input â†’ same fallback output).
 
 ---
-

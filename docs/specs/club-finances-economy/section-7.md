@@ -1,9 +1,9 @@
 # Club Finances & Economy #40 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026 (v0.2 — balance-pass AR pass 8 M2: the §7 precedent citation renamed off the phantom stream)
+**Last Updated:** August 8, 2026 (v0.3 — balance-pass AR pass 8 M2: the §7 precedent citation renamed off the phantom stream)
 **Last Updated (prior):** July 23, 2026 (v0.2 — AR-1 wage-semantics fix; prior v0.1 initial)
-**Version:** 0.2
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -80,5 +80,5 @@
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial T-phase plan (T0–T3) + deferred extensions + downstream seam contracts. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1 (1M): §7.2 records the deferred periodic wage cash-out (the step that debits `Balance` from `WageBillAggregate`). |
-| 0.2 | 2026-08-08 | — | **ERR-041-012 back-prop**: the append-only-purpose precedent citation renamed — #41 has a keyed derivation, not an `injuries.occurrence` stream. |
+| 0.3 | 2026-08-08 | — | **ERR-041-012 back-prop**: the append-only-purpose precedent citation renamed — #41 has a keyed derivation, not an `injuries.occurrence` stream. |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/pressing-ai/StaminaAccumulator.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-15
 // Author:   —
 // Spec:     Pressing AI #13 §3.7, Code Standards #20
 // Purpose:  Pure static class: applies per-tick fatigue cost to agents in active

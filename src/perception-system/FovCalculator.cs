@@ -1,6 +1,6 @@
 // File:     src/perception-system/FovCalculator.cs
 // Created:  2026-05-28
-// Modified: 2026-05-28
+// Modified: 2026-06-13
 // Author:   —
 // Spec:     Perception System #7 §3.1, Code Standards #20
 // Purpose:  Computes effective FoV angle per agent per heartbeat (§3.1).

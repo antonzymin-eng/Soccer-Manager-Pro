@@ -1,6 +1,6 @@
 // File:     src/shot-mechanics/ShotVelocityCalculator.cs
 // Created:  2026-05-27
-// Modified: 2026-05-27
+// Modified: 2026-05-28
 // Author:   —
 // Spec:     Shot Mechanics #6 §3.2, §4.1.2, Code Standards #20
 // Purpose:  Computes scalar kick speed from the §3.2 formula: Finishing/LongShots sigmoid

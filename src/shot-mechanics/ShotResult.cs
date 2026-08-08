@@ -1,6 +1,6 @@
 // File:     src/shot-mechanics/ShotResult.cs
 // Created:  2026-05-27
-// Modified: 2026-05-27
+// Modified: 2026-05-28
 // Author:   —
 // Spec:     Shot Mechanics #6 §2.4.2, Code Standards #20
 // Purpose:  Output struct returned by ShotExecutor. Zero heap allocation (all value types).

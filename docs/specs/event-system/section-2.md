@@ -2,7 +2,7 @@
 
 **Created:** May 13, 2026
 **Last Updated:** May 13, 2026
-**Version:** 0.3 (PASS 2 adversarial review applied)
+**Version:** 1.0.1
 **Status:** DRAFT
 
 > Section-heading layout follows `outline-detailed.md` v1.1 §"SECTION 2"

@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineObservationSurfaceTests.cs
 // Created:  2026-07-27
-// Modified: 2026-07-27 (AR-1 M-2: the neutrality run now spans a real restart, and says so.
+// Modified: 2026-07-28
 //           AR-2: the two participant-derived awarded teams — foul and offside — are locked.)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md) §5-P1,

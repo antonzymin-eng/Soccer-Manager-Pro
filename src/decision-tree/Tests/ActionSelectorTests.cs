@@ -1,6 +1,6 @@
 // File:     src/decision-tree/Tests/ActionSelectorTests.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-12
 // Author:   —
 // Spec:     Decision Tree #8 §3.3, §3.3.3–3.3.6, Code Standards #20
 // Purpose:  Unit tests for ActionSelector. Verifies empty-buffer fallback, single-option

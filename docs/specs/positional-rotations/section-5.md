@@ -1,8 +1,8 @@
 # Positional Rotations Specification #25 — Section 5: Test Plan
 
 **Created:** July 8, 2026
-**Last Updated:** July 8, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** July 8, 2026 (v0.2 — PASS-1: T-RO-I-003 / T-RO-DET-003 rewritten to the serialized-cache contract (H-1); T-RO-U-012/013 extended (L-2/L-3).)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---

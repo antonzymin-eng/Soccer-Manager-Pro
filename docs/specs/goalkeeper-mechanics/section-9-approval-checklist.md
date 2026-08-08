@@ -1,7 +1,7 @@
 # Goalkeeper Mechanics Specification #11 — Section 9: Approval Checklist
 
 **Created:** May 16, 2026
-**Version:** 0.2
+**Version:** 0.3
 **Status:** APPROVED
 **Purpose:** Programmatic quality gate for advancement of
 Goalkeeper Mechanics #11 from `IN REVIEW` to `APPROVED`. Every

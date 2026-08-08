@@ -1,7 +1,7 @@
 # Heading Mechanics Specification #10 — Appendices
 
 **Created:** May 16, 2026
-**Version:** 0.1
+**Version:** 0.3
 **Status:** DRAFT
 **Purpose:** Derivations, sensitivity tables, exemplar tuning
 profiles, glossary, and adversarial-review traceability tables

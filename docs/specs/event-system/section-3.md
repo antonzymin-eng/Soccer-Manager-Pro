@@ -2,7 +2,7 @@
 
 **Created:** May 13, 2026
 **Last Updated:** May 13, 2026
-**Version:** 0.3 (PASS 2 adversarial review applied)
+**Version:** 1.0.2
 **Status:** DRAFT
 
 > This section provides the **mechanics** for every FR-EVT-### named
