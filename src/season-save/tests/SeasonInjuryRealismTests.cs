@@ -351,6 +351,18 @@ namespace TacticalDirector.SeasonSave.Tests
                 "halving BaselineDailyRisk must fall out of the reserve band — the band locks it");
             Assert.Less(starterHalfAppearance, StarterMeanLo,
                 "halving AppearanceLoadWeight must fall out of the starter band — the band locks it");
+
+            // Delta form (AR pass 2): the starter band-edge assert above holds by ~0.03 at today's
+            // fit — deliberately tight, because a wider band stops locking the constant — but a
+            // margin that thin cannot also carry the EFFECT-SIZE claim. These do: halving a term
+            // must move its population's expectation by a magnitude no rounding drift can supply,
+            // independent of where the band edges sit.
+            Assert.Less(starterHalfAppearance, starter - 0.5,
+                "halving AppearanceLoadWeight must cost the starter expectation at least half an " +
+                "injury a season — the term is load-bearing, not decorative");
+            Assert.Less(reserveHalfBaseline, reserve - 0.3,
+                "halving BaselineDailyRisk must cost the reserve expectation at least 0.3 injuries " +
+                "a season");
         }
 
         // The pooled per-population bands, shared by the season measurement and the perturbation
@@ -369,4 +381,14 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | instrument): dial-off zero lock, dial-on league-wide realism      |
 // |         |            |        | bands over 8 seeds, and the perturbation check that the band      |
 // |         |            |        | locks both new constants.                                          |
+// | 1.1     | 2026-08-07 | —      | Balance-pass AR pass 1 (M1 + L): the restore lock re-anchored to  |
+// |         |            |        | injury growth PAST the carried count (InjuryCount rides through   |
+// |         |            |        | the save, so bare positivity passed with the dial disarmed); the  |
+// |         |            |        | perturbation comment's false "no clamp binds" reasoning replaced  |
+// |         |            |        | with the reviewer's measured halved-chain numbers. Row added at   |
+// |         |            |        | pass 2 (the edits shipped rowless).                               |
+// | 1.2     | 2026-08-07 | —      | Balance-pass AR pass 2 (L): delta-form perturbation asserts — the |
+// |         |            |        | starter band-edge margin is ~0.03 by design (a wider band stops   |
+// |         |            |        | locking), so the effect-size claim moves onto halving-costs-at-   |
+// |         |            |        | least-0.5/0.3-injuries asserts that no band refit can erode.      |
 #endregion

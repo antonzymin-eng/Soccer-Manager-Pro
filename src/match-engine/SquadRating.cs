@@ -109,6 +109,13 @@ namespace TacticalDirector.MatchEngine
         /// Pure, deterministic and allocating, like its siblings — boot / season cadence only. The
         /// returned array is fresh per call; no caller can alias another's.
         /// </para>
+        /// <para>
+        /// <b>Substitution dependency (recorded, not yet real):</b> this read equals "everyone who
+        /// took the pitch" only while Stage 0 fields a fixed eleven. When substitutions exist, the
+        /// appearance record's question ("who played?") and this method's ("who started?") diverge,
+        /// and the record must widen at its call sites — do not paper over that by redefining THIS
+        /// read, which <c>StartingElevenMean</c> and <c>ConfigureSquads</c> also key on.
+        /// </para>
         /// </summary>
         /// <param name="squad">A full club roster.</param>
         /// <exception cref="System.ArgumentNullException"><paramref name="squad"/> is null.</exception>
@@ -152,4 +159,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | paths. Same single TrySelect walk — a second selection walk in     |
 // |         |            |        | season-save would be the parallel-surface trap CanSelect's own     |
 // |         |            |        | history warns about.                                               |
+// | 1.3     | 2026-08-07 | —      | Balance-pass AR pass 2 (L, doc only): StartingElevenPlayerIds     |
+// |         |            |        | records its substitution dependency — "who started" equals "who   |
+// |         |            |        | played" only while Stage 0 fields a fixed eleven; the divergence  |
+// |         |            |        | belongs to the appearance record's call sites, not to this read.  |
 #endregion

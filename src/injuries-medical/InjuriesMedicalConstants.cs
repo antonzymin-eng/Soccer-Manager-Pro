@@ -289,4 +289,9 @@ namespace TacticalDirector.InjuriesMedical
 // |         |            |        | position normative); AppearanceLoadWeight 150 -> 5600 on the new   |
 // |         |            |        | per-million scale. InjuryRiskMax stays the (1%) probability        |
 // |         |            |        | ceiling through the invariant InjuryRiskMax <= DENOM.              |
+// | 1.4     | 2026-08-07 | —      | Balance-pass AR pass 1 (M3, doc side of the headroom fix): the     |
+// |         |            |        | InjuryRiskMax mirror doc's probability ceiling 1% -> 1.6% —        |
+// |         |            |        | TrainingSystemConstants (the [CROSS] source) raised 10000 -> 16000 |
+// |         |            |        | to restore discrimination headroom, superseding v1.3's "(1%)"      |
+// |         |            |        | description. Row added at AR pass 2 (the edit shipped rowless).    |
 #endregion

@@ -474,16 +474,23 @@ namespace TacticalDirector.SeasonSave
             for (int i = 0; i < indices.Length; i++)
             {
                 Fixture fixture = _state.FixtureAt(indices[i]);
-                MatchResult result = ResolveFixture(in fixture, squads, worldDay);
+                MatchResult result = ResolveFixture(
+                    in fixture, squads, worldDay, out int[] homeXi, out int[] awayXi);
 
-                // ERR-041-010(b): the appearance record, written for both clubs' fielded XIs once the
-                // fixture has resolved. The medical/training state does not move between the pre-round
-                // step above and here, so re-selecting reproduces exactly the eleven ResolveFixture
-                // fielded — one selector, three read shapes (SquadRating). Placed BEFORE the pinned
-                // apply/emit/mark sequence (AR pass 1): it is the only fallible call in this block, and
-                // a throw after MarkFixturePlayed would strand the round — the fixture skipped by the
-                // unplayed-index filter on retry, the cursor never advancing, the season unrecoverable.
-                RecordFieldedAppearances(in fixture, squads, worldDay);
+                // ERR-041-010(b): the appearance record, written from the XIs the RESOLUTION ITSELF
+                // fielded — ResolveFixture hands back the ids it derived at its own filter+configure
+                // site (AR pass 2: a second SelectAvailable walk here was an unenforced agreement with
+                // the engine's configuration, of exactly the documented-not-structural class this file
+                // refuses elsewhere). Null XIs = no career wired = nothing to record. Placed BEFORE
+                // the pinned apply/emit/mark sequence (AR pass 1): it is the only fallible call in
+                // this block, and a throw after MarkFixturePlayed would strand the round — the fixture
+                // skipped by the unplayed-index filter on retry, the cursor never advancing, the
+                // season unrecoverable.
+                if (_career != null)
+                {
+                    _career.RecordAppearances(fixture.HomeClubId, homeXi, worldDay);
+                    _career.RecordAppearances(fixture.AwayClubId, awayXi, worldDay);
+                }
 
                 // FR-SN-013's pinned order, for every fixture: (1) table, (2) event, then mark played.
                 _state.ApplyResult(in result);
@@ -813,30 +820,12 @@ namespace TacticalDirector.SeasonSave
             //                          LastIntakeWorldDay; live at #42's own T-phase)
             // 8. board         (#45) — NULL SEAM (ERR-030-008: one bounded integer drift per modelled
             //                          club; live at #45's own T-phase)
-        }
-
-        /// <summary>
-        /// Writes the ERR-041-010(b) appearance record for one resolved fixture: both clubs' fielded
-        /// starting XIs, on both resolution paths — the away side is not a mirror-image afterthought
-        /// (ERR-008-002's class), it is the same code path run twice. No-op with no career wired.
-        /// </summary>
-        private void RecordFieldedAppearances(in Fixture fixture, ISquadProvider squads, uint worldDay)
-        {
-            if (_career == null)
-            {
-                return;
-            }
-
-            RecordClubAppearances(fixture.HomeClubId, squads, worldDay);
-            RecordClubAppearances(fixture.AwayClubId, squads, worldDay);
-        }
-
-        /// <summary>One club's half of <see cref="RecordFieldedAppearances"/>: filter, select, record.</summary>
-        private void RecordClubAppearances(int clubId, ISquadProvider squads, uint worldDay)
-        {
-            Squad fielded = _career.SelectAvailable(ResolveSquad(squads, clubId));
-            _career.RecordAppearances(
-                clubId, SquadRating.StartingElevenPlayerIds(fielded), worldDay);
+            // 9. scouting      (#32) — NULL SEAM (ERR-030-022: deep-tier assignment progress; the
+            //                          minimal tier is the fog-off identity, so the seam is empty)
+            // 10. media expiry (#35) — NULL SEAM (ERR-030-022: conference-window / pending-question
+            //                          expiry; after scouting, before the world-day tick)
+            // 11. tenure       (#54) — NULL SEAM (ERR-030-021: EvaluateTenure — after board, whose
+            //                          confidence it reads; the terminating decision is #54's)
         }
 
         /// <summary>
@@ -844,18 +833,31 @@ namespace TacticalDirector.SeasonSave
         /// through the full engine under <see cref="RoundResolutionMode.ManagedThroughEngine"/>, every
         /// fixture through the engine under <see cref="RoundResolutionMode.FullEngine"/>, everything else
         /// through <see cref="RoundResolutionModel"/>.
+        /// <para>
+        /// <b>The fielded XIs come out of THIS method</b> (ERR-041-010(b), AR pass 2): each branch
+        /// derives them at its own filter/configure site — the engine branch inside
+        /// <see cref="BootFixtureEngine"/>, one statement from the <c>ConfigureSquads</c> that consumes
+        /// the same squad instances; the quick-sim branch from the very squads its rating reads — so
+        /// the appearance record cannot drift from what the resolution actually fielded. Null with no
+        /// career wired. When a manager-chosen XI lands (#38 Wave-7), the id derivation moves WITH the
+        /// configuration it sits beside, not in a distant caller.
+        /// </para>
         /// </summary>
-        private MatchResult ResolveFixture(in Fixture fixture, ISquadProvider squads, uint worldDay)
+        private MatchResult ResolveFixture(
+            in Fixture fixture, ISquadProvider squads, uint worldDay,
+            out int[] homeXi, out int[] awayXi)
         {
             bool managed = fixture.Involves(_state.ManagedClubId);
 
             if (ShouldPlayThroughEngine(Mode, managed))
             {
-                return PlayThroughEngine(in fixture, squads, worldDay);
+                return PlayThroughEngine(in fixture, squads, worldDay, out homeXi, out awayXi);
             }
 
             Squad home = SelectAvailable(ResolveSquad(squads, fixture.HomeClubId));
             Squad away = SelectAvailable(ResolveSquad(squads, fixture.AwayClubId));
+            homeXi = _career != null ? SquadRating.StartingElevenPlayerIds(home) : null;
+            awayXi = _career != null ? SquadRating.StartingElevenPlayerIds(away) : null;
 
             // #29's match-entry fatigue is deliberately NOT an input here, unlike the availability
             // filter one line above. §3.4.1 keys this model on the rating differential alone, and the
@@ -926,9 +928,12 @@ namespace TacticalDirector.SeasonSave
         /// entry-fatigue projection read the day being played, not yesterday.
         /// </para>
         /// </summary>
-        private MatchResult PlayThroughEngine(in Fixture fixture, ISquadProvider squads, uint worldDay)
+        private MatchResult PlayThroughEngine(
+            in Fixture fixture, ISquadProvider squads, uint worldDay,
+            out int[] homeXi, out int[] awayXi)
         {
-            TacticalDirector.MatchEngine.MatchEngine engine = BootFixtureEngine(in fixture, squads);
+            TacticalDirector.MatchEngine.MatchEngine engine =
+                BootFixtureEngine(in fixture, squads, out homeXi, out awayXi);
 
             _activeMatch = engine;
             try
@@ -979,9 +984,33 @@ namespace TacticalDirector.SeasonSave
         internal TacticalDirector.MatchEngine.MatchEngine BootFixtureEngine(
             in Fixture fixture, ISquadProvider squads)
         {
+            return BootFixtureEngine(in fixture, squads, out _, out _);
+        }
+
+        /// <summary>
+        /// The id-producing form (ERR-041-010(b), AR pass 2): the fielded XIs are derived HERE, from
+        /// the same filtered squad instances the <c>ConfigureSquads</c> one statement below consumes —
+        /// so the appearance record's source is the configuration site itself, and a future
+        /// manager-chosen XI changes both or neither. This overload IS the production path
+        /// (<see cref="PlayThroughEngine"/> calls it); the discarding form above exists for boot-only
+        /// assertions.
+        /// </summary>
+        /// <param name="fixture">The fixture to boot an engine for.</param>
+        /// <param name="squads">The provider the rosters resolve from.</param>
+        /// <param name="homeXi">The home club's fielded starting eleven, or null with no career wired.</param>
+        /// <param name="awayXi">The away club's fielded starting eleven, or null with no career wired.</param>
+        internal TacticalDirector.MatchEngine.MatchEngine BootFixtureEngine(
+            in Fixture fixture, ISquadProvider squads, out int[] homeXi, out int[] awayXi)
+        {
             // ── resolve → filter → configure (ERR-030-009); #44's suspension view joins at its T2. ──
             Squad home = SelectAvailable(ResolveSquad(squads, fixture.HomeClubId));
             Squad away = SelectAvailable(ResolveSquad(squads, fixture.AwayClubId));
+
+            // The XI derivation sits against the squads ConfigureSquads consumes. Today both go
+            // through the one LineupSelector walk (SquadRating is its public read); the colocation is
+            // what makes a future explicit-XI seam edit this method, not a distant record site.
+            homeXi = _career != null ? SquadRating.StartingElevenPlayerIds(home) : null;
+            awayXi = _career != null ? SquadRating.StartingElevenPlayerIds(away) : null;
 
             ulong matchSeed = RoundResolutionModel.MatchSeedFor(in fixture, _state.Seed, _state.SeasonNumber);
             var engine = new TacticalDirector.MatchEngine.MatchEngine(matchSeed);
@@ -1145,6 +1174,14 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | career's appearance record via SquadRating.StartingElevenPlayer-  |
 // |         |            |        | Ids — the same single TrySelect walk, so the recorded eleven IS   |
 // |         |            |        | the fielded eleven on both resolution paths.                      |
+// | 1.12    | 2026-08-07 | —      | Balance-pass AR pass 2 (M): the fielded XIs come OUT of           |
+// |         |            |        | ResolveFixture — the engine branch derives them inside            |
+// |         |            |        | BootFixtureEngine one statement from the ConfigureSquads that     |
+// |         |            |        | consumes the same squad instances, the quick-sim branch from the  |
+// |         |            |        | very squads its rating reads — replacing the loop's second        |
+// |         |            |        | SelectAvailable walk, which was an unenforced agreement with the  |
+// |         |            |        | engine's configuration (the documented-not-structural class).     |
+// |         |            |        | Slots 9-11 join the seam list.                                    |
 // | 1.11    | 2026-08-07 | —      | Balance-pass AR pass 1 (3L): RecordFieldedAppearances moves ABOVE |
 // |         |            |        | the apply/emit/mark sequence — the only fallible call in the      |
 // |         |            |        | block, and a throw after MarkFixturePlayed strands the round      |

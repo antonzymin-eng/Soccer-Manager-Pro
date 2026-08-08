@@ -186,4 +186,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
 // | 1.3     | 2026-08-07 | —      | Balance pass D3 (ERR-041-011): the DENOM == InjuryRiskMax lock    |
 // |         |            |        | becomes the [FIXED]-denominator pin + the ceiling <= denominator  |
 // |         |            |        | invariant.                                                        |
+// | 1.4     | 2026-08-07 | —      | Balance-pass AR pass 1 (doc only, row added at pass 2): the       |
+// |         |            |        | header Purpose said the denominator "tracks" the ceiling — the    |
+// |         |            |        | pre-D3 coupling — reworded to "bounds" per ERR-041-011.           |
 #endregion

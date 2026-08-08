@@ -36,6 +36,15 @@ namespace TacticalDirector.SeasonSave
     /// <see cref="AppearanceWindow.Record"/> re-anchors unconditionally — so there is no day-0 trap and
     /// no sentinel. <see cref="AppearanceWindow"/> is the only production writer.
     /// </para>
+    /// <para>
+    /// <b>"Fielded" currently means "in the STARTING eleven"</b> — Stage 0 has no substitutions, so
+    /// the recorded ids come from the one <c>LineupSelector</c> walk
+    /// (<c>SquadRating.StartingElevenPlayerIds</c>) and the two are the same set. When substitutions
+    /// land (deep tier / #38 Wave-7's manager XI), FR-MD-010's load reading wants everyone who took
+    /// the pitch, so the RECORDING call sites widen — this type and its window arithmetic already
+    /// carry a bare "was fielded" bit per day and need no change. Noted so the widening lands where
+    /// the ids are derived, not as a second record.
+    /// </para>
     /// </summary>
     public struct AppearanceState
     {
@@ -52,4 +61,8 @@ namespace TacticalDirector.SeasonSave
 // | 1.0     | 2026-08-07 | —      | Initial implementation (balance pass D2, ERR-041-010(b)): the     |
 // |         |            |        | per-player appearance record, lazily shifted so no KD-2 day slot  |
 // |         |            |        | is added.                                                         |
+// | 1.1     | 2026-08-07 | —      | Balance-pass AR pass 2 (L, doc only): "fielded" pinned to "in the |
+// |         |            |        | starting eleven" for Stage 0, with the substitution widening      |
+// |         |            |        | assigned to the recording call sites — the bitmask itself needs   |
+// |         |            |        | no change when it lands.                                          |
 #endregion

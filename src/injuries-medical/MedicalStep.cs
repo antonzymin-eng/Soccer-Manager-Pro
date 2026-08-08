@@ -321,10 +321,12 @@ namespace TacticalDirector.InjuriesMedical
         /// publishing the scalar <see cref="AssembleRiskScore"/> passes through, so a robust player is
         /// priced down twice and the two <c>[GT]</c> tables cannot be tuned independently. Both specs
         /// mandate their term, so this is the contract rather than a defect — but it has a consequence
-        /// worth knowing before tuning: because #27 attributes floor at 1, this term is never zero, so
-        /// a risk score saturated at #29's ceiling still lands strictly below the
+        /// worth knowing before tuning: because #27 attributes floor at 1, this term is never zero.
+        /// It no longer keeps the worst case below the clamp, though — since the balance pass's AR
+        /// raised the ceiling for discrimination headroom, a worst-case assembly (saturated #29 risk
+        /// + baseline + a full appearance window) SATURATES at the
         /// <see cref="InjuriesMedicalConstants.InjuryRiskMax"/> clamp — and the clamp itself sits at
-        /// 1% of <see cref="InjuriesMedicalConstants.OCCURRENCE_DRAW_DENOM"/> — so no player is ever
+        /// 1.6% of <see cref="InjuriesMedicalConstants.OCCURRENCE_DRAW_DENOM"/> — so no player is ever
         /// remotely certain to be injured. Recorded under ERR-041-003; scale decoupled at ERR-041-011.
         /// </para>
         /// </summary>
@@ -503,4 +505,10 @@ namespace TacticalDirector.InjuriesMedical
 // |         |            |        | the [GT]-derived OccurrenceDrawDenom, and the draw-site guard      |
 // |         |            |        | becomes the new invariant InjuryRiskMax <= DENOM (the old negative- |
 // |         |            |        | denominator trap is unrepresentable against a const).              |
+// | 1.5     | 2026-08-07 | —      | Balance-pass AR passes 1+2 (doc only): the RobustnessMitigation     |
+// |         |            |        | tuning note claimed the worst case "lands strictly below the       |
+// |         |            |        | InjuryRiskMax clamp" at "1%" — false since the M3 headroom raise   |
+// |         |            |        | (the worst-case assembly now SATURATES the clamp; ceiling 1.6%).   |
+// |         |            |        | Pass 1's one-line doc edit here also shipped rowless; both under   |
+// |         |            |        | this row.                                                          |
 #endregion

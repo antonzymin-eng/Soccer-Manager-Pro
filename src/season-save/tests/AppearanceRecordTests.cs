@@ -274,6 +274,159 @@ namespace TacticalDirector.SeasonSave.Tests
         }
 
         [Test]
+        public void AnInjuredStarter_IsExcludedFromTheRecordedEleven()
+        {
+            // The filter PARTICIPATES in the recorded identity (AR pass 2): with every player fit,
+            // APlayedRound's expected-XI recomputation and the production path could both be reading
+            // the unfiltered squad and still agree. An injured first-choice starter forces the two
+            // elevens apart, so this fails if either side stops going through SelectAvailable.
+            League league = FourClubLeague();
+            CareerTestRoster.MutableSquadProvider provider = ProviderOver(league);
+            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, league.ClubIds(), injuryOccurrenceEnabled: false);
+            var loop = new SeasonLoop(
+                new WorldStore(ManagerId, WorldSeed), league.CreateSeason(0),
+                RoundResolutionMode.QuickSimAll, career, provider);
+
+            loop.AdvanceToNextFixtureDay();
+            uint fixtureDay = loop.World.CurrentWorldTick;
+
+            int clubId = league.ClubIds()[0];
+            int[] fitXi = SquadRating.StartingElevenPlayerIds(provider.ResolveByClubId(clubId));
+            var injured = InjuryState.Create();
+            injured.Severity = InjurySeverity.Moderate;
+            injured.RecoveryRemaining = 12;
+            career.SetMedicalState(clubId, fitXi[0], in injured);
+
+            loop.AdvanceAndPlayNextRound(provider);
+
+            ClubAppearanceStates block = BlockFor(career, clubId);
+            var recorded = new System.Collections.Generic.List<int>();
+            for (int i = 0; i < block.Count; i++)
+            {
+                if (AppearanceWindow.AppearanceDaysOn(in block.States[i], fixtureDay + 1u) == 1)
+                {
+                    recorded.Add(block.PlayerIds[i]);
+                }
+            }
+
+            CollectionAssert.DoesNotContain(recorded, fitXi[0],
+                "an injured starter must not carry an appearance — he was not fielded");
+            int[] filteredXi = SquadRating.StartingElevenPlayerIds(
+                career.SelectAvailable(provider.ResolveByClubId(clubId)));
+            CollectionAssert.AreEquivalent(filteredXi, recorded,
+                "the recorded eleven is the FILTERED selector's eleven");
+            CollectionAssert.AreNotEquivalent(fitXi, filteredXi,
+                "precondition: the injury genuinely changed the eleven, or this test proves nothing");
+        }
+
+        // ── the record's own refusals (direct) ─────────────────────────────────────────────
+
+        [Test]
+        public void RecordAppearances_UnknownIds_RecordNothingAtAll()
+        {
+            // The validate-all-then-write promise, asserted through the borrowed block arrays: a
+            // throw on ANY id must leave every OTHER id of the club unwritten too — half a matchday
+            // in the record is worse than none, because the retry then double-counts nobody but
+            // still injures off a phantom appearance.
+            League league = FourClubLeague();
+            CareerTestRoster.MutableSquadProvider provider = ProviderOver(league);
+            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, league.ClubIds(), injuryOccurrenceEnabled: false);
+            int clubId = league.ClubIds()[0];
+            ClubAppearanceStates block = BlockFor(career, clubId);
+            int validId = block.PlayerIds[0];
+
+            Assert.Throws<ArgumentException>(
+                () => career.RecordAppearances(clubId, new[] { validId, int.MaxValue }, 10u),
+                "an id the career does not carry refuses the write");
+            Assert.Throws<ArgumentException>(
+                () => career.RecordAppearances(int.MaxValue, new[] { validId }, 10u),
+                "a club the career does not carry refuses the write");
+            Assert.Throws<ArgumentNullException>(
+                () => career.RecordAppearances(clubId, null, 10u));
+
+            for (int i = 0; i < block.Count; i++)
+            {
+                Assert.AreEqual(0u, block.States[i].RecentBits,
+                    "nothing may be recorded when any id fails — validate ALL, then write");
+            }
+        }
+
+        [Test]
+        public void RecordAppearances_DayRegression_RecordsNothingNew()
+        {
+            League league = FourClubLeague();
+            CareerTestRoster.MutableSquadProvider provider = ProviderOver(league);
+            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, league.ClubIds(), injuryOccurrenceEnabled: false);
+            int clubId = league.ClubIds()[0];
+            ClubAppearanceStates block = BlockFor(career, clubId);
+            int anchored = block.PlayerIds[0];
+            int fresh = block.PlayerIds[1];
+
+            career.RecordAppearances(clubId, new[] { anchored }, 20u);
+
+            // `fresh` is listed FIRST: an interleaved validate-and-write would set his bit before
+            // reaching the regression on `anchored` — exactly the half-recorded state the pre-check
+            // exists to prevent (AR pass 1), so this ordering is the mutant-killer.
+            Assert.Throws<ArgumentException>(
+                () => career.RecordAppearances(clubId, new[] { fresh, anchored }, 10u),
+                "a day before an already-recorded appearance is a wrong-career pairing or clock fault");
+
+            Assert.AreEqual(0u, block.States[1].RecentBits,
+                "the player listed before the offender must not have been written");
+            Assert.AreEqual(20u, block.States[0].BitsAsOfWorldDay,
+                "the anchored player's record is untouched by the refused write");
+            Assert.AreEqual(1u, block.States[0].RecentBits);
+        }
+
+        [Test]
+        public void ARecordingThrow_LeavesTheFixtureUnplayed_SoTheRoundIsRetryable()
+        {
+            // AR pass 1 moved the recording ABOVE apply/emit/mark because a throw after
+            // MarkFixturePlayed strands the round; this is the lock that fails if it moves back.
+            // Poison: pre-anchor one of the away side's would-be starters past today, so recording
+            // trips the regression refusal AFTER the home club recorded — the worst-ordered throw.
+            League league = FourClubLeague();
+            CareerTestRoster.MutableSquadProvider provider = ProviderOver(league);
+            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, league.ClubIds(), injuryOccurrenceEnabled: false);
+            var loop = new SeasonLoop(
+                new WorldStore(ManagerId, WorldSeed), league.CreateSeason(0),
+                RoundResolutionMode.QuickSimAll, career, provider);
+
+            loop.AdvanceToNextFixtureDay();
+            int round = loop.NextRoundIndex;
+            int[] unplayed = loop.State.UnplayedFixtureIndicesInRound(round);
+            Fixture first = loop.State.FixtureAt(unplayed[0]);
+
+            int[] awayXi = SquadRating.StartingElevenPlayerIds(
+                career.SelectAvailable(provider.ResolveByClubId(first.AwayClubId)));
+            career.RecordAppearances(
+                first.AwayClubId, new[] { awayXi[0] }, loop.CurrentWorldDay + 100u);
+
+            Assert.Throws<ArgumentException>(() => loop.AdvanceAndPlayNextRound(provider));
+
+            CollectionAssert.Contains(
+                loop.State.UnplayedFixtureIndicesInRound(round), unplayed[0],
+                "the fixture whose recording threw must remain unplayed — recording runs before " +
+                "apply/emit/mark, so nothing was committed for it");
+            Assert.AreEqual(round, loop.NextRoundIndex,
+                "the round cursor must not advance past a stranded fixture");
+        }
+
+        private static ClubAppearanceStates BlockFor(PlayerCareerStates career, int clubId)
+        {
+            ClubAppearanceStates[] blocks = career.AppearanceBlocks();
+            for (int i = 0; i < blocks.Length; i++)
+            {
+                if (blocks[i].ClubId == clubId)
+                {
+                    return blocks[i];
+                }
+            }
+
+            throw new InvalidOperationException($"club {clubId} not carried by the career under test");
+        }
+
+        [Test]
         public void TheRecordSurvivesTheSaveFile()
         {
             League league = FourClubLeague();
@@ -378,4 +531,12 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | wrong eleven, and this doubles as the mode-independence lock);    |
 // |         |            |        | the save round trip proves 44 bits were recorded before asserting |
 // |         |            |        | they survive (an all-zero record round-tripped green).            |
+// | 1.2     | 2026-08-07 | —      | Balance-pass AR pass 2 (4L): + the direct RecordAppearances       |
+// |         |            |        | refusals (unknown id / unknown club / regression, each proving    |
+// |         |            |        | NOTHING was written — the fresh-listed-first ordering is the      |
+// |         |            |        | interleaved-write mutant-killer); + the recording-throw-leaves-   |
+// |         |            |        | the-fixture-unplayed lock on the pass-1 ordering fix; + the       |
+// |         |            |        | injured-starter case, which forces the filter to PARTICIPATE in   |
+// |         |            |        | the XI-identity assertion (all-fit squads let both sides read the |
+// |         |            |        | unfiltered squad and still agree).                                |
 #endregion

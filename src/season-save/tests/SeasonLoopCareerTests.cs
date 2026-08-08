@@ -462,6 +462,61 @@ namespace TacticalDirector.SeasonSave.Tests
         }
 
         [Test]
+        public void EnginePath_HandsBackTheFilteredElevensIds()
+        {
+            // The AR pass-2 Medium's lock: the fielded XIs come OUT of the resolution
+            // (BootFixtureEngine's id-producing overload), derived from the same filtered squad
+            // instances the ConfigureSquads one statement below consumes — the loop's old second
+            // SelectAvailable walk was an unenforced agreement with that configuration. An injured
+            // starter must therefore be absent from the very ids the appearance record consumes.
+            League league = FourClubLeague();
+            var provider = new CareerTestRoster.MutableSquadProvider();
+            int[] clubIds = league.ClubIds();
+            for (int i = 0; i < clubIds.Length; i++)
+            {
+                provider.Set(CareerTestRoster.Build(clubIds[i], PlayerDatabaseConstants.CLUB_SQUAD_SIZE));
+            }
+
+            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, clubIds, injuryOccurrenceEnabled: false);
+            var loop = new SeasonLoop(
+                new WorldStore(ManagerId, WorldSeed), league.CreateSeason(0),
+                RoundResolutionMode.FullEngine, career, provider);
+
+            Fixture fixture = FirstFixture(loop);
+            Squad home = provider.ResolveByClubId(fixture.HomeClubId);
+
+            var injuredIds = new System.Collections.Generic.List<int>();
+            for (int local = home.Count - 1; local >= home.Count - 7; local--)
+            {
+                var injured = InjuryState.Create();
+                injured.Severity = InjurySeverity.Serious;
+                injured.RecoveryRemaining = 60;
+                career.SetMedicalState(fixture.HomeClubId, home.GetPlayer(local).PlayerId, in injured);
+                injuredIds.Add(home.GetPlayer(local).PlayerId);
+            }
+
+            loop.BootFixtureEngine(in fixture, provider, out int[] homeXi, out int[] awayXi);
+
+            int[] expectedHome = SquadRating.StartingElevenPlayerIds(career.SelectAvailable(home));
+            int[] expectedAway = SquadRating.StartingElevenPlayerIds(
+                career.SelectAvailable(provider.ResolveByClubId(fixture.AwayClubId)));
+            CollectionAssert.AreEqual(expectedHome, homeXi,
+                "the ids handed back are the filtered selector's eleven, in the selector's own order");
+            CollectionAssert.AreEqual(expectedAway, awayXi,
+                "…for the away side too (ERR-008-002's class: never home-only)");
+            for (int i = 0; i < injuredIds.Count; i++)
+            {
+                CollectionAssert.DoesNotContain(homeXi, injuredIds[i],
+                    "an injured player cannot be in the eleven the record will consume");
+            }
+
+            CollectionAssert.AreNotEquivalent(
+                SquadRating.StartingElevenPlayerIds(home), homeXi,
+                "precondition: the injuries genuinely changed the eleven — otherwise the exclusion "
+                + "assertions above are satisfied by a filter that did nothing");
+        }
+
+        [Test]
         public void EnginePath_OnAnUnwiredLoop_BootsExactlyAsBefore()
         {
             // The neutrality floor for the branch above: with no career, BootFixtureEngine must pass
@@ -642,4 +697,8 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | matchday is lived exactly once (the conditioning cursor is the     |
 // |         |            |        | discriminating idempotency assertion; Balanced's net fatigue is 0).|
 // |         |            |        | ForLeague call sites declare the now-required dial explicitly.     |
+// | 1.3     | 2026-08-07 | —      | Balance-pass AR pass 2 (M): + EnginePath_HandsBackTheFiltered-     |
+// |         |            |        | ElevensIds — the id-producing BootFixtureEngine overload returns   |
+// |         |            |        | exactly the filtered selector's elevens (both sides), with injured |
+// |         |            |        | starters absent from the ids the appearance record consumes.       |
 #endregion

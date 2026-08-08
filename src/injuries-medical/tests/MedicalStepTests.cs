@@ -36,8 +36,8 @@ namespace TacticalDirector.InjuriesMedical.Tests
 
         /// <summary>
         /// A risk input that saturates the <c>InjuryRiskMax</c> clamp — the HIGHEST risk any input can
-        /// produce. Since ERR-041-011 that is a 1% daily probability, not certainty: the draw is
-        /// uniform in the 100×-larger <c>OCCURRENCE_DRAW_DENOM</c>, so "an occurrence happens" is
+        /// produce. Since ERR-041-011 that is a 1.6% daily probability, not certainty: the draw is
+        /// uniform in the ~60×-larger <c>OCCURRENCE_DRAW_DENOM</c>, so "an occurrence happens" is
         /// forced by pairing this with a day whose keyed draw is known to fall under the clamp
         /// (<see cref="HotDay"/>) — deterministic, because the draw is a pure function of
         /// <c>(seed, playerId, day)</c>.
@@ -48,7 +48,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
         /// <summary>
         /// The first world day at or after <paramref name="start"/> whose keyed occurrence draw for
         /// <paramref name="playerId"/> falls below the <c>InjuryRiskMax</c> clamp — a day on which a
-        /// max-risk player IS injured. Pure scan over the keyed derivation; ~1% of days qualify, so
+        /// max-risk player IS injured. Pure scan over the keyed derivation; ~1.6% of days qualify, so
         /// the bound is generous and the result is a constant of (WorldSeed, playerId).
         /// </summary>
         private static uint HotDay(uint start, int playerId = PlayerId)
@@ -632,7 +632,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
         /// magnitude out in both directions). Under the retune the same three career states, plus the
         /// appearance rows the BEFORE version could not have (ERR-041-010(b) had no record to read),
         /// land in the football band: fractions of a percent per day, matches the dominant term, and
-        /// a hard 1% ceiling from the <c>InjuryRiskMax</c> clamp.
+        /// a hard 1.6% ceiling from the <c>InjuryRiskMax</c> clamp.
         /// </para>
         /// <para>
         /// Asserted in <b>per-hundred-thousand</b>, not per-mille: at the per-million denominator a
@@ -838,4 +838,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
 // |         |            |        | preconditions; ImpossibleOccurrenceRisk renamed Minimum (the      |
 // |         |            |        | baseline term made "impossible" a lie); characterization rows     |
 // |         |            |        | re-fit to the 16000 ceiling (congestion priced 1.49%, cap 1.6%).  |
+// | 1.6     | 2026-08-07 | —      | Balance-pass AR pass 2 (L, doc only): three "1%" ceiling residues |
+// |         |            |        | (MaxOccurrenceRisk, HotDay, the characterization summary) updated |
+// |         |            |        | to the 1.6% / ~60x figures the M3 headroom raise made current.    |
 #endregion

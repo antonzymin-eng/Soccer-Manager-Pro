@@ -58,6 +58,14 @@ namespace TacticalDirector.SeasonSave
         // Per club, parallel and ascending by ClubId. Each club's PlayerIds are ascending too, so a
         // lookup is a binary search and the codecs' canonical-order requirement is satisfied by
         // construction rather than by a sort at encode time.
+        //
+        // Three parallel state sets is the ceiling for this shape (AR pass 2). Every writer must
+        // already touch all of them in lockstep (SyncToRoster stages five arrays; FromBlocks
+        // coherence-checks three block sets pairwise), and each addition multiplies the
+        // wrong-pairing surface the T0 AR's SetFocus finding came from. A FOURTH per-player set
+        // (#44 suspensions is the likely candidate) collapses this into one per-player career
+        // struct per club — one array, one pairing, the codecs reading fields off it — rather than
+        // extending the parallel walk again.
         private readonly List<int> _clubIds = new List<int>();
         private readonly List<int[]> _playerIds = new List<int[]>();
         private readonly List<TrainingState[]> _training = new List<TrainingState[]>();
@@ -587,9 +595,22 @@ namespace TacticalDirector.SeasonSave
                     // anyway would be a per-player-per-day cost on every career today for values that
                     // are discarded — and, worse to read, would suggest the recovery countdown depends
                     // on them.
+                    // The second gate mirrors MedicalStep's own idempotency cursor (F6): a re-entered
+                    // day — the ERR-030-027 pre-round/next-advance pair — no-ops inside the step, so
+                    // its inputs must not be computed on the re-entry either. Not just thrift: the
+                    // re-entry runs AFTER the round recorded today's appearances, and reading the
+                    // window then would be the one call site where the anchor can equal the day with
+                    // today's match already in the bits — correct today (the window excludes bit 0 at
+                    // shift 0), but only this guard keeps that correctness out of the draw path's
+                    // dependencies. unchecked: the never-advanced sentinel is uint.MaxValue, so +1
+                    // wraps to 0 and a fresh state passes for every day (Spec #16 §3.4.4-style
+                    // deliberate wrap, though 32-bit here).
+                    bool willAdvance =
+                        worldDay >= unchecked(injury[i].LastAdvancedWorldDay + 1u);
+
                     InjuryRiskContribution risk;
                     MatchLoad load;
-                    if (InjuryOccurrenceEnabled)
+                    if (InjuryOccurrenceEnabled && willAdvance)
                     {
                         risk = TrainingStep.ComputeInjuryRisk(in training[i], in record.Attributes);
                         load = new MatchLoad(
@@ -1322,4 +1343,10 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | regression refusal in its validate loop, so the write loop can no  |
 // |         |            |        | longer throw half-way and leave a club half-recorded — the         |
 // |         |            |        | validate-all-then-write promise its doc already made.              |
+// | 1.7     | 2026-08-07 | —      | Balance-pass AR pass 2 (2L): AdvanceMedicalDay computes the        |
+// |         |            |        | occurrence inputs only when the step will actually advance         |
+// |         |            |        | (mirrors MedicalStep's F6 cursor) — the ERR-030-027 re-entered day |
+// |         |            |        | no longer reads the appearance window with today's match already   |
+// |         |            |        | in the bits; + the three-parallel-state-sets ceiling note (a       |
+// |         |            |        | fourth set collapses this into a per-player career struct).        |
 #endregion

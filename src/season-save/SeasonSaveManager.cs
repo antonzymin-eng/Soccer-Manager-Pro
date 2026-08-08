@@ -2,7 +2,6 @@
 // Created:  2026-07-22
 // Modified: 2026-08-07 (balance pass D2/D4: the appearance block on the same required-never-null
 //           terms; Load's filter career constructed at the armed posture.)
-//           shares-arrays-with-the-contents justification.)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-1 / KD-5..KD-8;
 //           Training System #29 §4.4 / FR-TR-018/019; Injuries & Medical #41 §4.4 / FR-MD-017/018;
