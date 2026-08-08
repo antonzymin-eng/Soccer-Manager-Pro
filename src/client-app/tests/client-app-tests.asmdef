@@ -1,0 +1,19 @@
+{
+    "name": "TacticalDirector.ClientApp.Tests",
+    "rootNamespace": "TacticalDirector.ClientApp.Tests",
+    "references": [
+        "TacticalDirector.ClientApp",
+        "TacticalDirector.UiFramework"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

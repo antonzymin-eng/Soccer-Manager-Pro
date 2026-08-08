@@ -1,0 +1,16 @@
+{
+    "name": "TacticalDirector.ClientApp",
+    "rootNamespace": "TacticalDirector.ClientApp",
+    "references": [
+        "TacticalDirector.UiFramework"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
