@@ -1,15 +1,18 @@
 # Season & Competition Loop Specification #30 — Section 7: Future Extensions & T-phase Plan
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.2 — section-file PASS-1 reconciliation, §9.3)
-**Version:** 0.2
+**Last Updated:** August 8, 2026 (v0.3 — the lint sweep: §7's preamble tensed to plan-since-executed)
+**Last Updated (prior):** July 22, 2026 (v0.2 — section-file PASS-1 reconciliation, §9.3)
+**Version:** 0.3
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
 ---
 
-Unlike #27, **nothing is built yet** — §7.1 is a forward T-phase plan; §7.2 the deliberate deferrals;
-§7.3 the generalization seams later specs attach to.
+Authored forward ("nothing is built yet" as of July 22); **the T-phase plan has since been executed** —
+T0–T3 all landed July 2026, the #29/#41 T2 wiring and the balance pass on top (currency corrected at
+the lint sweep, August 8, 2026). §7.1 is kept as the plan the landings followed; §7.2 the deliberate
+deferrals; §7.3 the generalization seams later specs attach to.
 
 ## 7.1 T-phase plan (forward)
 
@@ -65,4 +68,5 @@ world tick live — avoids a re-pin across every Wave-2+ spec.
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial forward T-phase plan (T0..T3), deferrals, and the #43/#40/#33/#37/#44 generalization seams. |
 | 0.2 | 2026-07-22 | — | Section-file PASS-1 reconciliation (whole-round KD-9 command/API rename, living-world-KD disambiguation, KD/FR label fixes). See section-9 §9.3. |
+| 0.3 | 2026-08-08 | — | **Lint sweep**: the preamble still read "nothing is built yet" of a spec whose T-phases all landed (the pass-13-L4 class, in §7). |
 #endregion

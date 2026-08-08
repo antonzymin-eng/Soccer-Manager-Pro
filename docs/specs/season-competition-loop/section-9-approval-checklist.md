@@ -1,8 +1,9 @@
 # Season & Competition Loop Specification #30 — Section 9: Approval Checklist
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.3 — #16 §3.4 cross-cite filed + R-01..R-05 signed; APPROVED)
-**Version:** 0.3
+**Last Updated:** August 8, 2026 (v0.4 — the lint sweep: §9.2's implementation status corrected to LANDED, the §9.1 preamble tensed to as-approved, rows 0.2/0.3 reordered ascending)
+**Last Updated (prior):** July 22, 2026 (v0.3 — #16 §3.4 cross-cite filed + R-01..R-05 signed; APPROVED)
+**Version:** 0.4
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -10,7 +11,7 @@
 
 Checklist entries are verified against real source; nothing is checked without a programmatically
 verifiable anchor (CLAUDE.md "Never fabricate verification values"). This is a **forward-design**
-spec — the implementation gates are open by construction (nothing is built yet), and the review
+spec — the implementation gates were open by construction at approval (a forward design; since landed — see §9.2), and the review
 gates track the promotion pipeline.
 
 ## 9.1 Content gates
@@ -26,10 +27,10 @@ gates track the promotion pipeline.
 - [x] KD-2 fixed day-advance tick order pinned with the Wave-2+ null-seam positions explicit (§3.3).
 - [x] KD-3 producer-not-ingest boundary stated and reconciled against `FR-LW-032` / FR-LW-031.
 
-## 9.2 Implementation status (forward design — nothing built yet)
+## 9.2 Implementation status *(as-approved: forward design, nothing built; currency corrected at the lint sweep, August 8, 2026)*
 
 - [x] FR set complete + stable: FR-SN-001..034 + 013a/013b (36 distinct; grep-verified in §2/§5).
-- [ ] Layer built — **NOT STARTED** (forward design; §7 T-phase plan T0..T3).
+- [x] Layer built — **LANDED** (T0–T3 in `src/season-save/`, July 2026; the #29/#41 T2 wiring and the balance pass on top — 356-test suite at the August 8 gate. The as-approved row read NOT STARTED; corrected with the header above).
 - [ ] `MatchEngine` / `WorldStore` wiring — NOT STARTED (T2).
 - [ ] Round-trip determinism proven — NOT STARTED (T1/T2 tests, §5.5/§5.6).
 
@@ -113,6 +114,7 @@ Post-APPROVED, non-blocking: the `[GT]` balance pass pinning the illustrative po
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial checklist. Content/consistency gates checked; implementation + review gates OPEN by construction (forward design). Status IN REVIEW. |
-| 0.3 | 2026-07-22 | — | #16 §3.4 `0x22`/84 cross-cite filed (ERR-030-001, spec-text-first); #22 phase-1 cross-check → no back-prop needed; R-01..R-05 signed; §9.6 decision APPROVED. Status APPROVED. |
 | 0.2 | 2026-07-22 | — | Section-file PASS-1 (1H+2M+2L) → AR-2 convergence recorded in §9.3; H-1 = whole-round resolution (KD-9). §9.5 status note updated (sign-off is the remaining gate). |
+| 0.3 | 2026-07-22 | — | #16 §3.4 `0x22`/84 cross-cite filed (ERR-030-001, spec-text-first); #22 phase-1 cross-check → no back-prop needed; R-01..R-05 signed; §9.6 decision APPROVED. Status APPROVED. |
+| 0.4 | 2026-08-08 | — | **Lint sweep (the recurring-defect tool's first run)**: §9.2 still declared "forward design — nothing built yet" / "Layer built — NOT STARTED" of a spec whose T0–T3 all landed in July and whose suite ran 356 tests at the August 8 gate (the pass-13-L4 outline class, in the approval checklist); §9.1's preamble tensed; rows 0.2/0.3 reordered ascending. As-approved wording preserved by annotation, not rewritten. |
 #endregion

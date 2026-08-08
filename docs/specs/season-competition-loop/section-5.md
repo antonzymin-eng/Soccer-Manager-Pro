@@ -78,7 +78,7 @@ B; path under `SCENARIO_PATH_CROSS_SPEC_PREFIX`): boot a `SeasonLoop`, play K fi
 schedule (advancing the world between them), and assert (a) the table reflects the played results,
 (b) a two-run same-seed digest match over the full season state, and (c) the KD-8 floor holds for
 every no-fixture day. The match-engine capstone (`match-engine-kickoff-multi-second`) precedent. Not
-required at the design stage; the natural §5 addition once T2 wires the loop.
+required at the design stage; T2 has since wired the loop, so this is now simply the outstanding §5 addition (noted at the lint sweep).
 
 ## 5.8 FR traceability
 
@@ -94,5 +94,5 @@ not by an execution test — nothing ticks there yet.
 | 0.1 | 2026-07-22 | — | Initial test plan: fixture / table / calendar / save / determinism / capstone + FR traceability. |
 | 0.2 | 2026-07-22 | — | Section-file PASS-1: whole-round resolution (KD-9 / FR-SN-012/013a/013b / §3.4 / ManagedClubId), API-name corrections (`RunTick`→`MatchEnded`, `ResolveByClubId`), `uint` world-day, KD-collision + label reconciliation. See section-9 §9.3. |
 | 0.3 | 2026-07-25 | — | **ERR-030-010**: T-SN-FIX-001 re-anchored to the corrected Appendix C table; new **T-SN-FIX-008** venue-balance regression lock (fails under the pre-correction rule). |
-| 0.4 | 2026-08-08 | — | **Balance-pass AR pass 13 (L5)**: ERR-030-029's back-prop had reached #36's test plan and not #30's own — **T-SN-DET-004** names the two existing depleted-squad locks (back-fill + terminal refusal). |
+| 0.4 | 2026-08-08 | — | **Balance-pass AR pass 13 (L5) + the lint sweep**: *(lint: §5.7's "once T2 wires the loop" tensed — T2 wired it.)* ERR-030-029's back-prop had reached #36's test plan and not #30's own — **T-SN-DET-004** names the two existing depleted-squad locks (back-fill + terminal refusal). |
 #endregion

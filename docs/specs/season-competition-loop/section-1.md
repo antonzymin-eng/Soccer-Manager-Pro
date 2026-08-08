@@ -1,8 +1,9 @@
 # Season & Competition Loop Specification #30 — Section 1: Introduction, Scope, Dependencies
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.2 — section-file PASS-1 fixes, §9.3)
-**Version:** 0.2
+**Last Updated:** August 8, 2026 (v0.3 — the lint sweep: §1's null-seam list stops naming #29 among specs that do not exist)
+**Last Updated (prior):** July 22, 2026 (v0.2 — section-file PASS-1 fixes, §9.3)
+**Version:** 0.3
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -22,7 +23,9 @@ promotion-relegation (**#43**), finances (**#40**), the human-systems model this
 (**#33**), transfers (**#31**), injuries (**#41**), progression/aging (**#28**), training (**#29**),
 discipline/suspensions (**#44**), and the UI that renders the loop (**#38**). The Stage-2 surface is
 **single-division, single-competition** (master plan §4.1). Where this loop must *tick* a world-tick
-spec that does not exist yet (#28/#29/#33), it does so through a **documented null seam** — the
+spec that has not yet landed (#28/#33 today — #29 and #41 landed at T2 and occupy slots 2/4 LIVE;
+currency corrected at the lint sweep, August 8, 2026, the FR-SN-034 class in §1), it does so through a
+**documented null seam** — the
 `WorldLoop` phase-1/2/5 precedent (FR-LW-031: no phantom interfaces) — never an invented interface.
 
 This is a **Stage-1-forward pull** (master plan §4.1/§4.5 place the full loop at Stage 2), motivated
@@ -150,4 +153,5 @@ season-boundary roll. #22 ingest activation, finances (#40), promotion-relegatio
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial section from supplement v0.2; forward-design plan; KD-1..KD-8 carried from supplement §7; KD-9 (whole-round resolution) added at section-file PASS-1. |
 | 0.2 | 2026-07-22 | — | Section-file PASS-1: whole-round resolution (KD-9 / FR-SN-012/013a/013b / §3.4 / ManagedClubId), API-name corrections (`RunTick`→`MatchEnded`, `ResolveByClubId`), `uint` world-day, KD-collision + label reconciliation. See section-9 §9.3. |
+| 0.3 | 2026-08-08 | — | **Lint sweep**: §1's boundary text still counted #29 among world-tick specs "that do not exist yet" — the FR-SN-034/§3.3 class (passes 11–12) reaching §1. |
 #endregion

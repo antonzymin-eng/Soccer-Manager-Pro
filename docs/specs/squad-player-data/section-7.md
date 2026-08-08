@@ -1,8 +1,8 @@
 # Squad / Player Data Layer Specification #27 — Section 7: Future Extensions and Wiring Status
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** July 22, 2026 (v0.2 — AR-2 M-1, the §7.3 LANDED record; header corrected August 8, 2026 at the lint sweep: it had misstated v0.1 while the table carried v0.2 — the pass-4-M5 header-currency class, on the spec ERR-027-004 amended)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---

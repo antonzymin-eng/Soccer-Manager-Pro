@@ -74,6 +74,7 @@ TEXT_DATE_RE = re.compile(
     r"November|December)\s+(\d{1,2}),?\s+(\d{4})\b")
 
 VERSION_CELL_RE = re.compile(r"^v?(\d+(?:\.\d+)*)$")
+BULLET_ROW_RE = re.compile(r"^[-*]\s+\*\*v?(\d+(?:\.\d+)*)\s*\(([^)]*)\)")
 
 
 class Finding(object):
@@ -201,12 +202,17 @@ def version_rows(block_text, offset_line):
     rows = []
     for i, raw in enumerate(block_text.splitlines()):
         cells = split_row(raw)
-        if not cells or len(cells) < 2:
-            continue
-        key = version_key(cells[0])
-        if key is None:
-            continue
-        rows.append((offset_line + i, key, parse_date(cells[1]), raw.strip()))
+        if cells and len(cells) >= 2:
+            key = version_key(cells[0])
+            if key is not None:
+                rows.append((offset_line + i, key, parse_date(cells[1]), raw.strip()))
+                continue
+        # Bullet form: '- **v1.0.14 (July 25, 2026):** …' — #16 §3.4/§3.5 use it,
+        # and its two v1.0.14 rows are a documented residual.
+        m = BULLET_ROW_RE.match(raw.strip())
+        if m:
+            rows.append((offset_line + i, version_key(m.group(1)),
+                         parse_date(m.group(2)), raw.strip()))
     return rows
 
 
@@ -837,6 +843,10 @@ def main(argv=None):
                     choices=list(CHECKS), help="run only this class (repeatable)")
     ap.add_argument("--hide-info", action="store_true",
                     help="print only ERROR and WARN findings")
+    ap.add_argument("--path", action="append", metavar="GLOB",
+                    help="report only findings whose path matches this glob "
+                         "(repeatable) — e.g. --path 'src/season-save/*' to scope a "
+                         "sweep to one landing's surface")
     args = ap.parse_args(argv)
 
     root = os.path.abspath(args.repo)
@@ -849,6 +859,10 @@ def main(argv=None):
         if args.only and name not in args.only:
             continue
         fn(root, findings)
+
+    if args.path:
+        findings = [f for f in findings
+                    if any(fnmatch.fnmatch(f.path, g) for g in args.path)]
 
     supp_path = args.suppressions or os.path.join(
         root, "tools", "recurring-defect-lint.suppressions")
