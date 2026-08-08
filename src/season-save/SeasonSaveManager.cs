@@ -1,6 +1,6 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
-// Modified: 2026-08-08 (AR pass 3: the career-block-triple coherence gate at Save — L7.)
+// Modified: 2026-08-08 (AR pass 6: the KD-4 invariant at Save + the bidirectional cursor gate — v1.15)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-1 / KD-5..KD-8;
 //           Training System #29 §4.4 / FR-TR-018/019; Injuries & Medical #41 §4.4 / FR-MD-017/018;

@@ -1,10 +1,7 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
-// Modified: 2026-08-08 (balance-pass AR passes 1-3 over the D1+D2 landing: recording moved above
-//           apply/emit/mark, then sourced from ResolveFixture's own ids via BootFixtureEngine's
-//           id-producing overload, then made pair-atomic via RecordFixtureAppearances — the
-//           ERR-041-010(b) record now cannot drift from, half-record, or strand the round it
-//           describes.)
+// Modified: 2026-08-08 (AR pass 6: the constructor pairs the career against the world clock —
+//           v1.15; the pass 1-3 recording chain and the pass-5 doc fix are the rows below)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (day advance / KD-2 tick order), §3.4 (playing a round /
 //           KD-9), §3.5 (season-boundary roll / KD-6), §4.3 (the composition root), §4.6 (the #22

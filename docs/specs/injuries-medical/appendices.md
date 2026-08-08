@@ -1,9 +1,10 @@
 # Injuries & Medical #41 — Appendices
 
 **Created:** July 23, 2026
-**Last Updated:** August 7, 2026 (v0.4 — ERR-041-011 at the balance pass: Appendix A's `INJURY_RISK_MAX` re-tagged `[CROSS: #29 Appendix A]` (discharging ERR-041-003's standing back-prop), `OCCURRENCE_DRAW_DENOM` re-tagged `[FIXED]` 1,000,000 (decoupled), `APPEARANCE_LOAD_WEIGHT` refitted 150 → 5600 on the new scale, + `BASELINE_DAILY_RISK` 4000 and `APPEARANCE_WINDOW_DAYS` 7)
+**Last Updated:** August 8, 2026 (v0.5 — balance-pass AR pass 7 M1: the ERR-041-012 sweep reaches the appendices — Appendix A no longer asserts the T2 stream registration §4.5 forbids, and Appendix C's T-MD-NEU-003 matches §5.5's restatement instead of contradicting it under the same test id)
+**Last Updated (prior):** August 7, 2026 (v0.4 — ERR-041-011 at the balance pass: Appendix A's `INJURY_RISK_MAX` re-tagged `[CROSS: #29 Appendix A]` (discharging ERR-041-003's standing back-prop), `OCCURRENCE_DRAW_DENOM` re-tagged `[FIXED]` 1,000,000 (decoupled), `APPEARANCE_LOAD_WEIGHT` refitted 150 → 5600 on the new scale, + `BASELINE_DAILY_RISK` 4000 and `APPEARANCE_WINDOW_DAYS` 7)
 **Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.4
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -39,8 +40,10 @@ Stage-2/3 balance pass (the #21 G2 precedent); the shapes/directions are the rev
 
 **`DOMAIN_TAG_INJURIES_MEDICAL` / `SubsystemOrdinals.InjuriesMedical`** — `0x2A` / `92` respectively, per
 `docs/tracking/injuries-medical-design.md` §5 and the roadmap §6 reservation; promoted at section-file
-approval (ERR-041-001, spec-text-first like `0x22`/`0x20`); the code const + the `injuries.occurrence`
-stream registration itself land at #41 T2 with the first draw site (FR-LW-031 — no phantom stream). These
+approval (ERR-041-001, spec-text-first like `0x22`/`0x20`); the code const landed at #41 T0;
+**no stream registration exists or may be added** (ERR-041-012 — a registered stream is
+cursor-positioned, forbidden by FR-MD-006/007; FR-LW-031's no-phantom rule is why ordinal 92 stays
+deliberately unallocated). These
 are **not** `[GT]`/`[FIXED]` project constants declared in this catalogue — they are `#16`'s tag-namespace
 allocation, cross-cited `[CROSS: #16 §3.4]` once promoted.
 
@@ -67,10 +70,9 @@ normal operating mode), `AdvanceMedicalDay` for every input still runs the recov
 injured) but never evaluates §3.1 step 2 — no draw is issued, so `InjuryState.Severity` can only ever
 decrease toward `None` and never increase (T-MD-NEU-001). `InjuryState.Create()` yields `{ Severity = None,
 RecoveryRemaining = 0, InjuryCount = 0, LastAdvancedWorldDay = MEDICAL_NOT_ADVANCED_SENTINEL }` — the Healthy
-identity (T-MD-NEU-002). Registering the `injuries.occurrence` stream at #41 T2 leaves every other
-registered stream's cursor byte-identical across a full season run, with or without #41 active (T-MD-NEU-003)
-— the keyed-draw property means the new stream's presence changes nothing about how any other stream is
-addressed or advanced.
+identity (T-MD-NEU-002). Stream independence is vacuous by construction since ERR-041-012 — #41 registers nothing and
+holds no cursor — so every other registered stream's cursor is byte-identical across a full season run,
+with or without #41 active (T-MD-NEU-003, as restated in §5.5).
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -79,4 +81,5 @@ addressed or advanced.
 | 0.2 | 2026-07-23 | — | AR-1 (1M): integer-arithmetic fix — `SEVERITY_*_PERMILLE` + `SEVERITY_PERMILLE_DENOM` replace the float severity fractions; `MEDICAL_MODIFIER_IDENTITY_PERMILLE` added; `RECOVERY_DAYS_PER_TICK_BASE` / `TRAINING_RISK_PASSTHROUGH_WEIGHT` clarified integer. |
 | 0.3 | 2026-07-23 | — | AR-2 (1M): `DRAW_PURPOSE_COUNT` [DERIVED] replaced by `DRAW_PURPOSE_RADIX` = 16 [FIXED] (append-parity radix). |
 | 0.4 | 2026-08-07 | — | **ERR-041-011 (the balance pass)**: `INJURY_RISK_MAX` → `[CROSS: #29 Appendix A]` (ERR-041-003 discharged — one owner, one config key; now the probability ceiling — 16000 = 1.6%/day after the AR pass-1 headroom raise — ≤ `OCCURRENCE_DRAW_DENOM` fail-loud); `OCCURRENCE_DRAW_DENOM` → `[FIXED]` 1,000,000 (a config-tunable denominator re-rolls every career's draws); `APPEARANCE_LOAD_WEIGHT` 150 → 5600 (per-million scale, ≈3.9%/match over the window); + `BASELINE_DAILY_RISK` 4000 (before-mitigation, the R-2 refit note) and `APPEARANCE_WINDOW_DAYS` 7 (the FR-MD-010 unit, bounded [1,31] by #30's record). |
+| 0.5 | 2026-08-08 | — | **Balance-pass AR pass 7 (M1)**: Appendix A asserted "the `injuries.occurrence` stream registration itself lands at #41 T2" while citing the anti-phantom FR; Appendix C defined T-MD-NEU-003 as the registration's independence while §5.5 (pass 6) had restated the same id as vacuous-by-construction — one test id, two contradictory definitions. Both re-anchored. |
 #endregion

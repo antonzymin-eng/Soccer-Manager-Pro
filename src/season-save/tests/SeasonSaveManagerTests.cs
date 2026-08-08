@@ -698,6 +698,25 @@ namespace TacticalDirector.SeasonSave
         }
 
         [Test]
+        public void Save_DuplicateClubId_IsRefusedByName()
+        {
+            // AR pass 7 (L4): the pass-6 duplicate-ClubId refusal had no test. Without it the
+            // duplicate is still caught downstream (the codec's canonical order), so the risk is a
+            // MISLEADING diagnostic — the unstable sorts pair duplicate clubs arbitrarily and the
+            // gate would name a phantom mismatch. Message + paramName pinned, the pass-5 M3 shape.
+            var ex = Assert.Throws<ArgumentException>(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    new[] { TBlock(7, 100), TBlock(7, 101) },
+                    new[] { MBlock(7, 100), MBlock(7, 101) },
+                    new[] { ABlock(7, 100), ABlock(7, 101) }),
+                "a club appearing twice in the career triple is refused by name");
+            Assert.That(ex.Message, Does.Contain("twice"),
+                "the refusal must come from the duplicate-club branch, not a phantom mismatch");
+            Assert.AreEqual("trainingClubs", ex.ParamName);
+        }
+
+        [Test]
         public void Save_CursorLaggingTheClockByTwoOrMore_FailsLoud()
         {
             // AR pass 6 (M2): the mirror case is WORSE than ahead — the F7 gap refusal fires on every
@@ -1253,4 +1272,7 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | the content — and the test asserts THAT first); + the lagging- |
 // |         |            |        | cursor refusal with the lag-of-exactly-one PASS case (the     |
 // |         |            |        | pre-increment convention's normal saved state).               |
+// | 1.11    | 2026-08-08 | —      | Balance-pass AR pass 7 (L4): the duplicate-ClubId refusal gains   |
+// |         |            |        | its message+paramName lock — without it the unstable sorts pair  |
+// |         |            |        | duplicates arbitrarily and the gate names a phantom mismatch.    |
 #endregion

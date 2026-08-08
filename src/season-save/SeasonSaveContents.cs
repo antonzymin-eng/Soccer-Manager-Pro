@@ -1,14 +1,14 @@
 // File:     src/season-save/SeasonSaveContents.cs
 // Created:  2026-07-22
-// Modified: 2026-08-07 (balance pass D2: carries the reconstructed appearance state too)
+// Modified: 2026-08-08 (AR pass 7 L3: the Purpose block names the appearance records — v1.4)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / G4 / KD-3;
 //           Season & Competition Loop #30 FR-SN-021; Training System #29 FR-TR-019;
 //           Injuries & Medical #41 FR-MD-018; Code Standards #20
 // Purpose:  The reconstructed contents of a season save: the living-world WorldStore (always), the
-//           season state (always), the per-club #29 training and #41 medical states (always, possibly
-//           empty), and the in-progress MatchEngine (null when the season carried no match).
-//           SeasonSaveManager.Load returns this.
+//           season state (always), the per-club #29 training, #41 medical and #30 appearance states
+//           (always, possibly empty), and the in-progress MatchEngine (null when the season carried
+//           no match). SeasonSaveManager.Load returns this.
 
 using TacticalDirector.InjuriesMedical;
 using TacticalDirector.LivingWorld;
@@ -75,4 +75,8 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | MedicalClubs (never null; empty until T2 wires the producers).   |
 // | 1.3     | 2026-08-07 | —      | Balance pass D2 (ERR-041-010(b)): gains AppearanceClubs (never   |
 // |         |            |        | null; the #30 appearance record).                                |
+// | 1.4     | 2026-08-08 | —      | Balance-pass AR pass 7 (L3): the header Purpose block still       |
+// |         |            |        | omitted the appearance records the class summary and Modified     |
+// |         |            |        | line already named — the SeasonSaveCodec v1.5 doc-drift class,    |
+// |         |            |        | one file over, again.                                             |
 #endregion

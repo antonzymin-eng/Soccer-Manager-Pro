@@ -1,8 +1,9 @@
 # Injuries & Medical #41 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.1 — initial authoring)
-**Version:** 0.1
+**Last Updated:** August 8, 2026 (v0.2 — balance-pass AR pass 7 M1: the ERR-041-012 sweep reaches §7 — the T2 instruction no longer orders the stream registration §4.5 forbids, and §7.2's stochastic-recovery extension appends into the keyed derivation, not onto a stream)
+**Last Updated (prior):** July 23, 2026 (v0.1 — initial authoring)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -16,9 +17,9 @@
 - **T1** — `MedicalSaveCodec` (`MEDICAL_SAVE_FORMAT_VERSION` = 1) + composition into #30's season save (the
   `SeasonSaveCodec` sub-blob; #30's composing format-version bump coordinated here). Fail-loud gates.
 - **T2** — Wire `AdvanceMedicalDay` at #30's **new** reserved slot (after #28/#29/#33, before
-  `WorldStore.AdvanceDay()`, the ERR-030-002 back-prop); register `injuries.occurrence` at the first draw
-  (`DOMAIN_TAG_INJURIES_MEDICAL = 0x2A` / `SubsystemOrdinals.InjuriesMedical = 92`, promoted at approval per
-  ERR-041-001, code const lands here); wire the `IsAvailable` read into #30's squad selection; wire the
+  `WorldStore.AdvanceDay()`, the ERR-030-002 back-prop) — the draw stays the keyed local derivation
+  (`DOMAIN_TAG_INJURIES_MEDICAL = 0x2A`, code const landed at T0; **no stream is registered and none may
+  be** — ERR-041-012; ordinal 92 stays deliberately unallocated); wire the `IsAvailable` read into #30's squad selection; wire the
   FR-MD-025 roster-membership handoff (regen inserts `InjuryState.Create()`, retiree removes) at #30's
   season boundary. No #30 tick-order change beyond the KD-6 back-prop already filed (KD-6).
 - **T3** — Deep tier: the distribution-driven severity draw + recurrence risk on early return, the
@@ -42,8 +43,8 @@
   over the event ledger (KD-3); Stage 2 uses `AppearanceDays` only.
 - **A genuinely stochastic recovery model** (e.g. variable-length recovery with its own draw). If a later
   extension adds this, it appends a **new** draw-purpose ordinal (never renumbering `Occurrence = 0`,
-  FR-MD-008) on the same `injuries.occurrence` stream — no second stream is needed, since the stream is
-  already keyed per-purpose.
+  FR-MD-008) into the keyed derivation's `DeriveActionOrdinal` radix — there is no stream, and no second
+  anything is needed, since the derivation is already keyed per-purpose (ERR-041-012).
 
 ## 7.3 Seam contracts recorded for downstream authors
 
@@ -67,4 +68,5 @@
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial T-phase plan (T0–T3) + deferred extensions + downstream seam contracts. Status IN REVIEW. |
+| 0.2 | 2026-08-08 | — | **Balance-pass AR pass 7 (M1)**: §7.1's T2 line ordered registering `injuries.occurrence` — the registration §4.5 (as rewritten at D4) forbids and ERR-041-012 records as never-existed; §7.2's extension clause assumed the same stream. Both re-anchored to the keyed derivation. The T-phase file a deep-tier author reads pointed the wrong way. |
 #endregion

@@ -122,6 +122,97 @@ namespace TacticalDirector.SeasonSave.Tests
         }
 
         [Test]
+        public void Constructor_PairingGate_IsolatesEveryPredicate()
+        {
+            // AR pass 7 (M2): the pass-6 lock drove BOTH cursors ahead, so the training branch threw
+            // first and shadowed the other four predicates — deleting the medical, appearance and
+            // both lagging checks left the whole suite green (demonstrated with two mutants). One
+            // case per predicate, each reaching its branch and no earlier one; plus the lag-of-one
+            // PASS case, the pre-increment convention's normal state, mirroring the file boundary's.
+            League league = FourClubLeague();
+
+            // (a) medical-only ahead — the training cursor stays at the exempt sentinel.
+            CareerTestRoster.MutableSquadProvider pa = ProviderOver(league);
+            PlayerCareerStates medicalAhead = PlayerCareerStates.ForLeague(
+                pa, league.ClubIds(), injuryOccurrenceEnabled: false);
+            for (uint day = 0; day < 3; day++)
+            {
+                medicalAhead.AdvanceMedicalDay(day, WorldSeed, pa, MedicalModifier.Identity);
+            }
+
+            Assert.Throws<System.InvalidOperationException>(() => new SeasonLoop(
+                new WorldStore(ManagerId, WorldSeed), league.CreateSeason(0),
+                RoundResolutionMode.QuickSimAll, medicalAhead, pa),
+                "(a) a medical cursor ahead of the clock must be refused on its own");
+
+            // (b) appearance anchor ahead — both day-step cursors stay at their sentinels.
+            CareerTestRoster.MutableSquadProvider pb = ProviderOver(league);
+            PlayerCareerStates anchorAhead = PlayerCareerStates.ForLeague(
+                pb, league.ClubIds(), injuryOccurrenceEnabled: false);
+            int clubId = league.ClubIds()[0];
+            anchorAhead.RecordAppearances(
+                clubId, new[] { pb.ResolveByClubId(clubId).GetPlayer(0).PlayerId }, 5u);
+
+            Assert.Throws<System.InvalidOperationException>(() => new SeasonLoop(
+                new WorldStore(ManagerId, WorldSeed), league.CreateSeason(0),
+                RoundResolutionMode.QuickSimAll, anchorAhead, pb),
+                "(b) a future-dated appearance anchor must be refused on its own — it is the acute "
+                + "case (the slot-4 window read throws forever once the dial is armed)");
+
+            // (c) training lagging by >= 2 — the wedge direction (F7 refuses the gap forever).
+            CareerTestRoster.MutableSquadProvider pc = ProviderOver(league);
+            PlayerCareerStates lagging = PlayerCareerStates.ForLeague(
+                pc, league.ClubIds(), injuryOccurrenceEnabled: false);
+            lagging.AdvanceTrainingDay(0u, pc, CoachingModifier.Identity);
+            lagging.AdvanceMedicalDay(0u, WorldSeed, pc, MedicalModifier.Identity);
+            var laggedWorld = new WorldStore(ManagerId, WorldSeed);
+            laggedWorld.AdvanceDay();
+            laggedWorld.AdvanceDay();
+            laggedWorld.AdvanceDay();
+
+            Assert.Throws<System.InvalidOperationException>(() => new SeasonLoop(
+                laggedWorld, league.CreateSeason(0),
+                RoundResolutionMode.QuickSimAll, lagging, pc),
+                "(c) a cursor lagging the clock by three wedges the pairing permanently (F7)");
+
+            // (c2) MEDICAL-only lag — training sits at the legitimate lag of one, so this reaches
+            // the medical-lag branch and no earlier one.
+            CareerTestRoster.MutableSquadProvider pc2 = ProviderOver(league);
+            PlayerCareerStates medicalLagging = PlayerCareerStates.ForLeague(
+                pc2, league.ClubIds(), injuryOccurrenceEnabled: false);
+            for (uint day = 0; day < 3; day++)
+            {
+                medicalLagging.AdvanceTrainingDay(day, pc2, CoachingModifier.Identity);
+            }
+
+            medicalLagging.AdvanceMedicalDay(0u, WorldSeed, pc2, MedicalModifier.Identity);
+            var laggedWorld2 = new WorldStore(ManagerId, WorldSeed);
+            laggedWorld2.AdvanceDay();
+            laggedWorld2.AdvanceDay();
+            laggedWorld2.AdvanceDay();
+
+            Assert.Throws<System.InvalidOperationException>(() => new SeasonLoop(
+                laggedWorld2, league.CreateSeason(0),
+                RoundResolutionMode.QuickSimAll, medicalLagging, pc2),
+                "(c2) a medical cursor lagging by three is refused on its own");
+
+            // (d) the lag-of-exactly-one PASS case — every legitimately saved career sits here or
+            // at zero (the day steps take the pre-increment day).
+            CareerTestRoster.MutableSquadProvider pd = ProviderOver(league);
+            PlayerCareerStates normal = PlayerCareerStates.ForLeague(
+                pd, league.ClubIds(), injuryOccurrenceEnabled: false);
+            normal.AdvanceTrainingDay(0u, pd, CoachingModifier.Identity);
+            normal.AdvanceMedicalDay(0u, WorldSeed, pd, MedicalModifier.Identity);
+            var advancedWorld = new WorldStore(ManagerId, WorldSeed);
+            advancedWorld.AdvanceDay();
+
+            Assert.DoesNotThrow(() => new SeasonLoop(
+                advancedWorld, league.CreateSeason(0),
+                RoundResolutionMode.QuickSimAll, normal, pd),
+                "(d) the pre-increment convention's lag of exactly one is the NORMAL composed state");
+        }
+
+        [Test]
         public void AdvanceAndPlayNextRound_WithADifferentProvider_FailsLoud()
         {
             // Two providers would train one league and resolve fixtures against another, and every
@@ -760,4 +851,9 @@ namespace TacticalDirector.SeasonSave.Tests
 // | 1.5     | 2026-08-08 | —      | Balance-pass AR pass 6 (M3): + Constructor_RefusesACareerOff-  |
 // |         |            |        | TheWorldClock — the composition-boundary lock on the pairing   |
 // |         |            |        | the file boundary already refused.                             |
+// | 1.6     | 2026-08-08 | —      | Balance-pass AR pass 7 (M2): the pass-6 pairing lock drove BOTH   |
+// |         |            |        | cursors ahead, so the training branch shadowed the other four    |
+// |         |            |        | predicates — two mutants deleted them with the suite green. Now  |
+// |         |            |        | one case per predicate (medical-ahead, anchor-ahead, lag>=2,     |
+// |         |            |        | medical-only lag) plus the lag-of-one PASS case.                 |
 #endregion

@@ -1,7 +1,8 @@
 # Injuries & Medical #41 — Section 9: Approval Checklist
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — AR-1/AR-2/AR-3 recorded; R-01..R-05 signed; APPROVED)
+**Last Updated:** August 8, 2026 (v0.2 — balance-pass AR pass 7 M1: R-02's evidence phrase no longer signs off the phantom stream as verified)
+**Last Updated (prior):** July 23, 2026 (v0.2 — AR-1/AR-2/AR-3 recorded; R-01..R-05 signed; APPROVED)
 **Version:** 0.2
 **Status:** APPROVED
 **Source:** `docs/tracking/injuries-medical-design.md` v0.2
@@ -73,7 +74,7 @@ implementation gates are open by construction (nothing is built yet); review gat
 | # | Review gate | Evidence | Status |
 |---|---|---|---|
 | R-01 | **Content completeness** — §1–§9 + appendices per the template | all files | ☑ |
-| R-02 | **Technical accuracy** — ONE `injuries.occurrence` stream, keyed/position-independent draws, no
+| R-02 | **Technical accuracy** — ONE keyed occurrence derivation (no registered stream — ERR-041-012), position-independent draws, no
         persisted cursor; the KD-6 entry-state-gated ordering guarantee; the risk-score assembly citing
         #29's real `InjuryRiskContribution` output; the day-0 sentinel + day-gap fail-loud; 27 FRs;
         constants one tag each, no `[EST]`; cited #27/#29/#30/#16 APIs verified; **integer-only arithmetic (AR-1)** | §2/§3/§4/App. A/B/C | ☑ |
@@ -97,4 +98,5 @@ implementation gates are open by construction (nothing is built yet); review gat
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial checklist. Content/consistency/implementation gates open by construction; review gates NOT YET RUN. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1 (1M float→integer) / AR-2 (1M fixed-radix) / AR-3 CONVERGENCE recorded (§9.3.1); 9.1/9.4 gates checked; R-01..R-05 signed (§9.5); §9.6 APPROVED. |
+| 0.2 | 2026-08-08 | — | **Balance-pass AR pass 7 (M1)**: R-02 signed off "ONE `injuries.occurrence` stream" as verified evidence; restated to the keyed derivation (ERR-041-012). |
 #endregion
