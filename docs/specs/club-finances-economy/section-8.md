@@ -1,8 +1,9 @@
 # Club Finances & Economy #40 — Section 8: References
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.1 — initial authoring)
-**Version:** 0.1
+**Last Updated:** August 8, 2026 (v0.2 — balance-pass AR pass 8 M2: the §8 precedent list no longer names #41's draw as the `injuries.occurrence` stream)
+**Last Updated (prior):** July 23, 2026 (v0.1 — initial authoring)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -44,7 +45,7 @@
   follows exactly.
 - **#28 / #30 / #41 off-pitch keyed-draw precedent** — `player-progression.regen` (keyed by `entityId =
   clubId`), `season-loop.season-events` (keyed on `(seed, seasonNumber, roundIndex, homeClubId,
-  awayClubId)`), and `injuries.occurrence` (keyed on `(playerId, worldDay, purpose)`) are the
+  awayClubId)`), and #41's keyed occurrence derivation (keyed on `(worldSeed, playerId, worldDay, purpose)` — no registered stream, ERR-041-012) are the
   position-independent keyed-draw pattern the future T3 `club-finances.sponsorship-variance` stream will
   follow (KD-2/FR-FN-010) — no free-running cursor to persist even once it exists.
 - **#21 / #29 / #41** — default-behaviour-neutral routing-seam discipline (identity modifiers, dial-off
@@ -64,4 +65,5 @@ sports-science, or football-finance-industry spec.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial references. Status IN REVIEW. |
+| 0.2 | 2026-08-08 | — | **ERR-041-012 back-prop**: the keyed-draw precedent list restated #41's entry off the phantom stream name. |
 #endregion

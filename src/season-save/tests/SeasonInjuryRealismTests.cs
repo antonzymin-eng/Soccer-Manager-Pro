@@ -178,7 +178,7 @@ namespace TacticalDirector.SeasonSave.Tests
             foreach (ulong seed in Seeds)
             {
                 SeasonMeasurement m = PlaySeason(seed, occurrenceEnabled: true);
-                double perClub = m.TotalInjuries / 20.0;
+                double perClub = m.TotalInjuries / (double)LeagueBootstrapConstants.DefaultClubCount;
                 double starterMean = m.Starters > 0 ? (double)m.StarterInjuries / m.Starters : 0;
                 double reserveMean = m.Reserves > 0 ? (double)m.ReserveInjuries / m.Reserves : 0;
                 double unavailable = m.UnavailableFractionSum / m.MatchdayObservations;
@@ -402,4 +402,7 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | or window retune now MOVES the expectation instead of silently |
 // |         |            |        | falsifying it; 250 draw-eligible days stays the one documented |
 // |         |            |        | estimate.                                                      |
+// | 1.4     | 2026-08-08 | —      | Balance-pass AR pass 8 (L6): the per-club diagnostic log line     |
+// |         |            |        | reads DefaultClubCount instead of a hard-coded 20 — log-only, but |
+// |         |            |        | a club-count retune silently mislabelled the diagnostic.          |
 #endregion

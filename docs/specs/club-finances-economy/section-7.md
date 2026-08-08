@@ -1,7 +1,8 @@
 # Club Finances & Economy #40 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — AR-1 wage-semantics fix; prior v0.1 initial)
+**Last Updated:** August 8, 2026 (v0.2 — balance-pass AR pass 8 M2: the §7 precedent citation renamed off the phantom stream)
+**Last Updated (prior):** July 23, 2026 (v0.2 — AR-1 wage-semantics fix; prior v0.1 initial)
 **Version:** 0.2
 **Status:** APPROVED
 
@@ -51,7 +52,7 @@
 - **A genuinely stochastic FFP/board-confidence interaction** beyond the fixed multiplicative composition. If
   a later extension needs this, it composes as an additional multiplicative term or an additional keyed draw
   purpose on the same T3 stream — no second stream is needed, since the stream is already keyed per-purpose
-  (the #41 `injuries.occurrence` append-only-purpose precedent).
+  (the #41 keyed-derivation append-only-purpose precedent — ERR-041-012: no stream).
 
 ## 7.3 Seam contracts recorded for downstream authors
 
@@ -79,4 +80,5 @@
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial T-phase plan (T0–T3) + deferred extensions + downstream seam contracts. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1 (1M): §7.2 records the deferred periodic wage cash-out (the step that debits `Balance` from `WageBillAggregate`). |
+| 0.2 | 2026-08-08 | — | **ERR-041-012 back-prop**: the append-only-purpose precedent citation renamed — #41 has a keyed derivation, not an `injuries.occurrence` stream. |
 #endregion

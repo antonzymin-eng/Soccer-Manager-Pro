@@ -1,11 +1,12 @@
 # Injuries & Medical #41 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026 (v0.6 — balance-pass AR pass 4: §3.1.1 records the TRANSFER residual beside the club-term refusal it qualifies (the only cross-club handoff path today RESETS a moved player's career state — worse than the luck-change the refusal prices; #31's arrival obligation, recorded at the code site too); §3.2's overflow bound corrected to 1.6×10⁷ after the pass-1 headroom raise. This header was also STALE at v0.4 while the table below carried v0.5 — the header-drift class #30 §3's history records; pass 1's 1% → 1.6% edit also shipped without a bump, folded into v0.5's row note.)
+**Last Updated:** August 8, 2026 (v0.7 — balance-pass AR pass 8: the missing v0.6 version row added (L1); the §3.1.1 transfer note separated from the radix rule it had been fused into (L5))
+**Last Updated (prior):** August 8, 2026 (v0.6 — balance-pass AR pass 4: §3.1.1 records the TRANSFER residual beside the club-term refusal it qualifies (the only cross-club handoff path today RESETS a moved player's career state — worse than the luck-change the refusal prices; #31's arrival obligation, recorded at the code site too); §3.2's overflow bound corrected to 1.6×10⁷ after the pass-1 headroom raise. This header was also STALE at v0.4 while the table below carried v0.5 — the header-drift class #30 §3's history records; pass 1's 1% → 1.6% edit also shipped without a bump, folded into v0.5's row note.)
 **Last Updated (prior):** August 8, 2026 (v0.5 — AR pass 3: §3.1's signature de-phantomed — `rng` → `worldSeed, occurrenceEnabled`, the dial gated in step 2, §3.5's call updated; §3.1.1 gains the ERR-041-019 draw-key global-uniqueness contract)
 **Last Updated (prior):** August 7, 2026 (v0.4 — ERR-041-011 at the balance pass: §3.4 gains the normative-position `BASELINE_DAILY_RISK` term; the draw denominator decouples to the `[FIXED]` per-million `OCCURRENCE_DRAW_DENOM` with the `INJURY_RISK_MAX ≤ DENOM` invariant; §3.1's pseudocode re-anchored onto the keyed derivation (ERR-041-002/ERR-041-012); §3.6 re-derived (6600, + the congestion-clamp line))
 **Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.6
+**Version:** 0.7
 **Status:** APPROVED
 
 ---
@@ -111,7 +112,9 @@ resets his career state entirely (departure at the old club, `Create()` at the n
 injury history and any active injury gone; he arrives fit). Inert while no allocator moves players
 between clubs, and deliberately not fixed here: carrying state across clubs is #31 Transfers' arrival
 obligation (ERR-041-019's global-id guarantee is what makes it implementable — one pre-pass keyed on the
-now-unique id), and the code site carries the same record. The radix is the **FIXED** constant `DRAW_PURPOSE_RADIX` (Appendix A) — **not**
+now-unique id), and the code site carries the same record.
+
+The radix is the **FIXED** constant `DRAW_PURPOSE_RADIX` (Appendix A) — **not**
 the current purpose count — so appending a Stage-3 purpose ordinal (`DRAW_PURPOSE_OCCURRENCE = 0` today; a
 future recurrence draw = 1, …) leaves **every existing** `(worldDay, Occurrence)` ordinal unchanged
 (`worldDay × RADIX + 0`), preserving cross-version replay/save parity. Using the growing purpose *count* as
@@ -249,4 +252,6 @@ pass example used `AppearanceDays = 2` at weight 150 and no baseline, assembling
 | 0.3 | 2026-07-23 | — | AR-2 (1M): §3.1.1 `DeriveActionOrdinal` uses the fixed `DRAW_PURPOSE_RADIX` (was the growing purpose count, which broke cross-version replay parity on append) + a purpose bound guard. |
 | 0.4 | 2026-08-07 | — | **ERR-041-011 / ERR-041-012 (the balance pass)**: §3.4 formula gains `BASELINE_DAILY_RISK` inside the sum before the mitigation (position normative — robustness discriminates the floor; kills the exactly-0-forever default); the `OCCURRENCE_DRAW_DENOM == INJURY_RISK_MAX` identity retired — denominator `[FIXED]` at 1,000,000, ceiling stays the `[GT]` clamp (1.6%/day since the balance-pass AR raised it 10,000 → 16,000; this row originally said 1%/day and was corrected like its appendices counterpart), invariant enforced at the draw site; §3.1 pseudocode shows the real keyed derivation instead of the phantom `rng.DrawKeyed`; §3.2's bound note updated; §3.5 names the ERR-041-010(b) appearance record; §3.6 worked example re-derived (6600; congestion clamps at the ceiling). |
 | 0.5 | 2026-08-08 | — | **Balance-pass AR pass 3 (M5 + H1)**: §3.1's normative signature de-phantomed — `rng` (which the body never used) becomes `worldSeed, occurrenceEnabled`, and step 2 gates on `wasAvailableAtEntry and occurrenceEnabled` (FR-MD-027 is a required parameter of the step, so the algorithm that governs the armed subsystem now names the dial — the ERR-041-012 class recurring one section away); §3.5's composition call updated to match. **§3.1.1 gains the draw-key uniqueness contract (ERR-041-019)**: the key has no club term, so `PlayerId` must be GLOBALLY unique — stronger than #27's club-scoped KD-3 — enforced fail-loud at `PlayerCareerStates` construction/sync; a club term in the key is refused (re-rolls every career; a transfer would change a player's luck). v0.4's "1%/day" corrected in place to 1.6%. |
+| 0.6 | 2026-08-08 | — | **Balance-pass AR pass 4 (M4/M5/L6)**: §3.1.1 gains the transfer-reset RECORDED-NOT-FIXED residual beside the club-term refusal it qualifies; §3.2's overflow bound corrected to 1.6×10⁷; header currency repaired. (Row added at AR pass 8 — the v0.6 edit shipped rowless, the class this chain keeps meeting; pass 5's §3.6 congestion formula-probe note also rides under this version.) |
+| 0.7 | 2026-08-08 | — | **Balance-pass AR pass 8 (L1 + L5)**: the v0.6 row itself (added here — the version existed only in the header); the §3.1.1 paragraph break separating the pass-4 transfer note from the DRAW_PURPOSE_RADIX rule that had come to read as its continuation. |
 #endregion

@@ -1,10 +1,11 @@
 # Injuries & Medical #41 — Appendices
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026 (v0.5 — balance-pass AR pass 7 M1: the ERR-041-012 sweep reaches the appendices — Appendix A no longer asserts the T2 stream registration §4.5 forbids, and Appendix C's T-MD-NEU-003 matches §5.5's restatement instead of contradicting it under the same test id)
+**Last Updated:** August 8, 2026 (v0.6 — balance-pass AR pass 8 (L4): the DRAW_PURPOSE_OCCURRENCE row's "on `injuries.occurrence`" → "of the keyed occurrence derivation")
+**Last Updated (prior):** August 8, 2026 (v0.5 — balance-pass AR pass 7 M1: the ERR-041-012 sweep reaches the appendices — Appendix A no longer asserts the T2 stream registration §4.5 forbids, and Appendix C's T-MD-NEU-003 matches §5.5's restatement instead of contradicting it under the same test id)
 **Last Updated (prior):** August 7, 2026 (v0.4 — ERR-041-011 at the balance pass: Appendix A's `INJURY_RISK_MAX` re-tagged `[CROSS: #29 Appendix A]` (discharging ERR-041-003's standing back-prop), `OCCURRENCE_DRAW_DENOM` re-tagged `[FIXED]` 1,000,000 (decoupled), `APPEARANCE_LOAD_WEIGHT` refitted 150 → 5600 on the new scale, + `BASELINE_DAILY_RISK` 4000 and `APPEARANCE_WINDOW_DAYS` 7)
 **Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.5
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -35,7 +36,7 @@ Stage-2/3 balance pass (the #21 G2 precedent); the shapes/directions are the rev
 | `APPEARANCE_WINDOW_DAYS` | 7 | [GT] | The FR-MD-010 window: an appearance counts toward the risk for this many days after the match, never including the current day (ERR-030-027 — the draw runs pre-round). Structurally bounded to `[1, 31]` by #30's u32 bitmask record (fail-loud outside it). |
 | `HARD_CONTACT_WEIGHT` | 0 (Stage 2) | [GT] | Risk-score contribution per `MatchLoad.HardContacts`; zero at Stage 2 (the field is deep-tier only, KD-3); a future non-zero Stage-3 value is a config-dial change, not a formula rewrite. |
 | `RobustnessMitigation` weights | table | [GT] | Deterministic own-attribute (e.g. `Strength`/`Stamina`/`Balance`) mitigation subtracted from the assembled risk score — never RNG (FR-MD-015). |
-| `DRAW_PURPOSE_OCCURRENCE` | 0 | [FIXED] | The sole Stage-2 draw-purpose ordinal on `injuries.occurrence`. APPEND-only (FR-MD-008) — a future deep-tier purpose (e.g. recurrence) appends the next ordinal, never renumbering this one. |
+| `DRAW_PURPOSE_OCCURRENCE` | 0 | [FIXED] | The sole Stage-2 draw-purpose ordinal of the keyed occurrence derivation. APPEND-only (FR-MD-008) — a future deep-tier purpose (e.g. recurrence) appends the next ordinal, never renumbering this one. |
 | `DRAW_PURPOSE_RADIX` | 16 | [FIXED] | **Fixed** radix for `DeriveActionOrdinal`'s `worldDay × RADIX + purpose` bijection (§3.1.1). MUST be constant across all versions and MUST exceed the largest purpose ordinal ever defined — using the growing purpose *count* instead would shift every prior `(worldDay, Occurrence)` ordinal on an append, breaking replay/save parity (the hazard FR-MD-008 prevents). 16 leaves ample headroom for Stage-3 purposes; every `purpose` MUST be `< DRAW_PURPOSE_RADIX`. |
 
 **`DOMAIN_TAG_INJURIES_MEDICAL` / `SubsystemOrdinals.InjuriesMedical`** — `0x2A` / `92` respectively, per
@@ -82,4 +83,5 @@ with or without #41 active (T-MD-NEU-003, as restated in §5.5).
 | 0.3 | 2026-07-23 | — | AR-2 (1M): `DRAW_PURPOSE_COUNT` [DERIVED] replaced by `DRAW_PURPOSE_RADIX` = 16 [FIXED] (append-parity radix). |
 | 0.4 | 2026-08-07 | — | **ERR-041-011 (the balance pass)**: `INJURY_RISK_MAX` → `[CROSS: #29 Appendix A]` (ERR-041-003 discharged — one owner, one config key; now the probability ceiling — 16000 = 1.6%/day after the AR pass-1 headroom raise — ≤ `OCCURRENCE_DRAW_DENOM` fail-loud); `OCCURRENCE_DRAW_DENOM` → `[FIXED]` 1,000,000 (a config-tunable denominator re-rolls every career's draws); `APPEARANCE_LOAD_WEIGHT` 150 → 5600 (per-million scale, ≈3.9%/match over the window); + `BASELINE_DAILY_RISK` 4000 (before-mitigation, the R-2 refit note) and `APPEARANCE_WINDOW_DAYS` 7 (the FR-MD-010 unit, bounded [1,31] by #30's record). |
 | 0.5 | 2026-08-08 | — | **Balance-pass AR pass 7 (M1)**: Appendix A asserted "the `injuries.occurrence` stream registration itself lands at #41 T2" while citing the anti-phantom FR; Appendix C defined T-MD-NEU-003 as the registration's independence while §5.5 (pass 6) had restated the same id as vacuous-by-construction — one test id, two contradictory definitions. Both re-anchored. |
+| 0.6 | 2026-08-08 | — | **Balance-pass AR pass 8 (L4)**: the `DRAW_PURPOSE_OCCURRENCE` row still anchored the ordinal "on `injuries.occurrence`" — a stream that must never exist — in the appendix pass 7 bumped for this class. |
 #endregion

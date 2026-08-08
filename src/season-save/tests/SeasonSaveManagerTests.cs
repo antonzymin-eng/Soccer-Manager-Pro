@@ -1,7 +1,7 @@
 // File:     src/season-save/tests/SeasonSaveManagerTests.cs
 // Created:  2026-07-22
-// Modified: 2026-08-08 (balance pass D2: the frame carries the appearance block too; the round-trip
-//           and fail-loud suites cover the seven-argument Save and the v4 frame)
+// Modified: 2026-08-08 (AR pass 7: the duplicate-ClubId lock — v1.11; the cursor/coherence gate
+//           suites are the rows below)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §5 acceptance;
 //           Season & Competition Loop #30 FR-SN-019..023, Appendix B; Training System #29 FR-TR-018/019;

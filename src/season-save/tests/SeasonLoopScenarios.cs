@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonLoopScenarios.cs
 // Created:  2026-07-26
-// Modified: 2026-08-08 (retired the coincidence-prone managed-fixture-differs-from-the-model predicate; see the FR-SN-013b note)
+// Modified: 2026-08-08 (AR pass 5: the injury-changed-the-eleven precondition — v1.3)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §5.7 (the season-multi-fixture capstone), §3.3/§3.4,
 //           FR-SN-012/013b/026/030; Testing Strategy & Framework #19 §3.3.1/§3.3.3/§3.3.5/Appendix A.1/KD-8;

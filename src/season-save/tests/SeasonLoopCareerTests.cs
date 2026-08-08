@@ -145,6 +145,23 @@ namespace TacticalDirector.SeasonSave.Tests
                 RoundResolutionMode.QuickSimAll, medicalAhead, pa),
                 "(a) a medical cursor ahead of the clock must be refused on its own");
 
+            // (a2) TRAINING-only ahead — the medical cursor stays at the exempt sentinel (AR pass
+            // 8: the pass-7 cases left the training predicate shadowed in BOTH directions — the
+            // original lock advanced both cursors together, so deleting the training branch
+            // entirely left the suite green; the first-evaluated predicate was the unlocked one).
+            CareerTestRoster.MutableSquadProvider pa2 = ProviderOver(league);
+            PlayerCareerStates trainingAhead = PlayerCareerStates.ForLeague(
+                pa2, league.ClubIds(), injuryOccurrenceEnabled: false);
+            for (uint day = 0; day < 3; day++)
+            {
+                trainingAhead.AdvanceTrainingDay(day, pa2, CoachingModifier.Identity);
+            }
+
+            Assert.Throws<System.InvalidOperationException>(() => new SeasonLoop(
+                new WorldStore(ManagerId, WorldSeed), league.CreateSeason(0),
+                RoundResolutionMode.QuickSimAll, trainingAhead, pa2),
+                "(a2) a training cursor ahead of the clock must be refused on its own");
+
             // (b) appearance anchor ahead — both day-step cursors stay at their sentinels.
             CareerTestRoster.MutableSquadProvider pb = ProviderOver(league);
             PlayerCareerStates anchorAhead = PlayerCareerStates.ForLeague(
@@ -174,6 +191,27 @@ namespace TacticalDirector.SeasonSave.Tests
                 laggedWorld, league.CreateSeason(0),
                 RoundResolutionMode.QuickSimAll, lagging, pc),
                 "(c) a cursor lagging the clock by three wedges the pairing permanently (F7)");
+
+            // (c3) TRAINING-only lag — medical sits at the legitimate lag of one, so this reaches
+            // the training-lag branch and no earlier one (AR pass 8, the (a2) twin).
+            CareerTestRoster.MutableSquadProvider pc3 = ProviderOver(league);
+            PlayerCareerStates trainingLagging = PlayerCareerStates.ForLeague(
+                pc3, league.ClubIds(), injuryOccurrenceEnabled: false);
+            trainingLagging.AdvanceTrainingDay(0u, pc3, CoachingModifier.Identity);
+            for (uint day = 0; day < 3; day++)
+            {
+                trainingLagging.AdvanceMedicalDay(day, WorldSeed, pc3, MedicalModifier.Identity);
+            }
+
+            var laggedWorld3 = new WorldStore(ManagerId, WorldSeed);
+            laggedWorld3.AdvanceDay();
+            laggedWorld3.AdvanceDay();
+            laggedWorld3.AdvanceDay();
+
+            Assert.Throws<System.InvalidOperationException>(() => new SeasonLoop(
+                laggedWorld3, league.CreateSeason(0),
+                RoundResolutionMode.QuickSimAll, trainingLagging, pc3),
+                "(c3) a training cursor lagging by three is refused on its own");
 
             // (c2) MEDICAL-only lag — training sits at the legitimate lag of one, so this reaches
             // the medical-lag branch and no earlier one.
@@ -856,4 +894,10 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | predicates — two mutants deleted them with the suite green. Now  |
 // |         |            |        | one case per predicate (medical-ahead, anchor-ahead, lag>=2,     |
 // |         |            |        | medical-only lag) plus the lag-of-one PASS case.                 |
+// | 1.7     | 2026-08-08 | —      | Balance-pass AR pass 8 (M1): + the (a2) training-only-ahead and   |
+// |         |            |        | (c3) training-only-lag cases — pass 7's isolation claim was      |
+// |         |            |        | false for the two FIRST-evaluated predicates (the original lock  |
+// |         |            |        | drove both cursors together, so deleting the training branch     |
+// |         |            |        | left the suite green; demonstrated by mutation). Five predicates,|
+// |         |            |        | five isolating cases, one PASS case.                             |
 #endregion

@@ -190,7 +190,7 @@
 > tick). Promoted from the converged design supplement (`docs/tracking/injuries-medical-design.md` v0.2,
 > design-AR 2M+2L → clean) to a full 11-file section set (FR-MD-001..027); section-file **AR-1 (1M — float
 > arithmetic → integer per-mille throughout) → AR-2 (1M — fixed-radix action-ordinal for append parity) →
-> AR-3 clean, CONVERGENCE.** **KD-1:** all draws on ONE world-tick `injuries.occurrence` stream, keyed
+> AR-3 clean, CONVERGENCE.** **KD-1:** all draws via ONE world-tick keyed derivation (no registered stream — ERR-041-012), keyed
 > position-independently on `(playerId, worldDay, purpose)` — no free-running cursor, nothing to persist,
 > the match tick never draws (the plan's dual-clock hazard dissolved). **KD-6:** a #30 tick-order back-prop
 > (ERR-030-002) appends the injuries null seam as step 4. **KD-7:** a `MEDICAL_SAVE_FORMAT_VERSION`
