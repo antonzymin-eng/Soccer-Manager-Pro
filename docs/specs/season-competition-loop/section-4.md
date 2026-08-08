@@ -1,9 +1,10 @@
 # Season & Competition Loop Specification #30 — Section 4: Architecture
 
 **Created:** July 22, 2026
-**Last Updated:** August 8, 2026 (v0.4 — balance-pass AR pass 13 M3: §4 was three landings stale — §4.4's third signature copy deleted in favour of Appendix B, §4.3 gains the career pair + AdvanceDays, §4.2 the eight T1/T2/D2 files)
+**Last Updated:** August 8, 2026, later same day (v0.5 — AR pass 14 L4: §4.2's leftover 1 → 2 delta line corrected to 1 → 4; the tests list marked illustrative)
+**Last Updated (prior):** August 8, 2026 (v0.4 — balance-pass AR pass 13 M3: §4 was three landings stale — §4.4's third signature copy deleted in favour of Appendix B, §4.3 gains the career pair + AdvanceDays, §4.2 the eight T1/T2/D2 files)
 **Last Updated (prior):** July 26, 2026 (v0.3 — ERR-030-012 §4.5 keyed-not-cursor correction + ERR-030-013 §4.6 producer-record location, both found at #30 T2 implementation; prior v0.2 section-file PASS-1 reconciliation, §9.3)
-**Version:** 0.4
+**Version:** 0.5
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -39,7 +40,7 @@ reference the season-save tests already carry.
 ```
 src/season-save/
 ├── season-save.asmdef            ← existing; gains PlayerDatabase ref (already in the tests asmdef)
-├── SeasonSaveConstants.cs        ← existing; SEASON_SAVE_FORMAT_VERSION 1 → 2; + SEASON_STATE_FORMAT_VERSION
+├── SeasonSaveConstants.cs        ← existing; SEASON_SAVE_FORMAT_VERSION 1 → 4 across #30 T1 / #29-#41 T1 / D2; + SEASON_STATE_FORMAT_VERSION
 ├── SeasonSaveCodec.cs            ← existing; Encode/Decode gain the season block (§4.4)
 ├── SeasonSaveContents.cs         ← existing; gains the reconstructed SeasonState
 ├── SeasonSaveManager.cs          ← existing; Save/Load gain the season parameter (§4.4)
@@ -64,7 +65,7 @@ src/season-save/
 ├── AppearanceBlock.cs            ← balance pass D2: the typed frame block (ERR-029-005's compile-time half)
 ├── TrainingBlock.cs              ← #29/#41 T1: typed frame block for the #29 sub-blob
 ├── MedicalBlock.cs               ← #29/#41 T1: typed frame block for the #41 sub-blob
-└── tests/
+└── tests/                        (illustrative — `file-manifest.md` is the authoritative inventory)
     ├── season-save-tests.asmdef  ← existing
     ├── FixtureSchedulerTests.cs  ← NEW
     ├── LeagueTableTests.cs       ← NEW
@@ -168,4 +169,5 @@ fully-qualify `MatchEngine` and any `player-database` type that shares a bare na
 | 0.2 | 2026-07-22 | — | Section-file PASS-1 reconciliation (whole-round KD-9 command/API rename, living-world-KD disambiguation, KD/FR label fixes). See section-9 §9.3. |
 | 0.3 | 2026-07-26 | — | **ERR-030-012** (found at T2 implementation): §4.5's registered cursor-positioned season stream contradicts §3.4.1's keyed-draw requirement (T-SN-CAL-003c order-independence). T2 realizes the sub-stream as a keyed derivation folding `DOMAIN_TAG_SEASON_LOOP` into the fixture key — that tag's first consumer, satisfying ERR-030-001 — and does NOT allocate `SubsystemOrdinals.SeasonLoop = 84` in code, since an ordinal with no registered stream is the FR-LW-031 phantom; ordinal 84 stays spec-reserved for the first cursor-positioned season event. **ERR-030-013** (same landing): §4.6's "records the `MatchResult` in `SeasonState`" is not implementable — §2.2 / Appendix B give `SeasonState` no outcome collection, and adding one would bump `SEASON_STATE_FORMAT_VERSION` for a payload FR-SN-017 forbids a consumer for; the producer record is loop-scoped and transient, the durable record is the serialized table. |
 | 0.4 | 2026-08-08 | — | **Balance-pass AR pass 13 (M3)**: §4 had been untouched through T1/T2/D2 and every AR pass while `src/CLAUDE.md` orders implementers to read it before coding — §4.4 held the THIRD copy of the Save/Encode signature (the class pass 11 fixed in §2), still showing four arguments, the v1→2 bump and a five-field frame against today's seven-argument Save, version 4 and eight-field frame; §4.3's state list had no career pair and no `AdvanceDays`; §4.2's layout missed all eight T1/T2/D2 files. §4.4's copy DELETED in favour of a pointer to Appendix B (a third copy is not re-synchronised); the rest brought current. |
+| 0.5 | 2026-08-08 | — | **Balance-pass AR pass 14 (L4)**: the pass-13 M3 rewrite left `SEASON_SAVE_FORMAT_VERSION 1 → 2` five lines above the D2 files it added — the contradiction the fix was closing, re-introduced one block apart; corrected to 1 → 4, tests list marked illustrative. |
 #endregion

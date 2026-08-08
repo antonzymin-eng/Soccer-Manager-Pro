@@ -1,10 +1,11 @@
 # Training System #29 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026 (v0.5 — balance-pass AR pass 9 L4: §3.1's pseudocode gains the F8 sentinel-as-worldDay refusal the code has always enforced)
+**Last Updated:** August 8, 2026 (v0.6 — AR pass 14 L2: the ERR-029-008 sweep reaches §3's prose)
+**Last Updated (prior):** August 8, 2026 (v0.5 — balance-pass AR pass 9 L4: §3.1's pseudocode gains the F8 sentinel-as-worldDay refusal the code has always enforced)
 **Last Updated (prior):** July 27, 2026 (v0.4 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
 **Last Updated (prior):** July 23, 2026 (v0.3 — PASS-2 re-review; prior APPROVED)
-**Version:** 0.5
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -55,7 +56,7 @@ gap is a caller bug, not a catch-up case. A player with no `TrainingState` (a re
 FR-TR-025) is likewise a lifecycle bug — the state must be created via `TrainingState.Create` (F7).
 
 **No rollover, no weekly batch:** the step is per-day and self-contained; "weekly" lives only in how often
-the human calls `SetFocus`. There is no batch boundary to serialize beyond the normal per-day state (KD-4).
+the human calls `TrainingSchedule.TrySetFocus`. There is no batch boundary to serialize beyond the normal per-day state (KD-4).
 
 ## 3.2 The growth-input read (`ComputeTrainingInput`, slot-1, pure)
 
@@ -129,4 +130,5 @@ maintained across the season boundary per FR-TR-025 (regen insert / retiree remo
 | 0.3 | 2026-07-23 | — | PASS-2: §3.1 day-gap fail-loud (F7) + `FATIGUE_DAILY_RECOVERY`; §3.2 `deepTrainingEnabled` param + field-independence invariant; §3.4 method renamed `ComputeInjuryRisk`; §3.5 rewritten to #28's batch `AdvanceDay(worldDay, in trainingInputs)` + FR-TR-025 lifecycle. |
 | 0.4 | 2026-07-27 | — | **ERR-029-003** (at #53's approval): §3.2's signature and body take the root-assembled `FacilityModifier`. No #29 logic change and no #28 type change. |
 | 0.5 | 2026-08-08 | — | **Balance-pass AR pass 9 (L4)**: §3.1's pseudocode gains the `worldDay == TRAINING_NOT_ADVANCED_SENTINEL` refusal (**F8**, new in §2.3) that `TrainingStep.AdvanceTrainingDay` has enforced since T0 with no normative source — found at the #41 sibling and fixed at both in one commit (the folder-boundary lesson applied forward). |
+| 0.6 | 2026-08-08 | — | **Balance-pass AR pass 14 (L2)**: §3 still named the free `SetFocus` ERR-029-008 retired; corrected. |
 #endregion

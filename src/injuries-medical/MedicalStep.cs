@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/MedicalStep.cs
 // Created:  2026-08-05
-// Modified: 2026-08-08 (AR pass 13 M1+L6: the guard class completed — v1.10)
+// Modified: 2026-08-08 (AR pass 14 M1: the RecoveryMax guard moved to its reachable site — v1.11)
 // Author:   —
 // Spec:     Injuries & Medical #41 §3.1–§3.4 + Appendices A/B (FR-MD-003..016, FR-MD-023),
 //           F1/F4/F6/F7; Code Standards #20
@@ -129,15 +129,16 @@ namespace TacticalDirector.InjuriesMedical
                 // config at 0 (or negative) would otherwise make EVERY injury permanent, silently —
                 // the countdown never falls, Severity never returns to None, and the only symptom is
                 // the depleted-squad back-fill quietly fielding whole squads.
-                if (InjuriesMedicalConstants.RecoveryDaysPerTickBase <= 0
-                    || InjuriesMedicalConstants.RecoveryMax < 1)
+                // (The RecoveryMax half of the pass-13 guard moved to AssignRecoveryDays at AR
+                // pass 14 M1 — HERE it was provably dead: ValidateState has already refused any
+                // injured state with RecoveryRemaining > RecoveryMax, and Severity != None forces
+                // RecoveryRemaining >= 1, so RecoveryMax < 1 cannot reach this branch under ANY
+                // config; the breach it names happens on the mutually exclusive draw branch.)
+                if (InjuriesMedicalConstants.RecoveryDaysPerTickBase <= 0)
                 {
                     throw new InvalidOperationException(
-                        "RecoveryDaysPerTickBase must be positive and RecoveryMax at least 1 — a "
-                        + "non-positive decrement makes every injury permanent, and a RecoveryMax "
-                        + "below 1 makes the assignment clamp write RecoveryRemaining == 0 while "
-                        + "injured (an F1 breach into the live career, blamed one day later as data "
-                        + "corruption); catalogue/config integrity failure (§3.1, Appendix A).");
+                        "RecoveryDaysPerTickBase must be positive — a non-positive decrement makes "
+                        + "every injury permanent; catalogue/config integrity failure (§3.1, Appendix A).");
                 }
 
                 state.RecoveryRemaining = Clamp(
@@ -423,6 +424,20 @@ namespace TacticalDirector.InjuriesMedical
                     nameof(severity), severity, "Recovery days are assigned only for a confirmed injury (F1).");
             }
 
+            // The RecoveryMax >= 1 invariant, enforced at the one site whose clamp can breach it
+            // (AR pass 14 M1 — pass 13 placed this on the countdown branch, where ValidateState
+            // makes it unsatisfiable; the breach is HERE: with RecoveryMax < 1, ClampLong's
+            // value > max arm returns RecoveryMax, writing RecoveryRemaining <= 0 beside a
+            // just-assigned Severity — the F1 breach the floor below exists to stop, surfacing a
+            // day later as an ArgumentException blaming the state).
+            if (InjuriesMedicalConstants.RecoveryMax < 1)
+            {
+                throw new InvalidOperationException(
+                    "RecoveryMax must be at least 1 — below it the assignment clamp writes "
+                    + "RecoveryRemaining == 0 while injured (an F1 breach into the live career); "
+                    + "catalogue/config integrity failure (§3.3, Appendix A).");
+            }
+
             long scaled = (long)InjuriesMedicalConstants.RecoveryDaysFor(severity)
                           * InjuriesMedicalConstants.MEDICAL_MODIFIER_IDENTITY_PERMILLE
                           / medical.RecoverySpeedMillMult;
@@ -594,4 +609,10 @@ namespace TacticalDirector.InjuriesMedical
 // |         |            |        | ceiling (armed dial injures nobody, forever, silently); the       |
 // |         |            |        | entry point's exception doc names the four real guards, not the   |
 // |         |            |        | retired denominator one.                                          |
+// | 1.11    | 2026-08-08 | —      | Balance-pass AR pass 14 (M1): the pass-13 RecoveryMax guard was    |
+// |         |            |        | PROVABLY DEAD where it sat — ValidateState makes RecoveryMax < 1  |
+// |         |            |        | unsatisfiable on the countdown branch under any config, while the |
+// |         |            |        | breach it names happens on the mutually exclusive draw branch     |
+// |         |            |        | (demonstrated by model). Moved to AssignRecoveryDays, the one     |
+// |         |            |        | site whose clamp can write the breach.                            |
 #endregion

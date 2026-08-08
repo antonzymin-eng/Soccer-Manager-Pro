@@ -1,7 +1,8 @@
 # Injuries & Medical #41 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026, last entry of the day (v0.13 — balance-pass AR pass 13 M1: the guard class completed — RECOVERY_MAX ≥ 1 at the countdown site, the ceiling's positive side at the draw site)
+**Last Updated:** August 8, 2026, final entry of the day (v0.14 — balance-pass AR pass 14 M1: the RECOVERY_MAX guard moved to §3.3's assignment step, the one site whose clamp can breach it)
+**Last Updated (prior):** August 8, 2026, last entry of the day (v0.13 — balance-pass AR pass 13 M1: the guard class completed — RECOVERY_MAX ≥ 1 at the countdown site, the ceiling's positive side at the draw site)
 **Last Updated (prior):** August 8, 2026, even later same day (v0.12 — balance-pass AR pass 12 M3 + L3: §3.1's recovery countdown gains the non-positive-rate refusal; §3.1.1 pins the draw key's canonical spelling and its two sanctioned abbreviations)
 **Last Updated (prior):** August 8, 2026, still later same day (v0.10 — balance-pass AR pass 11 L3: the §3.2 guard mirrors all three lock predicates)
 **Last Updated (prior):** August 8, 2026, later same day (v0.9 — balance-pass AR pass 10 M1: §3.2 enforces the severity-split invariant at the classifying site)
@@ -11,7 +12,7 @@
 **Last Updated (prior):** August 8, 2026 (v0.5 — AR pass 3: §3.1's signature de-phantomed — `rng` → `worldSeed, occurrenceEnabled`, the dial gated in step 2, §3.5's call updated; §3.1.1 gains the ERR-041-019 draw-key global-uniqueness contract)
 **Last Updated (prior):** August 7, 2026 (v0.4 — ERR-041-011 at the balance pass: §3.4 gains the normative-position `BASELINE_DAILY_RISK` term; the draw denominator decouples to the `[FIXED]` per-million `OCCURRENCE_DRAW_DENOM` with the `INJURY_RISK_MAX ≤ DENOM` invariant; §3.1's pseudocode re-anchored onto the keyed derivation (ERR-041-002/ERR-041-012); §3.6 re-derived (6600, + the congestion-clamp line))
 **Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.13
+**Version:** 0.14
 **Status:** APPROVED
 
 ---
@@ -55,12 +56,13 @@ AdvanceMedicalDay(ref InjuryState s, playerId, in PlayerAttributes a, in InjuryR
     #    assigned tier-days at injury time in step 2 — FR-MD-014 — so a fractional multiplier is never
     #    truncated against a base of 1).
     if s.Severity != InjurySeverity.None:
-        # Recovery invariants, enforced HERE at the one countdown site (the §3.4 draw-site
-        # guard posture): both are [GT] config keys and the catalogue locks only see the fallbacks —
-        # a non-positive rate makes every injury PERMANENT, silently (AR pass 12 M3); RECOVERY_MAX
-        # below 1 makes the §3.3 assignment clamp write RecoveryRemaining == 0 while injured, the F1
-        # breach the assignment floor exists to stop (AR pass 13 M1).
-        if RECOVERY_DAYS_PER_TICK_BASE <= 0 or RECOVERY_MAX < 1:
+        # Recovery-rate invariant, enforced HERE at the one countdown site (the §3.4 draw-site
+        # guard posture): a [GT] config key the catalogue lock only sees the fallback of — a
+        # non-positive rate makes every injury PERMANENT, silently (AR pass 12 M3). The RECOVERY_MAX
+        # half lives in §3.3's assignment step (moved at AR pass 14 M1 — here it was provably dead:
+        # the F1 entry gate refuses any injured state above RECOVERY_MAX and forces
+        # RecoveryRemaining >= 1 while injured, so the predicate cannot fire on this branch).
+        if RECOVERY_DAYS_PER_TICK_BASE <= 0:
             throw InvalidOperationException      # catalogue/config integrity failure
         s.RecoveryRemaining = Clamp(s.RecoveryRemaining - RECOVERY_DAYS_PER_TICK_BASE, 0, RECOVERY_MAX)  # F1
         if s.RecoveryRemaining == 0:
@@ -192,6 +194,13 @@ integer 1/day. `MedicalModifier.Identity` is per-mille `1000` = ×1.0, so a no-s
 the severity tier's recovery-days constant. No RNG and no float is involved in recovery — a deterministic
 integer countdown (FR-MD-014).
 
+**The `RECOVERY_MAX ≥ 1` invariant is enforced HERE, at the assignment** (AR pass 14 M1 — moved from
+§3.1's countdown guard, where the F1 entry gate makes it provably unreachable under any config): with
+`RECOVERY_MAX < 1` the assignment clamp's `value > max` arm returns `RECOVERY_MAX`, writing
+`RecoveryRemaining ≤ 0` beside a just-assigned severity — the F1 breach the floor-at-1 exists to stop,
+surfacing a day later as a state-blaming refusal. `AssignRecoveryDays` fail-louds
+(`InvalidOperationException`, catalogue/config integrity) before the clamp.
+
 ## 3.4 The risk-score assembly (`AssembleRiskScore`, pure)
 
 ```
@@ -297,5 +306,6 @@ pass example used `AppearanceDays = 2` at weight 150 and no baseline, assembling
 | 0.10 | 2026-08-08 | — | **Balance-pass AR pass 11 (L3)**: the §3.2 guard was ONE of the design-time lock's three predicates while both new comments called them two halves of one invariant — a negative `[GT]` numerator passed the sum guard and silently deleted its own tier (the pass-6 rule-at-one-boundary shape, inside the fix being verified). Non-negativity added; zero stays legal (an expressible empty-tier intent). |
 | 0.11 | 2026-08-08 | — | **Balance-pass AR pass 12 (M3)**: `RECOVERY_DAYS_PER_TICK_BASE` was the one `[GT]` in the landing whose design-time lock had NO runtime mirror *(claim corrected at v0.13 — two more sides were unmirrored)* — non-positive, the countdown never falls and every injury is permanent, silently, with the armed dial progressively injuring the whole league; §3.1 gains the fail-loud refusal at the countdown site (the §3.4 guard posture, fourth instance). |
 | 0.12 | 2026-08-08 | — | **Balance-pass AR pass 12 (L3)**: §3.1.1 pins the key's canonical spelling + the two sanctioned abbreviations — the key had accumulated three drifted spellings across two assemblies and two specs, and a sweep needs a rule, not a preference. *(Folded into the same pass as v0.11 — one bump per pass would have hidden the two distinct changes.)* |
-| 0.13 | 2026-08-08 | — | **Balance-pass AR pass 13 (M1 + L1)**: *(L1: the §3.1.1 spelling rule gains the 4-tuple as a third sanctioned expansion — three live sites already used it and the rule as written made them defects.)* v0.11's "the one `[GT]` whose lock had no runtime mirror" was FALSE — `RECOVERY_MAX` had none (below 1, the §3.3 assignment clamp's min exceeds its max and writes `RecoveryRemaining == 0` while injured — the F1 breach the floor's own doc names — surfacing a day later as data corruption blamed on the state), and `INJURY_RISK_MAX`'s guard was one-sided (non-positive: the armed dial injures nobody, forever, silently — the pass-12 failure shape itself). §3.1's countdown guard and §3.4's draw-site invariant now cover both. |
+| 0.13 | 2026-08-08 | — | **Balance-pass AR pass 13 (M1 + L1)** *(the RECOVERY_MAX half's placement corrected at v0.14 — the countdown site cannot reach it)*: *(L1: the §3.1.1 spelling rule gains the 4-tuple as a third sanctioned expansion — three live sites already used it and the rule as written made them defects.)* v0.11's "the one `[GT]` whose lock had no runtime mirror" was FALSE — `RECOVERY_MAX` had none (below 1, the §3.3 assignment clamp's min exceeds its max and writes `RecoveryRemaining == 0` while injured — the F1 breach the floor's own doc names — surfacing a day later as data corruption blamed on the state), and `INJURY_RISK_MAX`'s guard was one-sided (non-positive: the armed dial injures nobody, forever, silently — the pass-12 failure shape itself). §3.1's countdown guard and §3.4's draw-site invariant now cover both. |
+| 0.14 | 2026-08-08 | — | **Balance-pass AR pass 14 (M1)**: v0.13 placed the `RECOVERY_MAX < 1` refusal on the countdown branch, where it is PROVABLY DEAD — the F1 entry gate refuses any injured state above the ceiling and forces `RecoveryRemaining ≥ 1` while injured, so the predicate is unsatisfiable there under any config, while the breach it names happens on the mutually exclusive draw branch (demonstrated by model: a healthy player drawn injured gets `RecoveryRemaining == 0` written beside a severity, refused a day later as a state fault). Moved to §3.3's assignment step; §3.1's guard reverts to rate-only. A guard on a mutually-exclusive branch ships green precisely because it is unreachable — the pass-13 verification gap. |
 #endregion

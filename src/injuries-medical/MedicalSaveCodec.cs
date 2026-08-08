@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/MedicalSaveCodec.cs
 // Created:  2026-08-06
-// Modified: 2026-08-06
+// Modified: 2026-08-08 (AR pass 14 L1: the #29/#41 non-gate asymmetry stated — v1.3)
 // Author:   —
 // Spec:     Injuries & Medical #41 §2.2 (the persisted medical block), §4.2 / §4.4 (the sub-blob codec),
 //           FR-MD-017/018/019, F1/F3/F4/F5; ERR-041-008 (the §4.4 layout's missing club id) and
@@ -177,6 +177,14 @@ namespace TacticalDirector.InjuriesMedical
         /// otherwise make every existing save unloadable, turning a tuning edit into data loss. Only the
         /// structural floor (a day counter cannot be negative) and the F1 coherence rule are enforced
         /// here.
+        /// <para>
+        /// <b>The asymmetry with #29 (AR pass 14 L1):</b> #29's day step CLAMPS its ceilings, so a
+        /// loaded out-of-band counter self-heals; #41's does not — <c>MedicalStep.ValidateState</c>
+        /// REFUSES <c>RecoveryRemaining &gt; RecoveryMax</c> (F1). A save loaded cleanly here under a
+        /// lowered ceiling therefore throws at slot 4 on every later advance until the config is
+        /// restored: loud and config-reversible, but a career-halting edit, not a self-healing one.
+        /// Lowering <c>RecoveryMax</c> is career-compatible only when nothing outstanding exceeds it.
+        /// </para>
         /// </para>
         /// </summary>
         /// <param name="blob">The bytes to decode.</param>
@@ -366,4 +374,8 @@ namespace TacticalDirector.InjuriesMedical
 // |         |            |        | TacticalDirector.DeterministicSim.SaveBlobFramingHelpers — this    |
 // |         |            |        | file and TrainingSaveCodec were byte-identical duplicates of those |
 // |         |            |        | four helpers with nothing mechanical keeping them in sync.         |
+// | 1.3     | 2026-08-08 | —      | Balance-pass AR pass 14 (L1, doc): the non-gate rationale         |
+// |         |            |        | inherited #29's clamp claim — #41's day step REFUSES an           |
+// |         |            |        | out-of-band counter, so a lowered ceiling halts a career loudly   |
+// |         |            |        | rather than self-healing; the asymmetry stated.                   |
 #endregion

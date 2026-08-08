@@ -1,11 +1,12 @@
 # Injuries & Medical #41 — Section 4: Architecture
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026 (v0.5 — balance-pass AR pass 7 M1: §4.1's dependency-diagram label restated off the phantom stream)
+**Last Updated:** August 8, 2026 (v0.6 — balance-pass AR pass 14 L1: §4.4's non-gate rationale states the #29/#41 clamp-vs-refuse asymmetry)
+**Last Updated (prior):** August 8, 2026 (v0.5 — balance-pass AR pass 7 M1: §4.1's dependency-diagram label restated off the phantom stream)
 **Last Updated (prior):** August 7, 2026 (v0.4 — ERR-041-012 at the balance pass: §4.5 rewritten from stream registration to the keyed derivation that actually exists; ordinal 92 stays deliberately unallocated)
 **Last Updated (prior):** August 6, 2026 (v0.3 — ERR-041-009: §4.4's layout gains the leading
 MEDICAL_SAVE_MAGIC, without which the #29 block decodes here silently; AR pass 1)
-**Version:** 0.5
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -134,7 +135,10 @@ Four properties the layout carries, each of which is a MUST (**ERR-041-008** and
   codec validating only on decode writes files no load of it can accept, surfacing the bug a session
   later; conversely, enforcing `RECOVERY_MAX` at load would turn a designer's ceiling change into data
   loss across every existing save. Only structurally impossible values (a negative day counter or injury
-  count, an undefined severity ordinal) and the F1 contradiction are refused.
+  count, an undefined severity ordinal) and the F1 contradiction are refused. **The asymmetry with #29
+  (AR pass 14 L1): #29's day step clamps its ceilings, #41's REFUSES them** (`ValidateState`, F1) — so a
+  lowered `RECOVERY_MAX` loads cleanly and then halts the career loudly at slot 4 until restored;
+  career-compatible only when no outstanding recovery exceeds the new ceiling.
 
 Fail-loud gates per F1/F3/F4/F5 (the `MatchSaveCodec` / `WorldStateSerializer.ReadCount` posture). All
 fields serialized via #16's `CanonicalSerializer` (bitwise round-trip); **serialize, don't regenerate**.
@@ -166,4 +170,5 @@ stream-independence property vacuously: nothing #41 does can move any other subs
 | 0.3 | 2026-08-06 | — | **ERR-041-009** (AR pass 1 over the T1 landing): §4.4's layout gains a leading `MEDICAL_SAVE_MAGIC`, and decode MUST refuse a block without it. v0.2 relied on the version field to gate the block, but every sub-blob format in the save stack is at version 1 — a version gate separates generations of one format, never one format from another. ERR-029-004 had just made the #29 training block this block's exact byte shape, so each codec decoded the other's bytes completely and silently: injury tiers read back as training focuses, recovery counters as conditioning cursors, every gate green. Also corrects the ERR-041-008 bullet's `KD-7 blob independence` citation to `KD-2` (`unified-season-save-design.md` KD-7 is the codec/disk-I/O split). |
 | 0.4 | 2026-08-07 | — | **ERR-041-012** (the balance pass, D4): §4.5 rewritten — the `injuries.occurrence` registered-stream requirement was self-contradictory (cursor-positioned, forbidden by FR-MD-006/007) and was resolved in code at T0 as the keyed derivation (ERR-041-002); arming the dial is the moment the stale text would govern a live subsystem, so it now describes the derivation and pins ordinal 92 as deliberately unallocated (FR-LW-031). (Rows 0.3/0.4 were appended out of order and swapped at the balance-pass AR pass 3 — L2.) |
 | 0.5 | 2026-08-08 | — | **Balance-pass AR pass 7 (M1)**: §4.1's diagram still labelled the #16 edge "[world-tick RNG stream + namespace]"; now the SplitMix64 finalizers + domain tag §4.5 describes. |
+| 0.6 | 2026-08-08 | — | **Balance-pass AR pass 14 (L1)**: the §4.4 non-gate rationale was TRUE for #29 and false here — #41's day step refuses, not clamps, so a lowered ceiling halts an existing career loudly (config-reversible); the asymmetry stated at both the codec and this section. |
 #endregion

@@ -62,3 +62,7 @@ docs/specs/season-competition-loop/section-3.md:seam is empty until # #31/#34/#3
 docs/specs/season-competition-loop/section-3.md:Empty until #(35|46) T2 # #35/#46 have no src/ assemblies — true seam notes
 docs/specs/season-competition-loop/section-3.md:NULL SEAM until #40 T2 # #40 has no src/ assembly — true seam note
 docs/specs/season-competition-loop/section-3.md:when they land # The pass-12 corrected clause — its list now names only unlanded specs, verified against the assembly map
+# SCOPE DECISION (AR pass 14 L3): lint_draw_key skips version-history rows entirely, but rows are
+# where this project's spelling record lives — the #27 §2 v0.3 row carried the last unsanctioned
+# spelling and was annotated in place instead. If a future pass narrows the exclusion to
+# CHANGELOG*/spec-error-log only, delete this comment.
