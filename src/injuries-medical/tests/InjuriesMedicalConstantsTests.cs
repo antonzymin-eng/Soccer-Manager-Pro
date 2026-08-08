@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/tests/InjuriesMedicalConstantsTests.cs
 // Created:  2026-08-05
-// Modified: 2026-08-05
+// Modified: 2026-08-07
 // Author:   —
 // Spec:     Injuries & Medical #41 Appendix A + §3.2/§3.4; Code Standards #20
 // Purpose:  Catalogue invariants — the per-mille split is well-formed, the tier table covers every
@@ -85,12 +85,19 @@ namespace TacticalDirector.InjuriesMedical.Tests
         }
 
         [Test]
-        public void DrawDenominator_TracksTheRiskCeiling()
+        public void DrawDenominator_IsFixed_AndBoundsTheRiskCeiling()
         {
-            Assert.AreEqual(InjuriesMedicalConstants.InjuryRiskMax, InjuriesMedicalConstants.OccurrenceDrawDenom,
-                "§3.4: the assembled risk is compared directly against the draw, so any gap between " +
-                "these two silently rescales every occurrence probability.");
-            Assert.Greater(InjuriesMedicalConstants.OccurrenceDrawDenom, 0);
+            // ERR-041-011 replaced the old DENOM == InjuryRiskMax identity: the draw is
+            // hash % denominator, so a config-tunable denominator re-rolls every career's draws.
+            // The denominator is now [FIXED] and the ceiling must sit at or below it — the invariant
+            // that keeps every daily probability <= 1, also enforced fail-loud at the draw site.
+            Assert.AreEqual(1_000_000, InjuriesMedicalConstants.OCCURRENCE_DRAW_DENOM,
+                "[FIXED]: changing this value re-rolls every keyed occurrence draw in every career — " +
+                "it is not a tuning dial (ERR-041-011).");
+            Assert.LessOrEqual(InjuriesMedicalConstants.InjuryRiskMax,
+                InjuriesMedicalConstants.OCCURRENCE_DRAW_DENOM,
+                "the [GT] risk ceiling must never exceed the [FIXED] draw denominator, or a clamped " +
+                "risk silently means 'certain and then some'.");
         }
 
         [Test]
@@ -176,4 +183,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
 // | 1.2     | 2026-08-05 | —      | AR pass 4 (L): the fixture now states that it pins the design-time |
 // |         |            |        | fallbacks, not a bound config — the distinction ERR-041-003 turned |
 // |         |            |        | on, and unstated in a fixture whose whole subject is [GT] values.  |
+// | 1.3     | 2026-08-07 | —      | Balance pass D3 (ERR-041-011): the DENOM == InjuryRiskMax lock    |
+// |         |            |        | becomes the [FIXED]-denominator pin + the ceiling <= denominator  |
+// |         |            |        | invariant.                                                        |
 #endregion

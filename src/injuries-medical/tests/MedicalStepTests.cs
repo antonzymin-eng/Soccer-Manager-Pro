@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/tests/MedicalStepTests.cs
 // Created:  2026-08-05
-// Modified: 2026-08-05
+// Modified: 2026-08-07
 // Author:   —
 // Spec:     Injuries & Medical #41 §3.1–§3.4 + Appendices A/B/C; Code Standards #20
 // Purpose:  T-MD-DET-001/003/005/006/007/009, T-MD-ORD-001, T-MD-SEV-001/002, T-MD-REC-001,
@@ -34,9 +34,55 @@ namespace TacticalDirector.InjuriesMedical.Tests
             return a;
         }
 
-        /// <summary>A risk input high enough that the clamp pins it to the draw denominator, so <c>draw &lt; risk</c> holds for every possible draw — an occurrence is certain.</summary>
-        private static InjuryRiskContribution CertainOccurrenceRisk() =>
+        /// <summary>
+        /// A risk input that saturates the <c>InjuryRiskMax</c> clamp — the HIGHEST risk any input can
+        /// produce. Since ERR-041-011 that is a 1% daily probability, not certainty: the draw is
+        /// uniform in the 100×-larger <c>OCCURRENCE_DRAW_DENOM</c>, so "an occurrence happens" is
+        /// forced by pairing this with a day whose keyed draw is known to fall under the clamp
+        /// (<see cref="HotDay"/>) — deterministic, because the draw is a pure function of
+        /// <c>(seed, playerId, day)</c>.
+        /// </summary>
+        private static InjuryRiskContribution MaxOccurrenceRisk() =>
             new InjuryRiskContribution(InjuriesMedicalConstants.InjuryRiskMax * 4);
+
+        /// <summary>
+        /// The first world day at or after <paramref name="start"/> whose keyed occurrence draw for
+        /// <paramref name="playerId"/> falls below the <c>InjuryRiskMax</c> clamp — a day on which a
+        /// max-risk player IS injured. Pure scan over the keyed derivation; ~1% of days qualify, so
+        /// the bound is generous and the result is a constant of (WorldSeed, playerId).
+        /// </summary>
+        private static uint HotDay(uint start, int playerId = PlayerId)
+        {
+            for (uint day = start; day < start + 10_000; day++)
+            {
+                int draw = MedicalStep.DrawOccurrence(
+                    WorldSeed, playerId,
+                    MedicalStep.DeriveActionOrdinal(day, InjuriesMedicalConstants.DRAW_PURPOSE_OCCURRENCE));
+                if (draw < InjuriesMedicalConstants.InjuryRiskMax)
+                {
+                    return day;
+                }
+            }
+
+            Assert.Fail("No hot day within 10,000 of day " + start + " — the draw distribution is broken.");
+            return 0;
+        }
+
+        /// <summary>The first player id whose keyed draw on world day 0 falls below the clamp — for the day-0 sentinel test, whose day cannot move.</summary>
+        private static int HotPlayerOnDayZero()
+        {
+            ulong ordinal = MedicalStep.DeriveActionOrdinal(0, InjuriesMedicalConstants.DRAW_PURPOSE_OCCURRENCE);
+            for (int pid = 1; pid < 100_000; pid++)
+            {
+                if (MedicalStep.DrawOccurrence(WorldSeed, pid, ordinal) < InjuriesMedicalConstants.InjuryRiskMax)
+                {
+                    return pid;
+                }
+            }
+
+            Assert.Fail("No hot player on day 0 within 100,000 ids — the draw distribution is broken.");
+            return 0;
+        }
 
         /// <summary>A risk input that clamps to zero, so no draw can ever be below it — an occurrence is impossible.</summary>
         private static InjuryRiskContribution ImpossibleOccurrenceRisk() => InjuryRiskContribution.None;
@@ -57,23 +103,32 @@ namespace TacticalDirector.InjuriesMedical.Tests
         // ── §3.6 — the worked example, term by term ─────────────────────────────────
 
         [Test]
-        public void WorkedExample_RiskAssembly_Is2900()
+        public void WorkedExample_RiskAssembly_Is6600()
         {
+            // §3.6 as re-derived at ERR-041-011: 1×3000 + 4000 (baseline, before the mitigation —
+            // position normative) − 400 = 6600, unchanged by the ×1000/1000 identity multiplier.
             int risk = MedicalStep.AssembleRiskScore(
                 new InjuryRiskContribution(3000),
-                new MatchLoad(appearanceDays: 2, hardContacts: 0),
+                MatchLoad.None,
                 WorkedExampleAttributes(),
                 MedicalModifier.Identity);
 
-            // 1×3000 + 150×2 − 400 = 2900, unchanged by the ×1000/1000 identity multiplier.
-            Assert.AreEqual(2900, risk);
+            Assert.AreEqual(6600, risk);
+
+            // And the same player in a congested week saturates the clamp: 3000 + 2×5600 + 4000 −
+            // 400 = 17800 → InjuryRiskMax. The ceiling is the 1% hard cap, not the formula.
+            Assert.AreEqual(InjuriesMedicalConstants.InjuryRiskMax, MedicalStep.AssembleRiskScore(
+                new InjuryRiskContribution(3000),
+                new MatchLoad(appearanceDays: 2, hardContacts: 0),
+                WorkedExampleAttributes(),
+                MedicalModifier.Identity));
         }
 
         [Test]
-        public void WorkedExample_Draw1500AgainstRisk2900_IsMinor_TTMDSEV001()
+        public void WorkedExample_Draw3500AgainstRisk6600_IsMinor_TTMDSEV001()
         {
-            // 1_500_000 < 2900 × 600 = 1_740_000 ⇒ Minor. The integer cross-multiply, no division.
-            Assert.AreEqual(InjurySeverity.Minor, MedicalStep.ClassifySeverityFromDraw(draw: 1500, risk: 2900));
+            // 3500 × 1000 = 3_500_000 < 6600 × 600 = 3_960_000 ⇒ Minor. Integer cross-multiply.
+            Assert.AreEqual(InjurySeverity.Minor, MedicalStep.ClassifySeverityFromDraw(draw: 3500, risk: 6600));
             Assert.AreEqual(7, MedicalStep.AssignRecoveryDays(InjurySeverity.Minor, MedicalModifier.Identity));
         }
 
@@ -116,22 +171,31 @@ namespace TacticalDirector.InjuriesMedical.Tests
         [Test]
         public void RecoveringToZero_CannotAlsoReinjure_InOneCall_TTMDORD001()
         {
+            // A day whose keyed draw falls under the max-risk clamp: an eligible max-risk player IS
+            // injured on this day, so if the gate read the post-countdown state instead of the entry
+            // state, the call below would heal and immediately re-injure.
+            uint hot = HotDay(1);
+
             var state = InjuryState.Create();
             state.Severity = InjurySeverity.Minor;
             state.RecoveryRemaining = 1;
-            state.LastAdvancedWorldDay = 211;
+            state.LastAdvancedWorldDay = hot - 1;
             state.InjuryCount = 1;
 
-            // Occurrence is CERTAIN under this risk — so if the gate read the post-countdown state
-            // instead of the entry state, this call would heal and immediately re-injure, and the
-            // player's injury would appear never to end.
-            Advance(ref state, 212, CertainOccurrenceRisk());
+            Advance(ref state, hot, MaxOccurrenceRisk());
 
             Assert.AreEqual(InjurySeverity.None, state.Severity, "recovered this call...");
             Assert.AreEqual(1, state.InjuryCount, "...and NOT re-injured by the same call (KD-6 / FR-MD-004).");
 
-            // The next call finds the player healthy at entry, so the certain occurrence now fires.
-            Advance(ref state, 213, CertainOccurrenceRisk());
+            // Walk day by day (F7 forbids a gap) to the NEXT hot day: the player is healthy at entry
+            // there, so the occurrence fires.
+            uint next = HotDay(hot + 1);
+            for (uint day = hot + 1; day < next; day++)
+            {
+                Advance(ref state, day, ImpossibleOccurrenceRisk());
+            }
+
+            Advance(ref state, next, MaxOccurrenceRisk());
 
             Assert.AreNotEqual(InjurySeverity.None, state.Severity);
             Assert.AreEqual(2, state.InjuryCount);
@@ -143,12 +207,16 @@ namespace TacticalDirector.InjuriesMedical.Tests
         [Test]
         public void AlreadyAdvancedDay_IsANoOp_TTMDDET005()
         {
+            // A hot day, so the first advance really draws an occurrence — a re-run that re-drew
+            // would be visible in InjuryCount rather than vacuously equal.
+            uint hot = HotDay(1);
             var state = InjuryState.Create();
-            Advance(ref state, 100, CertainOccurrenceRisk());
+            Advance(ref state, hot, MaxOccurrenceRisk());
+            Assert.AreEqual(1, state.InjuryCount, "precondition: the first advance drew an occurrence");
             InjuryState afterFirst = state;
 
-            Advance(ref state, 100, CertainOccurrenceRisk());
-            Advance(ref state, 99, CertainOccurrenceRisk());
+            Advance(ref state, hot, MaxOccurrenceRisk());
+            Advance(ref state, hot - 1, MaxOccurrenceRisk());
 
             Assert.AreEqual(afterFirst.Severity, state.Severity);
             Assert.AreEqual(afterFirst.RecoveryRemaining, state.RecoveryRemaining);
@@ -163,7 +231,9 @@ namespace TacticalDirector.InjuriesMedical.Tests
             var state = InjuryState.Create();
             Assert.AreEqual(InjuriesMedicalConstants.MEDICAL_NOT_ADVANCED_SENTINEL, state.LastAdvancedWorldDay);
 
-            Advance(ref state, 0, CertainOccurrenceRisk());
+            // Day 0 cannot move, so the PLAYER moves: one whose keyed draw on day 0 is hot, proving
+            // the day really was evaluated rather than skipped.
+            Advance(ref state, 0, MaxOccurrenceRisk(), playerId: HotPlayerOnDayZero());
 
             // With a 0 sentinel this call would have read as "already advanced" and the player would
             // never have been evaluated at all.
@@ -217,7 +287,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
             foreach (int draw in new[] { a, b, c, d })
             {
                 Assert.GreaterOrEqual(draw, 0);
-                Assert.Less(draw, InjuriesMedicalConstants.OccurrenceDrawDenom);
+                Assert.Less(draw, InjuriesMedicalConstants.OCCURRENCE_DRAW_DENOM);
             }
 
             // Adjacent player ids, adjacent days and adjacent seeds must not produce correlated
@@ -309,15 +379,19 @@ namespace TacticalDirector.InjuriesMedical.Tests
         {
             var state = InjuryState.Create();
 
-            for (uint day = 0; day < 400; day++)
+            // Walk through at least one KNOWN-hot day at max risk, or the zero-injury assertion is
+            // satisfiable by luck rather than by the dial.
+            uint lastDay = HotDay(0) + 10;
+            for (uint day = 0; day <= lastDay; day++)
             {
-                Advance(ref state, day, CertainOccurrenceRisk(), occurrenceEnabled: false);
+                Advance(ref state, day, MaxOccurrenceRisk(), occurrenceEnabled: false);
             }
 
             Assert.AreEqual(InjurySeverity.None, state.Severity);
             Assert.AreEqual(0, state.InjuryCount,
-                "with the dial off, severity can only ever fall toward None — no draw is issued at all.");
-            Assert.AreEqual(399u, state.LastAdvancedWorldDay, "the cursor still advances; only the draw is skipped.");
+                "with the dial off, severity can only ever fall toward None — no draw is issued at " +
+                "all, even through a day whose draw WOULD have injured a max-risk player.");
+            Assert.AreEqual(lastDay, state.LastAdvancedWorldDay, "the cursor still advances; only the draw is skipped.");
         }
 
         [Test]
@@ -356,12 +430,12 @@ namespace TacticalDirector.InjuriesMedical.Tests
                 "KD-5: a no-staff game recovers in exactly the tier's recovery-days constant.");
 
             Assert.AreEqual(
-                3000 - 400,
+                3000 + InjuriesMedicalConstants.BaselineDailyRisk - 400,
                 MedicalStep.AssembleRiskScore(
                     new InjuryRiskContribution(3000), MatchLoad.None, WorkedExampleAttributes(),
                     MedicalModifier.Identity),
                 "the identity occurrence multiplier leaves the assembled score at #29's contribution " +
-                "less the mean-14 robustness row.");
+                "plus the baseline term less the mean-14 robustness row (ERR-041-011).");
         }
 
         [Test]
@@ -399,7 +473,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
         {
             var state = InjuryState.Create();
             PlayerAttributes a = WorkedExampleAttributes();
-            InjuryRiskContribution risk = CertainOccurrenceRisk();
+            InjuryRiskContribution risk = MaxOccurrenceRisk();
 
             Assert.Throws<ArgumentException>(
                 () => MedicalStep.AdvanceMedicalDay(
@@ -509,7 +583,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
             // Both ends of #29's clamped output must land inside the range #41 draws against, or the
             // comparison in §3.1 is not on one scale (the coupling High-1 of AR pass 1 turned on).
             Assert.GreaterOrEqual(freshRisk, 0);
-            Assert.LessOrEqual(wornRisk, InjuriesMedicalConstants.OccurrenceDrawDenom);
+            Assert.LessOrEqual(wornRisk, InjuriesMedicalConstants.InjuryRiskMax);
 
             // The worst case a real player can reach — and the recorded fact that it does NOT saturate.
             TrainingState wrecked = TrainingState.Create(TrainingFocus.Physical);
@@ -525,97 +599,105 @@ namespace TacticalDirector.InjuriesMedical.Tests
 
             // BOTH layers mitigate on the SAME three physical attributes: #29 §3.4 subtracts its
             // robustness term before clamping, then #41 §3.4 subtracts its own from the result. Each
-            // spec mandates its own term, so this is spec-faithful — but it means a player's
-            // robustness is priced in twice, the two [GT] tables cannot be tuned independently, and
-            // #29's saturated 'maximum risk' NEVER means certain occurrence at #41 (the [1,20]
-            // attribute floor guarantees #41 always subtracts at least its mean-1 row). Recorded here
-            // rather than left to be rediscovered during the balance pass.
+            // spec mandates its own term, so this is spec-faithful and recorded (ERR-041-003). Since
+            // the balance pass (ERR-041-011) the old "never reaches the consumer's ceiling" fact is
+            // GONE — BaselineDailyRisk pushes the worst case past the clamp, deliberately — so the
+            // recorded property is now the clamp itself: the worst reachable case saturates at
+            // InjuryRiskMax exactly, and InjuryRiskMax over the [FIXED] denominator is the hard daily
+            // probability ceiling (1% at today's values). Anchored to the [GT] ceiling, NOT to the
+            // 100x-larger denominator — an assertion against the denominator would be the
+            // always-true-disjunction class this suite has already burned on.
             Assert.Greater(maxRisk, 0, "the worst realistic player must still carry real risk.");
-            Assert.Less(maxRisk, InjuriesMedicalConstants.OccurrenceDrawDenom,
-                "double mitigation: #41 re-subtracts on attributes #29 already priced in, so the " +
-                "producer's ceiling cannot reach the consumer's.");
+            Assert.AreEqual(InjuriesMedicalConstants.InjuryRiskMax, maxRisk,
+                "the worst reachable case saturates the clamp — the ceiling is real, not decorative.");
+            Assert.LessOrEqual(maxRisk, InjuriesMedicalConstants.OCCURRENCE_DRAW_DENOM,
+                "and the clamp is what keeps every daily probability <= 1 (ERR-041-011 invariant).");
         }
 
         /// <summary>
-        /// The rate the wired system would actually produce, measured through the real #29 → #41 chain
-        /// and recorded as the balance pass's BEFORE numbers.
+        /// The rate the wired system actually produces, measured through the real #29 → #41 chain.
         /// <para>
-        /// Every other occurrence test in this fixture hand-feeds <see cref="CertainOccurrenceRisk"/>
-        /// — <c>InjuryRiskMax × 4</c>, a value the producer chain cannot reach, since #29 clamps at the
-        /// ceiling and #41 then subtracts its own mitigation. So the fixture proves an injury happens
-        /// when one is forced and proves none happens with the dial off, and until this test it never
-        /// established what the wired system does at inputs a career actually produces. That is the
-        /// ERR-030-014 shape: a suite that asserts the machine runs rather than that it works.
+        /// <b>The balance pass's AFTER numbers</b> (ERR-041-011; the BEFORE numbers this test locked
+        /// from T0 to the pass were 23.1% / exactly-0-forever / 43.1% per day — two to three orders of
+        /// magnitude out in both directions). Under the retune the same three career states, plus the
+        /// appearance rows the BEFORE version could not have (ERR-041-010(b) had no record to read),
+        /// land in the football band: fractions of a percent per day, matches the dominant term, and
+        /// a hard 1% ceiling from the <c>InjuryRiskMax</c> clamp.
         /// </para>
         /// <para>
-        /// <b>What it produces is not football.</b> The three numbers below are locked deliberately, so
-        /// the balance pass leaves a visible diff. They are NOT retuned here: #29 and #41 are inert (no
-        /// production caller constructs either), and KD-W1 forbids landing a <c>[GT]</c> that governs an
-        /// unwired subsystem. Recorded, not fixed — the ERR-041-003 posture.
+        /// Asserted in <b>per-hundred-thousand</b>, not per-mille: at the per-million denominator a
+        /// per-mille read is <c>risk / 1000</c>, which hides ±300 of risk inside one output unit —
+        /// the resolution trap the evidence advisor flagged on the old helper.
         /// </para>
         /// </summary>
         [Test]
-        public void DailyOccurrenceProbability_ThroughTheRealChain_IsRecordedForTheBalancePass()
+        public void DailyOccurrenceProbability_ThroughTheRealChain_MatchesTheBalancePassFit()
         {
             PlayerAttributes average = PlayerAttributes.CreateDefault();
 
             // 1. The state #30 inserts for a regen at the season boundary — fully rested, perfectly
-            //    average, never trained a day. 231 per-mille is a 23% chance of being injured on his
-            //    FIRST day, and an expected ~4 days to first injury: ConditionStart (7000) sits 3000
-            //    below ConditionMax, and LowConditionRiskWeight carries that shortfall at weight 1 on
-            //    the very scale the draw denominator is derived from, so "not yet at peak" is priced
-            //    like "half dead".
-            Assert.AreEqual(231, DailyOccurrencePermille(TrainingState.Create(TrainingFocus.Balanced), average),
-                "a freshly inserted regen is 23% likely to be injured on day 0.");
+            //    average, never trained a day. The conditioning shortfall now reads as an elevated
+            //    ramp-in risk (0.63%/day, decaying as conditioning climbs over ~39 days), not the
+            //    BEFORE version's 23%-per-day absurdity.
+            Assert.AreEqual(631, DailyOccurrencePer100k(TrainingState.Create(TrainingFocus.Balanced), average),
+                "a freshly inserted regen carries 0.63%/day during ramp-in.");
 
-            // 2. The steady state of the DEFAULT focus. Balanced's daily load (200) exactly equals
-            //    FatigueDailyRecovery (200), so fatigue never accrues; conditioning climbs to the
-            //    ceiling in ~39 days and the shortfall term goes to zero. From then on the risk clamps
-            //    to 0 and STAYS there: on the default focus, with no matches, a player can never be
-            //    injured again. A subsystem whose default path emits exactly zero events is
-            //    indistinguishable from one that is switched off.
+            // 2. The steady state of the DEFAULT focus. Balanced's fatigue still nets exactly 0 and
+            //    conditioning still reaches the ceiling — but BaselineDailyRisk keeps a fit player at
+            //    a real 0.37%/day floor (≈1 injury per season with no matches), where the BEFORE
+            //    version converged on exactly 0 forever: a subsystem indistinguishable from OFF.
             TrainingState peak = TrainingState.Create(TrainingFocus.Balanced);
             peak.Condition = TrainingSystemConstants.ConditionMax;
             peak.TrainingFatigue = 0;
-            Assert.AreEqual(0, DailyOccurrencePermille(peak, average),
-                "the default focus converges on a permanently injury-proof player.");
+            Assert.AreEqual(371, DailyOccurrencePer100k(peak, average),
+                "the default focus floors at the baseline term, not at injury-proof-forever.");
 
-            // 3. The other end, and the reason (2) is not simply "the weights are low": half of the
-            //    fatigue range is 43% per day. The two ends are three orders of magnitude apart in
-            //    expected time-to-injury, and the traverse between them is monotone — there is no
-            //    setting of these weights that makes both ends plausible while the risk scale and the
-            //    draw denominator are the same 10000.
+            // 3. Sustained half-fatigue on a Fitness regime: elevated (0.83%/day ≈ +2.2x the fit
+            //    floor), no longer the BEFORE version's 43%/day.
             TrainingState halfSpent = TrainingState.Create(TrainingFocus.Fitness);
             halfSpent.Condition = TrainingSystemConstants.ConditionMax;
             halfSpent.TrainingFatigue = TrainingSystemConstants.TrainingFatigueMax / 2;
-            Assert.AreEqual(431, DailyOccurrencePermille(halfSpent, average),
-                "and half-fatigued is 43% per day.");
+            Assert.AreEqual(831, DailyOccurrencePer100k(halfSpent, average),
+                "half-fatigued sits at 0.83%/day — elevated, not absurd.");
 
-            // For scale: a real squad sees roughly one or two injuries per player per SEASON, so a
-            // plausible band for an average fit player is well under 1 per-mille per day. Every number
-            // above is two to three orders of magnitude out. The lever that rescales all of them
-            // without touching a single shape is the shared ceiling itself — InjuryRiskMax is both
-            // #29's risk clamp and, through OccurrenceDrawDenom, the draw's denominator (the [CROSS]
-            // mirror of ERR-041-003 is what makes it one dial rather than two). Recorded here as the
-            // balance pass's first lever, not asserted: that the two are equal is already true by
-            // construction and locked in InjuriesMedicalConstantsTests.
+            // 4. The appearance term, through the real chain (the pass's LARGEST constant — the old
+            //    characterization passed MatchLoad.None and left it unmeasured). One match in the
+            //    window adds 0.56%/day for the window's 7 days: ≈3.9% cumulative per match, ~1.5
+            //    match-driven injuries over a 38-round season for an ever-present starter (E-1's
+            //    match:training dominance).
+            Assert.AreEqual(931, DailyOccurrencePer100k(peak, average, new MatchLoad(1, 0)),
+                "a fit starter the week after a match: 0.93%/day.");
+
+            // 5. Two matches in one window saturates the InjuryRiskMax clamp: the daily probability
+            //    ceiling is exactly 1%. Recorded consequence: congestion beyond two matches/week is
+            //    NOT priced further at Stage 2 — the compression the research supplement's R-2 refit
+            //    inherits (its §10 note), not a bug to fix here.
+            Assert.AreEqual(1000, DailyOccurrencePer100k(peak, average, new MatchLoad(2, 0)),
+                "a congested week hits the hard 1% ceiling (the clamp, not the formula).");
         }
 
         /// <summary>
-        /// The daily occurrence probability in per-mille, driven end to end: #29 computes the risk
-        /// scalar from the training state, #41 assembles it and compares against a draw uniform in
-        /// <c>[0, OccurrenceDrawDenom)</c>, so the probability IS the assembled risk over that
-        /// denominator.
+        /// The daily occurrence probability in per-hundred-thousand, driven end to end: #29 computes
+        /// the risk scalar from the training state, #41 assembles it and compares against a draw
+        /// uniform in <c>[0, OCCURRENCE_DRAW_DENOM)</c>, so the probability IS the assembled risk over
+        /// that denominator.
         /// </summary>
-        private static int DailyOccurrencePermille(in TrainingState training, in PlayerAttributes attributes)
+        private static int DailyOccurrencePer100k(
+            in TrainingState training, in PlayerAttributes attributes)
+        {
+            return DailyOccurrencePer100k(in training, in attributes, MatchLoad.None);
+        }
+
+        private static int DailyOccurrencePer100k(
+            in TrainingState training, in PlayerAttributes attributes, in MatchLoad load)
         {
             int risk = MedicalStep.AssembleRiskScore(
                 TrainingStep.ComputeInjuryRisk(training, attributes),
-                MatchLoad.None,
+                in load,
                 attributes,
                 MedicalModifier.Identity);
 
-            return risk * 1000 / InjuriesMedicalConstants.OccurrenceDrawDenom;
+            return (int)((long)risk * 100_000 / InjuriesMedicalConstants.OCCURRENCE_DRAW_DENOM);
         }
 
         [Test]
@@ -635,9 +717,21 @@ namespace TacticalDirector.InjuriesMedical.Tests
         {
             PlayerAttributes a = WorkedExampleAttributes();
 
-            Assert.AreEqual(0,
-                MedicalStep.AssembleRiskScore(InjuryRiskContribution.None, MatchLoad.None, a, MedicalModifier.Identity),
-                "the mitigation exceeds the raw risk here; the result floors at 0 rather than going negative.");
+            // Since ERR-041-011 the baseline term (before mitigation, position normative) keeps every
+            // valid-input score ABOVE the floor at the default constants — which is the point: nobody
+            // is injury-proof. So the floor itself is exercised through the clamp helper (a negative
+            // sum is reachable only under a config that shrinks the baseline below the mitigation),
+            // and the design fact is asserted on the most robust player representable.
+            Assert.AreEqual(0, MedicalStep.ClampLong(-1, 0, InjuriesMedicalConstants.InjuryRiskMax),
+                "the floor is 0 — a negative assembled sum must clamp, not go negative.");
+            PlayerAttributes iron = PlayerAttributes.CreateDefault();
+            iron.Strength = 20;
+            iron.Stamina = 20;
+            iron.Balance = 20;
+            Assert.Greater(
+                MedicalStep.AssembleRiskScore(InjuryRiskContribution.None, MatchLoad.None, iron, MedicalModifier.Identity),
+                0,
+                "even the most robust player keeps a positive baseline floor — nobody is injury-proof (ERR-041-011).");
 
             Assert.AreEqual(InjuriesMedicalConstants.InjuryRiskMax,
                 MedicalStep.AssembleRiskScore(
@@ -653,7 +747,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
             PlayerAttributes copy = a;
 
             MedicalStep.AdvanceMedicalDay(
-                ref state, PlayerId, a, CertainOccurrenceRisk(), MatchLoad.None, MedicalModifier.Identity,
+                ref state, PlayerId, a, MaxOccurrenceRisk(), MatchLoad.None, MedicalModifier.Identity,
                 100, WorldSeed, occurrenceEnabled: true);
 
             // #41 reads #27 attributes and #29's scalar; it writes neither, and it has no path to any
@@ -705,4 +799,13 @@ namespace TacticalDirector.InjuriesMedical.Tests
 // |         |            |        | regen is 23% likely to be injured on day 0 and the DEFAULT focus   |
 // |         |            |        | converges on exactly 0 forever. Recorded, not retuned (KD-W1).     |
 // |         |            |        | (L): + the AssignRecoveryDays None-tier guard.                     |
+// | 1.4     | 2026-08-07 | —      | Balance pass D3 (ERR-041-011): the characterization test moves to |
+// |         |            |        | the AFTER numbers at per-100k resolution and gains the MatchLoad  |
+// |         |            |        | rows (the old one measured the pass's largest constant not at     |
+// |         |            |        | all); certainty is unreachable at the per-million denominator, so |
+// |         |            |        | CertainOccurrenceRisk becomes MaxOccurrenceRisk + a deterministic |
+// |         |            |        | HotDay/HotPlayerOnDayZero scan over the keyed derivation; the     |
+// |         |            |        | worked example re-derives to 6600 (+ the clamp line); the         |
+// |         |            |        | TrainingRiskFlows lock re-anchors to the InjuryRiskMax clamp      |
+// |         |            |        | (its old denominator bound became an always-true).                |
 #endregion

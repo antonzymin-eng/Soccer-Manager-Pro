@@ -1,9 +1,10 @@
 # Season & Competition Loop Specification #30 — Appendices
 
 **Created:** July 22, 2026
-**Last Updated:** July 27, 2026 (v0.4 — back-props ERR-030-017 (#47 conditional authored sub-blob) + ERR-030-019 (#50 `SaveOriginStamp` in the outer frame) landed atomically with the ten-spec approval wave; Appendix B's outer-frame description amended)
+**Last Updated:** August 7, 2026 (v0.5 — the #29/#41 balance pass D2 (ERR-041-010(b)): Appendix B's outer-frame description gains the three mandatory career sub-blobs — the #29 training and #41 medical blocks (frame v2→3, landed at their T1 and previously unrecorded here) and the new #30 appearance block (frame v3→4), between the season block and the optional match block)
+**Last Updated (prior):** July 27, 2026 (v0.4 — back-props ERR-030-017 (#47 conditional authored sub-blob) + ERR-030-019 (#50 `SaveOriginStamp` in the outer frame) landed atomically with the ten-spec approval wave; Appendix B's outer-frame description amended)
 **Last Updated (prior):** July 25, 2026 (v0.3 — ERR-030-010 Appendix C venue correction, found at #30 T0)
-**Version:** 0.4
+**Version:** 0.5
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -57,13 +58,29 @@ The season block, in order (all via `CanonicalSerializer`; every length prefix v
 > make the sub-blob round-trip exact with no NaN gate.
 
 
-The outer `SeasonSaveCodec` frame nesting this block, **as amended by the July 27, 2026 approval wave**:
+The outer `SeasonSaveCodec` frame nesting this block, **as amended by the July 27, 2026 approval wave
+and by the #29/#41 landings (T1 frame v3; the balance pass frame v4)**:
 
 `SEASON_SAVE_FORMAT_VERSION (u32) → SaveOriginStamp{ WorldGenerationVersion i32, BuildId i32 } →
 matchPresent flag (u8) → hasAuthoredDb flag (u8) → [len u32]world → [len u32]season →
+[len u32]training → [len u32]medical → [len u32]appearance →
 ([len u32]match iff matchPresent) → ([len u32]authoredDb iff hasAuthoredDb)`
 
 Trailing bytes after the declared content ⇒ throw (F3).
+
+**The three mandatory career sub-blobs.** The #29 training block (`TRAINING_SAVE_FORMAT_VERSION`,
+FR-TR-018, frame v2→3), the #41 medical block (`MEDICAL_SAVE_FORMAT_VERSION`, FR-MD-017, same bump)
+and the #30 appearance block (`APPEARANCE_SAVE_FORMAT_VERSION`, ERR-041-010(b), frame v3→4) sit
+between the season block and the optional match block, in that order, all three **mandatory** — career
+state has no absent case, only an empty one (a zero-club block), so no presence flags are added and a
+later wiring change needs no further frame bump. Each is typed at the `Encode` seam
+(`TrainingBlock` / `MedicalBlock` / `AppearanceBlock`) and self-identified by a leading magic
+(ERR-029-005 / ERR-041-009: a format version distinguishes generations of one format, never one format
+from another). The appearance block is #30's own domain — the per-player fielded-XI record that
+supplies #41's FR-MD-010 `MatchLoad`, which neither sibling block may carry (each is forbidden to
+describe the other's domain). *(Note the `SaveOriginStamp` / `hasAuthoredDb` elements above remain
+future amendments landing at #50/#47 T1; the frame in code today is
+`version → matchPresent → world → season → training → medical → appearance → [match]`.)*
 
 **`SaveOriginStamp` (ERR-030-019, at #50's approval)** sits in the **frame**, immediately after the
 version and **before any length-prefixed blob**. The placement is load-bearing rather than aesthetic:
@@ -131,4 +148,5 @@ is a **total order** — no two rows ever compare equal (FR-SN-007).
 | 0.2 | 2026-07-22 | — | Section-file PASS-1: whole-round resolution (KD-9 / FR-SN-012/013a/013b / §3.4 / ManagedClubId), API-name corrections (`RunTick`→`MatchEnded`, `ResolveByClubId`), `uint` world-day, KD-collision + label reconciliation. See section-9 §9.3. |
 | 0.3 | 2026-07-25 | — | **ERR-030-010** (found at #30 T0 implementation): Appendix C rounds 1 and 4 venue-corrected — the table was hand-derived without §3.1's round-parity venue rule. Pairings unchanged, so the 12-ordered-pair completeness bullet is unaffected; justification (20-club venue distribution) recorded inline. |
 | 0.4 | 2026-07-27 | — | **ERR-030-019** (#50) + **ERR-030-017** (#47), landed atomically with the ten-spec approval wave. Appendix B's outer-frame description gains the `SaveOriginStamp` (`WorldGenerationVersion` + `BuildId`) immediately after the version field and **before any length-prefixed blob** — the placement is load-bearing, since #50's classifier must read the generation version without parsing a sub-blob, and `BuildId` is recorded as **diagnostic only** so it can never become a migration input; and the **conditional** authored-database sub-blob, written only when `hasAuthoredDb`, with the flag/blob agreement required in both directions and failing loud. The world, season and match blobs are byte-untouched by both. |
+| 0.5 | 2026-08-07 | — | **Balance pass D2 (ERR-041-010(b))**: Appendix B's frame gains the mandatory #29 training / #41 medical blocks (v2→3 — a T1 change this appendix had missed) and the #30 appearance block (v3→4): the per-player fielded-XI record supplying FR-MD-010's `MatchLoad`, #30-owned because neither sibling block may describe the other's domain. All three mandatory (career state has an empty case, never an absent one), typed at the Encode seam, magic-led per ERR-029-005/ERR-041-009. |
 #endregion

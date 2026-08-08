@@ -6,11 +6,11 @@
 //           Injuries & Medical #41 §3.1/§3.5, §4.3, FR-MD-003/009/010/022/023/025/027;
 //           Season & Competition Loop #30 §3.3 (KD-2 slot order), §3.5 (the boundary), FR-SN-034;
 //           path-to-playable D2/D3 (T2); Code Standards #20
-// Purpose:  The #30-side owner of the per-club #29 training and #41 medical state — the thing that was
-//           missing at T1, when both codecs existed and nothing constructed a state set for them to
-//           encode. Holds both sets keyed by (ClubId, PlayerId), drives the two day steps at #30's
-//           slot-2 / slot-4, answers the availability question squad selection reads, projects
-//           match-entry fatigue, and keeps roster membership in lockstep (FR-TR-025 / FR-MD-025).
+// Purpose:  The #30-side owner of the per-club #29 training, #41 medical and #30 appearance state.
+//           Holds the three sets keyed by (ClubId, PlayerId), drives the two day steps at #30's
+//           slot-2 / slot-4, supplies the FR-MD-010 MatchLoad from the appearance record, answers the
+//           availability question squad selection reads, projects match-entry fatigue, and keeps
+//           roster membership in lockstep (FR-TR-025 / FR-MD-025).
 
 using System;
 using System.Collections.Generic;
@@ -34,9 +34,10 @@ namespace TacticalDirector.SeasonSave
     /// key sets are checked to agree.
     /// </para>
     /// <para>
-    /// <b>#41's occurrence draw is OFF by default</b> (<see cref="InjuryOccurrenceEnabled"/>,
-    /// FR-MD-027). The wiring is what T2 delivers; arming it is the balance pass's, and the reason is
-    /// measured rather than cautious — see the property's own documentation.
+    /// <b>#41's occurrence draw is ARMED</b> (<see cref="InjuryOccurrenceEnabled"/>, FR-MD-027 as
+    /// revised at the balance pass): construction declares the dial's position explicitly, production
+    /// passes <c>true</c>, and the OFF position remains supported for isolation — see the property's
+    /// own documentation.
     /// </para>
     /// <para>
     /// <b>One-way composition.</b> #29 and #41 reference neither #30 nor each other's step; this type
@@ -61,6 +62,7 @@ namespace TacticalDirector.SeasonSave
         private readonly List<int[]> _playerIds = new List<int[]>();
         private readonly List<TrainingState[]> _training = new List<TrainingState[]>();
         private readonly List<InjuryState[]> _injury = new List<InjuryState[]>();
+        private readonly List<AppearanceState[]> _appearance = new List<AppearanceState[]>();
 
         private PlayerCareerStates(bool injuryOccurrenceEnabled)
         {
@@ -87,25 +89,23 @@ namespace TacticalDirector.SeasonSave
         public int RosterGeneration { get; private set; }
 
         /// <summary>
-        /// The #41 KD-8 dial (FR-MD-027). <b>Off by default, deliberately.</b>
+        /// The #41 KD-8 dial (FR-MD-027). <b>ARMED at the balance pass — a production career is
+        /// constructed with this ON</b>; the measured rates at the retuned constants sit in the
+        /// football band (league ~780 injuries/season over the 20-club bootstrap, starters ~2.1,
+        /// reserves ~1.1, squad unavailability ~9%, locked league-wide by the season-scale
+        /// instrument). The pre-pass absurdities the dial was shipped OFF for — 23%/day for a fresh
+        /// regen, 43%/day half-fatigued, exactly-0-forever on the default focus — are gone
+        /// (ERR-041-011; the characterization test carries the AFTER numbers).
         /// <para>
-        /// The fifth adversarial-review pass over #41's T0 landing measured the daily occurrence
-        /// probability through the real producer chain rather than through a forced risk, and it is two
-        /// to three orders of magnitude out at career inputs in both directions: a freshly inserted
-        /// player is ~23% likely to be injured on his first day (his conditioning starts
-        /// <c>ConditionMax − ConditionStart</c> below the ceiling and that shortfall carries weight 1 on
-        /// the very scale the draw denominator derives from), a half-fatigued player ~43% per day, and
-        /// the default <see cref="TrainingFocus.Balanced"/> focus converges on exactly 0 forever. Those
-        /// three numbers are locked by a characterization test in #41's own suite so the balance pass
-        /// leaves a visible diff, and KD-W1 forbids re-tuning a <c>[GT]</c> ahead of that pass.
+        /// <b>The argument is REQUIRED, not defaulted, deliberately:</b> a default — in either
+        /// position — changes behaviour at every omitting call site with no diff at those sites the
+        /// day it flips. Construction declares the position: production passes <c>true</c>; a test
+        /// isolating the recovery-only path passes <c>false</c>, which stays supported and locked
+        /// both ways (a dial-off season injures nobody; a dial-on season injures at the band).
         /// </para>
         /// <para>
-        /// So T2 wires the call path and leaves it disarmed: with the dial off, <c>AdvanceMedicalDay</c>
-        /// reduces to the recovery countdown with no draw at all, which for a career that has never
-        /// been injured is a no-op over the cursor. Everything downstream of an injury — the
-        /// availability filter, the depleted-squad back-fill, the view models — is live and tested
-        /// against directly-constructed injured states, so flipping this dial at the balance pass is a
-        /// one-argument change rather than a second wiring pass.
+        /// With the dial off, <c>AdvanceMedicalDay</c> reduces to the recovery countdown with no draw
+        /// at all — the FR-MD-027 identity.
         /// </para>
         /// </summary>
         public bool InjuryOccurrenceEnabled { get; }
@@ -156,7 +156,7 @@ namespace TacticalDirector.SeasonSave
         /// <exception cref="ArgumentNullException">A required argument is null.</exception>
         /// <exception cref="ArgumentException"><paramref name="clubIds"/> repeats a club, or a club cannot be resolved to a roster.</exception>
         public static PlayerCareerStates ForLeague(
-            ISquadProvider squads, int[] clubIds, bool injuryOccurrenceEnabled = false)
+            ISquadProvider squads, int[] clubIds, bool injuryOccurrenceEnabled)
         {
             if (squads == null)
             {
@@ -199,6 +199,8 @@ namespace TacticalDirector.SeasonSave
                 career._playerIds.Add(ids);
                 career._training.Add(training);
                 career._injury.Add(injury);
+                // default(AppearanceState) is the valid fresh state here — no day-0 trap, see the type.
+                career._appearance.Add(new AppearanceState[ids.Length]);
             }
 
             return career;
@@ -228,13 +230,15 @@ namespace TacticalDirector.SeasonSave
         /// </summary>
         /// <param name="training">The decoded #29 blocks.</param>
         /// <param name="medical">The decoded #41 blocks.</param>
+        /// <param name="appearance">The decoded #30 appearance blocks — required, never null-meaning-empty (the T1 AR's silent-empty-career rule).</param>
         /// <param name="injuryOccurrenceEnabled">The #41 KD-8 dial; see <see cref="InjuryOccurrenceEnabled"/>.</param>
-        /// <exception cref="ArgumentNullException">Either array is null.</exception>
-        /// <exception cref="ArgumentException">The two blocks disagree on the club set or on any club's player set.</exception>
+        /// <exception cref="ArgumentNullException">Any array is null.</exception>
+        /// <exception cref="ArgumentException">The blocks disagree on the club set or on any club's player set.</exception>
         public static PlayerCareerStates FromBlocks(
             ClubTrainingStates[] training,
             ClubInjuryStates[] medical,
-            bool injuryOccurrenceEnabled = false)
+            ClubAppearanceStates[] appearance,
+            bool injuryOccurrenceEnabled)
         {
             if (training == null)
             {
@@ -246,11 +250,17 @@ namespace TacticalDirector.SeasonSave
                 throw new ArgumentNullException(nameof(medical));
             }
 
-            if (training.Length != medical.Length)
+            if (appearance == null)
+            {
+                throw new ArgumentNullException(nameof(appearance));
+            }
+
+            if (training.Length != medical.Length || training.Length != appearance.Length)
             {
                 throw new ArgumentException(
-                    $"The training block carries {training.Length} clubs and the medical block "
-                    + $"{medical.Length}; the two describe the same career and must agree.",
+                    $"The training block carries {training.Length} clubs, the medical block "
+                    + $"{medical.Length} and the appearance block {appearance.Length}; the three "
+                    + "describe the same career and must agree.",
                     nameof(medical));
             }
 
@@ -260,6 +270,7 @@ namespace TacticalDirector.SeasonSave
             {
                 ClubTrainingStates t = training[c];
                 ClubInjuryStates m = medical[c];
+                ClubAppearanceStates a = appearance[c];
 
                 // A default-valued block: its constructor refuses nulls, so the only way to hold one is
                 // to have never constructed it (`new ClubTrainingStates[n]`). Caught here rather than
@@ -272,30 +283,39 @@ namespace TacticalDirector.SeasonSave
                         t.PlayerIds == null || t.States == null ? nameof(training) : nameof(medical));
                 }
 
-                if (t.ClubId != m.ClubId)
+                if (a.PlayerIds == null || a.States == null)
                 {
                     throw new ArgumentException(
-                        $"Block {c}: the training block is club {t.ClubId} and the medical block is "
-                        + $"club {m.ClubId}. Both codecs canonicalize to ascending ClubId, so this is a "
-                        + "mismatched pair, not a re-ordering.",
+                        $"Block {c} of the appearance set is a default value, not a constructed one.",
+                        nameof(appearance));
+                }
+
+                if (t.ClubId != m.ClubId || t.ClubId != a.ClubId)
+                {
+                    throw new ArgumentException(
+                        $"Block {c}: the training block is club {t.ClubId}, the medical block club "
+                        + $"{m.ClubId}, the appearance block club {a.ClubId}. All three codecs "
+                        + "canonicalize to ascending ClubId, so this is a mismatched set, not a "
+                        + "re-ordering.",
                         nameof(medical));
                 }
 
-                if (t.Count != m.Count)
+                if (t.Count != m.Count || t.Count != a.Count)
                 {
                     throw new ArgumentException(
-                        $"Club {t.ClubId}: the training block carries {t.Count} players and the medical "
-                        + $"block {m.Count}.",
+                        $"Club {t.ClubId}: the training block carries {t.Count} players, the medical "
+                        + $"block {m.Count}, the appearance block {a.Count}.",
                         nameof(medical));
                 }
 
                 for (int i = 0; i < t.Count; i++)
                 {
-                    if (t.PlayerIds[i] != m.PlayerIds[i])
+                    if (t.PlayerIds[i] != m.PlayerIds[i] || t.PlayerIds[i] != a.PlayerIds[i])
                     {
                         throw new ArgumentException(
                             $"Club {t.ClubId}, entry {i}: the training block holds player "
-                            + $"{t.PlayerIds[i]} and the medical block player {m.PlayerIds[i]}.",
+                            + $"{t.PlayerIds[i]}, the medical block player {m.PlayerIds[i]}, the "
+                            + $"appearance block player {a.PlayerIds[i]}.",
                             nameof(medical));
                     }
 
@@ -344,11 +364,14 @@ namespace TacticalDirector.SeasonSave
                 Array.Copy(t.States, trainingStates, t.Count);
                 var injuryStates = new InjuryState[m.Count];
                 Array.Copy(m.States, injuryStates, m.Count);
+                var appearanceStates = new AppearanceState[a.Count];
+                Array.Copy(a.States, appearanceStates, a.Count);
 
                 career._clubIds.Add(t.ClubId);
                 career._playerIds.Add(t.PlayerIds);
                 career._training.Add(trainingStates);
                 career._injury.Add(injuryStates);
+                career._appearance.Add(appearanceStates);
             }
 
             return career;
@@ -392,6 +415,58 @@ namespace TacticalDirector.SeasonSave
             }
 
             return blocks;
+        }
+
+        /// <summary>The #30 appearance state as the per-club blocks <see cref="AppearanceSaveCodec.Encode"/> takes, <c>internal</c> on the same borrowing / single-writer terms as <see cref="TrainingBlocks"/>.</summary>
+        internal ClubAppearanceStates[] AppearanceBlocks()
+        {
+            var blocks = new ClubAppearanceStates[_clubIds.Count];
+            for (int c = 0; c < blocks.Length; c++)
+            {
+                blocks[c] = new ClubAppearanceStates(_clubIds[c], _playerIds[c], _appearance[c]);
+            }
+
+            return blocks;
+        }
+
+        /// <summary>
+        /// Records that <paramref name="fieldedPlayerIds"/> were fielded by <paramref name="clubId"/>
+        /// on <paramref name="worldDay"/> — the ERR-041-010(b) appearance record, written by
+        /// <see cref="SeasonLoop.AdvanceAndPlayNextRound"/> after each fixture resolves, on BOTH
+        /// resolution paths. <c>internal</c>: the season loop is the single production writer, the
+        /// same discipline as <see cref="SetMedicalState"/>.
+        /// <para>
+        /// Validate-all-then-write per club: every id is resolved before any bit is set, so an id the
+        /// career does not carry leaves the whole club's matchday unrecorded rather than half-recorded.
+        /// Re-recording the same day is idempotent (<see cref="AppearanceWindow.Record"/> is a bit-OR).
+        /// </para>
+        /// </summary>
+        /// <param name="clubId">The fielding club.</param>
+        /// <param name="fieldedPlayerIds">The fielded players — the starting XI the selector chose.</param>
+        /// <param name="worldDay">The fixture day.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="fieldedPlayerIds"/> is null.</exception>
+        /// <exception cref="ArgumentException">The club or a fielded player is not carried by this career, or the day precedes an already-recorded appearance.</exception>
+        internal void RecordAppearances(int clubId, int[] fieldedPlayerIds, uint worldDay)
+        {
+            if (fieldedPlayerIds == null)
+            {
+                throw new ArgumentNullException(nameof(fieldedPlayerIds));
+            }
+
+            int club = RequireClub(clubId);
+            int[] ids = _playerIds[club];
+            AppearanceState[] states = _appearance[club];
+
+            var indices = new int[fieldedPlayerIds.Length];
+            for (int i = 0; i < fieldedPlayerIds.Length; i++)
+            {
+                indices[i] = RequireIndexOfPlayer(ids, clubId, fieldedPlayerIds[i]);
+            }
+
+            for (int i = 0; i < indices.Length; i++)
+            {
+                AppearanceWindow.Record(ref states[indices[i]], worldDay);
+            }
         }
 
         /// <summary>
@@ -459,15 +534,12 @@ namespace TacticalDirector.SeasonSave
         /// throw — it would quietly price every injury off a one-day-stale training state.
         /// </para>
         /// <para>
-        /// <b><c>MatchLoad.None</c> is passed, and that is a recorded remainder rather than an
-        /// oversight.</b> FR-MD-010 makes the match-load term the caller's to supply, and an exact
-        /// per-player appearance record is #30-side state that neither #29's nor #41's save block may
-        /// carry (each is forbidden to describe the other's domain), so it needs a persisted home and a
-        /// format decision this landing does not make. Recomputing it from the fixture list instead is
-        /// not equivalent once the availability filter starts changing who actually played. The term is
-        /// inert while <see cref="InjuryOccurrenceEnabled"/> is off — <c>AssembleRiskScore</c> is not
-        /// even reached — so nothing today depends on it; it is due with the balance pass that arms the
-        /// dial.
+        /// <b>The FR-MD-010 match-load term is supplied from the #30 appearance record</b>
+        /// (ERR-041-010(b), closed at the balance pass): <see cref="RecordAppearances"/> writes each
+        /// fielded XI post-round, and this step reads the windowed count through
+        /// <see cref="AppearanceWindow.AppearanceDaysOn"/> — which never includes the current day, so
+        /// the pre-round draw (ERR-030-027) can never see a match that has not been played.
+        /// <c>HardContacts</c> stays 0 (deep-tier, KD-3).
         /// </para>
         /// </summary>
         /// <param name="worldDay">The world day being advanced — #30's clock BEFORE its day-9 increment.</param>
@@ -490,27 +562,40 @@ namespace TacticalDirector.SeasonSave
                 int[] ids = _playerIds[c];
                 TrainingState[] training = _training[c];
                 InjuryState[] injury = _injury[c];
+                AppearanceState[] appearance = _appearance[c];
 
                 for (int i = 0; i < ids.Length; i++)
                 {
                     int local = RequireLocalIndex(squad, _clubIds[c], ids[i]);
                     PlayerRecord record = squad.GetPlayer(local);
 
-                    // The risk is an occurrence-draw input and nothing else, so with the dial off it is
-                    // read by nobody: #41's step only reaches AssembleRiskScore inside the
-                    // `wasAvailableAtEntry && occurrenceEnabled` branch. Computing it anyway would be a
-                    // per-player-per-day cost on every career today for a value that is discarded — and,
-                    // worse to read, would suggest the recovery countdown depends on it.
-                    InjuryRiskContribution risk = InjuryOccurrenceEnabled
-                        ? TrainingStep.ComputeInjuryRisk(in training[i], in record.Attributes)
-                        : InjuryRiskContribution.None;
+                    // The risk and the match load are occurrence-draw inputs and nothing else, so with
+                    // the dial off they are read by nobody: #41's step only reaches AssembleRiskScore
+                    // inside the `wasAvailableAtEntry && occurrenceEnabled` branch. Computing them
+                    // anyway would be a per-player-per-day cost on every career today for values that
+                    // are discarded — and, worse to read, would suggest the recovery countdown depends
+                    // on them.
+                    InjuryRiskContribution risk;
+                    MatchLoad load;
+                    if (InjuryOccurrenceEnabled)
+                    {
+                        risk = TrainingStep.ComputeInjuryRisk(in training[i], in record.Attributes);
+                        load = new MatchLoad(
+                            AppearanceWindow.AppearanceDaysOn(in appearance[i], worldDay),
+                            hardContacts: 0);
+                    }
+                    else
+                    {
+                        risk = InjuryRiskContribution.None;
+                        load = MatchLoad.None;
+                    }
 
                     MedicalStep.AdvanceMedicalDay(
                         ref injury[i],
                         ids[i],
                         in record.Attributes,
                         in risk,
-                        MatchLoad.None,
+                        in load,
                         in medical,
                         worldDay,
                         worldSeed,
@@ -584,6 +669,7 @@ namespace TacticalDirector.SeasonSave
             var nextIds = new int[clubs][];
             var nextTraining = new TrainingState[clubs][];
             var nextInjury = new InjuryState[clubs][];
+            var nextAppearance = new AppearanceState[clubs][];
             int churn = 0;
 
             for (int c = 0; c < clubs; c++)
@@ -594,9 +680,11 @@ namespace TacticalDirector.SeasonSave
                 int[] heldIds = _playerIds[c];
                 TrainingState[] heldTraining = _training[c];
                 InjuryState[] heldInjury = _injury[c];
+                AppearanceState[] heldAppearance = _appearance[c];
 
                 var training = new TrainingState[rosterIds.Length];
                 var injury = new InjuryState[rosterIds.Length];
+                var appearance = new AppearanceState[rosterIds.Length];
                 int carried = 0;
 
                 for (int i = 0; i < rosterIds.Length; i++)
@@ -606,11 +694,13 @@ namespace TacticalDirector.SeasonSave
                     {
                         training[i] = heldTraining[held];
                         injury[i] = heldInjury[held];
+                        appearance[i] = heldAppearance[held];
                         carried++;
                     }
                     else
                     {
                         // A fresh id: Create, never default — the day-0 trap both specs name.
+                        // (AppearanceState's default IS its fresh state; the array element stays.)
                         training[i] = TrainingState.Create(TrainingFocus.Balanced);
                         injury[i] = InjuryState.Create();
                         churn++;
@@ -624,9 +714,11 @@ namespace TacticalDirector.SeasonSave
                 nextIds[c] = rosterIds;
                 nextTraining[c] = training;
                 nextInjury[c] = injury;
+                nextAppearance[c] = appearance;
             }
 
-            return new RosterSyncPlan(RosterGeneration, nextIds, nextTraining, nextInjury, churn);
+            return new RosterSyncPlan(
+                RosterGeneration, nextIds, nextTraining, nextInjury, nextAppearance, churn);
         }
 
         /// <summary>
@@ -659,6 +751,7 @@ namespace TacticalDirector.SeasonSave
                 _playerIds[c] = plan.PlayerIds[c];
                 _training[c] = plan.Training[c];
                 _injury[c] = plan.Injury[c];
+                _appearance[c] = plan.Appearance[c];
             }
 
             // Bumped unconditionally, not only when churn > 0: the arrays are replaced either way, so a
@@ -689,6 +782,9 @@ namespace TacticalDirector.SeasonSave
             /// <summary>Per club, the reconciled medical states.</summary>
             internal readonly InjuryState[][] Injury;
 
+            /// <summary>Per club, the reconciled appearance states.</summary>
+            internal readonly AppearanceState[][] Appearance;
+
             /// <summary>Entries inserted plus removed by this plan.</summary>
             internal readonly int Churn;
 
@@ -697,18 +793,21 @@ namespace TacticalDirector.SeasonSave
             /// <param name="playerIds">Per-club reconciled player ids.</param>
             /// <param name="training">Per-club reconciled training states.</param>
             /// <param name="injury">Per-club reconciled medical states.</param>
+            /// <param name="appearance">Per-club reconciled appearance states.</param>
             /// <param name="churn">Entries inserted plus removed.</param>
             internal RosterSyncPlan(
                 int generation,
                 int[][] playerIds,
                 TrainingState[][] training,
                 InjuryState[][] injury,
+                AppearanceState[][] appearance,
                 int churn)
             {
                 Generation = generation;
                 PlayerIds = playerIds;
                 Training = training;
                 Injury = injury;
+                Appearance = appearance;
                 Churn = churn;
             }
         }
@@ -1193,4 +1292,18 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | Behaviour is exactly what v1.2 described; it had simply never been |
 // |         |            |        | compiled, which is what every "NO GATE RUN" note on this landing   |
 // |         |            |        | was warning about.                                                 |
+// | 1.4     | 2026-08-07 | —      | Balance pass D2 (ERR-041-010(b)): the third state set. Owns the    |
+// |         |            |        | per-player AppearanceState (lazily-shifted bitmask, no KD-2 day    |
+// |         |            |        | slot), written by RecordAppearances (internal — SeasonLoop is the  |
+// |         |            |        | single production writer) and read into the FR-MD-010 MatchLoad at |
+// |         |            |        | slot 4, window-excluded from the current day per ERR-030-027.      |
+// |         |            |        | FromBlocks takes the third block set (required, coherence-checked, |
+// |         |            |        | states COPIED like its siblings); the roster sync carries          |
+// |         |            |        | appearance state with the same plan/commit staging.                |
+// | 1.5     | 2026-08-07 | —      | Balance pass D4: the dial is ARMED (FR-MD-027 as revised). The     |
+// |         |            |        | injuryOccurrenceEnabled argument becomes REQUIRED on ForLeague and |
+// |         |            |        | FromBlocks — a default in either position flips every omitting     |
+// |         |            |        | call site with no diff the day it changes; construction declares   |
+// |         |            |        | the position (production true; isolation tests false, both locked  |
+// |         |            |        | at season scale by SeasonInjuryRealismTests).                      |
 #endregion

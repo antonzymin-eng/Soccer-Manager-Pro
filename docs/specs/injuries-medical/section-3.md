@@ -1,8 +1,9 @@
 # Injuries & Medical #41 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.3
+**Last Updated:** August 7, 2026 (v0.4 — ERR-041-011 at the balance pass: §3.4 gains the normative-position `BASELINE_DAILY_RISK` term; the draw denominator decouples to the `[FIXED]` per-million `OCCURRENCE_DRAW_DENOM` with the `INJURY_RISK_MAX ≤ DENOM` invariant; §3.1's pseudocode re-anchored onto the keyed derivation (ERR-041-002/ERR-041-012); §3.6 re-derived (6600, + the congestion-clamp line))
+**Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -45,8 +46,12 @@ AdvanceMedicalDay(ref InjuryState s, playerId, in PlayerAttributes a, in InjuryR
     if wasAvailableAtEntry:
         risk = AssembleRiskScore(trainingRisk, recentMatchLoad, a, medical)   # §3.4; in [0, INJURY_RISK_MAX]
         actionOrdinal = DeriveActionOrdinal(worldDay, DRAW_PURPOSE_OCCURRENCE)     # §3.1.1
-        draw = rng.DrawKeyed(STREAM_INJURIES_OCCURRENCE, entityId: playerId,
-                              actionOrdinal: actionOrdinal, drawIndex: 0)          # in [0, OCCURRENCE_DRAW_DENOM)
+        # ERR-041-002 (re-anchored at ERR-041-011): the draw is a LOCAL KEYED DERIVATION, not a
+        # registered-stream call — #16 exposes no keyed-draw API and a registered stream is
+        # cursor-positioned, which KD-1/FR-MD-007 forbid. DrawOccurrence folds
+        # DOMAIN_TAG_INJURIES_MEDICAL, then playerId, then actionOrdinal, each through a SplitMix64
+        # finalizer, reduced modulo the [FIXED] denominator:
+        draw = DrawOccurrence(worldSeed, playerId, actionOrdinal)                  # in [0, OCCURRENCE_DRAW_DENOM)
         if draw < risk:                            # occurrence — the SAME draw also classifies severity (§3.2)
             severity = ClassifySeverityFromDraw(draw, risk)                       # §3.2 — NO second draw
             s.Severity           = severity
@@ -91,8 +96,9 @@ ClassifySeverityFromDraw(draw, risk) -> InjurySeverity:
     # draw is already known to be < risk here (an occurrence was confirmed in §3.1). Bucket the SAME
     # draw value deterministically by FIXED proportions (Appendix A) — this is NOT a second RNG draw;
     # KD-1 draws exactly once per player per occurrence-eligible day. INTEGER cross-multiplication (no
-    # float division): draw/risk < n/1000  ⇔  draw*1000 < risk*n. Products are bounded well within int
-    # range (draw,risk <= INJURY_RISK_MAX = 10000 ⇒ <= 10^7); use a widening (long) product to be safe.
+    # float division): draw/risk < n/1000  ⇔  draw*1000 < risk*n. draw < risk <= INJURY_RISK_MAX here
+    # (an occurrence was confirmed), so products are bounded by INJURY_RISK_MAX × 1000 = 10^7; the
+    # implementation widens to long so a raised [GT] ceiling cannot silently overflow (ERR-041-011).
     if draw * SEVERITY_PERMILLE_DENOM < risk * SEVERITY_MINOR_PERMILLE:
         return InjurySeverity.Minor
     elif draw * SEVERITY_PERMILLE_DENOM < risk * (SEVERITY_MINOR_PERMILLE + SEVERITY_MODERATE_PERMILLE):
@@ -123,19 +129,36 @@ AssembleRiskScore(in InjuryRiskContribution trainingRisk, in MatchLoad load, in 
                    in MedicalModifier medical) -> int:
     # All terms and weights are INTEGER (no float — FR-MD-014).
     risk = TRAINING_RISK_PASSTHROUGH_WEIGHT * trainingRisk.RiskScore        # #29's already-published scalar (weight = 1)
-         + APPEARANCE_LOAD_WEIGHT * load.AppearanceDays                    # Stage-2 match-load term
+         + APPEARANCE_LOAD_WEIGHT * load.AppearanceDays                    # Stage-2 match-load term (FR-MD-010 window count)
          + HARD_CONTACT_WEIGHT * load.HardContacts                         # 0 at Stage 2 (deep-tier only)
+         + BASELINE_DAILY_RISK                                             # exposure-independent floor (ERR-041-011)
          - RobustnessMitigation(a)                                         # deterministic, own-attribute
     risk = risk * medical.OccurrenceRiskMillMult / 1000                    # per-mille; ×1.0 at Identity (KD-5)
     return Clamp(risk, 0, INJURY_RISK_MAX)
 ```
 
+**`BASELINE_DAILY_RISK`'s position is normative** (ERR-041-011): it sits **inside the sum, before the
+mitigation**, so robustness discriminates the exposure-independent floor — a frail player's quiet week
+is riskier than an iron man's — and, because #27 attributes floor at 1 and the default magnitudes keep
+`BASELINE_DAILY_RISK` above the largest mitigation row, no valid-input player is ever injury-proof (the
+third absurdity the T0 fifth AR pass measured: the default focus converged on exactly-0-forever). It is
+the exposure-INDEPENDENT term: the research-alignment supplement's R-2 under-exposure arm must re-fit
+against it rather than add beside it, or the left tail is priced three times (its §10 concern).
+
 `RobustnessMitigation` is a fixed deterministic map over existing #27 physical attributes (e.g. `Strength` /
 `Stamina` / `Balance` — never RNG, FR-MD-015); a dedicated `InjuryProneness` attribute is a recorded deep-tier
 #27 append, not consumed here. `trainingRisk` is read-only (KD-2, FR-MD-009); `load` is a value the caller
-supplies (FR-MD-010) — #41 never tracks match participation itself. The result is clamped to the same
-`[0, INJURY_RISK_MAX]` scale the occurrence draw compares against (§3.1), so `OCCURRENCE_DRAW_DENOM ==
-INJURY_RISK_MAX` (Appendix A) and no extra scale factor is needed between the assembled score and the draw.
+supplies (FR-MD-010) — #41 never tracks match participation itself. The result is clamped to
+`[0, INJURY_RISK_MAX]`, and §3.1 tests `draw < risk` against a draw uniform in the **`[FIXED]`
+`OCCURRENCE_DRAW_DENOM` = 1,000,000** — so the assembled score IS the daily probability numerator on a
+per-million scale, capped at `INJURY_RISK_MAX / OCCURRENCE_DRAW_DENOM` (1% at today's values).
+**The denominator is deliberately DECOUPLED from the `[GT]` ceiling** (ERR-041-011, retiring the old
+`OCCURRENCE_DRAW_DENOM == INJURY_RISK_MAX` identity): the draw is `hash % denominator`, so the
+denominator determines the VALUE of every draw, not merely a threshold — a config-tunable denominator
+would re-roll every career's injury luck on a config edit, with the save recording nothing about which
+config produced it. Pinned, config edits move only thresholds. Invariant: `INJURY_RISK_MAX ≤
+OCCURRENCE_DRAW_DENOM`, enforced fail-loud at the draw site (a ceiling past the denominator would make
+a clamped risk mean "certain and then some").
 
 ## 3.5 Composition at #30's day-advance loop (informative)
 
@@ -145,7 +168,8 @@ pins (after #28/#29/#33, before `WorldStore.AdvanceDay()`):
 ```
 for each playerId in club roster:
     trainingRisk    = TrainingSystem.ComputeInjuryRisk(trainingState[playerId], attrs[playerId])   # #29 read
-    recentMatchLoad = ... caller-supplied MatchLoad (Stage 2: AppearanceDays from #30's fixture result) ...
+    recentMatchLoad = ... caller-supplied MatchLoad (Stage 2: AppearanceDays from #30's per-player
+                          appearance record — the FR-MD-010 window count; ERR-041-010(b)) ...
     AdvanceMedicalDay(ref medicalState[playerId], playerId, attrs[playerId], trainingRisk,
                        recentMatchLoad, medical, worldDay, rng)
 ```
@@ -157,15 +181,19 @@ per FR-MD-025 (regen insert / retiree remove).
 
 ## 3.6 Worked example
 
-Player 501, world day 205: `TrainingRiskContribution.RiskScore = 3000`, `MatchLoad.AppearanceDays = 2`
-(`APPEARANCE_LOAD_WEIGHT = 150`), mean robustness attribute `14` (`RobustnessMitigation(14) = 400`),
-`MedicalModifier.Identity`.
+Player 501, world day 205: `TrainingRiskContribution.RiskScore = 3000`, `MatchLoad.AppearanceDays = 0`
+(no match in the FR-MD-010 window), mean robustness attribute `14` (`RobustnessMitigation(14) = 400`),
+`BASELINE_DAILY_RISK = 4000`, `MedicalModifier.Identity`. *(Re-derived at ERR-041-011; the pre-balance-
+pass example used `AppearanceDays = 2` at weight 150 and no baseline, assembling 2900.)*
 
-- `risk = 1×3000 + 150×2 − 400 = 2900` (× `OccurrenceRiskMillMult 1000 / 1000` = unchanged; clamp within
-  `[0, 10000]` inactive).
-- Suppose `draw = 1500` (keyed on `(playerId=501, worldDay=205, purpose=Occurrence)`). Since `1500 < 2900`,
-  an occurrence is confirmed. Integer bucketing: `draw×1000 = 1_500_000` vs `risk×SEVERITY_MINOR_PERMILLE =
-  2900×600 = 1_740_000`; `1_500_000 < 1_740_000` ⇒ **Minor**. `RecoveryDaysForTier[Minor] = 7`; at
+- `risk = 1×3000 + 0 + 4000 − 400 = 6600` (× `OccurrenceRiskMillMult 1000 / 1000` = unchanged; clamp
+  within `[0, 10000]` inactive) — a 0.66%/day probability against the per-million draw. *(The same
+  player the week after two matches assembles `3000 + 2×5600 + 4000 − 400 = 17800`, which CLAMPS to
+  `INJURY_RISK_MAX = 10000`: a congested week sits at the hard 1%/day ceiling, the recorded Stage-2
+  compression R-2's refit inherits.)*
+- Suppose `draw = 3500` (keyed on `(playerId=501, worldDay=205, purpose=Occurrence)`). Since `3500 < 6600`,
+  an occurrence is confirmed. Integer bucketing: `draw×1000 = 3_500_000` vs `risk×SEVERITY_MINOR_PERMILLE =
+  6600×600 = 3_960_000`; `3_500_000 < 3_960_000` ⇒ **Minor**. `RecoveryDaysForTier[Minor] = 7`; at
   `RecoverySpeedMillMult = 1000`, `RecoveryRemaining = max(1, 7×1000/1000) = 7`.
 - `InjuryState`: `Severity = Minor`, `RecoveryRemaining = 7`, `InjuryCount += 1`, `LastAdvancedWorldDay =
   205`.
@@ -186,4 +214,5 @@ Player 501, world day 205: `TrainingRiskContribution.RiskScore = 3000`, `MatchLo
 | 0.1 | 2026-07-23 | — | Initial algorithms: `AdvanceMedicalDay`, action-ordinal derivation, severity bucketing, risk-score assembly, composition, worked example. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1 (1M): integer-arithmetic fix — no float division; integer per-mille severity bucketing; recovery-speed applied once at injury assignment (floored at 1 for F1 coherence); per-mille occurrence-risk mult; worked example redone in integer form. |
 | 0.3 | 2026-07-23 | — | AR-2 (1M): §3.1.1 `DeriveActionOrdinal` uses the fixed `DRAW_PURPOSE_RADIX` (was the growing purpose count, which broke cross-version replay parity on append) + a purpose bound guard. |
+| 0.4 | 2026-08-07 | — | **ERR-041-011 / ERR-041-012 (the balance pass)**: §3.4 formula gains `BASELINE_DAILY_RISK` inside the sum before the mitigation (position normative — robustness discriminates the floor; kills the exactly-0-forever default); the `OCCURRENCE_DRAW_DENOM == INJURY_RISK_MAX` identity retired — denominator `[FIXED]` at 1,000,000, ceiling stays the `[GT]` clamp (1%/day), invariant enforced at the draw site; §3.1 pseudocode shows the real keyed derivation instead of the phantom `rng.DrawKeyed`; §3.2's bound note updated; §3.5 names the ERR-041-010(b) appearance record; §3.6 worked example re-derived (6600; congestion clamps at the ceiling). |
 #endregion

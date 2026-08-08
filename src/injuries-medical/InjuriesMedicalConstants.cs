@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/InjuriesMedicalConstants.cs
 // Created:  2026-08-05
-// Modified: 2026-08-05
+// Modified: 2026-08-07
 // Author:   —
 // Spec:     Injuries & Medical #41 Appendix A (constant catalogue) + §3.1–§3.4; Code Standards #20
 // Purpose:  Every numeric constant for #41 occurrence, severity bucketing and recovery. No magic
@@ -17,8 +17,9 @@ namespace TacticalDirector.InjuriesMedical
 {
     /// <summary>
     /// Constant catalogue for Injuries &amp; Medical #41 (Appendix A). Region order (Code Standards
-    /// #20): Fixed → Derived → Cross → GT. The <c>[GT]</c> magnitudes are illustrative pending the
-    /// Stage-2/3 balance pass — the shapes and directions are the reviewed contract.
+    /// #20): Fixed → Cross → GT. The <c>[GT]</c> magnitudes carry the balance pass's first-guess fit
+    /// (ERR-041-011), measured by the season-scale instrument — the shapes and directions are the
+    /// reviewed contract.
     /// <para>
     /// <b>Every value here is an integer</b> (FR-MD-014). Nothing in #41 is a float, which keeps the
     /// whole system clear of float-mode / MXCSR sensitivity — the reason the severity split is a
@@ -82,22 +83,22 @@ namespace TacticalDirector.InjuriesMedical
         /// </summary>
         public const int DRAW_PURPOSE_RADIX = 16;
 
-        #endregion
-
-        #region Derived
-
         /// <summary>
-        /// [DERIVED] The keyed occurrence draw's output range is <c>[0, OccurrenceDrawDenom)</c>.
-        /// Formula: <c>OccurrenceDrawDenom = InjuryRiskMax</c>. §3.1 / §3.4.
-        /// Source constants: <see cref="InjuryRiskMax"/>.
+        /// [FIXED] The keyed occurrence draw's range: uniform in <c>[0, OCCURRENCE_DRAW_DENOM)</c>, so
+        /// the daily occurrence probability is <c>risk / OCCURRENCE_DRAW_DENOM</c> at a resolution of
+        /// one per-million (§3.1 / §3.4, ERR-041-011).
         /// <para>
-        /// Deriving it rather than declaring a second number is what lets §3.1 compare the assembled
-        /// risk score against the draw with no scale factor between them. It is a property, not a
-        /// <c>static readonly</c> field, because a field in this region would initialise BEFORE the
-        /// <c>Cross</c>-region field it reads and silently capture 0.
+        /// <b>[FIXED], and deliberately DECOUPLED from the <c>[GT]</c> <see cref="InjuryRiskMax"/> it
+        /// was originally derived from.</b> The draw is <c>hash % denominator</c>, so the denominator
+        /// determines the VALUE of every draw, not merely the threshold it is compared against — a
+        /// config-tunable denominator would mean one config edit re-rolls every career's injury luck,
+        /// with the save recording nothing about which config produced it (#50's
+        /// <c>SaveOriginStamp</c> is unbuilt). With it pinned, config edits move only thresholds; the
+        /// draw sequence is stable. The catalogue invariant <c>InjuryRiskMax ≤ OCCURRENCE_DRAW_DENOM</c>
+        /// keeps every probability ≤ 1 and is enforced fail-loud at the draw site.
         /// </para>
         /// </summary>
-        public static int OccurrenceDrawDenom => InjuryRiskMax;
+        public const int OCCURRENCE_DRAW_DENOM = 1_000_000;
 
         #endregion
 
@@ -112,25 +113,21 @@ namespace TacticalDirector.InjuriesMedical
         public static readonly byte DomainTagInjuriesMedical = DeterministicSimConstants.DOMAIN_TAG_INJURIES_MEDICAL;
 
         /// <summary>
-        /// [CROSS] The occurrence-risk clamp ceiling, and — through <see cref="OccurrenceDrawDenom"/> —
-        /// the keyed draw's range.
+        /// [CROSS] The occurrence-risk clamp ceiling — the maximum <see cref="MedicalStep.AssembleRiskScore"/>
+        /// can return, and therefore the daily probability ceiling
+        /// <c>InjuryRiskMax / OCCURRENCE_DRAW_DENOM</c> (1% at today's values).
         /// Authoritative source: <c>TrainingSystemConstants.InjuryRiskMax</c>. Training System #29
         /// Appendix A; consumed here per #41 §3.4.
         /// <para>
-        /// <b>Mirrored, not re-declared.</b> §3.4 passes #29's <c>RiskScore</c> through with weight 1 and
-        /// compares it directly against a draw in <c>[0, OccurrenceDrawDenom)</c>, so the two are one
-        /// scale by contract. Appendix A tags this <c>[GT]</c> in #41's own catalogue, which would give
-        /// it a second config key (<c>[injuries-medical] InjuryRiskMax</c>) independent of
-        /// <c>[training-system] InjuryRiskMax</c> — and setting one without the other silently rescales
-        /// every occurrence probability while #29's maximum risk quietly stops meaning "certain". That
-        /// is the duplicate-truth trap the <c>[CROSS]</c> routing rule exists to prevent (the
-        /// ERR-037-001 precedent). One owner, one key.
+        /// <b>Mirrored, not re-declared.</b> §3.4 passes #29's <c>RiskScore</c> through with weight 1,
+        /// so producer and consumer clamp on one scale by contract; a second config key would let one
+        /// side be set without the other (ERR-041-003, the ERR-037-001 precedent). One owner, one key.
         /// </para>
         /// <para>
-        /// The divergence from #41's Appendix A is filed and resolved as <b>ERR-041-003</b>
-        /// (<c>docs/tracking/spec-error-log.md</c>), which carries the back-prop re-tagging that row
-        /// <c>[CROSS]</c> at the spec's next revision. Do not "restore" the <c>[GT]</c> read here to
-        /// match the current spec text — read the ERR entry first.
+        /// <b>No longer the draw's denominator</b> (ERR-041-011, the balance pass): the draw range is
+        /// the <c>[FIXED]</c> <see cref="OCCURRENCE_DRAW_DENOM"/>, so tuning this ceiling moves the
+        /// probability ceiling without re-rolling any career's draws. Invariant:
+        /// <c>InjuryRiskMax ≤ OCCURRENCE_DRAW_DENOM</c>, enforced fail-loud at the draw site.
         /// </para>
         /// </summary>
         public static readonly int InjuryRiskMax = TrainingSystemConstants.InjuryRiskMax;
@@ -160,8 +157,43 @@ namespace TacticalDirector.InjuriesMedical
         /// <summary>[GT] Integer weight on #29's already-published <c>InjuryRiskContribution.RiskScore</c> in the risk assembly (§3.4). Config key [injuries-medical] TrainingRiskPassthroughWeight.</summary>
         public static readonly int TrainingRiskPassthroughWeight = Config.GetInt("injuries-medical", "TrainingRiskPassthroughWeight", 1);
 
-        /// <summary>[GT] Risk contribution per <see cref="MatchLoad.AppearanceDays"/> — the Stage-2 match-load term. Config key [injuries-medical] AppearanceLoadWeight.</summary>
-        public static readonly int AppearanceLoadWeight = Config.GetInt("injuries-medical", "AppearanceLoadWeight", 150);
+        /// <summary>
+        /// [GT] Risk contribution per <see cref="MatchLoad.AppearanceDays"/> — the Stage-2 match-load
+        /// term, on the <see cref="OCCURRENCE_DRAW_DENOM"/> per-million scale (ERR-041-011). One
+        /// appearance contributes for the whole <see cref="AppearanceWindowDays"/> window, so its
+        /// cumulative per-match probability is ≈ <c>window × weight / OCCURRENCE_DRAW_DENOM</c>
+        /// (≈ 3.9% at today's 7 × 5600 — first-guess, fitted so an ever-present starter carries
+        /// ~1.5 match-driven injuries over a 38-round season, the E-1 match:training split).
+        /// Config key [injuries-medical] AppearanceLoadWeight.
+        /// </summary>
+        public static readonly int AppearanceLoadWeight = Config.GetInt("injuries-medical", "AppearanceLoadWeight", 5600);
+
+        /// <summary>
+        /// [GT] The exposure-independent daily base risk added into §3.4's assembly BEFORE the
+        /// robustness mitigation (position is normative — before, so robustness discriminates it;
+        /// ERR-041-011), on the <see cref="OCCURRENCE_DRAW_DENOM"/> per-million scale. First-guess
+        /// 4000 (0.4%/day gross, ~0.37% net of average mitigation) targets ~1 injury per season for a
+        /// non-playing squad member — the training-ground floor that keeps the default Balanced focus
+        /// from converging on an injury-proof player (the fifth AR pass's third measured absurdity).
+        /// <para>
+        /// <b>Note for the research-alignment supplement (its §10):</b> this is the exposure-
+        /// independent term. R-2's under-exposure arm must RE-FIT against it rather than add beside
+        /// it, or the left tail is priced three times (low-Condition + under-exposure + baseline).
+        /// </para>
+        /// Config key [injuries-medical] BaselineDailyRisk.
+        /// </summary>
+        public static readonly int BaselineDailyRisk = Config.GetInt("injuries-medical", "BaselineDailyRisk", 4000);
+
+        /// <summary>
+        /// [GT] The <see cref="MatchLoad.AppearanceDays"/> window in world-days (FR-MD-010 /
+        /// ERR-041-010(b)): an appearance counts toward the occurrence risk for this many days AFTER
+        /// the match, never including the current day (ERR-030-027 — the draw runs pre-round, so the
+        /// window must not be able to contain a match not yet played). #41 owns this because it defines
+        /// what the <c>MatchLoad</c> input MEANS; #30 owns the record that supplies it
+        /// (<c>SeasonSave.AppearanceWindow</c>), which structurally bounds the value to <c>[1, 31]</c>
+        /// (a u32 bitmask) and fails loud outside it. Config key [injuries-medical] AppearanceWindowDays.
+        /// </summary>
+        public static readonly int AppearanceWindowDays = Config.GetInt("injuries-medical", "AppearanceWindowDays", 7);
 
         /// <summary>[GT] Risk contribution per <see cref="MatchLoad.HardContacts"/>. Zero at Stage 2 — the field is deep-tier only (KD-3), so a non-zero value is a config change rather than a formula rewrite. Config key [injuries-medical] HardContactWeight.</summary>
         public static readonly int HardContactWeight = Config.GetInt("injuries-medical", "HardContactWeight", 0);
@@ -247,4 +279,14 @@ namespace TacticalDirector.InjuriesMedical
 // |         |            |        | without naming the id that tracks it; the type doc credited the     |
 // |         |            |        | per-mille split to a pre-commit review pass this file's history     |
 // |         |            |        | does not record.                                                   |
+// | 1.3     | 2026-08-07 | —      | Balance pass D2+D3 (ERR-041-010(b) / ERR-041-011). D2: +           |
+// |         |            |        | AppearanceWindowDays [GT] (the FR-MD-010 window unit). D3: the     |
+// |         |            |        | draw denominator becomes the [FIXED] OCCURRENCE_DRAW_DENOM =       |
+// |         |            |        | 1,000,000, DECOUPLED from the [GT] InjuryRiskMax — a config-       |
+// |         |            |        | tunable denominator re-rolls every career's draws, a pinned one    |
+// |         |            |        | moves only thresholds (the Derived region retires with the         |
+// |         |            |        | property). + BaselineDailyRisk [GT] 4000 (before mitigation,       |
+// |         |            |        | position normative); AppearanceLoadWeight 150 -> 5600 on the new   |
+// |         |            |        | per-million scale. InjuryRiskMax stays the (1%) probability        |
+// |         |            |        | ceiling through the invariant InjuryRiskMax <= DENOM.              |
 #endregion

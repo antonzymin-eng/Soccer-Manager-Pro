@@ -1,8 +1,9 @@
 # Injuries & Medical #41 — Appendices
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.3
+**Last Updated:** August 7, 2026 (v0.4 — ERR-041-011 at the balance pass: Appendix A's `INJURY_RISK_MAX` re-tagged `[CROSS: #29 Appendix A]` (discharging ERR-041-003's standing back-prop), `OCCURRENCE_DRAW_DENOM` re-tagged `[FIXED]` 1,000,000 (decoupled), `APPEARANCE_LOAD_WEIGHT` refitted 150 → 5600 on the new scale, + `BASELINE_DAILY_RISK` 4000 and `APPEARANCE_WINDOW_DAYS` 7)
+**Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -25,10 +26,12 @@ Stage-2/3 balance pass (the #21 G2 precedent); the shapes/directions are the rev
 | `SEVERITY_PERMILLE_DENOM` | 1000 | [FIXED] | Denominator for the integer per-mille severity bucketing (§3.2 uses `draw×DENOM < risk×numerator` — no float division). |
 | `SEVERITY_MINOR_PERMILLE` | 600 | [GT] | Per-mille numerator of the occurrence-draw range (below the risk threshold) classified `Minor` (§3.2). Equivalent to the 0.60 fraction, expressed as an integer to keep bucketing float-free. |
 | `SEVERITY_MODERATE_PERMILLE` | 300 | [GT] | Per-mille numerator classified `Moderate` (cumulative with Minor: 900); the remaining 100‰ is `Serious`. `SEVERITY_MINOR_PERMILLE + SEVERITY_MODERATE_PERMILLE` MUST be ≤ `SEVERITY_PERMILLE_DENOM` (a catalogue invariant). |
-| `INJURY_RISK_MAX` | 10000 | [GT] | Occurrence-risk-score clamp ceiling — the same scale #29's `InjuryRiskContribution.RiskScore` uses (§3.4). |
-| `OCCURRENCE_DRAW_DENOM` | = `INJURY_RISK_MAX` (10000) | [DERIVED] | The keyed draw's output range `[0, OCCURRENCE_DRAW_DENOM)` — derived to match `INJURY_RISK_MAX` so the assembled risk score compares directly against the draw with no extra scale factor (§3.1/§3.4). |
+| `INJURY_RISK_MAX` | 10000 | [CROSS: #29 Appendix A] | Occurrence-risk-score clamp ceiling — mirrored read-only from `TrainingSystemConstants.InjuryRiskMax`, never a second config key (ERR-041-003: one owner, one key). Sets the daily probability CEILING `INJURY_RISK_MAX / OCCURRENCE_DRAW_DENOM` (1% today); MUST be ≤ `OCCURRENCE_DRAW_DENOM` (fail-loud at the draw site). |
+| `OCCURRENCE_DRAW_DENOM` | 1,000,000 | [FIXED] | The keyed draw's output range `[0, OCCURRENCE_DRAW_DENOM)` — per-million probability resolution. **DECOUPLED from `INJURY_RISK_MAX` at ERR-041-011** (the old `== INJURY_RISK_MAX` derivation is retired): the draw is `hash % denominator`, so a config-tunable denominator re-rolls every career's draws; pinned, config edits move only thresholds. |
 | `TRAINING_RISK_PASSTHROUGH_WEIGHT` | 1 | [GT] | Integer weight applied to #29's `InjuryRiskContribution.RiskScore` in the risk-score assembly (§3.4). Integer, not float (FR-MD-014). |
-| `APPEARANCE_LOAD_WEIGHT` | 150 | [GT] | Risk-score contribution per `MatchLoad.AppearanceDays` (Stage-2 match-load term). |
+| `APPEARANCE_LOAD_WEIGHT` | 5600 | [GT] | Risk-score contribution per `MatchLoad.AppearanceDays` (Stage-2 match-load term), on the per-million scale — one appearance contributes for the whole window, ≈ 3.9% cumulative per match at 7 × 5600 (fitted at the balance pass: an ever-present starter carries ~1.5 match-driven injuries per 38-round season, the E-1 match:training split; was 150 on the pre-ERR-041-011 scale). |
+| `BASELINE_DAILY_RISK` | 4000 | [GT] | The exposure-independent daily base risk (ERR-041-011), added BEFORE the mitigation (§3.4 — position normative, so robustness discriminates it). Fitted so a non-playing squad member carries ~1 injury/season; what keeps the default focus from converging on injury-proof-forever. The R-2 under-exposure arm must re-fit against this, not add beside it. |
+| `APPEARANCE_WINDOW_DAYS` | 7 | [GT] | The FR-MD-010 window: an appearance counts toward the risk for this many days after the match, never including the current day (ERR-030-027 — the draw runs pre-round). Structurally bounded to `[1, 31]` by #30's u32 bitmask record (fail-loud outside it). |
 | `HARD_CONTACT_WEIGHT` | 0 (Stage 2) | [GT] | Risk-score contribution per `MatchLoad.HardContacts`; zero at Stage 2 (the field is deep-tier only, KD-3); a future non-zero Stage-3 value is a config-dial change, not a formula rewrite. |
 | `RobustnessMitigation` weights | table | [GT] | Deterministic own-attribute (e.g. `Strength`/`Stamina`/`Balance`) mitigation subtracted from the assembled risk score — never RNG (FR-MD-015). |
 | `DRAW_PURPOSE_OCCURRENCE` | 0 | [FIXED] | The sole Stage-2 draw-purpose ordinal on `injuries.occurrence`. APPEND-only (FR-MD-008) — a future deep-tier purpose (e.g. recurrence) appends the next ordinal, never renumbering this one. |
@@ -75,4 +78,5 @@ addressed or advanced.
 | 0.1 | 2026-07-23 | — | Initial constant catalogue + worked examples (mid-recovery + post-fixture-draw save/restore; behaviour-neutral identity). Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1 (1M): integer-arithmetic fix — `SEVERITY_*_PERMILLE` + `SEVERITY_PERMILLE_DENOM` replace the float severity fractions; `MEDICAL_MODIFIER_IDENTITY_PERMILLE` added; `RECOVERY_DAYS_PER_TICK_BASE` / `TRAINING_RISK_PASSTHROUGH_WEIGHT` clarified integer. |
 | 0.3 | 2026-07-23 | — | AR-2 (1M): `DRAW_PURPOSE_COUNT` [DERIVED] replaced by `DRAW_PURPOSE_RADIX` = 16 [FIXED] (append-parity radix). |
+| 0.4 | 2026-08-07 | — | **ERR-041-011 (the balance pass)**: `INJURY_RISK_MAX` → `[CROSS: #29 Appendix A]` (ERR-041-003 discharged — one owner, one config key; now the 1%/day probability ceiling, ≤ `OCCURRENCE_DRAW_DENOM` fail-loud); `OCCURRENCE_DRAW_DENOM` → `[FIXED]` 1,000,000 (a config-tunable denominator re-rolls every career's draws); `APPEARANCE_LOAD_WEIGHT` 150 → 5600 (per-million scale, ≈3.9%/match over the window); + `BASELINE_DAILY_RISK` 4000 (before-mitigation, the R-2 refit note) and `APPEARANCE_WINDOW_DAYS` 7 (the FR-MD-010 unit, bounded [1,31] by #30's record). |
 #endregion

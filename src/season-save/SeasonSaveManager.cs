@@ -77,7 +77,8 @@ namespace TacticalDirector.SeasonSave
             MatchEngine.MatchEngine matchOrNull,
             string path,
             ClubTrainingStates[] trainingClubs,
-            ClubInjuryStates[] medicalClubs)
+            ClubInjuryStates[] medicalClubs,
+            ClubAppearanceStates[] appearanceClubs)
         {
             if (world == null)
             {
@@ -110,6 +111,12 @@ namespace TacticalDirector.SeasonSave
                     "Pass Array.Empty<ClubInjuryStates>() for a season that tracks no medical state " +
                     "— null is not the empty set (FR-MD-017).");
             }
+            if (appearanceClubs == null)
+            {
+                throw new ArgumentNullException(nameof(appearanceClubs),
+                    "Pass Array.Empty<ClubAppearanceStates>() for a season that tracks no appearance " +
+                    "record — null is not the empty set (#30 Appendix B).");
+            }
             if (string.IsNullOrEmpty(path))
             {
                 throw new ArgumentException("Save path must be non-empty.", nameof(path));
@@ -121,9 +128,10 @@ namespace TacticalDirector.SeasonSave
             byte[] seasonBlob = SeasonStateCodec.Encode(season);
             var trainingBlock = new TrainingBlock(TrainingSaveCodec.Encode(trainingClubs));
             var medicalBlock = new MedicalBlock(MedicalSaveCodec.Encode(medicalClubs));
+            var appearanceBlock = new AppearanceBlock(AppearanceSaveCodec.Encode(appearanceClubs));
             byte[] matchBlob = matchOrNull != null ? MatchSaveManager.Encode(matchOrNull) : null;
             byte[] blob = SeasonSaveCodec.Encode(
-                worldBlob, seasonBlob, in trainingBlock, in medicalBlock, matchBlob);
+                worldBlob, seasonBlob, in trainingBlock, in medicalBlock, in appearanceBlock, matchBlob);
 
             string tempPath = path + ".tmp";
             try
@@ -204,7 +212,10 @@ namespace TacticalDirector.SeasonSave
                     : Array.Empty<ClubTrainingStates>(),
                 loop.Career != null
                     ? loop.Career.MedicalBlocks()
-                    : Array.Empty<ClubInjuryStates>());
+                    : Array.Empty<ClubInjuryStates>(),
+                loop.Career != null
+                    ? loop.Career.AppearanceBlocks()
+                    : Array.Empty<ClubAppearanceStates>());
         }
 
         /// <summary>
@@ -255,6 +266,7 @@ namespace TacticalDirector.SeasonSave
             SeasonState season = SeasonStateCodec.Decode(blobs.SeasonBlob);
             ClubTrainingStates[] trainingClubs = TrainingSaveCodec.Decode(blobs.TrainingBlob);
             ClubInjuryStates[] medicalClubs = MedicalSaveCodec.Decode(blobs.MedicalBlob);
+            ClubAppearanceStates[] appearanceClubs = AppearanceSaveCodec.Decode(blobs.AppearanceBlob);
 
             // FR-SN-011 (MUST) / F4: the KD-4 cursor invariant is the one coherence rule that spans the
             // world and season blobs, so it can only be checked HERE — the two codecs each see one blob,
@@ -289,14 +301,19 @@ namespace TacticalDirector.SeasonSave
             MatchEngine.MatchEngine match = null;
             if (blobs.MatchBlob != null)
             {
-                var career = PlayerCareerStates.FromBlocks(trainingClubs, medicalClubs);
+                // The dial position is irrelevant to this throwaway career — it only answers the
+                // availability read; no day step ever runs on it — but it is constructed at the
+                // production posture (armed, FR-MD-027) rather than encoding a stale default.
+                var career = PlayerCareerStates.FromBlocks(
+                    trainingClubs, medicalClubs, appearanceClubs, injuryOccurrenceEnabled: true);
                 ISquadProvider asConfigured = squads == null
                     ? null
                     : new AvailabilityFilteredSquads(squads, career);
                 match = MatchSaveManager.Restore(blobs.MatchBlob, asConfigured);
             }
 
-            return new SeasonSaveContents(world, season, trainingClubs, medicalClubs, match);
+            return new SeasonSaveContents(
+                world, season, trainingClubs, medicalClubs, appearanceClubs, match);
         }
 
         /// <summary>
@@ -408,4 +425,12 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | FromBlocks copies the state arrays now. The conclusion holds  |
 // |         |            |        | (the decorator only reads); the stated REASON would have told |
 // |         |            |        | a reader that FromBlocks still borrows.                       |
+// | 1.10    | 2026-08-07 | —      | Balance pass D2 (ERR-041-010(b)): Save/Load carry the third   |
+// |         |            |        | (appearance) block on the same REQUIRED-never-null terms as   |
+// |         |            |        | its siblings; the match-restore career is rebuilt from all    |
+// |         |            |        | three; SeasonSaveContents gains AppearanceClubs.              |
+// | 1.11    | 2026-08-07 | —      | Balance pass D4: Load's throwaway filter career is constructed |
+// |         |            |        | at the armed production posture (the dial argument is now     |
+// |         |            |        | required; irrelevant to a read-only filter, but a literal     |
+// |         |            |        | false would encode a stale default).                          |
 #endregion

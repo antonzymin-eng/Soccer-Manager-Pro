@@ -20,16 +20,17 @@ namespace TacticalDirector.SeasonSave
         #region Fixed
         /// <summary>
         /// [FIXED] The season save-file FRAMING version — the outermost format version in the save
-        /// stack (KD-4). It gates only the season frame (the <c>matchPresent</c> flag + the five
+        /// stack (KD-4). It gates only the season frame (the <c>matchPresent</c> flag + the six
         /// length-prefixed sub-blobs — the living-world composite, the season state, the #29 training
-        /// block, the #41 medical block, and the optional match block); the inner versions ride inside
+        /// block, the #41 medical block, the #30 appearance block, and the optional match block); the
+        /// inner versions ride inside
         /// their own sub-blobs and are re-checked by
         /// <see cref="TacticalDirector.LivingWorld.WorldStore.Restore"/> /
         /// <see cref="SeasonStateCodec.Decode"/> /
         /// <see cref="TacticalDirector.TrainingSystem.TrainingSaveCodec.Decode"/> /
         /// <see cref="TacticalDirector.InjuriesMedical.MedicalSaveCodec.Decode"/> /
         /// <c>MatchSaveCodec.Decode</c> themselves. A mismatch fails loud on load — no cross-version
-        /// migration at Stage 0. Bump only on a season-frame layout change. Value: 3.
+        /// migration at Stage 0. Bump only on a season-frame layout change. Value: 4.
         /// <para>
         /// <b>1 → 2 at #30 T1 (FR-SN-020).</b> The frame gained the season-state sub-blob between the
         /// world and match blocks (#30 Appendix B). The world blob
@@ -46,8 +47,25 @@ namespace TacticalDirector.SeasonSave
         /// byte-untouched by that change; only the frame around them moved. A v2 file is rejected
         /// fail-loud.
         /// </para>
+        /// <para>
+        /// <b>3 → 4 at the #29/#41 balance pass (ERR-041-010(b)).</b> The frame gained the #30
+        /// appearance sub-blob (<see cref="APPEARANCE_SAVE_FORMAT_VERSION"/>) between the medical block
+        /// and the optional match block — mandatory for the same reason the #29/#41 blocks are: an
+        /// appearance record has no absent case, only an empty one. A v3 file is rejected fail-loud.
+        /// </para>
         /// </summary>
-        public const uint SEASON_SAVE_FORMAT_VERSION = 3;
+        public const uint SEASON_SAVE_FORMAT_VERSION = 4;
+
+        /// <summary>
+        /// [FIXED] The #30 appearance sub-blob's leading self-identifying tag — ASCII <c>"APPR"</c>,
+        /// written before <see cref="APPEARANCE_SAVE_FORMAT_VERSION"/> (the ERR-029-005 rule: a format
+        /// version distinguishes generations of ONE format, never one format from another, and every
+        /// sub-blob format in this stack sits at version 1).
+        /// </summary>
+        public const uint APPEARANCE_SAVE_MAGIC = 0x41505052;   // 'A''P''P''R'
+
+        /// <summary>[FIXED] The #30 appearance sub-blob version. Gates the generation of the format identified by <see cref="APPEARANCE_SAVE_MAGIC"/>.</summary>
+        public const uint APPEARANCE_SAVE_FORMAT_VERSION = 1;
         #endregion
     }
 }
@@ -66,4 +84,8 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | its <see cref> list omitted TrainingSaveCodec.Decode /           |
 // |         |            |        | MedicalSaveCodec.Decode; the file-header Purpose block named     |
 // |         |            |        | only three of the five nested versions. Both corrected.          |
+// | 1.4     | 2026-08-07 | —      | Balance pass D2 (ERR-041-010(b)): 3 -> 4 — the frame gained the  |
+// |         |            |        | mandatory #30 appearance sub-blob between the medical block and  |
+// |         |            |        | the optional match block; + APPEARANCE_SAVE_MAGIC ("APPR") and   |
+// |         |            |        | APPEARANCE_SAVE_FORMAT_VERSION = 1 (the ERR-029-005 rule).       |
 #endregion

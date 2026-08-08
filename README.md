@@ -1,7 +1,24 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** August 7, 2026 (**The main branch went red after the shot-fix chain merged; both
+**Last Updated:** August 7, 2026, later same day (**Players now get injured — at realistic rates.**
+The injury system built over the last three days had been wired but deliberately switched off,
+because measurement showed its first-guess numbers were absurd: a new player had a 23% chance of
+getting hurt on his first day, while a player on the default training regime could literally never
+be injured at all. This landing is the balance pass that fixes and arms it. Three things changed.
+First, match days now run in the right order: a player whose recovery ends on match day plays that
+match instead of missing one extra game, and the injury check happens on match-day morning. Second,
+the game now remembers who actually played: each club's starting eleven is recorded per fixture
+(and saved), so playing matches genuinely raises injury risk in the following week — match load is
+the dominant real-world driver. Third, the probabilities were refitted and then measured over eight
+full simulated 20-club seasons: roughly 780 injuries per league season (about 39 per club, squarely
+in the real-world 30–55 range), starters getting hurt about twice a season and reserves about once,
+and around 9% of players unavailable at any given match day. Those numbers are now locked by tests
+so they cannot silently drift. A design hazard was also closed along the way: the random draw's
+denominator was previously a tunable value, meaning a config tweak would have silently re-rolled
+every career's injury luck — it is now pinned. Prior entry below.)
+
+**Last Updated (prior):** August 7, 2026 (**The main branch went red after the shot-fix chain merged; both
 failures are diagnosed, and the tests are re-anchored to the intended new behaviour.** This week's
 chain of shooting fixes changed which shots players take. Two long-running acceptance tests were
 still checking numbers measured against the old behaviour, and the first full test run on the merged

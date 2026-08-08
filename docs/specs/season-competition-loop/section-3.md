@@ -105,7 +105,8 @@ AdvanceToNextFixtureDay():
     targetDay := Calendar.dayOf(Calendar.NextRoundIndex)
     while WorldStore.CurrentWorldTick < targetDay:       # CurrentWorldTick is uint (WorldStore)
         RunWorldTickInFixedOrder()          # KD-2 — one calendar day
-    # cursor is now AT the fixture day; the caller runs AdvanceAndPlayNextRound (§3.4)
+    # cursor is now AT the fixture day; its OWN day-slots have NOT run — they run pre-round
+    # inside AdvanceAndPlayNextRound (§3.3.2 / ERR-030-027); the caller runs it next (§3.4)
 
 RunWorldTickInFixedOrder():                 # the KD-2 choke point — pinned order
     # 0. facilities    (#53)  — NULL SEAM today (ERR-030-020 — AdvanceFacilityDay: upgrade-completion
@@ -199,9 +200,34 @@ for two different changes (#42's academy step, #32's scouting step) and `ERR-030
 historical entries are frozen records — and are noted here so a reader resolving an id against this
 section finds the ambiguity documented rather than discovering it.
 
+### 3.3.2 Where the round sits in the day order (ERR-030-026 / ERR-030-027, August 7, 2026)
+
+The slot list above has **no slot for "play the round"** — a round is resolved by a separate command
+(§3.4), not by the day advance — so where a fixture sits relative to the fixture day's own slots had
+to be pinned explicitly. ERR-030-026 found it emergent (it fell out of `AdvanceToNextFixtureDay`'s
+loop condition, producing play-the-round-then-process-matchday, which ran every injury one matchday
+longer than its assigned tier); the convention adopted there was interim, with the resolution
+deferred to the #29/#41 balance pass. **The pinned convention (ERR-030-027): the fixture day's own
+slots 0–11 run at the top of `AdvanceAndPlayNextRound`, before selection and resolution; step 12
+(the world-day tick) still runs on the NEXT advance.** Consequences, in order of intent:
+
+- **Recovery lands before selection.** A player whose #41 recovery expires on matchday is available
+  for that round — tiers mean exactly what they say, with no absorbed one-day bias for the balance
+  pass to fit constants through.
+- **The occurrence draw sits on matchday morning.** A player drawn injured on the fixture day is a
+  pre-kickoff training-ground loss, filtered by selection. Match participation reaches the draw
+  through the FR-MD-010 appearance window, which by construction never contains the current day —
+  a match played on day *d* first feeds the draw on day *d+1*. One day of latency in a multi-day
+  rolling window, in exchange for keeping #41's one-atomic-step-per-player-day contract (FR-MD-022)
+  untouched.
+- **The re-run is a no-op.** Both live steps are idempotent per day via their own cursors (F6), so
+  the next advance re-entering the same world day advances nothing twice. `AdvanceAndPlayNextRound`
+  runs the slots only after every one of its guards, so a refused call advances no cursor.
+
 ## 3.4 Playing a round (FR-SN-012..013b / KD-9)
 
-A fixture-day resolves the **whole round** — every one of its `N/2` fixtures — and applies **all**
+A fixture-day begins by running the day's own KD-2 slots pre-round (§3.3.2 / ERR-030-027), then
+resolves the **whole round** — every one of its `N/2` fixtures — and applies **all**
 their results to the table. Resolving only a subset would leave the unplayed clubs' rows undefined
 (the App. C 4-club round 0 = {10v13, 11v12}; playing only 10v13 never gives 11/12 a round-0 result).
 The managed club's fixture runs through the full `MatchEngine`; the rest through the round-resolution
@@ -396,4 +422,5 @@ by ascending `ClubId` (FR-SN-007 final key) — a total order.
 | 0.9 | 2026-07-25 | — | **ERR-030-010** (a) §3.1 pseudocode binds `ring := ids` (it was used but never defined); (b) (found at #30 T0 implementation): the §3.7 worked schedule's rounds 1 and 4 venue-corrected to agree with §3.1's round-parity rule (which is authoritative and unchanged). |
 | 1.0 | 2026-07-27 | — | **ERR-030-015** (found at #30 T3 implementation / roadmap A5): §3.5's `RollToNextSeason` gains step **(c′) rebuild the calendar**. The prior block regenerated `Fixtures` but left `Calendar`'s cursor at `RoundCount`, so a season rolled from it was permanently unplayable — `AdvanceToNextFixtureDay` and `AdvanceAndPlayNextRound` both throw for the rest of the career, and the transform could not deliver FR-SN-029's multi-season continuity at all. Correction note + boundary-condition note added; (a')/(b') insertion points and every surrounding step unchanged. Also consolidated the two stale `Version` header fields. |
 | 1.1 | 2026-07-27 | — | **Nine back-props landed atomically with the ten-spec approval wave.** (Authored as `-015`..`-024`; **`-015` was reassigned to `-025`** because #30's own T3 landing claimed `-015` on main first — see the header.) **ERR-030-022** (#35) — new **§3.3.1 tick-order reconciliation**: `ERR-030-007` was filed twice (#42 academy, #32 scouting), so §3.3 carried **two step 7s and two step 8s** plus an orphaned `AdvanceDay` comment; #32 → step 9, #35 media expiry → 10, `AdvanceDay` → 12, duplicate line deleted. **ERR-030-020** (#53) — the facilities seam at **step 0**, numbered zero rather than inserted as a new 1 because it must precede its same-day consumers *and* the six approved specs citing steps 1–8 by number must not be invalidated; §3.3.1 records the conflict and the judgement. **ERR-030-021** (#54) — the tenure seam at step 11 (after board, which it reads) and the `(b'')` boundary insertion point in §3.5; the terminating decision is #54's, not #30's. **ERR-030-023** (#35) + **ERR-030-025** (#46) — the conference-queue and match-item-projector null seams at §3.4's `EmitMatchOutcome` site, deliberately **two seams at one site** so #46's basic item type does not depend on #35 being approved. **ERR-030-024** (#46) — the drain generalized to sum across every external-delta producer. **ERR-030-016** (#36) — §3.4's resolve→filter→configure seam records that it admits multiple consumers, that the current pair composes order-independently **because both are removals**, and that a non-removal filter would need an explicit order. **ERR-030-017** (#47) + **ERR-030-019** (#50) — the outer-frame amendments are recorded in Appendix B. **Also fixed:** the file's duplicate `**Last Updated:**` headers. **Not touched:** the duplicate v0.7/v0.8 history rows below — frozen records, noted as errata in §3.3.1 rather than rewritten. |
+| 1.2 | 2026-08-07 | — | **ERR-030-027** (the #29/#41 balance pass, closing the half of ERR-030-026 deferred to it): new **§3.3.2** pins where the round sits in the day order — the fixture day's own slots run at the top of `AdvanceAndPlayNextRound`, pre-round, so recovery lands before selection (tiers mean what they say) and the occurrence draw sits on matchday morning, fed by the FR-MD-010 appearance window (which never contains today). §3.3 pseudocode comment + §3.4 opening amended. #41's FR-MD-022 one-step contract untouched — this is a #30 wiring pin, chosen over splitting #41's step and bumping the medical format. |
 #endregion

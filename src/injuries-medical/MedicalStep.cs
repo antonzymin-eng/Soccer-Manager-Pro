@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/MedicalStep.cs
 // Created:  2026-08-05
-// Modified: 2026-08-05
+// Modified: 2026-08-07
 // Author:   —
 // Spec:     Injuries & Medical #41 §3.1–§3.4 + Appendices A/B (FR-MD-003..016, FR-MD-023),
 //           F1/F4/F6/F7; Code Standards #20
@@ -161,13 +161,22 @@ namespace TacticalDirector.InjuriesMedical
         public static bool IsAvailable(in InjuryState state) => state.Severity == InjurySeverity.None;
 
         /// <summary>
-        /// The occurrence-risk assembly (§3.4) — pure, integer, and clamped to
-        /// <c>[0, InjuriesMedicalConstants.InjuryRiskMax]</c>, the same scale the draw is taken on, so
-        /// §3.1 compares the two directly with no scale factor between them.
+        /// The occurrence-risk assembly (§3.4, as revised by ERR-041-011) — pure, integer, and clamped
+        /// to <c>[0, InjuriesMedicalConstants.InjuryRiskMax]</c>. The draw is uniform in
+        /// <c>[0, OCCURRENCE_DRAW_DENOM)</c> and §3.1 tests <c>draw &lt; risk</c>, so the result IS the
+        /// daily probability numerator on the per-million scale, capped at the
+        /// <c>InjuryRiskMax / OCCURRENCE_DRAW_DENOM</c> ceiling (1% at today's values).
         /// <para>
         /// The training term is #29's <b>already-published</b> scalar, read-only: #41 never reads or
         /// mutates #29's training-fatigue accumulator or the match engine's <c>AerobicPool</c>, so no
         /// counter is shared and a double count is not representable (KD-2 / FR-MD-009).
+        /// </para>
+        /// <para>
+        /// <b><c>BaselineDailyRisk</c> sits BEFORE the mitigation, normatively</b> (§3.4 /
+        /// ERR-041-011): the exposure-independent floor is discriminated by robustness — a frail
+        /// player's quiet week is riskier than an iron man's — which an after-the-clamp addition
+        /// could not be. It is also what keeps a fit player on the default focus from being
+        /// injury-proof forever, the third absurdity the fifth AR pass measured.
         /// </para>
         /// </summary>
         /// <param name="trainingRisk">#29's risk contribution.</param>
@@ -186,6 +195,7 @@ namespace TacticalDirector.InjuriesMedical
             long risk = (long)InjuriesMedicalConstants.TrainingRiskPassthroughWeight * trainingRisk.RiskScore
                         + (long)InjuriesMedicalConstants.AppearanceLoadWeight * load.AppearanceDays
                         + (long)InjuriesMedicalConstants.HardContactWeight * load.HardContacts
+                        + InjuriesMedicalConstants.BaselineDailyRisk
                         - RobustnessMitigation(attributes);
 
             risk = risk * medical.OccurrenceRiskMillMult / InjuriesMedicalConstants.MEDICAL_MODIFIER_IDENTITY_PERMILLE;
@@ -255,7 +265,7 @@ namespace TacticalDirector.InjuriesMedical
         }
 
         /// <summary>
-        /// The keyed occurrence draw: a uniform in <c>[0, OccurrenceDrawDenom)</c> derived from
+        /// The keyed occurrence draw: a uniform in <c>[0, OCCURRENCE_DRAW_DENOM)</c> derived from
         /// <c>(worldSeed, playerId, actionOrdinal)</c> with the #41 domain tag folded in first, so
         /// #41's draws are domain-separated from every other subsystem's.
         /// <para>
@@ -274,27 +284,30 @@ namespace TacticalDirector.InjuriesMedical
         /// <param name="playerId">The player being evaluated.</param>
         /// <param name="actionOrdinal">The <c>(worldDay, purpose)</c> ordinal from <see cref="DeriveActionOrdinal"/>.</param>
         /// <exception cref="InvalidOperationException">
-        /// <see cref="InjuriesMedicalConstants.OccurrenceDrawDenom"/> is not positive — a catalogue
-        /// integrity failure rather than a bad argument, and one only a config override can produce.
+        /// The <c>[GT]</c> <see cref="InjuriesMedicalConstants.InjuryRiskMax"/> ceiling exceeds
+        /// <see cref="InjuriesMedicalConstants.OCCURRENCE_DRAW_DENOM"/> — a catalogue/config integrity
+        /// failure rather than a bad argument (ERR-041-011: the invariant that keeps every daily
+        /// probability ≤ 1, checked at the one site that draws).
         /// </exception>
         internal static int DrawOccurrence(ulong worldSeed, int playerId, ulong actionOrdinal)
         {
-            // The denominator is a [GT]-derived value and this is the one place it divides. Zero would
-            // throw on its own, but a NEGATIVE ceiling would not: the ulong cast turns it into ~2^64,
-            // the modulo becomes a no-op, and the int narrowing yields a signed garbage draw that the
-            // comparison downstream still happily classifies. #29 guards its own divisor for the same
-            // class of reason (§3.3), so refuse here rather than compute a plausible-looking wrong draw.
-            if (InjuriesMedicalConstants.OccurrenceDrawDenom <= 0)
+            // The denominator is [FIXED] and positive by construction (ERR-041-011 retired the
+            // [GT]-derived form whose negative-config trap the old guard existed for). What a config
+            // CAN still break is the invariant the decoupling introduced: a ceiling raised past the
+            // denominator makes a clamped risk mean "certain and then some", silently. One comparison
+            // at the one drawing site.
+            if (InjuriesMedicalConstants.InjuryRiskMax > InjuriesMedicalConstants.OCCURRENCE_DRAW_DENOM)
             {
                 throw new InvalidOperationException(
-                    "OccurrenceDrawDenom must be positive; it derives from the [GT] InjuryRiskMax ceiling (§3.4).");
+                    "InjuryRiskMax exceeds OCCURRENCE_DRAW_DENOM — the probability ceiling would pass " +
+                    "1; catalogue/config integrity failure (ERR-041-011, §3.4).");
             }
 
             ulong h = Mix((ulong)InjuriesMedicalConstants.DomainTagInjuriesMedical ^ worldSeed);
             h = Mix(h ^ (ulong)(uint)playerId);
             h = Mix(h ^ actionOrdinal);
 
-            return (int)(h % (ulong)InjuriesMedicalConstants.OccurrenceDrawDenom);
+            return (int)(h % (ulong)InjuriesMedicalConstants.OCCURRENCE_DRAW_DENOM);
         }
 
         /// <summary>
@@ -309,9 +322,10 @@ namespace TacticalDirector.InjuriesMedical
         /// priced down twice and the two <c>[GT]</c> tables cannot be tuned independently. Both specs
         /// mandate their term, so this is the contract rather than a defect — but it has a consequence
         /// worth knowing before tuning: because #27 attributes floor at 1, this term is never zero, so
-        /// a risk score saturated at #29's ceiling still lands strictly below
-        /// <see cref="InjuriesMedicalConstants.OccurrenceDrawDenom"/> and no player is ever certain to
-        /// be injured. Recorded under ERR-041-003 for the balance pass.
+        /// a risk score saturated at #29's ceiling still lands strictly below the
+        /// <see cref="InjuriesMedicalConstants.InjuryRiskMax"/> clamp — and the clamp itself sits at
+        /// 1% of <see cref="InjuriesMedicalConstants.OCCURRENCE_DRAW_DENOM"/> — so no player is ever
+        /// remotely certain to be injured. Recorded under ERR-041-003; scale decoupled at ERR-041-011.
         /// </para>
         /// </summary>
         /// <param name="attributes">The player's #27 attributes.</param>
@@ -483,4 +497,10 @@ namespace TacticalDirector.InjuriesMedical
 // |         |            |        | Also repairs a REGRESSION shipped in v1.2: that pass appended a     |
 // |         |            |        | <para> to RobustnessMitigation's doc and dropped the closing        |
 // |         |            |        | </summary>, leaving malformed XML (CS1570 under a doc-file build).  |
+// | 1.4     | 2026-08-07 | —      | Balance pass D3 (ERR-041-011): AssembleRiskScore gains the         |
+// |         |            |        | BaselineDailyRisk term BEFORE the mitigation (position normative);  |
+// |         |            |        | the draw reduces into the [FIXED] OCCURRENCE_DRAW_DENOM instead of  |
+// |         |            |        | the [GT]-derived OccurrenceDrawDenom, and the draw-site guard      |
+// |         |            |        | becomes the new invariant InjuryRiskMax <= DENOM (the old negative- |
+// |         |            |        | denominator trap is unrepresentable against a const).              |
 #endregion

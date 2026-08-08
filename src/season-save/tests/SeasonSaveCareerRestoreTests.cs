@@ -67,7 +67,7 @@ namespace TacticalDirector.SeasonSave.Tests
         {
             League league = FourClubLeague();
             CareerTestRoster.MutableSquadProvider provider = ProviderOver(league);
-            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, league.ClubIds());
+            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, league.ClubIds(), injuryOccurrenceEnabled: false);
             var world = new WorldStore(ManagerId, WorldSeed);
             var loop = new SeasonLoop(
                 world, league.CreateSeason(0), RoundResolutionMode.QuickSimAll, career, provider);
@@ -82,7 +82,9 @@ namespace TacticalDirector.SeasonSave.Tests
 
             SeasonSaveContents contents = SeasonSaveManager.Load(path, provider);
             PlayerCareerStates restored =
-                PlayerCareerStates.FromBlocks(contents.TrainingClubs, contents.MedicalClubs);
+                PlayerCareerStates.FromBlocks(
+                    contents.TrainingClubs, contents.MedicalClubs, contents.AppearanceClubs,
+                    injuryOccurrenceEnabled: false);
 
             Assert.AreEqual(conditioned, restored.TrainingView(0, playerId).Condition,
                 "The loop overload must write the career the loop actually drives — not an empty block.");
@@ -122,7 +124,7 @@ namespace TacticalDirector.SeasonSave.Tests
             CareerTestRoster.MutableSquadProvider provider = ProviderOver(league);
             provider.Set(CareerTestRoster.Build(0, PlayerDatabaseConstants.CLUB_SQUAD_SIZE));
 
-            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, league.ClubIds());
+            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, league.ClubIds(), injuryOccurrenceEnabled: false);
             Squad full = provider.ResolveByClubId(0);
             for (int local = full.Count - 1; local >= full.Count - 7; local--)
             {

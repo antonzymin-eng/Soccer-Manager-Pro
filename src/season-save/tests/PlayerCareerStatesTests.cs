@@ -92,7 +92,7 @@ namespace TacticalDirector.SeasonSave.Tests
             // Hand the clubs in descending order; the blocks must still come back ascending, which is
             // what both codecs require of their input.
             PlayerCareerStates career =
-                PlayerCareerStates.ForLeague(provider, new[] { 1, 0 });
+                PlayerCareerStates.ForLeague(provider, new[] { 1, 0 }, injuryOccurrenceEnabled: false);
 
             ClubTrainingStates[] blocks = career.TrainingBlocks();
             Assert.AreEqual(0, blocks[0].ClubId);
@@ -108,7 +108,7 @@ namespace TacticalDirector.SeasonSave.Tests
         {
             CareerTestRoster.MutableSquadProvider provider = TwoClubProvider();
             Assert.Throws<System.ArgumentException>(() =>
-                PlayerCareerStates.ForLeague(provider, new[] { 0, 0 }));
+                PlayerCareerStates.ForLeague(provider, new[] { 0, 0 }, injuryOccurrenceEnabled: false));
         }
 
         [Test]
@@ -116,7 +116,7 @@ namespace TacticalDirector.SeasonSave.Tests
         {
             CareerTestRoster.MutableSquadProvider provider = TwoClubProvider();
             Assert.Throws<System.ArgumentException>(() =>
-                PlayerCareerStates.ForLeague(provider, new[] { 0, 7 }));
+                PlayerCareerStates.ForLeague(provider, new[] { 0, 7 }, injuryOccurrenceEnabled: false));
         }
 
         // ── persistence ────────────────────────────────────────────────────────────────────
@@ -144,9 +144,13 @@ namespace TacticalDirector.SeasonSave.Tests
 
             byte[] trainingBlob = TrainingSaveCodec.Encode(career.TrainingBlocks());
             byte[] medicalBlob = MedicalSaveCodec.Encode(career.MedicalBlocks());
+            byte[] appearanceBlob = AppearanceSaveCodec.Encode(career.AppearanceBlocks());
 
             PlayerCareerStates restored = PlayerCareerStates.FromBlocks(
-                TrainingSaveCodec.Decode(trainingBlob), MedicalSaveCodec.Decode(medicalBlob));
+                TrainingSaveCodec.Decode(trainingBlob),
+                MedicalSaveCodec.Decode(medicalBlob),
+                AppearanceSaveCodec.Decode(appearanceBlob),
+                injuryOccurrenceEnabled: false);
 
             Assert.AreEqual(career.ClubCount, restored.ClubCount);
             for (int c = 0; c < career.ClubCount; c++)
@@ -197,7 +201,8 @@ namespace TacticalDirector.SeasonSave.Tests
 
             Assert.Throws<System.ArgumentException>(() =>
                 PlayerCareerStates.FromBlocks(
-                    career.TrainingBlocks(), new[] { medical[0] }));
+                    career.TrainingBlocks(), new[] { medical[0] }, career.AppearanceBlocks(),
+                    injuryOccurrenceEnabled: false));
         }
 
         [Test]
@@ -211,7 +216,9 @@ namespace TacticalDirector.SeasonSave.Tests
             var swapped = new[] { medical[1], medical[0] };
 
             Assert.Throws<System.ArgumentException>(() =>
-                PlayerCareerStates.FromBlocks(career.TrainingBlocks(), swapped));
+                PlayerCareerStates.FromBlocks(
+                    career.TrainingBlocks(), swapped, career.AppearanceBlocks(),
+                    injuryOccurrenceEnabled: false));
         }
 
         [Test]
@@ -232,7 +239,8 @@ namespace TacticalDirector.SeasonSave.Tests
             };
 
             Assert.Throws<System.ArgumentException>(() =>
-                PlayerCareerStates.FromBlocks(training, shortened));
+                PlayerCareerStates.FromBlocks(
+                    training, shortened, career.AppearanceBlocks(), injuryOccurrenceEnabled: false));
         }
 
         [Test]
@@ -263,9 +271,14 @@ namespace TacticalDirector.SeasonSave.Tests
                     ids,
                     new[] { InjuryState.Create(), InjuryState.Create(), InjuryState.Create() }),
             };
+            var appearance = new[]
+            {
+                new ClubAppearanceStates(0, ids, new AppearanceState[3]),
+            };
 
             Assert.Throws<System.ArgumentException>(
-                () => PlayerCareerStates.FromBlocks(training, medical));
+                () => PlayerCareerStates.FromBlocks(
+                    training, medical, appearance, injuryOccurrenceEnabled: false));
         }
 
         [Test]
@@ -283,8 +296,10 @@ namespace TacticalDirector.SeasonSave.Tests
             PlayerCareerStates source = Fresh(provider);
             ClubTrainingStates[] training = source.TrainingBlocks();
             ClubInjuryStates[] medical = source.MedicalBlocks();
+            ClubAppearanceStates[] appearance = source.AppearanceBlocks();
 
-            PlayerCareerStates career = PlayerCareerStates.FromBlocks(training, medical);
+            PlayerCareerStates career = PlayerCareerStates.FromBlocks(
+                training, medical, appearance, injuryOccurrenceEnabled: false);
             int playerId = training[0].PlayerIds[0];
             int condition = career.TrainingView(0, playerId).Condition;
 
@@ -615,7 +630,8 @@ namespace TacticalDirector.SeasonSave.Tests
         {
             var provider = new CareerTestRoster.MutableSquadProvider();
             provider.Set(CareerTestRoster.Build(0, 12));
-            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, new[] { 0 });
+            PlayerCareerStates career = PlayerCareerStates.ForLeague(
+                provider, new[] { 0 }, injuryOccurrenceEnabled: false);
             Squad squad = provider.ResolveByClubId(0);
 
             // With nobody injured the filter returns the squad untouched and the engine's own gate

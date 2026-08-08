@@ -6,7 +6,15 @@
 > and records two deliberately-undesigned forward items.
 > **Candidate spec:** none · **FR prefix:** none of its own (proposes appends to FR-MD / FR-PG)
 > **Owner specs:** #41 (FR-MD-028..034 proposed) · #28 (FR-PG-025..028 proposed)
-> **Back-props proposed:** ERR-041-002..007 · ERR-028-002..004. **Zero** #30 / #29 / #27 / #16 changes.
+> **Back-props proposed:** ERR-041-013..018 · ERR-028-002..004. **Zero** #30 / #29 / #27 / #16 changes.
+> *(Id-map re-based August 7, 2026 at the balance pass: the originally proposed ERR-041-002 and
+> ERR-041-003 were both filed by other findings while this supplement awaited sign-off — -002 is the T0
+> `DrawKeyed` API defect, -003 the `InjuryRiskMax` `[CROSS]` retag — and 004..011 have since been either
+> consumed or superseded (the T1/T2/balance-pass chain runs to ERR-041-012). The soft-reservation
+> convention stands: 013..018 are reserved for this supplement's six #41-side findings, re-verified free
+> at re-basing; every `Back-prop:` line below is re-pointed. Note for R-2: `BASELINE_DAILY_RISK`
+> (ERR-041-011) is now the exposure-INDEPENDENT term — R-2's under-exposure arm must re-fit against it
+> rather than add beside it, per #41 Appendix A's note.)*
 > **Determinism impact:** none — no new RNG stream, no new domain tag, no new `SubsystemOrdinal`,
 > no `DETERMINISM_DIGEST_VERSION` bump (§5).
 > **Save impact:** none *today* — no format version bump, because neither owning spec has yet written a
@@ -75,7 +83,7 @@ outright *and* the fix is structural; **M** = a missing modulator or input; **L*
 
 ### R-1 (H) — `AssembleRiskScore` has no age term at all
 
-**Evidence:** E-4. **Owner:** #41 §3.4 / Appendix A. **Back-prop:** ERR-041-002.
+**Evidence:** E-4. **Owner:** #41 §3.4 / Appendix A. **Back-prop:** ERR-041-013 *(re-based; originally -002, since taken)*.
 
 `AssembleRiskScore(trainingRisk, load, attributes, medical)` (#41 §3.4) assembles risk from training fatigue,
 appearance load, a robustness term derived from `Strength`/`Stamina`/`Balance`, and the staff modifier.
@@ -114,7 +122,7 @@ precedent (a value type, not an interface; FR-LW-031). The reference DAG is unch
 
 ### R-2 (M) — match-load risk is monotone; the evidence is U-shaped
 
-**Evidence:** E-2. **Owner:** #41 §3.4 / Appendix A. **Back-prop:** ERR-041-003.
+**Evidence:** E-2. **Owner:** #41 §3.4 / Appendix A. **Back-prop:** ERR-041-014 *(re-based; originally -003, since taken)*.
 
 `APPEARANCE_LOAD_WEIGHT * load.AppearanceDays` rises linearly and without bound, so under the current model an
 **unused player is maximally safe**. The rugby cohort puts both tails at elevated risk, and the football
@@ -141,7 +149,7 @@ over-weighting** of the left tail, which is a balance-pass concern (both terms a
 
 ### R-3 (M) — no representation of recovery interval, the best-evidenced effect
 
-**Evidence:** E-3. **Owner:** #41 §2.2 (`MatchLoad`) / §3.4. **Back-prop:** ERR-041-004.
+**Evidence:** E-3. **Owner:** #41 §2.2 (`MatchLoad`) / §3.4. **Back-prop:** ERR-041-015 *(re-based)*.
 
 `MatchLoad` carries `AppearanceDays` (a count) and `HardContacts` (deep-tier). Nothing encodes **spacing**,
 yet ≤3-day vs 6–10-day turnaround is the strongest single quantified effect in the corpus (~20%). Two players
@@ -159,7 +167,7 @@ state and nothing new to serialize. `MatchLoad.None` (all-zero) remains the neut
 
 ### R-4 (M) — recurrence is deferred to Stage 3, but its input is already serialized
 
-**Evidence:** E-5. **Owner:** #41 §3.1 / §7 KD-4. **Back-prop:** ERR-041-005.
+**Evidence:** E-5. **Owner:** #41 §3.1 / §7 KD-4. **Back-prop:** ERR-041-016 *(re-based)*.
 
 `InjuryState.InjuryCount` is serialized and, at Stage 2, **read by nothing**. Re-injury (~15–20%) is among the
 most robust numbers in the literature and, unlike most deep-tier items, its producer already exists.
@@ -187,7 +195,7 @@ early return would shorten `RecoveryRemaining` and raise the recurrence term for
 
 ### R-5 (H) — the severity model cannot represent the injury class that shapes careers
 
-**Evidence:** E-6. **Owner:** #41 §2.2 / §3.2 / Appendix A. **Back-prop:** ERR-041-006.
+**Evidence:** E-6. **Owner:** #41 §2.2 / §3.2 / Appendix A. **Back-prop:** ERR-041-017 *(re-based)*.
 
 Appendix A pins `RecoveryDaysForTier` at Minor 7 / Moderate 21 / **Serious 60** and `RECOVERY_MAX` at 240.
 The ACL mean return-to-play is **~11.6 months (~350 days)** — longer than the model's ceiling, let alone its
@@ -215,7 +223,7 @@ The catalogue invariant becomes `Σ SEVERITY_*_PERMILLE ≤ SEVERITY_PERMILLE_DE
 
 ### R-6 (H) — a player returns from injury with byte-identical attributes
 
-**Evidence:** E-6. **Owner:** #41 §0 / #28 §3.1. **Back-prop:** ERR-041-007 (signal) + ERR-028-004 (consumer).
+**Evidence:** E-6. **Owner:** #41 §0 / #28 §3.1. **Back-prop:** ERR-041-018 *(re-based)* (signal) + ERR-028-004 (consumer).
 
 #41 §0 puts "attribute decline from injury" out of scope and exposes "a read-only injury signal #28 *may*
 later read". #28 has no such reader. So the seam is **named on one side and built on neither**, and the shipped
@@ -594,7 +602,7 @@ public static void DrainOnePoint(ref PlayerRecord rec, ref PlayerLifecycle life)
 1. **AR to convergence on this supplement** (started — see Version History).
 2. **Owner sign-off** on the three structural decisions: the `Severe` tier + `RECOVERY_MAX` raise (R-5), the
    #41→#28 aftermath seam (R-6/KD-R4), and the deterministic-not-drawn PA reduction (KD-R4a).
-3. **File the back-props** — ERR-041-002..007, ERR-028-002..004 (`spec-error-log.md`), each patching the named
+3. **File the back-props** — ERR-041-013..018 (re-based), ERR-028-002..004 (`spec-error-log.md`), each patching the named
    section files and appending FR-MD-028..034 / FR-PG-025..028.
 4. **Patch the section files** — #41 §2.2 / §3.1 / §3.2 / §3.4 / Appendix A; #28 §3.1 / §4.3 / Appendix A.
    No `SPEC_INDEX.md` row changes (both specs stay APPROVED; these are back-props, not re-approvals).

@@ -1,6 +1,6 @@
 // File:     src/training-system/TrainingSystemConstants.cs
 // Created:  2026-08-05
-// Modified: 2026-08-05
+// Modified: 2026-08-07
 // Author:   —
 // Spec:     Training System #29 Appendix A (constant catalogue) + §3.1/§3.3/§3.4; Code Standards #20
 // Purpose:  Every numeric constant for #29 conditioning, training-fatigue accrual, the match-entry
@@ -104,12 +104,14 @@ namespace TacticalDirector.TrainingSystem
         /// <summary>
         /// [GT] Risk-scalar clamp ceiling for <see cref="InjuryRiskContribution.RiskScore"/> (§3.4).
         /// <para>
-        /// <b>This catalogue is the sole owner of the scale, and this is its only config key.</b> #41
-        /// assembles its occurrence risk on the same scale and derives its draw denominator from it
+        /// <b>This catalogue is the sole owner of the ceiling, and this is its only config key.</b>
+        /// #41 assembles its occurrence risk on the same scale and clamps to the same ceiling
         /// (#41 §3.4), so it <c>[CROSS]</c>-mirrors this field rather than declaring one of its own —
-        /// a second key under <c>[injuries-medical]</c> would let one side be set without the other,
-        /// silently rescaling every occurrence probability (ERR-041-003). Changing the value here
-        /// changes both sides at once, which is the property the mirror exists to give.
+        /// a second key under <c>[injuries-medical]</c> would let one side be set without the other
+        /// (ERR-041-003). Since ERR-041-011 the ceiling is <b>no longer #41's draw denominator</b> —
+        /// that is the <c>[FIXED]</c> per-million <c>OCCURRENCE_DRAW_DENOM</c>, so this value now sets
+        /// the daily probability CEILING (<c>InjuryRiskMax / OCCURRENCE_DRAW_DENOM</c>, 1% today) and
+        /// must never exceed the denominator (enforced fail-loud at #41's draw site).
         /// </para>
         /// Config key [training-system] InjuryRiskMax.
         /// </summary>
@@ -202,4 +204,8 @@ namespace TacticalDirector.TrainingSystem
 // | 1.2     | 2026-08-05 | —      | AR pass 5 (L): that same doc cited a test METHOD NAME in another    |
 // |         |            |        | assembly's suite — a rename restages the staleness pass 4 cleared.  |
 // |         |            |        | Cites the stable ERR id and the fixture instead.                    |
+// | 1.3     | 2026-08-07 | —      | Balance pass D3 (ERR-041-011 / ERR-029-007): InjuryRiskMax's doc    |
+// |         |            |        | no longer claims to be #41's draw denominator — the denominator is  |
+// |         |            |        | now the [FIXED] OCCURRENCE_DRAW_DENOM in #41's catalogue, and this  |
+// |         |            |        | ceiling sets the daily probability cap (1% today). Value unchanged. |
 #endregion

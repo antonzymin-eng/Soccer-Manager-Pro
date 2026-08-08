@@ -49,7 +49,7 @@ namespace TacticalDirector.SeasonSave.Tests
             out CareerTestRoster.MutableSquadProvider provider)
         {
             provider = ProviderOver(league);
-            career = PlayerCareerStates.ForLeague(provider, league.ClubIds());
+            career = PlayerCareerStates.ForLeague(provider, league.ClubIds(), injuryOccurrenceEnabled: false);
             world = new WorldStore(ManagerId, WorldSeed);
             return new SeasonLoop(
                 world, league.CreateSeason(0), RoundResolutionMode.QuickSimAll, career, provider);
@@ -62,7 +62,7 @@ namespace TacticalDirector.SeasonSave.Tests
         {
             League league = FourClubLeague();
             CareerTestRoster.MutableSquadProvider provider = ProviderOver(league);
-            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, league.ClubIds());
+            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, league.ClubIds(), injuryOccurrenceEnabled: false);
 
             Assert.Throws<System.ArgumentException>(() => new SeasonLoop(
                 new WorldStore(ManagerId, WorldSeed), league.CreateSeason(0),
@@ -87,7 +87,7 @@ namespace TacticalDirector.SeasonSave.Tests
             var subset = new int[allClubs.Length - 1];
             System.Array.Copy(allClubs, subset, subset.Length);
 
-            PlayerCareerStates partial = PlayerCareerStates.ForLeague(provider, subset);
+            PlayerCareerStates partial = PlayerCareerStates.ForLeague(provider, subset, injuryOccurrenceEnabled: false);
 
             Assert.Throws<System.ArgumentException>(() => new SeasonLoop(
                 new WorldStore(ManagerId, WorldSeed), league.CreateSeason(0),
@@ -138,7 +138,7 @@ namespace TacticalDirector.SeasonSave.Tests
             // catches an off-by-one in either direction — four days, six days, or two steps per day —
             // without this fixture re-deriving #29's conditioning arithmetic and drifting from it.
             PlayerCareerStates reference =
-                PlayerCareerStates.ForLeague(provider, league.ClubIds());
+                PlayerCareerStates.ForLeague(provider, league.ClubIds(), injuryOccurrenceEnabled: false);
             for (uint day = 0; day < 5; day++)
             {
                 reference.AdvanceTrainingDay(day, provider, CoachingModifier.Identity);
@@ -168,18 +168,15 @@ namespace TacticalDirector.SeasonSave.Tests
         [Test]
         public void DayAdvance_StopsBeforeTheFixtureDaysOwnSteps()
         {
-            // ERR-030-026. KD-2 pins the order of the nine day-slots but has no slot for "play the
-            // round" — a round is a separate command — so where the fixture sits relative to slots 2
-            // and 4 is settled by AdvanceToNextFixtureDay's loop condition alone, and was written down
-            // nowhere. It stops on REACHING the fixture day, so matchday's own steps run after the
-            // round: right for #41's occurrence draw (an injury sustained in a match is drawn after it,
-            // which is what makes the FR-MD-010 MatchLoad term coherent once ERR-041-010(b) lands),
-            // wrong for the recovery countdown that shares the same atomic step — a player whose
-            // RecoveryRemaining hits 0 on matchday misses a match he had served his time for, so every
-            // injury runs one matchday long.
-            //
-            // Pinned here rather than left emergent, because the balance pass will fit the recovery
-            // tiers straight through this convention and would otherwise absorb the bias silently.
+            // ERR-030-026 → ERR-030-027. KD-2 pins the order of the nine day-slots but has no slot
+            // for "play the round" — a round is a separate command — so where the fixture sits
+            // relative to slots 2 and 4 had to be pinned, not left to fall out of a loop condition.
+            // The pinned convention: AdvanceToNextFixtureDay still stops on REACHING the fixture day
+            // WITHOUT running its steps, and AdvanceAndPlayNextRound runs them itself, PRE-round — so
+            // the recovery countdown lands before selection (a player who served his time plays
+            // today) and the occurrence draw sits on matchday morning, fed by the FR-MD-010
+            // appearance window, which never contains today. The post-round re-run of the same day
+            // inside the next advance must be a cursor no-op, or matchday would be lived twice.
             League league = FourClubLeague();
             SeasonLoop loop = WiredLoop(
                 league, out WorldStore world, out PlayerCareerStates career,
@@ -197,29 +194,49 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.AreEqual(
                 fixtureDay - 1u,
                 career.TrainingBlocks()[0].States[0].LastAdvancedWorldDay,
-                "The last day step run is the fixture day MINUS ONE — matchday's own steps 2 and 4 "
-                + "have not run when the round is played (ERR-030-026).");
+                "AdvanceToNextFixtureDay leaves matchday's own steps unrun — they belong to "
+                + "AdvanceAndPlayNextRound (ERR-030-027).");
             Assert.AreEqual(
                 fixtureDay - 1u,
                 career.MedicalBlocks()[0].States[0].LastAdvancedWorldDay,
-                "…and the same for #41, which is where the one-matchday recovery bias comes from.");
+                "…and the same for #41.");
 
-            // The consequence, made concrete: a player whose recovery would expire ON the fixture day
-            // is still unavailable for it, because his last decrement was the day before.
+            // The convention's consequence, made concrete: a player whose recovery expires ON the
+            // fixture day serves exactly his tier — the pre-round step heals him and he is available
+            // for the round his tier said he would make.
             var injured = InjuryState.Create();
             injured.Severity = InjurySeverity.Minor;
             injured.RecoveryRemaining = 1;
             career.SetMedicalState(league.ClubIds()[0], playerId, in injured);
 
             Assert.IsFalse(career.IsAvailable(league.ClubIds()[0], playerId),
-                "One day of recovery outstanding at kickoff: unavailable for this round, because "
-                + "matchday's countdown runs after it (ERR-030-026).");
+                "One day of recovery outstanding as the clock reaches matchday: still injured, "
+                + "because matchday's own step has not run yet.");
 
             loop.AdvanceAndPlayNextRound(provider);
-            loop.AdvanceDays(1);   // the fixture day's own steps finally run
 
             Assert.IsTrue(career.IsAvailable(league.ClubIds()[0], playerId),
-                "…and he is fit the moment matchday is processed — one round later than his tier says.");
+                "The pre-round day-step ran his last recovery day before selection — available for "
+                + "THIS round, not the next one (ERR-030-027).");
+            Assert.AreEqual(
+                fixtureDay,
+                career.MedicalBlocks()[0].States[0].LastAdvancedWorldDay,
+                "Matchday's own steps ran inside AdvanceAndPlayNextRound.");
+
+            // And matchday is lived exactly once: the next advance re-enters the same world day,
+            // whose career steps must be a cursor no-op — the training accumulator would otherwise
+            // accrue a second day of load for one calendar day.
+            int fatigueAfterRound = career.TrainingBlocks()[0].States[0].TrainingFatigue;
+            int conditionAfterRound = career.TrainingBlocks()[0].States[0].Condition;
+            loop.AdvanceDays(1);
+
+            Assert.AreEqual(fatigueAfterRound, career.TrainingBlocks()[0].States[0].TrainingFatigue,
+                "The post-round re-run of the fixture day's steps must be idempotent (F6) — a second "
+                + "accrual would live matchday twice.");
+            Assert.AreEqual(conditionAfterRound, career.TrainingBlocks()[0].States[0].Condition,
+                "…and the same for the conditioning cursor.");
+            Assert.AreEqual(fixtureDay + 1u, world.CurrentWorldTick,
+                "…while the clock itself still advances past matchday.");
         }
 
         [Test]
@@ -289,7 +306,7 @@ namespace TacticalDirector.SeasonSave.Tests
                 provider.Set(CareerTestRoster.Build(clubIds[i], PlayerDatabaseConstants.CLUB_SQUAD_SIZE));
             }
 
-            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, clubIds);
+            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, clubIds, injuryOccurrenceEnabled: false);
             var world = new WorldStore(ManagerId, WorldSeed);
             var loop = new SeasonLoop(
                 world, league.CreateSeason(0), RoundResolutionMode.FullEngine, career, provider);
@@ -361,7 +378,7 @@ namespace TacticalDirector.SeasonSave.Tests
                 provider.Set(CareerTestRoster.Build(clubIds[i], PlayerDatabaseConstants.CLUB_SQUAD_SIZE));
             }
 
-            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, clubIds);
+            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, clubIds, injuryOccurrenceEnabled: false);
             var loop = new SeasonLoop(
                 new WorldStore(ManagerId, WorldSeed), league.CreateSeason(0),
                 RoundResolutionMode.FullEngine, career, provider);
@@ -486,9 +503,11 @@ namespace TacticalDirector.SeasonSave.Tests
 
             Assert.AreEqual(loop.State.Calendar.RoundCount, rounds);
 
-            // Every player advanced up to the last day the clock passed through — no gaps, no double
-            // accrual, across a season's worth of days and a whole league's worth of players.
-            uint lastLivedDay = world.CurrentWorldTick - 1u;
+            // Every player advanced up to the last day lived — no gaps, no double accrual, across a
+            // season's worth of days and a whole league's worth of players. The last command was
+            // AdvanceAndPlayNextRound, whose pre-round step lives the fixture day itself
+            // (ERR-030-027), so the cursors sit ON the clock rather than one behind it.
+            uint lastLivedDay = world.CurrentWorldTick;
             for (int c = 0; c < career.ClubCount; c++)
             {
                 ClubTrainingStates block = career.TrainingBlocks()[c];

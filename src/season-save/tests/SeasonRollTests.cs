@@ -341,7 +341,8 @@ namespace TacticalDirector.SeasonSave.Tests
             try
             {
                 SeasonSaveManager.Save(world, interrupted.State, null,
-                    path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>());
+                    path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>(),
+                    Array.Empty<ClubAppearanceStates>());
                 SeasonSaveContents contents = SeasonSaveManager.Load(path, league);
                 var resumed = new SeasonLoop(
                     contents.World, contents.Season, RoundResolutionMode.QuickSimAll);
@@ -377,7 +378,8 @@ namespace TacticalDirector.SeasonSave.Tests
             try
             {
                 SeasonSaveManager.Save(world, loop.State, null,
-                    path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>());
+                    path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>(),
+                    Array.Empty<ClubAppearanceStates>());
                 SeasonSaveContents contents = SeasonSaveManager.Load(path, league);
 
                 Assert.IsTrue(loop.State.FieldsEqual(contents.Season),

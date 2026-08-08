@@ -1,9 +1,11 @@
 # Injuries & Medical #41 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** August 6, 2026 (v0.4 — ERR-041-008: §2.3 F3's exception type corrected to match the posture it cites)
+**Last Updated:** August 7, 2026, later same day (v0.6 — the balance pass D3/D4: FR-MD-027 re-stated as ARMED with a required construction argument (ERR-041-011); FR-MD-005 re-anchored off the phantom registered stream onto the keyed derivation (ERR-041-012, discharging ERR-041-002's deferred half))
+**Last Updated (prior):** August 7, 2026 (v0.5 — the balance pass D2 (ERR-041-010(b)): FR-MD-010 pins the `AppearanceDays` window unit — appearances in the `APPEARANCE_WINDOW_DAYS` `[GT]` window of days strictly before the draw day, never the current day (the ERR-030-027 pre-round ordering depends on the exclusion); the record itself is #30-owned)
+**Last Updated (prior):** August 6, 2026 (v0.4 — ERR-041-008: §2.3 F3's exception type corrected to match the posture it cites)
 **Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.4
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -25,8 +27,12 @@
   occurrence cannot both happen from one call.
 
 **Determinism (KD-1)**
-- **FR-MD-005** — All #41 stochastic draws MUST occur on the world tick, on the single dedicated
-  `injuries.occurrence` stream; #41 MUST NOT draw on the match tick.
+- **FR-MD-005** — All #41 stochastic draws MUST occur on the world tick, via the single dedicated
+  keyed occurrence derivation (`DrawOccurrence`, domain-separated by `DOMAIN_TAG_INJURIES_MEDICAL`);
+  #41 MUST NOT draw on the match tick. *(Re-anchored at ERR-041-012, discharging ERR-041-002's deferred
+  half: no registered `DeterministicRngService` stream exists or may be added — a registered stream is
+  cursor-positioned, which FR-MD-006/007 forbid; `SubsystemOrdinals.InjuriesMedical = 92` stays
+  deliberately unallocated per FR-LW-031.)*
 - **FR-MD-006** — Each occurrence draw MUST be **position-independent / keyed** on `(playerId, worldDay,
   purpose)`; it MUST NOT depend on a free-running per-stream cursor or on the order in which other
   players/days were drawn.
@@ -42,9 +48,13 @@
 - **FR-MD-009** — #41 MUST read #29's `InjuryRiskContribution` read-only as one occurrence input; it MUST
   NOT read or mutate #29's `TrainingFatigue` accumulator or the match engine's `AerobicPool`.
 - **FR-MD-010** — `MatchLoad` is an occurrence input only, supplied by the caller (never computed or stored
-  by #41). Stage-2 populates `AppearanceDays` (a count #30's fixture result already tracks); the
-  ledger-derived `HardContacts` field is the deep-tier KD-3 extension. `MatchLoad.None` (all-zero) is the
-  identity — no match-load contribution.
+  by #41). Stage-2 populates `AppearanceDays` from #30's per-player appearance record (ERR-041-010(b)):
+  **the number of days the player was fielded in the `APPEARANCE_WINDOW_DAYS` `[GT]` window of days
+  strictly BEFORE the draw's world day — never the current day itself** (a match on day *d* first feeds
+  the draw on day *d+1*; #30 ERR-030-027 depends on this exclusion, since the draw runs pre-round). The
+  window length is #41's `[GT]` because #41 owns what the input means; #30 owns the record that supplies
+  it, which structurally bounds the window to `[1, 31]`. The ledger-derived `HardContacts` field is the
+  deep-tier KD-3 extension. `MatchLoad.None` (all-zero) is the identity — no match-load contribution.
 - **FR-MD-011** — #41 MUST NOT add a new match-engine producer or interface; any per-fixture physical-load
   derivation MUST be read-only over the already-emitted event ledger (KD-3).
 
@@ -117,10 +127,15 @@
 - **FR-MD-026** — The reference direction MUST stay one-way: `#30 → #41 → {#29, #27, #16}`; #41's assembly
   MUST NOT reference `MatchEngine`, `LivingWorld`, `SeasonSave`, or #30 itself. #29's / #27's assemblies stay
   schema-untouched.
-- **FR-MD-027** — Behaviour-neutral identity: with `occurrenceEnabled` off, `AdvanceMedicalDay` MUST reduce
-  to recovery-only (no draws, no new injuries); `InjuryState` MUST default to `Create()` = Healthy; and
-  registering the `injuries.occurrence` sub-stream MUST leave every existing stream's cursor byte-identical
-  (the #22/#26/#29 stream-independence precedent).
+- **FR-MD-027** — The occurrence dial. **ARMED at the balance pass (ERR-041-011): a production career is
+  constructed with `occurrenceEnabled` ON**, at rates measured in the football band by the season-scale
+  instrument (league ≈ 780 injuries/season on the 20-club bootstrap; starters ≈ 2.1, reserves ≈ 1.1,
+  squad unavailability ≈ 9%). The construction argument MUST be required, never defaulted — a default in
+  either position changes behaviour at every omitting call site with no diff the day it flips. The OFF
+  position stays supported and locked both ways: with `occurrenceEnabled` off, `AdvanceMedicalDay` MUST
+  reduce to recovery-only (no draws, no new injuries), and `InjuryState` MUST default to `Create()` =
+  Healthy. The stream-independence clause is vacuous by construction — no stream is registered
+  (FR-MD-005 as re-anchored; ERR-041-012).
 
 ## 2.2 Data structures
 
@@ -205,4 +220,6 @@ construction are pure reads over an `InjuryState` value. See §3.
 | 0.2 | 2026-07-23 | — | AR-1 (1M): integer-arithmetic fix — `MedicalModifier` now per-mille int multipliers with an explicit `Identity` (default() invalid → F4 fail-loud); FR-MD-014 recovery-speed applied to assigned tier-days (not a per-tick multiply); FR-MD-016 zero-modifier fail-loud. |
 | 0.3 | 2026-07-23 | — | AR-2 (1M): FR-MD-008 now mandates the fixed `DRAW_PURPOSE_RADIX` in `DeriveActionOrdinal` (append-parity — the growing purpose count as radix would shift prior ordinals). |
 | 0.4 | 2026-08-06 | — | **ERR-041-008** (at #41 T1): §2.3 **F3**'s exception type corrected from `ArgumentException` to `InvalidOperationException`, matching the `MatchSaveCodec` posture the same row cites (the #29 §2.3 F3 sibling correction). |
+| 0.6 | 2026-08-07 | — | **Balance pass D3/D4 (ERR-041-011 / ERR-041-012)**: FR-MD-027 ARMED — production constructs the dial ON, the argument is required-never-defaulted, the OFF identity stays supported and locked; FR-MD-005 re-anchored onto the keyed derivation (the `injuries.occurrence` registered stream never existed and may not — cursor-positioned, forbidden by FR-MD-006/007; ordinal 92 stays unallocated). |
+| 0.5 | 2026-08-07 | — | **Balance pass D2 (ERR-041-010(b))**: FR-MD-010's `AppearanceDays` gains its unit — the count of days fielded in the `APPEARANCE_WINDOW_DAYS` `[GT]` window strictly BEFORE the draw day, never the current day (a match on day *d* first feeds the draw on *d+1*; #30's ERR-030-027 pre-round ordering depends on the exclusion). The record is #30-owned (its own `APPR` sub-blob), reaching #41 only as the caller-supplied value; the window `[GT]` is #41's because #41 owns what the input means. Previously the FR called `AppearanceDays` "a count #30's fixture result already tracks", which was false — no such record existed (that is what ERR-041-010(b) filed). |
 #endregion
