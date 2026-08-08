@@ -1,8 +1,8 @@
 # Scripted Build-Up Structures Specification #24 — Section 7: Future Extensions and Deferrals
 
 **Created:** July 8, 2026
-**Last Updated:** July 8, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** July 8, 2026 (v0.2 — PASS-1: §7.6 slot-specific-rows deferral added (M-3).)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---

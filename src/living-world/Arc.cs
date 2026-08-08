@@ -1,6 +1,6 @@
 // File:     src/living-world/Arc.cs
 // Created:  2026-06-21
-// Modified: 2026-06-21
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Living World System #22 §2.2.4, §3.4, Code Standards #20
 // Purpose:  Arc value type: a serialised emergent-narrative state machine.
@@ -52,3 +52,9 @@ namespace TacticalDirector.LivingWorld
         public bool IsExpired(uint worldTick) => worldTick > MaxLifetimeTick;
     }
 }
+
+#region VersionHistory
+// | Version | Date       | Author       | Notes                                                     |
+// | 1.0     | 2026-06-21 | —            | Initial file. |
+// | 1.1     | 2026-08-08 | Claude Code  | Added the required #region VersionHistory block (FR-CS-058; tools/recurring-defect-lint.py hygiene pass). |
+#endregion

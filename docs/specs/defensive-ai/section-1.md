@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 1: Introduction, Scope, Dependencies, Key Decisions
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.3 — PASS-3 clean-up; Anticipation removed from §1.6 boundary matrix)
-**Version:** 0.3
+**Last Updated:** May 18, 2026 (v0.4 — FAIL-4 fix (A-03): §1.3.3 ERR-014-004 block — `[CROSS-PENDING]` promoted to `[CROSS: #16 §3.4]`, resolved outcome documented (0x1A final, 0x18/0x1D race resolved). §1.6 #16 boundary row — `[CROSS-PENDING]` promoted to `[CROSS: #16 §3.4]`.)
+**Version:** 0.4
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0 (May 17, 2026)
 

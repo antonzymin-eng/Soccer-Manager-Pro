@@ -1,8 +1,8 @@
 # Scripted Build-Up Structures Specification #24 — Section 5: Test Plan
 
 **Created:** July 8, 2026
-**Last Updated:** July 8, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** July 8, 2026 (v0.2 — PASS-1: T-BU-U-013 added (M-1); T-BU-I-004 / T-BU-U-011 / T-BU-U-012 extended (M-1/L-2/L-1). 13 unit tests.)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---

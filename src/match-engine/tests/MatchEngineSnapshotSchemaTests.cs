@@ -1,11 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineSnapshotSchemaTests.cs
 // Created:  2026-06-16
-// Modified: 2026-06-27 (Phase D D4 — schema pin 8 + DT + 4 mechanics-AI + perception probes)
-// Modified: 2026-07-11 (engine substrate — schema pin 13 → 14 + ScoreState probe)
-// Modified: 2026-07-14 (match-flow completion — schema pin 14 → 15 + discipline/substitution probes)
-// Modified: 2026-07-18 (#27 T3 — schema pin 15 → 16 + roster-reference probe)
-// Modified: 2026-07-19 (#27 lineup selection Plan-3 — NeutralSquad made position-coherent so proper selection succeeds; no schema change)
-// Modified: 2026-07-20 (snapshot-deserialize KD-8 — schema pin 16 → 17 + CardSeverityRngCursor probe)
+// Modified: 2026-07-23
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.6 / §5 Phase B (B3) + Phase D (D4), Code Standards #20
 // Purpose:  Phase B step B3 tests — proves the full §2.6 world-state field set (not just the B2

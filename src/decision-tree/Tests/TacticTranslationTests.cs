@@ -1,6 +1,6 @@
 // File:     src/decision-tree/Tests/TacticTranslationTests.cs
 // Created:  2026-06-28
-// Modified: 2026-06-29 (#21 §3.3 PlayerTacticActionMultiplier coverage)
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Tactical Instructions #21 §3.1, §3.2, §3.3, §4.7; Code Standards #20
 // Purpose:  Locks the #21 → #8 T2 consumer seam: enum-translation validity + F5 clamp,
@@ -195,3 +195,10 @@ namespace TacticalDirector.DecisionTree.Tests
         }
     }
 }
+
+#region VersionHistory
+// | Version | Date       | Author       | Notes                                                     |
+// | 1.0     | 2026-06-28 | —            | Initial file. |
+// | 1.1     | 2026-06-29 | —            | Substantive edit; no version-history row was recorded for it at the time (FR-CS-058 gap, predates this hygiene pass). |
+// | 1.2     | 2026-08-08 | Claude Code  | Added the required #region VersionHistory block (FR-CS-058; tools/recurring-defect-lint.py hygiene pass). |
+#endregion

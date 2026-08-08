@@ -1,5 +1,6 @@
 // File:     src/match-engine/TacticFileGrammar.cs
 // Created:  2026-07-24
+// Modified: 2026-07-24
 // Author:   —
 // Spec:     Tactical Instructions #21 §3.1/§3.2, Tactical Presets #26 KD-6, FR-CS-019; Code Standards #20
 // Purpose:  The shared line-oriented tactic-file grammar helpers (WS-1). Both TeamTacticFileLoader and

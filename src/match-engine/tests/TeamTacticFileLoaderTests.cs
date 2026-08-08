@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/TeamTacticFileLoaderTests.cs
 // Created:  2026-06-29
+// Modified: 2026-07-07
 // Author:   —
 // Spec:     Tactical Instructions #21 §3.1/§3.2, FR-TI-031, FR-CS-019; Match Engine design note §5; Code Standards #20
 // Purpose:  Locks the on-disk → TeamTacticConfig parser swap: round-trips the text grammar onto

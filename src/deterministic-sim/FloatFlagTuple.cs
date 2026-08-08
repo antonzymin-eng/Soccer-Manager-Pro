@@ -1,5 +1,6 @@
 // File:     src/deterministic-sim/FloatFlagTuple.cs
 // Created:  2026-07-19
+// Modified: 2026-07-19
 // Author:   —
 // Spec:     Deterministic Simulation #16 §4.8.3, §3.2.4.1, §3.4, Code Standards #20
 // Purpose:  The canonical 11-field float-flag tuple whose SHA-256 is EnvironmentFingerprint.FloatModelHash

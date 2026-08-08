@@ -1,8 +1,8 @@
 # Pressing AI Specification #13 — Section 3: Core Formulas and Algorithms
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.3 APPROVED gate: all [EST] hysteresis tags promoted to [GT])
-**Version:** 0.3
+**Last Updated:** June 15, 2026 (v0.4 — AR-3 implementation-review frame correction. ERR-013-009: §3.1.2 `BACKWARD_PASS` dotted against `attackingDirection` (the pressing team's) instead of the possessing team's `-attackingDirection`, firing on the possessing team's forward pass (home/away inversion class); pseudocode + worked example corrected, own-team-passer guard added. ERR-013-010: §3.4 `receiverProgressionGain` had the same inversion; formula + worked example corrected to `-attackingDirection`. Zone/third frames (§3.8/§3.9) unchanged — those correctly use the pressing team's `attackingDirection`.)
+**Version:** 0.4
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 

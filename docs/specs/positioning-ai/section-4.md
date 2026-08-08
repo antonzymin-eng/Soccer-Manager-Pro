@@ -1,8 +1,8 @@
 # Positioning AI Specification #12 — Section 4: Architecture, File Layout, Interface Contracts
 
 **Created:** May 15, 2026
-**Last Updated:** May 16, 2026 (v0.2 — PASS-1 adversarial fix pass)
-**Version:** 0.2
+**Last Updated:** May 18, 2026 (v0.4 — FAIL-4 fix (A-03): §4.6 RNG domain tag row — corrected value `0x16` → `0x17` and promoted `[CROSS-PENDING]` → `[CROSS: #16 §3.4]`; ERR-012-001 resolved.)
+**Version:** 0.4
 **Status:** DRAFT
 
 ---

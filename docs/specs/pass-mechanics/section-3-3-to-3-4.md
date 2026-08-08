@@ -9,7 +9,7 @@ attribute, and crossing foot direction. Together with §3.2 (kick speed), these 
 subsections produce the full velocity and spin arguments to `Ball.ApplyKick()`.
 
 **Created:** March 7, 2026, 12:00 PM PST
-**Version:** 1.0
+**Version:** 1.1
 **Status:** DRAFT — Awaiting Lead Developer Review
 **Specification Number:** 5 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)

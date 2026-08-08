@@ -1,6 +1,6 @@
 // File:     src/pressing-ai/CoverShadowSelector.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-15
 // Author:   —
 // Spec:     Pressing AI #13 §3.4–§3.5, Code Standards #20
 // Purpose:  Pure static class: scores candidate receivers by threat, assigns own-team

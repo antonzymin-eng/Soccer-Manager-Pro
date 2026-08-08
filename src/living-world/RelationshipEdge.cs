@@ -1,6 +1,6 @@
 // File:     src/living-world/RelationshipEdge.cs
 // Created:  2026-06-21
-// Modified: 2026-06-21
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Living World System #22 §2.2.1, §3.1, Appendix C, Code Standards #20
 // Purpose:  RelationshipEdge value type: a directed per-ordered-pair relationship edge.
@@ -48,3 +48,9 @@ namespace TacticalDirector.LivingWorld
             => (ActiveLayers & (1 << (int)layer)) != 0;
     }
 }
+
+#region VersionHistory
+// | Version | Date       | Author       | Notes                                                     |
+// | 1.0     | 2026-06-21 | —            | Initial file. |
+// | 1.1     | 2026-08-08 | Claude Code  | Added the required #region VersionHistory block (FR-CS-058; tools/recurring-defect-lint.py hygiene pass). |
+#endregion

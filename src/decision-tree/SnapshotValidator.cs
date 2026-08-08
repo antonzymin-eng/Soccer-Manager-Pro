@@ -1,6 +1,6 @@
 // File:     src/decision-tree/SnapshotValidator.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-11
 // Author:   —
 // Spec:     Decision Tree #8 §3.6, §3.8, Code Standards #20
 // Purpose:  Step 1 of the 6-step pipeline. Validates the incoming FilteredView before

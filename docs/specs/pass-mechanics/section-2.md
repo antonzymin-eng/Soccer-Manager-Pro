@@ -7,7 +7,7 @@ modes for Pass Mechanics Specification #5. This section defines the "what" and "
 before Section 3 defines the "how."
 
 **Created:** February 20, 2026, 5:30 PM PST
-**Version:** 1.0
+**Version:** 1.1
 **Status:** DRAFT — Awaiting Lead Developer Review
 **Specification Number:** 5 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)

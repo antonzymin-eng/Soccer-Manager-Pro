@@ -1,6 +1,6 @@
 // File:     src/defensive-ai/TacticTranslation.cs
 // Created:  2026-06-29
-// Modified: 2026-06-29
+// Modified: 2026-07-07
 // Author:   —
 // Spec:     Tactical Instructions #21 §3.4, FR-TI-022 / FR-TI-025 / FR-TI-031; Defensive AI #14 §3.7 / KD-9
 // Purpose:  Consumer-side (T2) translation seam: resolves the #21 OffsideTrap toggle onto the #14

@@ -1,6 +1,6 @@
 // File:     src/decision-tree/TacticalWeights.cs
 // Created:  2026-05-29
-// Modified: 2026-07-07
+// Modified: 2026-07-11
 // Author:   —
 // Spec:     Decision Tree #8 §3.4.7, new §3.2/§7.7, Code Standards #20
 // Purpose:  All tactical context modifier constants (§3.4) and dispatch constants (§3.5).

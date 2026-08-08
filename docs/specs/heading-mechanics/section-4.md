@@ -1,7 +1,7 @@
 # Heading Mechanics Specification #10 — Section 4: Architecture, File Layout, Interface Contracts
 
 **Created:** May 16, 2026
-**Version:** 0.1
+**Version:** 0.3
 **Status:** DRAFT
 **Purpose:** Define the file layout under `src/Gameplay/Heading/`, the
 input and output interface contracts (consumed and emitted method

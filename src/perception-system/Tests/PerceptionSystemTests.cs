@@ -1,6 +1,6 @@
 // File:     src/perception-system/Tests/PerceptionSystemTests.cs
 // Created:  2026-05-31
-// Modified: 2026-07-13
+// Modified: 2026-06-12
 // Author:   —
 // Spec:     Perception System #7 §5, Code Standards #20
 // Purpose:  Unit tests for Perception System. FOV, OCC, LR, SC, BP test groups.

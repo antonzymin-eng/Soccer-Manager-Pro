@@ -1,5 +1,6 @@
 // File:     src/deterministic-sim/MxcsrNative.cs
 // Created:  2026-07-21
+// Modified: 2026-07-21
 // Author:   —
 // Spec:     Deterministic Simulation #16 §4.8.2, Code Standards #20
 // Purpose:  P/Invoke boundary to the native MXCSR shim (native/mxcsr_query.c). .NET / Mono has no

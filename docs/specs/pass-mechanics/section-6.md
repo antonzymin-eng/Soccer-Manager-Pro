@@ -10,7 +10,7 @@ derived from this section; if a conflict exists, this section takes precedence.
 
 **Created:** February 20, 2026, 11:59 PM PST
 **Revised:** February 21, 2026
-**Version:** 1.1
+**Version:** 1.2
 **Status:** DRAFT — Awaiting Lead Developer Review
 **Specification Number:** 5 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)

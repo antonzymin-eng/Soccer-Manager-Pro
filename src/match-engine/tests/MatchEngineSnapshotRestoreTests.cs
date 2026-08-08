@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineSnapshotRestoreTests.cs
 // Created:  2026-07-20
+// Modified: 2026-07-23
 // Author:   —
 // Spec:     Snapshot-deserialize design note (docs/tracking/snapshot-deserialize-design.md) §5 Phase 1/2
 //           (G3 round-trip determinism, KD-1/KD-3/KD-4/KD-5/KD-8); Match Engine design note §5 Phase G; Code Standards #20

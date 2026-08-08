@@ -1,6 +1,6 @@
 // File:     src/ball-physics/BallPhysicsCore.cs
 // Created:  2026-05-24
-// Modified: 2026-06-09 (AR-7 fix pass)
+// Modified: 2026-06-12
 // Author:   —
 // Spec:     Ball Physics #1, Code Standards #20
 // Purpose:  Main physics update loop and force calculations for the ball.

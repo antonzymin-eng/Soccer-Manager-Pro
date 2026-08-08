@@ -1,6 +1,6 @@
 // File:     src/attacking-ai/AttackingAIConstants.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-30
 // Author:   —
 // Spec:     Attacking AI #15 §6.1, FR-AT-030, Code Standards #20 §4.2 FR-CS-025
 // Purpose:  Single constant catalogue for Spec #15. All GT / Derived / Cross constants;

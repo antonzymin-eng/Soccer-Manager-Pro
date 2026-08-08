@@ -1,6 +1,6 @@
 // File:     src/heading-mechanics/HeadingDuelResolution.cs
 // Created:  2026-05-28
-// Modified: 2026-06-05
+// Modified: 2026-06-12
 // Author:   —
 // Spec:     Heading Mechanics #10 §3.7, §4.2.1, KD-8, KD-10, FR-HE-010, FR-HE-017, FR-HE-023,
 //           FR-HE-026, FR-HE-027, Code Standards #20

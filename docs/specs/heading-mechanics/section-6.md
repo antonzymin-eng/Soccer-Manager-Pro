@@ -1,7 +1,7 @@
 # Heading Mechanics Specification #10 — Section 6: Performance Analysis & Budgets
 
 **Created:** May 16, 2026
-**Version:** 0.1
+**Version:** 0.3
 **Status:** DRAFT
 **Purpose:** Per-tick and per-frame performance budgets, hot-path
 allocation discipline, scaling analysis, and Stage 0 → Stage 1

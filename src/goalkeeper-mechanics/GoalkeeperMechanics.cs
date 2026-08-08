@@ -1253,7 +1253,7 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |         |            |        | the smother trigger; rush-intent clear broadened to the whole      |
 // |         |            |        | Rushing/OneOnOne/Smothered chain so a stale intent cannot          |
 // |         |            |        | re-trigger Set → Rushing.                                          |
-// | 1.6     | 2026-07-23 | —      | GK/Heading engine-integration Phase 2: CaptureState() bundles the |
+// | 1.6.1   | 2026-07-23 | —      | GK/Heading engine-integration Phase 2: CaptureState() bundles the |
 // |         |            |        | per-GK cross-tick arrays into a GoalkeeperTickState view;          |
 // |         |            |        | RestoreState(in) copies them back into the live containers (the    |
 // |         |            |        | Match Engine v18 snapshot seam, the PressingTickState pattern).    |

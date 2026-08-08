@@ -1,6 +1,6 @@
 // File:     src/decision-tree/AgentAction.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-11
 // Author:   —
 // Spec:     Decision Tree #8 §2.2.2, Code Standards #20
 // Purpose:  The selected action output of the Decision Tree pipeline. Readonly struct

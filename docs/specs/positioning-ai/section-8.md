@@ -1,8 +1,8 @@
 # Positioning AI Specification #12 — Section 8: References and Citations
 
 **Created:** May 15, 2026
-**Last Updated:** May 16, 2026 (v0.2 — PASS-1 adversarial fix pass)
-**Version:** 0.2
+**Last Updated:** May 18, 2026 (v0.3 — Run 3 fix: §8.4 ERR-012-001 resolution updated from "Pending" to "Resolved May 18, 2026".)
+**Version:** 0.3
 **Status:** DRAFT
 
 ---

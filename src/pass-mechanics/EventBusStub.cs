@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/EventBusStub.cs
 // Created:  2026-05-26
-// Modified: 2026-06-06
+// Modified: 2026-06-12
 // Author:   —
 // Spec:     Pass Mechanics #5 §4.6.3, Event System #17 §3.2.1, Code Standards #20
 // Purpose:  Thin forwarding wrapper over EventBus. Replaces the Stage 0 no-op stub.

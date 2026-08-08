@@ -1,9 +1,9 @@
 # Club Finances & Economy #40 — Appendices
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026 (v0.2 — balance-pass AR pass 8 M2, the ERR-041-012 back-prop: the T-FN-NEU-003 comparator claimed #41 "does register a stream" — false since ERR-041-012; #41's occurrence draw registers nothing, same as #40's minimal tier)
+**Last Updated:** August 8, 2026 (v0.3 — balance-pass AR pass 8 M2, the ERR-041-012 back-prop: the T-FN-NEU-003 comparator claimed #41 "does register a stream" — false since ERR-041-012; #41's occurrence draw registers nothing, same as #40's minimal tier)
 **Last Updated (prior):** July 23, 2026 (v0.2 — AR-1 wage-semantics fix; prior v0.1 initial)
-**Version:** 0.2
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -73,5 +73,5 @@ ERR-041-012, #41 also registers NO stream; this line originally claimed the oppo
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial constant catalogue + worked examples (mid-season + mid-boundary-roll save/restore; behaviour-neutral identity). Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | AR-1 (1M): Appendix B mid-season example updated — wage transactions leave `Balance` unchanged. |
-| 0.2 | 2026-08-08 | — | **ERR-041-012 back-prop (balance-pass AR pass 8, M2)**: the Appendix C comparator asserted #41 registers an `injuries.occurrence` stream — a factual claim about a sibling spec that ERR-041-012 established as never-true; restated. |
+| 0.3 | 2026-08-08 | — | **ERR-041-012 back-prop (balance-pass AR pass 8, M2)**: the Appendix C comparator asserted #41 registers an `injuries.occurrence` stream — a factual claim about a sibling spec that ERR-041-012 established as never-true; restated. |
 #endregion

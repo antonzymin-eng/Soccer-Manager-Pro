@@ -1,6 +1,6 @@
 // File:     src/defensive-ai/DefensiveAITick.cs
 // Created:  2026-05-29
-// Modified: 2026-06-27 (Match Engine Phase D D4: CaptureState snapshot seam)
+// Modified: 2026-07-20
 // Author:   —
 // Spec:     Defensive AI #14 §3.13, §4.1, §4.2, Code Standards #20
 // Purpose:  10 Hz Defensive AI orchestrator for one team. Implements the 9-step pipeline

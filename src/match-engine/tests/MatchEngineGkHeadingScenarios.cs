@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineGkHeadingScenarios.cs
 // Created:  2026-07-23
+// Modified: 2026-07-23
 // Author:   —
 // Spec:     GK/Heading engine-integration design supplement
 //           (docs/tracking/gk-heading-engine-integration-design.md; the closed-loop scenario item),

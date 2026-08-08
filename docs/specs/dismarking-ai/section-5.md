@@ -1,8 +1,8 @@
 # Dismarking & Marker-Awareness AI Specification #23 — Section 5: Test Plan
 
 **Created:** July 8, 2026
-**Last Updated:** July 8, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** July 8, 2026 (v0.2 — PASS-1: T-DM-I-003 rewritten to the one-stride contract (M-1); T-DM-U-014 extended (L-2).)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---

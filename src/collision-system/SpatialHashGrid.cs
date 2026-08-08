@@ -1,6 +1,6 @@
 // File:     src/collision-system/SpatialHashGrid.cs
 // Created:  2026-05-25
-// Modified: 2026-06-10  [v1.4]
+// Modified: 2026-06-12
 // Author:   —
 // Spec:     Collision System #3 §3.1.2, FR-01, Code Standards #20
 // Purpose:  Uniform grid spatial hash — O(N) insert, O(1) avg query. Broad phase only.

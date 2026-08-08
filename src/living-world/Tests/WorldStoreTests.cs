@@ -1,5 +1,6 @@
 // File:     src/living-world/Tests/WorldStoreTests.cs
 // Created:  2026-07-03
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Living World System #22 §4.2/§4.6/§7.1 (KD-10), FR-LW-019/022/023, Testing Strategy #19
 //           §3.1.4, Code Standards #20
@@ -356,3 +357,9 @@ namespace TacticalDirector.LivingWorld.Tests
         }
     }
 }
+
+#region VersionHistory
+// | Version | Date       | Author       | Notes                                                     |
+// | 1.0     | 2026-07-03 | —            | Initial file. |
+// | 1.1     | 2026-08-08 | Claude Code  | Added the required #region VersionHistory block (FR-CS-058; tools/recurring-defect-lint.py hygiene pass). |
+#endregion

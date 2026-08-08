@@ -7,7 +7,7 @@ and `src/CLAUDE.md` (concrete paths). Spec #20 does not publish a runtime interf
 §4.4 records the N/A justification.
 
 **Created:** May 7, 2026
-**Version:** 1.0
+**Version:** 1.0.1
 **Status:** DRAFT
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 4

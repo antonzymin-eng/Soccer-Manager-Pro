@@ -1,5 +1,6 @@
 // File:     src/deterministic-sim/MxcsrValidator.cs
 // Created:  2026-07-21
+// Modified: 2026-07-21
 // Author:   —
 // Spec:     Deterministic Simulation #16 §4.8.2 (runtime float-mode validation), §4.8.3 (float-flag tuple), Code Standards #20
 // Purpose:  Decodes the live MXCSR (via MxcsrNative) and validates the three float-mode fields the

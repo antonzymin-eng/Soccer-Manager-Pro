@@ -1,6 +1,6 @@
 // File:     src/event-system/tests/EventSystemTests.cs
 // Created:  2026-05-31
-// Modified: 2026-07-13
+// Modified: 2026-06-12
 // Author:   —
 // Spec:     Event System #17 §5, Code Standards #20
 // Purpose:  Unit tests for Event System. Tests Stage-0 activation criteria.

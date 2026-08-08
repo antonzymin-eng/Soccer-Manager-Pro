@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineGkHeadingScenarioTests.cs
 // Created:  2026-07-23
+// Modified: 2026-07-23
 // Author:   —
 // Spec:     GK/Heading scenario design supplement (docs/tracking/gk-heading-scenario-design.md),
 //           Testing Strategy & Framework #19 §3.1.1 (Simulation layer) / §3.3.3, Heading #10,

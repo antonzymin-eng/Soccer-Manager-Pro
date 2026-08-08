@@ -1,6 +1,6 @@
 // File:     src/tactical-instructions/Tests/TacticPresetLibraryTests.cs
 // Created:  2026-07-10
-// Modified: 2026-07-10
+// Modified: 2026-07-24
 // Author:   —
 // Spec:     Tactical Presets #26 §2.2 (FR-TP-001/002/003/013/014), Appendix A.1, Code Standards #20
 // Purpose:  Locks the #26 T0 catalogue: the pinned A.1 ladder order and compositions, the KD-7

@@ -1,6 +1,6 @@
 // File:     src/first-touch/AssemblyInfo.cs
 // Created:  2026-06-10
-// Modified: 2026-06-10
+// Modified: 2026-06-22
 // Author:   —
 // Spec:     First Touch Mechanics #4, Code Standards #20 FR-CS-015
 // Purpose:  Assembly-level attributes for TacticalDirector.FirstTouch.

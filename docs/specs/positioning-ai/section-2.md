@@ -1,8 +1,8 @@
 # Positioning AI Specification #12 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** May 15, 2026
-**Last Updated:** May 16, 2026 (v0.2 — PASS-1 adversarial fix pass)
-**Version:** 0.2
+**Last Updated:** May 18, 2026 (v0.3 — FAIL-4 fix (A-03): FR-PA-005 `[CROSS-PENDING]` promoted to `[CROSS: #16 §3.4]`; ERR-012-001 resolved.)
+**Version:** 0.3
 **Status:** DRAFT
 
 ---

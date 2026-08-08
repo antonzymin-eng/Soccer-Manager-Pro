@@ -1,7 +1,6 @@
 // File:     src/pressing-ai/PressingAITick.cs
 // Created:  2026-05-29
-// Modified: 2026-06-27 (Match Engine Phase D D4: CaptureState snapshot seam)
-// Modified: 2026-07-07 (cheap-item addition: curving-press blind-side bias)
+// Modified: 2026-07-20
 // Author:   —
 // Spec:     Pressing AI #13 §3.11, §4.2, new §3.3/§7.12, Code Standards #20
 // Purpose:  10 Hz Pressing AI orchestrator for one team. Runs the full §3.11 pipeline:

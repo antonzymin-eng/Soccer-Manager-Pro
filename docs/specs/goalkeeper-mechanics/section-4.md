@@ -1,7 +1,7 @@
 # Goalkeeper Mechanics Specification #11 — Section 4: Architecture, File Layout, Interface Contracts
 
 **Created:** May 16, 2026
-**Version:** 0.1
+**Version:** 0.3
 **Status:** DRAFT
 **Purpose:** Establish the architectural file layout, the input /
 output interface contracts, the determinism compliance surface,

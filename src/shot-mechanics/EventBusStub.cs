@@ -1,6 +1,6 @@
 // File:     src/shot-mechanics/EventBusStub.cs
 // Created:  2026-05-27
-// Modified: 2026-05-30
+// Modified: 2026-06-12
 // Author:   —
 // Spec:     Shot Mechanics #6 §4.7.3, Event System #17 §3.2.1, Code Standards #20
 // Purpose:  Thin forwarding wrapper over EventBus. Replaces the Stage 0 no-op stub.

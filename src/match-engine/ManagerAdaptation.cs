@@ -1,6 +1,6 @@
 // File:     src/match-engine/ManagerAdaptation.cs
 // Created:  2026-07-11
-// Modified: 2026-07-11
+// Modified: 2026-07-24
 // Author:   —
 // Spec:     Tactical Presets #26 §3.3 (FM-TP-03) / §3.4 (FM-TP-04), FR-TP-004/005/008/009/010/011,
 //           KD-1/KD-5/KD-8, F3; Code Standards #20

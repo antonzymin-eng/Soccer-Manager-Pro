@@ -1,5 +1,6 @@
 // File:     src/match-engine/ISquadProvider.cs
 // Created:  2026-07-20
+// Modified: 2026-07-20
 // Author:   —
 // Spec:     Snapshot-deserialize design note (docs/tracking/snapshot-deserialize-design.md) §5 Phase 2
 //           (KD-3 distinct-squad re-projection); Squad/Player Data Layer #27 T3; Code Standards #20

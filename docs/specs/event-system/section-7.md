@@ -2,7 +2,7 @@
 
 **Created:** May 13, 2026
 **Last Updated:** May 13, 2026
-**Version:** 0.1 (initial section-file draft from `outline-detailed.md` v1.1)
+**Version:** 1.0.1
 **Status:** DRAFT
 
 > Section heading order follows `outline-detailed.md` v1.1

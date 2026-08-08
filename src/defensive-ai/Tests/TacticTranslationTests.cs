@@ -1,6 +1,6 @@
 // File:     src/defensive-ai/Tests/TacticTranslationTests.cs
 // Created:  2026-06-29
-// Modified: 2026-07-07
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Tactical Instructions #21 §3.4, FR-TI-022 / FR-TI-031 / FR-TI-033; Defensive AI #14 §3.7; Code Standards #20
 // Purpose:  Locks the #21 → #14 T2 consumer seam: OffsideTrap → trap-request passthrough, the
@@ -73,3 +73,10 @@ namespace TacticalDirector.DefensiveAI.Tests
         }
     }
 }
+
+#region VersionHistory
+// | Version | Date       | Author       | Notes                                                     |
+// | 1.0     | 2026-06-29 | —            | Initial file. |
+// | 1.1     | 2026-07-07 | —            | Substantive edit; no version-history row was recorded for it at the time (FR-CS-058 gap, predates this hygiene pass). |
+// | 1.2     | 2026-08-08 | Claude Code  | Added the required #region VersionHistory block (FR-CS-058; tools/recurring-defect-lint.py hygiene pass). |
+#endregion

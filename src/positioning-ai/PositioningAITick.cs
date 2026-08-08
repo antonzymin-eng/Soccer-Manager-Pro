@@ -1,8 +1,6 @@
 // File: src/positioning-ai/PositioningAITick.cs
 // Created:  2026-05-29
-// Modified: 2026-06-27 (Match Engine Phase D D4: CaptureState snapshot seam)
-// Modified: 2026-07-07 (cheap-item addition: rest-defense coverage check)
-// Modified: 2026-07-11 (#25 RotationController wired into the tick, §4.2 order)
+// Modified: 2026-07-20
 // Author:   —
 // Spec: #12 Positioning AI §3.7 (§3.7.1 as amended by ERR-012-009), §3.11, §4.3, FR-PA-001..006,
 //       new §3.5/§7.13; Positional Rotations #25 §4.2

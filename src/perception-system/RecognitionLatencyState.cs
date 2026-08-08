@@ -1,5 +1,6 @@
 // File:     src/perception-system/RecognitionLatencyState.cs
 // Created:  2026-06-27
+// Modified: 2026-06-27
 // Author:   —
 // Spec:     Perception System #7 §3.3; Match Engine design note §2.6 (Phase D D4 follow-up); Code Standards #20
 // Purpose:  Read-only view over a RecognitionLatencyTracker's per-(observer,target) cross-tick counters so

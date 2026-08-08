@@ -277,7 +277,7 @@ namespace TacticalDirector.GoalkeeperMechanics
 // |         |            |        | isolation but not invoked at Stage 0 (synthetic reachCenter    |
 // |         |            |        | displacement is used); double-count hazard flagged for the     |
 // |         |            |        | Stage 1 AM-kinematics binding.                                 |
-// | 1.2     | 2026-07-28 | —      | gk-contact-rate (ERR-011-007): + TryPredictPlaneCrossing (the      |
+// | 1.3     | 2026-07-28 | —      | gk-contact-rate (ERR-011-007): + TryPredictPlaneCrossing (the      |
 // |         |            |        | one crossing predictor, shared by the dive direction and the    |
 // |         |            |        | commit gate), + ComputeDiveCommitLeadS (lateral-need-scaled     |
 // |         |            |        | lead, floored by DiveCommitMinLeadFrac), + ShouldCommitDive     |

@@ -1,6 +1,6 @@
 // File:     src/goalkeeper-mechanics/Tests/GoalkeeperConversionTests.cs
 // Created:  2026-07-28
-// Modified: 2026-07-28
+// Modified: 2026-08-03
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §3.2 / §3.5 / §4.6, Code Standards #20
 // Purpose:  Unit locks for the gk-catch-parry-conversion pass (ERR-011-005 / ERR-011-006):

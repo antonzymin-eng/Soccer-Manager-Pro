@@ -1,5 +1,6 @@
 // File:     src/goalkeeper-mechanics/GoalkeeperTickState.cs
 // Created:  2026-07-23
+// Modified: 2026-07-23
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §2.2, §3.1–§3.8; gk-heading-engine-integration-design.md Phase 2;
 //           Match Engine design note §2.6 (snapshot seam); Code Standards #20

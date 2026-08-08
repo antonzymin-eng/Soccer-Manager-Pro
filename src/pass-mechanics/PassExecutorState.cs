@@ -1,5 +1,6 @@
 // File:     src/pass-mechanics/PassExecutorState.cs
 // Created:  2026-06-19
+// Modified: 2026-06-19
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.8; Match Engine design note §2.6 (Phase C step C0); Code Standards #20
 // Purpose:  Plain-data snapshot of a PassExecutor's cross-tick state-machine + in-flight fields,

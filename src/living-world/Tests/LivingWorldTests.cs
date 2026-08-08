@@ -1,6 +1,6 @@
 // File:     src/living-world/Tests/LivingWorldTests.cs
 // Created:  2026-06-21
-// Modified: 2026-06-21
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Living World System #22 §5, Testing Strategy & Framework #19 §3.1.4, Code Standards #20
 // Purpose:  T0 unit tests for the living-world data types and pure math. Locks the contracts the spec
@@ -171,3 +171,9 @@ namespace TacticalDirector.LivingWorld.Tests
         }
     }
 }
+
+#region VersionHistory
+// | Version | Date       | Author       | Notes                                                     |
+// | 1.0     | 2026-06-21 | —            | Initial file. |
+// | 1.1     | 2026-08-08 | Claude Code  | Added the required #region VersionHistory block (FR-CS-058; tools/recurring-defect-lint.py hygiene pass). |
+#endregion

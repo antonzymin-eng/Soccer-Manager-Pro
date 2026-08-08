@@ -1,6 +1,6 @@
 // File:     src/tactical-instructions/Tests/FactoryIdentityTests.cs
 // Created:  2026-06-21
-// Modified: 2026-07-07
+// Modified: 2026-07-10
 // Author:   —
 // Spec:     Tactical Instructions #21 §2.2, §3.2–§3.4, Appendix A, FR-TI-031, Code Standards #20
 // Purpose:  Locks the identity factories (TeamTactic.Balanced / PlayerTactic.Default /

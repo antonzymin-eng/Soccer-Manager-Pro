@@ -1,5 +1,6 @@
 // File:     src/match-engine/PlayerTacticFileLoader.cs
 // Created:  2026-06-30
+// Modified: 2026-06-30
 // Author:   —
 // Spec:     Tactical Instructions #21 §3.3 (per-agent tactic config surface), FR-TI-031, FR-CS-019; Match Engine design note §5; Code Standards #20
 // Purpose:  The on-disk → PlayerTacticConfig parser swap (the per-agent half of the #21 config loader,

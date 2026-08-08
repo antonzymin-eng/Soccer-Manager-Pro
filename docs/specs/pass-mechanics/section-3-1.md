@@ -9,7 +9,7 @@ consumed by §3.2 (Velocity), §3.3 (Launch Angle), and §3.4 (Spin Vector).
 
 **Created:** February 20, 2026
 **Revised:** February 21, 2026
-**Version:** 1.1
+**Version:** 1.3
 **Status:** DRAFT — Awaiting Lead Developer Review
 **Specification Number:** 5 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)

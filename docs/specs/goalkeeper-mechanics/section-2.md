@@ -1,7 +1,7 @@
 # Goalkeeper Mechanics Specification #11 — Section 2: Functional Requirements, Data Structures & Failure Modes
 
 **Created:** May 16, 2026
-**Version:** 0.1
+**Version:** 0.3
 **Status:** DRAFT
 **Purpose:** Enumerate the functional requirements (FRs), publish the
 data structures, catalogue the failure modes, and declare the
