@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using TacticalDirector.InjuriesMedical;
 using TacticalDirector.MatchEngine;
 using TacticalDirector.PlayerDatabase;
+using TacticalDirector.PlayerProgression;
 using TacticalDirector.TrainingSystem;
 
 namespace TacticalDirector.SeasonSave
@@ -722,6 +723,63 @@ namespace TacticalDirector.SeasonSave
                         ref states[i], in record.Attributes, in coach, worldDay);
                 }
             }
+        }
+
+        /// <summary>
+        /// Gathers #30's <b>slot-1</b> growth-input batch (#29 §3.5 step 1 / #28 FR-PG-021): each
+        /// player's <c>ComputeTrainingInput</c>, keyed by player id, ready for
+        /// <c>ProgressionEngine.AdvanceDay</c>. This is the composition ERR-029-006 was filed against —
+        /// #29 specifies that #30 gathers the batch and hands it to #28, and until #28 exposed a batch
+        /// entry point there was nothing to hand it to.
+        /// <para>
+        /// <b>A read, never a mutation.</b> <c>ComputeTrainingInput</c> reads only <c>Focus</c>, the
+        /// player's attributes and the coach seam — fields <see cref="AdvanceTrainingDay"/> does not
+        /// write — which is the FR-TR-006 invariant that makes slot 1 and slot 2 order-independent. Call
+        /// this before or after slot 2 and the batch is identical.
+        /// </para>
+        /// <para>
+        /// <b>The ids travel with the inputs</b> so #28 can refuse a batch that does not describe the
+        /// players it is about to advance. That turns "#29's roster view and #28's have drifted apart"
+        /// from a silent mis-attribution of growth into a fail-loud at the seam.
+        /// </para>
+        /// </summary>
+        /// <param name="squads">The rosters the attributes are read from; must match the state's roster.</param>
+        /// <param name="coach">The #34 staff seam; <see cref="CoachingModifier.Identity"/> until #34 lands.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="squads"/> is null.</exception>
+        /// <exception cref="ArgumentException">A club or a held player id cannot be resolved against <paramref name="squads"/>.</exception>
+        internal ClubTrainingInputs[] GatherTrainingInputs(ISquadProvider squads, CoachingModifier coach)
+        {
+            if (squads == null)
+            {
+                throw new ArgumentNullException(nameof(squads));
+            }
+
+            var batch = new ClubTrainingInputs[_clubIds.Count];
+            for (int c = 0; c < _clubIds.Count; c++)
+            {
+                Squad squad = ResolveSquad(squads, _clubIds[c]);
+                int[] ids = _playerIds[c];
+                TrainingState[] states = _training[c];
+
+                var playerIds = new int[ids.Length];
+                var inputs = new TrainingInput[ids.Length];
+                for (int i = 0; i < ids.Length; i++)
+                {
+                    int local = RequireLocalIndex(squad, _clubIds[c], ids[i]);
+                    PlayerRecord record = squad.GetPlayer(local);
+                    playerIds[i] = ids[i];
+                    // deepTrainingEnabled is #29's OWN Stage-2/3 dial (FR-TR-007), independent of #28's
+                    // curveEnabled, and off at Stage 2 — so every input is Neutral today and the batch
+                    // is behaviour-neutral by construction, not by accident. The seam is what lands
+                    // here; the values arrive when #29 T3 turns its dial on.
+                    inputs[i] = TrainingStep.ComputeTrainingInput(
+                        in states[i], in record.Attributes, in coach, deepTrainingEnabled: false);
+                }
+
+                batch[c] = new ClubTrainingInputs(_clubIds[c], playerIds, inputs);
+            }
+
+            return batch;
         }
 
         /// <summary>

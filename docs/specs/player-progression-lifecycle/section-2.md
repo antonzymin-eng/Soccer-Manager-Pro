@@ -1,8 +1,9 @@
 # Player Progression & Lifecycle #28 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — section-file PASS-1 (0H+2M) → AR-2 (3M cross-fix) → AR-3 convergence; APPROVED)
-**Version:** 0.2
+**Last Updated:** August 8, 2026 (v0.3 — ERR-028-005: `PlayerLifecycle` gains `LastAdvancedWorldDay`, the daily-step idempotency cursor)
+**Last Updated (prior):** July 23, 2026 (v0.2 — section-file PASS-1 (0H+2M) → AR-2 (3M cross-fix) → AR-3 convergence; APPROVED)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -106,6 +107,7 @@ public struct PlayerLifecycle
                                    //   from it, so there is no discrete "rollover" step to double-count
     public bool RetirementFlag;    // set on the world tick at RETIREMENT_AGE (KD-5)
     public uint RetirementDay;     // the world-day the flag was set (0 if not flagged)
+    public uint LastAdvancedWorldDay;  // the last world day the daily step ran; sentinel uint.MaxValue = never
 }
 
 // The per-player growth contribution #29 writes (KD-2). Neutral == no training (FR-PG-009).
@@ -122,6 +124,13 @@ public readonly struct RegenResult      { /* new PlayerRecords + their fresh Pla
 // Read-only observer surface for #31/#38 (KD-7).
 public readonly struct LifecycleViewModel { /* age / CA / PA / retirement (value copies) */ }
 ```
+
+The sentinel for `LastAdvancedWorldDay` is `uint.MaxValue`, not `0` — day 0 is a legitimate world day (the
+day-0 trap: a zero default would read as "already advanced through day 0" and silently skip that player's
+first real step), the same reasoning and the same sentinel value #29 uses for
+`TRAINING_NOT_ADVANCED_SENTINEL`. The cursor is what makes the daily step idempotent when #30 runs a
+fixture day's KD-2 slots twice — once pre-round and once from the advance loop (ERR-030-027) — so a
+day already reflected in the cursor is a no-op rather than a second application of growth (ERR-028-005).
 
 The **career-state block** persisted under `PROGRESSION_SAVE_FORMAT_VERSION` is, per `PlayerId`:
 the complete `PlayerRecord` (identity + evolving `PlayerAttributes`, #27 types) **and** its
@@ -143,4 +152,5 @@ the complete `PlayerRecord` (identity + evolving `PlayerAttributes`, #27 types) 
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial FR set (FR-PG-001..024), data structures, failure modes F1..F6. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (0H+2M: M-1 age-model muddle → one BirthWorldDay-derived representation; M-2 per-club regen stream) → AR-2 (3M cross-fix regressions) → AR-3 convergence; APPROVED. See section-9 §9.3.1. |
+| 0.3 | 2026-08-08 | — | ERR-028-005: `PlayerLifecycle` gains `LastAdvancedWorldDay` (sentinel `uint.MaxValue`) so `AdvanceDay` is idempotent per day and gap-complete, matching #29's `TRAINING_NOT_ADVANCED_SENTINEL` precedent; documented alongside the struct listing. Spec + code, same commit (T1/T2a). |
 #endregion

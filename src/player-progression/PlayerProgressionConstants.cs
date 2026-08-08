@@ -1,6 +1,6 @@
 // File:     src/player-progression/PlayerProgressionConstants.cs
 // Created:  2026-07-24
-// Modified: 2026-07-24
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3/§4 + Appendix A (constant catalogue); Code Standards #20
 // Purpose:  All numeric constants for #28 aging/growth/regen — the age-derivation divisor, the CA/PA
@@ -26,8 +26,26 @@ namespace TacticalDirector.PlayerProgression
         /// <summary>[FIXED] World-days per age-year — the age-derivation divisor (§3.1.1).</summary>
         public const int DAYS_PER_YEAR = 365;
 
-        /// <summary>[FIXED] The lifecycle sub-blob version (independent of every other format version; §3.5). Declared now, consumed at T1.</summary>
+        /// <summary>
+        /// [FIXED] The #28 sub-blob's self-identifying leading tag — <c>'P''R''O''G'</c>, written BEFORE
+        /// the version (ERR-028-004). Not decoration and deliberately NOT the
+        /// <c>DOMAIN_TAG_PLAYER_PROGRESSION</c> RNG tag §3.5 named in its place: every sub-blob format in
+        /// the save stack sits at version 1, so without a magic each codec decodes a sibling's bytes
+        /// cleanly and silently. A version gate separates generations of ONE format, never one format
+        /// from another (ERR-029-005 / ERR-041-009).
+        /// </summary>
+        public const uint PROGRESSION_SAVE_MAGIC = 0x50524F47;   // 'P''R''O''G'
+
+        /// <summary>[FIXED] The lifecycle sub-blob version (independent of every other format version; §3.5). Gates the generation of the format identified by <see cref="PROGRESSION_SAVE_MAGIC"/> — the magic says WHICH format, this says WHICH VERSION of it.</summary>
         public const uint PROGRESSION_SAVE_FORMAT_VERSION = 1;
+
+        /// <summary>
+        /// [FIXED] <see cref="PlayerLifecycle.LastAdvancedWorldDay"/>'s never-advanced sentinel.
+        /// <c>uint.MaxValue</c> rather than 0 because day 0 is a legitimate world day — a zero default
+        /// would read as "already advanced on day 0" and silently skip the first real step (the day-0
+        /// trap; the #29 <c>TRAINING_NOT_ADVANCED_SENTINEL</c> precedent, same value for the same reason).
+        /// </summary>
+        public const uint PROGRESSION_NOT_ADVANCED_SENTINEL = uint.MaxValue;
 
         #endregion
 
@@ -104,12 +122,41 @@ namespace TacticalDirector.PlayerProgression
         /// <summary>[GT] Regen maximum generated age (young band, §3.3). TODO: replace with config loader (Stage 1).</summary>
         public static readonly int REGEN_AGE_MAX = 20;
 
+        /// <summary>
+        /// [GT] The PotentialAbility headroom a NEW-GAME (bootstrapped) player is seeded with, above his
+        /// generated CurrentAbility: <c>PA = clamp(CA + NEW_GAME_PA_HEADROOM, PA_MIN, ABILITY_MAX)</c>.
+        /// <para>
+        /// <b>This is a placeholder for authored data, and the seam matters more than the value</b>
+        /// (ERR-028-003). §3.2 sources new-game PA from the authored player database — which is
+        /// <b>#47</b>'s (New-Game Setup &amp; Database Editor), a spec with no <c>src/</c> assembly — so
+        /// until #47 lands, a procedurally bootstrapped league has no authored PA to read and #28 must
+        /// seed one. Deliberately <b>deterministic, not drawn</b>: a draw here would be #28's first draw
+        /// site and would force the <c>player-progression.regen</c> stream to register (FR-PG-020) for a
+        /// value #47 is going to overwrite. #47 fills real values through the same seam.
+        /// </para>
+        /// <para>
+        /// <b>Recorded, not fixed:</b> at the §4.3 band step a whole youth career raises CA by only
+        /// ~421 of <see cref="ABILITY_MAX"/> (8 growth years x ~52.6, one attribute per year), so ANY
+        /// headroom above ~420 makes the PA ceiling unreachable and F1 unexercised in production —
+        /// including this one, and including any realistic authored gap. That is a property of the
+        /// growth RATE, not of where PA comes from, and it is the Stage-3 <c>curveEnabled</c> tier's to
+        /// close. KD-W1 forbids retuning it in the pass that wires the subsystem.
+        /// </para>
+        /// TODO: replace with the #47 authored value (Stage 1).
+        /// </summary>
+        public static readonly int NEW_GAME_PA_HEADROOM = 1500;
+
         #endregion
     }
 }
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
+// | 1.1     | 2026-08-08 | —      | #28 T1: + PROGRESSION_SAVE_MAGIC ("PROG"), written before the  |
+// |         |            |        | version — ERR-028-004, since §3.5 specified the RNG domain tag |
+// |         |            |        | as the block's identifier and a version is not one             |
+// |         |            |        | (ERR-029-005/ERR-041-009). + NEW_GAME_PA_HEADROOM, the         |
+// |         |            |        | deterministic placeholder for #47's authored PA (ERR-028-003). |
 // | 1.0     | 2026-07-24 | —      | Initial #28 T0 constant catalogue: Fixed (DAYS_PER_YEAR,       |
 // |         |            |        | PROGRESSION_SAVE_FORMAT_VERSION), Derived (PROGRESSION_REGEN_  |
 // |         |            |        | FIELDS = 5+31+1), Cross (ATTRIBUTE_MIN/MAX mirror of #27), GT  |

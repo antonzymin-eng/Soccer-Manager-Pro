@@ -26,6 +26,7 @@ using TacticalDirector.InjuriesMedical;
 using TacticalDirector.LivingWorld;
 using TacticalDirector.MatchEngine;
 using TacticalDirector.PlayerDatabase;
+using TacticalDirector.PlayerProgression;
 using TacticalDirector.TrainingSystem;
 
 namespace TacticalDirector.SeasonSave
@@ -76,7 +77,8 @@ namespace TacticalDirector.SeasonSave
             string path,
             ClubTrainingStates[] trainingClubs,
             ClubInjuryStates[] medicalClubs,
-            ClubAppearanceStates[] appearanceClubs)
+            ClubAppearanceStates[] appearanceClubs,
+            ProgressionEngine progression)
         {
             if (world == null)
             {
@@ -115,6 +117,17 @@ namespace TacticalDirector.SeasonSave
                     "Pass Array.Empty<ClubAppearanceStates>() for a season that tracks no appearance " +
                     "record — null is not the empty set (#30 Appendix B).");
             }
+            // Required for the same reason as the three above, and more sharply: this block is the
+            // ROSTER (#28 KD-4). A null-means-empty default would let a call site omit it, save
+            // cleanly, and reload a career whose players have reverted to their day-0 attributes —
+            // with the world, season and career blocks all intact around them, so nothing would look
+            // wrong. "This season tracks no careers" is said with an empty ProgressionEngine.
+            if (progression == null)
+            {
+                throw new ArgumentNullException(nameof(progression),
+                    "Pass a ProgressionEngine (empty if the season tracks no careers) — null is not " +
+                    "the empty set, and this block carries the roster (FR-PG-017 / #28 KD-4).");
+            }
             if (string.IsNullOrEmpty(path))
             {
                 throw new ArgumentException("Save path must be non-empty.", nameof(path));
@@ -144,9 +157,11 @@ namespace TacticalDirector.SeasonSave
             var trainingBlock = new TrainingBlock(TrainingSaveCodec.Encode(trainingClubs));
             var medicalBlock = new MedicalBlock(MedicalSaveCodec.Encode(medicalClubs));
             var appearanceBlock = new AppearanceBlock(AppearanceSaveCodec.Encode(appearanceClubs));
+            var progressionBlock = new ProgressionBlock(progression.Snapshot());
             byte[] matchBlob = matchOrNull != null ? MatchSaveManager.Encode(matchOrNull) : null;
             byte[] blob = SeasonSaveCodec.Encode(
-                worldBlob, seasonBlob, in trainingBlock, in medicalBlock, in appearanceBlock, matchBlob);
+                worldBlob, seasonBlob, in trainingBlock, in medicalBlock, in appearanceBlock,
+                in progressionBlock, matchBlob);
 
             string tempPath = path + ".tmp";
             try
@@ -231,7 +246,10 @@ namespace TacticalDirector.SeasonSave
                     : Array.Empty<ClubInjuryStates>(),
                 loop.Career != null
                     ? loop.Career.AppearanceBlocks()
-                    : Array.Empty<ClubAppearanceStates>());
+                    : Array.Empty<ClubAppearanceStates>(),
+                // A careerless loop still saves a well-formed empty career store, not a null: the
+                // block is mandatory, and "no careers tracked" is a zero-club block.
+                loop.Progression ?? ProgressionEngine.Empty);
         }
 
         /// <summary>
@@ -283,6 +301,7 @@ namespace TacticalDirector.SeasonSave
             ClubTrainingStates[] trainingClubs = TrainingSaveCodec.Decode(blobs.TrainingBlob);
             ClubInjuryStates[] medicalClubs = MedicalSaveCodec.Decode(blobs.MedicalBlob);
             ClubAppearanceStates[] appearanceClubs = AppearanceSaveCodec.Decode(blobs.AppearanceBlob);
+            ProgressionEngine progression = ProgressionEngine.Restore(blobs.ProgressionBlob);
 
             // FR-SN-011 (MUST) / F4: the KD-4 cursor invariant is the one coherence rule that spans the
             // world and season blobs, so it can only be checked HERE — the two codecs each see one blob,
@@ -327,14 +346,27 @@ namespace TacticalDirector.SeasonSave
                 // production posture (armed, FR-MD-027) rather than encoding a stale default.
                 var career = PlayerCareerStates.FromBlocks(
                     trainingClubs, medicalClubs, appearanceClubs, injuryOccurrenceEnabled: true);
-                ISquadProvider asConfigured = squads == null
+
+                // #28 T2a: the roster comes from THIS FILE's career block whenever the file carries one,
+                // never from the caller's provider. The caller's is the bootstrap rebuilt from the world
+                // seed — day-0 attributes — and since KD-4 moved roster authority into the save, the two
+                // differ by exactly the growth this career has banked. Restoring a match against the
+                // bootstrap would put the same players on the pitch with the wrong attributes on every
+                // slot, every gate green (the ClubIds match, the sizes match), and the match would
+                // diverge from the pre-save run with nothing to announce it. Same reasoning as the
+                // availability filter below, one layer further back: rebuild from the file, not from a
+                // provider that merely looks like the right one.
+                ISquadProvider rosterSource = progression.ClubCount > 0
+                    ? new ProgressionSquads(progression)
+                    : squads;
+                ISquadProvider asConfigured = rosterSource == null
                     ? null
-                    : new AvailabilityFilteredSquads(squads, career);
+                    : new AvailabilityFilteredSquads(rosterSource, career);
                 match = MatchSaveManager.Restore(blobs.MatchBlob, asConfigured);
             }
 
             return new SeasonSaveContents(
-                world, season, trainingClubs, medicalClubs, appearanceClubs, match);
+                world, season, trainingClubs, medicalClubs, appearanceClubs, progression, match);
         }
 
         /// <summary>

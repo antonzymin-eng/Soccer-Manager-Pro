@@ -54,8 +54,17 @@ namespace TacticalDirector.SeasonSave
         /// and the optional match block — mandatory for the same reason the #29/#41 blocks are: an
         /// appearance record has no absent case, only an empty one. A v3 file is rejected fail-loud.
         /// </para>
+        /// <para>
+        /// <b>4 → 5 at #28 T1 (FR-PG-017).</b> The frame gained the #28 career-state sub-blob
+        /// (<c>PROGRESSION_SAVE_FORMAT_VERSION</c>) between the appearance block and the optional match
+        /// block — mandatory on the same argument, and load-bearing in a way the sibling career blocks
+        /// are not: it carries the <b>evolving <c>PlayerRecord</c> set itself</b> (#28 KD-4), so from
+        /// this version on the roster is a function of the SAVE rather than of the world seed. A v4 file
+        /// is rejected fail-loud. This retires the roadmap-A3 property that a career could be reopened
+        /// from the seed alone.
+        /// </para>
         /// </summary>
-        public const uint SEASON_SAVE_FORMAT_VERSION = 4;
+        public const uint SEASON_SAVE_FORMAT_VERSION = 5;
 
         /// <summary>
         /// [FIXED] The #30 appearance sub-blob's leading self-identifying tag — ASCII <c>"APPR"</c>,

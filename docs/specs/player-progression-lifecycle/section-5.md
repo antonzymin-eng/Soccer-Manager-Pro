@@ -1,8 +1,9 @@
 # Player Progression & Lifecycle #28 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — section-file PASS-1 (0H+2M) → AR-2 (3M cross-fix) → AR-3 convergence; APPROVED)
-**Version:** 0.2
+**Last Updated:** August 8, 2026 (v0.3 — ERR-028-005: T-PG-DET-002 reworded to the gap-replay semantic that makes it satisfiable)
+**Last Updated (prior):** July 23, 2026 (v0.2 — section-file PASS-1 (0H+2M) → AR-2 (3M cross-fix) → AR-3 convergence; APPROVED)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -17,9 +18,15 @@ lock; only regen generation draws.
   discrete rollover step) and every mutation is integer, a save on the day an attribute-point is spent,
   the day before, and the day after all restore to the identical continuation — nothing is
   double-counted across the save boundary.
-- **T-PG-DET-002** — Advance to a far-future world day (a long single `AdvanceDay` gap, or many days):
-  derived age (`(worldDay − BirthWorldDay)/DAYS_PER_YEAR`) and the accumulated cursor match a
-  day-by-day advance — age derivation is gap-independent (a pure function of the world day, §3.1.1).
+- **T-PG-DET-002** — A single `AdvanceDay` call spanning a far-future gap equals a day-by-day advance
+  over the same span, for **both** derived age **and** the accumulated `GrowthCursor` — not just age.
+  Age matches trivially, being gap-independent (a pure function of `(worldDay, BirthWorldDay)`,
+  §3.1.1); the cursor matches only because `AdvanceDay` **replays every intervening day** internally
+  (§3.1's `LastAdvancedWorldDay` walk) rather than accruing once for the whole gap — a naive single call
+  to the per-player projection would bank one day's `dailyPts` and lose the rest (ERR-028-005). Locked
+  separately: `AdvanceDay_FirstCall_AdvancesExactlyOneDay` — the first call on a never-advanced store
+  (cursor at the sentinel) advances **exactly one day** and anchors the cursor there, since it cannot
+  know how far in the past the career actually began accruing.
 
 ## 5.2 Two-run determinism
 
@@ -87,4 +94,5 @@ lock; only regen generation draws.
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial test plan (T-PG-*): byte-exact restore, two-run determinism, behaviour-neutral identity, CA/PA, regen, retirement/boundary, fail-loud, optional capstone. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (0H+2M: M-1 age-model muddle → one BirthWorldDay-derived representation; M-2 per-club regen stream) → AR-2 (3M cross-fix regressions) → AR-3 convergence; APPROVED. See section-9 §9.3.1. |
+| 0.3 | 2026-08-08 | — | ERR-028-005: T-PG-DET-002 reworded — the long-gap cursor match holds because `AdvanceDay` replays every intervening day, not because the cursor is gap-independent (only age is); added the separately-locked first-call-anchors-at-one-day semantic. Spec + code, same commit (T1/T2a). |
 #endregion

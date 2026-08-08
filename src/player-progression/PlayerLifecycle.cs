@@ -1,6 +1,6 @@
 // File:     src/player-progression/PlayerLifecycle.cs
 // Created:  2026-07-24
-// Modified: 2026-07-24
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §2.2 (data structures); Code Standards #20
 // Purpose:  The per-player lifecycle overlay #28 alone owns. The [1,20] attributes live on the
@@ -37,10 +37,34 @@ namespace TacticalDirector.PlayerProgression
 
         /// <summary>The world-day <see cref="RetirementFlag"/> was set (0 if not flagged).</summary>
         public uint RetirementDay;
+
+        /// <summary>
+        /// The last world day this player's daily step ran, or
+        /// <see cref="PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL"/> when it never has.
+        /// <para>
+        /// <b>Load-bearing for idempotency, not bookkeeping.</b> #30's <c>RunCareerDaySteps</c> runs a
+        /// fixture day's slots TWICE — once pre-round and once from the advance loop (ERR-030-027) — and
+        /// documents that each subsystem's own per-player cursor is what makes the second call a no-op.
+        /// Without this field #28's cursor would accrue twice on every fixture day, which is a silent
+        /// ~11% growth-rate error rather than a crash. The sibling #29/#41 states carry the same field
+        /// for the same reason.
+        /// </para>
+        /// <para>
+        /// The sentinel is <c>uint.MaxValue</c>, not 0: day 0 is a legitimate world day, so a zero
+        /// default would read as "already advanced on day 0" and silently skip a real first step — the
+        /// day-0 trap #29's <c>TRAINING_NOT_ADVANCED_SENTINEL</c> exists to avoid.
+        /// </para>
+        /// </summary>
+        public uint LastAdvancedWorldDay;
     }
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-07-24 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                          |
+// | 1.0     | 2026-07-24 | —      | Initial implementation.                                        |
+// | 1.1     | 2026-08-08 | —      | #28 T1: + LastAdvancedWorldDay (sentinel uint.MaxValue). #30's |
+// |         |            |        | RunCareerDaySteps runs a fixture day's slots twice             |
+// |         |            |        | (ERR-030-027) and relies on each subsystem's own cursor for    |
+// |         |            |        | idempotency; without it the growth cursor double-accrues on    |
+// |         |            |        | every fixture day, silently. Serialized by ProgressionSaveCodec.|
 #endregion

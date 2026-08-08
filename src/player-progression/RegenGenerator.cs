@@ -1,6 +1,6 @@
 // File:     src/player-progression/RegenGenerator.cs
 // Created:  2026-07-24
-// Modified: 2026-07-24
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.3 (regen generation); Deterministic Simulation #16 (RNG); Code Standards #20
 // Purpose:  Pure single-player regen generation (§3.3) — a young player with a drawn PotentialAbility
@@ -137,7 +137,10 @@ namespace TacticalDirector.PlayerProgression
                 GrowthCursor = 0,
                 BirthWorldDay = birthWorldDay,
                 RetirementFlag = false,
-                RetirementDay = 0
+                RetirementDay = 0,
+                // Never the 0 default: day 0 is a legitimate world day, so a zero here would read as
+                // "already advanced on day 0" and skip this regen's first daily step (the day-0 trap).
+                LastAdvancedWorldDay = PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL
             };
 
             return (record, life);
@@ -158,4 +161,8 @@ namespace TacticalDirector.PlayerProgression
 // | 1.2     | 2026-07-24 | —      | Adversarial-review L: DrawBounded + Clamp extracted to the     |
 // |         |            |        | shared PlayerDatabase.PlayerGenerationRng (was duplicated with |
 // |         |            |        | #27's RosterGenerator); byte-identical, call sites delegate.   |
+// | 1.3     | 2026-08-08 | —      | #28 T1: the returned lifecycle seeds LastAdvancedWorldDay to   |
+// |         |            |        | the never-advanced sentinel rather than leaving the 0 default,  |
+// |         |            |        | which would have skipped a regen's first daily step. No draw   |
+// |         |            |        | order, budget or value change — the RNG path is untouched.     |
 #endregion

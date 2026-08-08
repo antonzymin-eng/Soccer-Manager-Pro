@@ -13,6 +13,7 @@
 using TacticalDirector.InjuriesMedical;
 using TacticalDirector.LivingWorld;
 using TacticalDirector.MatchEngine;
+using TacticalDirector.PlayerProgression;
 using TacticalDirector.TrainingSystem;
 
 namespace TacticalDirector.SeasonSave
@@ -45,6 +46,14 @@ namespace TacticalDirector.SeasonSave
         /// null; empty when the save tracked no appearances (#30 Appendix B / ERR-041-010(b)).</summary>
         public readonly ClubAppearanceStates[] AppearanceClubs;
 
+        /// <summary>
+        /// The reconstructed #28 career store — the restored ROSTER, not merely an overlay on one
+        /// (#28 KD-4). Never null. This is the authority a caller must resume the career against: the
+        /// bootstrap product it was originally seeded from carries day-0 attributes and is stale by
+        /// exactly the growth this store has banked.
+        /// </summary>
+        public readonly ProgressionEngine Progression;
+
         /// <summary>The reconstructed in-progress match, or <c>null</c> if the season had no match.</summary>
         public readonly MatchEngine.MatchEngine Match;
 
@@ -55,6 +64,7 @@ namespace TacticalDirector.SeasonSave
             ClubTrainingStates[] trainingClubs,
             ClubInjuryStates[] medicalClubs,
             ClubAppearanceStates[] appearanceClubs,
+            ProgressionEngine progression,
             MatchEngine.MatchEngine match)
         {
             World = world;
@@ -62,6 +72,7 @@ namespace TacticalDirector.SeasonSave
             TrainingClubs = trainingClubs;
             MedicalClubs = medicalClubs;
             AppearanceClubs = appearanceClubs;
+            Progression = progression;
             Match = match;
         }
     }

@@ -1,13 +1,14 @@
 # Season & Competition Loop Specification #30 — Appendices
 
 **Created:** July 22, 2026
-**Last Updated:** August 8, 2026, later same day (v0.8 — balance-pass AR pass 13 M4: Appendix A's frame-version row corrected 2 → 4 and the three #30-owned appearance constants catalogued)
+**Last Updated:** August 8, 2026, later still (v0.9 — ERR-030-030: Appendix A's frame-version row 4 → 5 and Appendix B's frame gains the mandatory #28 progression sub-blob, for #28 T1)
+**Last Updated (prior):** August 8, 2026, later same day (v0.8 — balance-pass AR pass 13 M4: Appendix A's frame-version row corrected 2 → 4 and the three #30-owned appearance constants catalogued)
 **Last Updated (prior):** August 8, 2026 (v0.7 — balance-pass AR pass 11 M2: the cross-blob cursor rule stated in full in Appendix B)
 **Last Updated (prior):** August 8, 2026 (v0.6 — **ERR-030-028**: new **B.1** pins the appearance sub-blob's byte layout field by field — it was specified in NO spec, existing only in `AppearanceSaveCodec.cs`'s own comment, while F3 makes the first written layout the format permanently (the ERR-029-004 class, on the block created one landing after that ERR was filed); + the four sibling MUSTs and the deliberate no-`[GT]`-gating-on-decode decision)
 **Last Updated (prior):** August 7, 2026 (v0.5 — the #29/#41 balance pass D2 (ERR-041-010(b)): Appendix B's outer-frame description gains the three mandatory career sub-blobs — the #29 training and #41 medical blocks (frame v2→3, landed at their T1 and previously unrecorded here) and the new #30 appearance block (frame v3→4), between the season block and the optional match block)
 **Last Updated (prior):** July 27, 2026 (v0.4 — back-props ERR-030-017 (#47 conditional authored sub-blob) + ERR-030-019 (#50 `SaveOriginStamp` in the outer frame) landed atomically with the ten-spec approval wave; Appendix B's outer-frame description amended)
 **Last Updated (prior):** July 25, 2026 (v0.3 — ERR-030-010 Appendix C venue correction, found at #30 T0)
-**Version:** 0.8
+**Version:** 0.9
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -20,7 +21,7 @@ precedent — the spec's contract is the shapes/directions, the `[GT]` numbers a
 
 | Constant | Tag | Value | Meaning |
 |---|---|---|---|
-| `SEASON_SAVE_FORMAT_VERSION` | `[FIXED]` | 4 | outer season-frame version (owned by `SeasonSaveConstants`) — 1 → 2 at #30 T1 (the season block), 2 → 3 at #29/#41 T1 (the training + medical blocks), 3 → 4 at the balance pass D2 (the appearance block; Appendix B). *(Row corrected at AR pass 13 M4 — it read 2 while Appendix B in this same file described the v4 frame.)* |
+| `SEASON_SAVE_FORMAT_VERSION` | `[FIXED]` | 5 | outer season-frame version (owned by `SeasonSaveConstants`) — 1 → 2 at #30 T1 (the season block), 2 → 3 at #29/#41 T1 (the training + medical blocks), 3 → 4 at the balance pass D2 (the appearance block; Appendix B), 4 → 5 at #28 T1 (ERR-030-030): the mandatory `PROG` career-state sub-blob. *(Row corrected at AR pass 13 M4 — it read 2 while Appendix B in this same file described the v4 frame; corrected again August 8, 2026 — it read 4 while #28 T1 shipped the v5 frame the same day.)* |
 | `SEASON_STATE_FORMAT_VERSION` | `[FIXED]` | 1 | the season sub-blob's own version (new) |
 | `APPEARANCE_SAVE_MAGIC` | `[FIXED]` | `"APPR"` | the appearance sub-blob's self-identifying leading tag (Appendix B.1; the ERR-029-005/ERR-041-009 rule — a format version is not a format identifier) |
 | `APPEARANCE_SAVE_FORMAT_VERSION` | `[FIXED]` | 1 | the appearance sub-blob's own version (Appendix B.1) |
@@ -64,29 +65,45 @@ The season block, in order (all via `CanonicalSerializer`; every length prefix v
 > make the sub-blob round-trip exact with no NaN gate.
 
 
-The outer `SeasonSaveCodec` frame nesting this block, **as amended by the July 27, 2026 approval wave
-and by the #29/#41 landings (T1 frame v3; the balance pass frame v4)**:
+The outer `SeasonSaveCodec` frame nesting this block, **as amended by the July 27, 2026 approval wave,
+the #29/#41 landings (T1 frame v3; the balance pass frame v4), and #28 T1 (ERR-030-030, frame v5)**:
 
 `SEASON_SAVE_FORMAT_VERSION (u32) → SaveOriginStamp{ WorldGenerationVersion i32, BuildId i32 } →
 matchPresent flag (u8) → hasAuthoredDb flag (u8) → [len u32]world → [len u32]season →
-[len u32]training → [len u32]medical → [len u32]appearance →
+[len u32]training → [len u32]medical → [len u32]appearance → [len u32]progression →
 ([len u32]match iff matchPresent) → ([len u32]authoredDb iff hasAuthoredDb)`
 
 Trailing bytes after the declared content ⇒ throw (F3).
 
-**The three mandatory career sub-blobs.** The #29 training block (`TRAINING_SAVE_FORMAT_VERSION`,
-FR-TR-018, frame v2→3), the #41 medical block (`MEDICAL_SAVE_FORMAT_VERSION`, FR-MD-017, same bump)
-and the #30 appearance block (`APPEARANCE_SAVE_FORMAT_VERSION`, ERR-041-010(b), frame v3→4) sit
-between the season block and the optional match block, in that order, all three **mandatory** — career
+**The four mandatory career sub-blobs.** The #29 training block (`TRAINING_SAVE_FORMAT_VERSION`,
+FR-TR-018, frame v2→3), the #41 medical block (`MEDICAL_SAVE_FORMAT_VERSION`, FR-MD-017, same bump),
+the #30 appearance block (`APPEARANCE_SAVE_FORMAT_VERSION`, ERR-041-010(b), frame v3→4) and the #28
+progression block (`PROGRESSION_SAVE_FORMAT_VERSION`, FR-PG-016/017, frame v4→5, ERR-030-030) sit
+between the season block and the optional match block, in that order, all four **mandatory** — career
 state has no absent case, only an empty one (a zero-club block), so no presence flags are added and a
 later wiring change needs no further frame bump. Each is typed at the `Encode` seam
-(`TrainingBlock` / `MedicalBlock` / `AppearanceBlock`) and self-identified by a leading magic
-(ERR-029-005 / ERR-041-009: a format version distinguishes generations of one format, never one format
-from another). The appearance block is #30's own domain — the per-player fielded-XI record that
-supplies #41's FR-MD-010 `MatchLoad`, which neither sibling block may carry (each is forbidden to
-describe the other's domain). *(Note the `SaveOriginStamp` / `hasAuthoredDb` elements above remain
-future amendments landing at #50/#47 T1; the frame in code today is
-`version → matchPresent → world → season → training → medical → appearance → [match]`.)*
+(`TrainingBlock` / `MedicalBlock` / `AppearanceBlock` / `ProgressionBlock`) and self-identified by a
+leading magic (ERR-029-005 / ERR-041-009 / ERR-028-004: a format version distinguishes generations of
+one format, never one format from another). The appearance block is #30's own domain — the per-player
+fielded-XI record that supplies #41's FR-MD-010 `MatchLoad`, which neither sibling block may carry
+(each is forbidden to describe the other's domain).
+
+**The progression block is different in kind from its three siblings: it carries the ROSTER itself,
+not an overlay on one.** Training/medical/appearance each hold state keyed against a roster that
+still comes from elsewhere (the world-seed bootstrap); #28's block holds the complete evolving
+`PlayerRecord` — identity **and** the `[1,20]` attributes, per #28 KD-4 — plus its `PlayerLifecycle`
+overlay, because from this frame version a career's `[1,20]` attributes are no longer a pure function
+of the world seed (they grow). **This retires roadmap A3's property that a career could be reopened
+from the world seed alone**: from v5, a club's roster comes from the save file's progression block,
+never from re-running the bootstrap over `WorldGenerationVersion`/`Seed`. Bootstrap generation is
+still a pure function of the world seed — that is what makes a *new* game reproducible, and it is
+exactly what `ProgressionEngine.SeedFrom` consumes at new-game — it is simply no longer how an
+*existing* career gets its rosters back. See #28 §3.5 for the progression block's own byte layout
+(magic-led `PROG`, mirroring this appendix's B.1 discipline for the appearance block); it is not
+duplicated here, the same split as the training/medical blocks, each pinned in its own spec. *(Note
+the `SaveOriginStamp` / `hasAuthoredDb` elements above remain future amendments landing at #50/#47 T1;
+the frame in code today is
+`version → matchPresent → world → season → training → medical → appearance → progression → [match]`.)*
 
 **B.1 The appearance sub-blob's byte layout (ERR-030-028, balance-pass AR pass 5).** Pinned here
 because **F3 refuses every cross-version migration, so the first written layout IS the format
@@ -202,4 +219,5 @@ is a **total order** — no two rows ever compare equal (FR-SN-007).
 | 0.6 | 2026-08-08 | — | **ERR-030-028** (balance-pass AR pass 5, M1): new **B.1** — the appearance sub-blob's byte layout pinned field by field (magic → version → clubCount → {clubId, playerCount} → {playerId, recentBits, bitsAsOfWorldDay}), the four MUSTs its siblings carry, and the deliberate no-`[GT]`-gating-on-decode decision. The layout had shipped into every v4 save while specified in no spec — F3 makes the first written layout the format permanently, the exact ERR-029-004 reasoning, missed on the very next block. |
 | 0.7 | 2026-08-08 | — | **Balance-pass AR pass 11 (M2)**: the cursor-vs-clock paragraph stated in FULL — the prior single sentence covered the appearance anchor's ahead direction at the save root only, while the enforced rule spans three cursor kinds, two directions and three boundaries (§2.3's new F8; one shared predicate set). |
 | 0.8 | 2026-08-08 | — | **Balance-pass AR pass 13 (M4)**: Appendix A still said `SEASON_SAVE_FORMAT_VERSION = 2` — the identical wrong value pass 5 M6 fixed in the manifest, left in the OWNING catalogue, contradicting Appendix B in the same file — and carried no rows for `APPEARANCE_SAVE_MAGIC` / `APPEARANCE_SAVE_FORMAT_VERSION` / `APPEARANCE_BITMASK_MAX_WINDOW_DAYS`, the last load-bearing (the `AppearanceWindow` runtime guard reads it; #41's lock hard-codes its value) and in NO spec anywhere — ERR-030-028's class on a constant, one appendix over from where that ERR landed. |
+| 0.9 | 2026-08-08 | — | **ERR-030-030** (found at #28 T2a implementation): Appendix A's `SEASON_SAVE_FORMAT_VERSION` row 4 → 5 for the mandatory #28 `PROG` sub-blob. Appendix B's outer-frame nesting string gains `[len u32]progression` between `appearance` and the optional `match`; "three mandatory career sub-blobs" → four; new paragraph explaining the #28 block carries the ROSTER itself (KD-4) rather than an overlay, so from v5 a career's rosters come from the save file, not from re-running the bootstrap on the world seed — retiring roadmap A3's from-seed-alone reopening property. Byte layout not duplicated here; see #28 §3.5. |
 #endregion

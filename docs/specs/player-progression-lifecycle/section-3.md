@@ -1,8 +1,9 @@
 # Player Progression & Lifecycle #28 — Section 3: Core Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — section-file PASS-1 (0H+2M) → AR-2 (3M cross-fix) → AR-3 convergence; APPROVED)
-**Version:** 0.2
+**Last Updated:** August 8, 2026 (v0.3 — ERR-028-003/004/005: the batch `AdvanceDay` entry point + idempotency cursor, the #47 new-game PA seam, and the shipped §3.5 save layout)
+**Last Updated (prior):** July 23, 2026 (v0.2 — section-file PASS-1 (0H+2M) → AR-2 (3M cross-fix) → AR-3 convergence; APPROVED)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -15,6 +16,33 @@ the contract is the shapes and the byte-exactness.
 
 The daily step is a pure function of the player's state + inputs — **no RNG draw** (FR-PG-002). It is
 the single writer of attribute change (FR-PG-008).
+
+**FR-PG-021's public entry point.** `AdvanceDayForPlayer` below is the per-player projection; #30
+drives the batch that wraps it, once per carried club per carried player, in ascending `ClubId` /
+`PlayerId` order:
+
+```
+AdvanceDay(worldDay, in trainingInputs):          # FR-PG-021, the public entry point #30 drives
+    for each carried club, in ascending ClubId:
+        for each carried player, in ascending PlayerId:
+            if lifecycle.LastAdvancedWorldDay == PROGRESSION_NOT_ADVANCED_SENTINEL:
+                AdvanceDayForPlayer(..., worldDay, ...)      # anchors; cannot know an earlier start
+                lifecycle.LastAdvancedWorldDay = worldDay
+            else if worldDay > lifecycle.LastAdvancedWorldDay:
+                for d in (lifecycle.LastAdvancedWorldDay + 1) .. worldDay:
+                    AdvanceDayForPlayer(..., d, ...)          # gap-complete: the cursor is an accumulator
+                lifecycle.LastAdvancedWorldDay = worldDay
+            else:
+                skip                                          # idempotent per day (ERR-030-027)
+```
+
+Idempotency is required because #30's `AdvanceAndPlayNextRound` runs a fixture day's KD-2 slots
+**twice** — once pre-round and once from the advance loop (ERR-030-027) — and each subsystem is
+responsible for absorbing its own re-entry; without the cursor, the second call would bank a second
+day of growth for every fixture day, a silent ~11% rate error rather than a crash (ERR-028-005).
+Gap-completeness is the other half of the same cursor: it is what makes §5.2's T-PG-DET-002 true,
+because age is derived (gap-independent — §3.1.1) but `GrowthCursor` is an accumulator that must see
+every intervening day's `dailyPts` or lose them across the gap.
 
 ```
 AdvanceDayForPlayer(ref record, ref lifecycle, worldDay, in trainingInput, curveEnabled):
@@ -81,6 +109,24 @@ unused and `DailyPoints` is the flat §4.3 band step. CA is a cache in the seria
 attributes are authoritative — a restore recomputes CA from the attributes, so a corrupt CA cache can
 never diverge (it is overwritten on the first `AdvanceDay`, and §5 locks recompute-equals-stored).
 
+**New-game PA is authored data, owned by #47.** #28 does not draw a new-game player's `PotentialAbility`
+— per the owner's decision recorded at ERR-028-003, PA for the ~500 bootstrapped players of a new game
+is **authored data owned by New-Game Setup & Database Editor #47**, which is APPROVED but has no `src/`
+assembly yet. Until #47 exists to supply it, #28 exposes a seeding seam (`ProgressionEngine.SeedFrom`)
+that fills the gap with a deterministic `[GT]` placeholder: `PA = clamp(CA + NEW_GAME_PA_HEADROOM,
+PA_MIN, ABILITY_MAX)`. This is **deliberately not a draw**: a draw here would be #28's first draw site
+at all, and would force the `player-progression.regen` stream (FR-PG-020) to register for a value #47
+is going to overwrite the moment its assembly lands — a stream registered against a number nobody
+reads once #47 ships is exactly the phantom-surface class FR-LW-031 forbids.
+
+**Recorded limitation, not fixed here:** at the §4.3 flat band step, a whole youth career (roughly
+eight growth years, one attribute raised per year) raises CA by only ~421 of `ABILITY_MAX` = 10,000
+(8 years × ~52.6 per point). The PA ceiling therefore binds only when the authored CA→PA gap is under
+about 420 — no realistic authored wonderkid gap is that small. **PA-as-ceiling is decorative regardless
+of PA's source** (authored or drawn); the cause is the growth RATE, not where PA comes from. Closing it
+is the Stage-3 `curveEnabled` tier's job, and KD-W1 forbids retuning the flat-band rate in a landing
+that has not wired the deep tier.
+
 ## 3.3 Regen generation (KD-3)
 
 ```
@@ -126,19 +172,52 @@ mutations. `#30`/`#27` apply the `Squad` removal+insert from `RetirementResult`/
 
 ## 3.5 The save codec (KD-4)
 
-`ProgressionEngine.Snapshot() → byte[]` writes, via `CanonicalSerializer`: `PROGRESSION_SAVE_FORMAT_VERSION`
-→ `DOMAIN_TAG_PLAYER_PROGRESSION` → `NextPlayerId` → the boundary marker → an entry count → per entry
-`{ PlayerRecord (PlayerId, names, current age, position, 31 attrs + WeakFoot) , PlayerLifecycle
-(incl. BirthWorldDay + GrowthCursor) }`.
-`Restore(byte[])` reads it back with the fail-loud gate posture (FR-PG-018): version gate first, an
-overflow-safe `ReadCount` for the entry count (`0 ≤ count ≤ remaining`), and a trailing-byte check.
-The block is opaque to the season-save root, which frames it as one more length-prefixed sub-blob
-(FR-PG-017) — the `SeasonSaveCodec` never parses it, so `PROGRESSION_SAVE_FORMAT_VERSION` is
-independent of every other format version.
+**Layout correction (ERR-028-004):** an earlier revision of this section specified the block as
+`PROGRESSION_SAVE_FORMAT_VERSION -> DOMAIN_TAG_PLAYER_PROGRESSION -> NextPlayerId -> ...` —
+version-first, with the RNG hash-domain tag standing in as the block's identifier. That is the exact
+defect ERR-029-005 / ERR-041-009 filed as a MUST against in the sibling #29/#41 blocks: every sub-blob
+format in this save stack sits at version **1**, so a version gate alone cannot tell one format from
+another — it only separates generations of the SAME format — and a transposed `byte[]` at the frame
+would decode a sibling's bytes against this layout cleanly and silently. A domain tag is doubly wrong
+for the job besides: it is a hash-domain separator with an unrelated purpose, and ERR-029-005 already
+established that the magic is deliberately *not* an RNG tag. The shipped layout instead leads with a
+magic, checked before the version, and is otherwise unchanged from the original field order:
+
+```
+u32 PROGRESSION_SAVE_MAGIC ("PROG")   # BEFORE the version
+u32 PROGRESSION_SAVE_FORMAT_VERSION
+i32 nextPlayerId
+u32 clubCount
+per club, ascending ClubId:
+    i32 clubId
+    u32 playerCount
+    per player, ascending PlayerId:
+        i32 playerId, str firstName, str lastName, i32 age, u8 position,
+        i32 attribute[0..30], i32 weakFootRating,
+        i32 potentialAbility, i32 currentAbility, i64 growthCursor,
+        u32 birthWorldDay, u8 retirementFlag, u32 retirementDay, u32 lastAdvancedWorldDay
+```
+
+The block carries the same MUSTs as its `TrainingBlock`/`MedicalBlock`/`AppearanceBlock` siblings:
+the magic is checked **before** the version, so a foreign block is refused as the wrong format rather
+than mis-diagnosed as the wrong generation of this one; the club id is **written**, not implied by list
+order — identity carried by position alone is an implicit agreement with a sibling blob this codec is
+forbidden to read (the ERR-041-008 rule); keys (`ClubId`, and `PlayerId` within a club) are **strictly
+ascending** on decode, so a corrupt blob cannot smuggle in a duplicate; trailing bytes **throw**
+(F5); and `Encode` refuses to write anything `Decode` would refuse to read back (an undefined
+`PlayerPosition` ordinal or a non-ASCII name) — the never-write-what-Decode-refuses rule.
+`Restore(byte[])` applies the fail-loud gate posture (FR-PG-018) in that order: magic, then version,
+then an overflow-safe `ReadCount` for each count prefix (`0 ≤ count ≤ remaining`), then the ascending-key
+check per entry, then the trailing-byte check. The block is opaque to the season-save root, which frames
+it as one more length-prefixed sub-blob (FR-PG-017) — the `SeasonSaveCodec` never parses it, so
+`PROGRESSION_SAVE_FORMAT_VERSION` is independent of every other format version. **F3 makes the first
+written layout the format permanently** — the ERR-029-004 rule — so this is not a draft pending
+adjustment; a future field addition is a new format version, never a reordering of this one.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial algorithms: KD-1 integer growth projection + age derivation + weighted spend, the CA/PA model, regen generation, retirement + season boundary, the save codec. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (0H+2M: M-1 age-model muddle → one BirthWorldDay-derived representation; M-2 per-club regen stream) → AR-2 (3M cross-fix regressions) → AR-3 convergence; APPROVED. See section-9 §9.3.1. |
+| 0.3 | 2026-08-08 | — | ERR-028-003: §3.2 states new-game `PotentialAbility` is authored data owned by #47, with #28's `NEW_GAME_PA_HEADROOM` seed as a placeholder, plus the recorded ~421-of-`ABILITY_MAX` growth-rate limitation. ERR-028-004: §3.5's layout corrected from version-first/domain-tag-as-identifier to the shipped magic-led `PROG` layout. ERR-028-005: §3.1 gains the public batch `AdvanceDay` pseudocode showing the `LastAdvancedWorldDay` idempotency/gap-completeness cursor. Spec + code, same commit (T1/T2a). |
 #endregion
