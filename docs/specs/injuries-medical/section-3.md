@@ -151,7 +151,7 @@ against it rather than add beside it, or the left tail is priced three times (it
 supplies (FR-MD-010) — #41 never tracks match participation itself. The result is clamped to
 `[0, INJURY_RISK_MAX]`, and §3.1 tests `draw < risk` against a draw uniform in the **`[FIXED]`
 `OCCURRENCE_DRAW_DENOM` = 1,000,000** — so the assembled score IS the daily probability numerator on a
-per-million scale, capped at `INJURY_RISK_MAX / OCCURRENCE_DRAW_DENOM` (1% at today's values).
+per-million scale, capped at `INJURY_RISK_MAX / OCCURRENCE_DRAW_DENOM` (1.6% at today's values — the ceiling was raised 10000 → 16000 at the balance-pass AR so one appearance plus the baseline, 9,600, leaves the #29 and robustness terms real range instead of compressing them into the top 4% of the clamp; 16000 stays below #29's ~19,960 unclamped producer maximum, so the clamp still binds).
 **The denominator is deliberately DECOUPLED from the `[GT]` ceiling** (ERR-041-011, retiring the old
 `OCCURRENCE_DRAW_DENOM == INJURY_RISK_MAX` identity): the draw is `hash % denominator`, so the
 denominator determines the VALUE of every draw, not merely a threshold — a config-tunable denominator
@@ -187,10 +187,10 @@ Player 501, world day 205: `TrainingRiskContribution.RiskScore = 3000`, `MatchLo
 pass example used `AppearanceDays = 2` at weight 150 and no baseline, assembling 2900.)*
 
 - `risk = 1×3000 + 0 + 4000 − 400 = 6600` (× `OccurrenceRiskMillMult 1000 / 1000` = unchanged; clamp
-  within `[0, 10000]` inactive) — a 0.66%/day probability against the per-million draw. *(The same
+  within `[0, 16000]` inactive) — a 0.66%/day probability against the per-million draw. *(The same
   player the week after two matches assembles `3000 + 2×5600 + 4000 − 400 = 17800`, which CLAMPS to
-  `INJURY_RISK_MAX = 10000`: a congested week sits at the hard 1%/day ceiling, the recorded Stage-2
-  compression R-2's refit inherits.)*
+  `INJURY_RISK_MAX = 16000`: a heavily-loaded congested week sits at the hard 1.6%/day ceiling —
+  what sits beyond the cap is the residual the research supplement's R-2 refit inherits.)*
 - Suppose `draw = 3500` (keyed on `(playerId=501, worldDay=205, purpose=Occurrence)`). Since `3500 < 6600`,
   an occurrence is confirmed. Integer bucketing: `draw×1000 = 3_500_000` vs `risk×SEVERITY_MINOR_PERMILLE =
   6600×600 = 3_960_000`; `3_500_000 < 3_960_000` ⇒ **Minor**. `RecoveryDaysForTier[Minor] = 7`; at

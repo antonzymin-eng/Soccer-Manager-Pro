@@ -1,5 +1,6 @@
 // File:     src/season-save/AppearanceBlock.cs
 // Created:  2026-08-07
+// Modified: 2026-08-07
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §3 layout / KD-2;
 //           Season & Competition Loop #30 Appendix B; ERR-029-005 (the typed-frame-handle rule);

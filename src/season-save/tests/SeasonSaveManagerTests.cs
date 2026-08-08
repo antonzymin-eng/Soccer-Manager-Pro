@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonSaveManagerTests.cs
 // Created:  2026-07-22
-// Modified: 2026-08-06 (#29/#41 T1: the frame carries the training and medical blocks; the round-trip
+// Modified: 2026-08-07 (#29/#41 T1: the frame carries the training and medical blocks; the round-trip
 //           asserts both resume field-identical alongside the world, season and match)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §5 acceptance;
@@ -970,4 +970,7 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | mandatory-block guards, the training bound guard, the v2      |
 // |         |            |        | frame rejection, and the two whole-file round-trips (state    |
 // |         |            |        | field-identical; unwired ⇒ empty sets, never null).           |
+// | 1.6     | 2026-08-07 | —      | Balance pass D2: frame v4 — AppearanceStub joins every codec case, |
+// |         |            |        | the frame-order lock gains field 7 (APPR), the stale-version loop  |
+// |         |            |        | adds v3, Save call sites carry the required appearance set.        |
 #endregion

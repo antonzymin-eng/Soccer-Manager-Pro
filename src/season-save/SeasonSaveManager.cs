@@ -1,10 +1,7 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
-// Modified: 2026-08-06 (#29/#41 T1: the training and medical sub-blobs are composed in; doc-drift fix.
-//           T2 AR pass 1: Load re-applies the #41 availability filter to the in-progress match's roster
-//           so restore re-selects the eleven that actually played; + a Save(SeasonLoop, match, path)
-//           overload so the career's block accessors can stay internal. AR pass 3: the overload's
-//           quiescence precondition. AR pass 6: the load-time filter decorator's stale
+// Modified: 2026-08-07 (balance pass D2/D4: the appearance block on the same required-never-null
+//           terms; Load's filter career constructed at the armed posture.)
 //           shares-arrays-with-the-contents justification.)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-1 / KD-5..KD-8;
@@ -71,6 +68,8 @@ namespace TacticalDirector.SeasonSave
         /// which still writes a well-formed zero-club block rather than omitting one (FR-TR-018).</param>
         /// <param name="medicalClubs">The per-club #41 medical states, on the same terms
         /// (FR-MD-017).</param>
+        /// <param name="appearanceClubs">The per-club #30 appearance states, on the same terms —
+        /// REQUIRED, never null-meaning-empty (#30 Appendix B / ERR-041-010(b)).</param>
         public static void Save(
             WorldStore world,
             SeasonState season,

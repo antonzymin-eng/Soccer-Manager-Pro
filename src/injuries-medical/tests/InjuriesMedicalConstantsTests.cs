@@ -4,7 +4,7 @@
 // Author:   —
 // Spec:     Injuries & Medical #41 Appendix A + §3.2/§3.4; Code Standards #20
 // Purpose:  Catalogue invariants — the per-mille split is well-formed, the tier table covers every
-//           severity ordinal, the draw denominator tracks the risk ceiling, and #29/#41 agree on the
+//           severity ordinal, the [FIXED] draw denominator bounds the [GT] risk ceiling, and #29/#41 agree on the
 //           risk scale they share.
 
 using System;

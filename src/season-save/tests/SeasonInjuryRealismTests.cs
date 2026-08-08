@@ -243,6 +243,11 @@ namespace TacticalDirector.SeasonSave.Tests
             loop.AdvanceToNextFixtureDay();
             loop.AdvanceAndPlayNextRound(provider);
 
+            // AR pass 1 (M): InjuryCount is cumulative and CARRIED THROUGH THE SAVE, so asserting
+            // positivity after the resume passed with the restored career disarmed — the pre-save
+            // round had already injured people. The lock is GROWTH past the carried count.
+            int injuriesAtSave = CountInjuries(career);
+
             string path = System.IO.Path.Combine(
                 System.IO.Path.GetTempPath(), System.IO.Path.GetRandomFileName() + ".tdsave");
             try
@@ -256,7 +261,7 @@ namespace TacticalDirector.SeasonSave.Tests
                     contents.World, contents.Season, RoundResolutionMode.QuickSimAll,
                     restored, provider);
 
-                // 120 further days at the retuned rates: ~500 players x ~0.4%/day makes zero total
+                // 120 further days at the retuned rates: ~100 players x ~0.4%+/day makes zero NEW
                 // injuries astronomically improbable AND deterministic for this seed either way.
                 while (!resumed.IsSeasonComplete && contents.World.CurrentWorldTick < 120u)
                 {
@@ -264,19 +269,12 @@ namespace TacticalDirector.SeasonSave.Tests
                     resumed.AdvanceAndPlayNextRound(provider);
                 }
 
-                int injuries = 0;
-                ClubInjuryStates[] medical = restored.MedicalBlocks();
-                for (int c = 0; c < medical.Length; c++)
-                {
-                    for (int p = 0; p < medical[c].Count; p++)
-                    {
-                        injuries += medical[c].States[p].InjuryCount;
-                    }
-                }
+                int injuries = CountInjuries(restored);
 
-                Assert.Greater(injuries, 0,
-                    "a restored career reconstructed at the armed position must keep injuring — a " +
-                    "restore that silently disarms the dial is indistinguishable from a healthy run");
+                Assert.Greater(injuries, injuriesAtSave,
+                    "a restored career reconstructed at the armed position must keep injuring PAST " +
+                    "the count the save carried — positivity alone passes with the dial disarmed, " +
+                    "because InjuryCount is cumulative and rides through the file (AR pass 1, M)");
             }
             finally
             {
@@ -287,14 +285,34 @@ namespace TacticalDirector.SeasonSave.Tests
             }
         }
 
+        /// <summary>Total career injuries across every club of <paramref name="career"/>.</summary>
+        private static int CountInjuries(PlayerCareerStates career)
+        {
+            int injuries = 0;
+            ClubInjuryStates[] medical = career.MedicalBlocks();
+            for (int c = 0; c < medical.Length; c++)
+            {
+                for (int p = 0; p < medical[c].Count; p++)
+                {
+                    injuries += medical[c].States[p].InjuryCount;
+                }
+            }
+
+            return injuries;
+        }
+
         [Test]
         public void DialOn_PerturbingEitherNewConstant_LeavesTheAssertedBands()
         {
             // The perturbation obligation, done as arithmetic over the REAL chain functions rather
             // than a config rebind (the gate runs config-unbound, so constants cannot be rebound at
             // runtime): both risk values below go through AssembleRiskScore itself; only the season
-            // aggregation is closed-form. If halving a new constant kept every asserted band green,
-            // that band would not be a lock on it.
+            // aggregation is closed-form — an EXPECTATION, not the measurement (the measured season
+            // runs feedback ~10-20% below it: injured players draw no occurrence and starters miss
+            // rounds). The AR pass-1 reviewer additionally re-measured the REAL chain with each
+            // constant halved via a bound config (AppearanceLoadWeight/2 → starter 1.511;
+            // BaselineDailyRisk/2 → reserve 0.606 — both outside the bands), so the halving claim
+            // below is established by measurement, not only by this arithmetic.
             PlayerAttributes average = PlayerAttributes.CreateDefault();
             TrainingState peak = TrainingState.Create(TrainingFocus.Balanced);
             peak.Condition = TrainingSystemConstants.ConditionMax;

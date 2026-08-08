@@ -1,6 +1,6 @@
 // File:     src/match-engine/SquadRating.cs
 // Created:  2026-07-26
-// Modified: 2026-07-26
+// Modified: 2026-08-07
 // Author:   —
 // Spec:     League Bootstrap design supplement (docs/tracking/league-bootstrap-design.md) KD-7 +
 //           AR-4 M-1 (the named #30 T2 prerequisite); Season & Competition Loop #30 §3.4.1

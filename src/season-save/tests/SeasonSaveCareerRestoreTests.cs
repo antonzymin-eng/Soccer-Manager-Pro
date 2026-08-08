@@ -1,5 +1,6 @@
 // File:     src/season-save/tests/SeasonSaveCareerRestoreTests.cs
 // Created:  2026-08-06
+// Modified: 2026-08-07
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-3 / KD-6;
 //           Injuries & Medical #41 FR-MD-023; Squad/Player Data Layer #27 T3 (KD-T3-3, restore
@@ -191,4 +192,7 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | lock — a mid-match save whose squad was availability-filtered   |
 // |         |            |        | must restore the same eleven, not one re-selected from the      |
 // |         |            |        | unfiltered roster.                                              |
+// | 1.1     | 2026-08-07 | —      | Balance pass D2/D4: FromBlocks carries the appearance block and    |
+// |         |            |        | the now-required dial argument (false here — these locks isolate   |
+// |         |            |        | restore fidelity, not occurrence).                                 |
 #endregion

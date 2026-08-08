@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonLoopCareerTests.cs
 // Created:  2026-08-06
-// Modified: 2026-08-06
+// Modified: 2026-08-07
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (KD-2 tick order), §3.5 (the boundary), FR-SN-026;
 //           Training System #29 §3.5, FR-TR-004/025; Injuries & Medical #41 §3.5,
@@ -637,4 +637,9 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | round sits among the KD-2 slots was settled by a loop condition    |
 // |         |            |        | and written down nowhere, and it makes every injury one matchday   |
 // |         |            |        | longer than its tier.                                             |
+// | 1.2     | 2026-08-07 | —      | Balance pass D1 (ERR-030-027): the DayAdvance lock rewritten to    |
+// |         |            |        | the pre-round convention — served-his-time plays THIS round, and   |
+// |         |            |        | matchday is lived exactly once (the conditioning cursor is the     |
+// |         |            |        | discriminating idempotency assertion; Balanced's net fatigue is 0).|
+// |         |            |        | ForLeague call sites declare the now-required dial explicitly.     |
 #endregion

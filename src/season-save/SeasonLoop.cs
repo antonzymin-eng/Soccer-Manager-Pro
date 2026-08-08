@@ -476,16 +476,19 @@ namespace TacticalDirector.SeasonSave
                 Fixture fixture = _state.FixtureAt(indices[i]);
                 MatchResult result = ResolveFixture(in fixture, squads, worldDay);
 
+                // ERR-041-010(b): the appearance record, written for both clubs' fielded XIs once the
+                // fixture has resolved. The medical/training state does not move between the pre-round
+                // step above and here, so re-selecting reproduces exactly the eleven ResolveFixture
+                // fielded — one selector, three read shapes (SquadRating). Placed BEFORE the pinned
+                // apply/emit/mark sequence (AR pass 1): it is the only fallible call in this block, and
+                // a throw after MarkFixturePlayed would strand the round — the fixture skipped by the
+                // unplayed-index filter on retry, the cursor never advancing, the season unrecoverable.
+                RecordFieldedAppearances(in fixture, squads, worldDay);
+
                 // FR-SN-013's pinned order, for every fixture: (1) table, (2) event, then mark played.
                 _state.ApplyResult(in result);
                 EmitMatchOutcome(in result);
                 _state.MarkFixturePlayed(indices[i]);
-
-                // ERR-041-010(b): the appearance record, written for both clubs' fielded XIs after the
-                // fixture resolves. The medical/training state does not move between the pre-round step
-                // above and here, so re-selecting reproduces exactly the eleven ResolveFixture fielded
-                // — one selector, three read shapes (SquadRating).
-                RecordFieldedAppearances(in fixture, squads, worldDay);
 
                 results[i] = result;
             }
@@ -751,7 +754,7 @@ namespace TacticalDirector.SeasonSave
         /// than emergent</b> — the slot list has no slot for "play the round", because a round is
         /// resolved by a separate command (<see cref="AdvanceAndPlayNextRound"/>) rather than by the
         /// day advance. <see cref="AdvanceToNextFixtureDay"/> still stops the moment the clock REACHES
-        /// the fixture day, but the fixture day's own steps 2 and 4 no longer wait for the next
+        /// the fixture day, but the fixture day's own slots no longer wait for the next
         /// advance: <see cref="AdvanceAndPlayNextRound"/> runs them itself, pre-round, through the same
         /// idempotent <see cref="RunCareerDaySteps"/> this method calls — so the re-run here is a
         /// cursor no-op. <b>Matchday is processed, then the round is played</b> (ERR-030-027): the
@@ -765,20 +768,24 @@ namespace TacticalDirector.SeasonSave
         {
             RunCareerDaySteps(_world.CurrentWorldTick);
 
-            // 9. world day     — LIVE.
+            // 12. world day    — LIVE (the only step outside RunCareerDaySteps).
             _world.AdvanceDay();
         }
 
         /// <summary>
-        /// Slots 1–8 of the KD-2 day order for one world day — everything except step 9's clock
-        /// increment. Idempotent per day: both live steps carry their own per-player cursor, so the
-        /// second caller of the same day is a no-op. Called from two places, deliberately:
+        /// Slots 0–11 of the KD-2 day order for one world day (#30 §3.3 as reconciled by
+        /// ERR-030-022/-020) — everything except step 12's clock increment. Idempotent per day: both
+        /// live steps carry their own per-player cursor, so the second caller of the same day is a
+        /// no-op. Called from two places, deliberately:
         /// <see cref="RunWorldTickInFixedOrder"/> (every advanced day) and
         /// <see cref="AdvanceAndPlayNextRound"/> (the fixture day, pre-round — ERR-030-027).
         /// </summary>
-        /// <param name="day">The world day being lived — the clock BEFORE step 9's increment.</param>
+        /// <param name="day">The world day being lived — the clock BEFORE step 12's increment.</param>
         private void RunCareerDaySteps(uint day)
         {
+            // 0. facilities    (#53) — NULL SEAM (ERR-030-020: the upgrade-completion latch; numbered
+            //                          zero so it precedes its same-day consumers without renumbering
+            //                          the slots six APPROVED specs cite by number)
             // 1. progression   (#28) — NULL SEAM (its T0 core is built but unwired; #28 T2 wires it
             //                          here, and #29's ComputeTrainingInput batch is gathered with it —
             //                          gathering a batch for a consumer that does not exist would be
@@ -913,8 +920,10 @@ namespace TacticalDirector.SeasonSave
         /// left here is the run loop and the result. See that method for why the split exists.
         /// </para>
         /// <para>
-        /// With a career wired this resolves against state advanced through the day BEFORE the fixture
-        /// day; matchday's own steps 2 and 4 run after the round (ERR-030-026).
+        /// With a career wired this resolves against MATCHDAY-MORNING state: the fixture day's own
+        /// career day-steps have already run pre-round at the top of
+        /// <see cref="AdvanceAndPlayNextRound"/> (ERR-030-027), so the availability filter and the
+        /// entry-fatigue projection read the day being played, not yesterday.
         /// </para>
         /// </summary>
         private MatchResult PlayThroughEngine(in Fixture fixture, ISquadProvider squads, uint worldDay)
@@ -1136,4 +1145,11 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | career's appearance record via SquadRating.StartingElevenPlayer-  |
 // |         |            |        | Ids — the same single TrySelect walk, so the recorded eleven IS   |
 // |         |            |        | the fielded eleven on both resolution paths.                      |
+// | 1.11    | 2026-08-07 | —      | Balance-pass AR pass 1 (3L): RecordFieldedAppearances moves ABOVE |
+// |         |            |        | the apply/emit/mark sequence — the only fallible call in the      |
+// |         |            |        | block, and a throw after MarkFixturePlayed strands the round      |
+// |         |            |        | unrecoverably; RunCareerDaySteps' seam list renumbered to the     |
+// |         |            |        | spec's 0-12 order (slot 0 was missing, the tick was "9");         |
+// |         |            |        | PlayThroughEngine's summary no longer states the retired          |
+// |         |            |        | ERR-030-026 convention.                                           |
 #endregion

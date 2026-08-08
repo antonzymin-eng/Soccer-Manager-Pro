@@ -27,7 +27,7 @@ Stage-2/3 balance pass (the #21 G2 precedent); the shapes/directions are the rev
 | `MATCH_ENTRY_FATIGUE_SCALE` | 1.0 | [GT] | KD-1 projection scale: training-fatigue fraction → starting-fatigue offset. |
 | `AttributeConditioningBonus` weights | table | [GT] | Deterministic own-attribute (e.g. `WorkRate`/`Stamina`) bonus — never RNG (FR-TR-009). |
 | `FatigueRiskWeight` / `LowConditionRiskWeight` | table | [GT] | KD-5 injury-risk weights. |
-| `INJURY_RISK_MAX` | 10000 | [GT] | Risk-scalar clamp ceiling — **this catalogue is the sole owner; #41 `[CROSS]`-mirrors it** (ERR-041-003) and clamps its assembled occurrence risk to the same ceiling. Since ERR-041-011 it is **not** #41's draw denominator (that is the `[FIXED]` per-million `OCCURRENCE_DRAW_DENOM`); it sets the daily occurrence-probability ceiling (`INJURY_RISK_MAX / OCCURRENCE_DRAW_DENOM`, 1% today) and MUST stay ≤ the denominator (fail-loud at #41's draw site). ERR-029-007. |
+| `INJURY_RISK_MAX` | 16000 | [GT] | Risk-scalar clamp ceiling — **this catalogue is the sole owner; #41 `[CROSS]`-mirrors it** (ERR-041-003) and clamps its assembled occurrence risk to the same ceiling. Since ERR-041-011 it is **not** #41's draw denominator (that is the `[FIXED]` per-million `OCCURRENCE_DRAW_DENOM`); it sets the daily occurrence-probability ceiling (`INJURY_RISK_MAX / OCCURRENCE_DRAW_DENOM`, 1.6% today — 10000 → 16000 at the balance-pass AR, restoring the #29/robustness terms' range against the 9,600 baseline+appearance floor while staying below the ~19,960 unclamped producer maximum so the clamp still binds) and MUST stay ≤ the denominator (fail-loud at #41's draw site). ERR-029-007. |
 | `RobustnessMitigation` weights | table | [GT] | Deterministic own-attribute injury mitigation. |
 
 **No `DOMAIN_TAG_TRAINING` / `SubsystemOrdinals.Training` constant is defined** — #29 registers no stream
@@ -64,5 +64,5 @@ trainingInputs)` yields the exact no-training growth step — attributes/CA/PA b
 | 0.1 | 2026-07-23 | — | Initial constant catalogue + worked examples. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | APPROVED. |
 | 0.3 | 2026-07-23 | — | PASS-2: +`FATIGUE_DAILY_RECOVERY` constant; App. B recomputed (net +100/day, projection 0.23) + F7 gap note; App. C `deepTrainingEnabled` + batch `AdvanceDay`; schedule-not-persisted note. |
-| 0.4 | 2026-08-07 | — | **ERR-029-007 (the balance pass)**: `INJURY_RISK_MAX` row updated — sole owner of the shared clamp ceiling, `[CROSS]`-mirrored by #41 (ERR-041-003), no longer the draw denominator (ERR-041-011 pinned that `[FIXED]` at 1,000,000); now the 1%/day probability cap with the ≤-denominator invariant. Value unchanged. |
+| 0.4 | 2026-08-07 | — | **ERR-029-007 (the balance pass)**: `INJURY_RISK_MAX` row updated — sole owner of the shared clamp ceiling, `[CROSS]`-mirrored by #41 (ERR-041-003), no longer the draw denominator (ERR-041-011 pinned that `[FIXED]` at 1,000,000); now the probability cap with the ≤-denominator invariant; the AR pass then raised the value 10000 → 16000 (1.6%/day) for term headroom. |
 #endregion

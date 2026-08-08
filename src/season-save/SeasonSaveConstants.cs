@@ -1,14 +1,14 @@
 // File:     src/season-save/SeasonSaveConstants.cs
 // Created:  2026-07-22
-// Modified: 2026-08-06 (#29/#41 T1: SEASON_SAVE_FORMAT_VERSION 2 -> 3; doc-drift fix on the same)
+// Modified: 2026-08-07 (balance pass D2: SEASON_SAVE_FORMAT_VERSION 3 -> 4 + the APPR magic/version)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) KD-4; Code Standards #20
 // Purpose:  Constant catalogue for the season save-file frame. Holds the season-frame format version —
 //           distinct from every version the frame nests: WORLD_STORE_FORMAT_VERSION,
-//           SEASON_STATE_FORMAT_VERSION, TRAINING_SAVE_FORMAT_VERSION, and MEDICAL_SAVE_FORMAT_VERSION
-//           at the sub-blob level, MATCH_SAVE_FORMAT_VERSION for the optional match block, and — a
-//           level deeper still — the two snapshot schema versions nested inside the world and match
-//           blobs.
+//           SEASON_STATE_FORMAT_VERSION, TRAINING_SAVE_FORMAT_VERSION, MEDICAL_SAVE_FORMAT_VERSION and
+//           APPEARANCE_SAVE_FORMAT_VERSION at the sub-blob level, MATCH_SAVE_FORMAT_VERSION for the
+//           optional match block, and — a level deeper still — the two snapshot schema versions nested
+//           inside the world and match blobs.
 
 namespace TacticalDirector.SeasonSave
 {

@@ -110,12 +110,16 @@ namespace TacticalDirector.TrainingSystem
         /// a second key under <c>[injuries-medical]</c> would let one side be set without the other
         /// (ERR-041-003). Since ERR-041-011 the ceiling is <b>no longer #41's draw denominator</b> —
         /// that is the <c>[FIXED]</c> per-million <c>OCCURRENCE_DRAW_DENOM</c>, so this value now sets
-        /// the daily probability CEILING (<c>InjuryRiskMax / OCCURRENCE_DRAW_DENOM</c>, 1% today) and
-        /// must never exceed the denominator (enforced fail-loud at #41's draw site).
+        /// the daily probability CEILING (<c>InjuryRiskMax / OCCURRENCE_DRAW_DENOM</c>, 1.6% today —
+        /// raised 10000 → 16000 at the balance-pass AR so one appearance plus the baseline (9,600)
+        /// leaves the #29 and robustness terms real headroom instead of compressing them into the top
+        /// 4% of the range; 16000 stays below #29's unclamped producer maximum (~19,960), so this
+        /// clamp still binds and still means something) and must never exceed the denominator
+        /// (enforced fail-loud at #41's draw site).
         /// </para>
         /// Config key [training-system] InjuryRiskMax.
         /// </summary>
-        public static readonly int InjuryRiskMax = Config.GetInt("training-system", "InjuryRiskMax", 10000);
+        public static readonly int InjuryRiskMax = Config.GetInt("training-system", "InjuryRiskMax", 16000);
 
         /// <summary>
         /// [GT] Injury-risk mitigation per point of the player's mean robustness attribute
@@ -207,5 +211,12 @@ namespace TacticalDirector.TrainingSystem
 // | 1.3     | 2026-08-07 | —      | Balance pass D3 (ERR-041-011 / ERR-029-007): InjuryRiskMax's doc    |
 // |         |            |        | no longer claims to be #41's draw denominator — the denominator is  |
 // |         |            |        | now the [FIXED] OCCURRENCE_DRAW_DENOM in #41's catalogue, and this  |
-// |         |            |        | ceiling sets the daily probability cap (1% today). Value unchanged. |
+// |         |            |        | ceiling sets the daily probability cap. Value unchanged.            |
+// | 1.4     | 2026-08-07 | —      | Balance-pass AR pass 1 (M): 10000 -> 16000. Baseline + one          |
+// |         |            |        | appearance is 9,600, so at 10000 the #29 passthrough and both       |
+// |         |            |        | robustness terms were compressed into <=4% of the range for every   |
+// |         |            |        | player who played (measured: starter risks spanned [9143,10000],    |
+// |         |            |        | 7% at the cap) — the P2 discrimination doctrine inverted. 16000     |
+// |         |            |        | restores their range, prices congestion up to a 1.6%/day cap, and   |
+// |         |            |        | stays below #29's ~19,960 producer max so the clamp still binds.    |
 #endregion

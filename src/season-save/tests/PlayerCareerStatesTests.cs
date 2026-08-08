@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/PlayerCareerStatesTests.cs
 // Created:  2026-08-06
-// Modified: 2026-08-06
+// Modified: 2026-08-07
 // Author:   —
 // Spec:     Training System #29 §3.1/§3.3/§3.5, FR-TR-004/016/023/025/026, F6/F7;
 //           Injuries & Medical #41 §3.1/§3.5, FR-MD-003/004/022/023/025/027, F2/F6/F7;
@@ -854,4 +854,7 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | suite green. Eleven of the twelve pass-3-5 fixes had an enforcing  |
 // |         |            |        | test; this was the twelfth, and it guards the same silent-overwrite|
 // |         |            |        | class as pass 1's ascending-ids High.                              |
+// | 1.3     | 2026-08-07 | —      | Balance pass D2/D4: FromBlocks call sites carry the third          |
+// |         |            |        | (appearance) block set and the now-required dial argument; the     |
+// |         |            |        | round trip covers the APPR codec; the copy lock keeps its shape.   |
 #endregion

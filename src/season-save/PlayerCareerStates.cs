@@ -461,6 +461,18 @@ namespace TacticalDirector.SeasonSave
             for (int i = 0; i < fieldedPlayerIds.Length; i++)
             {
                 indices[i] = RequireIndexOfPlayer(ids, clubId, fieldedPlayerIds[i]);
+
+                // AppearanceWindow.Record's day-regression refusal is pre-checked here so it cannot
+                // fire mid-write and leave the club half-recorded (AR pass 1 — the validate-all
+                // promise was only half kept without this).
+                if (worldDay < states[indices[i]].BitsAsOfWorldDay)
+                {
+                    throw new ArgumentException(
+                        $"Appearance for player {fieldedPlayerIds[i]} on day {worldDay} precedes the "
+                        + $"state's anchor day {states[indices[i]].BitsAsOfWorldDay} — a wrong-career "
+                        + "pairing or clock fault; nothing has been recorded.",
+                        nameof(worldDay));
+                }
             }
 
             for (int i = 0; i < indices.Length; i++)
@@ -1306,4 +1318,8 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | call site with no diff the day it changes; construction declares   |
 // |         |            |        | the position (production true; isolation tests false, both locked  |
 // |         |            |        | at season scale by SeasonInjuryRealismTests).                      |
+// | 1.6     | 2026-08-07 | —      | Balance-pass AR pass 1 (L): RecordAppearances pre-checks the day-  |
+// |         |            |        | regression refusal in its validate loop, so the write loop can no  |
+// |         |            |        | longer throw half-way and leave a club half-recorded — the         |
+// |         |            |        | validate-all-then-write promise its doc already made.              |
 #endregion

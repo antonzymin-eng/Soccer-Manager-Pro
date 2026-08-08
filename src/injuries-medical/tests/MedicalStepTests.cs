@@ -84,8 +84,16 @@ namespace TacticalDirector.InjuriesMedical.Tests
             return 0;
         }
 
-        /// <summary>A risk input that clamps to zero, so no draw can ever be below it — an occurrence is impossible.</summary>
-        private static InjuryRiskContribution ImpossibleOccurrenceRisk() => InjuryRiskContribution.None;
+        /// <summary>
+        /// The LOWEST risk the assembly produces for the worked-example player —
+        /// <c>InjuryRiskContribution.None</c> assembles to <c>BaselineDailyRisk − 400 = 3600</c>
+        /// (0.36%/day), NOT zero: since ERR-041-011 nobody is injury-proof, so "no occurrence
+        /// happens" in the tests that walk days with this input holds because today's keyed draws
+        /// over those specific (seed, player, day) windows contain no sub-3600 draw — deterministic,
+        /// but a reseed would need re-checking (the AR pass-1 note; renamed from
+        /// ImpossibleOccurrenceRisk, which the baseline term made a lie).
+        /// </summary>
+        private static InjuryRiskContribution MinimumOccurrenceRisk() => InjuryRiskContribution.None;
 
         private static void Advance(
             ref InjuryState state,
@@ -116,7 +124,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
             Assert.AreEqual(6600, risk);
 
             // And the same player in a congested week saturates the clamp: 3000 + 2×5600 + 4000 −
-            // 400 = 17800 → InjuryRiskMax. The ceiling is the 1% hard cap, not the formula.
+            // 400 = 17800 → InjuryRiskMax (16000). The ceiling is the 1.6% hard cap, not the formula.
             Assert.AreEqual(InjuriesMedicalConstants.InjuryRiskMax, MedicalStep.AssembleRiskScore(
                 new InjuryRiskContribution(3000),
                 new MatchLoad(appearanceDays: 2, hardContacts: 0),
@@ -155,13 +163,13 @@ namespace TacticalDirector.InjuriesMedical.Tests
             // Days 206..211 tick the counter down without healing; only day 212 reaches zero.
             for (uint day = 206; day <= 211; day++)
             {
-                Advance(ref state, day, ImpossibleOccurrenceRisk());
+                Advance(ref state, day, MinimumOccurrenceRisk());
                 Assert.AreEqual(InjurySeverity.Minor, state.Severity, "still injured on day " + day);
             }
 
             Assert.AreEqual(1, state.RecoveryRemaining);
 
-            Advance(ref state, 212, ImpossibleOccurrenceRisk());
+            Advance(ref state, 212, MinimumOccurrenceRisk());
             Assert.AreEqual(InjurySeverity.None, state.Severity);
             Assert.AreEqual(0, state.RecoveryRemaining);
         }
@@ -192,7 +200,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
             uint next = HotDay(hot + 1);
             for (uint day = hot + 1; day < next; day++)
             {
-                Advance(ref state, day, ImpossibleOccurrenceRisk());
+                Advance(ref state, day, MinimumOccurrenceRisk());
             }
 
             Advance(ref state, next, MaxOccurrenceRisk());
@@ -245,10 +253,10 @@ namespace TacticalDirector.InjuriesMedical.Tests
         public void DayGap_FailsLoud_TTMDDET007()
         {
             var state = InjuryState.Create();
-            Advance(ref state, 100, ImpossibleOccurrenceRisk());
+            Advance(ref state, 100, MinimumOccurrenceRisk());
 
             PlayerAttributes a = WorkedExampleAttributes();
-            InjuryRiskContribution risk = ImpossibleOccurrenceRisk();
+            InjuryRiskContribution risk = MinimumOccurrenceRisk();
 
             Assert.Throws<ArgumentException>(
                 () => MedicalStep.AdvanceMedicalDay(
@@ -264,7 +272,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
         {
             var state = InjuryState.Create();
             PlayerAttributes a = WorkedExampleAttributes();
-            InjuryRiskContribution risk = ImpossibleOccurrenceRisk();
+            InjuryRiskContribution risk = MinimumOccurrenceRisk();
 
             Assert.Throws<ArgumentException>(
                 () => MedicalStep.AdvanceMedicalDay(
@@ -489,7 +497,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
         public void IncoherentState_FailsLoud_TTMDFAIL004()
         {
             PlayerAttributes a = WorkedExampleAttributes();
-            InjuryRiskContribution risk = ImpossibleOccurrenceRisk();
+            InjuryRiskContribution risk = MinimumOccurrenceRisk();
 
             var healthyButRecovering = InjuryState.Create();
             healthyButRecovering.RecoveryRemaining = 5;
@@ -512,7 +520,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
         public void UndefinedSeverityOnState_FailsLoud_F4()
         {
             PlayerAttributes a = WorkedExampleAttributes();
-            InjuryRiskContribution risk = ImpossibleOccurrenceRisk();
+            InjuryRiskContribution risk = MinimumOccurrenceRisk();
 
             var state = InjuryState.Create();
             state.Severity = (InjurySeverity)200;
@@ -542,7 +550,9 @@ namespace TacticalDirector.InjuriesMedical.Tests
                 new InjuryRiskContribution(4000), MatchLoad.None, ordinary, MedicalModifier.Identity);
 
             int moreMatches = MedicalStep.AssembleRiskScore(
-                new InjuryRiskContribution(3000), new MatchLoad(3, 0), ordinary, MedicalModifier.Identity);
+                new InjuryRiskContribution(3000), new MatchLoad(1, 0), ordinary, MedicalModifier.Identity);
+            Assert.Less(moreMatches, InjuriesMedicalConstants.InjuryRiskMax,
+                "precondition: unclamped, or the magnitude comparisons below are clamp artefacts.");
 
             int moreRobust = MedicalStep.AssembleRiskScore(
                 new InjuryRiskContribution(3000), MatchLoad.None, robust, MedicalModifier.Identity);
@@ -604,7 +614,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
             // GONE — BaselineDailyRisk pushes the worst case past the clamp, deliberately — so the
             // recorded property is now the clamp itself: the worst reachable case saturates at
             // InjuryRiskMax exactly, and InjuryRiskMax over the [FIXED] denominator is the hard daily
-            // probability ceiling (1% at today's values). Anchored to the [GT] ceiling, NOT to the
+            // probability ceiling (1.6% at today's values). Anchored to the [GT] ceiling, NOT to the
             // 100x-larger denominator — an assertion against the denominator would be the
             // always-true-disjunction class this suite has already burned on.
             Assert.Greater(maxRisk, 0, "the worst realistic player must still carry real risk.");
@@ -668,12 +678,17 @@ namespace TacticalDirector.InjuriesMedical.Tests
             Assert.AreEqual(931, DailyOccurrencePer100k(peak, average, new MatchLoad(1, 0)),
                 "a fit starter the week after a match: 0.93%/day.");
 
-            // 5. Two matches in one window saturates the InjuryRiskMax clamp: the daily probability
-            //    ceiling is exactly 1%. Recorded consequence: congestion beyond two matches/week is
-            //    NOT priced further at Stage 2 — the compression the research supplement's R-2 refit
-            //    inherits (its §10 note), not a bug to fix here.
-            Assert.AreEqual(1000, DailyOccurrencePer100k(peak, average, new MatchLoad(2, 0)),
-                "a congested week hits the hard 1% ceiling (the clamp, not the formula).");
+            // 5. Two matches in one window: congestion is PRICED (1.49%/day), no longer flattened
+            //    into the cap — the AR pass-1 ceiling raise (10000 → 16000) is what bought this row
+            //    its own value instead of the clamp's.
+            Assert.AreEqual(1491, DailyOccurrencePer100k(peak, average, new MatchLoad(2, 0)),
+                "a congested week prices at 1.49%/day — real congestion risk, not the clamp.");
+
+            // 6. The hard ceiling still exists and still binds: a half-fatigued player in the same
+            //    congested week assembles past InjuryRiskMax and caps at exactly 1.6%/day. What sits
+            //    beyond the cap is the residual the research supplement's R-2 refit inherits (§10).
+            Assert.AreEqual(1600, DailyOccurrencePer100k(halfSpent, average, new MatchLoad(2, 0)),
+                "the InjuryRiskMax clamp is the hard 1.6%/day ceiling.");
         }
 
         /// <summary>
@@ -705,9 +720,18 @@ namespace TacticalDirector.InjuriesMedical.Tests
         {
             PlayerAttributes a = WorkedExampleAttributes();
 
+            // Operands deliberately BELOW the clamp (AR pass 1: at MatchLoad(2, …) both sides
+            // saturated InjuryRiskMax and the test passed with HardContactWeight mutated to 100 —
+            // a clamp-induced tautology). The precondition keeps a future retune from silently
+            // re-clamping it.
+            int withoutContacts = MedicalStep.AssembleRiskScore(
+                new InjuryRiskContribution(3000), new MatchLoad(0, 0), a, MedicalModifier.Identity);
+            Assert.Less(withoutContacts, InjuriesMedicalConstants.InjuryRiskMax,
+                "precondition: the operand must sit below the clamp, or the equality is vacuous.");
             Assert.AreEqual(
-                MedicalStep.AssembleRiskScore(new InjuryRiskContribution(3000), new MatchLoad(2, 0), a, MedicalModifier.Identity),
-                MedicalStep.AssembleRiskScore(new InjuryRiskContribution(3000), new MatchLoad(2, 40), a, MedicalModifier.Identity),
+                withoutContacts,
+                MedicalStep.AssembleRiskScore(
+                    new InjuryRiskContribution(3000), new MatchLoad(0, 40), a, MedicalModifier.Identity),
                 "KD-3: the ledger-derived field is deep-tier only, so populating it early is harmless — " +
                 "raising its weight is a config change, not a formula rewrite.");
         }
@@ -808,4 +832,10 @@ namespace TacticalDirector.InjuriesMedical.Tests
 // |         |            |        | worked example re-derives to 6600 (+ the clamp line); the         |
 // |         |            |        | TrainingRiskFlows lock re-anchors to the InjuryRiskMax clamp      |
 // |         |            |        | (its old denominator bound became an always-true).                |
+// | 1.5     | 2026-08-07 | —      | Balance-pass AR pass 1 (2M + L): the HardContacts lock and the    |
+// |         |            |        | RiskAssembly moreMatches operand were clamp-saturated tautologies |
+// |         |            |        | after the retune — both moved below the clamp with explicit       |
+// |         |            |        | preconditions; ImpossibleOccurrenceRisk renamed Minimum (the      |
+// |         |            |        | baseline term made "impossible" a lie); characterization rows     |
+// |         |            |        | re-fit to the 16000 ceiling (congestion priced 1.49%, cap 1.6%).  |
 #endregion

@@ -165,7 +165,7 @@ namespace TacticalDirector.InjuriesMedical
         /// to <c>[0, InjuriesMedicalConstants.InjuryRiskMax]</c>. The draw is uniform in
         /// <c>[0, OCCURRENCE_DRAW_DENOM)</c> and §3.1 tests <c>draw &lt; risk</c>, so the result IS the
         /// daily probability numerator on the per-million scale, capped at the
-        /// <c>InjuryRiskMax / OCCURRENCE_DRAW_DENOM</c> ceiling (1% at today's values).
+        /// <c>InjuryRiskMax / OCCURRENCE_DRAW_DENOM</c> ceiling (1.6% at today's values).
         /// <para>
         /// The training term is #29's <b>already-published</b> scalar, read-only: #41 never reads or
         /// mutates #29's training-fatigue accumulator or the match engine's <c>AerobicPool</c>, so no

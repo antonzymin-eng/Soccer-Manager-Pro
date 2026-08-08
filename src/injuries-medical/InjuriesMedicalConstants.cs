@@ -115,7 +115,7 @@ namespace TacticalDirector.InjuriesMedical
         /// <summary>
         /// [CROSS] The occurrence-risk clamp ceiling — the maximum <see cref="MedicalStep.AssembleRiskScore"/>
         /// can return, and therefore the daily probability ceiling
-        /// <c>InjuryRiskMax / OCCURRENCE_DRAW_DENOM</c> (1% at today's values).
+        /// <c>InjuryRiskMax / OCCURRENCE_DRAW_DENOM</c> (1.6% at today's values).
         /// Authoritative source: <c>TrainingSystemConstants.InjuryRiskMax</c>. Training System #29
         /// Appendix A; consumed here per #41 §3.4.
         /// <para>

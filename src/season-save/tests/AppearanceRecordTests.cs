@@ -250,17 +250,26 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.AreEqual(ClubCount, blocks.Length);
             for (int c = 0; c < blocks.Length; c++)
             {
-                int fielded = 0;
+                // Identity, not just count (AR pass 1): the recorded set must BE the eleven the
+                // selector fields from the filtered squad — the same walk both resolution modes use
+                // (the recording path does not branch on mode), so this is the mode-independence
+                // lock too.
+                int[] expectedXi = SquadRating.StartingElevenPlayerIds(
+                    career.SelectAvailable(provider.ResolveByClubId(blocks[c].ClubId)));
+                var recorded = new System.Collections.Generic.List<int>();
                 for (int i = 0; i < blocks[c].Count; i++)
                 {
                     int days = AppearanceWindow.AppearanceDaysOn(in blocks[c].States[i], fixtureDay + 1u);
                     Assert.LessOrEqual(days, 1, "one round is one appearance");
-                    fielded += days;
+                    if (days == 1)
+                    {
+                        recorded.Add(blocks[c].PlayerIds[i]);
+                    }
                 }
 
-                Assert.AreEqual(MatchEngineConstants.PLAYERS_PER_TEAM, fielded,
-                    $"club {blocks[c].ClubId}: exactly the starting eleven carries an appearance — " +
-                    "not the bench, not the whole squad");
+                CollectionAssert.AreEquivalent(expectedXi, recorded,
+                    $"club {blocks[c].ClubId}: exactly the starting eleven the selector fields " +
+                    "carries an appearance — not the bench, not the whole squad, not a different XI");
             }
         }
 
@@ -290,6 +299,24 @@ namespace TacticalDirector.SeasonSave.Tests
 
                 ClubAppearanceStates[] before = career.AppearanceBlocks();
                 ClubAppearanceStates[] after = restored.AppearanceBlocks();
+
+                // An all-zero record would round-trip green, so prove something WAS recorded first
+                // (AR pass 1): the played round must have set a bit for every club's eleven.
+                int recordedBeforeSave = 0;
+                for (int c = 0; c < before.Length; c++)
+                {
+                    for (int i = 0; i < before[c].Count; i++)
+                    {
+                        if (before[c].States[i].RecentBits != 0)
+                        {
+                            recordedBeforeSave++;
+                        }
+                    }
+                }
+
+                Assert.AreEqual(ClubCount * MatchEngineConstants.PLAYERS_PER_TEAM, recordedBeforeSave,
+                    "precondition: every club's eleven carries a recorded appearance before the save");
+
                 for (int c = 0; c < before.Length; c++)
                 {
                     for (int i = 0; i < before[c].Count; i++)
@@ -346,4 +373,9 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | arithmetic incl. the multi-bit path, APPR codec gates, the round  |
 // |         |            |        | recording all four clubs' XIs, the save round trip, and the       |
 // |         |            |        | FromBlocks copy lock.                                              |
+// | 1.1     | 2026-08-07 | —      | Balance-pass AR pass 1 (2L): the round lock asserts XI IDENTITY   |
+// |         |            |        | against the selector's own ids (count alone could not see a       |
+// |         |            |        | wrong eleven, and this doubles as the mode-independence lock);    |
+// |         |            |        | the save round trip proves 44 bits were recorded before asserting |
+// |         |            |        | they survive (an all-zero record round-tripped green).            |
 #endregion
