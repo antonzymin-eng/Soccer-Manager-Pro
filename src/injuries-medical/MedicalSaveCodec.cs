@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/MedicalSaveCodec.cs
 // Created:  2026-08-06
-// Modified: 2026-08-09 (AR pass 15 L1: the asymmetry para un-nested — v1.4)
+// Modified: 2026-08-08 (AR pass 15 L1: the asymmetry para un-nested — v1.4)
 // Author:   —
 // Spec:     Injuries & Medical #41 §2.2 (the persisted medical block), §4.2 / §4.4 (the sub-blob codec),
 //           FR-MD-017/018/019, F1/F3/F4/F5; ERR-041-008 (the §4.4 layout's missing club id) and
@@ -378,6 +378,6 @@ namespace TacticalDirector.InjuriesMedical
 // |         |            |        | inherited #29's clamp claim — #41's day step REFUSES an           |
 // |         |            |        | out-of-band counter, so a lowered ceiling halts a career loudly   |
 // |         |            |        | rather than self-healing; the asymmetry stated.                   |
-// | 1.4     | 2026-08-09 | —      | Balance-pass AR pass 15 (L1): the v1.3 asymmetry block was nested |
+// | 1.4     | 2026-08-08 | —      | Balance-pass AR pass 15 (L1): the v1.3 asymmetry block was nested |
 // |         |            |        | inside the preceding para instead of a sibling; tags rebalanced.  |
 #endregion

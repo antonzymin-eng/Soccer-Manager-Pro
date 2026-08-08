@@ -1,7 +1,7 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 9, 2026 — **Balance-pass AR pass 15 (0H+2M+2L, all fixed — `spec-error-log.md` v1.95). No new files.** **Modified (code):** `MedicalStep` v1.12 (the draw branch atomic), `MedicalSaveCodec` v1.4. **Specs:** `injuries-medical/{section-3 v0.15, section-2 v0.10, appendices v0.13}`. **Tracking:** `src-tree.md` (two ERR-029-008 annotations), `spec-error-log.md` v1.95, both changelogs (v2.99; pass-14 gate PASSED — twelfth consecutive), root `CLAUDE.md`, this manifest.
+**Last Updated:** August 8, 2026, second final entry — **Balance-pass AR pass 15 (0H+2M+2L, all fixed — `spec-error-log.md` v1.95). No new files.** **Modified (code):** `MedicalStep` v1.12 (the draw branch atomic), `MedicalSaveCodec` v1.4. **Specs:** `injuries-medical/{section-3 v0.15, section-2 v0.10, appendices v0.13}`. **Tracking:** `src-tree.md` (two ERR-029-008 annotations), `spec-error-log.md` v1.95, both changelogs (v2.99; pass-14 gate PASSED — twelfth consecutive), root `CLAUDE.md`, this manifest.
 
 **Last Updated (prior):** August 8, 2026, past midnight — **Balance-pass AR pass 14 (0H+1M+4L, all fixed — `spec-error-log.md` v1.94). No new files.** **Modified (code):** `MedicalStep` v1.11 (the RecoveryMax guard moved to its reachable site), `MedicalSaveCodec` v1.3. **Specs:** `injuries-medical/{section-3 v0.14, appendices v0.12, section-4 v0.6}`; `training-system/{section-2 v0.9, section-3 v0.6, section-5 v0.5}`; `season-competition-loop/section-4.md` v0.5; `squad-player-data/section-2.md` (row annotated). **Tooling:** `recurring-defect-lint.suppressions` (the L3 scope note). **Tracking:** `spec-error-log.md` v1.94, both changelogs (v2.98), root `CLAUDE.md`, this manifest.
 

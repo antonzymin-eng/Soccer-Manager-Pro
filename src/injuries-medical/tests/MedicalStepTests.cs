@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/tests/MedicalStepTests.cs
 // Created:  2026-08-05
-// Modified: 2026-08-08
+// Modified: 2026-08-08 (AR pass 16 L2: the ceiling arm locked — v1.8)
 // Author:   —
 // Spec:     Injuries & Medical #41 §3.1–§3.4 + Appendices A/B/C; Code Standards #20
 // Purpose:  T-MD-DET-001/003/005/006/007/009, T-MD-ORD-001, T-MD-SEV-001/002, T-MD-REC-001,
@@ -468,6 +468,18 @@ namespace TacticalDirector.InjuriesMedical.Tests
                 "the floor of 1 is load-bearing: 0 assigned days would leave RecoveryRemaining == 0 " +
                 "while Severity != None, an F1 breach written straight into the save.");
 
+            // The CEILING arm (AR pass 16 L2 — locked for the first time: replacing RecoveryMax
+            // with int.MaxValue in the clamp left all 67 tests green while producing the state
+            // ValidateState refuses at slot 4). A slow physio (mult 200) on the Serious tier takes
+            // the raw division to 60 * 1000 / 200 = 300, past the 240 ceiling FR-MD-014 pins.
+            var slowPhysio = new MedicalModifier(
+                InjuriesMedicalConstants.MEDICAL_MODIFIER_IDENTITY_PERMILLE, 200);
+            Assert.AreEqual(InjuriesMedicalConstants.RecoveryMax,
+                MedicalStep.AssignRecoveryDays(InjurySeverity.Serious, slowPhysio),
+                "the ceiling arm: an assignment past RECOVERY_MAX would be persisted by the codec " +
+                "and refused by ValidateState the next day — the clamp keeps it in the field's " +
+                "declared range (FR-MD-014 as completed at AR pass 15 M2).");
+
             // ...and the same floor inverts on the None tier, whose recovery-days are 0 by the F1
             // invariant: floored to 1 it would write RecoveryRemaining == 1 against Severity == None.
             // No caller passes None today (ClassifySeverityFromDraw cannot return it); the guard keeps
@@ -848,4 +860,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
 // |         |            |        | congestion rows named as FORMULA PROBES — the Stage-0 cadence  |
 // |         |            |        | (DaysBetweenRounds == window == 7) cannot produce two matches  |
 // |         |            |        | in one window; that input arrives with #43's cup calendars.    |
+// | 1.8     | 2026-08-08 | —      | Balance-pass AR pass 16 (L2): the assignment CEILING arm locked    |
+// |         |            |        | for the first time — a mutant replacing RecoveryMax with          |
+// |         |            |        | int.MaxValue had left the whole suite green.                      |
 #endregion

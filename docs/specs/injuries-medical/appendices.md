@@ -1,7 +1,7 @@
 # Injuries & Medical #41 — Appendices
 
 **Created:** July 23, 2026
-**Last Updated:** August 9, 2026 (v0.13 — balance-pass AR pass 15 M1: the RECOVERY_MAX row records the write-ordering half of the enforcement)
+**Last Updated:** August 8, 2026, second final entry (v0.13 — balance-pass AR pass 15 M1: the RECOVERY_MAX row records the write-ordering half of the enforcement)
 **Last Updated (prior):** August 8, 2026, final entry of the day (v0.12 — balance-pass AR pass 14 M1: RECOVERY_MAX's enforcement site corrected to the assignment)
 **Last Updated (prior):** August 8, 2026, last entry of the day (v0.11 — balance-pass AR pass 13 M1: the guard class completed — RECOVERY_MAX ≥ 1 and the ceiling's positive side)
 **Last Updated (prior):** August 8, 2026, even later same day (v0.10 — balance-pass AR pass 12 M3: the recovery rate's positivity enforced at the countdown site)
@@ -97,5 +97,5 @@ with or without #41 active (T-MD-NEU-003, as restated in §5.5).
 | 0.10 | 2026-08-08 | — | **Balance-pass AR pass 12 (M3)**: the recovery rate's row records its runtime enforcement — the one `[GT]` here whose lock had no runtime mirror *(claim CORRECTED at pass 13 M1: `RECOVERY_MAX` and the ceiling's zero side were also unmirrored — see v0.11)*, and whose silent failure (every injury permanent) is worse than the deleted tier the split guard stops. |
 | 0.11 | 2026-08-08 | — | **Balance-pass AR pass 13 (M1)** *(the RECOVERY_MAX enforcement site corrected at v0.12)*: pass 12's "the one `[GT]` with no runtime mirror" was FALSE — `RECOVERY_MAX` (asserted one line below the pass-12 fix, no mirror: at < 1 the assignment clamp writes an F1 breach into the live career, blamed a day later as data corruption) and `INJURY_RISK_MAX`'s zero side (the draw-site guard was one-sided: non-positive, the armed dial injures nobody forever). Both rows carry their invariants; both guards live at the consuming sites. |
 | 0.12 | 2026-08-08 | — | **Balance-pass AR pass 14 (M1)**: the `RECOVERY_MAX` row's "enforced at the countdown site" was FALSE — that site provably cannot evaluate the predicate; enforcement moved to (and recorded at) the §3.3 assignment. |
-| 0.13 | 2026-08-09 | — | **Balance-pass AR pass 15 (M1)**: v0.12's "enforced at the assignment" was half the story — the guard fired AFTER `Severity` was written, so the refusal itself wrote the breach it named; the draw branch is now atomic and the row records ordering as the preventing half. |
+| 0.13 | 2026-08-08 | — | **Balance-pass AR pass 15 (M1)**: v0.12's "enforced at the assignment" was half the story — the guard fired AFTER `Severity` was written, so the refusal itself wrote the breach it named; the draw branch is now atomic and the row records ordering as the preventing half. |
 #endregion

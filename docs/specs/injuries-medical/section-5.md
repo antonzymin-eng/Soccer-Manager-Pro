@@ -1,10 +1,11 @@
 # Injuries & Medical #41 — Section 5: Test Plan
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026 (v0.5 — balance-pass AR pass 10 L4: T-MD-DET-010 names the existing F8 sentinel lock)
+**Last Updated:** August 8, 2026, second final entry (v0.6 — AR pass 16 L2: T-MD-MOD-002 covers both clamp arms)
+**Last Updated (prior):** August 8, 2026 (v0.5 — balance-pass AR pass 10 L4: T-MD-DET-010 names the existing F8 sentinel lock)
 **Last Updated (prior):** August 8, 2026 (v0.4 — balance-pass AR pass 6 M4: the ERR-041-012 sweep — T-MD-DET-004 / T-MD-NEU-003 / T-MD-SEV-001 restated off the phantom registered stream and its service reservation. Prior header below.)
 **Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.5
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -101,7 +102,9 @@ Tests land at T-phase; this is the acceptance contract.
   `RecoverySpeedMillMult > 1000` shortens total recovery (fewer assigned days) while the per-day decrement
   stays the fixed integer `RECOVERY_DAYS_PER_TICK_BASE`; and an aggressive multiplier that would divide the
   assigned days below 1 is **floored at 1** so a confirmed injury never has `RecoveryRemaining == 0` while
-  `Severity != None` (the F1 coherence floor, §3.1) — FR-MD-014.
+  `Severity != None` (the F1 coherence floor, §3.1), **and a slow multiplier that would push the assigned
+  days past `RECOVERY_MAX` is ceilinged there** (the field's declared range; AR pass 15 M2 / pass 16 L2 —
+  both arms locked) — FR-MD-014.
 - **T-MD-FAIL-006** — A `MedicalModifier` with `RecoverySpeedMillMult == 0` (e.g. `default(MedicalModifier)`)
   reaching the consuming seam → **fail loud** (divide-by-zero / ×0 risk; the zero-value-trap gate) — FR-MD-016 / F4.
 - **T-MD-MOD-001** — `MedicalModifier.Identity` yields the exact Stage-2 risk score and recovery pace
@@ -155,4 +158,5 @@ Tests land at T-phase; this is the acceptance contract.
 | 0.3 | 2026-07-23 | — | AR-2 (1M): +T-MD-DET-009 (fixed-radix append parity + bound guard); FR-MD-008 traceability; fixed a `FR-MD-007` typo. |
 | 0.4 | 2026-08-08 | — | **Balance-pass AR pass 6 (M4)**: three test descriptions still asserted against the registered `injuries.occurrence` stream / `DeterministicRngService` reservation that ERR-041-012 established never existed; restated against the keyed derivation the suites actually exercise. |
 | 0.5 | 2026-08-08 | — | **Balance-pass AR pass 10 (L4)**: **T-MD-DET-010** — the F8 sentinel-as-worldDay refusal (pass 9) gets its §5 id, naming the `AdvancingTheSentinelDay_FailsLoud` lock that already executes it. |
+| 0.6 | 2026-08-08 | — | **Balance-pass AR pass 16 (L2)**: T-MD-MOD-002 covered only the floor arm while pass 15 M2 made the ceiling normative — and a mutant erasing the ceiling left the whole suite green; both arms now stated and locked. |
 #endregion
