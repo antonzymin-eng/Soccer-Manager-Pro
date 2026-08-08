@@ -1,14 +1,15 @@
 # Injuries & Medical #41 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026 (v0.9 — balance-pass AR pass 9 L4: new F8 — the sentinel itself is not a day; the refusal the code has always enforced gets its normative row)
+**Last Updated:** August 9, 2026 (v0.10 — balance-pass AR pass 15 M2: FR-MD-014's assignment clause gains the RECOVERY_MAX ceiling the code has always applied)
+**Last Updated (prior):** August 8, 2026 (v0.9 — balance-pass AR pass 9 L4: new F8 — the sentinel itself is not a day; the refusal the code has always enforced gets its normative row)
 **Last Updated (prior):** August 8, 2026 (v0.8 — balance-pass AR pass 8 (L4 + L2): FR-MD-007 no longer names the `injuries.occurrence` stream that must never exist; rows 0.6/0.7 reordered ascending)
 **Last Updated (prior):** August 8, 2026 (v0.7 — balance-pass AR pass 6 M4: §2.2's signature de-phantomed — `rng` → `worldSeed, occurrenceEnabled`; the stale `MatchLoad` comment corrected. Prior header below.)
 **Last Updated (prior):** August 7, 2026, later same day (v0.6 — the balance pass D3/D4: FR-MD-027 re-stated as ARMED with a required construction argument (ERR-041-011); FR-MD-005 re-anchored off the phantom registered stream onto the keyed derivation (ERR-041-012, discharging ERR-041-002's deferred half))
 **Last Updated (prior):** August 7, 2026 (v0.5 — the balance pass D2 (ERR-041-010(b)): FR-MD-010 pins the `AppearanceDays` window unit — appearances in the `APPEARANCE_WINDOW_DAYS` `[GT]` window of days strictly before the draw day, never the current day (the ERR-030-027 pre-round ordering depends on the exclusion); the record itself is #30-owned)
 **Last Updated (prior):** August 6, 2026 (v0.4 — ERR-041-008: §2.3 F3's exception type corrected to match the posture it cites)
 **Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.9
+**Version:** 0.10
 **Status:** APPROVED
 
 ---
@@ -72,8 +73,11 @@
 - **FR-MD-014** — The Stage-2 recovery countdown MUST be **linear and integer**: `RecoveryRemaining`
   decrements by the fixed integer `RECOVERY_DAYS_PER_TICK_BASE` (= 1) per world day while `Severity !=
   None`, clamped at `[0, RECOVERY_MAX]` (F1). Staff **recovery-speed** modulation MUST be applied to the
-  **assigned tier recovery-days at injury time** (`RecoveryRemaining = RecoveryDaysForTier[tier] × 1000 /
-  MedicalModifier.RecoverySpeedMillMult`, integer division — a faster physio assigns fewer total days),
+  **assigned tier recovery-days at injury time** (`RecoveryRemaining = Clamp(RecoveryDaysForTier[tier] ×
+  1000 / MedicalModifier.RecoverySpeedMillMult, 1, RECOVERY_MAX)`, integer division — a faster physio
+  assigns fewer total days; **floored at 1 AND ceilinged at `RECOVERY_MAX`** — the ceiling was stated
+  only on the countdown until AR pass 15 M2, while a below-average physio on the Serious tier takes the
+  raw division past it),
   **not** as a per-tick decrement multiplier (which, against a fixed integer base of 1, would truncate every
   non-integer multiplier to a no-op). All medical arithmetic MUST be integer — no float (the #28/#29
   integer-projection posture; keeps the system free of float-mode/MXCSR sensitivity).
@@ -231,4 +235,5 @@ construction are pure reads over an `InjuryState` value. See §3.
 | 0.7 | 2026-08-08 | — | **Balance-pass AR pass 6 (M4)**: §2.2's normative `AdvanceMedicalDay` signature de-phantomed — it took the `DeterministicRngService rng` that never existed and could not express the required FR-MD-027 dial or the `worldSeed` key root declared 30 lines above it (the §3.1 v0.5 fix, which stopped one section short); the `MatchLoad` comment's "a count #30's fixture result already tracks" corrected (ERR-041-010(b) built the record because it did not). (Rows reordered ascending at AR pass 8 — the third recurrence in this table's own history.) |
 | 0.8 | 2026-08-08 | — | **Balance-pass AR pass 8 (L4 + L2)**: FR-MD-007's "for `injuries.occurrence`" → "for the keyed occurrence derivation" (true statement, phantom name); rows 0.6/0.7 reordered ascending — the third recurrence in this table's own history. |
 | 0.9 | 2026-08-08 | — | **Balance-pass AR pass 9 (L4)**: new **F8** — `AdvanceMedicalDay` invoked with the never-advanced sentinel as `worldDay` itself fails loud; enforced in code since T0 with no F-row (a fail-loud with no normative source). §3.1's pseudocode gains the guard in the same commit; mirrored at #29 §2.3/§3.1. |
+| 0.10 | 2026-08-09 | — | **Balance-pass AR pass 15 (M2)**: FR-MD-014 put the `[0, RECOVERY_MAX]` clamp on the COUNTDOWN and gave the assignment as a bare floored division, while the code has always ceilinged the assignment too — an implementer following the FR wrote `241+` for a slow physio on the Serious tier, refused by `ValidateState` the next day (the field's own declared range forbids it). The assignment clause now carries `Clamp(…, 1, RECOVERY_MAX)`. |
 #endregion

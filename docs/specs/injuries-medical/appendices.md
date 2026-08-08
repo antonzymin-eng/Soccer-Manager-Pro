@@ -1,7 +1,8 @@
 # Injuries & Medical #41 — Appendices
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026, final entry of the day (v0.12 — balance-pass AR pass 14 M1: RECOVERY_MAX's enforcement site corrected to the assignment)
+**Last Updated:** August 9, 2026 (v0.13 — balance-pass AR pass 15 M1: the RECOVERY_MAX row records the write-ordering half of the enforcement)
+**Last Updated (prior):** August 8, 2026, final entry of the day (v0.12 — balance-pass AR pass 14 M1: RECOVERY_MAX's enforcement site corrected to the assignment)
 **Last Updated (prior):** August 8, 2026, last entry of the day (v0.11 — balance-pass AR pass 13 M1: the guard class completed — RECOVERY_MAX ≥ 1 and the ceiling's positive side)
 **Last Updated (prior):** August 8, 2026, even later same day (v0.10 — balance-pass AR pass 12 M3: the recovery rate's positivity enforced at the countdown site)
 **Last Updated (prior):** August 8, 2026, still later same day (v0.9 — balance-pass AR pass 11 L3: the split invariant adds non-negativity)
@@ -11,7 +12,7 @@
 **Last Updated (prior):** August 8, 2026 (v0.5 — balance-pass AR pass 7 M1: the ERR-041-012 sweep reaches the appendices — Appendix A no longer asserts the T2 stream registration §4.5 forbids, and Appendix C's T-MD-NEU-003 matches §5.5's restatement instead of contradicting it under the same test id)
 **Last Updated (prior):** August 7, 2026 (v0.4 — ERR-041-011 at the balance pass: Appendix A's `INJURY_RISK_MAX` re-tagged `[CROSS: #29 Appendix A]` (discharging ERR-041-003's standing back-prop), `OCCURRENCE_DRAW_DENOM` re-tagged `[FIXED]` 1,000,000 (decoupled), `APPEARANCE_LOAD_WEIGHT` refitted 150 → 5600 on the new scale, + `BASELINE_DAILY_RISK` 4000 and `APPEARANCE_WINDOW_DAYS` 7)
 **Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.12
+**Version:** 0.13
 **Status:** APPROVED
 
 ---
@@ -25,7 +26,7 @@ Stage-2/3 balance pass (the #21 G2 precedent); the shapes/directions are the rev
 |---|---|---|---|
 | `MEDICAL_SAVE_FORMAT_VERSION` | 1 | [FIXED] | The #41 sub-blob version (KD-7). A season-save sub-blob, independently gated from `WORLD_STORE_FORMAT_VERSION` / `SEASON_STATE_FORMAT_VERSION` / `TRAINING_SAVE_FORMAT_VERSION` / `PROGRESSION_SAVE_FORMAT_VERSION`. |
 | `MEDICAL_NOT_ADVANCED_SENTINEL` | `uint.MaxValue` | [FIXED] | "Never advanced" seed for `LastAdvancedWorldDay` — chosen so a legitimate world-day 0 cannot collide with the fresh-state value (the day-0 double-accrual trap, the #28/#29 lifecycle precedent, F6). |
-| `RECOVERY_MAX` | 240 | [GT] | Ceiling on `RecoveryRemaining` (world-days) — generously bounds even a Stage-3 deep-tier recurrence-extended recovery; a Stage-2 Serious-tier injury never approaches this ceiling. MUST be **≥ 1** — below 1 the §3.3 assignment clamp writes `RecoveryRemaining == 0` while injured, the F1 breach the assignment floor exists to stop; **enforced fail-loud at the ASSIGNMENT site** (§3.3 — corrected at AR pass 14 M1: the countdown site v0.11 named cannot reach the predicate, the F1 entry gate making it unsatisfiable there). |
+| `RECOVERY_MAX` | 240 | [GT] | Ceiling on `RecoveryRemaining` (world-days) — generously bounds even a Stage-3 deep-tier recurrence-extended recovery; a Stage-2 Serious-tier injury never approaches this ceiling. MUST be **≥ 1** — below 1 the §3.3 assignment clamp writes `RecoveryRemaining == 0` while injured, the F1 breach the assignment floor exists to stop; **enforced fail-loud at the ASSIGNMENT site, sequenced before any state write** (§3.1/§3.3 — the site corrected at AR pass 14 M1, the ordering at AR pass 15 M1: with `Severity` written first the refusal itself left a half-injured career). |
 | `RECOVERY_DAYS_PER_TICK_BASE` | 1 | [GT] | Stage-2 linear recovery-countdown rate: a **fixed integer** number of `RecoveryRemaining` days consumed per world day. Staff recovery-speed does NOT scale this per-tick (it scales assigned tier-days at injury time — §3.1/FR-MD-014). MUST be **positive** — **enforced fail-loud at the countdown site** (§3.1; non-positive makes every injury permanent, silently; AR pass 12 M3). |
 | `MEDICAL_MODIFIER_IDENTITY_PERMILLE` | 1000 | [FIXED] | Per-mille identity for `MedicalModifier.OccurrenceRiskMillMult` / `RecoverySpeedMillMult` (= ×1.0). `MedicalModifier.Identity` sets both to this; `default(MedicalModifier)` (all-zero) is NOT valid (FR-MD-016 / F4). |
 | `RecoveryDaysForTier[Minor]` | 7 | [GT] | Fixed recovery-days constant for `InjurySeverity.Minor` (§3.2). |
@@ -96,4 +97,5 @@ with or without #41 active (T-MD-NEU-003, as restated in §5.5).
 | 0.10 | 2026-08-08 | — | **Balance-pass AR pass 12 (M3)**: the recovery rate's row records its runtime enforcement — the one `[GT]` here whose lock had no runtime mirror *(claim CORRECTED at pass 13 M1: `RECOVERY_MAX` and the ceiling's zero side were also unmirrored — see v0.11)*, and whose silent failure (every injury permanent) is worse than the deleted tier the split guard stops. |
 | 0.11 | 2026-08-08 | — | **Balance-pass AR pass 13 (M1)** *(the RECOVERY_MAX enforcement site corrected at v0.12)*: pass 12's "the one `[GT]` with no runtime mirror" was FALSE — `RECOVERY_MAX` (asserted one line below the pass-12 fix, no mirror: at < 1 the assignment clamp writes an F1 breach into the live career, blamed a day later as data corruption) and `INJURY_RISK_MAX`'s zero side (the draw-site guard was one-sided: non-positive, the armed dial injures nobody forever). Both rows carry their invariants; both guards live at the consuming sites. |
 | 0.12 | 2026-08-08 | — | **Balance-pass AR pass 14 (M1)**: the `RECOVERY_MAX` row's "enforced at the countdown site" was FALSE — that site provably cannot evaluate the predicate; enforcement moved to (and recorded at) the §3.3 assignment. |
+| 0.13 | 2026-08-09 | — | **Balance-pass AR pass 15 (M1)**: v0.12's "enforced at the assignment" was half the story — the guard fired AFTER `Severity` was written, so the refusal itself wrote the breach it named; the draw branch is now atomic and the row records ordering as the preventing half. |
 #endregion

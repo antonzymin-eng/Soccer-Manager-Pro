@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/MedicalStep.cs
 // Created:  2026-08-05
-// Modified: 2026-08-08 (AR pass 14 M1: the RecoveryMax guard moved to its reachable site — v1.11)
+// Modified: 2026-08-08 (AR pass 15 M1: the draw branch made atomic — fallible call before writes — v1.12)
 // Author:   —
 // Spec:     Injuries & Medical #41 §3.1–§3.4 + Appendices A/B (FR-MD-003..016, FR-MD-023),
 //           F1/F4/F6/F7; Code Standards #20
@@ -165,8 +165,16 @@ namespace TacticalDirector.InjuriesMedical
                     // consumes exactly one draw per occurrence-eligible day, never two.
                     InjurySeverity severity = ClassifySeverityFromDraw(draw, risk);
 
+                    // Fallible call FIRST, writes after (AR pass 15 M1): AssignRecoveryDays carries
+                    // the RecoveryMax guard, and with Severity already written its throw would leave
+                    // RecoveryRemaining == 0 beside a fresh severity IN THE LIVE CAREER — the exact
+                    // breach being refused, surfacing a day later as a state-blaming refusal. A
+                    // refused advance mutates nothing (the F7 standard); this branch was the one
+                    // exception.
+                    int recoveryDays = AssignRecoveryDays(severity, medical);
+
                     state.Severity = severity;
-                    state.RecoveryRemaining = AssignRecoveryDays(severity, medical);
+                    state.RecoveryRemaining = recoveryDays;
                     state.InjuryCount++;
                 }
             }
@@ -424,18 +432,19 @@ namespace TacticalDirector.InjuriesMedical
                     nameof(severity), severity, "Recovery days are assigned only for a confirmed injury (F1).");
             }
 
-            // The RecoveryMax >= 1 invariant, enforced at the one site whose clamp can breach it
+            // The RecoveryMax >= 1 invariant, enforced at the one site whose clamp could breach it
             // (AR pass 14 M1 — pass 13 placed this on the countdown branch, where ValidateState
-            // makes it unsatisfiable; the breach is HERE: with RecoveryMax < 1, ClampLong's
-            // value > max arm returns RecoveryMax, writing RecoveryRemaining <= 0 beside a
-            // just-assigned Severity — the F1 breach the floor below exists to stop, surfacing a
-            // day later as an ArgumentException blaming the state).
+            // makes it unsatisfiable; with RecoveryMax < 1, ClampLong's value > max arm would
+            // return RecoveryMax, an F1-breaching assignment). The caller sequences this call
+            // BEFORE any state write (AR pass 15 M1), so the refusal leaves the career untouched
+            // rather than half-injured — prevention is the ORDERING's property, not this guard's;
+            // the guard alone only made the breach loud.
             if (InjuriesMedicalConstants.RecoveryMax < 1)
             {
                 throw new InvalidOperationException(
-                    "RecoveryMax must be at least 1 — below it the assignment clamp writes "
-                    + "RecoveryRemaining == 0 while injured (an F1 breach into the live career); "
-                    + "catalogue/config integrity failure (§3.3, Appendix A).");
+                    "RecoveryMax must be at least 1 — below it the assignment clamp would produce "
+                    + "RecoveryRemaining == 0 for a confirmed injury; catalogue/config integrity "
+                    + "failure (§3.3, Appendix A).");
             }
 
             long scaled = (long)InjuriesMedicalConstants.RecoveryDaysFor(severity)
@@ -615,4 +624,10 @@ namespace TacticalDirector.InjuriesMedical
 // |         |            |        | breach it names happens on the mutually exclusive draw branch     |
 // |         |            |        | (demonstrated by model). Moved to AssignRecoveryDays, the one     |
 // |         |            |        | site whose clamp can write the breach.                            |
+// | 1.12    | 2026-08-08 | —      | Balance-pass AR pass 15 (M1): the pass-14 guard fired AFTER       |
+// |         |            |        | Severity was written — the draw branch was the step's one         |
+// |         |            |        | partial-write throw site, leaving the live career F1-incoherent   |
+// |         |            |        | behind the very refusal (demonstrated by model). AssignRecovery-  |
+// |         |            |        | Days now runs before any write; the branch is atomic; the guard's |
+// |         |            |        | message stops claiming the prevention the ordering provides.      |
 #endregion
