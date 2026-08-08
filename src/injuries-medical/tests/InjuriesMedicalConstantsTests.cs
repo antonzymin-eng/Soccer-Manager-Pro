@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/tests/InjuriesMedicalConstantsTests.cs
 // Created:  2026-08-05
-// Modified: 2026-08-08
+// Modified: 2026-08-08 (AR pass 9 L5: the severity-split lock goes strict — v1.7)
 // Author:   —
 // Spec:     Injuries & Medical #41 Appendix A + §3.2/§3.4; Code Standards #20
 // Purpose:  Catalogue invariants — the per-mille split is well-formed, the tier table covers every
@@ -77,11 +77,12 @@ namespace TacticalDirector.InjuriesMedical.Tests
         {
             Assert.Greater(InjuriesMedicalConstants.SeverityMinorPermille, 0);
             Assert.Greater(InjuriesMedicalConstants.SeverityModeratePermille, 0);
-            Assert.LessOrEqual(
+            Assert.Less(
                 InjuriesMedicalConstants.SeverityMinorPermille + InjuriesMedicalConstants.SeverityModeratePermille,
                 InjuriesMedicalConstants.SEVERITY_PERMILLE_DENOM,
-                "Minor + Moderate must leave room for Serious — a sum over the denominator would make " +
-                "the Serious tier unreachable (the Appendix A catalogue invariant).");
+                "Minor + Moderate must leave room for Serious — STRICT (AR pass 9 L5): at a sum of " +
+                "exactly 1000 the §3.2 second bucket's bound is the method's own precondition, so " +
+                "Serious is unreachable with a ≤ invariant 'satisfied' (the Appendix A catalogue invariant).");
         }
 
         [Test]
@@ -211,4 +212,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
 // | 1.6     | 2026-08-08 | —      | Balance-pass AR pass 5 (L4, comment): the window lock's 31     |
 // |         |            |        | names its authority (SeasonSaveConstants' [FIXED] bound, which |
 // |         |            |        | this assembly sits below and cannot read).                     |
+// | 1.7     | 2026-08-08 | —      | Balance-pass AR pass 9 (L5): LessOrEqual -> Less — the lock's  |
+// |         |            |        | own message already argued strictness while asserting the     |
+// |         |            |        | weaker bound (at sum == 1000 Serious is unreachable).         |
 #endregion

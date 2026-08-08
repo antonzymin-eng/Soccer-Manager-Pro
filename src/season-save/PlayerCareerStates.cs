@@ -1,6 +1,7 @@
 // File:     src/season-save/PlayerCareerStates.cs
 // Created:  2026-08-06
-// Modified: 2026-08-08
+// Modified: 2026-08-08 (AR pass 9 M1: the per-cursor predicates become the shared owner both
+//           boundaries delegate to — v1.12)
 // Author:   —
 // Spec:     Training System #29 §3.1/§3.3/§3.5, §4.3 (seam contracts), FR-TR-004/016/022/023/025;
 //           Injuries & Medical #41 §3.1/§3.5, §4.3, FR-MD-003/009/010/022/023/025/027;
@@ -532,36 +533,73 @@ namespace TacticalDirector.SeasonSave
 
                 for (int i = 0; i < ids.Length; i++)
                 {
-                    uint tDay = training[i].LastAdvancedWorldDay;
-                    if (tDay != TrainingSystemConstants.TRAINING_NOT_ADVANCED_SENTINEL
-                        && (tDay > worldTick || worldTick > tDay + 1))
-                    {
-                        throw new InvalidOperationException(
-                            $"Career/world pairing is incoherent: club {_clubIds[c]} player {ids[i]}'s "
-                            + $"training cursor ({tDay}) is "
-                            + (tDay > worldTick ? "ahead of" : "more than one day behind")
-                            + $" the world clock ({worldTick}).");
-                    }
-
-                    uint mDay = injury[i].LastAdvancedWorldDay;
-                    if (mDay != InjuriesMedicalConstants.MEDICAL_NOT_ADVANCED_SENTINEL
-                        && (mDay > worldTick || worldTick > mDay + 1))
-                    {
-                        throw new InvalidOperationException(
-                            $"Career/world pairing is incoherent: club {_clubIds[c]} player {ids[i]}'s "
-                            + $"medical cursor ({mDay}) is "
-                            + (mDay > worldTick ? "ahead of" : "more than one day behind")
-                            + $" the world clock ({worldTick}).");
-                    }
-
-                    if (appearance[i].BitsAsOfWorldDay > worldTick)
-                    {
-                        throw new InvalidOperationException(
-                            $"Career/world pairing is incoherent: club {_clubIds[c]} player {ids[i]}'s "
-                            + $"appearance anchor ({appearance[i].BitsAsOfWorldDay}) is ahead of the "
-                            + $"world clock ({worldTick}).");
-                    }
+                    RequireTrainingCursorWithinClock(
+                        worldTick, _clubIds[c], ids[i],
+                        training[i].LastAdvancedWorldDay, "Career/world pairing");
+                    RequireMedicalCursorWithinClock(
+                        worldTick, _clubIds[c], ids[i],
+                        injury[i].LastAdvancedWorldDay, "Career/world pairing");
+                    RequireAppearanceAnchorWithinClock(
+                        worldTick, _clubIds[c], ids[i],
+                        appearance[i].BitsAsOfWorldDay, "Career/world pairing");
                 }
+            }
+        }
+
+        /// <summary>
+        /// The training-cursor predicate BOTH boundaries share (AR pass 9 M1) — the composition
+        /// walk above and <c>SeasonSaveManager</c>'s block-level walk both delegate here, the
+        /// <see cref="RequireGloballyUniquePlayerIds"/> shape: one rule, one owner, so the two
+        /// gates cannot drift apart. Bidirectional: AHEAD is silently skipped by the F6
+        /// idempotency until the clock catches up; a lag of two or more wedges the pairing
+        /// permanently (F7 refuses the gap, and the day steps run before the clock increment,
+        /// so it can never close). The sentinel is exempt — a fresh state is coherent at any clock.
+        /// </summary>
+        internal static void RequireTrainingCursorWithinClock(
+            uint worldTick, int clubId, int playerId, uint trainingDay, string boundary)
+        {
+            if (trainingDay != TrainingSystemConstants.TRAINING_NOT_ADVANCED_SENTINEL
+                && (trainingDay > worldTick || worldTick > trainingDay + 1))
+            {
+                throw new InvalidOperationException(
+                    $"{boundary} is incoherent: club {clubId} player {playerId}'s "
+                    + $"training cursor ({trainingDay}) is "
+                    + (trainingDay > worldTick ? "ahead of" : "more than one day behind")
+                    + $" the world clock ({worldTick}).");
+            }
+        }
+
+        /// <summary>The medical-cursor twin of <see cref="RequireTrainingCursorWithinClock"/> — same band, same sentinel exemption, one owner for both boundaries (AR pass 9 M1).</summary>
+        internal static void RequireMedicalCursorWithinClock(
+            uint worldTick, int clubId, int playerId, uint medicalDay, string boundary)
+        {
+            if (medicalDay != InjuriesMedicalConstants.MEDICAL_NOT_ADVANCED_SENTINEL
+                && (medicalDay > worldTick || worldTick > medicalDay + 1))
+            {
+                throw new InvalidOperationException(
+                    $"{boundary} is incoherent: club {clubId} player {playerId}'s "
+                    + $"medical cursor ({medicalDay}) is "
+                    + (medicalDay > worldTick ? "ahead of" : "more than one day behind")
+                    + $" the world clock ({worldTick}).");
+            }
+        }
+
+        /// <summary>
+        /// The appearance-anchor predicate, ahead-checked only — the anchor has no gap contract
+        /// (a lazily-shifted bitmask is coherent at any lag; shifting is the read's job). One
+        /// owner for both boundaries (AR pass 9 M1).
+        /// </summary>
+        internal static void RequireAppearanceAnchorWithinClock(
+            uint worldTick, int clubId, int playerId, uint appearanceAnchor, string boundary)
+        {
+            if (appearanceAnchor > worldTick)
+            {
+                throw new InvalidOperationException(
+                    $"{boundary} is incoherent: club {clubId} player {playerId}'s "
+                    + $"appearance anchor ({appearanceAnchor}) is ahead of the world clock "
+                    + $"({worldTick}) — with the occurrence dial armed, the slot-4 window read "
+                    + "throws on every later day and the world clock can never advance again "
+                    + "(the career wedges while saving cleanly).");
             }
         }
 
@@ -1550,4 +1588,11 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | callers are SeasonLoop and this assembly's tests — and handed |
 // |         |            |        | any Career holder the ability to drive the career off the     |
 // |         |            |        | world clock). Step-12 prose fixed (L1).                       |
+// | 1.12    | 2026-08-08 | —      | Balance-pass AR pass 9 (M1): the cursor-vs-clock rule collapses  |
+// |         |            |        | to ONE owner — RequireTraining/Medical/AppearanceAnchor-         |
+// |         |            |        | WithinClock internal statics here; the instance walk and         |
+// |         |            |        | SeasonSaveManager's block walk both delegate (the                |
+// |         |            |        | RequireGloballyUniquePlayerIds shape). The file-boundary copy    |
+// |         |            |        | had an UNLOCKED predicate (medical lag >= 2) — the parallel-     |
+// |         |            |        | surface class the T2 AR's H3 collapsed, recurring one gate over. |
 #endregion

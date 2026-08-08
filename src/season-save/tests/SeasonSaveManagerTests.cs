@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonSaveManagerTests.cs
 // Created:  2026-07-22
-// Modified: 2026-08-08 (AR pass 7: the duplicate-ClubId lock — v1.11; the cursor/coherence gate
+// Modified: 2026-08-08 (AR pass 9 M1: the medical-only-lag isolating case at the Save boundary — v1.12)
 //           suites are the rows below)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §5 acceptance;
@@ -734,6 +734,21 @@ namespace TacticalDirector.SeasonSave
                     new[] { laggingTraining }, new[] { MBlock(7, 100) }, new[] { ABlock(7, 100) }),
                 "a training cursor two behind the clock wedges the career on the next advance (F7)");
 
+            // Medical-only lag (AR pass 9 M1): the training cursor sits at the LEGITIMATE lag of 1,
+            // so only the medical predicate can refuse — pass 8's isolation lesson at the file
+            // boundary. Before the shared-owner collapse this predicate had no isolating case at
+            // Save or Load: deleting the medical gap clause left the whole suite green.
+            var okT = TBlock(7, 100);
+            okT.States[0].LastAdvancedWorldDay = 1u;               // clock 2 → legitimate lag of 1
+            var laggingMedical = MBlock(7, 100);
+            laggingMedical.States[0].LastAdvancedWorldDay = 0u;    // clock 2 → gap of 2
+            Assert.Throws<InvalidOperationException>(
+                () => SeasonSaveManager.Save(
+                    laggedWorld, MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    new[] { okT }, new[] { laggingMedical }, new[] { ABlock(7, 100) }),
+                "a medical cursor two behind the clock is refused on its own — the training cursor "
+                + "is in-band, so this throw can only come from the medical predicate");
+
             var okTraining = TBlock(7, 100);
             okTraining.States[0].LastAdvancedWorldDay = 1u;        // clock 2 → the legitimate lag of 1
             Assert.DoesNotThrow(
@@ -1275,4 +1290,8 @@ namespace TacticalDirector.SeasonSave
 // | 1.11    | 2026-08-08 | —      | Balance-pass AR pass 7 (L4): the duplicate-ClubId refusal gains   |
 // |         |            |        | its message+paramName lock — without it the unstable sorts pair  |
 // |         |            |        | duplicates arbitrarily and the gate names a phantom mismatch.    |
+// | 1.12    | 2026-08-08 | —      | Balance-pass AR pass 9 (M1): + the medical-only-lag case in      |
+// |         |            |        | Save_CursorLaggingTheClockByTwoOrMore_FailsLoud (training at the |
+// |         |            |        | legitimate lag of 1, medical at gap 2) — the shared medical-lag  |
+// |         |            |        | predicate now has an isolating case at the file boundary too.   |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/season-save/SeasonSaveConstants.cs
 // Created:  2026-07-22
-// Modified: 2026-08-08 (AR pass 5 L4: + the [FIXED] appearance bitmask window bound — v1.5)
+// Modified: 2026-08-08 (AR pass 9 L3: the frame doc's inner-decoder list gains AppearanceSaveCodec — v1.6)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) KD-4; Code Standards #20
 // Purpose:  Constant catalogue for the season save-file frame. Holds the season-frame format version —
@@ -29,6 +29,7 @@ namespace TacticalDirector.SeasonSave
         /// <see cref="SeasonStateCodec.Decode"/> /
         /// <see cref="TacticalDirector.TrainingSystem.TrainingSaveCodec.Decode"/> /
         /// <see cref="TacticalDirector.InjuriesMedical.MedicalSaveCodec.Decode"/> /
+        /// <see cref="AppearanceSaveCodec.Decode"/> /
         /// <c>MatchSaveCodec.Decode</c> themselves. A mismatch fails loud on load — no cross-version
         /// migration at Stage 0. Bump only on a season-frame layout change. Value: 4.
         /// <para>
@@ -101,4 +102,8 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | APPEARANCE_BITMASK_MAX_WINDOW_DAYS = 31 — the bitmask's        |
 // |         |            |        | structural window bound, previously a bare literal at the     |
 // |         |            |        | AppearanceWindow guard and in its catalogue lock.             |
+// | 1.6     | 2026-08-08 | —      | Balance-pass AR pass 9 (L3): SEASON_SAVE_FORMAT_VERSION's       |
+// |         |            |        | inner-decoder cref list gains AppearanceSaveCodec.Decode — the  |
+// |         |            |        | v1.3 row fixed this same omission for the training/medical     |
+// |         |            |        | codecs; the appearance codec added at v1.4 repeated it.        |
 #endregion

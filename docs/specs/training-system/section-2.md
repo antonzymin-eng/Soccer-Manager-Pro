@@ -1,9 +1,10 @@
 # Training System #29 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** August 6, 2026 (v0.5 — ERR-029-004: §2.3 F3's exception type corrected to match the posture it cites)
+**Last Updated:** August 8, 2026 (v0.6 — balance-pass AR pass 9 L4: new F8 — the sentinel itself is not a day; the refusal the code has always enforced gets its normative row)
+**Last Updated (prior):** August 6, 2026 (v0.5 — ERR-029-004: §2.3 F3's exception type corrected to match the posture it cites)
 **Last Updated (prior):** July 27, 2026 (v0.4 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
-**Version:** 0.5
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -163,6 +164,7 @@ the latter accrues `Condition` + `TrainingFatigue`. See §3.
 | **F5** | Corrupt length prefix (out-of-bounds) or trailing bytes in the block | **Fail loud** (overflow-safe bound; the `WorldStateSerializer.ReadCount` posture). |
 | **F6** | `AdvanceTrainingDay` invoked twice for one world day (`worldDay <= LastAdvanced`) | Idempotent no-op guarded by `LastAdvancedWorldDay` — a mid-week save→restore→re-run does not double-accrue. |
 | **F7** | `AdvanceTrainingDay` called with a **day gap** (`worldDay > LastAdvanced + 1`, post-sentinel), or a player with no `TrainingState` (a regen never inserted per FR-TR-025) | **Fail loud** (`ArgumentException`) — a gap silently under-accrues and a missing state is a lifecycle bug (the day-0 hazard); neither is clamped or defaulted. |
+| **F8** | `AdvanceTrainingDay` invoked with `worldDay == TRAINING_NOT_ADVANCED_SENTINEL` itself | **Fail loud** (`ArgumentException`) — the sentinel is a reserved value, not a day; stored, the cursor would read back "never advanced" and re-arm the day-0 double-accrual trap F6 closes. |
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -171,5 +173,6 @@ the latter accrues `Condition` + `TrainingFatigue`. See §3.
 | 0.2 | 2026-07-23 | — | PASS-1 M-1 (single `Condition` cursor) / M-2 (no stream) folded from the supplement; AR-2/AR-3 clean; APPROVED. |
 | 0.3 | 2026-07-23 | — | PASS-2: +FR-TR-025 (regen/retire lifecycle) / FR-TR-026 (day-gap fail-loud); FR-TR-003 (focus single-source, schedule = derived view) / 006 (field-independence invariant) / 007 (#29-owned `deepTrainingEnabled`) / 019 (schedule not serialized); +F7. |
 | 0.5 | 2026-08-06 | — | **ERR-029-004** (at #29 T1): §2.3 **F3** said `ArgumentException` while citing the `MatchSaveCodec` posture, which throws `InvalidOperationException` — the row contradicted itself, and an implementer honouring the type would have diverged from every sibling codec. Corrected to `InvalidOperationException`. |
+| 0.6 | 2026-08-08 | — | **Balance-pass AR pass 9 (L4)**: new **F8** — `AdvanceTrainingDay` invoked with the never-advanced sentinel as `worldDay` itself fails loud; enforced in code since T0 with no F-row. §3.1's pseudocode gains the guard in the same commit; found at the #41 sibling, fixed at both. |
 | 0.4 | 2026-07-27 | — | **ERR-029-003** (at #53's approval): new **FR-TR-005a** — `ComputeTrainingInput` accepts #53's training-ground term as a **second root-assembled input**, alongside #34's `CoachingModifier`. Explicitly **not** delivered as a #53-returned `TrainingInput`, which FR-TR-005 forbids (#29 is that type's sole writer). Behaviour-neutral at neutral facilities; ◑ parameter at #29's Stage-3 tier. |
 #endregion

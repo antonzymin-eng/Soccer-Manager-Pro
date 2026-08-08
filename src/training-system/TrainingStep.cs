@@ -1,6 +1,6 @@
 // File:     src/training-system/TrainingStep.cs
 // Created:  2026-08-05
-// Modified: 2026-08-05
+// Modified: 2026-08-08 (AR pass 9 L4: the sentinel refusal cites its new normative row F8 — v1.3)
 // Author:   —
 // Spec:     Training System #29 §3.1–§3.4 (FR-TR-004..017, FR-TR-021/026), F1/F4/F6/F7; Code Standards #20
 // Purpose:  The four #29 entry points: the mutating daily world-day step, the pure growth-input read,
@@ -68,7 +68,7 @@ namespace TacticalDirector.TrainingSystem
             if (worldDay == TrainingSystemConstants.TRAINING_NOT_ADVANCED_SENTINEL)
             {
                 throw new ArgumentException(
-                    "worldDay must not be the never-advanced sentinel; storing it would re-arm the day-0 trap (F6).",
+                    "worldDay must not be the never-advanced sentinel; storing it would re-arm the day-0 trap (F8).",
                     nameof(worldDay));
             }
 
@@ -297,4 +297,8 @@ namespace TacticalDirector.TrainingSystem
 // |         |            |        | independently; it compounds on the same attributes (ERR-041-003).   |
 // |         |            |        | The §3.3 zero-ceiling comment said "refuse" of a branch that returns |
 // |         |            |        | the rested value.                                                   |
+// | 1.3     | 2026-08-08 | —      | Balance-pass AR pass 9 (L4, message only): the same unspecced      |
+// |         |            |        | sentinel guard as the #41 sibling — #29 SS2.3 gains F8, SS3.1 the  |
+// |         |            |        | pseudocode line, and the message cites F8 (fixed at both siblings  |
+// |         |            |        | at once — the folder-boundary lesson applied forward).            |
 #endregion

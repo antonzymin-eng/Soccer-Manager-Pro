@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/InjuriesMedicalConstants.cs
 // Created:  2026-08-05
-// Modified: 2026-08-07
+// Modified: 2026-08-08 (AR pass 9 L5: the severity-split invariant is strict — v1.5)
 // Author:   —
 // Spec:     Injuries & Medical #41 Appendix A (constant catalogue) + §3.1–§3.4; Code Standards #20
 // Purpose:  Every numeric constant for #41 occurrence, severity bucketing and recovery. No magic
@@ -151,7 +151,7 @@ namespace TacticalDirector.InjuriesMedical
         /// <summary>[GT] Per-mille numerator of the sub-threshold draw range classified <see cref="InjurySeverity.Minor"/> (§3.2). Config key [injuries-medical] SeverityMinorPermille.</summary>
         public static readonly int SeverityMinorPermille = Config.GetInt("injuries-medical", "SeverityMinorPermille", 600);
 
-        /// <summary>[GT] Per-mille numerator classified <see cref="InjurySeverity.Moderate"/> (cumulative with Minor); the remainder is <see cref="InjurySeverity.Serious"/>. Minor + Moderate MUST be ≤ <see cref="SEVERITY_PERMILLE_DENOM"/> — a catalogue invariant. Config key [injuries-medical] SeverityModeratePermille.</summary>
+        /// <summary>[GT] Per-mille numerator classified <see cref="InjurySeverity.Moderate"/> (cumulative with Minor); the remainder is <see cref="InjurySeverity.Serious"/>. Minor + Moderate MUST be strictly &lt; <see cref="SEVERITY_PERMILLE_DENOM"/> — a catalogue invariant (at exactly 1000 the §3.2 second bucket saturates and Serious becomes unreachable). Config key [injuries-medical] SeverityModeratePermille.</summary>
         public static readonly int SeverityModeratePermille = Config.GetInt("injuries-medical", "SeverityModeratePermille", 300);
 
         /// <summary>[GT] Integer weight on #29's already-published <c>InjuryRiskContribution.RiskScore</c> in the risk assembly (§3.4). Config key [injuries-medical] TrainingRiskPassthroughWeight.</summary>
@@ -294,4 +294,7 @@ namespace TacticalDirector.InjuriesMedical
 // |         |            |        | TrainingSystemConstants (the [CROSS] source) raised 10000 -> 16000 |
 // |         |            |        | to restore discrimination headroom, superseding v1.3's "(1%)"      |
 // |         |            |        | description. Row added at AR pass 2 (the edit shipped rowless).    |
+// | 1.5     | 2026-08-08 | —      | Balance-pass AR pass 9 (L5, doc): Minor + Moderate must be         |
+// |         |            |        | STRICTLY below the denominator — at exactly 1000 the SS3.2 second  |
+// |         |            |        | bucket saturates and Serious is unreachable with "<=" satisfied.   |
 #endregion

@@ -1,9 +1,10 @@
 # Injuries & Medical #41 — Section 8: References
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026 (v0.2 — balance-pass AR pass 7 M1: the #16 reference row no longer lists `DeterministicRngService` as a consumed API)
+**Last Updated:** August 8, 2026 (v0.3 — balance-pass AR pass 9 M2: §8.2's FR-LW-031 line no longer cites the anti-phantom FR as authority FOR registering the stream)
+**Last Updated (prior):** August 8, 2026 (v0.2 — balance-pass AR pass 7 M1: the #16 reference row no longer lists `DeterministicRngService` as a consumed API)
 **Last Updated (prior):** July 23, 2026 (v0.1 — initial authoring)
-**Version:** 0.2
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -34,7 +35,8 @@
 ## 8.2 Determinism / phantom-avoidance precedents
 
 - **FR-LW-031** — no phantom interface / no zero-draw RNG stream (the `world.arcs` precedent) — governs
-  KD-1 (stream registered only at the first draw site), KD-3 (no new match-engine interface), and KD-5 (no
+  KD-1 (no stream registered at all — the occurrence draw is a keyed SplitMix64 derivation and ordinal 92
+  is deliberately unallocated, ERR-041-012), KD-3 (no new match-engine interface), and KD-5 (no
   #34 interface).
 - **#28 / #30 off-pitch keyed-draw precedent** — `player-progression.regen` (keyed by `entityId = clubId`)
   and `season-loop.season-events` (keyed on `(seed, seasonNumber, roundIndex, homeClubId, awayClubId)`) are
@@ -55,4 +57,5 @@ or sports-science spec.
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial references. Status IN REVIEW. |
 | 0.2 | 2026-08-08 | — | **Balance-pass AR pass 7 (M1)**: §8.1's #16 row listed `DeterministicRngService` as consumed, which §1.3 (pass 6) explicitly denies; ordinal 92 noted deliberately unallocated. |
+| 0.3 | 2026-08-08 | — | **Balance-pass AR pass 9 (M2)**: §8.2's precedent line read "KD-1 (stream registered only at the first draw site)" — citing FR-LW-031, the FR that forbids the phantom, as the authority *for* registering it, in the file pass 7 bumped one section over. Re-anchored: no stream registered at all, ordinal 92 deliberately unallocated. |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/MedicalStep.cs
 // Created:  2026-08-05
-// Modified: 2026-08-07
+// Modified: 2026-08-08 (AR pass 9 L4: the sentinel refusal cites its new normative row F8 — v1.6)
 // Author:   —
 // Spec:     Injuries & Medical #41 §3.1–§3.4 + Appendices A/B (FR-MD-003..016, FR-MD-023),
 //           F1/F4/F6/F7; Code Standards #20
@@ -90,7 +90,7 @@ namespace TacticalDirector.InjuriesMedical
             if (worldDay == InjuriesMedicalConstants.MEDICAL_NOT_ADVANCED_SENTINEL)
             {
                 throw new ArgumentException(
-                    "worldDay must not be the never-advanced sentinel; storing it would re-arm the day-0 trap (F6).",
+                    "worldDay must not be the never-advanced sentinel; storing it would re-arm the day-0 trap (F8).",
                     nameof(worldDay));
             }
 
@@ -511,4 +511,7 @@ namespace TacticalDirector.InjuriesMedical
 // |         |            |        | (the worst-case assembly now SATURATES the clamp; ceiling 1.6%).   |
 // |         |            |        | Pass 1's one-line doc edit here also shipped rowless; both under   |
 // |         |            |        | this row.                                                          |
+// | 1.6     | 2026-08-08 | —      | Balance-pass AR pass 9 (L4, message only): the sentinel-as-        |
+// |         |            |        | worldDay refusal had NO normative source — #41 SS2.3 gains F8 and  |
+// |         |            |        | SS3.1's pseudocode the guard line; the message cites F8, not F6.   |
 #endregion

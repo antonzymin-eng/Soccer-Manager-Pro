@@ -1,6 +1,7 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
-// Modified: 2026-08-08 (AR pass 6: the KD-4 invariant at Save + the bidirectional cursor gate — v1.15)
+// Modified: 2026-08-08 (AR pass 9 M1: the cursor walk delegates to PlayerCareerStates' shared
+//           predicates — v1.16)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-1 / KD-5..KD-8;
 //           Training System #29 §4.4 / FR-TR-018/019; Injuries & Medical #41 §4.4 / FR-MD-017/018;
@@ -521,27 +522,17 @@ namespace TacticalDirector.SeasonSave
             ClubInjuryStates[] medicalClubs,
             ClubAppearanceStates[] appearanceClubs)
         {
+            // One predicate set, one owner (AR pass 9 M1): the per-cursor rules live on
+            // PlayerCareerStates beside the composition-boundary walk, so the two gates cannot
+            // drift — the RequireGloballyUniquePlayerIds shape. The three kinds iterate
+            // independently because the coherence gate accepts permuted club order per kind.
             for (int c = 0; c < trainingClubs.Length; c++)
             {
                 for (int i = 0; i < trainingClubs[c].Count; i++)
                 {
-                    uint day = trainingClubs[c].States[i].LastAdvancedWorldDay;
-                    if (day != TrainingSystemConstants.TRAINING_NOT_ADVANCED_SENTINEL
-                        && (day > worldTick || worldTick > day + 1))
-                    {
-                        // Both directions (AR pass 6 M2): AHEAD means the F6 idempotency silently
-                        // skips the day step until the clock catches up; LAGGING by >= 2 is WORSE —
-                        // the F7 gap refusal fires on every later advance and, because the day steps
-                        // run before the clock increment, the career wedges permanently while saving
-                        // cleanly. A legitimate save sits at worldTick - day in {0, 1} (or the
-                        // sentinel); the appearance anchor below has no gap contract, so it is
-                        // ahead-checked only.
-                        throw new InvalidOperationException(
-                            $"Career save is incoherent: club {trainingClubs[c].ClubId} player "
-                            + $"{trainingClubs[c].PlayerIds[i]}'s training cursor ({day}) is "
-                            + (day > worldTick ? "ahead of" : "more than one day behind")
-                            + $" the world clock ({worldTick}) — a mispaired or hand-edited save.");
-                    }
+                    PlayerCareerStates.RequireTrainingCursorWithinClock(
+                        worldTick, trainingClubs[c].ClubId, trainingClubs[c].PlayerIds[i],
+                        trainingClubs[c].States[i].LastAdvancedWorldDay, "Career save");
                 }
             }
 
@@ -549,16 +540,9 @@ namespace TacticalDirector.SeasonSave
             {
                 for (int i = 0; i < medicalClubs[c].Count; i++)
                 {
-                    uint day = medicalClubs[c].States[i].LastAdvancedWorldDay;
-                    if (day != InjuriesMedicalConstants.MEDICAL_NOT_ADVANCED_SENTINEL
-                        && (day > worldTick || worldTick > day + 1))
-                    {
-                        throw new InvalidOperationException(
-                            $"Career save is incoherent: club {medicalClubs[c].ClubId} player "
-                            + $"{medicalClubs[c].PlayerIds[i]}'s medical cursor ({day}) is "
-                            + (day > worldTick ? "ahead of" : "more than one day behind")
-                            + $" the world clock ({worldTick}).");
-                    }
+                    PlayerCareerStates.RequireMedicalCursorWithinClock(
+                        worldTick, medicalClubs[c].ClubId, medicalClubs[c].PlayerIds[i],
+                        medicalClubs[c].States[i].LastAdvancedWorldDay, "Career save");
                 }
             }
 
@@ -566,16 +550,9 @@ namespace TacticalDirector.SeasonSave
             {
                 for (int i = 0; i < appearanceClubs[c].Count; i++)
                 {
-                    uint day = appearanceClubs[c].States[i].BitsAsOfWorldDay;
-                    if (day > worldTick)
-                    {
-                        throw new InvalidOperationException(
-                            $"Career save is incoherent: club {appearanceClubs[c].ClubId} player "
-                            + $"{appearanceClubs[c].PlayerIds[i]}'s appearance anchor ({day}) is ahead "
-                            + $"of the world clock ({worldTick}) — with the occurrence dial armed, the "
-                            + "slot-4 window read throws on every later day and the world clock can "
-                            + "never advance again (the career wedges while saving cleanly).");
-                    }
+                    PlayerCareerStates.RequireAppearanceAnchorWithinClock(
+                        worldTick, appearanceClubs[c].ClubId, appearanceClubs[c].PlayerIds[i],
+                        appearanceClubs[c].States[i].BitsAsOfWorldDay, "Career save");
                 }
             }
         }
@@ -673,4 +650,9 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | cursors (gap >= 2 wedges via F7 — demonstrated; ahead-only    |
 // |         |            |        | before); duplicate ClubIds refused by name in the coherence   |
 // |         |            |        | gate; header/summary docs mention the appearance block.       |
+// | 1.16    | 2026-08-08 | —      | Balance-pass AR pass 9 (M1): RequireCareerCursorsWithinClock's   |
+// |         |            |        | three hand-copied predicate loops now delegate to                |
+// |         |            |        | PlayerCareerStates' shared per-cursor statics — one rule, one    |
+// |         |            |        | owner; the local copy's medical-lag clause had no isolating      |
+// |         |            |        | case at Save or Load (deleting it left the suite green).         |
 #endregion

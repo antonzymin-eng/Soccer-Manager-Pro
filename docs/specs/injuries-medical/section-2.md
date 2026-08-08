@@ -1,13 +1,14 @@
 # Injuries & Medical #41 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026 (v0.8 — balance-pass AR pass 8 (L4 + L2): FR-MD-007 no longer names the `injuries.occurrence` stream that must never exist; rows 0.6/0.7 reordered ascending)
+**Last Updated:** August 8, 2026 (v0.9 — balance-pass AR pass 9 L4: new F8 — the sentinel itself is not a day; the refusal the code has always enforced gets its normative row)
+**Last Updated (prior):** August 8, 2026 (v0.8 — balance-pass AR pass 8 (L4 + L2): FR-MD-007 no longer names the `injuries.occurrence` stream that must never exist; rows 0.6/0.7 reordered ascending)
 **Last Updated (prior):** August 8, 2026 (v0.7 — balance-pass AR pass 6 M4: §2.2's signature de-phantomed — `rng` → `worldSeed, occurrenceEnabled`; the stale `MatchLoad` comment corrected. Prior header below.)
 **Last Updated (prior):** August 7, 2026, later same day (v0.6 — the balance pass D3/D4: FR-MD-027 re-stated as ARMED with a required construction argument (ERR-041-011); FR-MD-005 re-anchored off the phantom registered stream onto the keyed derivation (ERR-041-012, discharging ERR-041-002's deferred half))
 **Last Updated (prior):** August 7, 2026 (v0.5 — the balance pass D2 (ERR-041-010(b)): FR-MD-010 pins the `AppearanceDays` window unit — appearances in the `APPEARANCE_WINDOW_DAYS` `[GT]` window of days strictly before the draw day, never the current day (the ERR-030-027 pre-round ordering depends on the exclusion); the record itself is #30-owned)
 **Last Updated (prior):** August 6, 2026 (v0.4 — ERR-041-008: §2.3 F3's exception type corrected to match the posture it cites)
 **Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.8
+**Version:** 0.9
 **Status:** APPROVED
 
 ---
@@ -216,6 +217,7 @@ construction are pure reads over an `InjuryState` value. See §3.
 | **F5** | Corrupt length prefix (out-of-bounds) or trailing bytes in the medical block | **Fail loud** (overflow-safe bound; the `WorldStateSerializer.ReadCount` posture). |
 | **F6** | `AdvanceMedicalDay` invoked twice for one world day (`worldDay <= LastAdvanced`) | Idempotent no-op guarded by `LastAdvancedWorldDay` — a mid-recovery save→restore→re-run does not double-decrement or double-draw. |
 | **F7** | `AdvanceMedicalDay` called with a **day gap** (`worldDay > LastAdvanced + 1`, post-sentinel) | **Fail loud** (`ArgumentException`) — a gap silently under-advances recovery and skips an occurrence evaluation; neither is clamped, defaulted, or batch-replayed (the FR-TR-026 posture). |
+| **F8** | `AdvanceMedicalDay` invoked with `worldDay == MEDICAL_NOT_ADVANCED_SENTINEL` itself | **Fail loud** (`ArgumentException`) — the sentinel is a reserved value, not a day; stored, the cursor would read back "never advanced" and re-arm the day-0 double-accrual trap F6 closes. |
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -228,4 +230,5 @@ construction are pure reads over an `InjuryState` value. See §3.
 | 0.6 | 2026-08-07 | — | **Balance pass D3/D4 (ERR-041-011 / ERR-041-012)**: FR-MD-027 ARMED — production constructs the dial ON, the argument is required-never-defaulted, the OFF identity stays supported and locked; FR-MD-005 re-anchored onto the keyed derivation (the `injuries.occurrence` registered stream never existed and may not — cursor-positioned, forbidden by FR-MD-006/007; ordinal 92 stays unallocated). (Rows 0.5/0.6 were appended out of order and swapped at the balance-pass AR pass 4 — the third table of this class in this landing chain.) |
 | 0.7 | 2026-08-08 | — | **Balance-pass AR pass 6 (M4)**: §2.2's normative `AdvanceMedicalDay` signature de-phantomed — it took the `DeterministicRngService rng` that never existed and could not express the required FR-MD-027 dial or the `worldSeed` key root declared 30 lines above it (the §3.1 v0.5 fix, which stopped one section short); the `MatchLoad` comment's "a count #30's fixture result already tracks" corrected (ERR-041-010(b) built the record because it did not). (Rows reordered ascending at AR pass 8 — the third recurrence in this table's own history.) |
 | 0.8 | 2026-08-08 | — | **Balance-pass AR pass 8 (L4 + L2)**: FR-MD-007's "for `injuries.occurrence`" → "for the keyed occurrence derivation" (true statement, phantom name); rows 0.6/0.7 reordered ascending — the third recurrence in this table's own history. |
+| 0.9 | 2026-08-08 | — | **Balance-pass AR pass 9 (L4)**: new **F8** — `AdvanceMedicalDay` invoked with the never-advanced sentinel as `worldDay` itself fails loud; enforced in code since T0 with no F-row (a fail-loud with no normative source). §3.1's pseudocode gains the guard in the same commit; mirrored at #29 §2.3/§3.1. |
 #endregion

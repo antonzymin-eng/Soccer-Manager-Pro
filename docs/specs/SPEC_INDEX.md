@@ -1,7 +1,9 @@
 # SPEC_INDEX.md — Canonical Specification Registry
 
 > **Created:** March 26, 2026, 11:00 PM PST
-> **Last Updated:** July 27, 2026, later same day (**ALL TEN ADVANCED `IN REVIEW → APPROVED`.**
+> **Last Updated:** August 8, 2026 (**ERR-041-012 back-prop, balance-pass AR pass 8 M2 — recorded at pass 9 L1, the edit having landed without this header bump.** One line inside the July 23 #41 entry below re-anchored: its KD-1 summary read "all draws on ONE world-tick `injuries.occurrence` stream", and ERR-041-012 established that stream never existed and may not — the draws are a keyed SplitMix64 derivation under `DOMAIN_TAG_INJURIES_MEDICAL = 0x2A`, `SubsystemOrdinals` 92 deliberately unallocated. Registry counts and every status unchanged.)
+>
+> **Last Updated (prior):** July 27, 2026, later same day (**ALL TEN ADVANCED `IN REVIEW → APPROVED`.**
 > Lead-developer **R-01..R-05 sign-off granted** on #53, #35, #46, #36, #54, #47, #48, #50, #51 and #39,
 > and the **23 back-props filed and RESOLVED atomically with the flips** per each spec's own pipeline step
 > 6 (`spec-error-log.md` v1.47). **Count: 53 APPROVED / 0 IN REVIEW / 0 NOT STARTED — every spec in the
