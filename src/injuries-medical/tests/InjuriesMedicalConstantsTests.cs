@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/tests/InjuriesMedicalConstantsTests.cs
 // Created:  2026-08-05
-// Modified: 2026-08-08 (AR pass 11 L3: the two-layer note covers all three predicates — v1.9)
+// Modified: 2026-08-08 (AR pass 12 M3: the recovery-rate lock's two-layer note — v1.10)
 // Author:   —
 // Spec:     Injuries & Medical #41 Appendix A + §3.2/§3.4; Code Standards #20
 // Purpose:  Catalogue invariants — the per-mille split is well-formed, the tier table covers every
@@ -142,6 +142,10 @@ namespace TacticalDirector.InjuriesMedical.Tests
         [Test]
         public void RecoveryRate_IsPositive_OrEveryInjuryIsPermanent()
         {
+            // Design-time half only (AR pass 12 M3): this reads the fallback in a config-unbound
+            // gate. The runtime half lives in AdvanceMedicalDay's countdown branch, which
+            // fail-louds on a non-positive rate — the DrawOccurrence posture, unreachable under
+            // the fallback by design.
             Assert.Greater(InjuriesMedicalConstants.RecoveryDaysPerTickBase, 0,
                 "a non-positive per-tick decrement means RecoveryRemaining never falls, so no injury " +
                 "ever ends and the career reaches a state nothing can recover from.");
@@ -230,4 +234,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
 // | 1.9     | 2026-08-08 | —      | Balance-pass AR pass 11 (L3, comment): the two-layer note no      |
 // |         |            |        | longer overstates — the runtime guard now mirrors all three       |
 // |         |            |        | predicates (non-negativity + strict sum).                         |
+// | 1.10    | 2026-08-08 | —      | Balance-pass AR pass 12 (M3, comment): the recovery-rate lock     |
+// |         |            |        | records its design-time-half-only scope now that the runtime      |
+// |         |            |        | guard exists at the countdown site.                               |
 #endregion

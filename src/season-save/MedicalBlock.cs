@@ -1,5 +1,6 @@
 // File:     src/season-save/MedicalBlock.cs
 // Created:  2026-08-06
+// Modified: 2026-08-06
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §3 layout / KD-2;
 //           Injuries & Medical #41 FR-MD-017; ERR-041-009; Code Standards #20

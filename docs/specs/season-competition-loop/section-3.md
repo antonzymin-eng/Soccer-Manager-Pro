@@ -1,7 +1,9 @@
 # Season & Competition Loop Specification #30 — Section 3: Algorithms
 
 **Created:** July 22, 2026
-**Last Updated:** August 8, 2026, still later same day (v1.6 — balance-pass AR pass 7 L2: v1.5's pseudocode lines reordered below the F5 guards, matching §3.3.2's after-every-guard property and the code. Prior header below.)
+**Last Updated:** August 8, 2026, later same day (v1.8 — ERR-030-029 at balance-pass AR pass 12 M4: the depleted-squad back-fill rule, normative at the seam that owns it)
+**Last Updated (prior):** August 8, 2026 (v1.7 — balance-pass AR pass 12 M1: §3.3's two stale prose clauses — "steps 1–7" and the only-world-tick-live byte-identity premise — corrected to the post-T2 loop)
+**Last Updated (prior):** August 8, 2026, still later same day (v1.6 — balance-pass AR pass 7 L2: v1.5's pseudocode lines reordered below the F5 guards, matching §3.3.2's after-every-guard property and the code. Prior header below.)
 **Last Updated (prior):** August 8, 2026, even later same day (v1.5 — balance-pass AR pass 6 L4: §3.4's pseudocode gains the pre-round `RunCareerDaySteps` line and the clock guard defining `worldDay`. Prior header below.)
 **Last Updated (prior):** August 8, 2026, later same day (v1.4 — balance-pass AR pass 5 M2: §3.4 caught up with the loop it describes — the filter seam is LIVE, `PlayThroughEngine` shows the filtered squads + entry fatigue + the XI derivation, and the appearance-record step appears at its load-bearing position. Prior header below.)
 **Last Updated (prior):** August 8, 2026 (v1.3 — balance-pass AR pass 4 header-currency fix: this header sat at v1.1 / July 27 while the table below carried v1.2 (Aug 7, ERR-030-027 — §3.3.2 pins the pre-round convention) and v1.3 (Aug 8, slots 2/4 marked LIVE) — two consecutive landings missed the bump, the exact drift class the v1.1 note below records this file fixing in itself.)
@@ -9,7 +11,7 @@
 **Last Updated (prior):** July 25, 2026 (v0.9 — ERR-030-010 §3.7 venue correction, found at #30 T0; prior v0.8 back-prop ERR-030-009 #44 availability-filter null seam in §3.4; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 25, 2026 (v0.8 — back-props ERR-030-008 board tick-order seam + ERR-030-009 JobSecurity derived band; prior v0.7 ERR-030-007 academy, v0.6 ERR-030-006 staff, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 27, 2026 (v1.0 — **ERR-030-015**: §3.5's boundary roll gains step (c′), the calendar rebuild it omitted, without which a rolled season is permanently unplayable; found at #30 T3. Also consolidates the TWO stale `Version` fields this header carried — the drift class `spec-error-log.md` v1.43 records. Prior v0.9 ERR-030-010 §3.7 venue correction; v0.8 back-props ERR-030-008/009; v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 1.6
+**Version:** 1.8
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -157,8 +159,9 @@ RunWorldTickInFixedOrder():                 # the KD-2 choke point — pinned or
 ```
 
 **KD-4 invariant:** `Calendar.dayOf(NextRoundIndex) ≥ WorldStore.CurrentWorldTick` always; a restore
-re-checks this and fails loud (F4). The Wave-2+ seams (steps 1–7) are **documented positions**, not
-interfaces — #28/#29/#33/#41/#31/#34/#32 each slot into a pre-declared slot when they land, so a wrong order
+re-checks this and fails loud (F4). The Wave-2+ seams (the slots at 0–11) are **documented positions**, not
+interfaces — #28/#33/#31/#34/#32/#35/#42/#45/#53/#54 each slot into a pre-declared slot when they land
+(#29 and #41 already HAVE — slots 2/4, live since T2, §3.3.2), so a wrong order
 here would force a re-pin across every Wave-2+ spec (§7). The injuries seam (step 4, appended by ERR-030-002
 at #41's approval) is positioned after #28/#29 so its occurrence-risk assembly reads the day's updated
 training-fatigue / condition, and before the live world-day tick. The transfers seam (step 5, appended by
@@ -174,8 +177,10 @@ but it is a **one-shot latched on `LastIntakeWorldDay`**, so on every day but on
 two integer comparisons and a return. The board seam (step 8, appended by ERR-030-008 at #45's approval)
 is the board-confidence day step — like the academy seam it goes live at #45's own T-phase rather than only
 at a deep tier, and it costs one bounded integer drift per **modelled** club (the minimal tier models the
-managed club only). With only the world-day tick live, a no-fixture day's advance is **byte-identical** to
-a bare `WorldStore.AdvanceDay()` (FR-SN-026 / KD-8).
+managed club only). A no-fixture day's advance is **byte-identical to the world** of
+a bare `WorldStore.AdvanceDay()` (FR-SN-026 / KD-8) — since #29/#41 T2 the career day-steps also run
+(slots 2/4), but their state lives in the career sub-blobs, not the world blob, so the world-digest
+identity FR-SN-026 pins is unchanged.
 
 ### 3.3.1 Tick-order reconciliation (ERR-030-022, July 27, 2026)
 
@@ -249,6 +254,21 @@ a **property to preserve rather than an accident to rely on**: a future non-remo
 or substitutes a player, would need an **explicit order** and cannot simply join the list. The composition
 also carries a shared obligation neither filter owns alone: a squad reduced **below a fieldable eleven by
 the composition** is a #44/#36/#30 concern at this seam, not either filter's private business.
+
+**The depleted-squad rule (ERR-030-029, at the balance-pass AR pass 12 — settling the obligation above,
+which the code had settled unilaterally at #29/#41 T2 while #36 §2 F7 and §5 T-NT-I-005 were still
+waiting on it):** when the composed filters leave a club unable to field the formation, the seam
+back-fills by **pressing the least-injured players back in one at a time** — ascending remaining
+recovery, ties broken by earliest roster position — probing the engine's own selector
+(`SquadRating.CanFieldStartingEleven`) after each, so fieldability is asked of the selection rule that
+will actually run rather than answered by a second, parallel rule at the seam. Back-filling to a player
+COUNT would be wrong: selection refuses a position-incomplete squad outright (KD-L3), so eighteen fit
+outfielders with no goalkeeper would stop the season. In the limit the back-fill is the whole squad —
+the unfiltered behaviour — so **the composed filter can never leave a club worse off than having no
+filter at all**. If even the whole squad cannot field the formation, the seam **fails loud**
+(`InvalidOperationException`, §2.3 F9) — that is a roster-integrity bug, not a football outcome. The
+rule is #30's because FR-MD-023 puts selection on this side of the seam; #44/#36 contribute removals
+only and inherit the rule unchanged when they join.
 
 ```
 AdvanceAndPlayNextRound(squads: ISquadProvider):
@@ -454,4 +474,6 @@ by ascending `ClubId` (FR-SN-007 final key) — a total order.
 | 1.4 | 2026-08-08 | — | **Balance-pass AR pass 5 (M2)**: §3.4 caught up with the loop it describes — the "null seam, empty until #44 T2" sentence retired (the ERR-030-009 seam has been LIVE via #41 FR-MD-023 since T2, both clubs, both paths); `PlayThroughEngine`'s pseudocode gains the filter + the #29 entry-fatigue projection + the XI derivation at the configuration site; `AdvanceAndPlayNextRound` gains the `RecordFixtureAppearances` step at its load-bearing position (before apply/emit/mark, pair-atomic). §3.4 had not been touched since v0.8 while three landings changed the code it specifies. |
 | 1.5 | 2026-08-08 | — | **Balance-pass AR pass 6 (L4)**: §3.4's pseudocode gains the two lines its own prose and §3.3.2 make load-bearing — the pre-round `RunCareerDaySteps(worldDay)` call (ERR-030-027) and the clock-at-fixture-day guard that also defines the `worldDay` the block used undefined. |
 | 1.6 | 2026-08-08 | — | **Balance-pass AR pass 7 (L2)**: v1.5's own new lines put `RunCareerDaySteps` ABOVE the F5 guards, contradicting §3.3.2's after-every-guard property two sections up and the code it specifies; reordered, with the season-complete refusal the code performs first added (it also makes `Calendar.DayOf(round)` well-defined). (Rows 1.4-1.6 were prepended descending and reordered ascending at AR pass 8 — the defect this file's own v1.1 note records fixing in itself.) |
+| 1.7 | 2026-08-08 | — | **Balance-pass AR pass 12 (M1)**: the pass-3 slot-list correction had stopped above §3.3's prose — "(steps 1–7)" predated ERR-030-022's 0–11 numbering, the "when they land" list still counted #29/#41 as future, and the FR-SN-026 premise clause ("with only the world-day tick live") had been false since T2; all three corrected (byte-identity qualified to the WORLD blob — the career sub-blobs carry the day-steps' state). Note: the v0.8 row below claims the seam clause was extended to "steps 1–8" — the file read "1–7" at this correction, so that claim was inaccurate or the edit was later reverted; recorded here rather than silently rewritten. |
+| 1.8 | 2026-08-08 | — | **ERR-030-029 (balance-pass AR pass 12, M4)**: the depleted-squad back-fill rule — press the least-injured back in until the engine's own selector can field the formation; in the limit the unfiltered squad, so the filter never leaves a club worse off; terminal refusal fails loud (F9) — had existed in NO spec while `PlayerCareerStates.SelectAvailable` implemented it and #36 §2 F7 / §5 T-NT-I-005 recorded the obligation as OPEN. §3.4 now owns it; the ERR-030-028 class (a shipped behaviour specified nowhere), on a behavioural rule rather than a byte layout. |
 #endregion

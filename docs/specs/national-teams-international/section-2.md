@@ -1,8 +1,9 @@
 # National Teams & International Management #36 — Section 2: Requirements, Data Structures, Failure Modes
 
 **Created:** July 27, 2026
-**Last Updated:** July 27, 2026 (v0.2 — PASS-1 fix pass)
-**Version:** 0.2
+**Last Updated:** August 8, 2026 (v0.3 — ERR-030-029 back-prop: F7's shared empty-squad obligation is SETTLED at #30 §3.4; pointer added, contract unchanged)
+**Last Updated (prior):** July 27, 2026 (v0.2 — PASS-1 fix pass)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -123,7 +124,7 @@ public struct NationPin { public int PlayerId; public NationId Nation; }
 | **F4** | A re-key hook invoked **after** the old `PlayerId` has become unresolvable, so the pre-transfer nation cannot be read. | **Fail loud** (FR-NT-011). Pinning the *post*-transfer derivation would silently record the wrong nationality — the exact defect the pin exists to prevent, committed by the mechanism meant to prevent it. |
 | **F5** | A `worldDay` gap past `LastAdvancedWorldDay`, or a re-advance of the same day. | **Fail loud** / **no-op**, respectively (FR-NT-020, the #33 F6 guard). |
 | **F6** | A call-up selection exceeding `NT_MAX_CALLUPS_PER_CLUB` for any club. | **Fail loud** at selection — a bounded contribution is what keeps #36's share of the empty-squad risk defined (FR-NT-018). |
-| **F7** | A squad reduced below a fieldable eleven **by the composition** of #36's and #44's filters. | **Not #36's failure mode.** It belongs to the seam, as a shared #44/#36/#30 obligation (FR-NT-019 / ERR-030-016). #36 bounds its own contribution and no more; inventing a private policy here is what would make the two filters disagree. |
+| **F7** | A squad reduced below a fieldable eleven **by the composition** of #36's and #44's filters. | **Not #36's failure mode.** It belongs to the seam, as a shared #44/#36/#30 obligation (FR-NT-019 / ERR-030-016). #36 bounds its own contribution and no more; inventing a private policy here is what would make the two filters disagree. **SETTLED (ERR-030-029, balance-pass AR pass 12):** #30 §3.4 now owns the rule — press the least-injured back in until the engine's own selector can field the formation; terminal case fails loud (#30 §2.3 F9). #36 inherits it unchanged. |
 | **F8** | A non-canonical, duplicated, or out-of-order `CallUp` entry on decode. | **Fail loud** (FR-NT-024) — two equivalent states must not serialize differently. |
 | **F9** | Bad `NATIONAL_TEAM_SAVE_FORMAT_VERSION`, an out-of-bounds length prefix, or trailing bytes on restore. | **Fail loud** — version gate read **first**; the bound compared against `total − offset`, never `offset + need`, which can wrap negative on a crafted near-`int.MaxValue` prefix. |
 
@@ -136,4 +137,5 @@ the pin table's *presence* is exceptional and a reader could mistake absence for
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial §2 (FR-NT-001..034, data structures, F1..F9) from supplement v0.6. Status IN REVIEW. |
 | 0.2 | 2026-07-27 | — | PASS-1 fixes. **M:** added **F4** — the re-key hook must read the **pre-transfer** nation, and a hook invoked after the old id is unresolvable would pin the *post*-transfer derivation, silently recording the wrong nationality **via the very mechanism meant to prevent it**; FR-NT-011 states the ordering and F4 makes it loud. **M:** added **FR-NT-012 / F3** — a pin equal to its derivation must **still** be stored (the obvious "skip the redundant pin" optimisation re-opens the transfer defect), and conversely a pin written for an untransferred player must fail loud, since the table's whole cost argument rests on being bounded by transfer volume rather than pool size. **L:** added **FR-NT-017** (the filter must be a pure removal — the property that makes composition order-free, previously stated only as an observation), **FR-NT-030** (the `0x28` promotion happens at a first draw site, on the record), and the *"an absent pin is not a failure"* note; `NationId`, `WindowCursor` and `IntlMinutes` written out. |
+| 0.3 | 2026-08-08 | — | **ERR-030-029 back-prop (balance-pass AR pass 12, M4)**: F7's "whatever the seam settles on" now has an answer — #30 §3.4's depleted-squad back-fill rule (least-injured first, selector-probed, fail-loud terminal case, #30 §2.3 F9). Pointer only; #36's own contract unchanged. |
 #endregion

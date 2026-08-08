@@ -1,5 +1,6 @@
 // File:     src/season-save/TrainingBlock.cs
 // Created:  2026-08-06
+// Modified: 2026-08-06
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §3 layout / KD-2;
 //           Training System #29 FR-TR-018; ERR-029-005; Code Standards #20

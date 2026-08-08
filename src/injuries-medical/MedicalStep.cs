@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/MedicalStep.cs
 // Created:  2026-08-05
-// Modified: 2026-08-08 (AR pass 11 L3: the guard mirrors all three lock predicates — v1.8)
+// Modified: 2026-08-08 (AR pass 12 M3: the recovery-rate guard at the countdown site — v1.9)
 // Author:   —
 // Spec:     Injuries & Medical #41 §3.1–§3.4 + Appendices A/B (FR-MD-003..016, FR-MD-023),
 //           F1/F4/F6/F7; Code Standards #20
@@ -70,8 +70,10 @@ namespace TacticalDirector.InjuriesMedical
         /// last-advanced day (F7) or is itself the never-advanced sentinel.
         /// </exception>
         /// <exception cref="InvalidOperationException">
-        /// The draw denominator is not positive — propagated from <see cref="DrawOccurrence"/>; a
-        /// catalogue integrity failure, not a caller error.
+        /// A catalogue/config integrity failure, not a caller error: the draw denominator is not
+        /// positive (propagated from <see cref="DrawOccurrence"/>), or
+        /// <see cref="InjuriesMedicalConstants.RecoveryDaysPerTickBase"/> is non-positive — a
+        /// decrement of zero would make every injury permanent (AR pass 12 M3).
         /// </exception>
         public static void AdvanceMedicalDay(
             ref InjuryState state,
@@ -118,6 +120,19 @@ namespace TacticalDirector.InjuriesMedical
             //    tier-days once at injury time instead (§3.3 / FR-MD-014).
             if (state.Severity != InjurySeverity.None)
             {
+                // The recovery-rate invariant, enforced at the one site that counts down (AR pass 12
+                // M3 — the DrawOccurrence guard posture, fourth instance): RecoveryDaysPerTickBase is
+                // a [GT] config key and the catalogue lock only sees the fallback, so a shipped
+                // config at 0 (or negative) would otherwise make EVERY injury permanent, silently —
+                // the countdown never falls, Severity never returns to None, and the only symptom is
+                // the depleted-squad back-fill quietly fielding whole squads.
+                if (InjuriesMedicalConstants.RecoveryDaysPerTickBase <= 0)
+                {
+                    throw new InvalidOperationException(
+                        "RecoveryDaysPerTickBase must be positive — a non-positive decrement makes "
+                        + "every injury permanent; catalogue/config integrity failure (§3.1, Appendix A).");
+                }
+
                 state.RecoveryRemaining = Clamp(
                     state.RecoveryRemaining - InjuriesMedicalConstants.RecoveryDaysPerTickBase,
                     0,
@@ -558,4 +573,8 @@ namespace TacticalDirector.InjuriesMedical
 // |         |            |        | the sum guard and silently deleted its own tier (Minor at -100 =   |
 // |         |            |        | a 0/20/80 split); positivity relaxed to non-negativity, a zero     |
 // |         |            |        | tier being an expressible intent.                                  |
+// | 1.9     | 2026-08-08 | —      | Balance-pass AR pass 12 (M3): RecoveryDaysPerTickBase gains its    |
+// |         |            |        | runtime guard at the countdown site — the one [GT] in the landing |
+// |         |            |        | whose lock had no runtime mirror; at 0 every injury was permanent |
+// |         |            |        | silently (the DrawOccurrence posture, fourth instance).            |
 #endregion

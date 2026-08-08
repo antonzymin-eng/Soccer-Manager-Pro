@@ -1,6 +1,6 @@
 // File:     src/training-system/TrainingStep.cs
 // Created:  2026-08-05
-// Modified: 2026-08-08 (AR pass 9 L4: the sentinel refusal cites its new normative row F8 — v1.3)
+// Modified: 2026-08-08 (AR pass 12 L2: the phantom-stream residue in the risk doc — v1.4)
 // Author:   —
 // Spec:     Training System #29 §3.1–§3.4 (FR-TR-004..017, FR-TR-021/026), F1/F4/F6/F7; Code Standards #20
 // Purpose:  The four #29 entry points: the mutating daily world-day step, the pure growth-input read,
@@ -195,8 +195,8 @@ namespace TacticalDirector.TrainingSystem
         /// <c>[0, TrainingSystemConstants.InjuryRiskMax]</c>.
         /// <para>
         /// #41 consumes this scalar and owns occurrence, severity and recovery; #29 computes the input
-        /// only and holds no injury model (FR-TR-017). No RNG — an injury draw is #41's, on #41's
-        /// stream, keyed on the world day (#41 KD-1).
+        /// only and holds no injury model (FR-TR-017). No RNG — an injury draw is #41's, via #41's
+        /// keyed occurrence derivation (no registered stream, ERR-041-012), keyed on the world day (#41 KD-1).
         /// </para>
         /// </summary>
         /// <param name="state">The player's training state, read-only.</param>
@@ -301,4 +301,7 @@ namespace TacticalDirector.TrainingSystem
 // |         |            |        | sentinel guard as the #41 sibling — #29 SS2.3 gains F8, SS3.1 the  |
 // |         |            |        | pseudocode line, and the message cites F8 (fixed at both siblings  |
 // |         |            |        | at once — the folder-boundary lesson applied forward).            |
+// | 1.4     | 2026-08-08 | —      | Balance-pass AR pass 12 (L2, doc): the ERR-041-012 sweep's fifth   |
+// |         |            |        | widening reached src/ — this doc still put the injury draw "on     |
+// |         |            |        | #41's stream"; re-anchored to the keyed derivation.                |
 #endregion

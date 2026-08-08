@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/PlayerCareerStatesTests.cs
 // Created:  2026-08-06
-// Modified: 2026-08-08
+// Modified: 2026-08-08 (AR pass 12 L3: the draw-key spelling in the roll-test comment)
 // Author:   —
 // Spec:     Training System #29 §3.1/§3.3/§3.5, FR-TR-004/016/023/025/026, F6/F7;
 //           Injuries & Medical #41 §3.1/§3.5, FR-MD-003/004/022/023/025/027, F2/F6/F7;
@@ -331,7 +331,7 @@ namespace TacticalDirector.SeasonSave.Tests
         public void ACrossClubDuplicatePlayerId_IsRefusedAtEveryIdEntryPoint()
         {
             // ERR-041-019 (AR pass 3, the High): #41's armed occurrence draw is keyed on
-            // (worldSeed, playerId, worldDay) with NO club term, so two clubs carrying one id would
+            // (worldSeed, playerId, actionOrdinal = worldDay x RADIX + purpose) with NO club term, so two clubs carrying one id would
             // draw bit-identical injury luck on every world day forever — and #27 promises id
             // uniqueness only WITHIN a club. Today's generator formula is globally unique by
             // accident of one allocator; this locks the precondition loud at all three id entry
@@ -930,4 +930,6 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | all three id entry points (ERR-041-019); the FromBlocks copy lock  |
 // |         |            |        | extends to the ID arrays (M2); the dial-off comment no longer      |
 // |         |            |        | cites the fixed 23%-first-day absurdity as current (L5).           |
+// | 1.5     | 2026-08-08 | —      | Balance-pass AR pass 12 (L3, comment): the ERR-041-019 key spelled |
+// |         |            |        | per #41 SS3.1.1 in the roll-test comment.                          |
 #endregion

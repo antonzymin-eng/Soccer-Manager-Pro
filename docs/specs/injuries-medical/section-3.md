@@ -1,7 +1,8 @@
 # Injuries & Medical #41 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026, still later same day (v0.10 — balance-pass AR pass 11 L3: the §3.2 guard mirrors all three lock predicates)
+**Last Updated:** August 8, 2026, even later same day (v0.12 — balance-pass AR pass 12 M3 + L3: §3.1's recovery countdown gains the non-positive-rate refusal; §3.1.1 pins the draw key's canonical spelling and its two sanctioned abbreviations)
+**Last Updated (prior):** August 8, 2026, still later same day (v0.10 — balance-pass AR pass 11 L3: the §3.2 guard mirrors all three lock predicates)
 **Last Updated (prior):** August 8, 2026, later same day (v0.9 — balance-pass AR pass 10 M1: §3.2 enforces the severity-split invariant at the classifying site)
 **Last Updated (prior):** August 8, 2026 (v0.8 — balance-pass AR pass 9 L4: §3.1's pseudocode gains the F8 sentinel-as-worldDay refusal the code has always enforced)
 **Last Updated (prior):** August 8, 2026 (v0.7 — balance-pass AR pass 8: the missing v0.6 version row added (L1); the §3.1.1 transfer note separated from the radix rule it had been fused into (L5))
@@ -9,7 +10,7 @@
 **Last Updated (prior):** August 8, 2026 (v0.5 — AR pass 3: §3.1's signature de-phantomed — `rng` → `worldSeed, occurrenceEnabled`, the dial gated in step 2, §3.5's call updated; §3.1.1 gains the ERR-041-019 draw-key global-uniqueness contract)
 **Last Updated (prior):** August 7, 2026 (v0.4 — ERR-041-011 at the balance pass: §3.4 gains the normative-position `BASELINE_DAILY_RISK` term; the draw denominator decouples to the `[FIXED]` per-million `OCCURRENCE_DRAW_DENOM` with the `INJURY_RISK_MAX ≤ DENOM` invariant; §3.1's pseudocode re-anchored onto the keyed derivation (ERR-041-002/ERR-041-012); §3.6 re-derived (6600, + the congestion-clamp line))
 **Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.10
+**Version:** 0.12
 **Status:** APPROVED
 
 ---
@@ -53,6 +54,11 @@ AdvanceMedicalDay(ref InjuryState s, playerId, in PlayerAttributes a, in InjuryR
     #    assigned tier-days at injury time in step 2 — FR-MD-014 — so a fractional multiplier is never
     #    truncated against a base of 1).
     if s.Severity != InjurySeverity.None:
+        # Recovery-rate invariant, enforced HERE at the one countdown site (the §3.4 draw-site
+        # guard posture): RECOVERY_DAYS_PER_TICK_BASE is a [GT] config key and the catalogue lock
+        # only sees the fallback — non-positive, every injury is PERMANENT, silently (AR pass 12 M3).
+        if RECOVERY_DAYS_PER_TICK_BASE <= 0:
+            throw InvalidOperationException      # catalogue/config integrity failure
         s.RecoveryRemaining = Clamp(s.RecoveryRemaining - RECOVERY_DAYS_PER_TICK_BASE, 0, RECOVERY_MAX)  # F1
         if s.RecoveryRemaining == 0:
             s.Severity = InjurySeverity.None      # recovered — but ineligible for a NEW occurrence
@@ -100,6 +106,13 @@ A pure bijection from `(worldDay, purpose)` to a single `u64` — **not** an inc
 with the same `(playerId, worldDay, purpose)` always resolve to the same draw regardless of call order
 across players or days, which is what makes the stream position-independent and gives it nothing to
 persist (FR-MD-006/007).
+
+**Spelling rule (AR pass 12, L3):** the draw key's canonical full spelling is
+`(worldSeed, playerId, actionOrdinal = worldDay × DRAW_PURPOSE_RADIX + purpose)`. Two abbreviations are
+sanctioned and mean the same key: `(playerId, worldDay, purpose)` — the varying components, the seed
+being career-constant (FR-MD-006's form) — and "keyed on `PlayerId` with no club term" where only the
+club-absence matters (FR-SQ-010's form). Any other spelling is a defect; three drifted spellings of this
+one key have already cost a sweep.
 
 **The full draw key is `(worldSeed, playerId, actionOrdinal)` — there is NO club term, so it requires
 `PlayerId` to be GLOBALLY unique across the career (ERR-041-019).** That is a stronger promise than #27
@@ -277,4 +290,6 @@ pass example used `AppearanceDays = 2` at weight 150 and no baseline, assembling
 | 0.8 | 2026-08-08 | — | **Balance-pass AR pass 9 (L4)**: §3.1's pseudocode gains the `worldDay == MEDICAL_NOT_ADVANCED_SENTINEL` refusal (**F8**, new in §2.3) that `MedicalStep.AdvanceMedicalDay` has enforced since T0 with no normative source — a production fail-loud with no spec row is the ERR-041-012 class inverted. Mirrored at the #29 sibling (`training-system` §2.3/§3.1) in the same commit — the folder-boundary lesson applied forward. |
 | 0.9 | 2026-08-08 | — | **Balance-pass AR pass 10 (M1)**: §3.2's pseudocode gains the fail-loud split-invariant guard at the classifying site — both numerators are `[GT]` config keys, the catalogue suite only sees the fallbacks (ERR-041-003's class), and a config summing to the denominator deleted the `Serious` tier silently. The §3.4 draw-site guard posture, at #41's other config-breakable invariant. |
 | 0.10 | 2026-08-08 | — | **Balance-pass AR pass 11 (L3)**: the §3.2 guard was ONE of the design-time lock's three predicates while both new comments called them two halves of one invariant — a negative `[GT]` numerator passed the sum guard and silently deleted its own tier (the pass-6 rule-at-one-boundary shape, inside the fix being verified). Non-negativity added; zero stays legal (an expressible empty-tier intent). |
+| 0.11 | 2026-08-08 | — | **Balance-pass AR pass 12 (M3)**: `RECOVERY_DAYS_PER_TICK_BASE` was the one `[GT]` in the landing whose design-time lock had NO runtime mirror — non-positive, the countdown never falls and every injury is permanent, silently, with the armed dial progressively injuring the whole league; §3.1 gains the fail-loud refusal at the countdown site (the §3.4 guard posture, fourth instance). |
+| 0.12 | 2026-08-08 | — | **Balance-pass AR pass 12 (L3)**: §3.1.1 pins the key's canonical spelling + the two sanctioned abbreviations — the key had accumulated three drifted spellings across two assemblies and two specs, and a sweep needs a rule, not a preference. *(Folded into the same pass as v0.11 — one bump per pass would have hidden the two distinct changes.)* |
 #endregion

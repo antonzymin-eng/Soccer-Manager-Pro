@@ -1,14 +1,15 @@
 # Injuries & Medical #41 — Appendices
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026, still later same day (v0.9 — balance-pass AR pass 11 L3: the split invariant adds non-negativity)
+**Last Updated:** August 8, 2026, even later same day (v0.10 — balance-pass AR pass 12 M3: the recovery rate's positivity enforced at the countdown site)
+**Last Updated (prior):** August 8, 2026, still later same day (v0.9 — balance-pass AR pass 11 L3: the split invariant adds non-negativity)
 **Last Updated (prior):** August 8, 2026, later same day (v0.8 — balance-pass AR pass 10 M1: the split invariant's Appendix A row records its runtime enforcement site)
 **Last Updated (prior):** August 8, 2026 (v0.7 — balance-pass AR pass 9 L5: the severity-split catalogue invariant is STRICT — ≤ at exactly 1000 makes Serious unreachable with the invariant satisfied)
 **Last Updated (prior):** August 8, 2026 (v0.6 — balance-pass AR pass 8 (L4): the DRAW_PURPOSE_OCCURRENCE row's "on `injuries.occurrence`" → "of the keyed occurrence derivation")
 **Last Updated (prior):** August 8, 2026 (v0.5 — balance-pass AR pass 7 M1: the ERR-041-012 sweep reaches the appendices — Appendix A no longer asserts the T2 stream registration §4.5 forbids, and Appendix C's T-MD-NEU-003 matches §5.5's restatement instead of contradicting it under the same test id)
 **Last Updated (prior):** August 7, 2026 (v0.4 — ERR-041-011 at the balance pass: Appendix A's `INJURY_RISK_MAX` re-tagged `[CROSS: #29 Appendix A]` (discharging ERR-041-003's standing back-prop), `OCCURRENCE_DRAW_DENOM` re-tagged `[FIXED]` 1,000,000 (decoupled), `APPEARANCE_LOAD_WEIGHT` refitted 150 → 5600 on the new scale, + `BASELINE_DAILY_RISK` 4000 and `APPEARANCE_WINDOW_DAYS` 7)
 **Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.9
+**Version:** 0.10
 **Status:** APPROVED
 
 ---
@@ -23,7 +24,7 @@ Stage-2/3 balance pass (the #21 G2 precedent); the shapes/directions are the rev
 | `MEDICAL_SAVE_FORMAT_VERSION` | 1 | [FIXED] | The #41 sub-blob version (KD-7). A season-save sub-blob, independently gated from `WORLD_STORE_FORMAT_VERSION` / `SEASON_STATE_FORMAT_VERSION` / `TRAINING_SAVE_FORMAT_VERSION` / `PROGRESSION_SAVE_FORMAT_VERSION`. |
 | `MEDICAL_NOT_ADVANCED_SENTINEL` | `uint.MaxValue` | [FIXED] | "Never advanced" seed for `LastAdvancedWorldDay` — chosen so a legitimate world-day 0 cannot collide with the fresh-state value (the day-0 double-accrual trap, the #28/#29 lifecycle precedent, F6). |
 | `RECOVERY_MAX` | 240 | [GT] | Ceiling on `RecoveryRemaining` (world-days) — generously bounds even a Stage-3 deep-tier recurrence-extended recovery; a Stage-2 Serious-tier injury never approaches this ceiling. |
-| `RECOVERY_DAYS_PER_TICK_BASE` | 1 | [GT] | Stage-2 linear recovery-countdown rate: a **fixed integer** number of `RecoveryRemaining` days consumed per world day. Staff recovery-speed does NOT scale this per-tick (it scales assigned tier-days at injury time — §3.1/FR-MD-014). |
+| `RECOVERY_DAYS_PER_TICK_BASE` | 1 | [GT] | Stage-2 linear recovery-countdown rate: a **fixed integer** number of `RecoveryRemaining` days consumed per world day. Staff recovery-speed does NOT scale this per-tick (it scales assigned tier-days at injury time — §3.1/FR-MD-014). MUST be **positive** — **enforced fail-loud at the countdown site** (§3.1; non-positive makes every injury permanent, silently; AR pass 12 M3). |
 | `MEDICAL_MODIFIER_IDENTITY_PERMILLE` | 1000 | [FIXED] | Per-mille identity for `MedicalModifier.OccurrenceRiskMillMult` / `RecoverySpeedMillMult` (= ×1.0). `MedicalModifier.Identity` sets both to this; `default(MedicalModifier)` (all-zero) is NOT valid (FR-MD-016 / F4). |
 | `RecoveryDaysForTier[Minor]` | 7 | [GT] | Fixed recovery-days constant for `InjurySeverity.Minor` (§3.2). |
 | `RecoveryDaysForTier[Moderate]` | 21 | [GT] | Fixed recovery-days constant for `InjurySeverity.Moderate`. |
@@ -90,4 +91,5 @@ with or without #41 active (T-MD-NEU-003, as restated in §5.5).
 | 0.7 | 2026-08-08 | — | **Balance-pass AR pass 9 (L5)**: the severity-split invariant `Minor + Moderate ≤ DENOM` corrected to strict `<` — the same row states "the remaining 100‰ is Serious", and at a sum of exactly 1000 the §3.2 second bucket's bound is the method's own precondition, so `Serious` is unreachable with "≤" satisfied. Catalogue doc + lock (`Assert.Less`) corrected with it. |
 | 0.8 | 2026-08-08 | — | **Balance-pass AR pass 10 (M1)**: the split-invariant row records its runtime enforcement (`ClassifySeverityFromDraw` fail-louds at the classifying site — the draw-site guard posture); until now this was the only one of the three catalogue invariants with no production guard, and the only lock ran config-unbound. |
 | 0.9 | 2026-08-08 | — | **Balance-pass AR pass 11 (L3)**: the split invariant gains non-negativity — a negative `[GT]` numerator deleted its tier through the sum guard's own blind spot; zero stays legal. |
+| 0.10 | 2026-08-08 | — | **Balance-pass AR pass 12 (M3)**: the recovery rate's row records its runtime enforcement — the one `[GT]` here whose lock had no runtime mirror, and whose silent failure (every injury permanent) is worse than the deleted tier the split guard stops. |
 #endregion
