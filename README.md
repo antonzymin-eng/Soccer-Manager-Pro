@@ -1,7 +1,37 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** August 7, 2026 (**The main branch went red after the shot-fix chain merged; both
+**Last Updated:** August 7, 2026, evening (**The screens work was fully build-and-test verified the
+same day — and the check-up found two unrelated, pre-existing test failures on the main branch.**
+For weeks, work in this environment could not be compiled locally because the .NET installer's
+download sites are blocked; it turns out the standard Ubuntu package archive serves the same
+toolkit and installs cleanly, a discovery now written into the build instructions. With a real
+toolchain, the whole project was built (zero errors) and every test run: the new screens module
+passed all fifteen of its tests on first execution, and a guard test that polices which modules may
+touch the UI framework flagged the new module exactly as designed — it is now on the approved list.
+The one red area is the match engine's realism checks: two long-running scenario tests fail, and
+re-running exactly those two against the untouched main branch shows **they fail there identically**
+— they are the current state of the main branch (most likely fallout from this week's shot-geometry
+fixes), now logged as an open issue for the match-realism work, not something this change caused.
+Prior entry below.)
+**Last Updated (prior):** August 7, 2026 (**The game's four screens now have an official home in the
+code, ending a layering question that was blocking the user interface work.** The interactive
+client's screens — Main Menu, Tactics Setup, Match View, Post-Match Report — needed somewhere to
+live, and no existing module was allowed to hold them: the UI framework is deliberately forbidden
+from hard-coding any screen, and the Unity-only module is invisible to the automated build, which
+this project treats as disqualifying for anything that makes decisions. The owner settled it: a
+new, small module that sits above the UI framework and holds exactly two things — the list of the
+four screens, and the map of which screen can lead to which (menu → setup → match → report →
+menu, plus cancelling out of setup). The map is deliberately strict: once a match starts you
+cannot "go back" into the setup screen for it, and once it ends you cannot return to a finished
+match — pressing back from the report lands on the main menu. There is intentionally no
+"abandon match" button, because no screen design calls for one yet, and this project does not
+build doors that lead nowhere. Fifteen automated tests pin all of this down. Nothing about how
+matches play out changes — this is purely about which screen you are looking at. The build could
+not be run in this environment (no .NET toolchain); CI compiles it on push. Note the chain below
+is drifted: two older entries both carry the bare "Last Updated" label and dates run out of
+order; left as found, new entries stack here. Prior entry below.)
+**Last Updated (prior):** August 7, 2026 (**The main branch went red after the shot-fix chain merged; both
 failures are diagnosed, and the tests are re-anchored to the intended new behaviour.** This week's
 chain of shooting fixes changed which shots players take. Two long-running acceptance tests were
 still checking numbers measured against the old behaviour, and the first full test run on the merged
@@ -532,7 +562,7 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 **Progress:** Implementation Phase (coding begun May 19, 2026)
 **Spec Phase Started:** February 2, 2026
 **Stage-0 Spec Phase Completed:** May 18, 2026 — all 20 Stage-0 specs APPROVED
-**Deliverables:** 53 APPROVED specifications + 33 production assemblies in `src/`
+**Deliverables:** 53 APPROVED specifications + 34 production assemblies in `src/`
 
 **Summary (July 27, 2026):** `SPEC_INDEX.md` records **53 APPROVED / 0 IN REVIEW / 0 NOT STARTED — every spec in the registry is approved, and the specification phase is closed** —
 the Stage-0 set of 20, plus 23 Stage-1-forward and management-layer specs (#21–#34, #37, #38, and
@@ -773,7 +803,7 @@ Soccer-Manager-Pro/
 │       │   └── path-to-playable-roadmap.md       [Which code to land, in what order]
 │       ├── certification-platform.md   [Pinned host/engine tuple] + cert-run-runbook.md
 │       └── *-design.md                 [42 design supplements — see note below]
-├── src/                                [33 production assemblies — coding begun May 19, 2026]
+├── src/                                [34 production assemblies — coding begun May 19, 2026]
 │   ├── CLAUDE.md                       [Coding guide — read before writing code]
 │   ├── Physics:    ball-physics, agent-movement, collision-system, first-touch,
 │   │               pass-mechanics, shot-mechanics, heading-mechanics, goalkeeper-mechanics
