@@ -1,14 +1,15 @@
 # Injuries & Medical #41 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026, later same day (v0.9 — balance-pass AR pass 10 M1: §3.2 enforces the severity-split invariant at the classifying site)
+**Last Updated:** August 8, 2026, still later same day (v0.10 — balance-pass AR pass 11 L3: the §3.2 guard mirrors all three lock predicates)
+**Last Updated (prior):** August 8, 2026, later same day (v0.9 — balance-pass AR pass 10 M1: §3.2 enforces the severity-split invariant at the classifying site)
 **Last Updated (prior):** August 8, 2026 (v0.8 — balance-pass AR pass 9 L4: §3.1's pseudocode gains the F8 sentinel-as-worldDay refusal the code has always enforced)
 **Last Updated (prior):** August 8, 2026 (v0.7 — balance-pass AR pass 8: the missing v0.6 version row added (L1); the §3.1.1 transfer note separated from the radix rule it had been fused into (L5))
 **Last Updated (prior):** August 8, 2026 (v0.6 — balance-pass AR pass 4: §3.1.1 records the TRANSFER residual beside the club-term refusal it qualifies (the only cross-club handoff path today RESETS a moved player's career state — worse than the luck-change the refusal prices; #31's arrival obligation, recorded at the code site too); §3.2's overflow bound corrected to 1.6×10⁷ after the pass-1 headroom raise. This header was also STALE at v0.4 while the table below carried v0.5 — the header-drift class #30 §3's history records; pass 1's 1% → 1.6% edit also shipped without a bump, folded into v0.5's row note.)
 **Last Updated (prior):** August 8, 2026 (v0.5 — AR pass 3: §3.1's signature de-phantomed — `rng` → `worldSeed, occurrenceEnabled`, the dial gated in step 2, §3.5's call updated; §3.1.1 gains the ERR-041-019 draw-key global-uniqueness contract)
 **Last Updated (prior):** August 7, 2026 (v0.4 — ERR-041-011 at the balance pass: §3.4 gains the normative-position `BASELINE_DAILY_RISK` term; the draw denominator decouples to the `[FIXED]` per-million `OCCURRENCE_DRAW_DENOM` with the `INJURY_RISK_MAX ≤ DENOM` invariant; §3.1's pseudocode re-anchored onto the keyed derivation (ERR-041-002/ERR-041-012); §3.6 re-derived (6600, + the congestion-clamp line))
 **Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.9
+**Version:** 0.10
 **Status:** APPROVED
 
 ---
@@ -135,10 +136,13 @@ MUST stay `< DRAW_PURPOSE_RADIX` (a catalogue invariant).
 ```
 ClassifySeverityFromDraw(draw, risk) -> InjurySeverity:
     # Split invariant, enforced HERE at the one classifying site (the §3.4 draw-site guard posture):
-    # SEVERITY_MINOR_PERMILLE + SEVERITY_MODERATE_PERMILLE strictly < SEVERITY_PERMILLE_DENOM, or
-    # fail loud — both numerators are [GT] config keys, the catalogue suite only sees the fallbacks,
-    # and at a sum of exactly 1000 the second bucket's bound is this method's own precondition, so
-    # Serious would be silently unreachable (Appendix A).
+    # both numerators NON-NEGATIVE (zero is a deliberate empty tier; NEGATIVE silently deletes its
+    # tier through the same mechanism the sum bound stops), and their sum strictly <
+    # SEVERITY_PERMILLE_DENOM — both numerators are [GT] config keys, the catalogue suite only sees
+    # the fallbacks, and at a sum of exactly 1000 the second bucket's bound is this method's own
+    # precondition, so Serious would be silently unreachable (Appendix A).
+    if SEVERITY_MINOR_PERMILLE < 0 or SEVERITY_MODERATE_PERMILLE < 0:
+        throw InvalidOperationException          # catalogue/config integrity failure
     if SEVERITY_MINOR_PERMILLE + SEVERITY_MODERATE_PERMILLE >= SEVERITY_PERMILLE_DENOM:
         throw InvalidOperationException          # catalogue/config integrity failure
 
@@ -272,4 +276,5 @@ pass example used `AppearanceDays = 2` at weight 150 and no baseline, assembling
 | 0.7 | 2026-08-08 | — | **Balance-pass AR pass 8 (L1 + L5)**: the v0.6 row itself (added here — the version existed only in the header); the §3.1.1 paragraph break separating the pass-4 transfer note from the DRAW_PURPOSE_RADIX rule that had come to read as its continuation. |
 | 0.8 | 2026-08-08 | — | **Balance-pass AR pass 9 (L4)**: §3.1's pseudocode gains the `worldDay == MEDICAL_NOT_ADVANCED_SENTINEL` refusal (**F8**, new in §2.3) that `MedicalStep.AdvanceMedicalDay` has enforced since T0 with no normative source — a production fail-loud with no spec row is the ERR-041-012 class inverted. Mirrored at the #29 sibling (`training-system` §2.3/§3.1) in the same commit — the folder-boundary lesson applied forward. |
 | 0.9 | 2026-08-08 | — | **Balance-pass AR pass 10 (M1)**: §3.2's pseudocode gains the fail-loud split-invariant guard at the classifying site — both numerators are `[GT]` config keys, the catalogue suite only sees the fallbacks (ERR-041-003's class), and a config summing to the denominator deleted the `Serious` tier silently. The §3.4 draw-site guard posture, at #41's other config-breakable invariant. |
+| 0.10 | 2026-08-08 | — | **Balance-pass AR pass 11 (L3)**: the §3.2 guard was ONE of the design-time lock's three predicates while both new comments called them two halves of one invariant — a negative `[GT]` numerator passed the sum guard and silently deleted its own tier (the pass-6 rule-at-one-boundary shape, inside the fix being verified). Non-negativity added; zero stays legal (an expressible empty-tier intent). |
 #endregion

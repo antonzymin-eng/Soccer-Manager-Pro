@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/tests/InjuriesMedicalConstantsTests.cs
 // Created:  2026-08-05
-// Modified: 2026-08-08 (AR pass 10 M1: the split lock documents its two-layer posture — v1.8)
+// Modified: 2026-08-08 (AR pass 11 L3: the two-layer note covers all three predicates — v1.9)
 // Author:   —
 // Spec:     Injuries & Medical #41 Appendix A + §3.2/§3.4; Code Standards #20
 // Purpose:  Catalogue invariants — the per-mille split is well-formed, the tier table covers every
@@ -80,7 +80,10 @@ namespace TacticalDirector.InjuriesMedical.Tests
             // so a shipped config summing past the denominator would sail through the suite. The
             // runtime half lives in ClassifySeverityFromDraw, which fail-louds at the classifying
             // site — the DrawOccurrence denominator-guard posture; like that guard, it is
-            // unreachable under the fallbacks and carries no reachability case by design.
+            // unreachable under the fallbacks and carries no reachability case by design. Since
+            // AR pass 11 (L3) the runtime half mirrors ALL THREE predicates below, with the
+            // positivity pair relaxed to non-negativity (zero = a deliberate no-Minor/no-Moderate
+            // config; negative = the same silent tier-deletion the sum guard stops).
             Assert.Greater(InjuriesMedicalConstants.SeverityMinorPermille, 0);
             Assert.Greater(InjuriesMedicalConstants.SeverityModeratePermille, 0);
             Assert.Less(
@@ -224,4 +227,7 @@ namespace TacticalDirector.InjuriesMedical.Tests
 // | 1.8     | 2026-08-08 | —      | Balance-pass AR pass 10 (M1, comment): the split lock is the   |
 // |         |            |        | DESIGN-TIME half only — the runtime guard now lives at the     |
 // |         |            |        | classifying site, unreachable under fallbacks by design.      |
+// | 1.9     | 2026-08-08 | —      | Balance-pass AR pass 11 (L3, comment): the two-layer note no      |
+// |         |            |        | longer overstates — the runtime guard now mirrors all three       |
+// |         |            |        | predicates (non-negativity + strict sum).                         |
 #endregion

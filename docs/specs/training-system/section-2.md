@@ -1,10 +1,11 @@
 # Training System #29 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026 (v0.6 — balance-pass AR pass 9 L4: new F8 — the sentinel itself is not a day; the refusal the code has always enforced gets its normative row)
+**Last Updated:** August 8, 2026, later same day (v0.7 — pass-10 L5's row reorder rowed at pass 11 L1)
+**Last Updated (prior):** August 8, 2026 (v0.6 — balance-pass AR pass 9 L4: new F8 — the sentinel itself is not a day; the refusal the code has always enforced gets its normative row)
 **Last Updated (prior):** August 6, 2026 (v0.5 — ERR-029-004: §2.3 F3's exception type corrected to match the posture it cites)
 **Last Updated (prior):** July 27, 2026 (v0.4 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
-**Version:** 0.6
+**Version:** 0.7
 **Status:** APPROVED
 
 ---
@@ -175,4 +176,5 @@ the latter accrues `Condition` + `TrainingFatigue`. See §3.
 | 0.4 | 2026-07-27 | — | **ERR-029-003** (at #53's approval): new **FR-TR-005a** — `ComputeTrainingInput` accepts #53's training-ground term as a **second root-assembled input**, alongside #34's `CoachingModifier`. Explicitly **not** delivered as a #53-returned `TrainingInput`, which FR-TR-005 forbids (#29 is that type's sole writer). Behaviour-neutral at neutral facilities; ◑ parameter at #29's Stage-3 tier. |
 | 0.5 | 2026-08-06 | — | **ERR-029-004** (at #29 T1): §2.3 **F3** said `ArgumentException` while citing the `MatchSaveCodec` posture, which throws `InvalidOperationException` — the row contradicted itself, and an implementer honouring the type would have diverged from every sibling codec. Corrected to `InvalidOperationException`. |
 | 0.6 | 2026-08-08 | — | **Balance-pass AR pass 9 (L4)**: new **F8** — `AdvanceTrainingDay` invoked with the never-advanced sentinel as `worldDay` itself fails loud; enforced in code since T0 with no F-row. §3.1's pseudocode gains the guard in the same commit; found at the #41 sibling, fixed at both. |
+| 0.7 | 2026-08-08 | — | **Balance-pass AR pass 10 (L5) — rowed at pass 11 (L1)**: the version table's rows reordered ascending (0.4 had sat below 0.5/0.6); the reorder shipped rowless. |
 #endregion

@@ -1,7 +1,6 @@
 // File:     src/season-save/PlayerCareerStates.cs
 // Created:  2026-08-06
-// Modified: 2026-08-08 (AR pass 9 M1: the per-cursor predicates become the shared owner both
-//           boundaries delegate to — v1.12)
+// Modified: 2026-08-08 (AR pass 11 L4: the draw key spelled one way — v1.13)
 // Author:   —
 // Spec:     Training System #29 §3.1/§3.3/§3.5, §4.3 (seam contracts), FR-TR-004/016/022/023/025;
 //           Injuries & Medical #41 §3.1/§3.5, §4.3, FR-MD-003/009/010/022/023/025/027;
@@ -219,7 +218,7 @@ namespace TacticalDirector.SeasonSave
 
         /// <summary>
         /// The #41 occurrence-draw key precondition, enforced at the one layer that spans clubs
-        /// (ERR-041-019, AR pass 3): the draw key is <c>(worldSeed, PlayerId, worldDay, purpose)</c>
+        /// (ERR-041-019, AR pass 3): the draw key is <c>(worldSeed, playerId, actionOrdinal = worldDay × RADIX + purpose)</c>
         /// with NO club term (#41 §3.1.1), but #27 promises <c>PlayerId</c> uniqueness only WITHIN a
         /// club — this very class is keyed <c>(ClubId, PlayerId)</c> on that premise. Two clubs
         /// carrying the same id would draw bit-identical injury luck on every world day forever,
@@ -243,7 +242,7 @@ namespace TacticalDirector.SeasonSave
                         throw new ArgumentException(
                             $"Player id {ids[i]} is carried by BOTH club {otherClub} and club "
                             + $"{clubIds[c]}. #41's occurrence draw is keyed on (worldSeed, playerId, "
-                            + "worldDay) with no club term (#41 §3.1.1), so two players sharing an id "
+                            + "actionOrdinal) with no club term (#41 §3.1.1), so two players sharing an id "
                             + "would draw identical injury luck forever. Player ids must be globally "
                             + "unique across the career (ERR-041-019).",
                             paramName);
@@ -1595,4 +1594,8 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | RequireGloballyUniquePlayerIds shape). The file-boundary copy    |
 // |         |            |        | had an UNLOCKED predicate (medical lag >= 2) — the parallel-     |
 // |         |            |        | surface class the T2 AR's H3 collapsed, recurring one gate over. |
+// | 1.13    | 2026-08-08 | —      | Balance-pass AR pass 11 (L4, doc): one draw key had three          |
+// |         |            |        | spellings across the uniqueness guard's doc, its throw message     |
+// |         |            |        | and #41 SS3.1.1; both local sites now name (worldSeed, playerId,   |
+// |         |            |        | actionOrdinal = worldDay x RADIX + purpose), matching the spec.    |
 #endregion

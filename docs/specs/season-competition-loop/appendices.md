@@ -1,11 +1,12 @@
 # Season & Competition Loop Specification #30 — Appendices
 
 **Created:** July 22, 2026
-**Last Updated:** August 8, 2026 (v0.6 — **ERR-030-028**: new **B.1** pins the appearance sub-blob's byte layout field by field — it was specified in NO spec, existing only in `AppearanceSaveCodec.cs`'s own comment, while F3 makes the first written layout the format permanently (the ERR-029-004 class, on the block created one landing after that ERR was filed); + the four sibling MUSTs and the deliberate no-`[GT]`-gating-on-decode decision)
+**Last Updated:** August 8, 2026 (v0.7 — balance-pass AR pass 11 M2: the cross-blob cursor rule stated in full in Appendix B)
+**Last Updated (prior):** August 8, 2026 (v0.6 — **ERR-030-028**: new **B.1** pins the appearance sub-blob's byte layout field by field — it was specified in NO spec, existing only in `AppearanceSaveCodec.cs`'s own comment, while F3 makes the first written layout the format permanently (the ERR-029-004 class, on the block created one landing after that ERR was filed); + the four sibling MUSTs and the deliberate no-`[GT]`-gating-on-decode decision)
 **Last Updated (prior):** August 7, 2026 (v0.5 — the #29/#41 balance pass D2 (ERR-041-010(b)): Appendix B's outer-frame description gains the three mandatory career sub-blobs — the #29 training and #41 medical blocks (frame v2→3, landed at their T1 and previously unrecorded here) and the new #30 appearance block (frame v3→4), between the season block and the optional match block)
 **Last Updated (prior):** July 27, 2026 (v0.4 — back-props ERR-030-017 (#47 conditional authored sub-blob) + ERR-030-019 (#50 `SaveOriginStamp` in the outer frame) landed atomically with the ten-spec approval wave; Appendix B's outer-frame description amended)
 **Last Updated (prior):** July 25, 2026 (v0.3 — ERR-030-010 Appendix C venue correction, found at #30 T0)
-**Version:** 0.6
+**Version:** 0.7
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -113,8 +114,19 @@ trailing bytes after the declared content throw (F3); the coherence gates run on
 decode, so the codec can never write a block its own decode refuses. **Deliberately NO `[GT]` gating
 on decode:** `recentBits` is structurally valid at any value — bits outside the configured window are
 dead weight the read masks off — and gating it against `AppearanceWindowDays` would turn a window
-retune into data loss (the ERR-029-004 rule). The cross-blob rule that the anchor may not sit ahead of
-the world clock is owned by the save root (`SeasonSaveManager`), the only layer holding both blobs.
+retune into data loss (the ERR-029-004 rule). The cross-blob cursor-vs-clock rule is stated here in full (AR pass 11 M2 — this paragraph previously
+covered one cursor kind, one direction, one boundary): **all three persisted per-player cursors must sit
+inside the coherent band relative to the world clock, checked at Save, at Load AND at `SeasonLoop`
+composition** (§2.3 F8). The #29/#41 `LastAdvancedWorldDay` cursors are checked in BOTH directions —
+AHEAD of the clock means the sibling specs' F6 idempotency silently skips the day step until the clock
+catches up; LAGGING by two or more is WORSE, because their F7 gap refusal then fires on every later
+advance and, the career day-steps running before the clock increment (§3.3.2), the gap can never close:
+the career wedges permanently while the file saves and reloads cleanly. The appearance anchor is checked
+AHEAD-only — a lazily-shifted bitmask has no gap contract (shifting is the read's job). The sentinel
+(never-advanced) is exempt in every case. All three boundaries evaluate ONE predicate set —
+`PlayerCareerStates`' per-cursor owners — so the save root's gate and the composition gate cannot drift
+(the parallel-surface rule). `SeasonSaveManager` owns the file-boundary halves as the only layer holding
+the world blob and the career blocks together.
 
 **`SaveOriginStamp` (ERR-030-019, at #50's approval)** sits in the **frame**, immediately after the
 version and **before any length-prefixed blob**. The placement is load-bearing rather than aesthetic:
@@ -184,4 +196,5 @@ is a **total order** — no two rows ever compare equal (FR-SN-007).
 | 0.4 | 2026-07-27 | — | **ERR-030-019** (#50) + **ERR-030-017** (#47), landed atomically with the ten-spec approval wave. Appendix B's outer-frame description gains the `SaveOriginStamp` (`WorldGenerationVersion` + `BuildId`) immediately after the version field and **before any length-prefixed blob** — the placement is load-bearing, since #50's classifier must read the generation version without parsing a sub-blob, and `BuildId` is recorded as **diagnostic only** so it can never become a migration input; and the **conditional** authored-database sub-blob, written only when `hasAuthoredDb`, with the flag/blob agreement required in both directions and failing loud. The world, season and match blobs are byte-untouched by both. |
 | 0.5 | 2026-08-07 | — | **Balance pass D2 (ERR-041-010(b))**: Appendix B's frame gains the mandatory #29 training / #41 medical blocks (v2→3 — a T1 change this appendix had missed) and the #30 appearance block (v3→4): the per-player fielded-XI record supplying FR-MD-010's `MatchLoad`, #30-owned because neither sibling block may describe the other's domain. All three mandatory (career state has an empty case, never an absent one), typed at the Encode seam, magic-led per ERR-029-005/ERR-041-009. |
 | 0.6 | 2026-08-08 | — | **ERR-030-028** (balance-pass AR pass 5, M1): new **B.1** — the appearance sub-blob's byte layout pinned field by field (magic → version → clubCount → {clubId, playerCount} → {playerId, recentBits, bitsAsOfWorldDay}), the four MUSTs its siblings carry, and the deliberate no-`[GT]`-gating-on-decode decision. The layout had shipped into every v4 save while specified in no spec — F3 makes the first written layout the format permanently, the exact ERR-029-004 reasoning, missed on the very next block. |
+| 0.7 | 2026-08-08 | — | **Balance-pass AR pass 11 (M2)**: the cursor-vs-clock paragraph stated in FULL — the prior single sentence covered the appearance anchor's ahead direction at the save root only, while the enforced rule spans three cursor kinds, two directions and three boundaries (§2.3's new F8; one shared predicate set). |
 #endregion

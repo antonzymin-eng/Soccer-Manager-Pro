@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/MedicalStep.cs
 // Created:  2026-08-05
-// Modified: 2026-08-08 (AR pass 10 M1: the severity-split guard at the classifying site — v1.7)
+// Modified: 2026-08-08 (AR pass 11 L3: the guard mirrors all three lock predicates — v1.8)
 // Author:   —
 // Spec:     Injuries & Medical #41 §3.1–§3.4 + Appendices A/B (FR-MD-003..016, FR-MD-023),
 //           F1/F4/F6/F7; Code Standards #20
@@ -236,11 +236,24 @@ namespace TacticalDirector.InjuriesMedical
             }
 
             // The split invariant, enforced at the one site that classifies (the DrawOccurrence
-            // denominator-guard posture, AR pass 10 M1): both numerators are [GT] config-tunable and
-            // the catalogue suite only ever sees the fallbacks (the gate runs config-unbound —
-            // ERR-041-003's class), so a shipped config summing to the denominator or past it would
-            // otherwise delete the Serious tier silently — at a sum of exactly 1000 the second
-            // bucket's bound IS this method's own precondition. Strict, per Appendix A.
+            // denominator-guard posture, AR pass 10 M1; completed AR pass 11 L3): both numerators
+            // are [GT] config-tunable and the catalogue suite only ever sees the fallbacks (the gate
+            // runs config-unbound — ERR-041-003's class), so a shipped config summing to the
+            // denominator or past it would otherwise delete the Serious tier silently — at a sum of
+            // exactly 1000 the second bucket's bound IS this method's own precondition. Strict, per
+            // Appendix A. The runtime guard mirrors ALL of the design-time lock's predicates, with
+            // positivity relaxed to non-negativity — a zero tier is an expressible config intent,
+            // but a NEGATIVE numerator makes its whole tier unreachable through the same silent
+            // mechanism the sum guard exists to stop (Minor at -100 reads as a 0/20/80 split).
+            if (InjuriesMedicalConstants.SeverityMinorPermille < 0
+                || InjuriesMedicalConstants.SeverityModeratePermille < 0)
+            {
+                throw new InvalidOperationException(
+                    "SeverityMinorPermille and SeverityModeratePermille must be non-negative — a "
+                    + "negative numerator silently deletes its tier; catalogue/config integrity "
+                    + "failure (§3.2, Appendix A).");
+            }
+
             if (InjuriesMedicalConstants.SeverityMinorPermille
                 + InjuriesMedicalConstants.SeverityModeratePermille
                 >= InjuriesMedicalConstants.SEVERITY_PERMILLE_DENOM)
@@ -540,4 +553,9 @@ namespace TacticalDirector.InjuriesMedical
 // |         |            |        | [GT] numerators sum to the denominator or past it (the             |
 // |         |            |        | DrawOccurrence guard posture; the catalogue lock only sees the     |
 // |         |            |        | fallbacks, ERR-041-003's class).                                   |
+// | 1.8     | 2026-08-08 | —      | Balance-pass AR pass 11 (L3): the runtime guard mirrors ALL the    |
+// |         |            |        | design-time lock's predicates — a NEGATIVE [GT] numerator passed   |
+// |         |            |        | the sum guard and silently deleted its own tier (Minor at -100 =   |
+// |         |            |        | a 0/20/80 split); positivity relaxed to non-negativity, a zero     |
+// |         |            |        | tier being an expressible intent.                                  |
 #endregion

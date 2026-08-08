@@ -1,6 +1,6 @@
 // File:     src/deterministic-sim/SaveBlobFramingHelpers.cs
 // Created:  2026-08-06
-// Modified: 2026-08-06
+// Modified: 2026-08-08 (AR pass 11 L2: the citation contract admits section authorities — v1.1)
 // Author:   —
 // Spec:     Deterministic Simulation #16 §3.2.4.1 (CanonicalSerializer, which every method here builds
 //           on); Training System #29 §4.4, Injuries & Medical #41 §4.4 (the two current callers — a
@@ -40,8 +40,9 @@ namespace TacticalDirector.DeterministicSim
         /// <param name="setName">The save set's name as it reads mid-sentence, e.g. <c>"training"</c> in
         /// "… in the training save set …".</param>
         /// <param name="what">The key's name, e.g. <c>"club id"</c> or <c>"player id"</c>.</param>
-        /// <param name="duplicateCitation">The FR- id to cite for the duplicate-key contract, e.g.
-        /// <c>"FR-TR-025"</c>.</param>
+        /// <param name="duplicateCitation">The authority to cite for the duplicate-key contract — the
+        /// owning spec's FR id or section, e.g. <c>"FR-TR-025"</c> or <c>"#30 Appendix B.1"</c>
+        /// (the owner is not always an FR: the APPR block is pinned by a section, AR pass 11 L2).</param>
         /// <exception cref="ArgumentException">Two elements of <paramref name="keys"/> are equal.</exception>
         public static int[] CanonicalOrder(int[] keys, string setName, string what, string duplicateCitation)
         {
@@ -167,4 +168,7 @@ namespace TacticalDirector.DeterministicSim
 // |         |            |        | TrainingSaveCodec and MedicalSaveCodec, which were byte-identical  |
 // |         |            |        | duplicates of each other modulo one message string. Both codecs    |
 // |         |            |        | now call this file and no longer carry private copies.             |
+// | 1.1     | 2026-08-08 | —      | Balance-pass AR pass 11 (L2, doc): duplicateCitation's contract    |
+// |         |            |        | widened to "FR id or section" — pass 10 L6's own call site         |
+// |         |            |        | (#30 Appendix B.1) already violated the FR-only wording.           |
 #endregion
