@@ -1,8 +1,9 @@
 # Squad / Player Data Layer Specification #27 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** August 8, 2026 (v0.3 — **ERR-027-004**: FR-SQ-010 gains the career-level GLOBAL `PlayerId` uniqueness requirement #41's club-less occurrence-draw key imposes over KD-3's club scope (#41 §3.1.1 / ERR-041-019); §2.2.3 amended to match. The consuming spec carried the contract for one AR pass while the OWNING spec — the one #42/#31's allocators will be written against — said nothing.)
+**Last Updated (prior):** July 22, 2026 (v0.1; the v0.2 PASS-1 row below also shipped without a header bump)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -30,7 +31,7 @@ All requirements describe the **landed** implementation (present tense).
 | FR-SQ-007 | `PlayerPosition` is `{Goalkeeper=0, Defender, Midfielder, Forward}`, byte-stable/APPEND-only; it is NOT positioning-ai's `RoleId`. | MUST | KD-4 |
 | FR-SQ-008 | `PlayerRecord` carries `{PlayerId, FirstName, LastName, Age, Position, Attributes}`. | MUST | §2.2.3 |
 | FR-SQ-009 | `Squad` carries `{ClubId, PlayerRecord[] (1..CLUB_SQUAD_SIZE), Count, GetPlayer(i)}`; the ctor snapshot-copies the caller's array and `GetPlayer` bounds-checks the index. | MUST | §2.2.4 / F3 |
-| FR-SQ-010 | `PlayerId = clubId * CLUB_SQUAD_SIZE + localIndex`; club identity is distinct from match `teamId`. | MUST | KD-3 |
+| FR-SQ-010 | `PlayerId = clubId * CLUB_SQUAD_SIZE + localIndex`; club identity is distinct from match `teamId`. **A career carrying more than one club additionally requires GLOBAL uniqueness across clubs** — #41's occurrence draw is keyed on `PlayerId` with no club term (#41 §3.1.1, ERR-041-019; the KD-3 formula satisfies it today, and `PlayerCareerStates` enforces it fail-loud); any future allocator (#42 intake, #31 transfers) MUST preserve it. | MUST | KD-3 / ERR-027-004 |
 | FR-SQ-011 | `PlayerDatabaseConstants` is the constant catalogue; every constant carries exactly one `[FIXED]/[DERIVED]/[GT]/[CROSS]` tag. | MUST | KD-5 / #20 |
 
 ### Generation (FR-SQ-012..017)
@@ -100,7 +101,9 @@ APPEND-only (ordinal indexes the position-bias table). NOT positioning-ai's `Rol
 ### 2.2.3 `PlayerRecord` (struct)
 
 `{ int PlayerId, string FirstName, string LastName, int Age, PlayerPosition Position,
-PlayerAttributes Attributes }`. `PlayerId` is club-scoped (KD-3). `CreateDefault(playerId)` yields the
+PlayerAttributes Attributes }`. `PlayerId` is club-scoped (KD-3) — and globally
+unique across a career's clubs, the stronger requirement #41's club-less draw key imposes (FR-SQ-010 as
+amended by ERR-027-004). `CreateDefault(playerId)` yields the
 identity record (`"Player"` / `playerId` / age 25 / `Midfielder` / `CreateDefault()` attributes).
 
 ### 2.2.4 `Squad` (sealed class)
@@ -143,4 +146,5 @@ re-projectable from the roster keyed by the serialized `_activeBenchSlot` (§7).
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial FR set (FR-SQ-001..026), data structures (confirmed against `src/player-database/`), failure modes F1–F5. |
 | 0.2 | 2026-07-22 | — | PASS-1 L: FR-SQ-018 omitted-key default-name corrected to `FirstName "Player"` / `LastName = playerId` (was the imprecise "Player N"; `PlayerRecord.CreateDefault` sets `LastName = playerId.ToString()`). |
+| 0.3 | 2026-08-08 | — | **ERR-027-004** (balance-pass AR pass 4, M3): FR-SQ-010 + §2.2.3 gain the career-level GLOBAL `PlayerId` uniqueness requirement — #41's occurrence draw is keyed `(worldSeed, playerId, worldDay)` with no club term (ERR-041-019), so KD-3's club-scoped promise is not enough the moment two clubs share a career; today's formula satisfies it, `PlayerCareerStates` enforces it fail-loud at construction/restore/sync, and every future allocator MUST preserve it. |
 #endregion

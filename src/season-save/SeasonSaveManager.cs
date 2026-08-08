@@ -398,6 +398,18 @@ namespace TacticalDirector.SeasonSave
 
             for (int c = 0; c < t.Length; c++)
             {
+                // A default-valued block NREs at the clones below; refuse it by name instead (AR
+                // pass 4 L1 — before this gate existed, the codecs produced the diagnosed refusal).
+                if (t[c].PlayerIds == null || t[c].States == null
+                    || m[c].PlayerIds == null || m[c].States == null
+                    || a[c].PlayerIds == null || a[c].States == null)
+                {
+                    throw new ArgumentException(
+                        $"Career block {c} is a default value, not a constructed one — a save cannot "
+                        + "carry blocks that were never populated.",
+                        nameof(medicalClubs));
+                }
+
                 if (t[c].ClubId != m[c].ClubId || t[c].ClubId != a[c].ClubId)
                 {
                     throw new ArgumentException(
@@ -436,6 +448,20 @@ namespace TacticalDirector.SeasonSave
                     }
                 }
             }
+
+            // The ERR-041-019 half of FromBlocks' refusal surface (AR pass 4 M1): without this,
+            // Save still wrote a file the restore path refuses — a cross-club duplicate PlayerId —
+            // one predicate short of the gate's own stated contract, missed within a commit of the
+            // gate being written. Same walk, same message, one owner.
+            var clubIds = new int[t.Length];
+            var idSets = new int[t.Length][];
+            for (int c = 0; c < t.Length; c++)
+            {
+                clubIds[c] = t[c].ClubId;
+                idSets[c] = t[c].PlayerIds;
+            }
+
+            PlayerCareerStates.RequireGloballyUniquePlayerIds(clubIds, idSets, nameof(trainingClubs));
         }
     }
 }
@@ -512,4 +538,10 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | (PlayerCareerStates.FromBlocks) refuses — the Encode-writes-  |
 // |         |            |        | what-Decode-refuses class the T1 AR filed against the codec.  |
 // |         |            |        | Also deletes v1.11's orphaned header fragment (AR pass 2).    |
+// | 1.13    | 2026-08-08 | —      | Balance-pass AR pass 4 (M1 + L1): the gate gains the           |
+// |         |            |        | ERR-041-019 half of FromBlocks' refusal surface (a cross-club |
+// |         |            |        | duplicate id still saved cleanly — the gate's own defect      |
+// |         |            |        | class, one predicate short, missed within a commit of the     |
+// |         |            |        | gate being written), and refuses a default block by name      |
+// |         |            |        | instead of NullReferenceException-ing at the clone.           |
 #endregion

@@ -3,8 +3,9 @@
 // Modified: 2026-08-08 (AR pass 3 / ERR-041-019: the PlayerId global-uniqueness doc — no code change)
 // Author:   —
 // Spec:     Squad/Player Data Layer design supplement (docs/tracking/squad-player-data-design.md) §3
-// Purpose:  One player's identity + attributes. PlayerId is club-scoped (KD-3), not the match-scoped
-//           agent roster index MatchEngine assigns per match.
+// Purpose:  One player's identity + attributes. PlayerId is club-scoped (KD-3) and globally unique
+//           across a career's clubs (ERR-027-004 / ERR-041-019); not the match-scoped agent roster
+//           index MatchEngine assigns per match.
 
 namespace TacticalDirector.PlayerDatabase
 {
@@ -64,4 +65,8 @@ namespace TacticalDirector.PlayerDatabase
 // |         |            |        | summary states the career-level GLOBAL-uniqueness requirement     |
 // |         |            |        | #41's club-less draw key imposes on top of KD-3's club scope,     |
 // |         |            |        | and where it is enforced. No code change.                         |
+// | 1.2     | 2026-08-08 | —      | AR pass 4 (M3, doc only — ERR-027-004): the header Purpose line   |
+// |         |            |        | still said club-scoped full stop; now cites the back-prop that    |
+// |         |            |        | landed the requirement in #27 FR-SQ-010 itself, where the future  |
+// |         |            |        | allocators will read it.                                          |
 #endregion

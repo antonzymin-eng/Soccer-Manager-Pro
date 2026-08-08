@@ -228,7 +228,7 @@ namespace TacticalDirector.SeasonSave
         /// (#42 youth intake, #31 transfers) that accident ends, so the precondition fails loud here
         /// rather than surfacing as two players who are always injured together.
         /// </summary>
-        private static void RequireGloballyUniquePlayerIds(
+        internal static void RequireGloballyUniquePlayerIds(
             IReadOnlyList<int> clubIds, IReadOnlyList<int[]> playerIds, string paramName)
         {
             var owner = new Dictionary<int, int>();
@@ -694,6 +694,12 @@ namespace TacticalDirector.SeasonSave
                     // dependencies. unchecked: the never-advanced sentinel is uint.MaxValue, so +1
                     // wraps to 0 and a fresh state passes for every day (Spec #16 §3.4.4-style
                     // deliberate wrap, though 32-bit here).
+                    //
+                    // INERT BY CONSTRUCTION today, so no test can fail if it is deleted (AR pass 4):
+                    // on the re-entered day the shift-0 exclusion makes the window read identical and
+                    // MedicalStep discards the inputs anyway. The guard's value is forward-looking —
+                    // it keeps that coincidence from ever becoming a load-bearing dependency — and
+                    // the pass-6 which-test-fails-if-reverted question has no answer here by design.
                     bool willAdvance =
                         worldDay >= unchecked(injury[i].LastAdvancedWorldDay + 1u);
 
@@ -809,6 +815,15 @@ namespace TacticalDirector.SeasonSave
                 var appearance = new AppearanceState[rosterIds.Length];
                 int carried = 0;
 
+                // RECORDED, NOT FIXED (AR pass 4): this reconciliation is PER CLUB, so a player who
+                // MOVES between two carried clubs is a departure here and a Create() there — his
+                // conditioning, injury history and any ACTIVE injury silently reset; he arrives fit.
+                // That is worse than the club-term key change #41 §3.1.1 refuses on the grounds that
+                // "the player carries his medical identity" (FR-MD-006). Inert today — no allocator
+                // moves players between clubs — but ERR-041-019's global-id guarantee is exactly what
+                // makes cross-club carry implementable (one pre-pass building id → held state before
+                // this walk), and that carry is #31 Transfers' arrival obligation, not a change to
+                // sneak in here without its spec.
                 for (int i = 0; i < rosterIds.Length; i++)
                 {
                     int held = IndexOfPlayer(heldIds, rosterIds[i]);
@@ -1453,4 +1468,10 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | break the ascending precondition just enforced). L6:               |
 // |         |            |        | RecordFixtureAppearances — both clubs validated before either is   |
 // |         |            |        | written, the per-club discipline one level up.                     |
+// | 1.9     | 2026-08-08 | —      | Balance-pass AR pass 4: the uniqueness guard goes internal so      |
+// |         |            |        | SeasonSaveManager's coherence gate shares the one walk (M1); the   |
+// |         |            |        | per-club roster reconciliation carries the RECORDED-NOT-FIXED      |
+// |         |            |        | transfer residual (M4 — a moved player's career state resets;      |
+// |         |            |        | #31's arrival obligation); the F6-mirror guard's comment states    |
+// |         |            |        | it is inert by construction and cannot be locked (L10).            |
 #endregion

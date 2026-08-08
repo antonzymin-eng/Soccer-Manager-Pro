@@ -1,9 +1,11 @@
 # Injuries & Medical #41 — Section 3: Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** August 7, 2026 (v0.4 — ERR-041-011 at the balance pass: §3.4 gains the normative-position `BASELINE_DAILY_RISK` term; the draw denominator decouples to the `[FIXED]` per-million `OCCURRENCE_DRAW_DENOM` with the `INJURY_RISK_MAX ≤ DENOM` invariant; §3.1's pseudocode re-anchored onto the keyed derivation (ERR-041-002/ERR-041-012); §3.6 re-derived (6600, + the congestion-clamp line))
+**Last Updated:** August 8, 2026 (v0.6 — balance-pass AR pass 4: §3.1.1 records the TRANSFER residual beside the club-term refusal it qualifies (the only cross-club handoff path today RESETS a moved player's career state — worse than the luck-change the refusal prices; #31's arrival obligation, recorded at the code site too); §3.2's overflow bound corrected to 1.6×10⁷ after the pass-1 headroom raise. This header was also STALE at v0.4 while the table below carried v0.5 — the header-drift class #30 §3's history records; pass 1's 1% → 1.6% edit also shipped without a bump, folded into v0.5's row note.)
+**Last Updated (prior):** August 8, 2026 (v0.5 — AR pass 3: §3.1's signature de-phantomed — `rng` → `worldSeed, occurrenceEnabled`, the dial gated in step 2, §3.5's call updated; §3.1.1 gains the ERR-041-019 draw-key global-uniqueness contract)
+**Last Updated (prior):** August 7, 2026 (v0.4 — ERR-041-011 at the balance pass: §3.4 gains the normative-position `BASELINE_DAILY_RISK` term; the draw denominator decouples to the `[FIXED]` per-million `OCCURRENCE_DRAW_DENOM` with the `INJURY_RISK_MAX ≤ DENOM` invariant; §3.1's pseudocode re-anchored onto the keyed derivation (ERR-041-002/ERR-041-012); §3.6 re-derived (6600, + the congestion-clamp line))
 **Last Updated (prior):** July 23, 2026 (v0.3 — AR-2 fixed-radix append-parity; prior v0.2 AR-1 integer fix, v0.1 initial)
-**Version:** 0.4
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -101,7 +103,15 @@ future id allocator (#42 youth intake, #31 transfers) MUST preserve it. Delibera
 `ClubId` to the key: the key is frozen by the same argument that pinned the denominator `[FIXED]` at
 ERR-041-011 — changing it re-rolls every career's injury luck — and a club term would additionally make a
 transferred player's luck change with his club, which FR-MD-006's "the player carries his medical
-identity" posture refuses. The radix is the **FIXED** constant `DRAW_PURPOSE_RADIX` (Appendix A) — **not**
+identity" posture refuses.
+
+**Recorded, not fixed (AR pass 4):** the only cross-club handoff path that exists today —
+`PlayerCareerStates`' per-club roster reconciliation — does WORSE than change a moved player's luck: it
+resets his career state entirely (departure at the old club, `Create()` at the new one — conditioning,
+injury history and any active injury gone; he arrives fit). Inert while no allocator moves players
+between clubs, and deliberately not fixed here: carrying state across clubs is #31 Transfers' arrival
+obligation (ERR-041-019's global-id guarantee is what makes it implementable — one pre-pass keyed on the
+now-unique id), and the code site carries the same record. The radix is the **FIXED** constant `DRAW_PURPOSE_RADIX` (Appendix A) — **not**
 the current purpose count — so appending a Stage-3 purpose ordinal (`DRAW_PURPOSE_OCCURRENCE = 0` today; a
 future recurrence draw = 1, …) leaves **every existing** `(worldDay, Occurrence)` ordinal unchanged
 (`worldDay × RADIX + 0`), preserving cross-version replay/save parity. Using the growing purpose *count* as
@@ -117,7 +127,7 @@ ClassifySeverityFromDraw(draw, risk) -> InjurySeverity:
     # draw value deterministically by FIXED proportions (Appendix A) — this is NOT a second RNG draw;
     # KD-1 draws exactly once per player per occurrence-eligible day. INTEGER cross-multiplication (no
     # float division): draw/risk < n/1000  ⇔  draw*1000 < risk*n. draw < risk <= INJURY_RISK_MAX here
-    # (an occurrence was confirmed), so products are bounded by INJURY_RISK_MAX × 1000 = 10^7; the
+    # (an occurrence was confirmed), so products are bounded by INJURY_RISK_MAX × 1000 = 1.6 × 10^7 (10^7 before the balance-pass AR raised the ceiling to 16,000); the
     # implementation widens to long so a raised [GT] ceiling cannot silently overflow (ERR-041-011).
     if draw * SEVERITY_PERMILLE_DENOM < risk * SEVERITY_MINOR_PERMILLE:
         return InjurySeverity.Minor

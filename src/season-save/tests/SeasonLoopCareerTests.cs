@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonLoopCareerTests.cs
 // Created:  2026-08-06
-// Modified: 2026-08-07
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (KD-2 tick order), §3.5 (the boundary), FR-SN-026;
 //           Training System #29 §3.5, FR-TR-004/025; Injuries & Medical #41 §3.5,
@@ -724,4 +724,10 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | ElevensIds — the id-producing BootFixtureEngine overload returns   |
 // |         |            |        | exactly the filtered selector's elevens (both sides), with injured |
 // |         |            |        | starters absent from the ids the appearance record consumes.       |
+// | 1.4     | 2026-08-08 | —      | Balance-pass AR pass 3 (M3 + the ERR-041-019 catch): the roll lock |
+// |         |            |        | records an appearance pre-roll and asserts anchor + bits post-roll |
+// |         |            |        | — the appearance carry finally has a failing-if-reverted test —    |
+// |         |            |        | and the regen fixture's suffix corrected off club 2's id range     |
+// |         |            |        | (the guard's first catch: this fixture had been creating a         |
+// |         |            |        | cross-club duplicate id since T2). Row added at pass 4 (rowless).  |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/AppearanceRecordTests.cs
 // Created:  2026-08-07
-// Modified: 2026-08-07
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.4 / Appendix B (the appearance record, ERR-041-010(b));
 //           Injuries & Medical #41 FR-MD-010 (the window unit); ERR-030-027 (current-day exclusion);
@@ -510,6 +510,10 @@ namespace TacticalDirector.SeasonSave.Tests
             CollectionAssert.AreEquivalent(xiA, recorded,
                 "the record must carry the eleven the RESOLUTION fielded (roster A) — a re-resolve " +
                 "after the fact would have recorded roster B's eleven, who never played");
+            Assert.AreEqual(0, provider.PassThroughRemaining,
+                "the shift must have gone LIVE during the round — an unconsumed pass-through budget " +
+                "means the loop's call shape changed and this lock is passing vacuously; re-fit the " +
+                "Arm() constant to the new shape");
         }
 
         /// <summary>
@@ -537,6 +541,12 @@ namespace TacticalDirector.SeasonSave.Tests
                 _armed = true;
                 _passThroughRemaining = resolvesBeforeShift;
             }
+
+            /// <summary>Pass-through budget left. 0 after the round ⇒ the shift went LIVE — the
+            /// vacuous-pass guard (AR pass 4: a call-shape change that REMOVES a resolve would
+            /// otherwise leave the shift unfired and the identity assertion satisfied trivially,
+            /// including against the pre-fix loop this lock exists to kill).</summary>
+            internal int PassThroughRemaining => _passThroughRemaining;
 
             public Squad ResolveByClubId(int clubId)
             {
@@ -683,4 +693,15 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | injured-starter case, which forces the filter to PARTICIPATE in   |
 // |         |            |        | the XI-identity assertion (all-fit squads let both sides read the |
 // |         |            |        | unfiltered squad and still agree).                                |
+// | 1.3     | 2026-08-08 | —      | Balance-pass AR pass 3 (M4): + TheRecordedXi_ComesFromThe-        |
+// |         |            |        | ResolutionsOwnSquadInstance — the one lock that FAILS against the |
+// |         |            |        | pre-fix loop, via a mid-round roster-shifting provider; the       |
+// |         |            |        | unplayed-fixture lock asserts the home side unwritten (the pair   |
+// |         |            |        | form). Row added at pass 4 — the pass-3 edit shipped rowless, the |
+// |         |            |        | third recurrence of the FR-CS-057 class in this chain.            |
+// | 1.4     | 2026-08-08 | —      | Balance-pass AR pass 4 (L4): the shifting provider exposes its    |
+// |         |            |        | remaining pass-through budget and the lock asserts it was         |
+// |         |            |        | CONSUMED — a call-shape change that removes a resolve would       |
+// |         |            |        | otherwise leave the shift unfired and the lock passing vacuously, |
+// |         |            |        | including against the pre-fix loop it exists to kill.             |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/tests/InjuriesMedicalConstantsTests.cs
 // Created:  2026-08-05
-// Modified: 2026-08-07
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Injuries & Medical #41 Appendix A + §3.2/§3.4; Code Standards #20
 // Purpose:  Catalogue invariants — the per-mille split is well-formed, the tier table covers every
@@ -101,6 +101,18 @@ namespace TacticalDirector.InjuriesMedical.Tests
         }
 
         [Test]
+        public void AppearanceWindowDays_SitsInsideTheBitmaskItIsReadThrough()
+        {
+            // The other balance-pass [GT]'s catalogue invariant (AR pass 4 — its sibling above had
+            // this lock, this one did not): #30's AppearanceWindow reads the window through a u32
+            // bitmask whose structural ceiling is 31, and refuses an out-of-range value at RUNTIME,
+            // mid-season (InvalidOperationException). The catalogue must not be able to ship one.
+            Assert.That(InjuriesMedicalConstants.AppearanceWindowDays, Is.InRange(1, 31),
+                "FR-MD-010 / ERR-041-010(b): the appearance window must fit the u32 day-bitmask — " +
+                "a value outside [1, 31] fails at the first windowed read of a live season.");
+        }
+
+        [Test]
         public void RiskScale_MirrorsTrainingSystem_RatherThanDuplicatingIt()
         {
             // #29 produces InjuryRiskContribution.RiskScore on its own clamped scale and #41 passes it
@@ -189,4 +201,8 @@ namespace TacticalDirector.InjuriesMedical.Tests
 // | 1.4     | 2026-08-07 | —      | Balance-pass AR pass 1 (doc only, row added at pass 2): the       |
 // |         |            |        | header Purpose said the denominator "tracks" the ceiling — the    |
 // |         |            |        | pre-D3 coupling — reworded to "bounds" per ERR-041-011.           |
+// | 1.5     | 2026-08-08 | —      | Balance-pass AR pass 4 (L3): + the AppearanceWindowDays [1,31]    |
+// |         |            |        | catalogue invariant — the sibling of the denominator lock; an     |
+// |         |            |        | out-of-range window otherwise fails at the first windowed read of |
+// |         |            |        | a live season rather than in the catalogue suite.                 |
 #endregion

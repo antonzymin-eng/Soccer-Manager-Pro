@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonSaveManagerTests.cs
 // Created:  2026-07-22
-// Modified: 2026-08-07 (balance pass D2: the frame carries the appearance block too; the round-trip
+// Modified: 2026-08-08 (balance pass D2: the frame carries the appearance block too; the round-trip
 //           and fail-loud suites cover the seven-argument Save and the v4 frame)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §5 acceptance;
@@ -550,6 +550,108 @@ namespace TacticalDirector.SeasonSave
                 "a career triple whose sets disagree on the club set must be refused at Save");
         }
 
+        private static ClubTrainingStates TBlock(int club, params int[] ids)
+        {
+            var states = new TrainingState[ids.Length];
+            for (int i = 0; i < states.Length; i++)
+            {
+                states[i] = TrainingState.Create(TrainingFocus.Balanced);
+            }
+
+            return new ClubTrainingStates(club, ids, states);
+        }
+
+        private static ClubInjuryStates MBlock(int club, params int[] ids)
+        {
+            var states = new InjuryState[ids.Length];
+            for (int i = 0; i < states.Length; i++)
+            {
+                states[i] = InjuryState.Create();
+            }
+
+            return new ClubInjuryStates(club, ids, states);
+        }
+
+        private static ClubAppearanceStates ABlock(int club, params int[] ids) =>
+            new ClubAppearanceStates(club, ids, new AppearanceState[ids.Length]);
+
+        [Test]
+        public void Save_CrossClubDuplicatePlayerId_FailsLoud()
+        {
+            // AR pass 4 (M1): the coherence gate's stated contract — never write a file FromBlocks
+            // refuses — was one predicate short of FromBlocks' actual refusal surface: ERR-041-019's
+            // global-id uniqueness, added to FromBlocks in the SAME commit as the gate. The
+            // reviewer demonstrated a two-club triple sharing one id saving cleanly and the
+            // documented restore path then refusing the loaded contents.
+            Assert.Throws<ArgumentException>(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    new[] { TBlock(0, 7), TBlock(1, 7) },
+                    new[] { MBlock(0, 7), MBlock(1, 7) },
+                    new[] { ABlock(0, 7), ABlock(1, 7) }),
+                "a cross-club duplicate PlayerId is refused at Save exactly as FromBlocks refuses "
+                + "it at load (ERR-041-019)");
+        }
+
+        [Test]
+        public void Save_DefaultCareerBlock_IsRefusedByName_NotByNullReference()
+        {
+            // AR pass 4 (L1): default(ClubTrainingStates) passed the gate's length checks and
+            // NullReferenceException'd at the clone — before the gate existed, the codecs produced
+            // the diagnosed ArgumentException. The refusal must name the cause again.
+            Assert.Throws<ArgumentException>(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    new ClubTrainingStates[1],
+                    new[] { MBlock(0, 7) },
+                    new[] { ABlock(0, 7) }),
+                "a never-constructed block is refused by name, not by NullReferenceException");
+        }
+
+        [Test]
+        public void Save_CoherenceGate_RefusesEachDisagreementShape_AndAcceptsPermutedClubOrder()
+        {
+            // AR pass 4 (L2): only the set-length branch had a lock. Each remaining refusal branch,
+            // plus the documented club-order insensitivity as a PASS case — the codecs canonicalize
+            // at encode, so a caller may hand the three sets in different club orders.
+            Assert.Throws<ArgumentException>(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    new[] { TBlock(0, 7), TBlock(1, 30) },
+                    new[] { MBlock(0, 7), MBlock(2, 30) },
+                    new[] { ABlock(0, 7), ABlock(1, 30) }),
+                "same lengths, different club SET — refused");
+
+            Assert.Throws<ArgumentException>(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    new[] { TBlock(0, 7, 9) },
+                    new[] { MBlock(0, 7) },
+                    new[] { ABlock(0, 7) }),
+                "same club, different player COUNT — refused");
+
+            Assert.Throws<ArgumentException>(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    new[] { TBlock(0, 7) },
+                    new[] { MBlock(0, 8) },
+                    new[] { ABlock(0, 7) }),
+                "same club, same count, different player IDS — refused");
+
+            string path = TempPath("permuted.season");
+            Assert.DoesNotThrow(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
+                    new[] { TBlock(1, 30), TBlock(0, 7) },
+                    new[] { MBlock(0, 7), MBlock(1, 30) },
+                    new[] { ABlock(1, 30), ABlock(0, 7) }),
+                "the gate is order-insensitive on clubs — the codecs canonicalize at encode");
+
+            SeasonSaveContents got = SeasonSaveManager.Load(path);
+            Assert.AreEqual(2, got.TrainingClubs.Length,
+                "…and the permuted-order save loads back canonicalized");
+        }
+
         [Test]
         public void SaveLoad_TransposedTrainingAndMedicalBlocks_FailLoud()
         {
@@ -1021,4 +1123,8 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | + Save_IncoherentCareerBlockTriple_FailsLoud — the round-trip      |
 // |         |            |        | test itself had been writing a 1-training/1-medical/0-appearance   |
 // |         |            |        | file FromBlocks refuses, now coherent.                             |
+// | 1.8     | 2026-08-08 | —      | Balance-pass AR pass 4 (M1 + L1 + L2): Save_CrossClubDuplicate-    |
+// |         |            |        | PlayerId_FailsLoud (the gate's missing ERR-041-019 predicate);     |
+// |         |            |        | Save_DefaultCareerBlock refused by name, not NRE; every coherence  |
+// |         |            |        | refusal branch locked + the permuted-club-order PASS case.         |
 #endregion

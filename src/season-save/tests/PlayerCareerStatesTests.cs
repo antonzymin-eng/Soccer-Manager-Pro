@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/PlayerCareerStatesTests.cs
 // Created:  2026-08-06
-// Modified: 2026-08-07
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Training System #29 §3.1/§3.3/§3.5, FR-TR-004/016/023/025/026, F6/F7;
 //           Injuries & Medical #41 §3.1/§3.5, FR-MD-003/004/022/023/025/027, F2/F6/F7;

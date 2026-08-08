@@ -1,6 +1,6 @@
 // File:     src/season-save/SeasonSaveCodec.cs
 // Created:  2026-07-22
-// Modified: 2026-08-07 (balance pass D2: the frame gains the #30 appearance sub-blob;
+// Modified: 2026-08-08 (balance pass D2: the frame gains the #30 appearance sub-blob;
 //           SEASON_SAVE_FORMAT_VERSION 3 -> 4 per ERR-041-010(b))
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §3 layout / KD-2..KD-8;
@@ -9,7 +9,8 @@
 //           Match Engine design note §5 Phase G-Phase 3; Deterministic Simulation #16 §3.2.4.1
 //           (CanonicalSerializer); Code Standards #20
 // Purpose:  Pure byte codec for the season save frame: packs the living-world composite blob, the
-//           season-state blob, the #29 training blob, the #41 medical blob, and an optional match save
+//           season-state blob, the #29 training blob, the #41 medical blob, the #30 appearance blob,
+//           and an optional match save
 //           blob into one version-gated, self-describing frame and deframes it back, fail-loud on any
 //           framing / length-bound / trailing-byte violation. Treats each sub-blob as opaque (never
 //           parses it — each keeps its own version gate). No file I/O (that is SeasonSaveManager), so
@@ -52,8 +53,9 @@ namespace TacticalDirector.SeasonSave
         /// <paramref name="matchBlobOrNull"/> being <c>null</c> (KD-8): null ⇒ no match (flag 0, no
         /// match block); non-null ⇒ the bytes are written after the appearance block (flag 1). Fail-loud on
         /// a null <paramref name="worldBlob"/> or <paramref name="seasonBlob"/>, or an unbound
-        /// <paramref name="training"/> / <paramref name="medical"/> — a season save always carries all
-        /// four (KD-3 / FR-SN-019 / FR-TR-018 / FR-MD-017). The buffer is sized exactly to the content;
+        /// <paramref name="training"/> / <paramref name="medical"/> / <paramref name="appearance"/> —
+        /// a season save always carries all five mandatory blobs (KD-3 / FR-SN-019 / FR-TR-018 /
+        /// FR-MD-017 / #30 Appendix B). The buffer is sized exactly to the content;
         /// see <see cref="Decode"/> for the inverse (kept adjacent so a layout change is edited in one
         /// place — R1).
         /// <para>
@@ -273,4 +275,9 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | #30 appearance sub-blob between the medical block and the        |
 // |         |            |        | optional match block (SEASON_SAVE_FORMAT_VERSION 3 -> 4); typed  |
 // |         |            |        | as AppearanceBlock per the ERR-029-005 discipline.               |
+// | 1.5     | 2026-08-08 | —      | Balance-pass AR pass 4 (L5, doc only): the file-header Purpose    |
+// |         |            |        | and Encode's doc predated the appearance block — "all four"       |
+// |         |            |        | mandatory blobs and a five-item list; now five-of-six with the    |
+// |         |            |        | appearance blob named (the SeasonSaveManager v1.6 doc-drift       |
+// |         |            |        | class, one file over).                                            |
 #endregion

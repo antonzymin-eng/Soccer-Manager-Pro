@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonSaveCareerRestoreTests.cs
 // Created:  2026-08-06
-// Modified: 2026-08-07
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-3 / KD-6;
 //           Injuries & Medical #41 FR-MD-023; Squad/Player Data Layer #27 T3 (KD-T3-3, restore
