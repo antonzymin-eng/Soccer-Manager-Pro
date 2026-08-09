@@ -20,8 +20,19 @@ namespace TacticalDirector.PositioningAI.Tests
             Vector3? ballPos = null,
             float ballVx = 0f,
             int possOwner = -1,
-            bool possIsOwn = false)
+            bool possIsOwn = false,
+            bool? teamPoss = null,
+            bool? teamPossIsOwn = null)
         {
+            // ERR-012-011 — team possession defaults to the on-ball carrier, mirroring the engine's
+            // own union in FillPositioningSnapshot (carrier, else pass-in-flight receiver, else none)
+            // for the carrier half only. Every pre-existing call site describes a carrier and no pass
+            // in flight, so the default keeps those cases meaning exactly what they meant. Pass the
+            // two explicit arguments to describe the case that has no carrier at all: a pass in
+            // flight, where a team IS in possession and nobody is on the ball.
+            bool hasTeamPoss = teamPoss ?? (possOwner >= 0);
+            bool teamIsOwn = teamPossIsOwn ?? (possOwner >= 0 && possIsOwn);
+
             var snap = new PositioningPerceptionSnapshot(PositioningAIConstants.SQUAD_SIZE)
             {
                 TickIndex               = tickIndex,
@@ -29,6 +40,8 @@ namespace TacticalDirector.PositioningAI.Tests
                 BallVxFiltered          = ballVx,
                 PossessionOwnerEntityId = possOwner,
                 PossessionOwnerIsOwnTeam = possIsOwn,
+                HasTeamPossession        = hasTeamPoss,
+                TeamPossessionIsOwnTeam  = teamIsOwn,
             };
             // Fill agents: entity IDs 0-10, sorted ascending, role matching 4-4-2 formation.
             FormationSlotRecord[] f = PositioningAIConstants.Family442;
@@ -1112,6 +1125,7 @@ namespace TacticalDirector.PositioningAI.Tests
             // Now switch to opponent possession → candidate changes → dwell resets.
             snap.PossessionOwnerEntityId = 5;
             snap.PossessionOwnerIsOwnTeam = false;
+            snap.HasTeamPossession = true; snap.TeamPossessionIsOwnTeam = false;
             snap.TickIndex = PositioningAIConstants.PHASE_HYSTERESIS_TICKS;
             PhaseClassifier.ClassifyAndCommit(snap, hyst);
 
@@ -1387,6 +1401,7 @@ namespace TacticalDirector.PositioningAI.Tests
             // ERR-012-005: SeedFromFormation() resets CurrentPhase to InPoss (match-init
             // default), so the phase override MUST be applied AFTER seeding, not before.
             snap.PossessionOwnerEntityId = 3; snap.PossessionOwnerIsOwnTeam = true;
+            snap.HasTeamPossession = true; snap.TeamPossessionIsOwnTeam = true;
             tickIn.SeedFromFormation(snap);
             if (hystIn != null) { hystIn.CurrentPhase = Phase.InPoss; hystIn.CandidatePhase = Phase.InPoss; }
             for (int t = 0; t < 5; t++) { snap.TickIndex = t; tickIn.Tick(snap, modIn); }
@@ -1399,6 +1414,7 @@ namespace TacticalDirector.PositioningAI.Tests
                 .GetField("_hyst", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
                 ?.GetValue(tickOut) as HysteresisState;
             snap.PossessionOwnerEntityId = -1; snap.PossessionOwnerIsOwnTeam = false;
+            snap.HasTeamPossession = false; snap.TeamPossessionIsOwnTeam = false;
             tickOut.SeedFromFormation(snap);
             if (hystOut != null) { hystOut.CurrentPhase = Phase.OutOfPoss; hystOut.CandidatePhase = Phase.OutOfPoss; }
             for (int t = 0; t < 5; t++) { snap.TickIndex = t; tickOut.Tick(snap, modIn); }
@@ -1422,6 +1438,8 @@ namespace TacticalDirector.PositioningAI.Tests
                 BallPosition = new Vector3(52.5f, 34f, 0f),
                 PossessionOwnerEntityId = 3,
                 PossessionOwnerIsOwnTeam = true,
+                HasTeamPossession = true,
+                TeamPossessionIsOwnTeam = true,
             };
             snap.ActiveOutfieldCount = 10;
             FormationSlotRecord[] f = PositioningAIConstants.Family433;
@@ -1522,6 +1540,7 @@ namespace TacticalDirector.PositioningAI.Tests
                 .GetField("_hyst", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
                 ?.GetValue(tickOut) as HysteresisState;
             snap.PossessionOwnerEntityId = -1; snap.PossessionOwnerIsOwnTeam = false;
+            snap.HasTeamPossession = false; snap.TeamPossessionIsOwnTeam = false;
             tickOut.SeedFromFormation(snap);
             if (hystOut != null) { hystOut.CurrentPhase = Phase.OutOfPoss; hystOut.CandidatePhase = Phase.OutOfPoss; }
             for (int t = 0; t < 5; t++) { snap.TickIndex = t; tickOut.Tick(snap, NeutralModifiers()); }
@@ -1550,6 +1569,7 @@ namespace TacticalDirector.PositioningAI.Tests
                 ?.GetValue(tickIn) as HysteresisState;
             // ERR-012-005: apply the phase override AFTER SeedFromFormation (which resets phase to InPoss).
             snap.PossessionOwnerEntityId = 3; snap.PossessionOwnerIsOwnTeam = true;
+            snap.HasTeamPossession = true; snap.TeamPossessionIsOwnTeam = true;
             tickIn.SeedFromFormation(snap);
             if (hystIn != null) { hystIn.CurrentPhase = Phase.InPoss; hystIn.CandidatePhase = Phase.InPoss; }
             for (int t = 0; t < 5; t++) { snap.TickIndex = t; tickIn.Tick(snap, NeutralModifiers()); }
@@ -1560,6 +1580,7 @@ namespace TacticalDirector.PositioningAI.Tests
                 .GetField("_hyst", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
                 ?.GetValue(tickTTD) as HysteresisState;
             snap.PossessionOwnerEntityId = -1; snap.PossessionOwnerIsOwnTeam = false;
+            snap.HasTeamPossession = false; snap.TeamPossessionIsOwnTeam = false;
             tickTTD.SeedFromFormation(snap);
             if (hystTTD != null) { hystTTD.CurrentPhase = Phase.TransToDef; hystTTD.CandidatePhase = Phase.TransToDef; }
             for (int t = 0; t < 5; t++) { snap.TickIndex = t; tickTTD.Tick(snap, NeutralModifiers()); }

@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassExecutor.cs
 // Created:  2026-05-26
-// Modified: 2026-06-19
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.8, §3.9, §4.1, Code Standards #20
 // Purpose:  Sealed instance orchestrator for the six-state pass execution state
@@ -86,6 +86,21 @@ namespace TacticalDirector.PassMechanics
 
         /// <summary>True when no pass is in progress and the executor is ready.</summary>
         public bool IsIdle => _state == PassExecutionState.Idle;
+
+        /// <summary>
+        /// The team-mate this executor's CURRENT pass was aimed at (<c>PassRequest.TargetAgentId</c>).
+        /// <para>
+        /// Only meaningful at the moment of the CONTACT kick, which is the sole caller: <c>_request</c>
+        /// is never cleared on the return to Idle, so between passes this reports a stale last-pass
+        /// target forever. Read it at the kick or not at all — the engine's own pass-in-flight latch
+        /// (ERR-012-011) exists precisely because this value is not self-dating.
+        /// </para>
+        /// <para>
+        /// Not a second derivation of anything: this and <c>CaptureState().Request</c> return the same
+        /// <c>_request</c> field, one for observation at the kick and one for serialization.
+        /// </para>
+        /// </summary>
+        public int InFlightTargetAgentId => _request.TargetAgentId;
 
         /// <summary>
         /// The result of the most recently completed (or cancelled/invalid) pass.
@@ -714,4 +729,9 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        | (its ordinals are captured into PassExecutorState.State and become      |
 // |         |            |        | digest-load-bearing at C5 — APPEND-only); RestoreState documents the    |
 // |         |            |        | benign restored-Idle profile recompute. Doc-only.                       |
+// | 1.15    | 2026-08-08 | —      | ERR-012-011: + InFlightTargetAgentId, an observation read of the        |
+// |         |            |        | PassRequest.TargetAgentId this executor already holds, so the engine    |
+// |         |            |        | can latch a pass's intended receiver at the CONTACT kick. Same field    |
+// |         |            |        | CaptureState().Request serializes — one source, two readers, not a      |
+// |         |            |        | second derivation. No execution-path change.                            |
 #endregion

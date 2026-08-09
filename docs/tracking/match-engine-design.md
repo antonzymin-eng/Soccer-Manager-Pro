@@ -250,6 +250,25 @@ and its omission diverges replay. Stage 0 field set:
   by movement in Physics (tick N+1) per the one-tick-lag contract below; cross-tick, so serialized.
 - per-agent DecisionTree state-machine state (IDLE/EVALUATING/EXECUTING/INTERRUPTED) and
   any in-flight executor state (Pass/Shot WINDUP/CONTACT) — persists between heartbeats.
+- **`_passInFlightReceiverId`** (v20, `ERR-012-011`) — the intended receiver of a pass currently
+  travelling to him. Cross-tick, and specifically NOT reconstructible: `PassExecutor` never clears
+  its `_request` on the return to Idle, so all 22 serialized executor states carry a stale last-pass
+  target and nothing in the payload dates one. See the possession-surfaces note below.
+
+**The three possession surfaces (`ERR-012-011`).** The engine answers three different possession
+questions and they do not agree. Which one a consumer wants is a real decision, and picking the
+nearest field is how #12's phase gate was wrong for the life of the engine:
+
+| Field | Answers | Consumers |
+|---|---|---|
+| `_possessingAgentId` | **Who is on the ball, right now.** `NO_POSSESSION` for the entire flight of every pass. | executor adapters' re-entrancy gate; `MatchContext`; #23's dismark carrier exclusion (FR-DM-007) |
+| `_passInFlightReceiverId` | **Who a live pass is travelling to.** Bridges exactly the gap the field above leaves open, and only that gap. | the #12 team-possession composition |
+| `_settledPossessionTeam` | **Which team last settled the ball.** Never cleared — holds through a clearance, a shot and a dead ball, forever, until somebody else settles. | #24's regain window only |
+
+**TEAM possession** — the football question, and the one #12 §3.0.2 asks — is the union of the first
+two: the carrier's team, else the in-flight receiver's team, else none. `FillPositioningSnapshot` is
+the single place that composes it. `_settledPossessionTeam` is **not** a "who has the ball now"
+answer and must not be used as one.
 
 If a buffer can be proven fully recomputed before its first read each tick, it may be
 excluded — but the default is to serialize cross-tick state, and the proof must be recorded

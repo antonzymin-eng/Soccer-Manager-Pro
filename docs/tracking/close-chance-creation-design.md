@@ -247,11 +247,19 @@ suite in the gate's own Debug configuration: **102 passed / 4 skipped, 0 failure
    outright: mean final-third episode length 5.1 s → **17.5 s** and **28.6 s**. This is what bounds
    `DRIBBLE_GOAL_DIR_MIN_MODIFIER` at 0.80 rather than the 0.50 that would match the PASS floor. It
    is a #8 §3.1.6 / §3.2.5 surface.
-3. **#12 commits `InPoss` only 9.5% of the time the ball is in the final third** (`TransToAtk`
-   58.3%). `PhaseClassifier.ComputeCandidate` keys on `PossessionOwnerEntityId >= 0`, false for the
-   entire flight of every pass, so a team passing the ball around reads as being in transition. Every
-   phase-gated mechanism in #13/#14/#15 — including the whole #15 run pipeline — is gated behind a
-   state the engine rarely occupies. A #12 §3.0.2 change with a blast radius across four consumers.
+3. **~~#12 commits `InPoss` only 9.5% of the time the ball is in the final third~~ — FIXED August 8,
+   2026 as `ERR-012-011`** (wiring backlog C1). `PhaseClassifier.ComputeCandidate` keyed on
+   `PossessionOwnerEntityId >= 0`, false for the entire flight of every pass, so a team passing the
+   ball around read as being in transition. Phase now classifies from TEAM possession — the on-ball
+   carrier's team, else the intended receiver of a pass in flight. **Two corrections this document
+   owes its readers.** First, the "every phase-gated mechanism in #13/#14/#15 is starved" framing
+   above is materially wrong: `TacticalContext.HasAttackIntent` has no production reader at all, so
+   #15 is inert independent of its gate, and #13's press targets have no consumer outside
+   `pressing-ai`. Second, and against this document's own hopes for the funnel, the fix was
+   *predicted to make box occupancy slightly worse* — #12's `PullFactor` `InPoss` column is less
+   advanced than the `TransToAtk` column it replaces for every attacking role. The C1 fix is a
+   correctness fix and a precondition for calibration; it is not the creation lever. Item 1 below
+   (#8 cannot pass to a place) remains that lever.
 4. **#15's TRANSITION branch never republishes per-agent intents.** `AttackingAITick.Tick` freezes
    the *directive* and returns, leaving `_intentBuffer` / `_entityToIntentIdx` holding the previous
    IN_POSSESSION stride's intents, which `GetIntent` then serves with a stale `ValidThroughTick`. The

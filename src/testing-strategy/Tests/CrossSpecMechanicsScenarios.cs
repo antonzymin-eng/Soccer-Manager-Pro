@@ -157,6 +157,8 @@ namespace TacticalDirector.TestingStrategy.Tests
             snap.BallVxFiltered = 0f;
             snap.PossessionOwnerEntityId  = CarrierEntityId; // opponent holds the ball
             snap.PossessionOwnerIsOwnTeam = false;            // ⇒ out-of-possession shape
+            snap.HasTeamPossession        = true;             // ERR-012-011 — a team IS in possession
+            snap.TeamPossessionIsOwnTeam  = false;            //   ...and it is not this one
 
             int activeOutfield = 0;
             for (int k = 0; k < OwnSquad; k++)

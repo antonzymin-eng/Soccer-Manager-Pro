@@ -260,7 +260,16 @@ namespace TacticalDirector.MatchEngine
         /// emitted when a contact BEGINS rather than on every tick the overlap persists, so the
         /// previous tick's pair set is the gate input. Omitting it would make a restore mid-contact
         /// re-emit an onset the uninterrupted run had already spent.</para>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 19;
+        /// <para>v20 (ERR-012-011, the #12 <c>InPoss</c> gate) appends <c>_passInFlightReceiverId</c> —
+        /// the intended receiver of a pass currently travelling to him, or <c>NO_POSSESSION</c>. It is
+        /// the second half of the engine's possession picture and, unlike <c>_possessingAgentId</c>, has
+        /// no mirror already in the payload: <c>MatchContext</c> carries only the on-ball carrier, and
+        /// <c>PassExecutor</c> never clears its request on returning to Idle, so the 22 serialized
+        /// executor states each hold a stale last-pass target that nothing dates. A restore that
+        /// dropped it would classify #12's phase as a transition for the remainder of every in-flight
+        /// pass while the uninterrupted run classified it as possession — a digest divergence from the
+        /// first pass onward. The same latch-and-flag class as v18.</para>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 20;
 
         /// <summary>[FIXED] On-disk match save-file framing version (match-save-file-design.md KD-1).
         /// The FIRST u32 of a <c>MatchSaveManager</c> save blob; a load with a mismatched value fails

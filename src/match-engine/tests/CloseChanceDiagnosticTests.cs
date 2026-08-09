@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/CloseChanceDiagnosticTests.cs
 // Created:  2026-08-03
-// Modified: 2026-08-03
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Decision Tree #8 §3.1, Positioning AI #12 §3.2, Attacking AI #15 §3.4, Testing Strategy #19 (instrument class)
 // Purpose:  Env-gated (TD_CREATION_DIAGNOSTIC=1) instrument for the residual
@@ -337,6 +337,22 @@ namespace TacticalDirector.MatchEngine
 
             PositioningAI.Phase phase = engine.TestOnly_PositioningPhase(attackingTeam);
             m.PhaseHist[(int)phase]++;
+
+            // The InPoss gate defect's own quantities, sampled in lockstep with PhaseHist so every
+            // new column shares C2's existing denominator (m.SupportSamples). ownerless = the engine
+            // holds no possessor at all, which is what makes the phase classifier fall through to its
+            // ball-velocity branch instead of the possession-based one. inFlight is read alongside it
+            // because a pass in flight is the one case where "nobody owns it yet" is not the defect —
+            // the receiver is about to.
+            if (engine.TestOnly_PossessingAgentId < 0) m.OwnerlessSamples++;
+            if (engine.TestOnly_PassInFlightReceiverId >= 0) m.PassInFlightSamples++;
+
+            // The DEFENDING team's own phase, computed from the MIRRORED snapshot (MatchEngine.cs
+            // ~line 3053 hand-flips BallVxFiltered's sign for the away side) — an away-side sign
+            // error there is invisible in the attacking-only PhaseHist above.
+            PositioningAI.Phase defPhase = engine.TestOnly_PositioningPhase(1 - attackingTeam);
+            m.DefPhaseHist[(int)defPhase]++;
+
             if (phase == PositioningAI.Phase.InPoss)
             {
                 // The conditional that actually matters. Unconditional box occupancy pools settled
@@ -486,8 +502,10 @@ namespace TacticalDirector.MatchEngine
             report.AppendLine("  seed             | samples | meanInBox | inBox=0 | =1 | =2 | 3+ | deepestAgent | deepestSlot | slotInBox% | runner% | runnerSlot");
 
             int nS = 0, nBoxSum = 0, nSlotIn = 0, nInPoss = 0, nRunS = 0, nIpBox = 0;
+            int nOwnerless = 0, nPassInFlight = 0;
             var hist = new int[4];
             var phist = new int[4];
+            var defPhist = new int[4];
             float dAgent = 0f, dSlot = 0f, dRunSlot = 0f, ipSlot = 0f;
 
             for (int i = 0; i < ms.Count; i++)
@@ -497,8 +515,10 @@ namespace TacticalDirector.MatchEngine
                 dAgent += m.DeepestAgentDepthSum; dSlot += m.DeepestSlotDepthSum;
                 nInPoss += m.InPossSamples; nRunS += m.RunnerSamples; dRunSlot += m.RunnerSlotDepthSum;
                 nIpBox += m.InPossInBoxSum; ipSlot += m.InPossDeepestSlotSum;
+                nOwnerless += m.OwnerlessSamples; nPassInFlight += m.PassInFlightSamples;
                 for (int k = 0; k < hist.Length; k++) hist[k] += m.AttackersInBoxHist[k];
                 for (int k = 0; k < phist.Length; k++) phist[k] += m.PhaseHist[k];
+                for (int k = 0; k < defPhist.Length; k++) defPhist[k] += m.DefPhaseHist[k];
 
                 report.AppendLine(FormatSupportRow(Inv($"0x{m.Seed:X16}"), m));
             }
@@ -527,6 +547,48 @@ namespace TacticalDirector.MatchEngine
             report.AppendLine(Inv($"    while IN_POSSESSION: meanAttackersInBox={(float)nIpBox / ip:F2}  ")
                             + Inv($"deepestSlot={ipSlot / ip:F1} m  (box edge {PenaltyAreaDepthM:F1} m)"));
             report.AppendLine();
+
+            // ── The InPoss gate defect, sized ──────────────────────────────
+            // ownerless% is the share of these same samples where the engine holds NO possessor at
+            // all (TestOnly_PossessingAgentId < 0) — that is exactly what makes #12's phase
+            // classifier fall through to its ball-velocity branch instead of a possession-based one,
+            // and it is the quantity a fix converts. inFlight% is read alongside it because a pass
+            // in flight (TestOnly_PassInFlightReceiverId >= 0) is the one case where "nobody owns it
+            // yet" is not itself the defect — a receiver is about to. Pre-fix, inFlight% reads 0%
+            // everywhere: the accessor is new and nothing wires a receiver id yet.
+            //
+            // ATK is broken out per seed here for the first time (previously pooled only), and a DEF
+            // row is added beside it. The defending team's phase is read off a MIRRORED snapshot with
+            // a hand-written BallVxFiltered sign flip at MatchEngine.cs:3053 — an away-side sign error
+            // there would be invisible in the attacking-only figure above, but shows up here as a
+            // DEF histogram that does not mirror the ATK one the way it should.
+            report.AppendLine("  #12 InPoss-gate sizing, per seed then pooled:");
+            report.AppendLine("  seed             | samples | ownerless% | inFlight% | ATK: InPoss/OutOfPoss/TransAtk/TransDef | DEF: InPoss/OutOfPoss/TransAtk/TransDef");
+
+            for (int i = 0; i < ms.Count; i++)
+            {
+                report.AppendLine(FormatGateRow(Inv($"0x{ms[i].Seed:X16}"), ms[i]));
+            }
+
+            report.AppendLine(FormatGateRow("pooled           ",
+                nS, nOwnerless, nPassInFlight, phist, defPhist));
+            report.AppendLine();
+        }
+
+        private static string FormatGateRow(string label, MatchTally m) =>
+            FormatGateRow(label, m.SupportSamples, m.OwnerlessSamples, m.PassInFlightSamples,
+                m.PhaseHist, m.DefPhaseHist);
+
+        private static string FormatGateRow(
+            string label, int samples, int ownerless, int passInFlight, int[] atkPhase, int[] defPhase)
+        {
+            int s = Math.Max(1, samples);
+            return Inv($"  {label,-16} | {samples,7} | {(float)ownerless / s,10:P1} | ")
+                 + Inv($"{(float)passInFlight / s,9:P1} | ")
+                 + Inv($"{(float)atkPhase[0] / s,4:P0}/{(float)atkPhase[1] / s,4:P0}/")
+                 + Inv($"{(float)atkPhase[2] / s,4:P0}/{(float)atkPhase[3] / s,4:P0} | ")
+                 + Inv($"{(float)defPhase[0] / s,4:P0}/{(float)defPhase[1] / s,4:P0}/")
+                 + Inv($"{(float)defPhase[2] / s,4:P0}/{(float)defPhase[3] / s,4:P0}");
         }
 
         private static string FormatSupportRow(string label, MatchTally m)
@@ -646,6 +708,9 @@ namespace TacticalDirector.MatchEngine
             public int InPossInBoxSum;
             public float InPossDeepestSlotSum;
             public readonly int[] PhaseHist = new int[4];   // InPoss / OutOfPoss / TransToAtk / TransToDef
+            public int OwnerlessSamples;
+            public int PassInFlightSamples;
+            public readonly int[] DefPhaseHist = new int[4];   // InPoss / OutOfPoss / TransToAtk / TransToDef
 
             // C3
             public int CarrierPass;
@@ -707,4 +772,13 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | box and — the discriminator — the deepest composed TARGET SLOT;     |
 // |         |            |        | C3 measures the carrier's own decision mix, pass progression and    |
 // |         |            |        | dribble goal-direction cosine. Assertion-free (ERR-030-014).        |
+// | 1.1     | 2026-08-08 | —      | C2: added ownerless% (share of samples with no possessor at all —   |
+// |         |            |        | TestOnly_PossessingAgentId < 0, the InPoss gate defect's own        |
+// |         |            |        | quantity) and inFlight% (TestOnly_PassInFlightReceiverId >= 0, the  |
+// |         |            |        | new accessor landing alongside this file — reads 0% pre-fix); split |
+// |         |            |        | the pooled-only #12 phase histogram out per seed for the attacking  |
+// |         |            |        | team, and added the defending team's phase histogram (per seed and |
+// |         |            |        | pooled) via TestOnly_PositioningPhase(1 - attackingTeam), to make   |
+// |         |            |        | an away-side sign error in the MatchEngine.cs:3053 mirrored         |
+// |         |            |        | BallVxFiltered flip visible. Assertion-free throughout.             |
 #endregion
