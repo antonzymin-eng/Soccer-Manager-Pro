@@ -427,7 +427,11 @@ Overall final-third completion is **23%**; 53% are intercepted and 24% reach a d
 `RunLooseBallPickup` both refuse any ball whose centre height exceeds
 `FirstTouchConstants.GroundControlHeight` = `BallPhysicsConstants.Possession.ControlHeight` =
 **0.5 m**, with the comment "a higher ball is a Heading Mechanics (#10) event, not Stage 0". Heading
-is only opt-in Phase 1 and DT-emitted HEADER is deferred behind the 3-bit `ActionType` ordinal
+was described here as "only opt-in Phase 1" — **CORRECTED the same day: it is default-ON since
+July 27, 2026 and its state is serialized in the v18 snapshot block.** The gap is not that heading
+is switched off; it is that a header **redirects** the ball and never grants possession, that
+`HeadingMechanics` exposes no control/trap entry point, and that the trigger reaches only the single
+nearest outfield agent within 1.5 m. DT-emitted HEADER is deferred behind the 3-bit `ActionType` ordinal
 ceiling. So **no agent can receive a ball out of the air at all.** An aerial delivery becomes
 receivable only after it lands and rolls — by which point the intended receiver is a mean of
 **19.0 m** away (C4e; >10 m on 57% of passes) and an opponent is nearer.

@@ -244,7 +244,16 @@ dormancy than anything in Class A.
   `RunLooseBallPickup` both refuse any ball whose centre height exceeds
   `FirstTouchConstants.GroundControlHeight` = `BallPhysicsConstants.Possession.ControlHeight` =
   **0.5 m**, on the stated grounds that "a higher ball is a Heading Mechanics (#10) event, not
-  Stage 0" — and heading is opt-in Phase 1 with DT-emitted HEADER deferred behind the 3-bit
+  Stage 0". **CORRECTION (Aug 9, 2026, same day): the "heading is opt-in" half of this entry as
+  first written was WRONG** — `EnableGkHeading` has been default-ON since July 27, 2026
+  (`MatchEngine.cs:821` sets it unconditionally) and heading state is serialized in the v18
+  snapshot block, so Phase 2 is largely done and the root `CLAUDE.md`'s "opt-in" wording is stale
+  too. The measured consequence below is unaffected, because the real gap is sharper than
+  "heading is off": a header **redirects** the ball and never grants possession, `HeadingMechanics`
+  exposes no control/trap/chest entry point at all, and `TryCommitHeaderIntents` fires only for the
+  single nearest outfield agent within **1.5 m**, once per airborne episode, always aimed at a fixed
+  point (opponent goal X, pitch-width/2) and never at a team-mate. DT-emitted HEADER is deferred
+  behind the 3-bit
   `ActionType` ordinal ceiling. **Measured consequence over 6 seeds × 90 min, 891 final-third
   passes: Lofted completes 1% (n=221), Cross completes 1% (n=171), against Ground 41% (n=441) and
   ThroughBall 28% (n=58).** Overall final-third completion 23%, interceptions 53%. An aerial
