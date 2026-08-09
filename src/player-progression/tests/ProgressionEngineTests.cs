@@ -5,7 +5,9 @@
 // Spec:     Player Progression & Lifecycle #28 §3.1 / §3.4 / §3.5 / §5, KD-4 / KD-7,
 //           FR-PG-011/013/014/019/021/022/023; ERR-029-006 (the batch entry point);
 //           ERR-030-027 (the twice-per-fixture-day call); ERR-028-006 (the signed age anchor);
-//           ERR-028-009 (the sentinel is not a legal world day, F8); Code Standards #20
+//           ERR-028-009 (the sentinel is not a legal world day, F8);
+//           ERR-028-014 (the never-advanced sentinel retired from the legal store states);
+//           Code Standards #20
 // Purpose:  T-PG-DET-001/002, T-PG-RET-001, T-PG-SAVE-001, plus the locks this landing needs that #28
 //           §5 does not list: per-day idempotency, the batch's key-agreement refusals, the KD-4
 //           projection — the one that fails if roster authority is moved back off #28's block — the
@@ -13,7 +15,9 @@
 //           adds the mutation-audit locks for seven FromBlocks/ToBlocks guards a mutation sweep proved
 //           dead (deleting each left the whole suite green): ascending club/player ids, the id-cursor
 //           guard, copy-not-borrow on both FromBlocks and ToBlocks, FromBlocks's own cross-club
-//           uniqueness call, and ValidateBatch's positional club-id check.
+//           uniqueness call, and ValidateBatch's positional club-id check. v1.3 (ERR-028-014) rewrites
+//           the seed-day/retirement-day/one-below-the-sentinel cases for the anchored cursor and adds
+//           the FromBlocks sentinel-refusal lock.
 
 using System;
 
@@ -53,12 +57,15 @@ namespace TacticalDirector.PlayerProgression.Tests
         }
 
         [Test]
-        public void AdvanceDay_FirstCall_AdvancesExactlyOneDay()
+        public void AdvanceDay_FirstCall_ReplaysFromTheSeedDay()
         {
-            // The first call on a never-advanced store has no prior cursor to measure a gap from, so it
-            // advances exactly one day and ANCHORS the cursor. That is the right production semantic —
-            // #30 calls this every world day — but it is an assumption the gap tests below depend on,
-            // so it is locked here rather than left implicit.
+            // INVERTED at ERR-028-014, and the inversion is the fix. This case used to assert that the
+            // first call banks exactly ONE day "however far ahead the first call's world day is —
+            // the store cannot know which day the career began accruing on." Both halves were wrong:
+            // SeedFrom is handed newGameWorldDay, so the store CAN know, and collapsing an arbitrary
+            // span into one day's accrual — while every player's DERIVED age jumped by the whole span
+            // — was the silent-data defect. The seed day is now the cursor, so there is no first-call
+            // special case left: the first advance replays from the seed day like any other gap.
             ProgressionEngine engine = SeedOneClub(ageAtBase: 18);
 
             // Stays inside the Growth band (age is DERIVED from the world day, FR-PG-005, so a day far
@@ -66,9 +73,9 @@ namespace TacticalDirector.PlayerProgression.Tests
             // behaviour, and exactly why the band is held fixed here so the COUNT is what is asserted).
             engine.AdvanceDay(BaseDay + 300, TrainingInputBatch.Neutral);
 
-            Assert.AreEqual(SquadSize, CursorOf(engine),
-                "one day of accrual per player, however far ahead the first call's world day is — the " +
-                "store cannot know which day the career began accruing on.");
+            Assert.AreEqual(300 * SquadSize, CursorOf(engine),
+                "the 300 days between the seed day and the first advance must be REPLAYED, not "
+                + "collapsed into one — the seed day is the cursor, so the span is known.");
         }
 
         [Test]
@@ -120,11 +127,16 @@ namespace TacticalDirector.PlayerProgression.Tests
             ProgressionEngine engine = SeedOneClub(
                 ageAtBase: PlayerProgressionConstants.RETIREMENT_AGE);
 
-            engine.AdvanceDay(BaseDay, TrainingInputBatch.Neutral);
+            // The FIRST LIVED day, not the seed day (ERR-028-014). The seed day is the cursor now, so
+            // advancing to it is a no-op — and the retirement test lives inside the advance step, so a
+            // player generated already at RETIREMENT_AGE is flagged on the first day the world actually
+            // lives rather than on the day he was generated. The one-day delay is harmless: the flag
+            // is consumed at the season boundary (FR-PG-014), not the day it is set.
+            engine.AdvanceDay(BaseDay + 1, TrainingInputBatch.Neutral);
 
             LifecycleViewModel view = engine.LifecycleView(ClubId, FirstPlayerId);
             Assert.IsTrue(view.RetirementFlag, "a player at RETIREMENT_AGE is flagged on the world tick.");
-            Assert.AreEqual(BaseDay, view.RetirementDay);
+            Assert.AreEqual(BaseDay + 1, view.RetirementDay);
             Assert.AreEqual(SquadSize, engine.SquadFor(ClubId).Count,
                 "flagging must not remove him — he stays selectable until the season boundary (FR-PG-014).");
         }
@@ -190,7 +202,10 @@ namespace TacticalDirector.PlayerProgression.Tests
             var squad = new Squad(ClubId, players);
             ProgressionEngine engine = ProgressionEngine.SeedFrom(new[] { squad }, newGameWorldDay: 0u);
 
-            engine.AdvanceDay(0, TrainingInputBatch.Neutral);
+            // Day 1, not day 0 (ERR-028-014): the seed day is now the cursor, so advancing to day 0 is
+            // a no-op — the generated state already describes the roster as of day 0. Day 1 is the
+            // first day actually lived, and it is one band step, which is what this case is about.
+            engine.AdvanceDay(1, TrainingInputBatch.Neutral);
 
             ClubCareerStates[] blocks = engine.ToBlocks();
             Assert.AreEqual(+1L, blocks[0].Lifecycles[0].GrowthCursor, "Growth band (age 18): +1/day.");
@@ -243,18 +258,22 @@ namespace TacticalDirector.PlayerProgression.Tests
         public void AdvanceDay_OneDayBelowTheSentinel_StillAdvancesNormally()
         {
             // The guard must be narrow: it refuses ONLY the sentinel value, not "large" world days in
-            // general — a day one below it is an ordinary (if extreme) first advance. (At this world
-            // day the derived age lands the squad in the Decline band rather than Growth, so only the
-            // MAGNITUDE — one point of accrual per player — is asserted here, not the sign.)
-            ProgressionEngine engine = SeedOneClub(ageAtBase: 18);
+            // general — a day one below it is an ordinary (if extreme) world day.
+            //
+            // The store is seeded TWO days below the sentinel, not at BaseDay (ERR-028-014). Since
+            // SeedFrom now anchors the cursor at the seed day, a store seeded at BaseDay and advanced
+            // to sentinel-1 is a ~4.29-billion-day gap, and AdvanceDay replays a gap day by day — so
+            // the old fixture turned this case from one step into an effectively unbounded loop. It
+            // hung the suite. Seeding beside the target keeps the case's actual subject — the F8
+            // guard's narrowness — and makes the advance one ordinary day.
+            const uint SeedDay = PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL - 2u;
+            ProgressionEngine engine = SeedOneClubAt(SeedDay, ageAtBase: 18);
 
             Assert.DoesNotThrow(
-                () => engine.AdvanceDay(
-                    PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL - 1,
-                    TrainingInputBatch.Neutral),
+                () => engine.AdvanceDay(SeedDay + 1u, TrainingInputBatch.Neutral),
                 "the guard must refuse only the sentinel itself, not merely a large world day.");
             Assert.AreEqual(SquadSize, Math.Abs(CursorOf(engine)),
-                "exactly one band-step of accrual per player for this first advance.");
+                "exactly one band-step of accrual per player for the one day advanced.");
         }
 
         // ── The KD-4 projection — the authority lock ──────────────────────────────────
@@ -492,6 +511,26 @@ namespace TacticalDirector.PlayerProgression.Tests
         }
 
         [Test]
+        public void FromBlocks_ANeverAdvancedSentinelCursor_IsRefused()
+        {
+            // ERR-028-014: the sentinel is a refused WORLD DAY (F8), never a legal STORE state.
+            // SeedFrom anchors the cursor at the seed day, so nothing writes it — and admitting one
+            // here would restore the defect through the only entry point that could still carry it: a
+            // store whose lived history starts nowhere checkable, which the cursor-vs-clock gate then
+            // waves through at any clock while the first advance banks a single day for the whole span.
+            var records = new[] { Player(800, age: 20) };
+            var lifecycles = new[]
+            {
+                DefaultLife(PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL)
+            };
+            var club = new ClubCareerStates(9, records, lifecycles);
+
+            Assert.Throws<ArgumentException>(
+                () => ProgressionEngine.FromBlocks(new[] { club }, nextPlayerId: 801),
+                "a career's lived history must start somewhere the world clock can be checked against.");
+        }
+
+        [Test]
         public void FromBlocks_CopiesTheStateArrays_NotBorrowsThem()
         {
             var records = new[] { Player(700, age: 20) };
@@ -586,7 +625,14 @@ namespace TacticalDirector.PlayerProgression.Tests
         private const int FirstPlayerId = ClubId * 25;
 
         private static ProgressionEngine SeedOneClub(int ageAtBase) =>
-            ProgressionEngine.SeedFrom(OneClubSquad(ageAtBase), BaseDay);
+            SeedOneClubAt(BaseDay, ageAtBase);
+
+        // Seeds on an explicit world day. Since SeedFrom anchors the cursor at the seed day
+        // (ERR-028-014), a case that advances to a far-off day must seed NEAR it — AdvanceDay replays
+        // a gap day by day, so seeding at BaseDay and advancing near uint.MaxValue is not an extreme
+        // input, it is an unbounded loop.
+        private static ProgressionEngine SeedOneClubAt(uint seedDay, int ageAtBase) =>
+            ProgressionEngine.SeedFrom(OneClubSquad(ageAtBase), seedDay);
 
         private static ProgressionEngine SeedTwoClubs() =>
             ProgressionEngine.SeedFrom(TwoClubSquads(), BaseDay);
@@ -620,7 +666,10 @@ namespace TacticalDirector.PlayerProgression.Tests
             return rec;
         }
 
-        private static PlayerLifecycle DefaultLife(uint lastAdvanced = PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL) =>
+        // The cursor defaults to day 0, a legal world day — NOT the never-advanced sentinel, which
+        // FromBlocks refuses since ERR-028-014. Cases that want the sentinel must ask for it, which is
+        // the point: it is no longer a legal store state, so a fixture must not reach it by default.
+        private static PlayerLifecycle DefaultLife(uint lastAdvanced = 0u) =>
             new PlayerLifecycle
             {
                 PotentialAbility = 5000,
@@ -716,4 +765,21 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | two-club swap that keeps every OTHER field correct. Each was    |
 // |         |            |        | proven by deleting the guard, confirming exactly the new test   |
 // |         |            |        | failed, and restoring it.                                       |
+// | 1.3     | 2026-08-09 | —      | ERR-028-014: three tests changed meaning, two of them INVERTED  |
+// |         |            |        | — they had been locking the defect as intended behaviour.       |
+// |         |            |        | AdvanceDay_FirstCall_AdvancesExactlyOneDay renamed               |
+// |         |            |        | AdvanceDay_FirstCall_ReplaysFromTheSeedDay: it asserted one day |
+// |         |            |        | of accrual "however far ahead the first call's world day is —   |
+// |         |            |        | the store cannot know which day the career began accruing on",  |
+// |         |            |        | which was false (SeedFrom is handed the seed day) — now asserts |
+// |         |            |        | the full 300-day replay. AdvanceDay_AtRetirementAge_Flags-       |
+// |         |            |        | ButDoesNotRemove advances one further day (BaseDay + 1, not     |
+// |         |            |        | BaseDay), since the seed day is now a no-op. AdvanceDay_OneDay-  |
+// |         |            |        | BelowTheSentinel_StillAdvancesNormally had to RESEED near the    |
+// |         |            |        | sentinel: with the cursor anchored, seeding at BaseDay and       |
+// |         |            |        | advancing to sentinel-1 became a ~4.29-billion-day replay (Ad-  |
+// |         |            |        | vanceDay replays a gap day by day) — it HUNG the suite; new      |
+// |         |            |        | SeedOneClubAt helper seeds two days below the sentinel instead.  |
+// |         |            |        | + FromBlocks_ANeverAdvancedSentinelCursor_IsRefused, the new     |
+// |         |            |        | lock on FromBlocks' refusal of the sentinel cursor.              |
 #endregion

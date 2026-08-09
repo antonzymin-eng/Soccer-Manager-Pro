@@ -1,10 +1,11 @@
 // File:     src/season-save/PlayerCareerStates.cs
 // Created:  2026-08-06
-// Modified: 2026-08-08 (#28 T1/T2a + AR pass 1 — v1.15)
+// Modified: 2026-08-09 (ERR-028-014 — v1.16)
 // Author:   —
 // Spec:     Training System #29 §3.1/§3.3/§3.5, §4.3 (seam contracts), FR-TR-004/016/022/023/025;
 //           Injuries & Medical #41 §3.1/§3.5, §4.3, FR-MD-003/009/010/022/023/025/027;
 //           Season & Competition Loop #30 §3.3 (KD-2 slot order), §3.5 (the boundary), FR-SN-034;
+//           Player Progression #28 (ERR-028-014 — the progression cursor's sentinel exemption);
 //           path-to-playable D2/D3 (T2); Code Standards #20
 // Purpose:  The #30-side owner of the per-club #29 training, #41 medical and #30 appearance state.
 //           Holds the three sets keyed by (ClubId, PlayerId), drives the two day steps at #30's
@@ -596,8 +597,14 @@ namespace TacticalDirector.SeasonSave
         internal static void RequireProgressionCursorWithinClock(
             uint worldTick, int clubId, int playerId, uint progressionDay, string boundary)
         {
-            if (progressionDay != PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL
-                && (progressionDay > worldTick || worldTick > progressionDay + 1))
+            // ERR-028-014: NO sentinel exemption. That exemption was copied from the #29/#41 siblings,
+            // where it is sound — their fresh states (fatigue 0, no injuries) carry no clock-anchored
+            // quantity, so "never advanced" means the same thing on every world day. #28's fresh state
+            // is the only one of the four that DOES carry one: age is derived from BirthWorldDay, so a
+            // never-advanced #28 state means something different at every clock value. The premise the
+            // siblings' exemption rests on is false here, and inheriting it left the gate with a hole
+            // shaped exactly like the state every new game starts in.
+            if (progressionDay > worldTick || worldTick > progressionDay + 1)
             {
                 throw new InvalidOperationException(
                     $"{boundary} is incoherent: club {clubId} player {playerId}'s "
@@ -1687,4 +1694,15 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | the two roster views fails loud); + RequireProgressionCursor-  |
 // |         |            |        | WithinClock, the fourth per-player cursor's single owner, with |
 // |         |            |        | all three boundaries delegating to it (ERR-028-007).           |
+// | 1.16    | 2026-08-09 | —      | ERR-028-014: RequireProgressionCursorWithinClock drops the      |
+// |         |            |        | sentinel exemption. The #29/#41 exemption it was copied from   |
+// |         |            |        | is sound for them (their fresh states carry no clock-anchored  |
+// |         |            |        | quantity); #28's is the one of the four that does — age is     |
+// |         |            |        | derived from BirthWorldDay — so a never-advanced #28 state      |
+// |         |            |        | means something different at every clock value, and the        |
+// |         |            |        | exemption was a hole shaped exactly like every new game's       |
+// |         |            |        | starting state. Deleting the exemption is sufficient: the       |
+// |         |            |        | existing bidirectional lag predicate now refuses the pairing    |
+// |         |            |        | with no new gate, since #28's own ProgressionEngine no longer   |
+// |         |            |        | writes the sentinel (ProgressionEngine.cs v1.1).                |
 #endregion

@@ -1,18 +1,21 @@
 // File:     src/season-save/tests/SeasonLoopProgressionTests.cs
 // Created:  2026-08-08
-// Modified: 2026-08-08
+// Modified: 2026-08-09
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (KD-2 slot 1); Player Progression & Lifecycle #28
 //           KD-4 / FR-PG-021 / FR-PG-022; ERR-029-006 (the batch entry point, closed here);
 //           ERR-030-027 (the twice-per-fixture-day call); ERR-028-007 (the fourth persisted cursor,
 //           checked at three boundaries — this file covers the SeasonLoop constructor boundary);
-//           Code Standards #20
+//           ERR-028-014 (the never-advanced sentinel retired from the legal store states, and from
+//           the constructor's cursor-vs-clock exemption); Code Standards #20
 // Purpose:  Locks that #30's slot 1 actually EXECUTES — the wiring proof — plus the single-roster-
 //           authority refusals the constructor now enforces. A dead seam and a live one are otherwise
 //           indistinguishable from outside, which is the ERR-030-014 failure mode one layer up. Also
 //           the composition-boundary third of ERR-028-007's three cursor-vs-clock checks (the other
 //           two — SeasonSaveManager.Save and .Load — live in SeasonSaveManagerTests.cs beside their
-//           #29/#41 siblings).
+//           #29/#41 siblings). v1.3 (ERR-028-014) rewrites the bootstrap-league accrual count for the
+//           anchored seed-day cursor and inverts the sentinel-exemption constructor case, which had
+//           been locking the defect as intended behaviour.
 
 using System;
 
@@ -52,10 +55,18 @@ namespace TacticalDirector.SeasonSave.Tests
             League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
             SeasonLoop loop = NewProgressionLoop(out _, out ProgressionEngine progression);
 
-            // Six days: the KD-4 cursor invariant refuses an advance past the pending round's fixture
-            // day (day 7). Six days cannot cross a birthday, so each player's band is fixed throughout.
-            const int Days = 6;
-            loop.AdvanceDays(Days);
+            // Six advances: the KD-4 cursor invariant refuses an advance past the pending round's
+            // fixture day (day 7). Six days cannot cross a birthday, so each player's band is fixed
+            // throughout.
+            //
+            // FIVE of those six accrue (ERR-028-014). The store is seeded on world day 0 and the seed
+            // day IS the cursor now, so slot 1's day-0 call is a no-op — the generated roster already
+            // describes the league as of day 0 — and days 1..5 are the days actually lived. The
+            // distinction is the whole content of the fix: before it, "never advanced" meant the store
+            // could not tell day 0 from day 3650, and the first advance banked one day either way.
+            const int Advances = 6;
+            const int AccruingDays = Advances - 1;
+            loop.AdvanceDays(Advances);
 
             int growth = 0, decline = 0, stable = 0;
             ClubCareerStates[] blocks = progression.ToBlocks();
@@ -68,8 +79,8 @@ namespace TacticalDirector.SeasonSave.Tests
                     int bootstrapAge = AgeOf(seeded, playerId);
 
                     long expected;
-                    if (bootstrapAge < PlayerProgressionConstants.GROWTH_AGE) { expected = +Days; growth++; }
-                    else if (bootstrapAge > PlayerProgressionConstants.DECLINE_AGE) { expected = -Days; decline++; }
+                    if (bootstrapAge < PlayerProgressionConstants.GROWTH_AGE) { expected = +AccruingDays; growth++; }
+                    else if (bootstrapAge > PlayerProgressionConstants.DECLINE_AGE) { expected = -AccruingDays; decline++; }
                     else { expected = 0; stable++; }
 
                     Assert.AreEqual(expected, blocks[c].Lifecycles[p].GrowthCursor,
@@ -332,21 +343,34 @@ namespace TacticalDirector.SeasonSave.Tests
         }
 
         [Test]
-        public void Constructor_WithSentinelProgressionCursor_IsAcceptedAtAnyClock()
+        public void Constructor_WithAStoreSeededFarBehindTheClock_IsRefused()
         {
-            // A never-advanced career (every player still at PROGRESSION_NOT_ADVANCED_SENTINEL) is
-            // coherent regardless of how far the world clock has moved — the sentinel exemption.
+            // INVERTED at ERR-028-014. This case previously asserted that a never-advanced store is
+            // "coherent at any clock" and passed — it was locking the defect as intended behaviour,
+            // the second test in this landing to do so.
+            //
+            // The exemption it enforced was copied from #29/#41, where it is sound: their fresh states
+            // carry no clock-anchored quantity, so "never advanced" means the same thing on every day.
+            // #28's does — age is DERIVED from BirthWorldDay — so a fresh #28 state means something
+            // different at every clock value. Composed three days on, this store's players would each
+            // have aged three days while banking a single day of growth; at a decade the same
+            // construction ages the whole league ten years, silently. The store is now seeded with its
+            // cursor anchored, so the ordinary lag rule refuses the pairing with no exemption to carve.
             (WorldStore world, SeasonState season, ProgressionEngine progression, PlayerCareerStates career) =
                 NewProgressionComponents();
 
             world.AdvanceDay();
             world.AdvanceDay();
-            world.AdvanceDay();   // world clock = 3, far from "never advanced" by either failure mode
+            world.AdvanceDay();   // world clock = 3; the store is anchored on day 0, so the lag is 3
 
-            Assert.DoesNotThrow(
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
                 () => new SeasonLoop(
                     world, season, RoundResolutionMode.QuickSimAll, career, null, progression),
-                "the sentinel is exempt — a never-advanced career is coherent at any clock.");
+                "a store whose lived history starts three days before the clock is not coherent — the "
+                + "next advance would replay the gap from one day's inputs, or, before the anchor "
+                + "existed, collapse it to a single day while every derived age jumped the whole span.");
+            StringAssert.Contains("more than one day behind", ex.Message,
+                "…and it must be the LAG half of the rule that refuses it, not the ahead half.");
         }
 
         // ── ERR-028-010: the wired configuration can actually play ───────────────────
@@ -668,4 +692,18 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | store and bootstrap were still attribute-identical when it       |
 // |         |            |        | compared them. It now seeds one club above the bootstrap and     |
 // |         |            |        | requires the round to differ from a bootstrap-resolved control.  |
+// | 1.3     | 2026-08-09 | —      | ERR-028-014: two tests changed meaning, one of them INVERTED —   |
+// |         |            |        | it had been locking the defect as intended behaviour.            |
+// |         |            |        | AdvanceDays_DrivesSlot1_AndEachPlayerAccruesHisOwnBandStep now    |
+// |         |            |        | expects 5 accruing days out of 6 advances, since the seed day     |
+// |         |            |        | (day 0) is now a cursor no-op — the generated league already      |
+// |         |            |        | describes itself as of day 0, so only days 1..5 are actually      |
+// |         |            |        | lived. Constructor_WithSentinelProgressionCursor_IsAcceptedAt-    |
+// |         |            |        | AnyClock renamed Constructor_WithAStoreSeededFarBehindTheClock_   |
+// |         |            |        | IsRefused: it asserted the sentinel exemption was correct, which  |
+// |         |            |        | it was not — the exemption is #29/#41's (their fresh states carry |
+// |         |            |        | no clock-anchored quantity); #28's fresh state DOES (age is       |
+// |         |            |        | derived from BirthWorldDay), so the same construction now         |
+// |         |            |        | refuses, and the assertion checks it is refused on the LAG half   |
+// |         |            |        | of the predicate specifically.                                    |
 #endregion

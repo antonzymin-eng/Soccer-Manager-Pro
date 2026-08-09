@@ -1,10 +1,11 @@
 // File:     src/player-progression/ProgressionEngine.cs
 // Created:  2026-08-08
-// Modified: 2026-08-08
+// Modified: 2026-08-09
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.1 / §3.4 / §3.5 / §4.2 / §4.5, KD-4 / KD-7 / KD-8,
 //           FR-PG-001/005/008/011/013/014/016/019/021/022/023; ERR-029-006 (the batch entry point);
-//           ERR-028-003 (new-game PA); Code Standards #20
+//           ERR-028-003 (new-game PA); ERR-028-014 (the never-advanced sentinel retired from the
+//           legal store states); Code Standards #20
 // Purpose:  The sole writer of #28 lifecycle state and of the career roster's evolving attributes
 //           (FR-PG-022). Owns the per-club career-state set KD-4 makes the SERIALIZED roster, exposes
 //           the FR-PG-021 batch daily entry point #30 drives at slot 1, and projects the current roster
@@ -192,6 +193,22 @@ namespace TacticalDirector.PlayerProgression
                 long previousPlayerId = long.MinValue;
                 for (int p = 0; p < club.Count; p++)
                 {
+                    // ERR-028-014: the never-advanced sentinel is not a legal STORE state, only a
+                    // refused world day (F8). SeedFrom anchors the cursor at the seed day, so nothing
+                    // writes it; admitting one here would restore the unbounded-span defect through
+                    // the one entry point that could still carry it, and would keep alive a branch of
+                    // AdvancePlayerTo that no longer exists.
+                    if (club.Lifecycles[p].LastAdvancedWorldDay
+                        == PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL)
+                    {
+                        throw new ArgumentException(
+                            $"Player {club.Records[p].PlayerId} in club {club.ClubId} carries the "
+                            + "never-advanced sentinel as its progression cursor. A career's lived "
+                            + "history has to start somewhere it can be checked against the world "
+                            + "clock (ERR-028-014); seed through SeedFrom, which anchors it.",
+                            nameof(clubs));
+                    }
+
                     int id = club.Records[p].PlayerId;
                     if (id <= previousPlayerId)
                     {
@@ -331,12 +348,13 @@ namespace TacticalDirector.PlayerProgression
         private static void AdvancePlayerTo(
             ref PlayerRecord rec, ref PlayerLifecycle life, uint worldDay, in TrainingInput input)
         {
-            if (life.LastAdvancedWorldDay == PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL)
-            {
-                GrowthProjection.AdvanceDayForPlayer(ref rec, ref life, worldDay, in input, curveEnabled: false);
-                life.LastAdvancedWorldDay = worldDay;
-            }
-            else if (worldDay > life.LastAdvancedWorldDay)
+            // ERR-028-014: there is no never-advanced branch. Every carried player has a real cursor —
+            // SeedFrom anchors it at the seed day and FromBlocks refuses the sentinel — so the only
+            // two cases are "there is a gap to replay" and "this day is already done". The branch that
+            // used to sit here banked a single day for an arbitrary span, and after the anchoring
+            // above nothing production-shaped could reach it: a guard on an unreachable branch ships
+            // green forever, which is why it is deleted rather than left as defence in depth.
+            if (worldDay > life.LastAdvancedWorldDay)
             {
                 for (uint d = life.LastAdvancedWorldDay + 1; d <= worldDay; d++)
                 {
@@ -440,7 +458,18 @@ namespace TacticalDirector.PlayerProgression
                 BirthWorldDay = birthWorldDay,
                 RetirementFlag = false,
                 RetirementDay = 0,
-                LastAdvancedWorldDay = PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL
+
+                // ERR-028-014: the seed day IS the cursor. A generated player describes the roster as
+                // of newGameWorldDay — §3.1.1 pins BirthWorldDay so his derived age equals Age0 exactly
+                // ON that day — so that day is already accounted for, not a day still to be lived.
+                //
+                // Leaving the sentinel here was the defect. It made "where does this career's lived
+                // history start" unrepresentable, so a store seeded at day 0 and composed against a
+                // clock at day 3650 banked ONE day of growth for a decade while every player silently
+                // read ten years older. Anchoring it means the ordinary lag rule refuses that pairing
+                // with no new gate: the gap machinery and the cursor-vs-clock predicate already
+                // handle every case the sentinel was carved out of.
+                LastAdvancedWorldDay = newGameWorldDay
             };
         }
 
@@ -632,4 +661,15 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | cursor makes the step idempotent (ERR-030-027) and gap-complete |
 // |         |            |        | (T-PG-DET-002). RunSeasonBoundary deliberately deferred — no   |
 // |         |            |        | draw site lands here.                                          |
+// | 1.1     | 2026-08-09 | —      | ERR-028-014: the never-advanced sentinel is retired from #28's |
+// |         |            |        | legal store states. SeedLifecycle anchors LastAdvancedWorldDay |
+// |         |            |        | at newGameWorldDay (the seed day IS the cursor, not a marker   |
+// |         |            |        | for "not yet lived") — a generated player describes the roster |
+// |         |            |        | as of that day, so it is already accounted for. AdvancePlayerTo |
+// |         |            |        | loses its never-advanced branch: only "gap to replay" and      |
+// |         |            |        | "already done" remain. FromBlocks now refuses a lifecycle       |
+// |         |            |        | carrying the sentinel cursor. Fixes the silent-data defect      |
+// |         |            |        | where a store seeded on day 0 and composed against a clock at  |
+// |         |            |        | day 3650 banked one day of growth for a decade while every      |
+// |         |            |        | player silently read ten years older.                          |
 #endregion

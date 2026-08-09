@@ -55,9 +55,21 @@ from collections import Counter, OrderedDict
 # Project pins
 # --------------------------------------------------------------------------
 
-# "Today" for the future-date check. Bump deliberately; a rolling clock would
-# make the lint's own verdict depend on when it ran.
-TODAY = datetime.date(2026, 8, 8)
+# "Today" for the future-date check.
+#
+# This was a hardcoded `datetime.date(2026, 8, 8)`, pinned on the reasoning that "a rolling clock
+# would make the lint's own verdict depend on when it ran". The intent — a reproducible verdict —
+# is right, but a pin does not deliver it: it goes stale the day after it is set, and from then on
+# every correctly-dated row written TODAY is reported as an ERROR for being "in the future". The
+# first same-day work after the pin landed produced nine such false errors, on a tool whose whole
+# job is to keep the header/version discipline honest. A check that cries wolf on correct work is
+# how a hygiene gate gets ignored.
+#
+# So: default to the real current date, and keep reproducibility available explicitly via --today.
+# A run that needs a fixed verdict pins it at the call site, where the pin is visible, rather than
+# in a constant nobody remembers to bump.
+DEFAULT_TODAY = datetime.date.today()
+TODAY = DEFAULT_TODAY
 
 SKIP_DIRS = {".git", "obj", "bin", "Temp", "Library", "node_modules", "__pycache__",
              "stress-reports", "packages"}
@@ -834,6 +846,9 @@ def main(argv=None):
     ap = argparse.ArgumentParser(
         description="Lint the recurring defect classes the #29/#41 AR passes keep re-finding.")
     ap.add_argument("--repo", default=".", help="repository root (default: .)")
+    ap.add_argument("--today", metavar="YYYY-MM-DD",
+                    help="pin the date the future-date check compares against, for a reproducible "
+                         "verdict (default: the real current date)")
     ap.add_argument("--suppressions",
                     default=None,
                     help="suppressions file (default: <repo>/tools/recurring-defect-lint.suppressions)")
@@ -848,6 +863,14 @@ def main(argv=None):
                          "(repeatable) — e.g. --path 'src/season-save/*' to scope a "
                          "sweep to one landing's surface")
     args = ap.parse_args(argv)
+
+    if args.today:
+        global TODAY
+        try:
+            TODAY = datetime.datetime.strptime(args.today, "%Y-%m-%d").date()
+        except ValueError:
+            sys.stderr.write("error: --today must be YYYY-MM-DD, got %r\n" % args.today)
+            return 2
 
     root = os.path.abspath(args.repo)
     if not os.path.isdir(os.path.join(root, "docs")):

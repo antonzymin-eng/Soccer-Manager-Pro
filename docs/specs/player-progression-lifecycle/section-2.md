@@ -1,9 +1,9 @@
 # Player Progression & Lifecycle #28 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026 (v0.4 — ERR-028-006: `BirthWorldDay` becomes a signed anchor; ERR-028-009: F8 sentinel-refusal row)
-**Last Updated (prior):** August 8, 2026 (v0.3 — ERR-028-005: `PlayerLifecycle` gains `LastAdvancedWorldDay`, the daily-step idempotency cursor)
-**Version:** 0.4
+**Last Updated:** August 9, 2026 (v0.5 — ERR-028-014: the never-advanced sentinel retired from #28's legal store states)
+**Last Updated (prior):** August 8, 2026 (v0.4 — ERR-028-006: `BirthWorldDay` becomes a signed anchor; ERR-028-009: F8 sentinel-refusal row)
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -114,7 +114,12 @@ public struct PlayerLifecycle
                                    //   the ORDINARY case for a non-zero generated age, not an edge case.
     public bool RetirementFlag;    // set on the world tick at RETIREMENT_AGE (KD-5)
     public uint RetirementDay;     // the world-day the flag was set (0 if not flagged)
-    public uint LastAdvancedWorldDay;  // the last world day the daily step ran; sentinel uint.MaxValue = never
+    public uint LastAdvancedWorldDay;  // the last world day the daily step ran. PROGRESSION_NOT_ADVANCED_SENTINEL
+                                   //   (uint.MaxValue) is NOT a legal value here (ERR-028-014) — it is a
+                                   //   refused WORLD DAY (F8) only. Every carried player's cursor is real:
+                                   //   SeedFrom (§3.1.1) anchors it at the seed day at generation, and
+                                   //   FromBlocks (the restore path) refuses a lifecycle carrying the
+                                   //   sentinel on decode.
 }
 
 // The per-player growth contribution #29 writes (KD-2). Neutral == no training (FR-PG-009).
@@ -139,6 +144,17 @@ first real step), the same reasoning and the same sentinel value #29 uses for
 fixture day's KD-2 slots twice — once pre-round and once from the advance loop (ERR-030-027) — so a
 day already reflected in the cursor is a no-op rather than a second application of growth (ERR-028-005).
 
+**Unlike #29/#41's identically-valued sentinels, #28's is never a legal resting state of the cursor
+itself (ERR-028-014).** #29's and #41's fresh states carry no clock-anchored quantity (zero fatigue, no
+injuries), so a state that has genuinely "never advanced" reads the same at every world day and their
+sentinel is a legitimate value the cursor field holds until the first daily step. #28's fresh state
+carries `BirthWorldDay`, from which age is derived (§3.1.1) — so a "never advanced" #28 state means a
+different age at every world day it might be composed against. `SeedFrom` therefore anchors
+`LastAdvancedWorldDay` at the seed day rather than at the sentinel, and `FromBlocks` refuses to
+construct a lifecycle whose cursor **is** the sentinel. The constant survives only as the refused input
+to `AdvanceDay`'s `worldDay` parameter (F8) — it is a value the API rejects, never a value the cursor
+field is found holding.
+
 The **career-state block** persisted under `PROGRESSION_SAVE_FORMAT_VERSION` is, per `PlayerId`:
 the complete `PlayerRecord` (identity + evolving `PlayerAttributes`, #27 types) **and** its
 `PlayerLifecycle` overlay, plus a store-level `NextPlayerId` monotonic cursor (FR-PG-011).
@@ -162,4 +178,5 @@ the complete `PlayerRecord` (identity + evolving `PlayerAttributes`, #27 types) 
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (0H+2M: M-1 age-model muddle → one BirthWorldDay-derived representation; M-2 per-club regen stream) → AR-2 (3M cross-fix regressions) → AR-3 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-08-08 | — | ERR-028-005: `PlayerLifecycle` gains `LastAdvancedWorldDay` (sentinel `uint.MaxValue`) so `AdvanceDay` is idempotent per day and gap-complete, matching #29's `TRAINING_NOT_ADVANCED_SENTINEL` precedent; documented alongside the struct listing. Spec + code, same commit (T1/T2a). |
 | 0.4 | 2026-08-08 | — | ERR-028-006: `BirthWorldDay` becomes a **signed** `long` — a new world starts on day 0, so any generated player with Age0 > 0 anchors negative; clamping to 0 read the whole league as age 0 after one daily step. ERR-028-009: new **F8** row — `AdvanceDay` fails loud on the never-advanced sentinel, matching #29/#41's guard. Spec + code, same commit (AR over the T1/T2a landing). |
+| 0.5 | 2026-08-09 | — | ERR-028-014: the `LastAdvancedWorldDay` struct comment and the sentinel discussion below §2.2's listing are corrected — the sentinel is NOT a legal cursor state for #28 as it is for #29/#41 (their fresh states carry no clock-anchored quantity; #28's derives age from `BirthWorldDay`). `SeedFrom` anchors the cursor at the seed day and `FromBlocks` refuses a lifecycle carrying the sentinel; the constant survives only as F8's refused `worldDay` input. Spec + code, same commit. |
 #endregion

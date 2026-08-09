@@ -1,6 +1,6 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
-// Modified: 2026-08-08 (#28 T1/T2a + AR pass 1 — v1.16)
+// Modified: 2026-08-09 (#28 T1/T2a + AR pass 1 — v1.16)
 //           v1.15; the pass 1-3 recording chain and the pass-5 doc fix are the rows below)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (day advance / KD-2 tick order), §3.4 (playing a round /

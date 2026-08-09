@@ -1,9 +1,9 @@
 # Player Progression & Lifecycle #28 — Section 3: Core Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026 (v0.4 — ERR-028-006/007/008/009: the signed age anchor, the cross-blob cursor rule, the destination-roster-overwrite refusal, and the F8 sentinel guard)
-**Last Updated (prior):** August 8, 2026 (v0.3 — ERR-028-003/004/005: the batch `AdvanceDay` entry point + idempotency cursor, the #47 new-game PA seam, and the shipped §3.5 save layout)
-**Version:** 0.4
+**Last Updated:** August 9, 2026 (v0.5 — ERR-028-014: the never-advanced sentinel retired from #28's legal store states)
+**Last Updated (prior):** August 8, 2026 (v0.4 — ERR-028-006/007/008/009: the signed age anchor, the cross-blob cursor rule, the destination-roster-overwrite refusal, and the F8 sentinel guard)
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -26,16 +26,29 @@ AdvanceDay(worldDay, in trainingInputs):          # FR-PG-021, the public entry 
     if worldDay == PROGRESSION_NOT_ADVANCED_SENTINEL: FAIL LOUD     # F8 (ERR-028-009)
     for each carried club, in ascending ClubId:
         for each carried player, in ascending PlayerId:
-            if lifecycle.LastAdvancedWorldDay == PROGRESSION_NOT_ADVANCED_SENTINEL:
-                AdvanceDayForPlayer(..., worldDay, ...)      # anchors; cannot know an earlier start
-                lifecycle.LastAdvancedWorldDay = worldDay
-            else if worldDay > lifecycle.LastAdvancedWorldDay:
+            if worldDay > lifecycle.LastAdvancedWorldDay:
                 for d in (lifecycle.LastAdvancedWorldDay + 1) .. worldDay:
                     AdvanceDayForPlayer(..., d, ...)          # gap-complete: the cursor is an accumulator
                 lifecycle.LastAdvancedWorldDay = worldDay
             else:
                 skip                                          # idempotent per day (ERR-030-027)
 ```
+
+**The seed day IS the cursor (ERR-028-014) — there is no never-advanced branch.** An earlier revision
+of this pseudocode carried a first case — `if lifecycle.LastAdvancedWorldDay == PROGRESSION_NOT_ADVANCED_SENTINEL:
+AdvanceDayForPlayer(..., worldDay, ...)` — with a comment claiming the store "anchors; cannot know an
+earlier start." That comment was the defect, not merely imprecise phrasing: the store **can** know,
+because `SeedFrom` (§3.1.1) is handed `newGameWorldDay` and anchors `LastAdvancedWorldDay` to it at
+generation — a generated player's records describe the roster **as of** that day, so that day is
+already accounted for, not a day still to be lived. Seeding the sentinel there instead made "where does
+this career's lived history start" unrepresentable: composing a store seeded at day 0 against a world
+clock at day 3650 (a save loaded far into a career, or a fresh regen bootstrap paired with a running
+season) collapsed a decade-long span into a single day's accrual on the first `AdvanceDay` call, while
+every player's **derived** age (§3.1.1) still read ten years on — silently. `FromBlocks` (the restore
+path) now **refuses** to construct a lifecycle carrying the sentinel cursor at all (F8's sibling rule,
+below), which makes the sentinel a refused world **day**, never a legal store **state**. With every
+carried player guaranteed a real cursor, only two cases remain — a gap to replay, or the day is already
+done — which is the pseudocode above.
 
 **The F8 guard runs before anything else in the batch (ERR-028-009).** #29's `TrainingStep` and #41's
 `MedicalStep` both refuse `worldDay == sentinel` under an explicit F8 row landed one day before #28's
@@ -251,9 +264,27 @@ predicate** rather than three independently hand-copied comparisons — the AR l
 the other is not. A lagging or leading cursor is worse here than for its siblings: `AdvanceDay` (§3.1)
 **replays** every day between the cursor and the target, so a file whose cursor is paired against the
 wrong world clock does not merely skip or repeat one day of growth — it banks N days of accrual from a
-single day's `TrainingInput`, silently compounding every day of drift into growth points. The sentinel
-value is exempt from the within-one-day check (a never-advanced player has no clock to be paired
-against).
+single day's `TrainingInput`, silently compounding every day of drift into growth points. **There is no
+sentinel exemption (ERR-028-014).** An earlier revision of this rule exempted the sentinel value from
+the within-one-day check, on the premise — copied from #29/#41's own cursor rule, where it is sound —
+that "a never-advanced player has no clock to be paired against." The premise is false for #28
+specifically: #29's and #41's fresh states (zero fatigue, no injuries) carry no clock-anchored quantity,
+so "never advanced" means the same thing at every world day, but #28's fresh state **does** carry one —
+age is derived from `BirthWorldDay` (§3.1.1) — so a never-advanced #28 state means a different age at
+every clock value it might be paired against. The sentinel is not a legal store state at all: §3.1's
+`SeedFrom` anchors `LastAdvancedWorldDay` at the seed day (never the sentinel), and `FromBlocks` (the
+decode path) **refuses** a lifecycle carrying the sentinel cursor. With no legal state left for the
+exemption to protect, the ordinary bidirectional lag predicate above applies unconditionally at all
+three boundaries.
+
+**Obligation for the deferred season boundary (regen insertion).** `RunSeasonBoundary` (§3.4) is not
+implemented by this landing, but when it is, a regen inserted mid-career **MUST** have its
+`LastAdvancedWorldDay` anchored at its insertion day — the world day `RunSeasonBoundary` runs on — for
+exactly the reason ERR-028-014 fixes at new-game: a regen is a freshly generated player whose records
+describe the roster as of the day he is inserted, not before, so seeding anything else (including the
+sentinel) reopens the identical unrepresentable-start defect one call site later. This is written down
+here so the next author implementing `RunSeasonBoundary` does not rediscover the sentinel trap from
+scratch.
 
 **The roster must never be silently erased (ERR-028-008).** #28's block, per KD-4, is the **canonical
 serialized roster** — not a cache rebuildable from the world seed once any player's `[1,20]` attributes
@@ -271,4 +302,5 @@ about not erasing a roster the codec can actually see.
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (0H+2M: M-1 age-model muddle → one BirthWorldDay-derived representation; M-2 per-club regen stream) → AR-2 (3M cross-fix regressions) → AR-3 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-08-08 | — | ERR-028-003: §3.2 states new-game `PotentialAbility` is authored data owned by #47, with #28's `NEW_GAME_PA_HEADROOM` seed as a placeholder, plus the recorded ~421-of-`ABILITY_MAX` growth-rate limitation. ERR-028-004: §3.5's layout corrected from version-first/domain-tag-as-identifier to the shipped magic-led `PROG` layout. ERR-028-005: §3.1 gains the public batch `AdvanceDay` pseudocode showing the `LastAdvancedWorldDay` idempotency/gap-completeness cursor. Spec + code, same commit (T1/T2a). |
 | 0.4 | 2026-08-08 | — | ERR-028-006: §3.1.1 states `BirthWorldDay` MUST be signed (a new world starts at day 0, so any generated player with `Age0 > 0` anchors negative) and forbids clamping it; §3.5's layout widened `u32 → i64`, free at format version 1. ERR-028-007: §3.5 gains the cross-blob cursor rule — `LastAdvancedWorldDay` is the fourth persisted per-player cursor and MUST be checked at all three save/load/composition boundaries through one shared predicate, lag being worse here because `AdvanceDay` replays gaps. ERR-028-008: §3.5 states the save root MUST refuse to overwrite a populated progression block with an empty one. ERR-028-009: §3.1's `AdvanceDay` pseudocode gains the F8 sentinel-refusal guard as its first line. Spec + code, same commit (AR over the T1/T2a landing). |
+| 0.5 | 2026-08-09 | — | ERR-028-014: §3.1's `AdvanceDay` pseudocode loses the never-advanced branch and its "anchors; cannot know an earlier start" comment, which was false — `SeedFrom` is handed the seed day, so the store always knows it; the seed-day-is-the-cursor rule is stated in its place. §3.5's cursor rule drops the sentinel exemption from the cross-blob cursor check — the exemption's premise (copied from #29/#41, sound there) is false for #28, whose fresh state carries a clock-anchored quantity (derived age); the sentinel is no longer a legal store state at either boundary, `FromBlocks` refuses it. §3.5 gains the deferred-season-boundary obligation: a mid-career regen insertion must anchor its cursor at its insertion day, for the same reason. Spec + code, same commit. |
 #endregion
