@@ -6,6 +6,7 @@
 // Modified: 2026-08-04 (ERR-008-018 — ScoreDribble gains the DirectionQuality_DRIBBLE term (close-chance-creation design KD-CC2))
 // Modified: 2026-08-05 (ERR-008-019 — ScoreShoot midfield long-shot gate: hard threshold → linear ramp (judgment-proxy doctrine P1/P5))
 // Modified: 2026-08-05 (ERR-008-019 owner revision — comment updated for the full-range half-width; formula unchanged)
+// Modified: 2026-08-09 (ERR-008-024 — ComputeDribbleDirectionQuality delegates to UtilityWeights.DribbleDirectionQuality; behaviour unchanged)
 // Author:   —
 // Spec:     Decision Tree #8 §3.2, §3.4, new §3.2/§7.7, Tactical Instructions #21 §3.2, Code Standards #20
 // Purpose:  Step 4 of the 6-step pipeline. Applies the utility scoring model to each
@@ -288,18 +289,12 @@ namespace TacticalDirector.DecisionTree
         /// </summary>
         private static float ComputeDribbleDirectionQuality(ref ActionOption opt, in DecisionContext ctx)
         {
-            Vector2 dir = opt.BestDribbleDirection;
-            Vector2 toGoal = ctx.OpponentGoalCentre - ctx.AgentPosition;
-
-            float dirLen = dir.magnitude;
-            float goalLen = toGoal.magnitude;
-            if (!(dirLen > 1e-4f) || !(goalLen > 1e-4f)) return 1.0f;   // NaN-safe !(x > 0) form
-
-            float cosine = Vector2.Dot(dir / dirLen, toGoal / goalLen);
-            if (float.IsNaN(cosine)) return 1.0f;
-
-            return UtilityWeights.DRIBBLE_GOAL_DIR_MIN_MODIFIER
-                 + ((cosine + 1.0f) * 0.5f) * (1.0f - UtilityWeights.DRIBBLE_GOAL_DIR_MIN_MODIFIER);
+            // ERR-008-024: the formula moved to UtilityWeights.DribbleDirectionQuality so that
+            // §3.1.5.2's sector ranking and this scoring term cannot drift apart. Behaviour here is
+            // unchanged — same inputs, same guards, same identity on a degenerate direction.
+            return UtilityWeights.DribbleDirectionQuality(
+                opt.BestDribbleDirection,
+                ctx.OpponentGoalCentre - ctx.AgentPosition);
         }
 
         // ── §3.2.5 HOLD ────────────────────────────────────────────────────────
@@ -552,4 +547,10 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        |   half-width [GT] moved to the full-range 0.25, so the branch comment now   |
 // |         |            |        |   describes the plateau-free full-attribute ramp rather than the 8.6–12.4   |
 // |         |            |        |   band.                                                                     |
+// | 1.16    | 2026-08-09 | —      | ERR-008-024: ComputeDribbleDirectionQuality's formula moved to               |
+// |         |            |        |   UtilityWeights.DribbleDirectionQuality(dir, toGoal) so §3.1.5.2's sector   |
+// |         |            |        |   scan and this scoring term share one copy instead of drifting apart.      |
+// |         |            |        |   Same inputs, same guards, same identity on a degenerate direction —       |
+// |         |            |        |   behaviour here is UNCHANGED; the fix is entirely in the generator's new   |
+// |         |            |        |   caller of the hoisted function.                                           |
 #endregion

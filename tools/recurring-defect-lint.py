@@ -57,7 +57,7 @@ from collections import Counter, OrderedDict
 
 # "Today" for the future-date check. Bump deliberately; a rolling clock would
 # make the lint's own verdict depend on when it ran.
-TODAY = datetime.date(2026, 8, 8)
+TODAY = datetime.date(2026, 8, 9)
 
 SKIP_DIRS = {".git", "obj", "bin", "Temp", "Library", "node_modules", "__pycache__",
              "stress-reports", "packages"}

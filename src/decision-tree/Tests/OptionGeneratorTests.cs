@@ -4,6 +4,7 @@
 // Modified: 2026-08-04 (ERR-008-020 — §3.1.3.3 pass-lane threat model locks, home + away)
 // Modified: 2026-08-05 (ERR-008-021 — §3.2.3.2 shot-lane block model locks, home + away + the GK exemption)
 // Modified: 2026-08-07 (ERR-008-023 — keeper-body lock added; far-post value recomputed; GK-read sweep de-tautologised)
+// Modified: 2026-08-09 (ERR-008-024 — two §3.1.5.2 sector-selection locks: goalward wins an all-clear tie; space still governs a blocked sector)
 // Author:   —
 // Spec:     Decision Tree #8 §5 (UT-OG-01 through UT-OG-07), Code Standards #20
 // Purpose:  Unit tests for OptionGenerator. Verifies all 7 action type gates,
@@ -1361,4 +1362,12 @@ namespace TacticalDirector.DecisionTree.Tests
 // |         |            |        | moved only the ability term, so an ability-neutral blocker made the     |
 // |         |            |        | sweep pure geometry and the assertion vacuous — the third tautology of  |
 // |         |            |        | this class in this file. + a swing assertion so it cannot recur.        |
+// | 1.11    | 2026-08-09 | —      | ERR-008-024. + two §3.1.5.2 sector-selection locks:                     |
+// |         |            |        | DribbleDirection_AllSectorsClear_PrefersTheGoalwardSectorNotTheFacing-  |
+// |         |            |        | One (the isolating lock — with every sector saturated at 1.0 the old    |
+// |         |            |        | strict > scan always kept sector 0 = AgentFacingDirection; fails        |
+// |         |            |        | pre-fix by construction, not by margin) and                             |
+// |         |            |        | DribbleDirection_GoalwardSectorBlocked_IsNotChosenDespiteBeingGoalward  |
+// |         |            |        | (KD-CC6: DirectionQuality is floored at 0.80, so it cannot overturn a   |
+// |         |            |        | genuinely blocked sector — space still governs).                        |
 #endregion

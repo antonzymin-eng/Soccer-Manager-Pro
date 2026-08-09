@@ -278,10 +278,41 @@ suite in the gate's own Debug configuration: **102 passed / 4 skipped, 0 failure
    parameters for every committed RUNNER every heartbeat, so the trigger tick is always re-stamped
    `currentTick + delay`; a consumer that waited for it would never fire. A timed run commit needs
    the parameters latched at assignment first.
-6. **The dribble is suppressed, never redirected** (KD-CC3). §3.1.5.3 emits a single candidate — the
-   free-space argmax — so the scoring stage cannot steer it, only decide how hard it competes. A
+6. **The dribble is suppressed, never redirected** (KD-CC3). §3.1.5.3 emits a single candidate —
+   the free-space argmax — so the scoring stage cannot steer it, only decide how hard it competes. A
    generator emitting the best *goalward* sector alongside the best *free* one would let the tree
-   choose between them; that is a §3.1.5 change, not a `[GT]`.
+   choose between them; that is a §3.1.5 change, not a `[GT]`. **REOPENED August 9, 2026 — a fix was
+   implemented as `ERR-008-024`, measured, and REFUSED (the KD-CC7 pattern; see §4 for the
+   precedent).** Rather than a generator emitting TWO competing candidates (goalward + free, which
+   §3.1.5.3 would then need scoring rules to arbitrate between, and which would grow the fixed-size
+   `ActionOption` buffer this assembly shares across every action type —
+   `DecisionTreeConstants.MaxOptions` = 17 — by a second DRIBBLE slot), §3.1.5.2's single-candidate
+   scan was changed to RANK its 8 sectors on `spaceInSector × DirectionQuality_DRIBBLE(sectorDir,
+   toGoal)` instead of `spaceInSector` alone, reusing the exact term §3.2.4.1 already applies at
+   scoring (no new constant — the floor is `DRIBBLE_GOAL_DIR_MIN_MODIFIER` = 0.80, unchanged). Root
+   cause, found only once this residual was chased down: `spaceInSector` saturates at exactly 1.0
+   for any sector with no opponent within `DRIBBLE_THREAT_RADIUS`, and the old scan's strict `>`
+   improvement test therefore always keeps the FIRST sector visited — sector 0,
+   `AgentFacingDirection` by construction — whenever two or more sectors are clear, the common case
+   in the final third. The carrier dribbles wherever he already faces; goal direction has no
+   influence on the choice at all, which is exactly why KD-CC3's scoring-only fix could suppress a
+   retreating dribble but never redirect it.
+   **This DOES fix the symptom:** `sim_match_engine_close_chance` — meanCosine −0.165 → **PASS**
+   (bound −0.16, unmoved), goalwardShare 0.407 → **PASS** (bound 0.42, unmoved).
+   **But the same build stalls play outright:** `sim_match_engine_play_develops` fails with "play
+   stalled: last possession change at tick 18424, ball last moving at tick 18465 of 32400", and
+   `sim_match_engine_shot_outcomes` fails `goals-still-scored` at **0**. A WIDER form ranking on
+   `space × DirectionQuality` outright (not as a tie-break) produced the **identical** stall at the
+   **identical tick**, plus mean-shot-distance 25.41 m against a 24.00 m ceiling — that identity is
+   what localises the cause to the tie-break itself, not to how much space either form trades away.
+   **Refused, not landed.** `OptionGenerator.cs` reverted to the pre-fix baseline logic (a
+   comment-only diff against the pre-ERR-008-024 commit). Kept, behaviour-neutral: the
+   `DirectionQuality_DRIBBLE` formula hoisted to `UtilityWeights.DribbleDirectionQuality(Vector2,
+   Vector2)` with `UtilityScorer` delegating to it. The two §3.1.5.2 unit locks the attempted fix
+   added are **REMOVED** — they locked behaviour that no longer exists. `DecisionTree.Tests`
+   **129 passed / 4 skipped / 0 failed.** Sending the dribble goalward is only safe once §10.2/§10.3's
+   blockers are addressed — see §10.5. See `spec-error-log.md` ERR-008-024 and
+   `decision-tree/section-3-1.md` §3.1.5.2.
 
 ---
 
@@ -447,6 +478,15 @@ which at 5 m/s is 14 m of running, and the counterfactual race for space 8 m goa
 - **`fast-balls-deflect-off-bodies` was never a reachability predicate in practice** — measured by
   execution at 4 events pre-C1 and 0 post-C1, across ~36 minutes of football, against a bound of
   "> 0". A positioning change moved it without touching collision code.
+- **Goalward dribbling (§7 item 6 / `ERR-008-024`) stalls the engine — consistent with §10.2/§10.3,
+  not a coincidence.** A tie-break fix that sends the carrier's dribble toward goal on a tie passes
+  the close-chance acceptance scenario but stalls `sim_match_engine_play_develops` outright (ball
+  last moving at tick 18465 of 32400) and zeroes `goals-still-scored`; a wider always-goalward form
+  produces the identical stall at the identical tick. That is exactly what §10.2/§10.3 predict:
+  nobody can receive a ball above 0.5 m (Bound B) and no composed slot reaches the box (Bound A), so
+  a carrier sent goalward runs into congestion with no pass option and no target to run at, and play
+  dies there. Implemented, measured, refused August 9, 2026. Sending the ball goalward is only safe
+  once those two bounds are addressed.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -454,4 +494,6 @@ which at 5 m/s is 14 m of running, and the counterfactual race for space 8 m goa
 | 1.0 | 2026-08-04 | — | Initial: implemented + measured. §1 both premises checked (the entry-count premise SURVIVED — the first in this chain); §2 the finding (box empty at 0.11 attackers, no target slot inside the area, and the average final-third dribble pointing AWAY from goal at cosine −0.30) and ERR-008-018; §3 KD-CC1..CC8; §4 the #15 run overlay implemented, measured and refused (its runner target moves 80.9 → 14.7 m while box occupancy falls 0.11 → 0.08); §5 acceptance, 2 of 3 predicates failing pre-fix by execution; §6 the measured result — a 6-of-6 per-seed flip in dribble direction, and an explicit list of what did NOT move, including the withdrawn box-occupancy claim that turned out to be one stalled match; §7 six recorded residuals headed by "#8 cannot pass to a place, only to a player", which now owns the ball-into-box stage; §8 the monotone ladder with the stall column that bounds the [GT] at 0.80. |
 | 1.1 | 2026-08-07 | — | Acceptance-3 (§9): the cosine predicate tripped at the ERR-008-021/-022/-023 main merge, pooled −0.119; per-seed the regression is entirely seed 0xD1A6D05E (−0.232 — its whole ERR-008-018 gain returned) while 0x0F1E…78 held (+0.078). Bound rebaselined −0.10 → −0.16 by owner call; share bound unchanged, margin thinned to 0.030. The regression is RECORDED for the KD-W1 calibration pass, not re-tuned here. `MatchEngineCloseChanceScenarios.cs` v1.1. |
 | 1.2 | 2026-08-08 | — | §10 added: the post-C1 re-measurement, and this document's own §7 item 1 priority claim RETRACTED (the finding stands; "the real bound" does not). Two bounds sit ahead of it. **Bound A** — the last 17 m of pitch are unreachable by composition at ANY legal constant value, for either side: the F442 ST anchor is 23.1 m from goal, the ball-relative offset is capped at `pull.x × 12 m`, and even at a `pull.x` of 1.0 (above every table value) the slot reaches only 16.8 m against a 16.5 m box edge, while the defensive block bottoms out at 17.4 m. Offside being live on the reception path inverts the order: the block drops BEFORE attackers occupy, else they are permanently offside. **Bound B, new and larger** — 44% of final-third passes are aerial (Lofted 25% + Cross 19%) and complete **1%**, against Ground 41% and ThroughBall 28%, because `RunFirstTouch` and `RunLooseBallPickup` both refuse any ball above 0.5 m (heading is deferred), so no agent can receive a ball out of the air; overall final-third completion is 23%. Corrected order recorded in §10.4, with pass-to-a-place last. §2/§4/§8 figures are superseded for every quantity restated in §10.1. No mechanism landed this pass; the instrument (v1.2) and the measurement are the deliverable. |
+| 1.3 | 2026-08-09 | — | §7 item 6 CLOSED as `ERR-008-024`, by a different route than the item proposed: one ranked DRIBBLE candidate instead of two competing ones. §3.1.5.2's 8-sector scan ranks on `spaceInSector × DirectionQuality_DRIBBLE(sectorDir, toGoal)` instead of `spaceInSector` alone — `spaceInSector` saturates at 1.0 for any clear sector, and the old strict `>` test always kept sector 0 (`AgentFacingDirection`) on a tie, which is exactly why KD-CC3's scoring-only fix could suppress a retreating dribble but never redirect it. Same term §3.2.4.1 already applies at scoring; no new constant. `sim_match_engine_close_chance`: meanCosine −0.165 → PASS (bound −0.16), goalwardShare 0.407 → PASS (bound 0.42); neither bound moved. See `spec-error-log.md` ERR-008-024. **[CORRECTED at v1.4 below — this fix was implemented, measured, and REFUSED. It was never landed: the same build stalls play outright and zeroes goals-still-scored. §7 item 6 is REOPENED, not closed.]** |
+| 1.4 | 2026-08-09 | — | **CORRECTION to v1.3: §7 item 6 / `ERR-008-024` was recorded CLOSED; it is not.** The fix was implemented, measured, and REFUSED — the KD-CC7 pattern (§4). The sector-scan tie-break DOES pass `sim_match_engine_close_chance` (meanCosine −0.165 → PASS, goalwardShare 0.407 → PASS) but STALLS `sim_match_engine_play_develops` outright (ball last moving at tick 18465 of 32400) and zeroes `goals-still-scored`; a wider `space × DirectionQuality` form produced the identical stall at the identical tick, plus mean-shot-distance 25.41 m against a 24.00 m ceiling. §7 item 6 REOPENED; §10.5 gains a cross-link recording that goalward dribbling is unsafe until §10.2/§10.3's bounds are addressed. `OptionGenerator.cs` reverted to the pre-fix baseline logic; kept, behaviour-neutral: `UtilityWeights.DribbleDirectionQuality` + `UtilityScorer`'s delegation to it. The two v1.3 unit locks are REMOVED. `DecisionTree.Tests` 129 passed / 4 skipped / 0 failed. See `spec-error-log.md` ERR-008-024 and `decision-tree/section-3-1.md` v1.8. |
 #endregion
