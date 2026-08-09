@@ -149,7 +149,19 @@ namespace TacticalDirector.SeasonSave
             // hand in the bootstrap product beside the store that has been evolving away from it since
             // day 0 — two surfaces that agree only at the moment anything would compare them, which is
             // the silent-divergence shape #29/#41 T2's H2 filed one layer down.
-            if (progressionOrNull != null && careerSquadsOrNull != null)
+            //
+            // An EMPTY store is NOT that authority (ERR-028-013). It carries no rosters, so it cannot
+            // be the thing every consumer reads through, and treating it as wired made the one
+            // composition the save root documents impossible to build: SeasonSaveContents.Progression
+            // is never null, a pre-#28 save carries a well-formed ZERO-club block, and
+            // SeasonSaveManager.Save's own refusal message tells the caller to thread that store back
+            // in. Beside a provider it tripped the two-authorities refusal below; alone it failed the
+            // season-coverage check. The only way through was to pass null INSTEAD of the loaded
+            // store — an undocumented special case, and the opposite of what the guard advised. An
+            // empty store is the absence of #28, stated rather than arrived at.
+            bool progressionIsRoster = progressionOrNull != null && progressionOrNull.ClubCount > 0;
+
+            if (progressionIsRoster && careerSquadsOrNull != null)
             {
                 throw new System.ArgumentException(
                     "Supply a progression store OR a squad provider, never both: when #28 is wired the "
@@ -159,7 +171,7 @@ namespace TacticalDirector.SeasonSave
                     nameof(careerSquadsOrNull));
             }
 
-            ISquadProvider resolvedSquads = progressionOrNull != null
+            ISquadProvider resolvedSquads = progressionIsRoster
                 ? new ProgressionSquads(progressionOrNull)
                 : careerSquadsOrNull;
 
@@ -168,7 +180,7 @@ namespace TacticalDirector.SeasonSave
             // subset would construct and advance days without complaint, then hand back a null squad
             // part-way through a round, after earlier fixtures had already been applied to the table.
             // Refuse the pairing rather than half-resolving a round.
-            if (progressionOrNull != null)
+            if (progressionIsRoster)
             {
                 ReadOnlyCollection<int> progressionClubs = season.ClubIds;
                 for (int i = 0; i < progressionClubs.Count; i++)
@@ -184,13 +196,29 @@ namespace TacticalDirector.SeasonSave
                 }
             }
 
-            if ((careerOrNull == null) != (resolvedSquads == null))
+            // A career still cannot be advanced without the rosters its attributes come from.
+            if (careerOrNull != null && resolvedSquads == null)
             {
                 throw new System.ArgumentException(
-                    "The career state and its squad provider are supplied together or not at all: a "
-                    + "career cannot be advanced without the rosters its attributes come from, and a "
-                    + "provider on its own drives nothing.",
-                    careerOrNull == null ? nameof(careerOrNull) : nameof(careerSquadsOrNull));
+                    "The career state needs the squad provider its attributes are read from: supply "
+                    + "careerSquadsOrNull, or a populated progression store for the loop to project "
+                    + "one from.",
+                    nameof(careerSquadsOrNull));
+            }
+
+            // …but a provider "on its own" is no longer inert (ERR-028-013). That rule predates #28:
+            // a bare ISquadProvider drives nothing, so requiring a career beside it was right. A
+            // PROGRESSION store drives slot 1 and is its own provider, so demanding #29/#41 career
+            // state beside it makes #28 unusable without two subsystems it does not depend on — and
+            // it made slot 1's own `_career == null` branch, the FR-PG-009 "no training anywhere"
+            // path, provably unreachable: a guard on a branch nothing can execute, which is how a
+            // dead path ships green forever.
+            if (careerOrNull == null && resolvedSquads != null && !progressionIsRoster)
+            {
+                throw new System.ArgumentException(
+                    "A squad provider on its own drives nothing: supply the career state it feeds, or "
+                    + "a populated progression store, which drives the slot-1 daily step by itself.",
+                    nameof(careerSquadsOrNull));
             }
 
             // The career must cover the season, and this is the only layer holding both — the same
@@ -227,7 +255,7 @@ namespace TacticalDirector.SeasonSave
             // (ERR-028-007). A loop can be composed from a store and a world that never met a save
             // file: ahead of the clock silently freezes growth, and lagging by two or more makes the
             // next advance REPLAY the gap, banking days of growth from one day's inputs.
-            if (progressionOrNull != null)
+            if (progressionIsRoster)
             {
                 ClubCareerStates[] careerBlocks = progressionOrNull.ToBlocks();
                 for (int c = 0; c < careerBlocks.Length; c++)
@@ -249,7 +277,13 @@ namespace TacticalDirector.SeasonSave
             Mode = mode;
             _career = careerOrNull;
             _careerSquads = resolvedSquads;
-            _progression = progressionOrNull;
+
+            // Only a store that IS the roster is retained (ERR-028-013): an empty one has nothing for
+            // slot 1 to advance, and holding it would make `_progression != null` mean two different
+            // things at the two places that read it. Save writes `loop.Progression ?? Empty`, so a
+            // loop composed from an empty store still round-trips to the same well-formed zero-club
+            // block it was built from.
+            _progression = progressionIsRoster ? progressionOrNull : null;
         }
 
         /// <summary>How this loop resolves a round's fixtures (§3.4.1).</summary>
@@ -1352,4 +1386,13 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | projects one from it instead (KD-4 single roster authority), and|
 // |         |            |        | gates the store's coverage + its cursor vs the world clock     |
 // |         |            |        | (ERR-028-007).                                                 |
+// | 1.17    | 2026-08-09 | —      | AR pass 2 (H1 + M1), ERR-028-013: an EMPTY ProgressionEngine is |
+// |         |            |        | no longer treated as a wired roster authority — it carries no   |
+// |         |            |        | rosters, and treating it as wired made the pre-#28 save the save |
+// |         |            |        | root deliberately WRITES impossible to resume, since            |
+// |         |            |        | SeasonSaveContents.Progression is never null. The pairing rule   |
+// |         |            |        | also splits: a career still needs a provider, but a populated    |
+// |         |            |        | store now composes WITHOUT #29/#41 career state, which is what   |
+// |         |            |        | makes slot 1's `_career == null` Neutral branch reachable — it   |
+// |         |            |        | had been provably dead since it was written.                    |
 #endregion

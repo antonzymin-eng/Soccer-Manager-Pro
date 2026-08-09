@@ -31,6 +31,10 @@ namespace TacticalDirector.SeasonSave.Tests
         private const int ManagerId = 1;
         private const int ClubCount = 4;
 
+        // The attribute floor SeedForWithClubStrengthened raises one club to. High enough that the
+        // club's SquadRating must move, well inside the [1,20] contract the codec range-gates.
+        private const int StrengthenedFloor = 18;
+
         // ── The wiring proof ──────────────────────────────────────────────────────────
 
         [Test]
@@ -153,6 +157,125 @@ namespace TacticalDirector.SeasonSave.Tests
                 + "distinction is the whole point of this case.");
         }
 
+        // ── ERR-028-013: an EMPTY store is the absence of #28, not a wired one ───────
+
+        [Test]
+        public void Constructor_WithAnEmptyProgressionStore_BesideABootstrapProvider_IsAccepted()
+        {
+            // The pre-#28 composition, which SeasonSaveManager.Save deliberately writes and its own
+            // refusal message tells the caller to resume from. SeasonSaveContents.Progression is NEVER
+            // null — a careerless save carries a well-formed ZERO-club block — so a caller threading it
+            // back in used to hit the two-authorities refusal here, and passing it alone instead failed
+            // the season-coverage check. The only way through was to pass null INSTEAD of the loaded
+            // store, which is the opposite of what the save root advises.
+            League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
+            var world = new WorldStore(ManagerId, WorldSeed);
+            SeasonState season = league.CreateSeason(managedClubId: 0);
+            var career = PlayerCareerStates.ForLeague(league, ClubIds(), injuryOccurrenceEnabled: true);
+
+            Assert.DoesNotThrow(
+                () => new SeasonLoop(
+                    world, season, RoundResolutionMode.QuickSimAll, career, league,
+                    ProgressionEngine.Empty),
+                "an empty store carries no rosters, so it cannot be the second authority the "
+                + "two-authorities refusal exists to prevent.");
+        }
+
+        [Test]
+        public void SaveThenResume_OfACareerWithNoProgression_RoundTripsThroughTheLoadedContents()
+        {
+            // The end-to-end shape the finding was really about: nothing anywhere reconstructed a
+            // SeasonLoop from SeasonSaveManager.Load's output, which is the one thing a real game does
+            // on every load. Threading contents.Progression back in verbatim — exactly as the Save-side
+            // guard instructs — must compose, and the resumed loop must still run.
+            League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
+            var world = new WorldStore(ManagerId, WorldSeed);
+            SeasonState season = league.CreateSeason(managedClubId: 0);
+            var career = PlayerCareerStates.ForLeague(league, ClubIds(), injuryOccurrenceEnabled: true);
+            var loop = new SeasonLoop(
+                world, season, RoundResolutionMode.QuickSimAll, career, league);
+            loop.AdvanceDays(3);
+
+            string path = System.IO.Path.Combine(
+                System.IO.Path.GetTempPath(), $"td-prog-resume-{Guid.NewGuid():N}.tdsave");
+            try
+            {
+                SeasonSaveManager.Save(loop, null, path);
+                SeasonSaveContents restored = SeasonSaveManager.Load(path);
+
+                Assert.AreEqual(0, restored.Progression.ClubCount,
+                    "precondition: this save's progression block is the empty one, which is the whole "
+                    + "case under test.");
+
+                SeasonLoop resumed = null;
+                Assert.DoesNotThrow(
+                    () => resumed = new SeasonLoop(
+                        restored.World, restored.Season, RoundResolutionMode.QuickSimAll,
+                        PlayerCareerStates.FromBlocks(
+                            restored.TrainingClubs, restored.MedicalClubs, restored.AppearanceClubs,
+                            injuryOccurrenceEnabled: true),
+                        league,
+                        restored.Progression),
+                    "contents.Progression must be threadable back verbatim — that is what the save "
+                    + "root's own refusal message instructs the caller to do.");
+
+                Assert.DoesNotThrow(() => resumed.AdvanceDays(1),
+                    "…and the resumed loop must actually run.");
+            }
+            finally
+            {
+                if (System.IO.File.Exists(path))
+                {
+                    System.IO.File.Delete(path);
+                }
+            }
+        }
+
+        [Test]
+        public void AProgressionStoreWithNoCareer_DrivesSlot1_OnTheNeutralBatch()
+        {
+            // #28 does not depend on #29 or #41, and a progression store is its own squad provider — so
+            // demanding career state beside it made #28 unusable without two unrelated subsystems, and
+            // made slot 1's `_career == null` branch (the FR-PG-009 "no training anywhere" path, and
+            // the only production consumer of TrainingInputBatch.Neutral) provably unreachable. A guard
+            // on a branch nothing can execute ships green forever, which is exactly the class this
+            // project keeps filing. This is the lock that the branch now executes.
+            League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
+            var world = new WorldStore(ManagerId, WorldSeed);
+            ProgressionEngine progression = SeedFor(league);
+
+            SeasonLoop loop = null;
+            Assert.DoesNotThrow(
+                () => loop = new SeasonLoop(
+                    world, league.CreateSeason(managedClubId: 0), RoundResolutionMode.QuickSimAll,
+                    careerOrNull: null, careerSquadsOrNull: null, progressionOrNull: progression),
+                "a populated progression store drives slot 1 on its own.");
+
+            long before = TotalCursor(progression);
+            loop.AdvanceDays(6);
+
+            Assert.AreNotEqual(before, TotalCursor(progression),
+                "slot 1 must have run on the Neutral batch — if this branch were still unreachable the "
+                + "constructor above would have thrown, and if it were reachable but dead the cursor "
+                + "would not move.");
+        }
+
+        [Test]
+        public void Constructor_WithABareProviderAndNoCareer_IsStillRefused()
+        {
+            // The relaxation above must not become "anything goes": a bare ISquadProvider with neither
+            // a career nor a progression store behind it still drives nothing, and the original pairing
+            // rule is right for that case. Without this the fix would have deleted a real guard.
+            League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
+            var world = new WorldStore(ManagerId, WorldSeed);
+
+            Assert.Throws<ArgumentException>(
+                () => new SeasonLoop(
+                    world, league.CreateSeason(managedClubId: 0), RoundResolutionMode.QuickSimAll,
+                    careerOrNull: null, careerSquadsOrNull: league),
+                "a provider on its own, with nothing behind it, still drives nothing.");
+        }
+
         // ── ERR-028-007: the fourth persisted cursor, checked at composition ──────────
 
         [Test]
@@ -250,25 +373,39 @@ namespace TacticalDirector.SeasonSave.Tests
         [Test]
         public void PlayingARound_ResolvesAgainstTheStore_NotTheBootstrap()
         {
-            // The other half of the same finding: the ISquadProvider overload resolved the round from
+            // The other half of the pass-1 finding: the ISquadProvider overload resolved the round from
             // the CALLER's provider rather than the loop's, so relaxing the reference gate alone would
-            // have played the round against the day-0 bootstrap. Driving enough days for growth to bank
-            // and then playing proves the round sees the store's current roster.
-            SeasonLoop loop = NewProgressionLoop(out _, out ProgressionEngine progression);
+            // have played the round against the day-0 bootstrap.
+            //
+            // AR pass 2: this test previously advanced six days, played, and asserted the store's
+            // attribute sum was unchanged across the round. That holds whichever provider resolved the
+            // fixtures — playing a round mutates no attributes — so it could not distinguish the two
+            // cases its own name claims to separate. Worse, six days bank six cursor points and
+            // POINT_COST is a whole year, so the store and the bootstrap were still attribute-identical
+            // at the moment of the assertion: there was nothing to tell apart.
+            //
+            // The discrimination has to come from a store that genuinely differs from the bootstrap.
+            // Seeding one club's squad at a raised attribute floor does that at day 0, and the round is
+            // then resolved by SquadRating — so if the loop reads the bootstrap, the diverged club's
+            // fixture must come out as the control's does.
+            League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
+            ProgressionEngine strengthened = SeedForWithClubStrengthened(league, clubId: 0);
 
-            // Mutate the store through its own step so the projection diverges from the bootstrap.
-            loop.AdvanceDays(6);
-            Squad projected = progression.SquadFor(0);
+            Squad fromStore = strengthened.SquadFor(0);
+            Squad fromBootstrap = league.ResolveByClubId(0);
+            Assert.Greater(SumAttributes(fromStore), SumAttributes(fromBootstrap),
+                "precondition: the store's club 0 must actually differ from the bootstrap's, or this "
+                + "test proves nothing about which of the two the round read.");
 
-            loop.AdvanceToNextFixtureDay();
-            Assert.DoesNotThrow(() => loop.AdvanceAndPlayNextRound(),
-                "the loop resolves the round through the provider it owns.");
+            MatchResult[] viaStore = PlayFirstRoundThroughTheStore(league, strengthened);
+            MatchResult[] viaBootstrap = PlayFirstRoundThroughAProvider(league);
 
-            // The store is the authority the round was resolved against: the same instance the loop
-            // holds, still projecting the evolved records rather than the bootstrap's.
-            Assert.AreEqual(
-                SumAttributes(projected), SumAttributes(progression.SquadFor(0)),
-                "the round must not have reset or bypassed the store's roster.");
+            Assert.AreEqual(viaBootstrap.Length, viaStore.Length,
+                "precondition: the same fixtures in both runs.");
+            Assert.IsFalse(ResultsMatch(viaStore, viaBootstrap),
+                "the round must resolve against the STORE's roster: an identical result set means it "
+                + "read the day-0 bootstrap instead, which is the silent divergence KD-4 exists to "
+                + "remove.");
         }
 
         [Test]
@@ -404,6 +541,80 @@ namespace TacticalDirector.SeasonSave.Tests
             return n;
         }
 
+        // A store seeded from the bootstrap with ONE club's attributes raised to a floor, so the store
+        // and the bootstrap genuinely disagree about that club at day 0. Growth cannot produce the
+        // divergence inside a test: POINT_COST is a whole year and the KD-4 cursor invariant refuses
+        // an advance past the pending round's fixture day, so nothing observable moves in six days.
+        private static ProgressionEngine SeedForWithClubStrengthened(League league, int clubId)
+        {
+            var squads = new Squad[league.ClubCount];
+            for (int c = 0; c < squads.Length; c++)
+            {
+                Squad source = league.ResolveByClubId(c);
+                if (c != clubId)
+                {
+                    squads[c] = source;
+                    continue;
+                }
+
+                var raised = new PlayerRecord[source.Count];
+                for (int p = 0; p < source.Count; p++)
+                {
+                    PlayerRecord rec = source.GetPlayer(p);
+                    int[] attrs = rec.Attributes.ToArray();
+                    for (int a = 0; a < attrs.Length; a++)
+                    {
+                        if (attrs[a] < StrengthenedFloor)
+                        {
+                            attrs[a] = StrengthenedFloor;
+                        }
+                    }
+                    var lifted = new PlayerAttributes();
+                    lifted.FromArray(attrs);
+                    lifted.WeakFootRating = rec.Attributes.WeakFootRating;
+                    rec.Attributes = lifted;
+                    raised[p] = rec;
+                }
+                squads[c] = new Squad(source.ClubId, raised);
+            }
+            return ProgressionEngine.SeedFrom(squads, 0u);
+        }
+
+        // The round as the loop's OWN provider resolves it (the store's projection).
+        private static MatchResult[] PlayFirstRoundThroughTheStore(
+            League league, ProgressionEngine progression)
+        {
+            var loop = new SeasonLoop(
+                new WorldStore(ManagerId, WorldSeed), league.CreateSeason(managedClubId: 0),
+                RoundResolutionMode.QuickSimAll,
+                careerOrNull: null, careerSquadsOrNull: null, progressionOrNull: progression);
+            loop.AdvanceToNextFixtureDay();
+            return loop.AdvanceAndPlayNextRound();
+        }
+
+        // The control: the same round resolved from the day-0 bootstrap, through a loop that owns no
+        // provider and is handed one at the call.
+        private static MatchResult[] PlayFirstRoundThroughAProvider(League league)
+        {
+            var loop = new SeasonLoop(
+                new WorldStore(ManagerId, WorldSeed), league.CreateSeason(managedClubId: 0),
+                RoundResolutionMode.QuickSimAll);
+            loop.AdvanceToNextFixtureDay();
+            return loop.AdvanceAndPlayNextRound(league);
+        }
+
+        private static bool ResultsMatch(MatchResult[] a, MatchResult[] b)
+        {
+            for (int i = 0; i < a.Length; i++)
+            {
+                if (a[i].HomeGoals != b[i].HomeGoals || a[i].AwayGoals != b[i].AwayGoals)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         private static long TotalCursor(ProgressionEngine progression)
         {
             long sum = 0;
@@ -445,4 +656,16 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | and accepted at any clock while still the sentinel. The other    |
 // |         |            |        | two boundaries (SeasonSaveManager.Save / .Load) are locked in    |
 // |         |            |        | SeasonSaveManagerTests.cs beside their #29/#41 siblings.         |
+// | 1.2     | 2026-08-09 | —      | AR pass 2. ERR-028-013 locks: an empty store composes beside a   |
+// |         |            |        | provider; contents.Progression threads back verbatim through a   |
+// |         |            |        | real save/load/resume; a store with no career drives slot 1 on   |
+// |         |            |        | the Neutral batch (the branch that was unreachable); and a bare  |
+// |         |            |        | provider with nothing behind it is STILL refused, so the         |
+// |         |            |        | relaxation did not delete a real guard. Also rewrites            |
+// |         |            |        | PlayingARound_ResolvesAgainstTheStore_NotTheBootstrap, whose     |
+// |         |            |        | assertions held whichever provider resolved the round — six      |
+// |         |            |        | days bank six cursor points against a POINT_COST of a year, so   |
+// |         |            |        | store and bootstrap were still attribute-identical when it       |
+// |         |            |        | compared them. It now seeds one club above the bootstrap and     |
+// |         |            |        | requires the round to differ from a bootstrap-resolved control.  |
 #endregion
