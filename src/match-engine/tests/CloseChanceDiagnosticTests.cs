@@ -1,8 +1,10 @@
 // File:     src/match-engine/tests/CloseChanceDiagnosticTests.cs
 // Created:  2026-08-03
-// Modified: 2026-08-08
+// Modified: 2026-08-09
 // Author:   —
-// Spec:     Decision Tree #8 §3.1, Positioning AI #12 §3.2, Attacking AI #15 §3.4, Pass Mechanics #5 §3.1.2, Testing Strategy #19 (instrument class)
+// Spec:     Decision Tree #8 §3.1, Positioning AI #12 §3.2, Attacking AI #15 §3.4, Pass Mechanics #5 §3.1.2,
+//           Heading Mechanics #10 §3.2/§3.9/§4.2-§4.3, Event System #17 §3.2.2 (boot-phase Subscribe),
+//           Testing Strategy #19 (instrument class)
 // Purpose:  Env-gated (TD_CREATION_DIAGNOSTIC=1) instrument for the residual
 //           gk-conversion-at-contact-design.md §7 item 4 recorded and did not fix:
 //           CLOSE-CHANCE CREATION, re-localized there to the final-third -> penalty-area
@@ -34,6 +36,21 @@
 //                 did. C2 also gained a counterfactual race: is the space 8 m goalward of the
 //                 ball one the attacking side would actually win a foot race to?
 //
+//           Report C5 (v1.3) asks a question C1-C4 do not: of the header intents #4.2
+//           (MatchEngine.TryCommitHeaderIntents) commits, how many ever make BALL CONTACT?
+//           HeadingEligibility.FindContactFrame holds the head centre fixed at the agent's
+//           CURRENT position while only the ball moves, contact requires the ball within
+//           HeadContactVolumeRadiusM (0.18 m) in 3-D and HeadContactVolumeHeightM (0.22 m)
+//           vertically, and the trigger fires at up to HeaderTriggerRangeM (1.5 m) horizontal —
+//           so commits may be near-universally failing to connect. C5a is the deciding number:
+//           HeaderExecutedEvent / (HeaderExecutedEvent + HeaderAttemptFailedEvent), the closest
+//           available proxy for contact rate (see C5a's own note on why the true commit count,
+//           item C-H1, is NOT OBSERVABLE without a new accessor). C5b censuses aerial-ball
+//           proximity independent of whether any header was even committed — is anyone ever
+//           close enough to head it at all? C5c/C5d follow the CROSS as a delivery mechanism:
+//           how it terminates, and where it lands when nobody touches it first. C5e measures
+//           offside annulments against the same final-third population C4 already tracks.
+//
 //           Asserts nothing (the ERR-030-014 convention) — pinning measured-but-wrong
 //           behaviour turns a defect into a contract. Acceptance predicates live in
 //           scenarios, not here.
@@ -48,9 +65,12 @@ using System.Text;
 
 using NUnit.Framework;
 
+using TacticalDirector.AgentMovement;
 using TacticalDirector.BallPhysics;
 using TacticalDirector.DecisionTree;
 using TacticalDirector.DeterministicSim;
+using TacticalDirector.EventSystem;
+using TacticalDirector.HeadingMechanics;
 using TacticalDirector.PassMechanics;
 using TacticalDirector.PlayerDatabase;
 
@@ -122,6 +142,52 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Bucket count implied by <see cref="ReceiverGapBucketBoundariesM"/> (boundaries + 1).</summary>
         private const int ReceiverGapBucketCount = 5;
 
+        // ── Report C5 (v1.3): aerial contact and crosses ───────────────────────────
+
+        /// <summary>Number of <see cref="FailureCause"/> members (Heading Mechanics #10 FR-HE-028: exactly
+        /// four). Read off the enum, not written down as a literal, matching <see cref="PassTypeCount"/>'s
+        /// own rationale.</summary>
+        private static readonly int FailureCauseCount = Enum.GetValues(typeof(FailureCause)).Length;
+
+        /// <summary>Number of <see cref="CrossOutcomeKind"/> members — the seven football outcomes C-H6's
+        /// brief names plus the <c>Unresolved</c> bookkeeping bucket (see that enum's own doc).</summary>
+        private static readonly int CrossOutcomeCount = Enum.GetValues(typeof(CrossOutcomeKind)).Length;
+
+        /// <summary>Coarse pitch-third buckets for Report C5a's header-contact-location breakdown:
+        /// defensive / middle / attacking, measured from the header-taker's OWN goal using the same
+        /// <see cref="FinalThirdDepthM"/> boundary C1-C4 already use. Not a production threshold.</summary>
+        private const int PitchThirdCount = 3;
+
+        /// <summary>
+        /// Report C5b bucket boundaries (m) for the minimum 3-D distance between the ball and the
+        /// nearest attacker/defender during an airborne episode. 0.18 m is <c>[CROSS]</c>
+        /// <see cref="HeadingMechanicsConstants.HeadContactVolumeRadiusM"/> — the contact volume itself, so
+        /// the first bucket answers "close enough to make contact this instant". 1.5 m is <c>[CROSS]</c>
+        /// <see cref="MatchEngineConstants.HeaderTriggerRangeM"/> — the trigger's own horizontal reach, so
+        /// the second bucket answers "close enough that a header COULD have been committed". 0.5 m, 3 m and
+        /// 5 m are ARBITRARY-BY-INSTRUMENT coarse spacing between those two production distances and a
+        /// "clearly not in the contest" tail — this file's brief names them explicitly and they answer no
+        /// spec formula.
+        /// </summary>
+        private static readonly float[] AerialProximityBucketBoundariesM = { 0.18f, 0.5f, 1.5f, 3f, 5f };
+
+        /// <summary>Bucket count implied by <see cref="AerialProximityBucketBoundariesM"/> (boundaries + 1).</summary>
+        private const int AerialProximityBucketCount = 6;
+
+        /// <summary>
+        /// Report C5d item 7's "nearby attacker" radius (m) at a cross's ground-contact point, exactly as
+        /// this report's own brief specifies it ("within 5 m"). ARBITRARY-BY-INSTRUMENT — not a production
+        /// value; happens to share a number with the last <see cref="AerialProximityBucketBoundariesM"/>
+        /// edge by coincidence, not by shared meaning (that one buckets a mid-air proximity SAMPLE; this
+        /// one counts attackers at a single ground-contact INSTANT).
+        /// </summary>
+        private const float CrossLandingAttackerRadiusM = 5.0f;
+
+        /// <summary>Coarse histogram buckets for how many attackers were within
+        /// <see cref="CrossLandingAttackerRadiusM"/> of a cross's landing point: 0 / 1 / 2 / 3-or-more.
+        /// ARBITRARY-BY-INSTRUMENT.</summary>
+        private const int CrossLandingAttackerCountBucketCount = 4;
+
         /// <summary>
         /// The three §5.Z.20–§5.Z.23 seeds (so every number here is same-population comparable with
         /// that chain) plus three more. The extension is not cosmetic: measured on the standing three,
@@ -139,6 +205,22 @@ namespace TacticalDirector.MatchEngine
             0x00000000D1A6D05FUL,
             0x1A2B3C4D5E6F7081UL,
         };
+
+        /// <summary>
+        /// Report C5 (v1.3) subscribes Tier A (<see cref="OffsideCalledEvent"/>) and Tier B
+        /// (<see cref="HeaderExecutedEvent"/>) consumers per match inside <see cref="RunMatch"/>, during
+        /// the boot window each fresh <c>new MatchEngine(seed)</c> opens (its constructor calls
+        /// <see cref="EventBus.ResetForNewMatch"/> before booting the registrars — see that method's own
+        /// doc). Every subsequent match's construction already clears the previous match's subscribers, but
+        /// this fixture's single <c>[Test]</c> is the LAST thing to subscribe in the run, so a
+        /// process-static leak toward <c>MaxHandlersPerEventType</c> for whichever fixture runs next in the
+        /// same test process is closed here — the <c>MatchEngineEventsTests</c> AR F1 precedent.
+        /// </summary>
+        [TearDown]
+        public void ResetEventBus()
+        {
+            EventBus.ResetForNewMatch();
+        }
 
         [Test]
         [Category("Calibration")]
@@ -164,6 +246,11 @@ namespace TacticalDirector.MatchEngine
             AppendSupportTable(report, seasons);
             AppendActionTable(report, seasons);
             AppendPassOutcomeTables(report, seasons);
+            AppendHeaderContactTable(report, seasons);
+            AppendAerialProximityTable(report, seasons);
+            AppendCrossOutcomeTable(report, seasons);
+            AppendCrossLandingTable(report, seasons);
+            AppendOffsideTable(report, seasons);
 
             report.AppendLine("Reading it:");
             report.AppendLine("  * raw crossings >> episodes => the 306.7 third-entry count is boundary");
@@ -184,6 +271,19 @@ namespace TacticalDirector.MatchEngine
             report.AppendLine("  * (v1.2) attackerNearer% (C2 item 7) well below 50% at the box edge => a ball");
             report.AppendLine("    played into the space the funnel needs would usually be lost anyway — the");
             report.AppendLine("    bottleneck is the RACE, not the decision to play the ball forward at all.");
+            report.AppendLine("  * (v1.3) C5a's executed/(executed+failed) ratio near 0% => headers are being");
+            report.AppendLine("    committed into contact that FindContactFrame's fixed-head-position search");
+            report.AppendLine("    almost never resolves — a contact-volume defect, not a trigger-range one.");
+            report.AppendLine("  * (v1.3) C5b's nearest-attacker histogram concentrated beyond 1.5 m while");
+            report.AppendLine("    headers are still being committed (C5a) => the trigger is firing on agents");
+            report.AppendLine("    who were never realistically going to reach the ball — HeaderTriggerRangeM");
+            report.AppendLine("    itself may be too generous, independent of the contact-volume question.");
+            report.AppendLine("  * (v1.3) C5c dominated by RestUntouched/OutOfPlay rather than any header =>");
+            report.AppendLine("    crosses are dying in the air with nobody contesting them — support geometry");
+            report.AppendLine("    in the box (C2), not the delivery itself, is the bound.");
+            report.AppendLine("  * (v1.3) C5e's mean offside-line distance far from the defended goal => the");
+            report.AppendLine("    attacking line is already high when annulments occur, which reads as an");
+            report.AppendLine("    attacking-shape question rather than a build-up-play one.");
 
             UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false;
             TestContext.WriteLine(report.ToString());
@@ -219,9 +319,32 @@ namespace TacticalDirector.MatchEngine
             int prevHolderForLaunch = MatchEngineConstants.NO_POSSESSION;
             int prevPassReceiverForLaunch = MatchEngineConstants.NO_POSSESSION;
             PendingPass pendingPass = PendingPass.None;
+            var aerial = AerialEpisode.None;
+
+            // ── Report C5 (v1.3) subscriptions ─────────────────────────────────
+            // Subscribed here — after construction (its EventBusRegistrar.Initialize() calls have
+            // already run, so the ordinals are non-zero) and before the tick loop's first RunTick
+            // below drains the first tick and closes the boot phase. HeaderExecutedEvent is Tier B
+            // and OffsideCalledEvent is Tier A — both MUST subscribe before the first DrainTick
+            // (FR-EVT-020/021) or throw ERR_EVT_REGISTRATION_PHASE (see MatchEngineEventsTests'
+            // TierA_Subscribe_AfterBootPhase_Throws for the same contract locked against
+            // PossessionChangedEvent). HeaderAttemptFailedEvent is Tier C and could subscribe at any
+            // time (FR-EVT-022), but is wired here alongside the other two for one subscription
+            // block. Each fresh `new MatchEngine(seed)` (the top of the NEXT call to this method)
+            // calls EventBus.ResetForNewMatch() before re-booting the registrars, so these
+            // subscriptions do not leak across matches; this fixture's own [TearDown] closes the
+            // window after the LAST match in a run (see ResetEventBus's doc).
+            var headerAgentIdsThisTick = new List<int>();
+            EventBus.Subscribe<HeaderExecutedEvent>(
+                (in HeaderExecutedEvent evt) => RecordHeaderExecuted(engine, m, headerAgentIdsThisTick, in evt));
+            EventBus.Subscribe<HeaderAttemptFailedEvent>(
+                (in HeaderAttemptFailedEvent evt) => RecordHeaderFailed(engine, m, in evt));
+            EventBus.Subscribe<OffsideCalledEvent>(
+                (in OffsideCalledEvent evt) => RecordOffsideAnnulment(engine, m, in pendingPass, in evt));
 
             for (int tick = 0; tick < TicksPerMatch; tick++)
             {
+                headerAgentIdsThisTick.Clear();
                 engine.RunTick();
 
                 UnityEngine.Vector3 ballPos = engine.BallView.Position;
@@ -236,6 +359,15 @@ namespace TacticalDirector.MatchEngine
                 int goalsThisTick = (engine.HomeScore - prevHome) + (engine.AwayScore - prevAway);
                 prevHome = engine.HomeScore;
                 prevAway = engine.AwayScore;
+
+                // ── Report C5c/C5d: classify a Cross tracked since an earlier tick ──
+                // Runs BEFORE the generic C4 resolution below, on the SAME per-tick signals, so both
+                // see identical inputs; SampleCrossOutcome is a no-op for a non-Cross pending pass and
+                // neither method reads or writes the other's fields (see that method's own doc).
+                if (pendingPass.Active)
+                {
+                    SampleCrossOutcome(engine, m, ref pendingPass, holder, goalsThisTick, headerAgentIdsThisTick);
+                }
 
                 // ── Report C4: resolve a pass tracked since an earlier tick ──────
                 // Runs every tick regardless of where the ball now is — a pass launched inside
@@ -264,6 +396,35 @@ namespace TacticalDirector.MatchEngine
 
                 if (inThird && !wasInThird) m.RawCrossings++;
                 wasInThird = inThird;
+
+                // ── Report C5b: aerial-ball proximity census ─────────────────────
+                // Airborne per TryCommitHeaderIntents' own gate ([CROSS] HeaderTriggerMinBallHeightM,
+                // MatchEngine.cs §4.2), AND in a team's attacking third (the same inThird/attackingEnd
+                // this report already computes for C1-C4). A change of END while airborne (a long
+                // clearance struck while still high) closes the first episode and opens a second,
+                // mirroring C1's own End-change handling above.
+                bool airborneInThird = inThird
+                    && ballPos.z > MatchEngineConstants.HeaderTriggerMinBallHeightM;
+                if (airborneInThird)
+                {
+                    if (!aerial.Open || aerial.End != attackingEnd)
+                    {
+                        if (aerial.Open) CloseAerialEpisode(m, in aerial);
+                        aerial = new AerialEpisode
+                        {
+                            Open = true,
+                            End = attackingEnd,
+                            MinAttackerDist = float.MaxValue,
+                            MinDefenderDist = float.MaxValue,
+                        };
+                    }
+                    SampleAerialProximity(engine, ref aerial, attackingEnd, ballPos);
+                }
+                else if (aerial.Open)
+                {
+                    CloseAerialEpisode(m, in aerial);
+                    aerial = AerialEpisode.None;
+                }
 
                 // ── Report C4: pass launch detection ─────────────────────────────
                 // The -1 -> R transition on the latch (see TestOnly_PassInFlightReceiverId's own
@@ -362,6 +523,16 @@ namespace TacticalDirector.MatchEngine
             }
 
             if (ep.Open) CloseEpisode(m, ref ep, TicksPerMatch, EpisodeOutcome.Cleared);
+            if (aerial.Open) CloseAerialEpisode(m, in aerial);
+
+            // A Cross still in flight (or grounded but not yet resolved) at full time — the C5c
+            // bookkeeping bucket, parallel to C4's own Unresolved handling below and run first since
+            // FinalizePending clears pendingPass.Active before KickerTeam could be read afterward.
+            if (pendingPass.Active && pendingPass.TypeKnown && pendingPass.Type == PassType.Cross
+                && !pendingPass.CrossOutcomeCaptured)
+            {
+                RecordCrossOutcome(m, pendingPass.KickerTeam, CrossOutcomeKind.Unresolved);
+            }
 
             // A pass still in flight (or still loose, pre-resolution) at full time. Every launched
             // pass gets exactly one outcome, so the match itself closes out whatever Report C4 was
@@ -851,6 +1022,294 @@ namespace TacticalDirector.MatchEngine
                 if (metres < ReceiverGapBucketBoundariesM[i]) return i;
             }
             return ReceiverGapBucketBoundariesM.Length;
+        }
+
+        // ── Report C5 (v1.3): aerial contact and crosses ───────────────────────────────────────────
+
+        /// <summary>
+        /// Report C5a's <see cref="HeaderExecutedEvent"/> Tier-B subscriber. Buckets by the header
+        /// TAKER's team and pitch third (measured from the ball's position at the contact frame,
+        /// carried on the event's own <c>IncomingBallState</c> — no extra engine query needed), and
+        /// appends the taker's agent id to <paramref name="headerAgentIdsThisTick"/> so
+        /// <see cref="SampleCrossOutcome"/> can attribute a Cross's termination to whichever side
+        /// headed it this same tick.
+        /// </summary>
+        private static void RecordHeaderExecuted(
+            MatchEngine engine, MatchTally m, List<int> headerAgentIdsThisTick, in HeaderExecutedEvent evt)
+        {
+            int team = engine.AgentTeamId(evt.AgentId);
+            int third = PitchThirdIndex(team, evt.IncomingBallState.Position.x);
+            m.HeaderExecutedByTeamThird[team][third]++;
+            headerAgentIdsThisTick.Add(evt.AgentId);
+        }
+
+        /// <summary>Report C5a's <see cref="HeaderAttemptFailedEvent"/> Tier-C subscriber. Buckets by
+        /// the ATTEMPTER's team and <see cref="FailureCause"/> — the breakdown that names which gate
+        /// killed the attempt (see this file's header note on <c>FindContactFrame</c>).</summary>
+        private static void RecordHeaderFailed(MatchEngine engine, MatchTally m, in HeaderAttemptFailedEvent evt)
+        {
+            int team = engine.AgentTeamId(evt.AgentId);
+            m.HeaderFailedByTeamCause[team][(int)evt.FailureCause]++;
+        }
+
+        /// <summary>Report C5a's pitch-third bucketing, measured from the header taker's OWN goal
+        /// (defensive/middle/attacking of HIS OWN half — a header taken deep in his own defensive
+        /// third is a defensive clearance, not an attacking header), using the same
+        /// <see cref="FinalThirdDepthM"/> boundary C1-C4 already use.</summary>
+        private static int PitchThirdIndex(int team, float ballX)
+        {
+            float ownGoalX = team == 0 ? 0f : MatchEngineConstants.PITCH_LENGTH_M;
+            float depthFromOwnGoal = Math.Abs(ballX - ownGoalX);
+            if (depthFromOwnGoal <= FinalThirdDepthM) return 0;             // defensive third
+            if (depthFromOwnGoal >= 2f * FinalThirdDepthM) return 2;        // attacking third
+            return 1;                                                      // middle third
+        }
+
+        /// <summary>Report C5b sample: the minimum 3-D distance from the ball to the nearest
+        /// (non-keeper, non-sent-off) attacking and defending outfielder this tick, folded into the
+        /// open <see cref="AerialEpisode"/>'s running minimum (an episode's own final bucket is its
+        /// LOWEST tick-sample, not a per-tick histogram entry — see <see cref="CloseAerialEpisode"/>).
+        /// </summary>
+        private static void SampleAerialProximity(
+            MatchEngine engine, ref AerialEpisode aerial, int attackingTeam, UnityEngine.Vector3 ballPos)
+        {
+            int defendingTeam = 1 - attackingTeam;
+            float nearestAttacker = float.MaxValue;
+            float nearestDefender = float.MaxValue;
+
+            for (int k = 0; k < MatchEngineConstants.PLAYERS_PER_TEAM; k++)
+            {
+                int ai = attackingTeam * MatchEngineConstants.PLAYERS_PER_TEAM + k;
+                if (!engine.TestOnly_IsGoalkeeper(ai) && !engine.TestOnly_IsSentOff(ai))
+                {
+                    float d = BallToAgentDistance3D(engine.TestOnly_AgentSnapshot(ai).Position, ballPos);
+                    if (d < nearestAttacker) nearestAttacker = d;
+                }
+
+                int di = defendingTeam * MatchEngineConstants.PLAYERS_PER_TEAM + k;
+                if (!engine.TestOnly_IsGoalkeeper(di) && !engine.TestOnly_IsSentOff(di))
+                {
+                    float d = BallToAgentDistance3D(engine.TestOnly_AgentSnapshot(di).Position, ballPos);
+                    if (d < nearestDefender) nearestDefender = d;
+                }
+            }
+
+            if (nearestAttacker < aerial.MinAttackerDist) aerial.MinAttackerDist = nearestAttacker;
+            if (nearestDefender < aerial.MinDefenderDist) aerial.MinDefenderDist = nearestDefender;
+        }
+
+        /// <summary>3-D distance from the ball to an agent's GROUND position. Agents carry no z here
+        /// (ground-plane kinematics — the synthetic heading jump lives only inside HeadingMechanics'
+        /// own per-agent <c>HeaderContactState</c>, not exposed by any <c>TestOnly_</c> accessor), so
+        /// this is the ball's height above a stationary point, the same simplification
+        /// <see cref="GkHeadingIntentSource.NearestHeaderCandidate"/> makes for the HORIZONTAL trigger
+        /// check, extended one axis further because this report asks about 3-D closeness.</summary>
+        private static float BallToAgentDistance3D(UnityEngine.Vector2 agentPos, UnityEngine.Vector3 ballPos)
+        {
+            float dx = agentPos.x - ballPos.x;
+            float dy = agentPos.y - ballPos.y;
+            return UnityEngine.Mathf.Sqrt(dx * dx + dy * dy + ballPos.z * ballPos.z);
+        }
+
+        /// <summary>Closes the open <see cref="AerialEpisode"/> into C5b's per-team sums/histograms.
+        /// Skipped entirely (not partially) when either side's minimum never resolved — every outfield
+        /// player on that side sent off mid-episode — the same degenerate-population guard
+        /// <see cref="SampleCounterfactualRace"/> already uses, so the two histograms' sample counts
+        /// never disagree.</summary>
+        private static void CloseAerialEpisode(MatchTally m, in AerialEpisode aerial)
+        {
+            if (aerial.MinAttackerDist == float.MaxValue || aerial.MinDefenderDist == float.MaxValue)
+            {
+                return;
+            }
+
+            m.AerialEpisodesByTeam[aerial.End]++;
+            m.AerialAttackerMinDistSumByTeam[aerial.End] += aerial.MinAttackerDist;
+            m.AerialDefenderMinDistSumByTeam[aerial.End] += aerial.MinDefenderDist;
+            m.AerialAttackerMinDistHistByTeam[aerial.End][AerialProximityBucketIndex(aerial.MinAttackerDist)]++;
+            m.AerialDefenderMinDistHistByTeam[aerial.End][AerialProximityBucketIndex(aerial.MinDefenderDist)]++;
+        }
+
+        private static int AerialProximityBucketIndex(float metres)
+        {
+            for (int i = 0; i < AerialProximityBucketBoundariesM.Length; i++)
+            {
+                if (metres < AerialProximityBucketBoundariesM[i]) return i;
+            }
+            return AerialProximityBucketBoundariesM.Length;
+        }
+
+        /// <summary>
+        /// Report C5c/C5d: classifies how a Cross-type pass tracked by <see cref="TryLaunchPass"/>
+        /// terminates, and separately captures its ground-contact landing point. Additive to, and run
+        /// BEFORE, the generic <see cref="ResolvePendingPass"/> each tick (see that call site's own
+        /// comment) so both read identical per-tick signals; this method neither reads nor writes any
+        /// field <see cref="ResolvePendingPass"/>/<see cref="FinalizePending"/> touch. A no-op for any
+        /// non-Cross pending pass. Each of the two captures fires at MOST once per launched Cross (the
+        /// <see cref="PendingPass.GroundContactCaptured"/>/<see cref="PendingPass.CrossOutcomeCaptured"/>
+        /// guards), and they are independent — a grounded cross can still go on to be headed away, so
+        /// ground contact does not itself terminate outcome tracking.
+        /// </summary>
+        private static void SampleCrossOutcome(
+            MatchEngine engine, MatchTally m, ref PendingPass pending,
+            int holder, int goalsThisTick, List<int> headerAgentIdsThisTick)
+        {
+            if (!pending.Active || !pending.TypeKnown || pending.Type != PassType.Cross)
+            {
+                return;
+            }
+
+            // C5d: ground-contact landing point. "Ground level" reuses the exact predicate
+            // MatchEngine's own RunFirstTouch/RunLooseBallPickup ground gates use (MatchEngine.cs
+            // ~lines 4365/4770/4912): ball height above BallPhysicsConstants.Ball.RADIUS at or below
+            // BallPhysicsConstants.Possession.ControlHeight — a [CROSS] reuse of the engine's own
+            // notion of "at ground level", not an instrument-invented threshold.
+            if (!pending.GroundContactCaptured)
+            {
+                UnityEngine.Vector3 ballPos3 = engine.BallView.Position;
+                if (ballPos3.z - BallPhysicsConstants.Ball.RADIUS <= BallPhysicsConstants.Possession.ControlHeight)
+                {
+                    RecordCrossLanding(engine, m, pending.KickerTeam, ballPos3);
+                    pending.GroundContactCaptured = true;
+                }
+            }
+
+            if (pending.CrossOutcomeCaptured)
+            {
+                return;
+            }
+
+            // A header this tick — attribute by comparing the taker's team to the crosser's. Prefers
+            // an ATTACKING header when more than one fires the same tick: a genuinely contested duel
+            // resolves to one winner (#10 §3.7), but a disturbed-but-undisturbed LOSER can also
+            // execute (HeadingMechanics.Update Pass 2), so more than one HeaderExecutedEvent in one
+            // tick is possible in principle.
+            if (headerAgentIdsThisTick.Count > 0)
+            {
+                bool attackerHeaded = false;
+                for (int i = 0; i < headerAgentIdsThisTick.Count; i++)
+                {
+                    if (engine.AgentTeamId(headerAgentIdsThisTick[i]) == pending.KickerTeam)
+                    {
+                        attackerHeaded = true;
+                        break;
+                    }
+                }
+                RecordCrossOutcome(m, pending.KickerTeam,
+                    attackerHeaded ? CrossOutcomeKind.AttackerHeader : CrossOutcomeKind.DefenderHeader);
+                pending.CrossOutcomeCaptured = true;
+                return;
+            }
+
+            if (holder >= 0)
+            {
+                CrossOutcomeKind kind = engine.TestOnly_IsGoalkeeper(holder) ? CrossOutcomeKind.KeeperClaimed
+                    : holder == pending.ReceiverId ? CrossOutcomeKind.ReachedReceiver
+                    : CrossOutcomeKind.GroundInterception;    // see CrossOutcomeKind's own doc on scope
+                RecordCrossOutcome(m, pending.KickerTeam, kind);
+                pending.CrossOutcomeCaptured = true;
+                return;
+            }
+
+            if (goalsThisTick > 0 || engine.RestartAppliedThisTick != RestartCue.None)
+            {
+                RecordCrossOutcome(m, pending.KickerTeam, CrossOutcomeKind.OutOfPlay);
+                pending.CrossOutcomeCaptured = true;
+                return;
+            }
+
+            // Ball Physics' own Rolling -> Stationary predicate, exactly as C4's own
+            // ResolvePendingPass/RecordTimeToRest already reuse it for item 4.
+            if (engine.BallView.Velocity.magnitude < BallPhysicsConstants.State.MinVelocity)
+            {
+                RecordCrossOutcome(m, pending.KickerTeam, CrossOutcomeKind.RestUntouched);
+                pending.CrossOutcomeCaptured = true;
+            }
+        }
+
+        private static void RecordCrossOutcome(MatchTally m, int kickerTeam, CrossOutcomeKind kind)
+        {
+            m.CrossesTrackedByTeam[kickerTeam]++;
+            m.CrossOutcomeByTeam[kickerTeam][(int)kind]++;
+        }
+
+        /// <summary>Report C5d sample: distance from the CROSSER's attacked goal at the ball's
+        /// ground-contact point, and how many of the crosser's own outfielders (non-keeper,
+        /// non-sent-off) were within <see cref="CrossLandingAttackerRadiusM"/> of it at that instant.
+        /// </summary>
+        private static void RecordCrossLanding(
+            MatchEngine engine, MatchTally m, int kickerTeam, UnityEngine.Vector3 landingPos)
+        {
+            float goalX = kickerTeam == 0 ? MatchEngineConstants.PITCH_LENGTH_M : 0f;
+            float dist = Math.Abs(landingPos.x - goalX);
+
+            var landing2 = new UnityEngine.Vector2(landingPos.x, landingPos.y);
+            int nearby = 0;
+            for (int k = 0; k < MatchEngineConstants.PLAYERS_PER_TEAM; k++)
+            {
+                int ai = kickerTeam * MatchEngineConstants.PLAYERS_PER_TEAM + k;
+                if (engine.TestOnly_IsGoalkeeper(ai) || engine.TestOnly_IsSentOff(ai)) continue;
+                if (UnityEngine.Vector2.Distance(engine.TestOnly_AgentSnapshot(ai).Position, landing2)
+                    <= CrossLandingAttackerRadiusM)
+                {
+                    nearby++;
+                }
+            }
+
+            m.CrossLandingSamplesByTeam[kickerTeam]++;
+            m.CrossLandingDistSumByTeam[kickerTeam] += dist;
+            m.CrossLandingAttackersNearbySumByTeam[kickerTeam] += nearby;
+            int bucket = Math.Min(nearby, CrossLandingAttackerCountBucketCount - 1);
+            m.CrossLandingAttackersNearbyHistByTeam[kickerTeam][bucket]++;
+        }
+
+        /// <summary>
+        /// Report C5e's <see cref="OffsideCalledEvent"/> Tier-A subscriber. Scoped to the SAME
+        /// final-third-launched population C4 already tracks: fires only when <paramref name="pending"/>
+        /// is a still-active tracked pass (any type, not just Cross — a header nod-down or a driven
+        /// through ball can be called offside exactly as a cross can) whose intended RECEIVER is the
+        /// offending agent — i.e. an offside call on a pass this report was already going to count as
+        /// Completed under C4's own generic resolution (see <see cref="ResolvePendingPass"/>), which
+        /// instead reads Intercepted there because <c>EvaluateAndApplyOffside</c> hands the restart to
+        /// the DEFENDING team's free-kick taker on the very same tick (MatchEngine.cs
+        /// <c>EvaluateAndApplyOffside</c>) — this counter recovers that misattribution as its own line
+        /// rather than changing C4's established categorization.
+        /// <para>
+        /// The offside-LINE distance is recomputed post-tick via the same pure
+        /// <see cref="OffsideEvaluator.ComputeOffsideLineX"/> the engine itself calls — a [CROSS] reuse,
+        /// not a reimplementation — from a fresh per-agent snapshot taken the moment this handler runs
+        /// (mid-<c>RunTick</c>, since Tier A dispatch happens inside <c>DrainTick</c>). It is therefore
+        /// EXACT for this tick's evaluation, not one-tick-stale.
+        /// </para>
+        /// </summary>
+        private static void RecordOffsideAnnulment(
+            MatchEngine engine, MatchTally m, in PendingPass pending, in OffsideCalledEvent evt)
+        {
+            // ReceiverId is set unconditionally by TryLaunchPass (unlike Type, which needs
+            // TypeKnown) — a match here is authoritative regardless of pass type, so TypeKnown is
+            // deliberately NOT part of this gate.
+            if (!pending.Active || pending.ReceiverId != evt.OffendingAgentId)
+            {
+                return;
+            }
+
+            m.OffsideAnnulledFinalThirdByTeam[pending.KickerTeam]++;
+
+            int defendingTeam = 1 - evt.Team;
+            var agents = new AgentState[MatchEngineConstants.SQUAD_SIZE];
+            var teamIds = new int[MatchEngineConstants.SQUAD_SIZE];
+            var sentOff = new bool[MatchEngineConstants.SQUAD_SIZE];
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                agents[i] = engine.TestOnly_AgentSnapshot(i);
+                teamIds[i] = engine.AgentTeamId(i);
+                sentOff[i] = engine.TestOnly_IsSentOff(i);
+            }
+
+            float lineX = OffsideEvaluator.ComputeOffsideLineX(
+                agents, teamIds, sentOff, defendingTeam, MatchEngineConstants.SQUAD_SIZE);
+            float defendedGoalX = defendingTeam == 0 ? 0f : MatchEngineConstants.PITCH_LENGTH_M;
+            m.OffsideLineDistSumByTeam[pending.KickerTeam] += Math.Abs(lineX - defendedGoalX);
         }
 
         // ── Aggregate tables ────────────────────────────────────────────────────────────────────
@@ -1372,6 +1831,300 @@ namespace TacticalDirector.MatchEngine
                  + Inv($"{(float)hist[3] / d,6:P0} | {(float)hist[4] / d,6:P0}");
         }
 
+        // ── Report C5 (v1.3) tables ─────────────────────────────────────────────────────────────
+
+        private static void AppendHeaderContactTable(StringBuilder report, List<MatchTally> ms)
+        {
+            report.AppendLine("C5a. HEADER CONTACT FUNNEL — committed -> executed/failed -> C-H4's deciding ratio.");
+            report.AppendLine("  C-H1 (header intents COMMITTED) is NOT OBSERVABLE from this test assembly today.");
+            report.AppendLine("  TestOnly_LastCommittedHeaderAttrs exists but holds only the MOST RECENT commit's");
+            report.AppendLine("  HeadingAgentAttributes — Heading/Strength/Balance/TeamId plus a Fatigue");
+            report.AppendLine("  MatchEngine always seeds at 0f (TryCommitHeaderIntents' own literal) — so the");
+            report.AppendLine("  SAME agent re-committing across episodes (the ordinary case for a team's best");
+            report.AppendLine("  header of the ball) writes byte-identical values every time, and a");
+            report.AppendLine("  tick-over-tick change check cannot tell two commits apart, let alone count");
+            report.AppendLine("  them. Would need a counter field incremented once per _heading.CommitIntent");
+            report.AppendLine("  call in TryCommitHeaderIntents, plus `internal int TestOnly_HeaderCommitCount");
+            report.AppendLine("  => _headerCommitCount;` — the exact TestOnly_ShotContacts / ");
+            report.AppendLine("  TestOnly_RushCommitCount precedent. NOT ADDED HERE (measurement-only pass, no");
+            report.AppendLine("  production accessor additions — the file header's own convention). C-H2+C-H3");
+            report.AppendLine("  below stand in as the best available proxy for total terminal outcomes — and");
+            report.AppendLine("  even that proxy can UNDER-count: HeadingMechanics.Update's per-agent loop");
+            report.AppendLine("  checks `currentFrame > landingFrame` BEFORE re-evaluating eligibility each");
+            report.AppendLine("  tick, so a commit whose FindContactFrame search returns a predicted contact");
+            report.AppendLine("  frame beyond the agent's own landing frame is silently deactivated with");
+            report.AppendLine("  NEITHER event ever published. Traced in the code (HeadingMechanics.cs), not");
+            report.AppendLine("  measured — measuring the gap itself would need the same missing counter.");
+            report.AppendLine();
+            report.AppendLine("  seed/team        | executed |  def% |  mid% |  att%");
+
+            var pooled = new MatchTally();
+            for (int i = 0; i < ms.Count; i++)
+            {
+                MatchTally m = ms[i];
+                AddC5Tally(pooled, m);
+                for (int t = 0; t < TeamCount; t++)
+                {
+                    report.AppendLine(FormatHeaderExecutedRow(Inv($"0x{m.Seed:X16}/{TeamLabel(t)}"), m.HeaderExecutedByTeamThird[t]));
+                }
+            }
+            for (int t = 0; t < TeamCount; t++)
+            {
+                report.AppendLine(FormatHeaderExecutedRow(Inv($"pooled/{TeamLabel(t)}"), pooled.HeaderExecutedByTeamThird[t]));
+            }
+            report.AppendLine();
+
+            report.AppendLine("  seed/team        | failed | mistimedEarly% | mistimedLate% | positionedPoorly% | disturbedInDuel%");
+            for (int i = 0; i < ms.Count; i++)
+            {
+                MatchTally m = ms[i];
+                for (int t = 0; t < TeamCount; t++)
+                {
+                    report.AppendLine(FormatHeaderFailedRow(Inv($"0x{m.Seed:X16}/{TeamLabel(t)}"), m.HeaderFailedByTeamCause[t]));
+                }
+            }
+            for (int t = 0; t < TeamCount; t++)
+            {
+                report.AppendLine(FormatHeaderFailedRow(Inv($"pooled/{TeamLabel(t)}"), pooled.HeaderFailedByTeamCause[t]));
+            }
+            report.AppendLine();
+
+            report.AppendLine("  C-H4 — THE DECIDING NUMBER: executed / (executed + failed), per seed then");
+            report.AppendLine("  pooled per team, then pooled across both teams. Near 0% means commits are");
+            report.AppendLine("  almost never resolving into contact — see this file's header note on");
+            report.AppendLine("  FindContactFrame's fixed-head-position search.");
+            report.AppendLine("  seed/team        | executed | failed | executed/(executed+failed)");
+
+            for (int i = 0; i < ms.Count; i++)
+            {
+                MatchTally m = ms[i];
+                for (int t = 0; t < TeamCount; t++)
+                {
+                    report.AppendLine(FormatHeaderRatioRow(Inv($"0x{m.Seed:X16}/{TeamLabel(t)}"),
+                        SumInt(m.HeaderExecutedByTeamThird[t]), SumInt(m.HeaderFailedByTeamCause[t])));
+                }
+            }
+            int executedAll = 0, failedAll = 0;
+            for (int t = 0; t < TeamCount; t++)
+            {
+                int executed = SumInt(pooled.HeaderExecutedByTeamThird[t]);
+                int failed = SumInt(pooled.HeaderFailedByTeamCause[t]);
+                report.AppendLine(FormatHeaderRatioRow(Inv($"pooled/{TeamLabel(t)}"), executed, failed));
+                executedAll += executed;
+                failedAll += failed;
+            }
+            report.AppendLine(FormatHeaderRatioRow("pooled/ALL", executedAll, failedAll));
+            report.AppendLine();
+        }
+
+        private static string FormatHeaderExecutedRow(string label, int[] third)
+        {
+            int n = third[0] + third[1] + third[2];
+            int d = Math.Max(1, n);
+            return Inv($"  {label,-16} | {n,8} | {(float)third[0] / d,4:P0} | ")
+                 + Inv($"{(float)third[1] / d,4:P0} | {(float)third[2] / d,4:P0}");
+        }
+
+        private static string FormatHeaderFailedRow(string label, int[] cause)
+        {
+            int n = SumInt(cause);
+            int d = Math.Max(1, n);
+            return Inv($"  {label,-16} | {n,6} | {(float)cause[(int)FailureCause.MistimedEarly] / d,15:P0} | ")
+                 + Inv($"{(float)cause[(int)FailureCause.MistimedLate] / d,13:P0} | ")
+                 + Inv($"{(float)cause[(int)FailureCause.PositionedPoorly] / d,18:P0} | ")
+                 + Inv($"{(float)cause[(int)FailureCause.DisturbedInDuel] / d,17:P0}");
+        }
+
+        private static string FormatHeaderRatioRow(string label, int executed, int failed)
+        {
+            int denom = Math.Max(1, executed + failed);
+            return Inv($"  {label,-16} | {executed,8} | {failed,6} | {(float)executed / denom,27:P1}");
+        }
+
+        private static int SumInt(int[] arr)
+        {
+            int s = 0;
+            for (int i = 0; i < arr.Length; i++) s += arr[i];
+            return s;
+        }
+
+        private static void AppendAerialProximityTable(StringBuilder report, List<MatchTally> ms)
+        {
+            report.AppendLine("C5b. AERIAL-BALL PROXIMITY CENSUS — one sample per airborne-in-a-final-third");
+            report.AppendLine(Inv($"  episode (ball z > {MatchEngineConstants.HeaderTriggerMinBallHeightM:F2} m, [CROSS] ")
+                             + "TryCommitHeaderIntents' own gate): the MINIMUM");
+            report.AppendLine("  3-D distance from the ball to the nearest attacking outfielder, and");
+            report.AppendLine("  separately the nearest defender, over the episode's whole duration.");
+            report.AppendLine("  Buckets (m): <=0.18 (HeadContactVolumeRadiusM) / 0.18-0.5 / 0.5-1.5");
+            report.AppendLine("  (<=HeaderTriggerRangeM) / 1.5-3 / 3-5 / >5 — see AerialProximityBucketBoundariesM's");
+            report.AppendLine("  own doc for which edges are production constants and which are instrument-arbitrary.");
+            report.AppendLine("  ATTACKER side:");
+            report.AppendLine("  seed/team        | episodes | mean(m) | <=0.18 | 0.18-0.5 | 0.5-1.5 | 1.5-3 |  3-5 |  >5");
+
+            var pooled = new MatchTally();
+            for (int i = 0; i < ms.Count; i++)
+            {
+                MatchTally m = ms[i];
+                AddC5Tally(pooled, m);
+                for (int t = 0; t < TeamCount; t++)
+                {
+                    report.AppendLine(FormatAerialRow(Inv($"0x{m.Seed:X16}/{TeamLabel(t)}"), t, m, attacker: true));
+                }
+            }
+            for (int t = 0; t < TeamCount; t++)
+            {
+                report.AppendLine(FormatAerialRow(Inv($"pooled/{TeamLabel(t)}"), t, pooled, attacker: true));
+            }
+            report.AppendLine();
+
+            report.AppendLine("  DEFENDER side (same episodes, so the sample counts match the table above):");
+            report.AppendLine("  seed/team        | episodes | mean(m) | <=0.18 | 0.18-0.5 | 0.5-1.5 | 1.5-3 |  3-5 |  >5");
+            for (int i = 0; i < ms.Count; i++)
+            {
+                MatchTally m = ms[i];
+                for (int t = 0; t < TeamCount; t++)
+                {
+                    report.AppendLine(FormatAerialRow(Inv($"0x{m.Seed:X16}/{TeamLabel(t)}"), t, m, attacker: false));
+                }
+            }
+            for (int t = 0; t < TeamCount; t++)
+            {
+                report.AppendLine(FormatAerialRow(Inv($"pooled/{TeamLabel(t)}"), t, pooled, attacker: false));
+            }
+            report.AppendLine();
+        }
+
+        private static string FormatAerialRow(string label, int team, MatchTally m, bool attacker)
+        {
+            int episodes = Math.Max(1, m.AerialEpisodesByTeam[team]);
+            float sum = attacker ? m.AerialAttackerMinDistSumByTeam[team] : m.AerialDefenderMinDistSumByTeam[team];
+            int[] hist = attacker ? m.AerialAttackerMinDistHistByTeam[team] : m.AerialDefenderMinDistHistByTeam[team];
+            return Inv($"  {label,-16} | {m.AerialEpisodesByTeam[team],8} | {sum / episodes,7:F2} | ")
+                 + Inv($"{(float)hist[0] / episodes,6:P0} | {(float)hist[1] / episodes,8:P0} | ")
+                 + Inv($"{(float)hist[2] / episodes,7:P0} | {(float)hist[3] / episodes,5:P0} | ")
+                 + Inv($"{(float)hist[4] / episodes,4:P0} | {(float)hist[5] / episodes,3:P0}");
+        }
+
+        private static void AppendCrossOutcomeTable(StringBuilder report, List<MatchTally> ms)
+        {
+            report.AppendLine("C5c. CROSS TERMINATING-OUTCOME CENSUS — every Cross-type pass C4 already");
+            report.AppendLine("  tracks (launched while the ball is in the crosser's OWN attacking third),");
+            report.AppendLine("  classified by how it ends. groundInt% also covers a different TEAM-MATE of");
+            report.AppendLine("  the crosser recovering it on the ground (see CrossOutcomeKind's own doc).");
+            report.AppendLine("  unresolved% is a bookkeeping bucket (still in flight at full time), not one");
+            report.AppendLine("  of the seven football outcomes — reported rather than silently folded in,");
+            report.AppendLine("  C4's own convention for its instrument-health counters.");
+            report.AppendLine("  seed/team        |   n | atkHeader% | defHeader% | groundInt% | reached% | outOfPlay% | restUntch% | keeperClm% | unresolv%");
+
+            var pooled = new MatchTally();
+            for (int i = 0; i < ms.Count; i++)
+            {
+                MatchTally m = ms[i];
+                AddC5Tally(pooled, m);
+                for (int t = 0; t < TeamCount; t++)
+                {
+                    report.AppendLine(FormatCrossOutcomeRow(Inv($"0x{m.Seed:X16}/{TeamLabel(t)}"), m.CrossOutcomeByTeam[t]));
+                }
+            }
+            var allOutcome = new int[CrossOutcomeCount];
+            for (int t = 0; t < TeamCount; t++)
+            {
+                report.AppendLine(FormatCrossOutcomeRow(Inv($"pooled/{TeamLabel(t)}"), pooled.CrossOutcomeByTeam[t]));
+                for (int k = 0; k < CrossOutcomeCount; k++) allOutcome[k] += pooled.CrossOutcomeByTeam[t][k];
+            }
+            report.AppendLine(FormatCrossOutcomeRow("pooled/ALL", allOutcome));
+            report.AppendLine();
+        }
+
+        private static string FormatCrossOutcomeRow(string label, int[] outcome)
+        {
+            int n = SumInt(outcome);
+            int d = Math.Max(1, n);
+            return Inv($"  {label,-16} | {n,3} | ")
+                 + Inv($"{(float)outcome[(int)CrossOutcomeKind.AttackerHeader] / d,9:P0} | ")
+                 + Inv($"{(float)outcome[(int)CrossOutcomeKind.DefenderHeader] / d,9:P0} | ")
+                 + Inv($"{(float)outcome[(int)CrossOutcomeKind.GroundInterception] / d,9:P0} | ")
+                 + Inv($"{(float)outcome[(int)CrossOutcomeKind.ReachedReceiver] / d,7:P0} | ")
+                 + Inv($"{(float)outcome[(int)CrossOutcomeKind.OutOfPlay] / d,9:P0} | ")
+                 + Inv($"{(float)outcome[(int)CrossOutcomeKind.RestUntouched] / d,9:P0} | ")
+                 + Inv($"{(float)outcome[(int)CrossOutcomeKind.KeeperClaimed] / d,9:P0} | ")
+                 + Inv($"{(float)outcome[(int)CrossOutcomeKind.Unresolved] / d,8:P0}");
+        }
+
+        private static void AppendCrossLandingTable(StringBuilder report, List<MatchTally> ms)
+        {
+            report.AppendLine("C5d. CROSS LANDING-POINT CENSUS — distance from the attacked goal at a");
+            report.AppendLine("  Cross's first ground contact (ball height above BallPhysicsConstants.Ball.RADIUS");
+            report.AppendLine("  at or below BallPhysicsConstants.Possession.ControlHeight — MatchEngine's own");
+            report.AppendLine("  ground-level gate). Only crosses that reach ground level BEFORE C5c resolves");
+            report.AppendLine("  them another way contribute a sample (see SampleCrossOutcome's own doc: an");
+            report.AppendLine("  AttackerHeader/DefenderHeader/KeeperClaimed/ReachedReceiver/OutOfPlay outcome");
+            report.AppendLine("  reached BEFORE ground contact leaves no landing sample). nearby = attackers within");
+            report.AppendLine(Inv($"  CrossLandingAttackerRadiusM ({CrossLandingAttackerRadiusM:F0} m) of the ")
+                             + "landing point at that instant.");
+            report.AppendLine("  seed/team        |   n | meanDist(m) | meanNearby | nearby=0 |   =1 |   =2 |   3+");
+
+            var pooled = new MatchTally();
+            for (int i = 0; i < ms.Count; i++)
+            {
+                MatchTally m = ms[i];
+                AddC5Tally(pooled, m);
+                for (int t = 0; t < TeamCount; t++)
+                {
+                    report.AppendLine(FormatCrossLandingRow(Inv($"0x{m.Seed:X16}/{TeamLabel(t)}"), m, t));
+                }
+            }
+            for (int t = 0; t < TeamCount; t++)
+            {
+                report.AppendLine(FormatCrossLandingRow(Inv($"pooled/{TeamLabel(t)}"), pooled, t));
+            }
+            report.AppendLine();
+        }
+
+        private static string FormatCrossLandingRow(string label, MatchTally m, int team)
+        {
+            int n = Math.Max(1, m.CrossLandingSamplesByTeam[team]);
+            int[] hist = m.CrossLandingAttackersNearbyHistByTeam[team];
+            return Inv($"  {label,-16} | {m.CrossLandingSamplesByTeam[team],3} | ")
+                 + Inv($"{m.CrossLandingDistSumByTeam[team] / n,11:F1} | ")
+                 + Inv($"{(float)m.CrossLandingAttackersNearbySumByTeam[team] / n,10:F2} | ")
+                 + Inv($"{(float)hist[0] / n,8:P0} | {(float)hist[1] / n,4:P0} | ")
+                 + Inv($"{(float)hist[2] / n,4:P0} | {(float)hist[3] / n,4:P0}");
+        }
+
+        private static void AppendOffsideTable(StringBuilder report, List<MatchTally> ms)
+        {
+            report.AppendLine("C5e. OFFSIDE ANNULMENTS — completed final-third passes (C4's own tracked");
+            report.AppendLine("  population — see RecordOffsideAnnulment's own scoping note) whose intended");
+            report.AppendLine("  receiver was flagged offside on reception, plus the mean offside LINE");
+            report.AppendLine("  distance from the DEFENDED goal at each annulment. By the ATTACKING (denied)");
+            report.AppendLine("  team.");
+            report.AppendLine("  seed/team        | annulled | meanLineDist(m)");
+
+            var pooled = new MatchTally();
+            for (int i = 0; i < ms.Count; i++)
+            {
+                MatchTally m = ms[i];
+                AddC5Tally(pooled, m);
+                for (int t = 0; t < TeamCount; t++)
+                {
+                    report.AppendLine(FormatOffsideRow(Inv($"0x{m.Seed:X16}/{TeamLabel(t)}"), m, t));
+                }
+            }
+            for (int t = 0; t < TeamCount; t++)
+            {
+                report.AppendLine(FormatOffsideRow(Inv($"pooled/{TeamLabel(t)}"), pooled, t));
+            }
+            report.AppendLine();
+        }
+
+        private static string FormatOffsideRow(string label, MatchTally m, int team)
+        {
+            int n = Math.Max(1, m.OffsideAnnulledFinalThirdByTeam[team]);
+            return Inv($"  {label,-16} | {m.OffsideAnnulledFinalThirdByTeam[team],8} | ")
+                 + Inv($"{m.OffsideLineDistSumByTeam[team] / n,15:F1}");
+        }
+
         private static string TeamLabel(int team) => team == 0 ? "home" : "away";
 
         // ── Types ───────────────────────────────────────────────────────────────────────────────
@@ -1425,7 +2178,55 @@ namespace TacticalDirector.MatchEngine
             public bool TypeKnown;
             public bool TimeToRestCaptured;
 
+            // Report C5c/C5d (v1.3) — meaningful only when Type == PassType.Cross && TypeKnown.
+            // Independent flags: ground contact is not terminal (see SampleCrossOutcome's doc), so
+            // a Cross can have GroundContactCaptured true while CrossOutcomeCaptured is still false.
+            public bool GroundContactCaptured;
+            public bool CrossOutcomeCaptured;
+
             public static PendingPass None => default;
+        }
+
+        /// <summary>
+        /// Report C5b's carried state for the ONE airborne-in-a-final-third episode currently open.
+        /// Deliberately separate from <see cref="Episode"/> (C1): that struct's "episode" is defined
+        /// by ball-in-third alone, this one additionally requires <c>ballPos.z &gt;</c>
+        /// <see cref="MatchEngineConstants.HeaderTriggerMinBallHeightM"/>, so the two open and close
+        /// on different ticks and conflating them would blur "the ball was deep" with "the ball was
+        /// in the air deep enough to be headed".
+        /// </summary>
+        private struct AerialEpisode
+        {
+            public bool Open;
+            public int End;
+            public float MinAttackerDist;
+            public float MinDefenderDist;
+
+            public static AerialEpisode None => default;
+        }
+
+        /// <summary>
+        /// Report C5c's seven football outcomes for how a Cross-type pass terminates, plus
+        /// <see cref="Unresolved"/> — a bookkeeping bucket for a Cross still in flight at full time,
+        /// exactly parallel to <see cref="PassOutcomeKind.Unresolved"/> and NOT one of the seven the
+        /// brief names (kept last, and reported separately, for the same reason C4's own
+        /// "instrument health" counters are reported separately from its football tables).
+        /// <see cref="GroundInterception"/> also covers the case this report's brief does not itemize
+        /// separately — a different TEAM-MATE of the kicker recovering the ball on the ground (C4's
+        /// own <c>TurnoverTeammate</c> shape) — since no non-header, non-receiver, non-keeper ground
+        /// recovery has anywhere else to go in this taxonomy; documented here rather than silently
+        /// folded in.
+        /// </summary>
+        private enum CrossOutcomeKind
+        {
+            AttackerHeader,
+            DefenderHeader,
+            GroundInterception,
+            ReachedReceiver,
+            OutOfPlay,
+            RestUntouched,
+            KeeperClaimed,
+            Unresolved,
         }
 
         private sealed class MatchTally
@@ -1518,6 +2319,36 @@ namespace TacticalDirector.MatchEngine
             public readonly int[] RaceSamplesByTeam = new int[TeamCount];
             public readonly int[] RaceAttackerNearerByTeam = new int[TeamCount];
 
+            // C5a (v1.3) — HeaderExecutedEvent by the header TAKER's team and pitch third, and
+            // HeaderAttemptFailedEvent by the ATTEMPTER's team and FailureCause. C-H1 (committed
+            // intents) is NOT tracked here — see AppendHeaderContactTable's own note on why.
+            public readonly int[][] HeaderExecutedByTeamThird = MakeTeamByBucket(PitchThirdCount);
+            public readonly int[][] HeaderFailedByTeamCause = MakeTeamByBucket(FailureCauseCount);
+
+            // C5b (v1.3) — aerial-ball proximity census, by ATTACKING team.
+            public readonly int[] AerialEpisodesByTeam = new int[TeamCount];
+            public readonly float[] AerialAttackerMinDistSumByTeam = new float[TeamCount];
+            public readonly float[] AerialDefenderMinDistSumByTeam = new float[TeamCount];
+            public readonly int[][] AerialAttackerMinDistHistByTeam = MakeTeamByBucket(AerialProximityBucketCount);
+            public readonly int[][] AerialDefenderMinDistHistByTeam = MakeTeamByBucket(AerialProximityBucketCount);
+
+            // C5c (v1.3) — cross terminating-outcome census, by the CROSSER's team.
+            public readonly int[] CrossesTrackedByTeam = new int[TeamCount];
+            public readonly int[][] CrossOutcomeByTeam = MakeTeamByBucket(CrossOutcomeCount);
+
+            // C5d (v1.3) — cross landing-point census, by the CROSSER's team.
+            public readonly int[] CrossLandingSamplesByTeam = new int[TeamCount];
+            public readonly float[] CrossLandingDistSumByTeam = new float[TeamCount];
+            public readonly int[] CrossLandingAttackersNearbySumByTeam = new int[TeamCount];
+            public readonly int[][] CrossLandingAttackersNearbyHistByTeam = MakeTeamByBucket(CrossLandingAttackerCountBucketCount);
+
+            // C5e (v1.3) — offside annulments, by the ATTACKING (denied) team. Scoped to the SAME
+            // final-third-launched population C4 already tracks (see RecordOffsideAnnulment's doc):
+            // only an annulment whose offending agent is the RECEIVER of a still-active tracked
+            // PendingPass counts here.
+            public readonly int[] OffsideAnnulledFinalThirdByTeam = new int[TeamCount];
+            public readonly float[] OffsideLineDistSumByTeam = new float[TeamCount];
+
             private static int[][] MakeTeamByType()
             {
                 var a = new int[TeamCount][];
@@ -1593,6 +2424,51 @@ namespace TacticalDirector.MatchEngine
 
             dst.LaunchesWithNoKickerDerived += src.LaunchesWithNoKickerDerived;
             dst.LaunchesSupersededPending += src.LaunchesSupersededPending;
+        }
+
+        /// <summary>Pools every Report-C5 field of <paramref name="src"/> into <paramref name="dst"/> —
+        /// the <see cref="AddPassTally"/> precedent, kept separate from it because C5's fields are a
+        /// distinct group added in a later version and pooling them together would make a future
+        /// per-report split harder, not easier.</summary>
+        private static void AddC5Tally(MatchTally dst, MatchTally src)
+        {
+            for (int t = 0; t < TeamCount; t++)
+            {
+                for (int k = 0; k < PitchThirdCount; k++)
+                {
+                    dst.HeaderExecutedByTeamThird[t][k] += src.HeaderExecutedByTeamThird[t][k];
+                }
+                for (int k = 0; k < FailureCauseCount; k++)
+                {
+                    dst.HeaderFailedByTeamCause[t][k] += src.HeaderFailedByTeamCause[t][k];
+                }
+
+                dst.AerialEpisodesByTeam[t] += src.AerialEpisodesByTeam[t];
+                dst.AerialAttackerMinDistSumByTeam[t] += src.AerialAttackerMinDistSumByTeam[t];
+                dst.AerialDefenderMinDistSumByTeam[t] += src.AerialDefenderMinDistSumByTeam[t];
+                for (int b = 0; b < AerialProximityBucketCount; b++)
+                {
+                    dst.AerialAttackerMinDistHistByTeam[t][b] += src.AerialAttackerMinDistHistByTeam[t][b];
+                    dst.AerialDefenderMinDistHistByTeam[t][b] += src.AerialDefenderMinDistHistByTeam[t][b];
+                }
+
+                dst.CrossesTrackedByTeam[t] += src.CrossesTrackedByTeam[t];
+                for (int k = 0; k < CrossOutcomeCount; k++)
+                {
+                    dst.CrossOutcomeByTeam[t][k] += src.CrossOutcomeByTeam[t][k];
+                }
+
+                dst.CrossLandingSamplesByTeam[t] += src.CrossLandingSamplesByTeam[t];
+                dst.CrossLandingDistSumByTeam[t] += src.CrossLandingDistSumByTeam[t];
+                dst.CrossLandingAttackersNearbySumByTeam[t] += src.CrossLandingAttackersNearbySumByTeam[t];
+                for (int b = 0; b < CrossLandingAttackerCountBucketCount; b++)
+                {
+                    dst.CrossLandingAttackersNearbyHistByTeam[t][b] += src.CrossLandingAttackersNearbyHistByTeam[t][b];
+                }
+
+                dst.OffsideAnnulledFinalThirdByTeam[t] += src.OffsideAnnulledFinalThirdByTeam[t];
+                dst.OffsideLineDistSumByTeam[t] += src.OffsideLineDistSumByTeam[t];
+            }
         }
 
         // ── Helpers ─────────────────────────────────────────────────────────────────────────────
@@ -1671,4 +2547,46 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | nobody). docs/tracking/close-chance-creation-design.md's existing   |
 // |         |            |        | numbers for that column predate this correction. Assertion-free    |
 // |         |            |        | throughout (ERR-030-014); no production files touched.              |
+// | 1.3     | 2026-08-09 | —      | Report C5: aerial contact and crosses. C5a subscribes                |
+// |         |            |        | HeaderExecutedEvent (Tier B) / HeaderAttemptFailedEvent (Tier C)     |
+// |         |            |        | during each match's boot window (before the first DrainTick, the    |
+// |         |            |        | MatchEngineEventsTests boot-phase idiom) and reports the C-H4        |
+// |         |            |        | deciding ratio, executed/(executed+failed), by team/third/           |
+// |         |            |        | FailureCause. C-H1 (committed intents) is recorded as NOT            |
+// |         |            |        | OBSERVABLE — TestOnly_LastCommittedHeaderAttrs holds only the LAST   |
+// |         |            |        | commit's attrs, which are byte-identical across a re-committing      |
+// |         |            |        | agent (Fatigue is always seeded 0f) — naming the exact accessor a    |
+// |         |            |        | real counter would need; not added (no production changes). Also    |
+// |         |            |        | traces, without measuring, a silent-drop path in                     |
+// |         |            |        | HeadingMechanics.Update: the per-agent landing check runs BEFORE     |
+// |         |            |        | eligibility re-evaluation each tick, so a commit whose               |
+// |         |            |        | FindContactFrame prediction lands beyond the agent's own landing     |
+// |         |            |        | frame can be deactivated with neither event ever firing. C5b         |
+// |         |            |        | censuses the minimum 3-D ball-to-nearest-attacker/defender distance  |
+// |         |            |        | over every airborne-in-a-final-third episode ([CROSS]                |
+// |         |            |        | HeaderTriggerMinBallHeightM), bucketed at HeadContactVolumeRadiusM   |
+// |         |            |        | (0.18 m) and HeaderTriggerRangeM (1.5 m) plus three                  |
+// |         |            |        | arbitrary-by-instrument edges. C5c/C5d extend the EXISTING C4        |
+// |         |            |        | Cross-type PendingPass tracking (additive — a new SampleCrossOutcome |
+// |         |            |        | runs BEFORE ResolvePendingPass each tick on identical signals,       |
+// |         |            |        | touches none of its fields): C5c classifies termination into the     |
+// |         |            |        | seven football outcomes this report's brief names plus an            |
+// |         |            |        | Unresolved bookkeeping bucket; C5d captures the ground-contact       |
+// |         |            |        | landing point (MatchEngine's own ground-level gate: ball height      |
+// |         |            |        | above Ball.RADIUS at or below Possession.ControlHeight) and the      |
+// |         |            |        | attacker count within 5 m of it, for crosses that reach ground       |
+// |         |            |        | before C5c resolves them another way. C5e subscribes                 |
+// |         |            |        | OffsideCalledEvent (Tier A) and recovers, as its own counter, the    |
+// |         |            |        | completed-final-third-passes-annulled-by-offside population that     |
+// |         |            |        | C4's existing Completed/Intercepted split currently misattributes    |
+// |         |            |        | as Intercepted (EvaluateAndApplyOffside hands the restart to the     |
+// |         |            |        | DEFENDING team's free-kick taker the same tick) — C4's own            |
+// |         |            |        | categorization is left untouched. The offside LINE distance is       |
+// |         |            |        | recomputed via the same pure OffsideEvaluator.ComputeOffsideLineX    |
+// |         |            |        | the engine itself calls, from a fresh per-agent snapshot taken       |
+// |         |            |        | inside the Tier A handler itself (mid-tick, Events phase, after      |
+// |         |            |        | Resolve and after the tick's one Physics-phase movement step — so    |
+// |         |            |        | EXACT for that tick, not stale). Every new table split by team AND   |
+// |         |            |        | by seed, pooled both ways (#8 ERR-008-002 precedent). Assertion-free |
+// |         |            |        | throughout (ERR-030-014); no production files touched.               |
 #endregion
