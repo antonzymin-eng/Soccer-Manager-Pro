@@ -223,6 +223,27 @@ namespace TacticalDirector.SeasonSave
                 careerOrNull.RequireCursorsWithinClock(world.CurrentWorldTick);
             }
 
+            // The same rule for #28's cursor, at the same boundary and through the same owner
+            // (ERR-028-007). A loop can be composed from a store and a world that never met a save
+            // file: ahead of the clock silently freezes growth, and lagging by two or more makes the
+            // next advance REPLAY the gap, banking days of growth from one day's inputs.
+            if (progressionOrNull != null)
+            {
+                ClubCareerStates[] careerBlocks = progressionOrNull.ToBlocks();
+                for (int c = 0; c < careerBlocks.Length; c++)
+                {
+                    for (int p = 0; p < careerBlocks[c].Count; p++)
+                    {
+                        PlayerCareerStates.RequireProgressionCursorWithinClock(
+                            world.CurrentWorldTick,
+                            careerBlocks[c].ClubId,
+                            careerBlocks[c].Records[p].PlayerId,
+                            careerBlocks[c].Lifecycles[p].LastAdvancedWorldDay,
+                            "SeasonLoop composition");
+                    }
+                }
+            }
+
             _world = world;
             _state = season;
             Mode = mode;

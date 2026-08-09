@@ -135,7 +135,7 @@ namespace TacticalDirector.SeasonSave
 
             RequireCoherentCareerBlocks(trainingClubs, medicalClubs, appearanceClubs);
             RequireCareerCursorsWithinClock(
-                world.CurrentWorldTick, trainingClubs, medicalClubs, appearanceClubs);
+                world.CurrentWorldTick, trainingClubs, medicalClubs, appearanceClubs, progression);
 
             // The FIRST cross-blob rule, symmetric at last (AR pass 6 M1): the KD-4 calendar-cursor
             // invariant was Load-only, three lines above a gate whose own doc states the
@@ -162,6 +162,19 @@ namespace TacticalDirector.SeasonSave
             byte[] blob = SeasonSaveCodec.Encode(
                 worldBlob, seasonBlob, in trainingBlock, in medicalBlock, in appearanceBlock,
                 in progressionBlock, matchBlob);
+
+            // ERR-028-008: refuse to overwrite a roster with an empty one. #28's block is the
+            // serialized roster (KD-4), so writing a zero-club block over a file that carries one
+            // deletes a career's banked growth with EVERY gate green — the world, season, training,
+            // medical and appearance blocks all intact around the hole, the frame still v5, Load still
+            // succeeding. The realistic way to reach it is a resume that never threaded
+            // SeasonSaveContents.Progression back into its loop, which no signature can force. It IS
+            // detectable here, because the destination is readable: an empty store may create a file
+            // and may overwrite an empty one, never a populated one.
+            if (progression.ClubCount == 0)
+            {
+                RequireDestinationCarriesNoRoster(path);
+            }
 
             string tempPath = path + ".tmp";
             try
@@ -247,9 +260,48 @@ namespace TacticalDirector.SeasonSave
                 loop.Career != null
                     ? loop.Career.AppearanceBlocks()
                     : Array.Empty<ClubAppearanceStates>(),
-                // A careerless loop still saves a well-formed empty career store, not a null: the
-                // block is mandatory, and "no careers tracked" is a zero-club block.
+                // A loop with no #28 store saves a well-formed EMPTY block — that is the honest
+                // pre-#28 composition (a career whose rosters come from the bootstrap), and it
+                // round-trips correctly. What must never happen is an empty block overwriting a file
+                // whose roster came from #28; that is guarded at the write itself, below, because it is
+                // a property of the DESTINATION rather than of this loop.
                 loop.Progression ?? ProgressionEngine.Empty);
+        }
+
+        // Reads the destination's progression block, if the destination exists and is a well-formed
+        // season save. A file that cannot be read at all is not this guard's business — an unreadable
+        // or foreign destination is simply overwritten, exactly as before.
+        private static void RequireDestinationCarriesNoRoster(string path)
+        {
+            if (!File.Exists(path))
+            {
+                return;
+            }
+
+            int existingClubs;
+            try
+            {
+                SeasonSaveBlobs existing = SeasonSaveCodec.Decode(File.ReadAllBytes(path));
+                ClubCareerStates[] blocks =
+                    ProgressionSaveCodec.Decode(existing.ProgressionBlob, out _);
+                existingClubs = blocks.Length;
+            }
+            catch (Exception)
+            {
+                // Not a readable season save (corrupt, truncated, a different format, or a v4 file).
+                // Nothing to protect.
+                return;
+            }
+
+            if (existingClubs > 0)
+            {
+                throw new InvalidOperationException(
+                    "Refusing to overwrite " + path + ": it carries a career roster for " +
+                    existingClubs + " club(s) and this save has none. #28's block IS the roster " +
+                    "(KD-4), so this write would delete it silently. Resume the loop with the " +
+                    "ProgressionEngine from SeasonSaveContents.Progression rather than rebuilding " +
+                    "the league from the world seed.");
+            }
         }
 
         /// <summary>
@@ -322,7 +374,7 @@ namespace TacticalDirector.SeasonSave
             // The second cross-blob rule (AR pass 5 M4): see RequireCareerCursorsWithinClock. Enforced
             // on load as well as save because a hand-edited or mispaired file arrives HERE.
             RequireCareerCursorsWithinClock(
-                world.CurrentWorldTick, trainingClubs, medicalClubs, appearanceClubs);
+                world.CurrentWorldTick, trainingClubs, medicalClubs, appearanceClubs, progression);
 
             // The in-progress match was configured with the AVAILABILITY-FILTERED squad (#41 FR-MD-023,
             // #29/#41 T2), and the snapshot records only each team's ClubId — it cannot record "which
@@ -552,7 +604,8 @@ namespace TacticalDirector.SeasonSave
             uint worldTick,
             ClubTrainingStates[] trainingClubs,
             ClubInjuryStates[] medicalClubs,
-            ClubAppearanceStates[] appearanceClubs)
+            ClubAppearanceStates[] appearanceClubs,
+            ProgressionEngine progression)
         {
             // One predicate set, one owner (AR pass 9 M1): the per-cursor rules live on
             // PlayerCareerStates beside the composition-boundary walk, so the two gates cannot
@@ -587,7 +640,27 @@ namespace TacticalDirector.SeasonSave
                         appearanceClubs[c].States[i].BitsAsOfWorldDay, "Career save");
                 }
             }
-        }
+        
+            // The FOURTH persisted per-player cursor (ERR-028-007). Added to this walker rather than
+            // checked separately, because a second walk over the same rule is the parallel-surface
+            // defect AR pass 9 collapsed for the first three.
+            if (progression != null)
+            {
+                ClubCareerStates[] careerBlocks = progression.ToBlocks();
+                for (int c = 0; c < careerBlocks.Length; c++)
+                {
+                    for (int p = 0; p < careerBlocks[c].Count; p++)
+                    {
+                        PlayerCareerStates.RequireProgressionCursorWithinClock(
+                            worldTick,
+                            careerBlocks[c].ClubId,
+                            careerBlocks[c].Records[p].PlayerId,
+                            careerBlocks[c].Lifecycles[p].LastAdvancedWorldDay,
+                            "Season save");
+                    }
+                }
+            }
+}
     }
 }
 

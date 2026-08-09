@@ -4,10 +4,12 @@
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.1 / §3.4 / §3.5 / §5, KD-4 / KD-7,
 //           FR-PG-011/013/014/019/021/022/023; ERR-029-006 (the batch entry point);
-//           ERR-030-027 (the twice-per-fixture-day call); Code Standards #20
+//           ERR-030-027 (the twice-per-fixture-day call); ERR-028-006 (the signed age anchor);
+//           ERR-028-009 (the sentinel is not a legal world day, F8); Code Standards #20
 // Purpose:  T-PG-DET-001/002, T-PG-RET-001, T-PG-SAVE-001, plus the locks this landing needs that #28
-//           §5 does not list: per-day idempotency, the batch's key-agreement refusals, and the KD-4
-//           projection — the one that fails if roster authority is moved back off #28's block.
+//           §5 does not list: per-day idempotency, the batch's key-agreement refusals, the KD-4
+//           projection — the one that fails if roster authority is moved back off #28's block — the
+//           signed BirthWorldDay anchor (ERR-028-006), and the F8 sentinel guard (ERR-028-009).
 
 using System;
 
@@ -133,6 +135,122 @@ namespace TacticalDirector.PlayerProgression.Tests
 
             Assert.IsFalse(engine.LifecycleView(ClubId, FirstPlayerId).RetirementFlag,
                 "the retirement test is hard AT RETIREMENT_AGE, not below it.");
+        }
+
+        // ── ERR-028-006: the signed age anchor ────────────────────────────────────────
+
+        [Test]
+        public void SeedFrom_AtWorldDayZero_ThenAdvanceDay_PreservesEachPlayersBootstrapAge()
+        {
+            // ERR-028-006: with BirthWorldDay held as uint, SeedLifecycle's anchor
+            // (newGameDay − age·DAYS_PER_YEAR) clamped to 0 for every player with a non-zero generated
+            // age, because a new world starts on day 0 and that anchor is NEGATIVE for anyone but a
+            // newborn. The clamp made the derived age worldDay/365 — the entire league read age 0 after
+            // the very first daily step. Varied, non-zero ages at world day 0 are exactly the case a
+            // uint anchor could not represent.
+            int[] ages = { 17, 22, 28, 34 };
+            var players = new PlayerRecord[ages.Length];
+            for (int i = 0; i < ages.Length; i++)
+            {
+                players[i] = Player(FirstPlayerId + i, ages[i]);
+            }
+            var squad = new Squad(ClubId, players);
+
+            ProgressionEngine engine = ProgressionEngine.SeedFrom(new[] { squad }, newGameWorldDay: 0u);
+            engine.AdvanceDay(0, TrainingInputBatch.Neutral);
+
+            for (int i = 0; i < ages.Length; i++)
+            {
+                LifecycleViewModel view = engine.LifecycleView(ClubId, FirstPlayerId + i);
+                Assert.AreEqual(ages[i], view.Age,
+                    $"player {FirstPlayerId + i}'s age must survive the first daily step at world day " +
+                    "0 — a clamped uint anchor would read every one of these non-zero ages as 0 here.");
+            }
+        }
+
+        [Test]
+        public void AdvanceDay_AtWorldDayZero_EachAgeBandAccruesItsOwnStepFromTheBootstrapAge()
+        {
+            // The unit-level twin of the bootstrap-league proof in
+            // SeasonLoopProgressionTests.AdvanceDays_DrivesSlot1_AndEachPlayerAccruesHisOwnBandStep —
+            // this one is hand-built rather than sourced from LeagueBootstrap, since player-progression
+            // cannot reference season-save. Fails exactly as that one would if ERR-028-006 recurred:
+            // a clamped anchor puts every age at 0, which is always Growth, so the Stable and Decline
+            // assertions below would go red first.
+            var players = new[]
+            {
+                Player(FirstPlayerId + 0, age: 18),   // Growth: < GROWTH_AGE (24)
+                Player(FirstPlayerId + 1, age: 27),   // Stable: GROWTH_AGE..DECLINE_AGE (24..30)
+                Player(FirstPlayerId + 2, age: 34),   // Decline: > DECLINE_AGE (30)
+            };
+            var squad = new Squad(ClubId, players);
+            ProgressionEngine engine = ProgressionEngine.SeedFrom(new[] { squad }, newGameWorldDay: 0u);
+
+            engine.AdvanceDay(0, TrainingInputBatch.Neutral);
+
+            ClubCareerStates[] blocks = engine.ToBlocks();
+            Assert.AreEqual(+1L, blocks[0].Lifecycles[0].GrowthCursor, "Growth band (age 18): +1/day.");
+            Assert.AreEqual(0L, blocks[0].Lifecycles[1].GrowthCursor, "Stable band (age 27): no change.");
+            Assert.AreEqual(-1L, blocks[0].Lifecycles[2].GrowthCursor, "Decline band (age 34): -1/day.");
+        }
+
+        [Test]
+        public void SaveRestore_ANegativeBirthWorldDayBeyondInt32Range_SurvivesTheCodec()
+        {
+            // The i64 field width is the point, not merely the sign (ERR-028-006). An anchor this far
+            // negative does not fit in 32 bits at all, so a codec that still read/wrote 32 bits — the
+            // field widened but the wire format left behind — would truncate it silently rather than
+            // throwing; the round trip below catches that either way.
+            const int ExtremeAge = 10_000_000;   // birthWorldDay = -3,650,000,000 — outside int32's range
+            var squad = new Squad(ClubId, new[] { Player(FirstPlayerId, ExtremeAge) });
+            ProgressionEngine engine = ProgressionEngine.SeedFrom(new[] { squad }, newGameWorldDay: 0u);
+
+            long birthWorldDay = engine.ToBlocks()[0].Lifecycles[0].BirthWorldDay;
+            Assert.Less(birthWorldDay, (long)int.MinValue,
+                "precondition: this anchor must not fit in 32 bits, or the test proves nothing about " +
+                "the field width the fix is about.");
+
+            ProgressionEngine restored = ProgressionEngine.Restore(engine.Snapshot());
+
+            Assert.AreEqual(birthWorldDay, restored.ToBlocks()[0].Lifecycles[0].BirthWorldDay,
+                "a BirthWorldDay outside the int32 range must round-trip exactly — the i64 field width " +
+                "is what ERR-028-006 buys over the old uint, which could not represent a pre-epoch " +
+                "birth at all.");
+        }
+
+        // ── ERR-028-009: the sentinel is not a legal world day (F8) ───────────────────
+
+        [Test]
+        public void AdvanceDay_AtTheSentinelWorldDay_IsRefused()
+        {
+            // F8: storing the sentinel would re-arm the day-0 trap (a player anchored there reads as
+            // never-advanced forever) and the gap-replay loop in AdvancePlayerTo would wrap at
+            // uint.MaxValue and never terminate. #29's TrainingStep and #41's MedicalStep refuse it for
+            // the same reason; #28 adopted their sentinel and must adopt their guard.
+            ProgressionEngine engine = SeedOneClub(ageAtBase: 18);
+
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => engine.AdvanceDay(
+                    PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL, TrainingInputBatch.Neutral),
+                "the never-advanced sentinel is not a legal world day (F8).");
+        }
+
+        [Test]
+        public void AdvanceDay_OneDayBelowTheSentinel_StillAdvancesNormally()
+        {
+            // The guard must be narrow: it refuses ONLY the sentinel value, not "large" world days in
+            // general — a day one below it is an ordinary (if extreme) first advance. (At this world
+            // day the derived age lands the squad in the Decline band rather than Growth, so only the
+            // MAGNITUDE — one point of accrual per player — is asserted here, not the sign.)
+            ProgressionEngine engine = SeedOneClub(ageAtBase: 18);
+
+            Assert.DoesNotThrow(
+                () => engine.AdvanceDay(
+                    PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL - 1,
+                    TrainingInputBatch.Neutral),
+                "the guard must refuse only the sentinel itself, not merely a large world day.");
+            Assert.AreEqual(SquadSize, Math.Abs(CursorOf(engine)),
+                "exactly one band-step of accrual per player for this first advance.");
         }
 
         // ── The KD-4 projection — the authority lock ──────────────────────────────────
@@ -424,4 +542,12 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | (ERR-030-027), gap-completeness (T-PG-DET-002), retirement     |
 // |         |            |        | flagging, save/restore continuation, canonical bytes, global   |
 // |         |            |        | id uniqueness, and the KD-4 projection lock.                   |
+// | 1.1     | 2026-08-08 | —      | Locks for five fixes just applied. ERR-028-006 (the signed age |
+// |         |            |        | anchor): the day-0 bootstrap-age regression lock, the per-band |
+// |         |            |        | step at world day 0 (the unit-level twin of                    |
+// |         |            |        | SeasonLoopProgressionTests' bootstrap-league proof), and a     |
+// |         |            |        | save/restore round trip past int32's range (the i64 field      |
+// |         |            |        | width). ERR-028-009 (F8): the sentinel-world-day refusal, plus |
+// |         |            |        | a one-below-the-sentinel PASS case so the guard is proven       |
+// |         |            |        | narrow.                                                         |
 #endregion

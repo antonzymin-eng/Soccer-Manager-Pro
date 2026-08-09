@@ -273,6 +273,18 @@ namespace TacticalDirector.PlayerProgression
         /// advanced — a club this store does not carry, or a club whose ids do not match the store's.</exception>
         public void AdvanceDay(uint worldDay, in TrainingInputBatch trainingInputs)
         {
+            // F8 (ERR-028-009): the never-advanced sentinel is not a legal world day. Storing it would re-arm the
+            // day-0 trap (a player anchored at the sentinel reads as never-advanced forever, so the
+            // step is not idempotent), and the gap replay below would wrap at uint.MaxValue and never
+            // terminate. Both siblings (#29 TrainingStep, #41 MedicalStep) refuse it for the same
+            // reason; #28 adopted their sentinel and must adopt their guard.
+            if (worldDay == PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(worldDay), worldDay,
+                    "The never-advanced sentinel is not a legal world day (F8 / ERR-028-009).");
+            }
+
             ValidateBatch(in trainingInputs);
 
             for (int c = 0; c < _clubIds.Count; c++)
@@ -390,10 +402,11 @@ namespace TacticalDirector.PlayerProgression
                 PlayerProgressionConstants.PA_MIN,
                 PlayerProgressionConstants.ABILITY_MAX);
 
-            // §3.1.1: the one serialized age anchor. Clamped at 0 so a generated age beyond the world
-            // clock cannot underflow the unsigned day.
-            long birthDays = (long)rec.Age * PlayerProgressionConstants.DAYS_PER_YEAR;
-            uint birthWorldDay = newGameWorldDay >= birthDays ? (uint)(newGameWorldDay - birthDays) : 0u;
+            // §3.1.1: the one serialized age anchor, and it is SIGNED on purpose (ERR-028-006). A new
+            // world starts on day 0, so for every player with a non-zero generated age this is NEGATIVE
+            // — the ordinary case, not an edge one. The earlier clamp to 0 made the derived age
+            // worldDay/365, which turned the whole league into age 0 on the first daily step.
+            long birthWorldDay = (long)newGameWorldDay - (long)rec.Age * PlayerProgressionConstants.DAYS_PER_YEAR;
 
             return new PlayerLifecycle
             {

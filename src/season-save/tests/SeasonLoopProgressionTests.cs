@@ -4,10 +4,15 @@
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (KD-2 slot 1); Player Progression & Lifecycle #28
 //           KD-4 / FR-PG-021 / FR-PG-022; ERR-029-006 (the batch entry point, closed here);
-//           ERR-030-027 (the twice-per-fixture-day call); Code Standards #20
+//           ERR-030-027 (the twice-per-fixture-day call); ERR-028-007 (the fourth persisted cursor,
+//           checked at three boundaries — this file covers the SeasonLoop constructor boundary);
+//           Code Standards #20
 // Purpose:  Locks that #30's slot 1 actually EXECUTES — the wiring proof — plus the single-roster-
 //           authority refusals the constructor now enforces. A dead seam and a live one are otherwise
-//           indistinguishable from outside, which is the ERR-030-014 failure mode one layer up.
+//           indistinguishable from outside, which is the ERR-030-014 failure mode one layer up. Also
+//           the composition-boundary third of ERR-028-007's three cursor-vs-clock checks (the other
+//           two — SeasonSaveManager.Save and .Load — live in SeasonSaveManagerTests.cs beside their
+//           #29/#41 siblings).
 
 using System;
 
@@ -29,25 +34,52 @@ namespace TacticalDirector.SeasonSave.Tests
         // ── The wiring proof ──────────────────────────────────────────────────────────
 
         [Test]
-        public void AdvanceDays_DrivesSlot1_AndTheCursorTracksTheClock()
+        public void AdvanceDays_DrivesSlot1_AndEachPlayerAccruesHisOwnBandStep()
         {
             // THE lock this landing exists for. Before #28 T2a slot 1 was a bare comment; if it reverts
             // to one, every other test here still passes because nothing else observes progression.
-            // What proves the seam is live is that the store's per-player cursor moved BY THE NUMBER OF
-            // DAYS the loop advanced — not merely that something changed.
+            //
+            // The expectation is built from the BOOTSTRAP age (#27's generated value), never from #28's
+            // own derived age — otherwise this would re-derive the answer with the code under test and
+            // pass no matter what that code did. An earlier version of this test asserted the far weaker
+            // `6 x players == |sum of cursors|`, which was only ever satisfiable because a clamped birth
+            // anchor had made EVERY player age 0 and therefore every band Growth (ERR-028-006). It went
+            // green on a league where age was destroyed; this one cannot.
+            League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
             SeasonLoop loop = NewProgressionLoop(out _, out ProgressionEngine progression);
 
-            long before = TotalCursor(progression);
             // Six days: the KD-4 cursor invariant refuses an advance past the pending round's fixture
-            // day (day 7), which is itself the reason a longer run belongs in ProgressionEngineTests.
-            loop.AdvanceDays(6);
+            // day (day 7). Six days cannot cross a birthday, so each player's band is fixed throughout.
+            const int Days = 6;
+            loop.AdvanceDays(Days);
 
-            long after = TotalCursor(progression);
-            Assert.AreNotEqual(before, after,
-                "slot 1 must actually run — an unwired seam leaves the store untouched.");
-            Assert.AreEqual(6 * PlayersInLeague(progression), Math.Abs(after - before),
-                "one day of accrual per player per advanced day: the cursor tracks the world clock, so " +
-                "a seam that ran once, twice, or not at all is all distinguishable here.");
+            int growth = 0, decline = 0, stable = 0;
+            ClubCareerStates[] blocks = progression.ToBlocks();
+            for (int c = 0; c < blocks.Length; c++)
+            {
+                Squad seeded = league.ResolveByClubId(blocks[c].ClubId);
+                for (int p = 0; p < blocks[c].Count; p++)
+                {
+                    int playerId = blocks[c].Records[p].PlayerId;
+                    int bootstrapAge = AgeOf(seeded, playerId);
+
+                    long expected;
+                    if (bootstrapAge < PlayerProgressionConstants.GROWTH_AGE) { expected = +Days; growth++; }
+                    else if (bootstrapAge > PlayerProgressionConstants.DECLINE_AGE) { expected = -Days; decline++; }
+                    else { expected = 0; stable++; }
+
+                    Assert.AreEqual(expected, blocks[c].Lifecycles[p].GrowthCursor,
+                        $"player {playerId} (bootstrap age {bootstrapAge}) must accrue his own band's "
+                        + "step once per advanced day — slot 1 running not at all, twice, or on the "
+                        + "wrong band is each distinguishable here.");
+                }
+            }
+
+            // Guards the assertion above against a degenerate league: if every player landed in one band
+            // the loop would still pass while proving far less. All three bands must be represented.
+            Assert.Greater(growth, 0, "precondition: the league must contain Growth-band players.");
+            Assert.Greater(decline, 0, "precondition: the league must contain Decline-band players.");
+            Assert.Greater(stable, 0, "precondition: the league must contain Stable-band players.");
         }
 
         [Test]
@@ -107,6 +139,79 @@ namespace TacticalDirector.SeasonSave.Tests
                 () => new SeasonLoop(
                     world, season, RoundResolutionMode.QuickSimAll, career, null, partial),
                 "the store must cover every club that plays in this season.");
+        }
+
+        // ── ERR-028-007: the fourth persisted cursor, checked at composition ──────────
+
+        [Test]
+        public void Constructor_WithProgressionCursorAheadOfClock_IsRefused()
+        {
+            // The composition-boundary counterpart of the #29/#41 rule (AR pass 6 M3): a loop can be
+            // built from a career and a world that never met a save file, and a cursor ahead of the
+            // clock would silently freeze growth until the clock catches up. Mutated directly on the
+            // engine, bypassing loop.AdvanceDays, so the world clock (still 0) and the career disagree.
+            (WorldStore world, SeasonState season, ProgressionEngine progression, PlayerCareerStates career) =
+                NewProgressionComponents();
+
+            progression.AdvanceDay(3, TrainingInputBatch.Neutral);   // cursor = 3, world clock still 0
+
+            Assert.Throws<InvalidOperationException>(
+                () => new SeasonLoop(
+                    world, season, RoundResolutionMode.QuickSimAll, career, null, progression),
+                "ERR-028-007: a progression cursor ahead of the world clock must be refused at composition.");
+        }
+
+        [Test]
+        public void Constructor_WithProgressionCursorLaggingByTwoOrMore_IsRefused()
+        {
+            // Worse than ahead (ERR-028-007's own doc): ProgressionEngine.AdvanceDay REPLAYS a gap, so a
+            // mispaired file banks N days of growth in one call from a single day's inputs, invisibly.
+            (WorldStore world, SeasonState season, ProgressionEngine progression, PlayerCareerStates career) =
+                NewProgressionComponents();
+
+            progression.AdvanceDay(0, TrainingInputBatch.Neutral);   // cursor = 0
+            world.AdvanceDay();
+            world.AdvanceDay();                                       // world clock = 2, lag = 2
+
+            Assert.Throws<InvalidOperationException>(
+                () => new SeasonLoop(
+                    world, season, RoundResolutionMode.QuickSimAll, career, null, progression),
+                "ERR-028-007: a lag of two or more must be refused.");
+        }
+
+        [Test]
+        public void Constructor_WithProgressionCursorLaggingByOne_IsAccepted()
+        {
+            // The ordinary saved state: the career day-steps run BEFORE the world clock's increment
+            // (KD-2), so a cursor exactly one behind the clock is the normal pairing, not a defect.
+            (WorldStore world, SeasonState season, ProgressionEngine progression, PlayerCareerStates career) =
+                NewProgressionComponents();
+
+            progression.AdvanceDay(0, TrainingInputBatch.Neutral);   // cursor = 0
+            world.AdvanceDay();                                       // world clock = 1, lag = 1
+
+            Assert.DoesNotThrow(
+                () => new SeasonLoop(
+                    world, season, RoundResolutionMode.QuickSimAll, career, null, progression),
+                "a lag of exactly one is the ordinary state between the day steps and the clock increment.");
+        }
+
+        [Test]
+        public void Constructor_WithSentinelProgressionCursor_IsAcceptedAtAnyClock()
+        {
+            // A never-advanced career (every player still at PROGRESSION_NOT_ADVANCED_SENTINEL) is
+            // coherent regardless of how far the world clock has moved — the sentinel exemption.
+            (WorldStore world, SeasonState season, ProgressionEngine progression, PlayerCareerStates career) =
+                NewProgressionComponents();
+
+            world.AdvanceDay();
+            world.AdvanceDay();
+            world.AdvanceDay();   // world clock = 3, far from "never advanced" by either failure mode
+
+            Assert.DoesNotThrow(
+                () => new SeasonLoop(
+                    world, season, RoundResolutionMode.QuickSimAll, career, null, progression),
+                "the sentinel is exempt — a never-advanced career is coherent at any clock.");
         }
 
         // ── Save / resume through the frame ───────────────────────────────────────────
@@ -183,12 +288,40 @@ namespace TacticalDirector.SeasonSave.Tests
                 career, null, progression);
         }
 
+        // The un-constructed components NewProgressionLoop wires together, for the ERR-028-007 tests
+        // that need to mutate the world clock or the progression cursor BEFORE handing them to the
+        // SeasonLoop constructor under test — NewProgressionLoop itself already constructs a (valid)
+        // loop, which is one call too late for these.
+        private static (WorldStore world, SeasonState season, ProgressionEngine progression, PlayerCareerStates career)
+            NewProgressionComponents()
+        {
+            League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
+            var world = new WorldStore(ManagerId, WorldSeed);
+            SeasonState season = league.CreateSeason(managedClubId: 0);
+            ProgressionEngine progression = SeedFor(league);
+            var career = PlayerCareerStates.ForLeague(
+                new ProgressionSquads(progression), ClubIds(), injuryOccurrenceEnabled: true);
+            return (world, season, progression, career);
+        }
+
         private static SeasonLoop NewBareLoop(out WorldStore world)
         {
             League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
             world = new WorldStore(ManagerId, WorldSeed);
             return new SeasonLoop(
                 world, league.CreateSeason(managedClubId: 0), RoundResolutionMode.QuickSimAll);
+        }
+
+        private static int AgeOf(Squad squad, int playerId)
+        {
+            for (int p = 0; p < squad.Count; p++)
+            {
+                if (squad.GetPlayer(p).PlayerId == playerId)
+                {
+                    return squad.GetPlayer(p).Age;
+                }
+            }
+            throw new InvalidOperationException($"player {playerId} not in the bootstrap squad.");
         }
 
         private static int PlayersInLeague(ProgressionEngine progression)
@@ -237,4 +370,10 @@ namespace TacticalDirector.SeasonSave.Tests
 // | 1.0     | 2026-08-08 | —      | #28 T2a: the slot-1 wiring proof (cursor tracks the clock),      |
 // |         |            |        | world-digest invariance, the KD-4 authority observation, the     |
 // |         |            |        | two constructor refusals, and the save/resume roster lock.       |
+// | 1.1     | 2026-08-08 | —      | ERR-028-007 lock at the SeasonLoop composition boundary: the     |
+// |         |            |        | fourth persisted cursor refused when ahead of the clock or       |
+// |         |            |        | lagging by two or more, accepted at the ordinary lag of one,     |
+// |         |            |        | and accepted at any clock while still the sentinel. The other    |
+// |         |            |        | two boundaries (SeasonSaveManager.Save / .Load) are locked in    |
+// |         |            |        | SeasonSaveManagerTests.cs beside their #29/#41 siblings.         |
 #endregion

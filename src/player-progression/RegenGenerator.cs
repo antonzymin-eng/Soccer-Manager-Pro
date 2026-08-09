@@ -117,8 +117,9 @@ namespace TacticalDirector.PlayerProgression
 
             rng.CloseReservation(streamIndex);
 
-            long birthDays = age * (long)PlayerProgressionConstants.DAYS_PER_YEAR;
-            uint birthWorldDay = worldDay >= birthDays ? (uint)(worldDay - birthDays) : 0u;
+            // Signed (ERR-028-006): a regen generated on an early world day is born before the epoch,
+            // and clamping that to 0 would report him as age worldDay/365 rather than his drawn age.
+            long birthWorldDay = (long)worldDay - age * (long)PlayerProgressionConstants.DAYS_PER_YEAR;
 
             var record = new PlayerRecord
             {

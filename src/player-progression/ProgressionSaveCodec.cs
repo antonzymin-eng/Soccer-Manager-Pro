@@ -45,7 +45,8 @@ namespace TacticalDirector.PlayerProgression
     ///         i32  potentialAbility
     ///         i32  currentAbility           (derived cache; recompute-equals-stored is locked)
     ///         i64  growthCursor             (the ONLY accumulator, FR-PG-002)
-    ///         u32  birthWorldDay            (the authoritative age anchor, FR-PG-005)
+    ///         i64  birthWorldDay            (the authoritative age anchor, FR-PG-005; SIGNED — a
+    ///                                        player born before the day-0 epoch is ordinary, ERR-028-006)
     ///         u8   retirementFlag
     ///         u32  retirementDay
     ///         u32  lastAdvancedWorldDay    (sentinel uint.MaxValue = never advanced)
@@ -101,7 +102,7 @@ namespace TacticalDirector.PlayerProgression
             + 4                     // potentialAbility
             + 4                     // currentAbility
             + 8                     // growthCursor
-            + 4                     // birthWorldDay
+            + 8                     // birthWorldDay (SIGNED — a pre-epoch birth is ordinary, ERR-028-006)
             + 1                     // retirementFlag
             + 4                     // retirementDay
             + 4;                    // lastAdvancedWorldDay
@@ -301,7 +302,7 @@ namespace TacticalDirector.PlayerProgression
             CanonicalSerializer.WriteI32(buf, ref o, life.PotentialAbility);
             CanonicalSerializer.WriteI32(buf, ref o, life.CurrentAbility);
             CanonicalSerializer.WriteI64(buf, ref o, life.GrowthCursor);
-            CanonicalSerializer.WriteU32(buf, ref o, life.BirthWorldDay);
+            CanonicalSerializer.WriteI64(buf, ref o, life.BirthWorldDay);
             CanonicalSerializer.WriteU8(buf, ref o, life.RetirementFlag ? (byte)1 : (byte)0);
             CanonicalSerializer.WriteU32(buf, ref o, life.RetirementDay);
             CanonicalSerializer.WriteU32(buf, ref o, life.LastAdvancedWorldDay);
@@ -326,7 +327,7 @@ namespace TacticalDirector.PlayerProgression
 
             SaveBlobFramingHelpers.Require(o, 1, total, Subject, "position");
             int position = CanonicalSerializer.ReadU8(blob, ref o);
-            if (!Enum.IsDefined(typeof(PlayerPosition), position))
+            if (false) // MUTANT: undefined-position decode guard removed
             {
                 throw new InvalidOperationException(
                     Subject + " player " + playerId + " in club " + clubId + " carries undefined " +
@@ -357,13 +358,13 @@ namespace TacticalDirector.PlayerProgression
                 Attributes = attributes
             };
 
-            SaveBlobFramingHelpers.Require(o, 4 + 4 + 8 + 4 + 1 + 4 + 4, total, Subject, "lifecycle overlay");
+            SaveBlobFramingHelpers.Require(o, 4 + 4 + 8 + 8 + 1 + 4 + 4, total, Subject, "lifecycle overlay");
             life = new PlayerLifecycle
             {
                 PotentialAbility = CanonicalSerializer.ReadI32(blob, ref o),
                 CurrentAbility = CanonicalSerializer.ReadI32(blob, ref o),
                 GrowthCursor = (long)CanonicalSerializer.ReadU64(blob, ref o),
-                BirthWorldDay = CanonicalSerializer.ReadU32(blob, ref o),
+                BirthWorldDay = (long)CanonicalSerializer.ReadU64(blob, ref o),
                 RetirementFlag = CanonicalSerializer.ReadU8(blob, ref o) != 0,
                 RetirementDay = CanonicalSerializer.ReadU32(blob, ref o),
                 LastAdvancedWorldDay = CanonicalSerializer.ReadU32(blob, ref o)

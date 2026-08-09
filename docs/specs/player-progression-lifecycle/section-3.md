@@ -1,9 +1,9 @@
 # Player Progression & Lifecycle #28 — Section 3: Core Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026 (v0.3 — ERR-028-003/004/005: the batch `AdvanceDay` entry point + idempotency cursor, the #47 new-game PA seam, and the shipped §3.5 save layout)
-**Last Updated (prior):** July 23, 2026 (v0.2 — section-file PASS-1 (0H+2M) → AR-2 (3M cross-fix) → AR-3 convergence; APPROVED)
-**Version:** 0.3
+**Last Updated:** August 8, 2026 (v0.4 — ERR-028-006/007/008/009: the signed age anchor, the cross-blob cursor rule, the destination-roster-overwrite refusal, and the F8 sentinel guard)
+**Last Updated (prior):** August 8, 2026 (v0.3 — ERR-028-003/004/005: the batch `AdvanceDay` entry point + idempotency cursor, the #47 new-game PA seam, and the shipped §3.5 save layout)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -23,6 +23,7 @@ drives the batch that wraps it, once per carried club per carried player, in asc
 
 ```
 AdvanceDay(worldDay, in trainingInputs):          # FR-PG-021, the public entry point #30 drives
+    if worldDay == PROGRESSION_NOT_ADVANCED_SENTINEL: FAIL LOUD     # F8 (ERR-028-009)
     for each carried club, in ascending ClubId:
         for each carried player, in ascending PlayerId:
             if lifecycle.LastAdvancedWorldDay == PROGRESSION_NOT_ADVANCED_SENTINEL:
@@ -35,6 +36,14 @@ AdvanceDay(worldDay, in trainingInputs):          # FR-PG-021, the public entry 
             else:
                 skip                                          # idempotent per day (ERR-030-027)
 ```
+
+**The F8 guard runs before anything else in the batch (ERR-028-009).** #29's `TrainingStep` and #41's
+`MedicalStep` both refuse `worldDay == sentinel` under an explicit F8 row landed one day before #28's
+own T1/T2a landing shipped without one — the same folder-boundary lesson recurring immediately. Two
+concrete consequences without the guard: `AdvanceDay(sentinel)` would **store** the sentinel as a real
+cursor value, so the step stops being idempotent (a second identical call accrues again, breaking the
+ERR-030-027 contract this section itself relies on two paragraphs down); and the gap-replay loop `for d
+in (cursor+1)..worldDay` never terminates when `worldDay` is `uint.MaxValue`.
 
 Idempotency is required because #30's `AdvanceAndPlayNextRound` runs a fixture day's KD-2 slots
 **twice** — once pre-round and once from the advance loop (ERR-030-027) — and each subsystem is
@@ -88,6 +97,18 @@ world day, so nothing anchors or double-counts. #28 keeps the career-state `Play
 **current** as a derived cache (the CA-cache pattern — recomputed each day, never a second source of
 truth), so a consumer reading `record.Age` gets current age, not the frozen new-game seed. This is the
 same one-representation discipline as the CA/PA model (§3.2): one authoritative anchor (`BirthWorldDay`),
+
+**`BirthWorldDay` MUST be stored as a SIGNED quantity (ERR-028-006).** A new world starts at
+`newGameDay = 0`, so the anchor formula above is negative for every generated player with `Age0 > 0` —
+which is nearly the entire bootstrap roster. Clamping the anchor to 0 is **forbidden**: an
+unrepresentable anchor and a correctly-signed one are indistinguishable at read time (both are valid
+`uint` values), so the clamp does not fail loud — it silently reports every clamped player's age as
+`worldDay / DAYS_PER_YEAR`, which reads as `0` for the whole league on the very first `AdvanceDay` and
+never diverges from that error on its own. Measured against the clamped implementation: bootstrap ages
+`26, 22, 30, 26, 28, 30 → 0, 0, 0, 0, 0, 0` after one simulated day, and a 100-player sample banded
+`growth=100 stable=0 decline=0` — the Decline band unreachable and `RETIREMENT_AGE` (§3.4) never
+firing, because no derived age can ever exceed one year. A player born before the epoch is the
+**ordinary** representation for a non-zero generated age, not an edge case to be special-cased away.
 one derived cache (`record.Age`).
 
 ### 3.1.2 The weighted spend order (`TrySpendOnePoint`)
@@ -195,8 +216,14 @@ per club, ascending ClubId:
         i32 playerId, str firstName, str lastName, i32 age, u8 position,
         i32 attribute[0..30], i32 weakFootRating,
         i32 potentialAbility, i32 currentAbility, i64 growthCursor,
-        u32 birthWorldDay, u8 retirementFlag, u32 retirementDay, u32 lastAdvancedWorldDay
+        i64 birthWorldDay, u8 retirementFlag, u32 retirementDay, u32 lastAdvancedWorldDay
 ```
+
+**`birthWorldDay` widened `u32 → i64` (ERR-028-006).** The anchor MUST be signed (§3.1.1) and a 32-bit
+signed field is not comfortably wide against `Age0 · DAYS_PER_YEAR` for long-lived save histories, so
+the field is `i64`, matching `GrowthCursor`'s width. The widening is **free**: `PROGRESSION_SAVE_FORMAT_VERSION`
+is still 1 and this format has never shipped in a released build, so there is no prior-version file to
+migrate and F3's "first written layout is the format permanently" rule has nothing to grandfather.
 
 The block carries the same MUSTs as its `TrainingBlock`/`MedicalBlock`/`AppearanceBlock` siblings:
 the magic is checked **before** the version, so a foreign block is refused as the wrong format rather
@@ -214,10 +241,34 @@ it as one more length-prefixed sub-blob (FR-PG-017) — the `SeasonSaveCodec` ne
 written layout the format permanently** — the ERR-029-004 rule — so this is not a draft pending
 adjustment; a future field addition is a new format version, never a reordering of this one.
 
+**The cross-blob cursor rule (ERR-028-007).** `LastAdvancedWorldDay` is the **fourth** persisted
+per-player cursor in #30's save frame — after #29's training cursor, #41's medical cursor, and #30's
+own world-day clock — and it MUST be checked against the world clock at all three boundaries the
+#29/#41 balance-pass AR loop established for its siblings: `SeasonSaveManager.Save`,
+`SeasonSaveManager.Load`, and `SeasonLoop` composition. All three MUST delegate to a **single shared
+predicate** rather than three independently hand-copied comparisons — the AR loop's own recorded lesson
+(pass 9, `#41`/`#29`) is that two hand-copied walks of the same rule drift the moment one is edited and
+the other is not. A lagging or leading cursor is worse here than for its siblings: `AdvanceDay` (§3.1)
+**replays** every day between the cursor and the target, so a file whose cursor is paired against the
+wrong world clock does not merely skip or repeat one day of growth — it banks N days of accrual from a
+single day's `TrainingInput`, silently compounding every day of drift into growth points. The sentinel
+value is exempt from the within-one-day check (a never-advanced player has no clock to be paired
+against).
+
+**The roster must never be silently erased (ERR-028-008).** #28's block, per KD-4, is the **canonical
+serialized roster** — not a cache rebuildable from the world seed once any player's `[1,20]` attributes
+have evolved away from their generated values (see ERR-030-030). The save root MUST therefore refuse to
+write a **zero-club** progression block over a destination file that already carries a **populated**
+one: an empty store is a legitimate state only for a file that has never carried a roster, or that
+itself already carries an empty one, never as a silent replacement for one that does. An unreadable or
+foreign destination is not this guard's concern and is overwritten as before — the refusal is narrowly
+about not erasing a roster the codec can actually see.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial algorithms: KD-1 integer growth projection + age derivation + weighted spend, the CA/PA model, regen generation, retirement + season boundary, the save codec. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (0H+2M: M-1 age-model muddle → one BirthWorldDay-derived representation; M-2 per-club regen stream) → AR-2 (3M cross-fix regressions) → AR-3 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-08-08 | — | ERR-028-003: §3.2 states new-game `PotentialAbility` is authored data owned by #47, with #28's `NEW_GAME_PA_HEADROOM` seed as a placeholder, plus the recorded ~421-of-`ABILITY_MAX` growth-rate limitation. ERR-028-004: §3.5's layout corrected from version-first/domain-tag-as-identifier to the shipped magic-led `PROG` layout. ERR-028-005: §3.1 gains the public batch `AdvanceDay` pseudocode showing the `LastAdvancedWorldDay` idempotency/gap-completeness cursor. Spec + code, same commit (T1/T2a). |
+| 0.4 | 2026-08-08 | — | ERR-028-006: §3.1.1 states `BirthWorldDay` MUST be signed (a new world starts at day 0, so any generated player with `Age0 > 0` anchors negative) and forbids clamping it; §3.5's layout widened `u32 → i64`, free at format version 1. ERR-028-007: §3.5 gains the cross-blob cursor rule — `LastAdvancedWorldDay` is the fourth persisted per-player cursor and MUST be checked at all three save/load/composition boundaries through one shared predicate, lag being worse here because `AdvanceDay` replays gaps. ERR-028-008: §3.5 states the save root MUST refuse to overwrite a populated progression block with an empty one. ERR-028-009: §3.1's `AdvanceDay` pseudocode gains the F8 sentinel-refusal guard as its first line. Spec + code, same commit (AR over the T1/T2a landing). |
 #endregion

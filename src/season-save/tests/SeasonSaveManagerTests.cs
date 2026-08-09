@@ -1,16 +1,20 @@
 // File:     src/season-save/tests/SeasonSaveManagerTests.cs
 // Created:  2026-07-22
-// Modified: 2026-08-08 (#28 T1: progression-block call-site updates — v1.13)
+// Modified: 2026-08-08 (ERR-028-007 / ERR-028-008 locks — v1.14)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §5 acceptance;
 //           Season & Competition Loop #30 FR-SN-019..023, Appendix B; Training System #29 FR-TR-018/019;
-//           Injuries & Medical #41 FR-MD-017/018;
+//           Injuries & Medical #41 FR-MD-017/018; Player Progression & Lifecycle #28 §3.5, KD-4,
+//           ERR-028-007 (the fourth persisted cursor), ERR-028-008 (refuse to overwrite a roster with
+//           an empty one);
 //           Match Engine design note §5 Phase G-Phase 3; Living World #22 §4.6/§7.1; Code Standards #20
 // Purpose:  Acceptance tests for the unified season save — disk round-trip determinism for a no-match
 //           season (world field-identical + world.text resumes + the season state field-identical) and a
 //           season with an in-progress match (neutral + distinct-squad-via-ISquadProvider; the match
 //           digest chain byte-identical AND the world + season field-identical, all through one file),
-//           plus the SeasonSaveCodec fail-loud guards and the SeasonSaveManager fail-loud paths.
+//           plus the SeasonSaveCodec fail-loud guards and the SeasonSaveManager fail-loud paths —
+//           including the #28 progression cursor's cursor-vs-clock gate at Save and Load, and the
+//           empty-roster-overwrite refusal.
 
 using System;
 using System.Collections.Generic;
@@ -803,6 +807,154 @@ namespace TacticalDirector.SeasonSave
                 + "cannot advance a single day and cannot be diagnosed from any later symptom");
         }
 
+        // ── ERR-028-007: the fourth persisted cursor, at the Save / Load boundaries ──
+
+        [Test]
+        public void Save_FutureDatedProgressionCursor_FailsLoud()
+        {
+            // The #28 twin of Save_FutureDatedCareerCursor_FailsLoud above, checked on the same terms.
+            WorldStore world = PopulatedStore();   // world clock sits at 2
+            ProgressionEngine future = ProgressionFor(PBlock(7, 100, lastAdvancedWorldDay: 500u));
+
+            Assert.Throws<InvalidOperationException>(
+                () => SeasonSaveManager.Save(
+                    world, MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    NoTraining, NoMedical, NoAppearance, future),
+                "ERR-028-007: a future-dated progression cursor must be refused at Save, exactly like " +
+                "its #29/#41 siblings.");
+        }
+
+        [Test]
+        public void Save_ProgressionCursorLaggingTheClockByTwoOrMore_FailsLoud()
+        {
+            WorldStore laggedWorld = PopulatedStore();   // clock 2
+            ProgressionEngine lagging = ProgressionFor(PBlock(7, 100, lastAdvancedWorldDay: 0u));   // gap of 2
+
+            Assert.Throws<InvalidOperationException>(
+                () => SeasonSaveManager.Save(
+                    laggedWorld, MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    NoTraining, NoMedical, NoAppearance, lagging),
+                "ERR-028-007: a progression cursor two behind the clock must be refused — AdvanceDay " +
+                "REPLAYS a gap, so a mispaired file would bank days of growth from one day's inputs, " +
+                "invisibly (worse than the sibling cursors' silent-freeze failure mode).");
+        }
+
+        [Test]
+        public void Save_ProgressionCursorLaggingTheClockByOne_IsAccepted()
+        {
+            WorldStore laggedWorld = PopulatedStore();   // clock 2
+            ProgressionEngine ok = ProgressionFor(PBlock(7, 100, lastAdvancedWorldDay: 1u));   // legitimate lag of 1
+
+            Assert.DoesNotThrow(
+                () => SeasonSaveManager.Save(
+                    laggedWorld, MidSeasonState(), matchOrNull: null, TempPath("ok-progression.season"),
+                    NoTraining, NoMedical, NoAppearance, ok),
+                "the pre-increment convention's lag of exactly one is the NORMAL saved state.");
+        }
+
+        [Test]
+        public void Load_FutureDatedProgressionCursor_FailsLoud()
+        {
+            // The same rule at the layer a hand-edited or mispaired file actually arrives through —
+            // crafted through SeasonSaveCodec.Encode directly (Save now refuses to WRITE this content,
+            // proven above), which isolates the SEPARATE check Load performs on its own: the third of
+            // ERR-028-007's three boundaries.
+            WorldStore world = PopulatedStore();
+
+            var trainingBlock = new TrainingBlock(TrainingSaveCodec.Encode(NoTraining));
+            var medicalBlock = new MedicalBlock(MedicalSaveCodec.Encode(NoMedical));
+            var appearanceBlock = new AppearanceBlock(AppearanceSaveCodec.Encode(NoAppearance));
+            var progressionBlock = new ProgressionBlock(
+                ProgressionSaveCodec.Encode(new[] { PBlock(7, 100, lastAdvancedWorldDay: 500u) }, 101));
+            byte[] frame = SeasonSaveCodec.Encode(
+                world.Snapshot(), SeasonStateCodec.Encode(MidSeasonState()),
+                in trainingBlock, in medicalBlock, in appearanceBlock, in progressionBlock, null);
+
+            string path = TempPath("wedged-progression.season");
+            File.WriteAllBytes(path, frame);
+
+            Assert.Throws<InvalidOperationException>(() => SeasonSaveManager.Load(path),
+                "ERR-028-007: a future-dated progression cursor must be refused at Load too — checked " +
+                "independently of Save, the third of the three boundaries.");
+        }
+
+        // Mirrors TBlock/MBlock/ABlock above: a one-player #28 block with a hand-set cursor, so the
+        // fixture controls exactly the field the cursor-vs-clock gate reads. Everything else is filler
+        // (irrelevant to that gate).
+        private static ClubCareerStates PBlock(int club, int playerId, uint lastAdvancedWorldDay)
+        {
+            PlayerRecord rec = PlayerRecord.CreateDefault(playerId);
+            var life = new PlayerLifecycle
+            {
+                PotentialAbility = PlayerProgressionConstants.PA_MIN,
+                CurrentAbility = PlayerProgressionConstants.PA_MIN,
+                GrowthCursor = 0,
+                BirthWorldDay = 0,
+                RetirementFlag = false,
+                RetirementDay = 0,
+                LastAdvancedWorldDay = lastAdvancedWorldDay,
+            };
+            return new ClubCareerStates(club, new[] { rec }, new[] { life });
+        }
+
+        private static ProgressionEngine ProgressionFor(ClubCareerStates block) =>
+            ProgressionEngine.FromBlocks(new[] { block }, nextPlayerId: block.Records[0].PlayerId + 1);
+
+        // ── ERR-028-008: refuse to overwrite a roster with an empty one ──────────────
+
+        [Test]
+        public void Save_AnEmptyProgressionStore_OverAPopulatedRoster_IsRefused()
+        {
+            // #28's block IS the roster (KD-4), so writing a zero-club block over a file that carries
+            // one would delete a career's banked growth with every OTHER gate green (world, season,
+            // training, medical and appearance all intact around the hole).
+            WorldStore world = PopulatedStore();
+            ProgressionEngine populated = ProgressionFor(PBlock(7, 100, lastAdvancedWorldDay: 1u));
+            string path = TempPath("populated-roster.season");
+
+            SeasonSaveManager.Save(
+                world, MidSeasonState(), matchOrNull: null, path,
+                NoTraining, NoMedical, NoAppearance, populated);
+
+            Assert.Throws<InvalidOperationException>(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
+                    NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty),
+                "ERR-028-008: an empty progression store must not overwrite a file carrying a roster.");
+
+            SeasonSaveContents reloaded = SeasonSaveManager.Load(path);
+            Assert.AreEqual(1, reloaded.Progression.ClubCount,
+                "the original file must be untouched by the refused write — the roster must still be there.");
+        }
+
+        [Test]
+        public void Save_AnEmptyProgressionStore_ToANewPath_Succeeds()
+        {
+            string path = TempPath("fresh-empty-roster.season");
+
+            Assert.DoesNotThrow(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
+                    NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty),
+                "an empty store may freely create a new file — there is nothing there to protect.");
+            Assert.IsTrue(File.Exists(path));
+        }
+
+        [Test]
+        public void Save_AnEmptyProgressionStore_OverAnAlreadyEmptyFile_Succeeds()
+        {
+            string path = TempPath("already-empty-roster.season");
+            SeasonSaveManager.Save(
+                PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
+                NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty);
+
+            Assert.DoesNotThrow(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
+                    NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty),
+                "an empty store may overwrite a file that itself already carries an empty roster.");
+        }
+
         [Test]
         public void SaveLoad_TransposedTrainingAndMedicalBlocks_FailLoud()
         {
@@ -1353,4 +1505,14 @@ namespace TacticalDirector.SeasonSave
 // | 1.13    | 2026-08-08 | —      | #28 T1: call sites updated for SeasonSaveManager.Save's / Season-|
 // |         |            |        | SaveCodec.Encode's new required progression-block parameter. No |
 // |         |            |        | assertion or intent change.                                      |
+// | 1.14    | 2026-08-08 | —      | Locks for two fixes just applied. ERR-028-007 (the fourth        |
+// |         |            |        | persisted cursor): the #28 twin of the existing #29/#41          |
+// |         |            |        | future-dated / lagging-by-two-or-more / lagging-by-one Save      |
+// |         |            |        | cases, plus a Load case crafted through SeasonSaveCodec.Encode   |
+// |         |            |        | directly so it isolates the Load-side check from the Save-side   |
+// |         |            |        | one Save now refuses to write. ERR-028-008 (refuse to overwrite  |
+// |         |            |        | a roster with an empty one): populated-then-empty-refused with   |
+// |         |            |        | the original file proven intact, empty-to-new-path accepted,     |
+// |         |            |        | empty-over-already-empty accepted. + PBlock/ProgressionFor       |
+// |         |            |        | fixtures mirroring TBlock/MBlock/ABlock.                         |
 #endregion

@@ -29,8 +29,17 @@ namespace TacticalDirector.PlayerProgression
         /// The authoritative age anchor (KD-A): age is DERIVED as <c>(worldDay − BirthWorldDay) /
         /// DAYS_PER_YEAR</c>, so there is no discrete year-rollover step to double-count (FR-PG-005).
         /// Pinned once at new-game from the generation-time age.
+        /// <para>
+        /// <b>Signed, and that is load-bearing (ERR-028-006).</b> §3.1.1 pins the anchor as
+        /// <c>newGameDay − Age0 · DAYS_PER_YEAR</c>, and a new world starts on day <b>0</b> — so for
+        /// every player with a non-zero generated age the anchor is NEGATIVE. Held as a <c>uint</c> it
+        /// had to be clamped to 0, which made the derived age <c>worldDay / 365</c>: the entire league
+        /// became age 0 on the first daily step, the Decline band was unreachable and
+        /// <c>RETIREMENT_AGE</c> could never fire. A player born before the epoch is an ordinary state,
+        /// not an edge case, so the anchor must be able to represent it.
+        /// </para>
         /// </summary>
-        public uint BirthWorldDay;
+        public long BirthWorldDay;
 
         /// <summary>Set on the world tick at RETIREMENT_AGE (FR-PG-013); the player stays selectable until the season boundary.</summary>
         public bool RetirementFlag;

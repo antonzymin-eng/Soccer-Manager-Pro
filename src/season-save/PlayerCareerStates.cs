@@ -585,6 +585,29 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>
+        /// The #28 progression-cursor predicate — the FOURTH persisted per-player cursor, and checked on
+        /// the same terms as its #29/#41 siblings (ERR-028-007). Ahead of the clock silently freezes
+        /// growth until the clock catches up; lagging by two or more is WORSE here than for the
+        /// siblings, because <c>ProgressionEngine.AdvanceDay</c> REPLAYS a gap — a mispaired file would
+        /// bank N days of growth in one call from a single day's inputs, invisibly. The sentinel is
+        /// exempt: a never-advanced career is coherent at any clock. One owner, all boundaries
+        /// delegating (the AR pass-9 M1 shape).
+        /// </summary>
+        internal static void RequireProgressionCursorWithinClock(
+            uint worldTick, int clubId, int playerId, uint progressionDay, string boundary)
+        {
+            if (progressionDay != PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL
+                && (progressionDay > worldTick || worldTick > progressionDay + 1))
+            {
+                throw new InvalidOperationException(
+                    $"{boundary} is incoherent: club {clubId} player {playerId}'s "
+                    + $"progression cursor ({progressionDay}) is "
+                    + (progressionDay > worldTick ? "ahead of" : "more than one day behind")
+                    + $" the world clock ({worldTick}).");
+            }
+        }
+
+        /// <summary>
         /// The appearance-anchor predicate, ahead-checked only — the anchor has no gap contract
         /// (a lazily-shifted bitmask is coherent at any lag; shifting is the read's job). One
         /// owner for both boundaries (AR pass 9 M1).

@@ -1,9 +1,9 @@
 # Player Progression & Lifecycle #28 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** August 8, 2026 (v0.3 — ERR-028-005: `PlayerLifecycle` gains `LastAdvancedWorldDay`, the daily-step idempotency cursor)
-**Last Updated (prior):** July 23, 2026 (v0.2 — section-file PASS-1 (0H+2M) → AR-2 (3M cross-fix) → AR-3 convergence; APPROVED)
-**Version:** 0.3
+**Last Updated:** August 8, 2026 (v0.4 — ERR-028-006: `BirthWorldDay` becomes a signed anchor; ERR-028-009: F8 sentinel-refusal row)
+**Last Updated (prior):** August 8, 2026 (v0.3 — ERR-028-005: `PlayerLifecycle` gains `LastAdvancedWorldDay`, the daily-step idempotency cursor)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -102,9 +102,16 @@ public struct PlayerLifecycle
     public int PotentialAbility;   // the ceiling, wide integer [0, ABILITY_MAX]
     public int CurrentAbility;     // DERIVED summary of the [1,20] attributes (cache; recomputed)
     public long GrowthCursor;      // the ONLY accumulator — integer fixed-point points pool
-    public uint BirthWorldDay;     // the authoritative age anchor — the world-day this player was "born"
+    public long BirthWorldDay;     // the authoritative age anchor — the world-day this player was "born"
                                    //   (= newGameDay − Age0·DAYS_PER_YEAR at new-game); age is DERIVED
-                                   //   from it, so there is no discrete "rollover" step to double-count
+                                   //   from it, so there is no discrete "rollover" step to double-count.
+                                   //   SIGNED deliberately (ERR-028-006): a new world starts on world day
+                                   //   0, so for every generated player with Age0 > 0 the anchor is
+                                   //   NEGATIVE. Held unsigned it had to be clamped to 0, which made the
+                                   //   derived age worldDay/DAYS_PER_YEAR — the entire league read as age
+                                   //   0 after the first daily step, the Decline band was unreachable, and
+                                   //   RETIREMENT_AGE could never fire. A player born before the epoch is
+                                   //   the ORDINARY case for a non-zero generated age, not an edge case.
     public bool RetirementFlag;    // set on the world tick at RETIREMENT_AGE (KD-5)
     public uint RetirementDay;     // the world-day the flag was set (0 if not flagged)
     public uint LastAdvancedWorldDay;  // the last world day the daily step ran; sentinel uint.MaxValue = never
@@ -146,6 +153,7 @@ the complete `PlayerRecord` (identity + evolving `PlayerAttributes`, #27 types) 
 | **F4** | A `TrainingInput` carries an out-of-contract value | **Fail loud** at the consuming seam (the #27 `SquadFileLoader` bounds-gate precedent) — an invalid input from the future #29 producer is a bug, not silently clamped. |
 | **F5** | Corrupt length prefix (out-of-bounds) or trailing bytes in the block | **Fail loud** (overflow-safe bound; the `WorldStateSerializer.ReadCount` posture). |
 | **F6** | `RunSeasonBoundary` invoked twice for one season boundary | Idempotent per boundary (FR-PG-024) — the second invocation is a no-op (guarded by the boundary marker), so a mid-roll save→restore→re-run does not double-apply. |
+| **F8** | `AdvanceDay` is called with `worldDay` equal to the never-advanced sentinel | **Fail loud** (`ArgumentOutOfRangeException`). Storing the sentinel as a real cursor re-arms the day-0 trap (the player reads as never-advanced forever, so the step stops being idempotent), and the gap-replay loop would not terminate at `uint.MaxValue`. (ERR-028-009) |
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -153,4 +161,5 @@ the complete `PlayerRecord` (identity + evolving `PlayerAttributes`, #27 types) 
 | 0.1 | 2026-07-23 | — | Initial FR set (FR-PG-001..024), data structures, failure modes F1..F6. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (0H+2M: M-1 age-model muddle → one BirthWorldDay-derived representation; M-2 per-club regen stream) → AR-2 (3M cross-fix regressions) → AR-3 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-08-08 | — | ERR-028-005: `PlayerLifecycle` gains `LastAdvancedWorldDay` (sentinel `uint.MaxValue`) so `AdvanceDay` is idempotent per day and gap-complete, matching #29's `TRAINING_NOT_ADVANCED_SENTINEL` precedent; documented alongside the struct listing. Spec + code, same commit (T1/T2a). |
+| 0.4 | 2026-08-08 | — | ERR-028-006: `BirthWorldDay` becomes a **signed** `long` — a new world starts on day 0, so any generated player with Age0 > 0 anchors negative; clamping to 0 read the whole league as age 0 after one daily step. ERR-028-009: new **F8** row — `AdvanceDay` fails loud on the never-advanced sentinel, matching #29/#41's guard. Spec + code, same commit (AR over the T1/T2a landing). |
 #endregion
