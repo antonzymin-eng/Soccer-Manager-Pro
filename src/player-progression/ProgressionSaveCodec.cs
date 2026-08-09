@@ -327,7 +327,7 @@ namespace TacticalDirector.PlayerProgression
 
             SaveBlobFramingHelpers.Require(o, 1, total, Subject, "position");
             int position = CanonicalSerializer.ReadU8(blob, ref o);
-            if (false) // MUTANT: undefined-position decode guard removed
+            if (!Enum.IsDefined(typeof(PlayerPosition), position))
             {
                 throw new InvalidOperationException(
                     Subject + " player " + playerId + " in club " + clubId + " carries undefined " +
