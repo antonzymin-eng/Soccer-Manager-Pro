@@ -1,14 +1,15 @@
 # Season & Competition Loop Specification #30 — Appendices
 
 **Created:** July 22, 2026
-**Last Updated:** August 8, 2026, later still (v0.9 — ERR-030-030: Appendix A's frame-version row 4 → 5 and Appendix B's frame gains the mandatory #28 progression sub-blob, for #28 T1)
+**Last Updated:** August 9, 2026 (v1.0 — ERR-028-014: Appendix B.1's cursor-vs-clock paragraph corrected from "all three ... cursors" / "exempt in every case" to the fourth (#28) cursor kind and the #28-only exception to the sentinel exemption, with the reason carried in full — the sweep-stopped-at-a-grep-boundary class, corrected here in the same pass as `section-2.md`'s F8 row)
+**Last Updated (prior):** August 8, 2026, later still (v0.9 — ERR-030-030: Appendix A's frame-version row 4 → 5 and Appendix B's frame gains the mandatory #28 progression sub-blob, for #28 T1)
 **Last Updated (prior):** August 8, 2026, later same day (v0.8 — balance-pass AR pass 13 M4: Appendix A's frame-version row corrected 2 → 4 and the three #30-owned appearance constants catalogued)
 **Last Updated (prior):** August 8, 2026 (v0.7 — balance-pass AR pass 11 M2: the cross-blob cursor rule stated in full in Appendix B)
 **Last Updated (prior):** August 8, 2026 (v0.6 — **ERR-030-028**: new **B.1** pins the appearance sub-blob's byte layout field by field — it was specified in NO spec, existing only in `AppearanceSaveCodec.cs`'s own comment, while F3 makes the first written layout the format permanently (the ERR-029-004 class, on the block created one landing after that ERR was filed); + the four sibling MUSTs and the deliberate no-`[GT]`-gating-on-decode decision)
 **Last Updated (prior):** August 7, 2026 (v0.5 — the #29/#41 balance pass D2 (ERR-041-010(b)): Appendix B's outer-frame description gains the three mandatory career sub-blobs — the #29 training and #41 medical blocks (frame v2→3, landed at their T1 and previously unrecorded here) and the new #30 appearance block (frame v3→4), between the season block and the optional match block)
 **Last Updated (prior):** July 27, 2026 (v0.4 — back-props ERR-030-017 (#47 conditional authored sub-blob) + ERR-030-019 (#50 `SaveOriginStamp` in the outer frame) landed atomically with the ten-spec approval wave; Appendix B's outer-frame description amended)
 **Last Updated (prior):** July 25, 2026 (v0.3 — ERR-030-010 Appendix C venue correction, found at #30 T0)
-**Version:** 0.9
+**Version:** 1.0
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -136,15 +137,34 @@ decode, so the codec can never write a block its own decode refuses. **Deliberat
 on decode:** `recentBits` is structurally valid at any value — bits outside the configured window are
 dead weight the read masks off — and gating it against `AppearanceWindowDays` would turn a window
 retune into data loss (the ERR-029-004 rule). The cross-blob cursor-vs-clock rule is stated here in full (AR pass 11 M2 — this paragraph previously
-covered one cursor kind, one direction, one boundary): **all three persisted per-player cursors must sit
+covered one cursor kind, one direction, one boundary; corrected again at **ERR-028-014** for a fourth
+cursor kind and a fourth, non-uniform exemption): **all four persisted per-player cursors must sit
 inside the coherent band relative to the world clock, checked at Save, at Load AND at `SeasonLoop`
-composition** (§2.3 F8). The #29/#41 `LastAdvancedWorldDay` cursors are checked in BOTH directions —
-AHEAD of the clock means the sibling specs' F6 idempotency silently skips the day step until the clock
-catches up; LAGGING by two or more is WORSE, because their F7 gap refusal then fires on every later
-advance and, the career day-steps running before the clock increment (§3.3.2), the gap can never close:
-the career wedges permanently while the file saves and reloads cleanly. The appearance anchor is checked
-AHEAD-only — a lazily-shifted bitmask has no gap contract (shifting is the read's job). The sentinel
-(never-advanced) is exempt in every case. All three boundaries evaluate ONE predicate set —
+composition** (§2.3 F8). The #29/#41 `LastAdvancedWorldDay` cursors, and #28's progression
+`LastAdvancedWorldDay` (ERR-028-007 — the fourth, added at #28 T1/T2a), are all checked in BOTH
+directions — AHEAD of the clock means the sibling specs' F6 idempotency silently skips the day step
+until the clock catches up; LAGGING by two or more is WORSE, because their F7 gap refusal then fires on
+every later advance and, the career day-steps running before the clock increment (§3.3.2), the gap can
+never close: the career wedges permanently while the file saves and reloads cleanly (**#28's lag case
+compounds this** — `ProgressionEngine.AdvanceDay` REPLAYS a gap rather than banking one day, so a
+mispaired restore would bank N days of growth from a single day's inputs, invisibly). The appearance
+anchor is checked AHEAD-only — a lazily-shifted bitmask has no gap contract (shifting is the read's
+job).
+
+**The sentinel (never-advanced) is exempt for #29/#41 only — it is NOT exempt for #28, and is not a
+legal #28 store state at all (ERR-028-014).** The reason is the load-bearing part, not the exception
+itself: #29's and #41's fresh states carry no clock-anchored quantity — a freshly created training or
+medical record means exactly the same thing ("never advanced") on world day 0 as on world day 40,000 —
+so their sentinel cursor is coherent at any clock and the band check waves it through unconditionally.
+#28's fresh state is the only one of the four that DOES carry a clock-anchored quantity: a player's age
+is derived from `BirthWorldDay` (§3.1.1), so a never-advanced #28 state would mean something different
+at every clock value it was paired against — the premise the siblings' exemption rests on is false for
+#28, and inheriting the exemption verbatim would have left the gate with a hole shaped exactly like the
+state every new game starts in. Accordingly `ProgressionEngine.SeedFrom` anchors the cursor at the seed
+day it is handed (never at the sentinel), and `FromBlocks` refuses a lifecycle carrying the sentinel
+outright — so #28's cursor is checked against the coherent band unconditionally, with no exempted value.
+
+All four boundaries evaluate ONE predicate set —
 `PlayerCareerStates`' per-cursor owners — so the save root's gate and the composition gate cannot drift
 (the parallel-surface rule). `SeasonSaveManager` owns the file-boundary halves as the only layer holding
 the world blob and the career blocks together.
@@ -220,4 +240,5 @@ is a **total order** — no two rows ever compare equal (FR-SN-007).
 | 0.7 | 2026-08-08 | — | **Balance-pass AR pass 11 (M2)**: the cursor-vs-clock paragraph stated in FULL — the prior single sentence covered the appearance anchor's ahead direction at the save root only, while the enforced rule spans three cursor kinds, two directions and three boundaries (§2.3's new F8; one shared predicate set). |
 | 0.8 | 2026-08-08 | — | **Balance-pass AR pass 13 (M4)**: Appendix A still said `SEASON_SAVE_FORMAT_VERSION = 2` — the identical wrong value pass 5 M6 fixed in the manifest, left in the OWNING catalogue, contradicting Appendix B in the same file — and carried no rows for `APPEARANCE_SAVE_MAGIC` / `APPEARANCE_SAVE_FORMAT_VERSION` / `APPEARANCE_BITMASK_MAX_WINDOW_DAYS`, the last load-bearing (the `AppearanceWindow` runtime guard reads it; #41's lock hard-codes its value) and in NO spec anywhere — ERR-030-028's class on a constant, one appendix over from where that ERR landed. |
 | 0.9 | 2026-08-08 | — | **ERR-030-030** (found at #28 T2a implementation): Appendix A's `SEASON_SAVE_FORMAT_VERSION` row 4 → 5 for the mandatory #28 `PROG` sub-blob. Appendix B's outer-frame nesting string gains `[len u32]progression` between `appearance` and the optional `match`; "three mandatory career sub-blobs" → four; new paragraph explaining the #28 block carries the ROSTER itself (KD-4) rather than an overlay, so from v5 a career's rosters come from the save file, not from re-running the bootstrap on the world seed — retiring roadmap A3's from-seed-alone reopening property. Byte layout not duplicated here; see #28 §3.5. |
+| 1.0 | 2026-08-09 | — | **ERR-028-014** (found at #28 implementation, August 8–9, 2026): Appendix B.1's cross-blob cursor-vs-clock paragraph still said "all three persisted per-player cursors" and "the sentinel ... is exempt in every case" — both false the day #28's progression cursor became the fourth (ERR-028-007) and #28's own sentinel exemption was retired as the defect it was. Corrected to name all four cursor kinds, state #28's worse-case lag consequence (`AdvanceDay` replays a gap rather than banking one day), and carry the full reason #28 alone has no sentinel exemption: #29/#41's fresh state carries no clock-anchored quantity (so "never advanced" is coherent at any clock), while #28's fresh state derives age from `BirthWorldDay` (so it is not) — `SeedFrom` anchors the cursor at the seed day and `FromBlocks` refuses a carried sentinel accordingly. Landed in the same pass as `section-2.md`'s F8 row, the section that paragraph exists to describe. |
 #endregion
