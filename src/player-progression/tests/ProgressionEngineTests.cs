@@ -1,6 +1,6 @@
 // File:     src/player-progression/tests/ProgressionEngineTests.cs
 // Created:  2026-08-08
-// Modified: 2026-08-08
+// Modified: 2026-08-09
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.1 / §3.4 / §3.5 / §5, KD-4 / KD-7,
 //           FR-PG-011/013/014/019/021/022/023; ERR-029-006 (the batch entry point);
@@ -9,7 +9,11 @@
 // Purpose:  T-PG-DET-001/002, T-PG-RET-001, T-PG-SAVE-001, plus the locks this landing needs that #28
 //           §5 does not list: per-day idempotency, the batch's key-agreement refusals, the KD-4
 //           projection — the one that fails if roster authority is moved back off #28's block — the
-//           signed BirthWorldDay anchor (ERR-028-006), and the F8 sentinel guard (ERR-028-009).
+//           signed BirthWorldDay anchor (ERR-028-006), and the F8 sentinel guard (ERR-028-009). v1.2
+//           adds the mutation-audit locks for seven FromBlocks/ToBlocks guards a mutation sweep proved
+//           dead (deleting each left the whole suite green): ascending club/player ids, the id-cursor
+//           guard, copy-not-borrow on both FromBlocks and ToBlocks, FromBlocks's own cross-club
+//           uniqueness call, and ValidateBatch's positional club-id check.
 
 using System;
 
@@ -443,6 +447,127 @@ namespace TacticalDirector.PlayerProgression.Tests
                 "two clubs sharing a player id would share career state silently.");
         }
 
+        // ── FromBlocks / ToBlocks structural guards (mutation-audit locks) ───────────
+        //
+        // A mutation audit proved that deleting each guard below leaves the whole suite green —
+        // nothing here previously exercised FromBlocks or ToBlocks directly, only through
+        // SeedFrom/Snapshot/Restore round trips that never construct a deliberately malformed block.
+        // Each test below drives FromBlocks (or ToBlocks) directly against a hand-built
+        // ClubCareerStates so the specific guard is the only thing standing between the input and a
+        // successful construction.
+
+        [Test]
+        public void FromBlocks_NonAscendingClubIds_IsRefused()
+        {
+            ClubCareerStates clubHigh = OneMemberClub(clubId: 5, playerId: 500);
+            ClubCareerStates clubLow = OneMemberClub(clubId: 3, playerId: 300);
+
+            Assert.Throws<ArgumentException>(
+                () => ProgressionEngine.FromBlocks(new[] { clubHigh, clubLow }, nextPlayerId: 501),
+                "club ids must strictly ascend — every lookup FromBlocks builds is a binary search " +
+                "over that invariant.");
+        }
+
+        [Test]
+        public void FromBlocks_NonAscendingPlayerIdsWithinAClub_IsRefused()
+        {
+            ClubCareerStates club = TwoMemberClub(clubId: 9, playerIdA: 50, playerIdB: 40);
+
+            Assert.Throws<ArgumentException>(
+                () => ProgressionEngine.FromBlocks(new[] { club }, nextPlayerId: 51),
+                "player ids within a club must strictly ascend — an unordered block makes a carried " +
+                "player un-findable, and the miss reads as 'new'.");
+        }
+
+        [Test]
+        public void FromBlocks_IdCursorAtOrBelowHighestCarriedPlayerId_IsRefused()
+        {
+            ClubCareerStates club = OneMemberClub(clubId: 9, playerId: 500);
+
+            Assert.Throws<ArgumentException>(
+                () => ProgressionEngine.FromBlocks(new[] { club }, nextPlayerId: 500),
+                "a cursor at or behind an id the store already carries would let the next allocation " +
+                "collide with a live player — exactly what serializing the cursor exists to prevent " +
+                "(FR-PG-011).");
+        }
+
+        [Test]
+        public void FromBlocks_CopiesTheStateArrays_NotBorrowsThem()
+        {
+            var records = new[] { Player(700, age: 20) };
+            var lifecycles = new[] { DefaultLife() };
+            var club = new ClubCareerStates(9, records, lifecycles);
+
+            ProgressionEngine engine = ProgressionEngine.FromBlocks(new[] { club }, nextPlayerId: 701);
+
+            // Mutate the CALLER's arrays after FromBlocks has returned.
+            records[0].Age = 999;
+            lifecycles[0].CurrentAbility = 123456;
+
+            LifecycleViewModel view = engine.LifecycleView(9, 700);
+            Assert.AreNotEqual(999, view.Age,
+                "FromBlocks must copy the state arrays — mutating the caller's arrays after " +
+                "construction must not reach a running career (the #29/#41 AR pass-3 finding, closed " +
+                "on the save route and left open on this one).");
+            Assert.AreNotEqual(123456, view.CurrentAbility);
+        }
+
+        [Test]
+        public void FromBlocks_ACrossClubDuplicatePlayerId_IsRefused()
+        {
+            // SeedFrom's twin of this lock already exists (SeedFrom_ACrossClubDuplicatePlayerId_IsRefused
+            // above); this is the OTHER route in — FromBlocks has its own call to the same guard.
+            ClubCareerStates clubA = OneMemberClub(clubId: 9, playerId: 500);
+            ClubCareerStates clubB = OneMemberClub(clubId: 10, playerId: 500);
+
+            Assert.Throws<ArgumentException>(
+                () => ProgressionEngine.FromBlocks(new[] { clubA, clubB }, nextPlayerId: 501),
+                "two clubs sharing a player id via the restore route must be refused just as SeedFrom " +
+                "refuses it (ERR-041-019 / ERR-027-004).");
+        }
+
+        [Test]
+        public void ToBlocks_ReturnsCopies_NotTheStoresLiveArrays()
+        {
+            ProgressionEngine engine = SeedOneClub(ageAtBase: 18);
+            ClubCareerStates[] blocks = engine.ToBlocks();
+
+            blocks[0].Records[0].Age = 999;
+            blocks[0].Lifecycles[0].CurrentAbility = 123456;
+
+            ClubCareerStates[] blocksAgain = engine.ToBlocks();
+            Assert.AreNotEqual(999, blocksAgain[0].Records[0].Age,
+                "ToBlocks must hand out copies — mutating the returned arrays must not reach the " +
+                "store (FR-PG-022: the store is the single writer, and every other caller must not " +
+                "become a second one).");
+            Assert.AreNotEqual(123456, blocksAgain[0].Lifecycles[0].CurrentAbility);
+        }
+
+        [Test]
+        public void AdvanceDay_BatchClubIdMismatchAtAnIndex_IsRefused_EvenWhenPlayerIdsAndLengthsAgree()
+        {
+            // Isolates ValidateBatch's positional club-id check from the downstream player-id / length
+            // checks: the two clubs' batch entries are swapped, but each entry still carries the
+            // PLAYER ids and count that genuinely belong at that index — so if only the club-id check
+            // is deleted, nothing else in ValidateBatch notices the drift and AdvanceDay silently
+            // trains the right players' club under the wrong club's identity.
+            ProgressionEngine engine = SeedTwoClubs();
+            ClubTrainingInputs clubAInputs = NeutralInputsFor(engine, ClubId);
+            ClubTrainingInputs clubBInputs = NeutralInputsFor(engine, ClubId + 1);
+
+            var swapped = new TrainingInputBatch(new[]
+            {
+                new ClubTrainingInputs(ClubId + 1, clubAInputs.PlayerIds, clubAInputs.Inputs),
+                new ClubTrainingInputs(ClubId, clubBInputs.PlayerIds, clubBInputs.Inputs),
+            });
+
+            Assert.Throws<ArgumentException>(
+                () => engine.AdvanceDay(BaseDay, swapped),
+                "the batch's ClubId at each index must match the store's own club there, even when " +
+                "the player ids and lengths at that index still agree — both sides order clubs by " +
+                "ascending id, so a mismatch means the two roster views have drifted apart.");
+        }
+
         // ── Empty store ───────────────────────────────────────────────────────────────
 
         [Test]
@@ -493,6 +618,32 @@ namespace TacticalDirector.PlayerProgression.Tests
             PlayerRecord rec = PlayerRecord.CreateDefault(playerId);
             rec.Age = age;
             return rec;
+        }
+
+        private static PlayerLifecycle DefaultLife(uint lastAdvanced = PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL) =>
+            new PlayerLifecycle
+            {
+                PotentialAbility = 5000,
+                CurrentAbility = 3000,
+                GrowthCursor = 0,
+                BirthWorldDay = 0,
+                RetirementFlag = false,
+                RetirementDay = 0,
+                LastAdvancedWorldDay = lastAdvanced
+            };
+
+        private static ClubCareerStates OneMemberClub(int clubId, int playerId)
+        {
+            var records = new[] { Player(playerId, age: 20) };
+            var lifecycles = new[] { DefaultLife() };
+            return new ClubCareerStates(clubId, records, lifecycles);
+        }
+
+        private static ClubCareerStates TwoMemberClub(int clubId, int playerIdA, int playerIdB)
+        {
+            var records = new[] { Player(playerIdA, age: 20), Player(playerIdB, age: 22) };
+            var lifecycles = new[] { DefaultLife(), DefaultLife() };
+            return new ClubCareerStates(clubId, records, lifecycles);
         }
 
         private static ClubTrainingInputs NeutralInputsFor(ProgressionEngine engine, int clubId)
@@ -554,4 +705,15 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | width). ERR-028-009 (F8): the sentinel-world-day refusal, plus |
 // |         |            |        | a one-below-the-sentinel PASS case so the guard is proven       |
 // |         |            |        | narrow.                                                         |
+// | 1.2     | 2026-08-09 | —      | Mutation-audit locks for seven FromBlocks/ToBlocks guards       |
+// |         |            |        | proven dead by deleting each one and observing the whole suite |
+// |         |            |        | stay green: the ascending club-id and player-id checks, the    |
+// |         |            |        | id-cursor-vs-highest-carried-id guard, FromBlocks copying (not |
+// |         |            |        | borrowing) its input arrays, FromBlocks's own cross-club        |
+// |         |            |        | uniqueness call (SeedFrom's twin was already locked), ToBlocks  |
+// |         |            |        | returning copies, and ValidateBatch's positional club-id check  |
+// |         |            |        | isolated from the downstream player-id/length checks via a      |
+// |         |            |        | two-club swap that keeps every OTHER field correct. Each was    |
+// |         |            |        | proven by deleting the guard, confirming exactly the new test   |
+// |         |            |        | failed, and restoring it.                                       |
 #endregion

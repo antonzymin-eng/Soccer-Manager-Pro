@@ -1,6 +1,6 @@
 // File:     src/player-progression/ProgressionSaveCodec.cs
 // Created:  2026-08-08
-// Modified: 2026-08-08
+// Modified: 2026-08-09
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.5 (the save codec), §4.2, KD-4, FR-PG-016/017/018/019,
 //           F3/F5; ERR-028-004 (§3.5 named the RNG domain tag as the block's identifier);
@@ -9,7 +9,8 @@
 //           block under #30's season save. Encodes the per-club per-player PlayerRecord + PlayerLifecycle
 //           map in canonical key order and reads it back, fail-loud on any magic / version / length-bound
 //           / ordering / trailing-byte violation. No file I/O (that is SeasonSaveManager), so the codec
-//           is exhaustively unit-testable in memory.
+//           is exhaustively unit-testable in memory. ReadPlayer's L3 range gates now cover
+//           PotentialAbility (the F1 growth ceiling) alongside attributes, weak-foot and age.
 
 using System;
 using System.Text;
@@ -426,6 +427,22 @@ namespace TacticalDirector.PlayerProgression
                 RetirementDay = CanonicalSerializer.ReadU32(blob, ref o),
                 LastAdvancedWorldDay = CanonicalSerializer.ReadU32(blob, ref o)
             };
+
+            // L3 (continued): PotentialAbility is the F1 growth ceiling — AbilityModel.TrySpendOnePoint
+            // returns false once CurrentAbility >= PotentialAbility, so a corrupt or hand-edited value
+            // below the floor would silently freeze this player's growth forever, and one above the
+            // ceiling would silently unbound it. The neighbouring L3 gates above cover attributes,
+            // weak-foot and age but read off `rec`; this one reads off `life`, which is only fully read
+            // at this point, so it necessarily sits after `rec` is built rather than before it (unlike
+            // its neighbours) — the check itself is otherwise the same shape.
+            if (life.PotentialAbility < PlayerProgressionConstants.PA_MIN
+                || life.PotentialAbility > PlayerProgressionConstants.ABILITY_MAX)
+            {
+                throw new InvalidOperationException(
+                    Subject + " player " + playerId + " in club " + clubId + " carries potentialAbility " +
+                    life.PotentialAbility + ", outside [" + PlayerProgressionConstants.PA_MIN + ", " +
+                    PlayerProgressionConstants.ABILITY_MAX + "] — corrupt save.");
+            }
         }
 
         // CanonicalSerializer.ReadString reads its own u32 length and then indexes the buffer without a
@@ -536,4 +553,12 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | domain tag as identifier); club id written not implied;        |
 // |         |            |        | canonical ascending keys both ways; guarded string read;       |
 // |         |            |        | non-ASCII names and undefined positions refused at Encode.     |
+// | 1.1     | 2026-08-09 | —      | ReadPlayer gains an L3 range gate for PotentialAbility against |
+// |         |            |        | [PA_MIN, ABILITY_MAX] — the F1 growth ceiling had no gate      |
+// |         |            |        | alongside the neighbouring attribute / weak-foot / age gates,  |
+// |         |            |        | so a corrupt negative value would silently freeze a player's   |
+// |         |            |        | growth forever (AbilityModel.TrySpendOnePoint returns false    |
+// |         |            |        | once CurrentAbility >= PotentialAbility). Placed after `life`  |
+// |         |            |        | is read, unlike its neighbours, since PA lives on the          |
+// |         |            |        | lifecycle overlay rather than the record.                       |
 #endregion

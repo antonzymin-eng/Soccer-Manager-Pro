@@ -1,8 +1,9 @@
 # Player Progression & Lifecycle #28 — Section 9: Approval Checklist
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — PASS-1 → AR-2 → AR-3 recorded in §9.3.1; R-01..R-05 signed; APPROVED)
-**Version:** 0.2
+**Last Updated:** August 9, 2026 (v0.3 — §9.2 implementation status corrected: T0/T1/T2a landed, verified
+against `src/`; season-boundary roster mutation deliberately deferred)
+**Version:** 0.3
 **Status:** APPROVED
 **Source:** `docs/tracking/player-progression-lifecycle-design.md` v0.3
 
@@ -25,14 +26,26 @@ verifiable anchor (CLAUDE.md "Never fabricate verification values"). This is a *
 - [x] KD-4 one-way reference direction stated (#30 depends on #28, never the reverse; #28 references
       only #27 + #16) (§1.4 / §4.1).
 
-## 9.2 Implementation status (forward design — nothing built yet)
+## 9.2 Implementation status (T0/T1/T2a landed; season boundary deliberately deferred)
 
 - [x] FR set complete + stable: FR-PG-001..024 (grep-verified in §2).
-- [ ] `TacticalDirector.PlayerProgression` assembly (value types + `GrowthProjection` §4.3 identity +
-      `RegenGenerator`) — **NOT STARTED** (T0).
-- [ ] `ProgressionSaveCodec` + season-save composition (a #30 change) — NOT STARTED (T1).
-- [ ] `AdvanceDay` / `RunSeasonBoundary` wired at #30's reserved seams — NOT STARTED (T2, gated on #30
-      implemented first).
+- [x] `TacticalDirector.PlayerProgression` assembly (value types + `GrowthProjection` §4.3 identity +
+      `RegenGenerator`) — **LANDED (T0)**. Verified: `src/player-progression/{AbilityModel,
+      GrowthProjection, PlayerLifecycle, PlayerProgressionConstants, RegenGenerator, TrainingInput}.cs`
+      exist, and `src/player-progression/tests/` compiles and passes under the `dotnet-ci` gate.
+- [x] `ProgressionSaveCodec` + season-save composition (a #30 change) — **LANDED (T1, August 8, 2026)**.
+      Verified: `src/player-progression/ProgressionSaveCodec.cs` (magic-led per ERR-028-004, since the
+      forward design's §3.5 had specified version-first with the RNG domain tag as identifier) and
+      `ClubCareerStates.cs` exist; `ProgressionEngine.Snapshot`/`Restore` round-trip through the codec.
+- [x] `AdvanceDay` wired at #30's reserved seam — **LANDED (T2a, August 8, 2026)**. Verified:
+      `ProgressionEngine.AdvanceDay` is the FR-PG-021 batch entry point; `src/season-save/SeasonLoop.cs`
+      calls `_progression.AdvanceDay(day, in growth)` at KD-2 slot 1 (ERR-029-006 closed). Retirement
+      FLAGGING (§3.4) is live as part of this draw-free daily step.
+- [ ] `RunSeasonBoundary` (retiree removal + 1:1 regen, §3.4) — **NOT STARTED, DELIBERATELY DEFERRED.**
+      The roster mutation needs the `player-progression.regen` stream, which this landing does not
+      register (no draw site exists yet — new-game `PotentialAbility` is seeded deterministically, not
+      drawn). Retirement is FLAGGED by `AdvanceDay` above; the roster is not yet actually shrunk or
+      regenerated.
 - [ ] Deep CA/PA curve dial + #29 training-input consumption — NOT STARTED (T3).
 
 ## 9.3 Review gates
@@ -117,4 +130,5 @@ consumption) is the post-APPROVED sequence.
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial checklist. Content/consistency gates checked; review + implementation gates OPEN by construction (forward design). Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | PASS-1 (0H+2M) → AR-2 (3M cross-fix) → AR-3 convergence recorded (§9.3.1); R-01..R-05 signed; §9.6 APPROVED. Status APPROVED. |
+| 0.3 | 2026-08-09 | — | §9.2 corrected: this section had stayed "forward design — nothing built yet" since APPROVED, but T0 (July 24, 2026) and T1/T2a (August 8, 2026) have since landed in `src/player-progression/` (verified: `ProgressionEngine`, `ProgressionSaveCodec`, `ClubCareerStates` exist; `AdvanceDay` is called from `src/season-save/SeasonLoop.cs` at KD-2 slot 1, closing ERR-029-006). `RunSeasonBoundary` and T3 remain unchecked — the season-boundary roster mutation (retiree removal + 1:1 regen) is deliberately deferred pending the `player-progression.regen` stream, not asserted as done. No other section touched. |
 #endregion
