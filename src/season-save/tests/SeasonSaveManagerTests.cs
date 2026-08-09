@@ -819,7 +819,8 @@ namespace TacticalDirector.SeasonSave
             Assert.Throws<InvalidOperationException>(
                 () => SeasonSaveManager.Save(
                     world, MidSeasonState(), matchOrNull: null, TempPath("x.season"),
-                    NoTraining, NoMedical, NoAppearance, future),
+                    TrainingMatching(7, 100), MedicalMatching(7, 100), AppearanceMatching(7, 100),
+                    future),
                 "ERR-028-007: a future-dated progression cursor must be refused at Save, exactly like " +
                 "its #29/#41 siblings.");
         }
@@ -833,7 +834,8 @@ namespace TacticalDirector.SeasonSave
             Assert.Throws<InvalidOperationException>(
                 () => SeasonSaveManager.Save(
                     laggedWorld, MidSeasonState(), matchOrNull: null, TempPath("x.season"),
-                    NoTraining, NoMedical, NoAppearance, lagging),
+                    TrainingMatching(7, 100), MedicalMatching(7, 100), AppearanceMatching(7, 100),
+                    lagging),
                 "ERR-028-007: a progression cursor two behind the clock must be refused — AdvanceDay " +
                 "REPLAYS a gap, so a mispaired file would bank days of growth from one day's inputs, " +
                 "invisibly (worse than the sibling cursors' silent-freeze failure mode).");
@@ -848,7 +850,8 @@ namespace TacticalDirector.SeasonSave
             Assert.DoesNotThrow(
                 () => SeasonSaveManager.Save(
                     laggedWorld, MidSeasonState(), matchOrNull: null, TempPath("ok-progression.season"),
-                    NoTraining, NoMedical, NoAppearance, ok),
+                    TrainingMatching(7, 100), MedicalMatching(7, 100), AppearanceMatching(7, 100),
+                    ok),
                 "the pre-increment convention's lag of exactly one is the NORMAL saved state.");
         }
 
@@ -881,6 +884,66 @@ namespace TacticalDirector.SeasonSave
         // Mirrors TBlock/MBlock/ABlock above: a one-player #28 block with a hand-set cursor, so the
         // fixture controls exactly the field the cursor-vs-clock gate reads. Everything else is filler
         // (irrelevant to that gate).
+        // Career blocks that AGREE with a PBlock's club and player. The four-way coherence gate
+        // (ERR-028-011c) refuses a populated progression set beside empty career sets — correctly, since
+        // a file claiming a roster but no career state for it is exactly the mismatch that gate exists
+        // to catch. These cursor tests are about the CURSOR rule, so they supply a coherent career.
+        [Test]
+        public void Save_ProgressionSetDisagreeingWithTheCareerSets_IsRefused()
+        {
+            // ERR-028-011(c). Before the four-way gate, Save wrote and Load accepted a file whose PROG
+            // block described one club set while training/medical/appearance described another. The
+            // failure then surfaced somewhere else entirely — a null squad mid-restore, or the
+            // SeasonLoop constructor throwing at composition — long after the file had been declared
+            // good. The whole point of this gate is that Save never writes what Load refuses.
+            ProgressionEngine progression = ProgressionFor(PBlock(7, 100, lastAdvancedWorldDay: 1u));
+
+            Assert.Throws<ArgumentException>(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    TrainingMatching(8, 100), MedicalMatching(8, 100), AppearanceMatching(8, 100),
+                    progression),
+                "the progression set carries club 7 and the career sets club 8 — all four describe one "
+                + "career and must agree.");
+        }
+
+        [Test]
+        public void Save_ProgressionSetWithADifferentPlayer_IsRefused()
+        {
+            // The same gate one level down: same club, different member set. Club agreement alone is
+            // not coherence — the career blocks must describe the same PLAYERS the roster carries.
+            ProgressionEngine progression = ProgressionFor(PBlock(7, 100, lastAdvancedWorldDay: 1u));
+
+            Assert.Throws<ArgumentException>(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    TrainingMatching(7, 999), MedicalMatching(7, 999), AppearanceMatching(7, 999),
+                    progression));
+        }
+
+        [Test]
+        public void Save_AnEmptyProgressionSet_BesideEmptyCareerSets_IsAccepted()
+        {
+            // The exemption is deliberate and must stay: a career whose rosters come from the bootstrap
+            // (the pre-#28 composition) writes an empty progression block, and that is coherent. If the
+            // gate ever refuses this it has become over-broad — the mistake made and corrected once
+            // already at ERR-028-008.
+            Assert.DoesNotThrow(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty));
+        }
+
+        private static ClubTrainingStates[] TrainingMatching(int club, int playerId) =>
+            new[] { new ClubTrainingStates(club, new[] { playerId },
+                new[] { TrainingState.Create(TrainingFocus.Balanced) }) };
+
+        private static ClubInjuryStates[] MedicalMatching(int club, int playerId) =>
+            new[] { new ClubInjuryStates(club, new[] { playerId }, new[] { InjuryState.Create() }) };
+
+        private static ClubAppearanceStates[] AppearanceMatching(int club, int playerId) =>
+            new[] { new ClubAppearanceStates(club, new[] { playerId }, new AppearanceState[1]) };
+
         private static ClubCareerStates PBlock(int club, int playerId, uint lastAdvancedWorldDay)
         {
             PlayerRecord rec = PlayerRecord.CreateDefault(playerId);
@@ -914,7 +977,8 @@ namespace TacticalDirector.SeasonSave
 
             SeasonSaveManager.Save(
                 world, MidSeasonState(), matchOrNull: null, path,
-                NoTraining, NoMedical, NoAppearance, populated);
+                TrainingMatching(7, 100), MedicalMatching(7, 100), AppearanceMatching(7, 100),
+                populated);
 
             Assert.Throws<InvalidOperationException>(
                 () => SeasonSaveManager.Save(

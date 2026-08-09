@@ -131,6 +131,15 @@ namespace TacticalDirector.PlayerProgression
                 throw new ArgumentNullException(nameof(clubs));
             }
 
+            // Bind-check FIRST (L4): ClubIdsOf reads ClubId off every element, and two
+            // `default(ClubCareerStates)` entries both read club id 0 — so keying before this ran
+            // reported "Duplicate club id 0" for what is actually an unbound block. Diagnose the real
+            // cause.
+            for (int i = 0; i < clubs.Length; i++)
+            {
+                RequireBound(clubs[i], i);
+            }
+
             int[] clubOrder = SaveBlobFramingHelpers.CanonicalOrder(
                 ClubIdsOf(clubs), SetName, "club id", "FR-PG-019");
 
@@ -139,10 +148,16 @@ namespace TacticalDirector.PlayerProgression
             var playerOrders = new int[clubs.Length][];
             for (int i = 0; i < clubs.Length; i++)
             {
-                RequireBound(clubs[i], i);
                 playerOrders[i] = SaveBlobFramingHelpers.CanonicalOrder(
                     PlayerIdsOf(clubs[i]), SetName, "player id in club " + clubs[i].ClubId, "FR-PG-019");
             }
+
+            // M2: never write what Restore refuses. CanonicalOrder only rejects a duplicate WITHIN a
+            // club, but a career needs player ids globally unique across clubs (ERR-041-019), and
+            // ProgressionEngine.Restore enforces exactly that — so without this gate Encode produced a
+            // file its own restore path rejects. This is the balance-pass AR pass-4 finding recurring
+            // in the landing whose own engine guard cites the same ERR.
+            RequireGloballyUniquePlayerIds(clubs);
 
             int size = 4 + 4 + 4 + 4;   // magic + version + nextPlayerId + clubCount
             for (int i = 0; i < clubs.Length; i++)
@@ -270,6 +285,12 @@ namespace TacticalDirector.PlayerProgression
                     "— truncated, padded, or corrupt (F5).");
             }
 
+            // The load-side mirror of Encode's gate (M2): ascending keys are checked per club, which
+            // cannot see a collision ACROSS clubs. A hand-edited file carrying one would otherwise
+            // reach ProgressionEngine.Restore and be refused there with a far less specific message —
+            // or, on the FromBlocks route, not at all.
+            RequireGloballyUniquePlayerIds(clubs);
+
             return clubs;
         }
 
@@ -344,6 +365,42 @@ namespace TacticalDirector.PlayerProgression
             SaveBlobFramingHelpers.Require(o, 4, total, Subject, "weak-foot rating");
             int weakFoot = CanonicalSerializer.ReadI32(blob, ref o);
 
+            // L3: range-gate what comes back. This block is the ROSTER now (KD-4), so a corrupt or
+            // hand-edited attribute flows straight into PlayerAttributeProjection and the match engine
+            // — an attribute of 9999 or a negative age would simply be played. The sibling career
+            // codecs gate their own value contracts for the same reason; #28's stakes are higher
+            // because nothing downstream re-derives these from a trusted source.
+            for (int i = 0; i < AttrIdx.Count; i++)
+            {
+                if (attrValues[i] < PlayerProgressionConstants.ATTRIBUTE_MIN
+                    || attrValues[i] > PlayerProgressionConstants.ATTRIBUTE_MAX)
+                {
+                    throw new InvalidOperationException(
+                        Subject + " player " + playerId + " in club " + clubId + " carries attribute " +
+                        i + " = " + attrValues[i] + ", outside [" +
+                        PlayerProgressionConstants.ATTRIBUTE_MIN + ", " +
+                        PlayerProgressionConstants.ATTRIBUTE_MAX + "] — corrupt save.");
+                }
+            }
+
+            if (weakFoot < PlayerDatabaseConstants.WEAK_FOOT_MIN
+                || weakFoot > PlayerDatabaseConstants.WEAK_FOOT_MAX)
+            {
+                throw new InvalidOperationException(
+                    Subject + " player " + playerId + " in club " + clubId + " carries weak-foot " +
+                    weakFoot + ", outside [" + PlayerDatabaseConstants.WEAK_FOOT_MIN + ", " +
+                    PlayerDatabaseConstants.WEAK_FOOT_MAX + "] — corrupt save.");
+            }
+
+            if (age < 0)
+            {
+                throw new InvalidOperationException(
+                    Subject + " player " + playerId + " in club " + clubId + " carries age " + age +
+                    " — negative ages are not representable in the model (corrupt save). Note the age " +
+                    "field is a DERIVED cache; the authoritative anchor is birthWorldDay, which may " +
+                    "legitimately be negative (ERR-028-006).");
+            }
+
             var attributes = new PlayerAttributes();
             attributes.FromArray(attrValues);
             attributes.WeakFootRating = weakFoot;
@@ -390,6 +447,32 @@ namespace TacticalDirector.PlayerProgression
         }
 
         // ── Shared helpers ────────────────────────────────────────────────────────────
+
+        // The cross-club uniqueness rule, shared by Encode and Decode so the two boundaries cannot
+        // drift (ERR-041-019 / ERR-027-004). ProgressionEngine enforces the same rule at its own entry
+        // points; this is the codec's half, so neither a written file nor a read one can carry the
+        // collision.
+        internal static void RequireGloballyUniquePlayerIds(ClubCareerStates[] clubs)
+        {
+            var seen = new System.Collections.Generic.Dictionary<int, int>();
+            for (int c = 0; c < clubs.Length; c++)
+            {
+                for (int p = 0; p < clubs[c].Count; p++)
+                {
+                    int id = clubs[c].Records[p].PlayerId;
+                    if (seen.TryGetValue(id, out int owner))
+                    {
+                        throw new ArgumentException(
+                            "Player id " + id + " appears in both club " + owner + " and club " +
+                            clubs[c].ClubId + ". A career requires GLOBALLY unique player ids, not " +
+                            "merely club-scoped ones (#27 FR-SQ-010 / ERR-041-019) — duplicates would " +
+                            "share career and injury state silently.",
+                            nameof(clubs));
+                    }
+                    seen.Add(id, clubs[c].ClubId);
+                }
+            }
+        }
 
         private static void RequireBound(in ClubCareerStates club, int index)
         {

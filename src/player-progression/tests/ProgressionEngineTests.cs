@@ -336,8 +336,12 @@ namespace TacticalDirector.PlayerProgression.Tests
         [Test]
         public void AdvanceDay_NeutralBatch_IsAcceptedAndIsTheIdentity()
         {
-            // FR-PG-009: Neutral must be byte-identical to no training input. Both routes are exercised
-            // here — the explicit Neutral batch and a fully-supplied batch of Neutral inputs.
+            // A SHAPE lock, not the FR-PG-009 identity lock (L1). `TrainingInput` is an empty struct
+            // today and `DailyPoints` ignores its `training` parameter entirely, so ANY batch content
+            // equals Neutral — this cannot enforce FR-PG-009 until #28 T3 gives the type a field. What
+            // it does enforce is that the two supply routes are accepted and agree, which is what the
+            // slot-1 composition depends on. #28 §5 records that the real identity lock lands with the
+            // first TrainingInput field.
             ProgressionEngine viaNeutral = SeedOneClub(ageAtBase: 18);
             ProgressionEngine viaFullBatch = SeedOneClub(ageAtBase: 18);
 

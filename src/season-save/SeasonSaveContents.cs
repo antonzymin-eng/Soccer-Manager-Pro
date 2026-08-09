@@ -1,6 +1,6 @@
 // File:     src/season-save/SeasonSaveContents.cs
 // Created:  2026-07-22
-// Modified: 2026-08-08 (AR pass 7 L3: the Purpose block names the appearance records — v1.4)
+// Modified: 2026-08-08 (#28 T1/T2a + AR pass 1 — v1.5)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / G4 / KD-3;
 //           Season & Competition Loop #30 FR-SN-021; Training System #29 FR-TR-019;
@@ -90,4 +90,6 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | omitted the appearance records the class summary and Modified     |
 // |         |            |        | line already named — the SeasonSaveCodec v1.5 doc-drift class,    |
 // |         |            |        | one file over, again.                                             |
+// | 1.5     | 2026-08-08 | —      | #28 T2a: gains the restored ProgressionEngine — the roster a    |
+// |         |            |        | caller must resume against (#28 KD-4), not merely an overlay.   |
 #endregion

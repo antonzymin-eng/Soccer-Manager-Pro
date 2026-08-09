@@ -1,6 +1,6 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
-// Modified: 2026-08-08 (AR pass 6: the constructor pairs the career against the world clock —
+// Modified: 2026-08-08 (#28 T1/T2a + AR pass 1 — v1.16)
 //           v1.15; the pass 1-3 recording chain and the pass-5 doc fix are the rows below)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (day advance / KD-2 tick order), §3.4 (playing a round /
@@ -492,6 +492,33 @@ namespace TacticalDirector.SeasonSave
         /// the re-run inside the next day-advance's <see cref="RunWorldTickInFixedOrder"/> is a no-op
         /// over the cursors.
         /// </remarks>
+        public MatchResult[] AdvanceAndPlayNextRound()
+        {
+            // The reachable entry point for a loop that owns its provider (ERR-028-010). When #28 is
+            // wired the constructor PROJECTS the provider from the progression store and keeps it
+            // private, so the ISquadProvider overload below — which demands reference-equality with
+            // that instance — could not be satisfied by any caller: the store's projection was not
+            // exposed anywhere, and constructing an equivalent one is a different object. The headline
+            // configuration of the #28 landing could therefore advance days and save, and never play a
+            // round. Resolving through the loop's own provider also removes the older hazard the
+            // overload guards against by hand: there is no second provider to disagree with.
+            if (_careerSquads == null)
+            {
+                throw new System.InvalidOperationException(
+                    "This loop owns no squad provider, so it cannot resolve a round on its own. Use "
+                    + "AdvanceAndPlayNextRound(ISquadProvider) — the careerless path, where the caller "
+                    + "supplies the rosters.");
+            }
+
+            return PlayNextRound(_careerSquads);
+        }
+
+        /// <summary>
+        /// The careerless / caller-supplied-provider path. When the loop owns a provider (a career, or
+        /// #28's projection) prefer the no-argument overload: this one exists for a loop that has no
+        /// provider of its own, and it still refuses a provider that disagrees with a wired career.
+        /// </summary>
+        /// <param name="squads">The rosters this round resolves against.</param>
         public MatchResult[] AdvanceAndPlayNextRound(ISquadProvider squads)
         {
             if (squads == null)
@@ -513,6 +540,13 @@ namespace TacticalDirector.SeasonSave
                     nameof(squads));
             }
 
+            return PlayNextRound(squads);
+        }
+
+        // The one body both overloads run. Extracted rather than duplicated: two copies of a
+        // twelve-guard round resolution is the parallel-surface defect this repo keeps filing.
+        private MatchResult[] PlayNextRound(ISquadProvider squads)
+        {
             if (_state.Calendar.IsSeasonComplete)
             {
                 throw new System.InvalidOperationException(
@@ -676,7 +710,12 @@ namespace TacticalDirector.SeasonSave
                     + "invariant (FR-SN-011). Roll at the end of the season, then advance the world.");
             }
 
-            // ── (d) #28 age advance inserts HERE — empty until #28 T2. ──────────────────────────
+            // ── (d) #28 season boundary — RESERVED, still empty. ────────────────────────────────
+            // The DAILY step is live at slot 1 since T2a, and age is derived there rather than
+            // advanced here, so there is no "age advance" left for this position. What the slot
+            // still holds open is RunSeasonBoundary: retiree removal + 1:1 regen, which needs the
+            // player-progression.regen stream (#28 §3.5 does not pin how that survives a save).
+            // #30 §3.5 carries the same wording.
             // (d′) the FR-TR-025 / FR-MD-025 roster-membership handoff, STAGED here and installed
             // below. #28's regens and retirements are the roster change, so the reconciliation reads
             // the provider at this point — after (d) — but it must not WRITE here: BeginNextSeason is
@@ -1306,4 +1345,11 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | beside its KD-4 and coverage gates; three step-9 prose sites  |
 // |         |            |        | corrected to step 12 (step 9 is the #32 scouting null seam    |
 // |         |            |        | under pass 1's own renumbering).                              |
+// | 1.16    | 2026-08-08 | —      | #28 T2a: optional ProgressionEngine; slot 1 LIVE (gathers the  |
+// |         |            |        | #29 batch via PlayerCareerStates.GatherTrainingInputs and hands|
+// |         |            |        | it to the FR-PG-021 batch AdvanceDay); the constructor REFUSES a|
+// |         |            |        | separately-supplied ISquadProvider when a store is present and |
+// |         |            |        | projects one from it instead (KD-4 single roster authority), and|
+// |         |            |        | gates the store's coverage + its cursor vs the world clock     |
+// |         |            |        | (ERR-028-007).                                                 |
 #endregion

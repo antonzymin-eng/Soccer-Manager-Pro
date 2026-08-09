@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/LeagueBootstrapTests.cs
 // Created:  2026-07-25
-// Modified: 2026-07-25
+// Modified: 2026-08-08 (#28 T1/T2a + AR pass 1 — v1.1)
 // Author:   —
 // Spec:     League Bootstrap design supplement (docs/tracking/league-bootstrap-design.md) §3
 //           (determinism contract), §4 (F1..F6), KD-2/KD-3/KD-5/KD-6/KD-9; path-to-playable A3
@@ -641,4 +641,9 @@ namespace TacticalDirector.SeasonSave.Tests
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                              |
 // | 1.0     | 2026-07-25 | —      | Initial suite (roadmap A3).                                        |
+// | 1.1     | 2026-08-08 | —      | #28 T2a: SavedWorldSeed_RebuildsTheSameLeague NARROWED to      |
+// |         |            |        | SavedWorldSeed_RebuildsTheSameDay0League. #28 KD-4 retires the |
+// |         |            |        | rule it asserted (squads are not persisted; the provider is    |
+// |         |            |        | rebuilt from the seed) — generation stays seed-pure, but an    |
+// |         |            |        | existing career's rosters now come from the save file.         |
 #endregion

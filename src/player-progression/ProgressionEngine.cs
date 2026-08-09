@@ -215,6 +215,29 @@ namespace TacticalDirector.PlayerProgression
             }
 
             engine.RequireGloballyUniquePlayerIds(nameof(clubs));
+
+            // M2: the whole point of serializing NextPlayerId is that "a regen can never reuse a
+            // retiree's id across a save boundary" (FR-PG-011). A cursor at or behind an id the store
+            // already carries defeats that silently — the next allocation collides with a LIVE player,
+            // and the collision then reads as one player with two careers.
+            int highest = int.MinValue;
+            for (int c = 0; c < engine._records.Count; c++)
+            {
+                PlayerRecord[] recs = engine._records[c];
+                if (recs.Length > 0 && recs[recs.Length - 1].PlayerId > highest)
+                {
+                    highest = recs[recs.Length - 1].PlayerId;   // ascending within a club
+                }
+            }
+            if (highest != int.MinValue && nextPlayerId <= highest)
+            {
+                throw new ArgumentException(
+                    $"The id cursor is {nextPlayerId} but this career already carries player "
+                    + $"{highest}. The next allocated id would collide with a live player, which is "
+                    + "exactly what serializing the cursor exists to prevent (FR-PG-011).",
+                    nameof(nextPlayerId));
+            }
+
             engine._nextPlayerId = nextPlayerId;
             return engine;
         }
@@ -356,10 +379,11 @@ namespace TacticalDirector.PlayerProgression
                 return null;
             }
 
-            PlayerRecord[] records = _records[c];
-            var copy = new PlayerRecord[records.Length];
-            Array.Copy(records, copy, records.Length);
-            return new Squad(clubId, copy);   // Squad snapshot-copies again; belt and braces, cheaply
+            // One copy, not two (L7). `Squad`'s constructor snapshot-copies what it is handed, so the
+            // store's live array is never aliased by the returned squad — the extra defensive Array.Copy
+            // that used to sit here bought nothing and doubled the per-projection cost, which is paid
+            // once per club per KD-2 slot per world day and grows with every slot that lands.
+            return new Squad(clubId, _records[c]);
         }
 
         /// <summary>

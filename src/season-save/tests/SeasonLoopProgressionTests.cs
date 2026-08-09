@@ -85,8 +85,11 @@ namespace TacticalDirector.SeasonSave.Tests
         [Test]
         public void AdvanceDays_LeavesTheWorldDigestUntouched()
         {
-            // FR-SN-026 / KD-8: the career day steps mutate career state, never the world blob. #28's
-            // block is its own sub-blob, so wiring slot 1 must not move the world snapshot.
+            // FR-SN-026 / KD-8: the career day steps mutate career state, never the world blob.
+            // Kept as a BOUNDARY guard, with its claim corrected (L2): #28's state lives in a separate
+            // object with no path to WorldStore, so no change to slot 1 can turn this red — it proves
+            // the separation holds, NOT that slot 1 does anything. The wiring proof is the per-band
+            // cursor lock above; do not read this one as evidence for it.
             SeasonLoop wired = NewProgressionLoop(out WorldStore wiredWorld, out _);
             SeasonLoop bare = NewBareLoop(out WorldStore bareWorld);
 
@@ -132,13 +135,22 @@ namespace TacticalDirector.SeasonSave.Tests
                 subset[c] = league.ResolveByClubId(c);
             }
             ProgressionEngine partial = ProgressionEngine.SeedFrom(subset, world.CurrentWorldTick);
-            var career = PlayerCareerStates.ForLeague(
-                new ProgressionSquads(partial), ClubIdsOf(subset.Length), injuryOccurrenceEnabled: true);
 
-            Assert.Throws<ArgumentException>(
+            // The career covers the WHOLE season deliberately (M5). Building it over the same three
+            // clubs as the store made this a tautology: the pre-existing career-covers-the-season check
+            // fired first, so deleting the progression coverage block left the test green and the new
+            // predicate had no isolating case at all. With a full career, only the progression
+            // predicate can refuse this.
+            var career = PlayerCareerStates.ForLeague(
+                league, ClubIds(), injuryOccurrenceEnabled: true);
+
+            ArgumentException ex = Assert.Throws<ArgumentException>(
                 () => new SeasonLoop(
                     world, season, RoundResolutionMode.QuickSimAll, career, null, partial),
                 "the store must cover every club that plays in this season.");
+            Assert.AreEqual("progressionOrNull", ex.ParamName,
+                "…and it must be the PROGRESSION predicate that refuses, not the career one — that "
+                + "distinction is the whole point of this case.");
         }
 
         // ── ERR-028-007: the fourth persisted cursor, checked at composition ──────────
@@ -212,6 +224,63 @@ namespace TacticalDirector.SeasonSave.Tests
                 () => new SeasonLoop(
                     world, season, RoundResolutionMode.QuickSimAll, career, null, progression),
                 "the sentinel is exempt — a never-advanced career is coherent at any clock.");
+        }
+
+        // ── ERR-028-010: the wired configuration can actually play ───────────────────
+
+        [Test]
+        public void AProgressionWiredLoop_CanPlayARound_ThroughItsOwnProvider()
+        {
+            // The landing's headline configuration could advance days and save, and nothing else. The
+            // constructor projects the provider from the store and keeps it private, while the
+            // ISquadProvider overload demands reference-equality with that instance — which nothing
+            // exposed. Every caller-constructible provider was refused; the working path was reachable
+            // only by reflection. This is the lock on the no-argument overload that closes it.
+            SeasonLoop loop = NewProgressionLoop(out _, out ProgressionEngine progression);
+
+            loop.AdvanceToNextFixtureDay();
+            MatchResult[] results = loop.AdvanceAndPlayNextRound();
+
+            Assert.Greater(results.Length, 0, "a round must actually resolve fixtures.");
+            Assert.AreEqual(ClubCount / 2, results.Length,
+                "every club plays exactly once in a round.");
+            Assert.IsTrue(progression.ClubCount > 0, "the store is still the loop's roster authority.");
+        }
+
+        [Test]
+        public void PlayingARound_ResolvesAgainstTheStore_NotTheBootstrap()
+        {
+            // The other half of the same finding: the ISquadProvider overload resolved the round from
+            // the CALLER's provider rather than the loop's, so relaxing the reference gate alone would
+            // have played the round against the day-0 bootstrap. Driving enough days for growth to bank
+            // and then playing proves the round sees the store's current roster.
+            SeasonLoop loop = NewProgressionLoop(out _, out ProgressionEngine progression);
+
+            // Mutate the store through its own step so the projection diverges from the bootstrap.
+            loop.AdvanceDays(6);
+            Squad projected = progression.SquadFor(0);
+
+            loop.AdvanceToNextFixtureDay();
+            Assert.DoesNotThrow(() => loop.AdvanceAndPlayNextRound(),
+                "the loop resolves the round through the provider it owns.");
+
+            // The store is the authority the round was resolved against: the same instance the loop
+            // holds, still projecting the evolved records rather than the bootstrap's.
+            Assert.AreEqual(
+                SumAttributes(projected), SumAttributes(progression.SquadFor(0)),
+                "the round must not have reset or bypassed the store's roster.");
+        }
+
+        [Test]
+        public void ANoArgumentRoundPlay_OnALoopThatOwnsNoProvider_FailsLoud()
+        {
+            // The no-argument overload is not a universal replacement: a careerless loop owns no
+            // provider and must still be told which rosters to use. Refusing by name beats a
+            // NullReferenceException from inside the resolution.
+            SeasonLoop bare = NewBareLoop(out _);
+            bare.AdvanceToNextFixtureDay();
+
+            Assert.Throws<InvalidOperationException>(() => bare.AdvanceAndPlayNextRound());
         }
 
         // ── Save / resume through the frame ───────────────────────────────────────────

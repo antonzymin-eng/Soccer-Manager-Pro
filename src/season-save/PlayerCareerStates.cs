@@ -1,6 +1,6 @@
 // File:     src/season-save/PlayerCareerStates.cs
 // Created:  2026-08-06
-// Modified: 2026-08-08 (AR pass 13 L2: the block counts — v1.14)
+// Modified: 2026-08-08 (#28 T1/T2a + AR pass 1 — v1.15)
 // Author:   —
 // Spec:     Training System #29 §3.1/§3.3/§3.5, §4.3 (seam contracts), FR-TR-004/016/022/023/025;
 //           Injuries & Medical #41 §3.1/§3.5, §4.3, FR-MD-003/009/010/022/023/025/027;
@@ -1682,4 +1682,9 @@ namespace TacticalDirector.SeasonSave
 // | 1.14    | 2026-08-08 | —      | Balance-pass AR pass 13 (L2, doc): FromBlocks' doc still counted   |
 // |         |            |        | "two" blocks — three since D2 (the pass-12-L1 stale-count class,  |
 // |         |            |        | one file over).                                                    |
+// | 1.15    | 2026-08-08 | —      | #28 T2a: + GatherTrainingInputs (#29 §3.5 step 1 — the slot-1  |
+// |         |            |        | batch #30 hands to #28, keyed by player id so a drift between  |
+// |         |            |        | the two roster views fails loud); + RequireProgressionCursor-  |
+// |         |            |        | WithinClock, the fourth per-player cursor's single owner, with |
+// |         |            |        | all three boundaries delegating to it (ERR-028-007).           |
 #endregion

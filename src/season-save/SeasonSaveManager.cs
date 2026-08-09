@@ -1,6 +1,6 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
-// Modified: 2026-08-08 (AR pass 13 L2: the block counts — v1.17)
+// Modified: 2026-08-08 (#28 T1/T2a + AR pass 1 — v1.18)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-1 / KD-5..KD-8;
 //           Training System #29 §4.4 / FR-TR-018/019; Injuries & Medical #41 §4.4 / FR-MD-017/018;
@@ -133,7 +133,7 @@ namespace TacticalDirector.SeasonSave
                 throw new ArgumentException("Save path must be non-empty.", nameof(path));
             }
 
-            RequireCoherentCareerBlocks(trainingClubs, medicalClubs, appearanceClubs);
+            RequireCoherentCareerBlocks(trainingClubs, medicalClubs, appearanceClubs, progression);
             RequireCareerCursorsWithinClock(
                 world.CurrentWorldTick, trainingClubs, medicalClubs, appearanceClubs, progression);
 
@@ -376,6 +376,13 @@ namespace TacticalDirector.SeasonSave
             RequireCareerCursorsWithinClock(
                 world.CurrentWorldTick, trainingClubs, medicalClubs, appearanceClubs, progression);
 
+            // M3, load side. Save runs the same four-way gate, so a file written by this build cannot
+            // reach here incoherent — but a hand-edited or mispaired one can, and the symptom without
+            // this is a null squad part-way through a restore rather than a refusal at the boundary
+            // that owns the rule. Unconditional: the progression block is mandatory in the frame.
+            RequireCoherentCareerBlocks(
+                trainingClubs, medicalClubs, appearanceClubs, progression);
+
             // The in-progress match was configured with the AVAILABILITY-FILTERED squad (#41 FR-MD-023,
             // #29/#41 T2), and the snapshot records only each team's ClubId — it cannot record "which
             // eighteen of the twenty-five". So restoring through the raw provider hands
@@ -482,8 +489,72 @@ namespace TacticalDirector.SeasonSave
         private static void RequireCoherentCareerBlocks(
             ClubTrainingStates[] trainingClubs,
             ClubInjuryStates[] medicalClubs,
-            ClubAppearanceStates[] appearanceClubs)
+            ClubAppearanceStates[] appearanceClubs,
+            ProgressionEngine progression)
         {
+            // M3: the FOURTH career set joins the gate. Until it did, a file whose PROG block described
+            // clubs {0,1} while the three career blocks described {0,1,2,3} was written and accepted —
+            // failing later and elsewhere (a null squad mid-restore, or the SeasonLoop constructor
+            // throwing at composition), long after the file had been declared good. The gate exists so
+            // Save never writes what Load refuses; a set added without joining it is outside that
+            // guarantee. Skipped for an EMPTY store, which is the honest pre-#28 composition — a career
+            // whose rosters come from the bootstrap, not from #28.
+            if (progression != null && progression.ClubCount > 0)
+            {
+                ClubCareerStates[] prog = progression.ToBlocks();
+                if (prog.Length != trainingClubs.Length)
+                {
+                    throw new ArgumentException(
+                        $"The progression set carries {prog.Length} clubs but the three career sets "
+                        + $"carry {trainingClubs.Length}; all four describe one career.",
+                        nameof(progression));
+                }
+
+                var byClub = new System.Collections.Generic.Dictionary<int, ClubCareerStates>();
+                for (int c = 0; c < prog.Length; c++)
+                {
+                    byClub[prog[c].ClubId] = prog[c];
+                }
+
+                for (int c = 0; c < trainingClubs.Length; c++)
+                {
+                    if (!byClub.TryGetValue(trainingClubs[c].ClubId, out ClubCareerStates pc))
+                    {
+                        throw new ArgumentException(
+                            $"The progression set carries no club {trainingClubs[c].ClubId}, which the "
+                            + "training/medical/appearance sets do.",
+                            nameof(progression));
+                    }
+
+                    if (pc.Count != trainingClubs[c].Count)
+                    {
+                        throw new ArgumentException(
+                            $"Club {pc.ClubId}: the progression set carries {pc.Count} players, the "
+                            + $"career sets {trainingClubs[c].Count}.",
+                            nameof(progression));
+                    }
+
+                    var progIds = new int[pc.Count];
+                    for (int i = 0; i < pc.Count; i++)
+                    {
+                        progIds[i] = pc.Records[i].PlayerId;
+                    }
+                    var careerIds = (int[])trainingClubs[c].PlayerIds.Clone();
+                    Array.Sort(progIds);
+                    Array.Sort(careerIds);
+                    for (int i = 0; i < progIds.Length; i++)
+                    {
+                        if (progIds[i] != careerIds[i])
+                        {
+                            throw new ArgumentException(
+                                $"Club {pc.ClubId}: the progression set and the career sets describe "
+                                + "different players.",
+                                nameof(progression));
+                        }
+                    }
+                }
+            }
+
             if (trainingClubs.Length != medicalClubs.Length
                 || trainingClubs.Length != appearanceClubs.Length)
             {
@@ -764,4 +835,9 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | zero-club blocks" (three since D2) and "every save written        |
 // |         |            |        | before T2" (frame v4 refuses a pre-T2 file; the live case is a    |
 // |         |            |        | careerless save).                                                  |
+// | 1.18    | 2026-08-08 | —      | #28 T2a: Save takes a required ProgressionEngine and writes the   |
+// |         |            |        | PROG sub-blob; Load restores it and prefers it over the caller's  |
+// |         |            |        | provider as the match-restore roster source; the career-cursor    |
+// |         |            |        | walker gains #28's fourth cursor (ERR-028-007); Save refuses to   |
+// |         |            |        | overwrite a populated roster with an empty one (ERR-028-008).     |
 #endregion
