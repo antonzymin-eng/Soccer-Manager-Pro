@@ -239,9 +239,31 @@ dormancy than anything in Class A.
   if it stopped working.
 - **C3 — `RunParameters.RunTriggerTick` is inert**, because run params are regenerated every
   heartbeat.
+- **C7 — NO AGENT CAN RECEIVE A BALL OUT OF THE AIR, and 44% of final-third passes are aerial**
+  (measured August 9, 2026; `close-chance-creation-design.md` §10.3). `RunFirstTouch` gate 2 and
+  `RunLooseBallPickup` both refuse any ball whose centre height exceeds
+  `FirstTouchConstants.GroundControlHeight` = `BallPhysicsConstants.Possession.ControlHeight` =
+  **0.5 m**, on the stated grounds that "a higher ball is a Heading Mechanics (#10) event, not
+  Stage 0" — and heading is opt-in Phase 1 with DT-emitted HEADER deferred behind the 3-bit
+  `ActionType` ordinal ceiling. **Measured consequence over 6 seeds × 90 min, 891 final-third
+  passes: Lofted completes 1% (n=221), Cross completes 1% (n=171), against Ground 41% (n=441) and
+  ThroughBall 28% (n=58).** Overall final-third completion 23%, interceptions 53%. An aerial
+  delivery only becomes receivable after it lands and rolls, by which point the intended receiver
+  is a mean of 19.0 m away. A cross is football's primary route into the penalty area and here it
+  is a 1% pass. **This is the largest measured item in this backlog** and it is the head of
+  `close-chance-creation-design.md` §10.4's corrected order. Its scope is the same
+  `CollisionConsumer` AGENT_BALL duel fan-out + DT-emitted HEADER already carried as the open
+  remainder of the #10/#11 engine integration — this entry supplies the measurement that ranks it.
+
 - **C4 — #8 §3.1.3 cannot pass to a place, only to a player** — one PASS candidate per visible
   teammate at that teammate's *current* position. No pass into space, no through-ball to a run, no
-  cross to an arriving header. A generator change, not a `[GT]`.
+  cross to an arriving header. A generator change, not a `[GT]`. **DEPRIORITIZED August 9, 2026:**
+  `close-chance-creation-design.md` §7 item 1 called this "the real bound"; §10 retracts that
+  ranking. C7 above and the box-geometry bound (§10.2) both sit ahead of it, and C7 makes landing
+  C4 first actively harmful — the engine already plays 171 crosses per corpus into space at a 1%
+  completion rate, so a candidate type that plays *more* balls into space adds to that bucket.
+  Note also that its executor-side half is **not** missing: `PassExecutor` Path A
+  (`ResolveSpaceTargetedAimPoint`) is fully implemented and merely has no producer.
 
 ---
 
@@ -257,7 +279,7 @@ Recorded so a later sweep does not re-litigate them.
 | `AttackingAITick.GetSnapshot` | Observation accessor. Not a gap. |
 | `CoverShadowCurve.ComputeCurveEffectiveness` | Telemetry-only. Not a gap. |
 | `DecisionTree.SetMatchSeed` | **Not a defect** — the seed is supplied at construction (`MatchEngine.cs:829`). Redundant setter; delete or leave. |
-| `BallCollision.ApplyGoalPostCollision`, most of `BallPhysicsCore` / `AgentLocomotion` / `PassTargetResolver` | Internal helpers driven by their own assembly's orchestrator. Correctly wired. |
+| `BallCollision.ApplyGoalPostCollision`, most of `BallPhysicsCore` / `AgentLocomotion` / `PassTargetResolver` | Internal helpers driven by their own assembly's orchestrator. Correctly wired. **CORRECTION (Aug 9, 2026): this row is wrong for `PassTargetResolver.ResolveSpaceTargetedAimPoint`**, which `ResolveAimPoint` reaches only when `TargetAgentId == -1`, and no producer in `src/` ever sets that. It is dormant Class-A, not a correctly-wired helper; it acquires its first producer if C4 lands. The v1.0 sweep counted methods with no caller and missed it because the method *has* a caller — on a branch nothing can take. |
 
 ---
 
@@ -302,6 +324,7 @@ next lever on close-chance creation and is large enough to want its own pass.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.3 | 2026-08-08 | — | **C7 filed, and it is the largest measured item in this document** — no agent can receive a ball above 0.5 m (`RunFirstTouch` gate 2 and `RunLooseBallPickup` both refuse it, heading being deferred out of Stage 0), and 44% of final-third passes are aerial: measured over 6 seeds × 90 min, **Lofted completes 1% (n=221) and Cross 1% (n=171)** against Ground 41% and ThroughBall 28%, with overall final-third completion 23%. **C4 deprioritized** on the same measurement — `close-chance-creation-design.md` §7 item 1's "the real bound" claim is retracted in §10, and landing C4 first would add to a bucket that already completes 1%. **One Class-C row corrected**: `PassTargetResolver.ResolveSpaceTargetedAimPoint` is dormant Class-A, not a correctly-wired helper — the v1.0 sweep missed it because the method has a caller on a branch nothing can take. No code changed in this revision. |
 | 1.2 | 2026-08-08 | — | **C1 fixed** (`ERR-012-011`) — #12 §3.0 classifies phase from TEAM possession; the engine gains a pass-in-flight receiver latch (`SNAPSHOT_SCHEMA_VERSION` 19 → 20), no new `[GT]`. **This document's own claim that C1 was "probably the highest-value item" is retracted in place**, refuted by the pre-implementation council: the gate is real but two of the three consumers it was meant to unblock are inert for unrelated reasons, and the third lever (#12's `PullFactor` `InPoss` column) is LESS advanced than the `TransToAtk` column it replaces, so the fix was predicted to move the shape slightly AWAY from goal. C1's value is a correct label plus a first-time-exercisable `InPoss` column for the calibration pass. **Two new Class-A items filed from the same investigation**: **C5** `TacticalContext.HasAttackIntent` is written by the engine and read by no production code (the second, larger lock on #15's door — missed by the v1.0 method because it counts methods with no caller, not fields with no reader), and **C6** `GkHeadingWorldAdapter.ApplyKick` is not reachable from any test. Next in sequence is **W2**, tackles. |
 | 1.1 | 2026-08-04 | — | **W1 wired** (`docs/tracking/gk-rush-trigger-design.md`) — `CommitRushIntent` has a production caller for the first time. Surfaced and fixed **two** spec defects: `ERR-011-010` (§3.7 delegated the rush decision to Decision Tree #8, which cannot make it — so the condition had no owner for ten weeks, and the spec never said what the keeper was deciding; new §3.7.0 states it, and the keeper comes out to REDUCE THE SHOOTING ANGLE, so a chasing defender does not keep him home and the distance is his own attributes) and `ERR-011-009` (a rush that reached its target had no §3.1.1 exit, so a swept loose ball stranded the keeper in `Rushing` for the rest of the match). Measurement not run — no .NET SDK in the authoring environment. Nine Class-A items remain; the next in sequence is **C1**, the `InPoss` gate. |
 | 1.0 | 2026-08-04 | — | Initial audit. Three-pass sweep over the 18 assemblies the match engine references; 10 Class-A dormant capabilities, 4 Class-B starved gates carried from §5.Z.24, 7 Class-C non-defects. Establishes KD-W1 (`[GT]` freeze) and KD-W2 (scope). |
