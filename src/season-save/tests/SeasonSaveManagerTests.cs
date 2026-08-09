@@ -292,6 +292,108 @@ namespace TacticalDirector.SeasonSave
                 squads: league);
         }
 
+        // ── #28 T2a (KD-4): Load must restore the match against the FILE's evolved roster,
+        //    never the caller-supplied provider, once the file carries a populated progression block ──
+
+        [Test]
+        public void Load_MatchWithPopulatedProgression_RestoresFromFileRosterNotCallerBootstrap()
+        {
+            // Mutation-audit lock on SeasonSaveManager.Load's roster-source selection:
+            //   rosterSource = progression.ClubCount > 0 ? new ProgressionSquads(progression) : squads;
+            // Forcing `rosterSource = squads` unconditionally left the whole suite green, because
+            // every other in-progress-match round-trip test hands the SAME roster to both
+            // ConfigureSquads and the caller-supplied provider — the two branches are
+            // indistinguishable there. Here they are made to diverge on purpose: the caller's
+            // provider is the DAY-0 bootstrap and the file's progression has banked real #28 growth,
+            // so only the correct branch reproduces the boot-time simulation.
+            //
+            // Discriminated by continuing the digest chain, the same technique the ISquadProvider
+            // round-trip tests above use — TestOnly_CanonicalAttributes is match-engine-TEST-internal
+            // (InternalsVisibleTo scopes it to TacticalDirector.MatchEngine.Tests only) and is not
+            // reachable from this assembly. Per-player attributes feed AI/physics every tick and the
+            // lineup selection itself is attribute-driven, so a wrong roster diverges the chain
+            // overwhelmingly likely within a handful of ticks.
+            const int homeClub = 5301;
+            const int awayClub = 5302;
+            Squad homeDay0 = GrowableSquad(homeClub);
+            Squad awayDay0 = GrowableSquad(awayClub);
+
+            ProgressionEngine progression =
+                ProgressionEngine.SeedFrom(new[] { homeDay0, awayDay0 }, newGameWorldDay: 0u);
+
+            // Bank exactly one whole attribute point per (Growth-band) player: GROWTH_DAILY_POINTS =
+            // +1/day, POINT_COST = DAYS_PER_YEAR. The first AdvanceDay call is the sentinel branch
+            // (accrues only that one day's point); the second REPLAYS the gap up to the year boundary
+            // (T-PG-DET-002), landing the cursor on the spend threshold exactly once.
+            progression.AdvanceDay(1u, TrainingInputBatch.Neutral);
+            progression.AdvanceDay((uint)PlayerProgressionConstants.DAYS_PER_YEAR, TrainingInputBatch.Neutral);
+
+            Squad homeEvolved = progression.SquadFor(homeClub);
+            Squad awayEvolved = progression.SquadFor(awayClub);
+
+            // Sanity: the growth step must have measurably diverged the roster from the day-0
+            // bootstrap BEFORE the save is even written, or the rest of this test proves nothing.
+            Assert.IsTrue(
+                SquadDiverges(homeDay0, homeEvolved) || SquadDiverges(awayDay0, awayEvolved),
+                "sanity: the year-boundary growth step produced no measurable attribute change vs the " +
+                "day-0 bootstrap — this test would pass for proving nothing.");
+
+            WorldStore world = PopulatedStore();
+            while (world.CurrentWorldTick < PlayerProgressionConstants.DAYS_PER_YEAR)
+            {
+                world.AdvanceDay();
+            }
+
+            // A completed season: the KD-4 calendar-cursor invariant is then vacuous at ANY world day
+            // (Load_CompletedSeason_PassesTheCursorInvariantVacuously), which is what lets the world
+            // clock sit a year ahead of MidSeasonState's fixture schedule.
+            SeasonState season = MidSeasonState();
+            while (!season.Calendar.IsSeasonComplete)
+            {
+                season.AdvanceCursorOneRound();
+            }
+
+            MEngine match = new MEngine(MatchSeed);
+            match.ConfigureSquads(homeEvolved, awayEvolved);
+            const int n = 150;
+            for (int i = 0; i < n; i++) match.RunTick();
+            Assert.AreEqual((ulong)n, match.CurrentTick);
+
+            string path = TempPath("progression-roster-restore.season");
+            SeasonSaveManager.Save(
+                world, season, match, path,
+                TrainingBlocksMatching(progression), MedicalBlocksMatching(progression),
+                AppearanceBlocksMatching(progression), progression);
+            Assert.IsTrue(File.Exists(path));
+
+            // Reference chain from the SAVED (non-mutated) match object — it is still configured with
+            // the evolved squad, so this is what a correct restore must reproduce byte-for-byte.
+            const int k = 60;
+            var refDigests = new List<byte[]>(k);
+            for (int i = 0; i < k; i++)
+            {
+                match.RunTick();
+                refDigests.Add(match.CurrentSnapshotDigest);
+            }
+
+            // The caller passes the DAY-0 BOOTSTRAP as its provider — deliberately the WRONG roster.
+            // The file's own populated progression block must win over it.
+            SeasonSaveContents contents = SeasonSaveManager.Load(path, Provider(homeDay0, awayDay0));
+            Assert.IsNotNull(contents.Match, "a season with a match must Load a non-null Match.");
+            Assert.AreEqual((ulong)n, contents.Match.CurrentTick,
+                "the loaded match's clock must resume at the saved tick.");
+
+            for (int i = 0; i < k; i++)
+            {
+                contents.Match.RunTick();
+                CollectionAssert.AreEqual(refDigests[i], contents.Match.CurrentSnapshotDigest,
+                    $"tick {n + i + 1}: the restored match diverged from the evolved-squad reference " +
+                    "chain — Load must restore the in-progress match against the FILE's #28 roster, " +
+                    "never the caller-supplied provider, once the file carries a populated " +
+                    "progression block (KD-4).");
+            }
+        }
+
         // ── SeasonSaveManager fail-loud ─────────────────────────────────────────────
 
         [Test]
@@ -362,6 +464,21 @@ namespace TacticalDirector.SeasonSave
             Assert.Throws<ArgumentNullException>(
                 () => SeasonSaveManager.Save(
                     PopulatedStore(), null, matchOrNull: null, TempPath("x.save"), NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty));
+        }
+
+        [Test]
+        public void Save_NullProgression_Throws()
+        {
+            // Mutation-audit lock: deleting this guard left the whole suite green. #28's block IS the
+            // roster (KD-4) — "this season tracks no careers" is said with an empty ProgressionEngine,
+            // never with null, on the same terms as trainingClubs/medicalClubs/appearanceClubs above.
+            var ex = Assert.Throws<ArgumentNullException>(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    NoTraining, NoMedical, NoAppearance, progression: null),
+                "Save must refuse a null progression — null is not the empty set, and this block " +
+                "carries the roster (FR-PG-017 / #28 KD-4).");
+            Assert.AreEqual("progression", ex.ParamName);
         }
 
         [Test]
@@ -1493,6 +1610,116 @@ namespace TacticalDirector.SeasonSave
                 players[k] = p;
             }
             return new Squad(clubId, players);
+        }
+
+        // ── Fixtures for the #28 roster-source mutation-audit lock ─────────────────
+
+        private const int GrowthBandPlayerAge = 20; // < GROWTH_AGE (24) — CreateDefault's Age (25) is Stable
+
+        /// <summary>
+        /// A distinct squad of <see cref="RequiredCount"/> Growth-band (age &lt; GROWTH_AGE) players,
+        /// so a #28 daily step banks measurable attribute growth. Mirrors <see cref="DistinctSquad"/>
+        /// except for the age override, and keeps every attribute below ATTRIBUTE_MAX so a spent point
+        /// always has somewhere to land.
+        /// </summary>
+        private static Squad GrowableSquad(int clubId)
+        {
+            var players = new PlayerRecord[RequiredCount];
+            for (int k = 0; k < players.Length; k++)
+            {
+                PlayerRecord p = PlayerRecord.CreateDefault(clubId * PlayerDatabaseConstants.CLUB_SQUAD_SIZE + k);
+                p.Position = PosFor(k);
+                p.Age = GrowthBandPlayerAge;
+
+                int[] a = new int[31];
+                for (int f = 0; f < a.Length; f++)
+                {
+                    a[f] = 1 + ((k * 7 + f * 3 + clubId) % 18);
+                }
+                var attrs = new PlayerAttributes();
+                attrs.FromArray(a);
+                attrs.WeakFootRating = 1 + ((k + clubId) % 5);
+                p.Attributes = attrs;
+
+                players[k] = p;
+            }
+            return new Squad(clubId, players);
+        }
+
+        /// <summary>True if any of the two squads' first <see cref="RequiredCount"/> players' attribute arrays differ.</summary>
+        private static bool SquadDiverges(Squad before, Squad after)
+        {
+            for (int k = 0; k < RequiredCount; k++)
+            {
+                int[] a = before.GetPlayer(k).Attributes.ToArray();
+                int[] b = after.GetPlayer(k).Attributes.ToArray();
+                for (int f = 0; f < a.Length; f++)
+                {
+                    if (a[f] != b[f])
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        // The four-way career-block coherence gate (SeasonSaveManager.RequireCoherentCareerBlocks)
+        // requires the training / medical / appearance sets to describe EXACTLY the same clubs and
+        // players as a non-empty progression store, so these build the matching (otherwise inert)
+        // siblings straight from the progression's own blocks — the single-player TrainingMatching /
+        // MedicalMatching / AppearanceMatching helpers above only cover a one-club-one-player fixture.
+
+        private static ClubTrainingStates[] TrainingBlocksMatching(ProgressionEngine progression)
+        {
+            ClubCareerStates[] blocks = progression.ToBlocks();
+            var result = new ClubTrainingStates[blocks.Length];
+            for (int c = 0; c < blocks.Length; c++)
+            {
+                var ids = new int[blocks[c].Count];
+                var states = new TrainingState[blocks[c].Count];
+                for (int p = 0; p < blocks[c].Count; p++)
+                {
+                    ids[p] = blocks[c].Records[p].PlayerId;
+                    states[p] = TrainingState.Create(TrainingFocus.Balanced);
+                }
+                result[c] = new ClubTrainingStates(blocks[c].ClubId, ids, states);
+            }
+            return result;
+        }
+
+        private static ClubInjuryStates[] MedicalBlocksMatching(ProgressionEngine progression)
+        {
+            ClubCareerStates[] blocks = progression.ToBlocks();
+            var result = new ClubInjuryStates[blocks.Length];
+            for (int c = 0; c < blocks.Length; c++)
+            {
+                var ids = new int[blocks[c].Count];
+                var states = new InjuryState[blocks[c].Count];
+                for (int p = 0; p < blocks[c].Count; p++)
+                {
+                    ids[p] = blocks[c].Records[p].PlayerId;
+                    states[p] = InjuryState.Create();
+                }
+                result[c] = new ClubInjuryStates(blocks[c].ClubId, ids, states);
+            }
+            return result;
+        }
+
+        private static ClubAppearanceStates[] AppearanceBlocksMatching(ProgressionEngine progression)
+        {
+            ClubCareerStates[] blocks = progression.ToBlocks();
+            var result = new ClubAppearanceStates[blocks.Length];
+            for (int c = 0; c < blocks.Length; c++)
+            {
+                var ids = new int[blocks[c].Count];
+                for (int p = 0; p < blocks[c].Count; p++)
+                {
+                    ids[p] = blocks[c].Records[p].PlayerId;
+                }
+                result[c] = new ClubAppearanceStates(blocks[c].ClubId, ids, new AppearanceState[blocks[c].Count]);
+            }
+            return result;
         }
 
         private static ISquadProvider Provider(params Squad[] squads)
