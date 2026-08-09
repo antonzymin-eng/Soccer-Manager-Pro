@@ -1,8 +1,8 @@
 # Positioning AI Specification #12 — Section 3: Core Formulas and Algorithms
 
 **Created:** May 15, 2026
-**Last Updated:** July 28, 2026 (v0.7 — ERR-012-010: §3.3.3 GK slot lateral term corrected from the pitch-anchored `GK_LATERAL_FACTOR × basisY` form to the ball-line point clamped inside the goal mouth (`GK_LATERAL_CLAMP_M`); the superseded form is preserved in-place with the measured rationale. See `gk-contact-rate-design.md` §1.2/KD-CR3/KD-CR4.)
-**Version:** 0.7
+**Last Updated:** August 8, 2026 (v0.8 — ERR-012-011: §3.0 now classifies phase from the orchestrator-supplied TEAM in possession rather than #7's on-ball carrier. A team keeps the ball while a pass it played travels to a team-mate; the carrier is absent for the whole flight of every pass, which committed `InPoss` on 7.5% of final-third samples and read a passing team as being in transition. New §3.0.5 worked example covers a pass flight. The V0 velocity branch, `PHASE_HYSTERESIS_TICKS` and every constant are unchanged. See `match-engine-wiring-backlog.md` C1.)
+**Version:** 0.8
 **Status:** APPROVED
 
 ---
@@ -15,17 +15,36 @@ example (CLAUDE.md "When Writing or Editing Specs").
 
 ### 3.0.1 Inputs and Outputs
 
-- **Inputs:** possession owner from #7 Perception (`EntityId?`,
-  `null` for loose ball); ball longitudinal velocity `ball.vx`
-  filtered over a 3-tick window.
+- **Inputs:** the **team in possession** supplied by the orchestrator
+  (`TeamId?`, `null` when no team is in possession); ball longitudinal
+  velocity `ball.vx` filtered over a 3-tick window.
 - **Output:** `Phase ∈ {InPoss, OutOfPoss, TransToAtk, TransToDef}`.
+
+**What "in possession" means here (FR-PA-022).** A team is in
+possession while one of its players is **on the ball**, and it remains
+in possession while a ball it **deliberately played is still
+travelling to a team-mate**. A ball played to no one is not
+possession: a shot, a ball struck by any player after the pass, or a
+ball that is no longer going to its intended receiver. This is the
+possession-sequence convention football itself uses, and it is a
+*team* fact rather than a per-player one.
+
+The input is deliberately **not** the on-ball carrier from #7
+Perception. No player is on the ball for the entire flight of a pass,
+so classifying from the carrier makes a team knocking the ball around
+read as being in transition — measured at `InPoss` on **7.5%** of
+final-third samples before this was corrected (`ERR-012-011`). #7
+cannot supply the corrected input either: a pass's intended receiver
+is an *intent* held by the executing #5 pass, not a perceived fact.
+The orchestrator therefore composes it (carrier's team, else the
+intended receiver's team, else none) and #12 consumes the answer.
 
 ### 3.0.2 Classification Rule
 
 ```
-isOwn = (possessionOwner != null) && (possessionOwner.team == ownTeam)
-isOpp = (possessionOwner != null) && (possessionOwner.team != ownTeam)
-isLoose = (possessionOwner == null)
+isOwn   = (teamInPossession != null) && (teamInPossession == ownTeam)
+isOpp   = (teamInPossession != null) && (teamInPossession != ownTeam)
+isLoose = (teamInPossession == null)
 
 candidate =
     isOwn                             → InPoss
@@ -37,7 +56,10 @@ candidate =
 
 `V₀ = 4.0 m/s` `[GT]` (`PHASE_LOOSE_VELOCITY_THRESHOLD` — Appendix A.6). The
 3-tick moving average filters tactical ball touches from genuine
-transitions.
+transitions. The velocity branch is unchanged by `ERR-012-011`: it
+still classifies a genuinely uncontrolled ball, and `isLoose` now
+means what it says — nobody's ball — rather than "nobody's foot is on
+it this instant".
 
 ### 3.0.3 Hysteresis
 
@@ -60,6 +82,40 @@ candidate sustained, `phaseDwellTicks = 3` — threshold met,
 commit fires: output flips to `TransToDef`, `phaseDwellTicks`
 reset to 0. (Commit on the third candidate tick, not the fourth —
 AR-S1-09.)
+
+### 3.0.5 Worked Example — a pass between team-mates (ERR-012-011)
+
+The case the pre-`ERR-012-011` spec had no example of, and the reason
+the defect survived: a settled possession in which the ball is
+*moving*.
+
+Own team (team 0, attacking +X) is circulating the ball in midfield.
+At tick T the carrier — agent 6 — plays a 14 m ground pass to agent 9.
+
+| tick | on-ball carrier | pass in flight to | `teamInPossession` | candidate |
+|---|---|---|---|---|
+| T−1 | 6 | — | 0 | `InPoss` |
+| T (contact) | none | 9 | 0 | `InPoss` |
+| T+1 … T+8 (flight) | none | 9 | 0 | `InPoss` |
+| T+9 (received) | 9 | — | 0 | `InPoss` |
+
+The candidate never changes, so `phaseDwellTicks` is never reset and
+the committed phase stays `InPoss` throughout — which is the point.
+Under the superseded rule the eight flight ticks had
+`possessionOwner == null`, and with `ball.vx_filtered = +9.1 m/s`
+(> `V₀`) the candidate became `TransToAtk`, committing on the third
+flight tick and reverting on the third tick after reception. Every
+pass produced a spurious `InPoss → TransToAtk → InPoss` round trip,
+and for the opposing team a mirrored `OutOfPoss → TransToDef →
+OutOfPoss` one.
+
+Two ticks of the same sequence that do **not** hold possession, for
+contrast: if agent 9 is dispossessed at T+9 and the ball runs free at
++6.2 m/s, `teamInPossession` is `null` and the candidate is
+`TransToAtk` for team 0 and `TransToDef` for team 1 — the velocity
+branch, doing exactly what it always did. And if agent 6 had shot
+rather than passed, `teamInPossession` is `null` from the contact
+tick, because a shot is not played to a team-mate.
 
 ## 3.1 Anchor Computation
 
@@ -663,3 +719,4 @@ that agent (§4.4.3).
 | 0.5 | June 13, 2026 | AI agent (dotnet-CI quarantine adjudication) | ERR-012-003 (dotnet-CI Linux gate, Positioning AI quarantine cluster): §3.5.1/§3.5.2/§3.5.3 double-counted `baseLateral[phase]`/`baseVertical[phase]` (in both the compactness scalar and the §3.5.2 numerator), so the phase baseline cancelled to a no-op (`base/(base·gain) = 1/gain`) — invisible because every worked example used `InPoss` (`base = 1.00`). Removed `base[phase]` from the §3.5.1 compactness scalars (now dynamic-gain products only); phase baseline contributes solely via the §3.5.2 numerator. `InPoss` §3.5.3 result unchanged. Production fix in `ContextModifier.cs` v1.1; locks tactical tests T-T-001/003/004/005 + T-U-063 directional invariant. |
 | 0.6 | July 10, 2026 | AI agent | Back-props ERR-012-007/008/009 (#23/#24/#25 `APPROVED` same day): new §3.7.1 records the Stage-1 pipeline amendments — build-up overlay stage (between ContextModifier and spacing), dismark offset stage (between spacing and pitch clamp, FR-DM-008), `RotationController` pre-composition position, and the `AgentPositioningData.SlotIndex` single-writer contract amendment (no longer immutable after `SeedFromFormation`; `RotationController` sole post-seed writer). All stages identity-no-op at zero-value dials; owning specs hold formulas/constants/tests. |
 | 0.7 | July 28, 2026 | AI agent (gk-contact-rate pass) | ERR-012-010: §3.3.3 GK slot lateral term corrected from the pitch-anchored `GK_LATERAL_FACTOR × basisY` form to the ball-line point clamped inside the goal mouth (`GK_LATERAL_CLAMP_M`); the superseded form is preserved in-place with the measured rationale. See `gk-contact-rate-design.md` §1.2/KD-CR3/KD-CR4. |
+| 0.8 | August 8, 2026 | AI agent (wiring-backlog C1) | ERR-012-011: §3.0.1/§3.0.2 reclassify phase from the orchestrator-supplied TEAM in possession instead of #7's on-ball carrier, with the football definition of team possession stated normatively and the reason #7 cannot own the input recorded. New §3.0.5 worked example walks a pass between team-mates tick by tick and contrasts it with the loose-ball and shot cases — the settled-possession-with-a-moving-ball case the section previously had no example of, which is how the defect survived. Measured: `InPoss` on 7.5% of final-third samples pre-fix. V0, the velocity branch, `PHASE_HYSTERESIS_TICKS` and every constant unchanged; §6.1 untouched (no new constant). |

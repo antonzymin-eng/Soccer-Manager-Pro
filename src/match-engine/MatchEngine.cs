@@ -160,11 +160,42 @@ namespace TacticalDirector.MatchEngine
         private readonly FirstTouchSystem _firstTouch;
         private readonly Vector2[] _opponentScratch;  // [PLAYERS_PER_TEAM]
 
+        // ── THE THREE POSSESSION SURFACES (ERR-012-011) ──────────────────────────────────────
+        // The engine answers three different possession questions and they do NOT agree. Which one
+        // a consumer wants is a real decision; picking the nearest field is how the #12 phase gate
+        // went wrong for the life of the engine. Documented together, once, on purpose:
+        //
+        //   _possessingAgentId       WHO IS ON THE BALL, right now. −1 for the ENTIRE flight of
+        //                            every pass. The executor adapters' re-entrancy gate, #23's
+        //                            dismark carrier exclusion, MatchContext.
+        //   _passInFlightReceiverId  WHO A LIVE PASS IS TRAVELLING TO. Bridges exactly the gap the
+        //                            field above leaves open, and only that gap.
+        //   _settledPossessionTeam   WHICH TEAM LAST SETTLED THE BALL. Never cleared — it holds
+        //                            through a clearance, a shot and a dead ball, forever, until
+        //                            somebody else settles. #24's regain window only. NOT a
+        //                            "who has the ball now" answer; do not use it as one.
+        //
+        // TEAM possession — the football question, and the one #12 §3.0.2 asks — is the union of
+        // the first two: _possessingAgentId's team, else _passInFlightReceiverId's team, else none.
+        // FillPositioningSnapshot is the single place that composes it.
+
         // Authoritative ball possession: agent index [0–21], or NO_POSSESSION (−1) when loose.
         // Read by the executor adapters (IsBallPossessedBy); cleared on ApplyKick. Folded into
         // MatchContext.PossessingAgentId each Resolve (C4); Stage 0 has no production possession
         // producer (kickoff is loose), so a TestOnly_ seam scripts it for the lifecycle tests.
         private int _possessingAgentId;
+
+        // The intended receiver of a pass that is currently in the air/on the ground travelling to
+        // him, or NO_POSSESSION (−1) when no pass is in flight. Latched at the kick from the #5
+        // PassRequest the executor already holds; cleared the moment ANY agent strikes the ball,
+        // anybody establishes possession, the ball stops travelling toward him, he leaves the
+        // field of play, or the ball is placed for a restart.
+        //
+        // Cross-tick, and NOT reconstructible: PassExecutor never clears _request on its return to
+        // Idle, so all 22 executors hold a stale last-pass target permanently and nothing in the
+        // payload separates "in flight" from "kicked forty seconds ago". Serialized; the reason
+        // SNAPSHOT_SCHEMA_VERSION is 20.
+        private int _passInFlightReceiverId;
 
         // Phase E — the possession holder as of the END of the PREVIOUS Resolve, used to detect a
         // possession transition once per tick (after this tick's possession settles). On a change the
@@ -575,6 +606,7 @@ namespace TacticalDirector.MatchEngine
 
             // §4 step 3 (cont.) — Resolve subsystems (Phase C C1). Kickoff ball is loose.
             _possessingAgentId = MatchEngineConstants.NO_POSSESSION;
+            _passInFlightReceiverId = MatchEngineConstants.NO_POSSESSION; // ERR-012-011 — nothing in flight at boot
             _prevPossessingAgentId = MatchEngineConstants.NO_POSSESSION; // Phase E — no transition at boot
             _collisionSystem = new CollisionSubsystem(MatchEngineConstants.SQUAD_SIZE);
             _eventConsumer = new MatchFlowCollisionConsumer(this);
@@ -2243,6 +2275,15 @@ namespace TacticalDirector.MatchEngine
         /// <summary>Test-only: the current authoritative possessing agent index (NO_POSSESSION = loose).</summary>
         internal int TestOnly_PossessingAgentId => _possessingAgentId;
 
+        /// <summary>Test-only (ERR-012-011): the intended receiver of the pass currently in flight,
+        /// or NO_POSSESSION when none. Observation seam for the gate instrument and the latch tests.</summary>
+        internal int TestOnly_PassInFlightReceiverId => _passInFlightReceiverId;
+
+        /// <summary>Test-only (ERR-012-011): arms the pass-in-flight latch directly, so the expiry
+        /// rules can be exercised without driving a full pass through an executor.</summary>
+        internal void TestOnly_ArmPassInFlight(int kickerId, int receiverId) =>
+            ArmPassInFlight(kickerId, receiverId);
+
         /// <summary>Test-only (§5.Z.15): ticks the current goalkeeper has held the ball. The stall this
         /// rule closes was exactly this counter running unbounded, so it is the value worth asserting —
         /// observing possession alone cannot tell "the rule fired" from "an opponent took it".</summary>
@@ -2547,6 +2588,7 @@ namespace TacticalDirector.MatchEngine
             _ball.Position = position;
             _ball.Velocity = velocity;
             _possessingAgentId = MatchEngineConstants.NO_POSSESSION;
+            ClearPassInFlight();   // ERR-012-011 — "loose" means loose; do not leave a latch behind
         }
 
         /// <summary>Test-only (§7): run the GK/Heading 10 Hz tactical drive (baselines + state machine +
@@ -3055,6 +3097,16 @@ namespace TacticalDirector.MatchEngine
             int owner = _possessingAgentId;
             snap.PossessionOwnerEntityId = owner;
             snap.PossessionOwnerIsOwnTeam = owner >= 0 && _teamIds[owner] == team;
+
+            // ERR-012-011 — compose TEAM possession, the question #12 §3.0.2 actually asks. This is
+            // the ONE place the union of the two possession surfaces is formed (see the field-
+            // declaration block): whoever is on the ball, else whoever a live pass is travelling to,
+            // else nobody. Deliberately a superset of `owner >= 0` rather than an alternative to it,
+            // so the classifier reads one possession concept and never reconstructs a second.
+            int possessingAgent = owner >= 0 ? owner : _passInFlightReceiverId;
+            snap.HasTeamPossession = possessingAgent >= 0;
+            snap.TeamPossessionIsOwnTeam =
+                possessingAgent >= 0 && _teamIds[possessingAgent] == team;
 
             // #23/#24/#25 Phase-D writers (FR-DM-015 / FR-BU-012 / FR-RO-014): this fill is the sole
             // populator of the #12 snapshot's routing dials. Default Balanced ⇒ Off / None / Off —
@@ -4027,6 +4079,13 @@ namespace TacticalDirector.MatchEngine
             // keeper that claims the ball this tick starts its count from this tick.
             EnforceGoalkeeperReleaseRule();
 
+            // ERR-012-011 — expire the pass-in-flight latch. AFTER every possession-granting and
+            // possession-clearing site above (restart, first touch, loose-ball pickup, keeper
+            // release) and BEFORE C4, whose composed team-possession answer the next AI tick reads.
+            // Deliberately NOT in the AI phase: that is stride-gated to 10 Hz, so a pass kicked and
+            // received inside one stride would never be observed here at all.
+            UpdatePassInFlight();
+
             // C4 — author MatchContext last, so it reflects this tick's settled possession (a CONTACT
             // kick above released possession, or a D3 first touch) and ball kinematics. Read by the next
             // AI tick (Phase D).
@@ -4203,6 +4262,11 @@ namespace TacticalDirector.MatchEngine
             _ball = BallState.CreateAtPosition(new Vector3(
                 position.x, position.y, MatchEngineConstants.BALL_REST_HEIGHT_M));
             _possessingAgentId = SelectRestartTaker(position, awardedTeam);
+
+            // ERR-012-011 — a restart ends any pass in flight, stated rather than inherited. The
+            // placed ball is at rest, so UpdatePassInFlight's receding test would clear the latch
+            // anyway; a rule that holds only through another rule's side effect is not enforced.
+            ClearPassInFlight();
 
             // P1 KD-P1-3 — within-tick observation state; see the field declaration.
             _restartAppliedThisTick = cue;
@@ -4746,7 +4810,7 @@ namespace TacticalDirector.MatchEngine
                 {
                     continue; // outside reach, or not closer than the current best
                 }
-                if (Vector2.Dot(ballVelXY, toAgent) <= 0f)
+                if (!BallApproaching(ballVelXY, toAgent))
                 {
                     continue; // ball receding from this agent — not a receive
                 }
@@ -5131,6 +5195,13 @@ namespace TacticalDirector.MatchEngine
             // Pass/Shot executor in-flight state (C0 CaptureState) is now serialized in the loop below
             // (C5) — at Stage 0 the executors are idle in production, but once the Phase D AI dispatcher
             // initiates passes/shots their WINDUP/CONTACT state is cross-tick and digest-relevant.
+            //
+            // THE PROOF ABOVE DOES NOT EXTEND TO _passInFlightReceiverId (ERR-012-011). That field is
+            // the OTHER half of the possession picture and has no such mirror: MatchContext carries the
+            // on-ball carrier only, and nothing else in this payload dates a pass. It is therefore
+            // serialized outright, as the trailing v20 field. Stated here because the sentence above
+            // used to read as a completeness claim about possession state, and a stale "nothing is
+            // excluded" note is how v17 hid for months (snapshot-deserialize-design.md KD-8).
             CanonicalSerializer.WriteU32(buf, ref o, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION);
             // Tick is also carried in the header; included here so the payload is self-describing
             // when decoded in isolation (replay/save tooling reads the payload directly).
@@ -5402,6 +5473,15 @@ namespace TacticalDirector.MatchEngine
             CanonicalSerializer.WriteI32(buf, ref o, _gkReleaseCooldownRemaining);
             CanonicalSerializer.WriteI32(buf, ref o, _gkReleasedAgentId);
 
+            // v20 (ERR-012-011) — the pass-in-flight receiver latch. Cross-tick and NOT reconstructible
+            // from anything else in this payload: PassExecutor never clears its _request on the return
+            // to Idle, so all 22 serialized PassExecutorStates carry a stale last-pass target and none
+            // of them dates it. Dropping this field would re-classify #12's phase mid-flight for the
+            // remainder of every restored pass — the possessing team would read as being in transition
+            // in the restored run and in possession in the uninterrupted one, and the digest chain
+            // would diverge from the first pass onward.
+            CanonicalSerializer.WriteI32(buf, ref o, _passInFlightReceiverId);
+
             payload.BytesWritten = o;
         }
 
@@ -5624,6 +5704,9 @@ namespace TacticalDirector.MatchEngine
             _gkHoldTicks = CanonicalSerializer.ReadI32(buf, ref o);
             _gkReleaseCooldownRemaining = CanonicalSerializer.ReadI32(buf, ref o);
             _gkReleasedAgentId = CanonicalSerializer.ReadI32(buf, ref o);
+
+            // v20 — pass-in-flight receiver latch (mirror of the writer's trailing field).
+            _passInFlightReceiverId = CanonicalSerializer.ReadI32(buf, ref o);
 
             // Trailing region: the event ledger. RunSnapshotPhase appends the canonical event-ledger bytes
             // (EventBus.SerializeLedger — a 1-byte domain tag + u32 count, then any Tier A records) AFTER the
@@ -7031,6 +7114,96 @@ namespace TacticalDirector.MatchEngine
             }
         }
 
+        // ── Pass-in-flight latch (ERR-012-011) ────────────────────────────────────────────────
+
+        /// <summary>
+        /// Is <paramref name="ballVelXY"/> carrying the ball TOWARD a point <paramref name="toTarget"/>
+        /// away from it? The one geometric rule behind both "this agent is receiving the ball"
+        /// (<see cref="RunFirstTouch"/>) and "this pass is still going to its intended receiver"
+        /// (<see cref="UpdatePassInFlight"/>). Hoisted so the two cannot drift: a hand-copied second
+        /// copy of a single rule is the <c>LineupSelector.CanSelect</c> trap.
+        /// <para>A stationary ball is NOT approaching (dot == 0 ⇒ false), which is what ends the
+        /// flight of a pass that ran out of momentum short of its target.</para>
+        /// </summary>
+        private static bool BallApproaching(Vector2 ballVelXY, Vector2 toTarget) =>
+            Vector2.Dot(ballVelXY, toTarget) > 0f;
+
+        /// <summary>
+        /// Arms the latch on a pass kicked toward <paramref name="receiverId"/>. Rejects anything that
+        /// is not a live team-mate: out of range, the kicker himself, an opponent (#8 only ever aims a
+        /// PASS at a team-mate, so this is a guard against a future generator, not dead code), or a
+        /// sent-off player. A rejected target simply leaves the ball loose, which is the honest
+        /// classification for a pass aimed at nobody.
+        /// </summary>
+        private void ArmPassInFlight(int kickerId, int receiverId)
+        {
+            if (receiverId < 0 || receiverId >= MatchEngineConstants.SQUAD_SIZE
+                || receiverId == kickerId
+                || kickerId < 0 || kickerId >= MatchEngineConstants.SQUAD_SIZE
+                || _teamIds[receiverId] != _teamIds[kickerId]
+                || _isSentOff[receiverId])
+            {
+                _passInFlightReceiverId = MatchEngineConstants.NO_POSSESSION;
+                return;
+            }
+
+            _passInFlightReceiverId = receiverId;
+        }
+
+        /// <summary>
+        /// Ends any pass in flight. Called wherever the previous pass stops being a pass: ANY agent
+        /// striking the ball (every <c>ApplyKick</c> adapter — shot, header, keeper parry/deflect/
+        /// spill), and every restart. Stated as one rule so no striking path is a special case.
+        /// </summary>
+        private void ClearPassInFlight() =>
+            _passInFlightReceiverId = MatchEngineConstants.NO_POSSESSION;
+
+        /// <summary>
+        /// Per-tick expiry of the pass-in-flight latch. Runs in Resolve AFTER every possession-granting
+        /// and possession-clearing site of the tick (restart, first touch, loose-ball pickup, keeper
+        /// release) and BEFORE C4, so the AI tick that reads the composed team-possession answer sees
+        /// this tick's settled one.
+        /// <para>
+        /// Nothing here can RE-arm the latch — only a kick does — so the expiry is monotone and cannot
+        /// oscillate. That matters because #12's PHASE_HYSTERESIS_TICKS is not a safety net for a
+        /// flickering candidate: <c>PhaseClassifier</c> resets its dwell count whenever the candidate
+        /// differs, so an alternating candidate never commits at all.
+        /// </para>
+        /// </summary>
+        private void UpdatePassInFlight()
+        {
+            if (_passInFlightReceiverId == MatchEngineConstants.NO_POSSESSION)
+            {
+                return;   // monotone by construction: only a kick arms this.
+            }
+
+            // Somebody has the ball. The pass is over however it ended — received, intercepted,
+            // picked up off the floor, or claimed by the keeper.
+            if (_possessingAgentId != MatchEngineConstants.NO_POSSESSION)
+            {
+                ClearPassInFlight();
+                return;
+            }
+
+            // The intended receiver left the field of play mid-flight.
+            if (_isSentOff[_passInFlightReceiverId])
+            {
+                ClearPassInFlight();
+                return;
+            }
+
+            // The ball is no longer going to him — it was deflected away, overhit past him, or has
+            // run out of momentum. Either way it is a loose ball now, and #12 §3.0.2's velocity
+            // branch is the correct classification for it.
+            Vector2 ballVelXY = new Vector2(_ball.Velocity.x, _ball.Velocity.y);
+            Vector2 toReceiver = _agents[_passInFlightReceiverId].Position
+                                 - new Vector2(_ball.Position.x, _ball.Position.y);
+            if (!BallApproaching(ballVelXY, toReceiver))
+            {
+                ClearPassInFlight();
+            }
+        }
+
         // ── Executor adapters (Phase C C1a) ───────────────────────────────────────────
         // Two adapter classes implement all six executor query interfaces (IPass/IShot × Ball/Agent/
         // Collision) over the host world state. Private nested sealed classes so they can read the
@@ -7052,6 +7225,12 @@ namespace TacticalDirector.MatchEngine
             {
                 BallCollision.ApplyKick(ref ball, velocity, spin, agentId, matchTime, logger: null);
                 _engine.ReleasePossessionOnKick(agentId);
+
+                // ERR-012-011 — the ball is now travelling to the team-mate this pass named, and the
+                // passing team is still in possession of it. Armed HERE and not inside
+                // ReleasePossessionOnKick, because that method only acts when the kicker happened to
+                // be the recorded holder — a guard with nothing to do with where the pass is going.
+                _engine.ArmPassInFlight(agentId, _engine._passExecutors[agentId].InFlightTargetAgentId);
             }
 
             public PassAgentAttributes GetAttributes(int agentId) => _engine.BuildPassAttributes(agentId);
@@ -7105,6 +7284,11 @@ namespace TacticalDirector.MatchEngine
                     MirrorVelocityIfAway(team, spin),
                     agentId, matchTime, logger: null);
                 _engine.ReleasePossessionOnKick(agentId);
+
+                // ERR-012-011 — an instance of the general rule that any agent striking the ball ends
+                // the previous pass. A shot is also not itself possession: the shooting team drops to
+                // #12 §3.0.2's velocity branch, which is the right shape for a rebound.
+                _engine.ClearPassInFlight();
             }
 
             public ShotAgentAttributes GetAttributes(int agentId) => _engine.BuildShotAttributes(agentId);
@@ -7171,6 +7355,12 @@ namespace TacticalDirector.MatchEngine
             public void ApplyKick(Vector3 velocity, Vector3 spin, int agentId, float matchTime)
             {
                 BallCollision.ApplyKick(ref _engine._ball, velocity, spin, agentId, matchTime, logger: null);
+
+                // ERR-012-011 — the same general rule: any agent striking the ball ends the previous
+                // pass. This adapter carries #10's headers and #11's parry / deflect / spill, and a
+                // header played on along the pass's own line does NOT flip the receding test, so
+                // without this the latch would survive a ball that was headed away.
+                _engine.ClearPassInFlight();
             }
 
             public void SetPossessor(int agentId) => _engine._possessingAgentId = agentId;

@@ -11,6 +11,7 @@
 // Modified: 2026-08-05 (ERR-008-021 — shot-lane block model: + SHOT_BLOCKER_ABILITY_MIN/MAX [GT]; LANE_VISION_FIDELITY_FLOOR redocumented as the shared P2 dial)
 // Modified: 2026-08-06 (ERR-008-022 — + SHOT_BLOCKER_NEAR_FADE_M / GK_PROXIMITY_FADE_M [GT]: the two remaining shot-lane predicates become ramps)
 // Modified: 2026-08-07 (ERR-008-023 — GK_BLOCKER_RADIUS_M RETIRED; BLOCKER_RADIUS_M now covers every blocker, keeper included)
+// Modified: 2026-08-09 (ERR-008-024 — DirectionQuality_DRIBBLE hoisted here as a free function so §3.1.5.2's sector ranking and §3.2.4.1's scoring share ONE formula; no constant changed)
 // Author:   —
 // Spec:     Decision Tree #8 §3.2.11, Code Standards #20
 // Purpose:  Authoritative constant catalogue for the utility scoring model.
@@ -300,6 +301,34 @@ namespace TacticalDirector.DecisionTree
         // the HOLD stall is fixed; see close-chance-creation-design.md §7 item 2 and §8.
         public const float DRIBBLE_GOAL_DIR_MIN_MODIFIER = 0.8f;
 
+        /// <summary>
+        /// DirectionQuality_DRIBBLE (§3.2.4.1) as a free function, so the ONE formula serves both
+        /// consumers: §3.1.5.2's sector ranking at generation time and §3.2.4.1's scoring of the
+        /// option that ranking produced. It was scoring-only until ERR-008-024; hoisting it here
+        /// rather than re-deriving it in the generator is deliberate — a hand-copied second walk of
+        /// a shared rule is this repository's most-repeated defect (see `LineupSelector.CanSelect`
+        /// and the cursor-vs-clock pair, both collapsed to one owner after shipping as two).
+        /// <para>
+        /// Linear in the cosine between <paramref name="dir"/> and <paramref name="toGoal"/>:
+        /// straight at the opponent goal ⇒ 1.0, straight away ⇒ the floor. A degenerate or
+        /// zero-length input resolves to the exact ×1.0 identity, NOT the mid-cosine value — the
+        /// ERR-008-017 / KD-V3 contract, which is what keeps a direct-injection test option that
+        /// never sets a direction priced exactly as it was before the term existed.
+        /// </para>
+        /// </summary>
+        public static float DribbleDirectionQuality(UnityEngine.Vector2 dir, UnityEngine.Vector2 toGoal)
+        {
+            float dirLen  = dir.magnitude;
+            float goalLen = toGoal.magnitude;
+            if (!(dirLen > 1e-4f) || !(goalLen > 1e-4f)) return 1.0f;   // NaN-safe !(x > 0) form
+
+            float cosine = UnityEngine.Vector2.Dot(dir / dirLen, toGoal / goalLen);
+            if (float.IsNaN(cosine)) return 1.0f;
+
+            return DRIBBLE_GOAL_DIR_MIN_MODIFIER
+                 + ((cosine + 1.0f) * 0.5f) * (1.0f - DRIBBLE_GOAL_DIR_MIN_MODIFIER);
+        }
+
         public const float PRESS_TRIGGER_DISTANCE = 8.0f;  // [GT] m; maximum distance for PRESS generation
         public const float PRESS_STAMINA_MINIMUM = 0.20f; // [GT] AerobicPool threshold for PRESS gate
 
@@ -409,4 +438,9 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        | with BLOCKER_RADIUS_M like every other player; his reach is #11's under    |
 // |         |            |        | P3. BLOCKER_RADIUS_M and GK_PROXIMITY_TO_GOAL redocumented accordingly     |
 // |         |            |        | (the latter now anchors the ability exemption only). No value changed.     |
+// | 1.14    | 2026-08-09 | —      | ERR-008-024. + DribbleDirectionQuality(Vector2 dir, Vector2 toGoal) —      |
+// |         |            |        | the §3.2.4.1 formula hoisted here as a free function so §3.1.5.2's sector  |
+// |         |            |        | scan and UtilityScorer's scoring term share ONE copy. No constant added    |
+// |         |            |        | or changed; DRIBBLE_GOAL_DIR_MIN_MODIFIER is the same floor both callers   |
+// |         |            |        | already used.                                                              |
 #endregion
