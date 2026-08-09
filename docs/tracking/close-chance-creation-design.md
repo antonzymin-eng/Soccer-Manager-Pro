@@ -492,6 +492,74 @@ which at 5 m/s is 14 m of running, and the counterfactual race for space 8 m goa
   dies there. Implemented, measured, refused August 9, 2026. Sending the ball goalward is only safe
   once those two bounds are addressed.
 
+### 10.6 The header measurement — item 1 is mispriced, and the real bound is narrower
+
+> **Measured August 9, 2026**, instrument v1.3 (Report C5), 6 seeds × 90 min. Ordered by the
+> evidence advisor with the decision rule stated BEFORE the run, so the reading is not post-hoc.
+
+§10.4 ranked aerial reception first on the grounds that #10 "exists and is unreached". **Both halves
+were wrong.** Heading is default-ON (since July 27, 2026) and its state is serialized in the v18
+block. So the question became: does a committed header ever CONNECT? Nothing in this tree had ever
+reported a header statistic — `HeadingTelemetry` is five no-op stubs — which is the §5.Z.17
+signature exactly.
+
+| | measured |
+|---|---|
+| headers **executed** | **2** — both in midfield, **zero** in any attacking third |
+| headers **failed** | **963** |
+| **contact ratio, executed / (executed + failed)** | **0.2%** |
+| dominant failure cause | **`positionedPoorly` — 97% away, 99% home** |
+| crosses ending in an attacker header | **0%** (n = 171) |
+| crosses ending in a defender header | **0%** |
+| crosses reaching the intended receiver | **0%** |
+| crosses **coming to rest untouched** | **69%** (30% ground interception, 1% keeper) |
+
+**Minimum 3-D distance from an airborne ball to the nearest outfielder, per airborne final-third
+episode (1,097 episodes):**
+
+| | ≤ 0.18 m | 0.18–0.5 | 0.5–1.5 | 1.5–3 | 3–5 | > 5 | mean |
+|---|---|---|---|---|---|---|---|
+| nearest **attacker** | **0%** | 0% | ~10% | ~25% | ~18% | ~46% | 5.9 m |
+| nearest **defender** | **0%** | 0% | ~31% | ~21% | 10% | ~38% | 4.7 m |
+
+**The defender row is the one that matters, and it narrows §10.2's claim.** Defenders are present in
+numbers and they make contact 0% of the time too. So an airborne ball is not merely unreachable by
+*attackers who are not in the box* — it is untouchable by **anybody, anywhere**, and box occupancy is
+not the binding constraint on it. Fixing §10.4 items 2–3 would therefore NOT make crosses work.
+
+**The cause is one sentence: nothing in this engine moves a player to where a ball is going.**
+`HeadingEligibility.FindContactFrame` holds the head centre fixed at the agent's current position
+while only the ball moves, so the prediction never models a player running onto it.
+`SelectLooseBallCollector` returns nobody while the ball is in motion. #12's composed slot is
+relative to the ball's *current* position, so support drifts after the ball rather than ahead of it.
+The 0.18 m contact volume is then unreachable by construction: the trigger arms at 1.5 m, and no
+mechanism closes the remaining 1.32 m.
+
+**Consequences for the order in §10.4, which is superseded:**
+
+1. **Item 1 is mispriced and is NOT a wiring item.** #10's contact model cannot connect at any
+   distance the rest of the engine actually produces. Widening `HeaderTriggerRangeM` or
+   `HeadContactVolumeRadiusM` to force contacts is barred — KD-W1, and §5.Z.9 is the precedent for
+   widening a trigger against a distribution nobody had measured.
+2. **The candidate first lever is now "attack the ball": move a player to a ball's predicted
+   arrival point.** It is upstream of aerial contact, of ground loose balls (`SelectLooseBallCollector`
+   is inert while the ball moves), and of pass-to-space (§7 item 1) — one mechanism, three payoffs.
+   It is also what the C1 pass-in-flight latch already identifies the receiver for.
+3. **Recorded, not fixed, and independent of sequencing:** the header target is a FIXED point —
+   opponent goal X, pitch-width / 2 — from anywhere on the pitch, so a defender clearing in his own
+   box aims 90 m at the far goal. That is the football-judgment doctrine's P4 shape (intent as a
+   first-class object) and is an ERR candidate in its own right.
+4. **Recorded, not fixed:** the header trigger arms at ball centre `z ≥ 0.5` while first touch
+   refuses at `z − 0.11 > 0.5`, so `z ∈ [0.50, 0.61]` is claimable by both and is resolved today only
+   by phase order.
+5. **A metric correction this run forced.** For a cross, "completion" is the wrong success criterion —
+   a cross should be headed, not controlled — so §10.3's 1% under-states crosses by construction. It
+   survives anyway: 0% headed, 0% reached, 69% untouched is not "headed instead of received".
+6. **Not observable, and worth a production accessor next time:** the count of header intents
+   COMMITTED. C5a's event pair is a proxy that can under-count, because `HeadingMechanics.Update`
+   stops re-evaluating once the frame passes the agent's landing frame, dropping such a commit with
+   neither event fired.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
@@ -500,4 +568,5 @@ which at 5 m/s is 14 m of running, and the counterfactual race for space 8 m goa
 | 1.2 | 2026-08-08 | — | §10 added: the post-C1 re-measurement, and this document's own §7 item 1 priority claim RETRACTED (the finding stands; "the real bound" does not). Two bounds sit ahead of it. **Bound A** — the last 17 m of pitch are unreachable by composition at ANY legal constant value, for either side: the F442 ST anchor is 23.1 m from goal, the ball-relative offset is capped at `pull.x × 12 m`, and even at a `pull.x` of 1.0 (above every table value) the slot reaches only 16.8 m against a 16.5 m box edge, while the defensive block bottoms out at 17.4 m. Offside being live on the reception path inverts the order: the block drops BEFORE attackers occupy, else they are permanently offside. **Bound B, new and larger** — 44% of final-third passes are aerial (Lofted 25% + Cross 19%) and complete **1%**, against Ground 41% and ThroughBall 28%, because `RunFirstTouch` and `RunLooseBallPickup` both refuse any ball above 0.5 m (heading is deferred), so no agent can receive a ball out of the air; overall final-third completion is 23%. Corrected order recorded in §10.4, with pass-to-a-place last. §2/§4/§8 figures are superseded for every quantity restated in §10.1. No mechanism landed this pass; the instrument (v1.2) and the measurement are the deliverable. |
 | 1.3 | 2026-08-09 | — | §7 item 6 CLOSED as `ERR-008-024`, by a different route than the item proposed: one ranked DRIBBLE candidate instead of two competing ones. §3.1.5.2's 8-sector scan ranks on `spaceInSector × DirectionQuality_DRIBBLE(sectorDir, toGoal)` instead of `spaceInSector` alone — `spaceInSector` saturates at 1.0 for any clear sector, and the old strict `>` test always kept sector 0 (`AgentFacingDirection`) on a tie, which is exactly why KD-CC3's scoring-only fix could suppress a retreating dribble but never redirect it. Same term §3.2.4.1 already applies at scoring; no new constant. `sim_match_engine_close_chance`: meanCosine −0.165 → PASS (bound −0.16), goalwardShare 0.407 → PASS (bound 0.42); neither bound moved. See `spec-error-log.md` ERR-008-024. **[CORRECTED at v1.4 below — this fix was implemented, measured, and REFUSED. It was never landed: the same build stalls play outright and zeroes goals-still-scored. §7 item 6 is REOPENED, not closed.]** |
 | 1.4 | 2026-08-09 | — | **CORRECTION to v1.3: §7 item 6 / `ERR-008-024` was recorded CLOSED; it is not.** The fix was implemented, measured, and REFUSED — the KD-CC7 pattern (§4). The sector-scan tie-break DOES pass `sim_match_engine_close_chance` (meanCosine −0.165 → PASS, goalwardShare 0.407 → PASS) but STALLS `sim_match_engine_play_develops` outright (ball last moving at tick 18465 of 32400) and zeroes `goals-still-scored`; a wider `space × DirectionQuality` form produced the identical stall at the identical tick, plus mean-shot-distance 25.41 m against a 24.00 m ceiling. §7 item 6 REOPENED; §10.5 gains a cross-link recording that goalward dribbling is unsafe until §10.2/§10.3's bounds are addressed. `OptionGenerator.cs` reverted to the pre-fix baseline logic; kept, behaviour-neutral: `UtilityWeights.DribbleDirectionQuality` + `UtilityScorer`'s delegation to it. The two v1.3 unit locks are REMOVED. `DecisionTree.Tests` 129 passed / 4 skipped / 0 failed. See `spec-error-log.md` ERR-008-024 and `decision-tree/section-3-1.md` v1.8. |
+| 1.5 | 2026-08-09 | — | §10.6: the header measurement. Contact ratio **0.2%** (2 executed, 963 failed; 97–99% `positionedPoorly`), zero executed headers in any attacking third, and crosses at 0% headed / 0% reached / **69% coming to rest untouched**. The proximity census settles the order: **0% of airborne final-third episodes bring ANY outfielder — attacker or defender — within the 0.18 m contact volume**, so an aerial ball is untouchable by anybody and box occupancy is NOT its binding constraint. §10.4's item 1 is mispriced and is not a wiring item; the candidate first lever becomes "move a player to a ball's predicted arrival point", which is upstream of aerial contact, ground loose balls and pass-to-space alike. Four residuals recorded not fixed, including the fixed-point header target (a P4 candidate) and the 0.50–0.61 m band both first touch and the header trigger claim. |
 #endregion
