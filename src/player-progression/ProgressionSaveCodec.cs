@@ -1,16 +1,19 @@
 // File:     src/player-progression/ProgressionSaveCodec.cs
 // Created:  2026-08-08
-// Modified: 2026-08-09
+// Modified: 2026-08-10
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.5 (the save codec), §4.2, KD-4, FR-PG-016/017/018/019,
 //           F3/F5; ERR-028-004 (§3.5 named the RNG domain tag as the block's identifier);
+//           ERR-028-014 (the never-advanced sentinel retired from #28's legal STORE states — Encode and
+//           Decode now refuse it, the ERR-028-011(a) class one ERR later);
 //           Deterministic Simulation #16 §3.2.4.1 (CanonicalSerializer); Code Standards #20
 // Purpose:  Pure byte codec for the #28 career-state sub-blob — one opaque, independently version-gated
 //           block under #30's season save. Encodes the per-club per-player PlayerRecord + PlayerLifecycle
 //           map in canonical key order and reads it back, fail-loud on any magic / version / length-bound
 //           / ordering / trailing-byte violation. No file I/O (that is SeasonSaveManager), so the codec
 //           is exhaustively unit-testable in memory. ReadPlayer's L3 range gates now cover
-//           PotentialAbility (the F1 growth ceiling) alongside attributes, weak-foot and age.
+//           PotentialAbility (the F1 growth ceiling) alongside attributes, weak-foot and age. Encode and
+//           Decode both refuse the never-advanced sentinel as a progression cursor (ERR-028-014).
 
 using System;
 using System.Text;
@@ -80,6 +83,19 @@ namespace TacticalDirector.PlayerProgression
     /// the first regen, which is the deferred season-boundary landing's concern.
     /// </para>
     /// <para>
+    /// <b>The never-advanced sentinel is not a legal STORE state.</b> ERR-028-014 retired
+    /// <see cref="PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL"/> from the set of values
+    /// <see cref="PlayerLifecycle.LastAdvancedWorldDay"/> may carry once a career exists —
+    /// <see cref="ProgressionEngine.SeedFrom"/> anchors the cursor at the seed day, so nothing legitimate
+    /// writes it, and <see cref="ProgressionEngine.FromBlocks"/> throws on it. Both <see cref="Encode"/>
+    /// and <see cref="Decode"/> refuse it too, for the same reason <see cref="Encode"/> and
+    /// <see cref="Decode"/> refuse a cross-club duplicate player id (ERR-028-011(a)): a hand-built block
+    /// carrying the sentinel would otherwise encode happily into a file its own restore path can never
+    /// load, and a hand-edited file carrying it would otherwise reach <see cref="ProgressionEngine.FromBlocks"/>
+    /// and be refused there with a less specific message than the codec can give at the boundary where
+    /// the bytes are still in hand.
+    /// </para>
+    /// <para>
     /// Off the 60 Hz hot path (a save is a host action), so allocation is permitted.
     /// </para>
     /// </summary>
@@ -120,7 +136,10 @@ namespace TacticalDirector.PlayerProgression
         /// <exception cref="ArgumentNullException"><paramref name="clubs"/> is null, or a club's arrays
         /// were never bound (a <c>default(ClubCareerStates)</c> element).</exception>
         /// <exception cref="ArgumentException">Two clubs share a club id, or two players within one club
-        /// share a player id — a duplicate key has no defined winner (FR-PG-019).</exception>
+        /// share a player id — a duplicate key has no defined winner (FR-PG-019); or a player carries
+        /// <see cref="PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL"/> as its progression
+        /// cursor — not a legal STORE state (ERR-028-014), so writing it would produce a file
+        /// <see cref="ProgressionEngine.FromBlocks"/> refuses to load.</exception>
         /// <exception cref="InvalidOperationException">A record being encoded carries an undefined
         /// <see cref="PlayerPosition"/> ordinal, or a non-ASCII name — both are contracts
         /// <see cref="Decode"/> itself refuses, so writing either would produce a file no load of it
@@ -159,6 +178,13 @@ namespace TacticalDirector.PlayerProgression
             // file its own restore path rejects. This is the balance-pass AR pass-4 finding recurring
             // in the landing whose own engine guard cites the same ERR.
             RequireGloballyUniquePlayerIds(clubs);
+
+            // Same class, one ERR later (ERR-028-011(a) → ERR-028-014): ERR-028-014 retired the
+            // never-advanced sentinel from #28's legal STORE states, and ProgressionEngine.FromBlocks
+            // (which Restore calls straight after Decode) throws on it — but neither Encode nor Decode
+            // validated LastAdvancedWorldDay at all, so a hand-built block carrying the sentinel encoded
+            // happily into a file that could never be loaded. Never write what FromBlocks refuses.
+            RequireNoNeverAdvancedSentinel(clubs);
 
             int size = 4 + 4 + 4 + 4;   // magic + version + nextPlayerId + clubCount
             for (int i = 0; i < clubs.Length; i++)
@@ -210,7 +236,11 @@ namespace TacticalDirector.PlayerProgression
         /// or wrong <see cref="PlayerProgressionConstants.PROGRESSION_SAVE_MAGIC"/>; a
         /// <see cref="PlayerProgressionConstants.PROGRESSION_SAVE_FORMAT_VERSION"/> mismatch (no
         /// cross-version migration at Stage 0); a count prefix the remaining bytes could not back; keys
-        /// that are not strictly ascending; an undefined position ordinal; or trailing bytes.
+        /// that are not strictly ascending; an undefined position ordinal; a player carrying
+        /// <see cref="PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL"/> as its progression
+        /// cursor — not a legal STORE state (ERR-028-014), refused here rather than left for
+        /// <see cref="ProgressionEngine.FromBlocks"/> to reject with a less specific message; or trailing
+        /// bytes.
         /// </summary>
         /// <param name="blob">The block's bytes.</param>
         /// <param name="nextPlayerId">The decoded store-level id cursor.</param>
@@ -291,6 +321,12 @@ namespace TacticalDirector.PlayerProgression
             // reach ProgressionEngine.Restore and be refused there with a far less specific message —
             // or, on the FromBlocks route, not at all.
             RequireGloballyUniquePlayerIds(clubs);
+
+            // The load-side mirror of Encode's sentinel gate: a hand-edited file carrying the
+            // never-advanced sentinel would otherwise reach ProgressionEngine.FromBlocks (via Restore)
+            // and be refused there with a message about the wrong subsystem's contract, not this
+            // codec's own (ERR-028-014).
+            RequireNoNeverAdvancedSentinel(clubs);
 
             return clubs;
         }
@@ -491,6 +527,32 @@ namespace TacticalDirector.PlayerProgression
             }
         }
 
+        // The never-advanced-sentinel rule, shared by Encode and Decode for the same reason
+        // RequireGloballyUniquePlayerIds is above it — the ERR-028-011(a) class, one ERR later:
+        // ProgressionEngine.FromBlocks refuses PROGRESSION_NOT_ADVANCED_SENTINEL as a STORE state
+        // (ERR-028-014 — SeedFrom is the only legal way to anchor a career's cursor), so this is the
+        // codec's own half of never-write-what-load-refuses.
+        internal static void RequireNoNeverAdvancedSentinel(ClubCareerStates[] clubs)
+        {
+            for (int c = 0; c < clubs.Length; c++)
+            {
+                for (int p = 0; p < clubs[c].Count; p++)
+                {
+                    if (clubs[c].Lifecycles[p].LastAdvancedWorldDay
+                        == PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL)
+                    {
+                        throw new ArgumentException(
+                            "Player " + clubs[c].Records[p].PlayerId + " in club " + clubs[c].ClubId +
+                            " carries the never-advanced sentinel as its progression cursor. The " +
+                            "sentinel is not a legal STORE state (ERR-028-014) — a career's lived " +
+                            "history has to start somewhere it can be checked against the world " +
+                            "clock; seed through ProgressionEngine.SeedFrom, which anchors it.",
+                            nameof(clubs));
+                    }
+                }
+            }
+        }
+
         private static void RequireBound(in ClubCareerStates club, int index)
         {
             if (club.Records == null || club.Lifecycles == null)
@@ -561,4 +623,12 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | once CurrentAbility >= PotentialAbility). Placed after `life`  |
 // |         |            |        | is read, unlike its neighbours, since PA lives on the          |
 // |         |            |        | lifecycle overlay rather than the record.                       |
+// | 1.2     | 2026-08-10 | —      | New RequireNoNeverAdvancedSentinel guard, called from both     |
+// |         |            |        | Encode and Decode (ERR-028-014, the ERR-028-011(a) class one   |
+// |         |            |        | ERR later): ERR-028-014 retired the never-advanced sentinel    |
+// |         |            |        | from #28's legal STORE states and ProgressionEngine.FromBlocks |
+// |         |            |        | refuses it, but neither Encode nor Decode validated it — a     |
+// |         |            |        | hand-built block carrying the sentinel encoded happily into a  |
+// |         |            |        | file that could never be loaded. Proven by mutation: deleting  |
+// |         |            |        | either call site left its new lock the only failure.           |
 #endregion

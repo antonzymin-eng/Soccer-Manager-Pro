@@ -1,11 +1,12 @@
 // File:     src/season-save/PlayerCareerStates.cs
 // Created:  2026-08-06
-// Modified: 2026-08-09 (ERR-028-014 — v1.16)
+// Modified: 2026-08-10 (doc fix — v1.17)
 // Author:   —
 // Spec:     Training System #29 §3.1/§3.3/§3.5, §4.3 (seam contracts), FR-TR-004/016/022/023/025;
 //           Injuries & Medical #41 §3.1/§3.5, §4.3, FR-MD-003/009/010/022/023/025/027;
 //           Season & Competition Loop #30 §3.3 (KD-2 slot order), §3.5 (the boundary), FR-SN-034;
-//           Player Progression #28 (ERR-028-014 — the progression cursor's sentinel exemption);
+//           Player Progression #28 (ERR-028-014 — the progression cursor has NO sentinel exemption,
+//           unlike its #29/#41 siblings, because #28's fresh state derives age from BirthWorldDay);
 //           path-to-playable D2/D3 (T2); Code Standards #20
 // Purpose:  The #30-side owner of the per-club #29 training, #41 medical and #30 appearance state.
 //           Holds the three sets keyed by (ClubId, PlayerId), drives the two day steps at #30's
@@ -586,13 +587,16 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>
-        /// The #28 progression-cursor predicate — the FOURTH persisted per-player cursor, and checked on
-        /// the same terms as its #29/#41 siblings (ERR-028-007). Ahead of the clock silently freezes
-        /// growth until the clock catches up; lagging by two or more is WORSE here than for the
+        /// The #28 progression-cursor predicate — the FOURTH persisted per-player cursor, checked on
+        /// the same ahead/one-lag band as its #29/#41 siblings (ERR-028-007). Ahead of the clock silently
+        /// freezes growth until the clock catches up; lagging by two or more is WORSE here than for the
         /// siblings, because <c>ProgressionEngine.AdvanceDay</c> REPLAYS a gap — a mispaired file would
-        /// bank N days of growth in one call from a single day's inputs, invisibly. The sentinel is
-        /// exempt: a never-advanced career is coherent at any clock. One owner, all boundaries
-        /// delegating (the AR pass-9 M1 shape).
+        /// bank N days of growth in one call from a single day's inputs, invisibly. Unlike its siblings,
+        /// the sentinel is NOT exempt here (ERR-028-014): #29's and #41's fresh states carry no
+        /// clock-anchored quantity, so "never advanced" means the same thing at every world day, but
+        /// #28's derives age from <c>BirthWorldDay</c>, so a never-advanced #28 state means something
+        /// different at every clock value — the premise the siblings' exemption rests on is false for
+        /// this one. One owner, all boundaries delegating (the AR pass-9 M1 shape).
         /// </summary>
         internal static void RequireProgressionCursorWithinClock(
             uint worldTick, int clubId, int playerId, uint progressionDay, string boundary)
@@ -1705,4 +1709,15 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | existing bidirectional lag predicate now refuses the pairing    |
 // |         |            |        | with no new gate, since #28's own ProgressionEngine no longer   |
 // |         |            |        | writes the sentinel (ProgressionEngine.cs v1.1).                |
+// | 1.17    | 2026-08-10 | —      | Doc-only: v1.16 fixed the logic but not the XML doc above       |
+// |         |            |        | RequireProgressionCursorWithinClock, which still read "The      |
+// |         |            |        | sentinel is exempt: a never-advanced career is coherent at any  |
+// |         |            |        | clock" — directly contradicting the method's own inline comment |
+// |         |            |        | and implementation since ERR-028-014. Corrected to state the    |
+// |         |            |        | opposite and carry the reason (the file header's own ERR-028-   |
+// |         |            |        | 014 citation corrected likewise): #29/#41 fresh states carry no |
+// |         |            |        | clock-anchored quantity, so "never advanced" means the same     |
+// |         |            |        | thing at every world day; #28's derives age from BirthWorldDay, |
+// |         |            |        | so it means something different at every clock value. No logic |
+// |         |            |        | change.                                                          |
 #endregion

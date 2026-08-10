@@ -1,11 +1,12 @@
 // File:     src/player-progression/tests/ProgressionSaveCodecTests.cs
 // Created:  2026-08-08
-// Modified: 2026-08-09
+// Modified: 2026-08-10
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.5 (the save codec), §4.2, KD-4,
 //           FR-PG-016/017/018/019, F3/F5; ERR-028-004 (§3.5 named the RNG domain tag as the block's
-//           identifier — the sibling-confusion lock); Deterministic Simulation #16 §3.2.4.1
-//           (CanonicalSerializer); Code Standards #20
+//           identifier — the sibling-confusion lock); ERR-028-014 (the never-advanced sentinel retired
+//           from #28's legal STORE states — Encode and Decode now refuse it); Deterministic
+//           Simulation #16 §3.2.4.1 (CanonicalSerializer); Code Standards #20
 // Purpose:  M4 — ProgressionSaveCodec's own dedicated suite (mirrors MedicalSaveCodecTests' house
 //           pattern): the round-trip field-identity FR-PG-018 demands, the canonical key order that
 //           makes the bytes deterministic, every fail-loud gate (magic, version, bounds, ordering,
@@ -15,7 +16,8 @@
 //           v1.1 adds mutation-audit locks for six ReadPlayer/RequireGloballyUniquePlayerIds guards a
 //           mutation sweep proved dead, plus the new PotentialAbility L3 gate (ProgressionSaveCodec.cs
 //           §ReadPlayer) and its own lock — PA is the F1 growth ceiling and had no range gate before
-//           this pass.
+//           this pass. v1.2 locks the new RequireNoNeverAdvancedSentinel guards at Encode and Decode
+//           (ERR-028-014).
 
 using System;
 
@@ -84,14 +86,20 @@ namespace TacticalDirector.PlayerProgression.Tests
 
         // Deliberately out of ascending order (club 2 before 1; within club 2, player 11 before 10) —
         // Encode must canonicalize regardless of the order it is handed.
+        //
+        // Player 10's LastAdvancedWorldDay used to BE PROGRESSION_NOT_ADVANCED_SENTINEL, to prove the
+        // sentinel round-trips as itself. ERR-028-014 retired the sentinel from #28's legal STORE
+        // states, and Encode now refuses it (Encode_NeverAdvancedSentinel_FailsLoud_ERR028014 below) —
+        // so a fixture every round-trip/fail-loud test shares can no longer carry it. Player 11's
+        // uint.MaxValue - 1 already covers "a near-maximum value round-trips correctly"; 12345u here
+        // is just an ordinary mid-range value, distinct from the other three players' cursors.
         private static ClubCareerStates[] TwoClubs() => new[]
         {
             Club(2,
                 (Rec(11, "Bruno", "Silva", 29, PlayerPosition.Forward, 3),
                  Life(8200, 7400, -120L, -50000L, retired: true, retiredDay: 900u, lastAdvanced: 900u)),
                 (Rec(10, "Aidan", "Cole", 19, PlayerPosition.Defender, 1),
-                 Life(5000, 3100, 0L, 30000L, retired: false, retiredDay: 0u,
-                      lastAdvanced: PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL))),
+                 Life(5000, 3100, 0L, 30000L, retired: false, retiredDay: 0u, lastAdvanced: 12345u))),
             Club(1,
                 (Rec(7, "Marco", "Diaz", 33, PlayerPosition.Midfielder, 4),
                  Life(6000, 5900, 200L, -80000L, retired: false, retiredDay: 0u, lastAdvanced: 0u)),
@@ -138,10 +146,11 @@ namespace TacticalDirector.PlayerProgression.Tests
 
             // Club 2: players ascend 10, 11.
             Assert.AreEqual(10, got[1].Records[0].PlayerId);
-            Assert.AreEqual(PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL,
-                got[1].Lifecycles[0].LastAdvancedWorldDay,
-                "the never-advanced sentinel must survive as itself — collapsing it to day 0 would " +
-                "make that player's first advance read as already-done.");
+            Assert.AreEqual(12345u, got[1].Lifecycles[0].LastAdvancedWorldDay,
+                "an ordinary mid-range cursor must survive exactly. (The never-advanced sentinel is no " +
+                "longer legal STORE data to round-trip at all since ERR-028-014 — see " +
+                "Encode_NeverAdvancedSentinel_FailsLoud_ERR028014 / Decode_NeverAdvancedSentinel_" +
+                "FailsLoud_ERR028014 below for that half of the contract.)");
 
             Assert.AreEqual(11, got[1].Records[1].PlayerId);
             Assert.AreEqual(PlayerPosition.Forward, got[1].Records[1].Position);
@@ -341,6 +350,54 @@ namespace TacticalDirector.PlayerProgression.Tests
                 "a hand-spliced blob carrying the same player id in two different (ascending, " +
                 "internally well-formed) clubs must still be refused — the load-side mirror of " +
                 "Encode's gate (ERR-041-019 / ERR-027-004).");
+        }
+
+        // ── Never-advanced sentinel (mutation-audit locks) ─────────────────────────
+        //
+        // ERR-028-014 retired PROGRESSION_NOT_ADVANCED_SENTINEL from #28's legal STORE states —
+        // ProgressionEngine.FromBlocks (which Restore calls straight after Decode) refuses it — but
+        // neither Encode nor Decode validated LastAdvancedWorldDay at all, so a hand-built block
+        // carrying the sentinel encoded happily into a file that could never be loaded. Same class as
+        // the cross-club uniqueness gate above (ERR-028-011(a)), one ERR later.
+
+        [Test]
+        public void Encode_NeverAdvancedSentinel_FailsLoud_ERR028014()
+        {
+            var clubs = new[]
+            {
+                Club(1,
+                    (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1),
+                     Life(5000, 3000, 0L, 0L, retired: false, retiredDay: 0u,
+                          lastAdvanced: PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL))),
+            };
+
+            Assert.Throws<ArgumentException>(() => ProgressionSaveCodec.Encode(clubs, 10),
+                "ProgressionEngine.FromBlocks refuses the never-advanced sentinel as a progression " +
+                "cursor (ERR-028-014) — writing it would produce a file its own restore path can never " +
+                "load.");
+        }
+
+        [Test]
+        public void Decode_NeverAdvancedSentinel_FailsLoud_ERR028014()
+        {
+            // Encode refuses this shape (the test above), so a hand-edited file is the only way bytes
+            // carrying the sentinel can reach Decode. Encode a well-formed player carrying an ordinary
+            // cursor, then patch the LastAdvancedWorldDay field in place to the sentinel value.
+            byte[] blob = ProgressionSaveCodec.Encode(
+                new[] { Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1), Life(5000, 3000, 0, 0, false, 0u, 1u))) },
+                10);
+            // PositionOffset(42) + position(1) + attributes(AttrIdx.Count*4) + weakFootRating(4)
+            //   + potentialAbility(4) + currentAbility(4) + growthCursor(8) + birthWorldDay(8)
+            //   + retirementFlag(1) + retirementDay(4) ⇒ lastAdvancedWorldDay
+            const int LastAdvancedWorldDayOffset =
+                42 + 1 + AttrIdx.Count * 4 + 4 + 4 + 4 + 8 + 8 + 1 + 4;
+            int o = LastAdvancedWorldDayOffset;
+            CanonicalSerializer.WriteU32(blob, ref o, PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL);
+
+            Assert.Throws<ArgumentException>(() => ProgressionSaveCodec.Decode(blob, out _),
+                "a hand-edited file carrying the never-advanced sentinel must be refused here — the " +
+                "codec's own half of never-write-what-load-refuses (ERR-028-014) — rather than reaching " +
+                "ProgressionEngine.FromBlocks with a less specific message.");
         }
 
         // ── Decode-side value-range gates (mutation-audit locks) ───────────────────
@@ -616,4 +673,20 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | (the F1 growth ceiling had no gate before it). Every lock proven   |
 // |         |            |        | by deleting its guard, confirming exactly the new test failed, and |
 // |         |            |        | restoring it.                                                       |
+// | 1.2     | 2026-08-10 | —      | Two new tests lock RequireNoNeverAdvancedSentinel at Encode and    |
+// |         |            |        | Decode (ERR-028-014, the ERR-028-011(a) class one ERR later):      |
+// |         |            |        | ProgressionEngine.FromBlocks refuses the never-advanced sentinel   |
+// |         |            |        | as a progression cursor, but neither Encode nor Decode validated   |
+// |         |            |        | it before this pass. Proven by mutation: deleting either call site |
+// |         |            |        | left its new test the only failure in the suite. TwoClubs() player |
+// |         |            |        | 10 (formerly carrying the sentinel itself, to prove it round-      |
+// |         |            |        | tripped as itself) now carries an ordinary 12345u — that fixture   |
+// |         |            |        | is shared by every round-trip/fail-loud test in this file, and     |
+// |         |            |        | Encode's new guard refuses it, so the eight tests that build a     |
+// |         |            |        | blob through TwoClubs() would otherwise fail on a fixture the      |
+// |         |            |        | codec's own contract no longer allows. RoundTrip_EveryField-       |
+// |         |            |        | Survives_FRPG018's assertion updated to match; the sentinel-       |
+// |         |            |        | round-trips-as-itself property it used to check is superseded by   |
+// |         |            |        | the new ERR-028-014 tests, which check the opposite (the sentinel  |
+// |         |            |        | is refused, not carried).                                          |
 #endregion

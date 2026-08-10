@@ -1,6 +1,6 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
-// Modified: 2026-08-08 (#28 T1/T2a + AR pass 1 — v1.18)
+// Modified: 2026-08-10 (doc fix — v1.19)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-1 / KD-5..KD-8;
 //           Training System #29 §4.4 / FR-TR-018/019; Injuries & Medical #41 §4.4 / FR-MD-017/018;
@@ -667,7 +667,7 @@ namespace TacticalDirector.SeasonSave
         /// <c>WorldStore.AdvanceDay</c> the clock can never catch up — the career is wedged
         /// permanently while saving and reloading cleanly. The sibling cursors fail the OTHER way
         /// (a future-dated #29/#41 cursor is a silent per-player no-op until the clock catches up).
-        /// Three persisted cursors, two failure modes, one owner: the only layer holding the world
+        /// Four persisted cursors, two failure modes, one owner: the only layer holding the world
         /// blob and the career blocks together. Checked at Save too, so this root never writes a
         /// file its own Load refuses (the T1 AR's Encode/Decode-asymmetry rule).
         /// </summary>
@@ -840,4 +840,8 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | provider as the match-restore roster source; the career-cursor    |
 // |         |            |        | walker gains #28's fourth cursor (ERR-028-007); Save refuses to   |
 // |         |            |        | overwrite a populated roster with an empty one (ERR-028-008).     |
+// | 1.19    | 2026-08-10 | —      | Doc-only: RequireCareerCursorsWithinClock's XML doc still said    |
+// |         |            |        | "Three persisted cursors" after v1.18 made the method walk four   |
+// |         |            |        | (ERR-028-007's progression cursor). Corrected to "Four" — no      |
+// |         |            |        | logic change.                                                      |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/player-progression/ProgressionEngine.cs
 // Created:  2026-08-08
-// Modified: 2026-08-09
+// Modified: 2026-08-10
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.1 / §3.4 / §3.5 / §4.2 / §4.5, KD-4 / KD-7 / KD-8,
 //           FR-PG-001/005/008/011/013/014/016/019/021/022/023; ERR-029-006 (the batch entry point);
@@ -102,6 +102,19 @@ namespace TacticalDirector.PlayerProgression
             if (squads == null)
             {
                 throw new ArgumentNullException(nameof(squads));
+            }
+
+            // F8 at the seed site (ERR-028-015). Since ERR-028-014 the seed day IS every player's
+            // cursor, so seeding on the sentinel writes the one value FromBlocks refuses and AdvanceDay
+            // refuses as a day — producing a store that cannot be saved, restored or advanced, and
+            // failing far from the call that caused it. AdvanceDay has carried this guard since
+            // ERR-028-009; anchoring the cursor made the seed site a second way in, so it carries it too.
+            if (newGameWorldDay == PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(newGameWorldDay), newGameWorldDay,
+                    "The never-advanced sentinel is not a legal world day to seed a career on "
+                    + "(F8 / ERR-028-014): it is the one cursor value FromBlocks refuses.");
             }
 
             var engine = new ProgressionEngine();
@@ -364,8 +377,20 @@ namespace TacticalDirector.PlayerProgression
             }
             else
             {
-                // Already advanced through this day — the ERR-030-027 second call. Nothing accrues, and
-                // in particular the retirement flag below is not re-stamped with a later day.
+                // Already advanced through this day. What this branch actually buys is narrower than
+                // it looked, and the difference matters (ERR-028-015): for the ERR-030-027 case — the
+                // SAME day called twice, which is what #30 does on every fixture day — the replay loop
+                // above is empty by construction (`d = cursor + 1 > worldDay`), so that call is a
+                // no-op with or without this branch. Deleting the branch and repeating a day leaves
+                // every suite green, which is exactly how the old lock here passed for the wrong
+                // reason.
+                //
+                // The branch is load-bearing against a BACKWARD call: without it the assignment below
+                // the loop would REGRESS `LastAdvancedWorldDay` to the earlier day, and the next
+                // forward advance would then replay days already banked — silent double accrual. #30
+                // never calls backward (the cursor-vs-clock gates refuse the composition that could),
+                // but AdvanceDay is public, so the guard stays and is locked on the case that
+                // actually distinguishes it.
                 return;
             }
 
@@ -672,4 +697,12 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | where a store seeded on day 0 and composed against a clock at  |
 // |         |            |        | day 3650 banked one day of growth for a decade while every      |
 // |         |            |        | player silently read ten years older.                          |
+// | 1.2     | 2026-08-10 | —      | AR pass 3 (ERR-028-015). SeedFrom gains the F8 sentinel guard —  |
+// |         |            |        | anchoring the cursor made the seed site a second way to write   |
+// |         |            |        | the one value FromBlocks refuses. AdvancePlayerTo's else-branch |
+// |         |            |        | comment CORRECTED: it does not make the ERR-030-027 same-day    |
+// |         |            |        | re-run safe (the replay loop is empty by construction there —   |
+// |         |            |        | deleting the branch left all 469 tests green). It is            |
+// |         |            |        | load-bearing only against a BACKWARD call, which would rewind   |
+// |         |            |        | the cursor and replay banked days.                              |
 #endregion

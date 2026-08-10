@@ -1,6 +1,6 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
-// Modified: 2026-08-09 (#28 T1/T2a + AR pass 1 — v1.16)
+// Modified: 2026-08-10
 //           v1.15; the pass 1-3 recording chain and the pass-5 doc fix are the rows below)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (day advance / KD-2 tick order), §3.4 (playing a round /
@@ -565,12 +565,24 @@ namespace TacticalDirector.SeasonSave
             // providers would train one league and play another, and every symptom of that would be a
             // plausible-looking result rather than a crash — so require the same object, which for the
             // one caller that matters (a League, which IS the provider) is free.
-            if (_career != null && !ReferenceEquals(squads, _careerSquads))
+            // Keyed on the PROVIDER, not on the career (ERR-028-015). Until #28 landed, the pairing
+            // rule made `_careerSquads != null` and `_career != null` a biconditional, so keying this
+            // on the career was equivalent and nothing distinguished them. ERR-028-013 broke that
+            // equivalence deliberately — a populated progression store now composes WITHOUT #29/#41
+            // career state — and this gate was left keyed on the half that had stopped covering the
+            // case: a progression-only loop skipped it entirely, so a caller could hand in the day-0
+            // bootstrap and have the round resolved against attributes the store had already grown
+            // away from. That is precisely the divergence ERR-028-010's second half installed this
+            // gate to prevent, reopened by the relaxation one commit later. The authority is whatever
+            // the loop OWNS, whichever subsystem put it there.
+            if (_careerSquads != null && !ReferenceEquals(squads, _careerSquads))
             {
                 throw new System.ArgumentException(
-                    "This loop drives a career whose state is keyed to a different ISquadProvider. "
-                    + "Pass the same provider the loop was constructed with, or the round would be "
-                    + "resolved against rosters the training and medical state does not describe.",
+                    "This loop owns the ISquadProvider its state is keyed to — a wired career's "
+                    + "training and medical state, a #28 store's roster, or both. Pass that same "
+                    + "provider, or prefer the no-argument overload, which resolves through it. A "
+                    + "different provider would resolve the round against rosters this loop's state "
+                    + "does not describe.",
                     nameof(squads));
             }
 
@@ -1395,4 +1407,12 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | store now composes WITHOUT #29/#41 career state, which is what   |
 // |         |            |        | makes slot 1's `_career == null` Neutral branch reachable — it   |
 // |         |            |        | had been provably dead since it was written.                    |
+// | 1.18    | 2026-08-10 | —      | AR pass 3 (ERR-028-015, High): the two-provider reference gate  |
+// |         |            |        | on AdvanceAndPlayNextRound(ISquadProvider) was keyed on         |
+// |         |            |        | `_career`, which v1.17's relaxation had just stopped being      |
+// |         |            |        | equivalent to `_careerSquads`. A progression-only loop skipped  |
+// |         |            |        | the gate entirely, so the day-0 bootstrap could resolve a round |
+// |         |            |        | against attributes the store had grown away from — the          |
+// |         |            |        | ERR-028-010 divergence, reopened by the fix one commit later.   |
+// |         |            |        | Rekeyed to the provider the loop OWNS. Mutation-verified.       |
 #endregion

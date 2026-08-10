@@ -1,6 +1,6 @@
 // File:     src/player-progression/tests/ProgressionEngineTests.cs
 // Created:  2026-08-08
-// Modified: 2026-08-09
+// Modified: 2026-08-10
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.1 / §3.4 / §3.5 / §5, KD-4 / KD-7,
 //           FR-PG-011/013/014/019/021/022/023; ERR-029-006 (the batch entry point);
@@ -38,22 +38,53 @@ namespace TacticalDirector.PlayerProgression.Tests
         [Test]
         public void AdvanceDay_TwiceOnTheSameDay_IsANoOp()
         {
-            // ERR-030-027: #30 runs a fixture day's slots TWICE — pre-round and from the advance loop —
-            // and RunCareerDaySteps documents that each subsystem's own cursor is what makes the second
-            // call a no-op. Without the cursor #28's growth would accrue twice on every fixture day: a
-            // silent rate error, not a crash. This is the lock on that.
+            // The ERR-030-027 production shape: the same day called twice. Kept because it is what
+            // #30 actually does on every fixture day — but it is a BOUNDARY case, not the lock on the
+            // guard, and saying so is the point (ERR-028-015). The replay loop is empty by
+            // construction at `worldDay == cursor`, so this passes with the guard deleted; the old
+            // version of this test claimed to lock the guard and did not, and a mutation run proved
+            // it by leaving all 469 tests across both suites green. The discriminating case is
+            // AdvanceDay_BackwardCall_DoesNotRegressTheCursor, below.
             ProgressionEngine engine = SeedOneClub(ageAtBase: 18);
 
-            engine.AdvanceDay(BaseDay, TrainingInputBatch.Neutral);
+            engine.AdvanceDay(BaseDay + 1, TrainingInputBatch.Neutral);
             int afterFirst = AttributeSum(engine);
             long cursorAfterFirst = CursorOf(engine);
+            Assert.AreNotEqual(0L, cursorAfterFirst,
+                "precondition: the first call must actually have accrued, or the repeat below is "
+                + "comparing two untouched states.");
 
-            engine.AdvanceDay(BaseDay, TrainingInputBatch.Neutral);
+            engine.AdvanceDay(BaseDay + 1, TrainingInputBatch.Neutral);
 
             Assert.AreEqual(cursorAfterFirst, CursorOf(engine),
                 "a second AdvanceDay for the SAME world day must accrue nothing (the ERR-030-027 " +
                 "pre-round re-run is a cursor no-op).");
             Assert.AreEqual(afterFirst, AttributeSum(engine));
+        }
+
+        [Test]
+        public void AdvanceDay_BackwardCall_DoesNotRegressTheCursor()
+        {
+            // THE lock on the idempotency guard (ERR-028-015). Repeating a day cannot distinguish the
+            // guard from its absence — the replay loop is empty either way. A BACKWARD call can:
+            // without the guard, the assignment after the loop rewinds LastAdvancedWorldDay to the
+            // earlier day, and the next forward advance replays days already banked, silently doubling
+            // that stretch of growth.
+            ProgressionEngine engine = SeedOneClub(ageAtBase: 18);
+
+            engine.AdvanceDay(BaseDay + 10, TrainingInputBatch.Neutral);
+            long cursorAtTen = CursorOf(engine);
+            Assert.AreEqual(10 * SquadSize, cursorAtTen,
+                "precondition: ten lived days banked, so a replay of any of them would be visible.");
+
+            engine.AdvanceDay(BaseDay + 3, TrainingInputBatch.Neutral);   // backward — must do nothing
+            Assert.AreEqual(cursorAtTen, CursorOf(engine),
+                "a backward call must not accrue.");
+
+            engine.AdvanceDay(BaseDay + 10, TrainingInputBatch.Neutral);  // forward again to the same day
+            Assert.AreEqual(cursorAtTen, CursorOf(engine),
+                "…and must not have rewound the cursor either: if it had, this advance would replay "
+                + "days 4..10 and bank them a second time.");
         }
 
         [Test]
@@ -144,10 +175,15 @@ namespace TacticalDirector.PlayerProgression.Tests
         [Test]
         public void AdvanceDay_BelowRetirementAge_DoesNotFlag()
         {
+            // The FIRST LIVED day (ERR-028-015). Its positive sibling above was bumped to BaseDay + 1
+            // when ERR-028-014 made the seed day a no-op; this control case was left behind, and a
+            // control that never runs the code is worse than none — deleting the age comparison
+            // outright, so that EVERY player retires on every advance, left the whole suite green.
+            // Verified by mutation.
             ProgressionEngine engine = SeedOneClub(
                 ageAtBase: PlayerProgressionConstants.RETIREMENT_AGE - 1);
 
-            engine.AdvanceDay(BaseDay, TrainingInputBatch.Neutral);
+            engine.AdvanceDay(BaseDay + 1, TrainingInputBatch.Neutral);
 
             Assert.IsFalse(engine.LifecycleView(ClubId, FirstPlayerId).RetirementFlag,
                 "the retirement test is hard AT RETIREMENT_AGE, not below it.");
@@ -173,7 +209,14 @@ namespace TacticalDirector.PlayerProgression.Tests
             var squad = new Squad(ClubId, players);
 
             ProgressionEngine engine = ProgressionEngine.SeedFrom(new[] { squad }, newGameWorldDay: 0u);
-            engine.AdvanceDay(0, TrainingInputBatch.Neutral);
+
+            // Day 1, not day 0 (ERR-028-015). ERR-028-014 made the seed day the cursor, so
+            // `AdvanceDay(0)` became a no-op and this case stopped executing the code it exists to
+            // guard: `LifecycleView.Age` reads the raw PlayerRecord.Age field, which is only ever
+            // recomputed FROM BirthWorldDay inside the daily step. With the step skipped, the test
+            // read back its own input and the ERR-028-006 clamp no longer failed it — verified by
+            // mutation. Advancing one real day forces the derivation this test is named for.
+            engine.AdvanceDay(1, TrainingInputBatch.Neutral);
 
             for (int i = 0; i < ages.Length; i++)
             {
@@ -511,6 +554,19 @@ namespace TacticalDirector.PlayerProgression.Tests
         }
 
         [Test]
+        public void SeedFrom_AtTheSentinelWorldDay_IsRefused()
+        {
+            // ERR-028-015: anchoring the cursor at the seed day made SeedFrom a second way to write
+            // the one value FromBlocks refuses. Seeding there produces a store that cannot be saved,
+            // restored or advanced — and fails a long way from the call that caused it.
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => ProgressionEngine.SeedFrom(
+                    OneClubSquad(ageAtBase: 18),
+                    PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL),
+                "the sentinel is not a legal seed day.");
+        }
+
+        [Test]
         public void FromBlocks_ANeverAdvancedSentinelCursor_IsRefused()
         {
             // ERR-028-014: the sentinel is a refused WORLD DAY (F8), never a legal STORE state.
@@ -782,4 +838,12 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | SeedOneClubAt helper seeds two days below the sentinel instead.  |
 // |         |            |        | + FromBlocks_ANeverAdvancedSentinelCursor_IsRefused, the new     |
 // |         |            |        | lock on FromBlocks' refusal of the sentinel cursor.              |
+// | 1.4     | 2026-08-10 | —      | AR pass 3 (ERR-028-015): three locks ERR-028-014 had silently    |
+// |         |            |        | DISARMED, each because AdvanceDay(seedDay) became a no-op and    |
+// |         |            |        | the test called exactly that. Mutation-verified: deleting the    |
+// |         |            |        | retirement age comparison left 85/85 green; reinstating the      |
+// |         |            |        | ERR-028-006 clamp no longer failed its own designated lock.      |
+// |         |            |        | All three now advance to a LIVED day. + the backward-call lock  |
+// |         |            |        | (the same-day repeat CANNOT discriminate the idempotency guard)  |
+// |         |            |        | and SeedFrom_AtTheSentinelWorldDay_IsRefused.                    |
 #endregion

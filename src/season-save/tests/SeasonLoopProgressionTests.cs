@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonLoopProgressionTests.cs
 // Created:  2026-08-08
-// Modified: 2026-08-09
+// Modified: 2026-08-10
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (KD-2 slot 1); Player Progression & Lifecycle #28
 //           KD-4 / FR-PG-021 / FR-PG-022; ERR-029-006 (the batch entry point, closed here);
@@ -269,6 +269,38 @@ namespace TacticalDirector.SeasonSave.Tests
                 "slot 1 must have run on the Neutral batch — if this branch were still unreachable the "
                 + "constructor above would have thrown, and if it were reachable but dead the cursor "
                 + "would not move.");
+        }
+
+        [Test]
+        public void AProgressionStoreWithNoCareer_CanPlayARound_AndRefusesAForeignProvider()
+        {
+            // ERR-028-015, and the reason the hole existed. ERR-028-013 made progression-without-career
+            // a legal composition, but the only case covering it called AdvanceDays — so the new
+            // configuration could advance days and save, and nothing else was ever exercised. That is
+            // verbatim the ERR-028-010 shape, in the fix that cited it.
+            //
+            // The second half is the defect it hid: the two-provider reference gate was keyed on
+            // `_career != null`, which had been equivalent to `_careerSquads != null` until this very
+            // relaxation broke the biconditional. A progression-only loop skipped the gate, so the
+            // day-0 bootstrap could be handed in and the round resolved against attributes the store
+            // had already grown away from — silently.
+            League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
+            ProgressionEngine progression = SeedFor(league);
+            var loop = new SeasonLoop(
+                new WorldStore(ManagerId, WorldSeed), league.CreateSeason(managedClubId: 0),
+                RoundResolutionMode.QuickSimAll,
+                careerOrNull: null, careerSquadsOrNull: null, progressionOrNull: progression);
+
+            loop.AdvanceToNextFixtureDay();
+
+            Assert.Throws<ArgumentException>(
+                () => loop.AdvanceAndPlayNextRound(league),
+                "the loop OWNS a provider projected from its store, so a foreign one — here the day-0 "
+                + "bootstrap — must be refused even though no #29/#41 career is wired.");
+
+            MatchResult[] results = loop.AdvanceAndPlayNextRound();
+            Assert.AreEqual(ClubCount / 2, results.Length,
+                "…and the configuration must actually be able to play, through the provider it owns.");
         }
 
         [Test]
@@ -706,4 +738,10 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | derived from BirthWorldDay), so the same construction now         |
 // |         |            |        | refuses, and the assertion checks it is refused on the LAG half   |
 // |         |            |        | of the predicate specifically.                                    |
+// | 1.4     | 2026-08-10 | —      | AR pass 3 (ERR-028-015): + AProgressionStoreWithNoCareer_Can-    |
+// |         |            |        | PlayARound_AndRefusesAForeignProvider. The composition v1.17     |
+// |         |            |        | created was only ever exercised through AdvanceDays — a config   |
+// |         |            |        | that could advance days and save and nothing else, verbatim the  |
+// |         |            |        | ERR-028-010 shape — and that gap is what hid the reference-gate  |
+// |         |            |        | hole this case now locks.                                        |
 #endregion
