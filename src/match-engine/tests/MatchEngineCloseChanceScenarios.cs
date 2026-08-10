@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineCloseChanceScenarios.cs
 // Created:  2026-08-04
-// Modified: 2026-08-07
+// Modified: 2026-08-10
 // Author:   —
 // Spec:     Decision Tree #8 §3.1.5.2 / §3.2.4.1 (ERR-008-018), Positioning AI #12 §3.2,
 //           Testing Strategy & Framework #19 §3.3.1/§3.3.5/Appendix A.1, Code Standards #20
@@ -111,12 +111,31 @@ namespace TacticalDirector.MatchEngine
             // Post-fix these two seeds read +0.074 and +0.091.
             //
             // Bound −0.10 → −0.16, rebaselined (owner call, August 7, 2026) at the ERR-008-023
-            // main merge. The -021/-022/-023 shot-lane chain moved the pooled mean to −0.119 —
-            // and the regression is SEED-ASYMMETRIC: 0x0F1E…78 held its gain (+0.078 over 110
-            // dribbles) while 0xD1A6D05E gave it back entirely (−0.232 over 192 dribbles, vs
-            // −0.221 pre-fix / +0.091 post-fix). The pooled bound now sits between today's −0.119
-            // and the pre-fix pooled ≈ −0.29, so the ERR-008-018 world still fails; the per-seed
-            // regression is recorded for the KD-W1 calibration pass, which owns pulling it back.
+            // main merge, when the -021/-022/-023 shot-lane chain moved this pair's pooled mean
+            // to −0.119, seed-asymmetrically (0x0F1E…78 +0.078, 0xD1A6D05E −0.232).
+            //
+            // READ THIS PREDICATE AS A FLOOR, NOT AS AN ESTIMATOR. The August 10, 2026 bisect
+            // (close-chance-creation-design.md §11) measured 18 seeds across six trees. Two facts
+            // bound what these two seeds can tell you about any LATER change:
+            //
+            //   * Between-seed spread of this statistic is sd ≈ 0.17, and any code change that
+            //     perturbs the trajectory resamples it — the shot lane reaches this metric only
+            //     by changing which SHOOT options exist, never through the DRIBBLE path, which
+            //     reads no goal-visibility term at all. Over all 153 pairs drawn from those 18
+            //     seeds, the two-seed pooled shift for the shot-lane chain has sd = 0.110; the
+            //     −0.119 above sits at its 4.6th percentile. The chain's actual directional
+            //     effect over 18 paired seeds is −0.027 ± 0.039 (t = −0.70, 8 up / 10 down).
+            //   * This pair was selected for maximum pre/post separation on ERR-008-018. Pricing
+            //     a different change off the same pair is selection on the outcome variable.
+            //
+            // So: a FAILURE here means look for a mechanism, and 4 of those 18 seeds already sit
+            // below −0.16 with none of the chain applied. It does NOT license reading the margin
+            // as a dose. The bound still refuses the pre-fix ERR-008-018 world (pooled ≈ −0.29),
+            // which is the job it was written to do.
+            //
+            // Widening this scenario to the full six-seed corpus would add four 90-minute matches
+            // to a suite already running ~23 minutes. Left at two by owner call, with the limit
+            // stated here instead.
             context.Envelope.CheckTrue("final-third-dribbles-are-not-goal-averse",
                 meanCosine > -0.16f,
                 "meanCosine=" + f3(meanCosine) + " (bound −0.16; pre-fix these seeds ≈ −0.29)");
@@ -126,7 +145,7 @@ namespace TacticalDirector.MatchEngine
             // August 7, 2026 rebaseline, but its margin thinned: pooled 0.450 (per-seed 0.564 /
             // 0.385 — the regressed seed is below the bound alone and the pooled figure carries
             // it). If this predicate trips next, that is the cosine regression deepening, not a
-            // new fact.
+            // new fact. The same floor-not-estimator caveat above applies to this bound too.
             context.Envelope.CheckTrue("goalward-dribbles-are-not-a-minority-of-one-in-three",
                 goalwardShare > 0.42f,
                 "goalwardShare=" + f3(goalwardShare) + " (bound 0.42; pre-fix these seeds ≈ 0.31)");
@@ -222,4 +241,14 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | seed gave back its whole ERR-008-018 gain). Share bound      |
 // |         |            |        | unchanged, margin thinned to 0.030 (0.450 pooled). Pull-back |
 // |         |            |        | owned by the KD-W1 calibration pass.                         |
+// | 1.2     | 2026-08-10 | —      | Comments only; no predicate, bound or seed changed. The v1.1  |
+// |         |            |        | KD-W1 hand-off is WITHDRAWN and the two bounds are restated   |
+// |         |            |        | as FLOORS rather than estimators, on the 18-seed bisect       |
+// |         |            |        | (close-chance-creation-design.md §11): the shot-lane chain's  |
+// |         |            |        | directional effect is -0.027 +/- 0.039 (t = -0.70, 8 up /     |
+// |         |            |        | 10 down), the -0.119 that drove the rebaseline is the 4.6th   |
+// |         |            |        | percentile of this pair's own estimator, and 4 of 18 seeds    |
+// |         |            |        | sit below -0.16 with none of the chain applied. The seed      |
+// |         |            |        | count stays at 2 (owner call); the limit is stated in the     |
+// |         |            |        | predicate comment instead of being widened away.              |
 #endregion
