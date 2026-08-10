@@ -6,8 +6,9 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 1.99
-**Updated:** August 9, 2026 (v1.99 — **CORRECTION to v1.98: `ERR-008-024` was recorded RESOLVED. It is not.** The v1.98 entry below overstated the outcome, filed earlier this same session. The tie-break fix — ranking §3.1.5.2's 8 sectors on `spaceInSector × DirectionQuality_DRIBBLE(sectorDir, toGoal)` instead of `spaceInSector` alone — was **implemented, measured, and REFUSED**, the KD-CC7 pattern (`close-chance-creation-design.md` §4, where the #15 run overlay met the same fate). It DOES fix the symptom: `sim_match_engine_close_chance` goes meanCosine −0.165 / goalwardShare 0.407 (both failing) to **PASS** (bounds −0.16 / 0.42, neither moved). But the same build **stalls play outright**: `sim_match_engine_play_develops` fails with "play stalled: last possession change at tick 18424, ball last moving at tick 18465 of 32400", and `sim_match_engine_shot_outcomes` fails `goals-still-scored` at **0**. A wider form ranking on `space × DirectionQuality` outright (not as a tie-break) produced the **identical** stall at the **identical tick**, plus mean-shot-distance 25.41 m against a 24.00 m ceiling — that identity is what localises the cause to the tie-break itself, not to how much space either form trades away. **Refused, not landed.** `OptionGenerator.cs` is now byte-identical in logic to the pre-fix baseline (verified: `git diff 23f8dd9 -- src/decision-tree/OptionGenerator.cs` has zero non-comment lines). What was KEPT is behaviour-neutral only: `DirectionQuality_DRIBBLE` hoisted to public static `UtilityWeights.DribbleDirectionQuality(Vector2, Vector2)` with `UtilityScorer` delegating to it (so generation and scoring cannot drift apart if this is retried), plus a long explanatory note at the defect site recording the refusal for the next attempt. The two §3.1.5.2 unit locks the v1.98 landing added are **REMOVED** — they locked behaviour that no longer exists. `DecisionTree.Tests` is back to **129 passed / 4 skipped / 0 failed**. ERR-008-024's status below changes from Resolved to **recorded, NOT fixed — implemented, measured, refused**; `section-3-1.md` reverted to v1.8 to describe the code that actually ships; `close-chance-creation-design.md` §7 item 6 **REOPENED** at v1.4. Prior (overstated) entry below, left unedited per this file's convention.)
+**Version:** 1.100
+**Updated:** August 10, 2026 (v1.100 — **Two documentation-integrity defects in this log itself, fixed; no spec or code changed.** (1) **`ERR-008-021` was allocated twice**, by two concurrent branches, both independently "verified free": this entry's original body (the near-post containment-cliff fix, filed August 5) and a second body (the elite/poor blocker ability-weighting fix, filed August 6) both merged in at `14d0796` ("Merge main — reconcile two concurrent implementations of ERR-008-021") and both are live in today's `ComputeGoalOpeningScore`. Retitled **`ERR-008-021 (a)`** and **`ERR-008-021 (b)`** respectively (title text otherwise unchanged); both now open with a shared collision note recording that both provenance claims were true when written and wrong by merge, that an unqualified `ERR-008-021` citation in this tree means the pair, and that the id was deliberately **NOT renumbered** — the "Spec Renumbering Cascades" hazard (root `CLAUDE.md`) — given dozens of citations across `CLAUDE.md`, `open-issues.md`, `close-chance-creation-design.md`, `OptionGenerator.cs`/`UtilityWeights.cs` version-history rows and spec section files; renumbering remains available to the owner. Both entries' `Id provenance` paragraphs are annotated in place rather than rewritten, and both cross-link the other plus `ERR-008-022` (the adversarial review filed over (a) specifically — its own Filed line and first `ERR-008-021` reference are annotated `(a)` to remove the ambiguity). One line added to the `ERR-030-025` id-collision precedent note (§"the collision class recurring live") recording this as a further, sharper instance: a **concurrent-branch** collision rather than branch-vs-main, which an authoring-time free-check cannot catch by construction — the check must be repeated at merge, not only at promotion. (2) **`ERR-008-023` had no `##` body entry** — it existed only in this header's own v1.76/v1.77 rows below and in the Error Index table row (added at `476e37d`), while `CLAUDE.md`, `open-issues.md`, `close-chance-creation-design.md` and an `OptionGenerator.cs` comment all cite it. The missing entry is now written in the log's standard shape, sourced only from what was already recorded here (the v1.76/v1.77 rows), from `476e37d`'s commit message, and from the `ERR-008-023:` comment block in `OptionGenerator.cs` — no new findings invented. Appended to it: a bisect measurement supplied August 10, 2026, isolating the -023 commit as the sole source of the close-chance cosine movement the v1.77 row below recorded as queued for the KD-W1 calibration pass (base `64513e4`, swapping only the three shot-lane files across -021/-022/-023; seed `0xD1A6D05E` bit-identical through -021 and -022, moving only at -023, −0.2320; chain effect over 18 paired seeds −0.027 ± 0.039, 95% CI [−0.110, +0.055], 8 up / 10 down — `close-chance-creation-design.md` §11). Prior update below.)
+**Updated (prior):** August 9, 2026 (v1.99 — **CORRECTION to v1.98: `ERR-008-024` was recorded RESOLVED. It is not.** The v1.98 entry below overstated the outcome, filed earlier this same session. The tie-break fix — ranking §3.1.5.2's 8 sectors on `spaceInSector × DirectionQuality_DRIBBLE(sectorDir, toGoal)` instead of `spaceInSector` alone — was **implemented, measured, and REFUSED**, the KD-CC7 pattern (`close-chance-creation-design.md` §4, where the #15 run overlay met the same fate). It DOES fix the symptom: `sim_match_engine_close_chance` goes meanCosine −0.165 / goalwardShare 0.407 (both failing) to **PASS** (bounds −0.16 / 0.42, neither moved). But the same build **stalls play outright**: `sim_match_engine_play_develops` fails with "play stalled: last possession change at tick 18424, ball last moving at tick 18465 of 32400", and `sim_match_engine_shot_outcomes` fails `goals-still-scored` at **0**. A wider form ranking on `space × DirectionQuality` outright (not as a tie-break) produced the **identical** stall at the **identical tick**, plus mean-shot-distance 25.41 m against a 24.00 m ceiling — that identity is what localises the cause to the tie-break itself, not to how much space either form trades away. **Refused, not landed.** `OptionGenerator.cs` is now byte-identical in logic to the pre-fix baseline (verified: `git diff 23f8dd9 -- src/decision-tree/OptionGenerator.cs` has zero non-comment lines). What was KEPT is behaviour-neutral only: `DirectionQuality_DRIBBLE` hoisted to public static `UtilityWeights.DribbleDirectionQuality(Vector2, Vector2)` with `UtilityScorer` delegating to it (so generation and scoring cannot drift apart if this is retried), plus a long explanatory note at the defect site recording the refusal for the next attempt. The two §3.1.5.2 unit locks the v1.98 landing added are **REMOVED** — they locked behaviour that no longer exists. `DecisionTree.Tests` is back to **129 passed / 4 skipped / 0 failed**. ERR-008-024's status below changes from Resolved to **recorded, NOT fixed — implemented, measured, refused**; `section-3-1.md` reverted to v1.8 to describe the code that actually ships; `close-chance-creation-design.md` §7 item 6 **REOPENED** at v1.4. Prior (overstated) entry below, left unedited per this file's convention.)
 **Updated (prior):** August 9, 2026 (v1.98 — **ERR-008-024 filed + RESOLVED: §3.1.5.2's 8-sector dribble scan always picked `AgentFacingDirection`, whatever the goal.** `spaceInSector` saturates at exactly 1.0 for any sector clear of `DRIBBLE_THREAT_RADIUS`, and the old scan ranked on `spaceInSector` alone with a strict `>` improvement test — so whenever two or more sectors were clear (the common case in the final third) the winner was always sector 0, `AgentFacingDirection` by construction, and goal direction never entered the choice at all. This is why ERR-008-018's `DirectionQuality_DRIBBLE` scoring term could suppress a retreating dribble but never redirect it (`close-chance-creation-design.md` KD-CC3 / §7 item 6, now closed). Fixed by ranking sectors on `spaceInSector × DirectionQuality_DRIBBLE(sectorDir, toGoal)` — the SAME term §3.2.4.1 already applies when scoring the resulting option, hoisted to a new public static `UtilityWeights.DribbleDirectionQuality(Vector2, Vector2)` so both stages share one formula instead of a hand-copied second walk; `UtilityScorer.ComputeDribbleDirectionQuality` now delegates to it, behaviour there unchanged. **No new constant** — the floor is ERR-008-018's `DRIBBLE_GOAL_DIR_MIN_MODIFIER` = 0.80, untouched, so `DirectionQuality_DRIBBLE ∈ [0.80, 1.0]` and direction can outrank at most a 20% space deficit (KD-CC6 preserved; a genuinely blocked sector still loses on space). Measured: `sim_match_engine_close_chance` acceptance scenario — meanCosine −0.165 → **PASS** (bound −0.16, unmoved), goalwardShare 0.407 → **PASS** (bound 0.42, unmoved). `DecisionTree.Tests` **131 passed / 4 skipped / 0 failed**, incl. 2 new §3.1.5.2 locks. `OptionGenerator.cs` v1.11, `UtilityScorer.cs` v1.16, `UtilityWeights.cs` v1.14, `OptionGeneratorTests.cs` v1.11, `section-3-1.md` v1.7, `close-chance-creation-design.md` v1.3. **⚠️ CORRECTED at v1.99 above — this entry overstated the outcome. The fix described here was implemented, measured, and REFUSED, not landed; see v1.99 for the refusal evidence.** Prior entry below.)
 **Updated (prior):** August 8, 2026, later same day (v1.97 — **ERR-012-011 filed + RESOLVED at wiring-backlog C1: the #12 `InPoss` gate.** #12 §3.0 classified phase from the on-ball carrier, absent for the whole flight of every pass, so a passing team read as being in transition — measured `InPoss` on **7.5%** of final-third samples against `TransToAtk` 58.9%. Phase now classifies from TEAM possession, composed by the orchestrator from the carrier's team ∪ the intended receiver of a pass in flight; the latch expires with no new `[GT]` by reusing `RunFirstTouch`'s receding predicate. Snapshot fields ADDED not redefined (#23's FR-DM-007 exclusion untouched); **`SNAPSHOT_SCHEMA_VERSION` 19 → 20**; no RNG/draw-order change. Two clears recorded as having no isolating lock. Prior entry below.)
 
@@ -243,7 +244,7 @@ authoritative remediation backlog.
 | ERR-041-008 | Injuries & Medical #41, found at **T1 implementation**: §4.4's `MEDICAL_SAVE_FORMAT_VERSION` pseudocode iterates `for club in perClubStates (deterministic club order)` and writes the player records — but **never writes the club id**. Club identity is therefore carried across a save boundary by list position alone, which means the block can only be interpreted by agreeing with something outside it about club ordering; the only candidate is #30's season sub-blob, and KD-7 of this same section forbids this codec to read it. A club-set reorder between save and load (promotion/relegation at a season boundary is the obvious one) silently re-attaches every club's medical states to the wrong club, with no id in the bytes for anything to notice. Same class as ERR-029-004 — the persistence section of each sibling spec was under-specified in a different way, and both surfaced the moment someone wrote the format instead of reading it. | Medium | 1 | ✅ Resolved August 6, 2026 at #41 T1 — spec + code, same commit. §4.4's layout gains `WriteI32(club.ClubId)` and the decode side gains the strictly-ascending club-id gate; #29's new §4.4.1 carries the field from the start, so the two blocks stay byte-shaped alike. The same edit pins the canonical ascending-key rule, the negative-counter refusals, and — the one asymmetry worth naming — that **the F1 coherence gate runs on encode as well as decode**: a codec validating only on the way in writes files no load of it can accept, and the contradiction then surfaces a session later, far from the bug that produced it. `[GT]` bands stay ungated on both sides for ERR-029-004's reason. §2.3 F3 corrected to `InvalidOperationException`. Implemented as `MedicalSaveCodec` + `ClubInjuryStates`; locked by `MedicalSaveCodecTests`, including a block-size assertion that fails if an RNG cursor is ever added to the block — the question "did we just make the draw position-dependent?" (KD-1 / FR-MD-007) then gets asked before it ships. **Id note:** 008, not 004 — `injury-aging-research-alignment-design.md` soft-reserves ERR-041-004..007 for its own pending back-props, and ERR-041-002 was already reassigned away from that supplement once. |
 | ERR-029-005 | Training System #29, found by **adversarial review over the T1 landing**: §4.4.1's block is gated by `TRAINING_SAVE_FORMAT_VERSION` alone, and that is not an identifier. Every sub-blob format in the save stack is at version 1 (`MEDICAL_SAVE_FORMAT_VERSION`, `SEASON_STATE_FORMAT_VERSION`, `MATCH_SAVE_FORMAT_VERSION`, `PROGRESSION_SAVE_FORMAT_VERSION` included), so the gate separates one *generation* of a format from the next and never one format from another. ERR-029-004 had just made this block byte-for-byte the same shape as #41's, so the #41 medical block decoded here **completely and silently**: severity ordinals 0–3 are all defined `TrainingFocus` values, `RecoveryRemaining` landed in `Condition`, the always-non-negative `InjuryCount` landed in `TrainingFatigue` and passed its only gate, and there were no trailing bytes. Confirmed by executing a byte-exact model of both formats in both directions. The trigger — transposing two arguments in `SeasonSaveCodec.Encode`'s list of five consecutive `byte[]` — had no compile-time signal either, and the only thing that caught it in one direction was #41's F1 coherence rule firing on the *other* block, an accident of #41 having an invariant #29 lacks. | **High** | 1 | ✅ Resolved August 6, 2026 at the AR pass — spec + code, same commit. Two layers, because the defect has two halves. **Load-time:** `TRAINING_SAVE_MAGIC` (ASCII `"TRNG"`) is written before the version and checked before it, so a foreign block is refused by name rather than mis-read; the message names the observed magic, turning a mystery corruption into "you handed me the medical block". Deliberately not an RNG domain tag — those name draw domains and must stay free to change independently of a save format. **Compile-time:** `SeasonSaveCodec.Encode`'s two confusable parameters become the typed `TrainingBlock` / `MedicalBlock`, so the transposition is a build error; `Encode` still null-guards `default(TrainingBlock)`, which skips the wrapper's constructor exactly as `default(ClubTrainingStates)` does one layer down. §4.4.1 records the general rule as a MUST: **a format version is not a format identifier.** Locked by `Decode_ForeignMagic_FailsLoud_NotSilentlyReinterpreted` (#29's suite, which cannot reference #41 and so stands in a same-shape foreign block), `Decode_ATrainingBlock_FailsLoud_BothDirections_ERR041009` (#41's suite, which can, and proves both directions on real blocks), and `SaveLoad_TransposedTrainingAndMedicalBlocks_FailLoud` through a whole file. |
 | ERR-041-009 | Injuries & Medical #41 — the same defect in the sibling spec, filed separately because §4.4 is its own normative layout and would otherwise stay wrong. The #29 training block decoded as a medical block just as silently in the reverse direction on realistic data: a squad on `Fitness`/`Technical` focus with a healthy `Condition` read back as a squad carrying `Moderate`/`Serious` injuries with thousands of recovery days, F1 coherence satisfied throughout, because a positive `Condition` is indistinguishable from a positive `RecoveryRemaining`. §4.4's ERR-041-008 bullet additionally cited "KD-7 blob independence"; in `unified-season-save-design.md` **KD-2** is the no-cross-parse decision and KD-7 is the codec/disk-I/O split, so the citation pointed at the wrong decision. | **High** | 1 | ✅ Resolved August 6, 2026 at the AR pass — spec + code, same commit. `MEDICAL_SAVE_MAGIC` (ASCII `"MEDL"`) written and checked first, mirroring ERR-029-005; §4.4's property list grows from three MUSTs to four, leading with **the block names its own format**; the `KD-7` citation corrected to `KD-2` in both §4.4 and #29's §4.4.1. Neither sub-blob's format version is bumped and `SEASON_SAVE_FORMAT_VERSION` stays 3: no such block has ever been written to a real save (nothing constructs either state set until T2), and the *frame* layout is untouched — only the contents of two blocks the frame treats as opaque. **Id note:** 009, not 004 — `injury-aging-research-alignment-design.md` still soft-reserves ERR-041-004..007. |
-| ERR-008-021 | Decision Tree #8 §3.1.4.3 / §3.2.3.2 — the shot-lane occlusion test was the pass lane's twin defect, deferred at the ERR-008-020 landing by owner call and closed here. An opponent contributed his **whole** blocking width if his angular centre fell inside the goal arc and **nothing at all** if it fell outside: a defender across the near post scored a fully open goal, and 4 cm of lateral position stepped `GoalOpeningScore` by 0.41 (0.595 → 1.000). The width was body radius alone, so blocker identity never entered the shooter's read of the goal. | Moderate | 3 | ✅ **Resolved August 5, 2026** (spec §3.1.4.3 + §3.2.3.2 + `OptionGenerator`/`UtilityWeights`, same commit; doctrine P1/P2/P3/P5) — the contribution is the true angular OVERLAP of the disc with the goal arc (continuous by construction) × the blocker's Anticipation/Positioning ability (`SHOT_BLOCKER_ABILITY_MIN/MAX` 0.6–1.4 `[GT]`, average exactly 1.0) read through the shooter's Vision fidelity (§3.1.3.3's floor, shared as one dial). **Goalkeeper exempt from the ability term** — #11 owns keeper shot-stopping (P3). P5 exact: old rectangle and new trapezoid both integrate to `4h·halfArc` over a uniformly-placed blocker. Digest invariance **not claimed** — the model is live on every generated shot. 10 `OptionGeneratorTests` locks incl. the GK exemption and the away mirror (counts and adequacy corrected at ERR-008-022). **COMPILED AND EXERCISED, NOT GATE-VERIFIED** — CI run 402 (PR #302, head `301c634`): build 0 errors, `DecisionTree.Tests` 127 passed / 1 failed / 4 skipped, all other suites green. The one failure was -022's far-post lock, not this landing. The gate job was **cancelled before returning a verdict** and four hygiene checks never ran; see the v1.75 header entry. **RECONCILED August 7, 2026 at the main merge — this finding was implemented TWICE, concurrently, by two sessions.** `claude/football-judgment-proxy-review-pq12dz` (PR #305) landed a form that keeps §3.2.3.2's wedge-containment test and §3.1.4.3's `IsInShotPath` goal-centre-plane bound and adds the ability weighting plus a single-goalkeeper-candidate selection (its AR-1 H-1); it merged to main and passed the gate. This branch landed the form recorded above — the containment test replaced by true angular overlap, then ERR-008-022's lane bounds and ERR-008-023's keeper body radius on top. **The merge keeps this branch's form**, because the other retains precisely the 0.595 ⇒ 1.000 cliff this finding was filed against, and the goal-centre-plane bound that ERR-008-022 then measured discarding the far-post blocker on 20,213 of 20,213 sampled off-centre shooters. **Not carried, and open:** PR #305's single-goalkeeper-candidate selection — exactly one keeper (goal-line-nearest within the band) takes the P3 ability exemption — is strictly better than this branch's `gkness`, which exempts the whole 6 m band and so hands the exemption to any defender who has tracked back. That is the same Stage-0 positional-proxy limitation recorded as *not fixed* at -022, and PR #305 solved it. It is deliberately NOT grafted in this merge: it is a behaviour change, the merge is already large, and grafting an unverified behaviour change into a reconciliation commit is how the -022 landing produced `goals-still-scored = 0`. Follow-up work, on its own gate run. |
+| ERR-008-021 | Decision Tree #8 §3.1.4.3 / §3.2.3.2 — the shot-lane occlusion test was the pass lane's twin defect, deferred at the ERR-008-020 landing by owner call and closed here. An opponent contributed his **whole** blocking width if his angular centre fell inside the goal arc and **nothing at all** if it fell outside: a defender across the near post scored a fully open goal, and 4 cm of lateral position stepped `GoalOpeningScore` by 0.41 (0.595 → 1.000). The width was body radius alone, so blocker identity never entered the shooter's read of the goal. | Moderate | 3 | ✅ **Resolved August 5, 2026** (spec §3.1.4.3 + §3.2.3.2 + `OptionGenerator`/`UtilityWeights`, same commit; doctrine P1/P2/P3/P5) — the contribution is the true angular OVERLAP of the disc with the goal arc (continuous by construction) × the blocker's Anticipation/Positioning ability (`SHOT_BLOCKER_ABILITY_MIN/MAX` 0.6–1.4 `[GT]`, average exactly 1.0) read through the shooter's Vision fidelity (§3.1.3.3's floor, shared as one dial). **Goalkeeper exempt from the ability term** — #11 owns keeper shot-stopping (P3). P5 exact: old rectangle and new trapezoid both integrate to `4h·halfArc` over a uniformly-placed blocker. Digest invariance **not claimed** — the model is live on every generated shot. 10 `OptionGeneratorTests` locks incl. the GK exemption and the away mirror (counts and adequacy corrected at ERR-008-022). **COMPILED AND EXERCISED, NOT GATE-VERIFIED** — CI run 402 (PR #302, head `301c634`): build 0 errors, `DecisionTree.Tests` 127 passed / 1 failed / 4 skipped, all other suites green. The one failure was -022's far-post lock, not this landing. The gate job was **cancelled before returning a verdict** and four hygiene checks never ran; see the v1.75 header entry. **RECONCILED August 7, 2026 at the main merge — this finding was implemented TWICE, concurrently, by two sessions.** `claude/football-judgment-proxy-review-pq12dz` (PR #305) landed a form that keeps §3.2.3.2's wedge-containment test and §3.1.4.3's `IsInShotPath` goal-centre-plane bound and adds the ability weighting plus a single-goalkeeper-candidate selection (its AR-1 H-1); it merged to main and passed the gate. This branch landed the form recorded above — the containment test replaced by true angular overlap, then ERR-008-022's lane bounds and ERR-008-023's keeper body radius on top. **The merge keeps this branch's form**, because the other retains precisely the 0.595 ⇒ 1.000 cliff this finding was filed against, and the goal-centre-plane bound that ERR-008-022 then measured discarding the far-post blocker on 20,213 of 20,213 sampled off-centre shooters. **Not carried, and open:** PR #305's single-goalkeeper-candidate selection — exactly one keeper (goal-line-nearest within the band) takes the P3 ability exemption — is strictly better than this branch's `gkness`, which exempts the whole 6 m band and so hands the exemption to any defender who has tracked back. That is the same Stage-0 positional-proxy limitation recorded as *not fixed* at -022, and PR #305 solved it. It is deliberately NOT grafted in this merge: it is a behaviour change, the merge is already large, and grafting an unverified behaviour change into a reconciliation commit is how the -022 landing produced `goals-still-scored = 0`. Follow-up work, on its own gate run. **Id-collision note (added August 10, 2026):** the id was allocated twice, not once — the body section below matching this row's description is retitled **`ERR-008-021 (a)`**, and PR #305's ability-weighting form (also filed under this id, on the branch this row calls "the other") has its own body section retitled **`ERR-008-021 (b)`**; both landings are live in code together. See either body entry's ID COLLISION note for the full account. Not renumbered. |
 | ERR-008-022 | Decision Tree #8 §3.1.4.3 / §3.2.3.2 — the shooting lane's far bound was a plane through the goal **centre**, which cuts diagonally across the goal mouth for any off-centre shooter: the **far-post** blocker was discarded on 100% of 20,213 sampled in-range off-centre shooters, a keeper on his line at goal centre was dropped for every shooter position (reading as a fully open goal), and an opponent standing *behind* the goal line was admitted at the keeper's radius — so ERR-008-021's overlap model was denied much of the geometry it exists to price. Two further hard predicates in the same derivation were larger cliffs than the one -021 removed: `GOAL_MIN_SHOT_DIST` stepped `GoalOpeningScore` 1.000 → 0.050 across 1 cm (and with 0.050 below `MIN_GOAL_VISIBILITY`, decided whether a SHOOT option existed), and the goalkeeper predicate stepped it 0.768 → 0.311 across 2 cm. | Moderate | 3 | ✅ **Resolved August 6, 2026** (spec §3.1.4.3 + §3.2.3.2 + `OptionGenerator`/`UtilityWeights`/`DecisionTreeConstants`, same commit; doctrine P1/P3) — lane bounded by the **goal-line plane**, near bound ramped over new `[GT] SHOT_BLOCKER_NEAR_FADE_M` = 1.0 m, GK predicate replaced by a scalar `gkness` lerping radius **and** the P3 ability exemption over new `[GT] GK_PROXIMITY_FADE_M` = 2.0 m. Also corrects three false -021 verification claims: the **P5 exactness** argument (holds only for `h ≤ halfArc`; up to **2×** above it — the stated reason no recalibration was needed, withdrawn), the **test count** (10 locks / 9 evaluable / 5 fail / 4 pass, not "9 / 5 of 8"), and the **worked example** (its opponent was classified a goalkeeper, so all three of its numbers were unreachable). Suite 10 → 15 locks; the over-blocking mutant that passed all ten now fails, and both `NullAttributeView` tautologies are fixed. **COMPILED AND EXERCISED, NOT GATE-VERIFIED** — CI run 402 (PR #302, head `301c634`): build 0 errors, `DecisionTree.Tests` 127 passed / 1 failed / 4 skipped, every other suite green. The failure was this entry's own `ShotLane_FarPostBlocker_OccludesTheGoal`, which read the NEAR post; fixed in `0612bcc`, **which has never been compiled** — run 403 was evicted from the queue without starting and PR #302 was then closed. The gate job in 402 was itself cancelled before returning a verdict and four hygiene checks never ran; see the header chain v1.75. |
 | ERR-008-023 | Decision Tree #8 §3.2.3.2 — the goalkeeper was assigned a `GK_BLOCKER_RADIUS_M` = **1.5 m** blocking disc rather than the 0.5 m body every other player occludes with, to "approximate arm reach + lateral movement". That is a **shot-stopping** argument, and doctrine P3's ownership ledger assigns keeper shot-stopping to Goalkeeper Mechanics #11 (§3.5 save model, §3.7.0 rush) — which prices the dive at contact — so the shooter's read of the goal charged him a second time for the same keeper. ERR-008-021 had already exempted the keeper from the *ability* term for exactly this reason and left the radius alone. The constant had never been exercised: the pre-ERR-008-022 lane bound discarded a goal-line keeper for **every** shooter position, so the disc went live for the first time at that landing and immediately removed **~42% of the goal arc on every shot** — `GoalOpeningScore` 1.000 → 0.584 at 16 m from the keeper alone, before any outfield defender. `MIN_GOAL_VISIBILITY` (§3.1.4.1 gate 4) then withholds the SHOOT option entirely below 0.12, and `blockedArc` sums blockers with no mutual-overlap correction, so a keeper plus two defenders in the lane compounds to the floor. | **High** | 1 | ✅ **Resolved August 7, 2026** (spec §3.2.3.2 + §3.2.10 + `OptionGenerator`/`UtilityWeights`, same commit; doctrine P3) — `GK_BLOCKER_RADIUS_M` **RETIRED** from the catalogue with a do-not-reintroduce note; `radius` is now `BLOCKER_RADIUS_M` for every blocker. `gkness` survives and still lerps the P3 ability exemption, so -022's continuity fix is untouched. **Found by execution, not review:** `sim_match_engine_shot_outcomes` failed `goals-still-scored = 0` across four seeds × 18 minutes on CI run `31188688249` — the first run ever to reach `MatchEngine.Tests` on this branch, that suite taking 22 m 55 s against the 3 minutes run 402 survived. This is the P5 residual the -022 entry recorded as *recorded, not fixed* under KD-W1: -022 strictly ADDS blockers to the count and landed with no recalibration, one landing after -021's population-preserving claim was withdrawn. Locked by `ShotLane_Goalkeeper_OccludesWithABodyNotAReach` (closed form 0.860770; the retired disc scored the same shot 0.583540, and the lock fails anywhere near it). `ShotLane_FarPostBlocker_OccludesTheGoal` recomputed 0.782157 → 0.927268 — its blocker stands on the goal line, so the GK read saturates. `ShotLane_GoalkeeperRead_IsContinuousAcrossItsBoundary` was about to become the **third tautology of its class in this file**: with the radius half of the read gone it moved only the ability term, which an ability-neutral blocker zeroes, so the sweep would have computed one geometric curve and passed whatever the read did. It now carries live attributes and a swing assertion (0.145 across the ramp, max step 0.004). Suite 15 → 16. **Downstream measured August 7, 2026 (v1.77):** the chain's first full run on main (CI 419) tripped two acceptance bands, both rebaselined by owner call to the post--023 baseline — keeper-contact deep dive-early `== 0` → `<= 1` (one episode 616.7 ms early, inside the pre-fix class) and close-chance cosine −0.10 → −0.16 (pooled −0.119; seed 0xD1A6D05E's entire ERR-008-018 gain returned, −0.232, while its partner held +0.078). The regressions themselves are KD-W1 calibration-pass work; the -021 P5 residual (withdrawn exactness above `h = halfArc`) and this row's uncalibrated blocker additions are the suspects. |
 | ERR-029-006 | Training System #29, found at **T2 implementation**: §3.5 and §4.3 route the growth input through *"#28's public `AdvanceDay(worldDay, in trainingInputs)` (FR-PG-021)"* — a **batch** entry point taking one `TrainingInput` per player. `TacticalDirector.PlayerProgression` exposes no such method. Its only daily entry point is the per-player `GrowthProjection.AdvanceDayForPlayer(ref rec, ref life, worldDay, in training, curveEnabled)`, landed at #28 T0, and #28's own slot-1 wiring (roadmap D1) has not landed either — so #30 has nowhere to hand a batch to. The same class as ERR-041-002 and ERR-030-012: a §3/§4 sketch naming an API the cited assembly does not expose, found by trying to call it. Compounded by **FR-TR-025**, which specifies the roster handoff as reacting to #28 `RegenResult` / `RetirementResult` values — two more types #28 does not define. | Medium | 1 | ◑ Partially resolved August 6, 2026 at #29 T2 — **the handoff half is resolved; the slot-1 half is deferred to D1, deliberately.** FR-TR-025's contract is realized as roster *reconciliation* (`PlayerCareerStates.SyncToRoster`): it diffs the per-club state set against the roster #30 already holds, inserting `TrainingState.Create(Balanced)` for every unseen `PlayerId` and dropping every state whose player has left. That is the same contract keyed the same way — by `PlayerId`, at the season boundary, by the roster owner — stated over state that exists, and it starts inserting exactly the regens and dropping exactly the retirees the moment #28 T2 produces them, with no further change here. Subscribing to `RegenResult` today would be a phantom seam against a type that does not exist. **Slot 1 stays a NULL SEAM**: gathering a `TrainingInput` batch for a consumer that has neither the batch API nor a wired call site would be the same phantom one layer up, and `ComputeTrainingInput` returns `TrainingInput.Neutral` on both branches anyway (#28's type still has no fields), so nothing is lost by waiting. Slot 2, the match-entry fatigue seam and the roster handoff are all live. §3.5/§4.3's `AdvanceDay` citation to be re-anchored at the next #29 revision — either #28 grows the batch overload at D1 or the citation becomes the per-player call. No FR text change, no format-version change, no `DETERMINISM_DIGEST_VERSION` bump. **NO GATE RUN** — still no .NET SDK in the authoring environment; CI on push is the gate. |
@@ -2128,6 +2129,16 @@ authoring** is not sufficient, because the log moves underneath an open branch. 
 re-run at merge**, not only at promotion — a proposed id is not a reservation, and neither is a verified
 one.
 
+**A further instance, recorded August 10, 2026: `ERR-008-021` (the shot-lane occlusion chain) was
+allocated to two branches open at the same time, both of which verified it free and both of which
+were correct when they checked.** Unlike this section's `-015`→`-025` case, neither branch's claim was
+ever wrong on its own terms — the collision existed only from the moment both branches' work was
+merged (`14d0796`), which no per-branch authoring-time check could have seen coming. Resolved by
+retitling the two body entries `ERR-008-021 (a)` / `(b)` rather than reassigning either, since both
+landings are live in code and dozens of citations to the bare id already exist across this tree — see
+the entries' own ID COLLISION notes. The lesson is the same one this section already states, sharpened
+further: **a "verified free" id is not secure until nothing else that could file it is still open.**
+
 ### The #30 tick-order reconciliation — ERR-030-022 (filed by #35)
 
 **#30's pinned day-advance order was not implementable as written.** `ERR-030-007` was filed **twice**:
@@ -2612,12 +2623,144 @@ share 93% → 36%.
 
 ---
 
+## ERR-008-023: Decision Tree #8 §3.2.3.2 — the keeper's shot-stopping reach was priced twice, and doing so scored zero goals over four seeds
+
+**Filed:** August 7, 2026 — found by execution, not review, on the first CI run to reach
+`MatchEngine.Tests` on this chain. **Status: RESOLVED** (same commit). Owner doc:
+`docs/tracking/football-judgment-proxy-review.md` (§6.4.2, the same owner doc as ERR-008-022).
+Doctrine authority: P3, the attribute ownership ledger.
+
+**This body entry was missing until August 10, 2026.** The Error Index row above (added at the
+landing commit) and this header's own v1.76/v1.77 rows have carried this id's record since
+August 7; `CLAUDE.md`, `open-issues.md`, `close-chance-creation-design.md` and a code comment in
+`OptionGenerator.cs` all cite `ERR-008-023`, but no `##` detail section was ever written for it —
+the gap this entry closes. Content below is sourced only from those existing records (the v1.76/
+v1.77 header rows, the Index row, the landing commit `476e37d`'s message, and the
+`ERR-008-023:` comment in `OptionGenerator.cs`); nothing new is asserted about the landing itself.
+The one genuinely new item is the bisect measurement in the last section, supplied August 10, 2026.
+
+**Id provenance.** The index row for `ERR-008-023` was filed the same day as the landing
+(`476e37d`) with zero prior `ERR-008-023` citations anywhere in this log, `docs/specs/`, or `src/`.
+Not subject to the `ERR-008-021` collision above — this id was never double-filed.
+
+**How found.** By execution. CI run `31188688249` (PR #303, head `a2987be`) — the **first** run
+ever to reach `MatchEngine.Tests` on this branch, that suite alone taking 22 m 55 s against the
+roughly 3 minutes CI run 402 survived before being cancelled — failed:
+
+```
+sim_match_engine_shot_outcomes
+failed predicate=goals-still-scored expected=true 0
+```
+
+Four seeds × 18 minutes, 72 minutes of football, **zero goals**. This also corrects a claim made
+earlier in the same session: run 402's suite sweep had **not** "run to completion" as recorded
+there — suites run in parallel, and `ui-framework` finishing last alphabetically at 16:57:38
+proved nothing about `MatchEngine.Tests`, the longest suite, which a job cancelled three minutes
+into testing never came near.
+
+**Cause: ERR-008-022's own headline fix.** The goal-centre-plane bound that -022 retired had
+discarded a keeper standing on his line for **every** shooter position (that is -022's own
+headline finding). Consequently the keeper-only `GK_BLOCKER_RADIUS_M` = 1.5 m blocking disc —
+present in the constant catalogue since the shot-lane model was first written — had **never been
+exercised by a single shot** before -022 landed. It went live for the first time at that landing
+and immediately removed roughly 42% of the goal arc on every shot, before any outfield defender is
+even counted:
+
+| shooter distance | arc blocked by the keeper alone | `GoalOpeningScore` |
+|---|---|---|
+| 6 m | 44.7% | 1.000 → 0.553 |
+| 16 m | 41.6% | 1.000 → 0.584 |
+| 25 m | 41.2% | 1.000 → 0.588 |
+
+`MIN_GOAL_VISIBILITY` (§3.1.4.1 gate 4, threshold 0.12) then withholds the SHOOT option from the
+generator entirely once the reading drops far enough, and `blockedArc` sums every blocker's
+contribution with no mutual-overlap correction, so a keeper plus two outfield defenders in the
+lane compounds toward the floor.
+
+**This is the P5 residual the `ERR-008-022` entry itself recorded as "recorded, not fixed" under
+KD-W1** ("the shot chain is not calibrated against a complete engine yet"): -022 strictly ADDS
+blockers to the occlusion count and landed with no recalibration, one landing after `ERR-008-021
+(a)`'s population-preserving claim had itself been withdrawn (see that entry). The interest came
+due four seeds later.
+
+**Fix (spec + code, same commit).** §3.2.3.2 + §3.2.10 and `OptionGenerator.cs` /
+`UtilityWeights.cs`, same commit; doctrine P3. `GK_BLOCKER_RADIUS_M` **RETIRED** from the constant
+catalogue with a do-not-reintroduce note; every blocker, keeper included, now occludes with the
+single `BLOCKER_RADIUS_M` used for outfield players. The `gkness` scalar `ERR-008-022` introduced
+survives unchanged and still lerps the P3 ability exemption alone — a keeper is still read as
+geometry only, never weighted by ability, for the reason `ERR-008-021 (a)` gave: keeper shot-
+stopping quality is Goalkeeper Mechanics #11's to price (§3.5 save model, §3.7.0 rush), and #11
+already prices it at contact. The 1.5 m radius was a **second**, uncredited, shot-stopping charge
+on top of that — "approximate arm reach + lateral movement" is a save-model argument, not a
+shot-lane-geometry one — so the shooter's read of the goal was billed for the same keeper twice.
+Retiring the radius removes the double charge; the ability exemption (which prices a *different*
+thing — perception, not reach) stays.
+
+Per `OptionGenerator.cs`'s own `ERR-008-023:` comment at the fix site: *"every blocker occludes
+with the same BODY radius, keeper included. The keeper's reach beyond his body is shot-stopping,
+which P3 assigns to Goalkeeper Mechanics #11 (§3.5/§3.7.0) and which #11 already prices at contact
+— charging it again here read it twice. The old keeper-only 1.5 m disc was never exercised: the
+pre-ERR-008-022 lane bound dropped a goal-line keeper for every shooter position, so it went live
+for the first time at that landing and removed ~42% of the goal arc on every shot, which is what
+took `goals-still-scored` to zero."*
+
+**Tests.** Suite 15 → **16** `OptionGeneratorTests`. New: `ShotLane_Goalkeeper_OccludesWithABodyNotAReach`
+— closed form 0.860770; the retired disc scored the identical shot 0.583540, and the lock fails
+anywhere near that value. Recomputed: `ShotLane_FarPostBlocker_OccludesTheGoal` 0.782157 →
+**0.927268** (its blocker stands on the goal line, so the GK read saturates and the old value was
+measuring the retired radius, not the far post). `ShotLane_GoalkeeperRead_IsContinuousAcrossItsBoundary`
+was one commit from becoming this file's **third tautology of its class**: with the radius half of
+the read gone, the sweep would have moved only the ability term — which an ability-neutral blocker
+zeroes — so it would have computed one geometric curve and passed regardless of what the read did.
+It now carries live attributes and asserts the actual swing (0.145 across the ramp, max step
+0.004).
+
+**Determinism impact.** Not stated explicitly anywhere in the source records for this landing, so
+recorded here from the evidence available rather than asserted: `git show 476e37d --stat` touches
+only `CLAUDE.md`, two `decision-tree` spec section files, `CHANGELOG.md`/`CHANGELOG-src.md`,
+`file-manifest.md`, `spec-error-log.md`, and `OptionGenerator.cs`/`UtilityWeights.cs`/
+`OptionGeneratorTests.cs` in `src/decision-tree/` — no `deterministic-sim` file, no
+`SNAPSHOT_SCHEMA_VERSION`, RNG stream, domain tag, or draw-order surface is touched. Digests move
+for any generated shot with a keeper in the shot lane, as intended — the same live-on-every-shot
+posture as `ERR-008-021 (a)`/`(b)` and `ERR-008-022`.
+
+**Downstream measured August 7, 2026 (recorded at v1.77 of this header).** The chain's first full
+run on `main` (CI run 419, merge `9b8a7b4`) tripped two acceptance bands, both rebaselined by owner
+call to the post‑023 baseline: `sim_match_engine_keeper_contact`'s `no-deep-dive-early-miss` — one
+crossed episode 616.7 ms early, inside the pre‑`ERR-011-008` 456–2000 ms class — rebaselined `== 0`
+→ `<= 1` rather than widening the ms bound past that episode; and `sim_match_engine_close_chance`
+cosine — pooled −0.119 (seed `0xD1A6D05E`'s entire `ERR-008-018` gain returned, −0.232, while its
+partner held +0.078) — rebaselined −0.10 → −0.16, still refusing the pre‑fix ≈ −0.29. One of the two
+was invisible to the session that first ran PR #303: the 5,000‑line CI log‑tail cap hides
+`sim_match_engine_close_chance`, which prints early, so that run actually had 3 failures, not the 2
+the session could see. Both regressions were queued for the KD‑W1 calibration pass rather than
+fixed here — the `ERR-008-021 (a)` P5 residual (exactness withdrawn above `h = halfArc`) and this
+entry's own uncalibrated blocker-count increase are the recorded suspects. Test‑only; no spec text
+was itself the defect for this downstream measurement, so no further ERR id was allocated for it.
+
+**Bisected August 10, 2026 (measured, new).** Over the six-seed close-chance corpus plus twelve
+fresh seeds, holding the tree at `64513e4` and swapping only the three shot-lane files across
+`ERR-008-021`/`-022`/`-023`: the `sim_match_engine_close_chance` cosine regression attributed to
+this chain above is **entirely this commit** — seed `0xD1A6D05E` is bit-identical (n=156, +0.1168)
+before `ERR-008-021`, after `ERR-008-021`, and after `ERR-008-022`, and only moves at **this**
+entry (−0.2320). The movement is a trajectory resample, not a mechanism: no DRIBBLE code path
+reads `GoalOpeningScore`. Over 18 paired seeds the chain's directional effect on that metric is
+**−0.027 ± 0.039** (95% CI [−0.110, +0.055]; 8 seeds up, 10 down). See
+`close-chance-creation-design.md` §11.
+
+---
+
 ## ERR-008-022: Decision Tree #8 §3.1.4.3 / §3.2.3.2 — the shot lane threw away the far post before the occlusion model ever ran
 
-**Filed:** August 6, 2026 — from the **adversarial review over the ERR-008-021 landing**, one day
-old. **Status: RESOLVED** (same commit). Owner doc:
+**Filed:** August 6, 2026 — from the **adversarial review over the ERR-008-021 (a) landing**, one
+day old. **Status: RESOLVED** (same commit). Owner doc:
 `docs/tracking/football-judgment-proxy-review.md` (§6.4.2). Doctrine authority: the review's §6
 remediation doctrine, P1 (continuous, never a cliff) and P3 (the attribute ownership ledger).
+**[Note added August 10, 2026: `ERR-008-021` was later found to have been allocated twice by two
+concurrent branches — see the ID COLLISION note on that id's two entries. This review is over the
+entry retitled `ERR-008-021 (a)` specifically (the near-post containment-cliff fix); it predates and
+is unrelated to the sibling `ERR-008-021 (b)` ability-weighting fix filed the same day on the other
+branch.]**
 
 **Id provenance.** `ERR-008-022` verified free at this landing: zero `## ERR-008-022` entries in
 this log and zero citations anywhere in `docs/specs/` or `src/` before this commit.
@@ -2785,7 +2928,7 @@ implementation of both models.
 
 ---
 
-## ERR-008-021: Decision Tree #8 §3.1.4.3 / §3.2.3.2 — a defender standing across the near post scored a fully open goal
+## ERR-008-021 (a): Decision Tree #8 §3.1.4.3 / §3.2.3.2 — a defender standing across the near post scored a fully open goal
 
 **Filed:** August 5, 2026 — the third fix landed under the football-judgment proxy review's
 remediation doctrine (`football-judgment-proxy-review.md` §6; doctrine P1/P2/P3/P5 are the fix's
@@ -2793,8 +2936,34 @@ design authority). **Status: RESOLVED** (same commit). Owner doc:
 `docs/tracking/football-judgment-proxy-review.md` (§2 finding for #8; §6.4 named this as the
 follow-up when the ERR-008-020 template fix was deliberately kept small).
 
+**⚠️ ID COLLISION (recorded August 10, 2026 — see the v1.100 header entry).** `ERR-008-021` was
+allocated **twice**, by two branches open at the same time, each independently checking the log and
+finding the id free. This entry, retitled **(a)**, is the near-post containment-cliff fix below. The
+**second** filing, retitled **`ERR-008-021 (b)`** (title: *"the shot-lane occlusion could not tell
+an elite blocker from a poor one"*), sits immediately after this entry and is the elite/poor blocker
+ability-weighting fix — a materially different defect and a materially different fix, sharing only
+the id. Both `Id provenance` claims below — this entry's and (b)'s — were **true when written and
+wrong by the time the branches merged** at `14d0796` ("Merge main — reconcile two concurrent
+implementations of ERR-008-021", August 7, 2026): the check that clears an id at authoring time
+cannot see a sibling branch also about to file it, and neither branch's "verified free" was false at
+the moment it was made. **Both landings are live in today's code** — `ComputeGoalOpeningScore`
+carries (a)'s angular-overlap-vs-containment rewrite AND (b)'s `PerceivedBlockAbility` weighting
+side by side; neither superseded the other. **An unqualified citation of "ERR-008-021" anywhere in
+this tree (there are dozens — `CLAUDE.md`, `open-issues.md`, `close-chance-creation-design.md`,
+`OptionGenerator.cs`/`UtilityWeights.cs` version-history rows, spec section files) means the pair,
+(a) and (b) together**, unless the citing text discriminates a specific fix by content. **Deliberately
+NOT renumbered** — see CLAUDE.md's "Spec Renumbering Cascades" hazard; a renumbering would need to
+chase every one of those citations, which is precisely the recurring bug class that hazard warns
+against, and the id remaining ambiguous-but-documented costs far less than a cascade. Renumbering
+remains available to the owner if the cost calculus changes. See **(b)** below and **`ERR-008-022`**
+(the adversarial review filed the next day specifically over **this** entry, (a) — not over (b),
+which (a)'s AR predates by a few hours).
+
 **Id provenance.** `ERR-008-021` verified free at this landing: zero `## ERR-008-021` entries in
-this log and zero citations anywhere in `docs/specs/` or `src/` before this commit.
+this log and zero citations anywhere in `docs/specs/` or `src/` before this commit. **[Correction,
+August 10, 2026 — see the ID COLLISION note above: true at the moment this was written, false by the
+August 7 merge, when a second branch's `ERR-008-021 (b)` filing turned out to have been verified free
+against the same, then-identical, log state. Not renumbered.]**
 
 **How found.** By review, not measurement — the same sweep that produced ERR-008-019 and -020.
 §6.4 recorded the shot lane as sharing the pass lane's geometry and deferred it by owner call; this
@@ -2903,7 +3072,10 @@ SDK in this environment; nothing in this landing has been compiled or executed.*
    have defined constants in their own §3 subsection tables and left that catalogue behind, so its
    "Total constants: 58" summary is now wrong by at least nine. Following the established practice
    here rather than half-correcting it; the catalogue needs one reconciliation pass of its own.
-## ERR-008-021: Decision Tree #8 §3.1.4.3 / §3.2.3.2 — the shot-lane occlusion could not tell an elite blocker from a poor one
+
+---
+
+## ERR-008-021 (b): Decision Tree #8 §3.1.4.3 / §3.2.3.2 — the shot-lane occlusion could not tell an elite blocker from a poor one
 
 **Filed:** August 6, 2026 — the third fix landed under the football-judgment proxy review's
 remediation doctrine (`football-judgment-proxy-review.md` §6; doctrine P2/P3/P5 are the fix's
@@ -2912,8 +3084,31 @@ design authority). This is the follow-up **deliberately deferred at the ERR-008-
 NOT adopt the model — owner call, keep the template small"). **Status: RESOLVED** (same commit).
 Owner doc: `docs/tracking/football-judgment-proxy-review.md`.
 
+**⚠️ ID COLLISION (recorded August 10, 2026 — see the v1.100 header entry).** `ERR-008-021` was
+allocated **twice** by two branches open at the same time, each verifying the id free
+independently and both being right at the moment of the check. The entry immediately above,
+**`ERR-008-021 (a)`** (*"a defender standing across the near post scored a fully open goal"*), is
+the near-post containment-cliff fix, filed a day earlier on a different branch; this entry,
+**(b)**, is the elite/poor blocker ability-weighting fix — a different defect, a different fix,
+sharing only the id. Both provenance claims were true when written and wrong by the time the
+branches merged at `14d0796` ("Merge main — reconcile two concurrent implementations of
+ERR-008-021", August 7, 2026). **Both landings are live in today's code**: `ComputeGoalOpeningScore`
+carries (a)'s angular-overlap geometry AND this entry's `PerceivedBlockAbility` weighting together.
+**An unqualified "ERR-008-021" citation anywhere in this tree means the pair**, (a) and (b), unless
+the citing text names a specific fix. **Deliberately NOT renumbered** — CLAUDE.md's "Spec
+Renumbering Cascades" hazard; dozens of citations (`CLAUDE.md`, `open-issues.md`,
+`close-chance-creation-design.md`, `OptionGenerator.cs`/`UtilityWeights.cs` version-history rows,
+spec section files) would all need chasing, and renumbering remains available to the owner if that
+calculus changes. **`ERR-008-022`** is the adversarial review filed the next day over **(a)**, not
+over this entry — its findings (the goal-line-plane bound, the near/far-fade ramps, the `gkness`
+scalar) sit in (a)'s geometry, not in this entry's ability weighting, though this entry's own
+same-day AR-1 (below) reviewed **this** landing directly.
+
 **Id provenance.** Verified free at this landing: zero `ERR-008-021` occurrences in this log and
-zero citations anywhere in `docs/` or `src/` before this commit.
+zero citations anywhere in `docs/` or `src/` before this commit. **[Correction, August 10, 2026 —
+see the ID COLLISION note above: true at the moment this was written, false by the August 7 merge,
+when a concurrently open branch's `ERR-008-021 (a)` filing turned out to have verified the same id
+free against the same, then-identical, log state one day earlier. Not renumbered.]**
 
 **How found.** By review, not measurement — the ERR-008-020 landing localized it and deferred it;
 structural property read directly from spec + code. `OptionGenerator.ComputeGoalOpeningScore`
