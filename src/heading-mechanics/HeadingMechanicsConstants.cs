@@ -1,6 +1,7 @@
 // File:     src/heading-mechanics/HeadingMechanicsConstants.cs
 // Created:  2026-05-28
-// Modified: 2026-05-28
+// Modified: 2026-08-09 (ERR-010-002 §3.5.1 constants, recorded retroactively at the AR over that landing;
+//           MaxRangeLaunchComponent retired in the same pass — see version history rows 1.4 and 1.5)
 // Author:   —
 // Spec:     Heading Mechanics #10 §3.1, KD-11, FR-HE-014, Code Standards #20
 // Purpose:  All numeric constants for the heading mechanics system. No magic literals in formula files.
@@ -115,16 +116,6 @@ namespace TacticalDirector.HeadingMechanics
         /// rather than introducing a second, silently different epsilon.
         /// </summary>
         public static readonly float SurfaceNormalEpsilon = Mathf.Sqrt(SURFACE_NORMAL_EPSILON_SQ);
-
-        /// <summary>
-        /// [DERIVED] Component magnitude of the 45° maximum-range ballistic launch direction, i.e. both
-        /// cos 45° and sin 45°.
-        /// Formula: sqrt(KINEMATIC_HALF_COEFF) = sqrt(1/2). Heading Mechanics #10 §3.5.1 (ERR-010-002).
-        /// Source constants: KINEMATIC_HALF_COEFF (Fixed const — always available).
-        /// Used only on §3.5.1's unreachable-target branch, where the target lies beyond ballistic range
-        /// at the header's own outgoing speed and 45° is the best available launch toward it.
-        /// </summary>
-        public static readonly float MaxRangeLaunchComponent = Mathf.Sqrt(KINEMATIC_HALF_COEFF);
 
         /// <summary>
         /// [DERIVED] Half the FIFA goal width (m). Used for own-goal bounding box computation (§3.8).
@@ -392,4 +383,14 @@ namespace TacticalDirector.HeadingMechanics
 // |         |            |        | DuelFrameMatchToleranceS [GT] added. AR-2 M-2: MS_PER_SECOND [FIXED], FrameS [DERIVED];  |
 // |         |            |        | FrameMs formula uses MS_PER_SECOND. AR-2 M-3: PitchCentreYM [DERIVED].                  |
 // |         |            |        | AR-2 M-4: REFLECTION_FORMULA_COEFF [FIXED]. AR-2 M-6: KINEMATIC_HALF_COEFF [FIXED].     |
+// | 1.4     | 2026-08-09 | —      | ERR-010-002 (§3.5.1 aim realization): + KINEMATIC_TWO_COEFF, PERFECT_CONTACT_QUALITY     |
+// |         |            |        | [FIXED]; + SurfaceNormalEpsilon, MaxRangeLaunchComponent [DERIVED]. No new [GT], so      |
+// |         |            |        | inside the KD-W1 freeze. ROW ADDED RETROACTIVELY at the adversarial review over that     |
+// |         |            |        | landing — the landing itself shipped these four constants with no version row and no     |
+// |         |            |        | Modified: update, the sixth consecutive FR-CS-056/057 recurrence in this repo.           |
+// | 1.5     | 2026-08-09 | —      | AR over the ERR-010-002 landing: MaxRangeLaunchComponent RETIRED. sqrt(1/2) is the       |
+// |         |            |        | max-range launch component only for a target at contact height; a header contacts near   |
+// |         |            |        | 2.3 m and aims at the ground, so the constant asserted in its own name something that    |
+// |         |            |        | was false on essentially every real header. §3.5.1's unreachable-target branch now       |
+// |         |            |        | computes tan(theta) = v / sqrt(v^2 - 2*g*dz) inline; no constant replaces it.            |
 #endregion

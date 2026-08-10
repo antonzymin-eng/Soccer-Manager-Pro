@@ -93,20 +93,77 @@ namespace TacticalDirector.HeadingMechanics.Tests
         }
 
         /// <summary>
-        /// Out of ballistic range degrades to the 45° maximum-range launch rather than failing — P1,
-        /// continuous never a cliff. sqrt(1/2) = 0.7071 in the vertical, and the same in the horizontal.
+        /// Out of ballistic range degrades to the maximum-range launch. Hand-derived, NOT computed
+        /// through production: contact at 2.3 m, target on the ground, so dz = −2.3 and the max-range
+        /// angle is tanθ = v / sqrt(v² − 2·g·dz) = 6 / sqrt(36 + 2·9.81·2.3) = 6 / 9.00700 = 0.666152,
+        /// θ = 33.66°. Direction = normalize(1, 0, 0.666152) ⇒ x = 0.832246, z = 0.554416.
+        ///
+        /// <para>The pre-AR code returned a flat 45° (0.70710678 in both), which is the max-range angle
+        /// only for dz = 0 — never true of a header. This test fails against it.</para>
         /// </summary>
         [Test]
-        public void AimDirection_UnreachableTarget_FallsBackToMaxRangeLaunch()
+        public void AimDirection_UnreachableTarget_FallsBackToTheTrueMaxRangeLaunch()
         {
             Vector3 contact = new Vector3(5.0f, 34.0f, 2.3f);
             Vector3 target = new Vector3(100.0f, 34.0f, 0.0f);
 
             Vector3 dir = HeadingAim.ComputeAimDirection(contact, target, 6.0f);
 
-            Assert.That(dir.z, Is.EqualTo(0.70710678f).Within(Tolerance), "45 degrees");
-            Assert.That(dir.x, Is.EqualTo(0.70710678f).Within(Tolerance));
+            Assert.That(dir.z, Is.EqualTo(0.554416f).Within(2e-3f), "max-range angle for dz = -2.3 m");
+            Assert.That(dir.x, Is.EqualTo(0.832246f).Within(2e-3f));
             Assert.That(dir.magnitude, Is.EqualTo(1.0f).Within(Tolerance));
+            Assert.That(dir.z, Is.LessThan(0.70710678f - 2e-3f),
+                "a flat 45 degrees is the dz = 0 answer and must not be returned for a target below the head");
+        }
+
+        /// <summary>
+        /// P1, asserted rather than claimed: the direction must not STEP as the target recedes past the
+        /// reachable boundary. §3.5.1 calls this branch "the ordinary case for a defensive clearance",
+        /// so a discontinuity here sits on the production path, not an edge case.
+        ///
+        /// <para>Hand-derived boundary: at v = 8 m/s with dz = −2.3 m, the two launch angles coincide at
+        /// R_max = (v/g)·sqrt(v² − 2·g·dz) = (8/9.81)·sqrt(64 + 45.126) = 0.81549 × 10.44634 = 8.5189 m.
+        /// Straddling it with a 4 cm step gives 2.42° here and 9.98° against the pre-AR flat 45°, so the
+        /// 4° bound separates them by more than 2× on either side.</para>
+        ///
+        /// <para>The bound is 4° rather than a fraction of a degree because the low root carries a
+        /// square-root singularity at the boundary — <c>tanθ = (v² − sqrt(disc))/(g·R)</c> with
+        /// <c>disc → 0</c> — so the direction is continuous there but not Lipschitz, and the last
+        /// centimetres before the boundary genuinely do turn fast. That is a property of the physics,
+        /// not of the fix; what the fix removed is the step ON TOP of it.</para>
+        /// </summary>
+        [Test]
+        public void AimDirection_IsContinuousAcrossTheReachabilityBoundary()
+        {
+            Vector3 contact = new Vector3(50.0f, 34.0f, 2.3f);
+
+            Vector3 justInside = HeadingAim.ComputeAimDirection(
+                contact, new Vector3(50.0f + 8.50f, 34.0f, 0.0f), 8.0f);
+            Vector3 justOutside = HeadingAim.ComputeAimDirection(
+                contact, new Vector3(50.0f + 8.54f, 34.0f, 0.0f), 8.0f);
+
+            Assert.That(justInside, Is.Not.EqualTo(Vector3.zero));
+            Assert.That(justOutside, Is.Not.EqualTo(Vector3.zero));
+            Assert.That(Vector3.Angle(justInside, justOutside), Is.LessThan(4.0f),
+                "4 cm of target distance either side of the reachability boundary must not step the launch");
+        }
+
+        /// <summary>
+        /// A target higher than this speed can reach at any launch angle has no horizontal solution that
+        /// brings the ball nearer it, so the closest approach is straight up. Guards the radicand of the
+        /// max-range formula, which goes non-positive exactly at dz ≥ v²/2g — 1.835 m at v = 6 m/s, and
+        /// the target here sits 28 m above the contact.
+        /// </summary>
+        [Test]
+        public void AimDirection_TargetAboveReach_LaunchesVertically()
+        {
+            Vector3 contact = new Vector3(50.0f, 34.0f, 2.0f);
+            Vector3 target = new Vector3(60.0f, 34.0f, 30.0f);
+
+            Vector3 dir = HeadingAim.ComputeAimDirection(contact, target, 6.0f);
+
+            Assert.That(dir.z, Is.EqualTo(1.0f).Within(Tolerance));
+            Assert.That(dir.x, Is.EqualTo(0.0f).Within(Tolerance));
         }
 
         // ── §3.5.1 step 2: the half-vector normal, and its physical bound ────────────────
@@ -242,6 +299,43 @@ namespace TacticalDirector.HeadingMechanics.Tests
             Assert.That(achieved.z, Is.EqualTo(1.0f).Within(Tolerance));
         }
 
+        /// <summary>
+        /// The lock the one above could not be: a degenerate aim must reach
+        /// <see cref="HeadingAim.ComputeAchievedNormal"/> AS a degenerate aim, through the composition
+        /// the production code actually runs.
+        ///
+        /// <para>Pre-AR, <see cref="HeadingAim.ComputeAimNormal"/> handed a zero desired direction
+        /// through as <c>normalize(incident + 0) == incident</c> — magnitude 1, so its own guard missed.
+        /// The blend then steered toward the incident and at authority 1 reflected the ball straight
+        /// back the way it came at full power: the MAXIMUM deflection, out of the branch documented as
+        /// producing the natural rebound. The direct-call test above passed throughout, because it
+        /// supplies the zero the composition never could.</para>
+        /// </summary>
+        [Test]
+        public void DegenerateAimDirection_PropagatesAsDegenerate_AndPlaysTheNaturalRebound()
+        {
+            Vector3 incomingVelocity = new Vector3(7.0f, 0.0f, -5.0f);
+            Vector3 incident = -incomingVelocity.normalized;
+            Vector3 contact = new Vector3(50.0f, 34.0f, 2.3f);
+
+            // A target horizontally coincident with the contact point: there is no bearing to launch
+            // along, so step 1 has no answer.
+            Vector3 degenerateAim = HeadingAim.ComputeAimDirection(contact, contact, 12.0f);
+            Assert.That(degenerateAim, Is.EqualTo(Vector3.zero), "precondition: step 1 is degenerate");
+
+            Vector3 aimNormal = HeadingAim.ComputeAimNormal(incident, degenerateAim);
+            Assert.That(aimNormal, Is.EqualTo(Vector3.zero),
+                "a degenerate aim must not be laundered into 'head it back where it came from'");
+
+            Vector3 geometric = new Vector3(0.0f, 0.0f, 1.0f);
+            Vector3 achieved = HeadingAim.ComputeAchievedNormal(geometric, aimNormal, 1.0f);
+
+            Assert.That(achieved.z, Is.EqualTo(1.0f).Within(Tolerance),
+                "the natural rebound, not the incident");
+            Assert.That(Vector3.Angle(achieved, incident), Is.GreaterThan(1.0f),
+                "the pre-fix path returned the incident itself here");
+        }
+
         // ── The anti-tautology lock ──────────────────────────────────────────────────────
 
         /// <summary>
@@ -293,8 +387,15 @@ namespace TacticalDirector.HeadingMechanics.Tests
         }
 
         /// <summary>
-        /// ERR-008-002 class: the aim is team-relative, so it must mirror. The same geometry mirrored
-        /// about the halfway line, for the opposite team, must produce the mirrored outgoing direction.
+        /// The aim solve is reflection-symmetric about the halfway line: mirrored geometry produces the
+        /// mirrored outgoing direction.
+        ///
+        /// <para><b>This is NOT the ERR-008-002 home/away lock it was originally labelled as</b>, and the
+        /// original label was corrected at the adversarial review over the ERR-010-002 landing.
+        /// <see cref="HeadingAim"/> takes no team id at all — it is team-agnostic pure geometry, and
+        /// both sides of this test run at <c>TeamId = 0</c>, so no team-asymmetry defect could ever fail
+        /// it. The team branch in this landing lives in <c>GkHeadingIntentSource.HeaderAimTarget</c>, and
+        /// the real ERR-008-002 lock for it is in that assembly's own fixture.</para>
         /// </summary>
         [Test]
         public void AimGeometry_MirrorsAboutTheHalfwayLine()
@@ -356,4 +457,20 @@ namespace TacticalDirector.HeadingMechanics.Tests
 // |         |            |        |   fallbacks, the two-targets anti-tautology lock, the descending-ball  |
 // |         |            |        |   lift lock (the 2-D round-trip consequence), and the home/away mirror |
 // |         |            |        |   (ERR-008-002 class).                                                 |
+// |         |            |        |   [CORRECTED at 1.1 — two claims here are false as published: there is |
+// |         |            |        |   no "grazing hemisphere bound" (removed from HeadingAim before it     |
+// |         |            |        |   landed), and the mirror test is NOT an ERR-008-002 lock, since       |
+// |         |            |        |   HeadingAim takes no team id. Annotated, not rewritten.]              |
+// | 1.1     | 2026-08-09 | —      | AR over the ERR-010-002 landing. FallsBackToMaxRangeLaunch renamed and |
+// |         |            |        |   re-derived: it asserted a flat 45°, which is the max-range angle     |
+// |         |            |        |   only for dz = 0 and so locked the wrong value on the production      |
+// |         |            |        |   path. + IsContinuousAcrossTheReachabilityBoundary (the P1 property   |
+// |         |            |        |   §3.5.1 claimed and did not have — 2.42° now vs 9.98° pre-fix        |
+// |         |            |        |   against a 4° bound; the bound is loose because the low root has a    |
+// |         |            |        |   sqrt singularity at the boundary, which is physics, not the defect), |
+// |         |            |        |   + TargetAboveReach_LaunchesVertically (the new radicand guard), and  |
+// |         |            |        |   + DegenerateAimDirection_PropagatesAsDegenerate, which is the lock   |
+// |         |            |        |   AchievedNormal_DegenerateAim could not be: that one supplies a zero  |
+// |         |            |        |   the composition could never produce, so it passed against a branch   |
+// |         |            |        |   production was unable to enter. Mirror-test doc claim corrected.     |
 #endregion

@@ -51,10 +51,17 @@ namespace TacticalDirector.HeadingMechanics
         /// <para>Of the two launch angles that reach a reachable target, the LOW one is taken: a
         /// header is a driven contact, not a lob, and the flat solution also spends least time in the
         /// air. A target beyond ballistic range at this speed is unreachable, and the direction
-        /// degrades continuously to the 45° maximum-range launch toward it rather than failing — P1,
-        /// continuous never a cliff.</para>
+        /// degrades to the maximum-range launch toward it rather than failing — P1, continuous never a
+        /// cliff. That maximum-range angle is a function of the height difference, not a fixed 45°;
+        /// see the branch itself for why the constant form was a step rather than the continuity it
+        /// claimed.</para>
         /// </summary>
-        /// <param name="contactPoint">World-space contact point (m), corner-origin.</param>
+        /// <param name="contactPoint">
+        /// World-space contact point (m), corner-origin. <c>HeadingMechanics</c> passes the BALL's
+        /// position rather than the resolved contact point, deliberately: the contact point is
+        /// downstream of this solve, so using it here would be circular, and the two differ by at most
+        /// the head-contact radius.
+        /// </param>
         /// <param name="target">World-space intended destination (m), corner-origin.</param>
         /// <param name="speed">Outgoing speed (m/s) from FM-010-003.</param>
         /// <returns>Unit launch direction, or <c>Vector3.zero</c> when the geometry is degenerate.</returns>
@@ -89,13 +96,30 @@ namespace TacticalDirector.HeadingMechanics
 
             if (discriminant < 0.0f)
             {
-                // Out of ballistic range at this speed. The best available launch toward the target is
-                // the maximum-range angle, which for a level target is 45 degrees. Using it here keeps
-                // the direction continuous as the target recedes past the reachable boundary.
-                return new Vector3(
-                    flat.x * HeadingMechanicsConstants.MaxRangeLaunchComponent,
-                    flat.y * HeadingMechanicsConstants.MaxRangeLaunchComponent,
-                    HeadingMechanicsConstants.MaxRangeLaunchComponent);
+                // Out of ballistic range at this speed: degrade to the maximum-range launch toward the
+                // target, which is the angle at which the discriminant vanishes —
+                //     tan(theta) = v / sqrt(v^2 - 2*g*dz)
+                // and equals 45 degrees ONLY when dz == 0. The first cut of this method returned a flat
+                // 45 degrees unconditionally, which put a step at the reachability boundary rather than
+                // the continuity §3.5.1 claims for this branch (P1). That is not an edge case here: a
+                // header contacts around 2.3 m and its targets sit on the ground, so dz is negative on
+                // essentially every real header, and §3.5.1 itself calls this branch "the ordinary case
+                // for a defensive clearance". At the production nominal speed the step was 4.4 degrees.
+                float radicand = vSq - HeadingMechanicsConstants.KINEMATIC_TWO_COEFF * g * dz;
+
+                if (radicand <= HeadingMechanicsConstants.SURFACE_NORMAL_EPSILON_SQ)
+                {
+                    // The target sits higher than this speed can reach at ANY launch angle, so no
+                    // horizontal component brings the ball nearer it. Straight up is the closest
+                    // approach, and the header goes nowhere useful — which is the honest answer.
+                    // NOT Vector3.up: that is Unity's +Y, and this project's up axis is +Z
+                    // (corner-origin, Ball Physics #1 §1.2). The first cut used it and the
+                    // TargetAboveReach lock caught it.
+                    return new Vector3(0.0f, 0.0f, 1.0f);
+                }
+
+                Vector3 maxRangeDir = new Vector3(flat.x, flat.y, speed / Mathf.Sqrt(radicand));
+                return maxRangeDir.normalized;
             }
 
             float tanTheta = (vSq - Mathf.Sqrt(discriminant)) / (g * range);
@@ -140,6 +164,18 @@ namespace TacticalDirector.HeadingMechanics
         public static Vector3 ComputeAimNormal(Vector3 incident, Vector3 desiredDirection)
         {
             if (!IsFinite(incident) || !IsFinite(desiredDirection))
+            {
+                return Vector3.zero;
+            }
+
+            // A degenerate desired direction must propagate as degenerate. Without this the half-vector
+            // below is incident + 0 == incident, whose magnitude is 1, so the guard misses and this
+            // method returns the incident itself — which ComputeAchievedNormal then steers toward, and
+            // at full authority reflects the ball straight back the way it came at full power. That is
+            // the MAXIMUM deflection, arrived at through the branch documented as producing the
+            // minimum; it also made ComputeAchievedNormal's zero-aim fallback unreachable through the
+            // composition, so the lock on it passed against a branch production could not enter.
+            if (desiredDirection.sqrMagnitude < HeadingMechanicsConstants.SURFACE_NORMAL_EPSILON_SQ)
             {
                 return Vector3.zero;
             }
@@ -219,4 +255,24 @@ namespace TacticalDirector.HeadingMechanics
 // |         |            |        |   it bounded to the physically reachable hemisphere, and an attribute-steered     |
 // |         |            |        |   blend from the geometric normal. No new constants: the Heading attribute is     |
 // |         |            |        |   the dial (FULL-RANGE ramp, ERR-008-019 shape).                                  |
+// |         |            |        |   [CORRECTED at 1.1 — "bounded to the physically reachable hemisphere" is FALSE   |
+// |         |            |        |   as published: the bound was removed from this file BEFORE it landed, and the    |
+// |         |            |        |   class doc has always said so. Left in place, annotated, per this repo's         |
+// |         |            |        |   convention for a falsified claim.]                                              |
+// | 1.1     | 2026-08-09 | —      | Adversarial review over the ERR-010-002 landing, two fixes:                       |
+// |         |            |        |   (1) the out-of-range branch returned a flat 45° as "the maximum-range launch",  |
+// |         |            |        |   which is the max-range angle only when the target sits at contact height. A     |
+// |         |            |        |   header contacts near 2.3 m and aims at the ground, so dz < 0 on essentially     |
+// |         |            |        |   every real header, and §3.5.1 calls this branch the ordinary defensive-clearance|
+// |         |            |        |   case — so the branch claiming P1 continuity carried a 4.4° step at the          |
+// |         |            |        |   reachability boundary, on the production path. Now the true max-range angle,    |
+// |         |            |        |   tan(theta) = v / sqrt(v^2 - 2*g*dz), with an unreachable-height guard.          |
+// |         |            |        |   MaxRangeLaunchComponent is retired with it — a constant whose name asserted     |
+// |         |            |        |   what it was not.                                                               |
+// |         |            |        |   (2) ComputeAimNormal did not propagate a degenerate desired direction: half =   |
+// |         |            |        |   incident + 0 has magnitude 1, so the guard missed and the method returned the   |
+// |         |            |        |   incident, i.e. a full-power header straight back where the ball came from —     |
+// |         |            |        |   the maximum deflection out of the path documented as the minimum. It also made  |
+// |         |            |        |   ComputeAchievedNormal's zero-aim fallback unreachable through the composition,  |
+// |         |            |        |   so its lock passed against a branch production could not enter.                 |
 #endregion
