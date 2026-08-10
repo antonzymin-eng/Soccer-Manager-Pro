@@ -1,7 +1,33 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 9, 2026, later still — **AR over the ERR-010-002 landing, code half
+**Last Updated:** August 9, 2026, later still yet — **`close-chance-creation-design.md` §10.9
+(v1.8) — a falsifier run against the standing `sim_match_engine_close_chance` failure, to decide
+whether the band is catching a mechanism regression or just measuring a population change.**
+Documentation only; no code changes, nothing committed, no gate run. Post-C1 HEAD `02f7ba7`:
+`UtilityWeights.DRIBBLE_GOAL_DIR_MIN_MODIFIER` measured at its term-off identity (1.0) against the
+shipping value (0.80) via a temporary local literal edit, reverted immediately after each run —
+term-off meanCosine **−0.413**, term-on **−0.165**, on/off delta **+0.248**, against §8's pre-C1
+delta of **+0.308** at the same two rungs: **≈ 83% preserved**, and roughly a factor of seven from
+the delta (≈ 0.035) a genuine mechanism collapse would have produced. **Conclusion: the locked
+`DirectionQuality_DRIBBLE` term (ERR-008-018/KD-CC2) did not regress under C1 (`ERR-012-011`); the
+band failed because C1 legitimately moved roughly a third of final-third samples onto #12's
+`PullFactor` `InPoss` column, which was statistically unexercisable when the bounds were fitted and
+has never itself been calibrated** — the scenario is, in its present form, a proxy for composed
+positioning rather than for the term it was built to lock. Caveat recorded, not buried: the ≈17%
+erosion is real; if a future change widens it, the falsifier must be re-run rather than this
+conclusion inherited (recipe recorded in §10.9 item 3, cheap to repeat). **Disposition: hold red,
+queue for the KD-W1 calibration pass, do NOT rebaseline the band a third time** — a band rebaselined
+twice already (§9 Acceptance-1, Acceptance-3) stops being a lock, and retuning the `InPoss` column
+today would fit a `[GT]` against an engine with no tackling (wiring backlog W2), no aerial reception
+(§10.3 Bound B), and, per §10.8, nobody within 4–6 m of an aerial ball — an owner-facing
+recommendation, not a decision taken here. The disposition was reached independently by two routes
+(an advisory-model read and this session's own analysis of §7–§10.8) before the falsifier ran;
+agreement between them was tested rather than accepted, which is what turns it into evidence.
+**Modified:** `docs/tracking/close-chance-creation-design.md` (§10.9 added, VERSION HISTORY → v1.8),
+this manifest. `python3 tools/recurring-defect-lint.py --repo .`: **0 ERRORs**. Prior entry below.
+
+**Last Updated (prior):** August 9, 2026, later still — **AR over the ERR-010-002 landing, code half
 (`d93e0c8`), plus the whole-tree gate result for both AR commits (`48977fa` + `d93e0c8`).** Two
 behavioural fixes from the same adversarial review the prior entry's doc half did not cover. **(1)**
 The out-of-range branch in `HeadingAim`'s ballistic solve returned a flat 45° "maximum-range launch,"

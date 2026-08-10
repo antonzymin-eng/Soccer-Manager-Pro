@@ -701,6 +701,103 @@ forward. Flagged as an open question. No cause is theorised here.
 "Attack the ball" needs its own design pass and, per this repo's convention for a pre-implementation
 lever choice, an advisory council before any code is written.
 
+### 10.9 The `DRIBBLE_GOAL_DIR_MIN_MODIFIER` falsifier — the mechanism held, the population moved, and the band stays red
+
+> **Measured August 9, 2026**, post-C1 HEAD `02f7ba7`. `UtilityWeights.DRIBBLE_GOAL_DIR_MIN_MODIFIER`
+> is a compile-time `const`; measured by temporary local literal edit (1.0, then 0.80 — the shipping
+> value), reverted immediately after each run. Nothing committed, `dotnet` not re-run since.
+
+**Why this falsifier exists.** `sim_match_engine_close_chance` fails on the current build —
+`final-third-dribbles-are-not-goal-averse` meanCosine **−0.165** against a −0.16 bound,
+`goalward-dribbles-are-not-a-minority-of-one-in-three` goalwardShare **0.407** against a 0.42 bound —
+and both PASS at pre-C1 `ba4e194`. Three explanations compete, named in §7 item 3 and Acceptance-3
+(§9) without being distinguished: **(a)** retune #12's `PullFactor` `InPoss` column — a `[GT]`, inside
+the KD-W1 freeze; **(b)** an upstream defect in the DRIBBLE direction-quality mechanism itself; **(c)**
+the band is measuring a population change — §10.1's final-third `InPoss` 7.5% → 40.8% — not a
+regression in the `DirectionQuality_DRIBBLE` term (ERR-008-018/KD-CC2) it was built to lock. (a) is
+frozen regardless of the answer; the falsifier exists to separate (b) from (c), because the fix each
+implies is opposite: (b) needs the mechanism repaired, (c) needs the band re-scoped or left alone.
+
+The test: on the post-C1 population, measure the term's on/off delta and compare it against §8's
+pre-C1 on/off delta for the same two rungs. A **preserved** delta means the mechanism still does what
+it did pre-C1 and the band moved because C1 legitimately swapped a third of final-third samples onto a
+support-geometry column that has never been calibrated. A **collapsed** delta means the mechanism
+itself regressed under C1 and the band is correctly catching that.
+
+**Measured, post-C1 HEAD, close-chance scenario corpus:**
+
+| `DRIBBLE_GOAL_DIR_MIN_MODIFIER` | meanCosine | goalwardShare |
+|---|---|---|
+| 1.0 — term OFF (identity) | **−0.413** | **0.253** |
+| 0.80 — term ON (shipping) | **−0.165** | **0.407** |
+| on/off delta | **+0.248** | **+0.154** |
+
+§8's pre-C1 ladder, same two rungs: −0.302 (off) → +0.006 (on), delta **+0.308** (≈ +0.30).
+
+**1. The locked mechanism did NOT regress under C1.** If the term were fully intact on the post-C1
+population, term-off would read ≈ **−0.45** (shipping −0.165 minus the preserved ≈ +0.30 pre-C1
+delta). The measured term-off value, **−0.413**, is close to that prediction, not to the shipping
+value it would collapse toward if the mechanism had stopped working. The measured delta, **+0.248**,
+is **≈ 83% of the pre-C1 +0.30 delta** — and it is roughly a **factor of seven** away from the
+collapse case (a delta ≈ 0.035, the shape a fully-eroded term would produce) that would have signalled
+a genuine regression. `DirectionQuality_DRIBBLE` is doing essentially the same work it did before C1.
+
+**1b. The movement decomposes exactly, and that is the strongest form of this result.** Both rungs
+were measured on both populations, so the band's failure can be split rather than merely attributed:
+
+| rung | pre-C1 (§8) | post-C1 | movement |
+|---|---|---|---|
+| term OFF (1.0) | −0.302 | −0.413 | **−0.111** |
+| term ON (0.80, shipping) | +0.006 | −0.165 | **−0.171** |
+| on/off delta | +0.308 | +0.248 | −0.060 |
+
+The band's whole failure is the term-ON row: **+0.006 → −0.165, a movement of −0.171**, which is what
+carried it across the −0.16 bound. Of that, **−0.111 is visible with the mechanism entirely disabled**
+— it is pure population, and no state of the DRIBBLE term could have prevented it — and **−0.060 is
+the erosion of the term's own effect**. The two sum to −0.171 exactly. So **≈ 65% of the band's
+failure is population and ≈ 35% is the term working less well on that population**, and *none of it*
+is the term working incorrectly: the term-off row moving at all is a measurement taken with the locked
+mechanism switched off.
+
+That split is what makes (c) evidential rather than merely plausible. It also bounds the claim
+honestly — "the mechanism held" is not "the mechanism was untouched", and conclusion 3 below is the
+part of this that a future pass must re-check.
+
+**2. Therefore the band moved because its population changed, not because the mechanism it locks
+broke.** C1 legitimately moved roughly a third of final-third samples onto a `PullFactor` `InPoss`
+column that was statistically unexercisable at 7.5% when these bounds were fitted (§5/§9) and has
+never itself been calibrated. The band is measuring the composed shape those samples now carry, not
+the DRIBBLE scoring term. **This makes `sim_match_engine_close_chance`, in its present form, a proxy
+for composed positioning rather than for the `DirectionQuality_DRIBBLE` term it was built and locked
+to test.** That is a scope finding about the scenario, not a finding about the code it exercises.
+
+**3. Caveat, stated rather than buried: there is mild erosion.** +0.248 against +0.308 is **≈ 17%
+smaller**, not identical. The mechanism is intact, not untouched — something in the C1-changed
+population very slightly narrows what the term can do. This conclusion is conditional on that erosion
+not deepening: **if a future change moves the term-off/term-on delta further from +0.30, conclusion 1
+must be RE-TESTED, not inherited.** The recipe to re-run it cheaply: set
+`DRIBBLE_GOAL_DIR_MIN_MODIFIER` to `1.0f` (temporary literal edit, `UtilityWeights.cs` line 302),
+run the close-chance scenario corpus, revert, set it back to `0.80f`, re-run, revert again, and
+diff the on/off delta against the **+0.248 / +0.154** pair recorded here.
+
+**4. Disposition: hold red, queued for the KD-W1 calibration pass — do NOT rebaseline a third
+time.** A predicate whose bound has already moved once (§9 Acceptance-3, −0.10 → −0.16, owner call
+August 7, 2026) and would now move a second time to pass is a predicate that has stopped being a lock
+(the same rule the Acceptance-1 box predicate was deleted under, §9). And retuning #12's `PullFactor`
+`InPoss` column today — the only lever that could move the band without touching the DRIBBLE term —
+would fit a `[GT]` against an engine that KD-W1 names as not ready to calibrate against: no tackling
+(wiring backlog W2), no aerial reception (§10.3 Bound B), and, per §10.8, nobody within **4–6 m** of
+an aerial ball in any of the measured series. This is an owner-facing recommendation, not a decision
+taken here.
+
+**5. Provenance, recorded because it matters for how much weight this carries.** This disposition —
+hold red, blame the population not the mechanism, wait for KD-W1 — was reached independently by two
+routes before the falsifier ran: an advisory-model read and this session's own reading of §7–§10.8.
+Agreement between two independent reads is not, by itself, evidence; it was **tested** rather than
+accepted, and the measured on/off delta above is what turns the agreed disposition into a checked one.
+The falsifier recipe in item 3 exists so the next pass can re-check it just as cheaply rather than
+re-deriving the whole argument from scratch.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
@@ -712,4 +809,5 @@ lever choice, an advisory council before any code is written.
 | 1.5 | 2026-08-09 | — | §10.6: the header measurement. Contact ratio **0.2%** (2 executed, 963 failed; 97–99% `positionedPoorly`), zero executed headers in any attacking third, and crosses at 0% headed / 0% reached / **69% coming to rest untouched**. The proximity census settles the order: **0% of airborne final-third episodes bring ANY outfielder — attacker or defender — within the 0.18 m contact volume**, so an aerial ball is untouchable by anybody and box occupancy is NOT its binding constraint. §10.4's item 1 is mispriced and is not a wiring item; the candidate first lever becomes "move a player to a ball's predicted arrival point", which is upstream of aerial contact, ground loose balls and pass-to-space alike. Four residuals recorded not fixed, including the fixed-point header target (a P4 candidate) and the 0.50–0.61 m band both first touch and the header trigger claim. |
 | 1.6 | 2026-08-09 | — | **§10.7: two corrections to §10.6, one of which retracts its headline measurement.** (1) Item 3's consequence was wrong — `TargetIntent` reaches NO formula, so the header aim was not merely fixed, it was **inert**, and every header was a passive specular mirror: a defender clearing in his own box headed the ball back the way it came rather than aiming 90 m at the far goal. Filed and fixed as `ERR-010-002` with two further defects in the same chain (two independent contact-point derivations; the 3-D point rebuilt from its 2-D head-local projection, pinning the reflection normal horizontal so `reflected.z = v̂_in.z` and **no header could lift the ball**). (2) **The §10.6 proximity census is an instrument artifact.** `BallToAgentDistance3D` measures ball-to-agent-GROUND distance including the ball's full height, while the episode gate requires ball z > 0.5 m — so the `≤ 0.18 m` and `0.18–0.5 m` buckets are structurally unreachable and the published `0%` in both is the instrument reporting its own gate. "0% within the contact volume", "untouchable by anybody, anywhere", the 1.32 m gap arithmetic and the 5.9 m / 4.7 m labels are all withdrawn; read correctly the same table shows ~31% of episodes with a **defender within 0.5–1.5 m in 3-D**, the opposite of the premise. §10.6 item 2's ranking of "attack the ball" as the first lever is **withdrawn, not replaced** — the third retraction in this document, and the first caused by the instrument rather than the reasoning. Two cheaper upstream candidates recorded ahead of it (the header commit's missing head-height gate; `FindContactFrame` freezing head z as well as xy), plus the KD-W1 note that the Z-fix alone yields FEWER intercepts and its unlock `MAX_INTERCEPT_TIME` is `[GT]` and frozen. |
 | 1.7 | 2026-08-09 | — | **§10.8: the §10.7-corrected instrument's first execution (Report C5b, 6 seeds × 90 min, 1,081 aerial final-third episodes) — headers fail HORIZONTALLY, and "attack the ball" is RE-RANKED to first.** Series 1 (pure XY, no height term): nearest attacker 5.88–5.93 m, nearest defender 4.28–4.93 m — the vertical hypotheses (C8's missing head-height gate; `FindContactFrame`'s frozen head z) stay recorded, not promoted, because a 5 m lateral gap forecloses them. Series 1b: ball height at closest horizontal approach is **0.59 m**, on the 0.50 m episode-gate floor — these episodes are not crosses into an occupied box. Series 2 (true 3-D distance to headZ = 2.20 m) reaches **0%** within contact distance for both attacker and defender, both sides — the SAME conclusion §10.7 withdrew, reached this time by an instrument without the height-floor artifact; the reversal of §10.7's withdrawal is evidence-driven, not a walk-back. Series 3 (the retained pre-correction measure) shows what the artifact was doing: 10%/9% in the 0.5–1.5 m band against Series 2's 1%/0% for the identical question asked correctly. Recorded, not analysed: defenders sit consistently nearer the ball than attackers in the attacking third (4.28–4.93 m vs 5.88–5.93 m), an open question about attacking movement. Lever design explicitly out of scope — needs its own pass plus an advisory council. |
+| 1.8 | 2026-08-09 | — | **§10.9: the `DRIBBLE_GOAL_DIR_MIN_MODIFIER` falsifier, run against the standing `sim_match_engine_close_chance` failure (meanCosine −0.165 / bound −0.16, goalwardShare 0.407 / bound 0.42) to distinguish a population change from a mechanism regression.** Post-C1 HEAD `02f7ba7`, term-off (1.0) meanCosine **−0.413**, term-on (0.80, shipping) **−0.165**, on/off delta **+0.248** — against §8's pre-C1 delta of +0.308 (≈ +0.30) at the same two rungs, **≈ 83% preserved** and roughly a factor of seven from the collapse case (delta ≈ 0.035) a genuine regression would have produced. **Conclusion: the locked `DirectionQuality_DRIBBLE` mechanism did not regress under C1; the band moved because C1 swapped roughly a third of final-third samples onto #12's uncalibrated `PullFactor` `InPoss` column** — the scenario is, in its present form, a proxy for composed positioning rather than for the DRIBBLE term it was built to lock. Caveat: the ≈17% erosion is real and mild, not zero — if it deepens on a future change, re-run the falsifier rather than inherit this conclusion (recipe recorded in §10.9 item 3). **Disposition: hold red, queue for the KD-W1 calibration pass, do not rebaseline a third time** — a band rebaselined twice already stops being a lock, and retuning the `InPoss` column today would fit a `[GT]` against an engine with no tackling (W2), no aerial reception (§10.3), and nobody within 4–6 m of an aerial ball (§10.8); owner-facing recommendation, not a decision taken here. Reached independently by an advisory-model read and this session's own analysis, then tested rather than accepted — the falsifier is what makes it evidence. Measurement only: `UtilityWeights.cs` edited locally and reverted, nothing committed, no gate run. |
 #endregion
