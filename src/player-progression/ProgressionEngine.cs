@@ -97,6 +97,9 @@ namespace TacticalDirector.PlayerProgression
         /// <exception cref="ArgumentException">Two squads share a club id, or two players share a player
         /// id across the whole set — ids must be globally unique across a career (ERR-041-019 /
         /// ERR-027-004), not merely club-scoped.</exception>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="newGameWorldDay"/> is
+        /// <see cref="PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL"/> — the one cursor
+        /// value <see cref="FromBlocks"/> refuses (F8 / ERR-028-014).</exception>
         public static ProgressionEngine SeedFrom(Squad[] squads, uint newGameWorldDay)
         {
             if (squads == null)
@@ -377,20 +380,26 @@ namespace TacticalDirector.PlayerProgression
             }
             else
             {
-                // Already advanced through this day. What this branch actually buys is narrower than
-                // it looked, and the difference matters (ERR-028-015): for the ERR-030-027 case — the
-                // SAME day called twice, which is what #30 does on every fixture day — the replay loop
-                // above is empty by construction (`d = cursor + 1 > worldDay`), so that call is a
-                // no-op with or without this branch. Deleting the branch and repeating a day leaves
-                // every suite green, which is exactly how the old lock here passed for the wrong
-                // reason.
+                // Already advanced through this day — two separate things are true here, and only one
+                // of them is this `return;`'s doing (AR pass 4).
                 //
-                // The branch is load-bearing against a BACKWARD call: without it the assignment below
-                // the loop would REGRESS `LastAdvancedWorldDay` to the earlier day, and the next
-                // forward advance would then replay days already banked — silent double accrual. #30
-                // never calls backward (the cursor-vs-clock gates refuse the composition that could),
-                // but AdvanceDay is public, so the guard stays and is locked on the case that
-                // actually distinguishes it.
+                // Cursor regression is guarded by the `if` CONDITION above, not by this statement: the
+                // assignment `life.LastAdvancedWorldDay = worldDay;` sits INSIDE the `if`, so a
+                // backward call (worldDay <= cursor) never reaches it regardless of what this branch
+                // contains — deleting the whole if/else and running the body unconditionally is what
+                // regresses the cursor, and that is what
+                // AdvanceDay_BackwardCall_DoesNotRegressTheCursor locks.
+                //
+                // What this bare `return;` actually buys is narrower, and it is real: without it, a
+                // call that advanced nothing (same-day repeat OR backward) falls through to the §3.4
+                // retirement evaluation below. For the ERR-030-027 same-day case that is merely
+                // redundant (Age and RetirementFlag are unchanged by the empty replay, so re-evaluating
+                // is a no-op) — but for a BACKWARD call it is not: a player not yet flagged whose
+                // rec.Age already satisfies RETIREMENT_AGE would be flagged on that call, stamping
+                // RetirementDay with a day EARLIER than his own cursor. #30 never calls backward (the
+                // cursor-vs-clock gates refuse the composition that could), but AdvanceDay is public, so
+                // the guard stays. Locked by AdvanceDay_BackwardCall_DoesNotEvaluateRetirement, which
+                // isolates the `return;` from the `if` condition above it.
                 return;
             }
 
@@ -705,4 +714,17 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | deleting the branch left all 469 tests green). It is            |
 // |         |            |        | load-bearing only against a BACKWARD call, which would rewind   |
 // |         |            |        | the cursor and replay banked days.                              |
+// | 1.3     | 2026-08-10 | —      | AR pass 4. The 1.2 else-branch comment over-attributed the fix: |
+// |         |            |        | it called the bare `return;` "load-bearing against a BACKWARD  |
+// |         |            |        | call", but cursor regression is guarded by the `if` CONDITION   |
+// |         |            |        | (the assignment sits inside it), not by `return;`. Rewritten to |
+// |         |            |        | separate the two: the condition guards regression (locked by    |
+// |         |            |        | AdvanceDay_BackwardCall_DoesNotRegressTheCursor); `return;`      |
+// |         |            |        | additionally stops the §3.4 retirement evaluation from running  |
+// |         |            |        | on a non-advancing call, which for a backward call would flag a |
+// |         |            |        | player and stamp RetirementDay earlier than his own cursor —    |
+// |         |            |        | now isolated by AdvanceDay_BackwardCall_DoesNotEvaluateRetirement |
+// |         |            |        | (deleting only `return;`, if/else shell intact, fails it and no |
+// |         |            |        | other test). SeedFrom's XML doc gains the ArgumentOutOfRangeException |
+// |         |            |        | tag its sentinel guard already throws but was undocumented.     |
 #endregion

@@ -17,7 +17,10 @@
 //           guard, copy-not-borrow on both FromBlocks and ToBlocks, FromBlocks's own cross-club
 //           uniqueness call, and ValidateBatch's positional club-id check. v1.3 (ERR-028-014) rewrites
 //           the seed-day/retirement-day/one-below-the-sentinel cases for the anchored cursor and adds
-//           the FromBlocks sentinel-refusal lock.
+//           the FromBlocks sentinel-refusal lock. v1.4 (AR pass 4) isolates the else-branch `return;`
+//           from its `if` condition, and adds duplicate-club-id / null-argument / unbound-element
+//           guard locks for SeedFrom, FromBlocks and ValidateBatch that had no isolating test, plus the
+//           SeedFrom sentinel guard's narrowness proof.
 
 using System;
 
@@ -85,6 +88,31 @@ namespace TacticalDirector.PlayerProgression.Tests
             Assert.AreEqual(cursorAtTen, CursorOf(engine),
                 "…and must not have rewound the cursor either: if it had, this advance would replay "
                 + "days 4..10 and bank them a second time.");
+        }
+
+        [Test]
+        public void AdvanceDay_BackwardCall_DoesNotEvaluateRetirement()
+        {
+            // AR pass 4. Isolates the bare `return;` in AdvancePlayerTo's else-branch from the `if`
+            // CONDITION above it, which AdvanceDay_BackwardCall_DoesNotRegressTheCursor already locks.
+            // The condition alone stops cursor regression — the assignment sits inside the `if`, so a
+            // backward call never reaches it whether or not the else-branch has a `return;`. Deleting
+            // ONLY the `return;` (leaving the if/else shell intact) does not regress the cursor, so the
+            // sibling lock stays green — but it lets the §3.4 retirement evaluation below the if/else
+            // run on a call that advanced nothing. A player not yet flagged whose age already satisfies
+            // RETIREMENT_AGE would then be flagged on a BACKWARD call, stamping RetirementDay with a day
+            // earlier than his own cursor — nonsense state this test catches.
+            var records = new[] { Player(900, age: PlayerProgressionConstants.RETIREMENT_AGE) };
+            var lifecycles = new[] { DefaultLife(lastAdvanced: BaseDay) };
+            var club = new ClubCareerStates(ClubId, records, lifecycles);
+            ProgressionEngine engine = ProgressionEngine.FromBlocks(new[] { club }, nextPlayerId: 901);
+
+            engine.AdvanceDay(BaseDay - 100, TrainingInputBatch.Neutral);   // backward — advances nothing
+
+            LifecycleViewModel view = engine.LifecycleView(ClubId, 900);
+            Assert.IsFalse(view.RetirementFlag,
+                "a non-advancing (backward) call must not reach the §3.4 retirement evaluation — only a "
+                + "call that actually advances the cursor may flag a player.");
         }
 
         [Test]
@@ -385,6 +413,24 @@ namespace TacticalDirector.PlayerProgression.Tests
         }
 
         [Test]
+        public void AdvanceDay_BatchEntryUnbound_IsRefused()
+        {
+            // AR pass 4 (task 3d). default(ClubTrainingInputs) skips the constructor that rejects null
+            // arrays, so PlayerIds/Inputs are both null — ValidateBatch's own bind check must catch it.
+            // Club id 0 is deliberate: default(ClubTrainingInputs) carries ClubId 0, and ValidateBatch's
+            // positional club-id check (club.ClubId != _clubIds[i]) runs BEFORE the bind check — seeding
+            // at any other club id would let that earlier check fire first and never isolate the guard
+            // under test.
+            var squad = new Squad(0, new[] { Player(1, age: 20) });
+            ProgressionEngine engine = ProgressionEngine.SeedFrom(new[] { squad }, BaseDay);
+            var batch = new TrainingInputBatch(new ClubTrainingInputs[1]);   // never bound
+
+            Assert.Throws<ArgumentException>(
+                () => engine.AdvanceDay(BaseDay, batch),
+                "a batch entry that was never bound (default(ClubTrainingInputs)) must be refused.");
+        }
+
+        [Test]
         public void AdvanceDay_BatchWithAWrongPlayerCount_IsRefused()
         {
             ProgressionEngine engine = SeedOneClub(ageAtBase: 18);
@@ -509,6 +555,39 @@ namespace TacticalDirector.PlayerProgression.Tests
                 "two clubs sharing a player id would share career state silently.");
         }
 
+        [Test]
+        public void SeedFrom_ADuplicateClubId_IsRefused()
+        {
+            // AR pass 4 (task 3a): distinct from the duplicate-PLAYER-id lock above — this is
+            // SeedFrom's own duplicate-CLUB-id enforcement (a career carries one roster per club).
+            // Proven by mutation against the underlying storage, not just the explicit ContainsKey
+            // check: byClub.Add already throws on a duplicate key, so deleting only the explicit
+            // check leaves this test green; the discriminating mutation replaces Add with a silent
+            // overwrite (byClub[id] = squad), which this test does catch.
+            var clubA = new Squad(ClubId, new[] { Player(FirstPlayerId, age: 20) });
+            var clubB = new Squad(ClubId, new[] { Player(FirstPlayerId + 1, age: 22) });
+
+            Assert.Throws<ArgumentException>(
+                () => ProgressionEngine.SeedFrom(new[] { clubA, clubB }, BaseDay),
+                "two squads sharing a club id must be refused — a career carries one roster per club.");
+        }
+
+        [Test]
+        public void SeedFrom_NullSquadsArray_IsRefused()
+        {
+            // AR pass 4 (task 3b).
+            Assert.Throws<ArgumentNullException>(() => ProgressionEngine.SeedFrom(null, BaseDay));
+        }
+
+        [Test]
+        public void SeedFrom_ANullSquadElement_IsRefused()
+        {
+            // AR pass 4 (task 3b).
+            var squads = new[] { OneClubSquad(ageAtBase: 18)[0], null };
+
+            Assert.Throws<ArgumentNullException>(() => ProgressionEngine.SeedFrom(squads, BaseDay));
+        }
+
         // ── FromBlocks / ToBlocks structural guards (mutation-audit locks) ───────────
         //
         // A mutation audit proved that deleting each guard below leaves the whole suite green —
@@ -517,6 +596,27 @@ namespace TacticalDirector.PlayerProgression.Tests
         // Each test below drives FromBlocks (or ToBlocks) directly against a hand-built
         // ClubCareerStates so the specific guard is the only thing standing between the input and a
         // successful construction.
+
+        [Test]
+        public void FromBlocks_NullClubsArray_IsRefused()
+        {
+            // AR pass 4 (task 3c).
+            Assert.Throws<ArgumentNullException>(
+                () => ProgressionEngine.FromBlocks(null, nextPlayerId: 0));
+        }
+
+        [Test]
+        public void FromBlocks_AnUnboundClubElement_IsRefused()
+        {
+            // AR pass 4 (task 3c). default(ClubCareerStates) skips the constructor that rejects null
+            // arrays, so Records/Lifecycles are both null — the RequireBound-shaped guard FromBlocks
+            // must run before anything reads ClubId off the element (an unbound element and a real club
+            // id 0 would otherwise both key identically).
+            var clubs = new ClubCareerStates[1];   // default(ClubCareerStates) — never bound
+
+            Assert.Throws<ArgumentNullException>(
+                () => ProgressionEngine.FromBlocks(clubs, nextPlayerId: 0));
+        }
 
         [Test]
         public void FromBlocks_NonAscendingClubIds_IsRefused()
@@ -564,6 +664,19 @@ namespace TacticalDirector.PlayerProgression.Tests
                     OneClubSquad(ageAtBase: 18),
                     PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL),
                 "the sentinel is not a legal seed day.");
+        }
+
+        [Test]
+        public void SeedFrom_OneDayBelowTheSentinelWorldDay_Succeeds()
+        {
+            // AR pass 4 (task 4a): the guard above proves it FIRES on the sentinel; this proves it is
+            // NARROW — it refuses only the sentinel itself, not "large" world days in general. Mirrors
+            // AdvanceDay_OneDayBelowTheSentinel_StillAdvancesNormally's proof of the sibling guard.
+            const uint SeedDay = PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL - 1u;
+
+            Assert.DoesNotThrow(
+                () => ProgressionEngine.SeedFrom(OneClubSquad(ageAtBase: 18), SeedDay),
+                "the guard must refuse only the sentinel itself, not merely a large world day.");
         }
 
         [Test]
@@ -846,4 +959,18 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | All three now advance to a LIVED day. + the backward-call lock  |
 // |         |            |        | (the same-day repeat CANNOT discriminate the idempotency guard)  |
 // |         |            |        | and SeedFrom_AtTheSentinelWorldDay_IsRefused.                    |
+// | 1.5     | 2026-08-10 | —      | AR pass 4. AdvanceDay_BackwardCall_DoesNotEvaluateRetirement      |
+// |         |            |        | isolates the else-branch bare `return;` from the `if` condition  |
+// |         |            |        | above it — the condition alone guards cursor regression (already |
+// |         |            |        | locked); `return;` additionally stops the §3.4 retirement        |
+// |         |            |        | evaluation running on a non-advancing backward call. New guard   |
+// |         |            |        | locks with no prior isolating test: SeedFrom_ADuplicateClubId_    |
+// |         |            |        | IsRefused, SeedFrom_NullSquadsArray_IsRefused, SeedFrom_ANull-    |
+// |         |            |        | SquadElement_IsRefused, FromBlocks_NullClubsArray_IsRefused,      |
+// |         |            |        | FromBlocks_AnUnboundClubElement_IsRefused, AdvanceDay_BatchEntry- |
+// |         |            |        | Unbound_IsRefused. + SeedFrom_OneDayBelowTheSentinelWorldDay_     |
+// |         |            |        | Succeeds, proving the SeedFrom sentinel guard is narrow (mirrors  |
+// |         |            |        | AdvanceDay's existing one-below-the-sentinel case). Every new     |
+// |         |            |        | lock proven by mutation: guard deleted, new test observed to fail |
+// |         |            |        | and no other test to fail, guard restored.                        |
 #endregion

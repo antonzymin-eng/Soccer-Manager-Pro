@@ -17,7 +17,9 @@
 //           mutation sweep proved dead, plus the new PotentialAbility L3 gate (ProgressionSaveCodec.cs
 //           §ReadPlayer) and its own lock — PA is the F1 growth ceiling and had no range gate before
 //           this pass. v1.2 locks the new RequireNoNeverAdvancedSentinel guards at Encode and Decode
-//           (ERR-028-014).
+//           (ERR-028-014). v1.3 (AR pass 4) adds the missing halves of three two-sided ReadPlayer range
+//           checks (attribute MIN, weak-foot MIN, PotentialAbility MAX) that only had their other side
+//           tested.
 
 using System;
 
@@ -428,6 +430,23 @@ namespace TacticalDirector.PlayerProgression.Tests
         }
 
         [Test]
+        public void Decode_AttributeBelowRange_FailsLoud()
+        {
+            // AR pass 4 (task 2): the MIN side of ReadPlayer's attribute OR — Decode_AttributeOutOfRange_
+            // FailsLoud above only exercises the MAX side, so deleting the MIN half of the check left
+            // the whole suite green.
+            byte[] blob = ProgressionSaveCodec.Encode(
+                new[] { Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1), Life(5000, 3000, 0, 0, false, 0u, 1u))) },
+                10);
+            const int Attribute0Offset = 43;
+            int o = Attribute0Offset;
+            CanonicalSerializer.WriteI32(blob, ref o, PlayerProgressionConstants.ATTRIBUTE_MIN - 1);
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(blob, out _),
+                "an attribute BELOW ATTRIBUTE_MIN must be refused too, not just above ATTRIBUTE_MAX.");
+        }
+
+        [Test]
         public void Decode_WeakFootOutOfRange_FailsLoud()
         {
             byte[] blob = ProgressionSaveCodec.Encode(
@@ -441,6 +460,22 @@ namespace TacticalDirector.PlayerProgression.Tests
             Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(blob, out _),
                 "a weak-foot rating outside [WEAK_FOOT_MIN, WEAK_FOOT_MAX] must be refused — a " +
                 "different scale from the [1,20] attributes, gated separately.");
+        }
+
+        [Test]
+        public void Decode_WeakFootBelowRange_FailsLoud()
+        {
+            // AR pass 4 (task 2): the MIN side of ReadPlayer's weak-foot OR — Decode_WeakFootOutOfRange_
+            // FailsLoud above only exercises the MAX side.
+            byte[] blob = ProgressionSaveCodec.Encode(
+                new[] { Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1), Life(5000, 3000, 0, 0, false, 0u, 1u))) },
+                10);
+            const int WeakFootOffset = 42 + 1 + AttrIdx.Count * 4;
+            int o = WeakFootOffset;
+            CanonicalSerializer.WriteI32(blob, ref o, PlayerDatabaseConstants.WEAK_FOOT_MIN - 1);
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(blob, out _),
+                "a weak-foot rating BELOW WEAK_FOOT_MIN must be refused too, not just above WEAK_FOOT_MAX.");
         }
 
         [Test]
@@ -498,6 +533,23 @@ namespace TacticalDirector.PlayerProgression.Tests
                 "a PotentialAbility outside [PA_MIN, ABILITY_MAX] must be refused — it is the F1 " +
                 "growth ceiling, and a corrupt value below PA_MIN would silently freeze a player's " +
                 "growth forever.");
+        }
+
+        [Test]
+        public void Decode_PotentialAbilityAboveRange_FailsLoud()
+        {
+            // AR pass 4 (task 2): the MAX side of ReadPlayer's PotentialAbility OR —
+            // Decode_PotentialAbilityOutOfRange_FailsLoud above only exercises the MIN side (PA_MIN - 1).
+            // A corrupt value above ABILITY_MAX would silently unbound a player's growth ceiling.
+            byte[] blob = ProgressionSaveCodec.Encode(
+                new[] { Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1), Life(5000, 3000, 0, 0, false, 0u, 1u))) },
+                10);
+            const int PotentialAbilityOffset = 42 + 1 + AttrIdx.Count * 4 + 4;
+            int o = PotentialAbilityOffset;
+            CanonicalSerializer.WriteI32(blob, ref o, PlayerProgressionConstants.ABILITY_MAX + 1);
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(blob, out _),
+                "a PotentialAbility ABOVE ABILITY_MAX must be refused too, not just below PA_MIN.");
         }
 
         // ── Decode-side fail-loud gates ─────────────────────────────────────────────
@@ -689,4 +741,14 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | round-trips-as-itself property it used to check is superseded by   |
 // |         |            |        | the new ERR-028-014 tests, which check the opposite (the sentinel  |
 // |         |            |        | is refused, not carried).                                          |
+// | 1.3     | 2026-08-10 | —      | AR pass 4 (task 2). Three of ReadPlayer's range checks are          |
+// |         |            |        | two-sided ORs with only one side locked: Decode_AttributeBelowRange_ |
+// |         |            |        | FailsLoud (attribute MIN — Decode_AttributeOutOfRange_FailsLoud only |
+// |         |            |        | covered MAX), Decode_WeakFootBelowRange_FailsLoud (weak-foot MIN —  |
+// |         |            |        | Decode_WeakFootOutOfRange_FailsLoud only covered MAX), and Decode_  |
+// |         |            |        | PotentialAbilityAboveRange_FailsLoud (PotentialAbility MAX —        |
+// |         |            |        | Decode_PotentialAbilityOutOfRange_FailsLoud only covered MIN).      |
+// |         |            |        | Production checks verified correct as written — test-only gaps.    |
+// |         |            |        | Each proven by deleting its half of the OR and observing exactly    |
+// |         |            |        | the new test fail.                                                  |
 #endregion
