@@ -571,6 +571,12 @@ mechanism closes the remaining 1.32 m.
 > agreement is what licenses every other number in this section.
 > **Corpus:** the six close-chance seeds plus twelve fresh ones, 90 minutes each — 18 seeds × 6
 > variants, 108 full matches.
+> **Whole-tree gate, run locally this session: FAILED, on the pre-existing C1 failure and nothing else.**
+> Build 0 errors, 31 of 32 suites green, quarantine unchanged; `MatchEngine.Tests` 447 passed / 1 failed /
+> 10 skipped (49 m 4 s). The one failure is `sim_match_engine_close_chance` at `meanCosine = -0.165` and
+> `goalwardShare = 0.407` — the gate reproducing this section's own probe (−0.1647) to three decimals, which
+> is a second, independent validation of the instrument. This pass changed no production code and no
+> predicate, bound or seed.
 
 **Why this section exists.** The Acceptance-3 row (§9) recorded the cosine regression as
 seed-asymmetric, named the chain's own P5 residuals as the suspects — "the withdrawn -021
