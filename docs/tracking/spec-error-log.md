@@ -6,8 +6,47 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 2.03
-**Updated:** August 9, 2026, still later same day (v2.03 — **Adversarial review of the ERR-010-002
+**Version:** 2.04
+**Updated:** August 9, 2026, later still (v2.04 — **Whole-tree gate result for the AR-over-ERR-010-002
+landing (commits `48977fa` doc half + `d93e0c8` code half).** `d93e0c8` landed the two behavioural
+fixes from the same adversarial review that v2.03 documented the doc-and-comment half of. **(1)** The
+out-of-range branch in `HeadingAim`'s ballistic solve returned a flat 45° as "the maximum-range
+launch." That is the max-range angle only when the target sits at contact height — a header contacts
+near 2.3 m and its targets sit on the ground, so `dz` is negative on essentially every real header, and
+§3.5.1 itself calls this branch "the ordinary case for a defensive clearance," making the wrong angle
+the production path rather than an edge case. Measured: 9.98° of error across 4 cm of target distance
+at the boundary, 4.38° at the production nominal speed (7.0 + 4.0 + 5.0 = 16.0 m/s × `PowerIntent` 0.7
+= 11.2 m/s). Fixed to the true max-range angle, `tan(θ) = v / √(v² − 2·g·dz)`, with a guard for a
+target above what the speed can reach at any angle. `MaxRangeLaunchComponent` — a `[DERIVED]` constant
+whose name asserted what it was not — is retired with it. **(2)** `ComputeAimNormal` did not propagate
+a degenerate desired direction: `half = incident + 0` has magnitude 1, so the zero guard missed and the
+method returned the incident itself, and the blend then steered toward it — at full authority
+reflecting the ball straight back the way it came at full power, the **maximum** possible deflection,
+arrived at through the branch documented as producing the natural rebound. This made
+`ComputeAchievedNormal`'s zero-aim fallback unreachable through the composition, so the lock on it had
+been passing against a branch production could never enter — this project's guard-on-an-unreachable-
+branch class, one method away from the omission the original landing was proud of. Also landed: four
+ERR-008-002 home/away locks for `GkHeadingIntentSource.HeaderAimTarget`, the landing's only
+team-branching geometry, which had none — a `HeadingMechanics.Tests` case labelled as the ERR-008-002
+lock ran team-**agnostic** code at `TeamId = 0` on both sides and could not have failed for an
+asymmetry; the mirror itself is correct, so this was a coverage/false-claim defect, not a live bug.
+**One bug was introduced by the fix and caught by its own new lock before landing**: the
+unreachable-height guard first returned `Vector3.up`, which is Unity's +Y, while this project's up axis
+is +Z (Ball Physics #1 §1.2) — the coordinate-axis trap in `CLAUDE.md`'s own hazard table, and it still
+nearly shipped.
+
+**Whole-tree gate, local run, head `d93e0c8`:** build 0 errors, 3 warnings. `GATE_EXIT=1` — the gate
+did **NOT** print "Gate PASSED"; this is **not** GATE-VERIFIED. Sole failure:
+`sim_match_engine_close_chance`, 2 of 3 predicates — `final-third-dribbles-are-not-goal-averse`
+meanCosine **−0.165** (bound −0.16) and `goalward-dribbles-are-not-a-minority-of-one-in-three`
+goalwardShare **0.407** (bound 0.42). This is the **inherited C1 failure** that predates this branch
+and awaits an owner call; it is identical to three decimals against the pre-fix baseline recorded at
+`589a011`, so this landing moved nothing. `MatchEngine.Tests` **451 passed / 1 failed / 10 skipped /
+462 total**, up from the 447/1/10/458 baseline — the +4 are exactly the four new `HeaderAimTarget`
+locks. `HeadingMechanics.Tests` **63 passed / 15 skipped / 0 failed** (60 → 63). All 31 other suites
+green, quarantine empty. `python3 tools/recurring-defect-lint.py --repo .`: **0 ERRORs**. Prior entry
+below.)
+**Updated (prior):** August 9, 2026, still later same day (v2.03 — **Adversarial review of the ERR-010-002
 landing: two of its five findings confirmed and fixed here (the other three touch files under
 concurrent edit and are out of scope for this pass).** **Finding 1 (High, fixed in
 `docs/specs/heading-mechanics/section-3.md` v0.5, not this file):** §3.5.1 Step 2's "bounded to the

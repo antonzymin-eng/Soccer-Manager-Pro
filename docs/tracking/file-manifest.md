@@ -1,7 +1,48 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 9, 2026, still later same day — **Adversarial review of the `ERR-010-002`
+**Last Updated:** August 9, 2026, later still — **AR over the ERR-010-002 landing, code half
+(`d93e0c8`), plus the whole-tree gate result for both AR commits (`48977fa` + `d93e0c8`).** Two
+behavioural fixes from the same adversarial review the prior entry's doc half did not cover. **(1)**
+The out-of-range branch in `HeadingAim`'s ballistic solve returned a flat 45° "maximum-range launch,"
+correct only when the target sits at contact height; a header contacts near 2.3 m aiming at
+ground-level targets, so this was the production path (measured 9.98° error at the boundary, 4.38° at
+the production nominal speed), not an edge case. Fixed to the true max-range angle,
+`tan(θ) = v / √(v² − 2·g·dz)`, with a guard for a target above what the speed can reach at any angle;
+`MaxRangeLaunchComponent` — a `[DERIVED]` constant whose name asserted what it was not — is retired
+with it. **(2)** `ComputeAimNormal` did not propagate a degenerate desired direction (`half = incident
++ 0` has magnitude 1, so the zero guard missed and the method returned the incident itself), so a zero
+`aimDir` reflected the ball straight back the way it came at full power — the maximum possible
+deflection, arrived at through the branch documented as producing the natural rebound, and it made
+`ComputeAchievedNormal`'s zero-aim fallback unreachable through the composition. Also landed: four
+ERR-008-002 home/away locks for `GkHeadingIntentSource.HeaderAimTarget`, the landing's only
+team-branching geometry, which had none (an existing test labelled as the ERR-008-002 lock ran
+team-agnostic code and could not have caught an asymmetry — coverage/false-claim defect, not a live
+bug). **One bug was introduced by the fix and caught by its own new lock before landing**: the
+unreachable-height guard first returned `Vector3.up`, Unity's +Y, instead of this project's +Z up axis
+(Ball Physics #1 §1.2) — the coordinate-axis trap in `CLAUDE.md`'s own hazard table. **Modified:**
+`src/heading-mechanics/HeadingAim.cs`, `src/heading-mechanics/HeadingMechanicsConstants.cs`,
+`src/heading-mechanics/Tests/HeadingAimTests.cs`, `src/match-engine/tests/GkHeadingIntentSourceTests.cs`
+— the four files the prior entry recorded as "not touched, per instruction (another agent editing
+concurrently)"; that concurrent edit is this one. **Whole-tree gate, local run, head `d93e0c8`: build 0
+errors, 3 warnings; `GATE_EXIT=1` — the gate did NOT print "Gate PASSED"; this is not GATE-VERIFIED.**
+Sole failure: `sim_match_engine_close_chance`, 2 of 3 predicates —
+`final-third-dribbles-are-not-goal-averse` meanCosine **−0.165** (bound −0.16) and
+`goalward-dribbles-are-not-a-minority-of-one-in-three` goalwardShare **0.407** (bound 0.42) — the
+inherited C1 failure, identical to three decimals against the pre-fix baseline recorded at `589a011`,
+so this landing moved nothing. `MatchEngine.Tests` **451 passed / 1 failed / 10 skipped / 462 total**,
+up from the 447/1/10/458 baseline — the +4 are exactly the four new `HeaderAimTarget` locks.
+`HeadingMechanics.Tests` **63 passed / 15 skipped / 0 failed** (60 → 63). All 31 other suites green,
+quarantine empty. `python3 tools/recurring-defect-lint.py --repo .`: **0 ERRORs**. Also landed:
+`docs/tracking/close-chance-creation-design.md` §10.8 (v1.7) — the §10.7-corrected instrument's first
+execution (Report C5b, 6 seeds × 90 min, 1,081 aerial final-third episodes) finds headers failing
+horizontally (nearest attacker 5.88–5.93 m, nearest defender 4.28–4.93 m in pure XY, no height term)
+and RE-RANKS §10.6's withdrawn "attack the ball" lever back to first on a corrected instrument reaching
+the same conclusion (0% within contact distance in true 3-D) without §10.7's height-floor artifact.
+`docs/tracking/spec-error-log.md` v2.03 → v2.04, `docs/tracking/CHANGELOG.md`,
+`docs/tracking/CHANGELOG-src.md` v2.105. Prior entry below.
+
+**Last Updated (prior):** August 9, 2026, still later same day — **Adversarial review of the `ERR-010-002`
 landing: two findings fixed here, three others (spec text, a phantom-citation doc, and version-history
 rows) fixed elsewhere, two rejected.** **Confirmed and fixed:** Finding 1 (High) — §3.5.1 Step 2's
 "bounded to the hemisphere the ball can physically reach" was stale spec text; `HeadingAim.cs` never
@@ -996,7 +1037,9 @@ byte-identical). **Full dotnet gate: PASSED, 0 failures (whole tree green; 290 m
 files:** `src/match-engine/GkHeadingIntentSource.cs` v1.0 (pure static §4 save/header trigger geometry —
 `SaveArmed` / `NearestHeaderCandidate` — extracted out of `MatchEngine` so the "when" heuristic is
 unit-testable, the `MatchFlowCollisionConsumer` precedent); `src/match-engine/tests/GkHeadingIntentSourceTests.cs`
-v1.0 (10 pure-function locks). **Modified:** `src/match-engine/MatchEngine.cs` v1.45 — the four nested
+v1.0 (10 pure-function locks; grown to 11 by the ERR-010-002 landing's `HeaderAimTarget` producer, then
+15 by the AR-over-ERR-010-002 code half `d93e0c8` (Aug 9, 2026), which added the four ERR-008-002
+home/away locks the team-branching `HeaderAimTarget` geometry had none of). **Modified:** `src/match-engine/MatchEngine.cs` v1.45 — the four nested
 ball/RNG adapters collapsed into ONE `GkHeadingWorldAdapter` (both ball systems share `ApplyKick`; the
 two RNG services disambiguate by arity), and `TryCommitSaveIntents`/`TryCommitHeaderIntents` delegate
 their geometry to `GkHeadingIntentSource` (keeping only latch + projection + commit).
@@ -1443,7 +1486,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | File | Purpose |
 |------|---------|
 | `src/heading-mechanics/heading-mechanics.asmdef` | Assembly definition (references agent-movement, ball-physics, collision-system, event-system; added event-system ref May 30, 2026) |
-| `src/heading-mechanics/HeadingMechanicsConstants.cs` | All GT/Fixed/Cross/Derived constants (§3.1); region order Fixed→Derived→Cross→GT; +`KINEMATIC_TWO_COEFF`/`PERFECT_CONTACT_QUALITY` [FIXED] + `SurfaceNormalEpsilon`/`MaxRangeLaunchComponent` [DERIVED] Aug 9, 2026 (ERR-010-002; no new [GT]) |
+| `src/heading-mechanics/HeadingMechanicsConstants.cs` | All GT/Fixed/Cross/Derived constants (§3.1); region order Fixed→Derived→Cross→GT; +`KINEMATIC_TWO_COEFF`/`PERFECT_CONTACT_QUALITY` [FIXED] Aug 9, 2026 (ERR-010-002; no new [GT]) — `SurfaceNormalEpsilon` [DERIVED] retained; `MaxRangeLaunchComponent` [DERIVED] added then RETIRED same day by the AR-over-ERR-010-002 code half (`d93e0c8`) — its name asserted the flat-45° fallback it fed was "the maximum-range launch," which the AR fix replaced with the true `tan(θ) = v / √(v² − 2·g·dz)` solve |
 | `src/heading-mechanics/ContactQualityLabel.cs` | Enum: Early / OnTime / Late — telemetry only; KD-2 |
 | `src/heading-mechanics/MistimedDirection.cs` | Enum: None / Early / Late — eligibility output |
 | `src/heading-mechanics/FailureCause.cs` | Enum: MistimedEarly / MistimedLate / PositionedPoorly / DisturbedInDuel |
@@ -1468,8 +1511,8 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/heading-mechanics/HeadingDuelResolution.cs` | FM-010-005 duel scoring; ICollisionEventConsumer; pre-allocated buffers |
 | `src/heading-mechanics/HeadingTelemetry.cs` | Stage 0 stub; emits §2.4 heading.* trace-pipeline channels at Stage 0+1 |
 | `src/heading-mechanics/HeadingMechanics.cs` | 60 Hz orchestrator; two-pass per-frame loop (§4.6); one `ResolveContactGeometry` owner read by both passes, 3-D contact point carried directly Aug 9, 2026 (ERR-010-002 — the prior two-derivation parallel-surface trap) |
-| `src/heading-mechanics/HeadingAim.cs` | §3.5.1 header-aim solve (ERR-010-002, Aug 9, 2026): ballistic launch-direction solve to `HeaderIntent.TargetIntent` at perfect-contact speed (low root, continuous 45° max-range fallback out of range) blended with the reflecting half-vector normal by normalised Heading (steer authority 0 = pre-fix specular behaviour exactly; full-attribute-range ramp, no plateau) |
-| `src/heading-mechanics/Tests/HeadingAimTests.cs` | ERR-010-002 locks for `HeadingAim` (Aug 9, 2026) |
+| `src/heading-mechanics/HeadingAim.cs` | §3.5.1 header-aim solve (ERR-010-002, Aug 9, 2026): ballistic launch-direction solve to `HeaderIntent.TargetIntent` at perfect-contact speed (low root; out-of-range case blended with the reflecting half-vector normal by normalised Heading (steer authority 0 = pre-fix specular behaviour exactly; full-attribute-range ramp, no plateau). AR-over-ERR-010-002 code half (`d93e0c8`, same day): the out-of-range fallback's flat 45° — right only at contact-height targets, wrong on essentially every real header — replaced with the true `tan(θ) = v / √(v² − 2·g·dz)` max-range angle plus an unreachable-target guard; `ComputeAimNormal` now propagates a degenerate desired direction instead of returning the incident unchanged |
+| `src/heading-mechanics/Tests/HeadingAimTests.cs` | ERR-010-002 locks for `HeadingAim` (Aug 9, 2026); + AR-over-ERR-010-002 code half (`d93e0c8`, same day): the reachability-boundary continuity lock (2.42° vs a 9.98° pre-fix reading, 4° bound), the new radicand guard, and the degenerate-aim-through-composition lock; the unreachable-target case re-derived against the correct angle |
 
 ### Spec #11 — Goalkeeper Mechanics (`src/goalkeeper-mechanics/`)
 

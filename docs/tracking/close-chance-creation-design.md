@@ -635,6 +635,72 @@ measured 2.83 s mean time-to-rest), which is `[GT]` and governs aerial reception
 unwired. **Inside the freeze.** Measure the candidate count before and after, or a correctness fix
 gets reported as a pursuit mechanism.
 
+### 10.8 The corrected instrument's first run — headers fail horizontally, and "attack the ball" is re-ranked to first
+
+> **Measured 2026-08-09**, `TD_CREATION_DIAGNOSTIC=1`, `CloseChanceDiagnosticTests` v1.4, Report C5b,
+> 6 seeds × 90 min, **1,081 aerial final-third episodes** (505 home / 576 away). This is the
+> §10.7-corrected instrument's first execution — three series measured side by side, none of them
+> carrying the ball-height-floor artifact that forced §10.7's retraction.
+
+**SERIES 1 — horizontal (XY) separation only, no ball-height term. Nearest agent per episode:**
+
+| | home mean | away mean | ≤0.18 m (H / A) | 0.18–0.5 m (H / A) | 0.5–1.5 m (H / A) |
+|---|---|---|---|---|---|
+| nearest **attacker** | 5.93 m | 5.88 m | 0% / 1% | 1% / 0% | 11% / 10% |
+| nearest **defender** | 4.93 m | 4.28 m | 0% / 0% | — | 30% / 37% |
+
+**SERIES 1b — ball height at the tick achieving Series 1's minimum separation:** attacker-side pooled
+mean **0.59 m** on both home and away, minimum observed **0.50 m** — which is the episode gate's own
+floor (`ballPos.z > HeaderTriggerMinBallHeightM`), not a football fact. Defender-side pooled **0.58 m
+/ 0.59 m**.
+
+**SERIES 2 — true 3-D distance to the agent's head point (headZ = 2.20 m):**
+
+| | home mean | away mean | ≤0.18 m | 0.5–1.5 m (H / A) |
+|---|---|---|---|---|
+| nearest **attacker** | 6.30 m | 6.24 m | **0%** | 1% / 0% |
+| nearest **defender** | 5.42 m | 4.81 m | **0%** | 1% / 0% |
+
+**SERIES 3 (retained pre-correction measure, for comparison):** attacker pooled **6.00 m / 5.95 m**,
+with **10% / 9%** of episodes in the 0.5–1.5 m band — against Series 2's **1% / 0%** for the same band
+measured correctly.
+
+**1. Headers fail horizontally, decisively — before height ever enters the question.** Series 1 drops
+the ball-height term entirely and still finds the nearest player **4–6 m** from the ball in pure XY.
+That forecloses the vertical hypotheses this document and the wiring backlog have been carrying:
+**C8**'s missing head-height gate at the header commit, and `FindContactFrame` freezing the head's z
+while sweeping only the ball. Both stay recorded, not promoted — you cannot have a head-height problem
+worth building against when the nearest head is five metres away laterally. Fix the gate, fix the
+frozen z, and the ball still lands nowhere near anyone.
+
+**2. Series 1b is the sharpest single number in this measurement.** At the moment of closest
+horizontal approach, the ball sits at **0.59 m** — essentially on the 0.50 m episode-gate floor. These
+are "aerial" episodes only in the instrument's sense that the ball briefly cleared the trigger height
+while skimming past players who are, on average, metres away. They are not crosses arriving into a box
+with anyone under them.
+
+**3. "Attack the ball" (§10.6 item 1) is RE-RANKED as the first candidate lever, on corrected
+evidence.** §10.7's withdrawal of that ranking was **correct** at the time it was made: the census it
+was built on, `BallToAgentDistance3D`, carried a ≥ 0.5 m height floor baked into every sample by the
+episode gate itself, so its two smallest buckets were structurally unreachable and the published 0%
+in both was the instrument reporting its own gate back at the caller, not a football measurement.
+Series 2 — the same 3-D-to-head-point question, asked by an instrument that does not carry that flaw —
+reaches the **same conclusion the withdrawn census reached**, by a sound route and with a sharper
+number: **0%** of episodes bring an attacker's or a defender's head within contact distance of the
+ball. That reverses a conclusion this document itself published four commits earlier (§10.7). The
+reversal is evidence-driven, not a walk-back: §10.7 was right to distrust its instrument, and the
+instrument it distrusted is not the instrument that produced this result.
+
+**4. Recorded, not analysed: the defender side is consistently nearer the ball than the attacker
+side** — 4.28–4.93 m against 5.88–5.93 m in Series 1, 4.81–5.42 m against 6.24–6.30 m in Series 2 —
+inside the **attacking** third, on every series and both home and away. That is a statement about
+attacking movement, not defending: the team without the ball is closer to it than the team playing it
+forward. Flagged as an open question. No cause is theorised here.
+
+**Not in scope here: designing the lever.** §10.8 records the measurement and the ranking only.
+"Attack the ball" needs its own design pass and, per this repo's convention for a pre-implementation
+lever choice, an advisory council before any code is written.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
@@ -645,4 +711,5 @@ gets reported as a pursuit mechanism.
 | 1.4 | 2026-08-09 | — | **CORRECTION to v1.3: §7 item 6 / `ERR-008-024` was recorded CLOSED; it is not.** The fix was implemented, measured, and REFUSED — the KD-CC7 pattern (§4). The sector-scan tie-break DOES pass `sim_match_engine_close_chance` (meanCosine −0.165 → PASS, goalwardShare 0.407 → PASS) but STALLS `sim_match_engine_play_develops` outright (ball last moving at tick 18465 of 32400) and zeroes `goals-still-scored`; a wider `space × DirectionQuality` form produced the identical stall at the identical tick, plus mean-shot-distance 25.41 m against a 24.00 m ceiling. §7 item 6 REOPENED; §10.5 gains a cross-link recording that goalward dribbling is unsafe until §10.2/§10.3's bounds are addressed. `OptionGenerator.cs` reverted to the pre-fix baseline logic; kept, behaviour-neutral: `UtilityWeights.DribbleDirectionQuality` + `UtilityScorer`'s delegation to it. The two v1.3 unit locks are REMOVED. `DecisionTree.Tests` 129 passed / 4 skipped / 0 failed. See `spec-error-log.md` ERR-008-024 and `decision-tree/section-3-1.md` v1.8. |
 | 1.5 | 2026-08-09 | — | §10.6: the header measurement. Contact ratio **0.2%** (2 executed, 963 failed; 97–99% `positionedPoorly`), zero executed headers in any attacking third, and crosses at 0% headed / 0% reached / **69% coming to rest untouched**. The proximity census settles the order: **0% of airborne final-third episodes bring ANY outfielder — attacker or defender — within the 0.18 m contact volume**, so an aerial ball is untouchable by anybody and box occupancy is NOT its binding constraint. §10.4's item 1 is mispriced and is not a wiring item; the candidate first lever becomes "move a player to a ball's predicted arrival point", which is upstream of aerial contact, ground loose balls and pass-to-space alike. Four residuals recorded not fixed, including the fixed-point header target (a P4 candidate) and the 0.50–0.61 m band both first touch and the header trigger claim. |
 | 1.6 | 2026-08-09 | — | **§10.7: two corrections to §10.6, one of which retracts its headline measurement.** (1) Item 3's consequence was wrong — `TargetIntent` reaches NO formula, so the header aim was not merely fixed, it was **inert**, and every header was a passive specular mirror: a defender clearing in his own box headed the ball back the way it came rather than aiming 90 m at the far goal. Filed and fixed as `ERR-010-002` with two further defects in the same chain (two independent contact-point derivations; the 3-D point rebuilt from its 2-D head-local projection, pinning the reflection normal horizontal so `reflected.z = v̂_in.z` and **no header could lift the ball**). (2) **The §10.6 proximity census is an instrument artifact.** `BallToAgentDistance3D` measures ball-to-agent-GROUND distance including the ball's full height, while the episode gate requires ball z > 0.5 m — so the `≤ 0.18 m` and `0.18–0.5 m` buckets are structurally unreachable and the published `0%` in both is the instrument reporting its own gate. "0% within the contact volume", "untouchable by anybody, anywhere", the 1.32 m gap arithmetic and the 5.9 m / 4.7 m labels are all withdrawn; read correctly the same table shows ~31% of episodes with a **defender within 0.5–1.5 m in 3-D**, the opposite of the premise. §10.6 item 2's ranking of "attack the ball" as the first lever is **withdrawn, not replaced** — the third retraction in this document, and the first caused by the instrument rather than the reasoning. Two cheaper upstream candidates recorded ahead of it (the header commit's missing head-height gate; `FindContactFrame` freezing head z as well as xy), plus the KD-W1 note that the Z-fix alone yields FEWER intercepts and its unlock `MAX_INTERCEPT_TIME` is `[GT]` and frozen. |
+| 1.7 | 2026-08-09 | — | **§10.8: the §10.7-corrected instrument's first execution (Report C5b, 6 seeds × 90 min, 1,081 aerial final-third episodes) — headers fail HORIZONTALLY, and "attack the ball" is RE-RANKED to first.** Series 1 (pure XY, no height term): nearest attacker 5.88–5.93 m, nearest defender 4.28–4.93 m — the vertical hypotheses (C8's missing head-height gate; `FindContactFrame`'s frozen head z) stay recorded, not promoted, because a 5 m lateral gap forecloses them. Series 1b: ball height at closest horizontal approach is **0.59 m**, on the 0.50 m episode-gate floor — these episodes are not crosses into an occupied box. Series 2 (true 3-D distance to headZ = 2.20 m) reaches **0%** within contact distance for both attacker and defender, both sides — the SAME conclusion §10.7 withdrew, reached this time by an instrument without the height-floor artifact; the reversal of §10.7's withdrawal is evidence-driven, not a walk-back. Series 3 (the retained pre-correction measure) shows what the artifact was doing: 10%/9% in the 0.5–1.5 m band against Series 2's 1%/0% for the identical question asked correctly. Recorded, not analysed: defenders sit consistently nearer the ball than attackers in the attacking third (4.28–4.93 m vs 5.88–5.93 m), an open question about attacking movement. Lever design explicitly out of scope — needs its own pass plus an advisory council. |
 #endregion
