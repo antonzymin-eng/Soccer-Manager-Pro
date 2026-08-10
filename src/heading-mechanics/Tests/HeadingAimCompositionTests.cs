@@ -254,12 +254,29 @@ namespace TacticalDirector.HeadingMechanics.Tests
         }
 
         /// <summary>
-        /// The vertical half of the same claim, through the orchestrator: a DESCENDING ball aimed at a
-        /// distant ground target must leave the head RISING. Pre-ERR-010-002 the reflection normal was
+        /// This locks the FR-HE-037 3-D-carry fix, NOT the aim — a distinction established by executing
+        /// both mutants during adversarial review pass 3, and corrected here because this doc first
+        /// called it "the vertical half of the same claim", which it is not. Unwiring the aim
+        /// (<c>aimNormal = Vector3.zero</c>) leaves this test PASSING, because the fixture's geometry
+        /// puts the geometric normal anti-parallel to the incoming ball and a pure mirror therefore
+        /// reflects a descending ball straight back up. Flattening <c>achievedNormal.z</c> — the actual
+        /// pre-fix defect — fails exactly this test and leaves
+        /// <see cref="TwoTargets_ThroughTheRealOrchestrator_ProduceDifferentOutgoingVelocities"/>
+        /// passing. The two are a complementary pair, one per fix, which is a stronger property than
+        /// either was originally claimed to have.
+        ///
+        /// <para>A DESCENDING ball aimed at a distant ground target must leave the head RISING.
+        /// Pre-ERR-010-002 the reflection normal was</para>
         /// pinned horizontal by the 2-D head-local round trip, so <c>reflected.z == v̂_in.z</c> and a
         /// dropping ball was headed further down — no header could lift the ball. That defect lived in
         /// <c>HeadingMechanics.Update</c> pass 2, which is code this fixture executes and
         /// <c>HeadingAimTests</c> does not.
+        ///
+        /// <para><b>Known edge of this fixture (AR pass 3, L-4):</b> nothing here covers
+        /// <c>aimHeadLocal</c> reaching §3.4's <c>pointError</c> — the "a header steered hard away from
+        /// its natural rebound is weaker as well as less accurate" half of ERR-010-002. A mutant
+        /// forcing <c>aimHeadLocal = actualHeadLocal</c> passes this fixture and, by construction,
+        /// every other suite in the tree.</para>
         /// </summary>
         [Test]
         public void DescendingBall_ThroughTheRealOrchestrator_LeavesTheHeadRising()
@@ -287,4 +304,12 @@ namespace TacticalDirector.HeadingMechanics.Tests
 // |         |            |        |   deliberately publish-free) and asserts on the velocity handed   |
 // |         |            |        |   to Ball Physics: two targets, one geometry, materially          |
 // |         |            |        |   different outgoing vectors, plus the descending-ball lift.      |
+// | 1.1     | 2026-08-09 | —      | AR pass 3 (doc-only, no test logic changed). L-3: the descending- |
+// |         |            |        |   ball test's doc claimed to be "the vertical half of the same    |
+// |         |            |        |   claim" as the two-target lock. Executing both mutants proves it |
+// |         |            |        |   is not: unwiring the aim leaves it PASSING, and flattening      |
+// |         |            |        |   achievedNormal.z fails exactly it. It locks FR-HE-037, not the  |
+// |         |            |        |   aim — the two tests are one-per-fix, which is stronger than the |
+// |         |            |        |   overclaim it replaces. L-4: the aimHeadLocal → §3.4 pointError  |
+// |         |            |        |   path is recorded as the known edge of this fixture's coverage.  |
 #endregion

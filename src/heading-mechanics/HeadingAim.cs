@@ -126,12 +126,13 @@ namespace TacticalDirector.HeadingMechanics
 
             // direction = normalize(flat + z*tan(theta)); dividing by the shared cos(theta) is exactly
             // this, and avoids an atan/sin/cos round trip.
+            // No degenerate-length guard here, and the omission is deliberate for the same reason
+            // ComputeAimNormal carries none: it provably cannot fire. `flat` is a unit vector by the
+            // range guard above, so dir.sqrMagnitude == 1 + tan²θ ≥ 1 on every path that reaches this
+            // line. The first cut of this method DID carry one — in a file that twice explains why a
+            // guard on an unreachable branch ships green precisely because nothing can fire it — and
+            // adversarial review pass 3 caught it. Recorded rather than written.
             Vector3 dir = new Vector3(flat.x, flat.y, tanTheta);
-            if (dir.sqrMagnitude < HeadingMechanicsConstants.SURFACE_NORMAL_EPSILON_SQ)
-            {
-                return Vector3.zero;
-            }
-
             return dir.normalized;
         }
 
