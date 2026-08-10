@@ -1,7 +1,7 @@
 # Heading Mechanics Specification #10 — Section 3: Core Formulas, Algorithms, Pseudocode
 
 **Created:** May 16, 2026
-**Version:** 0.3
+**Version:** 0.4
 **Status:** DRAFT
 **Purpose:** Define every formula, predicate, and algorithm that the
 Heading Mechanics pipeline executes — eligibility, jump kinematics,
@@ -375,10 +375,124 @@ launchAngle   = asin(reflectedDir.z / ||reflectedDir||)
 ```
 
 The intended launch direction (toward `targetIntent`) is realized
-by the upstream choice of `contactPointIntent`: Decision Tree #8
-selects a contact point on the head surface such that the
-reflected vector points at the target. `pointError` (§3.4)
-captures deviation from that geometric ideal.
+by §3.5.1, which derives the contact point that reflects the ball
+at the target. `pointError` (§3.4) captures deviation from that
+geometric ideal.
+
+> **ERR-010-002 (August 9, 2026) — the aim had no owner.** This
+> paragraph previously read: *"the upstream choice of
+> `contactPointIntent`: Decision Tree #8 selects a contact point on
+> the head surface such that the reflected vector points at the
+> target."* Decision Tree #8 **cannot emit a header at all** —
+> `ActionType` ordinal 8 overflows the 3-bit composure-noise field
+> (wiring backlog W9), so the header producer is, and for the whole
+> of Stage 0 has been, the match-engine proximity trigger. It
+> supplied `contactPointIntent = 0` and a fixed `targetIntent`, and
+> §3.5's reflection read neither, so **every header was a passive
+> mirror**: the ball left the head along the reflection of its own
+> incoming path and the player had no influence on where it went.
+> This is the `ERR-011-010` shape — a decision delegated to a system
+> that structurally cannot make it, and therefore made by nobody.
+> §3.5.1 takes the derivation back into #10. Two further defects
+> were fixed with it, both recorded in the error log: the contact
+> point was recomputed independently in two places from ball-vs-head
+> geometry (a parallel surface that agreed only by coincidence), and
+> the world-space contact point was rebuilt from its **2-D**
+> head-local projection, pinning `contactPointActual.z` to the head
+> centre — so the reflection normal was permanently horizontal,
+> `reflected.z = v̂_in.z`, and **a descending ball was headed further
+> down**. No header could lift the ball.
+
+### 3.5.1 Aim Realization (ERR-010-002)
+
+The aim is realized in three steps, all pure, all free of new
+`[GT]` constants — the Heading attribute is itself the dial, so
+this stays inside the KD-W1 freeze while heading is unwired.
+
+**Step 1 — the launch direction.** A `targetIntent` is a
+*destination*, reached by an arc, not a straight line: aiming
+along the straight line to a distant ground-level point sends the
+ball into the turf a few metres away. Solve the gravity-only
+projectile launch toward it, at the outgoing speed a perfect
+contact would carry (`contactQualityScalar = 1`; solving at the
+achieved speed would be circular, since achieved speed follows
+from quality and quality follows from the aim error):
+
+```
+R           = ||targetIntent.xy - contactPoint.xy||
+dz          = targetIntent.z - contactPoint.z
+disc        = v⁴ - g·(g·R² + 2·dz·v²)
+tanθ        = (v² - sqrt(disc)) / (g·R)          # low root
+aimDir      = normalize(flat·1 + ẑ·tanθ)
+```
+
+The **low** root is taken: a header is a driven contact, not a
+lob, and the flat solution also spends least time in the air.
+`disc < 0` means the target is beyond ballistic range at this
+speed; the direction then degrades continuously to the 45°
+maximum-range launch toward it rather than failing — P1,
+continuous never a cliff. That branch is the ordinary case for a
+defensive clearance, and it is what makes one long and high.
+
+**Step 2 — the normal that realizes it.** Inverting the §3.5
+reflection gives the half-vector exactly:
+
+```
+aimNormal = normalize(incident + aimDir)
+```
+
+bounded to the hemisphere the ball can physically reach. A
+contact point whose normal faces away from the oncoming ball is
+the back of the player's skull and no attribute puts it in the
+ball's path; when the half-vector falls outside, it is projected
+onto that boundary — the grazing contact, where the reflection
+leaves the ball travelling on unchanged, so the bound degrades
+continuously rather than snapping.
+
+**Step 3 — what the player actually achieves.**
+
+```
+achievedNormal = normalize(geometricNormal
+                 + Heading_norm · (aimNormal - geometricNormal))
+```
+
+`geometricNormal` is `normalize(ballPosition − headCentre)`, the
+pre-ERR-010-002 model, so **steer authority 0 is exactly the old
+behaviour** and authority 1 places the ball. `Heading_norm` spans
+the whole attribute range with no plateau at either end (raw 1 →
+0.05, raw 20 → 1.00), which is the FULL-RANGE ramp shape settled
+at `ERR-008-019`: the aim is skill (P2), not a switch.
+
+`contactPointActual = headCentre + achievedNormal · r`, where `r`
+is the radial magnitude of the geometric contact, clamped to
+`HEAD_CONTACT_VOLUME_RADIUS_M` — preserved from the geometric
+contact so §3.6's axial-offset input and §3.4's error scale keep
+their existing footing and this change moves one thing.
+`contactPointIntent` is `headCentre + aimNormal · r`, so §3.4's
+`pointError` becomes, for the first time, a genuine **execution**
+error: it was previously the distance between a hardcoded zero and
+a geometric fact. A header steered hard away from its natural
+rebound is therefore weaker as well as less accurate, which is the
+football.
+
+**`contactPointActual` is 3-D.** The head-local `Vector2`
+(Appendix D: +x facing-forward, +y agent-left) is the frame §3.4
+and §3.6 are defined over, and remains so — but it is a
+*projection*, and the reflection MUST take its normal from the
+full 3-D point. Reconstructing the world point from the 2-D
+projection is the defect ERR-010-002 removed.
+
+**Who chooses `targetIntent`.** #10 realizes an aim; it does not
+choose one. The producer does — the match engine today
+(`GkHeadingIntentSource.HeaderAimTarget`, governed by
+`match-engine-design.md`), Decision Tree #8 when W9 lands. This is
+the same split `ERR-011-010` settled for the keeper's rush: the
+engine owns *when* and *at what*, #11/#10 own the
+attribute-driven *how*. `contactPointIntent` remains on
+`HeaderIntent` as the DT-supplied override for W9 and is **not
+read by Stage-0 geometry** — the half-vector that realizes an aim
+depends on the incoming velocity at contact, which no producer can
+know at commit time, and KD-4 locks the intent at commit.
 
 ### Worked Example
 
@@ -658,3 +772,4 @@ for evt in contactEvents:
 | 0.1     | May 16, 2026 | drafter | Initial section draft from outline-detailed v1.1 |
 | 0.2     | May 16, 2026 | drafter | v0.2 PASS-1 adversarial-review fix pass (21 findings: 5 H / 9 M / 7 L). H-1 §3.6 spin double-reversal removed; H-2 §3.4 `headingAttrScale` semantics realigned (errors divided by scale); H-3 §3.2 worked example off-by-one fixed (T+14 → T+16); H-4 §3.7 step 4 `disturbanceFactor` formula added + `DUEL_DISTURBANCE_GAP_SATURATION [GT]` row added to §3.1; H-5 §3.5 `ANGULAR_COEFF` removed (Stage 0 reflection-only launch angle, deferred to §7.12); M-2 `EligibilityPredicate` split into pure predicate + caller; M-3 `jumpStartFrame` source defined in §3.3; M-5 §3.7 step 5 2-way/3-way loser semantics aligned; M-8 frame-tolerance `ceil` rounding policy pinned in §3.2; M-9 `timingJitterMs` semantics paragraph added in §3.4; L-3 `JUMP_APEX_FRACTION` tag rationale moved to footnote. |
 | 0.3     | May 16, 2026 | drafter | APPROVAL. §3.1 `DOMAIN_TAG_HEADING` promoted `[CROSS-PENDING] → [CROSS]` post #16 §3.5 v1.0.2 patch (ERR-010-001 RESOLVED). New `HEADING_CONTACT_BUFFER_CAPACITY [GT]` row added for §4.2.1 collision-event consumer buffer (OI-005). |
+| 0.4     | August 9, 2026 | — | **ERR-010-002 — the header aim had no owner.** §3.5's realization paragraph delegated the aim to Decision Tree #8 ("selects a contact point on the head surface such that the reflected vector points at the target"); #8 cannot emit a header at all (`ActionType` ordinal 8 overflows the 3-bit composure-noise field — wiring backlog W9), so the producer has always been the match-engine proximity trigger, which supplied `contactPointIntent = 0` and a fixed `targetIntent`, and §3.5 read neither: **every header was a passive mirror.** The `ERR-011-010` shape. New **§3.5.1** takes the derivation back into #10 — ballistic launch solve to the target at the perfect-contact speed (low root; 45° max-range fallback out of range, P1 continuous), the reflecting half-vector bounded to the physically reachable hemisphere, and an achieved normal blended from the geometric normal by normalised Heading (FULL-RANGE ramp, `ERR-008-019` shape; authority 0 ≡ pre-fix behaviour). No new `[GT]` — the attribute is the dial, so this stays inside the KD-W1 freeze. `pointError` becomes a genuine execution error rather than the distance between a hardcoded zero and a geometric fact. §3.5.1 also pins that `contactPointActual` is 3-D (the 2-D head-local frame is §3.4/§3.6's definition domain and a projection of it) and states the producer/realizer split: the engine chooses `targetIntent`, #10 realizes it. |

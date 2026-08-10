@@ -6,8 +6,9 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 1.99
-**Updated:** August 9, 2026 (v1.99 — **CORRECTION to v1.98: `ERR-008-024` was recorded RESOLVED. It is not.** The v1.98 entry below overstated the outcome, filed earlier this same session. The tie-break fix — ranking §3.1.5.2's 8 sectors on `spaceInSector × DirectionQuality_DRIBBLE(sectorDir, toGoal)` instead of `spaceInSector` alone — was **implemented, measured, and REFUSED**, the KD-CC7 pattern (`close-chance-creation-design.md` §4, where the #15 run overlay met the same fate). It DOES fix the symptom: `sim_match_engine_close_chance` goes meanCosine −0.165 / goalwardShare 0.407 (both failing) to **PASS** (bounds −0.16 / 0.42, neither moved). But the same build **stalls play outright**: `sim_match_engine_play_develops` fails with "play stalled: last possession change at tick 18424, ball last moving at tick 18465 of 32400", and `sim_match_engine_shot_outcomes` fails `goals-still-scored` at **0**. A wider form ranking on `space × DirectionQuality` outright (not as a tie-break) produced the **identical** stall at the **identical tick**, plus mean-shot-distance 25.41 m against a 24.00 m ceiling — that identity is what localises the cause to the tie-break itself, not to how much space either form trades away. **Refused, not landed.** `OptionGenerator.cs` is now byte-identical in logic to the pre-fix baseline (verified: `git diff 23f8dd9 -- src/decision-tree/OptionGenerator.cs` has zero non-comment lines). What was KEPT is behaviour-neutral only: `DirectionQuality_DRIBBLE` hoisted to public static `UtilityWeights.DribbleDirectionQuality(Vector2, Vector2)` with `UtilityScorer` delegating to it (so generation and scoring cannot drift apart if this is retried), plus a long explanatory note at the defect site recording the refusal for the next attempt. The two §3.1.5.2 unit locks the v1.98 landing added are **REMOVED** — they locked behaviour that no longer exists. `DecisionTree.Tests` is back to **129 passed / 4 skipped / 0 failed**. ERR-008-024's status below changes from Resolved to **recorded, NOT fixed — implemented, measured, refused**; `section-3-1.md` reverted to v1.8 to describe the code that actually ships; `close-chance-creation-design.md` §7 item 6 **REOPENED** at v1.4. Prior (overstated) entry below, left unedited per this file's convention.)
+**Version:** 2.00
+**Updated:** August 9, 2026 (v2.00 — **ERR-010-002 filed + RESOLVED: the header aim had no owner, and every header was a passive mirror.** #10 §3.5 delegated the aim to Decision Tree #8, which cannot emit a header at all (`ActionType` ordinal 8 overflows the 3-bit composure-noise field — wiring backlog W9), so `TargetIntent` reached no formula and the outgoing direction was pure specular reflection about `normalize(ballPosition − headCentre)`. Correcting `close-chance-creation-design.md` §10.6 item 3, which recorded the symptom ("a fixed aim point") and mis-stated its consequence: a defender clearing in his own box did not aim 90 m at the far goal — he headed the ball back the way it came. Two further defects in the same chain: the contact point had **two independent derivations** across `HeadingMechanics.Update`'s two passes, and Pass 2 rebuilt the world point from its **2-D** head-local projection, pinning `contactPointActual.z` to the head centre, so the reflection normal was permanently horizontal and `reflected.z = v̂_in.z` — **a descending ball was headed further down** and no header could lift the ball. Resolved by new #10 §3.5.1 + `HeadingAim.cs` (ballistic launch solve, half-vector normal bounded to the reachable hemisphere, attribute-blended achieved normal — authority 0 ≡ pre-fix, FULL-RANGE ramp) plus the producer half `GkHeadingIntentSource.HeaderAimTarget` (clear wide when deep, aim at goal when advanced, continuous). The `ERR-011-010` shape. No new `[GT]` (inside KD-W1), no schema bump, no RNG/draw-order change. Prior entry below.)
+**Updated (prior):** August 9, 2026 (v1.99 — **CORRECTION to v1.98: `ERR-008-024` was recorded RESOLVED. It is not.** The v1.98 entry below overstated the outcome, filed earlier this same session. The tie-break fix — ranking §3.1.5.2's 8 sectors on `spaceInSector × DirectionQuality_DRIBBLE(sectorDir, toGoal)` instead of `spaceInSector` alone — was **implemented, measured, and REFUSED**, the KD-CC7 pattern (`close-chance-creation-design.md` §4, where the #15 run overlay met the same fate). It DOES fix the symptom: `sim_match_engine_close_chance` goes meanCosine −0.165 / goalwardShare 0.407 (both failing) to **PASS** (bounds −0.16 / 0.42, neither moved). But the same build **stalls play outright**: `sim_match_engine_play_develops` fails with "play stalled: last possession change at tick 18424, ball last moving at tick 18465 of 32400", and `sim_match_engine_shot_outcomes` fails `goals-still-scored` at **0**. A wider form ranking on `space × DirectionQuality` outright (not as a tie-break) produced the **identical** stall at the **identical tick**, plus mean-shot-distance 25.41 m against a 24.00 m ceiling — that identity is what localises the cause to the tie-break itself, not to how much space either form trades away. **Refused, not landed.** `OptionGenerator.cs` is now byte-identical in logic to the pre-fix baseline (verified: `git diff 23f8dd9 -- src/decision-tree/OptionGenerator.cs` has zero non-comment lines). What was KEPT is behaviour-neutral only: `DirectionQuality_DRIBBLE` hoisted to public static `UtilityWeights.DribbleDirectionQuality(Vector2, Vector2)` with `UtilityScorer` delegating to it (so generation and scoring cannot drift apart if this is retried), plus a long explanatory note at the defect site recording the refusal for the next attempt. The two §3.1.5.2 unit locks the v1.98 landing added are **REMOVED** — they locked behaviour that no longer exists. `DecisionTree.Tests` is back to **129 passed / 4 skipped / 0 failed**. ERR-008-024's status below changes from Resolved to **recorded, NOT fixed — implemented, measured, refused**; `section-3-1.md` reverted to v1.8 to describe the code that actually ships; `close-chance-creation-design.md` §7 item 6 **REOPENED** at v1.4. Prior (overstated) entry below, left unedited per this file's convention.)
 **Updated (prior):** August 9, 2026 (v1.98 — **ERR-008-024 filed + RESOLVED: §3.1.5.2's 8-sector dribble scan always picked `AgentFacingDirection`, whatever the goal.** `spaceInSector` saturates at exactly 1.0 for any sector clear of `DRIBBLE_THREAT_RADIUS`, and the old scan ranked on `spaceInSector` alone with a strict `>` improvement test — so whenever two or more sectors were clear (the common case in the final third) the winner was always sector 0, `AgentFacingDirection` by construction, and goal direction never entered the choice at all. This is why ERR-008-018's `DirectionQuality_DRIBBLE` scoring term could suppress a retreating dribble but never redirect it (`close-chance-creation-design.md` KD-CC3 / §7 item 6, now closed). Fixed by ranking sectors on `spaceInSector × DirectionQuality_DRIBBLE(sectorDir, toGoal)` — the SAME term §3.2.4.1 already applies when scoring the resulting option, hoisted to a new public static `UtilityWeights.DribbleDirectionQuality(Vector2, Vector2)` so both stages share one formula instead of a hand-copied second walk; `UtilityScorer.ComputeDribbleDirectionQuality` now delegates to it, behaviour there unchanged. **No new constant** — the floor is ERR-008-018's `DRIBBLE_GOAL_DIR_MIN_MODIFIER` = 0.80, untouched, so `DirectionQuality_DRIBBLE ∈ [0.80, 1.0]` and direction can outrank at most a 20% space deficit (KD-CC6 preserved; a genuinely blocked sector still loses on space). Measured: `sim_match_engine_close_chance` acceptance scenario — meanCosine −0.165 → **PASS** (bound −0.16, unmoved), goalwardShare 0.407 → **PASS** (bound 0.42, unmoved). `DecisionTree.Tests` **131 passed / 4 skipped / 0 failed**, incl. 2 new §3.1.5.2 locks. `OptionGenerator.cs` v1.11, `UtilityScorer.cs` v1.16, `UtilityWeights.cs` v1.14, `OptionGeneratorTests.cs` v1.11, `section-3-1.md` v1.7, `close-chance-creation-design.md` v1.3. **⚠️ CORRECTED at v1.99 above — this entry overstated the outcome. The fix described here was implemented, measured, and REFUSED, not landed; see v1.99 for the refusal evidence.** Prior entry below.)
 **Updated (prior):** August 8, 2026, later same day (v1.97 — **ERR-012-011 filed + RESOLVED at wiring-backlog C1: the #12 `InPoss` gate.** #12 §3.0 classified phase from the on-ball carrier, absent for the whole flight of every pass, so a passing team read as being in transition — measured `InPoss` on **7.5%** of final-third samples against `TransToAtk` 58.9%. Phase now classifies from TEAM possession, composed by the orchestrator from the carrier's team ∪ the intended receiver of a pass in flight; the latch expires with no new `[GT]` by reusing `RunFirstTouch`'s receding predicate. Snapshot fields ADDED not redefined (#23's FR-DM-007 exclusion untouched); **`SNAPSHOT_SCHEMA_VERSION` 19 → 20**; no RNG/draw-order change. Two clears recorded as having no isolating lock. Prior entry below.)
 
@@ -130,6 +131,7 @@ authoritative remediation backlog.
 | ERR-012 | First Touch §7 refers to Decision Tree as Spec #7 (5 occurrences) | Minor | 1 | ✅ Closed — Fixed in first-touch/section-7.md v1.1 (March 5, 2026) |
 | ERR-012-001 | `DOMAIN_TAG_POSITIONING_AI` allocation + Phase B/C block (originally proposed `0x16…0x1B`; shifted to `0x17…0x1C` May 16, 2026 after #10 took `0x16`) needed in #16 §3.4 | Medium | 1 | ✅ Resolved May 18, 2026 — `DOMAIN_TAG_POSITIONING_AI = 0x17` allocated in #16 §3.4 v1.0.5; §6.1 `[CROSS-PENDING]` → `[CROSS: #16 §3.4]` promoted atomically with #12 `APPROVED`; body-text instances in §1/§2/§3/§4/§8 promoted in v0.3/v0.4 fix passes |
 | ERR-012-002 | Decision Tree #8 `section-3-1.md` L716 cites Formation System as "Spec #14" — current #14 is Defensive AI; Formation System is #12 | Minor | 1 | ✅ Closed — Fixed in decision-tree/section-3-1.md v1.1.1 (May 15, 2026); single-token "Spec #14" → "Positioning AI, Spec #12"; approval status preserved |
+| ERR-010-002 | Heading Mechanics #10 §3.5 delegated the header aim to Decision Tree #8 — which **cannot emit a header at all** (`ActionType` ordinal 8 overflows the 3-bit composure-noise field; wiring backlog W9) — so the aim decision had no owner and `TargetIntent` reached no formula. Every header was a **passive specular mirror**: the ball left the head along the reflection of its own incoming path and the player had no influence on direction. Two further defects in the same chain: the contact point had **two independent derivations** (Pass 1 and Pass 2 of `HeadingMechanics.Update`, agreeing only by coincidence), and Pass 2 rebuilt the world point from its **2-D** head-local projection, pinning `contactPointActual.z` to the head centre — so the reflection normal was permanently horizontal, `reflected.z = v̂_in.z`, and **a descending ball was headed further down**. No header could lift the ball. The `ERR-011-010` shape. | **High** | 10 | ✅ **Resolved August 9, 2026** — new #10 §3.5.1 + `HeadingAim.cs`: ballistic launch solve to the target (low root; 45° max-range fallback out of range, P1), the reflecting half-vector bounded to the physically reachable hemisphere, and an achieved normal blended from the geometric normal by normalised Heading (FULL-RANGE ramp, `ERR-008-019` shape; authority 0 ≡ pre-fix). One `ResolveContactGeometry` owner read by both passes; the 3-D contact point carried directly. Producer half: new `GkHeadingIntentSource.HeaderAimTarget` — clear wide when deep, aim at goal when advanced, continuous between. **No new `[GT]`** (the attribute is the dial, so inside KD-W1), **no schema bump**, no new RNG stream / domain tag / draw site / draw-order change; digests move because contact counts do. |
 | ERR-012-011 | Positioning AI #12 §3.0 classified phase from the **on-ball carrier**, which the engine clears at every `ApplyKick` and restores only on physical receipt — so for the entire flight of every pass the snapshot read "loose ball" and §3.0.2's velocity branch classified a team knocking the ball around as being in **transition**. Measured: `InPoss` committed on **7.5%** of final-third samples (`TransToAtk` 58.9%), starving every phase-gated mechanism in #13/#14/#15. Spec and code were each self-consistent; "who is on the ball" and "which team has the ball" are different questions and only the first was ever asked. | **High** | 9 | ✅ **Resolved August 8, 2026** (wiring backlog C1) — §3.0/FR-PA-022 now classify from TEAM possession, composed by the orchestrator as carrier's team ∪ intended receiver of a pass in flight; new §3.0.5 worked example. Engine gains a `_passInFlightReceiverId` latch expiring on possession, any ball strike, restart, receiver inactivity, or the ball ceasing to approach him (`RunFirstTouch`'s own receding predicate, hoisted — **no new `[GT]`, no timeout**, so inside the KD-W1 freeze). Snapshot fields ADDED, not redefined, so #23's FR-DM-007 carrier exclusion is untouched. **`SNAPSHOT_SCHEMA_VERSION` 19 → 20**; no new RNG stream / domain tag / draw site / draw-order change. Two clears (GK-heading adapter, `ApplyRestart`) recorded as having no isolating lock. |
 | ERR-008-001 | Decision Tree #8 §3.2 `PitchGeometry` pseudocode class uses centered origin `(0,0) = centre of pitch` with X:−52.5–+52.5m/Y:−34–+34m — contradicts CLAUDE.md + Ball Physics #1 §1.2 corner-origin; all goal constants wrong | High | 1 | ✅ Resolved May 18, 2026 — `section-3-2.md` v1.3: class rewritten to corner-origin (0,0,0); all `Vector2` goal constants replaced with `Vector3` using correct values; citation corrected to §1.2 and Appendix C; XC-GEOM-01 verification note added |
 | ERR-008-002 | DT #8 §2.2.5 `MatchContext.BallZone` is a single shared field documented "from own goal line" — unsatisfiable for both teams; implementation consumed home-perspective zone for away agents (all zone modifiers inverted; away in-range shots ×0.10) | High | 3 | ✅ Resolved June 11, 2026 — §2.2.5 field note (home-perspective; normative consumption is per-team derivation from `BallPosition.x`), §3.2.1.3 consumption note; `DecisionContextAssembler.cs` v1.2 + `PitchGeometry.cs` v1.1 + `UtilityScorer.cs` v1.2 |
@@ -2305,6 +2307,109 @@ ball reproduces the pre-fix slot exactly, so the existing worked examples and un
 keeper position: no new cross-tick state, **no `SNAPSHOT_SCHEMA_VERSION` change, no new RNG
 stream / domain tag / draw site, no draw-order change** — digests move for any match containing a
 save episode, as intended.
+
+---
+
+## ERR-010-002: Heading Mechanics #10 §3.5 delegated the header aim to a system that cannot emit headers, so every header was a passive mirror
+
+**Filed:** August 9, 2026. **Status: RESOLVED** (same commit, spec + code).
+Owner document: `docs/tracking/close-chance-creation-design.md` §10.6 item 3 (which recorded the
+symptom and mis-stated its consequence — corrected in the same commit).
+
+**The defect.** #10 §3.5 stated, verbatim: *"The intended launch direction (toward `targetIntent`)
+is realized by the upstream choice of `contactPointIntent`: Decision Tree #8 selects a contact point
+on the head surface such that the reflected vector points at the target."*
+
+Decision Tree #8 **cannot emit a header at all.** `ActionType` ordinal 8 overflows the 3-bit
+composure-noise field, which is why DT-emitted HEADER is deferred as wiring-backlog **W9**. The
+producer of every `HeaderIntent` in the game is, and for the whole of Stage 0 has been, the
+match-engine proximity trigger `MatchEngine.TryCommitHeaderIntents`, which supplied
+`ContactPointIntent = Vector2.zero` and a fixed `TargetIntent`.
+
+So the aim was delegated to a system that structurally could not make the decision, and therefore
+nobody made it. **This is the `ERR-011-010` shape exactly** — the same finding, one spec over: §11
+§3.7 delegated the keeper's rush decision to #8, which has no keeper model and cannot acquire one,
+and the condition sat unowned for ten weeks.
+
+**Three defects, one chain.** The consequence is worse than "the aim is a fixed point", which is how
+`close-chance-creation-design.md` §10.6 item 3 recorded it:
+
+1. **`TargetIntent` reached no formula.** Verified by exhaustive grep: its only production uses are
+   `HeadingMechanics.ClampToPitch` and the snapshot serializer. `ContactPointIntent` reached exactly
+   one read — §3.4's `pointError` — and never the geometry, because `contactPointActual` was
+   recomputed from ball-vs-head geometry. The outgoing direction was therefore pure specular
+   reflection about `normalize(ballPosition − headCentre)`: **a header was a passive bounce and the
+   player had no influence on where the ball went.** Correcting §10.6's recorded consequence: a
+   defender clearing in his own box did NOT aim 90 m at the far goal — he headed the ball back the
+   way it came, which is worse football and a different defect. Neither intent field had ever been
+   exercised anywhere in the tree, including in #10's own `HeadingScenarios` fixture, which also sets
+   `ContactPointIntent = Vector2.zero`.
+2. **The contact point had two independent derivations.** `HeadingMechanics.Update` Pass 1 (quality)
+   and Pass 2 (execution) each computed it from ball-vs-head geometry in separate code. They agreed
+   only by coincidence — the parallel-surface trap this log has filed repeatedly, most recently as
+   the T2-H3 `LineupSelector.CanSelect` finding. Now one `ResolveContactGeometry` owner, read by both.
+3. **A header could not lift the ball.** Pass 2 rebuilt the world-space contact point from its **2-D**
+   head-local projection (`+x` facing-forward, `+y` agent-left — both horizontal), which pins
+   `contactPointActual.z` to the head centre's z. The §3.5 reflection normal was therefore
+   permanently horizontal, and for a horizontal normal `reflected.z = v̂_in.z`: **a descending ball
+   was headed further down.** Every cross dropping onto a defender's head was deflected into the
+   turf. This was introduced by the AR-3 M-1 fix, which correctly stopped the lateral offset being
+   injected as height and, in doing so, removed the vertical component altogether; that fix is
+   preserved — the lateral term still maps to the agent-left axis — while the 3-D point is now
+   carried directly instead of round-tripped.
+
+**The resolution.** New #10 **§3.5.1**, and `src/heading-mechanics/HeadingAim.cs`. Three pure steps:
+
+- **Ballistic launch direction** to `targetIntent` at the speed a perfect contact would carry. A
+  destination is reached by an arc, not a straight line — aiming along the straight line to a distant
+  ground point heads the ball into the turf. The **low** root is taken (a header is a driven contact,
+  not a lob). `disc < 0` — the target beyond ballistic range — degrades continuously to the 45°
+  maximum-range launch rather than failing (**P1**, continuous never a cliff), which is the ordinary
+  case for a defensive clearance and is what makes one long and high. Solved at the perfect-contact
+  speed deliberately: solving at the achieved speed would be circular, since achieved speed follows
+  from quality and quality follows from the aim error.
+- **The half-vector normal** that realizes it, `normalize(incident + aimDir)` — the exact inverse of
+  §3.5's reflection — bounded to the hemisphere the ball can physically reach. You cannot head a ball
+  with the back of your skull; outside that hemisphere the normal is projected onto the grazing
+  boundary, where the reflection leaves the ball travelling on unchanged, so the bound degrades
+  continuously rather than snapping.
+- **The achieved normal**, blended from the geometric normal toward the aim normal by normalised
+  Heading. **Steer authority 0 is exactly the pre-fix model**, and the ramp spans the whole attribute
+  range with no plateau at either end (raw 1 → 0.05, raw 20 → 1.00) — the FULL-RANGE shape settled at
+  `ERR-008-019`. The aim is skill (**P2**), not a switch.
+
+`pointError` becomes a genuine **execution** error for the first time: it was previously the distance
+between a hardcoded zero and a geometric fact. A header steered hard away from its natural rebound is
+now weaker as well as less accurate, which is the football.
+
+**The producer half.** #10 realizes an aim; it does not choose one. The engine does, via new
+`GkHeadingIntentSource.HeaderAimTarget` (§4.2a) — the same producer/realizer split `ERR-011-010`
+settled for the keeper's rush. The football is one sentence: **the deeper you are, the wider you
+clear; the further forward you are, the more you aim at the goal**, as a continuous lerp in the
+taker's advancement up his own attacking direction, never a zone switch (**P1**). Constant-free: the
+only inputs are position, team, and `[FIXED]` pitch geometry.
+
+**No new `[GT]`** — the Heading attribute is itself the dial — so this stays inside **KD-W1** while
+heading remains unwired. **No `SNAPSHOT_SCHEMA_VERSION` bump**: both intent fields were already
+serialized and nothing new survives a tick. **No new RNG stream, no new domain tag, no new draw site,
+no draw-order change.** Digests DO move for any match containing a header, because the number of
+contacts changes and `HeadingContactQuality` draws twice per contact from the registered
+`heading.mechanics` stream, advancing its cursor.
+
+**Recorded, NOT fixed** (aim refinements on top of an aim that now exists):
+- The attacking target is the goal **centre** — i.e. at the goalkeeper. Aiming away from him needs the
+  keeper's position at the producer.
+- The target never names a **team-mate**: a knock-down or a flick to a runner is a #8 decision that
+  arrives with W9.
+- `HeaderIntent.ContactPointIntent` remains on the struct as the W9 DT-supplied override and is not
+  read by Stage-0 geometry. The half-vector that realizes an aim depends on the incoming velocity at
+  contact, which no producer can know at commit, and KD-4 locks the intent at commit.
+- **`HeadingEligibility` freezes the head centre — position AND jump-arc z — at the agent's current
+  frame** while sweeping only the ball, so a player running onto a ball is predicted to miss. Not
+  touched here; it is the contact model, not the aim.
+- **#10 KD-18's aerial-phase gate reads `AgentMovementState.GROUNDED`, which #2 §3.1.2 defines as
+  "knocked down"**, not "on the ground". A standing, upright player satisfies "must have left the
+  ground". Cross-spec semantic collision, separate ERR candidate, deliberately not folded in here.
 
 ---
 

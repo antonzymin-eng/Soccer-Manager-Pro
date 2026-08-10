@@ -284,15 +284,27 @@ namespace TacticalDirector.HeadingMechanics
                         agentState.Position.y,
                         agentHeadZ);
 
-                    Vector2 contactPointActual_headLocal = ComputeContactPointHeadLocal(
-                        freshBall.Position, headCentre_ws, agentState.FacingDirection);
+                    // §3.5.1 (ERR-010-002): the aimed contact geometry. contactPointIntent is DERIVED
+                    // here from TargetIntent rather than read from intent.ContactPointIntent — the
+                    // half-vector that realizes an aim depends on the incoming velocity at contact,
+                    // which no producer can know at commit time, and #10 KD-4 locks the intent at commit.
+                    ResolveContactGeometry(
+                        in intent,
+                        in attrs,
+                        freshBall.Position,
+                        freshBall.Velocity,
+                        headCentre_ws,
+                        agentState.FacingDirection,
+                        out Vector2 contactPointActual_headLocal,
+                        out Vector2 contactPointIntent_headLocal,
+                        out Vector3 unusedContactPoint_ws);
 
                     // Compute contact quality.
                     float qualityScalar = HeadingContactQuality.Compute(
                         contactState.ActualContactFrame,
                         contactState.IdealContactFrame,
                         contactPointActual_headLocal,
-                        intent.ContactPointIntent,
+                        contactPointIntent_headLocal,
                         attrs,
                         _rng,
                         out float timingOffsetMs,
@@ -345,18 +357,30 @@ namespace TacticalDirector.HeadingMechanics
                     agentState.Position.y,
                     agentHeadZ);
 
-                Vector2 contactPointActual_headLocal = ComputeContactPointHeadLocal(
-                    currentBall.Position, headCentre_ws, agentState.FacingDirection);
-
-                // Invert ComputeContactPointHeadLocal exactly: head-local +x = facing-forward,
-                // +y = agent-left lateral (-facing.y, facing.x) — both horizontal (XY plane).
-                // The lateral component MUST map to the left axis, not world Z (AR-3 M-1 fix);
-                // the prior code injected the lateral offset as height, tilting the reflection
-                // normal vertically for any off-centre header.
-                Vector2 facing = agentState.FacingDirection;
-                Vector3 contactPointActual_ws = headCentre_ws
-                    + new Vector3(facing.x, facing.y, 0.0f) * contactPointActual_headLocal.x
-                    + new Vector3(-facing.y, facing.x, 0.0f) * contactPointActual_headLocal.y;
+                // §3.5.1 (ERR-010-002): one owner for the contact geometry, shared with Pass 1 above.
+                //
+                // Pass 1 reassigns currentBall from each agent's own FR-HE-033 re-query, so by the time
+                // Pass 2 runs it holds the last-evaluated agent's freshBall. That is the same physical
+                // ball every agent saw this frame — the re-query reads one ball system at one frame —
+                // so both passes resolve identical geometry from identical inputs. The pre-fix code
+                // achieved that only by having written the same expression twice.
+                //
+                // The 3-D contact point is taken directly and NOT rebuilt from the 2-D head-local
+                // projection. Rebuilding it (the pre-fix Pass 2) pinned contactPointActual_ws.z to the
+                // head centre's z, so the §3.5 reflection normal was always horizontal and
+                // reflected.z == v̂_in.z — a dropping cross was headed further DOWN and no header
+                // could lift the ball. AR-3 M-1's fix, which stopped the lateral offset being injected
+                // as height, is preserved: the lateral term still maps to the agent-left axis.
+                ResolveContactGeometry(
+                    in intent,
+                    in attrs,
+                    currentBall.Position,
+                    currentBall.Velocity,
+                    headCentre_ws,
+                    agentState.FacingDirection,
+                    out Vector2 contactPointActual_headLocal,
+                    out Vector2 unusedAimHeadLocal,
+                    out Vector3 contactPointActual_ws);
 
                 // Find this agent's duel result.
                 int  duelId          = -1;
@@ -501,34 +525,104 @@ namespace TacticalDirector.HeadingMechanics
         }
 
         /// <summary>
-        /// Converts world-space ball position to head-local 2-D contact point.
-        /// Head-local: origin = headCentre, +x = agent.facing forward, +y = agent-left lateral.
+        /// §3.5.1 (ERR-010-002) — resolves the aimed contact geometry for one contact frame.
+        ///
+        /// <para>Single owner of the contact point, called from BOTH passes of <see cref="Update"/>.
+        /// Before ERR-010-002 each pass computed it independently from ball-vs-head geometry — the
+        /// parallel-surface shape this project keeps filing against itself — and neither read
+        /// <c>TargetIntent</c>, so the header was a passive mirror.</para>
+        ///
+        /// <para>Three outputs, because the spec needs the contact point in two frames at once:
+        /// <paramref name="actual_ws"/> is the full 3-D point the §3.5 reflection normal is taken
+        /// from, while <paramref name="actualHeadLocal"/> is its 2-D head-local projection, which is
+        /// all §3.4's <c>pointError</c> and §3.6's spin transfer are defined over (Appendix D pins that
+        /// frame as 2-D: +x facing-forward, +y agent-left). Reconstructing the world point FROM the
+        /// 2-D projection — what the pre-fix Pass 2 did — forces
+        /// <c>actual_ws.z == headCentre.z</c>, hence a permanently horizontal normal, hence
+        /// <c>reflected.z == v̂_in.z</c>: a descending ball stayed descending and no header could ever
+        /// lift the ball. The 3-D point is therefore carried directly rather than round-tripped.</para>
+        ///
+        /// <para>Radial magnitude is preserved from the geometric contact exactly as before; only the
+        /// DIRECTION is steered. That keeps §3.6's axial-offset input and §3.4's error scale on their
+        /// existing footing so this landing changes one thing.</para>
         /// </summary>
-        private static Vector2 ComputeContactPointHeadLocal(
+        private static void ResolveContactGeometry(
+            in HeaderIntent intent,
+            in HeadingAgentAttributes attrs,
             Vector3 ballPos,
+            Vector3 ballVelocity,
             Vector3 headCentre_ws,
-            Vector2 facingDir)
+            Vector2 facingDir,
+            out Vector2 actualHeadLocal,
+            out Vector2 aimHeadLocal,
+            out Vector3 actual_ws)
         {
             Vector3 delta = ballPos - headCentre_ws;
-
-            // Forward axis (head-local +x) = agent.facing projected into world XY, then extended to 3D.
-            Vector3 fwd = new Vector3(facingDir.x, facingDir.y, 0.0f);
-
-            // Left axis (head-local +y) = perpendicular in XY plane (CCW from forward).
-            Vector3 left = new Vector3(-facingDir.y, facingDir.x, 0.0f);
-
-            float localX = Vector3.Dot(delta, fwd);
-            float localY = Vector3.Dot(delta, left);
-
-            // Clamp to head contact radius.
             float radius = HeadingMechanicsConstants.HeadContactVolumeRadiusM;
-            Vector2 local = new Vector2(localX, localY);
-            if (local.sqrMagnitude > radius * radius)
+
+            // Radial magnitude of the geometric contact, clamped to the head surface (pre-fix behaviour).
+            float magnitude = Mathf.Min(delta.magnitude, radius);
+
+            Vector3 geometricNormal = delta.sqrMagnitude < HeadingMechanicsConstants.SURFACE_NORMAL_EPSILON_SQ
+                ? Vector3.zero
+                : delta.normalized;
+
+            // The aim is solved at the NOMINAL outgoing speed — the speed this header would carry on a
+            // perfect contact. Solving it at the achieved speed would be circular: achieved speed comes
+            // from contact quality, which comes from the error between aim and achieved. A player aims
+            // for the target expecting to strike it well, and execution then degrades what he gets.
+            float nominalSpeed = HeadingPowerAngle.ComputeOutgoingSpeed(
+                attrs, intent, HeadingMechanicsConstants.PERFECT_CONTACT_QUALITY);
+
+            Vector3 aimNormal = Vector3.zero;
+            if (ballVelocity.sqrMagnitude >= HeadingMechanicsConstants.DEGENERACY_EPSILON_SQ &&
+                IsFiniteVector(ballVelocity))
             {
-                local = local.normalized * radius;
+                Vector3 incident = -ballVelocity.normalized;
+                Vector3 aimDirection = HeadingAim.ComputeAimDirection(ballPos, intent.TargetIntent, nominalSpeed);
+                aimNormal = HeadingAim.ComputeAimNormal(incident, aimDirection);
             }
 
-            return local;
+            Vector3 achievedNormal = HeadingAim.ComputeAchievedNormal(
+                geometricNormal, aimNormal, NormalisedHeading(attrs));
+
+            actual_ws = headCentre_ws + achievedNormal * magnitude;
+            actualHeadLocal = ProjectToHeadLocal(achievedNormal * magnitude, facingDir);
+
+            // A degenerate aim leaves intent equal to achieved, so pointError is zero and §3.4 charges
+            // nothing for an aim that was never expressible.
+            aimHeadLocal = aimNormal.sqrMagnitude < HeadingMechanicsConstants.SURFACE_NORMAL_EPSILON_SQ
+                ? actualHeadLocal
+                : ProjectToHeadLocal(aimNormal * magnitude, facingDir);
+        }
+
+        /// <summary>Normalised Heading attribute [0, 1] — §3.5.1's steer authority (ERR-010-002).</summary>
+        private static float NormalisedHeading(in HeadingAgentAttributes attrs)
+        {
+            float clamped = Mathf.Clamp(
+                attrs.Heading,
+                HeadingMechanicsConstants.ATTR_MIN,
+                HeadingMechanicsConstants.ATTR_MAX);
+            return clamped / HeadingMechanicsConstants.ATTR_MAX;
+        }
+
+        private static bool IsFiniteVector(Vector3 v)
+        {
+            return float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
+        }
+
+        /// <summary>
+        /// Projects a world-space head-surface offset into the 2-D head-local frame
+        /// (origin = head centre, +x = agent.facing forward, +y = agent-left lateral; Appendix D).
+        /// The vertical component is dropped BY DEFINITION of that frame — §3.4 and §3.6 are the only
+        /// consumers and both are defined over it. The reflection uses the 3-D point instead.
+        /// </summary>
+        private static Vector2 ProjectToHeadLocal(Vector3 offset, Vector2 facingDir)
+        {
+            Vector3 fwd  = new Vector3(facingDir.x, facingDir.y, 0.0f);
+            Vector3 left = new Vector3(-facingDir.y, facingDir.x, 0.0f);
+
+            return new Vector2(Vector3.Dot(offset, fwd), Vector3.Dot(offset, left));
         }
 
         private Vector3 ClampToPitch(Vector3 pos, int agentId)

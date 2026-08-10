@@ -560,6 +560,81 @@ mechanism closes the remaining 1.32 m.
    stops re-evaluating once the frame passes the agent's landing frame, dropping such a commit with
    neither event fired.
 
+### 10.7 Two corrections to §10.6 — one of them retracts its headline measurement
+
+> **August 9, 2026.** Both were found while implementing §10.6's own recorded items, and both were
+> confirmed against source before anything was changed. The council convened on those items
+> (`advisor-integrity` + `advisor-evidence`, pre-implementation) surfaced the second.
+
+**Correction 1 — item 3's consequence was wrong, and the truth is worse.** §10.6 item 3 records "the
+header target is a FIXED point — opponent goal X, pitch-width / 2 — from anywhere on the pitch, so a
+defender clearing in his own box aims 90 m at the far goal." The **value** is right. The
+**consequence** is not: `TargetIntent` reaches no formula anywhere in the tree. Its only production
+uses are a pitch clamp and the snapshot serializer. `ContactPointIntent` — hardcoded `Vector2.zero`
+by the only producer — reaches exactly one read, §3.4's `pointError`, and never the geometry, because
+`contactPointActual` is recomputed from ball-vs-head geometry. The outgoing direction was therefore
+**pure specular reflection**: a header was a passive bounce and the player had no influence on
+direction at all. A defender clearing in his own box did not aim 90 m at the far goal; **he headed
+the ball back the way it came.** Filed and fixed as `ERR-010-002`, together with two further defects
+in the same chain that §10.6 did not see: the contact point had two independent derivations, and the
+world-space point was rebuilt from its 2-D head-local projection, pinning its height to the head
+centre — so the reflection normal was permanently horizontal, `reflected.z = v̂_in.z`, and **a
+descending ball was headed further down.** No header could lift the ball.
+
+**Correction 2 — §10.6's proximity census is an instrument artifact, and the ranking built on it is
+RETRACTED.** This is the third time this document has had to retract a priority claim, and the first
+time the cause is the instrument rather than the reasoning.
+
+`CloseChanceDiagnosticTests.BallToAgentDistance3D` computes
+`sqrt(dx² + dy² + ballPos.z²)` — the distance from the ball to the agent's **ground** position,
+including the ball's **full height**. Every sample is taken inside the episode gate
+`ballPos.z > HeaderTriggerMinBallHeightM` = **0.5 m**. So every sample is `> 0.5 m` **by
+construction**, and the census's first two buckets — `≤ 0.18 m` and `0.18–0.5 m` — are
+**structurally unreachable.** §10.6 published exactly `0%` in both, for both attackers and
+defenders, and read it as a measurement.
+
+What that invalidates, specifically:
+
+| §10.6 claim | status |
+|---|---|
+| "0% of airborne final-third episodes bring ANY outfielder within the 0.18 m contact volume" | **NOT MEASURED** — the bucket cannot be populated |
+| "an airborne ball is untouchable by **anybody, anywhere**" | **NOT ESTABLISHED** |
+| "the 0.18 m contact volume is unreachable by construction … no mechanism closes the remaining **1.32 m**" | **ARITHMETIC INVALID** — subtracts a horizontal trigger radius from a 3-D distance carrying a ≥ 0.5 m vertical floor |
+| nearest attacker **5.9 m** / nearest defender **4.7 m** | **MIS-LABELLED** — these are not horizontal separations; they carry the same height floor |
+| "box occupancy is NOT the binding constraint" | **UNSUPPORTED BY THIS CENSUS** (may still be true; not shown here) |
+
+Read as what it actually is — a 3-D distance including height — the same table shows roughly **31%
+of episodes with a defender within 0.5–1.5 m of the ball**, i.e. essentially under it or beside it.
+Defenders are in the contest. That is the **opposite** of the premise §10.6 item 2 was ranked on.
+
+**Consequences for the order.** §10.6 item 2 named "attack the ball — move a player to a ball's
+predicted arrival point" as the candidate first lever, on the strength of the refuted census. That
+ranking is **withdrawn, not replaced**: the mechanism may still be worth building, but nothing in
+this document currently establishes it, and the next pass owns the measurement, not the build. Two
+candidates that were never considered sit ahead of it, both cheaper and both upstream:
+
+1. **The header commit has no head-height gate.** `TryCommitHeaderIntents` fires for any loose ball
+   above **0.5 m**, while the head only occupies ~2.0–2.6 m during the §3.2 eligibility window
+   (apex = commit + 20 frames; window `[apex − 9, apex + 6]`). A knee-high ball at 0.6 m commits a
+   header that cannot possibly connect, and `positionedPoorly` — 97–99% of the 963 failures — is
+   emitted whenever `FindContactFrame` returns −1 **for any reason**, so it conflates "he was 4 m
+   away horizontally" with "the ball was 1.8 m below his head". Which of those dominates has never
+   been measured, and it is the single split that decides whether item 2 is the lever at all.
+2. **`HeadingEligibility.FindContactFrame` freezes the head centre — position AND jump-arc z — at the
+   agent's current frame** while sweeping only the ball. Even a perfectly-arriving player is tested
+   against the wrong head height. §10.6 named the XY half of this; the vertical half is new.
+
+Also recorded, from the same council: **`ERR-012-012` remains unconsumed and unreserved.** The
+intercept Z-blindness that item 2 would fix belongs to **#8 §3.1.9.2**, whose normative pseudocode
+has no aerial model at all — not to #12 — so it takes an `ERR-008-0NN` when it is filed, and §10.5's
+earmark for Bound A stands. And a KD-W1 note that constrains the shape of any such landing: making
+the projection 3-D moves the intercept point for a lofted ball to where the ball actually **lands**,
+which is FURTHER away, so `travelTime ≤ t` fails more often inside the 1.5 s horizon — expect
+**fewer** intercept candidates, not more. The unlock is `MAX_INTERCEPT_TIME` (1.5 s against a
+measured 2.83 s mean time-to-rest), which is `[GT]` and governs aerial reception, which W9/C7 leave
+unwired. **Inside the freeze.** Measure the candidate count before and after, or a correctness fix
+gets reported as a pursuit mechanism.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
@@ -569,4 +644,5 @@ mechanism closes the remaining 1.32 m.
 | 1.3 | 2026-08-09 | — | §7 item 6 CLOSED as `ERR-008-024`, by a different route than the item proposed: one ranked DRIBBLE candidate instead of two competing ones. §3.1.5.2's 8-sector scan ranks on `spaceInSector × DirectionQuality_DRIBBLE(sectorDir, toGoal)` instead of `spaceInSector` alone — `spaceInSector` saturates at 1.0 for any clear sector, and the old strict `>` test always kept sector 0 (`AgentFacingDirection`) on a tie, which is exactly why KD-CC3's scoring-only fix could suppress a retreating dribble but never redirect it. Same term §3.2.4.1 already applies at scoring; no new constant. `sim_match_engine_close_chance`: meanCosine −0.165 → PASS (bound −0.16), goalwardShare 0.407 → PASS (bound 0.42); neither bound moved. See `spec-error-log.md` ERR-008-024. **[CORRECTED at v1.4 below — this fix was implemented, measured, and REFUSED. It was never landed: the same build stalls play outright and zeroes goals-still-scored. §7 item 6 is REOPENED, not closed.]** |
 | 1.4 | 2026-08-09 | — | **CORRECTION to v1.3: §7 item 6 / `ERR-008-024` was recorded CLOSED; it is not.** The fix was implemented, measured, and REFUSED — the KD-CC7 pattern (§4). The sector-scan tie-break DOES pass `sim_match_engine_close_chance` (meanCosine −0.165 → PASS, goalwardShare 0.407 → PASS) but STALLS `sim_match_engine_play_develops` outright (ball last moving at tick 18465 of 32400) and zeroes `goals-still-scored`; a wider `space × DirectionQuality` form produced the identical stall at the identical tick, plus mean-shot-distance 25.41 m against a 24.00 m ceiling. §7 item 6 REOPENED; §10.5 gains a cross-link recording that goalward dribbling is unsafe until §10.2/§10.3's bounds are addressed. `OptionGenerator.cs` reverted to the pre-fix baseline logic; kept, behaviour-neutral: `UtilityWeights.DribbleDirectionQuality` + `UtilityScorer`'s delegation to it. The two v1.3 unit locks are REMOVED. `DecisionTree.Tests` 129 passed / 4 skipped / 0 failed. See `spec-error-log.md` ERR-008-024 and `decision-tree/section-3-1.md` v1.8. |
 | 1.5 | 2026-08-09 | — | §10.6: the header measurement. Contact ratio **0.2%** (2 executed, 963 failed; 97–99% `positionedPoorly`), zero executed headers in any attacking third, and crosses at 0% headed / 0% reached / **69% coming to rest untouched**. The proximity census settles the order: **0% of airborne final-third episodes bring ANY outfielder — attacker or defender — within the 0.18 m contact volume**, so an aerial ball is untouchable by anybody and box occupancy is NOT its binding constraint. §10.4's item 1 is mispriced and is not a wiring item; the candidate first lever becomes "move a player to a ball's predicted arrival point", which is upstream of aerial contact, ground loose balls and pass-to-space alike. Four residuals recorded not fixed, including the fixed-point header target (a P4 candidate) and the 0.50–0.61 m band both first touch and the header trigger claim. |
+| 1.6 | 2026-08-09 | — | **§10.7: two corrections to §10.6, one of which retracts its headline measurement.** (1) Item 3's consequence was wrong — `TargetIntent` reaches NO formula, so the header aim was not merely fixed, it was **inert**, and every header was a passive specular mirror: a defender clearing in his own box headed the ball back the way it came rather than aiming 90 m at the far goal. Filed and fixed as `ERR-010-002` with two further defects in the same chain (two independent contact-point derivations; the 3-D point rebuilt from its 2-D head-local projection, pinning the reflection normal horizontal so `reflected.z = v̂_in.z` and **no header could lift the ball**). (2) **The §10.6 proximity census is an instrument artifact.** `BallToAgentDistance3D` measures ball-to-agent-GROUND distance including the ball's full height, while the episode gate requires ball z > 0.5 m — so the `≤ 0.18 m` and `0.18–0.5 m` buckets are structurally unreachable and the published `0%` in both is the instrument reporting its own gate. "0% within the contact volume", "untouchable by anybody, anywhere", the 1.32 m gap arithmetic and the 5.9 m / 4.7 m labels are all withdrawn; read correctly the same table shows ~31% of episodes with a **defender within 0.5–1.5 m in 3-D**, the opposite of the premise. §10.6 item 2's ranking of "attack the ball" as the first lever is **withdrawn, not replaced** — the third retraction in this document, and the first caused by the instrument rather than the reasoning. Two cheaper upstream candidates recorded ahead of it (the header commit's missing head-height gate; `FindContactFrame` freezing head z as well as xy), plus the KD-W1 note that the Z-fix alone yields FEWER intercepts and its unlock `MAX_INTERCEPT_TIME` is `[GT]` and frozen. |
 #endregion

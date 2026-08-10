@@ -3835,13 +3835,18 @@ namespace TacticalDirector.MatchEngine
             }
 
             int t = _teamIds[nearest];
-            // Opponent goal: team 0 attacks +X (goal at PITCH_LENGTH_M), team 1 attacks −X (goal at 0).
-            float oppGoalX = t == 0 ? MatchEngineConstants.PITCH_LENGTH_M : 0f;
             var intent = new HeaderIntent
             {
                 PowerIntent = MatchEngineConstants.HeaderTriggerPowerIntent,
+                // ERR-010-002: NOT read by any geometry. #10 §3.5.1 derives the contact point from
+                // TargetIntent at the contact frame, because the half-vector that realizes an aim
+                // depends on the incoming velocity there, which this commit site cannot know. Left at
+                // zero deliberately; it becomes the DT-supplied override when W9 lands.
                 ContactPointIntent = Vector2.zero,
-                TargetIntent = new Vector3(oppGoalX, MatchEngineConstants.PITCH_WIDTH_M / 2f, 0f),
+                // ERR-010-002: was a FIXED point — the opponent's goal centre, from anywhere on the
+                // pitch, for every header by either side. Now the situational aim: clear wide when deep,
+                // aim at goal when advanced, continuous between (§4.2a).
+                TargetIntent = GkHeadingIntentSource.HeaderAimTarget(in _agents[nearest].Position, t),
                 AttemptCommittedTick = (int)_clock.CurrentTacticalTick,
                 SetPieceContext = SetPieceContext.OpenPlay,
             };

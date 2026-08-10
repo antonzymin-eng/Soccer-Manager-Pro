@@ -64,6 +64,23 @@ namespace TacticalDirector.HeadingMechanics
         /// <summary>[FIXED] Half-coefficient in the kinematic equation s = v₀t + ½at². §3.3 KD-18 / §3.8.</summary>
         public const float KINEMATIC_HALF_COEFF = 0.5f;
 
+        /// <summary>
+        /// [FIXED] The 2 in the kinematic relation v² = u² + 2as, as it appears in §3.5.1's projectile
+        /// launch-angle discriminant v⁴ − g(gR² + 2·Δz·v²). Distinct from
+        /// <see cref="REFLECTION_FORMULA_COEFF"/>, which is the 2 of the reflection identity — same
+        /// number, unrelated derivations, so they do not share a name (FR-CS-016).
+        /// Heading Mechanics #10 §3.5.1 (ERR-010-002).
+        /// </summary>
+        public const float KINEMATIC_TWO_COEFF = 2.0f;
+
+        /// <summary>
+        /// [FIXED] The contact-quality scalar of a perfect contact, i.e. the top of §3.4's [0, 1] range.
+        /// §3.5.1 solves the aim at the speed a perfect contact would carry, because solving it at the
+        /// achieved speed would be circular — achieved speed follows from quality, and quality follows
+        /// from the error between the aim and what was achieved. Heading Mechanics #10 §3.5.1 (ERR-010-002).
+        /// </summary>
+        public const float PERFECT_CONTACT_QUALITY = 1.0f;
+
         #endregion
 
         #region Derived
@@ -89,6 +106,25 @@ namespace TacticalDirector.HeadingMechanics
         /// </summary>
         public static readonly int FramesPerTacticalTick =
             (int)(TickRatePhysicsHz / TickRateTacticalHz);
+
+        /// <summary>
+        /// [DERIVED] Linear-magnitude epsilon for degenerate-length guards (m).
+        /// Formula: sqrt(SURFACE_NORMAL_EPSILON_SQ). Heading Mechanics #10 §3.5.1 (ERR-010-002).
+        /// Source constants: SURFACE_NORMAL_EPSILON_SQ (Fixed const — always available).
+        /// Exists so §3.5.1's range and speed guards test the same threshold as §3.5's squared guards
+        /// rather than introducing a second, silently different epsilon.
+        /// </summary>
+        public static readonly float SurfaceNormalEpsilon = Mathf.Sqrt(SURFACE_NORMAL_EPSILON_SQ);
+
+        /// <summary>
+        /// [DERIVED] Component magnitude of the 45° maximum-range ballistic launch direction, i.e. both
+        /// cos 45° and sin 45°.
+        /// Formula: sqrt(KINEMATIC_HALF_COEFF) = sqrt(1/2). Heading Mechanics #10 §3.5.1 (ERR-010-002).
+        /// Source constants: KINEMATIC_HALF_COEFF (Fixed const — always available).
+        /// Used only on §3.5.1's unreachable-target branch, where the target lies beyond ballistic range
+        /// at the header's own outgoing speed and 45° is the best available launch toward it.
+        /// </summary>
+        public static readonly float MaxRangeLaunchComponent = Mathf.Sqrt(KINEMATIC_HALF_COEFF);
 
         /// <summary>
         /// [DERIVED] Half the FIFA goal width (m). Used for own-goal bounding box computation (§3.8).

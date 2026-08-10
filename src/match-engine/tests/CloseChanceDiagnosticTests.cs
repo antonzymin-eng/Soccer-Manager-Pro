@@ -47,7 +47,24 @@
 //           available proxy for contact rate (see C5a's own note on why the true commit count,
 //           item C-H1, is NOT OBSERVABLE without a new accessor). C5b censuses aerial-ball
 //           proximity independent of whether any header was even committed — is anyone ever
-//           close enough to head it at all? C5c/C5d follow the CROSS as a delivery mechanism:
+//           close enough to head it at all?
+//
+//           CORRECTION (v1.4, 2026-08-09): C5b's original single distance series opened its
+//           episode gate on ballPos.z > HeaderTriggerMinBallHeightM (0.5 m) and then sampled
+//           ball-to-agent-GROUND-position distance, sqrt(dx^2+dy^2+ballZ^2) — which is >= ballZ
+//           by construction, so its <=0.18 m and 0.18-0.5 m buckets were STRUCTURALLY
+//           UNREACHABLE for the whole life of every sample the gate ever admits. The published
+//           "0% of airborne final-third episodes bring anybody within contact range" reading in
+//           close-chance-creation-design.md §10.6 was the instrument reporting its own gate, not
+//           a measurement. C5b now reports THREE series side by side per episode: SERIES 1 is
+//           horizontal (XY)-only separation, comparable to HeaderTriggerRangeM's own 2-D trigger
+//           check; SERIES 2 is 3-D distance to the agent's HEAD POINT, comparable to
+//           HeadContactVolumeRadiusM and able to read inside 0.18 m for the first time; SERIES 3
+//           is the original ground-position measure, retained for continuity but relabelled
+//           everywhere as a floor, never a contact distance. A fourth reading, the ball height at
+//           the tick Series 1 achieves its minimum, discriminates "nobody is near it
+//           horizontally" from "someone is right under it but it is over their head". C5c/C5d
+//           follow the CROSS as a delivery mechanism:
 //           how it terminates, and where it lands when nobody touches it first. C5e measures
 //           offside annulments against the same final-third population C4 already tracks.
 //
@@ -159,20 +176,38 @@ namespace TacticalDirector.MatchEngine
         private const int PitchThirdCount = 3;
 
         /// <summary>
-        /// Report C5b bucket boundaries (m) for the minimum 3-D distance between the ball and the
-        /// nearest attacker/defender during an airborne episode. 0.18 m is <c>[CROSS]</c>
-        /// <see cref="HeadingMechanicsConstants.HeadContactVolumeRadiusM"/> — the contact volume itself, so
-        /// the first bucket answers "close enough to make contact this instant". 1.5 m is <c>[CROSS]</c>
-        /// <see cref="MatchEngineConstants.HeaderTriggerRangeM"/> — the trigger's own horizontal reach, so
-        /// the second bucket answers "close enough that a header COULD have been committed". 0.5 m, 3 m and
-        /// 5 m are ARBITRARY-BY-INSTRUMENT coarse spacing between those two production distances and a
-        /// "clearly not in the contest" tail — this file's brief names them explicitly and they answer no
-        /// spec formula.
+        /// Report C5b bucket boundaries (m), shared by all three v1.4 distance series (see each
+        /// series' own doc at <see cref="AppendAerialProximityTable"/>) for the minimum distance
+        /// between the ball and the nearest attacker/defender during an airborne episode. 0.18 m
+        /// is <c>[CROSS]</c> <see cref="HeadingMechanicsConstants.HeadContactVolumeRadiusM"/> — the
+        /// contact volume itself, so the first bucket answers "close enough to make contact this
+        /// instant" (only SERIES 1 and SERIES 2 can ever land in it — see
+        /// <see cref="BallToAgentGroundDistance3D"/>'s doc on why SERIES 3 cannot). 1.5 m is
+        /// <c>[CROSS]</c> <see cref="MatchEngineConstants.HeaderTriggerRangeM"/> — the trigger's
+        /// own horizontal reach, so the second bucket answers "close enough that a header COULD
+        /// have been committed". 0.5 m, 3 m and 5 m are ARBITRARY-BY-INSTRUMENT coarse spacing
+        /// between those two production distances and a "clearly not in the contest" tail — this
+        /// file's brief names them explicitly and they answer no spec formula.
         /// </summary>
         private static readonly float[] AerialProximityBucketBoundariesM = { 0.18f, 0.5f, 1.5f, 3f, 5f };
 
         /// <summary>Bucket count implied by <see cref="AerialProximityBucketBoundariesM"/> (boundaries + 1).</summary>
         private const int AerialProximityBucketCount = 6;
+
+        /// <summary>
+        /// Report C5b SERIES 2's head-point height (m) above an agent's ground position — used only
+        /// for the standing (non-jumping) case this census sub-samples (FR brief: "use the STANDING
+        /// head height... if there is no standing-head-height constant exposed, use the
+        /// jump-kinematics base and say so"). HeadingMechanics exposes no dedicated standing-only
+        /// head-height constant; the closest available production value is
+        /// <see cref="HeadingMechanicsConstants.JUMP_REACH_BASE_M"/> (2.20 m), whose own doc reads
+        /// "Anatomical baseline head reach: average standing head-height plus typical no-effort
+        /// reach" — i.e. it is standing head height PLUS a small unjumped-reach allowance, not a
+        /// pure standing-head-height figure, so SERIES 2 is a slight UNDERESTIMATE of true
+        /// head-to-ball distance for an agent who has not jumped. Used as-is rather than inventing
+        /// a new production constant, per this correction's own brief.
+        /// </summary>
+        private static readonly float AerialCensusHeadHeightM = HeadingMechanicsConstants.JUMP_REACH_BASE_M;
 
         /// <summary>
         /// Report C5d item 7's "nearby attacker" radius (m) at a cross's ground-contact point, exactly as
@@ -274,10 +309,18 @@ namespace TacticalDirector.MatchEngine
             report.AppendLine("  * (v1.3) C5a's executed/(executed+failed) ratio near 0% => headers are being");
             report.AppendLine("    committed into contact that FindContactFrame's fixed-head-position search");
             report.AppendLine("    almost never resolves — a contact-volume defect, not a trigger-range one.");
-            report.AppendLine("  * (v1.3) C5b's nearest-attacker histogram concentrated beyond 1.5 m while");
-            report.AppendLine("    headers are still being committed (C5a) => the trigger is firing on agents");
-            report.AppendLine("    who were never realistically going to reach the ball — HeaderTriggerRangeM");
+            report.AppendLine("  * (v1.3) C5b SERIES 1 (horizontal) concentrated beyond 1.5 m while headers");
+            report.AppendLine("    are still being committed (C5a) => the trigger is firing on agents who");
+            report.AppendLine("    were never realistically going to reach the ball — HeaderTriggerRangeM");
             report.AppendLine("    itself may be too generous, independent of the contact-volume question.");
+            report.AppendLine("  * (v1.4) C5b SERIES 2 (head-point 3-D) reading inside 0.18 m for a nonzero");
+            report.AppendLine("    share of episodes, alongside a low SERIES 1b ball-height mean for those");
+            report.AppendLine("    same episodes => somebody genuinely is close enough to make contact — any");
+            report.AppendLine("    0% figure previously read off SERIES 3 (the ground-position floor) was an");
+            report.AppendLine("    artifact of that series' own >= ballZ construction, not a measurement; see");
+            report.AppendLine("    this table's header note. SERIES 1b's height staying high while SERIES 1");
+            report.AppendLine("    is small says the opposite: someone stands right under a ball still too");
+            report.AppendLine("    high to reach — a genuine air-superiority gap, not an instrument artifact.");
             report.AppendLine("  * (v1.3) C5c dominated by RestUntouched/OutOfPlay rather than any header =>");
             report.AppendLine("    crosses are dying in the air with nobody contesting them — support geometry");
             report.AppendLine("    in the box (C2), not the delivery itself, is the bound.");
@@ -414,6 +457,10 @@ namespace TacticalDirector.MatchEngine
                         {
                             Open = true,
                             End = attackingEnd,
+                            MinAttackerHorizDist = float.MaxValue,
+                            MinDefenderHorizDist = float.MaxValue,
+                            MinAttackerHeadDist = float.MaxValue,
+                            MinDefenderHeadDist = float.MaxValue,
                             MinAttackerDist = float.MaxValue,
                             MinDefenderDist = float.MaxValue,
                         };
@@ -1065,57 +1112,126 @@ namespace TacticalDirector.MatchEngine
             return 1;                                                      // middle third
         }
 
-        /// <summary>Report C5b sample: the minimum 3-D distance from the ball to the nearest
-        /// (non-keeper, non-sent-off) attacking and defending outfielder this tick, folded into the
-        /// open <see cref="AerialEpisode"/>'s running minimum (an episode's own final bucket is its
-        /// LOWEST tick-sample, not a per-tick histogram entry — see <see cref="CloseAerialEpisode"/>).
-        /// </summary>
+        /// <summary>Report C5b sample (v1.4: three series, not one — see this method's own note on
+        /// why one pass over the roster suffices for all three). For each side (attacking/
+        /// defending) finds the nearest non-keeper, non-sent-off outfielder BY HORIZONTAL (XY)
+        /// separation this tick, then folds that single nearest agent's horizontal separation,
+        /// head-point 3-D distance and ground-position 3-D distance into the open
+        /// <see cref="AerialEpisode"/>'s three running minima (an episode's own final bucket is its
+        /// LOWEST tick-sample per series, not a per-tick histogram entry — see
+        /// <see cref="CloseAerialEpisode"/>). One roster pass is enough because <c>ballPos.z</c> and
+        /// <see cref="AerialCensusHeadHeightM"/> are both the SAME value for every agent within one
+        /// tick — so the vertical term in every one of the three distance formulas is a per-tick
+        /// constant, and whichever agent minimizes horizontal separation this tick also minimizes
+        /// both 3-D distances this tick. The three series' minima are still tracked independently
+        /// ACROSS ticks (a different tick, and so a different nearest agent, can hold each series'
+        /// episode-wide minimum).</summary>
         private static void SampleAerialProximity(
             MatchEngine engine, ref AerialEpisode aerial, int attackingTeam, UnityEngine.Vector3 ballPos)
         {
             int defendingTeam = 1 - attackingTeam;
-            float nearestAttacker = float.MaxValue;
-            float nearestDefender = float.MaxValue;
 
+            FoldNearestAgentIntoAerialEpisode(engine, ref aerial, attackingTeam, ballPos, attacker: true);
+            FoldNearestAgentIntoAerialEpisode(engine, ref aerial, defendingTeam, ballPos, attacker: false);
+        }
+
+        /// <summary>Finds the <paramref name="team"/> outfielder nearest the ball by horizontal (XY)
+        /// separation this tick (no-op if every outfielder on that side is a goalkeeper or sent off
+        /// — the same degenerate-population case <see cref="CloseAerialEpisode"/> guards) and folds
+        /// SERIES 1/2/3's per-tick sample for that one agent into <paramref name="aerial"/>'s three
+        /// running minima on the <paramref name="attacker"/> side.</summary>
+        private static void FoldNearestAgentIntoAerialEpisode(
+            MatchEngine engine, ref AerialEpisode aerial, int team, UnityEngine.Vector3 ballPos, bool attacker)
+        {
+            int nearestAgent = -1;
+            float nearestHorizSq = float.MaxValue;
             for (int k = 0; k < MatchEngineConstants.PLAYERS_PER_TEAM; k++)
             {
-                int ai = attackingTeam * MatchEngineConstants.PLAYERS_PER_TEAM + k;
-                if (!engine.TestOnly_IsGoalkeeper(ai) && !engine.TestOnly_IsSentOff(ai))
+                int ai = team * MatchEngineConstants.PLAYERS_PER_TEAM + k;
+                if (engine.TestOnly_IsGoalkeeper(ai) || engine.TestOnly_IsSentOff(ai))
                 {
-                    float d = BallToAgentDistance3D(engine.TestOnly_AgentSnapshot(ai).Position, ballPos);
-                    if (d < nearestAttacker) nearestAttacker = d;
+                    continue;
                 }
-
-                int di = defendingTeam * MatchEngineConstants.PLAYERS_PER_TEAM + k;
-                if (!engine.TestOnly_IsGoalkeeper(di) && !engine.TestOnly_IsSentOff(di))
+                UnityEngine.Vector2 pos = engine.TestOnly_AgentSnapshot(ai).Position;
+                float dx = pos.x - ballPos.x;
+                float dy = pos.y - ballPos.y;
+                float horizSq = dx * dx + dy * dy;
+                if (horizSq < nearestHorizSq)
                 {
-                    float d = BallToAgentDistance3D(engine.TestOnly_AgentSnapshot(di).Position, ballPos);
-                    if (d < nearestDefender) nearestDefender = d;
+                    nearestHorizSq = horizSq;
+                    nearestAgent = ai;
                 }
             }
 
-            if (nearestAttacker < aerial.MinAttackerDist) aerial.MinAttackerDist = nearestAttacker;
-            if (nearestDefender < aerial.MinDefenderDist) aerial.MinDefenderDist = nearestDefender;
+            if (nearestAgent < 0)
+            {
+                return;
+            }
+
+            float horiz = UnityEngine.Mathf.Sqrt(nearestHorizSq);
+            float headDist = BallToAgentHeadDistance3D(nearestHorizSq, ballPos.z);
+            float groundDist = BallToAgentGroundDistance3D(nearestHorizSq, ballPos.z);
+
+            if (attacker)
+            {
+                if (horiz < aerial.MinAttackerHorizDist)
+                {
+                    aerial.MinAttackerHorizDist = horiz;
+                    aerial.BallHeightAtMinAttackerHoriz = ballPos.z;
+                }
+                if (headDist < aerial.MinAttackerHeadDist) aerial.MinAttackerHeadDist = headDist;
+                if (groundDist < aerial.MinAttackerDist) aerial.MinAttackerDist = groundDist;
+            }
+            else
+            {
+                if (horiz < aerial.MinDefenderHorizDist)
+                {
+                    aerial.MinDefenderHorizDist = horiz;
+                    aerial.BallHeightAtMinDefenderHoriz = ballPos.z;
+                }
+                if (headDist < aerial.MinDefenderHeadDist) aerial.MinDefenderHeadDist = headDist;
+                if (groundDist < aerial.MinDefenderDist) aerial.MinDefenderDist = groundDist;
+            }
         }
 
-        /// <summary>3-D distance from the ball to an agent's GROUND position. Agents carry no z here
-        /// (ground-plane kinematics — the synthetic heading jump lives only inside HeadingMechanics'
-        /// own per-agent <c>HeaderContactState</c>, not exposed by any <c>TestOnly_</c> accessor), so
-        /// this is the ball's height above a stationary point, the same simplification
-        /// <see cref="GkHeadingIntentSource.NearestHeaderCandidate"/> makes for the HORIZONTAL trigger
-        /// check, extended one axis further because this report asks about 3-D closeness.</summary>
-        private static float BallToAgentDistance3D(UnityEngine.Vector2 agentPos, UnityEngine.Vector3 ballPos)
+        /// <summary>SERIES 2 (v1.4, NEW): 3-D distance from the ball to an agent's HEAD POINT —
+        /// <see cref="AerialCensusHeadHeightM"/> above his ground position. Comparable to <c>[CROSS]</c>
+        /// <see cref="HeadingMechanicsConstants.HeadContactVolumeRadiusM"/> (0.18 m), the contact volume
+        /// itself; this is the series that can answer the 0.18 m question, unlike
+        /// <see cref="BallToAgentGroundDistance3D"/>. <paramref name="horizDistSq"/> is
+        /// <c>dx*dx + dy*dy</c> (agent-to-ball, horizontal), already computed by the caller.</summary>
+        private static float BallToAgentHeadDistance3D(float horizDistSq, float ballZ)
         {
-            float dx = agentPos.x - ballPos.x;
-            float dy = agentPos.y - ballPos.y;
-            return UnityEngine.Mathf.Sqrt(dx * dx + dy * dy + ballPos.z * ballPos.z);
+            float dz = ballZ - AerialCensusHeadHeightM;
+            return UnityEngine.Mathf.Sqrt(horizDistSq + dz * dz);
         }
 
-        /// <summary>Closes the open <see cref="AerialEpisode"/> into C5b's per-team sums/histograms.
-        /// Skipped entirely (not partially) when either side's minimum never resolved — every outfield
-        /// player on that side sent off mid-episode — the same degenerate-population guard
-        /// <see cref="SampleCounterfactualRace"/> already uses, so the two histograms' sample counts
-        /// never disagree.</summary>
+        /// <summary>SERIES 3 (RETAINED, pre-v1.4 measure — do not read as a contact distance): 3-D
+        /// distance from the ball to an agent's GROUND position. Agents carry no z here (ground-plane
+        /// kinematics — the synthetic heading jump lives only inside HeadingMechanics' own per-agent
+        /// <c>HeaderContactState</c>, not exposed by any <c>TestOnly_</c> accessor), so this is the
+        /// ball's height above a stationary point — the same simplification
+        /// <see cref="GkHeadingIntentSource.NearestHeaderCandidate"/> makes for the HORIZONTAL trigger
+        /// check (SERIES 1 above), extended one axis further. Because <c>dz = ballZ</c> exactly, this
+        /// value is ALWAYS &gt;= <c>ballZ</c> — and this report's own airborne gate requires
+        /// <c>ballZ &gt; HeaderTriggerMinBallHeightM</c> (0.5 m) for any sample to exist at all, so this
+        /// series' <c>&lt;=0.18 m</c> and <c>0.18-0.5 m</c> buckets are STRUCTURALLY UNREACHABLE by
+        /// construction — a floor, never a contact-distance proxy (ERR-030-014's own lesson: an
+        /// instrument's own gate is not a measurement of the thing behind it). <paramref
+        /// name="horizDistSq"/> is <c>dx*dx + dy*dy</c> (agent-to-ball, horizontal), already computed by
+        /// the caller.</summary>
+        private static float BallToAgentGroundDistance3D(float horizDistSq, float ballZ)
+        {
+            return UnityEngine.Mathf.Sqrt(horizDistSq + ballZ * ballZ);
+        }
+
+        /// <summary>Closes the open <see cref="AerialEpisode"/> into C5b's per-team sums/histograms,
+        /// across all three v1.4 series plus the SERIES 1b ball-height-at-minimum reading. Skipped
+        /// entirely (not partially) when either side's SERIES 3 minimum never resolved — every
+        /// outfield player on that side sent off mid-episode — the same degenerate-population guard
+        /// <see cref="SampleCounterfactualRace"/> already uses, so every series' sample counts never
+        /// disagree (all three, plus SERIES 1b, are folded together per side in
+        /// <see cref="FoldNearestAgentIntoAerialEpisode"/>, so if one resolved they all did).</summary>
         private static void CloseAerialEpisode(MatchTally m, in AerialEpisode aerial)
         {
             if (aerial.MinAttackerDist == float.MaxValue || aerial.MinDefenderDist == float.MaxValue)
@@ -1124,6 +1240,36 @@ namespace TacticalDirector.MatchEngine
             }
 
             m.AerialEpisodesByTeam[aerial.End]++;
+
+            m.AerialAttackerMinHorizDistSumByTeam[aerial.End] += aerial.MinAttackerHorizDist;
+            m.AerialDefenderMinHorizDistSumByTeam[aerial.End] += aerial.MinDefenderHorizDist;
+            m.AerialAttackerMinHorizDistHistByTeam[aerial.End][AerialProximityBucketIndex(aerial.MinAttackerHorizDist)]++;
+            m.AerialDefenderMinHorizDistHistByTeam[aerial.End][AerialProximityBucketIndex(aerial.MinDefenderHorizDist)]++;
+
+            m.AerialAttackerBallHeightAtMinHorizSumByTeam[aerial.End] += aerial.BallHeightAtMinAttackerHoriz;
+            if (aerial.BallHeightAtMinAttackerHoriz < m.AerialAttackerBallHeightAtMinHorizMinByTeam[aerial.End])
+            {
+                m.AerialAttackerBallHeightAtMinHorizMinByTeam[aerial.End] = aerial.BallHeightAtMinAttackerHoriz;
+            }
+            if (aerial.BallHeightAtMinAttackerHoriz > m.AerialAttackerBallHeightAtMinHorizMaxByTeam[aerial.End])
+            {
+                m.AerialAttackerBallHeightAtMinHorizMaxByTeam[aerial.End] = aerial.BallHeightAtMinAttackerHoriz;
+            }
+            m.AerialDefenderBallHeightAtMinHorizSumByTeam[aerial.End] += aerial.BallHeightAtMinDefenderHoriz;
+            if (aerial.BallHeightAtMinDefenderHoriz < m.AerialDefenderBallHeightAtMinHorizMinByTeam[aerial.End])
+            {
+                m.AerialDefenderBallHeightAtMinHorizMinByTeam[aerial.End] = aerial.BallHeightAtMinDefenderHoriz;
+            }
+            if (aerial.BallHeightAtMinDefenderHoriz > m.AerialDefenderBallHeightAtMinHorizMaxByTeam[aerial.End])
+            {
+                m.AerialDefenderBallHeightAtMinHorizMaxByTeam[aerial.End] = aerial.BallHeightAtMinDefenderHoriz;
+            }
+
+            m.AerialAttackerMinHeadDistSumByTeam[aerial.End] += aerial.MinAttackerHeadDist;
+            m.AerialDefenderMinHeadDistSumByTeam[aerial.End] += aerial.MinDefenderHeadDist;
+            m.AerialAttackerMinHeadDistHistByTeam[aerial.End][AerialProximityBucketIndex(aerial.MinAttackerHeadDist)]++;
+            m.AerialDefenderMinHeadDistHistByTeam[aerial.End][AerialProximityBucketIndex(aerial.MinDefenderHeadDist)]++;
+
             m.AerialAttackerMinDistSumByTeam[aerial.End] += aerial.MinAttackerDist;
             m.AerialDefenderMinDistSumByTeam[aerial.End] += aerial.MinDefenderDist;
             m.AerialAttackerMinDistHistByTeam[aerial.End][AerialProximityBucketIndex(aerial.MinAttackerDist)]++;
@@ -1948,32 +2094,93 @@ namespace TacticalDirector.MatchEngine
             return s;
         }
 
+        /// <summary>Report C5b (v1.4 correction): prints THREE distance series side by side, per
+        /// side (attacker/defender), so the SERIES 3 floor documented in this table's own header
+        /// note can never again recur silently — a reader sees SERIES 1/2 alongside it on every
+        /// run. See <see cref="AppendAerialSeriesTablePair"/> for the per-series table shape and
+        /// <see cref="AppendAerialBallHeightAtMinHorizTable"/> for the SERIES 1b height reading.
+        /// </summary>
         private static void AppendAerialProximityTable(StringBuilder report, List<MatchTally> ms)
         {
             report.AppendLine("C5b. AERIAL-BALL PROXIMITY CENSUS — one sample per airborne-in-a-final-third");
             report.AppendLine(Inv($"  episode (ball z > {MatchEngineConstants.HeaderTriggerMinBallHeightM:F2} m, [CROSS] ")
-                             + "TryCommitHeaderIntents' own gate): the MINIMUM");
-            report.AppendLine("  3-D distance from the ball to the nearest attacking outfielder, and");
-            report.AppendLine("  separately the nearest defender, over the episode's whole duration.");
-            report.AppendLine("  Buckets (m): <=0.18 (HeadContactVolumeRadiusM) / 0.18-0.5 / 0.5-1.5");
-            report.AppendLine("  (<=HeaderTriggerRangeM) / 1.5-3 / 3-5 / >5 — see AerialProximityBucketBoundariesM's");
-            report.AppendLine("  own doc for which edges are production constants and which are instrument-arbitrary.");
-            report.AppendLine("  ATTACKER side:");
-            report.AppendLine("  seed/team        | episodes | mean(m) | <=0.18 | 0.18-0.5 | 0.5-1.5 | 1.5-3 |  3-5 |  >5");
+                             + "TryCommitHeaderIntents' own gate). THREE");
+            report.AppendLine("  distance series over the episode's whole duration, per side (attacker/");
+            report.AppendLine("  defender) — read them TOGETHER, not any one alone:");
+            report.AppendLine("  CORRECTION (2026-08-09): SERIES 3 below (the original, pre-correction C5b");
+            report.AppendLine("  measure) is ball-to-agent-GROUND-position distance, sqrt(dx^2+dy^2+ballZ^2)");
+            report.AppendLine("  — which is >= ballZ by construction, and ballZ itself is > 0.5 m under this");
+            report.AppendLine("  table's own airborne gate above. Its <=0.18 m and 0.18-0.5 m buckets were");
+            report.AppendLine("  therefore STRUCTURALLY UNREACHABLE for the whole life of every sample this");
+            report.AppendLine("  gate ever admits — the published \"0% of airborne episodes bring anybody");
+            report.AppendLine("  within contact range\" reading was the instrument reporting its own gate,");
+            report.AppendLine("  not a measurement (ERR-030-014's own lesson, one level up). SERIES 1 and 2");
+            report.AppendLine("  are the correction and can both read inside 0.18 m; SERIES 3 is retained");
+            report.AppendLine("  only for continuity — read it as a loose upper-bound floor, never again as");
+            report.AppendLine("  a contact distance.");
+            report.AppendLine(Inv($"  SERIES 2's head point uses headZ = {AerialCensusHeadHeightM:F2} m — see ")
+                             + "AerialCensusHeadHeightM's own doc for why.");
+            report.AppendLine("  Buckets (m) — identical boundaries for all three series: <=0.18");
+            report.AppendLine("  (HeadContactVolumeRadiusM) / 0.18-0.5 / 0.5-1.5 (<=HeaderTriggerRangeM) /");
+            report.AppendLine("  1.5-3 / 3-5 / >5 — see AerialProximityBucketBoundariesM's own doc for which");
+            report.AppendLine("  edges are production constants and which are instrument-arbitrary.");
+            report.AppendLine();
 
             var pooled = new MatchTally();
             for (int i = 0; i < ms.Count; i++)
             {
+                AddC5Tally(pooled, ms[i]);
+            }
+
+            report.AppendLine("  SERIES 1 — HORIZONTAL (XY) separation only, no ball-height term. Comparable");
+            report.AppendLine("  to [CROSS] MatchEngineConstants.HeaderTriggerRangeM (1.5 m) — the trigger's");
+            report.AppendLine("  own 2-D check (GkHeadingIntentSource.NearestHeaderCandidate).");
+            AppendAerialSeriesTablePair(report, ms, pooled,
+                (m, t) => m.AerialAttackerMinHorizDistSumByTeam[t], (m, t) => m.AerialAttackerMinHorizDistHistByTeam[t],
+                (m, t) => m.AerialDefenderMinHorizDistSumByTeam[t], (m, t) => m.AerialDefenderMinHorizDistHistByTeam[t]);
+
+            AppendAerialBallHeightAtMinHorizTable(report, ms, pooled);
+
+            report.AppendLine("  SERIES 2 — 3-D distance to the agent's HEAD POINT (headZ above his ground");
+            report.AppendLine("  position). Comparable to [CROSS] HeadingMechanicsConstants.");
+            report.AppendLine("  HeadContactVolumeRadiusM (0.18 m) — the contact volume itself. This is the");
+            report.AppendLine("  series that makes the 0.18 m question askable for the first time.");
+            AppendAerialSeriesTablePair(report, ms, pooled,
+                (m, t) => m.AerialAttackerMinHeadDistSumByTeam[t], (m, t) => m.AerialAttackerMinHeadDistHistByTeam[t],
+                (m, t) => m.AerialDefenderMinHeadDistSumByTeam[t], (m, t) => m.AerialDefenderMinHeadDistHistByTeam[t]);
+
+            report.AppendLine("  SERIES 3 (RETAINED, pre-correction measure) — 3-D distance from the ball to");
+            report.AppendLine("  the agent's GROUND position. ALWAYS >= ballZ — see this table's own header");
+            report.AppendLine("  note. Read as a loose upper-bound floor, NEVER as a contact distance.");
+            AppendAerialSeriesTablePair(report, ms, pooled,
+                (m, t) => m.AerialAttackerMinDistSumByTeam[t], (m, t) => m.AerialAttackerMinDistHistByTeam[t],
+                (m, t) => m.AerialDefenderMinDistSumByTeam[t], (m, t) => m.AerialDefenderMinDistHistByTeam[t]);
+        }
+
+        /// <summary>Prints one SERIES's ATTACKER and DEFENDER tables (the pre-v1.4 two-block shape,
+        /// unchanged), sourcing the sum/histogram for each row through the supplied selectors so
+        /// the three C5b series and their six sum/histogram field pairs share one print path rather
+        /// than six near-identical hand-written blocks.</summary>
+        private static void AppendAerialSeriesTablePair(
+            StringBuilder report, List<MatchTally> ms, MatchTally pooled,
+            Func<MatchTally, int, float> attackerSum, Func<MatchTally, int, int[]> attackerHist,
+            Func<MatchTally, int, float> defenderSum, Func<MatchTally, int, int[]> defenderHist)
+        {
+            report.AppendLine("  ATTACKER side:");
+            report.AppendLine("  seed/team        | episodes | mean(m) | <=0.18 | 0.18-0.5 | 0.5-1.5 | 1.5-3 |  3-5 |  >5");
+            for (int i = 0; i < ms.Count; i++)
+            {
                 MatchTally m = ms[i];
-                AddC5Tally(pooled, m);
                 for (int t = 0; t < TeamCount; t++)
                 {
-                    report.AppendLine(FormatAerialRow(Inv($"0x{m.Seed:X16}/{TeamLabel(t)}"), t, m, attacker: true));
+                    report.AppendLine(FormatAerialRow(Inv($"0x{m.Seed:X16}/{TeamLabel(t)}"),
+                        m.AerialEpisodesByTeam[t], attackerSum(m, t), attackerHist(m, t)));
                 }
             }
             for (int t = 0; t < TeamCount; t++)
             {
-                report.AppendLine(FormatAerialRow(Inv($"pooled/{TeamLabel(t)}"), t, pooled, attacker: true));
+                report.AppendLine(FormatAerialRow(Inv($"pooled/{TeamLabel(t)}"),
+                    pooled.AerialEpisodesByTeam[t], attackerSum(pooled, t), attackerHist(pooled, t)));
             }
             report.AppendLine();
 
@@ -1984,25 +2191,88 @@ namespace TacticalDirector.MatchEngine
                 MatchTally m = ms[i];
                 for (int t = 0; t < TeamCount; t++)
                 {
-                    report.AppendLine(FormatAerialRow(Inv($"0x{m.Seed:X16}/{TeamLabel(t)}"), t, m, attacker: false));
+                    report.AppendLine(FormatAerialRow(Inv($"0x{m.Seed:X16}/{TeamLabel(t)}"),
+                        m.AerialEpisodesByTeam[t], defenderSum(m, t), defenderHist(m, t)));
                 }
             }
             for (int t = 0; t < TeamCount; t++)
             {
-                report.AppendLine(FormatAerialRow(Inv($"pooled/{TeamLabel(t)}"), t, pooled, attacker: false));
+                report.AppendLine(FormatAerialRow(Inv($"pooled/{TeamLabel(t)}"),
+                    pooled.AerialEpisodesByTeam[t], defenderSum(pooled, t), defenderHist(pooled, t)));
             }
             report.AppendLine();
         }
 
-        private static string FormatAerialRow(string label, int team, MatchTally m, bool attacker)
+        private static string FormatAerialRow(string label, int episodes, float sum, int[] hist)
         {
-            int episodes = Math.Max(1, m.AerialEpisodesByTeam[team]);
-            float sum = attacker ? m.AerialAttackerMinDistSumByTeam[team] : m.AerialDefenderMinDistSumByTeam[team];
-            int[] hist = attacker ? m.AerialAttackerMinDistHistByTeam[team] : m.AerialDefenderMinDistHistByTeam[team];
-            return Inv($"  {label,-16} | {m.AerialEpisodesByTeam[team],8} | {sum / episodes,7:F2} | ")
-                 + Inv($"{(float)hist[0] / episodes,6:P0} | {(float)hist[1] / episodes,8:P0} | ")
-                 + Inv($"{(float)hist[2] / episodes,7:P0} | {(float)hist[3] / episodes,5:P0} | ")
-                 + Inv($"{(float)hist[4] / episodes,4:P0} | {(float)hist[5] / episodes,3:P0}");
+            int denom = Math.Max(1, episodes);
+            return Inv($"  {label,-16} | {episodes,8} | {sum / denom,7:F2} | ")
+                 + Inv($"{(float)hist[0] / denom,6:P0} | {(float)hist[1] / denom,8:P0} | ")
+                 + Inv($"{(float)hist[2] / denom,7:P0} | {(float)hist[3] / denom,5:P0} | ")
+                 + Inv($"{(float)hist[4] / denom,4:P0} | {(float)hist[5] / denom,3:P0}");
+        }
+
+        /// <summary>SERIES 1b (v1.4, NEW): the ball height (z, m) reading at the tick SERIES 1
+        /// achieved its per-episode minimum, per side — mean/min/max. The single most important
+        /// reading this correction adds: a low SERIES 1 mean (someone is close horizontally)
+        /// alongside a HIGH mean here says the ball is still over everybody's head; alongside a LOW
+        /// mean here it says somebody is genuinely contesting a reachable ball.</summary>
+        private static void AppendAerialBallHeightAtMinHorizTable(StringBuilder report, List<MatchTally> ms, MatchTally pooled)
+        {
+            report.AppendLine("  SERIES 1b — ball height (z, m) AT THE TICK achieving SERIES 1's minimum");
+            report.AppendLine("  horizontal separation, per side (see this method's own doc for how to read");
+            report.AppendLine("  it alongside SERIES 1).");
+            report.AppendLine("  ATTACKER side:");
+            report.AppendLine("  seed/team        | mean(m) |  min(m) |  max(m)");
+            for (int i = 0; i < ms.Count; i++)
+            {
+                MatchTally m = ms[i];
+                for (int t = 0; t < TeamCount; t++)
+                {
+                    report.AppendLine(FormatBallHeightRow(Inv($"0x{m.Seed:X16}/{TeamLabel(t)}"), m.AerialEpisodesByTeam[t],
+                        m.AerialAttackerBallHeightAtMinHorizSumByTeam[t], m.AerialAttackerBallHeightAtMinHorizMinByTeam[t],
+                        m.AerialAttackerBallHeightAtMinHorizMaxByTeam[t]));
+                }
+            }
+            for (int t = 0; t < TeamCount; t++)
+            {
+                report.AppendLine(FormatBallHeightRow(Inv($"pooled/{TeamLabel(t)}"), pooled.AerialEpisodesByTeam[t],
+                    pooled.AerialAttackerBallHeightAtMinHorizSumByTeam[t], pooled.AerialAttackerBallHeightAtMinHorizMinByTeam[t],
+                    pooled.AerialAttackerBallHeightAtMinHorizMaxByTeam[t]));
+            }
+            report.AppendLine();
+
+            report.AppendLine("  DEFENDER side:");
+            report.AppendLine("  seed/team        | mean(m) |  min(m) |  max(m)");
+            for (int i = 0; i < ms.Count; i++)
+            {
+                MatchTally m = ms[i];
+                for (int t = 0; t < TeamCount; t++)
+                {
+                    report.AppendLine(FormatBallHeightRow(Inv($"0x{m.Seed:X16}/{TeamLabel(t)}"), m.AerialEpisodesByTeam[t],
+                        m.AerialDefenderBallHeightAtMinHorizSumByTeam[t], m.AerialDefenderBallHeightAtMinHorizMinByTeam[t],
+                        m.AerialDefenderBallHeightAtMinHorizMaxByTeam[t]));
+                }
+            }
+            for (int t = 0; t < TeamCount; t++)
+            {
+                report.AppendLine(FormatBallHeightRow(Inv($"pooled/{TeamLabel(t)}"), pooled.AerialEpisodesByTeam[t],
+                    pooled.AerialDefenderBallHeightAtMinHorizSumByTeam[t], pooled.AerialDefenderBallHeightAtMinHorizMinByTeam[t],
+                    pooled.AerialDefenderBallHeightAtMinHorizMaxByTeam[t]));
+            }
+            report.AppendLine();
+        }
+
+        /// <summary><paramref name="min"/> reads as <see cref="MatchTally.MakeFilledMaxValue"/>'s
+        /// sentinel (no episode ever sampled — <paramref name="episodes"/> is 0) when
+        /// <paramref name="episodes"/> is 0; printed as 0.00 in that case, matching how the mean
+        /// column already reads 0/max(1,0) for a zero-episode row rather than a raw sentinel.
+        /// </summary>
+        private static string FormatBallHeightRow(string label, int episodes, float sum, float min, float max)
+        {
+            int denom = Math.Max(1, episodes);
+            float minDisplay = episodes > 0 ? min : 0f;
+            return Inv($"  {label,-16} | {sum / denom,7:F2} | {minDisplay,7:F2} | {max,7:F2}");
         }
 
         private static void AppendCrossOutcomeTable(StringBuilder report, List<MatchTally> ms)
@@ -2199,6 +2469,26 @@ namespace TacticalDirector.MatchEngine
         {
             public bool Open;
             public int End;
+
+            // SERIES 1 (v1.4, NEW): minimum HORIZONTAL (XY) separation this episode, per side —
+            // comparable to [CROSS] MatchEngineConstants.HeaderTriggerRangeM.
+            public float MinAttackerHorizDist;
+            public float MinDefenderHorizDist;
+
+            // SERIES 1b (v1.4, NEW): ball height (z) at the tick achieving the SERIES 1 minimum
+            // above, per side — discriminates "nobody near horizontally" from "someone is right
+            // under it but it is over their head".
+            public float BallHeightAtMinAttackerHoriz;
+            public float BallHeightAtMinDefenderHoriz;
+
+            // SERIES 2 (v1.4, NEW): minimum 3-D distance to the agent's HEAD POINT this episode, per
+            // side — comparable to [CROSS] HeadingMechanicsConstants.HeadContactVolumeRadiusM.
+            public float MinAttackerHeadDist;
+            public float MinDefenderHeadDist;
+
+            // SERIES 3 (RETAINED, pre-v1.4 name/field unchanged): minimum 3-D distance from the ball
+            // to the agent's GROUND position, per side. ALWAYS >= ball height — see
+            // BallToAgentGroundDistance3D's own doc. Not a contact-distance proxy.
             public float MinAttackerDist;
             public float MinDefenderDist;
 
@@ -2325,8 +2615,40 @@ namespace TacticalDirector.MatchEngine
             public readonly int[][] HeaderExecutedByTeamThird = MakeTeamByBucket(PitchThirdCount);
             public readonly int[][] HeaderFailedByTeamCause = MakeTeamByBucket(FailureCauseCount);
 
-            // C5b (v1.3) — aerial-ball proximity census, by ATTACKING team.
+            // C5b (v1.3; three-series correction v1.4) — aerial-ball proximity census, by
+            // ATTACKING team. AerialEpisodesByTeam is the shared episode count every series below
+            // is divided by (all three, plus the SERIES 1b height reading, resolve together per
+            // side — see FoldNearestAgentIntoAerialEpisode's own doc).
             public readonly int[] AerialEpisodesByTeam = new int[TeamCount];
+
+            // SERIES 1 (v1.4, NEW) — minimum horizontal (XY) separation. Comparable to [CROSS]
+            // MatchEngineConstants.HeaderTriggerRangeM.
+            public readonly float[] AerialAttackerMinHorizDistSumByTeam = new float[TeamCount];
+            public readonly float[] AerialDefenderMinHorizDistSumByTeam = new float[TeamCount];
+            public readonly int[][] AerialAttackerMinHorizDistHistByTeam = MakeTeamByBucket(AerialProximityBucketCount);
+            public readonly int[][] AerialDefenderMinHorizDistHistByTeam = MakeTeamByBucket(AerialProximityBucketCount);
+
+            // SERIES 1b (v1.4, NEW) — ball height (z, m) at the tick achieving SERIES 1's minimum,
+            // per side: mean, min (MakeFilledMaxValue-seeded so the first sample always wins the
+            // comparison) and max (0f-seeded — a safe floor, since heights are never negative).
+            public readonly float[] AerialAttackerBallHeightAtMinHorizSumByTeam = new float[TeamCount];
+            public readonly float[] AerialAttackerBallHeightAtMinHorizMinByTeam = MakeFilledMaxValue();
+            public readonly float[] AerialAttackerBallHeightAtMinHorizMaxByTeam = new float[TeamCount];
+            public readonly float[] AerialDefenderBallHeightAtMinHorizSumByTeam = new float[TeamCount];
+            public readonly float[] AerialDefenderBallHeightAtMinHorizMinByTeam = MakeFilledMaxValue();
+            public readonly float[] AerialDefenderBallHeightAtMinHorizMaxByTeam = new float[TeamCount];
+
+            // SERIES 2 (v1.4, NEW) — minimum 3-D distance to the agent's HEAD POINT. Comparable to
+            // [CROSS] HeadingMechanicsConstants.HeadContactVolumeRadiusM; the series that can read
+            // inside 0.18 m.
+            public readonly float[] AerialAttackerMinHeadDistSumByTeam = new float[TeamCount];
+            public readonly float[] AerialDefenderMinHeadDistSumByTeam = new float[TeamCount];
+            public readonly int[][] AerialAttackerMinHeadDistHistByTeam = MakeTeamByBucket(AerialProximityBucketCount);
+            public readonly int[][] AerialDefenderMinHeadDistHistByTeam = MakeTeamByBucket(AerialProximityBucketCount);
+
+            // SERIES 3 (RETAINED, pre-v1.4 field names unchanged) — minimum 3-D distance from the
+            // ball to the agent's GROUND position. ALWAYS >= ball height; see
+            // BallToAgentGroundDistance3D's own doc — not a contact-distance proxy.
             public readonly float[] AerialAttackerMinDistSumByTeam = new float[TeamCount];
             public readonly float[] AerialDefenderMinDistSumByTeam = new float[TeamCount];
             public readonly int[][] AerialAttackerMinDistHistByTeam = MakeTeamByBucket(AerialProximityBucketCount);
@@ -2367,6 +2689,15 @@ namespace TacticalDirector.MatchEngine
             {
                 var a = new float[TeamCount];
                 for (int t = 0; t < TeamCount; t++) a[t] = float.MinValue;
+                return a;
+            }
+
+            /// <summary>C5b SERIES 1b's min-by-team seed — <see cref="MakeFilledMinValue"/>'s
+            /// counterpart for a running MINIMUM (rather than maximum) accumulator.</summary>
+            private static float[] MakeFilledMaxValue()
+            {
+                var a = new float[TeamCount];
+                for (int t = 0; t < TeamCount; t++) a[t] = float.MaxValue;
                 return a;
             }
         }
@@ -2444,6 +2775,42 @@ namespace TacticalDirector.MatchEngine
                 }
 
                 dst.AerialEpisodesByTeam[t] += src.AerialEpisodesByTeam[t];
+
+                dst.AerialAttackerMinHorizDistSumByTeam[t] += src.AerialAttackerMinHorizDistSumByTeam[t];
+                dst.AerialDefenderMinHorizDistSumByTeam[t] += src.AerialDefenderMinHorizDistSumByTeam[t];
+                for (int b = 0; b < AerialProximityBucketCount; b++)
+                {
+                    dst.AerialAttackerMinHorizDistHistByTeam[t][b] += src.AerialAttackerMinHorizDistHistByTeam[t][b];
+                    dst.AerialDefenderMinHorizDistHistByTeam[t][b] += src.AerialDefenderMinHorizDistHistByTeam[t][b];
+                }
+
+                dst.AerialAttackerBallHeightAtMinHorizSumByTeam[t] += src.AerialAttackerBallHeightAtMinHorizSumByTeam[t];
+                if (src.AerialAttackerBallHeightAtMinHorizMinByTeam[t] < dst.AerialAttackerBallHeightAtMinHorizMinByTeam[t])
+                {
+                    dst.AerialAttackerBallHeightAtMinHorizMinByTeam[t] = src.AerialAttackerBallHeightAtMinHorizMinByTeam[t];
+                }
+                if (src.AerialAttackerBallHeightAtMinHorizMaxByTeam[t] > dst.AerialAttackerBallHeightAtMinHorizMaxByTeam[t])
+                {
+                    dst.AerialAttackerBallHeightAtMinHorizMaxByTeam[t] = src.AerialAttackerBallHeightAtMinHorizMaxByTeam[t];
+                }
+                dst.AerialDefenderBallHeightAtMinHorizSumByTeam[t] += src.AerialDefenderBallHeightAtMinHorizSumByTeam[t];
+                if (src.AerialDefenderBallHeightAtMinHorizMinByTeam[t] < dst.AerialDefenderBallHeightAtMinHorizMinByTeam[t])
+                {
+                    dst.AerialDefenderBallHeightAtMinHorizMinByTeam[t] = src.AerialDefenderBallHeightAtMinHorizMinByTeam[t];
+                }
+                if (src.AerialDefenderBallHeightAtMinHorizMaxByTeam[t] > dst.AerialDefenderBallHeightAtMinHorizMaxByTeam[t])
+                {
+                    dst.AerialDefenderBallHeightAtMinHorizMaxByTeam[t] = src.AerialDefenderBallHeightAtMinHorizMaxByTeam[t];
+                }
+
+                dst.AerialAttackerMinHeadDistSumByTeam[t] += src.AerialAttackerMinHeadDistSumByTeam[t];
+                dst.AerialDefenderMinHeadDistSumByTeam[t] += src.AerialDefenderMinHeadDistSumByTeam[t];
+                for (int b = 0; b < AerialProximityBucketCount; b++)
+                {
+                    dst.AerialAttackerMinHeadDistHistByTeam[t][b] += src.AerialAttackerMinHeadDistHistByTeam[t][b];
+                    dst.AerialDefenderMinHeadDistHistByTeam[t][b] += src.AerialDefenderMinHeadDistHistByTeam[t][b];
+                }
+
                 dst.AerialAttackerMinDistSumByTeam[t] += src.AerialAttackerMinDistSumByTeam[t];
                 dst.AerialDefenderMinDistSumByTeam[t] += src.AerialDefenderMinDistSumByTeam[t];
                 for (int b = 0; b < AerialProximityBucketCount; b++)
@@ -2589,4 +2956,37 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | EXACT for that tick, not stale). Every new table split by team AND   |
 // |         |            |        | by seed, pooled both ways (#8 ERR-008-002 precedent). Assertion-free |
 // |         |            |        | throughout (ERR-030-014); no production files touched.               |
+// | 1.4     | 2026-08-09 | —      | C5b CORRECTION: the report's single distance series was              |
+// |         |            |        | ball-to-agent-GROUND-position distance, sqrt(dx^2+dy^2+ballZ^2),     |
+// |         |            |        | which is >= ballZ by construction, and the airborne gate requires    |
+// |         |            |        | ballZ > 0.5 m for any sample to exist — so the <=0.18 m and 0.18-0.5 |
+// |         |            |        | m buckets were STRUCTURALLY UNREACHABLE and the published "0% within |
+// |         |            |        | contact range" reading was the instrument reporting its own gate,    |
+// |         |            |        | not a measurement. Now reports THREE series per side (attacker/      |
+// |         |            |        | defender), all sourced from one roster pass per side (the vertical   |
+// |         |            |        | term is a per-tick constant across agents, so the agent nearest by   |
+// |         |            |        | horizontal separation is also nearest by both 3-D measures — see     |
+// |         |            |        | FoldNearestAgentIntoAerialEpisode's own doc): SERIES 1 is horizontal |
+// |         |            |        | (XY)-only separation, comparable to [CROSS] HeaderTriggerRangeM      |
+// |         |            |        | (the trigger's own 2-D check); SERIES 2 is 3-D distance to the       |
+// |         |            |        | agent's HEAD POINT (headZ = HeadingMechanicsConstants.               |
+// |         |            |        | JUMP_REACH_BASE_M — no standing-only head-height constant is         |
+// |         |            |        | exposed; AerialCensusHeadHeightM's own doc records the substitution  |
+// |         |            |        | and its direction of error), comparable to [CROSS]                   |
+// |         |            |        | HeadContactVolumeRadiusM and able to read inside 0.18 m for the      |
+// |         |            |        | first time; SERIES 3 is the original ground-position measure,        |
+// |         |            |        | RETAINED verbatim (same fields, same values) but relabelled          |
+// |         |            |        | everywhere — code comments and the printed report — as a floor,      |
+// |         |            |        | never again a contact distance. SERIES 1b (NEW) additionally         |
+// |         |            |        | records the ball height at the tick SERIES 1 achieves its per-       |
+// |         |            |        | episode minimum, per side (mean/min/max), the single reading that    |
+// |         |            |        | discriminates "nobody is near it horizontally" from "someone is      |
+// |         |            |        | right under it but it is over their head". All three series print    |
+// |         |            |        | side by side in one table so SERIES 3's floor can never again be     |
+// |         |            |        | read silently as a contact-distance measurement. AerialEpisode,      |
+// |         |            |        | MatchTally and AddC5Tally extended accordingly; FormatAerialRow      |
+// |         |            |        | generalized to take an explicit episode count/sum/histogram rather   |
+// |         |            |        | than a fixed field pair, shared by all three series via the new      |
+// |         |            |        | AppendAerialSeriesTablePair. No production files touched;            |
+// |         |            |        | assertion-free throughout (ERR-030-014).                              |
 #endregion
