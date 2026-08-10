@@ -516,11 +516,36 @@ namespace TacticalDirector.PlayerProgression
             // worldDay/365, which turned the whole league into age 0 on the first daily step.
             long birthWorldDay = (long)newGameWorldDay - (long)rec.Age * PlayerProgressionConstants.DAYS_PER_YEAR;
 
+            // AR pass 5 (High). The comment below says the seed day is "already accounted for, not a day
+            // still to be lived" — and then the cursor started at 0, which accounts for it as NOTHING.
+            // The band exit is decided by the DERIVED AGE, not by the cursor, so leaving the anchor day
+            // uncredited shifts the accrual window one day right against a fixed band edge: every
+            // traversal of a band N years long accrued N·365 − 1 days, and since POINT_COST is exactly
+            // DAYS_PER_YEAR (KD-8) that is one whole attribute point short, every time. Measured through
+            // the public API before this fix:
+            //     seedAge 16 (8 years of Growth) -> 7 points, residue cursor 364
+            //     seedAge 20 (4 years)           -> 3 points, residue cursor 364
+            //     seedAge 23 (1 year)            -> 0 points, residue cursor 364
+            // Appendix A and KD-8 both say +1/yr, so this is a defect against normative spec text, not
+            // a tuning choice. The 364 residue then survives the Stable band (which accrues nothing, so
+            // it can never be spent) and eats the first year of Decline, delaying a player's first
+            // decline point to day 728 — and it makes two otherwise identical players diverge purely by
+            // the age they were seeded at.
+            //
+            // Crediting the anchor day's own band step here is ERR-028-014's reading made arithmetically
+            // honest. Deliberately NOT fixed by anchoring the cursor at newGameWorldDay - 1: at day 0
+            // that underflows to uint.MaxValue, which is the sentinel FromBlocks refuses.
+            AbilityModel.AgeBand seedBand = AbilityModel.ClassifyAgeBand(rec.Age);
+            long seedCursor =
+                seedBand == AbilityModel.AgeBand.Growth ? PlayerProgressionConstants.GROWTH_DAILY_POINTS
+                : seedBand == AbilityModel.AgeBand.Decline ? PlayerProgressionConstants.DECLINE_DAILY_POINTS
+                : 0;
+
             return new PlayerLifecycle
             {
                 PotentialAbility = potentialAbility,
                 CurrentAbility = currentAbility,
-                GrowthCursor = 0,
+                GrowthCursor = seedCursor,
                 BirthWorldDay = birthWorldDay,
                 RetirementFlag = false,
                 RetirementDay = 0,

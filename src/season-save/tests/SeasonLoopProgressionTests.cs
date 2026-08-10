@@ -71,6 +71,14 @@ namespace TacticalDirector.SeasonSave.Tests
             const int AccruingDays = Advances - 1;
             loop.AdvanceDays(Advances);
 
+            // AR pass 5: +1 band-step per player, on top of AccruingDays. SeedLifecycle now credits
+            // the seed day (world day 0) with its own band step instead of starting GrowthCursor at 0
+            // — slot 1's day-0 call is still a cursor no-op (LastAdvancedWorldDay is already 0), but
+            // the step that day would have produced is now banked at seed time rather than never at
+            // all. Total accrual is AccruingDays replayed days plus that one seeded step. Arithmetic
+            // window shift, not a semantic change.
+            const int SeedDayCredit = 1;
+
             int growth = 0, decline = 0, stable = 0;
             ClubCareerStates[] blocks = progression.ToBlocks();
             for (int c = 0; c < blocks.Length; c++)
@@ -82,8 +90,8 @@ namespace TacticalDirector.SeasonSave.Tests
                     int bootstrapAge = AgeOf(seeded, playerId);
 
                     long expected;
-                    if (bootstrapAge < PlayerProgressionConstants.GROWTH_AGE) { expected = +AccruingDays; growth++; }
-                    else if (bootstrapAge > PlayerProgressionConstants.DECLINE_AGE) { expected = -AccruingDays; decline++; }
+                    if (bootstrapAge < PlayerProgressionConstants.GROWTH_AGE) { expected = +(AccruingDays + SeedDayCredit); growth++; }
+                    else if (bootstrapAge > PlayerProgressionConstants.DECLINE_AGE) { expected = -(AccruingDays + SeedDayCredit); decline++; }
                     else { expected = 0; stable++; }
 
                     Assert.AreEqual(expected, blocks[c].Lifecycles[p].GrowthCursor,

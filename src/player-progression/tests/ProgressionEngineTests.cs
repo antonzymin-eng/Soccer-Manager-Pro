@@ -77,7 +77,11 @@ namespace TacticalDirector.PlayerProgression.Tests
 
             engine.AdvanceDay(BaseDay + 10, TrainingInputBatch.Neutral);
             long cursorAtTen = CursorOf(engine);
-            Assert.AreEqual(10 * SquadSize, cursorAtTen,
+            // AR pass 5: +1 band-step per player. SeedLifecycle now credits the seed day's own band
+            // step instead of starting GrowthCursor at 0, so the ten REPLAYED days (BaseDay+1..+10)
+            // sit on top of one already-banked day from the seed itself — 11, not 10. Arithmetic
+            // window shift, not a semantic change.
+            Assert.AreEqual(11 * SquadSize, cursorAtTen,
                 "precondition: ten lived days banked, so a replay of any of them would be visible.");
 
             engine.AdvanceDay(BaseDay + 3, TrainingInputBatch.Neutral);   // backward — must do nothing
@@ -132,7 +136,11 @@ namespace TacticalDirector.PlayerProgression.Tests
             // behaviour, and exactly why the band is held fixed here so the COUNT is what is asserted).
             engine.AdvanceDay(BaseDay + 300, TrainingInputBatch.Neutral);
 
-            Assert.AreEqual(300 * SquadSize, CursorOf(engine),
+            // AR pass 5: +1 band-step per player. SeedLifecycle now credits the seed day's own band
+            // step (previously 0), so the store carries one already-banked day before the 300 REPLAYED
+            // days (BaseDay+1..+300) are added on top — 301, not 300. Arithmetic window shift, not a
+            // semantic change.
+            Assert.AreEqual(301 * SquadSize, CursorOf(engine),
                 "the 300 days between the seed day and the first advance must be REPLAYED, not "
                 + "collapsed into one — the seed day is the cursor, so the span is known.");
         }
@@ -278,10 +286,15 @@ namespace TacticalDirector.PlayerProgression.Tests
             // first day actually lived, and it is one band step, which is what this case is about.
             engine.AdvanceDay(1, TrainingInputBatch.Neutral);
 
+            // AR pass 5: +1 band-step per player, Growth and Decline only. SeedLifecycle now credits
+            // the seed day (world day 0) with its own band step, so the Growth and Decline players
+            // each carry one already-banked step before the ONE REPLAYED day (day 1) adds a second —
+            // ±2, not ±1. The Stable player's seed step is 0 either way (Stable never accrues), so his
+            // expectation is unchanged. Arithmetic window shift, not a semantic change.
             ClubCareerStates[] blocks = engine.ToBlocks();
-            Assert.AreEqual(+1L, blocks[0].Lifecycles[0].GrowthCursor, "Growth band (age 18): +1/day.");
+            Assert.AreEqual(+2L, blocks[0].Lifecycles[0].GrowthCursor, "Growth band (age 18): +1/day, plus the seed day's own step.");
             Assert.AreEqual(0L, blocks[0].Lifecycles[1].GrowthCursor, "Stable band (age 27): no change.");
-            Assert.AreEqual(-1L, blocks[0].Lifecycles[2].GrowthCursor, "Decline band (age 34): -1/day.");
+            Assert.AreEqual(-2L, blocks[0].Lifecycles[2].GrowthCursor, "Decline band (age 34): -1/day, plus the seed day's own step.");
         }
 
         [Test]
@@ -343,8 +356,11 @@ namespace TacticalDirector.PlayerProgression.Tests
             Assert.DoesNotThrow(
                 () => engine.AdvanceDay(SeedDay + 1u, TrainingInputBatch.Neutral),
                 "the guard must refuse only the sentinel itself, not merely a large world day.");
-            Assert.AreEqual(SquadSize, Math.Abs(CursorOf(engine)),
-                "exactly one band-step of accrual per player for the one day advanced.");
+            // AR pass 5: +1 band-step per player. SeedLifecycle now credits the seed day's own band
+            // step, so the store already carries one banked step before the ONE REPLAYED day
+            // (SeedDay+1) adds a second — 2, not 1. Arithmetic window shift, not a semantic change.
+            Assert.AreEqual(2 * SquadSize, Math.Abs(CursorOf(engine)),
+                "one band-step from the seed day itself plus one band-step for the day advanced.");
         }
 
         // ── The KD-4 projection — the authority lock ──────────────────────────────────
@@ -639,6 +655,55 @@ namespace TacticalDirector.PlayerProgression.Tests
                 () => ProgressionEngine.FromBlocks(new[] { club }, nextPlayerId: 51),
                 "player ids within a club must strictly ascend — an unordered block makes a carried " +
                 "player un-findable, and the miss reads as 'new'.");
+        }
+
+        [Test]
+        public void AdvanceDay_AWholeGrowthBandTraversal_GainsExactlyOnePointPerYear_AndLeavesNoResidue()
+        {
+            // AR pass 5's High, and the assertion this suite did not have. Every existing growth lock
+            // measures a hand-placed 365-day window in MID-band; none measures a band TRAVERSAL, so
+            // none could see that the accrual window was shifted one day right against a fixed band
+            // edge. Measured before the fix: 8 years of Growth gave 7 points and a 364 residue; a
+            // 23-year-old with one year left gave ZERO.
+            //
+            // Two assertions, and the residue one is the load-bearing half: points-gained alone would
+            // still pass if a future change re-introduced a residue while rounding the count back up.
+            // The residue is what silently eats the first year of the Decline band later.
+            foreach (int seedAge in new[] { 16, 20, 23 })
+            {
+                PlayerRecord rec = Player(1, age: seedAge);
+                var squad = new Squad(clubId: 1, new[] { rec });
+                ProgressionEngine engine = ProgressionEngine.SeedFrom(new[] { squad }, newGameWorldDay: 0u);
+
+                int yearsInBand = PlayerProgressionConstants.GROWTH_AGE - seedAge;
+                int before = AttributeSum(engine, clubIndex: 0, playerIndex: 0);
+
+                engine.AdvanceDay(
+                    (uint)(yearsInBand * PlayerProgressionConstants.DAYS_PER_YEAR),
+                    TrainingInputBatch.Neutral);
+
+                int after = AttributeSum(engine, clubIndex: 0, playerIndex: 0);
+                PlayerLifecycle life = engine.ToBlocks()[0].Lifecycles[0];
+
+                Assert.AreEqual(yearsInBand, after - before,
+                    $"a player seeded at {seedAge} spends {yearsInBand} years in the Growth band and "
+                    + "Appendix A / KD-8 promise exactly one attribute point per year.");
+                Assert.AreEqual(0L, life.GrowthCursor,
+                    $"…and he must leave the band with NO residue: seeded at {seedAge}, a leftover "
+                    + "cursor survives the Stable band unspendable and then cancels the first year of "
+                    + "Decline.");
+            }
+        }
+
+        private static int AttributeSum(ProgressionEngine engine, int clubIndex, int playerIndex)
+        {
+            int[] values = engine.ToBlocks()[clubIndex].Records[playerIndex].Attributes.ToArray();
+            int sum = 0;
+            for (int i = 0; i < values.Length; i++)
+            {
+                sum += values[i];
+            }
+            return sum;
         }
 
         [Test]
