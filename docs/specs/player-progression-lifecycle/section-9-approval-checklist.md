@@ -1,17 +1,26 @@
 # Player Progression & Lifecycle #28 — Section 9: Approval Checklist
 
 **Created:** July 23, 2026
-**Last Updated:** August 9, 2026 (v0.3 — §9.2 implementation status corrected: T0/T1/T2a landed, verified
+**Last Updated:** August 10, 2026 (v0.4 — ERR-028-017: the §9.1 preamble and §9.5's blockquote both still
+read as "forward design (nothing built)" one revision after §9.2 was corrected to record T0/T1/T2a as
+landed — qualified to describe the state AT APPROVAL and date-stamped, respectively)
+**Last Updated (prior):** August 9, 2026 (v0.3 — §9.2 implementation status corrected: T0/T1/T2a landed, verified
 against `src/`; season-boundary roster mutation deliberately deferred)
-**Version:** 0.3
+**Version:** 0.4
 **Status:** APPROVED
 **Source:** `docs/tracking/player-progression-lifecycle-design.md` v0.3
 
 ---
 
 Checklist entries are verified against real source; nothing is checked without a programmatically
-verifiable anchor (CLAUDE.md "Never fabricate verification values"). This is a **forward-design** spec
-— implementation gates are open by construction (nothing is built yet); review gates track the pipeline.
+verifiable anchor (CLAUDE.md "Never fabricate verification values"). **This was a forward-design spec
+at APPROVAL** (July 23, 2026) — implementation gates were open by construction at that moment (nothing
+was built yet), and review gates tracked the pipeline. **T0/T1/T2a have since landed** (§9.2, corrected
+August 9, 2026); §9.2 records what has actually landed against real `src/` paths, not the
+still-forward-design posture this paragraph describes as of sign-off. Read this paragraph as describing
+the state AT APPROVAL, and §9.2 as the current implementation status (ERR-028-017, AR pass 5 — this
+paragraph and §9.5's blockquote below both still read as if nothing were built, one implementation phase
+after §9.2 was corrected to say otherwise).
 
 ## 9.1 Content gates
 
@@ -100,9 +109,12 @@ cycle (the #21–#30 convention).
 
 ## 9.5 Lead-developer review gates (R-01..R-05)
 
-> **Status: SIGNED — July 23, 2026.** PASS-1 → AR-2 → AR-3 converged (§9.3.1, 0H unresolved). This is a
-> forward design (nothing built) — sign-off approves the DESIGN, exactly as #21–#30 were approved before
-> their T0 code; the §7 roadmap is the post-APPROVED sequence.
+> **Status: SIGNED — July 23, 2026.** PASS-1 → AR-2 → AR-3 converged (§9.3.1, 0H unresolved). **As of
+> this July 23, 2026 sign-off**, this was a forward design (nothing built) — sign-off approved the
+> DESIGN, exactly as #21–#30 were approved before their T0 code; the §7 roadmap was the post-APPROVED
+> sequence. **Date-stamped at ERR-028-017 (August 10, 2026)** because T0/T1/T2a landed August 5/8, 2026
+> (§9.2) — a reader reaching this blockquote after §9.2 without the date would read "nothing built" as
+> the CURRENT state rather than the state this sign-off describes.
 
 | # | Review gate | Evidence to confirm | Status |
 |---|---|---|---|
@@ -131,4 +143,5 @@ consumption) is the post-APPROVED sequence.
 | 0.1 | 2026-07-23 | — | Initial checklist. Content/consistency gates checked; review + implementation gates OPEN by construction (forward design). Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | PASS-1 (0H+2M) → AR-2 (3M cross-fix) → AR-3 convergence recorded (§9.3.1); R-01..R-05 signed; §9.6 APPROVED. Status APPROVED. |
 | 0.3 | 2026-08-09 | — | §9.2 corrected: this section had stayed "forward design — nothing built yet" since APPROVED, but T0 (July 24, 2026) and T1/T2a (August 8, 2026) have since landed in `src/player-progression/` (verified: `ProgressionEngine`, `ProgressionSaveCodec`, `ClubCareerStates` exist; `AdvanceDay` is called from `src/season-save/SeasonLoop.cs` at KD-2 slot 1, closing ERR-029-006). `RunSeasonBoundary` and T3 remain unchecked — the season-boundary roster mutation (retiree removal + 1:1 regen) is deliberately deferred pending the `player-progression.regen` stream, not asserted as done. No other section touched. |
+| 0.4 | 2026-08-10 | — | ERR-028-017 (AR pass 5 spec-vs-code sweep, found against the T1/T2a landing, no code change): the v0.3 fix corrected §9.2 but left §9.1's preamble ("This is a **forward-design** spec — implementation gates are open by construction (nothing is built yet)") and §9.5's blockquote ("This is a forward design (nothing built)") both asserting the pre-T0 state as if current, one revision after §9.2 itself was corrected to say otherwise — a reader who read top-to-bottom would hit the contradiction before reaching the corrected section. §9.1 qualified to describe the state AT the July 23, 2026 approval, pointing to §9.2 for current status; §9.5's blockquote date-stamped to the same sign-off. This is the doc-hygiene class `tools/recurring-defect-lint.py` swept August 8, 2026 — this file survived that sweep uncaught. |
 #endregion

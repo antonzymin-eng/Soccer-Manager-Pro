@@ -1,9 +1,10 @@
 # Player Progression & Lifecycle #28 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** August 9, 2026 (v0.5 — ERR-028-014: the never-advanced sentinel retired from #28's legal store states)
+**Last Updated:** August 10, 2026 (v0.6 — ERR-028-017: AR pass 5 spec corrections — §2.3 F3's exception type corrected (`InvalidOperationException`, matching #29/#41's own ERR-029-004/ERR-041-008 corrections), F5 gains the same type, F8 extended from one refusing site to five, new F9 for the FR-PG-021 batch's four validation gates, §2.2 gains `ClubTrainingInputs`/`TrainingInputBatch`)
+**Last Updated (prior):** August 9, 2026 (v0.5 — ERR-028-014: the never-advanced sentinel retired from #28's legal store states)
 **Last Updated (prior):** August 8, 2026 (v0.4 — ERR-028-006: `BirthWorldDay` becomes a signed anchor; ERR-028-009: F8 sentinel-refusal row)
-**Version:** 0.5
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -135,6 +136,30 @@ public readonly struct RegenResult      { /* new PlayerRecords + their fresh Pla
 
 // Read-only observer surface for #31/#38 (KD-7).
 public readonly struct LifecycleViewModel { /* age / CA / PA / retirement (value copies) */ }
+
+// The FR-PG-021 batch parameter's actual type (ERR-028-017 — neither had a declared shape here; §4.5
+// called the seam "a TrainingInput method parameter", and §3.1's pseudocode wrote AdvanceDay(worldDay,
+// in trainingInputs) without saying what that was). One club's per-player contributions, ids carried
+// alongside the inputs so AdvanceDay can VERIFY the pairing rather than trust two arrays to stay in
+// the same order.
+public readonly struct ClubTrainingInputs
+{
+    public readonly int ClubId;
+    public readonly int[] PlayerIds;      // never null; index i pairs with Inputs[i]
+    public readonly TrainingInput[] Inputs;  // never null; same length as PlayerIds
+}
+
+// The whole league's contributions for one world day — AdvanceDay's trainingInputs argument.
+// TrainingInputBatch.Neutral (Clubs == null) is the explicit "no training anywhere" identity
+// (FR-PG-009); a BOUND batch must cover every carried club, in the store's own ascending-ClubId
+// order, with an entry for every one of that club's players in the store's own ascending-PlayerId
+// order (F9) — a partial batch is refused, not gap-filled with Neutral.
+public readonly struct TrainingInputBatch
+{
+    public readonly ClubTrainingInputs[] Clubs;   // null == Neutral
+    public static TrainingInputBatch Neutral => default;
+    public bool IsNeutral => Clubs == null;
+}
 ```
 
 The sentinel for `LastAdvancedWorldDay` is `uint.MaxValue`, not `0` — day 0 is a legitimate world day (the
@@ -165,11 +190,12 @@ the complete `PlayerRecord` (identity + evolving `PlayerAttributes`, #27 types) 
 |---|---|---|
 | **F1** | A growth spend would exceed the `PotentialAbility` ceiling | The spend is a no-op (clamped at the ceiling), deterministic; the cursor is not consumed past the ceiling. |
 | **F2** | A regen is requested for a club with no vacancy (roster already full) | Refused / no-op — the bounded-roster invariant (FR-PG-019); a regen is produced only for an actual retirement vacancy. |
-| **F3** | `PROGRESSION_SAVE_FORMAT_VERSION` mismatch on restore | **Fail loud** (`ArgumentException`), the `MatchSaveCodec` posture. |
+| **F3** | `PROGRESSION_SAVE_FORMAT_VERSION` mismatch on restore | **Fail loud** (`InvalidOperationException`), the `MatchSaveCodec` posture — corrected from `ArgumentException` (ERR-028-017), the same self-contradiction ERR-029-004 (#29 §2.3 F3) and ERR-041-008 (#41 §2.3 F3) filed against their sibling rows: the cited `MatchSaveCodec` posture IS `InvalidOperationException`, so the row's own two halves disagreed. Third instance of the class. |
 | **F4** | A `TrainingInput` carries an out-of-contract value | **Fail loud** at the consuming seam (the #27 `SquadFileLoader` bounds-gate precedent) — an invalid input from the future #29 producer is a bug, not silently clamped. |
-| **F5** | Corrupt length prefix (out-of-bounds) or trailing bytes in the block | **Fail loud** (overflow-safe bound; the `WorldStateSerializer.ReadCount` posture). |
+| **F5** | Corrupt length prefix (out-of-bounds) or trailing bytes in the block | **Fail loud** (`InvalidOperationException`; overflow-safe bound; the `WorldStateSerializer.ReadCount` posture). Exception type added at ERR-028-017 alongside F3's correction — the codec's framing gates (`SaveBlobFramingHelpers.Require`/`ReadCount`) throw the same type as F3's format-version gate, not `ArgumentException`. |
 | **F6** | `RunSeasonBoundary` invoked twice for one season boundary | Idempotent per boundary (FR-PG-024) — the second invocation is a no-op (guarded by the boundary marker), so a mid-roll save→restore→re-run does not double-apply. |
-| **F8** | `AdvanceDay` is called with `worldDay` equal to the never-advanced sentinel | **Fail loud** (`ArgumentOutOfRangeException`). Storing the sentinel as a real cursor re-arms the day-0 trap (the player reads as never-advanced forever, so the step stops being idempotent), and the gap-replay loop would not terminate at `uint.MaxValue`. (ERR-028-009) |
+| **F8** | The never-advanced sentinel (`PROGRESSION_NOT_ADVANCED_SENTINEL`) is presented where a real cursor or world day is required | **Fail loud, at FIVE sites — not one, and not uniformly typed** (ERR-028-017 corrects this row, which named only `AdvanceDay`): `AdvanceDay(worldDay == sentinel)` → `ArgumentOutOfRangeException` (ERR-028-009); `SeedFrom(newGameWorldDay == sentinel)` → `ArgumentOutOfRangeException` (ERR-028-015 — anchoring the cursor at the seed day made the seed site a second way to write the one value `FromBlocks` refuses); `FromBlocks` (a decoded lifecycle's cursor equals the sentinel) → `ArgumentException`; `ProgressionSaveCodec.Encode` and `ProgressionSaveCodec.Decode`, both via the shared `RequireNoNeverAdvancedSentinel` → `ArgumentException` at each (the ERR-028-011(a) class, one ERR later than ERR-028-014 — never write or read back what `FromBlocks` refuses). Storing the sentinel as a real cursor re-arms the day-0 trap (a player reads as never-advanced forever, so the step stops being idempotent) and the gap-replay loop would not terminate at `uint.MaxValue`. |
+| **F9** | The FR-PG-021 batch (`TrainingInputBatch`, §2.2) is bound but malformed | **Fail loud** (`ArgumentException`, `ProgressionEngine.ValidateBatch`), at four independent gates, none stated in any prior revision of this spec (ERR-028-017): **(a)** the batch's club count does not equal the store's carried club count — a dropped club would otherwise advance on Neutral, indistinguishable from a club that genuinely trained neutrally; **(b)** a batch club does not positionally match the store's club at the same index — both sides hold clubs in ascending `ClubId` order, so a mismatch means the two roster views have drifted; **(c)** a batch club's player count does not equal that club's carried player count — a partial batch is refused rather than gap-filled with `TrainingInput.Neutral`, which would make a dropped player indistinguishable from an untrained one; **(d)** a batch player id does not equal the store's player id at the same position — the batch would train the wrong player. `TrainingInputBatch.Neutral` (an unbound batch) bypasses all four — it is the explicit "no training anywhere" identity (FR-PG-009), not a batch to validate. |
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -179,4 +205,5 @@ the complete `PlayerRecord` (identity + evolving `PlayerAttributes`, #27 types) 
 | 0.3 | 2026-08-08 | — | ERR-028-005: `PlayerLifecycle` gains `LastAdvancedWorldDay` (sentinel `uint.MaxValue`) so `AdvanceDay` is idempotent per day and gap-complete, matching #29's `TRAINING_NOT_ADVANCED_SENTINEL` precedent; documented alongside the struct listing. Spec + code, same commit (T1/T2a). |
 | 0.4 | 2026-08-08 | — | ERR-028-006: `BirthWorldDay` becomes a **signed** `long` — a new world starts on day 0, so any generated player with Age0 > 0 anchors negative; clamping to 0 read the whole league as age 0 after one daily step. ERR-028-009: new **F8** row — `AdvanceDay` fails loud on the never-advanced sentinel, matching #29/#41's guard. Spec + code, same commit (AR over the T1/T2a landing). |
 | 0.5 | 2026-08-09 | — | ERR-028-014: the `LastAdvancedWorldDay` struct comment and the sentinel discussion below §2.2's listing are corrected — the sentinel is NOT a legal cursor state for #28 as it is for #29/#41 (their fresh states carry no clock-anchored quantity; #28's derives age from `BirthWorldDay`). `SeedFrom` anchors the cursor at the seed day and `FromBlocks` refuses a lifecycle carrying the sentinel; the constant survives only as F8's refused `worldDay` input. Spec + code, same commit. |
+| 0.6 | 2026-08-10 | — | ERR-028-017 (AR pass 5 spec-vs-code sweep, found against the T1/T2a landing, no code change): §2.3 **F3** corrected `ArgumentException` → `InvalidOperationException` (the row cited the `MatchSaveCodec` posture, which throws `InvalidOperationException` — the third instance of this exact self-contradiction, after ERR-029-004 and ERR-041-008 on the sibling #29/#41 rows); **F5** gains the same exception type, undocumented until now; **F8** extended from naming one refusing site (`AdvanceDay`) to all five the code carries (`AdvanceDay`, `SeedFrom`, `FromBlocks`, `ProgressionSaveCodec.Encode`, `ProgressionSaveCodec.Decode` — two exception types across them); new **F9** for the FR-PG-021 batch's four `ValidateBatch` refusals (club-count coverage, positional club agreement, per-club player-count exactness, per-player id agreement), none previously stated anywhere. §2.2 gains `ClubTrainingInputs`/`TrainingInputBatch` — the batch parameter's actual shape, previously declared in no document. |
 #endregion

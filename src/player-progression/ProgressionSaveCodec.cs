@@ -1,6 +1,6 @@
 // File:     src/player-progression/ProgressionSaveCodec.cs
 // Created:  2026-08-08
-// Modified: 2026-08-10
+// Modified: 2026-08-10 (AR pass 5 — Encode/Decode range-gate parity via DescribeOutOfRangeValues — v1.3)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.5 (the save codec), §4.2, KD-4, FR-PG-016/017/018/019,
 //           F3/F5; ERR-028-004 (§3.5 named the RNG domain tag as the block's identifier);
@@ -13,7 +13,9 @@
 //           / ordering / trailing-byte violation. No file I/O (that is SeasonSaveManager), so the codec
 //           is exhaustively unit-testable in memory. ReadPlayer's L3 range gates now cover
 //           PotentialAbility (the F1 growth ceiling) alongside attributes, weak-foot and age. Encode and
-//           Decode both refuse the never-advanced sentinel as a progression cursor (ERR-028-014).
+//           Decode both refuse the never-advanced sentinel as a progression cursor (ERR-028-014). Encode
+//           and Decode now enforce the SAME four value-range rules through one shared
+//           DescribeOutOfRangeValues owner, closing the never-write-what-Decode-refuses gap (AR pass 5).
 
 using System;
 using System.Text;
@@ -185,6 +187,18 @@ namespace TacticalDirector.PlayerProgression
             // validated LastAdvancedWorldDay at all, so a hand-built block carrying the sentinel encoded
             // happily into a file that could never be loaded. Never write what FromBlocks refuses.
             RequireNoNeverAdvancedSentinel(clubs);
+
+            // Same class again, and the third time it has been the SAME rule: §3.5 states
+            // never-write-what-Decode-refuses as a MUST, and Encode enforced four fewer predicates than
+            // Decode did. Decode range-gates attributes, weak-foot, negative age and PotentialAbility
+            // (the L3 block in ReadPlayer); Encode gated none of them, and ProgressionEngine.FromBlocks
+            // gates none either — so a store carrying PotentialAbility = 0 encoded happily through
+            // Snapshot() and was then refused by Restore/Load FOREVER. Because #28's block IS the roster
+            // (KD-4), that is an unloadable career, failing at the one boundary where nothing can be
+            // recovered. The rules now have ONE owner (DescribeOutOfRangeValues) that both sides call,
+            // rather than a second hand-copied walk — the parallel-surface trap this codec has already
+            // been bitten by twice.
+            RequireValuesInRange(clubs);
 
             int size = 4 + 4 + 4 + 4;   // magic + version + nextPlayerId + clubCount
             for (int i = 0; i < clubs.Length; i++)
@@ -407,37 +421,6 @@ namespace TacticalDirector.PlayerProgression
             // — an attribute of 9999 or a negative age would simply be played. The sibling career
             // codecs gate their own value contracts for the same reason; #28's stakes are higher
             // because nothing downstream re-derives these from a trusted source.
-            for (int i = 0; i < AttrIdx.Count; i++)
-            {
-                if (attrValues[i] < PlayerProgressionConstants.ATTRIBUTE_MIN
-                    || attrValues[i] > PlayerProgressionConstants.ATTRIBUTE_MAX)
-                {
-                    throw new InvalidOperationException(
-                        Subject + " player " + playerId + " in club " + clubId + " carries attribute " +
-                        i + " = " + attrValues[i] + ", outside [" +
-                        PlayerProgressionConstants.ATTRIBUTE_MIN + ", " +
-                        PlayerProgressionConstants.ATTRIBUTE_MAX + "] — corrupt save.");
-                }
-            }
-
-            if (weakFoot < PlayerDatabaseConstants.WEAK_FOOT_MIN
-                || weakFoot > PlayerDatabaseConstants.WEAK_FOOT_MAX)
-            {
-                throw new InvalidOperationException(
-                    Subject + " player " + playerId + " in club " + clubId + " carries weak-foot " +
-                    weakFoot + ", outside [" + PlayerDatabaseConstants.WEAK_FOOT_MIN + ", " +
-                    PlayerDatabaseConstants.WEAK_FOOT_MAX + "] — corrupt save.");
-            }
-
-            if (age < 0)
-            {
-                throw new InvalidOperationException(
-                    Subject + " player " + playerId + " in club " + clubId + " carries age " + age +
-                    " — negative ages are not representable in the model (corrupt save). Note the age " +
-                    "field is a DERIVED cache; the authoritative anchor is birthWorldDay, which may " +
-                    "legitimately be negative (ERR-028-006).");
-            }
-
             var attributes = new PlayerAttributes();
             attributes.FromArray(attrValues);
             attributes.WeakFootRating = weakFoot;
@@ -471,13 +454,16 @@ namespace TacticalDirector.PlayerProgression
             // weak-foot and age but read off `rec`; this one reads off `life`, which is only fully read
             // at this point, so it necessarily sits after `rec` is built rather than before it (unlike
             // its neighbours) — the check itself is otherwise the same shape.
-            if (life.PotentialAbility < PlayerProgressionConstants.PA_MIN
-                || life.PotentialAbility > PlayerProgressionConstants.ABILITY_MAX)
+            // All four L3 value gates now run from the ONE owner, here rather than inline above, because
+            // `life` is only fully read at this point and the PA gate needs it. The gates are therefore
+            // evaluated after `rec`/`life` are built rather than during the read — which changes nothing
+            // observable (the values are identical, and nothing between the read and here can act on a
+            // bad one), and buys the property that Encode cannot drift from Decode: reverting either
+            // side's call leaves the other enforcing the same rule from the same code.
+            string violation = DescribeOutOfRangeValues(rec, life, clubId);
+            if (violation != null)
             {
-                throw new InvalidOperationException(
-                    Subject + " player " + playerId + " in club " + clubId + " carries potentialAbility " +
-                    life.PotentialAbility + ", outside [" + PlayerProgressionConstants.PA_MIN + ", " +
-                    PlayerProgressionConstants.ABILITY_MAX + "] — corrupt save.");
+                throw new InvalidOperationException(Subject + " " + violation);
             }
         }
 
@@ -547,6 +533,82 @@ namespace TacticalDirector.PlayerProgression
                             "sentinel is not a legal STORE state (ERR-028-014) — a career's lived " +
                             "history has to start somewhere it can be checked against the world " +
                             "clock; seed through ProgressionEngine.SeedFrom, which anchors it.",
+                            nameof(clubs));
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// The SINGLE owner of #28's per-player value ranges. Returns <c>null</c> when every value is
+        /// in range, otherwise the violation text (already phrased to follow a subject prefix).
+        /// <para>
+        /// This returns a message rather than throwing because the two callers owe DIFFERENT exception
+        /// contracts — <see cref="Decode"/> throws <see cref="InvalidOperationException"/> ("this file is
+        /// corrupt"), <see cref="Encode"/> throws <see cref="ArgumentException"/> on <c>clubs</c> ("this
+        /// argument is invalid") — and collapsing them would either break the decode locks that assert
+        /// the type or mislabel a caller's bad argument as a corrupt file. What must not be duplicated is
+        /// the RULE, and it is not: both sides call this.
+        /// </para>
+        /// </summary>
+        internal static string DescribeOutOfRangeValues(in PlayerRecord rec, in PlayerLifecycle life, int clubId)
+        {
+            int[] attrValues = rec.Attributes.ToArray();
+            for (int i = 0; i < attrValues.Length; i++)
+            {
+                if (attrValues[i] < PlayerProgressionConstants.ATTRIBUTE_MIN
+                    || attrValues[i] > PlayerProgressionConstants.ATTRIBUTE_MAX)
+                {
+                    return "player " + rec.PlayerId + " in club " + clubId + " carries attribute " +
+                        i + " = " + attrValues[i] + ", outside [" +
+                        PlayerProgressionConstants.ATTRIBUTE_MIN + ", " +
+                        PlayerProgressionConstants.ATTRIBUTE_MAX + "] — corrupt save.";
+                }
+            }
+
+            if (rec.Attributes.WeakFootRating < PlayerDatabaseConstants.WEAK_FOOT_MIN
+                || rec.Attributes.WeakFootRating > PlayerDatabaseConstants.WEAK_FOOT_MAX)
+            {
+                return "player " + rec.PlayerId + " in club " + clubId + " carries weak-foot " +
+                    rec.Attributes.WeakFootRating + ", outside [" + PlayerDatabaseConstants.WEAK_FOOT_MIN +
+                    ", " + PlayerDatabaseConstants.WEAK_FOOT_MAX + "] — corrupt save.";
+            }
+
+            if (rec.Age < 0)
+            {
+                return "player " + rec.PlayerId + " in club " + clubId + " carries age " + rec.Age +
+                    " — negative ages are not representable in the model (corrupt save). Note the age " +
+                    "field is a DERIVED cache; the authoritative anchor is birthWorldDay, which may " +
+                    "legitimately be negative (ERR-028-006).";
+            }
+
+            if (life.PotentialAbility < PlayerProgressionConstants.PA_MIN
+                || life.PotentialAbility > PlayerProgressionConstants.ABILITY_MAX)
+            {
+                return "player " + rec.PlayerId + " in club " + clubId + " carries potentialAbility " +
+                    life.PotentialAbility + ", outside [" + PlayerProgressionConstants.PA_MIN + ", " +
+                    PlayerProgressionConstants.ABILITY_MAX + "] — corrupt save.";
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Encode's half of never-write-what-Decode-refuses for the four value ranges. See the call site
+        /// in <see cref="Encode"/> for why this was missing and what it cost.
+        /// </summary>
+        internal static void RequireValuesInRange(ClubCareerStates[] clubs)
+        {
+            for (int c = 0; c < clubs.Length; c++)
+            {
+                for (int p = 0; p < clubs[c].Count; p++)
+                {
+                    string violation = DescribeOutOfRangeValues(
+                        clubs[c].Records[p], clubs[c].Lifecycles[p], clubs[c].ClubId);
+                    if (violation != null)
+                    {
+                        throw new ArgumentException(
+                            "Refusing to write a block Decode would refuse to read back: " + violation,
                             nameof(clubs));
                     }
                 }
@@ -631,4 +693,19 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | hand-built block carrying the sentinel encoded happily into a  |
 // |         |            |        | file that could never be loaded. Proven by mutation: deleting  |
 // |         |            |        | either call site left its new lock the only failure.           |
+// | 1.3     | 2026-08-10 | —      | AR pass 5 (High): Encode enforced FOUR fewer predicates than    |
+// |         |            |        | Decode, breaking §3.5's never-write-what-Decode-refuses MUST —  |
+// |         |            |        | Decode range-gates attributes, weak-foot, negative age and      |
+// |         |            |        | PotentialAbility; neither Encode nor FromBlocks gated any of    |
+// |         |            |        | them, so a store carrying e.g. PotentialAbility = 0 encoded     |
+// |         |            |        | happily and was then refused by Restore/Load forever — an       |
+// |         |            |        | unloadable career, since #28's block IS the roster (KD-4). New  |
+// |         |            |        | DescribeOutOfRangeValues(in PlayerRecord, in PlayerLifecycle,    |
+// |         |            |        | int clubId) is the ONE owner of the four range rules, called    |
+// |         |            |        | from the new RequireValuesInRange(clubs) on Encode and from     |
+// |         |            |        | ReadPlayer on Decode; the two sides keep DIFFERENT exception    |
+// |         |            |        | types deliberately (ArgumentException on clubs for a bad        |
+// |         |            |        | argument; InvalidOperationException for a corrupt file) — what  |
+// |         |            |        | is shared is the rule, not the throw. Mutation-verified:         |
+// |         |            |        | reverting the Encode call fails 6 tests.                         |
 #endregion

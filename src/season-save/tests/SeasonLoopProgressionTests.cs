@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonLoopProgressionTests.cs
 // Created:  2026-08-08
-// Modified: 2026-08-10
+// Modified: 2026-08-10 (AR pass 5 — the progression-only advance/play/save/reload/resume lock — v1.5)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (KD-2 slot 1); Player Progression & Lifecycle #28
 //           KD-4 / FR-PG-021 / FR-PG-022; ERR-029-006 (the batch entry point, closed here);
@@ -15,9 +15,12 @@
 //           two — SeasonSaveManager.Save and .Load — live in SeasonSaveManagerTests.cs beside their
 //           #29/#41 siblings). v1.3 (ERR-028-014) rewrites the bootstrap-league accrual count for the
 //           anchored seed-day cursor and inverts the sentinel-exemption constructor case, which had
-//           been locking the defect as intended behaviour.
+//           been locking the defect as intended behaviour. v1.5 (AR pass 5, High) adds the
+//           save/reload/resume lock for a progression-only (no #29/#41 career) loop — the composition
+//           SeasonSaveManager could not save at all before this pass's SeasonSaveManager.cs fix.
 
 using System;
+using System.IO;
 
 using NUnit.Framework;
 
@@ -301,6 +304,72 @@ namespace TacticalDirector.SeasonSave.Tests
             MatchResult[] results = loop.AdvanceAndPlayNextRound();
             Assert.AreEqual(ClubCount / 2, results.Length,
                 "…and the configuration must actually be able to play, through the provider it owns.");
+        }
+
+        [Test]
+        public void AProgressionStoreWithNoCareer_SavesAndReloadsAndResumes()
+        {
+            // AR pass 5, and it is the SAME shape a third time — the one the case above names and then
+            // itself demonstrates. Its comment claimed the progression-only composition "could advance
+            // days and save"; the first half was true and the second was never once executed. Save's
+            // career-coherence gate carved out an empty STORE (the honest pre-#28 wiring) and never the
+            // mirror: an empty CAREER beside a populated store. Save(SeasonLoop, …) feeds
+            // Array.Empty<ClubTrainingStates>() for a careerless loop, so the length compare fired
+            // unconditionally and this blessed composition threw:
+            //     "The progression set carries 4 clubs but the three career sets carry 0"
+            // A career that advances, plays, and then cannot be persisted — with the loss landing only
+            // when the player saves, and silently for any caller catching broadly.
+            //
+            // The operation set for a supported composition is advance / play / SAVE / RESUME, so this
+            // asserts all four. It fails at Save against the pre-fix gate.
+            League league = LeagueBootstrap.Generate(WorldSeed, ClubCount);
+            ProgressionEngine progression = SeedFor(league);
+            var loop = new SeasonLoop(
+                new WorldStore(ManagerId, WorldSeed), league.CreateSeason(managedClubId: 0),
+                RoundResolutionMode.QuickSimAll,
+                careerOrNull: null, careerSquadsOrNull: null, progressionOrNull: progression);
+
+            loop.AdvanceToNextFixtureDay();
+            loop.AdvanceAndPlayNextRound();
+
+            string dir = Path.Combine(Path.GetTempPath(), "td-prog-only-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            try
+            {
+                string path = Path.Combine(dir, "progression-only.save");
+
+                Assert.DoesNotThrow(
+                    () => SeasonSaveManager.Save(loop, matchOrNull: null, path),
+                    "a composition ERR-028-013 blessed, and that this suite locks can advance and play, "
+                    + "must be persistable — the career sets being empty is the ABSENCE of #29/#41, not "
+                    + "a disagreement with the store.");
+
+                SeasonSaveContents contents = SeasonSaveManager.Load(path);
+                Assert.AreEqual(ClubCount, contents.Progression.ClubCount,
+                    "the roster is #28's block (KD-4), so a save that drops it loses the career.");
+
+                // Resume into a live loop and keep going: a file that loads but cannot be run forward is
+                // not a saved career either.
+                //
+                // The world MUST come from the file, not from a fresh WorldStore on the same seed. The
+                // first draft of this test built a new one and the composition gate refused it — "club 0
+                // player 0's progression cursor (7) is ahead of the world clock (0)" — which is the
+                // cursor-vs-clock invariant doing precisely its job: a career's lived history and the
+                // clock it was lived against travel together or not at all. Worth keeping as a comment
+                // because a fresh-store resume is the obvious thing to write and it is wrong.
+                var resumed = new SeasonLoop(
+                    contents.World, contents.Season,
+                    RoundResolutionMode.QuickSimAll,
+                    careerOrNull: null, careerSquadsOrNull: null, progressionOrNull: contents.Progression);
+                resumed.AdvanceToNextFixtureDay();
+                MatchResult[] resumedResults = resumed.AdvanceAndPlayNextRound();
+                Assert.AreEqual(ClubCount / 2, resumedResults.Length,
+                    "the resumed progression-only loop must play through the provider it owns.");
+            }
+            finally
+            {
+                Directory.Delete(dir, recursive: true);
+            }
         }
 
         [Test]
@@ -744,4 +813,12 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | that could advance days and save and nothing else, verbatim the  |
 // |         |            |        | ERR-028-010 shape — and that gap is what hid the reference-gate  |
 // |         |            |        | hole this case now locks.                                        |
+// | 1.5     | 2026-08-10 | —      | AR pass 5 (High): + AProgressionStoreWithNoCareer_               |
+// |         |            |        | SavesAndReloadsAndResumes — the progression-only loop advances,   |
+// |         |            |        | plays a round, SAVES, reloads and RESUMES; the fix this pass      |
+// |         |            |        | proves (SeasonSaveManager's carve-out made symmetric). The        |
+// |         |            |        | test's own comment records that a fresh WorldStore on the same    |
+// |         |            |        | seed is refused as a resume source by the cursor-vs-clock         |
+// |         |            |        | invariant — the world MUST come from the loaded file, not be      |
+// |         |            |        | rebuilt from the seed (roadmap A3's retired property).             |
 #endregion

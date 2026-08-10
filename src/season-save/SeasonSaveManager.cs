@@ -1,6 +1,6 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
-// Modified: 2026-08-10 (doc fix — v1.19)
+// Modified: 2026-08-10 (AR pass 5 — RequireCoherentCareerBlocks carve-out made symmetric — v1.20)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-1 / KD-5..KD-8;
 //           Training System #29 §4.4 / FR-TR-018/019; Injuries & Medical #41 §4.4 / FR-MD-017/018;
@@ -499,7 +499,18 @@ namespace TacticalDirector.SeasonSave
             // Save never writes what Load refuses; a set added without joining it is outside that
             // guarantee. Skipped for an EMPTY store, which is the honest pre-#28 composition — a career
             // whose rosters come from the bootstrap, not from #28.
-            if (progression != null && progression.ClubCount > 0)
+            //
+            // ALSO skipped when the three career sets are empty and the store is not. That is the
+            // MIRROR composition, and it is legal by construction: ERR-028-013 made "populated #28
+            // store, no #29/#41 career" a supported wiring, and `SeasonLoop` locks that it can advance
+            // days and play a round. The carve-out above was written for one direction only, so the
+            // blessed composition could run and play and then throw on Save — `Save(SeasonLoop, …)`
+            // feeds `Array.Empty<ClubTrainingStates>()` for a careerless loop, and the length compare
+            // below fired unconditionally. A career you can play and cannot persist is worse than one
+            // that refuses at composition, because the loss lands only when the player saves.
+            // The two sets describe one career ONLY when both exist; when one is absent there is
+            // nothing to agree with, which is exactly what the empty-store case already says.
+            if (progression != null && progression.ClubCount > 0 && trainingClubs.Length > 0)
             {
                 ClubCareerStates[] prog = progression.ToBlocks();
                 if (prog.Length != trainingClubs.Length)
@@ -844,4 +855,14 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | "Three persisted cursors" after v1.18 made the method walk four   |
 // |         |            |        | (ERR-028-007's progression cursor). Corrected to "Four" — no      |
 // |         |            |        | logic change.                                                      |
+// | 1.20    | 2026-08-10 | —      | AR pass 5 (High): RequireCoherentCareerBlocks carved out an EMPTY |
+// |         |            |        | store (the honest pre-#28 composition) but never its mirror — a   |
+// |         |            |        | populated #28 store beside an empty #29/#41 career, the           |
+// |         |            |        | composition ERR-028-013 blessed and SeasonLoop locks can advance  |
+// |         |            |        | and play. Save(SeasonLoop, …) feeds Array.Empty<ClubTrainingStates>|
+// |         |            |        | for a careerless loop, so the length compare fired unconditionally|
+// |         |            |        | and a progression-only career could not be saved at all. The      |
+// |         |            |        | carve-out is now symmetric (&& trainingClubs.Length > 0).          |
+// |         |            |        | Mutation-verified: reverting the predicate fails the new           |
+// |         |            |        | SeasonLoopProgressionTests lock.                                   |
 #endregion

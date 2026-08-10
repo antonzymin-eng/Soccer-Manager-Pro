@@ -1,9 +1,10 @@
 # Player Progression & Lifecycle #28 — Section 3: Core Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** August 9, 2026 (v0.5 — ERR-028-014: the never-advanced sentinel retired from #28's legal store states)
+**Last Updated:** August 10, 2026 (v0.6 — ERR-028-017: AR pass 5 spec corrections — §3.1.1 states the `ageDays ≤ 0 → age 0` guard the formula omitted; §3.4 states the retirement evaluation runs once per `AdvanceDay` CALL on post-replay age (not once per lived day), with the multi-day-gap `RetirementDay` limitation recorded and cross-referenced to T-PG-DET-002; §3.5's byte layout pins the `str` encoding (u32 length + ASCII, #16 §3.2.4.1) and states the four VALUE gates `Decode` applies (previously undocumented), with the `PA_MIN`/`ABILITY_MAX` config-keyed-acceptance-predicate tension against #30 Appendix B.1's posture recorded as an OPEN decision)
+**Last Updated (prior):** August 9, 2026 (v0.5 — ERR-028-014: the never-advanced sentinel retired from #28's legal store states)
 **Last Updated (prior):** August 8, 2026 (v0.4 — ERR-028-006/007/008/009: the signed age anchor, the cross-blob cursor rule, the destination-roster-overwrite refusal, and the F8 sentinel guard)
-**Version:** 0.5
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -102,8 +103,18 @@ Growth/Decline bands and zero times in Stable — the literal §4.3 `±1/year` s
 ### 3.1.1 Age derivation — one representation
 
 Age is **derived** from the single serialized anchor `BirthWorldDay` (the authoritative field on the
-lifecycle overlay): `AgeYears = (worldDay − BirthWorldDay) / DAYS_PER_YEAR` (integer division).
-`BirthWorldDay` is pinned once at new-game from #27's generation-time `PlayerRecord.Age`
+lifecycle overlay): `AgeYears = (worldDay − BirthWorldDay) / DAYS_PER_YEAR` (integer division), **guarded
+at zero when `worldDay ≤ BirthWorldDay` (ERR-028-017 — this formula was previously stated unconditionally)**:
+`GrowthProjection.AdvanceDayForPlayer` computes `ageDays = worldDay − BirthWorldDay` and returns `age = 0`
+whenever `ageDays ≤ 0`, rather than dividing. Since `BirthWorldDay` is SIGNED and ordinarily negative for
+a generated player (§3.1.1 below / ERR-028-006), the unconditional formula would otherwise divide a
+non-positive numerator by a positive divisor — never undefined in C# integer arithmetic, but the result
+(zero or a small negative quotient, truncating toward zero) is not a meaningful age for a player who has
+not yet "reached" his own birth day relative to the world clock he is being read against. The guard
+applies at every call — including the ordinary case, where `worldDay` sits at or shortly after
+`BirthWorldDay` and `ageDays` is small but positive, which the unguarded formula already handles
+correctly; the guard only changes the `ageDays ≤ 0` edge. `BirthWorldDay` is pinned once at new-game from
+#27's generation-time `PlayerRecord.Age`
 (`BirthWorldDay = newGameDay − Age0 · DAYS_PER_YEAR`, where `Age0 = PlayerRecord.Age` at new-game).
 There is **no** `AgeAnchorDay` field and **no** rollover `while`-loop — age is a pure function of the
 world day, so nothing anchors or double-counts. #28 keeps the career-state `PlayerRecord.Age` field
@@ -186,6 +197,26 @@ are generated below PA so the player has room to grow.
 true; RetirementDay = worldDay`. Deterministic-hard — no draw (FR-PG-013). The player stays in the
 roster and stays selectable (FR-PG-014).
 
+**Evaluated once per `AdvanceDay` call, on the post-replay derived age — not once per lived day
+(ERR-028-017, correcting a placement §3.1's `AdvanceDayForPlayer` pseudocode never showed).** §3.1's
+`AdvanceDay` gap-replay loop calls `GrowthProjection.AdvanceDayForPlayer` once per day in the gap, but
+the retirement check above lives in `ProgressionEngine.AdvancePlayerTo`, which wraps the WHOLE replay
+and evaluates retirement exactly once, after the loop, against the age derived at `worldDay` (the
+call's target day) — never against any intermediate day the replay passed through. §3.1 itself has no
+retirement step at all; this section (§3.4) is the only normative placement, and until now it did not
+say which of "per lived day" or "per call" the evaluation runs at.
+**Known limitation, stated rather than fixed:** `RetirementDay` is stamped `worldDay` — the call's
+target day — not the earlier day within the gap on which `AgeYears` first reached `RETIREMENT_AGE`. For
+any gap of more than one day where the threshold is crossed mid-gap, these two days differ, and the
+earlier crossing day is not recoverable from the stored state. This is a property of a system whose only
+per-day cursor is the growth accumulator (§3.1) and whose age is DERIVED rather than stepped — pinning
+the true crossing day would need either a per-day retirement check inside the replay loop (changing
+`AdvanceDayForPlayer`'s contract, which §5's T-PG-DET-002 keystone below directly exercises) or a second
+stored anchor, and neither is justified by what `RetirementDay` is actually used for today (FR-PG-014's
+selectability gate reads only the boolean flag). **See §5's T-PG-DET-002**, which mandates far-future gap
+tests: a reader running that test against a player who crosses `RETIREMENT_AGE` mid-gap will observe
+this limitation directly, so the cross-reference is here rather than left implicit.
+
 **At the season boundary (`RunSeasonBoundary`, invoked by #30 KD-6):**
 ```
 RunSeasonBoundary(...):
@@ -232,6 +263,31 @@ per club, ascending ClubId:
         i64 birthWorldDay, u8 retirementFlag, u32 retirementDay, u32 lastAdvancedWorldDay
 ```
 
+**`str` is `u32` length-prefix + ASCII body (ERR-028-017), pinned explicitly because F3 makes the first
+written layout the format permanently.** This section left the string encoding unstated — no width, no
+character set — for a field F3 forbids ever changing. The shipped encoding, per Deterministic
+Simulation #16 §3.2.4.1 (`CanonicalSerializer.WriteString`/`ReadString`), is a `u32` byte-length prefix
+followed by that many ASCII bytes; `ProgressionSaveCodec.Encode` refuses a non-ASCII name at the write
+site rather than mangling it silently (the never-write-what-Decode-refuses rule), so a name outside
+ASCII is a save-time failure, not a round-trip corruption.
+
+**The fail-loud enumeration below was incomplete — it named only the framing gates, not the VALUE
+gates `Decode` applies to what the framing successfully reads (ERR-028-017).** `ReadPlayer` range-gates
+four value fields the framing-level list omits entirely: each `[1,20]` attribute against
+`[ATTRIBUTE_MIN, ATTRIBUTE_MAX]`, `weakFootRating` against `[WEAK_FOOT_MIN, WEAK_FOOT_MAX]` (#27's
+bounds), `age` against `≥ 0` (the field is a derived cache — see §3.1.1's SIGNED `birthWorldDay` for the
+authoritative anchor, which MAY legitimately be negative; the cache itself may not), and
+`potentialAbility` against `[PA_MIN, ABILITY_MAX]` (the F1 growth ceiling — a corrupt value below the
+floor would silently freeze a player's growth forever, and one above the ceiling would silently unbound
+it). All four throw `InvalidOperationException`, matching the framing gates' type (see the corrected F3
+row, §2.3). **`PA_MIN` and `ABILITY_MAX` are `[GT]` (Appendix A)** — this makes the `potentialAbility`
+gate a save-acceptance predicate keyed on tunable config, the exact posture #30 Appendix B.1 reasons
+AGAINST for its own appearance sub-blob ("gating it would turn a retune into data loss"). **This is
+recorded as an OPEN decision, not resolved here**: whether the range gate should instead read from a
+`[FIXED]`/`[DERIVED]` bound, or whether the tension with #30's stated posture is acceptable because this
+block is the roster itself (KD-4) rather than an overlay, is an owner call for a future pass. Nothing in
+this correction changes any tag, retags any constant, or migrates the gate.
+
 **`birthWorldDay` widened `u32 → i64` (ERR-028-006).** The anchor MUST be signed (§3.1.1) and a 32-bit
 signed field is not comfortably wide against `Age0 · DAYS_PER_YEAR` for long-lived save histories, so
 the field is `i64`, matching `GrowthCursor`'s width. The widening is **free**: `PROGRESSION_SAVE_FORMAT_VERSION`
@@ -248,7 +304,12 @@ ascending** on decode, so a corrupt blob cannot smuggle in a duplicate; trailing
 `PlayerPosition` ordinal or a non-ASCII name) — the never-write-what-Decode-refuses rule.
 `Restore(byte[])` applies the fail-loud gate posture (FR-PG-018) in that order: magic, then version,
 then an overflow-safe `ReadCount` for each count prefix (`0 ≤ count ≤ remaining`), then the ascending-key
-check per entry, then the trailing-byte check. The block is opaque to the season-save root, which frames
+check per entry, then the trailing-byte check, **then, per player (ERR-028-017 — this ordering previously
+stopped at framing and never named these), the VALUE gates**: each `[1,20]` attribute against
+`[ATTRIBUTE_MIN, ATTRIBUTE_MAX]`, `weakFootRating` against `[WEAK_FOOT_MIN, WEAK_FOOT_MAX]`, `age` against
+`≥ 0`, and `potentialAbility` against `[PA_MIN, ABILITY_MAX]` (the F1 ceiling) — see the note above this
+layout block for why the last of those is a save-acceptance predicate keyed on `[GT]` config, recorded as
+an open decision, not resolved here. The block is opaque to the season-save root, which frames
 it as one more length-prefixed sub-blob (FR-PG-017) — the `SeasonSaveCodec` never parses it, so
 `PROGRESSION_SAVE_FORMAT_VERSION` is independent of every other format version. **F3 makes the first
 written layout the format permanently** — the ERR-029-004 rule — so this is not a draft pending
@@ -303,4 +364,5 @@ about not erasing a roster the codec can actually see.
 | 0.3 | 2026-08-08 | — | ERR-028-003: §3.2 states new-game `PotentialAbility` is authored data owned by #47, with #28's `NEW_GAME_PA_HEADROOM` seed as a placeholder, plus the recorded ~421-of-`ABILITY_MAX` growth-rate limitation. ERR-028-004: §3.5's layout corrected from version-first/domain-tag-as-identifier to the shipped magic-led `PROG` layout. ERR-028-005: §3.1 gains the public batch `AdvanceDay` pseudocode showing the `LastAdvancedWorldDay` idempotency/gap-completeness cursor. Spec + code, same commit (T1/T2a). |
 | 0.4 | 2026-08-08 | — | ERR-028-006: §3.1.1 states `BirthWorldDay` MUST be signed (a new world starts at day 0, so any generated player with `Age0 > 0` anchors negative) and forbids clamping it; §3.5's layout widened `u32 → i64`, free at format version 1. ERR-028-007: §3.5 gains the cross-blob cursor rule — `LastAdvancedWorldDay` is the fourth persisted per-player cursor and MUST be checked at all three save/load/composition boundaries through one shared predicate, lag being worse here because `AdvanceDay` replays gaps. ERR-028-008: §3.5 states the save root MUST refuse to overwrite a populated progression block with an empty one. ERR-028-009: §3.1's `AdvanceDay` pseudocode gains the F8 sentinel-refusal guard as its first line. Spec + code, same commit (AR over the T1/T2a landing). |
 | 0.5 | 2026-08-09 | — | ERR-028-014: §3.1's `AdvanceDay` pseudocode loses the never-advanced branch and its "anchors; cannot know an earlier start" comment, which was false — `SeedFrom` is handed the seed day, so the store always knows it; the seed-day-is-the-cursor rule is stated in its place. §3.5's cursor rule drops the sentinel exemption from the cross-blob cursor check — the exemption's premise (copied from #29/#41, sound there) is false for #28, whose fresh state carries a clock-anchored quantity (derived age); the sentinel is no longer a legal store state at either boundary, `FromBlocks` refuses it. §3.5 gains the deferred-season-boundary obligation: a mid-career regen insertion must anchor its cursor at its insertion day, for the same reason. Spec + code, same commit. |
+| 0.6 | 2026-08-10 | — | ERR-028-017 (AR pass 5 spec-vs-code sweep, found against the T1/T2a landing, no code change). **§3.1.1**: the age formula is stated unconditionally; `GrowthProjection.AdvanceDayForPlayer` guards `age = 0` when `ageDays ≤ 0` rather than dividing — now stated. **§3.4**: the daily retirement check's placement was undocumented — it runs ONCE per `AdvanceDay` call (in `ProgressionEngine.AdvancePlayerTo`, which wraps the whole gap-replay loop), against the age derived at the call's target day, never once per lived day inside the replay; `RetirementDay` is therefore stamped with the call's target day, not the earlier day within a multi-day gap on which the threshold was actually crossed — recorded as a known limitation and cross-referenced to §5's T-PG-DET-002 far-future-gap tests, which a reader would otherwise rebuild. **§3.5**: the byte layout left `str` unencoded (now pinned: `u32` length + ASCII, #16 §3.2.4.1) and its fail-loud enumeration named only framing gates, omitting the four VALUE gates `Decode` applies (attribute range, weak-foot range, non-negative age, `PotentialAbility` within `[PA_MIN, ABILITY_MAX]`) — now stated, with the `PA_MIN`/`ABILITY_MAX` `[GT]` tags' tension against #30 Appendix B.1's no-`[GT]`-gating-on-decode posture recorded as an OPEN decision, not resolved. |
 #endregion

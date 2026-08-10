@@ -1,6 +1,6 @@
 // File:     src/player-progression/tests/ProgressionSaveCodecTests.cs
 // Created:  2026-08-08
-// Modified: 2026-08-10
+// Modified: 2026-08-10 (AR pass 5 — 6 new Encode range-gate locks + the anti-drift lock — v1.4)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.5 (the save codec), §4.2, KD-4,
 //           FR-PG-016/017/018/019, F3/F5; ERR-028-004 (§3.5 named the RNG domain tag as the block's
@@ -19,7 +19,9 @@
 //           this pass. v1.2 locks the new RequireNoNeverAdvancedSentinel guards at Encode and Decode
 //           (ERR-028-014). v1.3 (AR pass 4) adds the missing halves of three two-sided ReadPlayer range
 //           checks (attribute MIN, weak-foot MIN, PotentialAbility MAX) that only had their other side
-//           tested.
+//           tested. v1.4 (AR pass 5, High) adds one lock per range Encode now gates to match Decode
+//           (PA below floor, PA above ceiling, negative age, weak-foot, attribute) plus
+//           Encode_AndDecode_ShareOneRangeRule, the PA_MIN-boundary anti-drift lock.
 
 using System;
 
@@ -241,6 +243,113 @@ namespace TacticalDirector.PlayerProgression.Tests
             };
 
             Assert.Throws<ArgumentException>(() => ProgressionSaveCodec.Encode(clubs, 10));
+        }
+
+        // AR pass 5 (never-write-what-Decode-refuses, the four VALUE ranges). §3.5 states that rule as a
+        // MUST and Encode enforced four fewer predicates than Decode: attributes, weak-foot, negative
+        // age and PotentialAbility were gated on the way IN and not on the way OUT. ProgressionEngine
+        // .FromBlocks gates none of them either, so a store carrying PotentialAbility = 0 encoded
+        // happily through Snapshot() and was then refused by Restore/Load forever — and because #28's
+        // block IS the roster (KD-4), that is an unloadable career, failing at the one boundary where
+        // nothing can be recovered.
+        //
+        // One case per range on purpose: a single out-of-range player cannot isolate four predicates,
+        // and this suite's own history (passes 7/8 of the sibling loop) is of "five-for-five isolation"
+        // claims that were false because one branch shadowed the rest. Each case below fails on its own
+        // predicate and passes once that predicate alone is restored.
+        [Test]
+        public void Encode_PotentialAbilityBelowFloor_FailsLoud()
+        {
+            var clubs = new[]
+            {
+                Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 3),
+                         Life(0, 0, 0, 0, false, 0u, 1u))),
+            };
+
+            Assert.Throws<ArgumentException>(
+                () => ProgressionSaveCodec.Encode(clubs, 10),
+                "PotentialAbility = 0 is outside [PA_MIN, ABILITY_MAX]; Decode refuses it, so Encode "
+                + "must — otherwise Snapshot() writes a career Restore can never read back.");
+        }
+
+        [Test]
+        public void Encode_PotentialAbilityAboveCeiling_FailsLoud()
+        {
+            var clubs = new[]
+            {
+                Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 3),
+                         Life(PlayerProgressionConstants.ABILITY_MAX + 1, 3000, 0, 0, false, 0u, 1u))),
+            };
+
+            Assert.Throws<ArgumentException>(() => ProgressionSaveCodec.Encode(clubs, 10));
+        }
+
+        [Test]
+        public void Encode_NegativeAge_FailsLoud()
+        {
+            var clubs = new[]
+            {
+                Club(1, (Rec(5, "A", "B", -1, PlayerPosition.Midfielder, 3),
+                         Life(5000, 3000, 0, 0, false, 0u, 1u))),
+            };
+
+            Assert.Throws<ArgumentException>(() => ProgressionSaveCodec.Encode(clubs, 10));
+        }
+
+        [Test]
+        public void Encode_WeakFootOutOfRange_FailsLoud()
+        {
+            var clubs = new[]
+            {
+                Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder,
+                             PlayerDatabaseConstants.WEAK_FOOT_MAX + 1),
+                         Life(5000, 3000, 0, 0, false, 0u, 1u))),
+            };
+
+            Assert.Throws<ArgumentException>(() => ProgressionSaveCodec.Encode(clubs, 10));
+        }
+
+        [Test]
+        public void Encode_AttributeOutOfRange_FailsLoud()
+        {
+            PlayerRecord rec = Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 3);
+            PlayerAttributes attrs = rec.Attributes;
+            attrs.Finishing = PlayerProgressionConstants.ATTRIBUTE_MAX + 1;
+            rec.Attributes = attrs;
+
+            var clubs = new[] { Club(1, (rec, Life(5000, 3000, 0, 0, false, 0u, 1u))) };
+
+            Assert.Throws<ArgumentException>(
+                () => ProgressionSaveCodec.Encode(clubs, 10),
+                "this block is the roster, so an out-of-range attribute would be PLAYED, not just "
+                + "stored — Decode says so in its own L3 comment and Encode must agree.");
+        }
+
+        [Test]
+        public void Encode_AndDecode_ShareOneRangeRule()
+        {
+            // The anti-drift lock, asserted through observable behaviour rather than by reaching at the
+            // shared helper — the two sides owe different exception types (ArgumentException for a bad
+            // argument, InvalidOperationException for a corrupt file) and so cannot share a throw; what
+            // they must share is where the boundary IS. Exactly PA_MIN must be writable AND readable;
+            // one below must be refused by the writer. If Encode ever grew its own copy of the rule and
+            // the copies drifted by one, the round-trip at the boundary is what breaks first.
+            PlayerRecord rec = Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 3);
+            PlayerLifecycle atFloor = Life(PlayerProgressionConstants.PA_MIN, 3000, 0, 0, false, 0u, 1u);
+            PlayerLifecycle belowFloor = Life(PlayerProgressionConstants.PA_MIN - 1, 3000, 0, 0, false, 0u, 1u);
+
+            byte[] blob = null;
+            Assert.DoesNotThrow(
+                () => blob = ProgressionSaveCodec.Encode(new[] { Club(1, (rec, atFloor)) }, 10),
+                "exactly PA_MIN is legal — the range is inclusive at both ends.");
+
+            Assert.DoesNotThrow(
+                () => ProgressionSaveCodec.Decode(blob, out _),
+                "…and the reader must agree with the writer at that same boundary value.");
+
+            Assert.Throws<ArgumentException>(
+                () => ProgressionSaveCodec.Encode(new[] { Club(1, (rec, belowFloor)) }, 10),
+                "one below the floor is not legal, and the writer is where that must be caught.");
         }
 
         [Test]
@@ -751,4 +860,14 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | Production checks verified correct as written — test-only gaps.    |
 // |         |            |        | Each proven by deleting its half of the OR and observing exactly    |
 // |         |            |        | the new test fail.                                                  |
+// | 1.4     | 2026-08-10 | —      | AR pass 5 (High): +6 tests locking the new Encode-side               |
+// |         |            |        | DescribeOutOfRangeValues/RequireValuesInRange gates — one per range  |
+// |         |            |        | Decode already enforced and Encode did not (PotentialAbility below   |
+// |         |            |        | PA_MIN, PotentialAbility above ABILITY_MAX, negative age, weak-foot   |
+// |         |            |        | out of range, attribute out of range) — plus                         |
+// |         |            |        | Encode_AndDecode_ShareOneRangeRule, an anti-drift lock asserting      |
+// |         |            |        | Encode and Decode agree EXACTLY at PA_MIN (writable and readable)     |
+// |         |            |        | and that one below it is refused by the writer, not just the reader. |
+// |         |            |        | Mutation-verified: reverting the ProgressionSaveCodec.cs             |
+// |         |            |        | RequireValuesInRange(clubs) call in Encode fails all 6.               |
 #endregion

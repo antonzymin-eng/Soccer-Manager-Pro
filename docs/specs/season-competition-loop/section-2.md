@@ -1,14 +1,15 @@
 # Season & Competition Loop Specification #30 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 22, 2026
-**Last Updated:** August 9, 2026 (v1.3 — ERR-028-014: F8 grows a fourth persisted per-player cursor (#28's progression `LastAdvancedWorldDay`) and states the #28 exception to the sentinel exemption its #29/#41 siblings carry — the sweep-stopped-at-a-grep-boundary class, corrected here in the same pass as `appendices.md` Appendix B.1)
+**Last Updated:** August 10, 2026 (v1.4 — ERR-030-032: AR pass 5 over the #28 T1/T2a landing found this section three parameters and one landing stale in two places — FR-SN-021 still showed the seven-argument `Save` signature after #28 T1 added the required, null-rejecting `progression` parameter, and §2.2 declared no #28 type at all, the ERR-030-028 gap recurring on the very next subsystem to wire)
+**Last Updated (prior):** August 9, 2026 (v1.3 — ERR-028-014: F8 grows a fourth persisted per-player cursor (#28's progression `LastAdvancedWorldDay`) and states the #28 exception to the sentinel exemption its #29/#41 siblings carry — the sweep-stopped-at-a-grep-boundary class, corrected here in the same pass as `appendices.md` Appendix B.1)
 **Last Updated (prior):** August 8, 2026, later still (v1.2 — ERR-030-030: FR-SN-034 stops mandating #28 as a null seam — #28 T2a made slot 1 LIVE, same as #29/#41's slots 2/4)
 **Last Updated (prior):** August 8, 2026, later same day (v1.1 — balance-pass AR pass 12 M1+M2+L5: FR-SN-034 stops mandating #29/#41 as null seams, §2.2 learns the career/appearance types exist, FR-SN-032/F5 cover AdvanceDays and the roll's unplayed-fixture refusal)
 **Last Updated (prior):** August 8, 2026 (v1.0 — balance-pass AR pass 11 M1+M2: FR-SN-013's availability seam corrected to LIVE (the §3.4 v1.4 correction had stopped one section short of the FR an implementer reads first), FR-SN-021's signature refreshed three landings forward, + F7/F8 — the composition-pairing and cursor-vs-clock refusals five landings of code had enforced with no normative source)
 **Last Updated (prior):** July 27, 2026 (v0.9 — back-props ERR-030-016 / -020 / -021 / -022 landed atomically with the ten-spec approval wave: the tick order reconciled after the duplicate `ERR-030-007` filing, FR-SN-013b's `ManagedClubId` made an explicit optional, FR-SN-034 extended to #32/#35/#53/#54)
 **Last Updated (prior):** July 25, 2026 (v0.8 — back-props ERR-030-008 board tick-order + ERR-030-009 JobSecurity derived band; prior v0.7 ERR-030-007 academy, v0.6 ERR-030-006 staff, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 24, 2026 (v0.8 — back-prop ERR-030-009 #44 availability-filter null seam in FR-SN-013; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 1.3
+**Version:** 1.4
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -72,7 +73,7 @@ the outline's pass-13 L4 class, in the FR preamble).
 |---|---|---|---|
 | FR-SN-019 | Season state MUST persist as a **third opaque sub-blob** in `SeasonSaveCodec`, with its own `SEASON_STATE_FORMAT_VERSION`; the codec MUST NOT parse the world or match sub-blobs. | MUST | KD-1 |
 | FR-SN-020 | The outer `SEASON_SAVE_FORMAT_VERSION` MUST bump **1 → 2**; the world blob (`WORLD_STORE_FORMAT_VERSION`) and match blob (`MATCH_SAVE_FORMAT_VERSION`) MUST stay byte-untouched. | MUST | KD-1 |
-| FR-SN-021 | `SeasonSaveManager.Save`/`Load` MUST carry the season alongside the world and optional match; capture MUST complete before the file is opened (the blob-before-file precedent). *(Signature as amended through #29/#41 T1–T2 and the balance pass — refreshed at AR pass 11 after three landings had left the original `Save(world, season, matchOrNull, path)` form here while Appendix B moved:)* `Save(world, season, matchOrNull, path, trainingClubs, medicalClubs, appearanceClubs)` — the three career-block sets REQUIRED and null-rejecting (T1 AR: an omitted set must not compile into an empty save) — plus the `Save(loop, matchOrNull, path)` overload for external callers; `Load(path, …) → SeasonSaveContents` (world, season, the three career-block sets, optional match). | MUST | KD-1 |
+| FR-SN-021 | `SeasonSaveManager.Save`/`Load` MUST carry the season alongside the world and optional match; capture MUST complete before the file is opened (the blob-before-file precedent). *(Signature as amended through #29/#41 T1–T2, the balance pass and #28 T1 — refreshed at ERR-030-032 (AR pass 5 over the #28 landing) after this row had gone three parameters and one landing stale again the moment §4.4 pointed at it as the single owner:)* `Save(world, season, matchOrNull, path, trainingClubs, medicalClubs, appearanceClubs, progression)` — the three career-block sets and `progression` (a `ProgressionEngine`, #28 KD-4) are all REQUIRED and null-rejecting (T1 AR: an omitted set must not compile into an empty save; `progression` follows the identical rule at #28 T1) — plus the `Save(loop, matchOrNull, path)` overload for external callers; `Load(path, …) → SeasonSaveContents` (world, season, the three career-block sets, the reconstructed `Progression` — never null, #28's restored roster authority per KD-4 — optional match). | MUST | KD-1 |
 | FR-SN-022 | Save→restore of the full season state (table + fixtures + calendar + board) MUST be byte-identical through one file (round-trip determinism). | MUST | — |
 | FR-SN-023 | The season codec MUST fail-loud on: a `SEASON_STATE_FORMAT_VERSION` / `SEASON_SAVE_FORMAT_VERSION` mismatch, an out-of-bounds length prefix (overflow-safe bound), or trailing bytes — the `MatchSaveCodec`/`WorldStateSerializer` posture. | MUST | F3 |
 | FR-SN-024 | A save may land **mid-sequence** in the KD-2 day-advance; a restore MUST equal an uninterrupted advance (`save@day-N mid-advance → restore → advance to N+K == an uninterrupted run`). | MUST | KD-2 |
@@ -137,6 +138,29 @@ the outline's pass-13 L4 class, in the FR preamble).
   (never ahead of the clock, F8). Byte layout pinned in Appendix B.1 (ERR-030-028).
 - **`ClubAppearanceStates`** (sealed class): one club's `PlayerIds`/`AppearanceState[]` pair — the
   appearance third of the career triple, serialized as the `APPR` sub-blob.
+- **`ProgressionEngine`** (#28-owned, `TacticalDirector.PlayerProgression`; added at ERR-030-032, AR
+  pass 5 over the #28 T1/T2a landing — this section declared no #28 type at all, the identical gap
+  ERR-030-028 filed against the appearance types one landing earlier, on the exact next subsystem to
+  wire). **The ROSTER AUTHORITY (#28 KD-4), not an overlay.** `SeasonLoop` holds it optionally, drives
+  its daily step at KD-2 slot 1 (`AdvanceDay`), and — when it is populated — projects the season's
+  `ISquadProvider` from it rather than from any separately-supplied one (§4.3/§3.3). Serialized as the
+  season frame's `PROG` sub-blob (`PROGRESSION_SAVE_FORMAT_VERSION`, Appendix B), the block that made
+  `SEASON_SAVE_FORMAT_VERSION` 4 → 5 (ERR-030-030) — unlike training/medical/appearance state, which
+  overlay a roster that still comes from the world-seed bootstrap, this block carries the evolving
+  `PlayerRecord` set itself, so from frame v5 a career's roster is a function of the SAVE, never a
+  from-the-seed rebuild.
+- **`ProgressionSquads`** (sealed class, `src/season-save/ProgressionSquads.cs`): the `ISquadProvider`
+  projection `SeasonLoop` builds over a populated `ProgressionEngine` (`ResolveByClubId(clubId) =>
+  progression.SquadFor(clubId)`) — the mechanism by which #28, once wired, becomes its own provider
+  without #30 or `match-engine` needing a second roster-resolution surface. Lives here rather than in
+  `player-progression` because `ISquadProvider` is a `match-engine` type #28 §4.1 forbids #28 to
+  reference (the same reason `ProgressionSquads` was already noted in the root `CLAUDE.md` assembly map
+  as living in `season-save`, one layer this section had not caught up to).
+- **`ProgressionBlock`** (typed frame block, `src/season-save/ProgressionBlock.cs`): the compile-time
+  half of ERR-028-004/ERR-029-005's "a format version is not a format identifier" rule for the #28 sub-blob
+  — joins `TrainingBlock`/`MedicalBlock`/`AppearanceBlock` at the `SeasonSaveCodec.Encode` seam so a
+  positional mistake among the frame's four same-shaped opaque payloads needs a build error, not a
+  load-time one.
 - **`SeasonViewModel`** (readonly struct): read-only value copies of the table view, fixture list, and
   calendar position for #37/#38.
 
@@ -170,4 +194,5 @@ the outline's pass-13 L4 class, in the FR preamble).
 | 1.1 | 2026-08-08 | — | **Balance-pass AR pass 12 (M1 + M2 + L5)** — pass 11's own fixes completed to their class: **FR-SN-034** still MANDATED #29/#41 as null seams one row below the FR-SN-013 pass 11 corrected (amended to landed-live at slots 2/4, the MUST restricted to unlanded specs); **§2.2** declared a `SeasonLoop` with no career pair and knew nothing of `PlayerCareerStates`/`AppearanceState`/`ClubAppearanceStates` three landings after all became load-bearing — the gap that let the APPR layout ship unspecified (ERR-030-028) and forced F7/F8 to cite undeclared members; **FR-SN-032/F5** gain `AdvanceDays` (a public command with three fail-loud refusals, absent from every list) and the roll's `RequireEveryFixturePlayed` half.**F9** (M4, ERR-030-029): the depleted-squad terminal refusal — see §3.4's new rule. |
 | 1.2 | 2026-08-08 | — | **ERR-030-030** (found at #28 T2a implementation): **FR-SN-034** dropped #28 from the null-seam enumeration — #28's `AdvanceDay` went LIVE at slot 1 the same day, the identical stale-seam-text class corrected for #29/#41 at AR passes 11/12, recurring on the next subsystem to wire. See also §3.3, §3.5 step (d), and `appendices.md` Appendix A/B, corrected in the same commit. |
 | 1.3 | 2026-08-09 | — | **ERR-028-014** (found at #28 implementation, August 8–9, 2026): #28's `ProgressionEngine.SeedFrom` now anchors `LastAdvancedWorldDay` at the seed day and `FromBlocks` refuses a lifecycle carrying the never-advanced sentinel, retiring that sentinel from #28's legal store states — but `AdvanceDay_FirstCall_AdvancesExactlyOneDay`'s reasoning survived nowhere else that mattered until this row: **F8** still enumerated only three cursor kinds (#29, #41, the appearance anchor) with no mention of #28's, and carried no statement of the exception. Corrected: F8 now names #28's progression `LastAdvancedWorldDay` as the fourth persisted per-player cursor (ERR-028-007), states its worse-case lag consequence (`AdvanceDay` replays a gap rather than banking one day), and states the #28-only exception to the sentinel exemption — #29/#41's fresh state carries no clock-anchored quantity so "never advanced" is exempt at any clock, while #28's fresh state derives age from `BirthWorldDay` so the same exemption would have meant something different at every clock value, which is why #28 has none. `appendices.md` Appendix B.1 corrected in the same commit (the identical duplicated-description class F8's own row exists to prevent — one paragraph, two homes). |
+| 1.4 | 2026-08-10 | — | **ERR-030-032** (AR pass 5 over the #28 T1/T2a landing, no code change, found alongside #28's own ERR-028-017): two staleness gaps this section is the natural home for. **FR-SN-021** still showed `Save(world, season, matchOrNull, path, trainingClubs, medicalClubs, appearanceClubs)` — seven arguments — one landing after #28 T1 added a required, null-rejecting eighth (`progression`), and `Load`'s return description omitted `Progression` even though `SeasonSaveContents.Progression` is never null. Corrected to the eight-argument form with `progression` marked REQUIRED/null-rejecting, and `Progression` added to the `Load` description. **§2.2** declared no #28-owned type at all — the identical gap AR pass 12 filed as part of ERR-030-028 for the appearance types one landing earlier, recurring verbatim on the very next subsystem to wire. Added `ProgressionEngine` (the ROSTER AUTHORITY, KD-4, not an overlay), `ProgressionSquads` (the `ISquadProvider` projection, living in `season-save` because #28 §4.1 forbids #28 itself from referencing that `match-engine` type), and `ProgressionBlock` (the typed frame block, ERR-028-004's compile-time half), mirroring how the appearance types were added. |
 #endregion
