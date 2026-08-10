@@ -298,6 +298,44 @@ namespace TacticalDirector.PlayerProgression.Tests
         }
 
         [Test]
+        public void FromBlocks_ABirthWorldDayBelowTheDerivableFloor_IsRefused()
+        {
+            // AR pass 5 (recorded), fixed. BirthWorldDay was the ONLY lifecycle field with no range
+            // gate, and it is the AUTHORITATIVE age anchor — every other age in the model is a derived
+            // cache of it. Probe-verified before the fix: this anchor was accepted at every boundary,
+            // the daily step narrowed the derived age to int.MinValue, ClassifyAgeBand read that as
+            // GROWTH (so the player grows forever and RETIREMENT_AGE can never fire — ERR-028-006's
+            // failure mode through a different door), and Snapshot() then refused the negative age —
+            // a career that loaded, advanced and projected fine, permanently unsavable.
+            var records = new[] { Player(400, age: 20) };
+            var lifecycles = new[] { DefaultLife() };
+            lifecycles[0].BirthWorldDay = -(long)int.MaxValue * PlayerProgressionConstants.DAYS_PER_YEAR
+                                          - PlayerProgressionConstants.DAYS_PER_YEAR;
+            var club = new ClubCareerStates(9, records, lifecycles);
+
+            Assert.Throws<ArgumentException>(
+                () => ProgressionEngine.FromBlocks(new[] { club }, nextPlayerId: 401),
+                "an anchor whose derived age cannot be represented must be refused where it enters, "
+                + "not discovered at the save that can no longer be written.");
+        }
+
+        [Test]
+        public void FromBlocks_AnIdCursorAtOrBelowACarriedId_IsRefusedByTheCodecToo()
+        {
+            // AR pass 5 (recorded), fixed. FR-PG-011 lived ONLY in FromBlocks, so both codec sides
+            // admitted a bad cursor — and Restore is Decode + FromBlocks, so Encode could write a blob
+            // that loads NEVER. Probe-verified: a club carrying {10, 11} with nextPlayerId 0 encoded
+            // cleanly, decoded cleanly, and threw at Restore forever. One owner now; this locks the
+            // WRITE side, which is the half that had no enforcement at all.
+            ClubCareerStates club = TwoMemberClub(clubId: 9, playerIdA: 10, playerIdB: 11);
+
+            Assert.Throws<ArgumentException>(
+                () => ProgressionSaveCodec.Encode(new[] { club }, nextPlayerId: 0),
+                "the writer must refuse a cursor that would collide with a live player — otherwise the "
+                + "file is written and its own Restore refuses it forever.");
+        }
+
+        [Test]
         public void SaveRestore_ANegativeBirthWorldDayBeyondInt32Range_SurvivesTheCodec()
         {
             // The i64 field width is the point, not merely the sign (ERR-028-006). An anchor this far

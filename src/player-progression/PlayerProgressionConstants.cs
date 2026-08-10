@@ -27,6 +27,40 @@ namespace TacticalDirector.PlayerProgression
         public const int DAYS_PER_YEAR = 365;
 
         /// <summary>
+        /// [FIXED] The widest age, in years, the model will derive from a <see cref="PlayerLifecycle"/>'s
+        /// birth anchor. This is a REPRESENTABILITY bound, not a football one — it exists so the
+        /// <c>long</c> day difference can never narrow into <c>int</c> as garbage.
+        /// <para>
+        /// <c>BirthWorldDay</c> was the one lifecycle field with no range gate, and it is the
+        /// authoritative age anchor. An anchor of <c>-(long)int.MaxValue * 365 - 365</c> was accepted at
+        /// every boundary, and the daily step then narrowed the derived age to
+        /// <c>int.MinValue</c> — which <see cref="AbilityModel.ClassifyAgeBand"/> classifies as
+        /// <c>Growth</c>, so the player grows forever and <see cref="RETIREMENT_AGE"/> can never fire
+        /// (ERR-028-006's failure mode through a different door), and which the save path then refuses
+        /// as a negative age, making a career that loaded and advanced fine permanently unsavable.
+        /// </para>
+        /// <para>
+        /// <b>This is NOT a football-plausibility bound, and the distinction is load-bearing.</b> It was
+        /// first set to 1000 — a sanity bound, not a representability one — which contradicted this very
+        /// paragraph and broke
+        /// <c>SaveRestore_ANegativeBirthWorldDayBeyondInt32Range_SurvivesTheCodec</c>, the lock proving
+        /// the <c>i64</c> field width ERR-028-006 bought. That lock needs an anchor that does NOT fit in
+        /// 32 bits (birthWorldDay &lt; int.MinValue, i.e. &gt; ~5.88M years), so any bound below that
+        /// makes the field width unprovable. A "reasonable age" gate and a 64-bit-width proof cannot
+        /// both hold; the width proof wins, because a silently truncating codec is the worse failure.
+        /// </para>
+        /// <para>
+        /// 100,000,000 sits far above that floor and far below the ceiling: the widest derived age is
+        /// <c>MAX_DERIVABLE_AGE_YEARS + uint.MaxValue/365</c> ≈ 1.117e8, comfortably inside
+        /// <c>int.MaxValue</c>. It still refuses the anchor that produced the defect
+        /// (<c>-(long)int.MaxValue * 365 - 365</c> ≈ -7.84e11, which derives ~2.15e9 and overflows).
+        /// If a football-plausibility bound on age is ever wanted, it belongs at the roster generator
+        /// as a separate <c>[GT]</c>, not here.
+        /// </para>
+        /// </summary>
+        public const int MAX_DERIVABLE_AGE_YEARS = 100_000_000;
+
+        /// <summary>
         /// [FIXED] The #28 sub-blob's self-identifying leading tag — <c>'P''R''O''G'</c>, written BEFORE
         /// the version (ERR-028-004). Not decoration and deliberately NOT the
         /// <c>DOMAIN_TAG_PLAYER_PROGRESSION</c> RNG tag §3.5 named in its place: every sub-blob format in

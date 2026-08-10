@@ -285,23 +285,10 @@ namespace TacticalDirector.PlayerProgression
             // retiree's id across a save boundary" (FR-PG-011). A cursor at or behind an id the store
             // already carries defeats that silently — the next allocation collides with a LIVE player,
             // and the collision then reads as one player with two careers.
-            int highest = int.MinValue;
-            for (int c = 0; c < engine._records.Count; c++)
-            {
-                PlayerRecord[] recs = engine._records[c];
-                if (recs.Length > 0 && recs[recs.Length - 1].PlayerId > highest)
-                {
-                    highest = recs[recs.Length - 1].PlayerId;   // ascending within a club
-                }
-            }
-            if (highest != int.MinValue && nextPlayerId <= highest)
-            {
-                throw new ArgumentException(
-                    $"The id cursor is {nextPlayerId} but this career already carries player "
-                    + $"{highest}. The next allocated id would collide with a live player, which is "
-                    + "exactly what serializing the cursor exists to prevent (FR-PG-011).",
-                    nameof(nextPlayerId));
-            }
+            // AR pass 5 (recorded), fixed here: this rule lived ONLY at this boundary, so both codec
+            // sides admitted a bad cursor and Encode could write a blob whose own Restore refuses it
+            // forever. One owner now, called from Encode, Decode and here.
+            ProgressionSaveCodec.RequireIdCursorAheadOfCarriedIds(clubs, nextPlayerId);
 
             engine._nextPlayerId = nextPlayerId;
             return engine;

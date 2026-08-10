@@ -1,6 +1,6 @@
 // File:     src/player-progression/GrowthProjection.cs
 // Created:  2026-07-24
-// Modified: 2026-07-24
+// Modified: 2026-08-10
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.1 (the daily growth projection); Code Standards #20
 // Purpose:  The pure, draw-free per-player daily step (§3.1) — the SOLE attribute-mutation path
@@ -42,7 +42,20 @@ namespace TacticalDirector.PlayerProgression
         {
             // 1. Age is DERIVED — no discrete rollover step (§3.1.1); attribute change is the cursor alone.
             long ageDays = (long)worldDay - life.BirthWorldDay;
-            int age = ageDays > 0 ? (int)(ageDays / PlayerProgressionConstants.DAYS_PER_YEAR) : 0;
+
+            // The narrowing is SATURATING, and the predicate is >= 0 rather than > 0 (AR pass 5).
+            // §3.5 states never-write-what-Decode-refuses as a MUST, and this is the one site that
+            // derives a value the save path range-gates — so it must be structurally incapable of
+            // producing one out of range, independently of the anchor gate that now guards the input.
+            // Two layers rather than one because they fail differently: the gate refuses bad state at
+            // the boundary, this keeps the step total even if a future boundary is added without it.
+            // (`>= 0` also makes the boundary the one it names — a player born TODAY is age 0, which
+            // took the else-branch before. Same answer today; the right predicate for when DailyPoints
+            // becomes sensitive to the anchor day, which the seed-day credit has now made it.)
+            long ageYears = ageDays >= 0 ? ageDays / PlayerProgressionConstants.DAYS_PER_YEAR : 0;
+            int age = ageYears > PlayerProgressionConstants.MAX_DERIVABLE_AGE_YEARS
+                ? PlayerProgressionConstants.MAX_DERIVABLE_AGE_YEARS
+                : (int)ageYears;
             rec.Age = age; // keep the record's Age current (derived cache, FR-PG-005)
 
             // 2. Per-day point accrual — the ONLY accumulator (FR-PG-002/003).
@@ -54,7 +67,16 @@ namespace TacticalDirector.PlayerProgression
             {
                 if (!AbilityModel.TrySpendOnePoint(ref rec, ref life))
                 {
-                    break; // at the PA ceiling — leave the cursor (no thrash, F1)
+                    // At the PA ceiling. CLAMP, do not bank (M2, ERR-028-018): leaving the cursor to
+                    // accumulate across every refused day lets it grow unbounded while PA == CA holds,
+                    // and Stable never spends it — so a long PA-bound stretch (an authored player with
+                    // no headroom, #47) banks thousands of points that then have to be walked back down
+                    // through Decline before a single point can drain, silently cancelling years of
+                    // decline the player should have taken. Clamping to POINT_COST - 1 keeps the pending
+                    // fraction (still no thrash — the next Growth day's accrual can still cross the
+                    // threshold and try again) while bounding the credit to at most one point's worth.
+                    life.GrowthCursor = PlayerProgressionConstants.POINT_COST - 1;
+                    break;
                 }
                 life.GrowthCursor -= PlayerProgressionConstants.POINT_COST;
             }
@@ -92,6 +114,14 @@ namespace TacticalDirector.PlayerProgression
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-07-24 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                          |
+// | 1.0     | 2026-07-24 | —      | Initial implementation.                                        |
+// | 1.1     | 2026-08-10 | —      | AR pass 5 carryforward (ERR-028-018). Age narrowing made       |
+// |         |            |        | saturating: predicate `>= 0` (a player born today is age 0,    |
+// |         |            |        | not the else-branch) and a MAX_DERIVABLE_AGE_YEARS ceiling     |
+// |         |            |        | (L1). M2 fix: a refused spend at the PA ceiling now clamps     |
+// |         |            |        | GrowthCursor to POINT_COST - 1 instead of banking unbounded —  |
+// |         |            |        | an unbounded bank (2,189 points measured) silently cancelled   |
+// |         |            |        | years of Decline once reached, via FromBlocks / #47 authored   |
+// |         |            |        | PA. No draw, no format change.                                 |
 #endregion

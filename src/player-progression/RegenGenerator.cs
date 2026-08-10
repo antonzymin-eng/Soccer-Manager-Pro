@@ -1,6 +1,6 @@
 // File:     src/player-progression/RegenGenerator.cs
 // Created:  2026-07-24
-// Modified: 2026-08-08
+// Modified: 2026-08-10
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.3 (regen generation); Deterministic Simulation #16 (RNG); Code Standards #20
 // Purpose:  Pure single-player regen generation (§3.3) — a young player with a drawn PotentialAbility
@@ -139,9 +139,16 @@ namespace TacticalDirector.PlayerProgression
                 BirthWorldDay = birthWorldDay,
                 RetirementFlag = false,
                 RetirementDay = 0,
-                // Never the 0 default: day 0 is a legitimate world day, so a zero here would read as
-                // "already advanced on day 0" and skip this regen's first daily step (the day-0 trap).
-                LastAdvancedWorldDay = PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL
+                // M3 (ERR-028-014 carryforward): worldDay, NOT the never-advanced sentinel. A regen
+                // describes the roster AS OF worldDay, exactly like a seeded player (SeedLifecycle
+                // anchors the same way) — his anchor and his cursor agree by construction, so his first
+                // AdvanceDay call correctly treats worldDay itself as already accounted for. The sentinel
+                // was retired from the set of legal STORE states by ERR-028-014 the day after this line
+                // was written: ProgressionEngine.FromBlocks and ProgressionSaveCodec.Encode/Decode all
+                // refuse it by name now, so a block built from a generated regen would fail every one of
+                // them — the day-0 trap this comment used to cite no longer applies to a live consumer,
+                // because nothing downstream of a regen can hold the sentinel and survive.
+                LastAdvancedWorldDay = worldDay
             };
 
             return (record, life);
@@ -166,4 +173,9 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | the never-advanced sentinel rather than leaving the 0 default,  |
 // |         |            |        | which would have skipped a regen's first daily step. No draw   |
 // |         |            |        | order, budget or value change — the RNG path is untouched.     |
+// | 1.4     | 2026-08-10 | —      | M3 (ERR-028-014 carryforward): LastAdvancedWorldDay now seeds  |
+// |         |            |        | to worldDay, not the sentinel — ERR-028-014 retired the        |
+// |         |            |        | sentinel from every legal store state one day after 1.3, so    |
+// |         |            |        | FromBlocks/Encode/Decode all refused what this method returned.|
+// |         |            |        | No draw order, budget or value change.                         |
 #endregion

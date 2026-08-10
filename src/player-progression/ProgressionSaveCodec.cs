@@ -200,6 +200,10 @@ namespace TacticalDirector.PlayerProgression
             // been bitten by twice.
             RequireValuesInRange(clubs);
 
+            // FR-PG-011 at the write boundary too (AR pass 5): Restore is Decode + FromBlocks, so a
+            // cursor this side accepted and FromBlocks refuses is a blob that loads never.
+            RequireIdCursorAheadOfCarriedIds(clubs, nextPlayerId);
+
             int size = 4 + 4 + 4 + 4;   // magic + version + nextPlayerId + clubCount
             for (int i = 0; i < clubs.Length; i++)
             {
@@ -341,6 +345,10 @@ namespace TacticalDirector.PlayerProgression
             // and be refused there with a message about the wrong subsystem's contract, not this
             // codec's own (ERR-028-014).
             RequireNoNeverAdvancedSentinel(clubs);
+
+            // Same mirror for FR-PG-011 (AR pass 5). Refusing here means a corrupt cursor is caught at
+            // the boundary where the bytes are still in hand, rather than by FromBlocks one call later.
+            RequireIdCursorAheadOfCarriedIds(clubs, nextPlayerId);
 
             return clubs;
         }
@@ -590,7 +598,61 @@ namespace TacticalDirector.PlayerProgression
                     PlayerProgressionConstants.ABILITY_MAX + "] — corrupt save.";
             }
 
+            // AR pass 5 (recorded), fixed here. BirthWorldDay was the ONLY lifecycle field with no gate,
+            // and it is the AUTHORITATIVE age anchor — every other age value in the model is a derived
+            // cache of it. An anchor far below the floor narrowed the derived age to int.MinValue, which
+            // ClassifyAgeBand reads as Growth (so the player grows forever and retirement never fires)
+            // and which this very method then refuses as a negative age — making a career that loaded,
+            // advanced and projected fine PERMANENTLY unsavable. The upper bound is the world clock's own
+            // ceiling: a player born on the current day is age 0, which is ordinary, but an anchor beyond
+            // uint.MaxValue cannot correspond to any reachable world day.
+            long minBirthWorldDay =
+                -(long)PlayerProgressionConstants.MAX_DERIVABLE_AGE_YEARS
+                * PlayerProgressionConstants.DAYS_PER_YEAR;
+            if (life.BirthWorldDay < minBirthWorldDay || life.BirthWorldDay > uint.MaxValue)
+            {
+                return "player " + rec.PlayerId + " in club " + clubId + " carries birthWorldDay " +
+                    life.BirthWorldDay + ", outside [" + minBirthWorldDay + ", " + uint.MaxValue +
+                    "] — the anchor must derive an age the model can represent (corrupt save).";
+            }
+
             return null;
+        }
+
+        /// <summary>
+        /// FR-PG-011: the id cursor must exceed every carried <c>PlayerId</c>, or the next allocation
+        /// collides with a live player and one player ends up with two careers.
+        /// <para>
+        /// This lived ONLY in <see cref="ProgressionEngine.FromBlocks"/>, so both codec sides admitted a
+        /// bad cursor — and since <c>Restore</c> is <c>Decode</c> + <c>FromBlocks</c>, <see cref="Encode"/>
+        /// could write a blob that loads NEVER. Probe-verified before the fix: encoding a club carrying
+        /// players {10, 11} with <c>nextPlayerId: 0</c> produced a blob that decoded cleanly and whose
+        /// <c>Restore</c> then threw forever. The codec's own round-trip fixture satisfied the rule only
+        /// by coincidence (cursor 12 against a max id of 11) and nothing asserted that it must.
+        /// </para>
+        /// </summary>
+        internal static void RequireIdCursorAheadOfCarriedIds(ClubCareerStates[] clubs, int nextPlayerId)
+        {
+            int highest = int.MinValue;
+            for (int c = 0; c < clubs.Length; c++)
+            {
+                for (int p = 0; p < clubs[c].Count; p++)
+                {
+                    if (clubs[c].Records[p].PlayerId > highest)
+                    {
+                        highest = clubs[c].Records[p].PlayerId;
+                    }
+                }
+            }
+
+            if (highest != int.MinValue && nextPlayerId <= highest)
+            {
+                throw new ArgumentException(
+                    "The id cursor is " + nextPlayerId + " but this career already carries player " +
+                    highest + ". The next allocated id would collide with a live player, which is " +
+                    "exactly what serializing the cursor exists to prevent (FR-PG-011).",
+                    nameof(nextPlayerId));
+            }
         }
 
         /// <summary>
