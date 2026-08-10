@@ -1,6 +1,6 @@
 // File: src/positioning-ai/PositioningPerceptionSnapshot.cs
 // Created:  2026-05-29
-// Modified: 2026-07-11
+// Modified: 2026-08-08
 // Author:   —
 // Spec: #12 Positioning AI §4.3, §3.0, §3.2; Dismarking #23 §2.2.3/§3.3; Build-Up #24 §3.1/§3.2; Rotations #25 §4.3
 // Purpose: Pre-allocated perception input consumed by PositioningAITick; filled each 10 Hz tick by the orchestrator.
@@ -32,13 +32,36 @@ namespace TacticalDirector.PositioningAI
         public float BallVxFiltered;
 
         /// <summary>
-        /// EntityId of the agent currently in possession, or -1 if ball is loose.
-        /// FR-PA-022: phase classified locally from possession state.
+        /// EntityId of the agent currently ON the ball, or -1 if no agent holds it.
+        /// This is the ON-BALL carrier, NOT the team-possession answer: it is -1 for the whole
+        /// flight of a pass. Phase does not read it (see <see cref="HasTeamPossession"/>); the
+        /// only consumer is #23's dismark carrier exclusion (FR-DM-007, SlotComposer), which
+        /// wants precisely the player playing the ball and no one else.
         /// </summary>
         public int PossessionOwnerEntityId;
 
         /// <summary>True when PossessionOwnerEntityId ≥ 0 and that agent belongs to the team being processed.</summary>
         public bool PossessionOwnerIsOwnTeam;
+
+        /// <summary>
+        /// True when SOME team is in possession, in the football sense FR-PA-022 defines: a player is
+        /// on the ball, OR a ball that team deliberately played is still travelling to a team-mate.
+        /// False only for a genuinely uncontrolled ball — a shot, a clearance, a ball no longer going
+        /// to its intended receiver — which is the case §3.0.2's velocity branch exists to classify.
+        /// <para>
+        /// Distinct from <see cref="PossessionOwnerEntityId"/> ≥ 0 on purpose: the on-ball carrier is
+        /// absent for the entire flight of every pass, and reading phase off him classified a team
+        /// knocking the ball around as being in transition (ERR-012-011).
+        /// </para>
+        /// </summary>
+        public bool HasTeamPossession;
+
+        /// <summary>
+        /// True when <see cref="HasTeamPossession"/> and the possessing team is the team being
+        /// processed. Meaningless when HasTeamPossession is false; §3.0.2 tests it only under that
+        /// guard. Filled by the orchestrator, which owns the pass-in-flight latch.
+        /// </summary>
+        public bool TeamPossessionIsOwnTeam;
 
         /// <summary>
         /// Per-agent data for all squad members, sorted by EntityId ascending at fill time.
@@ -129,4 +152,10 @@ namespace TacticalDirector.PositioningAI
 // |         |            |        |   committed zone + suppression flag (classified by the           |
 // |         |            |        |   orchestrator pre-tick); RotationFreedom. All zero defaults are |
 // |         |            |        |   the exact identities, so existing fills stay byte-identical.   |
+// | 1.2     | 2026-08-08 | —      | ERR-012-011: + HasTeamPossession / TeamPossessionIsOwnTeam, the  |
+// |         |            |        |   TEAM-possession pair §3.0.2 now classifies phase from.         |
+// |         |            |        |   PossessionOwnerEntityId / ...IsOwnTeam are UNCHANGED and keep   |
+// |         |            |        |   their on-ball-carrier meaning for #23's FR-DM-007 exclusion —   |
+// |         |            |        |   redefining them would have excluded the intended RECEIVER from  |
+// |         |            |        |   the dismark nudge for the whole flight of every pass.          |
 #endregion

@@ -70,6 +70,10 @@ from collections import Counter, OrderedDict
 # in a constant nobody remembers to bump.
 DEFAULT_TODAY = datetime.date.today()
 TODAY = DEFAULT_TODAY
+#
+# NOTE (merge, 2026-08-10): main independently hit this and bumped the pin to 2026-08-09 — the same
+# defect, patched in the way that goes stale again the next day. The dynamic default below subsumes
+# that fix and removes the recurrence; --today keeps a pinned verdict available where one is wanted.
 
 SKIP_DIRS = {".git", "obj", "bin", "Temp", "Library", "node_modules", "__pycache__",
              "stress-reports", "packages"}

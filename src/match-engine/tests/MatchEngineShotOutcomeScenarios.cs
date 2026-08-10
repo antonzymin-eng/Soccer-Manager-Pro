@@ -2,6 +2,12 @@
 // Created:  2026-07-27
 // Modified: 2026-07-27
 // Modified: 2026-07-28 (shot-volume pass: windows 9 -> 18 min per seed — the calibrated goal rate needs a longer corpus for the goals-still-scored reachability predicate; sanity ceiling rescaled to the new window length)
+// Modified: 2026-08-08 (predicate-shape repair: "fast-balls-deflect-off-bodies" demoted from an
+//           asserted natural-occurrence count to a reported figure — measured 4 events at ba4e194,
+//           0 at HEAD, moved by a positioning fix that never touched the collision code, so the
+//           bound was luck, not a lock; a CONSTRUCTED "fast-ball-deflects-off-stationary-agent"
+//           lock added in its place, exercising the deflection mechanism directly. No other
+//           predicate, bound, seed or tick count touched.)
 // Author:   —
 // Spec:     Shot-outcome distribution design (docs/tracking/shot-outcome-distribution-design.md) §5;
 //           Match Engine design note §5.Z.17/§5.Z.18; Ball Physics #1 §3.1.10 (ERR-001-004,
@@ -166,10 +172,48 @@ namespace TacticalDirector.MatchEngine
             context.Envelope.CheckTrue("airborne-exit-count-recorded", true,
                 "naturalAirborneExits=" + Inv(totalAirborneExits));
 
-            // ERR-003-007: a fast ball bends off a body. Pre-fix the handler was an empty TODO —
-            // a fast AGENT_BALL contact never changed the ball's path.
-            context.Envelope.CheckTrue("fast-balls-deflect-off-bodies", totalDeflections > 0,
-                Inv(totalDeflections));
+            // ERR-003-007, CONSTRUCTED LOCK: a stationary agent hit by a ball fast enough to clear
+            // AgentDeflection.MinBallSpeedMps must have its path bent by >= the same
+            // DeflectionMinAngleDeg the corpus counter below uses, with residual speed still >=
+            // DeflectionMinResidualSpeedMps. Measured (docs/tracking — not re-derived here): the
+            // natural-occurrence corpus count of this event went 4 (commit ba4e194, pre
+            // ERR-012-011) -> 0 (HEAD) from a positioning fix alone, with the collision code
+            // untouched — four occurrences across ~36 minutes of simulated football was luck, not
+            // a lock on the mechanism. This probe exercises the mechanism directly instead of
+            // hoping the corpus produces it, using the same single-purpose-engine idiom as the two
+            // airborne-crossing probes above (TestOnly_SetBall + one RunTick()).
+            var deflect = new MatchEngine(ShotOutcomeSeed);
+            var deflectAgentPos = new UnityEngine.Vector2(40.0f, 34.0f); // mid-pitch, off the kickoff lines
+            deflect.TestOnly_SetAgent(1, AgentMovement.AgentState.CreateAtPosition(
+                deflectAgentPos, new UnityEngine.Vector2(1f, 0f)));
+            deflect.TestOnly_SetCommand(1, AgentMovement.MovementCommand.Stop(deflectAgentPos));
+            BallPhysics.BallState deflectBall = BallPhysics.BallState.CreateAtPosition(
+                new UnityEngine.Vector3(
+                    deflectAgentPos.x + 0.4f, deflectAgentPos.y, MatchEngineConstants.BALL_REST_HEIGHT_M));
+            deflectBall.Velocity = new UnityEngine.Vector3(-20.0f, 0f, 0f);
+            deflectBall.State = BallPhysics.BallStateType.Rolling;
+            deflect.TestOnly_SetBall(deflectBall);
+            var deflectBefore = new UnityEngine.Vector2(deflectBall.Velocity.x, deflectBall.Velocity.y);
+            deflect.RunTick();
+            UnityEngine.Vector3 deflectAfterVel = deflect.TestOnly_BallSnapshot.Velocity;
+            var deflectAfter = new UnityEngine.Vector2(deflectAfterVel.x, deflectAfterVel.y);
+            float deflectTurnDeg = UnityEngine.Vector2.Angle(deflectBefore, deflectAfter);
+            context.Envelope.CheckTrue("fast-ball-deflects-off-stationary-agent",
+                deflectAfter.magnitude >= DeflectionMinResidualSpeedMps
+                && deflectTurnDeg >= DeflectionMinAngleDeg,
+                "beforeSpeed=" + deflectBefore.magnitude.ToString(
+                    "F2", System.Globalization.CultureInfo.InvariantCulture)
+                + " afterSpeed=" + deflectAfter.magnitude.ToString(
+                    "F2", System.Globalization.CultureInfo.InvariantCulture)
+                + " turnDeg=" + deflectTurnDeg.ToString(
+                    "F1", System.Globalization.CultureInfo.InvariantCulture));
+
+            // Natural-occurrence fast-contact deflections stay REPORTED (not asserted): the corpus
+            // count went 4 (ba4e194) -> 0 (HEAD, ERR-012-011's positioning fix — collision code
+            // untouched), which makes it a stochastic count of a rare event rather than a
+            // reachability signal. The constructed lock above guards the mechanism instead.
+            context.Envelope.CheckTrue("fast-deflection-natural-count-recorded", true,
+                "naturalDeflections=" + Inv(totalDeflections));
 
             // Over-correction guard: the fixes must not kill scoring outright.
             context.Envelope.CheckTrue("goals-still-scored", totalGoals > 0, Inv(totalGoals));
@@ -325,4 +369,19 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | (the keeper-conversion corpus-sizing lesson). MaxMeanGoalsPerWindow |
 // |         |            |        | rescaled 1.2 → 2.4 for the doubled window (pre-fix ~3.1 still      |
 // |         |            |        | fails it — the discriminator is preserved).                        |
+// | 1.2     | 2026-08-08 | —      | Predicate-shape repair. "fast-balls-deflect-off-bodies" asserted   |
+// |         |            |        | totalDeflections > 0 over the natural-occurrence corpus count —    |
+// |         |            |        | measured 4 events at ba4e194 (pre ERR-012-011), 0 at HEAD, moved   |
+// |         |            |        | by a positioning fix alone with the collision code untouched: a   |
+// |         |            |        | stochastic count of a rare event, not a reachability lock. Demoted |
+// |         |            |        | to "fast-deflection-natural-count-recorded" (reported, not         |
+// |         |            |        | asserted — the airborne-exit-count-recorded precedent). Added a    |
+// |         |            |        | CONSTRUCTED "fast-ball-deflects-off-stationary-agent" lock:        |
+// |         |            |        | TestOnly_SetAgent + TestOnly_SetBall place a stationary agent and  |
+// |         |            |        | a fast ball on a collision course, one RunTick(), assert the       |
+// |         |            |        | post-contact planar turn >= DeflectionMinAngleDeg with residual    |
+// |         |            |        | speed >= DeflectionMinResidualSpeedMps. Mutation-verified: FAILS   |
+// |         |            |        | with BallCollisionHandler.OnAgentCollision neutered (early         |
+// |         |            |        | return), PASSES restored — production code unchanged. No other    |
+// |         |            |        | predicate, bound, seed or tick count touched.                      |
 #endregion

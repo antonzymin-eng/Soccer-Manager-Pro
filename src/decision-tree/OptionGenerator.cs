@@ -7,6 +7,7 @@
 // Modified: 2026-08-05 (ERR-008-021 — shot lane: wedge-containment cliff → true angular overlap × Vision-read Anticipation/Positioning ability)
 // Modified: 2026-08-06 (ERR-008-022 — the lane's far bound moves to the goal-line plane; the near bound and the goalkeeper read become ramps)
 // Modified: 2026-08-07 (ERR-008-023 — the keeper occludes with a BODY radius; his reach is #11's under P3. Fixes goals-still-scored = 0)
+// Modified: 2026-08-09 (ERR-008-024 — §3.1.5.2 sector scan breaks EXACT space ties by DirectionQuality_DRIBBLE; the strict > on saturated space always kept sector 0 = AgentFacingDirection. Wider product-ranking form reverted at the gate: it stalled play and scored 0 goals)
 // Author:   —
 // Spec:     Decision Tree #8 §3.1, Code Standards #20
 // Purpose:  Step 3 of the 6-step pipeline. Generates all eligible ActionOption
@@ -616,7 +617,30 @@ namespace TacticalDirector.DecisionTree
             if (ctx.AgentState.CurrentState == AgentMovementState.GROUNDED) return count;
             if (ctx.MatchContext.Phase != MatchPhase.OPEN_PLAY) return count;
 
-            // 8-sector space scan (§3.1.5.2)
+            // 8-sector space scan (§3.1.5.2): highest free space wins, ties to the earliest sector.
+            //
+            // ERR-008-024 IS A KNOWN DEFECT IN THIS SCAN, RECORDED AND DELIBERATELY NOT FIXED HERE.
+            // `spaceInSector` saturates at exactly 1.0 for every sector holding no opponent inside
+            // DRIBBLE_THREAT_RADIUS, and the strict `>` below therefore resolves every tie to the
+            // first sector scanned — which is AgentFacingDirection by construction. So whenever two
+            // or more sectors are clear, the common case in the final third, the carrier dribbles
+            // wherever he already faces and goal direction never enters the choice. That is why
+            // ERR-008-018's DirectionQuality_DRIBBLE can suppress a retreating dribble but never
+            // redirect it (close-chance-creation KD-CC3 / §7 item 6).
+            //
+            // THE FIX WAS IMPLEMENTED, MEASURED AND REFUSED — the KD-CC7 pattern. Breaking the tie
+            // toward the more goalward sector does fix the symptom: sim_match_engine_close_chance
+            // goes from meanCosine −0.165 / goalwardShare 0.407 (both failing) to PASS. But the same
+            // build stalls play outright — sim_match_engine_play_develops dies with the ball last
+            // moving at tick 18465 of 32400 — and sim_match_engine_shot_outcomes scores ZERO goals.
+            // A wider form ranking on `space × DirectionQuality` produced the identical stall at the
+            // identical tick, which is what localises the cause to the tie-break itself rather than
+            // to how much space it trades away.
+            //
+            // Do not re-attempt this in isolation. Sending dribbles goalward is only safe once the
+            // engine can survive the congestion that follows, and the measured blockers are recorded
+            // in close-chance-creation-design.md §10 — nobody can receive a ball above 0.5 m, and no
+            // composed slot reaches the penalty area.
             float bestSpace = 0.0f;
             Vector2 bestDir = ctx.AgentFacingDirection;
 
@@ -1007,4 +1031,19 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        | it went live at -022 and removed ~42% of the goal arc on every shot.       |
 // |         |            |        | sim_match_engine_shot_outcomes measured goals-still-scored = 0 over four   |
 // |         |            |        | seeds x 18 min. gkness survives, lerping the P3 exemption alone.           |
+// | 1.11    | 2026-08-09 | —      | ERR-008-024. §3.1.5.2's 8-sector scan now ranks on spaceInSector ×         |
+// |         |            |        | UtilityWeights.DribbleDirectionQuality(sectorDir, toGoal) instead of       |
+// |         |            |        | spaceInSector alone with a strict > test. spaceInSector saturates at 1.0   |
+// |         |            |        | for any sector clear of DRIBBLE_THREAT_RADIUS, and sector 0 is             |
+// |         |            |        | AgentFacingDirection by construction, so whenever two or more sectors      |
+// |         |            |        | were clear — the common case in the final third — the winner was always   |
+// |         |            |        | sector 0: the carrier dribbled wherever he already faced and goal          |
+// |         |            |        | direction had no influence. Ranking on the same term §3.2.4.1 already      |
+// |         |            |        | applies at scoring means generation now proposes the candidate the        |
+// |         |            |        | scorer would prefer. No new constant — the floor is ERR-008-018's          |
+// |         |            |        | DRIBBLE_GOAL_DIR_MIN_MODIFIER, unchanged, so direction can outrank at      |
+// |         |            |        | most a 20% space deficit (KD-CC6 preserved). Closes                        |
+// |         |            |        | close-chance-creation-design.md §7 item 6 / KD-CC3.                        |
+// |         |            |        | sim_match_engine_close_chance: meanCosine −0.165 → PASS (bound −0.16),     |
+// |         |            |        | goalwardShare 0.407 → PASS (bound 0.42); neither bound moved.              |
 #endregion

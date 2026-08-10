@@ -1,8 +1,8 @@
 # Positioning AI Specification #12 — Section 5: Test Plan
 
 **Created:** May 15, 2026
-**Last Updated:** June 13, 2026 (v0.3 — ERR-012-006: T-T-001 clarified as an absolute deep-line threshold, not an OutOfPoss-vs-InPoss comparison)
-**Version:** 0.3
+**Last Updated:** August 8, 2026 (v0.4 — ERR-012-011: §5.2.3 gains T-U-023/024/025 for the team-possession phase input, the pass-in-flight latch lifecycle, and the unchanged velocity branch.)
+**Version:** 0.4
 **Status:** DRAFT
 
 ---
@@ -38,6 +38,9 @@ The test plan binds to Testing Strategy #19 §3 (test taxonomy) and
 - **T-U-020** Possession-flip own→opp commits to `OutOfPoss` immediately on next tick.
 - **T-U-021** Loose ball with `vx_filtered > +4 m/s` produces candidate `TransToAtk`.
 - **T-U-022** Phase hysteresis: oscillating candidate at boundary stays in `lastPhase` for at least `PHASE_HYSTERESIS_TICKS = 3` ticks.
+- **T-U-023** (ERR-012-011) A pass in flight between team-mates commits `InPoss` for the passing team and `OutOfPoss` for the other — asserted through a real `MatchEngine`, MIRRORED home and away. A hand-filled snapshot cannot verify this: it would test the classifier while leaving the orchestrator's composition — the half that was wrong — unexercised.
+- **T-U-024** (ERR-012-011) The pass-in-flight latch's lifecycle: armed at the CONTACT kick on the request's `TargetAgentId`; refused for an opponent, for the kicker himself, for no target and for an out-of-range target, each with a positive control; cleared when anybody establishes possession, when the ball ceases to travel toward the intended receiver, when it comes to rest, and when any agent strikes it. Monotone — nothing but a kick re-arms it.
+- **T-U-025** (ERR-012-011) With no team in possession, §3.0.2's `V₀` velocity branch still yields `TransToAtk` / `TransToDef` unchanged — the half of the rule this change must NOT have altered.
 
 ### 5.2.4 Line / Lane Membership (§3.3, §3.4)
 - **T-U-030** k=3 partition is stable under EntityId reordering.
@@ -123,3 +126,4 @@ The test plan binds to Testing Strategy #19 §3 (test taxonomy) and
 | 0.1 | May 15, 2026 | AI agent (claude/draft-positional-ai-specs-MOejb) | Initial section-file draft from `outline-detailed.md` v1.2. |
 | 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass. Added T-U-035..T-U-037 (archetype line cuts, lane boundary semantics, post-spacing lane); T-U-044/T-U-045 (spacing convergence + non-convergent fallback); T-U-063..T-U-065 (compactness directional invariants, isActive centroid, baseSlot subject); T-I-004 sentinel correction; T-I-011 orchestrator non-invocation of `Stage0Default()`. Unit target ≥48; integration target ≥11; total ≥74. |
 | 0.3 | June 13, 2026 | AI agent (dotnet-CI quarantine adjudication) | ERR-012-006: T-T-001 clarified — the `x ≤ 25 m` deep-line condition is ABSOLUTE (ball in own defensive third; §3.2 ball-relative pull), not an OutOfPoss-vs-InPoss comparison. The implemented `TacticalCorrectness_OutOfPoss_DefensiveLineCompact` test had invented such a comparison with a center ball (unsatisfiable under §3.5 vertical compactness) and was corrected to the absolute threshold. |
+| 0.4 | August 8, 2026 | AI agent (wiring-backlog C1) | ERR-012-011: §5.2.3 gains T-U-023 (a pass in flight commits `InPoss` for the passing team and `OutOfPoss` for the other, driven through a real `MatchEngine` and mirrored home/away — a hand-filled snapshot would leave the orchestrator's composition, the half that was wrong, unexercised), T-U-024 (the latch lifecycle: arm, four refusals each with a positive control, four expiries, monotonicity) and T-U-025 (the `V₀` branch is unchanged). Counts in §5.1 are `≥` targets and are unaffected. |

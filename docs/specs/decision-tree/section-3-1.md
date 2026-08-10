@@ -11,8 +11,8 @@ selected downstream. All attribute references are cross-referenced to `PlayerAtt
 as DT requirements pending Spec #20 master attribute registry.
 
 **Created:** March 01, 2026, 3:30 PM PST
-**Updated:** May 18, 2026 (v1.6 — ERR-015-002: §3.1.7.2 Stage 1+ RUNNER override note added; Stage 0 behavior unchanged, non-behavioral patch)
-**Version:** 1.6
+**Updated:** August 9, 2026 (v1.8 — CORRECTION to v1.7: `ERR-008-024`'s fix was implemented, measured, and REFUSED, not landed. §3.1.5.2's pseudocode reverted to match the shipped code — `best_direction = argmax(space_in_dir)`, ties to the earliest sector — and the ERR-008-024 callout now records a KNOWN, MEASURED, UNFIXED defect with the refusal evidence. See the version-history table.)
+**Version:** 1.8
 **Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate; see §9 approval checklist). v1.1.1 (May 15, 2026): ERR-012-002 stale spec ref correction (§3.1.7.2 "Spec #14" → "Positioning AI, Spec #12"). v1.1.2 (May 17, 2026): ERR-013-004 stale spec name correction (§3.1.8.1 "Fatigue System #13" → "Pressing AI #13"). Both are single-token non-behavioral patches; no formula, contract, or pipeline change. Approval status preserved.
 **Specification Number:** 8 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -702,9 +702,13 @@ foreach dir in candidate_directions:
         nearest_dist = MIN(|O.PerceivedPosition − AgentPosition|) for O in sector_opponents
         space_in_dir(dir) = Clamp(nearest_dist / DRIBBLE_THREAT_RADIUS, 0.0, 1.0)
 
-// Best dribble direction: highest space score, forward-arc bias on tie
-best_direction  = argmax(space_in_dir), tie broken by lowest sector index (forward-first)
-SpaceScore      = space_in_dir(best_direction)    // [0.0, 1.0]
+// Best dribble direction: highest space score wins; ties broken by lowest
+// sector index (forward-first) — i.e. AgentFacingDirection wins any tie.
+// Direction to goal does NOT enter this choice. That is ERR-008-024, a
+// KNOWN, MEASURED, UNFIXED defect — see the callout below for why a fix
+// was attempted and refused.
+best_direction = argmax(space_in_dir), tie broken by lowest sector index (forward-first)
+SpaceScore     = space_in_dir(best_direction)    // [0.0, 1.0]
 ```
 
 **DRIBBLE_THREAT_RADIUS = 2.0m [GT]:** An opponent within 2m of the agent's intended
@@ -744,9 +748,11 @@ was assigned to the nearest sector but with up to ±22.5° angular error from a 
 sector boundary, vs. ±22.5° maximum in the 8-sector model. The 8-sector model
 eliminates the structural gap between sectors and reduces the worst-case angular
 error from ±67.5° (5-sector midpoints) to ±22.5°. No backward-sector penalty is
-applied to `SpaceScore` at generation time; the scoring stage applies the
-directional-to-goal modifier to the DRIBBLE utility — `DirectionQuality_DRIBBLE`
-in §3.2.4.1.
+applied to `SpaceScore`'s own value — it remains the raw space fraction of
+whichever sector is chosen. **Sector selection itself is space-only** — direction
+to goal has no influence at all on `best_direction`. That is exactly the defect
+ERR-008-024 records below: a fix was implemented, measured, and refused, so this
+remains true of the shipped code.
 
 > **ERR-008-018 (August 3, 2026).** The cross-reference above previously pointed at
 > §3.2.2, which is the **PASS** utility formula; §3.2.4 is DRIBBLE's. The promised
@@ -759,6 +765,53 @@ in §3.2.4.1.
 > heartbeat decisions) with a mean cosine to the opponent goal of **−0.30**: the
 > average final-third dribble pointed away from the goal. `DirectionQuality_DRIBBLE`
 > is added to §3.2.4.1 in the same commit.
+>
+> **ERR-008-024 (August 9, 2026) — recorded, NOT fixed. Implemented, measured,
+> refused; this is a KNOWN, MEASURED, UNFIXED defect, not an oversight.**
+> ERR-008-018 fixed the SCORING stage; the passage above already recorded
+> that `best_direction` itself was still `argmax(space)` and therefore direction-
+> blind. That is exactly what let the gap survive: `space_in_dir` **saturates at
+> exactly 1.0** for any sector with no opponent inside `DRIBBLE_THREAT_RADIUS`, and
+> the scan uses a strict `>` improvement test starting from `best_space =
+> 0`, so the FIRST sector visited — sector 0, `AgentFacingDirection` by
+> construction — always wins a tie. Two or more clear sectors is the common case in
+> the final third, so the carrier dribbles wherever he already faces and goal
+> direction never enters the choice of direction at all; ERR-008-018's scoring
+> term can then only suppress the resulting dribble, never redirect it toward a
+> sector that is both clear AND goalward
+> (`close-chance-creation-design.md` KD-CC3 / §7 item 6, reopened by this entry).
+>
+> **A tie-break fix was implemented, and it DOES fix the symptom.** Ranking ties
+> toward the more goalward sector — `rank(dir) = space_in_dir(dir) ×
+> DirectionQuality_DRIBBLE(dir, toGoal)`, the SAME `DirectionQuality_DRIBBLE` term
+> §3.2.4.1 already applies at scoring, no new constant — moves the
+> `sim_match_engine_close_chance` acceptance scenario from meanCosine −0.165 /
+> goalwardShare 0.407 (both failing) to **PASS** (bounds −0.16 / 0.42, neither
+> moved).
+>
+> **The gate REFUSED it.** The same build **stalls play outright**:
+> `sim_match_engine_play_develops` fails with "play stalled: last possession
+> change at tick 18424, ball last moving at tick 18465 of 32400", and
+> `sim_match_engine_shot_outcomes` fails `goals-still-scored` at **0**. A WIDER
+> form was tried first, ranking on `space × DirectionQuality` outright rather than
+> as a tie-break only — it produced the **identical** stall at the **identical
+> tick**, plus mean-shot-distance 25.41 m against a 24.00 m ceiling. That identity
+> is what localises the cause to the tie-break itself, not to how much space
+> either form trades away: sending dribbles goalward is not safe today, at any
+> strength.
+>
+> **Refused, not landed.** `OptionGenerator.cs` is back to the pre-fix baseline
+> logic byte-for-byte (comment-only diff against the pre-ERR-008-024 commit).
+> Kept, behaviour-neutral: `DirectionQuality_DRIBBLE` hoisted to a shared
+> `UtilityWeights.DribbleDirectionQuality(dir, toGoal)` with `UtilityScorer`
+> delegating to it (so generation and scoring cannot drift apart if this is
+> retried), plus the explanatory note above at the defect site. The two
+> `DribbleDirection_*` §3.1.5.2 locks the attempted fix added are **REMOVED** —
+> they locked behaviour that no longer exists. `DecisionTree.Tests`: **129 passed
+> / 4 skipped / 0 failed.** **Do not re-attempt this in isolation** — the measured
+> blockers are recorded in `close-chance-creation-design.md` §10.2/§10.3: nobody
+> can receive a ball above 0.5 m, and no composed slot reaches the penalty area.
+> Sending the ball goalward is only safe once those are addressed.
 
 ### 3.1.5.3 DribbleOption Construction
 
@@ -1013,3 +1066,5 @@ scoring is §3.2 (unchanged — it is an INTERCEPT), dispatch §3.5.
 | 1.4 | August 5, 2026 | — | ERR-008-021 (the v1.3 deferral, now closed; spec + code, same commit). §3.1.4.3's shot lane adopts the §3.1.3.3 model, and the scope note deferring it is replaced by the shape of the fix. Two defects, the same two the pass lane had: the wedge-containment test counted an opponent's WHOLE blocking width when his angular centre fell inside the goal arc and nothing at all when it fell outside (a cliff at the post direction — ~0.41 of GoalOpeningScore across 4 cm on the §5 fixture, and a defender across the near post scoring a fully open goal), and the width was body radius alone, blind to whether the man could actually get across the shot. Now: the true angular OVERLAP of the disc with the arc (continuous by construction; integrates to the identical occlusion over a uniformly-placed blocker — P5) × the blocker's Anticipation/Positioning ability (`SHOT_BLOCKER_ABILITY_MIN/MAX` 0.6–1.4 [GT], average ⇒ exactly 1.0) read through the SHOOTER's Vision fidelity (the §3.1.3.3 dial, deliberately shared — P2). Goalkeeper exempt from the ability term (P3 — #11 §3.5/§3.7.0 owns keeper shot-stopping). Authoritative derivation: §3.2.3.2. Consumers: `UtilityWeights.cs` v1.11, `OptionGenerator.cs` v1.7, `OptionGeneratorTests.cs` v1.7. |
 | 1.5 | August 6, 2026 | — | ERR-008-022 (adversarial review over the ERR-008-021 landing; spec + code, same commit). §3.1.4.3's `IsInShotPath` bounded the shooting lane by the distance to the goal CENTRE — a plane that cuts diagonally across the goal mouth for any off-centre shooter, so the FAR-POST blocker was discarded (measured on 100% of 20,213 sampled in-range off-centre shooters) and a keeper on his line at goal centre was dropped for every shooter position, while an opponent standing BEHIND the goal line was admitted at the keeper's larger radius. Replaced by `ShotPathWeight`: bounded by the goal-line PLANE, and ramping in with lane depth rather than gating hard at `GOAL_MIN_SHOT_DIST` (which flipped a whole SHOOT decision on one centimetre). Derivation and constants: §3.2.3.2 steps 3a–4. Two cross-reference corrections in the same section: the closing delegation pointed at **§3.2.2, the PASS utility formula** (the ERR-008-018 defect verbatim, in text written one day after it) — corrected to §3.2.3.1; and the field was called `GoalVisibilityScore` here and `GoalOpeningScore` in §3.2.3.2, the option struct and the code — unified onto `GoalOpeningScore`. |
 | 1.6 | May 18, 2026 | Claude (AI) / Anton | Non-behavioral patch. ERR-015-002 §3.1.7 update: Stage 1+ RUNNER override note added to §3.1.7.2 — when AttackIntent.role == RUNNER, MOVE_TO_POSITION target is runTargetPosition from #15 §3.4 instead of formation slot. Stage 0 behavior unchanged (AttackIntent null). Approval status preserved. |
+| 1.7 | August 9, 2026 | — | ERR-008-024 (spec + code, same commit). §3.1.5.2's 8-sector scan now ranks on `space_in_dir(dir) × DirectionQuality_DRIBBLE(dir, toGoal)` instead of `space_in_dir` alone. `space_in_dir` saturates at exactly 1.0 for any sector clear of `DRIBBLE_THREAT_RADIUS`, and the old strict-improvement scan always kept the first sector visited — sector 0, `AgentFacingDirection` by construction — whenever two or more sectors were clear, the common case in the final third: goal direction never entered the choice of `best_direction` at all, which is why ERR-008-018's scoring-stage fix could suppress a retreating dribble but never redirect it (close-chance-creation KD-CC3 / §7 item 6, now closed). Ranks on the SAME `DirectionQuality_DRIBBLE` term §3.2.4.1 already applies at scoring — no new constant; the floor is `DRIBBLE_GOAL_DIR_MIN_MODIFIER` = 0.80 (§3.2.4.1, unchanged), so direction can outrank at most a 20% space deficit. `SpaceScore` itself (§3.1.5.3) is unaffected — it remains the raw space fraction of whichever sector the ranking picks. Consumers: `OptionGenerator.cs` v1.11, `UtilityWeights.cs` v1.14, `UtilityScorer.cs` v1.16, `OptionGeneratorTests.cs` v1.11. Measured: `sim_match_engine_close_chance` meanCosine −0.165 → PASS (bound −0.16), goalwardShare 0.407 → PASS (bound 0.42); `DecisionTree.Tests` 131 passed / 4 skipped / 0 failed. **[CORRECTED at v1.8 below — this fix was implemented, measured, and REFUSED. It was never actually landed: the same build stalls `sim_match_engine_play_develops` outright and zeroes `goals-still-scored`. The pseudocode and callout described here have been reverted.]** |
+| 1.8 | August 9, 2026 | — | CORRECTION to v1.7: `ERR-008-024`'s tie-break fix was implemented, measured, and REFUSED — not landed. §3.1.5.2's pseudocode reverted to `best_direction = argmax(space_in_dir)`, ties to the earliest sector — the code `OptionGenerator.cs` actually runs, byte-identical in logic to the pre-fix baseline. The "sector selection is no longer space-only" claim and the ERR-008-024 callout are corrected to record a KNOWN, MEASURED, UNFIXED defect with the refusal evidence: the tie-break form passes `sim_match_engine_close_chance` (meanCosine −0.165 → PASS, goalwardShare 0.407 → PASS) but stalls play outright (`sim_match_engine_play_develops` fails, ball last moving at tick 18465 of 32400) and zeroes `goals-still-scored`; a wider `space × DirectionQuality` form produced the identical stall at the identical tick, plus mean-shot-distance 25.41 m against a 24.00 m ceiling. Kept, behaviour-neutral: `UtilityWeights.DribbleDirectionQuality(Vector2, Vector2)` (the hoisted §3.2.4.1 formula) and `UtilityScorer`'s delegation to it. The two v1.7 unit locks are REMOVED. `DecisionTree.Tests` 129 passed / 4 skipped / 0 failed. See `spec-error-log.md` ERR-008-024 and `close-chance-creation-design.md` §7 item 6 (reopened). |

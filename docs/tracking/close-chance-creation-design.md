@@ -4,7 +4,9 @@
 > **Class:** DESIGN SUPPLEMENT (class (b) — governs a surface that is not a numbered spec; the pass
 > itself is recorded as `match-engine-design.md` §5.Z.24)
 > **Status:** LANDED — one formula defect fixed (ERR-008-018) at a deliberately conservative `[GT]`.
-> **The creation gap itself is NOT closed**, and §7 item 1 names what actually owns it.
+> **The creation gap itself is NOT closed.** §7 item 1 named what owns it; **§10 (August 9, 2026)
+> retracts that ranking on re-measurement** and puts two bounds ahead of it — read §10 first, and
+> treat every figure in §2, §4 and §8 as pre-C1 unless §10.1 restates it.
 > **Owner pass:** §5.Z.24. Predecessor: `gk-conversion-at-contact-design.md` §7 item 4 (§5.Z.23),
 > which re-localized §5.Z.21's "possession churn" residual to this stage.
 > **Instrument:** `src/match-engine/tests/CloseChanceDiagnosticTests.cs` (env-gated,
@@ -233,7 +235,13 @@ suite in the gate's own Debug configuration: **102 passed / 4 skipped, 0 failure
 
 ## 7. Recorded, NOT fixed
 
-1. **The real bound on ball-into-box is that #8 cannot pass to a place — only to a player.**
+1. ~~**The real bound on ball-into-box is that #8 cannot pass to a place — only to a player.**~~
+   **PRIORITY CLAIM RETRACTED August 9, 2026 — see §10.** The *finding* stands and the candidate
+   type is still missing; what is withdrawn is "the real bound". Re-measurement after the C1 phase
+   fix found two bounds ahead of it, and the second one makes this item actively harmful to land
+   first: **44% of final-third passes are already aerial and they complete 1% of the time**, because
+   no agent in the engine can receive a ball above 0.5 m. Adding a candidate type that plays *more*
+   balls into space adds to that bucket. The original text follows unedited.
    §3.1.3 generates one PASS candidate per visible teammate **at that teammate's current position**.
    There is no pass-into-space, no through-ball-to-a-run, no cross-to-an-arriving-header. So the ball
    can only enter the penalty area if a teammate is *already standing in it at the moment of the
@@ -247,11 +255,19 @@ suite in the gate's own Debug configuration: **102 passed / 4 skipped, 0 failure
    outright: mean final-third episode length 5.1 s → **17.5 s** and **28.6 s**. This is what bounds
    `DRIBBLE_GOAL_DIR_MIN_MODIFIER` at 0.80 rather than the 0.50 that would match the PASS floor. It
    is a #8 §3.1.6 / §3.2.5 surface.
-3. **#12 commits `InPoss` only 9.5% of the time the ball is in the final third** (`TransToAtk`
-   58.3%). `PhaseClassifier.ComputeCandidate` keys on `PossessionOwnerEntityId >= 0`, false for the
-   entire flight of every pass, so a team passing the ball around reads as being in transition. Every
-   phase-gated mechanism in #13/#14/#15 — including the whole #15 run pipeline — is gated behind a
-   state the engine rarely occupies. A #12 §3.0.2 change with a blast radius across four consumers.
+3. **~~#12 commits `InPoss` only 9.5% of the time the ball is in the final third~~ — FIXED August 8,
+   2026 as `ERR-012-011`** (wiring backlog C1). `PhaseClassifier.ComputeCandidate` keyed on
+   `PossessionOwnerEntityId >= 0`, false for the entire flight of every pass, so a team passing the
+   ball around read as being in transition. Phase now classifies from TEAM possession — the on-ball
+   carrier's team, else the intended receiver of a pass in flight. **Two corrections this document
+   owes its readers.** First, the "every phase-gated mechanism in #13/#14/#15 is starved" framing
+   above is materially wrong: `TacticalContext.HasAttackIntent` has no production reader at all, so
+   #15 is inert independent of its gate, and #13's press targets have no consumer outside
+   `pressing-ai`. Second, and against this document's own hopes for the funnel, the fix was
+   *predicted to make box occupancy slightly worse* — #12's `PullFactor` `InPoss` column is less
+   advanced than the `TransToAtk` column it replaces for every attacking role. The C1 fix is a
+   correctness fix and a precondition for calibration; it is not the creation lever. Item 1 below
+   (#8 cannot pass to a place) remains that lever.
 4. **#15's TRANSITION branch never republishes per-agent intents.** `AttackingAITick.Tick` freezes
    the *directive* and returns, leaving `_intentBuffer` / `_entityToIntentIdx` holding the previous
    IN_POSSESSION stride's intents, which `GetIntent` then serves with a stale `ValidThroughTick`. The
@@ -262,10 +278,41 @@ suite in the gate's own Debug configuration: **102 passed / 4 skipped, 0 failure
    parameters for every committed RUNNER every heartbeat, so the trigger tick is always re-stamped
    `currentTick + delay`; a consumer that waited for it would never fire. A timed run commit needs
    the parameters latched at assignment first.
-6. **The dribble is suppressed, never redirected** (KD-CC3). §3.1.5.3 emits a single candidate — the
-   free-space argmax — so the scoring stage cannot steer it, only decide how hard it competes. A
+6. **The dribble is suppressed, never redirected** (KD-CC3). §3.1.5.3 emits a single candidate —
+   the free-space argmax — so the scoring stage cannot steer it, only decide how hard it competes. A
    generator emitting the best *goalward* sector alongside the best *free* one would let the tree
-   choose between them; that is a §3.1.5 change, not a `[GT]`.
+   choose between them; that is a §3.1.5 change, not a `[GT]`. **REOPENED August 9, 2026 — a fix was
+   implemented as `ERR-008-024`, measured, and REFUSED (the KD-CC7 pattern; see §4 for the
+   precedent).** Rather than a generator emitting TWO competing candidates (goalward + free, which
+   §3.1.5.3 would then need scoring rules to arbitrate between, and which would grow the fixed-size
+   `ActionOption` buffer this assembly shares across every action type —
+   `DecisionTreeConstants.MaxOptions` = 17 — by a second DRIBBLE slot), §3.1.5.2's single-candidate
+   scan was changed to RANK its 8 sectors on `spaceInSector × DirectionQuality_DRIBBLE(sectorDir,
+   toGoal)` instead of `spaceInSector` alone, reusing the exact term §3.2.4.1 already applies at
+   scoring (no new constant — the floor is `DRIBBLE_GOAL_DIR_MIN_MODIFIER` = 0.80, unchanged). Root
+   cause, found only once this residual was chased down: `spaceInSector` saturates at exactly 1.0
+   for any sector with no opponent within `DRIBBLE_THREAT_RADIUS`, and the old scan's strict `>`
+   improvement test therefore always keeps the FIRST sector visited — sector 0,
+   `AgentFacingDirection` by construction — whenever two or more sectors are clear, the common case
+   in the final third. The carrier dribbles wherever he already faces; goal direction has no
+   influence on the choice at all, which is exactly why KD-CC3's scoring-only fix could suppress a
+   retreating dribble but never redirect it.
+   **This DOES fix the symptom:** `sim_match_engine_close_chance` — meanCosine −0.165 → **PASS**
+   (bound −0.16, unmoved), goalwardShare 0.407 → **PASS** (bound 0.42, unmoved).
+   **But the same build stalls play outright:** `sim_match_engine_play_develops` fails with "play
+   stalled: last possession change at tick 18424, ball last moving at tick 18465 of 32400", and
+   `sim_match_engine_shot_outcomes` fails `goals-still-scored` at **0**. A WIDER form ranking on
+   `space × DirectionQuality` outright (not as a tie-break) produced the **identical** stall at the
+   **identical tick**, plus mean-shot-distance 25.41 m against a 24.00 m ceiling — that identity is
+   what localises the cause to the tie-break itself, not to how much space either form trades away.
+   **Refused, not landed.** `OptionGenerator.cs` reverted to the pre-fix baseline logic (a
+   comment-only diff against the pre-ERR-008-024 commit). Kept, behaviour-neutral: the
+   `DirectionQuality_DRIBBLE` formula hoisted to `UtilityWeights.DribbleDirectionQuality(Vector2,
+   Vector2)` with `UtilityScorer` delegating to it. The two §3.1.5.2 unit locks the attempted fix
+   added are **REMOVED** — they locked behaviour that no longer exists. `DecisionTree.Tests`
+   **129 passed / 4 skipped / 0 failed.** Sending the dribble goalward is only safe once §10.2/§10.3's
+   blockers are addressed — see §10.5. See `spec-error-log.md` ERR-008-024 and
+   `decision-tree/section-3-1.md` §3.1.5.2.
 
 ---
 
@@ -308,9 +355,218 @@ lever, and it is more useful than a fitted number would have been.
 | Acceptance-2 (pre-fix execution) | — | 2 of 3 predicates fail at `7fcd897` by execution (cosine −0.291 vs −0.10; goalward 0.306 vs 0.42), with the non-vacuity predicate passing |
 | Acceptance-3 (main run 419 fallout — the cosine predicate tripped at the ERR-008-021/-022/-023 merge; owner-approved rebaseline) | 1 regression RECORDED, not fixed | The shot-lane chain moved the pooled cosine to **−0.119** vs the −0.10 bound — and per-seed measurement shows the regression is **one seed, entirely**: 0x0F1E…78 held its gain (+0.078 / 110 dribbles, vs +0.074 post-fix) while 0xD1A6D05E gave back the whole ERR-008-018 flip (**−0.232** / 192 dribbles, vs −0.221 pre-fix and +0.091 post-fix). The goalward share held at 0.450 pooled but only because the healthy seed carries it (0.564 / 0.385 — the regressed seed is below the 0.42 bound alone). Bound moved −0.10 → −0.16 (owner call, August 7, 2026), still refusing the pre-fix pooled ≈ −0.29; share bound unchanged with its thinned margin recorded in the scenario. The pull-back belongs to the KD-W1 calibration pass — the chain's own P5 residuals (the withdrawn -021 population-preserving claim, -022's uncalibrated added blockers) are the suspects, and re-tuning them here would repeat the exact mistake -023 exists to record. Scenario v1.1 |
 
+## 10. The post-C1 re-measurement — two bounds ahead of §7 item 1
+
+> **Added:** August 9, 2026. **Status:** measurement complete, no mechanism landed.
+> **Instrument:** `CloseChanceDiagnosticTests.cs` v1.2 (`TD_CREATION_DIAGNOSTIC=1`), 6 seeds ×
+> 90 min. Council convened before any code: `advisor-integrity` ×2, `advisor-evidence` ×1.
+
+**Why this section exists.** Every number in §2, §4 and §8 was measured before `ERR-012-011`
+(wiring-backlog C1) landed on August 8. That fix moved final-third possession-phase share from
+24.2% to 96.8%, so it changed the population every one of those numbers was drawn from. The
+evidence advisor's first instruction was to re-measure before designing against them. That was
+done, and it refuted this document's own ranking.
+
+### 10.1 What re-measurement changed
+
+| quantity | §2 (pre-C1) | re-measured (post-C1) | football |
+|---|---|---|---|
+| mean attacking outfielders in the penalty area | 0.11 | **0.02** | 2–4 |
+| samples with zero attackers in the box | 92% | **98%** | — |
+| most advanced attacker, from the attacked goal line | 22.2 m | **25.2 m** | — |
+| most advanced composed **target slot** | 22.8 m | **25.7 m** | box edge 16.5 m |
+| final-third episodes reaching the box | 5–6% | **5%** | ~40% |
+| passes whose target is inside the box | 1% | **0%** | — |
+| mean final-third pass gain toward goal | not measured | **−20.16 m** | ≈ −2 to +3 |
+
+The support geometry got *worse*, exactly as §7 item 3 predicted it would.
+
+### 10.2 Bound A — the last 17 metres are not playable space, for either side
+
+The players are within 0.5 m of their targets (25.2 m actual against 25.7 m composed). They are not
+slow to arrive; they are never asked. And this **cannot be fixed by tuning**, which is the part that
+was not previously established:
+
+- F442's most advanced anchor is the ST at `longPct = 0.78` → 81.9 m → **23.1 m from goal**
+  (`PositioningAIConstants.cs`, `AnchorCalculator.ComputeAnchor`).
+- The ball-relative offset is `pull.x × basisX × OFFSET_RANGE_X_M`, with `OFFSET_RANGE_X_M = 12.0`
+  and `basisX = (ball.x − 52.5)/52.5` (`AnchorCalculator.ComputeBallRelativeOffset`).
+- With the ball 25 m from goal (`basisX` = 0.524) the ST slot lands at **19.3 m**. At a hypothetical
+  `pull.x = 1.0` — above every value in the table — it still only reaches **16.8 m**. Reaching the
+  16.5 m line at the shipped 0.60 needs the ball within **4.4 m of the goal line**.
+- Both terms are capped, so reshaping the basis curve changes only *when* the cap is reached. Fully
+  saturated the ST reaches 15.9 m with zero depth, where football wants 6–12 m.
+
+The defensive mirror is the same arithmetic: CB anchor `0.20` → 21.0 m, maximum OutOfPoss retreat
+`0.30 × 12` = 3.6 m, so the block bottoms out at **17.4 m from its own goal** even with the ball on
+that goal line. All twenty outfield players are therefore confined to a band of roughly 17–25 m.
+
+**Sequencing consequence, and it inverts the obvious order.** `EvaluateAndApplyOffside` is live on
+the reception path (`MatchEngine.cs`), and with the ball 25 m out the defending CB slot computes to
+19.1 m. Placing attackers at a realistic 11 m while the block sits at 19.1 m makes them offside on
+every completed pass, permanently. **The defensive block must drop first**: it is independently
+correct football, it moves the offside line back, and it carries no unmarked-attacker risk because
+the attackers are not there yet.
+
+### 10.3 Bound B — every aerial pass fails, and 44% of final-third passes are aerial
+
+This was never measured before, because **no instrument in this tree reported any pass outcome**.
+C4 now does. Final-third passes, 891 launched over the corpus:
+
+| type | n | completion | space-targeted? |
+|---|---|---|---|
+| Ground | 441 | **41%** | no |
+| Lofted | 221 | **1%** | no — aims at the receiver's feet |
+| Cross | 171 | **1%** | yes |
+| ThroughBall | 58 | **28%** | yes |
+| Driven / AerialThrough / Chip | 0 | — | never derived |
+
+Overall final-third completion is **23%**; 53% are intercepted and 24% reach a different team-mate.
+
+**The cause is one line of Stage-0 scope, not a formula.** `RunFirstTouch` gate 2 and
+`RunLooseBallPickup` both refuse any ball whose centre height exceeds
+`FirstTouchConstants.GroundControlHeight` = `BallPhysicsConstants.Possession.ControlHeight` =
+**0.5 m**, with the comment "a higher ball is a Heading Mechanics (#10) event, not Stage 0". Heading
+was described here as "only opt-in Phase 1" — **CORRECTED the same day: it is default-ON since
+July 27, 2026 and its state is serialized in the v18 snapshot block.** The gap is not that heading
+is switched off; it is that a header **redirects** the ball and never grants possession, that
+`HeadingMechanics` exposes no control/trap entry point, and that the trigger reaches only the single
+nearest outfield agent within 1.5 m. DT-emitted HEADER is deferred behind the 3-bit `ActionType` ordinal
+ceiling. So **no agent can receive a ball out of the air at all.** An aerial delivery becomes
+receivable only after it lands and rolls — by which point the intended receiver is a mean of
+**19.0 m** away (C4e; >10 m on 57% of passes) and an opponent is nearer.
+
+That single fact explains the 1% pair, the 53% interception rate, the 86% ownerless share, and the
+5% box-reach — a cross is football's primary route into the penalty area and here it is a 1% pass.
+
+Two figures argue the window is not the problem: mean time-to-rest is **2.83 s** (65% exceed 2 s),
+which at 5 m/s is 14 m of running, and the counterfactual race for space 8 m goalward of the ball is
+**46% attacker-nearer** — close to even, not a rout. Space is contestable; nobody contests it.
+
+### 10.4 The corrected order
+
+1. **Aerial reception** (Bound B). Largest measured footprint, and it is a *wiring* item — the
+   heading subsystem exists and is unreached — rather than new physics. Until it lands, 44% of
+   final-third passes are guaranteed turnovers.
+2. **The defensive block drop** (Bound A, defensive half). Independently correct, creates the space,
+   moves the offside line.
+3. **Attacking box occupation** (Bound A, attacking half). A new `SlotComposer` step 3c: additive,
+   goal-relative, weight ramped continuously in ball advancement (P1 — never a hard third gate),
+   owned by **#12**. Not #24: `FR-BU-004` gates its overlay on `zone ∈ {OwnThird, MiddleThird}` and
+   build-up §3 delegates the final third to #12/#15 in terms, so a final-third row there is a
+   contract violation that breaks its own `T-BU-U-007` lock. Placed after 3b and **before** step 4,
+   because an occupation displacement is a shape proposal and placing it after spacing would breach
+   `FR-PA-012`.
+4. **§7 item 1, pass-to-a-place**, last — after there is someone in the box to aim near and a way to
+   receive the ball when it gets there.
+
+### 10.5 Recorded, not fixed
+
+- **`FR-PA-027` ("at most three agents per lane", a MUST) has no enforcement anywhere in `src/`** —
+  no constant, no check, no test. Converging attack-line slots into lane C at step 3c would be the
+  first thing likely to breach it, and nothing would notice.
+- **A defender who reaches the box would be scenery.** `DefensiveAITick.GetAssignment`, the
+  per-attacker mark assignment, has no production consumer, and W2 means no agent can tackle.
+- **`PassTargetResolver.ResolveSpaceTargetedAimPoint` is dormant** — reachable only when
+  `TargetAgentId == -1`, which no producer sets. The wiring backlog's Class-C table lists
+  `PassTargetResolver` as "correctly wired"; that row is wrong for this method.
+- **`PassOutcome.Invalid` is not observable** without a new `MatchEngine` accessor, so C4 cannot
+  report it.
+- **No `ERR-` id was filed for either bound, deliberately.** Bound A is a genuine #12 spec defect
+  (the §3.1/§3.2 composition cannot place an agent in the attacking penalty area at any legal
+  constant value, while #24 §3.2 delegates final-third positioning to it), and `ERR-012-012` was
+  verified free by grep on August 9. It is **not** soft-reserved: this project has been burned by
+  ids reserved in prose and consumed elsewhere, so the id is to be re-grepped and filed by whichever
+  landing fixes it. Bound B is not a spec defect at all — Stage 0 scopes aerial control out by
+  design and says so at the gate; it is a wiring item, and belongs in the wiring backlog.
+- **`fast-balls-deflect-off-bodies` was never a reachability predicate in practice** — measured by
+  execution at 4 events pre-C1 and 0 post-C1, across ~36 minutes of football, against a bound of
+  "> 0". A positioning change moved it without touching collision code.
+- **Goalward dribbling (§7 item 6 / `ERR-008-024`) stalls the engine — consistent with §10.2/§10.3,
+  not a coincidence.** A tie-break fix that sends the carrier's dribble toward goal on a tie passes
+  the close-chance acceptance scenario but stalls `sim_match_engine_play_develops` outright (ball
+  last moving at tick 18465 of 32400) and zeroes `goals-still-scored`; a wider always-goalward form
+  produces the identical stall at the identical tick. That is exactly what §10.2/§10.3 predict:
+  nobody can receive a ball above 0.5 m (Bound B) and no composed slot reaches the box (Bound A), so
+  a carrier sent goalward runs into congestion with no pass option and no target to run at, and play
+  dies there. Implemented, measured, refused August 9, 2026. Sending the ball goalward is only safe
+  once those two bounds are addressed.
+
+### 10.6 The header measurement — item 1 is mispriced, and the real bound is narrower
+
+> **Measured August 9, 2026**, instrument v1.3 (Report C5), 6 seeds × 90 min. Ordered by the
+> evidence advisor with the decision rule stated BEFORE the run, so the reading is not post-hoc.
+
+§10.4 ranked aerial reception first on the grounds that #10 "exists and is unreached". **Both halves
+were wrong.** Heading is default-ON (since July 27, 2026) and its state is serialized in the v18
+block. So the question became: does a committed header ever CONNECT? Nothing in this tree had ever
+reported a header statistic — `HeadingTelemetry` is five no-op stubs — which is the §5.Z.17
+signature exactly.
+
+| | measured |
+|---|---|
+| headers **executed** | **2** — both in midfield, **zero** in any attacking third |
+| headers **failed** | **963** |
+| **contact ratio, executed / (executed + failed)** | **0.2%** |
+| dominant failure cause | **`positionedPoorly` — 97% away, 99% home** |
+| crosses ending in an attacker header | **0%** (n = 171) |
+| crosses ending in a defender header | **0%** |
+| crosses reaching the intended receiver | **0%** |
+| crosses **coming to rest untouched** | **69%** (30% ground interception, 1% keeper) |
+
+**Minimum 3-D distance from an airborne ball to the nearest outfielder, per airborne final-third
+episode (1,097 episodes):**
+
+| | ≤ 0.18 m | 0.18–0.5 | 0.5–1.5 | 1.5–3 | 3–5 | > 5 | mean |
+|---|---|---|---|---|---|---|---|
+| nearest **attacker** | **0%** | 0% | ~10% | ~25% | ~18% | ~46% | 5.9 m |
+| nearest **defender** | **0%** | 0% | ~31% | ~21% | 10% | ~38% | 4.7 m |
+
+**The defender row is the one that matters, and it narrows §10.2's claim.** Defenders are present in
+numbers and they make contact 0% of the time too. So an airborne ball is not merely unreachable by
+*attackers who are not in the box* — it is untouchable by **anybody, anywhere**, and box occupancy is
+not the binding constraint on it. Fixing §10.4 items 2–3 would therefore NOT make crosses work.
+
+**The cause is one sentence: nothing in this engine moves a player to where a ball is going.**
+`HeadingEligibility.FindContactFrame` holds the head centre fixed at the agent's current position
+while only the ball moves, so the prediction never models a player running onto it.
+`SelectLooseBallCollector` returns nobody while the ball is in motion. #12's composed slot is
+relative to the ball's *current* position, so support drifts after the ball rather than ahead of it.
+The 0.18 m contact volume is then unreachable by construction: the trigger arms at 1.5 m, and no
+mechanism closes the remaining 1.32 m.
+
+**Consequences for the order in §10.4, which is superseded:**
+
+1. **Item 1 is mispriced and is NOT a wiring item.** #10's contact model cannot connect at any
+   distance the rest of the engine actually produces. Widening `HeaderTriggerRangeM` or
+   `HeadContactVolumeRadiusM` to force contacts is barred — KD-W1, and §5.Z.9 is the precedent for
+   widening a trigger against a distribution nobody had measured.
+2. **The candidate first lever is now "attack the ball": move a player to a ball's predicted
+   arrival point.** It is upstream of aerial contact, of ground loose balls (`SelectLooseBallCollector`
+   is inert while the ball moves), and of pass-to-space (§7 item 1) — one mechanism, three payoffs.
+   It is also what the C1 pass-in-flight latch already identifies the receiver for.
+3. **Recorded, not fixed, and independent of sequencing:** the header target is a FIXED point —
+   opponent goal X, pitch-width / 2 — from anywhere on the pitch, so a defender clearing in his own
+   box aims 90 m at the far goal. That is the football-judgment doctrine's P4 shape (intent as a
+   first-class object) and is an ERR candidate in its own right.
+4. **Recorded, not fixed:** the header trigger arms at ball centre `z ≥ 0.5` while first touch
+   refuses at `z − 0.11 > 0.5`, so `z ∈ [0.50, 0.61]` is claimable by both and is resolved today only
+   by phase order.
+5. **A metric correction this run forced.** For a cross, "completion" is the wrong success criterion —
+   a cross should be headed, not controlled — so §10.3's 1% under-states crosses by construction. It
+   survives anyway: 0% headed, 0% reached, 69% untouched is not "headed instead of received".
+6. **Not observable, and worth a production accessor next time:** the count of header intents
+   COMMITTED. C5a's event pair is a proxy that can under-count, because `HeadingMechanics.Update`
+   stops re-evaluating once the frame passes the agent's landing frame, dropping such a commit with
+   neither event fired.
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 1.0 | 2026-08-04 | — | Initial: implemented + measured. §1 both premises checked (the entry-count premise SURVIVED — the first in this chain); §2 the finding (box empty at 0.11 attackers, no target slot inside the area, and the average final-third dribble pointing AWAY from goal at cosine −0.30) and ERR-008-018; §3 KD-CC1..CC8; §4 the #15 run overlay implemented, measured and refused (its runner target moves 80.9 → 14.7 m while box occupancy falls 0.11 → 0.08); §5 acceptance, 2 of 3 predicates failing pre-fix by execution; §6 the measured result — a 6-of-6 per-seed flip in dribble direction, and an explicit list of what did NOT move, including the withdrawn box-occupancy claim that turned out to be one stalled match; §7 six recorded residuals headed by "#8 cannot pass to a place, only to a player", which now owns the ball-into-box stage; §8 the monotone ladder with the stall column that bounds the [GT] at 0.80. |
 | 1.1 | 2026-08-07 | — | Acceptance-3 (§9): the cosine predicate tripped at the ERR-008-021/-022/-023 main merge, pooled −0.119; per-seed the regression is entirely seed 0xD1A6D05E (−0.232 — its whole ERR-008-018 gain returned) while 0x0F1E…78 held (+0.078). Bound rebaselined −0.10 → −0.16 by owner call; share bound unchanged, margin thinned to 0.030. The regression is RECORDED for the KD-W1 calibration pass, not re-tuned here. `MatchEngineCloseChanceScenarios.cs` v1.1. |
+| 1.2 | 2026-08-08 | — | §10 added: the post-C1 re-measurement, and this document's own §7 item 1 priority claim RETRACTED (the finding stands; "the real bound" does not). Two bounds sit ahead of it. **Bound A** — the last 17 m of pitch are unreachable by composition at ANY legal constant value, for either side: the F442 ST anchor is 23.1 m from goal, the ball-relative offset is capped at `pull.x × 12 m`, and even at a `pull.x` of 1.0 (above every table value) the slot reaches only 16.8 m against a 16.5 m box edge, while the defensive block bottoms out at 17.4 m. Offside being live on the reception path inverts the order: the block drops BEFORE attackers occupy, else they are permanently offside. **Bound B, new and larger** — 44% of final-third passes are aerial (Lofted 25% + Cross 19%) and complete **1%**, against Ground 41% and ThroughBall 28%, because `RunFirstTouch` and `RunLooseBallPickup` both refuse any ball above 0.5 m (heading is deferred), so no agent can receive a ball out of the air; overall final-third completion is 23%. Corrected order recorded in §10.4, with pass-to-a-place last. §2/§4/§8 figures are superseded for every quantity restated in §10.1. No mechanism landed this pass; the instrument (v1.2) and the measurement are the deliverable. |
+| 1.3 | 2026-08-09 | — | §7 item 6 CLOSED as `ERR-008-024`, by a different route than the item proposed: one ranked DRIBBLE candidate instead of two competing ones. §3.1.5.2's 8-sector scan ranks on `spaceInSector × DirectionQuality_DRIBBLE(sectorDir, toGoal)` instead of `spaceInSector` alone — `spaceInSector` saturates at 1.0 for any clear sector, and the old strict `>` test always kept sector 0 (`AgentFacingDirection`) on a tie, which is exactly why KD-CC3's scoring-only fix could suppress a retreating dribble but never redirect it. Same term §3.2.4.1 already applies at scoring; no new constant. `sim_match_engine_close_chance`: meanCosine −0.165 → PASS (bound −0.16), goalwardShare 0.407 → PASS (bound 0.42); neither bound moved. See `spec-error-log.md` ERR-008-024. **[CORRECTED at v1.4 below — this fix was implemented, measured, and REFUSED. It was never landed: the same build stalls play outright and zeroes goals-still-scored. §7 item 6 is REOPENED, not closed.]** |
+| 1.4 | 2026-08-09 | — | **CORRECTION to v1.3: §7 item 6 / `ERR-008-024` was recorded CLOSED; it is not.** The fix was implemented, measured, and REFUSED — the KD-CC7 pattern (§4). The sector-scan tie-break DOES pass `sim_match_engine_close_chance` (meanCosine −0.165 → PASS, goalwardShare 0.407 → PASS) but STALLS `sim_match_engine_play_develops` outright (ball last moving at tick 18465 of 32400) and zeroes `goals-still-scored`; a wider `space × DirectionQuality` form produced the identical stall at the identical tick, plus mean-shot-distance 25.41 m against a 24.00 m ceiling. §7 item 6 REOPENED; §10.5 gains a cross-link recording that goalward dribbling is unsafe until §10.2/§10.3's bounds are addressed. `OptionGenerator.cs` reverted to the pre-fix baseline logic; kept, behaviour-neutral: `UtilityWeights.DribbleDirectionQuality` + `UtilityScorer`'s delegation to it. The two v1.3 unit locks are REMOVED. `DecisionTree.Tests` 129 passed / 4 skipped / 0 failed. See `spec-error-log.md` ERR-008-024 and `decision-tree/section-3-1.md` v1.8. |
+| 1.5 | 2026-08-09 | — | §10.6: the header measurement. Contact ratio **0.2%** (2 executed, 963 failed; 97–99% `positionedPoorly`), zero executed headers in any attacking third, and crosses at 0% headed / 0% reached / **69% coming to rest untouched**. The proximity census settles the order: **0% of airborne final-third episodes bring ANY outfielder — attacker or defender — within the 0.18 m contact volume**, so an aerial ball is untouchable by anybody and box occupancy is NOT its binding constraint. §10.4's item 1 is mispriced and is not a wiring item; the candidate first lever becomes "move a player to a ball's predicted arrival point", which is upstream of aerial contact, ground loose balls and pass-to-space alike. Four residuals recorded not fixed, including the fixed-point header target (a P4 candidate) and the 0.50–0.61 m band both first touch and the header trigger claim. |
 #endregion
