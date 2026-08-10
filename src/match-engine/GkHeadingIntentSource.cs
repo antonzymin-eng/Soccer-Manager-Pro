@@ -2,6 +2,8 @@
 // Created:  2026-07-22
 // Modified: 2026-08-04 (wiring backlog W1: + RushArmed / TrySolveRushIntercept — the keeper rush trigger geometry. See docs/tracking/gk-rush-trigger-design.md)
 // Modified: 2026-08-04 (ERR-011-010 + AR-1: goal-side cover replaces the rejected last-man test; + the minimum-run guard that stops a completed sweep re-arming. See docs/tracking/gk-rush-trigger-design.md)
+// Modified: 2026-08-09 (ERR-010-002: + HeaderAimTarget (§4.2a) — the situational header aim, clear wide
+//           when deep / aim at goal when advanced. See docs/tracking/gk-heading-engine-integration-design.md §4.2a)
 // Author:   —
 // Spec:     GK/Heading engine-integration design supplement
 //           (docs/tracking/gk-heading-engine-integration-design.md) §4; Code Standards #20
@@ -448,4 +450,11 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | state of a sweep, giving a 3-tick rush/recover churn. AR-1 L:    |
 // |         |            |        | GK_RUSH_SOLVE_EPSILON renamed GK_RUSH_DEGENERACY_EPSILON — one   |
 // |         |            |        | constant guarding three dimensionally different quantities.      |
+// | 1.3     | 2026-08-09 | —      | ERR-010-002: + HeaderAimTarget (§4.2a) — the engine's half of the |
+// |         |            |        | header aim (the situational target), realized by #10 §3.5.1's    |
+// |         |            |        | new HeadingAim.cs. Replaces the previous fixed-point target      |
+// |         |            |        | (opponent goal centre from anywhere) with a continuous lerp on   |
+// |         |            |        | the taker's own advancement. Retroactive version-history row     |
+// |         |            |        | (adversarial review of the landing, Finding 4) — no further      |
+// |         |            |        | logic change from this row itself.                                |
 #endregion

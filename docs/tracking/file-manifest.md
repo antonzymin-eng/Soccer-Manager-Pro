@@ -1,7 +1,45 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 9, 2026, later same day — **`ERR-010-003` filed — Heading Mechanics #10's KD-18
+**Last Updated:** August 9, 2026, still later same day — **Adversarial review of the `ERR-010-002`
+landing: two findings fixed here, three others (spec text, a phantom-citation doc, and version-history
+rows) fixed elsewhere, two rejected.** **Confirmed and fixed:** Finding 1 (High) — §3.5.1 Step 2's
+"bounded to the hemisphere the ball can physically reach" was stale spec text; `HeadingAim.cs` never
+implemented that bound and its own doc proves it provably cannot fire. Fixed in
+`docs/specs/heading-mechanics/section-3.md` v0.5 (no code change — the code was already correct).
+Finding 2 (Medium) — the same stale claim survived in `spec-error-log.md` at two sites (the
+`ERR-010-002` "Updated (prior)" summary and the Error Index row); annotated in place there (v2.03),
+this file's own convention. **Verified NOT present** in this file, `CHANGELOG.md`, or
+`CHANGELOG-src.md` — all three already carried the corrected "no bound is applied" phrasing; Finding
+2's claim that they needed fixing was wrong for those three, and no change was made to them. Finding 3
+(Medium) — `§4.2a`, cited by `GkHeadingIntentSource.cs` and `MatchEngine.cs` since the `ERR-010-002`
+landing, was a phantom citation with no defining document. Fixed by adding §4.2a to
+`docs/tracking/gk-heading-engine-integration-design.md` — **correcting the finding's own file target**:
+that document, not `match-engine-design.md`, is `GkHeadingIntentSource.cs`'s own cited governing spec
+(verified: `match-engine-design.md` §4 is an unrelated "Boot sequence" section and never mentions
+GK/Heading). New §4.2a records `HeaderAimTarget` as implemented plus two measured limitations (the
+ballistic solve's ≈ 15 m range ceiling given the target is always pinned to the goal line; the
+lateral-bias inversion — (10,10) aims 4.1° off-axis, (10,34) aims 17.9°). Finding 4 (Medium) — three
+production files (`HeadingMechanics.cs`, `GkHeadingIntentSource.cs`, `MatchEngine.cs`) gained
+substantive `c89c838` changes with no version-history row or `Modified:` header line (the sixth
+consecutive FR-CS-056/057 recurrence); all three now carry a new row/line (comment-only; no logic
+touched). Finding 5 (Low) — `HeadingMechanics.cs`'s `ClampToHeadEnvelope(intent.ContactPointIntent)`
+call now carries a one-line comment recording that it validates the W9 DT-supplied override and is not
+read by Stage-0 geometry, matching the equivalent note already at `MatchEngine.cs`'s `HeaderIntent`
+commit site. **Modified:** `docs/specs/heading-mechanics/section-3.md` (v0.4 → v0.5),
+`docs/tracking/gk-heading-engine-integration-design.md` (+ §4.2a, + §9d catch-up note),
+`docs/tracking/spec-error-log.md` (v2.02 → v2.03), `src/heading-mechanics/HeadingMechanics.cs` (v1.6 →
+v1.7, header + comment), `src/match-engine/GkHeadingIntentSource.cs` (v1.2 → v1.3, header),
+`src/match-engine/MatchEngine.cs` (v1.64 → v1.65, header). **Not touched, per instruction (another
+agent editing concurrently):** `src/heading-mechanics/HeadingAim.cs`,
+`src/heading-mechanics/Tests/HeadingAimTests.cs`, `src/heading-mechanics/HeadingMechanicsConstants.cs`,
+`src/match-engine/tests/GkHeadingIntentSourceTests.cs` — all four show unrelated concurrent changes in
+this working tree that this pass did not make. **No build or `dotnet` command run**, per instruction (a
+long test run was live in this workspace). `python3 tools/recurring-defect-lint.py --repo .`: **0
+ERRORs** (126 WARN / 27 INFO, unchanged classes — spec-version/stale-forward/stale-count noise
+pre-existing and unrelated to this pass). Prior entry below.
+
+**Last Updated (prior):** August 9, 2026, later same day — **`ERR-010-003` filed — Heading Mechanics #10's KD-18
 aerial-phase gate borrows Agent Movement #2's `GROUNDED` state, which #2 §3.1.2 defines as "knocked
 down" not "on the ground."** Surfaced as a "recorded, not fixed" bullet at the tail of the
 `ERR-010-002` entry immediately below and filed here as its own candidate, per that entry's own note.

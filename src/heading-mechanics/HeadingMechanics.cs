@@ -3,6 +3,8 @@
 // Modified: 2026-06-14
 // Modified: 2026-07-23 (GK/Heading engine-integration Phase 2: CaptureState/RestoreState snapshot seam over
 //           the per-agent cross-tick arrays, for the Match Engine v18 save/restore path)
+// Modified: 2026-08-09 (ERR-010-002: contact-geometry rewritten around a single ResolveContactGeometry
+//           owner read by both Update passes, carrying the 3-D contact point directly; see §3.5.1 / HeadingAim.cs)
 // Author:   —
 // Spec:     Heading Mechanics #10 §3.2–§3.9 dispatch, §4.6, KD-9, KD-17, KD-18, Code Standards #20
 // Purpose:  60 Hz physics-tick orchestrator. Manages per-agent intent tracking, jump kinematics,
@@ -99,7 +101,10 @@ namespace TacticalDirector.HeadingMechanics
             // FR-HE-029: clamp targetIntent to pitch bounding box.
             intent.TargetIntent = ClampToPitch(intent.TargetIntent, agentId);
 
-            // FR-HE-030: clamp contactPointIntent to head-local envelope.
+            // FR-HE-030: clamp contactPointIntent to head-local envelope. ERR-010-002: this validates
+            // the W9 DT-supplied override; Stage-0 geometry does not read ContactPointIntent at all
+            // (§3.5.1 derives the contact point from TargetIntent at the contact frame instead — see
+            // the matching note at MatchEngine.cs's HeaderIntent commit site).
             intent.ContactPointIntent = ClampToHeadEnvelope(intent.ContactPointIntent);
 
             _intents[agentId]           = intent;
@@ -679,4 +684,13 @@ namespace TacticalDirector.HeadingMechanics
 // | 1.6     | 2026-07-23 | —      | GK/Heading engine-integration Phase 2: CaptureState() bundles the per-agent       |
 // |         |            |        | cross-tick arrays into a HeadingTickState view; RestoreState(in) copies them      |
 // |         |            |        | back into the live containers (the Match Engine v18 snapshot seam).               |
+// | 1.7     | 2026-08-09 | —      | ERR-010-002: the header aim had no owner (delegated to Decision Tree #8, which    |
+// |         |            |        | cannot emit a header at all). New ResolveContactGeometry is the single owner of   |
+// |         |            |        | contact-point derivation, read by both Update passes (was two independent,       |
+// |         |            |        | only-by-coincidence-agreeing derivations); the 3-D contact point is carried       |
+// |         |            |        | directly instead of round-tripped through its 2-D head-local projection, which    |
+// |         |            |        | had pinned contactPointActual.z to the head centre and made every reflection      |
+// |         |            |        | normal horizontal. Calls the new §3.5.1 / HeadingAim.cs three-step aim solve.     |
+// |         |            |        | Retroactive version-history row (adversarial review of the landing, Finding 4) —  |
+// |         |            |        | no further logic change from this row itself.                                     |
 #endregion

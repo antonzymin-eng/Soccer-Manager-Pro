@@ -52,6 +52,7 @@
 // Modified: 2026-08-04 (W1 AR-1: RefreshGkAgentIds filters _isSentOff so a keeper sent off mid-rush stops; + TestOnly_DriveGkHeadingPhysics. See docs/tracking/gk-rush-trigger-design.md v1.2)
 // Modified: 2026-08-04 (W1 AR-2: RefreshGkAgentIds detects a CHANGE of keeper-slot occupant and calls GoalkeeperMechanics.ResetSlot — a substitute keeper was inheriting the dismissed keeper's locked RushIntent. No new state, no schema change. See docs/tracking/gk-rush-trigger-design.md v1.3)
 // Modified: 2026-08-06 (#29 T2 match-boot fatigue seam: a four-argument ConfigureSquads overload taking each squad's per-local-index match-entry fatigue (#29 §3.3 / KD-1), seeded onto each starter's AerobicPool as 1 − fatigue. The reservoir is already the engine's live-fatigue quantity and already serialized, so no schema change; null ⇒ rested ⇒ byte-identical to the two-argument form.)
+// Modified: 2026-08-09 (ERR-010-002: TryCommitHeaderIntents' HeaderIntent.TargetIntent now sourced from GkHeadingIntentSource.HeaderAimTarget — the situational aim — instead of a fixed opponent-goal-centre point. No new engine state, no schema change. See docs/tracking/gk-heading-engine-integration-design.md §4.2a)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -8450,4 +8451,11 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | site stay byte-identical. Fails loud on a length mismatch or an           |
 // |         |            |        | out-of-[0,1]/NaN value — the producer already clamps, so either means the |
 // |         |            |        | array was built against a different squad.                                |
+// | 1.65    | 2026-08-09 | —      | ERR-010-002: TryCommitHeaderIntents' HeaderIntent.TargetIntent now reads  |
+// |         |            |        | GkHeadingIntentSource.HeaderAimTarget (§4.2a) — clear wide when deep, aim |
+// |         |            |        | at goal when advanced — replacing the previous fixed opponent-goal-centre |
+// |         |            |        | point. ContactPointIntent stays at Vector2.zero (not read by Stage-0      |
+// |         |            |        | geometry; the W9 DT-supplied override). No new engine state, no schema    |
+// |         |            |        | change. Retroactive version-history row (adversarial review of the       |
+// |         |            |        | landing, Finding 4) — no further logic change from this row itself.      |
 #endregion
