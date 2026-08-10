@@ -784,4 +784,20 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | (deleting only `return;`, if/else shell intact, fails it and no |
 // |         |            |        | other test). SeedFrom's XML doc gains the ArgumentOutOfRangeException |
 // |         |            |        | tag its sentinel guard already throws but was undocumented.     |
+// | 1.4     | 2026-08-10 | —      | AR pass 5 (time/arithmetic axis), High (ERR-028-018).            |
+// |         |            |        | SeedLifecycle credits the seed day's own band step instead of   |
+// |         |            |        | starting GrowthCursor at 0. A band exit is decided by the       |
+// |         |            |        | DERIVED AGE, so leaving the anchor day uncredited shifted the   |
+// |         |            |        | accrual window one day right of a fixed band edge: every        |
+// |         |            |        | traversal of an N-year band accrued N·365 − 1 days, and since   |
+// |         |            |        | POINT_COST == DAYS_PER_YEAR (KD-8) that is one whole attribute  |
+// |         |            |        | point short every time (seedAge 16 measured 7 points not 8,     |
+// |         |            |        | residue cursor 364; seedAge 23 measured 0 not 1). The residue   |
+// |         |            |        | then survived the Stable band and ate the first year of         |
+// |         |            |        | Decline. Appendix A and KD-8 both promise +1/yr, so this        |
+// |         |            |        | contradicted normative spec text. Deliberately NOT fixed by     |
+// |         |            |        | anchoring the cursor at newGameWorldDay - 1: at day 0 that       |
+// |         |            |        | underflows to uint.MaxValue, the sentinel FromBlocks refuses.   |
+// |         |            |        | Mutation-verified: reverting the seed credit fails 6 of 109     |
+// |         |            |        | player-progression tests.                                       |
 #endregion

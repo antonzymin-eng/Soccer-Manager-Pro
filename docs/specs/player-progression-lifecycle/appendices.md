@@ -1,10 +1,11 @@
 # Player Progression & Lifecycle #28 — Appendices
 
 **Created:** July 23, 2026
-**Last Updated:** August 10, 2026 (v0.4 — ERR-028-017: Appendix A's `DOMAIN_TAG_PLAYER_PROGRESSION`/`SUBSYSTEM_ORDINAL_PLAYER_PROGRESSION` rows marked "not yet in the catalogue" — the v0.3 "copied verbatim from code" claim was false for these two, which exist only in doc-comment prose, not as declared constants; Appendix B's worked example scoped to the raw per-player projection, since the public `SeedFrom`+`AdvanceDay` entry point spends its first point one day later (world-day 365, not 364) since ERR-028-014 anchored the cursor at the seed day)
+**Last Updated:** August 10, 2026 (v0.5 — ERR-028-018: correcting v0.4's own scope note, which was falsified by execution — Appendix B's worked example now describes what the public `SeedFrom`+`AdvanceDay` entry point actually produces, since `ProgressionEngine.SeedLifecycle` now credits the seed day's own band step)
+**Last Updated (prior):** August 10, 2026 (v0.4 — ERR-028-017: Appendix A's `DOMAIN_TAG_PLAYER_PROGRESSION`/`SUBSYSTEM_ORDINAL_PLAYER_PROGRESSION` rows marked "not yet in the catalogue" — the v0.3 "copied verbatim from code" claim was false for these two, which exist only in doc-comment prose, not as declared constants; Appendix B's worked example scoped to the raw per-player projection, since the public `SeedFrom`+`AdvanceDay` entry point spends its first point one day later (world-day 365, not 364) since ERR-028-014 anchored the cursor at the seed day)
 **Last Updated (prior):** August 9, 2026 (v0.3 — Appendix A brought current with `PlayerProgressionConstants.cs`: 7 constants added that landed at #28 T0/T1 with no catalogue row — `PROGRESSION_SAVE_MAGIC`, `PROGRESSION_NOT_ADVANCED_SENTINEL` (both `[FIXED]`) and `PA_MIN`, `REGEN_PA_HEADROOM`, `REGEN_AGE_MIN`, `REGEN_AGE_MAX`, `NEW_GAME_PA_HEADROOM` (all `[GT]`); values copied verbatim from code, none changed)
 **Last Updated (prior):** July 23, 2026 (v0.2 — section-file PASS-1 (0H+2M) → AR-2 (3M cross-fix) → AR-3 convergence; APPROVED)
-**Version:** 0.4
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -45,17 +46,33 @@ A Growth-band player (age derived < `GROWTH_AGE` from `BirthWorldDay`), `GROWTH_
 `POINT_COST = DAYS_PER_YEAR = 365`, `GrowthCursor = 0`, `Passing = 12`. Attribute change is the cursor
 alone — there is no discrete year-rollover step (age is a pure function of the world day, §3.1.1).
 
-**This table describes `GrowthProjection.AdvanceDayForPlayer` called directly, one row per call — NOT
-the public `ProgressionEngine.SeedFrom` + `AdvanceDay` entry point a real career uses (ERR-028-017,
-clarifying scope rather than changing a number).** Since ERR-028-014, `SeedFrom` anchors
-`LastAdvancedWorldDay` AT the seed day (the seed day is already "lived" — it describes the roster as of
-that day), so the FIRST day `AdvanceDay` actually accrues for a player seeded on world-day 0 is day 1,
-not day 0. Through the public entry point, a player seeded at world-day 0 therefore spends his first
-point on **world-day 365** (the 365th day accrued, day 1 through day 365 inclusive), not world-day 364
-as the row below shows. The per-player projection itself is unchanged and this table's arithmetic is
-correct for what it actually exercises (`ProgressionEngineTests.AdvanceDay_AGrowthBandYear_SpendsExactlyOnePoint`
-seeds at `BaseDay`, calls `AdvanceDay(BaseDay)` as a no-op anchor, then `AdvanceDay(BaseDay + 365)` to
-observe the spend) — only the day-column labels differ by one from the public-API sequence:
+**This table describes BOTH `GrowthProjection.AdvanceDayForPlayer` called directly AND the public
+`ProgressionEngine.SeedFrom` + `AdvanceDay` entry point a real career uses — as of ERR-028-018
+(August 10, 2026) they agree exactly, world-day for world-day.**
+
+**Correction to the ERR-028-017 scope note previously here (falsified by execution the same day,
+ERR-028-018):** that note said the public entry point spends its first point one day later than this
+table (world-day 365, not 364) purely because `SeedFrom` anchors `LastAdvancedWorldDay` at the seed
+day, and called it "only the day-column labels differ by one" while asserting "the per-player
+projection itself is unchanged and this table's arithmetic is correct." Both claims were false. The
+band exit is decided by the DERIVED AGE, not by the cursor, so leaving the seed day's own band step
+uncredited (`GrowthCursor = 0` at seed) shifted the accrual window one day right of a fixed band edge —
+harmless for a single intra-band year (which is all this table exercises), but for a full N-year band
+traversal it accrued N·365 − 1 days instead of N·365: one whole `[1,20]` attribute point short every
+time, since `POINT_COST == DAYS_PER_YEAR` (KD-8). Measured through the public API before the fix:
+seedAge 16 (8 years of Growth) gained 7 points with a 364-day residue cursor; seedAge 23 (1 year)
+gained ZERO. The residue survived the Stable band (which accrues nothing, so it can never be spent)
+and ate the first year of Decline. Appendix A and KD-8 both promise +1/yr, so this contradicted
+normative spec text — a defect, not a scope difference.
+
+**The fix:** `SeedLifecycle` now credits the seed day's own band step at construction
+(`GrowthCursor = GROWTH_DAILY_POINTS` for a Growth-band seed, `DECLINE_DAILY_POINTS` for Decline, `0`
+for Stable) instead of starting every band at cursor `0`. A player seeded at world-day 0 now reaches
+world-day 364 with `GrowthCursor = 365` and spends there — exactly the row below, exactly the direct-call
+model, no residual one-day offset. Mutation-verified: reverting the seed-day credit fails 6 of 109
+`PlayerProgression.Tests`, including the new `AdvanceDay_AWholeGrowthBandTraversal_
+GainsExactlyOnePointPerYear_AndLeavesNoResidue` lock, which this table's single-year example did not
+by itself have the reach to catch:
 
 | World-day | Derived age band | Accrue | Cursor | Spend? | Passing | Save→restore here == continuous? |
 |---|---|---|---|---|---|---|
@@ -91,4 +108,5 @@ Player `PlayerId = 175` (club 7, localIndex 0) reaches age 36 on world-day 4020 
 | 0.2 | 2026-07-23 | — | Section-file PASS-1 (0H+2M: M-1 age-model muddle → one BirthWorldDay-derived representation; M-2 per-club regen stream) → AR-2 (3M cross-fix regressions) → AR-3 convergence; APPROVED. See section-9 §9.3.1. |
 | 0.3 | 2026-08-09 | — | Appendix A gains 7 rows for constants `PlayerProgressionConstants.cs` has carried since #28 T0/T1 with no catalogue entry: `PROGRESSION_SAVE_MAGIC` and `PROGRESSION_NOT_ADVANCED_SENTINEL` (`[FIXED]`), `PA_MIN`, `REGEN_PA_HEADROOM`, `REGEN_AGE_MIN`, `REGEN_AGE_MAX` and `NEW_GAME_PA_HEADROOM` (`[GT]`). Values, tags and doc text copied verbatim from code (authoritative here); no value changed. `PROGRESSION_NOT_ADVANCED_SENTINEL`'s row also records ERR-028-014 — the sentinel is no longer a legal *stored* cursor value, though the constant remains live as the refused `AdvanceDay` argument (F8). Doc-only, no code change. |
 | 0.4 | 2026-08-10 | — | ERR-028-017 (AR pass 5 spec-vs-code sweep, no code change): the v0.3 row above claims Appendix A's values are "copied verbatim from code", but `DOMAIN_TAG_PLAYER_PROGRESSION` and `SUBSYSTEM_ORDINAL_PLAYER_PROGRESSION` were never declared constants at all — grep of `PlayerProgressionConstants.cs` finds them only in doc-comment prose (the class summary, the `PROGRESSION_SAVE_MAGIC` comment); both rows corrected to "not yet in the catalogue — lands with the regen stream" rather than listed as present. Appendix B's worked example gains a scope note: it describes `GrowthProjection.AdvanceDayForPlayer` called directly, and the public `SeedFrom`+`AdvanceDay` entry point a real career uses spends its first point one day later (world-day 365, not 364) because `SeedFrom` anchors the cursor at the seed day (ERR-028-014) rather than treating day 0 as the first day to accrue. The table's own arithmetic is unchanged and correct for what it exercises. |
+| 0.5 | 2026-08-10 | — | ERR-028-018: the v0.4 scope note above is CORRECTED, not merely superseded — it was falsified by execution. `SeedLifecycle` crediting the seed day as "already lived" while leaving `GrowthCursor` at 0 was not a label-only discrepancy; a band exit is decided by the DERIVED AGE, so the uncredited seed day cost one whole attribute point per full band traversal (N·365 − 1 days accrued, not N·365) and left a 364-day residue that ate the first year of Decline — measured via the public API, not merely reasoned. `ProgressionEngine.SeedLifecycle` now credits the seed day's own band step (commit `789ea74`), and Appendix B's table now describes the public `SeedFrom` + `AdvanceDay` entry point exactly, not just the direct-call model. Doc-only here; the code fix landed at `789ea74` without this close-out, which this row and `spec-error-log.md` ERR-028-018 supply retroactively (FR-CS-057). |
 #endregion

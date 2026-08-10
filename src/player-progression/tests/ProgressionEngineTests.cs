@@ -1079,4 +1079,21 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | AdvanceDay's existing one-below-the-sentinel case). Every new     |
 // |         |            |        | lock proven by mutation: guard deleted, new test observed to fail |
 // |         |            |        | and no other test to fail, guard restored.                        |
+// | 1.6     | 2026-08-10 | —      | AR pass 5 (time/arithmetic axis), High (ERR-028-018). Five        |
+// |         |            |        | locks rebaselined by exactly +1 day of accrual now that the seed  |
+// |         |            |        | day's own band step is credited: AdvanceDay_FirstCall_Replays-    |
+// |         |            |        | FromTheSeedDay (300 -> 301 * SquadSize), AdvanceDay_BackwardCall_ |
+// |         |            |        | DoesNotRegressTheCursor (10 -> 11 * SquadSize), AdvanceDay_One-   |
+// |         |            |        | DayBelowTheSentinel_StillAdvances (1 -> 2 * SquadSize), and       |
+// |         |            |        | AdvanceDay_AtWorldDayZero_EachAgeBand... (+1/0/-1 -> +2/0/-2).    |
+// |         |            |        | + new lock AdvanceDay_AWholeGrowthBandTraversal_GainsExactlyOne-  |
+// |         |            |        | PointPerYear_AndLeavesNoResidue — none of the existing growth     |
+// |         |            |        | locks measured a full band TRAVERSAL against the fixed band edge, |
+// |         |            |        | which is exactly what let the seed-day-uncredited defect through  |
+// |         |            |        | five prior AR passes. Asserts both points gained AND a zero       |
+// |         |            |        | residue at the band edge — a points-only assertion would still    |
+// |         |            |        | pass a future regression that reintroduced a residue while        |
+// |         |            |        | rounding the count back up. Mutation-verified: reverting the      |
+// |         |            |        | ProgressionEngine seed credit fails all five rebaselined locks    |
+// |         |            |        | plus the new traversal lock (6 of 109), and nothing else.         |
 #endregion

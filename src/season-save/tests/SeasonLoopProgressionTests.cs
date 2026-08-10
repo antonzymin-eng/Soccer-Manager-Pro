@@ -1,13 +1,15 @@
 // File:     src/season-save/tests/SeasonLoopProgressionTests.cs
 // Created:  2026-08-08
-// Modified: 2026-08-10 (AR pass 5 — the progression-only advance/play/save/reload/resume lock — v1.5)
+// Modified: 2026-08-10 (AR pass 5, time/arithmetic axis — the seed-day-credit rebaseline — v1.6)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (KD-2 slot 1); Player Progression & Lifecycle #28
 //           KD-4 / FR-PG-021 / FR-PG-022; ERR-029-006 (the batch entry point, closed here);
 //           ERR-030-027 (the twice-per-fixture-day call); ERR-028-007 (the fourth persisted cursor,
 //           checked at three boundaries — this file covers the SeasonLoop constructor boundary);
 //           ERR-028-014 (the never-advanced sentinel retired from the legal store states, and from
-//           the constructor's cursor-vs-clock exemption); Code Standards #20
+//           the constructor's cursor-vs-clock exemption); ERR-028-018 (the seed-day band-step credit,
+//           and the correction of ERR-028-017's false "label only" reading of this same seam);
+//           Code Standards #20
 // Purpose:  Locks that #30's slot 1 actually EXECUTES — the wiring proof — plus the single-roster-
 //           authority refusals the constructor now enforces. A dead seam and a live one are otherwise
 //           indistinguishable from outside, which is the ERR-030-014 failure mode one layer up. Also
@@ -18,6 +20,8 @@
 //           been locking the defect as intended behaviour. v1.5 (AR pass 5, High) adds the
 //           save/reload/resume lock for a progression-only (no #29/#41 career) loop — the composition
 //           SeasonSaveManager could not save at all before this pass's SeasonSaveManager.cs fix.
+//           v1.6 (AR pass 5, time/arithmetic axis) rebaselines the slot-1 accrual expectation by the
+//           seed day's own band step (ERR-028-018).
 
 using System;
 using System.IO;
@@ -829,4 +833,11 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | seed is refused as a resume source by the cursor-vs-clock         |
 // |         |            |        | invariant — the world MUST come from the loaded file, not be      |
 // |         |            |        | rebuilt from the seed (roadmap A3's retired property).             |
+// | 1.6     | 2026-08-10 | —      | AR pass 5 (time/arithmetic axis), High (ERR-028-018). Adds        |
+// |         |            |        | SeedDayCredit = 1 to AdvanceDays_DrivesSlot1_AndEachPlayerAccrues- |
+// |         |            |        | HisOwnBandStep's expected accrual: ProgressionEngine.SeedLifecycle |
+// |         |            |        | now credits the seed day's own band step instead of starting      |
+// |         |            |        | GrowthCursor at 0, so total accrual is AccruingDays replayed days  |
+// |         |            |        | plus that one seeded step (±5 -> ±6 over the same six advances).   |
+// |         |            |        | Arithmetic window shift, not a semantic change to this test.       |
 #endregion
