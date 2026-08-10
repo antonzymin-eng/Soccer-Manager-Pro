@@ -642,6 +642,47 @@ namespace TacticalDirector.PlayerProgression.Tests
         }
 
         [Test]
+        public void FromBlocks_OutOfRangeValues_AreRefusedAtConstruction_NotOnlyAtSave()
+        {
+            // AR pass 5. The PREVIOUS pass gave the four value ranges one owner and wired the codec's
+            // Encode and Decode to it — and stopped there, in a commit whose own message said
+            // "ProgressionEngine.FromBlocks gates none either". So the breach was caught only at the
+            // save: a store built from these blocks advanced, played and projected a squad perfectly,
+            // and could never be persisted. Proven before the fix by probe:
+            //     FromBlocks(PA = 0) -> accepted; AdvanceDay(6) -> ok; SquadFor -> non-null;
+            //     Snapshot() -> "carries potentialAbility 0, outside [4000, 10000] — corrupt save."
+            // default(PlayerLifecycle) is the live trigger — PotentialAbility 0 against PA_MIN 4000 —
+            // and FromBlocks is public and documented as THE restore path, so a #47 authored-data
+            // loader or a tool hits this first.
+            var records = new[] { Player(500, age: 20) };
+            var lifecycles = new[] { default(PlayerLifecycle) };
+            var club = new ClubCareerStates(9, records, lifecycles);
+
+            Assert.Throws<ArgumentException>(
+                () => ProgressionEngine.FromBlocks(new[] { club }, nextPlayerId: 501),
+                "a boundary that can admit a breach must refuse it — catching this only at Save means "
+                + "catching it where nothing can be recovered.");
+        }
+
+        [Test]
+        public void SeedFrom_OutOfRangeValues_AreRefusedAtConstruction_NotOnlyAtSave()
+        {
+            // The sibling boundary, same rule, same owner. A squad whose record carries an
+            // out-of-range weak-foot seeds a store the codec will refuse to write.
+            PlayerRecord bad = Player(700, age: 20);
+            PlayerAttributes attrs = bad.Attributes;
+            attrs.WeakFootRating = 0;                      // WEAK_FOOT_MIN is 1
+            bad.Attributes = attrs;
+
+            var squad = new Squad(clubId: 4, new[] { bad });
+
+            Assert.Throws<ArgumentException>(
+                () => ProgressionEngine.SeedFrom(new[] { squad }, newGameWorldDay: 0u),
+                "SeedFrom is the new-game entry point; a career seeded out of range is unsaveable from "
+                + "its first day.");
+        }
+
+        [Test]
         public void FromBlocks_IdCursorAtOrBelowHighestCarriedPlayerId_IsRefused()
         {
             ClubCareerStates club = OneMemberClub(clubId: 9, playerId: 500);

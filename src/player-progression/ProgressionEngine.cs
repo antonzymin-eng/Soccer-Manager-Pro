@@ -151,6 +151,24 @@ namespace TacticalDirector.PlayerProgression
                     PlayerRecord rec = squad.GetPlayer(p);   // value copy — Squad hands out copies
                     records[p] = rec;
                     lifecycles[p] = SeedLifecycle(in rec, newGameWorldDay);
+
+                    // AR pass 5, and this is the PREVIOUS pass's fix stopping one file short of the gap
+                    // its own commit message named ("ProgressionEngine.FromBlocks gates none either").
+                    // The codec now refuses out-of-range values at Encode and Decode; the two STORE
+                    // construction boundaries still admitted them, so the breach was caught only at the
+                    // save — the one boundary where it is unrecoverable. A store built from a squad
+                    // carrying WeakFootRating = 0 advances, plays and projects a squad perfectly, and
+                    // then cannot be persisted, ever. Same owner as the codec's two calls: the RULE has
+                    // one home and every boundary that can admit a breach delegates to it.
+                    string outOfRange = ProgressionSaveCodec.DescribeOutOfRangeValues(
+                        in rec, in lifecycles[p], entry.Key);
+                    if (outOfRange != null)
+                    {
+                        throw new ArgumentException(
+                            "Refusing to seed a career from state the save path would refuse to write: "
+                            + outOfRange, nameof(squads));
+                    }
+
                     if (rec.PlayerId > maxPlayerId)
                     {
                         maxPlayerId = rec.PlayerId;
@@ -223,6 +241,20 @@ namespace TacticalDirector.PlayerProgression
                             + "history has to start somewhere it can be checked against the world "
                             + "clock (ERR-028-014); seed through SeedFrom, which anchors it.",
                             nameof(clubs));
+                    }
+
+                    // AR pass 5, the sibling half of the SeedFrom guard above. This is the DOCUMENTED
+                    // restore path and it is public, so a caller hand-building blocks — a #47 authored
+                    // data loader, a tool, a fixture — got a store that advanced, played and projected
+                    // fine and could never be saved. `default(PlayerLifecycle)` is the live trigger:
+                    // PotentialAbility = 0, which PA_MIN = 4000 refuses at the codec.
+                    string outOfRange = ProgressionSaveCodec.DescribeOutOfRangeValues(
+                        in club.Records[p], in club.Lifecycles[p], club.ClubId);
+                    if (outOfRange != null)
+                    {
+                        throw new ArgumentException(
+                            "Refusing to build a career from state the save path would refuse to write: "
+                            + outOfRange, nameof(clubs));
                     }
 
                     int id = club.Records[p].PlayerId;

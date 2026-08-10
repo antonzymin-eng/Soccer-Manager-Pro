@@ -195,6 +195,49 @@ namespace TacticalDirector.InjuriesMedical.Tests
             Assert.Throws<ArgumentException>(() => MedicalSaveCodec.Encode(clubs));
         }
 
+        // AR pass 5. Encode's own comment claimed "the F1/F4 gates run on the WAY OUT as well as the
+        // way in" — true of the two gates it called, false of these two, which lived inline in Decode
+        // only. RequireCoherent does NOT subsume them: it tests (recoveryRemaining > 0) != injured, and
+        // -1 > 0 is false, so an UNINJURED player carrying -1 satisfied it. Encode wrote the whole
+        // season file and Decode refused it, so the loss landed at load, one session from the bug.
+        // Proven before the fix by probe: Encode({None, RecoveryRemaining = -1}) wrote a blob; Decode
+        // threw "a day counter's floor is 0".
+        //
+        // One lock per rule, because a single bad state cannot isolate two predicates — the same reason
+        // the sibling #28 codec got six separate range locks rather than one.
+        [Test]
+        public void Encode_NegativeRecoveryRemaining_FailsLoud()
+        {
+            var clubs = new[] { Club(1, (5, State(InjurySeverity.None, -1, 0, 1u))) };
+
+            Assert.Throws<InvalidOperationException>(
+                () => MedicalSaveCodec.Encode(clubs),
+                "an uninjured player with negative recovery slips past RequireCoherent, and Decode "
+                + "refuses it — so Encode must, or the file is written and never loadable.");
+        }
+
+        [Test]
+        public void Encode_NegativeInjuryCount_FailsLoud()
+        {
+            var clubs = new[] { Club(1, (5, State(InjurySeverity.None, 0, -1, 1u))) };
+
+            Assert.Throws<InvalidOperationException>(() => MedicalSaveCodec.Encode(clubs));
+        }
+
+        [Test]
+        public void Encode_AndDecode_ShareTheCounterFloors()
+        {
+            // The anti-drift lock: zero is legal at both ends and must round-trip, which is what would
+            // break first if either side grew its own copy of the floor and moved it.
+            var clubs = new[] { Club(1, (5, State(InjurySeverity.None, 0, 0, 1u))) };
+
+            byte[] blob = null;
+            Assert.DoesNotThrow(() => blob = MedicalSaveCodec.Encode(clubs),
+                "0 is the floor, not below it — the range is inclusive.");
+            Assert.DoesNotThrow(() => MedicalSaveCodec.Decode(blob),
+                "…and the reader must agree with the writer at that same boundary value.");
+        }
+
         [Test]
         public void Encode_DuplicateClubId_FailsLoud()
         {
