@@ -1,7 +1,7 @@
 # Heading Mechanics Specification #10 — Section 3: Core Formulas, Algorithms, Pseudocode
 
 **Created:** May 16, 2026
-**Version:** 0.5
+**Version:** 0.6
 **Status:** DRAFT
 **Purpose:** Define every formula, predicate, and algorithm that the
 Heading Mechanics pipeline executes — eligibility, jump kinematics,
@@ -422,17 +422,45 @@ from quality and quality follows from the aim error):
 R           = ||targetIntent.xy - contactPoint.xy||
 dz          = targetIntent.z - contactPoint.z
 disc        = v⁴ - g·(g·R² + 2·dz·v²)
-tanθ        = (v² - sqrt(disc)) / (g·R)          # low root
-aimDir      = normalize(flat·1 + ẑ·tanθ)
+
+if disc >= 0:
+    tanθ    = (v² - sqrt(disc)) / (g·R)          # low root
+    aimDir  = normalize(flat·1 + ẑ·tanθ)
+else:
+    # Out of ballistic range at this speed: degrade to the
+    # maximum-range launch toward the target — the angle at which
+    # disc vanishes — rather than failing (P1, continuous never a
+    # cliff).
+    radicand = v² - 2·g·dz
+    if radicand <= ε²:
+        aimDir  = ẑ            # unreachable at ANY angle; straight up is the closest approach
+    else:
+        tanθ    = v / sqrt(radicand)
+        aimDir  = normalize(flat·1 + ẑ·tanθ)
 ```
 
 The **low** root is taken: a header is a driven contact, not a
 lob, and the flat solution also spends least time in the air.
 `disc < 0` means the target is beyond ballistic range at this
-speed; the direction then degrades continuously to the 45°
-maximum-range launch toward it rather than failing — P1,
-continuous never a cliff. That branch is the ordinary case for a
-defensive clearance, and it is what makes one long and high.
+speed; the direction then degrades continuously to the true
+maximum-range launch angle toward it, `tanθ = v / sqrt(v² −
+2·g·dz)`, rather than failing — P1, continuous never a cliff. That
+angle equals 45° **only when `dz == 0`.** A header contacts near
+2.3 m and its targets sit on the ground, so `dz < 0` on essentially
+every real header, and this branch is the ordinary case for a
+defensive clearance — it is what makes one long and high. An
+earlier draft of this step used a flat 45° unconditionally, which
+put a discontinuous step at the reachability boundary rather than
+the P1 continuity this branch claims: measured, the step was 9.98°
+across a 4 cm change in target distance at the boundary, and 4.38°
+at the production nominal speed of 11.2 m/s. Fixed in the same
+adversarial-review pass as Step 2 below, `HeadingAim.ComputeAimDirection`
+v1.1. When even the true maximum-range angle cannot bring the ball
+nearer the target — it sits higher than this speed reaches at any
+launch angle, `radicand <= ε²` — `aimDir` is straight up (`+ẑ`, this
+project's up axis per Ball Physics #1 §1.2, not Unity's `+Y`): the
+closest approach available, and the honest answer rather than a
+degenerate direction.
 
 **Step 2 — the normal that realizes it.** Inverting the §3.5
 reflection gives the half-vector exactly:
@@ -793,3 +821,4 @@ for evt in contactEvents:
 | 0.3     | May 16, 2026 | drafter | APPROVAL. §3.1 `DOMAIN_TAG_HEADING` promoted `[CROSS-PENDING] → [CROSS]` post #16 §3.5 v1.0.2 patch (ERR-010-001 RESOLVED). New `HEADING_CONTACT_BUFFER_CAPACITY [GT]` row added for §4.2.1 collision-event consumer buffer (OI-005). |
 | 0.4     | August 9, 2026 | — | **ERR-010-002 — the header aim had no owner.** §3.5's realization paragraph delegated the aim to Decision Tree #8 ("selects a contact point on the head surface such that the reflected vector points at the target"); #8 cannot emit a header at all (`ActionType` ordinal 8 overflows the 3-bit composure-noise field — wiring backlog W9), so the producer has always been the match-engine proximity trigger, which supplied `contactPointIntent = 0` and a fixed `targetIntent`, and §3.5 read neither: **every header was a passive mirror.** The `ERR-011-010` shape. New **§3.5.1** takes the derivation back into #10 — ballistic launch solve to the target at the perfect-contact speed (low root; 45° max-range fallback out of range, P1 continuous), the reflecting half-vector bounded to the physically reachable hemisphere, and an achieved normal blended from the geometric normal by normalised Heading (FULL-RANGE ramp, `ERR-008-019` shape; authority 0 ≡ pre-fix behaviour). No new `[GT]` — the attribute is the dial, so this stays inside the KD-W1 freeze. `pointError` becomes a genuine execution error rather than the distance between a hardcoded zero and a geometric fact. §3.5.1 also pins that `contactPointActual` is 3-D (the 2-D head-local frame is §3.4/§3.6's definition domain and a projection of it) and states the producer/realizer split: the engine chooses `targetIntent`, #10 realizes it. **This row's "bounded to the physically reachable hemisphere" claim is corrected at v0.5 below — the shipped code never carried that bound; see the adversarial review of the landing.** |
 | 0.5     | August 9, 2026 | — | **Adversarial review of the ERR-010-002 landing, Finding 1 (High).** §3.5.1 Step 2's normative text claimed the half-vector was "bounded to the hemisphere the ball can physically reach," projected onto that boundary when it fell outside. `HeadingAim.ComputeAimNormal` (the shipped implementation) carries no such bound and its XML doc proves one can never be needed: for unit vectors `dot(incident + aimDir, incident) = 1 + dot(aimDir, incident) ≥ 0`, so the half-vector is always in the forward hemisphere already — a "guard on an unreachable branch," this project's own recorded defect class. The spec was stale, not the code: Step 2 rewritten to state the no-bound design directly, carry the proof, and name the one genuinely degenerate input (`aimDir` exactly opposite `incident`, which returns no solution). No behaviour change — the code was already correct. |
+| 0.6     | August 9, 2026 | — | **Adversarial review pass 2 over the ERR-010-002 landing, Finding H-1.** Step 1's normative text still claimed the out-of-range branch "degrades continuously to the 45° maximum-range launch," and the pseudocode carried neither the out-of-range formula nor the unreachable-height guard — commit `d93e0c8` had already replaced the hardcoded 45° with the true `dz`-dependent maximum-range angle, `tanθ = v / sqrt(v² − 2·g·dz)` (45° only when `dz == 0`; a header contacts near 2.3 m aiming at the ground, so `dz < 0` on essentially every real header — measured step 9.98° across a 4 cm boundary change, 4.38° at the 11.2 m/s production nominal speed), plus a guard returning a vertical launch when the target is unreachable at any angle. `48977fa` (the documentation half of this same review pass) landed before `d93e0c8` and was never back-propagated — this project's spec-and-code-same-commit doctrine failing inside the very review pass that exists to enforce it (the `ERR-041-012` shape). Fixed: prose corrected to name the true formula and the `dz == 0` special case, and both branches (out-of-range solve, unreachable-height guard) added to the pseudocode, matching `HeadingAim.ComputeAimDirection` v1.1 exactly. No behaviour change — the code was already correct; only the spec was stale. |

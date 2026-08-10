@@ -351,8 +351,11 @@ target        = (oppGoalX, targetY, 0)
 ```
 
 At his own goal line (`advancement = 0`) the target is the far corner on his nearer touchline — which
-§3.5.1's ballistic solve turns into a 45° maximum-range launch, because that point is out of range at
-any header's outgoing speed: a clearance, long and wide. In the opponent's box (`advancement → 1`) the
+§3.5.1's ballistic solve turns into the true maximum-range launch toward it, because that point is out
+of range at any header's outgoing speed: a clearance, long and wide. That angle is **not** 45° — a
+header contacts near 2.3 m aiming at a ground-level target, so `dz ≈ −2.3 m`, not 0, and the
+maximum-range angle is `tanθ = v / sqrt(v² − 2·g·dz)`, which equals 45° only at `dz = 0`. In the
+opponent's box (`advancement → 1`) the
 target converges on the goal centre at short range, which the same solve turns into a downward header
 on target. Pure and constant-free — the only inputs are the taker's position, his team, and `[FIXED]`
 pitch geometry — so this stays inside the KD-W1 `[GT]`-freeze while heading remains unwired.
@@ -367,14 +370,16 @@ recorded here rather than fixed:**
 
 - **X is pinned to the goal line regardless of range, so the ballistic solve rarely engages.** §3.5.1
   Step 1 solves a real trajectory only while the target is within ballistic range of the outgoing speed
-  a perfect contact would carry; beyond that (`disc < 0`) it falls back continuously to a 45°
-  maximum-range launch. Because this target's X is always the goal line, the two are in range of each
+  a perfect contact would carry; beyond that (`disc < 0`) it falls back continuously to the true
+  `dz`-dependent maximum-range launch (`tanθ = v / sqrt(v² − 2·g·dz)`, 45° only at `dz = 0` — see
+  §4.2a above). Because this target's X is always the goal line, the two are in range of each
   other only when the taker is already close to it. At this producer's own ceiling — maximum Strength
   and Heading attributes, `HeaderTriggerPowerIntent = 0.7` — the solvable horizontal range to a
   ground-level target is on the order of 15 m. Past that (i.e. for essentially every header outside the
-  penalty area), every attempt hits the fallback: the 45°-maximum-range launch is the production path,
-  not the edge case the solve was written to treat it as. The fallback still degrades continuously and
-  is not itself wrong; it is this producer's target choice that makes it the common case.
+  penalty area), every attempt hits the fallback: **the dz-dependent maximum-range launch is the
+  production path**, not the edge case the solve was written to treat it as. The fallback still
+  degrades continuously and is not itself wrong; it is this producer's target choice that makes it the
+  common case.
 - **The lateral "wider clearance" bias is weak, and inverted in Y.** Two team-0 examples at the same X
   (10 m from his own goal line): a taker at (10, 10) — near the Y = 0 touchline — aims **4.1°** off
   straight upfield. A taker at (10, 34) — exact pitch-centre Y — aims **17.9°** off straight upfield,
@@ -610,6 +615,23 @@ mentions `GkHeadingIntentSource`; this file, per `GkHeadingIntentSource.cs`'s ow
 the correct governing document for its §4). New §4.2a added above, documenting `HeaderAimTarget` as
 implemented, including the two measured limitations (range ceiling ≈ 15 m; the inverted lateral bias)
 the review established. Documentation only — no code or behaviour change.
+
+## 9e. §4.2a 45°-fallback correction (2026-08-09) — adversarial review pass 2, Finding H-1, no code change
+
+§4.2a as landed at §9d above asserted the out-of-range fallback as a flat 45° maximum-range launch in
+three places (twice describing the own-goal-line clearance case, once summarizing it as "the production
+path"). That was accurate of `HeadingAim.ComputeAimDirection` **at the moment §9d/§4.2a was written**,
+but commit `d93e0c8` — landed hours later in the same review pass, over in `src/heading-mechanics/` —
+had already replaced the hardcoded 45° with the true `dz`-dependent maximum-range angle, `tanθ = v /
+sqrt(v² − 2·g·dz)` (45° only at `dz = 0`; a header contacts near 2.3 m aiming at a ground-level target,
+so `dz < 0` on essentially every real header), plus a guard returning a vertical launch when the target
+is unreachable at any angle. §4.2a was never back-propagated against that sibling commit — this
+project's spec-and-code-same-commit doctrine failing *inside* the review pass that exists to enforce it
+(the `ERR-041-012` shape, one layer up: a documentation site outliving the code change it describes).
+All three sites in §4.2a above corrected to name the true `dz`-dependent formula; the production path
+is unchanged in substance (the out-of-range branch is still what nearly every own-half clearance hits),
+only its angle is no longer misdescribed as a constant 45°. Documentation only — no code or behaviour
+change; `HeadingAim.ComputeAimDirection` was already correct.
 
 ## 10. Adversarial review log
 

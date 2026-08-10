@@ -4,6 +4,8 @@
 // Modified: 2026-08-04 (ERR-011-010 + AR-1: goal-side cover replaces the rejected last-man test; + the minimum-run guard that stops a completed sweep re-arming. See docs/tracking/gk-rush-trigger-design.md)
 // Modified: 2026-08-09 (ERR-010-002: + HeaderAimTarget (§4.2a) — the situational header aim, clear wide
 //           when deep / aim at goal when advanced. See docs/tracking/gk-heading-engine-integration-design.md §4.2a)
+// Modified: 2026-08-09 (AR pass 2 H-1, comment-only: the XML doc's flat-45° description of the §3.5.1
+//           out-of-range branch corrected to the dz-dependent maximum-range angle)
 // Author:   —
 // Spec:     GK/Heading engine-integration design supplement
 //           (docs/tracking/gk-heading-engine-integration-design.md) §4; Code Standards #20
@@ -340,9 +342,12 @@ namespace TacticalDirector.MatchEngine
         /// taker's advancement up his own attacking direction — never a zone switch, per the
         /// football-judgment doctrine's P1 (continuous, never a cliff). At his own goal line the target
         /// is the far corner on the nearer touchline, which the §3.5.1 ballistic solve turns into a
-        /// 45° maximum-range launch because that point is out of ballistic range — a clearance, long and
-        /// wide. In the opponent's box it is the goal itself, at short range, which the same solve turns
-        /// into a downward header on target.</para>
+        /// maximum-range launch because that point is out of ballistic range — a clearance, long and
+        /// wide. That launch angle is <b>not</b> a flat 45°: it is the dz-dependent maximum-range angle
+        /// <c>tanθ = v / sqrt(v² − 2·g·dz)</c>, which equals 45° only when the target sits at contact
+        /// height, and a header contacts near 2.3 m aiming at the ground. In the opponent's box the
+        /// target is the goal itself, at short range, which the same solve turns into a downward header
+        /// on target.</para>
         ///
         /// <para>Pure, and constant-free: the only inputs are the taker's position, his team, and
         /// <c>[FIXED]</c> pitch geometry. No <c>[GT]</c> is proposed, so this stays inside the KD-W1
@@ -457,4 +462,9 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | the taker's own advancement. Retroactive version-history row     |
 // |         |            |        | (adversarial review of the landing, Finding 4) — no further      |
 // |         |            |        | logic change from this row itself.                                |
+// | 1.4     | 2026-08-09 | —      | AR pass 2 H-1 (comment-only): HeaderAimTarget's XML doc described |
+// |         |            |        | the §3.5.1 out-of-range branch as a flat 45° maximum-range launch. |
+// |         |            |        | Commit d93e0c8 had already replaced that with the dz-dependent    |
+// |         |            |        | angle tan(theta) = v / sqrt(v^2 - 2*g*dz); 45° holds only at      |
+// |         |            |        | dz = 0, which a header never sees. No logic change.                |
 #endregion
