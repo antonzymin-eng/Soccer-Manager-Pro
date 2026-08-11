@@ -1178,6 +1178,77 @@ namespace TacticalDirector.SeasonSave
         }
 
         [Test]
+        public void Save_AnEmptyCareerTriple_OverAPopulatedCareer_IsRefused()
+        {
+            // AR pass 8, and the sibling of the lock above one block-family over. The roster guard was
+            // written when "populated store, no career" was an ILLEGAL composition; ERR-028-013 made it
+            // legal and the AR pass 5 coherence carve-out made it saveable, and neither revisited this.
+            //
+            // Demonstrated before the fix: load a populated save, resume through the blessed
+            // progression-only constructor, save back to the same path — no throw, reload returns
+            // TrainingClubs=0 / MedicalClubs=0 / AppearanceClubs=0 beside Progression=1. A season of
+            // conditioning, injury history and appearance records deleted with every gate green.
+            WorldStore world = PopulatedStore();
+            ProgressionEngine populated = ProgressionFor(PBlock(7, 100, lastAdvancedWorldDay: 1u));
+            string path = TempPath("populated-career.season");
+
+            SeasonSaveManager.Save(
+                world, MidSeasonState(), matchOrNull: null, path,
+                TrainingMatching(7, 100), MedicalMatching(7, 100), AppearanceMatching(7, 100),
+                populated);
+
+            Assert.Throws<InvalidOperationException>(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
+                    NoTraining, NoMedical, NoAppearance,
+                    ProgressionFor(PBlock(7, 100, lastAdvancedWorldDay: 1u))),
+                "an empty career triple must not overwrite a file carrying one — the roster surviving "
+                + "beside the hole is what makes this silent.");
+
+            SeasonSaveContents reloaded = SeasonSaveManager.Load(path);
+            Assert.AreEqual(1, reloaded.TrainingClubs.Length,
+                "the refused write must leave the original career intact.");
+            Assert.AreEqual(1, reloaded.MedicalClubs.Length);
+            Assert.AreEqual(1, reloaded.AppearanceClubs.Length);
+        }
+
+        [Test]
+        public void Save_AnEmptyCareerTriple_ToANewPath_Succeeds()
+        {
+            // The carve-out the guard must not break: a career-less composition is legal and must be
+            // able to create a file. Only OVERWRITING a populated one is refused.
+            string path = TempPath("fresh-empty-career.season");
+
+            Assert.DoesNotThrow(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
+                    NoTraining, NoMedical, NoAppearance,
+                    ProgressionFor(PBlock(7, 100, lastAdvancedWorldDay: 1u))),
+                "an empty career triple may freely create a new file — nothing there to protect.");
+            Assert.IsTrue(File.Exists(path));
+        }
+
+        [Test]
+        public void Save_AnEmptyCareerTriple_OverAnAlreadyEmptyCareer_Succeeds()
+        {
+            // The second half of the carve-out: repeated saves of a legitimately career-less game must
+            // keep working, or the guard breaks the composition ERR-028-013 blessed.
+            string path = TempPath("empty-career-twice.season");
+
+            SeasonSaveManager.Save(
+                PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
+                NoTraining, NoMedical, NoAppearance,
+                ProgressionFor(PBlock(7, 100, lastAdvancedWorldDay: 1u)));
+
+            Assert.DoesNotThrow(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
+                    NoTraining, NoMedical, NoAppearance,
+                    ProgressionFor(PBlock(7, 100, lastAdvancedWorldDay: 1u))),
+                "overwriting an already career-less file is not a loss and must stay legal.");
+        }
+
+        [Test]
         public void Save_AnEmptyProgressionStore_ToANewPath_Succeeds()
         {
             string path = TempPath("fresh-empty-roster.season");

@@ -176,6 +176,24 @@ namespace TacticalDirector.SeasonSave
                 RequireDestinationCarriesNoRoster(path);
             }
 
+            // The SIBLING half, and it is the same defect one block-family over (AR pass 8). The guard
+            // above protects the ROSTER against an empty store; nothing protected the #29/#41/#30 career
+            // TRIPLE against empty arrays. That hole did not exist when the roster guard was written —
+            // ERR-028-013 CREATED it by making "populated store, no career" a legal composition, and the
+            // AR pass 5 carve-out (`&& trainingClubs.Length > 0`, below) then made that composition
+            // SAVEABLE. Neither change revisited this guard.
+            //
+            // Demonstrated end to end: load a populated save, resume through the blessed progression-only
+            // constructor, save back to the same path — no throw, and the reload returns
+            // TrainingClubs=0, MedicalClubs=0, AppearanceClubs=0 beside Progression=4. A season of
+            // conditioning, injury history and appearance records deleted with every gate green, the
+            // world and season and roster intact around the hole. That is ERR-028-008's measured shape
+            // (clubs 4 -> 0) exactly, in the block family its fix did not visit.
+            if (trainingClubs.Length == 0 && medicalClubs.Length == 0 && appearanceClubs.Length == 0)
+            {
+                RequireDestinationCarriesNoCareer(path);
+            }
+
             string tempPath = path + ".tmp";
             try
             {
@@ -301,6 +319,57 @@ namespace TacticalDirector.SeasonSave
                     "(KD-4), so this write would delete it silently. Resume the loop with the " +
                     "ProgressionEngine from SeasonSaveContents.Progression rather than rebuilding " +
                     "the league from the world seed.");
+            }
+        }
+
+        /// <summary>
+        /// The <see cref="RequireDestinationCarriesNoRoster"/> sibling, for the #29/#41/#30 career
+        /// triple. An empty triple may create a file and may overwrite an empty one, never a populated
+        /// one — the same rule, the same reason, the block family the roster guard did not cover.
+        /// <para>
+        /// Deliberately keyed on the TRIPLE being empty rather than on any one block: the three are
+        /// written and read as one career by <see cref="RequireCoherentCareerBlocks"/>, so a partially
+        /// empty set is a different (and already gated) error, and refusing on one empty block alone
+        /// would reject the honest "this season tracks no medical state" composition.
+        /// </para>
+        /// </summary>
+        private static void RequireDestinationCarriesNoCareer(string path)
+        {
+            if (!File.Exists(path))
+            {
+                return;
+            }
+
+            int existingTraining;
+            int existingMedical;
+            int existingAppearance;
+            try
+            {
+                SeasonSaveBlobs existing = SeasonSaveCodec.Decode(File.ReadAllBytes(path));
+                existingTraining = TrainingSaveCodec.Decode(existing.TrainingBlob).Length;
+                existingMedical = MedicalSaveCodec.Decode(existing.MedicalBlob).Length;
+                existingAppearance = AppearanceSaveCodec.Decode(existing.AppearanceBlob).Length;
+            }
+            catch (Exception)
+            {
+                // Not a readable season save (corrupt, truncated, a different format, or an older
+                // frame). Nothing to protect — the roster guard reasons identically.
+                return;
+            }
+
+            int existingClubs = existingTraining > 0 ? existingTraining
+                : existingMedical > 0 ? existingMedical
+                : existingAppearance;
+
+            if (existingClubs > 0)
+            {
+                throw new InvalidOperationException(
+                    "Refusing to overwrite " + path + ": it carries #29/#41/#30 career state for " +
+                    existingClubs + " club(s) and this save has none. A season of conditioning, injury " +
+                    "history and appearance records would be deleted silently, with every other block " +
+                    "intact around the hole. Resume the loop with the career from " +
+                    "SeasonSaveContents (its TrainingClubs / MedicalClubs / AppearanceClubs) rather " +
+                    "than composing a progression-only loop over a populated file.");
             }
         }
 
