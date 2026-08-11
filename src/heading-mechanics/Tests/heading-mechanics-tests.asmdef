@@ -3,6 +3,7 @@
     "rootNamespace": "TacticalDirector.HeadingMechanics.Tests",
     "references": [
         "TacticalDirector.HeadingMechanics",
+        "TacticalDirector.DeterministicSim",
         "TacticalDirector.BallPhysics",
         "TacticalDirector.AgentMovement",
         "TacticalDirector.CollisionSystem",
@@ -11,11 +12,15 @@
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],
-    "includePlatforms": ["Editor"],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": true,
-    "precompiledReferences": ["nunit.framework.dll"],
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
     "autoReferenced": false,
     "defineConstraints": [],
     "versionDefines": [],

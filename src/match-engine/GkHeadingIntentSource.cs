@@ -2,6 +2,10 @@
 // Created:  2026-07-22
 // Modified: 2026-08-04 (wiring backlog W1: + RushArmed / TrySolveRushIntercept — the keeper rush trigger geometry. See docs/tracking/gk-rush-trigger-design.md)
 // Modified: 2026-08-04 (ERR-011-010 + AR-1: goal-side cover replaces the rejected last-man test; + the minimum-run guard that stops a completed sweep re-arming. See docs/tracking/gk-rush-trigger-design.md)
+// Modified: 2026-08-09 (ERR-010-002: + HeaderAimTarget (§4.2a) — the situational header aim, clear wide
+//           when deep / aim at goal when advanced. See docs/tracking/gk-heading-engine-integration-design.md §4.2a)
+// Modified: 2026-08-09 (AR pass 2 H-1, comment-only: the XML doc's flat-45° description of the §3.5.1
+//           out-of-range branch corrected to the dz-dependent maximum-range angle)
 // Author:   —
 // Spec:     GK/Heading engine-integration design supplement
 //           (docs/tracking/gk-heading-engine-integration-design.md) §4; Code Standards #20
@@ -321,6 +325,69 @@ namespace TacticalDirector.MatchEngine
             return true;
         }
 
+        /// <summary>
+        /// §4.2a (ERR-010-002): where this header should be sent — the <c>TargetIntent</c> a header
+        /// taker at <paramref name="headerPosition"/> aims at.
+        ///
+        /// <para>The engine is the producer of every <c>HeaderIntent</c> in the game, so the situational
+        /// half of the aim is its decision, exactly as W1 made the keeper's rush trigger the engine's
+        /// decision while #11 §3.7.0 kept the attribute-driven distance. #10 §3.5.1 owns realizing an
+        /// aim; this owns choosing one. Heading Mechanics #10 §3.5 previously delegated the whole thing
+        /// to Decision Tree #8, which cannot emit a header at all (W9 — <c>ActionType</c> ordinal 8
+        /// overflows the 3-bit composure-noise field), so the aim was a fixed point: the opponent's goal
+        /// centre, from anywhere on the pitch, for every header by either side.</para>
+        ///
+        /// <para>The football is one sentence: <b>the deeper you are, the wider you clear; the further
+        /// forward you are, the more you aim at the goal.</b> Realized as a continuous lerp in the
+        /// taker's advancement up his own attacking direction — never a zone switch, per the
+        /// football-judgment doctrine's P1 (continuous, never a cliff). At his own goal line the target
+        /// is the far corner on the nearer touchline, which the §3.5.1 ballistic solve turns into a
+        /// maximum-range launch because that point is out of ballistic range — a clearance, long and
+        /// wide. That launch angle is <b>not</b> a flat 45°: it is the dz-dependent maximum-range angle
+        /// <c>tanθ = v / sqrt(v² − 2·g·dz)</c>, which equals 45° only when the target sits at contact
+        /// height, and a header contacts near 2.3 m aiming at the ground. In the opponent's box the
+        /// target is the goal itself, at short range, which the same solve turns into a downward header
+        /// on target.</para>
+        ///
+        /// <para>Pure, and constant-free: the only inputs are the taker's position, his team, and
+        /// <c>[FIXED]</c> pitch geometry. No <c>[GT]</c> is proposed, so this stays inside the KD-W1
+        /// freeze while heading remains unwired.</para>
+        ///
+        /// <para>Deliberately NOT modelled here, and recorded rather than guessed: the target ignores
+        /// the goalkeeper's position (an attacking header aims at the goal centre, i.e. at the keeper)
+        /// and ignores team-mates entirely (a knock-down or a flick to a runner is a #8 decision that
+        /// arrives with W9). Both are aim REFINEMENTS on top of an aim that now exists.</para>
+        /// </summary>
+        /// <param name="headerPosition">World position of the header taker (m), corner-origin.</param>
+        /// <param name="teamId">Taker's team: 0 attacks +X, 1 attacks −X.</param>
+        /// <returns>World-space intended destination (m), on the pitch surface.</returns>
+        public static Vector3 HeaderAimTarget(in Vector2 headerPosition, int teamId)
+        {
+            float pitchLength = MatchEngineConstants.PITCH_LENGTH_M;
+            float pitchWidth  = MatchEngineConstants.PITCH_WIDTH_M;
+
+            // Opponent goal: team 0 attacks +X (goal at PITCH_LENGTH_M), team 1 attacks −X (goal at 0).
+            float oppGoalX = teamId == 0 ? pitchLength : 0f;
+
+            // Advancement: 0 on his own goal line, 1 on the opponent's, measured along his own
+            // attacking direction so the away side mirrors by construction (ERR-008-002 class).
+            float advancement = teamId == 0
+                ? headerPosition.x / pitchLength
+                : (pitchLength - headerPosition.x) / pitchLength;
+            advancement = Mathf.Clamp01(advancement);
+
+            // The touchline he is nearer — the side a clearance goes out towards. The exact centre is a
+            // tie; it resolves to the +Y touchline, which is arbitrary but deterministic and mirrors
+            // identically for both teams (the choice is ball-side, not team-side).
+            // 0.5f matches this file's own existing pitch-centre form at ComputeRushTarget (goalY).
+            float nearerTouchlineY = headerPosition.y < pitchWidth * 0.5f ? 0f : pitchWidth;
+
+            float goalCentreY = pitchWidth * 0.5f;
+            float targetY = nearerTouchlineY + (goalCentreY - nearerTouchlineY) * advancement;
+
+            return new Vector3(oppGoalX, targetY, 0f);
+        }
+
         /// <summary>§4.2: the single nearest active outfield agent within head range of a loose airborne
         /// ball, or −1 when none qualifies. Deterministic tie-break: the LATER index wins (the <c>&lt;=</c>
         /// compare), matching the engine's original scan. Pure — the caller owns the per-episode latch and
@@ -388,4 +455,16 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | state of a sweep, giving a 3-tick rush/recover churn. AR-1 L:    |
 // |         |            |        | GK_RUSH_SOLVE_EPSILON renamed GK_RUSH_DEGENERACY_EPSILON — one   |
 // |         |            |        | constant guarding three dimensionally different quantities.      |
+// | 1.3     | 2026-08-09 | —      | ERR-010-002: + HeaderAimTarget (§4.2a) — the engine's half of the |
+// |         |            |        | header aim (the situational target), realized by #10 §3.5.1's    |
+// |         |            |        | new HeadingAim.cs. Replaces the previous fixed-point target      |
+// |         |            |        | (opponent goal centre from anywhere) with a continuous lerp on   |
+// |         |            |        | the taker's own advancement. Retroactive version-history row     |
+// |         |            |        | (adversarial review of the landing, Finding 4) — no further      |
+// |         |            |        | logic change from this row itself.                                |
+// | 1.4     | 2026-08-09 | —      | AR pass 2 H-1 (comment-only): HeaderAimTarget's XML doc described |
+// |         |            |        | the §3.5.1 out-of-range branch as a flat 45° maximum-range launch. |
+// |         |            |        | Commit d93e0c8 had already replaced that with the dz-dependent    |
+// |         |            |        | angle tan(theta) = v / sqrt(v^2 - 2*g*dz); 45° holds only at      |
+// |         |            |        | dz = 0, which a header never sees. No logic change.                |
 #endregion

@@ -322,6 +322,77 @@ applies the new ball velocity via the ball adapter.
 the ball leaves head range or is possessed). Committing to only the single nearest eligible agent per
 tick keeps the trigger conservative and avoids 22 simultaneous headers.
 
+### 4.2a Header aim target — `HeaderAimTarget` (added 2026-08-09, ERR-010-002)
+
+§4.2 above still describes `TargetIntent` as fixed ("toward the opponent goal"), which was accurate at
+this document's original landing but has since been superseded in code. This subsection is a
+documentation catch-up: `GkHeadingIntentSource.HeaderAimTarget` and the `MatchEngine.cs` commit site
+have cited "§4.2a" since ERR-010-002 landed (2026-08-09); this section did not exist until an
+adversarial review of that landing caught the phantom citation and asked for it to be filled in — see
+`spec-error-log.md`'s `ERR-010-002` entry.
+
+**What it replaces.** Before ERR-010-002, `TargetIntent` was a fixed point — the opponent's goal
+centre, from anywhere on the pitch, for every header by either side — and Heading Mechanics #10 §3.5
+read neither `TargetIntent` nor `ContactPointIntent` in any formula, so the fixed point was inert
+besides: every header was pure specular reflection of the incoming ball. #10 §3.5.1 (same landing) now
+realizes whatever aim it is handed; this subsection is where that aim is chosen.
+
+**The model.** One sentence of football: *the deeper you are, the wider you clear; the further forward
+you are, the more you aim at the goal.* Realized as a continuous lerp on the taker's own advancement
+between his own goal line and the opponent's — never a zone switch (P1, continuous never a cliff):
+
+```
+oppGoalX      = opponent's goal line X (0 or PITCH_LENGTH_M, by team)
+advancement   = taker's X measured along his OWN attacking direction, / PITCH_LENGTH_M, clamped [0, 1]
+nearerTouch   = 0 if takerY < PITCH_WIDTH_M / 2, else PITCH_WIDTH_M   (an arbitrary but deterministic
+                                                                        tie-break exactly at centre)
+targetY       = lerp(nearerTouch, PITCH_WIDTH_M / 2, advancement)
+target        = (oppGoalX, targetY, 0)
+```
+
+At his own goal line (`advancement = 0`) the target is the far corner on his nearer touchline — which
+§3.5.1's ballistic solve turns into the true maximum-range launch toward it, because that point is out
+of range at any header's outgoing speed: a clearance, long and wide. That angle is **not** 45° — a
+header contacts near 2.3 m aiming at a ground-level target, so `dz ≈ −2.3 m`, not 0, and the
+maximum-range angle is `tanθ = v / sqrt(v² − 2·g·dz)`, which equals 45° only at `dz = 0`. In the
+opponent's box (`advancement → 1`) the
+target converges on the goal centre at short range, which the same solve turns into a downward header
+on target. Pure and constant-free — the only inputs are the taker's position, his team, and `[FIXED]`
+pitch geometry — so this stays inside the KD-W1 `[GT]`-freeze while heading remains unwired.
+
+**Deliberately not modelled, recorded rather than guessed:** the target ignores the goalkeeper's
+position (an attacking header aims at goal centre, i.e. at the keeper) and ignores team-mates entirely
+(a knock-down or a flick to a runner is a #8 decision, arriving with W9). Both are refinements on top
+of an aim that now exists, not corrections to this one.
+
+**Known limitation, measured at the adversarial review of the ERR-010-002 landing (2026-08-09) and
+recorded here rather than fixed:**
+
+- **X is pinned to the goal line regardless of range, so the ballistic solve rarely engages.** §3.5.1
+  Step 1 solves a real trajectory only while the target is within ballistic range of the outgoing speed
+  a perfect contact would carry; beyond that (`disc < 0`) it falls back continuously to the true
+  `dz`-dependent maximum-range launch (`tanθ = v / sqrt(v² − 2·g·dz)`, 45° only at `dz = 0` — see
+  §4.2a above). Because this target's X is always the goal line, the two are in range of each
+  other only when the taker is already close to it. At this producer's own ceiling — maximum Strength
+  and Heading attributes, `HeaderTriggerPowerIntent = 0.7` — the solvable horizontal range to a
+  ground-level target is on the order of 15 m. Past that (i.e. for essentially every header outside the
+  penalty area), every attempt hits the fallback: **the dz-dependent maximum-range launch is the
+  production path**, not the edge case the solve was written to treat it as. The fallback still
+  degrades continuously and is not itself wrong; it is this producer's target choice that makes it the
+  common case.
+- **The lateral "wider clearance" bias is weak, and inverted in Y.** Two team-0 examples at the same X
+  (10 m from his own goal line): a taker at (10, 10) — near the Y = 0 touchline — aims **4.1°** off
+  straight upfield. A taker at (10, 34) — exact pitch-centre Y — aims **17.9°** off straight upfield,
+  over four times as wide. The cause is the `nearerTouch` tie-break: a Y exactly at centre resolves to
+  the +Y touchline (arbitrary but deterministic per the formula above), which is *maximally far* from a
+  centrally-placed taker, so the lerp swings his target the furthest exactly where a real clearance
+  should go straightest; a taker already near a touchline gets the smallest swing, where a real
+  clearance is naturally short and wide already. The intended shape — wider clearance from a wider
+  starting Y — does not fall out of this formula as written.
+
+Both limitations are producer-side (this file), not realizer-side (#10 §3.5.1, which correctly
+executes whatever target it is handed).
+
 ### 4.3 Why heuristics, not the DT
 
 This mirrors `MatchFlowCollisionConsumer` exactly: match-flow completion added heuristic foul
@@ -531,6 +602,36 @@ threads them through `SerializeWorldState`/`DeserializeWorldState` at **`SNAPSHO
 neutral one), and takes a digest rebaseline. It is best landed as its own reviewed change (§6 is its
 plan). Until then the flag + fail-loud guard remain — but they are now the *only* thing the flag gates,
 since the heuristic is pure and the adapter is single.
+
+## 9d. §4.2a documentation catch-up (2026-08-09) — ERR-010-002 back-prop, no code change
+
+An adversarial review of the ERR-010-002 landing (`src/heading-mechanics/HeadingAim.cs` +
+`GkHeadingIntentSource.HeaderAimTarget`, commits `c89c838`/`589a011`) found that both the code
+(`GkHeadingIntentSource.cs:325`, `MatchEngine.cs:3848`) and `spec-error-log.md`'s own `ERR-010-002`
+entry had been citing "§4.2a" of this document since it landed, but this document was never actually
+updated — the finding named `docs/tracking/match-engine-design.md` as the file that should have been,
+which is incorrect (verified: that file's own §4 is the unrelated "Boot sequence" section and never
+mentions `GkHeadingIntentSource`; this file, per `GkHeadingIntentSource.cs`'s own header citation, is
+the correct governing document for its §4). New §4.2a added above, documenting `HeaderAimTarget` as
+implemented, including the two measured limitations (range ceiling ≈ 15 m; the inverted lateral bias)
+the review established. Documentation only — no code or behaviour change.
+
+## 9e. §4.2a 45°-fallback correction (2026-08-09) — adversarial review pass 2, Finding H-1, no code change
+
+§4.2a as landed at §9d above asserted the out-of-range fallback as a flat 45° maximum-range launch in
+three places (twice describing the own-goal-line clearance case, once summarizing it as "the production
+path"). That was accurate of `HeadingAim.ComputeAimDirection` **at the moment §9d/§4.2a was written**,
+but commit `d93e0c8` — landed hours later in the same review pass, over in `src/heading-mechanics/` —
+had already replaced the hardcoded 45° with the true `dz`-dependent maximum-range angle, `tanθ = v /
+sqrt(v² − 2·g·dz)` (45° only at `dz = 0`; a header contacts near 2.3 m aiming at a ground-level target,
+so `dz < 0` on essentially every real header), plus a guard returning a vertical launch when the target
+is unreachable at any angle. §4.2a was never back-propagated against that sibling commit — this
+project's spec-and-code-same-commit doctrine failing *inside* the review pass that exists to enforce it
+(the `ERR-041-012` shape, one layer up: a documentation site outliving the code change it describes).
+All three sites in §4.2a above corrected to name the true `dz`-dependent formula; the production path
+is unchanged in substance (the out-of-range branch is still what nearly every own-half clearance hits),
+only its angle is no longer misdescribed as a constant 45°. Documentation only — no code or behaviour
+change; `HeadingAim.ComputeAimDirection` was already correct.
 
 ## 10. Adversarial review log
 

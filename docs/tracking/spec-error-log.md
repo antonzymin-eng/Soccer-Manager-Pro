@@ -6,14 +6,95 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 2.06
-**Updated:** August 10, 2026 (v2.06 — **ERR-028-018: the tracking close-out for commit `789ea74`, filed retroactively (FR-CS-057) — AR pass 5 (time/arithmetic axis), High: `SeedLifecycle` credited `LastAdvancedWorldDay` to the seed day (ERR-028-014) but left `GrowthCursor` at 0, so every full Growth/Decline band traversal accrued one attribute point short of Appendix A / KD-8's `+1/yr` promise, with a permanent residue eating the first year of the next band. Fixed by crediting the seed day's own band step; five locks rebaselined by +1 day of accrual, one new traversal lock added, mutation-verified (6/109). Also CORRECTS ERR-028-017 finding (k), filed earlier this session, which had read this exact seam and concluded the discrepancy was a harmless day-label difference — falsified by execution; that row now carries a pointer here. `section-3.md` v0.7 and `appendices.md` v0.5 patched spec+code. Five items carried forward recorded-not-fixed (M1–M4, L1 from `789ea74`; four more from `e68e2ad`'s invariant axis).**)
-**Updated (prior):** August 10, 2026 (v2.05 — **ERR-028-017 + ERR-030-032: AR pass 5 over the #28 T1/T2a landing, a docs-only spec-vs-code sweep — 12 findings against `player-progression-lifecycle/` (F3/F5 exception-type self-contradiction, F8 understated by four refusing sites, the FR-PG-021 batch's undeclared type and validation contract, the byte layout's unstated string encoding and missing value gates, the retirement-evaluation placement, stale file layout / frame-version / public-surface text, the still-forward-design §9 preamble one revision after §9.2 was corrected, two Appendix A rows claiming code presence they lack, and the worked example's ambiguous entry point) and 3 against `season-competition-loop/` (FR-SN-021's stale seven-argument signature, §2.2's missing #28 type rows, §4's stale frame-version/file-layout/holdings text) — all found by re-reading the spec against `src/` after two consecutive AR passes (ERR-028-015, ERR-028-016) landed production refusals with no `docs/specs/` edit at all, which is why F8 itself was one of the findings. No code changed; `git status --short` after the pass touches only `docs/`.**)
-**Updated (prior):** August 10, 2026 (v2.04 — **merge-audit tracking-hygiene corrections over the f85958f merge resolution.** **Merge-audit tracking-hygiene correction, same day (2026-08-10):** the merge had renumbered the branch's entries to v2.00–v2.02 but left them physically below `main`'s v1.97–v1.99 block, so the chain read v2.03, v1.99, v1.98, v1.97, v2.02, v2.01, v2.00, v1.96 top-to-bottom — monotonic by neither version nor date (v1.97 is dated Aug 8; v2.02 immediately below it is dated Aug 9). Reordered to strictly decreasing version order (v2.03, v2.02, v2.01, v2.00, v1.99, v1.98, v1.97, v1.96, …) with entries moved whole and only their `**Updated:**`/`**Updated (prior):**` labels adjusted so exactly the top entry carries `**Updated:**`; no entry's text altered. The header `**Version:**` field, stale at 1.99, is bumped to **2.03** to match this (still-top) entry. `file-manifest.md`'s #28 T1/T2a entry separately corrected two dangling citations of the pre-renumbering `v1.97` (now `v2.00`) and a `SeasonLoop.cs` version claim (`v1.7` → `v1.16`); see that file's own chain. *(Recorded as its own entry rather than appended to v2.03: this project has already had one record written by editing a PUBLISHED entry in place, which was restored, split out and rowed at v2.88 of `CHANGELOG.md`; the same correction is applied here before it shipped.)*)
-**Updated (prior):** August 10, 2026 (v2.03 — **adversarial review passes 2 and 3 over the #28 T1/T2a landing.** Pass 2: **ERR-028-013** (H) — an EMPTY `ProgressionEngine` was treated as a wired roster authority, which made the pre-#28 save the save root deliberately WRITES impossible to resume, and made slot 1's `Neutral` branch provably unreachable; **ERR-028-014** (M) — the never-advanced sentinel retired from #28's legal store states, a **sibling-copy error**: the exemption is sound for #29/#41, whose fresh states carry no clock-anchored quantity, and false for #28, whose age derives from `BirthWorldDay`. Pass 3: **ERR-030-031** (H) — the ERR-028-014 sweep stopped at its own spec folder for the FIFTH recurrence of that class, leaving #30's F8 row and Appendix B asserting a sentinel exemption this branch had just deleted; **ERR-028-015** (H×2) — **both Highs were introduced by pass 2's own fixes**: ERR-028-014 silently DISARMED three locks (deleting the idempotency guard left all 469 tests green; deleting the retirement age comparison left 85/85 green), and ERR-028-013's relaxation reopened the ERR-028-010 provider gate. A **mutation sweep of 33 guards found 15 with no failing-if-reverted test**; all are now locked. Numbering note: this branch and `main` independently minted v1.97/98/99 — `main`'s keep those numbers, this branch's renumber to v2.00–v2.02 below.)
-**Updated (prior):** August 9, 2026, **AR pass 1 remediation COMPLETE — the remaining High, all four Mediums and all eight Lows fixed** (v2.02). **ERR-028-010 (H):** a progression-wired `SeasonLoop` could not play a round through ANY public API — the constructor keeps its projected provider private and the `ISquadProvider` overload demands reference-equality with it, so the configuration the landing exists to enable could advance days and save and nothing else; the reviewer reached the working path only by reflection. A parameterless `AdvanceAndPlayNextRound()` resolves through the loop's own provider, which also removes the two-provider hazard by construction. **ERR-028-011 (M×4):** Encode wrote cross-club duplicate ids its own Restore refuses; `FromBlocks` accepted an id cursor behind its live ids; the PROG block was never checked against the three career blocks; and the missing-club constructor test was a tautology. **ERR-028-012 (L×8):** decoded attributes/age had no range gate though the block IS the roster now; `default(ClubCareerStates)` was misdiagnosed; frame docs, the stale (d) comment, a doubled roster copy, and the landing's own overstated records. **Two Lows were resolved as DECISIONS, not repairs** — the proposed per-day squad cache is a silent behaviour change (slot 1 mutates the store, so slots 2 and 4 would price off a one-day-stale roster), and two tests had their CLAIMS corrected rather than their code, because neither can carry the weight it implied. Prior entry below.)
-**Updated (prior):** August 8, 2026, **adversarial review pass 1 over the #28 T1/T2a landing — 4 High, 7 Medium, 8 Low, every High and most Mediums demonstrated by executing probes against the built assemblies** (v2.01). **The landing was BROKEN and had already been pushed.** **ERR-028-006 (H):** a new world starts on day 0, so the `uint` birth anchor underflowed for every player with a non-zero age and was clamped to 0 — the ENTIRE LEAGUE became age 0 on the first daily step (`26,22,30,…` → `0,0,0,…`; bands `growth=100 stable=0 decline=0`), retirement could never fire, and `Age = 0` fed `LineupSelector` and the match engine through the KD-4 projection. **Both #28 fixtures used `BaseDay = 100000` with a comment explaining that it avoids the underflow — written around the defect, avoiding the only day the product starts on.** Fixed by making the anchor a signed `long` (codec `u32 → i64`, free at format v1); the landing's own headline lock passed *because* of this defect and was rewritten against bootstrap ages. **ERR-028-007 (H):** the FOURTH persisted per-player cursor was checked at none of the three boundaries the #29/#41 loop spent passes 5/6/9 establishing — a cursor 9,999 days ahead was accepted at composition, Save and Load, silently freezing growth. **ERR-028-008 (H):** `Save`'s `?? ProgressionEngine.Empty` let a resume that dropped the store write a zero-club roster over a populated file (`clubs=4 → clubs=0`, every gate green); the reviewer's proposed fix was NARROWED after testing showed it broke four legitimate pre-#28 suites — the guard now reads the destination instead. **ERR-028-009 (M):** the sentinel was a legal `worldDay`, breaking idempotency and hanging the gap-replay loop forever. Remaining findings tracked in the landing entry. Prior entry below.)
-**Updated (prior):** August 8, 2026, #28 T1/T2a landing (v2.00 — **roadmap D1 part one: ERR-029-006 FULLY RESOLVED.** #28 exposes the FR-PG-021 batch `AdvanceDay` and #30's KD-2 **slot 1 is LIVE**, gathered through the new `PlayerCareerStates.GatherTrainingInputs`; mutation-verified (reverting slot 1 fails two locks). Four ERRs filed AND resolved in the same commit: **ERR-028-003** (new-game `PotentialAbility` had no derivation anywhere — owner's call is that it is #47 authored data, seeded here by a deterministic `[GT]` placeholder so the landing has NO draw site; recorded-not-fixed that a whole career moves CA by only ~421 of 10,000, so the PA ceiling is decorative whatever its source), **ERR-028-004** (§3.5 specified the save block version-first with the RNG domain tag as its identifier — the ERR-029-005/ERR-041-009 MUST, third spec; now magic-led plus a typed `ProgressionBlock` at the frame), **ERR-028-005** (§5.2's keystone T-PG-DET-002 was unsatisfiable as worded, and §3.1 had no per-day cursor while #30 runs a fixture day's slots twice — growth would have double-accrued on every fixture day, silently), and **ERR-030-030** (five stale #28-null-seam sites + the v4 frame description). `SEASON_SAVE_FORMAT_VERSION` **4 -> 5**; no draw site, no RNG stream, no `DETERMINISM_DIGEST_VERSION` or `SNAPSHOT_SCHEMA_VERSION` bump. **This retires roadmap A3's seed-rebuildable-roster property** — #28 KD-4 makes the block the serialized roster. Prior entry below.)
+**Version:** 2.12
+**Updated:** August 11, 2026 (v2.12 — **Merge `origin/main` into this branch (docs-only, 4 conflicting files, no `src/` change): a VERSION HISTORY numbering collision spanning v2.00, v2.02, v2.03 and v2.04.** `origin/main` had independently used those four numbers for its own `ERR-010-002`/`ERR-010-003` review chain while this branch had already used the full `v2.00`–`v2.06` run for the #28 T1/T2a landing and its four-pass adversarial review loop. `origin/main` is the trunk and keeps `v2.00`/`v2.02`/`v2.03`/`v2.04` verbatim; this branch's seven rows renumbered `v2.00→2.05, v2.01→2.06, v2.02→2.07, v2.03→2.08, v2.04→2.09, v2.05→2.10, v2.06→2.11` — text otherwise verbatim, only the version cell and the one stale `(now v2.00)` self-citation (in what is now the v2.09 row) changed. No `ERR-` id collision: `origin/main`'s new commits did not touch the `ERR-028-*`/`ERR-030-*` series this branch filed into. See `CHANGELOG.md`, `CHANGELOG-src.md` and `file-manifest.md` for this same merge's other three conflicts.)
+**Updated (prior):** August 10, 2026 (v2.11 — **ERR-028-018: the tracking close-out for commit `789ea74`, filed retroactively (FR-CS-057) — AR pass 5 (time/arithmetic axis), High: `SeedLifecycle` credited `LastAdvancedWorldDay` to the seed day (ERR-028-014) but left `GrowthCursor` at 0, so every full Growth/Decline band traversal accrued one attribute point short of Appendix A / KD-8's `+1/yr` promise, with a permanent residue eating the first year of the next band. Fixed by crediting the seed day's own band step; five locks rebaselined by +1 day of accrual, one new traversal lock added, mutation-verified (6/109). Also CORRECTS ERR-028-017 finding (k), filed earlier this session, which had read this exact seam and concluded the discrepancy was a harmless day-label difference — falsified by execution; that row now carries a pointer here. `section-3.md` v0.7 and `appendices.md` v0.5 patched spec+code. Five items carried forward recorded-not-fixed (M1–M4, L1 from `789ea74`; four more from `e68e2ad`'s invariant axis).**)
+**Updated (prior):** August 10, 2026 (v2.10 — **ERR-028-017 + ERR-030-032: AR pass 5 over the #28 T1/T2a landing, a docs-only spec-vs-code sweep — 12 findings against `player-progression-lifecycle/` (F3/F5 exception-type self-contradiction, F8 understated by four refusing sites, the FR-PG-021 batch's undeclared type and validation contract, the byte layout's unstated string encoding and missing value gates, the retirement-evaluation placement, stale file layout / frame-version / public-surface text, the still-forward-design §9 preamble one revision after §9.2 was corrected, two Appendix A rows claiming code presence they lack, and the worked example's ambiguous entry point) and 3 against `season-competition-loop/` (FR-SN-021's stale seven-argument signature, §2.2's missing #28 type rows, §4's stale frame-version/file-layout/holdings text) — all found by re-reading the spec against `src/` after two consecutive AR passes (ERR-028-015, ERR-028-016) landed production refusals with no `docs/specs/` edit at all, which is why F8 itself was one of the findings. No code changed; `git status --short` after the pass touches only `docs/`.**)
+**Updated (prior):** August 10, 2026 (v2.09 — **merge-audit tracking-hygiene corrections over the f85958f merge resolution.** **Merge-audit tracking-hygiene correction, same day (2026-08-10):** the merge had renumbered the branch's entries to v2.00–v2.02 but left them physically below `main`'s v1.97–v1.99 block, so the chain read v2.03, v1.99, v1.98, v1.97, v2.02, v2.01, v2.00, v1.96 top-to-bottom — monotonic by neither version nor date (v1.97 is dated Aug 8; v2.02 immediately below it is dated Aug 9). Reordered to strictly decreasing version order (v2.03, v2.02, v2.01, v2.00, v1.99, v1.98, v1.97, v1.96, …) with entries moved whole and only their `**Updated:**`/`**Updated (prior):**` labels adjusted so exactly the top entry carries `**Updated:**`; no entry's text altered. The header `**Version:**` field, stale at 1.99, is bumped to **2.03** to match this (still-top) entry. `file-manifest.md`'s #28 T1/T2a entry separately corrected two dangling citations of the pre-renumbering `v1.97` (then renumbered to `v2.00`; renumbered again to `v2.05` at the 2026-08-11 merge below, `origin/main` having independently used `v2.00` for unrelated content) and a `SeasonLoop.cs` version claim (`v1.7` → `v1.16`); see that file's own chain. *(Recorded as its own entry rather than appended to v2.03: this project has already had one record written by editing a PUBLISHED entry in place, which was restored, split out and rowed at v2.88 of `CHANGELOG.md`; the same correction is applied here before it shipped.)*)
+**Updated (prior):** August 10, 2026 (v2.08 — **adversarial review passes 2 and 3 over the #28 T1/T2a landing.** Pass 2: **ERR-028-013** (H) — an EMPTY `ProgressionEngine` was treated as a wired roster authority, which made the pre-#28 save the save root deliberately WRITES impossible to resume, and made slot 1's `Neutral` branch provably unreachable; **ERR-028-014** (M) — the never-advanced sentinel retired from #28's legal store states, a **sibling-copy error**: the exemption is sound for #29/#41, whose fresh states carry no clock-anchored quantity, and false for #28, whose age derives from `BirthWorldDay`. Pass 3: **ERR-030-031** (H) — the ERR-028-014 sweep stopped at its own spec folder for the FIFTH recurrence of that class, leaving #30's F8 row and Appendix B asserting a sentinel exemption this branch had just deleted; **ERR-028-015** (H×2) — **both Highs were introduced by pass 2's own fixes**: ERR-028-014 silently DISARMED three locks (deleting the idempotency guard left all 469 tests green; deleting the retirement age comparison left 85/85 green), and ERR-028-013's relaxation reopened the ERR-028-010 provider gate. A **mutation sweep of 33 guards found 15 with no failing-if-reverted test**; all are now locked. Numbering note: this branch and `main` independently minted v1.97/98/99 — `main`'s keep those numbers, this branch's renumber to v2.00–v2.02 below.)
+**Updated (prior):** August 9, 2026, **AR pass 1 remediation COMPLETE — the remaining High, all four Mediums and all eight Lows fixed** (v2.07). **ERR-028-010 (H):** a progression-wired `SeasonLoop` could not play a round through ANY public API — the constructor keeps its projected provider private and the `ISquadProvider` overload demands reference-equality with it, so the configuration the landing exists to enable could advance days and save and nothing else; the reviewer reached the working path only by reflection. A parameterless `AdvanceAndPlayNextRound()` resolves through the loop's own provider, which also removes the two-provider hazard by construction. **ERR-028-011 (M×4):** Encode wrote cross-club duplicate ids its own Restore refuses; `FromBlocks` accepted an id cursor behind its live ids; the PROG block was never checked against the three career blocks; and the missing-club constructor test was a tautology. **ERR-028-012 (L×8):** decoded attributes/age had no range gate though the block IS the roster now; `default(ClubCareerStates)` was misdiagnosed; frame docs, the stale (d) comment, a doubled roster copy, and the landing's own overstated records. **Two Lows were resolved as DECISIONS, not repairs** — the proposed per-day squad cache is a silent behaviour change (slot 1 mutates the store, so slots 2 and 4 would price off a one-day-stale roster), and two tests had their CLAIMS corrected rather than their code, because neither can carry the weight it implied. Prior entry below.)
+**Updated (prior):** August 8, 2026, **adversarial review pass 1 over the #28 T1/T2a landing — 4 High, 7 Medium, 8 Low, every High and most Mediums demonstrated by executing probes against the built assemblies** (v2.06). **The landing was BROKEN and had already been pushed.** **ERR-028-006 (H):** a new world starts on day 0, so the `uint` birth anchor underflowed for every player with a non-zero age and was clamped to 0 — the ENTIRE LEAGUE became age 0 on the first daily step (`26,22,30,…` → `0,0,0,…`; bands `growth=100 stable=0 decline=0`), retirement could never fire, and `Age = 0` fed `LineupSelector` and the match engine through the KD-4 projection. **Both #28 fixtures used `BaseDay = 100000` with a comment explaining that it avoids the underflow — written around the defect, avoiding the only day the product starts on.** Fixed by making the anchor a signed `long` (codec `u32 → i64`, free at format v1); the landing's own headline lock passed *because* of this defect and was rewritten against bootstrap ages. **ERR-028-007 (H):** the FOURTH persisted per-player cursor was checked at none of the three boundaries the #29/#41 loop spent passes 5/6/9 establishing — a cursor 9,999 days ahead was accepted at composition, Save and Load, silently freezing growth. **ERR-028-008 (H):** `Save`'s `?? ProgressionEngine.Empty` let a resume that dropped the store write a zero-club roster over a populated file (`clubs=4 → clubs=0`, every gate green); the reviewer's proposed fix was NARROWED after testing showed it broke four legitimate pre-#28 suites — the guard now reads the destination instead. **ERR-028-009 (M):** the sentinel was a legal `worldDay`, breaking idempotency and hanging the gap-replay loop forever. Remaining findings tracked in the landing entry. Prior entry below.)
+**Updated (prior):** August 8, 2026, #28 T1/T2a landing (v2.05 — **roadmap D1 part one: ERR-029-006 FULLY RESOLVED.** #28 exposes the FR-PG-021 batch `AdvanceDay` and #30's KD-2 **slot 1 is LIVE**, gathered through the new `PlayerCareerStates.GatherTrainingInputs`; mutation-verified (reverting slot 1 fails two locks). Four ERRs filed AND resolved in the same commit: **ERR-028-003** (new-game `PotentialAbility` had no derivation anywhere — owner's call is that it is #47 authored data, seeded here by a deterministic `[GT]` placeholder so the landing has NO draw site; recorded-not-fixed that a whole career moves CA by only ~421 of 10,000, so the PA ceiling is decorative whatever its source), **ERR-028-004** (§3.5 specified the save block version-first with the RNG domain tag as its identifier — the ERR-029-005/ERR-041-009 MUST, third spec; now magic-led plus a typed `ProgressionBlock` at the frame), **ERR-028-005** (§5.2's keystone T-PG-DET-002 was unsatisfiable as worded, and §3.1 had no per-day cursor while #30 runs a fixture day's slots twice — growth would have double-accrued on every fixture day, silently), and **ERR-030-030** (five stale #28-null-seam sites + the v4 frame description). `SEASON_SAVE_FORMAT_VERSION` **4 -> 5**; no draw site, no RNG stream, no `DETERMINISM_DIGEST_VERSION` or `SNAPSHOT_SCHEMA_VERSION` bump. **This retires roadmap A3's seed-rebuildable-roster property** — #28 KD-4 makes the block the serialized roster. Prior entry below.)
+**Updated (prior):** August 9, 2026, later still (v2.04 — **Whole-tree gate result for the AR-over-ERR-010-002
+landing (commits `48977fa` doc half + `d93e0c8` code half).** `d93e0c8` landed the two behavioural
+fixes from the same adversarial review that v2.03 documented the doc-and-comment half of. **(1)** The
+out-of-range branch in `HeadingAim`'s ballistic solve returned a flat 45° as "the maximum-range
+launch." That is the max-range angle only when the target sits at contact height — a header contacts
+near 2.3 m and its targets sit on the ground, so `dz` is negative on essentially every real header, and
+§3.5.1 itself calls this branch "the ordinary case for a defensive clearance," making the wrong angle
+the production path rather than an edge case. Measured: 9.98° of error across 4 cm of target distance
+at the boundary, 4.38° at the production nominal speed (7.0 + 4.0 + 5.0 = 16.0 m/s × `PowerIntent` 0.7
+= 11.2 m/s). Fixed to the true max-range angle, `tan(θ) = v / √(v² − 2·g·dz)`, with a guard for a
+target above what the speed can reach at any angle. `MaxRangeLaunchComponent` — a `[DERIVED]` constant
+whose name asserted what it was not — is retired with it. **(2)** `ComputeAimNormal` did not propagate
+a degenerate desired direction: `half = incident + 0` has magnitude 1, so the zero guard missed and the
+method returned the incident itself, and the blend then steered toward it — at full authority
+reflecting the ball straight back the way it came at full power, the **maximum** possible deflection,
+arrived at through the branch documented as producing the natural rebound. This made
+`ComputeAchievedNormal`'s zero-aim fallback unreachable through the composition, so the lock on it had
+been passing against a branch production could never enter — this project's guard-on-an-unreachable-
+branch class, one method away from the omission the original landing was proud of. Also landed: four
+ERR-008-002 home/away locks for `GkHeadingIntentSource.HeaderAimTarget`, the landing's only
+team-branching geometry, which had none — a `HeadingMechanics.Tests` case labelled as the ERR-008-002
+lock ran team-**agnostic** code at `TeamId = 0` on both sides and could not have failed for an
+asymmetry; the mirror itself is correct, so this was a coverage/false-claim defect, not a live bug.
+**One bug was introduced by the fix and caught by its own new lock before landing**: the
+unreachable-height guard first returned `Vector3.up`, which is Unity's +Y, while this project's up axis
+is +Z (Ball Physics #1 §1.2) — the coordinate-axis trap in `CLAUDE.md`'s own hazard table, and it still
+nearly shipped.
+
+**Whole-tree gate, local run, head `d93e0c8`:** build 0 errors, 3 warnings. `GATE_EXIT=1` — the gate
+did **NOT** print "Gate PASSED"; this is **not** GATE-VERIFIED. Sole failure:
+`sim_match_engine_close_chance`, 2 of 3 predicates — `final-third-dribbles-are-not-goal-averse`
+meanCosine **−0.165** (bound −0.16) and `goalward-dribbles-are-not-a-minority-of-one-in-three`
+goalwardShare **0.407** (bound 0.42). This is the **inherited C1 failure** that predates this branch
+and awaits an owner call; it is identical to three decimals against the pre-fix baseline recorded at
+`589a011`, so this landing moved nothing. `MatchEngine.Tests` **451 passed / 1 failed / 10 skipped /
+462 total**, up from the 447/1/10/458 baseline — the +4 are exactly the four new `HeaderAimTarget`
+locks. `HeadingMechanics.Tests` **63 passed / 15 skipped / 0 failed** (60 → 63). All 31 other suites
+green, quarantine empty. `python3 tools/recurring-defect-lint.py --repo .`: **0 ERRORs**. Prior entry
+below.)
+**Updated (prior):** August 9, 2026, still later same day (v2.03 — **Adversarial review of the ERR-010-002
+landing: two of its five findings confirmed and fixed here (the other three touch files under
+concurrent edit and are out of scope for this pass).** **Finding 1 (High, fixed in
+`docs/specs/heading-mechanics/section-3.md` v0.5, not this file):** §3.5.1 Step 2's "bounded to the
+hemisphere the ball can physically reach" was stale spec text — `HeadingAim.ComputeAimNormal` never
+implemented that bound and its own XML doc proves it provably cannot fire (`dot(incident + aimDir,
+incident) = 1 + dot(aimDir, incident) ≥ 0`, always ≥ 0). **Finding 2 (Medium, this entry):** the same
+stale claim survives in THIS file at two sites — the `ERR-010-002` "Updated (prior)" summary below and
+the Error Index table row — both annotated in place below rather than rewritten, per this file's own
+convention (see the v1.99/v1.98 pair for the precedent). **Verified NOT present** in `CHANGELOG.md`,
+`CHANGELOG-src.md`, or `file-manifest.md` — all three already carry the correct "no bound is applied,
+provably unreachable" phrasing; Finding 2 was wrong to name them and no change was made there. **Finding
+3 (Medium, `docs/tracking/gk-heading-engine-integration-design.md` §4.2a, not this file):** `§4.2a`,
+cited by `GkHeadingIntentSource.cs:325` and `MatchEngine.cs:3848` and by this file's own `ERR-010-002`
+entry below, was a phantom citation — no document defined it. **Correcting the finding's own file
+target**: the citing code's header comment names `gk-heading-engine-integration-design.md` §4 as
+`GkHeadingIntentSource`'s governing document, not `match-engine-design.md` (verified — that file's own
+§4 is an unrelated "Boot sequence" section, and it never mentions `GkHeadingIntentSource` or GK/Heading
+at all); §4.2a is now documented there, beside the §4.2 it extends. Findings 4 and 5 are addressed in
+`src/heading-mechanics/HeadingMechanics.cs`, `src/match-engine/GkHeadingIntentSource.cs`, and
+`src/match-engine/MatchEngine.cs` directly (version rows / comments; no logic change). Prior entry
+below.)
+**Updated (prior):** August 9, 2026, later same day (v2.02 — **ERR-010-003 filed: `#10`'s KD-18 aerial-phase
+gate borrows AM #2's `GROUNDED` state, which #2 §3.1.2 defines as "knocked down", not "on the
+ground."** Surfaced as a "recorded, not fixed" bullet at the tail of the `ERR-010-002` entry below
+and filed here as its own candidate, per that entry's own note. Verified against source: #10 §3.2/§3.3
+(KD-18) and the mirrored `HeadingEligibility.cs`/`HeadingMechanics.cs` comments describe the
+`{GROUNDED, STUMBLING}` exclusion as establishing that the agent "has left the ground" / is in an
+"aerial phase," but AM #2 §3.1.2 defines `GROUNDED` as one specific incapacitated substate entered only
+via collision knockdown or an extreme stumble-fail — never entered by a merely standing, walking,
+jogging, sprinting, or decelerating player — and AM #2 publishes no Z-axis/airborne state at Stage 0 at
+all (KD-18's own premise), so no check reading `AgentMovementState` can establish "has left the
+ground" in the first place. **Verified NOT a no-op and NOT inverted**: the exclusion is real and
+reachable — it correctly blocks a header attempt while the agent is prone or stumbling from a
+collision, which is exercised by ordinary gameplay (`HeadingMechanics.cs:192-206`,
+`HeadingEligibility.cs:54-65`). The defect is entirely in the label: the tree's actual notion of
+"aerial phase" is synthesized independently by `HeadingJumpKinematics`'s `jumpStartFrame` →
+`landingFrame` elapsed-frame timer, never validated against any position, velocity, or state signal.
+**Documentation only, Low severity — same class as `ERR-020-003`** (two files using one word for two
+different things, each internally self-consistent); no code change proposed. Prior entry below.)
+**Updated (prior):** August 9, 2026 (v2.00 — **ERR-010-002 filed + RESOLVED: the header aim had no owner, and every header was a passive mirror.** #10 §3.5 delegated the aim to Decision Tree #8, which cannot emit a header at all (`ActionType` ordinal 8 overflows the 3-bit composure-noise field — wiring backlog W9), so `TargetIntent` reached no formula and the outgoing direction was pure specular reflection about `normalize(ballPosition − headCentre)`. Correcting `close-chance-creation-design.md` §10.6 item 3, which recorded the symptom ("a fixed aim point") and mis-stated its consequence: a defender clearing in his own box did not aim 90 m at the far goal — he headed the ball back the way it came. Two further defects in the same chain: the contact point had **two independent derivations** across `HeadingMechanics.Update`'s two passes, and Pass 2 rebuilt the world point from its **2-D** head-local projection, pinning `contactPointActual.z` to the head centre, so the reflection normal was permanently horizontal and `reflected.z = v̂_in.z` — **a descending ball was headed further down** and no header could lift the ball. Resolved by new #10 §3.5.1 + `HeadingAim.cs` (ballistic launch solve, half-vector normal bounded to the reachable hemisphere `[CORRECTED at v2.03 above: no such bound exists or is needed — the half-vector is always in the forward hemisphere by construction; see the v2.03 entry and #10 §3.5.1 v0.5]`, attribute-blended achieved normal — authority 0 ≡ pre-fix, FULL-RANGE ramp) plus the producer half `GkHeadingIntentSource.HeaderAimTarget` (clear wide when deep, aim at goal when advanced, continuous). The `ERR-011-010` shape. No new `[GT]` (inside KD-W1), no schema bump, no RNG/draw-order change. **GATE-VERIFIED** — `HeadingMechanics.Tests` 60/15/0 (+13 new locks), `MatchEngine.Tests` 447/1/10 byte-identical to the pre-fix baseline, its one failure the inherited C1 close-chance band. The landing's "digests DO move" claim is **withdrawn as stated**: nothing moved, because at a 0.2% contact ratio no acceptance scenario contains an executed header. Prior entry below.)
 **Updated (prior):** August 9, 2026 (v1.99 — **CORRECTION to v1.98: `ERR-008-024` was recorded RESOLVED. It is not.** The v1.98 entry below overstated the outcome, filed earlier this same session. The tie-break fix — ranking §3.1.5.2's 8 sectors on `spaceInSector × DirectionQuality_DRIBBLE(sectorDir, toGoal)` instead of `spaceInSector` alone — was **implemented, measured, and REFUSED**, the KD-CC7 pattern (`close-chance-creation-design.md` §4, where the #15 run overlay met the same fate). It DOES fix the symptom: `sim_match_engine_close_chance` goes meanCosine −0.165 / goalwardShare 0.407 (both failing) to **PASS** (bounds −0.16 / 0.42, neither moved). But the same build **stalls play outright**: `sim_match_engine_play_develops` fails with "play stalled: last possession change at tick 18424, ball last moving at tick 18465 of 32400", and `sim_match_engine_shot_outcomes` fails `goals-still-scored` at **0**. A wider form ranking on `space × DirectionQuality` outright (not as a tie-break) produced the **identical** stall at the **identical tick**, plus mean-shot-distance 25.41 m against a 24.00 m ceiling — that identity is what localises the cause to the tie-break itself, not to how much space either form trades away. **Refused, not landed.** `OptionGenerator.cs` is now byte-identical in logic to the pre-fix baseline (verified: `git diff 23f8dd9 -- src/decision-tree/OptionGenerator.cs` has zero non-comment lines). What was KEPT is behaviour-neutral only: `DirectionQuality_DRIBBLE` hoisted to public static `UtilityWeights.DribbleDirectionQuality(Vector2, Vector2)` with `UtilityScorer` delegating to it (so generation and scoring cannot drift apart if this is retried), plus a long explanatory note at the defect site recording the refusal for the next attempt. The two §3.1.5.2 unit locks the v1.98 landing added are **REMOVED** — they locked behaviour that no longer exists. `DecisionTree.Tests` is back to **129 passed / 4 skipped / 0 failed**. ERR-008-024's status below changes from Resolved to **recorded, NOT fixed — implemented, measured, refused**; `section-3-1.md` reverted to v1.8 to describe the code that actually ships; `close-chance-creation-design.md` §7 item 6 **REOPENED** at v1.4. Prior (overstated) entry below, left unedited per this file's convention.)
 **Updated (prior):** August 9, 2026 (v1.98 — **ERR-008-024 filed + RESOLVED: §3.1.5.2's 8-sector dribble scan always picked `AgentFacingDirection`, whatever the goal.** `spaceInSector` saturates at exactly 1.0 for any sector clear of `DRIBBLE_THREAT_RADIUS`, and the old scan ranked on `spaceInSector` alone with a strict `>` improvement test — so whenever two or more sectors were clear (the common case in the final third) the winner was always sector 0, `AgentFacingDirection` by construction, and goal direction never entered the choice at all. This is why ERR-008-018's `DirectionQuality_DRIBBLE` scoring term could suppress a retreating dribble but never redirect it (`close-chance-creation-design.md` KD-CC3 / §7 item 6, now closed). Fixed by ranking sectors on `spaceInSector × DirectionQuality_DRIBBLE(sectorDir, toGoal)` — the SAME term §3.2.4.1 already applies when scoring the resulting option, hoisted to a new public static `UtilityWeights.DribbleDirectionQuality(Vector2, Vector2)` so both stages share one formula instead of a hand-copied second walk; `UtilityScorer.ComputeDribbleDirectionQuality` now delegates to it, behaviour there unchanged. **No new constant** — the floor is ERR-008-018's `DRIBBLE_GOAL_DIR_MIN_MODIFIER` = 0.80, untouched, so `DirectionQuality_DRIBBLE ∈ [0.80, 1.0]` and direction can outrank at most a 20% space deficit (KD-CC6 preserved; a genuinely blocked sector still loses on space). Measured: `sim_match_engine_close_chance` acceptance scenario — meanCosine −0.165 → **PASS** (bound −0.16, unmoved), goalwardShare 0.407 → **PASS** (bound 0.42, unmoved). `DecisionTree.Tests` **131 passed / 4 skipped / 0 failed**, incl. 2 new §3.1.5.2 locks. `OptionGenerator.cs` v1.11, `UtilityScorer.cs` v1.16, `UtilityWeights.cs` v1.14, `OptionGeneratorTests.cs` v1.11, `section-3-1.md` v1.7, `close-chance-creation-design.md` v1.3. **⚠️ CORRECTED at v1.99 above — this entry overstated the outcome. The fix described here was implemented, measured, and REFUSED, not landed; see v1.99 for the refusal evidence.** Prior entry below.)
 **Updated (prior):** August 8, 2026, later same day (v1.97 — **ERR-012-011 filed + RESOLVED at wiring-backlog C1: the #12 `InPoss` gate.** #12 §3.0 classified phase from the on-ball carrier, absent for the whole flight of every pass, so a passing team read as being in transition — measured `InPoss` on **7.5%** of final-third samples against `TransToAtk` 58.9%. Phase now classifies from TEAM possession, composed by the orchestrator from the carrier's team ∪ the intended receiver of a pass in flight; the latch expires with no new `[GT]` by reusing `RunFirstTouch`'s receding predicate. Snapshot fields ADDED not redefined (#23's FR-DM-007 exclusion untouched); **`SNAPSHOT_SCHEMA_VERSION` 19 → 20**; no RNG/draw-order change. Two clears recorded as having no isolating lock. Prior entry below.)
@@ -136,7 +217,9 @@ authoritative remediation backlog.
 | ERR-012 | First Touch §7 refers to Decision Tree as Spec #7 (5 occurrences) | Minor | 1 | ✅ Closed — Fixed in first-touch/section-7.md v1.1 (March 5, 2026) |
 | ERR-012-001 | `DOMAIN_TAG_POSITIONING_AI` allocation + Phase B/C block (originally proposed `0x16…0x1B`; shifted to `0x17…0x1C` May 16, 2026 after #10 took `0x16`) needed in #16 §3.4 | Medium | 1 | ✅ Resolved May 18, 2026 — `DOMAIN_TAG_POSITIONING_AI = 0x17` allocated in #16 §3.4 v1.0.5; §6.1 `[CROSS-PENDING]` → `[CROSS: #16 §3.4]` promoted atomically with #12 `APPROVED`; body-text instances in §1/§2/§3/§4/§8 promoted in v0.3/v0.4 fix passes |
 | ERR-012-002 | Decision Tree #8 `section-3-1.md` L716 cites Formation System as "Spec #14" — current #14 is Defensive AI; Formation System is #12 | Minor | 1 | ✅ Closed — Fixed in decision-tree/section-3-1.md v1.1.1 (May 15, 2026); single-token "Spec #14" → "Positioning AI, Spec #12"; approval status preserved |
+| ERR-010-002 | Heading Mechanics #10 §3.5 delegated the header aim to Decision Tree #8 — which **cannot emit a header at all** (`ActionType` ordinal 8 overflows the 3-bit composure-noise field; wiring backlog W9) — so the aim decision had no owner and `TargetIntent` reached no formula. Every header was a **passive specular mirror**: the ball left the head along the reflection of its own incoming path and the player had no influence on direction. Two further defects in the same chain: the contact point had **two independent derivations** (Pass 1 and Pass 2 of `HeadingMechanics.Update`, agreeing only by coincidence), and Pass 2 rebuilt the world point from its **2-D** head-local projection, pinning `contactPointActual.z` to the head centre — so the reflection normal was permanently horizontal, `reflected.z = v̂_in.z`, and **a descending ball was headed further down**. No header could lift the ball. The `ERR-011-010` shape. | **High** | 10 | ✅ **Resolved August 9, 2026** — new #10 §3.5.1 + `HeadingAim.cs`: ballistic launch solve to the target (low root; maximum-range fallback out of range, P1) `[CORRECTED — this row said "45°"; 45° is the max-range angle only at dz = 0, and `d93e0c8` replaced it with tanθ = v / sqrt(v² − 2·g·dz). See the AR pass 2 entry above]`, the reflecting half-vector bounded to the physically reachable hemisphere `[CORRECTED — no bound exists; see the v2.03 entry above]`, and an achieved normal blended from the geometric normal by normalised Heading (FULL-RANGE ramp, `ERR-008-019` shape; authority 0 ≡ pre-fix). One `ResolveContactGeometry` owner read by both passes; the 3-D contact point carried directly. Producer half: new `GkHeadingIntentSource.HeaderAimTarget` — clear wide when deep, aim at goal when advanced, continuous between; documented at `gk-heading-engine-integration-design.md` §4.2a as of v2.03. **No new `[GT]`** (the attribute is the dial, so inside KD-W1), **no schema bump**, no new RNG stream / domain tag / draw site / draw-order change. **GATE-VERIFIED** (local whole-tree run, head `c89c838`): `HeadingMechanics.Tests` 60/15/0 (47 → 60, the +13 new locks all executed), `MatchEngine.Tests` 447/1/10 **byte-identical to the pre-fix baseline**, the single failure being the inherited C1 `sim_match_engine_close_chance`. The landing's own "digests DO move" claim is **WITHDRAWN as stated** — no measured movement anywhere; a match containing an executed header would digest differently and no scenario in this tree contains one, at a measured 0.2% contact ratio. |
 | ERR-012-011 | Positioning AI #12 §3.0 classified phase from the **on-ball carrier**, which the engine clears at every `ApplyKick` and restores only on physical receipt — so for the entire flight of every pass the snapshot read "loose ball" and §3.0.2's velocity branch classified a team knocking the ball around as being in **transition**. Measured: `InPoss` committed on **7.5%** of final-third samples (`TransToAtk` 58.9%), starving every phase-gated mechanism in #13/#14/#15. Spec and code were each self-consistent; "who is on the ball" and "which team has the ball" are different questions and only the first was ever asked. | **High** | 9 | ✅ **Resolved August 8, 2026** (wiring backlog C1) — §3.0/FR-PA-022 now classify from TEAM possession, composed by the orchestrator as carrier's team ∪ intended receiver of a pass in flight; new §3.0.5 worked example. Engine gains a `_passInFlightReceiverId` latch expiring on possession, any ball strike, restart, receiver inactivity, or the ball ceasing to approach him (`RunFirstTouch`'s own receding predicate, hoisted — **no new `[GT]`, no timeout**, so inside the KD-W1 freeze). Snapshot fields ADDED, not redefined, so #23's FR-DM-007 carrier exclusion is untouched. **`SNAPSHOT_SCHEMA_VERSION` 19 → 20**; no new RNG stream / domain tag / draw site / draw-order change. Two clears (GK-heading adapter, `ApplyRestart`) recorded as having no isolating lock. |
+| ERR-010-003 | Heading Mechanics #10 §3.2/§3.3 (KD-18) and the mirrored `HeadingEligibility.cs`/`HeadingMechanics.cs` comments describe the `{GROUNDED, STUMBLING}` exclusion as an **aerial-phase check** — "agent must have left the ground" — but Agent Movement #2 §3.1.2 defines `GROUNDED` as one specific incapacitated substate ("knocked down" after a collision or extreme stumble), not the complement of airborne. A standing, walking, jogging, sprinting, or decelerating player is never `GROUNDED` and clears the check trivially; AM #2 publishes no Z-axis/airborne state at all (KD-18's own premise), so "has left the ground" is not a question this check is capable of answering. Surfaced as a recorded-not-folded-in bullet at the tail of `ERR-010-002`. | Low | 9 (citation sites; none changed) | 🟡 **Open — RECORDED, NOT FIXED, August 9, 2026.** Verified NOT a no-op and NOT inverted: the exclusion is real and reachable — it correctly blocks a header attempt while the agent is prone or off-balance from a collision/stumble, exercised by ordinary gameplay. The defect is entirely in the label, not the behaviour: the actual aerial phase is synthesized independently by `jumpStartFrame`→`landingFrame` timing, never validated against any position/state signal. A real fix is a relabeling exercise (documentation-only; same class/severity as `ERR-020-003`), deferred — no code change proposed by this entry. |
 | ERR-008-001 | Decision Tree #8 §3.2 `PitchGeometry` pseudocode class uses centered origin `(0,0) = centre of pitch` with X:−52.5–+52.5m/Y:−34–+34m — contradicts CLAUDE.md + Ball Physics #1 §1.2 corner-origin; all goal constants wrong | High | 1 | ✅ Resolved May 18, 2026 — `section-3-2.md` v1.3: class rewritten to corner-origin (0,0,0); all `Vector2` goal constants replaced with `Vector3` using correct values; citation corrected to §1.2 and Appendix C; XC-GEOM-01 verification note added |
 | ERR-008-002 | DT #8 §2.2.5 `MatchContext.BallZone` is a single shared field documented "from own goal line" — unsatisfiable for both teams; implementation consumed home-perspective zone for away agents (all zone modifiers inverted; away in-range shots ×0.10) | High | 3 | ✅ Resolved June 11, 2026 — §2.2.5 field note (home-perspective; normative consumption is per-team derivation from `BallPosition.x`), §3.2.1.3 consumption note; `DecisionContextAssembler.cs` v1.2 + `PitchGeometry.cs` v1.1 + `UtilityScorer.cs` v1.2 |
 | ERR-008-003 | DT #8 §3.4.5 line-depth pseudocode adjusts `adjustedSlotY` — Y is the touchline axis in the corner-origin system; formula also lacks the team sign. Implementation copied the Y form verbatim (latent: Stage 0 depth pinned 0.5) | Medium | 2 | ✅ Resolved June 11, 2026 — §3.4.5 pseudocode rewritten to team-signed X; `TacticalContext.cs` v1.1 |
@@ -2330,6 +2413,222 @@ ball reproduces the pre-fix slot exactly, so the existing worked examples and un
 keeper position: no new cross-tick state, **no `SNAPSHOT_SCHEMA_VERSION` change, no new RNG
 stream / domain tag / draw site, no draw-order change** — digests move for any match containing a
 save episode, as intended.
+
+---
+
+## ERR-010-002: Heading Mechanics #10 §3.5 delegated the header aim to a system that cannot emit headers, so every header was a passive mirror
+
+**Filed:** August 9, 2026. **Status: RESOLVED** (same commit, spec + code).
+Owner document: `docs/tracking/close-chance-creation-design.md` §10.6 item 3 (which recorded the
+symptom and mis-stated its consequence — corrected in the same commit).
+
+**The defect.** #10 §3.5 stated, verbatim: *"The intended launch direction (toward `targetIntent`)
+is realized by the upstream choice of `contactPointIntent`: Decision Tree #8 selects a contact point
+on the head surface such that the reflected vector points at the target."*
+
+Decision Tree #8 **cannot emit a header at all.** `ActionType` ordinal 8 overflows the 3-bit
+composure-noise field, which is why DT-emitted HEADER is deferred as wiring-backlog **W9**. The
+producer of every `HeaderIntent` in the game is, and for the whole of Stage 0 has been, the
+match-engine proximity trigger `MatchEngine.TryCommitHeaderIntents`, which supplied
+`ContactPointIntent = Vector2.zero` and a fixed `TargetIntent`.
+
+So the aim was delegated to a system that structurally could not make the decision, and therefore
+nobody made it. **This is the `ERR-011-010` shape exactly** — the same finding, one spec over: §11
+§3.7 delegated the keeper's rush decision to #8, which has no keeper model and cannot acquire one,
+and the condition sat unowned for ten weeks.
+
+**Three defects, one chain.** The consequence is worse than "the aim is a fixed point", which is how
+`close-chance-creation-design.md` §10.6 item 3 recorded it:
+
+1. **`TargetIntent` reached no formula.** Verified by exhaustive grep: its only production uses are
+   `HeadingMechanics.ClampToPitch` and the snapshot serializer. `ContactPointIntent` reached exactly
+   one read — §3.4's `pointError` — and never the geometry, because `contactPointActual` was
+   recomputed from ball-vs-head geometry. The outgoing direction was therefore pure specular
+   reflection about `normalize(ballPosition − headCentre)`: **a header was a passive bounce and the
+   player had no influence on where the ball went.** Correcting §10.6's recorded consequence: a
+   defender clearing in his own box did NOT aim 90 m at the far goal — he headed the ball back the
+   way it came, which is worse football and a different defect. Neither intent field had ever been
+   exercised anywhere in the tree, including in #10's own `HeadingScenarios` fixture, which also sets
+   `ContactPointIntent = Vector2.zero`.
+2. **The contact point had two independent derivations.** `HeadingMechanics.Update` Pass 1 (quality)
+   and Pass 2 (execution) each computed it from ball-vs-head geometry in separate code. They agreed
+   only by coincidence — the parallel-surface trap this log has filed repeatedly, most recently as
+   the T2-H3 `LineupSelector.CanSelect` finding. Now one `ResolveContactGeometry` owner, read by both.
+3. **A header could not lift the ball.** Pass 2 rebuilt the world-space contact point from its **2-D**
+   head-local projection (`+x` facing-forward, `+y` agent-left — both horizontal), which pins
+   `contactPointActual.z` to the head centre's z. The §3.5 reflection normal was therefore
+   permanently horizontal, and for a horizontal normal `reflected.z = v̂_in.z`: **a descending ball
+   was headed further down.** Every cross dropping onto a defender's head was deflected into the
+   turf. This was introduced by the AR-3 M-1 fix, which correctly stopped the lateral offset being
+   injected as height and, in doing so, removed the vertical component altogether; that fix is
+   preserved — the lateral term still maps to the agent-left axis — while the 3-D point is now
+   carried directly instead of round-tripped.
+
+**The resolution.** New #10 **§3.5.1**, and `src/heading-mechanics/HeadingAim.cs`. Three pure steps:
+
+- **Ballistic launch direction** to `targetIntent` at the speed a perfect contact would carry. A
+  destination is reached by an arc, not a straight line — aiming along the straight line to a distant
+  ground point heads the ball into the turf. The **low** root is taken (a header is a driven contact,
+  not a lob). `disc < 0` — the target beyond ballistic range — degrades continuously to the 45°
+  maximum-range launch rather than failing (**P1**, continuous never a cliff), which is the ordinary
+  case for a defensive clearance and is what makes one long and high. Solved at the perfect-contact
+  speed deliberately: solving at the achieved speed would be circular, since achieved speed follows
+  from quality and quality follows from the aim error.
+- **The half-vector normal** that realizes it, `normalize(incident + aimDir)` — the exact inverse of
+  §3.5's reflection. `[CORRECTED August 9, 2026, same-day adversarial review of this landing: this bullet
+  originally continued "— bounded to the hemisphere the ball can physically reach... outside that
+  hemisphere the normal is projected onto the grazing boundary." No such bound exists in the shipped
+  `HeadingAim.ComputeAimNormal`, and none is needed: for unit vectors `dot(incident + aimDir, incident)
+  = 1 + dot(aimDir, incident) ≥ 0`, so the half-vector is always in the forward hemisphere already, for
+  every `aimDir`. A "guard on an unreachable branch" (this file's own recorded defect class) — recorded
+  here rather than written into code that would never execute it. The spec text was corrected to match
+  at #10 §3.5.1 v0.5, not the code, which was already right. See also the v2.03 chain entry above.]`
+- **The achieved normal**, blended from the geometric normal toward the aim normal by normalised
+  Heading. **Steer authority 0 is exactly the pre-fix model**, and the ramp spans the whole attribute
+  range with no plateau at either end (raw 1 → 0.05, raw 20 → 1.00) — the FULL-RANGE shape settled at
+  `ERR-008-019`. The aim is skill (**P2**), not a switch.
+
+`pointError` becomes a genuine **execution** error for the first time: it was previously the distance
+between a hardcoded zero and a geometric fact. A header steered hard away from its natural rebound is
+now weaker as well as less accurate, which is the football.
+
+**The producer half.** #10 realizes an aim; it does not choose one. The engine does, via new
+`GkHeadingIntentSource.HeaderAimTarget` (§4.2a) — the same producer/realizer split `ERR-011-010`
+settled for the keeper's rush. The football is one sentence: **the deeper you are, the wider you
+clear; the further forward you are, the more you aim at the goal**, as a continuous lerp in the
+taker's advancement up his own attacking direction, never a zone switch (**P1**). Constant-free: the
+only inputs are position, team, and `[FIXED]` pitch geometry.
+
+`[CORRECTED August 9, 2026, same-day adversarial review of this landing: "§4.2a" was a phantom citation
+— no document defined it (this entry cited it, the code cited it, nothing declared it). Now documented
+at `docs/tracking/gk-heading-engine-integration-design.md` §4.2a, the file `GkHeadingIntentSource.cs`'s
+own header names as its governing document (not `match-engine-design.md`, whose own §4 is an unrelated
+"Boot sequence" section). §4.2a also records a measured limitation not stated here at landing: the
+target's X is pinned to the opponent goal line, so beyond roughly 15 m of range the §3.5.1 ballistic
+solve is out of range on every attempt and the continuous 45°-fallback is the production path rather
+than the edge case; and the wide-clearance bias is weak and inverted in lateral position (a team-0
+header at (10, 10) aims 4.1° off straight upfield; one at (10, 34) aims 17.9°, the wrong direction for
+"clear wider from a central position"). Recorded as a known limitation, not fixed. See the v2.03 chain
+entry above.]`
+
+**No new `[GT]`** — the Heading attribute is itself the dial — so this stays inside **KD-W1** while
+heading remains unwired. **No `SNAPSHOT_SCHEMA_VERSION` bump**: both intent fields were already
+serialized and nothing new survives a tick. **No new RNG stream, no new domain tag, no new draw site,
+no draw-order change.** A match containing an executed header would digest differently, because the
+number of contacts changes and `HeadingContactQuality` draws twice per contact from the registered
+`heading.mechanics` stream, advancing its cursor — but see the measured result below: **no scenario in
+this tree contains one.**
+
+**GATE-VERIFIED** (local whole-tree run, August 9, 2026, head `c89c838`): build succeeded, 0 errors. `HeadingMechanics.Tests` **60 passed / 15 skipped / 0 failed** (47 → 60 — the +13 are this landing's `HeadingAimTests` locks, all executed). `MatchEngine.Tests` **447 passed / 1 failed / 10 skipped** — **byte-identical to the pre-fix baseline captured at HEAD before any change**, including the failing predicate's values to three decimals (`sim_match_engine_close_chance`: meanCosine −0.165 vs bound −0.16, goalwardShare 0.407 vs bound 0.42). That failure is the pre-existing C1 fallout awaiting an owner call; it predates this branch and this landing did not move it. Every other suite unchanged; 33 suites, quarantine empty. The gate's overall verdict is FAILED **solely** on that inherited failure.
+
+**CORRECTION, forced by that run — the "digests DO move" claim written at landing is WITHDRAWN as stated.** No measured digest movement occurred anywhere: every acceptance scenario returned values identical to the pre-fix baseline. The mechanism is live, but the population it acts on in these scenarios is at or near zero — consistent with the measured **0.2% header contact ratio** (2 executed, 963 failed over 6 seeds × 90 min), against acceptance scenarios of 4 seeds × 18 minutes which plausibly contain no executed header at all. The defensible statement is narrower: a match containing an executed header WOULD digest differently, and **no scenario in this tree demonstrates one**. This is exactly the pre-implementation hazard the evidence advisor named — at a 0.2% contact rate the aim is not observable as football, so it is locked by unit geometry and by nothing else. Recorded rather than repaired: the header contact rate, not the aim, is what any future measurement of this fix depends on.
+
+**Recorded, NOT fixed** (aim refinements on top of an aim that now exists):
+- The attacking target is the goal **centre** — i.e. at the goalkeeper. Aiming away from him needs the
+  keeper's position at the producer.
+- The target never names a **team-mate**: a knock-down or a flick to a runner is a #8 decision that
+  arrives with W9.
+- `HeaderIntent.ContactPointIntent` remains on the struct as the W9 DT-supplied override and is not
+  read by Stage-0 geometry. The half-vector that realizes an aim depends on the incoming velocity at
+  contact, which no producer can know at commit, and KD-4 locks the intent at commit.
+- **`HeadingEligibility` freezes the head centre — position AND jump-arc z — at the agent's current
+  frame** while sweeping only the ball, so a player running onto a ball is predicted to miss. Not
+  touched here; it is the contact model, not the aim.
+- **#10 KD-18's aerial-phase gate reads `AgentMovementState.GROUNDED`, which #2 §3.1.2 defines as
+  "knocked down"**, not "on the ground". A standing, upright player satisfies "must have left the
+  ground". Cross-spec semantic collision, separate ERR candidate, deliberately not folded in here.
+
+---
+
+## ERR-010-003: Heading Mechanics #10's KD-18 aerial-phase gate borrows Agent Movement #2's `GROUNDED` state, which #2 §3.1.2 defines as "knocked down" — not "on the ground"
+
+**Filed:** August 9, 2026. **Status: 🟡 Open — RECORDED, NOT FIXED** (documentation only; no code change
+proposed by this entry). Surfaced as a "Recorded, NOT fixed" bullet at the tail of `ERR-010-002`
+(same day), which named it "a separate ERR candidate, deliberately not folded in here." This entry is
+that candidate.
+
+**The defect.** #10 §3.2's eligibility predicate and §3.3's `jumpStartFrame` derivation both gate on
+excluding `{GROUNDED, STUMBLING}` from `AgentMovementState`, and both the spec prose and the mirrored
+code comment describe that exclusion as verifying the agent is airborne:
+
+- `section-3.md` §3.2, step 1: *"// (1) Aerial-phase check (KD-18). Stage 0 aerial phase is owned by
+  #10. // AM #2 ground state must be exitable (not GROUNDED / STUMBLING)."*
+- `section-3.md` §3.3, the `jumpStartFrame` source: *"agent.movementState ∉ { GROUNDED, STUMBLING }
+  (i.e. the agent has cleared any preceding AM #2 ground-recovery state)"* — and two lines later,
+  *"the agent's ground exit is observed via existing `agent.movementState`."*
+- `src/heading-mechanics/HeadingEligibility.cs:54` mirrors it verbatim: *"// (1) Aerial-phase check
+  (KD-18). Agent must have left the ground."*
+
+Agent Movement #2 §3.1.2 defines `GROUNDED` as one specific incapacitated substate, not the complement
+of "airborne": *"Agent on the ground after fall or heavy collision. Physics: No locomotion. Position
+fixed. Recovery timer active. Entry: Collision force exceeds knockdown threshold, OR stumble at extreme
+speed."* (`agent-movement/section-3-1-part-2.md:78-86`). The other six states in the seven-state
+machine — `IDLE, WALKING, JOGGING, SPRINTING, DECELERATING, STUMBLING(-approaching), GROUNDED`
+(`section-1-2.md:154`) — are every *ordinary* thing a footballer's feet do on the ground, and none of
+them is named `GROUNDED`. There is no `Jumping` state at all: `section-4.md:49` of #10 itself says so
+— *"No `Jumping` state exists; Stage 0 aerial phase is owned by #10 per KD-18 and is invisible to the
+AM #2 state machine."* AM #2's own vocabulary confirms the "knocked down" reading independently:
+`GroundedReason.DIVING_HEADER` exists specifically because a *header* can put a player into
+`GROUNDED` on landing (`section-3-1-part-2.md:97-98`), and `HeadingMechanics.cs:473`'s landing comment
+— *"set GROUNDED with DIVING_HEADER if appropriate"* — treats entering `GROUNDED` as a **consequence**
+of a header, not a **precondition** for one.
+
+So the check `if agentState.CurrentState == GROUNDED || STUMBLING: not eligible` does not and cannot
+establish "the agent has left the ground." A player who is simply standing (`IDLE`), walking, jogging,
+sprinting, decelerating, or approaching-a-stumble clears it trivially, because none of those states is
+`GROUNDED`, and AM #2 has no Z-axis / airborne state to fail the check against in the first place — by
+KD-18's own design, AM #2 publishes no Z>0 kinematics at Stage 0, so "has left the ground" is not a
+question this state machine is *capable* of answering. The entire notion of an aerial phase in this
+tree is synthesized independently inside `HeadingJumpKinematics` (`jumpStartFrame` → `apexFrame` →
+`landingFrame` over the fixed `JUMP_PHASE_DURATION_MS` window), driven purely by elapsed 60 Hz frames
+once the gate first passes — never by any position, velocity, or state read that could confirm the
+agent's feet actually left the turf.
+
+**What the check actually does (verified, not a no-op, not inverted).** The gate is not vacuous: it
+excludes an agent who is currently prone (`GROUNDED`, entered via `HeadingMechanics.cs:195` /
+`HeadingEligibility.cs:55` reads of a real collision-knockdown or extreme-stumble state written by
+Collision System #3 / Agent Movement #2) or off-balance (`STUMBLING`) from starting or continuing a
+header attempt, both at the `HeadingMechanics.Update` `jumpStartFrame`-latch site
+(`src/heading-mechanics/HeadingMechanics.cs:192-206`) and on every re-evaluation inside
+`HeadingEligibility.Evaluate` (`HeadingEligibility.cs:54-65`). That is a real and sensible exclusion —
+a felled or stumbling player should not be able to head the ball — and it fires whenever a collision
+or hard stumble coincides with a header attempt. **The defect is entirely in what the check is said to
+verify, not in what it verifies.** No inversion (a `GROUNDED` player is correctly excluded, not
+included) and no dead code (the exclusion is reachable and is exercised by ordinary collision
+gameplay) — contrary to the no-op/inversion hypothesis this entry was filed to check.
+
+**Consequence.** A documentation/spec-clarity defect, not a behavioural one — the same class and the
+same severity rationale as `ERR-020-003` (two files using one word, "grounded," for two different
+things, each internally self-consistent, with nothing in the tree currently misled by it). The risk is
+prospective: a future reader — implementing the KD-18 §7.8 retirement to AM #2 native Z kinematics, or
+just auditing the eligibility predicate — who trusts the label ("aerial-phase check", "must have left
+the ground") over #2's actual definition could believe a verticality/airborne safeguard exists here
+when none does, or could "simplify" the check on the assumption that it duplicates the
+`jumpStartFrame`/`landingFrame` timer, when in fact it is the *only* thing standing between a prone or
+stumbling player and a header attempt.
+
+**Recorded, NOT fixed.** No code change proposed by this entry (documentation-only per its filing
+scope). A real fix is a relabeling exercise, not a behaviour change: rename/re-comment the check at
+both cited spec sites and both cited code sites to state what it verifies — "agent is not incapacitated
+(not knocked down, not stumbling)" — rather than "agent has left the ground" / "aerial-phase check",
+and correct §3.3's "the agent's ground exit is observed via existing `agent.movementState`" claim, which
+is false as written (no ground *exit* is observed; only ground *incapacity* is excluded). Whether #10
+should gain a genuine airborne signal is a separate design question, out of scope here and moot until
+AM #2 grows Z kinematics per KD-18 §7.8.
+
+**Files Affected (citation sites only — no change made):**
+
+| File | Location | What it says |
+|---|---|---|
+| `docs/specs/heading-mechanics/section-2.md` | FR-HE-001, FR-HE-019 | "the agent is in the Stage-0 #10-owned aerial phase (KD-18)" / KD-18 citation |
+| `docs/specs/heading-mechanics/section-3.md` | §3.2 step 1 (line 118); §3.3 `jumpStartFrame` source (lines 202-213) | "Aerial-phase check (KD-18)... AM #2 ground state must be exitable"; "the agent's ground exit is observed via existing `agent.movementState`" |
+| `docs/specs/heading-mechanics/section-4.md` | §4.6 60 Hz loop pseudocode (lines 206-211) | `jumpStartFrame` initialization comment referencing GROUNDED/STUMBLING clearance as ground exit |
+| `docs/specs/heading-mechanics/section-5.md` | §5.1.1 eligibility truth table (line 27) | correctly distinguishes lowercase "Grounded (`STANDING`)" from backticked `` `GROUNDED` / `STUMBLING` (AM #2) `` — the two meanings are already kept apart here, unlike in §3.2/§3.3/§4.6's prose |
+| `docs/specs/heading-mechanics/outline-detailed.md` | lines 314, 666 | same KD-18 framing, same terminology |
+| `src/heading-mechanics/HeadingEligibility.cs` | line 54 | `// (1) Aerial-phase check (KD-18). Agent must have left the ground.` |
+| `src/heading-mechanics/HeadingMechanics.cs` | lines 191-196 | `jumpStartFrame` latch condition, no comment claim beyond the state names themselves |
+| `src/heading-mechanics/HeaderContactState.cs` | line 22 (XML doc) | mirrors the GROUNDED/STUMBLING exclusion condition, no "left the ground" claim |
+| `src/heading-mechanics/HeaderIntent.cs` | line 41 (XML doc) | mirrors the exclusion condition in `AttemptCommittedTick`'s doc comment |
 
 ---
 
