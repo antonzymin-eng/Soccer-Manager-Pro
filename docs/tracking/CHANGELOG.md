@@ -12,7 +12,43 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 10, 2026 (**#28 Player Progression — T1 + T2a LANDED August 8, 2026, plus
+> **Last Updated:** August 11, 2026 (**ERR-028-019 — docs-only close-out for #28 Player Progression's
+> AR passes 5-8, four consecutive production landings (`39c385a`, `cf5abf0`, `8556ddd`, `b798ce2`) that
+> shipped with ZERO `docs/specs/` edits between them — the ERR-028-017 class ("spec+code, same
+> commit" failing) recurring twice more, this time across four commits instead of two.** Derived from
+> reading each commit's own diff, not the summary that named them. Contract changes now recorded that
+> had no normative text anywhere before this pass: the FR-PG-011 id-cursor rule and the M3 club-size
+> rule (each enforced at three-to-four boundaries in `src/player-progression/ProgressionSaveCodec.cs`
+> and `ProgressionEngine.cs`, previously undocumented in full); the `MAX_DERIVABLE_AGE_YEARS`
+> representability-bound constant (Appendix A), whose own value was first set wrong — to a
+> football-plausibility 1000 — and corrected same-session after it broke the `BirthWorldDay` field-width
+> lock ERR-028-006 bought; the `Encode`/`FromBlocks`-vs-`Decode` exception-type split
+> (`ArgumentException` vs `InvalidOperationException`, AR pass 8 M-1), which corrects a now-stale claim
+> in #28 §2.3's F8 row; #30's `PlayerCareerStates.RequireBirthWorldDayWithinClock` (AR pass 6 M2(b)),
+> live in `src/season-save/` since `cf5abf0` with no `docs/specs/season-competition-loop/` row at all.
+> Two behaviour changes stated explicitly rather than silently overwritten: the spend/drain refusal
+> clamp moved `POINT_COST - 1` (AR pass 5, itself undocumented) → `0` (AR pass 6, after execution
+> falsified the "pending fraction" rationale), and `AbilityModel.DrainOnePoint` gained a failure exit
+> (`void` → `bool`) that a save file wedging the day step for ~70 days of CPU with no diagnostic had
+> exposed the absence of. **One OPEN hazard recorded, not resolved:** the new
+> `CurrentAbility == ComputeCA(attributes, position)` save-gate is keyed on a `[GT]` bias table carrying
+> a standing config-loader `TODO` — tuning one cell would make every previously-written save refuse to
+> load, permanently, with no migration path under #30 Appendix B.1's F3; not triggerable today (the
+> table is a compile-time constant, so stored always equals recomputed at write time), bites at the
+> first tune. No tag changed. **Two unrelated hygiene items folded in from this pass's own citation
+> sweep:** `CHANGELOG-src.md` v2.113's renumbering-scope claim corrected (two more rows, not just one,
+> had an internal citation edited); `spec-error-log.md`'s duplicate `## ERR-008-021` heading (two
+> independent write-ups from two concurrent branches, each individually true when written and jointly
+> false once merged) reconciled — the entry whose form survived the August 7 merge marked authoritative,
+> the other annotated superseded rather than deleted. `docs/specs/player-progression-lifecycle/{section-2.md
+> v0.7, section-3.md v0.8, appendices.md v0.6}`, `docs/specs/season-competition-loop/{section-2.md v1.5,
+> appendices.md v1.1}`, `spec-error-log.md` v2.13, `CHANGELOG-src.md` v2.114, `file-manifest.md`. **No
+> `src/` file touched** — `git status --short` after this pass shows only `docs/` changes.
+> `recurring-defect-lint.py --repo .` reports **0 ERROR**. Orientation note: the code review this pass
+> was given also named `src/injuries-medical/MedicalSaveCodec.cs` as changed by these four commits;
+> `git show --stat` on all four shows it was not, so #41's spec was left untouched.)
+>
+> **Last Updated (prior):** August 10, 2026 (**#28 Player Progression — T1 + T2a LANDED August 8, 2026, plus
 > four adversarial-review passes closing August 10, 2026: ERR-029-006 CLOSED, #30's KD-2 slot 1 LIVE,
 > and the career roster MOVED OFF THE WORLD SEED — but the loop found the landing genuinely broken and
 > this record is that repair, not a formality.** **The landing itself (August 8):** `ProgressionEngine`

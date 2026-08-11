@@ -1,11 +1,12 @@
 # Player Progression & Lifecycle #28 — Section 3: Core Algorithms
 
 **Created:** July 23, 2026
-**Last Updated:** August 10, 2026 (v0.7 — ERR-028-018: §3.1 states the seed-day accrual-window rule — the seed day's own band step MUST be credited to `GrowthCursor`, not merely excluded from replay — closing the gap that let a full band traversal accrue one attribute point short of Appendix A / KD-8's `+1/yr` promise)
+**Last Updated:** August 11, 2026 (v0.8 — ERR-028-019: docs close-out for AR passes 5-8, four consecutive production landings (`39c385a`, `cf5abf0`, `8556ddd`, `b798ce2`) with no `docs/specs/` edit — §3.1's spend/drain pseudocode rewritten for the AR pass 6/8 changes (fail-loud on a future-dated `BirthWorldDay`, saturating age narrowing at `MAX_DERIVABLE_AGE_YEARS`, both refusal branches clamp to 0 rather than banking or leaving the cursor, `DrainOnePoint` returns `bool`); §3.1.1's age-formula guard corrected from "guarded at zero" to "fails loud below zero, ordinary at zero"; §3.3 states the AR pass 7 regen construction-day credit; §3.5's fail-loud enumeration rewritten from four value gates to eight, with the Encode/FromBlocks-vs-Decode exception-type split stated per gate, and gains the FR-PG-011 id-cursor and M3 club-size rules (previously undocumented); a new OPEN decision recorded on the `CurrentAbility`/`ComputeCA` save-acceptance predicate, adjacent to the existing `PA_MIN` one)
+**Last Updated (prior):** August 10, 2026 (v0.7 — ERR-028-018: §3.1 states the seed-day accrual-window rule — the seed day's own band step MUST be credited to `GrowthCursor`, not merely excluded from replay — closing the gap that let a full band traversal accrue one attribute point short of Appendix A / KD-8's `+1/yr` promise)
 **Last Updated (prior):** August 10, 2026 (v0.6 — ERR-028-017: AR pass 5 spec corrections — §3.1.1 states the `ageDays ≤ 0 → age 0` guard the formula omitted; §3.4 states the retirement evaluation runs once per `AdvanceDay` CALL on post-replay age (not once per lived day), with the multi-day-gap `RetirementDay` limitation recorded and cross-referenced to T-PG-DET-002; §3.5's byte layout pins the `str` encoding (u32 length + ASCII, #16 §3.2.4.1) and states the four VALUE gates `Decode` applies (previously undocumented), with the `PA_MIN`/`ABILITY_MAX` config-keyed-acceptance-predicate tension against #30 Appendix B.1's posture recorded as an OPEN decision)
 **Last Updated (prior):** August 9, 2026 (v0.5 — ERR-028-014: the never-advanced sentinel retired from #28's legal store states)
 **Last Updated (prior):** August 8, 2026 (v0.4 — ERR-028-006/007/008/009: the signed age anchor, the cross-blob cursor rule, the destination-roster-overwrite refusal, and the F8 sentinel guard)
-**Version:** 0.7
+**Version:** 0.8
 **Status:** APPROVED
 
 ---
@@ -87,7 +88,10 @@ every intervening day's `dailyPts` or lose them across the gap.
 ```
 AdvanceDayForPlayer(ref record, ref lifecycle, worldDay, in trainingInput, curveEnabled):
     # 1. Age is DERIVED — no discrete rollover step (§3.1.1); attribute change is the cursor alone.
-    ageYears  = (worldDay - lifecycle.BirthWorldDay) / DAYS_PER_YEAR    # integer division
+    ageDays = worldDay - lifecycle.BirthWorldDay
+    if ageDays < 0: FAIL LOUD                          # M2(a), ERR-028-019 — a future-dated anchor is
+                                                         #   corrupt state, never age 0 (§3.1.1)
+    ageYears  = saturate(ageDays / DAYS_PER_YEAR, at MAX_DERIVABLE_AGE_YEARS)   # AR pass 5, ERR-028-019
     record.Age = ageYears                                              # keep the record's Age current (cache)
 
     # 2. Per-day point accrual — the ONLY accumulator (FR-PG-002/003).
@@ -96,17 +100,47 @@ AdvanceDayForPlayer(ref record, ref lifecycle, worldDay, in trainingInput, curve
     lifecycle.GrowthCursor += dailyPts
 
     # 3. Spend/drain whole attribute-points at the POINT_COST threshold (deterministic order).
+    #    Both loops CLAMP the cursor to 0 on a refused step and BREAK (AR pass 6, ERR-028-019) — a
+    #    refusal here is PERMANENT within the current band (PA never rises in Growth; no attribute
+    #    rises in Decline), so retaining the fraction never lets a retry succeed and only accrues
+    #    residue that would silently eat the next band's first days (the exact defect ERR-028-018
+    #    fixed at the seed boundary, reopened here if either loop kept a nonzero remainder).
     while lifecycle.GrowthCursor >= POINT_COST:
         if not TrySpendOnePoint(ref record, ref lifecycle):     # respects the PA ceiling (F1)
-            break                                               # at ceiling — leave the cursor (no thrash)
+            lifecycle.GrowthCursor = 0
+            break
         lifecycle.GrowthCursor -= POINT_COST
     while lifecycle.GrowthCursor <= -POINT_COST:
-        DrainOnePoint(ref record, ref lifecycle)                # symmetric decline
+        if not DrainOnePoint(ref record, ref lifecycle):        # AR pass 6 — now returns bool; a fully
+                                                                  #   drained player (every attribute at
+                                                                  #   ATTRIBUTE_MIN) is the loop's failure
+                                                                  #   exit, mirroring the spend side
+            lifecycle.GrowthCursor = 0
+            break
         lifecycle.GrowthCursor += POINT_COST
 
     # 4. Recompute the derived CA summary (never a second accumulator, FR-PG-003).
     lifecycle.CurrentAbility = ComputeCA(in record.Attributes, record.Position)
 ```
+
+**The spend/drain refusal exits were revised twice after this pseudocode was first written
+(ERR-028-019, superseding the account below without deleting it).** The original pseudocode (v0.1-0.7)
+showed the spend-side refusal as `break # at ceiling — leave the cursor (no thrash)` and the drain side
+as an unconditional `DrainOnePoint(...)` call with no failure exit at all — both accurate against the
+code at the time, and both since revised by execution-driven findings:
+- **AR pass 5 (`GrowthCursor = 0` → `POINT_COST - 1`, superseded the same session):** the "leave the
+  cursor" comment was replaced with a clamp to `POINT_COST - 1`, reasoned as preserving "the pending
+  fraction… the next Growth day's accrual can still cross the threshold and try again."
+- **AR pass 6 (`POINT_COST - 1` → `0`, current):** that reasoning was falsified by execution — within
+  one band traversal, PA never rises in Growth and no attribute rises in Decline, so a refused spend is
+  refused on *every remaining day of that band*; the retained fraction bought nothing and cost a whole
+  point of Decline 364 days late (measured: a PA-bound player's first decline point landed on day 4743
+  against an unbound player's day 4379). Clamping to `0` restores the no-residue invariant the
+  ERR-028-018 traversal lock established. The same pass added `DrainOnePoint`'s failure exit — as a
+  `void` no-op at the floor it had none, so an out-of-band cursor ground the loop upward one
+  `POINT_COST` per iteration with no diagnostic (a cursor of `long.MinValue/2` is ~1.26e13 iterations,
+  roughly 70 days of CPU) from a save file that round-tripped byte-exact; `DrainOnePoint` now returns
+  `bool` and the loop breaks on `false`, mirroring the spend side exactly.
 
 **Byte-exactness (FR-PG-006):** every field mutated is integer, and a save carries `GrowthCursor` +
 `BirthWorldDay` + the `[1,20]` attributes. Restore recomputes the identical continuation because
@@ -120,17 +154,50 @@ Growth/Decline bands and zero times in Stable — the literal §4.3 `±1/year` s
 ### 3.1.1 Age derivation — one representation
 
 Age is **derived** from the single serialized anchor `BirthWorldDay` (the authoritative field on the
-lifecycle overlay): `AgeYears = (worldDay − BirthWorldDay) / DAYS_PER_YEAR` (integer division), **guarded
-at zero when `worldDay ≤ BirthWorldDay` (ERR-028-017 — this formula was previously stated unconditionally)**:
-`GrowthProjection.AdvanceDayForPlayer` computes `ageDays = worldDay − BirthWorldDay` and returns `age = 0`
-whenever `ageDays ≤ 0`, rather than dividing. Since `BirthWorldDay` is SIGNED and ordinarily negative for
-a generated player (§3.1.1 below / ERR-028-006), the unconditional formula would otherwise divide a
-non-positive numerator by a positive divisor — never undefined in C# integer arithmetic, but the result
-(zero or a small negative quotient, truncating toward zero) is not a meaningful age for a player who has
-not yet "reached" his own birth day relative to the world clock he is being read against. The guard
-applies at every call — including the ordinary case, where `worldDay` sits at or shortly after
-`BirthWorldDay` and `ageDays` is small but positive, which the unguarded formula already handles
-correctly; the guard only changes the `ageDays ≤ 0` edge. `BirthWorldDay` is pinned once at new-game from
+lifecycle overlay): `AgeYears = (worldDay − BirthWorldDay) / DAYS_PER_YEAR` (integer division).
+
+**SUPERSEDED (ERR-028-019): the "guarded at zero when `worldDay ≤ BirthWorldDay`" claim below, stated
+at ERR-028-017, is no longer what the code does — annotated in place per this project's convention
+rather than silently restated.** ERR-028-017 (v0.6) stated: *"guarded at zero when `worldDay ≤
+BirthWorldDay`… `GrowthProjection.AdvanceDayForPlayer` computes `ageDays = worldDay − BirthWorldDay`
+and returns `age = 0` whenever `ageDays ≤ 0`, rather than dividing."* That was accurate against the
+code at the time. AR pass 6 (M2(a), ERR-028-019) found the guard's `ageDays ≤ 0` case conflated two
+states that must be handled differently, and split it:
+- **`ageDays == 0`** (a player born exactly on the world day being advanced to) is ORDINARY — `age = 0`,
+  unchanged from before.
+- **`ageDays < 0`** (`BirthWorldDay` is AHEAD of `worldDay` — the anchor claims the player is born
+  after the very day he is being advanced to) is now a **FAIL LOUD** (`InvalidOperationException`),
+  never `age = 0`. This state cannot arise from a real career (`SeedFrom` anchors at the seed day;
+  `AdvanceDay` only ever moves `worldDay` forward), so the old else-branch's silent `age = 0` was
+  reading corrupt state as ordinary data — and PERMANENTLY: `ProgressionSaveCodec`'s `DescribeOutOfRangeValues`
+  (§3.5) has no world day to bound the anchor's upper end against — its own ceiling is `uint.MaxValue`,
+  a property of the FORMAT, not of any one clock — so a save carrying a future-dated anchor loaded
+  cleanly and every subsequent `AdvanceDay` silently re-derived age 0 forever (measured before the fix: a
+  35-year-old read `age=0 band=Growth retirementFlag=false` after ten simulated years, and saved cleanly
+  — worse than a permanently-unsavable career, because it is undetectable). The composition boundary
+  (`PlayerCareerStates.RequireBirthWorldDayWithinClock`, called from both `SeasonLoop`'s per-player
+  walk and `SeasonSaveManager`'s block-level walk — #30-owned, see #30 Appendix B.1) now refuses a
+  `BirthWorldDay` ahead of the world clock BEFORE a day step can reach this guard; the guard here is the
+  structural half, independent of any caller remembering to run that check.
+
+Both the ordinary `ageDays == 0` case and the guarded `ageDays < 0` case apply at every call —
+including the ordinary case, where `worldDay` sits at or shortly after `BirthWorldDay` and `ageDays` is
+small but positive, which the plain division formula already handles correctly.
+
+**The narrowing is SATURATING, at `MAX_DERIVABLE_AGE_YEARS` (AR pass 5, ERR-028-019).** Once `ageDays`
+is known non-negative, `ageYears = ageDays / DAYS_PER_YEAR` is narrowed from `long` to `int` for
+`record.Age`; above `MAX_DERIVABLE_AGE_YEARS` the narrowing clamps rather than truncates, so the
+narrowing itself cannot produce a corrupt `int` even from an anchor whose `long` quotient would
+overflow. `MAX_DERIVABLE_AGE_YEARS` (Appendix A) is a **REPRESENTABILITY** bound, not a
+football-plausibility one, and the constant's own history records a correction worth repeating here: it
+was first set to `1000` — a "reasonable age" sanity number — in the same commit that added it, and that
+value broke the lock proving the `i64` `BirthWorldDay` field width `ERR-028-006` bought (which by
+construction needs an anchor whose derived age does NOT fit in 32 bits). A representability bound and a
+football-plausibility bound are different constants with different failure modes; conflating them once
+already cost a same-session revert. The shipped value is `100,000,000` — see Appendix A for the full
+derivation.
+
+`BirthWorldDay` is pinned once at new-game from
 #27's generation-time `PlayerRecord.Age`
 (`BirthWorldDay = newGameDay − Age0 · DAYS_PER_YEAR`, where `Age0 = PlayerRecord.Age` at new-game).
 There is **no** `AgeAnchorDay` field and **no** rollover `while`-loop — age is a pure function of the
@@ -207,6 +274,21 @@ clubId`; successive regens for the same club draw at successive `ActionOrdinal`s
 so a club's newgen sequence is reproducible. Club/nation come from `referenceRosterWorld` (read-only,
 #27). A regen's PA is drawn (a younger player with a high PA is a "wonderkid"); its `[1,20]` attributes
 are generated below PA so the player has room to grow.
+
+**A regen's `GrowthCursor` MUST credit its own construction day's band step, exactly like a seeded
+player's (AR pass 7, ERR-028-018/ERR-028-019).** `SeedLifecycle` (§3.1) and `GenerateRegen` are the two
+sites that construct a `PlayerLifecycle` from scratch, and both anchor `LastAdvancedWorldDay` at their
+own construction day — which, per §3.1's "already accounted for" rule, means that day's own band step
+must be CREDITED to `GrowthCursor`, not left at `0`. ERR-028-018 fixed this at `SeedLifecycle` only;
+`GenerateRegen` was not visited, and a regen anchored at `worldDay` with `GrowthCursor = 0` accrued
+`N · DAYS_PER_YEAR − 1` days over its remaining *N*-year Growth band, identically to the pre-ERR-028-018
+defect — measured: a regen gained +5 points over its remaining Growth band where an identically
+generated seeded player gained +6, the same 364-day residue surviving into Decline. `GenerateRegen` now
+sets `GrowthCursor = BandStepFor(age)` at construction — the construction day's own `DailyPoints` step
+for the drawn age's band (`GROWTH_DAILY_POINTS` in Growth, `DECLINE_DAILY_POINTS` in Decline, `0` in
+Stable; a regen's drawn age is always in `[REGEN_AGE_MIN, REGEN_AGE_MAX]`, which is always below
+`GROWTH_AGE` today, so this is Growth-band only in practice — but classified rather than hard-coded, so
+it does not silently become wrong if either age constant moves).
 
 ## 3.4 Retirement + the season boundary (KD-5 / KD-6)
 
@@ -288,22 +370,99 @@ followed by that many ASCII bytes; `ProgressionSaveCodec.Encode` refuses a non-A
 site rather than mangling it silently (the never-write-what-Decode-refuses rule), so a name outside
 ASCII is a save-time failure, not a round-trip corruption.
 
-**The fail-loud enumeration below was incomplete — it named only the framing gates, not the VALUE
-gates `Decode` applies to what the framing successfully reads (ERR-028-017).** `ReadPlayer` range-gates
-four value fields the framing-level list omits entirely: each `[1,20]` attribute against
-`[ATTRIBUTE_MIN, ATTRIBUTE_MAX]`, `weakFootRating` against `[WEAK_FOOT_MIN, WEAK_FOOT_MAX]` (#27's
-bounds), `age` against `≥ 0` (the field is a derived cache — see §3.1.1's SIGNED `birthWorldDay` for the
-authoritative anchor, which MAY legitimately be negative; the cache itself may not), and
-`potentialAbility` against `[PA_MIN, ABILITY_MAX]` (the F1 growth ceiling — a corrupt value below the
-floor would silently freeze a player's growth forever, and one above the ceiling would silently unbound
-it). All four throw `InvalidOperationException`, matching the framing gates' type (see the corrected F3
-row, §2.3). **`PA_MIN` and `ABILITY_MAX` are `[GT]` (Appendix A)** — this makes the `potentialAbility`
+**The fail-loud enumeration below was incomplete when ERR-028-017 wrote it — and is incomplete AGAIN
+now, this time by count rather than by omission-of-a-whole-class (ERR-028-019 SUPERSEDES the four-gate
+enumeration ERR-028-017 recorded, per this project's convention of annotating a superseded claim in
+place rather than silently restating it).** ERR-028-017 (v0.6, August 10, 2026) stated that `ReadPlayer`
+range-gated exactly FOUR value fields the framing-level list omitted entirely: attributes, weak-foot,
+age, and `potentialAbility`. That was accurate against the code at the time. AR passes 5 through 8
+(August 10-11, 2026) added FOUR MORE, all through the same shared owner
+(`ProgressionSaveCodec.DescribeOutOfRangeValues`), for **EIGHT** value gates total:
+
+1. Each `[1,20]` attribute against `[ATTRIBUTE_MIN, ATTRIBUTE_MAX]`.
+2. `weakFootRating` against `[WEAK_FOOT_MIN, WEAK_FOOT_MAX]` (#27's bounds).
+3. `age` against `≥ 0` (the field is a derived cache — see §3.1.1's SIGNED `birthWorldDay` for the
+   authoritative anchor, which MAY legitimately be negative; the cache itself may not).
+4. `potentialAbility` against `[PA_MIN, ABILITY_MAX]` (the F1 growth ceiling — a corrupt value below the
+   floor would silently freeze a player's growth forever, and one above the ceiling would silently
+   unbound it).
+5. **`growthCursor` against `(-POINT_COST, POINT_COST)` (AR pass 6, ERR-028-019) — no `[GT]` judgement
+   needed, since the band is DERIVABLE.** Both spend/drain loops (§3.1) leave `|GrowthCursor| ≤
+   POINT_COST - 1` after any completed step, and construction (`SeedLifecycle`/`GenerateRegen`, §3.1/§3.3)
+   writes one DAY's band step — `GROWTH_DAILY_POINTS` (`+1`) or `DECLINE_DAILY_POINTS` (`-1`), never a
+   whole POINT — so `|GrowthCursor| < POINT_COST` is exactly the serialized invariant. The distinction
+   matters and is not pedantry: `POINT_COST == DAYS_PER_YEAR == 365` (KD-8), so an implementer reading
+   "one whole point" as the construction credit would seed `|GrowthCursor| = POINT_COST`, which this very
+   gate refuses — the strict inequality is load-bearing, and §3.1's accrual step is what construction
+   mirrors, not §3.1's spend threshold. Out of range, this field does not merely corrupt data — it WEDGES the day step: before this
+   gate, an out-of-band cursor ground the drain loop upward one `POINT_COST` per iteration with no
+   failure exit, from a save file that round-tripped byte-exact.
+6. **`birthWorldDay` against `[-(MAX_DERIVABLE_AGE_YEARS · DAYS_PER_YEAR), uint.MaxValue]` (AR pass 5,
+   ERR-028-019) — the LOWER half only; see §3.1.1 for the UPPER half, which this codec cannot check
+   (it has no world clock).** `BirthWorldDay` is the AUTHORITATIVE age anchor (§3.1.1) and was, until
+   this gate, the one lifecycle field with no range gate at all — an anchor far below the floor narrowed
+   the derived age to `int.MinValue`, which `ClassifyAgeBand` reads as `Growth` (so the player grows
+   forever and `RETIREMENT_AGE` can never fire — ERR-028-006's failure mode through a different door),
+   and which this very gate then refused as a negative age, making a career that loaded, advanced and
+   projected fine PERMANENTLY unsavable.
+7. **`currentAbility` MUST equal `ComputeCA(attributes, position)` exactly (AR pass 8 L-4, ERR-028-019).**
+   Guarded on the position ordinal's own validity first — `ComputeCA` indexes
+   `PlayerDatabaseConstants.PositionAttributeBias` by the raw ordinal with no bounds check, so an
+   undefined position would throw `IndexOutOfRangeException` ahead of the boundary's own, more specific
+   `Enum.IsDefined` refusal, which must be the one that fires. `CurrentAbility` is a DERIVED cache
+   (FR-PG-003) that self-heals on the *next* day step — but the spend/drain loop above reads it BEFORE
+   that recompute, and (since AR pass 6) a refused spend at the ceiling now DISCARDS the fraction rather
+   than retaining it, so a stale restored value costs a whole `[1,20]` point PERMANENTLY at the next
+   threshold crossing, not merely a one-step delay. **This is recorded as an OPEN decision below**,
+   because the equality is checked against `PositionAttributeBias`, which is `[GT]` and carries a
+   standing `TODO: replace with config loader (Stage 1)`.
+8. **`retirementDay` is gated against `retirementFlag` (AR pass 8 L-4, ERR-028-019): unset MUST carry
+   `0`; set MUST carry a day at or before `lastAdvancedWorldDay`.** `RetirementFlag` is sticky — set
+   once, at the world day it fires, and never cleared (§3.4) — so `RetirementDay`'s own legal range is a
+   function of the flag, not an independent field; it cannot legitimately fire on a day this player was
+   never advanced to.
+
+**All eight throw `InvalidOperationException` from `Decode`, matching the framing gates' type (see the
+corrected F3 row, §2.3) — but this is now stated as a general rule, not merely true of `Decode`'s value
+gates specifically (ERR-028-019, AR pass 8 M-1).** Every shared boundary rule in this section — the
+eight value gates above, plus the FR-PG-011 id-cursor rule and the M3 club-size rule below — is now
+split into a `Describe*` half (returns the violation text, throws nothing) and a `Require*` wrapper
+around it. `Encode` and `ProgressionEngine.FromBlocks` (both bad-ARGUMENT boundaries) call the
+`Require*` wrapper and get `ArgumentException`; `Decode` (a corrupt-FILE boundary) calls the `Describe*`
+half directly and throws `InvalidOperationException` of its own. Before AR pass 8, the id-cursor and
+club-size rules' `Decode` call sites threw the SAME `ArgumentException` `Encode` throws, naming an
+argument (`clubs`/`nextPlayerId`) `Decode`'s own signature does not have — contradicting `Decode`'s own
+`<exception>` doc and the ERR-029-004/ERR-041-008 convention already binding on this section's own value
+gates. Three decode-side test locks had been asserting the observed (wrong) `ArgumentException` rather
+than the contract; they are retyped, not merely re-passed.
+
+**`PA_MIN` and `ABILITY_MAX` are `[GT]` (Appendix A)** — this makes the `potentialAbility`
 gate a save-acceptance predicate keyed on tunable config, the exact posture #30 Appendix B.1 reasons
 AGAINST for its own appearance sub-blob ("gating it would turn a retune into data loss"). **This is
 recorded as an OPEN decision, not resolved here**: whether the range gate should instead read from a
 `[FIXED]`/`[DERIVED]` bound, or whether the tension with #30's stated posture is acceptable because this
 block is the roster itself (KD-4) rather than an overlay, is an owner call for a future pass. Nothing in
 this correction changes any tag, retags any constant, or migrates the gate.
+
+**A second, sharper instance of the same hazard class, recorded here and NOT resolved (ERR-028-019,
+carrying forward AR pass 9's finding).** Gate 7 above — `currentAbility == ComputeCA(attributes,
+position)` — refuses to load any save where the stored value differs from what recomputing produces.
+`ComputeCA` weights attributes through `PlayerDatabaseConstants.PositionAttributeBias`, tagged `[GT]`
+with a standing `TODO: replace with config loader (Stage 1)` (`src/CLAUDE.md`, "Migration status").
+**Consequence: tuning one cell of that bias table makes every previously-written save refuse to load,
+permanently, with no migration path** — F3 (#30 Appendix B.1) forbids cross-version migration, and a
+`[GT]` retune is not a format-version bump, so there is no mechanism to reconcile an old file's stored
+`CurrentAbility` against a new bias table's recomputation. **Not triggerable today**: `PositionAttributeBias`
+is presently a compile-time constant, so a stored value always equals its recomputation at write time —
+the defect bites at the FIRST tune of that table, which is a planned Stage-1 activity, not a hypothetical
+one. This is the same hazard class as the `PA_MIN`/`ABILITY_MAX` OPEN decision immediately above, one
+gate sharper: `PA_MIN`/`ABILITY_MAX` bound a value against config-set floor/ceiling constants, while this
+gate makes save VALIDITY itself a function of a `[GT]` formula's current coefficients. **This is deliberately
+NOT resolved here** — no tag is changed, no code is changed. The alternative worth recording for a future
+owner pass: recompute `CurrentAbility` from the attributes at `Decode` time instead of refusing a mismatch
+(the field is a derived cache — nothing forbids re-deriving it on load), which would trade the "corrupt
+save" diagnostic this gate currently provides for silent self-healing on every bias-table retune; which of
+the two is preferable is an owner call, not something this pass decides.
 
 **`birthWorldDay` widened `u32 → i64` (ERR-028-006).** The anchor MUST be signed (§3.1.1) and a 32-bit
 signed field is not comfortably wide against `Age0 · DAYS_PER_YEAR` for long-lived save histories, so
@@ -321,16 +480,63 @@ ascending** on decode, so a corrupt blob cannot smuggle in a duplicate; trailing
 `PlayerPosition` ordinal or a non-ASCII name) — the never-write-what-Decode-refuses rule.
 `Restore(byte[])` applies the fail-loud gate posture (FR-PG-018) in that order: magic, then version,
 then an overflow-safe `ReadCount` for each count prefix (`0 ≤ count ≤ remaining`), then the ascending-key
-check per entry, then the trailing-byte check, **then, per player (ERR-028-017 — this ordering previously
-stopped at framing and never named these), the VALUE gates**: each `[1,20]` attribute against
-`[ATTRIBUTE_MIN, ATTRIBUTE_MAX]`, `weakFootRating` against `[WEAK_FOOT_MIN, WEAK_FOOT_MAX]`, `age` against
-`≥ 0`, and `potentialAbility` against `[PA_MIN, ABILITY_MAX]` (the F1 ceiling) — see the note above this
-layout block for why the last of those is a save-acceptance predicate keyed on `[GT]` config, recorded as
-an open decision, not resolved here. The block is opaque to the season-save root, which frames
+check per entry, then the trailing-byte check, then per player the **EIGHT** VALUE gates enumerated
+above (attributes, weak-foot, age, `potentialAbility`, `growthCursor`, `birthWorldDay`,
+`currentAbility`, `retirementDay` — ERR-028-017 named the first four of these, ERR-028-019 the other
+four; see that discussion above this layout block for the `[GT]`-keyed-acceptance-predicate open
+decisions on `potentialAbility` and `currentAbility`), then, once every player has decoded, the
+**global** checks that need the whole block assembled: the cross-club duplicate-id rule
+(`RequireGloballyUniquePlayerIds`/`ERR-041-019`), the never-advanced-sentinel rule (`ERR-028-014`), the
+M3 club-size rule (`[1, CLUB_SQUAD_SIZE]` per club, ERR-028-019), and the FR-PG-011 id-cursor rule
+(`nextPlayerId` ahead of every carried `PlayerId`, ERR-028-019) — see the id-cursor and club-size
+paragraphs below for what each refuses and why. **`Decode` throws `InvalidOperationException` for every
+one of these; `Encode` and `ProgressionEngine.FromBlocks` throw `ArgumentException`** — the M-1 split
+stated above, restated here because this is the ordering paragraph a future reader of the codec follows
+top to bottom. The block is opaque to the season-save root, which frames
 it as one more length-prefixed sub-blob (FR-PG-017) — the `SeasonSaveCodec` never parses it, so
 `PROGRESSION_SAVE_FORMAT_VERSION` is independent of every other format version. **F3 makes the first
 written layout the format permanently** — the ERR-029-004 rule — so this is not a draft pending
 adjustment; a future field addition is a new format version, never a reordering of this one.
+
+**A `null` player name round-trips to `""` — a known, deliberate non-idempotency, not a defect (AR pass
+8 L-5, ERR-028-019).** `CanonicalSerializer.WriteString` writes length `0` for a `null` string and the
+guarded string read returns `string.Empty` for a zero-length body, so the BYTES a `null` name and an
+empty name produce are identical — the same input always produces the same output, so this is not a
+round-trip defect — and no sim code reads names, so it has no downstream effect. Recorded here so a
+future reader does not re-file it: this is a property of `CanonicalSerializer`'s own string contract
+(#16 §3.2.4.1), not of this codec, and is deliberately left alone rather than "fixed" by refusing a
+`null` name at `Encode`, which would turn a harmless identity collapse into a new fail-loud surface for
+no behavioural gain.
+
+**The FR-PG-011 id-cursor rule is enforced at FOUR boundaries sharing one owner (AR pass 5 + 8,
+ERR-028-019) — previously enforced at exactly ONE (`ProgressionEngine.FromBlocks`), and undocumented in
+this spec at all until now.** `NextPlayerId` must exceed every carried `PlayerId`, or the next regen
+allocation collides with a live player and one player ends up with two careers sharing state silently.
+Before AR pass 5, this rule lived only in `FromBlocks` — and since `Restore` is `Decode` + `FromBlocks`,
+`Encode` could write a blob whose own `Restore` refuses forever (probe-verified before the fix: encoding
+a club carrying players {10, 11} with `nextPlayerId: 0` produced a blob that decoded cleanly and whose
+`Restore` then threw permanently; the codec's own round-trip fixture had satisfied the rule only by
+coincidence). AR pass 5 added the check to `Encode` and `Decode`, sharing one owner
+(`DescribeIdCursorNotAheadOfCarriedIds`) with `FromBlocks`. AR pass 8 (L-3) closed the fourth boundary:
+`ProgressionEngine.SeedFrom` computed `maxPlayerId + 1` and assigned it directly with NO check at all,
+so at `maxPlayerId == int.MaxValue` the addition silently overflowed (this project runs unchecked
+arithmetic by default) to a negative cursor — a store that seeds, advances and plays but can NEVER be
+saved, since the wrapped negative value reads as far behind every carried id it is actually ahead of.
+`SeedFrom` now computes the candidate cursor and calls the same shared gate before assigning it.
+Exception split: `Encode`/`FromBlocks`/`SeedFrom` throw `ArgumentException`; `Decode` throws
+`InvalidOperationException` (M-1).
+
+**The M3 club-size rule is enforced at THREE boundaries sharing one owner (AR pass 6, ERR-028-019) —
+previously enforced NOWHERE, at any boundary, in this spec or in code.** A club's player count must sit
+in `[1, CLUB_SQUAD_SIZE]` — `PlayerDatabase.Squad`'s own constructor bound, and #28's block IS the
+roster (KD-4), so `ProgressionEngine.SquadFor` builds a `Squad` straight off it. Before this gate, a
+0- or 30-player club advanced, saved and loaded cleanly and only threw from `SquadFor`, mid-round, inside
+`ISquadProvider.ResolveByClubId`, after earlier fixtures in that round had already been applied to the
+table — a club outside `Squad`'s own bound is state every boundary that can write or read it must
+refuse, not just the one that happens to call `SquadFor` next. Shared owner
+(`DescribeClubSizeOutOfRange`), called from `Encode`, `Decode` and `FromBlocks`. Same exception split as
+the id-cursor rule: `Encode`/`FromBlocks` throw `ArgumentException`; `Decode` throws
+`InvalidOperationException` (M-1).
 
 **The cross-blob cursor rule (ERR-028-007).** `LastAdvancedWorldDay` is the **fourth** persisted
 per-player cursor in #30's save frame — after #29's training cursor, #41's medical cursor, and #30's
@@ -354,6 +560,21 @@ every clock value it might be paired against. The sentinel is not a legal store 
 decode path) **refuses** a lifecycle carrying the sentinel cursor. With no legal state left for the
 exemption to protect, the ordinary bidirectional lag predicate above applies unconditionally at all
 three boundaries.
+
+**The sibling anchor-vs-clock rule (AR pass 6 M2(b), ERR-028-019) — a DIFFERENT invariant from the
+cursor rule immediately above, checked at the same two of the three boundaries.** `BirthWorldDay`
+(§3.1.1) is an ANCHOR, not a cursor — it is checked ahead-only, never for lag, because a player's age
+being derived from an arbitrarily old anchor is ordinary (a player born long before the epoch is the
+normal case for a generated player, ERR-028-006), while an anchor AHEAD of the world clock is corrupt
+state (§3.1.1's M2(a) fail-loud guard). This codec's own `DescribeOutOfRangeValues` (this section, gate
+6 above) cannot enforce the ahead-of-clock half — it has no world day to bound against, only the
+format's own `uint.MaxValue` ceiling — so the check lives at the **composition and file boundaries
+`ProgressionSaveCodec` does not own**: `PlayerCareerStates.RequireBirthWorldDayWithinClock`
+(`src/season-save/`, #30-owned), called from both `SeasonLoop`'s per-player composition walk and
+`SeasonSaveManager`'s block-level walk, refuses `BirthWorldDay > worldTick` before a day step can reach
+§3.1.1's guard. This is documented in full at #30 Appendix B.1 (the cross-blob cursor-vs-clock
+paragraph's sibling) and #30 §2.3's new **F10** row — cited here rather than restated, since the
+mechanism lives in an assembly #28 MUST NOT reference (§4.1).
 
 **Obligation for the deferred season boundary (regen insertion).** `RunSeasonBoundary` (§3.4) is not
 implemented by this landing, but when it is, a regen inserted mid-career **MUST** have its
@@ -383,4 +604,5 @@ about not erasing a roster the codec can actually see.
 | 0.5 | 2026-08-09 | — | ERR-028-014: §3.1's `AdvanceDay` pseudocode loses the never-advanced branch and its "anchors; cannot know an earlier start" comment, which was false — `SeedFrom` is handed the seed day, so the store always knows it; the seed-day-is-the-cursor rule is stated in its place. §3.5's cursor rule drops the sentinel exemption from the cross-blob cursor check — the exemption's premise (copied from #29/#41, sound there) is false for #28, whose fresh state carries a clock-anchored quantity (derived age); the sentinel is no longer a legal store state at either boundary, `FromBlocks` refuses it. §3.5 gains the deferred-season-boundary obligation: a mid-career regen insertion must anchor its cursor at its insertion day, for the same reason. Spec + code, same commit. |
 | 0.6 | 2026-08-10 | — | ERR-028-017 (AR pass 5 spec-vs-code sweep, found against the T1/T2a landing, no code change). **§3.1.1**: the age formula is stated unconditionally; `GrowthProjection.AdvanceDayForPlayer` guards `age = 0` when `ageDays ≤ 0` rather than dividing — now stated. **§3.4**: the daily retirement check's placement was undocumented — it runs ONCE per `AdvanceDay` call (in `ProgressionEngine.AdvancePlayerTo`, which wraps the whole gap-replay loop), against the age derived at the call's target day, never once per lived day inside the replay; `RetirementDay` is therefore stamped with the call's target day, not the earlier day within a multi-day gap on which the threshold was actually crossed — recorded as a known limitation and cross-referenced to §5's T-PG-DET-002 far-future-gap tests, which a reader would otherwise rebuild. **§3.5**: the byte layout left `str` unencoded (now pinned: `u32` length + ASCII, #16 §3.2.4.1) and its fail-loud enumeration named only framing gates, omitting the four VALUE gates `Decode` applies (attribute range, weak-foot range, non-negative age, `PotentialAbility` within `[PA_MIN, ABILITY_MAX]`) — now stated, with the `PA_MIN`/`ABILITY_MAX` `[GT]` tags' tension against #30 Appendix B.1's no-`[GT]`-gating-on-decode posture recorded as an OPEN decision, not resolved. |
 | 0.7 | 2026-08-10 | — | ERR-028-018 (High): §3.1 gains the accrual-window paragraph "already accounted for" was silent on — anchoring `LastAdvancedWorldDay` at the seed day stops that day being REPLAYED, but says nothing about whether `GrowthCursor` was CREDITED for it, and the code shipped crediting nothing. Since a band exit is decided by the derived age, not the cursor, that left every full band traversal one whole attribute point short (`N · DAYS_PER_YEAR − 1` days accrued, not `N · DAYS_PER_YEAR`) with a permanent residue eating the first year of the next accruing band — contradicting Appendix A / KD-8's `+1/yr` promise. `ProgressionEngine.SeedLifecycle` now credits the seed day's own band step at construction; spec text now states this as a MUST rather than leaving it implied by "already accounted for". Spec + code, same commit in spirit — code landed at `789ea74`, this row supplies the close-out FR-CS-057 requires. |
+| 0.8 | 2026-08-11 | — | ERR-028-019 — docs close-out for AR passes 5-8 (`39c385a`, `cf5abf0`, `8556ddd`, `b798ce2`), four consecutive production landings with no `docs/specs/` edit at all. **§3.1**: the spend/drain pseudocode rewritten — fail-loud on `ageDays < 0` (M2(a), AR pass 6) rather than the retired `ageDays ≤ 0 → age 0` guard; saturating narrowing at `MAX_DERIVABLE_AGE_YEARS` (AR pass 5); both spend and drain refusal branches now clamp `GrowthCursor = 0` and `break` (superseding the AR-pass-5-only `POINT_COST - 1` clamp this section never carried, and the original no-exit `DrainOnePoint` call, AR pass 6 High); the two-clamp-values history stated explicitly so a reader is not left to reconstruct it from `spec-error-log.md`. **§3.1.1**: the age-formula guard corrected — `ageDays == 0` is ordinary (age 0), `ageDays < 0` now FAILS LOUD rather than silently deriving age 0 (M2(a)); the ERR-028-017 "guarded at zero" claim SUPERSEDED in place; `MAX_DERIVABLE_AGE_YEARS`'s own history (first set to a football-plausibility 1000, corrected same-session to the representability bound 100,000,000) stated so the tag distinction is not re-litigated. **§3.3**: regen construction now credits `GrowthCursor` at its own construction day's band step (AR pass 7), the second of two `PlayerLifecycle` construction sites ERR-028-018 needed and did not reach at `SeedLifecycle` alone. **§3.5**: the four-value-gate enumeration ERR-028-017 recorded is SUPERSEDED (not restated) by eight; the Encode/FromBlocks-vs-Decode `ArgumentException`/`InvalidOperationException` exception-type split (AR pass 8 M-1) stated as a general rule covering every shared boundary rule in this section, correcting F8's stale claim (§2.3) that both codec sides threw the same type for the sentinel gate; the FR-PG-011 id-cursor rule (four boundaries, including the AR-pass-8 `SeedFrom` overflow fix) and the M3 club-size rule (three boundaries) stated in full — neither had ANY normative text in this spec before this pass; the null-name non-idempotency documented as deliberate (AR pass 8 L-5); a new paragraph cross-references the #30-owned `BirthWorldDay`-vs-clock composition/file check (M2(b)) to #30 Appendix B.1 rather than restating a mechanism §4.1 forbids #28 from referencing; a new OPEN decision recorded on the `CurrentAbility`/`ComputeCA`/`PositionAttributeBias` save-acceptance predicate (AR pass 9's finding), adjacent to the existing `PA_MIN`/`ABILITY_MAX` one, not resolved — no tag changed, no code changed. Code unchanged by this pass; verified against `src/player-progression/*.cs` at commit `6987dbf`. |
 #endregion
