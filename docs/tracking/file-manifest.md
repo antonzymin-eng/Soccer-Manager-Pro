@@ -1,7 +1,170 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 9, 2026 — **CORRECTION to the entry below: `ERR-008-024` was recorded "filed + resolved". It is not.** The fix — ranking §3.1.5.2's 8-sector scan on `spaceInSector × DirectionQuality_DRIBBLE(sectorDir, toGoal)` instead of `spaceInSector` alone — was **implemented, measured, and REFUSED**, the KD-CC7 pattern (`close-chance-creation-design.md` §4). It DOES fix the symptom: `sim_match_engine_close_chance` goes meanCosine −0.165 / goalwardShare 0.407 (both failing) to **PASS** (bounds −0.16 / 0.42, neither moved). But the same build **stalls play outright** — `sim_match_engine_play_develops` fails with "play stalled: last possession change at tick 18424, ball last moving at tick 18465 of 32400" — and `sim_match_engine_shot_outcomes` fails `goals-still-scored` at **0**. A wider `space × DirectionQuality` form produced the identical stall at the identical tick, plus mean-shot-distance 25.41 m against a 24.00 m ceiling. **Refused, not landed.** No new files. **Reverted (production):** `src/decision-tree/OptionGenerator.cs` back to the pre-fix baseline logic byte-for-byte (comment-only diff; `git diff 23f8dd9 -- src/decision-tree/OptionGenerator.cs` has zero non-comment lines) — the long explanatory note at the defect site now records the refusal. Kept, behaviour-neutral: `src/decision-tree/UtilityWeights.cs` v1.14 (+ public static `DribbleDirectionQuality(Vector2, Vector2)` — the §3.2.4.1 formula hoisted so generation and scoring can't drift apart if this is retried), `src/decision-tree/UtilityScorer.cs` v1.16 (`ComputeDribbleDirectionQuality` delegates to it; behaviour there unchanged). **Reverted (tests):** `src/decision-tree/Tests/OptionGeneratorTests.cs` — the 2 §3.1.5.2 locks the attempted fix added are REMOVED (they locked behaviour that no longer exists); `DecisionTree.Tests` back to **129 passed / 4 skipped / 0 failed**. **Specs:** `docs/specs/decision-tree/section-3-1.md` v1.8 (pseudocode reverted to `argmax(space_in_dir)`, ties to the earliest sector; ERR-008-024 callout rewritten to record a KNOWN, MEASURED, UNFIXED defect). **Tracking:** `spec-error-log.md` v1.99 (ERR-008-024 status → recorded, not fixed), `close-chance-creation-design.md` v1.4 (§7 item 6 REOPENED), both changelogs, this manifest. Prior (overstated) entry below, left unedited per this file's convention.
+**Last Updated:** August 9, 2026, later still yet again — **`close-chance-creation-design.md` §10.10
+(v2.1) — Report C5d, the cross landing-point census, WITHDRAWS §10.8's "attack the ball" ranking a
+second time, and `match-engine-wiring-backlog.md` §5 (v1.5) is reconciled to match.** Report C5d was
+measured in §10.8's own run (`TD_CREATION_DIAGNOSTIC=1`, `CloseChanceDiagnosticTests` v1.4, 6 seeds ×
+90 min) and had not been read: at a Cross's first ground contact, an attacker is within 5 m in
+~96–99% of episodes (home n=79, 30.8 m from the attacked goal, 1.10 attackers within 5 m, 82% exactly
+one; away n=91, 32.2 m, 1.07, 91% exactly one) — the opposite of §10.8's headline that nobody is near
+the ball. §10.8's Series 1 pooled 1,081 episodes against only 392 aerial final-third passes under a
+gate that closes on every ground touch or end change, and the distribution is bimodal (30–37% of
+episodes carry a defender within 0.5–1.5 m, with a long tail dragging the mean to 4–6 m); §10.8 item 2
+read the Series 1b contamination signal (ball at 0.59 m, on the 0.50 m gate floor) correctly and
+ranked on the same population anyway. The mechanism §10.8 proposed to build already exists and is
+live — `OptionGenerator.cs:822` `GenerateInterceptCandidate` (#8 §3.1.9 INTERCEPT,
+`U_BASE_INTERCEPT = 0.55`, every off-ball agent every stride) — so §10.6's and §10.8's shared claim
+that nothing moves a player toward the ball's arrival point is FALSE; what is true is narrower (the
+projection is Z-blind — `FilteredView.BallPerceivedPosition` is a `Vector2`, a #7 surface — its
+horizon `MAX_INTERCEPT_TIME` = 1.5 s is frozen under KD-W1 against a measured 2.83 s mean
+time-to-rest, and no instrument reports off-ball action mix). The real signal is the 30.8/32.2 m
+landing distance itself — crosses land at roughly twice the 16.5 m box depth from goal — which points
+at **C4** (the delivery, already in the wiring backlog), not at pursuit. No new lever ranked; what an
+honest ranking needs is recorded (per-delivery reachability + a provenance tag on the aerial census),
+along with the fact that this project has no football reference figure for nearest-agent separation
+anywhere (`invariants.md` §5 checked; no such row), which is what let 4–6 m read as a finding. Fourth
+retraction in this chain — §10.6's census artifact, §10.7's withdrawal, §10.8's re-ranking, this — and
+the lesson recorded is that the deciding number was in the instrument's own output for both §10.6 and
+§10.8 and was never read; the instrument was correct both times, only the reading was selective. §10.8
+conclusion 3 struck through and marked WITHDRAWN AGAIN in place, pointing to §10.10; its Series
+1/1b/2/3 measurements are unchanged. **`match-engine-wiring-backlog.md` §5's note rewritten** to
+record the full sequence (§10.7 withdrawn → §10.8 re-ranked → §10.10 withdrawn again) rather than only
+the first withdrawal, which is what had let the two documents disagree since §10.8 landed without a
+corresponding update here; a standing same-commit cross-reference rule is added so this cannot drift
+a third time. **Documentation only — no code changed, nothing committed, no gate run.** **Modified:**
+`docs/tracking/close-chance-creation-design.md` (§10.8 conclusion 3 struck through, §10.10 added,
+VERSION HISTORY → v2.1), `docs/tracking/match-engine-wiring-backlog.md` (§5 note rewritten, VERSION
+HISTORY → v1.5), this manifest. `python3 tools/recurring-defect-lint.py --repo .`: **0 ERRORs**.
+Prior entry below.
+
+**Last Updated (prior):** August 9, 2026, later still yet — **`close-chance-creation-design.md` §10.9
+(v1.8) — a falsifier run against the standing `sim_match_engine_close_chance` failure, to decide
+whether the band is catching a mechanism regression or just measuring a population change.**
+Documentation only; no code changes, nothing committed, no gate run. Post-C1 HEAD `02f7ba7`:
+`UtilityWeights.DRIBBLE_GOAL_DIR_MIN_MODIFIER` measured at its term-off identity (1.0) against the
+shipping value (0.80) via a temporary local literal edit, reverted immediately after each run —
+term-off meanCosine **−0.413**, term-on **−0.165**, on/off delta **+0.248**, against §8's pre-C1
+delta of **+0.308** at the same two rungs: **≈ 83% preserved**, and roughly a factor of seven from
+the delta (≈ 0.035) a genuine mechanism collapse would have produced. **Conclusion: the locked
+`DirectionQuality_DRIBBLE` term (ERR-008-018/KD-CC2) did not regress under C1 (`ERR-012-011`); the
+band failed because C1 legitimately moved roughly a third of final-third samples onto #12's
+`PullFactor` `InPoss` column, which was statistically unexercisable when the bounds were fitted and
+has never itself been calibrated** — the scenario is, in its present form, a proxy for composed
+positioning rather than for the term it was built to lock. Caveat recorded, not buried: the ≈17%
+erosion is real; if a future change widens it, the falsifier must be re-run rather than this
+conclusion inherited (recipe recorded in §10.9 item 3, cheap to repeat). **Disposition: hold red,
+queue for the KD-W1 calibration pass, do NOT rebaseline the band a third time** — a band rebaselined
+twice already (§9 Acceptance-1, Acceptance-3) stops being a lock, and retuning the `InPoss` column
+today would fit a `[GT]` against an engine with no tackling (wiring backlog W2), no aerial reception
+(§10.3 Bound B), and, per §10.8, nobody within 4–6 m of an aerial ball — an owner-facing
+recommendation, not a decision taken here. The disposition was reached independently by two routes
+(an advisory-model read and this session's own analysis of §7–§10.8) before the falsifier ran;
+agreement between them was tested rather than accepted, which is what turns it into evidence.
+**Modified:** `docs/tracking/close-chance-creation-design.md` (§10.9 added, VERSION HISTORY → v1.8),
+this manifest. `python3 tools/recurring-defect-lint.py --repo .`: **0 ERRORs**. Prior entry below.
+
+**Last Updated (prior):** August 9, 2026, later still — **AR over the ERR-010-002 landing, code half
+(`d93e0c8`), plus the whole-tree gate result for both AR commits (`48977fa` + `d93e0c8`).** Two
+behavioural fixes from the same adversarial review the prior entry's doc half did not cover. **(1)**
+The out-of-range branch in `HeadingAim`'s ballistic solve returned a flat 45° "maximum-range launch,"
+correct only when the target sits at contact height; a header contacts near 2.3 m aiming at
+ground-level targets, so this was the production path (measured 9.98° error at the boundary, 4.38° at
+the production nominal speed), not an edge case. Fixed to the true max-range angle,
+`tan(θ) = v / √(v² − 2·g·dz)`, with a guard for a target above what the speed can reach at any angle;
+`MaxRangeLaunchComponent` — a `[DERIVED]` constant whose name asserted what it was not — is retired
+with it. **(2)** `ComputeAimNormal` did not propagate a degenerate desired direction (`half = incident
++ 0` has magnitude 1, so the zero guard missed and the method returned the incident itself), so a zero
+`aimDir` reflected the ball straight back the way it came at full power — the maximum possible
+deflection, arrived at through the branch documented as producing the natural rebound, and it made
+`ComputeAchievedNormal`'s zero-aim fallback unreachable through the composition. Also landed: four
+ERR-008-002 home/away locks for `GkHeadingIntentSource.HeaderAimTarget`, the landing's only
+team-branching geometry, which had none (an existing test labelled as the ERR-008-002 lock ran
+team-agnostic code and could not have caught an asymmetry — coverage/false-claim defect, not a live
+bug). **One bug was introduced by the fix and caught by its own new lock before landing**: the
+unreachable-height guard first returned `Vector3.up`, Unity's +Y, instead of this project's +Z up axis
+(Ball Physics #1 §1.2) — the coordinate-axis trap in `CLAUDE.md`'s own hazard table. **Modified:**
+`src/heading-mechanics/HeadingAim.cs`, `src/heading-mechanics/HeadingMechanicsConstants.cs`,
+`src/heading-mechanics/Tests/HeadingAimTests.cs`, `src/match-engine/tests/GkHeadingIntentSourceTests.cs`
+— the four files the prior entry recorded as "not touched, per instruction (another agent editing
+concurrently)"; that concurrent edit is this one. **Whole-tree gate, local run, head `d93e0c8`: build 0
+errors, 3 warnings; `GATE_EXIT=1` — the gate did NOT print "Gate PASSED"; this is not GATE-VERIFIED.**
+Sole failure: `sim_match_engine_close_chance`, 2 of 3 predicates —
+`final-third-dribbles-are-not-goal-averse` meanCosine **−0.165** (bound −0.16) and
+`goalward-dribbles-are-not-a-minority-of-one-in-three` goalwardShare **0.407** (bound 0.42) — the
+inherited C1 failure, identical to three decimals against the pre-fix baseline recorded at `589a011`,
+so this landing moved nothing. `MatchEngine.Tests` **451 passed / 1 failed / 10 skipped / 462 total**,
+up from the 447/1/10/458 baseline — the +4 are exactly the four new `HeaderAimTarget` locks.
+`HeadingMechanics.Tests` **63 passed / 15 skipped / 0 failed** (60 → 63). All 31 other suites green,
+quarantine empty. `python3 tools/recurring-defect-lint.py --repo .`: **0 ERRORs**. Also landed:
+`docs/tracking/close-chance-creation-design.md` §10.8 (v1.7) — the §10.7-corrected instrument's first
+execution (Report C5b, 6 seeds × 90 min, 1,081 aerial final-third episodes) finds headers failing
+horizontally (nearest attacker 5.88–5.93 m, nearest defender 4.28–4.93 m in pure XY, no height term)
+and RE-RANKS §10.6's withdrawn "attack the ball" lever back to first on a corrected instrument reaching
+the same conclusion (0% within contact distance in true 3-D) without §10.7's height-floor artifact.
+`docs/tracking/spec-error-log.md` v2.03 → v2.04, `docs/tracking/CHANGELOG.md`,
+`docs/tracking/CHANGELOG-src.md` v2.105. Prior entry below.
+
+**Last Updated (prior):** August 9, 2026, still later same day — **Adversarial review of the `ERR-010-002`
+landing: two findings fixed here, three others (spec text, a phantom-citation doc, and version-history
+rows) fixed elsewhere, two rejected.** **Confirmed and fixed:** Finding 1 (High) — §3.5.1 Step 2's
+"bounded to the hemisphere the ball can physically reach" was stale spec text; `HeadingAim.cs` never
+implemented that bound and its own doc proves it provably cannot fire. Fixed in
+`docs/specs/heading-mechanics/section-3.md` v0.5 (no code change — the code was already correct).
+Finding 2 (Medium) — the same stale claim survived in `spec-error-log.md` at two sites (the
+`ERR-010-002` "Updated (prior)" summary and the Error Index row); annotated in place there (v2.03),
+this file's own convention. **Verified NOT present** in this file, `CHANGELOG.md`, or
+`CHANGELOG-src.md` — all three already carried the corrected "no bound is applied" phrasing; Finding
+2's claim that they needed fixing was wrong for those three, and no change was made to them. Finding 3
+(Medium) — `§4.2a`, cited by `GkHeadingIntentSource.cs` and `MatchEngine.cs` since the `ERR-010-002`
+landing, was a phantom citation with no defining document. Fixed by adding §4.2a to
+`docs/tracking/gk-heading-engine-integration-design.md` — **correcting the finding's own file target**:
+that document, not `match-engine-design.md`, is `GkHeadingIntentSource.cs`'s own cited governing spec
+(verified: `match-engine-design.md` §4 is an unrelated "Boot sequence" section and never mentions
+GK/Heading). New §4.2a records `HeaderAimTarget` as implemented plus two measured limitations (the
+ballistic solve's ≈ 15 m range ceiling given the target is always pinned to the goal line; the
+lateral-bias inversion — (10,10) aims 4.1° off-axis, (10,34) aims 17.9°). Finding 4 (Medium) — three
+production files (`HeadingMechanics.cs`, `GkHeadingIntentSource.cs`, `MatchEngine.cs`) gained
+substantive `c89c838` changes with no version-history row or `Modified:` header line (the sixth
+consecutive FR-CS-056/057 recurrence); all three now carry a new row/line (comment-only; no logic
+touched). Finding 5 (Low) — `HeadingMechanics.cs`'s `ClampToHeadEnvelope(intent.ContactPointIntent)`
+call now carries a one-line comment recording that it validates the W9 DT-supplied override and is not
+read by Stage-0 geometry, matching the equivalent note already at `MatchEngine.cs`'s `HeaderIntent`
+commit site. **Modified:** `docs/specs/heading-mechanics/section-3.md` (v0.4 → v0.5),
+`docs/tracking/gk-heading-engine-integration-design.md` (+ §4.2a, + §9d catch-up note),
+`docs/tracking/spec-error-log.md` (v2.02 → v2.03), `src/heading-mechanics/HeadingMechanics.cs` (v1.6 →
+v1.7, header + comment), `src/match-engine/GkHeadingIntentSource.cs` (v1.2 → v1.3, header),
+`src/match-engine/MatchEngine.cs` (v1.64 → v1.65, header). **Not touched, per instruction (another
+agent editing concurrently):** `src/heading-mechanics/HeadingAim.cs`,
+`src/heading-mechanics/Tests/HeadingAimTests.cs`, `src/heading-mechanics/HeadingMechanicsConstants.cs`,
+`src/match-engine/tests/GkHeadingIntentSourceTests.cs` — all four show unrelated concurrent changes in
+this working tree that this pass did not make. **No build or `dotnet` command run**, per instruction (a
+long test run was live in this workspace). `python3 tools/recurring-defect-lint.py --repo .`: **0
+ERRORs** (126 WARN / 27 INFO, unchanged classes — spec-version/stale-forward/stale-count noise
+pre-existing and unrelated to this pass). Prior entry below.
+
+**Last Updated (prior):** August 9, 2026, later same day — **`ERR-010-003` filed — Heading Mechanics #10's KD-18
+aerial-phase gate borrows Agent Movement #2's `GROUNDED` state, which #2 §3.1.2 defines as "knocked
+down" not "on the ground."** Surfaced as a "recorded, not fixed" bullet at the tail of the
+`ERR-010-002` entry immediately below and filed here as its own candidate, per that entry's own note.
+No new files and no file removed; this entry records tracking-document movement only. Verified against
+source before filing: #10 §3.2/§3.3 and the mirrored `HeadingEligibility.cs`/`HeadingMechanics.cs`
+comments describe the `{GROUNDED, STUMBLING}` exclusion as an aerial-phase/"left the ground" check, but
+AM #2 §3.1.2 defines `GROUNDED` as one incapacitated substate (collision knockdown or extreme-stumble
+fail) that a merely standing/walking/jogging/sprinting/decelerating player never enters, and AM #2
+publishes no Z-axis/airborne state at Stage 0 at all (KD-18's own premise) — so no read of
+`AgentMovementState` can establish "has left the ground." **Verified NOT a no-op and NOT inverted**:
+the exclusion is real, reachable, and correctly blocks a header attempt while an agent is prone or
+stumbling from a collision; the tree's actual "aerial phase" is synthesized independently by
+`jumpStartFrame` → `landingFrame` elapsed-frame timing, never checked against the excluded state.
+**Modified:** `docs/tracking/spec-error-log.md` → **v2.02** (one new `## ERR-010-003` entry + one
+Error Index row + the version-header chain). **No code, no spec text change** — documentation-only per
+this entry's filing scope; a real fix (relabeling the check, not changing its behaviour) is deferred.
+Prior entry below.)
+
+**Last Updated (prior):** August 9, 2026, later same day — **`ERR-010-002` — Heading Mechanics #10 §3.5 delegated header aim to Decision Tree #8, which cannot emit a header at all (`ActionType` ordinal 8 overflows the 3-bit composure-noise field, wiring backlog W9), so the aim decision had no owner and every header was a passive specular mirror; two further defects in the same chain — the contact point had two independent derivations that agreed only by coincidence, and Pass 2 rebuilt the world-space point from its 2-D head-local projection, pinning `contactPointActual.z` to the head centre so a descending ball was headed further down and no header could lift the ball.** Resolved by new #10 §3.5.1 + `src/heading-mechanics/HeadingAim.cs` (+ `Tests/HeadingAimTests.cs`): a ballistic launch-direction solve to `TargetIntent` at the perfect-contact speed, low root, with a continuous 45° maximum-range fallback when the target is out of range (P1); the reflecting half-vector normal, with a recorded note that no geometric hemisphere bound is applied because it provably can never fire (the guard-on-an-unreachable-branch class); an achieved normal blended from the geometric normal by normalised Heading, where steer authority 0 is exactly the pre-fix behaviour and the ramp spans the whole attribute range with no plateau (the ERR-008-019 FULL-RANGE shape, P2). One `ResolveContactGeometry` owner now read by both `HeadingMechanics.Update` passes; the 3-D contact point carried directly instead of round-tripped. Producer half: new `GkHeadingIntentSource.HeaderAimTarget` (§4.2a) — clear wide when deep, aim at goal when advanced, continuous lerp in the taker's advancement, constant-free. **New files (2 + metas):** `src/heading-mechanics/HeadingAim.cs`, `src/heading-mechanics/Tests/HeadingAimTests.cs`. **Modified:** `src/heading-mechanics/HeadingMechanics.cs` (single contact-geometry owner for both passes; 3-D contact point carried directly), `src/heading-mechanics/HeadingMechanicsConstants.cs` (+ `KINEMATIC_TWO_COEFF`/`PERFECT_CONTACT_QUALITY` [FIXED], `SurfaceNormalEpsilon`/`MaxRangeLaunchComponent` [DERIVED] — no new `[GT]`), `src/match-engine/GkHeadingIntentSource.cs` (+ `HeaderAimTarget`), `src/match-engine/MatchEngine.cs` (wires `HeaderAimTarget` into the header-commit path), `src/match-engine/tests/CloseChanceDiagnosticTests.cs` v1.4 (three separate proximity series — horizontal-only separation, 3-D distance to the agent's head point, the retained ball-to-ground measure explicitly relabelled as carrying a ≥ ball-height floor — plus the ball height at minimum horizontal separation; corrects the §10.6 proximity-census instrument artifact). **Specs:** `docs/specs/heading-mechanics/section-2.md` v0.4 (new FR-HE-036/037/038), `docs/specs/heading-mechanics/section-3.md` v0.4 (new §3.5.1). **Tracking:** `spec-error-log.md` v2.00 (ERR-010-002), `close-chance-creation-design.md` v1.6 (§10.7 — corrects §10.6 twice: item 3's consequence was wrong (the aim was inert, not merely fixed) and the proximity census is an instrument artifact — the "attack the ball" lever ranking is withdrawn, not replaced), `match-engine-wiring-backlog.md` v1.4, both changelogs, this manifest. **No `SNAPSHOT_SCHEMA_VERSION` change** (both intent fields already serialized), **no new RNG stream / domain tag / draw site / draw-order change**. Digests DO move for any match containing a header (contact counts change; `HeadingContactQuality` draws twice per contact). ****GATE-VERIFIED** (local whole-tree run, head `c89c838`): build 0 errors; `HeadingMechanics.Tests` **60 / 15 skipped / 0 failed** (47 → 60, the +13 being this landing's `HeadingAimTests` locks, all executed); `MatchEngine.Tests` **447 / 1 / 10 — byte-identical to the pre-fix baseline**, the one failure being the inherited C1 `sim_match_engine_close_chance` (meanCosine −0.165, goalwardShare 0.407, unchanged to three decimals) that predates this branch and awaits an owner call; all 33 suites otherwise unchanged, quarantine empty. **The "digests DO move" claim written at landing is WITHDRAWN as stated** — no measured digest movement anywhere. A match containing an executed header would digest differently; **no scenario in this tree contains one**, which is the 0.2% contact ratio (2 executed / 963 failed over 6 seeds × 90 min) showing up exactly where the evidence advisor predicted it would. The aim is locked by unit geometry and by nothing else.** — a whole-tree gate is running elsewhere; result to be recorded separately.
+
+**Last Updated (prior):** August 9, 2026 — **CORRECTION to the entry below: `ERR-008-024` was recorded "filed + resolved". It is not.** The fix — ranking §3.1.5.2's 8-sector scan on `spaceInSector × DirectionQuality_DRIBBLE(sectorDir, toGoal)` instead of `spaceInSector` alone — was **implemented, measured, and REFUSED**, the KD-CC7 pattern (`close-chance-creation-design.md` §4). It DOES fix the symptom: `sim_match_engine_close_chance` goes meanCosine −0.165 / goalwardShare 0.407 (both failing) to **PASS** (bounds −0.16 / 0.42, neither moved). But the same build **stalls play outright** — `sim_match_engine_play_develops` fails with "play stalled: last possession change at tick 18424, ball last moving at tick 18465 of 32400" — and `sim_match_engine_shot_outcomes` fails `goals-still-scored` at **0**. A wider `space × DirectionQuality` form produced the identical stall at the identical tick, plus mean-shot-distance 25.41 m against a 24.00 m ceiling. **Refused, not landed.** No new files. **Reverted (production):** `src/decision-tree/OptionGenerator.cs` back to the pre-fix baseline logic byte-for-byte (comment-only diff; `git diff 23f8dd9 -- src/decision-tree/OptionGenerator.cs` has zero non-comment lines) — the long explanatory note at the defect site now records the refusal. Kept, behaviour-neutral: `src/decision-tree/UtilityWeights.cs` v1.14 (+ public static `DribbleDirectionQuality(Vector2, Vector2)` — the §3.2.4.1 formula hoisted so generation and scoring can't drift apart if this is retried), `src/decision-tree/UtilityScorer.cs` v1.16 (`ComputeDribbleDirectionQuality` delegates to it; behaviour there unchanged). **Reverted (tests):** `src/decision-tree/Tests/OptionGeneratorTests.cs` — the 2 §3.1.5.2 locks the attempted fix added are REMOVED (they locked behaviour that no longer exists); `DecisionTree.Tests` back to **129 passed / 4 skipped / 0 failed**. **Specs:** `docs/specs/decision-tree/section-3-1.md` v1.8 (pseudocode reverted to `argmax(space_in_dir)`, ties to the earliest sector; ERR-008-024 callout rewritten to record a KNOWN, MEASURED, UNFIXED defect). **Tracking:** `spec-error-log.md` v1.99 (ERR-008-024 status → recorded, not fixed), `close-chance-creation-design.md` v1.4 (§7 item 6 REOPENED), both changelogs, this manifest. Prior (overstated) entry below, left unedited per this file's convention.
 
 **Last Updated (prior):** August 9, 2026 — **`ERR-008-024` filed + resolved: §3.1.5.2's 8-sector dribble scan always picked `AgentFacingDirection`, whatever the goal.** `spaceInSector` saturates at exactly 1.0 for any sector clear of `DRIBBLE_THREAT_RADIUS`, and the old scan ranked on `spaceInSector` alone with a strict `>` improvement test, so whenever two or more sectors were clear — the common case in the final third — the winner was always sector 0, `AgentFacingDirection` by construction: goal direction never entered the choice of `best_direction` at all, which is why ERR-008-018's scoring-stage `DirectionQuality_DRIBBLE` term could suppress a retreating dribble but never redirect it (`close-chance-creation-design.md` KD-CC3 / §7 item 6, now closed). No new files. **Modified (production):** `src/decision-tree/OptionGenerator.cs` v1.11 (the scan now ranks on `spaceInSector × DirectionQuality_DRIBBLE(sectorDir, toGoal)`), `src/decision-tree/UtilityWeights.cs` v1.14 (+ public static `DribbleDirectionQuality(Vector2, Vector2)` — the §3.2.4.1 formula hoisted so generation and scoring share one copy; no constant added or changed), `src/decision-tree/UtilityScorer.cs` v1.16 (`ComputeDribbleDirectionQuality` now delegates to the hoisted function; behaviour there unchanged). **Modified (tests):** `src/decision-tree/Tests/OptionGeneratorTests.cs` v1.11 (+ 2 §3.1.5.2 locks: goalward wins an all-clear tie; a blocked goalward sector still loses on space). **Specs:** `docs/specs/decision-tree/section-3-1.md` v1.7 (§3.1.5.2 pseudocode + a new ERR-008-024 callout, following the existing ERR-008-018 one). **Measured:** the `sim_match_engine_close_chance` acceptance scenario — which the wiring-backlog C1 entry immediately below left FAILING at meanCosine **−0.165** (bound −0.16) and goalwardShare **0.407** (bound 0.42) — now **PASSES both predicates**; neither bound was moved. `DecisionTree.Tests` **131 passed / 4 skipped / 0 failed**, including the 2 new locks. **Tracking:** `spec-error-log.md` v1.98 (ERR-008-024), `close-chance-creation-design.md` v1.3 (§7 item 6 closed), both changelogs, this manifest. **⚠️ CORRECTED above — this entry overstated the outcome; the fix was implemented, measured, and REFUSED, not landed.**
 
@@ -937,7 +1100,9 @@ byte-identical). **Full dotnet gate: PASSED, 0 failures (whole tree green; 290 m
 files:** `src/match-engine/GkHeadingIntentSource.cs` v1.0 (pure static §4 save/header trigger geometry —
 `SaveArmed` / `NearestHeaderCandidate` — extracted out of `MatchEngine` so the "when" heuristic is
 unit-testable, the `MatchFlowCollisionConsumer` precedent); `src/match-engine/tests/GkHeadingIntentSourceTests.cs`
-v1.0 (10 pure-function locks). **Modified:** `src/match-engine/MatchEngine.cs` v1.45 — the four nested
+v1.0 (10 pure-function locks; grown to 11 by the ERR-010-002 landing's `HeaderAimTarget` producer, then
+15 by the AR-over-ERR-010-002 code half `d93e0c8` (Aug 9, 2026), which added the four ERR-008-002
+home/away locks the team-branching `HeaderAimTarget` geometry had none of). **Modified:** `src/match-engine/MatchEngine.cs` v1.45 — the four nested
 ball/RNG adapters collapsed into ONE `GkHeadingWorldAdapter` (both ball systems share `ApplyKick`; the
 two RNG services disambiguate by arity), and `TryCommitSaveIntents`/`TryCommitHeaderIntents` delegate
 their geometry to `GkHeadingIntentSource` (keeping only latch + projection + commit).
@@ -1384,7 +1549,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | File | Purpose |
 |------|---------|
 | `src/heading-mechanics/heading-mechanics.asmdef` | Assembly definition (references agent-movement, ball-physics, collision-system, event-system; added event-system ref May 30, 2026) |
-| `src/heading-mechanics/HeadingMechanicsConstants.cs` | All GT/Fixed/Cross/Derived constants (§3.1); region order Fixed→Derived→Cross→GT |
+| `src/heading-mechanics/HeadingMechanicsConstants.cs` | All GT/Fixed/Cross/Derived constants (§3.1); region order Fixed→Derived→Cross→GT; +`KINEMATIC_TWO_COEFF`/`PERFECT_CONTACT_QUALITY` [FIXED] Aug 9, 2026 (ERR-010-002; no new [GT]) — `SurfaceNormalEpsilon` [DERIVED] retained; `MaxRangeLaunchComponent` [DERIVED] added then RETIRED same day by the AR-over-ERR-010-002 code half (`d93e0c8`) — its name asserted the flat-45° fallback it fed was "the maximum-range launch," which the AR fix replaced with the true `tan(θ) = v / √(v² − 2·g·dz)` solve |
 | `src/heading-mechanics/ContactQualityLabel.cs` | Enum: Early / OnTime / Late — telemetry only; KD-2 |
 | `src/heading-mechanics/MistimedDirection.cs` | Enum: None / Early / Late — eligibility output |
 | `src/heading-mechanics/FailureCause.cs` | Enum: MistimedEarly / MistimedLate / PositionedPoorly / DisturbedInDuel |
@@ -1408,7 +1573,10 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/heading-mechanics/HeadingSpinTransfer.cs` | FM-010-004 head angular-velocity derivation + outgoing spin (§3.6) |
 | `src/heading-mechanics/HeadingDuelResolution.cs` | FM-010-005 duel scoring; ICollisionEventConsumer; pre-allocated buffers |
 | `src/heading-mechanics/HeadingTelemetry.cs` | Stage 0 stub; emits §2.4 heading.* trace-pipeline channels at Stage 0+1 |
-| `src/heading-mechanics/HeadingMechanics.cs` | 60 Hz orchestrator; two-pass per-frame loop (§4.6) |
+| `src/heading-mechanics/HeadingMechanics.cs` | 60 Hz orchestrator; two-pass per-frame loop (§4.6); one `ResolveContactGeometry` owner read by both passes, 3-D contact point carried directly Aug 9, 2026 (ERR-010-002 — the prior two-derivation parallel-surface trap) |
+| `src/heading-mechanics/HeadingAim.cs` | §3.5.1 header-aim solve (ERR-010-002, Aug 9, 2026), three pure steps. `ComputeAimDirection` — ballistic launch-direction solve to `HeaderIntent.TargetIntent` at perfect-contact speed (low root), degrading continuously to the true max-range angle `tan(θ) = v / √(v² − 2·g·dz)` when out of range at this speed (AR-1, `d93e0c8`, same day — replaced an initial flat 45°, right only at contact-height targets) and to straight up when unreachable at any angle; its own trailing degenerate-length guard, provably unreachable (`dir.sqrMagnitude ≥ 1` on every path that reaches it), removed AR pass 3 (`7b22eb1`) and the comment justifying the removal itself corrected AR pass 4 (falsified by execution: an overflowing `range` passes the guard and yields `dir.sqrMagnitude = NaN`, not the claimed `≥ 1`). `ComputeAimNormal` — the reflecting half-vector, no hemisphere bound (provably unreachable; see the class doc), propagating a degenerate desired direction to zero since AR-1 (`d93e0c8`; previously fell through to the incident unchanged — the maximum deflection out of a branch documented as the minimum). `ComputeAchievedNormal` — the achieved normal blended from the geometric normal toward the aim normal by normalised Heading (steer authority 0 = pre-fix specular behaviour exactly; full-attribute-range ramp, no plateau) |
+| `src/heading-mechanics/Tests/HeadingAimTests.cs` | ERR-010-002 locks for `HeadingAim` (Aug 9, 2026); + AR-over-ERR-010-002 code half (`d93e0c8`, same day): the reachability-boundary continuity lock (2.42° vs a 9.98° pre-fix reading, 4° bound), the new radicand guard, and the degenerate-aim-through-composition lock; the unreachable-target case re-derived against the correct angle |
+| `src/heading-mechanics/Tests/HeadingAimCompositionTests.cs` (+ `.meta`, generated AR pass 3, `7b22eb1` — briefly the only tracked file under `src/` without one) | AR pass 2, M-1: every other §3.5.1 lock composes `ComputeAimDirection` → `ComputeAimNormal` → `ComputeAchievedNormal` inside the test helper, so nothing drove `HeadingMechanics.Update` to an actual contact and `ResolveContactGeometry` could have been unwired entirely with the whole tree still green. Drives a header through the real 60 Hz orchestrator to `ApplyKick` (the first test anywhere to reach it) and asserts on the velocity handed to Ball Physics: two targets/one geometry produce materially different outgoing vectors, plus the descending-ball lift (FR-HE-037, locked as its own complementary pair since AR pass 3, L-3) |
 
 ### Spec #11 — Goalkeeper Mechanics (`src/goalkeeper-mechanics/`)
 
@@ -1920,7 +2088,7 @@ Use this file to track the **current folder structure**, not legacy per-version 
 | `src/match-engine/tests/MatchEngineKeeperContactScenarios.cs` | gk-contact-rate acceptance scenario `match-engine-keeper-contact` (Tier B, 2 seeds × 45 min): the ERR-011-007 hold is alive, contacts outnumber un-contacted crossings, deep dive-early misses ≤ 1 (v1.1 — rebaselined from == 0 at the ERR-008-023 merge; the episode measured 616.7 ms early) — 3 of 4 predicates fail pre-fix, verified by execution |
 | `src/match-engine/tests/MatchEngineKeeperContactTests.cs` | Runs the gk-contact-rate acceptance scenario through the #19 ScenarioRunner |
 | `src/match-engine/tests/GoalConversionDiagnosticTests.cs` | Env-gated (TD_CONVERSION_DIAGNOSTIC=1) conversion-at-contact instrument: per-contact band, marginality (the real hand-envelope offset §3.5.1's pointQuality discards), incoming/outgoing ball speed, rebound placement and fate, goal provenance — plus the close-chance creation funnel (chains, third entries, BOX entries, shots per stage). The measurement that refuted §5.Z.22 §7's premise and localized the creation residual to the final-third → penalty-area transition |
-| `src/match-engine/tests/CloseChanceDiagnosticTests.cs` | Env-gated (TD_CREATION_DIAGNOSTIC=1) close-chance creation instrument: C1 re-counts final-third entries as dwell-filtered episodes with their outcomes (the check that validated the 6.5% denominator), C2 measures penalty-area occupancy, the deepest attacker AND the deepest composed TARGET SLOT (the discriminator between "cannot get there" and "never asked"), the #12 phase histogram and the #15 live-runner share, C3 measures the carrier's decision mix, pass progression and dribble goal-direction cosine. Six-seed corpus. Assertion-free (ERR-030-014) |
+| `src/match-engine/tests/CloseChanceDiagnosticTests.cs` | Env-gated (TD_CREATION_DIAGNOSTIC=1) close-chance creation instrument: C1 re-counts final-third entries as dwell-filtered episodes with their outcomes (the check that validated the 6.5% denominator), C2 measures penalty-area occupancy, the deepest attacker AND the deepest composed TARGET SLOT (the discriminator between "cannot get there" and "never asked"), the #12 phase histogram and the #15 live-runner share, C3 measures the carrier's decision mix, pass progression and dribble goal-direction cosine. Six-seed corpus. Assertion-free (ERR-030-014). v1.4 (ERR-010-002, Aug 9, 2026): three separate proximity series — horizontal-only separation, 3-D distance to the agent's head point, and the retained ball-to-ground measure explicitly relabelled as carrying a ≥ ball-height floor — plus the ball height at minimum horizontal separation, correcting the §10.6 proximity-census instrument artifact |
 | `src/match-engine/tests/MatchEngineCloseChanceScenarios.cs` + `MatchEngineCloseChanceTests.cs` | ERR-008-018 acceptance scenario `match-engine-close-chance` (#19 ScenarioRunner, Tier B, 2 seeds × 90 min, seeds chosen for pre/post MARGIN rather than traffic): final-third dribbles are sampled, are not goal-averse (mean cosine > −0.16; v1.1 — rebaselined from −0.10 at the ERR-008-023 merge against a measured pooled −0.119, one seed fully regressed), and are not a one-in-three minority (goalward share > 0.42). **2 of 3 predicates fail at `7fcd897` by execution.** Pins no goal rate, shot count or box-occupancy figure — none of them moved in a way the corpus supports |
 | `src/match-engine/tests/MatchEngineKeeperClaimScenarios.cs` | Conversion-at-contact acceptance scenario `match-engine-keeper-claim` (Tier B, 2 seeds × 90 min — full-match windows because a claim is rarer than a contact): claims occur, a claimed ball is arrested, and a held ball does not enter the keeper's own net — 2 of 3 predicates fail pre-fix, verified by execution (6 of 6 claims travelling, 5 of 6 held balls conceded) |
 | `src/match-engine/tests/MatchEngineKeeperClaimTests.cs` | Runs the conversion-at-contact acceptance scenario through the #19 ScenarioRunner |

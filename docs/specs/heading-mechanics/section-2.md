@@ -1,7 +1,7 @@
 # Heading Mechanics Specification #10 — Section 2: Functional Requirements, Data Structures & Failure Modes
 
 **Created:** May 16, 2026
-**Version:** 0.3
+**Version:** 0.4
 **Status:** DRAFT
 **Purpose:** Catalogue the functional requirements (`FR-HE-NNN`), the
 data structures consumed and produced by the Heading Mechanics
@@ -53,6 +53,9 @@ target subsection in which the conformance is realized.
 | FR-HE-033 | A `BallState` snapshot older than one physics frame MUST be re-queried before contact resolution proceeds. | MUST | KD-12 | §2.3 F-06, §3.2 |
 | FR-HE-034 | `WeakAerialSide` asymmetry, concussion accumulation, and bicycle-kick distinct kinematics are deferred to Stage 1+ per §7. | MUST | KD-14, KD-15 | §7.1, §7.2, §7.3 |
 | FR-HE-035 | The Stage 0 per-tick steady-state cost budget is ≤80 µs; the p99 duel-frame tail budget is ≤180 µs. | MUST | pass-1 H-4 | §4.5, §6.1 |
+| FR-HE-036 | The outgoing launch direction MUST be a function of `targetIntent`: the contact point is derived from the ballistic launch toward the target (§3.5.1 step 1), realized as the reflecting half-vector (step 2), and achieved in proportion to the taker's normalised Heading attribute (step 3). Steer authority 0 MUST reproduce the pre-ERR-010-002 geometric normal exactly, and the ramp MUST span the whole attribute range without a plateau at either end. | MUST | ERR-010-002 | §3.5.1, §5 |
+| FR-HE-037 | `contactPointActual` MUST be carried in three dimensions when the §3.5 reflection normal is taken from it. Reconstructing it from its 2-D head-local projection pins its height to the head centre, forcing a horizontal normal and `reflected.z = v̂_in.z` — a descending ball headed further down. The 2-D head-local frame remains the definition domain of §3.4 `pointError` and §3.6 spin transfer, and is a projection of the 3-D point, never its source. | MUST | ERR-010-002 | §3.5.1, §3.6, Appendix D |
+| FR-HE-038 | Exactly one derivation of the contact point MUST exist. Both resolution passes MUST read it from that one derivation rather than recomputing it from ball-vs-head geometry independently. | MUST | ERR-010-002 | §3.5.1, §4 |
 
 ---
 
@@ -210,3 +213,4 @@ KD-6 (#18 §6.4): trace emission must not perturb game state.
 | 0.1 | May 16, 2026 | section authoring | Initial draft from `outline-detailed.md` v1.1. FR catalogue covers FR-HE-001..035; structs and failure modes enumerated. | pending |
 | 0.2 | May 16, 2026 | drafter | v0.2 PASS-1 fix pass: FR-HE-027 rewritten for uniform 2-way/3+ way loser semantics (M-5); F-04 row prose rewritten to match; `HeaderIntent.attemptCommittedTick` documented as consumed by §3.3 `jumpStartFrame` derivation (L-1); `HeaderContactState` adds `jumpStartFrame` field (M-3) and documents `actualContactFrame` assignment site (M-4); `contactPointIntent` head-local axis convention pinned (L-7). | pending |
 | 0.3 | May 16, 2026 | drafter | APPROVAL. §2.4 trace-pipeline ownership re-framed from non-existent "#18 §3.10 channel rows" to #18 Appendix F.0 channel-registry schema (Stage 0 schema + Stage 0+1 populated rows). OI-002 RESOLVED. | granted |
+| 0.4     | August 9, 2026 | — | **ERR-010-002.** New FR-HE-036 (the outgoing direction MUST be a function of `targetIntent`, via §3.5.1's three steps, with steer authority 0 reproducing the pre-fix geometric normal and a full-range attribute ramp), FR-HE-037 (`contactPointActual` MUST be 3-D where the §3.5 normal is taken from it — the 2-D head-local frame is a projection, never the source; rebuilding from it forced a horizontal normal and `reflected.z = v̂_in.z`, so a descending ball was headed further down and no header could lift the ball), and FR-HE-038 (exactly one derivation of the contact point; both resolution passes read it). |
