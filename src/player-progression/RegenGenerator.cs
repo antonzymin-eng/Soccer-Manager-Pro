@@ -135,14 +135,36 @@ namespace TacticalDirector.PlayerProgression
             {
                 PotentialAbility = potentialAbility,
                 CurrentAbility = currentAbility,
-                GrowthCursor = 0,
+
+                // AR pass 7. ERR-028-018 credited the construction day's own band step to the cursor,
+                // and applied it at ONE of the two sites that construct a lifecycle from scratch. This
+                // is the other one. A regen anchored at worldDay whose cursor starts at 0 accrues
+                // N·365 − 1 days over an N-year band — one whole [1,20] point short, with the same
+                // 364-day residue, which then survives the accrual-free Stable band. Measured: a regen
+                // gained +5 over its remaining Growth band where an identically-generated seeded player
+                // gained +6, leaving it one point worse for the whole of ages 24–30, its selectable
+                // prime, and taking its first Decline point 364 days late.
+                //
+                // The comment below asserted these two "agree by construction". They did not: the
+                // anchor was worldDay and the cursor was 0, which is exactly the disagreement
+                // ERR-028-018 exists to remove. Now they do.
+                //
+                // Classified rather than hard-coded to GROWTH_DAILY_POINTS: a regen's drawn age is
+                // 16–20 and therefore always Growth today, but that is a fact about REGEN_AGE_MAX vs
+                // GROWTH_AGE, not about this line, and it should not silently become wrong if either
+                // constant moves.
+                GrowthCursor = BandStepFor(age),
+
                 BirthWorldDay = birthWorldDay,
                 RetirementFlag = false,
                 RetirementDay = 0,
                 // M3 (ERR-028-014 carryforward): worldDay, NOT the never-advanced sentinel. A regen
                 // describes the roster AS OF worldDay, exactly like a seeded player (SeedLifecycle
-                // anchors the same way) — his anchor and his cursor agree by construction, so his first
-                // AdvanceDay call correctly treats worldDay itself as already accounted for. The sentinel
+                // anchors the same way) — his anchor and his cursor agree by construction (TRUE only
+                // since AR pass 7 credited the cursor above; when this comment was written the anchor
+                // was worldDay and the cursor was 0, so they did not agree and the claim was false),
+                // so his first AdvanceDay call correctly treats worldDay itself as already
+                // accounted for. The sentinel
                 // was retired from the set of legal STORE states by ERR-028-014 the day after this line
                 // was written: ProgressionEngine.FromBlocks and ProgressionSaveCodec.Encode/Decode all
                 // refuse it by name now, so a block built from a generated regen would fail every one of
@@ -152,6 +174,21 @@ namespace TacticalDirector.PlayerProgression
             };
 
             return (record, life);
+        }
+
+        /// <summary>
+        /// The construction day's own band step — the ERR-028-018 invariant, shared in shape with
+        /// <c>ProgressionEngine.SeedLifecycle</c>. Every site that anchors
+        /// <see cref="PlayerLifecycle.LastAdvancedWorldDay"/> at its own construction day owes this,
+        /// because that anchor declares the day already lived and a zero cursor accounts for it as
+        /// nothing — costing one whole attribute point per band traversal.
+        /// </summary>
+        private static long BandStepFor(int age)
+        {
+            AbilityModel.AgeBand band = AbilityModel.ClassifyAgeBand(age);
+            return band == AbilityModel.AgeBand.Growth ? PlayerProgressionConstants.GROWTH_DAILY_POINTS
+                 : band == AbilityModel.AgeBand.Decline ? PlayerProgressionConstants.DECLINE_DAILY_POINTS
+                 : 0;
         }
 
         // DrawBounded (the reserved-draw → [0, bound) modulo mapping + its accepted-bias rationale) and

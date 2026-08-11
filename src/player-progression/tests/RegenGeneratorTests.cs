@@ -88,7 +88,24 @@ namespace TacticalDirector.PlayerProgression.Tests
             Assert.LessOrEqual(life.CurrentAbility, life.PotentialAbility, "a regen must have room to grow (§3.3).");
             Assert.GreaterOrEqual(life.PotentialAbility, PlayerProgressionConstants.PA_MIN);
             Assert.LessOrEqual(life.PotentialAbility, PlayerProgressionConstants.ABILITY_MAX);
-            Assert.AreEqual(0L, life.GrowthCursor);
+            // AR pass 7. This read `Assert.AreEqual(0L, life.GrowthCursor)` — a lock written against the
+            // OBSERVED value at a construction site ERR-028-018's fix never visited. When that fix was
+            // later applied here, this assertion went red and told the author the fix was the bug: the
+            // regression net had been extended to DEFEND the defect. Restated as the property, which is
+            // what the fix is actually about — a site that anchors LastAdvancedWorldDay at its own
+            // construction day must credit that day's band step, or the day is declared lived and
+            // accounted as nothing.
+            // Pinned to the literal, NOT re-derived through ClassifyAgeBand — routing the expectation
+            // through the same function the production code calls would agree with it however wrong
+            // either was. The precondition carries the reasoning instead: a regen is drawn in
+            // [REGEN_AGE_MIN, REGEN_AGE_MAX] and REGEN_AGE_MAX < GROWTH_AGE, so a regen is always in
+            // the Growth band, so its construction-day step is always GROWTH_DAILY_POINTS.
+            Assert.Less(PlayerProgressionConstants.REGEN_AGE_MAX, PlayerProgressionConstants.GROWTH_AGE,
+                "precondition: this lock's expected value only holds while every regen is Growth-band.");
+            Assert.AreEqual(
+                (long)PlayerProgressionConstants.GROWTH_DAILY_POINTS, life.GrowthCursor,
+                "a regen's cursor must carry its construction day's own band step (ERR-028-018), the "
+                + "same invariant SeedLifecycle applies — the anchor declares that day already lived.");
             Assert.IsFalse(life.RetirementFlag);
         }
 
