@@ -12,7 +12,26 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 11, 2026 (**ERR-028-019 — docs-only close-out for #28 Player Progression's
+> **Last Updated:** August 11, 2026, later same day (**Owner call formally recorded: hold
+> `sim_match_engine_close_chance` red, do not rebaseline a third time.**) `close-chance-creation-design.md`
+> §10.9 (the `DRIBBLE_GOAL_DIR_MIN_MODIFIER` falsifier, v2.1) had already reached a disposition — hold
+> red, blame the population C1 changed rather than the locked DRIBBLE mechanism, queue for the KD-W1
+> calibration pass — but stated it explicitly as "an owner-facing recommendation, not a decision taken
+> here." The owner has now confirmed it: §10.9 gains item 6 (v2.2), recording the confirmation and
+> restating the two numbers the band still fails on (`meanCosine` −0.165 against −0.16; `goalwardShare`
+> 0.407 against 0.42, both PASS at pre-C1 `ba4e194`) without moving either bound. A predicate already
+> rebaselined once (§9 Acceptance-3, −0.10 → −0.16, owner call August 7, 2026) and already deleted once
+> under the same rule when it stopped being a lock (§9 Acceptance-1's box predicate) does not get a
+> second rebaseline to make it pass here either. This closes the close-chance half of the two-predicate
+> "awaiting an owner call" note the match-engine wiring backlog's C1 gate-failure entry left open
+> (`open-issues.md`); the `sim_match_engine_shot_outcomes` `fast-balls-deflect-off-bodies` reachability
+> predicate in that same note is a separate lock, untouched by this call, and stays open awaiting its
+> own. Synced the same commit per the standing cross-reference rule: `match-engine-wiring-backlog.md`
+> (Version History → v1.6), `open-issues.md`'s wiring-backlog entry (split into the resolved close-chance
+> half and the still-open shot-outcomes half), root `CLAUDE.md`'s mirrored OPEN ISSUES bullet, and
+> `file-manifest.md`. **No `[GT]` moved, no code changed, no gate run — documentation only.**
+
+**Last Updated (prior):** August 11, 2026 (**ERR-028-019 — docs-only close-out for #28 Player Progression's
 > AR passes 5-8, four consecutive production landings (`39c385a`, `cf5abf0`, `8556ddd`, `b798ce2`) that
 > shipped with ZERO `docs/specs/` edits between them — the ERR-028-017 class ("spec+code, same
 > commit" failing) recurring twice more, this time across four commits instead of two.** Derived from
