@@ -1,7 +1,44 @@
 # File Manifest (Post-Migration Baseline)
 
 **Created:** April 30, 2026  
-**Last Updated:** August 9, 2026, later still yet — **`close-chance-creation-design.md` §10.9
+**Last Updated:** August 9, 2026, later still yet again — **`close-chance-creation-design.md` §10.10
+(v2.1) — Report C5d, the cross landing-point census, WITHDRAWS §10.8's "attack the ball" ranking a
+second time, and `match-engine-wiring-backlog.md` §5 (v1.5) is reconciled to match.** Report C5d was
+measured in §10.8's own run (`TD_CREATION_DIAGNOSTIC=1`, `CloseChanceDiagnosticTests` v1.4, 6 seeds ×
+90 min) and had not been read: at a Cross's first ground contact, an attacker is within 5 m in
+~96–99% of episodes (home n=79, 30.8 m from the attacked goal, 1.10 attackers within 5 m, 82% exactly
+one; away n=91, 32.2 m, 1.07, 91% exactly one) — the opposite of §10.8's headline that nobody is near
+the ball. §10.8's Series 1 pooled 1,081 episodes against only 392 aerial final-third passes under a
+gate that closes on every ground touch or end change, and the distribution is bimodal (30–37% of
+episodes carry a defender within 0.5–1.5 m, with a long tail dragging the mean to 4–6 m); §10.8 item 2
+read the Series 1b contamination signal (ball at 0.59 m, on the 0.50 m gate floor) correctly and
+ranked on the same population anyway. The mechanism §10.8 proposed to build already exists and is
+live — `OptionGenerator.cs:822` `GenerateInterceptCandidate` (#8 §3.1.9 INTERCEPT,
+`U_BASE_INTERCEPT = 0.55`, every off-ball agent every stride) — so §10.6's and §10.8's shared claim
+that nothing moves a player toward the ball's arrival point is FALSE; what is true is narrower (the
+projection is Z-blind — `FilteredView.BallPerceivedPosition` is a `Vector2`, a #7 surface — its
+horizon `MAX_INTERCEPT_TIME` = 1.5 s is frozen under KD-W1 against a measured 2.83 s mean
+time-to-rest, and no instrument reports off-ball action mix). The real signal is the 30.8/32.2 m
+landing distance itself — crosses land at roughly twice the 16.5 m box depth from goal — which points
+at **C4** (the delivery, already in the wiring backlog), not at pursuit. No new lever ranked; what an
+honest ranking needs is recorded (per-delivery reachability + a provenance tag on the aerial census),
+along with the fact that this project has no football reference figure for nearest-agent separation
+anywhere (`invariants.md` §5 checked; no such row), which is what let 4–6 m read as a finding. Fourth
+retraction in this chain — §10.6's census artifact, §10.7's withdrawal, §10.8's re-ranking, this — and
+the lesson recorded is that the deciding number was in the instrument's own output for both §10.6 and
+§10.8 and was never read; the instrument was correct both times, only the reading was selective. §10.8
+conclusion 3 struck through and marked WITHDRAWN AGAIN in place, pointing to §10.10; its Series
+1/1b/2/3 measurements are unchanged. **`match-engine-wiring-backlog.md` §5's note rewritten** to
+record the full sequence (§10.7 withdrawn → §10.8 re-ranked → §10.10 withdrawn again) rather than only
+the first withdrawal, which is what had let the two documents disagree since §10.8 landed without a
+corresponding update here; a standing same-commit cross-reference rule is added so this cannot drift
+a third time. **Documentation only — no code changed, nothing committed, no gate run.** **Modified:**
+`docs/tracking/close-chance-creation-design.md` (§10.8 conclusion 3 struck through, §10.10 added,
+VERSION HISTORY → v2.1), `docs/tracking/match-engine-wiring-backlog.md` (§5 note rewritten, VERSION
+HISTORY → v1.5), this manifest. `python3 tools/recurring-defect-lint.py --repo .`: **0 ERRORs**.
+Prior entry below.
+
+**Last Updated (prior):** August 9, 2026, later still yet — **`close-chance-creation-design.md` §10.9
 (v1.8) — a falsifier run against the standing `sim_match_engine_close_chance` failure, to decide
 whether the band is catching a mechanism regression or just measuring a population change.**
 Documentation only; no code changes, nothing committed, no gate run. Post-C1 HEAD `02f7ba7`:

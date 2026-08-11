@@ -367,15 +367,44 @@ throughout; `[GT]` landings are frozen per KD-W1 until the final pass.
 C2/C3/C4 are folded into whichever item touches their assembly; C4 in particular is the recorded
 next lever on close-chance creation and is large enough to want its own pass.
 
-**Note (Aug 10, 2026).** The pre-implementation council convened for `ERR-010-002`
-(`advisor-integrity` + `advisor-evidence`) also refuted `close-chance-creation-design.md` §10.6's
-candidate ordering, which had ranked "attack the ball — move a player to a ball's predicted arrival
-point" as the first lever: the ranking rested on a proximity census that is an instrument artifact
-(ball-to-agent distance measured ground-inclusive against an episode gate that guarantees > 0.5 m, so
-the near buckets were structurally unreachable and the published 0% was the instrument reporting its
-own gate — full derivation in §10.7). The ranking is **withdrawn, not replaced**; **C8** above and
-the vertical half of `HeadingEligibility.FindContactFrame`'s frozen head-height sweep are the two
-cheaper, upstream candidates the same council recorded ahead of it.
+**Note (Aug 10, 2026; updated 2026-08-09).** `close-chance-creation-design.md`'s "attack the ball"
+ranking has now been withdrawn, re-ranked, and withdrawn again, and this note tracks the full
+sequence so the two documents cannot drift out of sync a third time:
+
+1. **§10.7 — withdrawn.** The pre-implementation council convened for `ERR-010-002`
+   (`advisor-integrity` + `advisor-evidence`) refuted §10.6's candidate ordering, which had ranked
+   "attack the ball — move a player to a ball's predicted arrival point" as the first lever: the
+   ranking rested on a proximity census that is an instrument artifact (ball-to-agent distance
+   measured ground-inclusive against an episode gate that guarantees > 0.5 m, so the near buckets were
+   structurally unreachable and the published 0% was the instrument reporting its own gate — full
+   derivation in §10.7). **C8** above and the vertical half of `HeadingEligibility.FindContactFrame`'s
+   frozen head-height sweep were recorded as the two cheaper, upstream candidates ahead of it.
+2. **§10.8 — re-ranked to first.** A corrected instrument (Report C5b, v1.4), asked the same 3-D
+   question without the height-floor artifact, reached the same 0%-within-contact-distance conclusion
+   by a sound route, and §10.8 re-ranked "attack the ball" first on that corrected evidence. This
+   landing was **not** back-propagated into this backlog at the time, which is what let the two
+   documents disagree.
+3. **§10.10 — withdrawn again, and this time on a report that was already in hand.** Report C5d — the
+   cross landing-point census, measured in §10.8's own run and not read until §10.10 — found an
+   attacker within 5 m of a cross's landing point in ~96–99% of episodes, the opposite of §10.8's
+   headline. §10.8's Series 1 was built on 1,081 pooled episodes against only 392 aerial final-third
+   passes, a bimodal distribution masked by its mean. §10.10 also finds the mechanism §10.8 proposed
+   to build already exists and is live at `OptionGenerator.cs:822`
+   `GenerateInterceptCandidate` (#8 §3.1.9 INTERCEPT) — so the §10.6/§10.8 claim that nothing moves a
+   player toward the ball's arrival point is **false**; what is true is narrower (Z-blind perception,
+   a 1.5 s horizon frozen under KD-W1, and no instrument measuring whether INTERCEPT is ever
+   generated or selected). **C5d's 31 m mean landing distance (30.8 m home / 32.2 m away) points at
+   C4 — the delivery, not pursuit:** the penalty area is 16.5 m deep, and crosses are landing at
+   roughly twice that from goal with an attacker already there, which is exactly the shape of "#8
+   cannot pass to a place" rather than "nobody chases the ball". No new lever is ranked in §10.10;
+   the ranking stands **withdrawn**, matching this backlog's own C7/C8 ordering below, which never
+   adopted §10.8's re-ranking in the first place.
+
+**Standing rule, so this cannot drift again:** this backlog's own item ordering (§5 table below) is
+authoritative for wire-order, and any change to the "attack the ball" ranking in
+`close-chance-creation-design.md` must be reflected in this note **in the same commit** that changes
+it there. See `close-chance-creation-design.md` §10.10 for the C5d measurement and its VERSION
+HISTORY v2.1 entry for the record of this update.
 
 ---
 
@@ -398,6 +427,7 @@ cheaper, upstream candidates the same council recorded ahead of it.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.5 | 2026-08-09 | — | **§5's "attack the ball" note rewritten to record the full sequence, not just the withdrawal.** `close-chance-creation-design.md` §10.10 (Report C5d, the cross landing-point census — an attacker within 5 m of a cross's landing point in ~96–99% of episodes) withdraws §10.8's re-ranking of "attack the ball" to first, which this backlog's §5 note had never adopted in the first place — the two documents had been in conflict since §10.8 landed without a corresponding update here. The note now states all three steps (§10.7 withdrawn → §10.8 re-ranked → §10.10 withdrawn again), records that C5d's ~31 m mean landing distance points at **C4** (the delivery) rather than pursuit, and that the mechanism §10.8 proposed already exists and is live (`OptionGenerator.cs:822` `GenerateInterceptCandidate`). Adds a standing same-commit cross-reference rule so the two documents cannot drift again. No code changed in this revision; §5's table ordering (C7/C8 ahead of the withdrawn ranking) is unchanged — it never needed correcting. |
 | 1.4 | 2026-08-09 | — | **Four findings from today's `ERR-010-002` landing and the pre-implementation council that preceded it.** **W11 filed and resolved same-day**: `HeaderIntent.TargetIntent` was written, clamped, serialized, and restored, and read by NO formula — the inverse of the phantom-interface rule this project tracks, and a class the v1.0 method (no-caller methods) and C5 (no-reader fields) both miss, because every one of TargetIntent's five steps looked like production wiring. Resolved by `ERR-010-002`; **the detection gap is not** — recommended as an explicit check for **W12**. **C8 filed** (new Class B): the header commit has no head-height gate — `TryCommitHeaderIntents` fires above 0.5 m while the head occupies ~2.0–2.6 m during the eligibility window, so `FailureCause.PositionedPoorly` (97–99% of 963 measured failures) conflates two unrelated causes; **UNMEASURED**, cheap, upstream, and cannot stall play. **C7 corrected in place**: the "always aimed at a fixed point … never at a team-mate" defect was mis-stated — the fixed target never reached a formula at all, so the header was pure specular reflection with no player influence on direction whatsoever; fixed as `ERR-010-002`. The "never at a team-mate" half stands, still open, needs W9. **One new Class-C row**: `HeadingEligibility.cs:54-56`'s "must have left the ground" gate reads `AgentMovementState.GROUNDED`, which `#2` defines as "knocked down," not "on the ground" — a cross-spec semantic collision, not a wiring gap; filed as a separate ERR candidate against #10, deliberately not folded into `ERR-010-002`. **Also**: a note under §5 records that the same council refuted `close-chance-creation-design.md` §10.6's "attack the ball" ranking as resting on an instrument artifact (§10.7) — withdrawn, not replaced; C8 and `FindContactFrame`'s frozen-head-height vertical half are the two cheaper candidates recorded ahead of it. No code changed in this revision. |
 | 1.3 | 2026-08-08 | — | **C7 filed, and it is the largest measured item in this document** — no agent can receive a ball above 0.5 m (`RunFirstTouch` gate 2 and `RunLooseBallPickup` both refuse it, heading being deferred out of Stage 0), and 44% of final-third passes are aerial: measured over 6 seeds × 90 min, **Lofted completes 1% (n=221) and Cross 1% (n=171)** against Ground 41% and ThroughBall 28%, with overall final-third completion 23%. **C4 deprioritized** on the same measurement — `close-chance-creation-design.md` §7 item 1's "the real bound" claim is retracted in §10, and landing C4 first would add to a bucket that already completes 1%. **One Class-C row corrected**: `PassTargetResolver.ResolveSpaceTargetedAimPoint` is dormant Class-A, not a correctly-wired helper — the v1.0 sweep missed it because the method has a caller on a branch nothing can take. No code changed in this revision. |
 | 1.2 | 2026-08-08 | — | **C1 fixed** (`ERR-012-011`) — #12 §3.0 classifies phase from TEAM possession; the engine gains a pass-in-flight receiver latch (`SNAPSHOT_SCHEMA_VERSION` 19 → 20), no new `[GT]`. **This document's own claim that C1 was "probably the highest-value item" is retracted in place**, refuted by the pre-implementation council: the gate is real but two of the three consumers it was meant to unblock are inert for unrelated reasons, and the third lever (#12's `PullFactor` `InPoss` column) is LESS advanced than the `TransToAtk` column it replaces, so the fix was predicted to move the shape slightly AWAY from goal. C1's value is a correct label plus a first-time-exercisable `InPoss` column for the calibration pass. **Two new Class-A items filed from the same investigation**: **C5** `TacticalContext.HasAttackIntent` is written by the engine and read by no production code (the second, larger lock on #15's door — missed by the v1.0 method because it counts methods with no caller, not fields with no reader), and **C6** `GkHeadingWorldAdapter.ApplyKick` is not reachable from any test. Next in sequence is **W2**, tackles. |
