@@ -1,6 +1,6 @@
 // File:     src/player-progression/ProgressionSaveCodec.cs
 // Created:  2026-08-08
-// Modified: 2026-08-10 (AR pass 5 — Encode/Decode range-gate parity via DescribeOutOfRangeValues — v1.3)
+// Modified: 2026-08-11 (AR pass 6, M3 — the shared RequireClubSizeInRange gate on Encode/Decode — v1.4)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.5 (the save codec), §4.2, KD-4, FR-PG-016/017/018/019,
 //           F3/F5; ERR-028-004 (§3.5 named the RNG domain tag as the block's identifier);
@@ -200,6 +200,14 @@ namespace TacticalDirector.PlayerProgression
             // been bitten by twice.
             RequireValuesInRange(clubs);
 
+            // M3: never write a club SquadFor cannot project. PlayerDatabase.Squad's own constructor
+            // requires between 1 and CLUB_SQUAD_SIZE players; #28's block IS the roster (KD-4), and
+            // FromBlocks/Encode/Decode had no such gate at all — so a store carrying a 0- or 30-player
+            // club advanced, saved and loaded cleanly and then threw from SquadFor, mid-round, inside
+            // ISquadProvider.ResolveByClubId, after earlier fixtures in that round had already been
+            // applied. Never write what SquadFor cannot project.
+            RequireClubSizeInRange(clubs);
+
             // FR-PG-011 at the write boundary too (AR pass 5): Restore is Decode + FromBlocks, so a
             // cursor this side accepted and FromBlocks refuses is a blob that loads never.
             RequireIdCursorAheadOfCarriedIds(clubs, nextPlayerId);
@@ -345,6 +353,11 @@ namespace TacticalDirector.PlayerProgression
             // and be refused there with a message about the wrong subsystem's contract, not this
             // codec's own (ERR-028-014).
             RequireNoNeverAdvancedSentinel(clubs);
+
+            // The load-side mirror of Encode's M3 gate: a hand-edited file carrying a club SquadFor
+            // cannot project would otherwise decode cleanly and only throw later, mid-round, inside
+            // ISquadProvider.ResolveByClubId.
+            RequireClubSizeInRange(clubs);
 
             // Same mirror for FR-PG-011 (AR pass 5). Refusing here means a corrupt cursor is caught at
             // the boundary where the bytes are still in hand, rather than by FromBlocks one call later.
@@ -606,6 +619,25 @@ namespace TacticalDirector.PlayerProgression
             // advanced and projected fine PERMANENTLY unsavable. The upper bound is the world clock's own
             // ceiling: a player born on the current day is age 0, which is ordinary, but an anchor beyond
             // uint.MaxValue cannot correspond to any reachable world day.
+            // AR pass 6 (High), the structural half being the loop exits in GrowthProjection. Pass 5
+            // called BirthWorldDay "the ONLY lifecycle field with no range gate"; that claim was
+            // checkable and false — GrowthCursor had none either, and it is the one accumulator every
+            // attribute change flows through. Out of range it did not corrupt data, it WEDGED the day
+            // step: the drain loop ground upward one POINT_COST at a time with no failure exit, from a
+            // save file that round-tripped byte-exact.
+            //
+            // The legal band needs no [GT] judgement — it is derivable. Both loops leave
+            // |GrowthCursor| <= POINT_COST - 1 after any completed step, and SeedLifecycle writes ±1, so
+            // |GrowthCursor| < POINT_COST is exactly the serialized invariant.
+            if (life.GrowthCursor <= -PlayerProgressionConstants.POINT_COST
+                || life.GrowthCursor >= PlayerProgressionConstants.POINT_COST)
+            {
+                return "player " + rec.PlayerId + " in club " + clubId + " carries growthCursor " +
+                    life.GrowthCursor + ", outside (" + (-PlayerProgressionConstants.POINT_COST) + ", " +
+                    PlayerProgressionConstants.POINT_COST + ") — a completed day step always leaves the " +
+                    "cursor below one whole point (corrupt save).";
+            }
+
             long minBirthWorldDay =
                 -(long)PlayerProgressionConstants.MAX_DERIVABLE_AGE_YEARS
                 * PlayerProgressionConstants.DAYS_PER_YEAR;
@@ -673,6 +705,35 @@ namespace TacticalDirector.PlayerProgression
                             "Refusing to write a block Decode would refuse to read back: " + violation,
                             nameof(clubs));
                     }
+                }
+            }
+        }
+
+        /// <summary>
+        /// M3: the per-club roster-size rule, shared by <see cref="Encode"/>, <see cref="Decode"/> and
+        /// <see cref="ProgressionEngine.FromBlocks"/> — exactly the pattern
+        /// <see cref="RequireValuesInRange"/> and <see cref="RequireIdCursorAheadOfCarriedIds"/> already
+        /// follow. <see cref="PlayerDatabase.Squad"/>'s own constructor requires between 1 and
+        /// <see cref="PlayerDatabaseConstants.CLUB_SQUAD_SIZE"/> players, and #28's block IS the roster
+        /// (KD-4) — <see cref="ProgressionEngine.SquadFor"/> builds a <c>Squad</c> straight off it — so a
+        /// club outside that range is state every one of the three boundaries must refuse, not just the
+        /// one that happens to call <c>SquadFor</c> next.
+        /// </summary>
+        internal static void RequireClubSizeInRange(ClubCareerStates[] clubs)
+        {
+            for (int c = 0; c < clubs.Length; c++)
+            {
+                int count = clubs[c].Count;
+                if (count < 1 || count > PlayerDatabaseConstants.CLUB_SQUAD_SIZE)
+                {
+                    throw new ArgumentException(
+                        "Club " + clubs[c].ClubId + " carries " + count + " player(s), outside [1, " +
+                        PlayerDatabaseConstants.CLUB_SQUAD_SIZE + "] — PlayerDatabase.Squad's own " +
+                        "constructor bound (M3). #28's block IS the roster (KD-4), so a club outside " +
+                        "this range would encode/decode cleanly and only throw later, mid-round, " +
+                        "inside ISquadProvider.ResolveByClubId, after earlier fixtures in that round " +
+                        "had already been applied to the table.",
+                        nameof(clubs));
                 }
             }
         }
@@ -770,4 +831,14 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | argument; InvalidOperationException for a corrupt file) — what  |
 // |         |            |        | is shared is the rule, not the throw. Mutation-verified:         |
 // |         |            |        | reverting the Encode call fails 6 tests.                         |
+// | 1.4     | 2026-08-11 | —      | AR pass 6, M3. New RequireClubSizeInRange(clubs) — the per-club   |
+// |         |            |        | roster-size rule PlayerDatabase.Squad's own constructor enforces  |
+// |         |            |        | but neither Encode, Decode nor FromBlocks did — called from both   |
+// |         |            |        | Encode and Decode (FromBlocks' call is ProgressionEngine.cs v1.5).  |
+// |         |            |        | A 0- or 30-player club previously encoded/decoded cleanly and only |
+// |         |            |        | threw from SquadFor mid-round. Same exception-type split as the    |
+// |         |            |        | other shared boundary rules (ArgumentException from both sides,    |
+// |         |            |        | matching RequireGloballyUniquePlayerIds / RequireIdCursorAhead-    |
+// |         |            |        | CarriedIds, not the DescribeOutOfRangeValues split). Mutation-      |
+// |         |            |        | verified: reverting either call site fails the new locks.          |
 #endregion

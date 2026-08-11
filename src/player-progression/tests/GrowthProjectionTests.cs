@@ -1,11 +1,12 @@
 // File:     src/player-progression/tests/GrowthProjectionTests.cs
 // Created:  2026-07-24
-// Modified: 2026-08-10
+// Modified: 2026-08-11 (AR pass 6, M2(a) lock — v1.2)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.1 + Appendix B; Code Standards #20
 // Purpose:  T-PG-DET-001/002, T-PG-ID-001/002 — byte-exact growth across a value-copy "save", age
 //           gap-independence, the curve-off §4.3 identity step, TrainingInput.Neutral neutrality, and
-//           (M2, ERR-028-018) the PA-ceiling cursor-banking lock.
+//           (M2, ERR-028-018) the PA-ceiling cursor-banking lock. Also (AR pass 6, M2(a)) the
+//           future-dated-BirthWorldDay fail-loud lock.
 
 using NUnit.Framework;
 
@@ -90,6 +91,89 @@ namespace TacticalDirector.PlayerProgression.Tests
         }
 
         [Test]
+        public void PaBoundSpendRefusal_LeavesNoResidue()
+        {
+            // AR pass 6 M4. The M2 lock below asserts the cursor stays BOUNDED, which is true at a clamp
+            // of 364 and at 0 alike — so it could not discriminate the fix from the defect. This one can.
+            //
+            // Pass 5's M2 clamped to POINT_COST - 1 "to keep the pending fraction — the next Growth day
+            // can still cross the threshold and try again". Execution falsified that: PA never rises and
+            // no attribute falls in Growth, so a refused spend is refused every remaining Growth day. The
+            // retained 364 bought nothing and cost a whole point of Decline (first decline point on day
+            // 4743 against an unbound player's 4379). Zero also restores the no-residue invariant
+            // 789ea74 established for every other player.
+            PlayerRecord rec = PlayerRecord.CreateDefault(1);
+            int ca = AbilityModel.ComputeCA(in rec.Attributes, rec.Position);
+            var life = new PlayerLifecycle
+            {
+                PotentialAbility = ca,            // at the ceiling from day one — every spend refused
+                CurrentAbility = ca,
+                GrowthCursor = 0,
+                BirthWorldDay = (long)BaseDay - 18L * PlayerProgressionConstants.DAYS_PER_YEAR,
+                RetirementFlag = false,
+                RetirementDay = 0,
+                LastAdvancedWorldDay = BaseDay
+            };
+
+            // Two full years inside the Growth band: enough that the threshold is crossed and refused
+            // twice, so a retained fraction would be plainly visible.
+            for (uint d = 1; d <= 2 * PlayerProgressionConstants.DAYS_PER_YEAR; d++)
+            {
+                GrowthProjection.AdvanceDayForPlayer(
+                    ref rec, ref life, BaseDay + d, TrainingInput.Neutral, curveEnabled: false);
+            }
+
+            Assert.AreEqual(0L, life.GrowthCursor,
+                "a refusal that can never be retried must discard the fraction, not carry it into "
+                + "Decline — 364 here is one whole attribute point of decline silently cancelled.");
+        }
+
+        [Test]
+        public void FullyDrainedPlayer_DrainLoopExits_AndDoesNotGrind()
+        {
+            // AR pass 6 High. DrainOnePoint was void and a documented no-op at the attribute floor, so
+            // the drain loop had NO failure exit: its only progress was the cursor creeping up one
+            // POINT_COST per iteration. That terminates in principle and not in practice — a cursor of
+            // long.MinValue/2 is ~1.26e13 iterations, roughly 70 days of CPU, with no diagnostic, from a
+            // save file that round-trips byte-exact. The spend side has had a refusal exit since pass 5;
+            // this is the mirror it never got.
+            //
+            // Driven through GrowthProjection directly on purpose: the codec gate added alongside this
+            // fix now refuses such a cursor at every store boundary, so the loop is no longer reachable
+            // from a save — and a lock that could only be written through a boundary that refuses it
+            // would test the gate twice and the loop never.
+            PlayerRecord rec = PlayerRecord.CreateDefault(1);
+            PlayerAttributes floored = rec.Attributes;
+            int[] values = floored.ToArray();
+            for (int i = 0; i < values.Length; i++)
+            {
+                values[i] = PlayerProgressionConstants.ATTRIBUTE_MIN;
+            }
+            floored.FromArray(values);
+            floored.WeakFootRating = rec.Attributes.WeakFootRating;
+            rec.Attributes = floored;
+
+            var life = new PlayerLifecycle
+            {
+                PotentialAbility = PlayerProgressionConstants.PA_MIN,
+                CurrentAbility = AbilityModel.ComputeCA(in rec.Attributes, rec.Position),
+                GrowthCursor = -1000L * PlayerProgressionConstants.POINT_COST,   // ~1000 refused drains
+                BirthWorldDay = (long)BaseDay - 34L * PlayerProgressionConstants.DAYS_PER_YEAR,
+                RetirementFlag = false,
+                RetirementDay = 0,
+                LastAdvancedWorldDay = BaseDay
+            };
+
+            GrowthProjection.AdvanceDayForPlayer(
+                ref rec, ref life, BaseDay + 1, TrainingInput.Neutral, curveEnabled: false);
+
+            Assert.AreEqual(0L, life.GrowthCursor,
+                "the loop must EXIT on the first refused drain, not grind the cursor up one point at a "
+                + "time — the pre-fix loop would have run ~1000 iterations here and 1.26e13 at "
+                + "long.MinValue/2.");
+        }
+
+        [Test]
         public void PaBoundYoungster_CursorStaysBounded_AndDeclinesWithinOnePointOfUnbanked()
         {
             // M2 (ERR-028-018 carryforward): a player at the PA ceiling from day one — every Growth-band
@@ -142,6 +226,33 @@ namespace TacticalDirector.PlayerProgression.Tests
             Assert.LessOrEqual(pointsLostUnbanked - pointsLostBanked, 1,
                 "a bounded residual costs at most one point's worth of delay, not the years-long "
                 + "cancellation an unbounded bank produced pre-fix.");
+        }
+
+        [Test]
+        public void FutureDatedBirthWorldDay_ThrowsRatherThanReadingAgeAsZero()
+        {
+            // AR pass 6, M2(a). The retired `ageDays >= 0 ? … : 0` else-branch silently read a
+            // future-dated anchor (BirthWorldDay ahead of worldDay) as age 0 — corrupt state read as
+            // ordinary data, and permanently so: ProgressionSaveCodec.DescribeOutOfRangeValues has no
+            // world day to bound the anchor's upper end against (its own ceiling is uint.MaxValue), so
+            // nothing at the save boundary catches it either. This is the structural half: the step
+            // itself must be incapable of manufacturing a wrong-but-plausible age.
+            PlayerRecord rec = PlayerRecord.CreateDefault(1);
+            var life = new PlayerLifecycle
+            {
+                PotentialAbility = PlayerProgressionConstants.ABILITY_MAX,
+                CurrentAbility = 0,
+                GrowthCursor = 0,
+                BirthWorldDay = BaseDay + 1,   // one day AHEAD of the worldDay this step advances to
+                RetirementFlag = false,
+                RetirementDay = 0
+            };
+
+            Assert.Throws<System.InvalidOperationException>(
+                () => GrowthProjection.AdvanceDayForPlayer(
+                    ref rec, ref life, BaseDay, TrainingInput.Neutral, curveEnabled: false),
+                "a BirthWorldDay ahead of worldDay is corrupt state — the retired else-branch silently "
+                + "read this as age 0 instead of refusing it.");
         }
 
         [Test]
@@ -218,4 +329,7 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | cursor never banks beyond one point's worth at the PA ceiling, |
 // |         |            |        | and that the resulting Decline schedule is within one point of |
 // |         |            |        | an unbanked player's over an identical span.                   |
+// | 1.2     | 2026-08-11 | —      | AR pass 6 (M2(a)): + FutureDatedBirthWorldDay_ThrowsRatherThan- |
+// |         |            |        | ReadingAgeAsZero — a BirthWorldDay ahead of worldDay must throw |
+// |         |            |        | InvalidOperationException, not silently derive age 0.          |
 #endregion

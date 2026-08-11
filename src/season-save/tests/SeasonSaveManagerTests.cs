@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonSaveManagerTests.cs
 // Created:  2026-07-22
-// Modified: 2026-08-08 (ERR-028-007 / ERR-028-008 locks — v1.14)
+// Modified: 2026-08-11 (AR pass 6, M2(b) — BirthWorldDay-vs-clock Save/Load locks — v1.15)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §5 acceptance;
 //           Season & Competition Loop #30 FR-SN-019..023, Appendix B; Training System #29 FR-TR-018/019;
@@ -998,6 +998,75 @@ namespace TacticalDirector.SeasonSave
                 "independently of Save, the third of the three boundaries.");
         }
 
+        // ── AR pass 6, M2(b): the BirthWorldDay-vs-clock sibling, at the same two boundaries ──
+
+        [Test]
+        public void Save_FutureDatedBirthWorldDay_FailsLoud()
+        {
+            // The M2(b) twin of Save_FutureDatedProgressionCursor_FailsLoud above, checked on the same
+            // terms. lastAdvancedWorldDay stays at the ordinary lag of 1 (world clock 2) so only the
+            // BirthWorldDay predicate can be what refuses this.
+            WorldStore world = PopulatedStore();   // world clock sits at 2
+            ProgressionEngine future = ProgressionFor(
+                PBlockWithBirthDay(7, 100, lastAdvancedWorldDay: 1u, birthWorldDay: 500L));
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => SeasonSaveManager.Save(
+                    world, MidSeasonState(), matchOrNull: null, TempPath("x.season"),
+                    TrainingMatching(7, 100), MedicalMatching(7, 100), AppearanceMatching(7, 100),
+                    future),
+                "M2(b): a future-dated BirthWorldDay must be refused at Save, exactly like the " +
+                "progression cursor above.");
+            StringAssert.Contains("BirthWorldDay", ex.Message,
+                "…and it must be the BirthWorldDay predicate that refuses this, not the cursor one.");
+        }
+
+        [Test]
+        public void Load_FutureDatedBirthWorldDay_FailsLoud()
+        {
+            // The same rule at the layer a hand-edited or mispaired file actually arrives through —
+            // crafted through ProgressionSaveCodec.Encode directly (Save now refuses to WRITE this
+            // content, proven above), isolating Load's own separate check.
+            WorldStore world = PopulatedStore();
+
+            var trainingBlock = new TrainingBlock(TrainingSaveCodec.Encode(NoTraining));
+            var medicalBlock = new MedicalBlock(MedicalSaveCodec.Encode(NoMedical));
+            var appearanceBlock = new AppearanceBlock(AppearanceSaveCodec.Encode(NoAppearance));
+            var progressionBlock = new ProgressionBlock(
+                ProgressionSaveCodec.Encode(
+                    new[] { PBlockWithBirthDay(7, 100, lastAdvancedWorldDay: 1u, birthWorldDay: 500L) },
+                    101));
+            byte[] frame = SeasonSaveCodec.Encode(
+                world.Snapshot(), SeasonStateCodec.Encode(MidSeasonState()),
+                in trainingBlock, in medicalBlock, in appearanceBlock, in progressionBlock, null);
+
+            string path = TempPath("wedged-birthday.season");
+            File.WriteAllBytes(path, frame);
+
+            Assert.Throws<InvalidOperationException>(() => SeasonSaveManager.Load(path),
+                "M2(b): a future-dated BirthWorldDay must be refused at Load too — checked " +
+                "independently of Save.");
+        }
+
+        // The PBlock twin with a caller-supplied BirthWorldDay, for the two cases above — PBlock itself
+        // fixes it at 0, which is never ahead of any non-negative world clock.
+        private static ClubCareerStates PBlockWithBirthDay(
+            int club, int playerId, uint lastAdvancedWorldDay, long birthWorldDay)
+        {
+            PlayerRecord rec = PlayerRecord.CreateDefault(playerId);
+            var life = new PlayerLifecycle
+            {
+                PotentialAbility = PlayerProgressionConstants.PA_MIN,
+                CurrentAbility = PlayerProgressionConstants.PA_MIN,
+                GrowthCursor = 0,
+                BirthWorldDay = birthWorldDay,
+                RetirementFlag = false,
+                RetirementDay = 0,
+                LastAdvancedWorldDay = lastAdvancedWorldDay,
+            };
+            return new ClubCareerStates(club, new[] { rec }, new[] { life });
+        }
+
         // Mirrors TBlock/MBlock/ABlock above: a one-player #28 block with a hand-set cursor, so the
         // fixture controls exactly the field the cursor-vs-clock gate reads. Everything else is filler
         // (irrelevant to that gate).
@@ -1806,4 +1875,12 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | the original file proven intact, empty-to-new-path accepted,     |
 // |         |            |        | empty-over-already-empty accepted. + PBlock/ProgressionFor       |
 // |         |            |        | fixtures mirroring TBlock/MBlock/ABlock.                         |
+// | 1.15    | 2026-08-11 | —      | AR pass 6, M2(b): Save_FutureDatedBirthWorldDay_FailsLoud and    |
+// |         |            |        | Load_FutureDatedBirthWorldDay_FailsLoud — the Save/Load twins of |
+// |         |            |        | SeasonLoopProgressionTests' composition-boundary lock, checked   |
+// |         |            |        | on the same terms as the ERR-028-007 progression-cursor cases    |
+// |         |            |        | above. + PBlockWithBirthDay fixture (PBlock's twin with a        |
+// |         |            |        | caller-supplied BirthWorldDay). Mutation-verified: reverting     |
+// |         |            |        | either RequireBirthWorldDayWithinClock call in SeasonSaveManager |
+// |         |            |        | fails its own test and no other.                                 |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/season-save/PlayerCareerStates.cs
 // Created:  2026-08-06
-// Modified: 2026-08-10 (doc fix — v1.17)
+// Modified: 2026-08-11 (AR pass 6, M2(b) — RequireBirthWorldDayWithinClock — v1.18)
 // Author:   —
 // Spec:     Training System #29 §3.1/§3.3/§3.5, §4.3 (seam contracts), FR-TR-004/016/022/023/025;
 //           Injuries & Medical #41 §3.1/§3.5, §4.3, FR-MD-003/009/010/022/023/025/027;
@@ -615,6 +615,36 @@ namespace TacticalDirector.SeasonSave
                     + $"progression cursor ({progressionDay}) is "
                     + (progressionDay > worldTick ? "ahead of" : "more than one day behind")
                     + $" the world clock ({worldTick}).");
+            }
+        }
+
+        /// <summary>
+        /// The M2(b) sibling of <see cref="RequireProgressionCursorWithinClock"/>, checked at the same
+        /// two boundaries (this composition walk and <c>SeasonSaveManager</c>'s block-level walk): a
+        /// player's <c>BirthWorldDay</c> anchor must not sit AHEAD of the world clock.
+        /// <para>
+        /// <c>GrowthProjection</c> derives age as <c>(worldDay − BirthWorldDay) / DAYS_PER_YEAR</c>, and
+        /// <c>ProgressionSaveCodec.DescribeOutOfRangeValues</c> has no world day to bound the anchor's
+        /// upper end against — its own ceiling is <c>uint.MaxValue</c>, which rules out anchors that
+        /// cannot correspond to any reachable world day at all, not anchors ahead of THIS clock. A birth
+        /// day ahead of the day actually being advanced to is impossible for a real career (<c>SeedFrom</c>
+        /// anchors at the seed day; the clock only moves forward), and <c>GrowthProjection</c> now fails
+        /// loud on the resulting negative age-days (M2(a)) rather than silently deriving age 0 — but that
+        /// guard only fires once a day step reaches the player. This is the boundary that refuses the
+        /// pairing before it can, ahead-checked only (a birth day exactly on the clock is age 0, which is
+        /// ordinary — a player born today).
+        /// </para>
+        /// </summary>
+        internal static void RequireBirthWorldDayWithinClock(
+            uint worldTick, int clubId, int playerId, long birthWorldDay, string boundary)
+        {
+            if (birthWorldDay > worldTick)
+            {
+                throw new InvalidOperationException(
+                    $"{boundary} is incoherent: club {clubId} player {playerId}'s BirthWorldDay "
+                    + $"({birthWorldDay}) is ahead of the world clock ({worldTick}) — a future-dated "
+                    + "anchor is corrupt state; GrowthProjection would derive a negative age from it "
+                    + "(M2).");
             }
         }
 
@@ -1720,4 +1750,12 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | thing at every world day; #28's derives age from BirthWorldDay, |
 // |         |            |        | so it means something different at every clock value. No logic |
 // |         |            |        | change.                                                          |
+// | 1.18    | 2026-08-11 | —      | AR pass 6, M2(b). + RequireBirthWorldDayWithinClock, the        |
+// |         |            |        | sibling of RequireProgressionCursorWithinClock: refuses a       |
+// |         |            |        | player whose BirthWorldDay anchor sits ahead of the world       |
+// |         |            |        | clock. ProgressionSaveCodec's DescribeOutOfRangeValues cannot   |
+// |         |            |        | bound the anchor's top against a clock (it has none); this is   |
+// |         |            |        | the composition boundary that can. Called from SeasonLoop's     |
+// |         |            |        | per-player composition walk and SeasonSaveManager's block-level |
+// |         |            |        | walk, alongside RequireProgressionCursorWithinClock in both.    |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/player-progression/tests/ProgressionSaveCodecTests.cs
 // Created:  2026-08-08
-// Modified: 2026-08-10 (AR pass 5 — 6 new Encode range-gate locks + the anti-drift lock — v1.4)
+// Modified: 2026-08-11 (AR pass 6, M3 — the club-size gate locks — v1.5)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.5 (the save codec), §4.2, KD-4,
 //           FR-PG-016/017/018/019, F3/F5; ERR-028-004 (§3.5 named the RNG domain tag as the block's
@@ -403,6 +403,69 @@ namespace TacticalDirector.PlayerProgression.Tests
             Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Encode(clubs, 10));
         }
 
+        // ── Club-size gate (M3, AR pass 6) ──────────────────────────────────────────
+        //
+        // PlayerDatabase.Squad's own constructor requires between 1 and CLUB_SQUAD_SIZE players;
+        // grep CLUB_SQUAD_SIZE src/player-progression/ returned NOTHING before this fix. A club outside
+        // that range encoded/decoded cleanly and only threw from ProgressionEngine.SquadFor, mid-round,
+        // inside ISquadProvider.ResolveByClubId, after earlier fixtures in that round had already been
+        // applied to the table.
+
+        [Test]
+        public void Encode_ClubWithNoPlayers_FailsLoud()
+        {
+            var club = new ClubCareerStates(
+                9, System.Array.Empty<PlayerRecord>(), System.Array.Empty<PlayerLifecycle>());
+
+            Assert.Throws<ArgumentException>(
+                () => ProgressionSaveCodec.Encode(new[] { club }, 10),
+                "never write a club SquadFor cannot project — an empty club is outside [1, " +
+                "CLUB_SQUAD_SIZE].");
+        }
+
+        [Test]
+        public void Encode_ClubAboveClubSquadSize_FailsLoud()
+        {
+            int oversized = PlayerDatabaseConstants.CLUB_SQUAD_SIZE + 5;
+            var players = new (PlayerRecord rec, PlayerLifecycle life)[oversized];
+            for (int i = 0; i < oversized; i++)
+            {
+                players[i] = (
+                    Rec(1000 + i, "A", "B", 20, PlayerPosition.Midfielder, 1),
+                    Life(5000, 3000, 0, 0, false, 0u, 1u));
+            }
+            var club = Club(9, players);
+
+            // nextPlayerId must exceed the HIGHEST carried id (1000 + oversized - 1), or
+            // RequireIdCursorAheadOfCarriedIds throws first and this test stops isolating the
+            // club-size gate at all — exactly the defect a mutation run against the first draft of
+            // this fixture caught (10 + oversized = 40 sat far below the carried ids' 1000s range).
+            Assert.Throws<ArgumentException>(
+                () => ProgressionSaveCodec.Encode(new[] { club }, 1000 + oversized),
+                "the mirror case — a club above CLUB_SQUAD_SIZE is state SquadFor cannot project either.");
+        }
+
+        [Test]
+        public void Decode_AClubWithNoPlayers_FailsLoud()
+        {
+            // Hand-built rather than encoded — Encode now refuses to WRITE this (the test above), so a
+            // hand-edited file is the only way a 0-player club reaches Decode. That is exactly the case
+            // this gate exists for: a corrupt file must not slip past the boundary that can still
+            // refuse it.
+            byte[] blob = new byte[4 + 4 + 4 + 4 + 4 + 4];
+            int o = 0;
+            CanonicalSerializer.WriteU32(blob, ref o, PlayerProgressionConstants.PROGRESSION_SAVE_MAGIC);
+            CanonicalSerializer.WriteU32(blob, ref o, PlayerProgressionConstants.PROGRESSION_SAVE_FORMAT_VERSION);
+            CanonicalSerializer.WriteI32(blob, ref o, 0);   // nextPlayerId
+            CanonicalSerializer.WriteU32(blob, ref o, 1u);  // clubCount
+            CanonicalSerializer.WriteI32(blob, ref o, 9);   // clubId
+            CanonicalSerializer.WriteU32(blob, ref o, 0u);  // playerCount
+
+            Assert.Throws<ArgumentException>(() => ProgressionSaveCodec.Decode(blob, out _),
+                "a well-formed but 0-player club decodes structurally fine (no trailing bytes, nothing " +
+                "to order) — the club-size gate is the only thing that can still refuse it.");
+        }
+
         // ── Cross-club uniqueness (mutation-audit locks) ───────────────────────────
         //
         // A mutation audit proved that deleting RequireGloballyUniquePlayerIds at either Encode or
@@ -784,7 +847,16 @@ namespace TacticalDirector.PlayerProgression.Tests
         [Test]
         public void Decode_NonAscendingClubIds_FailsLoud()
         {
-            byte[] blob = ProgressionSaveCodec.Encode(new[] { Club(1), Club(2) }, 0);
+            // AR pass 6, M3: each club now needs at least one player — an empty Club(N) is refused by
+            // Encode's own new gate before this test's fixture can even be built. The byte offset this
+            // test mutates (16, right after clubCount) is unaffected by what follows it.
+            byte[] blob = ProgressionSaveCodec.Encode(
+                new[]
+                {
+                    Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1), Life(5000, 3000, 0, 0, false, 0u, 1u))),
+                    Club(2, (Rec(6, "C", "D", 20, PlayerPosition.Midfielder, 1), Life(5000, 3000, 0, 0, false, 0u, 1u))),
+                },
+                7);
             int o = 16;   // magic + version + nextPlayerId + clubCount ⇒ first club id
             CanonicalSerializer.WriteI32(blob, ref o, 5);   // 5 then 2 — no longer ascending
 
@@ -870,4 +942,11 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | and that one below it is refused by the writer, not just the reader. |
 // |         |            |        | Mutation-verified: reverting the ProgressionSaveCodec.cs             |
 // |         |            |        | RequireValuesInRange(clubs) call in Encode fails all 6.               |
+// | 1.5     | 2026-08-11 | —      | AR pass 6, M3: +4 locks on the new RequireClubSizeInRange gate —     |
+// |         |            |        | Encode_ClubWithNoPlayers_FailsLoud, Encode_ClubAboveClubSquadSize_    |
+// |         |            |        | FailsLoud, and the hand-built-bytes Decode_AClubWithNoPlayers_       |
+// |         |            |        | FailsLoud (Encode now refuses to WRITE a 0-player club, so a         |
+// |         |            |        | hand-edited file is the only way Decode ever sees one). Mutation-    |
+// |         |            |        | verified: reverting either call site fails its own test and no      |
+// |         |            |        | other.                                                                |
 #endregion

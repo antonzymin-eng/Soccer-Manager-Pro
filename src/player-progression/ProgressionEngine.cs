@@ -1,6 +1,6 @@
 // File:     src/player-progression/ProgressionEngine.cs
 // Created:  2026-08-08
-// Modified: 2026-08-10
+// Modified: 2026-08-11 (AR pass 6, M3 — FromBlocks gains the club-size gate — v1.5)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.1 / §3.4 / §3.5 / §4.2 / §4.5, KD-4 / KD-7 / KD-8,
 //           FR-PG-001/005/008/011/013/014/016/019/021/022/023; ERR-029-006 (the batch entry point);
@@ -280,6 +280,14 @@ namespace TacticalDirector.PlayerProgression
             }
 
             engine.RequireGloballyUniquePlayerIds(nameof(clubs));
+
+            // M3: never BUILD a career from a club SquadFor cannot project. The codec's Encode/Decode
+            // sides refuse the same rule (ProgressionSaveCodec.RequireClubSizeInRange); FromBlocks is
+            // the third and documented restore path (a #47 authored-data loader, a tool, a fixture) and
+            // must not be the one boundary a malformed block sails through — probe-verified before the
+            // fix: a 0-player and a 30-player club both round-tripped through AdvanceDay and Save, and
+            // SquadFor threw only when something finally asked to PLAY.
+            ProgressionSaveCodec.RequireClubSizeInRange(clubs);
 
             // M2: the whole point of serializing NextPlayerId is that "a regen can never reuse a
             // retiree's id across a save boundary" (FR-PG-011). A cursor at or behind an id the store
@@ -787,4 +795,12 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | underflows to uint.MaxValue, the sentinel FromBlocks refuses.   |
 // |         |            |        | Mutation-verified: reverting the seed credit fails 6 of 109     |
 // |         |            |        | player-progression tests.                                       |
+// | 1.5     | 2026-08-11 | —      | AR pass 6, M3. FromBlocks gains a                                |
+// |         |            |        | ProgressionSaveCodec.RequireClubSizeInRange call: a club outside |
+// |         |            |        | [1, CLUB_SQUAD_SIZE] had no gate anywhere in this file, so a     |
+// |         |            |        | 0- or 30-player block built, advanced-day'd and saved cleanly    |
+// |         |            |        | and only threw from SquadFor — mid-round, inside                 |
+// |         |            |        | ISquadProvider.ResolveByClubId, after earlier fixtures in that   |
+// |         |            |        | round had already been applied. Same shared owner Encode/Decode  |
+// |         |            |        | now call.                                                        |
 #endregion

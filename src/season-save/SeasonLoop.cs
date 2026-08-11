@@ -1,7 +1,7 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
-// Modified: 2026-08-10
-//           v1.15; the pass 1-3 recording chain and the pass-5 doc fix are the rows below)
+// Modified: 2026-08-11 (AR pass 6, M2(b) — the BirthWorldDay-vs-clock check joins the composition
+//           walk — v1.19; the pass 1-3 recording chain and the pass-5 doc fix are the rows below)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (day advance / KD-2 tick order), §3.4 (playing a round /
 //           KD-9), §3.5 (season-boundary roll / KD-6), §4.3 (the composition root), §4.6 (the #22
@@ -267,6 +267,16 @@ namespace TacticalDirector.SeasonSave
                             careerBlocks[c].ClubId,
                             careerBlocks[c].Records[p].PlayerId,
                             careerBlocks[c].Lifecycles[p].LastAdvancedWorldDay,
+                            "SeasonLoop composition");
+
+                        // M2(b): the sibling check, same walk, same reason a bad cursor is refused
+                        // HERE rather than left for a day step to reach it — GrowthProjection now
+                        // fails loud on a future-dated anchor (M2(a)), but only once it is stepped.
+                        PlayerCareerStates.RequireBirthWorldDayWithinClock(
+                            world.CurrentWorldTick,
+                            careerBlocks[c].ClubId,
+                            careerBlocks[c].Records[p].PlayerId,
+                            careerBlocks[c].Lifecycles[p].BirthWorldDay,
                             "SeasonLoop composition");
                     }
                 }
@@ -1415,4 +1425,11 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | against attributes the store had grown away from — the          |
 // |         |            |        | ERR-028-010 divergence, reopened by the fix one commit later.   |
 // |         |            |        | Rekeyed to the provider the loop OWNS. Mutation-verified.       |
+// | 1.19    | 2026-08-11 | —      | AR pass 6, M2(b). The per-player composition walk (ERR-028-007) |
+// |         |            |        | gains PlayerCareerStates.RequireBirthWorldDayWithinClock beside |
+// |         |            |        | RequireProgressionCursorWithinClock: a BirthWorldDay ahead of   |
+// |         |            |        | the world clock is corrupt state (GrowthProjection would derive |
+// |         |            |        | a negative age from it) and is now refused HERE, at composition,|
+// |         |            |        | rather than left for a day step to reach GrowthProjection's own |
+// |         |            |        | new M2(a) guard.                                                 |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonLoopProgressionTests.cs
 // Created:  2026-08-08
-// Modified: 2026-08-10 (AR pass 5, time/arithmetic axis — the seed-day-credit rebaseline — v1.6)
+// Modified: 2026-08-11 (AR pass 6, M2(b) — the BirthWorldDay-vs-clock composition locks — v1.7)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (KD-2 slot 1); Player Progression & Lifecycle #28
 //           KD-4 / FR-PG-021 / FR-PG-022; ERR-029-006 (the batch entry point, closed here);
@@ -486,6 +486,52 @@ namespace TacticalDirector.SeasonSave.Tests
                 "…and it must be the LAG half of the rule that refuses it, not the ahead half.");
         }
 
+        [Test]
+        public void Constructor_WithABirthWorldDayAheadOfTheClock_IsRefused()
+        {
+            // AR pass 6, M2(b). GrowthProjection.cs:55's retired else-branch used to silently read a
+            // future-dated BirthWorldDay as age 0 — reachable and PERMANENT, because
+            // ProgressionSaveCodec.DescribeOutOfRangeValues has no world day to bound the anchor's
+            // upper end against. This is the composition-boundary refusal, the same shape as
+            // Constructor_WithProgressionCursorAheadOfClock_IsRefused above: mutate one player's
+            // BirthWorldDay to sit ahead of the world clock (still 0) and rebuild through FromBlocks,
+            // bypassing loop.AdvanceDays entirely, so the two disagree.
+            (WorldStore world, SeasonState season, ProgressionEngine progression, PlayerCareerStates career) =
+                NewProgressionComponents();
+
+            ClubCareerStates[] blocks = progression.ToBlocks();
+            blocks[0].Lifecycles[0].BirthWorldDay = 5;   // ahead of the world clock, still 0
+            ProgressionEngine corrupted = ProgressionEngine.FromBlocks(blocks, progression.NextPlayerId);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => new SeasonLoop(
+                    world, season, RoundResolutionMode.QuickSimAll, career, null, corrupted),
+                "M2(b): a BirthWorldDay ahead of the world clock is corrupt state and must be refused "
+                + "at composition, the same boundary that already refuses a progression cursor ahead "
+                + "of the clock.");
+            StringAssert.Contains("BirthWorldDay", ex.Message,
+                "…and it must be the BirthWorldDay predicate that refuses this, not some other gate.");
+        }
+
+        [Test]
+        public void Constructor_WithABirthWorldDayExactlyOnTheClock_IsAccepted()
+        {
+            // The boundary value: a player born TODAY (BirthWorldDay == worldTick) is age 0, which is
+            // ordinary — only strictly AHEAD is corrupt. Ahead-checked only, the same shape as
+            // RequireAppearanceAnchorWithinClock.
+            (WorldStore world, SeasonState season, ProgressionEngine progression, PlayerCareerStates career) =
+                NewProgressionComponents();
+
+            ClubCareerStates[] blocks = progression.ToBlocks();
+            blocks[0].Lifecycles[0].BirthWorldDay = 0;   // exactly on the world clock (0) — legal
+            ProgressionEngine onClock = ProgressionEngine.FromBlocks(blocks, progression.NextPlayerId);
+
+            Assert.DoesNotThrow(
+                () => new SeasonLoop(
+                    world, season, RoundResolutionMode.QuickSimAll, career, null, onClock),
+                "a BirthWorldDay exactly on the world clock is a player born today, not corrupt state.");
+        }
+
         // ── ERR-028-010: the wired configuration can actually play ───────────────────
 
         [Test]
@@ -840,4 +886,8 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | GrowthCursor at 0, so total accrual is AccruingDays replayed days  |
 // |         |            |        | plus that one seeded step (±5 -> ±6 over the same six advances).   |
 // |         |            |        | Arithmetic window shift, not a semantic change to this test.       |
+// | 1.7     | 2026-08-11 | —      | AR pass 6 (M2(b)): + Constructor_WithABirthWorldDayAheadOfThe-    |
+// |         |            |        | Clock_IsRefused and Constructor_WithABirthWorldDayExactlyOnThe-    |
+// |         |            |        | Clock_IsAccepted — the composition-boundary counterpart of         |
+// |         |            |        | GrowthProjectionTests' M2(a) lock, at the ahead/on-clock boundary. |
 #endregion

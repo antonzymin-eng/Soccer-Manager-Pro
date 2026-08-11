@@ -1,6 +1,6 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
-// Modified: 2026-08-10 (AR pass 5 — RequireCoherentCareerBlocks carve-out made symmetric — v1.20)
+// Modified: 2026-08-11 (AR pass 6, M2(b) — the BirthWorldDay-vs-clock check joins the block-level walk — v1.21)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-1 / KD-5..KD-8;
 //           Training System #29 §4.4 / FR-TR-018/019; Injuries & Medical #41 §4.4 / FR-MD-017/018;
@@ -739,6 +739,15 @@ namespace TacticalDirector.SeasonSave
                             careerBlocks[c].Records[p].PlayerId,
                             careerBlocks[c].Lifecycles[p].LastAdvancedWorldDay,
                             "Season save");
+
+                        // M2(b): the sibling check, same walk, the file-boundary twin of the
+                        // SeasonLoop composition check — one owner, both boundaries delegating.
+                        PlayerCareerStates.RequireBirthWorldDayWithinClock(
+                            worldTick,
+                            careerBlocks[c].ClubId,
+                            careerBlocks[c].Records[p].PlayerId,
+                            careerBlocks[c].Lifecycles[p].BirthWorldDay,
+                            "Season save");
                     }
                 }
             }
@@ -865,4 +874,9 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | carve-out is now symmetric (&& trainingClubs.Length > 0).          |
 // |         |            |        | Mutation-verified: reverting the predicate fails the new           |
 // |         |            |        | SeasonLoopProgressionTests lock.                                   |
+// | 1.21    | 2026-08-11 | —      | AR pass 6, M2(b). The block-level cursor walk gains              |
+// |         |            |        | PlayerCareerStates.RequireBirthWorldDayWithinClock beside          |
+// |         |            |        | RequireProgressionCursorWithinClock — the file-boundary twin of    |
+// |         |            |        | SeasonLoop.cs v1.19's composition-boundary check. One owner, both  |
+// |         |            |        | boundaries delegating (the AR pass-9 M1 shape).                    |
 #endregion

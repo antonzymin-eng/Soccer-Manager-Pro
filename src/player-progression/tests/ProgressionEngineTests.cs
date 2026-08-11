@@ -1,6 +1,6 @@
 // File:     src/player-progression/tests/ProgressionEngineTests.cs
 // Created:  2026-08-08
-// Modified: 2026-08-10
+// Modified: 2026-08-11 (AR pass 6, M3 locks — v1.7)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.1 / §3.4 / §3.5 / §5, KD-4 / KD-7,
 //           FR-PG-011/013/014/019/021/022/023; ERR-029-006 (the batch entry point);
@@ -295,6 +295,30 @@ namespace TacticalDirector.PlayerProgression.Tests
             Assert.AreEqual(+2L, blocks[0].Lifecycles[0].GrowthCursor, "Growth band (age 18): +1/day, plus the seed day's own step.");
             Assert.AreEqual(0L, blocks[0].Lifecycles[1].GrowthCursor, "Stable band (age 27): no change.");
             Assert.AreEqual(-2L, blocks[0].Lifecycles[2].GrowthCursor, "Decline band (age 34): -1/day, plus the seed day's own step.");
+        }
+
+        [Test]
+        public void FromBlocks_AGrowthCursorBeyondOneWholePoint_IsRefused()
+        {
+            // AR pass 6 (High), the boundary half. Pass 5 called BirthWorldDay "the ONLY lifecycle field
+            // with no range gate" — checkable, and false: GrowthCursor had none either, and it is the one
+            // accumulator every attribute change flows through. Out of range it did not corrupt data, it
+            // WEDGED the day step (the drain loop had no failure exit), from a save file that round-tripped
+            // byte-exact.
+            //
+            // This lock exists because the mutation run that verified the loop exits ALSO disabled this
+            // gate and nothing went red — the gate had no test of its own. The band needs no [GT]
+            // judgement: both loops leave |cursor| <= POINT_COST - 1 after any completed step and
+            // SeedLifecycle writes ±1, so |cursor| < POINT_COST is exactly the serialized invariant.
+            var records = new[] { Player(410, age: 20) };
+            var lifecycles = new[] { DefaultLife() };
+            lifecycles[0].GrowthCursor = -1000L * PlayerProgressionConstants.POINT_COST;
+            var club = new ClubCareerStates(9, records, lifecycles);
+
+            Assert.Throws<ArgumentException>(
+                () => ProgressionEngine.FromBlocks(new[] { club }, nextPlayerId: 411),
+                "a cursor no completed step could have produced must be refused where it enters — "
+                + "otherwise it reaches the day step, which is where it stops being a diagnosable error.");
         }
 
         [Test]
@@ -844,6 +868,48 @@ namespace TacticalDirector.PlayerProgression.Tests
         }
 
         [Test]
+        public void FromBlocks_AnEmptyClub_IsRefused()
+        {
+            // AR pass 6, M3. PlayerDatabase.Squad's own constructor requires at least 1 player; #28's
+            // block IS the roster (KD-4), and grep CLUB_SQUAD_SIZE src/player-progression/ returned
+            // NOTHING before this fix — so the store carried clubs the projection could not build.
+            // Probe-verified before the fix: a 0-player club built, AdvanceDay'd and round-tripped
+            // through Snapshot/Restore cleanly, and SquadFor then threw ArgumentException("Squad must
+            // have between 1 and 25 players; got 0") — mid-round, inside
+            // ISquadProvider.ResolveByClubId, after earlier fixtures in that round had already been
+            // applied to the table.
+            var club = new ClubCareerStates(
+                9, System.Array.Empty<PlayerRecord>(), System.Array.Empty<PlayerLifecycle>());
+
+            Assert.Throws<ArgumentException>(
+                () => ProgressionEngine.FromBlocks(new[] { club }, nextPlayerId: 1),
+                "an empty club is state SquadFor cannot project — never let it past the boundary that "
+                + "can still refuse it.");
+        }
+
+        [Test]
+        public void FromBlocks_AClubAboveClubSquadSize_IsRefused()
+        {
+            // The mirror of the case above: PlayerDatabase.Squad's constructor also refuses ABOVE
+            // PlayerDatabaseConstants.CLUB_SQUAD_SIZE (25). Probe-verified before the fix: a 30-player
+            // club round-tripped identically and SquadFor threw "got 30" only when something finally
+            // asked to PLAY.
+            int oversized = PlayerDatabaseConstants.CLUB_SQUAD_SIZE + 5;
+            var records = new PlayerRecord[oversized];
+            var lifecycles = new PlayerLifecycle[oversized];
+            for (int i = 0; i < oversized; i++)
+            {
+                records[i] = Player(900 + i, age: 20);
+                lifecycles[i] = DefaultLife();
+            }
+            var club = new ClubCareerStates(9, records, lifecycles);
+
+            Assert.Throws<ArgumentException>(
+                () => ProgressionEngine.FromBlocks(new[] { club }, nextPlayerId: 900 + oversized),
+                "a club above CLUB_SQUAD_SIZE is state SquadFor cannot project either.");
+        }
+
+        [Test]
         public void FromBlocks_CopiesTheStateArrays_NotBorrowsThem()
         {
             var records = new[] { Player(700, age: 20) };
@@ -1134,4 +1200,9 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | rounding the count back up. Mutation-verified: reverting the      |
 // |         |            |        | ProgressionEngine seed credit fails all five rebaselined locks    |
 // |         |            |        | plus the new traversal lock (6 of 109), and nothing else.         |
+// | 1.7     | 2026-08-11 | —      | AR pass 6, M3: + FromBlocks_AnEmptyClub_IsRefused and              |
+// |         |            |        | FromBlocks_AClubAboveClubSquadSize_IsRefused — a club outside      |
+// |         |            |        | [1, CLUB_SQUAD_SIZE] must be refused at FromBlocks, not left to    |
+// |         |            |        | throw from SquadFor mid-round. Mutation-verified: reverting        |
+// |         |            |        | ProgressionEngine's RequireClubSizeInRange call fails both.        |
 #endregion
