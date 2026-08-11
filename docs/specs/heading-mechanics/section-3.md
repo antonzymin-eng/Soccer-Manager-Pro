@@ -1,7 +1,7 @@
 # Heading Mechanics Specification #10 — Section 3: Core Formulas, Algorithms, Pseudocode
 
 **Created:** May 16, 2026
-**Version:** 0.7
+**Version:** 0.8
 **Status:** DRAFT
 **Purpose:** Define every formula, predicate, and algorithm that the
 Heading Mechanics pipeline executes — eligibility, jump kinematics,
@@ -427,6 +427,7 @@ if any of contactPoint, targetIntent, v is non-finite:  aimDir = 0; stop
 R           = ||targetIntent.xy - contactPoint.xy||
 if R < ε or v < ε:                                      aimDir = 0; stop
 
+flat        = (targetIntent.xy - contactPoint.xy) / R   # unit horizontal direction, contact → target
 dz          = targetIntent.z - contactPoint.z
 disc        = v⁴ - g·(g·R² + 2·dz·v²)
 
@@ -510,16 +511,30 @@ achievedNormal = normalize(geometricNormal
                  + Heading_norm · (aimNormal - geometricNormal))
 ```
 
-**Degenerate contact (recorded, NOT fixed).** When the ball arrives
-within ~0.1 mm of the head centre, `ballPosition − headCentre` is zero,
-`geometricNormal` is zero, and this step's degenerate guard returns
-that zero unchanged — so the aim is silently discarded and two
-targets at opposite ends of the pitch produce the identical outgoing
-vector. It is reachable only if the ball crosses from outside the
-`HEAD_CONTACT_VOLUME_RADIUS_M` envelope to within 1e-4 m of the centre
-in a single 16.7 ms frame, and §3.5's own degenerate fallback still
-plays the contact, so it is recorded rather than fixed. The natural
-fix, if it is ever wanted, is to fall back to the AIM normal there —
+**Degenerate contact (recorded, NOT fixed; corrected AR pass 4, L-4).**
+When the ball arrives within ~0.1 mm of the head centre, `ballPosition
+− headCentre` is zero, `geometricNormal` is zero, and this step's
+degenerate guard returns that zero unchanged — so the aim is silently
+discarded and two targets at opposite ends of the pitch produce the
+identical outgoing vector. What makes this reachable at all is not the
+crossing speed: the crossing is of the RELATIVE head–ball displacement,
+and a sprinting agent plus the jump's own rise supplies most of the
+~10.8 m/s a single-frame crossing of the `HEAD_CONTACT_VOLUME_RADIUS_M`
+envelope needs — routine on a real header, not rare. The genuine
+improbability is landing within 1e-4 m of the head CENTRE specifically,
+inside that one 16.7 ms frame. Today that really is the only door in:
+`HEAD_CONTACT_VOLUME_HEIGHT_M` (0.22 m, `[GT]`, config-overridable)
+exceeds `HEAD_CONTACT_VOLUME_RADIUS_M` (0.18 m), so the vertical gate
+can never independently reject a frame the radial gate already
+accepted, and the radial crossing is the whole story. A configured
+`HEAD_CONTACT_VOLUME_HEIGHT_M` BELOW the radius would make the
+vertical gate the binding one instead, reopening a slower, non-crossing
+path — the ball dwelling within the narrower height band near the
+centre across several frames rather than passing through it in one —
+that this paragraph's single-frame-crossing framing does not cover.
+§3.5's own degenerate fallback still plays the contact, so it is
+recorded rather than fixed. The natural fix, if it is ever wanted, is
+to fall back to the AIM normal there —
 it is well defined precisely when the geometric one is not.
 
 `geometricNormal` is `normalize(ballPosition − headCentre)`, the
@@ -842,3 +857,4 @@ for evt in contactEvents:
 | 0.5     | August 9, 2026 | — | **Adversarial review of the ERR-010-002 landing, Finding 1 (High).** §3.5.1 Step 2's normative text claimed the half-vector was "bounded to the hemisphere the ball can physically reach," projected onto that boundary when it fell outside. `HeadingAim.ComputeAimNormal` (the shipped implementation) carries no such bound and its XML doc proves one can never be needed: for unit vectors `dot(incident + aimDir, incident) = 1 + dot(aimDir, incident) ≥ 0`, so the half-vector is always in the forward hemisphere already — a "guard on an unreachable branch," this project's own recorded defect class. The spec was stale, not the code: Step 2 rewritten to state the no-bound design directly, carry the proof, and name the one genuinely degenerate input (`aimDir` exactly opposite `incident`, which returns no solution). No behaviour change — the code was already correct. |
 | 0.6     | August 9, 2026 | — | **Adversarial review pass 2 over the ERR-010-002 landing, Finding H-1.** Step 1's normative text still claimed the out-of-range branch "degrades continuously to the 45° maximum-range launch," and the pseudocode carried neither the out-of-range formula nor the unreachable-height guard — commit `d93e0c8` had already replaced the hardcoded 45° with the true `dz`-dependent maximum-range angle, `tanθ = v / sqrt(v² − 2·g·dz)` (45° only when `dz == 0`; a header contacts near 2.3 m aiming at the ground, so `dz < 0` on essentially every real header — measured step 9.98° across a 4 cm boundary change, 4.38° at the 11.2 m/s production nominal speed), plus a guard returning a vertical launch when the target is unreachable at any angle. `48977fa` (the documentation half of this same review pass) landed before `d93e0c8` and was never back-propagated — this project's spec-and-code-same-commit doctrine failing inside the very review pass that exists to enforce it (the `ERR-041-012` shape). Fixed: prose corrected to name the true formula and the `dz == 0` special case, and both branches (out-of-range solve, unreachable-height guard) added to the pseudocode, matching `HeadingAim.ComputeAimDirection` v1.1's out-of-range branches exactly `[NARROWED at v0.7 — the BRANCHES matched; the METHOD did not. This row's original wording implied the whole pseudocode matched the code, and it omitted the degenerate-entry guard. AR pass 3, M-2]`. No behaviour change — the code was already correct; only the spec was stale. |
 | 0.7     | August 9, 2026 | — | **Adversarial review pass 3, Findings M-2 and L-2.** M-2: Step 1's pseudocode carried neither the finiteness guard nor the degenerate guard the shipped `HeadingAim.ComputeAimDirection` has at its entry (`range < ε || speed < ε → zero`), so an implementer following this spec literally divides by `g·R = 0` for a target directly above or below the contact point and sends NaN into every downstream vector. Worse, Step 2 is specified to PROPAGATE that zero (v0.5 above) — the spec documented a handler for an input it never said how to generate. Guard added to the pseudocode as a MUST; the v0.6 row's "matching v1.1 exactly" claim is narrowed in place, since the branches matched and the method did not (the falsified-hand-verification class this project keeps filing). L-2: the dead-centre degeneracy is now recorded here — when the ball arrives within ~0.1 mm of the head centre the geometric normal is zero, Step 3's degenerate guard returns that zero, and the aim is silently discarded. Reachable only if the ball crosses from outside the 0.18 m contact volume to within 1e-4 m of the centre in one 16.7 ms frame; §3.5's own degenerate fallback still plays the contact. Recorded, NOT fixed. |
+| 0.8     | August 9, 2026 | — | **Adversarial review pass 4, Findings L-3 and L-4.** L-3: Step 1's pseudocode used `flat` at both branch tails (`normalize(flat·1 + ẑ·tanθ)`) without ever defining it — added as `flat = (targetIntent.xy − contactPoint.xy) / R`, placed after the `R`/`v` degenerate-entry guard so it reads correctly in both branches, matching `HeadingAim.ComputeAimDirection`'s own ordering. L-4: the dead-centre paragraph's conclusion (recorded, NOT fixed) stands, but two of its details were imprecise. (a) The paragraph read as if the single-frame crossing itself were the improbable part; it is not — the crossing is of the RELATIVE head–ball displacement, and a sprinting agent plus the jump's own rise supplies most of the ~10.8 m/s closing speed, which is routine on a real header. The genuine improbability is landing within 1e-4 m of the head CENTRE specifically, which the paragraph now leads with. (b) The paragraph presented the single-frame-crossing path as the only door in without saying why: `HEAD_CONTACT_VOLUME_HEIGHT_M` (0.22 m) is `[GT]` and config-overridable, and today it exceeds `HEAD_CONTACT_VOLUME_RADIUS_M` (0.18 m), which is what closes off the alternative — a configured value below the radius would make the vertical gate binding instead and could reopen a slower, non-crossing dwell path the paragraph's framing does not cover. Both now stated; no formula or code changed. |

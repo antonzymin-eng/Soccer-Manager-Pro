@@ -65,6 +65,21 @@ namespace TacticalDirector.HeadingMechanics
         /// <param name="target">World-space intended destination (m), corner-origin.</param>
         /// <param name="speed">Outgoing speed (m/s) from FM-010-003.</param>
         /// <returns>Unit launch direction, or <c>Vector3.zero</c> when the geometry is degenerate.</returns>
+        /// <remarks>
+        /// <b>Known, unreachable-in-production contract violation (AR pass 4, L-2).</b> For finite
+        /// <paramref name="speed"/> roughly in <c>[1.4e10, 1.8e19]</c> m/s, <c>speed⁴</c> overflows to
+        /// <c>float.PositiveInfinity</c> inside the discriminant, driving <c>discriminant</c> to
+        /// <c>+Infinity</c>, the low-root <c>tanTheta</c> to <c>-Infinity</c>, and the return value to
+        /// <c>(0, 0, NaN)</c> — violating the "unit direction or <c>Vector3.zero</c>" contract stated
+        /// above. Pre-existing: the guard this method deleted at AR pass 3 (see the note in the low-root
+        /// branch below) never caught this either, since <c>NaN</c>/<c>Infinity</c> compare false
+        /// against any "&lt; epsilon" test. Not fixed, because it cannot be reached in production —
+        /// <c>nominalSpeed</c> is bounded to roughly ≤ 16 m/s by §3.3's outgoing-speed formula, eleven
+        /// orders of magnitude below the overflow floor — and an unreachable guard is exactly the defect
+        /// class this file already carries two other notes about. It is neutralised one call downstream
+        /// regardless: <see cref="ComputeAimNormal"/>'s finiteness guard rejects a non-finite
+        /// <c>desiredDirection</c> and returns <c>Vector3.zero</c>.
+        /// </remarks>
         public static Vector3 ComputeAimDirection(Vector3 contactPoint, Vector3 target, float speed)
         {
             if (!IsFinite(contactPoint) || !IsFinite(target) || !float.IsFinite(speed))
@@ -127,11 +142,24 @@ namespace TacticalDirector.HeadingMechanics
             // direction = normalize(flat + z*tan(theta)); dividing by the shared cos(theta) is exactly
             // this, and avoids an atan/sin/cos round trip.
             // No degenerate-length guard here, and the omission is deliberate for the same reason
-            // ComputeAimNormal carries none: it provably cannot fire. `flat` is a unit vector by the
-            // range guard above, so dir.sqrMagnitude == 1 + tan²θ ≥ 1 on every path that reaches this
-            // line. The first cut of this method DID carry one — in a file that twice explains why a
-            // guard on an unreachable branch ships green precisely because nothing can fire it — and
-            // adversarial review pass 3 caught it. Recorded rather than written.
+            // ComputeAimNormal carries none: it provably cannot fire. On every path that reaches this
+            // line, dir.sqrMagnitude is one of exactly three things — >= 1 (the ordinary finite case,
+            // since `flat` is unit by the range guard above), +Infinity (an astronomically distant
+            // target overflows `range` to +Inf, which PASSES the "range < epsilon" guard above,
+            // `invRange` to 0, and `flat` to the ZERO vector), or NaN (an `Infinity - NaN` inside
+            // `discriminant`, propagating through `tanTheta`) — and none of the three ever compares
+            // "< epsilon-squared", so the guard could never fire on any constructible input. The first
+            // cut of this method DID carry one — in a file that twice explains why a guard on an
+            // unreachable branch ships green precisely because nothing can fire it — and adversarial
+            // review pass 3 caught it. Recorded rather than written.
+            // [CORRECTED at AR pass 4 — the proof above replaces a narrower claim ("`flat` is a unit
+            // vector by the range guard above, so dir.sqrMagnitude == 1 + tan²θ ≥ 1 on every path that
+            // reaches this line") that the reviewer FALSIFIED BY EXECUTION: contactPoint = (0,0,0),
+            // target = (1e20,0,0), speed = 1e20 drive `range` to +Infinity — which still PASSES the
+            // "< epsilon" guard — `invRange` to 0, `flat` to the zero vector, and `dir.sqrMagnitude` to
+            // NaN. The deletion itself was still correct — the old guard's "< epsilon-squared" test
+            // compares false against >= 1, +Inf and NaN alike, on every constructible input — only the
+            // stated proof was wrong, not the fix.]
             Vector3 dir = new Vector3(flat.x, flat.y, tanTheta);
             return dir.normalized;
         }
@@ -276,4 +304,27 @@ namespace TacticalDirector.HeadingMechanics
 // |         |            |        |   the maximum deflection out of the path documented as the minimum. It also made  |
 // |         |            |        |   ComputeAchievedNormal's zero-aim fallback unreachable through the composition,  |
 // |         |            |        |   so its lock passed against a branch production could not enter.                 |
+// | 1.2     | 2026-08-09 | —      | ROW ADDED RETROACTIVELY at AR pass 4, M-1, over AR pass 3 itself: that pass        |
+// |         |            |        |   deleted ComputeAimDirection's five-line trailing degenerate-length guard —      |
+// |         |            |        |   provably unreachable, since `flat` is unit by the range guard above and         |
+// |         |            |        |   dir.sqrMagnitude is therefore >= 1 on every path that reaches it — and replaced |
+// |         |            |        |   it with the explanatory comment now further corrected at 1.3 below, but shipped |
+// |         |            |        |   with no version row and no Modified: update. The sixth consecutive FR-CS-056/057 |
+// |         |            |        |   recurrence in this file's own lineage (HeadingMechanicsConstants.cs 1.4 recorded |
+// |         |            |        |   the same class one landing earlier). Comment-only diff; no behaviour change (the |
+// |         |            |        |   guard could never fire).                                                        |
+// | 1.3     | 2026-08-09 | —      | AR pass 4, L-1 + L-2. L-1: the 1.2 comment's proof was itself FALSIFIED BY         |
+// |         |            |        |   EXECUTION — it claimed dir.sqrMagnitude == 1 + tan²θ >= 1 on every path that     |
+// |         |            |        |   reaches the deleted guard's site, but contactPoint = (0,0,0), target =           |
+// |         |            |        |   (1e20,0,0), speed = 1e20 overflow `range` to +Infinity (which PASSES the "range  |
+// |         |            |        |   < epsilon" guard), drive `flat` to the zero vector, and leave                    |
+// |         |            |        |   dir.sqrMagnitude = NaN. Reworded to the accurate three-way proof (>= 1, +Inf, or  |
+// |         |            |        |   NaN — none of which is ever < epsilon-squared); the DELETION was still correct,  |
+// |         |            |        |   only the stated reasoning was wrong, and the prior wording is annotated in place  |
+// |         |            |        |   rather than silently replaced. L-2: recorded (not fixed — an unreachable guard is |
+// |         |            |        |   this file's own defect class) a pre-existing, unrelated non-finite output: finite |
+// |         |            |        |   speed roughly in [1.4e10, 1.8e19] m/s overflows v⁴ and returns (0, 0, NaN),       |
+// |         |            |        |   breaking the documented unit-or-zero contract. Unreachable at the production     |
+// |         |            |        |   nominalSpeed ceiling (~16 m/s) and neutralised downstream by ComputeAimNormal's   |
+// |         |            |        |   own finiteness guard either way.                                                |
 #endregion
