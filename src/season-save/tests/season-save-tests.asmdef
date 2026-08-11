@@ -8,6 +8,7 @@
         "TacticalDirector.LivingWorld",
         "TacticalDirector.DeterministicSim",
         "TacticalDirector.PlayerDatabase",
+        "TacticalDirector.PlayerProgression",
         "TacticalDirector.TrainingSystem",
         "TacticalDirector.InjuriesMedical",
         "TacticalDirector.TestingStrategy",

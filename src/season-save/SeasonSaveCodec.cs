@@ -1,7 +1,6 @@
 // File:     src/season-save/SeasonSaveCodec.cs
 // Created:  2026-07-22
-// Modified: 2026-08-08 (AR pass 4 doc fix: header/Encode docs catch up with the appearance
-//           sub-blob the D2 frame bump added — v1.5)
+// Modified: 2026-08-08 (#28 T1: the frame gains the mandatory progression sub-blob — v1.6)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §3 layout / KD-2..KD-8;
 //           Season & Competition Loop #30 Appendix B (frame), FR-SN-019/020/023;
@@ -10,7 +9,7 @@
 //           (CanonicalSerializer); Code Standards #20
 // Purpose:  Pure byte codec for the season save frame: packs the living-world composite blob, the
 //           season-state blob, the #29 training blob, the #41 medical blob, the #30 appearance blob,
-//           and an optional match save
+//           the #28 progression blob, and an optional match save
 //           blob into one version-gated, self-describing frame and deframes it back, fail-loud on any
 //           framing / length-bound / trailing-byte violation. Treats each sub-blob as opaque (never
 //           parses it — each keeps its own version gate). No file I/O (that is SeasonSaveManager), so
@@ -25,10 +24,10 @@ namespace TacticalDirector.SeasonSave
     /// <summary>
     /// Encodes / decodes the season save frame (unified-season-save-design.md §3 / #30 Appendix B). The
     /// frame is one <see cref="SeasonSaveConstants.SEASON_SAVE_FORMAT_VERSION"/>-gated wrapper around a
-    /// <c>matchPresent</c> flag and six length-prefixed opaque sub-blobs, in order: the living-world
+    /// <c>matchPresent</c> flag and seven length-prefixed opaque sub-blobs, in order: the living-world
     /// composite (always), the season state (always), the #29 training block (always), the #41 medical
-    /// block (always), the #30 appearance block (always), and the match save (only when a match was in
-    /// progress). Serialized through
+    /// block (always), the #30 appearance block (always), the #28 career-state block (always), and the
+    /// match save (only when a match was in progress). Serialized through
     /// <see cref="CanonicalSerializer"/>. Off the 60 Hz hot path (a save is a host action), so
     /// allocation is permitted.
     /// <para>
@@ -48,22 +47,23 @@ namespace TacticalDirector.SeasonSave
 
         /// <summary>
         /// Encodes a season blob from the living-world composite blob, the season-state blob, the #29
-        /// training blob, the #41 medical blob, the #30 appearance blob, and an optional match save
-        /// blob. Presence keys on
+        /// training blob, the #41 medical blob, the #30 appearance blob, the #28 progression blob, and an
+        /// optional match save blob. Presence keys on
         /// <paramref name="matchBlobOrNull"/> being <c>null</c> (KD-8): null ⇒ no match (flag 0, no
         /// match block); non-null ⇒ the bytes are written after the appearance block (flag 1). Fail-loud on
         /// a null <paramref name="worldBlob"/> or <paramref name="seasonBlob"/>, or an unbound
-        /// <paramref name="training"/> / <paramref name="medical"/> / <paramref name="appearance"/> —
-        /// a season save always carries all five mandatory blobs (KD-3 / FR-SN-019 / FR-TR-018 /
-        /// FR-MD-017 / #30 Appendix B). The buffer is sized exactly to the content;
+        /// <paramref name="training"/> / <paramref name="medical"/> / <paramref name="appearance"/> /
+        /// <paramref name="progression"/> — a season save always carries all six mandatory blobs (KD-3 /
+        /// FR-SN-019 / FR-TR-018 / FR-MD-017 / FR-PG-017 / #30 Appendix B). The buffer is sized exactly to the content;
         /// see <see cref="Decode"/> for the inverse (kept adjacent so a layout change is edited in one
         /// place — R1).
         /// <para>
-        /// <b>The two new blocks are typed, not bare <c>byte[]</c>.</b> They have the same byte shape as
+        /// <b>The four career blocks are typed, not bare <c>byte[]</c>.</b> They have the same byte shape as
         /// each other, so a transposition in this parameter list produced a file that framed, decoded
         /// and reloaded without a single throw (ERR-029-005 / ERR-041-009). The leading magic in each
-        /// block now catches it at load; <see cref="TrainingBlock"/> / <see cref="MedicalBlock"/> catch
-        /// it at compile time, which is where a positional mistake should die.
+        /// block now catches it at load; <see cref="TrainingBlock"/> / <see cref="MedicalBlock"/> /
+        /// <see cref="AppearanceBlock"/> / <see cref="ProgressionBlock"/> catch it at compile time,
+        /// which is where a positional mistake should die.
         /// </para>
         /// </summary>
         public static byte[] Encode(
@@ -72,6 +72,7 @@ namespace TacticalDirector.SeasonSave
             in TrainingBlock training,
             in MedicalBlock medical,
             in AppearanceBlock appearance,
+            in ProgressionBlock progression,
             byte[] matchBlobOrNull)
         {
             if (worldBlob == null)
@@ -113,6 +114,14 @@ namespace TacticalDirector.SeasonSave
                     "block, not a null or a default(AppearanceBlock) (#30 Appendix B).");
             }
 
+            byte[] progressionBlob = progression.Bytes;
+            if (progressionBlob == null)
+            {
+                throw new ArgumentNullException(nameof(progression),
+                    "A season save always carries a progression block — an empty one is a zero-club " +
+                    "block, not a null or a default(ProgressionBlock) (FR-PG-017).");
+            }
+
             bool hasMatch = matchBlobOrNull != null;
             int size = 4                              // SEASON_SAVE_FORMAT_VERSION
                      + 1                              // matchPresent flag
@@ -120,7 +129,8 @@ namespace TacticalDirector.SeasonSave
                      + 4 + seasonBlob.Length          // season length prefix + body
                      + 4 + trainingBlob.Length        // training length prefix + body
                      + 4 + medicalBlob.Length         // medical length prefix + body
-                     + 4 + appearanceBlob.Length;     // appearance length prefix + body
+                     + 4 + appearanceBlob.Length      // appearance length prefix + body
+                     + 4 + progressionBlob.Length;    // progression length prefix + body
             if (hasMatch)
             {
                 size += 4 + matchBlobOrNull.Length;   // match length prefix + body
@@ -146,6 +156,9 @@ namespace TacticalDirector.SeasonSave
 
             CanonicalSerializer.WriteU32(buf, ref o, (uint)appearanceBlob.Length);
             Array.Copy(appearanceBlob, 0, buf, o, appearanceBlob.Length); o += appearanceBlob.Length;
+
+            CanonicalSerializer.WriteU32(buf, ref o, (uint)progressionBlob.Length);
+            Array.Copy(progressionBlob, 0, buf, o, progressionBlob.Length); o += progressionBlob.Length;
 
             if (hasMatch)
             {
@@ -208,6 +221,7 @@ namespace TacticalDirector.SeasonSave
             byte[] trainingBlob = ReadBlock(blob, ref o, len, "training block");
             byte[] medicalBlob = ReadBlock(blob, ref o, len, "medical block");
             byte[] appearanceBlob = ReadBlock(blob, ref o, len, "appearance block");
+            byte[] progressionBlob = ReadBlock(blob, ref o, len, "progression block");
 
             byte[] matchBlob = null;
             if (matchFlag == MatchPresent)
@@ -224,7 +238,7 @@ namespace TacticalDirector.SeasonSave
             }
 
             return new SeasonSaveBlobs(
-                worldBlob, seasonBlob, trainingBlob, medicalBlob, appearanceBlob, matchBlob);
+                worldBlob, seasonBlob, trainingBlob, medicalBlob, appearanceBlob, progressionBlob, matchBlob);
         }
 
         // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -280,4 +294,9 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | mandatory blobs and a five-item list; now five-of-six with the    |
 // |         |            |        | appearance blob named (the SeasonSaveManager v1.6 doc-drift       |
 // |         |            |        | class, one file over).                                            |
+// | 1.6     | 2026-08-08 | —      | #28 T1 (FR-PG-017): the frame gains the mandatory #28            |
+// |         |            |        | career-state sub-blob between the appearance block and the       |
+// |         |            |        | optional match block (SEASON_SAVE_FORMAT_VERSION 4 -> 5); typed   |
+// |         |            |        | as ProgressionBlock per the ERR-029-005 discipline, now with     |
+// |         |            |        | four same-shaped opaque payloads in the parameter list.          |
 #endregion

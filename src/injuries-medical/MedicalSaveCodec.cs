@@ -136,6 +136,7 @@ namespace TacticalDirector.InjuriesMedical
                     // validates on decode will happily write a state no decode of it could accept —
                     // and the failure then surfaces at load, one session away from the bug.
                     RequireDefinedSeverity(state.Severity, playerId);
+                    RequireNonNegativeCounters(state.RecoveryRemaining, state.InjuryCount, playerId);
                     RequireCoherent(state.Severity, state.RecoveryRemaining, playerId);
 
                     CanonicalSerializer.WriteI32(buf, ref o, playerId);
@@ -257,21 +258,12 @@ namespace TacticalDirector.InjuriesMedical
                     RequireDefinedSeverity(severity, playerId);
 
                     int recoveryRemaining = CanonicalSerializer.ReadI32(blob, ref o);
-                    if (recoveryRemaining < 0)
-                    {
-                        throw new InvalidOperationException(
-                            "Medical save player " + playerId + " has recovery remaining " +
-                            recoveryRemaining + " — a day counter's floor is 0 (§2.2); corrupt save.");
-                    }
-
                     int injuryCount = CanonicalSerializer.ReadI32(blob, ref o);
-                    if (injuryCount < 0)
-                    {
-                        throw new InvalidOperationException(
-                            "Medical save player " + playerId + " has injury count " + injuryCount +
-                            " — a cumulative career count cannot be negative; corrupt save.");
-                    }
 
+                    // One owner, both directions (AR pass 5). These two floors were inline here and
+                    // absent at Encode; sharing them is what stops the pair drifting rather than merely
+                    // making them equal today.
+                    RequireNonNegativeCounters(recoveryRemaining, injuryCount, playerId);
                     RequireCoherent(severity, recoveryRemaining, playerId);
 
                     uint lastAdvancedWorldDay = CanonicalSerializer.ReadU32(blob, ref o);
@@ -327,6 +319,36 @@ namespace TacticalDirector.InjuriesMedical
             }
 
             return club.PlayerIds;
+        }
+
+        /// <summary>
+        /// The two counter floors, shared by <c>Encode</c> and <c>Decode</c>. They lived inline in
+        /// Decode only, under an Encode comment asserting that "the F1/F4 gates run on the WAY OUT as
+        /// well as the way in" — which was true of the two gates Encode called and false of these two.
+        /// <para>
+        /// <see cref="RequireCoherent"/> does NOT subsume them: it tests
+        /// <c>(recoveryRemaining &gt; 0) != injured</c>, and <c>-1 &gt; 0</c> is <c>false</c>, so an
+        /// UNINJURED player carrying <c>RecoveryRemaining = -1</c> satisfied it. Encode wrote the whole
+        /// season file and Decode then refused it, so the loss surfaced at load, one session away from
+        /// the bug (AR pass 5 — the same class fixed for #28's codec in the commit before this one, in
+        /// the sibling codec #28's was modelled on).
+        /// </para>
+        /// </summary>
+        private static void RequireNonNegativeCounters(int recoveryRemaining, int injuryCount, int playerId)
+        {
+            if (recoveryRemaining < 0)
+            {
+                throw new InvalidOperationException(
+                    "Medical save player " + playerId + " has recovery remaining " +
+                    recoveryRemaining + " — a day counter's floor is 0 (§2.2); corrupt save.");
+            }
+
+            if (injuryCount < 0)
+            {
+                throw new InvalidOperationException(
+                    "Medical save player " + playerId + " has injury count " + injuryCount +
+                    " — a cumulative career count cannot be negative; corrupt save.");
+            }
         }
 
         private static void RequireDefinedSeverity(InjurySeverity severity, int playerId)

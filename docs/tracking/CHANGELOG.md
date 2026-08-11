@@ -12,7 +12,143 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 9, 2026, later still (**AR over the ERR-010-002 landing — 1 High, 6 Medium, 4 Low found, all fixed across two commits (`48977fa` doc half, `d93e0c8` code half), and the whole-tree gate result for both.** Doc half: §3.5.1's stale "bounded to the hemisphere the ball can physically reach" spec text corrected to match the code, which provably never enters that branch; `GkHeadingIntentSource.HeaderAimTarget`'s phantom `§4.2a` citation resolved to `gk-heading-engine-integration-design.md`, recording two measured limitations (the ballistic solve's ≈15 m range ceiling, since the target is always pinned to the goal line; the wide-clearance lateral bias, weak and inverted — a team-0 header at (10,10) aims 4.1° off straight upfield, one at (10,34) aims 17.9°, the wrong direction); version rows added to three production files that had shipped substantive changes with none. Code half: **(1)** the out-of-range fallback in the ballistic aim solve returned a flat 45° "maximum-range launch," which is only correct when the target sits at contact height — a header contacts near 2.3 m aiming at ground-level targets, so this was the production path (measured 9.98° error at the boundary, 4.38° at the production nominal speed), fixed to the true `tan(θ) = v / √(v² − 2·g·dz)` solve with a reachability guard, retiring the `[DERIVED]` `MaxRangeLaunchComponent` constant whose name asserted what it was not. **(2)** `ComputeAimNormal` did not propagate a degenerate desired direction, so a zero `aimDir` reflected the ball straight back at full power — the maximum possible deflection, arrived at through the branch documented as the natural rebound, and it made the zero-aim fallback's own lock pass against a branch production could never enter. **(3)** Four missing ERR-008-002 home/away locks added for `HeaderAimTarget`, the landing's only team-branching geometry — a mislabelled existing test ran team-agnostic code and could not have caught an asymmetry; the mirror itself was already correct. **One bug was introduced by the fix and caught by its own new lock before landing**: the unreachable-height guard first returned `Vector3.up` (Unity's +Y) instead of this project's +Z up axis (Ball Physics #1 §1.2) — the coordinate-axis trap in this file's own hazard table, and it still nearly shipped. **Whole-tree gate, local run, head `d93e0c8`: build 0 errors, 3 warnings; `GATE_EXIT=1` — did NOT print "Gate PASSED".** Sole failure: `sim_match_engine_close_chance`, 2 of 3 predicates (`final-third-dribbles-are-not-goal-averse` meanCosine −0.165 vs bound −0.16; `goalward-dribbles-are-not-a-minority-of-one-in-three` goalwardShare 0.407 vs bound 0.42) — the inherited C1 failure, identical to three decimals against the `589a011` baseline, so this landing moved nothing. `MatchEngine.Tests` **451 passed / 1 failed / 10 skipped / 462 total** (447/1/10/458 baseline, the +4 exactly the new `HeaderAimTarget` locks); `HeadingMechanics.Tests` **63 passed / 15 skipped / 0 failed** (60 → 63); all 31 other suites green, quarantine empty; `python3 tools/recurring-defect-lint.py --repo .`: 0 ERRORs. `spec-error-log.md` v2.04, `file-manifest.md`. Also landed: `close-chance-creation-design.md` §10.8 — the §10.7-corrected instrument's first execution (Report C5b, 6 seeds × 90 min, 1,081 aerial final-third episodes) finds headers failing horizontally (nearest attacker 5.88–5.93 m, nearest defender 4.28–4.93 m in pure XY, no height term at all) and RE-RANKS §10.6's withdrawn "attack the ball" lever back to first, on a corrected instrument reaching the same conclusion (0% within contact distance in true 3-D) by a route that does not carry §10.7's height-floor artifact. Prior entry below.)
+> **Last Updated:** August 11, 2026 (**ERR-028-019 — docs-only close-out for #28 Player Progression's
+> AR passes 5-8, four consecutive production landings (`39c385a`, `cf5abf0`, `8556ddd`, `b798ce2`) that
+> shipped with ZERO `docs/specs/` edits between them — the ERR-028-017 class ("spec+code, same
+> commit" failing) recurring twice more, this time across four commits instead of two.** Derived from
+> reading each commit's own diff, not the summary that named them. Contract changes now recorded that
+> had no normative text anywhere before this pass: the FR-PG-011 id-cursor rule and the M3 club-size
+> rule (each enforced at three-to-four boundaries in `src/player-progression/ProgressionSaveCodec.cs`
+> and `ProgressionEngine.cs`, previously undocumented in full); the `MAX_DERIVABLE_AGE_YEARS`
+> representability-bound constant (Appendix A), whose own value was first set wrong — to a
+> football-plausibility 1000 — and corrected same-session after it broke the `BirthWorldDay` field-width
+> lock ERR-028-006 bought; the `Encode`/`FromBlocks`-vs-`Decode` exception-type split
+> (`ArgumentException` vs `InvalidOperationException`, AR pass 8 M-1), which corrects a now-stale claim
+> in #28 §2.3's F8 row; #30's `PlayerCareerStates.RequireBirthWorldDayWithinClock` (AR pass 6 M2(b)),
+> live in `src/season-save/` since `cf5abf0` with no `docs/specs/season-competition-loop/` row at all.
+> Two behaviour changes stated explicitly rather than silently overwritten: the spend/drain refusal
+> clamp moved `POINT_COST - 1` (AR pass 5, itself undocumented) → `0` (AR pass 6, after execution
+> falsified the "pending fraction" rationale), and `AbilityModel.DrainOnePoint` gained a failure exit
+> (`void` → `bool`) that a save file wedging the day step for ~70 days of CPU with no diagnostic had
+> exposed the absence of. **One OPEN hazard recorded, not resolved:** the new
+> `CurrentAbility == ComputeCA(attributes, position)` save-gate is keyed on a `[GT]` bias table carrying
+> a standing config-loader `TODO` — tuning one cell would make every previously-written save refuse to
+> load, permanently, with no migration path under #30 Appendix B.1's F3; not triggerable today (the
+> table is a compile-time constant, so stored always equals recomputed at write time), bites at the
+> first tune. No tag changed. **Two unrelated hygiene items folded in from this pass's own citation
+> sweep:** `CHANGELOG-src.md` v2.113's renumbering-scope claim corrected (two more rows, not just one,
+> had an internal citation edited); `spec-error-log.md`'s duplicate `## ERR-008-021` heading (two
+> independent write-ups from two concurrent branches, each individually true when written and jointly
+> false once merged) reconciled — the entry whose form survived the August 7 merge marked authoritative,
+> the other annotated superseded rather than deleted. `docs/specs/player-progression-lifecycle/{section-2.md
+> v0.7, section-3.md v0.8, appendices.md v0.6}`, `docs/specs/season-competition-loop/{section-2.md v1.5,
+> appendices.md v1.1}`, `spec-error-log.md` v2.13, `CHANGELOG-src.md` v2.114, `file-manifest.md`. **No
+> `src/` file touched** — `git status --short` after this pass shows only `docs/` changes.
+> `recurring-defect-lint.py --repo .` reports **0 ERROR**. Orientation note: the code review this pass
+> was given also named `src/injuries-medical/MedicalSaveCodec.cs` as changed by these four commits;
+> `git show --stat` on all four shows it was not, so #41's spec was left untouched.)
+>
+> **Last Updated (prior):** August 10, 2026 (**#28 Player Progression — T1 + T2a LANDED August 8, 2026, plus
+> four adversarial-review passes closing August 10, 2026: ERR-029-006 CLOSED, #30's KD-2 slot 1 LIVE,
+> and the career roster MOVED OFF THE WORLD SEED — but the loop found the landing genuinely broken and
+> this record is that repair, not a formality.** **The landing itself (August 8):** `ProgressionEngine`
+> is the KD-7 sole writer of `[1,20]` attribute growth; `SeasonLoop` gathers #29's training-input batch
+> through `PlayerCareerStates.GatherTrainingInputs` and drives it through the FR-PG-021 batch
+> `AdvanceDay`. **KD-4** is the load-bearing decision: `Squad` is immutable and `League` was rebuilt
+> from the world seed at every load, so evolving attributes had nowhere to persist; #28's block is now
+> the serialized roster and `ProgressionSquads` is the sole provider every consumer reads through — one
+> authority at every moment, closing the two-authorities shape the #29/#41 T2 loop's H2 filed. This
+> **retires roadmap A3's seed-rebuildable-roster property** (`SavedWorldSeed_RebuildsTheSameLeague`
+> narrowed to the half that survives — generation is still seed-pure — not deleted).
+> `SEASON_SAVE_FORMAT_VERSION` **4 → 5**. **No draw site at all** — no stream registration, no `0x20`
+> promotion, no digest or snapshot-schema question — new-game `PotentialAbility` is a deterministic
+> `[GT]` placeholder (owner's call: it is #47 authored data). Four ERRs filed AND resolved the same
+> commit: **ERR-028-003** (new-game PA had no derivation anywhere; recorded-not-fixed that a whole
+> youth career only moves CA ~421/10,000, so the PA ceiling is decorative regardless of PA's source —
+> a growth-RATE property Stage-3 owns); **ERR-028-004** (§3.5 specified the block version-first with
+> the RNG domain tag as identifier, the ERR-029-005/ERR-041-009 MUST arriving in a third spec; now
+> magic-led, `ProgressionBlock` typed); **ERR-028-005** (§5.2's keystone lock was unsatisfiable as
+> worded and §3.1 carried no per-day cursor while #30 runs a fixture day's slots twice, ERR-030-027 —
+> a wired #28 would have double-accrued growth every fixture day; fixed with `LastAdvancedWorldDay`,
+> sentinel `uint.MaxValue`, idempotent-per-day and gap-complete); **ERR-030-030** (five stale #28-null-
+> seam sites + the v4 frame description). Landing suites: `PlayerProgression.Tests` 26 → 41,
+> `SeasonSave.Tests` 356/0/3.
+>
+> **The review loop that followed is the reason this entry exists, and it found the landing broken in
+> production while every test stayed green — four passes, closing 0 High by pass 4.** **AR pass 1**
+> (4 High, 7 Medium, 8 Low, all fixed) found the headline defects by executing probes against the
+> built assemblies: **ERR-028-006** — a new world starts on day 0, so `BirthWorldDay` (`uint`)
+> underflowed for every non-zero-age player and was clamped to 0, reading the **entire league as age 0**
+> after one advance (bands `growth=100 stable=0 decline=0`); both #28 fixtures used `BaseDay=100000`
+> specifically to avoid the day the product actually starts on — the ERR-030-014 shape again. Fixed:
+> `BirthWorldDay` → signed `long`, both clamps deleted. **ERR-028-007** — the new fourth persisted
+> per-player cursor was checked at none of the three boundaries the #29/#41 loop spent passes 5/6/9
+> establishing; a cursor 9,999 days ahead was accepted at composition, Save and Load, silently freezing
+> growth. **ERR-028-008** — `Save`'s `?? ProgressionEngine.Empty` let a resume that dropped the store
+> overwrite a populated 4-club roster with a zero-club one; fixed at the destination (`Save` now refuses
+> an empty store overwriting a populated block) after the reviewer's first-choice fix broke four
+> legitimate pre-#28 suites. **ERR-028-010** — a progression-wired `SeasonLoop` could not play a round
+> through any public API at all (the constructor's provider was private, the public overload demanded
+> reference-equality nothing exposed); fixed with a parameterless `AdvanceAndPlayNextRound()` resolving
+> through the loop's own store. Plus ERR-028-009 (Medium, no F8 sentinel guard — `AdvanceDay(uint.MaxValue)`
+> stored and a gap-replay loop never terminated) and ERR-028-011/-012 (Medium/Low: cross-club duplicate
+> ids Encode wrote and Restore refused; a stale cursor defeating FR-PG-011; no range gates on decoded
+> attributes; two records in this landing's own change history were wrong — six changed files carried
+> no version row and `SeasonLoop.cs`'s claimed version chain never existed).
+>
+> **AR pass 2** (ERR-028-013, High+Medium; ERR-028-014, Medium; plus a 33-guard mutation audit that
+> found 15 fixes with no test able to fail if reverted, all locked): the `SeasonLoop` constructor had
+> conflated "a progression store was supplied" with "#28 is the roster authority" — an empty store
+> (the honest pre-#28 composition `SeasonSaveManager.Save` itself documents) could be composed but not
+> resumed through any documented path, because nothing anywhere had ever reconstructed a `SeasonLoop`
+> from `Load` output. Fixed with one `progressionIsRoster` predicate driving every gate. **ERR-028-014**
+> is the diagnosis worth keeping: the never-advanced cursor sentinel was exempted from the cursor-vs-
+> clock rule as a **sibling-copy error** — the exemption is sound for #29/#41, whose fresh states carry
+> no clock-anchored quantity, and wrong for #28, the only one of the four whose fresh state (age, from
+> `BirthWorldDay`) means something different at every clock value; a day-0 store composed against a
+> day-3650 clock banked one day of growth for a decade, silently. Fixed by deleting the special case
+> (`SeedFrom` anchors the cursor at the seed day) rather than adding a gate; two tests that had been
+> locking the defect as intended behaviour were **inverted**, not adjusted. Also fixed
+> `tools/recurring-defect-lint.py`, which had `TODAY` hardcoded to its own authoring date and was
+> producing false ERRORs every day since.
+>
+> **AR pass 3** (ERR-030-031, High — doc sweep; ERR-028-015, High×2 — code, both introduced by pass 2):
+> the ERR-028-014 sweep had stopped at its own spec folder — the **fifth** recurrence of the grep-
+> boundary widening class — leaving #30 §2.3's F8 row and Appendix B.1 asserting "all three" cursors
+> and a blanket sentinel exemption ERR-028-014 had made false the same day, and #28 §5.1 still
+> documenting the retired behaviour for a test that had been renamed and inverted. **ERR-028-015** is
+> the sharper finding: anchoring the cursor at the seed day made `AdvanceDay(seedDay, …)` a total no-op,
+> and mutation testing — not the static audit — proved three locks had gone silently unguarded (deleting
+> the idempotency guard outright left **all 469 tests green**; deleting the retirement-age comparison
+> left 85/85 green); and the ERR-028-013 relaxation had reopened the ERR-028-010 gate by breaking the
+> biconditional it was keyed on (`_career` vs `_careerSquads`), letting a progression-only loop skip the
+> two-provider refusal entirely — verbatim the ERR-028-010 shape, in the fix that cites it. Rekeyed to
+> the authority the loop owns.
+>
+> **AR pass 4** (ERR-028-016, 0 High, Medium×4 — the loop's first pass with no High): the headline is a
+> correction to **pass 3's own comment** — pass 3 attributed a guard's load-bearing property to backward-
+> call cursor regression when the `if` condition already prevents that; the guard actually prevents the
+> §3.4 retirement evaluation from running on a no-op call, and pass 3's rewrite had also discarded the
+> original comment's correct half. Plus three decode range checks tested only one side of a two-sided OR
+> (the same half-guard shape pass 2's sweep found), and five more guards with no isolating test at all.
+> Suite: `PlayerProgression.Tests` 89 → **100**.
+>
+> **What remains open of #28, unchanged by the loop:** the season boundary (retiree removal + 1:1
+> regen) and the `player-progression.regen` stream it needs, plus T3's deep growth curve — the loop
+> found and fixed defects in what landed; it did not extend the landing's scope.
+>
+> **Verified 2026-08-10 at this branch's HEAD** (this session's own runs): whole tree builds **0 errors**;
+> `PlayerProgression.Tests` **100 passed / 0 failed / 0 skipped**; `SeasonSave.Tests` **385 passed / 0
+> failed / 3 skipped**; `tools/recurring-defect-lint.py --repo .` reports **0 ERROR** tree-wide. **Status
+> honestly: this branch is mid-review-loop, not closed out** — nothing here has been squared against a
+> whole-tree `MatchEngine.Tests` run on this exact tree. The last whole-tree gate this branch's own AR
+> passes report is pass-3's PASS at `9392839` (`MatchEngine.Tests` 436/0/10, quarantine empty; pass 4
+> did not touch the match engine). Separately, **CI is currently RED on `sim_match_engine_close_chance`**
+> — this reproduces identically on `main` at the same predicate values (the ERR-008-021/-022/-023 chain's
+> recorded, not-yet-recalibrated residual, per the entries above) and is **not caused by this branch**,
+> which touches no match-engine or decision-tree file.)
+>
+> **Last Updated (prior):** August 9, 2026, later still (**AR over the ERR-010-002 landing — 1 High, 6 Medium, 4 Low found, all fixed across two commits (`48977fa` doc half, `d93e0c8` code half), and the whole-tree gate result for both.** Doc half: §3.5.1's stale "bounded to the hemisphere the ball can physically reach" spec text corrected to match the code, which provably never enters that branch; `GkHeadingIntentSource.HeaderAimTarget`'s phantom `§4.2a` citation resolved to `gk-heading-engine-integration-design.md`, recording two measured limitations (the ballistic solve's ≈15 m range ceiling, since the target is always pinned to the goal line; the wide-clearance lateral bias, weak and inverted — a team-0 header at (10,10) aims 4.1° off straight upfield, one at (10,34) aims 17.9°, the wrong direction); version rows added to three production files that had shipped substantive changes with none. Code half: **(1)** the out-of-range fallback in the ballistic aim solve returned a flat 45° "maximum-range launch," which is only correct when the target sits at contact height — a header contacts near 2.3 m aiming at ground-level targets, so this was the production path (measured 9.98° error at the boundary, 4.38° at the production nominal speed), fixed to the true `tan(θ) = v / √(v² − 2·g·dz)` solve with a reachability guard, retiring the `[DERIVED]` `MaxRangeLaunchComponent` constant whose name asserted what it was not. **(2)** `ComputeAimNormal` did not propagate a degenerate desired direction, so a zero `aimDir` reflected the ball straight back at full power — the maximum possible deflection, arrived at through the branch documented as the natural rebound, and it made the zero-aim fallback's own lock pass against a branch production could never enter. **(3)** Four missing ERR-008-002 home/away locks added for `HeaderAimTarget`, the landing's only team-branching geometry — a mislabelled existing test ran team-agnostic code and could not have caught an asymmetry; the mirror itself was already correct. **One bug was introduced by the fix and caught by its own new lock before landing**: the unreachable-height guard first returned `Vector3.up` (Unity's +Y) instead of this project's +Z up axis (Ball Physics #1 §1.2) — the coordinate-axis trap in this file's own hazard table, and it still nearly shipped. **Whole-tree gate, local run, head `d93e0c8`: build 0 errors, 3 warnings; `GATE_EXIT=1` — did NOT print "Gate PASSED".** Sole failure: `sim_match_engine_close_chance`, 2 of 3 predicates (`final-third-dribbles-are-not-goal-averse` meanCosine −0.165 vs bound −0.16; `goalward-dribbles-are-not-a-minority-of-one-in-three` goalwardShare 0.407 vs bound 0.42) — the inherited C1 failure, identical to three decimals against the `589a011` baseline, so this landing moved nothing. `MatchEngine.Tests` **451 passed / 1 failed / 10 skipped / 462 total** (447/1/10/458 baseline, the +4 exactly the new `HeaderAimTarget` locks); `HeadingMechanics.Tests` **63 passed / 15 skipped / 0 failed** (60 → 63); all 31 other suites green, quarantine empty; `python3 tools/recurring-defect-lint.py --repo .`: 0 ERRORs. `spec-error-log.md` v2.04, `file-manifest.md`. Also landed: `close-chance-creation-design.md` §10.8 — the §10.7-corrected instrument's first execution (Report C5b, 6 seeds × 90 min, 1,081 aerial final-third episodes) finds headers failing horizontally (nearest attacker 5.88–5.93 m, nearest defender 4.28–4.93 m in pure XY, no height term at all) and RE-RANKS §10.6's withdrawn "attack the ball" lever back to first, on a corrected instrument reaching the same conclusion (0% within contact distance in true 3-D) by a route that does not carry §10.7's height-floor artifact. Prior entry below.)
 >
 > **Last Updated (prior):** August 9, 2026, later same day (**ERR-010-002 — Heading Mechanics #10 §3.5 delegated header aim to Decision Tree #8, which cannot emit a header at all.** `ActionType` ordinal 8 overflows the 3-bit composure-noise field (wiring backlog W9), so the aim decision had no owner, `HeaderIntent.TargetIntent` reached no formula anywhere, and every header was a **passive specular mirror**: the ball left the head along the reflection of its own incoming path with zero player influence on direction — the `ERR-011-010` shape, a decision delegated to a system that structurally cannot make it. Two further defects in the same chain: the contact point had **two independent derivations** (`HeadingMechanics.Update` Pass 1 and Pass 2, agreeing only by coincidence — the parallel-surface trap), and Pass 2 rebuilt the world-space point from its **2-D** head-local projection, pinning `contactPointActual.z` to the head centre, so the §3.5 reflection normal was permanently horizontal and `reflected.z = v̂_in.z` — **a descending ball was headed further down and no header could lift the ball**. **Resolved by new #10 §3.5.1 + `src/heading-mechanics/HeadingAim.cs`** (+ `Tests/HeadingAimTests.cs`): (1) a ballistic launch-direction solve to `TargetIntent` at the perfect-contact speed, low root, with a continuous 45° maximum-range fallback when the target is out of range (P1); (2) the reflecting half-vector normal — with a recorded note that NO geometric hemisphere bound is applied because it provably can never fire, this project's "guard on an unreachable branch" defect class; (3) an achieved normal blended from the geometric normal by normalised Heading, where **steer authority 0 is exactly the pre-fix behaviour** and the ramp spans the whole attribute range with no plateau (the `ERR-008-019` FULL-RANGE shape, P2). One `ResolveContactGeometry` owner now read by both passes; the 3-D contact point carried directly instead of round-tripped. Producer half: new `GkHeadingIntentSource.HeaderAimTarget` (§4.2a) — clear wide when deep, aim at goal when advanced, continuous lerp in the taker's advancement, constant-free. **No new `[GT]`** (the Heading attribute is the dial, so inside KD-W1), **no `SNAPSHOT_SCHEMA_VERSION` bump** (both intent fields were already serialized), **no new RNG stream / domain tag / draw site / draw-order change**. Digests DO move for any match containing a header because contact counts change and `HeadingContactQuality` draws twice per contact. Also landed: `close-chance-creation-design.md` **§10.7**, which corrects §10.6 twice — item 3's consequence was wrong (the aim was inert, not merely fixed), and **§10.6's proximity census is an instrument artifact**: `BallToAgentDistance3D` measured ball-to-agent-GROUND distance including the ball's full height while the episode gate requires ball z > 0.5 m, so its two smallest buckets were structurally unreachable and the published "0%" in both was the instrument reporting its own gate. §10.6's ranking of "attack the ball" as the first lever is **withdrawn, not replaced**. The instrument was corrected in `src/match-engine/tests/CloseChanceDiagnosticTests.cs` (v1.4): three separate series now — horizontal-only separation, 3-D distance to the agent's head point, and the retained ball-to-ground measure explicitly relabelled as carrying a ≥ ball-height floor — plus the ball height at the moment of minimum horizontal separation. **New files (2 + metas):** `src/heading-mechanics/HeadingAim.cs`, `src/heading-mechanics/Tests/HeadingAimTests.cs`. **Modified:** `src/heading-mechanics/HeadingMechanics.cs`, `src/heading-mechanics/HeadingMechanicsConstants.cs` (+ `KINEMATIC_TWO_COEFF`/`PERFECT_CONTACT_QUALITY` [FIXED], `SurfaceNormalEpsilon`/`MaxRangeLaunchComponent` [DERIVED]), `src/match-engine/GkHeadingIntentSource.cs`, `src/match-engine/MatchEngine.cs`, `src/match-engine/tests/CloseChanceDiagnosticTests.cs` (v1.4). **Specs:** `docs/specs/heading-mechanics/section-2.md` v0.4 (new FR-HE-036/037/038), `docs/specs/heading-mechanics/section-3.md` v0.4 (new §3.5.1). **Tracking:** `spec-error-log.md` v2.00 (ERR-010-002), `close-chance-creation-design.md` v1.6, `match-engine-wiring-backlog.md` v1.4, both changelogs, `file-manifest.md`. ****GATE-VERIFIED** (local whole-tree run, head `c89c838`): build 0 errors; `HeadingMechanics.Tests` **60 / 15 skipped / 0 failed** (47 → 60, the +13 being this landing's `HeadingAimTests` locks, all executed); `MatchEngine.Tests` **447 / 1 / 10 — byte-identical to the pre-fix baseline**, the one failure being the inherited C1 `sim_match_engine_close_chance` (meanCosine −0.165, goalwardShare 0.407, unchanged to three decimals) that predates this branch and awaits an owner call; all 33 suites otherwise unchanged, quarantine empty. **The "digests DO move" claim written at landing is WITHDRAWN as stated** — no measured digest movement anywhere. A match containing an executed header would digest differently; **no scenario in this tree contains one**, which is the 0.2% contact ratio (2 executed / 963 failed over 6 seeds × 90 min) showing up exactly where the evidence advisor predicted it would. The aim is locked by unit geometry and by nothing else.** — a whole-tree gate is running elsewhere; result to be recorded separately. Prior entry below.)
 >

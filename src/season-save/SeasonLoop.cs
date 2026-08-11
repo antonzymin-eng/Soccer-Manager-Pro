@@ -1,7 +1,7 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
-// Modified: 2026-08-08 (AR pass 6: the constructor pairs the career against the world clock —
-//           v1.15; the pass 1-3 recording chain and the pass-5 doc fix are the rows below)
+// Modified: 2026-08-11 (AR pass 6, M2(b) — the BirthWorldDay-vs-clock check joins the composition
+//           walk — v1.19; the pass 1-3 recording chain and the pass-5 doc fix are the rows below)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (day advance / KD-2 tick order), §3.4 (playing a round /
 //           KD-9), §3.5 (season-boundary roll / KD-6), §4.3 (the composition root), §4.6 (the #22
@@ -30,6 +30,7 @@ using TacticalDirector.InjuriesMedical;
 using TacticalDirector.LivingWorld;
 using TacticalDirector.MatchEngine;
 using TacticalDirector.PlayerDatabase;
+using TacticalDirector.PlayerProgression;
 using TacticalDirector.TrainingSystem;
 
 namespace TacticalDirector.SeasonSave
@@ -69,6 +70,7 @@ namespace TacticalDirector.SeasonSave
         // provider with no career would have nothing to advance.
         private readonly PlayerCareerStates _career;
         private readonly ISquadProvider _careerSquads;
+        private readonly ProgressionEngine _progression;
 
         private TacticalDirector.MatchEngine.MatchEngine _activeMatch;
 
@@ -113,7 +115,8 @@ namespace TacticalDirector.SeasonSave
             SeasonState season,
             RoundResolutionMode mode = RoundResolutionMode.ManagedThroughEngine,
             PlayerCareerStates careerOrNull = null,
-            ISquadProvider careerSquadsOrNull = null)
+            ISquadProvider careerSquadsOrNull = null,
+            ProgressionEngine progressionOrNull = null)
         {
             if (world == null)
             {
@@ -140,13 +143,82 @@ namespace TacticalDirector.SeasonSave
                     nameof(season));
             }
 
-            if ((careerOrNull == null) != (careerSquadsOrNull == null))
+            // #28 T2a — ONE roster authority, enforced by the signature rather than by convention.
+            // When a progression store is supplied it IS the roster (KD-4), so the loop derives the
+            // provider from it and refuses a separately-supplied one. Accepting both would let a caller
+            // hand in the bootstrap product beside the store that has been evolving away from it since
+            // day 0 — two surfaces that agree only at the moment anything would compare them, which is
+            // the silent-divergence shape #29/#41 T2's H2 filed one layer down.
+            //
+            // An EMPTY store is NOT that authority (ERR-028-013). It carries no rosters, so it cannot
+            // be the thing every consumer reads through, and treating it as wired made the one
+            // composition the save root documents impossible to build: SeasonSaveContents.Progression
+            // is never null, a pre-#28 save carries a well-formed ZERO-club block, and
+            // SeasonSaveManager.Save's own refusal message tells the caller to thread that store back
+            // in. Beside a provider it tripped the two-authorities refusal below; alone it failed the
+            // season-coverage check. The only way through was to pass null INSTEAD of the loaded
+            // store — an undocumented special case, and the opposite of what the guard advised. An
+            // empty store is the absence of #28, stated rather than arrived at.
+            bool progressionIsRoster = progressionOrNull != null && progressionOrNull.ClubCount > 0;
+
+            if (progressionIsRoster && careerSquadsOrNull != null)
             {
                 throw new System.ArgumentException(
-                    "The career state and its squad provider are supplied together or not at all: a "
-                    + "career cannot be advanced without the rosters its attributes come from, and a "
-                    + "provider on its own drives nothing.",
-                    careerOrNull == null ? nameof(careerOrNull) : nameof(careerSquadsOrNull));
+                    "Supply a progression store OR a squad provider, never both: when #28 is wired the "
+                    + "roster IS its career block (KD-4) and the loop projects the provider from it. A "
+                    + "separately-supplied provider would be the day-0 bootstrap, stale by exactly the "
+                    + "growth the store has banked.",
+                    nameof(careerSquadsOrNull));
+            }
+
+            ISquadProvider resolvedSquads = progressionIsRoster
+                ? new ProgressionSquads(progressionOrNull)
+                : careerSquadsOrNull;
+
+            // The progression store must cover the season, for the same reason the career must (below)
+            // and checked in the same place — this is the only layer holding both. A store built over a
+            // subset would construct and advance days without complaint, then hand back a null squad
+            // part-way through a round, after earlier fixtures had already been applied to the table.
+            // Refuse the pairing rather than half-resolving a round.
+            if (progressionIsRoster)
+            {
+                ReadOnlyCollection<int> progressionClubs = season.ClubIds;
+                for (int i = 0; i < progressionClubs.Count; i++)
+                {
+                    if (!progressionOrNull.CarriesClub(progressionClubs[i]))
+                    {
+                        throw new System.ArgumentException(
+                            $"The progression store carries no career state for club "
+                            + $"{progressionClubs[i]}, which plays in this season. Seed it over the "
+                            + "season's whole club set (ProgressionEngine.SeedFrom).",
+                            nameof(progressionOrNull));
+                    }
+                }
+            }
+
+            // A career still cannot be advanced without the rosters its attributes come from.
+            if (careerOrNull != null && resolvedSquads == null)
+            {
+                throw new System.ArgumentException(
+                    "The career state needs the squad provider its attributes are read from: supply "
+                    + "careerSquadsOrNull, or a populated progression store for the loop to project "
+                    + "one from.",
+                    nameof(careerSquadsOrNull));
+            }
+
+            // …but a provider "on its own" is no longer inert (ERR-028-013). That rule predates #28:
+            // a bare ISquadProvider drives nothing, so requiring a career beside it was right. A
+            // PROGRESSION store drives slot 1 and is its own provider, so demanding #29/#41 career
+            // state beside it makes #28 unusable without two subsystems it does not depend on — and
+            // it made slot 1's own `_career == null` branch, the FR-PG-009 "no training anywhere"
+            // path, provably unreachable: a guard on a branch nothing can execute, which is how a
+            // dead path ships green forever.
+            if (careerOrNull == null && resolvedSquads != null && !progressionIsRoster)
+            {
+                throw new System.ArgumentException(
+                    "A squad provider on its own drives nothing: supply the career state it feeds, or "
+                    + "a populated progression store, which drives the slot-1 daily step by itself.",
+                    nameof(careerSquadsOrNull));
             }
 
             // The career must cover the season, and this is the only layer holding both — the same
@@ -179,11 +251,49 @@ namespace TacticalDirector.SeasonSave
                 careerOrNull.RequireCursorsWithinClock(world.CurrentWorldTick);
             }
 
+            // The same rule for #28's cursor, at the same boundary and through the same owner
+            // (ERR-028-007). A loop can be composed from a store and a world that never met a save
+            // file: ahead of the clock silently freezes growth, and lagging by two or more makes the
+            // next advance REPLAY the gap, banking days of growth from one day's inputs.
+            if (progressionIsRoster)
+            {
+                ClubCareerStates[] careerBlocks = progressionOrNull.ToBlocks();
+                for (int c = 0; c < careerBlocks.Length; c++)
+                {
+                    for (int p = 0; p < careerBlocks[c].Count; p++)
+                    {
+                        PlayerCareerStates.RequireProgressionCursorWithinClock(
+                            world.CurrentWorldTick,
+                            careerBlocks[c].ClubId,
+                            careerBlocks[c].Records[p].PlayerId,
+                            careerBlocks[c].Lifecycles[p].LastAdvancedWorldDay,
+                            "SeasonLoop composition");
+
+                        // M2(b): the sibling check, same walk, same reason a bad cursor is refused
+                        // HERE rather than left for a day step to reach it — GrowthProjection now
+                        // fails loud on a future-dated anchor (M2(a)), but only once it is stepped.
+                        PlayerCareerStates.RequireBirthWorldDayWithinClock(
+                            world.CurrentWorldTick,
+                            careerBlocks[c].ClubId,
+                            careerBlocks[c].Records[p].PlayerId,
+                            careerBlocks[c].Lifecycles[p].BirthWorldDay,
+                            "SeasonLoop composition");
+                    }
+                }
+            }
+
             _world = world;
             _state = season;
             Mode = mode;
             _career = careerOrNull;
-            _careerSquads = careerSquadsOrNull;
+            _careerSquads = resolvedSquads;
+
+            // Only a store that IS the roster is retained (ERR-028-013): an empty one has nothing for
+            // slot 1 to advance, and holding it would make `_progression != null` mean two different
+            // things at the two places that read it. Save writes `loop.Progression ?? Empty`, so a
+            // loop composed from an empty store still round-trips to the same well-formed zero-club
+            // block it was built from.
+            _progression = progressionIsRoster ? progressionOrNull : null;
         }
 
         /// <summary>How this loop resolves a round's fixtures (§3.4.1).</summary>
@@ -294,6 +404,19 @@ namespace TacticalDirector.SeasonSave
         /// </para>
         /// </summary>
         public PlayerCareerStates Career => _career;
+
+        /// <summary>
+        /// The #28 career store this loop drives at slot 1, or <c>null</c> when none is wired.
+        /// <para>
+        /// When non-null this is also <b>the roster authority</b> (KD-4): the provider slots 2 and 4
+        /// read through is projected from it, so a client wanting a club's current squad should ask
+        /// this rather than the bootstrap it was seeded from. It is the surface
+        /// <see cref="SeasonSaveManager.Save(SeasonLoop,MatchEngine.MatchEngine,string)"/> takes the
+        /// progression block from, and the surface #31/#38 read
+        /// <c>LifecycleView</c> through (FR-PG-023).
+        /// </para>
+        /// </summary>
+        public ProgressionEngine Progression => _progression;
 
         /// <summary>
         /// Advances the world one calendar day at a time, in the KD-2 fixed order, until the clock sits ON
@@ -413,6 +536,33 @@ namespace TacticalDirector.SeasonSave
         /// the re-run inside the next day-advance's <see cref="RunWorldTickInFixedOrder"/> is a no-op
         /// over the cursors.
         /// </remarks>
+        public MatchResult[] AdvanceAndPlayNextRound()
+        {
+            // The reachable entry point for a loop that owns its provider (ERR-028-010). When #28 is
+            // wired the constructor PROJECTS the provider from the progression store and keeps it
+            // private, so the ISquadProvider overload below — which demands reference-equality with
+            // that instance — could not be satisfied by any caller: the store's projection was not
+            // exposed anywhere, and constructing an equivalent one is a different object. The headline
+            // configuration of the #28 landing could therefore advance days and save, and never play a
+            // round. Resolving through the loop's own provider also removes the older hazard the
+            // overload guards against by hand: there is no second provider to disagree with.
+            if (_careerSquads == null)
+            {
+                throw new System.InvalidOperationException(
+                    "This loop owns no squad provider, so it cannot resolve a round on its own. Use "
+                    + "AdvanceAndPlayNextRound(ISquadProvider) — the careerless path, where the caller "
+                    + "supplies the rosters.");
+            }
+
+            return PlayNextRound(_careerSquads);
+        }
+
+        /// <summary>
+        /// The careerless / caller-supplied-provider path. When the loop owns a provider (a career, or
+        /// #28's projection) prefer the no-argument overload: this one exists for a loop that has no
+        /// provider of its own, and it still refuses a provider that disagrees with a wired career.
+        /// </summary>
+        /// <param name="squads">The rosters this round resolves against.</param>
         public MatchResult[] AdvanceAndPlayNextRound(ISquadProvider squads)
         {
             if (squads == null)
@@ -425,15 +575,34 @@ namespace TacticalDirector.SeasonSave
             // providers would train one league and play another, and every symptom of that would be a
             // plausible-looking result rather than a crash — so require the same object, which for the
             // one caller that matters (a League, which IS the provider) is free.
-            if (_career != null && !ReferenceEquals(squads, _careerSquads))
+            // Keyed on the PROVIDER, not on the career (ERR-028-015). Until #28 landed, the pairing
+            // rule made `_careerSquads != null` and `_career != null` a biconditional, so keying this
+            // on the career was equivalent and nothing distinguished them. ERR-028-013 broke that
+            // equivalence deliberately — a populated progression store now composes WITHOUT #29/#41
+            // career state — and this gate was left keyed on the half that had stopped covering the
+            // case: a progression-only loop skipped it entirely, so a caller could hand in the day-0
+            // bootstrap and have the round resolved against attributes the store had already grown
+            // away from. That is precisely the divergence ERR-028-010's second half installed this
+            // gate to prevent, reopened by the relaxation one commit later. The authority is whatever
+            // the loop OWNS, whichever subsystem put it there.
+            if (_careerSquads != null && !ReferenceEquals(squads, _careerSquads))
             {
                 throw new System.ArgumentException(
-                    "This loop drives a career whose state is keyed to a different ISquadProvider. "
-                    + "Pass the same provider the loop was constructed with, or the round would be "
-                    + "resolved against rosters the training and medical state does not describe.",
+                    "This loop owns the ISquadProvider its state is keyed to — a wired career's "
+                    + "training and medical state, a #28 store's roster, or both. Pass that same "
+                    + "provider, or prefer the no-argument overload, which resolves through it. A "
+                    + "different provider would resolve the round against rosters this loop's state "
+                    + "does not describe.",
                     nameof(squads));
             }
 
+            return PlayNextRound(squads);
+        }
+
+        // The one body both overloads run. Extracted rather than duplicated: two copies of a
+        // twelve-guard round resolution is the parallel-surface defect this repo keeps filing.
+        private MatchResult[] PlayNextRound(ISquadProvider squads)
+        {
             if (_state.Calendar.IsSeasonComplete)
             {
                 throw new System.InvalidOperationException(
@@ -597,7 +766,12 @@ namespace TacticalDirector.SeasonSave
                     + "invariant (FR-SN-011). Roll at the end of the season, then advance the world.");
             }
 
-            // ── (d) #28 age advance inserts HERE — empty until #28 T2. ──────────────────────────
+            // ── (d) #28 season boundary — RESERVED, still empty. ────────────────────────────────
+            // The DAILY step is live at slot 1 since T2a, and age is derived there rather than
+            // advanced here, so there is no "age advance" left for this position. What the slot
+            // still holds open is RunSeasonBoundary: retiree removal + 1:1 regen, which needs the
+            // player-progression.regen stream (#28 §3.5 does not pin how that survives a save).
+            // #30 §3.5 carries the same wording.
             // (d′) the FR-TR-025 / FR-MD-025 roster-membership handoff, STAGED here and installed
             // below. #28's regens and retirements are the roster change, so the reconciliation reads
             // the provider at this point — after (d) — but it must not WRITE here: BeginNextSeason is
@@ -726,7 +900,10 @@ namespace TacticalDirector.SeasonSave
         /// <param name="careerOrNull">The restored #29/#41 career state (from
         /// <c>PlayerCareerStates.FromBlocks</c> over <see cref="SeasonSaveContents"/>'s two block
         /// arrays), or null for a loop that drives neither.</param>
-        /// <param name="careerSquadsOrNull">The rosters that career reads, on the constructor's terms.</param>
+        /// <param name="careerSquadsOrNull">The rosters that career reads, on the constructor's terms —
+        /// which means it must be null when <paramref name="progressionOrNull"/> is supplied.</param>
+        /// <param name="progressionOrNull">The restored #28 career store (from
+        /// <see cref="SeasonSaveContents.Progression"/>), or null for a loop that drives no progression.</param>
         /// <exception cref="System.ArgumentException">The blob is malformed (F3) or the restored pair
         /// violates the cursor invariant (F4).</exception>
         public static SeasonLoop Restore(
@@ -734,10 +911,12 @@ namespace TacticalDirector.SeasonSave
             byte[] seasonBlob,
             RoundResolutionMode mode = RoundResolutionMode.ManagedThroughEngine,
             PlayerCareerStates careerOrNull = null,
-            ISquadProvider careerSquadsOrNull = null)
+            ISquadProvider careerSquadsOrNull = null,
+            ProgressionEngine progressionOrNull = null)
         {
             return new SeasonLoop(
-                world, SeasonStateCodec.Decode(seasonBlob), mode, careerOrNull, careerSquadsOrNull);
+                world, SeasonStateCodec.Decode(seasonBlob), mode, careerOrNull, careerSquadsOrNull,
+                progressionOrNull);
         }
 
         /// <summary>
@@ -801,10 +980,22 @@ namespace TacticalDirector.SeasonSave
             // 0. facilities    (#53) — NULL SEAM (ERR-030-020: the upgrade-completion latch; numbered
             //                          zero so it precedes its same-day consumers without renumbering
             //                          the slots six APPROVED specs cite by number)
-            // 1. progression   (#28) — NULL SEAM (its T0 core is built but unwired; #28 T2 wires it
-            //                          here, and #29's ComputeTrainingInput batch is gathered with it —
-            //                          gathering a batch for a consumer that does not exist would be
-            //                          the phantom this project refuses, so it waits for D1)
+            // 1. progression   (#28) — LIVE (T2a, August 8, 2026: ERR-029-006 closed). #29 §3.5 step 1:
+            //                          #30 gathers each player's ComputeTrainingInput into the batch and
+            //                          hands it to #28's FR-PG-021 AdvanceDay. The gather is a pure read
+            //                          of fields slot 2 does not mutate (FR-TR-006), so slots 1 and 2
+            //                          are order-independent — but the batch is taken BEFORE slot 2 runs
+            //                          so that independence is a property of the code and not only of
+            //                          the argument for it.
+            if (_progression != null)
+            {
+                TrainingInputBatch growth = _career != null
+                    ? new TrainingInputBatch(
+                        _career.GatherTrainingInputs(_careerSquads, CoachingModifier.Identity))
+                    : TrainingInputBatch.Neutral;
+                _progression.AdvanceDay(day, in growth);
+            }
+
             // 2. training      (#29) — LIVE (T2).
             if (_career != null)
             {
@@ -1210,4 +1401,35 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | beside its KD-4 and coverage gates; three step-9 prose sites  |
 // |         |            |        | corrected to step 12 (step 9 is the #32 scouting null seam    |
 // |         |            |        | under pass 1's own renumbering).                              |
+// | 1.16    | 2026-08-08 | —      | #28 T2a: optional ProgressionEngine; slot 1 LIVE (gathers the  |
+// |         |            |        | #29 batch via PlayerCareerStates.GatherTrainingInputs and hands|
+// |         |            |        | it to the FR-PG-021 batch AdvanceDay); the constructor REFUSES a|
+// |         |            |        | separately-supplied ISquadProvider when a store is present and |
+// |         |            |        | projects one from it instead (KD-4 single roster authority), and|
+// |         |            |        | gates the store's coverage + its cursor vs the world clock     |
+// |         |            |        | (ERR-028-007).                                                 |
+// | 1.17    | 2026-08-09 | —      | AR pass 2 (H1 + M1), ERR-028-013: an EMPTY ProgressionEngine is |
+// |         |            |        | no longer treated as a wired roster authority — it carries no   |
+// |         |            |        | rosters, and treating it as wired made the pre-#28 save the save |
+// |         |            |        | root deliberately WRITES impossible to resume, since            |
+// |         |            |        | SeasonSaveContents.Progression is never null. The pairing rule   |
+// |         |            |        | also splits: a career still needs a provider, but a populated    |
+// |         |            |        | store now composes WITHOUT #29/#41 career state, which is what   |
+// |         |            |        | makes slot 1's `_career == null` Neutral branch reachable — it   |
+// |         |            |        | had been provably dead since it was written.                    |
+// | 1.18    | 2026-08-10 | —      | AR pass 3 (ERR-028-015, High): the two-provider reference gate  |
+// |         |            |        | on AdvanceAndPlayNextRound(ISquadProvider) was keyed on         |
+// |         |            |        | `_career`, which v1.17's relaxation had just stopped being      |
+// |         |            |        | equivalent to `_careerSquads`. A progression-only loop skipped  |
+// |         |            |        | the gate entirely, so the day-0 bootstrap could resolve a round |
+// |         |            |        | against attributes the store had grown away from — the          |
+// |         |            |        | ERR-028-010 divergence, reopened by the fix one commit later.   |
+// |         |            |        | Rekeyed to the provider the loop OWNS. Mutation-verified.       |
+// | 1.19    | 2026-08-11 | —      | AR pass 6, M2(b). The per-player composition walk (ERR-028-007) |
+// |         |            |        | gains PlayerCareerStates.RequireBirthWorldDayWithinClock beside |
+// |         |            |        | RequireProgressionCursorWithinClock: a BirthWorldDay ahead of   |
+// |         |            |        | the world clock is corrupt state (GrowthProjection would derive |
+// |         |            |        | a negative age from it) and is now refused HERE, at composition,|
+// |         |            |        | rather than left for a day step to reach GrowthProjection's own |
+// |         |            |        | new M2(a) guard.                                                 |
 #endregion

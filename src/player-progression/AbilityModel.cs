@@ -127,7 +127,18 @@ namespace TacticalDirector.PlayerProgression
         /// declining player sheds their least-emphasised attributes first. An attribute at ATTRIBUTE_MIN
         /// is skipped; a fully-drained player is a no-op (the caller's cursor still advances toward 0).
         /// </summary>
-        public static void DrainOnePoint(ref PlayerRecord rec, ref PlayerLifecycle life)
+        /// <returns>
+        /// <c>true</c> when a point was drained; <c>false</c> when every attribute already sits at
+        /// <c>ATTRIBUTE_MIN</c> and there is nothing left to take.
+        /// <para>
+        /// It returns a result at all because of AR pass 6's High: as a <c>void</c> no-op this method
+        /// gave the caller's drain loop NO failure exit, so a large negative cursor spun it once per
+        /// <c>POINT_COST</c> with no diagnostic — 1.26e13 iterations (~70 days of CPU) for a cursor of
+        /// <c>long.MinValue/2</c>. The spend side has had a refusal exit since AR pass 5's M2 clamp;
+        /// this is the mirror it never got.
+        /// </para>
+        /// </returns>
+        public static bool DrainOnePoint(ref PlayerRecord rec, ref PlayerLifecycle life)
         {
             int[] bias = PlayerDatabaseConstants.PositionAttributeBias[(int)rec.Position];
             int[] a = rec.Attributes.ToArray();
@@ -143,9 +154,11 @@ namespace TacticalDirector.PlayerProgression
                     }
                     a[i] -= 1;
                     CommitAttributes(ref rec, a);
-                    return;
+                    return true;
                 }
             }
+
+            return false;
         }
 
         private static int MaxBias(int[] bias)

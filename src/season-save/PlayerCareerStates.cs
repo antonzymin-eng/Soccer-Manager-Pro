@@ -1,10 +1,12 @@
 // File:     src/season-save/PlayerCareerStates.cs
 // Created:  2026-08-06
-// Modified: 2026-08-08 (AR pass 13 L2: the block counts — v1.14)
+// Modified: 2026-08-11 (AR pass 6, M2(b) — RequireBirthWorldDayWithinClock — v1.18)
 // Author:   —
 // Spec:     Training System #29 §3.1/§3.3/§3.5, §4.3 (seam contracts), FR-TR-004/016/022/023/025;
 //           Injuries & Medical #41 §3.1/§3.5, §4.3, FR-MD-003/009/010/022/023/025/027;
 //           Season & Competition Loop #30 §3.3 (KD-2 slot order), §3.5 (the boundary), FR-SN-034;
+//           Player Progression #28 (ERR-028-014 — the progression cursor has NO sentinel exemption,
+//           unlike its #29/#41 siblings, because #28's fresh state derives age from BirthWorldDay);
 //           path-to-playable D2/D3 (T2); Code Standards #20
 // Purpose:  The #30-side owner of the per-club #29 training, #41 medical and #30 appearance state.
 //           Holds the three sets keyed by (ClubId, PlayerId), drives the two day steps at #30's
@@ -18,6 +20,7 @@ using System.Collections.Generic;
 using TacticalDirector.InjuriesMedical;
 using TacticalDirector.MatchEngine;
 using TacticalDirector.PlayerDatabase;
+using TacticalDirector.PlayerProgression;
 using TacticalDirector.TrainingSystem;
 
 namespace TacticalDirector.SeasonSave
@@ -584,6 +587,68 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>
+        /// The #28 progression-cursor predicate — the FOURTH persisted per-player cursor, checked on
+        /// the same ahead/one-lag band as its #29/#41 siblings (ERR-028-007). Ahead of the clock silently
+        /// freezes growth until the clock catches up; lagging by two or more is WORSE here than for the
+        /// siblings, because <c>ProgressionEngine.AdvanceDay</c> REPLAYS a gap — a mispaired file would
+        /// bank N days of growth in one call from a single day's inputs, invisibly. Unlike its siblings,
+        /// the sentinel is NOT exempt here (ERR-028-014): #29's and #41's fresh states carry no
+        /// clock-anchored quantity, so "never advanced" means the same thing at every world day, but
+        /// #28's derives age from <c>BirthWorldDay</c>, so a never-advanced #28 state means something
+        /// different at every clock value — the premise the siblings' exemption rests on is false for
+        /// this one. One owner, all boundaries delegating (the AR pass-9 M1 shape).
+        /// </summary>
+        internal static void RequireProgressionCursorWithinClock(
+            uint worldTick, int clubId, int playerId, uint progressionDay, string boundary)
+        {
+            // ERR-028-014: NO sentinel exemption. That exemption was copied from the #29/#41 siblings,
+            // where it is sound — their fresh states (fatigue 0, no injuries) carry no clock-anchored
+            // quantity, so "never advanced" means the same thing on every world day. #28's fresh state
+            // is the only one of the four that DOES carry one: age is derived from BirthWorldDay, so a
+            // never-advanced #28 state means something different at every clock value. The premise the
+            // siblings' exemption rests on is false here, and inheriting it left the gate with a hole
+            // shaped exactly like the state every new game starts in.
+            if (progressionDay > worldTick || worldTick > progressionDay + 1)
+            {
+                throw new InvalidOperationException(
+                    $"{boundary} is incoherent: club {clubId} player {playerId}'s "
+                    + $"progression cursor ({progressionDay}) is "
+                    + (progressionDay > worldTick ? "ahead of" : "more than one day behind")
+                    + $" the world clock ({worldTick}).");
+            }
+        }
+
+        /// <summary>
+        /// The M2(b) sibling of <see cref="RequireProgressionCursorWithinClock"/>, checked at the same
+        /// two boundaries (this composition walk and <c>SeasonSaveManager</c>'s block-level walk): a
+        /// player's <c>BirthWorldDay</c> anchor must not sit AHEAD of the world clock.
+        /// <para>
+        /// <c>GrowthProjection</c> derives age as <c>(worldDay − BirthWorldDay) / DAYS_PER_YEAR</c>, and
+        /// <c>ProgressionSaveCodec.DescribeOutOfRangeValues</c> has no world day to bound the anchor's
+        /// upper end against — its own ceiling is <c>uint.MaxValue</c>, which rules out anchors that
+        /// cannot correspond to any reachable world day at all, not anchors ahead of THIS clock. A birth
+        /// day ahead of the day actually being advanced to is impossible for a real career (<c>SeedFrom</c>
+        /// anchors at the seed day; the clock only moves forward), and <c>GrowthProjection</c> now fails
+        /// loud on the resulting negative age-days (M2(a)) rather than silently deriving age 0 — but that
+        /// guard only fires once a day step reaches the player. This is the boundary that refuses the
+        /// pairing before it can, ahead-checked only (a birth day exactly on the clock is age 0, which is
+        /// ordinary — a player born today).
+        /// </para>
+        /// </summary>
+        internal static void RequireBirthWorldDayWithinClock(
+            uint worldTick, int clubId, int playerId, long birthWorldDay, string boundary)
+        {
+            if (birthWorldDay > worldTick)
+            {
+                throw new InvalidOperationException(
+                    $"{boundary} is incoherent: club {clubId} player {playerId}'s BirthWorldDay "
+                    + $"({birthWorldDay}) is ahead of the world clock ({worldTick}) — a future-dated "
+                    + "anchor is corrupt state; GrowthProjection would derive a negative age from it "
+                    + "(M2).");
+            }
+        }
+
+        /// <summary>
         /// The appearance-anchor predicate, ahead-checked only — the anchor has no gap contract
         /// (a lazily-shifted bitmask is coherent at any lag; shifting is the read's job). One
         /// owner for both boundaries (AR pass 9 M1).
@@ -722,6 +787,63 @@ namespace TacticalDirector.SeasonSave
                         ref states[i], in record.Attributes, in coach, worldDay);
                 }
             }
+        }
+
+        /// <summary>
+        /// Gathers #30's <b>slot-1</b> growth-input batch (#29 §3.5 step 1 / #28 FR-PG-021): each
+        /// player's <c>ComputeTrainingInput</c>, keyed by player id, ready for
+        /// <c>ProgressionEngine.AdvanceDay</c>. This is the composition ERR-029-006 was filed against —
+        /// #29 specifies that #30 gathers the batch and hands it to #28, and until #28 exposed a batch
+        /// entry point there was nothing to hand it to.
+        /// <para>
+        /// <b>A read, never a mutation.</b> <c>ComputeTrainingInput</c> reads only <c>Focus</c>, the
+        /// player's attributes and the coach seam — fields <see cref="AdvanceTrainingDay"/> does not
+        /// write — which is the FR-TR-006 invariant that makes slot 1 and slot 2 order-independent. Call
+        /// this before or after slot 2 and the batch is identical.
+        /// </para>
+        /// <para>
+        /// <b>The ids travel with the inputs</b> so #28 can refuse a batch that does not describe the
+        /// players it is about to advance. That turns "#29's roster view and #28's have drifted apart"
+        /// from a silent mis-attribution of growth into a fail-loud at the seam.
+        /// </para>
+        /// </summary>
+        /// <param name="squads">The rosters the attributes are read from; must match the state's roster.</param>
+        /// <param name="coach">The #34 staff seam; <see cref="CoachingModifier.Identity"/> until #34 lands.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="squads"/> is null.</exception>
+        /// <exception cref="ArgumentException">A club or a held player id cannot be resolved against <paramref name="squads"/>.</exception>
+        internal ClubTrainingInputs[] GatherTrainingInputs(ISquadProvider squads, CoachingModifier coach)
+        {
+            if (squads == null)
+            {
+                throw new ArgumentNullException(nameof(squads));
+            }
+
+            var batch = new ClubTrainingInputs[_clubIds.Count];
+            for (int c = 0; c < _clubIds.Count; c++)
+            {
+                Squad squad = ResolveSquad(squads, _clubIds[c]);
+                int[] ids = _playerIds[c];
+                TrainingState[] states = _training[c];
+
+                var playerIds = new int[ids.Length];
+                var inputs = new TrainingInput[ids.Length];
+                for (int i = 0; i < ids.Length; i++)
+                {
+                    int local = RequireLocalIndex(squad, _clubIds[c], ids[i]);
+                    PlayerRecord record = squad.GetPlayer(local);
+                    playerIds[i] = ids[i];
+                    // deepTrainingEnabled is #29's OWN Stage-2/3 dial (FR-TR-007), independent of #28's
+                    // curveEnabled, and off at Stage 2 — so every input is Neutral today and the batch
+                    // is behaviour-neutral by construction, not by accident. The seam is what lands
+                    // here; the values arrive when #29 T3 turns its dial on.
+                    inputs[i] = TrainingStep.ComputeTrainingInput(
+                        in states[i], in record.Attributes, in coach, deepTrainingEnabled: false);
+                }
+
+                batch[c] = new ClubTrainingInputs(_clubIds[c], playerIds, inputs);
+            }
+
+            return batch;
         }
 
         /// <summary>
@@ -1601,4 +1723,39 @@ namespace TacticalDirector.SeasonSave
 // | 1.14    | 2026-08-08 | —      | Balance-pass AR pass 13 (L2, doc): FromBlocks' doc still counted   |
 // |         |            |        | "two" blocks — three since D2 (the pass-12-L1 stale-count class,  |
 // |         |            |        | one file over).                                                    |
+// | 1.15    | 2026-08-08 | —      | #28 T2a: + GatherTrainingInputs (#29 §3.5 step 1 — the slot-1  |
+// |         |            |        | batch #30 hands to #28, keyed by player id so a drift between  |
+// |         |            |        | the two roster views fails loud); + RequireProgressionCursor-  |
+// |         |            |        | WithinClock, the fourth per-player cursor's single owner, with |
+// |         |            |        | all three boundaries delegating to it (ERR-028-007).           |
+// | 1.16    | 2026-08-09 | —      | ERR-028-014: RequireProgressionCursorWithinClock drops the      |
+// |         |            |        | sentinel exemption. The #29/#41 exemption it was copied from   |
+// |         |            |        | is sound for them (their fresh states carry no clock-anchored  |
+// |         |            |        | quantity); #28's is the one of the four that does — age is     |
+// |         |            |        | derived from BirthWorldDay — so a never-advanced #28 state      |
+// |         |            |        | means something different at every clock value, and the        |
+// |         |            |        | exemption was a hole shaped exactly like every new game's       |
+// |         |            |        | starting state. Deleting the exemption is sufficient: the       |
+// |         |            |        | existing bidirectional lag predicate now refuses the pairing    |
+// |         |            |        | with no new gate, since #28's own ProgressionEngine no longer   |
+// |         |            |        | writes the sentinel (ProgressionEngine.cs v1.1).                |
+// | 1.17    | 2026-08-10 | —      | Doc-only: v1.16 fixed the logic but not the XML doc above       |
+// |         |            |        | RequireProgressionCursorWithinClock, which still read "The      |
+// |         |            |        | sentinel is exempt: a never-advanced career is coherent at any  |
+// |         |            |        | clock" — directly contradicting the method's own inline comment |
+// |         |            |        | and implementation since ERR-028-014. Corrected to state the    |
+// |         |            |        | opposite and carry the reason (the file header's own ERR-028-   |
+// |         |            |        | 014 citation corrected likewise): #29/#41 fresh states carry no |
+// |         |            |        | clock-anchored quantity, so "never advanced" means the same     |
+// |         |            |        | thing at every world day; #28's derives age from BirthWorldDay, |
+// |         |            |        | so it means something different at every clock value. No logic |
+// |         |            |        | change.                                                          |
+// | 1.18    | 2026-08-11 | —      | AR pass 6, M2(b). + RequireBirthWorldDayWithinClock, the        |
+// |         |            |        | sibling of RequireProgressionCursorWithinClock: refuses a       |
+// |         |            |        | player whose BirthWorldDay anchor sits ahead of the world       |
+// |         |            |        | clock. ProgressionSaveCodec's DescribeOutOfRangeValues cannot   |
+// |         |            |        | bound the anchor's top against a clock (it has none); this is   |
+// |         |            |        | the composition boundary that can. Called from SeasonLoop's     |
+// |         |            |        | per-player composition walk and SeasonSaveManager's block-level |
+// |         |            |        | walk, alongside RequireProgressionCursorWithinClock in both.    |
 #endregion

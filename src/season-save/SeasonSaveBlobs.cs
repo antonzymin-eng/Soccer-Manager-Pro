@@ -1,23 +1,24 @@
 // File:     src/season-save/SeasonSaveBlobs.cs
 // Created:  2026-07-22
-// Modified: 2026-08-07 (balance pass D2: the sixth sub-blob — the #30 appearance block)
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) KD-2 / KD-7 / §4;
 //           Season & Competition Loop #30 Appendix B (frame), FR-SN-019; Training System #29 FR-TR-018;
 //           Injuries & Medical #41 FR-MD-017; Code Standards #20
-// Purpose:  The deframe result of a season save blob: the six opaque sub-blobs (the living-world
+// Purpose:  The deframe result of a season save blob: the seven opaque sub-blobs (the living-world
 //           composite, the season state, the #29 training block, the #41 medical block, the #30
-//           appearance block, and — when present — the match save). Pure bytes; the codec never reconstructs objects (that is
+//           appearance block, the #28 career-state block, and — when present — the match save). Pure bytes; the codec never reconstructs objects (that is
 //           SeasonSaveManager), so it stays free of match-engine / living-world / season-state types.
 
 namespace TacticalDirector.SeasonSave
 {
     /// <summary>
-    /// The six byte sub-blobs a season save carries (unified-season-save-design.md KD-2 + #30
-    /// FR-SN-019 + #29 FR-TR-018 + #41 FR-MD-017): the living-world composite
+    /// The seven byte sub-blobs a season save carries (unified-season-save-design.md KD-2 + #30
+    /// FR-SN-019 + #29 FR-TR-018 + #41 FR-MD-017 + #28 FR-PG-017): the living-world composite
     /// (<see cref="WorldBlob"/>), the season state (<see cref="SeasonBlob"/>), the #29 training block
-    /// (<see cref="TrainingBlob"/>), the #41 medical block (<see cref="MedicalBlob"/>) and the #30
-    /// appearance block (<see cref="AppearanceBlob"/>) — all five always present — and the match save (<see cref="MatchBlob"/>, <c>null</c> when the season had no
+    /// (<see cref="TrainingBlob"/>), the #41 medical block (<see cref="MedicalBlob"/>), the #30
+    /// appearance block (<see cref="AppearanceBlob"/>) and the #28 career-state block
+    /// (<see cref="ProgressionBlob"/>) — all six always present — and the match save (<see cref="MatchBlob"/>, <c>null</c> when the season had no
     /// in-progress match — KD-3). Produced by <see cref="SeasonSaveCodec.Decode"/>;
     /// <see cref="SeasonSaveManager"/> reconstructs the actual <c>WorldStore</c> /
     /// <see cref="SeasonState"/> / training + medical state / <c>MatchEngine</c> from them. Kept opaque
@@ -46,6 +47,12 @@ namespace TacticalDirector.SeasonSave
         /// game tracking no appearances carries a well-formed zero-club block (#30 Appendix B).</summary>
         public readonly byte[] AppearanceBlob;
 
+        /// <summary>The #28 career-state block
+        /// (<see cref="TacticalDirector.PlayerProgression.ProgressionSaveCodec.Encode"/>). Never null; a
+        /// game tracking no careers carries a well-formed zero-club block (FR-PG-017). Unlike its
+        /// siblings this block carries the evolving <c>PlayerRecord</c> set itself (#28 KD-4).</summary>
+        public readonly byte[] ProgressionBlob;
+
         /// <summary>The match save blob (<c>MatchSaveManager.Encode</c>), or <c>null</c> if the season
         /// had no in-progress match (KD-3).</summary>
         public readonly byte[] MatchBlob;
@@ -57,6 +64,7 @@ namespace TacticalDirector.SeasonSave
             byte[] trainingBlob,
             byte[] medicalBlob,
             byte[] appearanceBlob,
+            byte[] progressionBlob,
             byte[] matchBlob)
         {
             WorldBlob = worldBlob;
@@ -64,6 +72,7 @@ namespace TacticalDirector.SeasonSave
             TrainingBlob = trainingBlob;
             MedicalBlob = medicalBlob;
             AppearanceBlob = appearanceBlob;
+            ProgressionBlob = progressionBlob;
             MatchBlob = matchBlob;
         }
     }
@@ -77,4 +86,6 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | present) — the fourth and fifth sub-blobs.                        |
 // | 1.3     | 2026-08-07 | —      | Balance pass D2: gains AppearanceBlob (always present) — the     |
 // |         |            |        | sixth sub-blob (ERR-041-010(b)).                                  |
+// | 1.4     | 2026-08-08 | —      | #28 T1: gains ProgressionBlob (always present) — the seventh     |
+// |         |            |        | sub-blob, and the first to carry roster data (KD-4).             |
 #endregion

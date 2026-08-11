@@ -1,6 +1,6 @@
 // File:     src/season-save/SeasonSaveContents.cs
 // Created:  2026-07-22
-// Modified: 2026-08-08 (AR pass 7 L3: the Purpose block names the appearance records — v1.4)
+// Modified: 2026-08-08 (#28 T1/T2a + AR pass 1 — v1.5)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / G4 / KD-3;
 //           Season & Competition Loop #30 FR-SN-021; Training System #29 FR-TR-019;
@@ -13,6 +13,7 @@
 using TacticalDirector.InjuriesMedical;
 using TacticalDirector.LivingWorld;
 using TacticalDirector.MatchEngine;
+using TacticalDirector.PlayerProgression;
 using TacticalDirector.TrainingSystem;
 
 namespace TacticalDirector.SeasonSave
@@ -45,6 +46,14 @@ namespace TacticalDirector.SeasonSave
         /// null; empty when the save tracked no appearances (#30 Appendix B / ERR-041-010(b)).</summary>
         public readonly ClubAppearanceStates[] AppearanceClubs;
 
+        /// <summary>
+        /// The reconstructed #28 career store — the restored ROSTER, not merely an overlay on one
+        /// (#28 KD-4). Never null. This is the authority a caller must resume the career against: the
+        /// bootstrap product it was originally seeded from carries day-0 attributes and is stale by
+        /// exactly the growth this store has banked.
+        /// </summary>
+        public readonly ProgressionEngine Progression;
+
         /// <summary>The reconstructed in-progress match, or <c>null</c> if the season had no match.</summary>
         public readonly MatchEngine.MatchEngine Match;
 
@@ -55,6 +64,7 @@ namespace TacticalDirector.SeasonSave
             ClubTrainingStates[] trainingClubs,
             ClubInjuryStates[] medicalClubs,
             ClubAppearanceStates[] appearanceClubs,
+            ProgressionEngine progression,
             MatchEngine.MatchEngine match)
         {
             World = world;
@@ -62,6 +72,7 @@ namespace TacticalDirector.SeasonSave
             TrainingClubs = trainingClubs;
             MedicalClubs = medicalClubs;
             AppearanceClubs = appearanceClubs;
+            Progression = progression;
             Match = match;
         }
     }
@@ -79,4 +90,6 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | omitted the appearance records the class summary and Modified     |
 // |         |            |        | line already named — the SeasonSaveCodec v1.5 doc-drift class,    |
 // |         |            |        | one file over, again.                                             |
+// | 1.5     | 2026-08-08 | —      | #28 T2a: gains the restored ProgressionEngine — the roster a    |
+// |         |            |        | caller must resume against (#28 KD-4), not merely an overlay.   |
 #endregion

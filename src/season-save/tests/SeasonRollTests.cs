@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonRollTests.cs
 // Created:  2026-07-27
-// Modified: 2026-08-07
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.5 (season-boundary roll), FR-SN-029 (restartable
 //           transform), FR-SN-030 (two-run season determinism), FR-SN-031 (insertion points),
@@ -20,6 +20,7 @@ using NUnit.Framework;
 
 using TacticalDirector.InjuriesMedical;
 using TacticalDirector.LivingWorld;
+using TacticalDirector.PlayerProgression;
 using TacticalDirector.TrainingSystem;
 
 namespace TacticalDirector.SeasonSave.Tests
@@ -342,7 +343,7 @@ namespace TacticalDirector.SeasonSave.Tests
             {
                 SeasonSaveManager.Save(world, interrupted.State, null,
                     path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>(),
-                    Array.Empty<ClubAppearanceStates>());
+                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty);
                 SeasonSaveContents contents = SeasonSaveManager.Load(path, league);
                 var resumed = new SeasonLoop(
                     contents.World, contents.Season, RoundResolutionMode.QuickSimAll);
@@ -379,7 +380,7 @@ namespace TacticalDirector.SeasonSave.Tests
             {
                 SeasonSaveManager.Save(world, loop.State, null,
                     path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>(),
-                    Array.Empty<ClubAppearanceStates>());
+                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty);
                 SeasonSaveContents contents = SeasonSaveManager.Load(path, league);
 
                 Assert.IsTrue(loop.State.FieldsEqual(contents.Season),
@@ -595,4 +596,7 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | disabling its own gate and watching exactly that test fail.        |
 // | 1.3     | 2026-08-07 | —      | Balance pass D2: the two Save call sites carry the required        |
 // |         |            |        | (empty) appearance set — frame v4.                                 |
+// | 1.4     | 2026-08-08 | —      | #28 T1: call sites updated for SeasonSaveManager.Save's / Season-  |
+// |         |            |        | SaveCodec.Encode's new required progression-block parameter. No    |
+// |         |            |        | assertion or intent change.                                        |
 #endregion

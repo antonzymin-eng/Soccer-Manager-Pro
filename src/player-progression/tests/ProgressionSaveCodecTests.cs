@@ -1,0 +1,1065 @@
+// File:     src/player-progression/tests/ProgressionSaveCodecTests.cs
+// Created:  2026-08-08
+// Modified: 2026-08-11 (AR pass 8, M-1/L-4 — three Decode locks retyped to InvalidOperationException;
+//           the "current" fixture literal retuned to a computed CurrentAbility; +3 new L-4 locks — v1.6)
+// Author:   —
+// Spec:     Player Progression & Lifecycle #28 §3.5 (the save codec), §4.2, KD-4,
+//           FR-PG-016/017/018/019, F3/F5; ERR-028-004 (§3.5 named the RNG domain tag as the block's
+//           identifier — the sibling-confusion lock); ERR-028-014 (the never-advanced sentinel retired
+//           from #28's legal STORE states — Encode and Decode now refuse it); Deterministic
+//           Simulation #16 §3.2.4.1 (CanonicalSerializer); Code Standards #20
+// Purpose:  M4 — ProgressionSaveCodec's own dedicated suite (mirrors MedicalSaveCodecTests' house
+//           pattern): the round-trip field-identity FR-PG-018 demands, the canonical key order that
+//           makes the bytes deterministic, every fail-loud gate (magic, version, bounds, ordering,
+//           undefined position, non-ASCII names, trailing bytes), and the ERR-028-004 sibling-confusion
+//           proof against a hand-built #29 training block (player-progression may not reference
+//           training-system, so the block is hand-built rather than encoded through TrainingSaveCodec).
+//           v1.1 adds mutation-audit locks for six ReadPlayer/RequireGloballyUniquePlayerIds guards a
+//           mutation sweep proved dead, plus the new PotentialAbility L3 gate (ProgressionSaveCodec.cs
+//           §ReadPlayer) and its own lock — PA is the F1 growth ceiling and had no range gate before
+//           this pass. v1.2 locks the new RequireNoNeverAdvancedSentinel guards at Encode and Decode
+//           (ERR-028-014). v1.3 (AR pass 4) adds the missing halves of three two-sided ReadPlayer range
+//           checks (attribute MIN, weak-foot MIN, PotentialAbility MAX) that only had their other side
+//           tested. v1.4 (AR pass 5, High) adds one lock per range Encode now gates to match Decode
+//           (PA below floor, PA above ceiling, negative age, weak-foot, attribute) plus
+//           Encode_AndDecode_ShareOneRangeRule, the PA_MIN-boundary anti-drift lock.
+
+using System;
+
+using NUnit.Framework;
+
+using TacticalDirector.DeterministicSim;
+using TacticalDirector.PlayerDatabase;
+
+namespace TacticalDirector.PlayerProgression.Tests
+{
+    /// <summary>
+    /// Tests for <see cref="ProgressionSaveCodec"/>. The central property is FR-PG-018: every
+    /// <see cref="PlayerRecord"/> / <see cref="PlayerLifecycle"/> field round-trips identically, keyed
+    /// by <c>(ClubId, PlayerId)</c> — serialize, don't regenerate. The rest is the fail-loud surface
+    /// (F3/F5), the canonical-order guarantee, and the ERR-028-004 magic-led sibling-confusion proof.
+    /// </summary>
+    [TestFixture]
+    public sealed class ProgressionSaveCodecTests
+    {
+        // TrainingSystemConstants.TRAINING_SAVE_MAGIC ('T''R''N''G'). player-progression cannot
+        // reference training-system (the reference-direction rule), so the sibling-confusion test below
+        // hand-builds a plausible #29-shaped blob rather than encoding a real one through
+        // TrainingSaveCodec.
+        private const uint TrainingSaveMagic = 0x54524E47;
+
+        private static PlayerRecord Rec(
+            int id, string first, string last, int age, PlayerPosition pos, int weakFoot)
+        {
+            PlayerRecord rec = PlayerRecord.CreateDefault(id);
+            rec.FirstName = first;
+            rec.LastName = last;
+            rec.Age = age;
+            rec.Position = pos;
+            PlayerAttributes attrs = rec.Attributes;
+            attrs.WeakFootRating = weakFoot;
+            rec.Attributes = attrs;
+            return rec;
+        }
+
+        // L-4 (AR pass 8): DescribeOutOfRangeValues now requires CurrentAbility == ComputeCA(attributes)
+        // exactly. Every Rec() in this file shares the same default [1,20] attributes (Rec() only ever
+        // touches FirstName/LastName/Age/Position/WeakFootRating), and the position-weighted mean is
+        // position-INVARIANT for uniform attribute values (every weight cancels against the same base
+        // value) — so every legitimate fixture in this file owes the SAME computed CurrentAbility.
+        // Computed rather than a bare literal so it cannot silently drift from AbilityModel /
+        // PlayerDatabaseConstants if either changes. Every `Life(..., <literal>, ...)` "current" argument
+        // in this file was retyped to this field by the L-4 fix — most were arbitrary literals (3000,
+        // 4000, 5900, 4200, 7400, 3100) that predate CurrentAbility having any recompute contract at all.
+        private static readonly PlayerAttributes DefaultAttributes = PlayerAttributes.CreateDefault();
+        private static readonly int DefaultCA =
+            AbilityModel.ComputeCA(in DefaultAttributes, PlayerPosition.Midfielder);
+
+        private static PlayerLifecycle Life(
+            int potential, int current, long cursor, long birthDay,
+            bool retired, uint retiredDay, uint lastAdvanced) =>
+            new PlayerLifecycle
+            {
+                PotentialAbility = potential,
+                CurrentAbility = current,
+                GrowthCursor = cursor,
+                BirthWorldDay = birthDay,
+                RetirementFlag = retired,
+                RetirementDay = retiredDay,
+                LastAdvancedWorldDay = lastAdvanced,
+            };
+
+        private static ClubCareerStates Club(
+            int clubId, params (PlayerRecord rec, PlayerLifecycle life)[] players)
+        {
+            var records = new PlayerRecord[players.Length];
+            var lifecycles = new PlayerLifecycle[players.Length];
+            for (int i = 0; i < players.Length; i++)
+            {
+                records[i] = players[i].rec;
+                lifecycles[i] = players[i].life;
+            }
+            return new ClubCareerStates(clubId, records, lifecycles);
+        }
+
+        // Deliberately out of ascending order (club 2 before 1; within club 2, player 11 before 10) —
+        // Encode must canonicalize regardless of the order it is handed.
+        //
+        // Player 10's LastAdvancedWorldDay used to BE PROGRESSION_NOT_ADVANCED_SENTINEL, to prove the
+        // sentinel round-trips as itself. ERR-028-014 retired the sentinel from #28's legal STORE
+        // states, and Encode now refuses it (Encode_NeverAdvancedSentinel_FailsLoud_ERR028014 below) —
+        // so a fixture every round-trip/fail-loud test shares can no longer carry it. Player 11's
+        // uint.MaxValue - 1 already covers "a near-maximum value round-trips correctly"; 12345u here
+        // is just an ordinary mid-range value, distinct from the other three players' cursors.
+        private static ClubCareerStates[] TwoClubs() => new[]
+        {
+            Club(2,
+                (Rec(11, "Bruno", "Silva", 29, PlayerPosition.Forward, 3),
+                 Life(8200, DefaultCA, -120L, -50000L, retired: true, retiredDay: 900u, lastAdvanced: 900u)),
+                (Rec(10, "Aidan", "Cole", 19, PlayerPosition.Defender, 1),
+                 Life(5000, DefaultCA, 0L, 30000L, retired: false, retiredDay: 0u, lastAdvanced: 12345u))),
+            Club(1,
+                (Rec(7, "Marco", "Diaz", 33, PlayerPosition.Midfielder, 4),
+                 Life(6000, DefaultCA, 200L, -80000L, retired: false, retiredDay: 0u, lastAdvanced: 0u)),
+                (Rec(5, "Femi", "Adeyemi", 21, PlayerPosition.Goalkeeper, 2),
+                 Life(7000, DefaultCA, -364L, 10000L, retired: false, retiredDay: 0u,
+                      lastAdvanced: uint.MaxValue - 1))),
+        };
+
+        // ── Round-trip ──────────────────────────────────────────────────────────────
+
+        [Test]
+        public void RoundTrip_EveryFieldSurvives_FRPG018()
+        {
+            const int NextPlayerId = 12;
+            ClubCareerStates[] got = ProgressionSaveCodec.Decode(
+                ProgressionSaveCodec.Encode(TwoClubs(), NextPlayerId), out int gotNextPlayerId);
+
+            Assert.AreEqual(NextPlayerId, gotNextPlayerId, "the store-level id cursor must survive (FR-PG-011).");
+            Assert.AreEqual(2, got.Length, "both clubs must survive");
+            Assert.AreEqual(1, got[0].ClubId, "clubs come back in ascending club id");
+            Assert.AreEqual(2, got[1].ClubId);
+
+            // Club 1: players ascend 5, 7.
+            Assert.AreEqual(5, got[0].Records[0].PlayerId);
+            Assert.AreEqual("Femi", got[0].Records[0].FirstName);
+            Assert.AreEqual("Adeyemi", got[0].Records[0].LastName);
+            Assert.AreEqual(21, got[0].Records[0].Age);
+            Assert.AreEqual(PlayerPosition.Goalkeeper, got[0].Records[0].Position);
+            Assert.AreEqual(2, got[0].Records[0].Attributes.WeakFootRating);
+            Assert.AreEqual(7000, got[0].Lifecycles[0].PotentialAbility);
+            Assert.AreEqual(DefaultCA, got[0].Lifecycles[0].CurrentAbility);
+            Assert.AreEqual(-364L, got[0].Lifecycles[0].GrowthCursor);
+            Assert.AreEqual(10000L, got[0].Lifecycles[0].BirthWorldDay);
+            Assert.IsFalse(got[0].Lifecycles[0].RetirementFlag);
+            Assert.AreEqual(0u, got[0].Lifecycles[0].RetirementDay);
+            Assert.AreEqual(uint.MaxValue - 1, got[0].Lifecycles[0].LastAdvancedWorldDay);
+
+            Assert.AreEqual(7, got[0].Records[1].PlayerId);
+            Assert.AreEqual("Marco", got[0].Records[1].FirstName);
+            Assert.AreEqual(33, got[0].Records[1].Age);
+            Assert.AreEqual(PlayerPosition.Midfielder, got[0].Records[1].Position);
+            Assert.AreEqual(200L, got[0].Lifecycles[1].GrowthCursor);
+            Assert.AreEqual(-80000L, got[0].Lifecycles[1].BirthWorldDay);
+
+            // Club 2: players ascend 10, 11.
+            Assert.AreEqual(10, got[1].Records[0].PlayerId);
+            Assert.AreEqual(12345u, got[1].Lifecycles[0].LastAdvancedWorldDay,
+                "an ordinary mid-range cursor must survive exactly. (The never-advanced sentinel is no " +
+                "longer legal STORE data to round-trip at all since ERR-028-014 — see " +
+                "Encode_NeverAdvancedSentinel_FailsLoud_ERR028014 / Decode_NeverAdvancedSentinel_" +
+                "FailsLoud_ERR028014 below for that half of the contract.)");
+
+            Assert.AreEqual(11, got[1].Records[1].PlayerId);
+            Assert.AreEqual(PlayerPosition.Forward, got[1].Records[1].Position);
+            Assert.IsTrue(got[1].Lifecycles[1].RetirementFlag);
+            Assert.AreEqual(900u, got[1].Lifecycles[1].RetirementDay);
+            Assert.AreEqual(-120L, got[1].Lifecycles[1].GrowthCursor,
+                "GrowthCursor is signed — decline must survive as a negative value.");
+            Assert.AreEqual(-50000L, got[1].Lifecycles[1].BirthWorldDay,
+                "BirthWorldDay is signed — a pre-epoch birth must survive as a negative value (ERR-028-006).");
+        }
+
+        [Test]
+        public void RoundTrip_EmptySet_IsAWellFormedBlock()
+        {
+            byte[] blob = ProgressionSaveCodec.Encode(Array.Empty<ClubCareerStates>(), nextPlayerId: 0);
+            Assert.AreEqual(16, blob.Length,
+                "an empty block is exactly the magic + the version + nextPlayerId + a zero club count");
+
+            ClubCareerStates[] got = ProgressionSaveCodec.Decode(blob, out int nextPlayerId);
+            Assert.AreEqual(0, got.Length);
+            Assert.AreEqual(0, nextPlayerId);
+        }
+
+        // ── Canonical order ─────────────────────────────────────────────────────────
+
+        [Test]
+        public void Encode_IsOrderIndependent_SameStateSameBytes()
+        {
+            var forward = new[]
+            {
+                Club(1,
+                    (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1), Life(5000, DefaultCA, 0, 0, false, 0u, 1u)),
+                    (Rec(9, "C", "D", 22, PlayerPosition.Forward, 2), Life(6000, DefaultCA, 10, 0, false, 0u, 2u))),
+                Club(2,
+                    (Rec(3, "E", "F", 25, PlayerPosition.Defender, 3), Life(7000, DefaultCA, -10, 0, false, 0u, 3u))),
+            };
+            var shuffled = new[]
+            {
+                Club(2,
+                    (Rec(3, "E", "F", 25, PlayerPosition.Defender, 3), Life(7000, DefaultCA, -10, 0, false, 0u, 3u))),
+                Club(1,
+                    (Rec(9, "C", "D", 22, PlayerPosition.Forward, 2), Life(6000, DefaultCA, 10, 0, false, 0u, 2u)),
+                    (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1), Life(5000, DefaultCA, 0, 0, false, 0u, 1u))),
+            };
+
+            CollectionAssert.AreEqual(
+                ProgressionSaveCodec.Encode(forward, 10),
+                ProgressionSaveCodec.Encode(shuffled, 10),
+                "the same state set must encode to the same bytes whatever order it is presented in " +
+                "(canonical ordering — FR-PG-019).");
+        }
+
+        [Test]
+        public void Encode_OfADecodedBlob_IsByteIdentical()
+        {
+            byte[] once = ProgressionSaveCodec.Encode(TwoClubs(), 12);
+            ClubCareerStates[] decoded = ProgressionSaveCodec.Decode(once, out int nextPlayerId);
+            byte[] twice = ProgressionSaveCodec.Encode(decoded, nextPlayerId);
+            CollectionAssert.AreEqual(once, twice, "decode ∘ encode must be a fixed point");
+        }
+
+        [Test]
+        public void Encode_DoesNotMutateTheCallersArrays()
+        {
+            ClubCareerStates[] clubs = TwoClubs();
+            int firstClubIdBefore = clubs[0].ClubId;
+            int firstPlayerIdBefore = clubs[0].Records[0].PlayerId;
+
+            ProgressionSaveCodec.Encode(clubs, 12);
+
+            Assert.AreEqual(firstClubIdBefore, clubs[0].ClubId, "the club array must not be reordered");
+            Assert.AreEqual(firstPlayerIdBefore, clubs[0].Records[0].PlayerId,
+                "the player array must not be sorted in place");
+        }
+
+        // ── Encode-side fail-loud gates ────────────────────────────────────────────
+
+        [Test]
+        public void Encode_DuplicatePlayerId_FailsLoud()
+        {
+            var clubs = new[]
+            {
+                Club(1,
+                    (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1), Life(5000, DefaultCA, 0, 0, false, 0u, 1u)),
+                    (Rec(5, "C", "D", 21, PlayerPosition.Forward, 2), Life(6000, DefaultCA, 0, 0, false, 0u, 1u))),
+            };
+
+            Assert.Throws<ArgumentException>(() => ProgressionSaveCodec.Encode(clubs, 10));
+        }
+
+        // AR pass 5 (never-write-what-Decode-refuses, the four VALUE ranges). §3.5 states that rule as a
+        // MUST and Encode enforced four fewer predicates than Decode: attributes, weak-foot, negative
+        // age and PotentialAbility were gated on the way IN and not on the way OUT. ProgressionEngine
+        // .FromBlocks gates none of them either, so a store carrying PotentialAbility = 0 encoded
+        // happily through Snapshot() and was then refused by Restore/Load forever — and because #28's
+        // block IS the roster (KD-4), that is an unloadable career, failing at the one boundary where
+        // nothing can be recovered.
+        //
+        // One case per range on purpose: a single out-of-range player cannot isolate four predicates,
+        // and this suite's own history (passes 7/8 of the sibling loop) is of "five-for-five isolation"
+        // claims that were false because one branch shadowed the rest. Each case below fails on its own
+        // predicate and passes once that predicate alone is restored.
+        [Test]
+        public void Encode_PotentialAbilityBelowFloor_FailsLoud()
+        {
+            var clubs = new[]
+            {
+                Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 3),
+                         Life(0, DefaultCA, 0, 0, false, 0u, 1u))),
+            };
+
+            Assert.Throws<ArgumentException>(
+                () => ProgressionSaveCodec.Encode(clubs, 10),
+                "PotentialAbility = 0 is outside [PA_MIN, ABILITY_MAX]; Decode refuses it, so Encode "
+                + "must — otherwise Snapshot() writes a career Restore can never read back.");
+        }
+
+        [Test]
+        public void Encode_PotentialAbilityAboveCeiling_FailsLoud()
+        {
+            var clubs = new[]
+            {
+                Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 3),
+                         Life(PlayerProgressionConstants.ABILITY_MAX + 1, DefaultCA, 0, 0, false, 0u, 1u))),
+            };
+
+            Assert.Throws<ArgumentException>(() => ProgressionSaveCodec.Encode(clubs, 10));
+        }
+
+        [Test]
+        public void Encode_NegativeAge_FailsLoud()
+        {
+            var clubs = new[]
+            {
+                Club(1, (Rec(5, "A", "B", -1, PlayerPosition.Midfielder, 3),
+                         Life(5000, DefaultCA, 0, 0, false, 0u, 1u))),
+            };
+
+            Assert.Throws<ArgumentException>(() => ProgressionSaveCodec.Encode(clubs, 10));
+        }
+
+        [Test]
+        public void Encode_WeakFootOutOfRange_FailsLoud()
+        {
+            var clubs = new[]
+            {
+                Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder,
+                             PlayerDatabaseConstants.WEAK_FOOT_MAX + 1),
+                         Life(5000, DefaultCA, 0, 0, false, 0u, 1u))),
+            };
+
+            Assert.Throws<ArgumentException>(() => ProgressionSaveCodec.Encode(clubs, 10));
+        }
+
+        [Test]
+        public void Encode_AttributeOutOfRange_FailsLoud()
+        {
+            PlayerRecord rec = Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 3);
+            PlayerAttributes attrs = rec.Attributes;
+            attrs.Finishing = PlayerProgressionConstants.ATTRIBUTE_MAX + 1;
+            rec.Attributes = attrs;
+
+            var clubs = new[] { Club(1, (rec, Life(5000, DefaultCA, 0, 0, false, 0u, 1u))) };
+
+            Assert.Throws<ArgumentException>(
+                () => ProgressionSaveCodec.Encode(clubs, 10),
+                "this block is the roster, so an out-of-range attribute would be PLAYED, not just "
+                + "stored — Decode says so in its own L3 comment and Encode must agree.");
+        }
+
+        [Test]
+        public void Encode_AndDecode_ShareOneRangeRule()
+        {
+            // The anti-drift lock, asserted through observable behaviour rather than by reaching at the
+            // shared helper — the two sides owe different exception types (ArgumentException for a bad
+            // argument, InvalidOperationException for a corrupt file) and so cannot share a throw; what
+            // they must share is where the boundary IS. Exactly PA_MIN must be writable AND readable;
+            // one below must be refused by the writer. If Encode ever grew its own copy of the rule and
+            // the copies drifted by one, the round-trip at the boundary is what breaks first.
+            PlayerRecord rec = Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 3);
+            PlayerLifecycle atFloor = Life(PlayerProgressionConstants.PA_MIN, DefaultCA, 0, 0, false, 0u, 1u);
+            PlayerLifecycle belowFloor = Life(PlayerProgressionConstants.PA_MIN - 1, DefaultCA, 0, 0, false, 0u, 1u);
+
+            byte[] blob = null;
+            Assert.DoesNotThrow(
+                () => blob = ProgressionSaveCodec.Encode(new[] { Club(1, (rec, atFloor)) }, 10),
+                "exactly PA_MIN is legal — the range is inclusive at both ends.");
+
+            Assert.DoesNotThrow(
+                () => ProgressionSaveCodec.Decode(blob, out _),
+                "…and the reader must agree with the writer at that same boundary value.");
+
+            Assert.Throws<ArgumentException>(
+                () => ProgressionSaveCodec.Encode(new[] { Club(1, (rec, belowFloor)) }, 10),
+                "one below the floor is not legal, and the writer is where that must be caught.");
+        }
+
+        [Test]
+        public void Encode_DuplicateClubId_FailsLoud()
+        {
+            Assert.Throws<ArgumentException>(
+                () => ProgressionSaveCodec.Encode(new[] { Club(3), Club(3) }, 10));
+        }
+
+        [Test]
+        public void Encode_UnboundClub_FailsLoud()
+        {
+            Assert.Throws<ArgumentNullException>(
+                () => ProgressionSaveCodec.Encode(new ClubCareerStates[1], 10));
+        }
+
+        [Test]
+        public void Encode_NullSet_FailsLoud()
+        {
+            Assert.Throws<ArgumentNullException>(() => ProgressionSaveCodec.Encode(null, 10));
+        }
+
+        [Test]
+        public void Encode_UndefinedPosition_FailsLoud()
+        {
+            PlayerRecord bad = Rec(5, "A", "B", 20, (PlayerPosition)99, 1);
+            var clubs = new[] { Club(1, (bad, Life(5000, DefaultCA, 0, 0, false, 0u, 1u))) };
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Encode(clubs, 10),
+                "Decode refuses an undefined position ordinal, so writing one would produce a file no " +
+                "load of it could accept (the never-write-what-Decode-refuses rule).");
+        }
+
+        [Test]
+        public void Encode_NonAsciiFirstName_FailsLoud()
+        {
+            PlayerRecord bad = Rec(5, "André", "B", 20, PlayerPosition.Midfielder, 1);
+            var clubs = new[] { Club(1, (bad, Life(5000, DefaultCA, 0, 0, false, 0u, 1u))) };
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Encode(clubs, 10),
+                "the canonical string encoding is ASCII (#16 §3.2.4.1); a non-ASCII name would " +
+                "round-trip to a different name and must be refused at write, not silently mangled.");
+        }
+
+        [Test]
+        public void Encode_NonAsciiLastName_FailsLoud()
+        {
+            PlayerRecord bad = Rec(5, "A", "André", 20, PlayerPosition.Midfielder, 1);
+            var clubs = new[] { Club(1, (bad, Life(5000, DefaultCA, 0, 0, false, 0u, 1u))) };
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Encode(clubs, 10));
+        }
+
+        // ── Club-size gate (M3, AR pass 6) ──────────────────────────────────────────
+        //
+        // PlayerDatabase.Squad's own constructor requires between 1 and CLUB_SQUAD_SIZE players;
+        // grep CLUB_SQUAD_SIZE src/player-progression/ returned NOTHING before this fix. A club outside
+        // that range encoded/decoded cleanly and only threw from ProgressionEngine.SquadFor, mid-round,
+        // inside ISquadProvider.ResolveByClubId, after earlier fixtures in that round had already been
+        // applied to the table.
+
+        [Test]
+        public void Encode_ClubWithNoPlayers_FailsLoud()
+        {
+            var club = new ClubCareerStates(
+                9, System.Array.Empty<PlayerRecord>(), System.Array.Empty<PlayerLifecycle>());
+
+            Assert.Throws<ArgumentException>(
+                () => ProgressionSaveCodec.Encode(new[] { club }, 10),
+                "never write a club SquadFor cannot project — an empty club is outside [1, " +
+                "CLUB_SQUAD_SIZE].");
+        }
+
+        [Test]
+        public void Encode_ClubAboveClubSquadSize_FailsLoud()
+        {
+            int oversized = PlayerDatabaseConstants.CLUB_SQUAD_SIZE + 5;
+            var players = new (PlayerRecord rec, PlayerLifecycle life)[oversized];
+            for (int i = 0; i < oversized; i++)
+            {
+                players[i] = (
+                    Rec(1000 + i, "A", "B", 20, PlayerPosition.Midfielder, 1),
+                    Life(5000, DefaultCA, 0, 0, false, 0u, 1u));
+            }
+            var club = Club(9, players);
+
+            // nextPlayerId must exceed the HIGHEST carried id (1000 + oversized - 1), or
+            // RequireIdCursorAheadOfCarriedIds throws first and this test stops isolating the
+            // club-size gate at all — exactly the defect a mutation run against the first draft of
+            // this fixture caught (10 + oversized = 40 sat far below the carried ids' 1000s range).
+            Assert.Throws<ArgumentException>(
+                () => ProgressionSaveCodec.Encode(new[] { club }, 1000 + oversized),
+                "the mirror case — a club above CLUB_SQUAD_SIZE is state SquadFor cannot project either.");
+        }
+
+        [Test]
+        public void Decode_AClubWithNoPlayers_FailsLoud()
+        {
+            // Hand-built rather than encoded — Encode now refuses to WRITE this (the test above), so a
+            // hand-edited file is the only way a 0-player club reaches Decode. That is exactly the case
+            // this gate exists for: a corrupt file must not slip past the boundary that can still
+            // refuse it.
+            byte[] blob = new byte[4 + 4 + 4 + 4 + 4 + 4];
+            int o = 0;
+            CanonicalSerializer.WriteU32(blob, ref o, PlayerProgressionConstants.PROGRESSION_SAVE_MAGIC);
+            CanonicalSerializer.WriteU32(blob, ref o, PlayerProgressionConstants.PROGRESSION_SAVE_FORMAT_VERSION);
+            CanonicalSerializer.WriteI32(blob, ref o, 0);   // nextPlayerId
+            CanonicalSerializer.WriteU32(blob, ref o, 1u);  // clubCount
+            CanonicalSerializer.WriteI32(blob, ref o, 9);   // clubId
+            CanonicalSerializer.WriteU32(blob, ref o, 0u);  // playerCount
+
+            // M-1 (AR pass 8): this was asserting ArgumentException — the suite defending the shortfall
+            // it should have been testing against. Decode owes InvalidOperationException ("this file is
+            // corrupt"); ArgumentException names an argument ("clubs") Decode's own signature never has.
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(blob, out _),
+                "a well-formed but 0-player club decodes structurally fine (no trailing bytes, nothing " +
+                "to order) — the club-size gate is the only thing that can still refuse it.");
+        }
+
+        // ── Cross-club uniqueness (mutation-audit locks) ───────────────────────────
+        //
+        // A mutation audit proved that deleting RequireGloballyUniquePlayerIds at either Encode or
+        // Decode leaves the whole suite green. Encode_DuplicatePlayerId_FailsLoud above puts both
+        // duplicates in ONE club, which CanonicalOrder already refuses before this gate ever runs, so
+        // it is not a lock on this gate — these two are the cross-club case only this gate catches.
+
+        [Test]
+        public void Encode_CrossClubDuplicatePlayerId_FailsLoud()
+        {
+            var clubs = new[]
+            {
+                Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1), Life(5000, DefaultCA, 0, 0, false, 0u, 1u))),
+                Club(2, (Rec(5, "C", "D", 21, PlayerPosition.Forward, 2), Life(6000, DefaultCA, 0, 0, false, 0u, 1u))),
+            };
+
+            Assert.Throws<ArgumentException>(() => ProgressionSaveCodec.Encode(clubs, 10),
+                "player id 5 appears in both club 1 and club 2 — a career requires globally unique " +
+                "player ids (ERR-041-019 / ERR-027-004), and CanonicalOrder alone cannot see across " +
+                "clubs.");
+        }
+
+        [Test]
+        public void Decode_CrossClubDuplicatePlayerId_FailsLoud()
+        {
+            // Encode refuses this shape (the test above), so a corrupt/hand-edited file is the only
+            // way bytes carrying a cross-club duplicate can reach Decode. Two single-club blobs are
+            // encoded separately (each internally valid on its own) and their club bodies spliced
+            // together under one shared header — club ids ascend (1 then 2) and each club's own
+            // player id ascends trivially (one player each), so only the cross-club global-uniqueness
+            // gate at Decode can catch the splice.
+            byte[] club1Blob = ProgressionSaveCodec.Encode(
+                new[] { Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1), Life(5000, DefaultCA, 0, 0, false, 0u, 1u))) },
+                10);
+            byte[] club2Blob = ProgressionSaveCodec.Encode(
+                new[] { Club(2, (Rec(5, "C", "D", 21, PlayerPosition.Forward, 2), Life(6000, DefaultCA, 0, 0, false, 0u, 1u))) },
+                10);
+
+            const int HeaderBytes = 4 + 4 + 4 + 4;   // magic + version + nextPlayerId + clubCount
+            byte[] club1Body = new byte[club1Blob.Length - HeaderBytes];
+            Array.Copy(club1Blob, HeaderBytes, club1Body, 0, club1Body.Length);
+            byte[] club2Body = new byte[club2Blob.Length - HeaderBytes];
+            Array.Copy(club2Blob, HeaderBytes, club2Body, 0, club2Body.Length);
+
+            byte[] spliced = new byte[HeaderBytes + club1Body.Length + club2Body.Length];
+            int o = 0;
+            CanonicalSerializer.WriteU32(spliced, ref o, PlayerProgressionConstants.PROGRESSION_SAVE_MAGIC);
+            CanonicalSerializer.WriteU32(spliced, ref o, PlayerProgressionConstants.PROGRESSION_SAVE_FORMAT_VERSION);
+            CanonicalSerializer.WriteI32(spliced, ref o, 10);
+            CanonicalSerializer.WriteU32(spliced, ref o, 2u);
+            Array.Copy(club1Body, 0, spliced, o, club1Body.Length);
+            o += club1Body.Length;
+            Array.Copy(club2Body, 0, spliced, o, club2Body.Length);
+
+            // M-1 (AR pass 8): this was asserting ArgumentException — the suite defending the shortfall
+            // it should have been testing against. Decode owes InvalidOperationException ("this file is
+            // corrupt"); ArgumentException names an argument ("clubs") Decode's own signature never has.
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(spliced, out _),
+                "a hand-spliced blob carrying the same player id in two different (ascending, " +
+                "internally well-formed) clubs must still be refused — the load-side mirror of " +
+                "Encode's gate (ERR-041-019 / ERR-027-004).");
+        }
+
+        // ── Never-advanced sentinel (mutation-audit locks) ─────────────────────────
+        //
+        // ERR-028-014 retired PROGRESSION_NOT_ADVANCED_SENTINEL from #28's legal STORE states —
+        // ProgressionEngine.FromBlocks (which Restore calls straight after Decode) refuses it — but
+        // neither Encode nor Decode validated LastAdvancedWorldDay at all, so a hand-built block
+        // carrying the sentinel encoded happily into a file that could never be loaded. Same class as
+        // the cross-club uniqueness gate above (ERR-028-011(a)), one ERR later.
+
+        [Test]
+        public void Encode_NeverAdvancedSentinel_FailsLoud_ERR028014()
+        {
+            var clubs = new[]
+            {
+                Club(1,
+                    (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1),
+                     Life(5000, DefaultCA, 0L, 0L, retired: false, retiredDay: 0u,
+                          lastAdvanced: PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL))),
+            };
+
+            Assert.Throws<ArgumentException>(() => ProgressionSaveCodec.Encode(clubs, 10),
+                "ProgressionEngine.FromBlocks refuses the never-advanced sentinel as a progression " +
+                "cursor (ERR-028-014) — writing it would produce a file its own restore path can never " +
+                "load.");
+        }
+
+        [Test]
+        public void Decode_NeverAdvancedSentinel_FailsLoud_ERR028014()
+        {
+            // Encode refuses this shape (the test above), so a hand-edited file is the only way bytes
+            // carrying the sentinel can reach Decode. Encode a well-formed player carrying an ordinary
+            // cursor, then patch the LastAdvancedWorldDay field in place to the sentinel value.
+            byte[] blob = ProgressionSaveCodec.Encode(
+                new[] { Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1), Life(5000, DefaultCA, 0, 0, false, 0u, 1u))) },
+                10);
+            // PositionOffset(42) + position(1) + attributes(AttrIdx.Count*4) + weakFootRating(4)
+            //   + potentialAbility(4) + currentAbility(4) + growthCursor(8) + birthWorldDay(8)
+            //   + retirementFlag(1) + retirementDay(4) ⇒ lastAdvancedWorldDay
+            const int LastAdvancedWorldDayOffset =
+                42 + 1 + AttrIdx.Count * 4 + 4 + 4 + 4 + 8 + 8 + 1 + 4;
+            int o = LastAdvancedWorldDayOffset;
+            CanonicalSerializer.WriteU32(blob, ref o, PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL);
+
+            // M-1 (AR pass 8): this was asserting ArgumentException — the suite defending the shortfall
+            // it should have been testing against. Decode owes InvalidOperationException ("this file is
+            // corrupt"); ArgumentException names an argument ("clubs") Decode's own signature never has.
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(blob, out _),
+                "a hand-edited file carrying the never-advanced sentinel must be refused here — the " +
+                "codec's own half of never-write-what-load-refuses (ERR-028-014) — rather than reaching " +
+                "ProgressionEngine.FromBlocks with a less specific message.");
+        }
+
+        // ── Decode-side value-range gates (mutation-audit locks) ───────────────────
+        //
+        // A mutation audit proved that deleting any one of the L3 range gates in ReadPlayer — or the
+        // ReadGuardedString body-length bound — leaves the whole suite green. This block is the roster
+        // NOW (KD-4): a corrupt value flows straight into PlayerAttributeProjection / the match engine,
+        // so each gate needs a test that fails if it is reverted. All five reuse the single-player
+        // fixture and byte layout already established by Decode_UndefinedPositionOrdinal_FailsLoud
+        // (PositionOffset = 42).
+
+        [Test]
+        public void Decode_AttributeOutOfRange_FailsLoud()
+        {
+            byte[] blob = ProgressionSaveCodec.Encode(
+                new[] { Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1), Life(5000, DefaultCA, 0, 0, false, 0u, 1u))) },
+                10);
+            // magic(4)+version(4)+nextPlayerId(4)+clubCount(4)+clubId(4)+playerCount(4)+playerId(4)
+            //   +firstNameLen(4)+"A"(1)+lastNameLen(4)+"B"(1)+age(4)+position(1) = 43 ⇒ attribute[0]
+            const int Attribute0Offset = 43;
+            int o = Attribute0Offset;
+            CanonicalSerializer.WriteI32(blob, ref o, PlayerProgressionConstants.ATTRIBUTE_MAX + 1);
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(blob, out _),
+                "an attribute outside [ATTRIBUTE_MIN, ATTRIBUTE_MAX] must be refused — this block is " +
+                "the roster now (KD-4), so a corrupt attribute would flow straight into " +
+                "PlayerAttributeProjection and the match engine.");
+        }
+
+        [Test]
+        public void Decode_AttributeBelowRange_FailsLoud()
+        {
+            // AR pass 4 (task 2): the MIN side of ReadPlayer's attribute OR — Decode_AttributeOutOfRange_
+            // FailsLoud above only exercises the MAX side, so deleting the MIN half of the check left
+            // the whole suite green.
+            byte[] blob = ProgressionSaveCodec.Encode(
+                new[] { Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1), Life(5000, DefaultCA, 0, 0, false, 0u, 1u))) },
+                10);
+            const int Attribute0Offset = 43;
+            int o = Attribute0Offset;
+            CanonicalSerializer.WriteI32(blob, ref o, PlayerProgressionConstants.ATTRIBUTE_MIN - 1);
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(blob, out _),
+                "an attribute BELOW ATTRIBUTE_MIN must be refused too, not just above ATTRIBUTE_MAX.");
+        }
+
+        [Test]
+        public void Decode_WeakFootOutOfRange_FailsLoud()
+        {
+            byte[] blob = ProgressionSaveCodec.Encode(
+                new[] { Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1), Life(5000, DefaultCA, 0, 0, false, 0u, 1u))) },
+                10);
+            // PositionOffset(42) + position(1) + attributes(31 * 4 = 124) = 167 ⇒ weakFootRating
+            const int WeakFootOffset = 42 + 1 + AttrIdx.Count * 4;
+            int o = WeakFootOffset;
+            CanonicalSerializer.WriteI32(blob, ref o, PlayerDatabaseConstants.WEAK_FOOT_MAX + 1);
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(blob, out _),
+                "a weak-foot rating outside [WEAK_FOOT_MIN, WEAK_FOOT_MAX] must be refused — a " +
+                "different scale from the [1,20] attributes, gated separately.");
+        }
+
+        [Test]
+        public void Decode_WeakFootBelowRange_FailsLoud()
+        {
+            // AR pass 4 (task 2): the MIN side of ReadPlayer's weak-foot OR — Decode_WeakFootOutOfRange_
+            // FailsLoud above only exercises the MAX side.
+            byte[] blob = ProgressionSaveCodec.Encode(
+                new[] { Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1), Life(5000, DefaultCA, 0, 0, false, 0u, 1u))) },
+                10);
+            const int WeakFootOffset = 42 + 1 + AttrIdx.Count * 4;
+            int o = WeakFootOffset;
+            CanonicalSerializer.WriteI32(blob, ref o, PlayerDatabaseConstants.WEAK_FOOT_MIN - 1);
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(blob, out _),
+                "a weak-foot rating BELOW WEAK_FOOT_MIN must be refused too, not just above WEAK_FOOT_MAX.");
+        }
+
+        [Test]
+        public void Decode_NegativeAge_FailsLoud()
+        {
+            byte[] blob = ProgressionSaveCodec.Encode(
+                new[] { Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1), Life(5000, DefaultCA, 0, 0, false, 0u, 1u))) },
+                10);
+            // magic(4)+version(4)+nextPlayerId(4)+clubCount(4)+clubId(4)+playerCount(4)+playerId(4)
+            //   +firstNameLen(4)+"A"(1)+lastNameLen(4)+"B"(1) = 38 ⇒ age
+            const int AgeOffset = 38;
+            int o = AgeOffset;
+            CanonicalSerializer.WriteI32(blob, ref o, -1);
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(blob, out _),
+                "a negative age must be refused — not representable in the model. The authoritative " +
+                "anchor is birthWorldDay, which MAY legitimately be negative (ERR-028-006); the " +
+                "derived age cache may not.");
+        }
+
+        [Test]
+        public void Decode_GuardedStringLengthOverrunsBlob_FailsLoud()
+        {
+            byte[] blob = ProgressionSaveCodec.Encode(
+                new[] { Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1), Life(5000, DefaultCA, 0, 0, false, 0u, 1u))) },
+                10);
+            // magic(4)+version(4)+nextPlayerId(4)+clubCount(4)+clubId(4)+playerCount(4)+playerId(4)
+            //   = 28 ⇒ firstName length prefix
+            const int FirstNameLenOffset = 28;
+            int o = FirstNameLenOffset;
+            CanonicalSerializer.WriteU32(blob, ref o, (uint)(blob.Length + 1000));
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(blob, out _),
+                "a string length prefix that overruns the remaining blob must throw — not over-read " +
+                "past the buffer (ReadGuardedString's own bound, ahead of CanonicalSerializer.ReadString's " +
+                "unchecked index).");
+        }
+
+        [Test]
+        public void Decode_PotentialAbilityOutOfRange_FailsLoud()
+        {
+            // The gate this test locks: L3 covered attributes, weak-foot and age but not
+            // PotentialAbility, the F1 growth ceiling — a corrupt negative value would silently freeze
+            // a player's growth forever (AbilityModel.TrySpendOnePoint returns false once
+            // CurrentAbility >= PotentialAbility).
+            byte[] blob = ProgressionSaveCodec.Encode(
+                new[] { Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1), Life(5000, DefaultCA, 0, 0, false, 0u, 1u))) },
+                10);
+            // PositionOffset(42) + position(1) + attributes(124) + weakFootRating(4) = 171 ⇒ potentialAbility
+            const int PotentialAbilityOffset = 42 + 1 + AttrIdx.Count * 4 + 4;
+            int o = PotentialAbilityOffset;
+            CanonicalSerializer.WriteI32(blob, ref o, PlayerProgressionConstants.PA_MIN - 1);
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(blob, out _),
+                "a PotentialAbility outside [PA_MIN, ABILITY_MAX] must be refused — it is the F1 " +
+                "growth ceiling, and a corrupt value below PA_MIN would silently freeze a player's " +
+                "growth forever.");
+        }
+
+        [Test]
+        public void Decode_PotentialAbilityAboveRange_FailsLoud()
+        {
+            // AR pass 4 (task 2): the MAX side of ReadPlayer's PotentialAbility OR —
+            // Decode_PotentialAbilityOutOfRange_FailsLoud above only exercises the MIN side (PA_MIN - 1).
+            // A corrupt value above ABILITY_MAX would silently unbound a player's growth ceiling.
+            byte[] blob = ProgressionSaveCodec.Encode(
+                new[] { Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1), Life(5000, DefaultCA, 0, 0, false, 0u, 1u))) },
+                10);
+            const int PotentialAbilityOffset = 42 + 1 + AttrIdx.Count * 4 + 4;
+            int o = PotentialAbilityOffset;
+            CanonicalSerializer.WriteI32(blob, ref o, PlayerProgressionConstants.ABILITY_MAX + 1);
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(blob, out _),
+                "a PotentialAbility ABOVE ABILITY_MAX must be refused too, not just below PA_MIN.");
+        }
+
+        // ── Decode-side lifecycle field gates (L-4, AR pass 8) ─────────────────────
+        //
+        // Two lifecycle fields had NO gate at all before this pass — Encode/Decode both accepted
+        // -999999 for CurrentAbility, and a RetirementDay/RetirementFlag pair in any combination.
+        // CurrentAbility is a DERIVED cache (FR-PG-003): a stale/corrupt mismatch is read by the spend
+        // loop BEFORE the next day step's own recompute, costing a whole [1,20] point PERMANENTLY at the
+        // next threshold crossing (AR pass 6 changed the refusal branch's accrual from retain to
+        // discard). RetirementFlag is sticky (§3.4) — set once, at the world day it fires — so
+        // RetirementDay's legal range is a function of the flag, not independent of it.
+
+        [Test]
+        public void Decode_CurrentAbilityDoesNotMatchRecomputedValue_FailsLoud()
+        {
+            byte[] blob = ProgressionSaveCodec.Encode(
+                new[] { Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1), Life(5000, DefaultCA, 0, 0, false, 0u, 1u))) },
+                10);
+            // PositionOffset(42) + position(1) + attributes(124) + weakFootRating(4) + potentialAbility(4)
+            //   = 175 ⇒ currentAbility
+            const int CurrentAbilityOffset = 42 + 1 + AttrIdx.Count * 4 + 4 + 4;
+            int o = CurrentAbilityOffset;
+            CanonicalSerializer.WriteI32(blob, ref o, DefaultCA + 1);
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(blob, out _),
+                "a currentAbility that does not recompute from the carried attributes must be refused " +
+                "— CurrentAbility is a DERIVED cache (FR-PG-003), and a corrupt mismatch would cost the " +
+                "spend loop a whole point permanently at the next threshold crossing.");
+        }
+
+        [Test]
+        public void Decode_RetirementDayNonZeroWithFlagUnset_FailsLoud()
+        {
+            byte[] blob = ProgressionSaveCodec.Encode(
+                new[] { Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1), Life(5000, DefaultCA, 0, 0, false, 0u, 1u))) },
+                10);
+            // CurrentAbilityOffset(4) + growthCursor(8) + birthWorldDay(8) + retirementFlag(1) = 21
+            //   bytes further ⇒ retirementDay
+            const int CurrentAbilityOffset = 42 + 1 + AttrIdx.Count * 4 + 4 + 4;
+            const int RetirementDayOffset = CurrentAbilityOffset + 4 + 8 + 8 + 1;
+            int o = RetirementDayOffset;
+            CanonicalSerializer.WriteU32(blob, ref o, 5u);
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(blob, out _),
+                "retirementDay must be 0 while retirementFlag is false — an unset flag means nothing " +
+                "has fired, so a nonzero day is nonsense state.");
+        }
+
+        [Test]
+        public void Decode_RetirementDayAheadOfLastAdvancedWorldDay_FailsLoud()
+        {
+            byte[] blob = ProgressionSaveCodec.Encode(
+                new[]
+                {
+                    Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1),
+                             Life(5000, DefaultCA, 0, 0, retired: true, retiredDay: 50u, lastAdvanced: 100u))),
+                },
+                10);
+            const int CurrentAbilityOffset = 42 + 1 + AttrIdx.Count * 4 + 4 + 4;
+            const int RetirementDayOffset = CurrentAbilityOffset + 4 + 8 + 8 + 1;
+            int o = RetirementDayOffset;
+            CanonicalSerializer.WriteU32(blob, ref o, 150u);   // ahead of lastAdvanced (100)
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(blob, out _),
+                "retirementFlag is only ever SET (sticky), at the world day it fires — retirementDay " +
+                "can never exceed lastAdvancedWorldDay, the day this player was last advanced to.");
+        }
+
+        // ── Decode-side fail-loud gates ─────────────────────────────────────────────
+
+        [Test]
+        public void Decode_Null_FailsLoud()
+        {
+            Assert.Throws<ArgumentNullException>(() => ProgressionSaveCodec.Decode(null, out _));
+        }
+
+        [Test]
+        public void Decode_WrongMagic_FailsLoud()
+        {
+            byte[] blob = ProgressionSaveCodec.Encode(TwoClubs(), 12);
+            int o = 0;
+            CanonicalSerializer.WriteU32(blob, ref o, 0xDEADBEEFu);
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(blob, out _));
+        }
+
+        [Test]
+        public void Decode_ATrainingBlock_FailsLoud_ERR028004()
+        {
+            // player-progression cannot reference training-system (the reference-direction rule), so
+            // the #29 block is hand-built rather than encoded through TrainingSaveCodec: just its magic
+            // (TrainingSystemConstants.TRAINING_SAVE_MAGIC = 'T''R''N''G' = 0x54524E47) followed by
+            // enough bytes to look like a plausible version + zero-club count. The magic alone must be
+            // enough to refuse it — every later gate here would otherwise pass a well-formed empty block.
+            byte[] trainingLike = new byte[16];
+            int o = 0;
+            CanonicalSerializer.WriteU32(trainingLike, ref o, TrainingSaveMagic);
+            CanonicalSerializer.WriteU32(trainingLike, ref o, 1u);   // a plausible format version
+            CanonicalSerializer.WriteI32(trainingLike, ref o, 0);    // a plausible nextPlayerId-shaped field
+            CanonicalSerializer.WriteU32(trainingLike, ref o, 0u);   // a plausible zero-count field
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(trainingLike, out _),
+                "a #29 training block must be refused by the magic, not misread as #28 career state " +
+                "(ERR-028-004) — every sub-blob format in this save stack sits at version 1, so a " +
+                "version gate alone could not have caught this.");
+        }
+
+        [Test]
+        public void Decode_WrongFormatVersion_FailsLoud_F3()
+        {
+            byte[] blob = ProgressionSaveCodec.Encode(TwoClubs(), 12);
+            int o = 4;   // past the magic
+            CanonicalSerializer.WriteU32(blob, ref o,
+                PlayerProgressionConstants.PROGRESSION_SAVE_FORMAT_VERSION + 1);
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(blob, out _),
+                "a PROGRESSION_SAVE_FORMAT_VERSION mismatch must fail loud — no migration at Stage 0 (F3).");
+        }
+
+        [Test]
+        public void Decode_TrailingBytes_FailsLoud_F5()
+        {
+            byte[] blob = ProgressionSaveCodec.Encode(TwoClubs(), 12);
+            var padded = new byte[blob.Length + 1];
+            Array.Copy(blob, padded, blob.Length);
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(padded, out _));
+        }
+
+        [Test]
+        public void Decode_Truncated_FailsLoud_F5()
+        {
+            byte[] blob = ProgressionSaveCodec.Encode(TwoClubs(), 12);
+            var chopped = new byte[blob.Length - 3];
+            Array.Copy(blob, chopped, chopped.Length);
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(chopped, out _));
+        }
+
+        [Test]
+        public void Decode_TruncatedClubCountPrefix_FailsLoud()
+        {
+            // The count prefix itself is cut off mid-integer — fewer than 4 bytes remain to read it.
+            byte[] blob = ProgressionSaveCodec.Encode(Array.Empty<ClubCareerStates>(), 0);
+            var chopped = new byte[13];   // magic(4) + version(4) + nextPlayerId(4) + 1 byte of clubCount
+            Array.Copy(blob, chopped, chopped.Length);
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(chopped, out _));
+        }
+
+        [Test]
+        public void Decode_OversizeClubCount_FailsLoud()
+        {
+            // The overflow class the ReadCount bound exists for: a crafted count near uint.MaxValue must
+            // be refused against the bytes that remain.
+            byte[] blob = ProgressionSaveCodec.Encode(TwoClubs(), 12);
+            int o = 12;   // magic + version + nextPlayerId
+            CanonicalSerializer.WriteU32(blob, ref o, uint.MaxValue);
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(blob, out _));
+        }
+
+        [Test]
+        public void Decode_OversizePlayerCount_FailsLoud()
+        {
+            byte[] blob = ProgressionSaveCodec.Encode(
+                new[] { Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1), Life(5000, DefaultCA, 0, 0, false, 0u, 1u))) },
+                10);
+            int o = 4 + 4 + 4 + 4 + 4;   // magic, version, nextPlayerId, clubCount, clubId
+            CanonicalSerializer.WriteU32(blob, ref o, 0x7FFFFFFFu);
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(blob, out _));
+        }
+
+        [Test]
+        public void Decode_UndefinedPositionOrdinal_FailsLoud()
+        {
+            byte[] blob = ProgressionSaveCodec.Encode(
+                new[] { Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1), Life(5000, DefaultCA, 0, 0, false, 0u, 1u))) },
+                10);
+            // magic(4)+version(4)+nextPlayerId(4)+clubCount(4)+clubId(4)+playerCount(4)+playerId(4)
+            //   +firstNameLen(4)+"A"(1)+lastNameLen(4)+"B"(1)+age(4) = 42 ⇒ the position byte
+            const int PositionOffset = 42;
+            blob[PositionOffset] = 200;
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(blob, out _));
+        }
+
+        [Test]
+        public void Decode_NonAscendingClubIds_FailsLoud()
+        {
+            // AR pass 6, M3: each club now needs at least one player — an empty Club(N) is refused by
+            // Encode's own new gate before this test's fixture can even be built. The byte offset this
+            // test mutates (16, right after clubCount) is unaffected by what follows it.
+            byte[] blob = ProgressionSaveCodec.Encode(
+                new[]
+                {
+                    Club(1, (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1), Life(5000, DefaultCA, 0, 0, false, 0u, 1u))),
+                    Club(2, (Rec(6, "C", "D", 20, PlayerPosition.Midfielder, 1), Life(5000, DefaultCA, 0, 0, false, 0u, 1u))),
+                },
+                7);
+            int o = 16;   // magic + version + nextPlayerId + clubCount ⇒ first club id
+            CanonicalSerializer.WriteI32(blob, ref o, 5);   // 5 then 2 — no longer ascending
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(blob, out _));
+        }
+
+        [Test]
+        public void Decode_NonAscendingPlayerIds_FailsLoud()
+        {
+            byte[] blob = ProgressionSaveCodec.Encode(
+                new[]
+                {
+                    Club(1,
+                        (Rec(5, "A", "B", 20, PlayerPosition.Midfielder, 1), Life(5000, DefaultCA, 0, 0, false, 0u, 1u)),
+                        (Rec(6, "C", "D", 21, PlayerPosition.Forward, 2), Life(6000, DefaultCA, 0, 0, false, 0u, 1u))),
+                },
+                10);
+
+            int o = 4 + 4 + 4 + 4 + 4 + 4;   // magic, version, nextPlayerId, clubCount, clubId, playerCount
+            CanonicalSerializer.WriteI32(blob, ref o, 9);   // first player id 5 -> 9, now above the second
+
+            Assert.Throws<InvalidOperationException>(() => ProgressionSaveCodec.Decode(blob, out _));
+        }
+    }
+}
+
+#region VersionHistory
+// | Version | Date       | Author | Notes                                                              |
+// | 1.0     | 2026-08-08 | —      | M4: the codec's own dedicated suite (mirrors MedicalSaveCodecTests |
+// |         |            |        | / TrainingSaveCodecTests). Round-trip field identity (FR-PG-018),  |
+// |         |            |        | canonical-order determinism, the encode-side duplicate / unbound / |
+// |         |            |        | undefined-position / non-ASCII guards, and the decode fail-loud    |
+// |         |            |        | gates (magic, F3, F5, oversize counts, non-ascending keys), plus   |
+// |         |            |        | the ERR-028-004 sibling-confusion lock against a hand-built #29    |
+// |         |            |        | training-shaped block (player-progression cannot reference         |
+// |         |            |        | training-system).                                                   |
+// | 1.1     | 2026-08-09 | —      | Mutation-audit locks for six guards a mutation sweep proved dead:   |
+// |         |            |        | cross-club RequireGloballyUniquePlayerIds at Encode and at Decode  |
+// |         |            |        | (distinct from the existing single-club duplicate test, which      |
+// |         |            |        | CanonicalOrder already refuses before this gate runs), the         |
+// |         |            |        | attribute / weak-foot / age L3 range gates, and ReadGuardedString's |
+// |         |            |        | body-length bound (proven by observing the mutant throw the WRONG  |
+// |         |            |        | exception type — ArgumentOutOfRangeException from an unchecked     |
+// |         |            |        | Encoding.ASCII.GetString — rather than the codec's own              |
+// |         |            |        | InvalidOperationException). Also locks the new PotentialAbility    |
+// |         |            |        | range gate ProgressionSaveCodec.cs's ReadPlayer gained this pass   |
+// |         |            |        | (the F1 growth ceiling had no gate before it). Every lock proven   |
+// |         |            |        | by deleting its guard, confirming exactly the new test failed, and |
+// |         |            |        | restoring it.                                                       |
+// | 1.2     | 2026-08-10 | —      | Two new tests lock RequireNoNeverAdvancedSentinel at Encode and    |
+// |         |            |        | Decode (ERR-028-014, the ERR-028-011(a) class one ERR later):      |
+// |         |            |        | ProgressionEngine.FromBlocks refuses the never-advanced sentinel   |
+// |         |            |        | as a progression cursor, but neither Encode nor Decode validated   |
+// |         |            |        | it before this pass. Proven by mutation: deleting either call site |
+// |         |            |        | left its new test the only failure in the suite. TwoClubs() player |
+// |         |            |        | 10 (formerly carrying the sentinel itself, to prove it round-      |
+// |         |            |        | tripped as itself) now carries an ordinary 12345u — that fixture   |
+// |         |            |        | is shared by every round-trip/fail-loud test in this file, and     |
+// |         |            |        | Encode's new guard refuses it, so the eight tests that build a     |
+// |         |            |        | blob through TwoClubs() would otherwise fail on a fixture the      |
+// |         |            |        | codec's own contract no longer allows. RoundTrip_EveryField-       |
+// |         |            |        | Survives_FRPG018's assertion updated to match; the sentinel-       |
+// |         |            |        | round-trips-as-itself property it used to check is superseded by   |
+// |         |            |        | the new ERR-028-014 tests, which check the opposite (the sentinel  |
+// |         |            |        | is refused, not carried).                                          |
+// | 1.3     | 2026-08-10 | —      | AR pass 4 (task 2). Three of ReadPlayer's range checks are          |
+// |         |            |        | two-sided ORs with only one side locked: Decode_AttributeBelowRange_ |
+// |         |            |        | FailsLoud (attribute MIN — Decode_AttributeOutOfRange_FailsLoud only |
+// |         |            |        | covered MAX), Decode_WeakFootBelowRange_FailsLoud (weak-foot MIN —  |
+// |         |            |        | Decode_WeakFootOutOfRange_FailsLoud only covered MAX), and Decode_  |
+// |         |            |        | PotentialAbilityAboveRange_FailsLoud (PotentialAbility MAX —        |
+// |         |            |        | Decode_PotentialAbilityOutOfRange_FailsLoud only covered MIN).      |
+// |         |            |        | Production checks verified correct as written — test-only gaps.    |
+// |         |            |        | Each proven by deleting its half of the OR and observing exactly    |
+// |         |            |        | the new test fail.                                                  |
+// | 1.4     | 2026-08-10 | —      | AR pass 5 (High): +6 tests locking the new Encode-side               |
+// |         |            |        | DescribeOutOfRangeValues/RequireValuesInRange gates — one per range  |
+// |         |            |        | Decode already enforced and Encode did not (PotentialAbility below   |
+// |         |            |        | PA_MIN, PotentialAbility above ABILITY_MAX, negative age, weak-foot   |
+// |         |            |        | out of range, attribute out of range) — plus                         |
+// |         |            |        | Encode_AndDecode_ShareOneRangeRule, an anti-drift lock asserting      |
+// |         |            |        | Encode and Decode agree EXACTLY at PA_MIN (writable and readable)     |
+// |         |            |        | and that one below it is refused by the writer, not just the reader. |
+// |         |            |        | Mutation-verified: reverting the ProgressionSaveCodec.cs             |
+// |         |            |        | RequireValuesInRange(clubs) call in Encode fails all 6.               |
+// | 1.5     | 2026-08-11 | —      | AR pass 6, M3: +4 locks on the new RequireClubSizeInRange gate —     |
+// |         |            |        | Encode_ClubWithNoPlayers_FailsLoud, Encode_ClubAboveClubSquadSize_    |
+// |         |            |        | FailsLoud, and the hand-built-bytes Decode_AClubWithNoPlayers_       |
+// |         |            |        | FailsLoud (Encode now refuses to WRITE a 0-player club, so a         |
+// |         |            |        | hand-edited file is the only way Decode ever sees one). Mutation-    |
+// |         |            |        | verified: reverting either call site fails its own test and no      |
+// |         |            |        | other.                                                                |
+// | 1.6     | 2026-08-11 | —      | AR pass 8. **M-1:** three Decode-side locks were asserting the        |
+// |         |            |        | OBSERVED ArgumentException rather than the CONTRACT               |
+// |         |            |        | InvalidOperationException — Decode_AClubWithNoPlayers_FailsLoud,      |
+// |         |            |        | Decode_CrossClubDuplicatePlayerId_FailsLoud, Decode_                  |
+// |         |            |        | NeverAdvancedSentinel_FailsLoud_ERR028014 — retyped to match          |
+// |         |            |        | ProgressionSaveCodec.cs 1.5's fix, with a comment recording the       |
+// |         |            |        | "suite defends the shortfall" shape at each site. **L-4:** every      |
+// |         |            |        | `Life(..., <literal>, ...)` "current" argument in this file (43       |
+// |         |            |        | call sites) retyped from an arbitrary literal (3000/4000/5900/        |
+// |         |            |        | 4200/7400/3100) to the new DefaultCA field — ProgressionSaveCodec.cs  |
+// |         |            |        | 1.5's CurrentAbility == ComputeCA(attributes) gate refused every      |
+// |         |            |        | one of them, since every Rec() in this file shares default            |
+// |         |            |        | (uniform) attributes and the position-weighted mean is position-      |
+// |         |            |        | INVARIANT for uniform values. RoundTrip_EveryFieldSurvives_FRPG018's  |
+// |         |            |        | literal 4200 assertion updated to match. +3 new locks in the L-4      |
+// |         |            |        | section: Decode_CurrentAbilityDoesNotMatchRecomputedValue_FailsLoud,  |
+// |         |            |        | Decode_RetirementDayNonZeroWithFlagUnset_FailsLoud, Decode_           |
+// |         |            |        | RetirementDayAheadOfLastAdvancedWorldDay_FailsLoud. Mutation-         |
+// |         |            |        | verified: reverting Decode's four calls to the old Require*           |
+// |         |            |        | wrappers fails exactly the three M-1 retyped locks; reverting the     |
+// |         |            |        | two new DescribeOutOfRangeValues checks fails exactly the three new   |
+// |         |            |        | L-4 locks; reverting only the position-validity guard around the      |
+// |         |            |        | CurrentAbility check fails the pre-existing Encode_UndefinedPosition_ |
+// |         |            |        | FailsLoud (probe-verified, no new test needed for that guard).        |
+#endregion
