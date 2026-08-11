@@ -1,6 +1,7 @@
 // File:     src/season-save/tests/SeasonSaveManagerTests.cs
 // Created:  2026-07-22
-// Modified: 2026-08-11 (AR pass 6, M2(b) — BirthWorldDay-vs-clock Save/Load locks — v1.15)
+// Modified: 2026-08-11 (AR pass 8, L-4 — PBlock/PBlockWithBirthDay's CurrentAbility retuned to a
+//           computed value — v1.16)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §5 acceptance;
 //           Season & Competition Loop #30 FR-SN-019..023, Appendix B; Training System #29 FR-TR-018/019;
@@ -1057,7 +1058,7 @@ namespace TacticalDirector.SeasonSave
             var life = new PlayerLifecycle
             {
                 PotentialAbility = PlayerProgressionConstants.PA_MIN,
-                CurrentAbility = PlayerProgressionConstants.PA_MIN,
+                CurrentAbility = PBlockDefaultCurrentAbility,
                 GrowthCursor = 0,
                 BirthWorldDay = birthWorldDay,
                 RetirementFlag = false,
@@ -1130,13 +1131,21 @@ namespace TacticalDirector.SeasonSave
         private static ClubAppearanceStates[] AppearanceMatching(int club, int playerId) =>
             new[] { new ClubAppearanceStates(club, new[] { playerId }, new AppearanceState[1]) };
 
+        // L-4 (AR pass 8): DescribeOutOfRangeValues now requires CurrentAbility == ComputeCA(attributes)
+        // exactly. PBlock/PBlockWithBirthDay always build PlayerRecord.CreateDefault (Midfielder,
+        // uniform [1,20] attributes), so their CurrentAbility owes this one computed value, not
+        // PA_MIN — PotentialAbility keeps PA_MIN (its own, independent range check).
+        private static readonly PlayerAttributes PBlockDefaultAttributes = PlayerAttributes.CreateDefault();
+        private static readonly int PBlockDefaultCurrentAbility =
+            AbilityModel.ComputeCA(in PBlockDefaultAttributes, PlayerPosition.Midfielder);
+
         private static ClubCareerStates PBlock(int club, int playerId, uint lastAdvancedWorldDay)
         {
             PlayerRecord rec = PlayerRecord.CreateDefault(playerId);
             var life = new PlayerLifecycle
             {
                 PotentialAbility = PlayerProgressionConstants.PA_MIN,
-                CurrentAbility = PlayerProgressionConstants.PA_MIN,
+                CurrentAbility = PBlockDefaultCurrentAbility,
                 GrowthCursor = 0,
                 BirthWorldDay = 0,
                 RetirementFlag = false,
@@ -1954,4 +1963,12 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | caller-supplied BirthWorldDay). Mutation-verified: reverting     |
 // |         |            |        | either RequireBirthWorldDayWithinClock call in SeasonSaveManager |
 // |         |            |        | fails its own test and no other.                                 |
+// | 1.16    | 2026-08-11 | —      | AR pass 8, L-4. PBlock/PBlockWithBirthDay set CurrentAbility =   |
+// |         |            |        | PlayerProgressionConstants.PA_MIN (4000) against a               |
+// |         |            |        | PlayerRecord.CreateDefault record — ProgressionSaveCodec.cs      |
+// |         |            |        | 1.5's new CurrentAbility == ComputeCA(attributes) gate refused   |
+// |         |            |        | every one of the (many) tests routing through these two          |
+// |         |            |        | fixtures. Retuned to a computed PBlockDefaultCurrentAbility       |
+// |         |            |        | field; PotentialAbility stays PA_MIN (its own, independent range |
+// |         |            |        | check — unaffected). No test assertions changed.                 |
 #endregion

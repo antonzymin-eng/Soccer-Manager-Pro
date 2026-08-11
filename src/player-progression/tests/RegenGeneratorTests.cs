@@ -1,6 +1,7 @@
 // File:     src/player-progression/tests/RegenGeneratorTests.cs
 // Created:  2026-07-24
-// Modified: 2026-08-10
+// Modified: 2026-08-11 (AR pass 7 — the GrowthCursor construction-day-credit lock restated as a
+//           property — v1.2)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.3 / §4.3; Deterministic Simulation #16 (RNG); Code Standards #20
 // Purpose:  T-PG-REG-001/003 — regen determinism, the exact PROGRESSION_REGEN_FIELDS budget, generated
@@ -182,4 +183,13 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | WorldDay_EqualsWorldDayPassedIn + GenerateRegen_BlockBuiltFrom |
 // |         |            |        | AGeneratedRegen_IsAcceptedByFromBlocks, over RegenGenerator    |
 // |         |            |        | 1.4's fix (seed worldDay, not the retired sentinel).           |
+// | 1.2     | 2026-08-11 | —      | AR pass 7. GenerateRegen_CurrentAbilityIsBelowPotential_       |
+// |         |            |        | WithRoomToGrow's GrowthCursor assertion was AreEqual(0L, ...)  |
+// |         |            |        | — a lock written against the OBSERVED value at a construction  |
+// |         |            |        | site RegenGenerator 1.5's ERR-028-018 fix visits. Restated as  |
+// |         |            |        | the property (GROWTH_DAILY_POINTS, with the REGEN_AGE_MAX <    |
+// |         |            |        | GROWTH_AGE precondition asserted alongside it) over that fix,  |
+// |         |            |        | not re-derived through ClassifyAgeBand. This landing was       |
+// |         |            |        | recorded at 8556ddd with no version row (L-1) — this row and   |
+// |         |            |        | the corrected `Modified` header above backfill it.             |
 #endregion

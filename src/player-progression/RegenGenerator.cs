@@ -1,6 +1,7 @@
 // File:     src/player-progression/RegenGenerator.cs
 // Created:  2026-07-24
-// Modified: 2026-08-10
+// Modified: 2026-08-11 (AR pass 7 — GrowthCursor credits its own construction day, ERR-028-018's
+//           second writer — v1.5)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.3 (regen generation); Deterministic Simulation #16 (RNG); Code Standards #20
 // Purpose:  Pure single-player regen generation (§3.3) — a young player with a drawn PotentialAbility
@@ -215,4 +216,19 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | sentinel from every legal store state one day after 1.3, so    |
 // |         |            |        | FromBlocks/Encode/Decode all refused what this method returned.|
 // |         |            |        | No draw order, budget or value change.                         |
+// | 1.5     | 2026-08-11 | —      | AR pass 7. ERR-028-018 credited a lifecycle's construction day  |
+// |         |            |        | to its GrowthCursor at ProgressionEngine.SeedLifecycle but      |
+// |         |            |        | never visited this, the OTHER site that constructs a            |
+// |         |            |        | PlayerLifecycle from scratch — GrowthCursor = 0 accounted the   |
+// |         |            |        | construction day (LastAdvancedWorldDay = worldDay) as already   |
+// |         |            |        | lived and credited nothing for it, costing a regen one whole    |
+// |         |            |        | attribute point across its Growth band versus an identically-   |
+// |         |            |        | generated seeded player (measured: +5 vs +6). Now                |
+// |         |            |        | GrowthCursor = BandStepFor(age), the construction day's own      |
+// |         |            |        | band step (Growth-band only, by the REGEN_AGE_MAX < GROWTH_AGE   |
+// |         |            |        | precondition). No draw order, budget or value change — the RNG   |
+// |         |            |        | path is untouched. This landing was recorded at 8556ddd with no  |
+// |         |            |        | version row (the sixth consecutive FR-CS-057 recurrence,         |
+// |         |            |        | L-1) — this row and the corrected `Modified` header above        |
+// |         |            |        | backfill it.                                                     |
 #endregion

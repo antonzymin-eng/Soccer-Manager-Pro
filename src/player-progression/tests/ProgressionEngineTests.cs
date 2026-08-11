@@ -1,6 +1,7 @@
 // File:     src/player-progression/tests/ProgressionEngineTests.cs
 // Created:  2026-08-08
-// Modified: 2026-08-11 (AR pass 6, M3 locks — v1.7)
+// Modified: 2026-08-11 (AR pass 8 — L-3's SeedFrom overflow lock; L-4's DefaultLife() CurrentAbility
+//           retune to keep every FromBlocks(..., DefaultLife()) call legal — v1.8)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.1 / §3.4 / §3.5 / §5, KD-4 / KD-7,
 //           FR-PG-011/013/014/019/021/022/023; ERR-029-006 (the batch entry point);
@@ -650,6 +651,26 @@ namespace TacticalDirector.PlayerProgression.Tests
                 "two squads sharing a club id must be refused — a career carries one roster per club.");
         }
 
+        // ── Id-cursor overflow (L-3, AR pass 8) ────────────────────────────────────────
+
+        [Test]
+        public void SeedFrom_APlayerAtIntMaxValue_IsRefused()
+        {
+            // L-3: SeedFrom was the only construction boundary NOT delegating to the shared
+            // id-cursor owner — it wrote `maxPlayerId + 1` straight to `_nextPlayerId` with no check
+            // at all. At maxPlayerId == int.MaxValue that addition overflows (silently; this project
+            // runs unchecked arithmetic by default) to a negative cursor, producing a store that
+            // seeds, advances and plays but can NEVER be saved — RequireIdCursorAheadOfCarriedIds
+            // refuses the wrapped-negative cursor at Encode, forever. Refused here instead, at the
+            // one site that can still recover from it.
+            var squad = new Squad(ClubId, new[] { Player(int.MaxValue, age: 20) });
+
+            Assert.Throws<ArgumentException>(
+                () => ProgressionEngine.SeedFrom(new[] { squad }, BaseDay),
+                "a player carrying int.MaxValue overflows the id-cursor computation to a negative " +
+                "value on the next allocation — refused here rather than producing an unsaveable store.");
+        }
+
         [Test]
         public void SeedFrom_NullSquadsArray_IsRefused()
         {
@@ -1045,6 +1066,17 @@ namespace TacticalDirector.PlayerProgression.Tests
             return rec;
         }
 
+        // L-4 (AR pass 8): CurrentAbility must equal ComputeCA(attributes) exactly — every fixture in
+        // this file builds records via Player(), which never touches attributes beyond Age/Position, so
+        // the recomputed value is the same constant for every one of them (uniform default attributes
+        // make the position-weighted mean position-INVARIANT: every weight cancels against the same
+        // base value). Computed rather than a bare literal so it cannot silently drift from
+        // AbilityModel/PlayerDatabaseConstants if either changes.
+        private static readonly PlayerAttributes PlayerAttributes_Default = PlayerAttributes.CreateDefault();
+
+        private static readonly int DefaultComputedCurrentAbility =
+            AbilityModel.ComputeCA(in PlayerAttributes_Default, PlayerPosition.Midfielder);
+
         // The cursor defaults to day 0, a legal world day — NOT the never-advanced sentinel, which
         // FromBlocks refuses since ERR-028-014. Cases that want the sentinel must ask for it, which is
         // the point: it is no longer a legal store state, so a fixture must not reach it by default.
@@ -1052,7 +1084,12 @@ namespace TacticalDirector.PlayerProgression.Tests
             new PlayerLifecycle
             {
                 PotentialAbility = 5000,
-                CurrentAbility = 3000,
+                // L-4 (AR pass 8): was a bare 3000, mismatched against Player()'s default attributes
+                // (which recompute to DefaultComputedCurrentAbility) — DescribeOutOfRangeValues now
+                // refuses that mismatch at every boundary (FromBlocks included), so this literal must
+                // track the same computed value or every FromBlocks(..., DefaultLife()) call in this
+                // file throws.
+                CurrentAbility = DefaultComputedCurrentAbility,
                 GrowthCursor = 0,
                 BirthWorldDay = 0,
                 RetirementFlag = false,
@@ -1205,4 +1242,17 @@ namespace TacticalDirector.PlayerProgression.Tests
 // |         |            |        | [1, CLUB_SQUAD_SIZE] must be refused at FromBlocks, not left to    |
 // |         |            |        | throw from SquadFor mid-round. Mutation-verified: reverting        |
 // |         |            |        | ProgressionEngine's RequireClubSizeInRange call fails both.        |
+// | 1.8     | 2026-08-11 | —      | AR pass 8. **L-3:** + SeedFrom_APlayerAtIntMaxValue_IsRefused —    |
+// |         |            |        | locks ProgressionEngine.cs 1.6's fix (SeedFrom's id-cursor         |
+// |         |            |        | overflow now delegates to the shared gate). Mutation-verified:     |
+// |         |            |        | reverting the delegation fails exactly this new lock. **L-4:**     |
+// |         |            |        | DefaultLife()'s CurrentAbility was a bare 3000, mismatched against |
+// |         |            |        | Player()'s default attributes (which every Player()-built record   |
+// |         |            |        | in this file shares) — ProgressionSaveCodec.cs 1.5's new           |
+// |         |            |        | CurrentAbility == ComputeCA(attributes) gate refused every         |
+// |         |            |        | FromBlocks(..., DefaultLife()) call in this file. Retuned to a     |
+// |         |            |        | computed DefaultComputedCurrentAbility field (position-invariant   |
+// |         |            |        | for uniform default attributes, so one value covers every fixture  |
+// |         |            |        | here) rather than a second magic literal. No test assertions       |
+// |         |            |        | changed — this is the fixture keeping pace with a production gate. |
 #endregion

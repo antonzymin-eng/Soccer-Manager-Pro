@@ -1,6 +1,8 @@
 // File:     src/player-progression/ProgressionSaveCodec.cs
 // Created:  2026-08-08
-// Modified: 2026-08-11 (AR pass 6, M3 — the shared RequireClubSizeInRange gate on Encode/Decode — v1.4)
+// Modified: 2026-08-11 (AR pass 8, M-1/L-4/L-5 — Decode's four shared gates throw
+//           InvalidOperationException; CurrentAbility and RetirementDay/Flag gated; the null-name
+//           non-idempotency documented — v1.5)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.5 (the save codec), §4.2, KD-4, FR-PG-016/017/018/019,
 //           F3/F5; ERR-028-004 (§3.5 named the RNG domain tag as the block's identifier);
@@ -49,14 +51,27 @@ namespace TacticalDirector.PlayerProgression
     ///         i32  attribute[0 .. 30]       (AttrIdx order, [1,20])
     ///         i32  weakFootRating
     ///         i32  potentialAbility
-    ///         i32  currentAbility           (derived cache; recompute-equals-stored is locked)
+    ///         i32  currentAbility           (derived cache; recompute-equals-stored is gated by
+    ///                                        DescribeOutOfRangeValues and locked by test, L-4)
     ///         i64  growthCursor             (the ONLY accumulator, FR-PG-002)
     ///         i64  birthWorldDay            (the authoritative age anchor, FR-PG-005; SIGNED — a
     ///                                        player born before the day-0 epoch is ordinary, ERR-028-006)
     ///         u8   retirementFlag
-    ///         u32  retirementDay
+    ///         u32  retirementDay           (gated against retirementFlag: 0 while unset, at-or-before
+    ///                                        lastAdvancedWorldDay once set — L-4)
     ///         u32  lastAdvancedWorldDay    (sentinel uint.MaxValue = never advanced)
     /// </code>
+    /// <para>
+    /// <b>Known, deliberate non-idempotency: a <c>null</c> name round-trips to <c>""</c> (L-4/L-5, AR
+    /// pass 8).</b> <c>CanonicalSerializer.WriteString</c> writes length 0 for a <c>null</c> string and
+    /// <c>ReadGuardedString</c> returns <see cref="string.Empty"/> for a zero-length body — the BYTES a
+    /// <c>null</c> name and an empty name produce are identical, so this is not a round-trip defect (the
+    /// same input always produces the same output) and no sim code reads names, so it has no downstream
+    /// effect. Recorded here so the next reader does not re-file it: this is a property of
+    /// <c>CanonicalSerializer</c>'s string contract (#16 §3.2.4.1), not of this codec, and is deliberately
+    /// left alone rather than "fixed" by, say, refusing a <c>null</c> name at <see cref="Encode"/> — that
+    /// would turn a harmless identity collapse into a new fail-loud surface for no behavioural gain.
+    /// </para>
     /// <para>
     /// <b>The block says which format it is.</b> The leading
     /// <see cref="PlayerProgressionConstants.PROGRESSION_SAVE_MAGIC"/> is not decoration. §3.5 as
@@ -346,22 +361,48 @@ namespace TacticalDirector.PlayerProgression
             // cannot see a collision ACROSS clubs. A hand-edited file carrying one would otherwise
             // reach ProgressionEngine.Restore and be refused there with a far less specific message —
             // or, on the FromBlocks route, not at all.
-            RequireGloballyUniquePlayerIds(clubs);
+            //
+            // M-1 (AR pass 8): Decode owes InvalidOperationException ("this file is corrupt"), never
+            // the ArgumentException the shared Require* wrappers below throw for Encode's ("this
+            // argument is invalid") — so Decode calls the Describe* half directly and throws its own
+            // type here, the same split DescribeOutOfRangeValues already uses. Before this fix all four
+            // of these gates threw ArgumentException(nameof(clubs)/nameof(nextPlayerId)) even from this
+            // Decode path, naming arguments Decode's own signature never has — contradicting this
+            // method's own <exception> doc, DescribeOutOfRangeValues' documented rationale, and #28
+            // §3.5 (ERR-029-004/ERR-041-009's MUST: decode value gates throw InvalidOperationException,
+            // matching the framing gates' type).
+            string globalDupViolation = DescribeGlobalDuplicatePlayerId(clubs);
+            if (globalDupViolation != null)
+            {
+                throw new InvalidOperationException(Subject + " " + globalDupViolation);
+            }
 
             // The load-side mirror of Encode's sentinel gate: a hand-edited file carrying the
             // never-advanced sentinel would otherwise reach ProgressionEngine.FromBlocks (via Restore)
             // and be refused there with a message about the wrong subsystem's contract, not this
             // codec's own (ERR-028-014).
-            RequireNoNeverAdvancedSentinel(clubs);
+            string sentinelViolation = DescribeNeverAdvancedSentinel(clubs);
+            if (sentinelViolation != null)
+            {
+                throw new InvalidOperationException(Subject + " " + sentinelViolation);
+            }
 
             // The load-side mirror of Encode's M3 gate: a hand-edited file carrying a club SquadFor
             // cannot project would otherwise decode cleanly and only throw later, mid-round, inside
             // ISquadProvider.ResolveByClubId.
-            RequireClubSizeInRange(clubs);
+            string clubSizeViolation = DescribeClubSizeOutOfRange(clubs);
+            if (clubSizeViolation != null)
+            {
+                throw new InvalidOperationException(Subject + " " + clubSizeViolation);
+            }
 
             // Same mirror for FR-PG-011 (AR pass 5). Refusing here means a corrupt cursor is caught at
             // the boundary where the bytes are still in hand, rather than by FromBlocks one call later.
-            RequireIdCursorAheadOfCarriedIds(clubs, nextPlayerId);
+            string cursorViolation = DescribeIdCursorNotAheadOfCarriedIds(clubs, nextPlayerId);
+            if (cursorViolation != null)
+            {
+                throw new InvalidOperationException(Subject + " " + cursorViolation);
+            }
 
             return clubs;
         }
@@ -508,11 +549,17 @@ namespace TacticalDirector.PlayerProgression
 
         // ── Shared helpers ────────────────────────────────────────────────────────────
 
+        // M-1 (AR pass 8): this rule is shared by Encode/FromBlocks (ArgumentException-owing bad-argument
+        // boundaries) and Decode (an InvalidOperationException-owing corrupt-file boundary) — the same
+        // split DescribeOutOfRangeValues below already solves. Describe returns the violation text with
+        // no throw; each boundary's own thin wrapper (or, for Decode, its own inline call in Decode
+        // above) picks the exception type it owes.
+        //
         // The cross-club uniqueness rule, shared by Encode and Decode so the two boundaries cannot
         // drift (ERR-041-019 / ERR-027-004). ProgressionEngine enforces the same rule at its own entry
         // points; this is the codec's half, so neither a written file nor a read one can carry the
         // collision.
-        internal static void RequireGloballyUniquePlayerIds(ClubCareerStates[] clubs)
+        internal static string DescribeGlobalDuplicatePlayerId(ClubCareerStates[] clubs)
         {
             var seen = new System.Collections.Generic.Dictionary<int, int>();
             for (int c = 0; c < clubs.Length; c++)
@@ -522,15 +569,26 @@ namespace TacticalDirector.PlayerProgression
                     int id = clubs[c].Records[p].PlayerId;
                     if (seen.TryGetValue(id, out int owner))
                     {
-                        throw new ArgumentException(
-                            "Player id " + id + " appears in both club " + owner + " and club " +
+                        return "player id " + id + " appears in both club " + owner + " and club " +
                             clubs[c].ClubId + ". A career requires GLOBALLY unique player ids, not " +
                             "merely club-scoped ones (#27 FR-SQ-010 / ERR-041-019) — duplicates would " +
-                            "share career and injury state silently.",
-                            nameof(clubs));
+                            "share career and injury state silently.";
                     }
                     seen.Add(id, clubs[c].ClubId);
                 }
+            }
+            return null;
+        }
+
+        /// <summary>Encode's half — throws <see cref="ArgumentException"/> (a bad argument). Decode
+        /// calls <see cref="DescribeGlobalDuplicatePlayerId"/> directly and throws
+        /// <see cref="InvalidOperationException"/> instead (M-1, AR pass 8).</summary>
+        internal static void RequireGloballyUniquePlayerIds(ClubCareerStates[] clubs)
+        {
+            string violation = DescribeGlobalDuplicatePlayerId(clubs);
+            if (violation != null)
+            {
+                throw new ArgumentException(violation, nameof(clubs));
             }
         }
 
@@ -538,8 +596,8 @@ namespace TacticalDirector.PlayerProgression
         // RequireGloballyUniquePlayerIds is above it — the ERR-028-011(a) class, one ERR later:
         // ProgressionEngine.FromBlocks refuses PROGRESSION_NOT_ADVANCED_SENTINEL as a STORE state
         // (ERR-028-014 — SeedFrom is the only legal way to anchor a career's cursor), so this is the
-        // codec's own half of never-write-what-load-refuses.
-        internal static void RequireNoNeverAdvancedSentinel(ClubCareerStates[] clubs)
+        // codec's own half of never-write-what-load-refuses. Same M-1 Describe/Require split as above.
+        internal static string DescribeNeverAdvancedSentinel(ClubCareerStates[] clubs)
         {
             for (int c = 0; c < clubs.Length; c++)
             {
@@ -548,15 +606,26 @@ namespace TacticalDirector.PlayerProgression
                     if (clubs[c].Lifecycles[p].LastAdvancedWorldDay
                         == PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL)
                     {
-                        throw new ArgumentException(
-                            "Player " + clubs[c].Records[p].PlayerId + " in club " + clubs[c].ClubId +
+                        return "player " + clubs[c].Records[p].PlayerId + " in club " + clubs[c].ClubId +
                             " carries the never-advanced sentinel as its progression cursor. The " +
                             "sentinel is not a legal STORE state (ERR-028-014) — a career's lived " +
                             "history has to start somewhere it can be checked against the world " +
-                            "clock; seed through ProgressionEngine.SeedFrom, which anchors it.",
-                            nameof(clubs));
+                            "clock; seed through ProgressionEngine.SeedFrom, which anchors it.";
                     }
                 }
+            }
+            return null;
+        }
+
+        /// <summary>Encode's half — throws <see cref="ArgumentException"/> (a bad argument). Decode
+        /// calls <see cref="DescribeNeverAdvancedSentinel"/> directly and throws
+        /// <see cref="InvalidOperationException"/> instead (M-1, AR pass 8).</summary>
+        internal static void RequireNoNeverAdvancedSentinel(ClubCareerStates[] clubs)
+        {
+            string violation = DescribeNeverAdvancedSentinel(clubs);
+            if (violation != null)
+            {
+                throw new ArgumentException(violation, nameof(clubs));
             }
         }
 
@@ -648,6 +717,56 @@ namespace TacticalDirector.PlayerProgression
                     "] — the anchor must derive an age the model can represent (corrupt save).";
             }
 
+            // L-4 (AR pass 8): CurrentAbility is a DERIVED cache (FR-PG-003) — it self-heals on the
+            // NEXT day step, but post-AR-pass-6 a stale restored value is read by the spend loop BEFORE
+            // that step's recompute, so the first threshold crossing is refused against the stale value
+            // and the fraction is DISCARDED (pass 6 changed the refusal branch's accrual from retain to
+            // discard) — one whole [1,20] point lost PERMANENTLY per corrupt restore, where before it
+            // was only a delay. The layout comment above (`i32 currentAbility`) claimed "recompute-
+            // equals-stored is locked"; no such lock existed until this gate.
+            //
+            // Guarded on position validity FIRST: AbilityModel.ComputeCA indexes PositionAttributeBias
+            // by the raw position ordinal with no bounds check, so calling it against an undefined
+            // ordinal throws IndexOutOfRangeException — proven by mutation-run probe (an Encode call
+            // carrying PlayerPosition 99 crashed here, ahead of WritePlayer's own Enum.IsDefined gate,
+            // which is Encode's existing, more specific refusal for exactly this state and must be the
+            // one that fires). An undefined position is not this predicate's problem to diagnose; skip
+            // the CA check and let the boundary's own position gate (WritePlayer / ReadPlayer) refuse it.
+            if (Enum.IsDefined(typeof(PlayerPosition), rec.Position))
+            {
+                int computedCurrentAbility = AbilityModel.ComputeCA(in rec.Attributes, rec.Position);
+                if (life.CurrentAbility != computedCurrentAbility)
+                {
+                    return "player " + rec.PlayerId + " in club " + clubId + " carries currentAbility " +
+                        life.CurrentAbility + " but its attributes recompute to " + computedCurrentAbility +
+                        " — CurrentAbility is a DERIVED cache (FR-PG-003) and must equal " +
+                        "ComputeCA(attributes) exactly; a stale mismatch costs the spend loop a whole " +
+                        "point permanently at the next threshold crossing, not just a delay (corrupt " +
+                        "save).";
+                }
+            }
+
+            // L-4 (continued): RetirementFlag is sticky — set once, at the world day it fires, and
+            // never cleared (§3.4) — so RetirementDay's own legal range is a function of the flag, not
+            // an independent field. Unset must carry 0 (nothing has fired); set must carry a day at or
+            // before LastAdvancedWorldDay (it cannot fire on a day this player was never advanced to).
+            if (!life.RetirementFlag)
+            {
+                if (life.RetirementDay != 0)
+                {
+                    return "player " + rec.PlayerId + " in club " + clubId + " carries retirementDay " +
+                        life.RetirementDay + " with retirementFlag false — an unset flag must carry " +
+                        "retirementDay 0 (corrupt save).";
+                }
+            }
+            else if (life.RetirementDay > life.LastAdvancedWorldDay)
+            {
+                return "player " + rec.PlayerId + " in club " + clubId + " carries retirementDay " +
+                    life.RetirementDay + " ahead of lastAdvancedWorldDay " + life.LastAdvancedWorldDay +
+                    " — retirementFlag is only ever SET (sticky), at the world day it fires, so it can " +
+                    "never exceed the day this player was last advanced to (corrupt save).";
+            }
+
             return null;
         }
 
@@ -662,8 +781,12 @@ namespace TacticalDirector.PlayerProgression
         /// <c>Restore</c> then threw forever. The codec's own round-trip fixture satisfied the rule only
         /// by coincidence (cursor 12 against a max id of 11) and nothing asserted that it must.
         /// </para>
+        /// M-1 (AR pass 8): returns the violation text rather than throwing, the same split
+        /// <see cref="DescribeOutOfRangeValues"/> uses — Encode/<see cref="ProgressionEngine.FromBlocks"/>
+        /// owe <see cref="ArgumentException"/> (a bad argument); Decode owes
+        /// <see cref="InvalidOperationException"/> (a corrupt file) and calls this directly.
         /// </summary>
-        internal static void RequireIdCursorAheadOfCarriedIds(ClubCareerStates[] clubs, int nextPlayerId)
+        internal static string DescribeIdCursorNotAheadOfCarriedIds(ClubCareerStates[] clubs, int nextPlayerId)
         {
             int highest = int.MinValue;
             for (int c = 0; c < clubs.Length; c++)
@@ -679,11 +802,22 @@ namespace TacticalDirector.PlayerProgression
 
             if (highest != int.MinValue && nextPlayerId <= highest)
             {
-                throw new ArgumentException(
-                    "The id cursor is " + nextPlayerId + " but this career already carries player " +
+                return "the id cursor is " + nextPlayerId + " but this career already carries player " +
                     highest + ". The next allocated id would collide with a live player, which is " +
-                    "exactly what serializing the cursor exists to prevent (FR-PG-011).",
-                    nameof(nextPlayerId));
+                    "exactly what serializing the cursor exists to prevent (FR-PG-011).";
+            }
+            return null;
+        }
+
+        /// <summary>Encode's / <see cref="ProgressionEngine.FromBlocks"/>'s half — throws
+        /// <see cref="ArgumentException"/> (a bad argument). See
+        /// <see cref="DescribeIdCursorNotAheadOfCarriedIds"/> for the rule.</summary>
+        internal static void RequireIdCursorAheadOfCarriedIds(ClubCareerStates[] clubs, int nextPlayerId)
+        {
+            string violation = DescribeIdCursorNotAheadOfCarriedIds(clubs, nextPlayerId);
+            if (violation != null)
+            {
+                throw new ArgumentException(violation, nameof(nextPlayerId));
             }
         }
 
@@ -718,23 +852,40 @@ namespace TacticalDirector.PlayerProgression
         /// (KD-4) — <see cref="ProgressionEngine.SquadFor"/> builds a <c>Squad</c> straight off it — so a
         /// club outside that range is state every one of the three boundaries must refuse, not just the
         /// one that happens to call <c>SquadFor</c> next.
+        /// <para>
+        /// M-1 (AR pass 8): returns the violation text rather than throwing, the same split
+        /// <see cref="DescribeOutOfRangeValues"/> uses — Encode/<see cref="ProgressionEngine.FromBlocks"/>
+        /// owe <see cref="ArgumentException"/> (a bad argument); Decode owes
+        /// <see cref="InvalidOperationException"/> (a corrupt file) and calls this directly.
+        /// </para>
         /// </summary>
-        internal static void RequireClubSizeInRange(ClubCareerStates[] clubs)
+        internal static string DescribeClubSizeOutOfRange(ClubCareerStates[] clubs)
         {
             for (int c = 0; c < clubs.Length; c++)
             {
                 int count = clubs[c].Count;
                 if (count < 1 || count > PlayerDatabaseConstants.CLUB_SQUAD_SIZE)
                 {
-                    throw new ArgumentException(
-                        "Club " + clubs[c].ClubId + " carries " + count + " player(s), outside [1, " +
+                    return "club " + clubs[c].ClubId + " carries " + count + " player(s), outside [1, " +
                         PlayerDatabaseConstants.CLUB_SQUAD_SIZE + "] — PlayerDatabase.Squad's own " +
                         "constructor bound (M3). #28's block IS the roster (KD-4), so a club outside " +
                         "this range would encode/decode cleanly and only throw later, mid-round, " +
                         "inside ISquadProvider.ResolveByClubId, after earlier fixtures in that round " +
-                        "had already been applied to the table.",
-                        nameof(clubs));
+                        "had already been applied to the table.";
                 }
+            }
+            return null;
+        }
+
+        /// <summary>Encode's / <see cref="ProgressionEngine.FromBlocks"/>'s half — throws
+        /// <see cref="ArgumentException"/> (a bad argument). See
+        /// <see cref="DescribeClubSizeOutOfRange"/> for the rule.</summary>
+        internal static void RequireClubSizeInRange(ClubCareerStates[] clubs)
+        {
+            string violation = DescribeClubSizeOutOfRange(clubs);
+            if (violation != null)
+            {
+                throw new ArgumentException(violation, nameof(clubs));
             }
         }
 
@@ -841,4 +992,41 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | matching RequireGloballyUniquePlayerIds / RequireIdCursorAhead-    |
 // |         |            |        | CarriedIds, not the DescribeOutOfRangeValues split). Mutation-      |
 // |         |            |        | verified: reverting either call site fails the new locks.          |
+// | 1.5     | 2026-08-11 | —      | AR pass 8. THREE fixes. **M-1:** RequireGloballyUniquePlayerIds,     |
+// |         |            |        | RequireNoNeverAdvancedSentinel, RequireClubSizeInRange and            |
+// |         |            |        | RequireIdCursorAheadOfCarriedIds each split into a Describe*          |
+// |         |            |        | (returns the violation text, throws nothing) + the existing           |
+// |         |            |        | Require* wrapper (ArgumentException, for Encode/FromBlocks) — the     |
+// |         |            |        | same pattern DescribeOutOfRangeValues already used. Decode now calls  |
+// |         |            |        | each Describe* directly and throws InvalidOperationException, since   |
+// |         |            |        | before this fix all four threw ArgumentException(nameof(clubs)/       |
+// |         |            |        | nameof(nextPlayerId)) even from Decode, naming arguments Decode's own |
+// |         |            |        | signature never has — contradicting Decode's own <exception> doc,     |
+// |         |            |        | DescribeOutOfRangeValues' documented rationale, and #28 §3.5           |
+// |         |            |        | (ERR-029-004/ERR-041-009's MUST). Mutation-verified: reverting the     |
+// |         |            |        | four Decode call sites to the old Require* calls fails exactly the     |
+// |         |            |        | three retyped locks in ProgressionSaveCodecTests.cs (Decode_           |
+// |         |            |        | AClubWithNoPlayers_FailsLoud, Decode_CrossClubDuplicatePlayerId_       |
+// |         |            |        | FailsLoud, Decode_NeverAdvancedSentinel_FailsLoud_ERR028014).          |
+// |         |            |        | **L-4:** DescribeOutOfRangeValues gains two more gates — CurrentAbility|
+// |         |            |        | must equal ComputeCA(attributes) exactly (guarded on position         |
+// |         |            |        | validity first: ComputeCA indexes PositionAttributeBias by the raw    |
+// |         |            |        | ordinal with no bounds check and would otherwise throw                |
+// |         |            |        | IndexOutOfRangeException for an undefined position, ahead of          |
+// |         |            |        | WritePlayer's own, more specific Enum.IsDefined refusal — probe-      |
+// |         |            |        | verified by mutation), and the RetirementDay/RetirementFlag pair      |
+// |         |            |        | (unset ⇒ day == 0; set ⇒ day <= LastAdvancedWorldDay, since the flag   |
+// |         |            |        | is sticky and only ever set at the day it fires). The layout           |
+// |         |            |        | comment's "recompute-equals-stored is locked" claim was false before  |
+// |         |            |        | this gate; corrected to describe what is now actually enforced and    |
+// |         |            |        | locked. Mutation-verified: reverting the two new checks fails exactly |
+// |         |            |        | the three new L-4 locks (Decode_CurrentAbilityDoesNotMatchRecomputed- |
+// |         |            |        | Value_FailsLoud, Decode_RetirementDayNonZeroWithFlagUnset_FailsLoud,  |
+// |         |            |        | Decode_RetirementDayAheadOfLastAdvancedWorldDay_FailsLoud); reverting |
+// |         |            |        | the position-validity guard alone fails the pre-existing Encode_      |
+// |         |            |        | UndefinedPosition_FailsLoud lock (probe-verified, no new test         |
+// |         |            |        | needed). **L-5:** documented the null-name → "" round-trip as a       |
+// |         |            |        | known, deliberate non-idempotency (CanonicalSerializer's own string   |
+// |         |            |        | contract — bytes are identical either way, no sim code reads names,   |
+// |         |            |        | codec unchanged).                                                     |
 #endregion

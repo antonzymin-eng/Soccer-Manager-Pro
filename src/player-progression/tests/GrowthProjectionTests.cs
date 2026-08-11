@@ -1,6 +1,6 @@
 // File:     src/player-progression/tests/GrowthProjectionTests.cs
 // Created:  2026-07-24
-// Modified: 2026-08-11 (AR pass 6, M2(a) lock — v1.2)
+// Modified: 2026-08-11 (AR pass 8, L-2 — stale comment corrected, no assertion change — v1.3)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.1 + Appendix B; Code Standards #20
 // Purpose:  T-PG-DET-001/002, T-PG-ID-001/002 — byte-exact growth across a value-copy "save", age
@@ -178,7 +178,10 @@ namespace TacticalDirector.PlayerProgression.Tests
         {
             // M2 (ERR-028-018 carryforward): a player at the PA ceiling from day one — every Growth-band
             // spend is refused. Pre-fix, the refused day's accrual banked without bound (2,189 unspendable
-            // points measured over six years); the fix clamps to POINT_COST - 1 on every refusal.
+            // points measured over six years); the fix DISCARDS the accrual to zero on every refusal
+            // (AR pass 6 changed the earlier clamp-to-POINT_COST-1 posture to discard — L-2, this
+            // comment previously described the retired clamp mechanism). The assertions below are
+            // property-based (bounded in both directions) and hold either way.
             PlayerRecord rec = PlayerRecord.CreateDefault(1); // Midfielder, all attrs = 10
             int initialCA = AbilityModel.ComputeCA(in rec.Attributes, rec.Position);
             var life = new PlayerLifecycle
@@ -332,4 +335,10 @@ namespace TacticalDirector.PlayerProgression.Tests
 // | 1.2     | 2026-08-11 | —      | AR pass 6 (M2(a)): + FutureDatedBirthWorldDay_ThrowsRatherThan- |
 // |         |            |        | ReadingAgeAsZero — a BirthWorldDay ahead of worldDay must throw |
 // |         |            |        | InvalidOperationException, not silently derive age 0.          |
+// | 1.3     | 2026-08-11 | —      | AR pass 8, L-2 (doc only). PaBoundYoungster_...'s lead comment  |
+// |         |            |        | still said "the fix clamps to POINT_COST - 1 on every refusal" |
+// |         |            |        | — AR pass 6 changed that mechanism to discard-to-zero, and the |
+// |         |            |        | comment was never updated. Corrected; the assertions are       |
+// |         |            |        | property-based (bounded in both directions) and were already   |
+// |         |            |        | correct — this is a prose-only fix, no behavior or lock change.|
 #endregion

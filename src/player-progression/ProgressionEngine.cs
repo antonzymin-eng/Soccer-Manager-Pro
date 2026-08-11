@@ -1,6 +1,6 @@
 // File:     src/player-progression/ProgressionEngine.cs
 // Created:  2026-08-08
-// Modified: 2026-08-11 (AR pass 6, M3 — FromBlocks gains the club-size gate — v1.5)
+// Modified: 2026-08-11 (AR pass 8, L-3 — SeedFrom's id cursor no longer overflows silently — v1.6)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.1 / §3.4 / §3.5 / §4.2 / §4.5, KD-4 / KD-7 / KD-8,
 //           FR-PG-001/005/008/011/013/014/016/019/021/022/023; ERR-029-006 (the batch entry point);
@@ -182,7 +182,20 @@ namespace TacticalDirector.PlayerProgression
             }
 
             engine.RequireGloballyUniquePlayerIds(nameof(squads));
-            engine._nextPlayerId = maxPlayerId == int.MinValue ? 0 : maxPlayerId + 1;
+
+            // L-3 (AR pass 8): SeedFrom was the only construction boundary NOT delegating to the shared
+            // id-cursor owner — it computed `maxPlayerId + 1` and wrote it straight to `_nextPlayerId`
+            // with no check at all. At maxPlayerId == int.MaxValue that addition overflows (silently,
+            // this project runs unchecked arithmetic by default) to a negative cursor, producing a store
+            // that seeds, advances and plays but can NEVER be saved — RequireIdCursorAheadOfCarriedIds
+            // refuses it at Encode, forever, since the wrapped value reads as far behind every carried
+            // id it is actually ahead of. Delegating here means the overflow is refused AT THE SEED SITE
+            // rather than silently produced and only discovered at the one boundary nothing can recover
+            // from — and it is refused by the exact same gate Encode/Decode/FromBlocks already share, so
+            // there is one enforcer of FR-PG-011, not four independent copies of "don't let this happen".
+            int nextPlayerId = maxPlayerId == int.MinValue ? 0 : maxPlayerId + 1;
+            ProgressionSaveCodec.RequireIdCursorAheadOfCarriedIds(engine.ToBlocks(), nextPlayerId);
+            engine._nextPlayerId = nextPlayerId;
             return engine;
         }
 
@@ -803,4 +816,17 @@ namespace TacticalDirector.PlayerProgression
 // |         |            |        | ISquadProvider.ResolveByClubId, after earlier fixtures in that   |
 // |         |            |        | round had already been applied. Same shared owner Encode/Decode  |
 // |         |            |        | now call.                                                        |
+// | 1.6     | 2026-08-11 | —      | AR pass 8, L-3. SeedFrom was the only construction boundary NOT  |
+// |         |            |        | delegating to the shared id-cursor owner — it wrote               |
+// |         |            |        | `maxPlayerId + 1` straight to `_nextPlayerId` with no check at    |
+// |         |            |        | all, so at maxPlayerId == int.MaxValue the addition overflows     |
+// |         |            |        | (silently; this project's arithmetic is unchecked by default) to  |
+// |         |            |        | a negative cursor — a store that seeds, advances and plays but    |
+// |         |            |        | can NEVER be saved (ProgressionSaveCodec.RequireIdCursorAhead-    |
+// |         |            |        | OfCarriedIds refuses it at Encode, forever). Now computes the     |
+// |         |            |        | candidate cursor and calls that same shared gate before assigning |
+// |         |            |        | it — the overflow-wrapped value reads as far behind the carried   |
+// |         |            |        | int.MaxValue id, so the gate refuses it AT THE SEED SITE instead. |
+// |         |            |        | Mutation-verified: reverting to the bare assignment fails exactly |
+// |         |            |        | the new SeedFrom_APlayerAtIntMaxValue_IsRefused lock.             |
 #endregion
