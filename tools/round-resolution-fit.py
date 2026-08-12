@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # tools/round-resolution-fit.py
 # Created: 2026-07-26
-# Modified: 2026-08-12 (A4a run: resolution + dispersion diagnostics, and --wdl-csv)
+# Modified: 2026-08-12 (A4a run: resolution + dispersion diagnostics, --wdl-csv)
+# Modified: 2026-08-12 (ERR-030-033: KD-8 mean bar re-specified; KD-7a successor diagnostics)
 # Purpose: Fit the Season & Competition Loop #30 round-resolution model's three parameters
 #          (BaseGoals, GoalRatingSlope, HomeAdvantageRating) against the engine-simulated
 #          corpus produced by RoundResolutionCalibrationHarness, and emit the
@@ -222,6 +223,90 @@ def wdl_verdict(worst_pp, se_pp, n):
     return "FAIL" if worst_pp > BUCKET_MEAN_SIGMA * se_pp else "INCONCLUSIVE"
 
 
+def successor_diagnostics(summary):
+    """
+    KD-7a's dispersion parameter, reported with its own stability — because a single number here
+    would be a false precision.
+
+    `alpha` is fitted as `var = mu*(1 + alpha*mu)`, by least squares through the origin on
+    `(var - mu)` vs `mu^2`. Specified in that form, NOT as a constant var/mean ratio, because
+    dispersion rises with the mean and one ratio misfits both ends.
+
+    Two estimators and a leverage figure are emitted rather than one alpha, because at this corpus's
+    depth the weighted estimate is dominated by whichever cell happens to have drawn a low sample
+    variance: a variance estimate at n=18 carries ~33% relative error, and the inverse-variance
+    weights go as 1/var^2, so one unlucky cell can carry a third of the fit. When `max_leverage` is
+    large or the two estimators disagree by more than a factor of ~1.5, **alpha is not determined by
+    this corpus** and adopting a successor on it would be fitting noise.
+    """
+    pts = []
+    for b in summary:
+        for mean_key, var_key in (("mean_h", "var_h"), ("mean_a", "var_a")):
+            mu = b[mean_key]
+            if mu <= 0.0:
+                continue
+            var = b[var_key] * b["n"] / (b["n"] - 1)
+            if var <= 0.0:
+                continue
+            pts.append((mu, var, (b["n"] - 1) / (2.0 * var * var)))
+
+    def solve(weighted):
+        num = sum((w if weighted else 1.0) * (mu * mu) * (var - mu) for mu, var, w in pts)
+        den = sum((w if weighted else 1.0) * (mu * mu) ** 2 for mu, var, w in pts)
+        return num / den if den else float("nan")
+
+    alpha_w = solve(True)
+    alpha_u = solve(False)
+    leverage = [w * (mu ** 4) for mu, var, w in pts]
+    total = sum(leverage)
+    max_leverage = max(leverage) / total if total else float("nan")
+    ratio = (max(alpha_w, alpha_u) / min(alpha_w, alpha_u)
+             if min(alpha_w, alpha_u) > 0 else float("inf"))
+    determined = max_leverage < 0.25 and ratio < 1.5
+
+    return {"alpha": alpha_w, "alpha_unweighted": alpha_u, "points": len(pts),
+            "max_leverage": max_leverage, "ratio": ratio, "determined": determined}
+
+
+def pooled_correlation(rows):
+    """Pooled WITHIN-bucket home/away correlation — see successor_diagnostics for why it matters."""
+    buckets = bucket(rows)
+    num = den_h = den_a = 0.0
+    n_total = 0
+    for _, group in buckets.items():
+        n = len(group)
+        if n < 2:
+            continue
+        mh = sum(r["h"] for r in group) / n
+        ma = sum(r["a"] for r in group) / n
+        num += sum((r["h"] - mh) * (r["a"] - ma) for r in group)
+        den_h += sum((r["h"] - mh) ** 2 for r in group)
+        den_a += sum((r["a"] - ma) ** 2 for r in group)
+        n_total += n
+    if den_h <= 0 or den_a <= 0:
+        return float("nan"), float("nan"), n_total
+    r = num / math.sqrt(den_h * den_a)
+    se = 1.0 / math.sqrt(max(1, n_total - len(buckets)))
+    return r, se, n_total
+
+
+def nb2_pmf(k, mu, alpha):
+    """NB2 pmf by the same forward recurrence KD-7a pins for its inverse CDF."""
+    if alpha <= 0.0:
+        return math.exp(-mu) * mu ** k / math.factorial(k)
+    r = 1.0 / alpha
+    q = alpha * mu / (1.0 + alpha * mu)
+    p = (1.0 + alpha * mu) ** (-r)
+    for i in range(k):
+        p *= q * (r + i) / (i + 1)
+    return p
+
+
+def draw_share(lam_h, lam_a, alpha):
+    return sum(nb2_pmf(k, lam_h, alpha) * nb2_pmf(k, lam_a, alpha)
+               for k in range(MAX_GOALS_PER_SIDE + 1))
+
+
 def objective(params, summary):
     """Sample-weighted squared error between the model's per-bucket means and the corpus's."""
     base, slope, home_adv = params
@@ -312,6 +397,8 @@ def main():
     base, slope, home_adv = fit(summary)
     res = resolution(summary)
     bar = mean_bar(summary, (base, slope, home_adv))
+    succ = successor_diagnostics(summary)
+    corr, corr_se, corr_n = pooled_correlation(rows)
 
     print(f"corpus: {len(rows)} matches across {len(summary)} buckets")
     print(f"fit: BaseGoals={base:.4f} GoalRatingSlope={slope:.4f} HomeAdvantageRating={home_adv:.4f}")
@@ -372,6 +459,18 @@ def main():
               f"a PASS here would not be resolvable, a significant FAIL still is)")
     print(f"  -> SHAPE (W/D/L): {wdl}")
 
+    zero_lam_h = lam(base, slope, +(zero["mean_d"] + home_adv))
+    zero_lam_a = lam(base, slope, -(zero["mean_d"] + home_adv))
+    nb_draws = 100.0 * draw_share(zero_lam_h, zero_lam_a, succ["alpha"])
+    print(f"KD-7a successor diagnostics: NB2 alpha (var = mu(1+alpha*mu)) = {succ['alpha']:.4f} "
+          f"weighted / {succ['alpha_unweighted']:.4f} unweighted — "
+          f"{'DETERMINED' if succ['determined'] else 'NOT DETERMINED by this corpus'} "
+          f"(max single-cell leverage {100*succ['max_leverage']:.0f}%, estimator ratio "
+          f"{succ['ratio']:.2f}); "
+          f"pooled within-bucket home/away corr = {corr:+.3f} +/- {corr_se:.3f} (n={corr_n}); "
+          f"NB2 draw share at the acceptance bucket = {nb_draws:.1f}% vs corpus {cd:.1f}% "
+          f"(NB2 fixes dispersion, NOT the draw deficit)")
+
     accepted = bar["passed"] and wdl == "PASS"
     print(f"KD-8 acceptance: {'PASS' if accepted else 'FAIL'} "
           f"(mean {'PASS' if bar['passed'] else 'FAIL'}, shape {wdl})")
@@ -379,7 +478,8 @@ def main():
     if args.out:
         write_artifact(args, rows, summary, (base, slope, home_adv), worst,
                        (cw, cd, cl), (mw, md, ml), wdl_worst, accepted, zero, res,
-                       wdl_se, deep_n, rates, bar, wdl)
+                       wdl_se, deep_n, rates, bar, wdl,
+                       (succ, corr, corr_se, corr_n, nb_draws))
         print(f"wrote {args.out}")
     return 0
 
@@ -489,7 +589,7 @@ def split_preserved(path):
 
 
 def write_artifact(args, rows, summary, params, worst, corpus_wdl, model_wdl_v, wdl_worst,
-                   accepted, zero, res, wdl_se, deep_n, rates, bar, wdl):
+                   accepted, zero, res, wdl_se, deep_n, rates, bar, wdl, successor):
     base, slope, home_adv = params
     preamble, postamble = split_preserved(args.out)
     with open(args.out, "w") as f:
@@ -637,6 +737,26 @@ def write_artifact(args, rows, summary, params, worst, corpus_wdl, model_wdl_v, 
         f.write("correspondingly **fewer draws** — which is exactly where the W/D/L bar is missed. No\n")
         f.write("choice of the three fitted parameters closes that gap; it is a statement about the\n")
         f.write("model's family, not its coefficients.\n\n")
+        succ_d, corr_v, corr_se_v, corr_n_v, nb_draws_v = successor
+        f.write("## KD-7a successor diagnostics\n\n")
+        f.write("The three statistics KD-7a's adoption tripwire turns on, emitted every run so the\n")
+        f.write("decision is made against measurements rather than re-derived by hand at the next capture.\n\n")
+        f.write("| Statistic | Measured | What it decides |\n|---|---|---|\n")
+        f.write(f"| NB2 dispersion `α` (`var = μ(1+αμ)`) | **{succ_d['alpha']:.4f}** weighted / "
+                f"{succ_d['alpha_unweighted']:.4f} unweighted — "
+                f"**{'determined' if succ_d['determined'] else 'NOT DETERMINED by this corpus'}** "
+                f"(one cell carries {100*succ_d['max_leverage']:.0f}% of the weighted fit; estimators "
+                f"differ by {succ_d['ratio']:.2f}×) | The successor's one new parameter, and whether "
+                f"this corpus can yet fix it. A variance estimate at 18 samples carries ~33% relative "
+                f"error and the weights go as `1/var²`, so one unlucky cell dominates. Adopting on this "
+                f"would be fitting noise. |\n")
+        f.write(f"| Pooled within-bucket home/away correlation | **{corr_v:+.3f} ± {corr_se_v:.3f}** "
+                f"(n={corr_n_v}) | **Discriminates the candidate families.** Any shared-swing mechanism "
+                f"that would cut the draw share implies a clearly negative value; measured ≈ 0, such a "
+                f"family is refuted however well it fits the draw count. |\n")
+        f.write(f"| NB2 draw share at the acceptance bucket | **{nb_draws_v:.1f}%** vs corpus "
+                f"{corpus_wdl[1]:.1f}% | **The number that stops NB2 being mistaken for a fix to the draw "
+                f"deficit.** It closes the dispersion gap and barely moves draws. |\n\n")
         f.write("## Raw rows\n\n```csv\n")
         f.write("dSquad,homeGoals,awayGoals\n")
         for r in rows:
@@ -689,3 +809,23 @@ if __name__ == "__main__":
 # |         |            |        | a table. The fix belongs in the tool, not in prose: a warning    |
 # |         |            |        | not to misread the mean is advice; emitting the right number     |
 # |         |            |        | beside it is structural.                                         |
+# | 1.3     | 2026-08-12 | —      | ERR-030-033: KD-8's mean bar re-specified and now SCORED here    |
+# |         |            |        | rather than asserted. mean_bar() applies the per-cell            |
+# |         |            |        | max(0.25, 2*se) screen, the bounded-exceedance rule and the      |
+# |         |            |        | pooled chi-square (chi2_critical by Wilson-Hilferty — no         |
+# |         |            |        | third-party dependency, verified against exact values at dof 10  |
+# |         |            |        | and 19); wdl_verdict() returns INCONCLUSIVE when a miss is not   |
+# |         |            |        | distinguishable from noise. The verdict is reported in two parts |
+# |         |            |        | because the halves fail for unrelated reasons, and the flat      |
+# |         |            |        | verdict had been making ERR-030-034 read as a fit failure.       |
+# | 1.4     | 2026-08-12 | —      | KD-7a: the three statistics the successor-adoption tripwire      |
+# |         |            |        | turns on, so it is evaluable rather than merely written. The     |
+# |         |            |        | one that changed the deliverable is alpha's STABILITY: the       |
+# |         |            |        | weighted and unweighted estimators differ by 2.01x and one       |
+# |         |            |        | 18-sample cell carries 36% of the weighted fit, so alpha is      |
+# |         |            |        | NOT determined by this corpus and recording a single value       |
+# |         |            |        | would have been false precision. Also the pooled within-bucket   |
+# |         |            |        | home/away correlation (the statistic that DISCRIMINATES          |
+# |         |            |        | candidate families — a shared-swing family needs it clearly      |
+# |         |            |        | negative) and NB2's draw share at the acceptance bucket (the     |
+# |         |            |        | number that stops NB2 being mistaken for a fix to the draws).    |

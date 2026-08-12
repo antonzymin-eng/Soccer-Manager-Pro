@@ -289,6 +289,96 @@ A4 also keeps #30 §3.4.1's **minimal identity** available (resolve every fixtur
 `MatchEngine`): correct, deterministic, and unusably slow (roadmap C1: ≥ 16.3 h/season), so it is a
 test/verification mode and a `SeasonState`/config dial, never the default.
 
+### KD-7a — Designated successor distribution (pre-decided August 12, 2026; **NOT adopted**).
+
+`ERR-030-034` established by measurement that KD-7's Poisson marginal **cannot express what the
+engine does**: a Poisson variable's variance equals its mean by definition, and the engine's
+scorelines are over-dispersed at **z = +5.40** (pooled `χ² = 521.7` on 374 dof, 19 of 22 bucket-sides
+above 1). That is a property of the model's *family*, not its coefficients, so no re-fit of the three
+KD-7 parameters addresses it.
+
+This section exists so the next capture does not re-litigate the choice from scratch. It pins **what
+the successor would be, what would trigger adopting it, and what must be measured to decide** — with
+the same specificity KD-7 applies to `PoissonInverseCdf`, and for the same reason: two engineers
+handed "use a negative binomial" would pick different parameterisations and different quantile
+algorithms, consume different numbers of uniforms, and produce different scorelines from an identical
+key. **Nothing here is implemented, and adopting it is an owner decision, not a consequence of this
+text.**
+
+**S1 — The marginal: NB2, parameterised by mean and a dispersion term.**
+`var = μ·(1 + α·μ)`, i.e. `r = 1/α`, `q = α·μ/(1 + α·μ)`. Stated in this form and **not** as a
+constant `var/mean` ratio, because the measured dispersion **rises with the mean** — a single ratio
+misfits both ends, and 5 of 22 bucket-sides are mildly *under*-dispersed at small λ, which the
+`1 + α·μ` form predicts and a constant ratio does not.
+
+**S2 — The quantile, pinned by name: `NegativeBinomialInverseCdf`, by inversion.**
+`p₀ = (1 + α·μ)^(−1/α)`, `cdf = p₀`, and while `u > cdf` step `k++`,
+`p ·= q·(r + k − 1)/k`, `cdf += p`, bounded by the same `[FIXED] MAX_GOALS_PER_SIDE` cap. **One
+uniform per side, the existing home/away sub-streams unchanged**, so the keyed, order-independent,
+fixed-budget contract KD-7 specifies is preserved exactly — the successor changes the *shape* of the
+draw and nothing about how it is keyed.
+
+**S3 — `α` is a new `[GT] QuickSimDispersion`, and `α == 0` routes to `PoissonInverseCdf` verbatim.**
+Not a limit, an explicit branch: at `α = 0` the NB2 recurrence divides by zero, and "identical in the
+limit" is not the same as "bit-identical". Routing the zero case to today's code path makes the
+successor a strict superset — a save resolved at `α = 0` is byte-identical to one resolved today.
+
+**S4 — `α`'s value is NOT yet determined, and this is the first adoption gate.** The August 2026
+corpus does not fix it: the estimate is **0.0773 weighted / 0.1552 unweighted — a factor of 2.01** —
+and **one 18-sample cell carries 36% of the weighted fit** (bucket −4 away, which happens to have
+drawn a low sample variance). A variance estimate at n = 18 carries ~33% relative error and the
+inverse-variance weights go as `1/var²`, so a single unlucky cell dominates. **Adopting a successor
+on this corpus's `α` would be fitting noise.** The fitter emits both estimators, the max single-cell
+leverage and a determined/not-determined verdict every run.
+
+**S5 — NB2 does NOT fix the draw deficit, and must not be adopted expecting it to.** Measured at the
+fitted λ's: NB2 at the corpus's own α gives a **26.5%** draw share against Poisson's 26.8% and the
+engine's **19.2%**. It closes ~0.3 pp of a 7.6 pp gap. Over-dispersion fattens *both* tails, and 0–0
+is a draw — so the two findings inside `ERR-030-034` are **substantially independent**, and this
+successor addresses only the first.
+
+**S6 — The draw deficit has no pinned successor, deliberately, because its mechanism is not
+established.** The family that would cut draws materially is a shared antithetic swing (one side's
+good day is the other's bad day), and it necessarily implies negative home/away correlation. The
+corpus **refutes** that: pooled within-bucket correlation is **+0.044 ± 0.073** (n = 198), ~3σ from
+the ≈ −0.20 such a family predicts. A Dixon–Coles-style diagonal-deflation term `ρ` remains the
+candidate — it targets the draw cell directly, leaves the tails alone and keeps correlation ≈ 0, with
+the away side drawn by inversion of the conditional pmf given home so the two-uniform budget still
+holds — **but fitting `ρ` needs the joint scoreline histogram at depth**, not a W/D/L summary, which
+is why the raw rows are now committed under `docs/tracking/corpus-data/`.
+
+**S7 — The adoption tripwire.** At the next capture, adopt S1–S3 **only if all four hold**:
+
+1. Over-dispersion persists at **z > 3** on the new corpus;
+2. `α` is **determined** — max single-cell leverage < 25% and the weighted/unweighted estimators
+   within a factor of 1.5;
+3. The draw gap still exceeds `2·se` under KD-8's re-specified A5 bar; and
+4. The capture is **post-defensive-wiring**. The corpus is produced by an engine in which *no player
+   has ever made a tackle* (`match-engine-wiring-backlog.md` W2), and the second moment of scorelines
+   is precisely the statistic that wiring moves. KD-W1 does not formally bind here — the model itself
+   is wired — but the *target* is not, which is the same trap with the roles reversed.
+
+Condition 4 is not a delay tactic: KD-8's own re-capture trigger invalidates this fit at the next
+scoring-relevant landing regardless, so the decision is being made against a corpus that is going to
+be replaced anyway.
+
+**S8 — Cost, corrected.** An earlier record of `ERR-030-034` claimed a family change "moves persisted
+season state" and implied a save-format bump. **That is wrong and was verified in code:**
+`SeasonStateCodec` serializes a per-fixture `Played` flag and aggregate `LeagueTableRow` totals —
+individual scorelines are folded into the table at resolution and never re-derived from their key —
+so a successor with no persisted-layout change forces **no format bump**. The decisive evidence is
+the A4a refit itself: it changed all three `[GT]`s, i.e. every future draw in every save, and
+`SEASON_STATE_FORMAT_VERSION` is still **1**. What KD-7's pin-by-name protects is *implementation
+identity*, not save layout. The real costs are mid-save future-draw drift (already accepted at the
+refit), this section's revision, and the lock updates.
+
+**One football check to carry into the decision.** Real football draws ~25–26% at balanced fixtures.
+Today's Poisson model sits at 26.8% — **closer to football than the engine's 19.2% is**. Matching the
+engine exactly would make the unwatched 90% of the league *less* football-like in order to agree with
+an engine whose draw share should rise toward football as defensive behaviour wires in. That is an
+argument the draw gap may be an engine defect rather than a model defect, and it is why S6 pins no
+successor for it.
+
 ### KD-8 — Calibration methodology (A4a).
 
 The risk being managed is roadmap risk row 1: *"round-resolution model diverges from engine results;

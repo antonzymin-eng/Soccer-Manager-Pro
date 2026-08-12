@@ -204,6 +204,17 @@ correspondingly **fewer draws** — which is exactly where the W/D/L bar is miss
 choice of the three fitted parameters closes that gap; it is a statement about the
 model's family, not its coefficients.
 
+## KD-7a successor diagnostics
+
+The three statistics KD-7a's adoption tripwire turns on, emitted every run so the
+decision is made against measurements rather than re-derived by hand at the next capture.
+
+| Statistic | Measured | What it decides |
+|---|---|---|
+| NB2 dispersion `α` (`var = μ(1+αμ)`) | **0.0773** weighted / 0.1552 unweighted — **NOT DETERMINED by this corpus** (one cell carries 36% of the weighted fit; estimators differ by 2.01×) | The successor's one new parameter, and whether this corpus can yet fix it. A variance estimate at 18 samples carries ~33% relative error and the weights go as `1/var²`, so one unlucky cell dominates. Adopting on this would be fitting noise. |
+| Pooled within-bucket home/away correlation | **+0.044 ± 0.073** (n=198) | **Discriminates the candidate families.** Any shared-swing mechanism that would cut the draw share implies a clearly negative value; measured ≈ 0, such a family is refuted however well it fits the draw count. |
+| NB2 draw share at the acceptance bucket | **26.5%** vs corpus 19.2% | **The number that stops NB2 being mistaken for a fix to the draw deficit.** It closes the dispersion gap and barely moves draws. |
+
 ## Raw rows
 
 ```csv

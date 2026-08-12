@@ -98,6 +98,42 @@ break it, and do not edit historical entries.
 > v1.1 corrects its now-stale FAIL comments; **no assertion changed**, and its own tolerance remains a
 > regression guard rather than this bar, since the suite has no standard errors.
 
+> **Also August 12, 2026, later still (**`KD-7a` written: the round-resolution model's successor
+> distribution is PRE-DECIDED and gated, and deliberately NOT adopted. Landed on the advisory
+> recommendation, with one correction the act of writing it surfaced.**) `ERR-030-034` established that
+> KD-7's Poisson marginal cannot express the engine's spread; KD-7a now pins **what** the successor
+> would be with the same specificity KD-7 applies to `PoissonInverseCdf`, so the next capture decides
+> rather than re-litigates. **S1** NB2 as `var = μ(1+αμ)` — not a constant `var/mean` ratio, because
+> dispersion measurably rises with the mean and 5 of 22 bucket-sides are mildly *under*-dispersed at
+> small λ, which the `1+αμ` form predicts and a ratio does not. **S2** `NegativeBinomialInverseCdf` by
+> inversion, pinned by name AND by recurrence, **one uniform per side with the existing home/away
+> sub-streams unchanged** — the successor changes the shape of the draw and nothing about how it is
+> keyed, so KD-7's order-independent fixed-budget contract survives exactly. **S3** a new
+> `[GT] QuickSimDispersion` whose **zero case routes to `PoissonInverseCdf` verbatim** — an explicit
+> branch, not a limit: at α = 0 the NB2 recurrence divides by zero, and "identical in the limit" is not
+> "bit-identical", so the successor is a strict superset of today. **The correction the writing
+> surfaced, and it changed the deliverable: α is NOT determined by this corpus.** The advisory
+> recommended initialising α ≈ 0.15–0.25 from a weighted fit; fitting it properly gives **0.0773
+> weighted against 0.1552 unweighted — a factor of 2.01 — with ONE 18-sample cell carrying 36% of the
+> weighted fit** (bucket −4 away, which happens to have drawn a low sample variance). A variance
+> estimate at n = 18 carries ~33% relative error and inverse-variance weights go as `1/var²`, so a
+> single unlucky cell dominates. Recording a number would have been false precision, so **S4 records
+> the instability instead** and the fitter now emits both estimators, the max single-cell leverage and
+> a determined/not-determined verdict on every run — the tripwire is evaluable rather than merely
+> written. **S5** records that NB2 does **not** fix the draw deficit and must not be adopted expecting
+> it to: measured **26.5%** draws against Poisson's 26.8% and the engine's 19.2%, ~0.3 pp of a 7.6 pp
+> gap. **S6** pins **no** successor for the draw deficit, because its mechanism is unestablished — the
+> shared-swing family that would cut draws implies negative home/away correlation and the corpus
+> refutes that at **+0.044 ± 0.073** (n=198); a Dixon–Coles `ρ` remains the candidate but needs the
+> joint scoreline histogram at depth, which is what the newly-committed raw rows preserve. **S7** is
+> the adoption tripwire: dispersion still z > 3, α determined, the draw gap still beyond 2·se under
+> KD-8's A5, and the capture taken **post-defensive-wiring** — the corpus comes from an engine in which
+> *no player has ever made a tackle*, and the second moment of scorelines is exactly what that wiring
+> moves. **S8** carries the corrected cost: no save-format bump. Also recorded: today's Poisson model
+> draws 26.8% against real football's ~25–26%, i.e. **closer to football than the engine's 19.2% is** —
+> an argument the gap may be an engine defect rather than a model defect. No `src/` file touched;
+> `ERR-030-034` remains OPEN with its two findings now stated separately.
+
 > **GATE (whole tree, August 12, 2026, post-bar-respec): build 0 errors; `SeasonSave.Tests`
 > **402 passed / 0 failed / 3 skipped** and `MatchEngine.Tests` **451 / 1 / 10** — byte-identical to
 > this branch's pre-change run.** The single failure is `sim_match_engine_close_chance` at
