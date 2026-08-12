@@ -140,6 +140,27 @@ against the wrong quantity.
 > **RESULT: NOT YET RUN.** No numbers are recorded here and none are invented. The command is
 > `TD_TACKLE_DIAGNOSTIC=1 dotnet test -c Release --filter TackleIntentDiagnostic`.
 
+### 3.1 The pre-change baseline, measured — and one tracking correction it forces
+
+Whole-tree gate at `4b9271c`, before anything in this landing: **build 0 errors / 0 warnings, quarantine
+empty, every suite green except `MatchEngine.Tests` at 451 passed / 1 failed / 10 skipped (49 m 59 s).**
+
+The single failure is `sim_match_engine_close_chance`, on exactly the two predicates the August 11 owner
+call covers (`meanCosine = −0.165` against a −0.16 bound; `goalwardShare = 0.407` against 0.42) — held
+red deliberately, not to be rebaselined a third time.
+
+**The correction: `sim_match_engine_shot_outcomes` PASSES.** Root `CLAUDE.md`'s OPEN ISSUES entry and
+`match-engine-wiring-backlog.md` v1.6 both record its `fast-balls-deflect-off-bodies` reachability
+predicate as still open, with the branch "red by design" on **two** predicates. On this tree it is red on
+**one**. The test exists (`MatchEngineShotOutcomeTests.cs:20`), the quarantine is empty, and it appears in
+neither the failed nor the skipped list. Several main-line commits have landed since C1 drove it to zero —
+`ERR-010-002` changed header aim, and therefore ball trajectories, which is the plausible route — but this
+run establishes only the *outcome*, not the cause, and the entry is corrected to that and no further.
+
+This matters for W2 beyond bookkeeping: a landing that adds a possession-loss mechanism has to be able to
+tell its own regressions from inherited red, and "the branch is red on two predicates" would have hidden
+one.
+
 **W1's owed measurement is discharged in the same session** — `TD_GK_DIAGNOSTIC=1 dotnet test -c Release
 --filter GkRushDiagnostic` (`gk-rush-trigger-design.md` §6). W1 changes the near-goal contact geometry
 any tackle model would later be tuned against, and its instrument has never executed.
@@ -223,6 +244,23 @@ this class.
     So four copies already exist by design and a fifth is sanctioned. The real observation is that
     **four sanctioned copies is the point at which the shared helper stops being hypothetical**; that is
     a `deterministic-sim` item, recorded here and deliberately not bundled into a wiring landing.
+
+---
+
+### 5.1 Two council unknowns, resolved by grep
+
+- **`DOMAIN_TAG_DEFENSIVE_AI = 0x1A` has no draw site anywhere in `src/`.** The tag is allocated
+  (`DeterministicSimConstants.cs:105`) and already `[CROSS]`-mirrored into #14's own catalogue
+  (`DefensiveAIConstants.cs:54` `DomainTagDefensiveAI`), and #14's own determinism test T-DA-DET-005 is
+  `Assert.Ignore`d pending exactly this (*"activate when `DOMAIN_TAG_DEFENSIVE_AI` (0x1A) RNG draws are
+  live"*). So a tackle draw would be its **first** draw site — legitimate, requiring no new allocation,
+  and it un-ignores a test that has been waiting for it. Per the ERR-041-002 posture, do **not** also
+  allocate a subsystem ordinal.
+- **`TackleIntentRequest` is not in the per-tick digest, and #14 says it must be.** Before this
+  landing the type had **zero** references anywhere in `src/match-engine/` or `src/deterministic-sim/`,
+  while #14 §4.6 / XC-014-020 / XC-014-024 declare it digest-load-bearing. That is a pre-existing
+  spec-vs-code divergence which W2 makes material rather than creates, and it belongs in the
+  `ERR-014-006` filing alongside the KD-6 delegation.
 
 ---
 
