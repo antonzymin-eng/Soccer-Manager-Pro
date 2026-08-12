@@ -18,9 +18,17 @@
 //           inert (wiring backlog §3 C1, retracted in place). The backlog's own §1.1 asks for exactly
 //           this class of firing-rate measurement and books it as W12.
 //
-//           The three separation bands are reported side by side deliberately: #14's 3 m radius is a
-//           DECISION radius, a challenge is a contact event, and picking the contact radius is a
-//           design decision this instrument exists to inform rather than pre-empt.
+//           A zero has to arrive with its cause attached, because three unrelated things produce one
+//           and they want opposite fixes: nobody is ever near the carrier (a positioning problem
+//           upstream of W2); somebody is, but he is the primary presser, whom #14 §3.2's FR-DA-010
+//           rule excludes from the HOLD_SHAPE pool — so the player #13 sends AT the ball is by
+//           construction the one who cannot produce tackle intent; or a pool-eligible agent is near
+//           him and #14 still declines to COMMIT. Each has its own counter.
+//
+//           Reported per DEFENDING team and never pooled (ERR-008-002 — three home/away asymmetry
+//           defects shipped here because every fixture used the home team), and in POSSESSION
+//           EPISODES rather than strides, since a 10 Hz stride count over ~54 000 strides measures
+//           the sampling rate and is not comparable with football's per-90 figures.
 //
 //           Asserts nothing (the ERR-030-014 convention) — pinning a measured-but-wrong number turns
 //           a defect into a contract. Acceptance predicates live in scenarios, not here.
@@ -71,12 +79,26 @@ namespace TacticalDirector.MatchEngine
                 + Inv($"commitCoverageFloor={DefensiveAIConstants.TackleCommitCoverageFloor}  ")
                 + Inv($"jockeyAngle={DefensiveAIConstants.TackleJockeyAngleRad:F2} rad"));
             report.AppendLine();
-            report.AppendLine("total      : #14 TackleIntentRequests produced (all modes), counted once");
-            report.AppendLine("             per intent per 10 Hz stride");
-            report.AppendLine("commit     : of those, Mode == Commit (CoverageDepth >= floor, not last man)");
-            report.AppendLine("onCarrier  : intents whose TargetEntityId IS the current ball holder");
-            report.AppendLine("cmt+car    : both — the population a wired tackle could act on at all");
-            report.AppendLine("<=2m / <=1m: of cmt+car, the tackler-to-carrier separation");
+            report.AppendLine("Counted in POSSESSION EPISODES, not strides: at 10 Hz a match is ~54 000");
+            report.AppendLine("strides, so a stride count measures the sampling rate, not the football.");
+            report.AppendLine();
+            report.AppendLine("episodes : spells in which the OTHER team held the ball (this team defending)");
+            report.AppendLine("<=3m     : of those, episodes where any outfielder of this team came within");
+            report.AppendLine("           #14's own TackleEligibleRadiusM of the carrier");
+            report.AppendLine("<=2m/1.5m: the same, at two tighter bands — the contact radius a wired tackle");
+            report.AppendLine("           would use is a design decision this instrument informs, so the");
+            report.AppendLine("           bands are reported rather than one being picked here");
+            report.AppendLine("poolElig : of the <=3m episodes, those where the nearby man was HOLD_SHAPE-");
+            report.AppendLine("           eligible — the only population #14 can produce tackle intent for");
+            report.AppendLine("presser  : of the <=3m episodes, those where he carried a #13 press role.");
+            report.AppendLine("           FR-DA-010 excludes exactly these from the pool, so an episode here");
+            report.AppendLine("           and NOT in poolElig is a challenge the current design forbids");
+            report.AppendLine("intent   : episodes with >=1 tackle intent naming the carrier");
+            report.AppendLine("COMMIT   : of those, >=1 in Commit mode — the population a wired tackle,");
+            report.AppendLine("           gated as W2 proposes, could act on at all");
+            report.AppendLine("ballGap  : episodes where the CARRIER was ever >1 m from the ball he holds.");
+            report.AppendLine("           Possession is a flag, not a kinematic constraint (backlog W6), so");
+            report.AppendLine("           tackler-to-carrier and tackler-to-BALL are different distances");
             report.AppendLine();
 
             foreach (ulong seed in Seeds)
@@ -84,17 +106,20 @@ namespace TacticalDirector.MatchEngine
                 RunMatch(report, seed);
             }
 
-            report.AppendLine("Reading it:");
-            report.AppendLine("  * cmt+car == 0 => W2 as specified cannot fire at all: #14 never aims a");
-            report.AppendLine("    COMMIT at the man on the ball, and wiring the chain unchanged would");
-            report.AppendLine("    land dead code on top of dead code. The gate would then have to widen");
-            report.AppendLine("    (any mode, or any nearby opponent) and that is a #14 design question,");
-            report.AppendLine("    not an engine one.");
-            report.AppendLine("  * cmt+car large but <=1m ~ 0 => the intent exists but never at contact");
-            report.AppendLine("    range; the challenge would need a pursuit step, not just a draw.");
-            report.AppendLine("  * onCarrier >> cmt+car => the carrier IS being marked but COMMIT is being");
-            report.AppendLine("    refused — the CoverageDepth floor or the last-man override is the bound,");
-            report.AppendLine("    and both are #14 [GT]s frozen under KD-W1.");
+            report.AppendLine("Reading it — a zero must arrive with its cause attached:");
+            report.AppendLine("  * COMMIT == 0 and <=3m ~ 0  => nobody is ever near the man on the ball.");
+            report.AppendLine("    W2 is dead UPSTREAM, at positioning; wiring the chain changes nothing.");
+            report.AppendLine("  * COMMIT == 0, <=3m large, poolElig ~ 0, presser large => the only player");
+            report.AppendLine("    near the carrier is the one #13 sent at him, and FR-DA-010 excludes him");
+            report.AppendLine("    from the pool by construction. Then the tackle producer belongs in #13,");
+            report.AppendLine("    or #14's pool exclusion is wrong for tackles — a SPEC question, not an");
+            report.AppendLine("    engine one, and not something a call site may decide by itself.");
+            report.AppendLine("  * COMMIT == 0, poolElig large, intent ~ 0 => MarkAssigner is not marking");
+            report.AppendLine("    the carrier. It never reads the ball, so this is the expected shape.");
+            report.AppendLine("  * intent large, COMMIT == 0 => the CoverageDepth floor or the last-man");
+            report.AppendLine("    override is the bound; both are #14 [GT]s frozen under KD-W1.");
+            report.AppendLine("  * ballGap large => calibrate the contact gate on the distance the");
+            report.AppendLine("    mechanism will actually use, and make this instrument report that one.");
 
             UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false;
             TestContext.WriteLine(report.ToString());
@@ -111,14 +136,36 @@ namespace TacticalDirector.MatchEngine
                 engine.RunTick();
             }
 
-            var c = engine.TestOnly_TackleIntentCensus;
+            // Bank the episode still open at the final whistle, or the census is short by one.
+            engine.TestOnly_FinalizeTackleCensus();
 
             report.AppendLine(
                 Inv($"seed 0x{seed:X16}   final {engine.HomeScore}-{engine.AwayScore}"));
-            report.AppendLine("  total | commit | onCarrier | cmt+car | <=2m | <=1m");
             report.AppendLine(
-                Inv($"  {c.Total,5} | {c.Commit,6} | {c.OnCarrier,9} | {c.CommitOnCarrier,7} | ")
-                + Inv($"{c.CommitOnCarrierWithin2M,4} | {c.CommitOnCarrierWithin1M,4}"));
+                "  def | episodes | <=3m | <=2m | <=1.5m | poolElig | presser | intent | COMMIT | ballGap");
+
+            // Reported per DEFENDING team and never pooled: the coverage-depth "goal-side" term and
+            // LastManDetector.DefendsX0 are team-relative, and three home/away asymmetry defects have
+            // shipped in this tree because a fixture only ever used the home team (ERR-008-002).
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                TackleIntentCensus c = engine.TestOnly_TackleCensus(t);
+                report.AppendLine(
+                    Inv($"   {t}  | {c.DefendEpisodes,8} | {c.EpisodesWithin3M,4} | {c.EpisodesWithin2M,4} | ")
+                    + Inv($"{c.EpisodesWithin1P5M,6} | {c.EpisodesPoolEligibleWithin3M,8} | ")
+                    + Inv($"{c.EpisodesPresserWithin3M,7} | {c.EpisodesIntentOnCarrier,6} | ")
+                    + Inv($"{c.EpisodesCommitOnCarrier,6} | {c.EpisodesCarrierBallGapOverThreshold,7}"));
+            }
+
+            report.AppendLine("  mode split over on-carrier intents (strides, ratio only — NOT a per-90 rate):");
+            for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+            {
+                TackleIntentCensus c = engine.TestOnly_TackleCensus(t);
+                report.AppendLine(
+                    Inv($"   {t}  | allIntents={c.StrideIntentsTotal}  onCarrier: ")
+                    + Inv($"COMMIT={c.StrideOnCarrierCommit} Jockey={c.StrideOnCarrierJockey} ")
+                    + Inv($"Hold={c.StrideOnCarrierHold}"));
+            }
             report.AppendLine();
         }
 
