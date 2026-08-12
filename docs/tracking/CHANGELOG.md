@@ -12,7 +12,66 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 11, 2026, later same day (**Owner call formally recorded: hold
+> **Last Updated:** August 12, 2026 (**Roadmap A4a RAN — the round-resolution quick-sim is
+> calibrated against the engine for the first time, and both KD-8 acceptance bars are recorded FAILED
+> for two measured reasons that are not fit failures.**) KD-8 **Step 0 PASSED** on the current tree —
+> strong-at-home mean margin **+4.000**, strong-away **−3.500**, upsets present (the July-28 record was
+> +7.100 / −4.700, so the extremes have converged as the engine's goal rate fell). Corpus: **198 real
+> 90-minute `MatchEngine` matches** over 11 `dSquad` buckets × 18, ~90 s/match, four processes, ~1.4 h
+> — inside C1a's ~9 h budget. Least-squares fit: **`QuickSimBaseGoals` 1.35 → 1.2325,
+> `QuickSimGoalRatingSlope` 0.35 → 0.2162, `QuickSimHomeAdvantageRating` 0.30 → 0.4996**; the three
+> constants had carried a "provisional, not fitted" warning at their own declaration since #30 T2 and
+> no longer do. **Two findings, both filed and both left as owner decisions.** **`ERR-030-033` — KD-8's
+> ±0.25 per-bucket bar is below the sampling error of the corpus KD-8 itself sizes.** At ~18/bucket a
+> bucket mean carries a standard error of 0.135–0.633 and **15 of 22 bucket-sides exceed the whole
+> bar**, so a perfectly correct model scored against a re-run of the same corpus would also fail;
+> resolving ±0.25 needs n ≈ 770/bucket ≈ 210 h against a budgeted ~9 h. The tolerance and the sample
+> size were chosen independently and never checked against each other, which is why three AR passes on
+> that note read the bar as a statement about the model. **`ERR-030-034` — KD-7's Poisson shape cannot
+> express what the engine does.** Poisson fixes variance = mean; the engine is over-dispersed at
+> **z = +5.40** (mean var/mean 1.395, 19 of 22 bucket-sides above 1), so it produces more blowouts and
+> shut-outs and **far fewer draws** — 19.2% against the model's 26.8% at `dSquad ≈ 0`, most of the
+> 7.6 pp W/D/L miss. A second-moment gap that no value of three mean-shaping parameters closes, and
+> **the surviving half of roadmap risk row 1**. Neither was "fixed": widening a bar to fit its own
+> result stops it being a bar (and there is a standing owner ruling against exactly that move, the
+> August 11 close-chance call one entry below), and changing the distribution family moves persisted
+> season state, since the scoreline reaches `LeagueTable` and `SeasonStateCodec` serializes it. **The
+> corpus is committed, so a re-fit against a new family costs seconds rather than the run.**
+> **Measured in passing, and nothing was tracking it: the engine's goal rate is now 3.09/match** —
+> against 3.7 recorded August 3, 15.3 in July, and football's ~2.7. The §5.Z chain has taken the
+> engine *past* football's rate rather than to it; by KD-8's own rule that is a re-capture trigger the
+> next time it moves. **Also landed:** the harness gained a **sample-window** knob
+> (`TD_CALIBRATION_SAMPLE_FROM`) so one bucket can be split across processes — KD-8 called the run
+> parallelisable across buckets, but its acceptance bar lives at a *single* bucket, which could
+> therefore only be deepened serially — with locks that a window is exactly the contiguous plan's
+> slice (seeds **and** roster pairings, both keyed off the absolute index) and that adjacent windows
+> tile without overlap; the fitter now emits per-bucket standard errors and the pooled dispersion test,
+> so a FAIL verdict is interpretable instead of merely reported, plus `--wdl-csv`, which deepens the
+> acceptance bucket **without** feeding those rows to the sample-weighted objective; and
+> `RoundResolutionFitLockTests` pins the three constants, the per-bucket table over a fixed
+> 4000-fixture sweep, grid-wide monotonicity, and home advantage isolated at `dSquad = 0` — the lock
+> records the **achieved** 0.90 tolerance rather than the unmet ±0.25, so a future improvement tightens
+> a real number instead of re-flying a claim. **Two methodology properties were verified rather than
+> assumed, and both underpin the whole run:** a slice re-run in isolation reproduced its rows
+> byte-for-byte (checked before committing the hours, not after), and the ±6 buckets run split across
+> two processes reproduced the sanctioned `Pilot_Extreme` driver's own 20 rows **exactly**. **One
+> process error, recorded:** a rebuild was run while a set of deepening slices was mid-flight, swapping
+> assemblies under live test processes — this project's recorded gate-invalidation class (AR pass 9,
+> `spec-error-log.md` v1.90). Those slices were **killed and re-run clean** rather than reasoned about;
+> the 198-match corpus and the pilot predate every edit and were never at risk.
+
+> **GATE (whole tree, this branch, August 12, 2026): build 0 errors; 31 of 32 suites green;
+> `SeasonSave.Tests` **402 passed / 0 failed / 3 skipped** (the fitted constants moved no existing
+> assertion) and `MatchEngine.Tests` **451 / 1 / 10`.** The single failure is
+> `sim_match_engine_close_chance` at `meanCosine = −0.165` (bound −0.16) and `goalwardShare = 0.407`
+> (bound 0.42) — **byte-identical to the values already recorded on `main`**, and the band the owner
+> ruled on August 11, 2026 to **hold red rather than rebaseline a third time**
+> (`close-chance-creation-design.md` §10.9 item 6). It is not reachable from this change: `match-engine`'s
+> asmdef does not reference `TacticalDirector.SeasonSave` at all, so the round-resolution constants are
+> structurally invisible to the engine — verified, not assumed. `python3 tools/recurring-defect-lint.py
+> --repo .` reports **0 ERROR** (125 WARN / 27 INFO, the unchanged baseline).
+
+> **Last Updated (prior):** August 11, 2026, later same day (**Owner call formally recorded: hold
 > `sim_match_engine_close_chance` red, do not rebaseline a third time.**) `close-chance-creation-design.md`
 > §10.9 (the `DRIBBLE_GOAL_DIR_MIN_MODIFIER` falsifier, v2.1) had already reached a disposition — hold
 > red, blame the population C1 changed rather than the locked DRIBBLE mechanism, queue for the KD-W1

@@ -18,6 +18,47 @@ history by the original convention; they were not merged.
 
 ---
 
+- **A4a round-resolution calibration — the corpus is captured and the three `[GT]`s are fitted, but BOTH KD-8 acceptance bars FAILED, and each failure is an owner decision rather than a fit to redo (`ERR-030-033`, `ERR-030-034`)** — *opened August 12, 2026 (the A4a run).*
+  The run itself is complete and its outputs are committed: KD-8 **Step 0 PASSED** on the current tree
+  (strong-at-home mean margin **+4.000**, strong-away **−3.500**, upsets present), the corpus is **198
+  real 90-minute `MatchEngine` matches** over 11 `dSquad` buckets at 18 each (~90 s/match, four
+  processes, ~1.4 h — inside C1a's ~9 h budget), and the least-squares fit moved
+  **`QuickSimBaseGoals` 1.35 → 1.2325, `QuickSimGoalRatingSlope` 0.35 → 0.2162,
+  `QuickSimHomeAdvantageRating` 0.30 → 0.4996**. Those three constants had carried a
+  "provisional, not fitted" warning at their own declaration since #30 T2; they no longer do.
+  `RoundResolutionFitLockTests` pins them, the per-bucket table over a fixed sweep, grid-wide
+  monotonicity, and home advantage isolated at `dSquad = 0`.
+
+  **What is open is the acceptance verdict, and it is open in two independent ways.**
+
+  **(1) `ERR-030-033` — KD-8's ±0.25 per-bucket bar cannot be met at the depth KD-8 itself specifies.**
+  A bucket's mean is an estimate, and at ~18 matches its standard error runs 0.135–0.633; **15 of the
+  22 bucket-sides have a standard error larger than the entire bar**. A perfectly correct model
+  re-scored against a re-run of this same corpus would fail it too, so the bar is not currently a
+  statement about the model at all. Reaching ±0.25 as a *resolvable* bar needs n ≈ 770/bucket — about
+  210 h of engine time against a budgeted ~9 h. **Owner decision: re-specify the bar** (and/or state it
+  against the corpus's measured precision). Deliberately NOT closed by widening the tolerance to
+  whatever this run achieved — that stops it being a bar, and there is a standing owner ruling against
+  exactly that move (`close-chance-creation-design.md` §10.9 item 6, August 11, 2026).
+
+  **(2) `ERR-030-034` — the model's distribution family cannot express the engine's spread.** KD-7
+  resolves a fixture as two Poisson draws, and Poisson fixes variance = mean. The engine is
+  **over-dispersed**: mean `var/mean` **1.395** across 22 bucket-sides, 19 of 22 above 1, pooled
+  `chi2 = 521.7` on 374 dof, **z = +5.40**. The visible consequence is draws: at `dSquad ≈ 0` the
+  corpus draws **19.2%** against the fitted model's **26.8%** — the whole of the 7.6 pp W/D/L miss, measured at n = 198.
+  No value of three mean-shaping parameters closes a second-moment gap. **This is the surviving half of
+  roadmap risk row 1** — a quick-sim league table will show systematically more draws and fewer decisive
+  results than the same fixtures played through the engine. **Owner decision: whether to change the
+  family** (negative-binomial / Poisson-gamma, or a draw-inflated bivariate form — each keeps the keyed
+  one-uniform-per-side discipline but needs its quantile pinned by name for KD-7's own stated reason,
+  and the scoreline is persisted through `LeagueTable`/`SeasonStateCodec`, so this moves save state).
+  **The corpus is committed, so a re-fit against a new family costs seconds, not the run.**
+
+  **Also recorded, not a blocker: the engine's goal rate is now 3.09/match** — against 3.7 measured
+  August 3, 15.3 in July, and football's ~2.7. The §5.Z chain has taken the engine *past* football's
+  rate rather than to it. Nothing was tracking this, and it is a re-capture trigger for this corpus by
+  KD-8's own rule the moment it moves again.
+
 - **Football-judgment proxy review — 32 itemized findings still open across 24 specs; the §6 doctrine governs every fix; ERR-008-020 (template), ERR-008-019 (the founding long-shot cliff) and ERR-008-021 (the shot-lane follow-up) LANDED** — *opened August 4, 2026 (review + doctrine + template landing all same day); ERR-008-019 and ERR-008-021 landed August 5, 2026.*
   **ERR-008-021 LANDED August 5, 2026 — the §6.4 shot-lane deferral, discharged.** The geometry the
   template fix deliberately left behind turned out to carry **both** of the pass lane's defects, and

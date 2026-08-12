@@ -357,6 +357,27 @@ where home advantage should show up as an asymmetry, so it is the bucket that ac
 fitted `HomeAdvantageRating`). Both are recorded in the artifact
 so a later re-fit is measured against the same bar.
 
+> **⚠️ BOTH BARS WERE MISSED WHEN A4a ACTUALLY RAN (August 12, 2026), and neither miss is a fit
+> failure. Read `round-resolution-corpus.md` before re-using either number.**
+>
+> - **The ±0.25 bar is not measurable at the depth this same section specifies (`ERR-030-033`).** At
+>   ~18 matches per bucket a bucket mean carries a standard error of 0.135–0.633, and **15 of 22
+>   bucket-sides have a standard error larger than the entire bar**. The tolerance and the sample
+>   size were chosen independently and never checked against each other; as written, a perfectly
+>   correct model scored against a re-run of the same corpus would also fail. Resolving ±0.25 needs
+>   n ≈ 770/bucket — ~210 h of engine time against a budgeted ~9 h — so this is a bar to re-specify,
+>   not a run to re-size. The ±5 pp W/D/L bar has the same defect in milder form: at n = 18 the
+>   corpus draw share carries a ~7 pp standard error, so A4a deepened that one bucket specifically in
+>   order to evaluate it.
+> - **The model shape cannot express what the corpus shows (`ERR-030-034`).** KD-7 draws Poisson, whose
+>   variance equals its mean by construction; the engine is over-dispersed at **z = +5.40** (mean
+>   `var/mean` 1.395, 19 of 22 bucket-sides above 1), which shows up as far fewer draws than the model
+>   can produce. No value of the three fitted parameters closes a second-moment gap.
+>
+> Both are recorded, deliberately **not** fixed by A4a: widening a bar to fit its own result stops it
+> being a bar, and changing the distribution family is a KD-7 decision that moves persisted season
+> state. The corpus is committed, so a re-fit against a new family costs seconds rather than hours.
+
 ### KD-9 — What A3 hands #30: a `League` that is itself the `ISquadProvider`.
 
 ```

@@ -1,6 +1,7 @@
 // File:     src/season-save/SeasonLoopConstants.cs
 // Created:  2026-07-25
 // Modified: 2026-07-27
+// Modified: 2026-08-12 (A4a: the three round-resolution [GT]s FITTED against the engine corpus)
 // Author:   —
 // Spec:     Season & Competition Loop #30 Appendix A (constant catalogue); §3.2 (points);
 //           §3.1.1 (permutation seed); §3.5 (boundary roll); Code Standards #20
@@ -165,25 +166,35 @@ namespace TacticalDirector.SeasonSave
 
         // ── Round-resolution model (§3.4.1 / FR-SN-013a; league-bootstrap KD-7) ──────────────────
         //
-        // CALIBRATION STATUS: **UNCALIBRATED — these are provisional, not fitted.** Roadmap item A4a is
-        // supposed to fit the three shape parameters against an engine-simulated corpus (KD-8), and
-        // A4a's Step 0 pilot RAN on 2026-07-26 and REFUSED to proceed: all 20 engine matches finished
-        // 0–0 at a measured rating differential of ±6, because a Stage-0 match never puts the ball in
-        // motion at all (ERR-030-014 — see docs/tracking/round-resolution-corpus.md for the evidence and
-        // the root cause). Fitting against that corpus would have fitted three parameters to a table of
-        // zeros, which is precisely the outcome Step 0 exists to prevent.
+        // CALIBRATION STATUS: **FITTED against the engine, 2026-08-12 (roadmap A4a).** KD-8's Step 0
+        // pilot PASSED on the current tree (strong-at-home mean margin +4.000, strong-away −3.500 over
+        // 20 keyed matches), and the corpus behind these three numbers is 198 real 90-minute MatchEngine
+        // matches over an 11-bucket dSquad grid at 18 per bucket, least-squares fitted by
+        // tools/round-resolution-fit.py. Evidence, provenance and raw rows:
+        // docs/tracking/round-resolution-corpus.md. The superseded provisional values were 1.35 / 0.35 /
+        // 0.30 — football-plausible guesses that made no claim to agree with the engine.
         //
-        // So the values below are chosen to be FOOTBALL-PLAUSIBLE rather than engine-matched: ~1.35 goals
-        // per side at parity is close to the real-world top-division rate, the slope gives a ±6 rating gap
-        // roughly a 2:1 expected-goals edge, and home advantage is worth about a third of a rating point.
-        // They make the league table behave sensibly for a human reading it; they do NOT yet claim to
-        // agree with what the engine would produce. Re-run A4a and re-pin these once the engine can play
-        // a match — do not hand-tune them into looking calibrated.
+        // **THE FIT DOES NOT MEET KD-8's ACCEPTANCE BARS, and that is recorded rather than papered over.**
+        // Two causes, both measured, neither fixable by re-fitting these constants:
+        //   1. The ±0.25 per-bucket bar is below the corpus's own noise floor at 18 samples/bucket — 15 of
+        //      22 bucket-sides have a standard error on their own mean larger than 0.25 — so no model,
+        //      including a perfect one, could be SHOWN to satisfy it at that depth (ERR-030-033).
+        //   2. The engine's scorelines are over-dispersed relative to Poisson (mean var/mean 1.395,
+        //      pooled z = +5.4), and KD-7's model IS a Poisson draw, whose variance equals its mean by
+        //      definition. So the engine's spread — more blowouts, more shut-outs, fewer draws — is
+        //      outside this model's FAMILY, not merely off in its coefficients (ERR-030-034).
+        // These values are therefore the best available fit of the specified model shape, and are a
+        // strict improvement on guesses; they are not a claim that the quick-sim reproduces the engine's
+        // score distribution. Do not hand-tune them into looking calibrated — re-run A4a.
+        //
+        // RE-CAPTURE TRIGGER (KD-8): the corpus measures what the engine does at ONE commit. Anything
+        // that moves scoring invalidates the fit rather than merely aging it. The capture commit and
+        // SNAPSHOT_SCHEMA_VERSION are recorded in the artifact above.
 
         /// <summary>[GT] Expected goals per side at a zero <c>edge</c> — the round-resolution model's
         /// scale parameter (league-bootstrap KD-7). Config key <c>[season-save] QuickSimBaseGoals</c>.</summary>
         public static readonly float QuickSimBaseGoals =
-            Config.GetFloat("season-save", "QuickSimBaseGoals", 1.35f);
+            Config.GetFloat("season-save", "QuickSimBaseGoals", 1.2325f);
 
         /// <summary>
         /// [GT] How steeply one point of rating advantage bends the expected goals — the exponent scale in
@@ -192,7 +203,7 @@ namespace TacticalDirector.SeasonSave
         /// Config key <c>[season-save] QuickSimGoalRatingSlope</c>.
         /// </summary>
         public static readonly float QuickSimGoalRatingSlope =
-            Config.GetFloat("season-save", "QuickSimGoalRatingSlope", 0.35f);
+            Config.GetFloat("season-save", "QuickSimGoalRatingSlope", 0.2162f);
 
         /// <summary>
         /// [GT] Home advantage expressed in the SAME units as a rating difference, added to
@@ -202,7 +213,7 @@ namespace TacticalDirector.SeasonSave
         /// Config key <c>[season-save] QuickSimHomeAdvantageRating</c>.
         /// </summary>
         public static readonly float QuickSimHomeAdvantageRating =
-            Config.GetFloat("season-save", "QuickSimHomeAdvantageRating", 0.30f);
+            Config.GetFloat("season-save", "QuickSimHomeAdvantageRating", 0.4996f);
 
         /// <summary>[GT] Floor on a side's expected goals — a safety clamp, deliberately NOT fitted
         /// (league-bootstrap KD-7). Config key <c>[season-save] QuickSimLambdaMin</c>.</summary>
@@ -261,4 +272,15 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | loud instead of wrapping to ~4.29e9) and the two board            |
 // |         |            |        | job-security deltas, the missed one charged PER PLACE SHORT so     |
 // |         |            |        | missing by one is not the same conversation as finishing bottom.   |
+// | 1.4     | 2026-08-12 | —      | **Roadmap A4a — the three round-resolution [GT]s are FITTED, not  |
+// |         |            |        | provisional.** QuickSimBaseGoals 1.35 -> 1.2325, GoalRatingSlope  |
+// |         |            |        | 0.35 -> 0.2162, QuickSimHomeAdvantageRating 0.30 -> 0.4996, by    |
+// |         |            |        | least squares over 198 real MatchEngine matches (11 dSquad        |
+// |         |            |        | buckets x 18). KD-8 Step 0 PASSED first (+4.000 / -3.500 margins).|
+// |         |            |        | The CALIBRATION STATUS block above is rewritten accordingly and   |
+// |         |            |        | records the FAIL verdict against KD-8's two acceptance bars with  |
+// |         |            |        | its two measured causes (ERR-030-033 the bar is below the corpus's|
+// |         |            |        | own noise floor at 18/bucket; ERR-030-034 the engine is Poisson-  |
+// |         |            |        | over-dispersed at z=+5.4, which is a model-FAMILY gap no re-fit   |
+// |         |            |        | of these three closes). Locked by RoundResolutionFitLockTests.    |
 #endregion
