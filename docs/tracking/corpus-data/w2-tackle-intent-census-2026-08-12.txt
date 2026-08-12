@@ -1,0 +1,60 @@
+=== Tackle-intent census (wiring backlog W2) ===
+ticksPerMatch=324000  seeds=3  eligibleRadius=3.0 m  commitCoverageFloor=1  jockeyAngle=0.35 rad
+
+Counted in POSSESSION EPISODES, not strides: at 10 Hz a match is ~54 000
+strides, so a stride count measures the sampling rate, not the football.
+
+episodes : spells in which the OTHER team held the ball (this team defending)
+<=3m     : of those, episodes where any outfielder of this team came within
+           #14's own TackleEligibleRadiusM of the carrier
+<=2m/1.5m: the same, at two tighter bands — the contact radius a wired tackle
+           would use is a design decision this instrument informs, so the
+           bands are reported rather than one being picked here
+poolElig : of the <=3m episodes, those where the nearby man was HOLD_SHAPE-
+           eligible — the only population #14 can produce tackle intent for
+presser  : of the <=3m episodes, those where he carried a #13 press role.
+           FR-DA-010 excludes exactly these from the pool, so an episode here
+           and NOT in poolElig is a challenge the current design forbids
+intent   : episodes with >=1 tackle intent naming the carrier
+COMMIT   : of those, >=1 in Commit mode — the population a wired tackle,
+           gated as W2 proposes, could act on at all
+ballGap  : episodes where the CARRIER was ever >1 m from the ball he holds.
+           Possession is a flag, not a kinematic constraint (backlog W6), so
+           tackler-to-carrier and tackler-to-BALL are different distances
+
+seed 0x0F1E2D3C4B5A6978   final 0-3
+  def | episodes | <=3m | <=2m | <=1.5m | poolElig | presser | intent | COMMIT | ballGap
+   0  |      668 |  326 |  249 |    192 |      326 |       0 |    108 |     77 |      76
+   1  |      680 |  306 |  226 |    178 |      306 |       0 |     82 |     50 |      67
+  mode split over on-carrier intents (strides, ratio only — NOT a per-90 rate):
+   0  | allIntents=3057  onCarrier: COMMIT=325 Jockey=23 Hold=68
+   1  | allIntents=2271  onCarrier: COMMIT=107 Jockey=17 Hold=81
+
+seed 0x00000000D1A6D05E   final 2-5
+  def | episodes | <=3m | <=2m | <=1.5m | poolElig | presser | intent | COMMIT | ballGap
+   0  |      715 |  308 |  225 |    170 |      307 |       3 |    101 |     67 |     101
+   1  |      622 |  317 |  230 |    186 |      317 |       0 |    108 |     68 |      69
+  mode split over on-carrier intents (strides, ratio only — NOT a per-90 rate):
+   0  | allIntents=2567  onCarrier: COMMIT=155 Jockey=33 Hold=153
+   1  | allIntents=1890  onCarrier: COMMIT=163 Jockey=33 Hold=89
+
+seed 0x5EED000000000003   final 2-1
+  def | episodes | <=3m | <=2m | <=1.5m | poolElig | presser | intent | COMMIT | ballGap
+   0  |      733 |  313 |  229 |    180 |      313 |       0 |    100 |     73 |      95
+   1  |      672 |  291 |  213 |    167 |      291 |       0 |     84 |     57 |      82
+  mode split over on-carrier intents (strides, ratio only — NOT a per-90 rate):
+   0  | allIntents=2415  onCarrier: COMMIT=144 Jockey=35 Hold=97
+   1  | allIntents=2093  onCarrier: COMMIT=133 Jockey=26 Hold=77
+
+Reading it — a zero must arrive with its cause attached:
+  * COMMIT == 0 and <=3m ~ 0  => nobody is ever near the man on the ball.
+    W2 is dead UPSTREAM, at positioning; wiring the chain changes nothing.
+  * COMMIT == 0, <=3m large, poolElig ~ 0, presser large => the only player
+    near the carrier is the one #13 sent at him, and FR-DA-010 excludes him
+    from the pool by construction. Then the tackle producer belongs in #13,
+    or #14's pool exclusion is wrong for tackles — a SPEC question, not an
+    engine one, and not something a call site may decide by itself.
+  * COMMIT == 0, poolElig large, intent ~ 0 => MarkAssigner is not marking
+    the carrier. It never reads the ball, so this is the expected shape.
+  * intent large, COMMIT == 0 => the CoverageDepth floor or the last-man
+    override is the bound; both are #14 [GT]s frozen under KD-W1.

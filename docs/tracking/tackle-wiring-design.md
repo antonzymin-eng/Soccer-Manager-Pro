@@ -137,8 +137,60 @@ recorded as holding. Possession here is a **flag, not a kinematic constraint** (
 distances, and a contact gate calibrated against one while the mechanism uses the other is calibrated
 against the wrong quantity.
 
-> **RESULT: NOT YET RUN.** No numbers are recorded here and none are invented. The command is
-> `TD_TACKLE_DIAGNOSTIC=1 dotnet test -c Release --filter TackleIntentDiagnostic`.
+### 3.0 RESULT — measured August 12, 2026
+
+3 seeds × 90 min, both defending teams reported separately (6 team-matches). Per defending team per
+match, means over the six:
+
+| Quantity | Mean | Range | As a share |
+|---|---|---|---|
+| Defending episodes | **681.7** | 622–733 | — |
+| …with an outfielder within 3.0 m of the carrier | **310.2** | 291–326 | 45.5% of episodes |
+| …within 2.0 m | 228.7 | 213–249 | 33.5% |
+| …within 1.5 m | 178.8 | 167–192 | 26.2% |
+| …where that man was HOLD_SHAPE-**pool eligible** | **310.0** | 291–326 | **99.9% of the 3 m episodes** |
+| …where he carried a #13 **press role** | **0.5** | 0–3 | **0.2%** |
+| …with ≥1 tackle intent naming the carrier | 97.2 | 82–108 | 14.3% of episodes |
+| …with ≥1 **COMMIT** naming the carrier | **65.3** | 50–77 | 9.6% of episodes |
+| …where the carrier was ever >1 m from his own ball | 81.7 | 67–101 | 12.0% |
+
+**W2 is a RESOLUTION problem, not a producer problem, and not dead upstream.** Against §3's decision
+table the answer is the last row: `COMMIT` is not merely non-zero, it is **plentiful** — ~65 candidate
+challenges per team per match against football's ~15–17 tackle attempts per team per 90. The gate
+produces roughly **four times** the football rate, so the contact radius, the cooldown and the outcome
+model exist to **select down** from an abundant candidate pool, not to scrape for opportunities. That is
+the comfortable direction to be wrong in, and it is the opposite of C1.
+
+**Two predictions were refuted, and one of them is a finding in its own right.**
+
+**(a) The presser exclusion is not the bound.** §2.4 reasoned — and the evidence advisor agreed — that
+FR-DA-010's exclusion of `PrimaryPress`/`CoverShadow` would starve the tackle producer, since the presser
+is the man sent at the ball. Measured, `poolElig` and the 3 m population are the **same number to within
+one episode in six team-matches** (310.0 vs 310.2), and the presser column is **0.5**. The exclusion
+costs W2 essentially nothing.
+
+But the reason it costs nothing is itself alarming: **a #13 press-role holder is almost never within
+3 m of the man on the ball** — 0.5 episodes out of ~682, on a subsystem whose entire purpose is to send
+someone at the carrier. That is not a W2 defect and W2 must not fix it, but it is a **gate-level
+dormancy signal for #13** of exactly the class the backlog's §1.1 books as **W12**, found here by
+accident, and it is filed to the backlog rather than left in this note.
+
+**(b) `MarkAssigner`'s ball-blindness costs less than §2.4 implied.** It does cost: of the ~310 episodes
+with a pool-eligible defender inside 3 m, only ~97 (31%) produce any intent naming the carrier, because
+the assignment is not made on possession. But ~97 is still ample, and ~65 of those reach `COMMIT`. So
+giving the assignment a ball model is a **fidelity improvement, not a precondition** — and landing it
+inside W2 would be scope creep on a producer that already supplies four times what is needed.
+
+**One number changes a design decision.** `ballGap` is 81.7 episodes (12%): in one defending episode in
+eight the "carrier" is at some point more than a metre from the ball he is recorded as holding. So
+tackler-to-carrier and tackler-to-ball genuinely diverge, and the contact gate must name which one it
+means. Given that a tackle is a challenge **for the ball**, the gate should measure to the ball, and
+this instrument's bands — which measure to the carrier — must be re-read against that before any
+constant is set from them.
+
+> Raw output: `scratchpad/tackle-census2.log`. Command:
+> `TD_TACKLE_DIAGNOSTIC=1 dotnet test --filter TackleIntentDiagnostic --logger "console;verbosity=detailed"`.
+> Note the `--logger` — at default verbosity the instrument runs, passes, and prints nothing.
 
 ### 3.1 The pre-change baseline, measured — and one tracking correction it forces
 
@@ -302,4 +354,5 @@ only. A proposed id is never a reservation — the July 27 wave consumed three.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.1 | 2026-08-12 | — | **The census RAN and answered §3's decision table: W2 is a RESOLUTION problem** — 65.3 COMMIT-on-carrier episodes per defending team per match against football's ~15–17 tackle attempts, so the gate supplies ~4× what is needed and the contact radius / cooldown / outcome model exist to select DOWN. **Two of this note's own predictions refuted:** the FR-DA-010 presser exclusion is not the bound (`poolElig` 310.0 vs the 3 m population's 310.2; presser 0.5) — but a #13 press-role holder being almost never within 3 m of the carrier is a gate-level dormancy signal for #13, filed to the backlog; and `MarkAssigner`'s ball-blindness is a fidelity gap, not a precondition (31% of eligible episodes still yield an intent). `ballGap` 12% forces the contact gate to name whether it measures to the carrier or the BALL. Adds §3.1 (the pre-change baseline, and the measured correction that `sim_match_engine_shot_outcomes` now PASSES — the branch is red on one predicate, not two, and "red on two" would have masked a W2 regression), §5.1 (two council unknowns closed by grep: `DOMAIN_TAG_DEFENSIVE_AI` has no draw site anywhere so a tackle draw is its first and un-ignores #14's T-DA-DET-005; `TackleIntentRequest` is absent from the digest while #14 §4.6/XC-014-020/-024 declare it load-bearing), and §7 item 7 (turnovers cannot be split by cause — `PossessionChangedEvent.Reason` is always the UNSPECIFIED sentinel, so the landing's central claim is currently unmeasurable). One council claim corrected: a local SplitMix64 `Mix` is this project's documented norm, not a parallel-surface defect. |
 | 1.0 | 2026-08-12 | — | Initial. Wiring backlog W2. Records the fourth dead link and the finding that outranks it (no path anywhere dispossesses a controlled carrier); the four pre-implementation council corrections (`ApproachAngle` does not encode from-behind and its XML doc is wrong; `Commit` means "I have cover", not "I will tackle"; the flag is redundant on a won tackle, its real coverage being disrupt-without-winning; the primary presser is structurally excluded from producing tackle intent, and `MarkAssigner` never reads the ball); the census that decides the shape, with a decision table mapping each possible zero to its cause; the ten settled constraints on any resolution; and the ownership question, recorded as an owner decision rather than defaulted into the composition root. Measurement NOT yet run. |
