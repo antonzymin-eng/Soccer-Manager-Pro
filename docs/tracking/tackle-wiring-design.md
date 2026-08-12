@@ -4,10 +4,12 @@
 > **Status:** DESIGN SUPPLEMENT — the same governance class as `match-engine-design.md`. Opens no
 > numbered spec and changes no `SPEC_INDEX.md` row.
 > **Owner document:** `docs/tracking/match-engine-wiring-backlog.md` **W2** (this is that item).
-> **Purpose:** Nothing in this engine has ever made a tackle, and a player in control of the ball
-> cannot be dispossessed by any means at all. This note is the investigation, the defects the
-> investigation surfaced, the measurement that decides the shape of the fix, and the one decision
-> that is the owner's rather than this note's.
+> **Purpose:** Nothing in this engine had ever made a tackle, and a player in control of the ball
+> could not be dispossessed by any means at all. This note is the investigation, the defects it
+> surfaced, the measurements that shaped the fix — including the two that corrected this note's own
+> earlier conclusions — and the landing. **WIRED August 12, 2026** (`ERR-014-006`); the ownership
+> question §4 put to the owner was answered: the outcome model back-propagates into **#14 §3.6.5**,
+> with a fourth outcome, `BALL_LOOSE`, that the owner added.
 
 ---
 
@@ -219,7 +221,75 @@ any tackle model would later be tuned against, and its instrument has never exec
 
 ---
 
-## 4. The decision that is not this note's to take
+## 3.2 WHAT THE LANDING MEASURED, and the two things it corrected in this note
+
+§3.0's conclusion — *"W2 is a RESOLUTION problem, the gate supplies ~4x what is needed"* — was measured
+**to the carrier**. The mechanism reaches for the **ball**. Measured to the ball, the population
+collapses by about an order of magnitude, and §3.0's own `ballGap` row is why:
+
+| Measured at the gate (40 000 ticks, both seeds) | |
+|---|---|
+| Strides where a COMMIT intent named the carrier and the tackler was eligible | **10** and **1** (per seed) |
+| …of those, strides where anyone was within the first 1.5 m contact radius | **1** and **1** |
+| Mean nearest-eligible-challenger distance **to the ball** | **2.20 m** and 0.60 m |
+
+So §3.0's headline stands as a statement about *intent supply* and is **wrong as a statement about
+reachable challenges**. Corrected here rather than quietly restated: the intent is plentiful, the
+geometry is not.
+
+**The obvious widening was tried and rejected on measurement.** Dropping the "his mark target is the
+carrier" gate — acting on any COMMIT intent from a player near the ball — raises the eligible
+population about 14×, and the mean nearest-challenger-to-ball distance goes from 2.2 m to **21–31 m**,
+because those extra intents belong to defenders marking someone else at the far end of the pitch. It
+admits noise, not tackles. The rejection is recorded at the gate in `TryResolveTackle` so it is not
+re-tried by the next reader.
+
+**The contact radius went 1.5 m → 2.5 m, and not to make the count come out.** Fitting a constant to
+make a measurement look right is calibration, which KD-W1 forbids at a wiring pass. It is re-derived
+from what the mode *means*: #14 §3.6.1 defines COMMIT as a **lunge**, and a lunge is the extended-leg
+case #3 §7.2.1 itself describes for the Stage-2 slide tackle (*"compound hitbox (body + leg)"*,
+`ExtendedLegCapsule`). A standing challenge reaches about a metre; a lunging one reaches a body-length
+further. The measurement prompted re-deriving the number; it did not supply it.
+
+**Resulting rate, recorded and NOT tuned:** on the livelier seed, ~10 resolved challenges per 40 000
+ticks of which ~2 are decisive. Extrapolated that is order-of-magnitude ~40 challenges and ~8
+dispossessions per team per 90, against football's ~15–17 tackle attempts and ~9–10 won. The
+dispossession figure is close; the attempt figure is high because most challenges miss. **Both are
+un-calibrated by design** — they are the calibration pass's input.
+
+---
+
+## 3.3 What the wiring surfaced
+
+1. **FM-08 was logging an ordinary event as an error.** `PassExecutor`'s CONTACT-time possession
+   re-check logged `LogError` with the text *"Race condition."* — accurate while an ordering accident
+   between systems was the only way to lose the ball mid-windup, which is what FM-08 was written to
+   catch. A tackle makes it an ordinary football event. Left alone it would put a red line in the log
+   for every successful tackle on a passer, burying real errors — and it is how the defect was found,
+   because the Unity shim's `LogAssert` fails a test on an unexpected `LogError`. Now a `LogWarning`
+   with corrected wording.
+2. **`ContactType.SLIDE_TACKLE` gains its first producer.** Defined in #3 since the collision system
+   was written and produced by nothing; every foul this engine has ever given was published as
+   `FROM_BEHIND` regardless of cause. `FoulCommittedEvent.FoulKind` is meaningful for the first time.
+3. **`Tackling` gains its first consumer anywhere in the tree.** It and `Marking` are canonical #27
+   attributes — loaded, defaulted, serialized, and read by no formula. `Marking` still has none.
+4. **`DOMAIN_TAG_DEFENSIVE_AI` (0x1A) gains its first draw site**, which un-blocks #14's own
+   T-DA-DET-005 — `Assert.Ignore`d since May with the message *"activate when DOMAIN_TAG_DEFENSIVE_AI
+   RNG draws are live"*. Wiring it was not in this pass's scope; the test is now unblocked, not
+   un-ignored.
+5. **The FR-CS-057 recurrence happened in the landing that cites it.** Five new files shipped without
+   a `// Modified:` header field and were caught by `tools/recurring-defect-lint.py` before the commit.
+   Sixth consecutive occurrence of this class; the lint is what stopped it this time.
+
+---
+
+## 4. The decision that was not this note's to take — ANSWERED
+
+> **RESOLVED by owner decision, August 12, 2026: back-propagate into #14**, and add a fourth outcome.
+> Landed as **#14 §3.6.5 Tackle Outcome Resolution** under `ERR-014-006`, with KD-6 revised. The
+> `BALL_LOOSE` outcome is the owner's addition and it is the one that makes the model football rather
+> than bookkeeping — see §3.6.5.2. The reasoning below is preserved as the state of the question when
+> it was asked.
 
 **Who owns the tackle outcome model?** Not a rhetorical question — today nobody does:
 
@@ -354,5 +424,6 @@ only. A proposed id is never a reservation — the July 27 wave consumed three.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.2 | 2026-08-12 | — | **WIRED.** The owner answered §4: the outcome model back-propagates into **#14 §3.6.5** (`ERR-014-006`, KD-6 revised), with a **fourth outcome the owner added — `BALL_LOOSE`**, because won-or-missed cannot express the commonest result of getting a foot in and folding it into a clean win makes every successful challenge a turnover. **§3.2 records the two things the landing corrected in this note:** §3.0's "the gate supplies ~4x what is needed" was measured to the CARRIER, and measured to the BALL — which is what a tackle reaches for — the reachable population collapses ~10x (mean nearest challenger 2.20 m); and the obvious widening (act on any COMMIT intent from a player near the ball) was tried and REJECTED on measurement, since it raises the population 14x while moving the mean challenger distance to 21–31 m, admitting noise rather than tackles. The contact radius went 1.5 → 2.5 m re-derived from COMMIT meaning a *lunge* (#3 §7.2.1's own extended-leg case), explicitly NOT fitted to make the count come out. **§3.3 records five things the wiring surfaced**, including FM-08 logging an now-ordinary event as an error with the text "Race condition" (found because an unexpected LogError fails a suite), `ContactType.SLIDE_TACKLE` and the canonical `Tackling` attribute both gaining their first producer/consumer anywhere in the tree, and the FR-CS-057 recurrence happening in the landing that cites it. `SNAPSHOT_SCHEMA_VERSION` 20 → 21; card-severity draw order moves by design; **no digest invariance claimed**. |
 | 1.1 | 2026-08-12 | — | **The census RAN and answered §3's decision table: W2 is a RESOLUTION problem** — 65.3 COMMIT-on-carrier episodes per defending team per match against football's ~15–17 tackle attempts, so the gate supplies ~4× what is needed and the contact radius / cooldown / outcome model exist to select DOWN. **Two of this note's own predictions refuted:** the FR-DA-010 presser exclusion is not the bound (`poolElig` 310.0 vs the 3 m population's 310.2; presser 0.5) — but a #13 press-role holder being almost never within 3 m of the carrier is a gate-level dormancy signal for #13, filed to the backlog; and `MarkAssigner`'s ball-blindness is a fidelity gap, not a precondition (31% of eligible episodes still yield an intent). `ballGap` 12% forces the contact gate to name whether it measures to the carrier or the BALL. Adds §3.1 (the pre-change baseline, and the measured correction that `sim_match_engine_shot_outcomes` now PASSES — the branch is red on one predicate, not two, and "red on two" would have masked a W2 regression), §5.1 (two council unknowns closed by grep: `DOMAIN_TAG_DEFENSIVE_AI` has no draw site anywhere so a tackle draw is its first and un-ignores #14's T-DA-DET-005; `TackleIntentRequest` is absent from the digest while #14 §4.6/XC-014-020/-024 declare it load-bearing), and §7 item 7 (turnovers cannot be split by cause — `PossessionChangedEvent.Reason` is always the UNSPECIFIED sentinel, so the landing's central claim is currently unmeasurable). One council claim corrected: a local SplitMix64 `Mix` is this project's documented norm, not a parallel-surface defect. |
 | 1.0 | 2026-08-12 | — | Initial. Wiring backlog W2. Records the fourth dead link and the finding that outranks it (no path anywhere dispossesses a controlled carrier); the four pre-implementation council corrections (`ApproachAngle` does not encode from-behind and its XML doc is wrong; `Commit` means "I have cover", not "I will tackle"; the flag is redundant on a won tackle, its real coverage being disrupt-without-winning; the primary presser is structurally excluded from producing tackle intent, and `MarkAssigner` never reads the ball); the census that decides the shape, with a decision table mapping each possible zero to its cause; the ten settled constraints on any resolution; and the ownership question, recorded as an owner decision rather than defaulted into the composition root. Measurement NOT yet run. |
