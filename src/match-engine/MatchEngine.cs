@@ -1,6 +1,7 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
 // Modified: 2026-08-04 (ERR-008-020: SetAllAgentAttributes(_dtAttrs) wired per DecisionTree at boot — the §3.1.3.3 pass-lane attribute view)
+// Modified: 2026-08-12 (wiring backlog W2 instrument: the tackle-intent census — CensusTackleIntents + six WoodworkStrikes-class counters; observation only, no gameplay path, not serialized)
 // Modified: 2026-08-05 (CI fix — RestoreFromSnapshot step 3b ResyncGkAgentIdsAfterRestore: the W1 AR-2 occupant-change ResetSlot fired on the boot-vs-restored flag delta and wiped just-restored #11 state; see gk-rush-trigger-design.md v1.4)
 // Modified: 2026-07-27  (shot-outcome pass: live shot pressure query — ComputeOpponentPressureScalar)
 // Modified: 2026-07-27  (B3: the #37 KD-7 read-only per-tick ledger tap)
@@ -311,6 +312,20 @@ namespace TacticalDirector.MatchEngine
         // #11's own already-serialized _rushIntentActive, NOT this counter — the whole point of
         // reading #11's flag is that the engine keeps no rush state of its own.
         private int _rushCommitCount;
+
+        // Diagnostic observation (the _woodworkStrikes class): the wiring-backlog W2 tackle-intent
+        // census. #14 produces a TackleIntentRequest against the agent's MARK ASSIGNMENT target,
+        // whose only gate is TackleEligibleRadiusM — the marked man is usually NOT the one on the
+        // ball. So the rate at which a Commit-mode intent and the actual carrier coincide decides
+        // whether a wired tackle can fire at all, and it is the C1 question ("the gate was real but
+        // its consumers were inert") asked BEFORE the wiring rather than after it.
+        // NOT serialized; feeds no gameplay path; zero after a restore by design.
+        private int _tackleIntentTotalCount;
+        private int _tackleIntentCommitCount;
+        private int _tackleIntentOnCarrierCount;
+        private int _tackleIntentCommitOnCarrierCount;
+        private int _tackleIntentCommitOnCarrierWithin2MCount;
+        private int _tackleIntentCommitOnCarrierWithin1MCount;
 
         // Diagnostic observation (the _woodworkStrikes class): the ball's position/velocity at the
         // instant the LAST genuine #6 strike was counted — captured beside _shotContacts++, i.e.
@@ -2188,6 +2203,20 @@ namespace TacticalDirector.MatchEngine
         /// <paramref name="teamId"/> is the keeper index (== team id, KD-1).</summary>
         internal GoalkeeperState TestOnly_GkState(int teamId) => _goalkeeper.GetState(teamId);
 
+        /// <summary>Test-only: the wiring-backlog W2 tackle-intent census, cumulative over the match
+        /// (the <c>WoodworkStrikes</c> diagnostic class: not serialized, zero after a restore by design).
+        /// Counted at the AI stride, once per intent, so a 10 Hz intent is counted once and not six
+        /// times. The ratio that matters is <c>commitOnCarrier / commit</c>: #14 aims its intent at the
+        /// MARKED opponent, and a tackle can only ever be attempted on the agent holding the ball.</summary>
+        internal (int Total, int Commit, int OnCarrier, int CommitOnCarrier, int CommitOnCarrierWithin2M, int CommitOnCarrierWithin1M)
+            TestOnly_TackleIntentCensus =>
+            (_tackleIntentTotalCount,
+             _tackleIntentCommitCount,
+             _tackleIntentOnCarrierCount,
+             _tackleIntentCommitOnCarrierCount,
+             _tackleIntentCommitOnCarrierWithin2MCount,
+             _tackleIntentCommitOnCarrierWithin1MCount);
+
         /// <summary>Test-only: true iff every DecisionTree holds the squad attribute view
         /// (ERR-008-020 wiring lock). The §3.1.3.3 lane-threat model's null fallback is
         /// deliberately silent — an unwired tree prices every defender as average without
@@ -2939,6 +2968,7 @@ namespace TacticalDirector.MatchEngine
                 FillDefensiveSnapshot(t, tacticalTick);
                 _defensive[t].Tick(_defSnapshots[t]);
                 MarkDirective mark = _defensive[t].GetMarkDirective();
+                CensusTackleIntents(t);
 
                 // Attacking (#15) — per-agent AttackIntent; a committed run is the HasAttackIntent carrier.
                 FillAttackingSnapshot(t, tacticalTick);
@@ -3077,6 +3107,74 @@ namespace TacticalDirector.MatchEngine
             return intent.RunParameters.HasValue;
         }
 
+        /// <summary>
+        /// Wiring-backlog W2 instrument: counts this stride's #14 tackle intents, and how many of them
+        /// name the agent who actually holds the ball.
+        ///
+        /// <para>Observation only — no gameplay path reads these counters, and nothing here can influence
+        /// the match. It exists because the W2 wiring's whole value turns on a rate nobody has measured:
+        /// <see cref="TackleIntentEvaluator"/> emits an intent against the agent's MARK ASSIGNMENT target
+        /// whenever that target is inside <c>TackleEligibleRadiusM</c>, and says nothing about possession.
+        /// A tackle, however, can only ever be attempted on the carrier. If the two rarely coincide, the
+        /// wiring lands a mechanism that then never fires — which is exactly what the C1 landing did, and
+        /// this backlog's own §1.1 asks for the firing rate to be measured rather than assumed.</para>
+        ///
+        /// <para>Called once per team per AI stride, immediately after <c>DefensiveAITick.Tick</c> has
+        /// republished the buffer, so each 10 Hz intent is counted exactly once rather than once per
+        /// 60 Hz frame.</para>
+        /// </summary>
+        private void CensusTackleIntents(int team)
+        {
+            System.ReadOnlySpan<TackleIntentRequest> intents = _defensive[team].GetTackleIntentRequests();
+            if (intents.Length == 0)
+            {
+                return;
+            }
+
+            // Bounds-hedged exactly as UpdateMatchContext hedges the same field: an out-of-range
+            // holder must make this instrument report "no carrier", never throw inside the stride.
+            int carrier = _possessingAgentId >= 0 && _possessingAgentId < MatchEngineConstants.SQUAD_SIZE
+                ? _possessingAgentId
+                : MatchEngineConstants.NO_POSSESSION;
+
+            for (int n = 0; n < intents.Length; n++)
+            {
+                ref readonly TackleIntentRequest req = ref intents[n];
+                _tackleIntentTotalCount++;
+
+                bool commit = req.Mode == TackleMode.Commit;
+                if (commit)
+                {
+                    _tackleIntentCommitCount++;
+                }
+
+                if (carrier == MatchEngineConstants.NO_POSSESSION || req.TargetEntityId != carrier)
+                {
+                    continue;
+                }
+
+                _tackleIntentOnCarrierCount++;
+                if (!commit)
+                {
+                    continue;
+                }
+
+                _tackleIntentCommitOnCarrierCount++;
+
+                // The separation the tackle would have to cross. #14's own eligibility radius is 3 m,
+                // which is a DECISION radius; a challenge is a contact event, so the two tighter bands
+                // are reported alongside it rather than a single radius being chosen here.
+                float sepSq = (_agents[req.AgentEntityId].Position - _agents[carrier].Position).sqrMagnitude;
+                if (sepSq <= 4f)
+                {
+                    _tackleIntentCommitOnCarrierWithin2MCount++;
+                }
+                if (sepSq <= 1f)
+                {
+                    _tackleIntentCommitOnCarrierWithin1MCount++;
+                }
+            }
+        }
 
         /// <summary>
         /// Fills team <paramref name="team"/>'s reused <see cref="PositioningPerceptionSnapshot"/> from
@@ -8458,4 +8556,17 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | geometry; the W9 DT-supplied override). No new engine state, no schema    |
 // |         |            |        | change. Retroactive version-history row (adversarial review of the       |
 // |         |            |        | landing, Finding 4) — no further logic change from this row itself.      |
+// | 1.66    | 2026-08-12 | —      | Wiring backlog W2 INSTRUMENT ONLY (no behaviour change): CensusTackle-   |
+// |         |            |        | Intents counts, at the AI stride, how many #14 TackleIntentRequests the  |
+// |         |            |        | engine produces, how many are COMMIT, and how many name the agent who    |
+// |         |            |        | actually holds the ball. #14 aims its intent at the MARK ASSIGNMENT      |
+// |         |            |        | target, whose only gate is TackleEligibleRadiusM — possession is not one |
+// |         |            |        | of its gates — and a tackle can only be attempted on the carrier, so     |
+// |         |            |        | whether a wired tackle can fire AT ALL rests on a rate this tree has     |
+// |         |            |        | never measured. Measured BEFORE the wiring deliberately: C1 landed a     |
+// |         |            |        | real gate whose consumers were inert, and backlog §1.1 books exactly     |
+// |         |            |        | this firing-rate class of measurement as W12. Six counters of the        |
+// |         |            |        | _woodworkStrikes class — not serialized, zero after restore by design,   |
+// |         |            |        | read only by TestOnly_TackleIntentCensus. No schema change, no RNG       |
+// |         |            |        | draw, no draw-order change, no [GT] (KD-W1 holds).                       |
 #endregion
