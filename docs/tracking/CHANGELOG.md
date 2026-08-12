@@ -68,6 +68,45 @@ break it, and do not edit historical entries.
 > structurally invisible to the engine — verified, not assumed. `python3 tools/recurring-defect-lint.py
 > --repo .` reports **0 ERROR** (125 WARN / 27 INFO, the unchanged baseline).
 
+> **Also August 12, 2026 (**Fable advisory review on the two A4a owner decisions — it falsified two
+> of my own claims, and both corrections make the decisions cheaper and better-scoped. No decision
+> taken; the corpus rows are now committed so neither can be blocked on lost data.**) Consulted on
+> ERR-030-033 (the acceptance bar) and ERR-030-034 (the model family). Every load-bearing number below
+> was independently reproduced against the committed corpus before being recorded.
+> **Correction 1 — "a family change moves persisted season state" is OVERSTATED, verified in code.**
+> `SeasonStateCodec` writes a per-fixture `Played` flag and aggregate `LeagueTableRow` totals;
+> individual scorelines are folded into the table at resolution and never re-derived from their key,
+> so a successor family with no layout change forces no format bump. The decisive evidence is this
+> branch's own refit: it changed all three `[GT]`s — every future draw in every save — and
+> `SEASON_STATE_FORMAT_VERSION` is still 1. KD-7's pin-by-name protects implementation identity, not
+> save layout. **This materially lowers the cost of ERR-030-034.**
+> **Correction 2 — ERR-030-034's causal sentence is WRONG and would have misdirected its own fix.**
+> "More blowouts and shut-outs and correspondingly fewer draws — the whole of the 7.6 pp miss" does not
+> follow: over-dispersion fattens both tails, and 0–0 is a draw. At the fitted bucket-0 lambdas,
+> independent negative-binomial at the measured dispersion gives **26.3%** draws against Poisson's
+> 26.8% — it closes ~0.5 pp of 7.6. So dispersion and the draw deficit are **substantially independent
+> findings**, and the textbook answer to the one does nothing for the other. The only mixed-Poisson
+> mechanism that cuts draws materially is a shared antithetic swing, which implies negative home/away
+> correlation — and the corpus refutes it: pooled within-bucket correlation **+0.004 ± 0.052** (n=378),
+> ~4σ from the ≈ −0.20 such a family predicts. **The draw deficit's mechanism is therefore NOT
+> established.** The over-dispersion half stands and is NOT a pooling artifact — the hostile question
+> asked at filing has a clean negative answer, within-bucket `dSquad` spread contributing ≤ 0.005 of
+> the ~0.4 excess — but it is better specified as `var = μ(1+αμ)` with α ≈ 0.15–0.25 than as the
+> constant 1.395 ratio the ERR quotes, since dispersion rises with the mean and 5 of 22 bucket-sides
+> are mildly UNDER-dispersed at small λ.
+> **Correction 3 — the deepened rows were nearly lost.** The artifact preserved only their three-number
+> W/D/L summary; the 180 rows themselves (~4.5 h of engine time) lived in an ephemeral session
+> scratchpad. A joint-distribution decision needs the rows, not the summary. **All 378 raw rows are now
+> committed** under `docs/tracking/corpus-data/` with a README recording provenance and the re-fit
+> command, so any future family decision costs seconds of compute rather than a re-capture — and, once
+> the engine's scoring moves, a re-capture would not reproduce them at all.
+> **Measured in passing, and it reframes the whole question:** against a properly-sized mean bar the
+> current fit **PASSES** — pooled `χ² = 16.0` on 19 dof against a 30.1 threshold, worst bucket-side
+> |z| = 2.06, which is the nominal rate for 22 cells. So the honest verdict composition is
+> **mean-agreement PASS, distribution-shape FAIL**, not the flat "FAIL" the artifact currently reads.
+> Recorded here; re-specifying the bar is still ERR-030-033's owner decision and nothing was changed.
+> No `src/` file touched.
+
 > **Also August 12, 2026 (**A goal-rate match-realism pass that ended at its own premise check: the
 > engine has NOT overshot football's goal rate, and the brief claiming it had was mine.**) Run against
 > the A4a corpus, so it cost no new engine time. **§0.1's premise check refuted the brief and the pass
