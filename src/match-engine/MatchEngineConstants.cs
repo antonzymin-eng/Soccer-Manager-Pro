@@ -560,27 +560,34 @@ namespace TacticalDirector.MatchEngine
         /// <summary>
         /// [GT] Reach (m) from the BALL within which a committed #14 tackle intent becomes an actual
         /// challenge. Distinct from #14's <c>TackleEligibleRadiusM</c> (3 m), which is a DECISION radius
-        /// — "close enough to think about tackling him" — where this is a REACH: how far a lunging
-        /// player can get a foot to the ball.
+        /// — "close enough to think about tackling him" — where this is a CONTACT distance: close
+        /// enough to get a foot on the ball.
         ///
         /// <para>Measured to the ball rather than to the carrier because possession at Stage 0 is a flag
         /// and not a kinematic constraint (backlog W6): the W2 census found carrier and ball more than a
-        /// metre apart in 12% of defending episodes, and the gate anatomy then measured the nearest
-        /// eligible challenger sitting a mean of <b>2.20 m</b> from the ball at the moment #14 asks him
-        /// to tackle.</para>
+        /// metre apart in 12% of defending episodes.</para>
         ///
-        /// <para><b>Why 2.5 and not the 1.5 this landing first used.</b> 1.5 m was a guess made before
-        /// that distribution existed, and at 1.5 m only about one eligible stride in ten produced a
-        /// reachable ball. The value is NOT set to make the count come out — that would be calibration,
-        /// which KD-W1 forbids here. It is re-derived from what the mode means: #14 §3.6.1 defines
-        /// COMMIT as a <i>lunge</i>, and a lunge is the extended-leg case #3 §7.2.1 describes for its
-        /// Stage-2 slide tackle ("compound hitbox (body + leg)", <c>ExtendedLegCapsule</c>). A standing
-        /// challenge reaches about a metre; a lunging one reaches roughly a body-length further. The
-        /// measurement prompted re-deriving the number; it did not supply it.</para>
+        /// <para><b>It MUST NOT exceed <see cref="LooseBallPickupRadiusM"/>, and that is a correctness
+        /// constraint rather than a taste.</b> A <c>BALL_LOOSE</c> outcome leaves the ball where it lies
+        /// and expects the ordinary loose-ball paths to contest it — but <c>RunLooseBallPickup</c> needs
+        /// someone within <c>LooseBallPickupRadiusM</c> and <c>RunFirstTouch</c> needs the ball MOVING
+        /// and approaching a receiver. A stationary ball with nobody inside the pickup radius satisfies
+        /// neither, so it simply sits there.</para>
+        ///
+        /// <para><b>This shipped wrong once and the gate caught it.</b> The value was briefly 2.5 m,
+        /// re-derived from #14 §3.6.1 defining COMMIT as a *lunge*. That reasoning conflated how far a
+        /// lunging player's body extends with how far he can be from the ball and still touch it — he
+        /// cannot touch a ball 2.5 m away, and pretending he can produced exactly the stall above:
+        /// `sim_match_engine_inposs_gate` fell to 0.249 on one seed (the pre-ERR-012-011 signature),
+        /// with final-third samples nearly doubled and the on-ball share collapsing 13.7% → 3.4%.
+        /// Pinned to the pickup radius so a tackle can only knock free a ball the challenge could
+        /// actually reach. The cost is a lower tackle rate, which is the calibration pass's business;
+        /// a ball nobody can reclaim is a correctness defect, which is not.</para>
         ///
         /// Config key [match-engine] TackleContactRadiusM. UN-CALIBRATED.
         /// </summary>
-        public static readonly float TackleContactRadiusM = Config.GetFloat("match-engine", "TackleContactRadiusM", 2.5f);
+        public static readonly float TackleContactRadiusM =
+            Config.GetFloat("match-engine", "TackleContactRadiusM", 1.0f);
 
         /// <summary>
         /// [GT] AI strides (10 Hz) a player waits after making a challenge before he can make another.

@@ -283,6 +283,69 @@ un-calibrated by design** — they are the calibration pass's input.
 
 ---
 
+## 3.4 THE GATE FAILED, and the failure is real — an owner call, not a band to widen
+
+**Whole-tree gate on the landing: `MatchEngine.Tests` 459 passed / 3 failed / 11 skipped.** One failure
+is the inherited `sim_match_engine_close_chance`, held red by the August 11 owner call. The other two
+are W2's:
+
+- **`SchemaVersion_IsPinned`** — expected 20, got 21. Correct and intended; the pin is updated to 21
+  with its v21 note, which is what the snapshot-bump discipline requires.
+- **`sim_match_engine_inposs_gate`** — `homeShare` / `awayShare` **0.501** against a 0.70 bound. This
+  scenario PASSED at the pre-change baseline (`4b9271c`), so it is a W2 regression, and it is not
+  cosmetic: 0.24 is the pre-ERR-012-011 signature this bound exists to detect.
+
+**Measured attribution, because the first three explanations were all wrong:**
+
+| Run | seed `0F1E…6978` | seed `1A2B…7081` |
+|---|---|---|
+| Tackles OFF (contact radius 0) | **0.975** | **0.966** |
+| Tackles ON, radius 2.5 m | 0.977 | **0.249** |
+| Tackles ON, radius 1.0 m | **0.369** | 0.963 |
+
+So: with tackles off both seeds are healthy; with tackles on **one seed collapses, and which seed
+collapses moves with the radius**. The collapsing run had **three** decisive tackles. Three events
+take a match from 0.97 to 0.37 — that is a **stall**, not a rate effect, and no amount of
+recalibration addresses it.
+
+**What is established:** the on-ball share falls 14.4% → 5.5% and the pass-in-flight latch share
+76% → 28% *together*, so passing itself stops; final-third samples nearly double, so the ball parks
+there; and a trace from the first decisive tackle shows the ball still moving and still struck
+occasionally, with `holder = −1` at every sample for 400 ticks — **loose, live, and never possessed
+again.**
+
+**What is NOT established** — and is deliberately not guessed at — is the exact wedge. The leading
+candidate is that a `BALL_LOOSE` interacts badly with the KD-H3 loose-ball machinery, whose reclaim
+paths are mutually exclusive (`RunLooseBallPickup` needs the ball nearly at rest AND someone inside
+`LooseBallPickupRadiusM`; `RunFirstTouch` needs it MOVING and approaching a receiver), so a ball in the
+gap between them is reclaimed by nobody. That is backlog **W6** — possession is a flag and the ball is
+not attached to the carrier — surfacing under the first mechanic that deliberately creates a contested
+loose ball.
+
+**One real defect was found and fixed along the way**: the contact reach was briefly 2.5 m while
+`LooseBallPickupRadiusM` is 1.0 m, so a challenge could knock the ball free from further away than any
+reclaim path could reach it. The re-derivation from "COMMIT means a lunge" conflated how far a lunging
+player's body extends with how far he can be from the ball and still touch it. Now pinned at 1.0 m with
+a fail-loud guard at the resolution site (the catalogue lock alone would not see it — the gate runs
+config-unbound, the ERR-041-003 class). **That fix did not cure the stall**; it moved it to the other
+seed.
+
+**Recommendation, and it is a recommendation rather than an action.** Two precedents in this repo fit,
+and choosing between them is the owner's:
+
+1. **Hold red** — the `sim_match_engine_close_chance` precedent (owner call, August 11: *hold red, do
+   not rebaseline a third time*). W2 stays wired, the branch stays red on one predicate, and the stall
+   is chased as its own item alongside W6.
+2. **Ship the challenge disabled** — the FR-MD-027 precedent, where #41's injury-occurrence dial
+   shipped OFF pending its balance pass. `TackleContactRadiusM = 0` disables every challenge and the
+   scenario recovers to 0.975/0.966 (measured above); arming it later is a one-constant change.
+
+**What must NOT happen is widening the 0.70 bound.** It was set in the middle of a 0.24 → 0.97 gap
+precisely so it could not be argued with, and a landing that moves the number is not entitled to move
+the bar (`close-chance-creation-design.md` §10.9 item 6 is the standing ruling on that reflex).
+
+---
+
 ## 4. The decision that was not this note's to take — ANSWERED
 
 > **RESOLVED by owner decision, August 12, 2026: back-propagate into #14**, and add a fourth outcome.

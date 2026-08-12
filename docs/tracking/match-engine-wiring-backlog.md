@@ -112,7 +112,7 @@ Only the trigger condition is missing.
 to dive. This was the single most likely contributor to the conversion gap, and the cheapest to
 close. Whether closing it moved the conversion gap is **unmeasured** — see above.
 
-### W2 — No player has ever made a tackle — ✅ **WIRED August 12, 2026**
+### W2 — No player has ever made a tackle — ⚠️ **WIRED August 12, 2026, GATE RED — owner call pending**
 **Evidence:** three independent dormant links in one chain — **four**, on re-verification.
 - `defensive-ai/DefensiveAITick.cs:358` — `GetTackleIntentRequests` is populated every tick and read
   by nobody. The class doc says so outright: *"all output surfaces are populated at Stage 0 but
@@ -132,6 +132,8 @@ else writes `_possessingAgentId` away from a controlled carrier, so the engine h
 turnover mechanisms — the carrier kicks it and a team-mate fails to receive, and a foul restart.
 **A player in control cannot be dispossessed, at all, under any pressure.** That is a missing football
 mechanism rather than a churn imbalance, and it is the real content of W2.
+
+**⚠️ GATE RED, and the failure is W2's.** The whole-tree gate reads `MatchEngine.Tests` 459/3/11. Beyond the inherited `sim_match_engine_close_chance`, **`sim_match_engine_inposs_gate` regressed to 0.501 against its 0.70 bound** — it passed at the pre-change baseline. Measured attribution: with tackles OFF both scenario seeds read 0.975/0.966; with tackles ON one seed collapses, and WHICH seed collapses moves with the contact radius. The collapsing run had **three** decisive tackles, so it is a **stall**, not a rate effect. The on-ball share and the pass-in-flight latch share fall together and the ball is traced loose-live-and-never-possessed for 400 ticks after the challenge — the leading candidate is **W6** (possession is a flag, the ball is not attached) surfacing under the first mechanic that deliberately creates a contested loose ball. Two precedents fit and the choice is the owner's: hold red (the `close_chance` precedent) or ship the challenge disabled at `TackleContactRadiusM = 0` (the FR-MD-027 precedent, measured to restore 0.975/0.966). **Widening the 0.70 bound is explicitly not among them.** Full attribution table in `tackle-wiring-design.md` §3.4.
 
 **MEASURED (August 12, 2026)** — `TackleIntentDiagnosticTests` (`TD_TACKLE_DIAGNOSTIC=1`), 3 seeds ×
 90 min, both defending teams separately, counted in possession episodes. Per defending team per match:

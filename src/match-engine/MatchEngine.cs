@@ -3429,6 +3429,24 @@ namespace TacticalDirector.MatchEngine
             }
 
             Vector2 ballXY = new Vector2(_ball.Position.x, _ball.Position.y);
+
+            // The reach a challenge may have is bounded by the reach the engine can RESOLVE. A
+            // BALL_LOOSE outcome leaves the ball where it lies for the ordinary loose-ball paths to
+            // contest, and those need someone within LooseBallPickupRadiusM (or the ball moving toward
+            // a receiver). Knocking a ball free from further away than anyone can reclaim it strands
+            // the ball, which is what a 2.5 m reach measurably did. Fails loud rather than stalling
+            // play: the constant is config-overridable, and the gate runs config-unbound, so a lock on
+            // the catalogue alone would see the fallback forever (the ERR-041-003 class).
+            if (MatchEngineConstants.TackleContactRadiusM > MatchEngineConstants.LooseBallPickupRadiusM)
+            {
+                throw new InvalidOperationException(
+                    "MatchEngine.TryResolveTackles: TackleContactRadiusM ("
+                    + MatchEngineConstants.TackleContactRadiusM.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    + " m) exceeds LooseBallPickupRadiusM ("
+                    + MatchEngineConstants.LooseBallPickupRadiusM.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    + " m) — a knocked-loose ball would be unreachable by every reclaim path.");
+            }
+
             float radius = MatchEngineConstants.TackleContactRadiusM;
             float bestSq = radius * radius;
             int tackler = MatchEngineConstants.NO_POSSESSION;
