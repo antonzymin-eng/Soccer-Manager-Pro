@@ -44,7 +44,7 @@ break it, and do not edit historical entries.
 > defending team per match — against football's ~15–17 tackle attempts per team per 90, so the gate
 > supplied **~4× what was needed** and W2 was a RESOLUTION problem, not a producer problem, the
 > opposite of the C1 trap. Tests: 12 pure resolver locks + 7 composed engine locks, all green at the
-> landing commit (`fc8f81f2`). **Gate result pending** — a whole-tree gate was in flight at the time
+> landing commit (`fc8f81f2`). **GATE PASSED for W2 (August 12, 2026):** whole-tree build 0 errors / 0 warnings, quarantine empty, 32 suites; `MatchEngine.Tests` **461 passed / 1 failed / 11 skipped** (38 m 2 s). The single failure is `sim_match_engine_close_chance`, the inherited owner-held-red predicate that also fails at the pre-change baseline `4b9271c` — so the branch is at its baseline red state and W2 adds no new failure. Baseline was 451/1/10; the +10 passed are W2 locks and the +1 skipped is the env-gated census instrument. — a whole-tree gate was in flight at the time
 > this entry was written. ⟨PLACEHOLDER — operator to fill in build/warning counts, per-suite
 > pass/fail/skip (especially `DefensiveAI.Tests` and `MatchEngine.Tests`), quarantine state, and the
 > PASS/FAIL verdict once the run completes.⟩ `docs/tracking/match-engine-wiring-backlog.md` → **v1.8**

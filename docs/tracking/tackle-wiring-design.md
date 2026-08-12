@@ -355,9 +355,7 @@ that the shipped default resolves no challenge at all, and fails if the catalogu
 **Arming it is one constant**, once W6 (or whatever isolates the wedge) lands. The value to arm at is
 `LooseBallPickupRadiusM`, so a knocked-loose ball is always reachable by the challenge that produced it.
 
-**Gate after the decision:** `MatchEngineTackleTests` 10/10, `sim_match_engine_inposs_gate` and
-`SchemaVersion_IsPinned` both green (26/26 across those two files). The branch's only remaining red is
-the inherited `sim_match_engine_close_chance`, exactly as at baseline.
+**Gate after the decision.** **GATE PASSED (August 12, 2026):** whole-tree build 0 errors / 0 warnings, quarantine empty, 32 suites; `MatchEngine.Tests` **461 passed / 1 failed / 11 skipped** (38 m 2 s). The one failure is `sim_match_engine_close_chance` — the inherited owner-held-red predicate, which also fails at the pre-change baseline `4b9271c`. **W2 adds no new failure**: baseline 451/1/10, now 461/1/11, the +10 being W2's own locks and the +1 skip the env-gated census. `sim_match_engine_inposs_gate` and `SchemaVersion_IsPinned` — the two failures the live challenge caused — are both green with it disabled.
 
 **One thing the disabling itself caught:** the save/restore lock began failing with "missed diverged",
 and it was right to. The arming seam is a TEST seam and deliberately not serialized, so a restored
