@@ -340,6 +340,12 @@ namespace TacticalDirector.MatchEngine
         // standing geometric condition into discrete challenges.
         private readonly int[] _tackleCooldown = new int[MatchEngineConstants.SQUAD_SIZE];
 
+        // The challenge's effective reach. Negative means "use the catalogue", which ships at 0 —
+        // DISABLED, pending backlog W6 (see TackleContactRadiusM's own remarks). A test arms it
+        // through TestOnly_ArmTackleChallenge rather than by binding config, because GameplayConfig
+        // binding is one-shot per process and would leak across every other suite in the run.
+        private float _tackleContactRadiusOverrideM = -1f;
+
         // Diagnostic observation (the _woodworkStrikes class): challenges resolved this match, by
         // outcome. NOT serialized; feeds no gameplay path; zero after a restore by design.
         private int _tackleWonCount;
@@ -2271,6 +2277,12 @@ namespace TacticalDirector.MatchEngine
              _tackleGateInRadiusStrides,
              _tackleGateNearestSamples > 0 ? _tackleGateNearestSumM / _tackleGateNearestSamples : 0f);
 
+        /// <summary>Test-only: arms the W2 challenge at <paramref name="radiusM"/> metres of reach.
+        /// The shipped catalogue value is 0 — DISABLED pending backlog W6 — so every lock on the
+        /// tackle's behaviour goes through this seam, exactly as #41's suite drives its disarmed
+        /// occurrence model. Pass a negative value to fall back to the catalogue.</summary>
+        internal void TestOnly_ArmTackleChallenge(float radiusM) => _tackleContactRadiusOverrideM = radiusM;
+
         /// <summary>Test-only: challenges this team resolved (AR-1 M-4 — the pooled counters cannot
         /// see a one-sided defect).</summary>
         internal int TestOnly_TackleResolvedByTeam(int teamId) => _tackleResolvedByTeam[teamId];
@@ -3430,6 +3442,18 @@ namespace TacticalDirector.MatchEngine
 
             Vector2 ballXY = new Vector2(_ball.Position.x, _ball.Position.y);
 
+            float radius = _tackleContactRadiusOverrideM >= 0f
+                ? _tackleContactRadiusOverrideM
+                : MatchEngineConstants.TackleContactRadiusM;
+
+            // DISABLED is disabled, not "reachable only at exactly zero separation". Shipping the
+            // constant at 0 must mean no challenge is ever resolved, and an explicit exit says so
+            // where a >= comparison on a zero radius would merely make it vanishingly unlikely.
+            if (radius <= 0f)
+            {
+                return;
+            }
+
             // The reach a challenge may have is bounded by the reach the engine can RESOLVE. A
             // BALL_LOOSE outcome leaves the ball where it lies for the ordinary loose-ball paths to
             // contest, and those need someone within LooseBallPickupRadiusM (or the ball moving toward
@@ -3437,17 +3461,16 @@ namespace TacticalDirector.MatchEngine
             // the ball, which is what a 2.5 m reach measurably did. Fails loud rather than stalling
             // play: the constant is config-overridable, and the gate runs config-unbound, so a lock on
             // the catalogue alone would see the fallback forever (the ERR-041-003 class).
-            if (MatchEngineConstants.TackleContactRadiusM > MatchEngineConstants.LooseBallPickupRadiusM)
+            if (radius > MatchEngineConstants.LooseBallPickupRadiusM)
             {
                 throw new InvalidOperationException(
-                    "MatchEngine.TryResolveTackles: TackleContactRadiusM ("
-                    + MatchEngineConstants.TackleContactRadiusM.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    "MatchEngine.TryResolveTackles: tackle contact radius ("
+                    + radius.ToString(System.Globalization.CultureInfo.InvariantCulture)
                     + " m) exceeds LooseBallPickupRadiusM ("
                     + MatchEngineConstants.LooseBallPickupRadiusM.ToString(System.Globalization.CultureInfo.InvariantCulture)
                     + " m) — a knocked-loose ball would be unreachable by every reclaim path.");
             }
 
-            float radius = MatchEngineConstants.TackleContactRadiusM;
             float bestSq = radius * radius;
             int tackler = MatchEngineConstants.NO_POSSESSION;
             float tacklerAngle = 0f;

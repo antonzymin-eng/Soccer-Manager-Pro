@@ -330,8 +330,43 @@ a fail-loud guard at the resolution site (the catalogue lock alone would not see
 config-unbound, the ERR-041-003 class). **That fix did not cure the stall**; it moved it to the other
 seed.
 
-**Recommendation, and it is a recommendation rather than an action.** Two precedents in this repo fit,
-and choosing between them is the owner's:
+### 3.4.1 RESOLVED — the challenge ships DISABLED (owner decision, August 12, 2026)
+
+**Option 2 was taken**, on a Fable advisory read of the two precedents. The deciding argument was not
+about the tackle at all: **`sim_match_engine_inposs_gate` is the only detector of the 0.24-class
+possession collapse, and W4/W12 land directly on top of this branch.** A predicate held red on an
+un-isolated cause can no longer catch a *new* regression of the same class — which is the ERR-030-014
+failure mode, one layer up. The `close_chance` precedent does not transfer: that is a bounded
+calibration miss queued for a booked pass, where this is a correctness wedge owned by W6.
+
+Recorded as overridden: **KD-7a's tripwire in `league-bootstrap-design.md` explicitly waits on the
+tackle being wired, and a radius-0 engine is behaviourally unwired**, so the next dispersion capture
+stays a pre-tackle one. Overridden because a capture taken against stalled matches is worse than a
+delayed capture.
+
+**What "disabled" means here, concretely.** `TackleContactRadiusM` ships at **0**, and
+`TryResolveTackles` exits explicitly on `radius <= 0` rather than relying on a zero-radius comparison
+— disabled must mean disabled, not "reachable only at exactly zero separation". Everything downstream
+is live, and every lock on the tackle's behaviour arms the challenge through
+`MatchEngine.TestOnly_ArmTackleChallenge`, exactly as #41's suite drives its disarmed occurrence model:
+a dial being off must not make the mechanism untested. It is locked **both ways** — one case asserts
+that the shipped default resolves no challenge at all, and fails if the catalogue value stops being 0.
+
+**Arming it is one constant**, once W6 (or whatever isolates the wedge) lands. The value to arm at is
+`LooseBallPickupRadiusM`, so a knocked-loose ball is always reachable by the challenge that produced it.
+
+**Gate after the decision:** `MatchEngineTackleTests` 10/10, `sim_match_engine_inposs_gate` and
+`SchemaVersion_IsPinned` both green (26/26 across those two files). The branch's only remaining red is
+the inherited `sim_match_engine_close_chance`, exactly as at baseline.
+
+**One thing the disabling itself caught:** the save/restore lock began failing with "missed diverged",
+and it was right to. The arming seam is a TEST seam and deliberately not serialized, so a restored
+engine comes back on the shipped default — disabled — and the case was comparing an armed run against
+a disabled one. Fixed in the test, not the engine.
+
+---
+
+**The recommendation as it stood before the decision** — kept because the reasoning is the record:
 
 1. **Hold red** — the `sim_match_engine_close_chance` precedent (owner call, August 11: *hold red, do
    not rebaseline a third time*). W2 stays wired, the branch stays red on one predicate, and the stall
@@ -487,6 +522,7 @@ only. A proposed id is never a reservation — the July 27 wave consumed three.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.3 | 2026-08-12 | — | **The gate failed, the failure was W2's, and the owner's call is to ship the challenge DISABLED** (§3.4.1). `sim_match_engine_inposs_gate` regressed 0.97 → 0.501 against a 0.70 bound; measured attribution shows one scenario seed collapsing after as few as THREE decisive tackles, and WHICH seed collapses moves with the contact radius — a stall, not a rate effect. Root cause NOT isolated; leading candidate is backlog W6. Decided on the argument that this predicate is the ONLY detector of the 0.24-class collapse and W4/W12 land on this branch, so holding it red would blind it to a NEW regression of the same class (the ERR-030-014 shape one layer up). Overridden and recorded: KD-7a's tripwire waits on the tackle being WIRED, and radius-0 is behaviourally unwired. `TackleContactRadiusM` ships at 0 with an explicit `radius <= 0` exit; locks arm it through `TestOnly_ArmTackleChallenge` (#41 FR-MD-027 posture) and it is locked BOTH ways. Also fixed en route: the contact reach was briefly 2.5 m against a 1.0 m `LooseBallPickupRadiusM`, so a challenge could knock the ball free from beyond any reclaim path — now guarded fail-loud at the resolution site. |
 | 1.2 | 2026-08-12 | — | **WIRED.** The owner answered §4: the outcome model back-propagates into **#14 §3.6.5** (`ERR-014-006`, KD-6 revised), with a **fourth outcome the owner added — `BALL_LOOSE`**, because won-or-missed cannot express the commonest result of getting a foot in and folding it into a clean win makes every successful challenge a turnover. **§3.2 records the two things the landing corrected in this note:** §3.0's "the gate supplies ~4x what is needed" was measured to the CARRIER, and measured to the BALL — which is what a tackle reaches for — the reachable population collapses ~10x (mean nearest challenger 2.20 m); and the obvious widening (act on any COMMIT intent from a player near the ball) was tried and REJECTED on measurement, since it raises the population 14x while moving the mean challenger distance to 21–31 m, admitting noise rather than tackles. The contact radius went 1.5 → 2.5 m re-derived from COMMIT meaning a *lunge* (#3 §7.2.1's own extended-leg case), explicitly NOT fitted to make the count come out. **§3.3 records five things the wiring surfaced**, including FM-08 logging an now-ordinary event as an error with the text "Race condition" (found because an unexpected LogError fails a suite), `ContactType.SLIDE_TACKLE` and the canonical `Tackling` attribute both gaining their first producer/consumer anywhere in the tree, and the FR-CS-057 recurrence happening in the landing that cites it. `SNAPSHOT_SCHEMA_VERSION` 20 → 21; card-severity draw order moves by design; **no digest invariance claimed**. |
 | 1.1 | 2026-08-12 | — | **The census RAN and answered §3's decision table: W2 is a RESOLUTION problem** — 65.3 COMMIT-on-carrier episodes per defending team per match against football's ~15–17 tackle attempts, so the gate supplies ~4× what is needed and the contact radius / cooldown / outcome model exist to select DOWN. **Two of this note's own predictions refuted:** the FR-DA-010 presser exclusion is not the bound (`poolElig` 310.0 vs the 3 m population's 310.2; presser 0.5) — but a #13 press-role holder being almost never within 3 m of the carrier is a gate-level dormancy signal for #13, filed to the backlog; and `MarkAssigner`'s ball-blindness is a fidelity gap, not a precondition (31% of eligible episodes still yield an intent). `ballGap` 12% forces the contact gate to name whether it measures to the carrier or the BALL. Adds §3.1 (the pre-change baseline, and the measured correction that `sim_match_engine_shot_outcomes` now PASSES — the branch is red on one predicate, not two, and "red on two" would have masked a W2 regression), §5.1 (two council unknowns closed by grep: `DOMAIN_TAG_DEFENSIVE_AI` has no draw site anywhere so a tackle draw is its first and un-ignores #14's T-DA-DET-005; `TackleIntentRequest` is absent from the digest while #14 §4.6/XC-014-020/-024 declare it load-bearing), and §7 item 7 (turnovers cannot be split by cause — `PossessionChangedEvent.Reason` is always the UNSPECIFIED sentinel, so the landing's central claim is currently unmeasurable). One council claim corrected: a local SplitMix64 `Mix` is this project's documented norm, not a parallel-surface defect. |
 | 1.0 | 2026-08-12 | — | Initial. Wiring backlog W2. Records the fourth dead link and the finding that outranks it (no path anywhere dispossesses a controlled carrier); the four pre-implementation council corrections (`ApproachAngle` does not encode from-behind and its XML doc is wrong; `Commit` means "I have cover", not "I will tackle"; the flag is redundant on a won tackle, its real coverage being disrupt-without-winning; the primary presser is structurally excluded from producing tackle intent, and `MarkAssigner` never reads the ball); the census that decides the shape, with a decision table mapping each possible zero to its cause; the ten settled constraints on any resolution; and the ownership question, recorded as an owner decision rather than defaulted into the composition root. Measurement NOT yet run. |

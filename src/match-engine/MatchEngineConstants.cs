@@ -574,6 +574,22 @@ namespace TacticalDirector.MatchEngine
         /// and approaching a receiver. A stationary ball with nobody inside the pickup radius satisfies
         /// neither, so it simply sits there.</para>
         ///
+        /// <para><b>SHIPPED AT 0 — THE CHALLENGE IS DISABLED BY DEFAULT</b>, pending backlog W6. Not
+        /// caution and not a tuning choice: with the challenge live, <c>sim_match_engine_inposs_gate</c>
+        /// collapses on one scenario seed (0.501 pooled against a 0.70 bound) after as few as THREE
+        /// decisive tackles — a stall, not a rate effect. The wedge is not isolated; the leading
+        /// candidate is W6, where possession is a flag and the ball is unattached, so the two reclaim
+        /// paths are mutually exclusive and a ball between them is reclaimed by nobody. A tackle is the
+        /// first mechanic that deliberately creates a contested loose ball, so it is the first thing to
+        /// fall into that gap.
+        ///
+        /// <para>Disabled rather than held red because this predicate is the ONLY detector of the
+        /// 0.24-class possession collapse, and W4/W12 land on top of this branch: a predicate held red
+        /// on an un-isolated cause can no longer catch a NEW regression of the same class, which is the
+        /// ERR-030-014 failure mode. Arming is this one constant, or
+        /// <c>MatchEngine.TestOnly_ArmTackleChallenge</c> for a test. Everything downstream of the
+        /// challenge is live and locked — the #41 FR-MD-027 posture exactly.</para>
+        ///
         /// <para><b>This shipped wrong once and the gate caught it.</b> The value was briefly 2.5 m,
         /// re-derived from #14 §3.6.1 defining COMMIT as a *lunge*. That reasoning conflated how far a
         /// lunging player's body extends with how far he can be from the ball and still touch it — he
@@ -587,7 +603,7 @@ namespace TacticalDirector.MatchEngine
         /// Config key [match-engine] TackleContactRadiusM. UN-CALIBRATED.
         /// </summary>
         public static readonly float TackleContactRadiusM =
-            Config.GetFloat("match-engine", "TackleContactRadiusM", 1.0f);
+            Config.GetFloat("match-engine", "TackleContactRadiusM", 0.0f);
 
         /// <summary>
         /// [GT] AI strides (10 Hz) a player waits after making a challenge before he can make another.

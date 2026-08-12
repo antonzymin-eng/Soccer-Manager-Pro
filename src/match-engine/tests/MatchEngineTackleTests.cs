@@ -43,6 +43,11 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         private const int Ticks = 150_000;
 
+        /// <summary>The reach these locks arm the challenge at — the value the catalogue would carry
+        /// if W6 were closed, pinned to <c>LooseBallPickupRadiusM</c> so a knocked-loose ball is always
+        /// reachable by the challenge that produced it.</summary>
+        private const float ArmedRadiusM = 1.0f;
+
         private static readonly ulong[] Seeds =
         {
             0x0F1E2D3C4B5A6978UL,
@@ -83,6 +88,11 @@ namespace TacticalDirector.MatchEngine
         {
             var engine = new MatchEngine(seed);
             engine.ConfigureSquads(BuildSquad(seed, clubId: 1), BuildSquad(seed, clubId: 2));
+
+            // The challenge ships DISABLED (TackleContactRadiusM = 0, pending backlog W6), so every
+            // lock in this file arms it explicitly. Same shape as #41's suite driving its disarmed
+            // occurrence model: the dial being off must not make the mechanism untested.
+            engine.TestOnly_ArmTackleChallenge(ArmedRadiusM);
             return engine;
         }
 
@@ -167,6 +177,27 @@ namespace TacticalDirector.MatchEngine
         private static string Counts() =>
             $"won={s_pooled.Won} loose={s_pooled.Loose} foul={s_pooled.Foul} missed={s_pooled.Missed} " +
             $"dispossessions={s_dispossessions}";
+
+        [Test]
+        public void TheChallengeIsDisabledOnTheShippedDefault()
+        {
+            // The other half of the FR-MD-027 posture: a dial that ships off must be locked OFF as
+            // well as on, or "disabled" is a claim rather than a property. This is the only case in
+            // the file that does NOT arm the challenge.
+            var engine = new MatchEngine(Seeds[0]);
+            engine.ConfigureSquads(BuildSquad(Seeds[0], clubId: 1), BuildSquad(Seeds[0], clubId: 2));
+
+            for (int t = 0; t < 40_000; t++)
+            {
+                engine.RunTick();
+            }
+
+            var oc = engine.TestOnly_TackleOutcomeCounts;
+            Assert.That(oc.Won + oc.Loose + oc.Foul + oc.Missed, Is.Zero,
+                "the shipped TackleContactRadiusM is 0, so no challenge may resolve at all");
+            Assert.That(MatchEngineConstants.TackleContactRadiusM, Is.Zero,
+                "this lock is meaningless if the catalogue default is no longer 0 — arm it deliberately");
+        }
 
         [Test]
         public void TacklesHappenInComposedPlay()
@@ -292,6 +323,12 @@ namespace TacticalDirector.MatchEngine
 
             byte[] blob = MatchSaveManager.Encode(engine);
             MatchEngine restored = MatchSaveManager.Restore(blob, new TwoClubProvider(seed));
+
+            // The arming seam is a TEST seam and is deliberately not serialized — a restored engine
+            // comes back on the shipped default, which is DISABLED. Re-arm it to the same reach, or
+            // this case compares an armed run against a disabled one and reports it as a restore
+            // defect (which is exactly what it did first time round).
+            restored.TestOnly_ArmTackleChallenge(ArmedRadiusM);
 
             for (int a = 0; a < MatchEngineConstants.SQUAD_SIZE; a++)
             {
