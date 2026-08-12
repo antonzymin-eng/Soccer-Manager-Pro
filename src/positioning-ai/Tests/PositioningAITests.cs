@@ -239,12 +239,12 @@ namespace TacticalDirector.PositioningAI.Tests
         }
 
         // ──────────────────────────────────────────────────────────────────────
-        // T-U-010: Spacing §3.6.4 worked example
+        // T-U-010: Spacing §3.6.5 worked example
         // ──────────────────────────────────────────────────────────────────────
         [Test]
         public void SpacingResolver_WorkedExample_AgentADisplaced()
         {
-            // §3.6.4: A (entityId=7, slotIdx=0) at (50.0,30.0) anchor cost=0.4 m²
+            // §3.6.5: A (entityId=7, slotIdx=0) at (50.0,30.0) anchor cost=0.4 m²
             //          B (entityId=11, slotIdx=1) at (50.8,30.6) anchor cost=0.9 m²
             // A has lower cost → A is displaced.
             var slots   = new Vector2[PositioningAIConstants.SQUAD_SIZE];

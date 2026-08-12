@@ -269,7 +269,7 @@ namespace TacticalDirector.MatchEngine
         /// dropped it would classify #12's phase as a transition for the remainder of every in-flight
         /// pass while the uninterrupted run classified it as possession — a digest divergence from the
         /// first pass onward. The same latch-and-flag class as v18.</para>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 20;
+        public const uint SNAPSHOT_SCHEMA_VERSION = 21;
 
         /// <summary>[FIXED] On-disk match save-file framing version (match-save-file-design.md KD-1).
         /// The FIRST u32 of a <c>MatchSaveManager</c> save blob; a load with a mismatched value fails
@@ -544,6 +544,45 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         public static readonly float GkKickoffDepthM =
             TacticalDirector.PositioningAI.PositioningAIConstants.GK_DEPTH_M;
+
+        // ── Tackle (wiring backlog W2 — #14 §3.6.5 owns the OUTCOME; these two are the engine's
+        //    trigger geometry, the same split W1 used: how far the keeper comes out is #11's, while
+        //    the cover corridor and time budget are the engine's). Both UN-CALIBRATED (KD-W1).
+
+        /// <summary>
+        /// [GT] Reach (m) from the BALL within which a committed #14 tackle intent becomes an actual
+        /// challenge. Distinct from #14's <c>TackleEligibleRadiusM</c> (3 m), which is a DECISION radius
+        /// — "close enough to think about tackling him" — where this is a REACH: how far a lunging
+        /// player can get a foot to the ball.
+        ///
+        /// <para>Measured to the ball rather than to the carrier because possession at Stage 0 is a flag
+        /// and not a kinematic constraint (backlog W6): the W2 census found carrier and ball more than a
+        /// metre apart in 12% of defending episodes, and the gate anatomy then measured the nearest
+        /// eligible challenger sitting a mean of <b>2.20 m</b> from the ball at the moment #14 asks him
+        /// to tackle.</para>
+        ///
+        /// <para><b>Why 2.5 and not the 1.5 this landing first used.</b> 1.5 m was a guess made before
+        /// that distribution existed, and at 1.5 m only about one eligible stride in ten produced a
+        /// reachable ball. The value is NOT set to make the count come out — that would be calibration,
+        /// which KD-W1 forbids here. It is re-derived from what the mode means: #14 §3.6.1 defines
+        /// COMMIT as a <i>lunge</i>, and a lunge is the extended-leg case #3 §7.2.1 describes for its
+        /// Stage-2 slide tackle ("compound hitbox (body + leg)", <c>ExtendedLegCapsule</c>). A standing
+        /// challenge reaches about a metre; a lunging one reaches roughly a body-length further. The
+        /// measurement prompted re-deriving the number; it did not supply it.</para>
+        ///
+        /// Config key [match-engine] TackleContactRadiusM. UN-CALIBRATED.
+        /// </summary>
+        public static readonly float TackleContactRadiusM = Config.GetFloat("match-engine", "TackleContactRadiusM", 2.5f);
+
+        /// <summary>
+        /// [GT] AI strides (10 Hz) a player waits after making a challenge before he can make another.
+        /// This is what turns a standing geometric condition into discrete challenges: #14's COMMIT mode
+        /// means "I have cover behind me", not "I will tackle", so without a cooldown a defender
+        /// re-challenges every stride for as long as he stands near the ball. Arms on EVERY outcome
+        /// including a miss — arming only on success would let a player who keeps missing re-challenge
+        /// at 10 Hz indefinitely. Config key [match-engine] TackleCooldownStrides. UN-CALIBRATED.
+        /// </summary>
+        public static readonly int TackleCooldownStrides = Config.GetInt("match-engine", "TackleCooldownStrides", 20);
 
         /// <summary>
         /// [GT] Minimum <c>ContactForceData.ForceMagnitude</c> (N) for a FROM_BEHIND agent-agent

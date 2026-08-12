@@ -126,7 +126,7 @@ namespace TacticalDirector.DecisionTree
 
         /// <summary>
         /// Entry point called by the simulation orchestrator each heartbeat.
-        /// Passes by value to satisfy §3.6.4 snapshot lifetime constraint.
+        /// Passes by value to satisfy §3.6.5 snapshot lifetime constraint.
         /// Steps: Validate → Assemble → Generate → Score → Select → Dispatch. §3.6.
         /// While a PASS/SHOOT is in flight (EXECUTING), the pipeline is skipped on
         /// the normal heartbeat cadence and re-entered only on forced refresh

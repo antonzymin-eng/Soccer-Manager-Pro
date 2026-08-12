@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 6: Performance Analysis and Budgets
 
 **Created:** May 17, 2026
-**Last Updated:** May 18, 2026 (v0.3 — APPROVED: DOMAIN_TAG_DEFENSIVE_AI promoted [CROSS-PENDING] → [CROSS: #16 §3.4])
-**Version:** 0.3
+**Last Updated:** August 12, 2026 (v0.4 — APPROVED patch: KD-6 revised (`ERR-014-006`, wiring backlog W2) — §6.1 gains the new "Region: Tackle Outcome Resolution" (ten `[GT]` + one `[FIXED]`, exactly as tabulated at `section-3.md` §3.6.5.5))
+**Version:** 0.4
 **Status:** APPROVED
 **Source:** `outline-detailed.md` v1.0 (May 17, 2026)
 
@@ -62,6 +62,29 @@ Allocated in #16 §3.4 v1.0.5. Phase B/C block final layout: `0x17` = #12, `0x1D
 | `TACKLE_COMMIT_COVERAGE_FLOOR` | `[GT]` | 1 | count | Minimum teammates behind the agent (within y-corridor) before COMMIT mode is permitted (§3.6.2). |
 | `TACKLE_JOCKEY_ANGLE_RAD` | `[GT]` | 0.35 | rad (~20°) | Approach angle below which JOCKEY is preferred over HOLD when COMMIT is disallowed (§3.6.2). |
 | `COVERAGE_DEPTH_CORRIDOR_M` | `[GT]` | 5.0 | m | Half-width of the y-axis corridor used to count "teammates behind" for coverage depth (§3.6.2). |
+
+### Region: Tackle Outcome Resolution (KD-6, revised — `ERR-014-006`)
+
+Added at the wiring backlog W2 landing (August 12, 2026). All ten `[GT]`
+values are **un-calibrated**: no player in this engine had ever made a
+tackle before this landing, so there was no prior behaviour to preserve
+and nothing here was fitted against anything. KD-W1 permits new dials on
+a dead surface and forbids tuning them at the wiring pass; they are the
+calibration pass's input, not its output (§3.6.5.5).
+
+| Constant | Tag | Value | Unit | Purpose |
+|---|---|---|---|---|
+| `TACKLE_ENGAGE_BASE` | `[GT]` | 0.10 | probability | Base P(a committed challenge connects at all), before commitment and proximity (§3.6.5.3). |
+| `TACKLE_ENGAGE_COMMITMENT_K` | `[GT]` | 0.25 | probability | Added to the engage probability per unit of movement commitment, `cos(approachAngle)` clamped at 0 (§3.6.5.3). |
+| `TACKLE_ENGAGE_PROXIMITY_K` | `[GT]` | 0.20 | probability | Added to the engage probability per unit of proximity to the ball (§3.6.5.3). |
+| `TACKLE_FOUL_SHARE_BASE` | `[GT]` | 0.14 | share | Base share of connecting challenges that are fouls, before the Aggression and Tackling terms (§3.6.5.3). |
+| `TACKLE_FOUL_SHARE_AGGRESSION_K` | `[GT]` | 0.12 | share | Added to the foul share per unit of normalized tackler Aggression (§3.6.5.3). |
+| `TACKLE_FOUL_SHARE_TACKLING_K` | `[GT]` | 0.10 | share | Subtracted from the foul share per unit of normalized tackler Tackling (§3.6.5.3). |
+| `TACKLE_CLEAN_SHARE_BASE` | `[GT]` | 0.30 | share | Base share of non-foul connecting challenges won cleanly rather than knocked loose (§3.6.5.3). |
+| `TACKLE_CLEAN_SHARE_EDGE_K` | `[GT]` | 0.60 | share | Added to the clean-win share per unit of the tackler's ability edge over the carrier (§3.6.5.3). |
+| `TACKLE_RETAIN_DRIBBLING_WEIGHT` | `[GT]` | 0.65 | weight | Weight of the carrier's Dribbling in his ability to retain the ball through a challenge (§3.6.5.3). |
+| `TACKLE_RETAIN_BALANCE_WEIGHT` | `[GT]` | 0.35 | weight | Weight of the carrier's Balance in the same retain term (§3.6.5.3). |
+| `TACKLE_FOUL_SHARE_CEILING` | `[FIXED]` | 0.95 | share | Numerical guarantee, not a football judgment: at a foul share of exactly 1 the second inverse transform divides by zero, making `BALL_WON`/`BALL_LOOSE` unreachable rather than unlikely (§3.6.5.5). |
 
 ### Region: Anti-Chaos Invariants
 
@@ -214,3 +237,4 @@ the `EmitAllZonal` function is an O(N_HOLD) memset — the most trivial path.
 | 0.1 | May 17, 2026 | AI agent | Initial draft. Full 26-entry constant catalogue in §6.1 (22 [GT] + 4 [CROSS] / [CROSS-PENDING]). All [GT] constants promoted from [EST] at outline stage (Appendix A derivation record). Hot-path enumeration table in §6.2. Per-tick budget ≤ 0.12 ms against named reference host (§6.3). Memory footprint ≈ 1,840 bytes (§6.5). `REASSIGN_LATENCY_TICKS` added to catalogue (§5.6.2 exploit criterion). `GK_EXPECTED_ZONE_MIN_X` retained in catalogue for Stage 1+ zone visualisation even though it is not used in Stage 0 trigger logic. |
 | 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. M1: §6.1 and v0.1 history row corrected "27-entry" → "26-entry" (22 GT + 4 CROSS/CROSS-PENDING = 26, not 27). M7: §6.1 domain tag block layout now reflects ERR-011-001/ERR-012-001 race — #11 occupies `0x18` or `0x1D` depending on which of #11/#12 reaches `APPROVED` first. |
 | 0.3 | May 18, 2026 | AI agent (claude/review-phase-0-requirements-yMzh6) | APPROVED patch. ERR-014-004 resolved: `DOMAIN_TAG_DEFENSIVE_AI` promoted `[CROSS-PENDING]` → `[CROSS: #16 §3.4]` (value `0x1A` confirmed, allocated in #16 §3.4 v1.0.5). Block layout updated to final values: `0x17` = #12, `0x1D` = #11 (final value), `0x19` = #13, `0x1A` = #14, `0x1B` = #15. |
+| 0.4 | August 12, 2026 | AI agent (wiring backlog W2) | APPROVED patch. KD-6 revised (`ERR-014-006`): §6.1 gains "Region: Tackle Outcome Resolution" — ten `[GT]` + one `[FIXED]` constants, values copied verbatim from `section-3.md` §3.6.5.5. Catalogue grows from 26 entries (22 `[GT]` + 4 `[CROSS]`) to 37 (32 `[GT]` + 4 `[CROSS]` + 1 `[FIXED]`); §9.1 item 4's evidence count is now stale as a result and is flagged, not corrected, in this pass (see the W2 sweep report). |

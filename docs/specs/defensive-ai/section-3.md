@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 3: Core Formulas and Algorithms
 
 **Created:** May 17, 2026
-**Last Updated:** July 7, 2026 (v0.4 — Cheap-item addition (FR-TI-033): §3.3.3 Step 2 MAN_MARK candidate radius scaled by `MarkRadiusScalar(TeamTactic.MarkingOrientation)` — Balanced ⇒ ×1.00 identity, byte-identical to pre-addition. Implemented in `src/defensive-ai/TacticTranslation.cs` + `MarkAssigner.cs`.)
-**Version:** 0.4
+**Last Updated:** August 12, 2026 (v0.5 — KD-6 revised (`ERR-014-006`, wiring backlog W2): new §3.6.5 "Tackle Outcome Resolution" — #14 now resolves the tackle challenge outcome itself as a four-outcome abstract attribute duel, superseding the dead #8-mediates/#3-owns-contact delegation. §3.6.1 Purpose corrected. §3.12 constants index and tags table extended with the eleven new §3.6.5.5 constants and the `[FIXED]` tag. Top-of-file "no runtime code is produced at Stage 0" statement gains a scoped exception note for §3.6.5.)
+**Version:** 0.5
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -17,6 +17,12 @@ The per-tick pseudocode is in §3.13; §3.1–§3.12 define each algorithm step.
 **Spec-level stage binding:** This spec is authored at Stage 0; runtime activation
 is Stage 1. All algorithms in §3 are normative specification text. No runtime code
 is produced at Stage 0.
+
+**Amended (KD-6 revised — `ERR-014-006`, wiring backlog W2, August 12,
+2026):** §3.6.5's tackle outcome resolution is a scoped exception —
+`TackleOutcomeResolver.cs` ships as runtime code alongside this revision
+(see §1.8, §4.1 for the same note). The rest of §3 is unaffected: its
+algorithms remain normative specification text pending Stage 1 activation.
 
 ---
 
@@ -399,9 +405,18 @@ threat = 0.7905 × 0.7895 = 0.624  (to 3 d.p.)
 For each HOLD_SHAPE agent whose assigned opponent is within `TACKLE_ELIGIBLE_RADIUS_M`,
 #14 produces a `TackleIntentRequest` carrying the recommended mode:
 `COMMIT` (lunge), `JOCKEY` (shadow without committing), or `HOLD` (maintain
-shape). This is a *per-tick, per-agent* intent declaration — #8 Decision Tree
-consumes it and translates the intent into an `AgentAction` dispatched to
-#3 Collision System (KD-6 boundary).
+shape). This is a *per-tick, per-agent* intent declaration.
+
+**Amended (KD-6 revised — `ERR-014-006`; see §3.6.5):** the sentence
+originally here read *"#8 Decision Tree consumes it and translates the
+intent into an `AgentAction` dispatched to #3 Collision System (KD-6
+boundary)."* That dispatch never had a working delegate — #8's `ActionType`
+ordinal space is exhausted and #3 defers slide-tackle collision to Stage 2
+— so it is corrected rather than carried forward: a `COMMIT` intent that
+becomes a challenge is resolved by #14 itself, into a `TackleOutcome`, per
+§3.6.5. §3.6.1–§3.6.4 remain the correct account of how the intent
+(`COMMIT` / `JOCKEY` / `HOLD`) is chosen; they no longer describe where a
+`COMMIT` intent goes next.
 
 Intent is per-tick only; there is no carry-forward. Agents not within
 `TACKLE_ELIGIBLE_RADIUS_M` do not receive a `TackleIntentRequest` this tick.
@@ -519,6 +534,193 @@ coverageDepth (2) >= TACKLE_COMMIT_COVERAGE_FLOOR (1) → mode = COMMIT
 
 Emitted: `TackleIntentRequest { agentId = A, targetId = O, mode = COMMIT,
            approachAngle = 0.0 rad, coverageDepth = 2 }`.
+
+---
+
+## 3.6.5 Tackle Outcome Resolution (KD-6, revised — `ERR-014-006`)
+
+### 3.6.5.1 Why this section exists
+
+§3.6.1 ends at *intent*, on the strength of KD-6's original boundary: *"#14 produces
+`TackleIntentRequest` intent; #8 mediates dispatch; #3 owns contact physics."* Neither delegate can
+accept:
+
+- **#8 cannot mediate.** Its `ActionType` ordinal space is exhausted — `SAVE = 7` is the last value
+  that fits the 3-bit composure-noise field in `ActionSelector.ComputeOptionNoise`, and an eighth
+  action forces a composure-noise digest rebaseline. #8 also has no tackle model and, being an
+  individual-action tree with no duel concept, cannot acquire one incrementally.
+- **#3 does not own it at Stage 0.** §7.2.1 defers slide-tackle collision to **Stage 2**, and KR-3
+  records that ball-first-versus-player-first is undecidable with 60 Hz discrete detection. #3 also
+  never landed the `TackleContactFlag` amendment that Pass Mechanics #5 §4.4.2 flagged as
+  **XC-4.4-02, "Blocking — requires Collision System amendment"**.
+
+The consequence was not a gap in a design — it was **ten weeks of unreachable code**. `TackleIntent`
+was produced every tick and read by nobody; both engine collision adapters hardcoded
+`GetAndClearTackleFlag => false`; and #5 §3.8.5's tackle-interrupt branch was therefore dead. This is
+the `ERR-011-010` shape: a condition delegated to a delegate that structurally cannot accept it, left
+belonging to nobody.
+
+**A Stage-0 tackle cannot be a physics contact**, because the physics that would adjudicate it is a
+Stage-2 deliverable. It is an **abstract duel between two players' abilities** — and by the W1
+precedent, which took the keeper's rush-commit distance back into #11 §3.7.0 on the grounds that
+*"how far he comes out is a property of the keeper"*, whether a defender wins a challenge is a
+property of the defender and the carrier. It belongs to the spec that owns them, which is this one.
+
+**KD-6 is revised accordingly** (§1.5): #14 produces the intent **and resolves the outcome**; the
+composition root owns only the trigger geometry (which intent becomes a challenge, and when); #3
+retains contact physics for Stage 2+, at which point §3.6.5 becomes the fallback rather than a
+parallel authority — the same relationship W1 established between its rush commit and a future
+DT-emitted `RUSH`.
+
+### 3.6.5.2 The four outcomes
+
+| Outcome | Meaning |
+|---|---|
+| `MISSED` | The challenge did not connect. Possession unchanged; nothing is emitted. |
+| `BALL_WON` | The tackler takes the ball cleanly and becomes the holder. |
+| `BALL_LOOSE` | The carrier is dispossessed but nobody gains control — the ball is knocked free and resolves through the ordinary loose-ball paths. |
+| `FOUL` | The challenge is a foul on the tackler. The restart and the card are the match-flow discipline path's, which remains the single authority on cards. |
+
+**`BALL_LOOSE` is not an implementation detail.** The obvious three-outcome model — won, fouled,
+missed — has no way to express the commonest thing that happens when a defender gets a foot in: the
+ball goes somewhere neither player controls. Folding it into `BALL_WON` makes every successful
+challenge a clean turnover, which is false to the game and inflates the tackling side's possession;
+folding it into `MISSED` makes it invisible. It is expected to be the commonest of the three
+non-null outcomes.
+
+Ordinals are stable and append-only — the outcome reaches match flow and is digest-visible.
+
+### 3.6.5.3 Algorithm
+
+One uniform draw `u ∈ [0,1)` resolves all three decisions by nested inverse transforms — the
+`foul-discipline-balance-design.md` KD-F2 shape ("one draw, two decisions, no second stream"),
+extended by one level. No second draw site, no ordering between sub-decisions, no new stream.
+
+```
+resolve(inputs, u):
+    engage = clamp01(TACKLE_ENGAGE_BASE
+                     + TACKLE_ENGAGE_COMMITMENT_K · max(0, cos(approachAngle))
+                     + TACKLE_ENGAGE_PROXIMITY_K  · (1 − clamp01(reachFraction)))
+    if u >= engage:                    return MISSED
+
+    v = u / engage                     # uniform on [0,1)
+
+    foulShare = clamp(TACKLE_FOUL_SHARE_BASE
+                      + TACKLE_FOUL_SHARE_AGGRESSION_K · aggression
+                      − TACKLE_FOUL_SHARE_TACKLING_K   · tackling,
+                      0, TACKLE_FOUL_SHARE_CEILING)
+    if v < foulShare:                  return FOUL
+
+    w = (v − foulShare) / (1 − foulShare)
+
+    retain = TACKLE_RETAIN_DRIBBLING_WEIGHT · dribbling
+           + TACKLE_RETAIN_BALANCE_WEIGHT   · balance
+    cleanShare = clamp01(TACKLE_CLEAN_SHARE_BASE
+                         + TACKLE_CLEAN_SHARE_EDGE_K · (tackling − retain))
+
+    return w < cleanShare ? BALL_WON : BALL_LOOSE
+```
+
+All abilities are normalized to `[0,1]`. The three terms mean:
+
+- **`engage`** — did he get there. Commitment is `cos(approachAngle)` **clamped at zero**: §2.2.3's
+  approach angle is the angle between the tackler's own velocity and his bearing to the man, so 0 is
+  running straight at him and π is running directly away. A tackler moving away does not connect
+  *less* than one moving sideways; he simply does not connect, and the clamp states that without a
+  branch. **It carries no information about which side of the carrier the tackler is on**, and must
+  not be used as though it does — see §3.6.5.6.
+- **`foulShare`** — was it mistimed. Rises with Aggression, falls with Tackling, because the same
+  challenge is a foul when the timing is wrong and timing is what Tackling measures.
+- **`cleanShare`** — did he come away with it. Driven by the tackler's edge over the carrier's ability
+  to keep the ball (Dribbling) and stay upright through contact (Balance). The base sits well below a
+  half: a defender who merely matches his man mostly knocks the ball loose, and taking it off him
+  requires being better than him.
+
+**Continuity (football-judgment doctrine §6 P1) is a requirement here, not a preference.** No
+threshold anywhere decides an outcome; every input moves the probabilities smoothly, so a millimetre
+of position or one attribute point never flips a challenge from certain success to certain failure.
+
+### 3.6.5.4 Valid input ranges
+
+- `tackling`, `aggression`, `dribbling`, `balance`: `[0.0, 1.0]` (normalized; the resolver clamps
+  defensively but does not rescale).
+- `approachAngle`: `[0.0, π]` rad — §2.2.3.
+- `reachFraction`: `[0.0, 1.0]` — tackler-to-**ball** separation as a fraction of the contact radius.
+  **To the ball, not to the carrier**: possession at Stage 0 is a flag rather than a kinematic
+  constraint, and the W2 census measured carrier and ball more than a metre apart in 12% of defending
+  episodes. A tackle is a challenge for the ball.
+- `u`: `[0.0, 1.0)`.
+
+### 3.6.5.5 Constants
+
+Ten `[GT]` plus one `[FIXED]`, all in `DefensiveAIConstants.cs` per KD-14. **Every `[GT]` here is
+un-calibrated**: no player in this engine had ever made a tackle, so there was no prior behaviour to
+preserve and nothing was fitted against anything. KD-W1 permits new dials on a dead surface and
+forbids tuning them at the wiring pass; they are the calibration pass's input, not its output.
+
+| Constant | Tag | Default |
+|---|---|---|
+| `TACKLE_ENGAGE_BASE` | `[GT]` | 0.10 |
+| `TACKLE_ENGAGE_COMMITMENT_K` | `[GT]` | 0.25 |
+| `TACKLE_ENGAGE_PROXIMITY_K` | `[GT]` | 0.20 |
+| `TACKLE_FOUL_SHARE_BASE` | `[GT]` | 0.14 |
+| `TACKLE_FOUL_SHARE_AGGRESSION_K` | `[GT]` | 0.12 |
+| `TACKLE_FOUL_SHARE_TACKLING_K` | `[GT]` | 0.10 |
+| `TACKLE_CLEAN_SHARE_BASE` | `[GT]` | 0.30 |
+| `TACKLE_CLEAN_SHARE_EDGE_K` | `[GT]` | 0.60 |
+| `TACKLE_RETAIN_DRIBBLING_WEIGHT` | `[GT]` | 0.65 |
+| `TACKLE_RETAIN_BALANCE_WEIGHT` | `[GT]` | 0.35 |
+| `TACKLE_FOUL_SHARE_CEILING` | `[FIXED]` | 0.95 |
+
+The ceiling is `[FIXED]` and not `[GT]` deliberately: it is a **numerical guarantee about the
+mapping**, not a football judgment. At a foul share of exactly 1 the second inverse transform divides
+by zero and `BALL_WON`/`BALL_LOOSE` become unreachable rather than unlikely, so a config file must
+not be able to reach it.
+
+### 3.6.5.6 Attribute ownership (doctrine §6 P3)
+
+`Tackling` and `Aggression` are read from the **tackler**; `Dribbling` and `Balance` from the
+**carrier**. Two notes for the ledger:
+
+- **`Tackling` and `Marking` had no reader anywhere in the tree before this section.** Both are
+  canonical #27 attributes, loaded, defaulted and serialized, and consumed by no formula. §3.6.5
+  gives `Tackling` its first consumer; `Marking` still has none.
+- **`ApproachAngle` is not a from-behind indicator.** `TackleIntentRequest`'s own XML doc claimed
+  *"π = from behind"* until August 12, 2026, and the first draft of the W2 outcome model weighted a
+  foul term on that misreading before it was caught. From-behind contact geometry is #3's
+  `ContactTypeClassifier`, whose sign convention has itself been wrong twice (`ERR-003-002`,
+  `ERR-003-006`). §3.6.5 uses the angle only as commitment.
+
+### 3.6.5.7 Worked example
+
+Tackler A: `Tackling = 14`, `Aggression = 12` ⇒ normalized 0.70, 0.60 (÷ `ATTRIBUTE_MAX` = 20).
+Carrier O: `Dribbling = 16`, `Balance = 12` ⇒ 0.80, 0.60.
+A is running almost straight at the ball: `approachAngle = 0.40 rad`, and is 0.9 m from it with a
+1.5 m contact radius ⇒ `reachFraction = 0.60`.
+
+```
+commitment = max(0, cos(0.40))          = 0.9211
+proximity  = 1 − 0.60                   = 0.40
+engage     = 0.10 + 0.25·0.9211 + 0.20·0.40
+           = 0.10 + 0.23028 + 0.08      = 0.41027
+
+foulShare  = 0.14 + 0.12·0.60 − 0.10·0.70
+           = 0.14 + 0.072 − 0.07        = 0.142
+
+retain     = 0.65·0.80 + 0.35·0.60      = 0.52 + 0.21 = 0.73
+edge       = 0.70 − 0.73                = −0.03
+cleanShare = clamp01(0.30 + 0.60·(−0.03)) = 0.282
+```
+
+So this challenge misses ~59.0% of the time. Of the ~41.0% that connect, 14.2% are fouls; of the
+remaining 85.8%, 28.2% are clean wins and 71.8% knock the ball loose. Unconditionally:
+**MISSED 58.97%, FOUL 5.83%, BALL_WON 9.93%, BALL_LOOSE 25.27%**.
+
+A draw of `u = 0.30` gives `v = 0.30 / 0.41027 = 0.7312`; `0.7312 ≥ 0.142`, so not a foul;
+`w = (0.7312 − 0.142) / 0.858 = 0.6868`; `0.6868 ≥ 0.282` ⇒ **`BALL_LOOSE`**. A slightly better
+tackler — `Tackling = 17` ⇒ 0.85, `edge = +0.12`, `cleanShare = 0.372` — takes the same draw to
+`0.6868 ≥ 0.372`, still `BALL_LOOSE`; it takes `u < 0.189` for that challenge to be won cleanly. The
+model is deliberately hard to win cleanly against a good dribbler.
 
 ---
 
@@ -1124,6 +1326,7 @@ are not duplicated here.
 | Tag | Meaning | Rule |
 |-----|---------|------|
 | `[GT]` | Gameplay-Tuned | Designer sets value; lives in `DefensiveAIConstants.cs` |
+| `[FIXED]` | Fixed / physical or numerical law | Derived from a hard mapping constraint, not a football judgment; never tune (§3.6.5.5) |
 | `[CROSS]` | Cross-spec constant | Defined in named upstream spec; consumed read-only |
 | `[CROSS-PENDING]` | Cross-spec constant pending upstream allocation | Promoted to `[CROSS]` atomically with upstream APPROVED |
 
@@ -1137,6 +1340,17 @@ are not duplicated here.
 | `TACKLE_COMMIT_COVERAGE_FLOOR` | `[GT]` | §3.6.2 |
 | `TACKLE_JOCKEY_ANGLE_RAD` | `[GT]` | §3.6.2 |
 | `COVERAGE_DEPTH_CORRIDOR_M` | `[GT]` | §3.6.2 |
+| `TACKLE_ENGAGE_BASE` | `[GT]` | §3.6.5.3 |
+| `TACKLE_ENGAGE_COMMITMENT_K` | `[GT]` | §3.6.5.3 |
+| `TACKLE_ENGAGE_PROXIMITY_K` | `[GT]` | §3.6.5.3 |
+| `TACKLE_FOUL_SHARE_BASE` | `[GT]` | §3.6.5.3 |
+| `TACKLE_FOUL_SHARE_AGGRESSION_K` | `[GT]` | §3.6.5.3 |
+| `TACKLE_FOUL_SHARE_TACKLING_K` | `[GT]` | §3.6.5.3 |
+| `TACKLE_CLEAN_SHARE_BASE` | `[GT]` | §3.6.5.3 |
+| `TACKLE_CLEAN_SHARE_EDGE_K` | `[GT]` | §3.6.5.3 |
+| `TACKLE_RETAIN_DRIBBLING_WEIGHT` | `[GT]` | §3.6.5.3 |
+| `TACKLE_RETAIN_BALANCE_WEIGHT` | `[GT]` | §3.6.5.3 |
+| `TACKLE_FOUL_SHARE_CEILING` | `[FIXED]` | §3.6.5.5 |
 | `OFFSIDE_BALL_SPEED_THRESHOLD_M_S` | `[GT]` | §3.7.2 |
 | `OFFSIDE_TRAP_DWELL_TICKS` | `[GT]` | §3.7.2 |
 | `OFFSIDE_STEP_SIZE_M` | `[GT]` | §3.7.4 |
@@ -1298,3 +1512,4 @@ resolved May 18, 2026.
 | 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. H1: §3.3.3 Step 1 hysteresis pre-check now guards `mode != ZONAL` to avoid suppressing ZONAL re-evaluation (T-DA-054). H6: §3.7.4 offside trap loop now skips agents with `overriddenThisTick` set, preventing overwrite of last-man/GK-cover emergency assignments. H3: §3.10.3 Invariant 1 condition corrected `> MIN_BACKLINE_AGENTS` → `>= MIN_BACKLINE_AGENTS` (was triggering unnecessary fallbacks when exactly at the minimum). H5: §3.10.3 Invariant 1 demotion candidate argmin now requires `targetEntityId != null AND NOT overriddenThisTick` to prevent null-ref on COVER_GK_ZONE assignments and respect emergency overrides. M4: §3.3.3 Step 7 `ApplyHysteresisGate` call now passes `targetPosition = perception.GetAgent(bestTarget).position` (was missing, causing null targetPosition in non-ZONAL assignments). M5: §3.10.3 Invariant 3 displacement check now skips agents with `overriddenThisTick` set. |
 | 0.3 | May 17, 2026 | AI agent | PASS-2 adversarial review fix pass. PASS-2-H1: §3.13 now includes Step 3b that explicitly resets `overriddenThisTick = false` for all pool slots before Steps 4/4a set emergency overrides — without this, stale `true` values from the previous tick would cause Step 5 to incorrectly skip non-emergency agents. PASS-2-M1: §3.10.3 Invariant 1 demotion now checks `eligiblePool is empty` before calling `argmin` — if all non-ZONAL DEFENSE-line agents have `overriddenThisTick = true`, a `break` exits the pass loop and allows the F4 post-loop check to handle the residual invariant violation, rather than crashing on an empty argmin. |
 | 0.4 | 2026-07-07 | AI agent | Cheap-item addition (FR-TI-033): §3.3.3 Step 2 MAN_MARK candidate radius scaled by `MarkRadiusScalar(TeamTactic.MarkingOrientation)` — Balanced ⇒ ×1.00 identity, byte-identical to pre-addition. Implemented in `src/defensive-ai/TacticTranslation.cs` + `MarkAssigner.cs`. |
+| 0.5 | 2026-08-12 | AI agent (wiring backlog W2) | KD-6 revised (`ERR-014-006`): added §3.6.5 "Tackle Outcome Resolution" — #14 owns the tackle outcome (four-outcome abstract duel: `MISSED` / `BALL_WON` / `BALL_LOOSE` / `FOUL`) in addition to the intent, because neither original KD-6 delegate can accept dispatch (#8's `ActionType` ordinal space is exhausted; #3 defers slide-tackle collision to Stage 2). §3.6.1 Purpose corrected to stop asserting the dead #8-mediates/#3-owns-contact dispatch. §3.12 constants index extended with the eleven new §3.6.5.5 constants (ten `[GT]` + one `[FIXED]`) and the `[FIXED]` tag row. Top-of-file stage-binding statement gains a scoped exception note (§3.6.5 ships as Stage-0 runtime code; the rest of §3 is unaffected). Implemented in `src/defensive-ai/TackleOutcome.cs`, `TackleDuelInputs.cs`, `TackleOutcomeResolver.cs`. |

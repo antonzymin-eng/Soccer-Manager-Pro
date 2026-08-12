@@ -157,6 +157,22 @@ namespace TacticalDirector.MatchEngine
                     + Inv($"{c.EpisodesCommitOnCarrier,6} | {c.EpisodesCarrierBallGapOverThreshold,7}"));
             }
 
+            var oc = engine.TestOnly_TackleOutcomeCounts;
+            int resolved = oc.Won + oc.Loose + oc.Foul + oc.Missed;
+            int decisive = oc.Won + oc.Loose;
+            report.AppendLine(
+                Inv($"  CHALLENGES RESOLVED (both teams): {resolved}  ")
+                + Inv($"won={oc.Won} loose={oc.Loose} foul={oc.Foul} missed={oc.Missed}"));
+            if (resolved > 0)
+            {
+                report.AppendLine(
+                    Inv($"    engage rate {100.0 * (resolved - oc.Missed) / resolved:F1}%  ")
+                    + Inv($"of which foul {100.0 * oc.Foul / System.Math.Max(1, resolved - oc.Missed):F1}%  ")
+                    + Inv($"clean-win share of decisive {100.0 * oc.Won / System.Math.Max(1, decisive):F1}%"));
+                report.AppendLine(
+                    Inv($"    per team per 90: challenges {resolved / 2.0:F1}, ")
+                    + Inv($"dispossessions {decisive / 2.0:F1}, fouls {oc.Foul / 2.0:F1}"));
+            }
             report.AppendLine("  mode split over on-carrier intents (strides, ratio only — NOT a per-90 rate):");
             for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
             {
