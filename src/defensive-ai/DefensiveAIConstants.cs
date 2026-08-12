@@ -1,6 +1,6 @@
 // File:     src/defensive-ai/DefensiveAIConstants.cs
 // Created:  2026-05-29
-// Modified: 2026-06-30
+// Modified: 2026-08-12 (wiring backlog W2 / ERR-014-006 — the §3.6.5 tackle-outcome constants: 10 [GT] + 1 [FIXED])
 // Author:   —
 // Spec:     Defensive AI #14 §6.1, FR-DA-007, Code Standards #20 §4.2 FR-CS-025
 // Purpose:  Single constant catalogue for Spec #14. Contains all assignment thresholds,
@@ -202,7 +202,7 @@ namespace TacticalDirector.DefensiveAI
 
         // ── Tackle Outcome Resolution (§3.6.5 — wiring backlog W2, ERR-014-006) ─
         //
-        // ALL EIGHT ARE UN-CALIBRATED. They are first plausible values for a surface that has never
+        // ALL TEN ARE UN-CALIBRATED. They are first plausible values for a surface that has never
         // existed — no player in this engine has ever made a tackle — so there was no prior behaviour
         // to preserve and nothing here was fitted against anything. KD-W1 (the [GT] freeze) permits
         // new dials on a dead surface and forbids tuning them here; they are the calibration pass's
@@ -328,4 +328,10 @@ namespace TacticalDirector.DefensiveAI
 // | 1.2     | 2026-06-30 | —      | #21 §5.6 / G2: OffsideTrapRequestedDwellTicks (FR-TI-022) PINNED — illustrative →    |
 // |         |            |        |   pinned at 1 with the numerical-mirror invariant 1 ≤ value ≤ OffsideTrapDwellTicks  |
 // |         |            |        |   documented; locked by OffsideTrapControllerTests.RequestedDwell_InvariantPinned.   |
+// | 1.3     | 2026-08-12 | —      | Wiring backlog W2 / ERR-014-006: + the §3.6.5 tackle-outcome block —   |
+// |         |            |        | ten [GT] (engage / foul-share / clean-share / retain terms) and one    |
+// |         |            |        | [FIXED] TACKLE_FOUL_SHARE_CEILING, which is [FIXED] because it is a   |
+// |         |            |        | numerical guarantee that the second inverse transform never divides   |
+// |         |            |        | by zero, not a football judgment a config may reach. First [FIXED]    |
+// |         |            |        | region in this catalogue. ALL TEN [GT] UN-CALIBRATED per KD-W1.       |
 #endregion

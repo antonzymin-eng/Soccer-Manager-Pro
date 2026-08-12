@@ -71,7 +71,7 @@ namespace TacticalDirector.PositioningAI
         /// <summary>
         /// Displaces the cheaper-to-move agent (smaller |slot−anchor|²) away from the other.
         /// EntityId tie-break: higher EntityId is displaced when costs are within SPACING_EPSILON_M2.
-        /// Worked example §3.6.5: A@(50.0,30.0), B@(50.8,30.6) → A displaced by 0.51 m.
+        /// Worked example §3.6.4: A@(50.0,30.0), B@(50.8,30.6) → A displaced by 0.51 m.
         /// </summary>
         private static void Displace(
             Vector2[] outSlots, Vector2[] anchors, int[] agentIds,

@@ -2,6 +2,7 @@
 // Created:  2026-06-16
 // Modified: 2026-08-04 (ERR-008-020: SetAllAgentAttributes(_dtAttrs) wired per DecisionTree at boot — the §3.1.3.3 pass-lane attribute view)
 // Modified: 2026-08-12 (wiring backlog W2 instrument: the episode-based tackle-intent census — CensusTackleIntents + the TackleIntentCensus accumulator; observation only, no gameplay path, not serialized)
+// Modified: 2026-08-12 (wiring backlog W2 — the tackle: TryResolveTackles + #14 §3.6.5 duel + tackle flag; SNAPSHOT_SCHEMA_VERSION 20 -> 21; card-severity draw order moves by design)
 // Modified: 2026-08-05 (CI fix — RestoreFromSnapshot step 3b ResyncGkAgentIdsAfterRestore: the W1 AR-2 occupant-change ResetSlot fired on the boot-vs-restored flag delta and wiped just-restored #11 state; see gk-rush-trigger-design.md v1.4)
 // Modified: 2026-07-27  (shot-outcome pass: live shot pressure query — ComputeOpponentPressureScalar)
 // Modified: 2026-07-27  (B3: the #37 KD-7 read-only per-tick ledger tap)
@@ -345,6 +346,15 @@ namespace TacticalDirector.MatchEngine
         private int _tackleLooseCount;
         private int _tackleFoulCount;
         private int _tackleMissedCount;
+
+        // Per-team challenge tally, same diagnostic class. Split by team because the pooled counters
+        // cannot see a defect in which only one side ever challenges — which is exactly what the
+        // pre-AR-1 per-team resolution order could produce (ERR-008-002).
+        private readonly int[] _tackleResolvedByTeam = new int[MatchEngineConstants.TEAM_COUNT];
+
+        // Fouls published with ContactType.SLIDE_TACKLE. Same class; exists so the foulKind branch,
+        // which had no coverage at all when it landed, is observable (AR-1 H-3).
+        private int _tackleSlideTackleFouls;
 
         // Gate anatomy, same diagnostic class. Separates "no intent named the carrier" from "an intent
         // did, but nobody was within reach of the BALL" — the two look identical in an outcome count
@@ -2261,6 +2271,13 @@ namespace TacticalDirector.MatchEngine
              _tackleGateInRadiusStrides,
              _tackleGateNearestSamples > 0 ? _tackleGateNearestSumM / _tackleGateNearestSamples : 0f);
 
+        /// <summary>Test-only: challenges this team resolved (AR-1 M-4 — the pooled counters cannot
+        /// see a one-sided defect).</summary>
+        internal int TestOnly_TackleResolvedByTeam(int teamId) => _tackleResolvedByTeam[teamId];
+
+        /// <summary>Test-only: fouls published with <c>ContactType.SLIDE_TACKLE</c> (AR-1 H-3).</summary>
+        internal int TestOnly_TackleSlideTackleFouls => _tackleSlideTackleFouls;
+
         /// <summary>Test-only: this agent's remaining challenge cooldown in AI strides.</summary>
         internal int TestOnly_TackleCooldown(int agentId) => _tackleCooldown[agentId];
 
@@ -2870,10 +2887,6 @@ namespace TacticalDirector.MatchEngine
             // (attributes + tactics are static defaults assembled at boot). Rebuild the broad-phase grid
             // from current agent positions (perception queries it; the host owns population).
             PopulatePerceptionGrid();
-            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
-            {
-                _hasPossession[i] = i == _possessingAgentId;
-            }
 
             // The AI heartbeat index is the 10 Hz tactical tick (CurrentTick / AI_PHASE_STRIDE). RunAiPhase
             // runs only on stride ticks, so the integer division is exact (no truncation of a partial tick).
@@ -2884,6 +2897,26 @@ namespace TacticalDirector.MatchEngine
             // HOLD anchor is this tick's Positioning AI (#12) slot and its DefensiveLineDepth / Mark / Attack
             // carriers are this tick's Defensive (#14) / Attacking (#15) output rather than the boot scaffold.
             RunMechanicsAI(heartbeat);
+
+            // W2: challenges resolve AFTER the whole mechanics pass, and once for both teams rather
+            // than inside its per-team loop (AR-1 H-1). Inside the loop, team 0's tackle mutated
+            // _possessingAgentId before team 1's #12/#13/#14 snapshots were filled, so team 1 read a
+            // post-tackle world and team 0 could never read one — a home/away asymmetry of exactly the
+            // ERR-008-002 class, and W2 was the first thing in that loop to mutate shared world state.
+            // Hoisted here, both teams' mechanics see one frozen carrier and the resolution sees the
+            // settled output of both.
+            TryResolveTackles();
+
+            // §2.5 possession is refreshed HERE, after the tackle, not before the mechanics pass
+            // (AR-1 H-1). Perception and every DecisionTree below read this array, and a dispossessed
+            // carrier who is still told he has the ball selects a PASS whose Initiate() drains the very
+            // tackle flag the challenge just raised (#5 §4.4.2 drains at initiate and polls only during
+            // WINDUP) — the interrupt swallowed by the pass it exists to stop. With no tackle this tick
+            // the array is identical either way, since nothing else in RunMechanicsAI writes possession.
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                _hasPossession[i] = i == _possessingAgentId;
+            }
 
             // GK (#11) / Heading (#10) 10 Hz tactical drive (design §3.4): advance the GK state machine and
             // fire the §4 save/header triggers (committed at the tactical tick, KD-17). No-op unless the
@@ -3043,7 +3076,6 @@ namespace TacticalDirector.MatchEngine
                 _defensive[t].Tick(_defSnapshots[t]);
                 MarkDirective mark = _defensive[t].GetMarkDirective();
                 CensusTackleIntents(t);
-                TryResolveTackle(t);
 
                 // Attacking (#15) — per-agent AttackIntent; a committed run is the HasAttackIntent carrier.
                 FillAttackingSnapshot(t, tacticalTick);
@@ -3315,7 +3347,12 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
-        /// Wiring backlog W2 — resolves at most ONE committed tackle for this team this AI stride.
+        /// Wiring backlog W2 — resolves at most ONE committed tackle this AI stride.
+        ///
+        /// <para><b>Called once, after the whole mechanics pass, not per team inside it</b> (AR-1 H-1).
+        /// Only the team without the ball can challenge for it, so there is exactly one defending team
+        /// per stride; running inside the per-team loop meant team 0's tackle mutated possession before
+        /// team 1's snapshots were filled, and never the reverse.</para>
         ///
         /// <para><b>At most one, deliberately.</b> The census measured ~65 COMMIT-on-carrier episodes per
         /// defending team per match against football's ~15–17 tackle attempts, and several defenders
@@ -3342,11 +3379,10 @@ namespace TacticalDirector.MatchEngine
         /// <c>match-flow.card-severity</c> on ticks that previously had no such draw. The digest moves.
         /// Nothing in this landing claims digest invariance.</para>
         /// </summary>
-        private void TryResolveTackle(int team)
+        private void TryResolveTackles()
         {
-            for (int k = 0; k < MatchEngineConstants.PLAYERS_PER_TEAM; k++)
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
-                int i = team * MatchEngineConstants.PLAYERS_PER_TEAM + k;
                 if (_tackleCooldown[i] > 0)
                 {
                     _tackleCooldown[i]--;
@@ -3354,7 +3390,7 @@ namespace TacticalDirector.MatchEngine
             }
 
             int carrier = _possessingAgentId;
-            if (carrier < 0 || carrier >= MatchEngineConstants.SQUAD_SIZE || _teamIds[carrier] == team)
+            if (carrier < 0 || carrier >= MatchEngineConstants.SQUAD_SIZE)
             {
                 return;
             }
@@ -3362,6 +3398,29 @@ namespace TacticalDirector.MatchEngine
             {
                 return;
             }
+
+            // A keeper in possession is holding the ball in his hands (the engine models exactly that,
+            // for up to GkMaxHoldTicks), and challenging a keeper who has control of it is a Law 12
+            // offence, not a tackle. #14's MarkAssigner does not exclude an opponent keeper as a mark
+            // target, so without this gate a striker marking him inside the contact radius would take
+            // the ball out of his hands (AR-1 H-4).
+            if (_isGoalkeeper[carrier])
+            {
+                return;
+            }
+
+            // A restart taker is not yet in open play: ApplyRestart places the ball and hands him
+            // possession in the same breath, with no dead-ball state and no settling period, so on the
+            // very next stride he would be an ordinary carrier standing over a placed ball. Tackling a
+            // free-kick or kickoff taker before he has taken it is not football (AR-1 M-9).
+            if (_restartAppliedThisTick != RestartCue.None)
+            {
+                return;
+            }
+
+            // Only the team WITHOUT the ball can challenge for it, so there is exactly one defending
+            // team per stride and no per-team loop to order (AR-1 H-1).
+            int team = 1 - _teamIds[carrier];
 
             System.ReadOnlySpan<TackleIntentRequest> intents = _defensive[team].GetTackleIntentRequests();
             if (intents.Length == 0)
@@ -3466,6 +3525,7 @@ namespace TacticalDirector.MatchEngine
             // INCLUDING Missed. Arming only on success would let a defender who keeps missing
             // re-challenge at 10 Hz forever, which is the one behaviour a cooldown exists to stop.
             _tackleCooldown[tackler] = MatchEngineConstants.TackleCooldownStrides;
+            _tackleResolvedByTeam[team]++;
 
             switch (outcome)
             {
@@ -4488,6 +4548,14 @@ namespace TacticalDirector.MatchEngine
             // _foulCandidateFound needs no reset here: ApplyFoulIfCaptured (called every tick, right
             // below) always clears it when true, so it is already false entering UpdateCollisions —
             // an invariant a TestOnly-injected candidate can rely on too (design note §3 test plan).
+            //
+            // AMENDED at W2 (AR-1 L-3): "already false entering UpdateCollisions" is no longer true.
+            // The AI phase runs BEFORE Physics, and TryResolveTackles can leave a DECIDED candidate
+            // standing in the slot — which is the whole premise of the KD-F4 decided-outranks-candidate
+            // rule in MatchFlowCollisionConsumer. What survives is the property that actually matters
+            // here: the slot is always empty by the END of a tick, because ApplyFoulIfCaptured clears
+            // it on every path including the wave-on and the sent-off discard. It is a per-tick slot,
+            // not a per-phase one.
             _collisionSystem.UpdateCollisions(
                 _agents, _attrs, _teamIds, _isGoalkeeper,
                 knockdownOut: _isCollisionKnockdown,
@@ -5021,12 +5089,18 @@ namespace TacticalDirector.MatchEngine
             float u = (draw % 1_000_000UL) / 1_000_000f;
 
             // W2: a DECIDED candidate has already been adjudicated by #14 §3.6.5's own draw, which
-            // priced the challenge against BOTH players' attributes. Re-running KD-F1 over it would
-            // judge one foul twice and — since ComputeFoulCallProbability is a probability, not a
-            // classifier — discard the overwhelming majority of tackle fouls before they were ever
-            // observable. The whole draw is then free to select the card, exactly as the KD-F2 branch
-            // below does with its conditional remainder: u is already uniform on [0,1), which is the
-            // input DetermineCardKind's bands are defined against.
+            // priced the challenge against BOTH players' attributes, so it must not be judged twice.
+            //
+            // CORRECTED at AR-1 H-3, because the first version of this comment overclaimed. It said
+            // re-running KD-F1 "would discard the overwhelming majority of tackle fouls", and that is
+            // arithmetically false: RaiseDecidedFoulCandidate records CertainFoulForceN = 1e9, and
+            // ComputeFoulCallProbability(1e9) = FoulCallProbability x 1e9 / 1200 clamps to 1.0, so the
+            // wave-on below can never fire and v = u / 1.0 = u. The two branches agree bit-for-bit
+            // TODAY. The branch is kept because that agreement is a coincidence of one magic force
+            // value: decidedness is a property of how the candidate was raised, and expressing it only
+            // through a saturating number in a physical field would make a future change to the force
+            // model silently start waving off adjudicated fouls. Stating it in the type is what makes
+            // it survive that change.
             float v;
             if (decided)
             {
@@ -5058,6 +5132,11 @@ namespace TacticalDirector.MatchEngine
             byte foulKind = decided
                 ? (byte)ContactType.SLIDE_TACKLE
                 : (byte)ContactType.FROM_BEHIND;
+
+            if (foulKind == (byte)ContactType.SLIDE_TACKLE)
+            {
+                _tackleSlideTackleFouls++;
+            }
 
             var foulEvt = new FoulCommittedEvent(offender, victim, location, foulKind);
             EventBus.Publish(in foulEvt);
@@ -6027,10 +6106,14 @@ namespace TacticalDirector.MatchEngine
             // every defender re-challenge immediately after a restore, which diverges the digest on the
             // very next stride and does so in the direction of MORE tackles.
             //
-            // EXCLUSION PROOF — the four _tackle*Count diagnostics beside these two are deliberately
-            // NOT serialized. They are the _woodworkStrikes class: written only for instruments, read
-            // by no gameplay path, and therefore incapable of influencing a later tick. Zero after a
-            // restore is their documented behaviour, exactly as _rushCommitCount and _shotContacts are.
+            // EXCLUSION PROOF — EIGHT fields the W2 landing added beside these two are deliberately NOT
+            // serialized: the four _tackle*Count outcome tallies AND the four gate-anatomy accumulators
+            // (_tackleGateEligibleStrides, _tackleGateInRadiusStrides, _tackleGateNearestSumM,
+            // _tackleGateNearestSamples). All eight are the _woodworkStrikes class: written only for
+            // instruments, read by no gameplay path, and therefore incapable of influencing a later
+            // tick. Zero after a restore is their documented behaviour, exactly as _rushCommitCount and
+            // _shotContacts are. (Enumerated in full at AR-1 M-13 — the first version of this proof
+            // named only the four tallies, which is half an exclusion set and therefore not a proof.)
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
                 CanonicalSerializer.WriteBool(buf, ref o, _tackleFlag[i]);
@@ -9044,4 +9127,19 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | _woodworkStrikes class — not serialized, zero after restore by design,   |
 // |         |            |        | read only by TestOnly_TackleIntentCensus. No schema change, no RNG       |
 // |         |            |        | draw, no draw-order change, no [GT] (KD-W1 holds).                       |
+// | 1.67    | 2026-08-12 | —      | Wiring backlog W2 — THE TACKLE. TryResolveTackles (one challenge per   |
+// |         |            |        | stride, nearest eligible to the BALL, ties low index), the #14 §3.6.5  |
+// |         |            |        | duel, a keyed SplitMix64 draw under DOMAIN_TAG_DEFENSIVE_AI (0x1A's   |
+// |         |            |        | FIRST draw site anywhere), the per-agent tackle flag now backing both  |
+// |         |            |        | collision adapters, the decided-foul candidate path, and SLIDE_TACKLE  |
+// |         |            |        | as a foul kind. SNAPSHOT_SCHEMA_VERSION 20 -> 21 (flag + cooldown;     |
+// |         |            |        | eight diagnostic counters excluded, proof at the write site). DRAW     |
+// |         |            |        | ORDER ON match-flow.card-severity MOVES by design; no digest           |
+// |         |            |        | invariance is claimed. AR-1 H-1: resolution hoisted OUT of the         |
+// |         |            |        | per-team mechanics loop and _hasPossession refreshed AFTER it —       |
+// |         |            |        | inside the loop team 0's tackle mutated possession before team 1's    |
+// |         |            |        | snapshots were built (ERR-008-002 class), and a dispossessed carrier   |
+// |         |            |        | still read as holding the ball, so his next pass drained the very     |
+// |         |            |        | flag the tackle raised. AR-1 H-4/M-9: a keeper in possession and a     |
+// |         |            |        | restart taker cannot be tackled.                                       |
 #endregion

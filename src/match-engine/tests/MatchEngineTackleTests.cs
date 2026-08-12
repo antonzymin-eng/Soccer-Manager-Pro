@@ -35,9 +35,11 @@ namespace TacticalDirector.MatchEngine
         /// challenges, and the cases below pool the two rather than asserting per seed — pooling is
         /// right here because the claim is "this engine produces tackles", not "this seed does".
         ///
-        /// <para>Home and away are still distinguished where it matters (see
-        /// <c>ChallengesOccurForBothDefendingTeams</c>) — pooling the SEEDS is not pooling the TEAMS,
-        /// and ERR-008-002 is about the latter.</para>
+        /// <para><b>Corrected at AR-1 M-4.</b> This doc used to claim home and away were distinguished
+        /// "see <c>ChallengesOccurForBothDefendingTeams</c>" — a test that was never written, and the
+        /// only hit for that name in the tree was the sentence itself. It exists now, and the outcome
+        /// counters are split per team so it can, because a defect in which only team 0 ever resolves a
+        /// challenge would otherwise pass every case in this file (ERR-008-002).</para>
         /// </summary>
         private const int Ticks = 150_000;
 
@@ -94,6 +96,8 @@ namespace TacticalDirector.MatchEngine
         private static (int Won, int Loose, int Foul, int Missed) s_pooled;
         private static int s_dispossessions;
         private static bool s_sawCooldownWhileOnlyMisses;
+        private static readonly int[] s_perTeamResolved = new int[MatchEngineConstants.TEAM_COUNT];
+        private static int s_slideTackleFouls;
 
         [OneTimeSetUp]
         public void RunTheCorpusOnce()
@@ -141,6 +145,12 @@ namespace TacticalDirector.MatchEngine
                     before = now;
                     prevHolder = holder;
                 }
+
+                for (int t = 0; t < MatchEngineConstants.TEAM_COUNT; t++)
+                {
+                    s_perTeamResolved[t] += engine.TestOnly_TackleResolvedByTeam(t);
+                }
+                s_slideTackleFouls += engine.TestOnly_TackleSlideTackleFouls;
 
                 var oc = engine.TestOnly_TackleOutcomeCounts;
                 won += oc.Won;
@@ -238,6 +248,31 @@ namespace TacticalDirector.MatchEngine
             Assert.That(share, Is.GreaterThan(0.02),
                 $"tackle fouls are {share:P1} of connecting challenges — far below §3.6.5's foul " +
                 "share, which is what double-judging through ComputeFoulCallProbability looks like");
+        }
+
+        [Test]
+        public void ChallengesOccurForBothDefendingTeams()
+        {
+            // ERR-008-002, the standing house rule: three home/away asymmetry defects have shipped in
+            // this tree because every fixture used the home team. It is load-bearing HERE specifically,
+            // because until AR-1 H-1 the resolution ran inside the per-team mechanics loop, where team
+            // 0's tackle mutated possession before team 1's snapshots were built and never the reverse.
+            Assert.That(s_perTeamResolved[0], Is.GreaterThan(0), $"team 0 never challenged ({Counts()})");
+            Assert.That(s_perTeamResolved[1], Is.GreaterThan(0), $"team 1 never challenged ({Counts()})");
+        }
+
+        [Test]
+        public void ATackleFoulIsPublishedAsASlideTackle()
+        {
+            // AR-1 H-3: the landing claimed FoulCommittedEvent.FoulKind was "meaningful for the first
+            // time" — every foul this engine had ever given was published as FROM_BEHIND regardless of
+            // cause — and nothing asserted it. ContactType.SLIDE_TACKLE had no producer anywhere in the
+            // tree before W2, so a regression that dropped the foulKind branch would be invisible.
+            Assume.That(s_pooled.Foul, Is.GreaterThan(0), $"no tackle foul occurred ({Counts()})");
+            Assert.That(s_slideTackleFouls, Is.GreaterThan(0),
+                $"tackle fouls occurred but none published ContactType.SLIDE_TACKLE ({Counts()})");
+            Assert.That(s_slideTackleFouls, Is.EqualTo(s_pooled.Foul),
+                $"every tackle foul must publish SLIDE_TACKLE ({Counts()})");
         }
 
         [Test]

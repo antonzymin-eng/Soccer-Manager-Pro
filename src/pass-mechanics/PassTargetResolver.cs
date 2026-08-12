@@ -17,7 +17,7 @@ namespace TacticalDirector.PassMechanics
     /// </summary>
     internal static class PassTargetResolver
     {
-        // ── §3.6.3 / §3.6.5 — Aim Point Resolution ──────────────────────────────────
+        // ── §3.6.3 / §3.6.4 — Aim Point Resolution ──────────────────────────────────
 
         /// <summary>
         /// Resolves the pre-error aim point for a player-targeted pass.
@@ -32,7 +32,7 @@ namespace TacticalDirector.PassMechanics
 
         /// <summary>
         /// Resolves the pre-error aim point for a space-targeted pass from an explicit
-        /// target position. §3.6.5 Path A.
+        /// target position. §3.6.4 Path A.
         /// </summary>
         /// <param name="targetPosition">Explicit space target from PassRequest.</param>
         /// <returns>Aim point (may have Z > 0 if caller wants aerial target).</returns>

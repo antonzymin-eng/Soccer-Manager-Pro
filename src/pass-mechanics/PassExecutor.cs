@@ -547,7 +547,7 @@ namespace TacticalDirector.PassMechanics
                 return PassTargetResolver.ResolvePlayerTargetedAimPoint(receiverState.Position);
             }
 
-            // Space-targeted pass — §3.6.5
+            // Space-targeted pass — §3.6.4
             if (request.TargetAgentId == PassMechanicsConstants.AGENT_ID_NONE)
             {
                 // Path A: explicit space target from Decision Tree

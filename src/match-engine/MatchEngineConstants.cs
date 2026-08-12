@@ -6,6 +6,7 @@
 // Modified: 2026-07-14 (match-flow completion — restart/foul-card/offside/substitution/half-full-time constants; SNAPSHOT_SCHEMA_VERSION 14 → 15)
 // Modified: 2026-07-17 (#27 T1 AR-4, doc-only — STAGE0_NEUTRAL_* stale ERR-007 TODOs retired: production-unconsumed since T1, retained as the KD-P7 neutral-equivalence references)
 // Modified: 2026-07-27 (P1 richer observation frame: NO_RESTART_TEAM sentinel)
+// Modified: 2026-08-12 (wiring backlog W2 — SNAPSHOT_SCHEMA_VERSION 20 -> 21 + v21 doc row; + [GT] TackleContactRadiusM / TackleCooldownStrides)
 // Modified (prior): 2026-07-18 (#27 T3 — NO_ROSTER_CLUB_ID sentinel + SNAPSHOT_SCHEMA_VERSION 15 → 16, v16 per-team roster reference)
 // Modified: 2026-07-22 (GK #11 / Heading #10 engine integration Phase 1 — +6 [GT] Stage-0 save/header trigger constants; no schema change)
 // Modified: 2026-07-26 (§5.Z Phase H — [FIXED] FIRST_HALF_KICKOFF_TEAM + [DERIVED] SECOND_HALF_KICKOFF_TEAM + [GT] LooseBallPickupRadiusM; no schema change)
@@ -269,6 +270,13 @@ namespace TacticalDirector.MatchEngine
         /// dropped it would classify #12's phase as a transition for the remainder of every in-flight
         /// pass while the uninterrupted run classified it as possession — a digest divergence from the
         /// first pass onward. The same latch-and-flag class as v18.</para>
+        /// <para>v21 (wiring backlog W2 — the tackle): + the per-agent tackle-interrupt flag and the
+        /// per-agent challenge cooldown, 22 of each. Both cross-tick and neither reconstructible — the
+        /// flag is raised at a 10 Hz stride and drained by a 60 Hz windup poll several frames later, and
+        /// the cooldown spans up to TackleCooldownStrides by construction with nothing else recording
+        /// that a challenge was made. Dropping the cooldown would let every defender re-challenge
+        /// immediately after a restore, diverging on the very next stride and in the direction of MORE
+        /// tackles. The eight W2 diagnostic counters are excluded; the proof is at the write site.</para>
         public const uint SNAPSHOT_SCHEMA_VERSION = 21;
 
         /// <summary>[FIXED] On-disk match save-file framing version (match-save-file-design.md KD-1).
@@ -884,4 +892,10 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | HasGoalSideCover's squared line length, so a reader tuning it   |
 // |         |            |        | could not see everything it governs. Doc now names all three    |
 // |         |            |        | quantities and their units. Header row corrected 4 -> 5 [GT].   |
+// | 1.30    | 2026-08-12 | —      | Wiring backlog W2: SNAPSHOT_SCHEMA_VERSION 20 -> 21 (+ the v21 doc     |
+// |         |            |        | row) and two new [GT] engine-side trigger constants —                 |
+// |         |            |        | TackleContactRadiusM (2.5 m, re-derived from #14 §3.6.1's COMMIT      |
+// |         |            |        | meaning a LUNGE, not fitted to a measurement) and                     |
+// |         |            |        | TackleCooldownStrides. Both UN-CALIBRATED per KD-W1. The OUTCOME      |
+// |         |            |        | constants live in #14's catalogue, not here (ERR-014-006).            |
 #endregion

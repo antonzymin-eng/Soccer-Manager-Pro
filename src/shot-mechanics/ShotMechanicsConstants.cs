@@ -196,7 +196,7 @@ namespace TacticalDirector.ShotMechanics
         /// <summary>[GT] Base error at best effective attribute (degrees). §3.6.3.</summary>
         public static readonly float BaseErrorMin = Config.GetFloat("shot-mechanics", "BaseErrorMin", 0.5f);
 
-        /// <summary>[GT] Power penalty coefficient in quadratic power–accuracy trade-off. §3.6.5, FR-03.</summary>
+        /// <summary>[GT] Power penalty coefficient in quadratic power–accuracy trade-off. §3.6.4, FR-03.</summary>
         public static readonly float PowerPenaltyCoefficient = Config.GetFloat("shot-mechanics", "PowerPenaltyCoefficient", 1.5f);
 
         /// <summary>[GT] Maximum pressure penalty fraction (at full pressure, zero Composure). §3.6.5.</summary>

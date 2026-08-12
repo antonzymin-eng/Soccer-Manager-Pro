@@ -96,6 +96,11 @@ namespace TacticalDirector.MatchEngine
             report.AppendLine("intent   : episodes with >=1 tackle intent naming the carrier");
             report.AppendLine("COMMIT   : of those, >=1 in Commit mode — the population a wired tackle,");
             report.AppendLine("           gated as W2 proposes, could act on at all");
+            report.AppendLine("GATE ANATOMY: strides where a COMMIT intent named the carrier and the tackler was");
+            report.AppendLine("           eligible, how many of those had him within the contact radius of the");
+            report.AppendLine("           BALL, and the mean nearest-challenger-to-ball distance. This is the");
+            report.AppendLine("           measurement tackle-wiring-design.md §3.2 is built on, and it is");
+            report.AppendLine("           reported here so that number stays reproducible (AR-1 M-12).");
             report.AppendLine("ballGap  : episodes where the CARRIER was ever >1 m from the ball he holds.");
             report.AppendLine("           Possession is a flag, not a kinematic constraint (backlog W6), so");
             report.AppendLine("           tackler-to-carrier and tackler-to-BALL are different distances");
@@ -156,6 +161,12 @@ namespace TacticalDirector.MatchEngine
                     + Inv($"{c.EpisodesPresserWithin3M,7} | {c.EpisodesIntentOnCarrier,6} | ")
                     + Inv($"{c.EpisodesCommitOnCarrier,6} | {c.EpisodesCarrierBallGapOverThreshold,7}"));
             }
+
+            var ga = engine.TestOnly_TackleGateAnatomy;
+            report.AppendLine(
+                Inv($"  GATE ANATOMY: eligibleStrides={ga.Eligible} inRadiusStrides={ga.InRadius} ")
+                + Inv($"meanNearestChallengerToBall={ga.MeanNearestM:F2} m ")
+                + Inv($"(contactRadius={MatchEngineConstants.TackleContactRadiusM:F1} m)"));
 
             var oc = engine.TestOnly_TackleOutcomeCounts;
             int resolved = oc.Won + oc.Loose + oc.Foul + oc.Missed;

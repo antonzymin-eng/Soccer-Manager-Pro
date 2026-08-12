@@ -821,7 +821,7 @@ namespace TacticalDirector.ShotMechanics.Tests
                 20.0f, 20.0f, 20.0f, 18.0f, 0.4f, 0.0f, 0.0f, 1.0f, 1.0f);
 
             Assert.Greater(errMax, errMed,
-                "SE-003: PowerIntent=1.0 must produce greater error than PowerIntent=0.4 §3.6.5.");
+                "SE-003: PowerIntent=1.0 must produce greater error than PowerIntent=0.4 §3.6.4.");
         }
 
         // SE-004 — Power penalty is monotonically increasing with PowerIntent.

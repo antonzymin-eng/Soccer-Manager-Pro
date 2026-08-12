@@ -26,7 +26,7 @@ namespace TacticalDirector.ShotMechanics
         /// <param name="longShots">Agent LongShots attribute [1–20].</param>
         /// <param name="composure">Agent Composure attribute [1–20]; governs pressure resistance. §3.6.5.</param>
         /// <param name="distanceToGoal">Distance to goal (metres); drives Finishing/LongShots blend.</param>
-        /// <param name="powerIntent">Shot power [0, 1]; quadratic power penalty. §3.6.5.</param>
+        /// <param name="powerIntent">Shot power [0, 1]; quadratic power penalty. §3.6.4.</param>
         /// <param name="pressureScalar">Pressure scalar [0, 1] from nearby opponents. §3.6.5.</param>
         /// <param name="fatigue">Agent fatigue [0, 1]; 0=rested, 1=fatigued. §3.6.6.</param>
         /// <param name="bodyMechanicsScore">BMS [0, 1] from BodyMechanicsEvaluator. §3.6.7.</param>
@@ -53,7 +53,7 @@ namespace TacticalDirector.ShotMechanics
             float baseError = ShotMechanicsConstants.BaseErrorMax * (1.0f - normAttr)
                             + ShotMechanicsConstants.BaseErrorMin * normAttr;
 
-            // §3.6.5 — Power penalty: quadratic (FR-03)
+            // §3.6.4 — Power penalty: quadratic (FR-03)
             float powerPenalty = 1.0f + ShotMechanicsConstants.PowerPenaltyCoefficient
                                         * powerIntent * powerIntent;
 
