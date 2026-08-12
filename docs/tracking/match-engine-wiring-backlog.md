@@ -112,20 +112,49 @@ Only the trigger condition is missing.
 to dive. This was the single most likely contributor to the conversion gap, and the cheapest to
 close. Whether closing it moved the conversion gap is **unmeasured** — see above.
 
-### W2 — No player has ever made a tackle
-**Evidence:** three independent dormant links in one chain.
-- `defensive-ai/DefensiveAITick.cs:22` — `GetTackleIntentRequests` is populated every tick and read
+### W2 — No player has ever made a tackle — 🔬 **MEASURED August 12, 2026; wiring NOT yet landed**
+**Evidence:** three independent dormant links in one chain — **four**, on re-verification.
+- `defensive-ai/DefensiveAITick.cs:358` — `GetTackleIntentRequests` is populated every tick and read
   by nobody. The class doc says so outright: *"all output surfaces are populated at Stage 0 but
   integration with the match orchestrator and Decision Tree #8 occurs at Stage 1 (KD-16)."*
-- `match-engine/MatchEngine.cs:6721` and `:6789` — **both** collision-query adapters hardcode
-  `public bool GetAndClearTackleFlag(int agentId) => false;`
-- Consequently `pass-mechanics/PassExecutor.cs:393`'s §3.8.5 tackle-interrupt branch, and the
+- `match-engine/MatchEngine.cs:7248` and `:7321` — **both** collision-query adapters hardcode
+  `public bool GetAndClearTackleFlag(int agentId) => false;`. **(The `:6721` / `:6789` cited in v1.0
+  were already stale when written and are now GK snapshot deserialization.)** The two adapters are the
+  PASS and the SHOT adapter, so `shot-mechanics/ShotExecutor.cs:414`'s interrupt is equally dead — this
+  entry named only the pass side.
+- Consequently `pass-mechanics/PassExecutor.cs:408`'s §3.8.5 tackle-interrupt branch, and the
   `CancelReason.TackleInterrupt` outcome it raises, are **unreachable code**.
+- **Fourth link, not previously recorded:** `PassCancelledEvent` / `ShotCancelledEvent` have **no
+  production subscriber**, so even a working flag produces no possession consequence.
 
-**Consequence:** the defensive AI decides who should tackle, nothing acts on the decision, and the
-two systems that would respond are wired to a constant `false`. Possession can be lost to
-interception and to physical collision, but never to a tackle. This has a direct bearing on the
-possession-churn and turnover numbers used in earlier passes.
+**Consequence, restated and sharpened:** `RunFirstTouch` gate 1 refuses any possessed ball and nothing
+else writes `_possessingAgentId` away from a controlled carrier, so the engine has exactly **two**
+turnover mechanisms — the carrier kicks it and a team-mate fails to receive, and a foul restart.
+**A player in control cannot be dispossessed, at all, under any pressure.** That is a missing football
+mechanism rather than a churn imbalance, and it is the real content of W2.
+
+**MEASURED (August 12, 2026)** — `TackleIntentDiagnosticTests` (`TD_TACKLE_DIAGNOSTIC=1`), 3 seeds ×
+90 min, both defending teams separately, counted in possession episodes. Per defending team per match:
+**681.7 defending episodes, 310.2 with an outfielder within 3 m of the carrier, 178.8 within 1.5 m,
+97.2 with an intent naming the carrier, and 65.3 with a COMMIT naming the carrier** — against football's
+~15–17 tackle attempts per team per 90. **The gate supplies ~4× what is needed, so W2 is a RESOLUTION
+problem: not a producer problem, and not dead upstream.** This is the C1 question asked *before* the
+wiring instead of after it, which is what §1.1 books as W12; the instrument and the raw output are
+committed (`docs/tracking/corpus-data/w2-tackle-intent-census-2026-08-12.txt`).
+
+**Two predictions the investigation made were refuted by the measurement** — recorded because both were
+plausible enough to have shaped the design: the FR-DA-010 presser exclusion is **not** the bound
+(`poolElig` 310.0 against the 3 m population's 310.2, presser 0.5), and `MarkAssigner`'s ball-blindness
+is a fidelity gap rather than a precondition (31% of eligible episodes still yield an intent).
+
+**What remains open is the wiring itself**, and it is gated on one governance decision rather than on
+any engineering: **the tackle outcome model has no owner.** #14 stops at intent by design (KD-6:
+*"#8 mediates dispatch; #3 owns contact physics"*); #8 structurally cannot mediate (`ActionType.SAVE = 7`
+is the last ordinal that fits the 3-bit composure-noise field — the W9 ceiling); #3 defers slide-tackle
+collision to **Stage 2** (§7.2.1) and never landed the `TackleContactFlag` amendment that **#5 §4.4.2
+flagged as XC-4.4-02, "Blocking — requires Collision System amendment"**, which #5 was APPROVED around
+with no ERR filed. Full analysis, the ten settled constraints on any resolution, and three verified-free
+ERR ids (`ERR-014-006`, `ERR-003-008`, `ERR-005-002`) are in **`docs/tracking/tackle-wiring-design.md`**.
 
 ### W3 — Keepers never claim crosses
 **Evidence:** `goalkeeper-mechanics/GoalkeeperMechanics.cs:496–501` — the duel buffer is cleared
@@ -318,6 +347,23 @@ dormancy than anything in Class A.
   "attack the ball" mechanism the council refuted (note under §5 below) — and it cannot stall play,
   because it only ever REDUCES commits.
 
+- **C9 — a #13 press-role holder is almost never within 3 m of the ball carrier** (found August 12,
+  2026, by the W2 census, which was not looking for it). Measured over 3 seeds × 90 min, both defending
+  teams: of ~310 episodes per team per match in which an outfielder came within 3 m of the carrier, the
+  nearby man carried `PrimaryPress` or `CoverShadow` in **0.5** of them. #13's whole purpose is to send
+  someone at the man on the ball. Either press roles are rarely assigned, or the designated presser
+  never arrives — the census does not discriminate, and it should not be assumed to be either. **This is
+  gate-level dormancy of exactly the class §1.1 says a static sweep cannot see**, and it was found by
+  accident while measuring something else, which is the argument for building **W12** rather than
+  trusting this list to be complete. Not a W2 defect and deliberately not fixed there.
+
+- **C10 — `DefensiveAgentSnapshot.HasBall` is written and read by nothing.** The engine populates it
+  every stride (`MatchEngine.cs:3348`) and `MarkAssigner` — the one consumer that would want it —
+  contains **zero** ball references, so #14's mark assignment selects its target with no model of who
+  has the ball. Same class as **C5** (`TacticalContext.HasAttackIntent`), in a second assembly, and
+  missed by the v1.0 method for the same reason: the sweep counts methods with no caller, and this is a
+  field with no reader.
+
 - **C4 — #8 §3.1.3 cannot pass to a place, only to a player** — one PASS candidate per visible
   teammate at that teammate's *current* position. No pass into space, no through-ball to a run, no
   cross to an arriving header. A generator change, not a `[GT]`. **DEPRIORITIZED August 9, 2026:**
@@ -354,9 +400,9 @@ throughout; `[GT]` landings are frozen per KD-W1 until the final pass.
 
 | Order | Item | Rationale |
 |---|---|---|
-| 1 | ~~**W1** keeper rush trigger~~ ✅ **WIRED Aug 4, 2026** | Whole subsystem existed; a trigger-condition problem. Surfaced `ERR-011-010` + `ERR-011-009`. Its measurement is still owed. |
+| 1 | ~~**W1** keeper rush trigger~~ ✅ **WIRED Aug 4, 2026; MEASURED Aug 12** | Whole subsystem existed; a trigger-condition problem. Surfaced `ERR-011-010` + `ERR-011-009`. **Its owed measurement is discharged** — 23–46 rush intents per match against a pre-W1 baseline of exactly 0 by construction, keepers 9.1–14.1 m off their line, no `ERR-011-009` re-stall (`gk-rush-trigger-design.md` §6). The CONVERSION effect §6 was ultimately for is still unmeasured. |
 | 2 | ~~**C1** the `InPoss` gate~~ ✅ **FIXED Aug 8, 2026** (`ERR-012-011`) | Cheap, and the phase label was simply wrong. But the "unblocks #13/#14/#15" rationale was refuted before implementation — see the C1 entry: two of the three consumers are inert for reasons the gate does not touch. Re-measurement is the deliverable, not a creation gain. |
-| 3 | **W2** tackles | Three-link chain, all three links understood. High realism value; touches pass cancellation, so expect findings. |
+| 3 | **W2** tackles — 🔬 measured Aug 12, wiring open | **Four**-link chain, not three. Measured before building: the gate supplies ~4× football's tackle rate, so this is a RESOLUTION problem, not a producer one. Blocked on one governance decision — the tackle outcome model has no owner in any spec (`tackle-wiring-design.md` §4). Surfaced **C9**, **C10**, and three ERR candidates. |
 | 4 | **W4** keeper perception | Reuses tested occlusion. Upstream of all keeper behaviour, so it should precede any keeper calibration. |
 | 5 | **W12** the gate-firing instrument | Before calibration, and before assuming Class B is only four items. |
 | 6 | **W5**, **W7**, **W6** | Small, independent, each self-contained. |
@@ -427,6 +473,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.7 | 2026-08-12 | — | **W2 measured before being built, and the measurement refuted two of the investigation's own predictions.** Per defending team per match (3 seeds × 90 min, episodes not strides, teams never pooled): 681.7 defending episodes, 310.2 with an outfielder inside 3 m of the carrier, 97.2 with an intent naming him, **65.3 with a COMMIT** — ~4× football's ~15–17 tackle attempts, so **W2 is a RESOLUTION problem, not a producer problem and not dead upstream**, and the C1 shape does not repeat. Refuted: the FR-DA-010 presser exclusion is not the bound (presser 0.5 of 310), and `MarkAssigner`'s ball-blindness is a fidelity gap rather than a precondition. **W2's evidence list corrected** — it is a FOUR-link chain (`PassCancelledEvent`/`ShotCancelledEvent` have no production subscriber), the two hardcoded adapters are the PASS and SHOT adapters so #6's windup interrupt is equally dead, the `:6721`/`:6789` line numbers were stale, and the consequence is sharper than recorded: **no path anywhere dispossesses a controlled carrier**, so the engine has exactly two turnover mechanisms. **Two new Class-B items filed:** **C9** — a #13 press-role holder is within 3 m of the carrier in 0.5 episodes of ~310, on a subsystem whose purpose is to send someone at the ball; found by accident while measuring something else, which is the argument for **W12**. **C10** — `DefensiveAgentSnapshot.HasBall` is written every stride and read by nothing, the C5 class in a second assembly. **W1's measurement debt is discharged** (§5 row 1). **Wiring NOT landed:** blocked on one governance decision — the tackle outcome model has no owner, #14 stopping at intent by design, #8 barred by the 3-bit ordinal ceiling, and #3 deferring to Stage 2 while never landing the XC-4.4-02 amendment #5 was APPROVED around. `tackle-wiring-design.md` v1.1 carries the analysis, ten settled constraints, and three verified-free ERR ids. |
 | 1.6 | 2026-08-11 | — | **Owner call landed on half of C1's gate-failure note (§5 table row 2 / the open-issues.md entry this backlog does not restate).** `sim_match_engine_close_chance` — one of the two predicates C1 drove red — is CONFIRMED: hold red, do not rebaseline a third time; queued for the KD-W1 calibration pass in §5's own sequencing rather than fitted around piecemeal. Formal record: `close-chance-creation-design.md` §10.9 item 6 (v2.2); mirrored in `open-issues.md` and root `CLAUDE.md`'s OPEN ISSUES index per the standing same-commit cross-reference rule below. `sim_match_engine_shot_outcomes`'s `fast-balls-deflect-off-bodies` reachability predicate — the other half of that gate failure — is untouched by this call and stays open; the branch stays red by design and the §5 wire-order (W2 next) is unchanged. No `[GT]` moved, no code changed, no gate run — documentation only. |
 | 1.5 | 2026-08-09 | — | **§5's "attack the ball" note rewritten to record the full sequence, not just the withdrawal.** `close-chance-creation-design.md` §10.10 (Report C5d, the cross landing-point census — an attacker within 5 m of a cross's landing point in ~96–99% of episodes) withdraws §10.8's re-ranking of "attack the ball" to first, which this backlog's §5 note had never adopted in the first place — the two documents had been in conflict since §10.8 landed without a corresponding update here. The note now states all three steps (§10.7 withdrawn → §10.8 re-ranked → §10.10 withdrawn again), records that C5d's ~31 m mean landing distance points at **C4** (the delivery) rather than pursuit, and that the mechanism §10.8 proposed already exists and is live (`OptionGenerator.cs:822` `GenerateInterceptCandidate`). Adds a standing same-commit cross-reference rule so the two documents cannot drift again. No code changed in this revision; §5's table ordering (C7/C8 ahead of the withdrawn ranking) is unchanged — it never needed correcting. |
 | 1.4 | 2026-08-09 | — | **Four findings from today's `ERR-010-002` landing and the pre-implementation council that preceded it.** **W11 filed and resolved same-day**: `HeaderIntent.TargetIntent` was written, clamped, serialized, and restored, and read by NO formula — the inverse of the phantom-interface rule this project tracks, and a class the v1.0 method (no-caller methods) and C5 (no-reader fields) both miss, because every one of TargetIntent's five steps looked like production wiring. Resolved by `ERR-010-002`; **the detection gap is not** — recommended as an explicit check for **W12**. **C8 filed** (new Class B): the header commit has no head-height gate — `TryCommitHeaderIntents` fires above 0.5 m while the head occupies ~2.0–2.6 m during the eligibility window, so `FailureCause.PositionedPoorly` (97–99% of 963 measured failures) conflates two unrelated causes; **UNMEASURED**, cheap, upstream, and cannot stall play. **C7 corrected in place**: the "always aimed at a fixed point … never at a team-mate" defect was mis-stated — the fixed target never reached a formula at all, so the header was pure specular reflection with no player influence on direction whatsoever; fixed as `ERR-010-002`. The "never at a team-mate" half stands, still open, needs W9. **One new Class-C row**: `HeadingEligibility.cs:54-56`'s "must have left the ground" gate reads `AgentMovementState.GROUNDED`, which `#2` defines as "knocked down," not "on the ground" — a cross-spec semantic collision, not a wiring gap; filed as a separate ERR candidate against #10, deliberately not folded into `ERR-010-002`. **Also**: a note under §5 records that the same council refuted `close-chance-creation-design.md` §10.6's "attack the ball" ranking as resting on an instrument artifact (§10.7) — withdrawn, not replaced; C8 and `FindContactFrame`'s frozen-head-height vertical half are the two cheaper candidates recorded ahead of it. No code changed in this revision. |
