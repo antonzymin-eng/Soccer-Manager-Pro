@@ -12,7 +12,50 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 12, 2026 (**Roadmap A4a RAN — the round-resolution quick-sim is
+> **Last Updated:** August 12, 2026, later still (**Wiring backlog W2 LANDED — a player in control
+> can now be dispossessed for the first time in this engine, and `ERR-014-006` closes the tackle
+> outcome model's governance question.**) New #14 §3.6.5 "Tackle Outcome Resolution" takes the
+> tackle outcome decision back into the spec that owns the players, on the W1 precedent (#11 §3.7.0
+> took the keeper's rush-commit distance back for the same stated reason — it is a property of the
+> player, not the composition root). Neither original KD-6 delegate could accept: #8's `ActionType`
+> ordinals are exhausted by the 3-bit composure-noise field, and #3 defers slide-tackle collision to
+> Stage 2. A Stage-0 tackle is therefore an abstract attribute duel with **four** outcomes — `MISSED`
+> / `BALL_WON` / **`BALL_LOOSE`** / `FOUL` — `BALL_LOOSE` at owner direction, because a won/missed-only
+> model has no way to express the commonest result of a challenge (the ball going somewhere neither
+> player controls) and folding it into `BALL_WON` would make every successful tackle a clean turnover.
+> New `src/defensive-ai/TackleOutcome.cs`, `TackleDuelInputs.cs`, `TackleOutcomeResolver.cs` (ten new
+> `[GT]` + one `[FIXED]` numerical ceiling, all **un-calibrated per KD-W1**). `MatchEngine.cs` wires
+> the resolver at the COMMIT contact gate — radius **1.5 → 2.5 m**, re-derived (not fitted) from what
+> COMMIT means, a lunge, #3 §7.2.1's own extended-leg case for its Stage-2 slide tackle — publishes
+> `ContactType.SLIDE_TACKLE` for the first time anywhere in the tree, and routes a tackle foul through
+> the **existing single foul-candidate slot** under KD-F4 strongest-wins rather than a second authority
+> (`ApplyFoulIfCaptured` does not re-judge it — #14 §3.6.5 already priced the challenge).
+> `SNAPSHOT_SCHEMA_VERSION` **20 → 21** (per-agent tackle flag + challenge cooldown; the four outcome
+> counters excluded, proof at the write site). `DOMAIN_TAG_DEFENSIVE_AI` (0x1A) gets its **first draw
+> site anywhere in `src/`** — keyed, not reserved, un-blocking #14's own T-DA-DET-005 — and the
+> `match-flow.card-severity` draw order **moves by design** (the foul branch now draws on ticks that
+> previously had none). **No digest invariance is claimed anywhere in this landing.** `Tackling` gains
+> its first consumer anywhere in the tree; `Marking` still has none. Surfaced and fixed in the same
+> commit: FM-08's CONTACT-time possession-loss log was `LogError`("Race condition") — accurate only
+> while an ordering accident was the sole way to lose the ball mid-windup; a tackle makes it an
+> ordinary football event, so it is now `LogWarning` with corrected wording. Preceded by the census
+> (`TackleIntentDiagnosticTests`, 3 seeds × 90 min, both defending teams separately): **681.7 defending
+> episodes, 310.2 within 3 m of the carrier, 97.2 with an intent naming him, 65.3 with a COMMIT** per
+> defending team per match — against football's ~15–17 tackle attempts per team per 90, so the gate
+> supplied **~4× what was needed** and W2 was a RESOLUTION problem, not a producer problem, the
+> opposite of the C1 trap. Tests: 12 pure resolver locks + 7 composed engine locks, all green at the
+> landing commit (`fc8f81f2`). **Gate result pending** — a whole-tree gate was in flight at the time
+> this entry was written. ⟨PLACEHOLDER — operator to fill in build/warning counts, per-suite
+> pass/fail/skip (especially `DefensiveAI.Tests` and `MatchEngine.Tests`), quarantine state, and the
+> PASS/FAIL verdict once the run completes.⟩ `docs/tracking/match-engine-wiring-backlog.md` → **v1.8**
+> (W2 marked WIRED; next in sequence **W4** keeper perception, then **W12**), root `CLAUDE.md` (OPEN
+> ISSUES wiring-backlog bullet updated; the standing "no player has ever made a tackle" claim
+> retired), `docs/tracking/open-issues.md` (mirrored), `docs/tracking/CHANGELOG-src.md` → **v2.115**,
+> `docs/tracking/file-manifest.md`. Full account: `docs/tracking/tackle-wiring-design.md`, #14
+> `docs/specs/defensive-ai/section-3.md` §3.6.5, `docs/tracking/spec-error-log.md` `ERR-014-006`.
+> Prior entry below.
+
+> **Last Updated (prior):** August 12, 2026 (**Roadmap A4a RAN — the round-resolution quick-sim is
 > calibrated against the engine for the first time, and both KD-8 acceptance bars are recorded FAILED
 > for two measured reasons that are not fit failures.**) KD-8 **Step 0 PASSED** on the current tree —
 > strong-at-home mean margin **+4.000**, strong-away **−3.500**, upsets present (the July-28 record was

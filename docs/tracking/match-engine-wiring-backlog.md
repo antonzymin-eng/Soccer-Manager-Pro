@@ -112,7 +112,7 @@ Only the trigger condition is missing.
 to dive. This was the single most likely contributor to the conversion gap, and the cheapest to
 close. Whether closing it moved the conversion gap is **unmeasured** — see above.
 
-### W2 — No player has ever made a tackle — 🔬 **MEASURED August 12, 2026; wiring NOT yet landed**
+### W2 — No player has ever made a tackle — ✅ **WIRED August 12, 2026**
 **Evidence:** three independent dormant links in one chain — **four**, on re-verification.
 - `defensive-ai/DefensiveAITick.cs:358` — `GetTackleIntentRequests` is populated every tick and read
   by nobody. The class doc says so outright: *"all output surfaces are populated at Stage 0 but
@@ -147,14 +147,60 @@ plausible enough to have shaped the design: the FR-DA-010 presser exclusion is *
 (`poolElig` 310.0 against the 3 m population's 310.2, presser 0.5), and `MarkAssigner`'s ball-blindness
 is a fidelity gap rather than a precondition (31% of eligible episodes still yield an intent).
 
-**What remains open is the wiring itself**, and it is gated on one governance decision rather than on
-any engineering: **the tackle outcome model has no owner.** #14 stops at intent by design (KD-6:
+**What had been open was the wiring itself**, and it was gated on one governance decision rather than on
+any engineering: **the tackle outcome model had no owner.** #14 stops at intent by design (KD-6:
 *"#8 mediates dispatch; #3 owns contact physics"*); #8 structurally cannot mediate (`ActionType.SAVE = 7`
 is the last ordinal that fits the 3-bit composure-noise field — the W9 ceiling); #3 defers slide-tackle
 collision to **Stage 2** (§7.2.1) and never landed the `TackleContactFlag` amendment that **#5 §4.4.2
 flagged as XC-4.4-02, "Blocking — requires Collision System amendment"**, which #5 was APPROVED around
-with no ERR filed. Full analysis, the ten settled constraints on any resolution, and three verified-free
-ERR ids (`ERR-014-006`, `ERR-003-008`, `ERR-005-002`) are in **`docs/tracking/tackle-wiring-design.md`**.
+with no ERR filed. Full analysis and the ten settled constraints on any resolution are in
+**`docs/tracking/tackle-wiring-design.md`**.
+
+**LANDED August 12, 2026** (`fc8f81f2`) — new **#14 §3.6.5 "Tackle Outcome Resolution"** takes the
+decision back into the spec that owns the players, on the W1 precedent (#11 §3.7.0 took the keeper's
+rush-commit distance back for the stated reason *"how far he comes out is a property of the keeper"*;
+whether a defender wins a challenge is, by the same sentence, a property of the defender and the
+carrier). `ERR-014-006` filed and resolved the same commit. A Stage-0 tackle is **not** a physics contact
+(#3 defers slide-tackle collision to Stage 2) and **not** a Decision Tree action (`ActionType` ordinal 8
+overflows the 3-bit composure-noise field, the W9 ceiling) — it is an abstract attribute duel between the
+two players, producing one of **four** outcomes: `MISSED` / `BALL_WON` / **`BALL_LOOSE`** / `FOUL`.
+`BALL_LOOSE` is an owner decision: a won/missed-only model has no way to express the commonest result of
+a challenge — the ball going somewhere neither player controls — and folding that into `BALL_WON` would
+make every successful tackle a clean turnover.
+
+New `src/defensive-ai/TackleOutcome.cs`, `TackleDuelInputs.cs`, `TackleOutcomeResolver.cs` (ten new `[GT]`
++ one `[FIXED]` numerical ceiling, all **un-calibrated per KD-W1**), plus `src/defensive-ai/Tests/TackleOutcomeResolverTests.cs`
+(12 pure resolver locks), `src/match-engine/tests/MatchEngineTackleTests.cs` (7 composed engine locks) and
+`src/match-engine/tests/TackleIntentDiagnosticTests.cs` (the census instrument, now a modified file rather
+than a new one). `MatchEngine.cs` wires the resolver at the COMMIT contact gate — the contact radius went
+**1.5 → 2.5 m**, re-derived from what COMMIT means (#14 §3.6.1: a *lunge*, the extended-leg case #3 §7.2.1
+describes for its own Stage-2 slide tackle), **not fitted to a target** — publishes `ContactType.SLIDE_TACKLE`
+for the first time, and routes a tackle foul through the **existing single foul-candidate slot** under
+KD-F4 strongest-wins (`ApplyFoulIfCaptured` does not re-judge it; #14 §3.6.5 already priced the challenge).
+`SNAPSHOT_SCHEMA_VERSION` **20 → 21** (per-agent tackle flag + challenge cooldown; the four outcome
+counters are excluded, proof at the write site). `DOMAIN_TAG_DEFENSIVE_AI` (0x1A) gets its **first draw
+site anywhere in `src/`** — the tackle draw is keyed, not reserved, un-blocking #14's own T-DA-DET-005 —
+and the `match-flow.card-severity` draw order **MOVES by design** (the foul branch now draws on ticks that
+previously had none). **No digest invariance is claimed anywhere in this landing.** `Tackling` gains its
+first consumer anywhere in the tree; `Marking` still has none. Surfaced and fixed in the same commit:
+FM-08's CONTACT-time possession-loss log was `LogError`("Race condition") — accurate only while an
+ordering accident was the sole way to lose the ball mid-windup; a tackle makes it an ordinary football
+event, so it is now `LogWarning` with corrected wording.
+
+Tests: 12 pure resolver locks (partition, monotonicity, the P1 continuity requirement, the `[FIXED]`
+ceiling's numerical guarantee, the §3.6.5.7 worked example) + 7 composed engine locks (asserting a
+**ceiling** as well as a floor, since the failure mode of a new turnover source is too many rather than
+too few) — all green at the landing commit. **Gate result pending** — a whole-tree gate was running at
+the time this entry was written. ⟨PLACEHOLDER — operator to fill in: build errors/warnings, per-suite
+pass/fail/skip counts (especially `DefensiveAI.Tests`, `MatchEngine.Tests`), quarantine state, and
+PASS/FAIL verdict once the run completes.⟩
+
+**Two Class-B items filed from the investigation stay open**, not fixed here per scope: **C9** (a #13
+press-role holder is within 3 m of the ball carrier in 0.5 episodes of ~310 — the W12 class) and **C10**
+(`DefensiveAgentSnapshot.HasBall` written every stride, read by nothing — the C5 class in a second
+assembly). Full account: `docs/tracking/tackle-wiring-design.md`, #14 `docs/specs/defensive-ai/section-3.md`
+§3.6.5, `docs/tracking/spec-error-log.md` `ERR-014-006`. **Next in sequence: W4** (keeper perception),
+**then W12** (the gate-firing instrument).
 
 ### W3 — Keepers never claim crosses
 **Evidence:** `goalkeeper-mechanics/GoalkeeperMechanics.cs:496–501` — the duel buffer is cleared
@@ -402,8 +448,8 @@ throughout; `[GT]` landings are frozen per KD-W1 until the final pass.
 |---|---|---|
 | 1 | ~~**W1** keeper rush trigger~~ ✅ **WIRED Aug 4, 2026; MEASURED Aug 12** | Whole subsystem existed; a trigger-condition problem. Surfaced `ERR-011-010` + `ERR-011-009`. **Its owed measurement is discharged** — 23–46 rush intents per match against a pre-W1 baseline of exactly 0 by construction, keepers 9.1–14.1 m off their line, no `ERR-011-009` re-stall (`gk-rush-trigger-design.md` §6). The CONVERSION effect §6 was ultimately for is still unmeasured. |
 | 2 | ~~**C1** the `InPoss` gate~~ ✅ **FIXED Aug 8, 2026** (`ERR-012-011`) | Cheap, and the phase label was simply wrong. But the "unblocks #13/#14/#15" rationale was refuted before implementation — see the C1 entry: two of the three consumers are inert for reasons the gate does not touch. Re-measurement is the deliverable, not a creation gain. |
-| 3 | **W2** tackles — 🔬 measured Aug 12, wiring open | **Four**-link chain, not three. Measured before building: the gate supplies ~4× football's tackle rate, so this is a RESOLUTION problem, not a producer one. Blocked on one governance decision — the tackle outcome model has no owner in any spec (`tackle-wiring-design.md` §4). Surfaced **C9**, **C10**, and three ERR candidates. |
-| 4 | **W4** keeper perception | Reuses tested occlusion. Upstream of all keeper behaviour, so it should precede any keeper calibration. |
+| 3 | ~~**W2** tackles~~ ✅ **WIRED Aug 12, 2026** | **Four**-link chain, not three. Measured before building: the gate supplied ~4× football's tackle rate, so this was a RESOLUTION problem, not a producer one. Governance question resolved by `ERR-014-006`: new #14 §3.6.5 takes the outcome model back on the W1 precedent, a four-outcome (`MISSED`/`BALL_WON`/`BALL_LOOSE`/`FOUL`) abstract attribute duel, ten new `[GT]` un-calibrated per KD-W1. Surfaced **C9**, **C10**. Gate result pending — see the W2 entry above. |
+| 4 | **W4** keeper perception | Reuses tested occlusion. Upstream of all keeper behaviour, so it should precede any keeper calibration. **Next in sequence.** |
 | 5 | **W12** the gate-firing instrument | Before calibration, and before assuming Class B is only four items. |
 | 6 | **W5**, **W7**, **W6** | Small, independent, each self-contained. |
 | 7 | **W3** + AGENT_BALL fan-out | One dependency, two consumers. The largest single build in this document. |
@@ -473,6 +519,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.8 | 2026-08-12 | — | **W2 WIRED.** New #14 §3.6.5 "Tackle Outcome Resolution" (`ERR-014-006`, filed and resolved same commit `fc8f81f2`) takes the tackle outcome decision back into the spec that owns the players, on the W1 precedent. A Stage-0 tackle is an abstract attribute duel — not a physics contact (#3 defers to Stage 2), not a DT action (the ordinal-8 ceiling) — with **four** outcomes: `MISSED` / `BALL_WON` / **`BALL_LOOSE`** / `FOUL`, `BALL_LOOSE` at owner direction so a successful challenge does not have to mean a clean turnover. New `TackleOutcome.cs` / `TackleDuelInputs.cs` / `TackleOutcomeResolver.cs` (ten `[GT]` + one `[FIXED]`, un-calibrated per KD-W1); `MatchEngine.cs` wires it at the COMMIT contact gate, re-derived (not fitted) from 1.5 → 2.5 m on what COMMIT means (a lunge); a tackle foul enters the existing single foul-candidate slot rather than a second authority; `ContactType.SLIDE_TACKLE` gets its first producer. `SNAPSHOT_SCHEMA_VERSION` **20 → 21**. `DOMAIN_TAG_DEFENSIVE_AI` (0x1A) gets its first draw site anywhere in `src/`, un-blocking #14's T-DA-DET-005; the `match-flow.card-severity` draw order **moves by design**; **no digest invariance claimed**. FM-08's CONTACT-time possession-loss log corrected from `LogError`("Race condition") to `LogWarning`. Tests: 12 pure resolver locks + 7 composed engine locks, all green at the landing commit. **Gate result pending** — a whole-tree gate was in flight when this row was written. §5's W2 row marked WIRED; next in sequence is **W4** (keeper perception), then **W12**. |
 | 1.7 | 2026-08-12 | — | **W2 measured before being built, and the measurement refuted two of the investigation's own predictions.** Per defending team per match (3 seeds × 90 min, episodes not strides, teams never pooled): 681.7 defending episodes, 310.2 with an outfielder inside 3 m of the carrier, 97.2 with an intent naming him, **65.3 with a COMMIT** — ~4× football's ~15–17 tackle attempts, so **W2 is a RESOLUTION problem, not a producer problem and not dead upstream**, and the C1 shape does not repeat. Refuted: the FR-DA-010 presser exclusion is not the bound (presser 0.5 of 310), and `MarkAssigner`'s ball-blindness is a fidelity gap rather than a precondition. **W2's evidence list corrected** — it is a FOUR-link chain (`PassCancelledEvent`/`ShotCancelledEvent` have no production subscriber), the two hardcoded adapters are the PASS and SHOT adapters so #6's windup interrupt is equally dead, the `:6721`/`:6789` line numbers were stale, and the consequence is sharper than recorded: **no path anywhere dispossesses a controlled carrier**, so the engine has exactly two turnover mechanisms. **Two new Class-B items filed:** **C9** — a #13 press-role holder is within 3 m of the carrier in 0.5 episodes of ~310, on a subsystem whose purpose is to send someone at the ball; found by accident while measuring something else, which is the argument for **W12**. **C10** — `DefensiveAgentSnapshot.HasBall` is written every stride and read by nothing, the C5 class in a second assembly. **W1's measurement debt is discharged** (§5 row 1). **Wiring NOT landed:** blocked on one governance decision — the tackle outcome model has no owner, #14 stopping at intent by design, #8 barred by the 3-bit ordinal ceiling, and #3 deferring to Stage 2 while never landing the XC-4.4-02 amendment #5 was APPROVED around. `tackle-wiring-design.md` v1.1 carries the analysis, ten settled constraints, and three verified-free ERR ids. |
 | 1.6 | 2026-08-11 | — | **Owner call landed on half of C1's gate-failure note (§5 table row 2 / the open-issues.md entry this backlog does not restate).** `sim_match_engine_close_chance` — one of the two predicates C1 drove red — is CONFIRMED: hold red, do not rebaseline a third time; queued for the KD-W1 calibration pass in §5's own sequencing rather than fitted around piecemeal. Formal record: `close-chance-creation-design.md` §10.9 item 6 (v2.2); mirrored in `open-issues.md` and root `CLAUDE.md`'s OPEN ISSUES index per the standing same-commit cross-reference rule below. `sim_match_engine_shot_outcomes`'s `fast-balls-deflect-off-bodies` reachability predicate — the other half of that gate failure — is untouched by this call and stays open; the branch stays red by design and the §5 wire-order (W2 next) is unchanged. No `[GT]` moved, no code changed, no gate run — documentation only. |
 | 1.5 | 2026-08-09 | — | **§5's "attack the ball" note rewritten to record the full sequence, not just the withdrawal.** `close-chance-creation-design.md` §10.10 (Report C5d, the cross landing-point census — an attacker within 5 m of a cross's landing point in ~96–99% of episodes) withdraws §10.8's re-ranking of "attack the ball" to first, which this backlog's §5 note had never adopted in the first place — the two documents had been in conflict since §10.8 landed without a corresponding update here. The note now states all three steps (§10.7 withdrawn → §10.8 re-ranked → §10.10 withdrawn again), records that C5d's ~31 m mean landing distance points at **C4** (the delivery) rather than pursuit, and that the mechanism §10.8 proposed already exists and is live (`OptionGenerator.cs:822` `GenerateInterceptCandidate`). Adds a standing same-commit cross-reference rule so the two documents cannot drift again. No code changed in this revision; §5's table ordering (C7/C8 ahead of the withdrawn ranking) is unchanged — it never needed correcting. |
