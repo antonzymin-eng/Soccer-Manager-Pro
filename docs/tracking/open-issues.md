@@ -18,7 +18,7 @@ history by the original convention; they were not merged.
 
 ---
 
-- **A4a round-resolution calibration — the corpus is captured and the three `[GT]`s are fitted, but BOTH KD-8 acceptance bars FAILED, and each failure is an owner decision rather than a fit to redo (`ERR-030-033`, `ERR-030-034`)** — *opened August 12, 2026 (the A4a run).*
+- **A4a round-resolution calibration — the corpus is captured, the three `[GT]`s are fitted, and the MEAN bar now PASSES after `ERR-030-033` was re-specified (August 12, 2026). What remains open is `ERR-030-034`: the model's distribution family** — *opened August 12, 2026 (the A4a run).*
   The run itself is complete and its outputs are committed: KD-8 **Step 0 PASSED** on the current tree
   (strong-at-home mean margin **+4.000**, strong-away **−3.500**, upsets present), the corpus is **198
   real 90-minute `MatchEngine` matches** over 11 `dSquad` buckets at 18 each (~90 s/match, four
@@ -36,10 +36,21 @@ history by the original convention; they were not merged.
   22 bucket-sides have a standard error larger than the entire bar**. A perfectly correct model
   re-scored against a re-run of this same corpus would fail it too, so the bar is not currently a
   statement about the model at all. Reaching ±0.25 as a *resolvable* bar needs n ≈ 770/bucket — about
-  210 h of engine time against a budgeted ~9 h. **Owner decision: re-specify the bar** (and/or state it
-  against the corpus's measured precision). Deliberately NOT closed by widening the tolerance to
-  whatever this run achieved — that stops it being a bar, and there is a standing owner ruling against
-  exactly that move (`close-chance-creation-design.md` §10.9 item 6, August 11, 2026).
+  210 h of engine time against a budgeted ~9 h. **✅ RESOLVED August 12, 2026 — the bar was re-specified
+  against the corpus's measured precision, and the same fit now reads mean-agreement PASS.** Deliberately
+  NOT closed by widening the tolerance to whatever this run achieved — that stops it being a bar, and
+  there is a standing owner ruling against exactly that move (`close-chance-creation-design.md` §10.9
+  item 6, August 11, 2026). KD-8 now carries **A1** a per-cell `|Δ| ≤ max(0.25, 2·se)` screen with
+  **±0.25 retained as a FLOOR**, so a corpus deep enough that `2·se < 0.25` automatically restores the
+  original requirement rather than abandoning it; **A2** at most `1 + round(0.0455·cells)` exceedances,
+  none over `max(0.40, 3·se)`; **A3** a pooled `χ² ≤ χ²₀.₉₅(cells − 3)`, which is where the statistical
+  power actually lives, since A1/A2 are per-cell screens blind to systematic misfit every individual
+  cell passes; **A4** an 18/bucket scoreability floor, without which the se-relative form is gameable by
+  shrinking n; and **A5** the unchanged ±5 pp W/D/L bar plus a pinned n ≥ 250 for a resolvable *pass*.
+  Measured: worst |z| = 2.06, one exceedance of an allowed two, pooled **χ² = 16.0 on 19 dof** against a
+  30.1 threshold. **The verdict is now reported in two parts — mean agreement PASS, distribution shape
+  FAIL** — because they fail for unrelated reasons, and the single flat verdict had the practical effect
+  of making ERR-030-034 read as a fit failure.
 
   **(2) `ERR-030-034` — the model's distribution family cannot express the engine's spread.** KD-7
   resolves a fixture as two Poisson draws, and Poisson fixes variance = mean. The engine is

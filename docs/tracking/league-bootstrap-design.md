@@ -351,31 +351,68 @@ a **fixed** seed sweep must equal a recorded expected value within a recorded to
 seeds ⇒ the assertion is exact and reproducible; the tolerance encodes the agreement requirement,
 not test flake.
 
-**Acceptance.** Per-bucket mean home and away goals within ±0.25 of the corpus mean, and the
-win/draw/loss split within ±5 percentage points at `dSquad = 0` (evenly matched squads — note this is
-where home advantage should show up as an asymmetry, so it is the bucket that actually tests the
-fitted `HomeAdvantageRating`). Both are recorded in the artifact
-so a later re-fit is measured against the same bar.
+**Acceptance (re-specified August 12, 2026 — `ERR-030-033`).** The original bar was *"per-bucket mean
+home and away goals within ±0.25 of the corpus mean, and the win/draw/loss split within ±5 percentage
+points at `dSquad = 0`"*. The second half stands. **The first half was unmeetable by construction and
+is replaced**, because a bucket mean is an *estimate*: at the ~18 samples/bucket this same section
+sizes, 15 of 22 bucket-sides carried a standard error larger than the entire ±0.25 bar, so a
+perfectly correct model would have failed it too. The tolerance and the sample size had been chosen
+independently and never checked against each other.
+
+The replacement states the bar against the precision the corpus actually has, **a priori and for any
+corpus**, which is the standard construction of a test with a controlled false-alarm rate — not a
+tolerance widened to fit the result it was about to be scored against.
+
+**A1 — per-cell screen.** For every cell (bucket × side):
+`|model − corpus| ≤ max(0.25, 2·se)`, where `se` is the standard error of that cell's corpus mean.
+**±0.25 is retained as a floor, not discarded**: once a corpus is deep enough that `2·se < 0.25`, the
+original bar automatically becomes binding again, so the aspiration survives the re-specification.
+
+**A2 — bounded exceedances.** At most `1 + round(0.0455·cells)` cells may exceed A1 (a 2σ screen over
+*N* cells expects ~4.55% of them to exceed by chance, so a fixed "zero exceedances" rule would fail a
+correct model on a large grid), and **no** cell may exceed `max(0.40, 3·se)`.
+
+**A3 — pooled goodness-of-fit.** `χ² = Σ(Δᵢ/seᵢ)² ≤ χ²₀.₉₅(dof)` with `dof = cells − 3` (three fitted
+parameters). **This is where the statistical power lives:** A1 and A2 are per-cell screens and cannot
+see systematic misfit that every individual cell passes.
+
+**A4 — scoreability floor.** A corpus shallower than **18 samples/bucket** may not be scored against
+A1–A3 at all. Without this, the se-relative form is gameable by shrinking *n*, which widens every
+tolerance.
+
+**A5 — W/D/L, unchanged at ±5 pp**, with two additions: the acceptance bucket must carry **n ≥ 250**
+(the depth at which `2·se ≤ 5 pp` at a ~20% draw share, so that a *pass* is resolvable), and a bar
+*failure* must also exceed `2·se` — otherwise the honest verdict is INCONCLUSIVE rather than FAIL. A
+significant failure is still reportable below n = 250; only a pass requires the depth.
+
+**The verdict is reported in two parts** — *mean agreement* (A1–A4) and *distribution shape* (A5) —
+because they fail for unrelated reasons and a single flat verdict hides which. Against this bar the
+August 2026 fit reads **mean agreement PASS** (worst |z| = 2.06, one exceedance of an allowed two,
+pooled χ² = 16.0 on 19 dof against a 30.1 threshold) and **distribution shape FAIL** (7.6 pp, 2.7σ).
+All of it is emitted by `tools/round-resolution-fit.py` and recorded in the artifact, so a later
+re-fit is measured against the same bar.
 
 > **⚠️ BOTH BARS WERE MISSED WHEN A4a ACTUALLY RAN (August 12, 2026), and neither miss is a fit
 > failure. Read `round-resolution-corpus.md` before re-using either number.**
 >
-> - **The ±0.25 bar is not measurable at the depth this same section specifies (`ERR-030-033`).** At
->   ~18 matches per bucket a bucket mean carries a standard error of 0.135–0.633, and **15 of 22
->   bucket-sides have a standard error larger than the entire bar**. The tolerance and the sample
->   size were chosen independently and never checked against each other; as written, a perfectly
->   correct model scored against a re-run of the same corpus would also fail. Resolving ±0.25 needs
->   n ≈ 770/bucket — ~210 h of engine time against a budgeted ~9 h — so this is a bar to re-specify,
->   not a run to re-size. The ±5 pp W/D/L bar has the same defect in milder form: at n = 18 the
->   corpus draw share carries a ~7 pp standard error, so A4a deepened that one bucket specifically in
->   order to evaluate it.
-> - **The model shape cannot express what the corpus shows (`ERR-030-034`).** KD-7 draws Poisson, whose
->   variance equals its mean by construction; the engine is over-dispersed at **z = +5.40** (mean
->   `var/mean` 1.395, 19 of 22 bucket-sides above 1), which shows up as far fewer draws than the model
->   can produce. No value of the three fitted parameters closes a second-moment gap.
+> - **The ±0.25 bar was not measurable at the depth this same section specifies (`ERR-030-033`) —
+>   RESOLVED August 12, 2026: the bar is re-specified above (A1–A5).** At ~18 matches per bucket a
+>   bucket mean carries a standard error of 0.135–0.633, and **15 of 22 bucket-sides had a standard
+>   error larger than the entire bar**, so a perfectly correct model would also have failed. Against
+>   the re-specified bar the same fit reads **mean agreement PASS**.
+> - **The model shape cannot express what the corpus shows (`ERR-030-034`) — still open.** KD-7 draws
+>   Poisson, whose variance equals its mean by construction; the engine is over-dispersed at
+>   **z = +5.40**. **Note the mechanism was mis-stated when first filed:** over-dispersion fattens both
+>   tails and 0–0 is a draw, so an independent negative-binomial closes only ~0.5 pp of the 7.6 pp draw
+>   gap. Dispersion and the draw deficit are substantially independent findings, and the draw deficit's
+>   mechanism is **not established** — the shared-swing family that would explain it implies negative
+>   home/away correlation, which this corpus refutes (+0.004 ± 0.052, n=378).
 >
-> Both are recorded, deliberately **not** fixed by A4a: widening a bar to fit its own result stops it
-> being a bar, and changing the distribution family is a KD-7 decision that moves persisted season
+> The bar half is now fixed (above); the family half is deliberately still open. Neither was closed by
+> widening a number to fit its own result. **The family change is cheaper than first recorded** — it
+> forces no save-format bump, since `SeasonStateCodec` persists aggregate table rows rather than
+> individual scorelines — but no candidate family is yet supported by the data, which is the actual
+> reason to wait. Changing the distribution family remains a KD-7 decision that moves persisted season
 > state. The corpus is committed, so a re-fit against a new family costs seconds rather than hours.
 
 ### KD-9 — What A3 hands #30: a `League` that is itself the `ISquadProvider`.

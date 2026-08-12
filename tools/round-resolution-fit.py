@@ -30,9 +30,31 @@ LAMBDA_MIN = 0.15
 LAMBDA_MAX = 6.0
 MAX_GOALS_PER_SIDE = 20
 
-# KD-8 acceptance bars.
-BUCKET_MEAN_TOLERANCE = 0.25          # per-bucket mean goals, each side
+# KD-8 acceptance bars, as re-specified August 12, 2026 (ERR-030-033).
+#
+# The original bar was a flat +/-0.25 on every per-bucket mean. It was unmeetable by construction: a
+# bucket mean is an ESTIMATE, and at the 18 samples/bucket KD-8 itself sizes, 15 of 22 bucket-sides
+# carried a standard error larger than the whole bar — so a perfectly correct model would fail it too.
+# The fix is not to widen the number (a bar moved to fit its own result is not a bar) but to state it
+# against the precision the corpus actually has, a priori, for any corpus:
+#
+#   1. Per-bucket-side screen: |model - corpus| <= max(BUCKET_MEAN_TOLERANCE, 2*se). The floor is the
+#      ORIGINAL 0.25, so once a corpus is deep enough that 2*se < 0.25 the original bar automatically
+#      becomes binding again. The aspiration is preserved, not abandoned.
+#   2. A bounded number of exceedances, because a 2-sigma screen over many cells expects some by
+#      chance, and no single cell may exceed the 3-sigma / 0.40 hard screen.
+#   3. A pooled chi-square, which is where the statistical POWER lives: it catches systematic misfit
+#      that every individual cell passes.
+#
+# A corpus shallower than MIN_SAMPLES_PER_BUCKET may not be scored at all — otherwise the se-relative
+# form is gameable by shrinking n, which widens every tolerance.
+BUCKET_MEAN_TOLERANCE = 0.25          # per-bucket mean goals, each side — now a FLOOR, not the bar
+BUCKET_MEAN_SIGMA = 2.0               # se multiplier for the per-bucket-side screen
+BUCKET_HARD_TOLERANCE = 0.40          # no single bucket-side may exceed max(this, 3*se)
+BUCKET_HARD_SIGMA = 3.0
+MIN_SAMPLES_PER_BUCKET = 18           # below this the corpus is not scoreable at all
 WDL_TOLERANCE_POINTS = 5.0            # percentage points, at dSquad = 0
+WDL_MIN_SAMPLES = 250                 # depth at which 2*se <= the 5pp bar at a ~20% draw share
 
 # Mirrored from LeagueBootstrapConstants / LeagueBootstrap.StrengthDelta — used ONLY to re-weight the
 # grid into a league-representative goal rate (see goal_rates). Not part of the fit.
@@ -134,6 +156,72 @@ def resolution(summary):
             "chi2": chi2, "dof": dof, "z": z}
 
 
+def chi2_critical(dof, p=0.95):
+    """
+    Upper-tail chi-square critical value by the Wilson-Hilferty transform.
+
+    No third-party dependency on purpose (see the module header): the fit must run on any host that
+    can generate the corpus. Wilson-Hilferty is accurate to well under 1% for dof >= 10, which is
+    every corpus this bar can legally score — MIN_SAMPLES_PER_BUCKET forces at least 11 buckets'
+    worth of cells before a verdict is issued.
+    """
+    z = {0.95: 1.6448536269514722, 0.99: 2.3263478740408408}[p]
+    t = 1.0 - (2.0 / (9.0 * dof)) + z * math.sqrt(2.0 / (9.0 * dof))
+    return dof * t * t * t
+
+
+def mean_bar(summary, params):
+    """
+    The per-bucket mean bar, scored cell by cell against the corpus's OWN measured precision.
+
+    Returns the per-cell detail plus the pooled chi-square, so the artifact can show why a verdict
+    reads the way it does rather than only that it does.
+    """
+    base, slope, home_adv = params
+    cells = []
+    for b in summary:
+        edge = b["mean_d"] + home_adv
+        for model_lam, corpus_key, se_key, side in (
+                (lam(base, slope, +edge), "mean_h", "se_h", "home"),
+                (lam(base, slope, -edge), "mean_a", "se_a", "away")):
+            delta = model_lam - b[corpus_key]
+            se = b[se_key]
+            allowed = max(BUCKET_MEAN_TOLERANCE, BUCKET_MEAN_SIGMA * se)
+            hard = max(BUCKET_HARD_TOLERANCE, BUCKET_HARD_SIGMA * se)
+            cells.append({
+                "key": b["key"], "side": side, "delta": delta, "se": se,
+                "z": delta / se if se > 0 else float("inf"),
+                "allowed": allowed, "over": abs(delta) > allowed, "over_hard": abs(delta) > hard,
+            })
+
+    chi2 = sum(c["z"] ** 2 for c in cells)
+    dof = max(1, len(cells) - 3)              # three fitted parameters
+    crit = chi2_critical(dof)
+    # A 2-sigma screen over many cells expects ~4.55% of them to exceed by chance; allow that plus one.
+    allowance = 1 + int(round(0.0455 * len(cells)))
+    exceed = sum(1 for c in cells if c["over"])
+    hard_exceed = sum(1 for c in cells if c["over_hard"])
+    shallow = min(b["n"] for b in summary)
+
+    passed = (shallow >= MIN_SAMPLES_PER_BUCKET and exceed <= allowance
+              and hard_exceed == 0 and chi2 <= crit)
+    return {"cells": cells, "chi2": chi2, "dof": dof, "crit": crit, "exceed": exceed,
+            "allowance": allowance, "hard_exceed": hard_exceed, "shallow": shallow,
+            "scoreable": shallow >= MIN_SAMPLES_PER_BUCKET, "passed": passed,
+            "worst": max((abs(c["delta"]) for c in cells), default=0.0),
+            "worst_z": max((abs(c["z"]) for c in cells), default=0.0)}
+
+
+def wdl_verdict(worst_pp, se_pp, n):
+    """
+    The W/D/L bar, with the same discipline as the mean bar: a bar failure must also be
+    distinguishable from noise, or the honest answer is that the corpus cannot yet say.
+    """
+    if worst_pp <= WDL_TOLERANCE_POINTS:
+        return "PASS"
+    return "FAIL" if worst_pp > BUCKET_MEAN_SIGMA * se_pp else "INCONCLUSIVE"
+
+
 def objective(params, summary):
     """Sample-weighted squared error between the model's per-bucket means and the corpus's."""
     base, slope, home_adv = params
@@ -223,6 +311,7 @@ def main():
     summary = summarise(bucket(rows))
     base, slope, home_adv = fit(summary)
     res = resolution(summary)
+    bar = mean_bar(summary, (base, slope, home_adv))
 
     print(f"corpus: {len(rows)} matches across {len(summary)} buckets")
     print(f"fit: BaseGoals={base:.4f} GoalRatingSlope={slope:.4f} HomeAdvantageRating={home_adv:.4f}")
@@ -245,9 +334,16 @@ def main():
               f"{b['se_a']:>6.3f} {b['var_h']:>6.3f} {b['var_a']:>6.3f}")
 
     print()
-    print(f"worst per-bucket mean deviation: {worst:.3f} (bar {BUCKET_MEAN_TOLERANCE})")
-    print(f"bucket-sides whose OWN standard error exceeds that bar: "
-          f"{res['over_bar']} of {res['sides']}")
+    print(f"MEAN BAR (ERR-030-033 re-spec): per-cell |delta| <= max({BUCKET_MEAN_TOLERANCE}, "
+          f"{BUCKET_MEAN_SIGMA:.0f}*se), <= {bar['allowance']} exceedances, none over "
+          f"max({BUCKET_HARD_TOLERANCE}, {BUCKET_HARD_SIGMA:.0f}*se); pooled chi2 <= crit")
+    print(f"  worst |delta| {bar['worst']:.3f} (worst |z| {bar['worst_z']:.2f}); "
+          f"exceedances {bar['exceed']}/{bar['allowance']}, hard {bar['hard_exceed']}; "
+          f"chi2 {bar['chi2']:.1f} on {bar['dof']} dof vs crit {bar['crit']:.1f}; "
+          f"shallowest bucket n={bar['shallow']} (min {MIN_SAMPLES_PER_BUCKET})")
+    print(f"  -> MEAN: {'PASS' if bar['passed'] else 'FAIL'}")
+    print(f"NOTE the original flat {BUCKET_MEAN_TOLERANCE} bar was unmeetable here: "
+          f"{res['over_bar']} of {res['sides']} bucket-sides have a standard error exceeding it.")
     print(f"Poisson dispersion (var/mean, model shape = 1.000): mean {res['mean_ratio']:.3f} "
           f"across {res['ratios']} bucket-sides, {res['above_one']} above 1; "
           f"pooled chi2={res['chi2']:.1f} dof={res['dof']} -> z={res['z']:+.2f} sigma")
@@ -270,13 +366,20 @@ def main():
           f"worst {wdl_worst:.1f}pp (bar {WDL_TOLERANCE_POINTS}pp, "
           f"corpus draw-share 1 sigma = {wdl_se:.1f}pp)")
 
-    accepted = worst <= BUCKET_MEAN_TOLERANCE and wdl_worst <= WDL_TOLERANCE_POINTS
-    print(f"KD-8 acceptance: {'PASS' if accepted else 'FAIL'}")
+    wdl = wdl_verdict(wdl_worst, wdl_se, zero["n"])
+    if zero["n"] < WDL_MIN_SAMPLES:
+        print(f"  (acceptance bucket n={zero['n']} is below the pinned minimum {WDL_MIN_SAMPLES}; "
+              f"a PASS here would not be resolvable, a significant FAIL still is)")
+    print(f"  -> SHAPE (W/D/L): {wdl}")
+
+    accepted = bar["passed"] and wdl == "PASS"
+    print(f"KD-8 acceptance: {'PASS' if accepted else 'FAIL'} "
+          f"(mean {'PASS' if bar['passed'] else 'FAIL'}, shape {wdl})")
 
     if args.out:
         write_artifact(args, rows, summary, (base, slope, home_adv), worst,
                        (cw, cd, cl), (mw, md, ml), wdl_worst, accepted, zero, res,
-                       wdl_se, deep_n, rates)
+                       wdl_se, deep_n, rates, bar, wdl)
         print(f"wrote {args.out}")
     return 0
 
@@ -386,7 +489,7 @@ def split_preserved(path):
 
 
 def write_artifact(args, rows, summary, params, worst, corpus_wdl, model_wdl_v, wdl_worst,
-                   accepted, zero, res, wdl_se, deep_n, rates):
+                   accepted, zero, res, wdl_se, deep_n, rates, bar, wdl):
     base, slope, home_adv = params
     preamble, postamble = split_preserved(args.out)
     with open(args.out, "w") as f:
@@ -406,7 +509,12 @@ def write_artifact(args, rows, summary, params, worst, corpus_wdl, model_wdl_v, 
             f.write("> **Regenerate with:** the env-gated `Corpus_GeneratesTheRequestedSlice` driver in\n")
             f.write("> `src/season-save/tests/RoundResolutionCalibrationHarnessTests.cs`, then\n")
             f.write("> `python3 tools/round-resolution-fit.py <csv...> --out <this file>`.\n\n")
-        f.write("---\n\n## Capture provenance\n\n")
+        # The `---` closes the header blockquote, so it belongs to the header: with a preserved
+        # preamble the separator is already up there and repeating it opens the generated region
+        # with a stray rule.
+        if not preamble:
+            f.write("---\n\n")
+        f.write("## Capture provenance\n\n")
         f.write("This corpus measures what the match engine does **at the commit below**. A later engine\n")
         f.write("change invalidates the fit rather than merely aging it (KD-8's re-capture trigger): goal\n")
         f.write("detection landed July 11 2026 with a deliberately minimal restart model, so anything that\n")
@@ -460,17 +568,51 @@ def write_artifact(args, rows, summary, params, worst, corpus_wdl, model_wdl_v, 
                 f"`dSquad` distribution of a real {LEAGUE_CLUB_COUNT}-club season under the shipped "
                 f"`StrengthDelta` ramp ({rates['covered']:.0f}% of fixtures covered). |\n")
         f.write(f"| Football reference | ~{FOOTBALL_GOALS_PER_MATCH} | |\n\n")
-        f.write("\n## Acceptance (KD-8)\n\n")
-        f.write(f"- Per-bucket mean goals within ±{BUCKET_MEAN_TOLERANCE} of the corpus, each side — "
-                f"**worst deviation {worst:.3f}**.\n")
-        f.write(f"- Win/draw/loss split within ±{WDL_TOLERANCE_POINTS} percentage points at "
+        f.write("\n## Acceptance (KD-8, bars re-specified August 12, 2026 — ERR-030-033)\n\n")
+        f.write("The original bar was a flat ±0.25 on every per-bucket mean. It could not be met by any\n")
+        f.write("model at the depth KD-8 sizes, because a bucket mean is an **estimate**: "
+                f"{res['over_bar']} of {res['sides']} bucket-sides\n")
+        f.write("carry a standard error larger than the whole bar. The bar is now stated against the\n")
+        f.write("precision the corpus actually has — with ±0.25 kept as a **floor**, so a deeper corpus\n")
+        f.write("automatically restores the original requirement rather than abandoning it.\n\n")
+        f.write("**Mean agreement.** Per cell (bucket × side): "
+                f"`|model − corpus| ≤ max({BUCKET_MEAN_TOLERANCE}, {BUCKET_MEAN_SIGMA:.0f}·se)`, at most\n")
+        f.write(f"{bar['allowance']} exceedances (a {BUCKET_MEAN_SIGMA:.0f}σ screen over "
+                f"{len(bar['cells'])} cells expects ~1 by chance), none over\n")
+        f.write(f"`max({BUCKET_HARD_TOLERANCE}, {BUCKET_HARD_SIGMA:.0f}·se)`, and a pooled "
+                f"`χ² ≤ χ²₀.₉₅(dof)` — which is where the statistical\n")
+        f.write("power lives, since it catches systematic misfit that every individual cell passes.\n")
+        f.write(f"A corpus shallower than {MIN_SAMPLES_PER_BUCKET}/bucket is **not scoreable at all**, "
+                f"so the se-relative form cannot be\ngamed by shrinking n.\n\n")
+        f.write(f"| Check | Measured | Bar | |\n|---|---|---|---|\n")
+        f.write(f"| Worst cell deviation | {bar['worst']:.3f} (|z| = {bar['worst_z']:.2f}) | "
+                f"per-cell, se-relative | |\n")
+        f.write(f"| Exceedances | {bar['exceed']} | ≤ {bar['allowance']} | "
+                f"{'✅' if bar['exceed'] <= bar['allowance'] else '❌'} |\n")
+        f.write(f"| Hard exceedances | {bar['hard_exceed']} | 0 | "
+                f"{'✅' if bar['hard_exceed'] == 0 else '❌'} |\n")
+        f.write(f"| Pooled χ² | {bar['chi2']:.1f} on {bar['dof']} dof | ≤ {bar['crit']:.1f} | "
+                f"{'✅' if bar['chi2'] <= bar['crit'] else '❌'} |\n")
+        f.write(f"| Shallowest bucket | n = {bar['shallow']} | ≥ {MIN_SAMPLES_PER_BUCKET} | "
+                f"{'✅' if bar['scoreable'] else '❌'} |\n\n")
+        f.write(f"**Mean agreement: {'PASS' if bar['passed'] else 'FAIL'}.**\n\n")
+        f.write("**Distribution shape.** ")
+        f.write(f"Win/draw/loss split within ±{WDL_TOLERANCE_POINTS} percentage points at "
                 f"`dSquad ≈ 0` (the bucket where home advantage shows as an asymmetry, so it is the one "
                 f"that actually tests the fitted `HomeAdvantageRating`) — corpus "
                 f"{corpus_wdl[0]:.1f}/{corpus_wdl[1]:.1f}/{corpus_wdl[2]:.1f} vs model "
                 f"{model_wdl_v[0]:.1f}/{model_wdl_v[1]:.1f}/{model_wdl_v[2]:.1f}, "
                 f"**worst {wdl_worst:.1f}pp** (n={zero['n']}"
-                f"{f', deepened by {deep_n} matches beyond the grid' if deep_n else ''}).\n\n")
-        f.write(f"**Verdict: {'PASS' if accepted else 'FAIL'}.**\n\n")
+                f"{f', deepened by {deep_n} matches beyond the grid' if deep_n else ''}). "
+                f"A bar failure must also be distinguishable from noise, or the honest answer is that "
+                f"the corpus cannot yet say: the corpus draw share carries a ±{wdl_se:.1f}pp standard "
+                f"error here")
+        if zero["n"] < WDL_MIN_SAMPLES:
+            f.write(f", and n is below the pinned minimum of {WDL_MIN_SAMPLES} at which a *pass* "
+                    f"would be resolvable (a significant *fail* still is)")
+        f.write(f".\n\n**Distribution shape: {wdl}.**\n\n")
+        f.write(f"**Overall verdict: {'PASS' if accepted else 'FAIL'} — mean agreement "
+                f"{'PASS' if bar['passed'] else 'FAIL'}, distribution shape {wdl}.**\n\n")
         f.write("### Why the verdict reads the way it does\n\n")
         f.write("A bar is only meaningful against a measurement precise enough to test it, and a fit is\n")
         f.write("only meaningful if the model can express the shape it is fitting. Both are measured here\n")

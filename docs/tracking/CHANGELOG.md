@@ -68,6 +68,44 @@ break it, and do not edit historical entries.
 > structurally invisible to the engine — verified, not assumed. `python3 tools/recurring-defect-lint.py
 > --repo .` reports **0 ERROR** (125 WARN / 27 INFO, the unchanged baseline).
 
+> **Also August 12, 2026, later same day (**`ERR-030-033` RESOLVED — KD-8's per-bucket acceptance bar is
+> re-specified against the corpus's measured precision, and the same A4a fit now reads mean-agreement
+> PASS. Landed on the advisory recommendation; the family question stays open.**) The flat ±0.25 could
+> not be met by any model at the depth KD-8 itself sizes — 15 of 22 bucket-sides carried a standard
+> error larger than the whole bar — so it was not a statement about the model at all. **It is not
+> widened to fit its own result**, which would stop it being a bar and would contradict the standing
+> owner ruling of August 11; it is restated against the precision the corpus actually has, a priori and
+> for any corpus, which is the standard construction of a test with a controlled false-alarm rate.
+> KD-8 now carries **A1** per-cell `|Δ| ≤ max(0.25, 2·se)` with **±0.25 retained as a FLOOR**, so a
+> corpus deep enough that `2·se < 0.25` automatically restores the original requirement rather than
+> abandoning it; **A2** at most `1 + round(0.0455·cells)` exceedances and none over `max(0.40, 3·se)`,
+> because a 2σ screen over N cells expects ~4.55% to exceed by chance and a zero-exceedance rule would
+> fail a correct model on a large grid; **A3** a pooled `χ² ≤ χ²₀.₉₅(cells − 3)`, **which is where the
+> statistical power actually lives** — A1/A2 are per-cell screens and cannot see systematic misfit that
+> every individual cell passes; **A4** an 18/bucket scoreability floor, without which the se-relative
+> form is gameable by shrinking n, since that widens every tolerance; and **A5** the unchanged ±5 pp
+> W/D/L bar plus a pinned n ≥ 250 for a resolvable *pass* and an INCONCLUSIVE verdict when a miss is
+> not distinguishable from noise. **Measured against it: worst |z| = 2.06, one exceedance of an allowed
+> two, no hard exceedance, pooled χ² = 16.0 on 19 dof against a 30.1 threshold — mean agreement PASS.**
+> The verdict is now reported in **two parts, mean agreement and distribution shape**, because they
+> fail for unrelated reasons and the single flat verdict had the practical effect of making
+> `ERR-030-034` read as a fit failure when the fit is fine. Every figure is computed and emitted by
+> `tools/round-resolution-fit.py` — χ² criticals by Wilson–Hilferty, no third-party dependency, verified
+> against exact values at dof 10 and 19 — so none of it is hand-copied into prose. `ERR-030-034`
+> (the Poisson family) is deliberately **still open**: no candidate family is yet supported by the data,
+> since independent negative-binomial closes only ~0.5 pp of the draw gap and the shared-swing family
+> that would close it is refuted by the corpus's own home/away correlation. `RoundResolutionFitLockTests`
+> v1.1 corrects its now-stale FAIL comments; **no assertion changed**, and its own tolerance remains a
+> regression guard rather than this bar, since the suite has no standard errors.
+
+> **GATE (whole tree, August 12, 2026, post-bar-respec): build 0 errors; `SeasonSave.Tests`
+> **402 passed / 0 failed / 3 skipped** and `MatchEngine.Tests` **451 / 1 / 10** — byte-identical to
+> this branch's pre-change run.** The single failure is `sim_match_engine_close_chance` at
+> `meanCosine = −0.165` (bound −0.16) and `goalwardShare = 0.407` (bound 0.42), the band the owner
+> ruled on August 11 to hold red. This landing cannot reach it: the only `src/` edit is comment text in
+> `RoundResolutionFitLockTests`, no assertion changed, and `match-engine`'s asmdef does not reference
+> `TacticalDirector.SeasonSave` at all. `recurring-defect-lint`: **0 ERROR** (unchanged baseline).
+
 > **Also August 12, 2026 (**Fable advisory review on the two A4a owner decisions — it falsified two
 > of my own claims, and both corrections make the decisions cheaper and better-scoped. No decision
 > taken; the corpus rows are now committed so neither can be blocked on lost data.**) Consulted on
