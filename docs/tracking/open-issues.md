@@ -54,10 +54,7 @@ history by the original convention; they were not merged.
   and the scoreline is persisted through `LeagueTable`/`SeasonStateCodec`, so this moves save state).
   **The corpus is committed, so a re-fit against a new family costs seconds, not the run.**
 
-  **Also recorded, not a blocker: the engine's goal rate is now 3.09/match** — against 3.7 measured
-  August 3, 15.3 in July, and football's ~2.7. The §5.Z chain has taken the engine *past* football's
-  rate rather than to it. Nothing was tracking this, and it is a re-capture trigger for this corpus by
-  KD-8's own rule the moment it moves again.
+  **Also recorded, not a blocker: the corpus's grid-weighted goal rate is 3.09/match.** **⚠️ CORRECTED August 12, 2026 by the goal-rate match-realism pass:** 3.09 is the **grid-weighted** mean, and the grid samples `dSquad` −5…+5 uniformly while a real season clusters near 0 and mismatches score more. Re-measured: **balanced fixtures (`dSquad ≈ 0`, n=198) give 2.70 ± 0.13 vs football's ~2.7 — 0.02σ**; league-weighted 2.93 ± 0.15 (+1.47σ, not significant). **The engine did NOT overshoot football's rate; no defect, no `[GT]` moved.** The error was reading a calibration grid as a league; the fitter now emits all three figures so it cannot recur. It remains a re-capture trigger for this corpus by KD-8's own rule the moment the engine's scoring moves again.
 
 - **Football-judgment proxy review — 32 itemized findings still open across 24 specs; the §6 doctrine governs every fix; ERR-008-020 (template), ERR-008-019 (the founding long-shot cliff) and ERR-008-021 (the shot-lane follow-up) LANDED** — *opened August 4, 2026 (review + doctrine + template landing all same day); ERR-008-019 and ERR-008-021 landed August 5, 2026.*
   **ERR-008-021 LANDED August 5, 2026 — the §6.4 shot-lane deferral, discharged.** The geometry the

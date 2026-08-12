@@ -34,6 +34,14 @@ MAX_GOALS_PER_SIDE = 20
 BUCKET_MEAN_TOLERANCE = 0.25          # per-bucket mean goals, each side
 WDL_TOLERANCE_POINTS = 5.0            # percentage points, at dSquad = 0
 
+# Mirrored from LeagueBootstrapConstants / LeagueBootstrap.StrengthDelta — used ONLY to re-weight the
+# grid into a league-representative goal rate (see goal_rates). Not part of the fit.
+LEAGUE_STRENGTH_SPREAD = 3
+LEAGUE_CLUB_COUNT = 20
+
+# Football reference for the goal rate, for the realism line only (invariants: ~2.7 goals/match).
+FOOTBALL_GOALS_PER_MATCH = 2.7
+
 
 def lam(base, slope, signed_edge):
     """The model's expected goals for one side — SeasonLoopConstants shape, clamps included."""
@@ -245,6 +253,12 @@ def main():
           f"pooled chi2={res['chi2']:.1f} dof={res['dof']} -> z={res['z']:+.2f} sigma")
 
     zero, deep_n = wdl_bucket(summary, args.wdl_csv)
+
+    rates = goal_rates(summary, rows, zero)
+    print(f"goals/match — grid-weighted {rates['grid']:.2f} (over-weights blowouts, NOT a football "
+          f"figure) | balanced dSquad~0 {rates['balanced']:.2f} (n={rates['n_balanced']}) | "
+          f"league-weighted {rates['league']:.2f} ({rates['covered']:.0f}% of a season covered) | "
+          f"football ~{FOOTBALL_GOALS_PER_MATCH}")
     cw, cd, cl = (100.0 * zero["w"] / zero["n"], 100.0 * zero["d"] / zero["n"],
                   100.0 * zero["l"] / zero["n"])
     mw, md, ml = model_wdl(base, slope, home_adv, zero["mean_d"])
@@ -262,9 +276,57 @@ def main():
     if args.out:
         write_artifact(args, rows, summary, (base, slope, home_adv), worst,
                        (cw, cd, cl), (mw, md, ml), wdl_worst, accepted, zero, res,
-                       wdl_se, deep_n)
+                       wdl_se, deep_n, rates)
         print(f"wrote {args.out}")
     return 0
+
+
+def goal_rates(summary, rows, zero):
+    """
+    Goals per match, reported three ways — because the corpus mean is NOT a football-comparable
+    figure and reading it as one is a mistake this project has already made once.
+
+    The grid samples dSquad -5..+5 UNIFORMLY. A real 20-club season does not: its fixtures cluster
+    near dSquad 0 (|dSquad| <= 1 is ~39% of a 380-fixture season against the grid's 27%), and
+    mismatched fixtures score more. So the corpus mean over-weights blowouts and reads high against
+    football's ~2.7 even when the engine is exactly right at the strengths a league actually plays.
+
+    - `grid`: the raw corpus mean. Useful for the fit, misleading as a realism figure.
+    - `balanced`: the dSquad ~ 0 bucket alone — the football-comparable population, and the one the
+      acceptance bucket is deepened at, so it is also the best-measured.
+    - `league`: per-bucket rates re-weighted by the dSquad distribution of an actual season under the
+      shipped LeagueBootstrap.StrengthDelta ramp. The honest single number for "what will a league
+      table's goal rate look like".
+    """
+    grid = sum(r["h"] + r["a"] for r in rows) / len(rows)
+
+    balanced = zero["mean_h"] + zero["mean_a"]
+
+    # The shipped ramp: StrengthDelta(rank, clubCount) with halves-away-from-zero rounding.
+    def rounded_divide(num, den):
+        return (num + den // 2) // den if num >= 0 else -((-num + den // 2) // den)
+
+    spread, clubs = LEAGUE_STRENGTH_SPREAD, LEAGUE_CLUB_COUNT
+    ramp = [rounded_divide((2 * spread * rank) - (spread * (clubs - 1)), clubs - 1)
+            for rank in range(clubs)]
+    fixtures = defaultdict(int)
+    for home in range(clubs):
+        for away in range(clubs):
+            if home != away:
+                fixtures[ramp[home] - ramp[away]] += 1
+
+    # The acceptance bucket's DEEPENED mean, where it exists — it is the best-measured rate in the
+    # corpus and the one a league weights most heavily, so using the shallow grid value would throw
+    # away the very samples that were run to measure it.
+    by_key = {b["key"]: b["mean_h"] + b["mean_a"] for b in summary}
+    by_key[zero["key"]] = balanced
+    weight = sum(n for k, n in fixtures.items() if k in by_key)
+    league = (sum(n * by_key[k] for k, n in fixtures.items() if k in by_key) / weight
+              if weight else float("nan"))
+    covered = 100.0 * weight / sum(fixtures.values())
+
+    return {"grid": grid, "balanced": balanced, "league": league, "covered": covered,
+            "n_balanced": zero["n"]}
 
 
 def wdl_bucket(summary, wdl_paths):
@@ -324,7 +386,7 @@ def split_preserved(path):
 
 
 def write_artifact(args, rows, summary, params, worst, corpus_wdl, model_wdl_v, wdl_worst,
-                   accepted, zero, res, wdl_se, deep_n):
+                   accepted, zero, res, wdl_se, deep_n, rates):
     base, slope, home_adv = params
     preamble, postamble = split_preserved(args.out)
     with open(args.out, "w") as f:
@@ -332,15 +394,18 @@ def write_artifact(args, rows, summary, params, worst, corpus_wdl, model_wdl_v, 
             f.write(preamble)
         f.write(GENERATED_BEGIN + "\n\n")
         if not preamble:
+            # First run only: the file has no hand-maintained head yet, so emit the title and the
+            # header blockquote. On every later run BOTH already live in the preserved preamble, and
+            # re-emitting them here duplicates the header inside the generated region.
             f.write("# Round-Resolution Calibration Corpus\n\n")
-        f.write("> **Created:** July 26, 2026\n")
-        f.write("> **Status:** ARTIFACT — the measured ground truth the #30 round-resolution model's\n")
-        f.write("> three `[GT]` parameters are fitted against. Governed by\n")
-        f.write("> `docs/tracking/league-bootstrap-design.md` KD-7 (model shape) + KD-8 (methodology);\n")
-        f.write("> `docs/tracking/path-to-playable-roadmap.md` item **A4a**.\n")
-        f.write("> **Regenerate with:** the env-gated `Corpus_GeneratesTheRequestedSlice` driver in\n")
-        f.write("> `src/season-save/tests/RoundResolutionCalibrationHarnessTests.cs`, then\n")
-        f.write("> `python3 tools/round-resolution-fit.py <csv...> --out <this file>`.\n\n")
+            f.write("> **Created:** July 26, 2026\n")
+            f.write("> **Status:** ARTIFACT — the measured ground truth the #30 round-resolution model's\n")
+            f.write("> three `[GT]` parameters are fitted against. Governed by\n")
+            f.write("> `docs/tracking/league-bootstrap-design.md` KD-7 (model shape) + KD-8 (methodology);\n")
+            f.write("> `docs/tracking/path-to-playable-roadmap.md` item **A4a**.\n")
+            f.write("> **Regenerate with:** the env-gated `Corpus_GeneratesTheRequestedSlice` driver in\n")
+            f.write("> `src/season-save/tests/RoundResolutionCalibrationHarnessTests.cs`, then\n")
+            f.write("> `python3 tools/round-resolution-fit.py <csv...> --out <this file>`.\n\n")
         f.write("---\n\n## Capture provenance\n\n")
         f.write("This corpus measures what the match engine does **at the commit below**. A later engine\n")
         f.write("change invalidates the fit rather than merely aging it (KD-8's re-capture trigger): goal\n")
@@ -380,6 +445,21 @@ def write_artifact(args, rows, summary, params, worst, corpus_wdl, model_wdl_v, 
                     f"{mh - b['mean_h']:+.3f} | {b['se_h']:.3f} | "
                     f"{b['mean_a']:.3f} | {ma:.3f} | {ma - b['mean_a']:+.3f} | {b['se_a']:.3f} | "
                     f"{b['var_h']:.3f} | {b['var_a']:.3f} |\n")
+        f.write("\n## Goal rate — and why the corpus mean is not the football number\n\n")
+        f.write("The grid samples `dSquad` −5…+5 **uniformly**; a real season does not. Its fixtures\n")
+        f.write("cluster near 0, and mismatched fixtures score more, so the corpus mean over-weights\n")
+        f.write("blowouts and reads high against football even when the engine is right at the strengths\n")
+        f.write("a league actually plays. Three figures, because quoting the first one alone has already\n")
+        f.write("caused one false alarm:\n\n")
+        f.write("| Population | Goals/match | Notes |\n|---|---|---|\n")
+        f.write(f"| Grid-weighted (raw corpus mean) | {rates['grid']:.2f} | Correct for the fit; "
+                f"**not** a realism figure. |\n")
+        f.write(f"| **Balanced — `dSquad ≈ 0`** | **{rates['balanced']:.2f}** | n={rates['n_balanced']}. "
+                f"The football-comparable population, and the best-measured bucket. |\n")
+        f.write(f"| League-weighted | {rates['league']:.2f} | Per-bucket rates re-weighted by the "
+                f"`dSquad` distribution of a real {LEAGUE_CLUB_COUNT}-club season under the shipped "
+                f"`StrengthDelta` ramp ({rates['covered']:.0f}% of fixtures covered). |\n")
+        f.write(f"| Football reference | ~{FOOTBALL_GOALS_PER_MATCH} | |\n\n")
         f.write("\n## Acceptance (KD-8)\n\n")
         f.write(f"- Per-bucket mean goals within ±{BUCKET_MEAN_TOLERANCE} of the corpus, each side — "
                 f"**worst deviation {worst:.3f}**.\n")
@@ -454,3 +534,16 @@ if __name__ == "__main__":
 # |         |            |        | Stating that in the file's header would be documented-but-not-   |
 # |         |            |        | enforced; the markers make it structural. Verified idempotent —  |
 # |         |            |        | a second regeneration over the same inputs is byte-identical.    |
+# | 1.2     | 2026-08-12 | —      | The goal-rate match-realism pass. The corpus mean was quoted as  |
+# |         |            |        | a football figure (3.09 vs ~2.7, reported as an overshoot) and   |
+# |         |            |        | it is not one: the grid samples dSquad -5..+5 UNIFORMLY, while a |
+# |         |            |        | real season clusters near 0 and mismatches score far more, so    |
+# |         |            |        | the mean over-weights blowouts. Measured properly the engine is  |
+# |         |            |        | on football's rate — balanced fixtures 2.70 (n=198, 0.02 sigma), |
+# |         |            |        | league-weighted 2.93 (+1.47 sigma, not significant). goal_rates  |
+# |         |            |        | now reports all three side by side, re-weighting the per-bucket  |
+# |         |            |        | rates by the real StrengthDelta fixture distribution and using   |
+# |         |            |        | the DEEPENED acceptance bucket, and the artifact carries them as |
+# |         |            |        | a table. The fix belongs in the tool, not in prose: a warning    |
+# |         |            |        | not to misread the mean is advice; emitting the right number     |
+# |         |            |        | beside it is structural.                                         |

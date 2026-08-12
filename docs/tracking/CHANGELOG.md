@@ -37,10 +37,7 @@ break it, and do not edit historical entries.
 > August 11 close-chance call one entry below), and changing the distribution family moves persisted
 > season state, since the scoreline reaches `LeagueTable` and `SeasonStateCodec` serializes it. **The
 > corpus is committed, so a re-fit against a new family costs seconds rather than the run.**
-> **Measured in passing, and nothing was tracking it: the engine's goal rate is now 3.09/match** —
-> against 3.7 recorded August 3, 15.3 in July, and football's ~2.7. The §5.Z chain has taken the
-> engine *past* football's rate rather than to it; by KD-8's own rule that is a re-capture trigger the
-> next time it moves. **Also landed:** the harness gained a **sample-window** knob
+> **Measured in passing: the corpus's grid-weighted goal rate is 3.09/match.** **⚠️ CORRECTED August 12, 2026 by the goal-rate match-realism pass:** 3.09 is the **grid-weighted** mean, and the grid samples `dSquad` −5…+5 uniformly while a real season clusters near 0 and mismatches score more. Re-measured: **balanced fixtures (`dSquad ≈ 0`, n=198) give 2.70 ± 0.13 vs football's ~2.7 — 0.02σ**; league-weighted 2.93 ± 0.15 (+1.47σ, not significant). **The engine did NOT overshoot football's rate; no defect, no `[GT]` moved.** The error was reading a calibration grid as a league; the fitter now emits all three figures so it cannot recur. **Also landed:** the harness gained a **sample-window** knob
 > (`TD_CALIBRATION_SAMPLE_FROM`) so one bucket can be split across processes — KD-8 called the run
 > parallelisable across buckets, but its acceptance bar lives at a *single* bucket, which could
 > therefore only be deepened serially — with locks that a window is exactly the contiguous plan's
@@ -70,6 +67,34 @@ break it, and do not edit historical entries.
 > asmdef does not reference `TacticalDirector.SeasonSave` at all, so the round-resolution constants are
 > structurally invisible to the engine — verified, not assumed. `python3 tools/recurring-defect-lint.py
 > --repo .` reports **0 ERROR** (125 WARN / 27 INFO, the unchanged baseline).
+
+> **Also August 12, 2026 (**A goal-rate match-realism pass that ended at its own premise check: the
+> engine has NOT overshot football's goal rate, and the brief claiming it had was mine.**) Run against
+> the A4a corpus, so it cost no new engine time. **§0.1's premise check refuted the brief and the pass
+> stopped there** — no wiring gate needed, no ladder (KD-W1 freezes it regardless), no `[GT]` moved, no
+> `src/` file changed. **The measurement:** 3.09 goals/match is the **grid-weighted** corpus mean, and
+> the calibration grid samples `dSquad` −5…+5 **uniformly**. A real 380-fixture season does not: under
+> the shipped `StrengthDelta` ramp, |dSquad| ≤ 1 is ~39% of fixtures against the grid's 27%, and
+> mismatched fixtures score far more (4.78 goals/match at +5, 3.44 at −4). Re-measured on populations a
+> league actually plays: **balanced fixtures (`dSquad ≈ 0`, n=198) give 2.70 ± 0.13 against football's
+> ~2.7 — 0.02σ**, and the **league-weighted** rate is **2.93 ± 0.15 (+1.47σ, not significant)**, with
+> bucket-to-bucket variation marginal (χ² = 21.8 on 10 dof). So the §5.Z chain did not overshoot; it
+> landed on football's rate, and the apparent overshoot was **a calibration grid read as if it were a
+> league**. Every document that carried the false claim — `CLAUDE.md`, this file, `open-issues.md`,
+> `path-to-playable-roadmap.md`, `file-manifest.md` — is **annotated in place** rather than rewritten,
+> per this project's convention for a falsified claim. **The fix is in the tool, not in the prose:**
+> `tools/round-resolution-fit.py` now emits all three figures side by side (grid / balanced /
+> league-weighted, against the ~2.7 reference) and the artifact carries them as a table, so the corpus
+> mean cannot be quoted as a realism number again — the misreading is now structurally hard rather than
+> warned against. Two defects in that tool change were caught by running it and fixed: the regeneration
+> duplicated the header blockquote inside the generated region, and the `balanced` figure read the
+> shallow 18-sample grid bucket instead of the deepened 198 the run had paid for. Regeneration
+> re-verified idempotent. **Residual, classified for the next pass (§7): there is no goal-rate lever to
+> pull — the number is right.** What remains open on realism is unchanged and sits elsewhere: the foul
+> heuristic's ~7 reds per 9 minutes (a Stage-0 placeholder for #44, which has no assembly — measure, do
+> not calibrate), and the wiring backlog's 9 dormant capabilities, headline W2 "no player has ever made
+> a tackle". **No gate run: no `src/` file was touched** (`git diff --stat` covers `tools/` and `docs/`
+> only), and the tool change is verified by executing it.
 
 > **Last Updated (prior):** August 11, 2026, later same day (**Owner call formally recorded: hold
 > `sim_match_engine_close_chance` red, do not rebaseline a third time.**) `close-chance-creation-design.md`

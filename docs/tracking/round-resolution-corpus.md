@@ -78,15 +78,6 @@ used with a career wired.
 
 <!-- GENERATED:BEGIN — everything below is written by tools/round-resolution-fit.py -->
 
-> **Created:** July 26, 2026
-> **Status:** ARTIFACT — the measured ground truth the #30 round-resolution model's
-> three `[GT]` parameters are fitted against. Governed by
-> `docs/tracking/league-bootstrap-design.md` KD-7 (model shape) + KD-8 (methodology);
-> `docs/tracking/path-to-playable-roadmap.md` item **A4a**.
-> **Regenerate with:** the env-gated `Corpus_GeneratesTheRequestedSlice` driver in
-> `src/season-save/tests/RoundResolutionCalibrationHarnessTests.cs`, then
-> `python3 tools/round-resolution-fit.py <csv...> --out <this file>`.
-
 ---
 
 ## Capture provenance
@@ -142,6 +133,22 @@ corpus knows the number the model is being scored against.
 | +3 | 18 | 3.000 | 2.389 | 2.627 | +0.238 | 0.537 | 0.500 | 0.578 | +0.078 | 0.218 | 4.904 | 0.806 |
 | +4 | 18 | 4.000 | 2.611 | 3.261 | +0.650 | 0.537 | 0.389 | 0.466 | +0.077 | 0.164 | 4.904 | 0.460 |
 | +5 | 18 | 5.000 | 4.500 | 4.048 | -0.452 | 0.633 | 0.278 | 0.375 | +0.097 | 0.135 | 6.806 | 0.312 |
+
+## Goal rate — and why the corpus mean is not the football number
+
+The grid samples `dSquad` −5…+5 **uniformly**; a real season does not. Its fixtures
+cluster near 0, and mismatched fixtures score more, so the corpus mean over-weights
+blowouts and reads high against football even when the engine is right at the strengths
+a league actually plays. Three figures, because quoting the first one alone has already
+caused one false alarm:
+
+| Population | Goals/match | Notes |
+|---|---|---|
+| Grid-weighted (raw corpus mean) | 3.09 | Correct for the fit; **not** a realism figure. |
+| **Balanced — `dSquad ≈ 0`** | **2.70** | n=198. The football-comparable population, and the best-measured bucket. |
+| League-weighted | 2.93 | Per-bucket rates re-weighted by the `dSquad` distribution of a real 20-club season under the shipped `StrengthDelta` ramp (98% of fixtures covered). |
+| Football reference | ~2.7 | |
+
 
 ## Acceptance (KD-8)
 
