@@ -1,216 +1,433 @@
-# Round-Resolution Calibration Corpus — A4a
+# Round-Resolution Calibration Corpus
 
 > **Created:** July 26, 2026
-> **Status (current):** **STEP 0 PASSED July 28, 2026 — the corpus is worth fitting for the first
-> time — but the goal rate has MOVED TWICE since that run, so Step 0 must be re-run before the
-> corpus.** §5.Z.22 (keeper contact rate, July 28) left it at 5.0/match, and **§5.Z.23 (conversion
-> at contact, August 3 — `ERR-011-008`, a keeper's claim never stopped the ball) took it to
-> 3.7/match**, the closest yet to football's ~2.7. A corpus fitted against the July-28 tree would
-> calibrate the quick-sim to a goal rate the engine no longer produces, across a whole 380-fixture
-> league. The pilot is ~33 min and the corpus ~1.4 h, so re-running Step 0 first is cheap insurance;
-> the recipe below is unchanged. Nothing about the July-28 result is retracted — it is superseded.
+> **Status:** ARTIFACT — the measured ground truth the #30 round-resolution model's
+> three `[GT]` parameters are fitted against. Governed by
+> `docs/tracking/league-bootstrap-design.md` KD-7 (model shape) + KD-8 (methodology);
+> `docs/tracking/path-to-playable-roadmap.md` item **A4a**.
+> **Regenerate with:** the env-gated `Corpus_GeneratesTheRequestedSlice` driver in
+> `src/season-save/tests/RoundResolutionCalibrationHarnessTests.cs`, then
+> `python3 tools/round-resolution-fit.py <csv...> --out <this file>`.
 >
-> **Original July-28 record follows.**
-> Re-run after the §5.Z.17–§5.Z.21 match-realism chain (shot outcomes → shot speed + woodwork → keeper
-> catch/parry conversion → shot volume; engine goal rate on the diagnostic seeds now 4.7/match vs
-> football's ~2.7). Result over the same 20 keyed matches (spread = 3, dSquad ±6.0):
-> **strong-at-home mean margin +7.100, strong-away mean margin −4.700** — the ramp extremes separate
-> **in both directions**, upsets exist (the strong side LOSES 3–4 at away-weak's home in one row; a 5–8
-> thriller in another), and the §5.Z.11 home/away asymmetry that made the July-26 numbers unfittable
-> (25.3 vs 1.7 — the strong away side effectively never scored) has collapsed to a margin ratio of
-> ~1.5× (7.1 vs 4.7; football's home advantage is smaller still, recorded below as a fit caveat, not a
-> blocker). Full CSV in §1.b. Goals run hot for a ±6 mismatch (strong side 5.8–8.0/match) — expected:
-> ±6 is a third of the whole [1,20] scale; the near-balanced buckets the fit actually leans on sit at
-> the ~4.7/match diagnostic rate. **Instrument note:** the first post-play pilot run FAILED at teardown
-> with every assertion green — a PLAYING match emits FM-08/FM-03 possession-race errors as ordinary
-> match events (§5.Z Phase H), and this driver predates play developing; both env-gated drivers now
-> carry the same `LogAssert.ignoreFailingMessages` wrapper as every other engine-driving diagnostic
-> (harness tests v1.1), and the re-run with the fixed instrument reproduced the identical rows
-> (deterministic keyed seeds) and PASSED. **Next action: the corpus run + fit** (`TD_CALIBRATION_SAMPLES`
-> slices + `tools/round-resolution-fit.py`, ~1.4 h across four processes) — its own roadmap item.
-> The prior records below are kept verbatim as the evidence trail.
->
-> **Status (superseded, July 26):** **STILL BLOCKED July 26, 2026 — Step 0 was re-run twice and now PASSES, but on scorelines that must not be fitted.** After the §5.Z.9 foul balance pass and the §5.Z.10 keeper-placement fix, the pilot's assertion (`strongHomeMargin > strongAwayMargin`) is satisfied — 25.3 vs 1.7 — so it no longer refuses. The raw results are nonetheless unfittable: **strong-at-home matches finish 19–40 to nil, and the away side scores 0–2 in every one of the twenty matches** regardless of which side carries the +3 strength. Full detail and the two findings behind it: `match-engine-design.md` **§5.Z.11** (a structural home/away asymmetry worth ~50× football's home advantage, and a goal rate ~10× football's). **A4a stays blocked, now for a different and more dangerous reason than before:** previously the corpus was all zeros and obviously useless, so nothing could be fitted by accident; now it is full of plausible-looking non-zero numbers, and fitting three parameters against 25–0 results would calibrate the quick-sim to reproduce the defect faithfully across a whole 380-fixture league. That is worse than not fitting at all. **This is also a gap in Step 0 itself** — it asks "is there signal?", not "is the signal football?" — recorded rather than patched, because the right fix is upstream. Everything below is the July-26 pre-Phase-H record, kept verbatim as the evidence trail.
->
-> **Status (superseded, post-Phase-H):** **UNBLOCKED July 26, 2026 — the upstream defect is fixed; Step 0 is re-runnable.** The engine gap this document diagnosed (ERR-030-014) was closed the same day by match-engine §5.Z Phase H (roadmap A4b): a production match now kicks the ball (peak 16.2–17.2 m/s, was 0.00), holds possession 10.5–20.9% of ticks (was 0%), works into both penalty areas and scores. **Next action: re-run the Step 0 pilot below (~33 min).** Note it may still refuse — Phase H makes matches *play*, not necessarily *discriminate by squad strength*, and the latter is exactly what Step 0 asks; if the ramp extremes remain indistinguishable the answer is to raise `LeagueStrengthSpread`, not to fit three parameters to noise. Everything below is the July-26 pre-fix record, kept verbatim as the evidence trail.
->
-> **Status (original, pre-fix):** **BLOCKED at KD-8 Step 0.** This document was meant to record the fitted parameters of the
-> #30 round-resolution model against ~200 engine-simulated matches. It instead records why that corpus
-> cannot be generated today, because Step 0 — the cheap signal check that runs *before* the multi-hour
-> corpus — refused to proceed.
-> **Governance:** `docs/tracking/league-bootstrap-design.md` KD-7 (model shape) + KD-8 (methodology and
-> Step 0); `docs/tracking/path-to-playable-roadmap.md` item **A4a** and risk row 2.
-> **Filed as:** ERR-030-014 (`docs/tracking/spec-error-log.md`).
+> **This file is machine-generated below the header.** Everything from *Capture provenance*
+> to *Raw rows* is written by `tools/round-resolution-fit.py`; edit the tool, never this
+> file, or the next regeneration silently discards the correction. The two hand-maintained
+> sections — the standing caveat and the version history — bracket the generated body.
 
 ---
 
-## 0.b Standing caveat — the corpus predates injuries (August 7, 2026)
+## 0.a How this run was actually executed (August 12, 2026)
 
-The #29/#41 balance pass armed the occurrence dial (FR-MD-027): a career-wired season now removes
-injured players from selection, so the squad-strength distribution `RoundResolutionModel` resolves
-against is no longer the all-fit distribution every measurement in this corpus was (or will be)
-fitted on. The effect is bounded — ~9% of players unavailable at a matchday, starting XIs re-selected
-from the remainder — but it is systematic. **Recorded, deliberately not re-fitted here** (the
-evidence advisor's call at the balance pass): re-fitting the round-resolution constants belongs to
-their own calibration pass, run against the armed-career distribution, not smuggled into an injury
-landing. Until then, treat any A4a fit as conditioned on "no injuries" and re-check it when it is
-next used with a career wired.
-
-## 1. What Step 0 is, and what it found
-
-KD-8 Step 0 exists because of a specific failure mode: *"if those two populations' goal distributions
-are not distinguishable, the corpus carries no signal to fit … otherwise A4a burns nine hours fitting
-three parameters to noise and the league table stays meaningless."* It was added at the league-bootstrap
-AR-5 review (M-4) precisely so this check would happen before the expensive run.
-
-**It fired.** Run 2026-07-26 on the Linux gate host (Release, one process):
-
-| | strong-at-home | strong-away |
-|---|---|---|
-| Matches | 10 | 10 |
-| Mean measured `dSquad` | **+6.013** | **−5.984** |
-| Mean goal margin | **0.000** | **0.000** |
-| Distinct scorelines observed | 0–0 ×10 | 0–0 ×10 |
-| Wall clock | 32 m 37 s for the 20 matches (~98 s/match) | |
-
-Every one of the twenty full 90-minute matches finished **0–0**, at a rating differential of ±6 points on
-a `[1,20]` scale — an enormous gap, correctly measured and correctly applied to the rosters. The corpus
-carries no signal at all, and the reason is not the one Step 0 was written to catch.
-
-## 1.b Step 0 re-run, July 28, 2026 — PASSED
-
-Same 20 keyed matches (deterministic seeds, so the rows are reproducible in isolation), on the
-post-§5.Z.21 tree, ~33 min Release:
-
-| | strong-at-home | strong-away |
-|---|---|---|
-| Mean measured `dSquad` | +6.013 | −5.984 |
-| **Mean goal margin (home − away)** | **+7.100** | **−4.700** |
-| Strong-side goals/match | 8.0 | 5.8 |
-| Weak-side goals/match | 0.9 | 1.1 |
-| Upsets (strong side beaten) | 1 of 10 (3–4) | 0 of 10 (one 5–8 near-miss) |
-
-```
-strong-at-home (homeDelta +3, awayDelta −3):
-15-0  13-0  3-2  10-1  8-0  7-0  8-1  3-4  5-0  8-1
-strong-away (homeDelta −3, awayDelta +3):
-0-3  0-10  3-7  1-3  1-5  1-6  0-4  0-7  0-5  5-8
-```
-
-What changed since the July-26 record: the §5.Z.17–§5.Z.21 chain (every outcome class reachable;
-football-pace shots + a physical goal frame; the keeper's conversion live; the U_SHOOT distance
-term). The venue asymmetry is now a modifier on a strength signal instead of the signal itself.
-**Fit caveat, recorded:** the residual home-advantage factor (~1.5× on margin) is still above
-football's; the fit will absorb it into the model's home term, and if a later engine pass shrinks
-it the corpus must be re-captured (the KD-8 re-capture rule already says exactly this).
-
-## 2. Why: the engine never puts the ball in motion
-
-A follow-up characterisation (`EngineScoringDiagnosticTests`, env-gated, committed alongside this note)
-instrumented a match directly. Over 60,000 ticks (~16 minutes of match time), in **both** a
-distinct-squad configuration and a plain neutral one:
-
-| Observable | distinct squads | neutral, unconfigured |
-|---|---|---|
-| Score | 0–0 | 0–0 |
-| **Max ball speed** | **0.00 m/s** | **0.00 m/s** |
-| Max ball height | 0.11 m (= resting centre height) | 0.11 m |
-| Ticks with a possessing agent | **0** | **0** |
-| Ball x range | 23.53 … 84.76 | 17.97 … 83.11 |
-
-The ball's velocity is **identically zero for the entire match**, it never leaves the ground, and no agent
-ever holds it. Its x-position does wander, which is agents jostling a stationary ball around by physical
-contact — not play.
-
-The cause is a closed loop, and the engine's own source states half of it outright:
-
-1. `MatchEngine.InitializeKickoffState` places the ball at the centre spot at rest —
-   *"Stationary ball at the centre spot (**a kick would set it in motion; none at Stage 0**)."*
-2. `MatchEngine.RunFirstTouch` **gate 3** requires the ball to already be moving before any agent can
-   receive it (`|ballVelXY| ≥ FIRST_TOUCH_MIN_BALL_SPEED_M_S`, 0.5 m/s).
-3. Possession is granted **only** by that first-touch path in production
-   (`TestOnly_SetPossessor` is documented "Not called by production").
-4. The ball is set in motion **only** by a pass or shot executor, whose adapters gate on
-   `IsBallPossessedBy(agentId)`.
-
-So: no motion ⇒ no reception ⇒ no possession ⇒ no kick ⇒ no motion. `ApplyRestart` does not break the
-loop either — it repositions the ball and clears possession, and a restart requires a boundary crossing,
-which requires motion.
-
-**A production match is therefore a 90-minute 0–0 deadlock, and always has been.** This is not a defect
-A4 or A3 introduced: the neutral column above is the exact configuration every existing match-engine test
-and the `match-engine-kickoff-multi-second` capstone use.
-
-### Why no existing test caught it
-
-The 321 match-engine tests are per-subsystem or per-mechanic, each driving its own inputs. The one
-composed test — the kickoff capstone — ticks 600 ticks (10 s) and asserts tick count, AI-stride cadence,
-finiteness, on-pitch bounds, and that the digest chain advances. Every one of those holds for a match in
-which nothing happens. **No test has ever asserted that the ball gets kicked**, which is exactly the class
-of gap the path-to-playable roadmap opened with: *"the question a playable build answers — is this game
-any good — has never once been asked."*
-
-## 3. Consequences
-
-- **A4a is blocked, upstream of itself.** The blocker is not the ~5 hours of compute the run needs
-  (measured here at ~98 s/match ⇒ ~5.4 h for 198 matches serial, ~1.4 h across four processes). It is
-  that the engine cannot currently produce a corpus with any variance in it.
-- **The three `[GT]` shape parameters shipped with #30 T2 are provisional, not fitted**, and say so at
-  their declaration (`SeasonLoopConstants`). They are chosen to be football-plausible so a human reading
-  the league table sees sensible results; they make no claim to agree with the engine.
-- **PM-1 ("watch a match") is blocked by the same gap**, and more severely: a browser viewer pointed at
-  today's engine renders 22 players standing around a motionless ball. PM-2-sim is *not* blocked — the
-  quick-sim season runs, saves, restores and rolls without touching the engine.
-- The #30 T2 loop itself is unaffected and correct: it routes, resolves, applies, emits and persists
-  exactly as specified. Its FR-SN-013b managed-fixture path demonstrably runs a real engine match — that
-  match is simply always 0–0.
-
-## 4. What has to happen before A4a can run
-
-A match-engine change, owned by `docs/tracking/match-engine-design.md`, not by #30. The minimal shape is
-a **kickoff possession grant**: at kickoff and at every restart, award possession to a designated agent so
-the Decision Tree has a carrier to act for. That single change is what breaks the loop — from there
-PASS/SHOOT dispatch, first touch, offside, fouls and goal detection all already exist.
-
-It is deliberately **not** attempted as part of A4, for reasons worth recording:
-
-- It is a behaviour change to the project's most safety-critical assembly, and by construction it
-  activates a large amount of code that has never run in composition. Expect it to surface further
-  defects (roadmap C5's prediction, at its strongest).
-- It moves every digest in the engine. Most locks are comparative two-run checks and survive, but the
-  schema preimage probes and the certified perf baseline need review.
-- It wants its own design note, its own adversarial-review cycle, and its own landing.
-
-Once it lands: re-run Step 0 (about 33 minutes), and only if the extremes separate, run the corpus and
-`python3 tools/round-resolution-fit.py <csv...> --out docs/tracking/round-resolution-corpus.md`, which
-replaces this document with the fitted artifact KD-8 specifies (per-bucket means and variances, raw rows,
-engine SHA and `SNAPSHOT_SCHEMA_VERSION` at capture, and the ±0.25 / ±5 pp acceptance verdict).
-
-## 5. Reproducing the evidence
+Reproducing the numbers below needs three things KD-8 does not state, all learned by running it:
 
 ```bash
-# Step 0 pilot — 20 real matches, ~33 min Release. Fails while ERR-030-014 is open; that is the point.
-TD_CALIBRATION_PILOT=1 dotnet test src/season-save/tests/season-save-tests.gen.csproj -c Release \
-    --filter "FullyQualifiedName~Pilot_Extreme" -l "console;verbosity=detailed"
+# 0. The SDK. The Ubuntu archive carries it; every dot.net host is 403 at the proxy.
+apt-get update && apt-get install -y dotnet-sdk-8.0     # 8.0.129
+python3 tools/dotnet-ci/generate_projects.py
+dotnet build src/season-save/tests/season-save-tests.gen.csproj -c Release
 
-# Characterisation — two variants × 60 000 ticks, ~1 min Release.
-TD_ENGINE_DIAGNOSTIC=1 dotnet test src/season-save/tests/season-save-tests.gen.csproj -c Release \
-    --filter "FullyQualifiedName~EngineScoringDiagnostic" -l "console;verbosity=detailed"
+# 1. Step 0 FIRST — it gates the corpus, and it is the whole reason the July-26 run
+#    did not fit three parameters to a table of zeros.
+TD_CALIBRATION_PILOT=1 dotnet test src/season-save/tests/season-save-tests.gen.csproj \
+    -c Release --no-build --filter "FullyQualifiedName~Pilot_Extreme"
 
-# Corpus slice (once the engine can play) — each sample is one full match.
-TD_CALIBRATION_SAMPLES=18 TD_CALIBRATION_DELTA_FROM=-5 TD_CALIBRATION_DELTA_TO=5 \
-TD_CALIBRATION_OUT=/tmp/corpus.csv dotnet test ... --filter "FullyQualifiedName~Corpus_Generates"
+# 2. The corpus, four processes over disjoint bucket ranges (~90 s/match here).
+#    The engine's EventBus is process-static, so parallelism is across PROCESSES only.
+TD_CALIBRATION_SAMPLES=18 TD_CALIBRATION_DELTA_FROM=-5 TD_CALIBRATION_DELTA_TO=-3 \
+TD_CALIBRATION_OUT=/tmp/s1.csv dotnet test ... --filter "FullyQualifiedName~Corpus_Generates"
+#    ... and -2..0, 1..3, 4..5 in three more processes.
+
+# 3. The acceptance bucket, deepened across four processes via the sample window.
+TD_CALIBRATION_SAMPLES=45 TD_CALIBRATION_DELTA_FROM=0 TD_CALIBRATION_DELTA_TO=0 \
+TD_CALIBRATION_SAMPLE_FROM=18 TD_CALIBRATION_OUT=/tmp/z1.csv dotnet test ...
+#    ... and SAMPLE_FROM=63, 108, 153.
+
+python3 tools/round-resolution-fit.py /tmp/s{1,2,3,4}.csv \
+    --wdl-csv /tmp/z{1,2,3,4}.csv \
+    --engine-sha "$(git rev-parse --short HEAD)" --schema-version 20 \
+    --platform "Linux x64, .NET 8, Release — non-certifying" \
+    --out docs/tracking/round-resolution-corpus.md
 ```
 
-Capture provenance for the runs recorded above: engine commit `23a5c98`,
-`SNAPSHOT_SCHEMA_VERSION` 18, Linux gate host (non-certifying — these are engine *results*, not timings
-or determinism proofs, so the pinned Windows/Unity tuple is not required).
+**Do not run a build while slices are in flight.** A rebuild swaps assemblies under live
+test processes; this run hit exactly that and discarded the affected slices rather than
+reasoning about whether it mattered (the gate-invalidation class, `spec-error-log.md`
+v1.90).
+
+**Two properties were verified rather than assumed, both before the hours were spent:**
+
+1. **A slice reproduces in isolation.** One process ran buckets −1 then 0; another ran
+   bucket 0 alone. Bucket 0's rows came back byte-identical. Every split in this run —
+   and the whole "parallelisable" claim in KD-8 — rests on that, and nothing had checked it.
+2. **A split reproduces the sanctioned driver.** The ±6 buckets run as two separate
+   processes produced **all 20** of `Pilot_Extreme`'s own rows, exactly.
+
+## 0.b Standing caveat — the corpus is captured with no injuries (carried forward)
+
+The #29/#41 balance pass armed the occurrence dial (FR-MD-027): a career-wired season removes
+injured players from selection, so the squad-strength distribution `RoundResolutionModel`
+resolves against is not the all-fit distribution this corpus is captured on. The harness boots
+a bare `MatchEngine` over two shifted squads with no career state, so **every row below is an
+all-fit row**. The effect is bounded — ~9% of players unavailable at a matchday, starting XIs
+re-selected from the remainder — but systematic. **Recorded, deliberately not folded in** (the
+evidence advisor's call at the balance pass): re-fitting against the armed-career distribution
+is its own pass. Treat this fit as conditioned on "no injuries" and re-check it when it is next
+used with a career wired.
+
+---
+
+<!-- GENERATED:BEGIN — everything below is written by tools/round-resolution-fit.py -->
+
+## Capture provenance
+
+This corpus measures what the match engine does **at the commit below**. A later engine
+change invalidates the fit rather than merely aging it (KD-8's re-capture trigger): goal
+detection landed July 11 2026 with a deliberately minimal restart model, so anything that
+moves scoring moves this table.
+
+| Field | Value |
+|---|---|
+| Engine commit SHA | `95ffc31` |
+| `SNAPSHOT_SCHEMA_VERSION` | 20 |
+| Capture platform | Linux x64 (Ubuntu 24.04), .NET SDK 8.0.129, Release — non-certifying |
+| Matches | 198 |
+| Buckets | 11 |
+| Base-roster seed | `0x0CA11B8A7E5EED01` |
+
+**Non-certifying.** These are engine *results*, not timings or determinism proofs, so the
+Linux gate host is a legitimate capture platform — unlike `FR-PO-052` perf baselines or the
+`FR-DS-009-GATE` determinism KAT, which require the pinned Windows/Unity tuple.
+
+## Fitted parameters
+
+Least squares over the three KD-7 parameters against the per-bucket means below.
+`LambdaMin` / `LambdaMax` are safety clamps and are deliberately **not** fitted.
+
+| Constant | Fitted value |
+|---|---|
+| `QuickSimBaseGoals` | 1.2325 |
+| `QuickSimGoalRatingSlope` | 0.2162 |
+| `QuickSimHomeAdvantageRating` | 0.4996 |
+
+## Per-bucket corpus vs model
+
+Buckets are on the **measured** `dSquad = Rating(home) − Rating(away)` in unit steps —
+never on `edge`, which contains the fitted home advantage and does not exist at capture
+time (KD-8 / AR-7 H-1).
+
+`se` is the standard error of the corpus mean itself — the precision with which this
+corpus knows the number the model is being scored against.
+
+| bucket | n | mean dSquad | corpus home | model home | Δ | se home | corpus away | model away | Δ | se away | var home | var away |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| -5 | 18 | -4.999 | 0.389 | 0.466 | +0.077 | 0.143 | 2.889 | 3.261 | +0.372 | 0.498 | 0.349 | 4.210 |
+| -4 | 18 | -4.000 | 0.556 | 0.578 | +0.023 | 0.202 | 2.889 | 2.627 | -0.262 | 0.332 | 0.691 | 1.877 |
+| -3 | 18 | -3.000 | 0.444 | 0.718 | +0.273 | 0.166 | 2.111 | 2.116 | +0.005 | 0.361 | 0.469 | 2.210 |
+| -2 | 18 | -2.000 | 0.778 | 0.891 | +0.113 | 0.263 | 1.833 | 1.705 | -0.129 | 0.364 | 1.173 | 2.250 |
+| -1 | 18 | -1.000 | 0.889 | 1.106 | +0.217 | 0.254 | 1.389 | 1.373 | -0.016 | 0.344 | 1.099 | 2.015 |
+| +0 | 18 | 0.000 | 1.444 | 1.373 | -0.071 | 0.354 | 1.056 | 1.106 | +0.051 | 0.297 | 2.136 | 1.497 |
+| +1 | 18 | 1.000 | 1.500 | 1.705 | +0.205 | 0.364 | 1.056 | 0.891 | -0.164 | 0.286 | 2.250 | 1.386 |
+| +2 | 18 | 2.000 | 2.944 | 2.116 | -0.828 | 0.501 | 1.167 | 0.718 | -0.449 | 0.218 | 4.275 | 0.806 |
+| +3 | 18 | 3.000 | 2.389 | 2.627 | +0.238 | 0.537 | 0.500 | 0.578 | +0.078 | 0.218 | 4.904 | 0.806 |
+| +4 | 18 | 4.000 | 2.611 | 3.261 | +0.650 | 0.537 | 0.389 | 0.466 | +0.077 | 0.164 | 4.904 | 0.460 |
+| +5 | 18 | 5.000 | 4.500 | 4.048 | -0.452 | 0.633 | 0.278 | 0.375 | +0.097 | 0.135 | 6.806 | 0.312 |
+
+## Goal rate — and why the corpus mean is not the football number
+
+The grid samples `dSquad` −5…+5 **uniformly**; a real season does not. Its fixtures
+cluster near 0, and mismatched fixtures score more, so the corpus mean over-weights
+blowouts and reads high against football even when the engine is right at the strengths
+a league actually plays. Three figures, because quoting the first one alone has already
+caused one false alarm:
+
+| Population | Goals/match | Notes |
+|---|---|---|
+| Grid-weighted (raw corpus mean) | 3.09 | Correct for the fit; **not** a realism figure. |
+| **Balanced — `dSquad ≈ 0`** | **2.70** | n=198. The football-comparable population, and the best-measured bucket. |
+| League-weighted | 2.93 | Per-bucket rates re-weighted by the `dSquad` distribution of a real 20-club season under the shipped `StrengthDelta` ramp (98% of fixtures covered). |
+| Football reference | ~2.7 | |
+
+
+## Acceptance (KD-8, bars re-specified August 12, 2026 — ERR-030-033)
+
+The original bar was a flat ±0.25 on every per-bucket mean. It could not be met by any
+model at the depth KD-8 sizes, because a bucket mean is an **estimate**: 15 of 22 bucket-sides
+carry a standard error larger than the whole bar. The bar is now stated against the
+precision the corpus actually has — with ±0.25 kept as a **floor**, so a deeper corpus
+automatically restores the original requirement rather than abandoning it.
+
+**Mean agreement.** Per cell (bucket × side): `|model − corpus| ≤ max(0.25, 2·se)`, at most
+2 exceedances (a 2σ screen over 22 cells expects ~1 by chance), none over
+`max(0.4, 3·se)`, and a pooled `χ² ≤ χ²₀.₉₅(dof)` — which is where the statistical
+power lives, since it catches systematic misfit that every individual cell passes.
+A corpus shallower than 18/bucket is **not scoreable at all**, so the se-relative form cannot be
+gamed by shrinking n.
+
+| Check | Measured | Bar | |
+|---|---|---|---|
+| Worst cell deviation | 0.828 (|z| = 2.06) | per-cell, se-relative | |
+| Exceedances | 1 | ≤ 2 | ✅ |
+| Hard exceedances | 0 | 0 | ✅ |
+| Pooled χ² | 16.0 on 19 dof | ≤ 30.1 | ✅ |
+| Shallowest bucket | n = 18 | ≥ 18 | ✅ |
+
+**Mean agreement: PASS.**
+
+**Distribution shape.** Win/draw/loss split within ±5.0 percentage points at `dSquad ≈ 0` (the bucket where home advantage shows as an asymmetry, so it is the one that actually tests the fitted `HomeAdvantageRating`) — corpus 44.4/19.2/36.4 vs model 42.9/26.8/30.2, **worst 7.6pp** (n=198, deepened by 180 matches beyond the grid). A bar failure must also be distinguishable from noise, or the honest answer is that the corpus cannot yet say: the corpus draw share carries a ±2.8pp standard error here, and n is below the pinned minimum of 250 at which a *pass* would be resolvable (a significant *fail* still is).
+
+**Distribution shape: FAIL.**
+
+**Overall verdict: FAIL — mean agreement PASS, distribution shape FAIL.**
+
+### Why the verdict reads the way it does
+
+A bar is only meaningful against a measurement precise enough to test it, and a fit is
+only meaningful if the model can express the shape it is fitting. Both are measured here
+rather than assumed.
+
+**1. Sampling resolution.** 15 of 22 bucket-sides have a
+standard error on their own mean that already exceeds the ±0.25
+bar (`se` column above). Where that holds, **no** model — including a perfect one — can
+be shown to satisfy the bar, because the target it is scored against is not known that
+precisely. That is a property of the grid's depth, not of the fit.
+
+At the acceptance bucket the corpus draw share carries a ±2.8pp standard error
+against a ±5.0pp bar, after deepening it by 180 matches beyond the grid.
+
+**2. Model shape — the finding that no re-fit addresses.** A Poisson variable has
+variance equal to its mean by definition, and KD-7's model *is* a Poisson draw. The
+engine's scorelines are **over-dispersed**: mean var/mean = 1.395
+across 22 bucket-sides, 19 of them above 1, pooled
+chi2 = 521.7 on 374 dof (**z = +5.40**). So the engine
+produces more blowouts and more shut-outs than any Poisson with the same means can, and
+correspondingly **fewer draws** — which is exactly where the W/D/L bar is missed. No
+choice of the three fitted parameters closes that gap; it is a statement about the
+model's family, not its coefficients.
+
+## KD-7a successor diagnostics
+
+The three statistics KD-7a's adoption tripwire turns on, emitted every run so the
+decision is made against measurements rather than re-derived by hand at the next capture.
+
+| Statistic | Measured | What it decides |
+|---|---|---|
+| NB2 dispersion `α` (`var = μ(1+αμ)`) | **0.0773** weighted / 0.1552 unweighted — **NOT DETERMINED by this corpus** (one cell carries 36% of the weighted fit; estimators differ by 2.01×) | The successor's one new parameter, and whether this corpus can yet fix it. A variance estimate at 18 samples carries ~33% relative error and the weights go as `1/var²`, so one unlucky cell dominates. Adopting on this would be fitting noise. |
+| Pooled within-bucket home/away correlation | **+0.044 ± 0.073** (n=198) | **Discriminates the candidate families.** Any shared-swing mechanism that would cut the draw share implies a clearly negative value; measured ≈ 0, such a family is refuted however well it fits the draw count. |
+| NB2 draw share at the acceptance bucket | **26.5%** vs corpus 19.2% | **The number that stops NB2 being mistaken for a fix to the draw deficit.** It closes the dispersion gap and barely moves draws. |
+
+## Raw rows
+
+```csv
+dSquad,homeGoals,awayGoals
+-4.818182,0,2
+-5.041056,1,3
+-5.231672,0,3
+-4.697947,0,3
+-5.082112,1,3
+-5.120234,1,6
+-4.862171,0,0
+-5.272727,1,9
+-4.929619,0,2
+-4.782992,1,3
+-5.205279,0,2
+-4.938415,0,1
+-5.093843,0,1
+-4.970674,0,4
+-5.014664,0,5
+-4.906159,2,1
+-5.023460,0,2
+-4.982405,0,2
+-3.821115,0,3
+-4.041056,0,3
+-4.231671,1,2
+-3.700882,3,1
+-4.085045,2,3
+-4.120234,1,3
+-3.862171,0,2
+-4.272726,0,2
+-3.932553,1,3
+-3.785925,0,2
+-4.205279,1,7
+-3.941349,0,3
+-4.093842,0,4
+-3.973608,0,3
+-4.017596,1,3
+-3.906159,0,2
+-4.026394,0,1
+-3.982405,0,5
+-2.821115,0,2
+-3.041056,1,1
+-3.231671,0,4
+-2.700882,0,1
+-3.085045,0,4
+-3.120235,0,5
+-2.862171,0,1
+-3.272726,0,4
+-2.932553,1,4
+-2.785925,0,0
+-3.205279,1,2
+-2.941349,0,1
+-3.093842,0,1
+-2.973608,1,3
+-3.017596,2,2
+-2.906159,2,1
+-3.026394,0,2
+-2.982405,0,0
+-1.821116,0,1
+-2.041056,1,1
+-2.231671,0,0
+-1.700881,4,2
+-2.085045,0,4
+-2.120235,0,6
+-1.862171,0,1
+-2.272726,0,0
+-1.932552,1,2
+-1.785925,1,3
+-2.205279,2,2
+-1.941349,0,2
+-2.093842,0,3
+-1.973607,0,1
+-2.017596,2,1
+-1.906159,2,0
+-2.026394,1,1
+-1.982405,0,3
+-0.821115,1,2
+-1.041056,0,1
+-1.231670,2,1
+-0.700881,0,1
+-1.085044,2,2
+-1.120235,1,0
+-0.862171,0,3
+-1.272726,0,1
+-0.932551,3,6
+-0.785925,3,0
+-1.205278,0,2
+-0.941349,0,0
+-1.093842,0,2
+-0.973607,0,0
+-1.017595,0,1
+-0.906159,1,2
+-1.026393,1,0
+-0.982405,2,1
+0.178885,0,1
+-0.041056,1,1
+-0.231670,1,3
+0.299119,1,4
+-0.085044,2,0
+-0.120234,1,0
+0.137829,1,2
+-0.272726,0,0
+0.067449,6,0
+0.214075,2,0
+-0.205277,2,3
+0.058651,1,0
+-0.093842,0,1
+0.026393,2,1
+-0.017595,4,1
+0.093842,1,0
+-0.026393,1,0
+0.017595,0,2
+1.178884,1,1
+0.958945,1,1
+0.768330,0,1
+1.299120,0,0
+0.914956,2,5
+0.879766,3,1
+1.137830,0,2
+0.727274,0,1
+1.067450,3,1
+1.214075,4,1
+0.794723,1,0
+1.058651,3,2
+0.906158,1,1
+1.026394,2,0
+0.982405,1,0
+1.093842,5,0
+0.973607,0,0
+1.017596,0,2
+2.178885,1,2
+1.958945,3,0
+1.768330,3,2
+2.299120,5,2
+1.914956,1,0
+1.879766,1,1
+2.137831,4,1
+1.727274,1,2
+2.067450,3,1
+2.214075,3,1
+1.794723,2,2
+2.058651,1,0
+1.906159,5,3
+2.026394,0,0
+1.982405,7,1
+2.093842,6,0
+1.973607,6,1
+2.017596,1,2
+3.178885,1,0
+2.958945,0,0
+2.768330,0,0
+3.299120,7,0
+2.914956,5,1
+2.879767,0,0
+3.137831,3,2
+2.727274,0,0
+3.067450,4,1
+3.214075,5,0
+2.794723,5,0
+3.058651,2,0
+2.906159,0,0
+3.026394,4,0
+2.982405,4,2
+3.093842,2,0
+2.973607,0,0
+3.017596,1,3
+4.178885,1,0
+3.958945,1,0
+3.768330,2,2
+4.299120,3,0
+3.914957,3,0
+3.879767,5,0
+4.137831,6,2
+3.727274,1,1
+4.067450,1,0
+4.214075,1,0
+3.794723,9,1
+4.058651,1,0
+3.906159,0,0
+4.026394,2,0
+3.982405,2,0
+4.093842,2,0
+3.973608,5,0
+4.017596,2,1
+5.178885,4,0
+4.958946,3,0
+4.768329,4,0
+5.299119,9,0
+4.914957,2,1
+4.879766,6,0
+5.137831,5,0
+4.727273,4,0
+5.067449,2,0
+5.214075,1,0
+4.794723,4,1
+5.058651,4,0
+4.906159,2,1
+5.026393,10,0
+4.982404,2,0
+5.093841,3,0
+4.973608,9,0
+5.017597,7,2
+```
+
+<!-- GENERATED:END -->
+---
 
 ## Version History
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| 0.1 | 2026-07-26 | — | Initial record. A4a's KD-8 Step 0 pilot executed and REFUSED to proceed: 20/20 engine matches 0–0 at ±6 measured `dSquad`. Characterised to root cause — the ball starts at rest, only a moving ball can be received, and only a possessing agent can kick, so a production match is a closed deadlock (ERR-030-014). Records the evidence, the blast radius, the minimal fix, and why that fix is not attempted inside A4. |
-| 0.2 | 2026-07-26 | — | Post-Phase-H / §5.Z.11 status updates (kept in the header chain): Step 0 re-runnable, then re-ran onto 25–0 scorelines — passing while unfittable (the home/away asymmetry). |
-| 0.3 | 2026-07-28 | — | **Step 0 PASSED** on the post-§5.Z.21 tree: margins +7.100 / −4.700, both directions separate, upsets present, the venue asymmetry down to ~1.5× on margin (§1.b). Instrument fix recorded (LogAssert wrapper — a playing match emits FM-08/FM-03 as ordinary events; harness tests v1.1). Next: the corpus slices + fit, its own roadmap item. |
-| 0.4 | 2026-08-03 | — | Status amended: the goal rate moved again after the §5.Z.22 and §5.Z.23 passes (4.7 → 5.0 → **3.7**/match; §5.Z.23 = ERR-011-008, a keeper's claim never arrested the ball). Step 0 must be re-run before the corpus, or the fit calibrates the quick-sim to a rate the engine no longer produces. Recipe unchanged; the July-28 result is superseded, not retracted. |
+| 0.1 | 2026-07-26 | — | Initial record. A4a's KD-8 Step 0 pilot executed and REFUSED to proceed: 20/20 engine matches 0–0 at ±6 measured `dSquad`. Characterised to root cause — the ball starts at rest, only a moving ball can be received, and only a possessing agent can kick, so a production match was a closed deadlock (ERR-030-014). |
+| 0.2 | 2026-07-26 | — | Post-Phase-H / §5.Z.11 status updates: Step 0 re-runnable, then re-ran onto 25–0 scorelines — passing while unfittable (the home/away asymmetry). |
+| 0.3 | 2026-07-28 | — | **Step 0 PASSED** on the post-§5.Z.21 tree: margins +7.100 / −4.700, both directions separate, upsets present, venue asymmetry down to ~1.5× on margin. Instrument fix recorded (the `LogAssert` wrapper — a playing match emits FM-08/FM-03 as ordinary events). |
+| 0.4 | 2026-08-03 | — | Status amended: the goal rate moved again after §5.Z.22 and §5.Z.23 (4.7 → 5.0 → 3.7/match). Step 0 must be re-run before the corpus, or the fit calibrates the quick-sim to a rate the engine no longer produces. |
+| **1.0** | **2026-08-12** | **—** | **THE RUN. This file stops being an evidence record and becomes the KD-8 artifact.** Step 0 re-run PASSED (+4.000 / −3.500; the extremes have converged since July 28 as the engine's goal rate fell). Corpus captured: **198 real 90-minute `MatchEngine` matches**, 11 `dSquad` buckets × 18, ~90 s/match over four processes, ~1.4 h. Fitted: `QuickSimBaseGoals` **1.2325**, `QuickSimGoalRatingSlope` **0.2162**, `QuickSimHomeAdvantageRating` **0.4996** (was 1.35 / 0.35 / 0.30, provisional since #30 T2). **Verdict FAIL on both bars, for two measured reasons that are not fit failures** — `ERR-030-033` (the ±0.25 bar is below this corpus's own noise floor: 15 of 22 bucket-sides have a larger standard error than the whole bar) and `ERR-030-034` (the engine is Poisson-over-dispersed at z = +5.40, a model-FAMILY gap). The acceptance bucket was **deepened to n = 198** so the W/D/L bar could be resolved at all; that deepening moved the measured draw share **11.1% → 19.2%**, so the grid-depth reading would have overstated the draw defect twofold while still detecting it — the clearest single demonstration of why `ERR-030-033` matters. Body below is now tool-generated; §0.a records how the run was executed and the two methodology properties verified rather than assumed; §0.b carries the no-injuries caveat forward. |

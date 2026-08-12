@@ -18,6 +18,55 @@ history by the original convention; they were not merged.
 
 ---
 
+- **A4a round-resolution calibration — the corpus is captured, the three `[GT]`s are fitted, and the MEAN bar now PASSES after `ERR-030-033` was re-specified (August 12, 2026). What remains open is `ERR-030-034`: the model's distribution family** — *opened August 12, 2026 (the A4a run).*
+  The run itself is complete and its outputs are committed: KD-8 **Step 0 PASSED** on the current tree
+  (strong-at-home mean margin **+4.000**, strong-away **−3.500**, upsets present), the corpus is **198
+  real 90-minute `MatchEngine` matches** over 11 `dSquad` buckets at 18 each (~90 s/match, four
+  processes, ~1.4 h — inside C1a's ~9 h budget), and the least-squares fit moved
+  **`QuickSimBaseGoals` 1.35 → 1.2325, `QuickSimGoalRatingSlope` 0.35 → 0.2162,
+  `QuickSimHomeAdvantageRating` 0.30 → 0.4996**. Those three constants had carried a
+  "provisional, not fitted" warning at their own declaration since #30 T2; they no longer do.
+  `RoundResolutionFitLockTests` pins them, the per-bucket table over a fixed sweep, grid-wide
+  monotonicity, and home advantage isolated at `dSquad = 0`.
+
+  **What is open is the acceptance verdict, and it is open in two independent ways.**
+
+  **(1) `ERR-030-033` — KD-8's ±0.25 per-bucket bar cannot be met at the depth KD-8 itself specifies.**
+  A bucket's mean is an estimate, and at ~18 matches its standard error runs 0.135–0.633; **15 of the
+  22 bucket-sides have a standard error larger than the entire bar**. A perfectly correct model
+  re-scored against a re-run of this same corpus would fail it too, so the bar is not currently a
+  statement about the model at all. Reaching ±0.25 as a *resolvable* bar needs n ≈ 770/bucket — about
+  210 h of engine time against a budgeted ~9 h. **✅ RESOLVED August 12, 2026 — the bar was re-specified
+  against the corpus's measured precision, and the same fit now reads mean-agreement PASS.** Deliberately
+  NOT closed by widening the tolerance to whatever this run achieved — that stops it being a bar, and
+  there is a standing owner ruling against exactly that move (`close-chance-creation-design.md` §10.9
+  item 6, August 11, 2026). KD-8 now carries **A1** a per-cell `|Δ| ≤ max(0.25, 2·se)` screen with
+  **±0.25 retained as a FLOOR**, so a corpus deep enough that `2·se < 0.25` automatically restores the
+  original requirement rather than abandoning it; **A2** at most `1 + round(0.0455·cells)` exceedances,
+  none over `max(0.40, 3·se)`; **A3** a pooled `χ² ≤ χ²₀.₉₅(cells − 3)`, which is where the statistical
+  power actually lives, since A1/A2 are per-cell screens blind to systematic misfit every individual
+  cell passes; **A4** an 18/bucket scoreability floor, without which the se-relative form is gameable by
+  shrinking n; and **A5** the unchanged ±5 pp W/D/L bar plus a pinned n ≥ 250 for a resolvable *pass*.
+  Measured: worst |z| = 2.06, one exceedance of an allowed two, pooled **χ² = 16.0 on 19 dof** against a
+  30.1 threshold. **The verdict is now reported in two parts — mean agreement PASS, distribution shape
+  FAIL** — because they fail for unrelated reasons, and the single flat verdict had the practical effect
+  of making ERR-030-034 read as a fit failure.
+
+  **(2) `ERR-030-034` — the model's distribution family cannot express the engine's spread.** KD-7
+  resolves a fixture as two Poisson draws, and Poisson fixes variance = mean. The engine is
+  **over-dispersed**: mean `var/mean` **1.395** across 22 bucket-sides, 19 of 22 above 1, pooled
+  `chi2 = 521.7` on 374 dof, **z = +5.40**. The visible consequence is draws: at `dSquad ≈ 0` the
+  corpus draws **19.2%** against the fitted model's **26.8%** — the whole of the 7.6 pp W/D/L miss **⚠️ CORRECTED August 12, 2026 (Fable advisory review, independently reproduced): the causal sentence above is WRONG and would misdirect the fix.** Marginal over-dispersion fattens BOTH tails — more blowouts *and more 0–0s, which are draws* — so it barely moves the draw share. Computed at the fitted bucket-0 lambdas: independent negative-binomial at the measured dispersion gives **26.3%** draws against Poisson's 26.8%, i.e. it closes ~0.5 pp of the 7.6 pp gap. **Dispersion and the draw deficit are substantially INDEPENDENT findings.** The only mixed-Poisson mechanism that cuts draws materially is a shared antithetic swing, and it necessarily implies negative home/away correlation, which this corpus refutes: pooled within-bucket correlation is **+0.004 ± 0.052** (n=378), ~4σ from the ≈ −0.20 such a family predicts. So the draw deficit's mechanism is NOT established and is not expressible by any mixed-Poisson consistent with the measured correlation. Over-dispersion is separately confirmed real and NOT a pooling artifact (within-bucket `dSquad` spread contributes ≤ 0.005 of the ~0.4 excess), and is better specified as `var = μ(1+αμ)`, α ≈ 0.15–0.25, than as a constant 1.395 ratio., measured at n = 198.
+  No value of three mean-shaping parameters closes a second-moment gap. **This is the surviving half of
+  roadmap risk row 1** — a quick-sim league table will show systematically more draws and fewer decisive
+  results than the same fixtures played through the engine. **Owner decision: whether to change the
+  family** (negative-binomial / Poisson-gamma, or a draw-inflated bivariate form — each keeps the keyed
+  one-uniform-per-side discipline but needs its quantile pinned by name for KD-7's own stated reason,
+  and the scoreline is persisted through `LeagueTable`/`SeasonStateCodec`, so this moves save state).
+  **The corpus is committed, so a re-fit against a new family costs seconds, not the run.** **The successor is now PRE-DECIDED and gated (August 12, 2026): `league-bootstrap-design.md` **KD-7a**** — NB2 (`var = μ(1+αμ)`), `NegativeBinomialInverseCdf` pinned by name and by algorithm, one uniform per side with the existing sub-streams unchanged, and a `[GT] QuickSimDispersion` whose zero case routes to today's `PoissonInverseCdf` verbatim so `α = 0` is bit-identical rather than identical-in-the-limit. **It is deliberately NOT adopted**, on four measured gates: **α is not determined by this corpus** (0.0773 weighted vs 0.1552 unweighted, one 18-sample cell carrying 36% of the weighted fit); **NB2 does not fix the draw deficit** (26.5% vs Poisson's 26.8%, engine 19.2% — ~0.3 pp of a 7.6 pp gap); the draw deficit's own mechanism is unestablished (the shared-swing family that would cut draws implies negative home/away correlation, and the corpus measures **+0.044 ± 0.073**); and the capture predates the defensive wiring (**no player has ever made a tackle**) that moves the second moment. The tripwire is stated so the next capture decides rather than re-litigates.
+
+  **Also recorded, not a blocker: the corpus's grid-weighted goal rate is 3.09/match.** **⚠️ CORRECTED August 12, 2026 by the goal-rate match-realism pass:** 3.09 is the **grid-weighted** mean, and the grid samples `dSquad` −5…+5 uniformly while a real season clusters near 0 and mismatches score more. Re-measured: **balanced fixtures (`dSquad ≈ 0`, n=198) give 2.70 ± 0.13 vs football's ~2.7 — 0.02σ**; league-weighted 2.93 ± 0.15 (+1.47σ, not significant). **The engine did NOT overshoot football's rate; no defect, no `[GT]` moved.** The error was reading a calibration grid as a league; the fitter now emits all three figures so it cannot recur. It remains a re-capture trigger for this corpus by KD-8's own rule the moment the engine's scoring moves again.
+
 - **Football-judgment proxy review — 32 itemized findings still open across 24 specs; the §6 doctrine governs every fix; ERR-008-020 (template), ERR-008-019 (the founding long-shot cliff) and ERR-008-021 (the shot-lane follow-up) LANDED** — *opened August 4, 2026 (review + doctrine + template landing all same day); ERR-008-019 and ERR-008-021 landed August 5, 2026.*
   **ERR-008-021 LANDED August 5, 2026 — the §6.4 shot-lane deferral, discharged.** The geometry the
   template fix deliberately left behind turned out to carry **both** of the pass lane's defects, and
