@@ -289,6 +289,12 @@ only. A proposed id is never a reservation — the July 27 wave consumed three.
    nothing ever enters.
 6. **`.claude/advisors/invariants.md` §5 has no row for tackles, interceptions, or turnovers.** There is
    no repo-cited football reference for any of them. Missing is not permission; the row is owed.
+7. **Turnovers cannot currently be split by cause.** `PossessionChangedEvent` carries a `Reason` byte
+   and `MatchEngine` publishes every change with the Stage-0 `UNSPECIFIED` sentinel, so "what fraction of
+   turnovers are tackles" — the number this landing most wants to be judged on — is not answerable by any
+   existing instrument. Populating `Reason` is small, additive, and squarely in W2's path; whether it
+   lands here or is deferred is a scope call, but it must not be left implicit, because without it the
+   landing's central claim is unmeasurable.
 
 ---
 
