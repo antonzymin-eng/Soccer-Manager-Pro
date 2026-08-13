@@ -292,8 +292,8 @@ it expand Phase B.
 
 | # | Work item | Governance |
 |---|---|---|
-| **C1** | **#44 T0/T1** — `TacticalDirector.Discipline` assembly (`DisciplineState`, `DisciplineRules`, `Availability`, constants) + `DisciplineSaveCodec` (`DISCIPLINE_SAVE_FORMAT_VERSION` = 1) composed into #30's season save. Inert until wired. | #44 §7.1 |
-| **C2** | **#44 T2** — live wiring: the tap-fed `CardLedgerFold` (shares B3's #37-class per-tick tap — one tap, two consumers); the **ERR-030-009 filter** at #30's resolve→filter→configure seam; `OnClubFixturePlayed` serving on both resolution paths. | #44 §7.1 T2 |
+| **C1** | ~~**#44 T0/T1** — `TacticalDirector.Discipline` assembly (`DisciplineState`, `DisciplineRules`, `Availability`, constants) + `DisciplineSaveCodec` (`DISCIPLINE_SAVE_FORMAT_VERSION` = 1) composed into #30's season save. Inert until wired.~~ **LANDED August 13, 2026** (with C2, same commit). `src/discipline/` — the 35th production assembly — landed T0+T1 together: `DisciplineState`/`DisciplineRules`/`Availability`/`CardLedgerFold`/`DisciplineEntry`/`IDisciplineTickLedgerTap`/`DisciplineConstants` (**migrated** to `Config.GetInt`, four `// TODO: balance pass` markers) + `DisciplineSaveCodec` (magic-led `DISC`, not version-first — `ERR-044-001`, the fourth instance of the ERR-029-005/ERR-041-009 class, since Appendix B had specified it version-first with no magic). `Discipline.Tests` 81/81, four mutants killed. | #44 §7.1 |
+| **C2** | ~~**#44 T2** — live wiring: the tap-fed `CardLedgerFold` (shares B3's #37-class per-tick tap — one tap, two consumers); the **ERR-030-009 filter** at #30's resolve→filter→configure seam; `OnClubFixturePlayed` serving on both resolution paths.~~ **LANDED August 13, 2026** (with C1, same commit). The tap wires exactly as sketched — `MatchEngineDisciplineTap` feeds `CardLedgerFold` off B3's #37-class per-tick ledger tap, one tap, a third consumer. The filter did not wire exactly as sketched: the pre-implementation council found `season-competition-loop/section-3.md` §3.4 (APPROVED, and later than #44) overriding #44's own text on two of five design forks — FR-DC-010's engine-only filter scope contradicted FR-DC-011 and #30 §3.4 (`ERR-044-002`), and #44 §2.3 F5's fail-loud-below-eighteen rule contradicted #30 §2.3 F9's back-fill rule (`ERR-044-003`), which forced `PlayerCareerStates.SelectAvailable` to split into `MarkUnavailable` (a removal set) + the new `AvailabilityComposition` so a second contributor can compose with #41's back-fill without either racing the other. `SEASON_SAVE_FORMAT_VERSION` **5 → 6** (seventh mandatory sub-blob). Draw-free throughout (FR-DC-019) — no RNG stream, no domain tag, no `SubsystemOrdinals` entry, `SNAPSHOT_SCHEMA_VERSION` unchanged at 21. `SeasonLoopDisciplineTests` +14 wiring locks, incl. a real 90-minute engine fixture pairing observer-neutrality with a positive control. **Measured this session:** engine discipline fouls 35.0 / yellows 5.0 / reds 1.00 per 90 vs football's ~22/~3.5/~0.25 (corrects the stale root OPEN ISSUES foul/card entry). **REMAINDER — and it is the honest headline:** in `ManagedThroughEngine` only the managed fixture runs the engine and only engine fixtures generate cards, so suspensions are live for one club in twenty — the human's. **#44 T3 (the #30-owned quick-sim card synthesis) is the named answer** and is not yet scheduled on this roadmap; without it a league table's disciplinary column is a fact about the resolution mode, not about the football. **GATE: <pending — filled at the verdict>.** Full account: `docs/tracking/spec-error-log.md` v2.17. | #44 §7.1 T2 |
 | **C3** | **Season + squad screens** — league table, fixture list, calendar, squad/selection, advance-round. Binds #30's `SeasonViewModel` + the availability view; dispatches `AdvanceAndPlayNextRound`. | ⚠️ **needs governance** — §6 |
 | **C4** | **New-game flow** — league bootstrap → season start → save slot, wired through the client. | with C3 |
 
@@ -431,9 +431,12 @@ math are host-free and test-locked in `match-client-core` today.
                                               D1 #28 · D2 #29 · D3 #41 · D4 #40 · D5 #31 ──► PM-3
 ```
 
-**Critical path to PM-2:** A1 → A2 → A4 → A5 → C1 → C2 → C3 → C4, with A3 feeding A4 and Track C
-converging at C3. Roughly **13–16 landings to PM-2** on the critical path, plus 5–6 on Track C
-running in parallel.
+**Critical path to PM-2:** A1 → A2 → A4 → A5 → ~~C1 → C2~~ → C3 → C4, with A3 feeding A4 and Track C
+converging at C3. **C1 and C2 LANDED August 13, 2026** (#44 Discipline & Suspensions, C1 T0+T1 +
+C2 T2 in one commit) — the critical path now reads A1 → A2 → A4 → A5 → **C3 → C4**, both still open
+and both gated on client governance (§6). Roughly **13–16 landings to PM-2** on the critical path
+as originally scoped, plus 5–6 on Track C running in parallel; two of those landings are now behind
+us.
 
 **Amended July 26, 2026.** A4a is no longer a *predecessor* of A4 — A4 landed with the model's shape
 pinned and its numbers provisional, which is the right factoring: the loop does not depend on the fit, only

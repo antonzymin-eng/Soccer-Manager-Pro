@@ -14,7 +14,55 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** August 12, 2026 (v2.115 — **W2 LANDED — wiring backlog W2, the tackle, wired at
+> **Last Updated:** August 13, 2026 (v2.116 — **#44 Discipline & Suspensions C1 (T0+T1) + C2 (T2)
+> LANDED — `src/discipline/` is the 35th production assembly, and suspensions are live end to end.**)
+> New `TacticalDirector.Discipline` (references ONLY `EventSystem` + `PlayerDatabase` +
+> `DeterministicSim` + `ProjectConstants`): `DisciplineState.cs` (per-player yellow/red ledger),
+> `DisciplineRules.cs` (the crossing/reset rules, FR-DC-017), `CardLedgerFold.cs` (the #37-class
+> per-tick ledger tap consumer), `Availability.cs` (the per-club suspension-availability view),
+> `DisciplineSaveCodec.cs` (the `DISC`-magic-led sub-blob, `ERR-044-001`), `DisciplineEntry.cs`,
+> `IDisciplineTickLedgerTap.cs`, `DisciplineConstants.cs` (Appendix A — **migrated**: reads
+> `Config.GetInt` with four `// TODO: balance pass` markers, unlike most post-June-30 catalogues),
+> `AssemblyInfo.cs` + `discipline.asmdef`; five test files (`DisciplineStateTests`,
+> `DisciplineRulesTests`, `AvailabilityTests`, `CardLedgerFoldTests`, `DisciplineSaveCodecTests`) +
+> `discipline-tests.asmdef` — `Discipline.Tests` **81 passed / 0 failed**, four mutants killed. **New
+> in `season-save`:** `AvailabilityComposition.cs` (the composed removal-set intersection + back-fill
+> that `PlayerCareerStates.SelectAvailable` used to do in one method — split so a second contributor,
+> #44, can join before the back-fill runs), `DisciplineBlock.cs` (the typed sub-blob handle),
+> `MatchEngineDisciplineTap.cs` (the `CardLedgerFold` wiring into the engine's per-tick observation
+> surface), `tests/SeasonLoopDisciplineTests.cs` (+14 wiring locks, every one failing if its wiring
+> point is reverted, including a real 90-minute engine fixture pairing observer-neutrality with a
+> positive control — #44 §5's T-DC-NEU-001 as written is green if the fold never runs at all).
+> **Modified:** `src/match-engine/MatchEngine.cs` (new `PlayerIdsByAgentId()` over new
+> `_slotPlayerIds`/`_benchPlayerIds`, written at the four sites that write `_canonicalAttrs` — the
+> occupancy seed for #44's `Incoming`-id resolution comes OUT of the engine rather than a second
+> `LineupSelector` walk in `season-save`; boot-constant snapshot exclusion, same class and proof as
+> `_canonicalAttrs`), `MatchEngineConstants.cs` (`AGENT_ID_SPACE` `[DERIVED]`, `NO_PLAYER_ID`
+> `[FIXED]`), `src/season-save/PlayerCareerStates.cs` (`SelectAvailable` split into `MarkUnavailable`
+> + `AvailabilityComposition`), `SeasonLoop.cs`, `SeasonSaveBlobs.cs`, `SeasonSaveCodec.cs`,
+> `SeasonSaveConstants.cs`, `SeasonSaveContents.cs`, `SeasonSaveManager.cs`, `season-save.asmdef`,
+> `tests/SeasonLoopTests.cs`, `tests/SeasonRollTests.cs`, `tests/SeasonSaveManagerTests.cs`.
+> `SEASON_SAVE_FORMAT_VERSION` **5 → 6** (the seventh mandatory sub-blob, `DISC`).
+> **No `SNAPSHOT_SCHEMA_VERSION` change** (stays 21). **No new RNG stream, domain tag, subsystem
+> ordinal or draw site anywhere** — FR-DC-019, a positive property, verified by the suite.
+> **`this file` (`src/CLAUDE.md`):** "34 assembly folders" → **35**; the layer-taxonomy out-of-date
+> table's "19 of the 34 … Unlisted (15)" → "19 of the 35 … Unlisted (16)" with `discipline` added;
+> the migration-status section gains a dated note that `DisciplineConstants.cs`, created after the
+> 2026-08-10 measurement, is nonetheless already migrated (`Config.GetInt`, four
+> `// TODO: balance pass` markers — a different marker class from the loader `TODO`, so it does not
+> collide with the 71-marker/9-catalogue count above it). Four ERRs filed AND resolved in the same
+> commit: `ERR-044-001` (High), `ERR-044-002` (Medium), `ERR-044-003` (Medium), `ERR-030-035` (Low)
+> — full account in `docs/tracking/spec-error-log.md` v2.17. Measured this session (env-gated
+> `FoulRateDiagnosticTests`, 6 seeds × 54 000 ticks): engine discipline fouls 35.0 / yellows 5.0 /
+> reds 1.00 per 90 vs the July-26 §5.Z.9 record of 21.0 / 3.0 / 1.0 and football's ~22 / ~3.5 / ~0.25
+> — the root `CLAUDE.md` OPEN ISSUES foul/card entry, stale since C1's Aug-8 phase-classification
+> change moved the upstream contact stream, is corrected accordingly. **Recorded, not fixed:** in
+> `ManagedThroughEngine` only the managed fixture runs the engine and only engine fixtures generate
+> cards, so the managed club accrues roughly 20× the yellows/reds of every quick-simmed rival — #44
+> T3 (the #30-owned quick-sim card synthesis) is the named answer. **GATE: <pending — filled at the
+> verdict>.**
+
+> **Last Updated (prior):** August 12, 2026 (v2.115 — **W2 LANDED — wiring backlog W2, the tackle, wired at
 > last: a player in control can now be dispossessed for the first time in this engine.** New #14
 > §3.6.5 "Tackle Outcome Resolution" (`ERR-014-006`, filed and resolved same commit) takes the tackle
 > outcome decision back into the spec that owns the players, on the W1 precedent, because neither
@@ -2103,6 +2151,7 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.116 | 2026-08-13 | — | **#44 Discipline & Suspensions C1 (T0+T1) + C2 (T2) LANDED — `src/discipline/` (`TacticalDirector.Discipline`, references only EventSystem + PlayerDatabase + DeterministicSim + ProjectConstants) is the 35th production assembly, suspensions are live end to end.** New: `DisciplineState.cs`, `DisciplineRules.cs`, `CardLedgerFold.cs` (the #37-class per-tick ledger tap consumer), `Availability.cs`, `DisciplineSaveCodec.cs` (`DISC`-magic-led, `ERR-044-001`), `DisciplineEntry.cs`, `IDisciplineTickLedgerTap.cs`, `DisciplineConstants.cs` (**migrated** — `Config.GetInt`, four `// TODO: balance pass` markers), `AssemblyInfo.cs` + `discipline.asmdef` + five test files + `discipline-tests.asmdef` (`Discipline.Tests` 81/81, four mutants killed). New in `season-save`: `AvailabilityComposition.cs`, `DisciplineBlock.cs`, `MatchEngineDisciplineTap.cs`, `tests/SeasonLoopDisciplineTests.cs` (+14 wiring locks incl. a real 90-minute engine fixture pairing observer-neutrality with a positive control). Modified: `MatchEngine.cs` (`PlayerIdsByAgentId()` over new `_slotPlayerIds`/`_benchPlayerIds`), `MatchEngineConstants.cs` (`AGENT_ID_SPACE` `[DERIVED]`, `NO_PLAYER_ID` `[FIXED]`), `PlayerCareerStates.cs` (`SelectAvailable` split into `MarkUnavailable` + `AvailabilityComposition`), `SeasonLoop.cs`, `SeasonSaveBlobs.cs`, `SeasonSaveCodec.cs`, `SeasonSaveConstants.cs`, `SeasonSaveContents.cs`, `SeasonSaveManager.cs`, `season-save.asmdef`, three season-save test files. `SEASON_SAVE_FORMAT_VERSION` **5 → 6** (seventh mandatory sub-blob). No `SNAPSHOT_SCHEMA_VERSION` change (21); no new RNG stream/domain tag/ordinal/draw site anywhere (FR-DC-019). Four ERRs filed and resolved same commit: `ERR-044-001` (H), `ERR-044-002` (M), `ERR-044-003` (M), `ERR-030-035` (L) — `spec-error-log.md` v2.17. `src/CLAUDE.md` itself: assembly count 34 → 35, layer-taxonomy table's "19 of 34 … Unlisted (15)" → "19 of 35 … Unlisted (16)", migration-status section notes `DisciplineConstants.cs` migrated despite postdating the 2026-08-10 snapshot. Measured this session: engine discipline fouls 35.0 / yellows 5.0 / reds 1.00 per 90 (`FoulRateDiagnosticTests`) vs the July-26 record of 21.0/3.0/1.0 and football's ~22/~3.5/~0.25 — corrects the stale root OPEN ISSUES foul/card entry. Recorded, not fixed: `ManagedThroughEngine` generates cards for the managed club only, ~20× its quick-simmed rivals; #44 T3 (#30-owned quick-sim card synthesis) is the named answer. Full account in the header-chain entry above. **GATE: <pending — filled at the verdict>.** |
 | 2.115 | 2026-08-12 | — | **W2 LANDED — the tackle: `ERR-014-006` resolved, new #14 §3.6.5 "Tackle Outcome Resolution" (four outcomes — `MISSED`/`BALL_WON`/`BALL_LOOSE`/`FOUL`, `BALL_LOOSE` at owner direction), a player in control can now be dispossessed for the first time in this engine.** New `TackleOutcome.cs`/`TackleDuelInputs.cs`/`TackleOutcomeResolver.cs` (ten `[GT]` + one `[FIXED]`, un-calibrated per KD-W1) + their test files; `MatchEngine.cs` wires the resolver at the COMMIT contact gate (1.5 → 2.5 m, re-derived not fitted), routes a tackle foul through the existing single foul-candidate slot, publishes `ContactType.SLIDE_TACKLE` for the first time. `SNAPSHOT_SCHEMA_VERSION` **20 → 21**; `DOMAIN_TAG_DEFENSIVE_AI` (0x1A) gets its first draw site anywhere in `src/`; `match-flow.card-severity` draw order moves by design; no digest invariance claimed. Full account in the header-chain entry above. **GATE PASSED for W2 (August 12, 2026):** whole-tree build 0 errors / 0 warnings, quarantine empty, 32 suites; `MatchEngine.Tests` **461 passed / 1 failed / 11 skipped** (38 m 2 s). The single failure is `sim_match_engine_close_chance`, the inherited owner-held-red predicate that also fails at the pre-change baseline `4b9271c` — so the branch is at its baseline red state and W2 adds no new failure. Baseline was 451/1/10; the +10 passed are W2 locks and the +1 skipped is the env-gated census instrument. — a whole-tree gate was in flight when this row was written. |
 | 2.114 | 2026-08-11 | — | **ERR-028-019 — docs-only close-out for #28's AR passes 5-8** (`39c385a`, `cf5abf0`, `8556ddd`, `b798ce2`), four consecutive production landings with zero `docs/specs/` edits, the ERR-028-017 class recurring twice more. `player-progression-lifecycle/section-2.md` → **v0.7**, `section-3.md` → **v0.8**, `appendices.md` → **v0.6**; `season-competition-loop/section-2.md` → **v1.5**, `appendices.md` → **v1.1**. Full account in the header-chain entry above. Two hygiene corrections folded in: `CHANGELOG-src.md`'s own v2.113 row annotated (its renumbering-scope claim was false for two rows); `spec-error-log.md`'s duplicate `ERR-008-021` heading reconciled. **No `src/` file touched** — `git status --short` after this pass shows only `docs/`. `recurring-defect-lint.py --repo .` → **0 ERROR**. |
 | 2.113 | 2026-08-11 | — | **Merge `origin/main` into this branch (docs-only, 4 conflicting files, no `src/` change): a second VERSION HISTORY numbering collision.** `origin/main` had independently used v2.104/v2.105 for the ERR-010-002 landing (code half + filing) while this branch had already used v2.104-v2.110 for the #28 T1/T2a landing, its four-pass AR review loop, the `src/CLAUDE.md` migration-status correction, and the prior renumbering-cascade fix itself. Main is the trunk and keeps v2.104/v2.105 verbatim; this branch's seven rows renumbered `2.104→2.106, 2.105→2.107, 2.106→2.108, 2.107→2.109, 2.108→2.110, 2.109→2.111, 2.110→2.112` — text otherwise verbatim, only the version cell and one stale internal pointer (in what is now row 2.109) changed. See `CHANGELOG.md`, `file-manifest.md` and `spec-error-log.md` for this same merge's other three conflicts. **[ANNOTATION 2026-08-11, ERR-028-019 docs-close-out pass — this row's own "only … one stale internal pointer" claim is FALSE, verified by a byte-level diff of each renumbered row against its pre-merge original.** TWO more rows had a citation edited, not merely a version-cell renumber: what is now row **2.111** (old 2.109) had its embedded `` spec-error-log.md chain head **v2.05** `` rewritten to `` **v2.10** (renumbered from v2.05 at the 2026-08-11 merge, `origin/main` having independently minted v2.00–v2.04 for unrelated content) ``, and what is now row **2.112** (old 2.110) had its embedded `` spec-error-log.md chain head **v2.06** `` rewritten to `` **v2.11** (renumbered from v2.06 …) `` the same way — because `spec-error-log.md`'s OWN version chain was renumbered by this same merge (see that file's own history), and these two rows cite a `spec-error-log.md` version number inline, so leaving them unedited would have pointed at a stale/reused version. The edit was correct to make; the claim that it was not made is what is wrong. Confirmed by diff: rows old-2.104→2.106, 2.105→2.107, 2.106→2.108 and 2.108→2.110 changed ONLY their version-cell number (byte-identical bodies), matching this row's original claim for THOSE four; rows 2.107→2.109 (the one pointer this row already named) and 2.109→2.111 / 2.110→2.112 (newly identified here) did not.]** |

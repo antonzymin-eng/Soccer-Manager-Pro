@@ -15,6 +15,7 @@
 // Modified: 2026-07-26 (§5.Z.9 foul/discipline balance pass: + [GT] FoulCallProbability; Yellow 0.35 -> 0.16, Red 0.05 -> 0.011, FoulCooldownTicks 60 -> 180; no schema change. See docs/tracking/foul-discipline-balance-design.md)
 // Modified: 2026-08-04 (wiring backlog W1 keeper rush trigger: + [FIXED] GK_RUSH_DEGENERACY_EPSILON + 5 [GT] GkRush* trigger constants; no schema change. See docs/tracking/gk-rush-trigger-design.md)
 // Modified: 2026-08-04 (W1 AR-1 L: GK_RUSH_SOLVE_EPSILON renamed GK_RUSH_DEGENERACY_EPSILON — it guards three dimensionally different quantities, not just the solve)
+// Modified: 2026-08-13 (#44 T2: + [DERIVED] AGENT_ID_SPACE and [FIXED] NO_PLAYER_ID — the id space and sentinel MatchEngine.PlayerIdsByAgentId reports in; no schema change)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.3, Code Standards #20
 // Purpose:  Constant catalogue for the match-engine composition root. Stage 0 Phase A holds the
@@ -316,6 +317,34 @@ namespace TacticalDirector.MatchEngine
         /// <summary>[FIXED] Maximum substitutions permitted per team per match (current IFAB
         /// allowance). Design note §6.</summary>
         public const int MAX_SUBSTITUTIONS_PER_TEAM = 5;
+
+        /// <summary>
+        /// [DERIVED] Size of the engine's whole agent-id space: the on-pitch slots plus every team's
+        /// synthetic bench ids. Formula: <c>SQUAD_SIZE + TEAM_COUNT * SUBSTITUTES_PER_TEAM</c>.
+        /// Source constants: <see cref="SQUAD_SIZE"/>, <see cref="TEAM_COUNT"/>,
+        /// <see cref="SUBSTITUTES_PER_TEAM"/>.
+        /// <para>
+        /// This is the id space <c>SubstitutionEvent.Incoming</c> lives in — <c>SubstitutePlayer</c>
+        /// derives an incoming id as <c>SQUAD_SIZE + teamId * SUBSTITUTES_PER_TEAM + benchIndex</c>,
+        /// deliberately disjoint from any on-pitch slot index — and therefore the length any consumer
+        /// indexing by agent id must allocate (#44's occupancy fold, via
+        /// <c>MatchEngine.PlayerIdsByAgentId</c>).
+        /// </para>
+        /// </summary>
+        public const int AGENT_ID_SPACE = SQUAD_SIZE + TEAM_COUNT * SUBSTITUTES_PER_TEAM;
+
+        /// <summary>
+        /// [FIXED] Sentinel for "no player identity is known for this agent id"
+        /// (<c>MatchEngine.PlayerIdsByAgentId</c>). Negative because <c>0</c> is a valid
+        /// <c>PlayerId</c> and a zero sentinel would silently attribute a card to player 0.
+        /// <para>
+        /// Numerically equal to <c>Discipline.CardLedgerFold.NO_PLAYER</c> so the array crosses that
+        /// boundary untranslated; <c>match-engine</c> cannot reference <c>discipline</c> (the
+        /// composition root sits above both), so the agreement is pinned by a lock in
+        /// <c>season-save</c>, the one assembly that sees both.
+        /// </para>
+        /// </summary>
+        public const int NO_PLAYER_ID = -1;
 
         /// <summary>
         /// [FIXED] Team id awarded the FIRST-half kickoff. Stage 0 has no coin toss (that draw would need
@@ -921,4 +950,13 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | meaning a LUNGE, not fitted to a measurement) and                     |
 // |         |            |        | TackleCooldownStrides. Both UN-CALIBRATED per KD-W1. The OUTCOME      |
 // |         |            |        | constants live in #14's catalogue, not here (ERR-014-006).            |
+// | 1.31    | 2026-08-13 | —      | #44 T2 (roadmap C2): + [DERIVED] AGENT_ID_SPACE (SQUAD_SIZE +   |
+// |         |            |        | TEAM_COUNT * SUBSTITUTES_PER_TEAM = 36), the id space           |
+// |         |            |        | SubstitutionEvent.Incoming actually lives in and therefore the  |
+// |         |            |        | length any consumer indexing by agent id must allocate; and     |
+// |         |            |        | [FIXED] NO_PLAYER_ID = -1, negative because 0 is a valid        |
+// |         |            |        | PlayerId and a zero sentinel would attribute a card to player   |
+// |         |            |        | 0. Its numeric agreement with CardLedgerFold.NO_PLAYER is       |
+// |         |            |        | locked in season-save, the one assembly that sees both. No      |
+// |         |            |        | schema change, no draw site.                                    |
 #endregion

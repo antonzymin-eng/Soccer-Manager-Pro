@@ -1,8 +1,11 @@
 # Discipline & Suspensions #44 — Section 3: Core Algorithms
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.3
+**Last Updated:** August 13, 2026 (v0.4 — ERR-044-002 + ERR-044-003, C1/C2 landing back-prop: §3.3's
+ordering paragraph re-scoped to both resolution paths, and the `FilterAvailable` pseudocode comment
+points its viability rule at #30 §2.3 F9 instead of a withdrawn F5)
+**Last Updated (prior):** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -61,7 +64,9 @@ OnClubFixturePlayed(clubId):                               # called once per pla
 
 IsAvailable(s, pid)        := s[pid, comp].BanMatchesRemaining == 0   # (absent entry => available)
 FilterAvailable(squad, s)  := a reduced VALUE COPY of squad keeping available players only
-                              # F5 if the result drops below the 18 ConfigureSquads consumes
+                              # NO viability gate here (ERR-044-003 withdrew F5's fail-loud) — the
+                              # composed seam's viability rule, including the depleted-squad
+                              # back-fill and its own terminal refusal, is #30 §2.3 F9 / §3.4
 ```
 
 **Ordering (KD-3, the off-by-one lock):** fixture N resolves → the fold lands its cards → fixture
@@ -69,8 +74,11 @@ N+1's selection runs `FilterAvailable` at #30's resolve→configure seam (ERR-03
 player is excluded → after fixture N+1 is played, `OnClubFixturePlayed` decrements the ban → the
 player is available for N+2 (a 1-match ban). Serving counts the club's fixtures on **any**
 resolution path; only card *generation* is engine-fixture-only at minimal. The filter covers
-**both clubs' resolved squads** of the engine-resolved fixture (FR-DC-010) — a banned opponent
-does not appear against the managed club mid-ban.
+**both clubs' resolved squads of every fixture on both resolution paths** (FR-DC-010, re-scoped at
+ERR-044-002 — the prior "engine-resolved fixture" wording would have let a quick-sim fixture
+decrement a ban the banned player had just played through, since nearly every fixture of a career
+is quick-simmed) — a banned opponent does not appear against the managed club mid-ban on either
+path.
 
 ## 3.4 Boundary & hygiene (FR-DC-013/017)
 
@@ -90,4 +98,5 @@ does not appear against the managed club mid-ban.
 | 0.1 | 2026-07-24 | — | Initial §3 (occupancy fold, thresholds/bans + worked example, serving + the off-by-one lock, boundary/hygiene), promoted from design supplement v0.3. Status IN REVIEW. |
 | 0.2 | 2026-07-24 | — | Section-file AR PASS-1 (M follow-through): §3.4 aligns the `(0,0)` drop to **immediate, wherever it occurs** (mid-season serve-out included), citing FR-DC-017. |
 | 0.3 | 2026-07-24 | — | Cross-set AR pass 3 (M follow-through): §3.3's ordering paragraph states the both-squads filter coverage (FR-DC-010 — a banned opponent is excluded from the engine-resolved fixture). |
+| 0.4 | 2026-08-13 | — | **C1/C2 landing back-prop.** **ERR-044-002:** §3.3's ordering paragraph re-scoped from "the engine-resolved fixture" to both clubs' resolved squads of every fixture on both resolution paths, matching #30 §3.4's LIVE seam. **ERR-044-003:** the `FilterAvailable` pseudocode's F5 fail-loud comment replaced — #44 implements no viability gate; the rule is #30 §2.3 F9. |
 #endregion

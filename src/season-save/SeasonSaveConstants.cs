@@ -1,13 +1,14 @@
 // File:     src/season-save/SeasonSaveConstants.cs
 // Created:  2026-07-22
-// Modified: 2026-08-08 (#28 T1/T2a + AR pass 1 — v1.7)
+// Modified: 2026-08-13 (#44 T1, roadmap C1 — v1.8)
 // Author:   —
-// Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) KD-4; Code Standards #20
+// Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) KD-4; Discipline &
+//           Suspensions #44 Appendix B; Code Standards #20
 // Purpose:  Constant catalogue for the season save-file frame. Holds the season-frame format version —
 //           distinct from every version the frame nests: WORLD_STORE_FORMAT_VERSION,
 //           SEASON_STATE_FORMAT_VERSION, TRAINING_SAVE_FORMAT_VERSION, MEDICAL_SAVE_FORMAT_VERSION,
-//           APPEARANCE_SAVE_FORMAT_VERSION and PROGRESSION_SAVE_FORMAT_VERSION at the sub-blob level,
-//           MATCH_SAVE_FORMAT_VERSION for the
+//           APPEARANCE_SAVE_FORMAT_VERSION, PROGRESSION_SAVE_FORMAT_VERSION and
+//           DISCIPLINE_SAVE_FORMAT_VERSION at the sub-blob level, MATCH_SAVE_FORMAT_VERSION for the
 //           optional match block, and — a level deeper still — the two snapshot schema versions nested
 //           inside the world and match blobs.
 
@@ -21,9 +22,10 @@ namespace TacticalDirector.SeasonSave
         #region Fixed
         /// <summary>
         /// [FIXED] The season save-file FRAMING version — the outermost format version in the save
-        /// stack (KD-4). It gates only the season frame (the <c>matchPresent</c> flag + the seven
+        /// stack (KD-4). It gates only the season frame (the <c>matchPresent</c> flag + the eight
         /// length-prefixed sub-blobs — the living-world composite, the season state, the #29 training
-        /// block, the #41 medical block, the #30 appearance block, the #28 career-state block, and the
+        /// block, the #41 medical block, the #30 appearance block, the #28 career-state block, the #44
+        /// discipline block, and the
         /// optional match block); the
         /// inner versions ride inside
         /// their own sub-blobs and are re-checked by
@@ -33,8 +35,9 @@ namespace TacticalDirector.SeasonSave
         /// <see cref="TacticalDirector.InjuriesMedical.MedicalSaveCodec.Decode"/> /
         /// <see cref="AppearanceSaveCodec.Decode"/> /
         /// <see cref="TacticalDirector.PlayerProgression.ProgressionSaveCodec.Decode"/> /
+        /// <see cref="TacticalDirector.Discipline.DisciplineSaveCodec.Decode"/> /
         /// <c>MatchSaveCodec.Decode</c> themselves. A mismatch fails loud on load — no cross-version
-        /// migration at Stage 0. Bump only on a season-frame layout change. Value: 5.
+        /// migration at Stage 0. Bump only on a season-frame layout change. Value: 6.
         /// <para>
         /// <b>1 → 2 at #30 T1 (FR-SN-020).</b> The frame gained the season-state sub-blob between the
         /// world and match blocks (#30 Appendix B). The world blob
@@ -66,8 +69,16 @@ namespace TacticalDirector.SeasonSave
         /// is rejected fail-loud. This retires the roadmap-A3 property that a career could be reopened
         /// from the seed alone.
         /// </para>
+        /// <para>
+        /// <b>5 → 6 at #44 T1 (roadmap C1).</b> The frame gained the mandatory #44 discipline sub-blob
+        /// (<c>DISCIPLINE_SAVE_FORMAT_VERSION</c>, magic <c>DISCIPLINE_SAVE_MAGIC</c>) between the #28
+        /// career-state block and the optional match block — last of the mandatory set, on the same
+        /// "an empty set is a well-formed zero-entry block, not an absent one" argument as its siblings.
+        /// Every pre-existing blob is byte-untouched by that change; only the frame around them moved. A
+        /// v5 file is rejected fail-loud.
+        /// </para>
         /// </summary>
-        public const uint SEASON_SAVE_FORMAT_VERSION = 5;
+        public const uint SEASON_SAVE_FORMAT_VERSION = 6;
 
         /// <summary>
         /// [FIXED] The #30 appearance sub-blob's leading self-identifying tag — ASCII <c>"APPR"</c>,
@@ -121,4 +132,6 @@ namespace TacticalDirector.SeasonSave
 // | 1.7     | 2026-08-08 | —      | #28 T1: SEASON_SAVE_FORMAT_VERSION 4 -> 5 for the mandatory PROG|
 // |         |            |        | career-state sub-blob (FR-PG-017) — the first sub-blob to carry |
 // |         |            |        | roster data, which retires roadmap A3's from-the-seed rebuild.  |
+// | 1.8     | 2026-08-13 | —      | #44 T1: SEASON_SAVE_FORMAT_VERSION 5 -> 6 for the mandatory DISC|
+// |         |            |        | sub-blob (roadmap C1).                                           |
 #endregion

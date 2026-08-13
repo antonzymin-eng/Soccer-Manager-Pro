@@ -1,0 +1,26 @@
+{
+    "name": "TacticalDirector.Discipline.Tests",
+    "rootNamespace": "TacticalDirector.Discipline.Tests",
+    "references": [
+        "TacticalDirector.Discipline",
+        "TacticalDirector.EventSystem",
+        "TacticalDirector.PlayerDatabase",
+        "TacticalDirector.DeterministicSim",
+        "TacticalDirector.ProjectConstants",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

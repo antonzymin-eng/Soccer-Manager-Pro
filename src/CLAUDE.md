@@ -27,7 +27,7 @@ src/
 └── CLAUDE.md                       ← you are here
 ```
 
-**34 assembly folders.** The full annotated tree lives in
+**35 assembly folders.** The full annotated tree lives in
 `docs/tracking/src-tree.md`; the authoritative inventory is
 `docs/tracking/file-manifest.md`. Do not maintain a third copy here.
 
@@ -78,11 +78,11 @@ at runtime:
 
 
 > ⚠️ **This table is out of date and is not the current assembly index.**
-> It accounts for 19 of the 34 assembly folders now in `src/` — the 17 named in the
+> It accounts for 19 of the 35 assembly folders now in `src/` — the 17 named in the
 > layer tables plus `deterministic-sim` and `event-system`, covered as cross-cutting
 > foundations in the paragraph above.
 >
-> **Unlisted (15):** `client-app`, `injuries-medical`, `living-world`, `match-analytics`,
+> **Unlisted (16):** `client-app`, `discipline`, `injuries-medical`, `living-world`, `match-analytics`,
 > `match-client-core`, `match-client-unity`, `match-client-web`, `match-engine`,
 > `match-viewer`, `player-database`, `player-progression`, `season-save`,
 > `tactical-instructions`, `training-system`, `ui-framework`.
@@ -394,6 +394,16 @@ Measured tree-wide 2026-08-10 — **71** live `TODO: replace with config loader`
 named above plus `match-analytics`, `player-database`, `season-save`, `client-app`,
 `tactical-instructions`, `player-progression`). Six of those ten appear in neither the migrated-17
 list nor either carve-out.
+
+**`DisciplineConstants.cs` (created 2026-08-13, #44 C1/C2 landing) is the exception to the
+default-unmigrated rule above.** It postdates the 2026-08-10 measurement, so per the rule two
+paragraphs up it is unmigrated by default — but checking the catalogue rather than trusting the
+rule finds it **already migrated**: it reads `Config.GetInt(...)` throughout, with four
+`// TODO: balance pass` markers on its `[GT]` rows. Those four are a *different* marker class from
+the `// TODO: replace with config loader` marker this section counts — they flag values awaiting a
+calibration pass (the KD-W1 posture), not values awaiting the loader — so they do not belong in the
+71-marker/9-catalogue count above and finding four `TODO`s in `DisciplineConstants.cs` is not
+evidence against its migrated status.
 
 **Before any further migration pass, three findings from the 2026-08-10 advisory review — recorded,
 deliberately not fixed** (the migration is behaviour-neutral today and buys nothing until a

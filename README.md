@@ -1,7 +1,31 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** August 8, 2026 (**Players calmly passing the ball around were being read by the
+**Last Updated:** August 13, 2026 (**Managers can now be suspended for their bookings — the game has
+discipline and suspensions for the first time.** A new "discipline" module (`src/discipline/`, the
+35th part of the game's codebase) watches every yellow and red card as a match is played and keeps
+a running ledger per player, exactly the way the #37 match-statistics module already watches shots.
+Season management now consults that ledger before picking each team: a player serving a ban is
+pulled from selection the same way an injured player already was, using the same "never leave a
+club unable to field a team" safety rule the injury system established — a banned player is only
+ever fielded as the very last resort, and only after every injured player has already been pressed
+back in ahead of him, which is stricter than what a strict reading of the rule would have allowed
+and closer to how the actual Laws of the Game work. Building this against the season-save file
+format (its seventh saved section) caught a genuine bug before it shipped: the worked example in the
+specification described a substitute's identity using a number that, worked through by hand, points
+at an on-pitch player rather than a substitute — every card issued after a substitution would have
+been credited to the wrong man. Fixed by reading the substitute's real identity straight out of the
+match engine instead of re-deriving it a second way, which is also the safer design. Also this pass:
+81 new tests, all passing, and a five-day-old finding re-checked and confirmed still true — the
+game currently calls about 35 fouls, 5 yellow cards and 1 red card a match, against real football's
+roughly 22, 3.5 and 0.25, so both fouls and yellows are now about two-thirds too frequent (reds were
+already about four times too frequent and are unchanged). **What's still missing:** only matches the
+human manager actually plays out card up; matches simulated in the background for every other club
+in the league do not yet generate any, so today a human's own club racks up roughly twenty times as
+many bookings and suspensions as any rival — an honest and known gap, not a bug, and the next piece
+of work names the fix. Prior entry below.)
+
+**Last Updated (prior):** August 8, 2026 (**Players calmly passing the ball around were being read by the
 positioning system as a team in chaos.** The AI that decides where every outfield player should
 stand watches one signal to know what's happening right now: is my team in possession, is the
 other team, or is the ball loose in a scramble? That signal was being read at exactly the wrong
@@ -610,7 +634,7 @@ Technical wisdom extracted from project analysis. Read before starting each stag
 **Progress:** Implementation Phase (coding begun May 19, 2026)
 **Spec Phase Started:** February 2, 2026
 **Stage-0 Spec Phase Completed:** May 18, 2026 — all 20 Stage-0 specs APPROVED
-**Deliverables:** 53 APPROVED specifications + 34 production assemblies in `src/`
+**Deliverables:** 53 APPROVED specifications + 35 production assemblies in `src/`
 
 **Summary (July 27, 2026):** `SPEC_INDEX.md` records **53 APPROVED / 0 IN REVIEW / 0 NOT STARTED — every spec in the registry is approved, and the specification phase is closed** —
 the Stage-0 set of 20, plus 23 Stage-1-forward and management-layer specs (#21–#34, #37, #38, and
@@ -633,9 +657,15 @@ ticks (was 0%) and changing hands **262–298 times** (was 0), with the ball rea
 areas and goals scored. Locked by the `match-engine-play-develops` acceptance scenario — every
 predicate of which fails on the pre-fix engine.
 
-**The live gap: 12 APPROVED specs have no assembly at all** — #29 Training, #31 Transfers,
-and #32 Scouting, #33 Personalities/Morale, #34 Staff, #40 Finances, #41 Injuries,
-plus #42 Youth, #43 Competition Structure, #44 Discipline, #45 Board, #49 Localization. (#37 Match
+**The live gap: 11 of the specs previously listed here still have no assembly at all** — **#44
+Discipline landed its `src/discipline/` assembly August 13, 2026 (C1 T0+T1 + C2 T2, suspensions
+live end to end)** and is removed from this list accordingly. Remaining: #29 Training, #31
+Transfers, #32 Scouting, #33 Personalities/Morale, #34 Staff, #40 Finances, #41 Injuries, #42
+Youth, #43 Competition Structure, #45 Board, #49 Localization. **This list and the "22 of 53" figure
+below it are otherwise stale for reasons unrelated to this pass** — #29 Training and #41 Injuries &
+Medical both gained T0 assemblies August 5, 2026 and are still named above; this landing corrects
+only the #44 removal it is directly responsible for, per the root `CLAUDE.md`, which is the
+authoritative and current count (19 with no assembly as of August 13, 2026). (#37 Match
 Analytics gained a `src/match-analytics/` T0 assembly on July 27, 2026 — value types + the
 `XgLocationModel`; no engine wiring yet.) The specification frontier now runs well ahead of the code;
 `docs/tracking/path-to-playable-roadmap.md` sequences the shortest path to closing it.

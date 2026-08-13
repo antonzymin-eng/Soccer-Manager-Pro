@@ -1,0 +1,19 @@
+{
+    "name": "TacticalDirector.Discipline",
+    "rootNamespace": "TacticalDirector.Discipline",
+    "references": [
+        "TacticalDirector.EventSystem",
+        "TacticalDirector.PlayerDatabase",
+        "TacticalDirector.DeterministicSim",
+        "TacticalDirector.ProjectConstants"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

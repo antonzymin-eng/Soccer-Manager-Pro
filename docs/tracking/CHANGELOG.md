@@ -12,7 +12,40 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 12, 2026, later still (**Wiring backlog W2 LANDED — a player in control
+> **Last Updated:** August 13, 2026 (**#44 Discipline & Suspensions — C1 (T0+T1) and C2 (T2) LANDED:
+> `src/discipline/` is the 35th production assembly, suspensions are LIVE end to end, and the last
+> gap in the season spine for PM-2 is closed.**) WHAT REMAINS: #44 T3 — the #30-owned quick-sim card
+> synthesis, without which suspensions are live for one club in twenty. The subsystem is a third
+> consumer of two proven seams rather than new plumbing: the #37-class per-tick ledger tap (B3) feeds
+> a `CardLedgerFold`, and the ERR-030-009 resolve→filter→configure seam takes a third contributor.
+> **Draw-free by construction** — no RNG stream, no domain tag, no `SubsystemOrdinals` entry, no
+> `SNAPSHOT_SCHEMA_VERSION` bump (still 21). `SEASON_SAVE_FORMAT_VERSION` **5 → 6** for the seventh
+> mandatory sub-blob. The pre-implementation council changed the design on two of five forks against
+> `season-competition-loop/section-3.md` §3.4 (APPROVED, and later than #44): **(1)** FR-DC-010's
+> engine-only filter scope contradicted FR-DC-011 and #30 §3.4 (`ERR-044-002`); **(2)** #44 §2.3 F5's
+> fail-loud-below-eighteen requirement contradicted #30 §2.3 F9's back-fill rule, so
+> `PlayerCareerStates.SelectAvailable` was split into `MarkUnavailable` (a removal set) + the new
+> `AvailabilityComposition` (one intersection, one back-fill), letting a second contributor compose
+> with #41's back-fill without either racing the other (`ERR-044-003`; recorded, not fixed, that a
+> suspended player is reinstatable in extremis by owner decision — a stricter reinstatement tier, not
+> a refused fixture). `ERR-044-001` (the fourth instance of the ERR-029-005/ERR-041-009 magic-header
+> class) also closed a T2 verification failure: Appendix C's "slot 19" worked example was an on-pitch
+> index under `SQUAD_SIZE = 22`, not the synthetic post-substitution `Incoming` id range `[22, 36)`,
+> so every post-substitution card would have been misattributed as written. The occupancy seed now
+> comes OUT of the engine (`MatchEngine.PlayerIdsByAgentId`) rather than a second `LineupSelector`
+> walk in `season-save`. **Tests:** `Discipline.Tests` 81/81 (four mutants killed);
+> `SeasonLoopDisciplineTests` +14 wiring locks, including a real 90-minute engine fixture pairing
+> observer-neutrality with a positive control. **Measured, same session:** engine discipline fouls
+> 35.0 / yellows 5.0 / reds 1.00 per 90 (`FoulRateDiagnosticTests`, 6 seeds × 54 000 ticks) against
+> the July-26 record of 21.0 / 3.0 / 1.0 and football's ~22 / ~3.5 / ~0.25 — corrected in the OPEN
+> ISSUES foul/card entry, which had gone stale. **Recorded, not fixed:** in `ManagedThroughEngine`
+> only the managed fixture runs the engine and only engine fixtures generate cards, so the managed
+> club accrues roughly 20× the yellows and reds of every quick-simmed rival — #44 makes suspensions
+> live for one club in twenty, and #44 T3 (the #30-owned quick-sim card synthesis) is the named
+> answer. Full account: `docs/tracking/spec-error-log.md` v2.17, `docs/tracking/open-issues.md`.
+> **GATE: <pending — filled at the verdict>.**
+
+> **Last Updated (prior):** August 12, 2026, later still (**Wiring backlog W2 LANDED — a player in control
 > can now be dispossessed for the first time in this engine, and `ERR-014-006` closes the tackle
 > outcome model's governance question.**) New #14 §3.6.5 "Tackle Outcome Resolution" takes the
 > tackle outcome decision back into the spec that owns the players, on the W1 precedent (#11 §3.7.0

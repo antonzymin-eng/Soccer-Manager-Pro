@@ -1,6 +1,6 @@
 // File:     src/season-save/PlayerCareerStates.cs
 // Created:  2026-08-06
-// Modified: 2026-08-11 (AR pass 6, M2(b) — RequireBirthWorldDayWithinClock — v1.18)
+// Modified: 2026-08-13 (#44 T2: SelectAvailable split into MarkUnavailable + AvailabilityComposition — v1.19)
 // Author:   —
 // Spec:     Training System #29 §3.1/§3.3/§3.5, §4.3 (seam contracts), FR-TR-004/016/022/023/025;
 //           Injuries & Medical #41 §3.1/§3.5, §4.3, FR-MD-003/009/010/022/023/025/027;
@@ -17,6 +17,7 @@
 using System;
 using System.Collections.Generic;
 
+using TacticalDirector.Discipline;
 using TacticalDirector.InjuriesMedical;
 using TacticalDirector.MatchEngine;
 using TacticalDirector.PlayerDatabase;
@@ -1232,85 +1233,87 @@ namespace TacticalDirector.SeasonSave
         /// or none of a required position — and no filter can repair it; the same roster would be
         /// refused identically with no injuries at all.
         /// </exception>
-        public Squad SelectAvailable(Squad squad)
+        public Squad SelectAvailable(Squad squad) =>
+            AvailabilityComposition.Compose(
+                squad, this, discipline: null, competitionId: DisciplineConstants.LEAGUE_COMPETITION_KEY);
+
+        /// <summary>
+        /// #41's contribution to #30's composed availability seam (§3.4): marks every injured member of
+        /// <paramref name="squad"/> in <paramref name="removed"/>, and records each one's
+        /// <c>RecoveryRemaining</c> in <paramref name="recoveryRemaining"/> so the shared back-fill can
+        /// order them without reading #41's state itself.
+        /// <para>
+        /// <b>A removal, and nothing else.</b> The viability verdict and the depleted-squad back-fill
+        /// moved to <see cref="AvailabilityComposition"/> at #44 T2, because a second contributor that
+        /// joins AFTER a method which has already back-filled cannot compose with it: the back-fill
+        /// would run before #44's suspensions were known, and would then press players back in against
+        /// a fieldability test computed from the wrong set. #30 §3.4 asks that the contributors'
+        /// order-independence be preserved as a property; a contributor that only ever removes is how
+        /// that is preserved rather than asserted.
+        /// </para>
+        /// <para>
+        /// <b>Additive into a shared mask</b> — entries already true are left alone and are not
+        /// counted again, so contributors may run in any order.
+        /// </para>
+        /// </summary>
+        /// <param name="squad">The resolved roster.</param>
+        /// <param name="removed">A mask parallel to the squad's roster indices.</param>
+        /// <param name="recoveryRemaining">
+        /// A parallel array receiving each injured player's remaining recovery — the back-fill's
+        /// ordering key. Entries for players this call does not remove are left untouched.
+        /// </param>
+        /// <returns>How many entries this call newly set.</returns>
+        /// <exception cref="ArgumentNullException">Any argument is null.</exception>
+        /// <exception cref="ArgumentException">An array is not the squad's length, or the squad's club
+        /// or one of its players is not carried by this career.</exception>
+        public int MarkUnavailable(Squad squad, bool[] removed, int[] recoveryRemaining)
         {
             if (squad == null)
             {
                 throw new ArgumentNullException(nameof(squad));
+            }
+            if (removed == null)
+            {
+                throw new ArgumentNullException(nameof(removed));
+            }
+            if (recoveryRemaining == null)
+            {
+                throw new ArgumentNullException(nameof(recoveryRemaining));
+            }
+            if (removed.Length != squad.Count || recoveryRemaining.Length != squad.Count)
+            {
+                throw new ArgumentException(
+                    $"PlayerCareerStates.MarkUnavailable: the masks have {removed.Length} / "
+                    + $"{recoveryRemaining.Length} entries for a {squad.Count}-player squad. They are "
+                    + "indexed by roster position, so a length mismatch means they were built against a "
+                    + "different squad and every flag in them names the wrong player.",
+                    nameof(removed));
             }
 
             int club = RequireClub(squad.ClubId);
             int[] ids = _playerIds[club];
             InjuryState[] injury = _injury[club];
 
-            int total = squad.Count;
-            var stateIndex = new int[total];
-            var available = new bool[total];
-            int availableCount = 0;
-            for (int i = 0; i < total; i++)
+            int newlyRemoved = 0;
+            for (int i = 0; i < squad.Count; i++)
             {
-                stateIndex[i] = RequireIndexOfPlayer(ids, squad.ClubId, squad.GetPlayer(i).PlayerId);
-                available[i] = MedicalStep.IsAvailable(in injury[stateIndex[i]]);
-                if (available[i])
+                // Resolved for EVERY player, not only the ones we go on to remove: the career must
+                // carry the whole squad, and the refusal is the same caller-contract bug either way.
+                int index = RequireIndexOfPlayer(ids, squad.ClubId, squad.GetPlayer(i).PlayerId);
+                if (MedicalStep.IsAvailable(in injury[index]))
                 {
-                    availableCount++;
+                    continue;
+                }
+
+                recoveryRemaining[i] = injury[index].RecoveryRemaining;
+                if (!removed[i])
+                {
+                    removed[i] = true;
+                    newlyRemoved++;
                 }
             }
 
-            if (availableCount == total)
-            {
-                // Nothing to filter — hand back the same instance so the fit-squad path stays
-                // reference-identical, which is every fully-fit club (the common case; the dial has been ARMED since the balance pass).
-                return squad;
-            }
-
-            Squad filtered = Compose(squad, available, availableCount);
-
-            // Press the least-injured back in until the club can actually play. Bounded by the roster:
-            // each pass marks one more player selectable, and the loop ends at the latest when everyone
-            // is — at which point the verdict is the roster's own, not the injury list's.
-            while (filtered == null || !SquadRating.CanFieldStartingEleven(filtered))
-            {
-                if (availableCount == total)
-                {
-                    throw new InvalidOperationException(
-                        $"Club {squad.ClubId} cannot field the Stage-0 formation even with all "
-                        + $"{total} of its players selected. That is a roster problem — too few "
-                        + "players, or none of a position the formation requires — and the "
-                        + "availability filter cannot repair it.");
-                }
-
-                MarkLeastInjured(injury, stateIndex, available);
-                availableCount++;
-                filtered = Compose(squad, available, availableCount);
-            }
-
-            return availableCount == total ? squad : filtered;
-        }
-
-        /// <summary>
-        /// The squad of the currently-selectable players, or <c>null</c> when none are — which
-        /// <see cref="Squad"/> itself refuses to represent, and which the back-fill loop then resolves
-        /// by selecting someone.
-        /// </summary>
-        private static Squad Compose(Squad squad, bool[] available, int availableCount)
-        {
-            if (availableCount == 0)
-            {
-                return null;
-            }
-
-            var selected = new PlayerRecord[availableCount];
-            int w = 0;
-            for (int i = 0; i < available.Length; i++)
-            {
-                if (available[i])
-                {
-                    selected[w++] = squad.GetPlayer(i);
-                }
-            }
-
-            return new Squad(squad.ClubId, selected);
+            return newlyRemoved;
         }
 
         /// <summary>
@@ -1444,39 +1447,6 @@ namespace TacticalDirector.SeasonSave
         {
             RequireEntry(clubId, playerId, out int club, out int index);
             _injury[club][index] = state;
-        }
-
-        /// <summary>
-        /// The back-fill step of <see cref="SelectAvailable"/>: marks the single least-injured
-        /// not-yet-selectable player selectable. Ties on <c>RecoveryRemaining</c> break on the earliest
-        /// roster position, and the roster is walked in the squad's own order — so the choice is
-        /// deterministic and independent of the order the injuries were drawn in.
-        /// <para>
-        /// The caller has already established that someone is left to press in, which is what its
-        /// <c>availableCount == total</c> guard is for.
-        /// </para>
-        /// </summary>
-        private static void MarkLeastInjured(InjuryState[] injury, int[] stateIndex, bool[] available)
-        {
-            int best = -1;
-            int bestRecovery = int.MaxValue;
-
-            for (int i = 0; i < available.Length; i++)
-            {
-                if (available[i])
-                {
-                    continue;
-                }
-
-                int recovery = injury[stateIndex[i]].RecoveryRemaining;
-                if (recovery < bestRecovery)
-                {
-                    bestRecovery = recovery;
-                    best = i;
-                }
-            }
-
-            available[best] = true;
         }
 
         /// <summary>The club's player ids, ascending — the canonical key order both codecs require.</summary>
@@ -1758,4 +1728,14 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | the composition boundary that can. Called from SeasonLoop's     |
 // |         |            |        | per-player composition walk and SeasonSaveManager's block-level |
 // |         |            |        | walk, alongside RequireProgressionCursorWithinClock in both.    |
+// | 1.19    | 2026-08-13 | —      | #44 T2 (roadmap C2, ERR-044-003): SelectAvailable SPLIT. This   |
+// |         |            |        | class now contributes a removal SET (MarkUnavailable) and no    |
+// |         |            |        | longer decides viability; the intersection and the single       |
+// |         |            |        | depleted-squad back-fill moved to AvailabilityComposition, so   |
+// |         |            |        | #44's suspensions enter BEFORE the back-fill rather than after  |
+// |         |            |        | it. #30 §3.4 asks that the contributors' order-independence be  |
+// |         |            |        | PRESERVED as a property, and a contributor that back-fills      |
+// |         |            |        | cannot be composed with a second one. SelectAvailable is kept   |
+// |         |            |        | as a one-line delegation — its contract is unchanged for every  |
+// |         |            |        | existing caller. MarkLeastInjured moved with the back-fill.     |
 #endregion

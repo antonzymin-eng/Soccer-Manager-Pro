@@ -1,8 +1,12 @@
 # Discipline & Suspensions #44 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.2 — cross-set AR; prior v0.1 — initial)
-**Version:** 0.2
+**Last Updated:** August 13, 2026 (v0.3 — ERR-044-003, C1/C2 landing back-prop: the ban-serving
+deferral bullet flagged as a now-LIVE owner decision — #30 §2.3 F9 makes a suspended player
+reinstatable in extremis rather than an absolute bar — with the deferral queue recorded as the
+designed alternative)
+**Last Updated (prior):** July 24, 2026 (v0.2 — cross-set AR; prior v0.1 — initial)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -33,11 +37,17 @@
 - **Offence classes / varying ban lengths** — richer `CardIssuedEvent` interpretation (e.g.
   violent conduct vs two bookings) requires engine-side offence data that does not exist; deferred
   until the engine emits it.
-- **Ban-serving deferral under squad shortfall.** The F5 fail-loud below the 18-player floor is
-  coherent today (the engine's own `ValidateSquadSize` rejects `Count < 18` regardless), but a
-  mass-suspension pile-up on a 25-squad is reachable in principle; the deep mitigation is a
-  **deferral queue** (excess bans postpone serving until the squad can field 18) — recorded here
-  so the eventual answer is a designed extension, not an emergency patch.
+- **Ban-serving deferral under squad shortfall.** *(ERR-044-003, August 13, 2026 — this is now a
+  LIVE decision, not the hypothetical it was written as.)* §2.3's F5 fail-loud below the 18-player
+  floor was **withdrawn**: #30 §2.3 F9 / §3.4 (ERR-030-029, approved after this section) settles a
+  depleted squad by back-filling the least-injured (now least-suspended too) players back in until
+  the engine's own selector can field the formation, never refusing until even the whole squad
+  cannot. That means a suspended player **is** reinstatable in extremis today — suspension is a
+  stricter reinstatement tier than injury (pressed back only after every injured player), but not an
+  absolute bar, which the Laws of the Game do not allow. This deferral queue (excess bans postpone
+  serving until the squad can field 18, refusing the fixture rather than fielding a banned player) is
+  the designed alternative if the owner would rather refuse than reinstate — recorded here, still
+  unbuilt, so the eventual answer is a designed extension, not an emergency patch.
 - **Appeals / suspension psychology (#33)** — out of scope entirely at Stage 2.
 - **Suspension screens (#38) / news items (#46)** — deferred consumers of the availability view
   and ban events (FR-LW-031).
@@ -60,4 +70,5 @@
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial §7 (T-phase plan T0–T3, deferred extensions, downstream seam contracts), promoted from design supplement v0.3. Status IN REVIEW. |
 | 0.2 | 2026-07-24 | — | Cross-set AR (L): §7.2 gains the **ban-serving deferral under squad shortfall** row — the F5 <18 fail-loud is coherent today (the engine's own gate, verified) but the pile-up is reachable in principle; the deferral queue is the recorded deep mitigation. |
+| 0.3 | 2026-08-13 | — | **ERR-044-003** (C1/C2 landing back-prop): the deferral bullet corrected — §2.3's F5 fail-loud it was written against no longer exists (withdrawn in favour of #30 §2.3 F9's back-fill), so the squad-shortfall question is no longer hypothetical: a suspended player is reinstatable in extremis today, and the deferral queue is recorded as the alternative if the owner prefers refusing the fixture instead. |
 #endregion

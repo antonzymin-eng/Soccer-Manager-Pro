@@ -9,6 +9,7 @@
         "TacticalDirector.TrainingSystem",
         "TacticalDirector.InjuriesMedical",
         "TacticalDirector.PlayerProgression",
+        "TacticalDirector.Discipline",
         "TacticalDirector.ProjectConstants"
     ],
     "includePlatforms": [],

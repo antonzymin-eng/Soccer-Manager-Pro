@@ -1,6 +1,7 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
 // Modified: 2026-08-11 (AR pass 6, M2(b) — the BirthWorldDay-vs-clock check joins the composition
+// Modified: 2026-08-13 (#44 T2: the composed availability filter, the tap-fed CardLedgerFold, the FR-DC-011 serving decrement and the FR-DC-017 boundary sweep — see AvailabilityComposition)
 //           walk — v1.19; the pass 1-3 recording chain and the pass-5 doc fix are the rows below)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (day advance / KD-2 tick order), §3.4 (playing a round /
@@ -26,6 +27,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
+using TacticalDirector.Discipline;
 using TacticalDirector.InjuriesMedical;
 using TacticalDirector.LivingWorld;
 using TacticalDirector.MatchEngine;
@@ -72,6 +74,12 @@ namespace TacticalDirector.SeasonSave
         private readonly ISquadProvider _careerSquads;
         private readonly ProgressionEngine _progression;
 
+        // #44 T2: the discipline tally and its sole writer. Held UNPAIRED (see the constructor) — #44
+        // has no day step, no cursor and no provider of its own, so nothing here can fall out of step
+        // with anything else. Null means discipline is not wired, which is byte-identical to pre-#44.
+        private readonly DisciplineState _discipline;
+        private readonly DisciplineRules _disciplineRules;
+
         private TacticalDirector.MatchEngine.MatchEngine _activeMatch;
 
         /// <summary>
@@ -116,7 +124,8 @@ namespace TacticalDirector.SeasonSave
             RoundResolutionMode mode = RoundResolutionMode.ManagedThroughEngine,
             PlayerCareerStates careerOrNull = null,
             ISquadProvider careerSquadsOrNull = null,
-            ProgressionEngine progressionOrNull = null)
+            ProgressionEngine progressionOrNull = null,
+            DisciplineState disciplineOrNull = null)
         {
             if (world == null)
             {
@@ -294,6 +303,14 @@ namespace TacticalDirector.SeasonSave
             // loop composed from an empty store still round-trips to the same well-formed zero-club
             // block it was built from.
             _progression = progressionIsRoster ? progressionOrNull : null;
+
+            // #44 T2. Optional and UNPAIRED, unlike the career/provider pair above: #44 needs no squad
+            // provider of its own (it reads the squads the seam already resolved) and no world clock
+            // (it has no day step and no cursor — bans are served by fixtures, not by days), so there is
+            // no second reference that could disagree with a first. A null state is "discipline is not
+            // wired", which is behaviour-identical to before this landing.
+            _discipline = disciplineOrNull;
+            _disciplineRules = disciplineOrNull == null ? null : new DisciplineRules(disciplineOrNull);
         }
 
         /// <summary>How this loop resolves a round's fixtures (§3.4.1).</summary>
@@ -404,6 +421,19 @@ namespace TacticalDirector.SeasonSave
         /// </para>
         /// </summary>
         public PlayerCareerStates Career => _career;
+
+        /// <summary>
+        /// The #44 discipline tally this loop drives, or <c>null</c> when none is wired.
+        /// <para>
+        /// Read-only from outside: every mutation goes through this loop's own wiring — the fold at
+        /// fixture resolution, the serving decrement per played club fixture, the boundary sweep — and
+        /// <c>DisciplineState</c>'s own mutators are <c>internal</c> to the discipline assembly, so a
+        /// client holding this reference can render a suspension list but cannot forgive one
+        /// (FR-DC-022 / §4.5's "MUST NOT let the UI mutate DisciplineState directly").
+        /// </para>
+        /// <para>The surface <see cref="SeasonSaveManager.Save"/>'s discipline block argument comes from.</para>
+        /// </summary>
+        public DisciplineState Discipline => _discipline;
 
         /// <summary>
         /// The #28 career store this loop drives at slot 1, or <c>null</c> when none is wired.
@@ -650,7 +680,8 @@ namespace TacticalDirector.SeasonSave
             {
                 Fixture fixture = _state.FixtureAt(indices[i]);
                 MatchResult result = ResolveFixture(
-                    in fixture, squads, worldDay, out int[] homeXi, out int[] awayXi);
+                    in fixture, squads, worldDay,
+                    out int[] homeXi, out int[] awayXi, out CardLedgerFold fold);
 
                 // ERR-041-010(b): the appearance record, written from the XIs the RESOLUTION ITSELF
                 // fielded — ResolveFixture hands back the ids it derived at its own filter+configure
@@ -667,6 +698,29 @@ namespace TacticalDirector.SeasonSave
                 {
                     _career.RecordFixtureAppearances(
                         fixture.HomeClubId, homeXi, fixture.AwayClubId, awayXi, worldDay);
+                }
+
+                // #44 T2 (FR-DC-011): one ban-serving decrement per club per PLAYED fixture, on BOTH
+                // resolution paths — ResolveFixture has already branched and returned, so this single
+                // site covers the engine and the quick-sim alike. Deliberately NOT gated on _career:
+                // a ban is served by the club playing, which has nothing to do with whether training
+                // and medical state is wired. It runs AFTER the fold committed this fixture's own cards
+                // (inside ResolveFixture), which is what makes the ordering right: a red card shown
+                // today bans for the NEXT fixture, not this one, because this fixture's decrement
+                // applies to bans that were already outstanding when it kicked off... and the card just
+                // folded was not. The engine branch's Commit and this call are one statement apart in
+                // execution order for exactly that reason.
+                if (_disciplineRules != null)
+                {
+                    _disciplineRules.OnClubFixturePlayed(fixture.HomeClubId);
+                    _disciplineRules.OnClubFixturePlayed(fixture.AwayClubId);
+
+                    // ...and ONLY THEN this fixture's own cards (FR-DC-010). The order is the whole
+                    // off-by-one contract and it is easy to get backwards: committing first would let
+                    // a player sent off in fixture N serve one match of his ban DURING the match he was
+                    // dismissed in, so a two-match red would cost him one. Serving decrements the bans
+                    // that were outstanding at kickoff; the fold adds the ones he earned after it.
+                    fold?.Commit(_disciplineRules);
                 }
 
                 // FR-SN-013's pinned order, for every fixture: (1) table, (2) event, then mark played.
@@ -799,6 +853,15 @@ namespace TacticalDirector.SeasonSave
             {
                 _career.CommitRosterSync(in rosterSync);
             }
+
+            // ── (f) #44's season-boundary sweep (FR-DC-017) ────────────────────────────────────
+            // Yellows reset; UNSERVED BANS CARRY. A red card in the final round is still a ban in
+            // August, which is the whole reason #44 persists rather than recomputing from ledgers it
+            // does not keep (KD-1). Installed last, after the one commit that could refuse the roll,
+            // for the same reason the roster sync is: a discipline state swept for a season that never
+            // began is a half-rolled state, and this sweep is not idempotent — running it twice on a
+            // refused-then-retried roll would silently forgive a second season's yellows.
+            _disciplineRules?.RollToNextSeason();
 
             return new SeasonRollOutcome(
                 completedSeasonNumber,
@@ -1044,14 +1107,21 @@ namespace TacticalDirector.SeasonSave
         /// </summary>
         private MatchResult ResolveFixture(
             in Fixture fixture, ISquadProvider squads, uint worldDay,
-            out int[] homeXi, out int[] awayXi)
+            out int[] homeXi, out int[] awayXi, out CardLedgerFold foldOrNull)
         {
             bool managed = fixture.Involves(_state.ManagedClubId);
 
             if (ShouldPlayThroughEngine(Mode, managed))
             {
-                return PlayThroughEngine(in fixture, squads, worldDay, out homeXi, out awayXi);
+                return PlayThroughEngine(
+                    in fixture, squads, worldDay, out homeXi, out awayXi, out foldOrNull);
             }
+
+            // The quick-sim synthesizes no cards at all (#44 §1.1 / §7.2 — card generation is
+            // engine-only at minimal, and quick-sim synthesis is #30-owned and deferred to T3), so
+            // there is no fold on this branch. Ban SERVING still happens for both clubs, in
+            // PlayNextRound, which is what FR-DC-011's "regardless of resolution path" requires.
+            foldOrNull = null;
 
             Squad home = SelectAvailable(ResolveSquad(squads, fixture.HomeClubId));
             Squad away = SelectAvailable(ResolveSquad(squads, fixture.AwayClubId));
@@ -1129,10 +1199,20 @@ namespace TacticalDirector.SeasonSave
         /// </summary>
         private MatchResult PlayThroughEngine(
             in Fixture fixture, ISquadProvider squads, uint worldDay,
-            out int[] homeXi, out int[] awayXi)
+            out int[] homeXi, out int[] awayXi, out CardLedgerFold foldOrNull)
         {
+            foldOrNull = null;
             TacticalDirector.MatchEngine.MatchEngine engine =
                 BootFixtureEngine(in fixture, squads, out homeXi, out awayXi);
+
+            // #44 T2 (FR-DC-002/005): the occupancy fold, seeded from the engine's OWN slot→player map
+            // — not a second LineupSelector walk here, which is the parallel-surface trap SquadRating
+            // exists to prevent and which #29/#41's T2 AR pass 2 filed when a fielded XI was re-derived.
+            // Null when discipline is not wired, and then not a single tick does any extra work.
+            CardLedgerFold fold = _disciplineRules == null
+                ? null
+                : new CardLedgerFold(engine.PlayerIdsByAgentId(), DisciplineConstants.LEAGUE_COMPETITION_KEY);
+            MatchEngineDisciplineTap tap = fold == null ? null : new MatchEngineDisciplineTap(engine);
 
             _activeMatch = engine;
             try
@@ -1140,7 +1220,18 @@ namespace TacticalDirector.SeasonSave
                 while (!engine.MatchEnded)
                 {
                     engine.RunTick();
+
+                    // Pumped INSIDE the tick loop because the tap is scoped to the tick just completed
+                    // (#37 KD-7): a skipped call does not defer those records, it loses them. Read-only,
+                    // so the fixture's digest is identical observed or not (FR-DC-003).
+                    fold?.ObserveTick(tap);
                 }
+
+                // The fold is handed back UNCOMMITTED, deliberately — see PlayNextRound, where the
+                // commit is sequenced after this fixture's own ban-serving decrement. A fixture that
+                // throws mid-match therefore commits nothing: the buffered half-fixture is discarded
+                // with the engine rather than banked.
+                foldOrNull = fold;
 
                 EnginePlayedFixtures++;
 
@@ -1201,7 +1292,9 @@ namespace TacticalDirector.SeasonSave
         internal TacticalDirector.MatchEngine.MatchEngine BootFixtureEngine(
             in Fixture fixture, ISquadProvider squads, out int[] homeXi, out int[] awayXi)
         {
-            // ── resolve → filter → configure (ERR-030-009); #44's suspension view joins at its T2. ──
+            // ── resolve → filter → configure (ERR-030-009). #44's suspension removals joined the
+            //    filter at their own T2 (roadmap C2); the seam now composes #41 and #44 — see
+            //    SelectAvailable and AvailabilityComposition. #36 call-ups are the next contributor. ──
             Squad home = SelectAvailable(ResolveSquad(squads, fixture.HomeClubId));
             Squad away = SelectAvailable(ResolveSquad(squads, fixture.AwayClubId));
 
@@ -1237,18 +1330,28 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>
-        /// The FR-MD-023 availability filter, applied between resolving a roster and using it. With no
-        /// career wired — and with one whose players are all fit, the common case though no longer
-        /// every career (the dial has been ARMED since the balance pass) — this returns the same
-        /// instance, so the resolved-and-configured path is reference-identical to the pre-T2 one.
+        /// The composed availability filter (#30 §3.4), applied between resolving a roster and using
+        /// it — the ERR-030-009 seam. Two contributors today: #41's FR-MD-023 injury removals and
+        /// #44's FR-DC-010 suspension removals. With neither wired, and with both wired over a squad
+        /// that is fully fit and fully eligible, this returns the same instance, so the
+        /// resolved-and-configured path is reference-identical to the pre-T2 one.
         /// <para>
-        /// Applied to quick-simmed fixtures as well as engine ones: the quick-sim rates a club by the XI
-        /// it would field, and a club missing four first-choice players should be rated as such whether
-        /// or not a human is watching.
+        /// Applied to quick-simmed fixtures as well as engine ones, and to <b>both</b> clubs of every
+        /// fixture: the quick-sim rates a club by the XI it would field, and a club missing four
+        /// first-choice players should be rated as such whether or not a human is watching. For #44
+        /// that is not merely consistent but load-bearing — FR-DC-011 serves a ban on every played club
+        /// fixture regardless of path, so filtering on one path only would let a quick-sim fixture
+        /// decrement a ban the banned player had just played through (ERR-044-002; FR-DC-010's
+        /// engine-only wording is the narrower text and #30 §3.4 is the authority).
+        /// </para>
+        /// <para>
+        /// The removal/back-fill split lives in <see cref="AvailabilityComposition"/> — see that type
+        /// for why a second contributor could not simply be chained after the first.
         /// </para>
         /// </summary>
         private Squad SelectAvailable(Squad squad) =>
-            _career == null ? squad : _career.SelectAvailable(squad);
+            AvailabilityComposition.Compose(
+                squad, _career, _discipline, DisciplineConstants.LEAGUE_COMPETITION_KEY);
 
         /// <summary>
         /// #29's per-local-index match-entry fatigue for a squad about to be configured, or <c>null</c>
@@ -1432,4 +1535,17 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | a negative age from it) and is now refused HERE, at composition,|
 // |         |            |        | rather than left for a day step to reach GrowthProjection's own |
 // |         |            |        | new M2(a) guard.                                                 |
+// | 1.20    | 2026-08-13 | —      | #44 T2 (roadmap C2). The loop drives discipline at four points: |
+// |         |            |        | the composed availability filter at the ERR-030-009 seam (both  |
+// |         |            |        | clubs, BOTH resolution paths — ERR-044-002); the tap-fed         |
+// |         |            |        | CardLedgerFold around an engine-resolved fixture, pumped INSIDE |
+// |         |            |        | the tick loop because the tap is scoped to one tick; the        |
+// |         |            |        | FR-DC-011 serving decrement per played club fixture; and the    |
+// |         |            |        | FR-DC-017 boundary sweep after the roll's one fallible commit.  |
+// |         |            |        | The fold is handed back UNCOMMITTED and committed AFTER the     |
+// |         |            |        | serving decrement — the whole off-by-one contract lives in that |
+// |         |            |        | order, and reversed it would let a player sent off in fixture N |
+// |         |            |        | serve one match of his ban during the match he was dismissed    |
+// |         |            |        | in. The discipline state is optional and UNPAIRED (no provider, |
+// |         |            |        | no cursor, no day step), so null is byte-identical to pre-#44.  |
 #endregion

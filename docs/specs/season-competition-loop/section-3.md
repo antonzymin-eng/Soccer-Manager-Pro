@@ -1,7 +1,10 @@
 # Season & Competition Loop Specification #30 — Section 3: Algorithms
 
 **Created:** July 22, 2026
-**Last Updated:** August 8, 2026, later still (v1.9 — ERR-030-030: §3.3 slot 1 and §3.5 step (d) corrected to reflect #28 T2a — the daily step is LIVE, the season-boundary roster mutation remains reserved)
+**Last Updated:** August 13, 2026 (v2.0 — ERR-030-035's consumers half, #44 C1/C2 landing: §3.4's
+three "#44 … join the same seam at their own T-phases" / "when they join" mentions corrected — #44
+suspensions have joined, citing ERR-044-002/ERR-044-003 and the code sites; only #36 remains open)
+**Last Updated (prior):** August 8, 2026, later still (v1.9 — ERR-030-030: §3.3 slot 1 and §3.5 step (d) corrected to reflect #28 T2a — the daily step is LIVE, the season-boundary roster mutation remains reserved)
 **Last Updated (prior):** August 8, 2026, later same day (v1.8 — ERR-030-029 at balance-pass AR pass 12 M4: the depleted-squad back-fill rule, normative at the seam that owns it)
 **Last Updated (prior):** August 8, 2026 (v1.7 — balance-pass AR pass 12 M1: §3.3's two stale prose clauses — "steps 1–7" and the only-world-tick-live byte-identity premise — corrected to the post-T2 loop)
 **Last Updated (prior):** August 8, 2026, still later same day (v1.6 — balance-pass AR pass 7 L2: v1.5's pseudocode lines reordered below the F5 guards, matching §3.3.2's after-every-guard property and the code. Prior header below.)
@@ -12,7 +15,7 @@
 **Last Updated (prior):** July 25, 2026 (v0.9 — ERR-030-010 §3.7 venue correction, found at #30 T0; prior v0.8 back-prop ERR-030-009 #44 availability-filter null seam in §3.4; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 25, 2026 (v0.8 — back-props ERR-030-008 board tick-order seam + ERR-030-009 JobSecurity derived band; prior v0.7 ERR-030-007 academy, v0.6 ERR-030-006 staff, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 27, 2026 (v1.0 — **ERR-030-015**: §3.5's boundary roll gains step (c′), the calendar rebuild it omitted, without which a rolled season is permanently unplayable; found at #30 T3. Also consolidates the TWO stale `Version` fields this header carried — the drift class `spec-error-log.md` v1.43 records. Prior v0.9 ERR-030-010 §3.7 venue correction; v0.8 back-props ERR-030-008/009; v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 1.9
+**Version:** 2.0
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -248,10 +251,13 @@ The managed club's fixture runs through the full `MatchEngine`; the rest through
 model (§3.4.1). The resolve→*filter*→configure seam (ERR-030-009; FR-SN-013) is **LIVE**: #41's
 FR-MD-023 availability filter has occupied it since the #29/#41 T2 wiring, applied to **both** clubs
 of **every** fixture on **both** resolution paths (the engine boot and the quick-sim rating alike) —
-not only the managed squad. #44 suspensions and #36 call-ups join the same seam at their own T-phases.
+not only the managed squad. #44 suspensions **have joined** the same seam (ERR-044-002, ERR-030-035,
+C1/C2, August 13, 2026); #36 international call-ups join it at its own T-phase.
 
 **The filter seam admits more than one consumer** (ERR-030-016, filed at #36's approval): #44
-suspensions and #36 international call-ups both reduce the available squad at this point. **They compose
+suspensions and #36 international call-ups both reduce the available squad at this point — #44's
+removal now lives at `src/discipline/Availability.cs`, gathered alongside #41's at #30's own
+`src/season-save/AvailabilityComposition.cs`. **They compose
 order-independently *because both are removals*** — set intersection commutes — and that is stated here as
 a **property to preserve rather than an accident to rely on**: a future non-removal filter, one that adds
 or substitutes a player, would need an **explicit order** and cannot simply join the list. The composition
@@ -271,7 +277,10 @@ the unfiltered behaviour — so **the composed filter can never leave a club wor
 filter at all**. If even the whole squad cannot field the formation, the seam **fails loud**
 (`InvalidOperationException`, §2.3 F9) — that is a roster-integrity bug, not a football outcome. The
 rule is #30's because FR-MD-023 puts selection on this side of the seam; #44/#36 contribute removals
-only and inherit the rule unchanged when they join.
+only and inherit the rule unchanged when they join — **#44 has (ERR-044-003, C1/C2): its own §2.3 F5
+fail-loud was withdrawn in favour of this rule, recording that a suspended player is reinstatable in
+extremis under the never-worse-than-unfiltered invariant just stated.** Only #36 remains a future
+joiner.
 
 ```
 AdvanceAndPlayNextRound(squads: ISquadProvider):
@@ -490,4 +499,5 @@ by ascending `ClubId` (FR-SN-007 final key) — a total order.
 | 1.7 | 2026-08-08 | — | **Balance-pass AR pass 12 (M1)**: the pass-3 slot-list correction had stopped above §3.3's prose — "(steps 1–7)" predated ERR-030-022's 0–11 numbering, the "when they land" list still counted #29/#41 as future, and the FR-SN-026 premise clause ("with only the world-day tick live") had been false since T2; all three corrected (byte-identity qualified to the WORLD blob — the career sub-blobs carry the day-steps' state). Note: the v0.8 row below claims the seam clause was extended to "steps 1–8" — the file read "1–7" at this correction, so that claim was inaccurate or the edit was later reverted; recorded here rather than silently rewritten. |
 | 1.8 | 2026-08-08 | — | **ERR-030-029 (balance-pass AR pass 12, M4)**: the depleted-squad back-fill rule — press the least-injured back in until the engine's own selector can field the formation; in the limit the unfiltered squad, so the filter never leaves a club worse off; terminal refusal fails loud (F9) — had existed in NO spec while `PlayerCareerStates.SelectAvailable` implemented it and #36 §2 F7 / §5 T-NT-I-005 recorded the obligation as OPEN. §3.4 now owns it; the ERR-030-028 class (a shipped behaviour specified nowhere), on a behavioural rule rather than a byte layout. |
 | 1.9 | 2026-08-08 | — | **ERR-030-030** (found at #28 T2a implementation): §3.3's slot 1 comment corrected from "NULL SEAM today" to LIVE — `RunCareerDaySteps` gathers the batch through `PlayerCareerStates.GatherTrainingInputs` and hands it to `ProgressionEngine.AdvanceDay` at slot 1, ahead of #29's slot 2 — and the surrounding prose updated to count #28 among the landed seams. §3.5 step (d)'s `AdvanceAges()` comment corrected: the daily half (age derivation, growth, retirement flagging) is LIVE at slot 1, but the step (d) call itself is `RunSeasonBoundary` — the roster-mutation half (retiree removal + regen) — which #28 T2a deliberately does not land, so (d) stays RESERVED, now stated as such rather than a flat "NULL SEAM". Recorded as the identical stale-seam-text class corrected for #29/#41 at balance-pass AR passes 11/12, recurring on the next subsystem to wire. |
+| 2.0 | 2026-08-13 | — | **ERR-030-035, consumers half** (#44 C1/C2 landing): §3.4 stopped one landing short of the byte-layout half ERR-030-035 already fixed in Appendix A/B and §4/§2 (FR-SN-021) — three sentences still read "#44 … join the same seam at their own T-phases" / "when they join" as future tense after #44 had actually joined. Corrected to say #44's suspension view has joined (citing ERR-044-002 for the filter re-scope and ERR-044-003 for the depleted-squad rule #44 now inherits), with only #36 left as a future joiner; the composition-site sentence now names `src/discipline/Availability.cs` and `src/season-save/AvailabilityComposition.cs`. |
 #endregion

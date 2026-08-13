@@ -1,20 +1,21 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
-// Modified: 2026-08-11 (AR pass 6, M2(b) — the BirthWorldDay-vs-clock check joins the block-level walk — v1.21)
+// Modified: 2026-08-13 (#44 T1, roadmap C1 — Save/Load thread the mandatory discipline block)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-1 / KD-5..KD-8;
 //           Training System #29 §4.4 / FR-TR-018/019; Injuries & Medical #41 §4.4 / FR-MD-017/018;
+//           Discipline & Suspensions #44 Appendix B;
 //           Match Engine design note §5 Phase G-Phase 3; Deterministic Simulation #16 §4.6.1.1
 //           (atomic-write contract); Living World #22 §4.6/§7.1; Code Standards #20
 // Purpose:  The season save-file root — writes a season (the living-world WorldStore composite, the
-//           season state, the #29 per-club training states, the #41 per-club medical states, and the
-//           #30 per-club appearance records, plus
+//           season state, the #29 per-club training states, the #41 per-club medical states, the
+//           #30 per-club appearance records, the #28 progression store and the #44 discipline state, plus
 //           an optional in-progress MatchEngine) to disk as one file and reconstructs all of them. This
 //           is the only assembly that may reference both match-engine and living-world (FR-LW-003 keeps
 //           them independent; the season root sits above both, like match-viewer over match-engine).
 //           Save captures every sub-blob, encodes the season frame (SeasonSaveCodec), and writes
 //           atomically (temp -> fsync -> rename). Load reads the file, deframes it, and rebuilds the
-//           WorldStore, the season state, and the training/medical states (always) plus the MatchEngine
+//           WorldStore, the season state, and the training/medical/discipline states (always) plus the MatchEngine
 //           (only when the save carried a match).
 
 using System;
@@ -22,6 +23,7 @@ using System.IO;
 
 using Unity.Profiling;
 
+using TacticalDirector.Discipline;
 using TacticalDirector.InjuriesMedical;
 using TacticalDirector.LivingWorld;
 using TacticalDirector.MatchEngine;
@@ -34,7 +36,8 @@ namespace TacticalDirector.SeasonSave
     /// <summary>
     /// On-disk save/load for a season: one file carrying the living-world <see cref="WorldStore"/>
     /// composite, the <see cref="SeasonState"/>, the #29 per-club training states, the #41 per-club
-    /// medical states, and the #30 per-club appearance records — all five always present — and, when a match is in progress, a running
+    /// medical states, the #30 per-club appearance records, the #28 progression store and the #44
+    /// discipline state — all seven always present — and, when a match is in progress, a running
     /// <see cref="MatchEngine.MatchEngine"/> (unified-season-save-design.md). These are nested as
     /// opaque, independently version-gated sub-blobs (KD-2) — this root never parses any of them, it
     /// only frames/deframes and reconstructs.
@@ -70,6 +73,13 @@ namespace TacticalDirector.SeasonSave
         /// (FR-MD-017).</param>
         /// <param name="appearanceClubs">The per-club #30 appearance states, on the same terms —
         /// REQUIRED, never null-meaning-empty (#30 Appendix B / ERR-041-010(b)).</param>
+        /// <param name="progression">The #28 career store — REQUIRED, never null-meaning-empty; this
+        /// block IS the roster (KD-4).</param>
+        /// <param name="discipline">The #44 discipline state (the sparse per-player tally). REQUIRED,
+        /// never null: pass <c>new DisciplineState()</c> to say "no cards recorded yet", which still
+        /// writes a well-formed zero-entry block rather than omitting one (#44 Appendix B), on the same
+        /// terms as <paramref name="trainingClubs"/> / <paramref name="medicalClubs"/> /
+        /// <paramref name="appearanceClubs"/> / <paramref name="progression"/> above.</param>
         public static void Save(
             WorldStore world,
             SeasonState season,
@@ -78,7 +88,8 @@ namespace TacticalDirector.SeasonSave
             ClubTrainingStates[] trainingClubs,
             ClubInjuryStates[] medicalClubs,
             ClubAppearanceStates[] appearanceClubs,
-            ProgressionEngine progression)
+            ProgressionEngine progression,
+            DisciplineState discipline)
         {
             if (world == null)
             {
@@ -128,6 +139,15 @@ namespace TacticalDirector.SeasonSave
                     "Pass a ProgressionEngine (empty if the season tracks no careers) — null is not " +
                     "the empty set, and this block carries the roster (FR-PG-017 / #28 KD-4).");
             }
+            // Required on the same terms as its four siblings above (#44 Appendix B): a defaulted
+            // null-meaning-empty parameter would let a call site omit a season's discipline history and
+            // still compile, save and load — indistinguishable from a game that never showed a card.
+            if (discipline == null)
+            {
+                throw new ArgumentNullException(nameof(discipline),
+                    "Pass a DisciplineState (new DisciplineState() if the season tracks no cards) — " +
+                    "null is not the empty set (#44 Appendix B).");
+            }
             if (string.IsNullOrEmpty(path))
             {
                 throw new ArgumentException("Save path must be non-empty.", nameof(path));
@@ -158,10 +178,11 @@ namespace TacticalDirector.SeasonSave
             var medicalBlock = new MedicalBlock(MedicalSaveCodec.Encode(medicalClubs));
             var appearanceBlock = new AppearanceBlock(AppearanceSaveCodec.Encode(appearanceClubs));
             var progressionBlock = new ProgressionBlock(progression.Snapshot());
+            var disciplineBlock = new DisciplineBlock(DisciplineSaveCodec.Encode(discipline));
             byte[] matchBlob = matchOrNull != null ? MatchSaveManager.Encode(matchOrNull) : null;
             byte[] blob = SeasonSaveCodec.Encode(
                 worldBlob, seasonBlob, in trainingBlock, in medicalBlock, in appearanceBlock,
-                in progressionBlock, matchBlob);
+                in progressionBlock, in disciplineBlock, matchBlob);
 
             // ERR-028-008: refuse to overwrite a roster with an empty one. #28's block is the
             // serialized roster (KD-4), so writing a zero-club block over a file that carries one
@@ -283,7 +304,14 @@ namespace TacticalDirector.SeasonSave
                 // round-trips correctly. What must never happen is an empty block overwriting a file
                 // whose roster came from #28; that is guarded at the write itself, below, because it is
                 // a property of the DESTINATION rather than of this loop.
-                loop.Progression ?? ProgressionEngine.Empty);
+                loop.Progression ?? ProgressionEngine.Empty,
+                // A loop with no #44 state saves a well-formed EMPTY block, the same honest posture the
+                // progression block takes above: a career composed without discipline round-trips to
+                // the zero-entry block it was built from. When discipline IS wired this is the live
+                // tally, and it must be — a save that silently wrote an empty block would forgive
+                // every outstanding suspension in the career, and FR-DC-014 rules out recomputing them
+                // (no ledgers are retained, so the cards exist nowhere else).
+                loop.Discipline ?? new DisciplineState());
         }
 
         // Reads the destination's progression block, if the destination exists and is a well-formed
@@ -375,8 +403,9 @@ namespace TacticalDirector.SeasonSave
 
         /// <summary>
         /// Reads the season save file at <paramref name="path"/>, deframes it, and reconstructs the
-        /// living-world <see cref="WorldStore"/>, the <see cref="SeasonState"/> and the per-club #29
-        /// training / #41 medical state (all always — the last two possibly empty) and the
+        /// living-world <see cref="WorldStore"/>, the <see cref="SeasonState"/>, the per-club #29
+        /// training / #41 medical state (all always — the last two possibly empty), the #28 progression
+        /// store and the #44 discipline state, and the
         /// in-progress <see cref="MatchEngine.MatchEngine"/> (only when the save carried a match —
         /// otherwise <see cref="SeasonSaveContents.Match"/> is null, KD-3). Fail-loud: a missing /
         /// unreadable file surfaces the IO exception; a corrupt / version-mismatched / trailing-byte
@@ -423,6 +452,7 @@ namespace TacticalDirector.SeasonSave
             ClubInjuryStates[] medicalClubs = MedicalSaveCodec.Decode(blobs.MedicalBlob);
             ClubAppearanceStates[] appearanceClubs = AppearanceSaveCodec.Decode(blobs.AppearanceBlob);
             ProgressionEngine progression = ProgressionEngine.Restore(blobs.ProgressionBlob);
+            DisciplineState discipline = DisciplineSaveCodec.Decode(blobs.DisciplineBlob);
 
             // FR-SN-011 (MUST) / F4: the KD-4 cursor invariant is the one coherence rule that spans the
             // world and season blobs, so it can only be checked HERE — the two codecs each see one blob,
@@ -494,7 +524,8 @@ namespace TacticalDirector.SeasonSave
             }
 
             return new SeasonSaveContents(
-                world, season, trainingClubs, medicalClubs, appearanceClubs, progression, match);
+                world, season, trainingClubs, medicalClubs, appearanceClubs, progression, discipline,
+                match);
         }
 
         /// <summary>
@@ -948,4 +979,17 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | RequireProgressionCursorWithinClock — the file-boundary twin of    |
 // |         |            |        | SeasonLoop.cs v1.19's composition-boundary check. One owner, both  |
 // |         |            |        | boundaries delegating (the AR pass-9 M1 shape).                    |
+// | 1.22    | 2026-08-13 | —      | #44 T1 (roadmap C1): Save gains a required DisciplineState        |
+// |         |            |        | parameter (rejects null, the progression/appearance precedent)    |
+// |         |            |        | and encodes it as the new mandatory discipline sub-blob; Load     |
+// |         |            |        | decodes it and threads it into SeasonSaveContents. The             |
+// |         |            |        | Save(SeasonLoop, …) forwarding overload passes a fresh             |
+// |         |            |        | new DisciplineState() — #44 has no SeasonLoop seam yet and         |
+// |         |            |        | SeasonLoop.cs is out of scope for this landing (concurrent edit).  |
+// |         |            |        | Deliberately NOT added to RequireCoherentCareerBlocks /            |
+// |         |            |        | RequireCareerCursorsWithinClock: DisciplineState carries no        |
+// |         |            |        | per-player world-day cursor and is keyed by                        |
+// |         |            |        | (PlayerId, CompetitionId) rather than by club, so neither of the   |
+// |         |            |        | existing cross-block coherence walks has a natural analogue for    |
+// |         |            |        | it; flagged for owner review rather than invented here.            |
 #endregion

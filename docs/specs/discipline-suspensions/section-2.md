@@ -1,8 +1,12 @@
 # Discipline & Suspensions #44 — Section 2: Requirements, Data Structures, Failure Modes
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.3
+**Last Updated:** August 13, 2026 (v0.4 — ERR-044-002 + ERR-044-003, C1/C2 landing back-prop: FR-DC-010
+re-scoped off "the engine-resolved fixture" to every resolved squad on both resolution paths; F5's
+fail-loud withdrawn in favour of #30 §2.3 F9, with the suspension-as-stricter-reinstatement-tier
+decision recorded)
+**Last Updated (prior):** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -20,7 +24,7 @@
 | FR-DC-007 | When `Yellows ≥ YELLOW_ACCUMULATION_THRESHOLD`, an `ACCUM_BAN_MATCHES` ban MUST be added and `Yellows` MUST be reduced by the threshold (residual kept); bans from any source MUST **stack additively** on `BanMatchesRemaining`. | MUST | §3.2 |
 | FR-DC-008 | A player MUST be unavailable while `BanMatchesRemaining > 0`; `IsAvailable` MUST be a pure predicate over `DisciplineState`. | MUST | KD-4 |
 | FR-DC-009 | `FilterAvailable(in Squad) → Squad` MUST return a **reduced value copy** (available players only) for `ConfigureSquads`; it MUST NOT write #27 state; with no active ban it MUST pass the squad through unchanged. | MUST | KD-4 |
-| FR-DC-010 | The filter MUST act at #30's pre-declared **resolve→configure** seam (ERR-030-009) and MUST apply to **each** resolved squad of the engine-resolved fixture — the managed club's **and its opponent's** (both pass through `ResolveByClubId` → `ConfigureSquads`, so both pass the seam; a banned opponent is excluded exactly as a banned managed-club player is). The fold MUST complete at fixture resolution — so a card in fixture N bans for fixture N+1 (no off-by-one). | MUST | KD-3 |
+| FR-DC-010 | The filter MUST act at #30's pre-declared **resolve→configure** seam (ERR-030-009) and MUST apply to **every resolved squad of every fixture on both resolution paths** (the engine boot and the quick-sim rating alike) — the managed club's **and its opponent's**, whichever path resolved them (both pass through `ResolveByClubId` → `ConfigureSquads`, so both pass the seam; a banned opponent is excluded exactly as a banned managed-club player is). **Card *generation* stays engine-fixture-only at minimal (§3.3) — this row governs the filter, not the fold.** The fold MUST complete at fixture resolution — so a card in fixture N bans for fixture N+1 (no off-by-one). *(Re-scoped from "the engine-resolved fixture" — ERR-044-002, August 13, 2026: the narrower wording contradicted FR-DC-011's "regardless of resolution path" one row below and #30 §3.4's LIVE both-paths seam; a quick-sim-only implementation would have let a banned player's club decrement his ban on a fixture he had just played through.)* | MUST | KD-3 |
 | FR-DC-011 | A ban MUST decrement by exactly one per **played fixture of the player's club**, regardless of resolution path (engine-resolved or quick-sim); serving MUST be reported via `OnClubFixturePlayed`. | MUST | KD-3 |
 | FR-DC-012 | The tally MUST key `(PlayerId, CompetitionId)` with `CompetitionId = 0` at minimal (an `int` key — no #43 assembly reference); #43-scoped accumulation is a partition activation, not a rewrite. | MUST | KD-6 |
 | FR-DC-013 | On a roster **re-key** (#31 transfer) the entry — tally **and** unserved bans — MUST **migrate** old→new `PlayerId` (bans follow the player; the deliberate contrast with #32's drop rule); on **retirement** the entry MUST be dropped. Delivery: the FR-TX-022 hook / #28 lifecycle coordination (T-phase wiring). | MUST | KD-6 |
@@ -66,7 +70,29 @@ public void OnClubFixturePlayed(int clubId /*, int competitionId = 0 */);
 | **F2** | `OnClubFixturePlayed`/`FilterAvailable` naming a club/player outside the resolvable universe; a migration for an unknown source entry | **Fail loud** — identity validity is a caller-contract bug (the #31 F6 class). |
 | **F3** | Discipline sub-blob: bad version / out-of-bounds length / trailing bytes / non-ascending keys / negative values | **Fail loud** — the `SeasonSaveCodec` posture (FR-DC-015). |
 | **F4** | A `CardKind` outside `{0, 1, 2}` on the tap | **Fail loud** — an unknown card kind is an engine-contract change #44 must not guess about (contrast F5-class unknown *ordinals*, which are ignored — a known event with an unknown *payload value* is different). |
-| **F5** | `FilterAvailable` reducing a squad below the engine's minimum viable size (fewer than the 18 `ConfigureSquads` consumes) | **Fail loud** — a mass-suspension edge the caller must surface, never silently padded (the `ConfigureSquads` bounds gate would reject it downstream anyway; #44 fails first with the better message). |
+| **F5** | *(WITHDRAWN as a fail-loud, ERR-044-003, August 13, 2026 — see the note below the table.)* `FilterAvailable` reducing a squad below the engine's minimum viable size (fewer than the 18 `ConfigureSquads` consumes) | #44 contributes **removals only**; the composed seam's viability rule is **#30 §2.3 F9** (Season & Competition Loop, approved after this row was written). #44's `FilterAvailable`/`MarkSuspended` implement no viability gate at all — see below. |
+
+**ERR-044-003 (F5 vs #30 §2.3 F9).** This spec's original F5 required `FilterAvailable` to fail loud
+the moment it reduced a squad below eighteen. #30 §2.3 F9 / §3.4 (ERR-030-029, approved after #44)
+settles the identical event the opposite way at the one seam both specs share: back-fill the
+least-injured players in one at a time, probing the engine's own selector
+(`SquadRating.CanFieldStartingEleven`), and fail loud only if the **whole** squad cannot field the
+formation — and states outright that "the rule is #30's because FR-MD-023 puts selection on this
+side of the seam; #44/#36 contribute removals only and inherit the rule unchanged when they join."
+Two viability rules of opposite posture for one event on one shared method cannot both hold.
+**#30 wins** — implementing #44's F5 as written would also wedge a career permanently mid-save on a
+mass-suspension season, reachable at the engine's measured card rate (§1.5). `src/discipline/Availability.cs`
+implements no viability gate; the composition and the single back-fill live in
+`src/season-save/AvailabilityComposition.cs`.
+
+**Recorded, not fixed — an owner decision, not a repair.** Preserving #30 §3.4's stated invariant
+("the composed filter can never leave a club worse off than having no filter at all") means a
+suspended player **is** reinstatable in extremis, which the Laws of the Game do not allow. The
+implementation makes suspension a **stricter reinstatement tier** than injury — every injured player
+is pressed back before any suspended one, and a suspended player plays only when the alternative is a
+club that cannot take the field at all. §7.2's deferral queue is the designed alternative if the owner
+would rather refuse the fixture than field a banned player; see that section for the note recording
+this as now a live decision.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -74,4 +100,5 @@ public void OnClubFixturePlayed(int clubId /*, int competitionId = 0 */);
 | 0.1 | 2026-07-24 | — | Initial §2 (FR-DC-001..022, data structures, F1..F5), promoted from design supplement v0.3. Status IN REVIEW. |
 | 0.2 | 2026-07-24 | — | Section-file AR PASS-1 (M): FR-DC-017 gains the **immediate `(0,0)`-drop canonical-minimality rule** (an all-zero entry and an absent entry must never both be encodable — a serialized-representation determinism hazard the v0.1 boundary-only phrasing left open). |
 | 0.3 | 2026-07-24 | — | Cross-set AR pass 3 (M): FR-DC-010 pins **both-squads filter coverage** — the seam applies to each resolved squad of the engine-resolved fixture (managed club AND opponent); the unscoped v0.2 wording let a managed-squad-only implementation pass every test while banned opponents played through their bans. |
+| 0.4 | 2026-08-13 | — | **C1/C2 landing back-prop.** **ERR-044-002:** FR-DC-010's "the engine-resolved fixture" contradicted FR-DC-011's "regardless of resolution path" one row below and #30 §3.4's LIVE both-paths seam; re-scoped to every resolved squad of every fixture on both resolution paths. **ERR-044-003:** F5's fail-loud withdrawn — #30 §2.3 F9 (approved after this spec) settles the same depleted-squad event by back-filling instead, and #44 contributes removals only; recorded that a suspended player is reinstatable in extremis under #30's never-worse-than-unfiltered invariant, making suspension a stricter reinstatement tier than injury rather than an absolute bar. |
 #endregion
