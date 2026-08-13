@@ -695,8 +695,8 @@ not be able to reach it.
 
 Tackler A: `Tackling = 14`, `Aggression = 12` ⇒ normalized 0.70, 0.60 (÷ `ATTRIBUTE_MAX` = 20).
 Carrier O: `Dribbling = 16`, `Balance = 12` ⇒ 0.80, 0.60.
-A is running almost straight at the ball: `approachAngle = 0.40 rad`, and is 0.9 m from it with a
-1.5 m contact radius ⇒ `reachFraction = 0.60`.
+A is running almost straight at the ball: `approachAngle = 0.40 rad`, and is 0.6 m from it with a
+1.0 m reach ⇒ `reachFraction = 0.60`.
 
 ```
 commitment = max(0, cos(0.40))          = 0.9211
@@ -717,10 +717,25 @@ remaining 85.8%, 28.2% are clean wins and 71.8% knock the ball loose. Unconditio
 **MISSED 58.97%, FOUL 5.83%, BALL_WON 9.93%, BALL_LOOSE 25.27%**.
 
 A draw of `u = 0.30` gives `v = 0.30 / 0.41027 = 0.7312`; `0.7312 ≥ 0.142`, so not a foul;
-`w = (0.7312 − 0.142) / 0.858 = 0.6868`; `0.6868 ≥ 0.282` ⇒ **`BALL_LOOSE`**. A slightly better
-tackler — `Tackling = 17` ⇒ 0.85, `edge = +0.12`, `cleanShare = 0.372` — takes the same draw to
-`0.6868 ≥ 0.372`, still `BALL_LOOSE`; it takes `u < 0.189` for that challenge to be won cleanly. The
-model is deliberately hard to win cleanly against a good dribbler.
+`w = (0.7312 − 0.142) / 0.858 = 0.6868`; `0.6868 ≥ 0.282` ⇒ **`BALL_LOOSE`**.
+
+Now a better tackler, `Tackling = 17` ⇒ 0.85. **Both** shares move, and the second half of this example
+originally moved only one of them — corrected here (`ERR-014-006` AR-1 M-10):
+
+```
+foulShare  = 0.14 + 0.12·0.60 − 0.10·0.85 = 0.127     (not 0.142 — Tackling cuts fouls too)
+edge       = 0.85 − 0.73                  = +0.12
+cleanShare = clamp01(0.30 + 0.60·0.12)    = 0.372
+w          = (0.7312 − 0.127) / 0.873     = 0.6921
+```
+
+`0.6921 ≥ 0.372`, so the same draw is still **`BALL_LOOSE`**; that challenge needs `u < 0.1853` to be
+won cleanly. **The model is deliberately hard to win cleanly against a good dribbler** — a defender
+three attribute points better still knocks the ball free on this draw.
+
+The correction is small and the conclusion survives it, which is exactly why it was worth catching: an
+example that recomputes one term and not the other reads as correct, and `WorkedExampleMatchesSection365`
+locked only the first tackler, so nothing would have failed.
 
 ---
 

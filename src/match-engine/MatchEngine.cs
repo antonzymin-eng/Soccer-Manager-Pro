@@ -3619,13 +3619,19 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         private float TackleDrawUniform(int tackler, int carrier)
         {
-            ulong key = _matchSeed;
+            // Folded SEQUENTIALLY, not XOR-ed (AR-1 L-1). The first version XOR-ed three separately
+            // mixed terms with additive offsets — tick+1, tackler+0x100, carrier+0x10000 — and those
+            // domains OVERLAP: tick+1 runs to 324 001 and crosses both other ranges, so whenever
+            // tick + 1 == tackler + 0x100 the two terms cancelled and distinct (tick, tackler, carrier)
+            // triples shared a draw. Four reachable instances per match. Sequential folding gives each
+            // term a different avalanche and cannot cancel.
+            ulong key;
             unchecked  // Spec #16 §3.4.4: deliberate 64-bit wrap-around; not an overflow bug
             {
-                key ^= (ulong)DefensiveAIConstants.DomainTagDefensiveAI * 0x9E3779B97F4A7C15UL;
-                key ^= TackleMix((ulong)(uint)CurrentTick + 0x1UL);
-                key ^= TackleMix((ulong)(uint)tackler + 0x100UL);
-                key ^= TackleMix((ulong)(uint)carrier + 0x10000UL);
+                key = _matchSeed ^ ((ulong)DefensiveAIConstants.DomainTagDefensiveAI * 0x9E3779B97F4A7C15UL);
+                key = TackleMix(key ^ (ulong)(uint)CurrentTick);
+                key = TackleMix(key ^ (ulong)(uint)tackler);
+                key = TackleMix(key ^ (ulong)(uint)carrier);
             }
 
             return (TackleMix(key) % 1_000_000UL) / 1_000_000f;

@@ -239,9 +239,13 @@ namespace TacticalDirector.MatchEngine
         {
             // "> 0" is this file's tautology risk: the failure mode of a NEW turnover source is far more
             // likely to be too many than too few, and a floor-only assertion is green either way. The
-            // bound below is loose enough not to be a calibration lock (KD-W1 forbids one) and tight
-            // enough that a cooldown regression trips it — without the per-agent cooldown a single
-            // standing geometry re-challenges at 10 Hz and the count runs to thousands.
+            // bound below is loose enough not to be a calibration lock (KD-W1 forbids one).
+            //
+            // CORRECTED at AR-1 M-6: this used to claim the ceiling was "tight enough that a cooldown
+            // regression trips it". The arithmetic says otherwise — removing the cooldown multiplies
+            // the count by at most TackleCooldownStrides, which still lands under the bound. It is an
+            // ABANDONMENT guard against a runaway turnover source, and nothing more. The cooldown's
+            // own lock is TheCooldownArmsOnEveryOutcomeIncludingAMiss.
             int resolved = s_pooled.Won + s_pooled.Loose + s_pooled.Foul + s_pooled.Missed;
 
             Assert.That(resolved, Is.LessThan(2_000),

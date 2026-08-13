@@ -69,11 +69,41 @@ namespace TacticalDirector.DefensiveAI.Tests
         }
 
         [Test]
-        public void OutcomeSharesPartitionTheDrawRange()
+        public void OutcomeSharesMatchTheClosedFormDistribution()
         {
-            var d = Distribution(Inputs());
-            Assert.That(d.Missed + d.Won + d.Loose + d.Foul, Is.EqualTo(1.0).Within(1e-9),
-                "the four outcomes must partition [0,1) exactly — a gap is a draw that resolves to nothing");
+            // AR-1 M-1: this used to assert that the four shares sum to 1.0, which is TRUE OF ANY
+            // implementation — Distribution() bins every draw into exactly one bucket, so a Resolve
+            // that returned Missed unconditionally passed it. The real property is that each share
+            // equals the product the §3.6.5.3 pseudocode predicts, which fails on a sign error, a
+            // swapped branch, or a transposed share.
+            var inputs = new TackleDuelInputs(
+                tacklerTackling: 0.70f, tacklerAggression: 0.60f,
+                carrierDribbling: 0.80f, carrierBalance: 0.60f,
+                approachAngle: 0.40f, reachFraction: 0.60f);
+
+            double engage = TackleOutcomeResolver.EngageProbability(inputs);
+            double foul = TackleOutcomeResolver.FoulShare(inputs);
+            double clean = TackleOutcomeResolver.CleanShare(inputs);
+
+            var d = Distribution(inputs);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(d.Missed, Is.EqualTo(1.0 - engage).Within(0.002), "MISSED share");
+                Assert.That(d.Foul, Is.EqualTo(engage * foul).Within(0.002), "FOUL share");
+                Assert.That(d.Won, Is.EqualTo(engage * (1.0 - foul) * clean).Within(0.002), "BALL_WON share");
+                Assert.That(d.Loose, Is.EqualTo(engage * (1.0 - foul) * (1.0 - clean)).Within(0.002),
+                    "BALL_LOOSE share");
+            });
+
+            // The §3.6.5.7 figures, so the spec's own worked example cannot drift from the code.
+            Assert.Multiple(() =>
+            {
+                Assert.That(d.Missed, Is.EqualTo(0.5897).Within(0.002));
+                Assert.That(d.Foul, Is.EqualTo(0.0583).Within(0.002));
+                Assert.That(d.Won, Is.EqualTo(0.0993).Within(0.002));
+                Assert.That(d.Loose, Is.EqualTo(0.2527).Within(0.002));
+            });
         }
 
         [Test]
@@ -152,47 +182,130 @@ namespace TacticalDirector.DefensiveAI.Tests
         [Test]
         public void NoInputProducesACliff()
         {
-            // Football-judgment doctrine §6 P1, asserted rather than asserted-in-prose. Walking the
-            // approach angle and the reach fraction in fine steps, the engage probability must never
-            // jump: a threshold anywhere in this model would show up here as a step.
-            float prevAngle = TackleOutcomeResolver.EngageProbability(Inputs(approachAngle: 0f));
-            for (int i = 1; i <= 1000; i++)
-            {
-                float a = (float)(Math.PI * i / 1000.0);
-                float p = TackleOutcomeResolver.EngageProbability(Inputs(approachAngle: a));
-                Assert.That(Math.Abs(p - prevAngle), Is.LessThan(0.01f),
-                    $"engage probability stepped at approachAngle={a}");
-                prevAngle = p;
-            }
+            // Football-judgment doctrine §6 P1, asserted rather than asserted-in-prose. Walking each
+            // continuous input in fine steps, no probability may jump: a threshold anywhere in this
+            // model shows up here as a step.
+            //
+            // EXTENDED at AR-1 M-8. This used to walk EngageProbability only — the one function with
+            // no clamp that binds — so it could not have seen the plateau it now documents in
+            // CleanShare. The step tolerance is also tightened from 0.01 (which was ~12x the true
+            // per-step delta and would have missed a real sub-0.01 cliff) to a multiple of the largest
+            // legitimate step each walk can take.
+            AssertNoStep(a => TackleOutcomeResolver.EngageProbability(Inputs(approachAngle: a)),
+                0f, (float)Math.PI, "engage vs approachAngle");
+            AssertNoStep(r => TackleOutcomeResolver.EngageProbability(Inputs(reachFraction: r)),
+                0f, 1f, "engage vs reachFraction");
+            AssertNoStep(t => TackleOutcomeResolver.FoulShare(Inputs(tackling: t)),
+                0f, 1f, "foulShare vs tackling");
+            AssertNoStep(a => TackleOutcomeResolver.FoulShare(Inputs(aggression: a)),
+                0f, 1f, "foulShare vs aggression");
+            AssertNoStep(t => TackleOutcomeResolver.CleanShare(Inputs(tackling: t)),
+                0f, 1f, "cleanShare vs tackling");
+        }
 
-            float prevReach = TackleOutcomeResolver.EngageProbability(Inputs(reachFraction: 0f));
-            for (int i = 1; i <= 1000; i++)
+        [Test]
+        public void CleanShareHasAPlateauAgainstAnEliteCarrier_RECORDED_NOT_FIXED()
+        {
+            // AR-1 M-8, and it is a real football-judgment §6 P1/P2 violation, locked here rather than
+            // quietly left: cleanShare = clamp01(Base + EdgeK·(tackling − retain)) is pinned at ZERO
+            // whenever edge <= −Base/EdgeK. Against a maxed dribbler (retain = 1.0) that is every
+            // tackler at or below tackling = 0.5 — raw attributes 1 THROUGH 10 are indistinguishable
+            // and all have exactly no chance of a clean win.
+            //
+            // Not fixed here: the fix is a ramp with no plateau (the ERR-008-019 half-width precedent),
+            // which changes a [GT]-governed shape and is therefore the calibration pass's business
+            // under KD-W1, not a wiring pass's. Locked so the plateau cannot widen unnoticed and so
+            // the pass that fixes it has a failing test to delete.
+            var eliteCarrier = new Func<float, TackleDuelInputs>(t =>
+                Inputs(tackling: t, dribbling: 1f, balance: 1f));
+
+            Assert.That(TackleOutcomeResolver.CleanShare(eliteCarrier(0.05f)), Is.Zero,
+                "raw 1 should be at the plateau floor");
+            Assert.That(TackleOutcomeResolver.CleanShare(eliteCarrier(0.50f)), Is.Zero,
+                "raw 10 is still at the plateau floor — the whole bottom half of the range is flat");
+            Assert.That(TackleOutcomeResolver.CleanShare(eliteCarrier(0.55f)), Is.GreaterThan(0f),
+                "above the plateau the term must move again, or the clamp is swallowing everything");
+        }
+
+        /// <summary>Walks a probability over [lo, hi] and fails on any step larger than a small
+        /// multiple of the mean step — the shape a threshold makes.</summary>
+        private static void AssertNoStep(Func<float, float> f, float lo, float hi, string what)
+        {
+            const int Steps = 2000;
+            float prev = f(lo);
+            float span = Math.Abs(f(hi) - f(lo));
+            float tolerance = Math.Max(4f * span / Steps, 1e-5f);
+
+            for (int i = 1; i <= Steps; i++)
             {
-                float r = i / 1000f;
-                float p = TackleOutcomeResolver.EngageProbability(Inputs(reachFraction: r));
-                Assert.That(Math.Abs(p - prevReach), Is.LessThan(0.01f),
-                    $"engage probability stepped at reachFraction={r}");
-                prevReach = p;
+                float x = lo + (hi - lo) * i / Steps;
+                float y = f(x);
+                Assert.That(Math.Abs(y - prev), Is.LessThan(tolerance),
+                    $"{what} stepped at {x} ({prev} -> {y}, tolerance {tolerance})");
+                prev = y;
             }
         }
 
         [Test]
-        public void FoulShareStaysBelowOne_SoTheSecondTransformNeverDividesByZero()
+        public void TheTwoDefensiveClampsAreStructurallyUnreachable_AndThisLocksThatFact()
         {
-            // TACKLE_FOUL_SHARE_CEILING's whole reason to be [FIXED]. Driven to the extremes the [GT]s
-            // allow, the share must still leave headroom.
-            float extreme = TackleOutcomeResolver.FoulShare(Inputs(aggression: 1f, tackling: 0f));
-            Assert.That(extreme, Is.LessThanOrEqualTo(DefensiveAIConstants.TACKLE_FOUL_SHARE_CEILING));
-            Assert.That(DefensiveAIConstants.TACKLE_FOUL_SHARE_CEILING, Is.LessThan(1f));
+            // AR-1 M-2/M-3, second attempt — the FIRST attempt was also tautological and a mutation
+            // run proved it: deleting the TACKLE_FOUL_SHARE_CEILING clamp AND the uniform clamp left
+            // every case in this file green.
+            //
+            // The reason is arithmetic, not a weak assertion. At the shipped [GT]s:
+            //   max raw foulShare = Base + AggressionK              (Tackling only subtracts)
+            //   max engage        = Base + CommitmentK + ProximityK
+            // Both sit far below the values their clamps defend against, so no input can reach either
+            // clamp and no test on this resolver's OUTPUTS can detect its removal. They are defensive
+            // code with no reachable input — the RushCommitFatiguePenaltyM situation (W1 §7 item 6) —
+            // and the honest response is the same: say so, and lock the CONDITION under which they
+            // stop being unreachable.
+            //
+            // So this does not pretend to exercise the clamps. It asserts the headroom, and fails the
+            // moment a retune makes either guard live — which is exactly when a real lock is needed.
+            float maxRawFoulShare = DefensiveAIConstants.TackleFoulShareBase
+                                    + DefensiveAIConstants.TackleFoulShareAggressionK;
+            Assert.That(maxRawFoulShare, Is.LessThan(DefensiveAIConstants.TACKLE_FOUL_SHARE_CEILING),
+                "the foul-share ceiling has become reachable — it now needs a lock that exercises it, "
+                + "and Resolve's second inverse transform needs a tested divide-by-zero guard");
+
+            float maxEngage = DefensiveAIConstants.TackleEngageBase
+                              + DefensiveAIConstants.TackleEngageCommitmentK
+                              + DefensiveAIConstants.TackleEngageProximityK;
+            Assert.That(maxEngage, Is.LessThan(1f),
+                "engage can now reach 1, so the uniform ceiling is live and needs its own lock");
+
+            Assert.That(DefensiveAIConstants.TACKLE_FOUL_SHARE_CEILING, Is.GreaterThan(0f).And.LessThan(1f));
         }
 
         [Test]
-        public void ADrawOfExactlyOneStillResolves()
+        public void ResolveIsTotalOverADenseSweepOfEveryInput()
         {
-            // A total mapping: u = 1.0 is outside the contract but arrives from a caller's rounding,
-            // and an unhandled value here would be an unreachable-outcome bug rather than a throw.
-            Assert.DoesNotThrow(() => TackleOutcomeResolver.Resolve(Inputs(), 1.0f));
-            Assert.DoesNotThrow(() => TackleOutcomeResolver.Resolve(Inputs(), -0.5f));
+            // What IS worth locking about the mapping: every combination the model can present — plus
+            // the out-of-contract draws a caller's rounding hands it — produces one of the four
+            // declared outcomes. Fails on a NaN, an unhandled branch, or a fifth value leaking out.
+            float[] draws = { -0.5f, 0f, 0.0001f, 0.5f, 0.9999f, 1f, 42f };
+
+            for (int a = 0; a <= 10; a++)
+            {
+                for (int t = 0; t <= 10; t++)
+                {
+                    var probe = Inputs(
+                        tackling: t / 10f, aggression: a / 10f,
+                        dribbling: (10 - t) / 10f, balance: a / 10f,
+                        approachAngle: (float)(Math.PI * a / 10.0), reachFraction: t / 10f);
+
+                    foreach (float u in draws)
+                    {
+                        TackleOutcome o = TackleOutcomeResolver.Resolve(in probe, u);
+                        Assert.That(
+                            o == TackleOutcome.Missed || o == TackleOutcome.BallWon
+                            || o == TackleOutcome.BallLoose || o == TackleOutcome.Foul,
+                            Is.True, $"undeclared outcome {o} at u={u}");
+                    }
+                }
+            }
         }
 
         [Test]
@@ -208,6 +321,21 @@ namespace TacticalDirector.DefensiveAI.Tests
             Assert.That(TackleOutcomeResolver.FoulShare(inputs), Is.EqualTo(0.142f).Within(0.0001f));
             Assert.That(TackleOutcomeResolver.CleanShare(inputs), Is.EqualTo(0.282f).Within(0.0001f));
             Assert.That(TackleOutcomeResolver.Resolve(inputs, 0.30f), Is.EqualTo(TackleOutcome.BallLoose));
+
+            // §3.6.5.7's SECOND tackler, which nothing locked until AR-1 M-10 — and the spec's
+            // arithmetic for it was wrong, because raising Tackling lowers the foul share too and the
+            // example recomputed only the clean share. Locked now so that cannot recur silently.
+            var better = new TackleDuelInputs(
+                tacklerTackling: 0.85f, tacklerAggression: 0.60f,
+                carrierDribbling: 0.80f, carrierBalance: 0.60f,
+                approachAngle: 0.40f, reachFraction: 0.60f);
+
+            Assert.That(TackleOutcomeResolver.FoulShare(better), Is.EqualTo(0.127f).Within(0.0001f));
+            Assert.That(TackleOutcomeResolver.CleanShare(better), Is.EqualTo(0.372f).Within(0.0001f));
+            Assert.That(TackleOutcomeResolver.Resolve(better, 0.30f), Is.EqualTo(TackleOutcome.BallLoose),
+                "three attribute points better still knocks the ball free on this draw");
+            Assert.That(TackleOutcomeResolver.Resolve(better, 0.18f), Is.EqualTo(TackleOutcome.BallWon),
+                "below the 0.1853 threshold the same challenge is won cleanly");
         }
     }
 }

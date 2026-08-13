@@ -746,5 +746,7 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        | correct while an ordering accident was the ONLY way to lose the ball |
 // |         |            |        | mid-windup; #14 §3.6.5 made it an ordinary football event, and an    |
 // |         |            |        | error line per successful tackle buries real errors and fails any    |
-// |         |            |        | suite treating an unexpected LogError as a failure. Text only.       |
+// |         |            |        | suite treating an unexpected LogError as a failure. NOT "text only" |
+// |         |            |        | (AR-1 L-7): the SEVERITY change alters LogAssert behaviour in every  |
+// |         |            |        | suite, which is the whole reason for making it. No formula changed.  |
 #endregion
