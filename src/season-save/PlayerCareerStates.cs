@@ -1,9 +1,11 @@
 // File:     src/season-save/PlayerCareerStates.cs
 // Created:  2026-08-06
-// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 2, L8 — the public SelectAvailable's
-//           discipline-less call passes competitionId: 0 instead of naming
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 3, M14 — MarkUnavailable now OWNS its
+//           removed/recoveryRemaining masks (writes every index unconditionally) instead of being
+//           additive, matching Availability.MarkSuspended's contract — v1.21. Prior: v1.20 L8 — the
+//           public SelectAvailable's discipline-less call passes competitionId: 0 instead of naming
 //           DisciplineConstants.LEAGUE_COMPETITION_KEY for a value it provably never reads, dropping
-//           this file's #44 import — v1.20. Prior: v1.19 SelectAvailable split into MarkUnavailable +
+//           this file's #44 import. v1.19 SelectAvailable split into MarkUnavailable +
 //           AvailabilityComposition.)
 // Author:   —
 // Spec:     Training System #29 §3.1/§3.3/§3.5, §4.3 (seam contracts), FR-TR-004/016/022/023/025;
@@ -1260,17 +1262,27 @@ namespace TacticalDirector.SeasonSave
         /// that is preserved rather than asserted.
         /// </para>
         /// <para>
-        /// <b>Additive into a shared mask</b> — entries already true are left alone and are not
-        /// counted again, so contributors may run in any order.
+        /// <b>This method OWNS <paramref name="removed"/></b> (M14) — every entry is (re)written to
+        /// reflect injury status alone, unconditionally: index <c>local</c> ends the call exactly
+        /// <c>true</c> when that player is injured and exactly <c>false</c> otherwise, regardless of
+        /// what the caller passed in. That mirrors <see cref="Availability.MarkSuspended"/>'s contract
+        /// exactly, and for the same reason: a caller composing this removal with another contributor's
+        /// (e.g. #44's) must allocate a SEPARATE mask per contributor and OR them together explicitly —
+        /// the shape <c>AvailabilityComposition.Compose</c> uses for both contributors. The prior
+        /// "additive, entries already true left alone" contract meant #41 and #44 disagreed about who
+        /// owned a shared mask, which is exactly the class of mistake M3 fixed on #44's side of this
+        /// same seam — giving both contributors one contract removes the asymmetry rather than
+        /// documenting around it.
         /// </para>
         /// </summary>
         /// <param name="squad">The resolved roster.</param>
-        /// <param name="removed">A mask parallel to the squad's roster indices.</param>
+        /// <param name="removed">A mask parallel to the squad's roster indices. Overwritten in full by
+        /// this call — see the remarks above.</param>
         /// <param name="recoveryRemaining">
         /// A parallel array receiving each injured player's remaining recovery — the back-fill's
-        /// ordering key. Entries for players this call does not remove are left untouched.
+        /// ordering key. Also OWNED: an entry for a player this call does not remove is written 0.
         /// </param>
-        /// <returns>How many entries this call newly set.</returns>
+        /// <returns>How many players are injured — the number of entries this call wrote <c>true</c>.</returns>
         /// <exception cref="ArgumentNullException">Any argument is null.</exception>
         /// <exception cref="ArgumentException">An array is not the squad's length, or the squad's club
         /// or one of its players is not carried by this career.</exception>
@@ -1302,26 +1314,23 @@ namespace TacticalDirector.SeasonSave
             int[] ids = _playerIds[club];
             InjuryState[] injury = _injury[club];
 
-            int newlyRemoved = 0;
+            int removedCount = 0;
             for (int i = 0; i < squad.Count; i++)
             {
                 // Resolved for EVERY player, not only the ones we go on to remove: the career must
                 // carry the whole squad, and the refusal is the same caller-contract bug either way.
                 int index = RequireIndexOfPlayer(ids, squad.ClubId, squad.GetPlayer(i).PlayerId);
-                if (MedicalStep.IsAvailable(in injury[index]))
-                {
-                    continue;
-                }
+                bool isInjured = !MedicalStep.IsAvailable(in injury[index]);
 
-                recoveryRemaining[i] = injury[index].RecoveryRemaining;
-                if (!removed[i])
+                removed[i] = isInjured;
+                recoveryRemaining[i] = isInjured ? injury[index].RecoveryRemaining : 0;
+                if (isInjured)
                 {
-                    removed[i] = true;
-                    newlyRemoved++;
+                    removedCount++;
                 }
             }
 
-            return newlyRemoved;
+            return removedCount;
         }
 
         /// <summary>
@@ -1753,4 +1762,15 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | null-discipline path. Now competitionId: 0, with a comment      |
 // |         |            |        | explaining why; the `using TacticalDirector.Discipline;` line   |
 // |         |            |        | dropped, since nothing else in this file needs it.              |
+// | 1.21    | 2026-08-13 | —      | AR round 3 fix (M14): MarkUnavailable's contract flipped from   |
+// |         |            |        | additive (entries already true left alone) to OWNING — every    |
+// |         |            |        | index of removed/recoveryRemaining is now written               |
+// |         |            |        | unconditionally, matching Availability.MarkSuspended's contract |
+// |         |            |        | exactly. The two contributors to AvailabilityComposition.Compose|
+// |         |            |        | carried opposite contracts (round 1's M3 made MarkSuspended     |
+// |         |            |        | owning; this method stayed additive), which under the OWNING    |
+// |         |            |        | side's contract meant a shared mask would clear the other       |
+// |         |            |        | contributor's removals — strictly worse than the pre-M3 hazard. |
+// |         |            |        | Compose (AvailabilityComposition.cs v1.2) now allocates a fresh |
+// |         |            |        | mask for this contributor too and ORs it in itself.             |
 #endregion

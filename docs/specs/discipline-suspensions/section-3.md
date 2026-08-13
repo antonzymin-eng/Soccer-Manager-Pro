@@ -1,7 +1,11 @@
 # Discipline & Suspensions #44 — Section 3: Core Algorithms
 
 **Created:** July 24, 2026
-**Last Updated:** August 13, 2026, later still (v0.6 — ERR-044-005 back-prop, owed by the #44 C1/C2
+**Last Updated:** August 13, 2026, yet later still (v0.7 — L13, a third adversarial-review pass over
+the #44 C1/C2 landing: §3.2's `AddYellow` pseudocode gains the `RequireYellowThreshold`/
+`RequireBanLength` **F6** guard calls (§2.3), which had no normative source at all despite being
+enforced in production and unit-tested — the AR pass 9 #29/#41 F8 precedent for this omission class)
+**Last Updated (prior):** August 13, 2026, later still (v0.6 — ERR-044-005 back-prop, owed by the #44 C1/C2
 adversarial review: §3.3's `FilterAvailable` pseudocode gains the all-suspended-squad `null`-return
 case and names `MarkSuspended`'s mask, consumed by #30's composed seam, as the actual production path)
 **Last Updated (prior):** August 13, 2026, later same day (v0.5 — ERR-030-037, adversarial review over the
@@ -12,7 +16,7 @@ the prior text only implied by describing separate fixtures)
 ordering paragraph re-scoped to both resolution paths, and the `FilterAvailable` pseudocode comment
 points its viability rule at #30 §2.3 F9 instead of a withdrawn F5)
 **Last Updated (prior):** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.6
+**Version:** 0.7
 **Status:** APPROVED
 
 ---
@@ -45,12 +49,18 @@ never read (the v1.33 substitution reset would lose a subbed-off player's cards)
 
 ```
 AddYellow(pid):
+    RequireYellowThreshold(YELLOW_ACCUMULATION_THRESHOLD)   # F6 — fail loud below 1: the residual
+                                                              # subtraction below can never terminate
+                                                              # a crossing otherwise, and every single
+                                                              # yellow would ban, silently
     e := tally[pid, comp]; e.Yellows += 1
     if e.Yellows >= YELLOW_ACCUMULATION_THRESHOLD:
         e.Yellows -= YELLOW_ACCUMULATION_THRESHOLD         # residual kept
-        e.BanMatchesRemaining += ACCUM_BAN_MATCHES         # stacks additively (FR-DC-007)
+        e.BanMatchesRemaining += RequireBanLength(ACCUM_BAN_MATCHES)   # F6 — fail loud if negative;
+                                                                         # stacks additively (FR-DC-007)
 
-AddBan(pid, matches):  tally[pid, comp].BanMatchesRemaining += matches
+AddBan(pid, matches):  tally[pid, comp].BanMatchesRemaining += matches   # matches < 0 is a CALLER bug
+                                                                           # (F2-class), not a [GT] guard
 ```
 
 **Worked example** (`THRESHOLD = 5`, `ACCUM = 1`, `SECOND_YELLOW = 1`, `STRAIGHT_RED = 2` — all
@@ -125,4 +135,5 @@ preserve this order.
 | 0.4 | 2026-08-13 | — | **C1/C2 landing back-prop.** **ERR-044-002:** §3.3's ordering paragraph re-scoped from "the engine-resolved fixture" to both clubs' resolved squads of every fixture on both resolution paths, matching #30 §3.4's LIVE seam. **ERR-044-003:** the `FilterAvailable` pseudocode's F5 fail-loud comment replaced — #44 implements no viability gate; the rule is #30 §2.3 F9. |
 | 0.5 | 2026-08-13 | — | **ERR-030-037** (adversarial review over the C1/C2 landing, M7): §3.3 gains a normative paragraph for the WITHIN-fixture half of the off-by-one contract — `OnClubFixturePlayed` MUST run before that same fixture's fold commits its cards, never after — locked in code by `SeasonLoopDisciplineTests.ANewBanEarnedThisFixtureIsNotServedByThisSameFixture` (`src/season-save/`). |
 | 0.6 | 2026-08-13 | — | **ERR-044-005** back-prop: §3.3's `FilterAvailable` pseudocode gains the `null`-return case for an all-suspended squad (`Squad` cannot represent zero players) and names `MarkSuspended`'s removal mask, consumed directly by #30's `AvailabilityComposition`, as #44's actual production path — `FilterAvailable` itself is FR-DC-009's own surface. |
+| 0.7 | 2026-08-13 | — | **L13**, a third adversarial-review pass: §3.2's `AddYellow` pseudocode gains `RequireYellowThreshold(YELLOW_ACCUMULATION_THRESHOLD)` before the tally read and `RequireBanLength(ACCUM_BAN_MATCHES)` around the accumulation ban — the two `[GT]` fail-loud guards `DisciplineRules.AddYellow`/`ApplyCard` actually enforce (§2.3 **F6**), previously present in code and unit tests but nowhere in the normative text; an implementer following §3.2 verbatim would have shipped a config that silently bans on the first yellow (the #29/#41 AR pass 9 F8 lesson, recurring here). |
 #endregion

@@ -1,6 +1,8 @@
 // File:     src/discipline/DisciplineRules.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 3, L11 — the kind-2 branch of ApplyCard
+//           extracted to internal ApplySecondYellow, taking the ban length as a parameter so the M4
+//           atomicity guarantee is directly testable — v1.3)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §3.2 (thresholds & bans) / §3.3 (serving) / §3.4 (boundary
 //           & hygiene); FR-DC-006/007/011/013/017; F2/F4; Code Standards #20
@@ -73,14 +75,8 @@ namespace TacticalDirector.Discipline
                     break;
 
                 case DisciplineConstants.CARD_KIND_SECOND_YELLOW:
-                    // Validated BEFORE AddYellow runs (M4): a bad SecondYellowBanMatches must refuse
-                    // the WHOLE card atomically, not leave the yellow (and any accumulation ban it
-                    // triggers) committed while the card itself is refused.
-                    int secondYellowBan = RequireBanLength(
-                        DisciplineConstants.SecondYellowBanMatches,
-                        nameof(DisciplineConstants.SecondYellowBanMatches));
-                    AddYellow(playerId, competitionId);
-                    AddBan(playerId, competitionId, secondYellowBan);
+                    ApplySecondYellow(
+                        playerId, competitionId, DisciplineConstants.SecondYellowBanMatches);
                     break;
 
                 case DisciplineConstants.CARD_KIND_RED:
@@ -96,6 +92,32 @@ namespace TacticalDirector.Discipline
                         "yellow) — F4. An unknown kind means the engine's card contract changed; #44 " +
                         "must not guess whether it bans.");
             }
+        }
+
+        /// <summary>
+        /// The kind-2 (second yellow) branch of <see cref="ApplyCard"/>, with the ban length taken as a
+        /// PARAMETER rather than read directly off
+        /// <see cref="DisciplineConstants.SecondYellowBanMatches"/> (L11) — the same L5 seam
+        /// <see cref="RequireBanLength"/> is <c>internal</c> for. That constant is
+        /// <c>public static readonly</c>, resolved once at type initialisation to its non-negative
+        /// default, so nothing exercised through the public <see cref="ApplyCard"/> can ever observe
+        /// the M4 atomicity guarantee below — a test would need a bound config this process cannot
+        /// produce. Calling this method directly with an explicit invalid length reaches the identical
+        /// guarded code and can genuinely tell "validated before <see cref="AddYellow"/>" from
+        /// "validated after".
+        /// <para>
+        /// Validated BEFORE <see cref="AddYellow"/> runs (M4): a bad ban length must refuse the WHOLE
+        /// card atomically, not leave the yellow (and any accumulation ban it triggers) committed while
+        /// the card itself is refused.
+        /// </para>
+        /// </summary>
+        /// <exception cref="InvalidOperationException"><paramref name="secondYellowBanMatches"/> is negative.</exception>
+        internal void ApplySecondYellow(int playerId, int competitionId, int secondYellowBanMatches)
+        {
+            int ban = RequireBanLength(
+                secondYellowBanMatches, nameof(DisciplineConstants.SecondYellowBanMatches));
+            AddYellow(playerId, competitionId);
+            AddBan(playerId, competitionId, ban);
         }
 
         /// <summary>
@@ -374,4 +396,15 @@ namespace TacticalDirector.Discipline
 // |         |            |        | are directly testable without depending on GameplayConfigHolder   |
 // |         |            |        | binding before DisciplineConstants' static readonly fields        |
 // |         |            |        | resolve, which no test in this process can guarantee.             |
+// | 1.3     | 2026-08-13 | —      | AR round 3 fix (L11): ApplyCard's kind-2 branch extracted to      |
+// |         |            |        | internal ApplySecondYellow(playerId, competitionId,               |
+// |         |            |        | secondYellowBanMatches) — the ban length taken as a parameter     |
+// |         |            |        | rather than read off DisciplineConstants directly, the same L5    |
+// |         |            |        | seam RequireBanLength/RequireYellowThreshold exist for. The prior |
+// |         |            |        | test (ApplyCard_Kind2_ValidatesSecondYellowBanMatches_Before-     |
+// |         |            |        | AddYellowRuns) could not discriminate order at the non-negative   |
+// |         |            |        | default; DisciplineRulesTests now drives ApplySecondYellow         |
+// |         |            |        | directly with an explicit -1 and asserts AddYellow's effect is    |
+// |         |            |        | absent, plus an equivalence test proving ApplyCard genuinely      |
+// |         |            |        | delegates rather than carrying a parallel copy of the same logic. |
 #endregion

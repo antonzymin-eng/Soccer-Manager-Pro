@@ -1,14 +1,19 @@
 # Discipline & Suspensions #44 — Section 4: Architecture
 
 **Created:** July 24, 2026
-**Last Updated:** August 13, 2026, later same day (v0.4 — L6, adversarial review over the C1/C2
+**Last Updated:** August 13, 2026, later still (v0.5 — L12(b), a third adversarial-review pass over
+the #44 C1/C2 landing: §4.2's file table listed 6 of the 9 files `src/discipline/` actually carries,
+omitting `DisciplineEntry.cs`, `IDisciplineTickLedgerTap.cs` and `AssemblyInfo.cs`; the `DisciplineRules.cs`
+and `Availability.cs` rows also corrected to name their full landed API rather than only the two
+methods the row was first written against)
+**Last Updated (prior):** August 13, 2026, later same day (v0.4 — L6, adversarial review over the C1/C2
 landing: §4.1's "at the T-phase" and §4.2's "proposed, at T-phase" headers corrected — the assembly
 and its file layout have existed since T0/T1, not just been proposed)
 **Last Updated (prior):** August 13, 2026 (v0.3 — ERR-044-001 + ERR-044-002, C1/C2 landing back-prop: §4.4
 gains the magic-before-version MUST and cites the frame v5 → 6 bump; §4.5's root contract re-scoped
 to both resolution paths)
 **Last Updated (prior):** July 24, 2026 (v0.2 — cross-set AR pass 3; prior v0.1 initial)
-**Version:** 0.4
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -39,11 +44,14 @@ needed (the #37/#49 positive property).
 | File | Contents |
 |---|---|
 | `DisciplineState.cs` | the `(PlayerId, CompetitionId)` tally map (KD-1/KD-6) |
+| `DisciplineEntry.cs` | one tally row — `PlayerId`, `CompetitionId`, `Yellows`, `BanMatchesRemaining` (F2's `PlayerId >= 0` gate) |
 | `CardLedgerFold.cs` | the occupancy fold over the tap (KD-2/KD-5, §3.1) |
-| `DisciplineRules.cs` | `AddYellow`/`AddBan` thresholds + `OnClubFixturePlayed` serving (§3.2/§3.3) |
-| `Availability.cs` | `IsAvailable` + `FilterAvailable` (KD-4) |
+| `IDisciplineTickLedgerTap.cs` | the #37-class per-tick read interface `CardLedgerFold.ObserveTick` consumes (KD-2/§4.3) |
+| `DisciplineRules.cs` | `ApplyCard`/`AddYellow`/`AddBan` thresholds + `OnClubFixturePlayed` serving + `RollToNextSeason`/`MigratePlayerId`/`DropPlayer` (§3.2/§3.3/§3.4) — the sole mutating entry point onto `DisciplineState` |
+| `Availability.cs` | `IsAvailable` + `MarkSuspended` (#30's composed-seam contribution) + `FilterAvailable` (KD-4) |
 | `DisciplineSaveCodec.cs` | `DISCIPLINE_SAVE_FORMAT_VERSION` sub-blob encode/decode (KD-1) |
 | `DisciplineConstants.cs` | the Appendix A catalogue |
+| `AssemblyInfo.cs` | assembly metadata (FR-CS-055) |
 
 ## 4.3 The tap read (KD-2)
 
@@ -95,4 +103,5 @@ specified the block version-first with no magic, which this section and Appendix
 | 0.2 | 2026-07-24 | — | Cross-set AR pass 3 (M follow-through): the root contract's filter clause scoped to **both clubs' resolved squads** of the managed fixture (FR-DC-010). |
 | 0.3 | 2026-08-13 | — | **C1/C2 landing back-prop.** **ERR-044-001:** §4.4 states the magic-before-version rule as a MUST (the ERR-029-005/ERR-041-009 class's fourth instance) and cites the `SEASON_SAVE_FORMAT_VERSION` 5 → 6 bump landed at ERR-030-035. **ERR-044-002:** §4.5's root contract re-scoped from "the managed fixture" to both clubs' resolved squads of every fixture on both resolution paths. |
 | 0.4 | 2026-08-13 | — | **L6** (adversarial review over the C1/C2 landing): §4.1's "at the T-phase" and §4.2's "proposed, at T-phase" headers corrected to say the assembly and its layout are landed, pointing at `file-manifest.md` as the authoritative inventory. |
+| 0.5 | 2026-08-13 | — | **L12(b)**, a third adversarial-review pass: §4.2's file table gains the three files it omitted — `DisciplineEntry.cs` (the tally row type), `IDisciplineTickLedgerTap.cs` (the tap interface `CardLedgerFold.ObserveTick` consumes), `AssemblyInfo.cs` — bringing it to all 9 files `src/discipline/` carries; the `DisciplineRules.cs` and `Availability.cs` rows widened from the two methods each was first written against to the full landed API (`ApplyCard`/`RollToNextSeason`/`MigratePlayerId`/`DropPlayer`; `MarkSuspended`). |
 #endregion

@@ -1,11 +1,18 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
-// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 2, M6/M11/L1 — v1.22. Serve+commit moved
-//           below MarkFixturePlayed (M6, ERR-030-037), the FR-DC-013 re-key/drop deferral recorded at
-//           the RollToNextSeason roster-sync site (M11), and the inverted-order comment sentence
-//           deleted (L1). Prior: v1.21 Restore threads disciplineOrNull (H1); v1.20 #44 T2's four
-//           discipline drive points; v1.19 the BirthWorldDay-vs-clock composition check; the pass 1-3
-//           recording chain and the pass-5 doc fix are the rows below.)
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 3, M12/L9/L10 — v1.23. M12: a
+//           TestOnly_AfterHomeClubServed hook added so the discipline serve+commit block's POSITION
+//           relative to MarkFixturePlayed is lockable independently of whether DisciplineRules
+//           happens to be fallible today — v1.22's row below is corrected in place (it did not add
+//           the lock it implied). L9: the M6 comment corrected — only fold.Commit is fallible under a
+//           bound config, not OnClubFixturePlayed. L10: the RollToNextSeason boundary-sweep comment
+//           corrected — the sweep IS idempotent; the hazard is its FIRST run against a roll that then
+//           gets refused, not a second run. Prior: v1.22 M6/M11/L1 — serve+commit moved below
+//           MarkFixturePlayed (M6, ERR-030-037), the FR-DC-013 re-key/drop deferral recorded at the
+//           RollToNextSeason roster-sync site (M11), and the inverted-order comment sentence deleted
+//           (L1). v1.21 Restore threads disciplineOrNull (H1); v1.20 #44 T2's four discipline drive
+//           points; v1.19 the BirthWorldDay-vs-clock composition check; the pass 1-3 recording chain
+//           and the pass-5 doc fix are the rows below.)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (day advance / KD-2 tick order), §3.4 (playing a round /
 //           KD-9), §3.5 (season-boundary roll / KD-6), §4.3 (the composition root), §4.6 (the #22
@@ -84,6 +91,19 @@ namespace TacticalDirector.SeasonSave
         private readonly DisciplineRules _disciplineRules;
 
         private TacticalDirector.MatchEngine.MatchEngine _activeMatch;
+
+        /// <summary>
+        /// Test-only injection point (M12): invoked, if set, between the home-club and away-club
+        /// <c>OnClubFixturePlayed</c> calls inside <see cref="PlayNextRound"/>'s discipline block —
+        /// i.e. AFTER at least one real serving decrement, but still inside the block M6 positions
+        /// after <see cref="SeasonState.MarkFixturePlayed"/>. Exists solely to lock that POSITION
+        /// property independently of whether today's <c>[GT]</c> defaults happen to make
+        /// <c>DisciplineRules</c> fallible — see
+        /// <c>SeasonLoopDisciplineTests.AThrowInsideTheServeAndCommitBlock_LeavesTheFixturePlayed_AndDoesNotDoubleServeOnRetry</c>.
+        /// Null in every production path; a test MUST clear it in a <c>finally</c>/<c>TearDown</c>,
+        /// since it is process-static.
+        /// </summary>
+        internal static System.Action TestOnly_AfterHomeClubServed;
 
         /// <summary>
         /// Composes a loop over an existing world and season.
@@ -716,21 +736,27 @@ namespace TacticalDirector.SeasonSave
                 // a ban is served by the club playing, which has nothing to do with whether training
                 // and medical state is wired.
                 //
-                // M6 (ERR-030-037): placed AFTER MarkFixturePlayed, deliberately. Both
-                // OnClubFixturePlayed and fold.Commit are FALLIBLE under a bound config
-                // (DisciplineRules.AddYellow throws below YellowAccumulationThreshold < 1;
-                // RequireBanLength throws on a negative [GT] ban length), and serving+committing is
-                // independent of Table.ApplyResult/EmitMatchOutcome/MarkFixturePlayed, so nothing is
-                // lost by running it last. Placed BEFORE MarkFixturePlayed (as this block did before
-                // M6), a throw here left the fixture UNPLAYED with both clubs' bans already
-                // decremented; a caller retrying AdvanceAndPlayNextRound would then replay the SAME
-                // fixture — the unplayed-index filter would not exclude it — and decrement every
-                // outstanding ban in the league a SECOND time, silently. Now the fixture is already
-                // marked played by the time this can throw, so the filter on retry skips it and
-                // nothing double-serves.
+                // M6 (ERR-030-037): placed AFTER MarkFixturePlayed, deliberately. fold.Commit IS
+                // fallible under a bound config (DisciplineRules.AddYellow throws below
+                // YellowAccumulationThreshold < 1; RequireBanLength throws on a negative [GT] ban
+                // length). OnClubFixturePlayed itself is NOT (L9): it reads no [GT] and its only
+                // guard is clubId < 0 (F2), a caller-contract bug rather than a config one — every
+                // fixture here supplies a real, non-negative club id, so that guard cannot fire on
+                // this path. Serving+committing is independent of
+                // Table.ApplyResult/EmitMatchOutcome/MarkFixturePlayed, so nothing is lost by running
+                // the pair last regardless of which of the two can actually throw. Placed BEFORE
+                // MarkFixturePlayed (as this block did before M6), a throw from fold.Commit here left
+                // the fixture UNPLAYED with both clubs' bans already decremented; a caller retrying
+                // AdvanceAndPlayNextRound would then replay the SAME fixture — the unplayed-index
+                // filter would not exclude it — and decrement every outstanding ban in the league a
+                // SECOND time, silently. Now the fixture is already marked played by the time this
+                // can throw, so the filter on retry skips it and nothing double-serves — the property
+                // locked by SeasonLoopDisciplineTests' M12 test below, independently of whether
+                // fold.Commit happens to be fallible today.
                 if (_disciplineRules != null)
                 {
                     _disciplineRules.OnClubFixturePlayed(fixture.HomeClubId);
+                    TestOnly_AfterHomeClubServed?.Invoke();
                     _disciplineRules.OnClubFixturePlayed(fixture.AwayClubId);
 
                     // ...and ONLY THEN this fixture's own cards (FR-DC-010). The order is the whole
@@ -887,9 +913,11 @@ namespace TacticalDirector.SeasonSave
             // Yellows reset; UNSERVED BANS CARRY. A red card in the final round is still a ban in
             // August, which is the whole reason #44 persists rather than recomputing from ledgers it
             // does not keep (KD-1). Installed last, after the one commit that could refuse the roll,
-            // for the same reason the roster sync is: a discipline state swept for a season that never
-            // began is a half-rolled state, and this sweep is not idempotent — running it twice on a
-            // refused-then-retried roll would silently forgive a second season's yellows.
+            // for the same reason the roster sync is: RollToNextSeason IS idempotent (it sets
+            // Yellows := 0, so a second call is a no-op) — but that only helps a SECOND run after a
+            // roll that already succeeded. Placed before (e)'s commits instead, this sweep's FIRST
+            // run would fire against a roll that then gets REFUSED — a discipline state swept for a
+            // season that never began (L10). Placed here, a refused roll leaves both untouched.
             _disciplineRules?.RollToNextSeason();
 
             return new SeasonRollOutcome(
@@ -1625,4 +1653,30 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | UNCOMMITTED). Locked by                                         |
 // |         |            |        | SeasonLoopDisciplineTests.ANewBanEarnedThisFixtureIsNotServed-  |
 // |         |            |        | ByThisSameFixture (v1.2 of that file).                          |
+// |         |            |        | **CORRECTION (v1.23, M12):** "both calls are fallible" above is |
+// |         |            |        | wrong — OnClubFixturePlayed reads no [GT] and cannot throw      |
+// |         |            |        | under any bound config (L9); only fold.Commit is fallible. And  |
+// |         |            |        | the ANewBanEarnedThisFixtureIsNotServedByThisSameFixture lock   |
+// |         |            |        | cited above locks M7 (the ORDER between OnClubFixturePlayed and |
+// |         |            |        | fold.Commit) — it is blind to M6 itself (the block's POSITION   |
+// |         |            |        | relative to MarkFixturePlayed): moving the whole block back     |
+// |         |            |        | above MarkFixturePlayed leaves that lock green. M6's position   |
+// |         |            |        | claim had NO test that failed when reverted until v1.23.        |
+// | 1.23    | 2026-08-13 | —      | #44 C1/C2 adversarial review round 3 (M12/L9/L10).              |
+// |         |            |        | **M12:** added TestOnly_AfterHomeClubServed, invoked between    |
+// |         |            |        | the home- and away-club OnClubFixturePlayed calls, so a test    |
+// |         |            |        | can force a throw INSIDE the serve+commit block without         |
+// |         |            |        | depending on DisciplineRules being fallible under today's       |
+// |         |            |        | defaults. SeasonLoopDisciplineTests gains                       |
+// |         |            |        | AThrowInsideTheServeAndCommitBlock_LeavesTheFixturePlayed_And-  |
+// |         |            |        | DoesNotDoubleServeOnRetry, which asserts the fixture IS played  |
+// |         |            |        | after the forced throw and that a retry does not re-serve the   |
+// |         |            |        | same club's ban — VERIFIED by temporarily moving the discipline |
+// |         |            |        | block back above MarkFixturePlayed and watching the new test go |
+// |         |            |        | red, then restoring the fix. **L9:** the v1.22 M6 comment        |
+// |         |            |        | corrected in place — OnClubFixturePlayed is not config-fallible.|
+// |         |            |        | **L10:** the (f) boundary-sweep comment corrected — RollToNext- |
+// |         |            |        | Season IS idempotent; the real hazard this ordering prevents is |
+// |         |            |        | the sweep's FIRST run landing against a roll that then gets     |
+// |         |            |        | refused, not a second run forgiving a second season.            |
 #endregion

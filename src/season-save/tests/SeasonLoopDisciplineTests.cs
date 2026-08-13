@@ -1,7 +1,8 @@
 // File:     src/season-save/tests/SeasonLoopDisciplineTests.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 2, M7 — the within-fixture off-by-one lock,
-//           ANewBanEarnedThisFixtureIsNotServedByThisSameFixture — v1.2)
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 3, M12 — a new lock for the serve+commit
+//           block's POSITION relative to MarkFixturePlayed, which the v1.2 footer below WRONGLY
+//           credited to ANewBanEarnedThisFixtureIsNotServedByThisSameFixture — v1.3)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §3.3/§5 (T-DC-NEU-001, T-DC-BAN-002/003/005, T-DC-VIEW-001,
 //           T-DC-SAV-002); Season & Competition Loop #30 §3.4 (the composed seam,
@@ -423,6 +424,61 @@ namespace TacticalDirector.SeasonSave.Tests
             }
         }
 
+        // ── M12: the block's POSITION relative to MarkFixturePlayed ───────────────────────
+
+        [Test]
+        public void AThrowInsideTheServeAndCommitBlock_LeavesTheFixturePlayed_AndDoesNotDoubleServeOnRetry()
+        {
+            // M12: ANewBanEarnedThisFixtureIsNotServedByThisSameFixture (above) locks M7 — the ORDER
+            // between OnClubFixturePlayed and fold.Commit — and is blind to M6: moving the WHOLE
+            // serve+commit block back above MarkFixturePlayed leaves that test green, since the order
+            // between the two calls is unchanged either way. This test locks M6 itself, using
+            // SeasonLoop.TestOnly_AfterHomeClubServed so it does not depend on DisciplineRules
+            // actually being fallible under today's [GT] defaults (it is not, for OnClubFixturePlayed —
+            // L9).
+            League league = FourClubLeague();
+            Fixture fixture = league.CreateSeason(league.ClubIds()[0]).FixtureAt(0);
+
+            int homeBanned = SquadRating.StartingElevenPlayerIds(
+                league.ResolveByClubId(fixture.HomeClubId))[3];
+
+            DisciplineState state = BansOf(5, homeBanned);
+            SeasonLoop loop = LoopOver(league, RoundResolutionMode.QuickSimAll, out _, state);
+
+            loop.AdvanceToNextFixtureDay();
+
+            SeasonLoop.TestOnly_AfterHomeClubServed = () =>
+                throw new System.InvalidOperationException("M12 forced throw — locks the block's position.");
+            try
+            {
+                Assert.Throws<System.InvalidOperationException>(
+                    () => loop.AdvanceAndPlayNextRound(league));
+            }
+            finally
+            {
+                SeasonLoop.TestOnly_AfterHomeClubServed = null;
+            }
+
+            Assert.That(loop.State.FixtureAt(0).Played, Is.True,
+                "M12/M6: a throw inside the #44 serve+commit block must not leave the fixture the "
+                + "throw happened in UNPLAYED — the block runs AFTER MarkFixturePlayed. Reverting the "
+                + "block to run BEFORE MarkFixturePlayed makes this throw before the mark, and this "
+                + "assertion is exactly what would then fail.");
+
+            int afterFirstThrow = Ban(state, homeBanned);
+            Assert.That(afterFirstThrow, Is.EqualTo(4),
+                "Precondition: the home club's OnClubFixturePlayed ran once, before the injected throw.");
+
+            // Retry the SAME round. If the fixture had been left unplayed (M6 reverted), it would be
+            // re-resolved and re-served here, decrementing the SAME ban a second time — the exact
+            // double-serve hazard M6 exists to prevent.
+            loop.AdvanceAndPlayNextRound(league);
+
+            Assert.That(Ban(state, homeBanned), Is.EqualTo(afterFirstThrow),
+                "The fixture's ban was served a SECOND time on retry — the serve+commit block ran "
+                + "again for an already-played fixture.");
+        }
+
         // ── composition with #41, and the ERR-044-003 tiering ─────────────────────────────
 
         [Test]
@@ -798,4 +854,24 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | it exactly. Verified by executing: reverting M6 (swapping          |
 // |         |            |        | OnClubFixturePlayed and fold.Commit back to their pre-fix order)   |
 // |         |            |        | turns this red, and restoring the fix turns it green again.        |
+// | 1.3     | 2026-08-13 | —      | AR round 3 fix (M12). **CORRECTION to the row above:** "reverting  |
+// |         |            |        | M6 (swapping OnClubFixturePlayed and fold.Commit back to their     |
+// |         |            |        | pre-fix order)" mislabels M7 as M6 — swapping the two calls'       |
+// |         |            |        | relative order IS M7 (this test's own subject); the real M6 is    |
+// |         |            |        | the whole block's POSITION relative to MarkFixturePlayed, and      |
+// |         |            |        | moving the whole block back above MarkFixturePlayed leaves the     |
+// |         |            |        | two calls' relative order — and therefore this test — unchanged    |
+// |         |            |        | and green. New test                                                |
+// |         |            |        | AThrowInsideTheServeAndCommitBlock_LeavesTheFixturePlayed_And-     |
+// |         |            |        | DoesNotDoubleServeOnRetry locks M6 itself, via SeasonLoop's new    |
+// |         |            |        | TestOnly_AfterHomeClubServed hook (v1.23) rather than a real       |
+// |         |            |        | config-driven throw — DisciplineConstants' [GT]s cannot be         |
+// |         |            |        | rebound in this process, and OnClubFixturePlayed is not fallible   |
+// |         |            |        | under any bound config regardless (L9). VERIFIED by executing:     |
+// |         |            |        | temporarily moving the discipline block back above                |
+// |         |            |        | MarkFixturePlayed in SeasonLoop.PlayNextRound turns the NEW test   |
+// |         |            |        | red (the Played assertion fails) while leaving                     |
+// |         |            |        | ANewBanEarnedThisFixtureIsNotServedByThisSameFixture green,        |
+// |         |            |        | confirming the two tests lock two different properties; restoring  |
+// |         |            |        | the fix turns the new test green again.                            |
 #endregion

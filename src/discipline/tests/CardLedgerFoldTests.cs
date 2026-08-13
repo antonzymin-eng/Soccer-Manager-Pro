@@ -1,6 +1,7 @@
 // File:     src/discipline/tests/CardLedgerFoldTests.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 3, M13 — two Commit atomicity tests via
+//           CommitWithExplicitConfig — v1.1)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §3.1 (the occupancy fold) / §4.3 (the tap read);
 //           FR-DC-002/003/004/005/006/010; F1/F4; §5 T-DC-FOLD-001/002/003, T-DC-DET-001;
@@ -9,7 +10,8 @@
 //           (the #37 FakeTap pattern) — card-to-occupant attribution, the occupancy shift across a
 //           substitution (before/after), the FR-DC-004 unknown-ordinal ignore posture, F1/F4 fail-loud
 //           gates, the buffer-then-commit-once contract (a mid-fixture state must stay empty), the
-//           double-commit/observe-after-commit refusals, and two-run determinism.
+//           double-commit/observe-after-commit refusals, Commit's atomicity under a bad [GT] (M13),
+//           and two-run determinism.
 
 using System;
 using System.Collections.Generic;
@@ -255,6 +257,66 @@ namespace TacticalDirector.Discipline.Tests
             Assert.Throws<ArgumentNullException>(() => fold.ObserveTick(null));
         }
 
+        // ── M13: Commit is atomic — a bad [GT] refuses the WHOLE list, not card k onward ──
+        //
+        // DisciplineConstants' [GT] fields are `public static readonly`, resolved once at type
+        // initialisation to their non-negative defaults — no test in this process can bind a bad
+        // config value before that first read happens (the same L5/DisciplineRulesTests constraint).
+        // CommitWithExplicitConfig takes the four guarded values as parameters for exactly this
+        // reason, so these tests drive the real Commit body through an explicit invalid value.
+
+        [Test]
+        public void Commit_WithAnInvalidYellowThreshold_RefusesBeforeApplyingAnyCard_AndLeavesTheFoldUncommitted()
+        {
+            var fold = new CardLedgerFold(Occupancy((5, 100), (6, 101)), Competition);
+            fold.ObserveTick(new FakeLedgerTap().Add(Card(5)).Add(Card(6)));
+
+            var state = new DisciplineState();
+            var rules = new DisciplineRules(state);
+
+            Assert.Throws<InvalidOperationException>(() => fold.CommitWithExplicitConfig(
+                rules,
+                yellowThreshold: 0,   // invalid — RequireYellowThreshold refuses below 1
+                accumBan: DisciplineConstants.AccumBanMatches,
+                secondYellowBan: DisciplineConstants.SecondYellowBanMatches,
+                straightRedBan: DisciplineConstants.StraightRedBanMatches));
+
+            Assert.AreEqual(0, state.Count,
+                "Neither buffered card may reach persisted state when the [GT] guard refuses the "
+                + "commit — M13's atomicity property.");
+            Assert.AreEqual(2, fold.PendingCardCount, "the buffer itself must be untouched by the refusal.");
+
+            // The refused attempt must not have latched _committed = true either — a genuinely atomic
+            // guard runs before ANY state is touched, including the fold's own commit flag.
+            int applied = fold.Commit(rules);
+            Assert.AreEqual(2, applied, "a subsequent, correctly-configured Commit must still succeed.");
+            Assert.AreEqual(2, state.Count);
+        }
+
+        [Test]
+        public void Commit_WithAnInvalidBanLength_RefusesBeforeApplyingAnyCard()
+        {
+            // The RequireBanLength sibling of the test above — a second-yellow card mid-list must not
+            // have its yellow committed (AddYellow's effect) while the whole card is refused for the
+            // ban it also carries (the M4 atomicity property, one layer up at the fold's own commit).
+            var fold = new CardLedgerFold(Occupancy((5, 100)), Competition);
+            fold.ObserveTick(
+                new FakeLedgerTap().Add(Card(5, kind: DisciplineConstants.CARD_KIND_SECOND_YELLOW)));
+
+            var state = new DisciplineState();
+            var rules = new DisciplineRules(state);
+
+            Assert.Throws<InvalidOperationException>(() => fold.CommitWithExplicitConfig(
+                rules,
+                yellowThreshold: DisciplineConstants.YellowAccumulationThreshold,
+                accumBan: DisciplineConstants.AccumBanMatches,
+                secondYellowBan: -1,   // invalid
+                straightRedBan: DisciplineConstants.StraightRedBanMatches));
+
+            Assert.AreEqual(0, state.Count, "the card's yellow must not land while its ban length is refused.");
+            Assert.AreEqual(1, fold.PendingCardCount);
+        }
+
         // ── Determinism (FR-DC-021) ────────────────────────────────────────────────
 
         [Test]
@@ -294,4 +356,11 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | at ObserveTick, the buffer-then-commit-once anti-mid-fixture-save|
 // |         |            |        | property, double-commit/observe-after-commit refusals, and       |
 // |         |            |        | two-run determinism via DisciplineSaveCodec.Encode.               |
+// | 1.1     | 2026-08-13 | —      | AR round 3 fix (M13): two new tests drive Commit's atomicity      |
+// |         |            |        | through CommitWithExplicitConfig with an explicit invalid          |
+// |         |            |        | yellow threshold / ban length — DisciplineConstants' [GT]s cannot  |
+// |         |            |        | be rebound in this process, so the public Commit alone could not   |
+// |         |            |        | exercise the guard. Each asserts the pending cards never reach     |
+// |         |            |        | DisciplineState and the fold survives to Commit successfully once  |
+// |         |            |        | given a valid config.                                              |
 #endregion

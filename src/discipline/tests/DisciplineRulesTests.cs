@@ -1,6 +1,8 @@
 // File:     src/discipline/tests/DisciplineRulesTests.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 3, L11 — the non-discriminating kind-2
+//           order test replaced with two tests driven through the new internal ApplySecondYellow
+//           seam — v1.2)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §3.2 (thresholds & bans) / §3.3 (serving) / §3.4 (boundary &
 //           hygiene); FR-DC-006/007/011/012/013/017; F2/F4; §5 T-DC-BAN-001/002/003, T-DC-HYG-001;
@@ -245,14 +247,12 @@ namespace TacticalDirector.Discipline.Tests
         }
 
         [Test]
-        public void ApplyCard_Kind2_ValidatesSecondYellowBanMatches_BeforeAddYellowRuns()
+        public void ApplyCard_Kind2_SuccessfulCard_YellowAndBanBothLand()
         {
-            // M4's atomicity requirement: at today's non-negative default the guard never fires, so
-            // this test proves the ORDER — AddYellow's effect is observable — rather than the refusal
-            // itself (RequireBanLength_Negative_Throws above covers the refusal). A prior version of
-            // this method called AddYellow BEFORE validating the second-yellow ban length, which would
-            // have left a committed yellow (and any accumulation ban it triggers) behind a refused card
-            // the moment SecondYellowBanMatches were ever misconfigured negative.
+            // The successful-path assertion the old (misnamed) version of this test actually verified:
+            // at today's non-negative default the [GT] guard never fires, so this cannot discriminate
+            // ORDER — see ApplySecondYellow_WithAnInvalidBanLength_RefusesTheWholeCardAtomically below
+            // for that.
             DisciplineRules rules = NewRules();
             int p = PlayerId(0, 1);
 
@@ -261,6 +261,49 @@ namespace TacticalDirector.Discipline.Tests
             DisciplineEntry entry = rules.State.EntryFor(p, Competition);
             Assert.AreEqual(1, entry.Yellows, "the yellow from a successful kind-2 must land");
             Assert.AreEqual(DisciplineConstants.SecondYellowBanMatches, entry.BanMatchesRemaining);
+        }
+
+        [Test]
+        public void ApplySecondYellow_WithAnInvalidBanLength_RefusesTheWholeCardAtomically()
+        {
+            // L11: replaces ApplyCard_Kind2_ValidatesSecondYellowBanMatches_BeforeAddYellowRuns, which
+            // could not discriminate order — DisciplineConstants.SecondYellowBanMatches is a public
+            // static readonly, resolved once at its non-negative default, so no test in this process
+            // can drive ApplyCard's real dispatch through a bad value (GameplayConfigHolder's
+            // lock-on-first-read contract, same as the M4/L5 guard tests above). ApplySecondYellow
+            // takes the ban length as a parameter for exactly this reason, so this test supplies an
+            // explicit -1 and can genuinely tell "validated before AddYellow" from "validated after":
+            // under the pre-M4 order this would leave Yellows == 1 despite the throw.
+            DisciplineRules rules = NewRules();
+            int p = PlayerId(0, 1);
+
+            Assert.Throws<InvalidOperationException>(
+                () => rules.ApplySecondYellow(p, Competition, secondYellowBanMatches: -1));
+
+            DisciplineEntry entry = rules.State.EntryFor(p, Competition);
+            Assert.AreEqual(0, entry.Yellows,
+                "AddYellow's effect must not be committed when the ban length is refused — the "
+                + "validation runs BEFORE AddYellow, not after (M4).");
+            Assert.AreEqual(0, entry.BanMatchesRemaining);
+        }
+
+        [Test]
+        public void ApplySecondYellow_WithAValidBanLength_MatchesApplyCardsKind2Behaviour()
+        {
+            // Confirms ApplyCard's kind-2 case genuinely DELEGATES to ApplySecondYellow rather than
+            // carrying a parallel copy of the same three lines — the parallel-surface defect class this
+            // repo keeps filing (#29/#41 T2 AR's H3, this landing's own D2/M9).
+            DisciplineRules viaApplyCard = NewRules();
+            DisciplineRules viaDirectCall = NewRules();
+            int p = PlayerId(0, 1);
+
+            viaApplyCard.ApplyCard(p, Competition, DisciplineConstants.CARD_KIND_SECOND_YELLOW);
+            viaDirectCall.ApplySecondYellow(p, Competition, DisciplineConstants.SecondYellowBanMatches);
+
+            DisciplineEntry expected = viaApplyCard.State.EntryFor(p, Competition);
+            DisciplineEntry actual = viaDirectCall.State.EntryFor(p, Competition);
+            Assert.AreEqual(expected.Yellows, actual.Yellows);
+            Assert.AreEqual(expected.BanMatchesRemaining, actual.BanMatchesRemaining);
         }
 
         // ── OnClubFixturePlayed ─────────────────────────────────────────────────────
@@ -552,4 +595,15 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | locks for OnClubFixturePlayed and RollToNextSeason's descending  |
 // |         |            |        | walks — verified red under a reverted ascending walk, then       |
 // |         |            |        | restored.                                                        |
+// | 1.2     | 2026-08-13 | —      | AR round 3 fix (L11): ApplyCard_Kind2_ValidatesSecondYellowBan-  |
+// |         |            |        | Matches_BeforeAddYellowRuns claimed to prove the M4 ORDER but    |
+// |         |            |        | could not — at the non-negative default the guard never fires,  |
+// |         |            |        | so both assertions held identically either order. Renamed to    |
+// |         |            |        | ApplyCard_Kind2_SuccessfulCard_YellowAndBanBothLand (what it     |
+// |         |            |        | actually asserts) and paired with two new tests driven through  |
+// |         |            |        | the new DisciplineRules.ApplySecondYellow seam (L11, this file's|
+// |         |            |        | own change): one supplies an explicit invalid ban length and     |
+// |         |            |        | asserts AddYellow's effect is absent (genuine order              |
+// |         |            |        | discrimination), one proves ApplyCard's kind-2 case actually     |
+// |         |            |        | delegates rather than duplicating the logic.                    |
 #endregion

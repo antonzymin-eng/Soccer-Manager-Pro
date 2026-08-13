@@ -1,7 +1,14 @@
 # Discipline & Suspensions #44 — Section 2: Requirements, Data Structures, Failure Modes
 
 **Created:** July 24, 2026
-**Last Updated:** August 13, 2026, later same day (v0.5 — ERR-044-004 + ERR-044-005, back-props owed
+**Last Updated:** August 13, 2026, later still (v0.6 — L12(c) + L13, a third adversarial-review pass
+over the #44 C1/C2 landing: §2.2's API block corrected to the real landed signatures — no
+`MarkSuspended`, `DisciplineRules` or `DisciplineEntry` shown at all, and `FilterAvailable`/`IsAvailable`
+carried signatures the code does not have (no `competitionId` on the filter, `in DisciplineState` on a
+class) — now the actual `DisciplineState`/`DisciplineEntry`/`CardLedgerFold`/`Availability`/
+`DisciplineRules` surface; §2.3 gains **F6**, the two `[GT]` fail-loud guards
+(`RequireYellowThreshold`/`RequireBanLength`), which had no normative source at all)
+**Last Updated (prior):** August 13, 2026, later same day (v0.5 — ERR-044-004 + ERR-044-005, back-props owed
 by the #44 C1/C2 adversarial review: F2's fail-loud stated explicitly for a negative/unresolvable
 `PlayerId`, not just a negative `clubId`; FR-DC-009 gains the all-suspended-squad `null`-return case)
 **Last Updated (prior):** August 13, 2026 (v0.4 — ERR-044-002 + ERR-044-003, C1/C2 landing back-prop: FR-DC-010
@@ -9,7 +16,7 @@ re-scoped off "the engine-resolved fixture" to every resolved squad on both reso
 fail-loud withdrawn in favour of #30 §2.3 F9, with the suspension-as-stricter-reinstatement-tier
 decision recorded)
 **Last Updated (prior):** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.5
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -47,22 +54,48 @@ decision recorded)
 // The per-player season tally (serialized, KD-1). Keyed (PlayerId, CompetitionId); canonical
 // ascending order; CompetitionId = 0 at minimal (FR-DC-012). All integer.
 public sealed class DisciplineState
-{ /* map (int PlayerId, int CompetitionId) -> (int Yellows, int BanMatchesRemaining); NO RNG state */ }
+{ /* map (int PlayerId, int CompetitionId) -> DisciplineEntry; NO RNG state */ }
+
+// One tally row (F2's PlayerId >= 0 invariant enforced at construction).
+public readonly struct DisciplineEntry
+{
+    public readonly int PlayerId;
+    public readonly int CompetitionId;
+    public readonly int Yellows;
+    public readonly int BanMatchesRemaining;
+}
 
 // KD-2 — the read-only fold, fed by the #37-class per-tick tap during an engine-resolved fixture.
+// Buffers the fixture's cards and commits them ONCE, at resolution (§3.1, FR-DC-010).
 public sealed class CardLedgerFold
 {
-    /* slot->PlayerId occupancy (seeded from the root's configured lineup, incl. bench identities);
-       SubstitutionEvent updates occupancy; CardIssuedEvent attributes to the occupant at its tick
-       and applies FR-DC-006/007. Unknown ordinals ignored (FR-DC-004). */
+    public CardLedgerFold(int[] occupancyByAgentId, int competitionId);
+    public void ObserveTick(IDisciplineTickLedgerTap tap);
+    public int  Commit(DisciplineRules rules);   // fallible under a bound [GT] — F6
 }
 
 // KD-4 — the availability view (pure; never mutates #27 state).
-public static bool  IsAvailable(in DisciplineState s, int playerId, int competitionId = 0);
-public static Squad FilterAvailable(in Squad resolved, in DisciplineState s);   // reduced VALUE COPY
+public static class Availability
+{
+    public static bool  IsAvailable(DisciplineState state, int playerId, int competitionId);
+    // #30's composed-seam contribution (§3.3) — OWNS removed/recoveryRemaining (M14).
+    public static int   MarkSuspended(Squad squad, DisciplineState state, int competitionId, bool[] removed);
+    // reduced VALUE COPY; FR-DC-009's OWN surface, not #44's production path — see FR-DC-009.
+    public static Squad FilterAvailable(Squad squad, DisciplineState state, int competitionId);
+}
 
-// KD-3 — ban serving (one decrement per played club fixture, either resolution path).
-public void OnClubFixturePlayed(int clubId /*, int competitionId = 0 */);
+// §3.2/§3.3/§3.4 — the sole mutating entry point onto DisciplineState.
+public sealed class DisciplineRules
+{
+    public DisciplineRules(DisciplineState state);
+    public void ApplyCard(int playerId, int competitionId, byte cardKind);   // FR-DC-006 — F4/F6
+    public void AddYellow(int playerId, int competitionId);                  // F6
+    public void AddBan(int playerId, int competitionId, int matches);
+    public void OnClubFixturePlayed(int clubId);                             // KD-3 — every competition of that club
+    public void RollToNextSeason();                                         // FR-DC-017
+    public void MigratePlayerId(int oldPlayerId, int newPlayerId);          // FR-DC-013 — F2
+    public void DropPlayer(int playerId);                                   // FR-DC-013
+}
 ```
 
 ## 2.3 Failure modes
@@ -74,6 +107,7 @@ public void OnClubFixturePlayed(int clubId /*, int competitionId = 0 */);
 | **F3** | Discipline sub-blob: bad version / out-of-bounds length / trailing bytes / non-ascending keys / negative values | **Fail loud** — the `SeasonSaveCodec` posture (FR-DC-015). |
 | **F4** | A `CardKind` outside `{0, 1, 2}` on the tap | **Fail loud** — an unknown card kind is an engine-contract change #44 must not guess about (contrast F5-class unknown *ordinals*, which are ignored — a known event with an unknown *payload value* is different). |
 | **F5** | *(WITHDRAWN as a fail-loud, ERR-044-003, August 13, 2026 — see the note below the table.)* `FilterAvailable` reducing a squad below the engine's minimum viable size (fewer than the 18 `ConfigureSquads` consumes) | #44 contributes **removals only**; the composed seam's viability rule is **#30 §2.3 F9** (Season & Competition Loop, approved after this row was written). #44's `FilterAvailable`/`MarkSuspended` implement no viability gate at all — see below. |
+| **F6** | A bound config setting `YellowAccumulationThreshold < 1` (the residual subtraction in §3.2 can never terminate a crossing, so every single yellow would ban) or a negative `AccumBanMatches`/`SecondYellowBanMatches`/`StraightRedBanMatches` | **Fail loud** — guarded at the site that would otherwise WRITE the breach (`DisciplineRules.AddYellow`/`ApplyCard`, `CardLedgerFold.Commit`), not the constant catalogue: the catalogue's own lock runs config-unbound and sees the fallback forever (the ERR-041-003 class), so a shipped config could otherwise silently ban a player on his first yellow, or leave a mid-fixture `Commit` half-applied. |
 
 **ERR-044-003 (F5 vs #30 §2.3 F9).** This spec's original F5 required `FilterAvailable` to fail loud
 the moment it reduced a squad below eighteen. #30 §2.3 F9 / §3.4 (ERR-030-029, approved after #44)
@@ -105,4 +139,5 @@ this as now a live decision.
 | 0.3 | 2026-07-24 | — | Cross-set AR pass 3 (M): FR-DC-010 pins **both-squads filter coverage** — the seam applies to each resolved squad of the engine-resolved fixture (managed club AND opponent); the unscoped v0.2 wording let a managed-squad-only implementation pass every test while banned opponents played through their bans. |
 | 0.4 | 2026-08-13 | — | **C1/C2 landing back-prop.** **ERR-044-002:** FR-DC-010's "the engine-resolved fixture" contradicted FR-DC-011's "regardless of resolution path" one row below and #30 §3.4's LIVE both-paths seam; re-scoped to every resolved squad of every fixture on both resolution paths. **ERR-044-003:** F5's fail-loud withdrawn — #30 §2.3 F9 (approved after this spec) settles the same depleted-squad event by back-filling instead, and #44 contributes removals only; recorded that a suspended player is reinstatable in extremis under #30's never-worse-than-unfiltered invariant, making suspension a stricter reinstatement tier than injury rather than an absolute bar. |
 | 0.5 | 2026-08-13 | — | **Adversarial-review back-prop.** **ERR-044-004:** F2 stated only "a club/player outside the resolvable universe" and the implementation had guarded the club half alone — a negative `PlayerId` truncation-derives to club 0 and was silently served, decremented and migrated; F2 now names the player half explicitly and cites both refusal sites (`DisciplineEntry`'s constructor, `DisciplineSaveCodec.Decode`/F3). **ERR-044-005:** FR-DC-009's "reduced value copy" requirement was total as written but unsatisfiable for an all-suspended squad (`Squad` cannot represent zero players); FR-DC-009 now states the `null`-return case and names `MarkSuspended`'s mask, consumed by #30's composed seam, as the actual production path — `FilterAvailable` is FR-DC-009's own surface, not #44's. |
+| 0.6 | 2026-08-13 | — | **L12(c) + L13**, a third adversarial-review pass. **L12(c):** §2.2's code block — the first place an implementer looks — showed only `DisciplineState`/`CardLedgerFold`/two free-floating `Availability` methods/one free-floating `OnClubFixturePlayed`, none matching the landed signatures (`IsAvailable`/`FilterAvailable` took `in DisciplineState` with a default `competitionId`, neither of which the code has; `MarkSuspended`, `DisciplineRules` and `DisciplineEntry` were absent entirely). Replaced with the real surface. **L13:** the failure-mode table stopped at F4 while `DisciplineRules.RequireYellowThreshold`/`RequireBanLength` are enforced in production and unit-tested (the AR pass 9 #29/#41 F8 precedent for exactly this omission class); new **F6** row added, and the matching guard calls landed in `section-3.md` §3.2's `AddYellow` pseudocode. |
 #endregion

@@ -1,6 +1,8 @@
 // File:     src/discipline/CardLedgerFold.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 3, M13 — Commit made atomic: the three
+//           [GT]s a fixture's cards could touch are now validated ONCE, before any card is applied,
+//           via the new internal CommitWithExplicitConfig — v1.2)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §3.1 (the occupancy fold) / §4.3 (the tap read);
 //           FR-DC-002/003/004/005/006/010; F1/F4; ERR-044-001 (Appendix C's bench-id defect);
@@ -183,14 +185,63 @@ namespace TacticalDirector.Discipline
         /// <returns>The number of cards applied.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="rules"/> is null.</exception>
         /// <exception cref="InvalidOperationException">This fold has already been committed — a second
-        /// commit would double every card in the fixture.</exception>
+        /// commit would double every card in the fixture; or a bound <c>[GT]</c> this fixture's cards
+        /// could touch is out of range (M13 — see <see cref="CommitWithExplicitConfig"/>).</exception>
         public int Commit(DisciplineRules rules)
         {
             if (rules == null)
             {
                 throw new ArgumentNullException(nameof(rules));
             }
+
+            return CommitWithExplicitConfig(
+                rules,
+                DisciplineConstants.YellowAccumulationThreshold,
+                DisciplineConstants.AccumBanMatches,
+                DisciplineConstants.SecondYellowBanMatches,
+                DisciplineConstants.StraightRedBanMatches);
+        }
+
+        /// <summary>
+        /// <see cref="Commit"/>'s real body, with the three <c>[GT]</c>s <paramref name="rules"/>' card
+        /// application can throw on taken as PARAMETERS rather than read directly off
+        /// <see cref="DisciplineConstants"/> (M13). This is the L5/L11 seam — the same reason
+        /// <c>DisciplineRules.RequireYellowThreshold</c>/<c>RequireBanLength</c> are <c>internal</c> —
+        /// extended here because <see cref="DisciplineConstants"/>' fields are resolved once, at their
+        /// non-negative defaults, before any test in this process can bind a bad config value, so
+        /// nothing exercised through the public <see cref="Commit"/> can observe the property this
+        /// method exists to guarantee: a throw on card <c>k</c> must leave cards <c>0..k-1</c>
+        /// UNAPPLIED and <see cref="_committed"/> still <c>false</c>, never applied-then-discarded.
+        /// <para>
+        /// <b>M13.</b> Applying cards one at a time through <see cref="DisciplineRules.ApplyCard"/> and
+        /// letting a bad <c>[GT]</c> throw mid-list left cards <c>0..k-1</c> already written to
+        /// persisted state while the fold — carrying card <c>k</c> onward, uncommitted — was discarded
+        /// by the caller: exactly the half-fixture tally buffering exists to prevent (see the type
+        /// remarks). M6 made the consequence PERMANENT: the fixture is marked played by the time
+        /// <c>SeasonLoop.PlayNextRound</c> calls this, so a retry's unplayed-index filter skips it and
+        /// the partial tally can never be repaired. Fixed by validating every <c>[GT]</c> this
+        /// fixture's cards could touch ONCE, before the loop, so a refusal can never follow a partial
+        /// write.
+        /// </para>
+        /// </summary>
+        /// <exception cref="InvalidOperationException">This fold has already been committed, or one of
+        /// the four arguments is out of range for the guard it names.</exception>
+        internal int CommitWithExplicitConfig(
+            DisciplineRules rules, int yellowThreshold, int accumBan, int secondYellowBan, int straightRedBan)
+        {
             RequireNotCommitted();
+
+            // Every card this fixture could have booked is one of {yellow, second-yellow, straight
+            // red} (F4 already refused anything else at ObserveTick), so validating all three [GT]s
+            // up front — rather than only the one(s) this fixture's own cards happen to touch — is
+            // what makes the guard unconditional and the atomicity property hold regardless of which
+            // kinds are pending.
+            DisciplineRules.RequireYellowThreshold(yellowThreshold);
+            DisciplineRules.RequireBanLength(accumBan, nameof(DisciplineConstants.AccumBanMatches));
+            DisciplineRules.RequireBanLength(
+                secondYellowBan, nameof(DisciplineConstants.SecondYellowBanMatches));
+            DisciplineRules.RequireBanLength(
+                straightRedBan, nameof(DisciplineConstants.StraightRedBanMatches));
 
             for (int i = 0; i < _pending.Count; i++)
             {
@@ -281,4 +332,18 @@ namespace TacticalDirector.Discipline
 // |         |            |        | so a mid-fixture restore loses every pre-save card outright.      |
 // |         |            |        | Buffering keeps a half-fixture tally OUT of persisted state;      |
 // |         |            |        | correctness additionally needs the pending list serialized.      |
+// | 1.2     | 2026-08-13 | —      | AR round 3 fix (M13): Commit is now atomic. It previously applied |
+// |         |            |        | cards one at a time through DisciplineRules.ApplyCard, which is   |
+// |         |            |        | fallible under a bound config — a throw on card k left cards      |
+// |         |            |        | 0..k-1 already written while the fold, carrying card k onward,    |
+// |         |            |        | was discarded uncommitted by the caller, exactly the half-fixture |
+// |         |            |        | tally buffering exists to prevent, and M6 made the consequence    |
+// |         |            |        | PERMANENT (the fixture is already marked played). Fixed by        |
+// |         |            |        | extracting the real body to internal CommitWithExplicitConfig,    |
+// |         |            |        | which validates RequireYellowThreshold + the three RequireBanLength|
+// |         |            |        | guards ONCE before the loop; Commit(rules) passes the real         |
+// |         |            |        | DisciplineConstants values through it. Locked by                  |
+// |         |            |        | CardLedgerFoldTests' two new atomicity tests, which drive the     |
+// |         |            |        | guard through an explicit bad value since DisciplineConstants'    |
+// |         |            |        | fields cannot be rebound in this process (the same L5/L11 seam).  |
 #endregion

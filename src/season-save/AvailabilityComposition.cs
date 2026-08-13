@@ -1,9 +1,12 @@
 // File:     src/season-save/AvailabilityComposition.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 2, L7 — the type remarks now record that
-//           the extremis back-fill fields a suspended player AND that same fixture's serving
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 3, M14 — both contributors now own the
+//           mask they are handed; Compose allocates one per contributor and does all the OR-ing
+//           itself, and the stale MarkSuspended-skips-entries-already-true comment (accurate before
+//           round 1's M3, false since) is replaced — v1.2. Prior: v1.1 L7 — the type remarks record
+//           that the extremis back-fill fields a suspended player AND that same fixture's serving
 //           decrement then discharges his ban regardless; extended in spec-error-log.md's ERR-044-003
-//           row rather than a new id — v1.1)
+//           row rather than a new id.)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.4 (the composed availability seam — ERR-030-016 multiple
 //           consumers, ERR-030-029 the depleted-squad rule, §2.3 F9) / FR-SN-013 / ERR-030-009;
@@ -110,17 +113,34 @@ namespace TacticalDirector.SeasonSave
             // Meaningful only where removed && !suspended: #41's ordering key for the back-fill.
             var recoveryRemaining = new int[total];
 
+            // M14: both contributors OWN the mask they are handed — every entry is (re)written
+            // unconditionally (Availability.MarkSuspended and, since M14, PlayerCareerStates.
+            // MarkUnavailable). A shared mask would let one contributor's write silently CLEAR a
+            // removal the OTHER had already made, so each gets its OWN freshly allocated mask here,
+            // and this method does all the OR-ing and counting — one contract, stated once, for both
+            // contributors, rather than a per-contributor hazard documented around.
             int removedCount = 0;
+
             if (career != null)
             {
-                removedCount += career.MarkUnavailable(squad, removed, recoveryRemaining);
+                var injuredMask = new bool[total];
+                career.MarkUnavailable(squad, injuredMask, recoveryRemaining);
+                for (int i = 0; i < total; i++)
+                {
+                    if (!injuredMask[i])
+                    {
+                        continue;
+                    }
+                    if (!removed[i])
+                    {
+                        removed[i] = true;
+                        removedCount++;
+                    }
+                }
             }
 
             if (discipline != null)
             {
-                // A separate mask, then OR'd in — MarkSuspended skips entries already true, so passing
-                // the shared mask would leave a player who is BOTH injured and suspended untagged as
-                // suspended and back-fillable in the cheaper tier.
                 var suspendedMask = new bool[total];
                 Availability.MarkSuspended(squad, discipline, competitionId, suspendedMask);
                 for (int i = 0; i < total; i++)
@@ -260,4 +280,16 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | anyway — the ERR-044-002 hazard reintroduced by ERR-044-003's    |
 // |         |            |        | compromise. Owner call recorded, not decided; extends the        |
 // |         |            |        | existing ERR-044-003 row in spec-error-log.md.                   |
+// | 1.2     | 2026-08-13 | —      | AR round 3 fix (M14): the two contributors carried OPPOSITE mask |
+// |         |            |        | contracts — round 1's M3 made MarkSuspended an OWNING writer     |
+// |         |            |        | while PlayerCareerStates.MarkUnavailable stayed additive — and   |
+// |         |            |        | this file's own comment above the discipline block still         |
+// |         |            |        | described the retired additive hazard as current. Both           |
+// |         |            |        | contributors now OWN the mask they are handed (MarkUnavailable's |
+// |         |            |        | own fix is in PlayerCareerStates.cs); Compose allocates a fresh  |
+// |         |            |        | mask per contributor and does all the OR-ing and counting        |
+// |         |            |        | itself — the shape it already used for #44, now used for #41     |
+// |         |            |        | too — and the stale comment is replaced with the real reason a   |
+// |         |            |        | separate mask is required: an owning writer would clear the      |
+// |         |            |        | other contributor's removals if they shared one.                 |
 #endregion
