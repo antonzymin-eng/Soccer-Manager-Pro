@@ -1,8 +1,8 @@
 // File:     src/discipline/CardLedgerFold.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 3, M13 — Commit made atomic: the three
-//           [GT]s a fixture's cards could touch are now validated ONCE, before any card is applied,
-//           via the new internal CommitWithExplicitConfig — v1.2)
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 4, M17 — the four [GT] guards are shared
+//           with a new fold-free RequireCommittableConfig(), so a round can run them BEFORE it marks
+//           any fixture played rather than discovering a bad config after the mark — v1.3)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §3.1 (the occupancy fold) / §4.3 (the tap read);
 //           FR-DC-002/003/004/005/006/010; F1/F4; ERR-044-001 (Appendix C's bench-id defect);
@@ -223,6 +223,14 @@ namespace TacticalDirector.Discipline
         /// fixture's cards could touch ONCE, before the loop, so a refusal can never follow a partial
         /// write.
         /// </para>
+        /// <para>
+        /// <b>M17 — atomicity is not recoverability.</b> This makes the commit all-or-nothing, which
+        /// leaves the fixture's whole card list lost rather than half-applied, and M6's placement makes
+        /// THAT permanent too. The round-level answer is <see cref="RequireCommittableConfig()"/>, run
+        /// once before the first fixture of the round is touched; the guards below stay because they
+        /// are this type's own contract and a caller that skipped the pre-check still must not write
+        /// half a fixture.
+        /// </para>
         /// </summary>
         /// <exception cref="InvalidOperationException">This fold has already been committed, or one of
         /// the four arguments is out of range for the guard it names.</exception>
@@ -231,17 +239,7 @@ namespace TacticalDirector.Discipline
         {
             RequireNotCommitted();
 
-            // Every card this fixture could have booked is one of {yellow, second-yellow, straight
-            // red} (F4 already refused anything else at ObserveTick), so validating all three [GT]s
-            // up front — rather than only the one(s) this fixture's own cards happen to touch — is
-            // what makes the guard unconditional and the atomicity property hold regardless of which
-            // kinds are pending.
-            DisciplineRules.RequireYellowThreshold(yellowThreshold);
-            DisciplineRules.RequireBanLength(accumBan, nameof(DisciplineConstants.AccumBanMatches));
-            DisciplineRules.RequireBanLength(
-                secondYellowBan, nameof(DisciplineConstants.SecondYellowBanMatches));
-            DisciplineRules.RequireBanLength(
-                straightRedBan, nameof(DisciplineConstants.StraightRedBanMatches));
+            RequireCommittableConfig(yellowThreshold, accumBan, secondYellowBan, straightRedBan);
 
             for (int i = 0; i < _pending.Count; i++)
             {
@@ -251,6 +249,59 @@ namespace TacticalDirector.Discipline
 
             _committed = true;
             return _pending.Count;
+        }
+
+        /// <summary>
+        /// Validates every <c>[GT]</c> a <see cref="Commit"/> could throw on — <b>without a fold</b>, so
+        /// a caller can run the check BEFORE it starts mutating state a throw would strand (M17).
+        /// <para>
+        /// <b>Why a round-level caller needs this.</b> <see cref="CommitWithExplicitConfig"/> already
+        /// makes one fixture's commit atomic (M13), but atomicity within the fixture is not
+        /// recoverability of the round: <c>SeasonLoop.PlayNextRound</c> commits AFTER
+        /// <c>MarkFixturePlayed</c> (M6, ERR-030-037), deliberately, so a throw here leaves the fixture
+        /// marked played with its whole card list gone and the retry's unplayed-index filter skipping
+        /// it — permanently. A bad <c>[GT]</c> is a property of the CONFIG, identical for every fixture
+        /// in the round, so the round can ask this question once, before the first fixture is touched,
+        /// and refuse with nothing written at all.
+        /// </para>
+        /// <para>
+        /// Reads the live <see cref="DisciplineConstants"/> values, which is exactly what
+        /// <see cref="Commit"/> passes — one source, two entry points, so the round-level pre-check
+        /// cannot drift from the guard it front-runs.
+        /// </para>
+        /// </summary>
+        /// <exception cref="InvalidOperationException">A bound <c>[GT]</c> is out of range for the
+        /// guard it names — the same exception, from the same guards, that <see cref="Commit"/> would
+        /// have thrown.</exception>
+        public static void RequireCommittableConfig()
+        {
+            RequireCommittableConfig(
+                DisciplineConstants.YellowAccumulationThreshold,
+                DisciplineConstants.AccumBanMatches,
+                DisciplineConstants.SecondYellowBanMatches,
+                DisciplineConstants.StraightRedBanMatches);
+        }
+
+        /// <summary>
+        /// The four guards, with the values taken as PARAMETERS — the L5/L11 seam
+        /// <see cref="CommitWithExplicitConfig"/> exists for, shared with it so one rule has one owner.
+        /// <para>
+        /// Every card a fixture could have booked is one of {yellow, second-yellow, straight red} (F4
+        /// already refused anything else at <see cref="ObserveTick"/>), so validating all four values
+        /// up front — rather than only the one(s) a given fixture's cards happen to touch — is what
+        /// makes the guard unconditional: the answer does not depend on which fold is asking, which is
+        /// what lets the round ask before any fold exists.
+        /// </para>
+        /// </summary>
+        internal static void RequireCommittableConfig(
+            int yellowThreshold, int accumBan, int secondYellowBan, int straightRedBan)
+        {
+            DisciplineRules.RequireYellowThreshold(yellowThreshold);
+            DisciplineRules.RequireBanLength(accumBan, nameof(DisciplineConstants.AccumBanMatches));
+            DisciplineRules.RequireBanLength(
+                secondYellowBan, nameof(DisciplineConstants.SecondYellowBanMatches));
+            DisciplineRules.RequireBanLength(
+                straightRedBan, nameof(DisciplineConstants.StraightRedBanMatches));
         }
 
         /// <summary>
@@ -346,4 +397,15 @@ namespace TacticalDirector.Discipline
 // |         |            |        | CardLedgerFoldTests' two new atomicity tests, which drive the     |
 // |         |            |        | guard through an explicit bad value since DisciplineConstants'    |
 // |         |            |        | fields cannot be rebound in this process (the same L5/L11 seam).  |
+// | 1.3     | 2026-08-13 | —      | AR round 4 fix (M17): the four [GT] guards move into a shared      |
+// |         |            |        | RequireCommittableConfig — a public no-argument form reading the   |
+// |         |            |        | live DisciplineConstants, and the internal four-argument form      |
+// |         |            |        | CommitWithExplicitConfig now delegates to. Commit's atomicity      |
+// |         |            |        | (v1.2) stops a HALF-applied fixture but not a LOST one: M6 puts    |
+// |         |            |        | the commit after MarkFixturePlayed, so a config refusal there      |
+// |         |            |        | strands the round permanently and loses the fixture's whole card   |
+// |         |            |        | list. A bad [GT] is a property of the config, identical for every  |
+// |         |            |        | fixture, so SeasonLoop.PlayNextRound now asks once before the      |
+// |         |            |        | fixture loop. No behaviour change to Commit itself: same guards,   |
+// |         |            |        | same order, same values, one owner.                               |
 #endregion

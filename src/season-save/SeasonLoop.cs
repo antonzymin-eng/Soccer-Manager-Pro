@@ -1,18 +1,19 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
-// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 3, M12/L9/L10 — v1.23. M12: a
-//           TestOnly_AfterHomeClubServed hook added so the discipline serve+commit block's POSITION
-//           relative to MarkFixturePlayed is lockable independently of whether DisciplineRules
-//           happens to be fallible today — v1.22's row below is corrected in place (it did not add
-//           the lock it implied). L9: the M6 comment corrected — only fold.Commit is fallible under a
-//           bound config, not OnClubFixturePlayed. L10: the RollToNextSeason boundary-sweep comment
-//           corrected — the sweep IS idempotent; the hazard is its FIRST run against a roll that then
-//           gets refused, not a second run. Prior: v1.22 M6/M11/L1 — serve+commit moved below
-//           MarkFixturePlayed (M6, ERR-030-037), the FR-DC-013 re-key/drop deferral recorded at the
-//           RollToNextSeason roster-sync site (M11), and the inverted-order comment sentence deleted
-//           (L1). v1.21 Restore threads disciplineOrNull (H1); v1.20 #44 T2's four discipline drive
-//           points; v1.19 the BirthWorldDay-vs-clock composition check; the pass 1-3 recording chain
-//           and the pass-5 doc fix are the rows below.)
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 4, M17/M16 — v1.24. M17: PlayNextRound
+//           runs CardLedgerFold.RequireCommittableConfig with its other guards, before the fixture
+//           loop, so the config cause of a post-MarkFixturePlayed commit throw — which strands the
+//           round permanently and loses the fixture's whole card list — is refused while nothing has
+//           been written; M6's ordering unchanged, both its comment and #30 §3.4 corrected to state
+//           that cost honestly. M16: TestOnly_AfterHomeClubServed deleted; the serve+commit
+//           collaborator is the constructor-injected IFixtureDisciplineDriver seam (FR-CS-051..054).
+//           Prior: v1.23 M12/L9/L10 — the (now deleted) static hook, the M6 comment corrected to
+//           "only fold.Commit is fallible", and the boundary-sweep comment. v1.22 M6/M11/L1 —
+//           serve+commit moved below MarkFixturePlayed (M6, ERR-030-037), the FR-DC-013 re-key/drop
+//           deferral recorded at the RollToNextSeason roster-sync site (M11), and the inverted-order
+//           comment sentence deleted (L1). v1.21 Restore threads disciplineOrNull (H1); v1.20 #44
+//           T2's four discipline drive points; v1.19 the BirthWorldDay-vs-clock composition check;
+//           the pass 1-3 recording chain and the pass-5 doc fix are the rows below.)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (day advance / KD-2 tick order), §3.4 (playing a round /
 //           KD-9), §3.5 (season-boundary roll / KD-6), §4.3 (the composition root), §4.6 (the #22
@@ -90,20 +91,58 @@ namespace TacticalDirector.SeasonSave
         private readonly DisciplineState _discipline;
         private readonly DisciplineRules _disciplineRules;
 
+        // The per-fixture #44 collaborator PlayNextRound drives — null exactly when _disciplineRules
+        // is. Constructor-injected (M16) rather than reached through a static hook: the loop's own
+        // driver is a thin adapter over _disciplineRules, and a test that needs the block to throw
+        // supplies its own implementation instead of the production ordering carrying a call to a
+        // process-static delegate (FR-CS-051..054 — a static mutable field cannot be reset between
+        // deterministic replays, and "a test MUST clear it in a finally" is the documented-not-enforced
+        // standard this assembly rejects for ScheduleFor / TrySetFocus one file over).
+        private readonly IFixtureDisciplineDriver _disciplineDriver;
+
         private TacticalDirector.MatchEngine.MatchEngine _activeMatch;
 
         /// <summary>
-        /// Test-only injection point (M12): invoked, if set, between the home-club and away-club
-        /// <c>OnClubFixturePlayed</c> calls inside <see cref="PlayNextRound"/>'s discipline block —
-        /// i.e. AFTER at least one real serving decrement, but still inside the block M6 positions
-        /// after <see cref="SeasonState.MarkFixturePlayed"/>. Exists solely to lock that POSITION
-        /// property independently of whether today's <c>[GT]</c> defaults happen to make
-        /// <c>DisciplineRules</c> fallible — see
-        /// <c>SeasonLoopDisciplineTests.AThrowInsideTheServeAndCommitBlock_LeavesTheFixturePlayed_AndDoesNotDoubleServeOnRetry</c>.
-        /// Null in every production path; a test MUST clear it in a <c>finally</c>/<c>TearDown</c>,
-        /// since it is process-static.
+        /// The per-fixture #44 surface <see cref="PlayNextRound"/> drives: the FR-DC-011 serving
+        /// decrement and the FR-DC-010 commit of the fixture's folded cards, in that pinned order.
+        /// <para>
+        /// A seam, not an abstraction boundary: production has exactly one implementation
+        /// (<see cref="RulesFixtureDisciplineDriver"/>, over this loop's own
+        /// <see cref="DisciplineRules"/>), and it exists so a test can substitute a failing
+        /// collaborator through the constructor rather than through process-static state (M16). It is
+        /// <c>internal</c> because both sides are in this assembly or its test assembly — no phantom
+        /// interface (FR-CS-048/049).
+        /// </para>
         /// </summary>
-        internal static System.Action TestOnly_AfterHomeClubServed;
+        internal interface IFixtureDisciplineDriver
+        {
+            /// <summary>One club's FR-DC-011 ban-serving decrement for a played fixture.</summary>
+            void OnClubFixturePlayed(int clubId);
+
+            /// <summary>
+            /// Commits this fixture's folded cards (FR-DC-010). <paramref name="foldOrNull"/> is null on
+            /// the quick-sim path, which synthesizes no cards — serving still ran.
+            /// </summary>
+            void CommitFixtureCards(CardLedgerFold foldOrNull);
+        }
+
+        /// <summary>The production <see cref="IFixtureDisciplineDriver"/>: a direct pass-through to the
+        /// loop's <see cref="DisciplineRules"/>, holding no state of its own.</summary>
+        private sealed class RulesFixtureDisciplineDriver : IFixtureDisciplineDriver
+        {
+            private readonly DisciplineRules _rules;
+
+            internal RulesFixtureDisciplineDriver(DisciplineRules rules)
+            {
+                _rules = rules;
+            }
+
+            /// <inheritdoc />
+            public void OnClubFixturePlayed(int clubId) => _rules.OnClubFixturePlayed(clubId);
+
+            /// <inheritdoc />
+            public void CommitFixtureCards(CardLedgerFold foldOrNull) => foldOrNull?.Commit(_rules);
+        }
 
         /// <summary>
         /// Composes a loop over an existing world and season.
@@ -149,6 +188,35 @@ namespace TacticalDirector.SeasonSave
             ISquadProvider careerSquadsOrNull = null,
             ProgressionEngine progressionOrNull = null,
             DisciplineState disciplineOrNull = null)
+            : this(
+                world, season, mode, careerOrNull, careerSquadsOrNull, progressionOrNull,
+                disciplineOrNull, disciplineDriverOrNull: null)
+        {
+        }
+
+        /// <summary>
+        /// The one constructor body, plus the <see cref="IFixtureDisciplineDriver"/> seam (M16).
+        /// <para>
+        /// <paramref name="disciplineDriverOrNull"/> is <c>null</c> in every production path — the loop
+        /// then builds <see cref="RulesFixtureDisciplineDriver"/> over its own
+        /// <see cref="DisciplineRules"/>, which is exactly what the block ran before this seam existed.
+        /// A test supplies a driver to make the serve+commit block fail on demand, so the property M6
+        /// pins (a throw there leaves the fixture PLAYED and does not double-serve on retry) is lockable
+        /// without depending on today's <c>[GT]</c> defaults making <c>DisciplineRules</c> fallible —
+        /// and without the production ordering carrying a call to process-static test state, which is
+        /// the FR-CS-051..054 pattern this assembly bans and the documented-not-enforced standard it
+        /// rejects one file over.
+        /// </para>
+        /// </summary>
+        internal SeasonLoop(
+            WorldStore world,
+            SeasonState season,
+            RoundResolutionMode mode,
+            PlayerCareerStates careerOrNull,
+            ISquadProvider careerSquadsOrNull,
+            ProgressionEngine progressionOrNull,
+            DisciplineState disciplineOrNull,
+            IFixtureDisciplineDriver disciplineDriverOrNull)
         {
             if (world == null)
             {
@@ -334,6 +402,23 @@ namespace TacticalDirector.SeasonSave
             // wired", which is behaviour-identical to before this landing.
             _discipline = disciplineOrNull;
             _disciplineRules = disciplineOrNull == null ? null : new DisciplineRules(disciplineOrNull);
+
+            // The seam is bound here, once, and never reassigned (M16). A driver without a tally is
+            // refused rather than quietly accepted: PlayNextRound gates the whole serve+commit block on
+            // this field, so a driver beside a null state would run #44's per-fixture work for a loop
+            // whose Discipline property is null and whose save writes an empty block — two answers to
+            // "is discipline wired" in one object, which is the distinction ERR-030-038/-039 exist over.
+            if (disciplineDriverOrNull != null && disciplineOrNull == null)
+            {
+                throw new System.ArgumentException(
+                    "A fixture discipline driver needs the DisciplineState it writes: supply "
+                    + "disciplineOrNull too, or neither.",
+                    nameof(disciplineDriverOrNull));
+            }
+
+            _disciplineDriver = _disciplineRules == null
+                ? null
+                : disciplineDriverOrNull ?? new RulesFixtureDisciplineDriver(_disciplineRules);
         }
 
         /// <summary>How this loop resolves a round's fixtures (§3.4.1).</summary>
@@ -686,6 +771,25 @@ namespace TacticalDirector.SeasonSave
 
             uint worldDay = _world.CurrentWorldTick;
 
+            // M17: the #44 [GT] guards, once, for the WHOLE round — with the other guards, before
+            // anything is written. fold.Commit validates them too (it is this type's contract), but it
+            // runs AFTER MarkFixturePlayed by design (M6, ERR-030-037), and a throw there is not a
+            // recoverable retry: the fixture is already marked played, so UnplayedFixtureIndicesInRound
+            // skips it forever — its whole card list gone (M13 made the commit all-or-nothing, so it is
+            // the whole fixture's, not a suffix), and once every fixture in the round has been marked
+            // this way PlayNextRound throws "no unplayed fixtures (F5)" permanently, AdvanceCursorOneRound
+            // is never reached, IsSeasonComplete stays false and RollToNextSeason refuses. A career that
+            // saves and reloads cleanly and can never progress again.
+            //
+            // A bad [GT] is a property of the CONFIG, not of a fixture: identical for every fixture in
+            // the round and knowable before the first one is touched. Asking here costs four integer
+            // comparisons per round and makes the config cause of that wedge unreachable, leaving M6's
+            // ordering untouched. Gated on discipline being wired, so a pre-#44 loop is unchanged.
+            if (_disciplineDriver != null)
+            {
+                CardLedgerFold.RequireCommittableConfig();
+            }
+
             // ERR-030-027: the fixture day's own career day-steps run BEFORE the round, in the same
             // KD-2 slot order, over the WHOLE career — not just the round's clubs, or clubs without a
             // fixture today would desynchronise from those with one. This is what makes the recovery
@@ -742,29 +846,39 @@ namespace TacticalDirector.SeasonSave
                 // length). OnClubFixturePlayed itself is NOT (L9): it reads no [GT] and its only
                 // guard is clubId < 0 (F2), a caller-contract bug rather than a config one — every
                 // fixture here supplies a real, non-negative club id, so that guard cannot fire on
-                // this path. Serving+committing is independent of
-                // Table.ApplyResult/EmitMatchOutcome/MarkFixturePlayed, so nothing is lost by running
-                // the pair last regardless of which of the two can actually throw. Placed BEFORE
-                // MarkFixturePlayed (as this block did before M6), a throw from fold.Commit here left
-                // the fixture UNPLAYED with both clubs' bans already decremented; a caller retrying
-                // AdvanceAndPlayNextRound would then replay the SAME fixture — the unplayed-index
-                // filter would not exclude it — and decrement every outstanding ban in the league a
-                // SECOND time, silently. Now the fixture is already marked played by the time this
-                // can throw, so the filter on retry skips it and nothing double-serves — the property
-                // locked by SeasonLoopDisciplineTests' M12 test below, independently of whether
-                // fold.Commit happens to be fallible today.
-                if (_disciplineRules != null)
+                // this path. Placed BEFORE MarkFixturePlayed (as this block did before M6), a throw
+                // from fold.Commit here left the fixture UNPLAYED with both clubs' bans already
+                // decremented; a caller retrying AdvanceAndPlayNextRound would then replay the SAME
+                // fixture — the unplayed-index filter would not exclude it — and decrement every
+                // outstanding ban in the league a SECOND time, silently. Now the fixture is already
+                // marked played by the time this can throw, so the filter on retry skips it and
+                // nothing double-serves — the property locked by SeasonLoopDisciplineTests' M12 test
+                // below, independently of whether fold.Commit happens to be fallible today.
+                //
+                // M17 — what M6 COSTS, stated honestly (this comment previously claimed "nothing is
+                // lost by running the pair last", which is false, and the same method's appearance-
+                // record comment ~25 lines above names this very outcome as the reason a fallible call
+                // must sit before the mark). A throw here is unrecoverable in the other direction: the
+                // fixture is already played, so the retry skips it and its whole card list is gone
+                // (M13 made the commit all-or-nothing, so it is the whole fixture's), and if every
+                // fixture in the round throws this way the round is stranded permanently — F5 on every
+                // retry, the cursor never advancing, the season unrollable. The two hazards are not
+                // symmetric and neither ordering escapes both: before the mark, a config throw
+                // double-serves the league on retry; after it, a config throw strands the round. M6
+                // keeps the ordering and REMOVES THE CAUSE instead — CardLedgerFold.RequireCommittable-
+                // Config runs at the top of this method, before any fixture is touched, so the config
+                // that could throw here is refused while nothing has been written at all.
+                if (_disciplineDriver != null)
                 {
-                    _disciplineRules.OnClubFixturePlayed(fixture.HomeClubId);
-                    TestOnly_AfterHomeClubServed?.Invoke();
-                    _disciplineRules.OnClubFixturePlayed(fixture.AwayClubId);
+                    _disciplineDriver.OnClubFixturePlayed(fixture.HomeClubId);
+                    _disciplineDriver.OnClubFixturePlayed(fixture.AwayClubId);
 
                     // ...and ONLY THEN this fixture's own cards (FR-DC-010). The order is the whole
                     // off-by-one contract and it is easy to get backwards: committing first would let
                     // a player sent off in fixture N serve one match of his ban DURING the match he was
                     // dismissed in, so a two-match red would cost him one. Serving decrements the bans
                     // that were outstanding at kickoff; the fold adds the ones he earned after it.
-                    fold?.Commit(_disciplineRules);
+                    _disciplineDriver.CommitFixtureCards(fold);
                 }
 
                 results[i] = result;
@@ -1679,4 +1793,28 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | Season IS idempotent; the real hazard this ordering prevents is |
 // |         |            |        | the sweep's FIRST run landing against a roll that then gets     |
 // |         |            |        | refused, not a second run forgiving a second season.            |
+// | 1.24    | 2026-08-13 | —      | #44 C1/C2 adversarial review round 4 (M17 + M16).               |
+// |         |            |        | **M17:** PlayNextRound calls CardLedgerFold.RequireCommittable- |
+// |         |            |        | Config once, with its other guards, before the fixture loop. M6 |
+// |         |            |        | put the fallible commit AFTER MarkFixturePlayed, so a config    |
+// |         |            |        | throw there strands the round PERMANENTLY (the retry's unplayed |
+// |         |            |        | filter skips the fixture, the cursor never advances, F5 forever)|
+// |         |            |        | and loses that fixture's whole card list — the outcome this     |
+// |         |            |        | method's own appearance-record comment names as the reason a    |
+// |         |            |        | fallible call must precede the mark, while M6's comment claimed |
+// |         |            |        | "nothing is lost by running the pair last". Both comments and   |
+// |         |            |        | #30 §3.4 now state the cost honestly; the ordering is unchanged |
+// |         |            |        | (serve strictly before commit, both after the mark) and the     |
+// |         |            |        | CAUSE is removed instead, since a bad [GT] is a property of the |
+// |         |            |        | config and identical for every fixture in the round.            |
+// |         |            |        | **M16:** TestOnly_AfterHomeClubServed — process-static mutable  |
+// |         |            |        | state on a production class, invoked from the production round  |
+// |         |            |        | loop mid-way through a persisted-state mutation — is DELETED.   |
+// |         |            |        | The serve+commit collaborator is now the constructor-injected   |
+// |         |            |        | IFixtureDisciplineDriver seam (FR-CS-051..054 name constructor  |
+// |         |            |        | injection as the required alternative); production binds        |
+// |         |            |        | RulesFixtureDisciplineDriver over the loop's own DisciplineRules|
+// |         |            |        | and a test supplies a failing implementation. The M12 position  |
+// |         |            |        | lock drives the seam instead of the static and still fails when |
+// |         |            |        | the block moves back above MarkFixturePlayed.                   |
 #endregion

@@ -1,7 +1,8 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
-// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 3 — H3/ERR-030-038: the destination
-//           discipline guard is re-keyed from "the tally is empty" to "no discipline is wired" — v1.24)
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 4 — H4/ERR-030-039: `disciplineWired` is
+//           promoted onto the PUBLIC long form and the forwarding overload that hardcoded `true` is
+//           deleted, so no entry point can assert wiring on the caller's behalf — v1.25)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-1 / KD-5..KD-8;
 //           Training System #29 §4.4 / FR-TR-018/019; Injuries & Medical #41 §4.4 / FR-MD-017/018;
@@ -81,47 +82,29 @@ namespace TacticalDirector.SeasonSave
         /// writes a well-formed zero-entry block rather than omitting one (#44 Appendix B), on the same
         /// terms as <paramref name="trainingClubs"/> / <paramref name="medicalClubs"/> /
         /// <paramref name="appearanceClubs"/> / <paramref name="progression"/> above.</param>
-        public static void Save(
-            WorldStore world,
-            SeasonState season,
-            MatchEngine.MatchEngine matchOrNull,
-            string path,
-            ClubTrainingStates[] trainingClubs,
-            ClubInjuryStates[] medicalClubs,
-            ClubAppearanceStates[] appearanceClubs,
-            ProgressionEngine progression,
-            DisciplineState discipline)
-        {
-            // A caller of THIS form hands over a tally it constructed and cannot omit it (null is
-            // refused below), so it drives #44 by construction — there is no "forgot the argument"
-            // path here to guard against, and after ERR-030-038 the guard keys on wiring rather than
-            // on emptiness. The distinction only exists one layer up, where a SeasonLoop may hold no
-            // DisciplineState at all; that is where the false-meaning-unwired overload is reached from.
-            Save(
-                world, season, matchOrNull, path, trainingClubs, medicalClubs, appearanceClubs,
-                progression, discipline, disciplineWired: true);
-        }
-
-        /// <summary>
-        /// The <see cref="Save(WorldStore,SeasonState,MatchEngine.MatchEngine,string,ClubTrainingStates[],ClubInjuryStates[],ClubAppearanceStates[],ProgressionEngine,DisciplineState)"/>
-        /// body, plus the one fact the public form cannot carry: whether the caller drives a #44
-        /// discipline subsystem at all (ERR-030-038).
+        /// <param name="disciplineWired">Whether a #44 discipline subsystem is driven behind this save
+        /// at all — the fact <see cref="RequireDestinationCarriesNoDiscipline"/> keys on (ERR-030-038),
+        /// and a REQUIRED parameter on this, the outermost write entry point (ERR-030-039).
         /// <para>
-        /// <paramref name="disciplineWired"/> is what
-        /// <see cref="RequireDestinationCarriesNoDiscipline"/> keys on. It is <b>not</b> derivable from
-        /// <paramref name="discipline"/>: FR-DC-017 drops a row the instant it reaches
-        /// <c>(0, 0)</c> — mid-season when a ban is served out with no residual yellows, and again for
-        /// every yellows-only row at the boundary sweep — so <c>Count == 0</c> is the NORMAL state of a
-        /// correctly wired tally, not evidence that one was dropped. It is a required parameter and
-        /// never defaulted, for the same reason the block parameters above reject null: a caller that
-        /// can stay silent about wiring is a caller whose silence is indistinguishable from the loss.
+        /// It is <b>not</b> derivable from <paramref name="discipline"/>: FR-DC-017 drops a row the
+        /// instant it reaches <c>(0, 0)</c> — mid-season when a ban is served out with no residual
+        /// yellows, and again for every yellows-only row at the boundary sweep — so <c>Count == 0</c>
+        /// is the NORMAL state of a correctly wired tally, not evidence that one was dropped. Pass
+        /// <c>true</c> when the caller drives a tally (including one that has legitimately drained to
+        /// zero entries), <c>false</c> when there is no discipline subsystem behind this save, which is
+        /// the sole composition from which an empty <c>DISC</c> block is evidence of a drop.
         /// </para>
-        /// </summary>
-        /// <param name="disciplineWired">True when the caller drives a #44 <see cref="DisciplineState"/>
-        /// — including one that has legitimately drained to zero entries. False only when there is no
-        /// discipline subsystem behind this save at all, which is the sole composition from which an
-        /// empty <c>DISC</c> block is evidence of a drop.</param>
-        internal static void Save(
+        /// <para>
+        /// Never defaulted, and never asserted on the caller's behalf, for the same reason the five
+        /// block parameters above reject null: a caller that can stay silent about wiring is a caller
+        /// whose silence is indistinguishable from the loss. ERR-030-039 is what happens when one entry
+        /// point does assert it — this method previously forwarded from a nine-argument public form
+        /// that hardcoded <c>true</c>, on the reasoning that handing over a tally proves the caller
+        /// drives #44. It proves only that the tally is not null: <c>new DisciplineState()</c> is
+        /// exactly what an unwired caller passes (this parameter's own documentation sanctions it), and
+        /// over a populated destination that is the ERR-030-036 loss with the guard bypassed.
+        /// </para></param>
+        public static void Save(
             WorldStore world,
             SeasonState season,
             MatchEngine.MatchEngine matchOrNull,
@@ -281,6 +264,18 @@ namespace TacticalDirector.SeasonSave
             // fresh cards accrued, because the destination keeps the old rows forever — with the thrown
             // message telling the operator to do the very thing they had already done. `disciplineWired`
             // is the fact that actually distinguishes the loss, and it exists only at the call site.
+            //
+            // ERR-030-039: and it is now asked of EVERY caller. ERR-030-038 landed the flag on an
+            // INTERNAL overload behind a public nine-argument form that passed `true` unconditionally,
+            // so the guard was live on one of the two write entry points and bypassed on the other —
+            // and the bypassed one is the form every external caller reaches. The reasoning ("a caller
+            // that hands over a tally drives #44 by construction") excludes only null: `new
+            // DisciplineState()` is exactly what an unwired caller passes, because the `discipline`
+            // parameter's own doc sanctions it as the way to say "no cards recorded yet". Measured
+            // against the built assemblies: two identical public calls, the second with a fresh tally,
+            // took the destination from 1 row to 0 with no refusal. Appendix B.1's "passed to the
+            // write, not re-derived from the block" is a rule about the WRITE, so it holds only when no
+            // entry point can answer for the caller.
             if (!disciplineWired)
             {
                 RequireDestinationCarriesNoDiscipline(path);
@@ -486,7 +481,10 @@ namespace TacticalDirector.SeasonSave
         /// discipline subsystem may create a file and may overwrite a card-less one, never one that
         /// carries rows.
         /// <para>
-        /// Invoked on <c>disciplineWired == false</c>, NOT on the tally being empty (ERR-030-038). The
+        /// Invoked on <c>disciplineWired == false</c>, NOT on the tally being empty (ERR-030-038) —
+        /// and <c>disciplineWired</c> is a required parameter of the one public long-form
+        /// <see cref="Save(WorldStore,SeasonState,MatchEngine.MatchEngine,string,ClubTrainingStates[],ClubInjuryStates[],ClubAppearanceStates[],ProgressionEngine,DisciplineState,bool)"/>,
+        /// never asserted on a caller's behalf by a forwarding overload (ERR-030-039). The
         /// two sibling guards may key on emptiness because their families have no legitimate empty
         /// state — a career roster never empties — but #44's does: FR-DC-017 drops a row the instant it
         /// reaches <c>(0, 0)</c>, so the empty tally is the canonical clean state and reads as a drop
@@ -1207,4 +1205,26 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | Save(SeasonLoop, …) passes loop.Discipline != null, which is where |
 // |         |            |        | the `??` would otherwise discard the distinction. Mutation-        |
 // |         |            |        | verified: restoring the Count == 0 predicate fails both new locks. |
+// | 1.25    | 2026-08-13 | —      | #44 C1/C2 adversarial review round 4, H4 (ERR-030-039): a defect   |
+// |         |            |        | in v1.24's own fix. The flag landed on an INTERNAL overload while  |
+// |         |            |        | the public nine-argument form forwarded disciplineWired: true      |
+// |         |            |        | unconditionally, so the guard was live on one write entry point    |
+// |         |            |        | and bypassed on the other — the one every external caller reaches. |
+// |         |            |        | The stated reasoning ("a caller that hands over a tally drives #44 |
+// |         |            |        | by construction") excludes only null, and the `discipline`         |
+// |         |            |        | parameter's own doc sanctions new DisciplineState() as the way to  |
+// |         |            |        | say "no cards recorded yet" — which over a populated destination   |
+// |         |            |        | is the ERR-030-036 loss with the guard bypassed (measured against  |
+// |         |            |        | the built assemblies: file rows 1 -> 0, no refusal). It also       |
+// |         |            |        | contradicted #30 Appendix B.1 v1.4's own MUST, which requires the  |
+// |         |            |        | wiring fact to be PASSED to the write rather than re-derived —     |
+// |         |            |        | satisfied at one of the two entry points and re-derived from       |
+// |         |            |        | nothing at all at the other. Fixed by promoting disciplineWired    |
+// |         |            |        | onto the PUBLIC long form (required, never defaulted — the five    |
+// |         |            |        | block parameters' own convention) and deleting the forwarding      |
+// |         |            |        | overload, so one long form exists and no entry point can answer    |
+// |         |            |        | for its caller. Locked by                                          |
+// |         |            |        | Save_ThePublicLongForm_DrivingNoDiscipline_CannotEmptyAPopulated-  |
+// |         |            |        | Tally; mutation-verified by reinstating the hardcode inside the    |
+// |         |            |        | promoted method (disciplineWired = true).                          |
 #endregion

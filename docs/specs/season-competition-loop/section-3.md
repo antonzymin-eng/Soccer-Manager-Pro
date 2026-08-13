@@ -1,7 +1,13 @@
 # Season & Competition Loop Specification #30 — Section 3: Algorithms
 
 **Created:** July 22, 2026
-**Last Updated:** August 13, 2026, later still (v2.2 — **L9, a third adversarial-review pass over the
+**Last Updated:** August 13, 2026, later still (v2.3 — **`ERR-030-039` / M17, a fourth
+adversarial-review pass over the #44 C1/C2 landing**: §3.4's `AdvanceAndPlayNextRound` gains the
+round-level `RequireCommittableConfig()` step among its guards, and the M6 comment's implicit
+"nothing is lost by running the pair last" is replaced by what that placement actually costs — a
+throw from `fold.Commit` after `f.Played := true` strands the round PERMANENTLY and loses the
+fixture's whole card list. The ordering is unchanged; the config cause is removed ahead of it.)
+**Last Updated (prior):** August 13, 2026, later still (v2.2 — **L9, a third adversarial-review pass over the
 #44 C1/C2 landing**: §3.4's M6 comment corrected — it claimed `OnClubFixturePlayed` was fallible under
 a bound config alongside `fold.Commit`; `OnClubFixturePlayed` reads no `[GT]` and its only guard is
 `clubId < 0`, never reachable from a real fixture, so only `fold.Commit` is fallible. Extends the
@@ -27,7 +33,7 @@ suspensions have joined, citing ERR-044-002/ERR-044-003 and the code sites; only
 **Last Updated (prior):** July 25, 2026 (v0.9 — ERR-030-010 §3.7 venue correction, found at #30 T0; prior v0.8 back-prop ERR-030-009 #44 availability-filter null seam in §3.4; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 25, 2026 (v0.8 — back-props ERR-030-008 board tick-order seam + ERR-030-009 JobSecurity derived band; prior v0.7 ERR-030-007 academy, v0.6 ERR-030-006 staff, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 27, 2026 (v1.0 — **ERR-030-015**: §3.5's boundary roll gains step (c′), the calendar rebuild it omitted, without which a rolled season is permanently unplayable; found at #30 T3. Also consolidates the TWO stale `Version` fields this header carried — the drift class `spec-error-log.md` v1.43 records. Prior v0.9 ERR-030-010 §3.7 venue correction; v0.8 back-props ERR-030-008/009; v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 2.2
+**Version:** 2.3
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -303,6 +309,13 @@ AdvanceAndPlayNextRound(squads: ISquadProvider):
     worldDay := WorldStore.CurrentWorldTick
     require worldDay == Calendar.DayOf(round)   # the clock is AT the fixture day (§3.3's advance
                                                 # stops there; playing early or late is a caller bug)
+    if discipline is wired:                     # ERR-030-039/M17: the four #44 [GT] guards, ONCE, for
+        RequireCommittableConfig()               # the whole round, HERE — with the guards above, before
+                                                # anything is written. A bad [GT] is a property of the
+                                                # CONFIG, identical for every fixture, and the commit
+                                                # that would otherwise throw on it runs AFTER
+                                                # `f.Played := true` (see below), where a throw is
+                                                # UNRECOVERABLE. Refusing here leaves the round untouched
     RunCareerDaySteps(worldDay)                 # the fixture day's OWN slots, pre-round — idempotent,
                                                 # so the next advance's re-run is a cursor no-op — and
                                                 # AFTER every guard above, so a refused call cannot
@@ -341,6 +354,16 @@ AdvanceAndPlayNextRound(squads: ISquadProvider):
         # UNPLAYED with its bans already served once. Before this fix, that throw let a caller
         # retrying AdvanceAndPlayNextRound replay the SAME fixture (the unplayed-index filter did not
         # exclude it) and serve every outstanding ban in the league a SECOND time, silently.
+        #
+        # M17/ERR-030-039 — what this ordering COSTS, stated rather than glossed. It is not free, and
+        # this comment previously implied it was ("nothing is lost by running the pair last"). A throw
+        # HERE is unrecoverable in the other direction: `f.Played` is already true, so the retry's
+        # unplayed-index filter skips the fixture and its WHOLE card list is gone (Commit is
+        # all-or-nothing), and if every fixture of the round throws this way the round is stranded
+        # permanently — F5 on every retry, `Calendar.NextRoundIndex` never advancing, the season
+        # neither completable nor rollable. Neither position escapes both hazards, so the ordering
+        # stands and the CAUSE is removed instead: RequireCommittableConfig above refuses the config
+        # that would throw here while nothing has been written at all.
         OnClubFixturePlayed(f.HomeClubId)
         OnClubFixturePlayed(f.AwayClubId)
         # ...and ONLY THEN this fixture's OWN cards (FR-DC-010, ERR-030-037/#44 §3.3): serving
@@ -551,4 +574,5 @@ by ascending `ClubId` (FR-SN-007 final key) — a total order.
 | 2.0 | 2026-08-13 | — | **ERR-030-035, consumers half** (#44 C1/C2 landing): §3.4 stopped one landing short of the byte-layout half ERR-030-035 already fixed in Appendix A/B and §4/§2 (FR-SN-021) — three sentences still read "#44 … join the same seam at their own T-phases" / "when they join" as future tense after #44 had actually joined. Corrected to say #44's suspension view has joined (citing ERR-044-002 for the filter re-scope and ERR-044-003 for the depleted-squad rule #44 now inherits), with only #36 left as a future joiner; the composition-site sentence now names `src/discipline/Availability.cs` and `src/season-save/AvailabilityComposition.cs`. |
 | 2.1 | 2026-08-13 | — | **ERR-030-037** (M8, adversarial review over the C1/C2 landing): §3.4's pseudocode gains the #44 loop it never had — `PlayThroughEngine` gains the `CardLedgerFold` construction and per-tick `ObserveTick` pump (`fold.ObserveTick(tap)` inside the tick loop), returns `fold` UNCOMMITTED, and `AdvanceAndPlayNextRound` gains the `OnClubFixturePlayed`×2 + `fold?.Commit(...)` pair, sequenced AFTER `f.Played := true` per M6's fix (`SeasonLoop.cs` v1.22) rather than before it as the code read pre-fix. §3.5's `RollToNextSeason` pseudocode gains step (f), `DisciplineRules?.RollToNextSeason()`, installed after (e)'s commits. Locked in code by `SeasonLoopDisciplineTests.ANewBanEarnedThisFixtureIsNotServedByThisSameFixture`. |
 | 2.2 | 2026-08-13 | — | **L9** (a third adversarial-review pass over the C1/C2 landing, extending `ERR-030-037` rather than a new id): the M6 comment landed at v2.1 asserted `OnClubFixturePlayed` and `fold.Commit` are "BOTH fallible under a bound config" — false for `OnClubFixturePlayed`, which reads no `[GT]` and refuses only `clubId < 0`, a caller-contract bug no real fixture can trigger. Corrected to name `fold.Commit` as the fallible half alone; the placement argument (running the pair after `f.Played := true`) is unaffected, since it survives on `fold.Commit` alone. Locked in code (`src/season-save/SeasonLoop.cs` v1.23) by `SeasonLoopDisciplineTests.AThrowInsideTheServeAndCommitBlock_LeavesTheFixturePlayed_AndDoesNotDoubleServeOnRetry`. |
+| 2.3 | 2026-08-13 | — | **ERR-030-039 (M17, a fourth adversarial-review pass over the C1/C2 landing)**: §3.4's `AdvanceAndPlayNextRound` gains a round-level `RequireCommittableConfig()` step, among the F5/clock guards and before `RunCareerDaySteps` — the four #44 `[GT]` guards asked ONCE for the whole round, since a bad `[GT]` is a property of the config and identical for every fixture in it. Filed because v2.1/v2.2's M6 comment stated only the benefit of the after-the-mark placement and asserted "nothing is lost by running the pair last", while the SAME method's appearance-record comment names that exact outcome — "the cursor never advancing, the season unrecoverable" — as the reason a fallible call must precede the mark. Two opposite rules for one hazard in one method. What M6 costs is now stated: a `fold.Commit` throw after `f.Played := true` leaves the fixture marked played, so the retry's unplayed-index filter skips it and its WHOLE card list is lost (Commit is all-or-nothing since M13), and once every fixture of the round has been marked this way the round throws F5 forever — the cursor never advances, `IsSeasonComplete` stays false and the boundary roll refuses, giving a career that saves and reloads cleanly and can never progress. Neither position escapes both hazards (before the mark, the same throw double-serves every outstanding ban in the league on retry), so the ordering STANDS and the cause is removed instead. Serve-strictly-before-commit is untouched. Code: `SeasonLoop.cs` v1.24, `CardLedgerFold.cs` v1.3. |
 #endregion

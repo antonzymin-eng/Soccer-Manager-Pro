@@ -1,8 +1,8 @@
 // File:     src/season-save/tests/SeasonLoopDisciplineTests.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 3, M12 — a new lock for the serve+commit
-//           block's POSITION relative to MarkFixturePlayed, which the v1.2 footer below WRONGLY
-//           credited to ANewBanEarnedThisFixtureIsNotServedByThisSameFixture — v1.3)
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 4, M16 — the M12 position lock drives a
+//           constructor-injected IFixtureDisciplineDriver instead of SeasonLoop's process-static
+//           TestOnly_AfterHomeClubServed hook, which is deleted — v1.4)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §3.3/§5 (T-DC-NEU-001, T-DC-BAN-002/003/005, T-DC-VIEW-001,
 //           T-DC-SAV-002); Season & Competition Loop #30 §3.4 (the composed seam,
@@ -75,7 +75,8 @@ namespace TacticalDirector.SeasonSave.Tests
             League league,
             RoundResolutionMode mode,
             out PlayerCareerStates career,
-            DisciplineState discipline = null)
+            DisciplineState discipline = null,
+            SeasonLoop.IFixtureDisciplineDriver disciplineDriverOrNull = null)
         {
             career = PlayerCareerStates.ForLeague(league, league.ClubIds(), injuryOccurrenceEnabled: false);
             return new SeasonLoop(
@@ -85,7 +86,43 @@ namespace TacticalDirector.SeasonSave.Tests
                 career,
                 league,
                 progressionOrNull: null,
-                disciplineOrNull: discipline);
+                disciplineOrNull: discipline,
+                disciplineDriverOrNull: disciplineDriverOrNull);
+        }
+
+        /// <summary>
+        /// The M16 seam's test implementation: serves and commits for real through
+        /// <see cref="DisciplineRules"/>, and throws on its FIRST serving call so the throw lands
+        /// inside <c>PlayNextRound</c>'s serve+commit block, after at least one real decrement.
+        /// <para>
+        /// Replaces the process-static <c>TestOnly_AfterHomeClubServed</c> hook this suite used at
+        /// v1.3: that put an arbitrary-code injection point into the production round loop whose only
+        /// safety was one inline <c>finally</c> (M16 / FR-CS-051..054). Instance state, constructed per
+        /// test, nothing to clear.
+        /// </para>
+        /// </summary>
+        private sealed class ThrowOnFirstServeDriver : SeasonLoop.IFixtureDisciplineDriver
+        {
+            private readonly DisciplineRules _rules;
+            private int _serves;
+
+            internal ThrowOnFirstServeDriver(DisciplineState state)
+            {
+                _rules = new DisciplineRules(state);
+            }
+
+            public void OnClubFixturePlayed(int clubId)
+            {
+                _rules.OnClubFixturePlayed(clubId);
+                _serves++;
+                if (_serves == 1)
+                {
+                    throw new System.InvalidOperationException(
+                        "M16/M12 forced throw — locks the serve+commit block's position.");
+                }
+            }
+
+            public void CommitFixtureCards(CardLedgerFold foldOrNull) => foldOrNull?.Commit(_rules);
         }
 
         // ── the sentinel agreement ─────────────────────────────────────────────────────────
@@ -432,10 +469,15 @@ namespace TacticalDirector.SeasonSave.Tests
             // M12: ANewBanEarnedThisFixtureIsNotServedByThisSameFixture (above) locks M7 — the ORDER
             // between OnClubFixturePlayed and fold.Commit — and is blind to M6: moving the WHOLE
             // serve+commit block back above MarkFixturePlayed leaves that test green, since the order
-            // between the two calls is unchanged either way. This test locks M6 itself, using
-            // SeasonLoop.TestOnly_AfterHomeClubServed so it does not depend on DisciplineRules
+            // between the two calls is unchanged either way. This test locks M6 itself, forcing the
+            // throw through a substituted collaborator so it does not depend on DisciplineRules
             // actually being fallible under today's [GT] defaults (it is not, for OnClubFixturePlayed —
             // L9).
+            //
+            // M16: the collaborator arrives through the CONSTRUCTOR now, not through a process-static
+            // delegate the production loop invokes and a `finally` has to clear. Same property locked,
+            // same forced throw position — after the home club's real serving decrement, inside the
+            // block — with nothing static to leak into another test.
             League league = FourClubLeague();
             Fixture fixture = league.CreateSeason(league.ClubIds()[0]).FixtureAt(0);
 
@@ -443,21 +485,14 @@ namespace TacticalDirector.SeasonSave.Tests
                 league.ResolveByClubId(fixture.HomeClubId))[3];
 
             DisciplineState state = BansOf(5, homeBanned);
-            SeasonLoop loop = LoopOver(league, RoundResolutionMode.QuickSimAll, out _, state);
+            SeasonLoop loop = LoopOver(
+                league, RoundResolutionMode.QuickSimAll, out _, state,
+                new ThrowOnFirstServeDriver(state));
 
             loop.AdvanceToNextFixtureDay();
 
-            SeasonLoop.TestOnly_AfterHomeClubServed = () =>
-                throw new System.InvalidOperationException("M12 forced throw — locks the block's position.");
-            try
-            {
-                Assert.Throws<System.InvalidOperationException>(
-                    () => loop.AdvanceAndPlayNextRound(league));
-            }
-            finally
-            {
-                SeasonLoop.TestOnly_AfterHomeClubServed = null;
-            }
+            Assert.Throws<System.InvalidOperationException>(
+                () => loop.AdvanceAndPlayNextRound(league));
 
             Assert.That(loop.State.FixtureAt(0).Played, Is.True,
                 "M12/M6: a throw inside the #44 serve+commit block must not leave the fixture the "
@@ -477,6 +512,25 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.That(Ban(state, homeBanned), Is.EqualTo(afterFirstThrow),
                 "The fixture's ban was served a SECOND time on retry — the serve+commit block ran "
                 + "again for an already-played fixture.");
+        }
+
+        [Test]
+        public void AFixtureDisciplineDriverWithoutATally_IsRefusedAtComposition()
+        {
+            // M16, the seam's own coherence rule. PlayNextRound gates the whole serve+commit block on
+            // the driver, so a driver beside a null DisciplineState would run #44's per-fixture work
+            // for a loop whose Discipline property is null and whose save writes an empty DISC block —
+            // two answers to "is discipline wired" inside one object, which is precisely the
+            // distinction ERR-030-038/-039 exist over. Refused at composition instead.
+            League league = FourClubLeague();
+            var orphan = new DisciplineState();
+
+            Assert.Throws<System.ArgumentException>(
+                () => LoopOver(
+                    league, RoundResolutionMode.QuickSimAll, out _, discipline: null,
+                    disciplineDriverOrNull: new ThrowOnFirstServeDriver(orphan)),
+                "a driver with no tally behind it must be refused where it is composed, not discovered "
+                + "when the first fixture serves.");
         }
 
         // ── composition with #41, and the ERR-044-003 tiering ─────────────────────────────
@@ -874,4 +928,15 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | ANewBanEarnedThisFixtureIsNotServedByThisSameFixture green,        |
 // |         |            |        | confirming the two tests lock two different properties; restoring  |
 // |         |            |        | the fix turns the new test green again.                            |
+// | 1.4     | 2026-08-13 | —      | AR round 4 (M16): the M12 position lock now forces its throw       |
+// |         |            |        | through ThrowOnFirstServeDriver, a SeasonLoop.IFixture-            |
+// |         |            |        | DisciplineDriver supplied to the constructor, replacing            |
+// |         |            |        | SeasonLoop.TestOnly_AfterHomeClubServed — process-static mutable   |
+// |         |            |        | state on a production class, invoked from the production round     |
+// |         |            |        | loop, whose only safety was this test's own finally (FR-CS-051..   |
+// |         |            |        | 054). Same forced-throw position, same assertions, nothing         |
+// |         |            |        | static to leak between tests. Plus AFixtureDisciplineDriver-       |
+// |         |            |        | WithoutATally_IsRefusedAtComposition for the seam's coherence      |
+// |         |            |        | rule. Re-VERIFIED by execution: moving the serve+commit block      |
+// |         |            |        | back above MarkFixturePlayed still turns the position lock red.    |
 #endregion

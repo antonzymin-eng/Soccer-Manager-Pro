@@ -1,6 +1,8 @@
 // File:     src/season-save/tests/SeasonSaveManagerTests.cs
 // Created:  2026-07-22
-// Modified: 2026-08-13 (#44 C1/C2 AR round 3, H3 — the ERR-030-038 drained-tally locks — v1.19)
+// Modified: 2026-08-13 (#44 C1/C2 AR round 4, H4/ERR-030-039 — the public long form's own
+//           unwired-over-populated lock, and every call site updated for the required
+//           disciplineWired parameter — v1.20)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §5 acceptance;
 //           Season & Competition Loop #30 FR-SN-019..023, Appendix B; Training System #29 FR-TR-018/019;
@@ -160,7 +162,7 @@ namespace TacticalDirector.SeasonSave
             WorldStore world = PopulatedStore();
             SeasonState season = MidSeasonState();
             string path = TempPath("season.save");
-            SeasonSaveManager.Save(world, season, matchOrNull: null, path, NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState());
+            SeasonSaveManager.Save(world, season, matchOrNull: null, path, NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true);
             Assert.IsTrue(File.Exists(path), "Save must produce the destination file atomically.");
 
             // Capture is non-mutating, so the saved store itself is a valid uninterrupted reference.
@@ -195,7 +197,7 @@ namespace TacticalDirector.SeasonSave
             Assert.AreEqual(1, world.Arcs.ArcCount, "only PopulatedStore's manual arc exists; the trigger has not fired yet");
 
             string path = TempPath("season-flagon.save");
-            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState());
+            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true);
 
             // Uninterrupted reference: the saved (non-mutated) world advances one day and fires.
             world.AdvanceDay();
@@ -233,7 +235,7 @@ namespace TacticalDirector.SeasonSave
             Assert.AreEqual((ulong)n, match.CurrentTick);
 
             string path = TempPath("season-match.save");
-            SeasonSaveManager.Save(world, season, match, path, NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState());
+            SeasonSaveManager.Save(world, season, match, path, NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true);
             Assert.IsTrue(File.Exists(path));
 
             // Reference chains from the saved (non-mutated) objects.
@@ -371,7 +373,7 @@ namespace TacticalDirector.SeasonSave
             SeasonSaveManager.Save(
                 world, season, match, path,
                 TrainingBlocksMatching(progression), MedicalBlocksMatching(progression),
-                AppearanceBlocksMatching(progression), progression, new DisciplineState());
+                AppearanceBlocksMatching(progression), progression, new DisciplineState(), disciplineWired: true);
             Assert.IsTrue(File.Exists(path));
 
             // Reference chain from the SAVED (non-mutated) match object — it is still configured with
@@ -411,7 +413,7 @@ namespace TacticalDirector.SeasonSave
             // never touches the (absent) match, returning a null Match.
             WorldStore world = PopulatedStore();
             string path = TempPath("nomatch-provider.save");
-            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState());
+            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true);
 
             SeasonSaveContents contents = SeasonSaveManager.Load(path, Provider(DistinctSquad(1)));
             Assert.IsNull(contents.Match,
@@ -432,7 +434,7 @@ namespace TacticalDirector.SeasonSave
         {
             WorldStore world = PopulatedStore();
             string path = TempPath("corrupt.save");
-            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState());
+            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true);
 
             byte[] bytes = File.ReadAllBytes(path);
             File.WriteAllBytes(path, new ArraySegment<byte>(bytes, 0, bytes.Length / 2).ToArray());
@@ -450,7 +452,7 @@ namespace TacticalDirector.SeasonSave
             match.ConfigureSquads(DistinctSquad(1), DistinctSquad(2));
             for (int i = 0; i < 30; i++) match.RunTick();
             string path = TempPath("distinct.save");
-            SeasonSaveManager.Save(world, MidSeasonState(), match, path, NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState());
+            SeasonSaveManager.Save(world, MidSeasonState(), match, path, NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true);
 
             Assert.Throws<NotSupportedException>(
                 () => SeasonSaveManager.Load(path),
@@ -461,7 +463,7 @@ namespace TacticalDirector.SeasonSave
         public void Save_NullWorld_Throws()
         {
             Assert.Throws<ArgumentNullException>(
-                () => SeasonSaveManager.Save(null, MidSeasonState(), matchOrNull: null, TempPath("x.save"), NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState()));
+                () => SeasonSaveManager.Save(null, MidSeasonState(), matchOrNull: null, TempPath("x.save"), NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true));
         }
 
         [Test]
@@ -471,7 +473,7 @@ namespace TacticalDirector.SeasonSave
             // than write a file that Load could not reconstruct a season from.
             Assert.Throws<ArgumentNullException>(
                 () => SeasonSaveManager.Save(
-                    PopulatedStore(), null, matchOrNull: null, TempPath("x.save"), NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState()));
+                    PopulatedStore(), null, matchOrNull: null, TempPath("x.save"), NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true));
         }
 
         [Test]
@@ -483,7 +485,7 @@ namespace TacticalDirector.SeasonSave
             var ex = Assert.Throws<ArgumentNullException>(
                 () => SeasonSaveManager.Save(
                     PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
-                    NoTraining, NoMedical, NoAppearance, progression: null, discipline: new DisciplineState()),
+                    NoTraining, NoMedical, NoAppearance, progression: null, discipline: new DisciplineState(), disciplineWired: true),
                 "Save must refuse a null progression — null is not the empty set, and this block " +
                 "carries the roster (FR-PG-017 / #28 KD-4).");
             Assert.AreEqual("progression", ex.ParamName);
@@ -494,10 +496,10 @@ namespace TacticalDirector.SeasonSave
         {
             WorldStore world = PopulatedStore();
             string path = TempPath("overwrite.save");
-            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState());
+            SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true);
 
             world.AdvanceDay();
-            Assert.DoesNotThrow(() => SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState()),
+            Assert.DoesNotThrow(() => SeasonSaveManager.Save(world, MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true),
                 "Re-saving over an existing file must atomically replace it (File.Replace), not throw.");
             Assert.IsFalse(File.Exists(path + ".tmp"), "The temp file must not survive a successful save.");
         }
@@ -578,7 +580,7 @@ namespace TacticalDirector.SeasonSave
 
             SeasonSaveManager.Save(
                 PopulatedStore(), MidSeasonState(), matchOrNull: null, path, training, medical, appearance,
-                ProgressionEngine.Empty, new DisciplineState());
+                ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true);
 
             SeasonSaveContents got = SeasonSaveManager.Load(path);
 
@@ -620,7 +622,7 @@ namespace TacticalDirector.SeasonSave
             // caller SAYS "no training state" with NoTraining/NoMedical; Save has no default that would
             // let it stay silent, because silence and real-state-dropped look identical on reload.
             string path = TempPath("no-training.season");
-            SeasonSaveManager.Save(PopulatedStore(), MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState());
+            SeasonSaveManager.Save(PopulatedStore(), MidSeasonState(), matchOrNull: null, path, NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true);
 
             SeasonSaveContents got = SeasonSaveManager.Load(path);
 
@@ -643,19 +645,19 @@ namespace TacticalDirector.SeasonSave
             Assert.Throws<ArgumentNullException>(
                 () => SeasonSaveManager.Save(
                     PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
-                    null, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState()),
+                    null, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true),
                 "A null training set must fail loud — say Array.Empty to mean empty (FR-TR-018).");
 
             Assert.Throws<ArgumentNullException>(
                 () => SeasonSaveManager.Save(
                     PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
-                    NoTraining, null, NoAppearance, ProgressionEngine.Empty, new DisciplineState()),
+                    NoTraining, null, NoAppearance, ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true),
                 "A null medical set must fail loud — say Array.Empty to mean empty (FR-MD-017).");
 
             Assert.Throws<ArgumentNullException>(
                 () => SeasonSaveManager.Save(
                     PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
-                    NoTraining, NoMedical, null, ProgressionEngine.Empty, new DisciplineState()),
+                    NoTraining, NoMedical, null, ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true),
                 "A null appearance set must fail loud on the same terms (#30 Appendix B) — its two " +
                 "siblings had this lock from T1 and it did not (AR pass 3).");
         }
@@ -676,7 +678,7 @@ namespace TacticalDirector.SeasonSave
             Assert.Throws<ArgumentException>(
                 () => SeasonSaveManager.Save(
                     PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
-                    oneTrainingClub, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState()),
+                    oneTrainingClub, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true),
                 "a career triple whose sets disagree on the club set must be refused at Save");
         }
 
@@ -719,7 +721,7 @@ namespace TacticalDirector.SeasonSave
                     new[] { TBlock(0, 7), TBlock(1, 7) },
                     new[] { MBlock(0, 7), MBlock(1, 7) },
                     new[] { ABlock(0, 7), ABlock(1, 7) },
-                    ProgressionEngine.Empty, new DisciplineState()),
+                    ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true),
                 "a cross-club duplicate PlayerId is refused at Save exactly as FromBlocks refuses "
                 + "it at load (ERR-041-019)");
         }
@@ -740,7 +742,7 @@ namespace TacticalDirector.SeasonSave
                     new ClubTrainingStates[1],
                     new[] { MBlock(0) },
                     new[] { ABlock(0) },
-                    ProgressionEngine.Empty, new DisciplineState()),
+                    ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true),
                 "a never-constructed block is refused by name, not by NullReferenceException");
             Assert.That(ex.Message, Does.Contain("default value"),
                 "the refusal must come from the default-block branch, not a downstream mismatch");
@@ -760,7 +762,7 @@ namespace TacticalDirector.SeasonSave
                     new[] { TBlock(0, 7), TBlock(1, 30) },
                     new[] { MBlock(0, 7), MBlock(2, 30) },
                     new[] { ABlock(0, 7), ABlock(1, 30) },
-                    ProgressionEngine.Empty, new DisciplineState()),
+                    ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true),
                 "same lengths, different club SET — refused");
 
             Assert.Throws<ArgumentException>(
@@ -769,7 +771,7 @@ namespace TacticalDirector.SeasonSave
                     new[] { TBlock(0, 7, 9) },
                     new[] { MBlock(0, 7) },
                     new[] { ABlock(0, 7) },
-                    ProgressionEngine.Empty, new DisciplineState()),
+                    ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true),
                 "same club, different player COUNT — refused");
 
             Assert.Throws<ArgumentException>(
@@ -778,7 +780,7 @@ namespace TacticalDirector.SeasonSave
                     new[] { TBlock(0, 7) },
                     new[] { MBlock(0, 8) },
                     new[] { ABlock(0, 7) },
-                    ProgressionEngine.Empty, new DisciplineState()),
+                    ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true),
                 "same club, same count, different player IDS — refused");
 
             string path = TempPath("permuted.season");
@@ -788,7 +790,7 @@ namespace TacticalDirector.SeasonSave
                     new[] { TBlock(1, 30), TBlock(0, 7) },
                     new[] { MBlock(0, 7), MBlock(1, 30) },
                     new[] { ABlock(1, 30), ABlock(0, 7) },
-                    ProgressionEngine.Empty, new DisciplineState()),
+                    ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true),
                 "the gate is order-insensitive on clubs — the codecs canonicalize at encode");
 
             SeasonSaveContents got = SeasonSaveManager.Load(path);
@@ -814,7 +816,7 @@ namespace TacticalDirector.SeasonSave
                 () => SeasonSaveManager.Save(
                     world, MidSeasonState(), matchOrNull: null, TempPath("x.season"),
                     new[] { TBlock(7, 100) }, new[] { MBlock(7, 100) }, new[] { futureAppearance },
-                    ProgressionEngine.Empty, new DisciplineState()),
+                    ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true),
                 "a future-dated appearance anchor wedges the career; refuse it at the write");
 
             var futureTraining = TBlock(7, 100);
@@ -823,7 +825,7 @@ namespace TacticalDirector.SeasonSave
                 () => SeasonSaveManager.Save(
                     world, MidSeasonState(), matchOrNull: null, TempPath("x.season"),
                     new[] { futureTraining }, new[] { MBlock(7, 100) }, new[] { ABlock(7, 100) },
-                    ProgressionEngine.Empty, new DisciplineState()),
+                    ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true),
                 "a future-dated training cursor silently freezes the player out of the day step");
 
             var futureMedical = MBlock(7, 100);
@@ -832,7 +834,7 @@ namespace TacticalDirector.SeasonSave
                 () => SeasonSaveManager.Save(
                     world, MidSeasonState(), matchOrNull: null, TempPath("x.season"),
                     new[] { TBlock(7, 100) }, new[] { futureMedical }, new[] { ABlock(7, 100) },
-                    ProgressionEngine.Empty, new DisciplineState()),
+                    ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true),
                 "…and the medical cursor likewise");
         }
 
@@ -849,7 +851,7 @@ namespace TacticalDirector.SeasonSave
                     new[] { TBlock(7, 100), TBlock(7, 101) },
                     new[] { MBlock(7, 100), MBlock(7, 101) },
                     new[] { ABlock(7, 100), ABlock(7, 101) },
-                    ProgressionEngine.Empty, new DisciplineState()),
+                    ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true),
                 "a club appearing twice in the career triple is refused by name");
             Assert.That(ex.Message, Does.Contain("twice"),
                 "the refusal must come from the duplicate-club branch, not a phantom mismatch");
@@ -872,7 +874,7 @@ namespace TacticalDirector.SeasonSave
                 () => SeasonSaveManager.Save(
                     laggedWorld, MidSeasonState(), matchOrNull: null, TempPath("x.season"),
                     new[] { laggingTraining }, new[] { MBlock(7, 100) }, new[] { ABlock(7, 100) },
-                    ProgressionEngine.Empty, new DisciplineState()),
+                    ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true),
                 "a training cursor two behind the clock wedges the career on the next advance (F7)");
 
             // Medical-only lag (AR pass 9 M1): the training cursor sits at the LEGITIMATE lag of 1,
@@ -887,7 +889,7 @@ namespace TacticalDirector.SeasonSave
                 () => SeasonSaveManager.Save(
                     laggedWorld, MidSeasonState(), matchOrNull: null, TempPath("x.season"),
                     new[] { okT }, new[] { laggingMedical }, new[] { ABlock(7, 100) },
-                    ProgressionEngine.Empty, new DisciplineState()),
+                    ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true),
                 "a medical cursor two behind the clock is refused on its own — the training cursor "
                 + "is in-band, so this throw can only come from the medical predicate");
 
@@ -897,7 +899,7 @@ namespace TacticalDirector.SeasonSave
                 () => SeasonSaveManager.Save(
                     laggedWorld, MidSeasonState(), matchOrNull: null, TempPath("ok.season"),
                     new[] { okTraining }, new[] { MBlock(7, 100) }, new[] { ABlock(7, 100) },
-                    ProgressionEngine.Empty, new DisciplineState()),
+                    ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true),
                 "the pre-increment convention's lag of exactly one is the NORMAL saved state");
         }
 
@@ -945,7 +947,7 @@ namespace TacticalDirector.SeasonSave
                 () => SeasonSaveManager.Save(
                     world, MidSeasonState(), matchOrNull: null, TempPath("x.season"),
                     TrainingMatching(7, 100), MedicalMatching(7, 100), AppearanceMatching(7, 100),
-                    future, new DisciplineState()),
+                    future, new DisciplineState(), disciplineWired: true),
                 "ERR-028-007: a future-dated progression cursor must be refused at Save, exactly like " +
                 "its #29/#41 siblings.");
         }
@@ -960,7 +962,7 @@ namespace TacticalDirector.SeasonSave
                 () => SeasonSaveManager.Save(
                     laggedWorld, MidSeasonState(), matchOrNull: null, TempPath("x.season"),
                     TrainingMatching(7, 100), MedicalMatching(7, 100), AppearanceMatching(7, 100),
-                    lagging, new DisciplineState()),
+                    lagging, new DisciplineState(), disciplineWired: true),
                 "ERR-028-007: a progression cursor two behind the clock must be refused — AdvanceDay " +
                 "REPLAYS a gap, so a mispaired file would bank days of growth from one day's inputs, " +
                 "invisibly (worse than the sibling cursors' silent-freeze failure mode).");
@@ -976,7 +978,7 @@ namespace TacticalDirector.SeasonSave
                 () => SeasonSaveManager.Save(
                     laggedWorld, MidSeasonState(), matchOrNull: null, TempPath("ok-progression.season"),
                     TrainingMatching(7, 100), MedicalMatching(7, 100), AppearanceMatching(7, 100),
-                    ok, new DisciplineState()),
+                    ok, new DisciplineState(), disciplineWired: true),
                 "the pre-increment convention's lag of exactly one is the NORMAL saved state.");
         }
 
@@ -1022,7 +1024,7 @@ namespace TacticalDirector.SeasonSave
                 () => SeasonSaveManager.Save(
                     world, MidSeasonState(), matchOrNull: null, TempPath("x.season"),
                     TrainingMatching(7, 100), MedicalMatching(7, 100), AppearanceMatching(7, 100),
-                    future, new DisciplineState()),
+                    future, new DisciplineState(), disciplineWired: true),
                 "M2(b): a future-dated BirthWorldDay must be refused at Save, exactly like the " +
                 "progression cursor above.");
             StringAssert.Contains("BirthWorldDay", ex.Message,
@@ -1096,7 +1098,7 @@ namespace TacticalDirector.SeasonSave
                 () => SeasonSaveManager.Save(
                     PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
                     TrainingMatching(8, 100), MedicalMatching(8, 100), AppearanceMatching(8, 100),
-                    progression, new DisciplineState()),
+                    progression, new DisciplineState(), disciplineWired: true),
                 "the progression set carries club 7 and the career sets club 8 — all four describe one "
                 + "career and must agree.");
         }
@@ -1112,7 +1114,7 @@ namespace TacticalDirector.SeasonSave
                 () => SeasonSaveManager.Save(
                     PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
                     TrainingMatching(7, 999), MedicalMatching(7, 999), AppearanceMatching(7, 999),
-                    progression, new DisciplineState()));
+                    progression, new DisciplineState(), disciplineWired: true));
         }
 
         [Test]
@@ -1125,7 +1127,7 @@ namespace TacticalDirector.SeasonSave
             Assert.DoesNotThrow(
                 () => SeasonSaveManager.Save(
                     PopulatedStore(), MidSeasonState(), matchOrNull: null, TempPath("x.season"),
-                    NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState()));
+                    NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true));
         }
 
         private static ClubTrainingStates[] TrainingMatching(int club, int playerId) =>
@@ -1180,12 +1182,12 @@ namespace TacticalDirector.SeasonSave
             SeasonSaveManager.Save(
                 world, MidSeasonState(), matchOrNull: null, path,
                 TrainingMatching(7, 100), MedicalMatching(7, 100), AppearanceMatching(7, 100),
-                populated, new DisciplineState());
+                populated, new DisciplineState(), disciplineWired: true);
 
             Assert.Throws<InvalidOperationException>(
                 () => SeasonSaveManager.Save(
                     PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
-                    NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState()),
+                    NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true),
                 "ERR-028-008: an empty progression store must not overwrite a file carrying a roster.");
 
             SeasonSaveContents reloaded = SeasonSaveManager.Load(path);
@@ -1211,13 +1213,13 @@ namespace TacticalDirector.SeasonSave
             SeasonSaveManager.Save(
                 world, MidSeasonState(), matchOrNull: null, path,
                 TrainingMatching(7, 100), MedicalMatching(7, 100), AppearanceMatching(7, 100),
-                populated, new DisciplineState());
+                populated, new DisciplineState(), disciplineWired: true);
 
             Assert.Throws<InvalidOperationException>(
                 () => SeasonSaveManager.Save(
                     PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
                     NoTraining, NoMedical, NoAppearance,
-                    ProgressionFor(PBlock(7, 100, lastAdvancedWorldDay: 1u)), new DisciplineState()),
+                    ProgressionFor(PBlock(7, 100, lastAdvancedWorldDay: 1u)), new DisciplineState(), disciplineWired: true),
                 "an empty career triple must not overwrite a file carrying one — the roster surviving "
                 + "beside the hole is what makes this silent.");
 
@@ -1239,7 +1241,7 @@ namespace TacticalDirector.SeasonSave
                 () => SeasonSaveManager.Save(
                     PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
                     NoTraining, NoMedical, NoAppearance,
-                    ProgressionFor(PBlock(7, 100, lastAdvancedWorldDay: 1u)), new DisciplineState()),
+                    ProgressionFor(PBlock(7, 100, lastAdvancedWorldDay: 1u)), new DisciplineState(), disciplineWired: true),
                 "an empty career triple may freely create a new file — nothing there to protect.");
             Assert.IsTrue(File.Exists(path));
         }
@@ -1254,13 +1256,13 @@ namespace TacticalDirector.SeasonSave
             SeasonSaveManager.Save(
                 PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
                 NoTraining, NoMedical, NoAppearance,
-                ProgressionFor(PBlock(7, 100, lastAdvancedWorldDay: 1u)), new DisciplineState());
+                ProgressionFor(PBlock(7, 100, lastAdvancedWorldDay: 1u)), new DisciplineState(), disciplineWired: true);
 
             Assert.DoesNotThrow(
                 () => SeasonSaveManager.Save(
                     PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
                     NoTraining, NoMedical, NoAppearance,
-                    ProgressionFor(PBlock(7, 100, lastAdvancedWorldDay: 1u)), new DisciplineState()),
+                    ProgressionFor(PBlock(7, 100, lastAdvancedWorldDay: 1u)), new DisciplineState(), disciplineWired: true),
                 "overwriting an already career-less file is not a loss and must stay legal.");
         }
 
@@ -1272,7 +1274,7 @@ namespace TacticalDirector.SeasonSave
             Assert.DoesNotThrow(
                 () => SeasonSaveManager.Save(
                     PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
-                    NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState()),
+                    NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true),
                 "an empty store may freely create a new file — there is nothing there to protect.");
             Assert.IsTrue(File.Exists(path));
         }
@@ -1283,12 +1285,12 @@ namespace TacticalDirector.SeasonSave
             string path = TempPath("already-empty-roster.season");
             SeasonSaveManager.Save(
                 PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
-                NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState());
+                NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true);
 
             Assert.DoesNotThrow(
                 () => SeasonSaveManager.Save(
                     PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
-                    NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState()),
+                    NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true),
                 "an empty store may overwrite a file that itself already carries an empty roster.");
         }
 
@@ -1343,12 +1345,15 @@ namespace TacticalDirector.SeasonSave
             // still v6, Load still succeeding. FR-DC-014 retains no ledgers, so nothing can recompute
             // them.
             //
-            // Driven through the INTERNAL overload since ERR-030-038, because that is where the fact the
-            // guard keys on now lives. The public long form cannot express this case at all: a caller
-            // that hands over a DisciplineState drives #44 by construction (null is refused), and its
-            // tally being empty is FR-DC-017's ordinary state rather than evidence of a drop. See
-            // AWiredTallyThatDrainsToZero_SavesOverItsOwnPopulatedFile below for the case the old
-            // Count == 0 keying wrongly refused.
+            // Driven with disciplineWired: false since ERR-030-038, because that is the fact the guard
+            // keys on. It is a parameter of the ONE public long form since ERR-030-039 — this comment
+            // previously read "the public long form cannot express this case at all", which was the
+            // false premise behind that form hardcoding disciplineWired: true and bypassing this guard
+            // entirely (H4). An empty tally is FR-DC-017's ordinary state rather than evidence of a
+            // drop; see AWiredTallyThatDrainsToZero_SavesOverItsOwnPopulatedFile below for the case the
+            // old Count == 0 keying wrongly refused, and
+            // Save_ThePublicLongForm_DrivingNoDiscipline_CannotEmptyAPopulatedTally for the entry point
+            // the flag used to be answered on the caller's behalf at.
             WorldStore world = PopulatedStore();
             ProgressionEngine populated = ProgressionFor(PBlock(7, 100, lastAdvancedWorldDay: 1u));
             string path = TempPath("populated-discipline.season");
@@ -1356,7 +1361,7 @@ namespace TacticalDirector.SeasonSave
             SeasonSaveManager.Save(
                 world, MidSeasonState(), matchOrNull: null, path,
                 TrainingMatching(7, 100), MedicalMatching(7, 100), AppearanceMatching(7, 100),
-                populated, TallyFor(100));
+                populated, TallyFor(100), disciplineWired: true);
 
             // Everything else about the second save is legitimate — the roster and the career triple are
             // both populated, so neither sibling guard has anything to say. Only the tally is missing.
@@ -1425,7 +1430,7 @@ namespace TacticalDirector.SeasonSave
 
             SeasonSaveManager.Save(
                 world, MidSeasonState(), matchOrNull: null, path,
-                NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, TallyFor(100));
+                NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, TallyFor(100), disciplineWired: true);
 
             SeasonSaveContents contents = SeasonSaveManager.Load(path);
             SeasonLoop resumed = SeasonLoop.Restore(
@@ -1463,7 +1468,7 @@ namespace TacticalDirector.SeasonSave
 
             SeasonSaveManager.Save(
                 world, MidSeasonState(), matchOrNull: null, path,
-                NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, TallyFor(100));
+                NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, TallyFor(100), disciplineWired: true);
 
             SeasonSaveContents contents = SeasonSaveManager.Load(path);
             SeasonLoop resumed = SeasonLoop.Restore(
@@ -1481,6 +1486,50 @@ namespace TacticalDirector.SeasonSave
             SeasonSaveContents reloaded = SeasonSaveManager.Load(path);
             Assert.AreEqual(1, reloaded.Discipline.Count,
                 "the refused write must leave the file's tally intact.");
+        }
+
+        // ── ERR-030-039: no write entry point may assert the wiring fact for its caller ──
+
+        [Test]
+        public void Save_ThePublicLongForm_DrivingNoDiscipline_CannotEmptyAPopulatedTally()
+        {
+            // ERR-030-039 (H4): a defect in ERR-030-038's own fix. That fix put disciplineWired on an
+            // INTERNAL overload and had the public nine-argument form pass `true` unconditionally, on
+            // the reasoning that a caller handing over a tally drives #44 by construction. That
+            // excludes only null — and `new DisciplineState()` is exactly what an unwired caller
+            // passes, because the `discipline` parameter's own documentation sanctions it as the way
+            // to say "no cards recorded yet". So the guard was live on one write entry point and
+            // bypassed on the other, and the bypassed one is the form every external caller reaches:
+            // two identical public calls, the second with a fresh tally, silently took the destination
+            // from one row to zero (measured against the built assemblies before the fix).
+            //
+            // This drives the PUBLIC form on both calls. It is the entry point half of the lock; the
+            // guard's own behaviour is locked above.
+            string path = TempPath("public-form-unwired-discipline.season");
+
+            SeasonSaveManager.Save(
+                PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
+                NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, TallyFor(100),
+                disciplineWired: true);
+            Assert.AreEqual(1, SeasonSaveManager.Load(path).Discipline.Count,
+                "Precondition: the destination carries the row the second save must not be able to "
+                + "delete.");
+
+            Assert.Throws<InvalidOperationException>(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
+                    NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty,
+                    new DisciplineState(), disciplineWired: false),
+                "the public long form must be able to SAY it drives no discipline, and be refused for "
+                + "it. While it asserted disciplineWired: true on the caller's behalf, this exact call "
+                + "wrote a zero-entry DISC block over a populated one with every gate green — and "
+                + "FR-DC-014 retains no ledgers, so the bans and yellows were unrecoverable.");
+
+            Assert.AreEqual(1, SeasonSaveManager.Load(path).Discipline.Count,
+                "the refused write must leave the destination's tally intact.");
+            Assert.AreEqual(3,
+                SeasonSaveManager.Load(path).Discipline
+                    .EntryFor(100, DisciplineConstants.LEAGUE_COMPETITION_KEY).BanMatchesRemaining);
         }
 
         // ── ERR-030-038: an empty tally is FR-DC-017's clean state, not evidence of a loss ──
@@ -1734,7 +1783,7 @@ namespace TacticalDirector.SeasonSave
             Assert.Throws<InvalidOperationException>(
                 () => SeasonSaveManager.Save(
                     world, MidSeasonState(), matchOrNull: null, TempPath("cursor-behind.season"),
-                    NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState()),
+                    NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true),
                 "Save must refuse a world already past the season's next fixture day — Load refuses "
                 + "this file, and this root never writes what its own Load refuses.");
 
@@ -1771,7 +1820,7 @@ namespace TacticalDirector.SeasonSave
                 done.AdvanceCursorOneRound();
             }
 
-            SeasonSaveManager.Save(world, done, matchOrNull: null, path, NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState());
+            SeasonSaveManager.Save(world, done, matchOrNull: null, path, NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true);
 
             SeasonSaveContents got = SeasonSaveManager.Load(path);
             Assert.IsTrue(got.Season.Calendar.IsSeasonComplete,
@@ -2317,4 +2366,17 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | Unwired* — because the public long form cannot express "no        |
 // |         |            |        | discipline wired" and its empty tally is no longer a refusal.     |
 // |         |            |        | + the LoopDriving fixture.                                        |
+// | 1.20    | 2026-08-13 | —      | #44 C1/C2 AR round 4, H4 (ERR-030-039). New lock:                  |
+// |         |            |        | Save_ThePublicLongForm_DrivingNoDiscipline_CannotEmptyAPopulated- |
+// |         |            |        | Tally — two PUBLIC long-form saves over one path, the second      |
+// |         |            |        | driving no discipline, asserting the refusal and that the         |
+// |         |            |        | destination's row survives. Before the fix that form hardcoded    |
+// |         |            |        | disciplineWired: true, so the same call emptied the tally with    |
+// |         |            |        | every gate green. Every long-form call site in this file now      |
+// |         |            |        | passes disciplineWired explicitly (true where the previous        |
+// |         |            |        | forwarding overload asserted it), and v1.19's claim that "the      |
+// |         |            |        | public long form cannot express 'no discipline wired'" — the      |
+// |         |            |        | false premise the defect rested on — is corrected in the comment  |
+// |         |            |        | that carried it. Mutation-verified: reinstating the hardcode      |
+// |         |            |        | (disciplineWired = true at the top of Save) fails the new lock.   |
 #endregion
