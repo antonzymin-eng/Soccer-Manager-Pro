@@ -1,6 +1,7 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
-// Modified: 2026-08-13 (#44 T1, roadmap C1 — Save/Load thread the mandatory discipline block)
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review — H1 the destination discipline guard, H2 the
+//           composed restore filter — v1.23)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-1 / KD-5..KD-8;
 //           Training System #29 §4.4 / FR-TR-018/019; Injuries & Medical #41 §4.4 / FR-MD-017/018;
@@ -215,6 +216,24 @@ namespace TacticalDirector.SeasonSave
                 RequireDestinationCarriesNoCareer(path);
             }
 
+            // The THIRD instance of the same defect, in the third block family (ERR-030-036, the C1/C2
+            // AR's H1). Neither guard above can see it: the roster guard fires only when the #28 store
+            // is empty, the career guard only when all three career blocks are, and the reachable case
+            // is a resumed career with BOTH populated and the tally dropped — so a save sailed through
+            // both and deleted every ban and every yellow in the destination, frame still v6, Load still
+            // succeeding. FR-DC-014 retains no ledgers (§4.5), so the cards exist nowhere else and
+            // nothing downstream can recompute them; a forgiven ban is simply gone.
+            //
+            // The realistic way to reach it was structural rather than careless: SeasonLoop.Restore had
+            // no discipline parameter at all until this fix, so the documented resume path could not
+            // carry SeasonSaveContents.Discipline even deliberately. That half is fixed at the source;
+            // this half is the one that survives a future call site forgetting the argument, the same
+            // argument the required `discipline` parameter above already makes for null.
+            if (discipline.Count == 0)
+            {
+                RequireDestinationCarriesNoDiscipline(path);
+            }
+
             string tempPath = path + ".tmp";
             try
             {
@@ -310,7 +329,10 @@ namespace TacticalDirector.SeasonSave
                 // the zero-entry block it was built from. When discipline IS wired this is the live
                 // tally, and it must be — a save that silently wrote an empty block would forgive
                 // every outstanding suspension in the career, and FR-DC-014 rules out recomputing them
-                // (no ledgers are retained, so the cards exist nowhere else).
+                // (no ledgers are retained, so the cards exist nowhere else). That hazard was stated
+                // here one line above the call that caused it and nothing enforced it (ERR-030-036);
+                // it is a property of the DESTINATION, not of this loop, so it is guarded at the write
+                // itself — RequireDestinationCarriesNoDiscipline — exactly as the roster is.
                 loop.Discipline ?? new DisciplineState());
         }
 
@@ -402,6 +424,54 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>
+        /// The THIRD sibling (ERR-030-036), for the #44 discipline tally. An empty tally may create a
+        /// file and may overwrite an empty one, never a populated one.
+        /// <para>
+        /// Keyed on the tally's own emptiness rather than on any career block, because #44's state is
+        /// keyed by <c>(PlayerId, CompetitionId)</c> and has no club dimension at all — the two guards
+        /// above key on block families it shares nothing with, which is precisely why a resumed career
+        /// with a populated store AND populated career blocks passed both while dropping every ban.
+        /// </para>
+        /// <para>
+        /// The loss this refuses is unrecoverable in a way the sibling guards' is not: FR-DC-014 keeps
+        /// no card ledgers, only the running <c>(Yellows, BanMatchesRemaining)</c> tally, so a forgiven
+        /// suspension cannot be re-derived from anything else in the file.
+        /// </para>
+        /// </summary>
+        private static void RequireDestinationCarriesNoDiscipline(string path)
+        {
+            if (!File.Exists(path))
+            {
+                return;
+            }
+
+            int existingEntries;
+            try
+            {
+                SeasonSaveBlobs existing = SeasonSaveCodec.Decode(File.ReadAllBytes(path));
+                existingEntries = DisciplineSaveCodec.Decode(existing.DisciplineBlob).Count;
+            }
+            catch (Exception)
+            {
+                // Not a readable season save (corrupt, truncated, a different format, or a pre-v6
+                // frame). Nothing to protect — both sibling guards reason identically.
+                return;
+            }
+
+            if (existingEntries > 0)
+            {
+                throw new InvalidOperationException(
+                    "Refusing to overwrite " + path + ": it carries #44 discipline state for " +
+                    existingEntries + " player(s) and this save has none. Every outstanding suspension " +
+                    "and every yellow would be forgiven silently, and FR-DC-014 retains no card " +
+                    "ledgers, so nothing can recompute them. Resume the loop with the tally from " +
+                    "SeasonSaveContents.Discipline (SeasonLoop.Restore's disciplineOrNull, or the " +
+                    "constructor's seventh argument) rather than composing a discipline-less loop over " +
+                    "a populated file.");
+            }
+        }
+
+        /// <summary>
         /// Reads the season save file at <paramref name="path"/>, deframes it, and reconstructs the
         /// living-world <see cref="WorldStore"/>, the <see cref="SeasonState"/>, the per-club #29
         /// training / #41 medical state (all always — the last two possibly empty), the #28 progression
@@ -482,20 +552,34 @@ namespace TacticalDirector.SeasonSave
             RequireCoherentCareerBlocks(
                 trainingClubs, medicalClubs, appearanceClubs, progression);
 
-            // The in-progress match was configured with the AVAILABILITY-FILTERED squad (#41 FR-MD-023,
-            // #29/#41 T2), and the snapshot records only each team's ClubId — it cannot record "which
+            // The in-progress match was configured with the COMPOSED availability filter (#30 §3.4 —
+            // #41's FR-MD-023 injury removals AND #44's FR-DC-010 suspension removals since the C1/C2
+            // landing), and the snapshot records only each team's ClubId — it cannot record "which
             // eighteen of the twenty-five". So restoring through the raw provider hands
             // ReprojectDistinctSquads the FULL roster, it re-runs LineupSelector over a different
             // candidate set, and the restored eleven is not the eleven that took the pitch: different
             // canonical attribute records on every slot, every gate green (the ClubId matches, the size
             // check passes), and the match then diverges from the pre-save run with nothing to announce
-            // it. Re-applying the same filter — from the medical state carried in THIS file, which is
-            // the state the match was configured against — reproduces the exact squad, so selection
-            // lands on the same eleven.
+            // it. Re-applying the same filter — over the medical state AND the discipline tally carried
+            // in THIS file, which is the state the match was configured against — reproduces the exact
+            // squad, so selection lands on the same eleven.
+            //
+            // BOTH contributors, not just #41 (the C1/C2 AR's H2): the decorator originally called
+            // PlayerCareerStates.SelectAvailable, which composes with `discipline: null`, while
+            // SeasonLoop.BootFixtureEngine configured the engine through SelectAvailable WITH the
+            // tally. A fixture in which a suspension changed the eleven therefore restored a strictly
+            // larger candidate set and re-selected a DIFFERENT eleven — the identical defect this
+            // decorator was created to close, reopened one contributor later. It also retires the
+            // inherited proof for the snapshot's `_slotPlayerIds` exclusion: that exclusion is
+            // mechanically sound (both reprojection paths write it and `_activeBenchSlot` is
+            // serialized), but its safety PREMISE is "the provider yields the squad the match was
+            // configured with", and only a composed filter makes that true again.
             //
             // Pass-through for a club the career does not carry, which is every club of every
             // careerless save (all three career blocks empty — a literally pre-T2 v3 FILE is refused
-            // by F3): the decorator is then the identity and the restore is bit-for-bit what it was.
+            // by F3). #44 has no club dimension — its tally is keyed (PlayerId, CompetitionId) — so
+            // its removals still apply there; with an empty tally that is the identity and the restore
+            // is bit-for-bit what it was.
             MatchEngine.MatchEngine match = null;
             if (blobs.MatchBlob != null)
             {
@@ -519,7 +603,7 @@ namespace TacticalDirector.SeasonSave
                     : squads;
                 ISquadProvider asConfigured = rosterSource == null
                     ? null
-                    : new AvailabilityFilteredSquads(rosterSource, career);
+                    : new AvailabilityFilteredSquads(rosterSource, career, discipline);
                 match = MatchSaveManager.Restore(blobs.MatchBlob, asConfigured);
             }
 
@@ -529,14 +613,26 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>
-        /// An <see cref="ISquadProvider"/> that applies the #41 availability filter on the way out, so a
+        /// An <see cref="ISquadProvider"/> that applies #30 §3.4's COMPOSED availability filter on the
+        /// way out — both contributors, #41's injury removals and #44's suspension removals — so a
         /// restore re-selects from the same squad the match was configured with. Load-time only; never
         /// persisted (the <c>squads</c> / <c>canon</c> precedent).
         /// <para>
-        /// It only reads the career, so the throwaway instance <see cref="Load"/> builds for this
-        /// cannot disturb the blocks handed back in <see cref="SeasonSaveContents"/> — and would not
-        /// reach them in any case, since <see cref="PlayerCareerStates.FromBlocks"/> copies the state
-        /// arrays rather than borrowing them.
+        /// <b>Both contributors, because the boot uses both</b> (the C1/C2 AR's H2).
+        /// <see cref="SeasonLoop.BootFixtureEngine"/> filters through the same
+        /// <see cref="AvailabilityComposition.Compose"/> call carrying the loop's tally, so a decorator
+        /// that composed with <c>discipline: null</c> handed the re-selection a strictly LARGER
+        /// candidate set on any fixture a suspension had touched — a different eleven on the pitch,
+        /// ClubId matching, size gate passing, digest diverging with nothing to announce it. That is
+        /// the defect this decorator was created to close, reopened one contributor later.
+        /// </para>
+        /// <para>
+        /// It only reads the career and the tally, so the throwaway instances <see cref="Load"/> builds
+        /// for this cannot disturb what is handed back in <see cref="SeasonSaveContents"/> — and would
+        /// not reach the career blocks in any case, since
+        /// <see cref="PlayerCareerStates.FromBlocks"/> copies the state arrays rather than borrowing
+        /// them. The tally IS the instance handed back, which is safe for the same reason: every read
+        /// here goes through <see cref="AvailabilityComposition"/>, which only queries it.
         /// </para>
         /// <para>
         /// A roster that has drifted from the save — a squad player the save's career carries no state
@@ -549,26 +645,34 @@ namespace TacticalDirector.SeasonSave
         {
             private readonly ISquadProvider _inner;
             private readonly PlayerCareerStates _career;
+            private readonly DisciplineState _discipline;
 
-            internal AvailabilityFilteredSquads(ISquadProvider inner, PlayerCareerStates career)
+            internal AvailabilityFilteredSquads(
+                ISquadProvider inner, PlayerCareerStates career, DisciplineState discipline)
             {
                 _inner = inner;
                 _career = career;
+                _discipline = discipline;
             }
 
             /// <inheritdoc />
             public Squad ResolveByClubId(int clubId)
             {
                 Squad squad = _inner.ResolveByClubId(clubId);
-                if (squad == null || !_career.CarriesClub(clubId))
+                if (squad == null)
                 {
                     // Null is the provider's own "unknown club" answer and the restore factory's
-                    // fail-loud input — do not turn it into an exception here, and do not filter a club
-                    // this save carries no medical state for.
+                    // fail-loud input — do not turn it into an exception here.
                     return squad;
                 }
 
-                return _career.SelectAvailable(squad);
+                // #41's contributor is club-keyed and fail-louds on a club it does not carry, so it is
+                // withheld for a club this save has no career state for (every club of a careerless
+                // save). #44's is not club-keyed at all — its tally is (PlayerId, CompetitionId) — so
+                // it applies either way, and an empty tally makes Compose return the same instance.
+                PlayerCareerStates careerOrNull = _career.CarriesClub(clubId) ? _career : null;
+                return AvailabilityComposition.Compose(
+                    squad, careerOrNull, _discipline, DisciplineConstants.LEAGUE_COMPETITION_KEY);
             }
         }
 
@@ -992,4 +1096,24 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | (PlayerId, CompetitionId) rather than by club, so neither of the   |
 // |         |            |        | existing cross-block coherence walks has a natural analogue for    |
 // |         |            |        | it; flagged for owner review rather than invented here.            |
+// | 1.23    | 2026-08-13 | —      | #44 C1/C2 adversarial review, H1 + H2.                             |
+// |         |            |        | H1 (ERR-030-036): new RequireDestinationCarriesNoDiscipline,       |
+// |         |            |        | invoked when the tally is empty — the third sibling of the roster  |
+// |         |            |        | and career-triple guards, in the third block family, and the one   |
+// |         |            |        | neither of those could see: they key on #28's club count and on    |
+// |         |            |        | the three career blocks, so a resumed career with BOTH populated   |
+// |         |            |        | and the tally dropped passed both and deleted every ban and every  |
+// |         |            |        | yellow in the destination — a hazard this file's own comment       |
+// |         |            |        | stated verbatim one line above the call that caused it. Paired     |
+// |         |            |        | with SeasonLoop.Restore's new disciplineOrNull (SeasonLoop v1.21), |
+// |         |            |        | without which the documented resume path could not carry the       |
+// |         |            |        | tally at all.                                                      |
+// |         |            |        | H2: AvailabilityFilteredSquads composes BOTH contributors. It      |
+// |         |            |        | called PlayerCareerStates.SelectAvailable (discipline: null) while |
+// |         |            |        | SeasonLoop.BootFixtureEngine configured the engine WITH the tally, |
+// |         |            |        | so a mid-match save of a fixture a suspension had touched restored |
+// |         |            |        | a strictly larger candidate set and re-selected a different eleven |
+// |         |            |        | — the exact H2 the #29/#41 T2 AR closed for injuries, reopened one |
+// |         |            |        | contributor later. Now one AvailabilityComposition.Compose call,   |
+// |         |            |        | mirroring the boot's.                                              |
 #endregion

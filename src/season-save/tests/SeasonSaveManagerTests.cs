@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonSaveManagerTests.cs
 // Created:  2026-07-22
-// Modified: 2026-08-13 (#44 T1, roadmap C1 — call sites updated for the new discipline parameter — v1.17)
+// Modified: 2026-08-13 (#44 C1/C2 AR, H1 — the ERR-030-036 resume-and-save locks — v1.18)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §5 acceptance;
 //           Season & Competition Loop #30 FR-SN-019..023, Appendix B; Training System #29 FR-TR-018/019;
@@ -1292,6 +1292,185 @@ namespace TacticalDirector.SeasonSave
                 "an empty store may overwrite a file that itself already carries an empty roster.");
         }
 
+        // ── ERR-030-036: a resume-and-save cycle must not forgive every outstanding suspension ──
+
+        /// <summary>A tally in which <paramref name="playerId"/> carries a live ban and two yellows.</summary>
+        private static DisciplineState TallyFor(int playerId) =>
+            DisciplineState.FromEntries(new[]
+            {
+                new DisciplineEntry(
+                    playerId, DisciplineConstants.LEAGUE_COMPETITION_KEY, yellows: 2,
+                    banMatchesRemaining: 3),
+            });
+
+        [Test]
+        public void Restore_CarriesTheDisciplineTallyIntoTheResumedLoop()
+        {
+            // ERR-030-036, the half that makes a correct resume EXPRESSIBLE. SeasonLoop.Restore took six
+            // parameters and none of them was the tally, so a loop rebuilt through the documented
+            // restore path had Discipline == null whatever the file carried — and the next
+            // Save(SeasonLoop, …) then wrote `loop.Discipline ?? new DisciplineState()`, a well-formed
+            // ZERO-ENTRY block, over the live one.
+            WorldStore world = PopulatedStore();
+            DisciplineState tally = TallyFor(100);
+
+            SeasonLoop restored = SeasonLoop.Restore(
+                world, SeasonStateCodec.Encode(MidSeasonState()), RoundResolutionMode.QuickSimAll,
+                careerOrNull: null, careerSquadsOrNull: null, progressionOrNull: null,
+                disciplineOrNull: tally);
+
+            Assert.IsNotNull(restored.Discipline,
+                "The restored loop drives no discipline at all, so every card it would show is lost and "
+                + "every ban it holds is already forgiven — Restore must forward disciplineOrNull.");
+            Assert.AreSame(tally, restored.Discipline,
+                "The loop must drive the very tally handed to it: #44's state is mutated in place by "
+                + "the fold and the serving decrement, so a copy would strand every update.");
+            Assert.AreEqual(1, restored.Discipline.Count);
+            Assert.AreEqual(3,
+                restored.Discipline.EntryFor(100, DisciplineConstants.LEAGUE_COMPETITION_KEY)
+                    .BanMatchesRemaining,
+                "the outstanding ban must survive the restore.");
+        }
+
+        [Test]
+        public void Save_AnEmptyDisciplineTally_OverAPopulatedOne_IsRefused()
+        {
+            // ERR-030-036's headline: ERR-028-008's measured shape in the third block family, and the
+            // one neither existing destination guard can see. RequireDestinationCarriesNoRoster fires
+            // only when the #28 store is empty and RequireDestinationCarriesNoCareer only when all
+            // three career blocks are, so a resumed career with BOTH populated and the tally dropped
+            // sails through both — and every ban and every yellow in the destination is gone, frame
+            // still v6, Load still succeeding. FR-DC-014 retains no ledgers, so nothing can recompute
+            // them.
+            WorldStore world = PopulatedStore();
+            ProgressionEngine populated = ProgressionFor(PBlock(7, 100, lastAdvancedWorldDay: 1u));
+            string path = TempPath("populated-discipline.season");
+
+            SeasonSaveManager.Save(
+                world, MidSeasonState(), matchOrNull: null, path,
+                TrainingMatching(7, 100), MedicalMatching(7, 100), AppearanceMatching(7, 100),
+                populated, TallyFor(100));
+
+            // Everything else about the second save is legitimate — the roster and the career triple are
+            // both populated, so neither sibling guard has anything to say. Only the tally is missing.
+            Assert.Throws<InvalidOperationException>(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
+                    TrainingMatching(7, 100), MedicalMatching(7, 100), AppearanceMatching(7, 100),
+                    ProgressionFor(PBlock(7, 100, lastAdvancedWorldDay: 1u)), new DisciplineState()),
+                "an empty discipline tally must not overwrite a file carrying one — the roster and the "
+                + "whole career surviving beside the hole is exactly what makes this silent.");
+
+            SeasonSaveContents reloaded = SeasonSaveManager.Load(path);
+            Assert.AreEqual(1, reloaded.Discipline.Count,
+                "the refused write must leave the original tally intact.");
+            Assert.AreEqual(3,
+                reloaded.Discipline.EntryFor(100, DisciplineConstants.LEAGUE_COMPETITION_KEY)
+                    .BanMatchesRemaining);
+        }
+
+        [Test]
+        public void Save_AnEmptyDisciplineTally_ToANewPath_Succeeds()
+        {
+            // The carve-out the guard must not break: a game that has never shown a card writes a
+            // well-formed zero-entry block, and that is the honest state, not a loss.
+            string path = TempPath("fresh-empty-discipline.season");
+
+            Assert.DoesNotThrow(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
+                    NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState()),
+                "an empty tally may freely create a new file — there is nothing there to protect.");
+            Assert.IsTrue(File.Exists(path));
+        }
+
+        [Test]
+        public void Save_AnEmptyDisciplineTally_OverAnAlreadyEmptyOne_Succeeds()
+        {
+            // The second half of the carve-out: a discipline-less career must stay repeatedly saveable,
+            // or the guard breaks every save written before the first card of the season.
+            string path = TempPath("empty-discipline-twice.season");
+            SeasonSaveManager.Save(
+                PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
+                NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState());
+
+            Assert.DoesNotThrow(
+                () => SeasonSaveManager.Save(
+                    PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
+                    NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState()),
+                "overwriting an already card-less file is not a loss and must stay legal.");
+        }
+
+        [Test]
+        public void ResumeThroughRestore_AndSaveBack_KeepsEveryOutstandingSuspension()
+        {
+            // The two halves of ERR-030-036 driven end to end, through the documented resume path: Load
+            // the file, rebuild the loop with SeasonSaveContents.Discipline, save back to the same path.
+            // Before the fix the parameter did not exist, so this sequence was unwritable — and the
+            // sequence that WAS writable (omit the tally) wrote the empty block with nothing to stop it.
+            WorldStore world = PopulatedStore();
+            string path = TempPath("resume-discipline.season");
+
+            SeasonSaveManager.Save(
+                world, MidSeasonState(), matchOrNull: null, path,
+                NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, TallyFor(100));
+
+            SeasonSaveContents contents = SeasonSaveManager.Load(path);
+            SeasonLoop resumed = SeasonLoop.Restore(
+                contents.World, SeasonStateCodec.Encode(contents.Season),
+                RoundResolutionMode.QuickSimAll,
+                careerOrNull: null, careerSquadsOrNull: null, progressionOrNull: null,
+                disciplineOrNull: contents.Discipline);
+
+            Assert.DoesNotThrow(
+                () => SeasonSaveManager.Save(resumed, matchOrNull: null, path),
+                "a loop resumed WITH the file's tally must save back over its own file — the guard "
+                + "protects against dropping the tally, not against carrying it.");
+
+            SeasonSaveContents reloaded = SeasonSaveManager.Load(path);
+            Assert.AreEqual(1, reloaded.Discipline.Count,
+                "the resume-and-save cycle silently forgave the whole season's discipline.");
+            Assert.AreEqual(3,
+                reloaded.Discipline.EntryFor(100, DisciplineConstants.LEAGUE_COMPETITION_KEY)
+                    .BanMatchesRemaining,
+                "the outstanding ban must survive a resume-and-save cycle unchanged.");
+            Assert.AreEqual(2,
+                reloaded.Discipline.EntryFor(100, DisciplineConstants.LEAGUE_COMPETITION_KEY).Yellows,
+                "the accumulated yellows must survive it too — FR-DC-014 keeps no ledger to rebuild "
+                + "them from.");
+        }
+
+        [Test]
+        public void ResumeThatDropsTheTally_AndSavesBack_IsRefused()
+        {
+            // The negative control the guard exists for, and the one a caller actually reaches: the same
+            // resume as above with the tally simply not threaded through. It compiles, the loop runs, and
+            // before the guard the save succeeded — deleting the season's discipline in a green write.
+            WorldStore world = PopulatedStore();
+            string path = TempPath("resume-drops-discipline.season");
+
+            SeasonSaveManager.Save(
+                world, MidSeasonState(), matchOrNull: null, path,
+                NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, TallyFor(100));
+
+            SeasonSaveContents contents = SeasonSaveManager.Load(path);
+            SeasonLoop resumed = SeasonLoop.Restore(
+                contents.World, SeasonStateCodec.Encode(contents.Season),
+                RoundResolutionMode.QuickSimAll);
+
+            Assert.IsNull(resumed.Discipline, "Precondition: this resume drives no discipline.");
+            Assert.Throws<InvalidOperationException>(
+                () => SeasonSaveManager.Save(resumed, matchOrNull: null, path),
+                "Save(SeasonLoop, …) writes `loop.Discipline ?? new DisciplineState()`, so a resume that "
+                + "dropped the tally writes a zero-entry block over the live one. It must be refused at "
+                + "the write — the loss is a property of the DESTINATION, which no signature can force a "
+                + "caller to consider.");
+
+            SeasonSaveContents reloaded = SeasonSaveManager.Load(path);
+            Assert.AreEqual(1, reloaded.Discipline.Count,
+                "the refused write must leave the file's tally intact.");
+        }
+
         [Test]
         public void SaveLoad_TransposedTrainingAndMedicalBlocks_FailLoud()
         {
@@ -2002,4 +2181,14 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | Match assert the discipline block round-trips too; Codec_PreT1-  |
 // |         |            |        | FrameVersions_FailLoud's stale-version list gains v4 and v5. No  |
 // |         |            |        | other assertion or intent change.                                 |
+// | 1.18    | 2026-08-13 | —      | #44 C1/C2 adversarial review, H1 (ERR-030-036): six locks on the  |
+// |         |            |        | resume-and-save cycle. Restore_CarriesTheDisciplineTallyIntoThe-  |
+// |         |            |        | ResumedLoop (the forwarding half — fails if SeasonLoop.Restore's  |
+// |         |            |        | new disciplineOrNull stops reaching the constructor); Save_An-    |
+// |         |            |        | EmptyDisciplineTally_OverAPopulatedOne_IsRefused, with BOTH       |
+// |         |            |        | sibling guards' subjects deliberately populated so only the new   |
+// |         |            |        | one can fire; its two carve-outs (new path, already-empty         |
+// |         |            |        | destination); and the two end-to-end resume cases — threading     |
+// |         |            |        | SeasonSaveContents.Discipline keeps the ban and the yellows,      |
+// |         |            |        | dropping it is refused at the write. + the TallyFor fixture.      |
 #endregion

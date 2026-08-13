@@ -1,8 +1,9 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
-// Modified: 2026-08-11 (AR pass 6, M2(b) — the BirthWorldDay-vs-clock check joins the composition
-// Modified: 2026-08-13 (#44 T2: the composed availability filter, the tap-fed CardLedgerFold, the FR-DC-011 serving decrement and the FR-DC-017 boundary sweep — see AvailabilityComposition)
-//           walk — v1.19; the pass 1-3 recording chain and the pass-5 doc fix are the rows below)
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review, H1 — Restore threads disciplineOrNull, so a loop
+//           rebuilt through the documented restore path can carry the tally the save file holds — v1.21.
+//           Prior: v1.20 #44 T2's four discipline drive points; v1.19 the BirthWorldDay-vs-clock
+//           composition check; the pass 1-3 recording chain and the pass-5 doc fix are the rows below.)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (day advance / KD-2 tick order), §3.4 (playing a round /
 //           KD-9), §3.5 (season-boundary roll / KD-6), §4.3 (the composition root), §4.6 (the #22
@@ -967,6 +968,18 @@ namespace TacticalDirector.SeasonSave
         /// which means it must be null when <paramref name="progressionOrNull"/> is supplied.</param>
         /// <param name="progressionOrNull">The restored #28 career store (from
         /// <see cref="SeasonSaveContents.Progression"/>), or null for a loop that drives no progression.</param>
+        /// <param name="disciplineOrNull">The restored #44 tally (from
+        /// <see cref="SeasonSaveContents.Discipline"/>), or null for a loop that drives no discipline.
+        /// <para>
+        /// <b>Threaded here because a career cannot be resumed without it (the C1/C2 AR's H1).</b> This
+        /// method took six parameters and none of them was the tally, so a loop rebuilt through the
+        /// documented restore path had <c>Discipline == null</c> whatever the file carried — and
+        /// <see cref="SeasonSaveManager.Save(SeasonLoop,MatchEngine.MatchEngine,string)"/> then wrote a
+        /// well-formed ZERO-ENTRY block over it, forgiving every outstanding suspension and every yellow
+        /// in one green save. FR-DC-014 retains no ledgers, so nothing can recompute them. The
+        /// destination guard at the write is the second half of that fix; this is the half that makes
+        /// the correct resume expressible at all.
+        /// </para></param>
         /// <exception cref="System.ArgumentException">The blob is malformed (F3) or the restored pair
         /// violates the cursor invariant (F4).</exception>
         public static SeasonLoop Restore(
@@ -975,11 +988,12 @@ namespace TacticalDirector.SeasonSave
             RoundResolutionMode mode = RoundResolutionMode.ManagedThroughEngine,
             PlayerCareerStates careerOrNull = null,
             ISquadProvider careerSquadsOrNull = null,
-            ProgressionEngine progressionOrNull = null)
+            ProgressionEngine progressionOrNull = null,
+            DisciplineState disciplineOrNull = null)
         {
             return new SeasonLoop(
                 world, SeasonStateCodec.Decode(seasonBlob), mode, careerOrNull, careerSquadsOrNull,
-                progressionOrNull);
+                progressionOrNull, disciplineOrNull);
         }
 
         /// <summary>
@@ -1548,4 +1562,15 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | serve one match of his ban during the match he was dismissed    |
 // |         |            |        | in. The discipline state is optional and UNPAIRED (no provider, |
 // |         |            |        | no cursor, no day step), so null is byte-identical to pre-#44.  |
+// | 1.21    | 2026-08-13 | —      | #44 C1/C2 adversarial review, H1 (ERR-030-036). Restore gains a  |
+// |         |            |        | seventh parameter, disciplineOrNull, forwarded to the           |
+// |         |            |        | constructor. Without it the documented restore path could not   |
+// |         |            |        | carry SeasonSaveContents.Discipline at all, so a resumed loop   |
+// |         |            |        | always had Discipline == null and the next Save wrote a         |
+// |         |            |        | zero-entry DISC block over the file's live tally — every        |
+// |         |            |        | outstanding suspension and yellow forgiven, silently, with the  |
+// |         |            |        | frame still v6 and Load still succeeding. FR-DC-014 keeps no    |
+// |         |            |        | ledgers, so nothing downstream can recompute them. The          |
+// |         |            |        | destination-side refusal is the other half (SeasonSaveManager   |
+// |         |            |        | v1.23).                                                          |
 #endregion

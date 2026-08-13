@@ -1,10 +1,11 @@
 // File:     src/season-save/tests/SeasonLoopDisciplineTests.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13
+// Modified: 2026-08-13 (#44 C1/C2 AR, H2 — the mid-match restore-fidelity lock — v1.1)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §3.3/§5 (T-DC-NEU-001, T-DC-BAN-002/003/005, T-DC-VIEW-001,
 //           T-DC-SAV-002); Season & Competition Loop #30 §3.4 (the composed seam,
 //           ERR-030-009/-016/-029); ERR-044-002 (both resolution paths), ERR-044-003 (removals only);
+//           unified season save §4 / KD-6 (restore fidelity — the C1/C2 AR's H2);
 //           Code Standards #20
 // Purpose:  The #44 T2 WIRING locks. Every case here fails if a wiring point is reverted — the fold's
 //           seed and its per-tick pump, the filter at the seam on both paths and both clubs, the
@@ -28,6 +29,24 @@ namespace TacticalDirector.SeasonSave.Tests
         private const int ManagerId = 1;
         private const int ClubCount = 4;
         private const int BigLeagueClubCount = 20;
+
+        // Only the mid-match restore-fidelity lock touches the disk; the rest of this suite is in-memory.
+        private string _tempDir;
+
+        [SetUp]
+        public void SetUp()
+        {
+            _tempDir = System.IO.Path.Combine(
+                System.IO.Path.GetTempPath(), "td-disc-" + System.Guid.NewGuid().ToString("N"));
+            System.IO.Directory.CreateDirectory(_tempDir);
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            try { System.IO.Directory.Delete(_tempDir, recursive: true); }
+            catch (System.Exception) { }
+        }
 
         private static League FourClubLeague() => LeagueBootstrap.Generate(WorldSeed, ClubCount);
 
@@ -462,6 +481,88 @@ namespace TacticalDirector.SeasonSave.Tests
             }
         }
 
+        // ── mid-match restore fidelity (the C1/C2 AR's H2) ───────────────────────────────
+
+        [Test]
+        public void AMidMatchSave_WithASuspendedStarter_RestoresTheElevenThatActuallyPlayed()
+        {
+            // The #29/#41 T2 AR filed and closed this for injuries; #44 reopened it one contributor
+            // later. The match is configured through the COMPOSED filter — SeasonLoop.SelectAvailable
+            // passes _discipline — but SeasonSaveManager.Load's restore decorator called
+            // PlayerCareerStates.SelectAvailable, which composes with `discipline: null`. So a fixture a
+            // suspension had touched restored a strictly LARGER candidate set, LineupSelector re-ran
+            // over it, and a different eleven's canonical attribute records went onto the pitch: ClubId
+            // matching, size gate passing, digest diverging with nothing to announce it.
+            //
+            // Discriminated by continuing the digest chain, the injury lock's own technique — the
+            // canonical attribute records are re-derived from the roster at restore rather than
+            // serialized, so simulating on is the only way to see WHICH eleven came back.
+            League league = FourClubLeague();
+            int clubId = league.ClubIds()[0];
+            Squad full = league.ResolveByClubId(clubId);
+
+            // Suspend the seven best-rated players, so an unfiltered re-selection picks several of them
+            // and a filtered one cannot. Mirrors the injury lock's fixture exactly.
+            int[] firstChoice = SquadRating.StartingElevenPlayerIds(full);
+            var banned = new int[7];
+            for (int i = 0; i < banned.Length; i++)
+            {
+                banned[i] = firstChoice[i];
+            }
+
+            DisciplineState tally = BansOf(3, banned);
+
+            Squad fielded = AvailabilityComposition.Compose(
+                full, null, tally, DisciplineConstants.LEAGUE_COMPETITION_KEY);
+            Assert.That(fielded, Is.Not.SameAs(full),
+                "Precondition: the filter must have removed somebody.");
+            Assert.That(
+                SquadRating.StartingElevenMean(fielded),
+                Is.Not.EqualTo(SquadRating.StartingElevenMean(full)),
+                "Precondition: the suspensions must change WHICH eleven is selected, or this test "
+                + "cannot distinguish a correct restore from a broken one.");
+
+            var engine = new TacticalDirector.MatchEngine.MatchEngine(WorldSeed);
+            engine.ConfigureSquads(fielded, league.ResolveByClubId(league.ClubIds()[1]));
+            for (int t = 0; t < 10; t++)
+            {
+                engine.RunTick();
+            }
+
+            var world = new WorldStore(ManagerId, WorldSeed);
+            var loop = new SeasonLoop(
+                world, league.CreateSeason(clubId), RoundResolutionMode.QuickSimAll,
+                careerOrNull: null, careerSquadsOrNull: null, progressionOrNull: null,
+                disciplineOrNull: tally);
+
+            string path = System.IO.Path.Combine(_tempDir, "midmatch-suspension.save");
+            SeasonSaveManager.Save(loop, engine, path);
+
+            // What the un-saved match goes on to do — the chain a correct restore must reproduce.
+            const int Continue = 60;
+            var reference = new byte[Continue][];
+            for (int t = 0; t < Continue; t++)
+            {
+                engine.RunTick();
+                reference[t] = engine.CurrentSnapshotDigest;
+            }
+
+            // Loaded with the UNFILTERED league as its provider — which is all any caller has.
+            SeasonSaveContents contents = SeasonSaveManager.Load(path, league);
+            Assert.That(contents.Match, Is.Not.Null, "Precondition: the save carried a match.");
+
+            for (int t = 0; t < Continue; t++)
+            {
+                contents.Match.RunTick();
+                Assert.That(contents.Match.CurrentSnapshotDigest, Is.EqualTo(reference[t]),
+                    $"Digest diverged {t + 1} ticks after restore. The match was configured with the "
+                    + "COMPOSED availability filter and the snapshot records only the ClubId, so a "
+                    + "restore that re-applies #41's removals alone re-selects from a larger candidate "
+                    + "set and puts a different eleven's attribute records on the pitch — silently, "
+                    + "with every gate green.");
+            }
+        }
+
         // ── the season boundary ──────────────────────────────────────────────────────────
 
         [Test]
@@ -589,4 +690,10 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | both paths and BOTH clubs, serving, the off-by-one, the #41       |
 // |         |            |        | composition and its back-fill tiering, the real-match fold with   |
 // |         |            |        | its positive control, and the boundary sweep.                     |
+// | 1.1     | 2026-08-13 | —      | #44 C1/C2 adversarial review, H2: the mid-match restore-fidelity  |
+// |         |            |        | lock — a save whose eleven was shaped by a SUSPENSION must        |
+// |         |            |        | restore that same eleven, proven by a 60-tick digest              |
+// |         |            |        | continuation (the #29/#41 T2 AR's technique, on the contributor   |
+// |         |            |        | that reopened its defect). + the temp-dir SetUp/TearDown this one |
+// |         |            |        | disk-touching case needs.                                          |
 #endregion
