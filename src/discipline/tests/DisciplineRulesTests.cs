@@ -1,8 +1,8 @@
 // File:     src/discipline/tests/DisciplineRulesTests.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 3, L11 — the non-discriminating kind-2
-//           order test replaced with two tests driven through the new internal ApplySecondYellow
-//           seam — v1.2)
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 5, M15/M19(a) — a MigratePlayerId negative-
+//           target-id lock, the kind-1 twin of L11's ApplySecondYellow seam (ApplyStraightRed), and
+//           the CARD_KIND_* rename to CardKind* (L17) — v1.3)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §3.2 (thresholds & bans) / §3.3 (serving) / §3.4 (boundary &
 //           hygiene); FR-DC-006/007/011/012/013/017; F2/F4; §5 T-DC-BAN-001/002/003, T-DC-HYG-001;
@@ -42,7 +42,7 @@ namespace TacticalDirector.Discipline.Tests
             DisciplineRules rules = NewRules();
             int p = PlayerId(0, 1);
 
-            rules.ApplyCard(p, Competition, DisciplineConstants.CARD_KIND_YELLOW);
+            rules.ApplyCard(p, Competition, DisciplineConstants.CardKindYellow);
 
             DisciplineEntry entry = rules.State.EntryFor(p, Competition);
             Assert.AreEqual(1, entry.Yellows);
@@ -55,7 +55,7 @@ namespace TacticalDirector.Discipline.Tests
             DisciplineRules rules = NewRules();
             int p = PlayerId(0, 1);
 
-            rules.ApplyCard(p, Competition, DisciplineConstants.CARD_KIND_RED);
+            rules.ApplyCard(p, Competition, DisciplineConstants.CardKindRed);
 
             DisciplineEntry entry = rules.State.EntryFor(p, Competition);
             Assert.AreEqual(0, entry.Yellows, "kind 1 must carry NO yellow (FR-DC-006)");
@@ -68,7 +68,7 @@ namespace TacticalDirector.Discipline.Tests
             DisciplineRules rules = NewRules();
             int p = PlayerId(0, 1);
 
-            rules.ApplyCard(p, Competition, DisciplineConstants.CARD_KIND_SECOND_YELLOW);
+            rules.ApplyCard(p, Competition, DisciplineConstants.CardKindSecondYellow);
 
             DisciplineEntry entry = rules.State.EntryFor(p, Competition);
             Assert.AreEqual(1, entry.Yellows, "kind 2 IS one yellow — never zero, never synthesized away");
@@ -85,11 +85,11 @@ namespace TacticalDirector.Discipline.Tests
             // Defaults: threshold 5, accum 1. 4 straight yellows leave Yellows=4, no ban yet.
             for (int i = 0; i < 4; i++)
             {
-                rules.ApplyCard(p, Competition, DisciplineConstants.CARD_KIND_YELLOW);
+                rules.ApplyCard(p, Competition, DisciplineConstants.CardKindYellow);
             }
             Assert.AreEqual(4, rules.State.EntryFor(p, Competition).Yellows, "pre-condition: 4 yellows banked");
 
-            rules.ApplyCard(p, Competition, DisciplineConstants.CARD_KIND_YELLOW);   // the 5th ⇒ crosses
+            rules.ApplyCard(p, Competition, DisciplineConstants.CardKindYellow);   // the 5th ⇒ crosses
 
             DisciplineEntry entry = rules.State.EntryFor(p, Competition);
             Assert.AreEqual(0, entry.Yellows, "5 - threshold(5) = 0 residual");
@@ -103,12 +103,12 @@ namespace TacticalDirector.Discipline.Tests
             int p = PlayerId(0, 1);
             for (int i = 0; i < 4; i++)
             {
-                rules.ApplyCard(p, Competition, DisciplineConstants.CARD_KIND_YELLOW);
+                rules.ApplyCard(p, Competition, DisciplineConstants.CardKindYellow);
             }
 
             // The 5th yellow (from the kind-2) crosses the threshold AND the kind-2 adds its own ban —
             // both bans stack additively (FR-DC-007).
-            rules.ApplyCard(p, Competition, DisciplineConstants.CARD_KIND_SECOND_YELLOW);
+            rules.ApplyCard(p, Competition, DisciplineConstants.CardKindSecondYellow);
 
             DisciplineEntry entry = rules.State.EntryFor(p, Competition);
             Assert.AreEqual(0, entry.Yellows);
@@ -125,10 +125,10 @@ namespace TacticalDirector.Discipline.Tests
             int p = PlayerId(0, 1);
             for (int i = 0; i < 4; i++)
             {
-                rules.ApplyCard(p, Competition, DisciplineConstants.CARD_KIND_YELLOW);
+                rules.ApplyCard(p, Competition, DisciplineConstants.CardKindYellow);
             }
 
-            rules.ApplyCard(p, Competition, DisciplineConstants.CARD_KIND_RED);
+            rules.ApplyCard(p, Competition, DisciplineConstants.CardKindRed);
 
             DisciplineEntry entry = rules.State.EntryFor(p, Competition);
             Assert.AreEqual(4, entry.Yellows, "a straight red does not touch the yellow tally at all");
@@ -152,7 +152,7 @@ namespace TacticalDirector.Discipline.Tests
             int threshold = DisciplineConstants.YellowAccumulationThreshold;
             state.Upsert(new DisciplineEntry(p, Competition, threshold + 2, 0));   // 7 at the default threshold 5
 
-            rules.ApplyCard(p, Competition, DisciplineConstants.CARD_KIND_YELLOW);   // 7 + 1 = 8 >= 5: crosses
+            rules.ApplyCard(p, Competition, DisciplineConstants.CardKindYellow);   // 7 + 1 = 8 >= 5: crosses
 
             DisciplineEntry entry = rules.State.EntryFor(p, Competition);
             Assert.AreEqual(3, entry.Yellows,
@@ -168,8 +168,8 @@ namespace TacticalDirector.Discipline.Tests
             DisciplineRules rules = NewRules();
             int p = PlayerId(0, 1);
 
-            rules.ApplyCard(p, Competition, DisciplineConstants.CARD_KIND_RED);            // + StraightRedBanMatches
-            rules.ApplyCard(p, Competition, DisciplineConstants.CARD_KIND_RED);            // + StraightRedBanMatches again
+            rules.ApplyCard(p, Competition, DisciplineConstants.CardKindRed);            // + StraightRedBanMatches
+            rules.ApplyCard(p, Competition, DisciplineConstants.CardKindRed);            // + StraightRedBanMatches again
             rules.AddBan(p, Competition, 3);                                               // + 3 direct
 
             int expected = 2 * DisciplineConstants.StraightRedBanMatches + 3;
@@ -231,19 +231,59 @@ namespace TacticalDirector.Discipline.Tests
         }
 
         [Test]
-        public void ApplyCard_Kind1_RoutesStraightRedBanMatchesThroughRequireBanLength()
+        public void ApplyCard_Kind1_SuccessfulCard_BanLands()
         {
-            // M4: at today's non-negative default this is a behaviour-preserving routing change —
-            // confirmed by the existing WorkedExample_Kind1_AddsBanPlus2_YellowsUntouched test still
-            // passing unmodified. RequireBanLength's own direct tests above prove the guard fires; this
-            // one proves ApplyCard actually calls it (not just AddBan's separate `matches < 0` check).
+            // M19(a): renamed from ApplyCard_Kind1_RoutesStraightRedBanMatchesThroughRequireBanLength,
+            // whose own comment claimed "this one proves ApplyCard actually calls [RequireBanLength]" —
+            // false, since at today's non-negative default RequireBanLength never refuses, so this
+            // assertion is identical whether or not ApplyCard's kind-1 branch calls the guard at all
+            // (a reviewer-executed mutant deleting that call survived). See
+            // ApplyStraightRed_WithAnInvalidBanLength_Throws below for the test that actually
+            // discriminates it, the ApplySecondYellow/L11 shape applied to kind-1.
             DisciplineRules rules = NewRules();
             int p = PlayerId(0, 1);
 
-            rules.ApplyCard(p, Competition, DisciplineConstants.CARD_KIND_RED);
+            rules.ApplyCard(p, Competition, DisciplineConstants.CardKindRed);
 
             Assert.AreEqual(DisciplineConstants.StraightRedBanMatches,
                 rules.State.EntryFor(p, Competition).BanMatchesRemaining);
+        }
+
+        [Test]
+        public void ApplyStraightRed_WithAnInvalidBanLength_Throws()
+        {
+            // M19(a): DisciplineConstants.StraightRedBanMatches is a public static readonly, resolved
+            // once at its non-negative default — no test in this process can drive ApplyCard's real
+            // kind-1 dispatch through a bad value (the same L5/L11 constraint the kind-2 tests document
+            // above). ApplyStraightRed takes the ban length as a parameter for exactly this reason.
+            DisciplineRules rules = NewRules();
+            int p = PlayerId(0, 1);
+
+            Assert.Throws<InvalidOperationException>(
+                () => rules.ApplyStraightRed(p, Competition, straightRedBanMatches: -1));
+
+            Assert.AreEqual(0, rules.State.EntryFor(p, Competition).BanMatchesRemaining,
+                "the refused ban length must not have been added.");
+        }
+
+        [Test]
+        public void ApplyStraightRed_WithAValidBanLength_MatchesApplyCardsKind1Behaviour()
+        {
+            // Proves ApplyCard's kind-1 case genuinely DELEGATES to ApplyStraightRed rather than
+            // carrying a parallel copy of the same call — the parallel-surface defect class this repo
+            // keeps filing (mirrors ApplySecondYellow_WithAValidBanLength_MatchesApplyCardsKind2Behaviour
+            // below).
+            DisciplineRules viaApplyCard = NewRules();
+            DisciplineRules viaDirectCall = NewRules();
+            int p = PlayerId(0, 1);
+
+            viaApplyCard.ApplyCard(p, Competition, DisciplineConstants.CardKindRed);
+            viaDirectCall.ApplyStraightRed(p, Competition, DisciplineConstants.StraightRedBanMatches);
+
+            DisciplineEntry expected = viaApplyCard.State.EntryFor(p, Competition);
+            DisciplineEntry actual = viaDirectCall.State.EntryFor(p, Competition);
+            Assert.AreEqual(expected.Yellows, actual.Yellows);
+            Assert.AreEqual(expected.BanMatchesRemaining, actual.BanMatchesRemaining);
         }
 
         [Test]
@@ -256,7 +296,7 @@ namespace TacticalDirector.Discipline.Tests
             DisciplineRules rules = NewRules();
             int p = PlayerId(0, 1);
 
-            rules.ApplyCard(p, Competition, DisciplineConstants.CARD_KIND_SECOND_YELLOW);
+            rules.ApplyCard(p, Competition, DisciplineConstants.CardKindSecondYellow);
 
             DisciplineEntry entry = rules.State.EntryFor(p, Competition);
             Assert.AreEqual(1, entry.Yellows, "the yellow from a successful kind-2 must land");
@@ -297,7 +337,7 @@ namespace TacticalDirector.Discipline.Tests
             DisciplineRules viaDirectCall = NewRules();
             int p = PlayerId(0, 1);
 
-            viaApplyCard.ApplyCard(p, Competition, DisciplineConstants.CARD_KIND_SECOND_YELLOW);
+            viaApplyCard.ApplyCard(p, Competition, DisciplineConstants.CardKindSecondYellow);
             viaDirectCall.ApplySecondYellow(p, Competition, DisciplineConstants.SecondYellowBanMatches);
 
             DisciplineEntry expected = viaApplyCard.State.EntryFor(p, Competition);
@@ -388,8 +428,8 @@ namespace TacticalDirector.Discipline.Tests
         {
             DisciplineRules rules = NewRules();
             int p = PlayerId(0, 1);
-            rules.ApplyCard(p, Competition, DisciplineConstants.CARD_KIND_YELLOW);
-            rules.ApplyCard(p, Competition, DisciplineConstants.CARD_KIND_YELLOW);
+            rules.ApplyCard(p, Competition, DisciplineConstants.CardKindYellow);
+            rules.ApplyCard(p, Competition, DisciplineConstants.CardKindYellow);
             rules.AddBan(p, Competition, 3);   // an unserved ban, e.g. a red in the last round of May
 
             rules.RollToNextSeason();
@@ -404,7 +444,7 @@ namespace TacticalDirector.Discipline.Tests
         {
             DisciplineRules rules = NewRules();
             int p = PlayerId(0, 1);
-            rules.ApplyCard(p, Competition, DisciplineConstants.CARD_KIND_YELLOW);   // Yellows 1, ban 0
+            rules.ApplyCard(p, Competition, DisciplineConstants.CardKindYellow);   // Yellows 1, ban 0
 
             rules.RollToNextSeason();
 
@@ -420,8 +460,8 @@ namespace TacticalDirector.Discipline.Tests
             DisciplineRules rules = NewRules();
             int p1 = PlayerId(0, 1);
             int p2 = PlayerId(0, 2);
-            rules.ApplyCard(p1, Competition, DisciplineConstants.CARD_KIND_YELLOW);   // Yellows 1, ban 0
-            rules.ApplyCard(p2, Competition, DisciplineConstants.CARD_KIND_YELLOW);   // Yellows 1, ban 0
+            rules.ApplyCard(p1, Competition, DisciplineConstants.CardKindYellow);   // Yellows 1, ban 0
+            rules.ApplyCard(p2, Competition, DisciplineConstants.CardKindYellow);   // Yellows 1, ban 0
 
             rules.RollToNextSeason();
 
@@ -437,7 +477,7 @@ namespace TacticalDirector.Discipline.Tests
             DisciplineRules rules = NewRules();
             int oldId = PlayerId(0, 1);
             int newId = PlayerId(1, 5);
-            rules.ApplyCard(oldId, Competition, DisciplineConstants.CARD_KIND_YELLOW);
+            rules.ApplyCard(oldId, Competition, DisciplineConstants.CardKindYellow);
             rules.AddBan(oldId, Competition, 2);
 
             rules.MigratePlayerId(oldId, newId);
@@ -508,6 +548,28 @@ namespace TacticalDirector.Discipline.Tests
         }
 
         [Test]
+        public void MigratePlayerId_NegativeTargetId_ThrowsAndWritesNothing()
+        {
+            // M15: round-1's M1 taught DisciplineEntry's constructor to refuse a negative PlayerId, but
+            // the write loop below didn't gain a matching pre-check — it removed the source's first row,
+            // THEN let the constructor throw on the negative target, deleting that row and aborting
+            // with the player's other competitions untouched. Two competitions makes the loss visible:
+            // a single-competition player would just look like an ordinary refusal.
+            DisciplineRules rules = NewRules();
+            int oldId = PlayerId(0, 1);
+            rules.AddBan(oldId, 0, 2);
+            rules.AddBan(oldId, 1, 3);
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => rules.MigratePlayerId(oldId, -1));
+
+            Assert.AreEqual(2, rules.State.Count,
+                "the refusal must leave BOTH of the source player's rows intact — a negative target id "
+                + "must be refused before the first row is ever removed.");
+            Assert.AreEqual(2, rules.State.EntryFor(oldId, 0).BanMatchesRemaining);
+            Assert.AreEqual(3, rules.State.EntryFor(oldId, 1).BanMatchesRemaining);
+        }
+
+        [Test]
         public void MigratePlayerId_NoRows_IsANoOp()
         {
             DisciplineRules rules = NewRules();
@@ -524,8 +586,8 @@ namespace TacticalDirector.Discipline.Tests
             DisciplineRules rules = NewRules();
             int oldId = PlayerId(0, 1);
             int newId = PlayerId(1, 1);
-            rules.ApplyCard(oldId, Competition, DisciplineConstants.CARD_KIND_YELLOW);
-            rules.ApplyCard(newId, Competition, DisciplineConstants.CARD_KIND_YELLOW);   // target already carries a row here
+            rules.ApplyCard(oldId, Competition, DisciplineConstants.CardKindYellow);
+            rules.ApplyCard(newId, Competition, DisciplineConstants.CardKindYellow);   // target already carries a row here
 
             Assert.Throws<ArgumentException>(() => rules.MigratePlayerId(oldId, newId));
         }
@@ -535,7 +597,7 @@ namespace TacticalDirector.Discipline.Tests
         {
             DisciplineRules rules = NewRules();
             int p = PlayerId(0, 1);
-            rules.ApplyCard(p, Competition, DisciplineConstants.CARD_KIND_YELLOW);
+            rules.ApplyCard(p, Competition, DisciplineConstants.CardKindYellow);
 
             Assert.DoesNotThrow(() => rules.MigratePlayerId(p, p));
             Assert.AreEqual(1, rules.State.EntryFor(p, Competition).Yellows, "the row must be untouched");
@@ -549,9 +611,9 @@ namespace TacticalDirector.Discipline.Tests
             DisciplineRules rules = NewRules();
             int target = PlayerId(0, 1);
             int other = PlayerId(0, 2);
-            rules.ApplyCard(target, 0, DisciplineConstants.CARD_KIND_YELLOW);
-            rules.ApplyCard(target, 1, DisciplineConstants.CARD_KIND_YELLOW);
-            rules.ApplyCard(other, 0, DisciplineConstants.CARD_KIND_YELLOW);
+            rules.ApplyCard(target, 0, DisciplineConstants.CardKindYellow);
+            rules.ApplyCard(target, 1, DisciplineConstants.CardKindYellow);
+            rules.ApplyCard(other, 0, DisciplineConstants.CardKindYellow);
 
             rules.DropPlayer(target);
 
@@ -568,9 +630,9 @@ namespace TacticalDirector.Discipline.Tests
             DisciplineRules rules = NewRules();
             int p = PlayerId(0, 1);
 
-            rules.ApplyCard(p, 0, DisciplineConstants.CARD_KIND_YELLOW);
-            rules.ApplyCard(p, 0, DisciplineConstants.CARD_KIND_YELLOW);
-            rules.ApplyCard(p, 1, DisciplineConstants.CARD_KIND_YELLOW);
+            rules.ApplyCard(p, 0, DisciplineConstants.CardKindYellow);
+            rules.ApplyCard(p, 0, DisciplineConstants.CardKindYellow);
+            rules.ApplyCard(p, 1, DisciplineConstants.CardKindYellow);
 
             Assert.AreEqual(2, rules.State.EntryFor(p, 0).Yellows);
             Assert.AreEqual(1, rules.State.EntryFor(p, 1).Yellows);
@@ -606,4 +668,20 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | asserts AddYellow's effect is absent (genuine order              |
 // |         |            |        | discrimination), one proves ApplyCard's kind-2 case actually     |
 // |         |            |        | delegates rather than duplicating the logic.                    |
+// | 1.3     | 2026-08-13 | —      | AR round 5 fixes. M15: MigratePlayerId_NegativeTargetId_Throws-  |
+// |         |            |        | AndWritesNothing locks the new newPlayerId >= 0 guard — the      |
+// |         |            |        | write loop used to remove the source's first row and THEN let    |
+// |         |            |        | DisciplineEntry's constructor throw on a negative target,        |
+// |         |            |        | deleting that row and aborting with the rest of the player's     |
+// |         |            |        | history stranded. M19(a): ApplyCard_Kind1_RoutesStraightRedBan-  |
+// |         |            |        | MatchesThroughRequireBanLength renamed to ApplyCard_Kind1_       |
+// |         |            |        | SuccessfulCard_BanLands (its comment claimed to prove ApplyCard  |
+// |         |            |        | calls RequireBanLength, but at the non-negative default it       |
+// |         |            |        | cannot — a reviewer-executed mutant deleting that call survived  |
+// |         |            |        | 96/96); paired with two new tests through the new                |
+// |         |            |        | DisciplineRules.ApplyStraightRed seam (the kind-1 twin of L11's  |
+// |         |            |        | ApplySecondYellow), mirroring that pair exactly. L17: every      |
+// |         |            |        | CARD_KIND_* reference renamed to DisciplineConstants.CardKind*   |
+// |         |            |        | (the constants are now [CROSS], PascalCase per src/CLAUDE.md     |
+// |         |            |        | §3.2.3).                                                          |
 #endregion

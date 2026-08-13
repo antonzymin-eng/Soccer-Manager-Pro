@@ -1,8 +1,9 @@
 // File:     src/season-save/tests/SeasonLoopDisciplineTests.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 4, M16 — the M12 position lock drives a
-//           constructor-injected IFixtureDisciplineDriver instead of SeasonLoop's process-static
-//           TestOnly_AfterHomeClubServed hook, which is deleted — v1.4)
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 5, M18 — two new MarkUnavailable-owning-
+//           contract locks, driven directly with a pre-set mask (AvailabilityComposition.Compose
+//           always hands it a fresh one, so the contract was unobservable through the wired seam) —
+//           v1.5)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §3.3/§5 (T-DC-NEU-001, T-DC-BAN-002/003/005, T-DC-VIEW-001,
 //           T-DC-SAV-002); Season & Competition Loop #30 §3.4 (the composed seam,
@@ -156,7 +157,7 @@ namespace TacticalDirector.SeasonSave.Tests
 
             int[] byAgent = engine.PlayerIdsByAgentId();
 
-            Assert.That(byAgent.Length, Is.EqualTo(MatchEngineConstants.AGENT_ID_SPACE),
+            Assert.That(byAgent.Length, Is.EqualTo(MatchEngineConstants.AgentIdSpace),
                 "The array must span the whole agent-id space, bench ids included — "
                 + "SubstitutionEvent.Incoming indexes past SQUAD_SIZE.");
 
@@ -174,7 +175,7 @@ namespace TacticalDirector.SeasonSave.Tests
 
             // Every bench id is populated too — a fold seeded from a half-filled array would fail F1
             // the first time a substitute was booked.
-            for (int b = MatchEngineConstants.SQUAD_SIZE; b < MatchEngineConstants.AGENT_ID_SPACE; b++)
+            for (int b = MatchEngineConstants.SQUAD_SIZE; b < MatchEngineConstants.AgentIdSpace; b++)
             {
                 Assert.That(byAgent[b], Is.Not.EqualTo(MatchEngineConstants.NO_PLAYER_ID),
                     $"Bench agent id {b} carries no player identity, so a card shown to a substitute "
@@ -803,6 +804,72 @@ namespace TacticalDirector.SeasonSave.Tests
                 + "The roll must neither forgive it nor serve it.");
         }
 
+        // ── M18: PlayerCareerStates.MarkUnavailable's OWNING contract, driven directly ────
+        //
+        // #30's composed seam (AvailabilityComposition.Compose) always hands MarkUnavailable a
+        // freshly allocated all-false mask, so the M14 "OWNS every index unconditionally" contract
+        // and a merely-additive one are indistinguishable through that call site alone — reverting
+        // the fix to additive (skip an index already false/0 instead of writing it) leaves the whole
+        // tree green. These two tests drive MarkUnavailable directly with a PRE-SET mask, the only
+        // way to observe the difference — the same reason Availability.MarkSuspended's own coverage
+        // in AvailabilityTests.cs pre-seeds its masks. This file, not PlayerCareerStatesTests.cs
+        // (season-save/tests has no such file today), because SeasonLoopDisciplineTests.cs is the
+        // #44/#30 wiring suite this session owns.
+
+        [Test]
+        public void MarkUnavailable_OwnsTheMask_ClearsAPreSetFlagForAFitPlayer()
+        {
+            League league = FourClubLeague();
+            LoopOver(league, RoundResolutionMode.QuickSimAll, out PlayerCareerStates career);
+            int clubId = league.ClubIds()[0];
+            Squad squad = league.ResolveByClubId(clubId);
+
+            var removed = new bool[squad.Count];
+            removed[0] = true;   // pre-set true for a player who is NOT injured — stale/shared mask
+            var recoveryRemaining = new int[squad.Count];
+            recoveryRemaining[0] = 99;   // pre-set to a stale nonzero value
+
+            int injuredCount = career.MarkUnavailable(squad, removed, recoveryRemaining);
+
+            Assert.That(removed[0], Is.False,
+                "M18/M14: a pre-set true for a player who is NOT injured must be cleared — this "
+                + "method owns the whole mask unconditionally, the same contract "
+                + "Availability.MarkSuspended carries.");
+            Assert.That(recoveryRemaining[0], Is.EqualTo(0),
+                "M18/M14: recoveryRemaining for a player this call does not remove must be written 0, "
+                + "not left at whatever the caller passed in.");
+            Assert.That(injuredCount, Is.EqualTo(0), "nobody in this fresh career carries an injury.");
+        }
+
+        [Test]
+        public void MarkUnavailable_RecoveryRemaining_IsZeroForAFitPlayer_EvenWhenOthersAreInjured()
+        {
+            League league = FourClubLeague();
+            LoopOver(league, RoundResolutionMode.QuickSimAll, out PlayerCareerStates career);
+            int clubId = league.ClubIds()[0];
+            Squad squad = league.ResolveByClubId(clubId);
+
+            int injuredPlayerId = squad.GetPlayer(0).PlayerId;
+            var knock = InjuryState.Create();
+            knock.Severity = InjurySeverity.Moderate;
+            knock.RecoveryRemaining = 7;
+            career.SetMedicalState(clubId, injuredPlayerId, in knock);
+
+            var removed = new bool[squad.Count];
+            var recoveryRemaining = new int[squad.Count];
+            recoveryRemaining[1] = 42;   // stale value for a player who is NOT injured
+
+            int injuredCount = career.MarkUnavailable(squad, removed, recoveryRemaining);
+
+            Assert.That(injuredCount, Is.EqualTo(1));
+            Assert.That(removed[0], Is.True, "the genuinely injured player must be marked.");
+            Assert.That(recoveryRemaining[0], Is.EqualTo(7));
+            Assert.That(removed[1], Is.False);
+            Assert.That(recoveryRemaining[1], Is.EqualTo(0),
+                "M18/M14: a fit player's recoveryRemaining must be zeroed, not left at a stale value "
+                + "the caller (or a prior contributor) had written.");
+        }
+
         // ── helpers ──────────────────────────────────────────────────────────────────────
 
         /// <summary>
@@ -939,4 +1006,14 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | WithoutATally_IsRefusedAtComposition for the seam's coherence      |
 // |         |            |        | rule. Re-VERIFIED by execution: moving the serve+commit block      |
 // |         |            |        | back above MarkFixturePlayed still turns the position lock red.    |
+// | 1.5     | 2026-08-13 | —      | AR round 5 fix (M18): MarkUnavailable_OwnsTheMask_ClearsAPreSet-   |
+// |         |            |        | FlagForAFitPlayer and MarkUnavailable_RecoveryRemaining_IsZero-    |
+// |         |            |        | ForAFitPlayer_EvenWhenOthersAreInjured — PlayerCareerStates.       |
+// |         |            |        | MarkUnavailable's M14 owning contract had zero coverage:           |
+// |         |            |        | AvailabilityComposition.Compose always hands it a freshly          |
+// |         |            |        | allocated all-false mask, so an additive implementation would      |
+// |         |            |        | behave identically through the wired seam and the whole tree       |
+// |         |            |        | stayed green under a revert. These two drive the method directly   |
+// |         |            |        | with a pre-set mask, mirroring Availability.MarkSuspended's own    |
+// |         |            |        | AvailabilityTests coverage.                                        |
 #endregion

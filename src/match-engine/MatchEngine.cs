@@ -1,5 +1,6 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 5, L15 — PlayerIdsByAgentId's two AGENT_ID_SPACE references updated for MatchEngineConstants' AGENT_ID_SPACE -> AgentIdSpace rename ([FIXED] -> [DERIVED] region fix); no behaviour change)
 // Modified: 2026-08-04 (ERR-008-020: SetAllAgentAttributes(_dtAttrs) wired per DecisionTree at boot — the §3.1.3.3 pass-lane attribute view)
 // Modified: 2026-08-12 (wiring backlog W2 instrument: the episode-based tackle-intent census — CensusTackleIntents + the TackleIntentCensus accumulator; observation only, no gameplay path, not serialized)
 // Modified: 2026-08-12 (wiring backlog W2 — the tackle: TryResolveTackles + #14 §3.6.5 duel + tackle flag; SNAPSHOT_SCHEMA_VERSION 20 -> 21; card-severity draw order moves by design)
@@ -2149,7 +2150,7 @@ namespace TacticalDirector.MatchEngine
 
         /// <summary>
         /// Which <c>PlayerId</c> currently occupies each of the engine's agent ids (#44 T2) — a fresh
-        /// array of length <see cref="MatchEngineConstants.AGENT_ID_SPACE"/>, indexed exactly the way
+        /// array of length <see cref="MatchEngineConstants.AgentIdSpace"/>, indexed exactly the way
         /// <c>CardIssuedEvent.Recipient</c> and <c>SubstitutionEvent.Outgoing</c>/<c>Incoming</c> are:
         /// on-pitch slots <c>[0, SQUAD_SIZE)</c> first, then the synthetic bench ids
         /// <c>SQUAD_SIZE + teamId * SUBSTITUTES_PER_TEAM + benchIndex</c> that
@@ -2174,7 +2175,7 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         public int[] PlayerIdsByAgentId()
         {
-            var ids = new int[MatchEngineConstants.AGENT_ID_SPACE];
+            var ids = new int[MatchEngineConstants.AgentIdSpace];
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
                 ids[i] = _slotPlayerIds[i];
@@ -9287,4 +9288,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | _activeBenchSlot, so that exclusion proof is unchanged. No            |
 // |         |            |        | SNAPSHOT_SCHEMA_VERSION change (stays 21), no draw site, no RNG       |
 // |         |            |        | stream, no behaviour change on any existing path.                     |
+// | 1.69    | 2026-08-13 | —      | AR round 5 fix (L15, discipline C1/C2 landing): PlayerIdsByAgentId's  |
+// |         |            |        | two MatchEngineConstants.AGENT_ID_SPACE references updated to        |
+// |         |            |        | AgentIdSpace ([FIXED]-region -> [DERIVED]-region rename, no value     |
+// |         |            |        | change). No behaviour change.                                         |
 #endregion

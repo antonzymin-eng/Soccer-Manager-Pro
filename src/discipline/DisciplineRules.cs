@@ -1,8 +1,9 @@
 // File:     src/discipline/DisciplineRules.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 3, L11 — the kind-2 branch of ApplyCard
-//           extracted to internal ApplySecondYellow, taking the ban length as a parameter so the M4
-//           atomicity guarantee is directly testable — v1.3)
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 5, M15/M19(a) — MigratePlayerId now refuses
+//           a negative newPlayerId before any row is written, and the kind-1 branch of ApplyCard
+//           extracted to internal ApplyStraightRed (the L11 ApplySecondYellow shape) so the guard is
+//           directly testable — v1.4)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §3.2 (thresholds & bans) / §3.3 (serving) / §3.4 (boundary
 //           & hygiene); FR-DC-006/007/011/013/017; F2/F4; Code Standards #20
@@ -70,19 +71,18 @@ namespace TacticalDirector.Discipline
         {
             switch (cardKind)
             {
-                case DisciplineConstants.CARD_KIND_YELLOW:
+                case DisciplineConstants.CardKindYellow:
                     AddYellow(playerId, competitionId);
                     break;
 
-                case DisciplineConstants.CARD_KIND_SECOND_YELLOW:
+                case DisciplineConstants.CardKindSecondYellow:
                     ApplySecondYellow(
                         playerId, competitionId, DisciplineConstants.SecondYellowBanMatches);
                     break;
 
-                case DisciplineConstants.CARD_KIND_RED:
-                    AddBan(playerId, competitionId, RequireBanLength(
-                        DisciplineConstants.StraightRedBanMatches,
-                        nameof(DisciplineConstants.StraightRedBanMatches)));
+                case DisciplineConstants.CardKindRed:
+                    ApplyStraightRed(
+                        playerId, competitionId, DisciplineConstants.StraightRedBanMatches);
                     break;
 
                 default:
@@ -117,6 +117,26 @@ namespace TacticalDirector.Discipline
             int ban = RequireBanLength(
                 secondYellowBanMatches, nameof(DisciplineConstants.SecondYellowBanMatches));
             AddYellow(playerId, competitionId);
+            AddBan(playerId, competitionId, ban);
+        }
+
+        /// <summary>
+        /// The kind-1 (straight red) branch of <see cref="ApplyCard"/>, with the ban length taken as a
+        /// PARAMETER (M19) rather than read directly off
+        /// <see cref="DisciplineConstants.StraightRedBanMatches"/> — the same L5/L11 seam
+        /// <see cref="ApplySecondYellow"/> exists for. That constant is <c>public static readonly</c>,
+        /// resolved once at type initialisation to its non-negative default, so nothing exercised
+        /// through the public <see cref="ApplyCard"/> can ever observe <see cref="RequireBanLength"/>
+        /// refusing it — the prior <c>ApplyCard_Kind1_RoutesStraightRedBanMatchesThroughRequireBanLength</c>
+        /// test asserted only the successful path and could not tell "the guard runs" from "the guard
+        /// was deleted". Calling this method directly with an explicit invalid length reaches the
+        /// identical guarded code.
+        /// </summary>
+        /// <exception cref="InvalidOperationException"><paramref name="straightRedBanMatches"/> is negative.</exception>
+        internal void ApplyStraightRed(int playerId, int competitionId, int straightRedBanMatches)
+        {
+            int ban = RequireBanLength(
+                straightRedBanMatches, nameof(DisciplineConstants.StraightRedBanMatches));
             AddBan(playerId, competitionId, ban);
         }
 
@@ -251,11 +271,29 @@ namespace TacticalDirector.Discipline
         /// <exception cref="ArgumentException">The target id already carries a row in a competition the
         /// source also carries — <b>F2</b>. There is no defined winner, and merging two players'
         /// histories silently is worse than refusing.</exception>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="newPlayerId"/> is negative —
+        /// <b>F2</b>. Checked here, before the first row is written, rather than left for
+        /// <see cref="DisciplineEntry"/>'s own constructor to refuse mid-write (M15): a walk that
+        /// removed the source row and then let the constructor throw on the negative target would
+        /// delete that row and abort with the player's remaining competitions untouched — the exact
+        /// non-atomic footgun the gather-then-write split below exists to close for the conflict
+        /// case.</exception>
         public void MigratePlayerId(int oldPlayerId, int newPlayerId)
         {
             if (oldPlayerId == newPlayerId)
             {
                 return;
+            }
+
+            if (newPlayerId < 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(newPlayerId), newPlayerId,
+                    "DisciplineRules.MigratePlayerId: newPlayerId must be >= 0 (F2). " +
+                    "DisciplineEntry's own constructor refuses a negative PlayerId, and validating "
+                    + "only in the write loop — after the first row has already been removed from "
+                    + "the source id — would delete that row and abort with the rest of the player's "
+                    + "history stranded on neither id.");
             }
 
             // Gathered BEFORE anything is written, for two independent reasons, both of which a
@@ -407,4 +445,19 @@ namespace TacticalDirector.Discipline
 // |         |            |        | directly with an explicit -1 and asserts AddYellow's effect is    |
 // |         |            |        | absent, plus an equivalence test proving ApplyCard genuinely      |
 // |         |            |        | delegates rather than carrying a parallel copy of the same logic. |
+// | 1.4     | 2026-08-13 | —      | AR round 5 fixes. M15: MigratePlayerId now validates              |
+// |         |            |        | newPlayerId >= 0 in the gather phase, before the first row is      |
+// |         |            |        | ever removed — the round-1 M1 fix taught DisciplineEntry's        |
+// |         |            |        | constructor to refuse a negative id, but the write loop below     |
+// |         |            |        | had no matching pre-check, so it deleted the source's first row   |
+// |         |            |        | and then let the constructor throw on the negative target,        |
+// |         |            |        | aborting with the rest of the player's history stranded. M19(a):  |
+// |         |            |        | ApplyCard's kind-1 branch extracted to internal ApplyStraightRed  |
+// |         |            |        | (playerId, competitionId, straightRedBanMatches) — the L11        |
+// |         |            |        | ApplySecondYellow shape applied to the sibling branch, so         |
+// |         |            |        | RequireBanLength's kind-1 guard is directly testable the same     |
+// |         |            |        | way. L17: CARD_KIND_YELLOW/RED/SECOND_YELLOW re-tagged [CROSS]    |
+// |         |            |        | (they are #17 CardIssuedEvent.CardKind domain ordinals consumed   |
+// |         |            |        | read-only, not values #44 owns) and renamed PascalCase —          |
+// |         |            |        | CardKindYellow/Red/SecondYellow — per src/CLAUDE.md §3.2.3.       |
 #endregion

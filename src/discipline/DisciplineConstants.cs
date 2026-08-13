@@ -1,6 +1,7 @@
 // File:     src/discipline/DisciplineConstants.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 5, L17 — the three card-kind constants
+//           re-tagged [FIXED] -> [CROSS] and renamed PascalCase, moved into a new Cross region — v1.1)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 Appendix A (constant catalogue) + §3.2/§3.3; ERR-044-001
 //           (the magic-before-version rule, ERR-029-005/ERR-041-009 class); Code Standards #20
@@ -71,26 +72,36 @@ namespace TacticalDirector.Discipline
         /// </summary>
         public const int LEAGUE_COMPETITION_KEY = 0;
 
-        /// <summary>
-        /// [FIXED] Card kind: a first (or non-promoting) caution.
-        /// <c>CardIssuedEvent.CardKind</c> ordinal 0 (#17 Appendix A row 0x06).
-        /// </summary>
-        public const byte CARD_KIND_YELLOW = 0;
+        #endregion
+
+        #region Cross
 
         /// <summary>
-        /// [FIXED] Card kind: a straight red. <c>CardIssuedEvent.CardKind</c> ordinal 1. Carries NO
-        /// yellow (FR-DC-006).
+        /// [CROSS] Card kind: a first (or non-promoting) caution — <c>CardIssuedEvent.CardKind</c>'s own
+        /// domain ordinal 0 (Event System #17 Appendix A row 0x06: "Card kind: 0=Yellow, 1=Red,
+        /// 2=SecondYellow (domain ordinal)"). #44 consumes this value read-only off the tap and never
+        /// sets it independently (L17) — the single-consumer mirror rule (root <c>CLAUDE.md</c> tag
+        /// table; <c>src/CLAUDE.md</c> §4.2), mirrored directly rather than through
+        /// <c>ProjectConstants.cs</c> because #44 is the only consuming assembly.
         /// </summary>
-        public const byte CARD_KIND_RED = 1;
+        public const byte CardKindYellow = 0;
 
         /// <summary>
-        /// [FIXED] Card kind: a second caution, promoted to a dismissal. <c>CardIssuedEvent.CardKind</c>
-        /// ordinal 2, and the engine emits it as <b>one</b> event, never a yellow-then-red pair —
-        /// verified at <c>MatchEngine.ApplyCardAndCheckSentOff</c>, which returns the actual kind and
-        /// publishes exactly one <c>CardIssuedEvent</c> (KD-5 / FR-DC-006). So a kind-2 is one yellow
-        /// AND one dismissal ban; #44 must never synthesize the missing red.
+        /// [CROSS] Card kind: a straight red — <c>CardIssuedEvent.CardKind</c> domain ordinal 1 (#17
+        /// Appendix A row 0x06). Carries NO yellow (FR-DC-006). Single-consumer mirror, as
+        /// <see cref="CardKindYellow"/>.
         /// </summary>
-        public const byte CARD_KIND_SECOND_YELLOW = 2;
+        public const byte CardKindRed = 1;
+
+        /// <summary>
+        /// [CROSS] Card kind: a second caution, promoted to a dismissal — <c>CardIssuedEvent.CardKind</c>
+        /// domain ordinal 2 (#17 Appendix A row 0x06), and the engine emits it as <b>one</b> event, never
+        /// a yellow-then-red pair — verified at <c>MatchEngine.ApplyCardAndCheckSentOff</c>, which
+        /// returns the actual kind and publishes exactly one <c>CardIssuedEvent</c> (KD-5 / FR-DC-006).
+        /// So a kind-2 is one yellow AND one dismissal ban; #44 must never synthesize the missing red.
+        /// Single-consumer mirror, as <see cref="CardKindYellow"/>.
+        /// </summary>
+        public const byte CardKindSecondYellow = 2;
 
         #endregion
 
@@ -148,4 +159,12 @@ namespace TacticalDirector.Discipline
 // |         |            |        | catalogue, plus DISCIPLINE_SAVE_MAGIC (ERR-044-001 — Appendix B  |
 // |         |            |        | specified the block version-first, the ERR-029-005 defect's      |
 // |         |            |        | fourth instance) and the three CardIssuedEvent kind ordinals.    |
+// | 1.1     | 2026-08-13 | —      | AR round 5 fix (L17): CARD_KIND_YELLOW/RED/SECOND_YELLOW were    |
+// |         |            |        | [FIXED] in the Fixed region but are #17 CardIssuedEvent.CardKind |
+// |         |            |        | domain ordinals (Appendix A row 0x06) #44 consumes read-only and |
+// |         |            |        | never sets independently — the root CLAUDE.md tag table makes    |
+// |         |            |        | that [CROSS], not [FIXED]. Moved to a new Cross region (Fixed ->  |
+// |         |            |        | Derived -> Cross -> GT per src/CLAUDE.md's region order) and      |
+// |         |            |        | renamed CardKindYellow/CardKindRed/CardKindSecondYellow           |
+// |         |            |        | (PascalCase, src/CLAUDE.md §3.2.3); every reference updated.      |
 #endregion

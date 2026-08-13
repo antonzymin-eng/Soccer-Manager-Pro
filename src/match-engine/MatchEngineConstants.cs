@@ -16,6 +16,7 @@
 // Modified: 2026-08-04 (wiring backlog W1 keeper rush trigger: + [FIXED] GK_RUSH_DEGENERACY_EPSILON + 5 [GT] GkRush* trigger constants; no schema change. See docs/tracking/gk-rush-trigger-design.md)
 // Modified: 2026-08-04 (W1 AR-1 L: GK_RUSH_SOLVE_EPSILON renamed GK_RUSH_DEGENERACY_EPSILON — it guards three dimensionally different quantities, not just the solve)
 // Modified: 2026-08-13 (#44 T2: + [DERIVED] AGENT_ID_SPACE and [FIXED] NO_PLAYER_ID — the id space and sentinel MatchEngine.PlayerIdsByAgentId reports in; no schema change)
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 5, L15 — AGENT_ID_SPACE was [DERIVED] but named/regioned as [FIXED] (ALL_CAPS, #region Fixed); moved to #region Derived and renamed AgentIdSpace per src/CLAUDE.md; every reference updated; no behaviour change)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2.3, Code Standards #20
 // Purpose:  Constant catalogue for the match-engine composition root. Stage 0 Phase A holds the
@@ -319,21 +320,6 @@ namespace TacticalDirector.MatchEngine
         public const int MAX_SUBSTITUTIONS_PER_TEAM = 5;
 
         /// <summary>
-        /// [DERIVED] Size of the engine's whole agent-id space: the on-pitch slots plus every team's
-        /// synthetic bench ids. Formula: <c>SQUAD_SIZE + TEAM_COUNT * SUBSTITUTES_PER_TEAM</c>.
-        /// Source constants: <see cref="SQUAD_SIZE"/>, <see cref="TEAM_COUNT"/>,
-        /// <see cref="SUBSTITUTES_PER_TEAM"/>.
-        /// <para>
-        /// This is the id space <c>SubstitutionEvent.Incoming</c> lives in — <c>SubstitutePlayer</c>
-        /// derives an incoming id as <c>SQUAD_SIZE + teamId * SUBSTITUTES_PER_TEAM + benchIndex</c>,
-        /// deliberately disjoint from any on-pitch slot index — and therefore the length any consumer
-        /// indexing by agent id must allocate (#44's occupancy fold, via
-        /// <c>MatchEngine.PlayerIdsByAgentId</c>).
-        /// </para>
-        /// </summary>
-        public const int AGENT_ID_SPACE = SQUAD_SIZE + TEAM_COUNT * SUBSTITUTES_PER_TEAM;
-
-        /// <summary>
         /// [FIXED] Sentinel for "no player identity is known for this agent id"
         /// (<c>MatchEngine.PlayerIdsByAgentId</c>). Negative because <c>0</c> is a valid
         /// <c>PlayerId</c> and a zero sentinel would silently attribute a card to player 0.
@@ -386,6 +372,21 @@ namespace TacticalDirector.MatchEngine
 #endregion
 
         #region Derived
+
+        /// <summary>
+        /// [DERIVED] Size of the engine's whole agent-id space: the on-pitch slots plus every team's
+        /// synthetic bench ids. Formula: <c>SQUAD_SIZE + TEAM_COUNT * SUBSTITUTES_PER_TEAM</c>.
+        /// Source constants: <see cref="SQUAD_SIZE"/>, <see cref="TEAM_COUNT"/>,
+        /// <see cref="SUBSTITUTES_PER_TEAM"/>.
+        /// <para>
+        /// This is the id space <c>SubstitutionEvent.Incoming</c> lives in — <c>SubstitutePlayer</c>
+        /// derives an incoming id as <c>SQUAD_SIZE + teamId * SUBSTITUTES_PER_TEAM + benchIndex</c>,
+        /// deliberately disjoint from any on-pitch slot index — and therefore the length any consumer
+        /// indexing by agent id must allocate (#44's occupancy fold, via
+        /// <c>MatchEngine.PlayerIdsByAgentId</c>).
+        /// </para>
+        /// </summary>
+        public static readonly int AgentIdSpace = SQUAD_SIZE + TEAM_COUNT * SUBSTITUTES_PER_TEAM;
 
         /// <summary>
         /// [DERIVED] Kickoff ball X (centre spot) = PITCH_LENGTH_M / 2, metres.
@@ -959,4 +960,12 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | 0. Its numeric agreement with CardLedgerFold.NO_PLAYER is       |
 // |         |            |        | locked in season-save, the one assembly that sees both. No      |
 // |         |            |        | schema change, no draw site.                                    |
+// | 1.32    | 2026-08-13 | —      | AR round 5 fix (L15): AGENT_ID_SPACE was declared [DERIVED] but |
+// |         |            |        | lived in #region Fixed with ALL_CAPS naming — src/CLAUDE.md      |
+// |         |            |        | reserves ALL_CAPS/#region Fixed for [FIXED] and requires         |
+// |         |            |        | PascalCase in #region Derived for [DERIVED]. Moved to #region    |
+// |         |            |        | Derived and renamed AgentIdSpace (public static readonly, the    |
+// |         |            |        | MaxEntityId precedent already in this region); every reference   |
+// |         |            |        | in MatchEngine.cs and SeasonLoopDisciplineTests.cs updated. No   |
+// |         |            |        | behaviour change. NO_PLAYER_ID is correctly [FIXED] — untouched. |
 #endregion

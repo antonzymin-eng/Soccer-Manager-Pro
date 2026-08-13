@@ -1,8 +1,8 @@
 // File:     src/discipline/CardLedgerFold.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 4, M17 — the four [GT] guards are shared
-//           with a new fold-free RequireCommittableConfig(), so a round can run them BEFORE it marks
-//           any fixture played rather than discovering a bad config after the mark — v1.3)
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 5, L17 — RequireKnownCardKind's three
+//           comparisons updated for DisciplineConstants' CARD_KIND_* -> CardKind* rename ([CROSS],
+//           PascalCase per src/CLAUDE.md §3.2.3); no behaviour change — v1.4)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §3.1 (the occupancy fold) / §4.3 (the tap read);
 //           FR-DC-002/003/004/005/006/010; F1/F4; ERR-044-001 (Appendix C's bench-id defect);
@@ -335,9 +335,9 @@ namespace TacticalDirector.Discipline
 
         private static void RequireKnownCardKind(byte cardKind)
         {
-            if (cardKind != DisciplineConstants.CARD_KIND_YELLOW
-                && cardKind != DisciplineConstants.CARD_KIND_RED
-                && cardKind != DisciplineConstants.CARD_KIND_SECOND_YELLOW)
+            if (cardKind != DisciplineConstants.CardKindYellow
+                && cardKind != DisciplineConstants.CardKindRed
+                && cardKind != DisciplineConstants.CardKindSecondYellow)
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(cardKind), cardKind,
@@ -408,4 +408,9 @@ namespace TacticalDirector.Discipline
 // |         |            |        | fixture, so SeasonLoop.PlayNextRound now asks once before the      |
 // |         |            |        | fixture loop. No behaviour change to Commit itself: same guards,   |
 // |         |            |        | same order, same values, one owner.                               |
+// | 1.4     | 2026-08-13 | —      | AR round 5 fix (L17): DisciplineConstants.CARD_KIND_YELLOW/RED/    |
+// |         |            |        | SECOND_YELLOW renamed CardKindYellow/Red/SecondYellow ([FIXED] ->  |
+// |         |            |        | [CROSS] — they are #17 CardIssuedEvent.CardKind domain ordinals    |
+// |         |            |        | #44 consumes read-only). RequireKnownCardKind's three comparisons  |
+// |         |            |        | updated to match; no behaviour change.                             |
 #endregion

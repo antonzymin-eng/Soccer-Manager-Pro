@@ -1,6 +1,7 @@
 // File:     src/discipline/tests/DisciplineSaveCodecTests.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 5, L17 — DisciplineConstants.CardKindYellow
+//           reference updated for the CARD_KIND_YELLOW rename — v1.2)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §4.4 + Appendix B (the sub-blob layout) / FR-DC-014/015/016;
 //           F3; ERR-044-001 (the magic-before-version correction); §5 T-DC-SAV-001, T-DC-DET-001;
@@ -270,14 +271,14 @@ namespace TacticalDirector.Discipline.Tests
             // Ban 3 — through two DIFFERENT orders of DisciplineRules calls, so canonical ordering by
             // DisciplineState itself is what is actually under test.
             var forward = new DisciplineRules(new DisciplineState());
-            forward.ApplyCard(1, 0, DisciplineConstants.CARD_KIND_YELLOW);
-            forward.ApplyCard(1, 0, DisciplineConstants.CARD_KIND_YELLOW);
+            forward.ApplyCard(1, 0, DisciplineConstants.CardKindYellow);
+            forward.ApplyCard(1, 0, DisciplineConstants.CardKindYellow);
             forward.AddBan(9, 0, 3);
 
             var reverse = new DisciplineRules(new DisciplineState());
             reverse.AddBan(9, 0, 3);
-            reverse.ApplyCard(1, 0, DisciplineConstants.CARD_KIND_YELLOW);
-            reverse.ApplyCard(1, 0, DisciplineConstants.CARD_KIND_YELLOW);
+            reverse.ApplyCard(1, 0, DisciplineConstants.CardKindYellow);
+            reverse.ApplyCard(1, 0, DisciplineConstants.CardKindYellow);
 
             CollectionAssert.AreEqual(
                 DisciplineSaveCodec.Encode(forward.State),
@@ -303,4 +304,7 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | comment corrected — its rows were already ascending, and          |
 // |         |            |        | FromEntries refuses non-ascending input rather than canonicalizing|
 // |         |            |        | it.                                                                |
+// | 1.2     | 2026-08-13 | —      | AR round 5 fix (L17): DisciplineConstants.CARD_KIND_YELLOW        |
+// |         |            |        | references updated to CardKindYellow ([FIXED] -> [CROSS] rename); |
+// |         |            |        | no behaviour change.                                               |
 #endregion

@@ -1,7 +1,12 @@
 # Discipline & Suspensions #44 — Appendices
 
 **Created:** July 24, 2026
-**Last Updated:** August 13, 2026, later still (v0.4 — L12(a), a third adversarial-review pass over
+**Last Updated:** August 13, 2026, later still (v0.5 — L17, a fifth adversarial-review pass over the
+#44 C1/C2 landing: `CARD_KIND_YELLOW`/`RED`/`SECOND_YELLOW` were `[FIXED]` in the code but are #17
+`CardIssuedEvent.CardKind` domain ordinals #44 consumes read-only — retagged `[CROSS]`, renamed
+`CardKindYellow`/`CardKindRed`/`CardKindSecondYellow`, and Appendix A gains one row per constant
+instead of folding them into the `CardIssuedEvent`/`SubstitutionEvent` ordinal row)
+**Last Updated (prior):** August 13, 2026, later still (v0.4 — L12(a), a third adversarial-review pass over
 the #44 C1/C2 landing: Appendix A's catalogue row "the 18-slot `ConfigureSquads` minimum … the F5
 filter floor" removed — F5 was withdrawn at ERR-044-003 (§2.3), `src/discipline/DisciplineConstants.cs`
 has no such constant, and #44 has implemented no viability gate since that withdrawal)
@@ -10,7 +15,7 @@ the magic-before-version row + the MUST rule and Appendix A the `DISCIPLINE_SAVE
 Appendix C re-worked onto real engine ids after its "slot 19" worked example was verified
 unimplementable, with the hedge deleted)
 **Last Updated (prior):** July 24, 2026 (v0.2 — cross-set AR pass 3; prior v0.1 initial)
-**Version:** 0.4
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -27,6 +32,9 @@ unimplementable, with the hedge deleted)
 | `STRAIGHT_RED_BAN_MATCHES` | `[GT]` | 2 (illustrative) | ban length for a kind-1 dismissal. |
 | `LEAGUE_COMPETITION_KEY` | `[FIXED]` | 0 | the minimal-tier `CompetitionId` partition key (FR-DC-012; aligns with #43's `LEAGUE_COMPETITION_ID = 0`). |
 | `CardIssuedEvent` 0x06 / `SubstitutionEvent` 0x08 | `[CROSS]` | #17/engine | the fold's inputs (payloads verified — XC-044-001); kinds `{0,1,2}` with the single-event kind-2 contract. |
+| `CardKindYellow` | `[CROSS]` | 0 | `CardIssuedEvent.CardKind`'s own domain ordinal (#17 Appendix A row 0x06 — "0=Yellow, 1=Red, 2=SecondYellow"); #44 consumes it read-only and never sets it independently (L17 — was `[FIXED]` `CARD_KIND_YELLOW`, the ALL_CAPS/`[FIXED]` mistagging root `CLAUDE.md`'s tag table rules out for a value defined in another spec). |
+| `CardKindRed` | `[CROSS]` | 1 | as `CardKindYellow` — #17 Appendix A row 0x06 domain ordinal 1. Carries NO yellow (FR-DC-006). |
+| `CardKindSecondYellow` | `[CROSS]` | 2 | as `CardKindYellow` — #17 Appendix A row 0x06 domain ordinal 2, the promoted second caution the engine emits as ONE event (KD-5 / FR-DC-006). |
 
 **Tag note:** the `[GT]` magnitudes are illustrative pending the balance pass (the #21 G2
 precedent) — the reviewed contract is the shapes (threshold-and-residual accumulation, additive
@@ -99,4 +107,5 @@ All integer; two runs identical; #27 squads byte-untouched.
 | 0.2 | 2026-07-24 | — | Cross-set AR pass 3 (M): Appendix C's bench player re-keyed 201 → **191** — 201 derives to club 8 (`201 / 25 = 8`), an impossible teammate of club-7's 183, and `OnClubFixturePlayed(7)` would never have decremented it; the example now derives coherently (`183 / 25 = 191 / 25 = 7`). |
 | 0.3 | 2026-08-13 | — | **ERR-044-001** (C1/C2 landing, §7.1 T2's verification obligation): Appendix B's layout gains the `DISCIPLINE_SAVE_MAGIC` row before the version and the magic-before-version MUST (the ERR-029-005/ERR-041-009 class's fourth instance); Appendix A gains the matching catalogue row; Appendix C's worked example — verified against the live engine and found unimplementable, "slot 19" being an on-pitch index under `SQUAD_SIZE = 22` — re-derived onto the real synthetic bench-id formula (`SQUAD_SIZE + teamId * SUBSTITUTES_PER_TEAM + benchIndex`), with the "(or 19 → 191, absorbed either way)" hedge deleted. |
 | 0.4 | 2026-08-13 | — | **L12(a)**, a third adversarial-review pass over the C1/C2 landing: Appendix A's "the 18-slot `ConfigureSquads` minimum \| `[CROSS]` \| match engine \| the F5 filter floor" row deleted — F5 was withdrawn at ERR-044-003 (§2.3 F5, `section-2.md` v0.4) and no such constant exists in `DisciplineConstants.cs`; #44 implements no viability gate of any kind since that withdrawal, so nothing in the catalogue names one. |
+| 0.5 | 2026-08-13 | — | **L17**, a fifth adversarial-review pass over the C1/C2 landing: `CARD_KIND_YELLOW`/`RED`/`SECOND_YELLOW` are #17 `CardIssuedEvent.CardKind` domain ordinals (Appendix A row 0x06) #44 consumes read-only and never sets independently — the root `CLAUDE.md` tag table makes that `[CROSS]`, not `[FIXED]`, and `src/CLAUDE.md` §3.2.3 makes `[CROSS]` PascalCase, not `ALL_CAPS`. Retagged and renamed in code (`CardKindYellow`/`CardKindRed`/`CardKindSecondYellow`); Appendix A's single combined `CardIssuedEvent 0x06 / SubstitutionEvent 0x08` row (about the EVENT ordinals, a different fact) is unchanged, and gains three sibling rows — one per card-kind constant, each citing #17 Appendix A row 0x06 by value. |
 #endregion

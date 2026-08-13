@@ -1,6 +1,7 @@
 // File:     src/discipline/tests/AvailabilityTests.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 5, L17 — DisciplineConstants.CardKindYellow
+//           reference updated for the CARD_KIND_YELLOW rename — v1.2)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §3.3 / FR-DC-008/009/010; ERR-044-003 (F5 vs #30 §2.3 F9 —
 //           viability is #30's, #44 contributes removals only); §5 T-DC-VIEW-001/002, T-DC-BAN-004/005;
@@ -47,7 +48,7 @@ namespace TacticalDirector.Discipline.Tests
         public void IsAvailable_YellowsButNoBan_IsTrue()
         {
             var rules = new DisciplineRules(new DisciplineState());
-            rules.ApplyCard(5, Competition, DisciplineConstants.CARD_KIND_YELLOW);
+            rules.ApplyCard(5, Competition, DisciplineConstants.CardKindYellow);
 
             Assert.IsTrue(Availability.IsAvailable(rules.State, 5, Competition),
                 "yellows alone (below the ban threshold) must not restrict availability");
@@ -246,4 +247,7 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | FilterAvailable_LeavesTheSourceSquadUntouched — Squad is         |
 // |         |            |        | immutable and exposes no mutator, so no implementation could     |
 // |         |            |        | ever fail that assertion; it had no real failure mode.           |
+// | 1.2     | 2026-08-13 | —      | AR round 5 fix (L17): DisciplineConstants.CARD_KIND_YELLOW        |
+// |         |            |        | reference updated to CardKindYellow ([FIXED] -> [CROSS] rename); |
+// |         |            |        | no behaviour change.                                              |
 #endregion

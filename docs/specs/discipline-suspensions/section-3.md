@@ -1,7 +1,11 @@
 # Discipline & Suspensions #44 — Section 3: Core Algorithms
 
 **Created:** July 24, 2026
-**Last Updated:** August 13, 2026, yet later still (v0.7 — L13, a third adversarial-review pass over
+**Last Updated:** August 13, 2026, yet later still again (v0.8 — M20, a fifth adversarial-review pass
+over the #44 C1/C2 landing: §3.1's occupancy-fold pseudocode still showed the pre-M4 order — kind-2
+adding the yellow before the ban, both bans unguarded — one landing after L13 added the identical F6
+guards to §3.2's `AddYellow` and stopped short of §3.1. Extends L13's ERR record rather than a new id)
+**Last Updated (prior):** August 13, 2026, yet later still (v0.7 — L13, a third adversarial-review pass over
 the #44 C1/C2 landing: §3.2's `AddYellow` pseudocode gains the `RequireYellowThreshold`/
 `RequireBanLength` **F6** guard calls (§2.3), which had no normative source at all despite being
 enforced in production and unit-tested — the AR pass 9 #29/#41 F8 precedent for this omission class)
@@ -16,7 +20,7 @@ the prior text only implied by describing separate fixtures)
 ordering paragraph re-scoped to both resolution paths, and the `FilterAvailable` pseudocode comment
 points its viability rule at #30 §2.3 F9 instead of a withdrawn F5)
 **Last Updated (prior):** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.7
+**Version:** 0.8
 **Status:** APPROVED
 
 ---
@@ -34,9 +38,14 @@ CardLedgerFold(lineup /* slot -> PlayerId, incl. bench identities */):
             0x06 CardIssuedEvent:
                 pid := occupancy.OccupantAt(record.Recipient)          # F1 if unmapped
                 switch record.CardKind:                                # F4 outside {0,1,2}
-                    0: AddYellow(pid)                                  # first yellow
-                    2: AddYellow(pid); AddBan(pid, SECOND_YELLOW_BAN_MATCHES)   # ONE event (KD-5)
-                    1: AddBan(pid, STRAIGHT_RED_BAN_MATCHES)           # straight red, no yellow
+                    0: AddYellow(pid)                                  # first yellow (F6 inside, §3.2)
+                    2: ban := RequireBanLength(SECOND_YELLOW_BAN_MATCHES)   # F6 — validated BEFORE
+                       AddYellow(pid); AddBan(pid, ban)                     # AddYellow, so a refused
+                                                                             # ban never leaves the
+                                                                             # yellow committed alone
+                                                                             # (ONE event — KD-5)
+                    1: AddBan(pid, RequireBanLength(STRAIGHT_RED_BAN_MATCHES))   # F6 — straight red,
+                                                                                   # no yellow
             else: ignore                                               # FR-DC-004 (unknown ordinals)
 ```
 
@@ -136,4 +145,5 @@ preserve this order.
 | 0.5 | 2026-08-13 | — | **ERR-030-037** (adversarial review over the C1/C2 landing, M7): §3.3 gains a normative paragraph for the WITHIN-fixture half of the off-by-one contract — `OnClubFixturePlayed` MUST run before that same fixture's fold commits its cards, never after — locked in code by `SeasonLoopDisciplineTests.ANewBanEarnedThisFixtureIsNotServedByThisSameFixture` (`src/season-save/`). |
 | 0.6 | 2026-08-13 | — | **ERR-044-005** back-prop: §3.3's `FilterAvailable` pseudocode gains the `null`-return case for an all-suspended squad (`Squad` cannot represent zero players) and names `MarkSuspended`'s removal mask, consumed directly by #30's `AvailabilityComposition`, as #44's actual production path — `FilterAvailable` itself is FR-DC-009's own surface. |
 | 0.7 | 2026-08-13 | — | **L13**, a third adversarial-review pass: §3.2's `AddYellow` pseudocode gains `RequireYellowThreshold(YELLOW_ACCUMULATION_THRESHOLD)` before the tally read and `RequireBanLength(ACCUM_BAN_MATCHES)` around the accumulation ban — the two `[GT]` fail-loud guards `DisciplineRules.AddYellow`/`ApplyCard` actually enforce (§2.3 **F6**), previously present in code and unit tests but nowhere in the normative text; an implementer following §3.2 verbatim would have shipped a config that silently bans on the first yellow (the #29/#41 AR pass 9 F8 lesson, recurring here). |
+| 0.8 | 2026-08-13 | — | **M20**, extending L13's fix rather than a new id: §3.1's occupancy-fold pseudocode still read `2: AddYellow(pid); AddBan(pid, SECOND_YELLOW_BAN_MATCHES)` and `1: AddBan(pid, STRAIGHT_RED_BAN_MATCHES)` — L13 patched §3.2's `AddYellow` with the F6 guards but stopped one section short of §3.1, which an implementer following verbatim would have reproduced M4 (the yellow committed while the card is refused) in APPROVED text. Both branches now show `RequireBanLength(...)` and the kind-2 branch validates BEFORE `AddYellow` runs, matching `DisciplineRules.ApplySecondYellow`/`ApplyStraightRed` exactly. |
 #endregion

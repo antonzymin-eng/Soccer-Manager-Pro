@@ -6,8 +6,73 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 2.23
-**Updated:** August 13, 2026, later still (v2.23 — **`ERR-030-039`, a High from the FOURTH
+**Version:** 2.24
+**Updated:** August 13, 2026, later still again (v2.24 — **The FIFTH adversarial-review pass over the
+#44 C1/C2 landing: nine findings (M15, M18, M19, M20, M21, L14, L15, L16, L17), zero High, all fixed —
+no new ERR id allocated; M20 extends the existing L13/F6 row (v2.22 below) and M21 cites the standing
+`ERR-030-035`.** **M15 (`DisciplineRules.MigratePlayerId`):** round-1's M1 taught `DisciplineEntry`'s
+constructor to refuse a negative `PlayerId`, but the re-key write loop had no matching pre-check on the
+TARGET id — it removed the source's first row and then let the constructor throw on a negative
+`newPlayerId`, deleting that row and aborting with the player's other competitions stranded. Demonstrated:
+`MigratePlayerId(100, -1)` over a two-competition player left `state.Count == 1` (was 2). Fixed with a
+`newPlayerId >= 0` guard in the gather phase, before the first `Remove`; locked by
+`MigratePlayerId_NegativeTargetId_ThrowsAndWritesNothing` (`state.Count` unchanged after the refusal).
+**M18 (`PlayerCareerStates.MarkUnavailable`):** the M14 owning-mask contract (round-3) had zero test
+coverage of its own — `AvailabilityComposition.Compose`, the only production caller, always hands it a
+freshly allocated all-false mask, so an additive implementation is indistinguishable from an owning one
+through the wired seam, and reverting the fix left the whole tree green. Two new locks in
+`SeasonLoopDisciplineTests.cs` (no `PlayerCareerStatesTests.cs` exists in `season-save/tests` today) drive
+the method directly with a pre-set mask, mirroring `Availability.MarkSuspended`'s own `AvailabilityTests`
+coverage: a pre-set `true` for a fit player must clear, and `recoveryRemaining` for a player not removed
+must write `0`. **M19 (two dead `[GT]` guard predicates):** the reviewer executed two mutants, both
+survived 96/96 — (a) deleting `RequireBanLength(...)` from `ApplyCard`'s kind-1 branch, since the sole
+existing test asserted only the successful path (its own comment's claim to "prove ApplyCard actually
+calls it" was false, the L11 lesson recurring one branch over); (b) deleting the `accumBan`/
+`straightRedBan` guards from `CardLedgerFold.CommitWithExplicitConfig`'s `RequireCommittableConfig`,
+since only `yellowThreshold` and `secondYellowBan` had isolating cases. Fixed by mirroring L11's remedy:
+a new internal `DisciplineRules.ApplyStraightRed(playerId, competitionId, straightRedBanMatches)` seam
+(`ApplyCard`'s kind-1 branch now delegates to it), an explicit `-1` refusal test plus a
+delegation-equivalence test, and two new `CardLedgerFoldTests` cases driving `accumBan`/`straightRedBan`
+invalid through `CommitWithExplicitConfig` directly. Both re-run mutants now fail. **M20 (spec text, no
+new id — extends the L13/F6 row):** `discipline-suspensions/section-3.md` §3.1's occupancy-fold
+pseudocode still showed the PRE-M4 order (`2: AddYellow(pid); AddBan(pid, SECOND_YELLOW_BAN_MATCHES)`,
+`1: AddBan(pid, STRAIGHT_RED_BAN_MATCHES)`, both bans unguarded) — L13 (v2.22 below) patched §3.2's
+`AddYellow` with the F6 guards and stopped one section short of §3.1, an implementer following which
+verbatim would reproduce M4 (the yellow committed while the card is refused) in APPROVED text; the
+grep-boundary class filed five times over ERR-041-012. Both branches now show `RequireBanLength(...)`
+and the kind-2 branch validates BEFORE `AddYellow`, matching the code exactly. **M21 (cites
+`ERR-030-035`):** `season-competition-loop/section-2.md` §2.2 declared no #44 type at all, three
+landings after `SeasonLoop` started holding `_discipline`/`_disciplineRules`, exposing `Discipline`, and
+taking `disciplineOrNull` on both the constructor and `Restore` — the identical gap this section's own
+v1.2 and v1.4 rows record closing for the appearance and progression types on the two PRIOR subsystems
+wired, recurring verbatim on the next one. New `DisciplineState` bullet; the `SeasonLoop` bullet
+extended with the unpaired optional tally, the `Discipline` accessor, the two `disciplineOrNull`
+parameters and the internal `IFixtureDisciplineDriver` seam (round-3 M16, not previously described
+anywhere in §2.2). **L14 (doc-only):** `DisciplineSaveCodec.Decode`'s summary claimed the negative-
+`PlayerId` check ran BEFORE the ordering comparison "can misread it as a real, if unusual, key" — the
+ordering check is at `:172`, the negativity check at `:186`, the reverse. Corrected in place rather than
+reordering the code (behaviour is unchanged either way — both are F3 fail-loud, and for any entry but
+the first a negative id already breaks strict ascent against the previous real key, so only entry 0 can
+reach the dedicated negativity check on its own). **L15:** `MatchEngineConstants.AGENT_ID_SPACE` was
+tagged `[DERIVED]` but lived in `#region Fixed` with `ALL_CAPS` naming — `src/CLAUDE.md` reserves both
+for `[FIXED]`. Moved to `#region Derived`, renamed `AgentIdSpace` (`public static readonly`, the
+`MaxEntityId` precedent already in that region); every reference in `MatchEngine.cs` and
+`SeasonLoopDisciplineTests.cs` updated (`NO_PLAYER_ID` is correctly `[FIXED]`, left alone). **L16
+(doc-only):** `discipline-suspensions/section-2.md` §2.2's API block commented `MarkSuspended` as
+"OWNS removed/recoveryRemaining (M14)" — `recoveryRemaining` is `PlayerCareerStates.MarkUnavailable`'s
+own out parameter, not `MarkSuspended`'s, which has no such array; comment corrected to name only
+`removed`. **L17:** `CARD_KIND_YELLOW`/`RED`/`SECOND_YELLOW` were `[FIXED]` in `DisciplineConstants.cs`
+but are #17 `CardIssuedEvent.CardKind` domain ordinals (Appendix A row 0x06) #44 consumes read-only and
+never sets independently — the root `CLAUDE.md` tag table makes that `[CROSS]`, not `[FIXED]`, while
+Appendix A itself carried no per-constant row and was implicitly treating them as such. Retagged
+`[CROSS]`, renamed PascalCase (`CardKindYellow`/`CardKindRed`/`CardKindSecondYellow`, `src/CLAUDE.md`
+§3.2.3), moved into a new `#region Cross`; every reference updated across `src/discipline/` (production
+and tests). `appendices.md` Appendix A gains one row per constant, citing #17 Appendix A row 0x06 by
+value; the existing combined `CardIssuedEvent 0x06 / SubstitutionEvent 0x08` row — about the EVENT
+ordinals, a different fact — is unchanged. **Verification:** `Discipline.Tests` and `SeasonSave.Tests`
+re-run green after every fix (see `dotnet-gate` output for this landing); the two M19 mutants were
+re-executed and now fail; `tools/recurring-defect-lint.py --repo .` reports 0 ERROR. Prior entry below.)
+**Updated (prior):** August 13, 2026, later still (v2.23 — **`ERR-030-039`, a High from the FOURTH
 adversarial-review pass over the #44 C1/C2 landing, filed and resolved in the same commit — and, like
 `ERR-030-038` before it, a defect IN the previous round's own fix.** `-038` moved the destination
 discipline guard onto a `disciplineWired` flag and put that flag on an **internal** `Save` overload,

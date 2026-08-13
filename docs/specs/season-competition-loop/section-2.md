@@ -1,7 +1,13 @@
 # Season & Competition Loop Specification #30 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 22, 2026
-**Last Updated:** August 13, 2026, later same day (v1.7 — ERR-030-035's consumers half, #44 C1/C2 landing: FR-SN-013's seam-occupancy sentence updated — #44's suspension view HAS joined the seam, not "at its own T-phase" as a future event; only #36 remains a future joiner)
+**Last Updated:** August 13, 2026, later still (v1.8 — M21, a fifth adversarial-review pass over the
+#44 C1/C2 landing: §2.2 declared no #44 type at all, three landings after `SeasonLoop` started holding
+one — the identical ERR-030-028/ERR-030-032 gap this section's own v1.4 and v1.2 rows record fixing for
+the appearance and progression types, recurring here on the next subsystem wired. New `DisciplineState`
+bullet; the `SeasonLoop` bullet extended with the unpaired optional tally, the `Discipline` accessor,
+the two `disciplineOrNull` parameters and the internal `IFixtureDisciplineDriver` seam (round-3 M16))
+**Last Updated (prior):** August 13, 2026, later same day (v1.7 — ERR-030-035's consumers half, #44 C1/C2 landing: FR-SN-013's seam-occupancy sentence updated — #44's suspension view HAS joined the seam, not "at its own T-phase" as a future event; only #36 remains a future joiner)
 **Last Updated (prior):** August 13, 2026 (v1.6 — ERR-030-035, #44 T1 (roadmap C1): FR-SN-021's `Save` signature refreshed to nine arguments with the new required, null-rejecting `discipline` parameter, and `Load`'s return description gains the reconstructed `Discipline`)
 **Last Updated (prior):** August 11, 2026 (v1.5 — ERR-028-019 back-prop: new **F10** for `PlayerCareerStates.RequireBirthWorldDayWithinClock` (AR pass 6 M2(b)) — a #28 `BirthWorldDay` anchor ahead of the world clock, refused at `SeasonLoop` composition and at `SeasonSaveManager` Save/Load, sibling to F8's cursor-vs-clock rule but a DIFFERENT invariant: an anchor, checked ahead-only, never for lag)
 **Last Updated (prior):** August 10, 2026 (v1.4 — ERR-030-032: AR pass 5 over the #28 T1/T2a landing found this section three parameters and one landing stale in two places — FR-SN-021 still showed the seven-argument `Save` signature after #28 T1 added the required, null-rejecting `progression` parameter, and §2.2 declared no #28 type at all, the ERR-030-028 gap recurring on the very next subsystem to wire)
@@ -12,7 +18,7 @@
 **Last Updated (prior):** July 27, 2026 (v0.9 — back-props ERR-030-016 / -020 / -021 / -022 landed atomically with the ten-spec approval wave: the tick order reconciled after the duplicate `ERR-030-007` filing, FR-SN-013b's `ManagedClubId` made an explicit optional, FR-SN-034 extended to #32/#35/#53/#54)
 **Last Updated (prior):** July 25, 2026 (v0.8 — back-props ERR-030-008 board tick-order + ERR-030-009 JobSecurity derived band; prior v0.7 ERR-030-007 academy, v0.6 ERR-030-006 staff, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 24, 2026 (v0.8 — back-prop ERR-030-009 #44 availability-filter null seam in FR-SN-013; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 1.7
+**Version:** 1.8
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -127,9 +133,24 @@ the outline's pass-13 L4 class, in the FR preamble).
 - **`SeasonLoop`** (sealed class, the composition root): owns `SeasonState`; holds references to the
   `WorldStore` and the active-or-null `MatchEngine` (the managed club's in-progress fixture); since
   #29/#41 T2 also holds the optional **career PAIR** — `PlayerCareerStates` + the `ISquadProvider` it
-  was bound to (half-supplying or later swapping the provider is refused, F7); exposes
+  was bound to (half-supplying or later swapping the provider is refused, F7); since **#44's C1/C2
+  landing (ERR-030-035)** also holds the optional, UNPAIRED `DisciplineState` — unlike the career pair
+  and the progression store, #44 has no day step, no cursor and no roster dependency, so nothing here
+  can fall out of step with it — taken as `disciplineOrNull` on both the public constructor and
+  `Restore`, and exposed read-only via `Discipline`; internally also takes an `IFixtureDisciplineDriver`
+  (round-3 M16) — a constructor-injected collaborator the per-round serve+commit step is driven
+  through, defaulting to a thin pass-through over the loop's own `DisciplineRules`, so a test can
+  substitute a failing collaborator without process-static state (FR-CS-051..054); exposes
   the command API (`AdvanceToNextFixtureDay`, `AdvanceDays`, `AdvanceAndPlayNextRound(ISquadProvider)`,
   `RollToNextSeason`, `View`) + `Snapshot()`/`Restore()` for the season sub-blob.
+- **`DisciplineState`** (#44-owned, `TacticalDirector.Discipline`; added at ERR-030-035, #44 C1/C2
+  landing — the identical gap ERR-030-028/ERR-030-032 filed against the appearance and progression
+  types on the exact prior subsystems to wire, recurring here on the next one). The per-player,
+  per-`CompetitionId` card/ban tally (#44 §2.2/Appendix B). Serialized as the season frame's seventh
+  mandatory sub-blob (`DISC`, `DISCIPLINE_SAVE_FORMAT_VERSION`, `SEASON_SAVE_FORMAT_VERSION` **5 → 6**).
+  The sole mutator is `DisciplineRules`, held internally by `SeasonLoop` and never handed out; #44
+  itself has no day step and registers no RNG stream (FR-DC-019), so it needs none of F8's per-cursor
+  machinery.
 - **`PlayerCareerStates`** (sealed class, #30-owned since #29/#41 T2): the three parallel per-club
   career state sets — #29 training, #41 medical, #30 appearance — keyed `(ClubId, PlayerId)` with
   globally-unique player ids (ERR-041-019), the single place #30 calls either sibling subsystem from,
@@ -202,4 +223,5 @@ the outline's pass-13 L4 class, in the FR preamble).
 | 1.5 | 2026-08-11 | — | **ERR-028-019 back-prop** (docs close-out for #28's AR passes 5-8, four production landings with no `docs/specs/` edit): new **F10** — `PlayerCareerStates.RequireBirthWorldDayWithinClock` (AR pass 6 M2(b)), refusing a #28 `BirthWorldDay` anchor ahead of the world clock at `SeasonLoop` composition and at `SeasonSaveManager.Save`/`.Load`. This is NOT a restatement of F8 — F8 governs the four persisted per-player CURSORS (checked both ahead and for lag); F10 governs #28's birth ANCHOR (checked ahead-only, since an anchor arbitrarily in the past is ordinary). Both rules share the same two-boundary, one-shared-owner discipline. See `player-progression-lifecycle/section-3.md` §3.5 for the #28-side citation and Appendix B.1 for the full mechanism. No code changed by this back-prop. |
 | 1.6 | 2026-08-13 | — | **ERR-030-035** (#44 T1, roadmap C1): **FR-SN-021** refreshed again — `Save(world, season, matchOrNull, path, trainingClubs, medicalClubs, appearanceClubs, progression, discipline)`, the ninth argument `discipline` (a `DisciplineState`, #44 Appendix B) REQUIRED and null-rejecting on the identical terms as `progression`; `Load`'s return description gains the reconstructed `Discipline` (never null, #44's restored per-player tally). |
 | 1.7 | 2026-08-13 | — | **ERR-030-035, consumers half** (#44 C1/C2 landing): FR-SN-013's seam-occupancy sentence stopped one landing short of the FR-SN-021 byte-layout half above — it still described #44 joining "at its own T-phase" after #44 had actually joined. Corrected: the seam is occupied by #41's medical view and #44's suspension view; only #36 remains a future joiner. |
+| 1.8 | 2026-08-13 | — | **M21**, a fifth adversarial-review pass over the #44 C1/C2 landing (cites ERR-030-035): §2.2 declared no `DisciplineState` and no #44-holding fields on `SeasonLoop` at all — the identical gap this section's own v1.2 (career pair/appearance types) and v1.4 (`ProgressionEngine`) rows record closing on the two prior subsystems wired, recurring verbatim on #44. New `DisciplineState` bullet (the #44-owned per-player tally, `DISC` sub-blob, `SEASON_SAVE_FORMAT_VERSION` 5 → 6). `SeasonLoop`'s bullet extended: the optional, UNPAIRED `DisciplineState` (no day step, no cursor, so nothing to fall out of step with — unlike the career pair), the `Discipline` read-only accessor, `disciplineOrNull` on both the constructor and `Restore`, and the internal `IFixtureDisciplineDriver` seam (round-3 M16) the per-round serve+commit step is driven through. |
 #endregion

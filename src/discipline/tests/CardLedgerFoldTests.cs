@@ -1,7 +1,7 @@
 // File:     src/discipline/tests/CardLedgerFoldTests.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 3, M13 — two Commit atomicity tests via
-//           CommitWithExplicitConfig — v1.1)
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 5, M19(b) — isolating cases for the
+//           accumBan and straightRedBan RequireCommittableConfig guards, which had none — v1.2)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §3.1 (the occupancy fold) / §4.3 (the tap read);
 //           FR-DC-002/003/004/005/006/010; F1/F4; §5 T-DC-FOLD-001/002/003, T-DC-DET-001;
@@ -74,7 +74,7 @@ namespace TacticalDirector.Discipline.Tests
             return arr;
         }
 
-        private static CardIssuedEvent Card(int recipient, byte kind = DisciplineConstants.CARD_KIND_YELLOW) =>
+        private static CardIssuedEvent Card(int recipient, byte kind = DisciplineConstants.CardKindYellow) =>
             new CardIssuedEvent(recipient, kind, foulOrdinal: 0xFFFF);
 
         private static SubstitutionEvent Sub(int outgoing, int incoming) =>
@@ -301,7 +301,7 @@ namespace TacticalDirector.Discipline.Tests
             // ban it also carries (the M4 atomicity property, one layer up at the fold's own commit).
             var fold = new CardLedgerFold(Occupancy((5, 100)), Competition);
             fold.ObserveTick(
-                new FakeLedgerTap().Add(Card(5, kind: DisciplineConstants.CARD_KIND_SECOND_YELLOW)));
+                new FakeLedgerTap().Add(Card(5, kind: DisciplineConstants.CardKindSecondYellow)));
 
             var state = new DisciplineState();
             var rules = new DisciplineRules(state);
@@ -315,6 +315,54 @@ namespace TacticalDirector.Discipline.Tests
 
             Assert.AreEqual(0, state.Count, "the card's yellow must not land while its ban length is refused.");
             Assert.AreEqual(1, fold.PendingCardCount);
+        }
+
+        // ── M19(b): the two guards with no prior isolating case ───────────────────────
+        //
+        // A reviewer-executed mutant deleting the accumBan or straightRedBan guard from
+        // RequireCommittableConfig survived 96/96 — no test here passed an invalid value for either,
+        // only for yellowThreshold and secondYellowBan. RequireCommittableConfig validates all four
+        // unconditionally before the loop runs (M17), so an ordinary card is enough to exercise it —
+        // the refused fixture's own cards need not touch the guarded constant.
+
+        [Test]
+        public void Commit_WithAnInvalidAccumBan_RefusesBeforeApplyingAnyCard()
+        {
+            var fold = new CardLedgerFold(Occupancy((5, 100)), Competition);
+            fold.ObserveTick(new FakeLedgerTap().Add(Card(5)));
+
+            var state = new DisciplineState();
+            var rules = new DisciplineRules(state);
+
+            Assert.Throws<InvalidOperationException>(() => fold.CommitWithExplicitConfig(
+                rules,
+                yellowThreshold: DisciplineConstants.YellowAccumulationThreshold,
+                accumBan: -1,   // invalid
+                secondYellowBan: DisciplineConstants.SecondYellowBanMatches,
+                straightRedBan: DisciplineConstants.StraightRedBanMatches));
+
+            Assert.AreEqual(0, state.Count, "no card may reach persisted state while accumBan is refused.");
+            Assert.AreEqual(1, fold.PendingCardCount, "the buffer itself must be untouched by the refusal.");
+        }
+
+        [Test]
+        public void Commit_WithAnInvalidStraightRedBan_RefusesBeforeApplyingAnyCard()
+        {
+            var fold = new CardLedgerFold(Occupancy((5, 100)), Competition);
+            fold.ObserveTick(new FakeLedgerTap().Add(Card(5)));
+
+            var state = new DisciplineState();
+            var rules = new DisciplineRules(state);
+
+            Assert.Throws<InvalidOperationException>(() => fold.CommitWithExplicitConfig(
+                rules,
+                yellowThreshold: DisciplineConstants.YellowAccumulationThreshold,
+                accumBan: DisciplineConstants.AccumBanMatches,
+                secondYellowBan: DisciplineConstants.SecondYellowBanMatches,
+                straightRedBan: -1));   // invalid
+
+            Assert.AreEqual(0, state.Count, "no card may reach persisted state while straightRedBan is refused.");
+            Assert.AreEqual(1, fold.PendingCardCount, "the buffer itself must be untouched by the refusal.");
         }
 
         // ── Determinism (FR-DC-021) ────────────────────────────────────────────────
@@ -332,7 +380,7 @@ namespace TacticalDirector.Discipline.Tests
                 var fold = new CardLedgerFold(Occupancy((slot, outgoingPlayer), (bench, incomingPlayer)), Competition);
                 fold.ObserveTick(new FakeLedgerTap().Add(Card(slot)));
                 fold.ObserveTick(new FakeLedgerTap().Add(Sub(outgoing: slot, incoming: bench)));
-                fold.ObserveTick(new FakeLedgerTap().Add(Card(slot, kind: DisciplineConstants.CARD_KIND_RED)));
+                fold.ObserveTick(new FakeLedgerTap().Add(Card(slot, kind: DisciplineConstants.CardKindRed)));
 
                 var state = new DisciplineState();
                 fold.Commit(new DisciplineRules(state));
@@ -363,4 +411,11 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | exercise the guard. Each asserts the pending cards never reach     |
 // |         |            |        | DisciplineState and the fold survives to Commit successfully once  |
 // |         |            |        | given a valid config.                                              |
+// | 1.2     | 2026-08-13 | —      | AR round 5 fix (M19(b)): two new tests, Commit_WithAnInvalid-      |
+// |         |            |        | AccumBan_RefusesBeforeApplyingAnyCard and Commit_WithAnInvalid-     |
+// |         |            |        | StraightRedBan_RefusesBeforeApplyingAnyCard — a reviewer-executed   |
+// |         |            |        | mutant deleting either guard from RequireCommittableConfig survived |
+// |         |            |        | 96/96 because no test drove an invalid value through them; the      |
+// |         |            |        | yellowThreshold and secondYellowBan guards already had isolating    |
+// |         |            |        | cases (v1.1), these two did not.                                    |
 #endregion

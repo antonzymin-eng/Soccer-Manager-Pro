@@ -78,7 +78,9 @@ public sealed class CardLedgerFold
 public static class Availability
 {
     public static bool  IsAvailable(DisciplineState state, int playerId, int competitionId);
-    // #30's composed-seam contribution (§3.3) — OWNS removed/recoveryRemaining (M14).
+    // #30's composed-seam contribution (§3.3) — OWNS removed (M14). recoveryRemaining is
+    // PlayerCareerStates.MarkUnavailable's own out parameter (#41's side of the seam), not this
+    // method's — L16 corrected this comment, which had wrongly attributed it here.
     public static int   MarkSuspended(Squad squad, DisciplineState state, int competitionId, bool[] removed);
     // reduced VALUE COPY; FR-DC-009's OWN surface, not #44's production path — see FR-DC-009.
     public static Squad FilterAvailable(Squad squad, DisciplineState state, int competitionId);

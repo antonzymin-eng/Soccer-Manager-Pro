@@ -1,6 +1,8 @@
 // File:     src/discipline/DisciplineSaveCodec.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 5, L14 — Decode's doc corrected: it claimed
+//           the negative-PlayerId check ran BEFORE the ordering comparison; the ordering check is at
+//           :172, the negativity check at :186 — the reverse. Behaviour unchanged; message-only — v1.2)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §4.4 + Appendix B (the sub-blob layout) / FR-DC-014/015/016;
 //           F3 / §2.3 F2; ERR-044-001 (the magic-before-version correction, ERR-029-005/ERR-041-009
@@ -106,10 +108,14 @@ namespace TacticalDirector.Discipline
         /// Decodes a discipline sub-blob produced by <see cref="Encode"/>. Fail-loud (throws) on: a null
         /// blob; a magic mismatch (these bytes are some other format — checked FIRST); a version
         /// mismatch (no Stage-0 migration); a truncated read or a count prefix past the blob;
-        /// non-ascending <c>(PlayerId, CompetitionId)</c>; a negative <c>PlayerId</c> (§2.3 F2 — checked
-        /// before the ordering comparison can misread it as a real, if unusual, key); a negative
-        /// <c>Yellows</c> or <c>BanMatchesRemaining</c>; an all-zero row; or trailing bytes. Every one of
-        /// them is <b>F3</b> (FR-DC-015).
+        /// non-ascending <c>(PlayerId, CompetitionId)</c> — checked per entry BEFORE the negative-
+        /// <c>PlayerId</c> check below it (L14: an earlier revision of this comment claimed the reverse
+        /// order); a negative <c>PlayerId</c> (§2.3 F2); a negative <c>Yellows</c> or
+        /// <c>BanMatchesRemaining</c>; an all-zero row; or trailing bytes. Every one of them is
+        /// <b>F3</b> (FR-DC-015), so which one fires first is not load-bearing — for every entry but the
+        /// first, a negative id also breaks strict ascent against the previous real key and is caught by
+        /// the ordering check anyway; only entry 0, compared against the unconditionally-lower
+        /// <c>long.MinValue</c> sentinel, can reach the dedicated negativity check on its own.
         /// <para>
         /// The all-zero refusal is not in Appendix B's field table but follows from FR-DC-017: an
         /// absent row is the ONE representation of a clean player, so a stored <c>(0, 0)</c> is a
@@ -233,4 +239,10 @@ namespace TacticalDirector.Discipline
 // |         |            |        | (F3 / §2.3 F2) instead of letting it through as an unusually-    |
 // |         |            |        | small-but-otherwise-valid key — the file boundary was the one    |
 // |         |            |        | entry point that did not gate the player half of F2.             |
+// | 1.2     | 2026-08-13 | —      | AR round 5 fix (L14): Decode's doc corrected — it claimed the    |
+// |         |            |        | negative-PlayerId check (:186) ran BEFORE the ordering comparison |
+// |         |            |        | (:172) could misread it as a real key; the code has always run    |
+// |         |            |        | ordering first. Behaviour unchanged (both are F3 fail-loud, and   |
+// |         |            |        | for any entry but the first a negative id trips the ordering      |
+// |         |            |        | check anyway) — message-only fix, no code change.                 |
 #endregion
