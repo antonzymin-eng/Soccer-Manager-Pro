@@ -1,7 +1,7 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
-// Modified: 2026-08-13 (#44 C1/C2 adversarial review — H1 the destination discipline guard, H2 the
-//           composed restore filter — v1.23)
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 3 — H3/ERR-030-038: the destination
+//           discipline guard is re-keyed from "the tally is empty" to "no discipline is wired" — v1.24)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §4 / KD-1 / KD-5..KD-8;
 //           Training System #29 §4.4 / FR-TR-018/019; Injuries & Medical #41 §4.4 / FR-MD-017/018;
@@ -91,6 +91,47 @@ namespace TacticalDirector.SeasonSave
             ClubAppearanceStates[] appearanceClubs,
             ProgressionEngine progression,
             DisciplineState discipline)
+        {
+            // A caller of THIS form hands over a tally it constructed and cannot omit it (null is
+            // refused below), so it drives #44 by construction — there is no "forgot the argument"
+            // path here to guard against, and after ERR-030-038 the guard keys on wiring rather than
+            // on emptiness. The distinction only exists one layer up, where a SeasonLoop may hold no
+            // DisciplineState at all; that is where the false-meaning-unwired overload is reached from.
+            Save(
+                world, season, matchOrNull, path, trainingClubs, medicalClubs, appearanceClubs,
+                progression, discipline, disciplineWired: true);
+        }
+
+        /// <summary>
+        /// The <see cref="Save(WorldStore,SeasonState,MatchEngine.MatchEngine,string,ClubTrainingStates[],ClubInjuryStates[],ClubAppearanceStates[],ProgressionEngine,DisciplineState)"/>
+        /// body, plus the one fact the public form cannot carry: whether the caller drives a #44
+        /// discipline subsystem at all (ERR-030-038).
+        /// <para>
+        /// <paramref name="disciplineWired"/> is what
+        /// <see cref="RequireDestinationCarriesNoDiscipline"/> keys on. It is <b>not</b> derivable from
+        /// <paramref name="discipline"/>: FR-DC-017 drops a row the instant it reaches
+        /// <c>(0, 0)</c> — mid-season when a ban is served out with no residual yellows, and again for
+        /// every yellows-only row at the boundary sweep — so <c>Count == 0</c> is the NORMAL state of a
+        /// correctly wired tally, not evidence that one was dropped. It is a required parameter and
+        /// never defaulted, for the same reason the block parameters above reject null: a caller that
+        /// can stay silent about wiring is a caller whose silence is indistinguishable from the loss.
+        /// </para>
+        /// </summary>
+        /// <param name="disciplineWired">True when the caller drives a #44 <see cref="DisciplineState"/>
+        /// — including one that has legitimately drained to zero entries. False only when there is no
+        /// discipline subsystem behind this save at all, which is the sole composition from which an
+        /// empty <c>DISC</c> block is evidence of a drop.</param>
+        internal static void Save(
+            WorldStore world,
+            SeasonState season,
+            MatchEngine.MatchEngine matchOrNull,
+            string path,
+            ClubTrainingStates[] trainingClubs,
+            ClubInjuryStates[] medicalClubs,
+            ClubAppearanceStates[] appearanceClubs,
+            ProgressionEngine progression,
+            DisciplineState discipline,
+            bool disciplineWired)
         {
             if (world == null)
             {
@@ -229,7 +270,18 @@ namespace TacticalDirector.SeasonSave
             // carry SeasonSaveContents.Discipline even deliberately. That half is fixed at the source;
             // this half is the one that survives a future call site forgetting the argument, the same
             // argument the required `discipline` parameter above already makes for null.
-            if (discipline.Count == 0)
+            //
+            // ERR-030-038: keyed on WIRING, not on the tally being empty — that inference was this
+            // guard's own defect. It holds for the two siblings, whose families have no legitimate
+            // empty state (a career roster never empties), and it is FALSE for #44: FR-DC-017 makes
+            // the empty tally the canonical clean state, dropping a row the instant it reaches (0,0) —
+            // mid-season the moment a served ban leaves no residual yellows, and every yellows-only row
+            // at the boundary sweep. Keyed on Count, a correctly wired and correctly resumed loop whose
+            // last row cleared could never save over its own file again, and stayed unsaveable until
+            // fresh cards accrued, because the destination keeps the old rows forever — with the thrown
+            // message telling the operator to do the very thing they had already done. `disciplineWired`
+            // is the fact that actually distinguishes the loss, and it exists only at the call site.
+            if (!disciplineWired)
             {
                 RequireDestinationCarriesNoDiscipline(path);
             }
@@ -333,7 +385,13 @@ namespace TacticalDirector.SeasonSave
                 // here one line above the call that caused it and nothing enforced it (ERR-030-036);
                 // it is a property of the DESTINATION, not of this loop, so it is guarded at the write
                 // itself — RequireDestinationCarriesNoDiscipline — exactly as the roster is.
-                loop.Discipline ?? new DisciplineState());
+                //
+                // The `??` is where the two cases become indistinguishable, so the fact is passed
+                // alongside it rather than re-derived from the result (ERR-030-038): `loop.Discipline`
+                // is null for a loop that drives no discipline and non-null — possibly with zero
+                // entries, which FR-DC-017 makes the ordinary state — for one that does.
+                loop.Discipline ?? new DisciplineState(),
+                disciplineWired: loop.Discipline != null);
         }
 
         // Reads the destination's progression block, if the destination exists and is a well-formed
@@ -424,18 +482,34 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>
-        /// The THIRD sibling (ERR-030-036), for the #44 discipline tally. An empty tally may create a
-        /// file and may overwrite an empty one, never a populated one.
+        /// The THIRD sibling (ERR-030-036), for the #44 discipline tally. A save that drives no
+        /// discipline subsystem may create a file and may overwrite a card-less one, never one that
+        /// carries rows.
         /// <para>
-        /// Keyed on the tally's own emptiness rather than on any career block, because #44's state is
-        /// keyed by <c>(PlayerId, CompetitionId)</c> and has no club dimension at all — the two guards
-        /// above key on block families it shares nothing with, which is precisely why a resumed career
-        /// with a populated store AND populated career blocks passed both while dropping every ban.
+        /// Invoked on <c>disciplineWired == false</c>, NOT on the tally being empty (ERR-030-038). The
+        /// two sibling guards may key on emptiness because their families have no legitimate empty
+        /// state — a career roster never empties — but #44's does: FR-DC-017 drops a row the instant it
+        /// reaches <c>(0, 0)</c>, so the empty tally is the canonical clean state and reads as a drop
+        /// only when nothing was driving discipline in the first place.
+        /// </para>
+        /// <para>
+        /// Its subject is a family the two guards above share no key with — #44's state is keyed by
+        /// <c>(PlayerId, CompetitionId)</c> with no club dimension at all — which is precisely why a
+        /// resumed career with a populated store AND populated career blocks passed both while dropping
+        /// every ban.
         /// </para>
         /// <para>
         /// The loss this refuses is unrecoverable in a way the sibling guards' is not: FR-DC-014 keeps
         /// no card ledgers, only the running <c>(Yellows, BanMatchesRemaining)</c> tally, so a forgiven
         /// suspension cannot be re-derived from anything else in the file.
+        /// </para>
+        /// <para>
+        /// <b>Recorded, not fixed:</b> a loop wired with a FRESH <see cref="DisciplineState"/> instead
+        /// of the file's is wired, so this guard passes it — and it is indistinguishable at this
+        /// boundary from a tally that drained legitimately, since both present as "wired, zero rows".
+        /// The documented resume path (<c>SeasonLoop.Restore</c>'s <c>disciplineOrNull</c>, fed from
+        /// <see cref="SeasonSaveContents.Discipline"/>) is what closes that case; no destination
+        /// predicate can.
         /// </para>
         /// </summary>
         private static void RequireDestinationCarriesNoDiscipline(string path)
@@ -462,12 +536,13 @@ namespace TacticalDirector.SeasonSave
             {
                 throw new InvalidOperationException(
                     "Refusing to overwrite " + path + ": it carries #44 discipline state for " +
-                    existingEntries + " player(s) and this save has none. Every outstanding suspension " +
-                    "and every yellow would be forgiven silently, and FR-DC-014 retains no card " +
-                    "ledgers, so nothing can recompute them. Resume the loop with the tally from " +
-                    "SeasonSaveContents.Discipline (SeasonLoop.Restore's disciplineOrNull, or the " +
-                    "constructor's seventh argument) rather than composing a discipline-less loop over " +
-                    "a populated file.");
+                    existingEntries + " player(s) and this save drives no discipline subsystem at " +
+                    "all. Every outstanding suspension and every yellow would be forgiven silently, " +
+                    "and FR-DC-014 retains no card ledgers, so nothing can recompute them. Resume the " +
+                    "loop with the tally from SeasonSaveContents.Discipline (SeasonLoop.Restore's " +
+                    "disciplineOrNull, or the constructor's seventh argument) rather than composing a " +
+                    "discipline-less loop over a populated file. A wired tally that has legitimately " +
+                    "drained to zero rows (FR-DC-017) is NOT this case and saves freely.");
             }
         }
 
@@ -1116,4 +1191,20 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | — the exact H2 the #29/#41 T2 AR closed for injuries, reopened one |
 // |         |            |        | contributor later. Now one AvailabilityComposition.Compose call,   |
 // |         |            |        | mirroring the boot's.                                              |
+// | 1.24    | 2026-08-13 | —      | #44 C1/C2 adversarial review round 3, H3 (ERR-030-038): v1.23's    |
+// |         |            |        | own guard refused a LEGITIMATE save and made a career's file       |
+// |         |            |        | permanently unsaveable. It keyed on discipline.Count == 0 and read |
+// |         |            |        | that as proof the tally was dropped — true for the roster and the  |
+// |         |            |        | career triple, FALSE for #44, where FR-DC-017 makes the empty      |
+// |         |            |        | tally the canonical clean state (a served ban with no residual     |
+// |         |            |        | yellows is dropped mid-season; the boundary sweep drops every      |
+// |         |            |        | yellows-only row). A correctly wired, correctly resumed loop whose |
+// |         |            |        | last row cleared could never overwrite its own file again, and     |
+// |         |            |        | stayed unsaveable until fresh cards accrued. Re-keyed on WIRING:   |
+// |         |            |        | a new internal Save overload takes a required disciplineWired      |
+// |         |            |        | flag, the public long form passes true (a caller that hands over a |
+// |         |            |        | tally drives #44 by construction — null is refused), and           |
+// |         |            |        | Save(SeasonLoop, …) passes loop.Discipline != null, which is where |
+// |         |            |        | the `??` would otherwise discard the distinction. Mutation-        |
+// |         |            |        | verified: restoring the Count == 0 predicate fails both new locks. |
 #endregion

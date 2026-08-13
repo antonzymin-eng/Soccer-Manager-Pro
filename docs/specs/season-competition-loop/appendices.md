@@ -1,7 +1,8 @@
 # Season & Competition Loop Specification #30 — Appendices
 
 **Created:** July 22, 2026
-**Last Updated:** August 13, 2026, later same day (v1.3 — ERR-030-036 back-prop: Appendix B gains the THIRD cross-blob rule — no block family may be silently emptied over a populated destination, one guard per family because the families share no key, plus the `SeasonLoop.Restore` expressibility half the same finding exposed)
+**Last Updated:** August 13, 2026, later still (v1.4 — ERR-030-038 back-prop: v1.3's THIRD cross-blob rule was stated as "refuse to overwrite a populated block with an EMPTY one", which is a sound proxy only for families with no legitimate empty state; #44 is the counter-example (FR-DC-017 makes the empty tally the canonical clean state) and keying its guard on emptiness refused a correct save and made a career's own file permanently unsaveable. The rule now keys on the writing composition — is the family wired at all — passed to the write rather than re-derived from the block)
+**Last Updated (prior):** August 13, 2026, later same day (v1.3 — ERR-030-036 back-prop: Appendix B gains the THIRD cross-blob rule — no block family may be silently emptied over a populated destination, one guard per family because the families share no key, plus the `SeasonLoop.Restore` expressibility half the same finding exposed)
 **Last Updated (prior):** August 13, 2026 (v1.2 — ERR-030-035: Appendix A's frame-version row 5 → 6 and Appendix B's frame gains the mandatory #44 discipline sub-blob, for #44 T1)
 **Last Updated (prior):** August 11, 2026 (v1.1 — ERR-028-019 back-prop: Appendix B.1 gains the anchor-vs-clock rule (§2.3's new F10) as a paragraph adjacent to the existing cursor-vs-clock rule — a DIFFERENT invariant (#28's `BirthWorldDay` anchor, checked ahead-only) sharing the same two-boundary, one-shared-owner mechanism)
 **Last Updated (prior):** August 9, 2026 (v1.0 — ERR-028-014: Appendix B.1's cursor-vs-clock paragraph corrected from "all three ... cursors" / "exempt in every case" to the fourth (#28) cursor kind and the #28-only exception to the sentinel exemption, with the reason carried in full — the sweep-stopped-at-a-grep-boundary class, corrected here in the same pass as `section-2.md`'s F8 row)
@@ -12,7 +13,7 @@
 **Last Updated (prior):** August 7, 2026 (v0.5 — the #29/#41 balance pass D2 (ERR-041-010(b)): Appendix B's outer-frame description gains the three mandatory career sub-blobs — the #29 training and #41 medical blocks (frame v2→3, landed at their T1 and previously unrecorded here) and the new #30 appearance block (frame v3→4), between the season block and the optional match block)
 **Last Updated (prior):** July 27, 2026 (v0.4 — back-props ERR-030-017 (#47 conditional authored sub-blob) + ERR-030-019 (#50 `SaveOriginStamp` in the outer frame) landed atomically with the ten-spec approval wave; Appendix B's outer-frame description amended)
 **Last Updated (prior):** July 25, 2026 (v0.3 — ERR-030-010 Appendix C venue correction, found at #30 T0)
-**Version:** 1.3
+**Version:** 1.4
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -203,18 +204,40 @@ in both, so the two rules cannot drift from each other by one boundary gaining a
 (ERR-030-036, the #44 C1/C2 adversarial review's H1).** The two rules above govern *coherence between*
 blobs. This one governs the *destination*, and it is stated here because — like them — it can only be
 enforced by the layer that holds the whole file: `SeasonSaveManager.Save` **MUST refuse to overwrite a
-populated block with an empty one**, per block family, reading the destination back before it writes.
-Three guards implement it today — `RequireDestinationCarriesNoRoster` (#28's store, ERR-028-008),
-`RequireDestinationCarriesNoCareer` (the #29/#41/#30 career triple), and
-`RequireDestinationCarriesNoDiscipline` (#44's tally, ERR-030-036). All three pass an unreadable,
-foreign or older-frame destination through unchanged: an empty block *creating* a file, or overwriting
-an already-empty one, is the honest composition and stays legal.
+populated block with one the writing composition cannot account for**, per block family, reading the
+destination back before it writes. Three guards implement it today —
+`RequireDestinationCarriesNoRoster` (#28's store, ERR-028-008), `RequireDestinationCarriesNoCareer`
+(the #29/#41/#30 career triple), and `RequireDestinationCarriesNoDiscipline` (#44's tally,
+ERR-030-036). All three pass an unreadable, foreign or older-frame destination through unchanged: an
+empty block *creating* a file, or overwriting an already-empty one, is the honest composition and stays
+legal.
+
+**What "cannot account for" means — and why it is NOT simply "is empty" (ERR-030-038).** The rule's
+trigger is a *predicate on the writing composition*, and emptiness is only a sound proxy for it in
+families **with no legitimate empty state**. That is true of the first two: #28's block IS the roster
+(KD-4), and a career roster never legitimately empties, so a zero-club store is proof the store was
+dropped; the same holds for the #29/#41/#30 triple, whose clubs come and go only with the roster.
+**#44 is the counter-example, and the generalisation to it was wrong.** FR-DC-017 makes the empty
+tally the **canonical clean state**: an entry reaching `(Yellows = 0, BanMatchesRemaining = 0)` MUST be
+dropped immediately — mid-season, the moment a ban is served out with no residual yellows, and again
+for every yellows-only row at the boundary sweep — precisely so that an all-zero entry and an absent
+entry are never both encodable. An empty `DISC` block is therefore the ordinary output of a correctly
+wired season, and keying the refusal on it made a correctly wired, correctly *resumed* career unable to
+overwrite its own file the first time its last suspension was served, and unable to do so until fresh
+cards accrued (the destination keeps the old rows forever). The predicate that actually distinguishes
+the loss is **whether a #44 subsystem is wired behind the save at all** — a fact that exists at the
+call site (`SeasonLoop.Discipline` is null or it is not) and is destroyed by the `?? new
+DisciplineState()` the save root applies. It MUST therefore be **passed to the write, not re-derived
+from the block**. A family whose state has a legitimate empty case MUST key its guard this way; only a
+family with no legitimate empty case may key on emptiness.
 
 **Why it is a separate rule rather than a clause of the two above, and why each family needs its own
 guard.** Every block family is optional-but-not-absent — it has an empty case, never a missing one — so
 "this save carries none" and "this save dropped what the file had" are byte-identical at the frame, and
-only the destination distinguishes them. The failure is therefore always silent: every other block
-survives intact around the hole, the frame version is unchanged, and `Load` succeeds. It is also *per
+only the destination *plus the writing composition* distinguishes them (the destination alone is enough
+only where an empty block is itself impossible in a correct save — see ERR-030-038 above). The failure
+is therefore always silent: every other block survives intact around the hole, the frame version is
+unchanged, and `Load` succeeds. It is also *per
 family*, not one shared predicate, because the families share no key: #28's store is club-keyed, the
 career triple is `(ClubId, PlayerId)`-keyed, and **#44's tally is `(PlayerId, CompetitionId)`-keyed with
 no club dimension at all** — which is exactly how a resumed career with a populated store and populated
@@ -307,4 +330,5 @@ is a **total order** — no two rows ever compare equal (FR-SN-007).
 | 1.1 | 2026-08-11 | — | **ERR-028-019 back-prop** (docs close-out for #28's AR passes 5-8, four production landings — `39c385a`, `cf5abf0`, `8556ddd`, `b798ce2` — with no `docs/specs/` edit at all): Appendix B.1 gains a new paragraph for `PlayerCareerStates.RequireBirthWorldDayWithinClock` (AR pass 6 M2(b)), the anchor-vs-clock rule §2.3's new F10 states — a DIFFERENT invariant from the cursor-vs-clock paragraph immediately above (an ANCHOR, checked ahead-only, never for lag, since an anchor arbitrarily in the past is ordinary for #28), sharing its two-boundary (`SeasonLoop` composition, `SeasonSaveManager` Save/Load) one-shared-owner mechanism. This rule had NO normative text anywhere in `docs/specs/` before this pass despite being enforced in `src/season-save/` since `cf5abf0` (August 11, 2026). No code changed by this back-prop. |
 | 1.2 | 2026-08-13 | — | **ERR-030-035** (#44 T1, roadmap C1): Appendix A's `SEASON_SAVE_FORMAT_VERSION` row 5 → 6 for the mandatory #44 `DISC` discipline sub-blob, plus new `DISCIPLINE_SAVE_MAGIC` / `DISCIPLINE_SAVE_FORMAT_VERSION` rows. Appendix B's outer-frame nesting string gains `[len u32]discipline` between `progression` and the optional `match`; "four mandatory career sub-blobs" → five; the frame-in-code note updated. Byte layout not duplicated here; see #44 Appendix B. |
 | 1.3 | 2026-08-13 | — | **ERR-030-036 back-prop** (the #44 C1/C2 adversarial review's H1, spec + code same commit): Appendix B gains the **third cross-blob rule** — `Save` MUST refuse to overwrite a populated block family with an empty one, read back from the destination, with **one guard per family** because the families share no key (#28 club-keyed, the career triple `(ClubId, PlayerId)`-keyed, #44's tally `(PlayerId, CompetitionId)`-keyed and club-less), and a MUST that any family added to the frame hereafter brings its own guard. Recorded as a REFUSAL rule beside — not folded into — the F8 cursor and F10 anchor walks, since `DisciplineState` has neither a per-player world-day cursor nor a club dimension; that asymmetry is precisely how a resumed career with a populated store and populated career blocks passed both existing guards while deleting every ban and yellow it held, and FR-DC-014 keeps no ledgers to recompute them from. Also states the composition-boundary half the same finding exposed: every persisted family must be expressible on `SeasonLoop.Restore`'s parameter list, or the correct resume cannot be written at all — which is what #44's tally was until this fix. |
+| 1.4 | 2026-08-13 | — | **ERR-030-038 back-prop** (the #44 C1/C2 adversarial review's H3, spec + code same commit — a defect IN v1.3's own fix): v1.3 stated the third cross-blob rule as "MUST refuse to overwrite a populated block with an **empty** one, per block family", and explicitly extended it to #44. The generalisation was **over-broad**: emptiness is evidence of loss only for a family with no legitimate empty state, which is true of #28's roster and the #29/#41/#30 triple and **false for #44**, where FR-DC-017 makes the empty tally the canonical clean state (a served ban with no residual yellows is dropped mid-season; the boundary sweep drops every yellows-only row). Keyed on emptiness, `RequireDestinationCarriesNoDiscipline` refused a **legitimate** save: a correctly wired, correctly resumed loop whose last row cleared could never overwrite its own file again, and stayed unsaveable until fresh cards accrued, with the thrown message instructing the operator to do exactly what they had already done. Appendix B.1 now states the trigger as a predicate on the **writing composition** — is this family wired behind the save at all — carried to the write rather than re-derived from the block, since the `?? new DisciplineState()` at the save root destroys the distinction; and records that only a family with no legitimate empty case may key on emptiness. No frame, layout or version change. |
 #endregion

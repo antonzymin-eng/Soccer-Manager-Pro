@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonSaveManagerTests.cs
 // Created:  2026-07-22
-// Modified: 2026-08-13 (#44 C1/C2 AR, H1 — the ERR-030-036 resume-and-save locks — v1.18)
+// Modified: 2026-08-13 (#44 C1/C2 AR round 3, H3 — the ERR-030-038 drained-tally locks — v1.19)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §5 acceptance;
 //           Season & Competition Loop #30 FR-SN-019..023, Appendix B; Training System #29 FR-TR-018/019;
@@ -1333,7 +1333,7 @@ namespace TacticalDirector.SeasonSave
         }
 
         [Test]
-        public void Save_AnEmptyDisciplineTally_OverAPopulatedOne_IsRefused()
+        public void Save_AnUnwiredDiscipline_OverAPopulatedTally_IsRefused()
         {
             // ERR-030-036's headline: ERR-028-008's measured shape in the third block family, and the
             // one neither existing destination guard can see. RequireDestinationCarriesNoRoster fires
@@ -1342,6 +1342,13 @@ namespace TacticalDirector.SeasonSave
             // sails through both — and every ban and every yellow in the destination is gone, frame
             // still v6, Load still succeeding. FR-DC-014 retains no ledgers, so nothing can recompute
             // them.
+            //
+            // Driven through the INTERNAL overload since ERR-030-038, because that is where the fact the
+            // guard keys on now lives. The public long form cannot express this case at all: a caller
+            // that hands over a DisciplineState drives #44 by construction (null is refused), and its
+            // tally being empty is FR-DC-017's ordinary state rather than evidence of a drop. See
+            // AWiredTallyThatDrainsToZero_SavesOverItsOwnPopulatedFile below for the case the old
+            // Count == 0 keying wrongly refused.
             WorldStore world = PopulatedStore();
             ProgressionEngine populated = ProgressionFor(PBlock(7, 100, lastAdvancedWorldDay: 1u));
             string path = TempPath("populated-discipline.season");
@@ -1357,9 +1364,10 @@ namespace TacticalDirector.SeasonSave
                 () => SeasonSaveManager.Save(
                     PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
                     TrainingMatching(7, 100), MedicalMatching(7, 100), AppearanceMatching(7, 100),
-                    ProgressionFor(PBlock(7, 100, lastAdvancedWorldDay: 1u)), new DisciplineState()),
-                "an empty discipline tally must not overwrite a file carrying one — the roster and the "
-                + "whole career surviving beside the hole is exactly what makes this silent.");
+                    ProgressionFor(PBlock(7, 100, lastAdvancedWorldDay: 1u)), new DisciplineState(),
+                    disciplineWired: false),
+                "a save driving no discipline must not overwrite a file carrying a tally — the roster "
+                + "and the whole career surviving beside the hole is exactly what makes this silent.");
 
             SeasonSaveContents reloaded = SeasonSaveManager.Load(path);
             Assert.AreEqual(1, reloaded.Discipline.Count,
@@ -1370,34 +1378,38 @@ namespace TacticalDirector.SeasonSave
         }
 
         [Test]
-        public void Save_AnEmptyDisciplineTally_ToANewPath_Succeeds()
+        public void Save_AnUnwiredDiscipline_ToANewPath_Succeeds()
         {
-            // The carve-out the guard must not break: a game that has never shown a card writes a
-            // well-formed zero-entry block, and that is the honest state, not a loss.
+            // The carve-out the guard must not break: a game that drives no discipline writes a
+            // well-formed zero-entry block, and that is the honest state, not a loss. Driven unwired
+            // (ERR-030-038) so it exercises the guard rather than the branch that never calls it.
             string path = TempPath("fresh-empty-discipline.season");
 
             Assert.DoesNotThrow(
                 () => SeasonSaveManager.Save(
                     PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
-                    NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState()),
-                "an empty tally may freely create a new file — there is nothing there to protect.");
+                    NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState(),
+                    disciplineWired: false),
+                "an unwired save may freely create a new file — there is nothing there to protect.");
             Assert.IsTrue(File.Exists(path));
         }
 
         [Test]
-        public void Save_AnEmptyDisciplineTally_OverAnAlreadyEmptyOne_Succeeds()
+        public void Save_AnUnwiredDiscipline_OverAnAlreadyEmptyOne_Succeeds()
         {
             // The second half of the carve-out: a discipline-less career must stay repeatedly saveable,
             // or the guard breaks every save written before the first card of the season.
             string path = TempPath("empty-discipline-twice.season");
             SeasonSaveManager.Save(
                 PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
-                NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState());
+                NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState(),
+                disciplineWired: false);
 
             Assert.DoesNotThrow(
                 () => SeasonSaveManager.Save(
                     PopulatedStore(), MidSeasonState(), matchOrNull: null, path,
-                    NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState()),
+                    NoTraining, NoMedical, NoAppearance, ProgressionEngine.Empty, new DisciplineState(),
+                    disciplineWired: false),
                 "overwriting an already card-less file is not a loss and must stay legal.");
         }
 
@@ -1469,6 +1481,107 @@ namespace TacticalDirector.SeasonSave
             SeasonSaveContents reloaded = SeasonSaveManager.Load(path);
             Assert.AreEqual(1, reloaded.Discipline.Count,
                 "the refused write must leave the file's tally intact.");
+        }
+
+        // ── ERR-030-038: an empty tally is FR-DC-017's clean state, not evidence of a loss ──
+
+        /// <summary>
+        /// A loop resumed with <paramref name="tally"/> wired — the composition every one of the two
+        /// locks below saves from, and the one ERR-030-036's guard was written to protect rather than
+        /// to refuse.
+        /// </summary>
+        private static SeasonLoop LoopDriving(WorldStore world, DisciplineState tally) =>
+            SeasonLoop.Restore(
+                world, SeasonStateCodec.Encode(MidSeasonState()), RoundResolutionMode.QuickSimAll,
+                careerOrNull: null, careerSquadsOrNull: null, progressionOrNull: null,
+                disciplineOrNull: tally);
+
+        [Test]
+        public void AWiredTallyThatDrainsToZero_SavesOverItsOwnPopulatedFile()
+        {
+            // ERR-030-038, the mid-season half. ERR-030-036's guard keyed on `discipline.Count == 0` and
+            // read that as proof the tally had been DROPPED. That inference holds for the two sibling
+            // families — a career roster never legitimately empties — and is false here: FR-DC-017 drops
+            // a row the instant it reaches (0, 0), which for a player serving his last match of a ban
+            // with no residual yellows happens the moment his club plays. So a correctly wired,
+            // correctly resumed loop became permanently unable to overwrite its own file, and stayed
+            // that way until fresh cards accrued, because the destination keeps the old rows forever —
+            // while the thrown message told the operator to resume with SeasonSaveContents.Discipline,
+            // which is exactly what they had done.
+            WorldStore world = PopulatedStore();
+            string path = TempPath("drained-discipline.season");
+
+            // One outstanding match of ban, no residual yellows: FR-DC-017's mid-season drop case.
+            DisciplineState tally = DisciplineState.FromEntries(new[]
+            {
+                new DisciplineEntry(
+                    100, DisciplineConstants.LEAGUE_COMPETITION_KEY, yellows: 0,
+                    banMatchesRemaining: 1),
+            });
+            SeasonLoop loop = LoopDriving(world, tally);
+
+            SeasonSaveManager.Save(loop, matchOrNull: null, path);
+            Assert.AreEqual(1, SeasonSaveManager.Load(path).Discipline.Count,
+                "Precondition: the destination now carries the row the second save must be allowed to "
+                + "clear.");
+
+            // The ban is served by the club playing (FR-DC-011), and #27's club-scoped id formula puts
+            // player 100 in club 4. The row reaches (0, 0) and is dropped by FR-DC-017 — the tally is
+            // still wired, still the loop's own, and now empty.
+            new DisciplineRules(tally).OnClubFixturePlayed(100 / PlayerDatabaseConstants.CLUB_SQUAD_SIZE);
+            Assert.AreEqual(0, tally.Count,
+                "Precondition: serving the last match of a ban with no residual yellows drops the row "
+                + "immediately (FR-DC-017).");
+            Assert.AreSame(tally, loop.Discipline,
+                "Precondition: the loop still drives this tally — nothing about it became unwired.");
+
+            Assert.DoesNotThrow(
+                () => SeasonSaveManager.Save(loop, matchOrNull: null, path),
+                "a wired tally that drained to zero must save over its own populated file — refusing it "
+                + "makes a career's own save permanently unwriteable the first time its last "
+                + "suspension is served out.");
+
+            Assert.AreEqual(0, SeasonSaveManager.Load(path).Discipline.Count,
+                "and the drained tally must actually reach the file: the row is served out, so keeping "
+                + "the destination's copy would resurrect a ban the player has already sat.");
+        }
+
+        [Test]
+        public void ASeasonRollThatClearsEveryYellow_LeavesTheCareerSaveable()
+        {
+            // ERR-030-038, the boundary half — the same defect on FR-DC-017's other drop path, and the
+            // one that would hit every save of a clean season's first day. The boundary sweep resets
+            // every yellow count to 0 and carries unserved bans; a tally holding only yellows therefore
+            // empties completely, and under the Count == 0 keying the next save of that career was
+            // refused outright.
+            WorldStore world = PopulatedStore();
+            string path = TempPath("rolled-discipline.season");
+
+            DisciplineState tally = DisciplineState.FromEntries(new[]
+            {
+                new DisciplineEntry(
+                    100, DisciplineConstants.LEAGUE_COMPETITION_KEY, yellows: 2,
+                    banMatchesRemaining: 0),
+            });
+            SeasonLoop loop = LoopDriving(world, tally);
+
+            SeasonSaveManager.Save(loop, matchOrNull: null, path);
+            Assert.AreEqual(1, SeasonSaveManager.Load(path).Discipline.Count,
+                "Precondition: the destination carries the yellows-only row.");
+
+            new DisciplineRules(tally).RollToNextSeason();
+            Assert.AreEqual(0, tally.Count,
+                "Precondition: the boundary sweep zeroes the yellows and FR-DC-017 drops the resulting "
+                + "(0, 0) row.");
+
+            Assert.DoesNotThrow(
+                () => SeasonSaveManager.Save(loop, matchOrNull: null, path),
+                "a career whose every yellow was cleared at the season boundary must stay saveable — "
+                + "this is the state a new season STARTS in, so refusing it breaks the ordinary save.");
+
+            Assert.AreEqual(0, SeasonSaveManager.Load(path).Discipline.Count,
+                "and the swept tally must reach the file, or next season resumes carrying last "
+                + "season's yellows.");
         }
 
         [Test]
@@ -2191,4 +2304,17 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | destination); and the two end-to-end resume cases — threading     |
 // |         |            |        | SeasonSaveContents.Discipline keeps the ban and the yellows,      |
 // |         |            |        | dropping it is refused at the write. + the TallyFor fixture.      |
+// | 1.19    | 2026-08-13 | —      | #44 C1/C2 AR round 3, H3 (ERR-030-038): two locks on the case     |
+// |         |            |        | v1.18's four missed by construction — a tally that DRAINS.        |
+// |         |            |        | AWiredTallyThatDrainsToZero_SavesOverItsOwnPopulatedFile (a       |
+// |         |            |        | served ban with no residual yellows, FR-DC-017's mid-season       |
+// |         |            |        | drop) and ASeasonRollThatClearsEveryYellow_LeavesTheCareer-       |
+// |         |            |        | Saveable (the boundary sweep) both save a WIRED loop over its     |
+// |         |            |        | own populated file and assert the empty tally reaches disk.       |
+// |         |            |        | Both fail if the guard is re-keyed on discipline.Count == 0.      |
+// |         |            |        | The three v1.18 locks that exercise the guard now drive it        |
+// |         |            |        | through the internal disciplineWired overload — renamed Save_An-  |
+// |         |            |        | Unwired* — because the public long form cannot express "no        |
+// |         |            |        | discipline wired" and its empty tally is no longer a refusal.     |
+// |         |            |        | + the LoopDriving fixture.                                        |
 #endregion
