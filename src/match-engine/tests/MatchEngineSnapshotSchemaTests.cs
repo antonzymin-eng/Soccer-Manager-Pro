@@ -56,7 +56,10 @@ namespace TacticalDirector.MatchEngine
             // ActionOrdinal, the engine's only mutable RNG stream), v18 GK/Heading engine-integration Phase 2
             // (the two subsystem RNG-stream cursors + the two §4 trigger latches + both orchestrators'
             // in-flight state via their CaptureState seams — making a flag-on engine snapshot-safe).
-            Assert.AreEqual(20u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
+            // v19 collision contact-onset pair set + the §5.Z.15 six-second-rule state, v20
+            // (ERR-012-011) the pass-in-flight receiver latch, v21 (wiring backlog W2 — the tackle)
+            // the per-agent tackle-interrupt flag and per-agent challenge cooldown.
+            Assert.AreEqual(21u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
                 "SNAPSHOT_SCHEMA_VERSION drifted — bump it intentionally only with a field-set/order change.");
         }
 

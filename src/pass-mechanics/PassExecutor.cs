@@ -1,6 +1,6 @@
 // File:     src/pass-mechanics/PassExecutor.cs
 // Created:  2026-05-26
-// Modified: 2026-08-08
+// Modified: 2026-08-12 (W2: FM-08's CONTACT-time possession loss downgraded LogError -> LogWarning; a tackle now makes it ordinary)
 // Author:   —
 // Spec:     Pass Mechanics #5 §3.8, §3.9, §4.1, Code Standards #20
 // Purpose:  Sealed instance orchestrator for the six-state pass execution state
@@ -470,7 +470,14 @@ namespace TacticalDirector.PassMechanics
             if (!_ballSystem.IsBallPossessedBy(_request.AgentId))
             {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                Debug.LogError($"[PassExecutor] FM-08: Agent {_request.AgentId} lost possession before CONTACT. Race condition.");
+                // Downgraded from LogError, and the wording corrected, at wiring backlog W2. "Race
+                // condition" was accurate while the ONLY way to lose the ball mid-windup was an
+                // ordering accident between systems — which is what FM-08 was written to catch. Since
+                // #14 §3.6.5 gave the engine a tackle, this is an ORDINARY football event: a defender
+                // took the ball off the passer before he struck it. Leaving it at error level would
+                // put a red line in the log for every successful tackle on a passer, which both buries
+                // real errors and fails any suite that treats an unexpected LogError as a failure.
+                Debug.LogWarning($"[PassExecutor] FM-08: Agent {_request.AgentId} lost possession before CONTACT — pass cancelled.");
 #endif
                 EmitPassCancelled(matchTime, frameNumber, CancelReason.PossessionLost);
                 return;
@@ -734,4 +741,12 @@ namespace TacticalDirector.PassMechanics
 // |         |            |        | can latch a pass's intended receiver at the CONTACT kick. Same field    |
 // |         |            |        | CaptureState().Request serializes — one source, two readers, not a      |
 // |         |            |        | second derivation. No execution-path change.                            |
+// | 1.16    | 2026-08-12 | —      | Wiring backlog W2: FM-08's CONTACT-time possession-loss log goes      |
+// |         |            |        | LogError -> LogWarning and drops "Race condition". That wording was  |
+// |         |            |        | correct while an ordering accident was the ONLY way to lose the ball |
+// |         |            |        | mid-windup; #14 §3.6.5 made it an ordinary football event, and an    |
+// |         |            |        | error line per successful tackle buries real errors and fails any    |
+// |         |            |        | suite treating an unexpected LogError as a failure. NOT "text only" |
+// |         |            |        | (AR-1 L-7): the SEVERITY change alters LogAssert behaviour in every  |
+// |         |            |        | suite, which is the whole reason for making it. No formula changed.  |
 #endregion

@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 8: References, Citations, Cross-Reference Audit
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.2 — PASS-1 adversarial review fix pass; M6/M7 resolved)
-**Version:** 0.2
+**Last Updated:** August 12, 2026 (v0.3 — KD-6 revised (`ERR-014-006`, wiring backlog W2): XC-014-004 and §8.2 invariant row 7 corrected — the #8-mediates/#3-owns-contact dispatch has no working delegate; #14 resolves the tackle outcome itself (§3.6.5).)
+**Version:** 0.3
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0 (May 17, 2026)
 
@@ -20,7 +20,7 @@ spec versions current on that date.
 | XC-014-001 | #1 Ball Physics | §1.2, Appendix C | v1.0 APPROVED | Corner-origin coordinate system (X = 0–105 m goal-to-goal, Y = 0–68 m touchline-to-touchline, Z = height, origin = corner); `PITCH_LENGTH_M = 105.0 m`; `PITCH_WIDTH_M = 68.0 m`; `HALF_LINE_X = 52.5 m` (§6.1 CROSS constants). |
 | XC-014-002 | #2 Agent Movement | §2.5 (XC-002-001) | v1.1.1 APPROVED | EntityId no-reuse constraint: no despawned EntityId is reused within the lifetime of a match. Inherited by #14 for all EntityId iteration and tie-break logic. |
 | XC-014-003 | #2 Agent Movement | §3.1 | v1.1 APPROVED | Dwell-time + dead-zone hysteresis pattern reused by §3.11 (KD-11). #14 parameterises the #2 pattern with `MARK_DWELL_TICKS [GT]`. |
-| XC-014-004 | #3 Collision System | §3.3 (section-3-3.md) | v1.0 APPROVED | Agent-agent collision response surface. #14's `TackleIntentRequest` is dispatched here via #8 (KD-6). #14 does NOT call #3 directly; #8 mediates. Q2 resolution: confirmed at section-file draft. |
+| XC-014-004 | #3 Collision System | §3.3 (section-3-3.md) | v1.0 APPROVED | Agent-agent collision response surface. **Amended (KD-6 revised — `ERR-014-006`, August 12, 2026):** originally read "#14's `TackleIntentRequest` is dispatched here via #8 (KD-6). #14 does NOT call #3 directly; #8 mediates." That dispatch has no working delegate — #8's `ActionType` ordinal space is exhausted and #3 defers slide-tackle collision to Stage 2 (§7.2.1). #14 now resolves the tackle outcome itself as an abstract attribute duel (§3.6.5); #3 §3.3 remains cited here only as the Stage 2+ fallback contact-physics authority, not a Stage 0 dispatch target. Q2 resolution: confirmed at section-file draft (superseded by this amendment). |
 | XC-014-005 | #7 Perception System | §3.7–§3.10 | v1.0 APPROVED | Perception snapshot schema: agent positions, velocities, `isActive`, ball position, ball velocity, possession owner. Perceived opponent attributes consumed at Stage 0: `FirstTouch` (threat score §3.5), `Tackling` (declared for future tackle-quality use; not consumed by §3.6 algorithm at Stage 0). All attribute reads go through `perception.GetPerceivedAttribute` (KD-1 cite-not-redefine). |
 | XC-014-006 | #8 Decision Tree | §1.3.2 | v1.1 APPROVED | Stage 1+ deferral of coordinated defensive assignment. Authoritative basis for the §1.8 Stage-Binding Statement: "#14 introduces coordinated mark assignments" at Stage 1 per §1.3.2. |
 | XC-014-007 | #8 Decision Tree | §1.7.3 (XC-008-001) | v1.1.1 APPROVED | EntityId no-reuse constraint (back-propagated from #16 §3.2.5 via ERR-016-002). Inherited by #14 per XC-014-002 chain. |
@@ -62,7 +62,7 @@ Each invariant is cited-not-redefined (KD-1).
 | 4 | Zero-allocation hot path | FR-DA-006 / §4.2 / §6.2 / XC-014-026 |
 | 5 | Constant-tag policy: every constant carries exactly one of `[GT]` / `[EST]` / `[FIXED]` / `[DERIVED]` / `[CROSS]` / `[CROSS-PENDING]` | FR-DA-035 / KD-13 / §6.1 |
 | 6 | Interface Design Principle: no interface against #15 Attacking AI at Stage 0 | FR-DA-036 / KD-8 / §4.5.3 |
-| 7 | Parameter-based physics (no type enums in physics layer): #14 produces `TackleIntentRequest` struct; #8 mediates; #3 owns contact physics | KD-6 / §3.6 / §4.5.2 |
+| 7 | Parameter-based physics (no type enums in physics layer): #14 produces `TackleIntentRequest` and (KD-6 revised, `ERR-014-006`) `TackleOutcome` structs; neither crosses into the physics layer. Original text ("#8 mediates; #3 owns contact physics") superseded — #14 resolves the tackle outcome itself (§3.6.5) | KD-6 / §3.6 / §3.6.5 / §4.5.2 |
 | 8 | EntityId no-reuse: no despawned ID reused within a match | XC-014-002 / XC-014-007 / §1.7 |
 | 9 | Stage 0 uses `float`; Fixed64 is Stage 5+ per #9 §8.1 | §7.10 / §4.6 |
 | 10 | No magic numbers: all constants in `DefensiveAIConstants.cs` | FR-DA-007 / KD-14 / XC-014-029 |
@@ -125,3 +125,4 @@ folder and against the 14 upstream spec folders listed in §1.3:
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent | Initial draft. 29 XC-014-NNN cross-references allocated and audit-verified. ERR-014-001..004 declared with target spec, section, and status. Zero academic references at Stage 0. CLAUDE.md invariants 1–10 bound. Stale-reference grep record (7 search terms) with all-PASS results. |
 | 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. M6: XC-014-005 "what is consumed" list corrected — `Anticipation` removed (not used in any §3 formula); `Tackling` annotated as "declared for future tackle-quality use; not consumed at Stage 0". M7: XC-014-022 and ERR-014-004 updated to reflect ERR-011-001/ERR-012-001 race — #11 may occupy `0x18` or shift to `0x1D` if #12 reaches `APPROVED` first; #14's `0x1A` slot is stable regardless. |
+| 0.3 | August 12, 2026 | AI agent (wiring backlog W2) | KD-6 revised (`ERR-014-006`): XC-014-004 corrected — the "dispatched here via #8... #8 mediates" claim had no working delegate; #3 §3.3 is now cited only as the Stage 2+ fallback contact-physics authority. §8.2 invariant row 7 corrected to name `TackleOutcome` alongside `TackleIntentRequest` and drop the superseded #8/#3 clause. `ERR-014-006` itself is not added as a new §8.3 row in this pass — it is filed against #14's own KD-6 rather than as a cross-spec back-prop target, and `docs/tracking/tackle-wiring-design.md` is its authoritative record; flagged for a follow-up decision rather than added here to avoid an uncoordinated change to the "ERR-014-001..004" count in `section-9-approval-checklist.md` §9.1 item 25. |

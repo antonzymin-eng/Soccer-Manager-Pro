@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Appendices
 
 **Created:** May 17, 2026
-**Last Updated:** May 18, 2026 (v0.3 — FAIL-4 fix: Appendix F glossary `DOMAIN_TAG_DEFENSIVE_AI` entry promoted `[CROSS-PENDING]` → `[CROSS: #16 §3.4]`)
-**Version:** 0.3
+**Last Updated:** August 12, 2026 (v0.4 — KD-6 revised (`ERR-014-006`, wiring backlog W2): Appendix A.12 rationale prose corrected (dead #8/#3 execution clause); Appendix F `TackleIntentRequest` entry corrected and two new entries (`TackleDuelInputs`, `TackleOutcome`) added — glossary is now 18 entries, making the "16-entry" description in §9.1 item 32 / Appendix H v0.1 stale.)
+**Version:** 0.4
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0 (May 17, 2026)
 
@@ -205,7 +205,12 @@ dwell does not delay critical responses.
 intent is evaluated at 10 Hz (every 100 ms), but the actual tackle movement
 occurs over the following 6–10 physics frames (at 60 Hz, 100–167 ms). A
 3 m radius allows the agent to declare tackle intent while still in the
-approaching phase, giving #8 / #3 enough frames to execute the physical action.
+approaching phase, giving the challenge enough frames to close before the
+outcome is resolved. **Amended (KD-6 revised — `ERR-014-006`):** the
+closing clause originally read "giving #8 / #3 enough frames to execute
+the physical action" — #8/#3 no longer execute it; the tackle outcome is
+resolved by #14 itself (§3.6.5). The 3 m rationale and value are
+unaffected by this correction.
 
 **Stage 0 default:** 3.0 m.
 
@@ -723,7 +728,9 @@ same tick that the GK out-of-zone condition is first detected. No tick lag.
 | `MarkDirective` | Per-team per-tick output struct from #14. Fields: `team`, `offensiveLineDepth` (read from #12), `offsideTrapActive`, `stepUpTargetDepth`, `emergencyFlag`. |
 | `MarkAssignment` | Per-agent per-tick output struct. `mode` is one of: `ZONAL`, `MAN_MARK`, `INTERCEPT_RUNNER`, `COVER_GK_ZONE`. `targetEntityId` and `targetPosition` are null for `ZONAL`. |
 | `MarkHysteresisState` | Per-agent per-tick persistent state. Tracks `dwellCounter`, `candidateMode`, `candidateTargetId`, `holdTicks`. Prevents assignment thrash (§3.11). Digested per #16 §6.2. |
-| `TackleIntentRequest` | Per-agent per-tick struct produced for agents within `TACKLE_ELIGIBLE_RADIUS_M` of their assigned opponent. `mode` is `COMMIT`, `JOCKEY`, or `HOLD`. Consumed by #8 → dispatched to #3. |
+| `TackleIntentRequest` | Per-agent per-tick struct produced for agents within `TACKLE_ELIGIBLE_RADIUS_M` of their assigned opponent. `mode` is `COMMIT`, `JOCKEY`, or `HOLD`. **Amended (KD-6 revised — `ERR-014-006`):** originally "Consumed by #8 → dispatched to #3" — that dispatch has no working delegate; a committed intent is now resolved by #14 itself into a `TackleOutcome` (§3.6.5). |
+| `TackleDuelInputs` | New (KD-6 revised, `ERR-014-006`) per-challenge struct: the tackler's `Tackling`/`Aggression` and the carrier's `Dribbling`/`Balance`, normalized to `[0,1]`, plus `approachAngle` and `reachFraction`. Input to `TackleOutcomeResolver` (§2.2.8, §3.6.5.4). |
+| `TackleOutcome` | New (KD-6 revised, `ERR-014-006`) four-value result of a resolved tackle challenge: `MISSED` / `BALL_WON` / `BALL_LOOSE` / `FOUL`. Digest-visible; ordinals stable and append-only (§2.2.9, §3.6.5.2). |
 | `OffsideLineState` | Per-team persistent state. Tracks `currentLineDepth`, `stepUpDwellCounter`, `cooldownTicksRemaining`, `coverGkZoneActiveTicks`. Digested per #16 §6.2. |
 | `HOLD_SHAPE pool` | Set of outfield agents not assigned to a press role (`PRIMARY_PRESS` / `COVER_SHADOW`) by #13 and excluding the GK. #14's exclusive assignment pool. |
 | `ZONAL` | Mark mode: agent maintains position near their #12 `formationSlot` baseline. No specific opponent `EntityId` tracked. Default mode and safe fallback. |
@@ -779,3 +786,4 @@ They do not affect the deterministic simulation output.
 | 0.1 | May 17, 2026 | AI agent | Initial appendices. Appendix A: 22 `[GT]` constant derivation entries (all promoted from `[EST]`; A.1–A.22). Appendix B: last-man predicate reference card with formal definitions (both team orientations) + 3 canonical test cases (single last man, EntityId tie, GK-forward exclusion). Appendix C: offside trap verification with 4 canonical cases (trap fires, ball too fast, incoherent line, active press). Appendix D: anti-chaos sensitivity analysis with high/low/default values + interaction rule + two named style profiles. Appendix E: 4 KD-18 exploit-resistance scenarios (E.1 early trap, E.2 switch through hole, E.3 last-man one-on-one, E.4 GK out of position) — tick-by-tick trace with pass criteria. Appendix F: 16-entry glossary. Appendix G: telemetry playbook (Stage 0 placeholder + Stage 1+ planned overlays + known diagnostic signals). |
 | 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. L4: Appendix A.9 typo corrected — "time for a restart restart pass" → "time for a restart pass". |
 | 0.3 | May 18, 2026 | AI agent (adversarial-specs-review-run2-AFrm4) | FAIL-4 fix (A-03): Appendix F glossary entry for `DOMAIN_TAG_DEFENSIVE_AI` — `[CROSS-PENDING]` (ERR-014-004) promoted to `[CROSS: #16 §3.4]`; ERR-014-004 resolved May 18, 2026. |
+| 0.4 | August 12, 2026 | AI agent (wiring backlog W2) | KD-6 revised (`ERR-014-006`): Appendix A.12 `TACKLE_ELIGIBLE_RADIUS_M` rationale's closing clause corrected — "giving #8 / #3 enough frames to execute the physical action" had no working delegate; value (3.0 m) and the rest of the rationale unaffected. Appendix F `TackleIntentRequest` entry corrected ("Consumed by #8 → dispatched to #3" superseded); added `TackleDuelInputs` and `TackleOutcome` entries. Glossary is now 18 entries (was 16) — `section-9-approval-checklist.md` §9.1 item 32's "16-entry" evidence is now stale and is flagged, not recounted, in this pass. |

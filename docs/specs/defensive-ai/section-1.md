@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 1: Introduction, Scope, Dependencies, Key Decisions
 
 **Created:** May 17, 2026
-**Last Updated:** May 18, 2026 (v0.4 — FAIL-4 fix (A-03): §1.3.3 ERR-014-004 block — `[CROSS-PENDING]` promoted to `[CROSS: #16 §3.4]`, resolved outcome documented (0x1A final, 0x18/0x1D race resolved). §1.6 #16 boundary row — `[CROSS-PENDING]` promoted to `[CROSS: #16 §3.4]`.)
-**Version:** 0.4
+**Last Updated:** August 12, 2026 (v0.5 — KD-6 revised (`ERR-014-006`, wiring backlog W2): §1.2.1 scope gains tackle outcome resolution; §1.3.1 #3 dependency row, §1.4 glossary "Tackle intent" entry (+ new "Tackle outcome" entry), §1.5 KD-6 row, §1.6 #3 boundary row, and §1.7's last bullet corrected to stop asserting the dead #8-mediates/#3-owns-contact dispatch; §1.8 gains a scoped Stage-0-runtime-code amendment for §3.6.5 only.)
+**Version:** 0.5
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0 (May 17, 2026)
 
@@ -56,6 +56,11 @@ NOT STARTED at the time of this draft).
   (cite-not-redefine KD-1).
 - Tackle intent evaluation: `COMMIT` / `JOCKEY` / `HOLD` per eligible
   agent; `TackleIntentRequest` output (§3.6, KD-6).
+- Tackle outcome resolution: the four-outcome (`MISSED` / `BALL_WON` /
+  `BALL_LOOSE` / `FOUL`) abstract attribute-duel resolution of a committed
+  challenge (§3.6.5, KD-6 revised — `ERR-014-006`). Added because neither
+  original KD-6 delegate could accept the dispatch (see the KD-6 row
+  below).
 - Offside trap execution: trigger condition, step-up target depth,
   simultaneous backline advance, hysteresis (§3.7, KD-9).
 - Last-man predicate and emergency `INTERCEPT_RUNNER` override (§3.8–§3.9,
@@ -92,7 +97,7 @@ handling (GK positioning is owned by #11 per KD-7).
 |---|---|---|
 | #1 Ball Physics | §1.2, Appendix C | Corner-origin coordinates; `PITCH_LENGTH_M` / `PITCH_WIDTH_M` constants; ball-state schema for sideline geometry |
 | #2 Agent Movement | §2.5 (`XC-002-001`), §3.1 | EntityId no-reuse; dwell-time + dead-zone hysteresis pattern |
-| #3 Collision System | §3.x (tackle contact model) | Boundary reference: #14 produces tackle intent; #3 owns contact physics (KD-6) |
+| #3 Collision System | §3.x (tackle contact model) | Boundary reference (KD-6, **revised** — `ERR-014-006`): #14 produces tackle intent **and now resolves the tackle outcome itself** (§3.6.5, an abstract attribute duel); #3's contact-physics model is the Stage 2+ fallback, not a Stage 0 parallel authority — §7.2.1 defers slide-tackle collision to Stage 2 and the `TackleContactFlag` amendment Pass Mechanics #5 §4.4.2 flagged as `XC-4.4-02` never landed |
 | #4 First Touch | §3.1 (control quality `q`) | Not read directly — consumed via #7 perception snapshot propagation |
 | #5 Pass Mechanics | §2 FR-10 (`PassAttemptEvent`) | Not read directly — ball state and opponent positioning consumed via #7 snapshot |
 | #6 Shot Mechanics | §2 (shot-event schema) | Boundary awareness for threat scoring near goal; consumed via #7 snapshot only |
@@ -179,7 +184,8 @@ declaration between them at Stage 0.
 | **Displacement cost** | `|agent.position − targetPos|²` in m². Used for assignment optimisation — lower cost preferred; EntityId ascending is the terminal tie-break. |
 | **Offside trap** | A coordinated simultaneous advance of all DEFENSE-line agents to a target x-depth, executed on the same tick when trigger conditions are met (ball velocity, hysteresis dwell, phase state). #14 owns the step-up decision; offside adjudication is out of scope (KD-9). |
 | **Last-man predicate** | A deterministic per-tick boolean derived from `IsLastManCandidate` and `IsLastManThreat` (KD-12). When both are true, the identified agent is overridden to `INTERCEPT_RUNNER` mode. GK is excluded from this predicate. |
-| **Tackle intent** | A per-agent per-tick intent signal (`COMMIT` / `JOCKEY` / `HOLD`) produced by #14 for agents within `TACKLE_ELIGIBLE_RADIUS_M [GT]` of their assigned opponent. #8 reads this to construct an `AgentAction`; #3 owns the contact physics (KD-6). |
+| **Tackle intent** | A per-agent per-tick intent signal (`COMMIT` / `JOCKEY` / `HOLD`) produced by #14 for agents within `TACKLE_ELIGIBLE_RADIUS_M [GT]` of their assigned opponent (§3.6). **Amended (KD-6 revised — `ERR-014-006`):** the original entry read "#8 reads this to construct an `AgentAction`; #3 owns the contact physics" — that dispatch has no working delegate at Stage 0 (see the KD-6 row in §1.5), so a `COMMIT` intent that becomes a challenge is resolved by #14 itself into a `TackleOutcome` (§3.6.5), not handed to #8 or #3. |
+| **Tackle outcome** | The result of a committed tackle challenge: `MISSED` / `BALL_WON` / `BALL_LOOSE` / `FOUL`, resolved by #14 as an abstract attribute duel between the tackler and the ball carrier (§3.6.5, KD-6 revised — `ERR-014-006`). Digest-visible; ordinals are stable and append-only. |
 | **Anti-chaos invariant** | One of the three measurable constraints in KD-17, enforced before directive publication: minimum backline count (`MIN_BACKLINE_AGENTS`), maximum simultaneous man-mark count (`MAX_MAN_MARK_ASSIGNMENTS`), and maximum mark displacement from #12 anchor (`MAX_MARK_DISPLACEMENT_M`). |
 | **Assignment hysteresis** | Per-agent dwell counter tracking how long an agent has held its current `MarkAssignment` mode. Transitions are gated on the `MARK_DWELL_TICKS [GT]` dwell-time pattern from #2 §3.1. |
 | **OffsideLineState** | Per-team internal state tracking the current line x-depth, step-up dwell counter, and post-trap cooldown ticks remaining. Digested per #16 §6.2. |
@@ -195,7 +201,7 @@ Cross-reference to the 19 KDs catalogued in `outline-detailed.md` v1.0:
 | KD-3 | Boundary with Positioning AI #12 — #12 owns baseline slot, line membership, and depth; #14 reads and overrides HOLD_SHAPE subset | §1.6, §4.4, §4.5 |
 | KD-4 | Boundary with Pressing AI #13 — disjoint role partition; #14 owns HOLD_SHAPE subset exclusively | §1.6, §3.2, §4.5 |
 | KD-5 | Boundary with Decision Tree #8 — Option B selected: `TacticalContext.MarkDirective?` nullable field via ERR-014-001 (mirrors #13 ERR-013-001 precedent) | §1.6, §4.4 |
-| KD-6 | Boundary with Collision System #3 — #14 produces `TackleIntentRequest` intent; #8 mediates dispatch; #3 owns contact physics | §1.6, §3.6 |
+| KD-6 | Boundary with Collision System #3 — **revised** (`ERR-014-006`, wiring backlog W2): #14 produces `TackleIntentRequest` intent **and resolves the `TackleOutcome`** as an abstract attribute duel; #8 does not mediate (its `ActionType` ordinal space is exhausted and it has no tackle model) and #3's contact physics is the Stage 2+ fallback (§7.2.1 defers slide-tackle collision to Stage 2). Original resolution: #14 produces intent; #8 mediates dispatch; #3 owns contact physics — superseded | §1.6, §3.6, §3.6.5 |
 | KD-7 | Boundary with Goalkeeper Mechanics #11 — #14 owns defensive wall + `COVER_GK_ZONE`; #11 owns GK saves/positioning; GK position always read via #7 | §1.6, §3.9 |
 | KD-8 | Boundary with Attacking AI #15 — mutually exclusive by possession phase; no Stage 0 interface produced | §1.6, §3.1 |
 | KD-9 | Offside-line ownership — #14 owns step-up decision; adjudication is out of scope (future referee spec) | §1.2.2, §3.7 |
@@ -219,7 +225,7 @@ Authoritative Boundary Matrix (mirrors `outline-detailed.md` v1.0):
 | #8 Decision Tree | `MarkDirective` per team + per-agent `MarkAssignment` for HOLD_SHAPE agents | Per-agent action loop (`MOVE_TO_POSITION` / `INTERCEPT` scoring) | #8 reads #14 (Stage 1) | `TacticalContext.MarkDirective?` extension via ERR-014-001, Option B (mirrors #13 ERR-013-001 precedent — KD-5) | No (Stage 1 runtime) |
 | #12 Positioning AI | Mark-mode overrides for HOLD_SHAPE agents | Baseline out-of-poss `formationSlot`; `LineMembership`; `LaneAssignment`; `DefensiveLineDepth` | Orchestrator composes; both read by #8 | `BaselineDefensiveShapeView` + `GetLine(EntityId)` accessor (Stage 1+; declared in #12 §4.5.1 / §4.5.2) | No (Stage 1) |
 | #13 Pressing AI | HOLD_SHAPE agent assignments | `PRIMARY_PRESS` / `COVER_SHADOW` agent assignments | #14 reads #13 role partition | Per-tick `PressAssignment` role filter (KD-4 handoff) | No (Stage 1) |
-| #3 Collision System | Tackle intent (`TackleIntentRequest`) | Contact physics, foul detection, impulse response | #8 reads #14 intent, dispatches to #3 | Parameter-based physics pipeline (CLAUDE.md / KD-6) | No (Stage 1 spec; declared at Stage 0) |
+| #3 Collision System | Tackle intent (`TackleIntentRequest`) **and, since `ERR-014-006`, tackle outcome resolution** (`TackleOutcome` via `TackleOutcomeResolver`, §3.6.5) | Contact physics — Stage 2+ fallback only, not a parallel Stage 0 authority (§7.2.1 defers slide-tackle collision to Stage 2) | **Revised (KD-6):** the composition root resolves outcome through #14 directly; no #8/#3 mediation. (Original, superseded: "#8 reads #14 intent, dispatches to #3".) | #14-internal abstract-duel resolution (§3.6.5); parameter-based physics pipeline principle preserved — no type enum crosses into the physics layer (CLAUDE.md / KD-6) | Outcome resolution: **Yes** — ships as Stage 0 runtime code (`TackleOutcomeResolver.cs`, wiring backlog W2). Intent declaration: No (Stage 1 runtime per §1.8) |
 | #11 Goalkeeper | Outfield defensive wall (declared #14 scope per #11 FR-GK-016); `COVER_GK_ZONE` assignment | GK positioning, saves, distribution | #14 reads GK position via #7 perception snapshot; no direct #11 accessor | KD-7 boundary; Interface Design Principle (Stage 1 coupling) | No (spec text only) |
 | #2 Agent Movement | (none direct — via #8 action output) | 60 Hz steering toward `Action.TargetPosition` | #2 reads #8 | Same composition path as #12 / #13 | No |
 | #7 Perception | (none — read consumer only) | Filtered world model | #14 reads #7 | Snapshot read at tick start | Yes (spec text) |
@@ -260,8 +266,12 @@ Authoritative Boundary Matrix (mirrors `outline-detailed.md` v1.0):
   target positions and `EntityId?` target identifiers, not enum types
   propagated into the physics pipeline. CLAUDE.md "Parameter-Based
   Physics (No Type Enums)". `TackleIntentRequest.mode` is a #14-owned
-  tactical intent enum consumed by #8 before dispatch to #3; it does
-  not enter the physics layer directly.
+  tactical intent enum; it does not enter the physics layer directly.
+  **Amended (KD-6 revised — `ERR-014-006`):** the clause used to end
+  "...consumed by #8 before dispatch to #3" — that hand-off has no working
+  delegate at Stage 0 (§1.5 KD-6). A committed intent is instead resolved
+  by #14 itself into a `TackleOutcome` (§3.6.5), which is likewise a
+  #14-owned enum that does not enter the physics layer.
 
 ## 1.8 Stage-Binding Statement
 
@@ -291,6 +301,17 @@ Stage 1 activation requires three preconditions (FR-DA-037):
 Until all three clear, #14 ships as inert specification — exactly the
 pattern established by #13 §1.8 for Pressing AI.
 
+**Amendment (KD-6 revised — `ERR-014-006`, wiring backlog W2, August 12,
+2026):** the tackle-outcome resolution introduced at §3.6.5 is a Stage-0
+exception to "no runtime code at Stage 0" above. It ships as runtime code
+(`src/defensive-ai/TackleOutcome.cs`, `TackleDuelInputs.cs`,
+`TackleOutcomeResolver.cs`) alongside this revision, because the delegation
+it replaces (#8 mediates, #3 owns contact) was never implementable and
+leaving the outcome undecided left #5 §3.8.5's tackle-interrupt branch
+permanently dead code. This note narrows only the tackle-outcome claim;
+it does not re-assert or re-derive the three-precondition gate above for
+the rest of #14's runtime, which this revision does not touch.
+
 ## 1.9 Version History
 
 | Version | Date | Author | Summary |
@@ -299,3 +320,4 @@ pattern established by #13 §1.8 for Pressing AI.
 | 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. M7: §1.3.3 ERR-014-004 block layout updated to reflect ERR-011-001/ERR-012-001 race — #11 occupies `0x18` or shifts to `0x1D` depending on which of #11/#12 reaches `APPROVED` first; explicitly notes that #14's `0x1A` slot is stable regardless of that race outcome. |
 | 0.3 | May 17, 2026 | AI agent | PASS-3 clean-up. §1.6 boundary matrix row for #7 Perception: removed `Anticipation` from attribute lookups (consistent with M6 fix in §2.3 and XC-014-005 — `Anticipation` is not consumed by #14 at Stage 0); retained `FirstTouch` (threat score §3.5) and `Tackling` (declared for future tackle-quality use). |
 | 0.4 | May 18, 2026 | AI agent (adversarial-specs-review-run2-AFrm4) | FAIL-4 fix (A-03): §1.3.3 ERR-014-004 block — `[CROSS-PENDING]` promoted to `[CROSS: #16 §3.4]`, resolved outcome documented (0x1A final, 0x18/0x1D race resolved). §1.6 #16 boundary row — `[CROSS-PENDING]` promoted to `[CROSS: #16 §3.4]`. |
+| 0.5 | August 12, 2026 | AI agent (wiring backlog W2) | KD-6 revised (`ERR-014-006`): the original delegation ("#14 produces intent; #8 mediates dispatch; #3 owns contact physics") is dead — #8's `ActionType` ordinal space is exhausted and has no tackle model; #3 defers slide-tackle collision to Stage 2 and never landed the `TackleContactFlag` amendment (`XC-4.4-02`). #14 now resolves the tackle outcome itself (new §3.6.5, an abstract attribute duel with four outcomes). Corrected every site in this file that stated the dead delegation or implied #14 stops at intent: §1.2.1 scope (new bullet), §1.3.1 #3 dependency row, §1.4 glossary (amended "Tackle intent" entry + new "Tackle outcome" entry), §1.5 KD-6 row, §1.6 #3 boundary row, §1.7 last bullet, §1.8 (scoped Stage-0-runtime-code amendment for §3.6.5 only — the broader three-precondition Stage-1 gate is untouched by this revision). |

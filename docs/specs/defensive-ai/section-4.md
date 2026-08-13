@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 4: Architecture, File Layout, Interface Contracts
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.2 — PASS-1 adversarial review fix pass; L3/M7 resolved)
-**Version:** 0.2
+**Last Updated:** August 12, 2026 (v0.3 — KD-6 revised (`ERR-014-006`, wiring backlog W2): §4.2 file structure gains the three new tackle-outcome files and a constant-catalogue mention; §4.1 and §4.5's dead #8-mediates/#3-owns-contact claims corrected, §4.5.2 rewritten as the corrected boundary; §4.3 gains a `TackleOutcomeResolver` row; §4.6 per-tick digest row gains `TackleOutcome`.)
+**Version:** 0.3
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -37,6 +37,15 @@ determinism digest per #16 §3.2 (KD-10). **Runtime activates at Stage 1.**
 Stage 0 delivers the published specification; no runtime code is emitted at
 Stage 0 per #8 §1.3.2 and KD-16.
 
+**Amended (KD-6 revised — `ERR-014-006`, wiring backlog W2, August 12,
+2026):** the tackle-outcome resolution added at §3.6.5 is a scoped
+exception to the "no runtime code at Stage 0" statement above —
+`TackleOutcomeResolver.cs` ships as runtime code alongside this revision,
+because the delegation it replaces was never implementable. This note
+narrows only the tackle-outcome claim; it does not re-derive the broader
+Stage 0/Stage 1 activation gate (§1.8, §7.1) for the rest of #14, which
+this revision does not touch.
+
 No threads, no async work, no per-frame callbacks. All work is synchronous
 on the tactical thread (KD-2).
 
@@ -48,6 +57,9 @@ src/DefensiveAI/                                     (Stage 1+)
 ├── HoldShapePoolFilter.cs      (§3.2 — excludes GK + #13 press roles)
 ├── MarkAssigner.cs             (§3.3 + §3.4 + §3.5 assignment algorithm)
 ├── TackleIntentEvaluator.cs    (§3.6)
+├── TackleDuelInputs.cs         (§3.6.5.4 — KD-6 revised, `ERR-014-006`)
+├── TackleOutcome.cs            (§3.6.5.2 — KD-6 revised, `ERR-014-006`)
+├── TackleOutcomeResolver.cs    (§3.6.5.3 — KD-6 revised, `ERR-014-006`)
 ├── OffsideTrapController.cs    (§3.7; OffsideLineState is authoritative)
 ├── LastManDetector.cs          (§3.8 + §3.9)
 ├── InvariantEnforcer.cs        (§3.10 + KD-17)
@@ -55,11 +67,17 @@ src/DefensiveAI/                                     (Stage 1+)
 └── DefensiveAIConstants.cs     (SINGLE constant catalogue per FR-CS-025 / KD-14)
 ```
 
+**Amended (KD-6 revised — `ERR-014-006`, wiring backlog W2, August 12,
+2026):** `TackleDuelInputs.cs`, `TackleOutcome.cs`, and
+`TackleOutcomeResolver.cs` are live in `src/defensive-ai/` as of this
+revision — see the §4.1 Stage-0-runtime-code note below.
+
 KD-14 / FR-DA-007: a single `DefensiveAIConstants.cs` per #20 §4.2
 FR-CS-025. Assignment thresholds, hysteresis constants, offside-trap
-parameters, tackle-intent thresholds, anti-chaos floors, GK zone bounds,
-and cross-spec scalar imports all live as `#region` blocks inside the same
-file.
+parameters, tackle-intent thresholds, tackle-outcome-resolution constants
+(§3.6.5.5, ten `[GT]` + one `[FIXED]` — KD-6 revised, `ERR-014-006`),
+anti-chaos floors, GK zone bounds, and cross-spec scalar imports all live
+as `#region` blocks inside the same file.
 
 No class types on the hot path (zero-alloc per #18 §3.7 / FR-DA-006).
 All module types are `readonly struct`.
@@ -74,6 +92,7 @@ Each module's input/output is declared as `readonly struct` parameters
 | `HoldShapePoolFilter` | `PerceptionSnapshot`, `ReadOnlySpan<PressAssignment>`, GK `EntityId` | `HoldShapePool` (`EntityId[]` + count) |
 | `MarkAssigner` | `HoldShapePool`, `PerceptionSnapshot`, `BaselineDefensiveShapeView`, `Span<MarkHysteresisState>` | `Span<MarkAssignment>` (per pool agent) |
 | `TackleIntentEvaluator` | `HoldShapePool`, `PerceptionSnapshot`, `ReadOnlySpan<MarkAssignment>` | `Span<TackleIntentRequest>` (count ≤ pool size) |
+| `TackleOutcomeResolver` (KD-6 revised, `ERR-014-006`, §3.6.5) | `in TackleDuelInputs`, `float uniform` | `TackleOutcome` — pure static, no state, no RNG service call (caller supplies the draw) |
 | `OffsideTrapController` | `HoldShapePool`, `PerceptionSnapshot`, `PressDirective`, `ref OffsideLineState` | Updated `OffsideLineState`; DEFENSE-line `MarkAssignment` overrides if trap fires |
 | `LastManDetector` | `HoldShapePool`, `PerceptionSnapshot` | `LastManResult { isEmergency, lastManEntityId, advancingAttackerEntityId, isGKOutOfZone }` |
 | `InvariantEnforcer` | `HoldShapePool`, `ReadOnlySpan<MarkAssignment>`, `BaselineDefensiveShapeView` | `bool allClean`; corrected `Span<MarkAssignment>` |
@@ -173,20 +192,38 @@ ReadOnlySpan<TackleIntentRequest> DefensiveAI.GetTackleIntentRequests();
 `GetAssignments()` supplies the per-agent assignment span used by the
 orchestrator to compose the per-agent target for #8 (HOLD_SHAPE agents use
 #14's mark target; PRIMARY_PRESS / COVER_SHADOW agents retain their #13
-target). `GetTackleIntentRequests()` surfaces tackle intents consumed by #8
-which translates them into `AgentAction` dispatched to #3 §3.3 (§4.5.2
-below). `GetMarkDirective()` is used to write `TacticalContext.MarkDirective?`
+target). `GetTackleIntentRequests()` surfaces tackle intents; **see the
+`ERR-014-006` amendment to §4.5.2 below — they are no longer routed through
+#8/#3.** `GetMarkDirective()` is used to write `TacticalContext.MarkDirective?`
 (Option B per §4.4.4).
 
-### 4.5.2 To #8 Decision Tree → #3 Collision System (KD-6)
+### 4.5.2 Tackle Resolution (KD-6, revised — `ERR-014-006`)
 
-`TackleIntentRequest` is surfaced to the orchestrator via
+**This section is corrected, not merely amended: its original text
+described a dispatch that never had a working delegate.** It read:
+*"`TackleIntentRequest` is surfaced to the orchestrator via
 `DefensiveAI.GetTackleIntentRequests()`. The orchestrator passes each
 intent to #8, which translates it into an `AgentAction` (TACKLE, JOCKEY,
 or HOLD) dispatched to #3 §3.3 (agent-agent collision response). #14 does
 NOT call #3 directly — the parameter-based physics pipeline principle
 (CLAUDE.md) is preserved. #14 produces intent parameters; #3 translates
-them into contact physics.
+them into contact physics."* #8's `ActionType` ordinal space is exhausted
+(no room for an eighth action without a composure-noise digest rebaseline)
+and #8 has no tackle model to translate into; #3 defers slide-tackle
+collision to Stage 2 (§7.2.1) and never landed the `TackleContactFlag`
+amendment Pass Mechanics #5 §4.4.2 flagged as blocking (`XC-4.4-02`).
+
+**Corrected boundary:** `TackleIntentRequest` is still surfaced via
+`DefensiveAI.GetTackleIntentRequests()`, but the composition root owns
+only the trigger geometry — which intent becomes a committed challenge,
+and when. When a `COMMIT` intent is triggered, the composition root builds
+a `TackleDuelInputs` (§2.2.8) from the #7 perception snapshot and calls
+`TackleOutcomeResolver.Resolve(in TackleDuelInputs, float uniform)`
+(§3.6.5, §4.3) directly — #14 resolves its own outcome. #14 still does NOT
+call #3 directly, and the parameter-based physics pipeline principle
+(CLAUDE.md) is preserved: no `TackleIntentRequest`/`TackleOutcome` value
+enters the physics layer as a type enum. #3's contact-physics model
+becomes the fallback authority only at Stage 2+, per §3.6.5.1.
 
 ### 4.5.3 To #15 Attacking AI (Stage 1+ — declared, not implemented)
 
@@ -211,7 +248,7 @@ buffers. No additional mutable state. Used by:
 |---|---|---|
 | Iteration order | #16 §3.2.5 | HOLD_SHAPE pool iterated EntityId-ascending on every tick (FR-DA-003) |
 | RNG domain tag | #16 §3.4 | `DOMAIN_TAG_DEFENSIVE_AI = 0x1A` `[CROSS-PENDING]` (ERR-014-004; resolves to `[CROSS]` when #16 §3.4 v1.0.4 patch lands) |
-| Per-tick digest | #16 §6.2 | `MarkDirective` (2 teams), all 22 `MarkAssignment` slots, all 22 `MarkHysteresisState` slots, `OffsideLineState` (2 teams), and `TackleIntentRequest[]` count + contents |
+| Per-tick digest | #16 §6.2 | `MarkDirective` (2 teams), all 22 `MarkAssignment` slots, all 22 `MarkHysteresisState` slots, `OffsideLineState` (2 teams), `TackleIntentRequest[]` count + contents, and — added at KD-6 revision (`ERR-014-006`) — each resolved `TackleOutcome` this tick (§3.6.5.2: "Ordinals are stable and append-only — the outcome reaches match flow and is digest-visible") |
 | Stage-0 arithmetic | CLAUDE.md "When Writing Code" | `float`; Fixed64 deferred to Stage 5+ per #9 §8.1 (§7.9) |
 | State-snapshot determinism | #16 §3.2 | `MarkHysteresisState[]` and `OffsideLineState` saved/restored verbatim across snapshots |
 | EntityId no-reuse | #2 §2.5 (XC-002-001); #8 §1.7.3 (XC-008-001) | Inherited; no additional constraint added |
@@ -251,3 +288,4 @@ at section-file draft time.
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent | Initial draft. KD-5 Option B resolved: `TacticalContext.MarkDirective?` via ERR-014-001 (mirrors #13 ERR-013-001 precedent). Q2 resolved: #3 §3.3 tackle contact surface. `TackleIntentRequest` surfaced via `DefensiveAI.GetTackleIntentRequests()` accessor. Stage 1+ file layout declared. #12 Stage 1 accessor names confirmed per ERR-013-007/008 precedent. |
 | 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. L3: §4.4.2 accessor declaration corrected `LocalPhase` → `Phase` (non-existent type; canonical enum is `Phase` from #12 §2.1). M7: §4.6 domain tag block layout updated to reflect ERR-011-001/ERR-012-001 race: #11 may occupy `0x18` or `0x1D` depending on which of #11/#12 reaches `APPROVED` first. |
+| 0.3 | August 12, 2026 | AI agent (wiring backlog W2) | KD-6 revised (`ERR-014-006`): the original delegation ("#14 produces intent; #8 mediates dispatch; #3 owns contact physics") has no working delegate. §4.2 file structure gains `TackleDuelInputs.cs`, `TackleOutcome.cs`, `TackleOutcomeResolver.cs` and a constant-catalogue mention of the new tackle-outcome region. §4.1 gains a scoped Stage-0-runtime-code amendment. §4.3 gains a `TackleOutcomeResolver` module-contract row. §4.5.1's "read by #8" clause corrected; §4.5.2 rewritten in place (its original text quoted verbatim, then corrected) to describe the composition root calling `TackleOutcomeResolver` directly instead of a #8→#3 dispatch. §4.6 per-tick digest row gains `TackleOutcome`. Implemented in `src/defensive-ai/TackleDuelInputs.cs`, `TackleOutcome.cs`, `TackleOutcomeResolver.cs`. |

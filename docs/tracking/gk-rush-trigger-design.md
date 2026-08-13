@@ -9,8 +9,9 @@
 > **Purpose:** `GoalkeeperMechanics.CommitRushIntent` has had zero production callers since it was
 > written. Everything downstream of it is built, tested and reachable; only the trigger condition
 > was missing, so every one-on-one in this engine has been a stationary keeper on his line waiting
-> to dive. This note is the trigger, the two spec defects the wiring surfaced, and the measurement
-> that has **not yet been run**.
+> to dive. This note is the trigger, the two spec defects the wiring surfaced, and the measurement —
+> **run at last on August 12, 2026** during the W2 pass, eight days after this note was written and a
+> week after its stated blocker stopped being true. See §6.
 
 ---
 
@@ -270,7 +271,39 @@ time-budget guards are the **engine's**, because they are properties of the trig
 
 ---
 
-## 6. Measurement — **NOT YET RUN**
+## 6. Measurement — **RUN August 12, 2026** (the debt below is discharged)
+
+> **The instrument executed for the first time on August 12, 2026**, during the wiring-backlog **W2**
+> pass, on a session that has a .NET SDK. `src/CLAUDE.md` records (verified August 7, 2026) that
+> `apt-get update && apt-get install -y dotnet-sdk-8.0` works from the Ubuntu archive — the installer
+> block that justified the deferral below was never the whole story, and the deferral outlived its own
+> reason by a week.
+>
+> `TD_GK_DIAGNOSTIC=1`, 3 seeds × 90 min, `ConfigureSquads` path, Debug:
+>
+> | Seed | Score | Commits | GK 0 launches / claimed / recovering / offLine / maxOut | GK 1 launches / claimed / recovering / offLine / maxOut |
+> |---|---|---|---|---|
+> | `0x0F1E2D3C4B5A6978` | 0–3 | 28 | 11 / 4 / 7 / 1005 / **11.8 m** | 15 / 6 / 9 / 838 / **13.0 m** |
+> | `0x00000000D1A6D05E` | 2–5 | 23 | 11 / 3 / 8 / 1101 / **9.1 m** | 11 / 4 / 7 / 905 / **14.1 m** |
+> | `0x5EED000000000003` | 2–1 | 46 | 15 / 10 / 5 / 1071 / **9.2 m** | 30 / 12 / 18 / 2306 / **10.5 m** |
+>
+> **W1 works.** Against a pre-W1 baseline of exactly zero by construction: 23–46 rush intents committed
+> per match, 11–30 launches per keeper, and keepers reaching **9.1–14.1 m off their own goal line** — in
+> range of the 9–16 m the §3.7.0 attribute formula produces, so the trigger is arming on real geometry
+> and not on balls already at the keeper's feet. Chains terminate in a claim 3–12 times per keeper per
+> match, and `offLine` tracks `launches` rather than climbing without them, so **`ERR-011-009`'s stall
+> has not returned as a churn** either.
+>
+> **What is still NOT measured is the thing this section said it was for:** the effect on close-range
+> **conversion**. These are anatomy numbers, not an outcome comparison, and no pre/post conversion pair
+> exists on identical seeds. The §5.Z.23 `pointQuality` decision remains parked on that, not on this.
+>
+> The original text is kept below verbatim, because the *reason* recorded for not measuring turned out
+> to be wrong and deleting it would erase that.
+
+---
+
+### 6.1 The original entry (August 4, 2026) — superseded, kept for the record
 
 This is a deviation from the discipline every §5.Z pass in this chain has followed, and it is recorded
 here rather than papered over.
@@ -359,6 +392,7 @@ because this geometry is what it turns on.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.5 | 2026-08-12 | — | **§6's measurement debt is DISCHARGED — the instrument executed for the first time**, during the wiring-backlog W2 pass, on a session with a .NET SDK. W1 works: 23–46 rush intents committed per match against a pre-W1 baseline of exactly zero by construction, 11–30 launches per keeper, keepers reaching **9.1–14.1 m off their goal line** (in range of the 9–16 m §3.7.0's attribute formula produces, so the trigger arms on real geometry rather than on balls already at the keeper's feet), 3–12 chains per keeper ending in a claim, and `offLine` tracking `launches` rather than climbing without them — so `ERR-011-009`'s stall has not returned as a churn. **The deferral's stated reason was wrong for a week before it was acted on**: `src/CLAUDE.md` records (verified August 7, 2026) that the Ubuntu-archive `dotnet-sdk-8.0` installs fine, so "no SDK in the authoring environment" stopped being true well before this run. §6's original text is kept verbatim as §6.1 rather than deleted, because the falsified reason is the part worth keeping. **Still NOT measured:** the close-range CONVERSION effect this section said it was for — these are anatomy numbers, not an outcome comparison on identical seeds, and the §5.Z.23 `pointQuality` decision stays parked on that. No code changed in this revision. |
 | 1.4 | 2026-08-05 | — | **The v1.3 restore claim was FALSE, and CI proved it on the merge commit.** v1.3 argued `_gkAgentIds` needs no schema bump because it "is reconstructed rather than serialized, so restore re-derives it and sees no change." The no-schema-bump half stands; the sees-no-change half does not: the boot-time derivation runs against the DEFAULT flag layout, `DeserializeWorldState` then overwrites `_isGoalkeeper`/`_isSentOff` with the SAVED layout, and whenever the two differ the first post-restore `RefreshGkAgentIds` misreads the flag delta as a live occupant change and `ResetSlot`s state that was itself just restored. `RoundTrip_KeeperSubstitutedOntoOutfieldSlot_IsDeterministic` (a keeper substituted onto an outfield slot at tick 50, saved at 150) failed on `main` at the W1 merge — digest diverged at tick 151, the first post-restore tick, exactly the reset firing in the restored engine only. Fixed in `MatchEngine.cs` v1.63: the resolution loop extracted to `ResolveGkAgentId`, and `RestoreFromSnapshot` gains step 3b — `ResyncGkAgentIdsAfterRestore`, a re-derivation from the restored flags **without** `ResetSlot`, since the restored #11 per-slot state already belongs to the restored occupant. The live-path reset (the actual v1.3 fix) is unchanged; restore-transparency is restored to what it was before v1.3 introduced the reset. All restore paths route through the one factory (`MatchSaveManager.Restore` → `RestoreFromSnapshot`), so the fix covers `MatchSession.RestoreFrom` too. Verification is the already-failing CI test — no new test needed; not runnable locally (no .NET SDK). |
 | 1.3 | 2026-08-04 | — | **Adversarial review pass 2 — 1 High, 1 Medium, 3 Low.** H: **#11 keys every per-keeper array by `gkIndex` = TEAM (KD-1), while the engine keys identity by ROSTER SLOT**, and the occupant changes mid-match — keeper sent off, bench keeper on in a different slot (`SubstitutePlayer` refuses the dismissed slot itself; the path is live from `ManagerCommand`). #11 cannot observe that, so the substitute inherited the whole slot, including a `RushIntent` whose target was locked (KD-15) for a player no longer on the pitch, which `Set → Rushing` then launched him at. This is the **other half of AR-1's own sent-off fix**, not a separate defect: filtering the dismissed keeper out of `_gkAgentIds` is exactly what changed his slot from self-resolving (#11 kept ticking him to the end of the run) into frozen-indefinitely, and frozen state is what gets inherited — the fix traded a ghost sprint for a stale one. New `GoalkeeperMechanics.ResetSlot`, called by the constructor (so "a fresh slot" is defined once, not in a pair that must agree — §5.Z.12) and by `RefreshGkAgentIds` when the resolved occupant differs from the standing one. No new engine state: `_gkAgentIds` **is** the previous value and is reconstructed rather than serialized, so restore re-derives it and sees no change ⇒ no `SNAPSHOT_SCHEMA_VERSION` bump. Selection still resolves last-match-wins, preserving the pre-AR-2 fill order. M: AR-1's sent-off fix had **no test** — added, both keepers, plus the substitute-inheritance lock. L ×3, recorded not fixed: §7 items 7–9. **Still not measured — see §6.** |
 | 1.2 | 2026-08-04 | — | **Adversarial review pass 1 — 1 High, 4 Medium, 4 Low, all fixed.** H: `RushArmed` had an upper bound on run length and no lower one, so a keeper standing on the ball he had just swept re-armed — the ORDINARY end state of a sweep, since §5.Z.15/16 bars him from collecting it — giving a zero-length rush every third tactical tick, a keeper pinned to a dead ball, a `RushPhase.Reached` per cycle, and no `Anticipate` dwell long enough to dive. New condition 6 reuses #11's own arrival radius rather than minting a twelfth `[GT]` (§5.Z.12: a pair has two places that must agree, a mirror has one). M: a keeper sent off mid-rush kept sprinting (the engine's freeze is `_commands = Stop`, which governs movement only, and #11's Rushing branch writes position after it) — `RefreshGkAgentIds` now filters `_isSentOff`, which is what `NotifyKeeperOfShot`'s own comment already assumed. M: `RushCommitFatiguePenaltyM` is structurally dead (§7 item 6). M: no test proved the keeper physically leaves his line through a real engine — added, with the re-arm lock. M: `GkHeadingIntentSource`'s v1.1 history row still documented the rejected last-man model as current. L: epsilon renamed `GK_RUSH_DEGENERACY_EPSILON` (it guards three dimensionally different quantities); `+4 [GT]` header corrected to 5; orphaned header continuation in `GoalkeeperMechanics.cs` folded back; the cross-catalogue `GkRushCommitment > RushCommitThreshold` invariant now asserted instead of merely commented. **Still not measured — see §6.** |

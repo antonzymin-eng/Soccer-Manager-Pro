@@ -1,0 +1,45 @@
+=== Keeper rush anatomy (wiring backlog W1) ===
+ticksPerMatch=324000  seeds=3  commitBase=8.0 m  commitK1v1=8.0  coverCorridor=6.0 m  maxIntercept=2.0 s  commitment=0.85  reachedRadius=0.50 m
+
+commits   : RushIntents committed (engine-wide; the pre-W1 value is 0 by
+            construction — CommitRushIntent had no production caller)
+launches  : rising edges into Rushing (a commit the state machine acted on)
+ended:sm  : rush chains ending in HandsOnBall — the keeper claimed it
+ended:rec : rush chains ending in Recovering — reached, aborted or failed
+offLine   : ticks in Rushing/OneOnOne/Smothered
+maxOut    : furthest the keeper got from his own goal line (m)
+            — compare against the §3.7.0 commit distance the keepers'
+            attributes produce: a maxOut far below it means the trigger is
+            arming only on balls already at the keeper's feet.
+
+seed 0x0F1E2D3C4B5A6978   final 0-3   commits=28
+  gk | launches | ended:sm | ended:rec | offLine | maxOut
+   0 |       11 |        4 |         7 |    1005 |   11.8
+   1 |       15 |        6 |         9 |     838 |   13.0
+
+seed 0x00000000D1A6D05E   final 2-5   commits=23
+  gk | launches | ended:sm | ended:rec | offLine | maxOut
+   0 |       11 |        3 |         8 |    1101 |    9.1
+   1 |       11 |        4 |         7 |     905 |   14.1
+
+seed 0x5EED000000000003   final 2-1   commits=46
+  gk | launches | ended:sm | ended:rec | offLine | maxOut
+   0 |       15 |       10 |         5 |    1071 |    9.2
+   1 |       30 |       12 |        18 |    2306 |   10.5
+
+Reading it:
+  * commits > 0 and launches ≈ commits => the trigger fires AND the state
+    machine acts on it. commits >> launches => intents are being committed
+    from states that cannot launch, or disarmed before the next tick.
+  * offLine large with maxOut small => the keeper is committing to targets
+    he is already on top of; the trigger is arming on nothing.
+  * a keeper stuck in Rushing shows as offLine climbing without new launches
+    — that is ERR-011-009 regressing.
+ === Keeper rush anatomy (wiring backlog W1) ===
+ ticksPerMatch=324000  seeds=3  commitBase=8.0 m  commitK1v1=8.0  coverCorridor=6.0 m  maxIntercept=2.0 s  commitment=0.85  reachedRadius=0.50 m
+ 
+ commits   : RushIntents committed (engine-wide; the pre-W1 value is 0 by
+             construction — CommitRushIntent had no production caller)
+ launches  : rising edges into Rushing (a commit the state machine acted on)
+ ended:sm  : rush chains ending in HandsOnBall — the keeper claimed it
+ ended:rec : rush chains ending in Recovering — reached, aborted or failed
