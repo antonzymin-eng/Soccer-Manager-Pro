@@ -73,12 +73,20 @@ namespace TacticalDirector.Discipline
                     break;
 
                 case DisciplineConstants.CARD_KIND_SECOND_YELLOW:
+                    // Validated BEFORE AddYellow runs (M4): a bad SecondYellowBanMatches must refuse
+                    // the WHOLE card atomically, not leave the yellow (and any accumulation ban it
+                    // triggers) committed while the card itself is refused.
+                    int secondYellowBan = RequireBanLength(
+                        DisciplineConstants.SecondYellowBanMatches,
+                        nameof(DisciplineConstants.SecondYellowBanMatches));
                     AddYellow(playerId, competitionId);
-                    AddBan(playerId, competitionId, DisciplineConstants.SecondYellowBanMatches);
+                    AddBan(playerId, competitionId, secondYellowBan);
                     break;
 
                 case DisciplineConstants.CARD_KIND_RED:
-                    AddBan(playerId, competitionId, DisciplineConstants.StraightRedBanMatches);
+                    AddBan(playerId, competitionId, RequireBanLength(
+                        DisciplineConstants.StraightRedBanMatches,
+                        nameof(DisciplineConstants.StraightRedBanMatches)));
                     break;
 
                 default:
@@ -103,15 +111,7 @@ namespace TacticalDirector.Discipline
         /// this — it runs config-unbound (ERR-041-003).</exception>
         public void AddYellow(int playerId, int competitionId)
         {
-            int threshold = DisciplineConstants.YellowAccumulationThreshold;
-            if (threshold < 1)
-            {
-                throw new InvalidOperationException(
-                    "DisciplineRules.AddYellow: YellowAccumulationThreshold is " + threshold +
-                    "; it must be >= 1. Below 1 every yellow crosses the threshold and the residual " +
-                    "subtraction never brings the count back under it — a config edit would silently " +
-                    "ban a player on his first booking, forever.");
-            }
+            int threshold = RequireYellowThreshold(DisciplineConstants.YellowAccumulationThreshold);
 
             DisciplineEntry entry = _state.EntryFor(playerId, competitionId);
             int yellows = entry.Yellows + 1;
@@ -158,6 +158,11 @@ namespace TacticalDirector.Discipline
         /// assembly is not allowed to hold. That derivation rests on #27 FR-SQ-010's global-uniqueness
         /// promise as amended by <b>ERR-027-004</b>; before that amendment ids were unique only within
         /// a club and this method would have served two clubs' bans at once (the ERR-041-019 class).
+        /// It ALSO rests on every stored <c>PlayerId</c> being non-negative — C# integer division
+        /// truncates toward zero, so a negative id would otherwise derive to club 0 regardless of
+        /// uniqueness. That half is enforced separately, at construction: <see cref="DisciplineEntry"/>
+        /// (M1, §2.3 F2) and <see cref="DisciplineSaveCodec.Decode"/> both refuse a negative
+        /// <c>PlayerId</c>, so no row this method reads can ever carry one.
         /// </para>
         /// <para>A row that reaches <c>(0, 0)</c> here is dropped immediately, mid-season, per FR-DC-017.</para>
         /// </summary>
@@ -290,12 +295,45 @@ namespace TacticalDirector.Discipline
         }
 
         /// <summary>
+        /// Fail-loud gate on the <c>[GT]</c> <see cref="DisciplineConstants.YellowAccumulationThreshold"/>
+        /// at the one site that reads it. Extracted out of <see cref="AddYellow"/> so the guard is
+        /// directly testable (L5, see <see cref="RequireBanLength"/>'s remark for why).
+        /// </summary>
+        /// <exception cref="InvalidOperationException"><paramref name="threshold"/> is below 1 — the
+        /// residual subtraction can never terminate a crossing, so every single yellow would ban,
+        /// silently.</exception>
+        internal static int RequireYellowThreshold(int threshold)
+        {
+            if (threshold < 1)
+            {
+                throw new InvalidOperationException(
+                    "DisciplineRules.AddYellow: YellowAccumulationThreshold is " + threshold +
+                    "; it must be >= 1. Below 1 every yellow crosses the threshold and the residual " +
+                    "subtraction never brings the count back under it — a config edit would silently " +
+                    "ban a player on his first booking, forever.");
+            }
+            return threshold;
+        }
+
+        /// <summary>
         /// Fail-loud gate on a <c>[GT]</c> ban length at the site that would otherwise write it. The
         /// catalogue's locks run config-unbound and see the fallback forever (ERR-041-003), so a
         /// negative length shipped in a config would reach <see cref="DisciplineEntry"/>'s constructor
         /// as a confusing arithmetic error rather than a config error.
+        /// <para>
+        /// <b>L5:</b> <c>internal</c> rather than <c>private</c> so this exact guard — the one
+        /// <see cref="AddYellow"/> and <see cref="ApplyCard"/> actually run — is directly testable.
+        /// <see cref="DisciplineConstants"/>' <c>[GT]</c> fields are <c>public static readonly</c>,
+        /// resolved once at type initialisation; no test in this process can bind a bad config value
+        /// before that first read happens, so driving the guard through the config-reading call sites
+        /// can never observe a config-driven breach. Calling this method (and
+        /// <see cref="RequireYellowThreshold"/>) directly reaches the identical guarded code with an
+        /// explicit value instead — the cheapest honest seam that does not require a config-loader
+        /// composition root this project does not have yet.
+        /// </para>
         /// </summary>
-        private static int RequireBanLength(int matches, string constantName)
+        /// <exception cref="InvalidOperationException"><paramref name="matches"/> is negative.</exception>
+        internal static int RequireBanLength(int matches, string constantName)
         {
             if (matches < 0)
             {
@@ -324,4 +362,16 @@ namespace TacticalDirector.Discipline
 // |         |            |        | on an id nobody would look up again. The same change makes the    |
 // |         |            |        | F2 conflict refusal atomic: a player with one conflicting and     |
 // |         |            |        | one clean competition no longer ends up half-migrated.            |
+// | 1.2     | 2026-08-13 | —      | AR fixes. M1: OnClubFixturePlayed's doc now names the negative-  |
+// |         |            |        | PlayerId half of the club-derivation hazard and where it is now   |
+// |         |            |        | closed (DisciplineEntry's constructor / Decode). M4: ApplyCard's  |
+// |         |            |        | kind-2/kind-1 branches now route SecondYellowBanMatches and       |
+// |         |            |        | StraightRedBanMatches through RequireBanLength, and the kind-2    |
+// |         |            |        | branch validates BEFORE AddYellow runs so the card applies        |
+// |         |            |        | atomically or not at all. L5: the threshold check AddYellow ran   |
+// |         |            |        | inline is extracted to internal RequireYellowThreshold, and       |
+// |         |            |        | RequireBanLength goes private -> internal, so both [GT] guards    |
+// |         |            |        | are directly testable without depending on GameplayConfigHolder   |
+// |         |            |        | binding before DisciplineConstants' static readonly fields        |
+// |         |            |        | resolve, which no test in this process can guarantee.             |
 #endregion

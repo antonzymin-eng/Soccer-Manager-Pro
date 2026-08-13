@@ -1,12 +1,16 @@
 # Discipline & Suspensions #44 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 24, 2026
-**Last Updated:** August 13, 2026 (v0.3 — ERR-044-003, C1/C2 landing back-prop: the ban-serving
+**Last Updated:** August 13, 2026, later same day (v0.4 — M11 + L6, adversarial review over the C1/C2
+landing: §7.1's T2 bullet marked LANDED (except the migrate/drop hygiene, which did not land with
+it); new §7.2 bullet records FR-DC-013's re-key/drop delivery has zero production call site and the
+id-reuse hazard that lands with it; §7.3's #30 seam contract corrected from "null seam" to LIVE)
+**Last Updated (prior):** August 13, 2026 (v0.3 — ERR-044-003, C1/C2 landing back-prop: the ban-serving
 deferral bullet flagged as a now-LIVE owner decision — #30 §2.3 F9 makes a suspended player
 reinstatable in extremis rather than an absolute bar — with the deferral queue recorded as the
 designed alternative)
 **Last Updated (prior):** July 24, 2026 (v0.2 — cross-set AR; prior v0.1 — initial)
-**Version:** 0.3
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -18,11 +22,14 @@ designed alternative)
   Inert until wired (nothing calls it — behaviour-preserving by construction).
 - **T1** — `DisciplineSaveCodec` (`DISCIPLINE_SAVE_FORMAT_VERSION` = 1) + composition into #30's
   season save (outer bump coordinated — exact version TBD, §4.4). Fail-loud gates (F3).
-- **T2** — the live wiring: the tap-fed `CardLedgerFold` around engine-resolved fixtures (the
+- **T2** — **LANDED August 13, 2026 (roadmap C1/C2), except the migrate/drop hygiene below.** the live
+  wiring: the tap-fed `CardLedgerFold` around engine-resolved fixtures (the
   #37-class read); the **ERR-030-009 filter** at the resolve→configure seam; `OnClubFixturePlayed`
-  serving on both resolution paths; the **re-key migration / retirement drop** hygiene on the
-  FR-TX-022 hook / #28 lifecycle coordination (as those land); the `Incoming`-id semantics
-  verified against the live engine (KD-2's absorbed assumption re-checked).
+  serving on both resolution paths; the `Incoming`-id semantics verified against the live engine
+  (KD-2's absorbed assumption re-checked; ERR-044-001 corrected what the verification found). **The
+  re-key migration / retirement drop** hygiene on the FR-TX-022 hook / #28 lifecycle coordination did
+  **not** land with the rest of T2 — `DisciplineRules.MigratePlayerId`/`DropPlayer` exist and are
+  unit-tested but have zero production callers; see the §7.2 bullet below.
 - **T3** — deep: **#43 competition partitions** (per-`CompetitionId` tallies + per-competition
   serving — a partition activation over the FR-DC-012 key); the **#30-owned quick-sim card
   synthesis** coordination (keyed draws on #30's `0x22` stream, evening the minimal coverage
@@ -48,14 +55,27 @@ designed alternative)
   serving until the squad can field 18, refusing the fixture rather than fielding a banned player) is
   the designed alternative if the owner would rather refuse than reinstate — recorded here, still
   unbuilt, so the eventual answer is a designed extension, not an emergency patch.
+- **FR-DC-013's re-key/drop delivery has no call site (M11, recorded at the adversarial review over
+  the C1/C2 landing).** `DisciplineRules.MigratePlayerId` and `DropPlayer` are built and unit-tested
+  but referenced by nothing outside `src/discipline/` — the T-phase plan above named the FR-TX-022
+  roster-move hook as the delivery point, and #29/#41's own T2 roster-sync landed at exactly that
+  point in `SeasonLoop.RollToNextSeason` (`PlayerCareerStates.CommitRosterSync`) without also
+  wiring #44's re-key/drop, and #44 has no membership of its own to reconcile independently. Inert
+  today, because #28's boundary regen (retiree removal + 1:1 replacement) is itself deferred — but
+  the consequence when it lands is not an orphan discipline row: player ids are `clubId *
+  CLUB_SQUAD_SIZE + localIndex` (#27), so a regen filling a retiree's vacated slot **inherits the
+  identical id**, and with it — silently — the retiree's outstanding ban and yellow tally. Recorded
+  at `SeasonLoop.RollToNextSeason`'s roster-sync call site in `src/season-save/SeasonLoop.cs` so
+  #28's boundary landing cannot miss it.
 - **Appeals / suspension psychology (#33)** — out of scope entirely at Stage 2.
 - **Suspension screens (#38) / news items (#46)** — deferred consumers of the availability view
   and ban events (FR-LW-031).
 
 ## 7.3 Seam contracts recorded for downstream authors
 
-- **#30:** the ERR-030-009 resolve→*filter*→configure null seam is #44's insertion point; serving
-  is reported per played fixture on both resolution paths; the sub-blob rides `SeasonSaveCodec`.
+- **#30:** the ERR-030-009 resolve→*filter*→configure seam is #44's insertion point — LIVE since T2
+  (C1/C2, August 13, 2026), not the null seam it was at approval; serving is reported per played
+  fixture on both resolution paths; the sub-blob rides `SeasonSaveCodec`.
 - **#37:** one per-tick tap feeds both consumers when both are built (a composition-root
   concern); neither references the other.
 - **#43:** partitions activate over the `(PlayerId, CompetitionId)` key; #43's `CompetitionId` on
@@ -71,4 +91,5 @@ designed alternative)
 | 0.1 | 2026-07-24 | — | Initial §7 (T-phase plan T0–T3, deferred extensions, downstream seam contracts), promoted from design supplement v0.3. Status IN REVIEW. |
 | 0.2 | 2026-07-24 | — | Cross-set AR (L): §7.2 gains the **ban-serving deferral under squad shortfall** row — the F5 <18 fail-loud is coherent today (the engine's own gate, verified) but the pile-up is reachable in principle; the deferral queue is the recorded deep mitigation. |
 | 0.3 | 2026-08-13 | — | **ERR-044-003** (C1/C2 landing back-prop): the deferral bullet corrected — §2.3's F5 fail-loud it was written against no longer exists (withdrawn in favour of #30 §2.3 F9's back-fill), so the squad-shortfall question is no longer hypothetical: a suspended player is reinstatable in extremis today, and the deferral queue is recorded as the alternative if the owner prefers refusing the fixture instead. |
+| 0.4 | 2026-08-13 | — | **M11 + L6** (adversarial review over the C1/C2 landing): §7.1's T2 bullet marked LANDED, with the migrate/drop hygiene split out as the one T2 item that did NOT land; new §7.2 bullet records FR-DC-013's re-key/drop delivery has zero production call site today and the id-reuse hazard a #28 boundary regen would hit; §7.3's #30 seam-contract bullet corrected from "null seam" (stale since T2) to LIVE. |
 #endregion

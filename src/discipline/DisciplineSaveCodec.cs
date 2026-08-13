@@ -3,8 +3,8 @@
 // Modified: 2026-08-13
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §4.4 + Appendix B (the sub-blob layout) / FR-DC-014/015/016;
-//           F3; ERR-044-001 (the magic-before-version correction, ERR-029-005/ERR-041-009 class);
-//           Deterministic Simulation #16 §3.2.4.1 (CanonicalSerializer); Code Standards #20
+//           F3 / §2.3 F2; ERR-044-001 (the magic-before-version correction, ERR-029-005/ERR-041-009
+//           class); Deterministic Simulation #16 §3.2.4.1 (CanonicalSerializer); Code Standards #20
 // Purpose:  Pure byte codec for the #44 discipline sub-blob — one opaque, independently version-gated
 //           block under #30's season frame, carrying every discipline row in canonical key order.
 //           Fail-loud on any framing / ordering / range / trailing-byte violation. No file I/O.
@@ -106,9 +106,10 @@ namespace TacticalDirector.Discipline
         /// Decodes a discipline sub-blob produced by <see cref="Encode"/>. Fail-loud (throws) on: a null
         /// blob; a magic mismatch (these bytes are some other format — checked FIRST); a version
         /// mismatch (no Stage-0 migration); a truncated read or a count prefix past the blob;
-        /// non-ascending <c>(PlayerId, CompetitionId)</c>; a negative <c>Yellows</c> or
-        /// <c>BanMatchesRemaining</c>; an all-zero row; or trailing bytes. Every one of them is <b>F3</b>
-        /// (FR-DC-015).
+        /// non-ascending <c>(PlayerId, CompetitionId)</c>; a negative <c>PlayerId</c> (§2.3 F2 — checked
+        /// before the ordering comparison can misread it as a real, if unusual, key); a negative
+        /// <c>Yellows</c> or <c>BanMatchesRemaining</c>; an all-zero row; or trailing bytes. Every one of
+        /// them is <b>F3</b> (FR-DC-015).
         /// <para>
         /// The all-zero refusal is not in Appendix B's field table but follows from FR-DC-017: an
         /// absent row is the ONE representation of a clean player, so a stored <c>(0, 0)</c> is a
@@ -182,6 +183,14 @@ namespace TacticalDirector.Discipline
                 previousPlayerId = playerId;
                 previousCompetitionId = competitionId;
 
+                if (playerId < 0)
+                {
+                    throw new InvalidOperationException(
+                        "Discipline save entry " + i + " has PlayerId = " + playerId + "; PlayerId " +
+                        "MUST be >= 0 (F3 / §2.3 F2). A negative id names no real player, and integer " +
+                        "division would silently derive it to club 0's OnClubFixturePlayed loop.");
+                }
+
                 if (yellows < 0 || banMatchesRemaining < 0)
                 {
                     throw new InvalidOperationException(
@@ -220,4 +229,8 @@ namespace TacticalDirector.Discipline
 // |         |            |        | sub-blob, magic-led per ERR-044-001, with F3 gates on version,   |
 // |         |            |        | bounds, key order, value range, canonical minimality and         |
 // |         |            |        | trailing bytes — refused at BOTH boundaries, not just this one.  |
+// | 1.1     | 2026-08-13 | —      | AR fix (M1): Decode now refuses a negative PlayerId explicitly   |
+// |         |            |        | (F3 / §2.3 F2) instead of letting it through as an unusually-    |
+// |         |            |        | small-but-otherwise-valid key — the file boundary was the one    |
+// |         |            |        | entry point that did not gate the player half of F2.             |
 #endregion

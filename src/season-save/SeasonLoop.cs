@@ -1,9 +1,11 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
-// Modified: 2026-08-13 (#44 C1/C2 adversarial review, H1 — Restore threads disciplineOrNull, so a loop
-//           rebuilt through the documented restore path can carry the tally the save file holds — v1.21.
-//           Prior: v1.20 #44 T2's four discipline drive points; v1.19 the BirthWorldDay-vs-clock
-//           composition check; the pass 1-3 recording chain and the pass-5 doc fix are the rows below.)
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 2, M6/M11/L1 — v1.22. Serve+commit moved
+//           below MarkFixturePlayed (M6, ERR-030-037), the FR-DC-013 re-key/drop deferral recorded at
+//           the RollToNextSeason roster-sync site (M11), and the inverted-order comment sentence
+//           deleted (L1). Prior: v1.21 Restore threads disciplineOrNull (H1); v1.20 #44 T2's four
+//           discipline drive points; v1.19 the BirthWorldDay-vs-clock composition check; the pass 1-3
+//           recording chain and the pass-5 doc fix are the rows below.)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (day advance / KD-2 tick order), §3.4 (playing a round /
 //           KD-9), §3.5 (season-boundary roll / KD-6), §4.3 (the composition root), §4.6 (the #22
@@ -689,28 +691,43 @@ namespace TacticalDirector.SeasonSave
                 // site (AR pass 2: a second SelectAvailable walk here was an unenforced agreement with
                 // the engine's configuration, of exactly the documented-not-structural class this file
                 // refuses elsewhere). Null XIs = no career wired = nothing to record. Placed BEFORE
-                // the pinned apply/emit/mark sequence (AR pass 1): it is the only fallible call in
-                // this block, and a throw after MarkFixturePlayed would strand the round — the fixture
-                // skipped by the unplayed-index filter on retry, the cursor never advancing, the
-                // season unrecoverable. The pair form (AR pass 3) validates BOTH clubs before writing
-                // EITHER, so a refused away side no longer leaves the home XI carrying an appearance
-                // for a fixture that was never applied.
+                // the pinned apply/emit/mark sequence (AR pass 1): it is the only fallible call placed
+                // BEFORE MarkFixturePlayed in this block (M6, ERR-030-037 — the #44 serve+commit pair
+                // below is ALSO fallible, and is deliberately placed AFTER MarkFixturePlayed instead,
+                // see that comment), and a throw here would strand the round — the fixture skipped by
+                // the unplayed-index filter on retry, the cursor never advancing, the season
+                // unrecoverable. The pair form (AR pass 3) validates BOTH clubs before writing EITHER,
+                // so a refused away side no longer leaves the home XI carrying an appearance for a
+                // fixture that was never applied.
                 if (_career != null)
                 {
                     _career.RecordFixtureAppearances(
                         fixture.HomeClubId, homeXi, fixture.AwayClubId, awayXi, worldDay);
                 }
 
+                // FR-SN-013's pinned order, for every fixture: (1) table, (2) event, then mark played.
+                _state.ApplyResult(in result);
+                EmitMatchOutcome(in result);
+                _state.MarkFixturePlayed(indices[i]);
+
                 // #44 T2 (FR-DC-011): one ban-serving decrement per club per PLAYED fixture, on BOTH
                 // resolution paths — ResolveFixture has already branched and returned, so this single
                 // site covers the engine and the quick-sim alike. Deliberately NOT gated on _career:
                 // a ban is served by the club playing, which has nothing to do with whether training
-                // and medical state is wired. It runs AFTER the fold committed this fixture's own cards
-                // (inside ResolveFixture), which is what makes the ordering right: a red card shown
-                // today bans for the NEXT fixture, not this one, because this fixture's decrement
-                // applies to bans that were already outstanding when it kicked off... and the card just
-                // folded was not. The engine branch's Commit and this call are one statement apart in
-                // execution order for exactly that reason.
+                // and medical state is wired.
+                //
+                // M6 (ERR-030-037): placed AFTER MarkFixturePlayed, deliberately. Both
+                // OnClubFixturePlayed and fold.Commit are FALLIBLE under a bound config
+                // (DisciplineRules.AddYellow throws below YellowAccumulationThreshold < 1;
+                // RequireBanLength throws on a negative [GT] ban length), and serving+committing is
+                // independent of Table.ApplyResult/EmitMatchOutcome/MarkFixturePlayed, so nothing is
+                // lost by running it last. Placed BEFORE MarkFixturePlayed (as this block did before
+                // M6), a throw here left the fixture UNPLAYED with both clubs' bans already
+                // decremented; a caller retrying AdvanceAndPlayNextRound would then replay the SAME
+                // fixture — the unplayed-index filter would not exclude it — and decrement every
+                // outstanding ban in the league a SECOND time, silently. Now the fixture is already
+                // marked played by the time this can throw, so the filter on retry skips it and
+                // nothing double-serves.
                 if (_disciplineRules != null)
                 {
                     _disciplineRules.OnClubFixturePlayed(fixture.HomeClubId);
@@ -723,11 +740,6 @@ namespace TacticalDirector.SeasonSave
                     // that were outstanding at kickoff; the fold adds the ones he earned after it.
                     fold?.Commit(_disciplineRules);
                 }
-
-                // FR-SN-013's pinned order, for every fixture: (1) table, (2) event, then mark played.
-                _state.ApplyResult(in result);
-                EmitMatchOutcome(in result);
-                _state.MarkFixturePlayed(indices[i]);
 
                 results[i] = result;
             }
@@ -855,6 +867,22 @@ namespace TacticalDirector.SeasonSave
                 _career.CommitRosterSync(in rosterSync);
             }
 
+            // M11: FR-DC-013 names the T-phase roster-event delivery point as WHERE #44's re-key
+            // (DisciplineRules.MigratePlayerId) and retirement drop (DisciplineRules.DropPlayer) are
+            // meant to be called — and the roster sync immediately above IS that T-phase for #29/#41.
+            // Neither #44 method is called anywhere in this assembly (or any other) today; both have
+            // zero references outside src/discipline/ and its own unit tests. That is inert while
+            // #28's boundary regen stays deferred (RunSeasonBoundary above is a documented, still-empty
+            // position — see the (d) note two screens up), but the consequence when it lands is NOT an
+            // orphan discipline row: player ids are `clubId * CLUB_SQUAD_SIZE + localIndex`
+            // (PlayerDatabase), so a regen filling a retiree's vacated slot INHERITS the identical id —
+            // and with it, silently, the retiree's outstanding ban and yellow tally, on a player who
+            // never earned either. Recorded here rather than wired: the roster-move hook FR-DC-013
+            // needs (something that tells this call site "id X left, id Y arrived, are they the same
+            // player") does not exist yet, and #29/#41's own CommitRosterSync above solves a narrower
+            // problem (per-club membership, not identity/re-key). #28's boundary landing must not miss
+            // this — see also #44 §7.2's deferred list.
+            //
             // ── (f) #44's season-boundary sweep (FR-DC-017) ────────────────────────────────────
             // Yellows reset; UNSERVED BANS CARRY. A red card in the final round is still a ban in
             // August, which is the whole reason #44 persists rather than recomputing from ledgers it
@@ -1573,4 +1601,28 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | ledgers, so nothing downstream can recompute them. The          |
 // |         |            |        | destination-side refusal is the other half (SeasonSaveManager   |
 // |         |            |        | v1.23).                                                          |
+// | 1.22    | 2026-08-13 | —      | #44 C1/C2 adversarial review round 2 (M6/M11/L1, ERR-030-037).  |
+// |         |            |        | **M6:** the serve+commit pair (OnClubFixturePlayed ×2 +         |
+// |         |            |        | fold?.Commit) moves from BEFORE to AFTER MarkFixturePlayed —    |
+// |         |            |        | both calls are fallible under a bound config, and running them  |
+// |         |            |        | before the fixture was marked played meant a throw left it      |
+// |         |            |        | UNPLAYED with both clubs' bans already decremented once; a      |
+// |         |            |        | retried AdvanceAndPlayNextRound then replayed the fixture and   |
+// |         |            |        | served every outstanding ban a second time, silently. The       |
+// |         |            |        | serve-before-commit ORDER between the two calls (the off-by-one |
+// |         |            |        | contract itself) is unchanged — only their position relative to |
+// |         |            |        | MarkFixturePlayed moved. **M11:** RollToNextSeason's roster-sync|
+// |         |            |        | site gains a comment naming FR-DC-013's two unwired methods     |
+// |         |            |        | (DisciplineRules.MigratePlayerId / DropPlayer) and the id-reuse |
+// |         |            |        | inheritance hazard a #28 boundary regen would hit — a retiree's |
+// |         |            |        | vacated clubId*CLUB_SQUAD_SIZE+local id inherited by his regen  |
+// |         |            |        | replacement, silently carrying the retiree's ban/yellows too.   |
+// |         |            |        | Not wired (the roster-move hook it needs does not exist).       |
+// |         |            |        | **L1:** deleted the RecordFixtureAppearances comment's inverted |
+// |         |            |        | "(inside ResolveFixture)" sentence, which claimed serving runs  |
+// |         |            |        | after the fold commits — backwards on both counts (Commit runs  |
+// |         |            |        | after serving, and PlayThroughEngine hands the fold back        |
+// |         |            |        | UNCOMMITTED). Locked by                                         |
+// |         |            |        | SeasonLoopDisciplineTests.ANewBanEarnedThisFixtureIsNotServed-  |
+// |         |            |        | ByThisSameFixture (v1.2 of that file).                          |
 #endregion

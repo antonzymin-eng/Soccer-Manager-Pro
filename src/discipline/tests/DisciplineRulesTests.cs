@@ -7,8 +7,10 @@
 //           Code Standards #20
 // Purpose:  Unit tests for DisciplineRules — the FR-DC-006 card-kind dispatch (including the §3.2
 //           worked example and the residual-kept assertion that distinguishes it from a reset), ban
-//           stacking, club-fixture serving (including the FR-DC-017 mid-season drop), the season
-//           boundary sweep, player-id migration, retirement drop, and multi-competition independence.
+//           stacking, the [GT] guard routing/atomicity/direct-reachability trio (M4/L5), club-fixture
+//           serving (including the FR-DC-017 mid-season drop and the M5 two-row descending-walk lock),
+//           the season boundary sweep (with its own M5 lock), player-id migration, retirement drop, and
+//           multi-competition independence.
 
 using System;
 
@@ -190,6 +192,77 @@ namespace TacticalDirector.Discipline.Tests
                 () => rules.ApplyCard(PlayerId(0, 1), Competition, 255));
         }
 
+        // ── M4/L5: [GT] guard routing, atomicity, and direct reachability ────────────
+        //
+        // DisciplineConstants' [GT] fields are `public static readonly`, resolved once at type
+        // initialisation, at their fixed non-negative defaults — no test in this process can bind a
+        // bad config value before that first read happens (GameplayConfigHolder's lock-on-first-read
+        // contract makes the ordering unenforceable across independent test fixtures). Driving these
+        // guards through ApplyCard/AddYellow with the real catalogue can therefore never observe a
+        // config-driven breach. RequireYellowThreshold and RequireBanLength are `internal` precisely so
+        // the identical guarded code is reachable directly, with an explicit value (L5).
+
+        [Test]
+        public void RequireYellowThreshold_BelowOne_Throws()
+        {
+            Assert.Throws<InvalidOperationException>(() => DisciplineRules.RequireYellowThreshold(0));
+        }
+
+        [Test]
+        public void RequireYellowThreshold_AtLeastOne_ReturnsItUnchanged()
+        {
+            Assert.AreEqual(1, DisciplineRules.RequireYellowThreshold(1));
+            Assert.AreEqual(5, DisciplineRules.RequireYellowThreshold(5));
+        }
+
+        [Test]
+        public void RequireBanLength_Negative_Throws()
+        {
+            Assert.Throws<InvalidOperationException>(() => DisciplineRules.RequireBanLength(-1, "TestBanLength"));
+        }
+
+        [Test]
+        public void RequireBanLength_NonNegative_ReturnsItUnchanged()
+        {
+            Assert.AreEqual(0, DisciplineRules.RequireBanLength(0, "TestBanLength"));
+            Assert.AreEqual(3, DisciplineRules.RequireBanLength(3, "TestBanLength"));
+        }
+
+        [Test]
+        public void ApplyCard_Kind1_RoutesStraightRedBanMatchesThroughRequireBanLength()
+        {
+            // M4: at today's non-negative default this is a behaviour-preserving routing change —
+            // confirmed by the existing WorkedExample_Kind1_AddsBanPlus2_YellowsUntouched test still
+            // passing unmodified. RequireBanLength's own direct tests above prove the guard fires; this
+            // one proves ApplyCard actually calls it (not just AddBan's separate `matches < 0` check).
+            DisciplineRules rules = NewRules();
+            int p = PlayerId(0, 1);
+
+            rules.ApplyCard(p, Competition, DisciplineConstants.CARD_KIND_RED);
+
+            Assert.AreEqual(DisciplineConstants.StraightRedBanMatches,
+                rules.State.EntryFor(p, Competition).BanMatchesRemaining);
+        }
+
+        [Test]
+        public void ApplyCard_Kind2_ValidatesSecondYellowBanMatches_BeforeAddYellowRuns()
+        {
+            // M4's atomicity requirement: at today's non-negative default the guard never fires, so
+            // this test proves the ORDER — AddYellow's effect is observable — rather than the refusal
+            // itself (RequireBanLength_Negative_Throws above covers the refusal). A prior version of
+            // this method called AddYellow BEFORE validating the second-yellow ban length, which would
+            // have left a committed yellow (and any accumulation ban it triggers) behind a refused card
+            // the moment SecondYellowBanMatches were ever misconfigured negative.
+            DisciplineRules rules = NewRules();
+            int p = PlayerId(0, 1);
+
+            rules.ApplyCard(p, Competition, DisciplineConstants.CARD_KIND_SECOND_YELLOW);
+
+            DisciplineEntry entry = rules.State.EntryFor(p, Competition);
+            Assert.AreEqual(1, entry.Yellows, "the yellow from a successful kind-2 must land");
+            Assert.AreEqual(DisciplineConstants.SecondYellowBanMatches, entry.BanMatchesRemaining);
+        }
+
         // ── OnClubFixturePlayed ─────────────────────────────────────────────────────
 
         [Test]
@@ -244,6 +317,27 @@ namespace TacticalDirector.Discipline.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => rules.OnClubFixturePlayed(-1));
         }
 
+        [Test]
+        public void OnClubFixturePlayed_TwoSameClubRowsBothReachZeroZero_InOneCall_BothDropped()
+        {
+            // M5: the descending walk's correctness has no test that fails when reverted UNLESS at
+            // least two rows of the SAME club both empty out in one call — every other test here has
+            // exactly one droppable row per call. Under an ascending walk, removing the first row
+            // (Upsert drops an empty entry) shifts the second row down into the just-vacated index,
+            // which the ascending loop's incremented cursor then steps straight over — verified by
+            // reverting the loop to ascending and watching this go red (see the fix report).
+            DisciplineRules rules = NewRules();
+            int p1 = PlayerId(0, 1);
+            int p2 = PlayerId(0, 2);
+            rules.AddBan(p1, Competition, 1);
+            rules.AddBan(p2, Competition, 1);
+
+            rules.OnClubFixturePlayed(0);
+
+            Assert.IsFalse(rules.State.HasEntry(p1, Competition), "p1's one-match ban must be served and the row dropped");
+            Assert.IsFalse(rules.State.HasEntry(p2, Competition), "p2's one-match ban must ALSO be served in the same call");
+        }
+
         // ── RollToNextSeason ────────────────────────────────────────────────────────
 
         [Test]
@@ -272,6 +366,24 @@ namespace TacticalDirector.Discipline.Tests
             rules.RollToNextSeason();
 
             Assert.IsFalse(rules.State.HasEntry(p, Competition));
+        }
+
+        [Test]
+        public void RollToNextSeason_TwoRowsBothBecomeZeroZero_InOneCall_BothDropped()
+        {
+            // M5: same shape as the OnClubFixturePlayed case above, for RollToNextSeason's own
+            // descending walk — two droppable rows in one call, which reverting the loop to ascending
+            // fails (verified; see the fix report).
+            DisciplineRules rules = NewRules();
+            int p1 = PlayerId(0, 1);
+            int p2 = PlayerId(0, 2);
+            rules.ApplyCard(p1, Competition, DisciplineConstants.CARD_KIND_YELLOW);   // Yellows 1, ban 0
+            rules.ApplyCard(p2, Competition, DisciplineConstants.CARD_KIND_YELLOW);   // Yellows 1, ban 0
+
+            rules.RollToNextSeason();
+
+            Assert.IsFalse(rules.State.HasEntry(p1, Competition), "p1's yellow resets to 0, row becomes (0,0) and drops");
+            Assert.IsFalse(rules.State.HasEntry(p2, Competition), "p2's row must ALSO drop in the same call");
         }
 
         // ── MigratePlayerId ─────────────────────────────────────────────────────────
@@ -432,4 +544,12 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | serving with the FR-DC-017 mid-season drop, the season boundary  |
 // |         |            |        | sweep, player-id migration (F2), retirement drop, and            |
 // |         |            |        | multi-competition independence.                                  |
+// | 1.1     | 2026-08-13 | —      | AR fixes. M4: added ApplyCard kind-1/kind-2 routing + atomicity  |
+// |         |            |        | tests. L5: added direct RequireYellowThreshold/RequireBanLength  |
+// |         |            |        | guard tests (now internal — reachable without depending on       |
+// |         |            |        | GameplayConfigHolder binding before DisciplineConstants' static  |
+// |         |            |        | readonly fields resolve). M5: added the two-same-row-in-one-call |
+// |         |            |        | locks for OnClubFixturePlayed and RollToNextSeason's descending  |
+// |         |            |        | walks — verified red under a reverted ascending walk, then       |
+// |         |            |        | restored.                                                        |
 #endregion

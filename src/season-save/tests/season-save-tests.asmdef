@@ -11,6 +11,7 @@
         "TacticalDirector.PlayerProgression",
         "TacticalDirector.TrainingSystem",
         "TacticalDirector.InjuriesMedical",
+        "TacticalDirector.Discipline",
         "TacticalDirector.TestingStrategy",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"

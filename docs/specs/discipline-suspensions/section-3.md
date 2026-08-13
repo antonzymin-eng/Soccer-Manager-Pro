@@ -1,11 +1,18 @@
 # Discipline & Suspensions #44 — Section 3: Core Algorithms
 
 **Created:** July 24, 2026
-**Last Updated:** August 13, 2026 (v0.4 — ERR-044-002 + ERR-044-003, C1/C2 landing back-prop: §3.3's
+**Last Updated:** August 13, 2026, later still (v0.6 — ERR-044-005 back-prop, owed by the #44 C1/C2
+adversarial review: §3.3's `FilterAvailable` pseudocode gains the all-suspended-squad `null`-return
+case and names `MarkSuspended`'s mask, consumed by #30's composed seam, as the actual production path)
+**Last Updated (prior):** August 13, 2026, later same day (v0.5 — ERR-030-037, adversarial review over the
+#44 C1/C2 landing (M7): §3.3 gains normative text for the WITHIN-fixture half of the off-by-one
+contract — `OnClubFixturePlayed` MUST run before that same fixture's fold commits its cards — which
+the prior text only implied by describing separate fixtures)
+**Last Updated (prior):** August 13, 2026 (v0.4 — ERR-044-002 + ERR-044-003, C1/C2 landing back-prop: §3.3's
 ordering paragraph re-scoped to both resolution paths, and the `FilterAvailable` pseudocode comment
 points its viability rule at #30 §2.3 F9 instead of a withdrawn F5)
 **Last Updated (prior):** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.4
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -67,6 +74,11 @@ FilterAvailable(squad, s)  := a reduced VALUE COPY of squad keeping available pl
                               # NO viability gate here (ERR-044-003 withdrew F5's fail-loud) — the
                               # composed seam's viability rule, including the depleted-squad
                               # back-fill and its own terminal refusal, is #30 §2.3 F9 / §3.4
+                              # Returns NULL if every player is suspended (ERR-044-005) — Squad
+                              # cannot represent a zero-player roster. This is FR-DC-009's OWN
+                              # surface; #44's production path is MarkSuspended's removal mask,
+                              # consumed directly by #30's composed seam (AvailabilityComposition),
+                              # which never calls FilterAvailable.
 ```
 
 **Ordering (KD-3, the off-by-one lock):** fixture N resolves → the fold lands its cards → fixture
@@ -79,6 +91,18 @@ ERR-044-002 — the prior "engine-resolved fixture" wording would have let a qui
 decrement a ban the banned player had just played through, since nearly every fixture of a career
 is quick-simmed) — a banned opponent does not appear against the managed club mid-ban on either
 path.
+
+**WITHIN one fixture, `OnClubFixturePlayed` MUST run BEFORE that same fixture's fold commits its
+cards (ERR-030-037)** — this is the half of the off-by-one contract the paragraph above states only
+implicitly by describing fixtures N and N+1 as separate steps. Serving decrements the bans that
+were **outstanding at kickoff**; the fold then adds the ones earned **during** the fixture just
+played. Reversing the two — committing fixture N's cards before serving fixture N's bans — lets a
+player sent off in fixture N serve one match of his own ban **during** the match he was dismissed
+in, turning a two-match red into a one-match ban, and (worse) a fresh accumulation ban that reduces
+to exactly the served amount is decremented straight to `(0, 0)` and dropped by FR-DC-017 before it
+has cost the player a single fixture — a card that bans nobody. Both `#30`'s composition-root
+implementation (`SeasonLoop.PlayNextRound`) and any future re-implementation of the loop MUST
+preserve this order.
 
 ## 3.4 Boundary & hygiene (FR-DC-013/017)
 
@@ -99,4 +123,6 @@ path.
 | 0.2 | 2026-07-24 | — | Section-file AR PASS-1 (M follow-through): §3.4 aligns the `(0,0)` drop to **immediate, wherever it occurs** (mid-season serve-out included), citing FR-DC-017. |
 | 0.3 | 2026-07-24 | — | Cross-set AR pass 3 (M follow-through): §3.3's ordering paragraph states the both-squads filter coverage (FR-DC-010 — a banned opponent is excluded from the engine-resolved fixture). |
 | 0.4 | 2026-08-13 | — | **C1/C2 landing back-prop.** **ERR-044-002:** §3.3's ordering paragraph re-scoped from "the engine-resolved fixture" to both clubs' resolved squads of every fixture on both resolution paths, matching #30 §3.4's LIVE seam. **ERR-044-003:** the `FilterAvailable` pseudocode's F5 fail-loud comment replaced — #44 implements no viability gate; the rule is #30 §2.3 F9. |
+| 0.5 | 2026-08-13 | — | **ERR-030-037** (adversarial review over the C1/C2 landing, M7): §3.3 gains a normative paragraph for the WITHIN-fixture half of the off-by-one contract — `OnClubFixturePlayed` MUST run before that same fixture's fold commits its cards, never after — locked in code by `SeasonLoopDisciplineTests.ANewBanEarnedThisFixtureIsNotServedByThisSameFixture` (`src/season-save/`). |
+| 0.6 | 2026-08-13 | — | **ERR-044-005** back-prop: §3.3's `FilterAvailable` pseudocode gains the `null`-return case for an all-suspended squad (`Squad` cannot represent zero players) and names `MarkSuspended`'s removal mask, consumed directly by #30's `AvailabilityComposition`, as #44's actual production path — `FilterAvailable` itself is FR-DC-009's own surface. |
 #endregion

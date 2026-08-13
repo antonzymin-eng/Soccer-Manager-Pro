@@ -2,8 +2,8 @@
 // Created:  2026-08-13
 // Modified: 2026-08-13
 // Author:   —
-// Spec:     Discipline & Suspensions #44 §2.2 (data structures) / FR-DC-012 / FR-DC-017 / FR-DC-020;
-//           Code Standards #20
+// Spec:     Discipline & Suspensions #44 §2.2 (data structures) / §2.3 F2 / FR-DC-012 / FR-DC-017 /
+//           FR-DC-020; Code Standards #20
 // Purpose:  One player's discipline tally within one competition — the (PlayerId, CompetitionId) →
 //           (Yellows, BanMatchesRemaining) row DisciplineState stores and DisciplineSaveCodec writes.
 
@@ -37,18 +37,35 @@ namespace TacticalDirector.Discipline
         /// </summary>
         public readonly int CompetitionId;
 
-        /// <summary>Yellows accumulated toward the next accumulation ban. Never negative; always below the threshold after a crossing (§3.2's residual rule).</summary>
+        /// <summary>
+        /// Yellows accumulated toward the next accumulation ban. Never negative. <b>NOT necessarily
+        /// below the threshold</b> — <c>AddYellow</c> subtracts the threshold exactly once per
+        /// crossing (§3.2's residual rule), so a row seeded or decoded above twice the threshold
+        /// stays above it after one crossing: 12 + 1 at threshold 5 → 8, still above threshold.
+        /// </summary>
         public readonly int Yellows;
 
         /// <summary>Club fixtures still to be served. Never negative. Carries across <c>RollToNextSeason</c> (FR-DC-017).</summary>
         public readonly int BanMatchesRemaining;
 
         /// <summary>Builds a row.</summary>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref name="yellows"/> or
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="playerId"/> is negative — §2.3
+        /// <b>F2</b>, a player outside the resolvable universe. C# integer division truncates toward
+        /// zero, so every id in <c>[-CLUB_SQUAD_SIZE + 1, -1]</c> would otherwise derive to club 0 in
+        /// <see cref="DisciplineRules.OnClubFixturePlayed"/> — silently serving, decrementing and
+        /// migrating a ban that names no real player. <paramref name="yellows"/> or
         /// <paramref name="banMatchesRemaining"/> is negative — a negative tally is a counting bug, and
         /// the codec refuses one on the way back in (F3), so it must never be constructible either.</exception>
         public DisciplineEntry(int playerId, int competitionId, int yellows, int banMatchesRemaining)
         {
+            if (playerId < 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(playerId), playerId,
+                    "DisciplineEntry: PlayerId must be >= 0 (§2.3 F2) — a negative id names no real " +
+                    "player, and integer division would otherwise silently derive it to club 0's " +
+                    "OnClubFixturePlayed loop.");
+            }
             if (yellows < 0)
             {
                 throw new ArgumentOutOfRangeException(
@@ -108,4 +125,11 @@ namespace TacticalDirector.Discipline
 // |         |            |        | (PlayerId, CompetitionId) tally row, with the FR-DC-017          |
 // |         |            |        | canonical-minimality predicate and the F3 non-negative gates     |
 // |         |            |        | enforced at construction, not only at decode.                    |
+// | 1.1     | 2026-08-13 | —      | AR fix (M1): the constructor now refuses a negative PlayerId     |
+// |         |            |        | (§2.3 F2) — C# integer division truncates toward zero, so every  |
+// |         |            |        | id in [-24, -1] previously derived to club 0 in                  |
+// |         |            |        | OnClubFixturePlayed with nothing refusing it. Corrected the      |
+// |         |            |        | Yellows XML doc's false "always below the threshold after a      |
+// |         |            |        | crossing" claim (L3) — AddYellow subtracts the threshold exactly |
+// |         |            |        | once, so a row seeded above twice the threshold stays above it.  |
 #endregion

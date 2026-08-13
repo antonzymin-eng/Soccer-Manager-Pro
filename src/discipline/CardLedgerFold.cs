@@ -33,8 +33,11 @@ namespace TacticalDirector.Discipline
     /// restore has no way to know which half, because KD-2 rules out re-deriving the tally from engine
     /// slot state. That save path is refused today (<c>SeasonSaveManager</c> declines a live
     /// <c>ActiveMatch</c>), but <c>MatchSession.TickOnce/CaptureSave/RestoreFrom</c> already exists one
-    /// assembly over, so the buffer is what keeps this correct when the seam opens rather than a
-    /// second thing to remember then.
+    /// assembly over. <b>Buffering alone does not make a mid-fixture save CORRECT</b> (L2) — this fold
+    /// is not itself serialized, so a restore rebuilds an empty fold and every card issued before the
+    /// save point is lost outright, trading a half-persisted tally for a silently-truncated one.
+    /// Buffering keeps a half-fixture tally OUT of persisted state; making a mid-fixture save correct
+    /// additionally requires serializing the fold's pending list, which is deferred with the seam.
     /// </para>
     /// <para>
     /// <b>Observer-neutral</b> (FR-DC-003): every tap member is a read and this type holds no reference
@@ -273,4 +276,9 @@ namespace TacticalDirector.Discipline
 // |         |            |        | fold, buffered per fixture and committed once at resolution so   |
 // |         |            |        | no half-fixture tally can reach a save (the mid-fixture restore  |
 // |         |            |        | hazard the council flagged).                                     |
+// | 1.1     | 2026-08-13 | —      | AR fix (L2): corrected the overclaim that buffering "keeps this  |
+// |         |            |        | correct when the seam opens" — the fold itself is not serialized,|
+// |         |            |        | so a mid-fixture restore loses every pre-save card outright.      |
+// |         |            |        | Buffering keeps a half-fixture tally OUT of persisted state;      |
+// |         |            |        | correctness additionally needs the pending list serialized.      |
 #endregion

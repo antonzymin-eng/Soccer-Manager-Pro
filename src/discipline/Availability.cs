@@ -56,12 +56,18 @@ namespace TacticalDirector.Discipline
         }
 
         /// <summary>
-        /// Marks every suspended member of <paramref name="squad"/> in <paramref name="removed"/> —
+        /// Writes #44's suspension mask for <paramref name="squad"/> into <paramref name="removed"/> —
         /// #44's contribution to #30's composed availability seam (§3.3, FR-DC-010).
         /// <para>
-        /// <b>Additive into a shared mask</b>, never clearing a flag another contributor set: the mask
-        /// is the union of every filter's removals, and a player unavailable for one reason is not made
-        /// available by being fit for another.
+        /// <b>This method OWNS <paramref name="removed"/>.</b> Every entry is (re)written to reflect
+        /// suspension status alone, unconditionally — index <c>local</c> ends the call exactly
+        /// <c>true</c> when that player is suspended and exactly <c>false</c> otherwise, regardless of
+        /// what the caller passed in. It is <b>NOT additive</b>: a caller composing #44's removals with
+        /// another contributor's (e.g. #41's) MUST allocate a separate mask for each contributor and
+        /// OR them together explicitly — the shape <c>AvailabilityComposition.Compose</c> already uses,
+        /// because passing one shared mask here would let this call silently CLEAR a flag a different
+        /// contributor had set for a different reason (M3: the prior additive-and-skip contract made
+        /// exactly that mistake look like the safe, documented way to call it).
         /// </para>
         /// <para>
         /// Applies to <b>each</b> resolved squad — the managed club's and its opponent's — and on
@@ -77,10 +83,11 @@ namespace TacticalDirector.Discipline
         /// <param name="state">The tally to read. Never written.</param>
         /// <param name="competitionId">The competition partition (FR-DC-012).</param>
         /// <param name="removed">
-        /// A mask parallel to the squad's roster indices. Suspended players' entries are set true;
-        /// entries already true are left alone.
+        /// A mask parallel to the squad's roster indices, indexed by roster position. Overwritten in
+        /// full by this call — see the remarks above.
         /// </param>
-        /// <returns>How many entries this call newly set — 0 for the overwhelming majority of fixtures.</returns>
+        /// <returns>How many players are suspended — the number of entries this call wrote <c>true</c>,
+        /// 0 for the overwhelming majority of fixtures.</returns>
         /// <exception cref="ArgumentNullException">Any argument is null.</exception>
         /// <exception cref="ArgumentException"><paramref name="removed"/> is not the squad's length — it
         /// is indexed by roster position, so a length mismatch means it was built against a different
@@ -108,21 +115,18 @@ namespace TacticalDirector.Discipline
                     nameof(removed));
             }
 
-            int newlyRemoved = 0;
+            int suspendedCount = 0;
             for (int local = 0; local < squad.Count; local++)
             {
-                if (removed[local])
+                bool isSuspended = state.EntryFor(squad.GetPlayer(local).PlayerId, competitionId).IsSuspended;
+                removed[local] = isSuspended;
+                if (isSuspended)
                 {
-                    continue;
-                }
-                if (state.EntryFor(squad.GetPlayer(local).PlayerId, competitionId).IsSuspended)
-                {
-                    removed[local] = true;
-                    newlyRemoved++;
+                    suspendedCount++;
                 }
             }
 
-            return newlyRemoved;
+            return suspendedCount;
         }
 
         /// <summary>
@@ -135,11 +139,27 @@ namespace TacticalDirector.Discipline
         /// "filtered" from "untouched" by reference.
         /// </para>
         /// <para>
-        /// <b>No viability gate</b> — see the type remarks (ERR-044-003). This can return a squad too
-        /// small to field an eleven; #30's seam is what recovers from that, and it is the only thing
-        /// that can, because it alone sees every contributor's removals.
+        /// <b>Returns <c>null</c> when EVERY player is suspended</b> (M2). <see cref="Squad"/>'s own
+        /// constructor refuses a zero-player squad, so there is no reduced value copy left to return —
+        /// this mirrors the private helper of the same shape one layer up in
+        /// <c>AvailabilityComposition.Compose</c> rather than letting a cross-assembly
+        /// <c>ArgumentException</c> naming neither discipline nor the cause escape from
+        /// <c>Squad</c>'s constructor. <b>This method — and this all-suspended case — is FR-DC-009's own
+        /// surface, exercised directly by this assembly's tests, and is NOT #44's production path:</b>
+        /// #30's composed seam (<c>AvailabilityComposition.Compose</c>) never calls it, consuming
+        /// <see cref="MarkSuspended"/>'s mask directly instead so it can back-fill before a
+        /// too-small-to-field squad is ever constructed.
+        /// </para>
+        /// <para>
+        /// <b>No viability gate otherwise</b> — see the type remarks (ERR-044-003). This can return a
+        /// squad too small to field an eleven; #30's seam is what recovers from that, and it is the
+        /// only thing that can, because it alone sees every contributor's removals.
         /// </para>
         /// </summary>
+        /// <returns>
+        /// The reduced squad, the same instance when nothing is suspended, or <c>null</c> when every
+        /// player is suspended.
+        /// </returns>
         /// <exception cref="ArgumentNullException"><paramref name="squad"/> or <paramref name="state"/> is null.</exception>
         public static Squad FilterAvailable(Squad squad, DisciplineState state, int competitionId)
         {
@@ -167,6 +187,11 @@ namespace TacticalDirector.Discipline
                 }
             }
 
+            if (keptCount == 0)
+            {
+                return null;
+            }
+
             var kept = new PlayerRecord[keptCount];
             int w = 0;
             for (int local = 0; local < removed.Length; local++)
@@ -188,4 +213,15 @@ namespace TacticalDirector.Discipline
 // |         |            |        | predicate, the removal-mask contribution #30's composed seam     |
 // |         |            |        | consumes, and the reduced-copy filter built on it. F5's          |
 // |         |            |        | fail-loud deliberately NOT implemented — ERR-044-003.            |
+// | 1.1     | 2026-08-13 | —      | AR fixes. M2: FilterAvailable now returns null for an            |
+// |         |            |        | all-suspended squad instead of letting Squad's constructor throw |
+// |         |            |        | a cross-assembly ArgumentException naming neither #44 nor the    |
+// |         |            |        | cause; doc records this method is FR-DC-009's own surface, not   |
+// |         |            |        | the production path (AvailabilityComposition consumes the mask   |
+// |         |            |        | directly). M3: MarkSuspended now OWNS its removed mask — writes  |
+// |         |            |        | suspension status unconditionally for every index instead of     |
+// |         |            |        | skipping already-true entries — because the additive contract    |
+// |         |            |        | was the shape that would put a suspended player on the pitch if  |
+// |         |            |        | a caller ever passed it a shared mask; AvailabilityComposition   |
+// |         |            |        | already allocates a fresh, separate mask, so it is unaffected.   |
 #endregion

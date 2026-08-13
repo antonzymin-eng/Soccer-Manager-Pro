@@ -1,6 +1,10 @@
 // File:     src/season-save/PlayerCareerStates.cs
 // Created:  2026-08-06
-// Modified: 2026-08-13 (#44 T2: SelectAvailable split into MarkUnavailable + AvailabilityComposition — v1.19)
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 2, L8 — the public SelectAvailable's
+//           discipline-less call passes competitionId: 0 instead of naming
+//           DisciplineConstants.LEAGUE_COMPETITION_KEY for a value it provably never reads, dropping
+//           this file's #44 import — v1.20. Prior: v1.19 SelectAvailable split into MarkUnavailable +
+//           AvailabilityComposition.)
 // Author:   —
 // Spec:     Training System #29 §3.1/§3.3/§3.5, §4.3 (seam contracts), FR-TR-004/016/022/023/025;
 //           Injuries & Medical #41 §3.1/§3.5, §4.3, FR-MD-003/009/010/022/023/025/027;
@@ -17,7 +21,6 @@
 using System;
 using System.Collections.Generic;
 
-using TacticalDirector.Discipline;
 using TacticalDirector.InjuriesMedical;
 using TacticalDirector.MatchEngine;
 using TacticalDirector.PlayerDatabase;
@@ -1234,8 +1237,13 @@ namespace TacticalDirector.SeasonSave
         /// refused identically with no injuries at all.
         /// </exception>
         public Squad SelectAvailable(Squad squad) =>
-            AvailabilityComposition.Compose(
-                squad, this, discipline: null, competitionId: DisciplineConstants.LEAGUE_COMPETITION_KEY);
+            // L8: competitionId is provably unread on this path — AvailabilityComposition.Compose
+            // only reads it inside its `discipline != null` branch, and this call always passes
+            // `discipline: null` (the #41-side surface has no discipline state to key against; #30's
+            // own SeasonLoop.SelectAvailable is the composed call site that supplies both). 0 rather
+            // than DisciplineConstants.LEAGUE_COMPETITION_KEY so this file needs no #44 import to name
+            // a value it never reads.
+            AvailabilityComposition.Compose(squad, this, discipline: null, competitionId: 0);
 
         /// <summary>
         /// #41's contribution to #30's composed availability seam (§3.4): marks every injured member of
@@ -1738,4 +1746,11 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | cannot be composed with a second one. SelectAvailable is kept   |
 // |         |            |        | as a one-line delegation — its contract is unchanged for every  |
 // |         |            |        | existing caller. MarkLeastInjured moved with the back-fill.     |
+// | 1.20    | 2026-08-13 | —      | #44 C1/C2 adversarial review round 2 (L8). SelectAvailable's    |
+// |         |            |        | discipline-less call passed competitionId:                      |
+// |         |            |        | DisciplineConstants.LEAGUE_COMPETITION_KEY — importing #44's    |
+// |         |            |        | catalogue to name a value Compose provably never reads on a     |
+// |         |            |        | null-discipline path. Now competitionId: 0, with a comment      |
+// |         |            |        | explaining why; the `using TacticalDirector.Discipline;` line   |
+// |         |            |        | dropped, since nothing else in this file needs it.              |
 #endregion

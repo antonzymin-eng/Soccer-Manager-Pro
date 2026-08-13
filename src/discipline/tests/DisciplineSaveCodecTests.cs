@@ -7,9 +7,10 @@
 //           Code Standards #20
 // Purpose:  Unit tests for DisciplineSaveCodec — round-trip field identity (empty and populated
 //           multi-entry, multi-competition states), the pinned magic-then-version-then-count byte
-//           layout, proof that the magic actually refuses a foreign sub-blob, and every F3 fail-loud
+//           layout, proof that the magic actually refuses a foreign sub-blob, every F3 fail-loud
 //           gate (magic, version, every truncation length, trailing bytes, non-ascending keys,
-//           duplicate keys, negative values, an all-zero row) plus two-run determinism.
+//           duplicate keys, a negative PlayerId, negative Yellows/BanMatchesRemaining, an all-zero
+//           row) plus determinism across different DisciplineRules call orders.
 
 using System;
 
@@ -28,8 +29,11 @@ namespace TacticalDirector.Discipline.Tests
 
         private static DisciplineState PopulatedState()
         {
-            // Multi-entry, multi-competition, in scrambled insertion order — DisciplineState.Upsert
-            // (via DisciplineState.FromEntries below where noted) is what canonicalizes it.
+            // Multi-entry, multi-competition, ALREADY in the strictly ascending (PlayerId,
+            // CompetitionId) order FromEntries requires (L4(c) correction — the rows below were never
+            // scrambled, and FromEntries REFUSES non-ascending input rather than canonicalizing it;
+            // DisciplineRulesTests.MigratePlayerId_ToALowerId_MovesEVERYCompetitionsRows is where
+            // out-of-order handling is actually exercised, via DisciplineRules' internal Upsert).
             return DisciplineState.FromEntries(new[]
             {
                 Row(5, 0, 3, 0),
@@ -197,6 +201,21 @@ namespace TacticalDirector.Discipline.Tests
         }
 
         [Test]
+        public void Decode_NegativePlayerId_Throws()
+        {
+            // M1: DisciplineEntry's own constructor now refuses a negative PlayerId too, so this also
+            // proves the codec's explicit F3 gate (added ahead of the constructor call) actually fires —
+            // without it, the constructor guard alone would still refuse the value, but the exception
+            // and message would come from a different layer than every other F3 refusal in this file.
+            byte[] blob = DisciplineSaveCodec.Encode(DisciplineState.FromEntries(new[] { Row(1, 0, 1, 0) }));
+            int o = 12;   // first entry's playerId, right after the header
+            CanonicalSerializer.WriteI32(blob, ref o, -1);
+
+            Assert.Throws<InvalidOperationException>(() => DisciplineSaveCodec.Decode(blob),
+                "F3 / §2.3 F2: a negative PlayerId must be refused explicitly at the file boundary.");
+        }
+
+        [Test]
         public void Decode_NegativeYellows_Throws()
         {
             byte[] blob = DisciplineSaveCodec.Encode(DisciplineState.FromEntries(new[] { Row(1, 0, 1, 0) }));
@@ -242,12 +261,28 @@ namespace TacticalDirector.Discipline.Tests
         // ── Determinism ────────────────────────────────────────────────────────────
 
         [Test]
-        public void Encode_TwoEqualStates_ProduceIdenticalBytes()
+        public void Encode_StatesBuiltThroughDifferentDisciplineRulesCallOrders_ProduceIdenticalBytes()
         {
-            DisciplineState a = DisciplineState.FromEntries(new[] { Row(1, 0, 2, 0), Row(9, 0, 0, 3) });
-            DisciplineState b = DisciplineState.FromEntries(new[] { Row(1, 0, 2, 0), Row(9, 0, 0, 3) });
+            // L4(b): the prior version of this test built both states through DisciplineState.FromEntries
+            // with the SAME array literal — a pure function fed identical input twice, which cannot fail
+            // regardless of whether canonical order is actually preserved anywhere. This version reaches
+            // the same final tally — (player 1, comp 0): Yellows 2, Ban 0; (player 9, comp 0): Yellows 0,
+            // Ban 3 — through two DIFFERENT orders of DisciplineRules calls, so canonical ordering by
+            // DisciplineState itself is what is actually under test.
+            var forward = new DisciplineRules(new DisciplineState());
+            forward.ApplyCard(1, 0, DisciplineConstants.CARD_KIND_YELLOW);
+            forward.ApplyCard(1, 0, DisciplineConstants.CARD_KIND_YELLOW);
+            forward.AddBan(9, 0, 3);
 
-            CollectionAssert.AreEqual(DisciplineSaveCodec.Encode(a), DisciplineSaveCodec.Encode(b));
+            var reverse = new DisciplineRules(new DisciplineState());
+            reverse.AddBan(9, 0, 3);
+            reverse.ApplyCard(1, 0, DisciplineConstants.CARD_KIND_YELLOW);
+            reverse.ApplyCard(1, 0, DisciplineConstants.CARD_KIND_YELLOW);
+
+            CollectionAssert.AreEqual(
+                DisciplineSaveCodec.Encode(forward.State),
+                DisciplineSaveCodec.Encode(reverse.State),
+                "the same final tally, reached through different call orders, must encode identically.");
         }
     }
 }
@@ -260,4 +295,12 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | blob proving the magic gate does its job (the sibling codecs are  |
 // |         |            |        | unreachable from this asmdef), every F3 fail-loud gate incl. an   |
 // |         |            |        | exhaustive truncation-length loop, and two-run determinism.       |
+// | 1.1     | 2026-08-13 | —      | AR fixes. M1: added Decode_NegativePlayerId_Throws. L4(b):        |
+// |         |            |        | Encode_TwoEqualStates_ProduceIdenticalBytes replaced — it fed the |
+// |         |            |        | same array literal to FromEntries twice, which cannot fail        |
+// |         |            |        | regardless of ordering correctness; now built through two         |
+// |         |            |        | different DisciplineRules call orders. L4(c): PopulatedState's    |
+// |         |            |        | comment corrected — its rows were already ascending, and          |
+// |         |            |        | FromEntries refuses non-ascending input rather than canonicalizing|
+// |         |            |        | it.                                                                |
 #endregion

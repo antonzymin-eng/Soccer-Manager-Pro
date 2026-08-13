@@ -1,6 +1,9 @@
 // File:     src/season-save/AvailabilityComposition.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 2, L7 — the type remarks now record that
+//           the extremis back-fill fields a suspended player AND that same fixture's serving
+//           decrement then discharges his ban regardless; extended in spec-error-log.md's ERR-044-003
+//           row rather than a new id — v1.1)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.4 (the composed availability seam — ERR-030-016 multiple
 //           consumers, ERR-030-029 the depleted-squad rule, §2.3 F9) / FR-SN-013 / ERR-030-009;
@@ -48,6 +51,19 @@ namespace TacticalDirector.SeasonSave
     /// #30's stated invariant true and never wedges a season; it is recorded under ERR-044-003 as the
     /// one place #44's football and #30's liveness disagree, with the deferral queue (#44 §7.2) as the
     /// designed answer if the owner would rather refuse the fixture than field a banned player.
+    /// </para>
+    /// <para>
+    /// <b>L7, RECORDED — an extremis appearance discharges the ban it was fielded through.</b> A
+    /// player <see cref="Reinstate"/> presses back in via the suspended tier is, by construction, still
+    /// carrying <c>BanMatchesRemaining &gt; 0</c> at kickoff — <see cref="Compose"/> only removes him
+    /// from the filtered result; it never touches <see cref="DisciplineState"/>. <c>SeasonLoop</c>'s
+    /// serving call (<c>DisciplineRules.OnClubFixturePlayed</c>, run once per played club fixture
+    /// regardless of who was selected) then decrements that same fixture's ban anyway — the exact
+    /// "decrement a ban the banned player had just played through" hazard ERR-044-002's fix exists to
+    /// prevent, reintroduced here by ERR-044-003's own compromise one tier over. Whether an extremis
+    /// appearance should count as a match SERVED (today's behaviour) or should be exempted so the ban
+    /// still costs a full fixture is an owner call, not decided here — see the extension to
+    /// <c>ERR-044-003</c> in <c>spec-error-log.md</c>.
     /// </para>
     /// </summary>
     internal static class AvailabilityComposition
@@ -238,4 +254,10 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | PlayerCareerStates.SelectAvailable so a second contributor can   |
 // |         |            |        | join before the back-fill rather than after it. Suspension is a  |
 // |         |            |        | stricter reinstatement tier than injury (ERR-044-003).           |
+// | 1.1     | 2026-08-13 | —      | #44 C1/C2 adversarial review round 2 (L7). Type remarks record   |
+// |         |            |        | that Reinstate's extremis tier fields a suspended player whose   |
+// |         |            |        | ban this same fixture's OnClubFixturePlayed then decrements      |
+// |         |            |        | anyway — the ERR-044-002 hazard reintroduced by ERR-044-003's    |
+// |         |            |        | compromise. Owner call recorded, not decided; extends the        |
+// |         |            |        | existing ERR-044-003 row in spec-error-log.md.                   |
 #endregion

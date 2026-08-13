@@ -1,8 +1,11 @@
 # Discipline & Suspensions #44 — Section 8: References & Cross-References
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.1 — initial)
-**Version:** 0.1
+**Last Updated:** August 13, 2026 (v0.2 — L6, adversarial review over the C1/C2 landing: §8.3's
+ERR-030-009 entry annotated LIVE since T2, so the "null seam until #44 T2 wires it" clause reads as
+the historical approval-time text it is rather than the current state)
+**Last Updated (prior):** July 24, 2026 (v0.1 — initial)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -33,7 +36,9 @@ card synthesis draws on **#30's** `0x22` stream (FR-DC-019), never a #44 stream.
   pre-declared **availability-filter null seam**: "the resolved squad MAY be filtered through the
   #44 availability view (a value-copy reduction) between `ISquadProvider.ResolveByClubId` and
   `ConfigureSquads`" — a null seam until #44 T2 wires it (the ERR-030-002/004/006/007
-  pre-declaration pattern, flow-side rather than tick-order-side). Doc-only.
+  pre-declaration pattern, flow-side rather than tick-order-side). Doc-only. **LIVE since T2 (C1/C2,
+  August 13, 2026)** — recorded here as the historical text of the back-prop AT APPROVAL; the seam
+  is no longer null (see §7.3).
 - **ERR-030-008 (soft-reserved by #43)** — noted to keep the numbering straight: #43 holds 008;
   #44 takes **009**.
 - **No #16/#37/#43/#27/#17 change at approval.**
@@ -49,4 +54,5 @@ card synthesis draws on **#30's** `0x22` stream (FR-DC-019), never a #44 stream.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial §8 (XC-044-001..007, the no-determinism-row positive property, back-prop references, master-plan anchor), promoted from design supplement v0.3. Status IN REVIEW. |
+| 0.2 | 2026-08-13 | — | **L6** (adversarial review over the C1/C2 landing): §8.3's ERR-030-009 entry annotated LIVE since T2 — the "null seam until #44 T2 wires it" clause is the approval-time back-prop text, frozen as a historical record, not a claim about the current state. |
 #endregion

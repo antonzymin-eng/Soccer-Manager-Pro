@@ -1,18 +1,22 @@
 # Discipline & Suspensions #44 — Section 4: Architecture
 
 **Created:** July 24, 2026
-**Last Updated:** August 13, 2026 (v0.3 — ERR-044-001 + ERR-044-002, C1/C2 landing back-prop: §4.4
+**Last Updated:** August 13, 2026, later same day (v0.4 — L6, adversarial review over the C1/C2
+landing: §4.1's "at the T-phase" and §4.2's "proposed, at T-phase" headers corrected — the assembly
+and its file layout have existed since T0/T1, not just been proposed)
+**Last Updated (prior):** August 13, 2026 (v0.3 — ERR-044-001 + ERR-044-002, C1/C2 landing back-prop: §4.4
 gains the magic-before-version MUST and cites the frame v5 → 6 bump; §4.5's root contract re-scoped
 to both resolution paths)
 **Last Updated (prior):** July 24, 2026 (v0.2 — cross-set AR pass 3; prior v0.1 initial)
-**Version:** 0.3
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
 
 ## 4.1 Assembly & reference direction
 
-New assembly **`TacticalDirector.Discipline`** (`src/discipline/`, at the T-phase). References
+**`TacticalDirector.Discipline`** (`src/discipline/`) — LANDED at T0/T1 (July 24 – August 13, 2026);
+the sentence below describes the reference direction as designed and as built. References
 **`#17 EventSystem`** (the `CardIssuedEvent`/`SubstitutionEvent` value types the tap yields) and
 **`#27 PlayerDatabase`** (`PlayerId`/`Squad`, read-only — `FilterAvailable` returns a value
 copy). It references **neither #30 nor #43 nor #38 nor the match engine nor #16's RNG service**
@@ -30,7 +34,7 @@ compositionRoot (season loop) ──► #44 Discipline ──► { #17 (event ty
 Acyclic; no consumer references #44. **No RNG stream/tag/ordinal** — no #16 row exists or is
 needed (the #37/#49 positive property).
 
-## 4.2 File layout (proposed, at T-phase)
+## 4.2 File layout (as landed — see `docs/tracking/file-manifest.md`'s `src/discipline/` section for the authoritative inventory)
 
 | File | Contents |
 |---|---|
@@ -90,4 +94,5 @@ specified the block version-first with no magic, which this section and Appendix
 | 0.1 | 2026-07-24 | — | Initial §4 (assembly/reference direction, file layout, the tap read, save composition, root/#30 contracts), promoted from design supplement v0.3. Status IN REVIEW. |
 | 0.2 | 2026-07-24 | — | Cross-set AR pass 3 (M follow-through): the root contract's filter clause scoped to **both clubs' resolved squads** of the managed fixture (FR-DC-010). |
 | 0.3 | 2026-08-13 | — | **C1/C2 landing back-prop.** **ERR-044-001:** §4.4 states the magic-before-version rule as a MUST (the ERR-029-005/ERR-041-009 class's fourth instance) and cites the `SEASON_SAVE_FORMAT_VERSION` 5 → 6 bump landed at ERR-030-035. **ERR-044-002:** §4.5's root contract re-scoped from "the managed fixture" to both clubs' resolved squads of every fixture on both resolution paths. |
+| 0.4 | 2026-08-13 | — | **L6** (adversarial review over the C1/C2 landing): §4.1's "at the T-phase" and §4.2's "proposed, at T-phase" headers corrected to say the assembly and its layout are landed, pointing at `file-manifest.md` as the authoritative inventory. |
 #endregion

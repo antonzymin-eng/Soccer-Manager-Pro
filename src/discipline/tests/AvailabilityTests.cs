@@ -5,10 +5,10 @@
 // Spec:     Discipline & Suspensions #44 §3.3 / FR-DC-008/009/010; ERR-044-003 (F5 vs #30 §2.3 F9 —
 //           viability is #30's, #44 contributes removals only); §5 T-DC-VIEW-001/002, T-DC-BAN-004/005;
 //           Code Standards #20
-// Purpose:  Unit tests for Availability — the pure IsAvailable predicate, the additive MarkSuspended
-//           mask contribution, FilterAvailable's same-instance pass-through and reduced-copy behaviour,
-//           and the deliberate non-viability-gate property (ERR-044-003) that distinguishes #44's
-//           filter from a fail-loud one.
+// Purpose:  Unit tests for Availability — the pure IsAvailable predicate, MarkSuspended's mask-owning
+//           (non-additive) contract, FilterAvailable's same-instance pass-through, reduced-copy and
+//           all-suspended-returns-null behaviour, and the deliberate non-viability-gate property
+//           (ERR-044-003) that distinguishes #44's filter from a fail-loud one.
 
 using System;
 
@@ -71,34 +71,41 @@ namespace TacticalDirector.Discipline.Tests
         // ── MarkSuspended ──────────────────────────────────────────────────────────
 
         [Test]
-        public void MarkSuspended_IsAdditive_NeverClearsAFlagAnotherContributorSet()
+        public void MarkSuspended_OwnsTheMask_OverwritesAPreSetFlagForAPlayerWhoIsNotSuspended()
         {
+            // M3: MarkSuspended is NOT additive — it writes suspension status unconditionally for
+            // every index, regardless of what the caller passed in. A pre-set `true` for a player who
+            // is NOT suspended (e.g. stale data, or a caller mistakenly reusing a shared mask) must be
+            // cleared, not preserved — the old additive-and-skip contract is exactly what let a
+            // suspended player reach the pitch if a caller ever shared a mask across contributors.
             Squad squad = MakeSquad(0, 3);
             var rules = new DisciplineRules(new DisciplineState());
             rules.AddBan(squad.GetPlayer(1).PlayerId, Competition, 1);   // only index 1 is actually banned
 
-            var removed = new[] { true, false, false };   // index 0 pre-marked by a DIFFERENT contributor (e.g. #41)
+            var removed = new[] { true, false, false };   // index 0 pre-set to true, but player 0 is NOT suspended
 
-            int newlySet = Availability.MarkSuspended(squad, rules.State, Competition, removed);
+            int suspendedCount = Availability.MarkSuspended(squad, rules.State, Competition, removed);
 
-            Assert.IsTrue(removed[0], "a flag set by another contributor must survive untouched");
+            Assert.IsFalse(removed[0], "M3: a pre-set flag for a player who is NOT suspended must be cleared — this method owns the whole mask");
             Assert.IsTrue(removed[1], "the actually-suspended player must be marked");
             Assert.IsFalse(removed[2]);
-            Assert.AreEqual(1, newlySet, "only index 1 was NEWLY set by this call");
+            Assert.AreEqual(1, suspendedCount, "the return value is the count of suspended players, not a delta");
         }
 
         [Test]
-        public void MarkSuspended_ReturnsZero_WhenEveryoneIsAlreadyMarked()
+        public void MarkSuspended_ReturnsTheFullSuspendedCount_EvenWhenTheMaskWasAlreadyAllTrue()
         {
             Squad squad = MakeSquad(0, 2);
             var rules = new DisciplineRules(new DisciplineState());
-            rules.AddBan(squad.GetPlayer(0).PlayerId, Competition, 1);
+            rules.AddBan(squad.GetPlayer(0).PlayerId, Competition, 1);   // index 0 genuinely suspended, index 1 not
 
-            var removed = new[] { true, true };   // both already marked by prior contributors
+            var removed = new[] { true, true };   // both pre-set true by a stale/shared mask
 
-            int newlySet = Availability.MarkSuspended(squad, rules.State, Competition, removed);
+            int suspendedCount = Availability.MarkSuspended(squad, rules.State, Competition, removed);
 
-            Assert.AreEqual(0, newlySet, "nothing NEW was set even though index 0 is genuinely suspended");
+            Assert.IsTrue(removed[0], "genuinely suspended");
+            Assert.IsFalse(removed[1], "M3: NOT suspended, so the pre-set true must be overwritten to false");
+            Assert.AreEqual(1, suspendedCount, "the count reflects who is ACTUALLY suspended, independent of the input mask");
         }
 
         [Test]
@@ -199,30 +206,28 @@ namespace TacticalDirector.Discipline.Tests
                 "no back-fill either — the method returns exactly what remains, small or not.");
         }
 
-        // ── T-DC-VIEW-001 class: the source Squad is left byte-identical ─────────────
+        // ── M2: every player suspended — no reduced copy is constructible ────────────
 
         [Test]
-        public void FilterAvailable_LeavesTheSourceSquadUntouched()
+        public void FilterAvailable_EveryPlayerSuspended_ReturnsNull()
         {
-            Squad squad = MakeSquad(0, 4);
+            // Squad's own constructor refuses a zero-player squad, so FilterAvailable cannot return a
+            // "reduced value copy" when nothing survives the reduction — it returns null instead of
+            // letting a cross-assembly ArgumentException from Squad's constructor escape (M2). This is
+            // FR-DC-009's own surface, not #44's production path: AvailabilityComposition consumes
+            // MarkSuspended's mask directly and never reaches this case via Squad's constructor.
+            Squad squad = MakeSquad(0, 3);
             var rules = new DisciplineRules(new DisciplineState());
-            int bannedId = squad.GetPlayer(1).PlayerId;
-            rules.AddBan(bannedId, Competition, 1);
-
-            var beforeIds = new int[squad.Count];
-            for (int i = 0; i < squad.Count; i++)
+            for (int i = 0; i < 3; i++)
             {
-                beforeIds[i] = squad.GetPlayer(i).PlayerId;
+                rules.AddBan(squad.GetPlayer(i).PlayerId, Competition, 1);
             }
 
-            Availability.FilterAvailable(squad, rules.State, Competition);
-
-            for (int i = 0; i < squad.Count; i++)
-            {
-                Assert.AreEqual(beforeIds[i], squad.GetPlayer(i).PlayerId,
-                    "the original squad — including the banned player — must still be fully readable");
-            }
-            Assert.AreEqual(4, squad.Count, "the source squad's own Count must not shrink");
+            Squad result = null;
+            Assert.DoesNotThrow(
+                () => result = Availability.FilterAvailable(squad, rules.State, Competition),
+                "M2: an all-suspended squad must not let Squad's constructor throw uncaught.");
+            Assert.IsNull(result, "M2: no reduced copy exists when every player is removed.");
         }
     }
 }
@@ -234,4 +239,11 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | same-instance pass-through / reduced-copy shape, the ERR-044-003 |
 // |         |            |        | deliberate non-viability-gate property, and the T-DC-VIEW-001    |
 // |         |            |        | source-untouched guarantee.                                      |
+// | 1.1     | 2026-08-13 | —      | AR fixes. M3: MarkSuspended tests rewritten for the mask-OWNING  |
+// |         |            |        | (non-additive) contract — a pre-set flag for a NON-suspended     |
+// |         |            |        | player must now be cleared, not preserved. M2: added the         |
+// |         |            |        | all-suspended-returns-null case. L4(a): deleted                  |
+// |         |            |        | FilterAvailable_LeavesTheSourceSquadUntouched — Squad is         |
+// |         |            |        | immutable and exposes no mutator, so no implementation could     |
+// |         |            |        | ever fail that assertion; it had no real failure mode.           |
 #endregion

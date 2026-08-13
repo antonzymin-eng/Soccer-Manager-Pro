@@ -1,16 +1,18 @@
 // File:     src/season-save/tests/SeasonLoopDisciplineTests.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13 (#44 C1/C2 AR, H2 — the mid-match restore-fidelity lock — v1.1)
+// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 2, M7 — the within-fixture off-by-one lock,
+//           ANewBanEarnedThisFixtureIsNotServedByThisSameFixture — v1.2)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §3.3/§5 (T-DC-NEU-001, T-DC-BAN-002/003/005, T-DC-VIEW-001,
 //           T-DC-SAV-002); Season & Competition Loop #30 §3.4 (the composed seam,
 //           ERR-030-009/-016/-029); ERR-044-002 (both resolution paths), ERR-044-003 (removals only);
-//           unified season save §4 / KD-6 (restore fidelity — the C1/C2 AR's H2);
-//           Code Standards #20
+//           ERR-030-037 (the M6/M7 within-fixture serve-before-commit lock); unified season save §4 /
+//           KD-6 (restore fidelity — the C1/C2 AR's H2); Code Standards #20
 // Purpose:  The #44 T2 WIRING locks. Every case here fails if a wiring point is reverted — the fold's
 //           seed and its per-tick pump, the filter at the seam on both paths and both clubs, the
-//           serving decrement, the off-by-one, the composition with #41, and the boundary sweep.
-//           #44's own rules are unit tested in discipline/tests; nothing here re-tests them.
+//           serving decrement, the off-by-one (both across fixtures and WITHIN one), the composition
+//           with #41, and the boundary sweep. #44's own rules are unit tested in discipline/tests;
+//           nothing here re-tests them.
 
 using NUnit.Framework;
 
@@ -331,6 +333,94 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.That(state.HasEntry(banned, DisciplineConstants.LEAGUE_COMPETITION_KEY), Is.False,
                 "A row that reaches (0, 0) is dropped IMMEDIATELY, mid-season — FR-DC-017's canonical "
                 + "minimality, not just a boundary sweep.");
+        }
+
+        [Test]
+        public void ANewBanEarnedThisFixtureIsNotServedByThisSameFixture()
+        {
+            // M7 (ERR-030-037): the off-by-one contract's WITHIN-fixture half, which
+            // AOneMatchBan_CostsExactlyTheNextFixtureAndNoMore above cannot see — that test pre-seeds
+            // the ban before the fixture is played, so it is blind to the ORDER of
+            // OnClubFixturePlayed vs fold.Commit inside PlayNextRound. Swapping the two calls makes a
+            // straight red a ONE-match ban instead of the two FR-DC-006 specifies (or, for a fresh
+            // accumulation crossing with no residual yellows, decrements the just-added ban straight to
+            // (0, 0) and FR-DC-017 drops the row — the player vanishes from the tally as if never
+            // carded at all), and every other test in this suite still passes: QuickSimAll (most of
+            // them) never builds a fold at all, and the fixed-tally fixtures above are seeded BEFORE
+            // kickoff, so they are blind to commit-vs-serve order within a fixture that EARNS a card.
+            //
+            // Ground truth for what round 0's cards alone should produce — with no serving anywhere
+            // near them — comes from an independent replay of the SAME deterministic round, fixture by
+            // fixture: the match is a pure function of (seed, squads), both tallies here start EMPTY so
+            // nobody is suspension-filtered, and the replayed engine runs are therefore byte-identical
+            // to production's. Committing each replayed fold into one fresh, unrelated
+            // DisciplineRules — never touched by a serving call — gives the exact tally PlayNextRound's
+            // own commits must reproduce if, and only if, serving never touches a ban a fixture just
+            // earned for itself. FullEngine (not ManagedThroughEngine) so BOTH of this 4-club round's
+            // fixtures book cards; at WorldSeed, fixture 0 alone happens to book nothing bannable, and
+            // a positive control that only checked SOME card existed would be vacuous on that fixture.
+            League league = FourClubLeague();
+
+            SeasonLoop groundTruthLoop = LoopOver(league, RoundResolutionMode.FullEngine, out _);
+            var groundTruth = new DisciplineState();
+            var groundTruthRules = new DisciplineRules(groundTruth);
+            for (int f = 0; f < 2; f++)
+            {
+                Fixture fixture = groundTruthLoop.State.FixtureAt(f);
+                TacticalDirector.MatchEngine.MatchEngine groundTruthEngine =
+                    groundTruthLoop.BootFixtureEngine(in fixture, league);
+                var groundTruthFold = new CardLedgerFold(
+                    groundTruthEngine.PlayerIdsByAgentId(), DisciplineConstants.LEAGUE_COMPETITION_KEY);
+                var groundTruthTap = new MatchEngineDisciplineTap(groundTruthEngine);
+                while (!groundTruthEngine.MatchEnded)
+                {
+                    groundTruthEngine.RunTick();
+                    groundTruthFold.ObserveTick(groundTruthTap);
+                }
+                groundTruthFold.Commit(groundTruthRules);
+            }
+
+            int groundTruthBanEntries = 0;
+            for (int i = 0; i < groundTruth.Count; i++)
+            {
+                if (groundTruth.EntryAt(i).BanMatchesRemaining > 0)
+                {
+                    groundTruthBanEntries++;
+                }
+            }
+
+            Assert.That(groundTruthBanEntries, Is.GreaterThan(0),
+                "Positive control: round 0 must deterministically book at least one BAN-WORTHY card "
+                + "(not just any card — a bare uncrossed yellow has BanMatchesRemaining == 0 and is "
+                + "untouched by serving either way, so it would pass this lock vacuously). If this ever "
+                + "fails, the fixture/seed pairing needs revisiting, not the ordering this test exists "
+                + "to lock.");
+
+            var tally = new DisciplineState();
+            SeasonLoop loop = LoopOver(league, RoundResolutionMode.FullEngine, out _, tally);
+            loop.AdvanceToNextFixtureDay();
+            loop.AdvanceAndPlayNextRound(league);
+
+            for (int i = 0; i < groundTruth.Count; i++)
+            {
+                DisciplineEntry expected = groundTruth.EntryAt(i);
+
+                Assert.That(
+                    tally.HasEntry(expected.PlayerId, expected.CompetitionId), Is.True,
+                    $"Player {expected.PlayerId}'s card from this round is MISSING from the production "
+                    + "tally entirely. M6/M7: OnClubFixturePlayed ran on this player's newly committed "
+                    + "(residual-yellows, ban) entry and decremented it to (0, 0), which FR-DC-017 then "
+                    + "drops immediately — a ban his own fixture's card had just added, served (and "
+                    + "erased) before it ever counted for a fixture.");
+
+                DisciplineEntry actual = tally.EntryFor(expected.PlayerId, expected.CompetitionId);
+                Assert.That(actual.BanMatchesRemaining, Is.EqualTo(expected.BanMatchesRemaining),
+                    $"Player {expected.PlayerId} earned a {expected.BanMatchesRemaining}-match ban this "
+                    + $"round (ground truth, commit alone) but the production tally shows "
+                    + $"{actual.BanMatchesRemaining}. OnClubFixturePlayed must run BEFORE that player's "
+                    + "own fixture's fold.Commit, never after — a card shown in fixture N must not have "
+                    + "ITS OWN ban served by fixture N.");
+            }
         }
 
         // ── composition with #41, and the ERR-044-003 tiering ─────────────────────────────
@@ -696,4 +786,16 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | continuation (the #29/#41 T2 AR's technique, on the contributor   |
 // |         |            |        | that reopened its defect). + the temp-dir SetUp/TearDown this one |
 // |         |            |        | disk-touching case needs.                                          |
+// | 1.2     | 2026-08-13 | —      | #44 C1/C2 adversarial review round 2, M7 (ERR-030-037): new       |
+// |         |            |        | ANewBanEarnedThisFixtureIsNotServedByThisSameFixture — the         |
+// |         |            |        | within-fixture half of the off-by-one contract           |
+// |         |            |        | AOneMatchBan_CostsExactlyTheNextFixtureAndNoMore cannot see,       |
+// |         |            |        | since that test pre-seeds its ban before kickoff. Ground truth     |
+// |         |            |        | for what a fixture's OWN cards should produce comes from an        |
+// |         |            |        | independent deterministic replay (same seed, same unfiltered       |
+// |         |            |        | squads) committed to a fresh, unrelated DisciplineRules with no    |
+// |         |            |        | serving call anywhere near it; the production tally must match     |
+// |         |            |        | it exactly. Verified by executing: reverting M6 (swapping          |
+// |         |            |        | OnClubFixturePlayed and fold.Commit back to their pre-fix order)   |
+// |         |            |        | turns this red, and restoring the fix turns it green again.        |
 #endregion
