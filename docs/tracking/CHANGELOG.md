@@ -43,7 +43,7 @@ break it, and do not edit historical entries.
 > club accrues roughly 20× the yellows and reds of every quick-simmed rival — #44 makes suspensions
 > live for one club in twenty, and #44 T3 (the #30-owned quick-sim card synthesis) is the named
 > answer. Full account: `docs/tracking/spec-error-log.md` v2.17, `docs/tracking/open-issues.md`.
-> **GATE: <pending — filled at the verdict>.**
+> **GATE: RUN TO COMPLETION at `0fb3ff0`, August 13, 2026 — 33 suites, quarantine empty. `Discipline.Tests` 101/101; `SeasonSave.Tests` 431 passed / 0 failed / 3 known skips; `MatchEngine.Tests` 461 passed / **1 failed** / 11 skipped (59 m). The gate's exit status is FAILED (the quarantine is empty, so any failure fails it), and the single failure across the ENTIRE tree is `sim_match_engine_close_chance` — the inherited owner-held red that `close-chance-creation-design.md` §10.9 item 6 rules "hold red, do not rebaseline a third time". Those counts are IDENTICAL to the pre-#44 baseline this branch was cut from (W2, `MatchEngine.Tests` 461/1/11, same single failure), so **#44 adds no new failure**: the landing is gate-clean on its own terms and the tree is red for a reason that predates it and is an owner decision, not a defect.**
 
 > **Last Updated (prior):** August 12, 2026, later still (**Wiring backlog W2 LANDED — a player in control
 > can now be dispossessed for the first time in this engine, and `ERR-014-006` closes the tackle
