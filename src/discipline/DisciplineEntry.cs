@@ -1,6 +1,9 @@
 // File:     src/discipline/DisciplineEntry.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13
+// Modified: 2026-08-15 (reviewed findings pass, L4 — v1.2: the CompetitionId doc's
+//           <see cref="DisciplineConstants.LEAGUE_COMPETITION_KEY"/> reference renamed for that
+//           constant's ALL_CAPS -> LeagueCompetitionKey rename (DisciplineConstants.cs v1.5). No
+//           behaviour change.)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §2.2 (data structures) / §2.3 F2 / FR-DC-012 / FR-DC-017 /
 //           FR-DC-020; Code Standards #20
@@ -32,7 +35,7 @@ namespace TacticalDirector.Discipline
         public readonly int PlayerId;
 
         /// <summary>
-        /// The competition partition (FR-DC-012). <see cref="DisciplineConstants.LEAGUE_COMPETITION_KEY"/>
+        /// The competition partition (FR-DC-012). <see cref="DisciplineConstants.LeagueCompetitionKey"/>
         /// at minimal; a plain <c>int</c> so #44 needs no #43 reference.
         /// </summary>
         public readonly int CompetitionId;
@@ -132,4 +135,7 @@ namespace TacticalDirector.Discipline
 // |         |            |        | Yellows XML doc's false "always below the threshold after a      |
 // |         |            |        | crossing" claim (L3) — AddYellow subtracts the threshold exactly |
 // |         |            |        | once, so a row seeded above twice the threshold stays above it.  |
+// | 1.2     | 2026-08-15 | —      | Reviewed findings pass, L4. The CompetitionId doc's <see        |
+// |         |            |        | cref="DisciplineConstants.LEAGUE_COMPETITION_KEY"/> reference     |
+// |         |            |        | renamed to LeagueCompetitionKey. No behaviour change.             |
 #endregion

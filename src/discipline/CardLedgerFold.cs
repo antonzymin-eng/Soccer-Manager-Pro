@@ -1,5 +1,11 @@
 // File:     src/discipline/CardLedgerFold.cs
 // Created:  2026-08-13
+// Modified: 2026-08-15, later (reviewed findings pass, L3/L5 — v1.6: L3 — the L22 comment inside
+//           ObserveTick was spliced into the middle of a sentence ("…read at the same index only in the
+//           sense" broken across the whole L22 block from "that both are dispatched…"); the sentence now
+//           closes before the L22 paragraph instead of resuming after it. L5 — NO_PLAYER's XML doc had
+//           no tag (FR-CS-060/061); tagged [FIXED]. A #44 Appendix A row + spec declaration are owed and
+//           are reported, not filed here.)
 // Modified: 2026-08-15 (#44 AR round 5, L19/L22 — the type remark's claim that SeasonSaveManager
 //           refuses a live ActiveMatch was FALSE and is replaced by the real reason the hazard is
 //           unreachable; ObserveTick now states its dependency on MatchEngine.RunResolvePhase
@@ -62,7 +68,10 @@ namespace TacticalDirector.Discipline
     /// </summary>
     public sealed class CardLedgerFold
     {
-        /// <summary>Occupancy sentinel: this agent id maps to no player (an unused slot in the seed).</summary>
+        /// <summary>[FIXED] Occupancy sentinel: this agent id maps to no player (an unused slot in the
+        /// seed). Reviewed findings pass, L5, 2026-08-15: this constant carried no tag, violating
+        /// FR-CS-060/061 — a spec declaration and Appendix A row are owed against #44 and are reported,
+        /// not filed here (spec-error-log.md is out of this pass's ownership).</summary>
         public const int NO_PLAYER = -1;
 
         // Indexed by agent id: on-pitch slots first, then the engine's synthetic bench ids. Mutable —
@@ -166,6 +175,9 @@ namespace TacticalDirector.Discipline
                 byte ordinal = tap.OrdinalAt(i);
 
                 // Substitutions are handled BEFORE cards are read at the same index only in the sense
+                // that both are dispatched in the tap's own canonical order — a substitution and a card
+                // in one tick apply in publish order, which is what FR-DC-021 pins.
+                //
                 // L22 — DEPENDENCY ON THE ENGINE'S PHASE ORDER, stated because nothing else states it.
                 // MatchEngine.SubstitutePlayer swaps the slot IMMEDIATELY, between ticks, and QUEUES the
                 // SubstitutionEvent for flush at the top of the next RunResolvePhase — the same phase that
@@ -173,8 +185,6 @@ namespace TacticalDirector.Discipline
                 // RunResolvePhase. If it ever moves after, every card in the substitution tick is
                 // attributed to the OUTGOING player, silently and permanently; Stage 0 fields a fixed
                 // eleven, so SubstitutePlayer has no production caller and nothing would catch it.
-                // that both are dispatched in the tap's own canonical order — a substitution and a card
-                // in one tick apply in publish order, which is what FR-DC-021 pins.
                 if (ordinal == substitutionOrdinal)
                 {
                     SubstitutionEvent sub = tap.RecordAt<SubstitutionEvent>(i);
@@ -443,4 +453,10 @@ namespace TacticalDirector.Discipline
 // |         |            |        | silently — and Stage 0 fields a fixed eleven, so nothing would     |
 // |         |            |        | catch it. Dependency now stated at the site plus a fold test       |
 // |         |            |        | (CardLedgerFoldTests) authoring Sub-then-Card in one tick.         |
+// | 1.6     | 2026-08-15, later | — | Reviewed findings pass, L3/L5. L3: the L22 comment inside       |
+// |         |            |        | ObserveTick was spliced into the middle of a sentence — closed     |
+// |         |            |        | before the L22 paragraph instead of resuming after it, comment     |
+// |         |            |        | text unchanged otherwise. L5: NO_PLAYER's XML doc tagged [FIXED]   |
+// |         |            |        | (FR-CS-060/061); a #44 Appendix A row + spec declaration owed,     |
+// |         |            |        | not filed here. No behaviour change either way.                    |
 #endregion

@@ -1,5 +1,9 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
+// Modified: 2026-08-15, later (reviewed findings pass, L4 — v1.28: DisciplineConstants.
+//           LEAGUE_COMPETITION_KEY reference renamed for that constant's ALL_CAPS -> LeagueCompetitionKey
+//           rename (DisciplineConstants.cs v1.5, src/CLAUDE.md reserves ALL_CAPS for [FIXED]). No
+//           behaviour change.)
 // Modified: 2026-08-15 (reviewed-findings pass — v1.27: M1/ERR-030-040 — the M6 comment's "only guard
 //           is clubId < 0" claim is stale since ERR-044-003 stage 1 added a second guard
 //           (fieldedPlayerIds == null); corrected to name both guards and state why the null case is
@@ -1475,7 +1479,7 @@ namespace TacticalDirector.SeasonSave
             // Null when discipline is not wired, and then not a single tick does any extra work.
             CardLedgerFold fold = _disciplineRules == null
                 ? null
-                : new CardLedgerFold(engine.PlayerIdsByAgentId(), DisciplineConstants.LEAGUE_COMPETITION_KEY);
+                : new CardLedgerFold(engine.PlayerIdsByAgentId(), DisciplineConstants.LeagueCompetitionKey);
             MatchEngineDisciplineTap tap = fold == null ? null : new MatchEngineDisciplineTap(engine);
 
             _activeMatch = engine;
@@ -1616,7 +1620,7 @@ namespace TacticalDirector.SeasonSave
         /// </summary>
         private Squad SelectAvailable(Squad squad) =>
             AvailabilityComposition.Compose(
-                squad, _career, _discipline, DisciplineConstants.LEAGUE_COMPETITION_KEY);
+                squad, _career, _discipline, DisciplineConstants.LeagueCompetitionKey);
 
         /// <summary>
         /// The eleven a filtered squad fields, or <c>null</c> when nothing needs it.
@@ -1991,4 +1995,8 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | stage 1, #44's serving exemption. SquadRating.cs v1.3 names     |
 // |         |            |        | only the first; that file and discipline/ are out of this       |
 // |         |            |        | assembly's scope, so their own notes are still owed.            |
+// | 1.28    | 2026-08-15, later | — | Reviewed findings pass, L4. DisciplineConstants.               |
+// |         |            |        | LEAGUE_COMPETITION_KEY -> LeagueCompetitionKey rename           |
+// |         |            |        | (ALL_CAPS is reserved for [FIXED]; this constant is [CROSS]).   |
+// |         |            |        | Two call sites updated. No behaviour change.                    |
 #endregion

@@ -1,8 +1,15 @@
 // File:     src/match-engine/MatchEngineConstants.cs
 // Created:  2026-06-16
+// Modified: 2026-08-15, later still (reviewed findings pass, L1 — corrected the L3 entry directly below:
+//           MatchEngine.cs's card-issuing call site (MatchEngine.cs:5286) WAS repointed onto
+//           FoulOrdinalNone, by the SAME DAY's later "#44 AR round 5, L3" pass on MatchEngine.cs — so
+//           "not repointed / out of this pass's ownership / open call site" below is SUPERSEDED, not
+//           true of the tree today. Left in place per this repo's annotate-in-place convention; see the
+//           FoulOrdinalNone XML doc for the corrected statement)
 // Modified: 2026-08-15, later (reviewed-findings pass, L3 — new #region Cross entry FoulOrdinalNone,
 //           a [CROSS] mirror of the new EventSystemConstants.FOUL_ORDINAL_NONE; MatchEngine.cs's own
-//           0xFFFF literal call site not repointed, out of this pass's ownership)
+//           0xFFFF literal call site not repointed, out of this pass's ownership) — SUPERSEDED, see the
+//           entry above.
 // Modified: 2026-08-15 (#44 C1/C2 adversarial review round 4, M24/ERR-017-004 — CARD_KIND_YELLOW/RED
 //           deleted from #region Fixed; replaced by CardKindYellow/CardKindRed [CROSS] mirrors of the
 //           new EventSystemConstants.CARD_KIND_YELLOW/RED (now the [FIXED] ALL_CAPS source, per
@@ -500,10 +507,11 @@ namespace TacticalDirector.MatchEngine
         /// <para>
         /// Reviewed-findings pass, L3 (2026-08-15): added as the `[CROSS]` mirror of the new #17
         /// catalogue row, matching the <see cref="CardKindYellow"/> precedent one commit earlier
-        /// (M24/ERR-017-004) exactly. <b>Not yet consumed here</b> — <c>MatchEngine.cs</c>'s card-issuing
-        /// call site still writes the bare literal <c>0xFFFF</c> rather than this constant; repointing it
-        /// is outside this pass's ownership (constants catalogues only) and is reported as an open call
-        /// site.
+        /// (M24/ERR-017-004) exactly. <b>Consumed</b> — the same day's later "#44 AR round 5, L3" pass
+        /// repointed <c>MatchEngine.cs</c>'s card-issuing call site (<c>MatchEngine.cs:5286</c>) from the
+        /// bare literal <c>0xFFFF</c> onto this constant. (Reviewed findings pass, 2026-08-15, corrected
+        /// this doc — it previously reported the call site as open, superseded the same day it was
+        /// written.)
         /// </para>
         /// </summary>
         public const ushort FoulOrdinalNone = EventSystemConstants.FOUL_ORDINAL_NONE;
@@ -1047,5 +1055,11 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | into MatchEngine.cs — the card-issuing call site still writes the |
 // |         |            |        | bare 0xFFFF literal; repointing it is outside this pass's          |
 // |         |            |        | ownership (constants catalogues only). No value change, no         |
-// |         |            |        | behaviour change.                                                  |
+// |         |            |        | behaviour change. **SUPERSEDED same day** — see v1.35 below: the   |
+// |         |            |        | later "#44 AR round 5, L3" pass (MatchEngine.cs v1.71) repointed   |
+// |         |            |        | the call site onto this constant after this row was written.       |
+// | 1.35    | 2026-08-15, later still | — | Reviewed findings pass (L1). Corrected v1.34 above and the  |
+// |         |            |        | FoulOrdinalNone XML doc, both of which still claimed the call     |
+// |         |            |        | site was open — MatchEngine.cs:5286 reads this constant. No code  |
+// |         |            |        | change in this file.                                              |
 #endregion

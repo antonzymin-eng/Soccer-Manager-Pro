@@ -1,5 +1,12 @@
 // File:     src/discipline/tests/AvailabilityTests.cs
 // Created:  2026-08-13
+// Modified: 2026-08-15, later (reviewed findings pass, L4/L6 — v1.4: L4 — the Competition constant's
+//           DisciplineConstants.LEAGUE_COMPETITION_KEY reference renamed for that constant's ALL_CAPS ->
+//           LeagueCompetitionKey rename (DisciplineConstants.cs v1.5), no behaviour change. L6 — the
+//           Spec line's §5 test-id list still named T-DC-BAN-004, WITHDRAWN at ERR-044-003 (August 13),
+//           of which #44 section-5.md §5.3 itself says "No test exists or should exist"; dropped from
+//           this line only — the version-history rows below that name it are correct AS HISTORY and are
+//           unchanged.)
 // Modified: 2026-08-15 (reviewed-findings pass — v1.3: the Spec line's §5 test-id list still named
 //           T-DC-VIEW-001, withdrawn today (ERR-044-006) — this is the file whose own test for it
 //           (FilterAvailable_LeavesTheSourceSquadUntouched, L4(a)) was deleted at v1.1. Removed the id
@@ -8,7 +15,7 @@
 //           reference updated for the CARD_KIND_YELLOW rename — v1.2)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §3.3 / FR-DC-008/009/010; ERR-044-003 (F5 vs #30 §2.3 F9 —
-//           viability is #30's, #44 contributes removals only); §5 T-DC-VIEW-002, T-DC-BAN-004/005;
+//           viability is #30's, #44 contributes removals only); §5 T-DC-VIEW-002, T-DC-BAN-005;
 //           Code Standards #20
 // Purpose:  Unit tests for Availability — the pure IsAvailable predicate, MarkSuspended's mask-owning
 //           (non-additive) contract, FilterAvailable's same-instance pass-through, reduced-copy and
@@ -27,7 +34,7 @@ namespace TacticalDirector.Discipline.Tests
     [TestFixture]
     internal sealed class AvailabilityTests
     {
-        private const int Competition = DisciplineConstants.LEAGUE_COMPETITION_KEY;
+        private const int Competition = DisciplineConstants.LeagueCompetitionKey;
 
         private static Squad MakeSquad(int clubId, int count)
         {
@@ -259,4 +266,11 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | (FilterAvailable_LeavesTheSourceSquadUntouched) was deleted at    |
 // |         |            |        | v1.1 (L4(a)). Removed the id from the Spec line; the v1.0 row     |
 // |         |            |        | naming the deleted test is correct AS HISTORY and is unchanged.  |
+// | 1.4     | 2026-08-15, later | — | Reviewed findings pass, L4/L6. L4: Competition's               |
+// |         |            |        | DisciplineConstants reference renamed for LEAGUE_COMPETITION_KEY |
+// |         |            |        | -> LeagueCompetitionKey. L6: dropped T-DC-BAN-004 from the Spec  |
+// |         |            |        | line — WITHDRAWN at ERR-044-003, and #44 section-5.md §5.3 says  |
+// |         |            |        | "No test exists or should exist" for it. Version-history rows    |
+// |         |            |        | naming it (none in this file) would stay as history; there are   |
+// |         |            |        | none, so nothing else changes.                                   |
 #endregion

@@ -1,5 +1,8 @@
 // File:     src/season-save/tests/SeasonSaveManagerTests.cs
 // Created:  2026-07-22
+// Modified: 2026-08-15, later (reviewed findings pass, L4 — DisciplineConstants.LEAGUE_COMPETITION_KEY
+//           references renamed for that constant's ALL_CAPS -> LeagueCompetitionKey rename
+//           (DisciplineConstants.cs v1.5). No behaviour change — v1.23)
 // Modified: 2026-08-15 (M4, reviewed-findings pass — 50 public long-form Save call sites that drive no
 //           #44 subsystem flipped from disciplineWired: true to disciplineWired: false; the 5 sites
 //           that hand over a real TallyFor(...) tally are unchanged — v1.22)
@@ -1303,7 +1306,7 @@ namespace TacticalDirector.SeasonSave
             DisciplineState.FromEntries(new[]
             {
                 new DisciplineEntry(
-                    playerId, DisciplineConstants.LEAGUE_COMPETITION_KEY, yellows: 2,
+                    playerId, DisciplineConstants.LeagueCompetitionKey, yellows: 2,
                     banMatchesRemaining: 3),
             });
 
@@ -1331,7 +1334,7 @@ namespace TacticalDirector.SeasonSave
                 + "the fold and the serving decrement, so a copy would strand every update.");
             Assert.AreEqual(1, restored.Discipline.Count);
             Assert.AreEqual(3,
-                restored.Discipline.EntryFor(100, DisciplineConstants.LEAGUE_COMPETITION_KEY)
+                restored.Discipline.EntryFor(100, DisciplineConstants.LeagueCompetitionKey)
                     .BanMatchesRemaining,
                 "the outstanding ban must survive the restore.");
         }
@@ -1380,7 +1383,7 @@ namespace TacticalDirector.SeasonSave
             Assert.AreEqual(1, reloaded.Discipline.Count,
                 "the refused write must leave the original tally intact.");
             Assert.AreEqual(3,
-                reloaded.Discipline.EntryFor(100, DisciplineConstants.LEAGUE_COMPETITION_KEY)
+                reloaded.Discipline.EntryFor(100, DisciplineConstants.LeagueCompetitionKey)
                     .BanMatchesRemaining);
         }
 
@@ -1450,11 +1453,11 @@ namespace TacticalDirector.SeasonSave
             Assert.AreEqual(1, reloaded.Discipline.Count,
                 "the resume-and-save cycle silently forgave the whole season's discipline.");
             Assert.AreEqual(3,
-                reloaded.Discipline.EntryFor(100, DisciplineConstants.LEAGUE_COMPETITION_KEY)
+                reloaded.Discipline.EntryFor(100, DisciplineConstants.LeagueCompetitionKey)
                     .BanMatchesRemaining,
                 "the outstanding ban must survive a resume-and-save cycle unchanged.");
             Assert.AreEqual(2,
-                reloaded.Discipline.EntryFor(100, DisciplineConstants.LEAGUE_COMPETITION_KEY).Yellows,
+                reloaded.Discipline.EntryFor(100, DisciplineConstants.LeagueCompetitionKey).Yellows,
                 "the accumulated yellows must survive it too — FR-DC-014 keeps no ledger to rebuild "
                 + "them from.");
         }
@@ -1531,7 +1534,7 @@ namespace TacticalDirector.SeasonSave
                 "the refused write must leave the destination's tally intact.");
             Assert.AreEqual(3,
                 SeasonSaveManager.Load(path).Discipline
-                    .EntryFor(100, DisciplineConstants.LEAGUE_COMPETITION_KEY).BanMatchesRemaining);
+                    .EntryFor(100, DisciplineConstants.LeagueCompetitionKey).BanMatchesRemaining);
         }
 
         // ── ERR-030-038: an empty tally is FR-DC-017's clean state, not evidence of a loss ──
@@ -1566,7 +1569,7 @@ namespace TacticalDirector.SeasonSave
             DisciplineState tally = DisciplineState.FromEntries(new[]
             {
                 new DisciplineEntry(
-                    100, DisciplineConstants.LEAGUE_COMPETITION_KEY, yellows: 0,
+                    100, DisciplineConstants.LeagueCompetitionKey, yellows: 0,
                     banMatchesRemaining: 1),
             });
             SeasonLoop loop = LoopDriving(world, tally);
@@ -1612,7 +1615,7 @@ namespace TacticalDirector.SeasonSave
             DisciplineState tally = DisciplineState.FromEntries(new[]
             {
                 new DisciplineEntry(
-                    100, DisciplineConstants.LEAGUE_COMPETITION_KEY, yellows: 2,
+                    100, DisciplineConstants.LeagueCompetitionKey, yellows: 2,
                     banMatchesRemaining: 0),
             });
             SeasonLoop loop = LoopDriving(world, tally);
@@ -2406,4 +2409,7 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | (the ERR-030-036/-038/-039 discipline-specific tests) are        |
 // |         |            |        | untouched — those legitimately drive #44. Verified: this file's  |
 // |         |            |        | 119 tests pass unchanged after the flip.                         |
+// | 1.23    | 2026-08-15, later | — | Reviewed findings pass, L4. DisciplineConstants.               |
+// |         |            |        | LEAGUE_COMPETITION_KEY -> LeagueCompetitionKey rename. Eight    |
+// |         |            |        | references updated. No behaviour change.                        |
 #endregion

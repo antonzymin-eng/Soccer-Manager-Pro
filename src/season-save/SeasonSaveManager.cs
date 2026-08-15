@@ -1,5 +1,8 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
+// Modified: 2026-08-15, later (reviewed findings pass, L4 — DisciplineConstants.LEAGUE_COMPETITION_KEY
+//           reference renamed for that constant's ALL_CAPS -> LeagueCompetitionKey rename
+//           (DisciplineConstants.cs v1.5). No behaviour change — v1.27)
 // Modified: 2026-08-15 (L3, reviewed-findings pass — formatting only: trailing whitespace removed and
 //           a method-closing brace moved from column 0 to column 8, per FR-CS-011/012 — v1.26)
 //           Prior: 2026-08-13 (#44 C1/C2 adversarial review round 4 — H4/ERR-030-039: `disciplineWired` is
@@ -747,7 +750,7 @@ namespace TacticalDirector.SeasonSave
                 // it applies either way, and an empty tally makes Compose return the same instance.
                 PlayerCareerStates careerOrNull = _career.CarriesClub(clubId) ? _career : null;
                 return AvailabilityComposition.Compose(
-                    squad, careerOrNull, _discipline, DisciplineConstants.LEAGUE_COMPETITION_KEY);
+                    squad, careerOrNull, _discipline, DisciplineConstants.LeagueCompetitionKey);
             }
         }
 
@@ -1234,4 +1237,7 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | loop, and that method's closing brace moved from column 0 to       |
 // |         |            |        | column 8 to match its own opening indent (FR-CS-011/012). No       |
 // |         |            |        | behaviour change.                                                  |
+// | 1.27    | 2026-08-15, later | — | Reviewed findings pass, L4. DisciplineConstants.                |
+// |         |            |        | LEAGUE_COMPETITION_KEY -> LeagueCompetitionKey rename. One         |
+// |         |            |        | reference updated. No behaviour change.                            |
 #endregion

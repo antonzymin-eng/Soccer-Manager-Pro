@@ -1,5 +1,8 @@
 // File:     src/discipline/DisciplineRules.cs
 // Created:  2026-08-13
+// Modified: 2026-08-15, later (reviewed findings pass, L4 — v1.6: a prose reference to
+//           LEAGUE_COMPETITION_KEY renamed for that constant's ALL_CAPS -> LeagueCompetitionKey rename
+//           (DisciplineConstants.cs v1.5). Doc-only, no behaviour change.)
 // Modified: 2026-08-15 (ERR-044-003 stage 1 — OnClubFixturePlayed now takes the club's fielded eleven
 //           and exempts anyone in it, so an extremis appearance no longer serves the ban it was fielded
 //           through; owner decision, the first of three staged tiers — v1.5)
@@ -214,7 +217,7 @@ namespace TacticalDirector.Discipline
         /// <para>
         /// <b>Competition granularity.</b> The exemption matches on player id alone, at the same
         /// granularity as the club walk below — which already serves EVERY competition's ban on any
-        /// played fixture. Both are exact while <c>LEAGUE_COMPETITION_KEY</c> is the only competition
+        /// played fixture. Both are exact while <c>LeagueCompetitionKey</c> is the only competition
         /// that exists; a real multi-competition calendar (#43) must revisit them together, since a
         /// league fixture should serve a league ban and leave a cup ban alone.
         /// </para>
@@ -538,4 +541,7 @@ namespace TacticalDirector.Discipline
 // |         |            |        | put a banned id in the eleven. Required, not optional: an         |
 // |         |            |        | omitting call site would silently restore the old behaviour,      |
 // |         |            |        | which is this landing's own H1/H4 chain.                          |
+// | 1.6     | 2026-08-15, later | — | Reviewed findings pass, L4. A prose LEAGUE_COMPETITION_KEY      |
+// |         |            |        | reference renamed to LeagueCompetitionKey. Doc-only, no            |
+// |         |            |        | behaviour change.                                                  |
 #endregion

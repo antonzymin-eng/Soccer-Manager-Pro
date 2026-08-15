@@ -1,6 +1,14 @@
 // File:     src/season-save/tests/SeasonLoopDisciplineTests.cs
 // Created:  2026-08-13
-// Modified: 2026-08-15 (AR round 5 fix, ERR-044-006 — v1.8: the Spec: line below drops T-DC-VIEW-001,
+// Modified: 2026-08-15 (reviewed findings, M1/M2/M3 — v1.9: M1 parameterises the extremis-exemption
+//           wiring lock over BOTH clubs of the fixture, the home-only version having been proven
+//           unable to catch an away-side argument-swap mutation (ERR-008-002's class, recurring in
+//           this file's own newest lock); M2 adds the training-cursor assertion that discriminates
+//           SeasonLoop.PlayNextRound's "refused while nothing has been written at all" claim from
+//           RunCareerDaySteps running first; M3 adds a new tier-order lock,
+//           TheBackFillNeverReinstatesASuspendedPlayerWhileAnyInjuredPlayerRemains, forcing TWO
+//           reinstate calls so a defect that only shows up past the first is caught too (ERR-030-042).
+//           Prior: 2026-08-15 (AR round 5 fix, ERR-044-006 — v1.8: the Spec: line below drops T-DC-VIEW-001,
 //           WITHDRAWN at #44 section-5.md v0.5. This file listed it while implementing no test for it,
 //           and neither did discipline/tests/AvailabilityTests.cs, whose only such test was deleted as
 //           tautological at AR round 1 — two files claiming one id, neither implementing it. Header
@@ -15,16 +23,19 @@
 //           still serves — v1.6)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §3.3/§5 (T-DC-NEU-001/002, T-DC-FOLD-002, T-DC-BAN-002/003/
-//           005/006, T-DC-SAV-002); Season & Competition Loop #30 §3.4 (the composed seam,
-//           ERR-030-009/-016/-029); ERR-044-002 (both resolution paths), ERR-044-003 (the fielded-
-//           eleven serving exemption, stage 1); ERR-030-037 (the M6/M7 within-fixture serve-before-
-//           commit lock); unified season save §4 / KD-6 (restore fidelity — the C1/C2 AR's H2); Code
-//           Standards #20
+//           005/006, T-DC-SAV-002); Season & Competition Loop #30 §3.4/§5 (the composed seam,
+//           ERR-030-009/-016/-029/-042, T-SN-DET-004); ERR-044-002 (both resolution paths), ERR-044-003
+//           (the fielded-eleven serving exemption, stage 1); ERR-030-037 (the M6/M7 within-fixture
+//           serve-before-commit lock); ERR-008-002 (home/away asymmetry); unified season save §4 / KD-6
+//           (restore fidelity — the C1/C2 AR's H2); Code Standards #20
 // Purpose:  The #44 T2 WIRING locks. Every case here fails if a wiring point is reverted — the fold's
 //           seed and its per-tick pump, the filter at the seam on both paths and both clubs, the
-//           serving decrement (including the ERR-044-003 fielded-eleven exemption), the off-by-one
-//           (both across fixtures and WITHIN one), the composition with #41, and the boundary sweep.
-//           #44's own rules are unit tested in discipline/tests; nothing here re-tests them.
+//           serving decrement (including the ERR-044-003 fielded-eleven exemption, now on both clubs
+//           of the fixture), the off-by-one (both across fixtures and WITHIN one), the composition with
+//           #41 (including the back-fill's tier order across multiple reinstatements), the round-level
+//           pre-check's position relative to BOTH the fixture loop and RunCareerDaySteps, and the
+//           boundary sweep. #44's own rules are unit tested in discipline/tests; nothing here re-tests
+//           them.
 
 using NUnit.Framework;
 
@@ -76,7 +87,7 @@ namespace TacticalDirector.SeasonSave.Tests
             for (int i = 0; i < sorted.Length; i++)
             {
                 entries[i] = new DisciplineEntry(
-                    sorted[i], DisciplineConstants.LEAGUE_COMPETITION_KEY, 0, matches);
+                    sorted[i], DisciplineConstants.LeagueCompetitionKey, 0, matches);
             }
 
             return DisciplineState.FromEntries(entries);
@@ -397,7 +408,7 @@ namespace TacticalDirector.SeasonSave.Tests
             SeasonLoop loop = LoopOver(league, RoundResolutionMode.QuickSimAll, out _, state);
 
             Assert.That(
-                Availability.IsAvailable(state, banned, DisciplineConstants.LEAGUE_COMPETITION_KEY),
+                Availability.IsAvailable(state, banned, DisciplineConstants.LeagueCompetitionKey),
                 Is.False,
                 "Precondition: the player starts the round suspended.");
 
@@ -405,10 +416,10 @@ namespace TacticalDirector.SeasonSave.Tests
             loop.AdvanceAndPlayNextRound(league);
 
             Assert.That(
-                Availability.IsAvailable(state, banned, DisciplineConstants.LEAGUE_COMPETITION_KEY),
+                Availability.IsAvailable(state, banned, DisciplineConstants.LeagueCompetitionKey),
                 Is.True,
                 "After serving one fixture a one-match ban is discharged.");
-            Assert.That(state.HasEntry(banned, DisciplineConstants.LEAGUE_COMPETITION_KEY), Is.False,
+            Assert.That(state.HasEntry(banned, DisciplineConstants.LeagueCompetitionKey), Is.False,
                 "A row that reaches (0, 0) is dropped IMMEDIATELY, mid-season — FR-DC-017's canonical "
                 + "minimality, not just a boundary sweep.");
         }
@@ -448,7 +459,7 @@ namespace TacticalDirector.SeasonSave.Tests
                 TacticalDirector.MatchEngine.MatchEngine groundTruthEngine =
                     groundTruthLoop.BootFixtureEngine(in fixture, league);
                 var groundTruthFold = new CardLedgerFold(
-                    groundTruthEngine.PlayerIdsByAgentId(), DisciplineConstants.LEAGUE_COMPETITION_KEY);
+                    groundTruthEngine.PlayerIdsByAgentId(), DisciplineConstants.LeagueCompetitionKey);
                 var groundTruthTap = new MatchEngineDisciplineTap(groundTruthEngine);
                 while (!groundTruthEngine.MatchEnded)
                 {
@@ -585,14 +596,15 @@ namespace TacticalDirector.SeasonSave.Tests
             // reached before the fixture loop: no fixture this round would otherwise resolve can have
             // been marked played yet.
             //
-            // L1 (adversarial review over AR round 5): this test's ONLY assertion is Played == False,
-            // which locks the pre-check's position relative to the FIXTURE LOOP alone — NOT relative to
-            // RunCareerDaySteps. Moving the pre-check to run after RunCareerDaySteps(worldDay) but still
-            // before the fixture loop would leave this test green (no fixture would yet be marked
-            // played) while breaking "refused while nothing has been written at all", since a career
-            // day-step is itself a write. The comment above previously claimed this test proved
-            // ordering against RunCareerDaySteps too; it does not, and that claim is retracted here
-            // rather than backed by a new assertion (see the CHANGELOG entry for why).
+            // L1 (adversarial review over AR round 5): this test's ONLY assertion USED TO BE
+            // Played == False, which locks the pre-check's position relative to the FIXTURE LOOP alone
+            // — NOT relative to RunCareerDaySteps. Moving the pre-check to run after
+            // RunCareerDaySteps(worldDay) but still before the fixture loop would leave that assertion
+            // green (no fixture would yet be marked played) while breaking "refused while nothing has
+            // been written at all", since a career day-step is itself a write. The comment previously
+            // recorded that gap as retracted rather than closed; M2 (reviewed findings, 2026-08-15)
+            // closes it with the cursor assertion below, since production and test comment had drifted
+            // to disagree on the same claim otherwise.
             // VERIFIED by executing (M3, adversarial review over AR round 5): temporarily deleting the
             // `_disciplineDriver.RequireCommittableConfig();` call in SeasonLoop.PlayNextRound does NOT
             // turn this test red at Assert.Throws — ThrowOnRequireCommittableConfigDriver's OTHER two
@@ -604,13 +616,28 @@ namespace TacticalDirector.SeasonSave.Tests
             // test locks; Assert.Throws alone would pass under this exact mutation. Restoring the call
             // turns the test green again (RequireCommittableConfig throws first, before the fixture
             // loop is ever entered, so Played stays False).
+            // VERIFIED by executing (M2, reviewed findings, 2026-08-15): moving the
+            // `_disciplineDriver.RequireCommittableConfig();` call below `RunCareerDaySteps(worldDay);`
+            // in SeasonLoop.PlayNextRound leaves `Played == False` green (still before the fixture loop)
+            // but turns the new `LastAdvancedWorldDay` assertion below red — the career day-step has
+            // already advanced the cursor by the time the pre-check throws. Restoring the call's
+            // position turns it green again. See the CHANGELOG entry for the observed run.
             League league = FourClubLeague();
             var tally = new DisciplineState();
             SeasonLoop loop = LoopOver(
-                league, RoundResolutionMode.QuickSimAll, out _, tally,
+                league, RoundResolutionMode.QuickSimAll, out PlayerCareerStates career, tally,
                 new ThrowOnRequireCommittableConfigDriver());
 
             loop.AdvanceToNextFixtureDay();
+
+            // Captured AFTER AdvanceToNextFixtureDay, not before: that call runs the KD-2 day steps for
+            // every day up to (but not including) the fixture day itself (SeasonLoop.cs's own
+            // AdvanceToNextFixtureDay doc — "the fixture day's OWN day steps have not run when this
+            // returns"), so the cursor is already off its sentinel by this point on any league whose
+            // first fixture day is not day 0. Capturing before that call — as this test did on its
+            // first attempt — makes the assertion below fail on UNMODIFIED production code, comparing
+            // AdvanceToNextFixtureDay's own advance against a sentinel that was never going to survive it.
+            uint cursorBefore = career.TrainingBlocks()[0].States[0].LastAdvancedWorldDay;
 
             Assert.Throws<System.InvalidOperationException>(
                 () => loop.AdvanceAndPlayNextRound(league));
@@ -619,6 +646,13 @@ namespace TacticalDirector.SeasonSave.Tests
                 "The round-level pre-check must fail BEFORE any fixture is touched — if this fixture "
                 + "were marked played, RequireCommittableConfig ran after (or was skipped and) the "
                 + "fixture loop, not before it.");
+
+            Assert.That(career.TrainingBlocks()[0].States[0].LastAdvancedWorldDay, Is.EqualTo(cursorBefore),
+                "The round-level pre-check must fail BEFORE RunCareerDaySteps, not merely before the "
+                + "fixture loop — if the training cursor has already advanced, a career day-step ran "
+                + "before the config was refused, and SeasonLoop.PlayNextRound's M17 comment (\"the "
+                + "config that could throw here is refused while nothing has been written at all\") is "
+                + "false.");
         }
 
         // ── composition with #41, and the ERR-044-003 tiering ─────────────────────────────
@@ -688,7 +722,7 @@ namespace TacticalDirector.SeasonSave.Tests
             career.SetMedicalState(clubId, all[0], in knock);
 
             Squad fielded = AvailabilityComposition.Compose(
-                full, career, state, DisciplineConstants.LEAGUE_COMPETITION_KEY);
+                full, career, state, DisciplineConstants.LeagueCompetitionKey);
 
             Assert.That(SquadRating.CanFieldStartingEleven(fielded), Is.True,
                 "The composed filter must never stop a club playing (#30 §3.4 / §2.3 F9).");
@@ -696,6 +730,76 @@ namespace TacticalDirector.SeasonSave.Tests
                 "The back-fill reinstated a suspended player while an injured one was still available. "
                 + "Suspension is the stricter tier — a banned man plays only when the alternative is a "
                 + "club that cannot take the field at all (ERR-044-003).");
+        }
+
+        [Test]
+        public void TheBackFillNeverReinstatesASuspendedPlayerWhileAnyInjuredPlayerRemains()
+        {
+            // M3 (reviewed findings, 2026-08-15). #30 §5's T-SN-DET-004 names two depleted-squad locks
+            // (the back-fill and the terminal refusal) but neither one is a lock on the back-fill's TIER
+            // ORDER itself — the test above proves the tier holds for a SINGLE injured player, which is
+            // exactly the case where the first Reinstate call has only one candidate to choose between.
+            // Nothing here proved the order holds across MULTIPLE reinstate calls, which is why
+            // ERR-030-042 (an implementer following the spec could press banned players back AHEAD of
+            // injured ones) had no detector. This forces TWO reinstatements with TWO injured players
+            // available, so a tier-order defect that only shows up on the second call — or that trades
+            // one injured player for a suspended one rather than the other injured player — is caught
+            // too.
+            League league = FourClubLeague();
+            int clubId = league.ClubIds()[0];
+            Squad full = league.ResolveByClubId(clubId);
+
+            var all = new int[full.Count];
+            for (int i = 0; i < full.Count; i++)
+            {
+                all[i] = full.GetPlayer(i).PlayerId;
+            }
+
+            // SquadRating.CanFieldStartingEleven needs the FULL matchday eighteen (11 starters + 7
+            // bench — MatchEngineConstants.PLAYERS_PER_TEAM / SUBSTITUTES_PER_TEAM), not merely eleven
+            // (TheBackFillPressesAnInjuredPlayerBackBeforeASuspendedOne above only checks that ONE
+            // player is reinstated, so it never had to get this right). Suspend everyone but the first
+            // EIGHTEEN, then injure TWO of those eighteen — exactly the shortfall the back-fill must
+            // make up (available = 18 - 2 = 16, needing 2 reinstated), so both places must be filled
+            // from the injured pair and neither from the seven suspended.
+            const int CoreSize = 18;
+            var banned = new int[all.Length - CoreSize];
+            for (int i = CoreSize; i < all.Length; i++)
+            {
+                banned[i - CoreSize] = all[i];
+            }
+
+            DisciplineState state = BansOf(1, banned);
+            SeasonLoop loop = LoopOver(
+                league, RoundResolutionMode.FullEngine, out PlayerCareerStates career, state);
+
+            var firstKnock = InjuryState.Create();
+            firstKnock.Severity = InjurySeverity.Moderate;
+            firstKnock.RecoveryRemaining = 3;
+            career.SetMedicalState(clubId, all[0], in firstKnock);
+
+            var secondKnock = InjuryState.Create();
+            secondKnock.Severity = InjurySeverity.Moderate;
+            secondKnock.RecoveryRemaining = 5;
+            career.SetMedicalState(clubId, all[1], in secondKnock);
+
+            Squad fielded = AvailabilityComposition.Compose(
+                full, career, state, DisciplineConstants.LeagueCompetitionKey);
+
+            Assert.That(SquadRating.CanFieldStartingEleven(fielded), Is.True,
+                "The composed filter must never stop a club playing (#30 §3.4 / §2.3 F9).");
+            Assert.That(Contains(fielded, all[0]), Is.True,
+                "The first injured player must be reinstated before any suspended one.");
+            Assert.That(Contains(fielded, all[1]), Is.True,
+                "The second injured player must ALSO be reinstated before any suspended one — the tier "
+                + "order must hold across every reinstate call, not just the first.");
+            for (int i = 0; i < banned.Length; i++)
+            {
+                Assert.That(Contains(fielded, banned[i]), Is.False,
+                    $"Suspended player {banned[i]} was reinstated while an injured player still needed "
+                    + "a place — the back-fill's suspended tier fired ahead of the injured tier "
+                    + "(ERR-030-042).");
+            }
         }
 
         [Test]
@@ -712,7 +816,7 @@ namespace TacticalDirector.SeasonSave.Tests
 
             Squad squad = league.ResolveByClubId(league.ClubIds()[0]);
             Squad composed = AvailabilityComposition.Compose(
-                squad, career, loop.Discipline, DisciplineConstants.LEAGUE_COMPETITION_KEY);
+                squad, career, loop.Discipline, DisciplineConstants.LeagueCompetitionKey);
 
             Assert.That(composed, Is.SameAs(squad),
                 "A fully fit, fully eligible squad must pass through the seam untouched.");
@@ -801,7 +905,7 @@ namespace TacticalDirector.SeasonSave.Tests
             DisciplineState tally = BansOf(3, banned);
 
             Squad fielded = AvailabilityComposition.Compose(
-                full, null, tally, DisciplineConstants.LEAGUE_COMPETITION_KEY);
+                full, null, tally, DisciplineConstants.LeagueCompetitionKey);
             Assert.That(fielded, Is.Not.SameAs(full),
                 "Precondition: the filter must have removed somebody.");
             Assert.That(
@@ -853,8 +957,19 @@ namespace TacticalDirector.SeasonSave.Tests
 
         // ── ERR-044-003 stage 1: the extremis exemption, wired end to end ─────────────────
 
-        [Test]
-        public void ASuspendedPlayerPressedInByTheExtremisBackFill_IsExemptFromServing_WhileAnUnfieldedSuspendedTeammateStillServes()
+        // M1 (reviewed findings, 2026-08-15): parameterised over BOTH clubs of the fixture, not just
+        // the home one. Proven live by execution: mutating SeasonLoop.PlayNextRound's away call from
+        // `OnClubFixturePlayed(fixture.AwayClubId, awayXi)` to `OnClubFixturePlayed(fixture.AwayClubId,
+        // homeXi)` left the home-only version of this test at 22/22 green, because every entry it walks
+        // belongs to `fixture.HomeClubId` and is skipped by the driver's own club check before
+        // `WasFielded` is ever reached with the away array — the root CLAUDE.md's home-team-only trap
+        // (ERR-008-002), recurring in this file's own newest lock two tests after it cites that id by
+        // name (`EnginePath_ExcludesASuspendedOPPONENTPlayerToo`, above). The `[TestCase(false)]` case
+        // below reads the fixture's AWAY club and fails under that exact mutation (see the CHANGELOG
+        // entry for the observed run).
+        [TestCase(true, TestName = "ASuspendedPlayerPressedInByTheExtremisBackFill_IsExemptFromServing_WhileAnUnfieldedSuspendedTeammateStillServes_Home")]
+        [TestCase(false, TestName = "ASuspendedPlayerPressedInByTheExtremisBackFill_IsExemptFromServing_WhileAnUnfieldedSuspendedTeammateStillServes_Away")]
+        public void ASuspendedPlayerPressedInByTheExtremisBackFill_IsExemptFromServing_WhileAnUnfieldedSuspendedTeammateStillServes(bool useHomeClub)
         {
             // ERR-044-003 stage 1's own wiring lock. #30 §2.3 F9's back-fill can press a suspended
             // player onto the pitch when too many of his club's players are unavailable to field the
@@ -870,7 +985,7 @@ namespace TacticalDirector.SeasonSave.Tests
             League league = FourClubLeague();
             SeasonLoop probe = LoopOver(league, RoundResolutionMode.QuickSimAll, out _);
             Fixture fixture = probe.State.FixtureAt(0);
-            int clubId = fixture.HomeClubId;
+            int clubId = useHomeClub ? fixture.HomeClubId : fixture.AwayClubId;
             Squad full = league.ResolveByClubId(clubId);
 
             var all = new int[full.Count];
@@ -905,7 +1020,7 @@ namespace TacticalDirector.SeasonSave.Tests
             // instances AdvanceAndPlayNextRound is about to consume. Pure and side-effect-free, so
             // computing it here disturbs nothing the round itself does.
             Squad composed = AvailabilityComposition.Compose(
-                full, career, state, DisciplineConstants.LEAGUE_COMPETITION_KEY);
+                full, career, state, DisciplineConstants.LeagueCompetitionKey);
             int[] expectedXi = SquadRating.StartingElevenPlayerIds(composed);
 
             int fieldedSuspended = -1;
@@ -960,7 +1075,7 @@ namespace TacticalDirector.SeasonSave.Tests
             // would then be asserted on nothing.
             var state = DisciplineState.FromEntries(new[]
             {
-                new DisciplineEntry(player, DisciplineConstants.LEAGUE_COMPETITION_KEY, 4, 100),
+                new DisciplineEntry(player, DisciplineConstants.LeagueCompetitionKey, 4, 100),
             });
 
             SeasonLoop loop = LoopOver(league, RoundResolutionMode.QuickSimAll, out _, state);
@@ -1124,10 +1239,10 @@ namespace TacticalDirector.SeasonSave.Tests
         }
 
         private static int Ban(DisciplineState state, int playerId) =>
-            state.EntryFor(playerId, DisciplineConstants.LEAGUE_COMPETITION_KEY).BanMatchesRemaining;
+            state.EntryFor(playerId, DisciplineConstants.LeagueCompetitionKey).BanMatchesRemaining;
 
         private static int Yellows(DisciplineState state, int playerId) =>
-            state.EntryFor(playerId, DisciplineConstants.LEAGUE_COMPETITION_KEY).Yellows;
+            state.EntryFor(playerId, DisciplineConstants.LeagueCompetitionKey).Yellows;
     }
 }
 
@@ -1243,4 +1358,21 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | SquadInstance), T-DC-FOLD-002's engine-side occupancy half        |
 // |         |            |        | (PlayerIdsByAgentId_FollowsASubstitution) and T-DC-BAN-006 (the   |
 // |         |            |        | ERR-044-003 stage 1 exemption lock added at v1.6).                |
+// | 1.9     | 2026-08-15 | —      | Reviewed findings, M1/M2/M3, all mutation-verified.               |
+// |         |            |        | **M1:** ASuspendedPlayerPressedInByTheExtremisBackFill_Is-        |
+// |         |            |        | ExemptFromServing_WhileAnUnfieldedSuspendedTeammateStillServes    |
+// |         |            |        | parameterised [TestCase(true/false)] over home/away — the         |
+// |         |            |        | home-only version could not catch SeasonLoop.PlayNextRound's away |
+// |         |            |        | call passing the wrong XI (ERR-008-002's class); the fixture's    |
+// |         |            |        | AWAY club is now exercised too. **M2:** RequireCommittableConfig- |
+// |         |            |        | Driver_RunsBeforeAnyFixtureIsResolved gains a training-cursor     |
+// |         |            |        | assertion (career.TrainingBlocks()[0].States[0].LastAdvanced-     |
+// |         |            |        | WorldDay unchanged) discriminating the pre-check's position       |
+// |         |            |        | relative to RunCareerDaySteps, not just the fixture loop — closing|
+// |         |            |        | the gap the L1 correction at v1.7/v1.8 left open. **M3:** new     |
+// |         |            |        | TheBackFillNeverReinstatesASuspendedPlayerWhileAnyInjuredPlayer-  |
+// |         |            |        | Remains — the back-fill tier order (ERR-030-042, resolved spec-   |
+// |         |            |        | only against already-correct code) had no locking test at all;   |
+// |         |            |        | this one forces two reinstate calls with two injured players so a|
+// |         |            |        | defect past the first call is caught too.                        |
 #endregion

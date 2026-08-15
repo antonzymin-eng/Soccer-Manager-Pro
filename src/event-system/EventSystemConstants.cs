@@ -1,11 +1,16 @@
 // File:     src/event-system/EventSystemConstants.cs
 // Created:  2026-05-30
+// Modified: 2026-08-15, later still (reviewed findings pass, L1 — corrected the v1.6 entry directly
+//           below: MatchEngine.cs's foulOrdinal: 0xFFFF literal call site WAS repointed, by the SAME
+//           DAY's later "#44 AR round 5, L3" pass (MatchEngine.cs v1.71, MatchEngine.cs:5286) — so
+//           "NOT repointed / still needs repointing / open call site" below is SUPERSEDED, not true of
+//           the tree today. Left in place per this repo's annotate-in-place convention — v1.7)
 // Modified: 2026-08-15, later (reviewed-findings pass, L3 — added FOUL_ORDINAL_NONE = 0xFFFF to
 //           #region Fixed beside the CARD_KIND_* rows: CardIssuedEvent.FoulOrdinal's "no associated
 //           foul" sentinel, previously prose-only in CardIssuedEvent.cs — ERR-017-004's exact defect
 //           shape recurring on the sibling payload field. Mirrored [CROSS] in MatchEngineConstants;
 //           the one production call site (MatchEngine.cs's foulOrdinal: 0xFFFF literal) is outside
-//           this pass's ownership and still needs repointing — v1.6)
+//           this pass's ownership and still needs repointing — v1.6) — SUPERSEDED, see the entry above.
 // Modified: 2026-08-15 (#44 C1/C2 adversarial review round 4, M24/ERR-017-004 — added a new #region
 //           Fixed (first region in the file) with CARD_KIND_YELLOW/CARD_KIND_RED/
 //           CARD_KIND_SECOND_YELLOW, ALL_CAPS [FIXED]: the CardIssuedEvent.CardKind domain-ordinal
@@ -44,8 +49,12 @@ namespace TacticalDirector.EventSystem
         /// independently in <c>MatchEngineConstants</c> (tagged <c>[FIXED]</c>) and
         /// <c>DisciplineConstants</c> (tagged <c>[CROSS]</c>, but citing this row's prose rather than
         /// a bound symbol) — two catalogues, two tags, neither actually pointing at #17, the spec that
-        /// owns the encoding (Appendix A: "#17 (default owner)"). Both now mirror this constant
-        /// directly (single-consumer routing, src/CLAUDE.md §"[CROSS] mirrors").
+        /// owns the encoding (Appendix A: "#17 (default owner)"). All three consumers — those two plus
+        /// <c>MatchAnalyticsConstants</c> — now mirror this constant directly (the owning-catalogue
+        /// carve-out, ERR-020-004, src/CLAUDE.md §"[CROSS] mirrors" — corrected here, reviewed findings
+        /// pass, L2, 2026-08-15: this paragraph previously said "Both … single-consumer routing", which
+        /// was wrong on the count (three consumers, not two) and wrong on the clause — the carve-out
+        /// applies regardless of consumer count).
         /// </para>
         /// </summary>
         public const byte CARD_KIND_YELLOW = 0;
@@ -233,5 +242,10 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | of the same event. Mirrored [CROSS]/PascalCase in                        |
 // |         |            |        | MatchEngineConstants.FoulOrdinalNone. MatchEngine.cs's own               |
 // |         |            |        | foulOrdinal: 0xFFFF literal call site was NOT repointed (out of this     |
-// |         |            |        | pass's ownership) — reported as an open call site.                       |
+// |         |            |        | pass's ownership) — reported as an open call site. **SUPERSEDED same     |
+// |         |            |        | day** — see v1.7 below: the later "#44 AR round 5, L3" pass repointed    |
+// |         |            |        | the call site after this row was written.                                |
+// | 1.7     | 2026-08-15, later still | — | Reviewed findings pass (L1). Corrected v1.6 above, which  |
+// |         |            |        | still claimed the call site was open — MatchEngine.cs:5286 reads         |
+// |         |            |        | MatchEngineConstants.FoulOrdinalNone. No code change in this file.       |
 #endregion

@@ -1,12 +1,15 @@
 // File:     src/season-save/PlayerCareerStates.cs
 // Created:  2026-08-06
+// Modified: 2026-08-15, later (reviewed findings pass, L4 — DisciplineConstants.LEAGUE_COMPETITION_KEY
+//           references renamed for that constant's ALL_CAPS -> LeagueCompetitionKey rename
+//           (DisciplineConstants.cs v1.5). No behaviour change — v1.23)
 // Modified: 2026-08-15 (L3, reviewed-findings pass — formatting only: a stray double blank line
 //           collapsed to one, per FR-CS-011/012 — v1.22)
 //           Prior: 2026-08-13 (#44 C1/C2 adversarial review round 3, M14 — MarkUnavailable now OWNS its
 //           removed/recoveryRemaining masks (writes every index unconditionally) instead of being
 //           additive, matching Availability.MarkSuspended's contract — v1.21. Prior: v1.20 L8 — the
 //           public SelectAvailable's discipline-less call passes competitionId: 0 instead of naming
-//           DisciplineConstants.LEAGUE_COMPETITION_KEY for a value it provably never reads, dropping
+//           DisciplineConstants.LeagueCompetitionKey for a value it provably never reads, dropping
 //           this file's #44 import. v1.19 SelectAvailable split into MarkUnavailable +
 //           AvailabilityComposition.)
 // Author:   —
@@ -1245,7 +1248,7 @@ namespace TacticalDirector.SeasonSave
             // only reads it inside its `discipline != null` branch, and this call always passes
             // `discipline: null` (the #41-side surface has no discipline state to key against; #30's
             // own SeasonLoop.SelectAvailable is the composed call site that supplies both). 0 rather
-            // than DisciplineConstants.LEAGUE_COMPETITION_KEY so this file needs no #44 import to name
+            // than DisciplineConstants.LeagueCompetitionKey so this file needs no #44 import to name
             // a value it never reads.
             AvailabilityComposition.Compose(squad, this, discipline: null, competitionId: 0);
 
@@ -1758,7 +1761,7 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | existing caller. MarkLeastInjured moved with the back-fill.     |
 // | 1.20    | 2026-08-13 | —      | #44 C1/C2 adversarial review round 2 (L8). SelectAvailable's    |
 // |         |            |        | discipline-less call passed competitionId:                      |
-// |         |            |        | DisciplineConstants.LEAGUE_COMPETITION_KEY — importing #44's    |
+// |         |            |        | DisciplineConstants.LeagueCompetitionKey — importing #44's    |
 // |         |            |        | catalogue to name a value Compose provably never reads on a     |
 // |         |            |        | null-discipline path. Now competitionId: 0, with a comment      |
 // |         |            |        | explaining why; the `using TacticalDirector.Discipline;` line   |
@@ -1777,4 +1780,7 @@ namespace TacticalDirector.SeasonSave
 // | 1.22    | 2026-08-15 | —      | L3 (reviewed-findings pass), formatting only: the stray double  |
 // |         |            |        | blank line inside RequireClub collapsed to one (FR-CS-011/012). |
 // |         |            |        | No behaviour change.                                             |
+// | 1.23    | 2026-08-15, later | — | Reviewed findings pass, L4. DisciplineConstants.               |
+// |         |            |        | LEAGUE_COMPETITION_KEY -> LeagueCompetitionKey rename. Three    |
+// |         |            |        | references updated. No behaviour change.                        |
 #endregion

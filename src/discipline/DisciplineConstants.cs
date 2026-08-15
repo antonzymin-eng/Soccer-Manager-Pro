@@ -1,5 +1,16 @@
 // File:     src/discipline/DisciplineConstants.cs
 // Created:  2026-08-13
+// Modified: 2026-08-15, later still (reviewed findings pass, L2/L4 — v1.5: L2 — CardKindRed's and
+//           CardKindSecondYellow's doc comments still said "Single-consumer mirror … as CardKindYellow",
+//           pointing at a row whose own doc now says that justification is FALSE (three consumers);
+//           both now cite the ERR-020-004 owning-catalogue carve-out instead, matching CardKindYellow's
+//           M4 correction. L4 — LEAGUE_COMPETITION_KEY renamed LeagueCompetitionKey: it is [CROSS], and
+//           src/CLAUDE.md reserves ALL_CAPS for [FIXED]; the v1.3 row below excused the deviation as
+//           "~20 call sites outside this pass's ownership" while the SAME pass renamed
+//           MatchAnalyticsConstants.CARD_KIND_RED -> CardKindRed including a test file, citing the same
+//           rule — so the excuse did not survive its own pass. All src/ call sites updated (11 files).
+//           #43's own Appendix A row is still ALL_CAPS and is reported, not fixed here (docs/ is not
+//           this pass's tree).)
 // Modified: 2026-08-15, later (reviewed-findings pass, M4/owner decision 2 — v1.4: CardKindYellow's
 //           doc comment's false "#44 is the only consuming assembly" sentence (three consumers exist:
 //           discipline, match-engine, match-analytics) deleted and replaced with the real reason —
@@ -7,7 +18,7 @@
 //           directly regardless of consumer count. Carve-out recorded in src/CLAUDE.md's [CROSS]
 //           mirrors section and Code Standards #20 §4.2; ERR-020-004 owed against #20, not filed
 //           here (spec-error-log.md out of this pass's ownership). No value change.)
-// Modified: 2026-08-15 (reviewed-findings pass, M26 — v1.3: LEAGUE_COMPETITION_KEY re-tagged
+// Modified: 2026-08-15 (reviewed-findings pass, M26 — v1.3: LeagueCompetitionKey re-tagged
 //           [FIXED] -> [CROSS] and moved Fixed -> Cross; it is a verbatim copy of APPROVED #43's
 //           LEAGUE_COMPETITION_ID, not a value #44 owns. Literal 0 unchanged — #43 has no src/
 //           assembly to bind a real mirror to. An ERR-044-NNN back-prop against #44 Appendix A is
@@ -104,7 +115,7 @@ namespace TacticalDirector.Discipline
         /// <c>(PlayerId, CompetitionId)</c> key, not a rewrite.
         /// </para>
         /// </summary>
-        public const int LEAGUE_COMPETITION_KEY = 0;
+        public const int LeagueCompetitionKey = 0;
 
         /// <summary>
         /// [CROSS] Card kind: a first (or non-promoting) caution — <c>CardIssuedEvent.CardKind</c>'s own
@@ -137,8 +148,12 @@ namespace TacticalDirector.Discipline
 
         /// <summary>
         /// [CROSS] Card kind: a straight red — <c>CardIssuedEvent.CardKind</c> domain ordinal 1 (#17
-        /// Appendix A row 0x06). Carries NO yellow (FR-DC-006). Single-consumer mirror of
-        /// <c>EventSystemConstants.CARD_KIND_RED</c>, as <see cref="CardKindYellow"/>. M24/ERR-017-004.
+        /// Appendix A row 0x06). Carries NO yellow (FR-DC-006). Owning-catalogue carve-out mirror of
+        /// <c>EventSystemConstants.CARD_KIND_RED</c> (ERR-020-004), as <see cref="CardKindYellow"/> —
+        /// mirrored directly from #17's own catalogue regardless of consumer count, because #17 owns
+        /// the encoding and has its own catalogue to mirror from; NOT because this is the only
+        /// consuming assembly (reviewed findings pass, L2, 2026-08-15 — corrected, see
+        /// <see cref="CardKindYellow"/>'s M4 paragraph). M24/ERR-017-004.
         /// </summary>
         public const byte CardKindRed = EventSystemConstants.CARD_KIND_RED;
 
@@ -148,8 +163,11 @@ namespace TacticalDirector.Discipline
         /// a yellow-then-red pair — verified at <c>MatchEngine.ApplyCardAndCheckSentOff</c>, which
         /// returns the actual kind and publishes exactly one <c>CardIssuedEvent</c> (KD-5 / FR-DC-006).
         /// So a kind-2 is one yellow AND one dismissal ban; #44 must never synthesize the missing red.
-        /// Single-consumer mirror of <c>EventSystemConstants.CARD_KIND_SECOND_YELLOW</c>, as
-        /// <see cref="CardKindYellow"/>. M24/ERR-017-004.
+        /// Owning-catalogue carve-out mirror of <c>EventSystemConstants.CARD_KIND_SECOND_YELLOW</c>
+        /// (ERR-020-004), as <see cref="CardKindYellow"/> — mirrored directly from #17's own catalogue
+        /// regardless of consumer count, NOT because this is the only consuming assembly (reviewed
+        /// findings pass, L2, 2026-08-15 — corrected, see <see cref="CardKindYellow"/>'s M4 paragraph).
+        /// M24/ERR-017-004.
         /// </summary>
         public const byte CardKindSecondYellow =
             EventSystemConstants.CARD_KIND_SECOND_YELLOW;
@@ -231,7 +249,7 @@ namespace TacticalDirector.Discipline
 // |         |            |        | No value change. L18: the class doc's region-                     |
 // |         |            |        | order line still said "Fixed → GT", stale since v1.1 added the    |
 // |         |            |        | Cross region — corrected to "Fixed → Cross → GT".                 |
-// | 1.3     | 2026-08-15 | —      | Reviewed-findings fix (M26): LEAGUE_COMPETITION_KEY was tagged    |
+// | 1.3     | 2026-08-15 | —      | Reviewed-findings fix (M26): LeagueCompetitionKey was tagged    |
 // |         |            |        | [FIXED] but is a verbatim copy of APPROVED Competition Structure  |
 // |         |            |        | #43's LEAGUE_COMPETITION_ID (Appendix A, FR-CP-004) — the root    |
 // |         |            |        | CLAUDE.md tag table makes a value defined in another approved     |
@@ -262,4 +280,15 @@ namespace TacticalDirector.Discipline
 // |         |            |        | filed — spec-error-log.md is out of this pass's ownership; see    |
 // |         |            |        | the reviewed-findings report for its exact text). No value change,|
 // |         |            |        | no other code changed.                                            |
+// | 1.5     | 2026-08-15, later still | — | Reviewed findings pass, L2/L4. L2: CardKindRed's and       |
+// |         |            |        | CardKindSecondYellow's doc comments still said "Single-consumer   |
+// |         |            |        | mirror … as CardKindYellow" after v1.4 corrected THAT row to say  |
+// |         |            |        | the opposite — both now cite the ERR-020-004 owning-catalogue     |
+// |         |            |        | carve-out. L4: LEAGUE_COMPETITION_KEY -> LeagueCompetitionKey —   |
+// |         |            |        | the v1.3 row above excused ALL_CAPS as "~20 call sites outside    |
+// |         |            |        | this pass's ownership", but the same v1.2 pass had already        |
+// |         |            |        | renamed MatchAnalyticsConstants.CARD_KIND_RED -> CardKindRed      |
+// |         |            |        | including a test file, on the identical rule. All 11 src/ files   |
+// |         |            |        | referencing the old name updated. #44 Appendix A's own ALL_CAPS   |
+// |         |            |        | row is unchanged (docs/ is not this pass's tree) and is reported. |
 #endregion

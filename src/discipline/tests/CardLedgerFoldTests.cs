@@ -1,5 +1,8 @@
 // File:     src/discipline/tests/CardLedgerFoldTests.cs
 // Created:  2026-08-13
+// Modified: 2026-08-15, later (reviewed findings pass, L4 — v1.5: the Competition constant's
+//           DisciplineConstants.LEAGUE_COMPETITION_KEY reference renamed for that constant's ALL_CAPS ->
+//           LeagueCompetitionKey rename (DisciplineConstants.cs v1.5). No behaviour change.)
 // Modified: 2026-08-15 (reviewed-findings pass, L22 — v1.4: new SubstitutionAndCard_InTheSameTick_
 //           AttributesToIncoming case authoring a substitution and card in the SAME ObserveTick call,
 //           pairing the CardLedgerFold.cs doc fix naming the MatchEngine.RunResolvePhase ordering
@@ -62,7 +65,7 @@ namespace TacticalDirector.Discipline.Tests
     [TestFixture]
     internal sealed class CardLedgerFoldTests
     {
-        private const int Competition = DisciplineConstants.LEAGUE_COMPETITION_KEY;
+        private const int Competition = DisciplineConstants.LeagueCompetitionKey;
         private const int SquadSize = 22;     // on-pitch slots [0, 22)
         private const int OccupancyLength = 36;   // + bench ids [22, 36) — 22 + teamId*7 + benchIndex
 
@@ -510,4 +513,7 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | Fold.cs doc fix naming MatchEngine.RunResolvePhase's flush-before-  |
 // |         |            |        | cards ordering as the guarantee this fold's occupancy correctness   |
 // |         |            |        | rests on but does not itself enforce.                               |
+// | 1.5     | 2026-08-15, later | — | Reviewed findings pass, L4. Competition constant's                |
+// |         |            |        | DisciplineConstants reference renamed LEAGUE_COMPETITION_KEY ->    |
+// |         |            |        | LeagueCompetitionKey. No behaviour change.                          |
 #endregion

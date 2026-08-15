@@ -1,5 +1,8 @@
 // File:     src/discipline/tests/DisciplineRulesTests.cs
 // Created:  2026-08-13
+// Modified: 2026-08-15, later (reviewed findings pass, L4 — v1.7: the Competition constant's
+//           DisciplineConstants.LEAGUE_COMPETITION_KEY reference renamed for that constant's ALL_CAPS ->
+//           LeagueCompetitionKey rename (DisciplineConstants.cs v1.5). No behaviour change.)
 // Modified: 2026-08-15 (reviewed-findings pass, L20 + M25 — v1.6: OnClubFixturePlayed_
 //           AFieldedPlayerWithNoBan_IsUnaffected_NoRowInvented was vacuous (rules fresh,
 //           _state.Count == 0, WasFielded never called); rewritten to give both a fielded and a
@@ -43,7 +46,7 @@ namespace TacticalDirector.Discipline.Tests
         private static int PlayerId(int clubId, int local) =>
             clubId * PlayerDatabaseConstants.CLUB_SQUAD_SIZE + local;
 
-        private const int Competition = DisciplineConstants.LEAGUE_COMPETITION_KEY;
+        private const int Competition = DisciplineConstants.LeagueCompetitionKey;
 
         private static DisciplineRules NewRules() => new DisciplineRules(new DisciplineState());
 
@@ -878,4 +881,7 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | (M1) is a backstop that throws the identical ArgumentOutOfRange-  |
 // |         |            |        | Exception from a different site once AddBan's guard is neutered,  |
 // |         |            |        | so a bare Assert.Throws<...> does not discriminate them.          |
+// | 1.7     | 2026-08-15, later | — | Reviewed findings pass, L4. Competition constant's              |
+// |         |            |        | DisciplineConstants reference renamed LEAGUE_COMPETITION_KEY ->  |
+// |         |            |        | LeagueCompetitionKey. No behaviour change.                        |
 #endregion
