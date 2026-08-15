@@ -112,9 +112,9 @@ namespace TacticalDirector.SeasonSave.Tests
                 _rules = new DisciplineRules(state);
             }
 
-            public void OnClubFixturePlayed(int clubId)
+            public void OnClubFixturePlayed(int clubId, int[] fieldedPlayerIds)
             {
-                _rules.OnClubFixturePlayed(clubId);
+                _rules.OnClubFixturePlayed(clubId, fieldedPlayerIds);
                 _serves++;
                 if (_serves == 1)
                 {

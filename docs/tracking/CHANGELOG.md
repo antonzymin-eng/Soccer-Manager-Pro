@@ -12,7 +12,53 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 13, 2026 (**#44 Discipline & Suspensions — C1 (T0+T1) and C2 (T2) LANDED:
+> **Last Updated:** August 15, 2026 (**Two owner decisions landed, one as code and one as sequencing.**)
+>
+> **(1) `ERR-044-003` stage 1 — an extremis appearance no longer serves the ban it was fielded
+> through.** The #44 C1/C2 landing recorded, twice and explicitly as an owner call, that #30 §2.3 F9's
+> depleted-squad back-fill can press a **suspended** player onto the pitch when a club would otherwise
+> be unable to field a formation, and that the same fixture's `OnClubFixturePlayed` then decremented
+> his ban anyway — so the appearance was **strictly free**, and a two-match red cost a mass-suspension
+> club nothing at all. The decision is exemption. `DisciplineRules.OnClubFixturePlayed` takes a
+> **required** `int[] fieldedPlayerIds` and skips the decrement for anyone in it, because the rule is
+> not "the club played" but "the club played **without** him". Required rather than optional-with-a-
+> default: an omitting call site would silently restore the free appearance, which is this same
+> landing's own H1/H4 shape. **Fixed at the serving site, not in `AvailabilityComposition`** — the
+> football rule is about who PLAYED — so the reinstatement tier order is untouched. The eleven passed
+> is the array `ERR-041-010(b)`'s appearance record **already** derived at the filter+configure site,
+> so no second selection walk appears (AR pass 2's parallel-surface finding); `SeasonLoop.FieldedXi`
+> widens that derivation's gate from `_career` alone to the union of its two consumers, keyed on
+> `_disciplineDriver` so a substituted driver cannot be handed a null eleven the production path would
+> have filled. **Behaviour-identical on every fixture that does not reach the extremis tier, by
+> construction** — the filter removes every suspended player before selection, so nothing but the
+> back-fill can put a banned id in the eleven. No format bump, no schema bump, no draw-order change;
+> #44 stays draw-free. **The better answer is agreed and NOT built, with both blockers named:** the
+> Football Manager posture is a tier ladder — promote **youth**, then field **generated low-attribute
+> cover**, both ahead of any suspended player — under which a banned man never takes the field at all
+> and the suspended tier becomes *unreachable* rather than merely expensive, letting #30's liveness
+> invariant and the Laws of the Game both hold instead of trading one against the other. Stage 2 is
+> blocked on **#42 Youth having no `src/` assembly** (nothing to draw from); stage 3 on the id space —
+> `PlayerId = clubId × CLUB_SQUAD_SIZE + local` is **fully packed at 25**, so a 26th player for club N
+> collides with club N+1's first, and widening it touches #27 FR-SQ-010 (as amended by ERR-027-004),
+> every save file, and ERR-041-019's global-uniqueness guard. `spec-error-log.md` v2.25.
+>
+> **(2) The foul/card calibration is sequenced behind W2 — arm the tackle first, then calibrate once.**
+> The August-13 re-measurement (**fouls 35.0 / yellows 5.0 / reds 1.00 per 90** against football's
+> ~22 / ~3.5 / ~0.25, fouls and yellows both ~67% above their own July-26 post-balance-pass figures)
+> will **not** be fitted against today's engine. Today's foul population is **pre-tackle** —
+> `TackleContactRadiusM` ships at 0 — and arming W2 routes ~47 challenges per team per 90 into the
+> same single foul-candidate slot, so a fit landed now would be re-fitted immediately while its
+> intermediate value sat in the tree looking calibrated. That is **KD-W1 read literally**, and the
+> July-26 pass is the counter-example that makes it concrete: it fitted correctly against the contact
+> stream of its day, C1's phase reclassification moved that stream in August, and nobody re-measured
+> for four months. **The accepted cost is stated rather than hidden:** the drift stays live until the
+> W2 calibration pass, so the card rate — and the suspension rate #44 now derives from it — is
+> knowingly wrong meanwhile, with the acceptance bands reading green throughout (they cap fouls at 90,
+> yellows at 20 and reds at 5; a plausibility floor, not a calibration signal). Consequence for the
+> wiring backlog's own ordering: **W2 is now the precondition for the most load-bearing open realism
+> item**, not merely the next wiring item. `match-engine-wiring-backlog.md` v1.9.
+>
+> **Last Updated (prior):** August 13, 2026 (**#44 Discipline & Suspensions — C1 (T0+T1) and C2 (T2) LANDED:
 > `src/discipline/` is the 35th production assembly, suspensions are LIVE end to end, and the last
 > gap in the season spine for PM-2 is closed.**) WHAT REMAINS: #44 T3 — the #30-owned quick-sim card
 > synthesis, without which suspensions are live for one club in twenty. The subsystem is a third

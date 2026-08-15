@@ -1577,7 +1577,8 @@ namespace TacticalDirector.SeasonSave
             // The ban is served by the club playing (FR-DC-011), and #27's club-scoped id formula puts
             // player 100 in club 4. The row reaches (0, 0) and is dropped by FR-DC-017 — the tally is
             // still wired, still the loop's own, and now empty.
-            new DisciplineRules(tally).OnClubFixturePlayed(100 / PlayerDatabaseConstants.CLUB_SQUAD_SIZE);
+            new DisciplineRules(tally).OnClubFixturePlayed(
+                100 / PlayerDatabaseConstants.CLUB_SQUAD_SIZE, Array.Empty<int>());
             Assert.AreEqual(0, tally.Count,
                 "Precondition: serving the last match of a ban with no residual yellows drops the row "
                 + "immediately (FR-DC-017).");

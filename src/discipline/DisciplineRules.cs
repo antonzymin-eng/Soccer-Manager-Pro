@@ -1,9 +1,8 @@
 // File:     src/discipline/DisciplineRules.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 5, M15/M19(a) — MigratePlayerId now refuses
-//           a negative newPlayerId before any row is written, and the kind-1 branch of ApplyCard
-//           extracted to internal ApplyStraightRed (the L11 ApplySecondYellow shape) so the guard is
-//           directly testable — v1.4)
+// Modified: 2026-08-15 (ERR-044-003 stage 1 — OnClubFixturePlayed now takes the club's fielded eleven
+//           and exempts anyone in it, so an extremis appearance no longer serves the ban it was fielded
+//           through; owner decision, the first of three staged tiers — v1.5)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §3.2 (thresholds & bans) / §3.3 (serving) / §3.4 (boundary
 //           & hygiene); FR-DC-006/007/011/013/017; F2/F4; Code Standards #20
@@ -191,8 +190,34 @@ namespace TacticalDirector.Discipline
 
         /// <summary>
         /// Serves one fixture of every outstanding ban held by a player of <paramref name="clubId"/>
-        /// (§3.3, FR-DC-011). Called <b>once per played fixture per club</b>, on either resolution path
-        /// — a ban is served by the club playing, not by the engine simulating.
+        /// who did <b>not</b> take part in it (§3.3, FR-DC-011). Called <b>once per played fixture per
+        /// club</b>, on either resolution path — a ban is served by the club playing, not by the engine
+        /// simulating.
+        /// <para>
+        /// <b>Why the fielded eleven is a parameter (ERR-044-003, staged answer).</b> The rule is not
+        /// "the club played" but "the club played without him" — a match a suspended man appears in is
+        /// not a match of his ban served, which is the whole meaning of a suspension. Under #30 §2.3
+        /// F9's depleted-squad back-fill a banned player CAN reach the pitch in extremis (see
+        /// <c>AvailabilityComposition</c>), and serving his ban for that fixture made the appearance
+        /// strictly free: he played AND the ban shortened, so a two-match red could cost a
+        /// mass-suspension club nothing at all. Exempting him keeps #30's liveness invariant — the
+        /// fixture is still played, the season still advances — while restoring the ban's cost. It is
+        /// the first stage of the fuller answer (youth call-ups, then generated cover, ahead of any
+        /// suspended player); those tiers need #42 and an id-space widening, this one needs an argument.
+        /// </para>
+        /// <para>
+        /// <b>Normal fixtures are unaffected, by construction.</b> The availability filter removes every
+        /// suspended player before selection, so the only way an id with an outstanding ban appears in
+        /// <paramref name="fieldedPlayerIds"/> at all is the extremis back-fill. On every fixture that
+        /// is not one, this walk skips nobody and behaves exactly as it did before the parameter existed.
+        /// </para>
+        /// <para>
+        /// <b>Competition granularity.</b> The exemption matches on player id alone, at the same
+        /// granularity as the club walk below — which already serves EVERY competition's ban on any
+        /// played fixture. Both are exact while <c>LEAGUE_COMPETITION_KEY</c> is the only competition
+        /// that exists; a real multi-competition calendar (#43) must revisit them together, since a
+        /// league fixture should serve a league ban and leave a cup ban alone.
+        /// </para>
         /// <para>
         /// <b>Club membership is derived, not looked up:</b> <c>PlayerId / CLUB_SQUAD_SIZE == clubId</c>
         /// is #27's club-scoped id formula, and FR-DC-013's migration rule keeps a transferred player's
@@ -208,10 +233,16 @@ namespace TacticalDirector.Discipline
         /// </para>
         /// <para>A row that reaches <c>(0, 0)</c> here is dropped immediately, mid-season, per FR-DC-017.</para>
         /// </summary>
+        /// <param name="clubId">The club that played the fixture.</param>
+        /// <param name="fieldedPlayerIds">The eleven this club actually fielded. Never null: a caller
+        /// that does not know who played cannot know whose ban was served either, and defaulting the
+        /// unknown case to "serve everybody" is precisely the silent-loss shape this project has twice
+        /// filed (the #44 H1/H4 chain) — so the ignorance is refused rather than absorbed.</param>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="clubId"/> is negative — <b>F2</b>,
         /// a club outside the resolvable universe. No id divides to a negative club, so this would
         /// otherwise be a silent no-op rather than the caller-contract bug it is.</exception>
-        public void OnClubFixturePlayed(int clubId)
+        /// <exception cref="ArgumentNullException"><paramref name="fieldedPlayerIds"/> is null.</exception>
+        public void OnClubFixturePlayed(int clubId, int[] fieldedPlayerIds)
         {
             if (clubId < 0)
             {
@@ -219,6 +250,14 @@ namespace TacticalDirector.Discipline
                     nameof(clubId), clubId,
                     "DisciplineRules.OnClubFixturePlayed: clubId must be >= 0 (F2). A negative club " +
                     "matches no player id, so serving would silently do nothing.");
+            }
+            if (fieldedPlayerIds == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(fieldedPlayerIds),
+                    "DisciplineRules.OnClubFixturePlayed: the fielded eleven is required. A ban is "
+                    + "served by the club playing WITHOUT the banned player, so serving cannot be "
+                    + "decided without knowing who took part (ERR-044-003).");
             }
 
             // Walk downward: Upsert may REMOVE the row it just emptied (FR-DC-017), which would shift
@@ -232,6 +271,12 @@ namespace TacticalDirector.Discipline
                 }
                 if (entry.PlayerId / PlayerDatabaseConstants.CLUB_SQUAD_SIZE != clubId)
                 {
+                    continue;
+                }
+                if (WasFielded(entry.PlayerId, fieldedPlayerIds))
+                {
+                    // The extremis case, and the only way a banned id reaches here. He played, so this
+                    // fixture is not one of his ban — ERR-044-003.
                     continue;
                 }
 
@@ -355,6 +400,25 @@ namespace TacticalDirector.Discipline
         }
 
         /// <summary>
+        /// Whether <paramref name="playerId"/> is one of the ids a club fielded. A linear scan over
+        /// eleven entries, called once per outstanding ban per played club fixture — the season loop,
+        /// not the 60 Hz path — so the array stays an array rather than becoming a set the caller has
+        /// to build and this assembly has to trust the contents of.
+        /// </summary>
+        private static bool WasFielded(int playerId, int[] fieldedPlayerIds)
+        {
+            for (int i = 0; i < fieldedPlayerIds.Length; i++)
+            {
+                if (fieldedPlayerIds[i] == playerId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Fail-loud gate on the <c>[GT]</c> <see cref="DisciplineConstants.YellowAccumulationThreshold"/>
         /// at the one site that reads it. Extracted out of <see cref="AddYellow"/> so the guard is
         /// directly testable (L5, see <see cref="RequireBanLength"/>'s remark for why).
@@ -460,4 +524,18 @@ namespace TacticalDirector.Discipline
 // |         |            |        | (they are #17 CardIssuedEvent.CardKind domain ordinals consumed   |
 // |         |            |        | read-only, not values #44 owns) and renamed PascalCase —          |
 // |         |            |        | CardKindYellow/Red/SecondYellow — per src/CLAUDE.md §3.2.3.       |
+// | 1.5     | 2026-08-15 | —      | ERR-044-003 stage 1, owner decision. OnClubFixturePlayed gains a |
+// |         |            |        | required int[] fieldedPlayerIds and skips any banned player in    |
+// |         |            |        | it. The C1/C2 landing recorded, as an open owner call, that the   |
+// |         |            |        | #30 §2.3 F9 back-fill can field a suspended player in extremis    |
+// |         |            |        | AND that this method then decremented his ban for that same       |
+// |         |            |        | fixture — making the appearance strictly free and a two-match     |
+// |         |            |        | red cost a depleted club nothing. A ban is served by the club     |
+// |         |            |        | playing WITHOUT him, so the eleven is now an input rather than    |
+// |         |            |        | an assumption. Behaviour-identical on every fixture that does     |
+// |         |            |        | not reach the extremis tier, because the availability filter      |
+// |         |            |        | removes suspended players before selection and nothing else can   |
+// |         |            |        | put a banned id in the eleven. Required, not optional: an         |
+// |         |            |        | omitting call site would silently restore the old behaviour,      |
+// |         |            |        | which is this landing's own H1/H4 chain.                          |
 #endregion

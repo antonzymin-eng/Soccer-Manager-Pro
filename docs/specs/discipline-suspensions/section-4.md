@@ -1,7 +1,11 @@
 # Discipline & Suspensions #44 — Section 4: Architecture
 
 **Created:** July 24, 2026
-**Last Updated:** August 13, 2026, later still (v0.5 — L12(b), a third adversarial-review pass over
+**Last Updated:** August 15, 2026 (v0.6 — ERR-044-003 stage 1, owner decision: §4.5's composition-root
+contract for calling `OnClubFixturePlayed` amended to require passing the club's fielded eleven, so
+the call can exempt a player who appeared through the extremis back-fill from serving that fixture's
+ban)
+**Last Updated (prior):** August 13, 2026, later still (v0.5 — L12(b), a third adversarial-review pass over
 the #44 C1/C2 landing: §4.2's file table listed 6 of the 9 files `src/discipline/` actually carries,
 omitting `DisciplineEntry.cs`, `IDisciplineTickLedgerTap.cs` and `AssemblyInfo.cs`; the `DisciplineRules.cs`
 and `Availability.cs` rows also corrected to name their full landed API rather than only the two
@@ -13,7 +17,7 @@ and its file layout have existed since T0/T1, not just been proposed)
 gains the magic-before-version MUST and cites the frame v5 → 6 bump; §4.5's root contract re-scoped
 to both resolution paths)
 **Last Updated (prior):** July 24, 2026 (v0.2 — cross-set AR pass 3; prior v0.1 initial)
-**Version:** 0.5
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -86,8 +90,10 @@ specified the block version-first with no magic, which this section and Appendix
   bench identities) before kickoff and feed the tap every tick (lossless); run `FilterAvailable`
   at the resolve→configure seam on **both clubs' resolved squads of every fixture on both
   resolution paths** (FR-DC-010, re-scoped at ERR-044-002 — the seam does not run on the engine
-  boot alone); call `OnClubFixturePlayed` once per
-  played fixture per club (both resolution paths); route the roster re-key/retirement events to
+  boot alone); call `OnClubFixturePlayed` once per played fixture per club, **passing the club's
+  fielded eleven** (both resolution paths; FR-DC-011, amended ERR-044-003 stage 1 — the eleven is
+  what lets the call exempt a player who appeared through the extremis back-fill from serving that
+  same fixture); route the roster re-key/retirement events to
   the migrate/drop hygiene (T-phase); and compose the sub-blob. It MUST NOT let the UI mutate
   `DisciplineState` directly.
 - **#30** — the ERR-030-009 null seam (resolve → *filter* → configure) is the one spec-text
@@ -104,4 +110,5 @@ specified the block version-first with no magic, which this section and Appendix
 | 0.3 | 2026-08-13 | — | **C1/C2 landing back-prop.** **ERR-044-001:** §4.4 states the magic-before-version rule as a MUST (the ERR-029-005/ERR-041-009 class's fourth instance) and cites the `SEASON_SAVE_FORMAT_VERSION` 5 → 6 bump landed at ERR-030-035. **ERR-044-002:** §4.5's root contract re-scoped from "the managed fixture" to both clubs' resolved squads of every fixture on both resolution paths. |
 | 0.4 | 2026-08-13 | — | **L6** (adversarial review over the C1/C2 landing): §4.1's "at the T-phase" and §4.2's "proposed, at T-phase" headers corrected to say the assembly and its layout are landed, pointing at `file-manifest.md` as the authoritative inventory. |
 | 0.5 | 2026-08-13 | — | **L12(b)**, a third adversarial-review pass: §4.2's file table gains the three files it omitted — `DisciplineEntry.cs` (the tally row type), `IDisciplineTickLedgerTap.cs` (the tap interface `CardLedgerFold.ObserveTick` consumes), `AssemblyInfo.cs` — bringing it to all 9 files `src/discipline/` carries; the `DisciplineRules.cs` and `Availability.cs` rows widened from the two methods each was first written against to the full landed API (`ApplyCard`/`RollToNextSeason`/`MigratePlayerId`/`DropPlayer`; `MarkSuspended`). |
+| 0.6 | 2026-08-15 | — | **ERR-044-003 stage 1**, owner decision: §4.5's composition-root contract corrected — the `OnClubFixturePlayed` call MUST pass the club's fielded eleven, not just its id, so a played fixture the banned player appeared in (via #30 §2.3 F9's extremis back-fill) does not serve his ban. |
 #endregion

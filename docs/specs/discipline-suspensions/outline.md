@@ -1,8 +1,12 @@
 # Discipline & Suspensions #44 — Outline
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.1 — initial, promoted from design supplement v0.3)
-**Version:** 0.1
+**Last Updated:** August 15, 2026 (v0.2 — ERR-044-003 stage 1, owner decision: **KD-3** corrected — a
+ban serves one decrement per played fixture of the player's club **that he did not appear in**, not
+per played fixture full stop; the extremis back-fill (#30 §2.3 F9) can field a suspended player, and
+without the exemption that appearance served his ban for free)
+**Last Updated (prior):** July 24, 2026 (v0.1 — initial, promoted from design supplement v0.3)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -43,7 +47,9 @@ no domain tag, no `SubsystemOrdinals` entry** (the #37/#38/#49 read-only class).
   slot-reset), never a new subscription pattern.
 - **KD-3** — fold at fixture resolution; availability filter at the next selection (the
   ERR-030-009 resolve→configure seam); a ban serves one decrement per played fixture of the
-  player's club (either resolution path). No off-by-one.
+  player's club **that the player did not appear in** (either resolution path — amended
+  ERR-044-003 stage 1: the exemption matters only when the extremis back-fill has fielded a
+  suspended player, since the filter otherwise excludes him already). No off-by-one.
 - **KD-4** — availability is a **VIEW**: `IsAvailable` is a pure predicate; `FilterAvailable`
   returns a reduced value-copy `Squad`; #27 state is never written.
 - **KD-5** — de-dup resolved by source: **one event per incident**; kind 2 = yellow +1 AND a
@@ -67,4 +73,5 @@ no domain tag, no `SubsystemOrdinals` entry** (the #37/#38/#49 read-only class).
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial outline, promoted from design supplement v0.3 (AR-converged). Status IN REVIEW. |
+| 0.2 | 2026-08-15 | — | **ERR-044-003 stage 1**, owner decision: KD-3 corrected to state the played-fixture ban decrement excludes any fixture the player appeared in (the extremis back-fill case), matching the amended FR-DC-011 / `OnClubFixturePlayed`. |
 #endregion

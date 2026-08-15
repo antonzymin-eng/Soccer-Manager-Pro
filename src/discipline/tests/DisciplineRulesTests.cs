@@ -357,7 +357,7 @@ namespace TacticalDirector.Discipline.Tests
             rules.AddBan(clubAPlayer, Competition, 2);
             rules.AddBan(clubBPlayer, Competition, 2);
 
-            rules.OnClubFixturePlayed(0);
+            rules.OnClubFixturePlayed(0, Array.Empty<int>());
 
             Assert.AreEqual(1, rules.State.EntryFor(clubAPlayer, Competition).BanMatchesRemaining,
                 "club 0's fixture serves club 0's ban");
@@ -372,10 +372,10 @@ namespace TacticalDirector.Discipline.Tests
             int p = PlayerId(0, 1);
             rules.AddBan(p, Competition, 1);
 
-            rules.OnClubFixturePlayed(0);   // 1 -> 0, drops the row
+            rules.OnClubFixturePlayed(0, Array.Empty<int>());   // 1 -> 0, drops the row
             // A second played fixture with no outstanding ban must not underflow — the row is gone,
             // so this call has nothing to touch, and must not throw or resurrect a negative row.
-            Assert.DoesNotThrow(() => rules.OnClubFixturePlayed(0));
+            Assert.DoesNotThrow(() => rules.OnClubFixturePlayed(0, Array.Empty<int>()));
 
             Assert.IsFalse(rules.State.HasEntry(p, Competition));
         }
@@ -387,7 +387,7 @@ namespace TacticalDirector.Discipline.Tests
             int p = PlayerId(0, 1);
             rules.AddBan(p, Competition, 1);   // Yellows 0, ban 1 — serving this to 0 makes an all-zero row
 
-            rules.OnClubFixturePlayed(0);
+            rules.OnClubFixturePlayed(0, Array.Empty<int>());
 
             Assert.IsFalse(rules.State.HasEntry(p, Competition),
                 "FR-DC-017: a row that reaches (0,0) MID-SEASON must be dropped immediately");
@@ -397,7 +397,8 @@ namespace TacticalDirector.Discipline.Tests
         public void OnClubFixturePlayed_NegativeClubId_Throws()
         {
             DisciplineRules rules = NewRules();
-            Assert.Throws<ArgumentOutOfRangeException>(() => rules.OnClubFixturePlayed(-1));
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => rules.OnClubFixturePlayed(-1, Array.Empty<int>()));
         }
 
         [Test]
@@ -415,7 +416,7 @@ namespace TacticalDirector.Discipline.Tests
             rules.AddBan(p1, Competition, 1);
             rules.AddBan(p2, Competition, 1);
 
-            rules.OnClubFixturePlayed(0);
+            rules.OnClubFixturePlayed(0, Array.Empty<int>());
 
             Assert.IsFalse(rules.State.HasEntry(p1, Competition), "p1's one-match ban must be served and the row dropped");
             Assert.IsFalse(rules.State.HasEntry(p2, Competition), "p2's one-match ban must ALSO be served in the same call");

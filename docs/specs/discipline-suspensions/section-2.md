@@ -1,7 +1,13 @@
 # Discipline & Suspensions #44 — Section 2: Requirements, Data Structures, Failure Modes
 
 **Created:** July 24, 2026
-**Last Updated:** August 13, 2026, later still (v0.6 — L12(c) + L13, a third adversarial-review pass
+**Last Updated:** August 15, 2026 (v0.7 — ERR-044-003 stage 1, owner decision: FR-DC-011 amended so a
+ban no longer decrements on a fixture the player appeared in through #30 §2.3 F9's extremis back-fill —
+`OnClubFixturePlayed` now takes the club's fielded eleven and exempts anyone in it; the §2.3
+"recorded, not fixed" note updated to record the free-appearance half as FIXED (reinstatement tier
+order unchanged) and to point at §7.2's staged youth/generated-cover plan, in place of the deferral
+queue, which was NOT chosen)
+**Last Updated (prior):** August 13, 2026, later still (v0.6 — L12(c) + L13, a third adversarial-review pass
 over the #44 C1/C2 landing: §2.2's API block corrected to the real landed signatures — no
 `MarkSuspended`, `DisciplineRules` or `DisciplineEntry` shown at all, and `FilterAvailable`/`IsAvailable`
 carried signatures the code does not have (no `competitionId` on the filter, `in DisciplineState` on a
@@ -16,7 +22,7 @@ re-scoped off "the engine-resolved fixture" to every resolved squad on both reso
 fail-loud withdrawn in favour of #30 §2.3 F9, with the suspension-as-stricter-reinstatement-tier
 decision recorded)
 **Last Updated (prior):** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.6
+**Version:** 0.7
 **Status:** APPROVED
 
 ---
@@ -35,7 +41,7 @@ decision recorded)
 | FR-DC-008 | A player MUST be unavailable while `BanMatchesRemaining > 0`; `IsAvailable` MUST be a pure predicate over `DisciplineState`. | MUST | KD-4 |
 | FR-DC-009 | `FilterAvailable(in Squad) → Squad` MUST return a **reduced value copy** (available players only) for `ConfigureSquads`; it MUST NOT write #27 state; with no active ban it MUST pass the squad through unchanged. **When every player is suspended there is no reduced value copy to return — `Squad` cannot represent a zero-player roster — so `FilterAvailable` MUST return `null` for that case** (ERR-044-005; `Squad`'s own constructor refuses `players.Length == 0`, so returning it as a normal squad is not an option). This method is FR-DC-009's own surface; #44's production path is `MarkSuspended`'s removal mask, consumed directly by #30's composed availability seam. | MUST | KD-4 |
 | FR-DC-010 | The filter MUST act at #30's pre-declared **resolve→configure** seam (ERR-030-009) and MUST apply to **every resolved squad of every fixture on both resolution paths** (the engine boot and the quick-sim rating alike) — the managed club's **and its opponent's**, whichever path resolved them (both pass through `ResolveByClubId` → `ConfigureSquads`, so both pass the seam; a banned opponent is excluded exactly as a banned managed-club player is). **Card *generation* stays engine-fixture-only at minimal (§3.3) — this row governs the filter, not the fold.** The fold MUST complete at fixture resolution — so a card in fixture N bans for fixture N+1 (no off-by-one). *(Re-scoped from "the engine-resolved fixture" — ERR-044-002, August 13, 2026: the narrower wording contradicted FR-DC-011's "regardless of resolution path" one row below and #30 §3.4's LIVE both-paths seam; a quick-sim-only implementation would have let a banned player's club decrement his ban on a fixture he had just played through.)* | MUST | KD-3 |
-| FR-DC-011 | A ban MUST decrement by exactly one per **played fixture of the player's club**, regardless of resolution path (engine-resolved or quick-sim); serving MUST be reported via `OnClubFixturePlayed`. | MUST | KD-3 |
+| FR-DC-011 | A ban MUST decrement by exactly one per **played fixture of the player's club that the player did not appear in**, regardless of resolution path (engine-resolved or quick-sim); serving MUST be reported via `OnClubFixturePlayed`, which MUST take the club's fielded eleven as an input. *(Amended — ERR-044-003 stage 1, August 15, 2026: the original row read "per played fixture of the player's club" full stop, which is correct only while a banned player can never take the field. #30 §2.3 F9's depleted-squad back-fill can field him in extremis — see the ERR-044-003 note below — and under the original wording that appearance ALSO served his ban, so it cost him nothing and a two-match red cost a depleted club nothing at all. A suspension means the club plays **without** him; a fixture he plays in is not one of it.)* | MUST | KD-3 |
 | FR-DC-012 | The tally MUST key `(PlayerId, CompetitionId)` with `CompetitionId = 0` at minimal (an `int` key — no #43 assembly reference); #43-scoped accumulation is a partition activation, not a rewrite. | MUST | KD-6 |
 | FR-DC-013 | On a roster **re-key** (#31 transfer) the entry — tally **and** unserved bans — MUST **migrate** old→new `PlayerId` (bans follow the player; the deliberate contrast with #32's drop rule); on **retirement** the entry MUST be dropped. Delivery: the FR-TX-022 hook / #28 lifecycle coordination (T-phase wiring). | MUST | KD-6 |
 | FR-DC-014 | #44 state MUST persist as an opaque, independently version-gated `DISCIPLINE_SAVE_FORMAT_VERSION` sub-blob composed into #30's `SeasonSaveCodec`; no `WORLD_STORE_FORMAT_VERSION` bump; recompute-on-load is not an option (no ledgers are retained — KD-1). | MUST | KD-1 |
@@ -124,14 +130,23 @@ mass-suspension season, reachable at the engine's measured card rate (§1.5). `s
 implements no viability gate; the composition and the single back-fill live in
 `src/season-save/AvailabilityComposition.cs`.
 
-**Recorded, not fixed — an owner decision, not a repair.** Preserving #30 §3.4's stated invariant
+**Recorded, partially fixed — an owner decision, staged.** Preserving #30 §3.4's stated invariant
 ("the composed filter can never leave a club worse off than having no filter at all") means a
 suspended player **is** reinstatable in extremis, which the Laws of the Game do not allow. The
 implementation makes suspension a **stricter reinstatement tier** than injury — every injured player
 is pressed back before any suspended one, and a suspended player plays only when the alternative is a
-club that cannot take the field at all. §7.2's deferral queue is the designed alternative if the owner
-would rather refuse the fixture than field a banned player; see that section for the note recording
-this as now a live decision.
+club that cannot take the field at all. **That tier order is unchanged.** What **ERR-044-003 stage 1**
+(August 15, 2026) fixed is the free-appearance half: an extremis appearance no longer serves the ban it
+was fielded through — `OnClubFixturePlayed` now takes the club's fielded eleven and exempts anyone in
+it (FR-DC-011), so a two-match red still costs a depleted club two full fixtures rather than one. The
+fuller answer, agreed but not yet built, is two further tiers staged ahead of the suspended one — youth
+call-ups first, then generated low-attribute cover — after which a banned man never reaches the pitch
+at all and the suspended tier above becomes unreachable rather than merely costly. Both are blocked:
+**#42 Youth has no `src/` assembly**, and generated cover needs the packed `PlayerId = clubId ×
+CLUB_SQUAD_SIZE + local` id space widened, since it is fully packed at 25 and a 26th player for club N
+collides with club N+1's first (#27 FR-SQ-010 as amended by ERR-027-004). §7.2 records the staged plan
+and its blockers in full; the deferral queue previously recorded there as the alternative was **not**
+chosen.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -142,4 +157,5 @@ this as now a live decision.
 | 0.4 | 2026-08-13 | — | **C1/C2 landing back-prop.** **ERR-044-002:** FR-DC-010's "the engine-resolved fixture" contradicted FR-DC-011's "regardless of resolution path" one row below and #30 §3.4's LIVE both-paths seam; re-scoped to every resolved squad of every fixture on both resolution paths. **ERR-044-003:** F5's fail-loud withdrawn — #30 §2.3 F9 (approved after this spec) settles the same depleted-squad event by back-filling instead, and #44 contributes removals only; recorded that a suspended player is reinstatable in extremis under #30's never-worse-than-unfiltered invariant, making suspension a stricter reinstatement tier than injury rather than an absolute bar. |
 | 0.5 | 2026-08-13 | — | **Adversarial-review back-prop.** **ERR-044-004:** F2 stated only "a club/player outside the resolvable universe" and the implementation had guarded the club half alone — a negative `PlayerId` truncation-derives to club 0 and was silently served, decremented and migrated; F2 now names the player half explicitly and cites both refusal sites (`DisciplineEntry`'s constructor, `DisciplineSaveCodec.Decode`/F3). **ERR-044-005:** FR-DC-009's "reduced value copy" requirement was total as written but unsatisfiable for an all-suspended squad (`Squad` cannot represent zero players); FR-DC-009 now states the `null`-return case and names `MarkSuspended`'s mask, consumed by #30's composed seam, as the actual production path — `FilterAvailable` is FR-DC-009's own surface, not #44's. |
 | 0.6 | 2026-08-13 | — | **L12(c) + L13**, a third adversarial-review pass. **L12(c):** §2.2's code block — the first place an implementer looks — showed only `DisciplineState`/`CardLedgerFold`/two free-floating `Availability` methods/one free-floating `OnClubFixturePlayed`, none matching the landed signatures (`IsAvailable`/`FilterAvailable` took `in DisciplineState` with a default `competitionId`, neither of which the code has; `MarkSuspended`, `DisciplineRules` and `DisciplineEntry` were absent entirely). Replaced with the real surface. **L13:** the failure-mode table stopped at F4 while `DisciplineRules.RequireYellowThreshold`/`RequireBanLength` are enforced in production and unit-tested (the AR pass 9 #29/#41 F8 precedent for exactly this omission class); new **F6** row added, and the matching guard calls landed in `section-3.md` §3.2's `AddYellow` pseudocode. |
+| 0.7 | 2026-08-15 | — | **ERR-044-003 stage 1**, owner decision: FR-DC-011 amended — a ban no longer decrements on a fixture the player appeared in via #30 §2.3 F9's extremis back-fill; `OnClubFixturePlayed` now takes the club's fielded eleven and exempts anyone in it. The §2.3 "recorded, not fixed" paragraph updated to state the free-appearance half is now FIXED (reinstatement tier order unchanged) and to name the staged three-tier plan (exempt-the-appearance now; youth call-ups; generated cover) with its two blockers — #42 Youth has no `src/` assembly, and generated cover needs the packed `PlayerId` id space widened (#27 FR-SQ-010 / ERR-027-004) — replacing the deferral-queue alternative, which was NOT chosen. |
 #endregion

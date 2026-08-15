@@ -1,7 +1,12 @@
 # Discipline & Suspensions #44 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 24, 2026
-**Last Updated:** August 13, 2026, later same day (v0.4 — M11 + L6, adversarial review over the C1/C2
+**Last Updated:** August 15, 2026 (v0.5 — ERR-044-003 stage 1, owner decision: the ban-serving deferral
+bullet resolved — the deferral queue was NOT chosen; the chosen answer is the exempt-the-appearance fix
+(now LANDED, FR-DC-011 / `OnClubFixturePlayed`) plus two further staged tiers, both blocked — #42 Youth
+has no `src/` assembly, and generated cover needs the packed `PlayerId` id space widened (#27
+FR-SQ-010 / ERR-027-004))
+**Last Updated (prior):** August 13, 2026, later same day (v0.4 — M11 + L6, adversarial review over the C1/C2
 landing: §7.1's T2 bullet marked LANDED (except the migrate/drop hygiene, which did not land with
 it); new §7.2 bullet records FR-DC-013's re-key/drop delivery has zero production call site and the
 id-reuse hazard that lands with it; §7.3's #30 seam contract corrected from "null seam" to LIVE)
@@ -10,7 +15,7 @@ deferral bullet flagged as a now-LIVE owner decision — #30 §2.3 F9 makes a su
 reinstatable in extremis rather than an absolute bar — with the deferral queue recorded as the
 designed alternative)
 **Last Updated (prior):** July 24, 2026 (v0.2 — cross-set AR; prior v0.1 — initial)
-**Version:** 0.4
+**Version:** 0.5
 **Status:** APPROVED
 
 ---
@@ -44,17 +49,25 @@ designed alternative)
 - **Offence classes / varying ban lengths** — richer `CardIssuedEvent` interpretation (e.g.
   violent conduct vs two bookings) requires engine-side offence data that does not exist; deferred
   until the engine emits it.
-- **Ban-serving deferral under squad shortfall.** *(ERR-044-003, August 13, 2026 — this is now a
-  LIVE decision, not the hypothetical it was written as.)* §2.3's F5 fail-loud below the 18-player
-  floor was **withdrawn**: #30 §2.3 F9 / §3.4 (ERR-030-029, approved after this section) settles a
-  depleted squad by back-filling the least-injured (now least-suspended too) players back in until
-  the engine's own selector can field the formation, never refusing until even the whole squad
-  cannot. That means a suspended player **is** reinstatable in extremis today — suspension is a
-  stricter reinstatement tier than injury (pressed back only after every injured player), but not an
-  absolute bar, which the Laws of the Game do not allow. This deferral queue (excess bans postpone
-  serving until the squad can field 18, refusing the fixture rather than fielding a banned player) is
-  the designed alternative if the owner would rather refuse than reinstate — recorded here, still
-  unbuilt, so the eventual answer is a designed extension, not an emergency patch.
+- **Ban-serving under squad shortfall — RESOLVED, staged.** *(ERR-044-003, August 13, 2026, stage 1
+  August 15, 2026.)* §2.3's F5 fail-loud below the 18-player floor was **withdrawn**: #30 §2.3 F9 /
+  §3.4 (ERR-030-029, approved after this section) settles a depleted squad by back-filling the
+  least-injured (now least-suspended too) players back in until the engine's own selector can field
+  the formation, never refusing until even the whole squad cannot. That means a suspended player **is**
+  reinstatable in extremis — suspension is a stricter reinstatement tier than injury (pressed back
+  only after every injured player), but not an absolute bar, which the Laws of the Game do not allow.
+  **The deferral queue this bullet used to record as the alternative (excess bans postpone serving
+  until the squad can field 18, refusing the fixture rather than fielding a banned player) was NOT
+  chosen.** The owner's decision (August 15, 2026) is a three-tier staging instead, of which the first
+  tier is now **LANDED**: (1) an extremis appearance no longer serves the ban it was fielded through —
+  `OnClubFixturePlayed` now takes the club's fielded eleven and exempts anyone in it (FR-DC-011,
+  §3.3), so the reinstatement stays possible but is no longer free; (2) **youth call-ups** ahead of
+  any suspended player — **blocked: #42 Youth has no `src/` assembly**; (3) **generated low-attribute
+  cover** ahead of that, after which a banned man never reaches the pitch at all and the suspended
+  tier becomes unreachable rather than merely costly — **blocked: the packed `PlayerId = clubId ×
+  CLUB_SQUAD_SIZE + local` id space needs widening** (fully packed at 25; a 26th player for club N
+  collides with club N+1's first — #27 FR-SQ-010 as amended by ERR-027-004). Tiers 2 and 3 are
+  recorded here, unbuilt, as the eventual answer once their blockers clear.
 - **FR-DC-013's re-key/drop delivery has no call site (M11, recorded at the adversarial review over
   the C1/C2 landing).** `DisciplineRules.MigratePlayerId` and `DropPlayer` are built and unit-tested
   but referenced by nothing outside `src/discipline/` — the T-phase plan above named the FR-TX-022
@@ -92,4 +105,5 @@ designed alternative)
 | 0.2 | 2026-07-24 | — | Cross-set AR (L): §7.2 gains the **ban-serving deferral under squad shortfall** row — the F5 <18 fail-loud is coherent today (the engine's own gate, verified) but the pile-up is reachable in principle; the deferral queue is the recorded deep mitigation. |
 | 0.3 | 2026-08-13 | — | **ERR-044-003** (C1/C2 landing back-prop): the deferral bullet corrected — §2.3's F5 fail-loud it was written against no longer exists (withdrawn in favour of #30 §2.3 F9's back-fill), so the squad-shortfall question is no longer hypothetical: a suspended player is reinstatable in extremis today, and the deferral queue is recorded as the alternative if the owner prefers refusing the fixture instead. |
 | 0.4 | 2026-08-13 | — | **M11 + L6** (adversarial review over the C1/C2 landing): §7.1's T2 bullet marked LANDED, with the migrate/drop hygiene split out as the one T2 item that did NOT land; new §7.2 bullet records FR-DC-013's re-key/drop delivery has zero production call site today and the id-reuse hazard a #28 boundary regen would hit; §7.3's #30 seam-contract bullet corrected from "null seam" (stale since T2) to LIVE. |
+| 0.5 | 2026-08-15 | — | **ERR-044-003 stage 1**, owner decision: the ban-serving-under-squad-shortfall bullet resolved from "now a live decision" to RESOLVED — the deferral queue was NOT chosen; the chosen answer is a three-tier staging, of which tier 1 (exempt the extremis appearance from serving, FR-DC-011) is LANDED, and tiers 2 (youth call-ups) and 3 (generated cover) are recorded unbuilt with their blockers (#42 has no `src/` assembly; the packed `PlayerId` id space needs widening, #27 FR-SQ-010 / ERR-027-004). |
 #endregion

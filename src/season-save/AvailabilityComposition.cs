@@ -1,6 +1,9 @@
 // File:     src/season-save/AvailabilityComposition.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 3, M14 — both contributors now own the
+// Modified: 2026-08-15 (ERR-044-003 stage 1 — the L7 remark's open owner call is DECIDED: an extremis
+//           appearance no longer serves the ban it was fielded through, fixed at the serving site
+//           rather than here; the two further FM-style tiers are recorded with what blocks them — v1.3.
+//           Prior: 2026-08-13, #44 C1/C2 adversarial review round 3, M14 — both contributors now own the
 //           mask they are handed; Compose allocates one per contributor and does all the OR-ing
 //           itself, and the stale MarkSuspended-skips-entries-already-true comment (accurate before
 //           round 1's M3, false since) is replaced — v1.2. Prior: v1.1 L7 — the type remarks record
@@ -56,17 +59,28 @@ namespace TacticalDirector.SeasonSave
     /// designed answer if the owner would rather refuse the fixture than field a banned player.
     /// </para>
     /// <para>
-    /// <b>L7, RECORDED — an extremis appearance discharges the ban it was fielded through.</b> A
-    /// player <see cref="Reinstate"/> presses back in via the suspended tier is, by construction, still
-    /// carrying <c>BanMatchesRemaining &gt; 0</c> at kickoff — <see cref="Compose"/> only removes him
-    /// from the filtered result; it never touches <see cref="DisciplineState"/>. <c>SeasonLoop</c>'s
-    /// serving call (<c>DisciplineRules.OnClubFixturePlayed</c>, run once per played club fixture
-    /// regardless of who was selected) then decrements that same fixture's ban anyway — the exact
+    /// <b>An extremis appearance no longer discharges the ban it was fielded through</b> (ERR-044-003
+    /// stage 1, owner decision, August 15, 2026 — this paragraph previously recorded it as an open
+    /// call). A player <see cref="Reinstate"/> presses back in via the suspended tier is, by
+    /// construction, still carrying <c>BanMatchesRemaining &gt; 0</c> at kickoff: <see cref="Compose"/>
+    /// only removes him from the filtered result, and never touches <see cref="DisciplineState"/>.
+    /// <c>SeasonLoop</c>'s serving call used to decrement that same fixture's ban anyway — the exact
     /// "decrement a ban the banned player had just played through" hazard ERR-044-002's fix exists to
-    /// prevent, reintroduced here by ERR-044-003's own compromise one tier over. Whether an extremis
-    /// appearance should count as a match SERVED (today's behaviour) or should be exempted so the ban
-    /// still costs a full fixture is an owner call, not decided here — see the extension to
-    /// <c>ERR-044-003</c> in <c>spec-error-log.md</c>.
+    /// prevent, reintroduced by this type's own compromise one tier over, and it made the appearance
+    /// strictly free. <c>DisciplineRules.OnClubFixturePlayed</c> now takes the fielded eleven and
+    /// exempts anyone in it, so the ban still costs a full fixture. The reinstatement tiers below are
+    /// unchanged — the fix is at the serving site, because the football rule is about who PLAYED, not
+    /// about who was selectable.
+    /// </para>
+    /// <para>
+    /// <b>The two tiers still missing, in order</b> (owner-agreed staging, August 15, 2026): youth
+    /// call-ups ahead of any suspended player, then generated low-attribute cover ahead of that — the
+    /// Football Manager posture, under which a banned man never takes the field at all and this type's
+    /// suspended tier becomes unreachable rather than merely expensive. Neither is buildable yet:
+    /// <b>#42 Youth has no <c>src/</c> assembly</b>, and generated cover needs the <c>PlayerId =
+    /// clubId × CLUB_SQUAD_SIZE + local</c> id space widened, since it is fully packed at 25 and a
+    /// 26th player for club N collides with club N+1's first (#27 FR-SQ-010 as amended by
+    /// ERR-027-004). Until then the suspended tier stays, and stays costly.
     /// </para>
     /// </summary>
     internal static class AvailabilityComposition
@@ -292,4 +306,17 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | too — and the stale comment is replaced with the real reason a   |
 // |         |            |        | separate mask is required: an owning writer would clear the      |
 // |         |            |        | other contributor's removals if they shared one.                 |
+// | 1.3     | 2026-08-15 | —      | ERR-044-003 stage 1, owner decision. v1.1's L7 remark recorded    |
+// |         |            |        | as an OPEN owner call that Reinstate's extremis tier fields a     |
+// |         |            |        | suspended player whose ban the same fixture's serving call then   |
+// |         |            |        | discharged — making the appearance free. Decided: it does not.    |
+// |         |            |        | The fix is in DisciplineRules.OnClubFixturePlayed, which now      |
+// |         |            |        | takes the fielded eleven and exempts anyone in it; the rule is    |
+// |         |            |        | about who PLAYED, so it belongs at the serving site and this      |
+// |         |            |        | type's tier order is untouched. The remark is rewritten from an   |
+// |         |            |        | open question to the decision, and the two further tiers the      |
+// |         |            |        | owner agreed to (youth call-ups, then generated cover, both       |
+// |         |            |        | ahead of any suspended player) are recorded with their blockers:  |
+// |         |            |        | #42 has no src/ assembly, and generated cover needs the packed    |
+// |         |            |        | clubId x CLUB_SQUAD_SIZE + local id space widened.                |
 #endregion
