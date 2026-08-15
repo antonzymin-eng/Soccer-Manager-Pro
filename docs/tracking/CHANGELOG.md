@@ -12,7 +12,45 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 15, 2026 (**Two owner decisions landed, one as code and one as sequencing.**)
+> **Last Updated:** August 15, 2026, later (**#44 adversarial-review round 4 CLOSED — all ten findings (0 High / 6 Medium / 4 Low) fixed, gate
+> run to completion.** The round-4 findings had sat unapplied since August 13 (a session ended at a
+> usage limit). Split by file domain across two delegated agents so they could not collide. **M22** —
+> the round-level `[GT]` pre-check called a static nothing in `src/` binds a config for, so deleting
+> it left the tree green; routed through the `IFixtureDisciplineDriver` seam. Verified by deletion,
+> and the result needs stating precisely because the naive reading is wrong: deleting the call DOES
+> fail a test, but not on the thrown exception — that still arrives via the per-fixture driver call —
+> it fails on the assertion that no fixture was touched, the fixture being already marked `Played` by
+> then under M6's ordering. That is exactly the wedge the pre-check exists to prevent. **M23** —
+> claims corrected, **no lock manufactured**: an inline copy of the delegated-to body passes either
+> test, so the pair structurally cannot prove delegation and now says so. **M24** — the card-kind
+> encoding, which lived four times bound nowhere under two tags, is declared ONCE as `[FIXED]`/
+> ALL_CAPS in `EventSystemConstants` (#17 owns the `CardIssuedEvent` payload) with `[CROSS]`/
+> PascalCase mirrors in `MatchEngineConstants` and `DisciplineConstants`, `MatchEngine.cs`'s bare
+> `0/1/2` literals replaced (FR-CS-016), and `MatchAnalyticsConstants` repointed at the authority;
+> filed as **ERR-017-004**. **Two defects in the first draft of that fix were caught on review and
+> fixed before landing** — the new constants were tagged `[GT]` (designer-tunable-via-config), which
+> is M24's own defect class recurring inside M24's fix, and `MatchAnalyticsConstants` had been
+> repointed at a MIRROR rather than the authority, giving the "must not diverge from its source" rule
+> two hops to fail at. **M25** — #44 §5, untouched since July 24, had `T-DC-BAN-004` marked WITHDRAWN
+> in place rather than deleted (the row records why the test existed and what retired it), four rows
+> added for tests that existed with no §5 entry, and §9's G14 re-checked and correctly left ✅ — the
+> checklist row was never wrong, only the table it cited. Every cited test name was verified to exist
+> in `src/discipline/tests/` before being written into the spec; fabricated checklist values are this
+> project's oldest recorded trap and a traceability table is where they hide. **M26** — FR-SN-021's
+> `Save` signature corrected 9 → 10 arguments (`disciplineWired`, ERR-030-039). **M27** — §3.1's fold
+> pseudocode rewritten to `CardLedgerFold`'s real buffer-then-commit-atomically shape, which an
+> implementer following the old text would not have reproduced. **L18–L21** fixed; the four stale
+> counts by direct measurement rather than by copying another document's figure. **The round-numbering
+> divergence was recorded, not "corrected"** — file headers count review passes (to 5), `git log`
+> groups the same work into 3 fix-commits; both are internally consistent and there is no single right
+> number. **No production behaviour change.** **GATE: run to completion, 34 suites, quarantine empty** —
+> `Discipline.Tests` 105/0, `SeasonSave.Tests` **433**/0/3 (+1, the M22 driver lock),
+> `MatchAnalytics.Tests` 57/0, `MatchEngine.Tests` 461/1/11 (1 h 1 m), every other suite green. The one
+> failure tree-wide is `sim_match_engine_close_chance`, **read by name out of the gate log rather than
+> inferred from matching counts** — the inherited owner-held red; `MatchEngine.Tests` is identical to
+> baseline, so this adds no new failure.)
+>
+> **Last Updated (prior):** August 15, 2026 (**Two owner decisions landed, one as code and one as sequencing.**)
 >
 > **(1) `ERR-044-003` stage 1 — an extremis appearance no longer serves the ban it was fielded
 > through.** The #44 C1/C2 landing recorded, twice and explicitly as an owner call, that #30 §2.3 F9's
