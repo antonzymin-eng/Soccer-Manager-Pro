@@ -1,6 +1,8 @@
 // File:     src/match-engine/SquadRating.cs
 // Created:  2026-07-26
-// Modified: 2026-08-07
+// Modified: 2026-08-15 (#44 AR round 5, M5 — the substitution-dependency note now names its
+//           SECOND consumer: #44's FR-DC-011 serving exemption, not just #41's appearance record)
+// Prior-Modified: 2026-08-07
 // Author:   —
 // Spec:     League Bootstrap design supplement (docs/tracking/league-bootstrap-design.md) KD-7 +
 //           AR-4 M-1 (the named #30 T2 prerequisite); Season & Competition Loop #30 §3.4.1
@@ -116,6 +118,19 @@ namespace TacticalDirector.MatchEngine
         /// and the record must widen at its call sites — do not paper over that by redefining THIS
         /// read, which <c>StartingElevenMean</c> and <c>ConfigureSquads</c> also key on.
         /// </para>
+        /// <para>
+        /// <b>There are TWO such consumers now, not one</b> (#44 AR round 5, M5). #41's FR-MD-010
+        /// appearance record was the first. The second, added August 15, 2026, is #44's FR-DC-011
+        /// <b>serving exemption</b>: <c>SeasonLoop.FieldedXi</c> feeds this array to
+        /// <c>DisciplineRules.OnClubFixturePlayed</c>, which skips the ban decrement for anyone in it.
+        /// That consumer is the sharper of the two, because #44 goes to real lengths to be
+        /// substitution-CORRECT for card attribution (FR-DC-005, the whole <c>CardLedgerFold</c>
+        /// occupancy machinery, the synthetic bench-id derivation) and then serves bans against "who
+        /// started". The day <c>SubstitutePlayer</c> gets a production caller, a suspended player
+        /// pressed on by #30 §2.3 F9's extremis back-fill and brought on as a substitute has his ban
+        /// served for a match he played — exactly the free appearance ERR-044-003 stage 1 exists to
+        /// remove, silently reintroduced. Widen at the call sites, as above; not here.
+        /// </para>
         /// </summary>
         /// <param name="squad">A full club roster.</param>
         /// <exception cref="System.ArgumentNullException"><paramref name="squad"/> is null.</exception>
@@ -163,4 +178,12 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | records its substitution dependency — "who started" equals "who   |
 // |         |            |        | played" only while Stage 0 fields a fixed eleven; the divergence  |
 // |         |            |        | belongs to the appearance record's call sites, not to this read.  |
+// | 1.4     | 2026-08-15 | —      | AR round 5 fix (M5), doc only. The substitution-dependency  |
+// |         |            |        | note named only #41's appearance record as the consumer that|
+// |         |            |        | must widen when substitutions land. Since ERR-044-003 stage |
+// |         |            |        | 1 there is a second — #44's serving exemption, which reads  |
+// |         |            |        | this array through SeasonLoop.FieldedXi — and it is the     |
+// |         |            |        | sharper case: a suspended player brought on as a SUB would  |
+// |         |            |        | serve his ban for a match he played, reintroducing exactly  |
+// |         |            |        | the free appearance stage 1 removed.                        |
 #endregion

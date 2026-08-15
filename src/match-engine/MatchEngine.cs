@@ -1,6 +1,9 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
-// Modified: 2026-08-15 (#44 C1/C2 adversarial review round 4, M24/ERR-017-004 — DetermineCardKind and
+// Modified: 2026-08-15, later (#44 AR round 5, L3 — the bare 0xFFFF "no associated foul" sentinel in
+//           the card-issue publish now reads MatchEngineConstants.FoulOrdinalNone, the [CROSS] mirror of
+//           #17's new FOUL_ORDINAL_NONE; same value, FR-CS-016 — v1.71.
+//           Prior: 2026-08-15 (#44 C1/C2 adversarial review round 4, M24/ERR-017-004 — DetermineCardKind and
 //           ApplyCardAndCheckSentOff now read MatchEngineConstants.CardKindYellow/Red/SecondYellow
 //           instead of MatchEngineConstants.CARD_KIND_YELLOW/RED and the bare literals 0/1/2; the
 //           constants themselves moved from [FIXED] to [CROSS] mirrors of the new authoritative
@@ -5279,7 +5282,8 @@ namespace TacticalDirector.MatchEngine
             if (drawnKind.HasValue)
             {
                 byte cardKind = ApplyCardAndCheckSentOff(offender, drawnKind.Value);
-                var cardEvt = new CardIssuedEvent(offender, cardKind, foulOrdinal: 0xFFFF);
+                var cardEvt = new CardIssuedEvent(
+                    offender, cardKind, MatchEngineConstants.FoulOrdinalNone);
                 EventBus.Publish(in cardEvt);
             }
 
@@ -9305,4 +9309,12 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | literals — the encoding is now declared once, in event-system, and    |
 // |         |            |        | mirrored here. Same byte values (0/1/2) at every site; no behaviour   |
 // |         |            |        | change.                                                                |
+// | 1.71    | 2026-08-15 | —      | AR round 5 fix (L3). The card-issue publish carried a bare       |
+// |         |            |        | 0xFFFF "procedural, no associated foul" sentinel with no        |
+// |         |            |        | catalogue home in any assembly — ERR-017-004's exact defect on   |
+// |         |            |        | the SIBLING payload field of the same event, in the same        |
+// |         |            |        | statement that fix rewrote to remove the bare 0/1/2 card-kind   |
+// |         |            |        | literals. Now MatchEngineConstants.FoulOrdinalNone, the [CROSS]  |
+// |         |            |        | mirror of #17's FOUL_ORDINAL_NONE. Same value; no behaviour     |
+// |         |            |        | change.                                                         |
 #endregion
