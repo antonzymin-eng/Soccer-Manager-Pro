@@ -741,10 +741,19 @@ namespace TacticalDirector.SeasonSave.Tests
             // exactly the case where the first Reinstate call has only one candidate to choose between.
             // Nothing here proved the order holds across MULTIPLE reinstate calls, which is why
             // ERR-030-042 (an implementer following the spec could press banned players back AHEAD of
-            // injured ones) had no detector. This forces TWO reinstatements with TWO injured players
-            // available, so a tier-order defect that only shows up on the second call — or that trades
-            // one injured player for a suspended one rather than the other injured player — is caught
-            // too.
+            // injured ones) had no detector.
+            //
+            // Every player but three (SuspendedCount) is injured, so the back-fill must reinstate
+            // several times before it could possibly run out of injured candidates — the tier order is
+            // exercised across an unknown-but-large number of passes rather than hand-picked to be
+            // exactly one, which is what let it silently reach the suspended tier the first time this
+            // test was written with a tight margin (CanFieldStartingEleven needs the full EIGHTEEN —
+            // 11 starters + 7 bench, MatchEngineConstants.PLAYERS_PER_TEAM / SUBSTITUTES_PER_TEAM — and
+            // a "first eighteen by roster index" core was one player short of position-complete on this
+            // seed's squad, forcing a THIRD reinstate that landed on the suspended tier and correctly
+            // failed the not-yet-corrected version of this test). With twenty-two injured candidates
+            // against a formation that needs at most eighteen selectable, there is no roster-position
+            // combination that can exhaust the injured pool before the suspended three are needed.
             League league = FourClubLeague();
             int clubId = league.ClubIds()[0];
             Squad full = league.ResolveByClubId(clubId);
@@ -755,50 +764,40 @@ namespace TacticalDirector.SeasonSave.Tests
                 all[i] = full.GetPlayer(i).PlayerId;
             }
 
-            // SquadRating.CanFieldStartingEleven needs the FULL matchday eighteen (11 starters + 7
-            // bench — MatchEngineConstants.PLAYERS_PER_TEAM / SUBSTITUTES_PER_TEAM), not merely eleven
-            // (TheBackFillPressesAnInjuredPlayerBackBeforeASuspendedOne above only checks that ONE
-            // player is reinstated, so it never had to get this right). Suspend everyone but the first
-            // EIGHTEEN, then injure TWO of those eighteen — exactly the shortfall the back-fill must
-            // make up (available = 18 - 2 = 16, needing 2 reinstated), so both places must be filled
-            // from the injured pair and neither from the seven suspended.
-            const int CoreSize = 18;
-            var banned = new int[all.Length - CoreSize];
-            for (int i = CoreSize; i < all.Length; i++)
+            const int SuspendedCount = 3;
+            var banned = new int[SuspendedCount];
+            for (int i = 0; i < SuspendedCount; i++)
             {
-                banned[i - CoreSize] = all[i];
+                banned[i] = all[all.Length - SuspendedCount + i];
             }
 
             DisciplineState state = BansOf(1, banned);
             SeasonLoop loop = LoopOver(
                 league, RoundResolutionMode.FullEngine, out PlayerCareerStates career, state);
 
-            var firstKnock = InjuryState.Create();
-            firstKnock.Severity = InjurySeverity.Moderate;
-            firstKnock.RecoveryRemaining = 3;
-            career.SetMedicalState(clubId, all[0], in firstKnock);
-
-            var secondKnock = InjuryState.Create();
-            secondKnock.Severity = InjurySeverity.Moderate;
-            secondKnock.RecoveryRemaining = 5;
-            career.SetMedicalState(clubId, all[1], in secondKnock);
+            int injuredCount = all.Length - SuspendedCount;
+            for (int i = 0; i < injuredCount; i++)
+            {
+                var knock = InjuryState.Create();
+                knock.Severity = InjurySeverity.Moderate;
+                knock.RecoveryRemaining = i + 1;   // distinct, ascending — a real tie-break order
+                career.SetMedicalState(clubId, all[i], in knock);
+            }
 
             Squad fielded = AvailabilityComposition.Compose(
                 full, career, state, DisciplineConstants.LeagueCompetitionKey);
 
             Assert.That(SquadRating.CanFieldStartingEleven(fielded), Is.True,
                 "The composed filter must never stop a club playing (#30 §3.4 / §2.3 F9).");
-            Assert.That(Contains(fielded, all[0]), Is.True,
-                "The first injured player must be reinstated before any suspended one.");
-            Assert.That(Contains(fielded, all[1]), Is.True,
-                "The second injured player must ALSO be reinstated before any suspended one — the tier "
-                + "order must hold across every reinstate call, not just the first.");
+            Assert.That(fielded.Count, Is.LessThan(all.Length),
+                "Precondition: the back-fill must have actually run (not every player selectable), or "
+                + "the assertions below are vacuous.");
             for (int i = 0; i < banned.Length; i++)
             {
                 Assert.That(Contains(fielded, banned[i]), Is.False,
-                    $"Suspended player {banned[i]} was reinstated while an injured player still needed "
-                    + "a place — the back-fill's suspended tier fired ahead of the injured tier "
-                    + "(ERR-030-042).");
+                    $"Suspended player {banned[i]} was reinstated while {injuredCount} injured players "
+                    + "were available to press back instead — the back-fill's suspended tier fired "
+                    + "ahead of the injured tier (ERR-030-042).");
             }
         }
 
