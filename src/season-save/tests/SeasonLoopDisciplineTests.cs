@@ -1,6 +1,11 @@
 // File:     src/season-save/tests/SeasonLoopDisciplineTests.cs
 // Created:  2026-08-13
-// Modified: 2026-08-15 (AR round 4 fix, M22 — v1.7: ThrowOnFirstServeDriver gains a pass-through
+// Modified: 2026-08-15 (AR round 5 fix, ERR-044-006 — v1.8: the Spec: line below drops T-DC-VIEW-001,
+//           WITHDRAWN at #44 section-5.md v0.5. This file listed it while implementing no test for it,
+//           and neither did discipline/tests/AvailabilityTests.cs, whose only such test was deleted as
+//           tautological at AR round 1 — two files claiming one id, neither implementing it. Header
+//           comment only; no test logic changed.
+//           Prior: 2026-08-15 (AR round 4 fix, M22 — v1.7: ThrowOnFirstServeDriver gains a pass-through
 //           RequireCommittableConfig() to match the widened IFixtureDisciplineDriver interface, and a
 //           new ThrowOnRequireCommittableConfigDriver + RequireCommittableConfigDriver_RunsBefore-
 //           AnyFixtureIsResolved lock the round-level [GT] pre-check's call site itself.
@@ -9,8 +14,8 @@
 //           back-fill's fielded player is exempt from serving while an unfielded suspended team-mate
 //           still serves — v1.6)
 // Author:   —
-// Spec:     Discipline & Suspensions #44 §3.3/§5 (T-DC-NEU-001, T-DC-BAN-002/003/005, T-DC-VIEW-001,
-//           T-DC-SAV-002); Season & Competition Loop #30 §3.4 (the composed seam,
+// Spec:     Discipline & Suspensions #44 §3.3/§5 (T-DC-NEU-001/002, T-DC-FOLD-002, T-DC-BAN-002/003/
+//           005/006, T-DC-SAV-002); Season & Competition Loop #30 §3.4 (the composed seam,
 //           ERR-030-009/-016/-029); ERR-044-002 (both resolution paths), ERR-044-003 (the fielded-
 //           eleven serving exemption, stage 1); ERR-030-037 (the M6/M7 within-fixture serve-before-
 //           commit lock); unified season save §4 / KD-6 (restore fidelity — the C1/C2 AR's H2); Code
@@ -1204,4 +1209,15 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | green. VERIFIED by executing: deleting                              |
 // |         |            |        | `_disciplineDriver.RequireCommittableConfig();` from PlayNextRound  |
 // |         |            |        | turns the new test red, restoring it turns the test green again.   |
+// | 1.8     | 2026-08-15 | —      | AR round 5 fix (ERR-044-006), header comment ONLY — no test logic  |
+// |         |            |        | changed. The Spec: line claimed T-DC-VIEW-001, which this file    |
+// |         |            |        | has never implemented; its only test lived in discipline/tests/   |
+// |         |            |        | AvailabilityTests.cs and was deleted at AR round 1 as             |
+// |         |            |        | tautological (that file's v1.1, L4(a)), so two files claimed the  |
+// |         |            |        | id and neither implemented it. The row is now WITHDRAWN at #44    |
+// |         |            |        | section-5.md v0.5. Replaced with the ids this file does lock:     |
+// |         |            |        | T-DC-NEU-002 (WithNothingUnavailable_TheSeamHandsBackTheSAME-     |
+// |         |            |        | SquadInstance), T-DC-FOLD-002's engine-side occupancy half        |
+// |         |            |        | (PlayerIdsByAgentId_FollowsASubstitution) and T-DC-BAN-006 (the   |
+// |         |            |        | ERR-044-003 stage 1 exemption lock added at v1.6).                |
 #endregion

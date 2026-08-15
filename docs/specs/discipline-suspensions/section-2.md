@@ -1,7 +1,16 @@
 # Discipline & Suspensions #44 — Section 2: Requirements, Data Structures, Failure Modes
 
 **Created:** July 24, 2026
-**Last Updated:** August 15, 2026 (v0.7 — ERR-044-003 stage 1, owner decision: FR-DC-011 amended so a
+**Last Updated:** August 15, 2026, later still (v0.8 — reviewed-findings pass over the #44 C1/C2
+landing. `ERR-044-007`: §2.2's `DisciplineRules.OnClubFixturePlayed` signature still showed the
+pre-stage-1 `(int clubId)` form — a signature the code has not had since v0.7's own change — and the
+block was missing three landed members (`DisciplineRules.State`, `CardLedgerFold.PendingCardCount`,
+`CardLedgerFold.RequireCommittableConfig()`); F2 extended to cover the null-`fieldedPlayerIds`
+refusal §3.3's pseudocode already attributed to it but this table never stated. `ERR-044-010`:
+FR-DC-011 gains a note that "the fielded eleven" means who actually played, not who started, and that
+today's `SeasonLoop.FieldedXi` supplies the latter and is correct only in the absence of a
+`SubstitutePlayer` call site)
+**Last Updated (prior):** August 15, 2026 (v0.7 — ERR-044-003 stage 1, owner decision: FR-DC-011 amended so a
 ban no longer decrements on a fixture the player appeared in through #30 §2.3 F9's extremis back-fill —
 `OnClubFixturePlayed` now takes the club's fielded eleven and exempts anyone in it; the §2.3
 "recorded, not fixed" note updated to record the free-appearance half as FIXED (reinstatement tier
@@ -22,7 +31,7 @@ re-scoped off "the engine-resolved fixture" to every resolved squad on both reso
 fail-loud withdrawn in favour of #30 §2.3 F9, with the suspension-as-stricter-reinstatement-tier
 decision recorded)
 **Last Updated (prior):** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.7
+**Version:** 0.8
 **Status:** APPROVED
 
 ---
@@ -41,7 +50,7 @@ decision recorded)
 | FR-DC-008 | A player MUST be unavailable while `BanMatchesRemaining > 0`; `IsAvailable` MUST be a pure predicate over `DisciplineState`. | MUST | KD-4 |
 | FR-DC-009 | `FilterAvailable(in Squad) → Squad` MUST return a **reduced value copy** (available players only) for `ConfigureSquads`; it MUST NOT write #27 state; with no active ban it MUST pass the squad through unchanged. **When every player is suspended there is no reduced value copy to return — `Squad` cannot represent a zero-player roster — so `FilterAvailable` MUST return `null` for that case** (ERR-044-005; `Squad`'s own constructor refuses `players.Length == 0`, so returning it as a normal squad is not an option). This method is FR-DC-009's own surface; #44's production path is `MarkSuspended`'s removal mask, consumed directly by #30's composed availability seam. | MUST | KD-4 |
 | FR-DC-010 | The filter MUST act at #30's pre-declared **resolve→configure** seam (ERR-030-009) and MUST apply to **every resolved squad of every fixture on both resolution paths** (the engine boot and the quick-sim rating alike) — the managed club's **and its opponent's**, whichever path resolved them (both pass through `ResolveByClubId` → `ConfigureSquads`, so both pass the seam; a banned opponent is excluded exactly as a banned managed-club player is). **Card *generation* stays engine-fixture-only at minimal (§3.3) — this row governs the filter, not the fold.** The fold MUST complete at fixture resolution — so a card in fixture N bans for fixture N+1 (no off-by-one). *(Re-scoped from "the engine-resolved fixture" — ERR-044-002, August 13, 2026: the narrower wording contradicted FR-DC-011's "regardless of resolution path" one row below and #30 §3.4's LIVE both-paths seam; a quick-sim-only implementation would have let a banned player's club decrement his ban on a fixture he had just played through.)* | MUST | KD-3 |
-| FR-DC-011 | A ban MUST decrement by exactly one per **played fixture of the player's club that the player did not appear in**, regardless of resolution path (engine-resolved or quick-sim); serving MUST be reported via `OnClubFixturePlayed`, which MUST take the club's fielded eleven as an input. *(Amended — ERR-044-003 stage 1, August 15, 2026: the original row read "per played fixture of the player's club" full stop, which is correct only while a banned player can never take the field. #30 §2.3 F9's depleted-squad back-fill can field him in extremis — see the ERR-044-003 note below — and under the original wording that appearance ALSO served his ban, so it cost him nothing and a two-match red cost a depleted club nothing at all. A suspension means the club plays **without** him; a fixture he plays in is not one of it.)* | MUST | KD-3 |
+| FR-DC-011 | A ban MUST decrement by exactly one per **played fixture of the player's club that the player did not appear in**, regardless of resolution path (engine-resolved or quick-sim); serving MUST be reported via `OnClubFixturePlayed`, which MUST take the club's fielded eleven as an input. *(Amended — ERR-044-003 stage 1, August 15, 2026: the original row read "per played fixture of the player's club" full stop, which is correct only while a banned player can never take the field. #30 §2.3 F9's depleted-squad back-fill can field him in extremis — see the ERR-044-003 note below — and under the original wording that appearance ALSO served his ban, so it cost him nothing and a two-match red cost a depleted club nothing at all. A suspension means the club plays **without** him; a fixture he plays in is not one of it.)* **The "fielded eleven" this row requires is the eleven that actually took part, not merely the eleven that started (`ERR-044-010`).** `SeasonLoop.FieldedXi` supplies the STARTING eleven today, which satisfies this row only because #44 is scrupulously substitution-correct for card attribution while no `MatchEngine.SubstitutePlayer` call site exists on the season path (Stage 0 fields a fixed XI); §3.3's pseudocode records the dependency and what breaks once one exists. | MUST | KD-3 |
 | FR-DC-012 | The tally MUST key `(PlayerId, CompetitionId)` with `CompetitionId = 0` at minimal (an `int` key — no #43 assembly reference); #43-scoped accumulation is a partition activation, not a rewrite. | MUST | KD-6 |
 | FR-DC-013 | On a roster **re-key** (#31 transfer) the entry — tally **and** unserved bans — MUST **migrate** old→new `PlayerId` (bans follow the player; the deliberate contrast with #32's drop rule); on **retirement** the entry MUST be dropped. Delivery: the FR-TX-022 hook / #28 lifecycle coordination (T-phase wiring). | MUST | KD-6 |
 | FR-DC-014 | #44 state MUST persist as an opaque, independently version-gated `DISCIPLINE_SAVE_FORMAT_VERSION` sub-blob composed into #30's `SeasonSaveCodec`; no `WORLD_STORE_FORMAT_VERSION` bump; recompute-on-load is not an option (no ledgers are retained — KD-1). | MUST | KD-1 |
@@ -76,8 +85,13 @@ public readonly struct DisciplineEntry
 public sealed class CardLedgerFold
 {
     public CardLedgerFold(int[] occupancyByAgentId, int competitionId);
+    public int  PendingCardCount { get; }        // cards folded so far this fixture; 0 for most
     public void ObserveTick(IDisciplineTickLedgerTap tap);
     public int  Commit(DisciplineRules rules);   // fallible under a bound [GT] — F6
+    // The round-level pre-check (M8/§4.5): validates the same four bound [GT]s Commit would throw
+    // on, WITHOUT a fold, so a caller can ask once, before the first fixture of a round is touched,
+    // rather than discover a bad config only when a per-fixture Commit strands the round (§4.5).
+    public static void RequireCommittableConfig();
 }
 
 // KD-4 — the availability view (pure; never mutates #27 state).
@@ -96,10 +110,15 @@ public static class Availability
 public sealed class DisciplineRules
 {
     public DisciplineRules(DisciplineState state);
+    public DisciplineState State { get; }                                   // the state this instance writes
     public void ApplyCard(int playerId, int competitionId, byte cardKind);   // FR-DC-006 — F4/F6
     public void AddYellow(int playerId, int competitionId);                  // F6
     public void AddBan(int playerId, int competitionId, int matches);
-    public void OnClubFixturePlayed(int clubId);                             // KD-3 — every competition of that club
+    // KD-3 — every competition of that club. fieldedPlayerIds is REQUIRED (never null, F2) and
+    // exempts anyone in it from the decrement — ERR-044-003 stage 1: a ban is served by the club
+    // playing WITHOUT the banned player, and #30 §2.3 F9's extremis back-fill can put him on the
+    // pitch, so "the club played" is not by itself "his ban was served".
+    public void OnClubFixturePlayed(int clubId, int[] fieldedPlayerIds);
     public void RollToNextSeason();                                         // FR-DC-017
     public void MigratePlayerId(int oldPlayerId, int newPlayerId);          // FR-DC-013 — F2
     public void DropPlayer(int playerId);                                   // FR-DC-013
@@ -111,7 +130,7 @@ public sealed class DisciplineRules
 | ID | Condition | Handling |
 |---|---|---|
 | **F1** | A fold record referencing an agent slot with no occupancy mapping (a card/sub for an unmapped id) | **Fail loud** — the lineup seed is incomplete, a root-contract bug; silent misattribution is the trap. |
-| **F2** | `OnClubFixturePlayed`/`FilterAvailable` naming a club/player outside the resolvable universe; a migration for an unknown source entry. **The player half is explicit: a negative or otherwise unresolvable `PlayerId` MUST be refused, not just a negative `clubId`** — C# integer division truncates toward zero, so every id in `[-CLUB_SQUAD_SIZE + 1, -1]` would otherwise derive to club 0 in `OnClubFixturePlayed` and be served, decremented and migrated as one of its players, silently (ERR-044-004). Refused at BOTH boundaries: `DisciplineEntry`'s constructor and `DisciplineSaveCodec.Decode` (F3). | **Fail loud** — identity validity is a caller-contract bug (the #31 F6 class). |
+| **F2** | `OnClubFixturePlayed`/`FilterAvailable` naming a club/player outside the resolvable universe; a migration for an unknown source entry. **The player half is explicit: a negative or otherwise unresolvable `PlayerId` MUST be refused, not just a negative `clubId`** — C# integer division truncates toward zero, so every id in `[-CLUB_SQUAD_SIZE + 1, -1]` would otherwise derive to club 0 in `OnClubFixturePlayed` and be served, decremented and migrated as one of its players, silently (ERR-044-004). Refused at BOTH boundaries: `DisciplineEntry`'s constructor and `DisciplineSaveCodec.Decode` (F3). **`OnClubFixturePlayed`'s `fieldedPlayerIds` MUST also be refused when null (ERR-044-007)** — this is the same caller-contract posture, not a different one: a caller that cannot name who played cannot know whose ban was served, so the ignorance is refused rather than silently read as "serve everybody" (which would restore the free-appearance defect ERR-044-003 stage 1 exists to close). | **Fail loud** — identity validity is a caller-contract bug (the #31 F6 class); an unknown "who played" is the same bug one level up. |
 | **F3** | Discipline sub-blob: bad version / out-of-bounds length / trailing bytes / non-ascending keys / negative values | **Fail loud** — the `SeasonSaveCodec` posture (FR-DC-015). |
 | **F4** | A `CardKind` outside `{0, 1, 2}` on the tap | **Fail loud** — an unknown card kind is an engine-contract change #44 must not guess about (contrast F5-class unknown *ordinals*, which are ignored — a known event with an unknown *payload value* is different). |
 | **F5** | *(WITHDRAWN as a fail-loud, ERR-044-003, August 13, 2026 — see the note below the table.)* `FilterAvailable` reducing a squad below the engine's minimum viable size (fewer than the 18 `ConfigureSquads` consumes) | #44 contributes **removals only**; the composed seam's viability rule is **#30 §2.3 F9** (Season & Competition Loop, approved after this row was written). #44's `FilterAvailable`/`MarkSuspended` implement no viability gate at all — see below. |
@@ -158,4 +177,5 @@ chosen.
 | 0.5 | 2026-08-13 | — | **Adversarial-review back-prop.** **ERR-044-004:** F2 stated only "a club/player outside the resolvable universe" and the implementation had guarded the club half alone — a negative `PlayerId` truncation-derives to club 0 and was silently served, decremented and migrated; F2 now names the player half explicitly and cites both refusal sites (`DisciplineEntry`'s constructor, `DisciplineSaveCodec.Decode`/F3). **ERR-044-005:** FR-DC-009's "reduced value copy" requirement was total as written but unsatisfiable for an all-suspended squad (`Squad` cannot represent zero players); FR-DC-009 now states the `null`-return case and names `MarkSuspended`'s mask, consumed by #30's composed seam, as the actual production path — `FilterAvailable` is FR-DC-009's own surface, not #44's. |
 | 0.6 | 2026-08-13 | — | **L12(c) + L13**, a third adversarial-review pass. **L12(c):** §2.2's code block — the first place an implementer looks — showed only `DisciplineState`/`CardLedgerFold`/two free-floating `Availability` methods/one free-floating `OnClubFixturePlayed`, none matching the landed signatures (`IsAvailable`/`FilterAvailable` took `in DisciplineState` with a default `competitionId`, neither of which the code has; `MarkSuspended`, `DisciplineRules` and `DisciplineEntry` were absent entirely). Replaced with the real surface. **L13:** the failure-mode table stopped at F4 while `DisciplineRules.RequireYellowThreshold`/`RequireBanLength` are enforced in production and unit-tested (the AR pass 9 #29/#41 F8 precedent for exactly this omission class); new **F6** row added, and the matching guard calls landed in `section-3.md` §3.2's `AddYellow` pseudocode. |
 | 0.7 | 2026-08-15 | — | **ERR-044-003 stage 1**, owner decision: FR-DC-011 amended — a ban no longer decrements on a fixture the player appeared in via #30 §2.3 F9's extremis back-fill; `OnClubFixturePlayed` now takes the club's fielded eleven and exempts anyone in it. The §2.3 "recorded, not fixed" paragraph updated to state the free-appearance half is now FIXED (reinstatement tier order unchanged) and to name the staged three-tier plan (exempt-the-appearance now; youth call-ups; generated cover) with its two blockers — #42 Youth has no `src/` assembly, and generated cover needs the packed `PlayerId` id space widened (#27 FR-SQ-010 / ERR-027-004) — replacing the deferral-queue alternative, which was NOT chosen. |
+| 0.8 | 2026-08-15 | — | **Reviewed-findings pass.** **`ERR-044-007`:** §2.2's `DisciplineRules` block corrected `OnClubFixturePlayed(int clubId)` → `OnClubFixturePlayed(int clubId, int[] fieldedPlayerIds)` (verified against `src/discipline/DisciplineRules.cs:245` — the v0.7 signature amendment never reached this code block) and gained the `State` property (`src/discipline/DisciplineRules.cs:49`); `CardLedgerFold` gained `PendingCardCount` (`CardLedgerFold.cs:127`) and the public static `RequireCommittableConfig()` (`CardLedgerFold.cs:276`) — the round-level `[GT]` pre-check §3.1's own pseudocode calls and `SeasonLoop.PlayNextRound` enforces in production (`src/season-save/SeasonLoop.cs`), which had no §2.2 declaration at all. F2 (§2.3) extended to state the null-`fieldedPlayerIds` refusal explicitly — `DisciplineRules.cs:254-261` throws `ArgumentNullException` there and §3.3's pseudocode already read `REQUIRE fieldedPlayerIds is not null  # F2`, but this table's F2 row described only the club/player-identity case. **`ERR-044-010`:** FR-DC-011 gains a note that the required "fielded eleven" is the eleven that played, not merely started, and that today's `SeasonLoop.FieldedXi` (the STARTING eleven) satisfies the row only because no `SubstitutePlayer` call site exists on the season path. See `spec-error-log.md` `ERR-044-007`, `ERR-044-010`. |
 #endregion

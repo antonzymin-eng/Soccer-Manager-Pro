@@ -1,6 +1,14 @@
 // File:     src/discipline/tests/CardLedgerFoldTests.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 5, M19(b) — isolating cases for the
+// Modified: 2026-08-15 (reviewed-findings pass, L22 — v1.4: new SubstitutionAndCard_InTheSameTick_
+//           AttributesToIncoming case authoring a substitution and card in the SAME ObserveTick call,
+//           pairing the CardLedgerFold.cs doc fix naming the MatchEngine.RunResolvePhase ordering
+//           dependency this fold's occupancy correctness rests on.)
+//           Prior: 2026-08-15 (reviewed-findings pass, M25 — v1.3: three new isolating tests —
+//           Constructor_EmptyOccupancySeed_Throws, Constructor_NegativeNonSentinelSeedEntry_Throws,
+//           Substitution_WithUnmappedOutgoing_Throws — for guards the reviewer's mutation pass found
+//           had no test that failed under deletion.)
+//           Prior: 2026-08-13 (#44 C1/C2 adversarial review round 5, M19(b) — isolating cases for the
 //           accumBan and straightRedBan RequireCommittableConfig guards, which had none — v1.2)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §3.1 (the occupancy fold) / §4.3 (the tap read);
@@ -80,6 +88,27 @@ namespace TacticalDirector.Discipline.Tests
         private static SubstitutionEvent Sub(int outgoing, int incoming) =>
             new SubstitutionEvent(outgoing, incoming, team: 0, substitutionReason: 0);
 
+        // ── Constructor guards (M25) ──────────────────────────────────────────────
+        //
+        // Mutation-verified: neutering either guard below (replacing the `if` with `if (false)`) left
+        // the whole 105-test suite green before this pair existed — nothing exercised the empty seed
+        // or a negative-non-NO_PLAYER seed entry.
+
+        [Test]
+        public void Constructor_EmptyOccupancySeed_Throws()
+        {
+            Assert.Throws<ArgumentException>(() => new CardLedgerFold(Array.Empty<int>(), Competition));
+        }
+
+        [Test]
+        public void Constructor_NegativeNonSentinelSeedEntry_Throws()
+        {
+            // -1 is CardLedgerFold.NO_PLAYER (legal, an unused slot). -2 is neither a valid player id
+            // nor the sentinel.
+            var seed = new[] { 100, -2 };
+            Assert.Throws<ArgumentException>(() => new CardLedgerFold(seed, Competition));
+        }
+
         // ── Basic attribution ─────────────────────────────────────────────────────
 
         [Test]
@@ -123,6 +152,38 @@ namespace TacticalDirector.Discipline.Tests
                 "the card BEFORE the substitution must attribute to the player who was subbed off");
             Assert.AreEqual(1, state.EntryFor(incomingPlayer, Competition).Yellows,
                 "the card AFTER the substitution, at the same slot, must attribute to the player who came on");
+        }
+
+        [Test]
+        public void SubstitutionAndCard_InTheSameTick_AttributesToIncoming()
+        {
+            // L22: this fold's occupancy correctness rests on an engine event-ordering guarantee it
+            // does not itself enforce — MatchEngine.RunResolvePhase flushes a queued SubstitutionEvent
+            // BEFORE issuing cards within the same phase/tick, so a substitution and a card that both
+            // land in ONE ObserveTick call (as the tap's own canonical publish order, not split across
+            // ticks like the before/after test above) must still attribute the card to the INCOMING
+            // player.
+            int outgoingPlayer = 200;
+            int incomingPlayer = 300;
+            int slot = 5;
+            int bench = BenchId(teamId: 0, benchIndex: 0);
+
+            var fold = new CardLedgerFold(Occupancy((slot, outgoingPlayer), (bench, incomingPlayer)), Competition);
+
+            // One tick: the substitution record precedes the card record, matching the tap's own
+            // canonical publish order within the phase.
+            var tap = new FakeLedgerTap()
+                .Add(Sub(outgoing: slot, incoming: bench))
+                .Add(Card(slot));
+            fold.ObserveTick(tap);
+
+            var state = new DisciplineState();
+            fold.Commit(new DisciplineRules(state));
+
+            Assert.IsFalse(state.HasEntry(outgoingPlayer, Competition),
+                "the outgoing player must carry NO card from this tick — he was replaced before the card.");
+            Assert.AreEqual(1, state.EntryFor(incomingPlayer, Competition).Yellows,
+                "the card, issued in the same tick as the substitution, must attribute to the player who came on.");
         }
 
         // ── FR-DC-004: unknown ordinals ignored, known ones still fold in the same batch ──
@@ -175,6 +236,21 @@ namespace TacticalDirector.Discipline.Tests
             int bench = BenchId(0, 0);
             // Slot 5 is mapped; the bench id it substitutes onto is NOT — an incomplete lineup seed.
             var fold = new CardLedgerFold(Occupancy((5, 100)), Competition);
+            var tap = new FakeLedgerTap().Add(Sub(outgoing: 5, incoming: bench));
+
+            Assert.Throws<InvalidOperationException>(() => fold.ObserveTick(tap));
+        }
+
+        [Test]
+        public void Substitution_WithUnmappedOutgoing_Throws()
+        {
+            // M25: the mirror case — the INCOMING bench id is mapped, but the OUTGOING on-pitch slot
+            // is not. ApplySubstitution's OccupantOf(outgoingAgentId, "SubstitutionEvent.Outgoing")
+            // read exists purely to fail loud here; mutation-verified by deleting that call, which left
+            // the whole suite green before this test existed (nothing else exercises an unmapped
+            // outgoing slot with a validly-mapped incoming one).
+            int bench = BenchId(0, 0);
+            var fold = new CardLedgerFold(Occupancy((bench, 300)), Competition);   // slot 5 is unmapped
             var tap = new FakeLedgerTap().Add(Sub(outgoing: 5, incoming: bench));
 
             Assert.Throws<InvalidOperationException>(() => fold.ObserveTick(tap));
@@ -418,4 +494,20 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | 96/96 because no test drove an invalid value through them; the      |
 // |         |            |        | yellowThreshold and secondYellowBan guards already had isolating    |
 // |         |            |        | cases (v1.1), these two did not.                                    |
+// | 1.3     | 2026-08-15 | —      | Reviewed-findings fix (M25). Three new tests, each mutation-       |
+// |         |            |        | verified against the guard it locks: Constructor_EmptyOccupancy-   |
+// |         |            |        | Seed_Throws (the :100 empty-seed ArgumentException), Constructor_  |
+// |         |            |        | NegativeNonSentinelSeedEntry_Throws (the :113 negative-non-        |
+// |         |            |        | NO_PLAYER ArgumentException), Substitution_WithUnmappedOutgoing_   |
+// |         |            |        | Throws (the F1 OccupantOf(outgoingAgentId, ...) read at            |
+// |         |            |        | ApplySubstitution's :318, mirroring the existing incoming-side     |
+// |         |            |        | test). All three replicate a reviewer finding that neutering the   |
+// |         |            |        | guard left 105/105 tests green.                                    |
+// | 1.4     | 2026-08-15 | —      | Reviewed-findings fix (L22): new                                   |
+// |         |            |        | SubstitutionAndCard_InTheSameTick_AttributesToIncoming — a          |
+// |         |            |        | substitution and a card in ONE ObserveTick call (the before/after   |
+// |         |            |        | test above splits them across three ticks). Pairs the CardLedger    |
+// |         |            |        | Fold.cs doc fix naming MatchEngine.RunResolvePhase's flush-before-  |
+// |         |            |        | cards ordering as the guarantee this fold's occupancy correctness   |
+// |         |            |        | rests on but does not itself enforce.                               |
 #endregion

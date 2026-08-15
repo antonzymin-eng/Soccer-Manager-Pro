@@ -1,6 +1,6 @@
 // File:     src/discipline/tests/DisciplineStateTests.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13
+// Modified: 2026-08-15 (reviewed-findings pass, L21 — v1.1)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §2.2 (data structures) / FR-DC-012 / FR-DC-017 / FR-DC-020/021;
 //           §5 T-DC-SAV-002 / T-DC-DET-001; Code Standards #20
@@ -198,6 +198,13 @@ namespace TacticalDirector.Discipline.Tests
         [Test]
         public void FromEntries_CopiesTheArray_CallerMutationDoesNotReachTheState()
         {
+            // L21: this cannot fail for any implementation FromEntries could plausibly take. _entries
+            // is a List<DisciplineEntry> over a readonly struct, and FromEntries populates it via
+            // copy.Add(entry) reading a VALUE out of the caller's array element-by-element — there is
+            // no code shape reachable from this signature that aliases the caller's array instead
+            // (List<T> never borrows the array backing it). Kept as documentation of that field/method
+            // choice, not as a guard against a reachable failure — do not read a pass here as locking
+            // anything.
             var entries = new[] { Row(1, 0, 3, 0) };
 
             DisciplineState state = DisciplineState.FromEntries(entries);
@@ -244,4 +251,11 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | arbitrary insert orders, binary-search lookup, EntryFor's clean  |
 // |         |            |        | zero row, the FR-DC-017 Upsert drop, and FromEntries' three       |
 // |         |            |        | restore-door refusals plus its copy-not-borrow guarantee.        |
+// | 1.1     | 2026-08-15 | —      | Reviewed-findings fix (L21): FromEntries_CopiesTheArray_          |
+// |         |            |        | CallerMutationDoesNotReachTheState cannot fail for any            |
+// |         |            |        | implementation this signature admits — List<DisciplineEntry>      |
+// |         |            |        | populated via copy.Add(entry) always reads a VALUE, never aliases |
+// |         |            |        | the caller's array. Annotated as documentation of the field/      |
+// |         |            |        | method choice rather than a reachable-failure guard; not deleted, |
+// |         |            |        | assertion unchanged.                                              |
 #endregion

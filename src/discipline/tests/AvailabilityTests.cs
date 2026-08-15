@@ -1,10 +1,14 @@
 // File:     src/discipline/tests/AvailabilityTests.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 5, L17 — DisciplineConstants.CardKindYellow
+// Modified: 2026-08-15 (reviewed-findings pass — v1.3: the Spec line's §5 test-id list still named
+//           T-DC-VIEW-001, withdrawn today (ERR-044-006) — this is the file whose own test for it
+//           (FilterAvailable_LeavesTheSourceSquadUntouched, L4(a)) was deleted at v1.1. Removed the id
+//           from the Spec line only; the v1.0 row naming the deleted test stays as history, unchanged.)
+//           Prior: 2026-08-13 (#44 C1/C2 adversarial review round 5, L17 — DisciplineConstants.CardKindYellow
 //           reference updated for the CARD_KIND_YELLOW rename — v1.2)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §3.3 / FR-DC-008/009/010; ERR-044-003 (F5 vs #30 §2.3 F9 —
-//           viability is #30's, #44 contributes removals only); §5 T-DC-VIEW-001/002, T-DC-BAN-004/005;
+//           viability is #30's, #44 contributes removals only); §5 T-DC-VIEW-002, T-DC-BAN-004/005;
 //           Code Standards #20
 // Purpose:  Unit tests for Availability — the pure IsAvailable predicate, MarkSuspended's mask-owning
 //           (non-additive) contract, FilterAvailable's same-instance pass-through, reduced-copy and
@@ -250,4 +254,9 @@ namespace TacticalDirector.Discipline.Tests
 // | 1.2     | 2026-08-13 | —      | AR round 5 fix (L17): DisciplineConstants.CARD_KIND_YELLOW        |
 // |         |            |        | reference updated to CardKindYellow ([FIXED] -> [CROSS] rename); |
 // |         |            |        | no behaviour change.                                              |
+// | 1.3     | 2026-08-15 | —      | Reviewed-findings fix: the Spec line still listed T-DC-VIEW-001,  |
+// |         |            |        | withdrawn today (ERR-044-006) — its own test                     |
+// |         |            |        | (FilterAvailable_LeavesTheSourceSquadUntouched) was deleted at    |
+// |         |            |        | v1.1 (L4(a)). Removed the id from the Spec line; the v1.0 row     |
+// |         |            |        | naming the deleted test is correct AS HISTORY and is unchanged.  |
 #endregion

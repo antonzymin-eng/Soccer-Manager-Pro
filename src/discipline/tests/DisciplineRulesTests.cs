@@ -1,6 +1,13 @@
 // File:     src/discipline/tests/DisciplineRulesTests.cs
 // Created:  2026-08-13
-// Modified: 2026-08-15 (AR round 4 fix, M23 — v1.5: corrected the two "genuinely DELEGATES" claims on
+// Modified: 2026-08-15 (reviewed-findings pass, L20 + M25 — v1.6: OnClubFixturePlayed_
+//           AFieldedPlayerWithNoBan_IsUnaffected_NoRowInvented was vacuous (rules fresh,
+//           _state.Count == 0, WasFielded never called); rewritten to give both a fielded and a
+//           not-fielded player a yellows-only row so the walk actually reaches them, mutation-verified
+//           (L20). Two new isolating tests, AddBan_NegativeMatches_Throws and Constructor_NullState_
+//           Throws, for guards the reviewer's mutation pass found had no failing test under deletion
+//           (M25).
+//           Prior: 2026-08-15 (AR round 4 fix, M23 — v1.5: corrected the two "genuinely DELEGATES" claims on
 //           ApplyStraightRed_WithAValidBanLength_MatchesApplyCardsKind1Behaviour and
 //           ApplySecondYellow_WithAValidBanLength_MatchesApplyCardsKind2Behaviour — both were mutation-
 //           falsified (an inline copy of the delegated-to method's body passes either test) and are the
@@ -180,6 +187,39 @@ namespace TacticalDirector.Discipline.Tests
 
             int expected = 2 * DisciplineConstants.StraightRedBanMatches + 3;
             Assert.AreEqual(expected, rules.State.EntryFor(p, Competition).BanMatchesRemaining);
+        }
+
+        [Test]
+        public void AddBan_NegativeMatches_Throws()
+        {
+            // M25: neutering AddBan's own `matches < 0` guard (replacing the `if` with `if (false)`)
+            // does NOT fail a bare Assert.Throws<ArgumentOutOfRangeException> here — DisciplineEntry's
+            // OWN constructor guard (M1) is a backstop that fires next, on the negative
+            // BanMatchesRemaining AddBan would otherwise pass it, throwing the identical exception TYPE
+            // from a different site. Asserting the ParamName distinguishes them: AddBan's own guard
+            // names "matches" (nameof(matches)); DisciplineEntry's backstop names "banMatchesRemaining"
+            // (nameof(banMatchesRemaining)) — mutation-verified, this ParamName assertion fails under
+            // the neutered guard while a bare exception-type assertion does not.
+            DisciplineRules rules = NewRules();
+            int p = PlayerId(0, 1);
+
+            var ex = Assert.Throws<ArgumentOutOfRangeException>(() => rules.AddBan(p, Competition, -1));
+            Assert.AreEqual("matches", ex.ParamName,
+                "the exception must come from AddBan's OWN guard, not DisciplineEntry's constructor "
+                + "backstop one level down — a bare exception-TYPE assertion cannot tell them apart.");
+
+            Assert.IsFalse(rules.State.HasEntry(p, Competition),
+                "the refused call must not have created a row.");
+        }
+
+        // ── Constructor guard (M25) ────────────────────────────────────────────────
+
+        [Test]
+        public void Constructor_NullState_Throws()
+        {
+            // M25: mutation-verified — neutering this guard (replacing the `if` with `if (false)`) left
+            // the whole 105-test suite green before this test existed.
+            Assert.Throws<ArgumentNullException>(() => new DisciplineRules(null));
         }
 
         // ── ApplyCard F4 ────────────────────────────────────────────────────────────
@@ -473,15 +513,40 @@ namespace TacticalDirector.Discipline.Tests
         [Test]
         public void OnClubFixturePlayed_AFieldedPlayerWithNoBan_IsUnaffected_NoRowInvented()
         {
+            // L20: the original version left `rules` fresh (_state.Count == 0), so the descending walk
+            // never executed its body at all and WasFielded was never called — it passed regardless of
+            // what WasFielded returned. Fixed by giving BOTH players a YELLOWS-ONLY row
+            // (BanMatchesRemaining == 0) so the walk actually reaches them: each must be skipped on the
+            // `entry.BanMatchesRemaining <= 0` guard, and both rows must survive completely untouched.
+            // Mutation-verified two ways. (1) Deleting the `BanMatchesRemaining <= 0` guard outright —
+            // leaving only the club and WasFielded checks — makes this test FAIL: notFieldedNoBan is not
+            // in fieldedPlayerIds, so with the guard gone the walk falls through to the decrement and
+            // DisciplineEntry's own constructor throws ArgumentOutOfRangeException on BanMatchesRemaining
+            // == -1 (confirmed by running the mutant). (2) A pure REORDER — moving the same guard to run
+            // textually after the WasFielded check, with both checks still present — does NOT fail this
+            // test, because the two conditions are independent `continue`s and either one skips the row
+            // regardless of which is evaluated first; confirmed by running that mutant too. The
+            // notFieldedNoBan row is what makes (1) observable: the fielded row alone is also skipped by
+            // WasFielded on its own, so it cannot distinguish "guarded" from "guard deleted".
             DisciplineRules rules = NewRules();
-            int p = PlayerId(0, 1);
+            int fielded = PlayerId(0, 1);
+            int notFieldedNoBan = PlayerId(0, 2);
+            rules.ApplyCard(fielded, Competition, DisciplineConstants.CardKindYellow);           // Yellows 1, ban 0
+            rules.ApplyCard(notFieldedNoBan, Competition, DisciplineConstants.CardKindYellow);   // Yellows 1, ban 0
 
-            rules.OnClubFixturePlayed(0, new[] { p });
+            rules.OnClubFixturePlayed(0, new[] { fielded });
 
-            Assert.IsFalse(rules.State.HasEntry(p, Competition),
-                "a fielded player who never carried a discipline row must not gain one just for "
-                + "having played — WasFielded is consulted only for rows that already carry an "
-                + "outstanding ban (BanMatchesRemaining > 0), never as a reason to create one.");
+            DisciplineEntry fieldedEntry = rules.State.EntryFor(fielded, Competition);
+            Assert.AreEqual(1, fieldedEntry.Yellows, "a fielded player's yellows-only row must survive untouched");
+            Assert.AreEqual(0, fieldedEntry.BanMatchesRemaining,
+                "WasFielded is consulted only for rows that already carry an outstanding ban "
+                + "(BanMatchesRemaining > 0) — this row has none, so the walk must skip it on that "
+                + "guard before ever reaching WasFielded, never as a reason to create or touch a ban.");
+            DisciplineEntry notFieldedEntry = rules.State.EntryFor(notFieldedNoBan, Competition);
+            Assert.AreEqual(1, notFieldedEntry.Yellows,
+                "the NOT-fielded teammate's yellows-only row must ALSO survive untouched — he has no "
+                + "outstanding ban either, so the same guard must skip him regardless of WasFielded.");
+            Assert.AreEqual(0, notFieldedEntry.BanMatchesRemaining);
         }
 
         [Test]
@@ -796,4 +861,21 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | new lock was manufactured to replace the false claim — none is    |
 // |         |            |        | reachable without test-only instrumentation ApplyCard does not    |
 // |         |            |        | carry.                                                             |
+// | 1.6     | 2026-08-15 | —      | Reviewed-findings fixes. L20: OnClubFixturePlayed_                |
+// |         |            |        | AFieldedPlayerWithNoBan_IsUnaffected_NoRowInvented was vacuous —   |
+// |         |            |        | rules fresh, _state.Count == 0, the walk's body never executed and|
+// |         |            |        | WasFielded was never called. Rewritten to give both a fielded and |
+// |         |            |        | a not-fielded player a yellows-only row (BanMatchesRemaining == 0)|
+// |         |            |        | so the walk reaches both; mutation-verified two ways (deleting the|
+// |         |            |        | BanMatchesRemaining <= 0 guard fails the test via                 |
+// |         |            |        | ArgumentOutOfRangeException; a pure reorder of the same guard past|
+// |         |            |        | the WasFielded check does not, since both are independent         |
+// |         |            |        | continues). M25: two new isolating tests, AddBan_NegativeMatches_ |
+// |         |            |        | Throws and Constructor_NullState_Throws, for guards a reviewer    |
+// |         |            |        | mutation pass found had no test that failed under `if (false)`.   |
+// |         |            |        | AddBan_NegativeMatches_Throws needed a ParamName assertion, not   |
+// |         |            |        | just the exception type — DisciplineEntry's own constructor guard |
+// |         |            |        | (M1) is a backstop that throws the identical ArgumentOutOfRange-  |
+// |         |            |        | Exception from a different site once AddBan's guard is neutered,  |
+// |         |            |        | so a bare Assert.Throws<...> does not discriminate them.          |
 #endregion

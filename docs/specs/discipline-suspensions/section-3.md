@@ -1,7 +1,14 @@
 # Discipline & Suspensions #44 — Section 3: Core Algorithms
 
 **Created:** July 24, 2026
-**Last Updated:** August 15, 2026, later still (v0.10 — M27, the spec half of #44's adversarial-review
+**Last Updated:** August 15, 2026, yet later still (v0.11 — `ERR-044-010`, reviewed-findings pass:
+§3.3's `OnClubFixturePlayed` pseudocode comment block gains a SUBSTITUTION DEPENDENCY paragraph — the
+`fieldedPlayerIds` the composition root supplies is the STARTING eleven (`SeasonLoop.FieldedXi`), not
+a record of who actually played, correct today only because no `MatchEngine.SubstitutePlayer` call
+site exists on the season path; a suspended player fielded as a substitute rather than a starter would
+not be recognized once one does, reopening ERR-044-003's free-appearance defect at the substitution
+boundary. FR-DC-011 (`section-2.md`) gains the matching note)
+**Last Updated (prior):** August 15, 2026, later still (v0.10 — M27, the spec half of #44's adversarial-review
 round 4 (`open-issues.md`): §3.1's normative fold pseudocode showed each tap record calling `AddYellow`/
 `AddBan` directly, with no buffer and no `Commit` — an implementer following it verbatim would reproduce
 the pre-M13 half-fixture defect (`CardLedgerFold.cs` v1.2) that lets a bad `[GT]` leave cards `0..k-1`
@@ -32,7 +39,7 @@ the prior text only implied by describing separate fixtures)
 ordering paragraph re-scoped to both resolution paths, and the `FilterAvailable` pseudocode comment
 points its viability rule at #30 §2.3 F9 instead of a withdrawn F5)
 **Last Updated (prior):** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.10
+**Version:** 0.11
 **Status:** APPROVED
 
 ---
@@ -143,6 +150,18 @@ OnClubFixturePlayed(clubId, fieldedPlayerIds):             # called once per pla
     # itself, which already serves EVERY competition's ban on any played fixture. Both are exact
     # while the league is the only competition; a real multi-competition calendar (#43) must revisit
     # them together, since a league fixture should serve a league ban and leave a cup ban alone.
+    #
+    # SUBSTITUTION DEPENDENCY (recorded, not fixed — ERR-044-010). fieldedPlayerIds today IS the
+    # STARTING eleven (SeasonLoop.FieldedXi, derived from the same pre-kickoff LineupSelector walk
+    # ConfigureSquads consumes), not a record of who actually took the field. That is exact only
+    # because no MatchEngine.SubstitutePlayer call site exists yet (Stage 0 fields a fixed XI —
+    # CardLedgerFold's own recorded gap). #44 is otherwise scrupulously substitution-correct for card
+    # ATTRIBUTION (the occupancy fold tracks synthetic bench ids through every SubstitutionEvent);
+    # this exemption is not — the moment a production caller substitutes players, a suspended player
+    # fielded by the extremis back-fill as a SUBSTITUTE rather than a starter will not appear in
+    # fieldedPlayerIds, and his ban will decrement for a fixture he actually played, reopening
+    # ERR-044-003's free-appearance defect at the substitution boundary. The fix belongs at the
+    # #30-owned derivation site (§4.5), not here.
 
 IsAvailable(s, pid)        := s[pid, comp].BanMatchesRemaining == 0   # (absent entry => available)
 FilterAvailable(squad, s)  := a reduced VALUE COPY of squad keeping available players only
@@ -204,4 +223,5 @@ preserve this order.
 | 0.8 | 2026-08-13 | — | **M20**, extending L13's fix rather than a new id: §3.1's occupancy-fold pseudocode still read `2: AddYellow(pid); AddBan(pid, SECOND_YELLOW_BAN_MATCHES)` and `1: AddBan(pid, STRAIGHT_RED_BAN_MATCHES)` — L13 patched §3.2's `AddYellow` with the F6 guards but stopped one section short of §3.1, which an implementer following verbatim would have reproduced M4 (the yellow committed while the card is refused) in APPROVED text. Both branches now show `RequireBanLength(...)` and the kind-2 branch validates BEFORE `AddYellow` runs, matching `DisciplineRules.ApplySecondYellow`/`ApplyStraightRed` exactly. |
 | 0.9 | 2026-08-15 | — | **ERR-044-003 stage 1**, owner decision: §3.3's `OnClubFixturePlayed(clubId)` pseudocode becomes `OnClubFixturePlayed(clubId, fieldedPlayerIds)` — a played fixture the banned player himself appeared in (reachable only through #30 §2.3 F9's depleted-squad back-fill) no longer decrements his ban, with a new comment block explaining why the exemption exists, that it changes nothing outside the extremis tier, and its granularity relative to the FR-DC-012 competition key. Ordering paragraph and FR-DC-011 cross-reference updated to match. |
 | 0.10 | 2026-08-15 | — | **M27** (#44 adversarial-review round 4, `open-issues.md`): §3.1's normative fold pseudocode called `AddYellow`/`AddBan` straight from `OnTapRecord`, with no buffer and no `Commit` — verified against `src/discipline/CardLedgerFold.cs`, whose real shape is `ObserveTick` (buffers a `(PlayerId, CardKind)` pair per card, applying nothing) and a separate `Commit(rules)` (validates all four bound `[GT]`s via `RequireCommittableConfig` before the loop, then applies the whole buffered list, all-or-nothing — the M13 fix, v1.2). Rewritten to match: `ObserveTick`/`Commit` as two named steps, a `pending` list, and the F6 guard called once before any buffered card is applied. §0.7/§0.8's F6/kind-2-ordering fixes are preserved verbatim inside the new `Commit` body — this is a restructuring around them, not a second change to the guard logic. |
+| 0.11 | 2026-08-15 | — | **`ERR-044-010`**, reviewed-findings pass: §3.3's `OnClubFixturePlayed` comment block gains a SUBSTITUTION DEPENDENCY paragraph recording that `fieldedPlayerIds` is today's STARTING eleven, not a played-eleven record, and stays correct only while no `MatchEngine.SubstitutePlayer` call site exists on the season path (verified against `src/discipline/CardLedgerFold.cs`'s own "the substitution branch has no production driver" remark and `src/season-save/SeasonLoop.cs`'s `FieldedXi`, which derives from the pre-kickoff `LineupSelector` walk). See `spec-error-log.md` `ERR-044-010`. |
 #endregion

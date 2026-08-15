@@ -1,9 +1,14 @@
 # Discipline & Suspensions #44 — Appendices
 
 **Created:** July 24, 2026
-**Last Updated:** August 15, 2026 (v0.6 — ERR-044-003 stage 1, owner decision: Appendix C's worked
-example calls `OnClubFixturePlayed(7, fieldedPlayerIds)` rather than the club id alone, and notes
-that neither example player is in the fielded eleven, so the extremis exemption does not apply here)
+**Last Updated:** August 15, 2026, later (v0.7 — `ERR-044-012`, back-prop owed by
+`src/discipline/DisciplineConstants.cs` v1.3 (M26, not filed with that code change): `LEAGUE_COMPETITION_KEY`
+was `[FIXED]` in Appendix A, but it is a verbatim copy of APPROVED Competition Structure #43's
+`LEAGUE_COMPETITION_ID` (`docs/specs/competition-structure/appendices.md`) — the root `CLAUDE.md` tag
+table makes a value defined in another approved spec and consumed read-only `[CROSS]`, never `[FIXED]`,
+the identical argument already applied to `CardKindYellow`/`Red`/`SecondYellow` two rows below.
+Re-tagged; the literal `0` is unchanged, since #43 has no `src/` assembly to bind a compiler-checked
+mirror to)
 **Last Updated (prior):** August 13, 2026, later still (v0.5 — L17, a fifth adversarial-review pass over the
 #44 C1/C2 landing: `CARD_KIND_YELLOW`/`RED`/`SECOND_YELLOW` were `[FIXED]` in the code but are #17
 `CardIssuedEvent.CardKind` domain ordinals #44 consumes read-only — retagged `[CROSS]`, renamed
@@ -18,7 +23,7 @@ the magic-before-version row + the MUST rule and Appendix A the `DISCIPLINE_SAVE
 Appendix C re-worked onto real engine ids after its "slot 19" worked example was verified
 unimplementable, with the hedge deleted)
 **Last Updated (prior):** July 24, 2026 (v0.2 — cross-set AR pass 3; prior v0.1 initial)
-**Version:** 0.6
+**Version:** 0.7
 **Status:** APPROVED
 
 ---
@@ -33,7 +38,7 @@ unimplementable, with the hedge deleted)
 | `ACCUM_BAN_MATCHES` | `[GT]` | 1 (illustrative) | ban length for an accumulation threshold crossing. |
 | `SECOND_YELLOW_BAN_MATCHES` | `[GT]` | 1 (illustrative) | ban length for a kind-2 dismissal. |
 | `STRAIGHT_RED_BAN_MATCHES` | `[GT]` | 2 (illustrative) | ban length for a kind-1 dismissal. |
-| `LEAGUE_COMPETITION_KEY` | `[FIXED]` | 0 | the minimal-tier `CompetitionId` partition key (FR-DC-012; aligns with #43's `LEAGUE_COMPETITION_ID = 0`). |
+| `LEAGUE_COMPETITION_KEY` | `[CROSS]` | 0 | the minimal-tier `CompetitionId` partition key (FR-DC-012) — a **verbatim copy** of APPROVED Competition Structure #43's `LEAGUE_COMPETITION_ID` (`docs/specs/competition-structure/appendices.md`, value 0, FR-CP-004), consumed read-only and never set independently here (`ERR-044-012` — the identical `CardKindYellow`/`Red`/`SecondYellow` argument two rows below, applied to this constant). The literal `0` stays a literal rather than a compiler-checked mirror: #43 has no `src/` assembly yet to bind a `CompetitionStructureConstants` reference to. |
 | `CardIssuedEvent` 0x06 / `SubstitutionEvent` 0x08 | `[CROSS]` | #17/engine | the fold's inputs (payloads verified — XC-044-001); kinds `{0,1,2}` with the single-event kind-2 contract. |
 | `CardKindYellow` | `[CROSS]` | 0 | `CardIssuedEvent.CardKind`'s own domain ordinal (#17 Appendix A row 0x06 — "0=Yellow, 1=Red, 2=SecondYellow"); #44 consumes it read-only and never sets it independently (L17 — was `[FIXED]` `CARD_KIND_YELLOW`, the ALL_CAPS/`[FIXED]` mistagging root `CLAUDE.md`'s tag table rules out for a value defined in another spec). |
 | `CardKindRed` | `[CROSS]` | 1 | as `CardKindYellow` — #17 Appendix A row 0x06 domain ordinal 1. Carries NO yellow (FR-DC-006). |
@@ -114,4 +119,5 @@ All integer; two runs identical; #27 squads byte-untouched.
 | 0.4 | 2026-08-13 | — | **L12(a)**, a third adversarial-review pass over the C1/C2 landing: Appendix A's "the 18-slot `ConfigureSquads` minimum \| `[CROSS]` \| match engine \| the F5 filter floor" row deleted — F5 was withdrawn at ERR-044-003 (§2.3 F5, `section-2.md` v0.4) and no such constant exists in `DisciplineConstants.cs`; #44 implements no viability gate of any kind since that withdrawal, so nothing in the catalogue names one. |
 | 0.5 | 2026-08-13 | — | **L17**, a fifth adversarial-review pass over the C1/C2 landing: `CARD_KIND_YELLOW`/`RED`/`SECOND_YELLOW` are #17 `CardIssuedEvent.CardKind` domain ordinals (Appendix A row 0x06) #44 consumes read-only and never sets independently — the root `CLAUDE.md` tag table makes that `[CROSS]`, not `[FIXED]`, and `src/CLAUDE.md` §3.2.3 makes `[CROSS]` PascalCase, not `ALL_CAPS`. Retagged and renamed in code (`CardKindYellow`/`CardKindRed`/`CardKindSecondYellow`); Appendix A's single combined `CardIssuedEvent 0x06 / SubstitutionEvent 0x08` row (about the EVENT ordinals, a different fact) is unchanged, and gains three sibling rows — one per card-kind constant, each citing #17 Appendix A row 0x06 by value. |
 | 0.6 | 2026-08-15 | — | **ERR-044-003 stage 1**, owner decision: Appendix C's worked example updated for the amended `OnClubFixturePlayed(clubId, fieldedPlayerIds)` signature, noting that its two example players are already filtered out and so are not in the fielded eleven (the exemption does not fire in this worked case). |
+| 0.7 | 2026-08-15 | — | **`ERR-044-012`**, back-prop owed by `DisciplineConstants.cs` v1.3 (M26): `LEAGUE_COMPETITION_KEY` re-tagged `[FIXED]` → `[CROSS]` — it is a verbatim copy of APPROVED #43's `LEAGUE_COMPETITION_ID` (FR-CP-004), consumed read-only, the identical argument already applied to the `CardKindYellow`/`Red`/`SecondYellow` rows. Literal value `0` unchanged; #43 has no `src/` assembly to bind a real mirror to. See `spec-error-log.md` `ERR-044-012`. |
 #endregion

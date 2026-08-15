@@ -1,6 +1,11 @@
 // File:     src/discipline/DisciplineConstants.cs
 // Created:  2026-08-13
-// Modified: 2026-08-15 (#44 C1/C2 adversarial review round 4, M24/L18/ERR-017-004 — v1.2: the three
+// Modified: 2026-08-15 (reviewed-findings pass, M26 — v1.3: LEAGUE_COMPETITION_KEY re-tagged
+//           [FIXED] -> [CROSS] and moved Fixed -> Cross; it is a verbatim copy of APPROVED #43's
+//           LEAGUE_COMPETITION_ID, not a value #44 owns. Literal 0 unchanged — #43 has no src/
+//           assembly to bind a real mirror to. An ERR-044-NNN back-prop against #44 Appendix A is
+//           owed for this and is not filed here.)
+//           Prior: 2026-08-15 (#44 C1/C2 adversarial review round 4, M24/L18/ERR-017-004 — v1.2: the three
 //           card-kind constants are now real [CROSS] mirrors of the new
 //           EventSystemConstants.CARD_KIND_YELLOW/RED/SECOND_YELLOW declaration ([FIXED], ALL_CAPS —
 //           Event System #17 §3.10) instead of independent literals citing #17 in prose only; class
@@ -72,17 +77,27 @@ namespace TacticalDirector.Discipline
         /// </summary>
         public const uint DISCIPLINE_SAVE_FORMAT_VERSION = 1;
 
-        /// <summary>
-        /// [FIXED] The minimal-tier <c>CompetitionId</c> partition key (FR-DC-012). Aligns with #43's
-        /// <c>LEAGUE_COMPETITION_ID = 0</c>, carried here as a plain <c>int</c> so #44 needs no #43
-        /// assembly reference. Per-competition tallies are a T3 partition activation over the
-        /// <c>(PlayerId, CompetitionId)</c> key, not a rewrite.
-        /// </summary>
-        public const int LEAGUE_COMPETITION_KEY = 0;
-
         #endregion
 
         #region Cross
+
+        /// <summary>
+        /// [CROSS] The minimal-tier <c>CompetitionId</c> partition key (FR-DC-012) — a verbatim copy of
+        /// APPROVED Competition Structure #43's <c>LEAGUE_COMPETITION_ID</c> (Appendix A, value 0,
+        /// FR-CP-004: "instance 0 — the #30 league binding"). #44 consumes this value read-only and
+        /// never sets it independently — the same argument that re-tags <see cref="CardKindYellow"/>
+        /// three rows up, per the root <c>CLAUDE.md</c> tag table (a value defined in another APPROVED
+        /// spec and consumed read-only is <c>[CROSS]</c>, never <c>[FIXED]</c>).
+        /// <para>
+        /// <b>The literal <c>0</c> stays a literal.</b> #43 has no <c>src/</c> assembly, so there is no
+        /// <c>CompetitionStructureConstants</c> symbol to bind this mirror to — unlike
+        /// <see cref="CardKindYellow"/>'s real <c>EventSystemConstants</c> reference, this is a
+        /// same-value coincidence recorded as a citation, not a compiler-checked mirror, until #43
+        /// lands an assembly. Per-competition tallies are a T3 partition activation over the
+        /// <c>(PlayerId, CompetitionId)</c> key, not a rewrite.
+        /// </para>
+        /// </summary>
+        public const int LEAGUE_COMPETITION_KEY = 0;
 
         /// <summary>
         /// [CROSS] Card kind: a first (or non-promoting) caution — <c>CardIssuedEvent.CardKind</c>'s own
@@ -197,4 +212,21 @@ namespace TacticalDirector.Discipline
 // |         |            |        | No value change. L18: the class doc's region-                     |
 // |         |            |        | order line still said "Fixed → GT", stale since v1.1 added the    |
 // |         |            |        | Cross region — corrected to "Fixed → Cross → GT".                 |
+// | 1.3     | 2026-08-15 | —      | Reviewed-findings fix (M26): LEAGUE_COMPETITION_KEY was tagged    |
+// |         |            |        | [FIXED] but is a verbatim copy of APPROVED Competition Structure  |
+// |         |            |        | #43's LEAGUE_COMPETITION_ID (Appendix A, FR-CP-004) — the root    |
+// |         |            |        | CLAUDE.md tag table makes a value defined in another approved     |
+// |         |            |        | spec and consumed read-only [CROSS], never [FIXED] (the identical |
+// |         |            |        | argument M24/L17 already applied to CardKindYellow/Red/           |
+// |         |            |        | SecondYellow three rows below). Re-tagged and moved Fixed -> Cross|
+// |         |            |        | region; literal value 0 unchanged, since #43 has no src/ assembly |
+// |         |            |        | to bind a real mirror to (recorded as a citation, not a compiler- |
+// |         |            |        | checked reference, unlike the CardKind mirrors). Name left        |
+// |         |            |        | ALL_CAPS (not renamed to PascalCase like the CardKind precedent)  |
+// |         |            |        | because it is a public constant read by ~20 call sites in         |
+// |         |            |        | season-save, outside this pass's ownership (src/discipline only). |
+// |         |            |        | This contradicts APPROVED #44 Appendix A; an ERR-044-NNN back-prop|
+// |         |            |        | is owed and is NOT filed here (spec-error-log.md is out of scope  |
+// |         |            |        | for this pass) — see the reviewed-findings report for what it     |
+// |         |            |        | should say.                                                        |
 #endregion

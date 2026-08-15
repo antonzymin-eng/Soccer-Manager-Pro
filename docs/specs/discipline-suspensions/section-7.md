@@ -1,7 +1,13 @@
 # Discipline & Suspensions #44 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 24, 2026
-**Last Updated:** August 15, 2026, later still (v0.6 — L21, the spec half of #44's adversarial-review
+**Last Updated:** August 15, 2026, yet later still (v0.7 — `ERR-044-008`, reviewed-findings pass:
+§7.3's `#37` seam-contract bullet still read "one per-tick tap feeds both consumers when both are
+built", a future condition that has already occurred — both #37 and #44 have had `src/` assemblies
+since July 27, 2026 — and turned out false: `src/discipline/IDisciplineTickLedgerTap.cs` records that
+§4.1's reference rule makes #37's identical interface unreachable from either #44 or the composition
+root. Restated to state the fact and its cost — two reads per tick, not a shared adapter)
+**Last Updated (prior):** August 15, 2026, later still (v0.6 — L21, the spec half of #44's adversarial-review
 round 4 (`open-issues.md`): §7.1's T1 bullet still read "outer bump coordinated — exact version TBD,
 §4.4" — a placeholder left unresolved since §4.4 itself was corrected to the real `5 → 6` bump at its
 own v0.3 (August 13, 2026, ERR-030-035). Filled in with the landed figure and citation, verified by
@@ -20,7 +26,7 @@ deferral bullet flagged as a now-LIVE owner decision — #30 §2.3 F9 makes a su
 reinstatable in extremis rather than an absolute bar — with the deferral queue recorded as the
 designed alternative)
 **Last Updated (prior):** July 24, 2026 (v0.2 — cross-set AR; prior v0.1 — initial)
-**Version:** 0.6
+**Version:** 0.7
 **Status:** APPROVED
 
 ---
@@ -95,8 +101,12 @@ designed alternative)
 - **#30:** the ERR-030-009 resolve→*filter*→configure seam is #44's insertion point — LIVE since T2
   (C1/C2, August 13, 2026), not the null seam it was at approval; serving is reported per played
   fixture on both resolution paths; the sub-blob rides `SeasonSaveCodec`.
-- **#37:** one per-tick tap feeds both consumers when both are built (a composition-root
-  concern); neither references the other.
+- **#37:** #44 reads the engine's per-tick ledger through its own `IDisciplineTickLedgerTap`
+  rather than #37's identically-shaped tap interface — both now have `src/` assemblies (since
+  July 27, 2026), and §4.1's reference rule still makes #37's interface unreachable from either
+  #44 or the composition root that owns the engine (`ERR-044-008`), so a shared adapter type is
+  not achievable even now. Neither references the other; the engine's own tap is still filled once
+  per tick, so the cost of two accessor shapes is two reads, not two behaviours.
 - **#43:** partitions activate over the `(PlayerId, CompetitionId)` key; #43's `CompetitionId` on
   fixtures/results is the scoping input.
 - **#31/#28:** the roster re-key/retirement events deliver the migrate/drop hygiene — bans follow
@@ -113,4 +123,5 @@ designed alternative)
 | 0.4 | 2026-08-13 | — | **M11 + L6** (adversarial review over the C1/C2 landing): §7.1's T2 bullet marked LANDED, with the migrate/drop hygiene split out as the one T2 item that did NOT land; new §7.2 bullet records FR-DC-013's re-key/drop delivery has zero production call site today and the id-reuse hazard a #28 boundary regen would hit; §7.3's #30 seam-contract bullet corrected from "null seam" (stale since T2) to LIVE. |
 | 0.5 | 2026-08-15 | — | **ERR-044-003 stage 1**, owner decision: the ban-serving-under-squad-shortfall bullet resolved from "now a live decision" to RESOLVED — the deferral queue was NOT chosen; the chosen answer is a three-tier staging, of which tier 1 (exempt the extremis appearance from serving, FR-DC-011) is LANDED, and tiers 2 (youth call-ups) and 3 (generated cover) are recorded unbuilt with their blockers (#42 has no `src/` assembly; the packed `PlayerId` id space needs widening, #27 FR-SQ-010 / ERR-027-004). |
 | 0.6 | 2026-08-15 | — | **L21** (#44 adversarial-review round 4, `open-issues.md`): §7.1's T1 bullet filled in the "exact version TBD" placeholder with the actual landed bump (`SEASON_SAVE_FORMAT_VERSION` 5 → 6, ERR-030-035) — `section-4.md` §4.4 has carried this figure since its own v0.3 (August 13, 2026), so the placeholder had been stale for two days. |
+| 0.7 | 2026-08-15 | — | **`ERR-044-008`**, reviewed-findings pass: §7.3's `#37` bullet corrected — "one tap feeds both when built" is no longer a future condition (both assemblies exist) and was never going to become true under §4.1's reference rule, verified against `src/discipline/IDisciplineTickLedgerTap.cs`'s own recorded finding. Restated with the two-reads cost named. See `spec-error-log.md` `ERR-044-008`. |
 #endregion

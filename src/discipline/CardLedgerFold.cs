@@ -1,6 +1,10 @@
 // File:     src/discipline/CardLedgerFold.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 5, L17 — RequireKnownCardKind's three
+// Modified: 2026-08-15 (#44 AR round 5, L19/L22 — the type remark's claim that SeasonSaveManager
+//           refuses a live ActiveMatch was FALSE and is replaced by the real reason the hazard is
+//           unreachable; ObserveTick now states its dependency on MatchEngine.RunResolvePhase
+//           flushing queued SubstitutionEvents before card issuance — v1.5. Prior:
+//           2026-08-13, round 5 L17 — RequireKnownCardKind's three
 //           comparisons updated for DisciplineConstants' CARD_KIND_* -> CardKind* rename ([CROSS],
 //           PascalCase per src/CLAUDE.md §3.2.3); no behaviour change — v1.4)
 // Author:   —
@@ -33,9 +37,12 @@ namespace TacticalDirector.Discipline
     /// resolution"). Writing straight through to <see cref="DisciplineRules"/> would put half a
     /// fixture's cards into persisted state at any moment a save could be taken mid-fixture — and a
     /// restore has no way to know which half, because KD-2 rules out re-deriving the tally from engine
-    /// slot state. That save path is refused today (<c>SeasonSaveManager</c> declines a live
-    /// <c>ActiveMatch</c>), but <c>MatchSession.TickOnce/CaptureSave/RestoreFrom</c> already exists one
-    /// assembly over. <b>Buffering alone does not make a mid-fixture save CORRECT</b> (L2) — this fold
+    /// slot state. <b>Nothing refuses that save path</b> (L19) — <c>SeasonSaveManager</c> does NOT
+    /// decline a live <c>ActiveMatch</c>; it documents that <c>SeasonLoop.ActiveMatch</c> is not a safe
+    /// source and asks the caller to pass an engine it owns. The hazard is unreachable today only
+    /// because no seam exposes a mid-fixture engine at all: <c>ActiveMatch</c> is non-null solely
+    /// inside the synchronous tick loop that owns it. That is unreachability, not a gate — and
+    /// <c>MatchSession.TickOnce/CaptureSave/RestoreFrom</c> already exists one assembly over. <b>Buffering alone does not make a mid-fixture save CORRECT</b> (L2) — this fold
     /// is not itself serialized, so a restore rebuilds an empty fold and every card issued before the
     /// save point is lost outright, trading a half-persisted tally for a silently-truncated one.
     /// Buffering keeps a half-fixture tally OUT of persisted state; making a mid-fixture save correct
@@ -159,6 +166,13 @@ namespace TacticalDirector.Discipline
                 byte ordinal = tap.OrdinalAt(i);
 
                 // Substitutions are handled BEFORE cards are read at the same index only in the sense
+                // L22 — DEPENDENCY ON THE ENGINE'S PHASE ORDER, stated because nothing else states it.
+                // MatchEngine.SubstitutePlayer swaps the slot IMMEDIATELY, between ticks, and QUEUES the
+                // SubstitutionEvent for flush at the top of the next RunResolvePhase — the same phase that
+                // issues cards. This fold is correct only while that flush PRECEDES card issuance in
+                // RunResolvePhase. If it ever moves after, every card in the substitution tick is
+                // attributed to the OUTGOING player, silently and permanently; Stage 0 fields a fixed
+                // eleven, so SubstitutePlayer has no production caller and nothing would catch it.
                 // that both are dispatched in the tap's own canonical order — a substitution and a card
                 // in one tick apply in publish order, which is what FR-DC-021 pins.
                 if (ordinal == substitutionOrdinal)
@@ -413,4 +427,20 @@ namespace TacticalDirector.Discipline
 // |         |            |        | [CROSS] — they are #17 CardIssuedEvent.CardKind domain ordinals    |
 // |         |            |        | #44 consumes read-only). RequireKnownCardKind's three comparisons  |
 // |         |            |        | updated to match; no behaviour change.                             |
+// | 1.5     | 2026-08-15 | —      | AR round 5 fixes (L19, L22), comments only — no behaviour change.  |
+// |         |            |        | L19: the type remark asserted "that save path is refused today     |
+// |         |            |        | (SeasonSaveManager declines a live ActiveMatch)". It declines      |
+// |         |            |        | nothing of the sort — it documents that SeasonLoop.ActiveMatch is  |
+// |         |            |        | not a safe source and asks the caller to pass its own engine.      |
+// |         |            |        | The L2 buffering argument rested on that false premise. Replaced   |
+// |         |            |        | with the true reason: no seam exposes a mid-fixture engine at all, |
+// |         |            |        | so this is unreachability, not a gate. L22: ObserveTick's          |
+// |         |            |        | correctness depends on MatchEngine.RunResolvePhase flushing        |
+// |         |            |        | queued SubstitutionEvents BEFORE issuing cards in the same phase   |
+// |         |            |        | (SubstitutePlayer swaps the slot between ticks and queues the      |
+// |         |            |        | event). If that flush ever moves after card issuance, every card   |
+// |         |            |        | in the substitution tick is attributed to the OUTGOING player,     |
+// |         |            |        | silently — and Stage 0 fields a fixed eleven, so nothing would     |
+// |         |            |        | catch it. Dependency now stated at the site plus a fold test       |
+// |         |            |        | (CardLedgerFoldTests) authoring Sub-then-Card in one tick.         |
 #endregion
