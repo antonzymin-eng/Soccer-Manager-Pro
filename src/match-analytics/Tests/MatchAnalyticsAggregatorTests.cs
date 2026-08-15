@@ -1,6 +1,7 @@
 // File:     src/match-analytics/Tests/MatchAnalyticsAggregatorTests.cs
 // Created:  2026-07-27
-// Modified: 2026-07-27
+// Modified: 2026-08-15 (reviewed-findings pass, L2 — MatchAnalyticsConstants.CARD_KIND_RED renamed
+//           CardKindRed (PascalCase [CROSS]-mirror naming); call site updated. No behaviour change.)
 // Author:   —
 // Spec:     Match Analytics & Statistics #37 §3.1–§3.5, §5 (T-AN-*), Code Standards #20
 // Purpose:  Drives the §3.2 routing table, §3.1 possession weighting, §3.4 positional binning and
@@ -160,7 +161,7 @@ namespace TacticalDirector.MatchAnalytics.Tests
         {
             var agg = new MatchAnalyticsAggregator();
             var tap = new FakeTap()
-                .Add(new CardIssuedEvent(recipient: 4, cardKind: MatchAnalyticsConstants.CARD_KIND_RED, foulOrdinal: 0xFFFF))
+                .Add(new CardIssuedEvent(recipient: 4, cardKind: MatchAnalyticsConstants.CardKindRed, foulOrdinal: 0xFFFF))
                 .Add(new CardIssuedEvent(recipient: 4, cardKind: 0, foulOrdinal: 0xFFFF))
                 .Add(new CardIssuedEvent(recipient: 18, cardKind: 0, foulOrdinal: 0xFFFF));
 
@@ -586,4 +587,7 @@ namespace TacticalDirector.MatchAnalytics.Tests
 // |         |            |        | control, and a dismissed agent dropping out of the §3.4        |
 // |         |            |        | sample. Both fail against the pre-fix aggregator (verified by  |
 // |         |            |        | perturbing each fix); FakeSample gains SendOff.                |
+// | 1.2     | 2026-08-15 | —      | Reviewed-findings pass (L2). CARD_KIND_RED reference updated   |
+// |         |            |        | to MatchAnalyticsConstants.CardKindRed (PascalCase rename of   |
+// |         |            |        | the [CROSS] mirror). No behaviour change.                      |
 #endregion

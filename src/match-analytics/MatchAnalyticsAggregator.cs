@@ -1,6 +1,7 @@
 // File:     src/match-analytics/MatchAnalyticsAggregator.cs
 // Created:  2026-07-27
-// Modified: 2026-07-27
+// Modified: 2026-08-15 (reviewed-findings pass, L2 — MatchAnalyticsConstants.CARD_KIND_RED renamed
+//           CardKindRed (PascalCase [CROSS]-mirror naming); call site updated. No behaviour change.)
 // Author:   —
 // Spec:     Match Analytics & Statistics #37 §3.1–§3.5 (KD-3), FR-AN-003..012 / 016..018,
 //           Code Standards #20
@@ -232,7 +233,7 @@ namespace TacticalDirector.MatchAnalytics
             {
                 CardIssuedEvent evt = tap.ReadRecord<CardIssuedEvent>(index);
                 int team = TeamOfAgent(sample, evt.Recipient, "CardIssuedEvent.Recipient");
-                if (evt.CardKind == MatchAnalyticsConstants.CARD_KIND_RED)
+                if (evt.CardKind == MatchAnalyticsConstants.CardKindRed)
                 {
                     _redCards[team]++;
                 }
@@ -462,4 +463,7 @@ namespace TacticalDirector.MatchAnalytics
 // |         |            |        | the §3.4 binning loop (they are frozen ON the pitch per §5.Z   |
 // |         |            |        | Phase H, so one red card dominated the heatmap thereafter).    |
 // |         |            |        | AR-1 L: FR-CS-071 justification recorded for Percent's double. |
+// | 1.2     | 2026-08-15 | —      | Reviewed-findings pass (L2). CARD_KIND_RED reference updated   |
+// |         |            |        | to MatchAnalyticsConstants.CardKindRed (PascalCase rename of   |
+// |         |            |        | the [CROSS] mirror). No behaviour change.                      |
 #endregion

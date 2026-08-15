@@ -1,7 +1,20 @@
 # Season & Competition Loop Specification #30 — Section 3: Algorithms
 
 **Created:** July 22, 2026
-**Last Updated:** August 15, 2026 (v2.4 — **ERR-044-003 stage 1**, owner decision: §3.4's
+**Last Updated:** August 15, 2026, later (v2.5 — a reviewed-findings pass, two spec-text defects,
+**`ERR-030-040`** and **`ERR-030-041`**, both spec + code same commit. **ERR-030-040 (M1):** §3.4's
+`OnClubFixturePlayed` comment (and its mirror in `src/season-save/SeasonLoop.cs`) still said "its only
+guard is `clubId < 0`" — stale since ERR-044-003 stage 1 added a second guard
+(`fieldedPlayerIds == null`). Corrected to name both guards and state WHY the null case is structurally
+excluded: `FieldedXi` returns non-null exactly when discipline is wired, the same condition this whole
+block already runs under — a distant invariant, not a local one, that a narrower `FieldedXi` gate, a
+third consumer, or a different-XI-deriving resolution mode would each be enough to break. **ERR-030-041
+(M7):** §3.5 step (f)'s stated reason for the sweep's placement — "the sweep is NOT idempotent" — is
+false; `DisciplineRules.RollToNextSeason()` sets `Yellows := 0`, so a second run is a no-op, exactly as
+the code comment at the same site already said. The placement (after the one commit that can refuse the
+roll) is right; only the stated reason was wrong. Corrected to the real reason: a FIRST run against a
+roll that is then refused would sweep a discipline state for a season that never began.)
+**Last Updated (prior):** August 15, 2026 (v2.4 — **ERR-044-003 stage 1**, owner decision: §3.4's
 `AdvanceAndPlayNextRound` pseudocode passes `OnClubFixturePlayed` each club's fielded eleven
 (`homeXi`/`awayXi`) rather than calling it with only the club id, and the surrounding comments
 corrected — a ban decrements per played fixture the player did NOT appear in, not per played fixture
@@ -353,8 +366,14 @@ AdvanceAndPlayNextRound(squads: ISquadProvider):
         # `f.Played := true`, deliberately (M6, ERR-030-037):
         # fold.Commit IS fallible under a bound config (a threshold or ban length below its floor
         # throws) — OnClubFixturePlayed itself reads no [GT] and cannot throw under any bound config
-        # (its only guard is clubId < 0, a caller-contract bug never reachable from a real fixture;
-        # L9) — and serving+committing is independent of
+        # (L9, EXTENDED at M1/ERR-030-040): it has TWO guards — clubId < 0, a caller-contract bug never
+        # reachable from a real fixture, and, since ERR-044-003 stage 1, fieldedPlayerIds == null
+        # (ArgumentNullException). The null case is excluded STRUCTURALLY, not by caller discipline:
+        # homeXi/awayXi are FieldedXi's output, which is non-null exactly when discipline is wired — the
+        # same condition this whole block already runs under. That is a distant invariant (FieldedXi's
+        # own gate, not a local one) and holds only until that gate is narrowed, a third FieldedXi
+        # consumer is added, or a resolution mode derives its XI differently — and serving+committing is
+        # independent of
         # Table.ApplyResult/EmitMatchOutcome/`f.Played := true` — so running the pair after the
         # fixture is marked played means a throw from fold.Commit here cannot leave the fixture
         # UNPLAYED with its bans already served once. Before this fix, that throw let a caller
@@ -452,8 +471,15 @@ RollToNextSeason():
     # UNCHANGED — a red card in the final round is still a ban in August, which is the whole reason
     # #44 persists rather than recomputing from ledgers it does not keep (KD-1). Installed LAST,
     # after (e)'s commits, for the same reason the roster sync at (d′) is: a discipline state swept
-    # for a season that never began is a half-rolled state, and the sweep is NOT idempotent — running
-    # it twice on a refused-then-retried roll would silently forgive a second season's yellows.
+    # for a season that never began is a half-rolled state (M7/ERR-030-041 — CORRECTED; the placement
+    # is right, the reason given for it below WAS wrong. The sweep IS idempotent —
+    # DisciplineRules.RollToNextSeason() sets Yellows := 0, so a second run finds every row already at
+    # 0 and writes nothing, which is NOT the hazard here). The hazard is a FIRST run against a roll that
+    # is then REFUSED: BeginNextSeason (e) is the one commit in RollToNextSeason that can throw, and
+    # placing the sweep BEFORE it would fire the sweep against a season that never actually began —
+    # yellows reset for a roll that did not happen, on a refused-then-retried roll's first attempt, not
+    # a repeat. Placed here, after the one commit that can refuse, a refused roll leaves the discipline
+    # state untouched, same as the roster sync.
     DisciplineRules?.RollToNextSeason()
 ```
 

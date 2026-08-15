@@ -1,6 +1,8 @@
 // File:     src/season-save/PlayerCareerStates.cs
 // Created:  2026-08-06
-// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 3, M14 — MarkUnavailable now OWNS its
+// Modified: 2026-08-15 (L3, reviewed-findings pass — formatting only: a stray double blank line
+//           collapsed to one, per FR-CS-011/012 — v1.22)
+//           Prior: 2026-08-13 (#44 C1/C2 adversarial review round 3, M14 — MarkUnavailable now OWNS its
 //           removed/recoveryRemaining masks (writes every index unconditionally) instead of being
 //           additive, matching Availability.MarkSuspended's contract — v1.21. Prior: v1.20 L8 — the
 //           public SelectAvailable's discipline-less call passes competitionId: 0 instead of naming
@@ -1576,7 +1578,6 @@ namespace TacticalDirector.SeasonSave
                 }
             }
 
-
             throw new ArgumentException(
                 $"This career carries no state for club {clubId}.", nameof(clubId));
         }
@@ -1773,4 +1774,7 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | contributor's removals — strictly worse than the pre-M3 hazard. |
 // |         |            |        | Compose (AvailabilityComposition.cs v1.2) now allocates a fresh |
 // |         |            |        | mask for this contributor too and ORs it in itself.             |
+// | 1.22    | 2026-08-15 | —      | L3 (reviewed-findings pass), formatting only: the stray double  |
+// |         |            |        | blank line inside RequireClub collapsed to one (FR-CS-011/012). |
+// |         |            |        | No behaviour change.                                             |
 #endregion

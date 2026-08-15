@@ -7,7 +7,8 @@ and `src/CLAUDE.md` (concrete paths). Spec #20 does not publish a runtime interf
 §4.4 records the N/A justification.
 
 **Created:** May 7, 2026
-**Version:** 1.0.1
+**Last Updated:** August 15, 2026
+**Version:** 1.0.2
 **Status:** DRAFT
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 4
@@ -118,8 +119,27 @@ is the PascalCase form of the spec's folder name:
 
 The project-wide root catalogue, `ProjectConstants.cs`, lives in the
 `project-constants/` folder. It is the sole source of truth for `[CROSS]` constants
-that are shared across more than one spec assembly. A constant that appears in only one
-spec's catalogue is **not** promoted to `ProjectConstants.cs`.
+that are shared across more than one spec assembly **and have no single owning
+catalogue** — see the carve-out below. A constant that appears in only one spec's
+catalogue is **not** promoted to `ProjectConstants.cs`.
+
+**Owning-catalogue carve-out (ERR-020-004, added August 15, 2026).** A constant whose
+owning spec already has its own constant catalogue mirrors from THAT catalogue
+directly, regardless of how many other specs consume it — `ProjectConstants.cs`
+routing is for constants with no single owning catalogue (a project-wide physical
+value like `PHYSICS_TICK_HZ`, which no one spec owns outright). Example: Event
+System #17 owns the `CardIssuedEvent.CardKind` domain-ordinal encoding (Appendix A:
+"#17 default owner") and declares it once in `EventSystemConstants.cs`; three
+downstream catalogues — `MatchEngineConstants`, `DisciplineConstants`, and
+`MatchAnalyticsConstants` — each mirror it directly from `EventSystemConstants`, none
+routed through `ProjectConstants.cs`, even though the encoding plainly has more than
+one consumer. This is not a violation of the multi-consumer rule above; it is the case
+that rule's two-way split (declared here vs. shared bucket) never named. Routing a
+spec-owned encoding through `ProjectConstants.cs` would add a hop without adding an
+authority — the owning spec's catalogue already IS the authority. (ERR-020-004 found
+this gap because a compliant mirror — `DisciplineConstants.CardKindYellow` — had to
+justify itself with a false "single consumer" claim for want of a rule that fit the
+actual shape.)
 
 ### Per-Tag Region Ordering
 
@@ -291,6 +311,7 @@ concretises, establishing the Spec #20 ↔ `src/CLAUDE.md` cite-chain.
 |---|---|---|---|---|
 | 1.0 | May 7, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §SECTION 4. | — |
 | 1.0.1 | May 22, 2026 | — | ERR-020-001: §4.2 `[CROSS]` mirror example field name corrected `PHYSICS_TICK_HZ` (ALL_CAPS) → `PhysicsTickHz` (PascalCase) per §3.2.3 authoritative rule; XML doc updated to include spec+section citation and value per FR-CS-022. | — |
+| 1.0.2 | August 15, 2026 | Claude Code | ERR-020-004 (reviewed-findings pass, M4/owner decision 2): §4.2's `[CROSS]` routing rule stated only a two-way split (multi-consumer → `ProjectConstants.cs`; single-consumer → local) with no accommodation for a constant that has ≥ 2 consumers but a single owning spec's catalogue to mirror from. New "Owning-catalogue carve-out" paragraph: such a constant mirrors from its owning spec's catalogue directly regardless of consumer count (the `CardIssuedEvent.CardKind` / `EventSystemConstants` example, mirrored by three downstream catalogues with none routed through `ProjectConstants.cs`). Found because `src/discipline/DisciplineConstants.cs`'s compliant mirror had invented a false "single consumer" justification for want of a rule that fit its actual shape. `src/CLAUDE.md`'s `[CROSS]` mirrors section gains the identical carve-out. | — |
 
 ---
 

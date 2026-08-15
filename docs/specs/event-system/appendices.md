@@ -1,8 +1,8 @@
 # Event System Specification #17 — Appendices
 
 **Created:** May 13, 2026
-**Last Updated:** August 15, 2026
-**Version:** 1.0.2
+**Last Updated:** August 15, 2026, later
+**Version:** 1.0.3
 **Status:** DRAFT
 
 > Appendix layout follows `outline-detailed.md` v1.1 §"APPENDICES"
@@ -53,7 +53,7 @@ rules per §2.4.2. Producer-spec ownership and tier are normative.
 | `0x03` | `BallCrossedLineEvent` | A | Physics | #1 | 1 | `lineKind: byte; crossingPoint: Vector3; ballVelocityAtCross: Vector3` | n/a | #17 v1.0 | N |
 | `0x04` | `PossessionChangedEvent` | A | Resolve | #17 (default owner) | 1 | `previousHolder: EntityId; newHolder: EntityId; reason: byte` | n/a | #17 v1.0 | N |
 | `0x05` | `FoulCommittedEvent` | A | Resolve | #17 (default owner) | 1 | `offender: EntityId; victim: EntityId; location: Vector3; foulKind: byte` | n/a | #17 v1.0 | N |
-| `0x06` | `CardIssuedEvent` | A | Resolve | #17 (default owner) | 1 | `recipient: EntityId; cardKind: byte; foulOrdinal: byte` | n/a | #17 v1.0 | N |
+| `0x06` | `CardIssuedEvent` | A | Resolve | #17 (default owner) | 1 | `recipient: EntityId; cardKind: byte; foulOrdinal: ushort` | n/a | #17 v1.0 | N |
 | `0x07` | `GoalAwardedEvent` | A | Resolve | #17 (default owner) | 1 | `scorer: EntityId; assister: EntityId; scoringTeam: byte; ballPosition: Vector3` | n/a | #17 v1.0 | N |
 | `0x08` | `SubstitutionEvent` | A | Resolve | #17 (default owner) | 1 | `outgoing: EntityId; incoming: EntityId; team: byte; substitutionReason: byte` | n/a | #17 v1.0 | N |
 | `0x09` | `TickHeartbeatEvent` | C | `Snapshot` | #17 (default owner) | 1 | (header only) | 1 / tick | #17 v1.0 | N |
@@ -61,9 +61,25 @@ rules per §2.4.2. Producer-spec ownership and tier are normative.
 | `0x0B` | `UiNotificationCue` | C | Resolve | #17 (default owner) | 1 | `notificationKind: byte; subjectEntity: EntityId` | 32 / tick | #17 v1.0 | N |
 
 **`0x06` `cardKind` values** (ERR-017-004): `0` = Yellow, `1` = Red, `2` = SecondYellow. Declared
-as design-fixed `[GT]` in §3.10's constants catalogue (`CARD_KIND_YELLOW` / `CARD_KIND_RED` /
+as `[FIXED]` in §3.10's constants catalogue (`CARD_KIND_YELLOW` / `CARD_KIND_RED` /
 `CARD_KIND_SECOND_YELLOW`) — this table records that a domain-ordinal payload field exists;
-§3.10 is the catalogue home for its actual values.
+§3.10 is the catalogue home for its actual values. **Corrected 2026-08-15 (ERR-017-005):** this
+note previously read "design-fixed `[GT]`", which was already stale against §3.10's own `[FIXED]`
+tagging (v1.0.3 / `EventSystemConstants.cs` v1.5, both landed the same day as this note itself at
+ERR-017-004) — the two never disagreed in code or in §3.10, only in this row's prose.
+
+**`0x06` `foulOrdinal` width** (ERR-017-005): the field-list column above reads `ushort`, not
+`byte`. `CardIssuedEvent.FoulOrdinal` — the `intraPhaseDrawIndex` of the triggering
+`FoulCommittedEvent`, or a "no associated foul" sentinel — was widened `byte` → `ushort` at AR-5
+L-1 (`src/event-system/CardIssuedEvent.cs` v1.2, 2026-06-02): `intraPhaseDrawIndex` is itself a
+`ushort` header field (0..65535), so a `byte` field could not represent every draw index it might
+need to carry, and the sentinel moved `0xFF` → `0xFFFF` in the same change. This registry row —
+the canonical wire-format source per §"Append rules" above — was never updated to match; every
+current producer/consumer already uses the `ushort` form (`MatchEngine.cs`'s
+`foulOrdinal: 0xFFFF`, `CardLedgerFoldTests.cs`, `MatchAnalyticsAggregatorTests.cs`), and no
+shipped consumer ever decoded the `byte` form (Stage 0 wiring did not exist in May 2026, per the
+`CardIssuedEvent.cs` v1.2 note itself), so this is a documentation correction, not a format
+migration — `Current version` stays `1` and none of Appendix C's recipes apply.
 
 ### A.2 Reserved ordinals
 
@@ -279,3 +295,4 @@ Cross-references for each row land in §3.8 (mechanics) and §2.5
 | 0.3     | May 13, 2026 | Claude Code | PASS 2 critique resolution. H-2-1: Appendix A `0x09` row producer phase reverted to `Snapshot`; `maxPerTick` corrected to `1 / tick`. H-2-2: Appendix E EC-017-005a updated to compile-time / lint-only (no runtime error code; `0x1702` slot reserved). |
 | 1.0.1   | May 15, 2026 | Claude Code | Patch revision (no behavioral change). Appendix B preamble + B.1 / B.2 / B.3 byte streams inline `DOMAIN_TAG_EVENT_LEDGER = 0x15` (allocated in #16 §3.4 v1.0.1, May 14, 2026 per ERR-017-001 RESOLVED). Appendix D glossary row updated to `0x15` / `[CROSS]`. Replaces the symbolic `DT` placeholder used while #17 was drafted against `[CROSS-PENDING]`. |
 | 1.0.2   | August 15, 2026 | Claude Code | ERR-017-004 back-prop (Discipline & Suspensions #44 adversarial review round 4, M24). Appendix A.1 gained a note under the registry table pointing `0x06`'s `cardKind` payload values at §3.10's new catalogue rows (`CARD_KIND_YELLOW`/`RED`/`SECOND_YELLOW`) — the encoding was normative in the row's own comment ("0=Yellow, 1=Red, 2=SecondYellow") but had no catalogue home anywhere in this spec, and two downstream implementation catalogues (`MatchEngineConstants`, `DisciplineConstants`) had each declared it independently under two different tags. No table-row change; no behavioral change. Header version corrected 0.3 → 1.0.2 to match this file's own version-history chain, which the header had fallen out of sync with. |
+| 1.0.3   | August 15, 2026, later | Claude Code | ERR-017-005 (reviewed-findings pass, M2/M3). Two corrections the v1.0.2 note left behind: (1) it read "design-fixed `[GT]`" for `0x06`'s `cardKind` values, already stale against §3.10's own same-day `[FIXED]` retag at ERR-017-004 — corrected to `[FIXED]`, with a note explaining the two never actually disagreed anywhere but this prose. (2) Appendix A.1's row 0x06 payload field list still read `foulOrdinal: byte`, six weeks stale against `CardIssuedEvent.FoulOrdinal`'s widening to `ushort` (AR-5 L-1, `CardIssuedEvent.cs` v1.2, 2026-06-02) — corrected to `ushort`, with a new note recording the widening, its `0xFFFF` sentinel, and that every current producer/consumer already uses the `ushort` form so `Current version` stays `1` (documentation correction, not an Appendix C migration). No code change — both corrections bring this registry into line with code and with §3.10 that were already right. |

@@ -1,6 +1,9 @@
 // File:     src/season-save/AvailabilityComposition.cs
 // Created:  2026-08-13
-// Modified: 2026-08-15 (ERR-044-003 stage 1 — the L7 remark's open owner call is DECIDED: an extremis
+// Modified: 2026-08-15 (L2, reviewed-findings pass — the private Squad-materialization helper renamed
+//           Compose → MaterializeSquad; it shared its name with the public Compose that calls it,
+//           reading as recursion from inside a method named Compose — v1.4)
+//           Prior: 2026-08-15 (ERR-044-003 stage 1 — the L7 remark's open owner call is DECIDED: an extremis
 //           appearance no longer serves the ban it was fielded through, fixed at the serving site
 //           rather than here; the two further FM-style tiers are recorded with what blocks them — v1.3.
 //           Prior: 2026-08-13, #44 C1/C2 adversarial review round 3, M14 — both contributors now own the
@@ -178,7 +181,7 @@ namespace TacticalDirector.SeasonSave
             }
 
             int availableCount = total - removedCount;
-            Squad filtered = Compose(squad, removed, availableCount);
+            Squad filtered = MaterializeSquad(squad, removed, availableCount);
 
             // Bounded by the roster: each pass reinstates exactly one more player, so the loop ends at
             // the latest when everybody is selected — at which point the verdict is the roster's own.
@@ -195,7 +198,7 @@ namespace TacticalDirector.SeasonSave
 
                 Reinstate(removed, suspended, recoveryRemaining);
                 availableCount++;
-                filtered = Compose(squad, removed, availableCount);
+                filtered = MaterializeSquad(squad, removed, availableCount);
             }
 
             return availableCount == total ? squad : filtered;
@@ -205,8 +208,15 @@ namespace TacticalDirector.SeasonSave
         /// The squad of the currently-selectable players, or <c>null</c> when none are — which
         /// <see cref="Squad"/> itself refuses to represent, and which the back-fill loop then resolves
         /// by selecting someone.
+        /// <para>
+        /// L2: named <c>MaterializeSquad</c>, not <c>Compose</c> — the public <see cref="Compose"/>
+        /// above called this private helper by the SAME name (an overload on two unrelated meanings,
+        /// "compose availability" vs "materialise a Squad from a mask"), so the back-fill loop's
+        /// <c>filtered = Compose(squad, removed, availableCount);</c> read as recursion from inside a
+        /// method named <c>Compose</c>.
+        /// </para>
         /// </summary>
-        private static Squad Compose(Squad squad, bool[] removed, int availableCount)
+        private static Squad MaterializeSquad(Squad squad, bool[] removed, int availableCount)
         {
             if (availableCount == 0)
             {
@@ -319,4 +329,11 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | ahead of any suspended player) are recorded with their blockers:  |
 // |         |            |        | #42 has no src/ assembly, and generated cover needs the packed    |
 // |         |            |        | clubId x CLUB_SQUAD_SIZE + local id space widened.                |
+// | 1.4     | 2026-08-15 | —      | L2 (reviewed-findings pass): the private Squad-materialization    |
+// |         |            |        | helper renamed Compose → MaterializeSquad. It overloaded the      |
+// |         |            |        | public Compose's name on two unrelated meanings — "compose        |
+// |         |            |        | availability" vs "materialise a Squad from a removed-mask" — and  |
+// |         |            |        | the back-fill loop's own `filtered = Compose(squad, removed,      |
+// |         |            |        | availableCount);`, called from inside a method named Compose,     |
+// |         |            |        | read as recursion. No behaviour change; both call sites updated.  |
 #endregion

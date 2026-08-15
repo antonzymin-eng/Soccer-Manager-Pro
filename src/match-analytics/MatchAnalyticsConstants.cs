@@ -1,5 +1,10 @@
 // File:     src/match-analytics/MatchAnalyticsConstants.cs
 // Created:  2026-07-27
+// Modified: 2026-08-15, later (reviewed-findings pass, L2 — CARD_KIND_RED renamed CardKindRed
+//           (PascalCase): a [CROSS] mirror was left ALL_CAPS when its MatchEngineConstants/
+//           DisciplineConstants siblings were renamed in the same M24/ERR-017-004 round. Consumers
+//           MatchAnalyticsAggregator.cs and MatchAnalyticsAggregatorTests.cs updated in the same
+//           commit. No value change — v1.4)
 // Modified: 2026-08-15 (#44 C1/C2 adversarial review round 4, M24/ERR-017-004 — CARD_KIND_RED
 //           repointed from MatchEngineConstants.CardKindRed to EventSystemConstants.CARD_KIND_RED
 //           directly (the .asmdef already references TacticalDirector.EventSystem), avoiding a
@@ -91,8 +96,17 @@ namespace TacticalDirector.MatchAnalytics
         /// (also used for <c>CardIssuedEvent</c> itself, read in <c>MatchAnalyticsAggregator</c>), so no
         /// new assembly reference was needed.
         /// </para>
+        /// <para>
+        /// L2 (reviewed-findings pass, 2026-08-15): renamed <c>CARD_KIND_RED</c> → <c>CardKindRed</c>.
+        /// <c>src/CLAUDE.md</c>'s naming table and the ERR-020-001 note require PascalCase for
+        /// <c>[CROSS]</c> mirrors; this field was left ALL_CAPS when <c>MatchEngineConstants</c> and
+        /// <c>DisciplineConstants</c>'s equivalent mirrors were renamed to <c>CardKindRed</c> in the same
+        /// M24/ERR-017-004 round. The rest of this file is ALL_CAPS for other <c>[CROSS]</c>/<c>[GT]</c>
+        /// constants too (a pre-existing, file-wide deviation) — out of scope here; only the field this
+        /// pass's other findings touch is renamed.
+        /// </para>
         /// </summary>
-        public const byte CARD_KIND_RED = EventSystemConstants.CARD_KIND_RED;
+        public const byte CardKindRed = EventSystemConstants.CARD_KIND_RED;
 
         /// <summary>[CROSS] <c>RestartAwardedEvent.RestartKind</c> value for a throw-in. Authoritative
         /// source: Ball Physics #1 <c>RestartType.ThrowIn</c>.</summary>
@@ -130,4 +144,15 @@ namespace TacticalDirector.MatchAnalytics
 // |         |            |        | this M24 fix's own first-draft defect (two hops for the "must  |
 // |         |            |        | not diverge from its source" rule to fail at). No asmdef change|
 // |         |            |        | needed — TacticalDirector.EventSystem was already referenced.  |
+// | 1.4     | 2026-08-15, later | — | Reviewed-findings pass (L2). CARD_KIND_RED renamed          |
+// |         |            |        | CardKindRed (PascalCase) — src/CLAUDE.md's naming table and the |
+// |         |            |        | ERR-020-001 note require PascalCase for [CROSS] mirrors, and    |
+// |         |            |        | this field was left ALL_CAPS when MatchEngineConstants and      |
+// |         |            |        | DisciplineConstants's equivalent mirrors were renamed to        |
+// |         |            |        | CardKindRed in the same M24/ERR-017-004 round (v1.33/v1.2        |
+// |         |            |        | respectively). Consumers updated: MatchAnalyticsAggregator.cs   |
+// |         |            |        | (line ~235) and MatchAnalyticsAggregatorTests.cs (line ~163).   |
+// |         |            |        | No value change. The rest of this file's [CROSS]/[GT] constants |
+// |         |            |        | remain ALL_CAPS (a pre-existing, file-wide deviation) — out of  |
+// |         |            |        | scope for this pass.                                             |
 #endregion

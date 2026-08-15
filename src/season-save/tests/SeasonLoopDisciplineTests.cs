@@ -582,14 +582,28 @@ namespace TacticalDirector.SeasonSave.Tests
             // could ever prove that call was reached, and deleting it left the whole tree green. Routing
             // it through IFixtureDisciplineDriver.RequireCommittableConfig lets THIS test substitute an
             // implementation that always throws, proving the round-level pre-check is both reached and
-            // reached before RunCareerDaySteps/the fixture loop: nothing this round would otherwise do
-            // (a career day-step, a fixture resolution, a MarkFixturePlayed) can have happened yet.
+            // reached before the fixture loop: no fixture this round would otherwise resolve can have
+            // been marked played yet.
             //
-            // VERIFIED by executing: temporarily deleting the
-            // `_disciplineDriver.RequireCommittableConfig();` call in SeasonLoop.PlayNextRound turns
-            // this test red (Assert.Throws sees no exception, because ThrowOnRequireCommittableConfig-
-            // Driver's OTHER two members also throw and neither runs either — the round completes
-            // successfully instead), then restoring the call turns it green again.
+            // L1 (adversarial review over AR round 5): this test's ONLY assertion is Played == False,
+            // which locks the pre-check's position relative to the FIXTURE LOOP alone — NOT relative to
+            // RunCareerDaySteps. Moving the pre-check to run after RunCareerDaySteps(worldDay) but still
+            // before the fixture loop would leave this test green (no fixture would yet be marked
+            // played) while breaking "refused while nothing has been written at all", since a career
+            // day-step is itself a write. The comment above previously claimed this test proved
+            // ordering against RunCareerDaySteps too; it does not, and that claim is retracted here
+            // rather than backed by a new assertion (see the CHANGELOG entry for why).
+            // VERIFIED by executing (M3, adversarial review over AR round 5): temporarily deleting the
+            // `_disciplineDriver.RequireCommittableConfig();` call in SeasonLoop.PlayNextRound does NOT
+            // turn this test red at Assert.Throws — ThrowOnRequireCommittableConfigDriver's OTHER two
+            // members (OnClubFixturePlayed, CommitFixtureCards) also throw InvalidOperationException,
+            // so the fixture loop reaches OnClubFixturePlayed instead and Assert.Throws still sees an
+            // exception of the expected type and PASSES. The mutation is caught downstream: by the time
+            // OnClubFixturePlayed throws, MarkFixturePlayed has already run, so `Played` reads True and
+            // the `Assert.That(..., Is.False, ...)` below FAILS. That assertion is the only thing this
+            // test locks; Assert.Throws alone would pass under this exact mutation. Restoring the call
+            // turns the test green again (RequireCommittableConfig throws first, before the fixture
+            // loop is ever entered, so Played stays False).
             League league = FourClubLeague();
             var tally = new DisciplineState();
             SeasonLoop loop = LoopOver(
@@ -1206,9 +1220,18 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | nothing in this process could ever drive through a failing config  |
 // |         |            |        | (DisciplineConstants is public static readonly, resolved once at   |
 // |         |            |        | its non-negative defaults) — deleting the call left the whole tree |
-// |         |            |        | green. VERIFIED by executing: deleting                              |
+// |         |            |        | green. **CORRECTED at v1.9 (M3):** the claim below that deleting   |
+// |         |            |        | `_disciplineDriver.RequireCommittableConfig();` turns the new test |
+// |         |            |        | red "because Assert.Throws sees no exception" was FALSE — under    |
+// |         |            |        | that mutation Assert.Throws still PASSES (ThrowOnRequireCommittable|
+// |         |            |        | ConfigDriver's other two members also throw, so the fixture loop   |
+// |         |            |        | supplies an exception of the same type); the test only turns red   |
+// |         |            |        | because the Played == False assertion fails once MarkFixturePlayed |
+// |         |            |        | has already run by the time that later throw fires. Original text, |
+// |         |            |        | for the record: "VERIFIED by executing: deleting                   |
 // |         |            |        | `_disciplineDriver.RequireCommittableConfig();` from PlayNextRound  |
-// |         |            |        | turns the new test red, restoring it turns the test green again.   |
+// |         |            |        | turns the new test red (Assert.Throws sees no exception), restoring|
+// |         |            |        | it turns the test green again."                                    |
 // | 1.8     | 2026-08-15 | —      | AR round 5 fix (ERR-044-006), header comment ONLY — no test logic  |
 // |         |            |        | changed. The Spec: line claimed T-DC-VIEW-001, which this file    |
 // |         |            |        | has never implemented; its only test lived in discipline/tests/   |

@@ -1,6 +1,13 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
-// Modified: 2026-08-15 (AR round 4 fix, M22 — v1.26: PlayNextRound's round-level [GT] pre-check now
+// Modified: 2026-08-15 (reviewed-findings pass — v1.27: M1/ERR-030-040 — the M6 comment's "only guard
+//           is clubId < 0" claim is stale since ERR-044-003 stage 1 added a second guard
+//           (fieldedPlayerIds == null); corrected to name both guards and state why the null case is
+//           structurally excluded (FieldedXi's gate is the same _career/_disciplineDriver union this
+//           block already runs under). M5 (code half) — FieldedXi's XML doc now records the
+//           substitution dependency on BOTH its consumers, not just #41's appearance record; the
+//           SquadRating.cs and discipline/ notes are out of this assembly's scope and are still owed.
+//           Prior: 2026-08-15 (AR round 4 fix, M22 — v1.26: PlayNextRound's round-level [GT] pre-check now
 //           calls IFixtureDisciplineDriver.RequireCommittableConfig() instead of the static
 //           CardLedgerFold.RequireCommittableConfig() directly, so a test can drive the round-level
 //           guard through a failing implementation; deleting the prior direct call left the whole tree
@@ -900,10 +907,19 @@ namespace TacticalDirector.SeasonSave
                 // M6 (ERR-030-037): placed AFTER MarkFixturePlayed, deliberately. fold.Commit IS
                 // fallible under a bound config (DisciplineRules.AddYellow throws below
                 // YellowAccumulationThreshold < 1; RequireBanLength throws on a negative [GT] ban
-                // length). OnClubFixturePlayed itself is NOT (L9): it reads no [GT] and its only
-                // guard is clubId < 0 (F2), a caller-contract bug rather than a config one — every
-                // fixture here supplies a real, non-negative club id, so that guard cannot fire on
-                // this path. Placed BEFORE MarkFixturePlayed (as this block did before M6), a throw
+                // length). OnClubFixturePlayed itself is NOT (L9, EXTENDED at M1/ERR-030-040): it
+                // reads no [GT], and it has TWO guards — clubId < 0 (F2) and, since ERR-044-003
+                // stage 1, fieldedPlayerIds == null (ArgumentNullException) — neither of which can
+                // fire on this path. clubId < 0 is a caller-contract bug no real fixture can trigger,
+                // same as before. The null guard is excluded structurally, not by caller discipline:
+                // homeXi/awayXi are FieldedXi's output, and FieldedXi returns non-null exactly when
+                // _career != null || _disciplineDriver != null — the SAME condition this whole block
+                // already runs under (`if (_disciplineDriver != null)`, above). So whenever this call
+                // is reached, the array it is fed cannot be null. This is a distant invariant, not a
+                // local one: narrowing FieldedXi's gate, adding a third consumer, or a resolution mode
+                // whose XI derivation differs would each be enough to break it, and a post-mark
+                // ArgumentNullException here strands the round exactly as M17 describes below for
+                // fold.Commit. Placed BEFORE MarkFixturePlayed (as this block did before M6), a throw
                 // from fold.Commit here left the fixture UNPLAYED with both clubs' bans already
                 // decremented; a caller retrying AdvanceAndPlayNextRound would then replay the SAME
                 // fixture — the unplayed-index filter would not exclude it — and decrement every
@@ -1616,6 +1632,23 @@ namespace TacticalDirector.SeasonSave
         /// One <c>LineupSelector</c> walk, taken at the filter+configure site rather than re-derived
         /// by a caller (AR pass 2's parallel-surface finding); <see cref="SquadRating"/> is its read.
         /// </para>
+        /// <para>
+        /// <b>M5 — the substitution dependency, on BOTH consumers now.</b> This returns the STARTING
+        /// eleven, not a record of who actually played. Stage 0 has no production
+        /// <c>MatchEngine.SubstitutePlayer</c> call site, so "who started" and "who played" coincide
+        /// today for both readers — but if that changes, they diverge for both at once. #41's
+        /// appearance record would misattribute an appearance; #44's <c>OnClubFixturePlayed</c>
+        /// exemption (ERR-044-003 stage 1) is worse than stale in that case — a suspended player pressed
+        /// in by the extremis back-fill and then substituted OFF before a card is drawn would still read
+        /// as "fielded" and have his ban served for a match he barely played, while one substituted ON
+        /// (including a suspended player brought on as a sub) would NOT read as fielded and would have
+        /// his ban served for a match he did play. <c>SquadRating.StartingElevenPlayerIds</c>'s own XML
+        /// doc (v1.3, `src/match-engine/SquadRating.cs`) names only the appearance record as affected by
+        /// this dependency — the #44 serving exemption is a second consumer of the same gap, added
+        /// August 15, 2026, and is not yet recorded there. Out of this assembly's scope to fix (that
+        /// file is owned by `match-engine`; the exemption itself by `discipline`) — recorded here so the
+        /// next reader of either file finds the other.
+        /// </para>
         /// </summary>
         private int[] FieldedXi(Squad squad) =>
             _career == null && _disciplineDriver == null
@@ -1943,4 +1976,19 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | since IFixtureDisciplineDriver is opaque. Comment corrected to  |
 // |         |            |        | say precisely that: nullness is enforced, identity is a trusted |
 // |         |            |        | convention every driver in this assembly happens to follow.     |
+// | 1.27    | 2026-08-15 | —      | Reviewed-findings pass. M1/ERR-030-040: the M6 comment's "only  |
+// |         |            |        | guard is clubId < 0" claim (L9) is stale since ERR-044-003      |
+// |         |            |        | stage 1 added a second guard (fieldedPlayerIds == null);        |
+// |         |            |        | corrected to name both and state why the null case is           |
+// |         |            |        | structurally excluded — FieldedXi returns non-null exactly when |
+// |         |            |        | _career != null || _disciplineDriver != null, the same          |
+// |         |            |        | condition this block already runs under. A distant invariant,   |
+// |         |            |        | not a local one: narrowing FieldedXi's gate, a third consumer,  |
+// |         |            |        | or a resolution mode with a different XI derivation would each  |
+// |         |            |        | reopen it. M5 (code half): FieldedXi's XML doc now records the  |
+// |         |            |        | substitution dependency (STARTING eleven != who played) on BOTH |
+// |         |            |        | its consumers — #41's appearance record AND, since ERR-044-003  |
+// |         |            |        | stage 1, #44's serving exemption. SquadRating.cs v1.3 names     |
+// |         |            |        | only the first; that file and discipline/ are out of this       |
+// |         |            |        | assembly's scope, so their own notes are still owed.            |
 #endregion

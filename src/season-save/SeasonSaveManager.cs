@@ -1,6 +1,8 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
-// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 4 — H4/ERR-030-039: `disciplineWired` is
+// Modified: 2026-08-15 (L3, reviewed-findings pass — formatting only: trailing whitespace removed and
+//           a method-closing brace moved from column 0 to column 8, per FR-CS-011/012 — v1.26)
+//           Prior: 2026-08-13 (#44 C1/C2 adversarial review round 4 — H4/ERR-030-039: `disciplineWired` is
 //           promoted onto the PUBLIC long form and the forwarding overload that hardcoded `true` is
 //           deleted, so no entry point can assert wiring on the caller's behalf — v1.25)
 // Author:   —
@@ -999,7 +1001,7 @@ namespace TacticalDirector.SeasonSave
                         appearanceClubs[c].States[i].BitsAsOfWorldDay, "Career save");
                 }
             }
-        
+
             // The FOURTH persisted per-player cursor (ERR-028-007). Added to this walker rather than
             // checked separately, because a second walk over the same rule is the parallel-surface
             // defect AR pass 9 collapsed for the first three.
@@ -1028,7 +1030,7 @@ namespace TacticalDirector.SeasonSave
                     }
                 }
             }
-}
+        }
     }
 }
 
@@ -1227,4 +1229,9 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | Save_ThePublicLongForm_DrivingNoDiscipline_CannotEmptyAPopulated-  |
 // |         |            |        | Tally; mutation-verified by reinstating the hardcode inside the    |
 // |         |            |        | promoted method (disciplineWired = true).                          |
+// | 1.26    | 2026-08-15 | —      | L3 (reviewed-findings pass), formatting only: trailing whitespace  |
+// |         |            |        | removed after RequireCareerCursorsWithinClock's appearance-anchor  |
+// |         |            |        | loop, and that method's closing brace moved from column 0 to       |
+// |         |            |        | column 8 to match its own opening indent (FR-CS-011/012). No       |
+// |         |            |        | behaviour change.                                                  |
 #endregion

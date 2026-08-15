@@ -1,6 +1,9 @@
 // File:     src/season-save/tests/SeasonRollTests.cs
 // Created:  2026-07-27
-// Modified: 2026-08-13 (#44 C1/C2 AR round 4, H4/ERR-030-039 — call sites updated for the required
+// Modified: 2026-08-15 (M4, reviewed-findings pass — the two Save call sites here drive no #44
+//           subsystem; flipped disciplineWired: true → false, matching SeasonSaveManagerTests.cs'
+//           companion fix — v1.7)
+//           Prior: 2026-08-13 (#44 C1/C2 AR round 4, H4/ERR-030-039 — call sites updated for the required
 //           disciplineWired parameter now on the public Save long form — v1.6)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.5 (season-boundary roll), FR-SN-029 (restartable
@@ -345,7 +348,7 @@ namespace TacticalDirector.SeasonSave.Tests
             {
                 SeasonSaveManager.Save(world, interrupted.State, null,
                     path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>(),
-                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true);
+                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty, new DisciplineState(), disciplineWired: false);
                 SeasonSaveContents contents = SeasonSaveManager.Load(path, league);
                 var resumed = new SeasonLoop(
                     contents.World, contents.Season, RoundResolutionMode.QuickSimAll);
@@ -382,7 +385,7 @@ namespace TacticalDirector.SeasonSave.Tests
             {
                 SeasonSaveManager.Save(world, loop.State, null,
                     path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>(),
-                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty, new DisciplineState(), disciplineWired: true);
+                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty, new DisciplineState(), disciplineWired: false);
                 SeasonSaveContents contents = SeasonSaveManager.Load(path, league);
 
                 Assert.IsTrue(loop.State.FieldsEqual(contents.Season),
@@ -607,4 +610,8 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | sites pass the now-required disciplineWired: true, which is what   |
 // |         |            |        | the deleted forwarding overload used to assert for them. No        |
 // |         |            |        | assertion or intent change.                                        |
+// | 1.7     | 2026-08-15 | —      | M4 (reviewed-findings pass): both Save call sites save an empty    |
+// |         |            |        | tally to a fresh temp path and drive no #44 subsystem —             |
+// |         |            |        | disciplineWired: true flipped to false to match the parameter's     |
+// |         |            |        | own contract. No assertion or intent change; suite still green.     |
 #endregion

@@ -1,5 +1,8 @@
 // File:     src/match-engine/MatchEngineConstants.cs
 // Created:  2026-06-16
+// Modified: 2026-08-15, later (reviewed-findings pass, L3 — new #region Cross entry FoulOrdinalNone,
+//           a [CROSS] mirror of the new EventSystemConstants.FOUL_ORDINAL_NONE; MatchEngine.cs's own
+//           0xFFFF literal call site not repointed, out of this pass's ownership)
 // Modified: 2026-08-15 (#44 C1/C2 adversarial review round 4, M24/ERR-017-004 — CARD_KIND_YELLOW/RED
 //           deleted from #region Fixed; replaced by CardKindYellow/CardKindRed [CROSS] mirrors of the
 //           new EventSystemConstants.CARD_KIND_YELLOW/RED (now the [FIXED] ALL_CAPS source, per
@@ -489,6 +492,21 @@ namespace TacticalDirector.MatchEngine
         /// literal <c>2</c> with no named constant anywhere in this catalogue.
         /// </summary>
         public const byte CardKindSecondYellow = EventSystemConstants.CARD_KIND_SECOND_YELLOW;
+
+        /// <summary>[CROSS] <c>CardIssuedEvent.FoulOrdinal</c> sentinel for "procedural card, no
+        /// associated <c>FoulCommittedEvent</c>" — the wire-format value this engine's card-issuing call
+        /// sites publish. Authoritative source: <c>EventSystemConstants.FOUL_ORDINAL_NONE</c> (Event
+        /// System #17, <c>[FIXED]</c>, Appendix A row 0x06 / §3.10).
+        /// <para>
+        /// Reviewed-findings pass, L3 (2026-08-15): added as the `[CROSS]` mirror of the new #17
+        /// catalogue row, matching the <see cref="CardKindYellow"/> precedent one commit earlier
+        /// (M24/ERR-017-004) exactly. <b>Not yet consumed here</b> — <c>MatchEngine.cs</c>'s card-issuing
+        /// call site still writes the bare literal <c>0xFFFF</c> rather than this constant; repointing it
+        /// is outside this pass's ownership (constants catalogues only) and is reported as an open call
+        /// site.
+        /// </para>
+        /// </summary>
+        public const ushort FoulOrdinalNone = EventSystemConstants.FOUL_ORDINAL_NONE;
 
         #endregion
 
@@ -1021,4 +1039,13 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | a mirror-of-a-mirror was the review-round-4 M24 fix's own first    |
 // |         |            |        | draft defect). No value change (0/1/2 throughout), no behaviour    |
 // |         |            |        | change.                                                            |
+// | 1.34    | 2026-08-15, later | — | Reviewed-findings pass (L3). New #region Cross entry           |
+// |         |            |        | FoulOrdinalNone, a [CROSS] PascalCase mirror of the new             |
+// |         |            |        | EventSystemConstants.FOUL_ORDINAL_NONE ([FIXED], 0xFFFF —          |
+// |         |            |        | CardIssuedEvent.FoulOrdinal's "no associated foul" sentinel).      |
+// |         |            |        | Matches the v1.33 CardKind* mirror precedent exactly. NOT wired    |
+// |         |            |        | into MatchEngine.cs — the card-issuing call site still writes the |
+// |         |            |        | bare 0xFFFF literal; repointing it is outside this pass's          |
+// |         |            |        | ownership (constants catalogues only). No value change, no         |
+// |         |            |        | behaviour change.                                                  |
 #endregion

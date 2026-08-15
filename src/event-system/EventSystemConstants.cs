@@ -1,5 +1,11 @@
 // File:     src/event-system/EventSystemConstants.cs
 // Created:  2026-05-30
+// Modified: 2026-08-15, later (reviewed-findings pass, L3 — added FOUL_ORDINAL_NONE = 0xFFFF to
+//           #region Fixed beside the CARD_KIND_* rows: CardIssuedEvent.FoulOrdinal's "no associated
+//           foul" sentinel, previously prose-only in CardIssuedEvent.cs — ERR-017-004's exact defect
+//           shape recurring on the sibling payload field. Mirrored [CROSS] in MatchEngineConstants;
+//           the one production call site (MatchEngine.cs's foulOrdinal: 0xFFFF literal) is outside
+//           this pass's ownership and still needs repointing — v1.6)
 // Modified: 2026-08-15 (#44 C1/C2 adversarial review round 4, M24/ERR-017-004 — added a new #region
 //           Fixed (first region in the file) with CARD_KIND_YELLOW/CARD_KIND_RED/
 //           CARD_KIND_SECOND_YELLOW, ALL_CAPS [FIXED]: the CardIssuedEvent.CardKind domain-ordinal
@@ -53,6 +59,20 @@ namespace TacticalDirector.EventSystem
         /// event, never a yellow-then-red pair. #17 Appendix A row 0x06 / §3.10, as
         /// <see cref="CARD_KIND_YELLOW"/>. ERR-017-004.</summary>
         public const byte CARD_KIND_SECOND_YELLOW = 2;
+
+        /// <summary>[FIXED] <c>CardIssuedEvent.FoulOrdinal</c> sentinel for "procedural card, no
+        /// associated <c>FoulCommittedEvent</c>". Appendix A row 0x06 / §3.10. Widened from <c>0xFF</c>
+        /// alongside the field's <c>byte</c>→<c>ushort</c> widening (AR-5 L-1, <c>CardIssuedEvent.cs</c>
+        /// v1.2, 2026-06-02) — same wire-format reasoning as <see cref="CARD_KIND_YELLOW"/>: a value a
+        /// producer (match-engine) writes and a consumer (discipline) reads, not designer-tunable.
+        /// <para>
+        /// <b>L3 (reviewed-findings pass, 2026-08-15).</b> Had no catalogue home anywhere in this spec —
+        /// it existed only as prose in <c>CardIssuedEvent.cs</c> — the exact ERR-017-004 defect shape
+        /// recurring on the sibling payload field of the same event, in the same statement that fix
+        /// rewrote to remove the bare card-kind literals (FR-CS-016).
+        /// </para>
+        /// </summary>
+        public const ushort FOUL_ORDINAL_NONE = 0xFFFF;
 
         #endregion
 
@@ -206,4 +226,12 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | not a symbol); both now mirror these rows [CROSS]/PascalCase, per        |
 // |         |            |        | src/CLAUDE.md's [CROSS]-mirror worked example. §3.10 patched in the same |
 // |         |            |        | commit (docs/specs/event-system/section-3.md).                          |
+// | 1.6     | 2026-08-15, later | — | Reviewed-findings pass (L3). Added FOUL_ORDINAL_NONE = 0xFFFF to  |
+// |         |            |        | #region Fixed, beside CARD_KIND_*: CardIssuedEvent.FoulOrdinal's "no     |
+// |         |            |        | associated foul" sentinel, previously prose-only in CardIssuedEvent.cs — |
+// |         |            |        | ERR-017-004's exact defect shape recurring on the sibling payload field  |
+// |         |            |        | of the same event. Mirrored [CROSS]/PascalCase in                        |
+// |         |            |        | MatchEngineConstants.FoulOrdinalNone. MatchEngine.cs's own               |
+// |         |            |        | foulOrdinal: 0xFFFF literal call site was NOT repointed (out of this     |
+// |         |            |        | pass's ownership) — reported as an open call site.                       |
 #endregion

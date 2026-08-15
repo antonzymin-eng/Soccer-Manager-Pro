@@ -441,6 +441,19 @@ testing-strategy).
 **`[CROSS]` mirrors — routing rule (Spec #20 §4.2):**
 - **Multi-consumer** (constant used by ≥ 2 spec assemblies): declare in `ProjectConstants.cs`; each consuming catalogue mirrors from there.
 - **Single-consumer** (constant used by exactly 1 spec assembly, e.g., a domain tag allocated in Spec #16 §3.4 used only by one spec): the consuming catalogue mirrors directly from the source spec's catalogue — not via `ProjectConstants.cs`.
+- **Owning-catalogue carve-out** (added 2026-08-15, ERR-020-004): a constant whose owning spec has its
+  own constant catalogue mirrors from THAT catalogue directly, **regardless of consumer count** —
+  `ProjectConstants.cs` routing applies only to constants with no single owning catalogue (a
+  project-wide value like `PHYSICS_TICK_HZ` that no one spec owns outright). Example:
+  `CardIssuedEvent.CardKind` is owned by Event System #17 (Appendix A: "#17 default owner") and
+  declared once in `EventSystemConstants.cs`; `MatchEngineConstants`, `DisciplineConstants`, AND
+  `MatchAnalyticsConstants` all mirror `CardKindYellow`/`CardKindRed`/`CardKindSecondYellow` directly
+  from `EventSystemConstants` — three consumers, none routed through `ProjectConstants.cs`. Before
+  this carve-out was written down, `DisciplineConstants.CardKindYellow`'s doc comment justified its
+  own (correct) routing with a false "single consumer" claim, because the rule as stated had no
+  third branch for a multi-consumer, single-owner constant to cite. Routing a spec-owned encoding
+  through a shared bucket adds a hop without adding an authority — that is the argument for the
+  carve-out, not merely its restatement.
 
 A `[CROSS]` mirror must not diverge from its source. Naming is PascalCase per §3.2.3. Cite the authoritative spec and section:
 

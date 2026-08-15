@@ -1,5 +1,12 @@
 // File:     src/discipline/DisciplineConstants.cs
 // Created:  2026-08-13
+// Modified: 2026-08-15, later (reviewed-findings pass, M4/owner decision 2 — v1.4: CardKindYellow's
+//           doc comment's false "#44 is the only consuming assembly" sentence (three consumers exist:
+//           discipline, match-engine, match-analytics) deleted and replaced with the real reason —
+//           #17 owns the encoding and has its own catalogue, so every consumer mirrors from it
+//           directly regardless of consumer count. Carve-out recorded in src/CLAUDE.md's [CROSS]
+//           mirrors section and Code Standards #20 §4.2; ERR-020-004 owed against #20, not filed
+//           here (spec-error-log.md out of this pass's ownership). No value change.)
 // Modified: 2026-08-15 (reviewed-findings pass, M26 — v1.3: LEAGUE_COMPETITION_KEY re-tagged
 //           [FIXED] -> [CROSS] and moved Fixed -> Cross; it is a verbatim copy of APPROVED #43's
 //           LEAGUE_COMPETITION_ID, not a value #44 owns. Literal 0 unchanged — #43 has no src/
@@ -103,9 +110,21 @@ namespace TacticalDirector.Discipline
         /// [CROSS] Card kind: a first (or non-promoting) caution — <c>CardIssuedEvent.CardKind</c>'s own
         /// domain ordinal 0 (Event System #17 Appendix A row 0x06: "Card kind: 0=Yellow, 1=Red,
         /// 2=SecondYellow (domain ordinal)"). #44 consumes this value read-only off the tap and never
-        /// sets it independently (L17) — the single-consumer mirror rule (root <c>CLAUDE.md</c> tag
-        /// table; <c>src/CLAUDE.md</c> §4.2), mirrored directly rather than through
-        /// <c>ProjectConstants.cs</c> because #44 is the only consuming assembly.
+        /// sets it independently (L17), mirrored directly from <c>EventSystemConstants</c> rather than
+        /// through <c>ProjectConstants.cs</c>.
+        /// <para>
+        /// <b>M4, reviewed-findings pass (owner decision, 2026-08-15): corrected routing rationale.</b>
+        /// This doc comment previously justified the direct mirror as "because #44 is the only consuming
+        /// assembly" — false: <c>MatchEngineConstants</c> and <c>MatchAnalyticsConstants</c> also mirror
+        /// <c>EventSystemConstants.CARD_KIND_YELLOW</c> directly, so the encoding has (at least) three
+        /// consumers, not one, and <c>src/CLAUDE.md</c>'s single-consumer routing clause is the one that
+        /// does NOT apply here. The real reason is ownership, not consumer count: #17 is the encoding's
+        /// owning spec and has its own constant catalogue (<c>EventSystemConstants</c>), so every
+        /// consumer mirrors from THAT catalogue directly regardless of how many consumers there are —
+        /// routing a spec-owned encoding through the shared <c>ProjectConstants.cs</c> bucket would add a
+        /// hop without adding an authority. This carve-out is now recorded in <c>src/CLAUDE.md</c>'s
+        /// <c>[CROSS]</c> mirrors section and in Code Standards #20 §4.2 (ERR-020-004).
+        /// </para>
         /// <para>
         /// M24/ERR-017-004: was an independent literal citing #17 in prose only — nothing bound it to
         /// #17's own declaration, so this catalogue and <c>MatchEngineConstants</c> (the producer) could
@@ -229,4 +248,18 @@ namespace TacticalDirector.Discipline
 // |         |            |        | is owed and is NOT filed here (spec-error-log.md is out of scope  |
 // |         |            |        | for this pass) — see the reviewed-findings report for what it     |
 // |         |            |        | should say.                                                        |
+// | 1.4     | 2026-08-15, later | — | Reviewed-findings fix (M4 / owner decision 2). CardKindYellow's |
+// |         |            |        | doc comment justified the direct #17-catalogue mirror as "because |
+// |         |            |        | #44 is the only consuming assembly" — false: MatchEngineConstants |
+// |         |            |        | and MatchAnalyticsConstants also mirror                           |
+// |         |            |        | EventSystemConstants.CARD_KIND_* directly (3 consumers, not 1),   |
+// |         |            |        | so src/CLAUDE.md's single-consumer routing clause was the wrong   |
+// |         |            |        | one cited. Sentence deleted; replaced with the real reason —      |
+// |         |            |        | #17 owns the encoding and has its own catalogue, so every         |
+// |         |            |        | consumer mirrors from it directly regardless of consumer count.   |
+// |         |            |        | Carve-out recorded in src/CLAUDE.md's [CROSS] mirrors section and |
+// |         |            |        | Code Standards #20 §4.2, both citing the owed ERR-020-004 (NOT    |
+// |         |            |        | filed — spec-error-log.md is out of this pass's ownership; see    |
+// |         |            |        | the reviewed-findings report for its exact text). No value change,|
+// |         |            |        | no other code changed.                                            |
 #endregion
