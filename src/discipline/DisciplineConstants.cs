@@ -1,6 +1,12 @@
 // File:     src/discipline/DisciplineConstants.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 5, L17 — the three card-kind constants
+// Modified: 2026-08-15 (#44 C1/C2 adversarial review round 4, M24/L18/ERR-017-004 — v1.2: the three
+//           card-kind constants are now real [CROSS] mirrors of the new
+//           EventSystemConstants.CARD_KIND_YELLOW/RED/SECOND_YELLOW declaration ([FIXED], ALL_CAPS —
+//           Event System #17 §3.10) instead of independent literals citing #17 in prose only; class
+//           doc's region-order line corrected Fixed → GT to Fixed → Cross → GT (L18, stale since L17
+//           added the Cross region one revision ago).
+//           Prior: 2026-08-13 (#44 C1/C2 adversarial review round 5, L17 — the three card-kind constants
 //           re-tagged [FIXED] -> [CROSS] and renamed PascalCase, moved into a new Cross region — v1.1)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 Appendix A (constant catalogue) + §3.2/§3.3; ERR-044-001
@@ -8,13 +14,15 @@
 // Purpose:  Every numeric constant for #44 accumulation, ban lengths, the partition key and the save
 //           block's identity. No magic literals in DisciplineRules or DisciplineSaveCodec.
 
+using TacticalDirector.EventSystem;
 using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
 
 namespace TacticalDirector.Discipline
 {
     /// <summary>
     /// Constant catalogue for Discipline &amp; Suspensions #44 (Appendix A). Region order (Code
-    /// Standards #20): Fixed → GT.
+    /// Standards #20): Fixed → Cross → GT (L18: this line said "Fixed → GT" after L17 had already
+    /// added the Cross region below — corrected to match the actual region order in this file).
     /// <para>
     /// <b>Every value here is an integer</b> (FR-DC-020). Nothing in #44 is a float — the whole
     /// subsystem is counting, and the integer posture keeps it clear of float-mode sensitivity for
@@ -83,15 +91,22 @@ namespace TacticalDirector.Discipline
         /// sets it independently (L17) — the single-consumer mirror rule (root <c>CLAUDE.md</c> tag
         /// table; <c>src/CLAUDE.md</c> §4.2), mirrored directly rather than through
         /// <c>ProjectConstants.cs</c> because #44 is the only consuming assembly.
+        /// <para>
+        /// M24/ERR-017-004: was an independent literal citing #17 in prose only — nothing bound it to
+        /// #17's own declaration, so this catalogue and <c>MatchEngineConstants</c> (the producer) could
+        /// drift from each other or from #17 with no compiler to catch it. Now a real mirror of
+        /// <c>EventSystemConstants.CARD_KIND_YELLOW</c>, #17's own <c>[FIXED]</c> catalogue declaration
+        /// (§3.10) — not designer-tunable, so <c>[GT]</c> would be the wrong tag there too.
+        /// </para>
         /// </summary>
-        public const byte CardKindYellow = 0;
+        public const byte CardKindYellow = EventSystemConstants.CARD_KIND_YELLOW;
 
         /// <summary>
         /// [CROSS] Card kind: a straight red — <c>CardIssuedEvent.CardKind</c> domain ordinal 1 (#17
-        /// Appendix A row 0x06). Carries NO yellow (FR-DC-006). Single-consumer mirror, as
-        /// <see cref="CardKindYellow"/>.
+        /// Appendix A row 0x06). Carries NO yellow (FR-DC-006). Single-consumer mirror of
+        /// <c>EventSystemConstants.CARD_KIND_RED</c>, as <see cref="CardKindYellow"/>. M24/ERR-017-004.
         /// </summary>
-        public const byte CardKindRed = 1;
+        public const byte CardKindRed = EventSystemConstants.CARD_KIND_RED;
 
         /// <summary>
         /// [CROSS] Card kind: a second caution, promoted to a dismissal — <c>CardIssuedEvent.CardKind</c>
@@ -99,9 +114,11 @@ namespace TacticalDirector.Discipline
         /// a yellow-then-red pair — verified at <c>MatchEngine.ApplyCardAndCheckSentOff</c>, which
         /// returns the actual kind and publishes exactly one <c>CardIssuedEvent</c> (KD-5 / FR-DC-006).
         /// So a kind-2 is one yellow AND one dismissal ban; #44 must never synthesize the missing red.
-        /// Single-consumer mirror, as <see cref="CardKindYellow"/>.
+        /// Single-consumer mirror of <c>EventSystemConstants.CARD_KIND_SECOND_YELLOW</c>, as
+        /// <see cref="CardKindYellow"/>. M24/ERR-017-004.
         /// </summary>
-        public const byte CardKindSecondYellow = 2;
+        public const byte CardKindSecondYellow =
+            EventSystemConstants.CARD_KIND_SECOND_YELLOW;
 
         #endregion
 
@@ -167,4 +184,17 @@ namespace TacticalDirector.Discipline
 // |         |            |        | Derived -> Cross -> GT per src/CLAUDE.md's region order) and      |
 // |         |            |        | renamed CardKindYellow/CardKindRed/CardKindSecondYellow           |
 // |         |            |        | (PascalCase, src/CLAUDE.md §3.2.3); every reference updated.      |
+// | 1.2     | 2026-08-15 | —      | AR round 4 fixes (M24 + L18, ERR-017-004). M24: the three         |
+// |         |            |        | CardKind* constants were [CROSS]-tagged but declared as           |
+// |         |            |        | independent literals citing #17 in PROSE only — nothing bound     |
+// |         |            |        | them to #17's own declaration, and MatchEngineConstants (the      |
+// |         |            |        | producer) carried a second independent set under [FIXED]. #17 had |
+// |         |            |        | no catalogue home for the encoding it owns. Fixed: EventSystem-   |
+// |         |            |        | Constants.CARD_KIND_YELLOW/RED/SECOND_YELLOW declared once, as    |
+// |         |            |        | [FIXED] ALL_CAPS not [GT] (§3.10 patched); this catalogue's own   |
+// |         |            |        | [CROSS]/PascalCase constants now read them directly (new           |
+// |         |            |        | `using TacticalDirector.EventSystem;`) instead of 0/1/2 literals.  |
+// |         |            |        | No value change. L18: the class doc's region-                     |
+// |         |            |        | order line still said "Fixed → GT", stale since v1.1 added the    |
+// |         |            |        | Cross region — corrected to "Fixed → Cross → GT".                 |
 #endregion

@@ -1,5 +1,10 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
+// Modified: 2026-08-15 (#44 C1/C2 adversarial review round 4, M24/ERR-017-004 — DetermineCardKind and
+//           ApplyCardAndCheckSentOff now read MatchEngineConstants.CardKindYellow/Red/SecondYellow
+//           instead of MatchEngineConstants.CARD_KIND_YELLOW/RED and the bare literals 0/1/2; the
+//           constants themselves moved from [FIXED] to [CROSS] mirrors of the new authoritative
+//           EventSystemConstants declaration. No behaviour change — same byte values throughout.)
 // Modified: 2026-08-13 (#44 C1/C2 adversarial review round 5, L15 — PlayerIdsByAgentId's two AGENT_ID_SPACE references updated for MatchEngineConstants' AGENT_ID_SPACE -> AgentIdSpace rename ([FIXED] -> [DERIVED] region fix); no behaviour change)
 // Modified: 2026-08-04 (ERR-008-020: SetAllAgentAttributes(_dtAttrs) wired per DecisionTree at boot — the §3.1.3.3 pass-lane attribute view)
 // Modified: 2026-08-12 (wiring backlog W2 instrument: the episode-based tackle-intent census — CensusTackleIntents + the TackleIntentCensus accumulator; observation only, no gameplay path, not serialized)
@@ -5321,11 +5326,11 @@ namespace TacticalDirector.MatchEngine
         {
             if (u < MatchEngineConstants.RedCardProbability)
             {
-                return MatchEngineConstants.CARD_KIND_RED;
+                return MatchEngineConstants.CardKindRed;
             }
             if (u < MatchEngineConstants.RedCardProbability + MatchEngineConstants.YellowCardProbability)
             {
-                return MatchEngineConstants.CARD_KIND_YELLOW;
+                return MatchEngineConstants.CardKindYellow;
             }
             return null;
         }
@@ -5343,19 +5348,19 @@ namespace TacticalDirector.MatchEngine
         /// </summary>
         private byte ApplyCardAndCheckSentOff(int offender, byte drawnKind)
         {
-            if (drawnKind == 0)
+            if (drawnKind == MatchEngineConstants.CardKindYellow)
             {
                 _yellowCards[offender]++;
                 if (_yellowCards[offender] >= 2)
                 {
                     _isSentOff[offender] = true;
-                    return 2; // SecondYellow
+                    return MatchEngineConstants.CardKindSecondYellow;
                 }
-                return 0;
+                return MatchEngineConstants.CardKindYellow;
             }
 
             _isSentOff[offender] = true; // straight red
-            return 1;
+            return MatchEngineConstants.CardKindRed;
         }
 
         /// <summary>Test-only seam: the card-kind-to-effect resolution, directly testable without a real
@@ -9292,4 +9297,12 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | two MatchEngineConstants.AGENT_ID_SPACE references updated to        |
 // |         |            |        | AgentIdSpace ([FIXED]-region -> [DERIVED]-region rename, no value     |
 // |         |            |        | change). No behaviour change.                                         |
+// | 1.70    | 2026-08-15 | —      | AR round 4 fix (M24/ERR-017-004, discipline C1/C2 landing):           |
+// |         |            |        | DetermineCardKind's two returns and ApplyCardAndCheckSentOff's        |
+// |         |            |        | drawnKind comparison + three returns now read the named               |
+// |         |            |        | MatchEngineConstants.CardKindYellow/Red/SecondYellow constants        |
+// |         |            |        | instead of MatchEngineConstants.CARD_KIND_YELLOW/RED and bare 0/1/2   |
+// |         |            |        | literals — the encoding is now declared once, in event-system, and    |
+// |         |            |        | mirrored here. Same byte values (0/1/2) at every site; no behaviour   |
+// |         |            |        | change.                                                                |
 #endregion

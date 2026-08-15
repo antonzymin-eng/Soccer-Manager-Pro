@@ -6,8 +6,21 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 2.25
-**Updated:** August 15, 2026 (v2.25 — **`ERR-044-003`'s recorded-not-fixed half is DECIDED and FIXED:
+**Version:** 2.26
+**Updated:** August 15, 2026 (v2.26 — **`ERR-017-004` filed and RESOLVED same commit** (#44 Discipline
+& Suspensions adversarial-review round 4 fix pass, M24): Event System #17 owns the
+`CardIssuedEvent.CardKind` domain-ordinal encoding (Appendix A row 0x06) but §3.10's constants
+catalogue never carried a row for it, so `MatchEngineConstants` (`[FIXED]`) and `DisciplineConstants`
+(`[CROSS]`, but citing prose rather than a bound symbol) had each declared the three values
+independently, and `MatchEngine.ApplyCardAndCheckSentOff` carried a bare literal `2` for the
+second-yellow case with no named constant anywhere. §3.10 gains three `[FIXED]` rows (**not** `[GT]`
+— this fix's own first draft mistagged them `[GT]`, self-corrected before landing, the identical
+wrong-tag class the entry exists to close);
+`EventSystemConstants.CARD_KIND_YELLOW/RED/SECOND_YELLOW` (ALL_CAPS) is now the single authoritative
+declaration, mirrored `[CROSS]`/PascalCase by `MatchEngineConstants` and `DisciplineConstants`, with
+`MatchAnalyticsConstants` (a third, pre-existing consumer) pointed straight at the #17 authority
+rather than through match-engine's mirror. No value or behaviour change (0/1/2 throughout).
+Prior: v2.25 — **`ERR-044-003`'s recorded-not-fixed half is DECIDED and FIXED:
 "stage 1".** The C1/C2 landing recorded, twice and as an explicit owner call, that #30 §2.3 F9's
 depleted-squad back-fill can field a SUSPENDED player in extremis and that the same fixture's
 `OnClubFixturePlayed` then decremented his ban anyway — so the appearance was strictly free and a
@@ -478,6 +491,7 @@ different things, each internally self-consistent); no code change proposed. Pri
 | ERR-017-001 | `DOMAIN_TAG_EVENT_LEDGER` allocation needed in Deterministic Simulation #16 §3.4 domain-tag table | Medium | 2 | ✅ FULLY RESOLVED. (1) #16-side May 14, 2026: `DOMAIN_TAG_EVENT_LEDGER = 0x15` allocated in #16 §3.4 (v1.0.1 patch revision); §8.3.1 #17 row promoted to `complete`. (2) #17-side May 15, 2026 (§1.0.1 patch revision): `[CROSS-PENDING]` → `[CROSS]` promotion completed across §3.4.2 / §3.10 / §1.4 / §2.4.4 / §7.5 D9 / §8.1.4 / §8.3.4 / §8.4 / §9.2 Q10 / §9.3 R3; Appendix B byte streams and Appendix D glossary now carry the literal value `0x15`. |
 | ERR-017-002 | Event System #17 §3.2.1/§3.2.2 specified three `Publish<T>`/`Subscribe<T>` overloads distinguished ONLY by generic constraint (`IEventA`/`IEventB`/`IEventC`) — illegal C# (CS0111: constraints are not part of a method signature); `EventBus.cs` and five spec `EventBusStub.cs` files implemented it verbatim, so the event-system production assembly never compiled | High | 8 | ✅ RESOLVED June 12, 2026 (same day; found by the first-ever compile on the dotnet CI gate, `tools/dotnet-ci/`). Spec §3.2.1/§3.2.2 patched to a single `where T : struct` method with cached tier-marker dispatch (section-3.md v1.0.2); code: `EventBus.cs` v1.9, new `EventTierCache.cs` v1.0, `CosmeticChannel.cs` v1.9 (`SubscribeFromBus` seam), 5× `EventBusStub.cs` merged to a single forwarder. Call sites unchanged; FR-EVT-009a exactly-one-marker contract enforced at the entry point. Adjacent boot-order fix: `EventRegistry.EnsureInitialized()` (v1.5) — `EventOrdinalCache<T>` reads never triggered the seeded-row cctor. |
 | ERR-017-003 | Event System #17 §3.2.1 `EventBus.Publish<T>` enforces the registered producer phase only under `#if UNITY_EDITOR \|\| DEVELOPMENT_BUILD` (a `Debug.Assert`); in a release/certification build a Tier A/B event published from the wrong phase is accepted, and `PublishAuthoritative` stamps the FM-017-002 sort key with the *actual* current phase rather than the registered producer phase. Determinism holds within one build config, but a debug run and a release run of the same scenario can produce different canonical orderings/digests if any producer is mis-phased — defeating the cross-environment digest contract. Implementation defect (foundation AR, event-system) | Medium | 1 | ⚠ Documented-open June 16, 2026 — proposed fix: promote the producer-phase comparison to an unconditional guard (the data — `GetProducerPhaseIndex(ordinal)` — is already available). Deferred (not applied blind): the change is digest-sensitive (it gates which publishes reach the ledger and could alter the pinned #17 boot-wiring smoke digest), and the remote review environment has no .NET SDK to run the gate. Apply with CI verification |
+| ERR-017-004 | Event System #17 owns the `CardIssuedEvent.CardKind` domain-ordinal encoding (Appendix A row 0x06) but §3.10's constants catalogue never carried a row for it, so two downstream catalogues (`MatchEngineConstants`, `DisciplineConstants`) each declared the three values independently under two different tags (`[FIXED]` / `[CROSS]`), and `MatchEngine.ApplyCardAndCheckSentOff` carried a bare literal `2` for the second-yellow case with no named constant anywhere | Medium | 4 | ✅ RESOLVED August 15, 2026 (same commit; found during the #44 discipline adversarial-review round 4 fix pass, M24). §3.10 gains `CARD_KIND_YELLOW`/`CARD_KIND_RED`/`CARD_KIND_SECOND_YELLOW` as `[FIXED]` rows (not designer-tunable — the fix's own first draft mistagged them `[GT]`, self-corrected before landing); Appendix A.1 gains a pointer note. `EventSystemConstants.CARD_KIND_YELLOW/RED/SECOND_YELLOW` is the single authoritative declaration; `MatchEngineConstants` and `DisciplineConstants` now mirror it `[CROSS]`/PascalCase instead of declaring independently, and `MatchAnalyticsConstants` (a third, pre-existing consumer) points straight at the #17 authority rather than through match-engine's mirror. No value or behaviour change. |
 | ERR-018-001 | Performance Optimization #18 `outline-detailed.md` cites Deterministic Simulation #16 sections by stale numbers / non-existent name (`#16 §7 regression scenarios`, `#16 §5 canonical save format`, `#16 §8 trace channels`) | Medium | 1 | ✅ Resolved at outline level — May 13, 2026 (same day as filing). `outline-detailed.md` v1.1 (a) inverts KD-3 (Spec #18 owns the trace pipeline; Spec #16 retains authority over canonical record format §3.2.4.1, regression scenarios §5, and determinism-of-emission constraints / veto authority over tick-pipeline trace points §3.1), and (b) corrects every `TBD-NORMATIVE`-marked #16 section-number citation against current `deterministic-sim/section-*.md`. Rationale for inversion: trace channels are an observability concern, not a determinism concern; mirrors KD-4 (#19 owns testing infrastructure, consumes #16 scenarios). New FR-PO-058a in §3.8.3 enforces determinism-of-emission for every #18-emitted trace point. Section files drafted from v1.1 will not inherit the drift. Architectural concern (re-anchor vs invert) is closed; section-file authoring still required to faithfully implement inverted KD-3 (FR-PO-058a in §3.8.3, #16-owner sign-off audit in §5.7, record-format binding in §3.8.4). |
 | ERR-018-002 | `[HotPathAllocExempt]` attribute cited in #18 as "declared in Spec #20 §3" but does not exist in `code-standards/` | High | 5 | ✅ Resolved — May 14, 2026 (v0.2 fix pass): §3.7.5 declares governance identifier in #18; Spec #20 §3 cited as policy authority only; C# attribute deferred to Stage 0+1 |
 | ERR-018-003 | MUST/MAY conflict between FR-PO-067 (§2.2.9) and §3.4.4 on baseline-reproducibility re-run | High | 1 | ✅ Resolved — May 14, 2026 (v0.2 fix pass): §3.4.4 "MAY" → "MUST" |
@@ -1185,6 +1199,66 @@ This is the renumbering-cascade hazard CLAUDE.md flags: a downstream spec adding
 3. **Adjacent fix surfaced by first execution:** `EventOrdinalCache<T>` is a separate static-generic type, so reading it never triggered `EventRegistry`'s seeded-row static constructor — a Subscribe/Publish of a #17-owned event before anything else touched `EventRegistry` threw `ERR_EVT_UNREGISTERED_ORDINAL`. New no-op `EventRegistry.EnsureInitialized()` called at the EventBus entry points (EventRegistry.cs v1.5).
 
 **Status:** ✅ RESOLVED June 12, 2026.
+
+---
+
+## ERR-017-004: Event System #17 owns the `CardIssuedEvent.CardKind` domain-ordinal encoding but never gave it a catalogue home
+
+**Filed:** August 15, 2026 — at the #44 Discipline & Suspensions adversarial-review round 4 fix pass
+(M24). **Status: RESOLVED** (same commit).
+
+**How found.** Appendix A row 0x06 (`CardIssuedEvent`) has always documented the payload's meaning
+in prose — "Card kind: 0=Yellow, 1=Red, 2=SecondYellow (domain ordinal)" — but §3.10's constants
+catalogue, the section this spec itself designates as the implementation source ("Constants live in
+their designated `.cs` constant catalogue at implementation time"), never carried a row for it.
+Verified against `src/`: the encoding was declared **independently** in two downstream catalogues —
+`MatchEngineConstants.CARD_KIND_YELLOW`/`CARD_KIND_RED` (tagged `[FIXED]`, ALL_CAPS) and
+`DisciplineConstants.CardKindYellow`/`CardKindRed`/`CardKindSecondYellow` (tagged `[CROSS]`,
+PascalCase, but citing this row's PROSE in a doc comment rather than binding to any symbol) — under
+two different tags, in two catalogues, neither of which owns the encoding. A third site,
+`MatchEngine.ApplyCardAndCheckSentOff`, returned the bare literal `2` for the second-yellow case with
+no named constant anywhere. Nothing connected any of the three to #17 or to each other; a future
+re-encoding at any one site would compile cleanly and diverge silently from the rest.
+
+**Fix (spec + code, same commit).** §3.10 gains three new rows — `CARD_KIND_YELLOW` (`0`),
+`CARD_KIND_RED` (`1`), `CARD_KIND_SECOND_YELLOW` (`2`) — tagged **`[FIXED]`**. Not `[GT]`, including
+not the section's pre-existing design-fixed-`[GT]` sub-class (`EVENT_TYPE_ORDINAL_WIDTH` /
+`PAYLOAD_VERSION_WIDTH` / the `ERR_EVT_*` codes): `[GT]` means designer-tunable, and this value is not
+tunable at all — it is the byte a producer (match-engine) writes and a consumer (discipline) reads,
+and changing it after publication breaks the `CardIssuedEvent` payload contract both already agree on.
+(This fix's own first draft mistagged the three rows `[GT]` — the same defect class this entry exists
+to close, recurring inside its own fix — and was self-corrected before landing.) Appendix A.1 gains a
+one-line note under the registry table pointing row 0x06's `cardKind` values at the new §3.10 rows
+(no table-row change — the registry records that a domain-ordinal field exists; §3.10 is the
+catalogue for its values).
+
+Implementation, matching src/CLAUDE.md's `[CROSS]`-mirror worked example (`PHYSICS_TICK_HZ` /
+`PhysicsTickHz`) exactly: `src/event-system/EventSystemConstants.cs` declares
+`CARD_KIND_YELLOW`/`CARD_KIND_RED`/`CARD_KIND_SECOND_YELLOW` as `public const byte`, ALL_CAPS, in a
+new `#region Fixed` — the single authoritative source. `src/match-engine/MatchEngineConstants.cs`'s
+old `CARD_KIND_YELLOW`/`CARD_KIND_RED` are deleted from its own `#region Fixed` and replaced by
+`CardKindYellow`/`CardKindRed` `[CROSS]`/PascalCase mirrors (plus a new `CardKindSecondYellow`
+mirror) in a new `#region Cross`; every call site in `MatchEngine.cs` (`DetermineCardKind`,
+`ApplyCardAndCheckSentOff`) now reads the named constants instead of `MatchEngineConstants.CARD_KIND_*`
+or the bare literal `2`. `src/discipline/DisciplineConstants.cs`'s three PascalCase `[CROSS]`
+constants are rebound to `EventSystemConstants.CARD_KIND_*` instead of carrying independent literals
+(single-consumer mirror routing — discipline is the only consumer, so it mirrors #17's catalogue
+directly rather than through `ProjectConstants.cs`). `src/match-analytics/MatchAnalyticsConstants
+.CARD_KIND_RED` (a pre-existing `[CROSS]` mirror, previously of `MatchEngineConstants.CARD_KIND_RED`)
+is repointed straight at `EventSystemConstants.CARD_KIND_RED` — the #17 authority — rather than through
+match-engine's own mirror: a mirror-of-a-mirror was this fix's own first-draft defect too, giving the
+"a `[CROSS]` mirror must not diverge from its source" rule two hops to fail at, and `match-analytics`'s
+`.asmdef` already references `TacticalDirector.EventSystem` (used for `CardIssuedEvent` itself), so no
+new assembly reference was needed. All declarations remain compile-time `const byte` throughout every
+chain (`EventSystemConstants` → `MatchEngineConstants`, `EventSystemConstants` →
+`DisciplineConstants`, `EventSystemConstants` → `MatchAnalyticsConstants` directly), so no runtime
+behaviour or byte value changes anywhere — 0/1/2 throughout, verified by full rebuild and the existing
+`Discipline.Tests` / `MatchAnalyticsAggregatorTests` suites.
+
+**Determinism impact: none.** No `SNAPSHOT_SCHEMA_VERSION` change, no RNG stream / domain tag / draw
+site, no draw-order change, no wire-format change — the byte values these constants declare are
+unchanged from what every producer already emitted and every consumer already read; this entry
+consolidates their DECLARATION, not their VALUE.
 
 ---
 

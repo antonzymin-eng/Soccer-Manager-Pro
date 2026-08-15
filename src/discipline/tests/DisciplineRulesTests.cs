@@ -1,7 +1,13 @@
 // File:     src/discipline/tests/DisciplineRulesTests.cs
 // Created:  2026-08-13
-// Modified: 2026-08-15 (ERR-044-003 stage 1 — every OnClubFixturePlayed call site updated for the new
-//           required fieldedPlayerIds parameter, plus five new tests locking the fielded-eleven
+// Modified: 2026-08-15 (AR round 4 fix, M23 — v1.5: corrected the two "genuinely DELEGATES" claims on
+//           ApplyStraightRed_WithAValidBanLength_MatchesApplyCardsKind1Behaviour and
+//           ApplySecondYellow_WithAValidBanLength_MatchesApplyCardsKind2Behaviour — both were mutation-
+//           falsified (an inline copy of the delegated-to method's body passes either test) and are the
+//           THIRD generation of this overclaim in this file. Comments corrected to state the tests
+//           establish result equivalence only; no test behaviour change, no new lock manufactured.
+//           Prior: 2026-08-15 (ERR-044-003 stage 1 — every OnClubFixturePlayed call site updated for the
+//           new required fieldedPlayerIds parameter, plus five new tests locking the fielded-eleven
 //           exemption itself — v1.4)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §3.2 (thresholds & bans) / §3.3 (serving) / §3.4 (boundary &
@@ -269,10 +275,19 @@ namespace TacticalDirector.Discipline.Tests
         [Test]
         public void ApplyStraightRed_WithAValidBanLength_MatchesApplyCardsKind1Behaviour()
         {
-            // Proves ApplyCard's kind-1 case genuinely DELEGATES to ApplyStraightRed rather than
-            // carrying a parallel copy of the same call — the parallel-surface defect class this repo
-            // keeps filing (mirrors ApplySecondYellow_WithAValidBanLength_MatchesApplyCardsKind2Behaviour
-            // below).
+            // M23 (round 4 AR): this asserts RESULT EQUIVALENCE only — that ApplyCard's kind-1 case
+            // produces the same DisciplineEntry as calling ApplyStraightRed directly, for the same
+            // inputs. It does NOT, and cannot, prove ApplyCard genuinely DELEGATES rather than carrying
+            // an inline copy of ApplyStraightRed's three lines: mutation-verified by replacing
+            // ApplyCard's kind-1 branch with a pasted-in copy of ApplyStraightRed's body and observing
+            // the whole suite, this test included, still pass — an exact copy produces identical state
+            // by definition. Two independently constructed DisciplineRules instances driven through two
+            // different call paths can only ever compare OUTPUTS; nothing here (or reachable without
+            // adding test-only instrumentation ApplyCard does not carry, e.g. a call counter) can
+            // distinguish "ApplyCard calls ApplyStraightRed" from "ApplyCard reimplements it verbatim".
+            // The prior comment claimed the stronger thing three times running (M23 is the third
+            // generation of this overclaim in this file) — recorded honestly here rather than
+            // manufacturing a lock that cannot exist.
             DisciplineRules viaApplyCard = NewRules();
             DisciplineRules viaDirectCall = NewRules();
             int p = PlayerId(0, 1);
@@ -330,9 +345,16 @@ namespace TacticalDirector.Discipline.Tests
         [Test]
         public void ApplySecondYellow_WithAValidBanLength_MatchesApplyCardsKind2Behaviour()
         {
-            // Confirms ApplyCard's kind-2 case genuinely DELEGATES to ApplySecondYellow rather than
-            // carrying a parallel copy of the same three lines — the parallel-surface defect class this
-            // repo keeps filing (#29/#41 T2 AR's H3, this landing's own D2/M9).
+            // M23 (round 4 AR): result equivalence only, same limitation as its kind-1 twin
+            // (ApplyStraightRed_WithAValidBanLength_MatchesApplyCardsKind1Behaviour above) — this cannot
+            // prove ApplyCard genuinely DELEGATES to ApplySecondYellow rather than carrying an inline
+            // copy of its three lines. Mutation-verified: pasting ApplySecondYellow's body into
+            // ApplyCard's kind-2 branch in place of the call leaves this test (and the whole suite)
+            // green, because two exact copies produce identical DisciplineEntry state by definition.
+            // The prior comment's "genuinely DELEGATES ... parallel-surface defect class" claim is the
+            // THIRD generation of this same overclaim in this file (round 3's L11 fix already renamed
+            // one predecessor test for making an equivalent false claim) — corrected here rather than
+            // building a lock this pair of tests structurally cannot support.
             DisciplineRules viaApplyCard = NewRules();
             DisciplineRules viaDirectCall = NewRules();
             int p = PlayerId(0, 1);
@@ -761,4 +783,17 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | pass by the method doing nothing); ...AFieldedPlayerWithNoBan_   |
 // |         |            |        | IsUnaffected_NoRowInvented; ...NullFieldedPlayerIds_Throws;       |
 // |         |            |        | ...ExemptionDoesNotBlockTheFRDC017DropForANonFieldedPlayer.       |
+// | 1.5     | 2026-08-15 | —      | AR round 4 fix (M23). Both "proves it delegates" comments were    |
+// |         |            |        | mutation-falsified: replacing ApplyCard's kind-1/kind-2 branches   |
+// |         |            |        | with an inline copy of ApplyStraightRed's/ApplySecondYellow's     |
+// |         |            |        | body passes the whole suite, because an exact copy produces        |
+// |         |            |        | identical state. Third generation of the same overclaim (v1.2's   |
+// |         |            |        | L11 fix and v1.3's M19(a) fix each corrected a predecessor test    |
+// |         |            |        | making the identical false claim). Corrected the comments to      |
+// |         |            |        | state what the tests actually establish — result equivalence      |
+// |         |            |        | between ApplyCard's dispatch and the directly-called internal     |
+// |         |            |        | method, not a call-graph lock. No test behaviour changed, and no  |
+// |         |            |        | new lock was manufactured to replace the false claim — none is    |
+// |         |            |        | reachable without test-only instrumentation ApplyCard does not    |
+// |         |            |        | carry.                                                             |
 #endregion

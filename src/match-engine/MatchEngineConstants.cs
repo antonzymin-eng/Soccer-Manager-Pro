@@ -1,5 +1,14 @@
 // File:     src/match-engine/MatchEngineConstants.cs
 // Created:  2026-06-16
+// Modified: 2026-08-15 (#44 C1/C2 adversarial review round 4, M24/ERR-017-004 — CARD_KIND_YELLOW/RED
+//           deleted from #region Fixed; replaced by CardKindYellow/CardKindRed [CROSS] mirrors of the
+//           new EventSystemConstants.CARD_KIND_YELLOW/RED (now the [FIXED] ALL_CAPS source, per
+//           src/CLAUDE.md's [CROSS]-mirror worked example) in a new #region Cross, plus a new
+//           CardKindSecondYellow mirror (MatchEngine.ApplyCardAndCheckSentOff previously returned the
+//           bare literal 2 with no named constant anywhere in this catalogue). #17 owns the
+//           CardIssuedEvent.CardKind domain-ordinal encoding (Appendix A: "#17 (default owner)"); this
+//           catalogue does not, so [FIXED] was the wrong tag even before the source constant existed
+//           to mirror. No value change (0/1/2 throughout).
 // Modified: 2026-07-27  (B3: CARD_KIND_YELLOW / CARD_KIND_RED)
 // Modified: 2026-07-11 (#26 manager-AI wiring — SNAPSHOT_SCHEMA_VERSION 12 → 13, v13 ManagerState doc)
 // Modified: 2026-07-11 (engine substrate — match-length/halves model + SNAPSHOT_SCHEMA_VERSION 13 → 14)
@@ -27,6 +36,7 @@
 
 using System;
 
+using TacticalDirector.EventSystem;
 using TacticalDirector.PositioningAI;
 using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
 
@@ -90,15 +100,6 @@ namespace TacticalDirector.MatchEngine
         /// <c>RestartCue.None</c>. Presentation-only observation state (interactive Unity client
         /// §5-P1 KD-P1-3); mirrors the −1 sentinel convention (<see cref="NO_POSSESSION"/>).</summary>
         public const int NO_RESTART_TEAM = -1;
-
-        /// <summary>[FIXED] <c>CardIssuedEvent.CardKind</c> value for a caution. The wire encoding of
-        /// the card severity a foul draws; named here so an observer (Match Analytics #37) reads the
-        /// same source the producer writes from rather than carrying a private 0/1 literal.</summary>
-        public const byte CARD_KIND_YELLOW = 0;
-
-        /// <summary>[FIXED] <c>CardIssuedEvent.CardKind</c> value for a dismissal (straight red, or a
-        /// second yellow promoted by <c>ApplyCardAndCheckSentOff</c>).</summary>
-        public const byte CARD_KIND_RED = 1;
 
         /// <summary>[FIXED] Reason ordinal written into the Phase E PossessionChangedEvent (#17 ordinal
         /// 0x04) payload. Stage 0 has no possession-change reason taxonomy (a kick release, a first-touch
@@ -455,6 +456,39 @@ namespace TacticalDirector.MatchEngine
         /// Source constants: MatchEngineConstants.MATCH_TICKS_TOTAL.
         /// </summary>
         public const long HALF_TIME_BOUNDARY_TICK = MATCH_TICKS_TOTAL / 2;
+
+        #endregion
+
+        #region Cross
+
+        /// <summary>[CROSS] <c>CardIssuedEvent.CardKind</c> domain ordinal for a caution — the wire
+        /// encoding of the card severity a foul draws; named here so an observer (Match Analytics #37)
+        /// reads the same source the producer writes from rather than carrying a private 0/1 literal.
+        /// Authoritative source: <c>EventSystemConstants.CARD_KIND_YELLOW</c> (Event System #17,
+        /// <c>[FIXED]</c>, Appendix A row 0x06 / §3.10).
+        /// <para>
+        /// M24/ERR-017-004: was <c>[FIXED]</c> and ALL_CAPS here — this catalogue does not own the
+        /// encoding (#17 does, "default owner" in Appendix A), so a local literal could drift from the
+        /// spec's own definition with nothing to catch it. Retagged <c>[CROSS]</c> (PascalCase per
+        /// src/CLAUDE.md §3.2.3) and rebound to the real, now-`[FIXED]`, source.
+        /// </para>
+        /// </summary>
+        public const byte CardKindYellow = EventSystemConstants.CARD_KIND_YELLOW;
+
+        /// <summary>[CROSS] <c>CardIssuedEvent.CardKind</c> domain ordinal for a dismissal (straight
+        /// red, or a second yellow promoted by <c>ApplyCardAndCheckSentOff</c>). Authoritative source:
+        /// <c>EventSystemConstants.CARD_KIND_RED</c>, as <see cref="CardKindYellow"/>. M24/ERR-017-004.
+        /// </summary>
+        public const byte CardKindRed = EventSystemConstants.CARD_KIND_RED;
+
+        /// <summary>[CROSS] <c>CardIssuedEvent.CardKind</c> domain ordinal for a second caution promoted
+        /// to a dismissal — this engine emits it as ONE event, never a yellow-then-red pair
+        /// (<c>ApplyCardAndCheckSentOff</c>). Authoritative source:
+        /// <c>EventSystemConstants.CARD_KIND_SECOND_YELLOW</c>, as <see cref="CardKindYellow"/>. Newly
+        /// named at M24/ERR-017-004 — <c>ApplyCardAndCheckSentOff</c> previously returned the bare
+        /// literal <c>2</c> with no named constant anywhere in this catalogue.
+        /// </summary>
+        public const byte CardKindSecondYellow = EventSystemConstants.CARD_KIND_SECOND_YELLOW;
 
         #endregion
 
@@ -968,4 +1002,23 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | MaxEntityId precedent already in this region); every reference   |
 // |         |            |        | in MatchEngine.cs and SeasonLoopDisciplineTests.cs updated. No   |
 // |         |            |        | behaviour change. NO_PLAYER_ID is correctly [FIXED] — untouched. |
+// | 1.33    | 2026-08-15 | —      | AR round 4 fix (M24/ERR-017-004, discipline C1/C2 landing).      |
+// |         |            |        | CARD_KIND_YELLOW/CARD_KIND_RED deleted from #region Fixed — #17  |
+// |         |            |        | owns the CardIssuedEvent.CardKind domain-ordinal encoding         |
+// |         |            |        | (Appendix A: "#17 (default owner)"), not this catalogue, so       |
+// |         |            |        | [FIXED] was always the wrong tag and the value was a private       |
+// |         |            |        | literal rather than bound to anything. New #region Cross (between |
+// |         |            |        | Derived and GT, per src/CLAUDE.md's canonical region order) with  |
+// |         |            |        | CardKindYellow/CardKindRed/CardKindSecondYellow, all [CROSS]       |
+// |         |            |        | PascalCase mirrors of the new EventSystemConstants.CARD_KIND_     |
+// |         |            |        | YELLOW/RED/SECOND_YELLOW ([FIXED], ALL_CAPS — the src/CLAUDE.md    |
+// |         |            |        | [CROSS]-mirror worked example's shape). CardKindSecondYellow is    |
+// |         |            |        | new — MatchEngine.ApplyCardAndCheckSentOff previously returned the |
+// |         |            |        | bare literal 2 with no named constant anywhere in this catalogue. |
+// |         |            |        | Every call site in MatchEngine.cs updated (v1.70);                |
+// |         |            |        | MatchAnalyticsConstants.CARD_KIND_RED repointed directly at        |
+// |         |            |        | EventSystemConstants.CARD_KIND_RED (not through this catalogue —   |
+// |         |            |        | a mirror-of-a-mirror was the review-round-4 M24 fix's own first    |
+// |         |            |        | draft defect). No value change (0/1/2 throughout), no behaviour    |
+// |         |            |        | change.                                                            |
 #endregion

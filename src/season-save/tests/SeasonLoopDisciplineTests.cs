@@ -1,7 +1,11 @@
 // File:     src/season-save/tests/SeasonLoopDisciplineTests.cs
 // Created:  2026-08-13
-// Modified: 2026-08-15 (ERR-044-003 stage 1 — ThrowOnFirstServeDriver.OnClubFixturePlayed updated for
-//           the new required fieldedPlayerIds parameter, and a new wiring lock proving the extremis
+// Modified: 2026-08-15 (AR round 4 fix, M22 — v1.7: ThrowOnFirstServeDriver gains a pass-through
+//           RequireCommittableConfig() to match the widened IFixtureDisciplineDriver interface, and a
+//           new ThrowOnRequireCommittableConfigDriver + RequireCommittableConfigDriver_RunsBefore-
+//           AnyFixtureIsResolved lock the round-level [GT] pre-check's call site itself.
+//           Prior: 2026-08-15 (ERR-044-003 stage 1 — ThrowOnFirstServeDriver.OnClubFixturePlayed updated
+//           for the new required fieldedPlayerIds parameter, and a new wiring lock proving the extremis
 //           back-fill's fielded player is exempt from serving while an unfielded suspended team-mate
 //           still serves — v1.6)
 // Author:   —
@@ -113,6 +117,11 @@ namespace TacticalDirector.SeasonSave.Tests
                 _rules = new DisciplineRules(state);
             }
 
+            // M22: pass-through, matching RulesFixtureDisciplineDriver's production behaviour — this
+            // driver exists to force a throw INSIDE the serve+commit block (M12/M6), not at the M17
+            // round-level pre-check, which ThrowOnRequireCommittableConfigDriver below covers instead.
+            public void RequireCommittableConfig() => CardLedgerFold.RequireCommittableConfig();
+
             public void OnClubFixturePlayed(int clubId, int[] fieldedPlayerIds)
             {
                 _rules.OnClubFixturePlayed(clubId, fieldedPlayerIds);
@@ -125,6 +134,30 @@ namespace TacticalDirector.SeasonSave.Tests
             }
 
             public void CommitFixtureCards(CardLedgerFold foldOrNull) => foldOrNull?.Commit(_rules);
+        }
+
+        /// <summary>
+        /// M22's own lock. Throws from <see cref="SeasonLoop.IFixtureDisciplineDriver.RequireCommittableConfig"/>
+        /// alone — <see cref="OnClubFixturePlayed"/> and <see cref="CommitFixtureCards"/> must never be
+        /// reached if <see cref="PlayNextRound"/> genuinely asks the round-level question BEFORE the
+        /// fixture loop, so both throw too (a defensive assertion failure, not the expected exception),
+        /// proving this driver is never even asked to serve or commit anything.
+        /// </summary>
+        private sealed class ThrowOnRequireCommittableConfigDriver : SeasonLoop.IFixtureDisciplineDriver
+        {
+            public void RequireCommittableConfig() =>
+                throw new System.InvalidOperationException(
+                    "M22 forced throw — locks the round-level [GT] pre-check's call site.");
+
+            public void OnClubFixturePlayed(int clubId, int[] fieldedPlayerIds) =>
+                throw new System.InvalidOperationException(
+                    "OnClubFixturePlayed must not run: RequireCommittableConfig should have thrown "
+                    + "before the fixture loop was ever entered.");
+
+            public void CommitFixtureCards(CardLedgerFold foldOrNull) =>
+                throw new System.InvalidOperationException(
+                    "CommitFixtureCards must not run: RequireCommittableConfig should have thrown "
+                    + "before the fixture loop was ever entered.");
         }
 
         // ── the sentinel agreement ─────────────────────────────────────────────────────────
@@ -533,6 +566,40 @@ namespace TacticalDirector.SeasonSave.Tests
                     disciplineDriverOrNull: new ThrowOnFirstServeDriver(orphan)),
                 "a driver with no tally behind it must be refused where it is composed, not discovered "
                 + "when the first fixture serves.");
+        }
+
+        [Test]
+        public void RequireCommittableConfigDriver_RunsBeforeAnyFixtureIsResolved()
+        {
+            // M22. PlayNextRound previously asked its round-level [GT] question by calling the STATIC
+            // CardLedgerFold.RequireCommittableConfig() directly — nothing in this process can bind a
+            // bad DisciplineConstants value (public static readonly, resolved once at boot), so no test
+            // could ever prove that call was reached, and deleting it left the whole tree green. Routing
+            // it through IFixtureDisciplineDriver.RequireCommittableConfig lets THIS test substitute an
+            // implementation that always throws, proving the round-level pre-check is both reached and
+            // reached before RunCareerDaySteps/the fixture loop: nothing this round would otherwise do
+            // (a career day-step, a fixture resolution, a MarkFixturePlayed) can have happened yet.
+            //
+            // VERIFIED by executing: temporarily deleting the
+            // `_disciplineDriver.RequireCommittableConfig();` call in SeasonLoop.PlayNextRound turns
+            // this test red (Assert.Throws sees no exception, because ThrowOnRequireCommittableConfig-
+            // Driver's OTHER two members also throw and neither runs either — the round completes
+            // successfully instead), then restoring the call turns it green again.
+            League league = FourClubLeague();
+            var tally = new DisciplineState();
+            SeasonLoop loop = LoopOver(
+                league, RoundResolutionMode.QuickSimAll, out _, tally,
+                new ThrowOnRequireCommittableConfigDriver());
+
+            loop.AdvanceToNextFixtureDay();
+
+            Assert.Throws<System.InvalidOperationException>(
+                () => loop.AdvanceAndPlayNextRound(league));
+
+            Assert.That(loop.State.FixtureAt(0).Played, Is.False,
+                "The round-level pre-check must fail BEFORE any fixture is touched — if this fixture "
+                + "were marked played, RequireCommittableConfig ran after (or was skipped and) the "
+                + "fixture loop, not before it.");
         }
 
         // ── composition with #41, and the ERR-044-003 tiering ─────────────────────────────
@@ -1125,4 +1192,16 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | player without hardcoding which one the tier order picks, then    |
 // |         |            |        | asserts his ban is unchanged after the round while an unfielded    |
 // |         |            |        | suspended team-mate's decrements by one, in the same call.         |
+// | 1.7     | 2026-08-15 | —      | AR round 4 fix (M22). ThrowOnFirstServeDriver gains a pass-through |
+// |         |            |        | RequireCommittableConfig() (SeasonLoop.IFixtureDisciplineDriver    |
+// |         |            |        | widened by the same fix). New ThrowOnRequireCommittableConfig-     |
+// |         |            |        | Driver + RequireCommittableConfigDriver_RunsBeforeAnyFixtureIs-    |
+// |         |            |        | Resolved: the round-level [GT] pre-check previously called the     |
+// |         |            |        | static CardLedgerFold.RequireCommittableConfig() directly, which   |
+// |         |            |        | nothing in this process could ever drive through a failing config  |
+// |         |            |        | (DisciplineConstants is public static readonly, resolved once at   |
+// |         |            |        | its non-negative defaults) — deleting the call left the whole tree |
+// |         |            |        | green. VERIFIED by executing: deleting                              |
+// |         |            |        | `_disciplineDriver.RequireCommittableConfig();` from PlayNextRound  |
+// |         |            |        | turns the new test red, restoring it turns the test green again.   |
 #endregion

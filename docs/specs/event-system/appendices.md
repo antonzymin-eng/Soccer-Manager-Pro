@@ -1,8 +1,8 @@
 # Event System Specification #17 — Appendices
 
 **Created:** May 13, 2026
-**Last Updated:** May 13, 2026
-**Version:** 0.3 (PASS 2 adversarial review applied)
+**Last Updated:** August 15, 2026
+**Version:** 1.0.2
 **Status:** DRAFT
 
 > Appendix layout follows `outline-detailed.md` v1.1 §"APPENDICES"
@@ -59,6 +59,11 @@ rules per §2.4.2. Producer-spec ownership and tier are normative.
 | `0x09` | `TickHeartbeatEvent` | C | `Snapshot` | #17 (default owner) | 1 | (header only) | 1 / tick | #17 v1.0 | N |
 | `0x0A` | `VfxImpactCue` | C | Resolve | #17 (default owner) | 1 | `impactPoint: Vector3; impactKind: byte; intensity: byte` | 64 / tick | #17 v1.0 | N |
 | `0x0B` | `UiNotificationCue` | C | Resolve | #17 (default owner) | 1 | `notificationKind: byte; subjectEntity: EntityId` | 32 / tick | #17 v1.0 | N |
+
+**`0x06` `cardKind` values** (ERR-017-004): `0` = Yellow, `1` = Red, `2` = SecondYellow. Declared
+as design-fixed `[GT]` in §3.10's constants catalogue (`CARD_KIND_YELLOW` / `CARD_KIND_RED` /
+`CARD_KIND_SECOND_YELLOW`) — this table records that a domain-ordinal payload field exists;
+§3.10 is the catalogue home for its actual values.
 
 ### A.2 Reserved ordinals
 
@@ -273,3 +278,4 @@ Cross-references for each row land in §3.8 (mechanics) and §2.5
 | 0.2     | May 13, 2026 | Claude Code | PASS 1 critique resolution. Appendix A `0x09` row producer phase set to `AI_NoOp` (H2). Appendix A §A.1 added column-semantics note: Tier A/B Producer phase normative, Tier C informational (L7). Renamed `producerSubsystem` → `subsystemOrdinal` in Appendix B B.2 header table (M4). Appendix E EC-017-005 split into 005a (tier-marker mismatch) and 005b (post-boot registration → `ERR_EVT_REGISTRATION_PHASE`) (L3). |
 | 0.3     | May 13, 2026 | Claude Code | PASS 2 critique resolution. H-2-1: Appendix A `0x09` row producer phase reverted to `Snapshot`; `maxPerTick` corrected to `1 / tick`. H-2-2: Appendix E EC-017-005a updated to compile-time / lint-only (no runtime error code; `0x1702` slot reserved). |
 | 1.0.1   | May 15, 2026 | Claude Code | Patch revision (no behavioral change). Appendix B preamble + B.1 / B.2 / B.3 byte streams inline `DOMAIN_TAG_EVENT_LEDGER = 0x15` (allocated in #16 §3.4 v1.0.1, May 14, 2026 per ERR-017-001 RESOLVED). Appendix D glossary row updated to `0x15` / `[CROSS]`. Replaces the symbolic `DT` placeholder used while #17 was drafted against `[CROSS-PENDING]`. |
+| 1.0.2   | August 15, 2026 | Claude Code | ERR-017-004 back-prop (Discipline & Suspensions #44 adversarial review round 4, M24). Appendix A.1 gained a note under the registry table pointing `0x06`'s `cardKind` payload values at §3.10's new catalogue rows (`CARD_KIND_YELLOW`/`RED`/`SECOND_YELLOW`) — the encoding was normative in the row's own comment ("0=Yellow, 1=Red, 2=SecondYellow") but had no catalogue home anywhere in this spec, and two downstream implementation catalogues (`MatchEngineConstants`, `DisciplineConstants`) had each declared it independently under two different tags. No table-row change; no behavioral change. Header version corrected 0.3 → 1.0.2 to match this file's own version-history chain, which the header had fallen out of sync with. |

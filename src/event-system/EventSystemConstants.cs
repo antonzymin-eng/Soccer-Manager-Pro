@@ -1,9 +1,16 @@
 // File:     src/event-system/EventSystemConstants.cs
 // Created:  2026-05-30
-// Modified: 2026-06-15
+// Modified: 2026-08-15 (#44 C1/C2 adversarial review round 4, M24/ERR-017-004 — added a new #region
+//           Fixed (first region in the file) with CARD_KIND_YELLOW/CARD_KIND_RED/
+//           CARD_KIND_SECOND_YELLOW, ALL_CAPS [FIXED]: the CardIssuedEvent.CardKind domain-ordinal
+//           encoding, the single authoritative declaration MatchEngineConstants and
+//           DisciplineConstants now mirror [CROSS] (PascalCase) from — v1.5)
 // Author:   —
 // Spec:     Event System #17 §3.10, Code Standards #20
-// Purpose:  All constants for the event system. Region order: GT → Cross.
+// Purpose:  All constants for the event system. Region order: Fixed → GT → Cross (Fixed added
+//           2026-08-15; GT → Cross was, and remains, this file's pre-existing order — src/CLAUDE.md's
+//           canonical Fixed → Derived → Cross → GT is not fully adopted here and is not in this
+//           pass's scope).
 //           No magic literals permitted in any other event-system file.
 
 using TacticalDirector.DeterministicSim;
@@ -18,6 +25,37 @@ namespace TacticalDirector.EventSystem
     /// </summary>
     public static class EventSystemConstants
     {
+        #region Fixed
+
+        /// <summary>[FIXED] <c>CardIssuedEvent.CardKind</c> domain ordinal for a first (or non-promoting)
+        /// caution. Appendix A row 0x06 / §3.10: "Card kind: 0=Yellow, 1=Red, 2=SecondYellow (domain
+        /// ordinal)". A wire-format decision, not a physics law, but `[GT]` is the wrong tag too: this
+        /// is not designer-tunable at all — it is the byte a producer (match-engine) writes and a
+        /// consumer (discipline) reads, and changing it after publication breaks the `CardIssuedEvent`
+        /// payload contract both already agree on. `[FIXED]` per the root `CLAUDE.md` tag table.
+        /// <para>
+        /// <b>ERR-017-004.</b> Before this constant existed, the three-value encoding was declared
+        /// independently in <c>MatchEngineConstants</c> (tagged <c>[FIXED]</c>) and
+        /// <c>DisciplineConstants</c> (tagged <c>[CROSS]</c>, but citing this row's prose rather than
+        /// a bound symbol) — two catalogues, two tags, neither actually pointing at #17, the spec that
+        /// owns the encoding (Appendix A: "#17 (default owner)"). Both now mirror this constant
+        /// directly (single-consumer routing, src/CLAUDE.md §"[CROSS] mirrors").
+        /// </para>
+        /// </summary>
+        public const byte CARD_KIND_YELLOW = 0;
+
+        /// <summary>[FIXED] <c>CardIssuedEvent.CardKind</c> domain ordinal for a straight red. #17
+        /// Appendix A row 0x06 / §3.10, as <see cref="CARD_KIND_YELLOW"/>. ERR-017-004.</summary>
+        public const byte CARD_KIND_RED = 1;
+
+        /// <summary>[FIXED] <c>CardIssuedEvent.CardKind</c> domain ordinal for a second caution promoted
+        /// to a dismissal — the producer (<c>MatchEngine.ApplyCardAndCheckSentOff</c>) emits this as ONE
+        /// event, never a yellow-then-red pair. #17 Appendix A row 0x06 / §3.10, as
+        /// <see cref="CARD_KIND_YELLOW"/>. ERR-017-004.</summary>
+        public const byte CARD_KIND_SECOND_YELLOW = 2;
+
+        #endregion
+
         #region GT
 
         // ── Runtime-tunable [GT] ────────────────────────────────────────────────────────
@@ -158,4 +196,14 @@ namespace TacticalDirector.EventSystem
 // |         |            |        | literals). Rendered text byte-identical — substring assertions unaffected.|
 // |         |            |        | AR-12 L-1: doc-noted CosmeticPerTickPublicationBudget + PayloadVersionWidth|
 // |         |            |        | as declared-but-unconsumed at Stage 0 (Stage 0+1 / Stage 5+ activation).  |
+// | 1.5     | 2026-08-15 | —      | #44 C1/C2 adversarial review round 4, M24/ERR-017-004: added a new       |
+// |         |            |        | #region Fixed with CARD_KIND_YELLOW/CARD_KIND_RED/CARD_KIND_SECOND_YELLOW|
+// |         |            |        | — the [FIXED] ALL_CAPS declaration of CardIssuedEvent.CardKind's         |
+// |         |            |        | domain-ordinal encoding (Appendix A row 0x06), which had no home in this |
+// |         |            |        | catalogue despite #17 owning the encoding. Two consuming catalogues had  |
+// |         |            |        | independently declared the same three values under two different tags   |
+// |         |            |        | (MatchEngineConstants [FIXED], DisciplineConstants [CROSS] citing prose, |
+// |         |            |        | not a symbol); both now mirror these rows [CROSS]/PascalCase, per        |
+// |         |            |        | src/CLAUDE.md's [CROSS]-mirror worked example. §3.10 patched in the same |
+// |         |            |        | commit (docs/specs/event-system/section-3.md).                          |
 #endregion

@@ -1,9 +1,14 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
-// Modified: 2026-08-15 (ERR-044-003 stage 1 — IFixtureDisciplineDriver.OnClubFixturePlayed takes the
-//           club's fielded eleven, and the XI derivation's gate widens from _career to the union of its
-//           two consumers via the new FieldedXi helper, so an extremis appearance no longer serves the
-//           ban it was fielded through — v1.25.
+// Modified: 2026-08-15 (AR round 4 fix, M22 — v1.26: PlayNextRound's round-level [GT] pre-check now
+//           calls IFixtureDisciplineDriver.RequireCommittableConfig() instead of the static
+//           CardLedgerFold.RequireCommittableConfig() directly, so a test can drive the round-level
+//           guard through a failing implementation; deleting the prior direct call left the whole tree
+//           green (round 3's own M12 defect recurring in the same method).
+//           Prior: 2026-08-15, ERR-044-003 stage 1 — IFixtureDisciplineDriver.OnClubFixturePlayed takes
+//           the club's fielded eleven, and the XI derivation's gate widens from _career to the union of
+//           its two consumers via the new FieldedXi helper, so an extremis appearance no longer serves
+//           the ban it was fielded through — v1.25.
 //           Prior: 2026-08-13, #44 C1/C2 adversarial review round 4, M17/M16 — v1.24. M17: PlayNextRound
 //           runs CardLedgerFold.RequireCommittableConfig with its other guards, before the fixture
 //           loop, so the config cause of a post-MarkFixturePlayed commit throw — which strands the
@@ -121,6 +126,20 @@ namespace TacticalDirector.SeasonSave
         internal interface IFixtureDisciplineDriver
         {
             /// <summary>
+            /// The round-level <c>[GT]</c> pre-check (M17): validates every guard <see cref="CardLedgerFold.Commit"/>
+            /// could throw on, once, before the first fixture of the round is touched (M22). Routed
+            /// through this seam — rather than <see cref="PlayNextRound"/> calling the static
+            /// <see cref="CardLedgerFold.RequireCommittableConfig()"/> directly — for the same reason
+            /// <see cref="OnClubFixturePlayed"/> and <see cref="CommitFixtureCards"/> are: a static call
+            /// baked into the production round loop cannot be driven by a test, so a test deleting the
+            /// call site's ONLY caller leaves the whole tree green (M22 — round 3's M12 defect
+            /// recurring in the same method). A test substitutes a driver whose implementation of this
+            /// method throws to prove the call is actually reached, and reached BEFORE any fixture is
+            /// resolved.
+            /// </summary>
+            void RequireCommittableConfig();
+
+            /// <summary>
             /// One club's FR-DC-011 ban-serving decrement for a played fixture, exempting the eleven
             /// it fielded (ERR-044-003 stage 1 — a ban is served by the club playing WITHOUT the
             /// banned player, and #30 §2.3 F9's back-fill can put him on the pitch in extremis).
@@ -144,6 +163,9 @@ namespace TacticalDirector.SeasonSave
             {
                 _rules = rules;
             }
+
+            /// <inheritdoc />
+            public void RequireCommittableConfig() => CardLedgerFold.RequireCommittableConfig();
 
             /// <inheritdoc />
             public void OnClubFixturePlayed(int clubId, int[] fieldedPlayerIds) =>
@@ -412,11 +434,27 @@ namespace TacticalDirector.SeasonSave
             _discipline = disciplineOrNull;
             _disciplineRules = disciplineOrNull == null ? null : new DisciplineRules(disciplineOrNull);
 
-            // The seam is bound here, once, and never reassigned (M16). A driver without a tally is
-            // refused rather than quietly accepted: PlayNextRound gates the whole serve+commit block on
-            // this field, so a driver beside a null state would run #44's per-fixture work for a loop
-            // whose Discipline property is null and whose save writes an empty block — two answers to
-            // "is discipline wired" in one object, which is the distinction ERR-030-038/-039 exist over.
+            // The seam is bound here, once, and never reassigned (M16). This guard enforces PRESENCE
+            // PAIRING, not object identity (L19 — the two are different claims and this comment
+            // previously conflated them): a driver supplied without its companion state is refused,
+            // because PlayNextRound gates the whole serve+commit block on _disciplineDriver alone, and a
+            // driver running beside a null _discipline would leave the public Discipline property null
+            // and the save writing an empty block while #44's per-fixture work still ran — "is
+            // discipline wired" would then disagree depending on which of the two fields a caller read
+            // (the distinction ERR-030-038/-039 exist over). The reverse direction needs no check: a
+            // state supplied with disciplineDriverOrNull == null auto-builds RulesFixtureDisciplineDriver
+            // directly from THIS _disciplineRules below, so that pairing holds by construction.
+            //
+            // What this guard does NOT, and structurally cannot, verify is that a caller-substituted
+            // driver (the M16 seam a test uses to force a throw) operates over the SAME DisciplineState
+            // instance as disciplineOrNull — IFixtureDisciplineDriver is opaque, so nothing here can
+            // inspect what state a supplied implementation wraps. Every test driver in this assembly is
+            // constructed over the identical `state` reference also passed as disciplineOrNull (see
+            // SeasonLoopDisciplineTests.LoopOver's call sites); that agreement is a convention this
+            // guard trusts, not one it enforces. "One answer per object" is therefore true of NULLNESS
+            // (wired or not), not of IDENTITY (wired to which state) — a caller that deliberately paired
+            // a driver with a different DisciplineState than disciplineOrNull would pass this check and
+            // still get two answers.
             if (disciplineDriverOrNull != null && disciplineOrNull == null)
             {
                 throw new System.ArgumentException(
@@ -794,9 +832,19 @@ namespace TacticalDirector.SeasonSave
             // the round and knowable before the first one is touched. Asking here costs four integer
             // comparisons per round and makes the config cause of that wedge unreachable, leaving M6's
             // ordering untouched. Gated on discipline being wired, so a pre-#44 loop is unchanged.
+            //
+            // M22: routed through the IFixtureDisciplineDriver seam rather than calling the static
+            // CardLedgerFold.RequireCommittableConfig() directly. A direct static call here is round
+            // 3's own M12 defect recurring in the same method: nothing in this process can bind a bad
+            // DisciplineConstants value (they are public static readonly, resolved once at their
+            // non-negative defaults), so no test can drive the static form through a failing config —
+            // deleting this call left the whole tree green. Routing it through the driver lets a test
+            // substitute an implementation whose RequireCommittableConfig() throws, proving the call is
+            // both reached and reached BEFORE RunCareerDaySteps/the fixture loop below
+            // (SeasonLoopDisciplineTests.RequireCommittableConfigDriver_RunsBeforeAnyFixtureIsResolved).
             if (_disciplineDriver != null)
             {
-                CardLedgerFold.RequireCommittableConfig();
+                _disciplineDriver.RequireCommittableConfig();
             }
 
             // ERR-030-027: the fixture day's own career day-steps run BEFORE the round, in the same
@@ -1870,4 +1918,29 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | than _career alone — keyed on _disciplineDriver, the thing      |
 // |         |            |        | PlayNextRound actually calls, so a substituted driver cannot    |
 // |         |            |        | be handed a null eleven the production path would have filled.  |
+// | 1.26    | 2026-08-15 | —      | AR round 4 fixes (M22 + L19). M22: PlayNextRound's round-level  |
+// |         |            |        | [GT] pre-check routes through the new IFixtureDisciplineDriver. |
+// |         |            |        | RequireCommittableConfig() member instead of calling the static |
+// |         |            |        | CardLedgerFold.RequireCommittableConfig() directly — round 3's  |
+// |         |            |        | own M12 defect recurring in the same method: DisciplineConstants|
+// |         |            |        | is public static readonly and cannot be rebound in this process,|
+// |         |            |        | so nothing could ever drive the static call through a failing   |
+// |         |            |        | config, and deleting the call left the whole tree green.        |
+// |         |            |        | RulesFixtureDisciplineDriver.RequireCommittableConfig is a      |
+// |         |            |        | direct pass-through (no behaviour change on the production      |
+// |         |            |        | path); ThrowOnFirstServeDriver gains the same pass-through so it|
+// |         |            |        | still compiles against the widened interface. VERIFIED by       |
+// |         |            |        | executing: temporarily deleting the                              |
+// |         |            |        | `_disciplineDriver.RequireCommittableConfig();` call turns the   |
+// |         |            |        | new RequireCommittableConfigDriver_RunsBeforeAnyFixtureIsResolved|
+// |         |            |        | test red (the forced throw never fires), then restoring the call|
+// |         |            |        | turns it green again. L19: the constructor's driver/tally guard  |
+// |         |            |        | comment claimed "two answers to 'is discipline wired' in one    |
+// |         |            |        | object" as if the guard closed the question fully, but the code |
+// |         |            |        | only enforces PRESENCE pairing (both null or both non-null) —   |
+// |         |            |        | it cannot and does not verify that a caller-substituted driver  |
+// |         |            |        | wraps the SAME DisciplineState instance as disciplineOrNull,    |
+// |         |            |        | since IFixtureDisciplineDriver is opaque. Comment corrected to  |
+// |         |            |        | say precisely that: nullness is enforced, identity is a trusted |
+// |         |            |        | convention every driver in this assembly happens to follow.     |
 #endregion
