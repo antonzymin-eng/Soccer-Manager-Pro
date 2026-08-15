@@ -1,7 +1,16 @@
 # Discipline & Suspensions #44 — Appendices
 
 **Created:** July 24, 2026
-**Last Updated:** August 15, 2026, later (v0.7 — `ERR-044-012`, back-prop owed by
+**Last Updated:** August 15, 2026, later still (v0.8 — reviewed-findings pass. **M5 (new id
+`ERR-044-013`):** Appendix A gains a `CardLedgerFold.NO_PLAYER` row (`[FIXED]`, `-1`) — verified
+present at `src/discipline/CardLedgerFold.cs:66`, caller-facing (the constructor's F1-class guard
+depends on the distinction) and used normatively by Appendix C below, but never catalogued. **L3:**
+the `LEAGUE_COMPETITION_KEY` row (v0.7, `ERR-044-012`) renamed to `LeagueCompetitionKey` — ALL_CAPS
+next to a `[CROSS]` tag contradicted `src/CLAUDE.md` §3.2.3's PascalCase rule for `[CROSS]`, the same
+correction L17 already made for `CardKindYellow`/`Red`/`SecondYellow` two rows below; the two mentions
+of the ALL_CAPS name in this file's own v0.7 history are left as-is, describing the code's state at
+that landing)
+**Last Updated (prior):** August 15, 2026, later (v0.7 — `ERR-044-012`, back-prop owed by
 `src/discipline/DisciplineConstants.cs` v1.3 (M26, not filed with that code change): `LEAGUE_COMPETITION_KEY`
 was `[FIXED]` in Appendix A, but it is a verbatim copy of APPROVED Competition Structure #43's
 `LEAGUE_COMPETITION_ID` (`docs/specs/competition-structure/appendices.md`) — the root `CLAUDE.md` tag
@@ -23,7 +32,7 @@ the magic-before-version row + the MUST rule and Appendix A the `DISCIPLINE_SAVE
 Appendix C re-worked onto real engine ids after its "slot 19" worked example was verified
 unimplementable, with the hedge deleted)
 **Last Updated (prior):** July 24, 2026 (v0.2 — cross-set AR pass 3; prior v0.1 initial)
-**Version:** 0.7
+**Version:** 0.8
 **Status:** APPROVED
 
 ---
@@ -34,11 +43,12 @@ unimplementable, with the hedge deleted)
 |---|---|---|---|
 | `DISCIPLINE_SAVE_MAGIC` | `[FIXED]` | `"DISC"` (`0x44495343`) | the sub-blob's self-identifying leading tag, checked BEFORE the version (ERR-044-001 — a format version is not a format identifier). |
 | `DISCIPLINE_SAVE_FORMAT_VERSION` | `[FIXED]` | 1 | the discipline sub-blob's own version gate (KD-1); gated second, behind the magic. |
+| `CardLedgerFold.NO_PLAYER` | `[FIXED]` | -1 | the occupancy-seed sentinel: this agent id maps to no player (§2.2, §3.1). Caller-facing — the constructor throws on any other negative occupancy value (F1's "any gap" refusal depends on the distinction) — and used normatively by Appendix C ("every other bench id `NO_PLAYER`"); had no catalogue row until `ERR-044-013`. |
 | `YELLOW_ACCUMULATION_THRESHOLD` | `[GT]` | 5 (illustrative) | yellows per accumulation ban (§3.2); balance-pass-pinned against real-competition rules. |
 | `ACCUM_BAN_MATCHES` | `[GT]` | 1 (illustrative) | ban length for an accumulation threshold crossing. |
 | `SECOND_YELLOW_BAN_MATCHES` | `[GT]` | 1 (illustrative) | ban length for a kind-2 dismissal. |
 | `STRAIGHT_RED_BAN_MATCHES` | `[GT]` | 2 (illustrative) | ban length for a kind-1 dismissal. |
-| `LEAGUE_COMPETITION_KEY` | `[CROSS]` | 0 | the minimal-tier `CompetitionId` partition key (FR-DC-012) — a **verbatim copy** of APPROVED Competition Structure #43's `LEAGUE_COMPETITION_ID` (`docs/specs/competition-structure/appendices.md`, value 0, FR-CP-004), consumed read-only and never set independently here (`ERR-044-012` — the identical `CardKindYellow`/`Red`/`SecondYellow` argument two rows below, applied to this constant). The literal `0` stays a literal rather than a compiler-checked mirror: #43 has no `src/` assembly yet to bind a `CompetitionStructureConstants` reference to. |
+| `LeagueCompetitionKey` | `[CROSS]` | 0 | the minimal-tier `CompetitionId` partition key (FR-DC-012) — a **verbatim copy** of APPROVED Competition Structure #43's `LEAGUE_COMPETITION_ID` (`docs/specs/competition-structure/appendices.md`, value 0, FR-CP-004), consumed read-only and never set independently here (`ERR-044-012` — the identical `CardKindYellow`/`Red`/`SecondYellow` argument two rows below, applied to this constant). PascalCase per `src/CLAUDE.md` §3.2.3's `[CROSS]` naming rule, the `CardKindYellow` precedent (L17) applied to this constant too. The literal `0` stays a literal rather than a compiler-checked mirror: #43 has no `src/` assembly yet to bind a `CompetitionStructureConstants` reference to. |
 | `CardIssuedEvent` 0x06 / `SubstitutionEvent` 0x08 | `[CROSS]` | #17/engine | the fold's inputs (payloads verified — XC-044-001); kinds `{0,1,2}` with the single-event kind-2 contract. |
 | `CardKindYellow` | `[CROSS]` | 0 | `CardIssuedEvent.CardKind`'s own domain ordinal (#17 Appendix A row 0x06 — "0=Yellow, 1=Red, 2=SecondYellow"); #44 consumes it read-only and never sets it independently (L17 — was `[FIXED]` `CARD_KIND_YELLOW`, the ALL_CAPS/`[FIXED]` mistagging root `CLAUDE.md`'s tag table rules out for a value defined in another spec). |
 | `CardKindRed` | `[CROSS]` | 1 | as `CardKindYellow` — #17 Appendix A row 0x06 domain ordinal 1. Carries NO yellow (FR-DC-006). |
@@ -120,4 +130,5 @@ All integer; two runs identical; #27 squads byte-untouched.
 | 0.5 | 2026-08-13 | — | **L17**, a fifth adversarial-review pass over the C1/C2 landing: `CARD_KIND_YELLOW`/`RED`/`SECOND_YELLOW` are #17 `CardIssuedEvent.CardKind` domain ordinals (Appendix A row 0x06) #44 consumes read-only and never sets independently — the root `CLAUDE.md` tag table makes that `[CROSS]`, not `[FIXED]`, and `src/CLAUDE.md` §3.2.3 makes `[CROSS]` PascalCase, not `ALL_CAPS`. Retagged and renamed in code (`CardKindYellow`/`CardKindRed`/`CardKindSecondYellow`); Appendix A's single combined `CardIssuedEvent 0x06 / SubstitutionEvent 0x08` row (about the EVENT ordinals, a different fact) is unchanged, and gains three sibling rows — one per card-kind constant, each citing #17 Appendix A row 0x06 by value. |
 | 0.6 | 2026-08-15 | — | **ERR-044-003 stage 1**, owner decision: Appendix C's worked example updated for the amended `OnClubFixturePlayed(clubId, fieldedPlayerIds)` signature, noting that its two example players are already filtered out and so are not in the fielded eleven (the exemption does not fire in this worked case). |
 | 0.7 | 2026-08-15 | — | **`ERR-044-012`**, back-prop owed by `DisciplineConstants.cs` v1.3 (M26): `LEAGUE_COMPETITION_KEY` re-tagged `[FIXED]` → `[CROSS]` — it is a verbatim copy of APPROVED #43's `LEAGUE_COMPETITION_ID` (FR-CP-004), consumed read-only, the identical argument already applied to the `CardKindYellow`/`Red`/`SecondYellow` rows. Literal value `0` unchanged; #43 has no `src/` assembly to bind a real mirror to. See `spec-error-log.md` `ERR-044-012`. |
+| 0.8 | 2026-08-15 | — | **Reviewed-findings pass.** **`ERR-044-013`** (M5, new id): Appendix A gains `CardLedgerFold.NO_PLAYER` (`[FIXED]`, `-1`, verified at `src/discipline/CardLedgerFold.cs:66`) — the occupancy-seed sentinel, caller-facing and used normatively by Appendix C's worked example, but never declared in §2.2 or catalogued here before now (`section-2.md` v0.9 gains the matching §2.2 declaration). **L3:** the `LEAGUE_COMPETITION_KEY` row renamed `LeagueCompetitionKey` — ALL_CAPS beside a `[CROSS]` tag contradicted `src/CLAUDE.md` §3.2.3, the same PascalCase correction L17 already made for the `CardKind*` rows; another agent's `src/discipline/DisciplineConstants.cs` change tracks the same rename. See `spec-error-log.md` `ERR-044-013`. |
 #endregion

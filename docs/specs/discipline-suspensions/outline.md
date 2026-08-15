@@ -1,7 +1,13 @@
 # Discipline & Suspensions #44 — Outline
 
 **Created:** July 24, 2026
-**Last Updated:** August 15, 2026, yet later still again (v0.5 — the "also recorded, not filed" item
+**Last Updated:** August 15, 2026, yet later still again and again (v0.6 — reviewed-findings pass,
+continuing `ERR-044-008`: KD-2 still said "one tap feeds #37+#44" — the refuted claim `ERR-044-008`
+corrected at `section-4.md` §4.3/§4.5, `section-7.md` §7.3 and `section-8.md` §8.1, missed here
+because §1's v0.4 "full-file sweep" note covered the section files it had just edited and never
+reached this file at all. Restated to name #44's own `IDisciplineTickLedgerTap` and the reference
+rule that makes a shared type unreachable)
+**Last Updated (prior):** August 15, 2026, yet later still again (v0.5 — the "also recorded, not filed" item
 from #44's adversarial-review round 4 (`open-issues.md`): a new "Numbering note" records that the
 round-3 fix commits' `src/` file headers say "AR round 5" while the git commit log calls the same
 work round 3, and that the section files' own "third/fourth/fifth adversarial-review pass" phrasing
@@ -22,7 +28,7 @@ ban serves one decrement per played fixture of the player's club **that he did n
 per played fixture full stop; the extremis back-fill (#30 §2.3 F9) can field a suspended player, and
 without the exemption that appearance served his ban for free)
 **Last Updated (prior):** July 24, 2026 (v0.1 — initial, promoted from design supplement v0.3)
-**Version:** 0.5
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -58,7 +64,10 @@ no domain tag, no `SubsystemOrdinals` entry** (the #37/#38/#49 read-only class).
   verification: `SerializeLedger` is write-only and no per-fixture ledgers are retained, so
   recompute-on-load has no input.
 - **KD-2** — the read is the **#37-class read-only per-tick ledger tap** (FR-AN-002 — the approved
-  observational pattern; one tap feeds #37+#44) + a slot→player **occupancy fold** (initial lineup
+  observational pattern reused, not a type shared with #37: §4.1's reference rule makes #37's
+  identically-shaped interface unreachable from either #44 or the composition root, so #44 declares
+  its own `IDisciplineTickLedgerTap` over the engine's one-per-tick fill rather than "one tap feeds
+  #37+#44" — `ERR-044-008`) + a slot→player **occupancy fold** (initial lineup
   + `SubstitutionEvent`s) — never ledger bytes, never post-match slot state (the v1.33
   slot-reset), never a new subscription pattern.
 - **KD-3** — fold at fixture resolution; availability filter at the next selection (the
@@ -112,4 +121,5 @@ different things.
 | 0.3 | 2026-08-15 | — | **L21** (#44 adversarial-review round 4, `open-issues.md`): the section-map's §2 row corrected "failure modes (F1..F5)" to **F1..F6** — `section-2.md`'s failure-mode table has carried six rows (F1–F6) since F6 was added at that section's v0.6 (August 13, 2026); this row was never updated to match, verified by `grep -c "^| \*\*F[0-9]\*\* |" section-2.md` returning 6. |
 | 0.4 | 2026-08-15 | — | **L21**, second finding: the "Back-props" section's "At T-phase (deferred)" bullet still listed the #30 outer `SEASON_SAVE_FORMAT_VERSION` bump (T1) as deferred two days after it landed `5 → 6` at ERR-030-035 (August 13, 2026) — verified against `section-4.md` §4.4, which has carried the landed figure since its own v0.3. Split into a landed T1 clause and a still-deferred T2/T3 clause, matching §7.2's current record of what has and has not shipped. |
 | 0.5 | 2026-08-15 | — | New "Numbering note" section, the "also recorded, not filed" item from round 4's own report: the round-3 fix commits' `src/` file headers say "AR round 5" while the commit log calls the same work round 3, and the section files' "third/fourth/fifth adversarial-review pass" phrasing is a third counter again. All three are internally correct; recorded rather than reconciled, since there is no single number to converge them on. |
+| 0.6 | 2026-08-15 | — | **Reviewed-findings pass, continuing `ERR-044-008`.** KD-2's "one tap feeds #37+#44" was the same refuted claim fixed at `section-4.md` §4.3/§4.5, `section-7.md` §7.3 and `section-8.md` §8.1 — missed here because those fixes' own "full-file sweep" claim (`section-1.md` v0.4) covered only the section files that pass had just edited, never this file. Restated: #44 declares its own `IDisciplineTickLedgerTap` because §4.1's reference rule makes #37's identically-shaped interface unreachable from either #44 or the composition root, so no shared type exists even with both assemblies built. No new ERR id — `ERR-044-008`'s own back-prop reaching a site its founding fix missed. See `spec-error-log.md` `ERR-044-008`. |
 #endregion

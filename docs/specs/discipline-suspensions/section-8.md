@@ -1,7 +1,10 @@
 # Discipline & Suspensions #44 — Section 8: References & Cross-References
 
 **Created:** July 24, 2026
-**Last Updated:** August 15, 2026 (v0.3 — `ERR-044-008`, reviewed-findings pass: XC-044-002's
+**Last Updated:** August 15, 2026, later (v0.4 — reviewed-findings pass: §8.1's own XC-044-003 row still
+called the ERR-030-009 seam a "null seam" — L6 (v0.2) annotated §8.3's copy of the same fact as LIVE
+since T2 but never reached this row, one table up in the same file. Annotated to match §8.3/§7.3)
+**Last Updated (prior):** August 15, 2026 (v0.3 — `ERR-044-008`, reviewed-findings pass: XC-044-002's
 Contract cell still read "one tap feeds both when built; neither references the other" — verified
 against `src/discipline/IDisciplineTickLedgerTap.cs`, whose own remarks record the claim as
 unachievable under §4.1's reference rule, not merely unbuilt. Restated to name #44's own tap
@@ -10,7 +13,7 @@ interface and the two-reads cost)
 ERR-030-009 entry annotated LIVE since T2, so the "null seam until #44 T2 wires it" clause reads as
 the historical approval-time text it is rather than the current state)
 **Last Updated (prior):** July 24, 2026 (v0.1 — initial)
-**Version:** 0.3
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -21,7 +24,7 @@ the historical approval-time text it is rather than the current state)
 |---|---|---|---|
 | XC-044-001 | #44 → engine events (via the tap) | `CardIssuedEvent` 0x06 `{ int Recipient (agent id); byte CardKind 0/1/2; ushort FoulOrdinal }`; `SubstitutionEvent` 0x08 `{ int Outgoing, Incoming; byte Team, SubstitutionReason }`; both Tier A with tick headers (verified `CardIssuedEvent.cs`/`SubstitutionEvent.cs`) | the fold's inputs; the **single-event kind-2** emission contract (`ApplyCardAndCheckSentOff`, `MatchEngine.cs`) is the KD-5 de-dup rule; `Recipient` is an agent id — occupancy attribution required (KD-2). |
 | XC-044-002 | #44 → #37 (pattern reuse) | the read-only per-tick ledger tap (FR-AN-002; lossless; unknown ordinals ignored, FR-AN-019/F5) | the approved observational read pattern #44 mirrors through its own `IDisciplineTickLedgerTap`, **not** #37's identically-shaped interface — §4.1's reference rule makes #37's type unreachable from either #44 or the composition root that owns the match engine, so no shared adapter exists even now that both assemblies are built (`ERR-044-008`); neither assembly references the other; the cost is two reads of the engine's one per-tick tap, not two behaviours. |
-| XC-044-003 | #44 → #30 (via composition root) | FR-SN-013's managed-fixture flow (resolve → configure); FR-SN-013a card-free quick-sim; `SeasonSaveCodec`; `RollToNextSeason` | the **ERR-030-009** resolve→*filter*→configure null seam (the one approval-time back-prop); serving reported per played fixture on both paths; the boundary rule (yellows reset, bans carry). |
+| XC-044-003 | #44 → #30 (via composition root) | FR-SN-013's managed-fixture flow (resolve → configure); FR-SN-013a card-free quick-sim; `SeasonSaveCodec`; `RollToNextSeason` | the **ERR-030-009** resolve→*filter*→configure seam — **LIVE since T2** (C1/C2, August 13, 2026), not the null seam it was at the approval-time back-prop (§8.3, §7.3); serving reported per played fixture on both paths; the boundary rule (yellows reset, bans carry). |
 | XC-044-004 | #44 → #27 | `PlayerId`/`Squad` (read-only) | `FilterAvailable` returns a reduced **value copy**; #27 state never written (FR-DC-001/009). |
 | XC-044-005 | #44 ↔ #31/#28 (indirect) | the FR-TX-022 roster-move hook / FR-TX-028 #28 lifecycle coordination | delivers the KD-6 hygiene: **migrate** on re-key (bans follow the player — the recorded contrast with #32's drop rule), drop on retirement; T-phase wiring. |
 | XC-044-006 | #44 → #43 (deferred) | `CompetitionId` on #43 fixtures/results (FR-CP-020) | the partition key FR-DC-012 pre-shapes (`0` at minimal); activation is deep; no #43 assembly reference (an `int` key). |
@@ -61,4 +64,5 @@ card synthesis draws on **#30's** `0x22` stream (FR-DC-019), never a #44 stream.
 | 0.1 | 2026-07-24 | — | Initial §8 (XC-044-001..007, the no-determinism-row positive property, back-prop references, master-plan anchor), promoted from design supplement v0.3. Status IN REVIEW. |
 | 0.2 | 2026-08-13 | — | **L6** (adversarial review over the C1/C2 landing): §8.3's ERR-030-009 entry annotated LIVE since T2 — the "null seam until #44 T2 wires it" clause is the approval-time back-prop text, frozen as a historical record, not a claim about the current state. |
 | 0.3 | 2026-08-15 | — | **`ERR-044-008`**, reviewed-findings pass: XC-044-002's Contract cell corrected — "one tap feeds both when built" is refuted by `IDisciplineTickLedgerTap.cs`'s own recorded finding (§4.1's reference rule makes #37's interface unreachable from either end, not merely unbuilt), and both assemblies now exist. Restated to name #44's own tap interface and the two-reads cost. See `spec-error-log.md` `ERR-044-008`. |
+| 0.4 | 2026-08-15 | — | **Reviewed-findings pass.** §8.1's XC-044-003 row still called the ERR-030-009 seam a "null seam (the one approval-time back-prop)" — L6 (v0.2) annotated §8.3's own copy of this fact LIVE since T2 but stopped at that one entry, never reaching XC-044-003 one table up in the same file. Annotated to match §8.3 and §7.3: LIVE since T2 (C1/C2, August 13, 2026), with the null-seam text preserved as the historical approval-time record. No new ERR id — a continuation of the L6 fix. |
 #endregion

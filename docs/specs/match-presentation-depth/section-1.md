@@ -1,9 +1,16 @@
 # Match Presentation Depth #48 — Section 1: Introduction, Scope, Dependencies, Key Decisions
 
 **Created:** July 27, 2026
-**Last Updated:** July 27, 2026 (v0.2 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
+**Last Updated:** August 15, 2026 (v0.3 — reviewed-findings pass: this section's §1.4(b) and KD-6 built
+their live-capture argument and their determinism posture on "one tap feeds #37+#44" — Discipline &
+Suspensions #44's own KD-2 line, quoted here verbatim — which #44's `ERR-044-008` (August 15, 2026)
+refuted as unachievable under its own §4.1 reference rule, not merely unbuilt. Corrected at all three
+sites: the tap is a fill the engine writes once per tick, read by independent accessor interfaces, not
+a type shared across assemblies; #48's own argument that it must not build a second tap survives
+unchanged, since it never depended on #37 and #44 sharing one)
+**Last Updated (prior):** July 27, 2026 (v0.2 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
 **Last Updated (prior):** July 27, 2026 (v0.1 — initial section-file set)
-**Version:** 0.2
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -92,16 +99,26 @@ FR-AN-021 states it in terms: #37 *"MUST consume **live during the match** (ther
 reader); it MUST NOT assume the serialized ledger bytes can be re-parsed."* `EventBus.SerializeLedger` is
 a **write-only** surface — the bytes go into the digest and nothing reads them back.
 
-**And the tap itself is specified but not built.** There is no `src/match-analytics/` — #37 is approved
-and unimplemented — and `EventBus.OnTickBoundary` is a per-tick *lifecycle reset*, not a consumer hook.
-So the live per-tick tap is a **#37-owned contract awaiting construction**, and the root `CLAUDE.md`
-already records the intended shape: *"the #37-class per-tick ledger tap (FR-AN-002, the approved
-observational pattern — **one tap feeds #37+#44**)."* **#48 makes it three consumers of one tap, and must
-not build a second** — a parallel tap would double-read the same ledger with two lifetimes and two sets of
-ordering assumptions, which is the parallel-surface class this project keeps catching.
+**And #37's own tap consumer is specified but not built — #44's already is, and its own history is the
+correction to make here.** `src/match-analytics/` has carried an assembly since July 27, 2026 (value
+types + the pure `XgLocationModel`) but no engine wiring, so #37's read is still a **contract awaiting
+construction**; `EventBus.OnTickBoundary` is a per-tick *lifecycle reset*, not a consumer hook, either
+way. #44 built its own read (`IDisciplineTickLedgerTap`, August 13, 2026) against the same underlying
+fill, and its own §4.3 records why *"one tap feeds #37+#44"* — the shape this section quoted verbatim —
+is **not achievable, not merely unbuilt**: Discipline & Suspensions #44's §4.1 reference rule makes
+#37's identically-shaped interface unreachable from either #44 or the composition root that owns the
+match engine, so no shared adapter type exists even once both #37 and #44 carry `src/` assemblies
+(`ERR-044-008`, filed August 15, 2026). **What IS shared is the engine's own fill** — one per-tick
+record set, written once, read by however many independent accessor interfaces ask for it. **#48 would
+be a third such reader, declaring its own accessor shape rather than reusing #37's or #44's, and must
+not build a second FILL mechanism** — a parallel re-parse of ledger bytes would double-read the same
+ledger with two lifetimes and two sets of ordering assumptions, which is the parallel-surface class
+this project keeps catching. The cost of a third reader is a third read of one tick's records, not a
+third behaviour.
 
 **Consequence, which the plan does not anticipate:** commentary triggered by *events* — a goal, a card, a
-save — can only be produced **live, during the tick loop**, through that one shared tap. The existing
+save — can only be produced **live, during the tick loop**, through the engine's per-tick record fill,
+read through #48's own accessor rather than a tap shared with #37 or #44. The existing
 `HtmlReplayExporter` is a post-hoc exporter over sampled positions, so **a replay cannot reconstruct
 event-driven commentary after the fact**. It can only replay commentary that was **captured while the
 match ran**, which is why KD-2 makes the output a *recorded artifact* rather than a re-derivation.
@@ -263,9 +280,10 @@ stochastic presentation surface would need a **fresh allocation** rather than a 
 
 ### KD-7 — Behaviour-neutral identity: neutral when *on*
 
-With all depth disabled, #48 registers no consumer on the shared tap (the tap's existence is #37's
-concern, not #48's), constructs no recorder, and emits no cue ⇒ the pipeline is exactly today's viewer and
-the digest chain is byte-identical.
+With all depth disabled, #48 registers no consumer on the engine's per-tick record fill (that fill's
+existence is the engine's concern, not #48's — see §1.4(b) on why no shared tap type exists even for
+#37 and #44, the two consumers already built), constructs no recorder, and emits no cue ⇒ the pipeline
+is exactly today's viewer and the digest chain is byte-identical.
 
 **With depth enabled, the same holds** — that is KD-2(ii)'s point, and **the difference from every other
 spec in this project is that #48's identity claim is not "neutral when off" but "neutral when on".** A
@@ -292,4 +310,5 @@ first, and because it is the property that makes #48 safe to enable by default.
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial §1 (scope with the content/trigger distinction stated in the out-of-scope table, dependencies + the doubly-inverted DAG, §1.4's verification findings — the built client layer, the missing post-match ledger reader, and the two already-answered questions — KD-1..KD-6 from supplement v0.6 plus **KD-7** promoted to its own decision, determinism posture). KD-7 is separated because *"neutral when on"* is the property that distinguishes #48 from every sibling and is what makes it safe to enable by default. Status IN REVIEW. |
 | 0.2 | 2026-07-27 | — | **ERR-048-001** (at #51's approval): KD-4's closing rationale corrected — the shell's `CueId → CueKey` mapping table is keyed on `CueId`, **not** #51's catalogue. See section-2. |
+| 0.3 | 2026-08-15 | — | **Reviewed-findings pass, cross-spec back-prop under `ERR-044-008`** (not a new id — #44's own error, whose fix this section quoted before the fix landed). §1.4(b)'s "one tap feeds #37+#44" quote of #44's KD-2, and the "that one shared tap" / "the shared tap" phrasing it fed at the (b) consequence paragraph and at KD-6, all built on a claim #44 §4.1's own reference rule made unachievable (`src/discipline/IDisciplineTickLedgerTap.cs`) and #44 itself withdrew the same day. Restated at all three sites: the engine's per-tick record fill is written once and read by independent accessor interfaces (#44's own `IDisciplineTickLedgerTap`, #37's when built); #48 would be a third such reader, not a third sharer of one type. §1.4(b)'s consequence — commentary can only be produced live, through that fill — is unchanged; only the "shared tap" framing was wrong. See `docs/tracking/spec-error-log.md` `ERR-044-008`. |
 #endregion

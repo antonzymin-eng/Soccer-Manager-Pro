@@ -1,7 +1,13 @@
 # Discipline & Suspensions #44 — Section 4: Architecture
 
 **Created:** July 24, 2026
-**Last Updated:** August 15, 2026, yet later still (v0.8 — reviewed-findings pass: `ERR-044-008`
+**Last Updated:** August 15, 2026, yet later still again (v0.9 — reviewed-findings pass, continuing
+`ERR-044-008`: v0.8's own sweep fixed §4.3 but stopped short of §4.5, 45 lines below in the same file
+— "the shared-tap composition is recorded from #44's side here (one tap, two folds)" was the
+identical refuted claim in different words, missed because the sweep was for the exact phrase rather
+than the underlying claim. Restated to match §4.3's corrected account: no shared tap, #44's own
+`IDisciplineTickLedgerTap`, the engine's one-per-tick fill read by independent accessor shapes.)
+**Last Updated (prior):** August 15, 2026, yet later still (v0.8 — reviewed-findings pass: `ERR-044-008`
 corrects §4.3's "one tap feeds both when built" — both #37 and #44 now have `src/` assemblies and
 neither can reach the other's tap interface (§4.1's reference rule), so the claim is false today, not
 merely unbuilt; `ERR-044-007` adds a §4.5 composition-root MUST to call
@@ -34,7 +40,7 @@ and its file layout have existed since T0/T1, not just been proposed)
 gains the magic-before-version MUST and cites the frame v5 → 6 bump; §4.5's root contract re-scoped
 to both resolution paths)
 **Last Updated (prior):** July 24, 2026 (v0.2 — cross-set AR pass 3; prior v0.1 initial)
-**Version:** 0.8
+**Version:** 0.9
 **Status:** APPROVED
 
 ---
@@ -141,8 +147,11 @@ specified the block version-first with no magic, which this section and Appendix
   `DisciplineState` directly.
 - **#30** — the ERR-030-009 null seam (resolve → *filter* → configure) is the one spec-text
   change, filed at approval; the outer save bump is T1.
-- **#37** — no change; the shared-tap composition is recorded from #44's side here (one tap,
-  two folds).
+- **#37** — no change; **no shared tap** — #44 reads through its own `IDisciplineTickLedgerTap`
+  (§4.3), not a type #37 shares, since §4.1 forbids `discipline` to reference the match engine and
+  `season-save` does not reference `match-analytics` either (`ERR-044-008`). The engine's own
+  per-tick fill is still written once; each read-only consumer defines its own accessor shape over
+  it, so the cost of #37 (when built) is a second read of that one fill, not a second fill.
 - **#31/#28** — no change; their existing roster-event surfaces deliver the hygiene at T-phase.
 
 #region VersionHistory
@@ -156,4 +165,5 @@ specified the block version-first with no magic, which this section and Appendix
 | 0.6 | 2026-08-15 | — | **ERR-044-003 stage 1**, owner decision: §4.5's composition-root contract corrected — the `OnClubFixturePlayed` call MUST pass the club's fielded eleven, not just its id, so a played fixture the banned player appeared in (via #30 §2.3 F9's extremis back-fill) does not serve his ban. |
 | 0.7 | 2026-08-15 | — | **L20** (#44 adversarial-review round 4, `open-issues.md`): §4.1 named 2 of `discipline.asmdef`'s 4 declared references. Added `TacticalDirector.DeterministicSim` (`CanonicalSerializer`/`SaveBlobFramingHelpers`, consumed by `DisciplineSaveCodec.cs`) and `TacticalDirector.ProjectConstants` (`GameplayConfigHolder`, consumed by `DisciplineConstants.cs`), both verified directly against the asmdef and the citing `.cs` files; clarified that the `DeterministicSim` reference is the byte-level serializer, not #16's RNG service (#44 registers none, FR-DC-019). Reference diagram updated to show all four. |
 | 0.8 | 2026-08-15 | — | **Reviewed-findings pass.** **`ERR-044-008`:** §4.3's "one tap feeds both when built" removed — verified against `src/discipline/IDisciplineTickLedgerTap.cs`, which records the claim as unachievable today (§4.1 forbids `discipline` to reference the match engine; `season-save` does not reference `match-analytics`), not merely deferred; restated as #44 declaring its own tap interface, with the two-reads-not-two-behaviours cost stated explicitly. **`ERR-044-007`:** §4.5 gains a composition-root MUST to call `CardLedgerFold.RequireCommittableConfig()` once per round before the first fixture resolves — enforced in production (`SeasonLoop.PlayNextRound`) and unit-tested, but previously undeclared anywhere in this section. **`ERR-044-010`:** §4.5's fielded-eleven bullet now states that the contract holds today only because `SeasonLoop.FieldedXi` derives the STARTING eleven and no `MatchEngine.SubstitutePlayer` call site exists yet, and MUST widen to the eleven that actually played once one does. See `spec-error-log.md`. |
+| 0.9 | 2026-08-15 | — | **Reviewed-findings pass, continuing `ERR-044-008`.** §4.5's `#37` bullet still read "the shared-tap composition is recorded from #44's side here (one tap, two folds)" — the identical refuted claim v0.8 fixed 45 lines up at §4.3, missed because that pass swept for the exact phrase rather than the underlying claim ("one tap feeds both") this bullet restated in different words. Corrected to match §4.3/§7.3/§8.1: no shared tap or adapter type; #44 reads through its own `IDisciplineTickLedgerTap`; the engine's one-per-tick fill is read by independent accessor shapes, so a second consumer costs a second read, not a second fill. No new ERR id — this is `ERR-044-008`'s own back-prop reaching the site its founding fix missed. See `spec-error-log.md` `ERR-044-008`. |
 #endregion

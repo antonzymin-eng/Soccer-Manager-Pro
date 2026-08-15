@@ -7,8 +7,8 @@ and `src/CLAUDE.md` (concrete paths). Spec #20 does not publish a runtime interf
 §4.4 records the N/A justification.
 
 **Created:** May 7, 2026
-**Last Updated:** August 15, 2026
-**Version:** 1.0.2
+**Last Updated:** August 15, 2026, later
+**Version:** 1.0.3
 **Status:** DRAFT
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 4
@@ -166,9 +166,18 @@ A spec that has no constants in a given tag category simply omits that region. A
 ### `ProjectConstants.cs` — Cross-Spec Source of Truth
 
 `[CROSS]` constants declared in individual spec catalogues are **mirrors** — they copy
-the value from the primary declaration and must not diverge. The primary declaration for
-any constant that multiple specs consume lives in `ProjectConstants.cs`. The mirroring
-catalogue file's `[CROSS]` entry cites the source:
+the value from the primary declaration and must not diverge. **Subject to the
+owning-catalogue carve-out above** (ERR-020-004): for a constant with a single owning
+spec, the primary declaration is that spec's own catalogue, mirrored directly regardless
+of consumer count. `ProjectConstants.cs` is the primary declaration only for the
+remaining case — a constant with no single owning catalogue, shared across specs by
+convention rather than ownership (`PHYSICS_TICK_HZ` below is exactly that case: no one
+spec owns the tick rate). ERR-020-005 (reviewed-findings pass, 2026-08-15) qualifies this
+sentence in place: as written it restated the pre-carve-out two-way split directly under
+the heading a reader looks to for the routing rule, 25 lines below the carve-out
+paragraph that already narrowed it — under the unqualified sentence, the three
+`CardKind*` mirrors the carve-out exists to legitimise all read as non-compliant. The
+mirroring catalogue file's `[CROSS]` entry cites the source:
 
 ```csharp
 // In BallPhysicsConstants.cs (mirror)
@@ -312,6 +321,7 @@ concretises, establishing the Spec #20 ↔ `src/CLAUDE.md` cite-chain.
 | 1.0 | May 7, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §SECTION 4. | — |
 | 1.0.1 | May 22, 2026 | — | ERR-020-001: §4.2 `[CROSS]` mirror example field name corrected `PHYSICS_TICK_HZ` (ALL_CAPS) → `PhysicsTickHz` (PascalCase) per §3.2.3 authoritative rule; XML doc updated to include spec+section citation and value per FR-CS-022. | — |
 | 1.0.2 | August 15, 2026 | Claude Code | ERR-020-004 (reviewed-findings pass, M4/owner decision 2): §4.2's `[CROSS]` routing rule stated only a two-way split (multi-consumer → `ProjectConstants.cs`; single-consumer → local) with no accommodation for a constant that has ≥ 2 consumers but a single owning spec's catalogue to mirror from. New "Owning-catalogue carve-out" paragraph: such a constant mirrors from its owning spec's catalogue directly regardless of consumer count (the `CardIssuedEvent.CardKind` / `EventSystemConstants` example, mirrored by three downstream catalogues with none routed through `ProjectConstants.cs`). Found because `src/discipline/DisciplineConstants.cs`'s compliant mirror had invented a false "single consumer" justification for want of a rule that fit its actual shape. `src/CLAUDE.md`'s `[CROSS]` mirrors section gains the identical carve-out. | — |
+| 1.0.3 | August 15, 2026, later | Claude Code | ERR-020-005 (extends ERR-020-004; reviewed-findings pass): the "`ProjectConstants.cs` — Cross-Spec Source of Truth" subsection's opening sentence still stated the pre-carve-out two-way split unqualified, 25 lines below the carve-out paragraph that had already narrowed it — the heading a reader looks under for the routing rule, restating the rule the carve-out exists to correct. Qualified in place: the primary declaration for a singly-owned constant is that spec's own catalogue (the carve-out), and `ProjectConstants.cs` is primary only for a constant with no single owning catalogue — the worked example immediately below (`PHYSICS_TICK_HZ`) is exactly that case, so the example is now internally consistent with the rule text above it. | — |
 
 ---
 

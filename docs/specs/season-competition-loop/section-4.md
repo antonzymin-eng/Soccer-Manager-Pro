@@ -1,12 +1,18 @@
 # Season & Competition Loop Specification #30 — Section 4: Architecture
 
 **Created:** July 22, 2026
-**Last Updated:** August 13, 2026 (v0.7 — ERR-030-035, #44 T1 (roadmap C1): §4.2's `SEASON_SAVE_FORMAT_VERSION` delta line 1 → 6, and `DisciplineBlock.cs` added to the file layout)
+**Last Updated:** August 15, 2026, later (v0.8 — ERR-030-043, extending ERR-030-035, found in a
+reviewed-findings pass: §4.3's `SeasonLoop` holdings list still had no #44 entry — ERR-030-035 (v0.7)
+amended §4.2's file layout for the same landing but left this list untouched, the THIRD recurrence of
+this section's own recorded omission class after the v0.4 and v0.6 rows below. New bullet naming
+`_discipline`/`_disciplineRules`/`Discipline`/`_disciplineDriver`, verified against
+`src/season-save/SeasonLoop.cs`)
+**Last Updated (prior):** August 13, 2026 (v0.7 — ERR-030-035, #44 T1 (roadmap C1): §4.2's `SEASON_SAVE_FORMAT_VERSION` delta line 1 → 6, and `DisciplineBlock.cs` added to the file layout)
 **Last Updated (prior):** August 10, 2026 (v0.6 — ERR-030-032: AR pass 5 over the #28 T1/T2a landing found this section stale in three more places — §4.2's `SEASON_SAVE_FORMAT_VERSION` delta line still read 1 → 4 after #28 T1's 4 → 5 bump, and was missing `ProgressionBlock.cs`/`ProgressionSquads.cs`; §4.3's `SeasonLoop` holdings list had no mention of `_progression`, the `Progression` property, or its three constructor refusals)
 **Last Updated (prior):** August 8, 2026, later same day (v0.5 — AR pass 14 L4: §4.2's leftover 1 → 2 delta line corrected to 1 → 4; the tests list marked illustrative)
 **Last Updated (prior):** August 8, 2026 (v0.4 — balance-pass AR pass 13 M3: §4 was three landings stale — §4.4's third signature copy deleted in favour of Appendix B, §4.3 gains the career pair + AdvanceDays, §4.2 the eight T1/T2/D2 files)
 **Last Updated (prior):** July 26, 2026 (v0.3 — ERR-030-012 §4.5 keyed-not-cursor correction + ERR-030-013 §4.6 producer-record location, both found at #30 T2 implementation; prior v0.2 section-file PASS-1 reconciliation, §9.3)
-**Version:** 0.7
+**Version:** 0.8
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -103,6 +109,18 @@ src/season-save/
   that "a bare `ISquadProvider` on its own drives nothing" still holds, a populated progression store
   being the one thing that changes it (it drives KD-2 slot 1 by itself, so it needs no career beside it).
   The store's cursors are clock-checked at construction on the same terms as the career pair (ERR-028-007).
+- the optional **`DisciplineState _discipline`** (since #44 T1/T2, roadmap C1→C2, §2.2 v1.8 — this list
+  omitted it entirely; `ERR-030-043`, extending `ERR-030-035`, which amended §4.2's file layout for the
+  same landing but left this holdings list untouched). Unpaired, unlike the career/progression holdings
+  above: the tally carries no per-club dimension and no per-player world-day cursor, so none of the
+  clock checks above apply to it. `SeasonLoop` also holds a `DisciplineRules _disciplineRules` view over
+  it, exposes the tally read-only via the `Discipline` property (the surface `SeasonSaveManager.Save`'s
+  discipline block argument comes from), and binds an internal `IFixtureDisciplineDriver
+  _disciplineDriver` collaborator that `AdvanceAndPlayNextRound` drives each fixture — production wires
+  `RulesFixtureDisciplineDriver` over `_disciplineRules`; a test may substitute a failing implementation
+  to prove the serve+commit block's ordering. All four travel together: `disciplineOrNull` is accepted
+  on both the constructor and `Restore` (a resumed career cannot carry its outstanding suspensions
+  without it), and a driver supplied without its companion state is refused at construction.
 
 Public command API (the only mutation path, FR-SN-032): `AdvanceToNextFixtureDay()`, `AdvanceDays(n)`
 (the bounded free-advance — refused past the season's last fixture day and past the next season's
@@ -190,4 +208,5 @@ fully-qualify `MatchEngine` and any `player-database` type that shares a bare na
 | 0.5 | 2026-08-08 | — | **Balance-pass AR pass 14 (L4)**: the pass-13 M3 rewrite left `SEASON_SAVE_FORMAT_VERSION 1 → 2` five lines above the D2 files it added — the contradiction the fix was closing, re-introduced one block apart; corrected to 1 → 4, tests list marked illustrative. |
 | 0.6 | 2026-08-10 | — | **ERR-030-032** (AR pass 5 over the #28 T1/T2a landing, no code change, found alongside #28's own ERR-028-017): the pass-14 fix corrected the frame-version line to "1 → 4" one landing before #28 T1 bumped it again to 5 — corrected, and `ProgressionBlock.cs`/`ProgressionSquads.cs` added to §4.2's file layout, missing since their T1/T2a landing. §4.3's `SeasonLoop` holdings list, updated at pass-13 M3 to add the #29/#41 career pair, had no equivalent entry for `_progression` — added, naming the `Progression` property and the three constructor refusals (mutual exclusion with a separately-supplied provider, season-coverage, and the no-career-no-provider case) that make it the roster authority when populated. |
 | 0.7 | 2026-08-13 | — | **ERR-030-035** (#44 T1, roadmap C1): §4.2's frame-version line 1 → 6 (the mandatory #44 `DISC` discipline sub-blob), and `DisciplineBlock.cs` added to the file layout, mirroring the `ProgressionBlock.cs` row. |
+| 0.8 | 2026-08-15 | — | **ERR-030-043** (extends ERR-030-035; reviewed-findings pass): §4.3's `SeasonLoop` holdings list, last touched at v0.6 to add the career pair and `_progression`, had no equivalent entry for #44 — v0.7's ERR-030-035 fix amended §4.2's file layout for the same landing but did not reach this list, the THIRD instance of this section's own recorded omission class. New bullet: the optional, unpaired `DisciplineState _discipline`, the `DisciplineRules _disciplineRules` view, the read-only `Discipline` property, and the internal `IFixtureDisciplineDriver _disciplineDriver` collaborator — all four verified against `src/season-save/SeasonLoop.cs` (fields, the `disciplineOrNull` constructor and `Restore` parameters, the property, and the driver's construction-time companion-state refusal). |
 #endregion

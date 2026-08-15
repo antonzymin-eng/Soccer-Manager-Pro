@@ -1,7 +1,12 @@
 # Discipline & Suspensions #44 — Section 5: Test Plan
 
 **Created:** July 24, 2026
-**Last Updated:** August 15, 2026, later (v0.5 — **ERR-044-006**, the round-5 High: this table named
+**Last Updated:** August 15, 2026, later still (v0.6 — reviewed-findings pass: §5.4's residue note on
+`AvailabilityTests.cs` was itself stale — that file's own v1.3, landed the same day as this row,
+already removed `T-DC-VIEW-001` from its `Spec:` header, so "line 7 still lists it" was wrong at the
+moment it was written. The real residue at that header is `T-DC-BAN-004`, withdrawn at ERR-044-003
+and un-noted here until now; corrected, recorded, not fixed (outside this pass's owned file set))
+**Last Updated (prior):** August 15, 2026, later (v0.5 — **ERR-044-006**, the round-5 High: this table named
 **two tests that do not exist** and, in a third row, stated a contract the implementation deliberately
 inverts. **T-DC-VIEW-001**'s only test was deleted at C1/C2 AR round 1 as tautological
 (`AvailabilityTests.cs` v1.1, L4(a)) and never replaced — now **WITHDRAWN** in place with what
@@ -30,7 +35,7 @@ return, ERR-044-005), **T-DC-SAV-003** (F2's negative-`PlayerId` refusal at both
 §5.6 updated to reflect the corrected table; §9's G14 re-checked against it and left unchanged — see
 that section's own version history for the verification note.)
 **Last Updated (prior):** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.5
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -159,10 +164,14 @@ that section's own version history for the verification note.)
   mutator or a by-`ref` accessor, at which point it is #27's test to write. See §5.6's disposition
   map for what carries FR-DC-001 now. **Consumers of the retired id:**
   `src/season-save/tests/SeasonLoopDisciplineTests.cs` also listed it in its `Spec:` header while
-  implementing no test for it — corrected at that file's v1.8. `src/discipline/tests/
-  AvailabilityTests.cs` line 7 still lists it and is **recorded, not fixed** (a header comment
-  outside the ERR-044-006 pass's owned file set); its v1.0 version-history row naming the deleted
-  test is correct as history and must stay.
+  implementing no test for it — corrected at that file's v1.8. **`src/discipline/tests/
+  AvailabilityTests.cs`'s own v1.3 (August 15, 2026) already removed it from its `Spec:` header the
+  same day this row was written** — verified directly against the file's current header, which no
+  longer names `T-DC-VIEW-001`; the "still lists it" note this row previously carried was stale the
+  moment it was written, not merely unfixed. **The real residue is a different id at the same
+  site**: that header's line 11 still lists `T-DC-BAN-004`, withdrawn at ERR-044-003 (August 13,
+  2026), of which §5.3 above says "No test exists or should exist" — **recorded, not fixed** (a
+  header comment outside this pass's owned file set).
 - **T-DC-VIEW-002** — `IsAvailable` is a pure predicate over `DisciplineState` (FR-DC-008): an
   absent entry ⇒ available; yellows below the threshold ⇒ available; `BanMatchesRemaining > 0` ⇒
   unavailable; a null state fails loud (`AvailabilityTests.IsAvailable_AbsentRow_IsTrue`,
@@ -330,4 +339,5 @@ wiring — each locked at its minimal boundary today.
 | 0.3 | 2026-07-24 | — | Cross-set AR pass 3 (M follow-through): new **T-DC-BAN-005** locks the both-squads filter coverage (a banned opponent excluded from the engine-resolved fixture — the case the managed-club-only tests never exercised). |
 | 0.5 | 2026-08-15 | — | **ERR-044-006** (#44 adversarial-review round 5, High): this table named **two tests that do not exist** and, in a third row, mandated the **opposite** of the contract the code enforces — and §9's G6/G13/G14 had ratified gates on all three. **T-DC-VIEW-001 WITHDRAWN** (its only test was deleted at C1/C2 AR round 1 as tautological — `AvailabilityTests.cs` v1.1, L4(a) — and never replaced; the property is #27's by construction, independently re-verified here against `Squad.cs` rather than taken from the deletion note). **T-DC-INT-001 WITHDRAWN**, both halves, for different reasons: FR-DC-019 is a structural negative with no observable to assert (G3's own posture), while FR-DC-020's integer posture rests on **audit, not enforcement** — a reflection lock would have a real failure mode and is recorded as a §9.2 follow-up rather than written into a row as if it existed. **T-DC-VIEW-002 CORRECTED**: it required a pass-through filter to return "an equal (but **distinct-copy**) squad", contradicting FR-DC-009, FR-DC-018's identity floor and the enforced `Is.SameAs` contract — a conformant implementation of the old text would have moved every clean fixture's digest. **T-DC-FOLD-001 and T-DC-DET-001 re-cited to what exists** (the scripted kind-{0,0,2,1} sequence has never existed; T-DC-DET-001's "identical filtered squads" half has no test and would be a tautology). **§5.6 replaced** by a per-FR disposition map (Test / Construction / Deferral) so G14 is re-derivable by grep — the old prose was false on five requirements, two of which (FR-DC-002, FR-DC-022) no row had ever named. Every surviving row was verified by reading the named test methods in `src/discipline/tests/` and `src/season-save/tests/`; test-method citations added throughout so the next verification is a grep rather than a re-reading. See §9's version history for the G6/G13/G14 re-derivation. |
 | 0.4 | 2026-08-15 | — | **M25** (#44 adversarial-review round 4, `open-issues.md`): this section had not been touched since v0.3 (July 24) despite five back-prop passes over the C1/C2 landing touching every other #44 section file. **T-DC-BAN-004** (F5's fail-loud) marked WITHDRAWN in place, pointing at §2.3's F5/ERR-044-003 note, rather than deleted or silently left mandating a test #44 no longer performs — §9's G14 ✅ certified total FR→test traceability against a table this left stale. New **T-DC-FOLD-004** (F6, the bound-`[GT]` atomic-commit guard, §5.2), **T-DC-BAN-006** (ERR-044-003 stage 1's fielded-eleven exemption, §5.3), **T-DC-VIEW-003** (FR-DC-009's all-suspended `null` return, ERR-044-005, §5.4), **T-DC-SAV-003** (F2's negative-`PlayerId` refusal at both boundary sites, §5.5) — all four cite tests already present and green in `src/discipline/tests/`, verified by reading each named test method directly rather than by inference from the surrounding code. §9 checked against the corrected table (see that section's own version history) and its G14 ✅ left standing — the claim is true of this table, it was the table that was stale. **⚠️ CORRECTED at v0.5 (ERR-044-006), annotated rather than rewritten: that last sentence was FALSE.** This pass verified the four rows it *added* and left every pre-existing row unchecked, then re-certified G14 against "the corrected table" as though the whole table had been verified — three rows (T-DC-VIEW-001, T-DC-INT-001, T-DC-VIEW-002) were defective at the moment of that certification, and two requirements (FR-DC-002, FR-DC-022) appeared in no row at all. A partial verification presented as a complete one is the same class of defect this row was filed to fix, one pass later. |
+| 0.6 | 2026-08-15 | — | **Reviewed-findings pass.** §5.4's `AvailabilityTests.cs` residue note (v0.5) said the file's `Spec:` header "line 7 still lists" `T-DC-VIEW-001` — checked directly against the file: its own v1.3, landed the same day, had already removed the id, so the note was stale at the moment v0.5 wrote it. The real residue at that same header (line 11) is `T-DC-BAN-004`, withdrawn at ERR-044-003 (August 13, 2026), of which §5.3 says "No test exists or should exist" — recorded here instead, out of this pass's owned file set (`src/discipline/`). No new ERR id; a correction of v0.5's own claim. |
 #endregion
