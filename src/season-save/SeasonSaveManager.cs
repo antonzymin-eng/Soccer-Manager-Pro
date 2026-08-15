@@ -1,5 +1,14 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
+// Modified: 2026-08-15, later still (reviewed findings pass, L1+L2 — L2: three sites (the Save summary,
+//           the header Purpose's Load-rebuild sentence, the Load summary) still described a five/six-blob
+//           frame after two prior additions (appearance, progression); pointed each at
+//           SeasonSaveBlobs / SeasonSaveContents, which already enumerate the full eight-blob frame,
+//           rather than restating the list a fourth time. L1: the Load summary's closing sentence
+//           claimed a save with no match is "untouched" by the career-block coherence gate, but
+//           RequireCoherentCareerBlocks (verified at its call site, which precedes and sits outside the
+//           `if (blobs.MatchBlob != null)` branch) runs unconditionally — corrected to say every save is checked,
+//           match or not. No behaviour change — v1.28)
 // Modified: 2026-08-15, later (reviewed findings pass, L4 — DisciplineConstants.LEAGUE_COMPETITION_KEY
 //           reference renamed for that constant's ALL_CAPS -> LeagueCompetitionKey rename
 //           (DisciplineConstants.cs v1.5). No behaviour change — v1.27)
@@ -21,9 +30,9 @@
 //           is the only assembly that may reference both match-engine and living-world (FR-LW-003 keeps
 //           them independent; the season root sits above both, like match-viewer over match-engine).
 //           Save captures every sub-blob, encodes the season frame (SeasonSaveCodec), and writes
-//           atomically (temp -> fsync -> rename). Load reads the file, deframes it, and rebuilds the
-//           WorldStore, the season state, and the training/medical/discipline states (always) plus the MatchEngine
-//           (only when the save carried a match).
+//           atomically (temp -> fsync -> rename). Load reads the file, deframes it, and rebuilds all
+//           eight sub-blobs the frame carries (see SeasonSaveBlobs for the enumeration) plus the
+//           MatchEngine (only when the save carried a match).
 
 using System;
 using System.IO;
@@ -59,10 +68,13 @@ namespace TacticalDirector.SeasonSave
         private static readonly ProfilerMarker s_loadMarker = new ProfilerMarker("SeasonSave.Load");
 
         /// <summary>
-        /// Captures <paramref name="world"/>, <paramref name="season"/>, <paramref name="trainingClubs"/>,
-        /// <paramref name="medicalClubs"/> and (when present) <paramref name="matchOrNull"/>, encodes
-        /// the season frame, and writes it to <paramref name="path"/> atomically (the §4.6.1.1 temp -> fsync -> rename
-        /// contract). Every sub-blob is captured and the frame encoded BEFORE the file is opened (the
+        /// Captures <paramref name="world"/>, <paramref name="season"/>, this root's five other REQUIRED
+        /// sub-blob sources, and (when present) <paramref name="matchOrNull"/>; encodes the season
+        /// frame; and writes it to <paramref name="path"/> atomically (the §4.6.1.1 temp -> fsync ->
+        /// rename contract). See <see cref="SeasonSaveBlobs"/> for the full eight-blob enumeration this
+        /// frame carries — restating that list in a doc comment has drifted from the real parameter set
+        /// twice before (v1.6, v1.17), so this summary points at the one place it is kept exact rather
+        /// than repeating it a fourth time. Every sub-blob is captured and the frame encoded BEFORE the file is opened (the
         /// <see cref="MatchSaveManager.Save"/> blob-before-file precedent, restated by FR-SN-021); no
         /// capture mutates its source, so a write failure leaves the live objects and any existing
         /// destination untouched (KD-8 / AR-2 L-1). Pass <c>null</c> for
@@ -550,10 +562,10 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>
-        /// Reads the season save file at <paramref name="path"/>, deframes it, and reconstructs the
-        /// living-world <see cref="WorldStore"/>, the <see cref="SeasonState"/>, the per-club #29
-        /// training / #41 medical state (all always — the last two possibly empty), the #28 progression
-        /// store and the #44 discipline state, and the
+        /// Reads the season save file at <paramref name="path"/>, deframes it, and reconstructs the full
+        /// <see cref="SeasonSaveContents"/> this method returns — see its own summary for the complete
+        /// enumeration (the world, the season, the per-club #29 training / #41 medical / #30 appearance
+        /// states, the #28 progression store, and the #44 discipline state) — plus the
         /// in-progress <see cref="MatchEngine.MatchEngine"/> (only when the save carried a match —
         /// otherwise <see cref="SeasonSaveContents.Match"/> is null, KD-3). Fail-loud: a missing /
         /// unreadable file surfaces the IO exception; a corrupt / version-mismatched / trailing-byte
@@ -571,7 +583,8 @@ namespace TacticalDirector.SeasonSave
         /// (<see cref="PlayerCareerStates.FromBlocks"/>), because the availability filter has to be
         /// rebuilt from them — see the match branch below. So a file whose training, medical and
         /// appearance blocks describe different squads is refused here rather than restoring a match
-        /// against a career nothing else would have validated. A save with no match is untouched by this.
+        /// against a career nothing else would have validated. Every save is checked, match or not; a
+        /// save carrying a match additionally needs the blocks to rebuild the availability filter.
         /// </para>
         /// </summary>
         /// <param name="path">The season save file to read.</param>
@@ -1240,4 +1253,18 @@ namespace TacticalDirector.SeasonSave
 // | 1.27    | 2026-08-15, later | — | Reviewed findings pass, L4. DisciplineConstants.                |
 // |         |            |        | LEAGUE_COMPETITION_KEY -> LeagueCompetitionKey rename. One         |
 // |         |            |        | reference updated. No behaviour change.                            |
+// | 1.28    | 2026-08-15, later still | — | Reviewed findings pass, L1+L2 (doc only).                 |
+// |         |            |        | L1: Load's summary said a save with no match is "untouched" by     |
+// |         |            |        | the career-coherence gate; RequireCoherentCareerBlocks actually    |
+// |         |            |        | runs unconditionally, before and outside the MatchBlob != null     |
+// |         |            |        | branch — corrected to say every save is checked, only the          |
+// |         |            |        | availability-filter rebuild (PlayerCareerStates.FromBlocks) is     |
+// |         |            |        | match-only. L2: the Save summary, the header Purpose's             |
+// |         |            |        | Load-rebuild sentence, and the Load summary each still enumerated  |
+// |         |            |        | a five/six-blob frame after two later additions (appearance,       |
+// |         |            |        | progression) — this file's own third and fourth instance of that   |
+// |         |            |        | class (v1.6, v1.17). Pointed each at SeasonSaveBlobs /              |
+// |         |            |        | SeasonSaveContents, whose own summaries already enumerate all      |
+// |         |            |        | eight sub-blobs, rather than restating the list a fifth time. No   |
+// |         |            |        | behaviour change.                                                   |
 #endregion

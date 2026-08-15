@@ -1,5 +1,10 @@
 // File:     src/season-save/PlayerCareerStates.cs
 // Created:  2026-08-06
+// Modified: 2026-08-15, later still (reviewed findings pass, L3 — SelectAvailable's doc still owned the
+//           depleted-squad/viability logic that moved to AvailabilityComposition.Compose at v1.19, and
+//           its ERR-030-009 line still called #44's suspension filter future tense after the 2026-08-13
+//           C1/C2 landing; cut to a pointer at AvailabilityComposition.Compose and corrected to name
+//           SeasonLoop.SelectAvailable as the composed seam. No behaviour change — v1.24)
 // Modified: 2026-08-15, later (reviewed findings pass, L4 — DisciplineConstants.LEAGUE_COMPETITION_KEY
 //           references renamed for that constant's ALL_CAPS -> LeagueCompetitionKey rename
 //           (DisciplineConstants.cs v1.5). No behaviour change — v1.23)
@@ -1196,33 +1201,25 @@ namespace TacticalDirector.SeasonSave
 
         /// <summary>
         /// The squad-selection filter #30 applies between resolving a roster and configuring a match
-        /// (the ERR-030-009 resolve → filter → configure shape, which #44's suspension filter will
-        /// share): returns the squad #30 will actually field. That is <paramref name="squad"/> with the
-        /// injured removed — <b>except</b> for whoever the depleted-squad rule below has to press back
-        /// in, which is nobody unless the injury list would otherwise stop the club playing.
+        /// (the ERR-030-009 resolve → filter → configure shape): returns the squad #30 will actually
+        /// field, via <see cref="AvailabilityComposition.Compose"/> composed here with
+        /// <c>discipline: null</c> — this call supplies only #41's contribution.
+        /// <see cref="SeasonLoop.SelectAvailable"/> is the composed seam that supplies both
+        /// contributors, #41's injury removals and #44's suspension removals, since the C1/C2 landing.
         /// <para>
         /// <b>Returns the same instance when nothing is filtered</b>, so a career with no injuries — every
         /// career today, with the occurrence dial off — resolves through a reference-identical squad and
         /// the match is byte-identical to the unfiltered path.
         /// </para>
         /// <para>
-        /// <b>The depleted-squad rule.</b> A club is never stopped from playing by its injury list. If
-        /// what remains cannot field the Stage-0 formation — too few players, or every goalkeeper out,
-        /// and selection refuses a position-incomplete squad outright (KD-L3) — the least-injured are
-        /// pressed back into service one at a time (ascending <c>RecoveryRemaining</c>, ties on the
-        /// earliest roster position) until it can. In the limit that is the whole squad, which is
-        /// exactly the unfiltered behaviour, so the filter can never leave a club worse off than having
-        /// no filter at all.
+        /// <b>The depleted-squad back-fill and the viability question it answers live in
+        /// <see cref="AvailabilityComposition.Compose"/></b> (moved there at #44 T2, ERR-030-029, so a
+        /// second contributor could compose with the removal instead of running after an already-applied
+        /// back-fill) — see that method's own doc for the tier order and the engine-selector viability
+        /// check. This method no longer owns either; it is a thin pass-through into the composition.
         /// </para>
         /// <para>
-        /// The viability question is asked of the engine's own selector
-        /// (<see cref="SquadRating.CanFieldStartingEleven"/>) rather than answered by a player-count
-        /// rule here — a count cannot see that a squad has eighteen fit outfielders and no goalkeeper,
-        /// and a second selection rule in this assembly is the parallel-surface trap
-        /// <see cref="SquadRating"/> exists to avoid.
-        /// </para>
-        /// <para>
-        /// It is stated as a policy here, in #30, because FR-MD-023 puts selection on this side of the
+        /// It is stated as a policy in #30 because FR-MD-023 puts selection on this side of the
         /// seam — #41 answers only "is he fit".
         /// </para>
         /// <para>
@@ -1783,4 +1780,17 @@ namespace TacticalDirector.SeasonSave
 // | 1.23    | 2026-08-15, later | — | Reviewed findings pass, L4. DisciplineConstants.               |
 // |         |            |        | LEAGUE_COMPETITION_KEY -> LeagueCompetitionKey rename. Three    |
 // |         |            |        | references updated. No behaviour change.                        |
+// | 1.24    | 2026-08-15, later still | — | Reviewed findings pass, L3 (doc only). SelectAvailable's |
+// |         |            |        | doc still presented the depleted-squad rule and the             |
+// |         |            |        | SquadRating.CanFieldStartingEleven viability check as this      |
+// |         |            |        | method's own behaviour, though both moved to                    |
+// |         |            |        | AvailabilityComposition.Compose at v1.19 (this method is now a  |
+// |         |            |        | one-line delegation passing discipline: null), and its opening  |
+// |         |            |        | line still called the ERR-030-009 shape one "which #44's        |
+// |         |            |        | suspension filter will share" — future tense for a filter that  |
+// |         |            |        | landed 2026-08-13. Cut the back-fill/viability paragraphs to a  |
+// |         |            |        | pointer at AvailabilityComposition.Compose and corrected the    |
+// |         |            |        | future-tense line to name SeasonLoop.SelectAvailable as the     |
+// |         |            |        | composed seam supplying both #41's and #44's removals. No       |
+// |         |            |        | behaviour change.                                                |
 #endregion
