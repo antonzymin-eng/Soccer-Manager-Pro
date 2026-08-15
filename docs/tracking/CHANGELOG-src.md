@@ -35,6 +35,8 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 > or `SEASON_SAVE_FORMAT_VERSION` change, no RNG stream, domain tag or draw-order change — #44 stays
 > draw-free. `DisciplineRules.cs` v1.5, `SeasonLoop.cs` v1.25, `AvailabilityComposition.cs` v1.3.
 >
+> **GATE: RUN TO COMPLETION at `eec95d0`, August 15, 2026** — quarantine empty. `Discipline.Tests` **105 / 0**, `SeasonSave.Tests` **432 / 0 / 3 known skips**, `MatchEngine.Tests` **461 / 1 / 11**. The one failure tree-wide is the close-chance scenario, identified by a name-filtered re-run rather than inferred from matching counts — the inherited owner-held red (`close-chance-creation-design.md` §10.9 item 6). `MatchEngine.Tests` is identical to the pre-change baseline, so this landing adds no new failure; nothing in it touches the match engine.
+>
 > **Last Updated (prior):** August 13, 2026 (v2.116 — **#44 Discipline & Suspensions C1 (T0+T1) + C2 (T2)
 > LANDED — `src/discipline/` is the 35th production assembly, and suspensions are live end to end.**)
 > New `TacticalDirector.Discipline` (references ONLY `EventSystem` + `PlayerDatabase` +

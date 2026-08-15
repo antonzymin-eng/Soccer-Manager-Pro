@@ -58,6 +58,8 @@ break it, and do not edit historical entries.
 > wiring backlog's own ordering: **W2 is now the precondition for the most load-bearing open realism
 > item**, not merely the next wiring item. `match-engine-wiring-backlog.md` v1.9.
 >
+> **GATE: RUN TO COMPLETION at `eec95d0`, August 15, 2026** — quarantine empty. `Discipline.Tests` **105 / 0**, `SeasonSave.Tests` **432 / 0 / 3 known skips**, `MatchEngine.Tests` **461 / 1 / 11**. The one failure tree-wide is the close-chance scenario, identified by a name-filtered re-run rather than inferred from matching counts — the inherited owner-held red (`close-chance-creation-design.md` §10.9 item 6). `MatchEngine.Tests` is identical to the pre-change baseline, so this landing adds no new failure; nothing in it touches the match engine.
+>
 > **Last Updated (prior):** August 13, 2026 (**#44 Discipline & Suspensions — C1 (T0+T1) and C2 (T2) LANDED:
 > `src/discipline/` is the 35th production assembly, suspensions are LIVE end to end, and the last
 > gap in the season spine for PM-2 is closed.**) WHAT REMAINS: #44 T3 — the #30-owned quick-sim card
