@@ -1,7 +1,7 @@
 // File:     src/match-client-unity/MatchClientBehaviour.cs
 // Created:  2026-08-15
-// Modified: 2026-08-15 (AR pass round 2 — Medium/Low findings M1-M9, L1-L5; see the VersionHistory
-//           block at the foot of this file for the per-finding detail)
+// Modified: 2026-08-15 (AR round 2 — High findings H4-H6; see the VersionHistory block at the foot
+//           of this file for the per-finding detail)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4b, §12),
 //           Code Standards #20
@@ -38,6 +38,18 @@ namespace TacticalDirector.MatchClientUnity
     /// marking line. The scale this code assigns is then the metre figure ITSELF, with no conversion
     /// — which is the whole point: a per-primitive "what radius is a Unity Cylinder by default"
     /// constant is a class of bug rather than a number.</description></item>
+    /// <item><description><b>the agent marker's material exposes the colour property named by
+    /// <see cref="_colorPropertyName"/></b> — defaulted to <c>"_Color"</c>, the Built-in Render
+    /// Pipeline standard shader's name for it. URP's Lit/SimpleLit/Unlit shaders expose
+    /// <c>"_BaseColor"</c> instead, and this repo does not settle which pipeline resolves at
+    /// runtime: <c>ProjectSettings/GraphicsSettings.asset</c> references a Universal render pipeline
+    /// asset while <c>Packages/manifest.json</c> declares no URP package. The requirement is stated
+    /// and checked rather than assumed because the failure is silent — <c>SetColor</c> against a
+    /// property the shader does not have succeeds and changes nothing, so both teams, the goalkeeper
+    /// tint and the sent-off tint would all render in whatever colour the prefab material already
+    /// carries, with no diagnostic anywhere. Rejected per marker at instantiation (H6); point
+    /// <see cref="_colorPropertyName"/> at the property your pipeline's shader actually
+    /// exposes.</description></item>
     /// </list>
     ///
     /// <para><b>Not supported: a world-space <c>LineRenderer</c>.</b> Its positions are absolute, so
@@ -72,12 +84,26 @@ namespace TacticalDirector.MatchClientUnity
         [Header("Camera")]
         [SerializeField] private Camera _matchCamera;
 
+        /// <summary>
+        /// The demo match's seed, as text. A <c>ulong</c> <c>[SerializeField]</c>'s round-trip
+        /// through Unity's <c>SerializedProperty</c> for values above <c>long.MaxValue</c> is
+        /// unverified in this environment (L5) — a string inspector field sidesteps the question
+        /// entirely, at the cost of parsing it here instead of the type system doing it for free.
+        /// That parse lives in <see cref="ValidateWiring"/> (H5), not at the point of use.
+        /// </summary>
         [Header("Demo boot (until a real squad source is wired)")]
         [SerializeField] private string _demoSeedText = "1";
 
-        // The colour property block shares this one cached shader-property id (M4) rather than
-        // looking it up by string every frame for every agent.
-        private static readonly int s_colorPropertyId = Shader.PropertyToID("_Color");
+        /// <summary>
+        /// Name of the shader property the marker's colour is written to — prefab-contract clause 3.
+        /// An inspector field rather than a baked literal because the answer is a render-pipeline
+        /// fact this code cannot see: the Built-in pipeline's standard shader calls it
+        /// <c>"_Color"</c> (the default here), URP's Lit/SimpleLit/Unlit call it <c>"_BaseColor"</c>.
+        /// Exposing it lets a URP project retarget the write from the Inspector instead of editing a
+        /// file the CI gate cannot compile (§12 rule 1).
+        /// </summary>
+        [Header("Marker material — the colour property name this project's shader exposes")]
+        [SerializeField] private string _colorPropertyName = "_Color";
 
         private MatchSession _session;
         private MatchRoster _roster;
@@ -92,25 +118,21 @@ namespace TacticalDirector.MatchClientUnity
         private Vector2[] _scratchAgentPositions;
         private AgentRenderModel[] _agentRenderModels;
 
+        // Both are resolved ONCE in ValidateWiring, before anything is constructed, from the two
+        // inspector fields above: the seed because parsing it lazily at the point of use threw out
+        // of Awake (H5), the property id because the per-frame path must not look a shader property
+        // up by string (M4). The id is an instance field rather than the static readonly one it
+        // replaces for the same reason the name became an inspector field — a static initialiser
+        // runs before deserialization and cannot see a serialized value.
+        private ulong _demoSeed;
+        private int _colorPropertyId;
+
         private bool _wiringRejected;
 
         // The previous/current frame decision (§12 rule 1: a state machine, so it lives in
         // match-client-core where the gate compiles and tests it — AR pass M-6).
         private readonly LiveFrameLatch _frameLatch = new LiveFrameLatch();
         private Vector2 _cameraTarget;
-
-        /// <summary>
-        /// Parses <see cref="_demoSeedText"/> into the <c>ulong</c> <c>MatchSetup.NeutralDemo</c>
-        /// needs. A <c>ulong</c> <c>[SerializeField]</c>'s round-trip through Unity's
-        /// <c>SerializedProperty</c> for values above <c>long.MaxValue</c> is unverified in this
-        /// environment (L5) — a string inspector field sidesteps the question entirely, at the cost
-        /// of a fail-loud parse here instead of the type system doing it for free.
-        /// </summary>
-        private ulong DemoSeed =>
-            ulong.TryParse(_demoSeedText, out ulong seed)
-                ? seed
-                : throw new InvalidOperationException(
-                    "MatchClientBehaviour: _demoSeedText \"" + _demoSeedText + "\" is not a valid ulong.");
 
         private void Awake()
         {
@@ -125,7 +147,41 @@ namespace TacticalDirector.MatchClientUnity
                 return;
             }
 
-            _session = new MatchSession(MatchSetup.NeutralDemo(DemoSeed));
+            // H5: Unity CATCHES an exception thrown out of Awake, logs it — and then delivers Start
+            // and every Update anyway, WITHOUT disabling the component. So anything that throws
+            // inside BuildScene (a MatchSession/MatchSetup constructor, PitchMarkings.BuildDrawables'
+            // own invariant check, BuildMarkings' unreachable-by-design default: arm) would leave
+            // _session null with this component still live, NullReferenceException-ing every frame
+            // forever and naming none of it. Catching converts any such failure into the single
+            // terminal, self-describing state this file already has for bad wiring.
+            //
+            // FR-CS-069 bans try/catch in per-frame INNER LOOPS; this is one-time initialization —
+            // the same carve-out LiveMatchStreamer's post-tick observer and MatchSession's save path
+            // cite for their own non-hot-path catches.
+            try
+            {
+                BuildScene();
+            }
+            catch (Exception ex)
+            {
+                RejectWiring("scene construction threw " + ex.GetType().Name + ": " + ex.Message + ".");
+
+                // Logged separately because the line above names the cause but drops the stack trace,
+                // which is the half that says WHERE in the construction it went wrong.
+                Debug.LogException(ex, this);
+            }
+        }
+
+        /// <summary>
+        /// Builds everything this binding owns, in the only order that works — the session first,
+        /// since the roster it reports is what sizes the per-agent arrays. Called once, from
+        /// <see cref="Awake"/> and only inside the guard documented there: nothing here may run
+        /// before <see cref="ValidateWiring"/> has passed, and nothing here may throw past
+        /// <see cref="Awake"/>.
+        /// </summary>
+        private void BuildScene()
+        {
+            _session = new MatchSession(MatchSetup.NeutralDemo(_demoSeed));
             _roster = MatchRoster.FromStreamer(_session.Streamer);
 
             _scratchAgentPositions = new Vector2[_roster.AgentCount];
@@ -139,7 +195,7 @@ namespace TacticalDirector.MatchClientUnity
 
             // Everything the PREFAB CONTENTS must satisfy is checked as each is instantiated, in
             // InstantiatePrefab below — the one place a further per-instantiation wiring check
-            // belongs (H-2's own comment). ValidateWiring above covers what has to be true before any
+            // belongs (H-2's own comment). ValidateWiring covers what has to be true before any
             // Instantiate call is even safe to make.
             BuildMarkings();
             BuildAgentObjects();
@@ -208,6 +264,11 @@ namespace TacticalDirector.MatchClientUnity
         /// rather than duplicating its log-and-disable behaviour; <see cref="InstantiatePrefab"/> below
         /// is the complementary check that runs once a prefab HAS been instantiated (root neutrality,
         /// no world-space <c>LineRenderer</c>).
+        ///
+        /// <para>It also RESOLVES the two inspector fields that are text rather than a usable value —
+        /// the demo seed and the shader colour-property id — because for both, "is this field valid"
+        /// and "what does it parse to" are the same question, and both answers are needed before
+        /// construction starts (H5).</para>
         /// </summary>
         private void ValidateWiring()
         {
@@ -239,6 +300,38 @@ namespace TacticalDirector.MatchClientUnity
                     transform.lossyScale + ".");
                 return;
             }
+
+            // H5: parsed HERE, ahead of every construction, rather than at the MatchSetup.NeutralDemo
+            // call site — a parse failure there threw out of Awake, which Unity answers by logging and
+            // carrying on, so Start and Update then ran forever against a null session with nothing
+            // naming the seed as the cause. Invariant culture with no permitted number styles, so the
+            // field means exactly "digits": a plain TryParse honours the host locale, under which a
+            // group separator would read "1.000" as the seed 1000 and silently play a different match.
+            if (!ulong.TryParse(_demoSeedText, NumberStyles.None, CultureInfo.InvariantCulture, out ulong seed))
+            {
+                RejectWiring(
+                    nameof(_demoSeedText) + " must be an unsigned 64-bit integer written as digits only " +
+                    "(no sign, spaces, separators or exponent) — it is \"" + _demoSeedText +
+                    "\", which MatchSetup.NeutralDemo cannot be given.");
+                return;
+            }
+
+            _demoSeed = seed;
+
+            if (string.IsNullOrEmpty(_colorPropertyName))
+            {
+                RejectWiring(
+                    nameof(_colorPropertyName) + " is empty — it must name the colour property this " +
+                    "project's marker shader exposes (Built-in Render Pipeline: \"_Color\"; URP Lit/" +
+                    "SimpleLit/Unlit: \"_BaseColor\"), since a write to a property that does not exist " +
+                    "is silently discarded.");
+                return;
+            }
+
+            // H6/M4: the id is resolved once, off the per-frame path. Whether the marker's MATERIAL
+            // actually carries the property is a separate question only an instantiated prefab can
+            // answer — checked per marker in BuildAgentObjects.
+            _colorPropertyId = Shader.PropertyToID(_colorPropertyName);
         }
 
         // ---- frame plumbing -------------------------------------------------------------------
@@ -337,6 +430,32 @@ namespace TacticalDirector.MatchClientUnity
                         " has no MeshRenderer under its instantiated root, so no team colour / " +
                         "sent-off / goalkeeper tint can be applied to it.");
                 }
+                else if (markerRenderer.sharedMaterial == null)
+                {
+                    // H6: the colour write is the ONLY thing distinguishing the two teams, the
+                    // goalkeeper and a sent-off player, and MaterialPropertyBlock.SetColor against a
+                    // material that cannot receive it fails SILENTLY — so the material is checked
+                    // here rather than discovered as "why is everyone blue?" on the pinned host.
+                    RejectWiring(
+                        nameof(_agentMarkerPrefab) + " agent index " + Inv(i) +
+                        " has a MeshRenderer with no material, so its team colour would be discarded " +
+                        "silently and every marker would render identically.");
+                }
+                else if (!markerRenderer.sharedMaterial.HasProperty(_colorPropertyId))
+                {
+                    Shader shader = markerRenderer.sharedMaterial.shader;
+
+                    RejectWiring(
+                        nameof(_agentMarkerPrefab) + " agent index " + Inv(i) + " has material \"" +
+                        markerRenderer.sharedMaterial.name + "\" (shader \"" +
+                        (shader == null ? "<none>" : shader.name) + "\"), which exposes no \"" +
+                        _colorPropertyName + "\" property — SetColor would succeed and change nothing, " +
+                        "rendering both teams, the goalkeeper tint and the sent-off tint in the " +
+                        "material's own colour. Set " + nameof(_colorPropertyName) + " to the property " +
+                        "this project's pipeline uses (Built-in Render Pipeline: \"_Color\"; URP Lit/" +
+                        "SimpleLit/Unlit: \"_BaseColor\"), or give the prefab a material that has it.");
+                }
+
                 _agentMarkerRenderers[i] = markerRenderer;
 
                 _possessionRings[i] = InstantiatePrefab(_possessionRingPrefab, transform, nameof(_possessionRingPrefab));
@@ -427,7 +546,7 @@ namespace TacticalDirector.MatchClientUnity
                 marker.position = model.WorldPosition;
                 marker.localScale = GroundScale(model.MarkerRadius);
 
-                _scratchPropertyBlock.SetColor(s_colorPropertyId, ResolveMarkerColor(in model));
+                _scratchPropertyBlock.SetColor(_colorPropertyId, ResolveMarkerColor(in model));
                 _agentMarkerRenderers[i].SetPropertyBlock(_scratchPropertyBlock);
 
                 Transform ring = _possessionRings[i].transform;
@@ -581,4 +700,34 @@ namespace TacticalDirector.MatchClientUnity
 // |         |            |        | unverified without a Unity host. M9 and L4 are Editor-instruction |
 // |         |            |        | findings, not code — not applicable to this file; flagged for   |
 // |         |            |        | the orchestrator to correct those instructions separately.       |
+// | 1.3     | 2026-08-15 | —      | AR round 2, High findings H4-H6. H4 is this file's missing      |
+// |         |            |        | .cs.meta, generated by tools/unity-ci/generate-missing-metas.sh |
+// |         |            |        | — no source change (a .cs with no committed .meta gets a fresh  |
+// |         |            |        | random GUID on every checkout, breaking every scene/prefab      |
+// |         |            |        | reference to this component; check-meta-integrity.sh is a       |
+// |         |            |        | SEPARATE CI job from run-gate.sh, which is how two gate-        |
+// |         |            |        | verified commits both missed it). H5: nothing that throws       |
+// |         |            |        | inside Awake can now leave the component enabled with null      |
+// |         |            |        | fields — Unity logs an Awake exception and then delivers        |
+// |         |            |        | Start/Update anyway. Two parts: the _demoSeedText parse moves   |
+// |         |            |        | INTO ValidateWiring (ahead of all construction, invariant-      |
+// |         |            |        | culture digits-only, rejecting by field name and bad value),    |
+// |         |            |        | and the throwing DemoSeed property is deleted in favour of the  |
+// |         |            |        | single validated _demoSeed field; the rest of Awake's           |
+// |         |            |        | construction moves into a new BuildScene() wrapped in try/catch |
+// |         |            |        | that routes any failure to RejectWiring + LogException          |
+// |         |            |        | (FR-CS-069 bans try/catch in per-frame inner loops; this is     |
+// |         |            |        | one-time init — the LiveMatchStreamer / MatchSession carve-out).|
+// |         |            |        | H6: the bare, unvalidated Shader.PropertyToID("_Color") literal |
+// |         |            |        | becomes the [SerializeField] _colorPropertyName (Built-in       |
+// |         |            |        | pipeline default; URP shaders expose _BaseColor, and this repo  |
+// |         |            |        | does not settle which pipeline resolves — GraphicsSettings.asset|
+// |         |            |        | names a Universal asset, manifest.json has no URP package), the |
+// |         |            |        | prefab contract gains it as numbered clause 3, s_colorPropertyId|
+// |         |            |        | becomes the instance _colorPropertyId resolved once in          |
+// |         |            |        | ValidateWiring (a static initialiser cannot read a serialized   |
+// |         |            |        | field), and BuildAgentObjects rejects any marker whose material |
+// |         |            |        | is absent or lacks the property — SetColor against a missing    |
+// |         |            |        | property succeeds silently, which would ship both teams, the    |
+// |         |            |        | goalkeeper tint and the sent-off tint in one colour.            |
 #endregion
