@@ -1,18 +1,18 @@
 // File:     src/discipline/tests/DisciplineRulesTests.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 5, M15/M19(a) — a MigratePlayerId negative-
-//           target-id lock, the kind-1 twin of L11's ApplySecondYellow seam (ApplyStraightRed), and
-//           the CARD_KIND_* rename to CardKind* (L17) — v1.3)
+// Modified: 2026-08-15 (ERR-044-003 stage 1 — every OnClubFixturePlayed call site updated for the new
+//           required fieldedPlayerIds parameter, plus five new tests locking the fielded-eleven
+//           exemption itself — v1.4)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §3.2 (thresholds & bans) / §3.3 (serving) / §3.4 (boundary &
 //           hygiene); FR-DC-006/007/011/012/013/017; F2/F4; §5 T-DC-BAN-001/002/003, T-DC-HYG-001;
-//           Code Standards #20
+//           ERR-044-003 (the fielded-eleven serving exemption); Code Standards #20
 // Purpose:  Unit tests for DisciplineRules — the FR-DC-006 card-kind dispatch (including the §3.2
 //           worked example and the residual-kept assertion that distinguishes it from a reset), ban
 //           stacking, the [GT] guard routing/atomicity/direct-reachability trio (M4/L5), club-fixture
-//           serving (including the FR-DC-017 mid-season drop and the M5 two-row descending-walk lock),
-//           the season boundary sweep (with its own M5 lock), player-id migration, retirement drop, and
-//           multi-competition independence.
+//           serving (including the FR-DC-017 mid-season drop, the M5 two-row descending-walk lock, and
+//           the ERR-044-003 fielded-eleven exemption), the season boundary sweep (with its own M5
+//           lock), player-id migration, retirement drop, and multi-competition independence.
 
 using System;
 
@@ -422,6 +422,72 @@ namespace TacticalDirector.Discipline.Tests
             Assert.IsFalse(rules.State.HasEntry(p2, Competition), "p2's one-match ban must ALSO be served in the same call");
         }
 
+        // ── ERR-044-003 stage 1: the fielded-eleven exemption ─────────────────────────
+
+        [Test]
+        public void OnClubFixturePlayed_ExemptsAFieldedBannedPlayer_ButStillServesAnUnfieldedTeammate()
+        {
+            // ERR-044-003 stage 1: a ban is served by the club playing WITHOUT the banned player.
+            // #30 §2.3 F9's extremis back-fill can field one anyway (AvailabilityComposition.
+            // Reinstate) — his ban must NOT serve that fixture. Asserted in the SAME call as an
+            // unfielded team-mate who DOES serve, so this cannot pass by the method skipping
+            // everybody (or by only ever exercising the trivial one-player case).
+            DisciplineRules rules = NewRules();
+            int fielded = PlayerId(0, 1);
+            int notFielded = PlayerId(0, 2);
+            rules.AddBan(fielded, Competition, 2);
+            rules.AddBan(notFielded, Competition, 2);
+
+            rules.OnClubFixturePlayed(0, new[] { fielded });
+
+            Assert.AreEqual(2, rules.State.EntryFor(fielded, Competition).BanMatchesRemaining,
+                "a banned player who WAS fielded (the extremis back-fill) must not have his ban "
+                + "served — he played, so this fixture is not one of his ban's matches.");
+            Assert.AreEqual(1, rules.State.EntryFor(notFielded, Competition).BanMatchesRemaining,
+                "a banned team-mate who was NOT fielded must still serve one match — otherwise this "
+                + "test would pass even if OnClubFixturePlayed exempted everybody unconditionally.");
+        }
+
+        [Test]
+        public void OnClubFixturePlayed_AFieldedPlayerWithNoBan_IsUnaffected_NoRowInvented()
+        {
+            DisciplineRules rules = NewRules();
+            int p = PlayerId(0, 1);
+
+            rules.OnClubFixturePlayed(0, new[] { p });
+
+            Assert.IsFalse(rules.State.HasEntry(p, Competition),
+                "a fielded player who never carried a discipline row must not gain one just for "
+                + "having played — WasFielded is consulted only for rows that already carry an "
+                + "outstanding ban (BanMatchesRemaining > 0), never as a reason to create one.");
+        }
+
+        [Test]
+        public void OnClubFixturePlayed_NullFieldedPlayerIds_Throws()
+        {
+            DisciplineRules rules = NewRules();
+            Assert.Throws<ArgumentNullException>(() => rules.OnClubFixturePlayed(0, null));
+        }
+
+        [Test]
+        public void OnClubFixturePlayed_ExemptionDoesNotBlockTheFRDC017DropForANonFieldedPlayer()
+        {
+            // The exemption only skips the decrement for a player IN fieldedPlayerIds — it must not
+            // interfere with FR-DC-017's immediate mid-season drop for anyone else served in the same
+            // call. fieldedNoBan is present in the array precisely so the exemption branch actually
+            // runs during this call, not merely so the array is non-empty.
+            DisciplineRules rules = NewRules();
+            int fieldedNoBan = PlayerId(0, 1);
+            int notFieldedOneMatch = PlayerId(0, 2);
+            rules.AddBan(notFieldedOneMatch, Competition, 1);
+
+            rules.OnClubFixturePlayed(0, new[] { fieldedNoBan });
+
+            Assert.IsFalse(rules.State.HasEntry(notFieldedOneMatch, Competition),
+                "FR-DC-017: a row that reaches (0, 0) mid-season must still be dropped immediately — "
+                + "the exemption running for a DIFFERENT player in the same call must not suppress it.");
+        }
+
         // ── RollToNextSeason ────────────────────────────────────────────────────────
 
         [Test]
@@ -685,4 +751,14 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | CARD_KIND_* reference renamed to DisciplineConstants.CardKind*   |
 // |         |            |        | (the constants are now [CROSS], PascalCase per src/CLAUDE.md     |
 // |         |            |        | §3.2.3).                                                          |
+// | 1.4     | 2026-08-15 | —      | ERR-044-003 stage 1: DisciplineRules.OnClubFixturePlayed gained  |
+// |         |            |        | a required int[] fieldedPlayerIds parameter (the fielded eleven  |
+// |         |            |        | is exempt from that fixture's ban-serving decrement). Every      |
+// |         |            |        | existing call site updated to pass Array.Empty<int>() (unchanged |
+// |         |            |        | intent: nobody was fielded, so everybody serves). New:            |
+// |         |            |        | OnClubFixturePlayed_ExemptsAFieldedBannedPlayer_ButStillServes-  |
+// |         |            |        | AnUnfieldedTeammate (both halves in ONE call, so the test cannot  |
+// |         |            |        | pass by the method doing nothing); ...AFieldedPlayerWithNoBan_   |
+// |         |            |        | IsUnaffected_NoRowInvented; ...NullFieldedPlayerIds_Throws;       |
+// |         |            |        | ...ExemptionDoesNotBlockTheFRDC017DropForANonFieldedPlayer.       |
 #endregion

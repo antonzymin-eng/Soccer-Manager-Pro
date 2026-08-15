@@ -1,6 +1,37 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
+**Last Updated:** August 15, 2026 (**A suspended player forced onto the pitch by an injury crisis
+no longer serves his ban by playing.** When bans and injuries between them leave a club unable to
+field eleven players, the season code presses players back into selection until it can — injured
+ones first, and a suspended one only when the alternative is a club that cannot take the field at
+all. That safety rule shipped two days ago with a hole in it, recorded openly at the time as
+something for the owner to decide: the same fixture that put the banned player on the pitch also
+counted as one match of his ban served. So the suspension cost him nothing — he played, and his ban
+got shorter anyway. A two-match red card could cost a badly hit club nothing whatsoever. That is now
+decided and fixed. A ban is served by the club playing a match **without** you, so the code that
+counts down bans is now told which eleven actually played and skips anyone in it. Nothing changes
+for an ordinary match, by construction rather than by testing: suspended players are removed from
+selection before the team is picked, so the only way a banned player can be in the eleven at all is
+that same last-resort press-back. **The better answer is agreed and not built, and it is worth
+naming because it is what a player would expect.** The Football Manager approach is a ladder: when a
+club runs out of bodies, promote youth players first, and below them field generated stand-in
+players with low attributes — so a banned man never takes the field at all. Neither rung can be
+built yet. The youth system has a finished design but no code. And the stand-in players hit a
+plainer wall: every player's identity number is derived from his club and his squad slot, squads are
+capped at 25, and the numbering is completely full — a 26th player at one club would collide with
+the first player at the next. Widening that is a real piece of design work touching every saved
+game, not a follow-up commit. **Also decided this pass, about the foul rate:** the game calls about
+35 fouls, 5 yellows and 1 red a match against real football's roughly 22, 3.5 and 0.25. Tempting to
+turn the dial down now — deliberately not doing that. Tackling is built but switched off, and
+switching it on will route tens of extra challenges per match through the same foul check, so any
+number tuned today would be re-tuned immediately while sitting in the code looking finished. Turn
+tackling on first, then tune once. The cost of waiting is stated rather than hidden: the foul and
+card rates — and so the suspension rate — are knowingly wrong until then. *(One correction to the
+entry below, which is left as written per this file's no-edit rule: it opens "Managers can now be
+suspended for their bookings". It is **players** who are suspended, not managers; nothing in the
+discipline module touches managers.)* Prior entry below.)
+
 **Last Updated:** August 13, 2026 (**Managers can now be suspended for their bookings — the game has
 discipline and suspensions for the first time.** A new "discipline" module (`src/discipline/`, the
 35th part of the game's codebase) watches every yellow and red card as a match is played and keeps

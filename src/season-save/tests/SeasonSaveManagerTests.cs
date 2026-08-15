@@ -1,8 +1,7 @@
 // File:     src/season-save/tests/SeasonSaveManagerTests.cs
 // Created:  2026-07-22
-// Modified: 2026-08-13 (#44 C1/C2 AR round 4, H4/ERR-030-039 — the public long form's own
-//           unwired-over-populated lock, and every call site updated for the required
-//           disciplineWired parameter — v1.20)
+// Modified: 2026-08-15 (ERR-044-003 stage 1 — the DisciplineRules.OnClubFixturePlayed call site
+//           updated for the new required fieldedPlayerIds parameter — v1.21)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §5 acceptance;
 //           Season & Competition Loop #30 FR-SN-019..023, Appendix B; Training System #29 FR-TR-018/019;
@@ -2380,4 +2379,11 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | false premise the defect rested on — is corrected in the comment  |
 // |         |            |        | that carried it. Mutation-verified: reinstating the hardcode      |
 // |         |            |        | (disciplineWired = true at the top of Save) fails the new lock.   |
+// | 1.21    | 2026-08-15 | —      | ERR-044-003 stage 1 (tests-only). DisciplineRules.OnClub-        |
+// |         |            |        | FixturePlayed gained a required int[] fieldedPlayerIds           |
+// |         |            |        | parameter (the fielded eleven is now exempt from that fixture's  |
+// |         |            |        | ban-serving decrement). The one direct call site here (the       |
+// |         |            |        | ERR-030-038 drained-tally test's serving setup) passes            |
+// |         |            |        | Array.Empty<int>() — unchanged intent: nobody was fielded, so    |
+// |         |            |        | everybody serves. No assertion changed.                          |
 #endregion

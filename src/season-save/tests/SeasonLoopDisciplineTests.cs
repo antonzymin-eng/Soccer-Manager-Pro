@@ -1,20 +1,21 @@
 // File:     src/season-save/tests/SeasonLoopDisciplineTests.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13 (#44 C1/C2 adversarial review round 5, M18 — two new MarkUnavailable-owning-
-//           contract locks, driven directly with a pre-set mask (AvailabilityComposition.Compose
-//           always hands it a fresh one, so the contract was unobservable through the wired seam) —
-//           v1.5)
+// Modified: 2026-08-15 (ERR-044-003 stage 1 — ThrowOnFirstServeDriver.OnClubFixturePlayed updated for
+//           the new required fieldedPlayerIds parameter, and a new wiring lock proving the extremis
+//           back-fill's fielded player is exempt from serving while an unfielded suspended team-mate
+//           still serves — v1.6)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §3.3/§5 (T-DC-NEU-001, T-DC-BAN-002/003/005, T-DC-VIEW-001,
 //           T-DC-SAV-002); Season & Competition Loop #30 §3.4 (the composed seam,
-//           ERR-030-009/-016/-029); ERR-044-002 (both resolution paths), ERR-044-003 (removals only);
-//           ERR-030-037 (the M6/M7 within-fixture serve-before-commit lock); unified season save §4 /
-//           KD-6 (restore fidelity — the C1/C2 AR's H2); Code Standards #20
+//           ERR-030-009/-016/-029); ERR-044-002 (both resolution paths), ERR-044-003 (the fielded-
+//           eleven serving exemption, stage 1); ERR-030-037 (the M6/M7 within-fixture serve-before-
+//           commit lock); unified season save §4 / KD-6 (restore fidelity — the C1/C2 AR's H2); Code
+//           Standards #20
 // Purpose:  The #44 T2 WIRING locks. Every case here fails if a wiring point is reverted — the fold's
 //           seed and its per-tick pump, the filter at the seam on both paths and both clubs, the
-//           serving decrement, the off-by-one (both across fixtures and WITHIN one), the composition
-//           with #41, and the boundary sweep. #44's own rules are unit tested in discipline/tests;
-//           nothing here re-tests them.
+//           serving decrement (including the ERR-044-003 fielded-eleven exemption), the off-by-one
+//           (both across fixtures and WITHIN one), the composition with #41, and the boundary sweep.
+//           #44's own rules are unit tested in discipline/tests; nothing here re-tests them.
 
 using NUnit.Framework;
 
@@ -764,6 +765,101 @@ namespace TacticalDirector.SeasonSave.Tests
             }
         }
 
+        // ── ERR-044-003 stage 1: the extremis exemption, wired end to end ─────────────────
+
+        [Test]
+        public void ASuspendedPlayerPressedInByTheExtremisBackFill_IsExemptFromServing_WhileAnUnfieldedSuspendedTeammateStillServes()
+        {
+            // ERR-044-003 stage 1's own wiring lock. #30 §2.3 F9's back-fill can press a suspended
+            // player onto the pitch when too many of his club's players are unavailable to field the
+            // Stage-0 formation otherwise (AvailabilityComposition.Reinstate's extremis tier). Before
+            // this landing the SAME fixture's OnClubFixturePlayed call then served his ban anyway,
+            // making the appearance strictly free. This locks BOTH halves in one played round:
+            // (a) POSITIVE CONTROL — a suspended player really is in the fielded eleven, or the rest
+            // of this test is vacuous the way ERR-030-014 was (and this file's own
+            // ARealEngineFixtureFoldsItsCardsOntoPlayerRecordsAndChangesNothingElse exists to guard
+            // against); (b) that player's ban is UNCHANGED after the round while a suspended
+            // team-mate who was NOT fielded still serves — so the test cannot pass by the exemption
+            // firing for everybody unconditionally.
+            League league = FourClubLeague();
+            SeasonLoop probe = LoopOver(league, RoundResolutionMode.QuickSimAll, out _);
+            Fixture fixture = probe.State.FixtureAt(0);
+            int clubId = fixture.HomeClubId;
+            Squad full = league.ResolveByClubId(clubId);
+
+            var all = new int[full.Count];
+            for (int i = 0; i < all.Length; i++)
+            {
+                all[i] = full.GetPlayer(i).PlayerId;
+            }
+
+            // Ban enough of the roster that fewer than eighteen players (11 starters + 7 bench —
+            // MatchEngineConstants.PLAYERS_PER_TEAM / SUBSTITUTES_PER_TEAM) remain directly
+            // selectable, forcing AvailabilityComposition's back-fill to press some of the banned
+            // players back in. Nothing here is injured, so every reinstatement comes from the
+            // suspended tier. CLUB_SQUAD_SIZE is 25 (PlayerDatabaseConstants), so banning the last
+            // BannedCount players leaves (25 - BannedCount) directly selectable; determined
+            // empirically (dotnet test, iterating this constant) rather than guessed — 10 leaves 15
+            // selectable, needing 3 reinstated, comfortably inside the 10 banned so at least one
+            // banned player is left over as the "still serves" control.
+            const int BannedCount = 10;
+            var banned = new int[BannedCount];
+            for (int i = 0; i < BannedCount; i++)
+            {
+                banned[i] = all[all.Length - BannedCount + i];
+            }
+
+            DisciplineState state = BansOf(50, banned);   // long enough to survive one served match
+            SeasonLoop loop = LoopOver(
+                league, RoundResolutionMode.QuickSimAll, out PlayerCareerStates career, state);
+
+            // The fielded eleven the wired seam is about to use — computed the SAME way SeasonLoop's
+            // private SelectAvailable/FieldedXi do (AvailabilityComposition.Compose then
+            // SquadRating.StartingElevenPlayerIds), over the identical squad/career/discipline
+            // instances AdvanceAndPlayNextRound is about to consume. Pure and side-effect-free, so
+            // computing it here disturbs nothing the round itself does.
+            Squad composed = AvailabilityComposition.Compose(
+                full, career, state, DisciplineConstants.LEAGUE_COMPETITION_KEY);
+            int[] expectedXi = SquadRating.StartingElevenPlayerIds(composed);
+
+            int fieldedSuspended = -1;
+            int unfieldedSuspended = -1;
+            for (int i = 0; i < banned.Length; i++)
+            {
+                bool inXi = System.Array.IndexOf(expectedXi, banned[i]) >= 0;
+                if (inXi && fieldedSuspended < 0)
+                {
+                    fieldedSuspended = banned[i];
+                }
+                if (!inXi && unfieldedSuspended < 0)
+                {
+                    unfieldedSuspended = banned[i];
+                }
+            }
+
+            Assert.That(fieldedSuspended, Is.GreaterThanOrEqualTo(0),
+                "POSITIVE CONTROL: no suspended player was pressed into the fielded eleven by this "
+                + "fixture. BannedCount must be raised until the extremis back-fill genuinely fires — "
+                + "without this the rest of the test is vacuous.");
+            Assert.That(unfieldedSuspended, Is.GreaterThanOrEqualTo(0),
+                "Precondition: at least one banned player must be left OFF the fielded eleven, or the "
+                + "'still serves' half below cannot be distinguished from the exemption firing for "
+                + "everybody unconditionally.");
+
+            int banBeforeFielded = Ban(state, fieldedSuspended);
+            int banBeforeUnfielded = Ban(state, unfieldedSuspended);
+
+            loop.AdvanceToNextFixtureDay();
+            loop.AdvanceAndPlayNextRound(league);
+
+            Assert.That(Ban(state, fieldedSuspended), Is.EqualTo(banBeforeFielded),
+                "A suspended player the extremis back-fill actually fielded must NOT have his ban "
+                + "served by the same fixture he played in (ERR-044-003 stage 1).");
+            Assert.That(Ban(state, unfieldedSuspended), Is.EqualTo(banBeforeUnfielded - 1),
+                "A suspended team-mate who was NOT fielded must still serve one match of his ban — "
+                + "otherwise this test would pass even if the exemption served nobody at all.");
+        }
+
         // ── the season boundary ──────────────────────────────────────────────────────────
 
         [Test]
@@ -1016,4 +1112,17 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | stayed green under a revert. These two drive the method directly   |
 // |         |            |        | with a pre-set mask, mirroring Availability.MarkSuspended's own    |
 // |         |            |        | AvailabilityTests coverage.                                        |
+// | 1.6     | 2026-08-15 | —      | ERR-044-003 stage 1. ThrowOnFirstServeDriver.OnClubFixturePlayed  |
+// |         |            |        | updated for DisciplineRules' new required int[] fieldedPlayerIds  |
+// |         |            |        | parameter (forwarded straight through — no behaviour change for   |
+// |         |            |        | the M12/M6 position lock it drives). New: ASuspendedPlayerPressed-|
+// |         |            |        | InByTheExtremisBackFill_IsExemptFromServing_WhileAnUnfielded-      |
+// |         |            |        | SuspendedTeammateStillServes — the wiring lock for the exemption   |
+// |         |            |        | itself, over a real played round. Positive control computes the   |
+// |         |            |        | fielded eleven the same way SelectAvailable/FieldedXi do          |
+// |         |            |        | (AvailabilityComposition.Compose then SquadRating.Starting-        |
+// |         |            |        | ElevenPlayerIds) to identify a genuinely back-filled suspended     |
+// |         |            |        | player without hardcoding which one the tier order picks, then    |
+// |         |            |        | asserts his ban is unchanged after the round while an unfielded    |
+// |         |            |        | suspended team-mate's decrements by one, in the same call.         |
 #endregion
