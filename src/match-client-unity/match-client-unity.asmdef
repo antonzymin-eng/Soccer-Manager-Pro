@@ -4,7 +4,8 @@
     "references": [
         "TacticalDirector.MatchClientCore",
         "TacticalDirector.MatchViewer",
-        "TacticalDirector.MatchEngine"
+        "TacticalDirector.MatchEngine",
+        "TacticalDirector.DeterministicSim"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
