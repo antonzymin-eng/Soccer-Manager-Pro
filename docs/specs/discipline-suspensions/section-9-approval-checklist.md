@@ -1,11 +1,20 @@
 # Discipline & Suspensions #44 — Section 9: Approval Checklist
 
 **Created:** July 24, 2026
-**Last Updated:** August 13, 2026 (v0.3 — L6, adversarial review over the C1/C2 landing: §9.3's
+**Last Updated:** August 15, 2026 (v0.4 — M25, the spec half of #44's adversarial-review round 4
+(`open-issues.md`): §5 (Test Plan) was found stale — it still mandated a withdrawn fail-loud
+(T-DC-BAN-004/F5) and had no row for F6, FR-DC-009's `null`-return case, or F2's negative-`PlayerId`
+refusal, which is exactly what **G14**'s ✅ ("FR-DC-001..022 each traceable to a T-DC-* test") claims
+does not happen. Re-checked here after `section-5.md` v0.4 corrected that table: G14's evidence
+citation is bare "§5.6", not individual test IDs, and §5.6 now accounts for F5/F6/FR-DC-009/FR-DC-011
+explicitly — **G14 is left ✅ unchanged**, since the claim was true of the corrected table; it was the
+table G14 pointed at that was stale, not the checklist row itself. No other gate re-verified in this
+pass.)
+**Last Updated (prior):** August 13, 2026 (v0.3 — L6, adversarial review over the C1/C2 landing: §9.3's
 ERR-030-009 back-prop entry annotated LIVE since T2, so it reads as the historical approval-time
 record it is)
 **Last Updated (prior):** July 24, 2026 (v0.2 — section-file AR PASS-1 (1M) → PASS-2 (2L) → CONVERGENCE; R-01..R-05 signed; APPROVED; prior v0.1 IN REVIEW)
-**Version:** 0.3
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -74,4 +83,5 @@ ERR-030-002/004/006/007 pattern, flow-side). **No #16 change** (read-only — no
 | 0.1 | 2026-07-24 | — | Initial approval checklist (G1..G15, sign-off pending), promoted from design supplement v0.3. Status IN REVIEW. |
 | 0.2 | 2026-07-24 | — | Section-file AR PASS-1 (1M) → PASS-2 (2L) → CONVERGENCE; G1..G15 ✅; R-01..R-05 signed; ERR-030-009 filed (`spec-error-log.md` v1.40, `season-competition-loop` section-2/3 v0.8); Status APPROVED. |
 | 0.3 | 2026-08-13 | — | **L6** (adversarial review over the C1/C2 landing): §9.3's ERR-030-009 entry annotated LIVE since T2 — the "null seam until #44 T2" clause is the frozen approval-time back-prop text, not a claim about today's state. |
+| 0.4 | 2026-08-15 | — | **M25** (#44 adversarial-review round 4, `open-issues.md`): re-checked G14 against `section-5.md` v0.4's corrected test-plan table (that section had mandated a withdrawn fail-loud and lacked rows for F6/FR-DC-009/F2). G14 cites bare "§5.6", which now names all four gaps explicitly — left **✅** unchanged, since the checklist row itself was never wrong, only the table it pointed at. |
 #endregion

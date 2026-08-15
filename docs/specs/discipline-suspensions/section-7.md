@@ -1,7 +1,12 @@
 # Discipline & Suspensions #44 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 24, 2026
-**Last Updated:** August 15, 2026 (v0.5 — ERR-044-003 stage 1, owner decision: the ban-serving deferral
+**Last Updated:** August 15, 2026, later still (v0.6 — L21, the spec half of #44's adversarial-review
+round 4 (`open-issues.md`): §7.1's T1 bullet still read "outer bump coordinated — exact version TBD,
+§4.4" — a placeholder left unresolved since §4.4 itself was corrected to the real `5 → 6` bump at its
+own v0.3 (August 13, 2026, ERR-030-035). Filled in with the landed figure and citation, verified by
+reading `section-4.md` §4.4 directly rather than copied from this file's own stale claim)
+**Last Updated (prior):** August 15, 2026 (v0.5 — ERR-044-003 stage 1, owner decision: the ban-serving deferral
 bullet resolved — the deferral queue was NOT chosen; the chosen answer is the exempt-the-appearance fix
 (now LANDED, FR-DC-011 / `OnClubFixturePlayed`) plus two further staged tiers, both blocked — #42 Youth
 has no `src/` assembly, and generated cover needs the packed `PlayerId` id space widened (#27
@@ -15,7 +20,7 @@ deferral bullet flagged as a now-LIVE owner decision — #30 §2.3 F9 makes a su
 reinstatable in extremis rather than an absolute bar — with the deferral queue recorded as the
 designed alternative)
 **Last Updated (prior):** July 24, 2026 (v0.2 — cross-set AR; prior v0.1 — initial)
-**Version:** 0.5
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -26,7 +31,8 @@ designed alternative)
   (thresholds/serving), `Availability` (`IsAvailable`/`FilterAvailable`), `DisciplineConstants`.
   Inert until wired (nothing calls it — behaviour-preserving by construction).
 - **T1** — `DisciplineSaveCodec` (`DISCIPLINE_SAVE_FORMAT_VERSION` = 1) + composition into #30's
-  season save (outer bump coordinated — exact version TBD, §4.4). Fail-loud gates (F3).
+  season save (outer `SEASON_SAVE_FORMAT_VERSION` bump **5 → 6**, landed at ERR-030-035, §4.4).
+  Fail-loud gates (F3).
 - **T2** — **LANDED August 13, 2026 (roadmap C1/C2), except the migrate/drop hygiene below.** the live
   wiring: the tap-fed `CardLedgerFold` around engine-resolved fixtures (the
   #37-class read); the **ERR-030-009 filter** at the resolve→configure seam; `OnClubFixturePlayed`
@@ -106,4 +112,5 @@ designed alternative)
 | 0.3 | 2026-08-13 | — | **ERR-044-003** (C1/C2 landing back-prop): the deferral bullet corrected — §2.3's F5 fail-loud it was written against no longer exists (withdrawn in favour of #30 §2.3 F9's back-fill), so the squad-shortfall question is no longer hypothetical: a suspended player is reinstatable in extremis today, and the deferral queue is recorded as the alternative if the owner prefers refusing the fixture instead. |
 | 0.4 | 2026-08-13 | — | **M11 + L6** (adversarial review over the C1/C2 landing): §7.1's T2 bullet marked LANDED, with the migrate/drop hygiene split out as the one T2 item that did NOT land; new §7.2 bullet records FR-DC-013's re-key/drop delivery has zero production call site today and the id-reuse hazard a #28 boundary regen would hit; §7.3's #30 seam-contract bullet corrected from "null seam" (stale since T2) to LIVE. |
 | 0.5 | 2026-08-15 | — | **ERR-044-003 stage 1**, owner decision: the ban-serving-under-squad-shortfall bullet resolved from "now a live decision" to RESOLVED — the deferral queue was NOT chosen; the chosen answer is a three-tier staging, of which tier 1 (exempt the extremis appearance from serving, FR-DC-011) is LANDED, and tiers 2 (youth call-ups) and 3 (generated cover) are recorded unbuilt with their blockers (#42 has no `src/` assembly; the packed `PlayerId` id space needs widening, #27 FR-SQ-010 / ERR-027-004). |
+| 0.6 | 2026-08-15 | — | **L21** (#44 adversarial-review round 4, `open-issues.md`): §7.1's T1 bullet filled in the "exact version TBD" placeholder with the actual landed bump (`SEASON_SAVE_FORMAT_VERSION` 5 → 6, ERR-030-035) — `section-4.md` §4.4 has carried this figure since its own v0.3 (August 13, 2026), so the placeholder had been stale for two days. |
 #endregion

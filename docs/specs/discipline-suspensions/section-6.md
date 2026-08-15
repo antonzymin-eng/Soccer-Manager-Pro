@@ -1,8 +1,13 @@
 # Discipline & Suspensions #44 — Section 6: Performance
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.1 — initial)
-**Version:** 0.1
+**Last Updated:** August 15, 2026 (v0.2 — L21, the spec half of #44's adversarial-review round 4
+(`open-issues.md`): §6.3 claimed "three ints per carded player"; `DisciplineEntry` (verified against
+`src/discipline/DisciplineEntry.cs`) and Appendix B's byte layout both carry **four** —
+`PlayerId`, `CompetitionId`, `Yellows`, `BanMatchesRemaining` — a count stale since this section was
+first authored, since `CompetitionId` was part of the entry from v0.1 of §2 onward)
+**Last Updated (prior):** July 24, 2026 (v0.1 — initial)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -26,7 +31,8 @@ fixture, a boundary sweep per season).
 ## 6.3 Save cost
 
 O(entries) integer serialization, once per save/load — the smallest sub-blob in the family
-(three ints per carded player). Empty at genesis.
+(four ints per carded player: `PlayerId`, `CompetitionId`, `Yellows`, `BanMatchesRemaining` —
+Appendix B). Empty at genesis.
 
 ## 6.4 Budget
 
@@ -37,4 +43,5 @@ filter's value copy. Not a per-tick budget concern.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial §6 (cadence, per-operation cost, save cost, budget), promoted from design supplement v0.3. Status IN REVIEW. |
+| 0.2 | 2026-08-15 | — | **L21** (#44 adversarial-review round 4, `open-issues.md`): §6.3's "three ints per carded player" corrected to **four** (`PlayerId`, `CompetitionId`, `Yellows`, `BanMatchesRemaining`), verified by direct count against `src/discipline/DisciplineEntry.cs`'s four `public readonly int` fields and Appendix B's four `per entry:` rows — both `grep`-counted rather than inferred. |
 #endregion

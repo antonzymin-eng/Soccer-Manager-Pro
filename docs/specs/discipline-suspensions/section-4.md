@@ -1,7 +1,16 @@
 # Discipline & Suspensions #44 — Section 4: Architecture
 
 **Created:** July 24, 2026
-**Last Updated:** August 15, 2026 (v0.6 — ERR-044-003 stage 1, owner decision: §4.5's composition-root
+**Last Updated:** August 15, 2026, later still (v0.7 — L20, the spec half of #44's adversarial-review
+round 4 (`open-issues.md`): §4.1 named only 2 of the 4 references `src/discipline/discipline.asmdef`
+actually declares — `TacticalDirector.EventSystem` and `TacticalDirector.PlayerDatabase`, omitting
+`TacticalDirector.DeterministicSim` (`CanonicalSerializer`/`SaveBlobFramingHelpers` in
+`DisciplineSaveCodec.cs`) and `TacticalDirector.ProjectConstants` (`GameplayConfigHolder`'s `[GT]`
+loader in `DisciplineConstants.cs`), both verified present in the asmdef file and in the citing
+source files directly. All four now named, with the `DeterministicSim` reference explicitly
+distinguished from #16's RNG service, which #44 does not consume (FR-DC-019); the reference diagram
+extended to show all four)
+**Last Updated (prior):** August 15, 2026 (v0.6 — ERR-044-003 stage 1, owner decision: §4.5's composition-root
 contract for calling `OnClubFixturePlayed` amended to require passing the club's fielded eleven, so
 the call can exempt a player who appeared through the extremis back-fill from serving that fixture's
 ban)
@@ -17,7 +26,7 @@ and its file layout have existed since T0/T1, not just been proposed)
 gains the magic-before-version MUST and cites the frame v5 → 6 bump; §4.5's root contract re-scoped
 to both resolution paths)
 **Last Updated (prior):** July 24, 2026 (v0.2 — cross-set AR pass 3; prior v0.1 initial)
-**Version:** 0.6
+**Version:** 0.7
 **Status:** APPROVED
 
 ---
@@ -25,16 +34,21 @@ to both resolution paths)
 ## 4.1 Assembly & reference direction
 
 **`TacticalDirector.Discipline`** (`src/discipline/`) — LANDED at T0/T1 (July 24 – August 13, 2026);
-the sentence below describes the reference direction as designed and as built. References
-**`#17 EventSystem`** (the `CardIssuedEvent`/`SubstitutionEvent` value types the tap yields) and
-**`#27 PlayerDatabase`** (`PlayerId`/`Squad`, read-only — `FilterAvailable` returns a value
-copy). It references **neither #30 nor #43 nor #38 nor the match engine nor #16's RNG service**
-— the composition root wires the tap around engine-resolved fixtures, threads the lineup mapping
-in, applies the filter at the ERR-030-009 seam, and reports played fixtures/roster events.
+the sentence below describes the reference direction as designed and as built. **`discipline.asmdef`
+declares four references**, all verified against the file directly (M25's sibling finding, L20):
+**`#17 EventSystem`** (the `CardIssuedEvent`/`SubstitutionEvent` value types the tap yields);
+**`#27 PlayerDatabase`** (`PlayerId`/`Squad`, read-only — `FilterAvailable` returns a value copy);
+**`#16 DeterministicSim`** (`CanonicalSerializer`/`SaveBlobFramingHelpers` — `DisciplineSaveCodec.cs`'s
+byte-level encode/decode, Deterministic Simulation #16 §3.2.4.1; **not** the RNG service, which #44
+does not consume — see below); and **`ProjectConstants`** (`GameplayConfigHolder`'s `[GT]` loader —
+`DisciplineConstants.cs`'s `Config.GetInt(...)` calls, `src/CLAUDE.md`'s "`[GT]` loading mechanism").
+It references **neither #30 nor #43 nor #38 nor the match engine, and consumes no #16 RNG stream/tag/
+ordinal** — the composition root wires the tap around engine-resolved fixtures, threads the lineup
+mapping in, applies the filter at the ERR-030-009 seam, and reports played fixtures/roster events.
 
 ```
-compositionRoot (season loop) ──► #44 Discipline ──► { #17 (event types), #27 (read-only) }
-        │                                ▲
+compositionRoot (season loop) ──► #44 Discipline ──► { #17 (event types), #27 (read-only),
+        │                                ▲              #16 (serializer only), ProjectConstants ([GT]) }
         └─ taps the fixture's events /   └── #38 (screens), #43 (partitions), #46 (news)
            threads lineup / applies          — deferred consumers, no interface built (FR-LW-031)
            the filter / reports fixtures
@@ -111,4 +125,5 @@ specified the block version-first with no magic, which this section and Appendix
 | 0.4 | 2026-08-13 | — | **L6** (adversarial review over the C1/C2 landing): §4.1's "at the T-phase" and §4.2's "proposed, at T-phase" headers corrected to say the assembly and its layout are landed, pointing at `file-manifest.md` as the authoritative inventory. |
 | 0.5 | 2026-08-13 | — | **L12(b)**, a third adversarial-review pass: §4.2's file table gains the three files it omitted — `DisciplineEntry.cs` (the tally row type), `IDisciplineTickLedgerTap.cs` (the tap interface `CardLedgerFold.ObserveTick` consumes), `AssemblyInfo.cs` — bringing it to all 9 files `src/discipline/` carries; the `DisciplineRules.cs` and `Availability.cs` rows widened from the two methods each was first written against to the full landed API (`ApplyCard`/`RollToNextSeason`/`MigratePlayerId`/`DropPlayer`; `MarkSuspended`). |
 | 0.6 | 2026-08-15 | — | **ERR-044-003 stage 1**, owner decision: §4.5's composition-root contract corrected — the `OnClubFixturePlayed` call MUST pass the club's fielded eleven, not just its id, so a played fixture the banned player appeared in (via #30 §2.3 F9's extremis back-fill) does not serve his ban. |
+| 0.7 | 2026-08-15 | — | **L20** (#44 adversarial-review round 4, `open-issues.md`): §4.1 named 2 of `discipline.asmdef`'s 4 declared references. Added `TacticalDirector.DeterministicSim` (`CanonicalSerializer`/`SaveBlobFramingHelpers`, consumed by `DisciplineSaveCodec.cs`) and `TacticalDirector.ProjectConstants` (`GameplayConfigHolder`, consumed by `DisciplineConstants.cs`), both verified directly against the asmdef and the citing `.cs` files; clarified that the `DeterministicSim` reference is the byte-level serializer, not #16's RNG service (#44 registers none, FR-DC-019). Reference diagram updated to show all four. |
 #endregion

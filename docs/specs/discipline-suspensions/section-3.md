@@ -1,7 +1,15 @@
 # Discipline & Suspensions #44 — Section 3: Core Algorithms
 
 **Created:** July 24, 2026
-**Last Updated:** August 15, 2026 (v0.9 — ERR-044-003 stage 1, owner decision: §3.3's `OnClubFixturePlayed`
+**Last Updated:** August 15, 2026, later still (v0.10 — M27, the spec half of #44's adversarial-review
+round 4 (`open-issues.md`): §3.1's normative fold pseudocode showed each tap record calling `AddYellow`/
+`AddBan` directly, with no buffer and no `Commit` — an implementer following it verbatim would reproduce
+the pre-M13 half-fixture defect (`CardLedgerFold.cs` v1.2) that lets a bad `[GT]` leave cards `0..k-1`
+applied and the rest silently lost. Rewritten to show `ObserveTick` only ever buffering
+`(PlayerId, CardKind)` pairs and a separate `Commit(rules)` that validates every bound `[GT]` up front
+(F6) and then applies the whole buffered list atomically, exactly matching `CardLedgerFold`'s real
+`ObserveTick`/`Commit`/`CommitWithExplicitConfig` shape; section header retitled to cite FR-DC-010)
+**Last Updated (prior):** August 15, 2026 (v0.9 — ERR-044-003 stage 1, owner decision: §3.3's `OnClubFixturePlayed`
 pseudocode now takes `fieldedPlayerIds` and skips decrementing any player who appears in it, with a new
 note explaining why — a banned player fielded through #30 §2.3 F9's extremis back-fill was previously
 serving his ban for free; the ordering paragraph and FR-DC-011 citation updated to match)
@@ -24,33 +32,58 @@ the prior text only implied by describing separate fixtures)
 ordering paragraph re-scoped to both resolution paths, and the `FilterAvailable` pseudocode comment
 points its viability rule at #30 §2.3 F9 instead of a withdrawn F5)
 **Last Updated (prior):** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.9
+**Version:** 0.10
 **Status:** APPROVED
 
 ---
 
-## 3.1 The occupancy fold (FR-DC-002/004/005/006)
+## 3.1 The occupancy fold (FR-DC-002/004/005/006/010)
+
+**Buffer, then commit once, atomically, at fixture resolution** (FR-DC-010: "the fold MUST complete
+at fixture resolution"). Writing each record straight through to `DisciplineRules` as it arrives
+would put half a fixture's cards into persisted state at any moment a save could be taken
+mid-fixture, and would let a bad `[GT]` (F6) throw with cards `0..k-1` already applied and card `k`
+onward silently discarded by the caller — the shape `CardLedgerFold.cs`'s own version history (v1.2,
+M13) records finding and fixing in code, which an implementer following an earlier, buffer-free
+draft of this section's pseudocode verbatim would have reproduced in a fresh implementation.
+`ObserveTick` only ever buffers; nothing reaches `DisciplineRules` until `Commit` runs, and `Commit`
+validates every `[GT]` it could throw on **before** applying the first buffered card, so a refusal
+leaves the fold's buffer untouched and `DisciplineRules` unmodified — never applied-then-discarded.
 
 ```
 CardLedgerFold(lineup /* slot -> PlayerId, incl. bench identities */):
     occupancy := lineup                                    # seeded by the root (F1 on any gap)
+    pending := []                                           # buffered (PlayerId, CardKind) pairs
+    committed := false                                       # Commit runs exactly once (FR-DC-010)
 
-    OnTapRecord(record):                                   # per tick, canonical publish order
-        switch record.ordinal:
-            0x08 SubstitutionEvent:
-                occupancy.ApplySub(record.Outgoing, record.Incoming)   # occupant changes at this tick
-            0x06 CardIssuedEvent:
-                pid := occupancy.OccupantAt(record.Recipient)          # F1 if unmapped
-                switch record.CardKind:                                # F4 outside {0,1,2}
-                    0: AddYellow(pid)                                  # first yellow (F6 inside, §3.2)
-                    2: ban := RequireBanLength(SECOND_YELLOW_BAN_MATCHES)   # F6 — validated BEFORE
-                       AddYellow(pid); AddBan(pid, ban)                     # AddYellow, so a refused
-                                                                             # ban never leaves the
-                                                                             # yellow committed alone
-                                                                             # (ONE event — KD-5)
-                    1: AddBan(pid, RequireBanLength(STRAIGHT_RED_BAN_MATCHES))   # F6 — straight red,
-                                                                                   # no yellow
-            else: ignore                                               # FR-DC-004 (unknown ordinals)
+    ObserveTick(records):                                   # per tick, canonical publish order
+        REQUIRE not committed
+        for each record in records:
+            switch record.ordinal:
+                0x08 SubstitutionEvent:
+                    occupancy.ApplySub(record.Outgoing, record.Incoming)  # occupant changes at this tick
+                0x06 CardIssuedEvent:
+                    pid := occupancy.OccupantAt(record.Recipient)          # F1 if unmapped
+                    RequireKnownCardKind(record.CardKind)                  # F4 outside {0,1,2}
+                    pending.Add((pid, record.CardKind))                    # BUFFERED — not applied yet
+                else: ignore                                               # FR-DC-004 (unknown ordinals)
+
+    Commit(rules):                                          # called ONCE, at fixture resolution
+        REQUIRE not committed
+        RequireCommittableConfig()   # F6 — validates ALL FOUR bound [GT]s up front, before any
+                                      # buffered card is applied, so a bad config refuses the WHOLE
+                                      # fixture atomically and never half of it (M13)
+        for each (pid, kind) in pending, in buffered (= publish) order:
+            switch kind:
+                0: AddYellow(pid)                                  # first yellow (F6 inside, §3.2)
+                2: ban := RequireBanLength(SECOND_YELLOW_BAN_MATCHES)   # already validated by
+                   AddYellow(pid); AddBan(pid, ban)                     # RequireCommittableConfig —
+                                                                         # re-derived here only to name
+                                                                         # the value applied (ONE event
+                                                                         # — KD-5)
+                1: AddBan(pid, RequireBanLength(STRAIGHT_RED_BAN_MATCHES))   # straight red, no yellow
+        committed := true
+        return pending.Count
 ```
 
 The engine's promoted second yellow arrives as a **single kind-2 event** (verified —
@@ -170,4 +203,5 @@ preserve this order.
 | 0.7 | 2026-08-13 | — | **L13**, a third adversarial-review pass: §3.2's `AddYellow` pseudocode gains `RequireYellowThreshold(YELLOW_ACCUMULATION_THRESHOLD)` before the tally read and `RequireBanLength(ACCUM_BAN_MATCHES)` around the accumulation ban — the two `[GT]` fail-loud guards `DisciplineRules.AddYellow`/`ApplyCard` actually enforce (§2.3 **F6**), previously present in code and unit tests but nowhere in the normative text; an implementer following §3.2 verbatim would have shipped a config that silently bans on the first yellow (the #29/#41 AR pass 9 F8 lesson, recurring here). |
 | 0.8 | 2026-08-13 | — | **M20**, extending L13's fix rather than a new id: §3.1's occupancy-fold pseudocode still read `2: AddYellow(pid); AddBan(pid, SECOND_YELLOW_BAN_MATCHES)` and `1: AddBan(pid, STRAIGHT_RED_BAN_MATCHES)` — L13 patched §3.2's `AddYellow` with the F6 guards but stopped one section short of §3.1, which an implementer following verbatim would have reproduced M4 (the yellow committed while the card is refused) in APPROVED text. Both branches now show `RequireBanLength(...)` and the kind-2 branch validates BEFORE `AddYellow` runs, matching `DisciplineRules.ApplySecondYellow`/`ApplyStraightRed` exactly. |
 | 0.9 | 2026-08-15 | — | **ERR-044-003 stage 1**, owner decision: §3.3's `OnClubFixturePlayed(clubId)` pseudocode becomes `OnClubFixturePlayed(clubId, fieldedPlayerIds)` — a played fixture the banned player himself appeared in (reachable only through #30 §2.3 F9's depleted-squad back-fill) no longer decrements his ban, with a new comment block explaining why the exemption exists, that it changes nothing outside the extremis tier, and its granularity relative to the FR-DC-012 competition key. Ordering paragraph and FR-DC-011 cross-reference updated to match. |
+| 0.10 | 2026-08-15 | — | **M27** (#44 adversarial-review round 4, `open-issues.md`): §3.1's normative fold pseudocode called `AddYellow`/`AddBan` straight from `OnTapRecord`, with no buffer and no `Commit` — verified against `src/discipline/CardLedgerFold.cs`, whose real shape is `ObserveTick` (buffers a `(PlayerId, CardKind)` pair per card, applying nothing) and a separate `Commit(rules)` (validates all four bound `[GT]`s via `RequireCommittableConfig` before the loop, then applies the whole buffered list, all-or-nothing — the M13 fix, v1.2). Rewritten to match: `ObserveTick`/`Commit` as two named steps, a `pending` list, and the F6 guard called once before any buffered card is applied. §0.7/§0.8's F6/kind-2-ordering fixes are preserved verbatim inside the new `Commit` body — this is a restructuring around them, not a second change to the guard logic. |
 #endregion
