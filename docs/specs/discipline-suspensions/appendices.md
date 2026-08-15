@@ -1,7 +1,10 @@
 # Discipline & Suspensions #44 — Appendices
 
 **Created:** July 24, 2026
-**Last Updated:** August 13, 2026, later still (v0.5 — L17, a fifth adversarial-review pass over the
+**Last Updated:** August 15, 2026 (v0.6 — ERR-044-003 stage 1, owner decision: Appendix C's worked
+example calls `OnClubFixturePlayed(7, fieldedPlayerIds)` rather than the club id alone, and notes
+that neither example player is in the fielded eleven, so the extremis exemption does not apply here)
+**Last Updated (prior):** August 13, 2026, later still (v0.5 — L17, a fifth adversarial-review pass over the
 #44 C1/C2 landing: `CARD_KIND_YELLOW`/`RED`/`SECOND_YELLOW` were `[FIXED]` in the code but are #17
 `CardIssuedEvent.CardKind` domain ordinals #44 consumes read-only — retagged `[CROSS]`, renamed
 `CardKindYellow`/`CardKindRed`/`CardKindSecondYellow`, and Appendix A gains one row per constant
@@ -15,7 +18,7 @@ the magic-before-version row + the MUST rule and Appendix A the `DISCIPLINE_SAVE
 Appendix C re-worked onto real engine ids after its "slot 19" worked example was verified
 unimplementable, with the hedge deleted)
 **Last Updated (prior):** July 24, 2026 (v0.2 — cross-set AR pass 3; prior v0.1 initial)
-**Version:** 0.5
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -94,9 +97,11 @@ Tap sequence: tick 4 000 `CardIssuedEvent{Recipient: 7, Kind: 0}` → occupant o
 the *synthetic* id 22 (191) and moves it onto slot 7: occupancy[7] := 191 (slot identity is
 unchanged; only who occupies it moves). Tick 12 000 `CardIssuedEvent{Recipient: 7, Kind: 2}` →
 occupant of slot 7 is now **191** → `Yellows` +1 **and** ban +1 (one event, one yellow, one
-dismissal — KD-5). Fixture N+1 selection: `FilterAvailable` excludes 183 and 191; after N+1 is
-played, `OnClubFixturePlayed(7)` decrements both to 0 (`183 / 25 = 191 / 25 = 7` — the §3.3
-club-derivation rule) — available for N+2. The engine's slot-7 yellow count was reset by the
+dismissal — KD-5). Fixture N+1 selection: `FilterAvailable` excludes 183 and 191, so neither
+appears in club 7's fielded eleven; after N+1 is played, `OnClubFixturePlayed(7, fieldedPlayerIds)`
+decrements both to 0 (`183 / 25 = 191 / 25 = 7` — the §3.3 club-derivation rule; neither id is in
+`fieldedPlayerIds`, so the ERR-044-003 stage 1 exemption does not apply — see that section for the
+case where it would) — available for N+2. The engine's slot-7 yellow count was reset by the
 substitution (v1.33) and **never read** — the tally kept 183's card via occupancy, not the slot.
 All integer; two runs identical; #27 squads byte-untouched.
 
@@ -108,4 +113,5 @@ All integer; two runs identical; #27 squads byte-untouched.
 | 0.3 | 2026-08-13 | — | **ERR-044-001** (C1/C2 landing, §7.1 T2's verification obligation): Appendix B's layout gains the `DISCIPLINE_SAVE_MAGIC` row before the version and the magic-before-version MUST (the ERR-029-005/ERR-041-009 class's fourth instance); Appendix A gains the matching catalogue row; Appendix C's worked example — verified against the live engine and found unimplementable, "slot 19" being an on-pitch index under `SQUAD_SIZE = 22` — re-derived onto the real synthetic bench-id formula (`SQUAD_SIZE + teamId * SUBSTITUTES_PER_TEAM + benchIndex`), with the "(or 19 → 191, absorbed either way)" hedge deleted. |
 | 0.4 | 2026-08-13 | — | **L12(a)**, a third adversarial-review pass over the C1/C2 landing: Appendix A's "the 18-slot `ConfigureSquads` minimum \| `[CROSS]` \| match engine \| the F5 filter floor" row deleted — F5 was withdrawn at ERR-044-003 (§2.3 F5, `section-2.md` v0.4) and no such constant exists in `DisciplineConstants.cs`; #44 implements no viability gate of any kind since that withdrawal, so nothing in the catalogue names one. |
 | 0.5 | 2026-08-13 | — | **L17**, a fifth adversarial-review pass over the C1/C2 landing: `CARD_KIND_YELLOW`/`RED`/`SECOND_YELLOW` are #17 `CardIssuedEvent.CardKind` domain ordinals (Appendix A row 0x06) #44 consumes read-only and never sets independently — the root `CLAUDE.md` tag table makes that `[CROSS]`, not `[FIXED]`, and `src/CLAUDE.md` §3.2.3 makes `[CROSS]` PascalCase, not `ALL_CAPS`. Retagged and renamed in code (`CardKindYellow`/`CardKindRed`/`CardKindSecondYellow`); Appendix A's single combined `CardIssuedEvent 0x06 / SubstitutionEvent 0x08` row (about the EVENT ordinals, a different fact) is unchanged, and gains three sibling rows — one per card-kind constant, each citing #17 Appendix A row 0x06 by value. |
+| 0.6 | 2026-08-15 | — | **ERR-044-003 stage 1**, owner decision: Appendix C's worked example updated for the amended `OnClubFixturePlayed(clubId, fieldedPlayerIds)` signature, noting that its two example players are already filtered out and so are not in the fielded eleven (the exemption does not fire in this worked case). |
 #endregion

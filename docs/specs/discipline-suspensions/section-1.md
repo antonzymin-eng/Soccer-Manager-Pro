@@ -1,8 +1,11 @@
 # Discipline & Suspensions #44 — Section 1: Introduction
 
 **Created:** July 24, 2026
-**Last Updated:** July 24, 2026 (v0.1 — initial)
-**Version:** 0.1
+**Last Updated:** August 15, 2026 (v0.2 — ERR-044-003 stage 1, owner decision: KD-3 corrected — a ban
+decrements per played club fixture the player did NOT appear in, not per played fixture full stop;
+matters only in the extremis tier, #30 §2.3 F9's depleted-squad back-fill)
+**Last Updated (prior):** July 24, 2026 (v0.1 — initial)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -77,8 +80,11 @@ Reference DAG: `compositionRoot → {#30, #44}`, `#44 → {#17 (event types), #2
   `Incoming`-id semantics are absorbed by the fold either way and re-verified at T-phase.
 - **KD-3 (ordering — no off-by-one).** Fold at fixture resolution; the availability filter runs
   at the **next** selection (ERR-030-009), so a card in fixture N bans for fixture N+1. A ban
-  decrements once per **played fixture of the player's club** — engine-resolved or quick-sim
-  alike (the ban's clock is the club's calendar, not the resolution path).
+  decrements once per **played fixture of the player's club that he did not appear in** —
+  engine-resolved or quick-sim alike (the ban's clock is the club's calendar, not the resolution
+  path). *(Amended ERR-044-003 stage 1, August 15, 2026: the exemption matters only in the
+  extremis tier — #30 §2.3 F9's depleted-squad back-fill can field a suspended player, and without
+  it that appearance also served his ban for free.)*
 - **KD-4 (availability is a VIEW).** `IsAvailable` is a pure predicate over the tally;
   `FilterAvailable(in Squad) → Squad` returns a **reduced value copy** for `ConfigureSquads`;
   #27's canonical records are never written (byte-identity-locked, the #32 T-SC-VIEW-001 class).
@@ -108,4 +114,5 @@ throughout; no float.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-24 | — | Initial §1 (scope, live-at-minimal posture, out-of-scope seams, dependencies, KD-1..KD-8, determinism posture), promoted from design supplement v0.3. Status IN REVIEW. |
+| 0.2 | 2026-08-15 | — | **ERR-044-003 stage 1**, owner decision: KD-3 corrected to state the ban decrement excludes a fixture the player appeared in (the extremis back-fill case), matching the amended FR-DC-011 / `OnClubFixturePlayed`. |
 #endregion
