@@ -2,7 +2,7 @@
 // Created:  2026-08-15
 // Modified: 2026-08-15
 // Author:   —
-// Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4b),
+// Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4b, §12),
 //           Code Standards #20
 // Purpose:  The Unity host for a live match (P4b). Owns a MatchSession, reads frames each Update,
 //           and binds them onto scene objects. Every render/camera/click decision is already made in
@@ -21,10 +21,32 @@ namespace TacticalDirector.MatchClientUnity
     /// Binds a live <see cref="MatchSession"/> onto scene objects. Contains no game decision — every
     /// value it assigns was already computed in <c>match-client-core</c> (§12 rule 1: the CI gate
     /// cannot compile this type, so nothing that needs testing may live here).
+    ///
+    /// <para><b>The prefab contract, which this file is the only statement of.</b> Every prefab slot
+    /// below MUST be authored so that:</para>
+    /// <list type="number">
+    /// <item><description><b>the ROOT transform is neutral</b> — identity local rotation, unit local
+    /// scale. This code assigns root rotation and scale outright, so a tilt or a size baked onto the
+    /// root is either destroyed or silently multiplied into every metre figure. Bake a fixed tilt (a
+    /// Quad lying flat, say) and any visual thickness onto a CHILD mesh, which nothing here
+    /// touches;</description></item>
+    /// <item><description><b>the mesh is unit-sized</b> — unit radius for anything round (marker,
+    /// ring, ball, shadow, circle, spot), unit length along local +Z with unit cross-section for a
+    /// marking line. The scale this code assigns is then the metre figure ITSELF, with no conversion
+    /// — which is the whole point: a per-primitive "what radius is a Unity Cylinder by default"
+    /// constant is a class of bug rather than a number.</description></item>
+    /// </list>
+    ///
+    /// <para><b>Not supported: a world-space <c>LineRenderer</c>.</b> Its positions are absolute, so
+    /// the transform this binding positions and scales is ignored entirely and the shape renders
+    /// wherever it was authored, forever — a total no-op that looks like a placement bug. Author
+    /// markings as meshes, or as a <c>LineRenderer</c> with <c>useWorldSpace = false</c> and
+    /// unit-radius/unit-length local points. Rejected at instantiation rather than left as prose,
+    /// since nothing else here can see it.</para>
     /// </summary>
     public sealed class MatchClientBehaviour : MonoBehaviour
     {
-        [Header("Prefabs — root transform only; bake any fixed tilt onto a child mesh")]
+        [Header("Prefabs — neutral root, unit-sized mesh (see the type doc for the full contract)")]
         [SerializeField] private GameObject _agentMarkerPrefab;
         [SerializeField] private GameObject _possessionRingPrefab;
         [SerializeField] private GameObject _ballPrefab;
@@ -42,9 +64,6 @@ namespace TacticalDirector.MatchClientUnity
         [Header("Demo boot (until a real squad source is wired)")]
         [SerializeField] private ulong _demoSeed = 1;
 
-        // Unity primitive defaults: a Cylinder/Sphere primitive has radius 0.5 m before scaling.
-        private const float PrimitiveDefaultRadiusM = 0.5f;
-
         private MatchSession _session;
         private MatchRoster _roster;
 
@@ -55,6 +74,8 @@ namespace TacticalDirector.MatchClientUnity
 
         private Vector2[] _scratchAgentPositions;
         private AgentRenderModel[] _agentRenderModels;
+
+        private bool _wiringRejected;
 
         private bool _hasFrame;
         private LiveMatchFrame _previousFrame;
@@ -70,6 +91,9 @@ namespace TacticalDirector.MatchClientUnity
             _scratchAgentPositions = new Vector2[_roster.AgentCount];
             _agentRenderModels = new AgentRenderModel[_roster.AgentCount];
 
+            // Everything the scene must satisfy is checked as it is instantiated, in
+            // InstantiatePrefab below — the one place a further wiring check belongs — and a failure
+            // rejects the whole client here, before Start() puts the match in motion.
             BuildMarkings();
             BuildAgentObjects();
             BuildBallObjects();
@@ -77,11 +101,23 @@ namespace TacticalDirector.MatchClientUnity
 
         private void Start()
         {
+            // Disabling a component during Awake defers Start rather than cancelling it, so the
+            // rejection has to be re-checked here: a rejected client must never start a match.
+            if (_wiringRejected)
+            {
+                return;
+            }
+
             _session.Start();
         }
 
         private void Update()
         {
+            if (_wiringRejected)
+            {
+                return;
+            }
+
             AdvanceFrame();
 
             if (!_hasFrame)
@@ -145,7 +181,10 @@ namespace TacticalDirector.MatchClientUnity
             Transform parent = new GameObject("Markings").transform;
             parent.SetParent(transform, false);
 
-            foreach (PitchMarking marking in PitchMarkings.Build())
+            // BuildDrawables, not Build: match-client-core has already decomposed each rectangle into
+            // the four lines that close it, so every entry here is one primitive and this file
+            // synthesises no corner of its own (§12 rule 1).
+            foreach (PitchMarking marking in PitchMarkings.BuildDrawables())
             {
                 switch (marking.Kind)
                 {
@@ -154,24 +193,19 @@ namespace TacticalDirector.MatchClientUnity
                         PlaceLine(parent, marking.A, marking.B);
                         break;
 
-                    case PitchMarkingKind.Rectangle:
-                        PlaceLine(parent, marking.A, new Vector2(marking.B.x, marking.A.y));
-                        PlaceLine(parent, new Vector2(marking.B.x, marking.A.y), marking.B);
-                        PlaceLine(parent, marking.B, new Vector2(marking.A.x, marking.B.y));
-                        PlaceLine(parent, new Vector2(marking.A.x, marking.B.y), marking.A);
-                        break;
-
                     case PitchMarkingKind.Circle:
-                        PlaceRadial(parent, _markingCirclePrefab, marking.A, marking.Radius);
+                        PlaceRadial(parent, _markingCirclePrefab, nameof(_markingCirclePrefab), marking.A, marking.Radius);
                         break;
 
                     case PitchMarkingKind.Spot:
-                        PlaceRadial(parent, _markingSpotPrefab, marking.A, marking.Radius);
+                        PlaceRadial(parent, _markingSpotPrefab, nameof(_markingSpotPrefab), marking.A, marking.Radius);
                         break;
 
                     default:
                         throw new ArgumentOutOfRangeException(
-                            nameof(marking.Kind), marking.Kind, "unhandled PitchMarkingKind");
+                            nameof(marking.Kind), marking.Kind,
+                            "unhandled PitchMarkingKind — note BuildDrawables emits no Rectangle, so " +
+                            "one arriving here means the decomposition regressed");
                 }
             }
         }
@@ -180,20 +214,25 @@ namespace TacticalDirector.MatchClientUnity
         {
             Vector3 from = PitchViewProjection.ToWorld(fromXY, 0f);
             Vector3 to = PitchViewProjection.ToWorld(toXY, 0f);
+            Vector3 along = to - from;
 
-            GameObject go = Instantiate(_markingLinePrefab, parent);
+            GameObject go = InstantiatePrefab(_markingLinePrefab, parent, nameof(_markingLinePrefab));
             go.transform.position = (from + to) * 0.5f;
-            go.transform.rotation = Quaternion.LookRotation(to - from, Vector3.up);
-            go.transform.localScale = new Vector3(
-                go.transform.localScale.x, go.transform.localScale.y, (to - from).magnitude);
+            go.transform.rotation = Quaternion.LookRotation(along, Vector3.up);
+
+            // Unit length along local +Z and unit cross-section, so both figures are metres as they
+            // stand. Y stays at 1: a line painted on the turf has no thickness of its own.
+            Vector3 scale = Vector3.one;
+            scale.x = MatchClientConstants.MarkingLineWidthM;
+            scale.z = along.magnitude;
+            go.transform.localScale = scale;
         }
 
-        private void PlaceRadial(Transform parent, GameObject prefab, Vector2 centreXY, float radius)
+        private void PlaceRadial(Transform parent, GameObject prefab, string prefabField, Vector2 centreXY, float radius)
         {
-            GameObject go = Instantiate(prefab, parent);
+            GameObject go = InstantiatePrefab(prefab, parent, prefabField);
             go.transform.position = PitchViewProjection.ToWorld(centreXY, 0f);
-            float s = radius / PrimitiveDefaultRadiusM;
-            go.transform.localScale = new Vector3(s, go.transform.localScale.y, s);
+            go.transform.localScale = GroundScale(radius);
         }
 
         private void BuildAgentObjects()
@@ -203,16 +242,68 @@ namespace TacticalDirector.MatchClientUnity
 
             for (int i = 0; i < _roster.AgentCount; i++)
             {
-                _agentMarkers[i] = Instantiate(_agentMarkerPrefab, transform);
-                _possessionRings[i] = Instantiate(_possessionRingPrefab, transform);
+                _agentMarkers[i] = InstantiatePrefab(_agentMarkerPrefab, transform, nameof(_agentMarkerPrefab));
+                _possessionRings[i] = InstantiatePrefab(_possessionRingPrefab, transform, nameof(_possessionRingPrefab));
                 _possessionRings[i].SetActive(false);
             }
         }
 
         private void BuildBallObjects()
         {
-            _ball = Instantiate(_ballPrefab, transform);
-            _ballShadow = Instantiate(_ballShadowPrefab, transform);
+            _ball = InstantiatePrefab(_ballPrefab, transform, nameof(_ballPrefab));
+            _ballShadow = InstantiatePrefab(_ballShadowPrefab, transform, nameof(_ballShadowPrefab));
+        }
+
+        /// <summary>
+        /// Instantiates one prefab under <paramref name="parent"/> and rejects the client unless the
+        /// instance honours the prefab contract in the type doc. This is the single gate every scene
+        /// object passes through, so it is also where any further wiring check belongs.
+        /// </summary>
+        private GameObject InstantiatePrefab(GameObject prefab, Transform parent, string prefabField)
+        {
+            GameObject instance = Instantiate(prefab, parent);
+            Transform root = instance.transform;
+
+            if (root.localRotation != Quaternion.identity || root.localScale != Vector3.one)
+            {
+                RejectWiring(
+                    prefabField + " must be authored with a NEUTRAL root — identity rotation, unit " +
+                    "scale — and any fixed tilt or thickness baked onto a child mesh; this one has " +
+                    "rotation " + root.localRotation.eulerAngles + " and scale " + root.localScale +
+                    ", which this binding overwrites.");
+            }
+
+            LineRenderer line = instance.GetComponentInChildren<LineRenderer>();
+
+            if (line != null && line.useWorldSpace)
+            {
+                RejectWiring(
+                    prefabField + " draws with a world-space LineRenderer, which ignores the transform " +
+                    "this binding positions and scales it by. Author it as a mesh, or set " +
+                    "useWorldSpace = false with unit-radius / unit-length local points.");
+            }
+
+            return instance;
+        }
+
+        /// <summary>
+        /// Scale for a flat, unit-radius prop lying on the turf: the radius in metres on both ground
+        /// axes, unit height. Under the prefab contract no conversion is involved — which is exactly
+        /// what a shared "default primitive radius" divisor used to hide.
+        /// </summary>
+        private static Vector3 GroundScale(float radiusM)
+        {
+            Vector3 scale = Vector3.one;
+            scale.x = radiusM;
+            scale.z = radiusM;
+            return scale;
+        }
+
+        private void RejectWiring(string reason)
+        {
+            Debug.LogError("MatchClientBehaviour: " + reason + " Disabling the client.", this);
+            _wiringRejected = true;
+            enabled = false;
         }
 
         // ---- per-frame binding ------------------------------------------------------------------
@@ -230,8 +321,7 @@ namespace TacticalDirector.MatchClientUnity
 
                 Transform marker = _agentMarkers[i].transform;
                 marker.position = model.WorldPosition;
-                float s = model.MarkerRadius / PrimitiveDefaultRadiusM;
-                marker.localScale = new Vector3(s, marker.localScale.y, s);
+                marker.localScale = GroundScale(model.MarkerRadius);
 
                 MeshRenderer markerRenderer = _agentMarkers[i].GetComponentInChildren<MeshRenderer>();
                 if (markerRenderer != null)
@@ -244,8 +334,7 @@ namespace TacticalDirector.MatchClientUnity
                 if (model.HasBall)
                 {
                     ring.position = model.WorldPosition;
-                    float ringScale = MatchClientConstants.PossessionRingRadiusM / PrimitiveDefaultRadiusM;
-                    ring.localScale = new Vector3(ringScale, ring.localScale.y, ringScale);
+                    ring.localScale = GroundScale(MatchClientConstants.PossessionRingRadiusM);
                 }
             }
         }
@@ -255,13 +344,11 @@ namespace TacticalDirector.MatchClientUnity
             Vector3 pitchBallPosition = FrameInterpolator.BallAt(_previousFrame, _currentFrame, alpha);
             BallRenderModel model = MatchRenderProjection.ProjectBall(pitchBallPosition);
 
-            float ballScale = model.Radius / PrimitiveDefaultRadiusM;
             _ball.transform.position = model.WorldPosition;
-            _ball.transform.localScale = new Vector3(ballScale, ballScale, ballScale);
+            _ball.transform.localScale = Vector3.one * model.Radius;
 
             _ballShadow.transform.position = model.ShadowPosition;
-            float shadowScale = model.ShadowRadius / PrimitiveDefaultRadiusM;
-            _ballShadow.transform.localScale = new Vector3(shadowScale, _ballShadow.transform.localScale.y, shadowScale);
+            _ballShadow.transform.localScale = GroundScale(model.ShadowRadius);
         }
 
         private void UpdateCamera()
@@ -303,4 +390,21 @@ namespace TacticalDirector.MatchClientUnity
 // |         |            |        | objects — markings, agents, possession ring, ball/shadow,      |
 // |         |            |        | camera pose, ground-click resolution. No decision logic; every |
 // |         |            |        | value read off match-client-core's P4a render model.            |
+// | 1.1     | 2026-08-15 | —      | AR pass H-1/H-2/H-3. H-1: markings come from                    |
+// |         |            |        | PitchMarkings.BuildDrawables(), so the rectangle arm and its    |
+// |         |            |        | four synthesised corners are gone — that geometry now lives     |
+// |         |            |        | where the gate compiles and tests it. H-2: the prefab contract  |
+// |         |            |        | the header asserted is now ENFORCED — every instantiation goes  |
+// |         |            |        | through InstantiatePrefab, which rejects a non-neutral root     |
+// |         |            |        | (a baked root tilt this code would overwrite, a baked scale it  |
+// |         |            |        | would multiply by) and disables the client naming the field;    |
+// |         |            |        | and a marking line's WIDTH is assigned from the new [GT]        |
+// |         |            |        | MarkingLineWidthM instead of inherited from the prefab. H-3:    |
+// |         |            |        | PrimitiveDefaultRadiusM (0.5, an untagged magic constant valid  |
+// |         |            |        | only for Unity's own Sphere/Cylinder) and every division by it  |
+// |         |            |        | are deleted in favour of a unit-radius / unit-length authoring  |
+// |         |            |        | contract, under which the assigned scale IS the metre figure.   |
+// |         |            |        | A world-space LineRenderer — for which transform placement is   |
+// |         |            |        | a silent no-op — is documented as unsupported and rejected at   |
+// |         |            |        | instantiation rather than mishandled.                           |
 #endregion

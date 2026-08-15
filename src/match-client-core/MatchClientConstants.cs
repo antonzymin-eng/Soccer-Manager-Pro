@@ -1,8 +1,8 @@
 // File:     src/match-client-core/MatchClientConstants.cs
 // Created:  2026-07-24
-// Modified: 2026-08-07
+// Modified: 2026-08-15
 // Author:   —
-// Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P0/§5-P3/§5-P4a/§5-P5),
+// Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P0/§5-P3/§5-P4a/§5-P4b/§5-P5),
 //           Code Standards #20 (constant catalogue; no magic numbers)
 // Purpose:  Constant catalogue for the host-free interactive-client core: the master-plan
 //           playback-speed set the UI presents (Pause is a streamer state, not a multiplier), the P3
@@ -210,6 +210,25 @@ namespace TacticalDirector.MatchClientCore
         /// </summary>
         public static readonly float MarkingSpotRadiusM =
             Config.GetFloat("match-client", "MarkingSpotRadiusM", 0.2f);
+
+        /// <summary>
+        /// [GT] Width (m) of a drawn marking line — the boundary, the halfway line, the end-box edges
+        /// and the goal mouths. Config key [match-client] MarkingLineWidthM.
+        ///
+        /// <para>Presentation, not Law 1, like <see cref="MarkingSpotRadiusM"/> above: IFAB caps a
+        /// real line at 12 cm, and at the default framing (a 52 m span,
+        /// 2 × <see cref="CameraViewHalfWidthM"/>, so ~37 px per metre on a 1920-px-wide view) that is
+        /// about 4 px — legible standing still, but a line that thin crawls and drops out as the
+        /// follow camera moves. The drawn line is deliberately wider than the painted one; nothing in
+        /// the simulation reads it.</para>
+        ///
+        /// <para>It exists as a constant at all because the binding assigns it: a marking prefab is
+        /// authored at unit cross-section, so without this the width is whatever the prefab happened
+        /// to be scaled to — a tuning value living in a scene asset, where neither the gate nor the
+        /// config file can see it.</para>
+        /// </summary>
+        public static readonly float MarkingLineWidthM =
+            Config.GetFloat("match-client", "MarkingLineWidthM", 0.2f);
 
         /// <summary>
         /// [GT] Radius (view units, 1 unit = 1 m) of an agent's marker. Config key [match-client]
@@ -423,4 +442,9 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | fail-louds, so a cap below a step used to surface as one speed  |
 // |         |            |        | button throwing mid-match while the others worked — the §5-P0   |
 // |         |            |        | "cap must be >= 10" note was prose with nothing enforcing it.   |
+// | 1.7     | 2026-08-15 | —      | P4b AR pass H-2: + MarkingLineWidthM. The binding set a marking |
+// |         |            |        | line's LENGTH and left its width at whatever localScale.x the   |
+// |         |            |        | prefab happened to carry — a tuning value living in a scene     |
+// |         |            |        | asset, invisible to the gate and unreachable from the config    |
+// |         |            |        | file. Now assigned explicitly from here.                        |
 #endregion
