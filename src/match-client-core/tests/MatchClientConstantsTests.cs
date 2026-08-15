@@ -137,6 +137,13 @@ namespace TacticalDirector.MatchClientCore.Tests
                 MatchClientConstants.CameraTiltDegrees + MatchClientConstants.CameraVerticalFovDegrees * 0.5f,
                 90f, "the camera's lowest ray must still meet the ground");
             Assert.IsTrue(float.IsFinite(MatchClientConstants.CameraLateralOffsetM));
+
+            // M-2: both tint factors are blend fractions, so [0, 1] is the whole legal range, not
+            // just today's shipped values.
+            Assert.GreaterOrEqual(MatchClientConstants.GoalkeeperTintFactor, 0f);
+            Assert.LessOrEqual(MatchClientConstants.GoalkeeperTintFactor, 1f);
+            Assert.GreaterOrEqual(MatchClientConstants.SentOffTintFactor, 0f);
+            Assert.LessOrEqual(MatchClientConstants.SentOffTintFactor, 1f);
         }
 
         [Test]
@@ -199,4 +206,6 @@ namespace TacticalDirector.MatchClientCore.Tests
 // |         |            |        | cross-catalogue pairing check that a playback speed is one the  |
 // |         |            |        | streamer will accept. Bounds are written relative to the cap    |
 // |         |            |        | rather than as literals, so a retune keeps the test meaningful. |
+// | 1.5     | 2026-08-15 | —      | P4b AR pass M-2: the shipped-values check gains the two new    |
+// |         |            |        | tint factors' [0, 1] bound.                                     |
 #endregion

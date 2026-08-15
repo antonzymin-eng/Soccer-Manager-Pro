@@ -1,6 +1,6 @@
 // File:     src/match-client-core/MatchClientConstants.cs
 // Created:  2026-07-24
-// Modified: 2026-08-15
+// Modified: 2026-08-15 (P4b AR pass M-2: + GoalkeeperTintFactor / SentOffTintFactor)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P0/§5-P3/§5-P4a/§5-P4b/§5-P5),
 //           Code Standards #20 (constant catalogue; no magic numbers)
@@ -257,6 +257,31 @@ namespace TacticalDirector.MatchClientCore
         public static readonly float BallMarkerRadiusM =
             Config.GetFloat("match-client", "BallMarkerRadiusM", 0.35f);
 
+        /// <summary>
+        /// [GT] Blend factor (0 = no change, 1 = solid white) lightening a goalkeeper's marker
+        /// towards white. Config key [match-client] GoalkeeperTintFactor.
+        ///
+        /// <para>AR pass M-2 over the P4b binding: <c>AgentRenderModel.IsGoalkeeper</c> was resolved
+        /// upstream but read by nobody. A shade of the agent's own team colour needs no new palette
+        /// entry or prefab slot — <c>UnityEngine.Color</c> is not in the CI shim's surface (see
+        /// <c>AgentRenderModel</c>'s class doc), so the blend itself lives in the binding; this dial
+        /// is just how far it goes.</para>
+        /// </summary>
+        public static readonly float GoalkeeperTintFactor = RequireInRange(
+            Config.GetFloat("match-client", "GoalkeeperTintFactor", 0.35f), 0f, 1f, "GoalkeeperTintFactor");
+
+        /// <summary>
+        /// [GT] Blend factor (0 = no change, 1 = solid black) darkening a sent-off player's marker
+        /// towards black. Config key [match-client] SentOffTintFactor.
+        ///
+        /// <para>Same AR pass M-2 as <see cref="GoalkeeperTintFactor"/> above:
+        /// <c>AgentRenderModel.IsSentOff</c> documents that a dismissed player keeps a position on
+        /// the pitch and must be MARKED, not hidden or drawn identically to a player still in the
+        /// game — a darkened marker is that mark.</para>
+        /// </summary>
+        public static readonly float SentOffTintFactor = RequireInRange(
+            Config.GetFloat("match-client", "SentOffTintFactor", 0.55f), 0f, 1f, "SentOffTintFactor");
+
         #endregion
 
         /// <summary>
@@ -447,4 +472,11 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | prefab happened to carry — a tuning value living in a scene     |
 // |         |            |        | asset, invisible to the gate and unreachable from the config    |
 // |         |            |        | file. Now assigned explicitly from here.                        |
+// | 1.8     | 2026-08-15 | —      | P4b AR pass M-2: + GoalkeeperTintFactor / SentOffTintFactor.    |
+// |         |            |        | AgentRenderModel.IsGoalkeeper/IsSentOff were resolved upstream  |
+// |         |            |        | but read by nobody; both are now bound as a lighten/darken of   |
+// |         |            |        | the agent's own team colour, so no new palette entry or prefab  |
+// |         |            |        | slot is needed (Color is not in the CI shim's surface, so the   |
+// |         |            |        | blend itself lives in MatchClientBehaviour — these are only the |
+// |         |            |        | [GT] amounts).                                                  |
 #endregion

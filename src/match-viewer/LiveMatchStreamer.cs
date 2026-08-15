@@ -5,6 +5,9 @@
 //           held in a single RestartBanner after AR-1 M-6)
 // Modified: 2026-08-03 (P4a: CaptureFrame samples the live goalkeeper flag into LiveAgentCue)
 // Modified: 2026-08-04 (P4a AR pass: shirt numbers come from the shared RosterShirtNumbers rule)
+// Modified: 2026-08-15 (P4b AR pass M-5: + EffectiveTicksPerSecond, the pacing loop's own
+//           ticksPerSecond × SpeedMultiplier product, so a consumer's interpolation alpha reads the
+//           streamer's actual pacing rate instead of reimplementing it against the DEFAULT tick rate)
 // Author:   —
 // Spec:     Interactive match view (docs/tracking/interactive-match-view-design.md) +
 //           interactive Unity client (docs/tracking/interactive-unity-client-design.md §4/§5-P0/§6),
@@ -485,6 +488,26 @@ namespace TacticalDirector.MatchViewer
         }
 
         /// <summary>
+        /// Ticks per second the pacing loop is currently targeting — <c>ticksPerSecond ×
+        /// SpeedMultiplier</c>, the exact product <see cref="PacingLoop"/> divides into to schedule
+        /// each tick's target wall-clock time.
+        ///
+        /// <para><b>Why a consumer must read this rather than recompute it.</b> <c>ticksPerSecond</c>
+        /// is a per-instance constructor argument that only DEFAULTS to
+        /// <c>DeterministicSimConstants.PHYSICS_TICK_HZ</c> — a caller may construct this streamer
+        /// with a different value, and a consumer that re-derives the product from the global
+        /// constant instead of asking the streamer would silently diverge from the rate this loop is
+        /// actually pacing at. AR pass M-5 over the interactive Unity client's P4b binding: the
+        /// <c>MatchClientBehaviour</c> render loop's interpolation alpha
+        /// (<c>FrameInterpolator.ComputeAlpha</c>) now reads this property instead of reimplementing
+        /// the product itself.</para>
+        /// </summary>
+        public float EffectiveTicksPerSecond
+        {
+            get { lock (_lock) { return _ticksPerSecond * _speedMultiplier; } }
+        }
+
+        /// <summary>
         /// Sets the playback-speed multiplier. Throws for a non-finite, non-positive, or
         /// out-of-[<see cref="MatchViewerConstants.MinLiveSpeedMultiplier"/>,
         /// <see cref="MatchViewerConstants.MaxLiveSpeedMultiplier"/>] value — fail loud rather than
@@ -613,4 +636,10 @@ namespace TacticalDirector.MatchViewer
 // |         |            |        | belongs to the slot, and a substitution hands it to whoever    |
 // |         |            |        | fills that slot. Also records the 2026-08-03 Modified line the |
 // |         |            |        | v1.6 landing left off the header.                              |
+// | 1.8     | 2026-08-15 | —      | P4b AR pass M-5: + EffectiveTicksPerSecond (ticksPerSecond ×   |
+// |         |            |        | SpeedMultiplier under the same lock SpeedMultiplier already    |
+// |         |            |        | uses) — the interactive Unity client's render loop no longer   |
+// |         |            |        | recomputes this product against the DEFAULT tick rate, which   |
+// |         |            |        | would have silently diverged from a streamer constructed with  |
+// |         |            |        | a non-default ticksPerSecond.                                  |
 #endregion

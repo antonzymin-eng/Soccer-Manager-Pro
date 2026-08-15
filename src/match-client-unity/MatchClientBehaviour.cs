@@ -1,6 +1,7 @@
 // File:     src/match-client-unity/MatchClientBehaviour.cs
 // Created:  2026-08-15
-// Modified: 2026-08-15
+// Modified: 2026-08-15 (AR pass round 2 — Medium/Low findings M1-M9, L1-L5; see the VersionHistory
+//           block at the foot of this file for the per-finding detail)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4b, §12),
 //           Code Standards #20
@@ -9,10 +10,12 @@
 //           match-client-core (P4a) — this type assigns transforms and forwards input, nothing more.
 
 using System;
+using System.Globalization;
 
 using UnityEngine;
 
 using TacticalDirector.MatchClientCore;
+using TacticalDirector.MatchEngine;
 using TacticalDirector.MatchViewer;
 
 namespace TacticalDirector.MatchClientUnity
@@ -43,6 +46,14 @@ namespace TacticalDirector.MatchClientUnity
     /// markings as meshes, or as a <c>LineRenderer</c> with <c>useWorldSpace = false</c> and
     /// unit-radius/unit-length local points. Rejected at instantiation rather than left as prose,
     /// since nothing else here can see it.</para>
+    ///
+    /// <para><b>M8 — Active Input Handling.</b> <see cref="HandleClick"/> uses the legacy
+    /// <c>UnityEngine.Input</c> API. Project Settings → Player → Active Input Handling MUST be
+    /// "Input Manager (Old)" or "Both" — under "Input System Package (New)" ONLY, every call in this
+    /// file to <c>Input.GetMouseButtonDown</c>/<c>Input.mousePosition</c> throws every frame. This is
+    /// a project-setup requirement this file cannot enforce or detect; it is recorded here because
+    /// nothing else states it (flagged for the Editor-setup instructions, which this file does not
+    /// own).</para>
     /// </summary>
     public sealed class MatchClientBehaviour : MonoBehaviour
     {
@@ -62,38 +73,74 @@ namespace TacticalDirector.MatchClientUnity
         [SerializeField] private Camera _matchCamera;
 
         [Header("Demo boot (until a real squad source is wired)")]
-        [SerializeField] private ulong _demoSeed = 1;
+        [SerializeField] private string _demoSeedText = "1";
+
+        // The colour property block shares this one cached shader-property id (M4) rather than
+        // looking it up by string every frame for every agent.
+        private static readonly int s_colorPropertyId = Shader.PropertyToID("_Color");
 
         private MatchSession _session;
         private MatchRoster _roster;
 
         private GameObject[] _agentMarkers;
+        private MeshRenderer[] _agentMarkerRenderers;
         private GameObject[] _possessionRings;
         private GameObject _ball;
         private GameObject _ballShadow;
 
+        private MaterialPropertyBlock _scratchPropertyBlock;
         private Vector2[] _scratchAgentPositions;
         private AgentRenderModel[] _agentRenderModels;
 
         private bool _wiringRejected;
 
-        private bool _hasFrame;
-        private LiveMatchFrame _previousFrame;
-        private LiveMatchFrame _currentFrame;
-        private float _currentFrameArrivalTime;
+        // The previous/current frame decision (§12 rule 1: a state machine, so it lives in
+        // match-client-core where the gate compiles and tests it — AR pass M-6).
+        private readonly LiveFrameLatch _frameLatch = new LiveFrameLatch();
         private Vector2 _cameraTarget;
+
+        /// <summary>
+        /// Parses <see cref="_demoSeedText"/> into the <c>ulong</c> <c>MatchSetup.NeutralDemo</c>
+        /// needs. A <c>ulong</c> <c>[SerializeField]</c>'s round-trip through Unity's
+        /// <c>SerializedProperty</c> for values above <c>long.MaxValue</c> is unverified in this
+        /// environment (L5) — a string inspector field sidesteps the question entirely, at the cost
+        /// of a fail-loud parse here instead of the type system doing it for free.
+        /// </summary>
+        private ulong DemoSeed =>
+            ulong.TryParse(_demoSeedText, out ulong seed)
+                ? seed
+                : throw new InvalidOperationException(
+                    "MatchClientBehaviour: _demoSeedText \"" + _demoSeedText + "\" is not a valid ulong.");
 
         private void Awake()
         {
-            _session = new MatchSession(MatchSetup.NeutralDemo(_demoSeed));
+            // M1: everything that must hold before ANY prefab is instantiated — a null inspector
+            // reference would NullReferenceException inside Instantiate itself, and a mis-sized team
+            // palette or a scaled parent transform would silently misrender every marker rather than
+            // fail loud at the point of the mistake. Guards every step below it: a rejected client
+            // must not go on to construct a session or build a scene.
+            ValidateWiring();
+            if (_wiringRejected)
+            {
+                return;
+            }
+
+            _session = new MatchSession(MatchSetup.NeutralDemo(DemoSeed));
             _roster = MatchRoster.FromStreamer(_session.Streamer);
 
             _scratchAgentPositions = new Vector2[_roster.AgentCount];
             _agentRenderModels = new AgentRenderModel[_roster.AgentCount];
+            _scratchPropertyBlock = new MaterialPropertyBlock();
 
-            // Everything the scene must satisfy is checked as it is instantiated, in
-            // InstantiatePrefab below — the one place a further wiring check belongs — and a failure
-            // rejects the whole client here, before Start() puts the match in motion.
+            // L1: seeded to the pitch CENTRE, not the corner-origin frame's (0, 0) — leaving the
+            // implicit Vector2.zero default put the camera's first target at a pitch corner, so every
+            // match opened with a ~1 s slide-in before FollowBallCamera caught up to the kickoff spot.
+            _cameraTarget = new Vector2(PitchViewProjection.HalfLengthM, PitchViewProjection.HalfWidthM);
+
+            // Everything the PREFAB CONTENTS must satisfy is checked as each is instantiated, in
+            // InstantiatePrefab below — the one place a further per-instantiation wiring check
+            // belongs (H-2's own comment). ValidateWiring above covers what has to be true before any
+            // Instantiate call is even safe to make.
             BuildMarkings();
             BuildAgentObjects();
             BuildBallObjects();
@@ -120,30 +167,78 @@ namespace TacticalDirector.MatchClientUnity
 
             AdvanceFrame();
 
-            if (!_hasFrame)
+            if (!_frameLatch.HasFrame)
             {
                 return;
             }
 
-            float effectiveTicksPerSecond =
-                DeterministicSim.DeterministicSimConstants.PHYSICS_TICK_HZ *
-                _session.Streamer.SpeedMultiplier;
-
             float alpha = FrameInterpolator.ComputeAlpha(
-                _previousFrame.Tick,
-                _currentFrame.Tick,
-                Time.time - _currentFrameArrivalTime,
-                effectiveTicksPerSecond);
+                _frameLatch.Previous.Tick,
+                _frameLatch.Current.Tick,
+                _frameLatch.SecondsSinceCurrent(Time.time),
+                _session.Streamer.EffectiveTicksPerSecond);
+
+            // Computed once and reused by both RenderBall and UpdateCamera (L2) — the two used to
+            // call FrameInterpolator.BallAt at DIFFERENT alphas (this one, and a hardcoded 1f under a
+            // comment that wrongly called the result "the interpolated frame"), which was both a
+            // redundant call and a silently stale camera target on every render frame that was not
+            // fully caught up to the newest tick.
+            Vector3 pitchBallPosition = FrameInterpolator.BallAt(_frameLatch.Previous, _frameLatch.Current, alpha);
 
             RenderAgents(alpha);
-            RenderBall(alpha);
-            UpdateCamera();
+            RenderBall(pitchBallPosition);
+            UpdateCamera(pitchBallPosition);
             HandleClick();
         }
 
         private void OnDestroy()
         {
             _session?.Stop();
+        }
+
+        // ---- wiring validation (Awake, before anything is instantiated) -----------------------
+
+        /// <summary>
+        /// M1: the wiring checks that must hold before ANY prefab is instantiated. A null inspector
+        /// reference would throw inside <c>Instantiate</c> itself; a team palette shorter than
+        /// <see cref="MatchEngineConstants.TEAM_COUNT"/> would index-out-of-range the first time an
+        /// away-team agent is drawn; and a non-identity scale on this GameObject's own transform would
+        /// silently double-scale every metre figure <see cref="PlaceLine"/>/<see cref="PlaceRadial"/>
+        /// assign, since both mix a world POSITION with a LOCAL scale. Reuses <see cref="RejectWiring"/>
+        /// rather than duplicating its log-and-disable behaviour; <see cref="InstantiatePrefab"/> below
+        /// is the complementary check that runs once a prefab HAS been instantiated (root neutrality,
+        /// no world-space <c>LineRenderer</c>).
+        /// </summary>
+        private void ValidateWiring()
+        {
+            if (_agentMarkerPrefab == null) { RejectWiring(nameof(_agentMarkerPrefab) + " is not assigned in the inspector."); return; }
+            if (_possessionRingPrefab == null) { RejectWiring(nameof(_possessionRingPrefab) + " is not assigned in the inspector."); return; }
+            if (_ballPrefab == null) { RejectWiring(nameof(_ballPrefab) + " is not assigned in the inspector."); return; }
+            if (_ballShadowPrefab == null) { RejectWiring(nameof(_ballShadowPrefab) + " is not assigned in the inspector."); return; }
+            if (_markingLinePrefab == null) { RejectWiring(nameof(_markingLinePrefab) + " is not assigned in the inspector."); return; }
+            if (_markingCirclePrefab == null) { RejectWiring(nameof(_markingCirclePrefab) + " is not assigned in the inspector."); return; }
+            if (_markingSpotPrefab == null) { RejectWiring(nameof(_markingSpotPrefab) + " is not assigned in the inspector."); return; }
+            if (_matchCamera == null) { RejectWiring(nameof(_matchCamera) + " is not assigned in the inspector."); return; }
+
+            if (_teamColors == null || _teamColors.Length != MatchEngineConstants.TEAM_COUNT)
+            {
+                RejectWiring(
+                    nameof(_teamColors) + " must have exactly " + Inv(MatchEngineConstants.TEAM_COUNT) +
+                    " entries (index 0 = home, 1 = away) — it is " +
+                    (_teamColors == null ? "null" : Inv(_teamColors.Length)) +
+                    "; RenderAgents indexes it by AgentRenderModel.TeamId unguarded.");
+                return;
+            }
+
+            if (transform.lossyScale != Vector3.one)
+            {
+                RejectWiring(
+                    "the MatchClient GameObject's own transform must be at identity scale — PlaceLine/" +
+                    "PlaceRadial mix a world POSITION with a LOCAL scale, so a scaled parent silently " +
+                    "double-scales every metre figure on the pitch. transform.lossyScale is " +
+                    transform.lossyScale + ".");
+                return;
+            }
         }
 
         // ---- frame plumbing -------------------------------------------------------------------
@@ -155,23 +250,7 @@ namespace TacticalDirector.MatchClientUnity
                 return;
             }
 
-            if (!_hasFrame)
-            {
-                _previousFrame = frame;
-                _currentFrame = frame;
-                _hasFrame = true;
-            }
-            else if (frame.Tick != _currentFrame.Tick)
-            {
-                _previousFrame = _currentFrame;
-                _currentFrame = frame;
-            }
-            else
-            {
-                return;
-            }
-
-            _currentFrameArrivalTime = Time.time;
+            _frameLatch.TryAccept(in frame, Time.time);
         }
 
         // ---- scene construction (Awake, once) --------------------------------------------------
@@ -238,11 +317,28 @@ namespace TacticalDirector.MatchClientUnity
         private void BuildAgentObjects()
         {
             _agentMarkers = new GameObject[_roster.AgentCount];
+            _agentMarkerRenderers = new MeshRenderer[_roster.AgentCount];
             _possessionRings = new GameObject[_roster.AgentCount];
 
             for (int i = 0; i < _roster.AgentCount; i++)
             {
                 _agentMarkers[i] = InstantiatePrefab(_agentMarkerPrefab, transform, nameof(_agentMarkerPrefab));
+
+                // M4: resolved ONCE here rather than every frame in RenderAgents — the walk was
+                // re-run 22 times a frame for a value (which mesh draws the marker) that never
+                // changes after construction, and Renderer.material (the property the old per-frame
+                // read used) clones a Material instance on first access, so the old code leaked one
+                // per marker per Play session on top of the redundant walk.
+                MeshRenderer markerRenderer = _agentMarkers[i].GetComponentInChildren<MeshRenderer>();
+                if (markerRenderer == null)
+                {
+                    RejectWiring(
+                        nameof(_agentMarkerPrefab) + " agent index " + Inv(i) +
+                        " has no MeshRenderer under its instantiated root, so no team colour / " +
+                        "sent-off / goalkeeper tint can be applied to it.");
+                }
+                _agentMarkerRenderers[i] = markerRenderer;
+
                 _possessionRings[i] = InstantiatePrefab(_possessionRingPrefab, transform, nameof(_possessionRingPrefab));
                 _possessionRings[i].SetActive(false);
             }
@@ -310,38 +406,68 @@ namespace TacticalDirector.MatchClientUnity
 
         private void RenderAgents(float alpha)
         {
-            FrameInterpolator.AgentsAt(_previousFrame, _currentFrame, alpha, _scratchAgentPositions);
+            FrameInterpolator.AgentsAt(_frameLatch.Previous, _frameLatch.Current, alpha, _scratchAgentPositions);
 
-            MatchRenderProjection.ProjectAgents(
-                _scratchAgentPositions, in _currentFrame, _roster, _agentRenderModels);
+            // M7: ProjectAgents returns how many slots it actually wrote — _agentRenderModels may be
+            // longer (it is sized once, in Awake, off the roster the streamer reports at boot) — so
+            // the loop below walks the returned count, not the destination array's own length.
+            int count = MatchRenderProjection.ProjectAgents(
+                _scratchAgentPositions, _frameLatch.Current, _roster, _agentRenderModels);
 
-            for (int i = 0; i < _agentRenderModels.Length; i++)
+            for (int i = 0; i < count; i++)
             {
                 AgentRenderModel model = _agentRenderModels[i];
 
+                // M2: ShirtNumber, YellowCards and IsSubstitute are DELIBERATELY DEFERRED here, not
+                // silently dropped. This landing wires no label prefab — Packages/manifest.json
+                // carries no com.unity.textmeshpro dependency — so there is nowhere on the existing
+                // marker to draw a number or a card count. IsGoalkeeper and IsSentOff below ARE
+                // bound: both fit the existing marker material as a tint, with no new prefab slot.
                 Transform marker = _agentMarkers[i].transform;
                 marker.position = model.WorldPosition;
                 marker.localScale = GroundScale(model.MarkerRadius);
 
-                MeshRenderer markerRenderer = _agentMarkers[i].GetComponentInChildren<MeshRenderer>();
-                if (markerRenderer != null)
-                {
-                    markerRenderer.material.color = _teamColors[model.TeamId];
-                }
+                _scratchPropertyBlock.SetColor(s_colorPropertyId, ResolveMarkerColor(in model));
+                _agentMarkerRenderers[i].SetPropertyBlock(_scratchPropertyBlock);
 
                 Transform ring = _possessionRings[i].transform;
                 _possessionRings[i].SetActive(model.HasBall);
                 if (model.HasBall)
                 {
                     ring.position = model.WorldPosition;
-                    ring.localScale = GroundScale(MatchClientConstants.PossessionRingRadiusM);
+                    // M3: reads AgentRenderModel.PossessionRingRadius (0 when !HasBall, otherwise the
+                    // catalogue's [GT] radius) rather than the [GT] constant a second time — the
+                    // model is the single source, per its own class doc.
+                    ring.localScale = GroundScale(model.PossessionRingRadius);
                 }
             }
         }
 
-        private void RenderBall(float alpha)
+        /// <summary>
+        /// The marker colour for one agent: its team colour, lightened for a goalkeeper and darkened
+        /// for a sent-off player (M2) — both a shade of the colour <see cref="_teamColors"/> already
+        /// assigns, rather than a new palette entry or a new prefab slot, since neither distinction
+        /// is a hue anyone chose.
+        /// </summary>
+        private Color ResolveMarkerColor(in AgentRenderModel model)
         {
-            Vector3 pitchBallPosition = FrameInterpolator.BallAt(_previousFrame, _currentFrame, alpha);
+            Color color = _teamColors[model.TeamId];
+
+            if (model.IsGoalkeeper)
+            {
+                color = Color.Lerp(color, Color.white, MatchClientConstants.GoalkeeperTintFactor);
+            }
+
+            if (model.IsSentOff)
+            {
+                color = Color.Lerp(color, Color.black, MatchClientConstants.SentOffTintFactor);
+            }
+
+            return color;
+        }
+
+        private void RenderBall(Vector3 pitchBallPosition)
+        {
             BallRenderModel model = MatchRenderProjection.ProjectBall(pitchBallPosition);
 
             _ball.transform.position = model.WorldPosition;
@@ -351,12 +477,9 @@ namespace TacticalDirector.MatchClientUnity
             _ballShadow.transform.localScale = GroundScale(model.ShadowRadius);
         }
 
-        private void UpdateCamera()
+        private void UpdateCamera(Vector3 pitchBallPosition)
         {
-            // Pitch-space XY, read straight off the interpolated frame rather than back out of the
-            // placed world object.
-            Vector3 pitchBall = FrameInterpolator.BallAt(_previousFrame, _currentFrame, 1f);
-            Vector2 ballPitchXY = new Vector2(pitchBall.x, pitchBall.y);
+            Vector2 ballPitchXY = new Vector2(pitchBallPosition.x, pitchBallPosition.y);
 
             _cameraTarget = FollowBallCamera.ComputeTarget(_cameraTarget, ballPitchXY, Time.deltaTime);
 
@@ -368,6 +491,9 @@ namespace TacticalDirector.MatchClientUnity
 
         private void HandleClick()
         {
+            // M8: requires Player Settings → Active Input Handling = "Input Manager (Old)" or
+            // "Both" — see the type doc. Under "Input System Package (New)" only, both calls below
+            // throw every frame.
             if (!Input.GetMouseButtonDown(0))
             {
                 return;
@@ -377,10 +503,14 @@ namespace TacticalDirector.MatchClientUnity
 
             if (PitchViewProjection.TryGroundHit(ray.origin, ray.direction, out Vector2 pitchXY))
             {
-                // Ground point resolved. Not yet routed anywhere: P5b (the UGUI/tactical binding)
-                // is what turns this into a ManagerCommand via _session.Commands.
+                // L3: TEMP diagnostic until P5b wires this into a ManagerCommand via
+                // _session.Commands — makes the resolved ground point observable instead of a dead,
+                // never-read local behind an empty branch.
+                Debug.Log("MatchClientBehaviour: ground click at pitch " + pitchXY + ".", this);
             }
         }
+
+        private static string Inv(int value) => value.ToString(CultureInfo.InvariantCulture);
     }
 }
 
@@ -407,4 +537,48 @@ namespace TacticalDirector.MatchClientUnity
 // |         |            |        | A world-space LineRenderer — for which transform placement is   |
 // |         |            |        | a silent no-op — is documented as unsupported and rejected at   |
 // |         |            |        | instantiation rather than mishandled.                           |
+// | 1.2     | 2026-08-15 | —      | AR pass round 2, Medium/Low findings. M1: ValidateWiring() runs |
+// |         |            |        | at the top of Awake — null-checks all 8 inspector refs by name, |
+// |         |            |        | asserts _teamColors.Length == TEAM_COUNT, asserts this          |
+// |         |            |        | GameObject's own transform is at identity scale (PlaceLine/     |
+// |         |            |        | PlaceRadial mix world position with LOCAL scale, so a scaled    |
+// |         |            |        | parent would double-scale every metre figure) — reuses          |
+// |         |            |        | RejectWiring, Awake early-returns on rejection. M2: IsGoalkeeper |
+// |         |            |        | and IsSentOff are now bound (a lighten/darken of the agent's own |
+// |         |            |        | team colour via the two new [GT] tint factors); ShirtNumber /   |
+// |         |            |        | YellowCards / IsSubstitute stay deliberately DEFERRED (commented |
+// |         |            |        | at the read site) — no label prefab, no TextMeshPro dependency  |
+// |         |            |        | in this landing. M3: the possession ring reads                  |
+// |         |            |        | AgentRenderModel.PossessionRingRadius (confirmed to exist)       |
+// |         |            |        | instead of the [GT] constant a second time. M4: the agent marker |
+// |         |            |        | MeshRenderer is resolved ONCE per agent in BuildAgentObjects     |
+// |         |            |        | (fail-loud via RejectWiring if absent) instead of                |
+// |         |            |        | GetComponentInChildren every frame, and coloured via a reused    |
+// |         |            |        | MaterialPropertyBlock instead of the leaking .material.color     |
+// |         |            |        | setter. M5: the effective-tick-rate product moves onto           |
+// |         |            |        | LiveMatchStreamer.EffectiveTicksPerSecond (match-viewer) — the   |
+// |         |            |        | local DeterministicSimConstants.PHYSICS_TICK_HZ recomputation is |
+// |         |            |        | deleted, and the now-unused TacticalDirector.DeterministicSim    |
+// |         |            |        | asmdef reference is reverted. M6: the previous/current frame     |
+// |         |            |        | latch state machine moves into match-client-core's new           |
+// |         |            |        | LiveFrameLatch (§12 rule 1) — AdvanceFrame is now three lines.   |
+// |         |            |        | M7: RenderAgents walks the count MatchRenderProjection.          |
+// |         |            |        | ProjectAgents returns, not _agentRenderModels.Length. M8: the    |
+// |         |            |        | type doc and HandleClick both now state the Active Input         |
+// |         |            |        | Handling requirement (Input Manager (Old) or Both) HandleClick's |
+// |         |            |        | legacy Input.* calls depend on. L1: _cameraTarget is seeded to   |
+// |         |            |        | the pitch CENTRE in Awake instead of the implicit corner-origin  |
+// |         |            |        | Vector2.zero default, removing the ~1 s kickoff slide-in. L2:    |
+// |         |            |        | RenderBall/UpdateCamera now take the ball's pitch position as a  |
+// |         |            |        | parameter, computed once in Update at the real alpha, instead of |
+// |         |            |        | UpdateCamera calling FrameInterpolator.BallAt a second time at a |
+// |         |            |        | hardcoded 1f under a comment that wrongly called the result "the |
+// |         |            |        | interpolated frame". L3: HandleClick's dead ground-hit branch    |
+// |         |            |        | now logs a TEMP diagnostic instead of discarding pitchXY behind  |
+// |         |            |        | an empty block. L5: _demoSeed (ulong) becomes _demoSeedText      |
+// |         |            |        | (string) + a fail-loud DemoSeed parse — a ulong SerializeField's |
+// |         |            |        | round-trip through SerializedProperty above long.MaxValue is     |
+// |         |            |        | unverified without a Unity host. M9 and L4 are Editor-instruction |
+// |         |            |        | findings, not code — not applicable to this file; flagged for   |
+// |         |            |        | the orchestrator to correct those instructions separately.       |
 #endregion
