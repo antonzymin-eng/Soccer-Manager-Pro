@@ -1,16 +1,21 @@
 // File:     src/season-save/tests/AvailabilityCompositionExtremisTests.cs
 // Created:  2026-08-16
-// Modified: 2026-08-16, later (ERR-030-045 — the multi-reinstatement case stopped asserting the
+// Modified: 2026-08-16, later still (ERR-030-046 — + the WeakPositionExtremis mutant-killer (a squad
+//           thin at ONE position, where a global rating key presses back exactly the banned player it
+//           has no room for), the MinimalStallExtremis minimisation lock and the CapFallbackExtremis
+//           beyond-cap lock; the five existing cases keep every assertion and had only their retired
+//           pass-structure prose updated)
+//           Prior: 2026-08-16, later (ERR-030-045 — the multi-reinstatement case stopped asserting the
 //           PRE-FIX key on a roster where the choice could not matter, and a k >= 2 lock added)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.4 / §2.3 F9 (the depleted-squad back-fill and its
-//           within-tier ordering key — ERR-030-044, ERR-030-045); Discipline & Suspensions #44 §2.3 /
-//           §7.2 / FR-DC-011 (ERR-044-019, the statement of the extremis compromise); ERR-044-003
-//           stage 1 (the fielded-eleven serving exemption); Code Standards #20
-// Purpose:  Locks for the tier-2 (suspended) reinstatement CHOICE — that the back-fill presses a
-//           suspended player onto the BENCH whenever any candidate choice permits it (including when
-//           it takes TWO reinstatements to get there), that his ban then advances because he did not
-//           play, and that the forced-start residual is exactly the recorded compromise, no wider.
+//           within-tier rule — ERR-030-044, ERR-030-045, ERR-030-046); Discipline & Suspensions #44
+//           §2.3 / §7.2 / FR-DC-011 (ERR-044-019, the statement of the extremis compromise);
+//           ERR-044-003 stage 1 (the fielded-eleven serving exemption); Code Standards #20
+// Purpose:  Locks for the tier-2 (suspended) reinstatement CHOICE — that the composed eleven contains
+//           the MINIMUM achievable number of reinstated-suspended players (zero whenever any completing
+//           choice benches them all), that a benched reinstatee's ban then advances because he did not
+//           play, and that the residual is exactly forced starts plus the beyond-cap corner.
 
 using NUnit.Framework;
 
@@ -35,12 +40,18 @@ namespace TacticalDirector.SeasonSave.Tests
     /// suspended player belongs on the BENCH: he is needed for the eighteenth slot, not the eleventh.
     /// </para>
     /// <para>
-    /// <b>Why two of these cases need a DOUBLE shortfall</b> (ERR-030-045). Fieldability is monotone in
-    /// adding players, so while a club is short by more than one no candidate is fieldable and the two
-    /// probe-qualified passes are structurally unreachable — the third pass decides alone, and its key
-    /// is the only thing standing between a mass-suspension club and its best banned man in the XI. A
-    /// single-reinstatement fixture cannot exercise that pass at all, which is how the original
-    /// ERR-030-044 suite came to assert the PRE-FIX key on a roster where the choice could not matter.
+    /// <b>Why several of these cases need a DOUBLE shortfall</b> (ERR-030-045, ERR-030-046).
+    /// Fieldability is monotone in adding players, so while a club is short by more than one NO single
+    /// candidate is fieldable: any rule that ranks candidates one at a time decides those passes blind.
+    /// That is why the choice is made over SUBSETS, and a single-reinstatement fixture cannot exercise
+    /// it at all — which is how the original ERR-030-044 suite came to assert the PRE-FIX key on a
+    /// roster where the choice could not matter.
+    /// </para>
+    /// <para>
+    /// <b>And why one of them is thin at a POSITION</b> (ERR-030-046). Selection is per position, so a
+    /// squad's ability to absorb a banned player is a positional question and a global rating key
+    /// cannot see it. <c>WeakPositionExtremis</c> is the fixture where the globally weakest banned
+    /// player is the one the squad has no room for; it is the mutant-killer for the whole search.
     /// </para>
     /// </summary>
     [TestFixture]
@@ -52,7 +63,7 @@ namespace TacticalDirector.SeasonSave.Tests
         private const int ClubCount = 4;
         private const int CraftedClubId = 0;
 
-        // ── 1. the mutant-killer: earliest-roster is NOT the ordering key ─────────────────
+        // ── 1. earliest-roster position is NOT what decides the choice ───────────────────
 
         [Test]
         public void BenchDepthExtremis_ReinstatesACandidateTheSelectorBenches_NotTheEarliestOnTheRoster()
@@ -61,9 +72,10 @@ namespace TacticalDirector.SeasonSave.Tests
             // suspended player is the club's best forward (he would walk into the XI), the roster-LATER
             // one its worst (he would bench). One reinstatement takes the club from seventeen to
             // eighteen, so exactly one of the two is pressed back — and which one is the whole
-            // question. The pre-fix key ("earliest roster position") picks the best forward and puts a
-            // banned man in the starting eleven of a club that could field a legal one without him;
-            // post-fix the choice is probe-qualified and lands on the man the selector benches.
+            // question. The original key ("earliest roster position") picks the best forward and puts
+            // a banned man in the starting eleven of a club that could field a legal one without him.
+            // The search finds its clean completion at SIZE 1 — the bench candidate's own singleton,
+            // dirty count 0 — and stops there.
             Squad full = BenchDepthRoster();
             DisciplineState state = BansOf(3, IdOf(StartingCandidateLocal), IdOf(BenchCandidateLocal));
 
@@ -79,9 +91,9 @@ namespace TacticalDirector.SeasonSave.Tests
 
             Assert.That(Contains(composed, IdOf(BenchCandidateLocal)), Is.True,
                 "The back-fill did not press back the suspended player the selector would BENCH. "
-                + "Tier 2's ordering key is 'the first candidate, in roster order, the selector would "
-                + "bench' — earliest roster position is the fallback for when no choice keeps every "
-                + "reinstated-suspended player out of the XI, not the rule (ERR-030-044).");
+                + "One reinstatement closes this gap, so the search finds its clean completion at SIZE "
+                + "1 — the bench candidate's own singleton, dirty count 0 — and stops there "
+                + "(ERR-030-046).");
             Assert.That(Contains(composed, IdOf(StartingCandidateLocal)), Is.False,
                 "The back-fill pressed back the roster-EARLIEST suspended player, who is this club's "
                 + "best forward — the pre-fix behaviour. A benchable candidate existed.");
@@ -157,16 +169,19 @@ namespace TacticalDirector.SeasonSave.Tests
         [Test]
         public void ForcedStartExtremis_TheOnlyGoalkeeper_IsReinstatedIntoTheXi_AndHisBanStalls()
         {
-            // The other side of ERR-030-044, locked as INTENDED behaviour rather than left to be
-            // rediscovered as a defect. Tier 2's pass 1 asks for a candidate the selector benches;
-            // when the club's ONLY goalkeeper is the suspended man, no candidate choice exists — pass
-            // 2 presses him back anyway (a club that cannot take the field is what #30 §2.3 F9 refuses
-            // to allow), he necessarily starts, and ERR-044-003 stage 1 then exempts him from serving.
+            // The other side of the extremis compromise, locked as INTENDED behaviour rather than
+            // left to be rediscovered as a defect. Here the candidate set has ONE member, so the
+            // search's own minimum is his singleton at dirty count 1: the club's only goalkeeper is
+            // the suspended man and no completing subset exists that benches him. He is pressed back
+            // anyway (a club that cannot take the field is what #30 §2.3 F9 refuses to allow), he
+            // necessarily starts, and ERR-044-003 stage 1 then exempts him from serving — residual
+            // (i), the probe-verified forced start (ERR-030-046).
             //
             // That stall is the recorded compromise between #30's liveness invariant and the Laws
-            // (#44 §7.2, ERR-044-019): it is NOT the bench-depth defect, because here there is nothing
-            // else the filter could have done. The fuller answer is the youth / generated-cover ladder
-            // recorded in AvailabilityComposition's remarks, both blocked today.
+            // (#44 §7.2, ERR-044-019 as extended at ERR-030-046): it is NOT the bench-depth defect,
+            // because the search PROVED there is nothing else the filter could have done. The fuller
+            // answer is the youth / generated-cover ladder recorded in AvailabilityComposition's
+            // remarks, both blocked today.
             Squad full = SoleGoalkeeperRoster();
             int keeper = IdOf(SoleGoalkeeperLocal);
             DisciplineState state = BansOf(3, keeper);
@@ -202,28 +217,26 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.That(Ban(state, keeper), Is.EqualTo(banBefore),
                 "A suspended player who was FORCED into the eleven served his ban for the match he "
                 + "played in — the free appearance ERR-044-003 stage 1 removed. The stall is the "
-                + "recorded compromise (ERR-030-044 / ERR-044-019); the exemption firing here is "
+                + "recorded residual (i) (ERR-030-046 / ERR-044-019); the exemption firing here is "
                 + "correct and this assertion is what would catch it being narrowed away.");
         }
 
-        // ── 4. multi-reinstatement: the weakest go back first, and it terminates ──────────
+        // ── 4. multi-reinstatement: the clean pair is found, and it terminates ───────────
 
         [Test]
         public void MultiReinstatementExtremis_PressesTheWeakestBannedPlayersBack_AndTerminatesDeterministically()
         {
-            // Tier 2's pass 3, and the whole reason it is ranked by SELECTOR RATING rather than by
-            // roster position (ERR-030-045). With sixteen fit players NO single reinstatement reaches
-            // eighteen, so on the first pass neither the "benchable" probe nor the "fieldable at all"
-            // probe can succeed for ANY candidate — fieldability is monotone in adding players, so a
-            // squad that is two short cannot be made legal by one man. Pass 3 therefore decides that
-            // pass outright, and its key is what keeps the club's best banned player out of the pool
-            // the rating-greedy selector then draws the eleven from: ascending selector rank, so the
-            // WEAKEST banned player is pressed back first and the best is reached only if nothing else
-            // can close the gap.
+            // The k >= 2 case, and the one no single-candidate probe can decide. With sixteen fit
+            // players NO single reinstatement reaches eighteen — fieldability is monotone in adding
+            // players, so a squad that is two short cannot be made legal by one man — which is exactly
+            // why the choice is made over SUBSETS rather than over candidates (ERR-030-046). The
+            // canonical clean pair here is {17, 18}, the two weakest banned players: it completes the
+            // squad and benches both, so the search stops at the first size-2 subset with a dirty
+            // count of 0 and commits one of its members per pass.
             //
-            // This is also the case that would hang or throw if the probe-qualified branch forgot its
-            // fallback, and the case where "the answer must not depend on how many times you ask" is a
-            // real property rather than a truism.
+            // This is also the case that would hang or throw if the search forgot its no-completing-
+            // subset fallback, and the case where "the answer must not depend on how many times you
+            // ask" is a real property rather than a truism.
             Squad full = DoubleShortfallRoster();
             DisciplineState state = BansOf(
                 3, IdOf(BestBannedLocal), IdOf(WeakBannedLocal), IdOf(WeakestBannedLocal));
@@ -238,14 +251,14 @@ namespace TacticalDirector.SeasonSave.Tests
                 + "selection walk requires — and no more, since each pass presses back exactly one.");
 
             Assert.That(Contains(composed, IdOf(WeakestBannedLocal)), Is.True,
-                "The first reinstatement of a double shortfall must be the WEAKEST banned player by "
-                + "the selector's own rating, not the earliest on the roster: no single candidate "
-                + "makes the squad fieldable, so pass 1 and pass 2 both come back empty and pass 3 "
-                + "decides — and pass 3's key is ascending selector rank (ERR-030-045).");
+                "The weakest banned player is not in the composed squad. {17, 18} is the canonical "
+                + "clean completing pair — no single candidate makes the squad fieldable, so the "
+                + "search's first zero-dirty subset is that pair, and both of its members are "
+                + "committed across the two passes (ERR-030-046).");
             Assert.That(Contains(composed, IdOf(BestBannedLocal)), Is.False,
-                "The back-fill reached the club's BEST banned player while two weaker banned players "
-                + "were still available to close the same gap. This roster is built so the pre-fix "
-                + "roster-order key picks exactly him, which is what puts a banned man in the XI.");
+                "The back-fill reached the club's BEST banned player while a clean completing pair "
+                + "was available to close the same gap. This roster is built so an ordering key picks "
+                + "exactly him, which is what puts a banned man in the XI.");
 
             Squad again = AvailabilityComposition.Compose(
                 full, career: null, state, DisciplineConstants.LeagueCompetitionKey);
@@ -263,15 +276,13 @@ namespace TacticalDirector.SeasonSave.Tests
         [Test]
         public void MultiReinstatementExtremis_KeepsEveryBannedPlayerOutOfTheXi_WhenACompletingChoiceExists()
         {
-            // ERR-030-045, the finding itself. Under the pre-fix key the k >= 2 case was EXACTLY the
-            // pre-ERR-030-044 behaviour: passes 1 and 2 are structurally unreachable on every
-            // non-final reinstatement (fieldability is monotone, so nothing is fieldable while the
-            // club is still short), pass 3 took the roster-earliest banned player — here the club's
-            // best forward — and once he is back in the pool, AnyReinstatedSuspendedStarts sees HIM
-            // in every subsequent candidate's eleven, which makes pass 1 unsatisfiable for the final
-            // pick too and drops that one to roster order as well. The composed XI then contained a
-            // banned man even though the alternative pair {WeakBanned, WeakestBanned} completes the
-            // squad and keeps every banned player on the bench.
+            // ERR-030-045's finding, kept as a standing lock under ERR-030-046's stronger rule. Every
+            // single-candidate probe is structurally unreachable on a non-final reinstatement
+            // (fieldability is monotone, so nothing is fieldable while the club is still short), so any
+            // rule that ranks CANDIDATES decides those passes blind — and a blindly reinstated starter
+            // then poisons the probe for every later candidate. The pair {WeakBanned, WeakestBanned}
+            // completes the squad and keeps every banned player on the bench, and a search over SUBSETS
+            // finds it directly.
             //
             // The assertion is about the OUTCOME rather than about which candidate was picked, so it
             // survives any future change to the within-tier key that still achieves it.
@@ -302,6 +313,175 @@ namespace TacticalDirector.SeasonSave.Tests
                 + "stalls a ban this club never needed to stall.");
         }
 
+        // ── 6. the ERR-030-046 mutant-killer: the choice is per POSITION, not by global rank ──
+
+        [Test]
+        public void WeakPositionExtremis_KeepsTheGloballyWeakestBannedPlayerOut_WhenACleanPairExists()
+        {
+            // ERR-030-046, and the case the ascending-global-rank key could not see. The fit squad is
+            // THIN AT MIDFIELD (five midfielders rated 5-7) and deep at the back (five defenders rated
+            // 10-12), while the banned trio is one midfielder rated 8 — the globally WEAKEST banned
+            // player, and still better than every fit midfielder — and two defenders rated 9, each
+            // outranked by all five fit defenders.
+            //
+            // Selection is PER POSITION. A global scalar rank cannot express that, so the blind
+            // ascending-rank pass pressed the midfielder back first, he walked into the XI, and the
+            // reinstated-suspended count then poisoned the probe for the final pick. The clean pair
+            // {D9a, D9b} completes the squad and benches both, and the search must find it.
+            Squad full = WeakMidfieldRoster();
+            DisciplineState state = BansOf(
+                3, IdOf(WeakMidBannedLocal), IdOf(StrongDefBannedALocal), IdOf(StrongDefBannedBLocal));
+
+            Squad composed = AvailabilityComposition.Compose(
+                full, career: null, state, DisciplineConstants.LeagueCompetitionKey);
+
+            Assert.That(SquadRating.CanFieldStartingEleven(composed), Is.True,
+                "Precondition: the composed filter must never stop a club playing (#30 §2.3 F9).");
+            Assert.That(composed.Count, Is.EqualTo(CareerTestRoster.MinimumSquad),
+                "Precondition: sixteen fit players need exactly TWO reinstatements to reach the "
+                + "eighteen the selection walk requires, so this really is the k >= 2 case.");
+
+            int[] xi = SquadRating.StartingElevenPlayerIds(composed);
+            Assert.That(xi, Does.Not.Contain(IdOf(WeakMidBannedLocal)),
+                "A banned midfielder is in the starting eleven of a club that could have completed its "
+                + "squad without him — {D9a, D9b} is fieldable and benches both. Selection is per "
+                + "POSITION, so 'the globally weakest banned player' is not the same question as 'the "
+                + "banned player this squad can absorb' (ERR-030-046).");
+            Assert.That(xi, Does.Not.Contain(IdOf(StrongDefBannedALocal)),
+                "A reinstated banned defender is starting; five fit defenders outrank him and the XI "
+                + "needs four, so a clean completion exists and the search must have found it.");
+            Assert.That(xi, Does.Not.Contain(IdOf(StrongDefBannedBLocal)),
+                "A reinstated banned defender is starting; five fit defenders outrank him and the XI "
+                + "needs four, so a clean completion exists and the search must have found it.");
+
+            Assert.That(Contains(composed, IdOf(WeakMidBannedLocal)), Is.False,
+                "The back-fill pressed the globally weakest banned player back in even though the pair "
+                + "of banned defenders completes the squad cleanly. Committing him is what put a banned "
+                + "man in the XI, and it is exactly the ascending-global-rank greedy the exhaustive "
+                + "clean-completion search replaces (ERR-030-046).");
+        }
+
+        // ── 7. the minimum is a MINIMUM, not zero: one forced start, and only one ban stalls ──
+
+        [Test]
+        public void MinimalStallExtremis_StartsExactlyTheForcedPlayer_AndOnlyHisBanStalls()
+        {
+            // The minimisation half of the ERR-030-046 theorem. No clean set exists at all — the club's
+            // ONLY goalkeeper is banned, so every completing subset starts him — but a second banned
+            // player (the club's worst forward) is absorbable onto the bench. The search must therefore
+            // return the MINIMUM achievable dirty count, which is exactly 1, not "some set that works".
+            //
+            // The consequence half is driven through a really played round: the forced keeper is in the
+            // fielded eleven, so ERR-044-003 stage 1's exemption fires and his ban stalls; the benched
+            // forward is not, so his advances. That pairing is what makes "minimum" a football claim
+            // rather than an arithmetic one — every avoided start is a ban that actually gets served.
+            Squad full = SoleBannedGoalkeeperRoster();
+            int keeper = IdOf(ForcedKeeperLocal);
+            int benchable = IdOf(BenchableForwardLocal);
+            DisciplineState state = BansOf(3, keeper, benchable);
+
+            League league = LeagueAround(full);
+            Squad composed = AvailabilityComposition.Compose(
+                full, career: null, state, DisciplineConstants.LeagueCompetitionKey);
+
+            Assert.That(SquadRating.CanFieldStartingEleven(composed), Is.True,
+                "#30 §3.4's liveness invariant: the composed filter can never leave a club worse off "
+                + "than having no filter at all.");
+            Assert.That(composed.Count, Is.EqualTo(CareerTestRoster.MinimumSquad),
+                "Precondition: sixteen fit outfielders need BOTH banned players back to reach the "
+                + "eighteen the selection walk requires, so both are in the composed squad.");
+
+            int[] xi = SquadRating.StartingElevenPlayerIds(composed);
+            int dirty = 0;
+            for (int s = 0; s < xi.Length; s++)
+            {
+                if (xi[s] == keeper || xi[s] == benchable)
+                {
+                    dirty++;
+                }
+            }
+
+            Assert.That(dirty, Is.EqualTo(1),
+                "The composed eleven must contain EXACTLY the one reinstated-suspended player no "
+                + "completing choice can avoid. Zero is unreachable (the only goalkeeper is banned); "
+                + "two would mean the search settled for a completing set instead of a MINIMUM one "
+                + "(ERR-030-046).");
+            Assert.That(xi, Does.Contain(keeper),
+                "The forced start must be the goalkeeper — he is the one the formation cannot do "
+                + "without. If it is not, this fixture no longer exercises the forced-start case.");
+            Assert.That(xi, Does.Not.Contain(benchable),
+                "The absorbable banned forward is starting. Four fit forwards outrank him and the XI "
+                + "needs two, so benching him costs nothing — and benching him is what lets his ban "
+                + "advance.");
+
+            int keeperBanBefore = Ban(state, keeper);
+            int benchableBanBefore = Ban(state, benchable);
+            var loop = new SeasonLoop(
+                new WorldStore(ManagerId, WorldSeed),
+                league.CreateSeason(CraftedClubId),
+                RoundResolutionMode.QuickSimAll,
+                careerOrNull: null,
+                careerSquadsOrNull: null,
+                progressionOrNull: null,
+                disciplineOrNull: state);
+
+            loop.AdvanceToNextFixtureDay();
+            loop.AdvanceAndPlayNextRound(league);
+
+            Assert.That(Ban(state, keeper), Is.EqualTo(keeperBanBefore),
+                "The FORCED starter served a match of his ban for a fixture he played in. That is the "
+                + "free appearance ERR-044-003 stage 1 removed; the stall is the recorded compromise "
+                + "and applies to exactly the players the search could not keep off the pitch.");
+            Assert.That(Ban(state, benchable), Is.EqualTo(benchableBanBefore - 1),
+                "The BENCHED reinstatee did not serve. He was pressed back for bench depth and never "
+                + "took the field, so the stage-1 exemption must not reach him — this is the half of "
+                + "the theorem that turns 'minimum starts' into 'maximum bans actually served'.");
+        }
+
+        // ── 8. beyond the search cap: the greedy fallback still terminates ────────────────
+
+        [Test]
+        public void CapFallbackExtremis_BeyondTheCandidateCap_StillTerminatesAndFieldsASquad()
+        {
+            // The stated residual (ii). With THIRTEEN concurrent suspended candidates the exhaustive
+            // search is refused outright — 2^13 probes is an algorithmic budget, not a football
+            // judgement — and the first pass degrades to the ascending-rank greedy with NO minimality
+            // claim. It self-heals: each pass commits one candidate, so m falls below the cap and the
+            // exact search resumes for every later pass.
+            //
+            // The assertions are deliberately narrow. Termination, fieldability and repeat-call
+            // determinism are the only properties the fallback promises, and asserting a clean XI here
+            // would be asserting a guarantee this branch explicitly does not make.
+            Squad full = ThirteenBannedRoster();
+            var bannedIds = new int[BannedCountBeyondCap];
+            for (int b = 0; b < BannedCountBeyondCap; b++)
+            {
+                bannedIds[b] = IdOf(FitCountBeyondCap + b);
+            }
+
+            DisciplineState state = BansOf(3, bannedIds);
+
+            Squad composed = AvailabilityComposition.Compose(
+                full, career: null, state, DisciplineConstants.LeagueCompetitionKey);
+
+            Assert.That(SquadRating.CanFieldStartingEleven(composed), Is.True,
+                "The back-fill must terminate at a squad that can actually play (#30 §2.3 F9), beyond "
+                + "the search cap exactly as within it.");
+            Assert.That(composed.Count, Is.EqualTo(CareerTestRoster.MinimumSquad),
+                "Twelve fit players need exactly six reinstatements to reach eighteen — one per pass, "
+                + "the first beyond the cap and the remaining five within it.");
+
+            Squad again = AvailabilityComposition.Compose(
+                full, career: null, state, DisciplineConstants.LeagueCompetitionKey);
+            for (int i = 0; i < composed.Count; i++)
+            {
+                Assert.That(again.GetPlayer(i).PlayerId, Is.EqualTo(composed.GetPlayer(i).PlayerId),
+                    $"Roster slot {i} differs between two identical Compose calls. The cap fallback "
+                    + "draws no RNG and reads nothing outside its arguments; a difference here is "
+                    + "state leaking between calls.");
+            }
+        }
+
         // ── fixtures ─────────────────────────────────────────────────────────────────────
 
         /// <summary>Roster slot of the suspended player the selector would START (best forward).</summary>
@@ -322,7 +502,8 @@ namespace TacticalDirector.SeasonSave.Tests
         /// <summary>The middle banned player of <see cref="DoubleShortfallRoster"/>.</summary>
         private const int WeakBannedLocal = 17;
 
-        /// <summary>The weakest banned player of <see cref="DoubleShortfallRoster"/> — pass 3's pick.</summary>
+        /// <summary>The weakest banned player of <see cref="DoubleShortfallRoster"/>, and one half of
+        /// its canonical clean completing pair.</summary>
         private const int WeakestBannedLocal = 18;
 
         /// <summary>
@@ -417,6 +598,138 @@ namespace TacticalDirector.SeasonSave.Tests
             players[16] = Player(16, PlayerPosition.Forward,    20);   // suspended, the BEST forward
             players[17] = Player(17, PlayerPosition.Midfielder,  2);   // suspended, weak
             players[18] = Player(18, PlayerPosition.Forward,     1);   // suspended, the weakest
+            return new Squad(CraftedClubId, players);
+        }
+
+        /// <summary>The banned MIDFIELDER of <see cref="WeakMidfieldRoster"/> — rated 8, the globally
+        /// weakest banned player, and better than every fit midfielder on the roster.</summary>
+        private const int WeakMidBannedLocal = 16;
+
+        /// <summary>The first banned DEFENDER of <see cref="WeakMidfieldRoster"/> — rated 9, outranked
+        /// by all five fit defenders, so the selector benches him.</summary>
+        private const int StrongDefBannedALocal = 17;
+
+        /// <summary>The second banned DEFENDER of <see cref="WeakMidfieldRoster"/>, rated 9.</summary>
+        private const int StrongDefBannedBLocal = 18;
+
+        /// <summary>The sole goalkeeper of <see cref="SoleBannedGoalkeeperRoster"/>, suspended.</summary>
+        private const int ForcedKeeperLocal = 16;
+
+        /// <summary>The absorbable banned forward of <see cref="SoleBannedGoalkeeperRoster"/>.</summary>
+        private const int BenchableForwardLocal = 17;
+
+        /// <summary>Fit players in <see cref="ThirteenBannedRoster"/> — exactly the eleven the formation
+        /// needs plus one spare, so every reinstated player belongs on the bench.</summary>
+        private const int FitCountBeyondCap = 12;
+
+        /// <summary>Suspended players in <see cref="ThirteenBannedRoster"/> — one past
+        /// <c>SeasonSaveConstants.EXTREMIS_SEARCH_CANDIDATE_CAP</c>.</summary>
+        private const int BannedCountBeyondCap = 13;
+
+        /// <summary>
+        /// Nineteen players whose fit sixteen are <b>thin at midfield and deep at the back</b> (2 GK,
+        /// 5 DEF rated 10-12, 5 MID rated 5-7, 4 FWD rated 10-12), plus a banned trio built so that
+        /// GLOBAL rank and POSITIONAL absorbability disagree: the banned midfielder is rated 8 — lowest
+        /// of the three — and outranks every fit midfielder, while the two banned defenders are rated 9
+        /// and are outranked by all five fit defenders.
+        /// <para>
+        /// Sixteen fit players is two short of the selection walk's eighteen, so exactly two of the
+        /// three come back. {D9a, D9b} completes the squad and benches both; any set containing the
+        /// midfielder starts him. That is the ERR-030-046 case: a global scalar key presses the
+        /// globally weakest banned player back first and cannot see that the squad has no room for him.
+        /// </para>
+        /// </summary>
+        private static Squad WeakMidfieldRoster()
+        {
+            var players = new PlayerRecord[19];
+            players[0]  = Player(0,  PlayerPosition.Goalkeeper, 12);
+            players[1]  = Player(1,  PlayerPosition.Goalkeeper, 11);
+            players[2]  = Player(2,  PlayerPosition.Defender,   12);
+            players[3]  = Player(3,  PlayerPosition.Defender,   12);
+            players[4]  = Player(4,  PlayerPosition.Defender,   11);
+            players[5]  = Player(5,  PlayerPosition.Defender,   11);
+            players[6]  = Player(6,  PlayerPosition.Defender,   10);
+            players[7]  = Player(7,  PlayerPosition.Midfielder,  7);
+            players[8]  = Player(8,  PlayerPosition.Midfielder,  7);
+            players[9]  = Player(9,  PlayerPosition.Midfielder,  6);
+            players[10] = Player(10, PlayerPosition.Midfielder,  6);
+            players[11] = Player(11, PlayerPosition.Midfielder,  5);
+            players[12] = Player(12, PlayerPosition.Forward,    12);
+            players[13] = Player(13, PlayerPosition.Forward,    11);
+            players[14] = Player(14, PlayerPosition.Forward,    10);
+            players[15] = Player(15, PlayerPosition.Forward,    10);
+            players[16] = Player(16, PlayerPosition.Midfielder,  8);   // suspended, would START
+            players[17] = Player(17, PlayerPosition.Defender,    9);   // suspended, would BENCH
+            players[18] = Player(18, PlayerPosition.Defender,    9);   // suspended, would BENCH
+            return new Squad(CraftedClubId, players);
+        }
+
+        /// <summary>
+        /// Eighteen players of whom sixteen are fit outfielders (5 DEF, 6 MID, 5 FWD) and two are
+        /// suspended: the club's ONLY goalkeeper and its worst forward. Both must come back to reach
+        /// eighteen, the keeper necessarily starts, and the forward is absorbed onto the bench — so the
+        /// minimum achievable reinstated-suspended count in the XI is exactly one.
+        /// </summary>
+        private static Squad SoleBannedGoalkeeperRoster()
+        {
+            var players = new PlayerRecord[18];
+            players[0]  = Player(0,  PlayerPosition.Defender,   12);
+            players[1]  = Player(1,  PlayerPosition.Defender,   11);
+            players[2]  = Player(2,  PlayerPosition.Defender,   10);
+            players[3]  = Player(3,  PlayerPosition.Defender,    9);
+            players[4]  = Player(4,  PlayerPosition.Defender,    8);
+            players[5]  = Player(5,  PlayerPosition.Midfielder, 12);
+            players[6]  = Player(6,  PlayerPosition.Midfielder, 11);
+            players[7]  = Player(7,  PlayerPosition.Midfielder, 10);
+            players[8]  = Player(8,  PlayerPosition.Midfielder,  9);
+            players[9]  = Player(9,  PlayerPosition.Midfielder,  8);
+            players[10] = Player(10, PlayerPosition.Midfielder,  7);
+            players[11] = Player(11, PlayerPosition.Forward,    12);
+            players[12] = Player(12, PlayerPosition.Forward,    11);
+            players[13] = Player(13, PlayerPosition.Forward,    10);
+            players[14] = Player(14, PlayerPosition.Forward,     9);
+            players[15] = Player(15, PlayerPosition.Forward,     8);
+            players[16] = Player(16, PlayerPosition.Goalkeeper, 10);   // suspended, the ONLY keeper
+            players[17] = Player(17, PlayerPosition.Forward,     2);   // suspended, absorbable
+            return new Squad(CraftedClubId, players);
+        }
+
+        /// <summary>
+        /// Twenty-five players — the full <c>CLUB_SQUAD_SIZE</c> — of whom twelve are fit and
+        /// <b>thirteen</b> are suspended, one past the exhaustive search's candidate cap. The fit twelve
+        /// are exactly the formation's eleven plus one spare and are rated far above every banned
+        /// player, so the six reinstatements the club needs all belong on the bench; what the test
+        /// asserts of the beyond-cap branch is only that it terminates, fields a squad, and answers the
+        /// same way twice.
+        /// </summary>
+        private static Squad ThirteenBannedRoster()
+        {
+            var players = new PlayerRecord[FitCountBeyondCap + BannedCountBeyondCap];
+            players[0]  = Player(0,  PlayerPosition.Goalkeeper, 18);
+            players[1]  = Player(1,  PlayerPosition.Defender,   18);
+            players[2]  = Player(2,  PlayerPosition.Defender,   17);
+            players[3]  = Player(3,  PlayerPosition.Defender,   17);
+            players[4]  = Player(4,  PlayerPosition.Defender,   16);
+            players[5]  = Player(5,  PlayerPosition.Midfielder, 18);
+            players[6]  = Player(6,  PlayerPosition.Midfielder, 17);
+            players[7]  = Player(7,  PlayerPosition.Midfielder, 17);
+            players[8]  = Player(8,  PlayerPosition.Midfielder, 16);
+            players[9]  = Player(9,  PlayerPosition.Forward,    18);
+            players[10] = Player(10, PlayerPosition.Forward,    17);
+            players[11] = Player(11, PlayerPosition.Forward,    16);
+
+            // Thirteen banned players, all far weaker than the fit eleven, spread across the outfield
+            // positions so no reinstatement can displace a fit starter.
+            PlayerPosition[] cycle =
+            {
+                PlayerPosition.Defender, PlayerPosition.Midfielder, PlayerPosition.Forward,
+            };
+            for (int b = 0; b < BannedCountBeyondCap; b++)
+            {
+                players[FitCountBeyondCap + b] =
+                    Player(FitCountBeyondCap + b, cycle[b % cycle.Length], 2 + (b % 5));
+            }
+
             return new Squad(CraftedClubId, players);
         }
 
@@ -526,4 +839,31 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | tree and green after. The three single-reinstatement cases are   |
 // |         |            |        | untouched — they exercise passes 1 and 2, which the finding      |
 // |         |            |        | leaves correct.                                                  |
+// | 1.2     | 2026-08-16 | —      | ERR-030-046 (escalated High). Three cases added and the retired  |
+// |         |            |        | pass-structure prose swept out of the five existing ones, whose  |
+// |         |            |        | ASSERTIONS are all unchanged — under the search rule test 1's    |
+// |         |            |        | clean singleton is found at size 1, test 3's sole goalkeeper is  |
+// |         |            |        | the m = 1 dirty minimum, test 4's {17, 18} is the canonical      |
+// |         |            |        | clean pair and test 5 is untouched. (a) WeakPositionExtremis,    |
+// |         |            |        | THE mutant-killer, written first and observed FAILING against    |
+// |         |            |        | the pre-fix tree: a fit sixteen thin at midfield (5 MID rated    |
+// |         |            |        | 5-7) and deep at the back (5 DEF rated 10-12), banned trio one   |
+// |         |            |        | midfielder rated 8 — globally the WEAKEST banned player, and     |
+// |         |            |        | better than every fit midfielder — plus two defenders rated 9    |
+// |         |            |        | that five fit defenders outrank. The clean pair {D9a, D9b}       |
+// |         |            |        | exists; the ascending-global-rank key committed the midfielder,  |
+// |         |            |        | he started, and the observed pre-fix failure was exactly that    |
+// |         |            |        | (id 16 in the composed XI). (b) MinimalStallExtremis: no clean   |
+// |         |            |        | set exists at all (the sole goalkeeper is banned) but a second   |
+// |         |            |        | banned player is absorbable — asserts the XI dirty count is      |
+// |         |            |        | EXACTLY 1, that the absorbable one is benched, and through a     |
+// |         |            |        | really played AdvanceAndPlayNextRound that the forced keeper's   |
+// |         |            |        | ban stalls while the benched man's decrements. That is the       |
+// |         |            |        | minimisation half: every avoided start is a ban actually served. |
+// |         |            |        | (c) CapFallbackExtremis: thirteen suspended candidates, one past |
+// |         |            |        | EXTREMIS_SEARCH_CANDIDATE_CAP — termination, fieldability and    |
+// |         |            |        | repeat-call determinism ONLY, since the beyond-cap branch makes  |
+// |         |            |        | no minimality claim and asserting one would assert a guarantee   |
+// |         |            |        | the code explicitly does not give. The k >= 2 lock (test 5) is   |
+// |         |            |        | kept as a standing lock.                                         |
 #endregion

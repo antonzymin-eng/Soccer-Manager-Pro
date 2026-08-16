@@ -1,6 +1,13 @@
 // File:     src/season-save/AvailabilityComposition.cs
 // Created:  2026-08-13
-// Modified: 2026-08-16, later (ERR-030-045, adversarial-review H2-continuation — tier 2's FALLBACK key,
+// Modified: 2026-08-16, later still (ERR-030-046, escalated High — tier 2's within-tier choice is no
+//           longer a greedy element-wise decision at all. Both prior shapes decided ONE player at a
+//           time against a scalar key while the constraint they were serving is set-valued and
+//           per-position, so a squad thin in the globally-weakest banned player's position pressed HIM
+//           back, started him, and poisoned the probe for every later pass. Now a capped EXHAUSTIVE
+//           search over subsets of the still-removed candidates: the composed squad fields the MINIMUM
+//           achievable number of reinstated-suspended players — v1.7)
+//           Prior: 2026-08-16, later (ERR-030-045, adversarial-review H2-continuation — tier 2's FALLBACK key,
 //           which ERR-030-044 left at earliest roster position and which therefore decided every
 //           reinstatement of a multi-player shortfall except the last, blindly: fieldability is monotone,
 //           so passes 1 and 2 are structurally unreachable while the club is short by more than one, and
@@ -85,41 +92,58 @@ namespace TacticalDirector.SeasonSave
     /// than being a wording nicety.
     /// </para>
     /// <para>
-    /// <b>So tier 2 is a CHOICE, and the choice is probe-qualified</b> (ERR-030-044). Reinstating by
-    /// earliest roster position put whichever suspended player happened to sit first on the roster into
-    /// the pool the rating-greedy selector then draws the STARTING eleven from — so a club that was
-    /// merely a bench short got its best banned player back into the XI, and ERR-044-003 stage 1's
-    /// exemption (he played, so the fixture is not one of his ban) then stalled that ban for as long as
-    /// the club stayed depleted. An ordering key that produces the outcome its own rule's rationale
-    /// forbids is a defect in the key, so tier 2 now asks the probe per candidate: the first candidate,
-    /// in roster order, that the selector would BENCH; then the first that is fieldable at all; and
-    /// otherwise the candidate the selector ranks LAST.
+    /// <b>So tier 2 is a CHOICE — and it is a choice of a SET, which is why two ordering keys failed at
+    /// it</b> (ERR-030-046, superseding ERR-030-044 and ERR-030-045). Reinstating by earliest roster
+    /// position put whichever suspended player happened to sit first on the roster into the pool the
+    /// rating-greedy selector then draws the STARTING eleven from, and ERR-044-003 stage 1's exemption
+    /// (he played, so the fixture is not one of his ban) then stalled that ban for as long as the club
+    /// stayed depleted. Ranking instead by ascending <see cref="SquadRating.PlayerRating"/> fixed the
+    /// direction and not the shape: <b>the rating is a global scalar and <c>LineupSelector</c> selects
+    /// per POSITION</b>, so a club thin in the globally-weakest banned player's position pressed exactly
+    /// him back — into a slot no fit player could contest — he started, and the reinstated-suspended
+    /// count then made the probe unsatisfiable for every later pass, which dropped those to roster order
+    /// in their turn. Both keys were <b>element-wise greedy decisions of a set-valued constraint</b>: a
+    /// squad is completed by a SET of reinstatements, whether that set starts a banned man is a property
+    /// of the set, and no per-player scalar can express it. The third shape stops guessing.
     /// </para>
     /// <para>
-    /// <b>The fallback is by selector rank, not roster position — because the probe cannot help on it</b>
-    /// (ERR-030-045). Fieldability is monotone in adding players, so while the club is short by more than
-    /// one NO candidate is fieldable and the two probe-qualified passes are structurally unreachable: the
-    /// fallback decides every reinstatement of a multi-player shortfall except the last, blind. Ranking it
-    /// by ascending <see cref="SquadRating.PlayerRating"/> — the selector's own key, ties on earliest
-    /// roster position — is the ordering that is safe without a probe, because the weakest banned players
-    /// go back first and the club's best is reached only when nothing weaker closes the gap. Under the
-    /// roster-order fallback the opposite happened, and it compounded: a good banned player pressed back
-    /// blindly appears in every later candidate's eleven, which makes pass 1 unsatisfiable for the final
-    /// pick too, so a two-player shortfall reproduced the pre-ERR-030-044 behaviour exactly.
+    /// <b>The rule is a capped exhaustive clean-completion search</b>
+    /// (<see cref="ChooseSuspendedCandidate"/>). Over the still-removed candidates — ordered ascending by
+    /// <see cref="SquadRating.PlayerRating"/>, ties on earliest roster position, a total order so the
+    /// enumeration is canonical — every subset is probed, sizes ascending: does the club's squad plus
+    /// that subset satisfy selection, and if so how many reinstated-suspended players does the resulting
+    /// XI contain. The subset preferred is the one with the fewest such starters, then the smallest, then
+    /// the first canonically. Above
+    /// <see cref="SeasonSaveConstants.EXTREMIS_SEARCH_CANDIDATE_CAP"/> candidates the search is refused
+    /// outright and the pass falls back to the weakest candidate — an algorithmic budget, stated as
+    /// residual (ii) below.
     /// </para>
     /// <para>
-    /// <b>The compromise therefore has three cases, and only one of them stalls a ban.</b> <b>Benched</b>
-    /// — the common case, and what the key above works to reach — the suspended player is not in the
-    /// fielded eleven, so <c>DisciplineRules.OnClubFixturePlayed</c> does not exempt him and his ban
-    /// advances normally: the suspension costs exactly what the Laws say. <b>Forced to start</b> — no
-    /// choice avoids the XI — he plays, the exemption fires, and that one ban does not advance. Two
-    /// distinct things reach that second case: a single reinstatement with no benchable candidate (the
-    /// club's only goalkeeper is the canonical one), and a multi-reinstatement set in which EVERY
-    /// completing choice starts someone. The ordering is a best-effort minimisation of the second case,
-    /// <b>not a guarantee against it</b>; claiming the stall is confined to a sole-goalkeeper-style
-    /// forcing would be exactly the overclaim ERR-030-045 corrected. The residual is recorded under
-    /// ERR-044-003 / ERR-044-019 / ERR-030-045 and is what the two missing tiers below eventually delete;
-    /// it is not a licence for the first case.
+    /// <b>What that buys — the theorem, stated as a theorem because two weaker claims were falsified in
+    /// two days.</b> With the candidate count within the cap, the composed squad fields <b>the minimum
+    /// achievable number of reinstated-suspended players in its starting eleven</b>, minimised over every
+    /// completing subset of the still-removed candidates — <b>zero whenever any completing choice benches
+    /// them all</b>. A reinstated-suspended player therefore starts only in a <i>probe-verified</i> forced
+    /// start: every completing choice within the search bound starts at least as many. The induction step
+    /// is that committing one member <c>c</c> of the chosen subset <c>R*</c> cannot raise the optimum for
+    /// the next pass, because <c>R* \ {c}</c> is still available and the squad
+    /// <c>F ∪ {c} ∪ (R* \ {c})</c> is byte-identical to the <c>F ∪ R*</c> already probed — the count sees
+    /// <c>c</c> through <c>suspended[c] &amp;&amp; !removed[c]</c> exactly as it saw him through
+    /// <c>c ∈ R</c>. Termination is unchanged: <c>availableCount</c> strictly increases per pass and §2.3
+    /// F9 fires at the bound. There is no repair loop and nothing is un-committed.
+    /// </para>
+    /// <para>
+    /// <b>The residual, stated exhaustively.</b> <b>(i) Forced starts</b> — the minimum is positive: the
+    /// club's sole goalkeeper being banned is the smallest case, and a <c>k ≥ 2</c> shortfall in which
+    /// every completing subset starts someone is its generalisation. There the ERR-044-003 stage-1
+    /// exemption stalls exactly the bans that were fielded, and no fewer. <b>(ii) The beyond-cap
+    /// corner</b> — more than <see cref="SeasonSaveConstants.EXTREMIS_SEARCH_CANDIDATE_CAP"/> concurrent
+    /// suspended candidates, which no measured card rate reaches; that pass degrades to ascending-rank
+    /// greedy and makes <b>no</b> minimality claim, and it self-heals, since each pass commits one
+    /// candidate and the search resumes as soon as the count is back within the cap. Those two are the
+    /// whole residual; ERR-030-044's two-case and ERR-030-045's three-case statements are
+    /// <b>superseded</b>, not amended. What deletes residual (i) is the two missing tiers below, not any
+    /// choice rule here.
     /// </para>
     /// <para>
     /// <b>An extremis appearance no longer discharges the ban it was fielded through</b> (ERR-044-003
@@ -299,8 +323,8 @@ namespace TacticalDirector.SeasonSave
         /// <summary>
         /// Presses exactly one removed player back into selection: the least-injured of the merely
         /// injured (ascending <c>RecoveryRemaining</c>, ties on earliest roster position), and only
-        /// once none of those remain, a suspended one — chosen by <see cref="ChooseSuspendedCandidate"/>
-        /// rather than by roster position (ERR-030-044, ERR-030-045).
+        /// once none of those remain, a suspended one — chosen by <see cref="ChooseSuspendedCandidate"/>,
+        /// which searches over SETS of candidates rather than ranking them (ERR-030-046).
         /// <para>
         /// The tier split is the whole football content of this method — see the type remarks. Called
         /// only when at least one player is still removed, which the loop's own guard establishes.
@@ -353,104 +377,230 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>
-        /// Tier 2's within-tier choice (ERR-030-044, pass 3 amended at ERR-030-045): WHICH suspended
-        /// player is pressed back in, when the
-        /// extremis branch has to press one. Returns his roster index, or <c>-1</c> when nobody is removed
-        /// at all — which <see cref="Reinstate"/>'s own guard turns into the divergence throw.
+        /// Tier 2's within-tier choice (ERR-030-046, superseding ERR-030-044 and ERR-030-045): WHICH
+        /// suspended player is pressed back in, when the extremis branch has to press one. Returns his
+        /// roster index, or <c>-1</c> when nobody is removed at all — which <see cref="Reinstate"/>'s own
+        /// guard turns into the divergence throw. Pure: the mask it is handed is left exactly as it was
+        /// found, and the caller commits the single returned index.
         /// <para>
-        /// Three passes, in order, over the still-removed candidates — the first two scanning in ascending
-        /// roster order, the third ranking by selector rating. Every candidate is suspended: tier 1 above
-        /// takes anyone who is removed and NOT suspended, so reaching here means it found none.
-        /// </para>
-        /// <list type="number">
-        /// <item><b>The first candidate the selector would BENCH.</b> The squad is materialised with him
-        /// reinstated and probed: it must be fieldable AND its starting eleven must contain no
-        /// reinstated-suspended player — neither him nor anyone the loop has already pressed back on an
-        /// earlier pass. This is the pass that keeps a bench-depth shortfall from putting a banned man in
-        /// the XI, and with him out of the eleven his ban serves normally.</item>
-        /// <item><b>Failing that, the first candidate who makes the squad fieldable at all.</b> The club
-        /// still has to take the field (§2.3 <b>F9</b>); a forced start is the recorded compromise, and
-        /// ERR-044-003 stage 1's exemption then stalls that one ban.</item>
-        /// <item><b>Failing that, the candidate the selector ranks LAST</b> — ascending
-        /// <see cref="SquadRating.PlayerRating"/>, ties broken by earliest roster position
-        /// (ERR-030-045). Reached whenever no SINGLE reinstatement reaches fieldability, i.e. the club is
-        /// short by more than one, which makes this the pass that decides EVERY reinstatement of a
-        /// multi-player shortfall except the last.</item>
-        /// </list>
-        /// <para>
-        /// <b>Why pass 3 is ranked by rating and not by roster position</b> (ERR-030-045 — the defect
-        /// ERR-030-044 left behind). Fieldability is <b>monotone in adding players</b>: a squad two
-        /// players short cannot be made legal by one, so on every non-final reinstatement the probe
-        /// rejects <i>every</i> candidate and passes 1 and 2 are structurally unreachable. Under the old
-        /// roster-order key pass 3 then pressed back whoever sat first on the roster, blindly — and once
-        /// a good banned player is back in the pool, <see cref="AnyReinstatedSuspendedStarts"/> sees HIM
-        /// in every later candidate's eleven, so pass 1 becomes unsatisfiable for the final pick too and
-        /// that drops to roster order as well. Net behaviour for two or more reinstatements was exactly
-        /// the pre-ERR-030-044 behaviour, in the case a mass-suspension club reaches most readily.
-        /// Ascending selector rank needs no probe to be safe on those blind passes: the weakest banned
-        /// players go back first, so the best is reached only when nothing weaker closes the gap, and the
-        /// final pick's pass 1 still has a benchable candidate to find whenever one exists.
+        /// Every candidate here is suspended: tier 1 above takes anyone who is removed and NOT suspended,
+        /// so reaching this method means it found none.
         /// </para>
         /// <para>
-        /// <b>It is a minimisation, not a guarantee</b> — see the type remarks' third case. A set of
-        /// reinstatements can still start a banned player when EVERY completing choice does, and
-        /// positional constraints force it outright (the weakest banned man being the club's only
-        /// goalkeeper is the same forced start pass 2 records, arrived at one pass later).
+        /// <b>Why this is a search over SETS and not an ordering</b> — the whole content of ERR-030-046,
+        /// and the reason two previous ordering keys were landed and defeated. A club is completed by a
+        /// <b>set</b> of reinstatements; whether that set puts a banned man in the eleven is a property
+        /// of the set; and <c>LineupSelector</c> decides it <b>per position</b>. Neither earliest roster
+        /// position (ERR-030-044's fallback) nor ascending selector rating (ERR-030-045's) can express a
+        /// per-position, set-valued constraint — the second failed on a squad thin in the globally
+        /// <i>weakest</i> banned player's position, where the "safe" key presses back precisely the one
+        /// man no fit player can displace. Ranking candidates at all was the defect class; the fix is to
+        /// stop ranking and start enumerating.
         /// </para>
         /// <para>
-        /// <b>Cost.</b> Per reinstatement: one squad materialisation per candidate, plus a selection walk
-        /// per candidate, plus a SECOND selection walk (inside <see cref="AnyReinstatedSuspendedStarts"/>)
-        /// for every candidate that turns out to be fieldable — so a fieldable candidate costs two full
-        /// <c>TrySelect</c> walks, not one. Bounded by the candidate count and extremis-only: this method
-        /// needs a club with no injured players left to press back and at least one suspended one, and on
-        /// every ordinary fixture it is never called at all. The season path pays boot-cadence costs
-        /// anyway (<c>SeasonLoop.ResolveFixture</c> makes the same argument for re-rating each club per
-        /// matchday).
+        /// <b>Setup.</b> The still-removed indices, ordered ascending by
+        /// <see cref="SquadRating.PlayerRating"/> with ties on earliest roster position — a <b>total
+        /// order</b>, so the enumeration below is canonical and the answer cannot depend on how many
+        /// times it is asked. The ordering no longer decides anything on its own; it only fixes what
+        /// "first" means.
+        /// </para>
+        /// <para>
+        /// <b>Cap.</b> With more than <see cref="SeasonSaveConstants.EXTREMIS_SEARCH_CANDIDATE_CAP"/>
+        /// candidates the search is refused and the weakest candidate returned, with <b>no cleanliness
+        /// claim</b> — ERR-030-046 residual (ii). It self-heals: this pass commits one candidate, so the
+        /// count falls, and the exact search resumes on the next pass as soon as it is back within the
+        /// bound.
+        /// </para>
+        /// <para>
+        /// <b>Search.</b> Enumerate subsets <c>R</c> of the ordered candidates, sizes ascending, and
+        /// lexicographically within a size. Materialise the filtered squad plus <c>R</c> (the tentative
+        /// mask flip generalised from one index to a subset, restored before anything else runs) and
+        /// probe <see cref="SquadRating.CanFieldStartingEleven"/>; a subset that does not complete the
+        /// squad is skipped. For one that does, count how many of the resulting starting eleven are
+        /// reinstated-suspended players (<see cref="CountReinstatedSuspendedInXi"/>). The preferred
+        /// completing subset is (1) the one with the smallest count, then (2) the smallest, then (3) the
+        /// first canonically — which a single strict <c>&lt;</c> gives, because sizes ascend and each
+        /// size is enumerated lexicographically. The first subset with a count of <b>zero</b> is
+        /// globally optimal and stops the search, since every smaller size has already been exhausted.
+        /// </para>
+        /// <para>
+        /// <b>Commit rule</b> — the search chooses a set, this method must return one member of it. If
+        /// <c>|R*| == 1</c>, that member. If <c>|R*| ≥ 2</c> and some member's own singleton was probed
+        /// and did <b>not</b> complete the squad, the canonically first such member: the outer loop
+        /// cannot exit on this pass, so the search simply reruns on the next one with the state
+        /// <c>R* \ {c}</c> was probed against. If <c>|R*| ≥ 2</c> and every member singly completes, the
+        /// choice is re-made among the size-1 completing subsets by the same preference — deterministic,
+        /// and the eleven the loop then exits on is one this call already probed.
+        /// </para>
+        /// <para>
+        /// <b>Guarantee (ERR-030-046).</b> Within the cap the composed squad fields the <b>minimum
+        /// achievable</b> number of reinstated-suspended players in its starting eleven, minimised over
+        /// every completing subset of the still-removed candidates — zero whenever any completing choice
+        /// benches them all — so a reinstated-suspended player starts only in a probe-verified forced
+        /// start. The induction step is that committing a non-completing member <c>c</c> of <c>R*</c>
+        /// cannot raise the optimum: <c>R* \ {c}</c> remains available next pass, and
+        /// <c>F ∪ {c} ∪ (R* \ {c})</c> is byte-identical to the <c>F ∪ R*</c> just probed, because the
+        /// count reaches <c>c</c> through <c>suspended[c] &amp;&amp; !removed[c]</c> exactly as it
+        /// reached him through <c>c ∈ R</c>. The residual is stated exhaustively in the type remarks:
+        /// forced starts, and the beyond-cap corner. Nothing else.
+        /// </para>
+        /// <para>
+        /// <b>Cost.</b> Worst case <c>m·2^(m+1)</c> <c>TrySelect</c> walks — every subset probed for
+        /// fieldability, a completing one probed again for its eleven, over at most <c>m</c> passes:
+        /// <b>98,304</b> at the cap. The reachable case is far smaller — <c>m ≤ 4</c> gives
+        /// <c>≤ 128</c> walks, single-digit milliseconds — and this method is <b>extremis-only</b>: it
+        /// needs a club with no injured player left to press back and at least one suspended one, so on
+        /// every ordinary fixture it is never called at all. Season cadence, never the 10 Hz or 60 Hz
+        /// loops; <c>SeasonLoop.ResolveFixture</c> already re-rates every club per matchday on the same
+        /// argument.
         /// </para>
         /// </summary>
         private static int ChooseSuspendedCandidate(
             Squad squad, bool[] removed, bool[] suspended, int availableCount)
         {
-            int firstFieldable = -1;
-
-            for (int c = 0; c < removed.Length; c++)
+            int[] order = CandidatesByAscendingRank(squad, removed);
+            int m = order.Length;
+            if (m == 0)
             {
-                if (!removed[c])
+                return -1;
+            }
+
+            if (m > SeasonSaveConstants.EXTREMIS_SEARCH_CANDIDATE_CAP)
+            {
+                // Residual (ii): the probe budget, not a football judgement. No minimality is claimed
+                // for this pass; the commit reduces m by one, so the exact search resumes as soon as
+                // the candidate count is back within the cap.
+                return order[0];
+            }
+
+            var subset = new int[m];            // positions into `order` — the current combination
+            var bestSubset = new int[m];
+            var singletonCompletes = new bool[m];
+            var singletonDirty = new int[m];
+
+            int bestDirty = int.MaxValue;
+            int bestSize = 0;
+
+            for (int s = 1; s <= m && bestDirty != 0; s++)
+            {
+                for (int k = 0; k < s; k++)
                 {
-                    continue;
+                    subset[k] = k;
                 }
 
-                // Tentative: c is put back only for the probe, and restored immediately. The mask is the
-                // loop's own state — a candidate that is not chosen must leave no trace in it.
-                removed[c] = false;
-                Squad candidate = MaterializeSquad(squad, removed, availableCount + 1);
-                removed[c] = true;
-
-                // candidate is never null here: MaterializeSquad returns null only for a count of zero,
-                // and this site passes availableCount + 1 >= 1.
-                if (!SquadRating.CanFieldStartingEleven(candidate))
+                while (true)
                 {
-                    continue;
-                }
+                    int dirty = ProbeSubset(
+                        squad, removed, suspended, order, subset, s, availableCount);
+                    if (dirty >= 0)
+                    {
+                        if (s == 1)
+                        {
+                            // Recorded for the commit rule below, which has to know whether a member of
+                            // a chosen multi-subset completes the squad on his own.
+                            singletonCompletes[subset[0]] = true;
+                            singletonDirty[subset[0]] = dirty;
+                        }
 
-                if (firstFieldable < 0)
-                {
-                    firstFieldable = c;
-                }
+                        if (dirty < bestDirty)
+                        {
+                            // Sizes ascend and each size is enumerated lexicographically, so a STRICT <
+                            // implements all three preference levels at once: fewest reinstated-suspended
+                            // starters, then smallest subset, then first canonically.
+                            bestDirty = dirty;
+                            bestSize = s;
+                            Array.Copy(subset, bestSubset, s);
+                            if (dirty == 0)
+                            {
+                                break;
+                            }
+                        }
+                    }
 
-                if (!AnyReinstatedSuspendedStarts(squad, removed, suspended, candidate, c))
-                {
-                    return c;
+                    int p = s - 1;
+                    while (p >= 0 && subset[p] == m - s + p)
+                    {
+                        p--;
+                    }
+                    if (p < 0)
+                    {
+                        break;
+                    }
+                    subset[p]++;
+                    for (int q = p + 1; q < s; q++)
+                    {
+                        subset[q] = subset[q - 1] + 1;
+                    }
                 }
             }
 
-            if (firstFieldable >= 0)
+            if (bestSize == 0)
             {
-                return firstFieldable;
+                // NO subset completes the squad — not even the full one, i.e. the whole roster cannot
+                // satisfy selection. That is the §2.3 F9 roster-integrity case, and it is the outer
+                // loop's to report: press the weakest back so availableCount keeps rising and the loop
+                // reaches its `availableCount == total` terminal refusal.
+                return order[0];
             }
 
-            int weakest = -1;
-            float weakestRating = float.MaxValue;
+            if (bestSize == 1)
+            {
+                return order[bestSubset[0]];
+            }
+
+            for (int k = 0; k < bestSize; k++)
+            {
+                if (!singletonCompletes[bestSubset[k]])
+                {
+                    // He does not complete the squad alone, so the outer loop cannot exit on this pass
+                    // and the search reruns with the rest of R* still available (the induction step).
+                    return order[bestSubset[k]];
+                }
+            }
+
+            // Every member of R* completes on its own, so committing any of them ENDS the back-fill and
+            // the exit eleven is decided here rather than by a later pass. Re-choose among the size-1
+            // completing subsets by the same preference — the full size-1 sweep necessarily ran, since a
+            // clean singleton would have been returned above.
+            int pick = -1;
+            int pickDirty = int.MaxValue;
+            for (int k = 0; k < m; k++)
+            {
+                if (singletonCompletes[k] && singletonDirty[k] < pickDirty)
+                {
+                    pickDirty = singletonDirty[k];
+                    pick = k;
+                }
+            }
+
+            return order[pick];
+        }
+
+        /// <summary>
+        /// The still-removed candidates in the search's canonical order: ascending
+        /// <see cref="SquadRating.PlayerRating"/>, ties broken by earliest roster position.
+        /// <para>
+        /// The order decides nothing by itself since ERR-030-046 — the subset search does — but it must
+        /// be a <b>total</b> order, because it is what "first canonically" means in the preference rule
+        /// and therefore what makes two identical calls return the same index. Insertion sort: the
+        /// candidate count is bounded by the roster and by the search cap, and this runs once per
+        /// extremis pass.
+        /// </para>
+        /// </summary>
+        private static int[] CandidatesByAscendingRank(Squad squad, bool[] removed)
+        {
+            int m = 0;
+            for (int i = 0; i < removed.Length; i++)
+            {
+                if (removed[i])
+                {
+                    m++;
+                }
+            }
+
+            var order = new int[m];
+            var rating = new float[m];
+            int w = 0;
             for (int i = 0; i < removed.Length; i++)
             {
                 if (!removed[i])
@@ -458,35 +608,91 @@ namespace TacticalDirector.SeasonSave
                     continue;
                 }
 
-                float rating = SquadRating.PlayerRating(squad.GetPlayer(i).Attributes);
-                if (rating < weakestRating)
-                {
-                    // Strict <, so equal ratings keep the earliest roster position — a total order, so
-                    // the pass is deterministic even on a squad of identically-rated players.
-                    weakestRating = rating;
-                    weakest = i;
-                }
+                order[w] = i;
+                rating[w] = SquadRating.PlayerRating(squad.GetPlayer(i).Attributes);
+                w++;
             }
 
-            return weakest;
+            for (int a = 1; a < m; a++)
+            {
+                int index = order[a];
+                float r = rating[a];
+                int b = a - 1;
+
+                // Strictly-greater, so the sort is stable and equal ratings keep the ascending roster
+                // order they were gathered in — the tie-break, without a second comparison.
+                while (b >= 0 && rating[b] > r)
+                {
+                    order[b + 1] = order[b];
+                    rating[b + 1] = rating[b];
+                    b--;
+                }
+
+                order[b + 1] = index;
+                rating[b + 1] = r;
+            }
+
+            return order;
         }
 
         /// <summary>
-        /// Whether <paramref name="candidate"/>'s starting eleven contains any suspended player the
-        /// back-fill has put back — the ones already reinstated on an earlier pass
-        /// (<c>suspended[i] &amp;&amp; !removed[i]</c>) plus the candidate <paramref name="c"/> being
-        /// probed. Identity is by <c>PlayerId</c>, because the candidate squad's own indices are
-        /// renumbered by the materialisation.
+        /// Probes one candidate subset: <c>-1</c> when the filtered squad plus that subset still cannot
+        /// satisfy selection, otherwise how many reinstated-suspended players its starting eleven
+        /// contains (zero being the clean completion the search is looking for).
         /// <para>
-        /// The already-reinstated half matters on a multi-reinstatement back-fill: a pass that keeps its
-        /// OWN candidate on the bench while promoting a previously reinstated one into the eleven has not
-        /// avoided anything.
+        /// The mask flips are tentative and are restored before anything else runs — the mask is the
+        /// back-fill loop's own state, and a subset that is not chosen must leave no trace in it.
         /// </para>
         /// </summary>
-        private static bool AnyReinstatedSuspendedStarts(
-            Squad squad, bool[] removed, bool[] suspended, Squad candidate, int c)
+        private static int ProbeSubset(
+            Squad squad, bool[] removed, bool[] suspended,
+            int[] order, int[] subset, int subsetLength, int availableCount)
+        {
+            for (int k = 0; k < subsetLength; k++)
+            {
+                removed[order[subset[k]]] = false;
+            }
+            Squad candidate = MaterializeSquad(squad, removed, availableCount + subsetLength);
+            for (int k = 0; k < subsetLength; k++)
+            {
+                removed[order[subset[k]]] = true;
+            }
+
+            // candidate is never null here: MaterializeSquad returns null only for a count of zero, and
+            // this site passes availableCount + subsetLength >= 1.
+            if (!SquadRating.CanFieldStartingEleven(candidate))
+            {
+                return -1;
+            }
+
+            return CountReinstatedSuspendedInXi(
+                squad, removed, suspended, candidate, order, subset, subsetLength);
+        }
+
+        /// <summary>
+        /// How many players in <paramref name="candidate"/>'s starting eleven are suspended players the
+        /// back-fill has put back — the ones an earlier pass already reinstated
+        /// (<c>suspended[i] &amp;&amp; !removed[i]</c>) plus the members of the subset being probed.
+        /// Identity is by <c>PlayerId</c>, because the candidate squad's own indices are renumbered by
+        /// the materialisation.
+        /// <para>
+        /// A <b>count</b>, not a predicate (ERR-030-046 — this was <c>AnyReinstatedSuspendedStarts</c>).
+        /// The search minimises it, and minimising needs to distinguish "starts one" from "starts three":
+        /// a boolean can only find a clean completion or give up, which is precisely how the previous
+        /// shape ended up with no claim at all whenever no clean completion existed.
+        /// </para>
+        /// <para>
+        /// The already-reinstated half matters on a multi-reinstatement back-fill: a subset that keeps
+        /// its OWN members on the bench while promoting a previously reinstated one into the eleven has
+        /// not avoided anything.
+        /// </para>
+        /// </summary>
+        private static int CountReinstatedSuspendedInXi(
+            Squad squad, bool[] removed, bool[] suspended, Squad candidate,
+            int[] order, int[] subset, int subsetLength)
         {
             int[] startingEleven = SquadRating.StartingElevenPlayerIds(candidate);
+            int count = 0;
 
             for (int i = 0; i < suspended.Length; i++)
             {
@@ -494,7 +700,7 @@ namespace TacticalDirector.SeasonSave
                 {
                     continue;
                 }
-                if (removed[i] && i != c)
+                if (removed[i] && !InSubset(order, subset, subsetLength, i))
                 {
                     // Still filtered out, so he is not in this candidate squad at all.
                     continue;
@@ -505,8 +711,23 @@ namespace TacticalDirector.SeasonSave
                 {
                     if (startingEleven[s] == playerId)
                     {
-                        return true;
+                        count++;
+                        break;
                     }
+                }
+            }
+
+            return count;
+        }
+
+        /// <summary>Whether roster index <paramref name="rosterIndex"/> is one of the subset's members.</summary>
+        private static bool InSubset(int[] order, int[] subset, int subsetLength, int rosterIndex)
+        {
+            for (int k = 0; k < subsetLength; k++)
+            {
+                if (order[subset[k]] == rosterIndex)
+                {
+                    return true;
                 }
             }
 
@@ -613,4 +834,66 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | `candidate == null` branch at the probe site — reachable only at  |
 // |         |            |        | availableCount 0, where this site passes >= 1 — is replaced by a  |
 // |         |            |        | comment saying why it cannot fire.                                |
+// | 1.7     | 2026-08-16 | —      | ERR-030-046 (escalated High — the SAME defect survived two        |
+// |         |            |        | successive fixes, so the no-third-identical-retry rule applied    |
+// |         |            |        | and the shape was ruled rather than iterated). v1.6's pass-3 key  |
+// |         |            |        | is an ascending-PlayerRating GLOBAL SCALAR while LineupSelector   |
+// |         |            |        | selects PER POSITION: where the fit squad is thin in the          |
+// |         |            |        | globally-weakest banned player's position, the blind pass presses |
+// |         |            |        | exactly HIM back — into a slot no fit player can contest — he     |
+// |         |            |        | starts, the reinstated-suspended probe is then unsatisfiable for  |
+// |         |            |        | every later candidate, and pass 2 falls to roster order. Measured |
+// |         |            |        | on generated mass-suspension fixtures, >= 476 of 1920 had a clean |
+// |         |            |        | completing choice the algorithm missed. Root-cause CLASS, and the |
+// |         |            |        | reason a third ordering key was refused: an element-wise greedy   |
+// |         |            |        | decision of a set-valued constraint. A squad is completed by a    |
+// |         |            |        | SET, whether that set starts a banned man is a property of the    |
+// |         |            |        | SET, and no per-player scalar can express it.                     |
+// |         |            |        | ChooseSuspendedCandidate is now a CAPPED EXHAUSTIVE               |
+// |         |            |        | clean-completion search: candidates ordered ascending             |
+// |         |            |        | PlayerRating (ties on roster index — a total order, so the        |
+// |         |            |        | enumeration is canonical, and the only thing the order still      |
+// |         |            |        | decides); every subset probed, sizes ascending and lexicographic  |
+// |         |            |        | within a size; preference is fewest dirty, then the smallest set, |
+// |         |            |        | then canonical first, the first dirty == 0 subset being globally  |
+// |         |            |        | optimal and stopping the search. AnyReinstatedSuspendedStarts     |
+// |         |            |        | becomes the subset-parameterised COUNT                            |
+// |         |            |        | CountReinstatedSuspendedInXi, because minimising needs to tell    |
+// |         |            |        | "starts one" from "starts three". The commit rule returns ONE     |
+// |         |            |        | member: a one-member R* gives that member; a larger R* gives the  |
+// |         |            |        | canonical-first member whose own singleton was probed NOT         |
+// |         |            |        | completing (the outer loop cannot exit, so the search reruns), or |
+// |         |            |        | else a re-choice among the size-1 completing sets by the same     |
+// |         |            |        | preference. + [FIXED] SeasonSaveConstants.                        |
+// |         |            |        | EXTREMIS_SEARCH_CANDIDATE_CAP = 12 (2^13 probe bound; an          |
+// |         |            |        | algorithmic budget, NOT a gameplay dial, so not [GT] and not      |
+// |         |            |        | subject to KD-W1) — beyond it the pass degrades to ascending-rank |
+// |         |            |        | greedy with no minimality claim, self-healing as each commit      |
+// |         |            |        | lowers m. GUARANTEE, now a theorem rather than a best effort:     |
+// |         |            |        | within the cap the composed squad fields the MINIMUM achievable   |
+// |         |            |        | number of reinstated-suspended players in its XI, minimised over  |
+// |         |            |        | every completing subset — zero whenever any completing choice     |
+// |         |            |        | benches them all — so one starts only in a probe-verified forced  |
+// |         |            |        | start. Induction step: committing a non-completing member c of R* |
+// |         |            |        | cannot raise the optimum, since R* \ {c} stays available and      |
+// |         |            |        | F u {c} u (R* \ {c}) is byte-identical to the probed F u R*.      |
+// |         |            |        | Termination unchanged (availableCount strictly increases; §2.3 F9 |
+// |         |            |        | at the bound; no repair loop). RESIDUAL, exhaustive: (i) forced   |
+// |         |            |        | starts — the minimum is positive (sole-GK forcings and their k>=2 |
+// |         |            |        | generalisations), where the ERR-044-003 stage-1 exemption stalls  |
+// |         |            |        | exactly the fielded bans and no fewer; (ii) the beyond-cap corner.|
+// |         |            |        | ERR-030-044's two-case and ERR-030-045's three-case guarantee     |
+// |         |            |        | statements are SUPERSEDED, not amended, and the falsified claims  |
+// |         |            |        | they rested on ("the final pick's pass 1 still has a benchable    |
+// |         |            |        | candidate", the two-routes-into-forced-start enumeration) are     |
+// |         |            |        | DELETED rather than re-worded — the enumeration form failed       |
+// |         |            |        | twice. Compose, the fresh-mask contract, tier-1 precedence, the   |
+// |         |            |        | one-reinstatement-per-pass outer loop, the F9 terminal throw and  |
+// |         |            |        | FR-DC-018's identity fast paths are UNTOUCHED. No RNG, no draw    |
+// |         |            |        | site, no SNAPSHOT_SCHEMA_VERSION / SEASON_SAVE_FORMAT_VERSION     |
+// |         |            |        | movement, no change to SquadRating / LineupSelector / MatchEngine;|
+// |         |            |        | digest invariance still not claimed for a season whose extremis   |
+// |         |            |        | tier fires. Back-props: #30 section-3.md §3.4 (the search rule +  |
+// |         |            |        | theorem + residual) and #44 section-2.md / section-7.md           |
+// |         |            |        | (ERR-044-019 EXTENDED, not re-filed).                             |
 #endregion

@@ -1,7 +1,23 @@
 # Discipline & Suspensions #44 — Section 2: Requirements, Data Structures, Failure Modes
 
 **Created:** July 24, 2026
-**Last Updated:** August 16, 2026, following the M18 pass (v0.16 — reviewed-findings pass, finding M-1:
+**Last Updated:** August 16, 2026, later still (v0.17 — **`ERR-044-019` EXTENDED, not re-filed**, by
+`ERR-030-046` (an ESCALATED High filed at #30 `section-3.md` v2.9, which owns the rule). §2.3's
+ERR-044-003 note stated the extremis compromise's second bullet as a **best-effort minimisation** of the
+forced-start case, following `ERR-030-045`. #30's within-tier rule is no longer an ordering key at all —
+two successive keys were defeated by the same class of defect (an element-wise greedy decision of a
+**set-valued**, per-position constraint), so the third attempt was ruled: a capped exhaustive search over
+subsets of the eligible candidates. What #44 must state is its result, and it is now a **guarantee**: a
+reinstated-suspended player **starts only in a probe-verified forced start — every completing choice
+within the search bound starts at least as many**, so the composed eleven contains the MINIMUM achievable
+number of them, zero whenever any completing choice benches them all. The residual becomes a two-item
+list — forced starts, and a beyond-cap corner above
+`SeasonSaveConstants.EXTREMIS_SEARCH_CANDIDATE_CAP` = 12 concurrent suspended candidates — stated as a
+list rather than as an enumeration of routes into a forced start, that form having now been falsified
+twice. No FR row changed: FR-DC-011 still says "did not appear in", which is right in every case. §7.2's
+mirror amended in the same commit (`section-7.md` v0.10); code
+`src/season-save/AvailabilityComposition.cs` v1.7, `src/season-save/SeasonSaveConstants.cs` v1.9.)
+**Last Updated (prior):** August 16, 2026, following the M18 pass (v0.16 — reviewed-findings pass, finding M-1:
 v0.15's own row below miscounted its five-item F1 extension as "the four" refusals — annotated in
 place with the corrected count and a re-verified "unit-tested" claim (`CardLedgerFoldTests.cs` v1.9's
 `Constructor_OnPitchAgentIdCountOutOfRange_Throws`, landed by a parallel fixer the same day) rather
@@ -115,7 +131,7 @@ re-scoped off "the engine-resolved fixture" to every resolved squad on both reso
 fail-loud withdrawn in favour of #30 §2.3 F9, with the suspension-as-stricter-reinstatement-tier
 decision recorded)
 **Last Updated (prior):** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.16
+**Version:** 0.17
 **Status:** APPROVED
 
 ---
@@ -299,12 +315,11 @@ is pressed back before any suspended one. **That tier order is unchanged.**
 > `ERR-030-044`'s amended key, and even then in a **two-case** form that this spec must state rather
 > than collapse:
 >
-> - **Benched — the common case, and the one the amended key exists to reach.** Tier 2 now prefers the
->   first candidate, in roster order, that the selector would **bench**. He is then not in
->   `fieldedPlayerIds`, FR-DC-011's decrement is not exempted, and **his ban advances normally** — the
->   suspension costs exactly what the Laws say it costs, even though the club was depleted enough to
->   need him in its eighteen.
-> - **Forced to start — the residual.** When no candidate choice keeps every reinstated-suspended
+> - **Benched — the common case, and the one #30's amended rule exists to reach.** The reinstated player
+>   is not in `fieldedPlayerIds`, FR-DC-011's decrement is not exempted, and **his ban advances
+>   normally** — the suspension costs exactly what the Laws say it costs, even though the club was
+>   depleted enough to need him in its eighteen.
+> - **Forced to start — the residual.** When no completing choice keeps every reinstated-suspended
 >   player out of the eleven, he starts, the ERR-044-003 stage-1 exemption fires, and **his ban does not
 >   advance for that fixture**. This is the compromise between #30's liveness invariant and the Laws,
 >   and it is the ONLY case in which a ban stalls. It is what the two unbuilt tiers below delete.
@@ -312,18 +327,31 @@ is pressed back before any suspended one. **That tier order is unchanged.**
 > Neither case is a licence for the other: the stall is a property of being *forced* onto the pitch,
 > never of being reinstated.
 >
-> **`ERR-030-045` (August 16, 2026) amends the second bullet — it was written as if only positional
-> forcing could reach it, and that is narrower than the truth.** The forced-start case is reached two
-> ways. The first is the canonical one: a **single** reinstatement with no benchable candidate, the
-> club's only goalkeeper. The second is a **multi-player shortfall** in which every completing choice
-> starts someone — a club short by more than one gets no useful probe on any reinstatement but the last
-> (fieldability is monotone in adding players, so nothing is fieldable until the gap closes), and #30's
-> pass-3 key can only make that pick *well*, not make it safe. #30 §3.4's key is therefore a **best-effort
-> minimisation of this bullet, not a guarantee against it** — it presses the weakest banned players back
-> first, so the strong ones the selector would start are reached only when nothing weaker completes the
-> squad. Read the two bullets that way: benched *whenever any choice permits it*, forced start when none
-> does. A mass-suspension club is the population that meets the second case, and #44 is the spec whose
-> own subject makes that club common.
+> **`ERR-030-046` (August 16, 2026, ESCALATED) restates what the second bullet costs — and it is now a
+> guarantee rather than a best effort. This supersedes `ERR-030-045`'s amendment of the same bullet**
+> (which had widened it from positional forcing alone to "positional forcing *or* a `k ≥ 2` shortfall",
+> and called #30's key a best-effort minimisation). Two successive ordering keys were landed at #30 §3.4
+> and both were defeated by the same class of defect — an element-wise greedy decision of a **set-valued**
+> constraint, since a depleted club is completed by a *set* of reinstatements and whether that set starts
+> a banned player is a property of the set, decided **per position**. #30's rule is now a **capped
+> exhaustive search** over subsets of the eligible candidates, and what #44 must state is its result:
+>
+> **A reinstated-suspended player starts only in a *probe-verified* forced start — every completing
+> choice within the search bound starts at least as many.** Equivalently: the composed eleven contains
+> the **minimum achievable** number of reinstated-suspended players, and that number is **zero whenever
+> any completing choice benches them all**. Where it is positive, every alternative would have cost at
+> least as many stalled bans.
+>
+> The residual is therefore exactly two things, and #44 states them as a list rather than as an
+> enumeration of routes into a forced start — **that form has now been falsified twice** and is not
+> attempted again: **(i)** the forced starts above, where the minimum is positive (the club's sole
+> goalkeeper being banned is the smallest such case, a `k ≥ 2` shortfall in which every completing subset
+> starts someone its generalisation); and **(ii)** a **beyond-cap corner** — more than
+> `SeasonSaveConstants.EXTREMIS_SEARCH_CANDIDATE_CAP` (12) concurrent suspended candidates at one club,
+> which no measured card rate reaches, where the pass degrades to an ascending-rank greedy and makes no
+> minimality claim, self-healing as each pass commits one candidate and the count falls back inside the
+> bound. A mass-suspension club is the population that meets (i), and #44 is the spec whose own subject
+> makes that club common; only §7.2's unbuilt tiers delete it.
 
 What **ERR-044-003 stage 1**
 (August 15, 2026) fixed is the free-appearance half: an extremis appearance no longer serves the ban it
@@ -357,4 +385,5 @@ chosen.
 | 0.14 | 2026-08-16, latest | — | **Reviewed findings pass, finding A (`ERR-044-022`).** §2.2's `CardLedgerFold` constructor line gains a required `onPitchAgentIdCount` parameter (`int[] occupancyByAgentId, int onPitchAgentIdCount, int competitionId`), with an inline comment stating the boundary it marks (on-pitch agent ids end, the engine's synthetic bench ids begin — `MatchEngineConstants.SQUAD_SIZE` in production), what it is FOR (`ApplySubstitution`, §3.1, refusing an on-pitch `Incoming` or a bench `Outgoing`), and why the seed's own M1 one-to-one check could not close this gap alone (it runs once, over player ids, and never learns which agent ids are on-pitch versus bench). The same comment cross-references `ERR-044-023`'s boot-time seed precondition, declared in full at §4.3. Matches `CardLedgerFold.cs` v1.10 exactly. See `spec-error-log.md` `ERR-044-022`. |
 | 0.15 | 2026-08-16, latest of all | — | **Reviewed-findings pass, finding M18.** §2.3's **F1** row extended to the five seed/substitution boundary refusals landed with `ERR-044-021` (the non-one-to-one construction seed, the self-substitution refusal) and `ERR-044-022` (an on-pitch `Incoming`, a bench `Outgoing`, and an out-of-range `onPitchAgentIdCount` constructor argument) — all enforced in production and unit-tested, none previously named by any F-row. New **F7** row declares the `ERR-044-020` lossless-pump refusals (the non-consecutive-tick refusal and the partial-application poison latch on `ObserveTick`), which had no failure-mode row at all despite §2.2/§3.1 both describing the mechanism normatively. `section-5.md` v0.8 in the same commit adds the matching §5.2 test-method citations and corrects §5.6's FR-DC-002 disposition from Construction to Test + Construction. *(M-1, August 16, 2026: this row miscounted its own extension as "the four" refusals when it names five — `ERR-044-021` contributes two, `ERR-044-022` three; corrected to "five" in place. The row's "and unit-tested" claim was unverified for the fifth (the `onPitchAgentIdCount` range guard) at the moment this row was written; `CardLedgerFoldTests.cs` v1.9 has since added `Constructor_OnPitchAgentIdCountOutOfRange_Throws` [T-DC-FOLD-003] — re-checked by grep the same day the correction was made — so the claim now holds for all five without further change.)* |
 | 0.16 | 2026-08-16, following the M18 pass | — | **Reviewed-findings pass, finding M-1.** The v0.15 row above is annotated in place (miscounted "four" → "five"; the "unit-tested" claim re-verified against `CardLedgerFoldTests.cs` v1.9's `Constructor_OnPitchAgentIdCountOutOfRange_Throws`, landed by a parallel fixer the same day) rather than rewritten, per this file's own convention. No FR/data-structure/failure-mode text changed. `section-5.md` v0.9 in the same commit cites the same test under T-DC-FOLD-003. |
+| 0.17 | 2026-08-16, later still | — | **`ERR-044-019` EXTENDED (annotated, not re-filed)** by **`ERR-030-046`**, an ESCALATED High filed at #30 `section-3.md` v2.9, which owns the rule. §2.3's ERR-044-003 note carried `ERR-030-045`'s statement of the compromise: two bullets, the second widened to "positional forcing *or* a `k >= 2` shortfall" and #30's within-tier key described as a **best-effort minimisation**. #30's rule is no longer an ordering key. Two successive keys — earliest roster position (`ERR-030-044`), then ascending selector rating (`ERR-030-045`) — were defeated by the same class of defect: an **element-wise greedy decision of a set-valued constraint**. A depleted club is completed by a SET of reinstatements, whether that set starts a banned player is a property of the SET, and `LineupSelector` decides it **per position**, so no per-player scalar can express it; the rating key failed on a squad thin in the globally *weakest* banned player's position, which is precisely where it presses him back. The third attempt was **ruled rather than iterated** (the no-third-identical-retry rule): a **capped exhaustive search** over subsets of the eligible candidates. §2.3 now states the result as a **guarantee** — *a reinstated-suspended player starts only in a probe-verified forced start; every completing choice within the search bound starts at least as many* — equivalently, the composed eleven contains the MINIMUM achievable number of reinstated-suspended players, zero whenever any completing choice benches them all. The residual is restated as a two-item list: **(i)** forced starts, where the minimum is positive (sole-GK forcings and their `k >= 2` generalisations), and **(ii)** the **beyond-cap corner** — more than `[FIXED] SeasonSaveConstants.EXTREMIS_SEARCH_CANDIDATE_CAP` = 12 concurrent suspended candidates at one club, unreachable at measured card rates, where the pass degrades to ascending-rank greedy with no minimality claim and self-heals as each commit lowers the count. Stated as a **list, not an enumeration of routes into a forced start** — that form has now been falsified twice and is deliberately not attempted again. No FR row changed (FR-DC-011's "did not appear in" is right in every case), no format-version change, no code change in `src/discipline/`. §7.2's mirror amended in the same commit (`section-7.md` v0.10). |
 #endregion
