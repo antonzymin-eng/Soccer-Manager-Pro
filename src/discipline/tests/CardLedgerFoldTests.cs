@@ -1,5 +1,8 @@
 // File:     src/discipline/tests/CardLedgerFoldTests.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16 (adversarial-review M2 — the four RequireCommittableConfig rejection cases each
+//           assert the refusal NAMES its own [GT], and the section comment records the executed
+//           per-guard mutation verification that each of the four arguments is isolating — v1.6)
 // Modified: 2026-08-15, later (reviewed findings pass, L4 — v1.5: the Competition constant's
 //           DisciplineConstants.LEAGUE_COMPETITION_KEY reference renamed for that constant's ALL_CAPS ->
 //           LeagueCompetitionKey rename (DisciplineConstants.cs v1.5). No behaviour change.)
@@ -353,12 +356,19 @@ namespace TacticalDirector.Discipline.Tests
             var state = new DisciplineState();
             var rules = new DisciplineRules(state);
 
-            Assert.Throws<InvalidOperationException>(() => fold.CommitWithExplicitConfig(
-                rules,
-                yellowThreshold: 0,   // invalid — RequireYellowThreshold refuses below 1
-                accumBan: DisciplineConstants.AccumBanMatches,
-                secondYellowBan: DisciplineConstants.SecondYellowBanMatches,
-                straightRedBan: DisciplineConstants.StraightRedBanMatches));
+            InvalidOperationException refusal = Assert.Throws<InvalidOperationException>(
+                () => fold.CommitWithExplicitConfig(
+                    rules,
+                    yellowThreshold: 0,   // invalid — RequireYellowThreshold refuses below 1
+                    accumBan: DisciplineConstants.AccumBanMatches,
+                    secondYellowBan: DisciplineConstants.SecondYellowBanMatches,
+                    straightRedBan: DisciplineConstants.StraightRedBanMatches));
+
+            Assert.That(
+                refusal.Message,
+                Does.Contain(nameof(DisciplineConstants.YellowAccumulationThreshold)),
+                "The refusal must name the [GT] that caused it — a bare InvalidOperationException "
+                + "cannot tell one of RequireCommittableConfig's four guards from another.");
 
             Assert.AreEqual(0, state.Count,
                 "Neither buffered card may reach persisted state when the [GT] guard refuses the "
@@ -385,13 +395,18 @@ namespace TacticalDirector.Discipline.Tests
             var state = new DisciplineState();
             var rules = new DisciplineRules(state);
 
-            Assert.Throws<InvalidOperationException>(() => fold.CommitWithExplicitConfig(
-                rules,
-                yellowThreshold: DisciplineConstants.YellowAccumulationThreshold,
-                accumBan: DisciplineConstants.AccumBanMatches,
-                secondYellowBan: -1,   // invalid
-                straightRedBan: DisciplineConstants.StraightRedBanMatches));
+            InvalidOperationException refusal = Assert.Throws<InvalidOperationException>(
+                () => fold.CommitWithExplicitConfig(
+                    rules,
+                    yellowThreshold: DisciplineConstants.YellowAccumulationThreshold,
+                    accumBan: DisciplineConstants.AccumBanMatches,
+                    secondYellowBan: -1,   // invalid
+                    straightRedBan: DisciplineConstants.StraightRedBanMatches));
 
+            Assert.That(
+                refusal.Message,
+                Does.Contain(nameof(DisciplineConstants.SecondYellowBanMatches)),
+                "The refusal must name the [GT] that caused it.");
             Assert.AreEqual(0, state.Count, "the card's yellow must not land while its ban length is refused.");
             Assert.AreEqual(1, fold.PendingCardCount);
         }
@@ -403,6 +418,19 @@ namespace TacticalDirector.Discipline.Tests
         // only for yellowThreshold and secondYellowBan. RequireCommittableConfig validates all four
         // unconditionally before the loop runs (M17), so an ordinary card is enough to exercise it —
         // the refused fixture's own cards need not touch the guarded constant.
+        //
+        // M2 (2026-08-16), re-verified by execution rather than re-asserted: all FOUR arguments of
+        // RequireCommittableConfig(int,int,int,int) now have an isolating case. Each guard was deleted
+        // in turn and the suite re-run; each deletion killed exactly one of the four tests above, and
+        // each test was killed by exactly one deletion. Worth stating for the secondYellowBan case,
+        // whose isolation is not obvious: with its pre-check deleted, the loop's ApplyCard reads the
+        // real DisciplineConstants.SecondYellowBanMatches — the -1 reaches the pre-check ONLY — so no
+        // throw follows and the test genuinely fails. The four Does.Contain(nameof(...)) assertions are
+        // what stop a future mutant satisfying Assert.Throws from the wrong guard.
+        //
+        // The set of guarded [GT]s is locked separately, in DisciplineConfigCompletenessTests: an
+        // isolating case per argument says nothing about a FIFTH constant added to the catalogue with
+        // no guard at all, which is the failure this pair of checks exists to cover between them.
 
         [Test]
         public void Commit_WithAnInvalidAccumBan_RefusesBeforeApplyingAnyCard()
@@ -413,13 +441,18 @@ namespace TacticalDirector.Discipline.Tests
             var state = new DisciplineState();
             var rules = new DisciplineRules(state);
 
-            Assert.Throws<InvalidOperationException>(() => fold.CommitWithExplicitConfig(
-                rules,
-                yellowThreshold: DisciplineConstants.YellowAccumulationThreshold,
-                accumBan: -1,   // invalid
-                secondYellowBan: DisciplineConstants.SecondYellowBanMatches,
-                straightRedBan: DisciplineConstants.StraightRedBanMatches));
+            InvalidOperationException refusal = Assert.Throws<InvalidOperationException>(
+                () => fold.CommitWithExplicitConfig(
+                    rules,
+                    yellowThreshold: DisciplineConstants.YellowAccumulationThreshold,
+                    accumBan: -1,   // invalid
+                    secondYellowBan: DisciplineConstants.SecondYellowBanMatches,
+                    straightRedBan: DisciplineConstants.StraightRedBanMatches));
 
+            Assert.That(
+                refusal.Message,
+                Does.Contain(nameof(DisciplineConstants.AccumBanMatches)),
+                "The refusal must name the [GT] that caused it.");
             Assert.AreEqual(0, state.Count, "no card may reach persisted state while accumBan is refused.");
             Assert.AreEqual(1, fold.PendingCardCount, "the buffer itself must be untouched by the refusal.");
         }
@@ -433,13 +466,18 @@ namespace TacticalDirector.Discipline.Tests
             var state = new DisciplineState();
             var rules = new DisciplineRules(state);
 
-            Assert.Throws<InvalidOperationException>(() => fold.CommitWithExplicitConfig(
-                rules,
-                yellowThreshold: DisciplineConstants.YellowAccumulationThreshold,
-                accumBan: DisciplineConstants.AccumBanMatches,
-                secondYellowBan: DisciplineConstants.SecondYellowBanMatches,
-                straightRedBan: -1));   // invalid
+            InvalidOperationException refusal = Assert.Throws<InvalidOperationException>(
+                () => fold.CommitWithExplicitConfig(
+                    rules,
+                    yellowThreshold: DisciplineConstants.YellowAccumulationThreshold,
+                    accumBan: DisciplineConstants.AccumBanMatches,
+                    secondYellowBan: DisciplineConstants.SecondYellowBanMatches,
+                    straightRedBan: -1));   // invalid
 
+            Assert.That(
+                refusal.Message,
+                Does.Contain(nameof(DisciplineConstants.StraightRedBanMatches)),
+                "The refusal must name the [GT] that caused it.");
             Assert.AreEqual(0, state.Count, "no card may reach persisted state while straightRedBan is refused.");
             Assert.AreEqual(1, fold.PendingCardCount, "the buffer itself must be untouched by the refusal.");
         }
@@ -516,4 +554,16 @@ namespace TacticalDirector.Discipline.Tests
 // | 1.5     | 2026-08-15, later | — | Reviewed findings pass, L4. Competition constant's                |
 // |         |            |        | DisciplineConstants reference renamed LEAGUE_COMPETITION_KEY ->    |
 // |         |            |        | LeagueCompetitionKey. No behaviour change.                          |
+// | 1.6     | 2026-08-16 | —      | Adversarial review, M2 (minimal fix). Each of the four              |
+// |         |            |        | RequireCommittableConfig rejection cases now asserts the refusal    |
+// |         |            |        | message NAMES the [GT] that caused it, so Assert.Throws can no      |
+// |         |            |        | longer be satisfied by the wrong guard. The section comment         |
+// |         |            |        | records the executed verification behind M2's ask — each of the     |
+// |         |            |        | four guards deleted in turn, each deletion killing exactly one of   |
+// |         |            |        | the four tests — so no case was missing and none was added; the     |
+// |         |            |        | secondYellowBan case's non-obvious isolation (the -1 reaches the    |
+// |         |            |        | pre-check only; ApplyCard reads the real constant) is written       |
+// |         |            |        | down rather than left to be re-derived. The complementary check     |
+// |         |            |        | — that the guarded SET still equals the settable set — is the new   |
+// |         |            |        | DisciplineConfigCompletenessTests, cross-referenced here.           |
 #endregion

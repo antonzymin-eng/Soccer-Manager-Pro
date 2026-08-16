@@ -1,5 +1,8 @@
 // File:     src/discipline/CardLedgerFold.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16 (adversarial-review M2, doc only — RequireCommittableConfig records that adding
+//           a guarded [GT] is a five-site change and names DisciplineConfigCompletenessTests, the check
+//           that detects the drift; the DisciplineConfig restructure stays recorded and gated — v1.7)
 // Modified: 2026-08-15, later (reviewed findings pass, L3/L5 — v1.6: L3 — the L22 comment inside
 //           ObserveTick was spliced into the middle of a sentence ("…read at the same index only in the
 //           sense" broken across the whole L22 block from "that both are dispatched…"); the sentence now
@@ -316,6 +319,17 @@ namespace TacticalDirector.Discipline
         /// makes the guard unconditional: the answer does not depend on which fold is asking, which is
         /// what lets the round ask before any fold exists.
         /// </para>
+        /// <para>
+        /// <b>Adding a guarded <c>[GT]</c> touches five places, not one</b> (M2): this method, the
+        /// no-argument form above, <see cref="CommitWithExplicitConfig"/>'s parameter list,
+        /// <see cref="DisciplineRules"/>' own site guard, and #44 §2.3 F6's guard list. Nothing makes
+        /// that mechanical, so <c>DisciplineConfigCompletenessTests</c> asserts the SET of
+        /// config-settable constants in <see cref="DisciplineConstants"/> equals the set covered here —
+        /// extend the pre-flight and that test together. The eventual owner-shape is a single validated
+        /// <c>DisciplineConfig</c> struct, which makes the drift impossible rather than detected; it is
+        /// recorded and deliberately deferred, gated on the <c>GameplayConfigHolder.Bind</c>
+        /// composition-root pass that no production caller runs yet.
+        /// </para>
         /// </summary>
         internal static void RequireCommittableConfig(
             int yellowThreshold, int accumBan, int secondYellowBan, int straightRedBan)
@@ -459,4 +473,15 @@ namespace TacticalDirector.Discipline
 // |         |            |        | text unchanged otherwise. L5: NO_PLAYER's XML doc tagged [FIXED]   |
 // |         |            |        | (FR-CS-060/061); a #44 Appendix A row + spec declaration owed,     |
 // |         |            |        | not filed here. No behaviour change either way.                    |
+// | 1.7     | 2026-08-16 | —      | Adversarial review, M2 (minimal fix), doc only.                   |
+// |         |            |        | RequireCommittableConfig(int,int,int,int) records that a new      |
+// |         |            |        | guarded [GT] must reach five places — both forms here,            |
+// |         |            |        | CommitWithExplicitConfig's parameters, DisciplineRules' site      |
+// |         |            |        | guard and #44 §2.3 F6's list — and names the new                  |
+// |         |            |        | DisciplineConfigCompletenessTests, which asserts the guarded set  |
+// |         |            |        | still equals DisciplineConstants' config-settable set. M2's       |
+// |         |            |        | fuller DisciplineConfig restructure (one validated struct, drift  |
+// |         |            |        | impossible rather than detected) is recorded as the eventual      |
+// |         |            |        | owner-shape, gated on the GameplayConfigHolder.Bind composition-  |
+// |         |            |        | root pass no production caller runs yet. No behaviour change.     |
 #endregion

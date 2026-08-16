@@ -1,7 +1,18 @@
 # Discipline & Suspensions #44 — Section 2: Requirements, Data Structures, Failure Modes
 
 **Created:** July 24, 2026
-**Last Updated:** August 16, 2026 (v0.10 — `ERR-044-014`, adversarial-review H1: club membership is
+**Last Updated:** August 16, 2026, later (v0.11 — **`ERR-044-019`**, adversarial-review H2, cross-filed
+at #30 as `ERR-030-044` which owns the rule: §2.3's ERR-044-003 note asserted that "a suspended player
+plays only when the alternative is a club that cannot take the field at all". That was FALSE of the
+implementation — #30 §3.4's probe is the FULL selection walk (eleven starters PLUS the seven-slot
+bench), so the extremis tier fires on **bench depth** on a club that could field a legal XI, and the
+pre-fix within-tier key (earliest roster position) let the rating-greedy selector START the reinstated
+man. Corrected to the **two-case** form the amended key produces: benched ⇒ not in the fielded eleven ⇒
+FR-DC-011's decrement is NOT exempted and the ban advances normally; forced to start (no candidate
+choice avoids the XI — the sole-goalkeeper case) ⇒ exempt, and only then does the ban stall. §7.2's
+mirror of the same claim corrected in the same commit (`section-7.md` v0.8). No FR row changes: the
+defect was #30's ordering key and #44's description of its consequence, not #44's own requirements.)
+**Last Updated (prior):** August 16, 2026 (v0.10 — `ERR-044-014`, adversarial-review H1: club membership is
 READ FROM THE ROSTER, not derived from #27's id packing. FR-DC-011 now requires `OnClubFixturePlayed`
 to take the club's roster as well as its fielded eleven and to decide membership by presence in it;
 §2.2's signature gains `int[] clubPlayerIds`; §2.3 **F2** gains the matching null refusal and records
@@ -48,7 +59,7 @@ re-scoped off "the engine-resolved fixture" to every resolved squad on both reso
 fail-loud withdrawn in favour of #30 §2.3 F9, with the suspension-as-stricter-reinstatement-tier
 decision recorded)
 **Last Updated (prior):** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.10
+**Version:** 0.11
 **Status:** APPROVED
 
 ---
@@ -177,8 +188,35 @@ implements no viability gate; the composition and the single back-fill live in
 ("the composed filter can never leave a club worse off than having no filter at all") means a
 suspended player **is** reinstatable in extremis, which the Laws of the Game do not allow. The
 implementation makes suspension a **stricter reinstatement tier** than injury — every injured player
-is pressed back before any suspended one, and a suspended player plays only when the alternative is a
-club that cannot take the field at all. **That tier order is unchanged.** What **ERR-044-003 stage 1**
+is pressed back before any suspended one. **That tier order is unchanged.**
+
+> **`ERR-044-019` — this paragraph used to say "and a suspended player plays only when the alternative
+> is a club that cannot take the field at all", and that was FALSE of the implementation** (August 16,
+> 2026; cross-filed at #30 as `ERR-030-044`, which owns the rule). The trigger for the back-fill is
+> #30 §3.4's probe, `SquadRating.CanFieldStartingEleven`, which is the FULL selection walk — eleven
+> position-matched starters PLUS the seven-slot bench — so the extremis tier fires for **bench depth**
+> too, on a club that could field a perfectly legal XI. Reinstating by earliest roster position (the
+> pre-fix within-tier key) then put a banned player into the pool the rating-greedy selector draws the
+> starting eleven from, and it **started him**: this sentence's "only when the alternative is a club
+> that cannot take the field" was true of neither the trigger nor the outcome. It is true only under
+> `ERR-030-044`'s amended key, and even then in a **two-case** form that this spec must state rather
+> than collapse:
+>
+> - **Benched — the common case, and the one the amended key exists to reach.** Tier 2 now prefers the
+>   first candidate, in roster order, that the selector would **bench**. He is then not in
+>   `fieldedPlayerIds`, FR-DC-011's decrement is not exempted, and **his ban advances normally** — the
+>   suspension costs exactly what the Laws say it costs, even though the club was depleted enough to
+>   need him in its eighteen.
+> - **Forced to start — the residual.** When no candidate choice keeps every reinstated-suspended
+>   player out of the eleven (the club's only goalkeeper being the canonical case), he starts, the
+>   ERR-044-003 stage-1 exemption fires, and **his ban does not advance for that fixture**. This is the
+>   compromise between #30's liveness invariant and the Laws, and it is the ONLY case in which a ban
+>   stalls. It is what the two unbuilt tiers below delete.
+>
+> Neither case is a licence for the other: the stall is a property of being *forced* onto the pitch,
+> never of being reinstated.
+
+What **ERR-044-003 stage 1**
 (August 15, 2026) fixed is the free-appearance half: an extremis appearance no longer serves the ban it
 was fielded through — `OnClubFixturePlayed` now takes the club's fielded eleven and exempts anyone in
 it (FR-DC-011), so a two-match red still costs a depleted club two full fixtures rather than one. The
@@ -204,4 +242,5 @@ chosen.
 | 0.8 | 2026-08-15 | — | **Reviewed-findings pass.** **`ERR-044-007`:** §2.2's `DisciplineRules` block corrected `OnClubFixturePlayed(int clubId)` → `OnClubFixturePlayed(int clubId, int[] fieldedPlayerIds)` (verified against `src/discipline/DisciplineRules.cs:245` — the v0.7 signature amendment never reached this code block) and gained the `State` property (`src/discipline/DisciplineRules.cs:49`); `CardLedgerFold` gained `PendingCardCount` (`CardLedgerFold.cs:127`) and the public static `RequireCommittableConfig()` (`CardLedgerFold.cs:276`) — the round-level `[GT]` pre-check §3.1's own pseudocode calls and `SeasonLoop.PlayNextRound` enforces in production (`src/season-save/SeasonLoop.cs`), which had no §2.2 declaration at all. F2 (§2.3) extended to state the null-`fieldedPlayerIds` refusal explicitly — `DisciplineRules.cs:254-261` throws `ArgumentNullException` there and §3.3's pseudocode already read `REQUIRE fieldedPlayerIds is not null  # F2`, but this table's F2 row described only the club/player-identity case. **`ERR-044-010`:** FR-DC-011 gains a note that the required "fielded eleven" is the eleven that played, not merely started, and that today's `SeasonLoop.FieldedXi` (the STARTING eleven) satisfies the row only because no `SubstitutePlayer` call site exists on the season path. See `spec-error-log.md` `ERR-044-007`, `ERR-044-010`. |
 | 0.9 | 2026-08-15 | — | **Reviewed-findings pass.** **`ERR-044-007`:** FR-DC-009's `FilterAvailable(in Squad) → Squad` requirement corrected to the landed signature — `FilterAvailable(Squad squad, DisciplineState state, int competitionId)`, three parameters, no `in` — verified against `src/discipline/Availability.cs`; the old form misstated the method as a pure predicate over `Squad` alone, omitting the tally and competition partition it actually reads. **`ERR-044-013`** (new id): §2.2's `CardLedgerFold` block gains `NO_PLAYER` (`src/discipline/CardLedgerFold.cs:66`, `[FIXED]`, value `-1`) — caller-facing (the constructor throws on any other negative occupancy value, F1's "any gap" language depends on it) and used normatively by Appendix C, with no §2.2 declaration and no Appendix A row until now; Appendix A gains the matching row. See `spec-error-log.md` `ERR-044-007`, `ERR-044-013`. |
 | 0.10 | 2026-08-16 | — | **`ERR-044-014`** (adversarial review, H1). FR-DC-011 amended: `OnClubFixturePlayed` MUST take the club's ROSTER alongside its fielded eleven, and "the player's club" MUST be read from that roster rather than derived from `PlayerId / CLUB_SQUAD_SIZE`. §2.2's signature becomes `OnClubFixturePlayed(int clubId, int[] clubPlayerIds, int[] fieldedPlayerIds)` (verified against `src/discipline/DisciplineRules.cs` v1.7), with `clubId` documented as identity + the F2 gate only and the roster documented as necessarily the UNFILTERED one — every id being served is one the filter has just removed. §2.3 **F2** extended with the null-`clubPlayerIds` refusal on the ERR-044-007 posture, and annotated: the negative-id-divides-to-club-0 hazard ERR-044-004 filed is no longer reachable through this method, which no longer divides, while the `DisciplineEntry`/`Decode` refusals stand. The retired derivation was a SECOND notion of club membership beside `Availability.MarkSuspended`'s roster walk, and the migration rule cited as keeping them in step (FR-DC-013) has no production caller. See `spec-error-log.md` `ERR-044-014`. |
+| 0.11 | 2026-08-16 | — | **`ERR-044-019`** (adversarial review, H2; the rule itself is #30's and is amended at `ERR-030-044`). §2.3's ERR-044-003 note stated the extremis compromise as ONE case — "a suspended player plays only when the alternative is a club that cannot take the field at all" — and that was false of the implementation on both halves. The TRIGGER is #30 §3.4's probe `SquadRating.CanFieldStartingEleven`, which is `LineupSelector`'s full selection walk (eleven position-matched starters PLUS the seven-slot bench), so the tier fires on **bench depth** at a club that can field a perfectly legal XI; and the pre-fix within-tier ORDERING (earliest roster position) then put the reinstated man into the pool the rating-greedy selector draws the starting eleven from, which started him — after which ERR-044-003 stage 1's exemption stalled his ban for as long as the club stayed depleted. Corrected to the two-case form #30's amended key produces: **benched** (the common case, and what the amended key prefers) ⇒ not in `fieldedPlayerIds` ⇒ FR-DC-011's decrement is NOT exempted ⇒ the ban advances normally; **forced to start** (no candidate choice keeps a reinstated-suspended player out of the XI — the sole-goalkeeper case) ⇒ exempt ⇒ and only then does the ban stall, which is the residual §7.2's unbuilt tiers delete. No FR row changed: FR-DC-011 already says "did not appear in", which is exactly right in both cases — what was wrong was this section's account of when the appearance happens. §7.2's mirror corrected in the same commit (`section-7.md` v0.8); code at `src/season-save/AvailabilityComposition.cs` v1.5. |
 #endregion

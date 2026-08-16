@@ -1,7 +1,15 @@
 # Discipline & Suspensions #44 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 24, 2026
-**Last Updated:** August 15, 2026, yet later still (v0.7 — `ERR-044-008`, reviewed-findings pass:
+**Last Updated:** August 16, 2026 (v0.8 — **`ERR-044-019`**, adversarial-review H2, cross-filed at #30
+as `ERR-030-044`: §7.2's ban-serving-under-squad-shortfall bullet described the extremis reinstatement
+as though its only outcome were a stalled ban. #30 §3.4's probe is the FULL selection walk (eleven
+starters PLUS the seven-slot bench), so the tier fires on bench depth too, and #30's amended within-tier
+key now prefers a candidate the selector would BENCH — which splits the outcome in two: benched, the ban
+advances normally; forced to start, the stage-1 exemption fires and only then does it stall. The bullet
+now states both cases and names the staging below as what deletes the residual. §2.3's mirror of the same
+claim corrected in the same commit (`section-2.md` v0.11))
+**Last Updated (prior):** August 15, 2026, yet later still (v0.7 — `ERR-044-008`, reviewed-findings pass:
 §7.3's `#37` seam-contract bullet still read "one per-tick tap feeds both consumers when both are
 built", a future condition that has already occurred — both #37 and #44 have had `src/` assemblies
 since July 27, 2026 — and turned out false: `src/discipline/IDisciplineTickLedgerTap.cs` records that
@@ -26,7 +34,7 @@ deferral bullet flagged as a now-LIVE owner decision — #30 §2.3 F9 makes a su
 reinstatable in extremis rather than an absolute bar — with the deferral queue recorded as the
 designed alternative)
 **Last Updated (prior):** July 24, 2026 (v0.2 — cross-set AR; prior v0.1 — initial)
-**Version:** 0.7
+**Version:** 0.8
 **Status:** APPROVED
 
 ---
@@ -68,6 +76,16 @@ designed alternative)
   the formation, never refusing until even the whole squad cannot. That means a suspended player **is**
   reinstatable in extremis — suspension is a stricter reinstatement tier than injury (pressed back
   only after every injured player), but not an absolute bar, which the Laws of the Game do not allow.
+  **`ERR-044-019` (August 16, 2026) corrects what "in extremis" means here, and what it costs.** The
+  probe #30 §3.4 uses is the FULL selection walk — eleven starters PLUS the seven-slot bench — so the
+  back-fill fires for **bench depth** as well, on a club that could field a legal XI; and the pre-fix
+  within-tier key (earliest roster position) then let the rating-greedy selector **start** the
+  reinstated man. #30's `ERR-030-044` amends that key to prefer a candidate the selector would BENCH,
+  which splits this bullet's outcome into two cases that must not be collapsed: **benched**, he is not
+  in the fielded eleven, so FR-DC-011's decrement is not exempted and **his ban advances normally**;
+  **forced to start** — no candidate choice avoids the eleven, the sole-goalkeeper case — he plays, the
+  stage-1 exemption fires, and **only then does his ban stall**. The staging below is what deletes that
+  residual; it is not a general licence to field banned players for free.
   **The deferral queue this bullet used to record as the alternative (excess bans postpone serving
   until the squad can field 18, refusing the fixture rather than fielding a banned player) was NOT
   chosen.** The owner's decision (August 15, 2026) is a three-tier staging instead, of which the first
@@ -124,4 +142,5 @@ designed alternative)
 | 0.5 | 2026-08-15 | — | **ERR-044-003 stage 1**, owner decision: the ban-serving-under-squad-shortfall bullet resolved from "now a live decision" to RESOLVED — the deferral queue was NOT chosen; the chosen answer is a three-tier staging, of which tier 1 (exempt the extremis appearance from serving, FR-DC-011) is LANDED, and tiers 2 (youth call-ups) and 3 (generated cover) are recorded unbuilt with their blockers (#42 has no `src/` assembly; the packed `PlayerId` id space needs widening, #27 FR-SQ-010 / ERR-027-004). |
 | 0.6 | 2026-08-15 | — | **L21** (#44 adversarial-review round 4, `open-issues.md`): §7.1's T1 bullet filled in the "exact version TBD" placeholder with the actual landed bump (`SEASON_SAVE_FORMAT_VERSION` 5 → 6, ERR-030-035) — `section-4.md` §4.4 has carried this figure since its own v0.3 (August 13, 2026), so the placeholder had been stale for two days. |
 | 0.7 | 2026-08-15 | — | **`ERR-044-008`**, reviewed-findings pass: §7.3's `#37` bullet corrected — "one tap feeds both when built" is no longer a future condition (both assemblies exist) and was never going to become true under §4.1's reference rule, verified against `src/discipline/IDisciplineTickLedgerTap.cs`'s own recorded finding. Restated with the two-reads cost named. See `spec-error-log.md` `ERR-044-008`. |
+| 0.8 | 2026-08-16 | — | **`ERR-044-019`** (adversarial review, H2; cross-filed at #30 as `ERR-030-044`, which owns the rule). §7.2's ban-serving-under-squad-shortfall bullet treated the extremis reinstatement as having a single outcome — a suspended player on the pitch whose ban then stalls. Two corrections. The back-fill's TRIGGER is #30 §3.4's probe, the full selection walk (eleven starters PLUS the seven-slot bench), so it fires on **bench depth** at a club that could field a legal XI — "in extremis" was never as narrow as this bullet implied. And #30's amended within-tier key now prefers a candidate the selector would BENCH, which splits the outcome: benched ⇒ he is not in the fielded eleven ⇒ FR-DC-011's decrement is not exempted ⇒ **his ban advances normally**; forced to start ⇒ exempt ⇒ the ban stalls. Only the second case is the residual the staged tiers below exist to delete, and the bullet now says so rather than reading as a general licence. The staging itself (stage 1 LANDED; youth call-ups and generated cover both blocked) and the NOT-chosen deferral queue are unchanged. §2.3's mirror corrected in the same commit (`section-2.md` v0.11). |
 #endregion

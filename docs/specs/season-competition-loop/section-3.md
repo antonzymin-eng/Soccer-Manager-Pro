@@ -1,7 +1,25 @@
 # Season & Competition Loop Specification #30 — Section 3: Algorithms
 
 **Created:** July 22, 2026
-**Last Updated:** August 15, 2026, later still (v2.6 — **`ERR-030-042`**, a reviewed High from the
+**Last Updated:** August 16, 2026 (v2.7 — **`ERR-030-044`**, an adversarially-reviewed High, spec + code
+same commit. **Two halves at §3.4's depleted-squad rule.** *(a) Trigger clarification, not a decision
+change:* the probe this rule already names — `SquadRating.CanFieldStartingEleven` — is `LineupSelector`'s
+FULL selection walk, eleven position-matched starters PLUS the seven-slot bench, so the extremis trigger
+is "the club cannot field WHAT SELECTION REQUIRES" and tier 2 is reachable on **bench depth alone**. The
+prose has said "field the formation" / "a fieldable eleven" since ERR-030-029 and #44 §2.3 says "cannot
+take the field at all"; the mechanism both cite has always meant eighteen. Corrected to the mechanism; the
+eleven-vs-eighteen *narrowing* (a short-bench posture) is recorded as the OPEN owner question, deliberately
+not resolved here. *(b) Within-tier rule amendment, a defect correction:* tier 2's ordering key was
+"earliest roster position", which on a bench-depth shortfall handed the rating-greedy selector whichever
+suspended player sat first on the roster and **started** him — while §3.4's own rationale states that
+reinstating a suspended player into play "stalls the suspension itself". An ordering key contradicting its
+own rule's stated purpose is the ERR class, not a new owner decision. The key becomes "the first candidate,
+in roster order, the selector would BENCH; earliest roster position only when no candidate choice keeps
+every reinstated-suspended player out of the XI", with the three-pass form stated normatively. Tier 1, the
+outer loop, the unfiltered limit and §2.3 F9 untouched. Code: `src/season-save/AvailabilityComposition.cs`
+v1.5. Cross-filed at #44 as `ERR-044-019` (§2.3 / §7.2's one-case statement of the compromise corrected to
+its true two-case form).)
+**Last Updated (prior):** August 15, 2026, later still (v2.6 — **`ERR-030-042`**, a reviewed High from the
 same reviewed-findings sweep: §3.4's depleted-squad rule stated ONE ordering key ("pressing the
 least-injured players back in one at a time — ascending remaining recovery") and then asserted that
 "#44/#36 contribute removals only and inherit the rule unchanged when they join — **#44 has**", while
@@ -62,7 +80,7 @@ suspensions have joined, citing ERR-044-002/ERR-044-003 and the code sites; only
 **Last Updated (prior):** July 25, 2026 (v0.9 — ERR-030-010 §3.7 venue correction, found at #30 T0; prior v0.8 back-prop ERR-030-009 #44 availability-filter null seam in §3.4; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 25, 2026 (v0.8 — back-props ERR-030-008 board tick-order seam + ERR-030-009 JobSecurity derived band; prior v0.7 ERR-030-007 academy, v0.6 ERR-030-006 staff, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 27, 2026 (v1.0 — **ERR-030-015**: §3.5's boundary roll gains step (c′), the calendar rebuild it omitted, without which a rolled season is permanently unplayable; found at #30 T3. Also consolidates the TWO stale `Version` fields this header carried — the drift class `spec-error-log.md` v1.43 records. Prior v0.9 ERR-030-010 §3.7 venue correction; v0.8 back-props ERR-030-008/009; v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 2.6
+**Version:** 2.7
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -313,15 +331,39 @@ the composition** is a #44/#36/#30 concern at this seam, not either filter's pri
 
 **The depleted-squad rule (ERR-030-029, at the balance-pass AR pass 12 — settling the obligation above,
 which the code had settled unilaterally at #29/#41 T2 while #36 §2 F7 and §5 T-NT-I-005 were still
-waiting on it):** when the composed filters leave a club unable to field the formation, the seam
-back-fills by **pressing removed players back in one at a time**, in the tier order below, probing the
-engine's own selector (`SquadRating.CanFieldStartingEleven`) after each, so fieldability is asked of
-the selection rule that will actually run rather than answered by a second, parallel rule at the seam.
-Back-filling to a player COUNT would be wrong: selection refuses a position-incomplete squad outright
-(KD-L3), so eighteen fit outfielders with no goalkeeper would stop the season. In the limit the back-fill is the whole squad —
-the unfiltered behaviour — so **the composed filter can never leave a club worse off than having no
-filter at all**. If even the whole squad cannot field the formation, the seam **fails loud**
-(`InvalidOperationException`, §2.3 F9) — that is a roster-integrity bug, not a football outcome.
+waiting on it):** when the composed filters leave a club unable to field **what selection requires**,
+the seam back-fills by **pressing removed players back in one at a time**, in the tier order below,
+probing the engine's own selector (`SquadRating.CanFieldStartingEleven`) after each, so fieldability is
+asked of the selection rule that will actually run rather than answered by a second, parallel rule at
+the seam. Back-filling to a player COUNT would be wrong: selection refuses a position-incomplete squad
+outright (KD-L3), so eighteen fit outfielders with no goalkeeper would stop the season. In the limit
+the back-fill is the whole squad — the unfiltered behaviour — so **the composed filter can never leave
+a club worse off than having no filter at all**. If even the whole squad cannot satisfy selection, the
+seam **fails loud** (`InvalidOperationException`, §2.3 F9) — that is a roster-integrity bug, not a
+football outcome.
+
+> **What "what selection requires" means, exactly — and why this rule's own prose said something
+> narrower (`ERR-030-044`, trigger clarification, NOT a change of decision).** The probe named one
+> paragraph above is `SquadRating.CanFieldStartingEleven`, and that is `LineupSelector`'s **full
+> selection walk**: eleven position-matched starters **plus** the seven-slot bench —
+> `PLAYERS_PER_TEAM + SUBSTITUTES_PER_TEAM` = **eighteen** players, position-complete in the starting
+> eleven. This rule's prose has said "unable to field the formation" / "a fieldable eleven" since
+> ERR-030-029, and #44 §2.3 says "cannot take the field at all"; **the named mechanism has always meant
+> eighteen and the prose has always read as eleven.** The consequence is not cosmetic: a club with
+> **seventeen** fit, position-complete players can field a perfectly legal XI and still reach the
+> back-fill, needing an eighteenth body for the **bench**. Tier 2 is therefore reachable on **bench
+> depth alone**, which is what made the within-tier defect below possible. The mechanism is
+> authoritative; the prose is corrected to it.
+>
+> **OPEN OWNER QUESTION, recorded not resolved: should the trigger be narrowed to the eleven?** A
+> short-bench posture — refuse to back-fill for bench slots and let a depleted club play with five
+> substitutes, or four, or none — is a defensible football answer and would make the extremis tier
+> markedly rarer. It is **not** taken here, because it is a change to what a fixture *is*
+> (`ConfigureSquads` and every consumer of `LineupPlan` assume a full bench today) and because
+> narrowing the probe without narrowing selection would produce exactly the divergence
+> `LineupSelector.TrySelect` was collapsed to one walk to prevent (#41 T2 AR pass 1's H3). Filed with
+> `ERR-030-044` as the open half; until it is decided, the trigger is the full selection walk and this
+> rule is written against that.
 
 **Reinstatement proceeds in TIERS (ERR-030-042).** The tier decides *who is eligible* to be pressed
 back at all; the ordering key only ranks players *within* the eligible tier. As implemented at
@@ -331,18 +373,54 @@ back at all; the ordering key only ranks players *within* the eligible tier. As 
   recovery, ties broken by earliest roster position. This is the ordinary path; a club is almost never
   depleted past it.
 - **Tier 2 — the suspended** (removed by #44, whether or not also injured): eligible **only when no
-  tier-1 player remains and the club still cannot field the formation**, then by earliest roster
-  position. #44 §2.3 states the same rule in its own words — "every injured player is pressed back
-  before any suspended one, and a suspended player plays only when the alternative is a club that
-  cannot take the field at all" — and #44 §7.2 records it as the owner's decision, taken in preference
-  to the deferral queue (refusing the fixture) that spec had previously recorded as the alternative.
+  tier-1 player remains and the club still cannot satisfy selection**, then by the within-tier key
+  amended at `ERR-030-044` below — **the first candidate, in roster order, the selector would bench**;
+  earliest roster position **only** when no candidate choice keeps every reinstated-suspended player
+  out of the starting eleven. #44 §2.3 states the tier order in its own words, and #44 §7.2 records it
+  as the owner's decision, taken in preference to the deferral queue (refusing the fixture) that spec
+  had previously recorded as the alternative.
+
+> **`ERR-030-044`, within-tier rule amendment (a defect correction, NOT a new owner decision).** Tier 2
+> previously ordered by **earliest roster position**, full stop. Because the trigger is the full
+> selection walk (above), tier 2 fires on **bench depth alone** — and the reinstated player does not go
+> onto a bench, he goes into the **pool the rating-greedy selector draws the starting eleven from**. The
+> roster-order key therefore hands the selector whichever suspended player happens to sit first on the
+> roster, and if he is any good the selector **starts** him: a club that was seventeen fit and one bench
+> short fielded its best banned man, in a fixture it could have played legally without him. This rule's
+> own rationale, three paragraphs down, states that a suspended player reinstated into play "stalls the
+> suspension itself" — so the stated ordering key produced **exactly the outcome the same rule's
+> rationale forbids**, which is why this is filed as an `ERR` rather than raised as an owner question:
+> an ordering key that contradicts its own rule's stated purpose is a defect in the key.
+>
+> **The amended key, as implemented at `AvailabilityComposition.ChooseSuspendedCandidate`** — scan the
+> still-removed (necessarily suspended) candidates in ascending roster order, materialising the squad
+> with each tentatively reinstated:
+>
+> 1. the first candidate whose squad both satisfies selection **and** whose starting eleven contains no
+>    reinstated-suspended player (neither this candidate nor one an earlier pass already pressed back);
+> 2. failing that, the first candidate whose squad satisfies selection at all — the **forced-start**
+>    residual, of which the club's sole goalkeeper is the canonical case;
+> 3. failing that — no *single* reinstatement reaches fieldability, i.e. the club is short by more than
+>    one — **earliest roster position**, exactly the pre-amendment behaviour, after which the outer loop
+>    presses another player back and asks again, so passes 1 and 2 still decide the reinstatement that
+>    finally closes the gap.
+>
+> Tier 1's key, the outer loop, the never-worse-than-unfiltered limit and the §2.3 F9 terminal refusal
+> are **untouched**. The consequence is that the ERR-044-003 stage-1 serving exemption now fires only in
+> case 2: benched, the reinstated player is not in the fielded eleven, so his ban advances normally.
+> #44's §2.3 and §7.2 statement of the compromise is corrected to that two-case form at `ERR-044-019`.
+> **Digest invariance is not claimed** for a season whose extremis tier fires — a different player is
+> reinstated, which is the point of the fix.
 
 The tier order is **not** cosmetic and is not merely #44's preference to state: a suspended player who
-reaches the pitch through this back-fill is exempted from serving that fixture's ban (ERR-044-003
+reaches **the pitch** through this back-fill is exempted from serving that fixture's ban (ERR-044-003
 stage 1 — `OnClubFixturePlayed` takes the fielded eleven; see the `AdvanceAndPlayNextRound` block
-below), so every fixture he is reinstated into is one his ban does **not** advance through. Reinstating
-the suspended ahead of the injured therefore does not merely field the wrong player, it stalls the
-suspension itself.
+below), so a fixture he is reinstated **into the starting eleven** for is one his ban does **not**
+advance through. Reinstating the suspended ahead of the injured therefore does not merely field the
+wrong player, it stalls the suspension itself. (Amended by `ERR-030-044`: reinstated onto the **bench**
+he is not in the fielded eleven, the exemption does not reach him, and his ban advances normally —
+which is why the within-tier key above prefers a benchable candidate. The stall is now confined to the
+forced-start case, where no candidate choice avoids it.)
 
 > **The zero-default trap — an implementation MUST NOT derive the tier from the ordering key.** The
 > ordering key is remaining recovery, and only #41 writes it (`PlayerCareerStates.MarkUnavailable`
@@ -672,4 +750,5 @@ by ascending `ClubId` (FR-SN-007 final key) — a total order.
 | 2.4 | 2026-08-15 | — | **ERR-044-003 stage 1**, owner decision: §3.4's `AdvanceAndPlayNextRound` pseudocode calls `OnClubFixturePlayed(f.HomeClubId, homeXi)` / `OnClubFixturePlayed(f.AwayClubId, awayXi)` rather than the club id alone, with a new comment explaining the extremis exemption (#30 §2.3 F9's depleted-squad back-fill can field a suspended player; without the exemption that appearance also served his ban, for free). The preceding comment block's "a ban is served by the club playing" is corrected to "served by the club playing WITHOUT him" to match the amended `#44` FR-DC-011. Matches `SeasonLoop.cs` v1.25. |
 | 2.5 | 2026-08-15 | — | **`ERR-030-040` + `ERR-030-041`** (a reviewed-findings pass over the ERR-044-003 stage 1 landing): §3.4's `OnClubFixturePlayed` comment corrected — "its only guard is `clubId < 0`" went stale when stage 1 added `fieldedPlayerIds == null` beside it; both guards now named, with the structural reason the null case cannot fire on this path. §3.5 step (f)'s idempotency rationale replaced with the real reason (a FIRST run against a roll that is then refused), taken from `SeasonLoop.cs`'s own comment at the mirrored site. **Row added retroactively at v2.6 — as published, v2.5 shipped with its header entry but NO version-history row and no `Version:` field bump (the FR-CS-057 class again); the body edits themselves are v2.5's, unmodified.** |
 | 2.6 | 2026-08-15 | — | **`ERR-030-042`** (a reviewed High from the same sweep): §3.4's depleted-squad rule (ERR-030-029) stated a SINGLE ordering key — "pressing the least-injured players back in one at a time — ascending remaining recovery, ties broken by earliest roster position" — and then asserted "#44/#36 contribute removals only and inherit the rule unchanged when they join — **#44 has**". #44 did not: `AvailabilityComposition.Reinstate` has run a TWO-TIER rule since C1/C2 (injured first; a suspended player only once no injured one remains), which #44 §2.3/§7.2 record as an owner decision and #30's spec set never stated. Implemented verbatim, §3.4 INVERTS that decision silently — the ordering key is written only by #41, so a suspended-but-uninjured player keeps the `int` default 0 and sorts to the FRONT. Fixed: the tiers are stated here as part of the rule #30 owns; "inherit the rule unchanged" requalified to the INVARIANT (viability, the selector probe, the unfiltered limit, F9) and explicitly NOT the ordering, with #36 required to state its own tier; the zero-default trap carried as a MUST NOT; the interaction with ERR-044-003 stage 1's serving exemption recorded (a wrongly-reinstated banned player's ban does not advance). #44 §7.2's two unbuilt tiers noted as future insertions into this list. §2.3 F9's parenthetical mirrored in the same commit (`section-2.md` v2.0). NO code change — the code is correct and the spec was wrong. |
+| 2.7 | 2026-08-16 | — | **`ERR-030-044`** (an adversarially-reviewed High, spec + code same commit): §3.4's depleted-squad rule, both halves. **(a) Trigger clarification — not a decision change.** The probe this rule already names, `SquadRating.CanFieldStartingEleven`, IS `LineupSelector`'s full selection walk: eleven position-matched starters PLUS the seven-slot bench (`PLAYERS_PER_TEAM + SUBSTITUTES_PER_TEAM` = 18). The prose has read "unable to field the formation" / "a fieldable eleven" since ERR-030-029, and #44 §2.3 reads "cannot take the field at all", while the mechanism both cite has always meant eighteen — so a club with SEVENTEEN fit, position-complete players reaches the extremis tier while able to field a perfectly legal XI, and tier 2 is reachable on **bench depth alone**. Corrected to "cannot field WHAT SELECTION REQUIRES", with the mechanism authoritative. The eleven-vs-eighteen NARROWING (a short-bench posture: refuse to back-fill for bench slots) is recorded as the **OPEN owner question**, deliberately unresolved — it changes what a fixture is, and narrowing the probe without narrowing selection recreates the two-walks divergence `LineupSelector.TrySelect` was collapsed to prevent. **(b) Within-tier rule amendment — a defect correction.** Tier 2 ordered by earliest roster position, full stop; because the trigger fires on bench depth, the reinstated player enters the pool the rating-greedy selector draws the STARTING eleven from, so the key handed the selector whichever suspended player sat first on the roster and STARTED him — a club seventeen fit and one bench short fielded its best banned man in a fixture it could have played legally without him, and ERR-044-003 stage 1's exemption then stalled that ban indefinitely. §3.4's own rationale states that reinstating a suspended player into play "stalls the suspension itself", so the stated ordering key produced exactly the outcome the same rule's rationale forbids — an ERR, not an owner question. The key becomes "the first candidate, in roster order, the selector would BENCH; earliest roster position only when no candidate choice keeps every reinstated-suspended player out of the XI", stated normatively as three passes (benchable / fieldable-at-all / roster-order fallback for the multi-reinstatement case). Tier 1's key, the outer loop, the never-worse-than-unfiltered limit and §2.3 F9's terminal refusal are untouched; the "tier order is not cosmetic" paragraph is amended to the two-case form (benched ⇒ ban advances; forced start ⇒ exempt, and only then does the ban stall). Digest invariance NOT claimed for a season whose extremis tier fires — a different player is reinstated, which is the fix. Code: `src/season-save/AvailabilityComposition.cs` v1.5, locked by `AvailabilityCompositionExtremisTests` (two of whose four cases fail at the pre-fix commit). Cross-filed at #44 as **`ERR-044-019`**. |
 #endregion

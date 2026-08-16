@@ -1,5 +1,8 @@
 // File:     src/discipline/DisciplineRules.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16, later (adversarial-review M2, doc only — RequireBanLength and
+//           RequireYellowThreshold carry the pointer that adding a guarded [GT] is a five-site change,
+//           and name the completeness test that detects the drift — v1.8)
 // Modified: 2026-08-16 (ERR-044-014, adversarial-review H1 — OnClubFixturePlayed takes the club's
 //           roster ids and matches membership by presence, deleting the packed-id club derivation that
 //           nothing validated and that disagrees with the removal half the moment a transfer or an
@@ -478,6 +481,11 @@ namespace TacticalDirector.Discipline
         /// <exception cref="InvalidOperationException"><paramref name="threshold"/> is below 1 — the
         /// residual subtraction can never terminate a crossing, so every single yellow would ban,
         /// silently.</exception>
+        /// <remarks>
+        /// M2: a <b>new</b> guarded <c>[GT]</c> needs a guard of this shape here AND an entry in both
+        /// <c>CardLedgerFold.RequireCommittableConfig</c> forms, <c>CommitWithExplicitConfig</c>'s
+        /// parameters and #44 §2.3 F6's list — see <see cref="RequireBanLength"/>'s remark.
+        /// </remarks>
         internal static int RequireYellowThreshold(int threshold)
         {
             if (threshold < 1)
@@ -506,6 +514,18 @@ namespace TacticalDirector.Discipline
         /// <see cref="RequireYellowThreshold"/>) directly reaches the identical guarded code with an
         /// explicit value instead — the cheapest honest seam that does not require a config-loader
         /// composition root this project does not have yet.
+        /// </para>
+        /// <para>
+        /// <b>M2 — adding a guarded <c>[GT]</c> is a five-site change.</b> A guard here is only half of
+        /// it: the constant must also reach both <c>CardLedgerFold.RequireCommittableConfig</c> forms
+        /// and <c>CommitWithExplicitConfig</c>'s parameter list (so the round-level pre-flight refuses
+        /// before anything is written), and #44 §2.3 F6's guard list in the spec. Nothing enforces that
+        /// mechanically, so <c>DisciplineConfigCompletenessTests</c> asserts the guarded set equals
+        /// <see cref="DisciplineConstants"/>' config-settable set — extend the pre-flight and that test
+        /// together, or the new constant ships with the very silent-breach exposure this method exists
+        /// to close. The recorded eventual shape is one validated <c>DisciplineConfig</c> struct rather
+        /// than a chain of guards; it is gated on the <c>GameplayConfigHolder.Bind</c> composition-root
+        /// pass, which no production caller runs yet, so it buys nothing today.
         /// </para>
         /// </summary>
         /// <exception cref="InvalidOperationException"><paramref name="matches"/> is negative.</exception>
@@ -613,4 +633,14 @@ namespace TacticalDirector.Discipline
 // |         |            |        | identical on today's packed ids over a full roster, asserted by   |
 // |         |            |        | DisciplineRulesTests' agreement lock; the disagreement case is    |
 // |         |            |        | locked separately and follows the roster.                         |
+// | 1.8     | 2026-08-16, later | — | Adversarial review, M2 (minimal fix), doc only. The two [GT]     |
+// |         |            |        | guards now record that a NEW guarded constant is a five-site      |
+// |         |            |        | change — this guard, both CardLedgerFold.RequireCommittableConfig |
+// |         |            |        | forms, CommitWithExplicitConfig's parameters and #44 §2.3 F6's    |
+// |         |            |        | list — and name DisciplineConfigCompletenessTests, which asserts  |
+// |         |            |        | the guarded set still equals DisciplineConstants' config-settable |
+// |         |            |        | set. The DisciplineConfig struct restructure that would make the  |
+// |         |            |        | drift structurally impossible is recorded as the eventual owner-  |
+// |         |            |        | shape and gated on the GameplayConfigHolder.Bind composition-root |
+// |         |            |        | pass no production caller runs yet. No behaviour change.          |
 #endregion
