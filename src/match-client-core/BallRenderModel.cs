@@ -1,6 +1,7 @@
 // File:     src/match-client-core/BallRenderModel.cs
 // Created:  2026-08-03
-// Modified: 2026-08-04
+// Modified: 2026-08-16 (P4b AR round 4, M21: WorldPosition/ShadowPosition docs corrected to describe
+//           round 3's M17 radius floor, which they had fallen out of sync with)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4a
 //           "ball (+ ground shadow)"), Ball Physics #1 §1.2, Code Standards #20
@@ -32,14 +33,23 @@ namespace TacticalDirector.MatchClientCore
     public readonly struct BallRenderModel
     {
         /// <summary>
-        /// Where the ball is drawn, in world space — the pitch point it is over, lifted by its
-        /// height along +Y.
+        /// Where the ball is drawn, in world space — the pitch point it is over, lifted along +Y by
+        /// its height, THEN floored on <see cref="Radius"/> (M17): <c>Y == max(HeightM sanitised to
+        /// non-negative, Radius)</c>. <see cref="Radius"/> is a legibility figure (0.35 m by default),
+        /// not the engine's own ~0.11 m ball, and the prefab draws a genuine sphere of that radius
+        /// centred here — so below the radius, this is NOT the raw physics height: it is the lowest Y
+        /// at which a sphere of that size can sit without its underside sinking through the ground.
         /// </summary>
         public readonly Vector3 WorldPosition;
 
         /// <summary>
-        /// Where the shadow is drawn: the same pitch point, on the ground plane (world Y = 0). Equal
-        /// to <see cref="WorldPosition"/> when the ball is on the turf.
+        /// Where the shadow is drawn: the same pitch point, on the ground plane (world Y = 0) — the
+        /// TRUE ground point the ball is over, unaffected by <see cref="WorldPosition"/>'s M17 radius
+        /// floor. No longer equal to <see cref="WorldPosition"/> even when the ball is on the turf
+        /// (whenever <see cref="Radius"/> is positive, as every configured default is): at rest
+        /// <see cref="Radius"/> keeps <see cref="WorldPosition"/>'s Y at 0.35 m (by default) while this
+        /// stays at 0 — the gap between the two IS the visual cue that the ball is sitting on the
+        /// ground, not floating at its drawn size's natural centre height.
         /// </summary>
         public readonly Vector3 ShadowPosition;
 
@@ -88,4 +98,13 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | remains is a world position, a ground shadow (which perspective |
 // |         |            |        | cannot supply and which marks where the ball actually is), and  |
 // |         |            |        | two constant radii.                                             |
+// | 1.3     | 2026-08-16 | —      | P4b AR round 4, M21: doc-only. Round 3's M17 (see               |
+// |         |            |        | MatchRenderProjection.ProjectBall) floored WorldPosition.Y on   |
+// |         |            |        | Radius instead of the raw height, but this file's XML docs were |
+// |         |            |        | never updated to match — ShadowPosition still claimed to equal  |
+// |         |            |        | WorldPosition "when the ball is on the turf" (now never true:   |
+// |         |            |        | WorldPosition.Y sits at Radius, ShadowPosition.Y stays 0), and   |
+// |         |            |        | WorldPosition's own doc still said only "lifted by its height"  |
+// |         |            |        | with no mention of the floor. Both corrected to state the exact |
+// |         |            |        | Y == max(sanitised HeightM, Radius) relationship.                |
 #endregion

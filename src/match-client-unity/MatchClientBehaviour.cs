@@ -1,6 +1,6 @@
 // File:     src/match-client-unity/MatchClientBehaviour.cs
 // Created:  2026-08-15
-// Modified: 2026-08-16 (AR round 3 — Medium/Low findings M15/M16/M18/L9; see the VersionHistory
+// Modified: 2026-08-16 (AR round 4 — Medium/Low findings M20/M21/M22/L12; see the VersionHistory
 //           block at the foot of this file for the per-finding detail)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4b, §12),
@@ -50,7 +50,20 @@ namespace TacticalDirector.MatchClientUnity
     /// assignment is a don't-care multiplier against a zero, not the source of it. A prefab whose
     /// mesh has real height (a genuinely unit-radius SPHERE used as a marker, say) renders as a
     /// squashed ellipsoid under this rule, not a flat disc — this code cannot detect that, so get the
-    /// mesh right.</description></item>
+    /// mesh right.
+    /// <para><b>M22: FLAT is a sizing rule, not a silhouette</b> — two of the seven FLAT slots must be
+    /// STROKED (an outline/ring, not a solid interior) and the rest FILLED, and this code cannot see
+    /// or check the difference any more than it can check mesh height above. <b>Stroked:</b> the
+    /// marking circle (<c>_markingCirclePrefab</c>) and the possession ring
+    /// (<c>_possessionRingPrefab</c>) — <see cref="PitchMarkingKind.Circle"/>'s own doc distinguishes
+    /// it from <see cref="PitchMarkingKind.Spot"/> precisely because "it is filled rather than
+    /// stroked, and a renderer that collapsed the two would draw a solid centre circle"; the ring is
+    /// meant to read as an annulus drawn AROUND the agent marker it annotates, not a second disc under
+    /// it. <b>Filled:</b> the marking spot (<c>_markingSpotPrefab</c>,
+    /// <see cref="PitchMarkingKind.Spot"/>'s own doc), the agent marker (<c>_agentMarkerPrefab</c>),
+    /// and the ball shadow (<c>_ballShadowPrefab</c>) — each a solid disc. Author the two stroked slots
+    /// as a ring/annulus mesh (or a hollow torus lying flat); a solid disc authored into either renders
+    /// as a filled blob with no diagnostic short of eyeballing the pitch.</para></description></item>
     /// <item><description><b>(b) the ball</b> is the one VOLUMETRIC prop in the contract: a genuine
     /// unit-radius SPHERE, scaled uniformly on all three axes (<c>Vector3.one * model.Radius</c>), so
     /// it reads as a sphere at every radius the sim reports rather than a disc.</description></item>
@@ -273,10 +286,38 @@ namespace TacticalDirector.MatchClientUnity
             // fully caught up to the newest tick.
             Vector3 pitchBallPosition = FrameInterpolator.BallAt(_frameLatch.Previous, _frameLatch.Current, alpha);
 
-            RenderAgents(alpha);
-            RenderBall(pitchBallPosition);
-            UpdateCamera(pitchBallPosition);
-            HandleClick();
+            // L12: MatchRenderProjection.ProjectAgents/ProjectBall (called inside RenderAgents/
+            // RenderBall below) are fail-loud on a non-finite coordinate, and nothing upstream refuses
+            // one — FrameInterpolator deliberately PROPAGATES a non-finite position rather than gating
+            // it (it reads one as a discontinuity and snaps to it). Without this, one bad frame from
+            // the sim throws the SAME exception every subsequent Update forever, with the rest of this
+            // method (the camera, the click handler) never reached again on any later frame either —
+            // an unresponsive-but-not-disabled client, H5's Awake failure mode one call site over.
+            //
+            // Mirrors H5's own Awake try/catch exactly, and the same FR-CS-069 reasoning applies: this
+            // is Unity's top-level MonoBehaviour callback, invoked once per rendered frame — not a
+            // per-frame INNER loop in the rule's sense (a physics substep loop iterated many times
+            // inside one frame, say). FR-CS-069 bans a catch inside that kind of hot inner loop; it
+            // does not ban one wrapping the once-per-frame entry point itself, which is exactly the
+            // carve-out H5's own comment in Awake already claims for one-time initialization — Update
+            // is the same shape, called once per frame rather than once per process, but never nested
+            // inside a tighter loop of its own.
+            try
+            {
+                RenderAgents(alpha);
+                RenderBall(pitchBallPosition);
+                UpdateCamera(pitchBallPosition);
+                HandleClick();
+            }
+            catch (Exception ex)
+            {
+                RejectWiring("Update threw " + ex.GetType().Name + ": " + ex.Message + ".");
+
+                // Logged separately for the same reason Awake's catch does: the RejectWiring message
+                // names the cause but drops the stack trace, which is the half that says WHERE in the
+                // frame's rendering it went wrong.
+                Debug.LogException(ex, this);
+            }
         }
 
         private void OnDestroy()
@@ -347,7 +388,10 @@ namespace TacticalDirector.MatchClientUnity
             // M15: the same POSITION-vs-SCALE-vs-ROTATION mixing hazard as the check above, for
             // rotation. World rotation, not localRotation — a rotated ANCESTOR reaches every child the
             // same way a scaled one does, and Instantiate(prefab, parent) only ever resets local space.
-            if (transform.rotation != Quaternion.identity)
+            // M20: IsIdentityRotation, not != Quaternion.identity — see that method's doc for why a
+            // plain equality check falsely rejects a legitimately-unrotated transform under quaternion
+            // double cover.
+            if (!IsIdentityRotation(transform.rotation))
             {
                 RejectWiring(
                     "the MatchClient GameObject's own transform (or an ancestor's) must be at identity " +
@@ -355,7 +399,8 @@ namespace TacticalDirector.MatchClientUnity
                     "and a LOCAL scale, never a rotation, so a rotated parent silently tilts every " +
                     "circle, spot, marker, ring, ball and shadow while PlaceLine's markings (which do " +
                     "assign a world rotation) stay flat. transform.rotation is " +
-                    transform.rotation.eulerAngles + ".");
+                    FormatQuaternionComponents(transform.rotation) + " (eulerAngles " +
+                    transform.rotation.eulerAngles + ").");
                 return;
             }
 
@@ -599,12 +644,14 @@ namespace TacticalDirector.MatchClientUnity
             GameObject instance = Instantiate(prefab, parent);
             Transform root = instance.transform;
 
-            if (root.localRotation != Quaternion.identity || root.localScale != Vector3.one)
+            // M20: IsIdentityRotation, not != Quaternion.identity — see that method's doc.
+            if (!IsIdentityRotation(root.localRotation) || root.localScale != Vector3.one)
             {
                 RejectWiring(
                     prefabField + " must be authored with a NEUTRAL root — identity rotation, unit " +
                     "scale — and any fixed tilt or thickness baked onto a child mesh; this one has " +
-                    "rotation " + root.localRotation.eulerAngles + " and scale " + root.localScale +
+                    "rotation " + FormatQuaternionComponents(root.localRotation) + " (eulerAngles " +
+                    root.localRotation.eulerAngles + ") and scale " + root.localScale +
                     ", which this binding overwrites.");
             }
 
@@ -741,9 +788,12 @@ namespace TacticalDirector.MatchClientUnity
             BallRenderModel model = MatchRenderProjection.ProjectBall(pitchBallPosition);
 
             // Prefab-contract clause 2b: the ball is the one VOLUMETRIC prop, scaled uniformly on all
-            // three axes so it reads as a sphere at every radius rather than a flat disc (M11). Its
-            // real physics height rides on model.WorldPosition.y already — not a ground layer, so it
-            // is left untouched by M12's layering.
+            // three axes so it reads as a sphere at every radius rather than a flat disc (M11).
+            // M21: model.WorldPosition.y is NOT the raw physics height below model.Radius (M17 floors
+            // it there so the drawn sphere never sinks through the turf — see BallRenderModel's own
+            // doc) — it is still left untouched by M12's ground-layer scheme, though, since it is not
+            // a ground layer at all: a ball above its own radius rides on its real physics height, and
+            // one below it rides on the floor instead, neither of which M12's ordering concerns.
             _ball.transform.position = model.WorldPosition;
             _ball.transform.localScale = Vector3.one * model.Radius;
 
@@ -786,7 +836,52 @@ namespace TacticalDirector.MatchClientUnity
             }
         }
 
+        /// <summary>
+        /// M20: whether <paramref name="rotation"/> IS the identity rotation, within
+        /// <see cref="RotationIdentityDotTolerance"/> — safe under quaternion double cover, unlike a
+        /// plain <c>!= Quaternion.identity</c> comparison.
+        ///
+        /// <para>A rotation and its negation (<c>q</c> and <c>-q</c>) represent the IDENTICAL
+        /// orientation — every component flipped in sign describes the same rotation, since a
+        /// quaternion's sign is not observable in the rotation it produces. Unity's
+        /// <c>Quaternion.operator==</c> is defined as <c>Dot(lhs, rhs) &gt; 1 - kEpsilon</c>, which is
+        /// sign-SENSITIVE: <c>Dot(q, -q) == -Dot(q, q) == -1</c> for a unit quaternion, so a
+        /// legitimately-unrotated transform whose composed rotation happens to land on the negative
+        /// representative of identity compares UNEQUAL to <c>Quaternion.identity</c> and was rejected
+        /// by both call sites of this method — a false positive with no way for the scene author to
+        /// "fix" it, since the rotation already IS identity. Comparing <c>|Dot|</c> against 1 instead
+        /// collapses the double cover: <c>|Dot(q, identity)|</c> is 1 for both <c>q</c> and
+        /// <c>-q</c>.</para>
+        /// </summary>
+        private static bool IsIdentityRotation(Quaternion rotation) =>
+            Mathf.Abs(Quaternion.Dot(rotation, Quaternion.identity)) >= 1f - RotationIdentityDotTolerance;
+
+        /// <summary>
+        /// [GT] Tolerance (M20) on the <c>|Dot|</c> test in <see cref="IsIdentityRotation"/>. Not a
+        /// catalogue constant — this file is excluded from the shim gate (§12 rule 1; see the
+        /// assembly's README) and has no consumer that would need it configurable — but named rather
+        /// than inlined so both call sites read the same value and a future retune touches one line.
+        /// </summary>
+        private const float RotationIdentityDotTolerance = 1e-5f;
+
+        /// <summary>
+        /// M20: formats <paramref name="rotation"/>'s raw <c>(x, y, z, w)</c> components. The rejection
+        /// messages that cite <see cref="IsIdentityRotation"/> print this ALONGSIDE
+        /// <c>Quaternion.eulerAngles</c> rather than in place of it, because <c>eulerAngles</c> alone
+        /// can actively mislead: the negative representative of identity, <c>(0, 0, 0, -1)</c>, still
+        /// reports <c>eulerAngles == (0, 0, 0)</c> — before this fix, that rotation was rejected by a
+        /// message reading "must be identity" while the only figure it showed already WAS <c>(0, 0,
+        /// 0)</c>, telling the operator nothing about what was actually wrong. Printing the raw
+        /// components alongside it means the message can never show a value that contradicts its own
+        /// stated requirement.
+        /// </summary>
+        private static string FormatQuaternionComponents(Quaternion rotation) =>
+            "(" + Inv(rotation.x) + ", " + Inv(rotation.y) + ", " + Inv(rotation.z) + ", " +
+            Inv(rotation.w) + ")";
+
         private static string Inv(int value) => value.ToString(CultureInfo.InvariantCulture);
+
+        private static string Inv(float value) => value.ToString(CultureInfo.InvariantCulture);
     }
 }
 
@@ -964,4 +1059,44 @@ namespace TacticalDirector.MatchClientUnity
 // |         |            |        | claim to checks applying UNIFORMLY to every prefab, naming H6's    |
 // |         |            |        | per-marker material/property check (in BuildAgentObjects, not      |
 // |         |            |        | here) as the precedent for a per-slot check's correct home.        |
+// | 1.6     | 2026-08-16 | —      | AR round 4, Medium/Low findings M20/M21/M22/L12. M20:               |
+// |         |            |        | ValidateWiring's rotation check and InstantiatePrefab's root-       |
+// |         |            |        | neutrality check both used `!= Quaternion.identity`, which is       |
+// |         |            |        | sign-sensitive under quaternion double cover — a legitimately-       |
+// |         |            |        | unrotated transform whose composed quaternion lands on the          |
+// |         |            |        | negative representative of identity, (0,0,0,-1), was falsely        |
+// |         |            |        | rejected, and the rejection message (which printed only              |
+// |         |            |        | eulerAngles) showed (0,0,0) — "must be identity" next to a value     |
+// |         |            |        | that already read as identity. Both sites now call the new           |
+// |         |            |        | IsIdentityRotation (|Dot(rotation, identity)| >= 1 - tolerance,       |
+// |         |            |        | tolerance 1e-5), and both rejection messages now print the raw       |
+// |         |            |        | (x, y, z, w) components alongside eulerAngles so the message can     |
+// |         |            |        | never show a value that contradicts its own stated requirement.      |
+// |         |            |        | M21: RenderBall's comment claiming the ball's "real physics          |
+// |         |            |        | height rides on model.WorldPosition.y already" fell out of sync      |
+// |         |            |        | with round 3's M17 (BallRenderModel.cs / MatchRenderProjection.cs,   |
+// |         |            |        | this round's other two M21 sites) — false for any raw height below   |
+// |         |            |        | the drawn radius, i.e. most of a match including rest; corrected to  |
+// |         |            |        | state the floor. M22: the type-doc prefab-contract clause 2a         |
+// |         |            |        | enumeration described the marking circle and the possession ring     |
+// |         |            |        | identically to the marking spot/agent marker/ball shadow ("FLAT,     |
+// |         |            |        | unit radius") despite PitchMarkingKind.Circle's own doc requiring    |
+// |         |            |        | it STROKED (an outline) against PitchMarkingKind.Spot's FILLED —     |
+// |         |            |        | "a renderer that collapsed the two would draw a solid centre         |
+// |         |            |        | circle" — and the possession ring has the identical silent failure   |
+// |         |            |        | mode. Clause 2a now names which of the seven FLAT slots must be      |
+// |         |            |        | stroked (marking circle, possession ring) and which filled (the      |
+// |         |            |        | rest), citing PitchMarkingKind's own docs as authority. L12: Update  |
+// |         |            |        | had no H5-style guard — MatchRenderProjection.ProjectAgents/         |
+// |         |            |        | ProjectBall are fail-loud on a non-finite coordinate and nothing     |
+// |         |            |        | upstream refuses one (FrameInterpolator deliberately propagates a    |
+// |         |            |        | non-finite position as a discontinuity to snap to), so one bad       |
+// |         |            |        | frame threw the same exception every Update forever, with the        |
+// |         |            |        | camera and click handler never reached again — unresponsive but      |
+// |         |            |        | not disabled. RenderAgents/RenderBall/UpdateCamera/HandleClick are   |
+// |         |            |        | now wrapped in a try/catch routing to RejectWiring, mirroring H5's    |
+// |         |            |        | own Awake catch exactly; the comment beside it states explicitly     |
+// |         |            |        | why this is the once-per-frame MonoBehaviour entry point rather      |
+// |         |            |        | than a per-frame INNER loop in the FR-CS-069 sense, the same         |
+// |         |            |        | carve-out H5's Awake comment already claims.                        |
 #endregion
