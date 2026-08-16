@@ -1,7 +1,18 @@
 # Discipline & Suspensions #44 — Section 4: Architecture
 
 **Created:** July 24, 2026
-**Last Updated:** August 16, 2026 (v0.10 — two adversarial-review findings, both in §4.5's
+**Last Updated:** August 16, 2026, later still (v0.11 — **`ERR-044-020`** (M3), the section-4 half of
+the sync the reviewed-findings pass landed into `section-2.md`/`section-3.md` and recorded open against
+this file (the fixer's owned set stopped short of it). §4.3 now declares `IDisciplineTickLedgerTap`'s
+`CurrentTick` member and describes `CardLedgerFold.ObserveTick`'s consecutive-tick refusal +
+partial-application poison latch — the same lossless-pump contract #37's `MatchAnalyticsAggregator`
+enforces, matching the wording already synced into §2.2/§3.1. §4.5's "feed the tap every tick
+(lossless)" root-contract bullet now states that losslessness is enforced by the tap contract itself
+(`IDisciplineTickLedgerTap.CurrentTick`), not merely upheld by the root's own discipline, so a root
+that skips or reorders a tick is refused rather than silently producing a wrong tally. No FR row
+changes — this is a description sync of an already-landed code contract, not a new requirement. See
+`spec-error-log.md` `ERR-044-020`.)
+**Last Updated (prior):** August 16, 2026 (v0.10 — two adversarial-review findings, both in §4.5's
 composition-root contract. **`ERR-044-015`** (H3): the clause instructed the root to "run
 `FilterAvailable` at the resolve→configure seam", the one method FR-DC-009, §2.2, §3.3 and §6.2 all
 say the root must NOT call — a root built against it verbatim bypasses `AvailabilityComposition`, so
@@ -50,7 +61,7 @@ and its file layout have existed since T0/T1, not just been proposed)
 gains the magic-before-version MUST and cites the frame v5 → 6 bump; §4.5's root contract re-scoped
 to both resolution paths)
 **Last Updated (prior):** July 24, 2026 (v0.2 — cross-set AR pass 3; prior v0.1 initial)
-**Version:** 0.10
+**Version:** 0.11
 **Status:** APPROVED
 
 ---
@@ -116,6 +127,22 @@ either to diverge. What it costs: the engine's own tap is still filled exactly o
 tick** where a shared adapter would have needed one. Nothing is lost; the cost is stated so a future
 reader does not assume a shared adapter exists.
 
+**`IDisciplineTickLedgerTap` (declared in §2.2) carries four members: `CurrentTick`, `RecordCount`,
+`OrdinalAt(int)`, `RecordAt<T>(int)`.** `CurrentTick` (`ERR-044-020`, M3) is the engine's own clock for
+the tick the other three accessors describe — `MatchEngineDisciplineTap` forwards
+`MatchEngine.CurrentTick`, an already-public read, so the engine itself needed no change — mirroring
+#37's `MatchAnalyticsObservation.CurrentTick`. `CardLedgerFold.ObserveTick` (§3.1) uses it to enforce a
+**lossless, in-order pump**, not merely to document one: the very first call anchors on whatever tick
+it is given (a fixture need not begin at tick 0); every later call must name exactly one more than the
+last tick observed, or the call is refused (`InvalidOperationException`, naming both the offending and
+the last-observed tick) instead of silently losing the skipped tick's records. A tick that throws
+part-way through — a record failing an F1/F4 refusal after earlier records in the same tick were
+already buffered — latches the fold shut: every subsequent `ObserveTick` call is refused too, even one
+that is otherwise perfectly consecutive, because nothing else distinguishes "this tick was skipped"
+from "this tick partially applied" once the tick counter has already advanced. `Commit` is unaffected
+by the latch — it still applies whatever was buffered before the failure (§3.1's atomicity is
+unchanged).
+
 ## 4.4 Save composition (KD-1)
 
 `DisciplineSaveCodec.Encode(in DisciplineState) → byte[]` produces the opaque sub-blob; the root
@@ -138,7 +165,11 @@ specified the block version-first with no magic, which this section and Appendix
 ## 4.5 Interface contracts recorded for the composition root & #30
 
 - **The composition root** MUST: seed the fold with the fixture's full lineup mapping (starting +
-  bench identities) before kickoff and feed the tap every tick (lossless); call
+  bench identities) before kickoff and feed the tap every tick, in tick order, with no gaps
+  (lossless) — **this is no longer only the root's own discipline to uphold**: `CardLedgerFold.ObserveTick`
+  (§3.1/§4.3) enforces it itself against `IDisciplineTickLedgerTap.CurrentTick` (`ERR-044-020`), so a
+  skipped tick, an out-of-order tick, or any call following one that failed part-way through is
+  refused rather than silently accepted; call
   `CardLedgerFold.RequireCommittableConfig()` **once per round, before the first fixture of the
   round is resolved** (`ERR-044-007`) — a bad `[GT]` discovered only when a per-fixture `Commit`
   throws strands the round permanently, because by the time `Commit` runs the fixture is already
@@ -186,4 +217,5 @@ specified the block version-first with no magic, which this section and Appendix
 | 0.8 | 2026-08-15 | — | **Reviewed-findings pass.** **`ERR-044-008`:** §4.3's "one tap feeds both when built" removed — verified against `src/discipline/IDisciplineTickLedgerTap.cs`, which records the claim as unachievable today (§4.1 forbids `discipline` to reference the match engine; `season-save` does not reference `match-analytics`), not merely deferred; restated as #44 declaring its own tap interface, with the two-reads-not-two-behaviours cost stated explicitly. **`ERR-044-007`:** §4.5 gains a composition-root MUST to call `CardLedgerFold.RequireCommittableConfig()` once per round before the first fixture resolves — enforced in production (`SeasonLoop.PlayNextRound`) and unit-tested, but previously undeclared anywhere in this section. **`ERR-044-010`:** §4.5's fielded-eleven bullet now states that the contract holds today only because `SeasonLoop.FieldedXi` derives the STARTING eleven and no `MatchEngine.SubstitutePlayer` call site exists yet, and MUST widen to the eleven that actually played once one does. See `spec-error-log.md`. |
 | 0.9 | 2026-08-15 | — | **Reviewed-findings pass, continuing `ERR-044-008`.** §4.5's `#37` bullet still read "the shared-tap composition is recorded from #44's side here (one tap, two folds)" — the identical refuted claim v0.8 fixed 45 lines up at §4.3, missed because that pass swept for the exact phrase rather than the underlying claim ("one tap feeds both") this bullet restated in different words. Corrected to match §4.3/§7.3/§8.1: no shared tap or adapter type; #44 reads through its own `IDisciplineTickLedgerTap`; the engine's one-per-tick fill is read by independent accessor shapes, so a second consumer costs a second read, not a second fill. No new ERR id — this is `ERR-044-008`'s own back-prop reaching the site its founding fix missed. See `spec-error-log.md` `ERR-044-008`. |
 | 0.10 | 2026-08-16 | — | **Two adversarial-review findings, both §4.5.** **`ERR-044-015`** (H3): the composition-root clause read "run `FilterAvailable` at the resolve→configure seam", naming the one method four other places in this spec say the root must not call (FR-DC-009 in `section-2.md`, §2.2's `Availability` block comment, §3.3's pseudocode, §6.2) and which has zero production call sites. A root built against it verbatim would filter with #44 alone and never reach `AvailabilityComposition`, so #30 §2.3 F9's back-fill would not run for suspensions — reinstating ERR-044-003's defect. Rewritten to the landed contract: removals gathered through `Availability.MarkSuspended` into the composed seam, which owns the intersection and the back-fill, with an explicit MUST NOT on `FilterAvailable`. The FR-DC-010 / ERR-044-002 both-clubs-both-paths half of the sentence is unchanged — it was correct. **`ERR-044-014`** (H1): the same bullet's `OnClubFixturePlayed` contract now requires the club's roster beside its fielded eleven, records that membership is READ from the roster rather than derived from `PlayerId / CLUB_SQUAD_SIZE`, and requires the UNFILTERED squad — every id being served is one the seam above just removed. See `spec-error-log.md` `ERR-044-014`, `ERR-044-015`. |
+| 0.11 | 2026-08-16, later still | — | **`ERR-044-020`** (M3), section-4 sync — the half of the fix the reviewed-findings pass landed into `section-2.md`/`section-3.md` and recorded open against this file, out of that pass's owned file set. §4.3 gains a paragraph declaring `IDisciplineTickLedgerTap`'s `CurrentTick` member (`MatchEngineDisciplineTap` forwards `MatchEngine.CurrentTick`) and describing `CardLedgerFold.ObserveTick`'s consecutive-tick refusal + partial-application poison latch, matching the wording already synced into §2.2/§3.1 and mirroring #37 `MatchAnalyticsAggregator`'s F6. §4.5's "feed the tap every tick (lossless)" root-contract bullet now states that losslessness is enforced by the tap contract itself, not merely upheld by the root's own discipline. No FR row changes; no behaviour change — a description sync of an already-landed code contract. See `spec-error-log.md` `ERR-044-020`. |
 #endregion

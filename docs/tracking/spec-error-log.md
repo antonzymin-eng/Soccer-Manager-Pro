@@ -6,8 +6,17 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 2.35
-**Updated:** August 16, 2026, yet later (v2.35 — **the final fixer pass of this review round: five #44
+**Version:** 2.36
+**Updated:** August 16, 2026, later still (v2.36 — **the `section-4.md` half of `ERR-044-020` (M3)
+landed**, closing the sync this log's own v2.35 entry below recorded open against `section-4.md`
+§4.3/§4.5 (out of that pass's owned file set). §4.3 now declares `IDisciplineTickLedgerTap`'s
+`CurrentTick` member and describes `CardLedgerFold.ObserveTick`'s consecutive-tick refusal +
+partial-application poison latch, matching the wording already synced into `section-2.md`/`section-3.md`;
+§4.5's "feed the tap every tick (lossless)" root-contract bullet now states that losslessness is
+enforced by the tap contract itself, not merely upheld by the root's own discipline. No FR row
+changes; no behaviour change — a description sync of an already-landed code contract. `section-4.md`
+v0.10 → v0.11. Annotated in place below rather than rewritten, per this file's own convention.)
+**Updated (prior):** August 16, 2026, yet later (v2.35 — **the final fixer pass of this review round: five #44
 ids filed and RESOLVED (`ERR-044-016`/`017`/`018`/`020`/`021`, all Medium) plus one annotation of an
 already-published row.** **`ERR-044-016`** (M6): Appendix C's worked fold example put a kind-2 card as
 slot 7's FIRST booking since a substitution — unproducible, since `MatchEngine.SubstitutePlayer` resets
@@ -26,7 +35,8 @@ that rest on it at the file boundary. **`ERR-044-020`** (M3): `IDisciplineTickLe
 but never declared in §2.2, and neither §2.2 nor §3.1 described the consecutive-tick refusal / poison
 latch a same-day code pass added to `CardLedgerFold.ObserveTick` — synced in `section-2.md`/`section-3.md`;
 `section-4.md` §4.3/§4.5 still owe the identical sync, recorded open in the entry rather than fixed (out
-of this pass's owned file set). **`ERR-044-021`** (M1): §3.1's pseudocode stated the pre-fix substitution
+of this pass's owned file set). **ANNOTATED August 16, 2026, later still (v2.36): this sync landed —
+see this file's own v2.36 entry above and `section-4.md` v0.11.** **`ERR-044-021`** (M1): §3.1's pseudocode stated the pre-fix substitution
 swap (no vacated-slot clear, no self-collision refusal) and the pre-fix constructor seed contract (no
 one-to-one requirement) verbatim — both closed to match `CardLedgerFold.cs` v1.8. **Also annotated in
 place, no new id:** `ERR-044-006`'s row (v2.27) carried a "RECORDED, NOT FIXED" claim about
