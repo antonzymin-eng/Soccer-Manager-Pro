@@ -1,7 +1,15 @@
 # Discipline & Suspensions #44 — Section 5: Test Plan
 
 **Created:** July 24, 2026
-**Last Updated:** August 16, 2026 (v0.7 — final fixer pass, M10: §5.4's residue paragraph on
+**Last Updated:** August 16, 2026, latest of all (v0.8 — reviewed-findings pass, finding M18: four
+refusals landed and unit-tested since the last pass over this file had no §5.2 test-method citation at
+all. **T-DC-FOLD-003 (F1)** extended with the seed/substitution boundary refusals
+(`ERR-044-021`/`ERR-044-022` — a non-one-to-one construction seed, a self-substitution, an on-pitch
+`Incoming`, a bench `Outgoing`); new **T-DC-FOLD-005 (F7, `ERR-044-020`)** cites the non-consecutive-tick
+refusal and the partial-application poison latch. §5.6's **FR-DC-002** disposition corrected from
+`Construction` to `Test + Construction` — the row's own "lossless" clause is now T-DC-FOLD-005's, not a
+structural claim alone. `section-2.md` v0.15 in the same commit adds the matching F1/F7 rows.)
+**Last Updated (prior):** August 16, 2026 (v0.7 — final fixer pass, M10: §5.4's residue paragraph on
 `AvailabilityTests.cs` was stale a THIRD time — v0.6's "the real residue is `T-DC-BAN-004`" was true
 when written but that file's own v1.4, landed the same day, removed it too; verified directly against
 the file's current header, which names neither retired id. Paragraph deleted, replaced with a one-line
@@ -42,7 +50,7 @@ return, ERR-044-005), **T-DC-SAV-003** (F2's negative-`PlayerId` refusal at both
 §5.6 updated to reflect the corrected table; §9's G14 re-checked against it and left unchanged — see
 that section's own version history for the verification note.)
 **Last Updated (prior):** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.7
+**Version:** 0.8
 **Status:** APPROVED
 
 ---
@@ -91,7 +99,18 @@ that section's own version history for the verification note.)
   `CardLedgerFoldTests.Card_ForAnAgentIdWithNoPlayerOccupancy_Throws`,
   `Card_ForAnOutOfRangeAgentId_Throws`, `Substitution_WithUnmappedIncoming_Throws`,
   `CardKind3_ThrowsAtObserveTick_NotDeferredToCommit`,
-  `UnknownOrdinal_IsIgnored_KnownOrdinalInTheSameBatchStillFolds`.
+  `UnknownOrdinal_IsIgnored_KnownOrdinalInTheSameBatchStillFolds`. **F1's seed/substitution
+  boundary extension (`ERR-044-021`/`ERR-044-022`)** — a construction seed mapping two agent ids
+  to the same player, a self-substitution, an on-pitch `Incoming`, and a bench `Outgoing` all fail
+  loud — `Constructor_SeedMapsOnePlayerToTwoAgentIds_ThrowsAndNamesBothIdsAndThePlayer`,
+  `Substitution_OutgoingEqualsIncoming_Throws`,
+  `Substitution_WithAnOccupiedOnPitchIncoming_ThrowsInsteadOfDestroyingTheOutgoingsMapping`,
+  `Substitution_WithABenchOutgoing_Throws`.
+- **T-DC-FOLD-005 (F7, the lossless pump, `ERR-044-020`)** — a non-consecutive `tap.CurrentTick`
+  fails loud and names both the offending and the last-observed tick; a part-way tick failure
+  latches the fold `faulted` and refuses every later call, even an otherwise-consecutive one —
+  `CardLedgerFoldTests.ObserveTick_SkippedTick_ThrowsAndNamesBothTicks`,
+  `ObserveTick_AfterPartialTickFailure_LatchesAndRefusesEvenAConsecutiveTick`.
 - **T-DC-FOLD-004 (F6, atomic commit)** — `Commit` validates all four bound `[GT]`s
   (`YellowAccumulationThreshold`, `AccumBanMatches`, `SecondYellowBanMatches`,
   `StraightRedBanMatches`) **before** applying the first buffered card: an invalid yellow
@@ -307,7 +326,7 @@ one such case, **FR-DC-020**, tracked as a §9.2 follow-up.
 | FR | Disposition | Established by |
 |---|---|---|
 | FR-DC-001 | Construction + Test | #27 immutability (`Squad` sealed, deep-copying ctor, `GetPlayer` by value) and #44's write surface being the caller's mask / a new `Squad`; the engine half by T-DC-NEU-001 over a real fixture. *T-DC-VIEW-001 withdrawn — see §5.4.* |
-| FR-DC-002 | Construction | `IDisciplineTickLedgerTap` is the assembly's only read surface; no `SerializeLedger` parse, no post-match slot read, no new subscription anywhere in `src/discipline/**`. G4's verified-source evidence (§1 KD-2, §3.1, XC-044-001/002); exercised live by T-DC-NEU-001. |
+| FR-DC-002 | Test + Construction | The read surface is `Construction` (`IDisciplineTickLedgerTap` is the assembly's only read surface; no `SerializeLedger` parse, no post-match slot read, no new subscription anywhere in `src/discipline/**` — G4's verified-source evidence, §1 KD-2, §3.1, XC-044-001/002; exercised live by T-DC-NEU-001), and the row's own "lossless" clause is now also `Test`: T-DC-FOLD-005 locks the non-consecutive-tick refusal and the partial-application poison latch that make the tap consumption a lossless, in-order pump rather than merely a single-surface one. |
 | FR-DC-003 | Test | T-DC-NEU-001 (with its positive control). |
 | FR-DC-004 | Test | T-DC-FOLD-003. |
 | FR-DC-005 | Test | T-DC-FOLD-002. |
@@ -347,4 +366,5 @@ wiring — each locked at its minimal boundary today.
 | 0.5 | 2026-08-15 | — | **ERR-044-006** (#44 adversarial-review round 5, High): this table named **two tests that do not exist** and, in a third row, mandated the **opposite** of the contract the code enforces — and §9's G6/G13/G14 had ratified gates on all three. **T-DC-VIEW-001 WITHDRAWN** (its only test was deleted at C1/C2 AR round 1 as tautological — `AvailabilityTests.cs` v1.1, L4(a) — and never replaced; the property is #27's by construction, independently re-verified here against `Squad.cs` rather than taken from the deletion note). **T-DC-INT-001 WITHDRAWN**, both halves, for different reasons: FR-DC-019 is a structural negative with no observable to assert (G3's own posture), while FR-DC-020's integer posture rests on **audit, not enforcement** — a reflection lock would have a real failure mode and is recorded as a §9.2 follow-up rather than written into a row as if it existed. **T-DC-VIEW-002 CORRECTED**: it required a pass-through filter to return "an equal (but **distinct-copy**) squad", contradicting FR-DC-009, FR-DC-018's identity floor and the enforced `Is.SameAs` contract — a conformant implementation of the old text would have moved every clean fixture's digest. **T-DC-FOLD-001 and T-DC-DET-001 re-cited to what exists** (the scripted kind-{0,0,2,1} sequence has never existed; T-DC-DET-001's "identical filtered squads" half has no test and would be a tautology). **§5.6 replaced** by a per-FR disposition map (Test / Construction / Deferral) so G14 is re-derivable by grep — the old prose was false on five requirements, two of which (FR-DC-002, FR-DC-022) no row had ever named. Every surviving row was verified by reading the named test methods in `src/discipline/tests/` and `src/season-save/tests/`; test-method citations added throughout so the next verification is a grep rather than a re-reading. See §9's version history for the G6/G13/G14 re-derivation. |
 | 0.6 | 2026-08-15 | — | **Reviewed-findings pass.** §5.4's `AvailabilityTests.cs` residue note (v0.5) said the file's `Spec:` header "line 7 still lists" `T-DC-VIEW-001` — checked directly against the file: its own v1.3, landed the same day, had already removed the id, so the note was stale at the moment v0.5 wrote it. The real residue at that same header (line 11) is `T-DC-BAN-004`, withdrawn at ERR-044-003 (August 13, 2026), of which §5.3 says "No test exists or should exist" — recorded here instead, out of this pass's owned file set (`src/discipline/`). No new ERR id; a correction of v0.5's own claim. |
 | 0.7 | 2026-08-16 | — | **Final fixer pass, M10 (third and final correction) + a version-row ordering fix.** §5.4's residue paragraph was itself stale, a third time: v0.6's "the real residue is `T-DC-BAN-004`, recorded not fixed" was true when written but `AvailabilityTests.cs` v1.4 (L6, the SAME day, August 15) removed that id too — verified directly against the file's current header (`§5 T-DC-VIEW-002, T-DC-BAN-005`, no retired id of either kind). The residue paragraph is deleted and replaced with a one-line dated closure note per this file's own annotate-in-place convention; nothing is left to record. `spec-error-log.md`'s `ERR-044-006` row (which still carries the original, also-false, "line 7 / T-DC-VIEW-001" claim) is annotated in place in the same commit — see that entry. **Also fixed:** this table's v0.5 row was published ahead of v0.4 (`tools/recurring-defect-lint.py`'s out-of-order-version check) — the two rows are swapped above into chronological order; no row's content changed, only its position. |
+| 0.8 | 2026-08-16, latest of all | — | **Reviewed-findings pass, finding M18.** Four refusals landed and unit-tested in `CardLedgerFoldTests.cs` had no §5.2 citation: **T-DC-FOLD-003** extended with the seed/substitution boundary refusals (`ERR-044-021`/`ERR-044-022`) — `Constructor_SeedMapsOnePlayerToTwoAgentIds_ThrowsAndNamesBothIdsAndThePlayer`, `Substitution_OutgoingEqualsIncoming_Throws`, `Substitution_WithAnOccupiedOnPitchIncoming_ThrowsInsteadOfDestroyingTheOutgoingsMapping`, `Substitution_WithABenchOutgoing_Throws`; new **T-DC-FOLD-005 (F7, `ERR-044-020`)** — `ObserveTick_SkippedTick_ThrowsAndNamesBothTicks`, `ObserveTick_AfterPartialTickFailure_LatchesAndRefusesEvenAConsecutiveTick`. §5.6's **FR-DC-002** row corrected `Construction` → `Test + Construction`, naming T-DC-FOLD-005 as what now carries the row's "lossless" clause. `section-2.md` v0.15 in the same commit adds the matching §2.3 F1/F7 rows. |
 #endregion

@@ -1,5 +1,11 @@
 // File:     src/season-save/tests/SeasonLoopDisciplineTests.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16, latest of all (reviewed-findings pass, M16 — v1.12: comment-string-only fix.
+//           TheBackFillPressesAnInjuredPlayerBackBeforeASuspendedOne's failure message quoted the
+//           ERR-044-019 sentence ("a banned man plays only when the alternative is a club that cannot
+//           take the field at all") that adversarial review declared FALSE of the implementation on
+//           both halves; restated to the two-case form (benched whenever any choice permits it; forced
+//           into the XI, and only then does the ban stall). No assertion, no test logic, changed.
 // Modified: 2026-08-16, latest (reviewed findings pass, findings A/B — v1.11: the groundTruthFold
 //           construction in ANewBanEarnedThisFixtureIsNotServedByThisSameFixture updated for
 //           CardLedgerFold's new required onPitchAgentIdCount parameter (ERR-044-022),
@@ -806,8 +812,10 @@ namespace TacticalDirector.SeasonSave.Tests
                 "The composed filter must never stop a club playing (#30 §3.4 / §2.3 F9).");
             Assert.That(Contains(fielded, all[0]), Is.True,
                 "The back-fill reinstated a suspended player while an injured one was still available. "
-                + "Suspension is the stricter tier — a banned man plays only when the alternative is a "
-                + "club that cannot take the field at all (ERR-044-003).");
+                + "Suspension is the stricter tier — a reinstated suspended player is benched whenever "
+                + "any candidate choice permits it (his ban advances normally), and is forced into the "
+                + "XI only when no completing choice avoids it, which is the only case where the ban "
+                + "stalls (ERR-044-003 stage 1, ERR-044-019).");
         }
 
         [Test]
@@ -1473,4 +1481,10 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | NO_PLAYER-sentinel-agreement lock this file already carries for   |
 // |         |            |        | the same reason (neither match-engine nor discipline can see the |
 // |         |            |        | other's code).                                                     |
+// | 1.12    | 2026-08-16, latest of all | — | Reviewed-findings pass, M16. Comment-string-only fix: |
+// |         |            |        | TheBackFillPressesAnInjuredPlayerBackBeforeASuspendedOne's failure |
+// |         |            |        | message quoted the ERR-044-019 sentence declared false of the     |
+// |         |            |        | implementation ("a banned man plays only when the alternative is  |
+// |         |            |        | a club that cannot take the field at all"); restated to the       |
+// |         |            |        | two-case form. No assertion or test logic changed.                |
 #endregion

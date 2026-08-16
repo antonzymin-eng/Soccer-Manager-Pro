@@ -1,7 +1,13 @@
 # Discipline & Suspensions #44 — Section 3: Core Algorithms
 
 **Created:** July 24, 2026
-**Last Updated:** August 16, 2026, latest (v0.14 — reviewed findings pass, findings A/B. **`ERR-044-022`**
+**Last Updated:** August 16, 2026, latest of all (v0.15 — reviewed-findings pass, finding L11: §3.2's
+worked example named the four `[GT]` threshold/ban constants as backticked ALL_CAPS abbreviations
+(`THRESHOLD`, `ACCUM`, `SECOND_YELLOW`, `STRAIGHT_RED`) that exist nowhere in code or in this spec's
+own §2.1/§2.2 — `ERR-044-017` (August 15, 2026) had already renamed these constants ALL_CAPS →
+PascalCase everywhere else. Corrected to `YellowAccumulationThreshold`/`AccumBanMatches`/
+`SecondYellowBanMatches`/`StraightRedBanMatches`, values and the illustrative tag unchanged.)
+**Last Updated (prior):** August 16, 2026, latest (v0.14 — reviewed findings pass, findings A/B. **`ERR-044-022`**
 (finding A): the `CardLedgerFold` constructor pseudocode gains a required `onPitchAgentIdCount`
 parameter and the `SubstitutionEvent` branch's `ApplySub` call gains an inline comment stating the two
 new refusals — `Incoming < onPitchAgentIdCount` (an on-pitch id cannot come on) and
@@ -73,7 +79,7 @@ the prior text only implied by describing separate fixtures)
 ordering paragraph re-scoped to both resolution paths, and the `FilterAvailable` pseudocode comment
 points its viability rule at #30 §2.3 F9 instead of a withdrawn F5)
 **Last Updated (prior):** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.14
+**Version:** 0.15
 **Status:** APPROVED
 
 ---
@@ -190,8 +196,9 @@ AddBan(pid, matches):  tally[pid, comp].BanMatchesRemaining += matches   # match
                                                                            # (F2-class), not a [GT] guard
 ```
 
-**Worked example** (`THRESHOLD = 5`, `ACCUM = 1`, `SECOND_YELLOW = 1`, `STRAIGHT_RED = 2` — all
-`[GT]` illustrative): a player on 4 yellows receives a kind-0 ⇒ `Yellows 5 → 0`, ban 1. A player
+**Worked example** (`YellowAccumulationThreshold = 5`, `AccumBanMatches = 1`,
+`SecondYellowBanMatches = 1`, `StraightRedBanMatches = 2` — all `[GT]` illustrative): a player on 4
+yellows receives a kind-0 ⇒ `Yellows 5 → 0`, ban 1. A player
 on 4 yellows receives a kind-2 ⇒ `Yellows 5 → 0` **and** the dismissal: ban `1 + 1 = 2` (the
 accumulation and the second-yellow bans stack). A kind-1 ⇒ ban +2, yellows untouched. All
 integer; same events ⇒ same tallies, always.
@@ -324,4 +331,5 @@ preserve this order.
 | 0.12 | 2026-08-16 | — | **`ERR-044-014`** (adversarial review, H1): §3.3's `OnClubFixturePlayed` pseudocode becomes `OnClubFixturePlayed(clubId, clubPlayerIds, fieldedPlayerIds)`, matches club membership by presence in `clubPlayerIds`, and REQUIREs it non-null (F2). The retired "DERIVABLE: `PlayerId / CLUB_SQUAD_SIZE == clubId` … no roster read is needed" comment is replaced by the reason it was unsafe: it was a second notion of membership beside `MarkSuspended`'s roster walk, agreeing only while #27's packing holds, and its stated guarantee — FR-DC-013's migration rule keeping a transferred player's id current — is not in force, `MigratePlayerId`/`DropPlayer` having no production caller (verified in `src/season-save/SeasonLoop.cs`). Also states that `clubId` is now identity/F2 only and deliberately un-cross-checked, and that the roster passed MUST be the unfiltered one, since every id being served is one the filter has just removed. `src/discipline/DisciplineRules.cs` v1.7, `src/season-save/SeasonLoop.cs` v1.29, same commit. See `spec-error-log.md` `ERR-044-014`. |
 | 0.13 | 2026-08-16, later | — | **Final fixer pass, two findings.** **`ERR-044-021`** (M1): §3.1's `CardLedgerFold` constructor line gains the one-to-one seed requirement alongside "F1 on any gap"; the `SubstitutionEvent` branch's `ApplySub` call gains an inline comment stating it clears `record.Incoming`'s vacated slot and refuses `Outgoing == Incoming` — both were previously silent on the exact shapes the reviewed findings pass closed in code (`CardLedgerFold.cs` v1.8), so an implementer following the OLD text verbatim would have reproduced the dormant hole. **`ERR-044-020`** (M3): `ObserveTick`'s pseudocode gains `faulted`/`lastObservedTick` state and the consecutive-tick + poison-latch refusals, matching `CardLedgerFold.cs`'s real `ObserveTick` (v1.8) and `IDisciplineTickLedgerTap.CurrentTick` (declared at `section-2.md` v0.12 §2.2). Also renamed the four `[GT]` constants in this section's active pseudocode ALL_CAPS → PascalCase (M7) — the v0.7/v0.8 version rows below, which quote the pre-rename pseudocode by name, are left as historical quotes per the `DisciplineConstants.cs`/`appendices.md` L3 precedent. See `spec-error-log.md` `ERR-044-017`, `ERR-044-020`, `ERR-044-021`. |
 | 0.14 | 2026-08-16, latest | — | **Reviewed findings pass, findings A/B.** **`ERR-044-022`** (finding A): the `CardLedgerFold` constructor pseudocode's signature gains `onPitchAgentIdCount`, with a comment stating the on-pitch/bench boundary it marks and that the one-to-one check above it cannot by itself distinguish a bench id from a pitch id. The `SubstitutionEvent` branch's `ApplySub` call gains a second comment stating the two new refusals it now performs BEFORE the write/clear pair — `Incoming < onPitchAgentIdCount` and `Outgoing >= onPitchAgentIdCount` — and the exact pre-fix defect they close (an on-pitch `Incoming` reached the write unchecked, silently destroying the outgoing slot's prior occupant's mapping). Matches `CardLedgerFold.cs` v1.10. **`ERR-044-023`** (finding B, doc only): the constructor line's comment states the `lineup` boot-time precondition explicitly, cross-referencing §4.3 for the full statement. See `spec-error-log.md` `ERR-044-022`, `ERR-044-023`. |
+| 0.15 | 2026-08-16, latest of all | — | **Reviewed-findings pass, finding L11.** §3.2's worked example renamed its four illustrative `[GT]` constants from backticked ALL_CAPS abbreviations that exist nowhere in code (`THRESHOLD`, `ACCUM`, `SECOND_YELLOW`, `STRAIGHT_RED`) to the actual PascalCase names (`YellowAccumulationThreshold`, `AccumBanMatches`, `SecondYellowBanMatches`, `StraightRedBanMatches`) — `ERR-044-017` renamed the constants themselves the prior day; this was the one surviving worked-example reference to the retired spelling. Values and the illustrative tag unchanged. |
 #endregion
