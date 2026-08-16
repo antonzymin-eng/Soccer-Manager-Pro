@@ -1,6 +1,6 @@
 // File:     src/discipline/DisciplineState.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13
+// Modified: 2026-08-16 (reviewed-findings pass, L1 — v1.1)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §2.2 (data structures) / FR-DC-001 / FR-DC-012 /
 //           FR-DC-016 / FR-DC-017 / FR-DC-021; Code Standards #20
@@ -126,10 +126,21 @@ namespace TacticalDirector.Discipline
 
         /// <summary>
         /// The row for <paramref name="playerId"/> in <paramref name="competitionId"/>, or a clean
-        /// zero row when the player has none. Pure — the absent case is not an error (FR-DC-008).
+        /// zero row when the player has none. Pure — the absent case is not an error (FR-DC-008),
+        /// including a negative <paramref name="playerId"/> (L1): no row can ever exist for one (the
+        /// validating constructor refuses it on every write path), so this returns
+        /// <c>default(DisciplineEntry)</c> directly rather than routing through
+        /// <see cref="DisciplineEntry"/>'s constructor — which runs the §2.3 F2 guard and throws.
+        /// <see cref="HasEntry"/> already reads false for the same key; a doc that promises "the absent
+        /// case is not an error" must not let one sibling method throw where the other returns false.
         /// </summary>
         public DisciplineEntry EntryFor(int playerId, int competitionId)
         {
+            if (playerId < 0)
+            {
+                return default;
+            }
+
             int index = IndexOf(playerId, competitionId);
             return index >= 0
                 ? _entries[index]
@@ -232,4 +243,12 @@ namespace TacticalDirector.Discipline
 // |         |            |        | map in canonical key order, with the FR-DC-017 drop applied at   |
 // |         |            |        | the single Upsert site and the ascending-order refusal enforced  |
 // |         |            |        | at the restore door (the PlayerCareerStates.FromBlocks H1 class). |
+// | 1.1     | 2026-08-16 | —      | Reviewed-findings fix (L1): EntryFor no longer routes a negative  |
+// |         |            |        | playerId through DisciplineEntry's validating constructor, which  |
+// |         |            |        | ran the §2.3 F2 guard and threw ArgumentOutOfRangeException —     |
+// |         |            |        | disagreeing with HasEntry(-1, 0), which already reads false for   |
+// |         |            |        | the same key, and propagating uncaught out of Availability.       |
+// |         |            |        | IsAvailable / MarkSuspended, neither of which declares it. Now    |
+// |         |            |        | returns default(DisciplineEntry) directly for a negative key —    |
+// |         |            |        | the clean zero row, with no constructor call at all.              |
 #endregion

@@ -1,7 +1,12 @@
 // File:     src/match-analytics/MatchAnalyticsAggregator.cs
 // Created:  2026-07-27
-// Modified: 2026-08-15 (reviewed-findings pass, L2 — MatchAnalyticsConstants.CARD_KIND_RED renamed
-//           CardKindRed (PascalCase [CROSS]-mirror naming); call site updated. No behaviour change.)
+// Modified: 2026-08-16 (reviewed-findings pass, M4/ERR-037-003 — CardIssuedEvent routing widened from
+//           a two-way `CardKind == CardKindRed ? red : yellow` test to a three-way switch over #17's
+//           full CardKind domain: a kind-2 (second-yellow dismissal) event now increments BOTH
+//           YellowCards and RedCards, instead of silently falling into the yellow-only else branch and
+//           never touching RedCards at all. Behaviour change: any match with a second-yellow dismissal
+//           now reports a nonzero RedCards for that team, matching MatchStatline.RedCards's documented
+//           contract. New MatchAnalyticsConstants.CardKindSecondYellow (and CardKindYellow) consumed.)
 // Author:   —
 // Spec:     Match Analytics & Statistics #37 §3.1–§3.5 (KD-3), FR-AN-003..012 / 016..018,
 //           Code Standards #20
@@ -233,7 +238,29 @@ namespace TacticalDirector.MatchAnalytics
             {
                 CardIssuedEvent evt = tap.ReadRecord<CardIssuedEvent>(index);
                 int team = TeamOfAgent(sample, evt.Recipient, "CardIssuedEvent.Recipient");
-                if (evt.CardKind == MatchAnalyticsConstants.CardKindRed)
+
+                // ERR-037-003 (reviewed-findings pass M4): CardKind is #17's three-value domain ordinal
+                // (0=Yellow, 1=Red, 2=SecondYellow — EventSystemConstants.CARD_KIND_*), not a boolean.
+                // The old `== red ? red : yellow` test had no branch for kind 2 at all, so a
+                // second-yellow dismissal fell into the else and counted as a plain yellow — RedCards
+                // stayed 0 for every match with one, contradicting MatchStatline.RedCards's own
+                // documented contract ("Red cards received (including second-yellow dismissals)").
+                //
+                // A kind-2 event still counts toward BOTH tallies, not just red: the producer
+                // (MatchEngine.ApplyCardAndCheckSentOff) emits it as ONE event standing in for the
+                // second caution AND the resulting dismissal, never a yellow-then-red pair, so nothing
+                // else will ever increment a yellow for that caution. Splitting it into a yellow and a
+                // red here is what makes the box score match the two bookings a real match report would
+                // show (the player's first caution earlier in the match already published its own
+                // separate kind-0 event and is counted there). This mirrors the discipline #44 precedent
+                // — DisciplineRules.ApplyCard's kind-2 branch is documented as "one yellow AND one
+                // dismissal ban" for the identical reason.
+                if (evt.CardKind == MatchAnalyticsConstants.CardKindSecondYellow)
+                {
+                    _yellowCards[team]++;
+                    _redCards[team]++;
+                }
+                else if (evt.CardKind == MatchAnalyticsConstants.CardKindRed)
                 {
                     _redCards[team]++;
                 }
@@ -466,4 +493,12 @@ namespace TacticalDirector.MatchAnalytics
 // | 1.2     | 2026-08-15 | —      | Reviewed-findings pass (L2). CARD_KIND_RED reference updated   |
 // |         |            |        | to MatchAnalyticsConstants.CardKindRed (PascalCase rename of   |
 // |         |            |        | the [CROSS] mirror). No behaviour change.                      |
+// | 1.3     | 2026-08-16 | —      | Reviewed-findings pass (M4/ERR-037-003). CardIssuedEvent        |
+// |         |            |        | routing widened to a three-way switch over #17's full CardKind |
+// |         |            |        | domain (0/1/2): a kind-2 second-yellow dismissal now increments|
+// |         |            |        | BOTH YellowCards and RedCards, instead of falling into the     |
+// |         |            |        | yellow-only else branch and leaving RedCards at 0 for every    |
+// |         |            |        | such match — MatchStatline.RedCards's own documented contract  |
+// |         |            |        | ("including second-yellow dismissals") was being contradicted. |
+// |         |            |        | Behaviour change (RedCards is now nonzero where it wasn't).    |
 #endregion

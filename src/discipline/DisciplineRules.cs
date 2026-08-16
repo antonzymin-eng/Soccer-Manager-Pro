@@ -1,5 +1,9 @@
 // File:     src/discipline/DisciplineRules.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16 (ERR-044-014, adversarial-review H1 — OnClubFixturePlayed takes the club's
+//           roster ids and matches membership by presence, deleting the packed-id club derivation that
+//           nothing validated and that disagrees with the removal half the moment a transfer or an
+//           id-space widening lands — v1.7)
 // Modified: 2026-08-15, later (reviewed findings pass, L4 — v1.6: a prose reference to
 //           LEAGUE_COMPETITION_KEY renamed for that constant's ALL_CAPS -> LeagueCompetitionKey rename
 //           (DisciplineConstants.cs v1.5). Doc-only, no behaviour change.)
@@ -14,8 +18,6 @@
 
 using System;
 using System.Collections.Generic;
-
-using TacticalDirector.PlayerDatabase;
 
 namespace TacticalDirector.Discipline
 {
@@ -222,37 +224,68 @@ namespace TacticalDirector.Discipline
         /// league fixture should serve a league ban and leave a cup ban alone.
         /// </para>
         /// <para>
-        /// <b>Club membership is derived, not looked up:</b> <c>PlayerId / CLUB_SQUAD_SIZE == clubId</c>
-        /// is #27's club-scoped id formula, and FR-DC-013's migration rule keeps a transferred player's
-        /// id current — so no roster read is needed and the serving cannot disagree with a roster this
-        /// assembly is not allowed to hold. That derivation rests on #27 FR-SQ-010's global-uniqueness
-        /// promise as amended by <b>ERR-027-004</b>; before that amendment ids were unique only within
-        /// a club and this method would have served two clubs' bans at once (the ERR-041-019 class).
-        /// It ALSO rests on every stored <c>PlayerId</c> being non-negative — C# integer division
-        /// truncates toward zero, so a negative id would otherwise derive to club 0 regardless of
-        /// uniqueness. That half is enforced separately, at construction: <see cref="DisciplineEntry"/>
-        /// (M1, §2.3 F2) and <see cref="DisciplineSaveCodec.Decode"/> both refuse a negative
-        /// <c>PlayerId</c>, so no row this method reads can ever carry one.
+        /// <b>Club membership is LOOKED UP, not derived (ERR-044-014).</b> Whose ban this fixture
+        /// serves is decided by presence in <paramref name="clubPlayerIds"/> — the club's actual
+        /// roster, supplied by the caller that holds it — and by nothing else. Until August 16, 2026
+        /// this walk instead computed <c>entry.PlayerId / CLUB_SQUAD_SIZE == clubId</c>, #27's packed
+        /// club-scoped id formula, while the removal half of the same subsystem
+        /// (<see cref="Availability.MarkSuspended"/>) walked the real squad and read
+        /// <c>PlayerRecord.PlayerId</c>. Two notions of "is this player at this club" that agree only
+        /// while the packing holds: the moment they disagree — #31 transfers, or the ERR-044-003
+        /// stage 3 id-space widening that is already required — a banned player is removed from every
+        /// squad he is really in and his ban is never decremented, so he is suspended forever, with no
+        /// throw, no log and no test able to see it. Both the code and #44 §3.3 asserted the
+        /// precondition was held by FR-DC-013's migration rule; it is not, because
+        /// <see cref="MigratePlayerId"/> and <see cref="DropPlayer"/> have no production caller at all
+        /// (recorded at <c>src/season-save/SeasonLoop.cs</c>'s <c>RollToNextSeason</c> roster sync).
+        /// This is ERR-041-019's defect one subsystem over, and it is closed the same way: one notion
+        /// of membership, taken from the roster, enforced at the entry point.
+        /// </para>
+        /// <para>
+        /// <b><paramref name="clubId"/> is now identity and caller-contract only.</b> It names which
+        /// club's fixture this is — for the §2.3 <b>F2</b> gate below, for diagnostics, and for the
+        /// competition granularity #43 must eventually revisit — and it participates in no matching
+        /// decision. Deliberately not cross-checked against <paramref name="clubPlayerIds"/>: any such
+        /// check would have to re-derive a club from a player id, which is the second notion of
+        /// membership this change exists to delete.
         /// </para>
         /// <para>A row that reaches <c>(0, 0)</c> here is dropped immediately, mid-season, per FR-DC-017.</para>
         /// </summary>
-        /// <param name="clubId">The club that played the fixture.</param>
+        /// <param name="clubId">The club that played the fixture. Identity only — see above.</param>
+        /// <param name="clubPlayerIds">The club's roster: every player id currently at
+        /// <paramref name="clubId"/>, whether or not he was available for this fixture. Never null, for
+        /// the same reason <paramref name="fieldedPlayerIds"/> is not — a caller who cannot name the
+        /// roster cannot name whose ban a fixture served, and the two silent readings of the unknown
+        /// case ("serve everybody" / "serve nobody") are respectively this method's old defect and a
+        /// permanently-suspended squad.</param>
         /// <param name="fieldedPlayerIds">The eleven this club actually fielded. Never null: a caller
         /// that does not know who played cannot know whose ban was served either, and defaulting the
         /// unknown case to "serve everybody" is precisely the silent-loss shape this project has twice
         /// filed (the #44 H1/H4 chain) — so the ignorance is refused rather than absorbed.</param>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="clubId"/> is negative — <b>F2</b>,
-        /// a club outside the resolvable universe. No id divides to a negative club, so this would
-        /// otherwise be a silent no-op rather than the caller-contract bug it is.</exception>
-        /// <exception cref="ArgumentNullException"><paramref name="fieldedPlayerIds"/> is null.</exception>
-        public void OnClubFixturePlayed(int clubId, int[] fieldedPlayerIds)
+        /// a club outside the resolvable universe. Kept as a caller-contract gate now that no id is
+        /// divided into a club: a caller passing a negative club is wrong about something, and the
+        /// roster it passed alongside cannot be trusted to be the club it meant.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="clubPlayerIds"/> or
+        /// <paramref name="fieldedPlayerIds"/> is null.</exception>
+        public void OnClubFixturePlayed(int clubId, int[] clubPlayerIds, int[] fieldedPlayerIds)
         {
             if (clubId < 0)
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(clubId), clubId,
                     "DisciplineRules.OnClubFixturePlayed: clubId must be >= 0 (F2). A negative club " +
-                    "matches no player id, so serving would silently do nothing.");
+                    "is outside the resolvable universe, so the roster supplied beside it cannot be " +
+                    "the club the caller meant.");
+            }
+            if (clubPlayerIds == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(clubPlayerIds),
+                    "DisciplineRules.OnClubFixturePlayed: the club's roster is required (F2, "
+                    + "ERR-044-014). Membership is read from it, never derived from the id packing, "
+                    + "so a caller that cannot name the roster cannot name whose ban this fixture "
+                    + "served — and both silent readings of the unknown case are wrong.");
             }
             if (fieldedPlayerIds == null)
             {
@@ -272,8 +305,10 @@ namespace TacticalDirector.Discipline
                 {
                     continue;
                 }
-                if (entry.PlayerId / PlayerDatabaseConstants.CLUB_SQUAD_SIZE != clubId)
+                if (!IsOnClubRoster(entry.PlayerId, clubPlayerIds))
                 {
+                    // Not one of this club's players — the SAME question, asked the SAME way, as the
+                    // removal half asks of the same squad (ERR-044-014).
                     continue;
                 }
                 if (WasFielded(entry.PlayerId, fieldedPlayerIds))
@@ -408,11 +443,25 @@ namespace TacticalDirector.Discipline
         /// not the 60 Hz path — so the array stays an array rather than becoming a set the caller has
         /// to build and this assembly has to trust the contents of.
         /// </summary>
-        private static bool WasFielded(int playerId, int[] fieldedPlayerIds)
+        private static bool WasFielded(int playerId, int[] fieldedPlayerIds) =>
+            ContainsId(fieldedPlayerIds, playerId);
+
+        /// <summary>
+        /// Whether <paramref name="playerId"/> is on the club's roster — the one membership rule
+        /// (ERR-044-014), matched by presence exactly as <see cref="Availability.MarkSuspended"/>
+        /// matches the squad it walks. A linear scan over at most a squad's worth of ids, run only for
+        /// a row that already carries an outstanding ban, on the season path.
+        /// </summary>
+        private static bool IsOnClubRoster(int playerId, int[] clubPlayerIds) =>
+            ContainsId(clubPlayerIds, playerId);
+
+        /// <summary>The shared scan behind <see cref="WasFielded"/> and <see cref="IsOnClubRoster"/> —
+        /// one copy, so the two questions cannot drift into two different answers.</summary>
+        private static bool ContainsId(int[] ids, int playerId)
         {
-            for (int i = 0; i < fieldedPlayerIds.Length; i++)
+            for (int i = 0; i < ids.Length; i++)
             {
-                if (fieldedPlayerIds[i] == playerId)
+                if (ids[i] == playerId)
                 {
                     return true;
                 }
@@ -544,4 +593,24 @@ namespace TacticalDirector.Discipline
 // | 1.6     | 2026-08-15, later | — | Reviewed findings pass, L4. A prose LEAGUE_COMPETITION_KEY      |
 // |         |            |        | reference renamed to LeagueCompetitionKey. Doc-only, no            |
 // |         |            |        | behaviour change.                                                  |
+// | 1.7     | 2026-08-16 | —      | ERR-044-014 (adversarial review, H1). OnClubFixturePlayed gains  |
+// |         |            |        | a required int[] clubPlayerIds and decides membership by          |
+// |         |            |        | PRESENCE in it; the PlayerId / CLUB_SQUAD_SIZE == clubId          |
+// |         |            |        | derivation is deleted, and with it this file's dependency on      |
+// |         |            |        | TacticalDirector.PlayerDatabase. The derivation was a SECOND      |
+// |         |            |        | notion of club membership beside Availability.MarkSuspended's,    |
+// |         |            |        | which walks the real squad and reads PlayerRecord.PlayerId; the   |
+// |         |            |        | two agree only while #27's packing holds, and the moment they     |
+// |         |            |        | disagree (a #31 transfer, or the ERR-044-003 stage 3 id-space     |
+// |         |            |        | widening) a banned player is removed from every squad he is       |
+// |         |            |        | really in while his ban never decrements — suspended forever,     |
+// |         |            |        | silently. The precondition both this file and #44 §3.3 cited      |
+// |         |            |        | (FR-DC-013's migration rule keeping ids current) is not held:     |
+// |         |            |        | MigratePlayerId and DropPlayer have no production caller.         |
+// |         |            |        | clubId is retained for the F2 caller-contract gate and identity   |
+// |         |            |        | alone and is deliberately NOT cross-checked against the roster,   |
+// |         |            |        | since any such check re-derives the club from an id. Behaviour-   |
+// |         |            |        | identical on today's packed ids over a full roster, asserted by   |
+// |         |            |        | DisciplineRulesTests' agreement lock; the disagreement case is    |
+// |         |            |        | locked separately and follows the roster.                         |
 #endregion

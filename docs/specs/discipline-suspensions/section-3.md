@@ -1,7 +1,15 @@
 # Discipline & Suspensions #44 — Section 3: Core Algorithms
 
 **Created:** July 24, 2026
-**Last Updated:** August 15, 2026, yet later still (v0.11 — `ERR-044-010`, reviewed-findings pass:
+**Last Updated:** August 16, 2026 (v0.12 — `ERR-044-014`, adversarial-review H1: §3.3's
+`OnClubFixturePlayed` takes the club's roster ids and decides membership by PRESENCE in them. The
+retired text stated club membership was "DERIVABLE: `PlayerId / CLUB_SQUAD_SIZE == clubId` … no roster
+read is needed", which gave #44 two notions of membership — that derivation and the roster walk its own
+removal half performs — resting on a migration rule (FR-DC-013) that has no production caller. On the
+first disagreement a banned player is removed from every squad he is really in while his ban never
+decrements: suspended forever, silently. §2.2's signature, §2.3 F2 and §4.5's root contract updated in
+the same commit)
+**Last Updated (prior):** August 15, 2026, yet later still (v0.11 — `ERR-044-010`, reviewed-findings pass:
 §3.3's `OnClubFixturePlayed` pseudocode comment block gains a SUBSTITUTION DEPENDENCY paragraph — the
 `fieldedPlayerIds` the composition root supplies is the STARTING eleven (`SeasonLoop.FieldedXi`), not
 a record of who actually played, correct today only because no `MatchEngine.SubstitutePlayer` call
@@ -39,7 +47,7 @@ the prior text only implied by describing separate fixtures)
 ordering paragraph re-scoped to both resolution paths, and the `FilterAvailable` pseudocode comment
 points its viability rule at #30 §2.3 F9 instead of a withdrawn F5)
 **Last Updated (prior):** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.11
+**Version:** 0.12
 **Status:** APPROVED
 
 ---
@@ -125,14 +133,37 @@ integer; same events ⇒ same tallies, always.
 ## 3.3 Serving & the availability filter (FR-DC-008..011)
 
 ```
-OnClubFixturePlayed(clubId, fieldedPlayerIds):             # called once per played fixture of the club
+OnClubFixturePlayed(clubId, clubPlayerIds, fieldedPlayerIds):   # once per played fixture of the club
+    REQUIRE clubPlayerIds is not null                      # F2 — see the note below
     REQUIRE fieldedPlayerIds is not null                   # F2 — see the note below
-    for each entry of a player currently at clubId with BanMatchesRemaining > 0:
+    for each entry with BanMatchesRemaining > 0 whose PlayerId is in clubPlayerIds:
         if entry.PlayerId in fieldedPlayerIds: continue    # he PLAYED — this fixture is not his ban
         entry.BanMatchesRemaining -= 1                     # either resolution path (KD-3)
-    # "currently at clubId" is DERIVABLE: PlayerId / CLUB_SQUAD_SIZE == clubId (#27's club-scoped
-    # id formula), and the KD-6 migration rule keeps the id current across transfers — no roster
-    # read is needed.
+    #
+    # ERR-044-014 (August 16, 2026). "Currently at clubId" is READ FROM THE ROSTER the caller
+    # resolved — presence in clubPlayerIds, matched exactly as MarkSuspended below matches the
+    # squad it walks — and is NOT derived. This paragraph previously read "DERIVABLE:
+    # PlayerId / CLUB_SQUAD_SIZE == clubId (#27's club-scoped id formula), and the KD-6 migration
+    # rule keeps the id current across transfers — no roster read is needed". Both halves were
+    # wrong to rely on. (a) It made #44 hold TWO notions of club membership — a derivation here and
+    # a roster walk in the removal half — which agree only while #27's packing holds and nothing
+    # anywhere checked that they did. (b) The migration rule that was supposed to keep them agreeing
+    # is not applied: MigratePlayerId and DropPlayer have no production caller (recorded at
+    # SeasonLoop.RollToNextSeason's roster-sync site). On the first disagreement — a #31 transfer, or
+    # the §7.2 / ERR-044-003 stage 3 id-space widening that is already required — a banned player is
+    # removed from every squad he is really in while his ban is never decremented: suspended
+    # forever, with no throw, no log, and no test able to observe it. This is ERR-041-019's defect
+    # one subsystem over, closed the same way: ONE notion of membership, taken from the roster,
+    # enforced at the entry point.
+    #
+    # clubId is retained for the F2 caller-contract gate and for identity/diagnostics only; it takes
+    # part in no matching decision, and it is deliberately NOT cross-checked against clubPlayerIds,
+    # since any such check would have to re-derive a club from a player id.
+    #
+    # The roster passed MUST be the UNFILTERED one. Every id whose ban is being served is precisely
+    # an id FilterAvailable / the composed seam has just removed, so serving against a filtered
+    # squad makes every suspension unservable — the same permanently-suspended outcome by the
+    # opposite route.
     #
     # ERR-044-003 stage 1 (August 15, 2026). The fielded-eleven exemption exists because a banned
     # player CAN reach the pitch: #30 §2.3 F9's depleted-squad back-fill presses removed players
@@ -224,4 +255,5 @@ preserve this order.
 | 0.9 | 2026-08-15 | — | **ERR-044-003 stage 1**, owner decision: §3.3's `OnClubFixturePlayed(clubId)` pseudocode becomes `OnClubFixturePlayed(clubId, fieldedPlayerIds)` — a played fixture the banned player himself appeared in (reachable only through #30 §2.3 F9's depleted-squad back-fill) no longer decrements his ban, with a new comment block explaining why the exemption exists, that it changes nothing outside the extremis tier, and its granularity relative to the FR-DC-012 competition key. Ordering paragraph and FR-DC-011 cross-reference updated to match. |
 | 0.10 | 2026-08-15 | — | **M27** (#44 adversarial-review round 4, `open-issues.md`): §3.1's normative fold pseudocode called `AddYellow`/`AddBan` straight from `OnTapRecord`, with no buffer and no `Commit` — verified against `src/discipline/CardLedgerFold.cs`, whose real shape is `ObserveTick` (buffers a `(PlayerId, CardKind)` pair per card, applying nothing) and a separate `Commit(rules)` (validates all four bound `[GT]`s via `RequireCommittableConfig` before the loop, then applies the whole buffered list, all-or-nothing — the M13 fix, v1.2). Rewritten to match: `ObserveTick`/`Commit` as two named steps, a `pending` list, and the F6 guard called once before any buffered card is applied. §0.7/§0.8's F6/kind-2-ordering fixes are preserved verbatim inside the new `Commit` body — this is a restructuring around them, not a second change to the guard logic. |
 | 0.11 | 2026-08-15 | — | **`ERR-044-010`**, reviewed-findings pass: §3.3's `OnClubFixturePlayed` comment block gains a SUBSTITUTION DEPENDENCY paragraph recording that `fieldedPlayerIds` is today's STARTING eleven, not a played-eleven record, and stays correct only while no `MatchEngine.SubstitutePlayer` call site exists on the season path (verified against `src/discipline/CardLedgerFold.cs`'s own "the substitution branch has no production driver" remark and `src/season-save/SeasonLoop.cs`'s `FieldedXi`, which derives from the pre-kickoff `LineupSelector` walk). See `spec-error-log.md` `ERR-044-010`. |
+| 0.12 | 2026-08-16 | — | **`ERR-044-014`** (adversarial review, H1): §3.3's `OnClubFixturePlayed` pseudocode becomes `OnClubFixturePlayed(clubId, clubPlayerIds, fieldedPlayerIds)`, matches club membership by presence in `clubPlayerIds`, and REQUIREs it non-null (F2). The retired "DERIVABLE: `PlayerId / CLUB_SQUAD_SIZE == clubId` … no roster read is needed" comment is replaced by the reason it was unsafe: it was a second notion of membership beside `MarkSuspended`'s roster walk, agreeing only while #27's packing holds, and its stated guarantee — FR-DC-013's migration rule keeping a transferred player's id current — is not in force, `MigratePlayerId`/`DropPlayer` having no production caller (verified in `src/season-save/SeasonLoop.cs`). Also states that `clubId` is now identity/F2 only and deliberately un-cross-checked, and that the roster passed MUST be the unfiltered one, since every id being served is one the filter has just removed. `src/discipline/DisciplineRules.cs` v1.7, `src/season-save/SeasonLoop.cs` v1.29, same commit. See `spec-error-log.md` `ERR-044-014`. |
 #endregion

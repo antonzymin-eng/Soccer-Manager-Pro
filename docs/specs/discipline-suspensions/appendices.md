@@ -1,7 +1,12 @@
 # Discipline & Suspensions #44 — Appendices
 
 **Created:** July 24, 2026
-**Last Updated:** August 15, 2026, later still (v0.8 — reviewed-findings pass. **M5 (new id
+**Last Updated:** August 16, 2026 (v0.9 — `ERR-044-014`, adversarial-review H1: Appendix C's worked
+example updated for the amended `OnClubFixturePlayed(clubId, clubPlayerIds, fieldedPlayerIds)`
+signature. Both ids are served because they are on club 7's ROSTER — the membership rule §3.3 now
+reads rather than derives — not because `183 / 25 = 191 / 25 = 7`, which remains in the text as the
+packing that makes the example's ids coherent)
+**Last Updated (prior):** August 15, 2026, later still (v0.8 — reviewed-findings pass. **M5 (new id
 `ERR-044-013`):** Appendix A gains a `CardLedgerFold.NO_PLAYER` row (`[FIXED]`, `-1`) — verified
 present at `src/discipline/CardLedgerFold.cs:66`, caller-facing (the constructor's F1-class guard
 depends on the distinction) and used normatively by Appendix C below, but never catalogued. **L3:**
@@ -32,7 +37,7 @@ the magic-before-version row + the MUST rule and Appendix A the `DISCIPLINE_SAVE
 Appendix C re-worked onto real engine ids after its "slot 19" worked example was verified
 unimplementable, with the hedge deleted)
 **Last Updated (prior):** July 24, 2026 (v0.2 — cross-set AR pass 3; prior v0.1 initial)
-**Version:** 0.8
+**Version:** 0.9
 **Status:** APPROVED
 
 ---
@@ -113,8 +118,10 @@ the *synthetic* id 22 (191) and moves it onto slot 7: occupancy[7] := 191 (slot 
 unchanged; only who occupies it moves). Tick 12 000 `CardIssuedEvent{Recipient: 7, Kind: 2}` →
 occupant of slot 7 is now **191** → `Yellows` +1 **and** ban +1 (one event, one yellow, one
 dismissal — KD-5). Fixture N+1 selection: `FilterAvailable` excludes 183 and 191, so neither
-appears in club 7's fielded eleven; after N+1 is played, `OnClubFixturePlayed(7, fieldedPlayerIds)`
-decrements both to 0 (`183 / 25 = 191 / 25 = 7` — the §3.3 club-derivation rule; neither id is in
+appears in club 7's fielded eleven; after N+1 is played,
+`OnClubFixturePlayed(7, clubPlayerIds, fieldedPlayerIds)` decrements both to 0 (both ids are on club
+7's roster, so both are in `clubPlayerIds` — the §3.3 membership rule, which since `ERR-044-014`
+READS the roster rather than deriving it from `183 / 25 = 191 / 25 = 7`; neither id is in
 `fieldedPlayerIds`, so the ERR-044-003 stage 1 exemption does not apply — see that section for the
 case where it would) — available for N+2. The engine's slot-7 yellow count was reset by the
 substitution (v1.33) and **never read** — the tally kept 183's card via occupancy, not the slot.
@@ -131,4 +138,5 @@ All integer; two runs identical; #27 squads byte-untouched.
 | 0.6 | 2026-08-15 | — | **ERR-044-003 stage 1**, owner decision: Appendix C's worked example updated for the amended `OnClubFixturePlayed(clubId, fieldedPlayerIds)` signature, noting that its two example players are already filtered out and so are not in the fielded eleven (the exemption does not fire in this worked case). |
 | 0.7 | 2026-08-15 | — | **`ERR-044-012`**, back-prop owed by `DisciplineConstants.cs` v1.3 (M26): `LEAGUE_COMPETITION_KEY` re-tagged `[FIXED]` → `[CROSS]` — it is a verbatim copy of APPROVED #43's `LEAGUE_COMPETITION_ID` (FR-CP-004), consumed read-only, the identical argument already applied to the `CardKindYellow`/`Red`/`SecondYellow` rows. Literal value `0` unchanged; #43 has no `src/` assembly to bind a real mirror to. See `spec-error-log.md` `ERR-044-012`. |
 | 0.8 | 2026-08-15 | — | **Reviewed-findings pass.** **`ERR-044-013`** (M5, new id): Appendix A gains `CardLedgerFold.NO_PLAYER` (`[FIXED]`, `-1`, verified at `src/discipline/CardLedgerFold.cs:66`) — the occupancy-seed sentinel, caller-facing and used normatively by Appendix C's worked example, but never declared in §2.2 or catalogued here before now (`section-2.md` v0.9 gains the matching §2.2 declaration). **L3:** the `LEAGUE_COMPETITION_KEY` row renamed `LeagueCompetitionKey` — ALL_CAPS beside a `[CROSS]` tag contradicted `src/CLAUDE.md` §3.2.3, the same PascalCase correction L17 already made for the `CardKind*` rows; another agent's `src/discipline/DisciplineConstants.cs` change tracks the same rename. See `spec-error-log.md` `ERR-044-013`. |
+| 0.9 | 2026-08-16 | — | **`ERR-044-014`** (adversarial review, H1): Appendix C's worked example updated for the amended `OnClubFixturePlayed(clubId, clubPlayerIds, fieldedPlayerIds)` signature, and its parenthetical rewritten — both ids are served because they are ON club 7's roster, which §3.3 now reads directly, rather than because `183 / 25 = 191 / 25 = 7`. The arithmetic is left visible as the packing that makes the example's ids coherent (v0.2's own fix), not as the membership rule. |
 #endregion

@@ -1,8 +1,12 @@
 # Match Analytics & Statistics #37 — Section 3: Algorithms
 
 **Created:** July 22, 2026
-**Last Updated:** July 22, 2026 (v0.2 — section-file PASS-1 (2M+3L) → AR-2 convergence; APPROVED)
-**Version:** 0.2
+**Last Updated:** August 16, 2026 (v0.3 — ERR-037-003 back-prop: the §3.2 `CardIssuedEvent` routing
+row was a two-way `CardKind==red ? … : …` test with no branch for `CardKind`'s third value
+(SecondYellow), so the implementation silently counted every second-yellow dismissal as a plain
+yellow and never as a red. Row rewritten as an explicit three-way mapping; see the log entry for the
+implementation-side fix)
+**Version:** 0.3
 **Status:** APPROVED
 
 ---
@@ -37,7 +41,7 @@ per-team tally; any record #37 does not recognize is ignored (F5). Known records
 | `PossessionChangedEvent` | `NewHolder` → KD-6 map (−1 ⇒ none) | **holder update** (§3.1), not a tally |
 | `GoalAwardedEvent` | `ScoringTeam` (direct) | `Goals[team]++`; append `(team, BallPosition.xy)` to `GoalMap` |
 | `FoulCommittedEvent` | `AgentTeamId(Offender)` (KD-6) | `Fouls[team]++`; append `(team, Location.xy)` to `FoulMap` |
-| `CardIssuedEvent` | `AgentTeamId(Recipient)` | `CardKind==red ? RedCards[team]++ : YellowCards[team]++` |
+| `CardIssuedEvent` | `AgentTeamId(Recipient)` | `CardKind` is #17's three-value domain ordinal (0=Yellow, 1=Red, 2=SecondYellow — Event System #17 Appendix A row 0x06): `Yellow ⇒ YellowCards[team]++`; `Red ⇒ RedCards[team]++`; `SecondYellow ⇒ YellowCards[team]++ AND RedCards[team]++` (ERR-037-003 — the producer emits the second caution and the resulting dismissal as ONE event, never a yellow-then-red pair, so the single event must cover both tallies for the box score to read as two yellows + one red, matching #44 Discipline's identical "one yellow AND one dismissal ban" treatment of the same value) |
 | `OffsideCalledEvent` | `Team` (direct) | `Offsides[team]++`; append `(team, Location.xy)` to `OffsideMap` |
 | `RestartAwardedEvent` | `AwardedTeam` (direct) | by `RestartKind`: `Corners`/`ThrowIns`/`GoalKicks` `[team]++` |
 | `SubstitutionEvent` | `Team` (direct) | `Substitutions[team]++` |
@@ -124,4 +128,5 @@ whether or not analytics run (the `match-viewer` digest-lock).
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial algorithms: possession tick-weighting, event routing, xG shape + worked example, territorial/heatmap binning, aggregation loop. Status IN REVIEW. |
 | 0.2 | 2026-07-22 | — | Section-file PASS-1 (0H+2M+3L; M-1 lossless every-tick + F6, M-2 possession known-handler, L-1 `SubstitutionEvent.Team`, L-2 territorial disambiguation, L-3 phase-context) → AR-2 convergence; APPROVED. See section-9 §9.3. |
+| 0.3 | 2026-08-16 | — | ERR-037-003 back-prop (reviewed-findings pass, M4, found at implementation): the §3.2 `CardIssuedEvent` row's `CardKind==red ? RedCards[team]++ : YellowCards[team]++` formula is a two-way test over a three-value domain ordinal (0=Yellow, 1=Red, 2=SecondYellow — #17 Appendix A row 0x06) and had no branch for the third value at all, so `MatchAnalyticsAggregator` implemented it literally and every second-yellow dismissal counted as a plain yellow and never as a red — contradicting `MatchStatline.RedCards`'s own documented contract ("including second-yellow dismissals"). Rewritten as an explicit three-way mapping: `SecondYellow` now increments both `YellowCards` and `RedCards`, matching #44 Discipline's `ApplyCard` kind-2 treatment ("one yellow AND one dismissal ban") for the same producer contract (the engine emits the second caution and the dismissal as ONE event, never a yellow-then-red pair). No FR text change, no format-version change. |
 #endregion

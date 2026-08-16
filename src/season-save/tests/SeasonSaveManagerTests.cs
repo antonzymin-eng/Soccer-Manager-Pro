@@ -1,5 +1,7 @@
 // File:     src/season-save/tests/SeasonSaveManagerTests.cs
 // Created:  2026-07-22
+// Modified: 2026-08-16 (ERR-044-014, adversarial-review H1 — the DisciplineRules.OnClubFixturePlayed
+//           call site updated for the new required clubPlayerIds parameter — v1.24)
 // Modified: 2026-08-15, later (reviewed findings pass, L4 — DisciplineConstants.LEAGUE_COMPETITION_KEY
 //           references renamed for that constant's ALL_CAPS -> LeagueCompetitionKey rename
 //           (DisciplineConstants.cs v1.5). No behaviour change — v1.23)
@@ -1579,11 +1581,13 @@ namespace TacticalDirector.SeasonSave
                 "Precondition: the destination now carries the row the second save must be allowed to "
                 + "clear.");
 
-            // The ban is served by the club playing (FR-DC-011), and #27's club-scoped id formula puts
-            // player 100 in club 4. The row reaches (0, 0) and is dropped by FR-DC-017 — the tally is
-            // still wired, still the loop's own, and now empty.
+            // The ban is served by the club playing (FR-DC-011). #27's club-scoped id formula puts
+            // player 100 in club 4, and since ERR-044-014 the club he is AT is stated by the roster
+            // argument rather than re-derived from that formula — so both are named here, agreeing.
+            // The row reaches (0, 0) and is dropped by FR-DC-017 — the tally is still wired, still
+            // the loop's own, and now empty.
             new DisciplineRules(tally).OnClubFixturePlayed(
-                100 / PlayerDatabaseConstants.CLUB_SQUAD_SIZE, Array.Empty<int>());
+                100 / PlayerDatabaseConstants.CLUB_SQUAD_SIZE, new[] { 100 }, Array.Empty<int>());
             Assert.AreEqual(0, tally.Count,
                 "Precondition: serving the last match of a ban with no residual yellows drops the row "
                 + "immediately (FR-DC-017).");
@@ -2412,4 +2416,9 @@ namespace TacticalDirector.SeasonSave
 // | 1.23    | 2026-08-15, later | — | Reviewed findings pass, L4. DisciplineConstants.               |
 // |         |            |        | LEAGUE_COMPETITION_KEY -> LeagueCompetitionKey rename. Eight    |
 // |         |            |        | references updated. No behaviour change.                        |
+// | 1.24    | 2026-08-16 | —      | ERR-044-014 (adversarial review, H1). The one direct            |
+// |         |            |        | DisciplineRules.OnClubFixturePlayed call site now names player  |
+// |         |            |        | 100 as the club's roster instead of relying on his id dividing  |
+// |         |            |        | to club 4; the comment states both, agreeing. No behaviour      |
+// |         |            |        | change.                                                          |
 #endregion

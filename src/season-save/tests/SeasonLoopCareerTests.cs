@@ -1,5 +1,7 @@
 // File:     src/season-save/tests/SeasonLoopCareerTests.cs
 // Created:  2026-08-06
+// Modified: 2026-08-16 (ERR-044-014, adversarial-review H1 — the one BootFixtureEngine call site with
+//           explicit out parameters updated for its two new roster-id outs, discarded here — v1.8)
 // Modified: 2026-08-08
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.3 (KD-2 tick order), §3.5 (the boundary), FR-SN-026;
@@ -651,7 +653,7 @@ namespace TacticalDirector.SeasonSave.Tests
                 injuredIds.Add(home.GetPlayer(local).PlayerId);
             }
 
-            loop.BootFixtureEngine(in fixture, provider, out int[] homeXi, out int[] awayXi);
+            loop.BootFixtureEngine(in fixture, provider, out int[] homeXi, out int[] awayXi, out _, out _);
 
             int[] expectedHome = SquadRating.StartingElevenPlayerIds(career.SelectAvailable(home));
             int[] expectedAway = SquadRating.StartingElevenPlayerIds(
@@ -900,4 +902,9 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | drove both cursors together, so deleting the training branch     |
 // |         |            |        | left the suite green; demonstrated by mutation). Five predicates,|
 // |         |            |        | five isolating cases, one PASS case.                             |
+// | 1.8     | 2026-08-16 | —      | ERR-044-014 (adversarial review, H1). BootFixtureEngine gained   |
+// |         |            |        | two out parameters carrying each club's roster ids, which #44    |
+// |         |            |        | now reads club membership from instead of deriving it from #27's |
+// |         |            |        | id packing; this file's single explicit-out call site discards    |
+// |         |            |        | them (out _, out _). No assertion changed.                        |
 #endregion

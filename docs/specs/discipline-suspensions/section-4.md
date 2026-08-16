@@ -1,7 +1,17 @@
 # Discipline & Suspensions #44 — Section 4: Architecture
 
 **Created:** July 24, 2026
-**Last Updated:** August 15, 2026, yet later still again (v0.9 — reviewed-findings pass, continuing
+**Last Updated:** August 16, 2026 (v0.10 — two adversarial-review findings, both in §4.5's
+composition-root contract. **`ERR-044-015`** (H3): the clause instructed the root to "run
+`FilterAvailable` at the resolve→configure seam", the one method FR-DC-009, §2.2, §3.3 and §6.2 all
+say the root must NOT call — a root built against it verbatim bypasses `AvailabilityComposition`, so
+#30 §2.3 F9's back-fill never runs for suspensions and ERR-044-003's defect is reinstated; rewritten
+to the landed contract (removals gathered through `Availability.MarkSuspended` into the composed
+seam), keeping the FR-DC-010/ERR-044-002 both-paths scope, which was correct. **`ERR-044-014`** (H1):
+the `OnClubFixturePlayed` bullet now requires the club's ROSTER as well as its fielded eleven, states
+that membership is read from it rather than derived from the `PlayerId` packing, and pins it to the
+UNFILTERED squad)
+**Last Updated (prior):** August 15, 2026, yet later still again (v0.9 — reviewed-findings pass, continuing
 `ERR-044-008`: v0.8's own sweep fixed §4.3 but stopped short of §4.5, 45 lines below in the same file
 — "the shared-tap composition is recorded from #44's side here (one tap, two folds)" was the
 identical refuted claim in different words, missed because the sweep was for the exact phrase rather
@@ -40,7 +50,7 @@ and its file layout have existed since T0/T1, not just been proposed)
 gains the magic-before-version MUST and cites the frame v5 → 6 bump; §4.5's root contract re-scoped
 to both resolution paths)
 **Last Updated (prior):** July 24, 2026 (v0.2 — cross-set AR pass 3; prior v0.1 initial)
-**Version:** 0.9
+**Version:** 0.10
 **Status:** APPROVED
 
 ---
@@ -132,13 +142,22 @@ specified the block version-first with no magic, which this section and Appendix
   `CardLedgerFold.RequireCommittableConfig()` **once per round, before the first fixture of the
   round is resolved** (`ERR-044-007`) — a bad `[GT]` discovered only when a per-fixture `Commit`
   throws strands the round permanently, because by the time `Commit` runs the fixture is already
-  marked played (§3.1's own pseudocode comment on `Commit`); run `FilterAvailable`
-  at the resolve→configure seam on **both clubs' resolved squads of every fixture on both
-  resolution paths** (FR-DC-010, re-scoped at ERR-044-002 — the seam does not run on the engine
-  boot alone); call `OnClubFixturePlayed` once per played fixture per club, **passing the club's
-  fielded eleven** (both resolution paths; FR-DC-011, amended ERR-044-003 stage 1 — the eleven is
-  what lets the call exempt a player who appeared through the extremis back-fill from serving that
-  same fixture) — **today that eleven is the STARTING eleven only, and the root MUST widen it to
+  marked played (§3.1's own pseudocode comment on `Commit`); gather #44's removals through
+  `Availability.MarkSuspended` into the composed availability seam (`AvailabilityComposition`) at the
+  resolve→configure seam, on **both clubs' resolved squads of every fixture on both resolution
+  paths** (FR-DC-010, re-scoped at ERR-044-002 — the seam does not run on the engine boot alone) —
+  that seam owns the intersection with #41's removals and the #30 §2.3 F9 back-fill, and
+  **`FilterAvailable` MUST NOT be the root's path** (`ERR-044-015`): it is FR-DC-009's own
+  single-contributor surface, has no production call site, and a root built against the earlier
+  wording of this clause would bypass `AvailabilityComposition` entirely, so the F9 back-fill would
+  never run for suspensions and ERR-044-003's defect would be reinstated; call
+  `OnClubFixturePlayed` once per played fixture per club, **passing the club's roster and the club's
+  fielded eleven** (both resolution paths; FR-DC-011, amended ERR-044-003 stage 1 and
+  `ERR-044-014`). The roster is what decides membership — #44 does not derive it from the `PlayerId`
+  packing — and it MUST be the **unfiltered** squad, the one resolved before the seam above removed
+  anybody, since every id whose ban is being served is precisely an id that seam removed. The eleven
+  is what lets the call exempt a player who appeared through the extremis back-fill from serving that
+  same fixture — **today that eleven is the STARTING eleven only, and the root MUST widen it to
   the eleven that actually took the field the moment a substitution seam gets a production caller
   (`ERR-044-010`)**, or a suspended player fielded as a substitute would not be recognized as
   having played and his ban would decrement for the fixture he took part in, reopening
@@ -166,4 +185,5 @@ specified the block version-first with no magic, which this section and Appendix
 | 0.7 | 2026-08-15 | — | **L20** (#44 adversarial-review round 4, `open-issues.md`): §4.1 named 2 of `discipline.asmdef`'s 4 declared references. Added `TacticalDirector.DeterministicSim` (`CanonicalSerializer`/`SaveBlobFramingHelpers`, consumed by `DisciplineSaveCodec.cs`) and `TacticalDirector.ProjectConstants` (`GameplayConfigHolder`, consumed by `DisciplineConstants.cs`), both verified directly against the asmdef and the citing `.cs` files; clarified that the `DeterministicSim` reference is the byte-level serializer, not #16's RNG service (#44 registers none, FR-DC-019). Reference diagram updated to show all four. |
 | 0.8 | 2026-08-15 | — | **Reviewed-findings pass.** **`ERR-044-008`:** §4.3's "one tap feeds both when built" removed — verified against `src/discipline/IDisciplineTickLedgerTap.cs`, which records the claim as unachievable today (§4.1 forbids `discipline` to reference the match engine; `season-save` does not reference `match-analytics`), not merely deferred; restated as #44 declaring its own tap interface, with the two-reads-not-two-behaviours cost stated explicitly. **`ERR-044-007`:** §4.5 gains a composition-root MUST to call `CardLedgerFold.RequireCommittableConfig()` once per round before the first fixture resolves — enforced in production (`SeasonLoop.PlayNextRound`) and unit-tested, but previously undeclared anywhere in this section. **`ERR-044-010`:** §4.5's fielded-eleven bullet now states that the contract holds today only because `SeasonLoop.FieldedXi` derives the STARTING eleven and no `MatchEngine.SubstitutePlayer` call site exists yet, and MUST widen to the eleven that actually played once one does. See `spec-error-log.md`. |
 | 0.9 | 2026-08-15 | — | **Reviewed-findings pass, continuing `ERR-044-008`.** §4.5's `#37` bullet still read "the shared-tap composition is recorded from #44's side here (one tap, two folds)" — the identical refuted claim v0.8 fixed 45 lines up at §4.3, missed because that pass swept for the exact phrase rather than the underlying claim ("one tap feeds both") this bullet restated in different words. Corrected to match §4.3/§7.3/§8.1: no shared tap or adapter type; #44 reads through its own `IDisciplineTickLedgerTap`; the engine's one-per-tick fill is read by independent accessor shapes, so a second consumer costs a second read, not a second fill. No new ERR id — this is `ERR-044-008`'s own back-prop reaching the site its founding fix missed. See `spec-error-log.md` `ERR-044-008`. |
+| 0.10 | 2026-08-16 | — | **Two adversarial-review findings, both §4.5.** **`ERR-044-015`** (H3): the composition-root clause read "run `FilterAvailable` at the resolve→configure seam", naming the one method four other places in this spec say the root must not call (FR-DC-009 in `section-2.md`, §2.2's `Availability` block comment, §3.3's pseudocode, §6.2) and which has zero production call sites. A root built against it verbatim would filter with #44 alone and never reach `AvailabilityComposition`, so #30 §2.3 F9's back-fill would not run for suspensions — reinstating ERR-044-003's defect. Rewritten to the landed contract: removals gathered through `Availability.MarkSuspended` into the composed seam, which owns the intersection and the back-fill, with an explicit MUST NOT on `FilterAvailable`. The FR-DC-010 / ERR-044-002 both-clubs-both-paths half of the sentence is unchanged — it was correct. **`ERR-044-014`** (H1): the same bullet's `OnClubFixturePlayed` contract now requires the club's roster beside its fielded eleven, records that membership is READ from the roster rather than derived from `PlayerId / CLUB_SQUAD_SIZE`, and requires the UNFILTERED squad — every id being served is one the seam above just removed. See `spec-error-log.md` `ERR-044-014`, `ERR-044-015`. |
 #endregion

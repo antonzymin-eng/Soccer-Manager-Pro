@@ -1,5 +1,7 @@
 // File:     src/season-save/tests/SeasonLoopDisciplineTests.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16 (ERR-044-014, adversarial-review H1 — both test IFixtureDisciplineDriver
+//           implementations updated for OnClubFixturePlayed's new clubPlayerIds parameter — v1.10)
 // Modified: 2026-08-15 (reviewed findings, M1/M2/M3 — v1.9: M1 parameterises the extremis-exemption
 //           wiring lock over BOTH clubs of the fixture, the home-only version having been proven
 //           unable to catch an away-side argument-swap mutation (ERR-008-002's class, recurring in
@@ -138,9 +140,9 @@ namespace TacticalDirector.SeasonSave.Tests
             // round-level pre-check, which ThrowOnRequireCommittableConfigDriver below covers instead.
             public void RequireCommittableConfig() => CardLedgerFold.RequireCommittableConfig();
 
-            public void OnClubFixturePlayed(int clubId, int[] fieldedPlayerIds)
+            public void OnClubFixturePlayed(int clubId, int[] clubPlayerIds, int[] fieldedPlayerIds)
             {
-                _rules.OnClubFixturePlayed(clubId, fieldedPlayerIds);
+                _rules.OnClubFixturePlayed(clubId, clubPlayerIds, fieldedPlayerIds);
                 _serves++;
                 if (_serves == 1)
                 {
@@ -165,7 +167,7 @@ namespace TacticalDirector.SeasonSave.Tests
                 throw new System.InvalidOperationException(
                     "M22 forced throw — locks the round-level [GT] pre-check's call site.");
 
-            public void OnClubFixturePlayed(int clubId, int[] fieldedPlayerIds) =>
+            public void OnClubFixturePlayed(int clubId, int[] clubPlayerIds, int[] fieldedPlayerIds) =>
                 throw new System.InvalidOperationException(
                     "OnClubFixturePlayed must not run: RequireCommittableConfig should have thrown "
                     + "before the fixture loop was ever entered.");
@@ -203,7 +205,7 @@ namespace TacticalDirector.SeasonSave.Tests
             Fixture fixture = loop.State.FixtureAt(0);
 
             TacticalDirector.MatchEngine.MatchEngine engine =
-                loop.BootFixtureEngine(in fixture, league, out int[] homeXi, out int[] awayXi);
+                loop.BootFixtureEngine(in fixture, league, out int[] homeXi, out int[] awayXi, out _, out _);
 
             int[] byAgent = engine.PlayerIdsByAgentId();
 
@@ -286,13 +288,13 @@ namespace TacticalDirector.SeasonSave.Tests
             League league = FourClubLeague();
             SeasonLoop unfiltered = LoopOver(league, RoundResolutionMode.FullEngine, out _);
             Fixture fixture = unfiltered.State.FixtureAt(0);
-            unfiltered.BootFixtureEngine(in fixture, league, out int[] baselineXi, out _);
+            unfiltered.BootFixtureEngine(in fixture, league, out int[] baselineXi, out _, out _, out _);
 
             int bannedStarter = baselineXi[5];
             SeasonLoop loop = LoopOver(
                 league, RoundResolutionMode.FullEngine, out _, BannedState(bannedStarter));
 
-            loop.BootFixtureEngine(in fixture, league, out int[] homeXi, out _);
+            loop.BootFixtureEngine(in fixture, league, out int[] homeXi, out _, out _, out _);
 
             Assert.That(homeXi, Does.Not.Contain(bannedStarter),
                 "A suspended home starter was still fielded. The filter is not reaching the engine "
@@ -311,13 +313,13 @@ namespace TacticalDirector.SeasonSave.Tests
             League league = FourClubLeague();
             SeasonLoop unfiltered = LoopOver(league, RoundResolutionMode.FullEngine, out _);
             Fixture fixture = unfiltered.State.FixtureAt(0);
-            unfiltered.BootFixtureEngine(in fixture, league, out _, out int[] baselineAwayXi);
+            unfiltered.BootFixtureEngine(in fixture, league, out _, out int[] baselineAwayXi, out _, out _);
 
             int bannedStarter = baselineAwayXi[5];
             SeasonLoop loop = LoopOver(
                 league, RoundResolutionMode.FullEngine, out _, BannedState(bannedStarter));
 
-            loop.BootFixtureEngine(in fixture, league, out _, out int[] awayXi);
+            loop.BootFixtureEngine(in fixture, league, out _, out int[] awayXi, out _, out _);
 
             Assert.That(awayXi, Does.Not.Contain(bannedStarter),
                 "A suspended AWAY starter was still fielded. The seam must filter each resolved squad "
@@ -663,7 +665,7 @@ namespace TacticalDirector.SeasonSave.Tests
             League league = FourClubLeague();
             SeasonLoop probe = LoopOver(league, RoundResolutionMode.FullEngine, out _);
             Fixture fixture = probe.State.FixtureAt(0);
-            probe.BootFixtureEngine(in fixture, league, out int[] baselineXi, out _);
+            probe.BootFixtureEngine(in fixture, league, out int[] baselineXi, out _, out _, out _);
 
             int suspended = baselineXi[2];
             int injured = baselineXi[7];
@@ -677,7 +679,7 @@ namespace TacticalDirector.SeasonSave.Tests
             knock.RecoveryRemaining = 12;
             career.SetMedicalState(fixture.HomeClubId, injured, in knock);
 
-            loop.BootFixtureEngine(in fixture, league, out int[] homeXi, out _);
+            loop.BootFixtureEngine(in fixture, league, out int[] homeXi, out _, out _, out _);
 
             Assert.That(homeXi, Does.Not.Contain(suspended),
                 "The suspension removal was lost when composed with the injury removal.");
@@ -1374,4 +1376,13 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | only against already-correct code) had no locking test at all;   |
 // |         |            |        | this one forces two reinstate calls with two injured players so a|
 // |         |            |        | defect past the first call is caught too.                        |
+// | 1.10    | 2026-08-16 | —      | ERR-044-014 (adversarial review, H1). ThrowOnFirstServeDriver    |
+// |         |            |        | and ThrowOnRequireCommittableConfigDriver updated for            |
+// |         |            |        | IFixtureDisciplineDriver.OnClubFixturePlayed's new clubPlayerIds |
+// |         |            |        | parameter — #44 now reads club membership from the roster the    |
+// |         |            |        | loop resolved instead of deriving it from #27's id packing. The  |
+// |         |            |        | first driver forwards it to DisciplineRules unchanged; every     |
+// |         |            |        | test's assertions are untouched, including the extremis-         |
+// |         |            |        | exemption pair, whose banned players are all on the roster the   |
+// |         |            |        | loop now supplies.                                               |
 #endregion

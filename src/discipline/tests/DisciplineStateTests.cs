@@ -1,12 +1,13 @@
 // File:     src/discipline/tests/DisciplineStateTests.cs
 // Created:  2026-08-13
-// Modified: 2026-08-15 (reviewed-findings pass, L21 — v1.1)
+// Modified: 2026-08-16 (reviewed-findings pass, L1 — v1.2)
 // Author:   —
-// Spec:     Discipline & Suspensions #44 §2.2 (data structures) / FR-DC-012 / FR-DC-017 / FR-DC-020/021;
-//           §5 T-DC-SAV-002 / T-DC-DET-001; Code Standards #20
+// Spec:     Discipline & Suspensions #44 §2.2 (data structures) / §2.3 F2 / FR-DC-008 / FR-DC-012 /
+//           FR-DC-017 / FR-DC-020/021; §5 T-DC-SAV-002 / T-DC-DET-001; Code Standards #20
 // Purpose:  Unit tests for DisciplineState — the canonical ascending (PlayerId, CompetitionId) order,
-//           binary-search lookup, the FR-DC-017 empty-row drop on Upsert, and FromEntries' three
-//           restore-door refusals (non-ascending, duplicate, all-zero) plus its copy-not-borrow rule.
+//           binary-search lookup, the FR-DC-017 empty-row drop on Upsert, FromEntries' three
+//           restore-door refusals (non-ascending, duplicate, all-zero) plus its copy-not-borrow rule,
+//           and EntryFor's negative-playerId absent case (L1).
 
 using System;
 
@@ -103,6 +104,31 @@ namespace TacticalDirector.Discipline.Tests
             Assert.IsTrue(state.HasEntry(1, 0));
             Assert.IsFalse(state.HasEntry(1, 1), "same player, different competition — no row exists there");
             Assert.IsFalse(state.HasEntry(2, 0), "a different player entirely");
+        }
+
+        [Test]
+        public void EntryFor_NegativePlayerId_ReturnsTheZeroRow_WithoutThrowing()
+        {
+            // L1: EntryFor's doc says the absent case is not an error, and no row can ever exist for a
+            // negative playerId (the validating constructor refuses one on every write path) — so this
+            // must not route through that constructor and throw ArgumentOutOfRangeException.
+            var state = new DisciplineState();
+
+            DisciplineEntry entry = state.EntryFor(-1, 0);
+
+            Assert.AreEqual(0, entry.Yellows);
+            Assert.AreEqual(0, entry.BanMatchesRemaining);
+            Assert.IsTrue(entry.IsEmpty);
+            Assert.IsFalse(entry.IsSuspended);
+        }
+
+        [Test]
+        public void HasEntry_NegativePlayerId_ReturnsFalse()
+        {
+            // L1: must agree with EntryFor(-1, 0) not throwing — both read a negative key as absent.
+            var state = new DisciplineState();
+
+            Assert.IsFalse(state.HasEntry(-1, 0));
         }
 
         // ── FR-DC-017: Upsert with an empty entry removes the row ────────────────────
@@ -258,4 +284,8 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | the caller's array. Annotated as documentation of the field/      |
 // |         |            |        | method choice rather than a reachable-failure guard; not deleted, |
 // |         |            |        | assertion unchanged.                                              |
+// | 1.2     | 2026-08-16 | —      | Reviewed-findings fix (L1): two new cases lock                    |
+// |         |            |        | DisciplineState.EntryFor(-1, 0) returning the zero row without    |
+// |         |            |        | throwing, and HasEntry(-1, 0) agreeing at false — the pairing the |
+// |         |            |        | production fix (DisciplineState.cs v1.1) restores.                |
 #endregion
