@@ -12,7 +12,81 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 15, 2026, later still again (round 7) — **#44 adversarial-review ROUND 7: 0
+> **Last Updated:** August 16, 2026 (rounds 8-9) — **#44 adversarial-review ROUNDS 8-9, a fresh
+> three-reviewer pass over the WHOLE branch state (AR-8 and AR-9 in the chain — the prior chain ended
+> at round 7). Round 8: 3 High / 12 Medium / 7 Low, all fixed. Round 9, a fresh full re-review of
+> round 8's own landing: 1 High / 10 Medium / 5 Low, all fixed.** Commits `2f4626f..051c25a`.
+> **Round 8's Highs:** **`ERR-044-014`** — `DisciplineRules.OnClubFixturePlayed` decided club
+> membership by `PlayerId / CLUB_SQUAD_SIZE == clubId`, a second notion of membership from
+> `Availability.MarkSuspended`'s real roster walk, agreeing only while #27's id packing holds and
+> validated by nothing; the derivation is DELETED, not guarded — `SeasonLoop` now supplies the
+> unfiltered roster ids at the same resolve→filter→configure site the fielded XIs come from. **
+> `ERR-044-015`** — #44 §4.5's composition-root MUST named `FilterAvailable`, the one method four
+> other sections forbid the root to call; rewritten to the landed `MarkSuspended` →
+> `AvailabilityComposition` contract. **`ERR-030-044` + `ERR-044-019`** (cross-filed at both owners)
+> — the extremis back-fill fired on a BENCH shortfall rather than an inability to field an eleven, so
+> a club seventeen fit and one bench short could have its best banned man reinstated into the
+> rating-greedy selector's STARTING eleven; tier 2's key becomes probe-qualified (prefer the first
+> candidate, in roster order, the selector would BENCH — his ban then advances normally), forced-start
+> corrected to the honest two-case form (benched ⇒ ban advances; forced start ⇒ exempt, and only then
+> does ERR-044-003 stage 1's serving exemption stall it). **Round 8 also:** `ERR-037-003` (M4) —
+> match-analytics routed second-yellow dismissals to plain yellows (a two-way branch over a
+> three-value ordinal domain), now counting one yellow AND one red per the box-score precedent;
+> `ERR-044-016`/`017`/`018` — Appendix C's worked fold example (an engine-unproducible kind-2-as-
+> first-booking) fixed with a preceding kind-0 card, the four `[GT]` threshold/ban constants renamed
+> ALL_CAPS → PascalCase across every spec file to match the code, and §2.2 declares `DisciplineState`'s
+> full landed API; `ERR-044-020`/`021` — the tap's `CurrentTick` member + `CardLedgerFold.ObserveTick`'s
+> consecutive-tick refusal and partial-application poison latch synced into sections 2/3/4; both
+> `DisciplineRules` card-accumulation paths (`AddYellow`/`AddBan`) now route through guarded overflow
+> helpers, locked at `int.MaxValue`; `CardLedgerFold` occupancy made injective by construction
+> (`ApplySubstitution` clears the vacated slot, refuses `outgoing == incoming`, the constructor refuses
+> a non-injective seed). **M2, an owner (Fable) ruling rather than a fix:** the reviewer's proposed
+> `DisciplineConfig` readonly-struct restructure (retiring `CommitWithExplicitConfig`, both
+> `RequireCommittableConfig` forms, and the driver pre-flight/guard seams) is recorded and DEFERRED —
+> it needs #44 §2.3 F6 and #30 §3.4 spec edits and belongs at (or after) the `GameplayConfigHolder.Bind`
+> composition-root pass, as the tree-wide pattern rather than a #44-local fix; landed instead as the
+> minimal completeness lock plus five pointer comments (see `open-issues.md`'s new head bullet).
+> **Round 9's High, `ERR-030-045`** — a second adversarial pass over the `ERR-030-044` landing found
+> its fix incomplete: fieldability is monotone, so while a club is short by more than one, NO candidate
+> is fieldable and passes 1-2 are structurally unreachable — pass 3's OLD earliest-roster key decided
+> every reinstatement but the last blindly, recreating the pre-fix defect for exactly the
+> multi-reinstatement population #44 exists for. Fixed with pass 3's key as ASCENDING SELECTOR RANK
+> (new `SquadRating.PlayerRating`, a delegation to the engine's own `LineupSelector.MeanAttribute` —
+> one selector, four read shapes, not a second rating formula), ties on roster order; the weakest
+> banned are pressed back first, so the final pick's pass 1 still finds a non-starting candidate
+> whenever one exists. Stated as a minimisation, not a guarantee — the k≥2 residual (no candidate
+> choice avoids starting a suspended player) and positional forcing both survive by design. **Round 9
+> also:** **`ERR-044-022`** (M13) — `CardLedgerFold`'s constructor gains a required
+> `onPitchAgentIdCount`; `ApplySubstitution` now refuses an on-pitch `Incoming` and a bench `Outgoing`
+> — Appendix C's slot-19 malformation throws instead of silently destroying the outgoing player's
+> occupancy mapping (the v1.8 row's false "impossible" claim annotated in place). **`ERR-044-023`**
+> (M14) — the seed's one-to-one precondition `CardLedgerFold` assumes is violated by its only
+> documented producer (`MatchEngine.PlayerIdsByAgentId` is injective only AT BOOT, never again after a
+> substitution); bound normatively at #44 §4.3, doc-only at `MatchEngine.cs`, locked against the real
+> engine. **M5 closed for good:** `PlayerCareerStates.SelectAvailable` — made internal at round 8,
+> DELETED entirely at round 9 (its "one call site needs it" justification named a call site that goes
+> straight to `Compose`) — the production-dead oracle surface that shipped the C1/C2 landing's own H2;
+> all ten test oracle sites re-pointed at `AvailabilityComposition.Compose(squad, career,
+> discipline: null, 0)` with explicit oracle-scope comments. **The round's final wave (text residues)**
+> swept the refuted "plays only when the club cannot take the field at all" sentence to its three
+> remaining live sites (root `CLAUDE.md`, `open-issues.md`, one `SeasonLoopDisciplineTests` assertion
+> message), annotated the `ERR-044-020` row's own CLOSED note (it had lived only in this file's header
+> chain), completed the section-1.3 reference DAG and the section-6.2 drifted line-citations → member
+> names, and finished the section-3.2 ALL_CAPS → PascalCase sweep. **The two Lows round 9 left open —
+> the missing landing record for rounds 8-9 in this chain, and the stale `Discipline.Tests` suite
+> count carried in `file-manifest.md`/root `CLAUDE.md`/`open-issues.md` (81 → 118, never advanced past
+> either round) — are the two this close-out entry itself lands**, re-derived by direct execution
+> rather than incremented. **GATE at `051c25a`, August 16, 2026:** meta-integrity OK; build 0 errors;
+> 34 suites, quarantine empty; `MatchEngine.Tests` **461 passed / 1 failed / 11 skipped** — the one
+> failure is the inherited owner-held-red `sim_match_engine_close_chance` (also failing at the
+> pre-branch baseline; owner call August 11: hold red), so the branch adds no new failure;
+> `SeasonSave.Tests` **441 passed / 0 failed / 3 known skips**; `Discipline.Tests` **143 passed / 0
+> failed**; `MatchAnalytics.Tests` **58 passed / 0 failed**. Assemblies touched: `src/discipline/`,
+> `src/season-save/`, `src/match-engine/` (`SquadRating.cs` + `MatchEngine.cs` doc-only), `src/
+> match-analytics/`, `src/deterministic-sim/` (doc-only) — full account in `CHANGELOG-src.md` and
+> `spec-error-log.md` v2.39.
+>
+> **Last Updated (prior):** August 15, 2026, later still again (round 7) — **#44 adversarial-review ROUND 7: 0
 > High / 0 Medium / 3 Low, all fixed — the first clean round in the chain, and docs-only.** Three Lows
 > surfaced on the surface six prior rounds had never read — `src/season-save/PlayerCareerStates.cs` and
 > `SeasonSaveManager.cs`, explicitly named unread by round 6's own reviewer. **L1** —

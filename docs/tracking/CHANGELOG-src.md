@@ -14,7 +14,49 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** August 15, 2026, later still again (v2.121 — round 7 — **#44 adversarial-review
+> **Last Updated:** August 16, 2026 (v2.122 — rounds 8-9 — **#44 adversarial-review ROUNDS 8-9: round
+> 8 (AR-8) 3 High / 12 Medium / 7 Low, round 9 (AR-9, a fresh full re-review of round 8's own landing)
+> 1 High / 10 Medium / 5 Low, all fixed.**) Commits `2f4626f..051c25a`, 32 `src/` files touched across
+> five assemblies. **Round 8 Highs:** `ERR-044-014` — `DisciplineRules.OnClubFixturePlayed`'s
+> packed-id club-membership derivation (`PlayerId / CLUB_SQUAD_SIZE == clubId`) DELETED in favour of
+> real roster-presence membership, matching `Availability.MarkSuspended`; `SeasonLoop` now supplies the
+> unfiltered roster ids at the resolve→filter→configure site. `ERR-044-015` — #44 §4.5 spec-only,
+> corrected the composition-root MUST off the forbidden `FilterAvailable` route. `ERR-030-044` /
+> `ERR-044-019` — the extremis back-fill's tier-2 key made probe-qualified (prefers the candidate the
+> selector would bench) in `AvailabilityComposition`; two-case forced-start form. **Round 8 code:**
+> `CardLedgerFold.cs` (occupancy injective by construction — vacated-slot clear, `outgoing==incoming`
+> refusal, non-injective seed refusal; `CurrentTick` + `ObserveTick` consecutive-tick refusal + poison
+> latch), `DisciplineEntry.cs` (guarded `YellowsPlusOne`/`BanMatchesPlus` overflow helpers),
+> `DisciplineRules.cs` (both accumulation paths routed through the overflow helpers; `OnClubFixturePlayed`
+> ERR-044-014 fix), `DisciplineSaveCodec.cs`, `DisciplineState.cs`, `IDisciplineTickLedgerTap.cs`
+> (`CurrentTick`), new `tests/DisciplineConfigCompletenessTests.cs` (+`.meta`), plus four discipline
+> test files; `src/match-analytics/{MatchAnalyticsAggregator.cs, MatchAnalyticsConstants.cs,
+> MatchStatline.cs}` + `Tests/MatchAnalyticsAggregatorTests.cs` (`ERR-037-003` second-yellow routing);
+> `src/deterministic-sim/SaveBlobFramingHelpers.cs` (doc-only, L3/L4/L7). **M2, an owner ruling:** the
+> `DisciplineConfig` readonly-struct restructure is DEFERRED to the `GameplayConfigHolder.Bind`
+> composition-root pass (tree-wide pattern, not a #44 one-off) — see `open-issues.md`'s new head
+> bullet for the verbatim scope. **Round 9 High, `ERR-030-045`:** fieldability is monotone, so tier
+> 2's OLD earliest-roster pass-3 key decided every reinstatement but the last blindly at `k ≥ 2`,
+> reopening the pre-`ERR-030-044` defect for the multi-reinstatement population; fixed with pass 3's
+> key as ascending selector rank via new `SquadRating.PlayerRating` (delegates to
+> `LineupSelector.MeanAttribute` — one selector, four read shapes), ties on roster order. **Round 9
+> code:** `SquadRating.cs` (`PlayerRating`), `MatchEngine.cs` v1.72 (doc-only — the boot-only
+> injectivity precondition on `PlayerIdsByAgentId`, `ERR-044-023`), `CardLedgerFold.cs` (`ERR-044-022`
+> — required `onPitchAgentIdCount`, on-pitch/bench substitution refusals), `AvailabilityComposition.cs`
+> (the k≥2 fix), `DisciplineEntry.cs`/`DisciplineRules.cs` (the L2 overflow-guard carry),
+> `PlayerCareerStates.cs` (`SelectAvailable` DELETED — M5 closed for good, ten test oracle sites
+> re-pointed at `AvailabilityComposition.Compose(squad, career, discipline: null, 0)`), `SeasonLoop.cs`,
+> new `tests/AvailabilityCompositionExtremisTests.cs` (+`.meta`), plus discipline/season-save test
+> files. **GATE at `051c25a`:** meta-integrity OK; build 0 errors; 34 suites, quarantine empty;
+> `MatchEngine.Tests` 461/1/11 (inherited owner-held-red `sim_match_engine_close_chance`, no new
+> failure); `SeasonSave.Tests` 441/0/3; `Discipline.Tests` 143/143; `MatchAnalytics.Tests` 58/58.
+> **The two Lows this entry itself closes** (round 9 left them unfixed by design, per the reviewed
+> findings brief): this chain's own missing rounds-8-9 entry, and the `Discipline.Tests` count carried
+> stale at 118 across `file-manifest.md`, root `CLAUDE.md` and `open-issues.md` — all re-derived to
+> 143 by direct execution, not incremented. Full account: `docs/tracking/CHANGELOG.md`,
+> `docs/tracking/spec-error-log.md` v2.39.
+>
+> **Last Updated (prior):** August 15, 2026, later still again (v2.121 — round 7 — **#44 adversarial-review
 > ROUND 7: 0 High / 0 Medium / 3 Low, all fixed — docs-comment-only, the first clean round in the
 > chain.**) Three Lows on the two `src/season-save/` files six prior rounds had never read. **L1** —
 > `SeasonSaveManager.Load`'s doc comment claimed the career-coherence gate is match-only; false since the
@@ -2308,6 +2350,7 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.122 | 2026-08-16 | — | **#44 adversarial-review ROUNDS 8-9 — round 8 (AR-8) 3 High / 12 Medium / 7 Low, round 9 (AR-9, a fresh full re-review) 1 High / 10 Medium / 5 Low, all fixed.** Round 8 Highs: `ERR-044-014` (`OnClubFixturePlayed`'s packed-id membership derivation deleted for real roster-presence membership), `ERR-044-015` (§4.5 `FilterAvailable` contradiction, spec-only), `ERR-030-044`/`ERR-044-019` (extremis tier-2 key made probe-qualified, two-case forced-start form). Round 8 also: `ERR-037-003` (second-yellow analytics routing), `ERR-044-016..018` (Appendix C reachability, `[GT]` PascalCase sweep, §2.2 `DisciplineState` surface), `ERR-044-020`/`021` (tap `CurrentTick` + fold pseudocode sync), both `DisciplineRules` accumulator paths overflow-guarded, `CardLedgerFold` occupancy injective by construction; M2 (owner ruling) DEFERS the `DisciplineConfig` readonly-struct restructure to the `GameplayConfigHolder.Bind` pass. Round 9 High `ERR-030-045`: fieldability-monotone k≥2 multi-reinstatement case — pass 3's key becomes ascending selector rank via new `SquadRating.PlayerRating`. Round 9 also: `ERR-044-022` (on-pitch/bench substitution refusals + required `onPitchAgentIdCount`), `ERR-044-023` (boot-only seed injectivity bound, `MatchEngine.cs` v1.72 doc-only), `PlayerCareerStates.SelectAvailable` DELETED (M5 closed for good, ten test oracle sites re-pointed at `AvailabilityComposition.Compose`), and the text-residue sweep (the refuted "cannot take the field at all" clause → the two-case form at its three surviving sites). **Modified:** `src/discipline/` (7 source + 6 test files, incl. new `DisciplineConfigCompletenessTests.cs`+`.meta`), `src/season-save/` (5 source + 8 test files, incl. new `AvailabilityCompositionExtremisTests.cs`+`.meta`), `src/match-engine/{SquadRating.cs, MatchEngine.cs}` (doc-only), `src/match-analytics/{MatchAnalyticsAggregator.cs, MatchAnalyticsConstants.cs, MatchStatline.cs}` + test, `src/deterministic-sim/SaveBlobFramingHelpers.cs` (doc-only). **GATE at `051c25a`:** meta-integrity OK, build 0 errors, 34 suites, quarantine empty, `MatchEngine.Tests` 461/1/11 (inherited owner-held-red, no new failure), `SeasonSave.Tests` **441**/0/3, `Discipline.Tests` **143**/0, `MatchAnalytics.Tests` **58**/0. This entry itself closes round 9's two deferred Lows — this chain's missing rounds-8-9 record and the stale 118 `Discipline.Tests` count carried in `file-manifest.md`/root `CLAUDE.md`/`open-issues.md`. Full account in the header-chain entry above. |
 | 2.121 | 2026-08-15 | — | **#44 adversarial-review ROUND 7 — 0 High / 0 Medium / 3 Low, all fixed, docs-comment-only, the first clean round in the chain.** Three Lows on `src/season-save/PlayerCareerStates.cs` and `SeasonSaveManager.cs`, the surface six prior rounds never read: `SeasonSaveManager.Load`'s doc corrected (the career-coherence gate is unconditional, not match-only, since the AR-pass-5 load-side fix); three sites' stale five-blob-frame description replaced with a pointer to `SeasonSaveBlobs`/`SeasonSaveContents` rather than a fourth hand-restatement; `SelectAvailable`'s doc corrected to stop claiming ownership of the depleted-squad rule that moved to `AvailabilityComposition` at v1.19. No logic, signature or method body changed; `season-save` builds 0 warnings / 0 errors; no gate run (nothing outside comments changed). Full account in the header-chain entry above, including the rounds 5-7 aggregate: 3 High / 25 Medium / 21 Low, 16 new ERR ids, five assemblies touched. |
 | 2.120 | 2026-08-15 | — | **#44 adversarial-review ROUND 6 — 2 High / 11 Medium / 8 Low, all fixed; gate run to completion, 34 suites, quarantine empty, first gate on this branch to cover the CI surface.** H1 (`ERR-030-042`, spec-only): #30 §3.4 stated one back-fill ordering key while `AvailabilityComposition.Reinstate` has implemented two tiers since C1/C2 — spec now states both, plus a MUST-NOT on the zero-default trap that made the omission undetectable. H2: four `src/` files (three from C1/C2, one from round 5) had no `.meta`, leaving `unity-meta-integrity` RED since Aug 13 across five rounds because `run-gate.sh` never ran that job; `.meta`s generated, gate now runs the check first. **Modified:** `src/discipline/{CardLedgerFold.cs, DisciplineConstants.cs, DisciplineEntry.cs, DisciplineRules.cs}` + 3 test files, `src/season-save/{PlayerCareerStates.cs, SeasonLoop.cs, SeasonSaveManager.cs}` + `SeasonLoopDisciplineTests.cs` (+3 new mutation-verified locks: away-club exemption, pre-check write-ordering, back-fill tier order) + `SeasonSaveManagerTests.cs`, `src/event-system/EventSystemConstants.cs`, `src/match-engine/MatchEngineConstants.cs`. **Specs:** #44 (8 files), #30 §2/§3/§4, #17 §3.10 + Appendix A, #20 §4.2, #48 §1 (cross-spec). **GATE:** `Discipline.Tests` **118**/0, `SeasonSave.Tests` **435**/0/3 (+2), `MatchAnalytics.Tests` 57/0, `EventSystem.Tests` 54/0, `MatchEngine.Tests` 461/**1**/11 (37 m 43 s); single failure the inherited `sim_match_engine_close_chance`, identical to baseline. Full account in the header-chain entry above. |
 | 2.119 | 2026-08-15 | — | **#44 adversarial-review ROUND 5 — 1 High / 14 Medium / 10 Low, all fixed; gate run to completion, 34 suites, quarantine empty.** H1 (`ERR-044-006`): #44 §5's traceability table named two tests that do not exist, with §9 ratifying gates on them — the repo's founding fabricated-citation trap recurring inside round 4's own fix for it. **Modified:** `src/discipline/{CardLedgerFold.cs, DisciplineConstants.cs}` + 4 test files + new `DisciplineEntryTests.cs` (`Discipline.Tests` 105 → 118), `src/season-save/{SeasonLoop.cs v1.27, AvailabilityComposition.cs v1.4, SeasonSaveManager.cs v1.26, PlayerCareerStates.cs v1.22}` + 4 test files (`ERR-030-040`/`ERR-030-041`; M4 — 53 of 63 `Save` call sites had re-hardcoded `disciplineWired: true`, now 60 false / 16 true, individually checked), `src/event-system/EventSystemConstants.cs`, `src/match-engine/{MatchEngine.cs v1.71, MatchEngineConstants.cs, SquadRating.cs v1.4}`, `src/match-analytics/{MatchAnalyticsConstants.cs, MatchAnalyticsAggregator.cs + tests}`, `src/CLAUDE.md` (the `ERR-020-004` carve-out). **Specs:** #44 (all sections), #30 section-3 v2.5, #17 section-3 + appendices, #20 section-4. **Two owner decisions on code evidence:** card-kind stays `[FIXED]` (structurally incapable of being `[GT]`); `[CROSS]` routing gains an owning-catalogue carve-out — `ERR-017-005`/`ERR-020-004`. Six guards mutation-verified individually. **GATE:** `Discipline.Tests` **118**/0, `SeasonSave.Tests` **433**/0/3, `MatchAnalytics.Tests` 57/0, `MatchEngine.Tests` 461/1/11 (38 m 35 s); single failure the inherited `sim_match_engine_close_chance`. 11 new ERR ids: `ERR-017-005`, `ERR-020-004`, `ERR-030-040`, `ERR-030-041`, `ERR-044-006`–`ERR-044-012`. Full account in the header-chain entry above. |
