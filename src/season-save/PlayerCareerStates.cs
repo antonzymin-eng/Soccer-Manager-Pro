@@ -1,5 +1,12 @@
 // File:     src/season-save/PlayerCareerStates.cs
 // Created:  2026-08-06
+// Modified: 2026-08-16 (reviewed findings pass, M5 — SelectAvailable was still public: the exact
+//           injury-only, single-contributor parallel to the composed seam that shipped this landing's
+//           own H2. Made internal (season-save + TacticalDirector.SeasonSave.Tests via the existing
+//           InternalsVisibleTo, no other assembly ever called it) and its doc remarks rewritten to say
+//           explicitly what it is (the injury-only view, kept for the one structurally-discipline-less
+//           call site) and what it is not (the "what squad plays" authority, which is
+//           SeasonLoop.SelectAvailable). No behaviour change — v1.25)
 // Modified: 2026-08-15, later still (reviewed findings pass, L3 — SelectAvailable's doc still owned the
 //           depleted-squad/viability logic that moved to AvailabilityComposition.Compose at v1.19, and
 //           its ERR-030-009 line still called #44's suspension filter future tense after the 2026-08-13
@@ -1200,12 +1207,25 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>
-        /// The squad-selection filter #30 applies between resolving a roster and configuring a match
-        /// (the ERR-030-009 resolve → filter → configure shape): returns the squad #30 will actually
-        /// field, via <see cref="AvailabilityComposition.Compose"/> composed here with
-        /// <c>discipline: null</c> — this call supplies only #41's contribution.
-        /// <see cref="SeasonLoop.SelectAvailable"/> is the composed seam that supplies both
-        /// contributors, #41's injury removals and #44's suspension removals, since the C1/C2 landing.
+        /// <b>The injury-only, single-contributor view — NOT "what squad plays".</b> Filters
+        /// <paramref name="squad"/> through <see cref="AvailabilityComposition.Compose"/> composed
+        /// here with <c>discipline: null</c>, so it answers #41's question alone and silently omits
+        /// #44's suspension removals. <see cref="SeasonLoop.SelectAvailable"/> is the composed seam
+        /// that supplies BOTH contributors, #41's injury removals and #44's suspension removals, and
+        /// is the authority on "which squad does #30 field" — call that one, not this one, for any
+        /// "what squad plays" question.
+        /// <para>
+        /// <c>internal</c> deliberately (M5): this method is the exact single-contributor shape the
+        /// C1/C2 adversarial review filed as H2 — <c>SeasonSaveManager.AvailabilityFilteredSquads</c>
+        /// called this injury-only view while <c>SeasonLoop.BootFixtureEngine</c> configured the match
+        /// through the composed one, and a mid-match restore silently re-selected a different eleven
+        /// with every gate green. That call site was fixed; a public modifier here left the trap open
+        /// for the next one — a #38 squad screen, #36 call-ups, or a future restore path outside this
+        /// assembly reaching for "the squad-availability method" and finding this one first. Kept
+        /// non-private (rather than deleted) only because one place inside this assembly needs the
+        /// injury-only view where a discipline contributor is structurally absent — see that call
+        /// site's own comment for why.
+        /// </para>
         /// <para>
         /// <b>Returns the same instance when nothing is filtered</b>, so a career with no injuries — every
         /// career today, with the occurrence dial off — resolves through a reference-identical squad and
@@ -1240,7 +1260,7 @@ namespace TacticalDirector.SeasonSave
         /// or none of a required position — and no filter can repair it; the same roster would be
         /// refused identically with no injuries at all.
         /// </exception>
-        public Squad SelectAvailable(Squad squad) =>
+        internal Squad SelectAvailable(Squad squad) =>
             // L8: competitionId is provably unread on this path — AvailabilityComposition.Compose
             // only reads it inside its `discipline != null` branch, and this call always passes
             // `discipline: null` (the #41-side surface has no discipline state to key against; #30's
@@ -1793,4 +1813,22 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | future-tense line to name SeasonLoop.SelectAvailable as the     |
 // |         |            |        | composed seam supplying both #41's and #44's removals. No       |
 // |         |            |        | behaviour change.                                                |
+// | 1.25    | 2026-08-16 | —      | Reviewed findings pass, M5. SelectAvailable made internal —      |
+// |         |            |        | it was still public, the exact injury-only single-contributor   |
+// |         |            |        | parallel to AvailabilityComposition.Compose(discipline: both)   |
+// |         |            |        | that shipped this landing's own H2 (SeasonSaveManager called    |
+// |         |            |        | this method while SeasonLoop.BootFixtureEngine configured the   |
+// |         |            |        | match through the composed seam; that call site was fixed, the  |
+// |         |            |        | public surface was not). Verified: every caller in src/ is      |
+// |         |            |        | within this assembly or TacticalDirector.SeasonSave.Tests (the  |
+// |         |            |        | existing InternalsVisibleTo grant) — no external-assembly       |
+// |         |            |        | caller existed. Doc remarks rewritten to state plainly what the |
+// |         |            |        | method is (the injury-only view, kept for the one structurally  |
+// |         |            |        | discipline-less call site) and is not (the "what squad plays"   |
+// |         |            |        | authority — SeasonLoop.SelectAvailable is). No test file        |
+// |         |            |        | required a change (every caller was already inside the grant);  |
+// |         |            |        | PlayerCareerStatesTests.cs gained one new case asserting the    |
+// |         |            |        | method is not public via reflection, so a future revert is      |
+// |         |            |        | caught even though the compiler cannot see a same-assembly      |
+// |         |            |        | access-level regression. No behaviour change.                   |
 #endregion

@@ -1,5 +1,7 @@
 // File:     src/season-save/tests/PlayerCareerStatesTests.cs
 // Created:  2026-08-06
+// Modified: 2026-08-16 (reviewed findings pass, M5: + SelectAvailable_IsNotPublic, a reflection lock
+//           on PlayerCareerStates.SelectAvailable's access level now that it is internal)
 // Modified: 2026-08-08 (AR pass 12 L3: the draw-key spelling in the roll-test comment)
 // Author:   —
 // Spec:     Training System #29 §3.1/§3.3/§3.5, FR-TR-004/016/023/025/026, F6/F7;
@@ -715,6 +717,29 @@ namespace TacticalDirector.SeasonSave.Tests
                 "Selection cannot invent a player; a 12-man club is a roster problem, not a filter one.");
         }
 
+        [Test]
+        public void SelectAvailable_IsNotPublic()
+        {
+            // M5: SelectAvailable is the injury-only, single-contributor view — exactly the parallel
+            // seam the C1/C2 AR filed as H2 when a caller reached it instead of the composed
+            // SeasonLoop.SelectAvailable. The compiler cannot catch a same-assembly access-level
+            // regression (this file already sits inside the InternalsVisibleTo grant and would keep
+            // compiling either way), so this locks it by reflection instead.
+            System.Reflection.MethodInfo method = typeof(PlayerCareerStates).GetMethod(
+                nameof(PlayerCareerStates.SelectAvailable),
+                System.Reflection.BindingFlags.Instance
+                    | System.Reflection.BindingFlags.NonPublic
+                    | System.Reflection.BindingFlags.Public);
+
+            Assert.NotNull(method, "SelectAvailable must still exist under its own name.");
+            Assert.IsFalse(method.IsPublic,
+                "SelectAvailable must be internal — a public modifier is the exact single-contributor "
+                + "trap the C1/C2 AR filed as H2 one call site over.");
+            Assert.IsTrue(method.IsAssembly,
+                "Internal (assembly-private), not private — the composed SeasonLoop.SelectAvailable "
+                + "call site and this test both need it from outside the declaring type.");
+        }
+
         // ── FR-TR-025 / FR-MD-025 roster reconciliation ────────────────────────────────────
 
         [Test]
@@ -932,4 +957,9 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | cites the fixed 23%-first-day absurdity as current (L5).           |
 // | 1.5     | 2026-08-08 | —      | Balance-pass AR pass 12 (L3, comment): the ERR-041-019 key spelled |
 // |         |            |        | per #41 SS3.1.1 in the roll-test comment.                          |
+// | 1.6     | 2026-08-16 | —      | Reviewed findings pass, M5: + SelectAvailable_IsNotPublic — reflec-|
+// |         |            |        | tion lock on the newly-internal PlayerCareerStates.SelectAvailable |
+// |         |            |        | (see PlayerCareerStates.cs v1.25). No other test needed a change:  |
+// |         |            |        | every existing SelectAvailable caller in this file already sits   |
+// |         |            |        | inside the assembly's InternalsVisibleTo grant.                   |
 #endregion
