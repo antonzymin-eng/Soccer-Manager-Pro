@@ -1,10 +1,17 @@
 # `TacticalDirector.MatchClientUnity` — Unity-only render/UGUI skin
 
 **Status:** P4b (the render/camera/click binding) **LANDED** —
-`MatchClientBehaviour.cs`, 9 commits across 4 AR rounds (Medium/Low findings
-M1-M22, L1-L13, plus H1-H6). The UGUI shell (P5b) and the on-host half of P6
+`MatchClientBehaviour.cs`, landed across **5 adversarial-review rounds** (findings
+H1-H6, M1-M27, L1-L13). The UGUI shell (P5b) and the on-host half of P6
 remain open. See `docs/tracking/interactive-unity-client-design.md` for the full
-landing history.
+landing history, and `MatchClientBehaviour.cs`'s own `VersionHistory` block for the
+per-round code detail.
+
+> **No commit count is stated here, deliberately (M13).** Four consecutive rounds
+> found this line's "N commits" figure stale, because it goes stale the moment any
+> commit lands — including the commit that fixes it. The ROUND count is stable
+> within a review loop; the commit history is `git log`'s to report, not a
+> document's to assert.
 
 This is the **Unity-host** half of the interactive Unity client — the
 `MonoBehaviour` that owns a `MatchSession`, reads frames each `Update`, and binds
@@ -26,10 +33,11 @@ Every AR round over it has been reviewed by hand.
 
 ## Editor setup — this is the document `MatchClientBehaviour.cs` defers to
 
-`MatchClientBehaviour.cs`'s own type doc states the prefab contract and defers
-project-setting requirements here, since a `MonoBehaviour` cannot enforce a
-Project Settings value or fail a Unity install that lacks it. This section is
-that document. `ValidateWiring()` enforces everything it can detect at runtime
+`MatchClientBehaviour.cs`'s own type doc defers BOTH the prefab contract (M27 —
+see §1) and every project-setting requirement here, since a `MonoBehaviour` can
+neither enforce a Project Settings value nor fail a Unity install that lacks it,
+and a contract stated in two places drifts. This section is that document —
+the single one. `ValidateWiring()` enforces everything it can detect at runtime
 (null references, array lengths, transform scale/rotation) and fails loud,
 naming the offending field, when it can — but the five items below are either
 checked only once a prefab is instantiated, or cannot be checked from code at
@@ -37,12 +45,18 @@ all.
 
 ### 1. The prefab contract — 8 slots
 
-Every `[SerializeField] GameObject` prefab slot on `MatchClientBehaviour` must
-be authored to the same contract (the type doc's numbered clauses; enforced at
-instantiation by `InstantiatePrefab`, `BuildAgentObjects`, and `ValidateWiring`
-where noted):
+**This section is the SOLE statement of the prefab contract (M27).** It used to
+be stated twice — here as a table, and again as ~75 lines of XML doc on
+`MatchClientBehaviour` — and the two had already drifted apart. `MatchClientBehaviour`'s
+type doc now states only what the code actually *enforces* and points here for the rest;
+the clause numbers below are this document's, and the code's comments cite them as
+"README §1 clause N". Enforcement, where it exists, is by `InstantiatePrefab`,
+`BuildAgentObjects` and `ValidateWiring` as noted per item.
 
-| Slot | Sizing (type-doc clause) | Silhouette (M22) |
+Every `[SerializeField] GameObject` prefab slot on `MatchClientBehaviour` must
+be authored to this contract:
+
+| Slot | Sizing (clause) | Silhouette (M22) |
 |---|---|---|
 | Agent marker | 2a — FLAT, unit radius | Filled disc |
 | Possession ring | 2a — FLAT, unit radius | **Stroked** — an outline/ring (annulus) drawn AROUND the marker it annotates, not a second disc under it |
@@ -53,11 +67,41 @@ where noted):
 | Marking spot | 2a — FLAT, unit radius | Filled disc — `PitchMarkingKind.Spot`'s own doc |
 | Goal mouth | 2a — FLAT, unit length along local +Z, unit cross-section (M18: shares the marking line's authoring, not its prefab or width — see `GoalMouthWidthM` in `MatchClientConstants.cs`) | Filled rectangle |
 
+**Clause 2a (FLAT)** covers seven of the eight slots: authored at UNIT RADIUS (the round ones) or
+UNIT LENGTH ALONG LOCAL +Z WITH UNIT CROSS-SECTION (the marking line and the goal mouth — M18: the
+goal mouth goes through the identical `PlaceLine` path and needs the identical authoring, only its
+own prefab and width). **Clause 2b** covers the eighth, the ball: the one VOLUMETRIC prop, a genuine
+unit-radius SPHERE, scaled uniformly on all three axes (`Vector3.one * model.Radius`) so it reads as
+a sphere at every radius the sim reports rather than a disc.
+
+Either way, **the scale this binding assigns is the metre figure ITSELF, with no conversion** — which
+is the point of the unit-sizing rule. The alternative, a per-primitive "what radius is a Unity
+Cylinder by default" divisor, is a class of bug rather than a number, and was deleted at H3.
+
+#### Stroked slots — silhouette and stroke width (M22, M26)
+
 M22: the marking circle and the possession ring are the only two STROKED slots — every other slot in
 the table (round or straight) is FILLED. `MatchClientBehaviour` cannot check the difference any more
-than it can check that a FLAT mesh has zero height (§1 above): authoring either stroked slot as a
+than it can check that a FLAT mesh has zero height: authoring either stroked slot as a
 solid disc renders a filled blob where an outline was required, with no diagnostic short of eyeballing
 the rendered pitch. Author the two stroked slots as a ring/annulus mesh, or a hollow torus lying flat.
+
+M26: **a stroked slot's stroke thickness is authored as a FRACTION of the prefab's unit radius, and
+is therefore multiplied by that slot's actual metre radius at runtime.** `FlatGroundScale` assigns a
+UNIFORM scale on both ground axes, so nothing in the prefab keeps a stroke at a fixed metre width —
+scale the whole prefab and the stroke scales with it. Author against these fractions:
+
+| Stroked slot | Fraction of unit radius | Working |
+|---|---|---|
+| Marking circle | **≈ 0.022** (2.2 %) | `MatchClientConstants.MarkingLineWidthM` ÷ `MatchViewerConstants.CentreCircleRadiusM` = 0.2 m ÷ 9.15 m. The centre circle is the only `PitchMarkingKind.Circle` `BuildDrawables()` emits, so this fraction draws it at exactly the same 0.2 m width as the straight markings around it |
+| Possession ring | **0.10** (10 %) | a chosen ring weight of 0.12 m ÷ `MatchClientConstants.PossessionRingRadiusM` = 0.12 m ÷ 1.2 m. The weight is a legibility choice, not a Law 1 figure: the ring only has to read as an annulus around a 0.7 m marker at the tilted camera's distance |
+
+**Neither fraction tracks its source `[GT]` automatically.** `MarkingLineWidthM` and
+`PossessionRingRadiusM` are both retunable from `[match-client]` config; the fraction is baked into
+the prefab mesh, so retuning either constant changes the stroke's rendered metre width without anyone
+touching the prefab — the marking circle's stroke would stop matching the straight lines it is drawn
+beside, and the possession ring would thin out or thicken. If either constant is retuned, re-derive
+the fraction and re-author the mesh.
 
 Every slot, whichever clause it follows:
 

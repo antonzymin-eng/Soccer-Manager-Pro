@@ -1,6 +1,7 @@
 // File:     src/match-client-core/PitchMarking.cs
 // Created:  2026-08-03
-// Modified: 2026-08-04
+// Modified: 2026-08-16 (P4b AR round 5, M25: the class doc's "at zero height" placement instruction
+//           is corrected to the M16 marking BAND it was replaced by two rounds ago)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4a, §7
 //           "Reuse the geometry that already exists"), Ball Physics #1 §1.2 (corner-origin frame),
@@ -15,9 +16,22 @@ namespace TacticalDirector.MatchClientCore
     /// <summary>
     /// One IFAB pitch marking, in <b>corner-origin pitch metres</b> (Ball Physics #1 §1.2) — the same
     /// frame the engine reports positions in. A renderer places each point on the ground plane
-    /// through <see cref="PitchViewProjection.ToWorld"/> at zero height — markings lie ON the turf,
-    /// so the height argument is what puts them there rather than standing upright in the world's XY
-    /// plane. <see cref="Radius"/> needs no conversion, since the world is 1 unit per metre.
+    /// through <see cref="PitchViewProjection.ToWorld"/>, whose height argument is what lays a marking
+    /// ON the turf rather than standing it upright in the world's XY plane.
+    /// <see cref="Radius"/> needs no conversion, since the world is 1 unit per metre.
+    ///
+    /// <para><b>That height is a BAND, not zero (M16).</b> This doc used to say "at zero height", which
+    /// was true only until every drawable sharing one plane turned out to z-fight: the boundary, the
+    /// penalty area, the goal area and the goal mouth all overlap at each goal line, the centre spot
+    /// sits exactly on the halfway line, and the centre circle crosses it twice. A renderer therefore
+    /// places drawable <c>i</c> of <see cref="PitchMarkings.BuildDrawables"/>'s stated, deterministic
+    /// order at <c>MatchClientConstants.MarkingLayerHeightM + i *
+    /// MatchClientConstants.MarkingLayerStepM</c> — the lowest of the four ordered M12 ground layers,
+    /// spread into a band by index. The band's total rise is boot-validated in
+    /// <c>MatchClientConstants</c> to stay comfortably below the next layer up
+    /// (<c>BallShadowLayerHeightM</c>), so it can never grow into it. The marking's own geometry is
+    /// unaffected: nothing here carries a height field, and the band is a pure rendering-order choice
+    /// applied at placement.</para>
     ///
     /// <para><b>Which fields are meaningful depends on <see cref="Kind"/></b>, and
     /// <see cref="PitchMarkingKind"/> documents each case. The alternative — a type per shape behind
@@ -114,4 +128,11 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | on the GROUND plane — following it would have stood every      |
 // |         |            |        | marking upright in the world XY plane. Now ToWorld at zero     |
 // |         |            |        | height. Doc only; no field, factory or value changed.          |
+// | 1.3     | 2026-08-16 | —      | P4b AR round 5, M25: the class doc still sent a renderer to     |
+// |         |            |        | ToWorld "at zero height", which round 3's M16 replaced with     |
+// |         |            |        | the marking BAND (MarkingLayerHeightM + i * MarkingLayerStepM   |
+// |         |            |        | over BuildDrawables' stated order) precisely because one shared |
+// |         |            |        | plane z-fought wherever two drawables overlap. Following the    |
+// |         |            |        | stale text would have reinstated that bug. Doc only; no field,  |
+// |         |            |        | factory or value changed.                                       |
 #endregion

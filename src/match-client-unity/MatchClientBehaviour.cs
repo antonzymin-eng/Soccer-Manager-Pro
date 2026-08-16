@@ -1,7 +1,7 @@
 // File:     src/match-client-unity/MatchClientBehaviour.cs
 // Created:  2026-08-15
-// Modified: 2026-08-16 (AR round 4 — Medium/Low findings M20/M21/M22/L12; see the VersionHistory
-//           block at the foot of this file for the per-finding detail)
+// Modified: 2026-08-16 (AR round 5 — Medium findings M24/M26/M27, plus M23's comment site; see the
+//           VersionHistory block at the foot of this file for the per-finding detail)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4b, §12),
 //           Code Standards #20
@@ -25,85 +25,40 @@ namespace TacticalDirector.MatchClientUnity
     /// value it assigns was already computed in <c>match-client-core</c> (§12 rule 1: the CI gate
     /// cannot compile this type, so nothing that needs testing may live here).
     ///
-    /// <para><b>The prefab contract, which this file is the only statement of.</b> Every prefab slot
-    /// below MUST be authored so that:</para>
-    /// <list type="number">
-    /// <item><description><b>the ROOT transform is neutral</b> — identity local rotation, unit local
-    /// scale. This code assigns root rotation and scale outright, so a tilt or a size baked onto the
-    /// root is either destroyed or silently multiplied into every metre figure. Bake a fixed tilt (a
-    /// Quad lying flat, say) and any visual thickness onto a CHILD mesh, which nothing here
-    /// touches;</description></item>
-    /// <item><description><b>the mesh is unit-sized, in one of TWO ways, depending on which of the
-    /// two classes below this slot is (M11 — this clause used to state one rule and every call site
-    /// but the ball's silently needed a second one)</b>:
-    /// <list type="bullet">
-    /// <item><description><b>(a) FLAT ground props</b> — the agent marker, the possession ring, the
-    /// ball shadow, a marking circle, a marking spot, a marking line, or the goal mouth (M18: the
-    /// goal mouth was missing from this enumeration despite going through the identical
-    /// <see cref="PlaceLine"/> path as a marking line and needing the identical authoring) — are
-    /// authored at UNIT RADIUS (the round ones) or UNIT LENGTH ALONG LOCAL +Z WITH UNIT CROSS-SECTION
-    /// (a marking line or the goal mouth), and with ZERO EXTENT IN LOCAL Y: the MESH ITSELF must be
-    /// flat, e.g. a Quad lying flat
-    /// rather than a Cylinder. This code assigns local Y = 1 to every one of these (see
-    /// <see cref="FlatGroundScale"/> — named for this rule, not the ball's), which is INERT against a
-    /// mesh with no height of its own. Flatness comes from the mesh being authored flat; the Y = 1
-    /// assignment is a don't-care multiplier against a zero, not the source of it. A prefab whose
-    /// mesh has real height (a genuinely unit-radius SPHERE used as a marker, say) renders as a
-    /// squashed ellipsoid under this rule, not a flat disc — this code cannot detect that, so get the
-    /// mesh right.
-    /// <para><b>M22: FLAT is a sizing rule, not a silhouette</b> — two of the seven FLAT slots must be
-    /// STROKED (an outline/ring, not a solid interior) and the rest FILLED, and this code cannot see
-    /// or check the difference any more than it can check mesh height above. <b>Stroked:</b> the
-    /// marking circle (<c>_markingCirclePrefab</c>) and the possession ring
-    /// (<c>_possessionRingPrefab</c>) — <see cref="PitchMarkingKind.Circle"/>'s own doc distinguishes
-    /// it from <see cref="PitchMarkingKind.Spot"/> precisely because "it is filled rather than
-    /// stroked, and a renderer that collapsed the two would draw a solid centre circle"; the ring is
-    /// meant to read as an annulus drawn AROUND the agent marker it annotates, not a second disc under
-    /// it. <b>Filled:</b> the marking spot (<c>_markingSpotPrefab</c>,
-    /// <see cref="PitchMarkingKind.Spot"/>'s own doc), the agent marker (<c>_agentMarkerPrefab</c>),
-    /// and the ball shadow (<c>_ballShadowPrefab</c>) — each a solid disc. Author the two stroked slots
-    /// as a ring/annulus mesh (or a hollow torus lying flat); a solid disc authored into either renders
-    /// as a filled blob with no diagnostic short of eyeballing the pitch.</para></description></item>
-    /// <item><description><b>(b) the ball</b> is the one VOLUMETRIC prop in the contract: a genuine
-    /// unit-radius SPHERE, scaled uniformly on all three axes (<c>Vector3.one * model.Radius</c>), so
-    /// it reads as a sphere at every radius the sim reports rather than a disc.</description></item>
-    /// </list>
-    /// Either way the scale this code assigns is then the metre figure ITSELF, with no conversion —
-    /// which is the whole point: a per-primitive "what radius is a Unity Cylinder by default"
-    /// constant is a class of bug rather than a number.</description></item>
-    /// <item><description><b>the agent marker's material exposes the colour property named by
-    /// <see cref="_colorPropertyName"/></b> — defaulted to <c>"_Color"</c>, the Built-in Render
-    /// Pipeline standard shader's name for it. URP's Lit/SimpleLit/Unlit shaders expose
-    /// <c>"_BaseColor"</c> instead, and this repo does not settle which pipeline resolves at
-    /// runtime: <c>ProjectSettings/GraphicsSettings.asset</c> references a Universal render pipeline
-    /// asset while <c>Packages/manifest.json</c> declares no URP package. The requirement is stated
-    /// and checked rather than assumed because the failure is silent — <c>SetColor</c> against a
-    /// property the shader does not have succeeds and changes nothing, so both teams, the goalkeeper
-    /// tint and the sent-off tint would all render in whatever colour the prefab material already
-    /// carries, with no diagnostic anywhere. Rejected per marker at instantiation (H6); point
-    /// <see cref="_colorPropertyName"/> at the property your pipeline's shader actually
-    /// exposes.</description></item>
-    /// </list>
+    /// <para><b>The prefab contract lives in the README, not here (M27).</b> See
+    /// <c>src/match-client-unity/README.md</c> §1 for the complete 8-slot prefab contract — sizing
+    /// (FLAT-unit-radius vs the ball's volumetric sphere), stroked-vs-filled silhouette and its
+    /// stroke-width fraction, root neutrality, mesh flatness, the <c>LineRenderer</c> restriction, and
+    /// every slot's individual requirement. That README is the SOLE statement of it. This doc used to
+    /// restate the whole contract as ~75 lines of prose beside the README's table, and the two had
+    /// already drifted — the version here was missing two of the slots the README correctly listed,
+    /// which is exactly the failure mode two copies of one contract produce.</para>
     ///
-    /// <para><b>Not supported: a world-space <c>LineRenderer</c>.</b> Its positions are absolute, so
-    /// the transform this binding positions and scales is ignored entirely and the shape renders
-    /// wherever it was authored, forever — a total no-op that looks like a placement bug. Author
-    /// markings as meshes, or as a <c>LineRenderer</c> with <c>useWorldSpace = false</c> and
-    /// unit-radius/unit-length local points. Rejected at instantiation rather than left as prose,
-    /// since nothing else here can see it.</para>
+    /// <para><b>What this file ENFORCES</b>, as opposed to what it merely requires: root neutrality
+    /// (identity local rotation via <see cref="IsIdentityRotation"/>, unit local scale) and the absence
+    /// of a world-space <c>LineRenderer</c> — both checked on every slot in
+    /// <see cref="InstantiatePrefab"/>, the world-space <c>LineRenderer</c> because the transform this
+    /// binding assigns is a total no-op against absolute positions; and, per agent marker in
+    /// <see cref="BuildAgentObjects"/> (H6), that its material exists and exposes the colour property
+    /// named by <see cref="_colorPropertyName"/>, since <c>SetColor</c> against a property the shader
+    /// does not have succeeds and changes nothing. <see cref="ValidateWiring"/> covers what must hold
+    /// before any <c>Instantiate</c> is safe at all. Everything else in the README §1 contract —
+    /// notably whether a FLAT mesh really has zero height, and whether a slot required to be STROKED
+    /// was authored as a solid disc — is invisible from code and has no diagnostic short of eyeballing
+    /// the rendered pitch.</para>
     ///
     /// <para><b>M8 — Active Input Handling.</b> <see cref="HandleClick"/> uses the legacy
     /// <c>UnityEngine.Input</c> API. Project Settings → Player → Active Input Handling MUST be
     /// "Input Manager (Old)" or "Both" — under "Input System Package (New)" ONLY, every call in this
     /// file to <c>Input.GetMouseButtonDown</c>/<c>Input.mousePosition</c> throws every frame. This is
-    /// a project-setup requirement this file cannot enforce or detect; it is recorded here AND in
-    /// (M14) the Editor-setup document this assembly's README has become —
-    /// <c>src/match-client-unity/README.md</c> — which also carries the prefab contract as a table,
-    /// this GameObject's own transform requirement (M15), and the team-colour palette shape.</para>
+    /// a project-setup requirement this file cannot enforce or detect; it is recorded in (M14) the
+    /// Editor-setup document this assembly's README has become —
+    /// <c>src/match-client-unity/README.md</c> — which also carries this GameObject's own transform
+    /// requirement (M15), the team-colour palette shape, and the pitch-surface placement rule (L13).</para>
     /// </summary>
     public sealed class MatchClientBehaviour : MonoBehaviour
     {
-        [Header("Prefabs — neutral root, unit-sized mesh (see the type doc for the full contract)")]
+        [Header("Prefabs — neutral root, unit-sized mesh (README.md §1 is the full contract)")]
         [SerializeField] private GameObject _agentMarkerPrefab;
         [SerializeField] private GameObject _possessionRingPrefab;
         [SerializeField] private GameObject _ballPrefab;
@@ -130,7 +85,7 @@ namespace TacticalDirector.MatchClientUnity
         [SerializeField] private string _demoSeedText = "1";
 
         /// <summary>
-        /// Name of the shader property the marker's colour is written to — prefab-contract clause 3.
+        /// Name of the shader property the marker's colour is written to — README §1 clause 3.
         /// An inspector field rather than a baked literal because the answer is a render-pipeline
         /// fact this code cannot see: the Built-in pipeline's standard shader calls it
         /// <c>"_Color"</c> (the default here), URP's Lit/SimpleLit/Unlit call it <c>"_BaseColor"</c>.
@@ -534,7 +489,7 @@ namespace TacticalDirector.MatchClientUnity
 
             // Unit length along local +Z and unit cross-section, so both figures are metres as they
             // stand. Y stays at 1 — inert, not the source of flatness (M11): the mesh itself must be
-            // authored with zero height (prefab-contract clause 2a), and a line painted on the turf
+            // authored with zero height (README §1 clause 2a), and a line painted on the turf
             // has no thickness of its own for that mesh to carry.
             Vector3 scale = Vector3.one;
             scale.x = widthM;
@@ -632,7 +587,8 @@ namespace TacticalDirector.MatchClientUnity
 
         /// <summary>
         /// Instantiates one prefab under <paramref name="parent"/> and rejects the client unless the
-        /// instance honours the prefab contract in the type doc. This is the gate every scene object
+        /// instance honours the parts of the README §1 prefab contract that are checkable from code.
+        /// This is the gate every scene object
         /// passes through for a check that applies UNIFORMLY to every prefab (root neutrality, no
         /// world-space <c>LineRenderer</c>) — so that is where a further wiring check of that shape
         /// belongs. L9: a check that applies to only one SLOT (a specific prefab's material, say)
@@ -669,7 +625,7 @@ namespace TacticalDirector.MatchClientUnity
         }
 
         /// <summary>
-        /// Scale for a FLAT, unit-radius prop lying on the turf (prefab-contract clause 2a): the
+        /// Scale for a FLAT, unit-radius prop lying on the turf (README §1 clause 2a): the
         /// radius in metres on both ground axes, and Y left at 1 — inert against a mesh authored with
         /// zero height, not the source of the flatness. Under the prefab contract no conversion is
         /// involved — which is exactly what a shared "default primitive radius" divisor used to hide.
@@ -678,6 +634,13 @@ namespace TacticalDirector.MatchClientUnity
         /// as clause 2a's rule at every call site — <see cref="RenderBall"/>'s ball itself does NOT
         /// use this method, because the ball is clause 2b's one volumetric prop
         /// (<c>Vector3.one * model.Radius</c>, scaled uniformly on all three axes).</para>
+        ///
+        /// <para>M26: the scale is UNIFORM across both ground axes, so for the two slots README §1
+        /// requires to be STROKED (the marking circle and the possession ring) the authored stroke
+        /// thickness scales with the radius along with everything else — it is a fraction of the
+        /// prefab's unit radius, multiplied here by that slot's metre radius. README §1 states the two
+        /// fractions to author against and why neither tracks its source <c>[GT]</c> automatically;
+        /// nothing in this method can check either.</para>
         /// </summary>
         private static Vector3 FlatGroundScale(float radiusM)
         {
@@ -709,10 +672,33 @@ namespace TacticalDirector.MatchClientUnity
             return groundPosition;
         }
 
+        /// <summary>
+        /// The client's single TERMINAL state, and (M24) its TEARDOWN point. Logs
+        /// <paramref name="reason"/>, stops the match if one is running, and disables this component;
+        /// every guard in this file re-checks <c>_wiringRejected</c> so nothing runs past it.
+        ///
+        /// <para><b>M24: it must stop the session, not merely disable the component.</b> Disabling a
+        /// <c>MonoBehaviour</c> stops Unity delivering <c>Update</c> — it does not touch
+        /// <see cref="MatchSession"/>, whose <see cref="MatchSession.Start"/> hands paced playback to a
+        /// BACKGROUND thread inside <c>LiveMatchStreamer</c>. Since L12 (round 4) added a catch around
+        /// <see cref="Update"/>'s render calls, a rejection can fire AFTER
+        /// <see cref="MatchSession.Start"/> — and without this, that thread went on ticking a full 90-minute match
+        /// nobody would ever read a frame from, until the Play session itself ended. The stop is safe
+        /// on every path this method is reachable from: <see cref="ValidateWiring"/> runs before
+        /// <see cref="_session"/> exists (hence the null-conditional), and
+        /// <c>LiveMatchStreamer.Stop</c> returns immediately unless the streamer is Running, so a
+        /// session constructed but never started, or already stopped, is a no-op rather than a
+        /// throw.</para>
+        /// </summary>
         private void RejectWiring(string reason)
         {
             Debug.LogError("MatchClientBehaviour: " + reason + " Disabling the client.", this);
             _wiringRejected = true;
+
+            // M24: BEFORE enabled = false, so the terminal state is reached with nothing still running
+            // behind it. Null-conditional because ValidateWiring rejects before _session is constructed.
+            _session?.Stop();
+
             enabled = false;
         }
 
@@ -787,13 +773,15 @@ namespace TacticalDirector.MatchClientUnity
         {
             BallRenderModel model = MatchRenderProjection.ProjectBall(pitchBallPosition);
 
-            // Prefab-contract clause 2b: the ball is the one VOLUMETRIC prop, scaled uniformly on all
+            // README §1 clause 2b: the ball is the one VOLUMETRIC prop, scaled uniformly on all
             // three axes so it reads as a sphere at every radius rather than a flat disc (M11).
-            // M21: model.WorldPosition.y is NOT the raw physics height below model.Radius (M17 floors
-            // it there so the drawn sphere never sinks through the turf — see BallRenderModel's own
-            // doc) — it is still left untouched by M12's ground-layer scheme, though, since it is not
-            // a ground layer at all: a ball above its own radius rides on its real physics height, and
-            // one below it rides on the floor instead, neither of which M12's ordering concerns.
+            // M21/M23: model.WorldPosition.y is NOT the raw physics height below the ball's floor
+            // (M17 floors it, and M23 raised that floor to Radius + AgentMarkerLayerHeightM so the
+            // drawn sphere clears the M12 ground LAYERS and not merely the turf — see
+            // BallRenderModel's own doc). WithGroundLayerHeight is still deliberately NOT applied
+            // here: the ball is not a ground layer, and the clearance it needs is already inside the
+            // Y it arrives with. Above the floor it rides on its real physics height; below, on the
+            // floor. Only the shadow below goes through M12's ordering.
             _ball.transform.position = model.WorldPosition;
             _ball.transform.localScale = Vector3.one * model.Radius;
 
@@ -1099,4 +1087,35 @@ namespace TacticalDirector.MatchClientUnity
 // |         |            |        | why this is the once-per-frame MonoBehaviour entry point rather      |
 // |         |            |        | than a per-frame INNER loop in the FR-CS-069 sense, the same         |
 // |         |            |        | carve-out H5's Awake comment already claims.                        |
+// | 1.7     | 2026-08-16 | —      | AR round 5, Medium findings M24/M26/M27 (+ the M23 comment site).   |
+// |         |            |        | M24: RejectWiring only logged and set enabled = false — it never    |
+// |         |            |        | stopped the session. Disabling a MonoBehaviour stops Unity          |
+// |         |            |        | delivering Update; it does not touch LiveMatchStreamer's BACKGROUND |
+// |         |            |        | playback thread, and since round 4's L12 a rejection can fire from  |
+// |         |            |        | Update, i.e. AFTER Start() — leaving that thread ticking a full     |
+// |         |            |        | 90-minute match nobody reads a frame from, until the Play session   |
+// |         |            |        | ends. Now _session?.Stop() before enabled = false; null-conditional |
+// |         |            |        | because ValidateWiring rejects before _session exists, and          |
+// |         |            |        | LiveMatchStreamer.Stop early-returns unless Running, so a session   |
+// |         |            |        | never started or already stopped is a no-op. RejectWiring's new doc |
+// |         |            |        | states it is BOTH the terminal state and the teardown point.        |
+// |         |            |        | M27: the ~75-line prefab contract in the type doc is CONSOLIDATED   |
+// |         |            |        | away — README.md §1 is now its sole statement. The two copies had   |
+// |         |            |        | already drifted (M22's own "Filled:" list here omitted the marking   |
+// |         |            |        | line and the goal mouth, which the README's table carried), which   |
+// |         |            |        | is the defect class rounds 3-5 kept re-finding. What remains here   |
+// |         |            |        | is only what this file ENFORCES at runtime — root neutrality and    |
+// |         |            |        | the world-space LineRenderer refusal (InstantiatePrefab), the       |
+// |         |            |        | per-marker colour-property check (BuildAgentObjects) — plus a       |
+// |         |            |        | pointer to README §1. The in-code "prefab-contract clause N"        |
+// |         |            |        | citations are repointed to "README §1 clause N" so the numbering    |
+// |         |            |        | still resolves to a document that exists. M26: FlatGroundScale's    |
+// |         |            |        | doc now states that its UNIFORM scale multiplies an authored        |
+// |         |            |        | stroke thickness along with the radius, so a stroked slot's stroke  |
+// |         |            |        | is a FRACTION of the prefab's unit radius; the two fractions to     |
+// |         |            |        | author against live in README §1. M23 (fixed in match-client-core): |
+// |         |            |        | RenderBall's M21 comment restated for the raised ball floor —       |
+// |         |            |        | Radius + AgentMarkerLayerHeightM, not Radius alone — and now says   |
+// |         |            |        | explicitly why WithGroundLayerHeight is still not applied to the    |
+// |         |            |        | ball itself.                                                        |
 #endregion

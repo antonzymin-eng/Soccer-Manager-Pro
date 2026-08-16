@@ -360,8 +360,10 @@ evidence. The two that need a review step invoke `adversarial-review` rather tha
   `SetSpeedMultiplier` fail-louds rather than clamping, a cap below a step would have shipped a 10×
   button that throws mid-match while 1×/3×/5× worked — now a load-time cross-catalogue pairing check.
   REMAINDER: **P5b and the on-host half of P4b/P6** — P4b's Unity binding landed as code
-  August 15, 2026 (`src/match-client-unity/MatchClientBehaviour.cs`; 9 landing commits, 4 AR
-  rounds — see `src/match-client-unity/README.md`), but `match-client-unity` is excluded from the CI
+  August 15, 2026 (`src/match-client-unity/MatchClientBehaviour.cs`; landed across 5 AR
+  rounds — see `src/match-client-unity/README.md`; no commit count is stated, deliberately:
+  four consecutive rounds found one stale, since it goes stale the moment any commit lands),
+  but `match-client-unity` is excluded from the CI
   gate by design (§12 rule 1) and has never compiled or run, so its host verification is still
   outstanding, alongside P5b's UGUI shell, scene boot, 60 FPS, live tactical input through a screen,
   and the FR-PO-052-class render-loop perf capture. All need the pinned host; the host block itself
