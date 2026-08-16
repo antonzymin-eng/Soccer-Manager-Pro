@@ -1,5 +1,15 @@
 // File:     src/match-engine/MatchEngine.cs
 // Created:  2026-06-16
+// Modified: 2026-08-16, latest (reviewed findings pass, finding B — v1.72, DOC ONLY, no code change).
+//           PlayerIdsByAgentId's XML doc now states the boot-only one-to-one precondition explicitly
+//           (ERR-044-023): SubstitutePlayer copies the incoming player's identity onto the outgoing
+//           on-pitch slot but never clears his OWN bench-origin entry, so after any substitution the
+//           returned array maps that player to TWO agent ids and is no longer one-to-one over its
+//           non-sentinel entries. A caller building a CardLedgerFold (or anything else that depends on
+//           the mapping being one-to-one) must take the seed AT BOOT, before any substitution — matching
+//           CardLedgerFold's own corrected constructor doc and the new SeasonLoopDisciplineTests
+//           cross-assembly lock. No behaviour change; the array's contents and the method's return type
+//           are unchanged.
 // Modified: 2026-08-15, later (#44 AR round 5, L3 — the bare 0xFFFF "no associated foul" sentinel in
 //           the card-issue publish now reads MatchEngineConstants.FoulOrdinalNone, the [CROSS] mirror of
 //           #17's new FOUL_ORDINAL_NONE; same value, FR-CS-016 — v1.71.
@@ -2179,6 +2189,18 @@ namespace TacticalDirector.MatchEngine
         /// <para>
         /// Boot / fixture cadence, never per-tick — the copy is deliberate so no caller can alias the
         /// engine's own array and become a second writer of match identity.
+        /// </para>
+        /// <para>
+        /// <b>One-to-one over non-sentinel entries AT BOOT ONLY (ERR-044-023).</b> <c>SubstitutePlayer</c>
+        /// copies the incoming player's identity onto the OUTGOING on-pitch slot but never clears his
+        /// OWN bench-origin entry (<c>_benchPlayerIds[team][bench]</c> keeps pointing at him) — so after
+        /// any substitution this array maps that player to TWO agent ids at once and is no longer
+        /// one-to-one. A caller that depends on the mapping being one-to-one (e.g. seeding a
+        /// <c>Discipline.CardLedgerFold</c>, whose constructor enforces exactly that property and would
+        /// correctly refuse a post-substitution seed) MUST take the seed AT BOOT, before any
+        /// substitution — as <c>SeasonLoop.PlayThroughEngine</c> does, calling this method immediately
+        /// after <c>BootFixtureEngine</c> and before the tick loop that could ever call
+        /// <c>SubstitutePlayer</c> runs.
         /// </para>
         /// </summary>
         public int[] PlayerIdsByAgentId()
@@ -9317,4 +9339,12 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | literals. Now MatchEngineConstants.FoulOrdinalNone, the [CROSS]  |
 // |         |            |        | mirror of #17's FOUL_ORDINAL_NONE. Same value; no behaviour     |
 // |         |            |        | change.                                                         |
+// | 1.72    | 2026-08-16, latest | — | Reviewed findings pass, finding B (ERR-044-023), DOC     |
+// |         |            |        | ONLY. PlayerIdsByAgentId's XML doc now states the boot-only      |
+// |         |            |        | one-to-one precondition explicitly: SubstitutePlayer never       |
+// |         |            |        | clears the incoming player's own bench-origin entry, so after    |
+// |         |            |        | any substitution the array maps him to two agent ids and is no   |
+// |         |            |        | longer one-to-one. Matches the corrected CardLedgerFold           |
+// |         |            |        | constructor doc and the new SeasonLoopDisciplineTests             |
+// |         |            |        | cross-assembly lock. No code change.                              |
 #endregion

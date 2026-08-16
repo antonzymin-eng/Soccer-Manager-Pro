@@ -1,5 +1,26 @@
 // File:     src/discipline/CardLedgerFold.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16, latest again (findings A and B, reviewed findings pass — v1.10: A —
+//           ERR-044-022. The constructor now takes a required onPitchAgentIdCount, validated
+//           0 < onPitchAgentIdCount <= the seed's length, and ApplySubstitution refuses an Incoming
+//           that names an on-pitch id ("an on-pitch agent id cannot come on") and an Outgoing that
+//           names a bench id ("only an on-pitch agent id can go off") — both before the write/clear
+//           pair runs. Closes the hole the v1.8 M1 fix could not see: the seed's one-to-one check
+//           runs once at construction and cannot, by itself, tell a bench id from a pitch id at
+//           ApplySubstitution time, so Sub(Outgoing=5, Incoming=6) with 6 an occupied ON-PITCH slot
+//           previously wrote silently — player 100 (slot 5's prior occupant) lost his mapping
+//           entirely and a card at slot 5 landed on player 101 (slot 6's occupant), the Appendix C
+//           "slot 19" family (ERR-044-001) the v1.8 M1 comment falsely claimed the vacated-slot
+//           clear alone made "impossible rather than merely unlikely" — that claim covered only the
+//           narrow bench-double-mapping shape M1 actually closed; it is annotated in place in the
+//           version-history row below rather than rewritten, and the inline comment at
+//           ApplySubstitution is corrected to state what is true now that this fix lands. SeasonLoop's
+//           construction site passes MatchEngineConstants.SQUAD_SIZE. B — ERR-044-023, doc only, no
+//           behaviour change: the constructor's XML doc now states the boot-time precondition on the
+//           seed explicitly (MatchEngine.PlayerIdsByAgentId is one-to-one over non-sentinel entries
+//           only AT BOOT — SubstitutePlayer never clears the incoming player's bench-origin entry, so
+//           a seed taken after any substitution maps him to two agent ids and this constructor's own
+//           M1 check would refuse it), matching the corrected MatchEngine.cs XML doc.
 // Modified: 2026-08-16, latest (findings A and C, doc only — v1.9: A — CommitWithExplicitConfig's L2
 //           doc still said wiring DisciplineRules.AddYellow/AddBan through the guarded YellowsPlusOne/
 //           BanMatchesPlus helpers was "outside this file's ownership for this pass" — stale the same
@@ -41,7 +62,8 @@
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §3.1 (the occupancy fold) / §4.3 (the tap read);
 //           FR-DC-002/003/004/005/006/010; F1/F4; ERR-044-001 (Appendix C's bench-id defect);
-//           Code Standards #20
+//           ERR-044-022 (the onPitchAgentIdCount boundary); ERR-044-023 (the boot-time seed
+//           precondition); Code Standards #20
 // Purpose:  The per-tick fold over an engine-resolved fixture's card and substitution records —
 //           attributes each card to the PlayerId occupying the recipient agent slot AT THAT TICK, and
 //           commits the fixture's whole card list once, at resolution.
@@ -98,6 +120,15 @@ namespace TacticalDirector.Discipline
     /// months, so the branch is driven from authored record lists in the suite rather than from a
     /// contrived match — a test that cannot reach a branch does not cover it.
     /// </para>
+    /// <para>
+    /// <b>The seed must be taken at boot (ERR-044-023).</b> <c>MatchEngine.PlayerIdsByAgentId</c> is
+    /// one-to-one over its non-sentinel entries only at that moment — <c>SubstitutePlayer</c> never
+    /// clears the incoming player's own bench-origin entry, so a seed taken after even one
+    /// substitution maps him to two agent ids, and this class's own constructor (M1) would then
+    /// correctly refuse it. See the constructor's own doc for the precondition and where it comes
+    /// from; <c>SeasonLoop</c> satisfies it by seeding immediately after <c>BootFixtureEngine</c>,
+    /// before the tick loop that could ever call <c>SubstitutePlayer</c> runs.
+    /// </para>
     /// </summary>
     public sealed class CardLedgerFold
     {
@@ -111,6 +142,13 @@ namespace TacticalDirector.Discipline
         // a substitution moves the occupant of the OUTGOING slot to the incoming player's identity.
         private readonly int[] _occupancy;
         private readonly int _competitionId;
+
+        // ERR-044-022: the boundary between on-pitch agent ids [0, _onPitchAgentIdCount) and the
+        // engine's synthetic bench ids [_onPitchAgentIdCount, _occupancy.Length). ApplySubstitution
+        // uses this to refuse an Incoming that names an on-pitch id or an Outgoing that names a bench
+        // id — a distinction the seed's own one-to-one check (M1) cannot make, since it only knows
+        // player ids and array length, never which agent ids are on-pitch versus bench.
+        private readonly int _onPitchAgentIdCount;
 
         // The fixture's cards in observation order, buffered until Commit. Order is the bus's canonical
         // publish order (tick, then intra-phase), which is what makes FR-DC-021 hold: the same fixture
@@ -133,6 +171,18 @@ namespace TacticalDirector.Discipline
         /// <summary>
         /// Seeds the fold with the fixture's full agent-id → <c>PlayerId</c> map — <b>starters and
         /// bench</b>, because a card can be shown to a player who came on.
+        /// <para>
+        /// <b>Boot-time precondition (ERR-044-023).</b> <paramref name="occupancyByAgentId"/> must be
+        /// a snapshot taken AT BOOT, before any substitution. <c>MatchEngine.PlayerIdsByAgentId</c> is
+        /// one-to-one over its non-sentinel entries only at that moment: <c>SubstitutePlayer</c>
+        /// copies the incoming player's identity onto the outgoing on-pitch slot but never clears his
+        /// OWN bench-origin entry, so a seed taken after even one substitution maps that player to two
+        /// agent ids at once and the constructor's own one-to-one check (M1, below) would then
+        /// correctly refuse it — for a caller with no fresh boot-time array left to re-supply.
+        /// <c>SeasonLoop</c> satisfies this by calling <c>PlayerIdsByAgentId()</c> immediately after
+        /// <c>BootFixtureEngine</c>, before the tick loop that could ever call
+        /// <c>SubstitutePlayer</c> runs.
+        /// </para>
         /// </summary>
         /// <param name="occupancyByAgentId">
         /// Indexed by the engine's agent id. On-pitch slots occupy the low indices; the engine's
@@ -147,14 +197,27 @@ namespace TacticalDirector.Discipline
         /// Filed as <b>ERR-044-001</b>; the code follows the engine.
         /// </para>
         /// </param>
+        /// <param name="onPitchAgentIdCount">
+        /// The number of leading entries of <paramref name="occupancyByAgentId"/> that are ON-PITCH
+        /// agent ids — <c>MatchEngineConstants.SQUAD_SIZE</c> in production. Every entry at or past
+        /// this index is one of the engine's synthetic bench ids. <see cref="ApplySubstitution"/> uses
+        /// this boundary to refuse a <c>SubstitutionEvent</c> whose <c>Incoming</c> names an on-pitch
+        /// id (an on-pitch agent id cannot come ON) or whose <c>Outgoing</c> names a bench id (only an
+        /// on-pitch agent id can go OFF) — <b>ERR-044-022</b>, the gap the M1 seed-injectivity check
+        /// alone could not close: that check runs once, over the whole seed, and knows only player ids
+        /// and array length, never which agent ids are on-pitch versus bench.
+        /// </param>
         /// <param name="competitionId">The competition partition these cards accrue in (FR-DC-012).</param>
         /// <exception cref="ArgumentNullException"><paramref name="occupancyByAgentId"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="onPitchAgentIdCount"/> is not
+        /// strictly greater than zero and at most <paramref name="occupancyByAgentId"/>'s length
+        /// (ERR-044-022).</exception>
         /// <exception cref="ArgumentException">The seed is empty, carries a negative player id that is
         /// not <see cref="NO_PLAYER"/>, or maps the same non-<see cref="NO_PLAYER"/> player id to two
         /// agent ids (M1, reviewed findings pass — the seed must be one-to-one, or a card at either
         /// agent id would attribute to the same player while whoever else the seed intended for one of
         /// those ids loses his mapping entirely).</exception>
-        public CardLedgerFold(int[] occupancyByAgentId, int competitionId)
+        public CardLedgerFold(int[] occupancyByAgentId, int onPitchAgentIdCount, int competitionId)
         {
             if (occupancyByAgentId == null)
             {
@@ -168,6 +231,16 @@ namespace TacticalDirector.Discipline
                     "where the message can still name the cause).",
                     nameof(occupancyByAgentId));
             }
+            if (onPitchAgentIdCount <= 0 || onPitchAgentIdCount > occupancyByAgentId.Length)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(onPitchAgentIdCount), onPitchAgentIdCount,
+                    "CardLedgerFold: onPitchAgentIdCount must be > 0 and <= the occupancy seed's " +
+                    "length (" + occupancyByAgentId.Length + ") — it marks the boundary between " +
+                    "on-pitch agent ids and the engine's synthetic bench ids (ERR-044-022); every " +
+                    "entry from it onward is a bench id.");
+            }
+            _onPitchAgentIdCount = onPitchAgentIdCount;
 
             _occupancy = new int[occupancyByAgentId.Length];
 
@@ -482,8 +555,10 @@ namespace TacticalDirector.Discipline
         /// <summary>
         /// Moves the outgoing slot's occupancy to the incoming player's identity (FR-DC-005). Both ids
         /// must be mapped: the outgoing one is an on-pitch agent slot, the incoming one the engine's
-        /// synthetic bench id. The vacated incoming slot is cleared (M1) so no player id maps to two
-        /// agent ids once this returns.
+        /// synthetic bench id — refused directly if either is the wrong KIND of id
+        /// (<see cref="_onPitchAgentIdCount"/>, ERR-044-022), before either is even looked up. The
+        /// vacated incoming slot is cleared (M1) so no player id maps to two agent ids once this
+        /// returns.
         /// </summary>
         private void ApplySubstitution(int outgoingAgentId, int incomingAgentId)
         {
@@ -499,6 +574,30 @@ namespace TacticalDirector.Discipline
                     "DIFFERENT player ON to it; the same id cannot be both (M1).");
             }
 
+            // ERR-044-022 (reviewed findings pass): Incoming must be a BENCH id and Outgoing must be an
+            // ON-PITCH id. Before this pair of guards existed, a malformed record naming an ON-PITCH
+            // Incoming (Appendix C's own "slot 19" shape, ERR-044-001) reached the write below
+            // unchecked — e.g. Sub(Outgoing=5, Incoming=6) with 6 an occupied on-pitch slot: the write
+            // overwrote slot 5's mapping with slot 6's occupant, and the vacated-slot clear then erased
+            // slot 6's own mapping, so slot 5's PRIOR occupant lost his mapping entirely and a card at
+            // slot 5 landed on the wrong player. M1's seed-injectivity check cannot catch this — it
+            // runs once, at construction, over player ids and never learns which agent ids are on-pitch
+            // versus bench; only this boundary can.
+            if (incomingAgentId < _onPitchAgentIdCount)
+            {
+                throw new InvalidOperationException(
+                    "CardLedgerFold: SubstitutionEvent.Incoming = " + incomingAgentId + " is an " +
+                    "ON-PITCH agent id (< " + _onPitchAgentIdCount + ") — an on-pitch agent id cannot " +
+                    "come ON (ERR-044-022). Only the engine's synthetic bench ids may be Incoming.");
+            }
+            if (outgoingAgentId >= _onPitchAgentIdCount)
+            {
+                throw new InvalidOperationException(
+                    "CardLedgerFold: SubstitutionEvent.Outgoing = " + outgoingAgentId + " is not an " +
+                    "on-pitch agent id (>= " + _onPitchAgentIdCount + ") — only an on-pitch agent id " +
+                    "can go OFF (ERR-044-022).");
+            }
+
             int incomingPlayerId = OccupantOf(incomingAgentId, "SubstitutionEvent.Incoming");
 
             // Read the outgoing slot too, purely so an unmapped OUTGOING id fails loud here rather than
@@ -510,9 +609,16 @@ namespace TacticalDirector.Discipline
             // M1 (reviewed findings pass): clear the vacated incoming slot. Left mapped, incomingPlayerId
             // would occupy TWO agent ids after this swap — a card naming either attributes to him, which
             // is silent double-booking when a malformed record later names the stale incoming id
-            // (Appendix C's own "slot 19" shape, ERR-044-001). Clearing makes that impossible rather
-            // than merely unlikely: OccupantOf refuses NO_PLAYER, so any later record naming this agent
-            // id now throws F1 instead of silently attributing to whoever was just subbed on.
+            // (Appendix C's own "slot 19" shape, ERR-044-001).
+            //
+            // CORRECTED (ERR-044-022, reviewed findings pass): this comment originally claimed the
+            // clear alone made that double-booking "impossible rather than merely unlikely". That was
+            // FALSE as written — it only closed the narrow shape where Incoming was genuinely a bench
+            // id; it did nothing to stop Incoming naming an ON-PITCH id with a live occupant, which the
+            // two guards above now refuse outright before this write or this clear ever runs. With
+            // those guards in place the claim is finally true: OccupantOf refuses NO_PLAYER, so any
+            // later record naming this now-vacated agent id throws F1 instead of silently attributing
+            // to whoever was just subbed on.
             _occupancy[incomingAgentId] = NO_PLAYER;
         }
 
@@ -664,6 +770,17 @@ namespace TacticalDirector.Discipline
 // |         |            |        | throw instead of silently corrupting occupancy; a skipped or      |
 // |         |            |        | out-of-order ObserveTick call now throws instead of silently      |
 // |         |            |        | losing cards.                                                      |
+// |         |            |        | **CORRECTION 2026-08-16, latest again (ERR-044-022, reviewed      |
+// |         |            |        | findings pass):** this row's claim that "a substitution whose     |
+// |         |            |        | Incoming names an already-occupied on-pitch slot ... now throw"   |
+// |         |            |        | was FALSE when written. The M1 fix above closed only the seed's   |
+// |         |            |        | one-to-one CHECK (at construction) and the vacated-BENCH-slot     |
+// |         |            |        | clear (at ApplySubstitution) — neither one asks whether Incoming  |
+// |         |            |        | is actually a bench id. Sub(Outgoing=5, Incoming=6) with 6 an     |
+// |         |            |        | occupied ON-PITCH slot did NOT throw at v1.8: it silently         |
+// |         |            |        | destroyed slot 5's prior occupant's mapping and misattributed his |
+// |         |            |        | cards to slot 6's occupant. TRUE as of v1.10 below, which adds    |
+// |         |            |        | the onPitchAgentIdCount boundary this row's claim was missing.    |
 // | 1.9     | 2026-08-16, latest | — | Findings A and C, doc only. A: CommitWithExplicitConfig's  |
 // |         |            |        | L2 doc corrected: the helpers ARE wired now (DisciplineRules.cs   |
 // |         |            |        | v1.9/v1.10), so the "outside this file's ownership for this pass" |
@@ -675,4 +792,24 @@ namespace TacticalDirector.Discipline
 // |         |            |        | field of ANY type, not only int, matching                         |
 // |         |            |        | DisciplineConfigCompletenessTests.cs v1.1. No code change either   |
 // |         |            |        | way.                                                                |
+// | 1.10    | 2026-08-16, latest again | — | Reviewed findings pass, findings A and B. A        |
+// |         |            |        | (ERR-044-022): the constructor gains a required onPitchAgentIdCount|
+// |         |            |        | parameter (0 < onPitchAgentIdCount <= the seed's length);          |
+// |         |            |        | ApplySubstitution refuses an Incoming below that boundary (an      |
+// |         |            |        | on-pitch id cannot come on) and an Outgoing at or past it (only an |
+// |         |            |        | on-pitch id can go off). Closes the hole M1 (v1.8) could not see:  |
+// |         |            |        | the seed's one-to-one check knows only player ids, never which     |
+// |         |            |        | agent ids are on-pitch versus bench. The v1.8 row above is         |
+// |         |            |        | annotated in place (not rewritten) with the dated correction; the  |
+// |         |            |        | inline "impossible rather than merely unlikely" comment at         |
+// |         |            |        | ApplySubstitution is corrected the same way — false when written,  |
+// |         |            |        | true now that these two guards exist. B (ERR-044-023, doc only):   |
+// |         |            |        | the constructor's XML doc and the type remarks now state the       |
+// |         |            |        | boot-time precondition on the seed explicitly — MatchEngine.       |
+// |         |            |        | PlayerIdsByAgentId is one-to-one over non-sentinel entries only AT |
+// |         |            |        | BOOT, since SubstitutePlayer never clears the incoming player's    |
+// |         |            |        | bench-origin entry — matching the corrected MatchEngine.cs XML doc |
+// |         |            |        | and the new SeasonLoopDisciplineTests cross-assembly lock. New     |
+// |         |            |        | CardLedgerFoldTests locks: Sub with an occupied on-pitch Incoming  |
+// |         |            |        | throws; Outgoing >= onPitchAgentIdCount throws.                   |
 #endregion

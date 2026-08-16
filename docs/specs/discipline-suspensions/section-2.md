@@ -1,7 +1,18 @@
 # Discipline & Suspensions #44 — Section 2: Requirements, Data Structures, Failure Modes
 
 **Created:** July 24, 2026
-**Last Updated:** August 16, 2026, later still (v0.13 — **`ERR-030-045`** (an adversarially-reviewed
+**Last Updated:** August 16, 2026, latest (v0.14 — reviewed findings pass, finding A. `CardLedgerFold`'s
+§2.2 constructor line gains a required `onPitchAgentIdCount` parameter (**`ERR-044-022`**): the
+constructor now takes `int[] occupancyByAgentId, int onPitchAgentIdCount, int competitionId`, matching
+`CardLedgerFold.cs` v1.10. The boundary marks where on-pitch agent ids end and the engine's synthetic
+bench ids begin (`MatchEngineConstants.SQUAD_SIZE` in production) — `ApplySubstitution` (§3.1) uses it
+to refuse a `SubstitutionEvent` whose `Incoming` names an on-pitch id or whose `Outgoing` names a bench
+id, closing the gap the M1 seed-injectivity check (v0.12) could not see on its own: that check runs
+once, over player ids, and never learns which agent ids are on-pitch versus bench. Without it,
+`Sub(Outgoing=5, Incoming=6)` with agent id 6 an occupied ON-PITCH slot silently destroyed slot 5's
+prior occupant's mapping and misattributed his cards — the Appendix C "slot 19" family (`ERR-044-001`)
+one layer deeper than the seed check alone could reach.)
+**Last Updated (prior):** August 16, 2026, later still (v0.13 — **`ERR-030-045`** (an adversarially-reviewed
 High continuing `ERR-030-044`'s, filed at #30 which owns the rule; back-propagated here). §2.3's
 `ERR-044-019` note stated the extremis compromise in a two-case form whose second case — "forced to
 start" — read as if only positional forcing could reach it (its parenthetical named the club's only
@@ -91,7 +102,7 @@ re-scoped off "the engine-resolved fixture" to every resolved squad on both reso
 fail-loud withdrawn in favour of #30 §2.3 F9, with the suspension-as-stricter-reinstatement-tier
 decision recorded)
 **Last Updated (prior):** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.13
+**Version:** 0.14
 **Status:** APPROVED
 
 ---
@@ -174,7 +185,13 @@ public sealed class CardLedgerFold
     // [FIXED] Occupancy sentinel: this agent id maps to no player (an unused seed slot). Appendix
     // A/C use the name normatively — a caller-facing, load-bearing value (ERR-044-013).
     public const int NO_PLAYER = -1;
-    public CardLedgerFold(int[] occupancyByAgentId, int competitionId);
+    // onPitchAgentIdCount (ERR-044-022) marks where on-pitch agent ids end and the engine's synthetic
+    // bench ids begin — MatchEngineConstants.SQUAD_SIZE in production. ApplySubstitution (§3.1) uses
+    // it to refuse an Incoming that names an on-pitch id or an Outgoing that names a bench id, a
+    // distinction the seed's own one-to-one check cannot make on its own. Also ERR-044-023: the seed
+    // itself must be a snapshot taken AT BOOT, before any substitution — MatchEngine.PlayerIdsByAgentId
+    // is one-to-one over its non-sentinel entries only at that moment (§4.3).
+    public CardLedgerFold(int[] occupancyByAgentId, int onPitchAgentIdCount, int competitionId);
     public int  PendingCardCount { get; }        // cards folded so far this fixture; 0 for most
     // ERR-044-020: refuses a NON-CONSECUTIVE tap.CurrentTick (InvalidOperationException, naming both
     // the offending and the last-observed tick), except on the very first call to a fresh fold, which
@@ -323,4 +340,5 @@ chosen.
 | 0.11 | 2026-08-16 | — | **`ERR-044-019`** (adversarial review, H2; the rule itself is #30's and is amended at `ERR-030-044`). §2.3's ERR-044-003 note stated the extremis compromise as ONE case — "a suspended player plays only when the alternative is a club that cannot take the field at all" — and that was false of the implementation on both halves. The TRIGGER is #30 §3.4's probe `SquadRating.CanFieldStartingEleven`, which is `LineupSelector`'s full selection walk (eleven position-matched starters PLUS the seven-slot bench), so the tier fires on **bench depth** at a club that can field a perfectly legal XI; and the pre-fix within-tier ORDERING (earliest roster position) then put the reinstated man into the pool the rating-greedy selector draws the starting eleven from, which started him — after which ERR-044-003 stage 1's exemption stalled his ban for as long as the club stayed depleted. Corrected to the two-case form #30's amended key produces: **benched** (the common case, and what the amended key prefers) ⇒ not in `fieldedPlayerIds` ⇒ FR-DC-011's decrement is NOT exempted ⇒ the ban advances normally; **forced to start** (no candidate choice keeps a reinstated-suspended player out of the XI — the sole-goalkeeper case) ⇒ exempt ⇒ and only then does the ban stall, which is the residual §7.2's unbuilt tiers delete. No FR row changed: FR-DC-011 already says "did not appear in", which is exactly right in both cases — what was wrong was this section's account of when the appearance happens. §7.2's mirror corrected in the same commit (`section-7.md` v0.8); code at `src/season-save/AvailabilityComposition.cs` v1.5. |
 | 0.12 | 2026-08-16, yet later | — | **Final fixer pass, four findings.** **`ERR-044-018`** (M8): §2.2's `DisciplineState` block declared — `Count`, `EntryAt(int)`, `EntryFor(int,int)`, `HasEntry(int,int)`, `FromEntries(DisciplineEntry[])` — replacing a bare `{ /* map ... */ }` comment; cross-referenced to F3 (§2.3) and FR-DC-017 for `FromEntries`' refusals, and notes `EntryFor`'s negative-key posture (the zero row, not a throw — `DisciplineState.cs` v1.1). **`ERR-044-020`** (M3): §2.2 gains the `IDisciplineTickLedgerTap` interface declaration (previously referenced, never declared), with `CurrentTick`, and `CardLedgerFold.ObserveTick`'s declaration gains a note on the consecutive-tick refusal and the partial-application poison latch — spec-side sync of a code addition the spec text had been silent on, not a contradiction. **M7** (`ERR-044-017`): FR-DC-006/FR-DC-007's four `[GT]` constant names renamed ALL_CAPS → PascalCase (`YellowAccumulationThreshold`/`AccumBanMatches`/`SecondYellowBanMatches`/`StraightRedBanMatches`) to match `DisciplineConstants.cs` and `src/CLAUDE.md` §3.2.3. **L6**: v0.8/v0.9's `DisciplineRules.cs`/`CardLedgerFold.cs` line-number citations replaced with member names in place, annotated. See `spec-error-log.md` `ERR-044-017`, `ERR-044-018`, `ERR-044-020`. |
 | 0.13 | 2026-08-16, later still | — | **`ERR-030-045`** (an adversarially-reviewed High continuing `ERR-030-044`'s; filed at #30 `section-3.md` v2.8, which owns the rule; back-propagated here). §2.3's v0.11 note stated the extremis compromise as two cases and pinned the second — "forced to start" — to positional forcing, its parenthetical naming the club's only goalkeeper as *the* case. That is narrower than what the implementation can produce. A club short by **more than one** player gets no usable probe on any reinstatement but the last, because fieldability is monotone in adding players — nothing is fieldable until the gap closes — so #30's within-tier key decides those picks blind. Its amended pass-3 key (weakest banned player first, by the selector's own rating) makes them *well*, and that is all it can do: if every completing choice starts a suspended player, one starts. So #30's key is a **best-effort minimisation** of the forced-start case, not a guarantee against it, and #44 must say so, because a mass-suspension club is precisely the population its own subject creates. The goalkeeper parenthetical moves into a new `ERR-030-045` note and the bullet is reworded to the condition that actually holds ("no candidate choice keeps every reinstated-suspended player out of the eleven"). No FR row changed — FR-DC-011 says "did not appear in", which is right in every case; what was wrong, again, was this section's account of when the appearance happens. §7.2's mirror amended in the same commit (`section-7.md` v0.9); code `src/season-save/AvailabilityComposition.cs` v1.6, `src/match-engine/SquadRating.cs` v1.5. |
+| 0.14 | 2026-08-16, latest | — | **Reviewed findings pass, finding A (`ERR-044-022`).** §2.2's `CardLedgerFold` constructor line gains a required `onPitchAgentIdCount` parameter (`int[] occupancyByAgentId, int onPitchAgentIdCount, int competitionId`), with an inline comment stating the boundary it marks (on-pitch agent ids end, the engine's synthetic bench ids begin — `MatchEngineConstants.SQUAD_SIZE` in production), what it is FOR (`ApplySubstitution`, §3.1, refusing an on-pitch `Incoming` or a bench `Outgoing`), and why the seed's own M1 one-to-one check could not close this gap alone (it runs once, over player ids, and never learns which agent ids are on-pitch versus bench). The same comment cross-references `ERR-044-023`'s boot-time seed precondition, declared in full at §4.3. Matches `CardLedgerFold.cs` v1.10 exactly. See `spec-error-log.md` `ERR-044-022`. |
 #endregion

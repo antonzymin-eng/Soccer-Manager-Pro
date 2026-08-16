@@ -1,7 +1,17 @@
 # Discipline & Suspensions #44 — Section 3: Core Algorithms
 
 **Created:** July 24, 2026
-**Last Updated:** August 16, 2026, later (v0.13 — final fixer pass over the reviewed-findings round.
+**Last Updated:** August 16, 2026, latest (v0.14 — reviewed findings pass, findings A/B. **`ERR-044-022`**
+(finding A): the `CardLedgerFold` constructor pseudocode gains a required `onPitchAgentIdCount`
+parameter and the `SubstitutionEvent` branch's `ApplySub` call gains an inline comment stating the two
+new refusals — `Incoming < onPitchAgentIdCount` (an on-pitch id cannot come on) and
+`Outgoing >= onPitchAgentIdCount` (only an on-pitch id can go off) — closing the gap the M1
+one-to-one check (v0.13) could not see on its own: it knows only player ids, never which agent ids are
+on-pitch versus bench. Matches `CardLedgerFold.cs` v1.10. **`ERR-044-023`** (finding B, doc only): the
+constructor line's own comment now states the boot-only precondition on `lineup` explicitly — it must
+be taken before any substitution, since the engine's slot→PlayerId map is one-to-one over non-sentinel
+entries only at that moment (bound in full at §4.3).)
+**Last Updated (prior):** August 16, 2026, later (v0.13 — final fixer pass over the reviewed-findings round.
 **`ERR-044-021`** (M1): §3.1's normative pseudocode stated the substitution swap as
 `occupancy.ApplySub(record.Outgoing, record.Incoming)` with no instruction to clear
 `record.Incoming`'s own slot afterward, and the constructor line's seed contract named only "F1 on
@@ -63,7 +73,7 @@ the prior text only implied by describing separate fixtures)
 ordering paragraph re-scoped to both resolution paths, and the `FilterAvailable` pseudocode comment
 points its viability rule at #30 §2.3 F9 instead of a withdrawn F5)
 **Last Updated (prior):** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.13
+**Version:** 0.14
 **Status:** APPROVED
 
 ---
@@ -82,11 +92,19 @@ validates every `[GT]` it could throw on **before** applying the first buffered 
 leaves the fold's buffer untouched and `DisciplineRules` unmodified — never applied-then-discarded.
 
 ```
-CardLedgerFold(lineup /* slot -> PlayerId, incl. bench identities */):
+CardLedgerFold(lineup /* slot -> PlayerId, incl. bench identities */, onPitchAgentIdCount):
     # F1 on any gap; and ONE-TO-ONE (ERR-044-021) — no two agent ids may map to the same non-empty
     # player id, or a card at EITHER id attributes to that one player while whichever OTHER player the
     # seed actually intended for one of those ids is never attributed a card at all. Checked once here,
     # at construction, over the whole seed — not left as a runtime property nothing enforces.
+    #
+    # onPitchAgentIdCount (ERR-044-022): 0 < onPitchAgentIdCount <= len(lineup) — the boundary between
+    # on-pitch agent ids [0, onPitchAgentIdCount) and the engine's synthetic bench ids
+    # [onPitchAgentIdCount, len(lineup)). The one-to-one check above cannot by itself tell a bench id
+    # from a pitch id — it only sees player ids — so ApplySub below uses this boundary directly.
+    #
+    # lineup MUST be taken AT BOOT, before any substitution (ERR-044-023, §4.3): the engine's own
+    # slot->PlayerId map is one-to-one over non-sentinel entries only at that moment.
     occupancy := lineup
     pending := []                                           # buffered (PlayerId, CardKind) pairs
     committed := false                                       # Commit runs exactly once (FR-DC-010)
@@ -114,6 +132,15 @@ CardLedgerFold(lineup /* slot -> PlayerId, incl. bench identities */):
                     # the stale incoming id would silently attribute a second card to him instead of
                     # failing loud (F1). Refuses Outgoing == Incoming (the write and the clear would
                     # target the same index, and the clear would erase the write an instant later).
+                    #
+                    # ERR-044-022: ALSO refuses Incoming < onPitchAgentIdCount (an on-pitch agent id
+                    # cannot come ON) and Outgoing >= onPitchAgentIdCount (only an on-pitch agent id
+                    # can go OFF) — BEFORE the write/clear pair above runs. Without this, Incoming
+                    # naming an occupied ON-PITCH slot (the Appendix C "slot 19" family, ERR-044-001)
+                    # reached the write unchecked: the write silently destroyed the OUTGOING slot's
+                    # prior occupant's mapping and the clear then erased the (wrongly-named) Incoming
+                    # slot's own mapping too. The one-to-one check at construction cannot catch this —
+                    # it only ever sees player ids, never which agent ids are on-pitch versus bench.
                     occupancy.ApplySub(record.Outgoing, record.Incoming)
                 0x06 CardIssuedEvent:
                     pid := occupancy.OccupantAt(record.Recipient)          # F1 if unmapped
@@ -296,4 +323,5 @@ preserve this order.
 | 0.11 | 2026-08-15 | — | **`ERR-044-010`**, reviewed-findings pass: §3.3's `OnClubFixturePlayed` comment block gains a SUBSTITUTION DEPENDENCY paragraph recording that `fieldedPlayerIds` is today's STARTING eleven, not a played-eleven record, and stays correct only while no `MatchEngine.SubstitutePlayer` call site exists on the season path (verified against `src/discipline/CardLedgerFold.cs`'s own "the substitution branch has no production driver" remark and `src/season-save/SeasonLoop.cs`'s `FieldedXi`, which derives from the pre-kickoff `LineupSelector` walk). See `spec-error-log.md` `ERR-044-010`. |
 | 0.12 | 2026-08-16 | — | **`ERR-044-014`** (adversarial review, H1): §3.3's `OnClubFixturePlayed` pseudocode becomes `OnClubFixturePlayed(clubId, clubPlayerIds, fieldedPlayerIds)`, matches club membership by presence in `clubPlayerIds`, and REQUIREs it non-null (F2). The retired "DERIVABLE: `PlayerId / CLUB_SQUAD_SIZE == clubId` … no roster read is needed" comment is replaced by the reason it was unsafe: it was a second notion of membership beside `MarkSuspended`'s roster walk, agreeing only while #27's packing holds, and its stated guarantee — FR-DC-013's migration rule keeping a transferred player's id current — is not in force, `MigratePlayerId`/`DropPlayer` having no production caller (verified in `src/season-save/SeasonLoop.cs`). Also states that `clubId` is now identity/F2 only and deliberately un-cross-checked, and that the roster passed MUST be the unfiltered one, since every id being served is one the filter has just removed. `src/discipline/DisciplineRules.cs` v1.7, `src/season-save/SeasonLoop.cs` v1.29, same commit. See `spec-error-log.md` `ERR-044-014`. |
 | 0.13 | 2026-08-16, later | — | **Final fixer pass, two findings.** **`ERR-044-021`** (M1): §3.1's `CardLedgerFold` constructor line gains the one-to-one seed requirement alongside "F1 on any gap"; the `SubstitutionEvent` branch's `ApplySub` call gains an inline comment stating it clears `record.Incoming`'s vacated slot and refuses `Outgoing == Incoming` — both were previously silent on the exact shapes the reviewed findings pass closed in code (`CardLedgerFold.cs` v1.8), so an implementer following the OLD text verbatim would have reproduced the dormant hole. **`ERR-044-020`** (M3): `ObserveTick`'s pseudocode gains `faulted`/`lastObservedTick` state and the consecutive-tick + poison-latch refusals, matching `CardLedgerFold.cs`'s real `ObserveTick` (v1.8) and `IDisciplineTickLedgerTap.CurrentTick` (declared at `section-2.md` v0.12 §2.2). Also renamed the four `[GT]` constants in this section's active pseudocode ALL_CAPS → PascalCase (M7) — the v0.7/v0.8 version rows below, which quote the pre-rename pseudocode by name, are left as historical quotes per the `DisciplineConstants.cs`/`appendices.md` L3 precedent. See `spec-error-log.md` `ERR-044-017`, `ERR-044-020`, `ERR-044-021`. |
+| 0.14 | 2026-08-16, latest | — | **Reviewed findings pass, findings A/B.** **`ERR-044-022`** (finding A): the `CardLedgerFold` constructor pseudocode's signature gains `onPitchAgentIdCount`, with a comment stating the on-pitch/bench boundary it marks and that the one-to-one check above it cannot by itself distinguish a bench id from a pitch id. The `SubstitutionEvent` branch's `ApplySub` call gains a second comment stating the two new refusals it now performs BEFORE the write/clear pair — `Incoming < onPitchAgentIdCount` and `Outgoing >= onPitchAgentIdCount` — and the exact pre-fix defect they close (an on-pitch `Incoming` reached the write unchecked, silently destroying the outgoing slot's prior occupant's mapping). Matches `CardLedgerFold.cs` v1.10. **`ERR-044-023`** (finding B, doc only): the constructor line's comment states the `lineup` boot-time precondition explicitly, cross-referencing §4.3 for the full statement. See `spec-error-log.md` `ERR-044-022`, `ERR-044-023`. |
 #endregion

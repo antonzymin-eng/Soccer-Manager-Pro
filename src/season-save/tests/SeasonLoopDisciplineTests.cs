@@ -1,5 +1,17 @@
 // File:     src/season-save/tests/SeasonLoopDisciplineTests.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16, latest (reviewed findings pass, findings A/B — v1.11: the groundTruthFold
+//           construction in ANewBanEarnedThisFixtureIsNotServedByThisSameFixture updated for
+//           CardLedgerFold's new required onPitchAgentIdCount parameter (ERR-044-022),
+//           MatchEngineConstants.SQUAD_SIZE. New lock PlayerIdsByAgentId_IsInjectiveAtBoot_
+//           ButNotAfterOneSubstitution (ERR-044-023) pins the cross-assembly precondition
+//           CardLedgerFold's constructor doc now states explicitly — MatchEngine.PlayerIdsByAgentId()
+//           is one-to-one over non-sentinel entries only AT BOOT, and is proven NOT injective after one
+//           SubstitutePlayer call, naming the constraint a future caller rebuilding a fold from a
+//           restored (necessarily mid-fixture) engine would hit — beside the existing
+//           TheEngineAndTheFoldAgreeOnTheNoPlayerSentinel sentinel-agreement lock, the same reasoning
+//           for the same reason: neither match-engine nor discipline can see the other's code, so
+//           season-save is the one place both are visible.
 // Modified: 2026-08-16 (ERR-044-014, adversarial-review H1 — both test IFixtureDisciplineDriver
 //           implementations updated for OnClubFixturePlayed's new clubPlayerIds parameter — v1.10)
 // Modified: 2026-08-15 (reviewed findings, M1/M2/M3 — v1.9: M1 parameterises the extremis-exemption
@@ -28,8 +40,9 @@
 //           005/006, T-DC-SAV-002); Season & Competition Loop #30 §3.4/§5 (the composed seam,
 //           ERR-030-009/-016/-029/-042, T-SN-DET-004); ERR-044-002 (both resolution paths), ERR-044-003
 //           (the fielded-eleven serving exemption, stage 1); ERR-030-037 (the M6/M7 within-fixture
-//           serve-before-commit lock); ERR-008-002 (home/away asymmetry); unified season save §4 / KD-6
-//           (restore fidelity — the C1/C2 AR's H2); Code Standards #20
+//           serve-before-commit lock); ERR-044-022 (the onPitchAgentIdCount boundary); ERR-044-023
+//           (the boot-only PlayerIdsByAgentId precondition); ERR-008-002 (home/away asymmetry); unified
+//           season save §4 / KD-6 (restore fidelity — the C1/C2 AR's H2); Code Standards #20
 // Purpose:  The #44 T2 WIRING locks. Every case here fails if a wiring point is reverted — the fold's
 //           seed and its per-tick pump, the filter at the seam on both paths and both clubs, the
 //           serving decrement (including the ERR-044-003 fielded-eleven exemption, now on both clubs
@@ -193,6 +206,68 @@ namespace TacticalDirector.SeasonSave.Tests
                 MatchEngineConstants.NO_PLAYER_ID, Is.EqualTo(CardLedgerFold.NO_PLAYER),
                 "MatchEngineConstants.NO_PLAYER_ID and CardLedgerFold.NO_PLAYER must be numerically "
                 + "equal — the occupancy array crosses that boundary untranslated.");
+        }
+
+        /// <summary>Counts non-sentinel entries and returns whether every one is unique.</summary>
+        private static bool IsInjectiveOverNonSentinelEntries(int[] byAgent)
+        {
+            var seen = new System.Collections.Generic.HashSet<int>();
+            for (int i = 0; i < byAgent.Length; i++)
+            {
+                if (byAgent[i] == MatchEngineConstants.NO_PLAYER_ID)
+                {
+                    continue;
+                }
+                if (!seen.Add(byAgent[i]))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        [Test]
+        public void PlayerIdsByAgentId_IsInjectiveAtBoot_ButNotAfterOneSubstitution()
+        {
+            // ERR-044-023. CardLedgerFold's constructor doc and its type remarks both now state a
+            // BOOT-ONLY precondition on the array MatchEngine.PlayerIdsByAgentId returns: one-to-one
+            // over its non-sentinel entries only at that moment. Neither assembly can see the other's
+            // code (match-engine cannot reference discipline; discipline cannot reference match-engine),
+            // so season-save — the one place both are visible — is where that precondition is pinned or
+            // nowhere, exactly like TheEngineAndTheFoldAgreeOnTheNoPlayerSentinel above pins the
+            // sentinel agreement. This is deliberately not asserted through CardLedgerFold's own
+            // constructor (which would just re-derive the M1 guard, already locked in
+            // CardLedgerFoldTests); it is asserted directly against the engine's array, naming the
+            // property a future caller who rebuilds a fold from a RESTORED (necessarily mid-fixture,
+            // necessarily post-substitution) engine would hit.
+            League league = FourClubLeague();
+            SeasonLoop loop = LoopOver(league, RoundResolutionMode.FullEngine, out _);
+            Fixture fixture = loop.State.FixtureAt(0);
+            TacticalDirector.MatchEngine.MatchEngine engine = loop.BootFixtureEngine(in fixture, league);
+
+            Assert.That(IsInjectiveOverNonSentinelEntries(engine.PlayerIdsByAgentId()), Is.True,
+                "At boot, before any substitution, PlayerIdsByAgentId() must be one-to-one over its "
+                + "non-sentinel entries — this is the precondition CardLedgerFold's constructor relies "
+                + "on and SeasonLoop.PlayThroughEngine satisfies by seeding immediately after boot.");
+
+            // Slot 1 rather than 0: slot 0 is the goalkeeper and bench 0 need not be one (the same
+            // choice PlayerIdsByAgentId_FollowsASubstitution above makes).
+            engine.SubstitutePlayer(teamId: 0, outSlotIndex: 1, benchIndex: 0, SubstitutionReason.Tactical);
+
+            // Documenting the known shape (ERR-044-023), not a regression this test can fix: MatchEngine.
+            // SubstitutePlayer copies the incoming player's identity onto the outgoing on-pitch slot but
+            // never clears his OWN bench-origin entry, so after one substitution he occupies TWO agent
+            // ids and the array is no longer injective. A fold seeded from THIS array would correctly
+            // throw at construction (CardLedgerFold's own M1 one-to-one check) — which is exactly why a
+            // caller must take the seed at boot, before any substitution, and never re-derive it later.
+            Assert.That(IsInjectiveOverNonSentinelEntries(engine.PlayerIdsByAgentId()), Is.False,
+                "After one substitution, PlayerIdsByAgentId() is expected to be NON-injective — the "
+                + "substitute now occupies both his new on-pitch slot and his stale bench id. If this "
+                + "ever starts passing, MatchEngine.SubstitutePlayer has started clearing the bench "
+                + "entry and the boot-only precondition this test exists to name may no longer be "
+                + "necessary — but the doc comments it locks (CardLedgerFold's constructor, MatchEngine."
+                + "PlayerIdsByAgentId, and this test's own) would then need revisiting together, not "
+                + "just this assertion.");
         }
 
         // ── the fold's seed: the engine reports who it actually fielded ────────────────────
@@ -461,7 +536,8 @@ namespace TacticalDirector.SeasonSave.Tests
                 TacticalDirector.MatchEngine.MatchEngine groundTruthEngine =
                     groundTruthLoop.BootFixtureEngine(in fixture, league);
                 var groundTruthFold = new CardLedgerFold(
-                    groundTruthEngine.PlayerIdsByAgentId(), DisciplineConstants.LeagueCompetitionKey);
+                    groundTruthEngine.PlayerIdsByAgentId(), MatchEngineConstants.SQUAD_SIZE,
+                    DisciplineConstants.LeagueCompetitionKey);
                 var groundTruthTap = new MatchEngineDisciplineTap(groundTruthEngine);
                 while (!groundTruthEngine.MatchEnded)
                 {
@@ -1385,4 +1461,16 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | test's assertions are untouched, including the extremis-         |
 // |         |            |        | exemption pair, whose banned players are all on the roster the   |
 // |         |            |        | loop now supplies.                                               |
+// | 1.11    | 2026-08-16, latest | — | Reviewed findings pass, findings A/B. groundTruthFold's       |
+// |         |            |        | construction updated for CardLedgerFold's new required           |
+// |         |            |        | onPitchAgentIdCount parameter (ERR-044-022), passing              |
+// |         |            |        | MatchEngineConstants.SQUAD_SIZE. New cross-assembly lock          |
+// |         |            |        | PlayerIdsByAgentId_IsInjectiveAtBoot_ButNotAfterOneSubstitution   |
+// |         |            |        | (ERR-044-023) proves PlayerIdsByAgentId() is one-to-one over     |
+// |         |            |        | non-sentinel entries at boot and NOT after one SubstitutePlayer  |
+// |         |            |        | call, pinning the boot-only precondition CardLedgerFold's         |
+// |         |            |        | constructor doc now states explicitly, beside the existing        |
+// |         |            |        | NO_PLAYER-sentinel-agreement lock this file already carries for   |
+// |         |            |        | the same reason (neither match-engine nor discipline can see the |
+// |         |            |        | other's code).                                                     |
 #endregion

@@ -1,5 +1,8 @@
 // File:     src/season-save/tests/SeasonLoopCareerTests.cs
 // Created:  2026-08-06
+// Modified: 2026-08-16, later (adversarial-review Medium — the three PlayerCareerStates.SelectAvailable
+//           oracle call sites re-pointed at AvailabilityComposition.Compose(discipline: null) directly,
+//           since the method was deleted as production-dead — v1.9)
 // Modified: 2026-08-16 (ERR-044-014, adversarial-review H1 — the one BootFixtureEngine call site with
 //           explicit out parameters updated for its two new roster-id outs, discarded here — v1.8)
 // Modified: 2026-08-08
@@ -554,7 +557,10 @@ namespace TacticalDirector.SeasonSave.Tests
                 career.SetMedicalState(fixture.HomeClubId, home.GetPlayer(local).PlayerId, in injured);
             }
 
-            Squad expected = career.SelectAvailable(home);
+            // Oracle = the composed seam with discipline structurally absent; if this fixture ever
+            // wires a discipline tally, pass it here too.
+            Squad expected =
+                AvailabilityComposition.Compose(home, career, discipline: null, competitionId: 0);
             Assert.AreNotSame(home, expected, "Precondition: the filter must have removed somebody.");
             Assert.AreNotEqual(
                 SquadRating.StartingElevenMean(home), SquadRating.StartingElevenMean(expected),
@@ -655,9 +661,13 @@ namespace TacticalDirector.SeasonSave.Tests
 
             loop.BootFixtureEngine(in fixture, provider, out int[] homeXi, out int[] awayXi, out _, out _);
 
-            int[] expectedHome = SquadRating.StartingElevenPlayerIds(career.SelectAvailable(home));
+            // Oracle = the composed seam with discipline structurally absent; if this fixture ever
+            // wires a discipline tally, pass it here too.
+            int[] expectedHome = SquadRating.StartingElevenPlayerIds(
+                AvailabilityComposition.Compose(home, career, discipline: null, competitionId: 0));
             int[] expectedAway = SquadRating.StartingElevenPlayerIds(
-                career.SelectAvailable(provider.ResolveByClubId(fixture.AwayClubId)));
+                AvailabilityComposition.Compose(
+                    provider.ResolveByClubId(fixture.AwayClubId), career, discipline: null, competitionId: 0));
             CollectionAssert.AreEqual(expectedHome, homeXi,
                 "the ids handed back are the filtered selector's eleven, in the selector's own order");
             CollectionAssert.AreEqual(expectedAway, awayXi,
@@ -907,4 +917,11 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | now reads club membership from instead of deriving it from #27's |
 // |         |            |        | id packing; this file's single explicit-out call site discards    |
 // |         |            |        | them (out _, out _). No assertion changed.                        |
+// | 1.9     | 2026-08-16, later | — | Adversarial-review Medium: this file's three oracle call sites   |
+// |         |            |        | used the now-deleted PlayerCareerStates.SelectAvailable, which    |
+// |         |            |        | agreed with the composed production seam only while no discipline |
+// |         |            |        | tally was wired (see PlayerCareerStates.cs v1.26). Re-pointed at |
+// |         |            |        | AvailabilityComposition.Compose(discipline: null) directly, with |
+// |         |            |        | a comment at each call site stating the oracle's scope explicitly.|
+// |         |            |        | No assertion or fixture changed.                                  |
 #endregion

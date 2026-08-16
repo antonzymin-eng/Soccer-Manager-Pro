@@ -1,5 +1,13 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
+// Modified: 2026-08-16, latest (reviewed findings pass, findings A/B — v1.30: the CardLedgerFold
+//           construction site in PlayThroughEngine now passes the new required onPitchAgentIdCount
+//           parameter (ERR-044-022), MatchEngineConstants.SQUAD_SIZE — the same cross-assembly
+//           agreement SeasonLoopDisciplineTests already locks for NO_PLAYER_ID. Comment-only otherwise:
+//           states that this call site is where the ERR-044-023 boot-time precondition on the seed is
+//           satisfied (read immediately after BootFixtureEngine, before any tick can call
+//           SubstitutePlayer). No behaviour change beyond what the new constructor parameter itself
+//           enforces — a fresh boot-time seed still satisfies the new guard trivially.)
 // Modified: 2026-08-16 (ERR-044-014, adversarial-review H1 — IFixtureDisciplineDriver.OnClubFixture-
 //           Played takes the club's roster ids, derived at the resolve→filter→configure site from the
 //           UNFILTERED squad by the new RosterIds helper, so #44 no longer derives club membership
@@ -1506,9 +1514,17 @@ namespace TacticalDirector.SeasonSave
             // — not a second LineupSelector walk here, which is the parallel-surface trap SquadRating
             // exists to prevent and which #29/#41's T2 AR pass 2 filed when a fielded XI was re-derived.
             // Null when discipline is not wired, and then not a single tick does any extra work.
+            //
+            // ERR-044-022/-023 (reviewed findings pass): MatchEngineConstants.SQUAD_SIZE is the
+            // on-pitch/bench boundary CardLedgerFold's constructor now requires, and this call site is
+            // exactly where the ERR-044-023 boot-time precondition is satisfied — PlayerIdsByAgentId()
+            // is read here, immediately after BootFixtureEngine and before the tick loop below can ever
+            // call SubstitutePlayer, so the seed is the one moment the engine's map is one-to-one.
             CardLedgerFold fold = _disciplineRules == null
                 ? null
-                : new CardLedgerFold(engine.PlayerIdsByAgentId(), DisciplineConstants.LeagueCompetitionKey);
+                : new CardLedgerFold(
+                    engine.PlayerIdsByAgentId(), MatchEngineConstants.SQUAD_SIZE,
+                    DisciplineConstants.LeagueCompetitionKey);
             MatchEngineDisciplineTap tap = fold == null ? null : new MatchEngineDisciplineTap(engine);
 
             _activeMatch = engine;
@@ -2098,4 +2114,12 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | inventory goes two -> three and records why the new null guard  |
 // |         |            |        | is structurally excluded too. No behaviour change on today's    |
 // |         |            |        | packed ids over a full roster.                                  |
+// | 1.30    | 2026-08-16, latest | — | Reviewed findings pass, findings A/B. PlayThroughEngine's   |
+// |         |            |        | CardLedgerFold construction passes the new required             |
+// |         |            |        | onPitchAgentIdCount parameter (ERR-044-022) —                   |
+// |         |            |        | MatchEngineConstants.SQUAD_SIZE, the same cross-assembly value  |
+// |         |            |        | SeasonLoopDisciplineTests already locks against                 |
+// |         |            |        | CardLedgerFold.NO_PLAYER via NO_PLAYER_ID. Comment added noting |
+// |         |            |        | this call site is where the ERR-044-023 boot-time precondition  |
+// |         |            |        | on the seed is satisfied. No behaviour change.                   |
 #endregion

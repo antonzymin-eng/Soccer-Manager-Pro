@@ -1,5 +1,17 @@
 // File:     src/discipline/tests/CardLedgerFoldTests.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16, latest again (reviewed findings pass, finding A — v1.8: every CardLedgerFold
+//           constructor call updated for the new required onPitchAgentIdCount parameter (ERR-044-022),
+//           passing SquadSize (22, this file's existing on-pitch-boundary constant). Two new locks:
+//           Substitution_WithAnOccupiedOnPitchIncoming_ThrowsInsteadOfDestroyingTheOutgoingsMapping
+//           drives the finding's own exact probe ({5->100, 6->101, 22->102}, Sub(Outgoing=5,
+//           Incoming=6)) and proves the refused call left player 100's mapping untouched;
+//           Substitution_WithABenchOutgoing_Throws isolates the mirror guard (Outgoing must be
+//           on-pitch) with a bench-vs-bench pair so the Incoming guard cannot mask it.
+//           Constructor_NegativeNonSentinelSeedEntry_Throws now passes seed.Length (2), not SquadSize,
+//           as the new parameter — its 2-entry seed can never satisfy SquadSize's 22, and passing
+//           SquadSize there would trip the new ERR-044-022 range guard before ever reaching the
+//           negative-entry check this test exists to isolate.
 // Modified: 2026-08-16, later (reviewed findings pass, M1/M3 — v1.7: FakeLedgerTap gained CurrentTick/
 //           AtTick(...) (M3); every pre-existing multi-call-on-one-fold test now chains consecutive
 //           ticks. New M1 locks: a doubly-mapped construction seed throws and names both agent ids plus
@@ -124,16 +136,18 @@ namespace TacticalDirector.Discipline.Tests
         [Test]
         public void Constructor_EmptyOccupancySeed_Throws()
         {
-            Assert.Throws<ArgumentException>(() => new CardLedgerFold(Array.Empty<int>(), Competition));
+            Assert.Throws<ArgumentException>(() => new CardLedgerFold(Array.Empty<int>(), SquadSize, Competition));
         }
 
         [Test]
         public void Constructor_NegativeNonSentinelSeedEntry_Throws()
         {
             // -1 is CardLedgerFold.NO_PLAYER (legal, an unused slot). -2 is neither a valid player id
-            // nor the sentinel.
+            // nor the sentinel. onPitchAgentIdCount is the seed's own length (2), not SquadSize — a
+            // 2-entry seed can never satisfy SquadSize's 22, so passing SquadSize here would trip the
+            // ERR-044-022 range guard first and never isolate THIS guard at all.
             var seed = new[] { 100, -2 };
-            Assert.Throws<ArgumentException>(() => new CardLedgerFold(seed, Competition));
+            Assert.Throws<ArgumentException>(() => new CardLedgerFold(seed, seed.Length, Competition));
         }
 
         // ── M1 (reviewed findings pass): the seed must be one-to-one ──────────────
@@ -146,7 +160,7 @@ namespace TacticalDirector.Discipline.Tests
             var seed = Occupancy((5, 100), (6, 100));
 
             ArgumentException ex = Assert.Throws<ArgumentException>(
-                () => new CardLedgerFold(seed, Competition));
+                () => new CardLedgerFold(seed, SquadSize, Competition));
 
             Assert.That(ex.Message, Does.Contain("player 100"), "the refusal must name the duplicated player id");
             Assert.That(ex.Message, Does.Contain("(5 and 6)"), "the refusal must name both agent ids");
@@ -159,7 +173,7 @@ namespace TacticalDirector.Discipline.Tests
             // M1 one-to-one check (every unused slot legitimately shares the same sentinel).
             var seed = Occupancy((5, 100));   // every other slot in Occupancy(...) is NO_PLAYER by default
 
-            Assert.DoesNotThrow(() => new CardLedgerFold(seed, Competition));
+            Assert.DoesNotThrow(() => new CardLedgerFold(seed, SquadSize, Competition));
         }
 
         // ── Basic attribution ─────────────────────────────────────────────────────
@@ -167,7 +181,7 @@ namespace TacticalDirector.Discipline.Tests
         [Test]
         public void Card_AttributesToTheOccupantOfRecipient()
         {
-            var fold = new CardLedgerFold(Occupancy((5, 100)), Competition);
+            var fold = new CardLedgerFold(Occupancy((5, 100)), SquadSize, Competition);
             var tap = new FakeLedgerTap().Add(Card(5));
 
             fold.ObserveTick(tap);
@@ -189,7 +203,7 @@ namespace TacticalDirector.Discipline.Tests
             int slot = 5;
             int bench = BenchId(teamId: 0, benchIndex: 0);   // 22
 
-            var fold = new CardLedgerFold(Occupancy((slot, outgoingPlayer), (bench, incomingPlayer)), Competition);
+            var fold = new CardLedgerFold(Occupancy((slot, outgoingPlayer), (bench, incomingPlayer)), SquadSize, Competition);
 
             // Tick 1: a card at `slot` while the outgoing player still occupies it.
             fold.ObserveTick(new FakeLedgerTap().Add(Card(slot)).AtTick(1));
@@ -221,7 +235,7 @@ namespace TacticalDirector.Discipline.Tests
             int slot = 5;
             int bench = BenchId(teamId: 0, benchIndex: 0);
 
-            var fold = new CardLedgerFold(Occupancy((slot, outgoingPlayer), (bench, incomingPlayer)), Competition);
+            var fold = new CardLedgerFold(Occupancy((slot, outgoingPlayer), (bench, incomingPlayer)), SquadSize, Competition);
 
             // One tick: the substitution record precedes the card record, matching the tap's own
             // canonical publish order within the phase.
@@ -253,7 +267,7 @@ namespace TacticalDirector.Discipline.Tests
             int slot = 5;
             int bench = BenchId(teamId: 0, benchIndex: 0);
 
-            var fold = new CardLedgerFold(Occupancy((slot, outgoingPlayer), (bench, incomingPlayer)), Competition);
+            var fold = new CardLedgerFold(Occupancy((slot, outgoingPlayer), (bench, incomingPlayer)), SquadSize, Competition);
             fold.ObserveTick(new FakeLedgerTap().Add(Sub(outgoing: slot, incoming: bench)).AtTick(1));
 
             // A malformed/later record naming the now-vacated bench id must fail loud, not attribute a
@@ -270,10 +284,68 @@ namespace TacticalDirector.Discipline.Tests
             // NO_PLAYER) would target the same index and the clear would erase the write it just made —
             // silently losing that player's occupancy entirely.
             int slot = 5;
-            var fold = new CardLedgerFold(Occupancy((slot, 100)), Competition);
+            var fold = new CardLedgerFold(Occupancy((slot, 100)), SquadSize, Competition);
 
             Assert.Throws<InvalidOperationException>(
                 () => fold.ObserveTick(new FakeLedgerTap().Add(Sub(outgoing: slot, incoming: slot))));
+        }
+
+        // ── ERR-044-022 (reviewed findings pass): Incoming must be a bench id, Outgoing must be ─
+        // ── on-pitch — the boundary M1's seed-injectivity check alone could not enforce ──────────
+
+        [Test]
+        public void Substitution_WithAnOccupiedOnPitchIncoming_ThrowsInsteadOfDestroyingTheOutgoingsMapping()
+        {
+            // The exact probe the finding names: {5 -> 100, 6 -> 101, 22 -> 102}, Sub(Outgoing=5,
+            // Incoming=6) — 6 is an ON-PITCH slot with a live occupant, not a bench id. Before this
+            // guard existed this did not throw: _occupancy[5] <- 101 (overwriting player 100's mapping
+            // entirely) and _occupancy[6] <- NO_PLAYER (erasing player 101's own mapping too), so a
+            // card at slot 5 would land on player 101 while player 100 vanished from the fold with no
+            // diagnostic at all.
+            var seed = Occupancy((5, 100), (6, 101), (BenchId(0, 0), 102));
+            var fold = new CardLedgerFold(seed, SquadSize, Competition);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => fold.ObserveTick(new FakeLedgerTap().Add(Sub(outgoing: 5, incoming: 6))));
+
+            Assert.That(ex.Message, Does.Contain("6"), "the refusal must name the offending Incoming id");
+
+            // M3's poison latch closes THIS fold to further ObserveTick calls the instant any record in
+            // a tick throws — by design, and independent of whether that record's own guard ran before
+            // any write (it did: the two new checks are the first thing ApplySubstitution does). So
+            // "nothing was written" is proven on a FRESH fold built from the identical seed, not by
+            // reusing the faulted instance: if the guard fired AFTER a partial write, this seed would
+            // already be corrupted the same way for every fold built from it, and slot 5 would report
+            // player 101 here too.
+            var freshFold = new CardLedgerFold(seed, SquadSize, Competition);
+            freshFold.ObserveTick(new FakeLedgerTap().Add(Card(5)).AtTick(1));
+            var state = new DisciplineState();
+            freshFold.Commit(new DisciplineRules(state));
+            Assert.AreEqual(1, state.EntryFor(100, Competition).Yellows,
+                "player 100's occupancy of slot 5 must be unaffected by the refused substitution — the "
+                + "guard must run before any write, not after a partial one.");
+            Assert.IsFalse(state.HasEntry(101, Competition),
+                "player 101 (slot 6's real occupant) must not have been credited a card he never received.");
+        }
+
+        [Test]
+        public void Substitution_WithABenchOutgoing_Throws()
+        {
+            // The mirror of the case above: Outgoing must be an on-pitch id. A bench id going OFF is
+            // meaningless — nobody occupies a bench slot in the sense a substitution can remove. Both
+            // ids are bench here (Incoming a DIFFERENT bench id from Outgoing) so this isolates the
+            // Outgoing guard specifically — an Incoming that is itself on-pitch would trip the OTHER
+            // guard first and never reach this one.
+            int outgoingBench = BenchId(teamId: 0, benchIndex: 0);
+            int incomingBench = BenchId(teamId: 0, benchIndex: 1);
+            var fold = new CardLedgerFold(
+                Occupancy((outgoingBench, 300), (incomingBench, 101)), SquadSize, Competition);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => fold.ObserveTick(new FakeLedgerTap().Add(Sub(outgoing: outgoingBench, incoming: incomingBench))));
+
+            Assert.That(ex.Message, Does.Contain(outgoingBench.ToString()),
+                "the refusal must name the offending Outgoing id");
         }
 
         // ── FR-DC-004: unknown ordinals ignored, known ones still fold in the same batch ──
@@ -281,7 +353,7 @@ namespace TacticalDirector.Discipline.Tests
         [Test]
         public void UnknownOrdinal_IsIgnored_KnownOrdinalInTheSameBatchStillFolds()
         {
-            var fold = new CardLedgerFold(Occupancy((5, 100)), Competition);
+            var fold = new CardLedgerFold(Occupancy((5, 100)), SquadSize, Competition);
             // 0x01 is neither CardIssuedEvent's ordinal (0x06, #17 Appendix A) nor SubstitutionEvent's
             // (0x08) — an ordinary forward-compatibility case, e.g. a producer landed after this fold
             // was written.
@@ -305,7 +377,7 @@ namespace TacticalDirector.Discipline.Tests
         [Test]
         public void Card_ForAnAgentIdWithNoPlayerOccupancy_Throws()
         {
-            var fold = new CardLedgerFold(Occupancy((5, 100)), Competition);   // slot 6 is unmapped (NO_PLAYER)
+            var fold = new CardLedgerFold(Occupancy((5, 100)), SquadSize, Competition);   // slot 6 is unmapped (NO_PLAYER)
             var tap = new FakeLedgerTap().Add(Card(6));
 
             Assert.Throws<InvalidOperationException>(() => fold.ObserveTick(tap));
@@ -314,7 +386,7 @@ namespace TacticalDirector.Discipline.Tests
         [Test]
         public void Card_ForAnOutOfRangeAgentId_Throws()
         {
-            var fold = new CardLedgerFold(Occupancy((5, 100)), Competition);
+            var fold = new CardLedgerFold(Occupancy((5, 100)), SquadSize, Competition);
             var tap = new FakeLedgerTap().Add(Card(999));   // far past OccupancyLength
 
             Assert.Throws<InvalidOperationException>(() => fold.ObserveTick(tap));
@@ -325,7 +397,7 @@ namespace TacticalDirector.Discipline.Tests
         {
             int bench = BenchId(0, 0);
             // Slot 5 is mapped; the bench id it substitutes onto is NOT — an incomplete lineup seed.
-            var fold = new CardLedgerFold(Occupancy((5, 100)), Competition);
+            var fold = new CardLedgerFold(Occupancy((5, 100)), SquadSize, Competition);
             var tap = new FakeLedgerTap().Add(Sub(outgoing: 5, incoming: bench));
 
             Assert.Throws<InvalidOperationException>(() => fold.ObserveTick(tap));
@@ -340,7 +412,7 @@ namespace TacticalDirector.Discipline.Tests
             // the whole suite green before this test existed (nothing else exercises an unmapped
             // outgoing slot with a validly-mapped incoming one).
             int bench = BenchId(0, 0);
-            var fold = new CardLedgerFold(Occupancy((bench, 300)), Competition);   // slot 5 is unmapped
+            var fold = new CardLedgerFold(Occupancy((bench, 300)), SquadSize, Competition);   // slot 5 is unmapped
             var tap = new FakeLedgerTap().Add(Sub(outgoing: 5, incoming: bench));
 
             Assert.Throws<InvalidOperationException>(() => fold.ObserveTick(tap));
@@ -351,7 +423,7 @@ namespace TacticalDirector.Discipline.Tests
         [Test]
         public void CardKind3_ThrowsAtObserveTick_NotDeferredToCommit()
         {
-            var fold = new CardLedgerFold(Occupancy((5, 100)), Competition);
+            var fold = new CardLedgerFold(Occupancy((5, 100)), SquadSize, Competition);
             var tap = new FakeLedgerTap().Add(Card(5, kind: 3));
 
             Assert.Throws<ArgumentOutOfRangeException>(() => fold.ObserveTick(tap));
@@ -367,7 +439,7 @@ namespace TacticalDirector.Discipline.Tests
         [Test]
         public void ObserveTick_BuffersWithoutWritingTheState_OnlyCommitWrites()
         {
-            var fold = new CardLedgerFold(Occupancy((5, 100), (6, 101)), Competition);
+            var fold = new CardLedgerFold(Occupancy((5, 100), (6, 101)), SquadSize, Competition);
 
             fold.ObserveTick(new FakeLedgerTap().Add(Card(5)).AtTick(1));
             fold.ObserveTick(new FakeLedgerTap().Add(Card(6)).AtTick(2));
@@ -392,7 +464,7 @@ namespace TacticalDirector.Discipline.Tests
         [Test]
         public void ObserveTick_SkippedTick_ThrowsAndNamesBothTicks()
         {
-            var fold = new CardLedgerFold(Occupancy((5, 100)), Competition);
+            var fold = new CardLedgerFold(Occupancy((5, 100)), SquadSize, Competition);
             fold.ObserveTick(new FakeLedgerTap().Add(Card(5)).AtTick(1));
 
             InvalidOperationException refusal = Assert.Throws<InvalidOperationException>(
@@ -412,7 +484,7 @@ namespace TacticalDirector.Discipline.Tests
         {
             // First-call anchoring (mirrors #37 MatchAnalyticsAggregator): there is no "last observed
             // tick" yet, so any starting tick is legal — a fixture need not begin at tick 0.
-            var fold = new CardLedgerFold(Occupancy((5, 100)), Competition);
+            var fold = new CardLedgerFold(Occupancy((5, 100)), SquadSize, Competition);
 
             Assert.DoesNotThrow(() => fold.ObserveTick(new FakeLedgerTap().Add(Card(5)).AtTick(4200)));
         }
@@ -422,7 +494,7 @@ namespace TacticalDirector.Discipline.Tests
         {
             // Not just "must increase" — must be EXACTLY one more. Repeating the same tick is the
             // double-pump shape, not the skip shape, and both must be refused.
-            var fold = new CardLedgerFold(Occupancy((5, 100)), Competition);
+            var fold = new CardLedgerFold(Occupancy((5, 100)), SquadSize, Competition);
             fold.ObserveTick(new FakeLedgerTap().Add(Card(5)).AtTick(1));
 
             Assert.Throws<InvalidOperationException>(
@@ -434,7 +506,7 @@ namespace TacticalDirector.Discipline.Tests
         {
             // Card(5) attributes fine; Card(6) has no occupancy mapping and throws F1 — so this tick
             // fails PART-WAY through, after the first record already landed in the buffer.
-            var fold = new CardLedgerFold(Occupancy((5, 100)), Competition);
+            var fold = new CardLedgerFold(Occupancy((5, 100)), SquadSize, Competition);
             var badTap = new FakeLedgerTap().Add(Card(5)).Add(Card(6)).AtTick(1);
 
             Assert.Throws<InvalidOperationException>(() => fold.ObserveTick(badTap));
@@ -454,7 +526,7 @@ namespace TacticalDirector.Discipline.Tests
         [Test]
         public void Commit_Twice_Throws()
         {
-            var fold = new CardLedgerFold(Occupancy((5, 100)), Competition);
+            var fold = new CardLedgerFold(Occupancy((5, 100)), SquadSize, Competition);
             fold.ObserveTick(new FakeLedgerTap().Add(Card(5)));
             fold.Commit(new DisciplineRules(new DisciplineState()));
 
@@ -464,7 +536,7 @@ namespace TacticalDirector.Discipline.Tests
         [Test]
         public void ObserveTick_AfterCommit_Throws()
         {
-            var fold = new CardLedgerFold(Occupancy((5, 100)), Competition);
+            var fold = new CardLedgerFold(Occupancy((5, 100)), SquadSize, Competition);
             fold.ObserveTick(new FakeLedgerTap().Add(Card(5)));
             fold.Commit(new DisciplineRules(new DisciplineState()));
 
@@ -474,14 +546,14 @@ namespace TacticalDirector.Discipline.Tests
         [Test]
         public void Commit_NullRules_Throws()
         {
-            var fold = new CardLedgerFold(Occupancy((5, 100)), Competition);
+            var fold = new CardLedgerFold(Occupancy((5, 100)), SquadSize, Competition);
             Assert.Throws<ArgumentNullException>(() => fold.Commit(null));
         }
 
         [Test]
         public void ObserveTick_NullTap_Throws()
         {
-            var fold = new CardLedgerFold(Occupancy((5, 100)), Competition);
+            var fold = new CardLedgerFold(Occupancy((5, 100)), SquadSize, Competition);
             Assert.Throws<ArgumentNullException>(() => fold.ObserveTick(null));
         }
 
@@ -496,7 +568,7 @@ namespace TacticalDirector.Discipline.Tests
         [Test]
         public void Commit_WithAnInvalidYellowThreshold_RefusesBeforeApplyingAnyCard_AndLeavesTheFoldUncommitted()
         {
-            var fold = new CardLedgerFold(Occupancy((5, 100), (6, 101)), Competition);
+            var fold = new CardLedgerFold(Occupancy((5, 100), (6, 101)), SquadSize, Competition);
             fold.ObserveTick(new FakeLedgerTap().Add(Card(5)).Add(Card(6)));
 
             var state = new DisciplineState();
@@ -534,7 +606,7 @@ namespace TacticalDirector.Discipline.Tests
             // The RequireBanLength sibling of the test above — a second-yellow card mid-list must not
             // have its yellow committed (AddYellow's effect) while the whole card is refused for the
             // ban it also carries (the M4 atomicity property, one layer up at the fold's own commit).
-            var fold = new CardLedgerFold(Occupancy((5, 100)), Competition);
+            var fold = new CardLedgerFold(Occupancy((5, 100)), SquadSize, Competition);
             fold.ObserveTick(
                 new FakeLedgerTap().Add(Card(5, kind: DisciplineConstants.CardKindSecondYellow)));
 
@@ -581,7 +653,7 @@ namespace TacticalDirector.Discipline.Tests
         [Test]
         public void Commit_WithAnInvalidAccumBan_RefusesBeforeApplyingAnyCard()
         {
-            var fold = new CardLedgerFold(Occupancy((5, 100)), Competition);
+            var fold = new CardLedgerFold(Occupancy((5, 100)), SquadSize, Competition);
             fold.ObserveTick(new FakeLedgerTap().Add(Card(5)));
 
             var state = new DisciplineState();
@@ -606,7 +678,7 @@ namespace TacticalDirector.Discipline.Tests
         [Test]
         public void Commit_WithAnInvalidStraightRedBan_RefusesBeforeApplyingAnyCard()
         {
-            var fold = new CardLedgerFold(Occupancy((5, 100)), Competition);
+            var fold = new CardLedgerFold(Occupancy((5, 100)), SquadSize, Competition);
             fold.ObserveTick(new FakeLedgerTap().Add(Card(5)));
 
             var state = new DisciplineState();
@@ -640,7 +712,7 @@ namespace TacticalDirector.Discipline.Tests
 
             byte[] EncodeOneRun()
             {
-                var fold = new CardLedgerFold(Occupancy((slot, outgoingPlayer), (bench, incomingPlayer)), Competition);
+                var fold = new CardLedgerFold(Occupancy((slot, outgoingPlayer), (bench, incomingPlayer)), SquadSize, Competition);
                 fold.ObserveTick(new FakeLedgerTap().Add(Card(slot)).AtTick(1));
                 fold.ObserveTick(new FakeLedgerTap().Add(Sub(outgoing: slot, incoming: bench)).AtTick(2));
                 fold.ObserveTick(new FakeLedgerTap().Add(Card(slot, kind: DisciplineConstants.CardKindRed)).AtTick(3));
@@ -725,4 +797,18 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | ObserveTick_SameTickTwice_Throws,                                 |
 // |         |            |        | ObserveTick_AfterPartialTickFailure_LatchesAndRefusesEvenA-       |
 // |         |            |        | ConsecutiveTick.                                                   |
+// | 1.8     | 2026-08-16, latest again | — | Reviewed findings pass, finding A (ERR-044-022).   |
+// |         |            |        | Every CardLedgerFold construction updated for the new required    |
+// |         |            |        | onPitchAgentIdCount parameter, passing SquadSize. New tests:       |
+// |         |            |        | Substitution_WithAnOccupiedOnPitchIncoming_ThrowsInsteadOf-        |
+// |         |            |        | DestroyingTheOutgoingsMapping (the finding's own exact probe —     |
+// |         |            |        | {5->100, 6->101, 22->102}, Sub(Outgoing=5, Incoming=6) — now       |
+// |         |            |        | throws and leaves player 100's mapping untouched, where it         |
+// |         |            |        | previously destroyed it silently) and Substitution_WithABench-     |
+// |         |            |        | Outgoing_Throws (the mirror guard, isolated with a bench-vs-bench  |
+// |         |            |        | pair so the Incoming guard cannot mask it). Constructor_Negative-  |
+// |         |            |        | NonSentinelSeedEntry_Throws now passes seed.Length instead of      |
+// |         |            |        | SquadSize, since its 2-entry seed cannot satisfy SquadSize and     |
+// |         |            |        | would otherwise trip the new range guard before ever reaching the  |
+// |         |            |        | negative-entry check the test isolates.                            |
 #endregion

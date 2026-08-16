@@ -1,5 +1,9 @@
 // File:     src/season-save/tests/SeasonLoopScenarios.cs
 // Created:  2026-07-26
+// Modified: 2026-08-16, later (adversarial-review Medium — the precondition's
+//           PlayerCareerStates.SelectAvailable oracle call re-pointed at
+//           AvailabilityComposition.Compose(discipline: null) directly, since the method was deleted
+//           as production-dead — v1.4)
 // Modified: 2026-08-08 (AR pass 5: the injury-changed-the-eleven precondition — v1.3)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §5.7 (the season-multi-fixture capstone), §3.3/§3.4,
@@ -261,8 +265,11 @@ namespace TacticalDirector.SeasonSave.Tests
             var obs = new EngineRoundObservations();
             MatchResult[] results = loop.AdvanceAndPlayNextRound(league);
 
+            // Oracle = the composed seam with discipline structurally absent; if this fixture ever
+            // wires a discipline tally, pass it here too.
             int[] expectedManagedXi = TacticalDirector.MatchEngine.SquadRating.StartingElevenPlayerIds(
-                career.SelectAvailable(league.ResolveByClubId(ManagedClubId)));
+                AvailabilityComposition.Compose(
+                    league.ResolveByClubId(ManagedClubId), career, discipline: null, competitionId: 0));
 
             // Precondition (AR pass 5 L7): the injury must have CHANGED the eleven, or the two
             // predicates below are satisfied by a filter that did nothing — the same guard the
@@ -419,4 +426,11 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | precondition predicate (the sibling suite's guard), and the    |
 // |         |            |        | round-mate model comparison states its unfiltered-roster       |
 // |         |            |        | assumption instead of assuming it.                             |
+// | 1.4     | 2026-08-16, later | — | Adversarial-review Medium: the precondition's oracle used the |
+// |         |            |        | now-deleted PlayerCareerStates.SelectAvailable, which agreed    |
+// |         |            |        | with the composed production seam only while no discipline      |
+// |         |            |        | tally was wired (see PlayerCareerStates.cs v1.26). Re-pointed   |
+// |         |            |        | at AvailabilityComposition.Compose(discipline: null) directly,  |
+// |         |            |        | with a comment stating the oracle's scope explicitly. No         |
+// |         |            |        | assertion or fixture changed.                                    |
 #endregion

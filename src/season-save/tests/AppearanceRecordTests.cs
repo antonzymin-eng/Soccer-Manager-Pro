@@ -1,5 +1,8 @@
 // File:     src/season-save/tests/AppearanceRecordTests.cs
 // Created:  2026-08-07
+// Modified: 2026-08-16, later (adversarial-review Medium — the four PlayerCareerStates.SelectAvailable
+//           oracle call sites re-pointed at AvailabilityComposition.Compose(discipline: null) directly,
+//           since the method was deleted as production-dead — v1.6)
 // Modified: 2026-08-08
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.4 / Appendix B (the appearance record, ERR-041-010(b));
@@ -267,9 +270,11 @@ namespace TacticalDirector.SeasonSave.Tests
                 // Identity, not just count (AR pass 1): the recorded set must BE the eleven the
                 // selector fields from the filtered squad — the same walk both resolution modes use
                 // (the recording path does not branch on mode), so this is the mode-independence
-                // lock too.
+                // lock too. Oracle = the composed seam with discipline structurally absent; if this
+                // fixture ever wires a discipline tally, pass it here too.
                 int[] expectedXi = SquadRating.StartingElevenPlayerIds(
-                    career.SelectAvailable(provider.ResolveByClubId(blocks[c].ClubId)));
+                    AvailabilityComposition.Compose(
+                        provider.ResolveByClubId(blocks[c].ClubId), career, discipline: null, competitionId: 0));
                 var recorded = new System.Collections.Generic.List<int>();
                 for (int i = 0; i < blocks[c].Count; i++)
                 {
@@ -293,7 +298,8 @@ namespace TacticalDirector.SeasonSave.Tests
             // The filter PARTICIPATES in the recorded identity (AR pass 2): with every player fit,
             // APlayedRound's expected-XI recomputation and the production path could both be reading
             // the unfiltered squad and still agree. An injured first-choice starter forces the two
-            // elevens apart, so this fails if either side stops going through SelectAvailable.
+            // elevens apart, so this fails if either side stops going through
+            // AvailabilityComposition.Compose.
             League league = FourClubLeague();
             CareerTestRoster.MutableSquadProvider provider = ProviderOver(league);
             PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, league.ClubIds(), injuryOccurrenceEnabled: false);
@@ -325,8 +331,11 @@ namespace TacticalDirector.SeasonSave.Tests
 
             CollectionAssert.DoesNotContain(recorded, fitXi[0],
                 "an injured starter must not carry an appearance — he was not fielded");
+            // Oracle = the composed seam with discipline structurally absent; if this fixture ever
+            // wires a discipline tally, pass it here too.
             int[] filteredXi = SquadRating.StartingElevenPlayerIds(
-                career.SelectAvailable(provider.ResolveByClubId(clubId)));
+                AvailabilityComposition.Compose(
+                    provider.ResolveByClubId(clubId), career, discipline: null, competitionId: 0));
             CollectionAssert.AreEquivalent(filteredXi, recorded,
                 "the recorded eleven is the FILTERED selector's eleven");
             CollectionAssert.AreNotEquivalent(fitXi, filteredXi,
@@ -411,8 +420,11 @@ namespace TacticalDirector.SeasonSave.Tests
             int[] unplayed = loop.State.UnplayedFixtureIndicesInRound(round);
             Fixture first = loop.State.FixtureAt(unplayed[0]);
 
+            // Oracle = the composed seam with discipline structurally absent; if this fixture ever
+            // wires a discipline tally, pass it here too.
             int[] awayXi = SquadRating.StartingElevenPlayerIds(
-                career.SelectAvailable(provider.ResolveByClubId(first.AwayClubId)));
+                AvailabilityComposition.Compose(
+                    provider.ResolveByClubId(first.AwayClubId), career, discipline: null, competitionId: 0));
             career.RecordAppearances(
                 first.AwayClubId, new[] { awayXi[0] }, loop.CurrentWorldDay + 100u);
 
@@ -720,4 +732,11 @@ namespace TacticalDirector.SeasonSave.Tests
 // | 1.5     | 2026-08-08 | —      | Balance-pass AR pass 5 (L4): + TheWindow_FitsTheBitmaskBound — |
 // |         |            |        | the [GT] window locked against the catalogued [FIXED] bound    |
 // |         |            |        | the production guard reads.                                    |
+// | 1.6     | 2026-08-16, later | — | Adversarial-review Medium: this file's four oracle call sites |
+// |         |            |        | used the now-deleted PlayerCareerStates.SelectAvailable, which |
+// |         |            |        | agreed with the composed production seam only while no          |
+// |         |            |        | discipline tally was wired (see PlayerCareerStates.cs v1.26).   |
+// |         |            |        | Re-pointed at AvailabilityComposition.Compose(discipline: null) |
+// |         |            |        | directly, with a comment at each stating the oracle's scope     |
+// |         |            |        | explicitly. No assertion or fixture changed.                    |
 #endregion
