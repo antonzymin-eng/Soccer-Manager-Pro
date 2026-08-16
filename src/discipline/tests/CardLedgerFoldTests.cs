@@ -1,5 +1,21 @@
 // File:     src/discipline/tests/CardLedgerFoldTests.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16, latest of all and later still (round-4 reviewed-findings pass, L-D/M-C — v1.10:
+//           L-D — new Constructor_NullOccupancySeed_Throws beside Constructor_EmptyOccupancySeed_Throws;
+//           the null-seed guard had no isolating lock (mutation-verified: deleting it left the suite
+//           green). M-C — Substitution_WithAnOccupiedOnPitchIncoming_ThrowsInsteadOfDestroyingThe-
+//           OutgoingsMapping's "guard runs before any write" proof was FALSE: it inferred "nothing was
+//           written" by building a SECOND, fresh fold from the same seed and checking that one committed
+//           correctly, but the constructor copies the seed array, so a fresh fold is pristine regardless
+//           of ordering within the faulted instance — the two assertions passed identically either way.
+//           Corrected the comment to state what the test actually establishes (the malformed Incoming
+//           is refused, the refusal names the id) and to record that pre-write ordering is unobservable
+//           through the public surface (M3's poison latch closes the fold before Commit is reachable).
+//           Locked ordering for real via the new CardLedgerFold.OccupancyAt(int) internal accessor
+//           (CardLedgerFold.cs v1.13): asserts the SAME faulted fold's occupancy at both slots 5 and 6
+//           is unchanged. Mutation-verified: moving both ERR-044-022 guards to after the write/clear
+//           pair made this test fail (slot 5 read 101, not 100) against the unmutated 145/146-passing
+//           baseline; reverted after observing the failure.)
 // Modified: 2026-08-16, latest of all (M-B, adversarial review — v1.9: the onPitchAgentIdCount range
 //           guard (constructor's ArgumentOutOfRangeException) had no lock — deleting it left all 143
 //           discipline tests green. New Constructor_OnPitchAgentIdCountOutOfRange_Throws (T-DC-FOLD-003)
@@ -142,6 +158,23 @@ namespace TacticalDirector.Discipline.Tests
         public void Constructor_EmptyOccupancySeed_Throws()
         {
             Assert.Throws<ArgumentException>(() => new CardLedgerFold(Array.Empty<int>(), SquadSize, Competition));
+        }
+
+        // ── L-D (round-4 reviewed-findings pass): the null-seed guard had no isolating lock ──────
+        //
+        // Mutation-verified: deleting the `if (occupancyByAgentId == null) throw ...` guard (replacing
+        // it with `if (false)`) left the whole suite green before this test existed — the empty-seed
+        // and negative-entry tests above both pass a non-null array, so neither exercises this branch.
+        // Every OTHER null guard in this assembly (Commit_NullRules_Throws, ObserveTick_NullTap_Throws)
+        // already has one; this was the one gap.
+
+        [Test]
+        public void Constructor_NullOccupancySeed_Throws()
+        {
+            ArgumentNullException ex = Assert.Throws<ArgumentNullException>(
+                () => new CardLedgerFold(null, SquadSize, Competition));
+
+            Assert.AreEqual("occupancyByAgentId", ex.ParamName);
         }
 
         [Test]
@@ -339,22 +372,34 @@ namespace TacticalDirector.Discipline.Tests
 
             Assert.That(ex.Message, Does.Contain("6"), "the refusal must name the offending Incoming id");
 
-            // M3's poison latch closes THIS fold to further ObserveTick calls the instant any record in
-            // a tick throws — by design, and independent of whether that record's own guard ran before
-            // any write (it did: the two new checks are the first thing ApplySubstitution does). So
-            // "nothing was written" is proven on a FRESH fold built from the identical seed, not by
-            // reusing the faulted instance: if the guard fired AFTER a partial write, this seed would
-            // already be corrupted the same way for every fold built from it, and slot 5 would report
-            // player 101 here too.
-            var freshFold = new CardLedgerFold(seed, SquadSize, Competition);
-            freshFold.ObserveTick(new FakeLedgerTap().Add(Card(5)).AtTick(1));
-            var state = new DisciplineState();
-            freshFold.Commit(new DisciplineRules(state));
-            Assert.AreEqual(1, state.EntryFor(100, Competition).Yellows,
-                "player 100's occupancy of slot 5 must be unaffected by the refused substitution — the "
-                + "guard must run before any write, not after a partial one.");
-            Assert.IsFalse(state.HasEntry(101, Competition),
-                "player 101 (slot 6's real occupant) must not have been credited a card he never received.");
+            // M-C (round-4 reviewed findings pass), CORRECTED. What this test establishes above is only
+            // that the malformed Incoming is refused and the refusal names the offending id — the two
+            // assertions immediately above this comment. Ordering — whether the guard ran BEFORE any
+            // write versus after a partial one — is NOT observable through the public surface within
+            // one fold: M3's poison latch closes a faulted fold to every further ObserveTick call the
+            // instant any record in a tick throws, regardless of WHERE within that tick the throw
+            // happened, so Commit is never reachable afterward to reveal what (if anything) got written.
+            //
+            // A PRIOR version of this test tried to infer "nothing was written" indirectly, by building
+            // a SECOND, fresh fold from the identical seed and checking that IT committed correctly.
+            // That was a false proof: the constructor COPIES the seed array, so a fresh fold is pristine
+            // regardless of what the faulted instance did to its OWN _occupancy — the two assertions
+            // passed identically whether or not the guard ran before the write. Mutation-verified: moving
+            // both guards in ApplySubstitution to AFTER the write/clear pair left 144/144 tests green,
+            // this one included.
+            //
+            // The ordering question genuinely IS observable through the internal surface this assembly
+            // grants its own tests (InternalsVisibleTo, AssemblyInfo.cs) — CardLedgerFold.OccupancyAt
+            // reads the SAME faulted fold's own array directly. Asserted for real here, and re-verified
+            // against the identical mutation: with the guards moved after the write, OccupancyAt(5) and
+            // OccupancyAt(6) below both fail (5 reads 101, 6 reads NO_PLAYER) — the strengthened test
+            // genuinely catches the ordering defect the old proxy check could not. Reverted afterward.
+            Assert.AreEqual(100, fold.OccupancyAt(5),
+                "slot 5's occupancy must be unaffected by the refused substitution — the guard must run "
+                + "before any write, not after a partial one.");
+            Assert.AreEqual(101, fold.OccupancyAt(6),
+                "slot 6's occupancy must be unaffected by the refused substitution — the guard must run "
+                + "before any write, not after a partial one.");
         }
 
         [Test]
@@ -847,4 +892,22 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | edges (0, seed.Length + 1) plus a negative value; mutation-        |
 // |         |            |        | verified by neutering the guard (`if (false)`) and confirming the  |
 // |         |            |        | new test fails, then restoring it and confirming green.            |
+// | 1.10    | 2026-08-16, latest of all and later still | — | Round-4 reviewed-findings fix    |
+// |         |            |        | (L-D/M-C). L-D: new Constructor_NullOccupancySeed_Throws beside    |
+// |         |            |        | Constructor_EmptyOccupancySeed_Throws — the null-seed guard had no |
+// |         |            |        | isolating lock (mutation-verified: deleting it left the suite      |
+// |         |            |        | green). M-C: Substitution_WithAnOccupiedOnPitchIncoming_Throws-    |
+// |         |            |        | InsteadOfDestroyingTheOutgoingsMapping's "guard runs before any    |
+// |         |            |        | write" proof was FALSE — it inferred "nothing was written" from a  |
+// |         |            |        | SECOND, fresh fold built off the same seed, which is pristine      |
+// |         |            |        | regardless of guard ordering because the constructor copies the    |
+// |         |            |        | seed array. Comment corrected to state what the test actually      |
+// |         |            |        | proves (the malformed Incoming is refused and named) and that      |
+// |         |            |        | pre-write ordering is unobservable through the public surface.     |
+// |         |            |        | Ordering now locked for real through the new internal              |
+// |         |            |        | CardLedgerFold.OccupancyAt(int) seam (CardLedgerFold.cs v1.13),    |
+// |         |            |        | asserting the SAME faulted fold's occupancy at slots 5 and 6 is    |
+// |         |            |        | unchanged. Mutation-verified: moving both ERR-044-022 guards to    |
+// |         |            |        | after the write/clear pair made this test fail (slot 5 read 101,   |
+// |         |            |        | not 100), 145/146 passing; reverted after observing the failure.   |
 #endregion

@@ -1,70 +1,14 @@
 // File:     src/discipline/CardLedgerFold.cs
 // Created:  2026-08-13
-// Modified: 2026-08-16, latest of all (L-1 and M-B, adversarial review, doc only — v1.11: L-1 —
-//           NO_PLAYER's doc said a spec declaration "is owed" against #44; ERR-044-013 discharged it
-//           2026-08-15 (section-2.md v0.9 + appendices v0.8) — added a dated discharge note. M-B —
-//           the constructor's onPitchAgentIdCount ArgumentOutOfRangeException doc now cites
-//           CardLedgerFoldTests.Constructor_OnPitchAgentIdCountOutOfRange_Throws (T-DC-FOLD-003) as the
-//           lock, giving the spec citation an anchor. No behaviour change either way.)
-// Modified: 2026-08-16, latest again (findings A and B, reviewed findings pass — v1.10: A —
-//           ERR-044-022. The constructor now takes a required onPitchAgentIdCount, validated
-//           0 < onPitchAgentIdCount <= the seed's length, and ApplySubstitution refuses an Incoming
-//           that names an on-pitch id ("an on-pitch agent id cannot come on") and an Outgoing that
-//           names a bench id ("only an on-pitch agent id can go off") — both before the write/clear
-//           pair runs. Closes the hole the v1.8 M1 fix could not see: the seed's one-to-one check
-//           runs once at construction and cannot, by itself, tell a bench id from a pitch id at
-//           ApplySubstitution time, so Sub(Outgoing=5, Incoming=6) with 6 an occupied ON-PITCH slot
-//           previously wrote silently — player 100 (slot 5's prior occupant) lost his mapping
-//           entirely and a card at slot 5 landed on player 101 (slot 6's occupant), the Appendix C
-//           "slot 19" family (ERR-044-001) the v1.8 M1 comment falsely claimed the vacated-slot
-//           clear alone made "impossible rather than merely unlikely" — that claim covered only the
-//           narrow bench-double-mapping shape M1 actually closed; it is annotated in place in the
-//           version-history row below rather than rewritten, and the inline comment at
-//           ApplySubstitution is corrected to state what is true now that this fix lands. SeasonLoop's
-//           construction site passes MatchEngineConstants.SQUAD_SIZE. B — ERR-044-023, doc only, no
-//           behaviour change: the constructor's XML doc now states the boot-time precondition on the
-//           seed explicitly (MatchEngine.PlayerIdsByAgentId is one-to-one over non-sentinel entries
-//           only AT BOOT — SubstitutePlayer never clears the incoming player's bench-origin entry, so
-//           a seed taken after any substitution maps him to two agent ids and this constructor's own
-//           M1 check would refuse it), matching the corrected MatchEngine.cs XML doc.
-// Modified: 2026-08-16, latest (findings A and C, doc only — v1.9: A — CommitWithExplicitConfig's L2
-//           doc still said wiring DisciplineRules.AddYellow/AddBan through the guarded YellowsPlusOne/
-//           BanMatchesPlus helpers was "outside this file's ownership for this pass" — stale the same
-//           day it was written, since DisciplineRules.cs v1.9/v1.10 landed that wiring. Corrected to
-//           say the helpers ARE wired and to state the surviving residual honestly: Commit still
-//           applies card-by-card, so a mid-list OverflowException still leaves 0..k-1 applied with
-//           _committed false — the guards make the failure loud and correctly named, they do not make
-//           Commit atomic against this class. C — RequireCommittableConfig's M2 remark now says the
-//           completeness lock covers every public static readonly field of ANY type, not only int,
-//           matching DisciplineConfigCompletenessTests.cs v1.1. No code change — this file's ownership
-//           here is DOC comments only.)
-// Modified: 2026-08-16, later (reviewed findings pass, M1/M3/L2 — v1.8: M1 — ApplySubstitution now
-//           clears the vacated incoming slot after the swap (a later record naming it throws F1 rather
-//           than silently double-booking) and refuses outgoing == incoming; the constructor's seed loop
-//           now refuses a seed that maps one player id to two agent ids. M3 — ObserveTick refuses a
-//           non-consecutive IDisciplineTickLedgerTap.CurrentTick and latches shut on a part-way
-//           failure, mirroring #37 MatchAnalyticsAggregator's F6; IDisciplineTickLedgerTap gained
-//           CurrentTick. L2 — CommitWithExplicitConfig's atomicity doc now scopes the "all-or-nothing"
-//           claim to the four RequireCommittableConfig guards, naming the uncovered accumulator-overflow
-//           throw from DisciplineEntry's range guards as a real, currently-open gap; the guarded
-//           DisciplineEntry.YellowsPlusOne/BanMatchesPlus helpers exist for DisciplineRules to route
-//           through, which is outside this file's ownership for this pass.)
-// Modified: 2026-08-16 (adversarial-review M2, doc only — RequireCommittableConfig records that adding
-//           a guarded [GT] is a five-site change and names DisciplineConfigCompletenessTests, the check
-//           that detects the drift; the DisciplineConfig restructure stays recorded and gated — v1.7)
-// Modified: 2026-08-15, later (reviewed findings pass, L3/L5 — v1.6: L3 — the L22 comment inside
-//           ObserveTick was spliced into the middle of a sentence ("…read at the same index only in the
-//           sense" broken across the whole L22 block from "that both are dispatched…"); the sentence now
-//           closes before the L22 paragraph instead of resuming after it. L5 — NO_PLAYER's XML doc had
-//           no tag (FR-CS-060/061); tagged [FIXED]. A #44 Appendix A row + spec declaration are owed and
-//           are reported, not filed here.)
-// Modified: 2026-08-15 (#44 AR round 5, L19/L22 — the type remark's claim that SeasonSaveManager
-//           refuses a live ActiveMatch was FALSE and is replaced by the real reason the hazard is
-//           unreachable; ObserveTick now states its dependency on MatchEngine.RunResolvePhase
-//           flushing queued SubstitutionEvents before card issuance — v1.5. Prior:
-//           2026-08-13, round 5 L17 — RequireKnownCardKind's three
-//           comparisons updated for DisciplineConstants' CARD_KIND_* -> CardKind* rename ([CROSS],
-//           PascalCase per src/CLAUDE.md §3.2.3); no behaviour change — v1.4)
+// Modified: 2026-08-16, latest of all, later still again (round-4 reviewed-findings pass, M-C — v1.13; see version history)
+// Modified: 2026-08-16, latest of all and later still (round-4 reviewed-findings pass, L-E — v1.12; see version history)
+// Modified: 2026-08-16, latest of all (L-1 and M-B, adversarial review, doc only — v1.11; see version history)
+// Modified: 2026-08-16, latest again (findings A and B, reviewed findings pass — v1.10; see version history)
+// Modified: 2026-08-16, latest (findings A and C, doc only — v1.9; see version history)
+// Modified: 2026-08-16, later (reviewed findings pass, M1/M3/L2 — v1.8; see version history)
+// Modified: 2026-08-16 (adversarial-review M2, doc only — RequireCommittableConfig records that adding; see version history)
+// Modified: 2026-08-15, later (reviewed findings pass, L3/L5 — v1.6; see version history)
+// Modified: 2026-08-15 (#44 AR round 5, L19/L22 — the type remark's claim that SeasonSaveManager; see version history)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §3.1 (the occupancy fold) / §4.3 (the tap read);
 //           FR-DC-002/003/004/005/006/010; F1/F4; ERR-044-001 (Appendix C's bench-id defect);
@@ -294,6 +238,22 @@ namespace TacticalDirector.Discipline
 
         /// <summary>Cards folded so far this fixture. Zero for the overwhelming majority of fixtures.</summary>
         public int PendingCardCount => _pending.Count;
+
+        /// <summary>
+        /// Test-only observation seam (M-C, round-4 reviewed findings pass). The raw occupancy at
+        /// <paramref name="agentId"/> — <see cref="NO_PLAYER"/> for an unmapped slot — read straight off
+        /// this instance's own <c>_occupancy</c> array. Exists so a test can observe THIS fold's
+        /// occupancy directly after a refused mutation, rather than inferring "nothing was written"
+        /// indirectly by constructing a SECOND fold from the same seed and checking that one commits
+        /// correctly. That indirect check cannot distinguish "the guard ran before any write" from "the
+        /// guard ran after a partial write" — the constructor copies the seed array, so a freshly built
+        /// fold is pristine either way, and only a poison latch (which closes THIS instance to further
+        /// <see cref="ObserveTick"/> calls, not a second one built from the same seed) stood between a
+        /// reordering defect and a still-green suite. <c>internal</c>: reachable only because
+        /// <c>AssemblyInfo.cs</c> grants <c>InternalsVisibleTo</c> to this assembly's own
+        /// <c>tests</c> assembly.
+        /// </summary>
+        internal int OccupancyAt(int agentId) => _occupancy[agentId];
 
         /// <summary>
         /// Consumes the records the engine captured for the tick just completed (FR-DC-002). Must be
@@ -545,10 +505,10 @@ namespace TacticalDirector.Discipline
         /// no-argument form above, <see cref="CommitWithExplicitConfig"/>'s parameter list,
         /// <see cref="DisciplineRules"/>' own site guard, and #44 §2.3 F6's guard list. Nothing makes
         /// that mechanical, so <c>DisciplineConfigCompletenessTests</c> asserts the SET of
-        /// config-settable constants in <see cref="DisciplineConstants"/> — every <c>public static
-        /// readonly</c> field, of any type, not only <c>int</c> (finding C) — equals the set covered
-        /// here — extend the pre-flight and that test together. The eventual owner-shape is a single
-        /// validated <c>DisciplineConfig</c> struct, which makes the drift impossible rather than
+        /// config-settable constants in <see cref="DisciplineConstants"/> — <c>static readonly</c>, any
+        /// type and any access level, not only <c>public int</c> (finding C, widened by finding M-A) —
+        /// equals the set covered here — extend the pre-flight and that test together. The eventual
+        /// owner-shape is a single validated <c>DisciplineConfig</c> struct, which makes the drift impossible rather than
         /// detected; it is recorded and deliberately deferred, gated on the
         /// <c>GameplayConfigHolder.Bind</c> composition-root pass that no production caller runs yet.
         /// </para>
@@ -834,4 +794,20 @@ namespace TacticalDirector.Discipline
 // |         |            |        | Throws (T-DC-FOLD-003) as its lock, giving the spec's own          |
 // |         |            |        | section-5 citation (owned by another fixer) an anchor to point at. |
 // |         |            |        | No behaviour change.                                               |
+// | 1.12    | 2026-08-16, latest of all and later still | — | Round-4 reviewed-findings fix     |
+// |         |            |        | (L-E), doc only. RequireCommittableConfig's M2 remark said "every  |
+// |         |            |        | public static readonly field, of any type, not only int" — the    |
+// |         |            |        | finding-C TYPE widening was current but the wording still read as |
+// |         |            |        | PUBLIC-only, while DisciplineConfigCompletenessTests.cs v1.2 (M-A) |
+// |         |            |        | had since widened the scan to BindingFlags.NonPublic too.          |
+// |         |            |        | Corrected to "static readonly, any type and any access level, not  |
+// |         |            |        | only public int". No behaviour change.                             |
+// | 1.13    | 2026-08-16, latest of all, later still again | — | Round-4 reviewed-findings   |
+// |         |            |        | fix (M-C). New internal OccupancyAt(int agentId), a test-only       |
+// |         |            |        | observation seam reading this instance's own _occupancy array —    |
+// |         |            |        | lets CardLedgerFoldTests prove a refused ERR-044-022 substitution   |
+// |         |            |        | wrote nothing by inspecting the SAME faulted fold directly,         |
+// |         |            |        | replacing a proxy check (a second fold built from the same seed)   |
+// |         |            |        | that could not tell pre-write-guard ordering from post-write-guard |
+// |         |            |        | ordering. No change to any existing production behaviour.          |
 #endregion

@@ -1,5 +1,13 @@
 // File:     src/discipline/DisciplineRules.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16, latest of all (round-4 reviewed-findings pass, L-E — v1.11: RequireBanLength's
+//           M2 remark still described the completeness lock as covering "every public static readonly
+//           field, of any type" — true of finding C's widening (any TYPE) but stale against M-A's later
+//           widening (any ACCESS LEVEL, via BindingFlags.NonPublic in
+//           DisciplineConfigCompletenessTests.cs v1.2), and "public static readonly" reads as excluding
+//           the internal fields the test now scans. Corrected to "static readonly, any type and any
+//           access level, not only public int". Doc only, no behaviour change. See CardLedgerFold.cs
+//           v1.12 for the sibling copy of this same remark.)
 // Modified: 2026-08-16, latest (carried L2 re-rated Medium, fully closed, plus finding C — v1.10:
 //           AddYellow's accumulation-ban addition (`ban += RequireBanLength(AccumBanMatches)`) was the
 //           one remaining unrouted accumulator addition in this file — v1.9 wired AddYellow's own
@@ -557,10 +565,12 @@ namespace TacticalDirector.Discipline
         /// and <c>CommitWithExplicitConfig</c>'s parameter list (so the round-level pre-flight refuses
         /// before anything is written), and #44 §2.3 F6's guard list in the spec. Nothing enforces that
         /// mechanically, so <c>DisciplineConfigCompletenessTests</c> asserts the guarded set equals
-        /// <see cref="DisciplineConstants"/>' config-settable set — every <c>public static readonly</c>
-        /// field, of any type, not only <c>int</c> (finding C: the earlier int-only filter would have
-        /// silently dropped a future <c>Config.GetBool</c>/<c>GetFloat</c>/<c>GetString</c> constant from
-        /// the very set this sentence claims is covered) — extend the pre-flight and that test together,
+        /// <see cref="DisciplineConstants"/>' config-settable set — <c>static readonly</c>, any type and
+        /// any access level, not only <c>public int</c> (finding C, widened by finding M-A: the earlier
+        /// int-only filter would have silently dropped a future <c>Config.GetBool</c>/<c>GetFloat</c>/
+        /// <c>GetString</c> constant, and the earlier public-only filter would have silently dropped a
+        /// future <c>internal</c> one, from the very set this sentence claims is covered) — extend the
+        /// pre-flight and that test together,
         /// or the new constant ships with the very silent-breach exposure this method exists to close.
         /// The recorded eventual shape is one validated <c>DisciplineConfig</c> struct rather than a
         /// chain of guards; it is gated on the <c>GameplayConfigHolder.Bind</c> composition-root pass,
@@ -708,4 +718,11 @@ namespace TacticalDirector.Discipline
 // |         |            |        | Finding C, doc only: RequireBanLength's M2 remark now says the            |
 // |         |            |        | completeness lock covers every public static readonly field of ANY type,  |
 // |         |            |        | not only int, matching DisciplineConfigCompletenessTests.cs v1.1.         |
+// | 1.11    | 2026-08-16, latest of all | — | Round-4 reviewed-findings fix (L-E), doc only.    |
+// |         |            |        | RequireBanLength's M2 remark said "every public static readonly field, of |
+// |         |            |        | any type, not only int" — v1.10's finding-C fix widened TYPE but the      |
+// |         |            |        | wording still read as PUBLIC-only, while DisciplineConfigCompletenessTests|
+// |         |            |        | .cs v1.2 (M-A) had since widened the scan to BindingFlags.NonPublic too.  |
+// |         |            |        | Corrected to "static readonly, any type and any access level, not only    |
+// |         |            |        | public int". No behaviour change.                                          |
 #endregion

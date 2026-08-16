@@ -1,7 +1,15 @@
 # Discipline & Suspensions #44 — Section 2: Requirements, Data Structures, Failure Modes
 
 **Created:** July 24, 2026
-**Last Updated:** August 16, 2026, later still (v0.17 — **`ERR-044-019` EXTENDED, not re-filed**, by
+**Last Updated:** August 16, 2026, even later still (v0.18 — round-4 reviewed-findings pass over the
+`ERR-030-046` landing at #30 `section-3.md` v2.10, residual wording only. The beyond-cap corner bullet
+said the fallback "self-heals ... the count falls back inside the bound" — true of the SEARCH resuming,
+false of the GUARANTEE, since a greedily committed candidate is never revisited and the composition can
+remain above the minimum for that fixture. Reworded to say both halves; no FR, data structure or
+guarantee text changed. Mirrored the same pass at #30 `section-3.md` §3.4 (the Cap bullet and residual
+(ii)), `AvailabilityComposition.cs` (two sites) and `SeasonSaveConstants.cs`; §7.2's mirror corrected in
+the same commit (`section-7.md` v0.11).)
+**Last Updated (prior):** August 16, 2026, later still (v0.17 — **`ERR-044-019` EXTENDED, not re-filed**, by
 `ERR-030-046` (an ESCALATED High filed at #30 `section-3.md` v2.9, which owns the rule). §2.3's
 ERR-044-003 note stated the extremis compromise's second bullet as a **best-effort minimisation** of the
 forced-start case, following `ERR-030-045`. #30's within-tier rule is no longer an ordering key at all —
@@ -131,7 +139,7 @@ re-scoped off "the engine-resolved fixture" to every resolved squad on both reso
 fail-loud withdrawn in favour of #30 §2.3 F9, with the suspension-as-stricter-reinstatement-tier
 decision recorded)
 **Last Updated (prior):** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.17
+**Version:** 0.18
 **Status:** APPROVED
 
 ---
@@ -349,9 +357,10 @@ is pressed back before any suspended one. **That tier order is unchanged.**
 > starts someone its generalisation); and **(ii)** a **beyond-cap corner** — more than
 > `SeasonSaveConstants.EXTREMIS_SEARCH_CANDIDATE_CAP` (12) concurrent suspended candidates at one club,
 > which no measured card rate reaches, where the pass degrades to an ascending-rank greedy and makes no
-> minimality claim, self-healing as each pass commits one candidate and the count falls back inside the
-> bound. A mass-suspension club is the population that meets (i), and #44 is the spec whose own subject
-> makes that club common; only §7.2's unbuilt tiers delete it.
+> minimality claim. The exact search resumes once the candidate count falls back inside the bound, but
+> the guarantee does not: a greedily committed candidate is not revisited, so the composition can
+> remain above the minimum for that fixture. A mass-suspension club is the population that meets (i),
+> and #44 is the spec whose own subject makes that club common; only §7.2's unbuilt tiers delete it.
 
 What **ERR-044-003 stage 1**
 (August 15, 2026) fixed is the free-appearance half: an extremis appearance no longer serves the ban it
@@ -386,4 +395,5 @@ chosen.
 | 0.15 | 2026-08-16, latest of all | — | **Reviewed-findings pass, finding M18.** §2.3's **F1** row extended to the five seed/substitution boundary refusals landed with `ERR-044-021` (the non-one-to-one construction seed, the self-substitution refusal) and `ERR-044-022` (an on-pitch `Incoming`, a bench `Outgoing`, and an out-of-range `onPitchAgentIdCount` constructor argument) — all enforced in production and unit-tested, none previously named by any F-row. New **F7** row declares the `ERR-044-020` lossless-pump refusals (the non-consecutive-tick refusal and the partial-application poison latch on `ObserveTick`), which had no failure-mode row at all despite §2.2/§3.1 both describing the mechanism normatively. `section-5.md` v0.8 in the same commit adds the matching §5.2 test-method citations and corrects §5.6's FR-DC-002 disposition from Construction to Test + Construction. *(M-1, August 16, 2026: this row miscounted its own extension as "the four" refusals when it names five — `ERR-044-021` contributes two, `ERR-044-022` three; corrected to "five" in place. The row's "and unit-tested" claim was unverified for the fifth (the `onPitchAgentIdCount` range guard) at the moment this row was written; `CardLedgerFoldTests.cs` v1.9 has since added `Constructor_OnPitchAgentIdCountOutOfRange_Throws` [T-DC-FOLD-003] — re-checked by grep the same day the correction was made — so the claim now holds for all five without further change.)* |
 | 0.16 | 2026-08-16, following the M18 pass | — | **Reviewed-findings pass, finding M-1.** The v0.15 row above is annotated in place (miscounted "four" → "five"; the "unit-tested" claim re-verified against `CardLedgerFoldTests.cs` v1.9's `Constructor_OnPitchAgentIdCountOutOfRange_Throws`, landed by a parallel fixer the same day) rather than rewritten, per this file's own convention. No FR/data-structure/failure-mode text changed. `section-5.md` v0.9 in the same commit cites the same test under T-DC-FOLD-003. |
 | 0.17 | 2026-08-16, later still | — | **`ERR-044-019` EXTENDED (annotated, not re-filed)** by **`ERR-030-046`**, an ESCALATED High filed at #30 `section-3.md` v2.9, which owns the rule. §2.3's ERR-044-003 note carried `ERR-030-045`'s statement of the compromise: two bullets, the second widened to "positional forcing *or* a `k >= 2` shortfall" and #30's within-tier key described as a **best-effort minimisation**. #30's rule is no longer an ordering key. Two successive keys — earliest roster position (`ERR-030-044`), then ascending selector rating (`ERR-030-045`) — were defeated by the same class of defect: an **element-wise greedy decision of a set-valued constraint**. A depleted club is completed by a SET of reinstatements, whether that set starts a banned player is a property of the SET, and `LineupSelector` decides it **per position**, so no per-player scalar can express it; the rating key failed on a squad thin in the globally *weakest* banned player's position, which is precisely where it presses him back. The third attempt was **ruled rather than iterated** (the no-third-identical-retry rule): a **capped exhaustive search** over subsets of the eligible candidates. §2.3 now states the result as a **guarantee** — *a reinstated-suspended player starts only in a probe-verified forced start; every completing choice within the search bound starts at least as many* — equivalently, the composed eleven contains the MINIMUM achievable number of reinstated-suspended players, zero whenever any completing choice benches them all. The residual is restated as a two-item list: **(i)** forced starts, where the minimum is positive (sole-GK forcings and their `k >= 2` generalisations), and **(ii)** the **beyond-cap corner** — more than `[FIXED] SeasonSaveConstants.EXTREMIS_SEARCH_CANDIDATE_CAP` = 12 concurrent suspended candidates at one club, unreachable at measured card rates, where the pass degrades to ascending-rank greedy with no minimality claim and self-heals as each commit lowers the count. Stated as a **list, not an enumeration of routes into a forced start** — that form has now been falsified twice and is deliberately not attempted again. No FR row changed (FR-DC-011's "did not appear in" is right in every case), no format-version change, no code change in `src/discipline/`. §7.2's mirror amended in the same commit (`section-7.md` v0.10). |
+| 0.18 | 2026-08-16, even later still | — | **Round-4 reviewed-findings pass over the `ERR-030-046` landing (Medium, residual wording only — one of four/six sites, per #30 `section-3.md` v2.10).** The beyond-cap corner bullet said the fallback "self-heals ... the pass degrades to an ascending-rank greedy with no minimality claim and self-heals as each commit lowers the count" — true only of the SEARCH resuming once `m` falls back inside the bound; false of the GUARANTEE, since a candidate this branch commits is never revisited, so the composition can remain above the minimum for that fixture even after the count recovers. Reworded to state both halves. No FR row, guarantee text, or code changed here — this section states no rule of its own, only #44's mirror of #30's. Same wording fixed in the same pass at #30 `section-3.md` §3.4 (the Cap bullet and residual (ii)), `AvailabilityComposition.cs` (two sites) and `SeasonSaveConstants.cs`; §7.2's mirror corrected in the same commit (`section-7.md` v0.11). |
 #endregion

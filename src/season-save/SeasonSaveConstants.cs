@@ -1,6 +1,11 @@
 // File:     src/season-save/SeasonSaveConstants.cs
 // Created:  2026-07-22
-// Modified: 2026-08-16 (ERR-030-046 — + EXTREMIS_SEARCH_CANDIDATE_CAP, the depleted-squad back-fill's
+// Modified: 2026-08-16, later (round-4 reviewed-findings pass over the ERR-030-046 landing — the
+//           EXTREMIS_SEARCH_CANDIDATE_CAP doc's "self-healing" sentence conflated the search
+//           resuming beyond the cap with the guarantee resuming; corrected to say the search resumes
+//           but a greedily committed candidate is never revisited, so the composition can remain
+//           above the minimum for that fixture — v1.10)
+// Prior-Modified: 2026-08-16 (ERR-030-046 — + EXTREMIS_SEARCH_CANDIDATE_CAP, the depleted-squad back-fill's
 //           exhaustive-search probe budget — v1.9)
 // Prior-Modified: 2026-08-13 (#44 T1, roadmap C1 — v1.8)
 // Author:   —
@@ -110,8 +115,9 @@ namespace TacticalDirector.SeasonSave
         /// (ERR-030-046). At or below this count the back-fill enumerates every subset of the
         /// candidates and returns a choice that provably minimises how many reinstated-suspended
         /// players end up in the starting eleven; above it, the pass degrades to the ascending-rank
-        /// greedy with no minimality claim, self-healing as each pass commits one candidate and the
-        /// count falls back within the bound.
+        /// greedy with no minimality claim. The exact search resumes once the candidate count falls
+        /// back within the bound, but the guarantee does not: a greedily committed candidate is not
+        /// revisited, so the composition can remain above the minimum for that fixture.
         /// <para>
         /// <b>This is an algorithmic budget, not a gameplay dial, and it is deliberately not
         /// <c>[GT]</c>.</b> The subset enumeration is <c>O(2^m)</c>: the value bounds the probe count
@@ -165,4 +171,14 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | enumerated before the pass degrades to ascending-rank greedy,   |
 // |         |            |        | so it is not [GT] and is not subject to KD-W1. First non-format |
 // |         |            |        | constant in this catalogue; the file Purpose says so.           |
+// | 1.10    | 2026-08-16, later | — | Round-4 reviewed-findings pass over the ERR-030-046 landing     |
+// |         |            |        | (Medium, one of four sites). EXTREMIS_SEARCH_CANDIDATE_CAP's    |
+// |         |            |        | doc said the beyond-cap greedy fallback "self-heals ... the     |
+// |         |            |        | count falls back within the bound" — true of the SEARCH, false  |
+// |         |            |        | of the OUTCOME: a candidate the greedy pass commits is never    |
+// |         |            |        | un-committed, so the composition can stay above the minimum for |
+// |         |            |        | that fixture even after the exact search resumes. Reworded; the |
+// |         |            |        | mirrored wording at AvailabilityComposition.cs (both sites),    |
+// |         |            |        | section-3.md §3.4, and discipline-suspensions/{section-2,       |
+// |         |            |        | section-7}.md corrected in the same pass.                       |
 #endregion

@@ -1,6 +1,12 @@
 // File:     src/season-save/tests/AvailabilityCompositionExtremisTests.cs
 // Created:  2026-08-16
-// Modified: 2026-08-16, later still (ERR-030-046 — + the WeakPositionExtremis mutant-killer (a squad
+// Modified: 2026-08-16, even later still (round-4 reviewed-findings pass over the ERR-030-046 landing —
+//           + InCapBoundaryExtremis (m == EXTREMIS_SEARCH_CANDIDATE_CAP exactly, the cap-comparison
+//           mutant-killer) and TiedForcedStartExtremis (two candidates tied at the same positive dirty
+//           count, the preference-strictness mutant-killer); both observed FAILING against their named
+//           mutant and reverted (see the fix's own version-history row in AvailabilityComposition.cs).
+//           The eight existing cases are untouched)
+//           Prior: 2026-08-16, later still (ERR-030-046 — + the WeakPositionExtremis mutant-killer (a squad
 //           thin at ONE position, where a global rating key presses back exactly the banned player it
 //           has no room for), the MinimalStallExtremis minimisation lock and the CapFallbackExtremis
 //           beyond-cap lock; the five existing cases keep every assertion and had only their retired
@@ -482,6 +488,72 @@ namespace TacticalDirector.SeasonSave.Tests
             }
         }
 
+        // ── 9. the cap boundary itself: m == CAP must still run the exhaustive search ──────
+
+        [Test]
+        public void InCapBoundaryExtremis_AtExactlyTheSearchCap_FindsTheCleanCandidate_NotTheGloballyWeakest()
+        {
+            // Mutant-killer for the cap comparison (`m > CAP` mutated to `m >= CAP`). Twelve
+            // suspended candidates is EXACTLY SeasonSaveConstants.EXTREMIS_SEARCH_CANDIDATE_CAP, so
+            // the exhaustive search MUST run on the first pass (12 > 12 is false); a `>=` mutant sends
+            // that exact pass to the beyond-cap greedy fallback instead, which blindly commits order[0]
+            // — the globally weakest candidate, who STARTS the moment he is reinstated. A completing
+            // 5-subset drawn from the eleven decoys always beats any subset containing him (dirty 0 vs
+            // dirty 1), so the real search never reinstates him at all; the mutant's blind pass-1
+            // commit is never undone, so he ends up a PERMANENT starter for the rest of the back-fill.
+            // Passes 2-5 run the real search under EITHER operator (m = 11, 10, 9, 8 are all below the
+            // cap either way), so the whole divergence traces to this one pass-1 decision.
+            Squad full = InCapBoundaryRoster();
+            DisciplineState state = BansOf(3, AllInCapBoundarySuspendedIds());
+
+            Squad composed = AvailabilityComposition.Compose(
+                full, career: null, state, DisciplineConstants.LeagueCompetitionKey);
+
+            Assert.That(SquadRating.CanFieldStartingEleven(composed), Is.True,
+                "Precondition: the composed filter must never stop a club playing (#30 §2.3 F9).");
+            Assert.That(composed.Count, Is.EqualTo(CareerTestRoster.MinimumSquad),
+                "Precondition: thirteen fit players need exactly FIVE reinstatements to reach the "
+                + "eighteen the selection walk requires, with the first pass landing exactly at "
+                + "m == EXTREMIS_SEARCH_CANDIDATE_CAP.");
+
+            Assert.That(Contains(composed, IdOf(InCapWeakLocal)), Is.False,
+                "The globally weakest candidate — order[0], and what the beyond-cap greedy fallback "
+                + "would blindly commit on pass 1 — was pressed back at all. At m == CAP the exhaustive "
+                + "search must run and must have found a completing set drawn from the eleven clean "
+                + "decoys instead (ERR-030-046); eleven decoys is more than the five needed.");
+        }
+
+        // ── 10. a tie at the same positive dirty count: canonical-first must win ───────────
+
+        [Test]
+        public void TiedForcedStartExtremis_CommitsTheCanonicallyFirstCandidate_WhenTwoTieAtTheSameDirtyCount()
+        {
+            // Mutant-killer for the preference comparison (`dirty < bestDirty` mutated to `<=`). Two
+            // suspended goalkeepers are the club's ONLY goalkeepers: either one alone completes the
+            // squad and each forces exactly one start (dirty == 1, tied), so the search must prefer
+            // the CANONICALLY FIRST of the tied candidates — order[0], the lower-rated keeper — over
+            // whichever is found last. A `<=` mutant lets a later-found tie overwrite an earlier one,
+            // which here also violates the monotonicity lemma (both singles complete, so the mutated
+            // search reaches a |R*| == 2 winner it should never reach) — so under the mutant this
+            // fixture either commits the wrong keeper or throws the lemma's fail-loud, and either
+            // outcome fails this test.
+            Squad full = TiedForcedStartRoster();
+            DisciplineState state = BansOf(3, IdOf(TiedForcedGkALocal), IdOf(TiedForcedGkBLocal));
+
+            Squad composed = AvailabilityComposition.Compose(
+                full, career: null, state, DisciplineConstants.LeagueCompetitionKey);
+
+            Assert.That(SquadRating.CanFieldStartingEleven(composed), Is.True,
+                "#30 §2.3 F9's liveness invariant: the composed filter can never leave a club worse "
+                + "off than having no filter at all.");
+            Assert.That(Contains(composed, IdOf(TiedForcedGkALocal)), Is.True,
+                "The canonically-first (order[0], lower-rated) of the two tied goalkeepers was not "
+                + "reinstated (ERR-030-046).");
+            Assert.That(Contains(composed, IdOf(TiedForcedGkBLocal)), Is.False,
+                "The later-found tied candidate was reinstated instead of the canonically-first one — "
+                + "exactly what a `<` weakened to `<=` in the preference comparison would allow.");
+        }
+
         // ── fixtures ─────────────────────────────────────────────────────────────────────
 
         /// <summary>Roster slot of the suspended player the selector would START (best forward).</summary>
@@ -733,6 +805,113 @@ namespace TacticalDirector.SeasonSave.Tests
             return new Squad(CraftedClubId, players);
         }
 
+        /// <summary>The globally weakest of <see cref="InCapBoundaryRoster"/>'s twelve suspended
+        /// candidates (order[0]) — rated below every other, but plays midfield where the fit squad is
+        /// THIN, so he STARTS the moment he is reinstated, permanently, for every later pass.</summary>
+        private const int InCapWeakLocal = 13;
+
+        /// <summary>Decoy suspended candidates in <see cref="InCapBoundaryRoster"/> — rated above
+        /// <see cref="InCapWeakLocal"/> but below the fit squad's deep DEF/FWD, so none of them ever
+        /// starts if reinstated. Eleven of them, so <see cref="InCapWeakLocal"/> plus these twelve
+        /// candidates land exactly on <c>SeasonSaveConstants.EXTREMIS_SEARCH_CANDIDATE_CAP</c>.</summary>
+        private const int InCapDecoyCount = 11;
+
+        /// <summary>
+        /// Thirteen fit players (1 GK, 5 DEF, 4 MID, 3 FWD — <c>CLUB_SQUAD_SIZE</c>-bounded, so a
+        /// TWELVE-candidate suspended pool needs a THIRTEEN-player fit base, not seventeen: 13 + 12 = 25
+        /// is the roster ceiling) plus exactly TWELVE suspended candidates —
+        /// <c>SeasonSaveConstants.EXTREMIS_SEARCH_CANDIDATE_CAP</c> itself, the boundary at which the
+        /// exhaustive search must still run rather than degrade to the beyond-cap greedy fallback. FIVE
+        /// reinstatements reach the selection walk's eighteen (11 starters + 4 fit bench already present
+        /// leaves 5 bench slots open) — the multi-reinstatement shape, at the cap boundary rather than
+        /// above it. The four fit midfielders are rated 1–4 (THIN); <see cref="InCapWeakLocal"/>, rated
+        /// 5, outranks all of them and so STARTS the moment he is reinstated — permanently, since a
+        /// reinstatement is never undone — while the eleven decoys (rated 6–16, below the fit DEF/FWD's
+        /// 20) never displace a fit starter however many of them come back. The search's first pass
+        /// (<c>m == 12</c>) must therefore find a completing 5-subset that excludes
+        /// <see cref="InCapWeakLocal"/> (eleven decoys is more than enough); the beyond-cap greedy
+        /// fallback a <c>&gt;=</c> mutant would trigger instead blindly commits <c>order[0]</c> —
+        /// <see cref="InCapWeakLocal"/> himself — on pass 1, and once committed he is never revisited, so
+        /// he ends up a PERMANENT starter for every remaining pass.
+        /// </summary>
+        private static Squad InCapBoundaryRoster()
+        {
+            var players = new PlayerRecord[13 + 12];
+            players[0]  = Player(0,  PlayerPosition.Goalkeeper, 20);
+            players[1]  = Player(1,  PlayerPosition.Defender,   20);
+            players[2]  = Player(2,  PlayerPosition.Defender,   20);
+            players[3]  = Player(3,  PlayerPosition.Defender,   20);
+            players[4]  = Player(4,  PlayerPosition.Defender,   20);
+            players[5]  = Player(5,  PlayerPosition.Defender,   20);
+            players[6]  = Player(6,  PlayerPosition.Midfielder,  4);   // fit, THIN
+            players[7]  = Player(7,  PlayerPosition.Midfielder,  3);   // fit, THIN
+            players[8]  = Player(8,  PlayerPosition.Midfielder,  2);   // fit, THIN
+            players[9]  = Player(9,  PlayerPosition.Midfielder,  1);   // fit, THIN
+            players[10] = Player(10, PlayerPosition.Forward,    20);
+            players[11] = Player(11, PlayerPosition.Forward,    20);
+            players[12] = Player(12, PlayerPosition.Forward,    20);
+            players[13] = Player(13, PlayerPosition.Midfielder,  5);   // suspended, order[0], would START
+            PlayerPosition[] cycle = { PlayerPosition.Defender, PlayerPosition.Forward };
+            for (int d = 0; d < InCapDecoyCount; d++)
+            {
+                // Never starts: rated 6..16, below the fit DEF/FWD's 20.
+                players[14 + d] = Player(14 + d, cycle[d % cycle.Length], 6 + d);
+            }
+
+            return new Squad(CraftedClubId, players);
+        }
+
+        private static int[] AllInCapBoundarySuspendedIds()
+        {
+            var ids = new int[12];
+            ids[0] = IdOf(InCapWeakLocal);
+            for (int d = 0; d < InCapDecoyCount; d++)
+            {
+                ids[1 + d] = IdOf(14 + d);
+            }
+
+            return ids;
+        }
+
+        /// <summary>The lower-rated of <see cref="TiedForcedStartRoster"/>'s two suspended
+        /// goalkeepers — order[0], and the one the search must commit.</summary>
+        private const int TiedForcedGkALocal = 17;
+
+        /// <summary>The higher-rated of <see cref="TiedForcedStartRoster"/>'s two suspended
+        /// goalkeepers — order[1]; committing him instead is the `<=` mutant's signature.</summary>
+        private const int TiedForcedGkBLocal = 18;
+
+        /// <summary>
+        /// Seventeen fit OUTFIELDERS — no goalkeeper at all — plus two suspended goalkeepers rated 10
+        /// and 11. Either alone completes the eighteen the selection walk needs and necessarily starts
+        /// (he is the squad's only keeper), so both singletons tie at dirty == 1: the case the strict
+        /// <c>&lt;</c> preference comparison exists to resolve deterministically.
+        /// </summary>
+        private static Squad TiedForcedStartRoster()
+        {
+            var players = new PlayerRecord[19];
+            players[0]  = Player(0,  PlayerPosition.Defender,   12);
+            players[1]  = Player(1,  PlayerPosition.Defender,   11);
+            players[2]  = Player(2,  PlayerPosition.Defender,   10);
+            players[3]  = Player(3,  PlayerPosition.Defender,    9);
+            players[4]  = Player(4,  PlayerPosition.Defender,    8);
+            players[5]  = Player(5,  PlayerPosition.Defender,    7);
+            players[6]  = Player(6,  PlayerPosition.Midfielder, 12);
+            players[7]  = Player(7,  PlayerPosition.Midfielder, 11);
+            players[8]  = Player(8,  PlayerPosition.Midfielder, 10);
+            players[9]  = Player(9,  PlayerPosition.Midfielder,  9);
+            players[10] = Player(10, PlayerPosition.Midfielder,  8);
+            players[11] = Player(11, PlayerPosition.Midfielder,  7);
+            players[12] = Player(12, PlayerPosition.Forward,    12);
+            players[13] = Player(13, PlayerPosition.Forward,    11);
+            players[14] = Player(14, PlayerPosition.Forward,    10);
+            players[15] = Player(15, PlayerPosition.Forward,     9);
+            players[16] = Player(16, PlayerPosition.Forward,     8);
+            players[17] = Player(17, PlayerPosition.Goalkeeper, 10);   // suspended, order[0]
+            players[18] = Player(18, PlayerPosition.Goalkeeper, 11);   // suspended, order[1]
+            return new Squad(CraftedClubId, players);
+        }
+
         // ── helpers ──────────────────────────────────────────────────────────────────────
 
         /// <summary>
@@ -839,7 +1018,7 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | tree and green after. The three single-reinstatement cases are   |
 // |         |            |        | untouched — they exercise passes 1 and 2, which the finding      |
 // |         |            |        | leaves correct.                                                  |
-// | 1.2     | 2026-08-16 | —      | ERR-030-046 (escalated High). Three cases added and the retired  |
+// | 1.2     | 2026-08-16, later still | — | ERR-030-046 (escalated High). Three cases added and the retired |
 // |         |            |        | pass-structure prose swept out of the five existing ones, whose  |
 // |         |            |        | ASSERTIONS are all unchanged — under the search rule test 1's    |
 // |         |            |        | clean singleton is found at size 1, test 3's sole goalkeeper is  |
@@ -866,4 +1045,34 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | no minimality claim and asserting one would assert a guarantee   |
 // |         |            |        | the code explicitly does not give. The k >= 2 lock (test 5) is   |
 // |         |            |        | kept as a standing lock.                                         |
+// | 1.3     | 2026-08-16, even later still | — | Round-4 reviewed-findings pass (Fix 4): two new       |
+// |         |            |        | mutant-killers for the in-cap search, each verified by actually  |
+// |         |            |        | applying its named mutant, running the filter (dotnet test), and |
+// |         |            |        | reverting. (a) InCapBoundaryExtremis: THIRTEEN fit players plus  |
+// |         |            |        | EXACTLY twelve suspended candidates (m == CAP on pass 1; five    |
+// |         |            |        | reinstatements needed — CLUB_SQUAD_SIZE = 25 forbids a           |
+// |         |            |        | seventeen-fit/single-reinstatement shape at m = 12, 17+12 = 29). |
+// |         |            |        | One candidate (order[0], globally weakest) outranks the fit      |
+// |         |            |        | squad's four THIN midfielders and starts the instant he is       |
+// |         |            |        | reinstated, permanently; eleven decoy candidates never start.    |
+// |         |            |        | The real search always finds a clean 5-subset of decoys on pass  |
+// |         |            |        | 1 and never touches order[0] at all. Kills the cap off-by-one    |
+// |         |            |        | (`m > CAP` -> `m >= CAP`): mutated, pass 1 (m == 12) is misrouted|
+// |         |            |        | to the greedy fallback, which blindly commits order[0]; once     |
+// |         |            |        | committed he is never revisited, so he is a PERMANENT starter    |
+// |         |            |        | for the rest of the back-fill even though passes 2-5 run the     |
+// |         |            |        | real search under either operator (m = 11..8, below the cap      |
+// |         |            |        | regardless). (b) TiedForcedStartExtremis: two suspended          |
+// |         |            |        | goalkeepers, no fit keeper at all, so both singletons tie at the |
+// |         |            |        | SAME positive dirty count (1) — the case the strict `<` in the   |
+// |         |            |        | preference comparison exists to resolve. Kills the preference    |
+// |         |            |        | mutant (`<` -> `<=`): mutated, the later-found tie overwrites the|
+// |         |            |        | earlier one at s == 1 and again at s == 2, reaching a |R*| == 2  |
+// |         |            |        | winner whose every member singly completes — which the           |
+// |         |            |        | monotonicity lemma (AvailabilityComposition.cs v1.8) proves      |
+// |         |            |        | cannot happen, so the mutant is caught either by the wrong       |
+// |         |            |        | keeper being committed or by the new fail-loud firing; either    |
+// |         |            |        | way the test fails. The third named mutant (the collapsed commit |
+// |         |            |        | rule) is moot after v1.8 — the fixed code already behaves        |
+// |         |            |        | identically to the collapsed form on every reachable input.      |
 #endregion

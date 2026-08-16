@@ -1,6 +1,6 @@
 // File:     src/match-analytics/MatchAnalyticsAggregator.cs
 // Created:  2026-07-27
-// Modified: 2026-08-16, later (L-6, adversarial review — v1.1: the card routing's final `else` still
+// Modified: 2026-08-16, later (L-6, adversarial review — v1.4: the card routing's final `else` still
 //           absorbed any FUTURE fourth CardKind as a plain yellow, even after M4/ERR-037-003 made the
 //           SecondYellow branch explicit — the spec's card table (section-3.md) is exhaustive over
 //           #17's three-value domain and states no fourth-value posture. Widened to an explicit

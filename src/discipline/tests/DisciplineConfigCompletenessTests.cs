@@ -1,5 +1,12 @@
 // File:     src/discipline/tests/DisciplineConfigCompletenessTests.cs
 // Created:  2026-08-16
+// Modified: 2026-08-16, latest of all (round-4 reviewed-findings pass, L-E — v1.3: the test method
+//           still carried the name EveryPublicStaticReadonlyConstant_IsOneOfTheGuardedFour, from
+//           before M-A widened the scan to BindingFlags.NonPublic — the name promised PUBLIC-only
+//           coverage the method no longer has. Renamed
+//           EveryStaticReadonlyConstant_IsOneOfTheGuardedFour. No behaviour change; the two production
+//           remarks describing this test (DisciplineRules.cs, CardLedgerFold.cs) are corrected in the
+//           same pass — see their own version histories.)
 // Modified: 2026-08-16, later still (M-A, adversarial review — v1.2: the completeness lock saw only
 //           PUBLIC fields (`BindingFlags.Public | BindingFlags.Static`); an `internal static readonly
 //           [GT]` was invisible to it, and `internal` is the natural shape for a same-assembly-only
@@ -97,7 +104,7 @@ namespace TacticalDirector.Discipline.Tests
         };
 
         [Test]
-        public void EveryPublicStaticReadonlyConstant_IsOneOfTheGuardedFour()
+        public void EveryStaticReadonlyConstant_IsOneOfTheGuardedFour()
         {
             // BindingFlags.NonPublic added (M-A, adversarial review): the previous Public-only scan was
             // blind to an `internal static readonly [GT]` — and `internal` is the natural access level
@@ -186,4 +193,10 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | catalogue: DisciplineConstants declares no non-public and no      |
 // |         |            |        | property-backed static readonly field, so the reflected set is    |
 // |         |            |        | unchanged at four.                                                 |
+// | 1.3     | 2026-08-16, latest of all | — | Round-4 reviewed-findings fix (L-E). Test method  |
+// |         |            |        | renamed EveryPublicStaticReadonlyConstant_IsOneOfTheGuardedFour -> |
+// |         |            |        | EveryStaticReadonlyConstant_IsOneOfTheGuardedFour — the old name   |
+// |         |            |        | still said "Public" although M-A (v1.2) widened the scan to        |
+// |         |            |        | BindingFlags.NonPublic too. No behaviour change; grepped repo-wide |
+// |         |            |        | for the old name (docs/ and src/) — no other reference found.      |
 #endregion

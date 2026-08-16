@@ -1,5 +1,10 @@
 // File:     src/discipline/DisciplineState.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16, later (round-4 reviewed-findings pass, L-F — v1.2: EntryFor's summary claimed
+//           the negative-key branch returns "a clean zero row" as if it were the same shape as the
+//           non-negative absent branch, which carries the requested key — the negative branch returns
+//           default(DisciplineEntry), whose PlayerId/CompetitionId are 0/0, not the requested id.
+//           Corrected the doc to state that explicitly; no code change.)
 // Modified: 2026-08-16 (reviewed-findings pass, L1 — v1.1)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §2.2 (data structures) / FR-DC-001 / FR-DC-012 /
@@ -133,6 +138,15 @@ namespace TacticalDirector.Discipline
         /// <see cref="DisciplineEntry"/>'s constructor — which runs the §2.3 F2 guard and throws.
         /// <see cref="HasEntry"/> already reads false for the same key; a doc that promises "the absent
         /// case is not an error" must not let one sibling method throw where the other returns false.
+        /// <para>
+        /// <b>The negative-key row does NOT carry the requested key (L-F).</b> <c>default</c> is the
+        /// all-zero <see cref="DisciplineEntry"/> — <c>PlayerId</c> 0 and <c>CompetitionId</c> 0 — not
+        /// <paramref name="playerId"/>/<paramref name="competitionId"/> echoed back. This differs from
+        /// the non-negative absent branch below, which builds a row carrying the actual requested key
+        /// with zero tallies. Both are "clean"; only one is "clean AND keyed to what you asked for" —
+        /// a caller reading the negative-key result's <c>PlayerId</c>/<c>CompetitionId</c> back would
+        /// see 0/0, not the id it passed in.
+        /// </para>
         /// </summary>
         public DisciplineEntry EntryFor(int playerId, int competitionId)
         {
@@ -251,4 +265,12 @@ namespace TacticalDirector.Discipline
 // |         |            |        | IsAvailable / MarkSuspended, neither of which declares it. Now    |
 // |         |            |        | returns default(DisciplineEntry) directly for a negative key —    |
 // |         |            |        | the clean zero row, with no constructor call at all.              |
+// | 1.2     | 2026-08-16, later | — | Round-4 reviewed-findings fix (L-F), doc only. EntryFor's      |
+// |         |            |        | summary said the negative-key branch returns "a clean zero row",  |
+// |         |            |        | the same phrase used for the non-negative absent branch, which    |
+// |         |            |        | carries the REQUESTED key with zero tallies. The negative branch  |
+// |         |            |        | returns default(DisciplineEntry) — PlayerId 0, CompetitionId 0,   |
+// |         |            |        | not the id passed in. Corrected to state the distinction          |
+// |         |            |        | explicitly; locked by DisciplineStateTests'                       |
+// |         |            |        | EntryFor_NegativePlayerId_ReturnsTheAllZeroKey_NotTheRequestedOne. |
 #endregion

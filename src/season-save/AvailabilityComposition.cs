@@ -1,6 +1,16 @@
 // File:     src/season-save/AvailabilityComposition.cs
 // Created:  2026-08-13
-// Modified: 2026-08-16, later still (ERR-030-046, escalated High — tier 2's within-tier choice is no
+// Modified: 2026-08-16, even later still (round-4 reviewed-findings pass over the ERR-030-046 landing —
+//           the monotonicity lemma the commit rule's third branch always relied on is now STATED, not
+//           assumed: LineupSelector's per-position top-k selection makes dirty(R) monotone
+//           non-decreasing under adding candidates, so a completing singleton is already the global
+//           minimum and a |R*| >= 2 winner whose every member singly completes cannot arise. The third
+//           commit branch is now a fail-loud InvalidOperationException naming the lemma, its re-choice
+//           machinery deleted. A hoisted full-candidate-set probe skips the m·2^m enumeration outright
+//           when even the full set cannot field the formation. The candidate gather now requires
+//           suspended[i], not removed[i] alone. Both "self-heals" residual remarks corrected: the
+//           search resumes beyond the cap; the guarantee does not — v1.8)
+//           Prior: 2026-08-16, later still (ERR-030-046, escalated High — tier 2's within-tier choice is no
 //           longer a greedy element-wise decision at all. Both prior shapes decided ONE player at a
 //           time against a scalar key while the constraint they were serving is set-valued and
 //           per-position, so a squad thin in the globally-weakest banned player's position pressed HIM
@@ -139,8 +149,9 @@ namespace TacticalDirector.SeasonSave
     /// exemption stalls exactly the bans that were fielded, and no fewer. <b>(ii) The beyond-cap
     /// corner</b> — more than <see cref="SeasonSaveConstants.EXTREMIS_SEARCH_CANDIDATE_CAP"/> concurrent
     /// suspended candidates, which no measured card rate reaches; that pass degrades to ascending-rank
-    /// greedy and makes <b>no</b> minimality claim, and it self-heals, since each pass commits one
-    /// candidate and the search resumes as soon as the count is back within the cap. Those two are the
+    /// greedy and makes <b>no</b> minimality claim. The exact search resumes once the candidate count
+    /// falls back inside the bound, but the guarantee does not: a greedily committed candidate is not
+    /// revisited, so the composition can remain above the minimum for that fixture. Those two are the
     /// whole residual; ERR-030-044's two-case and ERR-030-045's three-case statements are
     /// <b>superseded</b>, not amended. What deletes residual (i) is the two missing tiers below, not any
     /// choice rule here.
@@ -407,9 +418,20 @@ namespace TacticalDirector.SeasonSave
         /// <para>
         /// <b>Cap.</b> With more than <see cref="SeasonSaveConstants.EXTREMIS_SEARCH_CANDIDATE_CAP"/>
         /// candidates the search is refused and the weakest candidate returned, with <b>no cleanliness
-        /// claim</b> — ERR-030-046 residual (ii). It self-heals: this pass commits one candidate, so the
-        /// count falls, and the exact search resumes on the next pass as soon as it is back within the
-        /// bound.
+        /// claim</b> — ERR-030-046 residual (ii). The exact search resumes once the candidate count
+        /// falls back inside the bound, but the guarantee does not: a greedily committed candidate is
+        /// not revisited, so the composition can remain above the minimum for that fixture.
+        /// </para>
+        /// <para>
+        /// <b>Full-set probe first (Low, ERR-030-046 follow-up).</b> Before enumerating anything, one
+        /// probe checks whether <c>F</c> plus <b>every</b> remaining candidate can field the formation at
+        /// all. Fieldability is monotone in ADDING candidates — the same premise the lemma below rests
+        /// on — so if the full set cannot complete the squad, no smaller subset can either; the whole
+        /// <c>m·2^m</c> enumeration would only rediscover that. Skipping straight to the weakest
+        /// candidate here costs one extra <see cref="SquadRating.CanFieldStartingEleven"/> walk on every
+        /// call and saves the full search on the one call whose answer is "no subset completes" — the
+        /// §2.3 F9 roster-integrity case the outer loop's own <c>availableCount == total</c> guard
+        /// already exists to report.
         /// </para>
         /// <para>
         /// <b>Search.</b> Enumerate subsets <c>R</c> of the ordered candidates, sizes ascending, and
@@ -424,13 +446,38 @@ namespace TacticalDirector.SeasonSave
         /// globally optimal and stops the search, since every smaller size has already been exhausted.
         /// </para>
         /// <para>
-        /// <b>Commit rule</b> — the search chooses a set, this method must return one member of it. If
-        /// <c>|R*| == 1</c>, that member. If <c>|R*| ≥ 2</c> and some member's own singleton was probed
-        /// and did <b>not</b> complete the squad, the canonically first such member: the outer loop
-        /// cannot exit on this pass, so the search simply reruns on the next one with the state
-        /// <c>R* \ {c}</c> was probed against. If <c>|R*| ≥ 2</c> and every member singly completes, the
-        /// choice is re-made among the size-1 completing subsets by the same preference — deterministic,
-        /// and the eleven the loop then exits on is one this call already probed.
+        /// <b>The monotonicity lemma — why the third commit branch is unreachable (Medium, closed this
+        /// pass).</b> <c>LineupSelector</c> selects its starting eleven <b>per position class</b>: each
+        /// slot draws from the candidates eligible for that class and keeps its own top-<c>k</c>. Adding
+        /// a candidate to any squad can therefore only ever DISPLACE a same-class player from that
+        /// class's pool — it can never change which OTHER classes are already satisfied. So
+        /// <c>dirty(R)</c>, the count of reinstated-suspended starters, is monotone
+        /// <b>non-decreasing</b> in <c>R</c> under adding candidates: if some candidate <c>c</c>'s own
+        /// singleton <c>{c}</c> completes the squad, <c>dirty({c})</c> is already the GLOBAL minimum over
+        /// every completing superset containing <c>c</c> — no larger set built on top of <c>{c}</c> can
+        /// do better. The search's own <c>s == 1</c> pass evaluates every singleton before any larger
+        /// size, so a completing singleton is found — and, being a minimum, committed at size 1 — before
+        /// the search ever reaches a <c>|R*| ≥ 2</c> winner. <b>A completing singleton therefore cannot
+        /// coexist with a strictly better <c>|R*| ≥ 2</c> winner</b> while this premise holds.
+        /// <b>The premise is <c>LineupSelector</c>'s per-position top-k selection specifically</b> —
+        /// verified over 6,858 generated oracle cases (<c>thirdBranchReachable = 0</c>; collapsing the
+        /// whole commit rule to <c>return order[bestSubset[0]]</c> is behaviour-identical over 3,966
+        /// further cases, 11/11 tests). A Stage-1 role-weighted or cross-class selection rule would
+        /// invalidate the lemma and reopen the branch — which is why the implementation below fails loud
+        /// there rather than carrying dead re-choice code for a branch nothing can reach today.
+        /// </para>
+        /// <para>
+        /// <b>Commit rule</b> — the search chooses a set, this method must return one member of it.
+        /// <c>|R*| == 1</c> ⇒ that member. <c>|R*| ≥ 2</c> ⇒ the monotonicity lemma above guarantees every
+        /// member's own singleton was probed and did <b>not</b> complete the squad — a completing
+        /// singleton would already have been the global minimum and won at size 1 — so this method
+        /// returns the canonically first such member: the outer loop cannot exit on this pass, so the
+        /// search simply reruns on the next one with the state <c>R* \ {c}</c> was probed against.
+        /// Should the lemma ever be false — a selection rule that is no longer per-position top-k — every
+        /// member of <c>R*</c> completing on its own is detected and refused loudly instead of silently
+        /// re-choosing among them: the re-choice machinery that used to live here assumed the very
+        /// theorem this state contradicts, and guessing at a replacement key is exactly the class of
+        /// defect ERR-030-044 and ERR-030-045 were.
         /// </para>
         /// <para>
         /// <b>Guarantee (ERR-030-046).</b> Within the cap the composed squad fields the <b>minimum
@@ -454,11 +501,21 @@ namespace TacticalDirector.SeasonSave
         /// loops; <c>SeasonLoop.ResolveFixture</c> already re-rates every club per matchday on the same
         /// argument.
         /// </para>
+        /// <para>
+        /// <b>Allocation, not just walk count (Low, recorded not fixed).</b> Each <c>TrySelect</c> walk
+        /// allocates a fresh transient buffer per rating read, so the walk count above understates the
+        /// real cost. Measured: <c>m = 12</c> (the cap) is <b>~74.5 ms and ~157 MiB transient</b> (an
+        /// <c>int[31]</c> per rating read across roughly 8,000 probes), against <b>~0.22 ms / ~460 KiB</b>
+        /// at <c>m = 4</c>. Season cadence, plus the cap's own unreachability at any measured card rate,
+        /// keep both acceptable; <see cref="Compose"/>'s reference-identity fast path (FR-DC-018 — the
+        /// overwhelming majority of fixtures) is unaffected, since this method is never called on that
+        /// path at all.
+        /// </para>
         /// </summary>
         private static int ChooseSuspendedCandidate(
             Squad squad, bool[] removed, bool[] suspended, int availableCount)
         {
-            int[] order = CandidatesByAscendingRank(squad, removed);
+            int[] order = CandidatesByAscendingRank(squad, removed, suspended);
             int m = order.Length;
             if (m == 0)
             {
@@ -468,15 +525,30 @@ namespace TacticalDirector.SeasonSave
             if (m > SeasonSaveConstants.EXTREMIS_SEARCH_CANDIDATE_CAP)
             {
                 // Residual (ii): the probe budget, not a football judgement. No minimality is claimed
-                // for this pass; the commit reduces m by one, so the exact search resumes as soon as
-                // the candidate count is back within the cap.
+                // for this pass; the exact search resumes once the candidate count falls back inside
+                // the bound, but the guarantee does not — a greedily committed candidate is not
+                // revisited, so the composition can remain above the minimum for that fixture.
                 return order[0];
             }
 
             var subset = new int[m];            // positions into `order` — the current combination
+            for (int k = 0; k < m; k++)
+            {
+                subset[k] = k;
+            }
+            if (ProbeSubset(squad, removed, suspended, order, subset, m, availableCount) < 0)
+            {
+                // Fieldability is monotone in ADDING candidates (the same premise the commit-rule
+                // lemma below rests on): if even every remaining candidate together cannot field the
+                // formation, no smaller subset can either, and the m·2^m enumeration below would only
+                // rediscover that at full cost. Return the weakest candidate directly; the outer loop's
+                // own `availableCount == total` guard is what actually reports the roster problem
+                // (§2.3 F9), not this method.
+                return order[0];
+            }
+
             var bestSubset = new int[m];
             var singletonCompletes = new bool[m];
-            var singletonDirty = new int[m];
 
             int bestDirty = int.MaxValue;
             int bestSize = 0;
@@ -497,9 +569,10 @@ namespace TacticalDirector.SeasonSave
                         if (s == 1)
                         {
                             // Recorded for the commit rule below, which has to know whether a member of
-                            // a chosen multi-subset completes the squad on his own.
+                            // a chosen multi-subset completes the squad on its own (case 2's
+                            // non-completing check). The dirty count itself is no longer kept per
+                            // singleton — the monotonicity lemma below proves it is never needed.
                             singletonCompletes[subset[0]] = true;
-                            singletonDirty[subset[0]] = dirty;
                         }
 
                         if (dirty < bestDirty)
@@ -536,10 +609,9 @@ namespace TacticalDirector.SeasonSave
 
             if (bestSize == 0)
             {
-                // NO subset completes the squad — not even the full one, i.e. the whole roster cannot
-                // satisfy selection. That is the §2.3 F9 roster-integrity case, and it is the outer
-                // loop's to report: press the weakest back so availableCount keeps rising and the loop
-                // reaches its `availableCount == total` terminal refusal.
+                // Defensively unreachable now that the full-set probe above runs first: it already
+                // established the full candidate set completes the squad, so the s == m pass of the
+                // loop above necessarily assigns bestSize. Kept as a fail-safe, not a live path.
                 return order[0];
             }
 
@@ -558,26 +630,21 @@ namespace TacticalDirector.SeasonSave
                 }
             }
 
-            // Every member of R* completes on its own, so committing any of them ENDS the back-fill and
-            // the exit eleven is decided here rather than by a later pass. Re-choose among the size-1
-            // completing subsets by the same preference — the full size-1 sweep necessarily ran, since a
-            // clean singleton would have been returned above.
-            int pick = -1;
-            int pickDirty = int.MaxValue;
-            for (int k = 0; k < m; k++)
-            {
-                if (singletonCompletes[k] && singletonDirty[k] < pickDirty)
-                {
-                    pickDirty = singletonDirty[k];
-                    pick = k;
-                }
-            }
-
-            return order[pick];
+            // UNREACHABLE under LineupSelector's per-position top-k selection (the monotonicity lemma
+            // in this method's doc comment): a completing singleton is already the global minimum, so
+            // it would have been found and committed at size 1, and a |R*| >= 2 winner whose every
+            // member singly completes could never have been chosen over it. Reaching here means that
+            // premise no longer holds — fail loud rather than silently re-choosing among candidates a
+            // broken theorem can no longer rank (the re-choice machinery this branch used to run is
+            // deleted, not merely dead-coded).
+            throw new InvalidOperationException(
+                "AvailabilityComposition.ChooseSuspendedCandidate: a completing singleton coexists "
+                + "with a strictly better multi-set — the per-position monotonicity lemma is violated; "
+                + "the selection rule has changed and the theorem no longer holds.");
         }
 
         /// <summary>
-        /// The still-removed candidates in the search's canonical order: ascending
+        /// The still-removed, suspended candidates in the search's canonical order: ascending
         /// <see cref="SquadRating.PlayerRating"/>, ties broken by earliest roster position.
         /// <para>
         /// The order decides nothing by itself since ERR-030-046 — the subset search does — but it must
@@ -586,13 +653,23 @@ namespace TacticalDirector.SeasonSave
         /// candidate count is bounded by the roster and by the search cap, and this runs once per
         /// extremis pass.
         /// </para>
+        /// <para>
+        /// <b>Gathers on <c>removed[i] &amp;&amp; suspended[i]</c>, not <c>removed[i]</c> alone (Low).</b>
+        /// Every candidate this search considers is suspended by construction TODAY — <see cref="Reinstate"/>'s
+        /// tier-1 pass takes anyone removed-and-not-suspended first, so nothing else can be left when
+        /// <see cref="ChooseSuspendedCandidate"/> calls this — but that was documented, not enforced. A
+        /// future tier landing at this seam (the youth call-ups / generated cover ladder the type remarks
+        /// name) is exactly the change that could add a THIRD removal reason between tier 1 and tier 2; the
+        /// explicit <c>suspended[i]</c> filter keeps this method gathering only real tier-2 candidates
+        /// under such a change instead of silently absorbing whatever tier 1 left behind.
+        /// </para>
         /// </summary>
-        private static int[] CandidatesByAscendingRank(Squad squad, bool[] removed)
+        private static int[] CandidatesByAscendingRank(Squad squad, bool[] removed, bool[] suspended)
         {
             int m = 0;
             for (int i = 0; i < removed.Length; i++)
             {
-                if (removed[i])
+                if (removed[i] && suspended[i])
                 {
                     m++;
                 }
@@ -603,7 +680,7 @@ namespace TacticalDirector.SeasonSave
             int w = 0;
             for (int i = 0; i < removed.Length; i++)
             {
-                if (!removed[i])
+                if (!removed[i] || !suspended[i])
                 {
                     continue;
                 }
@@ -834,7 +911,7 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | `candidate == null` branch at the probe site — reachable only at  |
 // |         |            |        | availableCount 0, where this site passes >= 1 — is replaced by a  |
 // |         |            |        | comment saying why it cannot fire.                                |
-// | 1.7     | 2026-08-16 | —      | ERR-030-046 (escalated High — the SAME defect survived two        |
+// | 1.7     | 2026-08-16, later still | — | ERR-030-046 (escalated High — the SAME defect survived two |
 // |         |            |        | successive fixes, so the no-third-identical-retry rule applied    |
 // |         |            |        | and the shape was ruled rather than iterated). v1.6's pass-3 key  |
 // |         |            |        | is an ascending-PlayerRating GLOBAL SCALAR while LineupSelector   |
@@ -896,4 +973,53 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | tier fires. Back-props: #30 section-3.md §3.4 (the search rule +  |
 // |         |            |        | theorem + residual) and #44 section-2.md / section-7.md           |
 // |         |            |        | (ERR-044-019 EXTENDED, not re-filed).                             |
+// | 1.8     | 2026-08-16, even later still | — | Round-4 reviewed-findings pass over the ERR-030-046   |
+// |         |            |        | landing (six findings, all fixed). (Medium) The commit rule's     |
+// |         |            |        | third branch was unreachable, unproven, and would have violated   |
+// |         |            |        | the theorem if live — the reason is a lemma this file never       |
+// |         |            |        | stated: LineupSelector picks top-k PER POSITION CLASS, so adding  |
+// |         |            |        | a candidate to a completing set can only displace a same-class    |
+// |         |            |        | player, dirty(R) is monotone non-decreasing under adding          |
+// |         |            |        | candidates, and a completing singleton is therefore already the   |
+// |         |            |        | global minimum (verified: thirdBranchReachable = 0 over 6,858     |
+// |         |            |        | oracle cases; collapsing the whole commit rule to                 |
+// |         |            |        | order[bestSubset[0]] is behaviour-identical over 3,966 cases and  |
+// |         |            |        | 11/11 tests). ChooseSuspendedCandidate's doc now states the       |
+// |         |            |        | lemma, names the per-position-top-k premise as load-bearing, and  |
+// |         |            |        | warns a Stage-1 role-weighted or cross-class selector invalidates |
+// |         |            |        | it; the third commit branch is now a fail-loud                    |
+// |         |            |        | InvalidOperationException naming the lemma, and the re-choice     |
+// |         |            |        | machinery (singletonDirty[], the final pick loop) is DELETED, not |
+// |         |            |        | dead-coded. (Medium) §3.4 had no defined behaviour for "no subset |
+// |         |            |        | completes" beyond the code's own bestSize == 0 fallback; a fourth |
+// |         |            |        | Commit case is now normative in section-3.md, and (Low, same      |
+// |         |            |        | branch) a single hoisted full-candidate-set probe at the top of   |
+// |         |            |        | the search returns order[0] directly — sound by the same          |
+// |         |            |        | monotonicity premise — instead of spending the full m·2^m         |
+// |         |            |        | enumeration to discover nothing completes; bestSize == 0 is now a |
+// |         |            |        | defensive fail-safe rather than a live path. (Medium) Both        |
+// |         |            |        | "self-heals" remarks (~v1.7 line 141 and the Cap. paragraph)      |
+// |         |            |        | conflated the SEARCH resuming with the GUARANTEE resuming; a      |
+// |         |            |        | greedily committed beyond-cap candidate is never revisited, so    |
+// |         |            |        | the composition can remain above the minimum for that fixture —   |
+// |         |            |        | corrected at both sites here, at SeasonSaveConstants.cs:118, at   |
+// |         |            |        | section-3.md §3.4 (the Cap bullet and residual (ii)), and at the  |
+// |         |            |        | mirrored residual in discipline-suspensions/{section-2,           |
+// |         |            |        | section-7}.md. (Low) CandidatesByAscendingRank gathered on        |
+// |         |            |        | removed[i] alone — "every candidate here is suspended" was        |
+// |         |            |        | documented, not enforced, and the planned youth/generated-cover   |
+// |         |            |        | tiers land exactly at this seam; now gathers on                   |
+// |         |            |        | removed[i] && suspended[i], with the reason stated in its own     |
+// |         |            |        | doc. (Low) The Cost remark counted walks, not allocation:         |
+// |         |            |        | measured m=12 -> ~74.5 ms / ~157 MiB transient (an int[31] per    |
+// |         |            |        | rating read across ~8k probes), m=4 -> 0.22 ms / 460 KiB; both    |
+// |         |            |        | remarks now say so, noting season cadence + the cap's own         |
+// |         |            |        | unreachability keeps it acceptable and Compose's identity fast    |
+// |         |            |        | path is unaffected. Tests: AvailabilityCompositionExtremisTests   |
+// |         |            |        | v1.3 (+2 cases at m = 12 exactly and at a tied-dirty-count         |
+// |         |            |        | scenario, both observed failing against the two named mutants).   |
+// |         |            |        | Back-props: #30 section-3.md §3.4 (the lemma, the fourth Commit   |
+// |         |            |        | case, the residual wording), #44 section-2.md / section-7.md      |
+// |         |            |        | (residual wording only), spec-error-log.md (ERR-030-046           |
+// |         |            |        | annotation, dated).                                                |
 #endregion
