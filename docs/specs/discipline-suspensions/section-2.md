@@ -1,7 +1,22 @@
 # Discipline & Suspensions #44 — Section 2: Requirements, Data Structures, Failure Modes
 
 **Created:** July 24, 2026
-**Last Updated:** August 16, 2026, yet later (v0.12 — final fixer pass over the reviewed-findings
+**Last Updated:** August 16, 2026, later still (v0.13 — **`ERR-030-045`** (an adversarially-reviewed
+High continuing `ERR-030-044`'s, filed at #30 which owns the rule; back-propagated here). §2.3's
+`ERR-044-019` note stated the extremis compromise in a two-case form whose second case — "forced to
+start" — read as if only positional forcing could reach it (its parenthetical named the club's only
+goalkeeper as *the* case). That is narrower than the truth: a club short by **more than one** player
+gets no useful probe on any reinstatement but the last, because fieldability is monotone in adding
+players, so #30's amended within-tier key decides those picks blind and can only make them *well*. If
+every completing choice starts a suspended player, one starts. #30's key is therefore a **best-effort
+minimisation** of the forced-start case, not a guarantee against it — a distinction #44 has to state,
+because a mass-suspension club is the population its own subject creates. The goalkeeper parenthetical
+is moved into the new note and the bullet reworded to "no candidate choice keeps every
+reinstated-suspended player out of the eleven", which is the condition that actually holds. No FR row
+changed; FR-DC-011 is untouched and correct in every case. §7.2's mirror amended in the same commit
+(`section-7.md` v0.9); #30 `section-3.md` v2.8; code `src/season-save/AvailabilityComposition.cs` v1.6,
+`src/match-engine/SquadRating.cs` v1.5.)
+**Last Updated (prior):** August 16, 2026, yet later (v0.12 — final fixer pass over the reviewed-findings
 round: **`ERR-044-018`** (M8) — §2.2's `DisciplineState` block was a bare `{ /* map ... */ }` comment
 while the landed type exposes `Count`, `EntryAt(int)`, `EntryFor(int,int)`, `HasEntry(int,int)` and the
 restore-door `FromEntries(DisciplineEntry[])`, whose strictly-ascending + no-all-zero-rows refusals are
@@ -76,7 +91,7 @@ re-scoped off "the engine-resolved fixture" to every resolved squad on both reso
 fail-loud withdrawn in favour of #30 §2.3 F9, with the suspension-as-stricter-reinstatement-tier
 decision recorded)
 **Last Updated (prior):** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.12
+**Version:** 0.13
 **Status:** APPROVED
 
 ---
@@ -259,13 +274,25 @@ is pressed back before any suspended one. **That tier order is unchanged.**
 >   suspension costs exactly what the Laws say it costs, even though the club was depleted enough to
 >   need him in its eighteen.
 > - **Forced to start — the residual.** When no candidate choice keeps every reinstated-suspended
->   player out of the eleven (the club's only goalkeeper being the canonical case), he starts, the
->   ERR-044-003 stage-1 exemption fires, and **his ban does not advance for that fixture**. This is the
->   compromise between #30's liveness invariant and the Laws, and it is the ONLY case in which a ban
->   stalls. It is what the two unbuilt tiers below delete.
+>   player out of the eleven, he starts, the ERR-044-003 stage-1 exemption fires, and **his ban does not
+>   advance for that fixture**. This is the compromise between #30's liveness invariant and the Laws,
+>   and it is the ONLY case in which a ban stalls. It is what the two unbuilt tiers below delete.
 >
 > Neither case is a licence for the other: the stall is a property of being *forced* onto the pitch,
 > never of being reinstated.
+>
+> **`ERR-030-045` (August 16, 2026) amends the second bullet — it was written as if only positional
+> forcing could reach it, and that is narrower than the truth.** The forced-start case is reached two
+> ways. The first is the canonical one: a **single** reinstatement with no benchable candidate, the
+> club's only goalkeeper. The second is a **multi-player shortfall** in which every completing choice
+> starts someone — a club short by more than one gets no useful probe on any reinstatement but the last
+> (fieldability is monotone in adding players, so nothing is fieldable until the gap closes), and #30's
+> pass-3 key can only make that pick *well*, not make it safe. #30 §3.4's key is therefore a **best-effort
+> minimisation of this bullet, not a guarantee against it** — it presses the weakest banned players back
+> first, so the strong ones the selector would start are reached only when nothing weaker completes the
+> squad. Read the two bullets that way: benched *whenever any choice permits it*, forced start when none
+> does. A mass-suspension club is the population that meets the second case, and #44 is the spec whose
+> own subject makes that club common.
 
 What **ERR-044-003 stage 1**
 (August 15, 2026) fixed is the free-appearance half: an extremis appearance no longer serves the ban it
@@ -295,4 +322,5 @@ chosen.
 | 0.10 | 2026-08-16 | — | **`ERR-044-014`** (adversarial review, H1). FR-DC-011 amended: `OnClubFixturePlayed` MUST take the club's ROSTER alongside its fielded eleven, and "the player's club" MUST be read from that roster rather than derived from `PlayerId / CLUB_SQUAD_SIZE`. §2.2's signature becomes `OnClubFixturePlayed(int clubId, int[] clubPlayerIds, int[] fieldedPlayerIds)` (verified against `src/discipline/DisciplineRules.cs` v1.7), with `clubId` documented as identity + the F2 gate only and the roster documented as necessarily the UNFILTERED one — every id being served is one the filter has just removed. §2.3 **F2** extended with the null-`clubPlayerIds` refusal on the ERR-044-007 posture, and annotated: the negative-id-divides-to-club-0 hazard ERR-044-004 filed is no longer reachable through this method, which no longer divides, while the `DisciplineEntry`/`Decode` refusals stand. The retired derivation was a SECOND notion of club membership beside `Availability.MarkSuspended`'s roster walk, and the migration rule cited as keeping them in step (FR-DC-013) has no production caller. See `spec-error-log.md` `ERR-044-014`. |
 | 0.11 | 2026-08-16 | — | **`ERR-044-019`** (adversarial review, H2; the rule itself is #30's and is amended at `ERR-030-044`). §2.3's ERR-044-003 note stated the extremis compromise as ONE case — "a suspended player plays only when the alternative is a club that cannot take the field at all" — and that was false of the implementation on both halves. The TRIGGER is #30 §3.4's probe `SquadRating.CanFieldStartingEleven`, which is `LineupSelector`'s full selection walk (eleven position-matched starters PLUS the seven-slot bench), so the tier fires on **bench depth** at a club that can field a perfectly legal XI; and the pre-fix within-tier ORDERING (earliest roster position) then put the reinstated man into the pool the rating-greedy selector draws the starting eleven from, which started him — after which ERR-044-003 stage 1's exemption stalled his ban for as long as the club stayed depleted. Corrected to the two-case form #30's amended key produces: **benched** (the common case, and what the amended key prefers) ⇒ not in `fieldedPlayerIds` ⇒ FR-DC-011's decrement is NOT exempted ⇒ the ban advances normally; **forced to start** (no candidate choice keeps a reinstated-suspended player out of the XI — the sole-goalkeeper case) ⇒ exempt ⇒ and only then does the ban stall, which is the residual §7.2's unbuilt tiers delete. No FR row changed: FR-DC-011 already says "did not appear in", which is exactly right in both cases — what was wrong was this section's account of when the appearance happens. §7.2's mirror corrected in the same commit (`section-7.md` v0.8); code at `src/season-save/AvailabilityComposition.cs` v1.5. |
 | 0.12 | 2026-08-16, yet later | — | **Final fixer pass, four findings.** **`ERR-044-018`** (M8): §2.2's `DisciplineState` block declared — `Count`, `EntryAt(int)`, `EntryFor(int,int)`, `HasEntry(int,int)`, `FromEntries(DisciplineEntry[])` — replacing a bare `{ /* map ... */ }` comment; cross-referenced to F3 (§2.3) and FR-DC-017 for `FromEntries`' refusals, and notes `EntryFor`'s negative-key posture (the zero row, not a throw — `DisciplineState.cs` v1.1). **`ERR-044-020`** (M3): §2.2 gains the `IDisciplineTickLedgerTap` interface declaration (previously referenced, never declared), with `CurrentTick`, and `CardLedgerFold.ObserveTick`'s declaration gains a note on the consecutive-tick refusal and the partial-application poison latch — spec-side sync of a code addition the spec text had been silent on, not a contradiction. **M7** (`ERR-044-017`): FR-DC-006/FR-DC-007's four `[GT]` constant names renamed ALL_CAPS → PascalCase (`YellowAccumulationThreshold`/`AccumBanMatches`/`SecondYellowBanMatches`/`StraightRedBanMatches`) to match `DisciplineConstants.cs` and `src/CLAUDE.md` §3.2.3. **L6**: v0.8/v0.9's `DisciplineRules.cs`/`CardLedgerFold.cs` line-number citations replaced with member names in place, annotated. See `spec-error-log.md` `ERR-044-017`, `ERR-044-018`, `ERR-044-020`. |
+| 0.13 | 2026-08-16, later still | — | **`ERR-030-045`** (an adversarially-reviewed High continuing `ERR-030-044`'s; filed at #30 `section-3.md` v2.8, which owns the rule; back-propagated here). §2.3's v0.11 note stated the extremis compromise as two cases and pinned the second — "forced to start" — to positional forcing, its parenthetical naming the club's only goalkeeper as *the* case. That is narrower than what the implementation can produce. A club short by **more than one** player gets no usable probe on any reinstatement but the last, because fieldability is monotone in adding players — nothing is fieldable until the gap closes — so #30's within-tier key decides those picks blind. Its amended pass-3 key (weakest banned player first, by the selector's own rating) makes them *well*, and that is all it can do: if every completing choice starts a suspended player, one starts. So #30's key is a **best-effort minimisation** of the forced-start case, not a guarantee against it, and #44 must say so, because a mass-suspension club is precisely the population its own subject creates. The goalkeeper parenthetical moves into a new `ERR-030-045` note and the bullet is reworded to the condition that actually holds ("no candidate choice keeps every reinstated-suspended player out of the eleven"). No FR row changed — FR-DC-011 says "did not appear in", which is right in every case; what was wrong, again, was this section's account of when the appearance happens. §7.2's mirror amended in the same commit (`section-7.md` v0.9); code `src/season-save/AvailabilityComposition.cs` v1.6, `src/match-engine/SquadRating.cs` v1.5. |
 #endregion

@@ -1,5 +1,13 @@
 // File:     src/discipline/tests/DisciplineRulesTests.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16, latest (carried L2, re-rated Medium, closed in full — v1.10: two new locks.
+//           AddBan_NearIntMaxValue_ThrowsOverflowException_EntryUnmodified, in the shape of v1.9's
+//           AddYellow_AtIntMaxValue lock, for AddBan's own (already-routed) addition, which had no
+//           test of this shape. AddYellow_CrossingThresholdWithBanNearIntMaxValue_
+//           ThrowsOverflowException_EntryUnmodified locks the actual scenario the finding named: a
+//           threshold-crossing yellow whose SECOND addition — the accumulation-ban `+=`, one line below
+//           the `+1` v1.9 fixed — was still unrouted through int.MaxValue and left the row half-applied
+//           on the old code (DisciplineRules.cs v1.10 fixes it).)
 // Modified: 2026-08-16, yet later (final fixer pass — L2's second half wiring: one new lock,
 //           AddYellow_AtIntMaxValue_ThrowsOverflowException_EntryUnmodified, for
 //           DisciplineRules.AddYellow now routing through the guarded DisciplineEntry.YellowsPlusOne
@@ -229,6 +237,59 @@ namespace TacticalDirector.Discipline.Tests
                 + "DisciplineEntry.YellowsPlusOne refuses BEFORE the addition, not after.");
             Assert.AreEqual(0, entry.BanMatchesRemaining,
                 "the row must be untouched on the refused side too, not just the Yellows field.");
+        }
+
+        // ── Carried L2, re-rated Medium: the accumulation-ban addition, one line below the increment
+        // v1.9 fixed, was still unguarded until DisciplineRules.cs v1.10. AddBan's own addition was
+        // already routed through DisciplineEntry.BanMatchesPlus at v1.9 (it needed no code change here),
+        // but had no test in the AddYellow_AtIntMaxValue lock's shape — this closes that gap, and the
+        // second test below locks the actual scenario the finding named: a threshold-crossing yellow
+        // whose accumulation-ban addition, not its `+1` increment, is the one that would have overflowed.
+
+        [Test]
+        public void AddBan_NearIntMaxValue_ThrowsOverflowException_EntryUnmodified()
+        {
+            var state = new DisciplineState();
+            var rules = new DisciplineRules(state);
+            int p = PlayerId(0, 1);
+            state.Upsert(new DisciplineEntry(p, Competition, 4, int.MaxValue - 1));
+
+            Assert.Throws<OverflowException>(() => rules.AddBan(p, Competition, 3));
+
+            DisciplineEntry entry = rules.State.EntryFor(p, Competition);
+            Assert.AreEqual(4, entry.Yellows,
+                "the refused call must not have written anything, not just left BanMatchesRemaining alone.");
+            Assert.AreEqual(int.MaxValue - 1, entry.BanMatchesRemaining,
+                "the refused addition must not have written a wrapped (or any other) value — "
+                + "DisciplineEntry.BanMatchesPlus refuses BEFORE the addition, not after.");
+        }
+
+        [Test]
+        public void AddYellow_CrossingThresholdWithBanNearIntMaxValue_ThrowsOverflowException_EntryUnmodified()
+        {
+            // THE scenario the carried finding named verbatim: a player at BanMatchesRemaining ==
+            // int.MaxValue whose 5th yellow crosses the threshold used to hit AddYellow's SECOND,
+            // unrouted addition (`ban += RequireBanLength(AccumBanMatches)`) — a plain `+=` one line
+            // below the guarded `+1` v1.9 fixed. Before DisciplineRules.cs v1.10 this threw
+            // ArgumentOutOfRangeException from DisciplineEntry's constructor (the wrapped-negative value
+            // misreported as "a counting bug") with the row left HALF-applied: Yellows already reduced
+            // by the threshold (the residual subtraction, which happens before the ban addition), ban
+            // untouched. Now DisciplineEntry.BanMatchesPlus refuses before that addition runs, so the
+            // WHOLE call is refused and neither field moves.
+            var state = new DisciplineState();
+            var rules = new DisciplineRules(state);
+            int p = PlayerId(0, 1);
+            int threshold = DisciplineConstants.YellowAccumulationThreshold;
+            state.Upsert(new DisciplineEntry(p, Competition, threshold - 1, int.MaxValue));
+
+            Assert.Throws<OverflowException>(() => rules.AddYellow(p, Competition));
+
+            DisciplineEntry entry = rules.State.EntryFor(p, Competition);
+            Assert.AreEqual(threshold - 1, entry.Yellows,
+                "the refused crossing must not have applied the residual subtraction either — the call "
+                + "is refused as a whole, not half-applied with Yellows already reduced.");
+            Assert.AreEqual(int.MaxValue, entry.BanMatchesRemaining,
+                "the refused addition must not have written a wrapped (or any other) value.");
         }
 
         // ── Bans stack additively from any source ──────────────────────────────────
@@ -1030,4 +1091,18 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | `entry.Yellows + 1` through DisciplineEntry.YellowsPlusOne, which |
 // |         |            |        | refuses BEFORE the addition rather than letting it wrap negative  |
 // |         |            |        | and surface as a misleading "counting bug" range refusal.         |
+// | 1.10    | 2026-08-16, latest | — | Carried L2, re-rated Medium, closed in full. New:               |
+// |         |            |        | AddBan_NearIntMaxValue_ThrowsOverflowException_EntryUnmodified,   |
+// |         |            |        | mirroring v1.9's AddYellow_AtIntMaxValue lock for AddBan's own    |
+// |         |            |        | addition (already routed through BanMatchesPlus at v1.9, but with |
+// |         |            |        | no test of this shape until now). New:                            |
+// |         |            |        | AddYellow_CrossingThresholdWithBanNearIntMaxValue_                |
+// |         |            |        | ThrowsOverflowException_EntryUnmodified — the finding's own        |
+// |         |            |        | scenario: seeds BanMatchesRemaining == int.MaxValue and a row one |
+// |         |            |        | yellow below threshold, so the 5th yellow crosses and the SECOND, |
+// |         |            |        | previously-unrouted addition (the accumulation-ban `+=`) is the   |
+// |         |            |        | one that overflows. DisciplineRules.cs v1.10 now routes it through|
+// |         |            |        | DisciplineEntry.BanMatchesPlus, so the whole call is refused with |
+// |         |            |        | neither field moved, rather than leaving Yellows already reduced  |
+// |         |            |        | by the residual subtraction while the ban addition was lost.      |
 #endregion

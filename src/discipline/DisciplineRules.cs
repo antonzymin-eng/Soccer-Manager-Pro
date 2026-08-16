@@ -1,5 +1,19 @@
 // File:     src/discipline/DisciplineRules.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16, latest (carried L2 re-rated Medium, fully closed, plus finding C — v1.10:
+//           AddYellow's accumulation-ban addition (`ban += RequireBanLength(AccumBanMatches)`) was the
+//           one remaining unrouted accumulator addition in this file — v1.9 wired AddYellow's own
+//           `+ 1` and confirmed AddBan's `+ matches` was already routed, but missed this second
+//           addition one line below the increment it fixed. Now routes through
+//           DisciplineEntry.BanMatchesPlus, same as the other two. Doc-only elsewhere: the type
+//           remarks and CardLedgerFold.cs/DisciplineEntry.cs's stale "wiring is outside this file's
+//           ownership for this pass" trail is corrected to say the helpers ARE wired, with the
+//           surviving residual stated honestly — Commit still applies card-by-card, so a mid-list
+//           OverflowException still leaves 0..k-1 applied with _committed false; the guards make the
+//           failure loud and correctly named, they do not make Commit atomic against this class.
+//           Finding C: RequireBanLength's M2 remark now says the completeness lock covers every
+//           `public static readonly` field of ANY type, not only `int` — DisciplineConfigCompleteness-
+//           Tests.cs was widened the same day.)
 // Modified: 2026-08-16, yet later (final fixer pass — L2's second half: AddYellow's
 //           `entry.Yellows + 1` and AddBan's `entry.BanMatchesRemaining + matches` now route through
 //           DisciplineEntry.YellowsPlusOne/BanMatchesPlus, so an accumulator overflow throws
@@ -165,9 +179,13 @@ namespace TacticalDirector.Discipline
         /// this — it runs config-unbound (ERR-041-003).</exception>
         /// <exception cref="OverflowException"><paramref name="playerId"/>'s existing
         /// <see cref="DisciplineEntry.Yellows"/> is already <see cref="int.MaxValue"/> — refused BEFORE
-        /// the increment via <see cref="DisciplineEntry.YellowsPlusOne"/>, so the entry is never
+        /// the increment via <see cref="DisciplineEntry.YellowsPlusOne"/>; or, on a crossing,
+        /// <paramref name="playerId"/>'s existing <see cref="DisciplineEntry.BanMatchesRemaining"/> plus
+        /// <see cref="DisciplineConstants.AccumBanMatches"/> would overflow — refused BEFORE the
+        /// addition via <see cref="DisciplineEntry.BanMatchesPlus"/>. Either way the entry is never
         /// written with a value that silently wrapped negative and would otherwise surface here as a
-        /// misleading "counting bug" range refusal instead of what it actually is (L2).</exception>
+        /// misleading "counting bug" range refusal instead of what it actually is (L2, closed in full —
+        /// both additions this method performs are now guarded).</exception>
         public void AddYellow(int playerId, int competitionId)
         {
             int threshold = RequireYellowThreshold(DisciplineConstants.YellowAccumulationThreshold);
@@ -179,8 +197,10 @@ namespace TacticalDirector.Discipline
             if (yellows >= threshold)
             {
                 yellows -= threshold;
-                ban += RequireBanLength(
-                    DisciplineConstants.AccumBanMatches, nameof(DisciplineConstants.AccumBanMatches));
+                ban = DisciplineEntry.BanMatchesPlus(
+                    ban,
+                    RequireBanLength(
+                        DisciplineConstants.AccumBanMatches, nameof(DisciplineConstants.AccumBanMatches)));
             }
 
             _state.Upsert(new DisciplineEntry(playerId, competitionId, yellows, ban));
@@ -537,11 +557,14 @@ namespace TacticalDirector.Discipline
         /// and <c>CommitWithExplicitConfig</c>'s parameter list (so the round-level pre-flight refuses
         /// before anything is written), and #44 §2.3 F6's guard list in the spec. Nothing enforces that
         /// mechanically, so <c>DisciplineConfigCompletenessTests</c> asserts the guarded set equals
-        /// <see cref="DisciplineConstants"/>' config-settable set — extend the pre-flight and that test
-        /// together, or the new constant ships with the very silent-breach exposure this method exists
-        /// to close. The recorded eventual shape is one validated <c>DisciplineConfig</c> struct rather
-        /// than a chain of guards; it is gated on the <c>GameplayConfigHolder.Bind</c> composition-root
-        /// pass, which no production caller runs yet, so it buys nothing today.
+        /// <see cref="DisciplineConstants"/>' config-settable set — every <c>public static readonly</c>
+        /// field, of any type, not only <c>int</c> (finding C: the earlier int-only filter would have
+        /// silently dropped a future <c>Config.GetBool</c>/<c>GetFloat</c>/<c>GetString</c> constant from
+        /// the very set this sentence claims is covered) — extend the pre-flight and that test together,
+        /// or the new constant ships with the very silent-breach exposure this method exists to close.
+        /// The recorded eventual shape is one validated <c>DisciplineConfig</c> struct rather than a
+        /// chain of guards; it is gated on the <c>GameplayConfigHolder.Bind</c> composition-root pass,
+        /// which no production caller runs yet, so it buys nothing today.
         /// </para>
         /// </summary>
         /// <exception cref="InvalidOperationException"><paramref name="matches"/> is negative.</exception>
@@ -671,4 +694,18 @@ namespace TacticalDirector.Discipline
 // |         |            |        | shape exists in this file (AddYellow's separate `ban += RequireBanLength   |
 // |         |            |        | (AccumBanMatches)` line is a different addition, not in this pass's scope, |
 // |         |            |        | and was not named by the handoff).                                          |
+// | 1.10    | 2026-08-16, latest | — | Carried L2, re-rated Medium, closed in full; plus finding C.   |
+// |         |            |        | v1.9's own closing note above was WRONG: the AccumBanMatches addition it   |
+// |         |            |        | waved off as "a different addition, not in this pass's scope" is the SAME |
+// |         |            |        | accumulator shape one line below the fix — `ban += RequireBanLength       |
+// |         |            |        | (AccumBanMatches)` ran unguarded, so a player at BanMatchesRemaining ==    |
+// |         |            |        | int.MaxValue whose 5th yellow crossed the threshold still wrapped it       |
+// |         |            |        | negative and hit the constructor's misnamed "counting bug" guard, with     |
+// |         |            |        | the row left at yellows=4 (half-applied: the residual subtract landed,     |
+// |         |            |        | the ban add did not) and _committed still false. Now routes through        |
+// |         |            |        | DisciplineEntry.BanMatchesPlus, same as the other two accumulator sites.  |
+// |         |            |        | AddYellow's OverflowException doc extended to name both throw sources.    |
+// |         |            |        | Finding C, doc only: RequireBanLength's M2 remark now says the            |
+// |         |            |        | completeness lock covers every public static readonly field of ANY type,  |
+// |         |            |        | not only int, matching DisciplineConfigCompletenessTests.cs v1.1.         |
 #endregion

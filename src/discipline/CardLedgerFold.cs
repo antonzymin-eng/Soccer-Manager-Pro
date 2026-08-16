@@ -1,5 +1,16 @@
 // File:     src/discipline/CardLedgerFold.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16, latest (findings A and C, doc only — v1.9: A — CommitWithExplicitConfig's L2
+//           doc still said wiring DisciplineRules.AddYellow/AddBan through the guarded YellowsPlusOne/
+//           BanMatchesPlus helpers was "outside this file's ownership for this pass" — stale the same
+//           day it was written, since DisciplineRules.cs v1.9/v1.10 landed that wiring. Corrected to
+//           say the helpers ARE wired and to state the surviving residual honestly: Commit still
+//           applies card-by-card, so a mid-list OverflowException still leaves 0..k-1 applied with
+//           _committed false — the guards make the failure loud and correctly named, they do not make
+//           Commit atomic against this class. C — RequireCommittableConfig's M2 remark now says the
+//           completeness lock covers every public static readonly field of ANY type, not only int,
+//           matching DisciplineConfigCompletenessTests.cs v1.1. No code change — this file's ownership
+//           here is DOC comments only.)
 // Modified: 2026-08-16, later (reviewed findings pass, M1/M3/L2 — v1.8: M1 — ApplySubstitution now
 //           clears the vacated incoming slot after the swap (a later record naming it throws F1 rather
 //           than silently double-booking) and refuses outgoing == incoming; the constructor's seed loop
@@ -361,22 +372,27 @@ namespace TacticalDirector.Discipline
         /// half a fixture.
         /// </para>
         /// <para>
-        /// <b>L2 — the atomicity claim's SCOPE.</b> "All-or-nothing" above is a claim about the FOUR
-        /// pre-validated <c>[GT]</c>s <see cref="RequireCommittableConfig()"/> checks — the only throws
-        /// this loop is proven to rule out in advance. It is NOT a claim that <c>rules.ApplyCard</c>
-        /// cannot throw for any other reason: <see cref="DisciplineEntry"/>'s own non-negative range
-        /// guards (constructed fresh on every add) can still fire from plain accumulator overflow — a
-        /// decoded row at <c>Yellows == int.MaxValue</c> throws on the very next add, and that
-        /// exception's message ("a negative tally is a counting bug") misnames the cause, since the
-        /// tally was never negative until the addition silently wrapped it there. A throw from that
-        /// source, mid-loop, leaves cards <c>0..k-1</c> already applied and card <c>k</c> onward lost —
-        /// exactly the half-applied fixture this method exists to prevent, for a cause its guards do not
-        /// cover. <see cref="DisciplineEntry.YellowsPlusOne"/> / <see cref="DisciplineEntry.BanMatchesPlus"/>
-        /// now exist as the guarded arithmetic that would close this gap at its source, throwing an
-        /// overflow-named exception BEFORE the addition rather than after; wiring
-        /// <c>DisciplineRules.AddYellow</c>/<c>AddBan</c> to call them is the remaining half of L2 and is
-        /// outside this file's ownership for this pass — recorded here so the claim above is read as
-        /// scoped rather than as a guarantee this loop does not actually provide.
+        /// <b>L2 — the atomicity claim's SCOPE (closed at DisciplineRules.cs v1.10; residual restated,
+        /// not removed).</b> "All-or-nothing" above is a claim about the FOUR pre-validated
+        /// <c>[GT]</c>s <see cref="RequireCommittableConfig()"/> checks — the only throws this loop is
+        /// proven to rule out in advance. It is NOT a claim that <c>rules.ApplyCard</c> cannot throw for
+        /// any other reason. <c>DisciplineRules.AddYellow</c>/<c>AddBan</c> now route every accumulator
+        /// addition they perform through the guarded <see cref="DisciplineEntry.YellowsPlusOne"/> /
+        /// <see cref="DisciplineEntry.BanMatchesPlus"/> helpers (DisciplineRules.cs v1.10 — the second,
+        /// AddYellow's own <c>AccumBanMatches</c> addition, was still unrouted as of v1.9), so an
+        /// accumulator at <c>int.MaxValue</c> now throws a loud, correctly-named
+        /// <see cref="OverflowException"/> BEFORE any write, never <see cref="DisciplineEntry"/>'s
+        /// constructor misreporting it as "a negative tally is a counting bug". <b>That does not make
+        /// this loop atomic against it.</b> Commit still applies cards one at a time through
+        /// <c>rules.ApplyCard</c>, so a card <c>k</c> whose accumulator overflow now throws (loudly,
+        /// correctly named) still leaves cards <c>0..k-1</c> already applied and <see cref="_committed"/>
+        /// still <c>false</c> — exactly the half-applied fixture this method's own M13/M17 fixes exist to
+        /// prevent for the four pre-validated <c>[GT]</c>s, and do not extend to this cause. The guards
+        /// make the failure loud and correctly named; they do not make <c>Commit</c> atomic against this
+        /// class of throw. Reaching this in practice needs a decoded row already near <c>int.MaxValue</c>
+        /// — outside what any card-by-card play sequence can accumulate — so it is a save-boundary
+        /// exposure, not a live one, but the scoping above must not be read as a guarantee this loop does
+        /// not actually provide.
         /// </para>
         /// </summary>
         /// <exception cref="InvalidOperationException">This fold has already been committed, or one of
@@ -444,11 +460,12 @@ namespace TacticalDirector.Discipline
         /// no-argument form above, <see cref="CommitWithExplicitConfig"/>'s parameter list,
         /// <see cref="DisciplineRules"/>' own site guard, and #44 §2.3 F6's guard list. Nothing makes
         /// that mechanical, so <c>DisciplineConfigCompletenessTests</c> asserts the SET of
-        /// config-settable constants in <see cref="DisciplineConstants"/> equals the set covered here —
-        /// extend the pre-flight and that test together. The eventual owner-shape is a single validated
-        /// <c>DisciplineConfig</c> struct, which makes the drift impossible rather than detected; it is
-        /// recorded and deliberately deferred, gated on the <c>GameplayConfigHolder.Bind</c>
-        /// composition-root pass that no production caller runs yet.
+        /// config-settable constants in <see cref="DisciplineConstants"/> — every <c>public static
+        /// readonly</c> field, of any type, not only <c>int</c> (finding C) — equals the set covered
+        /// here — extend the pre-flight and that test together. The eventual owner-shape is a single
+        /// validated <c>DisciplineConfig</c> struct, which makes the drift impossible rather than
+        /// detected; it is recorded and deliberately deferred, gated on the
+        /// <c>GameplayConfigHolder.Bind</c> composition-root pass that no production caller runs yet.
         /// </para>
         /// </summary>
         internal static void RequireCommittableConfig(
@@ -647,4 +664,15 @@ namespace TacticalDirector.Discipline
 // |         |            |        | throw instead of silently corrupting occupancy; a skipped or      |
 // |         |            |        | out-of-order ObserveTick call now throws instead of silently      |
 // |         |            |        | losing cards.                                                      |
+// | 1.9     | 2026-08-16, latest | — | Findings A and C, doc only. A: CommitWithExplicitConfig's  |
+// |         |            |        | L2 doc corrected: the helpers ARE wired now (DisciplineRules.cs   |
+// |         |            |        | v1.9/v1.10), so the "outside this file's ownership for this pass" |
+// |         |            |        | line is stale. The residual is restated, not removed — Commit      |
+// |         |            |        | still applies cards one at a time, so a mid-list OverflowException |
+// |         |            |        | (now loud and correctly named) still leaves cards 0..k-1 applied  |
+// |         |            |        | and _committed false. C: RequireCommittableConfig's M2 remark now |
+// |         |            |        | says the completeness lock covers every public static readonly    |
+// |         |            |        | field of ANY type, not only int, matching                         |
+// |         |            |        | DisciplineConfigCompletenessTests.cs v1.1. No code change either   |
+// |         |            |        | way.                                                                |
 #endregion

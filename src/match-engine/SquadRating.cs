@@ -1,6 +1,9 @@
 // File:     src/match-engine/SquadRating.cs
 // Created:  2026-07-26
-// Modified: 2026-08-15 (#44 AR round 5, M5 — the substitution-dependency note now names its
+// Modified: 2026-08-16 (ERR-030-045 — + PlayerRating, the per-player key LineupSelector itself ranks
+//           by, exposed so #30's back-fill can order its suspended tier by selector rank instead of
+//           growing a second rating formula in season-save)
+// Prior-Modified: 2026-08-15 (#44 AR round 5, M5 — the substitution-dependency note now names its
 //           SECOND consumer: #44's FR-DC-011 serving exemption, not just #41's appearance record)
 // Prior-Modified: 2026-08-07
 // Author:   —
@@ -97,6 +100,28 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
+        /// The rating <c>LineupSelector</c> itself ranks a player by: the arithmetic mean of his 31
+        /// <c>[1,20]</c> attributes (<c>WeakFootRating</c>'s <c>[1,5]</c> scale excluded, KD-L2).
+        /// <para>
+        /// <b>Why this seam exists (ERR-030-045).</b> #30's depleted-squad back-fill has to choose
+        /// WHICH suspended player it presses back in, and the only key that behaves monotonically is
+        /// "the one the selector ranks last" — press the weakest back first, so the club's best banned
+        /// player is reached only when nothing else closes the gap. Computing a mean in
+        /// <c>season-save</c> instead would be a second rating formula silently agreeing with this one
+        /// until either moved: the parallel-surface trap this whole type exists to prevent
+        /// (league-bootstrap KD-7 / AR-4 M-1). One selector, now four read shapes — mean, viability,
+        /// ids, and the per-player key those three are built on.
+        /// </para>
+        /// <para>
+        /// Pure, deterministic and allocating (the attribute array), like its siblings — boot / season
+        /// cadence only, never the 10 Hz or 60 Hz loops.
+        /// </para>
+        /// </summary>
+        /// <param name="attributes">The player's attribute block.</param>
+        public static float PlayerRating(in PlayerAttributes attributes) =>
+            LineupSelector.MeanAttribute(in attributes);
+
+        /// <summary>
         /// The <c>PlayerId</c>s of the starting eleven <c>LineupSelector</c> selects from
         /// <paramref name="squad"/> under the Stage-0 formation — the same eleven
         /// <see cref="StartingElevenMean"/> rates and <c>ConfigureSquads</c> fields.
@@ -186,4 +211,11 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | sharper case: a suspended player brought on as a SUB would  |
 // |         |            |        | serve his ban for a match he played, reintroducing exactly  |
 // |         |            |        | the free appearance stage 1 removed.                        |
+// | 1.5     | 2026-08-16 | —      | ERR-030-045: + PlayerRating(in PlayerAttributes), a straight |
+// |         |            |        | delegation to LineupSelector.MeanAttribute. #30's tier-2     |
+// |         |            |        | back-fill needs the selector's OWN per-player key to press   |
+// |         |            |        | the weakest banned player back first; season-save cannot     |
+// |         |            |        | reach the internal LineupSelector, and re-deriving the mean  |
+// |         |            |        | there would be the parallel-surface trap this type exists    |
+// |         |            |        | to prevent. No behaviour change to any existing read.        |
 #endregion

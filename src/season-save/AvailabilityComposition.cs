@@ -1,6 +1,12 @@
 // File:     src/season-save/AvailabilityComposition.cs
 // Created:  2026-08-13
-// Modified: 2026-08-16 (ERR-030-044, adversarial-review H2 — tier 2's within-tier ordering key is now
+// Modified: 2026-08-16, later (ERR-030-045, adversarial-review H2-continuation — tier 2's FALLBACK key,
+//           which ERR-030-044 left at earliest roster position and which therefore decided every
+//           reinstatement of a multi-player shortfall except the last, blindly: fieldability is monotone,
+//           so passes 1 and 2 are structurally unreachable while the club is short by more than one, and
+//           the blind pick then poisoned the final pass too. Now ascending selector rank — the weakest
+//           banned player back first — via the new SquadRating.PlayerRating — v1.6)
+//           Prior: 2026-08-16 (ERR-030-044, adversarial-review H2 — tier 2's within-tier ordering key is now
 //           probe-qualified: the first suspended candidate, in roster order, the selector would BENCH,
 //           with earliest roster position kept only as the multi-reinstatement fallback. The trigger is
 //           the full selection walk (eleven + seven bench), so tier 2 fires on bench depth alone, and by
@@ -86,17 +92,34 @@ namespace TacticalDirector.SeasonSave
     /// exemption (he played, so the fixture is not one of his ban) then stalled that ban for as long as
     /// the club stayed depleted. An ordering key that produces the outcome its own rule's rationale
     /// forbids is a defect in the key, so tier 2 now asks the probe per candidate: the first candidate,
-    /// in roster order, that the selector would BENCH; earliest roster position only when no candidate
-    /// choice keeps every reinstated-suspended player out of the eleven.
+    /// in roster order, that the selector would BENCH; then the first that is fieldable at all; and
+    /// otherwise the candidate the selector ranks LAST.
     /// </para>
     /// <para>
-    /// <b>The compromise therefore has two cases, and only one of them stalls a ban.</b> Benched — the
-    /// bench-depth case, and the common one — the suspended player is not in the fielded eleven, so
-    /// <c>DisciplineRules.OnClubFixturePlayed</c> does not exempt him and his ban advances normally: the
-    /// suspension costs exactly what the Laws say. Forced to start — no candidate choice avoids the XI,
-    /// the club's only goalkeeper being the canonical case — he plays, the exemption fires, and the ban
-    /// does not advance. That second case is the residual recorded under ERR-044-003 / ERR-044-019, and
-    /// it is what the two missing tiers below eventually delete; it is not a licence for the first.
+    /// <b>The fallback is by selector rank, not roster position — because the probe cannot help on it</b>
+    /// (ERR-030-045). Fieldability is monotone in adding players, so while the club is short by more than
+    /// one NO candidate is fieldable and the two probe-qualified passes are structurally unreachable: the
+    /// fallback decides every reinstatement of a multi-player shortfall except the last, blind. Ranking it
+    /// by ascending <see cref="SquadRating.PlayerRating"/> — the selector's own key, ties on earliest
+    /// roster position — is the ordering that is safe without a probe, because the weakest banned players
+    /// go back first and the club's best is reached only when nothing weaker closes the gap. Under the
+    /// roster-order fallback the opposite happened, and it compounded: a good banned player pressed back
+    /// blindly appears in every later candidate's eleven, which makes pass 1 unsatisfiable for the final
+    /// pick too, so a two-player shortfall reproduced the pre-ERR-030-044 behaviour exactly.
+    /// </para>
+    /// <para>
+    /// <b>The compromise therefore has three cases, and only one of them stalls a ban.</b> <b>Benched</b>
+    /// — the common case, and what the key above works to reach — the suspended player is not in the
+    /// fielded eleven, so <c>DisciplineRules.OnClubFixturePlayed</c> does not exempt him and his ban
+    /// advances normally: the suspension costs exactly what the Laws say. <b>Forced to start</b> — no
+    /// choice avoids the XI — he plays, the exemption fires, and that one ban does not advance. Two
+    /// distinct things reach that second case: a single reinstatement with no benchable candidate (the
+    /// club's only goalkeeper is the canonical one), and a multi-reinstatement set in which EVERY
+    /// completing choice starts someone. The ordering is a best-effort minimisation of the second case,
+    /// <b>not a guarantee against it</b>; claiming the stall is confined to a sole-goalkeeper-style
+    /// forcing would be exactly the overclaim ERR-030-045 corrected. The residual is recorded under
+    /// ERR-044-003 / ERR-044-019 / ERR-030-045 and is what the two missing tiers below eventually delete;
+    /// it is not a licence for the first case.
     /// </para>
     /// <para>
     /// <b>An extremis appearance no longer discharges the ban it was fielded through</b> (ERR-044-003
@@ -277,7 +300,7 @@ namespace TacticalDirector.SeasonSave
         /// Presses exactly one removed player back into selection: the least-injured of the merely
         /// injured (ascending <c>RecoveryRemaining</c>, ties on earliest roster position), and only
         /// once none of those remain, a suspended one — chosen by <see cref="ChooseSuspendedCandidate"/>
-        /// rather than by roster position (ERR-030-044).
+        /// rather than by roster position (ERR-030-044, ERR-030-045).
         /// <para>
         /// The tier split is the whole football content of this method — see the type remarks. Called
         /// only when at least one player is still removed, which the loop's own guard establishes.
@@ -330,13 +353,14 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>
-        /// Tier 2's within-tier choice (ERR-030-044): WHICH suspended player is pressed back in, when the
+        /// Tier 2's within-tier choice (ERR-030-044, pass 3 amended at ERR-030-045): WHICH suspended
+        /// player is pressed back in, when the
         /// extremis branch has to press one. Returns his roster index, or <c>-1</c> when nobody is removed
         /// at all — which <see cref="Reinstate"/>'s own guard turns into the divergence throw.
         /// <para>
-        /// Three passes, in order, over the still-removed candidates in ascending roster order. Every one
-        /// of them is suspended: tier 1 above takes anyone who is removed and NOT suspended, so reaching
-        /// here means it found none.
+        /// Three passes, in order, over the still-removed candidates — the first two scanning in ascending
+        /// roster order, the third ranking by selector rating. Every candidate is suspended: tier 1 above
+        /// takes anyone who is removed and NOT suspended, so reaching here means it found none.
         /// </para>
         /// <list type="number">
         /// <item><b>The first candidate the selector would BENCH.</b> The squad is materialised with him
@@ -347,17 +371,41 @@ namespace TacticalDirector.SeasonSave
         /// <item><b>Failing that, the first candidate who makes the squad fieldable at all.</b> The club
         /// still has to take the field (§2.3 <b>F9</b>); a forced start is the recorded compromise, and
         /// ERR-044-003 stage 1's exemption then stalls that one ban.</item>
-        /// <item><b>Failing that, earliest roster position</b> — exactly the pre-ERR-030-044 behaviour.
-        /// Reached when no SINGLE reinstatement reaches fieldability, i.e. the club is short by more than
-        /// one; the outer loop presses another player back and asks again, so the probe-qualified passes
-        /// get their say on the reinstatement that finally closes the gap.</item>
+        /// <item><b>Failing that, the candidate the selector ranks LAST</b> — ascending
+        /// <see cref="SquadRating.PlayerRating"/>, ties broken by earliest roster position
+        /// (ERR-030-045). Reached whenever no SINGLE reinstatement reaches fieldability, i.e. the club is
+        /// short by more than one, which makes this the pass that decides EVERY reinstatement of a
+        /// multi-player shortfall except the last.</item>
         /// </list>
         /// <para>
-        /// <b>Cost.</b> One squad materialisation plus one selection walk per candidate per reinstatement
-        /// — but only on the extremis branch, which needs a club with no injured players left to press
-        /// back and at least one suspended one. On every ordinary fixture this method is never called at
-        /// all, and the season path pays boot-cadence costs anyway (<c>SeasonLoop.ResolveFixture</c> makes
-        /// the same argument for re-rating each club per matchday).
+        /// <b>Why pass 3 is ranked by rating and not by roster position</b> (ERR-030-045 — the defect
+        /// ERR-030-044 left behind). Fieldability is <b>monotone in adding players</b>: a squad two
+        /// players short cannot be made legal by one, so on every non-final reinstatement the probe
+        /// rejects <i>every</i> candidate and passes 1 and 2 are structurally unreachable. Under the old
+        /// roster-order key pass 3 then pressed back whoever sat first on the roster, blindly — and once
+        /// a good banned player is back in the pool, <see cref="AnyReinstatedSuspendedStarts"/> sees HIM
+        /// in every later candidate's eleven, so pass 1 becomes unsatisfiable for the final pick too and
+        /// that drops to roster order as well. Net behaviour for two or more reinstatements was exactly
+        /// the pre-ERR-030-044 behaviour, in the case a mass-suspension club reaches most readily.
+        /// Ascending selector rank needs no probe to be safe on those blind passes: the weakest banned
+        /// players go back first, so the best is reached only when nothing weaker closes the gap, and the
+        /// final pick's pass 1 still has a benchable candidate to find whenever one exists.
+        /// </para>
+        /// <para>
+        /// <b>It is a minimisation, not a guarantee</b> — see the type remarks' third case. A set of
+        /// reinstatements can still start a banned player when EVERY completing choice does, and
+        /// positional constraints force it outright (the weakest banned man being the club's only
+        /// goalkeeper is the same forced start pass 2 records, arrived at one pass later).
+        /// </para>
+        /// <para>
+        /// <b>Cost.</b> Per reinstatement: one squad materialisation per candidate, plus a selection walk
+        /// per candidate, plus a SECOND selection walk (inside <see cref="AnyReinstatedSuspendedStarts"/>)
+        /// for every candidate that turns out to be fieldable — so a fieldable candidate costs two full
+        /// <c>TrySelect</c> walks, not one. Bounded by the candidate count and extremis-only: this method
+        /// needs a club with no injured players left to press back and at least one suspended one, and on
+        /// every ordinary fixture it is never called at all. The season path pays boot-cadence costs
+        /// anyway (<c>SeasonLoop.ResolveFixture</c> makes the same argument for re-rating each club per
+        /// matchday).
         /// </para>
         /// </summary>
         private static int ChooseSuspendedCandidate(
@@ -378,7 +426,9 @@ namespace TacticalDirector.SeasonSave
                 Squad candidate = MaterializeSquad(squad, removed, availableCount + 1);
                 removed[c] = true;
 
-                if (candidate == null || !SquadRating.CanFieldStartingEleven(candidate))
+                // candidate is never null here: MaterializeSquad returns null only for a count of zero,
+                // and this site passes availableCount + 1 >= 1.
+                if (!SquadRating.CanFieldStartingEleven(candidate))
                 {
                     continue;
                 }
@@ -399,15 +449,26 @@ namespace TacticalDirector.SeasonSave
                 return firstFieldable;
             }
 
+            int weakest = -1;
+            float weakestRating = float.MaxValue;
             for (int i = 0; i < removed.Length; i++)
             {
-                if (removed[i])
+                if (!removed[i])
                 {
-                    return i;
+                    continue;
+                }
+
+                float rating = SquadRating.PlayerRating(squad.GetPlayer(i).Attributes);
+                if (rating < weakestRating)
+                {
+                    // Strict <, so equal ratings keep the earliest roster position — a total order, so
+                    // the pass is deterministic even on a squad of identically-rated players.
+                    weakestRating = rating;
+                    weakest = i;
                 }
             }
 
-            return -1;
+            return weakest;
         }
 
         /// <summary>
@@ -524,4 +585,32 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | differ, which is the point. Back-props: ERR-030-044 (#30 §3.4,    |
 // |         |            |        | trigger clarification + within-tier amendment) and ERR-044-019    |
 // |         |            |        | (#44 §2.3 / §7.2, the two-case statement of the compromise).      |
+// | 1.6     | 2026-08-16 | —      | ERR-030-045 (adversarial review, H2-continuation): v1.5's fix     |
+// |         |            |        | survived intact for k >= 2 reinstatements, and code, spec and     |
+// |         |            |        | suite all asserted that it did not. Fieldability is MONOTONE in   |
+// |         |            |        | adding players, so on any reinstatement that is not the last no   |
+// |         |            |        | candidate is fieldable: passes 1 and 2 are structurally           |
+// |         |            |        | unreachable and pass 3 — earliest roster position, the pre-fix    |
+// |         |            |        | key — decided alone. Worse, the blindly reinstated man then       |
+// |         |            |        | appears in every later candidate's eleven, so                     |
+// |         |            |        | AnyReinstatedSuspendedStarts made pass 1 unsatisfiable for the    |
+// |         |            |        | final pick too and it fell to roster order as well; net           |
+// |         |            |        | behaviour for k >= 2 was exactly pre-ERR-030-044, in the case a   |
+// |         |            |        | mass-suspension club reaches most readily. Pass 3's key becomes   |
+// |         |            |        | ascending SELECTOR RANK (SquadRating.PlayerRating, the new        |
+// |         |            |        | delegation to LineupSelector.MeanAttribute — not a second rating  |
+// |         |            |        | formula), ties on earliest roster position: monotone, so it needs |
+// |         |            |        | no probe on the blind passes, and the best banned player is       |
+// |         |            |        | reached only when nothing weaker closes the gap. The remarks'     |
+// |         |            |        | "two cases" claim is corrected to three — benched when any choice |
+// |         |            |        | permits; FORCED START when none does, which now names the k >= 2  |
+// |         |            |        | every-completing-choice-starts-someone set alongside the          |
+// |         |            |        | sole-goalkeeper forcing; the ban stalls only for a reinstatee     |
+// |         |            |        | actually fielded. A best-effort MINIMISATION, not a guarantee,    |
+// |         |            |        | and it now says so. Two Lows fixed with it: the Cost remark       |
+// |         |            |        | undercounted (a fieldable candidate costs TWO TrySelect walks,    |
+// |         |            |        | the second inside AnyReinstatedSuspendedStarts), and the dead     |
+// |         |            |        | `candidate == null` branch at the probe site — reachable only at  |
+// |         |            |        | availableCount 0, where this site passes >= 1 — is replaced by a  |
+// |         |            |        | comment saying why it cannot fire.                                |
 #endregion

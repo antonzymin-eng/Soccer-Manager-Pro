@@ -1,15 +1,16 @@
 // File:     src/season-save/tests/AvailabilityCompositionExtremisTests.cs
 // Created:  2026-08-16
-// Modified: 2026-08-16
+// Modified: 2026-08-16, later (ERR-030-045 — the multi-reinstatement case stopped asserting the
+//           PRE-FIX key on a roster where the choice could not matter, and a k >= 2 lock added)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.4 / §2.3 F9 (the depleted-squad back-fill and its
-//           within-tier ordering key — ERR-030-044); Discipline & Suspensions #44 §2.3 / §7.2 /
-//           FR-DC-011 (ERR-044-019, the two-case statement of the extremis compromise); ERR-044-003
+//           within-tier ordering key — ERR-030-044, ERR-030-045); Discipline & Suspensions #44 §2.3 /
+//           §7.2 / FR-DC-011 (ERR-044-019, the statement of the extremis compromise); ERR-044-003
 //           stage 1 (the fielded-eleven serving exemption); Code Standards #20
 // Purpose:  Locks for the tier-2 (suspended) reinstatement CHOICE — that the back-fill presses a
-//           suspended player onto the BENCH whenever any candidate choice permits it, that his ban
-//           then advances because he did not play, and that the forced-start residual (no choice
-//           avoids the XI) is exactly the recorded compromise and nothing wider.
+//           suspended player onto the BENCH whenever any candidate choice permits it (including when
+//           it takes TWO reinstatements to get there), that his ban then advances because he did not
+//           play, and that the forced-start residual is exactly the recorded compromise, no wider.
 
 using NUnit.Framework;
 
@@ -32,6 +33,14 @@ namespace TacticalDirector.SeasonSave.Tests
     /// <c>SUBSTITUTES_PER_TEAM</c> = 18). So a club with seventeen fit, position-complete players
     /// reaches the extremis tier while still able to field a perfectly legal XI, and the reinstated
     /// suspended player belongs on the BENCH: he is needed for the eighteenth slot, not the eleventh.
+    /// </para>
+    /// <para>
+    /// <b>Why two of these cases need a DOUBLE shortfall</b> (ERR-030-045). Fieldability is monotone in
+    /// adding players, so while a club is short by more than one no candidate is fieldable and the two
+    /// probe-qualified passes are structurally unreachable — the third pass decides alone, and its key
+    /// is the only thing standing between a mass-suspension club and its best banned man in the XI. A
+    /// single-reinstatement fixture cannot exercise that pass at all, which is how the original
+    /// ERR-030-044 suite came to assert the PRE-FIX key on a roster where the choice could not matter.
     /// </para>
     /// </summary>
     [TestFixture]
@@ -197,20 +206,27 @@ namespace TacticalDirector.SeasonSave.Tests
                 + "correct and this assertion is what would catch it being narrowed away.");
         }
 
-        // ── 5. multi-reinstatement: pass 3, termination, and repeat determinism ───────────
+        // ── 4. multi-reinstatement: the weakest go back first, and it terminates ──────────
 
         [Test]
-        public void MultiReinstatementExtremis_FallsBackToRosterOrder_AndTerminatesDeterministically()
+        public void MultiReinstatementExtremis_PressesTheWeakestBannedPlayersBack_AndTerminatesDeterministically()
         {
-            // Tier 2's pass 3. With sixteen fit players NO single reinstatement reaches eighteen, so
-            // neither the "benchable" probe nor the "fieldable at all" probe can succeed on the first
-            // pass — the choice falls back to earliest roster position, exactly today's behaviour, and
-            // the outer loop goes round again. This is the case that would hang or throw if the
-            // probe-qualified branch forgot its fallback, and the case where "the answer must not
-            // depend on how many times you ask" is a real property rather than a truism.
+            // Tier 2's pass 3, and the whole reason it is ranked by SELECTOR RATING rather than by
+            // roster position (ERR-030-045). With sixteen fit players NO single reinstatement reaches
+            // eighteen, so on the first pass neither the "benchable" probe nor the "fieldable at all"
+            // probe can succeed for ANY candidate — fieldability is monotone in adding players, so a
+            // squad that is two short cannot be made legal by one man. Pass 3 therefore decides that
+            // pass outright, and its key is what keeps the club's best banned player out of the pool
+            // the rating-greedy selector then draws the eleven from: ascending selector rank, so the
+            // WEAKEST banned player is pressed back first and the best is reached only if nothing else
+            // can close the gap.
+            //
+            // This is also the case that would hang or throw if the probe-qualified branch forgot its
+            // fallback, and the case where "the answer must not depend on how many times you ask" is a
+            // real property rather than a truism.
             Squad full = DoubleShortfallRoster();
-            int[] banned = { IdOf(16), IdOf(17), IdOf(18) };
-            DisciplineState state = BansOf(3, banned);
+            DisciplineState state = BansOf(
+                3, IdOf(BestBannedLocal), IdOf(WeakBannedLocal), IdOf(WeakestBannedLocal));
 
             Squad composed = AvailabilityComposition.Compose(
                 full, career: null, state, DisciplineConstants.LeagueCompetitionKey);
@@ -221,13 +237,15 @@ namespace TacticalDirector.SeasonSave.Tests
                 "Sixteen fit players need exactly TWO reinstatements to reach the eighteen the "
                 + "selection walk requires — and no more, since each pass presses back exactly one.");
 
-            // The fallback pass is a plain roster-order scan, so the earliest suspended candidate is
-            // the one it takes first. Asserting it here is what distinguishes 'pass 3 ran' from 'pass 1
-            // happened to find something', which on a sixteen-fit roster it cannot.
-            Assert.That(Contains(composed, banned[0]), Is.True,
-                "The first reinstatement of a double shortfall must be the earliest suspended player "
-                + "on the roster: no single candidate makes the squad fieldable, so pass 1 and pass 2 "
-                + "both come back empty and pass 3 decides.");
+            Assert.That(Contains(composed, IdOf(WeakestBannedLocal)), Is.True,
+                "The first reinstatement of a double shortfall must be the WEAKEST banned player by "
+                + "the selector's own rating, not the earliest on the roster: no single candidate "
+                + "makes the squad fieldable, so pass 1 and pass 2 both come back empty and pass 3 "
+                + "decides — and pass 3's key is ascending selector rank (ERR-030-045).");
+            Assert.That(Contains(composed, IdOf(BestBannedLocal)), Is.False,
+                "The back-fill reached the club's BEST banned player while two weaker banned players "
+                + "were still available to close the same gap. This roster is built so the pre-fix "
+                + "roster-order key picks exactly him, which is what puts a banned man in the XI.");
 
             Squad again = AvailabilityComposition.Compose(
                 full, career: null, state, DisciplineConstants.LeagueCompetitionKey);
@@ -240,6 +258,50 @@ namespace TacticalDirector.SeasonSave.Tests
             }
         }
 
+        // ── 5. and with k >= 2 reinstatements, the XI still comes back clean ──────────────
+
+        [Test]
+        public void MultiReinstatementExtremis_KeepsEveryBannedPlayerOutOfTheXi_WhenACompletingChoiceExists()
+        {
+            // ERR-030-045, the finding itself. Under the pre-fix key the k >= 2 case was EXACTLY the
+            // pre-ERR-030-044 behaviour: passes 1 and 2 are structurally unreachable on every
+            // non-final reinstatement (fieldability is monotone, so nothing is fieldable while the
+            // club is still short), pass 3 took the roster-earliest banned player — here the club's
+            // best forward — and once he is back in the pool, AnyReinstatedSuspendedStarts sees HIM
+            // in every subsequent candidate's eleven, which makes pass 1 unsatisfiable for the final
+            // pick too and drops that one to roster order as well. The composed XI then contained a
+            // banned man even though the alternative pair {WeakBanned, WeakestBanned} completes the
+            // squad and keeps every banned player on the bench.
+            //
+            // The assertion is about the OUTCOME rather than about which candidate was picked, so it
+            // survives any future change to the within-tier key that still achieves it.
+            Squad full = DoubleShortfallRoster();
+            DisciplineState state = BansOf(
+                3, IdOf(BestBannedLocal), IdOf(WeakBannedLocal), IdOf(WeakestBannedLocal));
+
+            Squad composed = AvailabilityComposition.Compose(
+                full, career: null, state, DisciplineConstants.LeagueCompetitionKey);
+
+            Assert.That(composed.Count, Is.EqualTo(CareerTestRoster.MinimumSquad),
+                "Precondition: the back-fill ran to exactly eighteen, so TWO players were pressed "
+                + "back and this really is the k >= 2 case.");
+
+            int[] xi = SquadRating.StartingElevenPlayerIds(composed);
+            Assert.That(xi, Does.Not.Contain(IdOf(BestBannedLocal)),
+                "A banned player is in the starting eleven of a club that could have completed its "
+                + "squad without him — {WeakBanned, WeakestBanned} is fieldable and benches both. "
+                + "A multi-reinstatement shortfall is not a licence to start a suspended man "
+                + "(ERR-030-045).");
+            Assert.That(xi, Does.Not.Contain(IdOf(WeakBannedLocal)),
+                "A reinstated banned player is starting. Both of the two players the back-fill "
+                + "pressed back must sit on the bench here, or the ERR-044-003 stage-1 exemption "
+                + "stalls a ban this club never needed to stall.");
+            Assert.That(xi, Does.Not.Contain(IdOf(WeakestBannedLocal)),
+                "A reinstated banned player is starting. Both of the two players the back-fill "
+                + "pressed back must sit on the bench here, or the ERR-044-003 stage-1 exemption "
+                + "stalls a ban this club never needed to stall.");
+        }
+
         // ── fixtures ─────────────────────────────────────────────────────────────────────
 
         /// <summary>Roster slot of the suspended player the selector would START (best forward).</summary>
@@ -250,6 +312,18 @@ namespace TacticalDirector.SeasonSave.Tests
 
         /// <summary>Roster slot of the sole goalkeeper in <see cref="SoleGoalkeeperRoster"/>.</summary>
         private const int SoleGoalkeeperLocal = 0;
+
+        /// <summary>
+        /// <see cref="DoubleShortfallRoster"/>'s roster-EARLIEST banned player, and the club's best
+        /// forward — the pre-ERR-030-045 key's pick, and the one who must not come back.
+        /// </summary>
+        private const int BestBannedLocal = 16;
+
+        /// <summary>The middle banned player of <see cref="DoubleShortfallRoster"/>.</summary>
+        private const int WeakBannedLocal = 17;
+
+        /// <summary>The weakest banned player of <see cref="DoubleShortfallRoster"/> — pass 3's pick.</summary>
+        private const int WeakestBannedLocal = 18;
 
         /// <summary>
         /// Nineteen players: seventeen fit and position-complete (2 GK, 6 DEF, 6 MID, 3 FWD) plus two
@@ -314,6 +388,12 @@ namespace TacticalDirector.SeasonSave.Tests
         /// Nineteen players of whom sixteen are fit (2 GK, 5 DEF, 5 MID, 4 FWD) — two short of the
         /// selection walk's eighteen, so the back-fill must reinstate twice and its first pass has no
         /// single candidate that reaches fieldability.
+        /// <para>
+        /// The three banned players' roster order and rating order DISAGREE, which is what makes the
+        /// k &gt;= 2 case a real choice (ERR-030-045): slot 16 is the club's best forward by a wide
+        /// margin, slots 17 and 18 its two worst players. Reinstating {17, 18} completes the squad and
+        /// benches both; reinstating 16 starts him.
+        /// </para>
         /// </summary>
         private static Squad DoubleShortfallRoster()
         {
@@ -334,9 +414,9 @@ namespace TacticalDirector.SeasonSave.Tests
             players[13] = Player(13, PlayerPosition.Forward,    11);
             players[14] = Player(14, PlayerPosition.Forward,    10);
             players[15] = Player(15, PlayerPosition.Forward,     9);
-            players[16] = Player(16, PlayerPosition.Defender,    6);   // suspended
-            players[17] = Player(17, PlayerPosition.Midfielder,  6);   // suspended
-            players[18] = Player(18, PlayerPosition.Forward,     6);   // suspended
+            players[16] = Player(16, PlayerPosition.Forward,    20);   // suspended, the BEST forward
+            players[17] = Player(17, PlayerPosition.Midfielder,  2);   // suspended, weak
+            players[18] = Player(18, PlayerPosition.Forward,     1);   // suspended, the weakest
             return new Squad(CraftedClubId, players);
         }
 
@@ -429,4 +509,21 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | be refound as a defect, and the double-shortfall fallback where  |
 // |         |            |        | pass 3 decides. Hand-built rosters throughout: the defect is a   |
 // |         |            |        | CHOICE, invisible unless roster order and rating order disagree. |
+// | 1.1     | 2026-08-16 | —      | ERR-030-045. v1.0's double-shortfall case asserted                |
+// |         |            |        | Contains(composed, banned[0]) — the PRE-FIX ordering key — on a  |
+// |         |            |        | roster whose three banned players were identically rated, so     |
+// |         |            |        | the choice provably could not matter and the assertion locked    |
+// |         |            |        | in the very behaviour ERR-030-044 was filed to remove, for the   |
+// |         |            |        | k >= 2 case where it still ran. DoubleShortfallRoster's banned   |
+// |         |            |        | trio now disagrees on roster order vs rating (slot 16 the best   |
+// |         |            |        | forward, 17 and 18 the two worst), and the case is reshaped to   |
+// |         |            |        | assert termination, repeat-call determinism and the NEW key's    |
+// |         |            |        | effect — weakest pressed back first, the best banned player      |
+// |         |            |        | never reached. A second case adds the k >= 2 lock from the       |
+// |         |            |        | finding's own probe: NO banned player in                         |
+// |         |            |        | StartingElevenPlayerIds(composed) when an alternative            |
+// |         |            |        | completing choice exists. Both observed FAILING at the pre-fix   |
+// |         |            |        | tree and green after. The three single-reinstatement cases are   |
+// |         |            |        | untouched — they exercise passes 1 and 2, which the finding      |
+// |         |            |        | leaves correct.                                                  |
 #endregion
