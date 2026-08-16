@@ -1,6 +1,8 @@
 // File:     src/match-client-core/MatchClientConstants.cs
 // Created:  2026-07-24
-// Modified: 2026-08-15 (P4b AR pass M-2: + GoalkeeperTintFactor / SentOffTintFactor)
+// Modified: 2026-08-15 (P4b AR round 2, M/L pass: + GoalMouthWidthM, the four ground-layer height
+//           constants, MarkingLineWidthM validation, and the CameraTiltDegrees/CameraLateralOffsetM
+//           pairing check)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P0/§5-P3/§5-P4a/§5-P4b/§5-P5),
 //           Code Standards #20 (constant catalogue; no magic numbers)
@@ -163,9 +165,18 @@ namespace TacticalDirector.MatchClientCore
         /// finiteness rather than range — but it IS checked. It is the one dial that lands directly
         /// in the camera's world position, so a non-finite value here puts the camera nowhere while
         /// every assertion about the aim point still passes.</para>
+        ///
+        /// <para>L8: also paired against <see cref="CameraTiltDegrees"/> via
+        /// <see cref="RequireTiltOrOffsetNonzero"/> — each dial is individually legal at zero, but
+        /// BOTH at zero sits the camera directly above its look-at target, where
+        /// <c>Transform.LookAt</c>'s forward is antiparallel to the default up vector, an undefined
+        /// rotation. Declared after <see cref="CameraTiltDegrees"/> deliberately, for the same
+        /// static-init-order reason <see cref="CameraVerticalFovDegrees"/> is declared after it too —
+        /// a pairing check that read a [GT] declared below it would see zero and pass vacuously.</para>
         /// </summary>
-        public static readonly float CameraLateralOffsetM = RequireFinite(
-            Config.GetFloat("match-client", "CameraLateralOffsetM", 5f), "CameraLateralOffsetM");
+        public static readonly float CameraLateralOffsetM = RequireTiltOrOffsetNonzero(
+            RequireFinite(Config.GetFloat("match-client", "CameraLateralOffsetM", 5f), "CameraLateralOffsetM"),
+            CameraTiltDegrees);
 
         /// <summary>
         /// [GT] Vertical field of view of the match camera, degrees. Config key [match-client]
@@ -212,8 +223,9 @@ namespace TacticalDirector.MatchClientCore
             Config.GetFloat("match-client", "MarkingSpotRadiusM", 0.2f);
 
         /// <summary>
-        /// [GT] Width (m) of a drawn marking line — the boundary, the halfway line, the end-box edges
-        /// and the goal mouths. Config key [match-client] MarkingLineWidthM.
+        /// [GT] Width (m) of a drawn marking line — the boundary, the halfway line and the end-box
+        /// edges (not the goal mouth; see <see cref="GoalMouthWidthM"/>). Config key [match-client]
+        /// MarkingLineWidthM.
         ///
         /// <para>Presentation, not Law 1, like <see cref="MarkingSpotRadiusM"/> above: IFAB caps a
         /// real line at 12 cm, and at the default framing (a 52 m span,
@@ -226,9 +238,28 @@ namespace TacticalDirector.MatchClientCore
         /// authored at unit cross-section, so without this the width is whatever the prefab happened
         /// to be scaled to — a tuning value living in a scene asset, where neither the gate nor the
         /// config file can see it.</para>
+        ///
+        /// <para>M10/L7: bounded to a small positive span — a marking line "shouldn't sanely exceed a
+        /// metre or so" of drawn width, and zero or negative would make the boundary invisible while
+        /// every gate above still reported success.</para>
         /// </summary>
-        public static readonly float MarkingLineWidthM =
-            Config.GetFloat("match-client", "MarkingLineWidthM", 0.2f);
+        public static readonly float MarkingLineWidthM = RequireInRange(
+            Config.GetFloat("match-client", "MarkingLineWidthM", 0.2f), 0.01f, 1f, "MarkingLineWidthM");
+
+        /// <summary>
+        /// [GT] Width (m) of the drawn goal mouth — post to post. Config key [match-client]
+        /// GoalMouthWidthM.
+        ///
+        /// <para>M10: <see cref="TacticalDirector.MatchClientCore.PitchMarkingKind.GoalMouth"/>'s own
+        /// doc is explicit that it is "drawn heavier than a marking line... goal furniture, not a
+        /// Law 1 marking" — the round-1 binding shared <see cref="MarkingLineWidthM"/> and
+        /// <c>_markingLinePrefab</c> for both cases, which is exactly the "may want it in a different
+        /// colour or as a mesh" distinction that member's doc calls out, collapsed back to one. This
+        /// is the goal mouth's own dial, deliberately wider by default so it reads as furniture
+        /// rather than turf paint.</para>
+        /// </summary>
+        public static readonly float GoalMouthWidthM = RequireInRange(
+            Config.GetFloat("match-client", "GoalMouthWidthM", 0.3f), 0.01f, 1f, "GoalMouthWidthM");
 
         /// <summary>
         /// [GT] Radius (view units, 1 unit = 1 m) of an agent's marker. Config key [match-client]
@@ -281,6 +312,56 @@ namespace TacticalDirector.MatchClientCore
         /// </summary>
         public static readonly float SentOffTintFactor = RequireInRange(
             Config.GetFloat("match-client", "SentOffTintFactor", 0.55f), 0f, 1f, "SentOffTintFactor");
+
+        #endregion
+
+        #region GT — ground-layer heights (M12: coplanar ground objects z-fight)
+
+        /// <summary>
+        /// [GT] World-Y height (m) at which pitch markings are drawn. Config key [match-client]
+        /// MarkingLayerHeightM.
+        ///
+        /// <para>M12: four ground layers — markings, the ball's shadow, the possession ring and the
+        /// agent marker — were all placed at world Y = 0, which z-fights in a real renderer wherever
+        /// two of them overlap (a shadow crossing a painted line; a ring sitting under the marker it
+        /// annotates). Zero is legal here and is today's default: a painted line sits ON the turf, and
+        /// every layer above this one is defined to sit strictly above it (see the three
+        /// <c>RequireGreaterThan</c> checks below), so this is the one layer nothing else needs to
+        /// clear.</para>
+        /// </summary>
+        public static readonly float MarkingLayerHeightM =
+            RequireAtLeast(Config.GetFloat("match-client", "MarkingLayerHeightM", 0f), 0f, "MarkingLayerHeightM");
+
+        /// <summary>
+        /// [GT] World-Y height (m) at which the ball's ground shadow is drawn. Config key
+        /// [match-client] BallShadowLayerHeightM. Must exceed <see cref="MarkingLayerHeightM"/> — the
+        /// shadow is an opaque disc that regularly crosses a painted line (a ball rolling over the
+        /// six-yard box, say), and two coplanar opaque surfaces z-fight.
+        /// </summary>
+        public static readonly float BallShadowLayerHeightM = RequireGreaterThan(
+            Config.GetFloat("match-client", "BallShadowLayerHeightM", 0.001f),
+            MarkingLayerHeightM, "BallShadowLayerHeightM", "MarkingLayerHeightM");
+
+        /// <summary>
+        /// [GT] World-Y height (m) at which the possession ring is drawn. Config key [match-client]
+        /// PossessionRingLayerHeightM. Must exceed <see cref="BallShadowLayerHeightM"/> — the ring is
+        /// drawn around whichever agent is in possession, and that agent's marker sits over the same
+        /// ground point the ball's shadow can also occupy, so the ring is ordered above the shadow
+        /// the way it is ordered below the marker (see <see cref="AgentMarkerLayerHeightM"/>).
+        /// </summary>
+        public static readonly float PossessionRingLayerHeightM = RequireGreaterThan(
+            Config.GetFloat("match-client", "PossessionRingLayerHeightM", 0.002f),
+            BallShadowLayerHeightM, "PossessionRingLayerHeightM", "BallShadowLayerHeightM");
+
+        /// <summary>
+        /// [GT] World-Y height (m) at which an agent marker is drawn. Config key [match-client]
+        /// AgentMarkerLayerHeightM. Must exceed <see cref="PossessionRingLayerHeightM"/> — the ring is
+        /// explicitly meant to sit visually UNDER the marker it annotates (the marker is the player;
+        /// the ring is drawn around him), so the marker is topmost of the four ground layers.
+        /// </summary>
+        public static readonly float AgentMarkerLayerHeightM = RequireGreaterThan(
+            Config.GetFloat("match-client", "AgentMarkerLayerHeightM", 0.003f),
+            PossessionRingLayerHeightM, "AgentMarkerLayerHeightM", "PossessionRingLayerHeightM");
 
         #endregion
 
@@ -341,6 +422,31 @@ namespace TacticalDirector.MatchClientCore
             }
 
             return fovDegrees;
+        }
+
+        /// <summary>
+        /// Returns <paramref name="lateralOffsetM"/>, or throws when it is zero AND
+        /// <paramref name="tiltDegrees"/> is also zero. Each dial is individually legal at zero — a
+        /// straight-down tilt, or dead-centre framing — but together they sit the camera directly
+        /// above its look-at target, where <c>Transform.LookAt</c>'s forward direction is antiparallel
+        /// to the default world-up vector: an undefined/degenerate rotation. Two individually-legal
+        /// dials pairing into an illegal camera is the same shape <see cref="RequireFarRayMeetsGround"/>
+        /// guards, which is why this follows it rather than being folded into either dial's own range
+        /// check.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">Both dials are zero.</exception>
+        internal static float RequireTiltOrOffsetNonzero(float lateralOffsetM, float tiltDegrees)
+        {
+            if (tiltDegrees == 0f && lateralOffsetM == 0f)
+            {
+                throw new InvalidOperationException(
+                    "[match-client] CameraTiltDegrees is 0 and CameraLateralOffsetM is 0; the camera " +
+                    "would sit directly above its look-at target, making Transform.LookAt's forward " +
+                    "antiparallel to the default up vector — an undefined rotation. Set at least one " +
+                    "of the two config keys away from zero.");
+            }
+
+            return lateralOffsetM;
         }
 
         /// <summary>
@@ -479,4 +585,24 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | slot is needed (Color is not in the CI shim's surface, so the   |
 // |         |            |        | blend itself lives in MatchClientBehaviour — these are only the |
 // |         |            |        | [GT] amounts).                                                  |
+// | 1.9     | 2026-08-15 | —      | P4b AR round 2, Medium/Low pass. M10: + GoalMouthWidthM — the   |
+// |         |            |        | goal mouth is goal furniture, not a Law 1 marking line          |
+// |         |            |        | (PitchMarkingKind.GoalMouth's own doc), and now has its own     |
+// |         |            |        | drawn width instead of sharing MarkingLineWidthM. M12: + the    |
+// |         |            |        | four ground-layer height [GT]s (Marking/BallShadow/             |
+// |         |            |        | PossessionRing/AgentMarker), millimetre-scale and strictly      |
+// |         |            |        | ascending via the existing RequireGreaterThan chain shape, so   |
+// |         |            |        | the four coplanar ground layers a real renderer would z-fight   |
+// |         |            |        | (markings, the ball's shadow, the possession ring, the agent    |
+// |         |            |        | marker) resolve to a named, boot-validated ordering instead of  |
+// |         |            |        | an inline literal the binding would otherwise have to invent.   |
+// |         |            |        | L7: MarkingLineWidthM (and the new GoalMouthWidthM from the     |
+// |         |            |        | start) now go through RequireInRange like every other [GT]      |
+// |         |            |        | render-cue sibling, instead of an unvalidated Config.GetFloat.  |
+// |         |            |        | L8: + RequireTiltOrOffsetNonzero, the CameraTiltDegrees /       |
+// |         |            |        | CameraLateralOffsetM pairing check in RequireFarRayMeetsGround's|
+// |         |            |        | own shape — both dials are individually legal at zero, but      |
+// |         |            |        | together they put the camera directly above its look-at target,|
+// |         |            |        | where Transform.LookAt's forward is antiparallel to the default |
+// |         |            |        | up vector.                                                       |
 #endregion

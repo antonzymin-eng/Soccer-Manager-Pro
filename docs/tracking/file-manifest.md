@@ -2104,6 +2104,7 @@ the Unity-only skin precisely so it stays under `tools/dotnet-ci` on every push.
 | `AgentRenderModel.cs` | **P4a** — one agent's resolved draw state: team, shirt, view position, marker and possession-ring radii, live goalkeeper flag, cards, sent-off, substitute. Colour-free — a palette has no correct answer a test could assert |
 | `BallRenderModel.cs` | **P4a** — the ball's resolved draw state: shadow at the ground point, sprite lifted and grown with height, the raw engine height, and both radii |
 | `MatchRenderProjection.cs` | **P4a** — frame + interpolated positions → the draw states above. Positions from the P3 interpolator's buffer (what is actually drawn); every discrete cue from the newest frame (cues do not interpolate). Allocation-free; fail-loud on every shape mismatch |
+| `LiveFrameLatch.cs` | **P4b AR pass M6** — the previous/current captured-frame state machine `MatchClientBehaviour.AdvanceFrame` drives, moved out of the `MonoBehaviour` (§12 rule 1: a state machine is a decision, and the CI gate cannot compile or test one left in `match-client-unity`). Tracks which frame is "previous" vs "current" and the wall-clock time the current one was accepted, which `FrameInterpolator.ComputeAlpha` needs |
 | `PlaybackSpeedLadder.cs` | **P5a** — the four `[GT]` playback multipliers as an *ordered* ladder plus the stepping semantics. The catalogue holds the dials; this holds the order, the opening rung (real time), and what a faster/slower click does at the ends — **clamps, never wraps**, since a faster-click at 10× dropping the viewer to 1× reads as a fault rather than a limit. Pause is deliberately not a rung: it is a streamer state, and 0× is outside the streamer's legal range |
 | `MatchControlAvailability.cs` | **P5a** — which match-view controls are live and why, as three states resolved from the latest frame (`AwaitingFirstFrame`/`Live`/`FullTime`). Resolves §5-P5's "the UI gates tactical input at full time so a click does not silently no-op". **Save stays enabled at full time** (§6.3 — `ServiceOnce()` needs no tick, and locking it would make a completed match unsaveable), and a frameless streamer does **not** resolve to `Live`, since `default(LiveMatchFrame).MatchEnded` is `false`. Documents at length that it is §6.2's best-effort early-out and **not** the sim-side guarantee |
 | `MatchControlLockReason.cs` | **P5a** — why a control is locked (`None = 0`/`AwaitingFirstFrame`/`MatchEnded`), so the shell can explain a disabled control instead of presenting a dead button. Zero-valued the way `ManagerCommandKind.None` and `IntentKind.None` are |
@@ -2123,29 +2124,35 @@ the Unity-only skin precisely so it stays under `tools/dotnet-ci` on every push.
 | `tests/PlaybackSpeedLadderTests.cs` | **P5a** — rung count, the ascending-order property `StepFaster` depends on, the opening rung, end-clamping in both directions, round-trip through `TryIndexOf`, refusal off either end, copy-not-view on `SnapshotRungs`, and the pairing assertion that every rung sits inside the streamer's `[Min, Max]` |
 | `tests/MatchControlAvailabilityTests.cs` | **P5a** — the three states, resolution from a live frame, the §6.3 save-survives-full-time lock, and the frameless-streamer-is-not-`Live` guard (the defect a `From` reading the frame unconditionally would have) |
 | `tests/PitchMarkingsTests.cs` | **P4a** — count and determinism, the four common markings, **every end-specific marking mirrored exactly at the other end**, IFAB distances read back against `MatchViewerConstants`, and the unused-field-is-zero contract |
+| `tests/PitchMarkingsDrawablesTests.cs` | **P4b AR pass H1** — locks `BuildDrawables()`'s rectangle-to-four-lines decomposition (moved out of `MatchClientBehaviour` so the CI gate compiles and tests it): the declared `DRAWABLE_COUNT`, that no `Rectangle` survives, the four edges close the outline with the documented winding, and the decomposition at BOTH ends of the pitch |
 | `tests/MatchRosterTests.cs` | **P4a** — per-team 1-based numbering (keeper on 1, asserted for **both** teams), uniqueness, an interleaved-order case that discriminates the rule from `index / 11`, copy semantics, argument guards |
 | `tests/MatchRenderProjectionTests.cs` | **P4a** — which source each field comes from (the positions-must-come-from-the-interpolator lock), the goalkeeper flag following a substitution, possession ringing mirrored to both teams, every shape guard, and the ball's shadow / lift / capped-scale cues |
 | `tests/FrameInterpolatorTests.cs` | **P3** — speed-aware alpha and the snap-across-discontinuity contract |
 | `tests/FollowBallCameraTests.cs` | **P3** — dead zone, frame-rate independence by step subdivision, pitch-clamp centring |
+| `tests/LiveFrameLatchTests.cs` | **P4b AR pass M6** — locks `LiveFrameLatch`'s three cases: the first-frame seed (both `Previous`/`Current` equal the same frame), a new-tick shift (including a multi-tick jump), and the same-tick no-op (the streamer publishes far more often than it advances a tick) |
 
 ---
 
-### `src/match-client-unity/` — the Unity-only render/UGUI skin (P4b–P6, not yet built)
+### `src/match-client-unity/` — the Unity-only render/UGUI skin (P4b LANDED August 15, 2026; P5b/P6 not yet built)
 
 Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P4b … §5-P6).
-**Scaffolded only — asmdef and README, no scripts.** It will hold the `MonoBehaviour` render/camera/HUD
-skin and the UGUI screens: types that need a Unity host (`Camera`, `SpriteRenderer`, `GameObject`, UGUI).
-It adds a skin over `match-client-core`, never engine-facing logic.
+**P4b landed:** the `MonoBehaviour` render/camera/click binding. The UGUI screens (P5b) are still to
+come — types that need a Unity host (`Camera`, `SpriteRenderer`/mesh prefabs, `GameObject`, UGUI).
+It adds a skin over `match-client-core`, never engine-facing logic — every render/camera/click
+*decision* was made in P4a/P5a; this file only assigns transforms and forwards input (§12 rule 1).
 
 **Excluded from the shim gate by design.** Listed in `tools/dotnet-ci/generate_projects.py`'s
 `SHIM_EXCLUDED_ASMDEFS`, so it is never generated, compiled, or referenced on Linux — it is verifiable
 only on the pinned Unity host (`certification-platform.md` v1.4, ✅ PINNED since July 19, 2026). This is
-the reason the determinism-bearing half lives in the host-free sibling above.
+the reason the determinism-bearing half lives in the host-free sibling above, and why this file's own
+correctness rests on manual review rather than the `dotnet-ci` gate — see its two AR rounds' worth of
+findings (H1-H6, M1-M13, L1-L8) for what that review caught.
 
 | File | Purpose |
 |------|---------|
 | `match-client-unity.asmdef` | `TacticalDirector.MatchClientUnity`; references MatchClientCore + MatchViewer + MatchEngine |
 | `README.md` | Why the assembly is empty, the host-free/host split it encodes, and the shim-gate exclusion |
+| `MatchClientBehaviour.cs` | **P4b, LANDED August 15, 2026** — the PlayerLoop host: owns a `MatchSession`, reads `TryGetLatestFrame` each `Update` via the new `LiveFrameLatch`, and binds `AgentRenderModel`/`BallRenderModel`/`PitchMarking` onto scene objects (transforms, `MaterialPropertyBlock` colour, camera pose, a ground-click ray). States and enforces the prefab contract (neutral root; flat-vs-volumetric unit sizing; the colour-property name; no world-space `LineRenderer`) at instantiation, rejecting the client by name+reason rather than throwing into a live `MonoBehaviour`. Two AR rounds landed against it: round 1 (H1-H3 + 9M + 5L) and round 2 (H4-H6, then M10-M13/L6-L8) — see this file's own `VersionHistory` block for the per-finding detail. Excluded from the `dotnet-ci` gate by design (above); reviewed by hand |
 
 ---
 

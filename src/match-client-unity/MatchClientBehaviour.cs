@@ -1,7 +1,7 @@
 // File:     src/match-client-unity/MatchClientBehaviour.cs
 // Created:  2026-08-15
-// Modified: 2026-08-15 (AR round 2 — High findings H4-H6; see the VersionHistory block at the foot
-//           of this file for the per-finding detail)
+// Modified: 2026-08-15 (AR round 2 — High findings H4-H6, then Medium/Low findings M10-M13/L6-L8; see
+//           the VersionHistory block at the foot of this file for the per-finding detail)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4b, §12),
 //           Code Standards #20
@@ -33,10 +33,27 @@ namespace TacticalDirector.MatchClientUnity
     /// root is either destroyed or silently multiplied into every metre figure. Bake a fixed tilt (a
     /// Quad lying flat, say) and any visual thickness onto a CHILD mesh, which nothing here
     /// touches;</description></item>
-    /// <item><description><b>the mesh is unit-sized</b> — unit radius for anything round (marker,
-    /// ring, ball, shadow, circle, spot), unit length along local +Z with unit cross-section for a
-    /// marking line. The scale this code assigns is then the metre figure ITSELF, with no conversion
-    /// — which is the whole point: a per-primitive "what radius is a Unity Cylinder by default"
+    /// <item><description><b>the mesh is unit-sized, in one of TWO ways, depending on which of the
+    /// two classes below this slot is (M11 — this clause used to state one rule and every call site
+    /// but the ball's silently needed a second one)</b>:
+    /// <list type="bullet">
+    /// <item><description><b>(a) FLAT ground props</b> — the agent marker, the possession ring, the
+    /// ball shadow, a marking circle, a marking spot, and a marking line — are authored at UNIT
+    /// RADIUS (the round ones) or UNIT LENGTH ALONG LOCAL +Z WITH UNIT CROSS-SECTION (a marking
+    /// line), and with ZERO EXTENT IN LOCAL Y: the MESH ITSELF must be flat, e.g. a Quad lying flat
+    /// rather than a Cylinder. This code assigns local Y = 1 to every one of these (see
+    /// <see cref="FlatGroundScale"/> — named for this rule, not the ball's), which is INERT against a
+    /// mesh with no height of its own. Flatness comes from the mesh being authored flat; the Y = 1
+    /// assignment is a don't-care multiplier against a zero, not the source of it. A prefab whose
+    /// mesh has real height (a genuinely unit-radius SPHERE used as a marker, say) renders as a
+    /// squashed ellipsoid under this rule, not a flat disc — this code cannot detect that, so get the
+    /// mesh right.</description></item>
+    /// <item><description><b>(b) the ball</b> is the one VOLUMETRIC prop in the contract: a genuine
+    /// unit-radius SPHERE, scaled uniformly on all three axes (<c>Vector3.one * model.Radius</c>), so
+    /// it reads as a sphere at every radius the sim reports rather than a disc.</description></item>
+    /// </list>
+    /// Either way the scale this code assigns is then the metre figure ITSELF, with no conversion —
+    /// which is the whole point: a per-primitive "what radius is a Unity Cylinder by default"
     /// constant is a class of bug rather than a number.</description></item>
     /// <item><description><b>the agent marker's material exposes the colour property named by
     /// <see cref="_colorPropertyName"/></b> — defaulted to <c>"_Color"</c>, the Built-in Render
@@ -77,6 +94,7 @@ namespace TacticalDirector.MatchClientUnity
         [SerializeField] private GameObject _markingLinePrefab;
         [SerializeField] private GameObject _markingCirclePrefab;
         [SerializeField] private GameObject _markingSpotPrefab;
+        [SerializeField] private GameObject _goalMouthPrefab;
 
         [Header("Team palette — index 0 = home, 1 = away")]
         [SerializeField] private Color[] _teamColors = new Color[] { Color.blue, Color.red };
@@ -197,8 +215,16 @@ namespace TacticalDirector.MatchClientUnity
             // InstantiatePrefab below — the one place a further per-instantiation wiring check
             // belongs (H-2's own comment). ValidateWiring covers what has to be true before any
             // Instantiate call is even safe to make.
+            //
+            // L6: each step can itself set _wiringRejected partway through (a bad prefab found on
+            // marking 3 of 20, say) — re-checked between steps so a rejection during BuildMarkings
+            // does not go on to instantiate every agent and ball object too.
             BuildMarkings();
+            if (_wiringRejected) { return; }
+
             BuildAgentObjects();
+            if (_wiringRejected) { return; }
+
             BuildBallObjects();
         }
 
@@ -279,6 +305,7 @@ namespace TacticalDirector.MatchClientUnity
             if (_markingLinePrefab == null) { RejectWiring(nameof(_markingLinePrefab) + " is not assigned in the inspector."); return; }
             if (_markingCirclePrefab == null) { RejectWiring(nameof(_markingCirclePrefab) + " is not assigned in the inspector."); return; }
             if (_markingSpotPrefab == null) { RejectWiring(nameof(_markingSpotPrefab) + " is not assigned in the inspector."); return; }
+            if (_goalMouthPrefab == null) { RejectWiring(nameof(_goalMouthPrefab) + " is not assigned in the inspector."); return; }
             if (_matchCamera == null) { RejectWiring(nameof(_matchCamera) + " is not assigned in the inspector."); return; }
 
             if (_teamColors == null || _teamColors.Length != MatchEngineConstants.TEAM_COUNT)
@@ -358,11 +385,27 @@ namespace TacticalDirector.MatchClientUnity
             // synthesises no corner of its own (§12 rule 1).
             foreach (PitchMarking marking in PitchMarkings.BuildDrawables())
             {
+                // L6: RejectWiring may have fired on a PREVIOUS iteration's InstantiatePrefab/PlaceLine/
+                // PlaceRadial call. Without this, a single bad marking prefab keeps getting instantiated
+                // (and keeps re-logging the same rejection) for every remaining entry — DRAWABLE_COUNT
+                // is in the twenties, so that is ~20+ redundant instantiations and log lines for one bug.
+                if (_wiringRejected) { return; }
+
                 switch (marking.Kind)
                 {
                     case PitchMarkingKind.Line:
+                        PlaceLine(
+                            parent, _markingLinePrefab, nameof(_markingLinePrefab),
+                            MatchClientConstants.MarkingLineWidthM, marking.A, marking.B);
+                        break;
+
                     case PitchMarkingKind.GoalMouth:
-                        PlaceLine(parent, marking.A, marking.B);
+                        // M10: its own prefab and width, not the marking line's. PitchMarkingKind.
+                        // GoalMouth's own doc is explicit that it is goal furniture drawn heavier than
+                        // a marking line, not a Law 1 marking sharing the line's look.
+                        PlaceLine(
+                            parent, _goalMouthPrefab, nameof(_goalMouthPrefab),
+                            MatchClientConstants.GoalMouthWidthM, marking.A, marking.B);
                         break;
 
                     case PitchMarkingKind.Circle:
@@ -382,20 +425,30 @@ namespace TacticalDirector.MatchClientUnity
             }
         }
 
-        private void PlaceLine(Transform parent, Vector2 fromXY, Vector2 toXY)
+        /// <summary>
+        /// Places one straight marking-shaped primitive from <paramref name="fromXY"/> to
+        /// <paramref name="toXY"/>, at the ground layer's Y (M12), using <paramref name="prefab"/> at
+        /// width <paramref name="widthM"/>. Shared by <see cref="PitchMarkingKind.Line"/> (the
+        /// boundary/halfway/box edges) and <see cref="PitchMarkingKind.GoalMouth"/> (M10: its own
+        /// prefab and width, not the marking line's), which differ only in which prefab and width the
+        /// caller passes.
+        /// </summary>
+        private void PlaceLine(Transform parent, GameObject prefab, string prefabField, float widthM, Vector2 fromXY, Vector2 toXY)
         {
-            Vector3 from = PitchViewProjection.ToWorld(fromXY, 0f);
-            Vector3 to = PitchViewProjection.ToWorld(toXY, 0f);
+            Vector3 from = PitchViewProjection.ToWorld(fromXY, MatchClientConstants.MarkingLayerHeightM);
+            Vector3 to = PitchViewProjection.ToWorld(toXY, MatchClientConstants.MarkingLayerHeightM);
             Vector3 along = to - from;
 
-            GameObject go = InstantiatePrefab(_markingLinePrefab, parent, nameof(_markingLinePrefab));
+            GameObject go = InstantiatePrefab(prefab, parent, prefabField);
             go.transform.position = (from + to) * 0.5f;
             go.transform.rotation = Quaternion.LookRotation(along, Vector3.up);
 
             // Unit length along local +Z and unit cross-section, so both figures are metres as they
-            // stand. Y stays at 1: a line painted on the turf has no thickness of its own.
+            // stand. Y stays at 1 — inert, not the source of flatness (M11): the mesh itself must be
+            // authored with zero height (prefab-contract clause 2a), and a line painted on the turf
+            // has no thickness of its own for that mesh to carry.
             Vector3 scale = Vector3.one;
-            scale.x = MatchClientConstants.MarkingLineWidthM;
+            scale.x = widthM;
             scale.z = along.magnitude;
             go.transform.localScale = scale;
         }
@@ -403,8 +456,8 @@ namespace TacticalDirector.MatchClientUnity
         private void PlaceRadial(Transform parent, GameObject prefab, string prefabField, Vector2 centreXY, float radius)
         {
             GameObject go = InstantiatePrefab(prefab, parent, prefabField);
-            go.transform.position = PitchViewProjection.ToWorld(centreXY, 0f);
-            go.transform.localScale = GroundScale(radius);
+            go.transform.position = PitchViewProjection.ToWorld(centreXY, MatchClientConstants.MarkingLayerHeightM);
+            go.transform.localScale = FlatGroundScale(radius);
         }
 
         private void BuildAgentObjects()
@@ -415,6 +468,10 @@ namespace TacticalDirector.MatchClientUnity
 
             for (int i = 0; i < _roster.AgentCount; i++)
             {
+                // L6: a bad prefab found on agent 0 of a 22-agent roster would otherwise keep
+                // instantiating (and keep re-logging the same rejection) for every remaining agent.
+                if (_wiringRejected) { return; }
+
                 _agentMarkers[i] = InstantiatePrefab(_agentMarkerPrefab, transform, nameof(_agentMarkerPrefab));
 
                 // M4: resolved ONCE here rather than every frame in RenderAgents — the walk was
@@ -458,6 +515,11 @@ namespace TacticalDirector.MatchClientUnity
 
                 _agentMarkerRenderers[i] = markerRenderer;
 
+                // L6: the marker check above may itself have just rejected agent i (a missing/bad
+                // material) — without this, the possession-ring prefab still gets instantiated for the
+                // same agent in the same iteration on top of the marker's own rejection.
+                if (_wiringRejected) { return; }
+
                 _possessionRings[i] = InstantiatePrefab(_possessionRingPrefab, transform, nameof(_possessionRingPrefab));
                 _possessionRings[i].SetActive(false);
             }
@@ -466,6 +528,11 @@ namespace TacticalDirector.MatchClientUnity
         private void BuildBallObjects()
         {
             _ball = InstantiatePrefab(_ballPrefab, transform, nameof(_ballPrefab));
+
+            // L6: the ball itself may have just been rejected (a non-neutral root, say) — without
+            // this, the shadow prefab still gets instantiated on top of that rejection.
+            if (_wiringRejected) { return; }
+
             _ballShadow = InstantiatePrefab(_ballShadowPrefab, transform, nameof(_ballShadowPrefab));
         }
 
@@ -502,16 +569,44 @@ namespace TacticalDirector.MatchClientUnity
         }
 
         /// <summary>
-        /// Scale for a flat, unit-radius prop lying on the turf: the radius in metres on both ground
-        /// axes, unit height. Under the prefab contract no conversion is involved — which is exactly
-        /// what a shared "default primitive radius" divisor used to hide.
+        /// Scale for a FLAT, unit-radius prop lying on the turf (prefab-contract clause 2a): the
+        /// radius in metres on both ground axes, and Y left at 1 — inert against a mesh authored with
+        /// zero height, not the source of the flatness. Under the prefab contract no conversion is
+        /// involved — which is exactly what a shared "default primitive radius" divisor used to hide.
+        ///
+        /// <para>M11: named <c>Flat</c>GroundScale, not <c>GroundScale</c>, specifically so it reads
+        /// as clause 2a's rule at every call site — <see cref="RenderBall"/>'s ball itself does NOT
+        /// use this method, because the ball is clause 2b's one volumetric prop
+        /// (<c>Vector3.one * model.Radius</c>, scaled uniformly on all three axes).</para>
         /// </summary>
-        private static Vector3 GroundScale(float radiusM)
+        private static Vector3 FlatGroundScale(float radiusM)
         {
             Vector3 scale = Vector3.one;
             scale.x = radiusM;
             scale.z = radiusM;
             return scale;
+        }
+
+        /// <summary>
+        /// M12: <paramref name="groundPosition"/> with its Y replaced by <paramref name="heightM"/> —
+        /// one of the four ordered <c>MatchClientConstants</c> ground-layer heights. Every producer of
+        /// <paramref name="groundPosition"/> in this file (<see cref="AgentRenderModel.WorldPosition"/>,
+        /// <see cref="BallRenderModel.ShadowPosition"/>) reports Y = 0, so without this every ground
+        /// layer would be coplanar and a real renderer would z-fight wherever two overlap — a shadow
+        /// crossing a painted line, a ring sitting under the marker it annotates.
+        ///
+        /// <para>Applied here rather than threaded through <c>match-client-core</c>'s render models:
+        /// the four layers are a pure rendering-order choice with no simulation meaning (unlike, say,
+        /// <see cref="BallRenderModel.HeightM"/>, which is the engine's own physics height), and
+        /// <c>PitchMarking</c> carries no height field at all — inventing one on either type to carry
+        /// a number that already has a named, boot-validated home in the constant catalogue would move
+        /// the decision without removing it. Reading the named constant directly here (rather than an
+        /// inline literal) is what the finding actually asked for.</para>
+        /// </summary>
+        private static Vector3 WithGroundLayerHeight(Vector3 groundPosition, float heightM)
+        {
+            groundPosition.y = heightM;
+            return groundPosition;
         }
 
         private void RejectWiring(string reason)
@@ -543,8 +638,8 @@ namespace TacticalDirector.MatchClientUnity
                 // marker to draw a number or a card count. IsGoalkeeper and IsSentOff below ARE
                 // bound: both fit the existing marker material as a tint, with no new prefab slot.
                 Transform marker = _agentMarkers[i].transform;
-                marker.position = model.WorldPosition;
-                marker.localScale = GroundScale(model.MarkerRadius);
+                marker.position = WithGroundLayerHeight(model.WorldPosition, MatchClientConstants.AgentMarkerLayerHeightM);
+                marker.localScale = FlatGroundScale(model.MarkerRadius);
 
                 _scratchPropertyBlock.SetColor(_colorPropertyId, ResolveMarkerColor(in model));
                 _agentMarkerRenderers[i].SetPropertyBlock(_scratchPropertyBlock);
@@ -553,11 +648,14 @@ namespace TacticalDirector.MatchClientUnity
                 _possessionRings[i].SetActive(model.HasBall);
                 if (model.HasBall)
                 {
-                    ring.position = model.WorldPosition;
+                    // M12: the ring's ground point matches the marker's (same agent), but its LAYER
+                    // height is deliberately its own, lower constant — the ring must render underneath
+                    // the marker it annotates, per PossessionRingLayerHeightM's ordering.
+                    ring.position = WithGroundLayerHeight(model.WorldPosition, MatchClientConstants.PossessionRingLayerHeightM);
                     // M3: reads AgentRenderModel.PossessionRingRadius (0 when !HasBall, otherwise the
                     // catalogue's [GT] radius) rather than the [GT] constant a second time — the
                     // model is the single source, per its own class doc.
-                    ring.localScale = GroundScale(model.PossessionRingRadius);
+                    ring.localScale = FlatGroundScale(model.PossessionRingRadius);
                 }
             }
         }
@@ -589,11 +687,17 @@ namespace TacticalDirector.MatchClientUnity
         {
             BallRenderModel model = MatchRenderProjection.ProjectBall(pitchBallPosition);
 
+            // Prefab-contract clause 2b: the ball is the one VOLUMETRIC prop, scaled uniformly on all
+            // three axes so it reads as a sphere at every radius rather than a flat disc (M11). Its
+            // real physics height rides on model.WorldPosition.y already — not a ground layer, so it
+            // is left untouched by M12's layering.
             _ball.transform.position = model.WorldPosition;
             _ball.transform.localScale = Vector3.one * model.Radius;
 
-            _ballShadow.transform.position = model.ShadowPosition;
-            _ballShadow.transform.localScale = GroundScale(model.ShadowRadius);
+            // M12: the shadow is a ground layer — its own height, above the markings it regularly
+            // crosses and below the ring/marker it can coincide with.
+            _ballShadow.transform.position = WithGroundLayerHeight(model.ShadowPosition, MatchClientConstants.BallShadowLayerHeightM);
+            _ballShadow.transform.localScale = FlatGroundScale(model.ShadowRadius);
         }
 
         private void UpdateCamera(Vector3 pitchBallPosition)
@@ -730,4 +834,47 @@ namespace TacticalDirector.MatchClientUnity
 // |         |            |        | is absent or lacks the property — SetColor against a missing    |
 // |         |            |        | property succeeds silently, which would ship both teams, the    |
 // |         |            |        | goalkeeper tint and the sent-off tint in one colour.            |
+// | 1.4     | 2026-08-15 | —      | AR round 2, Medium/Low findings M10-M13/L6-L8. M10: goal mouths |
+// |         |            |        | get their own _goalMouthPrefab (null-checked in ValidateWiring) |
+// |         |            |        | and the new [GT] GoalMouthWidthM instead of sharing the marking |
+// |         |            |        | line's prefab/width — PlaceLine is now parameterised over       |
+// |         |            |        | (prefab, prefabField, widthM) rather than always reading the    |
+// |         |            |        | marking-line fields, and PlaceRadial/RenderAgents/RenderBall    |
+// |         |            |        | call the renamed FlatGroundScale (see M11). M11: prefab-contract|
+// |         |            |        | clause 2 is rewritten into two explicit classes — 2a FLAT ground|
+// |         |            |        | props (unit radius/length in local XZ, ZERO extent in local Y,  |
+// |         |            |        | the mesh itself must be authored flat) and 2b the ball, the one |
+// |         |            |        | VOLUMETRIC unit-radius sphere scaled uniformly on all three     |
+// |         |            |        | axes — no 4th clause added. GroundScale renamed FlatGroundScale |
+// |         |            |        | so the name states which of the two rules a call site follows; |
+// |         |            |        | every call site updated. PlaceLine's "Y stays at 1" comment no  |
+// |         |            |        | longer credits the Y=1 ASSIGNMENT with flatness — the mesh being|
+// |         |            |        | authored flat is the source, Y=1 is inert against a zero height.|
+// |         |            |        | M12: four new ordered MatchClientConstants ground-layer heights |
+// |         |            |        | (markings lowest, then ball shadow, then possession ring, then  |
+// |         |            |        | agent marker) replace the implicit world Y=0 every ground prop  |
+// |         |            |        | shared — coplanar opaque surfaces z-fight in a real renderer,   |
+// |         |            |        | and the ring is explicitly meant to sit under the marker it     |
+// |         |            |        | annotates. New WithGroundLayerHeight helper applies the named   |
+// |         |            |        | constant at each ground placement (markings via PlaceLine/      |
+// |         |            |        | PlaceRadial, the marker and ring in RenderAgents, the shadow in |
+// |         |            |        | RenderBall); the ball itself is untouched, since its height is  |
+// |         |            |        | the engine's own physics height, not a ground layer. Read       |
+// |         |            |        | directly from the catalogue here rather than threaded through   |
+// |         |            |        | the match-client-core render models: the four layers are a pure |
+// |         |            |        | rendering-order choice with no simulation meaning, and           |
+// |         |            |        | PitchMarking carries no height field to extend. L6: BuildMarkings|
+// |         |            |        | / BuildAgentObjects / BuildBallObjects each now check            |
+// |         |            |        | _wiringRejected at the top of their loop body (and, where a      |
+// |         |            |        | rejection can fire mid-iteration, immediately after) and return  |
+// |         |            |        | rather than keep instantiating and re-logging the same failure   |
+// |         |            |        | for every remaining marking/agent/ball object; BuildScene checks |
+// |         |            |        | it between its three build steps too. L7: MarkingLineWidthM (and |
+// |         |            |        | the new GoalMouthWidthM, validated the same way from the start)  |
+// |         |            |        | now go through MatchClientConstants.RequireInRange like their    |
+// |         |            |        | render-cue siblings, instead of an unvalidated Config.GetFloat.  |
+// |         |            |        | L8: CameraTiltDegrees/CameraLateralOffsetM gain a pairing check  |
+// |         |            |        | (MatchClientConstants.RequireTiltOrOffsetNonzero) — both zero    |
+// |         |            |        | sits the camera directly above its target, an undefined          |
+// |         |            |        | LookAt rotation; each dial stays individually legal at zero.     |
 #endregion

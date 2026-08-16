@@ -1,6 +1,8 @@
 // File:     src/match-client-core/tests/MatchClientConstantsTests.cs
 // Created:  2026-08-04
-// Modified: 2026-08-07
+// Modified: 2026-08-15 (P4b AR round 2, M/L pass: RequireTiltOrOffsetNonzero (L8), the ground-layer
+//           height ordering and MarkingLineWidthM/GoalMouthWidthM bounds (M12/L7) in the shipped-
+//           values test)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4a),
 //           Code Standards #20 §3.2.3 ([GT] loading), Testing Strategy #19
@@ -105,6 +107,19 @@ namespace TacticalDirector.MatchClientCore.Tests
         }
 
         [Test]
+        public void RequireTiltOrOffsetNonzero_RefusesOnlyBothZero_L8()
+        {
+            // Each dial is individually legal at zero — straight-down tilt, or dead-centre framing —
+            // and it is the PAIR that is degenerate, in RequireFarRayMeetsGround's own shape.
+            Assert.AreEqual(5f, MatchClientConstants.RequireTiltOrOffsetNonzero(5f, 0f), "tilt alone");
+            Assert.AreEqual(0f, MatchClientConstants.RequireTiltOrOffsetNonzero(0f, 22f), "offset alone");
+            Assert.AreEqual(-5f, MatchClientConstants.RequireTiltOrOffsetNonzero(-5f, 0f), "either sign");
+
+            Assert.Throws<InvalidOperationException>(
+                () => MatchClientConstants.RequireTiltOrOffsetNonzero(0f, 0f), "both zero is refused");
+        }
+
+        [Test]
         public void TheMessageNamesTheConfigKey_SoABootFailureIsActionable()
         {
             // It surfaces wrapped in a TypeInitializationException, where the inner message is all
@@ -144,6 +159,26 @@ namespace TacticalDirector.MatchClientCore.Tests
             Assert.LessOrEqual(MatchClientConstants.GoalkeeperTintFactor, 1f);
             Assert.GreaterOrEqual(MatchClientConstants.SentOffTintFactor, 0f);
             Assert.LessOrEqual(MatchClientConstants.SentOffTintFactor, 1f);
+
+            // L7: MarkingLineWidthM and GoalMouthWidthM are both drawn widths — the same [0.01, 1] m
+            // span, re-evaluated on the finished values rather than assumed from the validator call.
+            Assert.GreaterOrEqual(MatchClientConstants.MarkingLineWidthM, 0.01f);
+            Assert.LessOrEqual(MatchClientConstants.MarkingLineWidthM, 1f);
+            Assert.GreaterOrEqual(MatchClientConstants.GoalMouthWidthM, 0.01f);
+            Assert.LessOrEqual(MatchClientConstants.GoalMouthWidthM, 1f);
+
+            // M12: the four ground-layer heights must be STRICTLY ascending — markings lowest, then
+            // shadow, then ring, then marker — or the layer they were added to separate collapses
+            // back onto its neighbour.
+            Assert.Less(MatchClientConstants.MarkingLayerHeightM, MatchClientConstants.BallShadowLayerHeightM);
+            Assert.Less(MatchClientConstants.BallShadowLayerHeightM, MatchClientConstants.PossessionRingLayerHeightM);
+            Assert.Less(MatchClientConstants.PossessionRingLayerHeightM, MatchClientConstants.AgentMarkerLayerHeightM);
+
+            // L8: at least one of the pair must be non-zero, re-evaluated on the finished values for
+            // the same static-init-order reason the tilt/fov pairing above is.
+            Assert.IsFalse(
+                MatchClientConstants.CameraTiltDegrees == 0f && MatchClientConstants.CameraLateralOffsetM == 0f,
+                "tilt and lateral offset cannot both be zero — the camera would sit directly above its target");
         }
 
         [Test]
@@ -208,4 +243,10 @@ namespace TacticalDirector.MatchClientCore.Tests
 // |         |            |        | rather than as literals, so a retune keeps the test meaningful. |
 // | 1.5     | 2026-08-15 | —      | P4b AR pass M-2: the shipped-values check gains the two new    |
 // |         |            |        | tint factors' [0, 1] bound.                                     |
+// | 1.6     | 2026-08-15 | —      | P4b AR round 2, M/L pass: + RequireTiltOrOffsetNonzero_         |
+// |         |            |        | RefusesOnlyBothZero_L8 (both-legal-alone, illegal-together, in  |
+// |         |            |        | RequireFarRayMeetsGround's own test shape). The shipped-values  |
+// |         |            |        | check gains MarkingLineWidthM/GoalMouthWidthM's [0.01, 1] bound,|
+// |         |            |        | the four ground-layer heights' strict ascending order, and the  |
+// |         |            |        | tilt/lateral-offset not-both-zero re-evaluation.                |
 #endregion
