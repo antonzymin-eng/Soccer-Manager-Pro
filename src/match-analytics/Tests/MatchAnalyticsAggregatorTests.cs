@@ -1,5 +1,9 @@
 // File:     src/match-analytics/Tests/MatchAnalyticsAggregatorTests.cs
 // Created:  2026-07-27
+// Modified: 2026-08-16, later (L-6, adversarial review — new Cards_WithAnUnknownKind_ThrowsAndNamesThe-
+//           Kind: a CardKind outside {0, 1, 2} now fails loud instead of the old `else` branch silently
+//           counting it as a plain yellow. Mutation-verified: reverting the aggregator's fail-loud else
+//           to `_yellowCards[team]++` leaves this test the only red one in the suite.)
 // Modified: 2026-08-16 (reviewed-findings pass, M4/ERR-037-003 — added
 //           Cards_SecondYellowDismissal_CountsAsBothAYellowAndARed, a kind-2 case for the §3.2
 //           CardIssuedEvent row that fails against the pre-fix two-way `== red ? … : …` routing
@@ -204,6 +208,24 @@ namespace TacticalDirector.MatchAnalytics.Tests
             Assert.AreEqual(0, r.Home.YellowCards);
             Assert.AreEqual(1, r.Away.RedCards, "The kind-2 event must count toward RedCards.");
             Assert.AreEqual(2, r.Away.YellowCards, "The kind-2 event's own caution must still count as a yellow.");
+        }
+
+        /// <summary>L-6 (reviewed findings pass): the §3.2 card mapping is exhaustive over #17's
+        /// three-value domain (0=Yellow, 1=Red, 2=SecondYellow) and states no fourth-value posture. A
+        /// value outside it must fail loud, naming the kind, rather than falling through the old `else`
+        /// branch and being silently counted as a plain yellow.</summary>
+        [Test]
+        public void Cards_WithAnUnknownKind_ThrowsAndNamesTheKind()
+        {
+            var agg = new MatchAnalyticsAggregator();
+            var tap = new FakeTap()
+                .Add(new CardIssuedEvent(recipient: 4, cardKind: 3, foulOrdinal: 0xFFFF));
+
+            ArgumentOutOfRangeException ex = Assert.Throws<ArgumentOutOfRangeException>(
+                () => Pump(agg, tap, new FakeSample(MidfieldBall), ticks: 1));
+
+            Assert.That(ex.Message, Does.Contain("CardKind"),
+                "the refusal must name the field it is refusing, not just the class");
         }
 
         [Test]
@@ -627,4 +649,9 @@ namespace TacticalDirector.MatchAnalytics.Tests
 // |         |            |        | kind-2 CardIssuedEvent on a recipient who already has a kind-0 |
 // |         |            |        | yellow must take YellowCards 1→2 and RedCards 0→1. Fails       |
 // |         |            |        | against the pre-fix aggregator (RedCards stays 0).             |
+// | 1.4     | 2026-08-16, later | — | L-6 (adversarial review). Added Cards_WithAnUnknownKind_    |
+// |         |            |        | ThrowsAndNamesTheKind: cardKind 3 (outside #17's {0,1,2}       |
+// |         |            |        | domain) must throw ArgumentOutOfRangeException naming          |
+// |         |            |        | CardKind, not fall into the old else branch and silently count |
+// |         |            |        | as a yellow. Mutation-verified against the aggregator fix.     |
 #endregion

@@ -1,5 +1,11 @@
 // File:     src/discipline/CardLedgerFold.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16, latest of all (L-1 and M-B, adversarial review, doc only — v1.11: L-1 —
+//           NO_PLAYER's doc said a spec declaration "is owed" against #44; ERR-044-013 discharged it
+//           2026-08-15 (section-2.md v0.9 + appendices v0.8) — added a dated discharge note. M-B —
+//           the constructor's onPitchAgentIdCount ArgumentOutOfRangeException doc now cites
+//           CardLedgerFoldTests.Constructor_OnPitchAgentIdCountOutOfRange_Throws (T-DC-FOLD-003) as the
+//           lock, giving the spec citation an anchor. No behaviour change either way.)
 // Modified: 2026-08-16, latest again (findings A and B, reviewed findings pass — v1.10: A —
 //           ERR-044-022. The constructor now takes a required onPitchAgentIdCount, validated
 //           0 < onPitchAgentIdCount <= the seed's length, and ApplySubstitution refuses an Incoming
@@ -134,8 +140,12 @@ namespace TacticalDirector.Discipline
     {
         /// <summary>[FIXED] Occupancy sentinel: this agent id maps to no player (an unused slot in the
         /// seed). Reviewed findings pass, L5, 2026-08-15: this constant carried no tag, violating
-        /// FR-CS-060/061 — a spec declaration and Appendix A row are owed against #44 and are reported,
-        /// not filed here (spec-error-log.md is out of this pass's ownership).</summary>
+        /// FR-CS-060/061 — a spec declaration and Appendix A row were owed against #44.
+        /// <para>
+        /// <b>Discharged 2026-08-15 — ERR-044-013.</b> The owed spec declaration landed the same day
+        /// (section-2.md v0.9 + appendices v0.8); this L5 debt is closed.
+        /// </para>
+        /// </summary>
         public const int NO_PLAYER = -1;
 
         // Indexed by agent id: on-pitch slots first, then the engine's synthetic bench ids. Mutable —
@@ -211,7 +221,9 @@ namespace TacticalDirector.Discipline
         /// <exception cref="ArgumentNullException"><paramref name="occupancyByAgentId"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="onPitchAgentIdCount"/> is not
         /// strictly greater than zero and at most <paramref name="occupancyByAgentId"/>'s length
-        /// (ERR-044-022).</exception>
+        /// (ERR-044-022). Locked by <c>CardLedgerFoldTests.Constructor_OnPitchAgentIdCountOutOfRange_
+        /// Throws</c> (T-DC-FOLD-003, M-B reviewed findings pass) — both edges plus a negative value,
+        /// mutation-verified.</exception>
         /// <exception cref="ArgumentException">The seed is empty, carries a negative player id that is
         /// not <see cref="NO_PLAYER"/>, or maps the same non-<see cref="NO_PLAYER"/> player id to two
         /// agent ids (M1, reviewed findings pass — the seed must be one-to-one, or a card at either
@@ -812,4 +824,14 @@ namespace TacticalDirector.Discipline
 // |         |            |        | and the new SeasonLoopDisciplineTests cross-assembly lock. New     |
 // |         |            |        | CardLedgerFoldTests locks: Sub with an occupied on-pitch Incoming  |
 // |         |            |        | throws; Outgoing >= onPitchAgentIdCount throws.                   |
+// | 1.11    | 2026-08-16, latest of all | — | L-1 and M-B (adversarial review), doc only. L-1:  |
+// |         |            |        | NO_PLAYER's doc said a spec declaration "is owed" against #44 —    |
+// |         |            |        | ERR-044-013 discharged it 2026-08-15 (section-2.md v0.9 +          |
+// |         |            |        | appendices v0.8); added a dated discharge note in place of the     |
+// |         |            |        | stale "owed" claim. M-B: the constructor's onPitchAgentIdCount     |
+// |         |            |        | ArgumentOutOfRangeException doc now cites the new                  |
+// |         |            |        | CardLedgerFoldTests.Constructor_OnPitchAgentIdCountOutOfRange_     |
+// |         |            |        | Throws (T-DC-FOLD-003) as its lock, giving the spec's own          |
+// |         |            |        | section-5 citation (owned by another fixer) an anchor to point at. |
+// |         |            |        | No behaviour change.                                               |
 #endregion

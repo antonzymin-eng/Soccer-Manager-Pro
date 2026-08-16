@@ -1,5 +1,9 @@
 // File:     src/season-save/tests/SeasonSaveCareerRestoreTests.cs
 // Created:  2026-08-06
+// Modified: 2026-08-16, latest (L-3, adversarial review — v1.4: the "Oracle = the composed seam..."
+//           comment was documented, not enforced. The call site now routes through the new
+//           SeasonLoopScenarios.ComposedOracle, whose doc states the oracle's scope once for every
+//           caller across the folder. No behaviour change.)
 // Modified: 2026-08-16, later (adversarial-review Medium — the restore-fidelity precondition's
 //           PlayerCareerStates.SelectAvailable oracle call re-pointed at
 //           AvailabilityComposition.Compose(discipline: null) directly, since the method was deleted
@@ -141,10 +145,8 @@ namespace TacticalDirector.SeasonSave.Tests
                 career.SetMedicalState(0, full.GetPlayer(local).PlayerId, in injured);
             }
 
-            // Oracle = the composed seam with discipline structurally absent; if this fixture ever
-            // wires a discipline tally, pass it here too.
             Squad fielded =
-                AvailabilityComposition.Compose(full, career, discipline: null, competitionId: 0);
+                SeasonLoopScenarios.ComposedOracle(full, career, discipline: null, competitionId: 0);
             Assert.AreNotSame(full, fielded, "Precondition: the filter must have removed somebody.");
             Assert.AreNotEqual(
                 SquadRating.StartingElevenMean(full), SquadRating.StartingElevenMean(fielded),
@@ -213,4 +215,9 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | Re-pointed at AvailabilityComposition.Compose(discipline: null)   |
 // |         |            |        | directly, with a comment stating the oracle's scope explicitly.   |
 // |         |            |        | No assertion or fixture changed.                                   |
+// | 1.4     | 2026-08-16, latest | — | L-3 (adversarial review). The "Oracle = ..." comment v1.3      |
+// |         |            |        | added was documented, not enforced. The call site now routes      |
+// |         |            |        | through the new SeasonLoopScenarios.ComposedOracle, whose doc      |
+// |         |            |        | states the oracle's scope once for every caller. No behaviour      |
+// |         |            |        | change.                                                             |
 #endregion

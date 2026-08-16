@@ -1,5 +1,9 @@
 // File:     src/season-save/tests/AppearanceRecordTests.cs
 // Created:  2026-08-07
+// Modified: 2026-08-16, latest (L-3, adversarial review — v1.7: the three identical "Oracle = the
+//           composed seam..." comments (one spliced mid-sentence at the loop site) were documented, not
+//           enforced. All three call sites now route through SeasonLoopScenarios.ComposedOracle, whose
+//           doc states the oracle's scope once for every caller across the folder. No behaviour change.)
 // Modified: 2026-08-16, later (adversarial-review Medium — the four PlayerCareerStates.SelectAvailable
 //           oracle call sites re-pointed at AvailabilityComposition.Compose(discipline: null) directly,
 //           since the method was deleted as production-dead — v1.6)
@@ -270,10 +274,9 @@ namespace TacticalDirector.SeasonSave.Tests
                 // Identity, not just count (AR pass 1): the recorded set must BE the eleven the
                 // selector fields from the filtered squad — the same walk both resolution modes use
                 // (the recording path does not branch on mode), so this is the mode-independence
-                // lock too. Oracle = the composed seam with discipline structurally absent; if this
-                // fixture ever wires a discipline tally, pass it here too.
+                // lock too.
                 int[] expectedXi = SquadRating.StartingElevenPlayerIds(
-                    AvailabilityComposition.Compose(
+                    SeasonLoopScenarios.ComposedOracle(
                         provider.ResolveByClubId(blocks[c].ClubId), career, discipline: null, competitionId: 0));
                 var recorded = new System.Collections.Generic.List<int>();
                 for (int i = 0; i < blocks[c].Count; i++)
@@ -331,10 +334,8 @@ namespace TacticalDirector.SeasonSave.Tests
 
             CollectionAssert.DoesNotContain(recorded, fitXi[0],
                 "an injured starter must not carry an appearance — he was not fielded");
-            // Oracle = the composed seam with discipline structurally absent; if this fixture ever
-            // wires a discipline tally, pass it here too.
             int[] filteredXi = SquadRating.StartingElevenPlayerIds(
-                AvailabilityComposition.Compose(
+                SeasonLoopScenarios.ComposedOracle(
                     provider.ResolveByClubId(clubId), career, discipline: null, competitionId: 0));
             CollectionAssert.AreEquivalent(filteredXi, recorded,
                 "the recorded eleven is the FILTERED selector's eleven");
@@ -420,10 +421,8 @@ namespace TacticalDirector.SeasonSave.Tests
             int[] unplayed = loop.State.UnplayedFixtureIndicesInRound(round);
             Fixture first = loop.State.FixtureAt(unplayed[0]);
 
-            // Oracle = the composed seam with discipline structurally absent; if this fixture ever
-            // wires a discipline tally, pass it here too.
             int[] awayXi = SquadRating.StartingElevenPlayerIds(
-                AvailabilityComposition.Compose(
+                SeasonLoopScenarios.ComposedOracle(
                     provider.ResolveByClubId(first.AwayClubId), career, discipline: null, competitionId: 0));
             career.RecordAppearances(
                 first.AwayClubId, new[] { awayXi[0] }, loop.CurrentWorldDay + 100u);
@@ -739,4 +738,9 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | Re-pointed at AvailabilityComposition.Compose(discipline: null) |
 // |         |            |        | directly, with a comment at each stating the oracle's scope     |
 // |         |            |        | explicitly. No assertion or fixture changed.                    |
+// | 1.7     | 2026-08-16, latest | — | L-3 (adversarial review). This file's three "Oracle = ..."    |
+// |         |            |        | comments v1.6 added were documented, not enforced. All three   |
+// |         |            |        | call sites now route through the new SeasonLoopScenarios.       |
+// |         |            |        | ComposedOracle, whose doc states the oracle's scope once for    |
+// |         |            |        | every caller. No behaviour change.                               |
 #endregion

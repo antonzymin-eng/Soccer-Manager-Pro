@@ -1,5 +1,10 @@
 // File:     src/season-save/tests/SeasonLoopCareerTests.cs
 // Created:  2026-08-06
+// Modified: 2026-08-16, latest (L-3, adversarial review — v1.10: the two identical "Oracle = the
+//           composed seam..." comments (covering three call sites) were documented, not enforced. Both
+//           sites now call the new SeasonLoopScenarios.ComposedOracle instead of
+//           AvailabilityComposition.Compose directly, whose doc states the oracle's scope once for
+//           every caller across this folder. No behaviour change.)
 // Modified: 2026-08-16, later (adversarial-review Medium — the three PlayerCareerStates.SelectAvailable
 //           oracle call sites re-pointed at AvailabilityComposition.Compose(discipline: null) directly,
 //           since the method was deleted as production-dead — v1.9)
@@ -557,10 +562,8 @@ namespace TacticalDirector.SeasonSave.Tests
                 career.SetMedicalState(fixture.HomeClubId, home.GetPlayer(local).PlayerId, in injured);
             }
 
-            // Oracle = the composed seam with discipline structurally absent; if this fixture ever
-            // wires a discipline tally, pass it here too.
             Squad expected =
-                AvailabilityComposition.Compose(home, career, discipline: null, competitionId: 0);
+                SeasonLoopScenarios.ComposedOracle(home, career, discipline: null, competitionId: 0);
             Assert.AreNotSame(home, expected, "Precondition: the filter must have removed somebody.");
             Assert.AreNotEqual(
                 SquadRating.StartingElevenMean(home), SquadRating.StartingElevenMean(expected),
@@ -661,12 +664,10 @@ namespace TacticalDirector.SeasonSave.Tests
 
             loop.BootFixtureEngine(in fixture, provider, out int[] homeXi, out int[] awayXi, out _, out _);
 
-            // Oracle = the composed seam with discipline structurally absent; if this fixture ever
-            // wires a discipline tally, pass it here too.
             int[] expectedHome = SquadRating.StartingElevenPlayerIds(
-                AvailabilityComposition.Compose(home, career, discipline: null, competitionId: 0));
+                SeasonLoopScenarios.ComposedOracle(home, career, discipline: null, competitionId: 0));
             int[] expectedAway = SquadRating.StartingElevenPlayerIds(
-                AvailabilityComposition.Compose(
+                SeasonLoopScenarios.ComposedOracle(
                     provider.ResolveByClubId(fixture.AwayClubId), career, discipline: null, competitionId: 0));
             CollectionAssert.AreEqual(expectedHome, homeXi,
                 "the ids handed back are the filtered selector's eleven, in the selector's own order");
@@ -924,4 +925,10 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | AvailabilityComposition.Compose(discipline: null) directly, with |
 // |         |            |        | a comment at each call site stating the oracle's scope explicitly.|
 // |         |            |        | No assertion or fixture changed.                                  |
+// | 1.10    | 2026-08-16, latest | — | L-3 (adversarial review). The two "Oracle = ..." comments      |
+// |         |            |        | v1.9 added (covering three call sites) were documented, not       |
+// |         |            |        | enforced — nothing kept them in step with four sibling suites'    |
+// |         |            |        | identical copies. All three call sites now route through the new  |
+// |         |            |        | SeasonLoopScenarios.ComposedOracle, whose doc states the oracle's |
+// |         |            |        | scope once for every caller. No behaviour change.                  |
 #endregion

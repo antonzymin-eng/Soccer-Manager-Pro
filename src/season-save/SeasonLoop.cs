@@ -1527,6 +1527,12 @@ namespace TacticalDirector.SeasonSave
                     DisciplineConstants.LeagueCompetitionKey);
             MatchEngineDisciplineTap tap = fold == null ? null : new MatchEngineDisciplineTap(engine);
 
+            // Recorded (L-5, adversarial review) — when the mid-match save seam reaches this path
+            // (MatchSession.TickOnce/CaptureSave/RestoreFrom, one assembly over; CardLedgerFold.cs's own
+            // type remarks track the same unreachability), THIS is the point where `fold`'s buffered,
+            // uncommitted pending list must be persisted alongside the engine snapshot, or the fixture
+            // refused outright — a mid-fixture restore today would rebuild an empty fold and silently
+            // lose every card issued before the save.
             _activeMatch = engine;
             try
             {

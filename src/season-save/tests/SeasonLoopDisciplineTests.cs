@@ -1,5 +1,22 @@
 // File:     src/season-save/tests/SeasonLoopDisciplineTests.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16, latest of all again (M-C, adversarial review — v1.13: the production
+//           onPitchAgentIdCount argument at SeasonLoop.PlayThroughEngine's CardLedgerFold construction
+//           site (MatchEngineConstants.SQUAD_SIZE) had no lock — ApplySubstitution is reachable only
+//           from a SubstitutionEvent and MatchEngine.SubstitutePlayer has no production caller, and
+//           Stage 0 never substitutes in a real match, so no test — including a full 90-minute engine
+//           fixture — has ever driven a SubstitutionEvent through PlayThroughEngine's fold. Mutating
+//           that production argument is therefore unreachable from a REAL match at any cost; the lock
+//           is a direct reconstruction instead. New FakeSubstitutionTap (duplicated from
+//           discipline/tests/CardLedgerFoldTests' internal FakeLedgerTap, unreachable across the
+//           assembly boundary) plus new PlayThroughEnginesOnPitchBoundary_MakesTheSubstitutionOccupancy-
+//           SwapLand: constructs a fold with the SAME three values PlayThroughEngine's construction
+//           site uses (a real booted engine's own PlayerIdsByAgentId(), MatchEngineConstants.SQUAD_SIZE,
+//           DisciplineConstants.LeagueCompetitionKey), feeds it a synthetic substitution + a following
+//           card at the vacated slot, and asserts the card attributes to the bench player who came on.
+//           Mutation-verified against the test's own onPitchAgentIdCount argument, mirroring what
+//           SeasonLoop.cs's real argument would produce if it diverged (see this row's own
+//           version-history entry below for the executed procedure).)
 // Modified: 2026-08-16, latest of all (reviewed-findings pass, M16 — v1.12: comment-string-only fix.
 //           TheBackFillPressesAnInjuredPlayerBackBeforeASuspendedOne's failure message quoted the
 //           ERR-044-019 sentence ("a banned man plays only when the alternative is a club that cannot
@@ -61,6 +78,7 @@
 using NUnit.Framework;
 
 using TacticalDirector.Discipline;
+using TacticalDirector.EventSystem;
 using TacticalDirector.InjuriesMedical;
 using TacticalDirector.LivingWorld;
 using TacticalDirector.MatchEngine;
@@ -212,6 +230,91 @@ namespace TacticalDirector.SeasonSave.Tests
                 MatchEngineConstants.NO_PLAYER_ID, Is.EqualTo(CardLedgerFold.NO_PLAYER),
                 "MatchEngineConstants.NO_PLAYER_ID and CardLedgerFold.NO_PLAYER must be numerically "
                 + "equal — the occupancy array crosses that boundary untranslated.");
+        }
+
+        /// <summary>
+        /// A tap holding authored records, for a fold constructed directly (M-C, adversarial review) —
+        /// duplicated from <c>discipline/tests/CardLedgerFoldTests.FakeLedgerTap</c> rather than shared,
+        /// because that type is <c>internal</c> to a different assembly this test project cannot reach.
+        /// </summary>
+        private sealed class FakeSubstitutionTap : IDisciplineTickLedgerTap
+        {
+            private readonly System.Collections.Generic.List<byte> _ordinals =
+                new System.Collections.Generic.List<byte>();
+            private readonly System.Collections.Generic.List<object> _records =
+                new System.Collections.Generic.List<object>();
+
+            public ulong CurrentTick { get; private set; }
+
+            public int RecordCount => _ordinals.Count;
+
+            public byte OrdinalAt(int index) => _ordinals[index];
+
+            public T RecordAt<T>(int index) where T : struct => (T)_records[index];
+
+            internal FakeSubstitutionTap Add<T>(in T record) where T : struct
+            {
+                _ordinals.Add(EventRegistry.GetOrdinal<T>());
+                _records.Add(record);
+                return this;
+            }
+
+            internal FakeSubstitutionTap AtTick(ulong tick)
+            {
+                CurrentTick = tick;
+                return this;
+            }
+        }
+
+        [Test]
+        public void PlayThroughEnginesOnPitchBoundary_MakesTheSubstitutionOccupancySwapLand()
+        {
+            // M-C (adversarial review): SeasonLoop.PlayThroughEngine constructs its CardLedgerFold with
+            // MatchEngineConstants.SQUAD_SIZE as onPitchAgentIdCount (ERR-044-022) — but
+            // ApplySubstitution is reachable only from a SubstitutionEvent, and MatchEngine.
+            // SubstitutePlayer has no production caller (Stage 0 fields a fixed eleven), so mutating
+            // that production argument to MatchEngineConstants.AgentIdSpace or to 1 left every existing
+            // test green, this file included: nothing constructed a fold with the real production
+            // boundary AND a real substitution together. This does — a fold built EXACTLY as
+            // PlayThroughEngine builds one (a real engine's own PlayerIdsByAgentId() seed,
+            // MatchEngineConstants.SQUAD_SIZE, DisciplineConstants.LeagueCompetitionKey) fed a synthetic
+            // SubstitutionEvent whose Incoming is a bench id (>= SQUAD_SIZE) and whose Outgoing is
+            // on-pitch (< SQUAD_SIZE) — then proves the occupancy swap actually landed by folding a card
+            // at the vacated slot on the next tick: CardLedgerFold exposes no public occupancy read, so
+            // OccupantOf(Outgoing) becoming the bench player's id is observed the same way
+            // CardLedgerFoldTests observes it one assembly over — through Commit's own attribution.
+            League league = FourClubLeague();
+            SeasonLoop loop = LoopOver(league, RoundResolutionMode.FullEngine, out _);
+            Fixture fixture = loop.State.FixtureAt(0);
+            TacticalDirector.MatchEngine.MatchEngine engine = loop.BootFixtureEngine(in fixture, league);
+
+            int[] seed = engine.PlayerIdsByAgentId();
+            int outgoing = 1;                                  // on-pitch, home team, not the goalkeeper
+            int incoming = MatchEngineConstants.SQUAD_SIZE;     // team 0's first bench id
+            int incomingPlayerId = seed[incoming];
+
+            var fold = new CardLedgerFold(
+                seed, MatchEngineConstants.SQUAD_SIZE, DisciplineConstants.LeagueCompetitionKey);
+
+            fold.ObserveTick(new FakeSubstitutionTap()
+                .Add(new SubstitutionEvent(outgoing, incoming, team: 0, substitutionReason: 0))
+                .AtTick(1));
+            fold.ObserveTick(new FakeSubstitutionTap()
+                .Add(new CardIssuedEvent(
+                    recipient: outgoing, cardKind: DisciplineConstants.CardKindYellow, foulOrdinal: 0xFFFF))
+                .AtTick(2));
+
+            var state = new DisciplineState();
+            fold.Commit(new DisciplineRules(state));
+
+            Assert.That(
+                state.EntryFor(incomingPlayerId, DisciplineConstants.LeagueCompetitionKey).Yellows,
+                Is.EqualTo(1),
+                "The card issued to the outgoing slot after the substitution must attribute to the "
+                + "bench player who came ON, not the player who went off — the occupancy swap the "
+                + "production onPitchAgentIdCount boundary (MatchEngineConstants.SQUAD_SIZE) makes "
+                + "possible. A wrong boundary here either throws (ERR-044-022's own guards) or lands the "
+                + "swap on the wrong slot, and either way this assertion fails.");
         }
 
         /// <summary>Counts non-sentinel entries and returns whether every one is unique.</summary>
@@ -946,15 +1049,21 @@ namespace TacticalDirector.SeasonSave.Tests
             // Every folded row belongs to a player of one of the two clubs that played the round's ONE
             // engine fixture — the attribution half. A fold that passed recipient agent ids straight
             // through as player ids would produce rows for ids in neither club.
+            //
+            // L-4 (reviewed findings pass): membership is checked against the two clubs' ACTUAL roster
+            // id arrays, not derived by playerId / CLUB_SQUAD_SIZE — that packing is production-deleted
+            // (ERR-044-014) and this assertion is scheduled to break the day the PlayerId space widens
+            // off it (the ERR-044-003 stage-1 entry's own named remainder).
+            Squad homeRoster = league.ResolveByClubId(observed.HomeClubId);
+            Squad awayRoster = league.ResolveByClubId(observed.AwayClubId);
             for (int i = 0; i < tally.Count; i++)
             {
                 int playerId = tally.EntryAt(i).PlayerId;
-                int club = playerId / PlayerDatabaseConstants.CLUB_SQUAD_SIZE;
                 Assert.That(
-                    club == observed.HomeClubId || club == observed.AwayClubId, Is.True,
-                    $"Folded a card onto player {playerId}, who belongs to club {club} — neither of the "
-                    + $"two clubs ({observed.HomeClubId} v {observed.AwayClubId}) that played the only "
-                    + "engine fixture of this round.");
+                    Contains(homeRoster, playerId) || Contains(awayRoster, playerId), Is.True,
+                    $"Folded a card onto player {playerId}, who is on neither roster of the two clubs "
+                    + $"({observed.HomeClubId} v {observed.AwayClubId}) that played the only engine "
+                    + "fixture of this round.");
             }
         }
 
@@ -965,9 +1074,11 @@ namespace TacticalDirector.SeasonSave.Tests
         {
             // The #29/#41 T2 AR filed and closed this for injuries; #44 reopened it one contributor
             // later. The match is configured through the COMPOSED filter — SeasonLoop.SelectAvailable
-            // passes _discipline — but SeasonSaveManager.Load's restore decorator called
-            // PlayerCareerStates.SelectAvailable, which composes with `discipline: null`. So a fixture a
-            // suspension had touched restored a strictly LARGER candidate set, LineupSelector re-ran
+            // passes _discipline — but SeasonSaveManager.Load's restore decorator called the then-extant
+            // PlayerCareerStates.SelectAvailable (since deleted at the #44 C1/C2 landing;
+            // AvailabilityComposition.Compose now holds this role), which composed with
+            // `discipline: null`. So a fixture a suspension had touched restored a strictly LARGER
+            // candidate set, LineupSelector re-ran
             // over it, and a different eleven's canonical attribute records went onto the pitch: ClubId
             // matching, size gate passing, digest diverging with nothing to announce it.
             //
@@ -1487,4 +1598,39 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | implementation ("a banned man plays only when the alternative is  |
 // |         |            |        | a club that cannot take the field at all"); restated to the       |
 // |         |            |        | two-case form. No assertion or test logic changed.                |
+// | 1.13    | 2026-08-16, latest of all again | — | M-C (adversarial review). SeasonLoop.cs's      |
+// |         |            |        | production onPitchAgentIdCount argument (MatchEngineConstants.    |
+// |         |            |        | SQUAD_SIZE, at the PlayThroughEngine CardLedgerFold construction  |
+// |         |            |        | site) had no lock: ApplySubstitution is reachable only via a      |
+// |         |            |        | SubstitutionEvent, SubstitutePlayer has no production caller, AND |
+// |         |            |        | Stage 0 never substitutes in a real match — so even the existing  |
+// |         |            |        | full-90-minute-engine-fixture test never drives a substitution    |
+// |         |            |        | through this construction site, at any cost. New FakeSubstitution-|
+// |         |            |        | Tap (duplicated from discipline/tests' internal FakeLedgerTap;    |
+// |         |            |        | unreachable across the assembly boundary) + PlayThroughEngines-   |
+// |         |            |        | OnPitchBoundary_MakesTheSubstitutionOccupancySwapLand: constructs |
+// |         |            |        | a fold with the same three values PlayThroughEngine's site uses   |
+// |         |            |        | (a real booted engine's PlayerIdsByAgentId(), MatchEngineConstants|
+// |         |            |        | .SQUAD_SIZE, DisciplineConstants.LeagueCompetitionKey), feeds it a|
+// |         |            |        | synthetic substitution (Incoming a bench id, Outgoing on-pitch)   |
+// |         |            |        | then a card at the vacated slot, and asserts the card attributes  |
+// |         |            |        | to the bench player who came on — the same Commit-attribution     |
+// |         |            |        | technique CardLedgerFoldTests uses, since OccupantOf is private.  |
+// |         |            |        | MUTATION-VERIFIED against the test's own onPitchAgentIdCount      |
+// |         |            |        | argument (SeasonLoop.PlayThroughEngine is private, so its real    |
+// |         |            |        | line cannot be exercised by any test without playing a real match |
+// |         |            |        | with a real substitution, which nothing does — this test's own    |
+// |         |            |        | argument IS what mirrors that line, so mutating IT mirrors        |
+// |         |            |        | mutating SeasonLoop.cs's real one): substituting                  |
+// |         |            |        | MatchEngineConstants.AgentIdSpace, ran, observed FAIL — Observe-  |
+// |         |            |        | Tick threw InvalidOperationException ("Incoming = 22 is an        |
+// |         |            |        | ON-PITCH agent id (< 36)"), because with the boundary at the      |
+// |         |            |        | array's own length every agent id, bench included, reads as       |
+// |         |            |        | on-pitch; reverted. Substituting the literal 1, ran, observed FAIL|
+// |         |            |        | — ObserveTick threw InvalidOperationException ("Outgoing = 1 is   |
+// |         |            |        | not an on-pitch agent id (>= 1)"), because with the boundary at 1 |
+// |         |            |        | every id past slot 0 reads as bench; reverted to                  |
+// |         |            |        | MatchEngineConstants.SQUAD_SIZE and re-ran green. Both mutations  |
+// |         |            |        | were applied to the ACTUAL FILE, built and run via dotnet test,   |
+// |         |            |        | not merely reasoned about.                                        |
 #endregion

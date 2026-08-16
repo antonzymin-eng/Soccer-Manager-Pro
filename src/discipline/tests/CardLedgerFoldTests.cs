@@ -1,5 +1,10 @@
 // File:     src/discipline/tests/CardLedgerFoldTests.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16, latest of all (M-B, adversarial review — v1.9: the onPitchAgentIdCount range
+//           guard (constructor's ArgumentOutOfRangeException) had no lock — deleting it left all 143
+//           discipline tests green. New Constructor_OnPitchAgentIdCountOutOfRange_Throws (T-DC-FOLD-003)
+//           isolates both edges, 0 and seed.Length + 1, plus a negative value, mutation-verified against
+//           the guard it locks.)
 // Modified: 2026-08-16, latest again (reviewed findings pass, finding A — v1.8: every CardLedgerFold
 //           constructor call updated for the new required onPitchAgentIdCount parameter (ERR-044-022),
 //           passing SquadSize (22, this file's existing on-pitch-boundary constant). Two new locks:
@@ -148,6 +153,30 @@ namespace TacticalDirector.Discipline.Tests
             // ERR-044-022 range guard first and never isolate THIS guard at all.
             var seed = new[] { 100, -2 };
             Assert.Throws<ArgumentException>(() => new CardLedgerFold(seed, seed.Length, Competition));
+        }
+
+        // ── M-B (reviewed findings pass): the onPitchAgentIdCount range guard — T-DC-FOLD-003 ──────
+        //
+        // Mutation-verified: deleting the ArgumentOutOfRangeException guard in the constructor (the
+        // `if (onPitchAgentIdCount <= 0 || onPitchAgentIdCount > occupancyByAgentId.Length)` check)
+        // left all 143 pre-existing discipline tests green — nothing exercised either edge. Isolates
+        // both boundaries (0, and seed.Length + 1) plus a negative value.
+
+        [Test]
+        public void Constructor_OnPitchAgentIdCountOutOfRange_Throws()
+        {
+            var seed = Occupancy((5, 100));
+
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => new CardLedgerFold(seed, 0, Competition),
+                "onPitchAgentIdCount == 0 must be refused — the boundary requires strictly greater than zero.");
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => new CardLedgerFold(seed, -1, Competition),
+                "a negative onPitchAgentIdCount must be refused.");
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => new CardLedgerFold(seed, seed.Length + 1, Competition),
+                "onPitchAgentIdCount beyond the seed's own length must be refused — every entry at or " +
+                "past it is supposed to be one of the seed's own bench ids.");
         }
 
         // ── M1 (reviewed findings pass): the seed must be one-to-one ──────────────
@@ -811,4 +840,11 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | SquadSize, since its 2-entry seed cannot satisfy SquadSize and     |
 // |         |            |        | would otherwise trip the new range guard before ever reaching the  |
 // |         |            |        | negative-entry check the test isolates.                            |
+// | 1.9     | 2026-08-16, latest of all | — | M-B (adversarial review). The onPitchAgentIdCount  |
+// |         |            |        | range guard (constructor's ArgumentOutOfRangeException) had no    |
+// |         |            |        | lock — deleting it left the whole suite green. New Constructor_    |
+// |         |            |        | OnPitchAgentIdCountOutOfRange_Throws (T-DC-FOLD-003) isolates both |
+// |         |            |        | edges (0, seed.Length + 1) plus a negative value; mutation-        |
+// |         |            |        | verified by neutering the guard (`if (false)`) and confirming the  |
+// |         |            |        | new test fails, then restoring it and confirming green.            |
 #endregion

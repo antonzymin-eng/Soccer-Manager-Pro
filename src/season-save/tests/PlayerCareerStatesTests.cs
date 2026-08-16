@@ -1,5 +1,9 @@
 // File:     src/season-save/tests/PlayerCareerStatesTests.cs
 // Created:  2026-08-06
+// Modified: 2026-08-16, latest (L-3, adversarial review — v1.8: the five identical "Oracle = the
+//           composed seam..." comments were documented, not enforced. All five call sites now route
+//           through the new SeasonLoopScenarios.ComposedOracle, whose doc carries the oracle-scope
+//           statement once. No behaviour change — same underlying Compose call, same arguments.)
 // Modified: 2026-08-16, later (adversarial-review Medium — PlayerCareerStates.SelectAvailable deleted
 //           as production-dead; the five oracle call sites re-pointed at AvailabilityComposition.Compose
 //           (discipline: null) directly, and the now-meaningless SelectAvailable_IsNotPublic reflection
@@ -594,11 +598,9 @@ namespace TacticalDirector.SeasonSave.Tests
             PlayerCareerStates career = Fresh(provider);
             Squad squad = provider.ResolveByClubId(0);
 
-            // Oracle = the composed seam with discipline structurally absent; if this fixture ever
-            // wires a discipline tally, pass it here too.
             Assert.AreSame(
                 squad,
-                AvailabilityComposition.Compose(squad, career, discipline: null, competitionId: 0),
+                SeasonLoopScenarios.ComposedOracle(squad, career, discipline: null, competitionId: 0),
                 "A fully fit club must resolve through a reference-identical squad, so the filtered "
                 + "path is byte-identical to the unfiltered one.");
         }
@@ -616,10 +618,8 @@ namespace TacticalDirector.SeasonSave.Tests
             injured.RecoveryRemaining = 20;
             career.SetMedicalState(0, injuredId, in injured);
 
-            // Oracle = the composed seam with discipline structurally absent; if this fixture ever
-            // wires a discipline tally, pass it here too.
             Squad filtered =
-                AvailabilityComposition.Compose(squad, career, discipline: null, competitionId: 0);
+                SeasonLoopScenarios.ComposedOracle(squad, career, discipline: null, competitionId: 0);
 
             Assert.AreEqual(squad.Count - 1, filtered.Count);
             for (int i = 0; i < filtered.Count; i++)
@@ -648,10 +648,8 @@ namespace TacticalDirector.SeasonSave.Tests
                 career.SetMedicalState(0, squad.GetPlayer(local).PlayerId, in injured);
             }
 
-            // Oracle = the composed seam with discipline structurally absent; if this fixture ever
-            // wires a discipline tally, pass it here too.
             Squad filtered =
-                AvailabilityComposition.Compose(squad, career, discipline: null, competitionId: 0);
+                SeasonLoopScenarios.ComposedOracle(squad, career, discipline: null, competitionId: 0);
 
             Assert.AreEqual(CareerTestRoster.MinimumSquad, filtered.Count);
             Assert.Less(SquadRating.StartingElevenMean(filtered), before,
@@ -678,10 +676,8 @@ namespace TacticalDirector.SeasonSave.Tests
                 career.SetMedicalState(0, squad.GetPlayer(local).PlayerId, in injured);
             }
 
-            // Oracle = the composed seam with discipline structurally absent; if this fixture ever
-            // wires a discipline tally, pass it here too.
             Squad filtered =
-                AvailabilityComposition.Compose(squad, career, discipline: null, competitionId: 0);
+                SeasonLoopScenarios.ComposedOracle(squad, career, discipline: null, competitionId: 0);
 
             Assert.AreEqual(CareerTestRoster.MinimumSquad, filtered.Count,
                 "The press-back-in must stop the moment the club can field a team, never go further.");
@@ -730,10 +726,8 @@ namespace TacticalDirector.SeasonSave.Tests
             injured.RecoveryRemaining = 2;
             career.SetMedicalState(0, squad.GetPlayer(5).PlayerId, in injured);
 
-            // Oracle = the composed seam with discipline structurally absent; if this fixture ever
-            // wires a discipline tally, pass it here too.
             Assert.Throws<System.InvalidOperationException>(
-                () => AvailabilityComposition.Compose(squad, career, discipline: null, competitionId: 0),
+                () => SeasonLoopScenarios.ComposedOracle(squad, career, discipline: null, competitionId: 0),
                 "Selection cannot invent a player; a 12-man club is a roster problem, not a filter one.");
         }
 
@@ -970,4 +964,10 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | SelectAvailable_IsNotPublic — its subject no longer exists, which |
 // |         |            |        | is a stronger property than the reflection lock asserted. No      |
 // |         |            |        | behaviour change; same assertions, same fixtures.                 |
+// | 1.8     | 2026-08-16, latest | — | L-3 (adversarial review). The five per-site "Oracle = ..."     |
+// |         |            |        | comments this file's own v1.7 row added were documented, not      |
+// |         |            |        | enforced — nothing kept them in step with the four sibling        |
+// |         |            |        | suites' identical copies. All five call sites now route through   |
+// |         |            |        | SeasonLoopScenarios.ComposedOracle, whose doc states the oracle's |
+// |         |            |        | scope once for every caller. No behaviour change.                  |
 #endregion

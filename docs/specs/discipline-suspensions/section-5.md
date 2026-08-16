@@ -1,7 +1,14 @@
 # Discipline & Suspensions #44 — Section 5: Test Plan
 
 **Created:** July 24, 2026
-**Last Updated:** August 16, 2026, latest of all (v0.8 — reviewed-findings pass, finding M18: four
+**Last Updated:** August 16, 2026, following the M18 pass (v0.9 — reviewed-findings pass, three
+findings. **M-1:** T-DC-FOLD-003 gains the fifth seed/substitution-boundary test citation the M18 pass
+left out (`Constructor_OnPitchAgentIdCountOutOfRange_Throws`), matching `section-2.md` v0.16's
+count correction. **M-2(b):** T-DC-BAN-003 and §5.6's FR-DC-011 row gain the three roster-membership
+tests `ERR-044-014` landed but this file never cited, closing that entry's last open item. **L-B:**
+T-DC-INT-001's FR-DC-020 grep count re-derived (five → ten, still all prose) rather than left stale.
+See this file's own version-history table for the full per-finding account.)
+**Last Updated (prior):** August 16, 2026, latest of all (v0.8 — reviewed-findings pass, finding M18: four
 refusals landed and unit-tested since the last pass over this file had no §5.2 test-method citation at
 all. **T-DC-FOLD-003 (F1)** extended with the seed/substitution boundary refusals
 (`ERR-044-021`/`ERR-044-022` — a non-one-to-one construction seed, a self-substitution, an on-pitch
@@ -50,7 +57,7 @@ return, ERR-044-005), **T-DC-SAV-003** (F2's negative-`PlayerId` refusal at both
 §5.6 updated to reflect the corrected table; §9's G14 re-checked against it and left unchanged — see
 that section's own version history for the verification note.)
 **Last Updated (prior):** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.8
+**Version:** 0.9
 **Status:** APPROVED
 
 ---
@@ -105,7 +112,11 @@ that section's own version history for the verification note.)
   loud — `Constructor_SeedMapsOnePlayerToTwoAgentIds_ThrowsAndNamesBothIdsAndThePlayer`,
   `Substitution_OutgoingEqualsIncoming_Throws`,
   `Substitution_WithAnOccupiedOnPitchIncoming_ThrowsInsteadOfDestroyingTheOutgoingsMapping`,
-  `Substitution_WithABenchOutgoing_Throws`.
+  `Substitution_WithABenchOutgoing_Throws`. **The fifth refusal in that extension — an out-of-range
+  `onPitchAgentIdCount` constructor argument (`ERR-044-022`) — had landed in production with no test
+  of its own (M-1, August 16, 2026); now locked by
+  `Constructor_OnPitchAgentIdCountOutOfRange_Throws`, which isolates both edges (0 and
+  `seed.Length + 1`) plus a negative value.**
 - **T-DC-FOLD-005 (F7, the lossless pump, `ERR-044-020`)** — a non-consecutive `tap.CurrentTick`
   fails loud and names both the offending and the last-observed tick; a part-way tick failure
   latches the fold `faulted` and refuses every later call, even an otherwise-consecutive one —
@@ -142,7 +153,17 @@ that section's own version history for the verification note.)
   `SeasonLoopDisciplineTests.QuickSimPath_MakesASuspensionCostSomething`,
   `EveryClubThatPlayedServesOneMatchOfItsBans`, and the unit-level decrement rules
   (`DisciplineRulesTests.OnClubFixturePlayed_DecrementsOnlyThatClubsPlayers`,
-  `OnClubFixturePlayed_NeverGoesBelowZero`).
+  `OnClubFixturePlayed_NeverGoesBelowZero`). **Membership is read from the roster, never derived
+  from the `PlayerId` packing (`ERR-044-014`)** —
+  `DisciplineRulesTests.OnClubFixturePlayed_ServesByRosterMembership_NotByThePackedIdDerivation`
+  asserts a disagreement case: it is executed against a restored packed-id derivation and observed
+  to fail, so it is a lock on the fix, not merely on its result;
+  `OnClubFixturePlayed_OverAPackedRoster_ServesExactlyWhatTheRetiredDerivationServed` confirms the
+  two notions still agree wherever the packing happens to hold; `OnClubFixturePlayed_NullClubPlayerIds_Throws`
+  is the matching F2 null-roster refusal (§2.3 F2). *(M-2(b), August 16, 2026: these three tests
+  existed and were green at the `ERR-044-014` landing but had never been cited here — closing the
+  one item of that entry's "RECORDED, NOT FIXED" list that was still genuinely open; see
+  `spec-error-log.md`'s `ERR-044-014` row.)*
 - **T-DC-BAN-004 (F5) — WITHDRAWN, ERR-044-003 (August 13, 2026).** *Superseded text, kept for
   history rather than deleted (this project's standing convention — git tracks history, IDs are not
   reused): "a filter reducing the squad below the 18 `ConfigureSquads` consumes fails loud."* #44's
@@ -293,10 +314,17 @@ that section's own version history for the verification note.)
   - **FR-DC-020 (integer posture) is NOT established by any test, and the honest statement is that
     it rests on audit.** What holds today: **`src/discipline/**` contains no `float`, `double` or
     `decimal` declaration of any kind** — `grep -nE "\b(float|double|decimal)\b" src/discipline/*.cs`
-    returns five lines, **all five of them English prose** in doc comments and one exception message
-    ("would double its cards", "not double-counting", and `DisciplineConstants.cs`'s own two
-    statements of this very posture); not one is a type (verified August 15, 2026) — and the save
+    returns **ten lines, all ten of them English prose** in doc comments and exception messages
+    ("would double its cards", "not double-counting", `DisciplineConstants.cs`'s own two statements
+    of this very posture, and several more of the same shape added by later passes); not one is a
+    type (re-derived August 16, 2026) — and the save
     format is integer-only by layout (T-DC-SAV-001's `12 + 16 * Count` lock over four `i32` fields).
+    *(L-B, August 16, 2026: this row previously pinned the count at "five lines, all five of them
+    English prose" — the number measured August 15, 2026 had drifted, as line counts do across later
+    edits (the `section-2.md`/`appendices.md`/`section-6.md` line-citation lesson one level up, the
+    same class here applied to a grep count rather than a source line); re-derived rather than
+    trusted, and correct as of this pass — the durable property this row exists to establish is "all
+    hits stay prose, none a type", which the count only illustrates.)*
     **That is an audit, not enforcement**: nothing in the compiler or the suite would stop a future
     field being declared `float`. A reflection assertion over the assembly's fields *would* have a
     real failure mode — unlike the two tautologies withdrawn above, it guards against a change that
@@ -335,7 +363,7 @@ one such case, **FR-DC-020**, tracked as a §9.2 follow-up.
 | FR-DC-008 | Test | T-DC-VIEW-002 (the four `IsAvailable_*` cases). |
 | FR-DC-009 | Test | T-DC-VIEW-002 (pass-through identity + reduced copy), T-DC-VIEW-003 (the all-suspended `null`). |
 | FR-DC-010 | Test | T-DC-BAN-002, T-DC-BAN-005 (both clubs, both paths). |
-| FR-DC-011 | Test | T-DC-BAN-002/003/006. |
+| FR-DC-011 | Test | T-DC-BAN-002/003/006; the roster-membership half (`ERR-044-014`) by the three `OnClubFixturePlayed_*` roster-membership cases cited under T-DC-BAN-003. |
 | FR-DC-012 | Test | `DisciplineRulesTests.SamePlayer_DifferentCompetitions_TalliesAreIndependent_BothSurvive`, `MigratePlayerId_ToALowerId_MovesEVERYCompetitionsRows`; the key's canonical ordering by `DisciplineStateTests.Upsert_MaintainsCanonicalAscendingOrder_RegardlessOfInsertOrder` and `DisciplineSaveCodecTests.Decode_NonAscendingKeys_Throws`. |
 | FR-DC-013 | Test | T-DC-HYG-001. |
 | FR-DC-014 | Test | The sub-blob's composition into #30's frame: `SeasonSaveManagerTests.Restore_CarriesTheDisciplineTallyIntoTheResumedLoop`, `Save_AnUnwiredDiscipline_OverAPopulatedTally_IsRefused`, `Save_ThePublicLongForm_DrivingNoDiscipline_CannotEmptyAPopulatedTally` (`src/season-save/tests/`). |
@@ -367,4 +395,5 @@ wiring — each locked at its minimal boundary today.
 | 0.6 | 2026-08-15 | — | **Reviewed-findings pass.** §5.4's `AvailabilityTests.cs` residue note (v0.5) said the file's `Spec:` header "line 7 still lists" `T-DC-VIEW-001` — checked directly against the file: its own v1.3, landed the same day, had already removed the id, so the note was stale at the moment v0.5 wrote it. The real residue at that same header (line 11) is `T-DC-BAN-004`, withdrawn at ERR-044-003 (August 13, 2026), of which §5.3 says "No test exists or should exist" — recorded here instead, out of this pass's owned file set (`src/discipline/`). No new ERR id; a correction of v0.5's own claim. |
 | 0.7 | 2026-08-16 | — | **Final fixer pass, M10 (third and final correction) + a version-row ordering fix.** §5.4's residue paragraph was itself stale, a third time: v0.6's "the real residue is `T-DC-BAN-004`, recorded not fixed" was true when written but `AvailabilityTests.cs` v1.4 (L6, the SAME day, August 15) removed that id too — verified directly against the file's current header (`§5 T-DC-VIEW-002, T-DC-BAN-005`, no retired id of either kind). The residue paragraph is deleted and replaced with a one-line dated closure note per this file's own annotate-in-place convention; nothing is left to record. `spec-error-log.md`'s `ERR-044-006` row (which still carries the original, also-false, "line 7 / T-DC-VIEW-001" claim) is annotated in place in the same commit — see that entry. **Also fixed:** this table's v0.5 row was published ahead of v0.4 (`tools/recurring-defect-lint.py`'s out-of-order-version check) — the two rows are swapped above into chronological order; no row's content changed, only its position. |
 | 0.8 | 2026-08-16, latest of all | — | **Reviewed-findings pass, finding M18.** Four refusals landed and unit-tested in `CardLedgerFoldTests.cs` had no §5.2 citation: **T-DC-FOLD-003** extended with the seed/substitution boundary refusals (`ERR-044-021`/`ERR-044-022`) — `Constructor_SeedMapsOnePlayerToTwoAgentIds_ThrowsAndNamesBothIdsAndThePlayer`, `Substitution_OutgoingEqualsIncoming_Throws`, `Substitution_WithAnOccupiedOnPitchIncoming_ThrowsInsteadOfDestroyingTheOutgoingsMapping`, `Substitution_WithABenchOutgoing_Throws`; new **T-DC-FOLD-005 (F7, `ERR-044-020`)** — `ObserveTick_SkippedTick_ThrowsAndNamesBothTicks`, `ObserveTick_AfterPartialTickFailure_LatchesAndRefusesEvenAConsecutiveTick`. §5.6's **FR-DC-002** row corrected `Construction` → `Test + Construction`, naming T-DC-FOLD-005 as what now carries the row's "lossless" clause. `section-2.md` v0.15 in the same commit adds the matching §2.3 F1/F7 rows. |
+| 0.9 | 2026-08-16, following the M18 pass | — | **Reviewed-findings pass, three findings.** **M-1:** T-DC-FOLD-003 gains the fifth seed/substitution-boundary citation the M18 pass's "four" miscount left out — `Constructor_OnPitchAgentIdCountOutOfRange_Throws` (`ERR-044-022`'s `onPitchAgentIdCount` range guard), landed by a parallel fixer the same day; `section-2.md` v0.16 corrects the matching count in place. **M-2(b):** closes the one still-open item of `ERR-044-014`'s "RECORDED, NOT FIXED" list — T-DC-BAN-003 gains the three roster-membership tests (`OnClubFixturePlayed_ServesByRosterMembership_NotByThePackedIdDerivation`, `..._OverAPackedRoster_ServesExactlyWhatTheRetiredDerivationServed`, `..._NullClubPlayerIds_Throws`), which existed and were green at the `ERR-044-014` landing but had never been cited here; §5.6's FR-DC-011 row updated to name them. **L-B:** T-DC-INT-001's FR-DC-020 sub-row re-derives its `grep -nE "\b(float\|double\|decimal)\b" src/discipline/*.cs` count — five lines at the August 15, 2026 measurement, ten today, all ten still prose — and drops reliance on the exact number for the property the row actually asserts. See `spec-error-log.md`'s `ERR-044-014` row for the M-2(b) closure note. |
 #endregion

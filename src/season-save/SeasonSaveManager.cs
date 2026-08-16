@@ -1,5 +1,10 @@
 // File:     src/season-save/SeasonSaveManager.cs
 // Created:  2026-07-22
+// Modified: 2026-08-16 (L-2, adversarial review, doc only — v1.29: the H2 comment at the restore
+//           decorator named PlayerCareerStates.SelectAvailable using present-tense grammar ("which
+//           composes with...") for a method #44 C1/C2 has since deleted. Qualified both mentions as
+//           "the then-extant" method and switched "composes" -> "composed" (past tense) so the text no
+//           longer reads as describing a method that still exists. No behaviour change.)
 // Modified: 2026-08-15, later still (reviewed findings pass, L1+L2 — L2: three sites (the Save summary,
 //           the header Purpose's Load-rebuild sentence, the Load summary) still described a five/six-blob
 //           frame after two prior additions (appearance, progression); pointed each at
@@ -655,15 +660,16 @@ namespace TacticalDirector.SeasonSave
             // in THIS file, which is the state the match was configured against — reproduces the exact
             // squad, so selection lands on the same eleven.
             //
-            // BOTH contributors, not just #41 (the C1/C2 AR's H2): the decorator originally called
-            // PlayerCareerStates.SelectAvailable, which composes with `discipline: null`, while
-            // SeasonLoop.BootFixtureEngine configured the engine through SelectAvailable WITH the
-            // tally. A fixture in which a suspension changed the eleven therefore restored a strictly
-            // larger candidate set and re-selected a DIFFERENT eleven — the identical defect this
-            // decorator was created to close, reopened one contributor later. It also retires the
-            // inherited proof for the snapshot's `_slotPlayerIds` exclusion: that exclusion is
-            // mechanically sound (both reprojection paths write it and `_activeBenchSlot` is
-            // serialized), but its safety PREMISE is "the provider yields the squad the match was
+            // BOTH contributors, not just #41 (the C1/C2 AR's H2): the decorator originally called the
+            // then-extant PlayerCareerStates.SelectAvailable (since deleted at the #44 C1/C2 landing;
+            // AvailabilityComposition.Compose now holds this role), which composed with
+            // `discipline: null`, while SeasonLoop.BootFixtureEngine configured the engine through that
+            // same then-extant method WITH the tally. A fixture in which a suspension changed the eleven
+            // therefore restored a strictly larger candidate set and re-selected a DIFFERENT eleven —
+            // the identical defect this decorator was created to close, reopened one contributor later.
+            // It also retires the inherited proof for the snapshot's `_slotPlayerIds` exclusion: that
+            // exclusion is mechanically sound (both reprojection paths write it and `_activeBenchSlot`
+            // is serialized), but its safety PREMISE is "the provider yields the squad the match was
             // configured with", and only a composed filter makes that true again.
             //
             // Pass-through for a club the career does not carry, which is every club of every
@@ -1267,4 +1273,11 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | SeasonSaveContents, whose own summaries already enumerate all      |
 // |         |            |        | eight sub-blobs, rather than restating the list a fifth time. No   |
 // |         |            |        | behaviour change.                                                   |
+// | 1.29    | 2026-08-16 | —      | L-2 (adversarial review), doc only. The H2 comment naming        |
+// |         |            |        | PlayerCareerStates.SelectAvailable at the restore decorator used   |
+// |         |            |        | present-tense grammar ("which composes with `discipline: null`")   |
+// |         |            |        | for a method #44 C1/C2 has since deleted. Qualified both mentions  |
+// |         |            |        | as "the then-extant" method, "composes" -> "composed" (past        |
+// |         |            |        | tense), and noted AvailabilityComposition.Compose now holds the    |
+// |         |            |        | role. No behaviour change.                                          |
 #endregion
