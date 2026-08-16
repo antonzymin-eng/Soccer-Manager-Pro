@@ -1,5 +1,9 @@
 // File:     src/discipline/tests/DisciplineRulesTests.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16, yet later (final fixer pass — L2's second half wiring: one new lock,
+//           AddYellow_AtIntMaxValue_ThrowsOverflowException_EntryUnmodified, for
+//           DisciplineRules.AddYellow now routing through the guarded DisciplineEntry.YellowsPlusOne
+//           helper — v1.9)
 // Modified: 2026-08-16 (ERR-044-014, adversarial-review H1 — every OnClubFixturePlayed call site takes
 //           the club's roster ids through the new RosterOf helper, plus three new locks: the
 //           roster-disagrees-with-the-packing case, the agrees-on-today's-ids case, and the null-roster
@@ -195,6 +199,36 @@ namespace TacticalDirector.Discipline.Tests
             Assert.AreEqual(3, entry.Yellows,
                 "8 - threshold(5) = 3 residual kept — 'Yellows = 0' on a crossing would read 0 here instead");
             Assert.AreEqual(DisciplineConstants.AccumBanMatches, entry.BanMatchesRemaining);
+        }
+
+        // ── L2 (final fixer pass): the accumulator overflow guard ────────────────────
+        //
+        // AddYellow's `entry.Yellows + 1` now routes through DisciplineEntry.YellowsPlusOne (wired at
+        // DisciplineRules.cs v1.9), which refuses BEFORE the addition rather than letting it wrap
+        // int.MaxValue to a negative value that DisciplineEntry's OWN constructor guard would then
+        // misreport as "a negative tally is a counting bug" — true of the symptom, false of the cause.
+        // A row at Yellows == int.MaxValue is not reachable through ApplyCard/AddYellow themselves (each
+        // call adds exactly one, so ~2^31 calls would be needed) — it is the shape a DECODED save could
+        // carry (DisciplineSaveCodec only refuses Yellows < 0, not an unreasonably large positive one),
+        // so the row is seeded directly via the internal Upsert seam, as ResidualIsKept_NotReset_
+        // WhenACrossingLandsAboveTheThreshold above does for the same reason.
+
+        [Test]
+        public void AddYellow_AtIntMaxValue_ThrowsOverflowException_EntryUnmodified()
+        {
+            var state = new DisciplineState();
+            var rules = new DisciplineRules(state);
+            int p = PlayerId(0, 1);
+            state.Upsert(new DisciplineEntry(p, Competition, int.MaxValue, 0));
+
+            Assert.Throws<OverflowException>(() => rules.AddYellow(p, Competition));
+
+            DisciplineEntry entry = rules.State.EntryFor(p, Competition);
+            Assert.AreEqual(int.MaxValue, entry.Yellows,
+                "the refused increment must not have written a wrapped (or any other) value — "
+                + "DisciplineEntry.YellowsPlusOne refuses BEFORE the addition, not after.");
+            Assert.AreEqual(0, entry.BanMatchesRemaining,
+                "the row must be untouched on the refused side too, not just the Yellows field.");
         }
 
         // ── Bans stack additively from any source ──────────────────────────────────
@@ -986,4 +1020,14 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | TheRetiredDerivationServed, the behaviour-preservation lock on   |
 // |         |            |        | today's ids probed at both ends of a club's range and one past   |
 // |         |            |        | it; and ...NullClubPlayerIds_Throws for the new F2-class guard.  |
+// | 1.9     | 2026-08-16, yet later | — | Final fixer pass — L2's second half wiring. New:         |
+// |         |            |        | AddYellow_AtIntMaxValue_ThrowsOverflowException_EntryUnmodified — |
+// |         |            |        | seeds a row at Yellows == int.MaxValue via the internal Upsert    |
+// |         |            |        | seam (the shape a decoded save could carry; not reachable through |
+// |         |            |        | ApplyCard/AddYellow's own +1-per-call arithmetic) and asserts the |
+// |         |            |        | next AddYellow throws OverflowException with the row completely   |
+// |         |            |        | untouched — DisciplineRules.cs v1.9 now routes AddYellow's        |
+// |         |            |        | `entry.Yellows + 1` through DisciplineEntry.YellowsPlusOne, which |
+// |         |            |        | refuses BEFORE the addition rather than letting it wrap negative  |
+// |         |            |        | and surface as a misleading "counting bug" range refusal.         |
 #endregion

@@ -1,5 +1,10 @@
 // File:     src/discipline/DisciplineRules.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16, yet later (final fixer pass — L2's second half: AddYellow's
+//           `entry.Yellows + 1` and AddBan's `entry.BanMatchesRemaining + matches` now route through
+//           DisciplineEntry.YellowsPlusOne/BanMatchesPlus, so an accumulator overflow throws
+//           OverflowException BEFORE any write instead of tripping the constructor's range guard with
+//           a misleading "counting bug" message mid-commit — v1.9)
 // Modified: 2026-08-16, later (adversarial-review M2, doc only — RequireBanLength and
 //           RequireYellowThreshold carry the pointer that adding a guarded [GT] is a five-site change,
 //           and name the completeness test that detects the drift — v1.8)
@@ -158,12 +163,17 @@ namespace TacticalDirector.Discipline
         /// <c>YellowAccumulationThreshold</c> below 1, at which point the residual subtraction cannot
         /// terminate a crossing and every single yellow bans, silently. The catalogue lock cannot see
         /// this — it runs config-unbound (ERR-041-003).</exception>
+        /// <exception cref="OverflowException"><paramref name="playerId"/>'s existing
+        /// <see cref="DisciplineEntry.Yellows"/> is already <see cref="int.MaxValue"/> — refused BEFORE
+        /// the increment via <see cref="DisciplineEntry.YellowsPlusOne"/>, so the entry is never
+        /// written with a value that silently wrapped negative and would otherwise surface here as a
+        /// misleading "counting bug" range refusal instead of what it actually is (L2).</exception>
         public void AddYellow(int playerId, int competitionId)
         {
             int threshold = RequireYellowThreshold(DisciplineConstants.YellowAccumulationThreshold);
 
             DisciplineEntry entry = _state.EntryFor(playerId, competitionId);
-            int yellows = entry.Yellows + 1;
+            int yellows = DisciplineEntry.YellowsPlusOne(entry.Yellows);
             int ban = entry.BanMatchesRemaining;
 
             if (yellows >= threshold)
@@ -181,6 +191,11 @@ namespace TacticalDirector.Discipline
         /// additively (FR-DC-007). A zero-length ban is legal and a no-op; a negative one is a caller bug.
         /// </summary>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="matches"/> is negative.</exception>
+        /// <exception cref="OverflowException"><paramref name="playerId"/>'s existing
+        /// <see cref="DisciplineEntry.BanMatchesRemaining"/> plus <paramref name="matches"/> would
+        /// exceed <see cref="int.MaxValue"/> — refused BEFORE the addition via
+        /// <see cref="DisciplineEntry.BanMatchesPlus"/>, for the identical reason
+        /// <see cref="AddYellow"/> is guarded (L2).</exception>
         public void AddBan(int playerId, int competitionId, int matches)
         {
             if (matches < 0)
@@ -193,7 +208,8 @@ namespace TacticalDirector.Discipline
 
             DisciplineEntry entry = _state.EntryFor(playerId, competitionId);
             _state.Upsert(new DisciplineEntry(
-                playerId, competitionId, entry.Yellows, entry.BanMatchesRemaining + matches));
+                playerId, competitionId, entry.Yellows,
+                DisciplineEntry.BanMatchesPlus(entry.BanMatchesRemaining, matches)));
         }
 
         /// <summary>
@@ -643,4 +659,16 @@ namespace TacticalDirector.Discipline
 // |         |            |        | drift structurally impossible is recorded as the eventual owner-  |
 // |         |            |        | shape and gated on the GameplayConfigHolder.Bind composition-root |
 // |         |            |        | pass no production caller runs yet. No behaviour change.          |
+// | 1.9     | 2026-08-16, yet later | — | Final fixer pass — L2's second half. AddYellow's        |
+// |         |            |        | `entry.Yellows + 1` now reads DisciplineEntry.YellowsPlusOne(entry.Yellows); |
+// |         |            |        | AddBan's `entry.BanMatchesRemaining + matches` now reads          |
+// |         |            |        | DisciplineEntry.BanMatchesPlus(entry.BanMatchesRemaining, matches). Both    |
+// |         |            |        | guarded helpers landed at DisciplineEntry.cs v1.3 (L2, first half) but were |
+// |         |            |        | unwired pending this file's ownership. An accumulator at int.MaxValue now   |
+// |         |            |        | throws OverflowException before the write, entry unmodified, rather than    |
+// |         |            |        | silently wrapping negative and tripping the constructor's "counting bug"    |
+// |         |            |        | range guard on the wrapped result. No other call site of either addition   |
+// |         |            |        | shape exists in this file (AddYellow's separate `ban += RequireBanLength   |
+// |         |            |        | (AccumBanMatches)` line is a different addition, not in this pass's scope, |
+// |         |            |        | and was not named by the handoff).                                          |
 #endregion

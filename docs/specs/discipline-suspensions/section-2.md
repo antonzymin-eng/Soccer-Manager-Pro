@@ -1,7 +1,24 @@
 # Discipline & Suspensions #44 — Section 2: Requirements, Data Structures, Failure Modes
 
 **Created:** July 24, 2026
-**Last Updated:** August 16, 2026, later (v0.11 — **`ERR-044-019`**, adversarial-review H2, cross-filed
+**Last Updated:** August 16, 2026, yet later (v0.12 — final fixer pass over the reviewed-findings
+round: **`ERR-044-018`** (M8) — §2.2's `DisciplineState` block was a bare `{ /* map ... */ }` comment
+while the landed type exposes `Count`, `EntryAt(int)`, `EntryFor(int,int)`, `HasEntry(int,int)` and the
+restore-door `FromEntries(DisciplineEntry[])`, whose strictly-ascending + no-all-zero-rows refusals are
+what FR-DC-015/FR-DC-017 rest on at the file boundary (`DisciplineSaveCodec.Decode` returns through
+it) — now declared, cross-referenced to F3/FR-DC-017, and noting `EntryFor`'s current negative-key
+posture (returns the zero row, not a throw — `DisciplineState.cs` v1.1, L1). **`ERR-044-020`** (M3) —
+§2.2's `CardLedgerFold` block referenced `IDisciplineTickLedgerTap` without ever declaring it; the
+interface is now declared, with `CurrentTick` (the member `CardLedgerFold.ObserveTick` uses to enforce
+a lossless, in-order pump) and a note on `ObserveTick`'s own declaration describing the consecutive-tick
+refusal and the partial-application poison latch as normative — not a contradiction of existing text,
+which was simply silent on enforcement. **M7** — the four `[GT]` threshold/ban constants renamed
+ALL_CAPS → PascalCase (`YellowAccumulationThreshold`/`AccumBanMatches`/`SecondYellowBanMatches`/
+`StraightRedBanMatches`, FR-DC-006/007) to match the code and `src/CLAUDE.md` §3.2.3's PascalCase rule
+for `[GT]` constants — filed as **`ERR-044-017`**. **L6** — two `section-2.md`-owned version rows
+(v0.8, v0.9) cited `DisciplineRules.cs`/`CardLedgerFold.cs` by line number; both drifted from the code
+they cited and are replaced in place with member names, annotated rather than silently rewritten.)
+**Last Updated (prior):** August 16, 2026, later (v0.11 — **`ERR-044-019`**, adversarial-review H2, cross-filed
 at #30 as `ERR-030-044` which owns the rule: §2.3's ERR-044-003 note asserted that "a suspended player
 plays only when the alternative is a club that cannot take the field at all". That was FALSE of the
 implementation — #30 §3.4's probe is the FULL selection walk (eleven starters PLUS the seven-slot
@@ -59,7 +76,7 @@ re-scoped off "the engine-resolved fixture" to every resolved squad on both reso
 fail-loud withdrawn in favour of #30 §2.3 F9, with the suspension-as-stricter-reinstatement-tier
 decision recorded)
 **Last Updated (prior):** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.11
+**Version:** 0.12
 **Status:** APPROVED
 
 ---
@@ -73,8 +90,8 @@ decision recorded)
 | FR-DC-003 | Tap consumption MUST be **observer-neutral**: an observed fixture is digest-identical to the same fixture unobserved (the `match-viewer` lock). | MUST | KD-7 |
 | FR-DC-004 | Unknown Tier A ordinals on the tap MUST be ignored (the FR-AN-019/F5 forward-compatibility posture); #44 folds only `CardIssuedEvent` (0x06) and `SubstitutionEvent` (0x08). | MUST | KD-2 |
 | FR-DC-005 | The fold MUST attribute each card to the **`PlayerId` occupying the recipient agent slot at the card's tick**: occupancy seeds from the fixture's configured lineup (root-supplied) and updates on each `SubstitutionEvent`, consumed in the bus's canonical publish order. | MUST | KD-2 |
-| FR-DC-006 | The de-dup rule IS the verified emission contract: kind 0 ⇒ `Yellows += 1`; kind 2 (SecondYellow — a **single** event) ⇒ `Yellows += 1` AND a `SECOND_YELLOW_BAN_MATCHES` ban; kind 1 ⇒ a `STRAIGHT_RED_BAN_MATCHES` ban (no yellow). #44 MUST NOT expect or synthesize a separate red event after a kind-2. | MUST | KD-5 |
-| FR-DC-007 | When `Yellows ≥ YELLOW_ACCUMULATION_THRESHOLD`, an `ACCUM_BAN_MATCHES` ban MUST be added and `Yellows` MUST be reduced by the threshold (residual kept); bans from any source MUST **stack additively** on `BanMatchesRemaining`. | MUST | §3.2 |
+| FR-DC-006 | The de-dup rule IS the verified emission contract: kind 0 ⇒ `Yellows += 1`; kind 2 (SecondYellow — a **single** event) ⇒ `Yellows += 1` AND a `SecondYellowBanMatches` ban; kind 1 ⇒ a `StraightRedBanMatches` ban (no yellow). #44 MUST NOT expect or synthesize a separate red event after a kind-2. | MUST | KD-5 |
+| FR-DC-007 | When `Yellows ≥ YellowAccumulationThreshold`, an `AccumBanMatches` ban MUST be added and `Yellows` MUST be reduced by the threshold (residual kept); bans from any source MUST **stack additively** on `BanMatchesRemaining`. | MUST | §3.2 |
 | FR-DC-008 | A player MUST be unavailable while `BanMatchesRemaining > 0`; `IsAvailable` MUST be a pure predicate over `DisciplineState`. | MUST | KD-4 |
 | FR-DC-009 | `FilterAvailable(Squad squad, DisciplineState state, int competitionId) → Squad` MUST return a **reduced value copy** (available players only) for `ConfigureSquads`; it MUST NOT write #27 state; with no active ban it MUST pass the squad through unchanged. Three parameters over the tally and its competition partition — never `in Squad` alone, which has never been the signature (`ERR-044-007`, verified against `src/discipline/Availability.cs`). **When every player is suspended there is no reduced value copy to return — `Squad` cannot represent a zero-player roster — so `FilterAvailable` MUST return `null` for that case** (ERR-044-005; `Squad`'s own constructor refuses `players.Length == 0`, so returning it as a normal squad is not an option). This method is FR-DC-009's own surface; #44's production path is `MarkSuspended`'s removal mask, consumed directly by #30's composed availability seam. | MUST | KD-4 |
 | FR-DC-010 | The filter MUST act at #30's pre-declared **resolve→configure** seam (ERR-030-009) and MUST apply to **every resolved squad of every fixture on both resolution paths** (the engine boot and the quick-sim rating alike) — the managed club's **and its opponent's**, whichever path resolved them (both pass through `ResolveByClubId` → `ConfigureSquads`, so both pass the seam; a banned opponent is excluded exactly as a banned managed-club player is). **Card *generation* stays engine-fixture-only at minimal (§3.3) — this row governs the filter, not the fold.** The fold MUST complete at fixture resolution — so a card in fixture N bans for fixture N+1 (no off-by-one). *(Re-scoped from "the engine-resolved fixture" — ERR-044-002, August 13, 2026: the narrower wording contradicted FR-DC-011's "regardless of resolution path" one row below and #30 §3.4's LIVE both-paths seam; a quick-sim-only implementation would have let a banned player's club decrement his ban on a fixture he had just played through.)* | MUST | KD-3 |
@@ -95,9 +112,25 @@ decision recorded)
 
 ```csharp
 // The per-player season tally (serialized, KD-1). Keyed (PlayerId, CompetitionId); canonical
-// ascending order; CompetitionId = 0 at minimal (FR-DC-012). All integer.
+// ascending order — every read is a binary search over it, the invariant only Upsert and
+// FromEntries below can establish; CompetitionId = 0 at minimal (FR-DC-012). All integer; NO RNG
+// state (FR-DC-016/019). Mutation (Upsert/Remove) is internal — DisciplineRules is the sole public
+// writer (§2.2, ERR-044-018).
 public sealed class DisciplineState
-{ /* map (int PlayerId, int CompetitionId) -> DisciplineEntry; NO RNG state */ }
+{
+    public DisciplineState();                              // genesis — empty (FR-DC-017)
+    public int  Count { get; }
+    public DisciplineEntry EntryAt(int index);              // canonical-order row access; F2-class
+                                                             // range guard outside [0, Count)
+    public DisciplineEntry EntryFor(int playerId, int competitionId);   // pure; absent OR a negative
+                                                             // playerId both return the clean zero
+                                                             // row (FR-DC-008) — never a throw
+    public bool HasEntry(int playerId, int competitionId);
+    // The restore door (FR-DC-015/F3's caller): requires rows STRICTLY ascending and none empty,
+    // because every read above is a binary search — an unordered or all-zero-row block would make a
+    // lookup silently miss a player who IS carried (the PlayerCareerStates.FromBlocks H1 class).
+    public static DisciplineState FromEntries(DisciplineEntry[] entries);
+}
 
 // One tally row (F2's PlayerId >= 0 invariant enforced at construction).
 public readonly struct DisciplineEntry
@@ -106,6 +139,17 @@ public readonly struct DisciplineEntry
     public readonly int CompetitionId;
     public readonly int Yellows;
     public readonly int BanMatchesRemaining;
+}
+
+// KD-2 — the #37-class per-tick read-only tap #44 reads through (its OWN interface, not a shared
+// one — §4.1/§4.3). CurrentTick (ERR-044-020) is what CardLedgerFold.ObserveTick uses to enforce a
+// lossless, in-order pump — the same role #37's MatchAnalyticsObservation.CurrentTick plays there.
+public interface IDisciplineTickLedgerTap
+{
+    ulong CurrentTick { get; }
+    int    RecordCount { get; }
+    byte   OrdinalAt(int index);
+    T      RecordAt<T>(int index) where T : struct;
 }
 
 // KD-2 — the read-only fold, fed by the #37-class per-tick tap during an engine-resolved fixture.
@@ -117,6 +161,13 @@ public sealed class CardLedgerFold
     public const int NO_PLAYER = -1;
     public CardLedgerFold(int[] occupancyByAgentId, int competitionId);
     public int  PendingCardCount { get; }        // cards folded so far this fixture; 0 for most
+    // ERR-044-020: refuses a NON-CONSECUTIVE tap.CurrentTick (InvalidOperationException, naming both
+    // the offending and the last-observed tick), except on the very first call to a fresh fold, which
+    // anchors on whatever tick it is first given (a fixture need not begin at tick 0). Also latches a
+    // "_faulted" state on any partial-tick failure — a later record in the SAME tick throwing (e.g. an
+    // F1/F4 refusal) — and refuses every subsequent ObserveTick call thereafter, even an otherwise-
+    // consecutive one, naming the fault. Commit is unaffected by the latch: it still applies whatever
+    // was buffered before the failure (§3.1's atomicity is unchanged).
     public void ObserveTick(IDisciplineTickLedgerTap tap);
     public int  Commit(DisciplineRules rules);   // fallible under a bound [GT] — F6
     // The round-level pre-check (M8/§4.5): validates the same four bound [GT]s Commit would throw
@@ -239,8 +290,9 @@ chosen.
 | 0.5 | 2026-08-13 | — | **Adversarial-review back-prop.** **ERR-044-004:** F2 stated only "a club/player outside the resolvable universe" and the implementation had guarded the club half alone — a negative `PlayerId` truncation-derives to club 0 and was silently served, decremented and migrated; F2 now names the player half explicitly and cites both refusal sites (`DisciplineEntry`'s constructor, `DisciplineSaveCodec.Decode`/F3). **ERR-044-005:** FR-DC-009's "reduced value copy" requirement was total as written but unsatisfiable for an all-suspended squad (`Squad` cannot represent zero players); FR-DC-009 now states the `null`-return case and names `MarkSuspended`'s mask, consumed by #30's composed seam, as the actual production path — `FilterAvailable` is FR-DC-009's own surface, not #44's. |
 | 0.6 | 2026-08-13 | — | **L12(c) + L13**, a third adversarial-review pass. **L12(c):** §2.2's code block — the first place an implementer looks — showed only `DisciplineState`/`CardLedgerFold`/two free-floating `Availability` methods/one free-floating `OnClubFixturePlayed`, none matching the landed signatures (`IsAvailable`/`FilterAvailable` took `in DisciplineState` with a default `competitionId`, neither of which the code has; `MarkSuspended`, `DisciplineRules` and `DisciplineEntry` were absent entirely). Replaced with the real surface. **L13:** the failure-mode table stopped at F4 while `DisciplineRules.RequireYellowThreshold`/`RequireBanLength` are enforced in production and unit-tested (the AR pass 9 #29/#41 F8 precedent for exactly this omission class); new **F6** row added, and the matching guard calls landed in `section-3.md` §3.2's `AddYellow` pseudocode. |
 | 0.7 | 2026-08-15 | — | **ERR-044-003 stage 1**, owner decision: FR-DC-011 amended — a ban no longer decrements on a fixture the player appeared in via #30 §2.3 F9's extremis back-fill; `OnClubFixturePlayed` now takes the club's fielded eleven and exempts anyone in it. The §2.3 "recorded, not fixed" paragraph updated to state the free-appearance half is now FIXED (reinstatement tier order unchanged) and to name the staged three-tier plan (exempt-the-appearance now; youth call-ups; generated cover) with its two blockers — #42 Youth has no `src/` assembly, and generated cover needs the packed `PlayerId` id space widened (#27 FR-SQ-010 / ERR-027-004) — replacing the deferral-queue alternative, which was NOT chosen. |
-| 0.8 | 2026-08-15 | — | **Reviewed-findings pass.** **`ERR-044-007`:** §2.2's `DisciplineRules` block corrected `OnClubFixturePlayed(int clubId)` → `OnClubFixturePlayed(int clubId, int[] fieldedPlayerIds)` (verified against `src/discipline/DisciplineRules.cs:245` — the v0.7 signature amendment never reached this code block) and gained the `State` property (`src/discipline/DisciplineRules.cs:49`); `CardLedgerFold` gained `PendingCardCount` (`CardLedgerFold.cs:127`) and the public static `RequireCommittableConfig()` (`CardLedgerFold.cs:276`) — the round-level `[GT]` pre-check §3.1's own pseudocode calls and `SeasonLoop.PlayNextRound` enforces in production (`src/season-save/SeasonLoop.cs`), which had no §2.2 declaration at all. F2 (§2.3) extended to state the null-`fieldedPlayerIds` refusal explicitly — `DisciplineRules.cs:254-261` throws `ArgumentNullException` there and §3.3's pseudocode already read `REQUIRE fieldedPlayerIds is not null  # F2`, but this table's F2 row described only the club/player-identity case. **`ERR-044-010`:** FR-DC-011 gains a note that the required "fielded eleven" is the eleven that played, not merely started, and that today's `SeasonLoop.FieldedXi` (the STARTING eleven) satisfies the row only because no `SubstitutePlayer` call site exists on the season path. See `spec-error-log.md` `ERR-044-007`, `ERR-044-010`. |
-| 0.9 | 2026-08-15 | — | **Reviewed-findings pass.** **`ERR-044-007`:** FR-DC-009's `FilterAvailable(in Squad) → Squad` requirement corrected to the landed signature — `FilterAvailable(Squad squad, DisciplineState state, int competitionId)`, three parameters, no `in` — verified against `src/discipline/Availability.cs`; the old form misstated the method as a pure predicate over `Squad` alone, omitting the tally and competition partition it actually reads. **`ERR-044-013`** (new id): §2.2's `CardLedgerFold` block gains `NO_PLAYER` (`src/discipline/CardLedgerFold.cs:66`, `[FIXED]`, value `-1`) — caller-facing (the constructor throws on any other negative occupancy value, F1's "any gap" language depends on it) and used normatively by Appendix C, with no §2.2 declaration and no Appendix A row until now; Appendix A gains the matching row. See `spec-error-log.md` `ERR-044-007`, `ERR-044-013`. |
+| 0.8 | 2026-08-15 | — | **Reviewed-findings pass.** **`ERR-044-007`:** §2.2's `DisciplineRules` block corrected `OnClubFixturePlayed(int clubId)` → `OnClubFixturePlayed(int clubId, int[] fieldedPlayerIds)` (verified against `src/discipline/DisciplineRules.cs`'s `OnClubFixturePlayed` — the v0.7 signature amendment never reached this code block) and gained the `State` property (`src/discipline/DisciplineRules.cs:49`); `CardLedgerFold` gained `PendingCardCount` and the public static `RequireCommittableConfig()` — the round-level `[GT]` pre-check §3.1's own pseudocode calls and `SeasonLoop.PlayNextRound` enforces in production (`src/season-save/SeasonLoop.cs`), which had no §2.2 declaration at all. F2 (§2.3) extended to state the null-`fieldedPlayerIds` refusal explicitly — `OnClubFixturePlayed`'s null-`fieldedPlayerIds` guard throws `ArgumentNullException` there and §3.3's pseudocode already read `REQUIRE fieldedPlayerIds is not null  # F2`, but this table's F2 row described only the club/player-identity case. **`ERR-044-010`:** FR-DC-011 gains a note that the required "fielded eleven" is the eleven that played, not merely started, and that today's `SeasonLoop.FieldedXi` (the STARTING eleven) satisfies the row only because no `SubstitutePlayer` call site exists on the season path. See `spec-error-log.md` `ERR-044-007`, `ERR-044-010`. *(L6, August 16, 2026: this row's `DisciplineRules.cs:245`/`CardLedgerFold.cs:127`/`CardLedgerFold.cs:276`/`DisciplineRules.cs:254-261` line citations were verified-against-wrong-lines — replaced with member names above, since exact lines drift across later edits and a line number is not a stable citation.)* |
+| 0.9 | 2026-08-15 | — | **Reviewed-findings pass.** **`ERR-044-007`:** FR-DC-009's `FilterAvailable(in Squad) → Squad` requirement corrected to the landed signature — `FilterAvailable(Squad squad, DisciplineState state, int competitionId)`, three parameters, no `in` — verified against `src/discipline/Availability.cs`; the old form misstated the method as a pure predicate over `Squad` alone, omitting the tally and competition partition it actually reads. **`ERR-044-013`** (new id): §2.2's `CardLedgerFold` block gains `NO_PLAYER` (verified against `src/discipline/CardLedgerFold.cs`'s `NO_PLAYER`, `[FIXED]`, value `-1`) — caller-facing (the constructor throws on any other negative occupancy value, F1's "any gap" language depends on it) and used normatively by Appendix C, with no §2.2 declaration and no Appendix A row until now; Appendix A gains the matching row. See `spec-error-log.md` `ERR-044-007`, `ERR-044-013`. *(L6, August 16, 2026: this row's `CardLedgerFold.cs:66` line citation was verified-against-wrong-line — replaced with the member name above.)* |
 | 0.10 | 2026-08-16 | — | **`ERR-044-014`** (adversarial review, H1). FR-DC-011 amended: `OnClubFixturePlayed` MUST take the club's ROSTER alongside its fielded eleven, and "the player's club" MUST be read from that roster rather than derived from `PlayerId / CLUB_SQUAD_SIZE`. §2.2's signature becomes `OnClubFixturePlayed(int clubId, int[] clubPlayerIds, int[] fieldedPlayerIds)` (verified against `src/discipline/DisciplineRules.cs` v1.7), with `clubId` documented as identity + the F2 gate only and the roster documented as necessarily the UNFILTERED one — every id being served is one the filter has just removed. §2.3 **F2** extended with the null-`clubPlayerIds` refusal on the ERR-044-007 posture, and annotated: the negative-id-divides-to-club-0 hazard ERR-044-004 filed is no longer reachable through this method, which no longer divides, while the `DisciplineEntry`/`Decode` refusals stand. The retired derivation was a SECOND notion of club membership beside `Availability.MarkSuspended`'s roster walk, and the migration rule cited as keeping them in step (FR-DC-013) has no production caller. See `spec-error-log.md` `ERR-044-014`. |
 | 0.11 | 2026-08-16 | — | **`ERR-044-019`** (adversarial review, H2; the rule itself is #30's and is amended at `ERR-030-044`). §2.3's ERR-044-003 note stated the extremis compromise as ONE case — "a suspended player plays only when the alternative is a club that cannot take the field at all" — and that was false of the implementation on both halves. The TRIGGER is #30 §3.4's probe `SquadRating.CanFieldStartingEleven`, which is `LineupSelector`'s full selection walk (eleven position-matched starters PLUS the seven-slot bench), so the tier fires on **bench depth** at a club that can field a perfectly legal XI; and the pre-fix within-tier ORDERING (earliest roster position) then put the reinstated man into the pool the rating-greedy selector draws the starting eleven from, which started him — after which ERR-044-003 stage 1's exemption stalled his ban for as long as the club stayed depleted. Corrected to the two-case form #30's amended key produces: **benched** (the common case, and what the amended key prefers) ⇒ not in `fieldedPlayerIds` ⇒ FR-DC-011's decrement is NOT exempted ⇒ the ban advances normally; **forced to start** (no candidate choice keeps a reinstated-suspended player out of the XI — the sole-goalkeeper case) ⇒ exempt ⇒ and only then does the ban stall, which is the residual §7.2's unbuilt tiers delete. No FR row changed: FR-DC-011 already says "did not appear in", which is exactly right in both cases — what was wrong was this section's account of when the appearance happens. §7.2's mirror corrected in the same commit (`section-7.md` v0.8); code at `src/season-save/AvailabilityComposition.cs` v1.5. |
+| 0.12 | 2026-08-16, yet later | — | **Final fixer pass, four findings.** **`ERR-044-018`** (M8): §2.2's `DisciplineState` block declared — `Count`, `EntryAt(int)`, `EntryFor(int,int)`, `HasEntry(int,int)`, `FromEntries(DisciplineEntry[])` — replacing a bare `{ /* map ... */ }` comment; cross-referenced to F3 (§2.3) and FR-DC-017 for `FromEntries`' refusals, and notes `EntryFor`'s negative-key posture (the zero row, not a throw — `DisciplineState.cs` v1.1). **`ERR-044-020`** (M3): §2.2 gains the `IDisciplineTickLedgerTap` interface declaration (previously referenced, never declared), with `CurrentTick`, and `CardLedgerFold.ObserveTick`'s declaration gains a note on the consecutive-tick refusal and the partial-application poison latch — spec-side sync of a code addition the spec text had been silent on, not a contradiction. **M7** (`ERR-044-017`): FR-DC-006/FR-DC-007's four `[GT]` constant names renamed ALL_CAPS → PascalCase (`YellowAccumulationThreshold`/`AccumBanMatches`/`SecondYellowBanMatches`/`StraightRedBanMatches`) to match `DisciplineConstants.cs` and `src/CLAUDE.md` §3.2.3. **L6**: v0.8/v0.9's `DisciplineRules.cs`/`CardLedgerFold.cs` line-number citations replaced with member names in place, annotated. See `spec-error-log.md` `ERR-044-017`, `ERR-044-018`, `ERR-044-020`. |
 #endregion
