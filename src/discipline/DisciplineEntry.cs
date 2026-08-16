@@ -1,5 +1,11 @@
 // File:     src/discipline/DisciplineEntry.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16 (reviewed findings pass, L2 — v1.3: added YellowsPlusOne/BanMatchesPlus, guarded
+//           accumulator arithmetic that refuses BEFORE an addition would overflow int.MaxValue and wrap
+//           to a negative value the constructor's existing guard would then misreport as "a counting
+//           bug". DisciplineRules.AddYellow/AddBan are the intended callers; wiring them is outside this
+//           file's ownership for this pass — see CardLedgerFold.cs v1.8's L2 doc for the scoped claim
+//           this closes the gap under.)
 // Modified: 2026-08-15 (reviewed findings pass, L4 — v1.2: the CompetitionId doc's
 //           <see cref="DisciplineConstants.LEAGUE_COMPETITION_KEY"/> reference renamed for that
 //           constant's ALL_CAPS -> LeagueCompetitionKey rename (DisciplineConstants.cs v1.5). No
@@ -8,7 +14,8 @@
 // Spec:     Discipline & Suspensions #44 §2.2 (data structures) / §2.3 F2 / FR-DC-012 / FR-DC-017 /
 //           FR-DC-020; Code Standards #20
 // Purpose:  One player's discipline tally within one competition — the (PlayerId, CompetitionId) →
-//           (Yellows, BanMatchesRemaining) row DisciplineState stores and DisciplineSaveCodec writes.
+//           (Yellows, BanMatchesRemaining) row DisciplineState stores and DisciplineSaveCodec writes,
+//           plus the guarded arithmetic that grows those two fields without a silent overflow.
 
 using System;
 
@@ -119,6 +126,61 @@ namespace TacticalDirector.Discipline
                 return hash;
             }
         }
+
+        // ── L2 (reviewed findings pass): guarded accumulator arithmetic ────────────────────────────
+        //
+        // DisciplineRules.AddYellow/AddBan read a field off an existing entry, add to it, and construct
+        // a new DisciplineEntry from the result. At int.MaxValue that addition wraps silently to a
+        // negative number, and THIS type's own constructor guard then refuses it as "a negative tally
+        // is a counting bug" — true of the symptom, false of the cause: the tally was never negative
+        // until the wrap put it there. CardLedgerFold.Commit's atomicity claim covers only the four
+        // pre-validated [GT] guards (see CardLedgerFold.cs v1.8's L2 doc), so a throw from this source
+        // mid-commit-loop still leaves cards 0..k-1 applied and card k onward lost. These two helpers
+        // are the guarded alternative — they check headroom BEFORE the addition, so the entry (and
+        // whichever caller reads it) never wraps in the first place. Wiring DisciplineRules.AddYellow/
+        // AddBan to call them is the remaining half of L2, outside this file's ownership for this pass.
+
+        /// <summary>
+        /// <paramref name="yellows"/> plus one, refusing BEFORE the addition if
+        /// <paramref name="yellows"/> is already <see cref="int.MaxValue"/> — the addition would
+        /// otherwise wrap silently to a negative value.
+        /// </summary>
+        /// <exception cref="OverflowException"><paramref name="yellows"/> is already
+        /// <see cref="int.MaxValue"/>.</exception>
+        internal static int YellowsPlusOne(int yellows)
+        {
+            if (yellows == int.MaxValue)
+            {
+                throw new OverflowException(
+                    "DisciplineEntry: Yellows is already int.MaxValue (" + int.MaxValue + "); adding " +
+                    "one more would overflow silently, wrapping to a negative value the constructor " +
+                    "would then misreport as a counting bug rather than what it actually is — an " +
+                    "accumulator overflow.");
+            }
+
+            return yellows + 1;
+        }
+
+        /// <summary>
+        /// <paramref name="banMatchesRemaining"/> plus <paramref name="matches"/>, refusing BEFORE the
+        /// addition if the sum would exceed <see cref="int.MaxValue"/>. Checked via subtraction
+        /// (<c>banMatchesRemaining &gt; int.MaxValue - matches</c>) rather than performing the addition
+        /// and inspecting the result, which would itself be the overflow this guard exists to catch.
+        /// </summary>
+        /// <exception cref="OverflowException">The sum would exceed <see cref="int.MaxValue"/>.</exception>
+        internal static int BanMatchesPlus(int banMatchesRemaining, int matches)
+        {
+            if (matches > 0 && banMatchesRemaining > int.MaxValue - matches)
+            {
+                throw new OverflowException(
+                    "DisciplineEntry: BanMatchesRemaining (" + banMatchesRemaining + ") + matches (" +
+                    matches + ") would overflow int.MaxValue (" + int.MaxValue + "), wrapping to a " +
+                    "negative value the constructor would then misreport as a counting bug rather " +
+                    "than what it actually is — an accumulator overflow.");
+            }
+
+            return banMatchesRemaining + matches;
+        }
     }
 }
 
@@ -138,4 +200,12 @@ namespace TacticalDirector.Discipline
 // | 1.2     | 2026-08-15 | —      | Reviewed findings pass, L4. The CompetitionId doc's <see        |
 // |         |            |        | cref="DisciplineConstants.LEAGUE_COMPETITION_KEY"/> reference     |
 // |         |            |        | renamed to LeagueCompetitionKey. No behaviour change.             |
+// | 1.3     | 2026-08-16 | —      | Reviewed findings pass, L2. Added internal static                 |
+// |         |            |        | YellowsPlusOne(int)/BanMatchesPlus(int,int): guarded arithmetic   |
+// |         |            |        | that throws OverflowException BEFORE an addition would wrap       |
+// |         |            |        | int.MaxValue to a negative value — the constructor's existing     |
+// |         |            |        | guard would otherwise refuse the wrapped result as "a negative    |
+// |         |            |        | tally is a counting bug", misnaming an overflow as a counting     |
+// |         |            |        | bug. DisciplineRules.AddYellow/AddBan are the intended callers;   |
+// |         |            |        | that wiring is outside this file's ownership for this pass.       |
 #endregion

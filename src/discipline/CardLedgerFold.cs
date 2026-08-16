@@ -1,5 +1,16 @@
 // File:     src/discipline/CardLedgerFold.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16, later (reviewed findings pass, M1/M3/L2 — v1.8: M1 — ApplySubstitution now
+//           clears the vacated incoming slot after the swap (a later record naming it throws F1 rather
+//           than silently double-booking) and refuses outgoing == incoming; the constructor's seed loop
+//           now refuses a seed that maps one player id to two agent ids. M3 — ObserveTick refuses a
+//           non-consecutive IDisciplineTickLedgerTap.CurrentTick and latches shut on a part-way
+//           failure, mirroring #37 MatchAnalyticsAggregator's F6; IDisciplineTickLedgerTap gained
+//           CurrentTick. L2 — CommitWithExplicitConfig's atomicity doc now scopes the "all-or-nothing"
+//           claim to the four RequireCommittableConfig guards, naming the uncovered accumulator-overflow
+//           throw from DisciplineEntry's range guards as a real, currently-open gap; the guarded
+//           DisciplineEntry.YellowsPlusOne/BanMatchesPlus helpers exist for DisciplineRules to route
+//           through, which is outside this file's ownership for this pass.)
 // Modified: 2026-08-16 (adversarial-review M2, doc only — RequireCommittableConfig records that adding
 //           a guarded [GT] is a five-site change and names DisciplineConfigCompletenessTests, the check
 //           that detects the drift; the DisciplineConfig restructure stays recorded and gated — v1.7)
@@ -62,6 +73,14 @@ namespace TacticalDirector.Discipline
     /// to the engine. An observed fixture is digest-identical to an unobserved one.
     /// </para>
     /// <para>
+    /// <b>Lossless consumption is enforced, not merely documented</b> (M3, reviewed findings pass).
+    /// <see cref="ObserveTick"/> refuses a non-consecutive
+    /// <see cref="IDisciplineTickLedgerTap.CurrentTick"/> and latches shut if a tick throws part-way
+    /// through — the same F6 shape #37's <c>MatchAnalyticsAggregator</c> enforces, adopted here because
+    /// nothing previously distinguished a caller that skipped a tick from one that pumped every tick;
+    /// both looked identical to this fold before this pass.
+    /// </para>
+    /// <para>
     /// <b>Recorded — the substitution branch has no production driver.</b> <c>SeasonLoop</c> never calls
     /// <c>SubstitutePlayer</c> (Stage 0 fields a fixed eleven), so occupancy never actually changes on
     /// the season path. That is precisely the shape that shipped <c>BootFixtureEngine</c> unrun for
@@ -89,6 +108,17 @@ namespace TacticalDirector.Discipline
 
         private bool _committed;
 
+        // ── Lossless-consumption enforcement (M3, reviewed findings pass) ──────────────────────────
+        // Mirrors #37 MatchAnalyticsAggregator's F6: ObserveTick is a per-tick obligation (see the type
+        // remarks and IDisciplineTickLedgerTap's own doc), and neither this class nor the tap interface
+        // could previously tell a skipped tick from a normal one. _hasObservedTick/_lastObservedTick
+        // anchor on the first call and refuse a non-consecutive one thereafter; _faulted latches once a
+        // tick throws part-way through, so a partial application never silently continues into the next
+        // tick's count.
+        private bool _hasObservedTick;
+        private ulong _lastObservedTick;
+        private bool _faulted;
+
         /// <summary>
         /// Seeds the fold with the fixture's full agent-id → <c>PlayerId</c> map — <b>starters and
         /// bench</b>, because a card can be shown to a player who came on.
@@ -108,8 +138,11 @@ namespace TacticalDirector.Discipline
         /// </param>
         /// <param name="competitionId">The competition partition these cards accrue in (FR-DC-012).</param>
         /// <exception cref="ArgumentNullException"><paramref name="occupancyByAgentId"/> is null.</exception>
-        /// <exception cref="ArgumentException">The seed is empty, or carries a negative player id that
-        /// is not <see cref="NO_PLAYER"/>.</exception>
+        /// <exception cref="ArgumentException">The seed is empty, carries a negative player id that is
+        /// not <see cref="NO_PLAYER"/>, or maps the same non-<see cref="NO_PLAYER"/> player id to two
+        /// agent ids (M1, reviewed findings pass — the seed must be one-to-one, or a card at either
+        /// agent id would attribute to the same player while whoever else the seed intended for one of
+        /// those ids loses his mapping entirely).</exception>
         public CardLedgerFold(int[] occupancyByAgentId, int competitionId)
         {
             if (occupancyByAgentId == null)
@@ -126,6 +159,13 @@ namespace TacticalDirector.Discipline
             }
 
             _occupancy = new int[occupancyByAgentId.Length];
+
+            // M1: the seed must be one-to-one — every non-NO_PLAYER player id may occupy exactly one
+            // agent id. A duplicate is not a harmless redundancy: ObserveTick would attribute a card at
+            // EITHER agent id to the same player, and whichever id the seed actually meant for a
+            // DIFFERENT player is now indistinguishable from a legitimate mapping. Checked at
+            // construction, once, rather than left as a runtime property nothing enforces.
+            var firstAgentIdForPlayer = new Dictionary<int, int>();
             for (int i = 0; i < occupancyByAgentId.Length; i++)
             {
                 int playerId = occupancyByAgentId[i];
@@ -135,6 +175,20 @@ namespace TacticalDirector.Discipline
                         "CardLedgerFold: occupancy seed at agent id " + i + " is " + playerId +
                         "; a player id is >= 0 and an unused slot is NO_PLAYER (" + NO_PLAYER + ").",
                         nameof(occupancyByAgentId));
+                }
+                if (playerId != NO_PLAYER)
+                {
+                    if (firstAgentIdForPlayer.TryGetValue(playerId, out int firstAgentId))
+                    {
+                        throw new ArgumentException(
+                            "CardLedgerFold: the occupancy seed maps player " + playerId +
+                            " to two agent ids (" + firstAgentId + " and " + i + "). The mapping must " +
+                            "be one-to-one (M1) — a card at either id would attribute to player " +
+                            playerId + ", and whoever the seed actually intended for one of these ids " +
+                            "would never be attributed a card at all.",
+                            nameof(occupancyByAgentId));
+                    }
+                    firstAgentIdForPlayer[playerId] = i;
                 }
                 _occupancy[i] = playerId;
             }
@@ -156,9 +210,13 @@ namespace TacticalDirector.Discipline
         /// </para>
         /// </summary>
         /// <exception cref="ArgumentNullException"><paramref name="tap"/> is null.</exception>
-        /// <exception cref="InvalidOperationException">The fixture has already been committed, or a
-        /// record names an agent slot with no occupancy mapping (<b>F1</b> — the lineup seed is
-        /// incomplete, a root-contract bug whose silent form is misattribution).</exception>
+        /// <exception cref="InvalidOperationException">The fixture has already been committed; a
+        /// previous call to this method failed part-way through, poisoning the fold (<b>M3</b> — see
+        /// the type remarks' lossless-consumption note); <paramref name="tap"/>'s
+        /// <see cref="IDisciplineTickLedgerTap.CurrentTick"/> is not consecutive with the last observed
+        /// tick (<b>M3</b>, mirrors #37 <c>MatchAnalyticsAggregator</c>'s F6); or a record names an
+        /// agent slot with no occupancy mapping (<b>F1</b> — the lineup seed is incomplete, a
+        /// root-contract bug whose silent form is misattribution).</exception>
         /// <exception cref="ArgumentOutOfRangeException">A <c>CardKind</c> outside <c>{0, 1, 2}</c>
         /// (<b>F4</b>).</exception>
         public void ObserveTick(IDisciplineTickLedgerTap tap)
@@ -168,6 +226,15 @@ namespace TacticalDirector.Discipline
                 throw new ArgumentNullException(nameof(tap));
             }
             RequireNotCommitted();
+            RequireNotFaulted();
+            RequireConsecutive(tap.CurrentTick);
+
+            // M3: latched BEFORE the loop runs, cleared only once the WHOLE tick applied. A record
+            // partway through the loop can throw (F1/F4) — RequireConsecutive above has already
+            // advanced by the time that happens, so without this latch the NEXT call would be accepted
+            // and the fold would carry on buffering cards on top of a tick it only half-applied. That is
+            // the exact silent-wrong-tally shape #37's F6 exists to prevent, one layer up.
+            _faulted = true;
 
             byte cardOrdinal = EventRegistry.GetOrdinal<CardIssuedEvent>();
             byte substitutionOrdinal = EventRegistry.GetOrdinal<SubstitutionEvent>();
@@ -202,6 +269,41 @@ namespace TacticalDirector.Discipline
 
                 // else: an ordinal #44 does not fold. Ignored (FR-DC-004).
             }
+
+            // Reached only when the WHOLE tick applied; any escape above leaves _faulted set. No
+            // try/finally — a finally would clear it on the exception path too, which is the one path
+            // it exists for (mirrors #37 MatchAnalyticsAggregator.ObserveTick verbatim).
+            _faulted = false;
+        }
+
+        // ── M3 (reviewed findings pass): lossless-consumption guard ────────────────────────────────
+
+        private void RequireNotFaulted()
+        {
+            if (_faulted)
+            {
+                throw new InvalidOperationException(
+                    "CardLedgerFold.ObserveTick: a previous tick failed part-way through, so this " +
+                    "fixture's buffered cards are incomplete and every further tick would compound a " +
+                    "tally that is silently wrong (M3, mirrors #37 MatchAnalyticsAggregator's F6). " +
+                    "Commit still applies whatever was buffered before the failure; a new fixture needs " +
+                    "a new fold.");
+            }
+        }
+
+        private void RequireConsecutive(ulong currentTick)
+        {
+            if (_hasObservedTick && currentTick != _lastObservedTick + 1UL)
+            {
+                throw new InvalidOperationException(
+                    "CardLedgerFold.ObserveTick: tick " + currentTick + " is not consecutive with the " +
+                    "last observed tick " + _lastObservedTick + ". ObserveTick is a per-tick obligation " +
+                    "of the composition root (#44 §4.3) — a skipped tick does not defer its records, it " +
+                    "loses them permanently (M3, mirrors #37 MatchAnalyticsAggregator's F6).");
+            }
+
+            _hasObservedTick = true;
+            _lastObservedTick = currentTick;
         }
 
         /// <summary>
@@ -257,6 +359,24 @@ namespace TacticalDirector.Discipline
         /// once before the first fixture of the round is touched; the guards below stay because they
         /// are this type's own contract and a caller that skipped the pre-check still must not write
         /// half a fixture.
+        /// </para>
+        /// <para>
+        /// <b>L2 — the atomicity claim's SCOPE.</b> "All-or-nothing" above is a claim about the FOUR
+        /// pre-validated <c>[GT]</c>s <see cref="RequireCommittableConfig()"/> checks — the only throws
+        /// this loop is proven to rule out in advance. It is NOT a claim that <c>rules.ApplyCard</c>
+        /// cannot throw for any other reason: <see cref="DisciplineEntry"/>'s own non-negative range
+        /// guards (constructed fresh on every add) can still fire from plain accumulator overflow — a
+        /// decoded row at <c>Yellows == int.MaxValue</c> throws on the very next add, and that
+        /// exception's message ("a negative tally is a counting bug") misnames the cause, since the
+        /// tally was never negative until the addition silently wrapped it there. A throw from that
+        /// source, mid-loop, leaves cards <c>0..k-1</c> already applied and card <c>k</c> onward lost —
+        /// exactly the half-applied fixture this method exists to prevent, for a cause its guards do not
+        /// cover. <see cref="DisciplineEntry.YellowsPlusOne"/> / <see cref="DisciplineEntry.BanMatchesPlus"/>
+        /// now exist as the guarded arithmetic that would close this gap at its source, throwing an
+        /// overflow-named exception BEFORE the addition rather than after; wiring
+        /// <c>DisciplineRules.AddYellow</c>/<c>AddBan</c> to call them is the remaining half of L2 and is
+        /// outside this file's ownership for this pass — recorded here so the claim above is read as
+        /// scoped rather than as a guarantee this loop does not actually provide.
         /// </para>
         /// </summary>
         /// <exception cref="InvalidOperationException">This fold has already been committed, or one of
@@ -345,10 +465,23 @@ namespace TacticalDirector.Discipline
         /// <summary>
         /// Moves the outgoing slot's occupancy to the incoming player's identity (FR-DC-005). Both ids
         /// must be mapped: the outgoing one is an on-pitch agent slot, the incoming one the engine's
-        /// synthetic bench id.
+        /// synthetic bench id. The vacated incoming slot is cleared (M1) so no player id maps to two
+        /// agent ids once this returns.
         /// </summary>
         private void ApplySubstitution(int outgoingAgentId, int incomingAgentId)
         {
+            // M1: an id cannot be both outgoing and incoming in the same substitution. Without this
+            // guard the write below (outgoing <- incomingPlayerId) and the clear below it (incoming <-
+            // NO_PLAYER) would target the SAME index, and the clear would erase the write an instant
+            // after it landed — silently losing a real player's occupancy rather than moving it.
+            if (outgoingAgentId == incomingAgentId)
+            {
+                throw new InvalidOperationException(
+                    "CardLedgerFold: SubstitutionEvent.Outgoing and .Incoming are both agent id " +
+                    outgoingAgentId + " — a substitution moves one player OFF an agent id and a " +
+                    "DIFFERENT player ON to it; the same id cannot be both (M1).");
+            }
+
             int incomingPlayerId = OccupantOf(incomingAgentId, "SubstitutionEvent.Incoming");
 
             // Read the outgoing slot too, purely so an unmapped OUTGOING id fails loud here rather than
@@ -356,6 +489,14 @@ namespace TacticalDirector.Discipline
             OccupantOf(outgoingAgentId, "SubstitutionEvent.Outgoing");
 
             _occupancy[outgoingAgentId] = incomingPlayerId;
+
+            // M1 (reviewed findings pass): clear the vacated incoming slot. Left mapped, incomingPlayerId
+            // would occupy TWO agent ids after this swap — a card naming either attributes to him, which
+            // is silent double-booking when a malformed record later names the stale incoming id
+            // (Appendix C's own "slot 19" shape, ERR-044-001). Clearing makes that impossible rather
+            // than merely unlikely: OccupantOf refuses NO_PLAYER, so any later record naming this agent
+            // id now throws F1 instead of silently attributing to whoever was just subbed on.
+            _occupancy[incomingAgentId] = NO_PLAYER;
         }
 
         private int OccupantOf(int agentId, string what)
@@ -484,4 +625,26 @@ namespace TacticalDirector.Discipline
 // |         |            |        | impossible rather than detected) is recorded as the eventual      |
 // |         |            |        | owner-shape, gated on the GameplayConfigHolder.Bind composition-  |
 // |         |            |        | root pass no production caller runs yet. No behaviour change.     |
+// | 1.8     | 2026-08-16, later | — | Reviewed findings pass (M1/M3/L2). M1: ApplySubstitution now  |
+// |         |            |        | clears _occupancy[incomingAgentId] after the swap and refuses     |
+// |         |            |        | outgoing == incoming; the constructor loop refuses a seed that    |
+// |         |            |        | maps one player id to two agent ids. Both close the injectivity   |
+// |         |            |        | hole the finding names — a later record naming the vacated slot   |
+// |         |            |        | now throws F1 instead of silently double-booking. M3: ObserveTick |
+// |         |            |        | now refuses a non-consecutive tap.CurrentTick and latches _faulted|
+// |         |            |        | shut on a part-way failure, mirroring #37 MatchAnalyticsAggregator|
+// |         |            |        | verbatim; IDisciplineTickLedgerTap gained CurrentTick, forwarded   |
+// |         |            |        | by MatchEngineDisciplineTap from MatchEngine's already-public      |
+// |         |            |        | clock (no MatchEngine.cs change). L2: CommitWithExplicitConfig's  |
+// |         |            |        | doc now scopes its "all-or-nothing" claim to the four             |
+// |         |            |        | RequireCommittableConfig guards and names the still-open          |
+// |         |            |        | accumulator-overflow gap (DisciplineEntry.YellowsPlusOne/         |
+// |         |            |        | BanMatchesPlus exist to close it; wiring DisciplineRules to call  |
+// |         |            |        | them is outside this file's ownership for this pass — see         |
+// |         |            |        | DisciplineEntry.cs v1.3). Behaviour change: a substitution whose  |
+// |         |            |        | Incoming names an already-occupied on-pitch slot, a self-         |
+// |         |            |        | colliding substitution, and a doubly-mapped construction seed now |
+// |         |            |        | throw instead of silently corrupting occupancy; a skipped or      |
+// |         |            |        | out-of-order ObserveTick call now throws instead of silently      |
+// |         |            |        | losing cards.                                                      |
 #endregion

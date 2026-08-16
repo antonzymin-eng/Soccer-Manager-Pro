@@ -1,5 +1,13 @@
 // File:     src/discipline/tests/CardLedgerFoldTests.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16, later (reviewed findings pass, M1/M3 — v1.7: FakeLedgerTap gained CurrentTick/
+//           AtTick(...) (M3); every pre-existing multi-call-on-one-fold test now chains consecutive
+//           ticks. New M1 locks: a doubly-mapped construction seed throws and names both agent ids plus
+//           the player id; a card naming a just-vacated substitution slot throws F1 instead of
+//           misattributing; a self-colliding substitution (outgoing == incoming) throws. New M3 locks:
+//           a skipped tick throws and names both ticks; the first call accepts any starting tick;
+//           repeating the same tick throws; a part-way tick failure latches the fold shut against even
+//           a consecutive follow-up tick.)
 // Modified: 2026-08-16 (adversarial-review M2 — the four RequireCommittableConfig rejection cases each
 //           assert the refusal NAMES its own [GT], and the section comment records the executed
 //           per-guard mutation verification that each of the four arguments is isolating — v1.6)
@@ -42,6 +50,12 @@ namespace TacticalDirector.Discipline.Tests
         private readonly List<byte> _ordinals = new List<byte>();
         private readonly List<object> _records = new List<object>();
 
+        // M3: defaults to 0. A fold's FIRST ObserveTick call accepts any tick (first-call anchoring —
+        // CardLedgerFold.RequireConsecutive), so single-call tests need not set this at all; a test that
+        // calls ObserveTick more than once on the same fold must chain .AtTick(...) with consecutive
+        // values, or the M3 guard refuses it exactly as it should.
+        public ulong CurrentTick { get; private set; }
+
         public int RecordCount => _ordinals.Count;
 
         public byte OrdinalAt(int index) => _ordinals[index];
@@ -60,6 +74,13 @@ namespace TacticalDirector.Discipline.Tests
         {
             _ordinals.Add(ordinal);
             _records.Add(default(CardIssuedEvent));   // never read — the fold must skip it by ordinal alone
+            return this;
+        }
+
+        /// <summary>Sets the tick this tap reports as <see cref="CurrentTick"/> (M3).</summary>
+        public FakeLedgerTap AtTick(ulong tick)
+        {
+            CurrentTick = tick;
             return this;
         }
     }
@@ -115,6 +136,32 @@ namespace TacticalDirector.Discipline.Tests
             Assert.Throws<ArgumentException>(() => new CardLedgerFold(seed, Competition));
         }
 
+        // ── M1 (reviewed findings pass): the seed must be one-to-one ──────────────
+
+        [Test]
+        public void Constructor_SeedMapsOnePlayerToTwoAgentIds_ThrowsAndNamesBothIdsAndThePlayer()
+        {
+            // Agent ids 5 and 6 both map to player 100 — a malformed seed of exactly the shape M1
+            // guards against (the Appendix C "slot 19" family, ERR-044-001).
+            var seed = Occupancy((5, 100), (6, 100));
+
+            ArgumentException ex = Assert.Throws<ArgumentException>(
+                () => new CardLedgerFold(seed, Competition));
+
+            Assert.That(ex.Message, Does.Contain("player 100"), "the refusal must name the duplicated player id");
+            Assert.That(ex.Message, Does.Contain("(5 and 6)"), "the refusal must name both agent ids");
+        }
+
+        [Test]
+        public void Constructor_SeedWithNO_PLAYERRepeated_DoesNotThrow()
+        {
+            // NO_PLAYER is the sentinel for "unused", not a player id — repeating it must not trip the
+            // M1 one-to-one check (every unused slot legitimately shares the same sentinel).
+            var seed = Occupancy((5, 100));   // every other slot in Occupancy(...) is NO_PLAYER by default
+
+            Assert.DoesNotThrow(() => new CardLedgerFold(seed, Competition));
+        }
+
         // ── Basic attribution ─────────────────────────────────────────────────────
 
         [Test]
@@ -145,11 +192,11 @@ namespace TacticalDirector.Discipline.Tests
             var fold = new CardLedgerFold(Occupancy((slot, outgoingPlayer), (bench, incomingPlayer)), Competition);
 
             // Tick 1: a card at `slot` while the outgoing player still occupies it.
-            fold.ObserveTick(new FakeLedgerTap().Add(Card(slot)));
+            fold.ObserveTick(new FakeLedgerTap().Add(Card(slot)).AtTick(1));
             // Tick 2: the substitution moves `slot`'s occupancy to the incoming player.
-            fold.ObserveTick(new FakeLedgerTap().Add(Sub(outgoing: slot, incoming: bench)));
+            fold.ObserveTick(new FakeLedgerTap().Add(Sub(outgoing: slot, incoming: bench)).AtTick(2));
             // Tick 3: a second card at the SAME slot, now occupied by the incoming player.
-            fold.ObserveTick(new FakeLedgerTap().Add(Card(slot)));
+            fold.ObserveTick(new FakeLedgerTap().Add(Card(slot)).AtTick(3));
 
             var state = new DisciplineState();
             fold.Commit(new DisciplineRules(state));
@@ -190,6 +237,43 @@ namespace TacticalDirector.Discipline.Tests
                 "the outgoing player must carry NO card from this tick — he was replaced before the card.");
             Assert.AreEqual(1, state.EntryFor(incomingPlayer, Competition).Yellows,
                 "the card, issued in the same tick as the substitution, must attribute to the player who came on.");
+        }
+
+        // ── M1 (reviewed findings pass): the vacated slot is cleared, not left double-booked ──
+
+        [Test]
+        public void Substitution_ClearsTheVacatedIncomingSlot_ALaterCardThereThrowsF1()
+        {
+            // Before the fix, incomingPlayer would occupy BOTH the new outgoing-slot mapping AND the
+            // stale incoming (bench) id after a substitution — a card naming either would silently
+            // attribute to him. After the fix the stale id is cleared, so a later record naming it must
+            // throw F1 instead of misattributing (M1's "the card at the stale slot throws F1" lock).
+            int outgoingPlayer = 200;
+            int incomingPlayer = 300;
+            int slot = 5;
+            int bench = BenchId(teamId: 0, benchIndex: 0);
+
+            var fold = new CardLedgerFold(Occupancy((slot, outgoingPlayer), (bench, incomingPlayer)), Competition);
+            fold.ObserveTick(new FakeLedgerTap().Add(Sub(outgoing: slot, incoming: bench)).AtTick(1));
+
+            // A malformed/later record naming the now-vacated bench id must fail loud, not attribute a
+            // card to incomingPlayer a second time via a stale mapping.
+            Assert.Throws<InvalidOperationException>(
+                () => fold.ObserveTick(new FakeLedgerTap().Add(Card(bench)).AtTick(2)));
+        }
+
+        [Test]
+        public void Substitution_OutgoingEqualsIncoming_Throws()
+        {
+            // A degenerate/malformed record naming the same agent id as both outgoing and incoming.
+            // Without the guard, ApplySubstitution's write (outgoing <- player) and clear (incoming <-
+            // NO_PLAYER) would target the same index and the clear would erase the write it just made —
+            // silently losing that player's occupancy entirely.
+            int slot = 5;
+            var fold = new CardLedgerFold(Occupancy((slot, 100)), Competition);
+
+            Assert.Throws<InvalidOperationException>(
+                () => fold.ObserveTick(new FakeLedgerTap().Add(Sub(outgoing: slot, incoming: slot))));
         }
 
         // ── FR-DC-004: unknown ordinals ignored, known ones still fold in the same batch ──
@@ -285,8 +369,8 @@ namespace TacticalDirector.Discipline.Tests
         {
             var fold = new CardLedgerFold(Occupancy((5, 100), (6, 101)), Competition);
 
-            fold.ObserveTick(new FakeLedgerTap().Add(Card(5)));
-            fold.ObserveTick(new FakeLedgerTap().Add(Card(6)));
+            fold.ObserveTick(new FakeLedgerTap().Add(Card(5)).AtTick(1));
+            fold.ObserveTick(new FakeLedgerTap().Add(Card(6)).AtTick(2));
 
             Assert.AreEqual(2, fold.PendingCardCount, "both cards are buffered");
 
@@ -301,6 +385,68 @@ namespace TacticalDirector.Discipline.Tests
 
             Assert.AreEqual(2, applied);
             Assert.AreEqual(2, state.Count, "both cards land only once Commit runs");
+        }
+
+        // ── M3 (reviewed findings pass): lossless-consumption guard ────────────────
+
+        [Test]
+        public void ObserveTick_SkippedTick_ThrowsAndNamesBothTicks()
+        {
+            var fold = new CardLedgerFold(Occupancy((5, 100)), Competition);
+            fold.ObserveTick(new FakeLedgerTap().Add(Card(5)).AtTick(1));
+
+            InvalidOperationException refusal = Assert.Throws<InvalidOperationException>(
+                () => fold.ObserveTick(new FakeLedgerTap().AtTick(3)));
+
+            Assert.That(refusal.Message, Does.Contain("3"), "the refusal must name the offending tick");
+            Assert.That(refusal.Message, Does.Contain("1"), "the refusal must name the last observed tick");
+
+            // The skipped call must not have been silently accepted — nothing from it (there was
+            // nothing to buffer anyway) may have landed, and the fold must still be usable for its
+            // existing pending card.
+            Assert.AreEqual(1, fold.PendingCardCount);
+        }
+
+        [Test]
+        public void ObserveTick_FirstCall_AcceptsAnyTick()
+        {
+            // First-call anchoring (mirrors #37 MatchAnalyticsAggregator): there is no "last observed
+            // tick" yet, so any starting tick is legal — a fixture need not begin at tick 0.
+            var fold = new CardLedgerFold(Occupancy((5, 100)), Competition);
+
+            Assert.DoesNotThrow(() => fold.ObserveTick(new FakeLedgerTap().Add(Card(5)).AtTick(4200)));
+        }
+
+        [Test]
+        public void ObserveTick_SameTickTwice_Throws()
+        {
+            // Not just "must increase" — must be EXACTLY one more. Repeating the same tick is the
+            // double-pump shape, not the skip shape, and both must be refused.
+            var fold = new CardLedgerFold(Occupancy((5, 100)), Competition);
+            fold.ObserveTick(new FakeLedgerTap().Add(Card(5)).AtTick(1));
+
+            Assert.Throws<InvalidOperationException>(
+                () => fold.ObserveTick(new FakeLedgerTap().AtTick(1)));
+        }
+
+        [Test]
+        public void ObserveTick_AfterPartialTickFailure_LatchesAndRefusesEvenAConsecutiveTick()
+        {
+            // Card(5) attributes fine; Card(6) has no occupancy mapping and throws F1 — so this tick
+            // fails PART-WAY through, after the first record already landed in the buffer.
+            var fold = new CardLedgerFold(Occupancy((5, 100)), Competition);
+            var badTap = new FakeLedgerTap().Add(Card(5)).Add(Card(6)).AtTick(1);
+
+            Assert.Throws<InvalidOperationException>(() => fold.ObserveTick(badTap));
+            Assert.AreEqual(1, fold.PendingCardCount,
+                "the first record in the failed tick was already buffered before the second one threw");
+
+            // Even a perfectly consecutive, otherwise-valid next tick must now be refused — tick 1's
+            // partial failure poisons the fold permanently, so its buffered cards (which the fold cannot
+            // prove are complete) are never compounded with more.
+            InvalidOperationException refusal = Assert.Throws<InvalidOperationException>(
+                () => fold.ObserveTick(new FakeLedgerTap().Add(Card(5)).AtTick(2)));
+            Assert.That(refusal.Message, Does.Contain("part-way"));
         }
 
         // ── Commit / ObserveTick sequencing ───────────────────────────────────────
@@ -495,9 +641,9 @@ namespace TacticalDirector.Discipline.Tests
             byte[] EncodeOneRun()
             {
                 var fold = new CardLedgerFold(Occupancy((slot, outgoingPlayer), (bench, incomingPlayer)), Competition);
-                fold.ObserveTick(new FakeLedgerTap().Add(Card(slot)));
-                fold.ObserveTick(new FakeLedgerTap().Add(Sub(outgoing: slot, incoming: bench)));
-                fold.ObserveTick(new FakeLedgerTap().Add(Card(slot, kind: DisciplineConstants.CardKindRed)));
+                fold.ObserveTick(new FakeLedgerTap().Add(Card(slot)).AtTick(1));
+                fold.ObserveTick(new FakeLedgerTap().Add(Sub(outgoing: slot, incoming: bench)).AtTick(2));
+                fold.ObserveTick(new FakeLedgerTap().Add(Card(slot, kind: DisciplineConstants.CardKindRed)).AtTick(3));
 
                 var state = new DisciplineState();
                 fold.Commit(new DisciplineRules(state));
@@ -566,4 +712,17 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | down rather than left to be re-derived. The complementary check     |
 // |         |            |        | — that the guarded SET still equals the settable set — is the new   |
 // |         |            |        | DisciplineConfigCompletenessTests, cross-referenced here.           |
+// | 1.7     | 2026-08-16, later | — | Reviewed findings pass (M1/M3). FakeLedgerTap gained             |
+// |         |            |        | CurrentTick/AtTick(ulong) (M3); every existing test that calls    |
+// |         |            |        | ObserveTick more than once on the same fold now chains consecutive|
+// |         |            |        | ticks, since the fold now enforces continuity. New M1 tests:      |
+// |         |            |        | Constructor_SeedMapsOnePlayerToTwoAgentIds_ThrowsAndNamesBothIds- |
+// |         |            |        | AndThePlayer, Constructor_SeedWithNO_PLAYERRepeated_DoesNotThrow, |
+// |         |            |        | Substitution_ClearsTheVacatedIncomingSlot_ALaterCardThereThrowsF1,|
+// |         |            |        | Substitution_OutgoingEqualsIncoming_Throws. New M3 tests:         |
+// |         |            |        | ObserveTick_SkippedTick_ThrowsAndNamesBothTicks,                  |
+// |         |            |        | ObserveTick_FirstCall_AcceptsAnyTick,                             |
+// |         |            |        | ObserveTick_SameTickTwice_Throws,                                 |
+// |         |            |        | ObserveTick_AfterPartialTickFailure_LatchesAndRefusesEvenA-       |
+// |         |            |        | ConsecutiveTick.                                                   |
 #endregion

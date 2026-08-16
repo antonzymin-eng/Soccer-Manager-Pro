@@ -1,13 +1,17 @@
 // File:     src/discipline/tests/DisciplineEntryTests.cs
 // Created:  2026-08-15
-// Modified: 2026-08-15
+// Modified: 2026-08-16 (reviewed findings pass, L2 — v1.1: six new tests for
+//           YellowsPlusOne(int)/BanMatchesPlus(int,int) — the overflow-named throw at the guard's
+//           boundary, the exact-boundary non-throw one step inside it, ordinary sums, and the
+//           zero-matches never-throws case.)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §2.2 (data structures) / §2.3 F2 / FR-DC-012 / FR-DC-017 /
 //           FR-DC-020; Code Standards #20
 // Purpose:  Unit tests for DisciplineEntry — the three constructor guards (playerId < 0, yellows < 0,
-//           banMatchesRemaining < 0), plus IsEmpty/IsSuspended and value equality. Reviewed finding
-//           M25: DisciplineEntry had no test file at all, and mutation-verified that neutering all
-//           three constructor guards left the whole 105-test discipline suite green.
+//           banMatchesRemaining < 0), IsEmpty/IsSuspended, value equality, and the guarded
+//           YellowsPlusOne/BanMatchesPlus accumulator arithmetic. Reviewed finding M25: DisciplineEntry
+//           had no test file at all, and mutation-verified that neutering all three constructor guards
+//           left the whole 105-test discipline suite green.
 
 using System;
 
@@ -71,6 +75,56 @@ namespace TacticalDirector.Discipline.Tests
             Assert.IsTrue(new DisciplineEntry(1, 0, 0, 1).IsSuspended);
         }
 
+        // ── L2 (reviewed findings pass): guarded accumulator arithmetic ─────────────
+
+        [Test]
+        public void YellowsPlusOne_AtIntMaxValue_ThrowsOverflowNamedMessage()
+        {
+            OverflowException ex = Assert.Throws<OverflowException>(
+                () => DisciplineEntry.YellowsPlusOne(int.MaxValue));
+            Assert.That(ex.Message, Does.Contain("overflow"),
+                "the refusal must name the cause as overflow, not a counting bug");
+        }
+
+        [Test]
+        public void YellowsPlusOne_BelowIntMaxValue_ReturnsIncrementedValue()
+        {
+            Assert.AreEqual(6, DisciplineEntry.YellowsPlusOne(5));
+            Assert.AreEqual(int.MaxValue, DisciplineEntry.YellowsPlusOne(int.MaxValue - 1),
+                "the boundary case, one below the guard, must still succeed");
+        }
+
+        [Test]
+        public void BanMatchesPlus_WouldOverflow_ThrowsOverflowNamedMessage()
+        {
+            OverflowException ex = Assert.Throws<OverflowException>(
+                () => DisciplineEntry.BanMatchesPlus(int.MaxValue - 1, 5));
+            Assert.That(ex.Message, Does.Contain("overflow"),
+                "the refusal must name the cause as overflow, not a counting bug");
+        }
+
+        [Test]
+        public void BanMatchesPlus_ExactlyReachesIntMaxValue_DoesNotThrow()
+        {
+            // int.MaxValue - 5 + 5 == int.MaxValue exactly — the guard's own boundary, isolating
+            // `>` from `>=` in the headroom check.
+            Assert.AreEqual(int.MaxValue, DisciplineEntry.BanMatchesPlus(int.MaxValue - 5, 5));
+        }
+
+        [Test]
+        public void BanMatchesPlus_WithinRange_ReturnsSum()
+        {
+            Assert.AreEqual(9, DisciplineEntry.BanMatchesPlus(4, 5));
+        }
+
+        [Test]
+        public void BanMatchesPlus_ZeroMatches_NeverThrowsRegardlessOfExistingTotal()
+        {
+            // A zero-length ban is legal and a no-op (DisciplineRules.AddBan); it must never be refused
+            // as an overflow no matter how close the existing total already is to int.MaxValue.
+            Assert.AreEqual(int.MaxValue, DisciplineEntry.BanMatchesPlus(int.MaxValue, 0));
+        }
+
         // ── Value equality ─────────────────────────────────────────────────────────
 
         [Test]
@@ -104,4 +158,11 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | mutation-verified — replacing all three with `if (false)` left   |
 // |         |            |        | the whole 105-test discipline suite green before this file       |
 // |         |            |        | existed. Also covers IsEmpty, IsSuspended, and value equality.   |
+// | 1.1     | 2026-08-16 | —      | Reviewed findings pass, L2. Six new tests for                    |
+// |         |            |        | YellowsPlusOne/BanMatchesPlus: overflow-named throws at the      |
+// |         |            |        | guard boundary (int.MaxValue for Yellows; a sum that would       |
+// |         |            |        | exceed it for BanMatchesRemaining), the exact-boundary case one  |
+// |         |            |        | step inside each guard succeeding, an ordinary sum, and the      |
+// |         |            |        | zero-matches case never throwing regardless of the existing      |
+// |         |            |        | total.                                                             |
 #endregion
