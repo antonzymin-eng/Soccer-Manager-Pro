@@ -1,6 +1,8 @@
 // File:     src/match-client-core/tests/MatchRenderProjectionTests.cs
 // Created:  2026-08-03
-// Modified: 2026-08-04
+// Modified: 2026-08-16 (P4b AR round 3, M17: the grounded/degenerate-height ball tests now assert
+//           WorldPosition.y against the drawn radius rather than the shadow's ground Y, + a new
+//           never-sinks-below-ground lock)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4a),
 //           Testing Strategy #19, Code Standards #20
@@ -327,7 +329,13 @@ namespace TacticalDirector.MatchClientCore.Tests
             BallRenderModel ball = MatchRenderProjection.ProjectBall(new Vector3(52.5f, 34f, 0f));
 
             Assert.AreEqual(Vector3.zero, ball.ShadowPosition, "the centre spot is the world origin");
-            Assert.AreEqual(ball.ShadowPosition, ball.WorldPosition);
+            Assert.AreEqual(ball.ShadowPosition.x, ball.WorldPosition.x, Tolerance);
+            Assert.AreEqual(ball.ShadowPosition.z, ball.WorldPosition.z, Tolerance);
+            // M17: a grounded ball's world Y is floored on the DRAWN radius, not on the shadow's
+            // ground Y (0) — the drawn sphere's centre must clear its own radius or its lower
+            // hemisphere sinks through the shadow it sits on.
+            Assert.AreEqual(MatchClientConstants.BallMarkerRadiusM, ball.WorldPosition.y, Tolerance,
+                "the sphere's centre sits one drawn radius above the ground it rests on");
             Assert.AreEqual(MatchClientConstants.BallMarkerRadiusM, ball.Radius, Tolerance);
             Assert.AreEqual(MatchClientConstants.BallMarkerRadiusM, ball.ShadowRadius, Tolerance);
         }
@@ -388,8 +396,30 @@ namespace TacticalDirector.MatchClientCore.Tests
 
                 Assert.AreEqual(expectedGround.x, ball.ShadowPosition.x, Tolerance, "height " + height);
                 Assert.AreEqual(expectedGround.z, ball.ShadowPosition.z, Tolerance, "height " + height);
-                Assert.AreEqual(ball.ShadowPosition, ball.WorldPosition, "height " + height);
+                Assert.AreEqual(ball.ShadowPosition.x, ball.WorldPosition.x, Tolerance, "height " + height);
+                Assert.AreEqual(ball.ShadowPosition.z, ball.WorldPosition.z, Tolerance, "height " + height);
+                // M17: a degenerate height sanitizes to ground (0), which the drawn-radius floor then
+                // lifts to the radius — same reasoning as AGroundedBall_SitsOnItsOwnShadow above.
+                Assert.AreEqual(MatchClientConstants.BallMarkerRadiusM, ball.WorldPosition.y, Tolerance, "height " + height);
                 Assert.AreEqual(MatchClientConstants.BallMarkerRadiusM, ball.Radius, Tolerance, "height " + height);
+            }
+        }
+
+        [Test]
+        public void TheBallNeverSinksBelowTheGroundPlane_M17()
+        {
+            // BallMarkerRadiusM (0.35 m by default) is a legibility figure, not the engine's physical
+            // ball radius (0.11 m at rest, Ball Physics #1 §1.2/Appendix C) — a sphere of the DRAWN
+            // radius centred at the engine's raw physics height has its lower hemisphere below the
+            // turf whenever the raw height is under that radius, which is most of a match including
+            // its single most common state (resting on the ground). The lowest point of the drawn
+            // sphere (world Y minus its own radius) must never go negative, at any height.
+            foreach (float height in new[] { 0f, 0.11f, 0.2f, MatchClientConstants.BallMarkerRadiusM, 1f, 25f })
+            {
+                BallRenderModel ball = MatchRenderProjection.ProjectBall(new Vector3(20f, 50f, height));
+
+                float lowestPointY = ball.WorldPosition.y - ball.Radius;
+                Assert.GreaterOrEqual(lowestPointY, -Tolerance, "height " + height);
             }
         }
 
@@ -418,4 +448,12 @@ namespace TacticalDirector.MatchClientCore.Tests
 // |         |            |        | they covered, replaced by TheBallRadiusDoesNotVaryWithHeight — |
 // |         |            |        | which asserts the ramp is really absent rather than merely     |
 // |         |            |        | unused, since an unused ramp would pass every other test here. |
+// | 1.3     | 2026-08-16 | —      | P4b AR round 3, M17: AGroundedBall_SitsOnItsOwnShadow and       |
+// |         |            |        | ADegenerateHeight_PutsTheBallOnTheGroundRatherThanNowhere no    |
+// |         |            |        | longer assert WorldPosition == ShadowPosition outright — X/Z    |
+// |         |            |        | stay equal, but WorldPosition.y is now the DRAWN radius, not    |
+// |         |            |        | the shadow's ground Y (0), since ProjectBall floors world Y on  |
+// |         |            |        | the radius rather than zero. + TheBallNeverSinksBelowTheGround- |
+// |         |            |        | Plane_M17, which locks the invariant across a spread of heights |
+// |         |            |        | including the engine's real 0.11 m rest height.                |
 #endregion

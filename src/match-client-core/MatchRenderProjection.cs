@@ -1,6 +1,7 @@
 // File:     src/match-client-core/MatchRenderProjection.cs
 // Created:  2026-08-03
-// Modified: 2026-08-04
+// Modified: 2026-08-16 (P4b AR round 3, M17: ProjectBall floors world Y on the drawn radius, not
+//           zero, so the ball never sinks through the ground it rests on)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4a, §7,
 //           §12 rule 1), Ball Physics #1 §1.2 (corner-origin frame), Code Standards #20
@@ -139,6 +140,18 @@ namespace TacticalDirector.MatchClientCore
         /// ball is" left to draw — so it is refused fail-loud, the same gate
         /// <c>MatchFrameView</c>'s constructor applies on the screen-facing path.</para>
         ///
+        /// <para><b>M17: the drawn ball's world Y is floored on its DRAWN radius, not its raw
+        /// height.</b> <see cref="BallRenderModel.Radius"/> is <c>MatchClientConstants.BallMarkerRadiusM</c>
+        /// — a legibility figure (0.35 m by default), not the engine's physical ball radius (0.11 m at
+        /// rest, Ball Physics #1 §1.2/Appendix C) — and the prefab contract scales the ball uniformly
+        /// on all three axes by that radius (clause 2b), so it is drawn as a genuine sphere of that
+        /// size centred on <see cref="BallRenderModel.WorldPosition"/>. Centring that sphere on the
+        /// engine's raw, physically-correct height sinks its lower hemisphere below the turf whenever
+        /// the raw height is under the drawn radius — which is most of a match, including its single
+        /// most common state, resting on the ground at 0.11 m. Flooring world Y on the drawn radius
+        /// keeps the sphere's LOWEST point at or above the ground plane at every height, so it never
+        /// swallows its own shadow or sinks through the markings/M12 ground layers.</para>
+        ///
         /// <para>No size or offset cue is computed here. The camera is tilted
         /// (<see cref="PitchCameraRig"/>), so height is a real world axis and perspective conveys it;
         /// the shadow supplies the one thing perspective cannot, which is the pitch point the ball is
@@ -156,11 +169,16 @@ namespace TacticalDirector.MatchClientCore
 
             Vector3 shadow = PitchViewProjection.ToWorldGround(pitchBallPosition);
 
-            float rawHeight = pitchBallPosition.z;
-            float height    = float.IsFinite(rawHeight) && rawHeight > 0f ? rawHeight : 0f;
+            float rawHeight       = pitchBallPosition.z;
+            float sanitizedHeight = float.IsFinite(rawHeight) && rawHeight > 0f ? rawHeight : 0f;
+            float radius          = MatchClientConstants.BallMarkerRadiusM;
 
-            var world  = new Vector3(shadow.x, height, shadow.z);
-            float radius = MatchClientConstants.BallMarkerRadiusM;
+            // M17: floored on the DRAWN radius (not zero), so a sphere of that radius centred at
+            // world Y never dips below the ground plane — its lowest point is worldY - radius, which
+            // this makes >= 0 unconditionally.
+            float worldY = Mathf.Max(sanitizedHeight, radius);
+
+            var world = new Vector3(shadow.x, worldY, shadow.z);
 
             return new BallRenderModel(world, shadow, rawHeight, radius, radius);
         }
@@ -228,4 +246,16 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | (Row written 2026-08-04 in the following AR pass — the v1.2     |
 // |         |            |        | edit landed without one, leaving v1.1 as the newest row while   |
 // |         |            |        | describing a HeightScale the file no longer had.)               |
+// | 1.3     | 2026-08-16 | —      | P4b AR round 3, M17: ProjectBall's world Y is now floored on    |
+// |         |            |        | the DRAWN radius (BallMarkerRadiusM, a legibility figure) via   |
+// |         |            |        | Mathf.Max, not on zero. BallRenderModel.Radius is 0.35 m by     |
+// |         |            |        | default, not the engine's physical 0.11 m rest height, and the  |
+// |         |            |        | prefab contract scales the ball uniformly by that radius (clause|
+// |         |            |        | 2b) — so a sphere of that radius centred on the RAW physics     |
+// |         |            |        | height had its lower hemisphere below the turf at every height  |
+// |         |            |        | under the radius, including rest, its single most common state, |
+// |         |            |        | visibly sinking through the ground/markings/M12 layers and       |
+// |         |            |        | swallowing its own shadow. HeightM and ShadowPosition are        |
+// |         |            |        | untouched — HeightM stays the engine's raw unsanitised height,   |
+// |         |            |        | ShadowPosition stays the true ground point.                      |
 #endregion

@@ -1,7 +1,7 @@
 // File:     src/match-client-unity/MatchClientBehaviour.cs
 // Created:  2026-08-15
-// Modified: 2026-08-15 (AR round 2 — High findings H4-H6, then Medium/Low findings M10-M13/L6-L8; see
-//           the VersionHistory block at the foot of this file for the per-finding detail)
+// Modified: 2026-08-16 (AR round 3 — Medium/Low findings M15/M16/M18/L9; see the VersionHistory
+//           block at the foot of this file for the per-finding detail)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4b, §12),
 //           Code Standards #20
@@ -38,9 +38,12 @@ namespace TacticalDirector.MatchClientUnity
     /// but the ball's silently needed a second one)</b>:
     /// <list type="bullet">
     /// <item><description><b>(a) FLAT ground props</b> — the agent marker, the possession ring, the
-    /// ball shadow, a marking circle, a marking spot, and a marking line — are authored at UNIT
-    /// RADIUS (the round ones) or UNIT LENGTH ALONG LOCAL +Z WITH UNIT CROSS-SECTION (a marking
-    /// line), and with ZERO EXTENT IN LOCAL Y: the MESH ITSELF must be flat, e.g. a Quad lying flat
+    /// ball shadow, a marking circle, a marking spot, a marking line, or the goal mouth (M18: the
+    /// goal mouth was missing from this enumeration despite going through the identical
+    /// <see cref="PlaceLine"/> path as a marking line and needing the identical authoring) — are
+    /// authored at UNIT RADIUS (the round ones) or UNIT LENGTH ALONG LOCAL +Z WITH UNIT CROSS-SECTION
+    /// (a marking line or the goal mouth), and with ZERO EXTENT IN LOCAL Y: the MESH ITSELF must be
+    /// flat, e.g. a Quad lying flat
     /// rather than a Cylinder. This code assigns local Y = 1 to every one of these (see
     /// <see cref="FlatGroundScale"/> — named for this rule, not the ball's), which is INERT against a
     /// mesh with no height of its own. Flatness comes from the mesh being authored flat; the Y = 1
@@ -80,9 +83,10 @@ namespace TacticalDirector.MatchClientUnity
     /// <c>UnityEngine.Input</c> API. Project Settings → Player → Active Input Handling MUST be
     /// "Input Manager (Old)" or "Both" — under "Input System Package (New)" ONLY, every call in this
     /// file to <c>Input.GetMouseButtonDown</c>/<c>Input.mousePosition</c> throws every frame. This is
-    /// a project-setup requirement this file cannot enforce or detect; it is recorded here because
-    /// nothing else states it (flagged for the Editor-setup instructions, which this file does not
-    /// own).</para>
+    /// a project-setup requirement this file cannot enforce or detect; it is recorded here AND in
+    /// (M14) the Editor-setup document this assembly's README has become —
+    /// <c>src/match-client-unity/README.md</c> — which also carries the prefab contract as a table,
+    /// this GameObject's own transform requirement (M15), and the team-colour palette shape.</para>
     /// </summary>
     public sealed class MatchClientBehaviour : MonoBehaviour
     {
@@ -211,10 +215,12 @@ namespace TacticalDirector.MatchClientUnity
             // match opened with a ~1 s slide-in before FollowBallCamera caught up to the kickoff spot.
             _cameraTarget = new Vector2(PitchViewProjection.HalfLengthM, PitchViewProjection.HalfWidthM);
 
-            // Everything the PREFAB CONTENTS must satisfy is checked as each is instantiated, in
-            // InstantiatePrefab below — the one place a further per-instantiation wiring check
-            // belongs (H-2's own comment). ValidateWiring covers what has to be true before any
-            // Instantiate call is even safe to make.
+            // Everything every PREFAB must satisfy UNIFORMLY is checked as each is instantiated, in
+            // InstantiatePrefab below — the gate for a check that applies to every prefab the same way
+            // (H-2's own comment). L9: a check that applies to only one SLOT belongs at its own
+            // instantiation site instead, not here — H6's marker material/colour-property check in
+            // BuildAgentObjects is the precedent for that pattern. ValidateWiring covers what has to be
+            // true before any Instantiate call is even safe to make.
             //
             // L6: each step can itself set _wiringRejected partway through (a bad prefab found on
             // marking 3 of 20, say) — re-checked between steps so a rejection during BuildMarkings
@@ -286,7 +292,17 @@ namespace TacticalDirector.MatchClientUnity
         /// <see cref="MatchEngineConstants.TEAM_COUNT"/> would index-out-of-range the first time an
         /// away-team agent is drawn; and a non-identity scale on this GameObject's own transform would
         /// silently double-scale every metre figure <see cref="PlaceLine"/>/<see cref="PlaceRadial"/>
-        /// assign, since both mix a world POSITION with a LOCAL scale. Reuses <see cref="RejectWiring"/>
+        /// assign, since both mix a world POSITION with a LOCAL scale. M15: a non-identity ROTATION on
+        /// this GameObject's own transform is the same hazard's other half — <c>Instantiate(prefab,
+        /// parent)</c> keeps <c>instantiateInWorldSpace</c> false, so an instantiated child's
+        /// <c>localRotation</c> copies the prefab's (identity, per the neutral-root contract), but it
+        /// still INHERITS this transform's WORLD rotation. <see cref="PlaceLine"/> assigns a world
+        /// <c>rotation</c> explicitly and is immune; <see cref="PlaceRadial"/>, <see cref="RenderAgents"/>
+        /// and <see cref="RenderBall"/> assign only world position and local scale, so an ancestor
+        /// rotation would silently tilt every circle, spot, marker, ring, ball and shadow while the
+        /// lines alone stayed flat — with no diagnostic anywhere short of this check. Checked against
+        /// world <c>rotation</c>, not <c>localRotation</c>, so a rotated ANCESTOR is caught too, not
+        /// just this GameObject's own transform. Reuses <see cref="RejectWiring"/>
         /// rather than duplicating its log-and-disable behaviour; <see cref="InstantiatePrefab"/> below
         /// is the complementary check that runs once a prefab HAS been instantiated (root neutrality,
         /// no world-space <c>LineRenderer</c>).
@@ -325,6 +341,21 @@ namespace TacticalDirector.MatchClientUnity
                     "PlaceRadial mix a world POSITION with a LOCAL scale, so a scaled parent silently " +
                     "double-scales every metre figure on the pitch. transform.lossyScale is " +
                     transform.lossyScale + ".");
+                return;
+            }
+
+            // M15: the same POSITION-vs-SCALE-vs-ROTATION mixing hazard as the check above, for
+            // rotation. World rotation, not localRotation — a rotated ANCESTOR reaches every child the
+            // same way a scaled one does, and Instantiate(prefab, parent) only ever resets local space.
+            if (transform.rotation != Quaternion.identity)
+            {
+                RejectWiring(
+                    "the MatchClient GameObject's own transform (or an ancestor's) must be at identity " +
+                    "world rotation — PlaceRadial/RenderAgents/RenderBall assign only a world POSITION " +
+                    "and a LOCAL scale, never a rotation, so a rotated parent silently tilts every " +
+                    "circle, spot, marker, ring, ball and shadow while PlaceLine's markings (which do " +
+                    "assign a world rotation) stay flat. transform.rotation is " +
+                    transform.rotation.eulerAngles + ".");
                 return;
             }
 
@@ -383,7 +414,9 @@ namespace TacticalDirector.MatchClientUnity
             // BuildDrawables, not Build: match-client-core has already decomposed each rectangle into
             // the four lines that close it, so every entry here is one primitive and this file
             // synthesises no corner of its own (§12 rule 1).
-            foreach (PitchMarking marking in PitchMarkings.BuildDrawables())
+            PitchMarking[] drawables = PitchMarkings.BuildDrawables();
+
+            for (int i = 0; i < drawables.Length; i++)
             {
                 // L6: RejectWiring may have fired on a PREVIOUS iteration's InstantiatePrefab/PlaceLine/
                 // PlaceRadial call. Without this, a single bad marking prefab keeps getting instantiated
@@ -391,12 +424,23 @@ namespace TacticalDirector.MatchClientUnity
                 // is in the twenties, so that is ~20+ redundant instantiations and log lines for one bug.
                 if (_wiringRejected) { return; }
 
+                PitchMarking marking = drawables[i];
+
+                // M16: BuildDrawables()'s ordering is a stated, deterministic contract (its own doc),
+                // so indexing into it to spread the marking layer into a BAND is safe — every drawable
+                // used to land at the exact same MarkingLayerHeightM, so the boundary/penalty
+                // area/goal area/goal mouth all overlapped at each goal line, the centre spot sat
+                // exactly on the halfway line, and the centre circle crossed it twice. Boot-validated
+                // against BallShadowLayerHeightM in MatchClientConstants so the band cannot grow into
+                // the next ground layer up.
+                float layerHeightM = MatchClientConstants.MarkingLayerHeightM + i * MatchClientConstants.MarkingLayerStepM;
+
                 switch (marking.Kind)
                 {
                     case PitchMarkingKind.Line:
                         PlaceLine(
                             parent, _markingLinePrefab, nameof(_markingLinePrefab),
-                            MatchClientConstants.MarkingLineWidthM, marking.A, marking.B);
+                            MatchClientConstants.MarkingLineWidthM, marking.A, marking.B, layerHeightM);
                         break;
 
                     case PitchMarkingKind.GoalMouth:
@@ -405,15 +449,15 @@ namespace TacticalDirector.MatchClientUnity
                         // a marking line, not a Law 1 marking sharing the line's look.
                         PlaceLine(
                             parent, _goalMouthPrefab, nameof(_goalMouthPrefab),
-                            MatchClientConstants.GoalMouthWidthM, marking.A, marking.B);
+                            MatchClientConstants.GoalMouthWidthM, marking.A, marking.B, layerHeightM);
                         break;
 
                     case PitchMarkingKind.Circle:
-                        PlaceRadial(parent, _markingCirclePrefab, nameof(_markingCirclePrefab), marking.A, marking.Radius);
+                        PlaceRadial(parent, _markingCirclePrefab, nameof(_markingCirclePrefab), marking.A, marking.Radius, layerHeightM);
                         break;
 
                     case PitchMarkingKind.Spot:
-                        PlaceRadial(parent, _markingSpotPrefab, nameof(_markingSpotPrefab), marking.A, marking.Radius);
+                        PlaceRadial(parent, _markingSpotPrefab, nameof(_markingSpotPrefab), marking.A, marking.Radius, layerHeightM);
                         break;
 
                     default:
@@ -427,16 +471,16 @@ namespace TacticalDirector.MatchClientUnity
 
         /// <summary>
         /// Places one straight marking-shaped primitive from <paramref name="fromXY"/> to
-        /// <paramref name="toXY"/>, at the ground layer's Y (M12), using <paramref name="prefab"/> at
-        /// width <paramref name="widthM"/>. Shared by <see cref="PitchMarkingKind.Line"/> (the
-        /// boundary/halfway/box edges) and <see cref="PitchMarkingKind.GoalMouth"/> (M10: its own
-        /// prefab and width, not the marking line's), which differ only in which prefab and width the
-        /// caller passes.
+        /// <paramref name="toXY"/>, at <paramref name="layerHeightM"/> (M12/M16), using
+        /// <paramref name="prefab"/> at width <paramref name="widthM"/>. Shared by
+        /// <see cref="PitchMarkingKind.Line"/> (the boundary/halfway/box edges) and
+        /// <see cref="PitchMarkingKind.GoalMouth"/> (M10: its own prefab and width, not the marking
+        /// line's), which differ only in which prefab and width the caller passes.
         /// </summary>
-        private void PlaceLine(Transform parent, GameObject prefab, string prefabField, float widthM, Vector2 fromXY, Vector2 toXY)
+        private void PlaceLine(Transform parent, GameObject prefab, string prefabField, float widthM, Vector2 fromXY, Vector2 toXY, float layerHeightM)
         {
-            Vector3 from = PitchViewProjection.ToWorld(fromXY, MatchClientConstants.MarkingLayerHeightM);
-            Vector3 to = PitchViewProjection.ToWorld(toXY, MatchClientConstants.MarkingLayerHeightM);
+            Vector3 from = PitchViewProjection.ToWorld(fromXY, layerHeightM);
+            Vector3 to = PitchViewProjection.ToWorld(toXY, layerHeightM);
             Vector3 along = to - from;
 
             GameObject go = InstantiatePrefab(prefab, parent, prefabField);
@@ -453,10 +497,15 @@ namespace TacticalDirector.MatchClientUnity
             go.transform.localScale = scale;
         }
 
-        private void PlaceRadial(Transform parent, GameObject prefab, string prefabField, Vector2 centreXY, float radius)
+        /// <summary>
+        /// Places one round marking-shaped primitive (a circle or a spot) centred at
+        /// <paramref name="centreXY"/>, at <paramref name="layerHeightM"/> (M12/M16), using
+        /// <paramref name="prefab"/> at <paramref name="radius"/>.
+        /// </summary>
+        private void PlaceRadial(Transform parent, GameObject prefab, string prefabField, Vector2 centreXY, float radius, float layerHeightM)
         {
             GameObject go = InstantiatePrefab(prefab, parent, prefabField);
-            go.transform.position = PitchViewProjection.ToWorld(centreXY, MatchClientConstants.MarkingLayerHeightM);
+            go.transform.position = PitchViewProjection.ToWorld(centreXY, layerHeightM);
             go.transform.localScale = FlatGroundScale(radius);
         }
 
@@ -538,8 +587,12 @@ namespace TacticalDirector.MatchClientUnity
 
         /// <summary>
         /// Instantiates one prefab under <paramref name="parent"/> and rejects the client unless the
-        /// instance honours the prefab contract in the type doc. This is the single gate every scene
-        /// object passes through, so it is also where any further wiring check belongs.
+        /// instance honours the prefab contract in the type doc. This is the gate every scene object
+        /// passes through for a check that applies UNIFORMLY to every prefab (root neutrality, no
+        /// world-space <c>LineRenderer</c>) — so that is where a further wiring check of that shape
+        /// belongs. L9: a check that applies to only one SLOT (a specific prefab's material, say)
+        /// belongs at ITS OWN instantiation site instead, the way H6's marker material/colour-property
+        /// check lives in <see cref="BuildAgentObjects"/> rather than here.
         /// </summary>
         private GameObject InstantiatePrefab(GameObject prefab, Transform parent, string prefabField)
         {
@@ -877,4 +930,38 @@ namespace TacticalDirector.MatchClientUnity
 // |         |            |        | (MatchClientConstants.RequireTiltOrOffsetNonzero) — both zero    |
 // |         |            |        | sits the camera directly above its target, an undefined          |
 // |         |            |        | LookAt rotation; each dial stays individually legal at zero.     |
+// | 1.5     | 2026-08-16 | —      | AR round 3, Medium/Low pass (M15/M16/M18/L9, plus the type-doc's |
+// |         |            |        | M8 paragraph updated for M14 — M17/L10/L11 are match-client-core |
+// |         |            |        | / doc-only findings, not this file). M14: the "Editor-setup      |
+// |         |            |        | instructions, which this file does not own" phrase pointed at a  |
+// |         |            |        | document that did not exist anywhere in the repo — now names     |
+// |         |            |        | src/match-client-unity/README.md, which has become that document.|
+// |         |            |        | M15: ValidateWiring gains a world-rotation check beside the      |
+// |         |            |        | existing lossyScale one — Instantiate(prefab, parent) resets a   |
+// |         |            |        | child's LOCAL rotation from the prefab but still inherits this   |
+// |         |            |        | transform's (or an ancestor's) WORLD rotation, and PlaceRadial/  |
+// |         |            |        | RenderAgents/RenderBall assign only world position and local     |
+// |         |            |        | scale, never rotation, so a non-identity rotation here would     |
+// |         |            |        | silently tilt every circle, spot, marker, ring, ball and shadow  |
+// |         |            |        | while PlaceLine's markings (which DO assign a world rotation)    |
+// |         |            |        | stayed flat, with no diagnostic anywhere. M16: the marking layer |
+// |         |            |        | becomes a BAND, not a plane — BuildMarkings threads each          |
+// |         |            |        | drawable's index from PitchMarkings.BuildDrawables() (a stated,  |
+// |         |            |        | deterministic order) through PlaceLine/PlaceRadial's new          |
+// |         |            |        | layerHeightM parameter as MarkingLayerHeightM + i *               |
+// |         |            |        | MatchClientConstants.MarkingLayerStepM (new [GT], boot-validated  |
+// |         |            |        | to stay comfortably clear of BallShadowLayerHeightM) — every      |
+// |         |            |        | drawable used to land at the exact same height, so the boundary/  |
+// |         |            |        | penalty area/goal area/goal mouth all overlapped at each goal     |
+// |         |            |        | line, the centre spot sat exactly on the halfway line, and the    |
+// |         |            |        | centre circle crossed it twice. M18: the type-doc prefab-contract |
+// |         |            |        | clause 2a enumeration gains the goal mouth, missing since M10     |
+// |         |            |        | gave it its own prefab despite going through the identical         |
+// |         |            |        | PlaceLine path and needing the identical unit-length/unit-        |
+// |         |            |        | cross-section authoring as a marking line. L9: InstantiatePrefab's |
+// |         |            |        | doc and BuildScene's echoing comment no longer claim to be THE     |
+// |         |            |        | single gate for any further wiring check — both now scope that     |
+// |         |            |        | claim to checks applying UNIFORMLY to every prefab, naming H6's    |
+// |         |            |        | per-marker material/property check (in BuildAgentObjects, not      |
+// |         |            |        | here) as the precedent for a per-slot check's correct home.        |
 #endregion

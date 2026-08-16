@@ -1,8 +1,7 @@
 // File:     src/match-client-core/MatchClientConstants.cs
 // Created:  2026-07-24
-// Modified: 2026-08-15 (P4b AR round 2, M/L pass: + GoalMouthWidthM, the four ground-layer height
-//           constants, MarkingLineWidthM validation, and the CameraTiltDegrees/CameraLateralOffsetM
-//           pairing check)
+// Modified: 2026-08-16 (P4b AR round 3, M16: + MarkingLayerStepM and its
+//           RequireMarkingBandFitsBelowShadowLayer pairing check)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P0/§5-P3/§5-P4a/§5-P4b/§5-P5),
 //           Code Standards #20 (constant catalogue; no magic numbers)
@@ -363,6 +362,30 @@ namespace TacticalDirector.MatchClientCore
             Config.GetFloat("match-client", "AgentMarkerLayerHeightM", 0.003f),
             PossessionRingLayerHeightM, "AgentMarkerLayerHeightM", "PossessionRingLayerHeightM");
 
+        /// <summary>
+        /// [GT] Height (m) between successive drawables within the marking layer band (M16). Config
+        /// key [match-client] MarkingLayerStepM.
+        ///
+        /// <para>M12's four ground layers keep markings/shadow/ring/marker from z-fighting BETWEEN
+        /// classes, but every entry <see cref="PitchMarkings.BuildDrawables"/> returns was still
+        /// placed at the exact same <see cref="MarkingLayerHeightM"/> — so the boundary, the penalty
+        /// areas, the goal areas and the goal mouths all overlap at each goal line, the centre spot
+        /// sits exactly on the halfway line, and the centre circle crosses it twice. This turns the
+        /// marking layer from a plane into a band: drawable index <c>i</c> is placed at
+        /// <c>MarkingLayerHeightM + i * MarkingLayerStepM</c> — <see cref="PitchMarkings.BuildDrawables"/>'s
+        /// ordering is already a stated, deterministic contract (its own doc), so indexing into it is
+        /// safe.</para>
+        ///
+        /// <para>Bounded so <see cref="PitchMarkings.DRAWABLE_COUNT"/> steps of it stay comfortably
+        /// below the clearance to <see cref="BallShadowLayerHeightM"/> (see
+        /// <see cref="RequireMarkingBandFitsBelowShadowLayer"/>) — otherwise the top of the marking
+        /// band would itself z-fight with the ball's shadow, reopening the exact hazard M12 fixed one
+        /// layer up.</para>
+        /// </summary>
+        public static readonly float MarkingLayerStepM = RequireMarkingBandFitsBelowShadowLayer(
+            Config.GetFloat("match-client", "MarkingLayerStepM", 0.00001f),
+            PitchMarkings.DRAWABLE_COUNT, MarkingLayerHeightM, BallShadowLayerHeightM, "MarkingLayerStepM");
+
         #endregion
 
         /// <summary>
@@ -465,6 +488,37 @@ namespace TacticalDirector.MatchClientCore
             }
 
             return value;
+        }
+
+        /// <summary>
+        /// Returns <paramref name="stepM"/>, or throws when <paramref name="drawableCount"/> steps of
+        /// it would push the TOP of the marking band (M16) past the MIDPOINT of the clearance between
+        /// <paramref name="baseHeightM"/> and <paramref name="shadowHeightM"/> — "comfortably below"
+        /// the shadow layer, not merely under it. Two individually-legal values (a small step, a large
+        /// drawable count) can pair into a band that reaches the next ground layer up, which is the
+        /// same shape <see cref="RequireFarRayMeetsGround"/> and <see cref="RequireTiltOrOffsetNonzero"/>
+        /// guard, so this follows their shape rather than being folded into a per-key range check.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">The band does not fit comfortably below the
+        /// shadow layer.</exception>
+        internal static float RequireMarkingBandFitsBelowShadowLayer(
+            float stepM, int drawableCount, float baseHeightM, float shadowHeightM, string key)
+        {
+            float bandTopM = baseHeightM + stepM * drawableCount;
+            float halfClearanceM = baseHeightM + (shadowHeightM - baseHeightM) * 0.5f;
+
+            if (!(bandTopM < halfClearanceM))
+            {
+                throw new InvalidOperationException(
+                    "[match-client] " + key + " (" + Inv(stepM) + ") * PitchMarkings.DRAWABLE_COUNT (" +
+                    Inv(drawableCount) + ") puts the top of the marking band at " + Inv(bandTopM) +
+                    "m, which is not comfortably below BallShadowLayerHeightM (" + Inv(shadowHeightM) +
+                    "m) — it must stay under the midpoint of the clearance above MarkingLayerHeightM (" +
+                    Inv(halfClearanceM) + "m), or the highest drawable in the marking band would " +
+                    "z-fight with the ball's shadow.");
+            }
+
+            return stepM;
         }
 
         /// <summary>
@@ -605,4 +659,16 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | together they put the camera directly above its look-at target,|
 // |         |            |        | where Transform.LookAt's forward is antiparallel to the default |
 // |         |            |        | up vector.                                                       |
+// | 1.10    | 2026-08-16 | —      | P4b AR round 3, M16: + MarkingLayerStepM and                    |
+// |         |            |        | RequireMarkingBandFitsBelowShadowLayer. The four M12 ground-     |
+// |         |            |        | layer heights stopped markings z-fighting BETWEEN classes, but  |
+// |         |            |        | every PitchMarkings.BuildDrawables() entry still landed at the  |
+// |         |            |        | exact same MarkingLayerHeightM, so drawables z-fought WITHIN     |
+// |         |            |        | their own class (goal-line overlaps, the centre spot on the     |
+// |         |            |        | halfway line, the centre circle crossing it twice). The new     |
+// |         |            |        | [GT] turns the marking layer into a band; its pairing check     |
+// |         |            |        | follows RequireFarRayMeetsGround's shape — the band's TOP must  |
+// |         |            |        | stay comfortably (under the midpoint of the clearance) below    |
+// |         |            |        | BallShadowLayerHeightM, or it would reopen the exact M12 hazard  |
+// |         |            |        | one layer up.                                                    |
 #endregion

@@ -1,8 +1,7 @@
 // File:     src/match-client-core/tests/MatchClientConstantsTests.cs
 // Created:  2026-08-04
-// Modified: 2026-08-15 (P4b AR round 2, M/L pass: RequireTiltOrOffsetNonzero (L8), the ground-layer
-//           height ordering and MarkingLineWidthM/GoalMouthWidthM bounds (M12/L7) in the shipped-
-//           values test)
+// Modified: 2026-08-16 (P4b AR round 3, M16: RequireMarkingBandFitsBelowShadowLayer coverage, +
+//           the marking-band-vs-shadow-layer invariant in the shipped-values test)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4a),
 //           Code Standards #20 §3.2.3 ([GT] loading), Testing Strategy #19
@@ -107,6 +106,24 @@ namespace TacticalDirector.MatchClientCore.Tests
         }
 
         [Test]
+        public void RequireMarkingBandFitsBelowShadowLayer_RefusesABandThatDoesNotClearTheShadowLayerComfortably_M16()
+        {
+            // Mirrors RequireFarRayMeetsGround's shape: the band's TOP must stay comfortably below
+            // the shadow layer (under the midpoint of the clearance), not merely under it, or the
+            // highest drawable in the marking band would z-fight with the ball's shadow — reopening
+            // the exact M12 hazard one layer up.
+            Assert.AreEqual(0.00001f, MatchClientConstants.RequireMarkingBandFitsBelowShadowLayer(
+                0.00001f, 27, 0f, 0.001f, "MarkingLayerStepM"), "27 * 0.00001 = 0.00027, well under the 0.0005 midpoint");
+
+            Assert.Throws<InvalidOperationException>(
+                () => MatchClientConstants.RequireMarkingBandFitsBelowShadowLayer(0.001f, 27, 0f, 0.001f, "MarkingLayerStepM"),
+                "the band reaches the shadow layer outright");
+            Assert.Throws<InvalidOperationException>(
+                () => MatchClientConstants.RequireMarkingBandFitsBelowShadowLayer(0.00002f, 27, 0f, 0.001f, "MarkingLayerStepM"),
+                "27 * 0.00002 = 0.00054 clears the shadow layer but not comfortably — past the 0.0005 midpoint");
+        }
+
+        [Test]
         public void RequireTiltOrOffsetNonzero_RefusesOnlyBothZero_L8()
         {
             // Each dial is individually legal at zero — straight-down tilt, or dead-centre framing —
@@ -173,6 +190,16 @@ namespace TacticalDirector.MatchClientCore.Tests
             Assert.Less(MatchClientConstants.MarkingLayerHeightM, MatchClientConstants.BallShadowLayerHeightM);
             Assert.Less(MatchClientConstants.BallShadowLayerHeightM, MatchClientConstants.PossessionRingLayerHeightM);
             Assert.Less(MatchClientConstants.PossessionRingLayerHeightM, MatchClientConstants.AgentMarkerLayerHeightM);
+
+            // M16: the marking BAND (DRAWABLE_COUNT steps of MarkingLayerStepM, starting at
+            // MarkingLayerHeightM) must stay comfortably under BallShadowLayerHeightM, re-evaluated on
+            // the finished values for the same static-init-order reason the tilt/fov pairing above is.
+            float markingBandTopM = MatchClientConstants.MarkingLayerHeightM +
+                PitchMarkings.DRAWABLE_COUNT * MatchClientConstants.MarkingLayerStepM;
+            float shadowHalfClearanceM = MatchClientConstants.MarkingLayerHeightM +
+                (MatchClientConstants.BallShadowLayerHeightM - MatchClientConstants.MarkingLayerHeightM) * 0.5f;
+            Assert.Less(markingBandTopM, shadowHalfClearanceM,
+                "the highest drawable in the marking band must not approach the ball's shadow layer");
 
             // L8: at least one of the pair must be non-zero, re-evaluated on the finished values for
             // the same static-init-order reason the tilt/fov pairing above is.
@@ -249,4 +276,11 @@ namespace TacticalDirector.MatchClientCore.Tests
 // |         |            |        | check gains MarkingLineWidthM/GoalMouthWidthM's [0.01, 1] bound,|
 // |         |            |        | the four ground-layer heights' strict ascending order, and the  |
 // |         |            |        | tilt/lateral-offset not-both-zero re-evaluation.                |
+// | 1.7     | 2026-08-16 | —      | P4b AR round 3, M16: +                                          |
+// |         |            |        | RequireMarkingBandFitsBelowShadowLayer_                          |
+// |         |            |        | RefusesABandThatDoesNotClearTheShadowLayerComfortably_M16, in    |
+// |         |            |        | RequireFarRayMeetsGround's own test shape. The shipped-values    |
+// |         |            |        | check gains the cross-catalogue invariant that DRAWABLE_COUNT    |
+// |         |            |        | steps of MarkingLayerStepM keep the marking band comfortably     |
+// |         |            |        | under BallShadowLayerHeightM.                                    |
 #endregion

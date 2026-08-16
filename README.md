@@ -247,7 +247,9 @@ per tick and `MatchRoster` deliberately holds none, which fixes both surfaces. N
 taking its corners in either order while `PitchMarkings` builds the end boxes goal-line-inwards, so
 the two away boxes arrived with descending X and a binding using `B − A` as an extent would have
 drawn exactly those two inverted — #8 ERR-008-002's home/away asymmetry class, in a `MonoBehaviour`
-the gate can never see. **Next: P4b on the pinned host.**)
+the gate can never see. **Next: P4b on the pinned host.** **UPDATE August 15, 2026: P4b landed as
+code** — `src/match-client-unity/MatchClientBehaviour.cs`; host verification is still outstanding, see
+below.)
 
 **Last Updated (prior):** August 3, 2026, latest same day (**Owner decision — roadmap B6 reversed: the product
 ships the full Unity UI, not the web-hosted viewer.** Doc-only. `src/match-client-web/` is retained and
@@ -258,7 +260,8 @@ unchanged. Standing rule recorded in `interactive-unity-client-design.md` §12 a
 `path-to-playable-roadmap.md` §7/C2 — **keep logic out of `MonoBehaviour`s**, since the CI gate cannot
 compile that assembly and faking `MonoBehaviour` in the Unity shim is explicitly refused. `PM-1`'s three
 screen-facing exit criteria reopen against the Unity client; its determinism criterion is met head-lessly
-and stays met.)
+and stays met. **UPDATE August 15, 2026: P4b has since landed as code** —
+`src/match-client-unity/MatchClientBehaviour.cs`; see below.)
 
 **Last Updated (prior):** August 3, 2026, later same day (**Interactive Unity client P6 — the head-less
 closed-loop scenario LANDED, ahead of P4.** The client's input-determinism claim is now checked on
@@ -882,10 +885,13 @@ PM-3 (playable career) ladder. Phase A (season spine) is in progress:
    reference harness** — the only surface exercising the read/playback/intent loop in CI — and is the
    current floor, but it is not the target. P0–P3, the head-less half of P6, **and P4a (the render
    model — coordinate adapter, IFAB marking catalogue, roster, per-agent and ball draw states)** are
-   done; **P4b (the Unity binding) is next, on the pinned host**, then P5 and P6's on-host half. P4 was
-   split on the standing rule for this surface: **keep logic out of `MonoBehaviour`s** — the CI gate
-   cannot compile `match-client-unity` and never will, so every decision lives in gate-compiled
-   `match-client-core` / `ui-framework`, and P4a is that rule made into a phase. See
+   done; **P4b (the Unity binding) landed as code August 15, 2026**
+   (`src/match-client-unity/MatchClientBehaviour.cs`) but is not yet host-verified —
+   `match-client-unity` is excluded from the CI gate by design (§12 rule 1), so P5 and P6's on-host
+   half, plus P4b's own host verification, remain outstanding. P4 was split on the standing rule for
+   this surface: **keep logic out of `MonoBehaviour`s** — the CI gate cannot compile
+   `match-client-unity` and never will, so every decision lives in gate-compiled `match-client-core` /
+   `ui-framework`, and P4a is that rule made into a phase. See
    `docs/tracking/interactive-unity-client-design.md` §12.
 
 **Operations / housekeeping:**
