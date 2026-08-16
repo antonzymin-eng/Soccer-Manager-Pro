@@ -1,6 +1,11 @@
 // File:     src/season-save/SeasonSaveConstants.cs
 // Created:  2026-07-22
-// Modified: 2026-08-16, later (round-4 reviewed-findings pass over the ERR-030-046 landing — the
+// Modified: 2026-08-16, round 5 (docs-only annotation, M1 round-5 reviewed-findings pass — the v1.10
+//           row's "one of four sites" / "AvailabilityComposition.cs (both sites)" undercounts: that
+//           diff corrected THREE sites in AvailabilityComposition.cs, not two, and missed a ninth site
+//           entirely (AvailabilityCompositionExtremisTests.cs's CapFallbackExtremis comment). Real
+//           corrected-site total: NINE. Annotated in place — v1.11)
+// Prior-Modified: 2026-08-16, later (round-4 reviewed-findings pass over the ERR-030-046 landing — the
 //           EXTREMIS_SEARCH_CANDIDATE_CAP doc's "self-healing" sentence conflated the search
 //           resuming beyond the cap with the guarantee resuming; corrected to say the search resumes
 //           but a greedily committed candidate is never revisited, so the composition can remain
@@ -181,4 +186,13 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | mirrored wording at AvailabilityComposition.cs (both sites),    |
 // |         |            |        | section-3.md §3.4, and discipline-suspensions/{section-2,       |
 // |         |            |        | section-7}.md corrected in the same pass.                       |
+// | 1.11    | 2026-08-16, round 5 | — | Docs-only annotation (M1, round-5 reviewed-findings pass).  |
+// |         |            |        | The v1.10 row's "one of four sites" / "AvailabilityComposi-     |
+// |         |            |        | tion.cs (both sites)" undercounts: that same round-4 diff       |
+// |         |            |        | corrected THREE sites in AvailabilityComposition.cs, not two,   |
+// |         |            |        | and missed a ninth site entirely (AvailabilityCompositionExtre- |
+// |         |            |        | misTests.cs's CapFallbackExtremis comment, fixed only now at    |
+// |         |            |        | that file's v1.4). Real corrected-site total: NINE. Annotated   |
+// |         |            |        | in place, not rewritten, here and at every other record of the  |
+// |         |            |        | undercount. No behaviour or normative text changed.              |
 #endregion

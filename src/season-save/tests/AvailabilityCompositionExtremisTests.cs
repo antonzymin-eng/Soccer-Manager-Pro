@@ -1,6 +1,18 @@
 // File:     src/season-save/tests/AvailabilityCompositionExtremisTests.cs
 // Created:  2026-08-16
-// Modified: 2026-08-16, even later still (round-4 reviewed-findings pass over the ERR-030-046 landing —
+// Modified: 2026-08-16, round 5 (a reviewed-findings pass over the round-4 landing — CapFallbackExtremis's
+//           own comment still carried the exact sentence round 4 proved false ("it self-heals ... the
+//           exact search resumes for every later pass"), even though that SAME commit reworded the
+//           identical claim at every other site it touched; reworded here to state both halves (the
+//           search resumes, the guarantee does not). ALSO: the round-4 sweep's own site count was wrong —
+//           it recorded "two sites" fixed in AvailabilityComposition.cs when the same diff touched three
+//           (the XML doc at ~152, the XML doc at ~421, and the inline comment inside
+//           `ChooseSuspendedCandidate`'s Cap branch at ~528), so the real corrected-site count, this file
+//           included, is NINE: #30 `section-3.md` §3.4's Cap bullet and residual (ii), the three
+//           `AvailabilityComposition.cs` sites, `SeasonSaveConstants.cs`, #44 `section-2.md`, #44
+//           `section-7.md`, and this comment. Annotated in place at each recorded site per the
+//           annotate-published-rows convention — v1.4)
+// Prior:    2026-08-16, even later still (round-4 reviewed-findings pass over the ERR-030-046 landing —
 //           + InCapBoundaryExtremis (m == EXTREMIS_SEARCH_CANDIDATE_CAP exactly, the cap-comparison
 //           mutant-killer) and TiedForcedStartExtremis (two candidates tied at the same positive dirty
 //           count, the preference-strictness mutant-killer); both observed FAILING against their named
@@ -452,8 +464,9 @@ namespace TacticalDirector.SeasonSave.Tests
             // The stated residual (ii). With THIRTEEN concurrent suspended candidates the exhaustive
             // search is refused outright — 2^13 probes is an algorithmic budget, not a football
             // judgement — and the first pass degrades to the ascending-rank greedy with NO minimality
-            // claim. It self-heals: each pass commits one candidate, so m falls below the cap and the
-            // exact search resumes for every later pass.
+            // claim. The exact search resumes once the candidate count falls back inside the bound, but
+            // the guarantee does not: a greedily committed candidate is not revisited, so the
+            // composition can remain above the minimum for that fixture.
             //
             // The assertions are deliberately narrow. Termination, fieldability and repeat-call
             // determinism are the only properties the fallback promises, and asserting a clean XI here
@@ -1075,4 +1088,16 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | way the test fails. The third named mutant (the collapsed commit |
 // |         |            |        | rule) is moot after v1.8 — the fixed code already behaves        |
 // |         |            |        | identically to the collapsed form on every reachable input.      |
+// | 1.4     | 2026-08-16, round 5 | — | Round-5 reviewed-findings pass (M1). CapFallbackExtremis's own |
+// |         |            |        | comment missed by the round-4 sweep: reworded from "it self-heals|
+// |         |            |        | ... the exact search resumes for every later pass" to state both |
+// |         |            |        | halves (the search resumes once m falls back inside the bound,   |
+// |         |            |        | the guarantee does not, since a greedily committed candidate is  |
+// |         |            |        | never revisited). Round 4's own "two sites" count for            |
+// |         |            |        | AvailabilityComposition.cs corrected to three (~152, ~421, ~528),|
+// |         |            |        | making the real corrected-site total NINE with this one; the     |
+// |         |            |        | mismatched counts recorded at #30 section-3.md v2.10's row, #44  |
+// |         |            |        | section-2.md v0.18's row, section-7.md v0.11's row, spec-error-  |
+// |         |            |        | log.md's ERR-030-046 annotation, and AvailabilityComposition.cs's|
+// |         |            |        | own v1.8 header/row are annotated in place, not rewritten.        |
 #endregion

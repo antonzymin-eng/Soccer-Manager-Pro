@@ -12,7 +12,67 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 16, 2026 (rounds 8-9) — **#44 adversarial-review ROUNDS 8-9, a fresh
+> **Last Updated:** August 16, 2026 (rounds 10-12) — **#44/#30 adversarial-review ROUNDS 10-12, a
+> continuation of the rounds-8-9 chain over the SAME `ERR-030-044`/`ERR-044-019` tier-2 reinstatement
+> landing.** Commits `a4a672b..d0f534a` (`ba2c574..HEAD`). **Round 10 (`a4a672b`, wave A) — M/L
+> findings, visibility/locks/text residues, no High:** the `DisciplineConfigCompletenessTests`
+> reflection scan widened to see `NonPublic` fields (an internal `[GT]` can no longer ship unguarded);
+> the constructor's `onPitchAgentIdCount` range guard and the production `SQUAD_SIZE` cross-assembly
+> occupancy-swap argument both gained mutation-verified locks; `ERR-044-013`'s owed `NO_PLAYER` spec
+> note discharged; stale `SelectAvailable` references in `LineupSelector`/`SeasonSaveManager`
+> re-pointed or past-tensed (the type itself was deleted at round 9, before `ba2c574`; this closes the
+> citations round 9 left behind); twelve duplicated oracle comments collapsed into one `ComposedOracle`
+> helper; a division-derived club-membership assertion replaced with real roster-array membership;
+> `match-analytics` card routing now fails loud on an unknown kind. Text: section-2's four-vs-five
+> miscount corrected, `ERR-044-014`'s stale remainder list closed, the `open-issues.md` #44 GATE
+> placeholder filled with the `051c25a` verdict, Appendix C's `onPitchAgentIdCount = 22`.
+> **Round 11 (`21bde36`, wave B) — 1 High, `ERR-030-046` ESCALATED under the no-third-identical-retry
+> rule:** the SAME tier-2 within-tier defect survived TWO successive fixes (`ERR-030-044`'s roster-order
+> key, `ERR-030-045`'s ascending-`PlayerRating` re-key) because both were an element-wise greedy
+> decision of a fundamentally set-valued, per-position constraint — a global scalar cannot see that a
+> squad has no room for the globally weakest banned player at HIS position, and measured on generated
+> mass-suspension fixtures, **≥ 476 of 1920** had a clean completing choice the algorithm missed. The
+> third attempt was ruled, not iterated: `ChooseSuspendedCandidate` becomes a capped exhaustive
+> clean-completion search over subsets of the still-removed candidates (new `[FIXED]
+> EXTREMIS_SEARCH_CANDIDATE_CAP = 12`, an algorithmic budget, not a `[GT]`), with the guarantee restated
+> as a THEOREM — the composed squad fields the minimum achievable number of reinstated-suspended
+> players, zero whenever any completing choice benches them all. Locked by three new
+> `AvailabilityCompositionExtremisTests` cases (`WeakPositionExtremis`, `MinimalStallExtremis`,
+> `CapFallbackExtremis`; suite 5 → 8), cross-filed at #44 as an extension of `ERR-044-019`.
+> **Round 12 (`d0f534a`) — 0 High / 1 Medium / 5 Low, all fixed in this commit, over the round-11
+> landing.** The Commit rule's third branch (`|R*| ≥ 2` with every member singly completing) was
+> unreachable, unproven, and would have violated round 11's own theorem if it were ever live: a
+> **monotonicity lemma** is now STATED and proven — `LineupSelector`'s per-position top-`k` selection
+> makes `dirty(R)` monotone non-decreasing under adding candidates, so a completing singleton is
+> already the global minimum — verified `thirdBranchReachable = 0` over 6,858 generated oracle cases,
+> with the collapsed `order[bestSubset[0]]` form behaviour-identical over 3,966 further cases and
+> 11/11 tests (an independent monotonicity proof over the code slice, not merely a restatement of
+> round 11's claim). The third branch is now a fail-loud `InvalidOperationException` naming the lemma,
+> its re-choice machinery deleted rather than kept dead; a fourth Commit case binds "no subset completes
+> at all" for the first time, with a hoisted full-set probe skipping the whole `m·2^m` enumeration on
+> that branch. Both "self-heals" beyond-cap residual statements were wrong the same way — conflating the
+> SEARCH resuming with the GUARANTEE resuming — corrected at six sites (a later reviewed-findings pass
+> found this same commit's own test-file comment had been missed, making the real total nine; see
+> `spec-error-log.md`'s `ERR-030-046` annotation). Two new mutant-killers, `InCapBoundaryExtremis`
+> (`m == CAP` exactly) and `TiedForcedStartExtremis` (a tied positive dirty count), each verified by
+> actually applying its named mutant and observing the failure before reverting; the discipline slice's
+> `ERR-044-022` ordering claim — previously unfalsifiable, since the constructor copies the seed and a
+> fresh fold is pristine regardless of guard ordering — is now genuinely locked through a new internal
+> `CardLedgerFold.OccupancyAt(int)` observation seam, with the guard-reordering mutation observed
+> FAILING 145/146; a null-seed constructor lock added. Five mutations executed and observed across the
+> round: the two `AvailabilityCompositionExtremisTests` mutant-killers above, the `OccupancyAt`
+> guard-reorder, the null-seed guard deletion, and the collapsed-commit-rule equivalence check.
+> **THE GATE (measured at `d0f534a`):** meta-integrity OK; build 0 errors; 34 suites, quarantine empty;
+> `MatchEngine.Tests` **461 passed / 1 failed / 11 skipped** — the sole failure is the inherited
+> owner-held-red `sim_match_engine_close_chance`, identical at baseline, no new failure;
+> `Discipline.Tests` **146/146**; `SeasonSave.Tests` **447 passed / 0 failed / 3 known skips**;
+> `MatchAnalytics.Tests` **59/59**. Assemblies touched: `src/discipline/`, `src/season-save/`,
+> `src/match-engine/` (`SquadRating.cs` + `LineupSelector.cs`, doc/lock only), `src/match-analytics/`
+> — **no `src/deterministic-sim/` change this stretch**, unlike the rounds-8-9 entry. No new files (21
+> files modified across the three commits, zero added). Full account: `CHANGELOG-src.md`,
+> `spec-error-log.md` v2.42 (`ERR-030-046` and its round-12 annotation).
+>
+> **Last Updated (prior):** August 16, 2026 (rounds 8-9) — **#44 adversarial-review ROUNDS 8-9, a fresh
 > three-reviewer pass over the WHOLE branch state (AR-8 and AR-9 in the chain — the prior chain ended
 > at round 7). Round 8: 3 High / 12 Medium / 7 Low, all fixed. Round 9, a fresh full re-review of
 > round 8's own landing: 1 High / 10 Medium / 5 Low, all fixed.** Commits `2f4626f..051c25a`.

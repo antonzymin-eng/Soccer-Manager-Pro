@@ -1,6 +1,16 @@
 // File:     src/season-save/AvailabilityComposition.cs
 // Created:  2026-08-13
-// Modified: 2026-08-16, even later still (round-4 reviewed-findings pass over the ERR-030-046 landing —
+// Modified: 2026-08-16, round 5 (docs-only annotation, a reviewed-findings pass over the v1.8 landing
+//           below — M1: the "two sites" count v1.8 recorded for this file is WRONG. That diff corrected
+//           THREE sites here (the XML doc at ~152, the XML doc at ~421, and the inline comment inside
+//           ChooseSuspendedCandidate's Cap branch at ~528), not two, and the whole sweep's real
+//           corrected-site total is NINE, not the six/"four-or-six" recorded elsewhere — a ninth site,
+//           AvailabilityCompositionExtremisTests.cs's own CapFallbackExtremis comment, was missed
+//           entirely by the v1.8 commit and fixed only now (that file's v1.4). Annotated in place, not
+//           rewritten, here and at #30 section-3.md v2.10's row, #44 section-2.md v0.18's row,
+//           section-7.md v0.11's row, and spec-error-log.md's ERR-030-046 annotation. No behaviour,
+//           guarantee, or normative text changed — v1.9)
+//           Prior: 2026-08-16, even later still (round-4 reviewed-findings pass over the ERR-030-046 landing —
 //           the monotonicity lemma the commit rule's third branch always relied on is now STATED, not
 //           assumed: LineupSelector's per-position top-k selection makes dirty(R) monotone
 //           non-decreasing under adding candidates, so a completing singleton is already the global
@@ -1022,4 +1032,15 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | case, the residual wording), #44 section-2.md / section-7.md      |
 // |         |            |        | (residual wording only), spec-error-log.md (ERR-030-046           |
 // |         |            |        | annotation, dated).                                                |
+// | 1.9     | 2026-08-16, round 5 | — | Docs-only annotation (M1, round-5 reviewed-findings pass). The |
+// |         |            |        | v1.8 row above's "corrected at both sites here" undercounts: this |
+// |         |            |        | file's own v1.8 diff touched THREE sites (~152, ~421, and the     |
+// |         |            |        | inline Cap-branch comment at ~528), not two, so the real          |
+// |         |            |        | corrected-site total across the whole sweep is NINE, not the six  |
+// |         |            |        | (or "four/six") recorded elsewhere — AvailabilityCompositionExtre-|
+// |         |            |        | misTests.cs's own CapFallbackExtremis comment was the ninth site  |
+// |         |            |        | and was missed entirely. Annotated in place, not rewritten, here  |
+// |         |            |        | and at #30 section-3.md v2.10's row, #44 section-2.md v0.18's row,|
+// |         |            |        | section-7.md v0.11's row, and spec-error-log.md's ERR-030-046     |
+// |         |            |        | annotation. No behaviour, guarantee, or normative text changed.   |
 #endregion

@@ -1,14 +1,15 @@
 // File:     src/discipline/CardLedgerFold.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16, round 5 (round-5 reviewed-findings pass, L-t4, header only — v1.14; see version history)
 // Modified: 2026-08-16, latest of all, later still again (round-4 reviewed-findings pass, M-C — v1.13; see version history)
 // Modified: 2026-08-16, latest of all and later still (round-4 reviewed-findings pass, L-E — v1.12; see version history)
 // Modified: 2026-08-16, latest of all (L-1 and M-B, adversarial review, doc only — v1.11; see version history)
 // Modified: 2026-08-16, latest again (findings A and B, reviewed findings pass — v1.10; see version history)
 // Modified: 2026-08-16, latest (findings A and C, doc only — v1.9; see version history)
 // Modified: 2026-08-16, later (reviewed findings pass, M1/M3/L2 — v1.8; see version history)
-// Modified: 2026-08-16 (adversarial-review M2, doc only — RequireCommittableConfig records that adding; see version history)
+// Modified: 2026-08-16 (adversarial-review M2, doc only — records the guard-addition contract; see version history)
 // Modified: 2026-08-15, later (reviewed findings pass, L3/L5 — v1.6; see version history)
-// Modified: 2026-08-15 (#44 AR round 5, L19/L22 — the type remark's claim that SeasonSaveManager; see version history)
+// Modified: 2026-08-15 (#44 AR round 5, L19/L22 — the type remark's SeasonSaveManager claim corrected; see version history)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §3.1 (the occupancy fold) / §4.3 (the tap read);
 //           FR-DC-002/003/004/005/006/010; F1/F4; ERR-044-001 (Appendix C's bench-id defect);
@@ -810,4 +811,14 @@ namespace TacticalDirector.Discipline
 // |         |            |        | replacing a proxy check (a second fold built from the same seed)   |
 // |         |            |        | that could not tell pre-write-guard ordering from post-write-guard |
 // |         |            |        | ordering. No change to any existing production behaviour.          |
+// | 1.14    | 2026-08-16, round 5 | — | Round-5 reviewed-findings pass (L-t4), header only. Two    |
+// |         |            |        | condensed Modified: lines (v1.7/M2 and v1.5/L19-L22) were           |
+// |         |            |        | truncated mid-clause when their narratives were condensed to      |
+// |         |            |        | single lines at v1.13 — "records that adding" and "the type       |
+// |         |            |        | remark's claim that SeasonSaveManager" both stopped short of a    |
+// |         |            |        | complete phrase. Trimmed to complete short phrases ("records the  |
+// |         |            |        | guard-addition contract"; "the type remark's SeasonSaveManager    |
+// |         |            |        | claim corrected"), verified against their own v1.5/v1.7 table     |
+// |         |            |        | rows above. No behaviour or detail change — the full narrative    |
+// |         |            |        | still lives in those rows, as the header itself says.              |
 #endregion

@@ -1,5 +1,8 @@
 // File:     src/discipline/tests/CardLedgerFoldTests.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16, round 5 (round-5 reviewed-findings pass, L-code — v1.11: Substitution_WithA-
+//           BenchOutgoing_Throws gained the two OccupancyAt assertions its Incoming sibling already had,
+//           locking the Outgoing guard's pre-write ordering the same way; mutation-verified.)
 // Modified: 2026-08-16, latest of all and later still (round-4 reviewed-findings pass, L-D/M-C — v1.10:
 //           L-D — new Constructor_NullOccupancySeed_Throws beside Constructor_EmptyOccupancySeed_Throws;
 //           the null-seed guard had no isolating lock (mutation-verified: deleting it left the suite
@@ -420,6 +423,20 @@ namespace TacticalDirector.Discipline.Tests
 
             Assert.That(ex.Message, Does.Contain(outgoingBench.ToString()),
                 "the refusal must name the offending Outgoing id");
+
+            // L-code (round-5 reviewed-findings pass): the Incoming test above locks its guard's
+            // PRE-WRITE ordering through OccupancyAt; this sibling asserted only the refusal itself,
+            // leaving the Outgoing guard's ordering unlocked. Mirrored here: both slots' occupancy must
+            // be exactly what the seed set, unaffected by the refused substitution — the guard must run
+            // before any write, not after a partial one. Mutation-verified: moving only this guard to
+            // AFTER the write/clear pair left the suite green except this test, which then failed here
+            // (OccupancyAt(outgoingBench) reads incomingBench's occupant instead of its own) — reverted.
+            Assert.AreEqual(300, fold.OccupancyAt(outgoingBench),
+                "the outgoing bench slot's occupancy must be unaffected by the refused substitution — "
+                + "the guard must run before any write, not after a partial one.");
+            Assert.AreEqual(101, fold.OccupancyAt(incomingBench),
+                "the incoming bench slot's occupancy must be unaffected by the refused substitution — "
+                + "the guard must run before any write, not after a partial one.");
         }
 
         // ── FR-DC-004: unknown ordinals ignored, known ones still fold in the same batch ──
@@ -910,4 +927,15 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | unchanged. Mutation-verified: moving both ERR-044-022 guards to    |
 // |         |            |        | after the write/clear pair made this test fail (slot 5 read 101,   |
 // |         |            |        | not 100), 145/146 passing; reverted after observing the failure.   |
+// | 1.11    | 2026-08-16, round 5 | — | Round-5 reviewed-findings pass (L-code). v1.10 locked the   |
+// |         |            |        | Incoming guard's pre-write ordering through OccupancyAt but left  |
+// |         |            |        | its sibling, Substitution_WithABenchOutgoing_Throws, asserting     |
+// |         |            |        | only the refusal itself. Two OccupancyAt assertions added after   |
+// |         |            |        | the refusal, mirroring the Incoming test: the outgoing bench      |
+// |         |            |        | slot's occupancy (300) and the incoming bench slot's (101) must   |
+// |         |            |        | both be unaffected. Mutation-verified: moving only the Outgoing   |
+// |         |            |        | guard (CardLedgerFold.cs ApplySubstitution) to after the          |
+// |         |            |        | write/clear pair left the whole suite green except this test,     |
+// |         |            |        | which then failed here (OccupancyAt(outgoingBench) read 101, not  |
+// |         |            |        | 300); reverted after observing the failure.                        |
 #endregion
