@@ -1,6 +1,8 @@
 // File:     src/match-client-core/tests/MatchClientConstantsTests.cs
 // Created:  2026-08-04
-// Modified: 2026-08-07
+// Modified: 2026-08-16 (P4b AR round 4, M19: RequireMarkingBandFitsBelowShadowLayer's new strictly-
+//           positive lower bound coverage, + the MarkingLayerStepM > 0 invariant in the shipped-
+//           values test)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4a),
 //           Code Standards #20 §3.2.3 ([GT] loading), Testing Strategy #19
@@ -105,6 +107,56 @@ namespace TacticalDirector.MatchClientCore.Tests
         }
 
         [Test]
+        public void RequireMarkingBandFitsBelowShadowLayer_RefusesABandThatDoesNotClearTheShadowLayerComfortably_M16()
+        {
+            // Mirrors RequireFarRayMeetsGround's shape: the band's TOP must stay comfortably below
+            // the shadow layer (under the midpoint of the clearance), not merely under it, or the
+            // highest drawable in the marking band would z-fight with the ball's shadow — reopening
+            // the exact M12 hazard one layer up.
+            Assert.AreEqual(0.00001f, MatchClientConstants.RequireMarkingBandFitsBelowShadowLayer(
+                0.00001f, 27, 0f, 0.001f, "MarkingLayerStepM"), "27 * 0.00001 = 0.00027, well under the 0.0005 midpoint");
+
+            Assert.Throws<InvalidOperationException>(
+                () => MatchClientConstants.RequireMarkingBandFitsBelowShadowLayer(0.001f, 27, 0f, 0.001f, "MarkingLayerStepM"),
+                "the band reaches the shadow layer outright");
+            Assert.Throws<InvalidOperationException>(
+                () => MatchClientConstants.RequireMarkingBandFitsBelowShadowLayer(0.00002f, 27, 0f, 0.001f, "MarkingLayerStepM"),
+                "27 * 0.00002 = 0.00054 clears the shadow layer but not comfortably — past the 0.0005 midpoint");
+        }
+
+        [Test]
+        public void RequireMarkingBandFitsBelowShadowLayer_RefusesAZeroOrNegativeStep_M19()
+        {
+            // M19: the ceiling check alone cannot catch either case — 0 * drawableCount is always
+            // comfortably under any positive clearance, so a zero step passed it trivially and
+            // silently reopened the exact M16 z-fighting bug (every drawable coplanar again) with no
+            // diagnostic; a negative step passed it too, while driving the band DOWNWARD through the
+            // ground plane. Both must be refused before the ceiling math ever runs.
+            Assert.Throws<InvalidOperationException>(
+                () => MatchClientConstants.RequireMarkingBandFitsBelowShadowLayer(0f, 27, 0f, 0.08f, "MarkingLayerStepM"),
+                "a zero step silently reopens the M16 hazard");
+            Assert.Throws<InvalidOperationException>(
+                () => MatchClientConstants.RequireMarkingBandFitsBelowShadowLayer(-0.001f, 27, 0f, 0.08f, "MarkingLayerStepM"),
+                "a negative step drives the band below the ground plane");
+            Assert.Throws<InvalidOperationException>(
+                () => MatchClientConstants.RequireMarkingBandFitsBelowShadowLayer(float.NaN, 27, 0f, 0.08f, "MarkingLayerStepM"),
+                "NaN fails the strictly-positive check too");
+        }
+
+        [Test]
+        public void RequireTiltOrOffsetNonzero_RefusesOnlyBothZero_L8()
+        {
+            // Each dial is individually legal at zero — straight-down tilt, or dead-centre framing —
+            // and it is the PAIR that is degenerate, in RequireFarRayMeetsGround's own shape.
+            Assert.AreEqual(5f, MatchClientConstants.RequireTiltOrOffsetNonzero(5f, 0f), "tilt alone");
+            Assert.AreEqual(0f, MatchClientConstants.RequireTiltOrOffsetNonzero(0f, 22f), "offset alone");
+            Assert.AreEqual(-5f, MatchClientConstants.RequireTiltOrOffsetNonzero(-5f, 0f), "either sign");
+
+            Assert.Throws<InvalidOperationException>(
+                () => MatchClientConstants.RequireTiltOrOffsetNonzero(0f, 0f), "both zero is refused");
+        }
+
+        [Test]
         public void TheMessageNamesTheConfigKey_SoABootFailureIsActionable()
         {
             // It surfaces wrapped in a TypeInitializationException, where the inner message is all
@@ -137,6 +189,47 @@ namespace TacticalDirector.MatchClientCore.Tests
                 MatchClientConstants.CameraTiltDegrees + MatchClientConstants.CameraVerticalFovDegrees * 0.5f,
                 90f, "the camera's lowest ray must still meet the ground");
             Assert.IsTrue(float.IsFinite(MatchClientConstants.CameraLateralOffsetM));
+
+            // M-2: both tint factors are blend fractions, so [0, 1] is the whole legal range, not
+            // just today's shipped values.
+            Assert.GreaterOrEqual(MatchClientConstants.GoalkeeperTintFactor, 0f);
+            Assert.LessOrEqual(MatchClientConstants.GoalkeeperTintFactor, 1f);
+            Assert.GreaterOrEqual(MatchClientConstants.SentOffTintFactor, 0f);
+            Assert.LessOrEqual(MatchClientConstants.SentOffTintFactor, 1f);
+
+            // L7: MarkingLineWidthM and GoalMouthWidthM are both drawn widths — the same [0.01, 1] m
+            // span, re-evaluated on the finished values rather than assumed from the validator call.
+            Assert.GreaterOrEqual(MatchClientConstants.MarkingLineWidthM, 0.01f);
+            Assert.LessOrEqual(MatchClientConstants.MarkingLineWidthM, 1f);
+            Assert.GreaterOrEqual(MatchClientConstants.GoalMouthWidthM, 0.01f);
+            Assert.LessOrEqual(MatchClientConstants.GoalMouthWidthM, 1f);
+
+            // M12: the four ground-layer heights must be STRICTLY ascending — markings lowest, then
+            // shadow, then ring, then marker — or the layer they were added to separate collapses
+            // back onto its neighbour.
+            Assert.Less(MatchClientConstants.MarkingLayerHeightM, MatchClientConstants.BallShadowLayerHeightM);
+            Assert.Less(MatchClientConstants.BallShadowLayerHeightM, MatchClientConstants.PossessionRingLayerHeightM);
+            Assert.Less(MatchClientConstants.PossessionRingLayerHeightM, MatchClientConstants.AgentMarkerLayerHeightM);
+
+            // M19: the step itself must be strictly positive, re-evaluated on the finished value —
+            // zero or negative silently reopens the M16 z-fighting bug the band exists to fix.
+            Assert.Greater(MatchClientConstants.MarkingLayerStepM, 0f);
+
+            // M16: the marking BAND (DRAWABLE_COUNT steps of MarkingLayerStepM, starting at
+            // MarkingLayerHeightM) must stay comfortably under BallShadowLayerHeightM, re-evaluated on
+            // the finished values for the same static-init-order reason the tilt/fov pairing above is.
+            float markingBandTopM = MatchClientConstants.MarkingLayerHeightM +
+                PitchMarkings.DRAWABLE_COUNT * MatchClientConstants.MarkingLayerStepM;
+            float shadowHalfClearanceM = MatchClientConstants.MarkingLayerHeightM +
+                (MatchClientConstants.BallShadowLayerHeightM - MatchClientConstants.MarkingLayerHeightM) * 0.5f;
+            Assert.Less(markingBandTopM, shadowHalfClearanceM,
+                "the highest drawable in the marking band must not approach the ball's shadow layer");
+
+            // L8: at least one of the pair must be non-zero, re-evaluated on the finished values for
+            // the same static-init-order reason the tilt/fov pairing above is.
+            Assert.IsFalse(
+                MatchClientConstants.CameraTiltDegrees == 0f && MatchClientConstants.CameraLateralOffsetM == 0f,
+                "tilt and lateral offset cannot both be zero — the camera would sit directly above its target");
         }
 
         [Test]
@@ -199,4 +292,26 @@ namespace TacticalDirector.MatchClientCore.Tests
 // |         |            |        | cross-catalogue pairing check that a playback speed is one the  |
 // |         |            |        | streamer will accept. Bounds are written relative to the cap    |
 // |         |            |        | rather than as literals, so a retune keeps the test meaningful. |
+// | 1.5     | 2026-08-15 | —      | P4b AR pass M-2: the shipped-values check gains the two new    |
+// |         |            |        | tint factors' [0, 1] bound.                                     |
+// | 1.6     | 2026-08-15 | —      | P4b AR round 2, M/L pass: + RequireTiltOrOffsetNonzero_         |
+// |         |            |        | RefusesOnlyBothZero_L8 (both-legal-alone, illegal-together, in  |
+// |         |            |        | RequireFarRayMeetsGround's own test shape). The shipped-values  |
+// |         |            |        | check gains MarkingLineWidthM/GoalMouthWidthM's [0.01, 1] bound,|
+// |         |            |        | the four ground-layer heights' strict ascending order, and the  |
+// |         |            |        | tilt/lateral-offset not-both-zero re-evaluation.                |
+// | 1.7     | 2026-08-16 | —      | P4b AR round 3, M16: +                                          |
+// |         |            |        | RequireMarkingBandFitsBelowShadowLayer_                          |
+// |         |            |        | RefusesABandThatDoesNotClearTheShadowLayerComfortably_M16, in    |
+// |         |            |        | RequireFarRayMeetsGround's own test shape. The shipped-values    |
+// |         |            |        | check gains the cross-catalogue invariant that DRAWABLE_COUNT    |
+// |         |            |        | steps of MarkingLayerStepM keep the marking band comfortably     |
+// |         |            |        | under BallShadowLayerHeightM.                                    |
+// | 1.8     | 2026-08-16 | —      | P4b AR round 4, M19: +                                          |
+// |         |            |        | RequireMarkingBandFitsBelowShadowLayer_RefusesAZeroOrNegative-   |
+// |         |            |        | Step_M19 — the v1.7 test only ever exercised the ceiling, never  |
+// |         |            |        | the (until now nonexistent) lower bound, so a zero or negative   |
+// |         |            |        | step reaching the validator went uncaught. The shipped-values    |
+// |         |            |        | check gains MarkingLayerStepM > 0, re-evaluated on the finished  |
+// |         |            |        | value for the same static-init-order reason its siblings are.    |
 #endregion
