@@ -83,7 +83,11 @@ event model), #27 (`PlayerId`/`Squad`, read-only), #30 (the flow #44 hooks, via 
 root). **Downstream (deferred consumers):** #38 (screens), #43 (partitions), #46 (news
 aggregation of bans).
 
-Reference DAG: `compositionRoot → {#30, #44}`, `#44 → {#17 (event types), #27 (read-only)}`.
+Reference DAG: `compositionRoot → {#30, #44}`, `#44 → {#17 (event types), #27 (read-only), #16
+(`CanonicalSerializer`'s byte helpers only — `DisciplineSaveCodec`'s single `using` in the assembly —
+never #16's RNG service), project-constants (shared `[GT]` config, read-only)}` — the full four-entry
+`discipline.asmdef` reference set (`EventSystem`, `PlayerDatabase`, `DeterministicSim`,
+`ProjectConstants`), matching §4.1.
 **Acyclic.** #44 does **not** reference #30, #43, #38, #16's RNG service, or engine internals.
 **No RNG stream, no domain tag, no ordinal** (the #37/#49 positive property — no #16 row needed).
 

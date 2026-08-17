@@ -1,9 +1,32 @@
 # Discipline & Suspensions #44 — Appendices
 
 **Created:** July 24, 2026
-**Last Updated:** August 15, 2026, later still (v0.8 — reviewed-findings pass. **M5 (new id
+**Last Updated:** August 16, 2026, later still (v0.11 — reviewed-findings pass, finding L-A: Appendix C's
+seed paragraph never stated `onPitchAgentIdCount` even though the worked substitution two paragraphs
+below is legal only under exactly `SQUAD_SIZE = 22` — now stated explicitly in the paragraph itself,
+with the direction it enforces. No id/tick/tally changes.)
+**Last Updated (prior):** August 16, 2026, later (v0.10 — final fixer pass over the reviewed-findings round.
+**`ERR-044-016`** (M6): Appendix C's worked example was not producible by the live engine —
+`MatchEngine.SubstitutePlayer` resets `_yellowCards[outSlot] = 0` on every substitution and
+`ApplyCardAndCheckSentOff` returns kind 2 only when the recipient slot's OWN count is `>= 2` after
+increment, so a slot's first booking since a reset can never legitimately be a kind-2. A kind-0 card
+for slot 7 now sits between the substitution and the kind-2 card, with the ticks and resulting
+tallies recomputed around it and the engine precondition (`_yellowCards[slot] >= 1`) stated
+explicitly; the id arithmetic verified at `ERR-044-001` is unchanged. **M7**: Appendix A's four
+`[GT]` threshold/ban rows renamed ALL_CAPS → PascalCase, matching `section-2.md`/`section-3.md` and
+`DisciplineConstants.cs`. **L6**: the `CardLedgerFold.cs:66` line citation (both in this file's own
+v0.8-chain header and its version-history table row) replaced with the member name `NO_PLAYER`,
+annotated in place rather than silently rewritten.)
+**Last Updated (prior):** August 16, 2026 (v0.9 — `ERR-044-014`, adversarial-review H1: Appendix C's worked
+example updated for the amended `OnClubFixturePlayed(clubId, clubPlayerIds, fieldedPlayerIds)`
+signature. Both ids are served because they are on club 7's ROSTER — the membership rule §3.3 now
+reads rather than derives — not because `183 / 25 = 191 / 25 = 7`, which remains in the text as the
+packing that makes the example's ids coherent)
+**Last Updated (prior):** August 15, 2026, later still (v0.8 — reviewed-findings pass. **M5 (new id
 `ERR-044-013`):** Appendix A gains a `CardLedgerFold.NO_PLAYER` row (`[FIXED]`, `-1`) — verified
-present at `src/discipline/CardLedgerFold.cs:66`, caller-facing (the constructor's F1-class guard
+present as `src/discipline/CardLedgerFold.cs`'s `NO_PLAYER` member (L6, August 16, 2026: the prior
+`:66` line citation was verified-against-wrong-line, replaced with the member name — a line number is
+not a stable citation), caller-facing (the constructor's F1-class guard
 depends on the distinction) and used normatively by Appendix C below, but never catalogued. **L3:**
 the `LEAGUE_COMPETITION_KEY` row (v0.7, `ERR-044-012`) renamed to `LeagueCompetitionKey` — ALL_CAPS
 next to a `[CROSS]` tag contradicted `src/CLAUDE.md` §3.2.3's PascalCase rule for `[CROSS]`, the same
@@ -32,7 +55,7 @@ the magic-before-version row + the MUST rule and Appendix A the `DISCIPLINE_SAVE
 Appendix C re-worked onto real engine ids after its "slot 19" worked example was verified
 unimplementable, with the hedge deleted)
 **Last Updated (prior):** July 24, 2026 (v0.2 — cross-set AR pass 3; prior v0.1 initial)
-**Version:** 0.8
+**Version:** 0.11
 **Status:** APPROVED
 
 ---
@@ -44,10 +67,10 @@ unimplementable, with the hedge deleted)
 | `DISCIPLINE_SAVE_MAGIC` | `[FIXED]` | `"DISC"` (`0x44495343`) | the sub-blob's self-identifying leading tag, checked BEFORE the version (ERR-044-001 — a format version is not a format identifier). |
 | `DISCIPLINE_SAVE_FORMAT_VERSION` | `[FIXED]` | 1 | the discipline sub-blob's own version gate (KD-1); gated second, behind the magic. |
 | `CardLedgerFold.NO_PLAYER` | `[FIXED]` | -1 | the occupancy-seed sentinel: this agent id maps to no player (§2.2, §3.1). Caller-facing — the constructor throws on any other negative occupancy value (F1's "any gap" refusal depends on the distinction) — and used normatively by Appendix C ("every other bench id `NO_PLAYER`"); had no catalogue row until `ERR-044-013`. |
-| `YELLOW_ACCUMULATION_THRESHOLD` | `[GT]` | 5 (illustrative) | yellows per accumulation ban (§3.2); balance-pass-pinned against real-competition rules. |
-| `ACCUM_BAN_MATCHES` | `[GT]` | 1 (illustrative) | ban length for an accumulation threshold crossing. |
-| `SECOND_YELLOW_BAN_MATCHES` | `[GT]` | 1 (illustrative) | ban length for a kind-2 dismissal. |
-| `STRAIGHT_RED_BAN_MATCHES` | `[GT]` | 2 (illustrative) | ban length for a kind-1 dismissal. |
+| `YellowAccumulationThreshold` | `[GT]` | 5 (illustrative) | yellows per accumulation ban (§3.2); balance-pass-pinned against real-competition rules. |
+| `AccumBanMatches` | `[GT]` | 1 (illustrative) | ban length for an accumulation threshold crossing. |
+| `SecondYellowBanMatches` | `[GT]` | 1 (illustrative) | ban length for a kind-2 dismissal. |
+| `StraightRedBanMatches` | `[GT]` | 2 (illustrative) | ban length for a kind-1 dismissal. |
 | `LeagueCompetitionKey` | `[CROSS]` | 0 | the minimal-tier `CompetitionId` partition key (FR-DC-012) — a **verbatim copy** of APPROVED Competition Structure #43's `LEAGUE_COMPETITION_ID` (`docs/specs/competition-structure/appendices.md`, value 0, FR-CP-004), consumed read-only and never set independently here (`ERR-044-012` — the identical `CardKindYellow`/`Red`/`SecondYellow` argument two rows below, applied to this constant). PascalCase per `src/CLAUDE.md` §3.2.3's `[CROSS]` naming rule, the `CardKindYellow` precedent (L17) applied to this constant too. The literal `0` stays a literal rather than a compiler-checked mirror: #43 has no `src/` assembly yet to bind a `CompetitionStructureConstants` reference to. |
 | `CardIssuedEvent` 0x06 / `SubstitutionEvent` 0x08 | `[CROSS]` | #17/engine | the fold's inputs (payloads verified — XC-044-001); kinds `{0,1,2}` with the single-event kind-2 contract. |
 | `CardKindYellow` | `[CROSS]` | 0 | `CardIssuedEvent.CardKind`'s own domain ordinal (#17 Appendix A row 0x06 — "0=Yellow, 1=Red, 2=SecondYellow"); #44 consumes it read-only and never sets it independently (L17 — was `[FIXED]` `CARD_KIND_YELLOW`, the ALL_CAPS/`[FIXED]` mistagging root `CLAUDE.md`'s tag table rules out for a value defined in another spec). |
@@ -104,20 +127,53 @@ Fixture N (engine-resolved), home team (`teamId = 0`). Lineup seeds on-pitch slo
 (club 7 — `183 / 25 = 7`); bench `benchIndex = 0` → PlayerId 191 (club 7, local 16 — same club, as a
 lineup must be), occupying the synthetic agent id `22 + 0 * 7 + 0 = 22`. The occupancy seed spans
 every agent id the engine can address (`SQUAD_SIZE + 2 * SUBSTITUTES_PER_TEAM = 36` entries): agent
-id 7 → 183, agent id 22 → 191, every other bench id `NO_PLAYER` until used.
+id 7 → 183, agent id 22 → 191, every other bench id `NO_PLAYER` until used. **The fold is constructed
+with `onPitchAgentIdCount = SQUAD_SIZE = 22`** (§2.2, `ERR-044-022`) — the boundary that makes the
+tick 9 000 substitution below *legal*: `Outgoing = 7 < 22` (on-pitch) and `Incoming = 22 ≥ 22`
+(bench), the direction `ApplySubstitution`'s F1 guard requires (L-A, August 16, 2026: this value was
+load-bearing in the example below but never stated).
+
+**`ERR-044-016` (August 16, 2026) — a kind-0 card now sits between the substitution and the kind-2
+card, and the ticks are recomputed around it.** The version below this one had the kind-2 at tick
+12 000 arrive as slot 7's FIRST card since the substitution — unproducible by the live engine:
+`MatchEngine.SubstitutePlayer` resets `_yellowCards[outSlot] = 0` on every substitution, and
+`ApplyCardAndCheckSentOff` returns kind 2 only when the RECIPIENT SLOT's own count is `>= 2` **after**
+the increment — so a slot can only ever emit a kind-2 as its **second** booking since the last reset,
+never its first. The id arithmetic (`183 / 25 = 191 / 25 = 7`, the synthetic bench id `22`) was
+already verified correct at `ERR-044-001` and is unchanged; only the tap sequence and the resulting
+tallies are recomputed.
 
 Tap sequence: tick 4 000 `CardIssuedEvent{Recipient: 7, Kind: 0}` → occupant of slot 7 is 183 →
 `Yellows` 4 → 5 ⇒ ban 1, `Yellows` 0 (threshold 5). Tick 9 000
 `SubstitutionEvent{Outgoing: 7, Incoming: 22, Team: 0}` → `ApplySubstitution` reads the occupant of
-the *synthetic* id 22 (191) and moves it onto slot 7: occupancy[7] := 191 (slot identity is
-unchanged; only who occupies it moves). Tick 12 000 `CardIssuedEvent{Recipient: 7, Kind: 2}` →
-occupant of slot 7 is now **191** → `Yellows` +1 **and** ban +1 (one event, one yellow, one
-dismissal — KD-5). Fixture N+1 selection: `FilterAvailable` excludes 183 and 191, so neither
-appears in club 7's fielded eleven; after N+1 is played, `OnClubFixturePlayed(7, fieldedPlayerIds)`
-decrements both to 0 (`183 / 25 = 191 / 25 = 7` — the §3.3 club-derivation rule; neither id is in
-`fieldedPlayerIds`, so the ERR-044-003 stage 1 exemption does not apply — see that section for the
-case where it would) — available for N+2. The engine's slot-7 yellow count was reset by the
-substitution (v1.33) and **never read** — the tally kept 183's card via occupancy, not the slot.
+the *synthetic* id 22 (191) and moves it onto slot 7 — occupancy[7] := 191 (slot identity is
+unchanged; only who occupies it moves) — and clears the vacated bench id 22 to `NO_PLAYER`
+(`ERR-044-021`: a later record naming agent id 22 now fails loud, F1, rather than silently
+double-booking 191). This also resets the engine's OWN `_yellowCards[7]` to 0 (v1.33) — a fact about
+the engine's card-KIND decision, never read by the fold, which tracks 191's accumulation tally by
+occupancy, not by the slot's reset-prone internal count.
+
+Tick 10 500 `CardIssuedEvent{Recipient: 7, Kind: 0}` (`ERR-044-016`, new) → occupant of slot 7 is
+now **191** → `Yellows` 0 → 1, no ban (below threshold 5). **This card is the engine precondition
+`_yellowCards[7] >= 1` that tick 12 000's booking needs to be legitimately emitted as a kind-2**: the
+engine increments `_yellowCards[7]` to 1 here (kind 0, since `1 < 2`), so the NEXT booking on this
+slot increments it to 2 and is returned as kind 2. Tick 12 000 `CardIssuedEvent{Recipient: 7, Kind: 2}`
+→ occupant of slot 7 is still 191 → `Yellows` 1 → 2 (still below threshold) **and** ban +1
+(`SecondYellowBanMatches`, one event, one yellow, one dismissal — KD-5). Player 191 ends the fixture
+at `Yellows = 2, BanMatchesRemaining = 1`; player 183 ends it at `Yellows = 0, BanMatchesRemaining = 1`
+(unchanged from tick 4 000 — the substitution moved occupancy, not his own tally).
+
+Fixture N+1 selection: `FilterAvailable` excludes 183 and 191, so neither appears in club 7's fielded
+eleven; after N+1 is played, `OnClubFixturePlayed(7, clubPlayerIds, fieldedPlayerIds)` decrements
+both bans to 0 (both ids are on club 7's roster, so both are in `clubPlayerIds` — the §3.3 membership
+rule, which since `ERR-044-014` READS the roster rather than deriving it from
+`183 / 25 = 191 / 25 = 7`; neither id is in `fieldedPlayerIds`, so the ERR-044-003 stage 1 exemption
+does not apply — see that section for the case where it would) — **both available for N+2, but only
+183's row is DROPPED.** 183 reaches `(Yellows = 0, BanMatchesRemaining = 0)` and is removed
+immediately per FR-DC-017's canonical-minimality rule; 191 reaches `(Yellows = 2,
+BanMatchesRemaining = 0)` — a real, nonzero row that **survives**, carrying his two accumulated
+yellows toward the next accumulation ban. The two players end the worked example in different states
+for the same reason: the ban was served either way, but only one of them was clean going in.
 All integer; two runs identical; #27 squads byte-untouched.
 
 #region VersionHistory
@@ -130,5 +186,8 @@ All integer; two runs identical; #27 squads byte-untouched.
 | 0.5 | 2026-08-13 | — | **L17**, a fifth adversarial-review pass over the C1/C2 landing: `CARD_KIND_YELLOW`/`RED`/`SECOND_YELLOW` are #17 `CardIssuedEvent.CardKind` domain ordinals (Appendix A row 0x06) #44 consumes read-only and never sets independently — the root `CLAUDE.md` tag table makes that `[CROSS]`, not `[FIXED]`, and `src/CLAUDE.md` §3.2.3 makes `[CROSS]` PascalCase, not `ALL_CAPS`. Retagged and renamed in code (`CardKindYellow`/`CardKindRed`/`CardKindSecondYellow`); Appendix A's single combined `CardIssuedEvent 0x06 / SubstitutionEvent 0x08` row (about the EVENT ordinals, a different fact) is unchanged, and gains three sibling rows — one per card-kind constant, each citing #17 Appendix A row 0x06 by value. |
 | 0.6 | 2026-08-15 | — | **ERR-044-003 stage 1**, owner decision: Appendix C's worked example updated for the amended `OnClubFixturePlayed(clubId, fieldedPlayerIds)` signature, noting that its two example players are already filtered out and so are not in the fielded eleven (the exemption does not fire in this worked case). |
 | 0.7 | 2026-08-15 | — | **`ERR-044-012`**, back-prop owed by `DisciplineConstants.cs` v1.3 (M26): `LEAGUE_COMPETITION_KEY` re-tagged `[FIXED]` → `[CROSS]` — it is a verbatim copy of APPROVED #43's `LEAGUE_COMPETITION_ID` (FR-CP-004), consumed read-only, the identical argument already applied to the `CardKindYellow`/`Red`/`SecondYellow` rows. Literal value `0` unchanged; #43 has no `src/` assembly to bind a real mirror to. See `spec-error-log.md` `ERR-044-012`. |
-| 0.8 | 2026-08-15 | — | **Reviewed-findings pass.** **`ERR-044-013`** (M5, new id): Appendix A gains `CardLedgerFold.NO_PLAYER` (`[FIXED]`, `-1`, verified at `src/discipline/CardLedgerFold.cs:66`) — the occupancy-seed sentinel, caller-facing and used normatively by Appendix C's worked example, but never declared in §2.2 or catalogued here before now (`section-2.md` v0.9 gains the matching §2.2 declaration). **L3:** the `LEAGUE_COMPETITION_KEY` row renamed `LeagueCompetitionKey` — ALL_CAPS beside a `[CROSS]` tag contradicted `src/CLAUDE.md` §3.2.3, the same PascalCase correction L17 already made for the `CardKind*` rows; another agent's `src/discipline/DisciplineConstants.cs` change tracks the same rename. See `spec-error-log.md` `ERR-044-013`. |
+| 0.8 | 2026-08-15 | — | **Reviewed-findings pass.** **`ERR-044-013`** (M5, new id): Appendix A gains `CardLedgerFold.NO_PLAYER` (`[FIXED]`, `-1`, verified as `src/discipline/CardLedgerFold.cs`'s `NO_PLAYER` member) — the occupancy-seed sentinel, caller-facing and used normatively by Appendix C's worked example, but never declared in §2.2 or catalogued here before now (`section-2.md` v0.9 gains the matching §2.2 declaration). **L3:** the `LEAGUE_COMPETITION_KEY` row renamed `LeagueCompetitionKey` — ALL_CAPS beside a `[CROSS]` tag contradicted `src/CLAUDE.md` §3.2.3, the same PascalCase correction L17 already made for the `CardKind*` rows; another agent's `src/discipline/DisciplineConstants.cs` change tracks the same rename. See `spec-error-log.md` `ERR-044-013`. *(L6, August 16, 2026: the `:66` line citation above and in this file's own v0.9-chain header was verified-against-wrong-line — replaced with the member name; a line number is not a stable citation across later edits.)* |
+| 0.9 | 2026-08-16 | — | **`ERR-044-014`** (adversarial review, H1): Appendix C's worked example updated for the amended `OnClubFixturePlayed(clubId, clubPlayerIds, fieldedPlayerIds)` signature, and its parenthetical rewritten — both ids are served because they are ON club 7's roster, which §3.3 now reads directly, rather than because `183 / 25 = 191 / 25 = 7`. The arithmetic is left visible as the packing that makes the example's ids coherent (v0.2's own fix), not as the membership rule. |
+| 0.10 | 2026-08-16, later | — | **Final fixer pass, three findings.** **`ERR-044-016`** (M6): a kind-0 `CardIssuedEvent` for slot 7 inserted between the substitution (tick 9 000) and the kind-2 card, now at tick 12 000, with a new tick 10 500; the engine precondition `_yellowCards[slot] >= 1` stated explicitly, and the resulting tallies recomputed — player 191 ends at `Yellows = 2, BanMatchesRemaining = 1` rather than `1, 1`, and after `OnClubFixturePlayed` serves both bans to 0, only 183's row is dropped (his reaches `(0, 0)`); 191's survives at `(2, 0)`, carrying his yellows toward the next accumulation ban. **M7**: Appendix A's `YELLOW_ACCUMULATION_THRESHOLD`/`ACCUM_BAN_MATCHES`/`SECOND_YELLOW_BAN_MATCHES`/`STRAIGHT_RED_BAN_MATCHES` rows renamed PascalCase. **L6**: the `CardLedgerFold.cs:66` citation in this file's own v0.8-chain header and version-history row replaced with the member name `NO_PLAYER`. See `spec-error-log.md` `ERR-044-016`, `ERR-044-017`. |
+| 0.11 | 2026-08-16, later still | — | **Reviewed-findings pass, finding L-A.** Appendix C's seed paragraph never stated `onPitchAgentIdCount`, though the tick 9 000 substitution two paragraphs below is legal only under exactly 22 (`Outgoing = 7` on-pitch, `Incoming = 22` bench) — the load-bearing value the example silently assumed. Now stated explicitly (`onPitchAgentIdCount = SQUAD_SIZE = 22`, §2.2, `ERR-044-022`) in the seed paragraph itself, with the direction it enforces named. No id/tick/tally in the example changes. |
 #endregion

@@ -1,5 +1,15 @@
 // File:     src/season-save/tests/SeasonLoopScenarios.cs
 // Created:  2026-07-26
+// Modified: 2026-08-16, latest (L-3, adversarial review — v1.5: the ten-plus identical "Oracle = the
+//           composed seam..." comments across this file, PlayerCareerStatesTests, SeasonLoopCareerTests,
+//           AppearanceRecordTests and SeasonSaveCareerRestoreTests were documented, not enforced — this
+//           file gains ComposedOracle, a thin shared wrapper over AvailabilityComposition.Compose whose
+//           doc states the oracle's scope ONCE; every one of those call sites now calls it. No behaviour
+//           change — same underlying Compose call, same arguments, at every site.)
+// Modified: 2026-08-16, later (adversarial-review Medium — the precondition's
+//           PlayerCareerStates.SelectAvailable oracle call re-pointed at
+//           AvailabilityComposition.Compose(discipline: null) directly, since the method was deleted
+//           as production-dead — v1.4)
 // Modified: 2026-08-08 (AR pass 5: the injury-changed-the-eleven precondition — v1.3)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §5.7 (the season-multi-fixture capstone), §3.3/§3.4,
@@ -16,7 +26,9 @@
 
 using System;
 
+using TacticalDirector.Discipline;
 using TacticalDirector.LivingWorld;
+using TacticalDirector.PlayerDatabase;
 using TacticalDirector.TestingStrategy;
 
 namespace TacticalDirector.SeasonSave.Tests
@@ -27,6 +39,27 @@ namespace TacticalDirector.SeasonSave.Tests
     /// </summary>
     internal static class SeasonLoopScenarios
     {
+        /// <summary>
+        /// L-3 (reviewed findings pass): the shared oracle every career/appearance/restore/scenario test
+        /// in this folder compares its production result against — a thin, deliberately unwrapped call
+        /// through to <see cref="AvailabilityComposition.Compose"/>.
+        /// <para>
+        /// <b>The oracle's scope, stated here once.</b> Ten-plus identical call sites across
+        /// <c>PlayerCareerStatesTests</c>, <c>SeasonLoopCareerTests</c>, <c>AppearanceRecordTests</c>,
+        /// <c>SeasonSaveCareerRestoreTests</c> and this file each carried the same "Oracle = the composed
+        /// seam with discipline structurally absent" comment, documented rather than enforced — nothing
+        /// stopped one site drifting to a different composition while the other nine still claimed the
+        /// same guarantee. Routing every site through one method makes that impossible instead of merely
+        /// documented: change what "the oracle" means once, here, and every caller moves with it. Today
+        /// every caller passes <c>discipline: null</c> — the oracle covers #41's contributor only, because
+        /// no fixture in this folder wires a discipline tally yet; the day one does, its call updates HERE
+        /// and every site inherits the correct oracle without a second edit.
+        /// </para>
+        /// </summary>
+        internal static Squad ComposedOracle(
+            Squad squad, PlayerCareerStates career, DisciplineState discipline, int competitionId) =>
+            AvailabilityComposition.Compose(squad, career, discipline, competitionId);
+
         public const string MultiFixturePath =
             TestingStrategyConstants.SCENARIO_PATH_CROSS_SPEC_PREFIX + "season-multi-fixture";
 
@@ -262,7 +295,8 @@ namespace TacticalDirector.SeasonSave.Tests
             MatchResult[] results = loop.AdvanceAndPlayNextRound(league);
 
             int[] expectedManagedXi = TacticalDirector.MatchEngine.SquadRating.StartingElevenPlayerIds(
-                career.SelectAvailable(league.ResolveByClubId(ManagedClubId)));
+                ComposedOracle(
+                    league.ResolveByClubId(ManagedClubId), career, discipline: null, competitionId: 0));
 
             // Precondition (AR pass 5 L7): the injury must have CHANGED the eleven, or the two
             // predicates below are satisfied by a filter that did nothing — the same guard the
@@ -419,4 +453,18 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | precondition predicate (the sibling suite's guard), and the    |
 // |         |            |        | round-mate model comparison states its unfiltered-roster       |
 // |         |            |        | assumption instead of assuming it.                             |
+// | 1.4     | 2026-08-16, later | — | Adversarial-review Medium: the precondition's oracle used the |
+// |         |            |        | now-deleted PlayerCareerStates.SelectAvailable, which agreed    |
+// |         |            |        | with the composed production seam only while no discipline      |
+// |         |            |        | tally was wired (see PlayerCareerStates.cs v1.26). Re-pointed   |
+// |         |            |        | at AvailabilityComposition.Compose(discipline: null) directly,  |
+// |         |            |        | with a comment stating the oracle's scope explicitly. No         |
+// |         |            |        | assertion or fixture changed.                                    |
+// | 1.5     | 2026-08-16, latest | — | L-3 (adversarial review). New internal static ComposedOracle  |
+// |         |            |        | (Squad, PlayerCareerStates, DisciplineState, int) — a thin        |
+// |         |            |        | wrapper over AvailabilityComposition.Compose whose XML doc        |
+// |         |            |        | states the oracle's scope once, replacing the ten-plus identical  |
+// |         |            |        | "Oracle = ..." comments across this file and the four sibling     |
+// |         |            |        | career/appearance/restore suites. This file's own call site       |
+// |         |            |        | updated to call it. No behaviour change.                           |
 #endregion

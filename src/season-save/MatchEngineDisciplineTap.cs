@@ -1,11 +1,13 @@
 // File:     src/season-save/MatchEngineDisciplineTap.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13
+// Modified: 2026-08-16 (reviewed findings pass, M3 — v1.1: forwards MatchEngine.CurrentTick, an
+//           already-public clock read (no MatchEngine.cs change needed), for the new
+//           IDisciplineTickLedgerTap.CurrentTick member.)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §4.3 (the tap read, KD-2) / FR-DC-002/003; Match Analytics
 //           #37 FR-AN-002 (the tap pattern); Season & Competition Loop #30 §3.4; Code Standards #20
-// Purpose:  Adapts MatchEngine's three per-tick ledger accessors to #44's IDisciplineTickLedgerTap, so
-//           the fold can read an engine it is not allowed to reference.
+// Purpose:  Adapts MatchEngine's current tick plus its three per-tick ledger accessors to #44's
+//           IDisciplineTickLedgerTap, so the fold can read an engine it is not allowed to reference.
 
 using System;
 
@@ -42,6 +44,9 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <inheritdoc/>
+        public ulong CurrentTick => _engine.CurrentTick;
+
+        /// <inheritdoc/>
         public int RecordCount => _engine.TickLedgerCount;
 
         /// <inheritdoc/>
@@ -57,4 +62,7 @@ namespace TacticalDirector.SeasonSave
 // | 1.0     | 2026-08-13 | —      | Initial implementation (#44 T2, roadmap C2): the composition     |
 // |         |            |        | root's three-method forward from MatchEngine's ledger tap to     |
 // |         |            |        | #44's IDisciplineTickLedgerTap.                                  |
+// | 1.1     | 2026-08-16 | —      | Reviewed findings pass (M3): CurrentTick forwards the engine's   |
+// |         |            |        | own already-public clock (MatchEngine.CurrentTick); no engine    |
+// |         |            |        | change was needed.                                               |
 #endregion

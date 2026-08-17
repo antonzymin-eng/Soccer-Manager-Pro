@@ -1,7 +1,96 @@
 # Season & Competition Loop Specification #30 — Section 3: Algorithms
 
 **Created:** July 22, 2026
-**Last Updated:** August 15, 2026, later still (v2.6 — **`ERR-030-042`**, a reviewed High from the
+**Last Updated:** August 16, 2026, round 5 (v2.11 — a round-5 reviewed-findings pass, two findings, both
+fixed. **M1 (annotation only):** v2.10's "`AvailabilityComposition.cs` (two sites)" undercounts — that
+round-4 diff corrected THREE sites in that file, not two, and missed a NINTH site entirely
+(`AvailabilityCompositionExtremisTests.cs`'s own `CapFallbackExtremis` comment, in a file the same
+round-4 commit edited). Real corrected-site total: nine. Annotated in place at every record of the
+undercount, not rewritten; the test file's stale comment itself reworded (its v1.4). **L-t3:** two
+normative bullets in §3.4's Cap-search rule carried leftover review-severity labels — "Full-set probe
+first (Low)." / "Allocation, not just walk count (Low):" — dropped; the findings' severities remain at
+v2.10's row. No rule, guarantee, or normative text changed by either finding.)
+**Last Updated (prior):** August 16, 2026, even later still (v2.10 — a round-4 reviewed-findings pass over the
+`ERR-030-046` landing (six findings, all fixed). §3.4's Commit bullet stated a third case — every member
+of `|R*| ≥ 2` completing on its own — with no proof it was ever reachable and no argument it would not
+violate the theorem if it were. It is unreachable, and now says why: a **monotonicity lemma**, new above
+the Commit bullet, that `LineupSelector`'s per-position top-`k` selection makes `dirty(R)` monotone
+non-decreasing under adding candidates, so a completing singleton is already the GLOBAL minimum and a
+`|R*| ≥ 2` winner whose every member singly completes cannot arise (verified: `thirdBranchReachable = 0`
+over 6,858 oracle cases; collapsing the whole rule to `order[bestSubset[0]]` is behaviour-identical over
+3,966 cases and 11/11 tests). The third Commit case is now a fail-loud refusal naming the lemma, not a
+re-choice. A **fourth Commit case** is added for the previously undefined "no subset completes at all"
+branch (⇒ commit the weakest candidate; the outer loop's own bound reports §2.3 F9), alongside a new
+**full-set probe first** bullet that skips the whole `m·2^m` enumeration on that branch by the same
+monotonicity argument. Both **"self-heals" residual statements were wrong in the same way** — the Cap
+bullet and residual (ii) each said the beyond-cap fallback self-heals, true of the SEARCH resuming but
+false of the GUARANTEE, since a greedily committed candidate is never revisited; both corrected, along
+with the same wording at `SeasonSaveConstants.cs`, `AvailabilityComposition.cs` (two sites), and the
+mirrored residual in `discipline-suspensions/{section-2,section-7}.md`. The Cost bullet gains an
+**allocation** sentence (`m = 12` measured at ~74.5 ms / ~157 MiB transient vs ~0.22 ms / ~460 KiB at
+`m = 4`). Code: `src/season-save/AvailabilityComposition.cs` v1.8, `SeasonSaveConstants.cs` v1.10,
+`src/match-engine/SquadRating.cs` v1.6 (doc only — the falsified ERR-030-045 rationale in its own
+"Why this seam exists" paragraph annotated, not deleted); tests:
+`AvailabilityCompositionExtremisTests.cs` v1.3 (+2 mutant-killers at the `m == CAP` boundary and a tied
+positive-dirty-count case, each verified by actually applying its named mutant and observing the test
+fail, then reverting). `spec-error-log.md`'s `ERR-030-046` row annotated with this closure.)
+**Last Updated (prior):** August 16, 2026, later still (v2.9 — **`ERR-030-046`**, an **escalated** High: the same
+defect survived v2.7's and v2.8's fixes, so the third attempt was ruled rather than iterated. §3.4's
+tier-2 within-tier rule is no longer an ordering key at all. v2.8's ascending-`PlayerRating` fallback is a
+**global scalar** while `LineupSelector` selects **per position**, so where the fit squad is thin in the
+globally-weakest banned player's position the blind pass presses exactly *him* back — into a slot no fit
+player can contest — he starts, the reinstated-suspended probe is then unsatisfiable for every later
+candidate, and pass 2 falls to roster order. Measured on generated mass-suspension fixtures, **≥ 476 of
+1920** had a clean completing choice the algorithm missed. **Root-cause class:** an element-wise greedy
+decision of a **set-valued** constraint — a squad is completed by a SET, whether that set starts a banned
+man is a property of the SET, and no per-player scalar can express it. The rule becomes a **capped
+exhaustive clean-completion search** over subsets of the still-removed candidates, with a stated
+**theorem**: within the search bound the composed squad fields the MINIMUM achievable number of
+reinstated-suspended players in its eleven — zero whenever any completing choice benches them all — so
+one starts only in a **probe-verified forced start**. The residual is exactly two things: forced starts,
+and the beyond-cap corner. `ERR-030-044`'s two-case and `ERR-030-045`'s three-case guarantee statements
+are **SUPERSEDED**. New `[FIXED] SeasonSaveConstants.EXTREMIS_SEARCH_CANDIDATE_CAP = 12` — an algorithmic
+probe budget, not a `[GT]`, not subject to KD-W1. Code: `src/season-save/AvailabilityComposition.cs` v1.7,
+`src/season-save/SeasonSaveConstants.cs` v1.9; no change to `SquadRating` / `LineupSelector` /
+`MatchEngine`. Locked by the new `WeakPositionExtremis` mutant-killer, observed failing at the pre-fix
+tree. Cross-filed at #44 as an EXTENSION of `ERR-044-019`.)
+**Last Updated (prior):** August 16, 2026, later (v2.8 — **`ERR-030-045`**, an adversarially-reviewed High
+continuing v2.7's, spec + code same commit. §3.4's tier-2 within-tier key, **pass 3**. `ERR-030-044` left
+it at "earliest roster position" and claimed the outer loop redeemed that, because "passes 1 and 2 still
+decide the reinstatement that finally closes the gap". Both halves were false: fieldability is **monotone
+in adding players**, so while a club is short by more than one NO candidate is fieldable and passes 1 and 2
+are **structurally unreachable** — pass 3 decides every reinstatement but the last, blindly — and the
+blindly reinstated man is then seen in every later candidate's eleven by `AnyReinstatedSuspendedStarts`,
+which makes pass 1 unsatisfiable for the final pick too. Net behaviour at `k >= 2` was *exactly*
+pre-`ERR-030-044`, in the case a mass-suspension club reaches most readily. Pass 3's key becomes
+**ascending selector rank** — `SquadRating.PlayerRating`, a new delegation to
+`LineupSelector.MeanAttribute` rather than a second rating formula in `season-save` — ties on earliest
+roster position: monotone, hence safe on exactly the passes that get no probe. §3.4's "the stall is now
+confined to the forced-start case" is corrected to the honest form: the stall is confined to a reinstatee
+who is **actually fielded**, reached both by a single reinstatement with no benchable candidate and by a
+`k >= 2` set in which every completing choice starts someone — **a minimisation, not a guarantee**. Code:
+`src/season-save/AvailabilityComposition.cs` v1.6, `src/match-engine/SquadRating.cs` v1.5, locked by two
+`AvailabilityCompositionExtremisTests` cases that fail at the pre-fix commit. Cross-filed at #44 as an
+amendment to `ERR-044-019`.)
+**Last Updated (prior):** August 16, 2026 (v2.7 — **`ERR-030-044`**, an adversarially-reviewed High, spec + code
+same commit. **Two halves at §3.4's depleted-squad rule.** *(a) Trigger clarification, not a decision
+change:* the probe this rule already names — `SquadRating.CanFieldStartingEleven` — is `LineupSelector`'s
+FULL selection walk, eleven position-matched starters PLUS the seven-slot bench, so the extremis trigger
+is "the club cannot field WHAT SELECTION REQUIRES" and tier 2 is reachable on **bench depth alone**. The
+prose has said "field the formation" / "a fieldable eleven" since ERR-030-029 and #44 §2.3 says "cannot
+take the field at all"; the mechanism both cite has always meant eighteen. Corrected to the mechanism; the
+eleven-vs-eighteen *narrowing* (a short-bench posture) is recorded as the OPEN owner question, deliberately
+not resolved here. *(b) Within-tier rule amendment, a defect correction:* tier 2's ordering key was
+"earliest roster position", which on a bench-depth shortfall handed the rating-greedy selector whichever
+suspended player sat first on the roster and **started** him — while §3.4's own rationale states that
+reinstating a suspended player into play "stalls the suspension itself". An ordering key contradicting its
+own rule's stated purpose is the ERR class, not a new owner decision. The key becomes "the first candidate,
+in roster order, the selector would BENCH; earliest roster position only when no candidate choice keeps
+every reinstated-suspended player out of the XI", with the three-pass form stated normatively. Tier 1, the
+outer loop, the unfiltered limit and §2.3 F9 untouched. Code: `src/season-save/AvailabilityComposition.cs`
+v1.5. Cross-filed at #44 as `ERR-044-019` (§2.3 / §7.2's one-case statement of the compromise corrected to
+its true two-case form).)
+**Last Updated (prior):** August 15, 2026, later still (v2.6 — **`ERR-030-042`**, a reviewed High from the
 same reviewed-findings sweep: §3.4's depleted-squad rule stated ONE ordering key ("pressing the
 least-injured players back in one at a time — ascending remaining recovery") and then asserted that
 "#44/#36 contribute removals only and inherit the rule unchanged when they join — **#44 has**", while
@@ -62,7 +151,7 @@ suspensions have joined, citing ERR-044-002/ERR-044-003 and the code sites; only
 **Last Updated (prior):** July 25, 2026 (v0.9 — ERR-030-010 §3.7 venue correction, found at #30 T0; prior v0.8 back-prop ERR-030-009 #44 availability-filter null seam in §3.4; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 25, 2026 (v0.8 — back-props ERR-030-008 board tick-order seam + ERR-030-009 JobSecurity derived band; prior v0.7 ERR-030-007 academy, v0.6 ERR-030-006 staff, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 27, 2026 (v1.0 — **ERR-030-015**: §3.5's boundary roll gains step (c′), the calendar rebuild it omitted, without which a rolled season is permanently unplayable; found at #30 T3. Also consolidates the TWO stale `Version` fields this header carried — the drift class `spec-error-log.md` v1.43 records. Prior v0.9 ERR-030-010 §3.7 venue correction; v0.8 back-props ERR-030-008/009; v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 2.6
+**Version:** 2.11
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -313,15 +402,39 @@ the composition** is a #44/#36/#30 concern at this seam, not either filter's pri
 
 **The depleted-squad rule (ERR-030-029, at the balance-pass AR pass 12 — settling the obligation above,
 which the code had settled unilaterally at #29/#41 T2 while #36 §2 F7 and §5 T-NT-I-005 were still
-waiting on it):** when the composed filters leave a club unable to field the formation, the seam
-back-fills by **pressing removed players back in one at a time**, in the tier order below, probing the
-engine's own selector (`SquadRating.CanFieldStartingEleven`) after each, so fieldability is asked of
-the selection rule that will actually run rather than answered by a second, parallel rule at the seam.
-Back-filling to a player COUNT would be wrong: selection refuses a position-incomplete squad outright
-(KD-L3), so eighteen fit outfielders with no goalkeeper would stop the season. In the limit the back-fill is the whole squad —
-the unfiltered behaviour — so **the composed filter can never leave a club worse off than having no
-filter at all**. If even the whole squad cannot field the formation, the seam **fails loud**
-(`InvalidOperationException`, §2.3 F9) — that is a roster-integrity bug, not a football outcome.
+waiting on it):** when the composed filters leave a club unable to field **what selection requires**,
+the seam back-fills by **pressing removed players back in one at a time**, in the tier order below,
+probing the engine's own selector (`SquadRating.CanFieldStartingEleven`) after each, so fieldability is
+asked of the selection rule that will actually run rather than answered by a second, parallel rule at
+the seam. Back-filling to a player COUNT would be wrong: selection refuses a position-incomplete squad
+outright (KD-L3), so eighteen fit outfielders with no goalkeeper would stop the season. In the limit
+the back-fill is the whole squad — the unfiltered behaviour — so **the composed filter can never leave
+a club worse off than having no filter at all**. If even the whole squad cannot satisfy selection, the
+seam **fails loud** (`InvalidOperationException`, §2.3 F9) — that is a roster-integrity bug, not a
+football outcome.
+
+> **What "what selection requires" means, exactly — and why this rule's own prose said something
+> narrower (`ERR-030-044`, trigger clarification, NOT a change of decision).** The probe named one
+> paragraph above is `SquadRating.CanFieldStartingEleven`, and that is `LineupSelector`'s **full
+> selection walk**: eleven position-matched starters **plus** the seven-slot bench —
+> `PLAYERS_PER_TEAM + SUBSTITUTES_PER_TEAM` = **eighteen** players, position-complete in the starting
+> eleven. This rule's prose has said "unable to field the formation" / "a fieldable eleven" since
+> ERR-030-029, and #44 §2.3 says "cannot take the field at all"; **the named mechanism has always meant
+> eighteen and the prose has always read as eleven.** The consequence is not cosmetic: a club with
+> **seventeen** fit, position-complete players can field a perfectly legal XI and still reach the
+> back-fill, needing an eighteenth body for the **bench**. Tier 2 is therefore reachable on **bench
+> depth alone**, which is what made the within-tier defect below possible. The mechanism is
+> authoritative; the prose is corrected to it.
+>
+> **OPEN OWNER QUESTION, recorded not resolved: should the trigger be narrowed to the eleven?** A
+> short-bench posture — refuse to back-fill for bench slots and let a depleted club play with five
+> substitutes, or four, or none — is a defensible football answer and would make the extremis tier
+> markedly rarer. It is **not** taken here, because it is a change to what a fixture *is*
+> (`ConfigureSquads` and every consumer of `LineupPlan` assume a full bench today) and because
+> narrowing the probe without narrowing selection would produce exactly the divergence
+> `LineupSelector.TrySelect` was collapsed to one walk to prevent (#41 T2 AR pass 1's H3). Filed with
+> `ERR-030-044` as the open half; until it is decided, the trigger is the full selection walk and this
+> rule is written against that.
 
 **Reinstatement proceeds in TIERS (ERR-030-042).** The tier decides *who is eligible* to be pressed
 back at all; the ordering key only ranks players *within* the eligible tier. As implemented at
@@ -331,18 +444,148 @@ back at all; the ordering key only ranks players *within* the eligible tier. As 
   recovery, ties broken by earliest roster position. This is the ordinary path; a club is almost never
   depleted past it.
 - **Tier 2 — the suspended** (removed by #44, whether or not also injured): eligible **only when no
-  tier-1 player remains and the club still cannot field the formation**, then by earliest roster
-  position. #44 §2.3 states the same rule in its own words — "every injured player is pressed back
-  before any suspended one, and a suspended player plays only when the alternative is a club that
-  cannot take the field at all" — and #44 §7.2 records it as the owner's decision, taken in preference
-  to the deferral queue (refusing the fixture) that spec had previously recorded as the alternative.
+  tier-1 player remains and the club still cannot satisfy selection**, then by the within-tier rule
+  ruled at `ERR-030-046` below — **not an ordering key at all, but a capped exhaustive search for a
+  completing SET of reinstatements that starts the fewest suspended players**, of which one member is
+  committed per pass. #44 §2.3 states the tier order in its own words, and #44 §7.2 records it
+  as the owner's decision, taken in preference to the deferral queue (refusing the fixture) that spec
+  had previously recorded as the alternative.
+
+> **`ERR-030-044`, within-tier rule amendment (a defect correction, NOT a new owner decision).** Tier 2
+> previously ordered by **earliest roster position**, full stop. Because the trigger is the full
+> selection walk (above), tier 2 fires on **bench depth alone** — and the reinstated player does not go
+> onto a bench, he goes into the **pool the rating-greedy selector draws the starting eleven from**. The
+> roster-order key therefore hands the selector whichever suspended player happens to sit first on the
+> roster, and if he is any good the selector **starts** him: a club that was seventeen fit and one bench
+> short fielded its best banned man, in a fixture it could have played legally without him. This rule's
+> own rationale, three paragraphs down, states that a suspended player reinstated into play "stalls the
+> suspension itself" — so the stated ordering key produced **exactly the outcome the same rule's
+> rationale forbids**, which is why this is filed as an `ERR` rather than raised as an owner question:
+> an ordering key that contradicts its own rule's stated purpose is a defect in the key.
+>
+> `ERR-030-044` amended the key to a three-pass probe (benchable candidate / fieldable-at-all /
+> roster-order fallback) and `ERR-030-045` re-keyed its third pass to ascending selector rank. **Both are
+> superseded by `ERR-030-046` below, which retires the notion of a within-tier ordering key entirely.**
+> The diagnosis above stands unchanged and is what the search is built to satisfy; what does not stand is
+> either spec's account of the *rule*, and neither pass list is normative any longer. Tier 1's key, the
+> outer loop, the never-worse-than-unfiltered limit and the §2.3 F9 terminal refusal were untouched by
+> all three landings.
+
+> **`ERR-030-046` — the within-tier RULE (escalated; supersedes the `ERR-030-044` and `ERR-030-045` pass
+> lists above).** The same defect survived two successive fixes, so the third attempt was ruled rather
+> than iterated, and the ruling changes the *shape* rather than the key. `ERR-030-045`'s ascending
+> `SquadRating.PlayerRating` is a **global scalar**, while `LineupSelector` selects **per position**. Where
+> the fit squad is thin in the globally *weakest* banned player's position — five midfielders rated 5–7
+> against a banned midfielder rated 8, say, with the other banned players defenders that five fit
+> defenders outrank — the blind pass presses exactly him back, into a slot no fit player can contest; he
+> **starts**; the reinstated-suspended test is then unsatisfiable for every later candidate, and the
+> fieldable-at-all pass takes the final pick in roster order. Measured on generated mass-suspension
+> fixtures, **at least 476 of 1920** had a clean completing choice the algorithm did not find.
+>
+> **The root-cause class, which is why a third key was refused:** an **element-wise greedy decision of a
+> set-valued constraint**. A depleted club is completed by a **set** of reinstatements; whether that set
+> puts a banned player in the eleven is a property **of the set**; and the property is decided per
+> position. No per-player scalar — roster order, rating, or any successor — can express it.
+>
+> **The rule.** Take the still-removed (necessarily suspended) candidates and order them ascending by
+> `SquadRating.PlayerRating`, ties on earliest roster position. That is a **total** order and it now
+> decides nothing on its own: it fixes what "first" means so the enumeration is canonical and two
+> identical calls agree. Let `m` be the candidate count.
+>
+> - **Cap.** If `m` exceeds `[FIXED] SeasonSaveConstants.EXTREMIS_SEARCH_CANDIDATE_CAP` (**12** — a
+>   `2^13` probe bound, an algorithmic budget and explicitly **not** a `[GT]`, so not subject to KD-W1's
+>   calibration freeze), the search is refused and the **weakest candidate** is committed, with **no**
+>   cleanliness claim. The exact search resumes once `m` falls back inside the bound, but the guarantee
+>   does not: a candidate this branch commits is never revisited, so the composition can remain above the
+>   minimum for that fixture even after the count recovers.
+> - **Full-set probe first.** Before enumerating, one probe checks whether `F` plus **every**
+>   remaining candidate can field the formation at all. Fieldability is monotone in adding candidates —
+>   the same premise the lemma below rests on — so a full set that cannot complete means no subset can
+>   either; the weakest candidate is returned directly, saving the full `m·2^m` enumeration on the one
+>   call whose answer would have been "no subset completes" (the §2.3 F9 roster-integrity case below).
+> - **Search** (`m` within the cap, full set fieldable). Enumerate every subset `R` of the ordered
+>   candidates, **sizes ascending**, lexicographically within a size. For each: materialise the filtered
+>   squad plus `R` and probe `SquadRating.CanFieldStartingEleven`; a subset that does not complete the
+>   squad is skipped. For one that does, count how many of `SquadRating.StartingElevenPlayerIds` belong to
+>   a reinstated-suspended player — anyone with `suspended[i]` who is either already back from an earlier
+>   pass or a member of `R`.
+> - **Preference** over completing subsets: (1) fewest such starters; (2) smallest `|R|`; (3) first in
+>   the canonical enumeration. The first subset with a count of **zero** is globally optimal and stops
+>   the search, every smaller size having already been exhausted.
+> - **Monotonicity lemma — why the third commit branch below is unreachable.** `LineupSelector` selects
+>   its starting eleven **per position class**, each slot drawing from its own top-`k`; adding a candidate
+>   to any squad can therefore only DISPLACE a same-class player, never change which other classes are
+>   satisfied. So `dirty(R)` is monotone **non-decreasing** in `R` under adding candidates, and a
+>   completing singleton `{c}` is already the GLOBAL minimum over every completing superset containing
+>   `c` — no `|R| ≥ 2` set built on top of it can do better. The search evaluates every singleton at
+>   `s == 1` before any larger size, so a completing singleton is found, and committed as the minimum,
+>   before a `|R*| ≥ 2` winner is ever reached: **a completing singleton cannot coexist with a strictly
+>   better `|R*| ≥ 2` winner while this holds.** The premise is `LineupSelector`'s per-position top-`k`
+>   selection specifically — verified over 6,858 generated oracle cases (`thirdBranchReachable = 0`;
+>   collapsing the whole commit rule to `order[bestSubset[0]]` is behaviour-identical over 3,966 further
+>   cases and 11/11 tests) — and a Stage-1 role-weighted or cross-class selection rule would invalidate it
+>   and reopen the branch, which is why the third case below fails loud rather than re-choosing.
+> - **Commit** — the search chooses a set, the pass commits one member. `|R*| = 1` ⇒ that member.
+>   `|R*| ≥ 2` ⇒ the lemma above guarantees every member's own singleton was probed and did **not**
+>   complete the squad (a completing singleton would already have won at size 1), so the canonically
+>   first such member is committed — the outer loop cannot exit on this pass, so the search reruns next
+>   pass with `R* \ {c}` still available. **No subset completes at all** ⇒ commit the weakest candidate;
+>   the outer loop's own `availableCount == total` bound, not this rule, is what reports that as the
+>   §2.3 F9 roster-integrity case. Should the lemma ever be false — a selection rule that is no longer
+>   per-position top-`k` — every member of `R*` completing on its own is detected and refused loudly
+>   rather than re-chosen among, since a broken theorem gives no key to re-choose by.
+>
+> **Guarantee, in theorem form — and stated as a theorem because two weaker claims were falsified within
+> two days.** With `m` inside the cap, the composed squad fields the **minimum achievable number of
+> reinstated-suspended players in its starting eleven**, minimised over **every** completing subset of the
+> still-removed candidates — **zero whenever any completing choice benches them all**. A
+> reinstated-suspended player therefore starts only in a **probe-verified forced start**: every completing
+> choice within the search bound starts at least as many. The induction step is that committing a
+> non-completing member `c` of `R*` cannot raise the optimum for the next pass, because `R* \ {c}` remains
+> available and the squad `F ∪ {c} ∪ (R* \ {c})` is byte-identical to the `F ∪ R*` already probed — the
+> count reaches `c` through `suspended[c] && !removed[c]` exactly as it reached him through `c ∈ R`.
+> Termination is unchanged: `availableCount` strictly increases per pass and §2.3 F9 fires at the bound.
+> There is no repair loop and nothing is un-committed.
+>
+> **Residual, stated exhaustively — and deliberately NOT as an enumeration of routes into a forced start,
+> which is the form that was falsified twice.** **(i) Forced starts**, i.e. the cases where the minimum is
+> positive: the club's sole goalkeeper being banned is the smallest, and a `k ≥ 2` shortfall in which
+> every completing subset starts someone is its generalisation. There the ERR-044-003 stage-1 exemption
+> stalls exactly the bans that were fielded, and no fewer. **(ii) The beyond-cap corner** — more than
+> `EXTREMIS_SEARCH_CANDIDATE_CAP` concurrent suspended candidates, which no measured card rate reaches;
+> that pass degrades to the ascending-rank greedy and makes **no** minimality claim. The exact search
+> resumes once the candidate count falls back inside the bound, but the guarantee does not: a greedily
+> committed candidate is not revisited, so the composition can remain above the minimum for that fixture.
+> Those two are the whole residual, and what deletes (i) is the unbuilt #44 §7.2 tiers, not any rule here.
+>
+> **Cost.** Worst case `m·2^(m+1)` selection walks — every subset probed for fieldability, a completing
+> one probed again for its eleven, over at most `m` passes: **98,304** at the cap. The reachable case is
+> `m ≤ 4` ⇒ **≤ 128** walks, single-digit milliseconds; and this path is extremis-only, at season cadence,
+> never on any per-tick loop. **Allocation, not just walk count:** each `TrySelect` walk allocates a
+> fresh transient buffer per rating read, so the walk count understates the real cost — measured, `m = 12`
+> is **~74.5 ms and ~157 MiB transient** against **~0.22 ms / ~460 KiB** at `m = 4`; season cadence and the
+> cap's own unreachability at any measured card rate keep both acceptable, and `Compose`'s
+> reference-identity fast path (FR-DC-018, the overwhelming majority of fixtures) is unaffected since this
+> method is never called on that path.
+>
+> Tier 1's key, the outer loop, the never-worse-than-unfiltered limit, §2.3 F9's terminal refusal and
+> FR-DC-018's reference-identity fast path are **untouched**; there is no RNG, no draw site and no
+> format-version movement, and `SquadRating` / `LineupSelector` / `MatchEngine` are unchanged. **Digest
+> invariance is not claimed** for a season whose extremis tier fires — a different player is reinstated,
+> which is the point.
 
 The tier order is **not** cosmetic and is not merely #44's preference to state: a suspended player who
-reaches the pitch through this back-fill is exempted from serving that fixture's ban (ERR-044-003
+reaches **the pitch** through this back-fill is exempted from serving that fixture's ban (ERR-044-003
 stage 1 — `OnClubFixturePlayed` takes the fielded eleven; see the `AdvanceAndPlayNextRound` block
-below), so every fixture he is reinstated into is one his ban does **not** advance through. Reinstating
-the suspended ahead of the injured therefore does not merely field the wrong player, it stalls the
-suspension itself.
+below), so a fixture he is reinstated **into the starting eleven** for is one his ban does **not**
+advance through. Reinstating the suspended ahead of the injured therefore does not merely field the
+wrong player, it stalls the suspension itself. (Settled by `ERR-030-046`, superseding the amendments
+`ERR-030-044` and `ERR-030-045` made to this paragraph: reinstated onto the **bench** he is not in the
+fielded eleven, the exemption does not reach him, and his ban advances normally — and within the search
+bound the composed eleven contains the **minimum achievable** number of reinstated-suspended players, so
+a ban stalls **only** where the search proved no completing choice avoids the start. Both earlier drafts
+tried to characterise that residual by enumerating the routes into it; both enumerations were falsified,
+and this paragraph no longer attempts one — see `ERR-030-046`'s residual (i) and (ii) above.)
 
 > **The zero-default trap — an implementation MUST NOT derive the tier from the ordering key.** The
 > ordering key is remaining recovery, and only #41 writes it (`PlayerCareerStates.MarkUnavailable`
@@ -672,4 +915,9 @@ by ascending `ClubId` (FR-SN-007 final key) — a total order.
 | 2.4 | 2026-08-15 | — | **ERR-044-003 stage 1**, owner decision: §3.4's `AdvanceAndPlayNextRound` pseudocode calls `OnClubFixturePlayed(f.HomeClubId, homeXi)` / `OnClubFixturePlayed(f.AwayClubId, awayXi)` rather than the club id alone, with a new comment explaining the extremis exemption (#30 §2.3 F9's depleted-squad back-fill can field a suspended player; without the exemption that appearance also served his ban, for free). The preceding comment block's "a ban is served by the club playing" is corrected to "served by the club playing WITHOUT him" to match the amended `#44` FR-DC-011. Matches `SeasonLoop.cs` v1.25. |
 | 2.5 | 2026-08-15 | — | **`ERR-030-040` + `ERR-030-041`** (a reviewed-findings pass over the ERR-044-003 stage 1 landing): §3.4's `OnClubFixturePlayed` comment corrected — "its only guard is `clubId < 0`" went stale when stage 1 added `fieldedPlayerIds == null` beside it; both guards now named, with the structural reason the null case cannot fire on this path. §3.5 step (f)'s idempotency rationale replaced with the real reason (a FIRST run against a roll that is then refused), taken from `SeasonLoop.cs`'s own comment at the mirrored site. **Row added retroactively at v2.6 — as published, v2.5 shipped with its header entry but NO version-history row and no `Version:` field bump (the FR-CS-057 class again); the body edits themselves are v2.5's, unmodified.** |
 | 2.6 | 2026-08-15 | — | **`ERR-030-042`** (a reviewed High from the same sweep): §3.4's depleted-squad rule (ERR-030-029) stated a SINGLE ordering key — "pressing the least-injured players back in one at a time — ascending remaining recovery, ties broken by earliest roster position" — and then asserted "#44/#36 contribute removals only and inherit the rule unchanged when they join — **#44 has**". #44 did not: `AvailabilityComposition.Reinstate` has run a TWO-TIER rule since C1/C2 (injured first; a suspended player only once no injured one remains), which #44 §2.3/§7.2 record as an owner decision and #30's spec set never stated. Implemented verbatim, §3.4 INVERTS that decision silently — the ordering key is written only by #41, so a suspended-but-uninjured player keeps the `int` default 0 and sorts to the FRONT. Fixed: the tiers are stated here as part of the rule #30 owns; "inherit the rule unchanged" requalified to the INVARIANT (viability, the selector probe, the unfiltered limit, F9) and explicitly NOT the ordering, with #36 required to state its own tier; the zero-default trap carried as a MUST NOT; the interaction with ERR-044-003 stage 1's serving exemption recorded (a wrongly-reinstated banned player's ban does not advance). #44 §7.2's two unbuilt tiers noted as future insertions into this list. §2.3 F9's parenthetical mirrored in the same commit (`section-2.md` v2.0). NO code change — the code is correct and the spec was wrong. |
+| 2.7 | 2026-08-16 | — | **`ERR-030-044`** (an adversarially-reviewed High, spec + code same commit): §3.4's depleted-squad rule, both halves. **(a) Trigger clarification — not a decision change.** The probe this rule already names, `SquadRating.CanFieldStartingEleven`, IS `LineupSelector`'s full selection walk: eleven position-matched starters PLUS the seven-slot bench (`PLAYERS_PER_TEAM + SUBSTITUTES_PER_TEAM` = 18). The prose has read "unable to field the formation" / "a fieldable eleven" since ERR-030-029, and #44 §2.3 reads "cannot take the field at all", while the mechanism both cite has always meant eighteen — so a club with SEVENTEEN fit, position-complete players reaches the extremis tier while able to field a perfectly legal XI, and tier 2 is reachable on **bench depth alone**. Corrected to "cannot field WHAT SELECTION REQUIRES", with the mechanism authoritative. The eleven-vs-eighteen NARROWING (a short-bench posture: refuse to back-fill for bench slots) is recorded as the **OPEN owner question**, deliberately unresolved — it changes what a fixture is, and narrowing the probe without narrowing selection recreates the two-walks divergence `LineupSelector.TrySelect` was collapsed to prevent. **(b) Within-tier rule amendment — a defect correction.** Tier 2 ordered by earliest roster position, full stop; because the trigger fires on bench depth, the reinstated player enters the pool the rating-greedy selector draws the STARTING eleven from, so the key handed the selector whichever suspended player sat first on the roster and STARTED him — a club seventeen fit and one bench short fielded its best banned man in a fixture it could have played legally without him, and ERR-044-003 stage 1's exemption then stalled that ban indefinitely. §3.4's own rationale states that reinstating a suspended player into play "stalls the suspension itself", so the stated ordering key produced exactly the outcome the same rule's rationale forbids — an ERR, not an owner question. The key becomes "the first candidate, in roster order, the selector would BENCH; earliest roster position only when no candidate choice keeps every reinstated-suspended player out of the XI", stated normatively as three passes (benchable / fieldable-at-all / roster-order fallback for the multi-reinstatement case). Tier 1's key, the outer loop, the never-worse-than-unfiltered limit and §2.3 F9's terminal refusal are untouched; the "tier order is not cosmetic" paragraph is amended to the two-case form (benched ⇒ ban advances; forced start ⇒ exempt, and only then does the ban stall). Digest invariance NOT claimed for a season whose extremis tier fires — a different player is reinstated, which is the fix. Code: `src/season-save/AvailabilityComposition.cs` v1.5, locked by `AvailabilityCompositionExtremisTests` (two of whose four cases fail at the pre-fix commit). Cross-filed at #44 as **`ERR-044-019`**. |
+| 2.8 | 2026-08-16 | — | **`ERR-030-045`** (an adversarially-reviewed High continuing `ERR-030-044`'s, spec + code same commit): §3.4's tier-2 within-tier key, **pass 3**. v2.7 amended passes 1 and 2 and left pass 3 at "earliest roster position", justifying it with "the outer loop presses another player back and asks again, so passes 1 and 2 still decide the reinstatement that finally closes the gap". That justification was false in both halves, and the code, this section and the new suite all asserted it. **Fieldability is monotone in adding players**, so while the club is short by more than one the probe rejects EVERY candidate: passes 1 and 2 are structurally unreachable and pass 3 decides every reinstatement except the last, blindly. And the blindly chosen man then appears in every later candidate's starting eleven, so `AnyReinstatedSuspendedStarts` makes pass 1 unsatisfiable for the final pick too and it falls to roster order as well — net behaviour at `k >= 2` was *exactly* the pre-`ERR-030-044` behaviour, in the case a mass-suspension club reaches more readily than the single-reinstatement one v2.7 was verified against. Demonstrated by probe: a nineteen-man roster two short, whose roster-earliest banned player is the club's best forward, composed an XI containing him while the alternative pair completes the squad and benches both. Pass 3's key becomes **ascending selector rank** (`SquadRating.PlayerRating` — a new straight delegation to `LineupSelector.MeanAttribute`, NOT a second rating formula in `season-save`; the parallel-surface trap `SquadRating` exists to prevent), ties broken by earliest roster position. The property that matters is that it is **safe without a probe**, which is what the blind passes need: weakest banned back first, so the best is reached only when nothing weaker closes the gap. §3.4's "the stall is now confined to the forced-start case, where no candidate choice avoids it" is corrected — the stall is confined to a reinstatee who is **actually fielded**, and that is reached two ways (a single reinstatement with no benchable candidate, the sole goalkeeper being canonical; and a `k >= 2` set in which every completing choice starts someone). The key **minimises** the second case and does not eliminate it; positional forcing can compel it outright. Stated as a minimisation, not a guarantee, and named as part of the recorded forced-start compromise the unbuilt #44 §7.2 tiers delete. Tier 1, the outer loop, the never-worse-than-unfiltered limit and §2.3 F9 are untouched. Code: `src/season-save/AvailabilityComposition.cs` v1.6, `src/match-engine/SquadRating.cs` v1.5; locked by two `AvailabilityCompositionExtremisTests` cases observed failing at the pre-fix commit and green after. Cross-filed at #44 as an amendment to `ERR-044-019` (§2.3 / §7.2). |
+| 2.9 | 2026-08-16 | — | **`ERR-030-046`** (an **ESCALATED** High — the same defect survived v2.7's and v2.8's fixes, so the third attempt was ruled rather than iterated; the no-third-identical-retry rule): §3.4's tier-2 within-tier rule is **no longer an ordering key**. v2.8's ascending-`SquadRating.PlayerRating` fallback is a **global scalar** while `LineupSelector` selects **per position**, so where the fit squad is thin in the globally *weakest* banned player's position the blind pass presses exactly him back — into a slot no fit player can contest — he **starts**, the reinstated-suspended test is then unsatisfiable for every later candidate, and the fieldable-at-all pass takes the final pick in roster order. Measured on generated mass-suspension fixtures, **≥ 476 of 1920** had a clean completing choice the algorithm missed. **Root-cause class: an element-wise greedy decision of a set-valued constraint** — a club is completed by a SET, whether that set starts a banned man is a property of the SET, and it is decided per position, so no per-player scalar can express it. The rule becomes a **capped exhaustive clean-completion search**: candidates ordered ascending by rating (ties on roster index — a total order, and now the only thing the order decides); every subset probed, sizes ascending, lexicographic within a size; preference fewest reinstated-suspended starters, then smallest subset, then canonical first, with the first zero-count subset globally optimal; one member committed per pass under a stated commit rule. New `[FIXED] SeasonSaveConstants.EXTREMIS_SEARCH_CANDIDATE_CAP = 12` bounds the enumeration (`2^13` probes) — an algorithmic budget, **not** a `[GT]`, **not** subject to KD-W1 — beyond which the pass degrades to the ascending-rank greedy with no minimality claim, self-healing as each commit lowers the count. **The guarantee is now a THEOREM:** within the bound the composed squad fields the MINIMUM achievable number of reinstated-suspended players in its eleven, minimised over every completing subset — zero whenever any completing choice benches them all — so one starts only in a probe-verified forced start; the induction step is that committing a non-completing member `c` of `R*` cannot raise the optimum, since `R* \ {c}` stays available and `F ∪ {c} ∪ (R* \ {c})` is byte-identical to the probed `F ∪ R*`. Termination unchanged (`availableCount` strictly increases; §2.3 F9 at the bound; no repair loop). **Residual stated exhaustively and NOT as a route enumeration** (that form was falsified twice): (i) forced starts, where the minimum is positive — sole-GK forcings and their `k ≥ 2` generalisations, and there the ERR-044-003 stage-1 exemption stalls exactly the fielded bans and no fewer; (ii) the beyond-cap corner. `ERR-030-044`'s two-case and `ERR-030-045`'s three-case guarantee statements are **SUPERSEDED**, not amended, and the pass lists they wrote here are no longer normative. Tier 1's key, the outer loop, the never-worse-than-unfiltered limit, §2.3 F9 and FR-DC-018's identity fast path are untouched; no RNG, no draw site, no format-version movement; digest invariance still not claimed for a season whose extremis tier fires. Code: `src/season-save/AvailabilityComposition.cs` v1.7, `src/season-save/SeasonSaveConstants.cs` v1.9 — **no change to `SquadRating.cs` / `LineupSelector.cs` / `MatchEngine.cs`**. Locked by `AvailabilityCompositionExtremisTests` (5 → 8 cases): the `WeakPositionExtremis` mutant-killer (observed FAILING at the pre-fix tree — the banned midfielder in the composed XI), the `MinimalStallExtremis` minimisation lock (dirty count exactly 1, benched reinstatee's ban advancing while the forced keeper's stalls, driven through a played round), and the `CapFallbackExtremis` beyond-cap termination lock. Cross-filed at #44 as an EXTENSION of `ERR-044-019` (`section-2.md` v0.17, `section-7.md` v0.10). |
+| 2.10 | 2026-08-16, even later still | — | **Round-4 reviewed-findings pass over the `ERR-030-046` landing (six findings, all fixed).** §3.4's Commit bullet is amended to two proven cases plus a fail-loud third, rather than a re-choice third case that was never proven reachable: a new **monotonicity lemma** bullet states that `LineupSelector`'s per-position top-`k` selection makes `dirty(R)` monotone non-decreasing under adding candidates, so a completing singleton is already the global minimum and a `|R*| ≥ 2` winner whose every member singly completes cannot arise — verified over 6,858 oracle cases (`thirdBranchReachable = 0`) and by behaviour-identity of the collapsed form over 3,966 further cases and 11/11 tests. The Commit bullet's third case is now `AvailabilityComposition.ChooseSuspendedCandidate` failing loud, naming the lemma, rather than re-choosing among size-1 completing subsets — that re-choice machinery is deleted, not dead-coded, and the warning that a Stage-1 role-weighted or cross-class selector would reopen the branch is carried in the lemma bullet itself. A **fourth Commit case** states, for the first time, what happens when no subset completes at all: commit the weakest candidate, with the outer loop's own `availableCount == total` bound reporting §2.3 F9 — previously only the code's `bestSize == 0` fallback did this, undocumented. A new **full-set probe first** bullet records the matching Low fix: one probe over `F` plus every remaining candidate, sound by the same monotonicity argument, skips the whole `m·2^m` enumeration on that branch. Both **"self-heals" statements were wrong the same way** — the Cap bullet and residual (ii) each said the beyond-cap fallback self-heals, true of the exact search resuming, false of the guarantee (a greedily committed candidate is never revisited, so the composition can remain above the minimum for that fixture); both corrected here, at `SeasonSaveConstants.cs`, at `AvailabilityComposition.cs` (two sites), and at the mirrored residual in `discipline-suspensions/{section-2,section-7}.md`. The Cost bullet gains an **allocation** sentence: measured, `m = 12` (the cap) costs ~74.5 ms and ~157 MiB transient against ~0.22 ms / ~460 KiB at `m = 4`, season cadence and the cap's own unreachability keeping both acceptable and `Compose`'s FR-DC-018 identity fast path unaffected. No change to the guarantee, the residual's substance, the tier order, the outer loop, §2.3 F9's terminal refusal, `SquadRating` / `LineupSelector` / `MatchEngine`, or any RNG/draw-site/format-version. Code: `src/season-save/AvailabilityComposition.cs` v1.8 (also: the candidate gather now requires `suspended[i]`, not `removed[i]` alone — Low, ERR-030-046 follow-up, documented-not-enforced), `SeasonSaveConstants.cs` v1.10, `src/match-engine/SquadRating.cs` v1.6 (doc only — `PlayerRating`'s own "Why this seam exists" paragraph still stated ERR-030-045's falsified rationale in present tense; corrected, with the v1.5 history row annotated rather than rewritten). Tests: `AvailabilityCompositionExtremisTests.cs` v1.3, +2 mutant-killers — `InCapBoundaryExtremis` (`m == CAP` exactly, kills the cap comparison mutated `>` → `>=`) and `TiedForcedStartExtremis` (two candidates tied at the same positive dirty count, kills the preference comparison mutated `<` → `<=`) — each verified by actually applying its named mutant, running the filtered suite, observing the failure, and reverting. `spec-error-log.md`'s `ERR-030-046` row gains a dated annotation covering this closure. |
+| 2.11 | 2026-08-16, round 5 | — | **Round-5 reviewed-findings pass (two findings, both fixed).** **(M1, annotation only.)** The v2.10 row above's "`AvailabilityComposition.cs` (two sites)" undercounts: that round-4 diff corrected **THREE** sites in `AvailabilityComposition.cs` (~152, ~421, and the inline comment inside `ChooseSuspendedCandidate`'s Cap branch at ~528), not two, and missed a **ninth** site entirely — `AvailabilityCompositionExtremisTests.cs`'s own `CapFallbackExtremis` comment still carried the pre-fix "it self-heals … the exact search resumes for every later pass" sentence, in a file the same round-4 commit edited. The real corrected-site total across the whole sweep is **NINE**: this section's Cap bullet + residual (ii); `AvailabilityComposition.cs` ~152, ~421, ~528; `SeasonSaveConstants.cs` ~118; `discipline-suspensions/section-2.md`; `section-7.md`; and the test comment. Fixed at that file (v1.4) and annotated in place — not rewritten — here, at `SeasonSaveConstants.cs` (v1.11), `AvailabilityComposition.cs` (v1.9), `discipline-suspensions/section-2.md` (v0.19), `section-7.md` (v0.12), and `spec-error-log.md`'s `ERR-030-046` annotation. No behaviour, guarantee, or normative rule changed. **(L-t3.)** Two normative bullets in the Cap-search rule above carried review-severity labels — "Full-set probe first (Low)." and "Allocation, not just walk count (Low):" — left over from the round-4 finding list rather than stated as spec text. Labels dropped; the findings' severities remain recorded at v2.10's own row. No rule text changed. |
 #endregion

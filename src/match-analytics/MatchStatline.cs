@@ -1,5 +1,9 @@
 // File:     src/match-analytics/MatchStatline.cs
 // Created:  2026-07-27
+// Modified: 2026-08-16 (reviewed-findings pass, M4/ERR-037-003 — YellowCards's and RedCards's XML docs
+//           cross-reference each other and record that a second-yellow dismissal's CardIssuedEvent
+//           counts toward both, since the engine publishes the second caution and the dismissal as one
+//           event. Doc only; no field/layout change.)
 // Modified: 2026-07-27
 // Author:   —
 // Spec:     Match Analytics & Statistics #37 §2.2 (FR-AN-015), Code Standards #20
@@ -47,10 +51,13 @@ namespace TacticalDirector.MatchAnalytics
         /// <summary>Fouls conceded.</summary>
         public readonly int Fouls;
 
-        /// <summary>Yellow cards received.</summary>
+        /// <summary>Yellow cards received, including the second caution of a second-yellow dismissal
+        /// (ERR-037-003) — the engine publishes that caution and the dismissal together as one event,
+        /// so both this and <see cref="RedCards"/> count it.</summary>
         public readonly int YellowCards;
 
-        /// <summary>Red cards received (including second-yellow dismissals).</summary>
+        /// <summary>Red cards received (including second-yellow dismissals; ERR-037-003 — see
+        /// <see cref="YellowCards"/>).</summary>
         public readonly int RedCards;
 
         /// <summary>Times caught offside.</summary>
@@ -131,6 +138,13 @@ namespace TacticalDirector.MatchAnalytics
 
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                          |
+// | 1.2     | 2026-08-16 | —      | Reviewed-findings pass (M4/ERR-037-003). YellowCards's and     |
+// |         |            |        | RedCards's XML docs now cross-reference each other and record  |
+// |         |            |        | that a second-yellow dismissal's single CardIssuedEvent counts |
+// |         |            |        | toward both fields (MatchAnalyticsAggregator was previously    |
+// |         |            |        | routing it to YellowCards only and never to RedCards, which    |
+// |         |            |        | this struct's own RedCards doc already contradicted). Doc      |
+// |         |            |        | only; no field/layout change.                                   |
 // | 1.1     | 2026-07-27 | —      | AR-1 M-1: _hasValue discriminator — default(MatchStatline)     |
 // |         |            |        | passed the result's team-attribution gate, because a zeroed    |
 // |         |            |        | TeamId IS a valid home id. The MatchFrameView _hasFrame        |

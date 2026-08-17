@@ -1,5 +1,21 @@
 // File:     src/discipline/tests/DisciplineRulesTests.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16, latest (carried L2, re-rated Medium, closed in full — v1.10: two new locks.
+//           AddBan_NearIntMaxValue_ThrowsOverflowException_EntryUnmodified, in the shape of v1.9's
+//           AddYellow_AtIntMaxValue lock, for AddBan's own (already-routed) addition, which had no
+//           test of this shape. AddYellow_CrossingThresholdWithBanNearIntMaxValue_
+//           ThrowsOverflowException_EntryUnmodified locks the actual scenario the finding named: a
+//           threshold-crossing yellow whose SECOND addition — the accumulation-ban `+=`, one line below
+//           the `+1` v1.9 fixed — was still unrouted through int.MaxValue and left the row half-applied
+//           on the old code (DisciplineRules.cs v1.10 fixes it).)
+// Modified: 2026-08-16, yet later (final fixer pass — L2's second half wiring: one new lock,
+//           AddYellow_AtIntMaxValue_ThrowsOverflowException_EntryUnmodified, for
+//           DisciplineRules.AddYellow now routing through the guarded DisciplineEntry.YellowsPlusOne
+//           helper — v1.9)
+// Modified: 2026-08-16 (ERR-044-014, adversarial-review H1 — every OnClubFixturePlayed call site takes
+//           the club's roster ids through the new RosterOf helper, plus three new locks: the
+//           roster-disagrees-with-the-packing case, the agrees-on-today's-ids case, and the null-roster
+//           refusal — v1.8)
 // Modified: 2026-08-15, later (reviewed findings pass, L4 — v1.7: the Competition constant's
 //           DisciplineConstants.LEAGUE_COMPETITION_KEY reference renamed for that constant's ALL_CAPS ->
 //           LeagueCompetitionKey rename (DisciplineConstants.cs v1.5). No behaviour change.)
@@ -45,6 +61,23 @@ namespace TacticalDirector.Discipline.Tests
         // Player ids are club-scoped per #27 KD-3: clubId * CLUB_SQUAD_SIZE + local.
         private static int PlayerId(int clubId, int local) =>
             clubId * PlayerDatabaseConstants.CLUB_SQUAD_SIZE + local;
+
+        /// <summary>
+        /// A club's roster as <c>OnClubFixturePlayed</c> now takes it (ERR-044-014) — the full packed
+        /// squad, which is what a real <c>Squad</c> resolved from the league yields today. Used
+        /// everywhere below EXCEPT the two tests that exist precisely to separate this from the
+        /// retired <c>PlayerId / CLUB_SQUAD_SIZE</c> derivation.
+        /// </summary>
+        private static int[] RosterOf(int clubId)
+        {
+            var ids = new int[PlayerDatabaseConstants.CLUB_SQUAD_SIZE];
+            for (int local = 0; local < ids.Length; local++)
+            {
+                ids[local] = PlayerId(clubId, local);
+            }
+
+            return ids;
+        }
 
         private const int Competition = DisciplineConstants.LeagueCompetitionKey;
 
@@ -174,6 +207,89 @@ namespace TacticalDirector.Discipline.Tests
             Assert.AreEqual(3, entry.Yellows,
                 "8 - threshold(5) = 3 residual kept — 'Yellows = 0' on a crossing would read 0 here instead");
             Assert.AreEqual(DisciplineConstants.AccumBanMatches, entry.BanMatchesRemaining);
+        }
+
+        // ── L2 (final fixer pass): the accumulator overflow guard ────────────────────
+        //
+        // AddYellow's `entry.Yellows + 1` now routes through DisciplineEntry.YellowsPlusOne (wired at
+        // DisciplineRules.cs v1.9), which refuses BEFORE the addition rather than letting it wrap
+        // int.MaxValue to a negative value that DisciplineEntry's OWN constructor guard would then
+        // misreport as "a negative tally is a counting bug" — true of the symptom, false of the cause.
+        // A row at Yellows == int.MaxValue is not reachable through ApplyCard/AddYellow themselves (each
+        // call adds exactly one, so ~2^31 calls would be needed) — it is the shape a DECODED save could
+        // carry (DisciplineSaveCodec only refuses Yellows < 0, not an unreasonably large positive one),
+        // so the row is seeded directly via the internal Upsert seam, as ResidualIsKept_NotReset_
+        // WhenACrossingLandsAboveTheThreshold above does for the same reason.
+
+        [Test]
+        public void AddYellow_AtIntMaxValue_ThrowsOverflowException_EntryUnmodified()
+        {
+            var state = new DisciplineState();
+            var rules = new DisciplineRules(state);
+            int p = PlayerId(0, 1);
+            state.Upsert(new DisciplineEntry(p, Competition, int.MaxValue, 0));
+
+            Assert.Throws<OverflowException>(() => rules.AddYellow(p, Competition));
+
+            DisciplineEntry entry = rules.State.EntryFor(p, Competition);
+            Assert.AreEqual(int.MaxValue, entry.Yellows,
+                "the refused increment must not have written a wrapped (or any other) value — "
+                + "DisciplineEntry.YellowsPlusOne refuses BEFORE the addition, not after.");
+            Assert.AreEqual(0, entry.BanMatchesRemaining,
+                "the row must be untouched on the refused side too, not just the Yellows field.");
+        }
+
+        // ── Carried L2, re-rated Medium: the accumulation-ban addition, one line below the increment
+        // v1.9 fixed, was still unguarded until DisciplineRules.cs v1.10. AddBan's own addition was
+        // already routed through DisciplineEntry.BanMatchesPlus at v1.9 (it needed no code change here),
+        // but had no test in the AddYellow_AtIntMaxValue lock's shape — this closes that gap, and the
+        // second test below locks the actual scenario the finding named: a threshold-crossing yellow
+        // whose accumulation-ban addition, not its `+1` increment, is the one that would have overflowed.
+
+        [Test]
+        public void AddBan_NearIntMaxValue_ThrowsOverflowException_EntryUnmodified()
+        {
+            var state = new DisciplineState();
+            var rules = new DisciplineRules(state);
+            int p = PlayerId(0, 1);
+            state.Upsert(new DisciplineEntry(p, Competition, 4, int.MaxValue - 1));
+
+            Assert.Throws<OverflowException>(() => rules.AddBan(p, Competition, 3));
+
+            DisciplineEntry entry = rules.State.EntryFor(p, Competition);
+            Assert.AreEqual(4, entry.Yellows,
+                "the refused call must not have written anything, not just left BanMatchesRemaining alone.");
+            Assert.AreEqual(int.MaxValue - 1, entry.BanMatchesRemaining,
+                "the refused addition must not have written a wrapped (or any other) value — "
+                + "DisciplineEntry.BanMatchesPlus refuses BEFORE the addition, not after.");
+        }
+
+        [Test]
+        public void AddYellow_CrossingThresholdWithBanNearIntMaxValue_ThrowsOverflowException_EntryUnmodified()
+        {
+            // THE scenario the carried finding named verbatim: a player at BanMatchesRemaining ==
+            // int.MaxValue whose 5th yellow crosses the threshold used to hit AddYellow's SECOND,
+            // unrouted addition (`ban += RequireBanLength(AccumBanMatches)`) — a plain `+=` one line
+            // below the guarded `+1` v1.9 fixed. Before DisciplineRules.cs v1.10 this threw
+            // ArgumentOutOfRangeException from DisciplineEntry's constructor (the wrapped-negative value
+            // misreported as "a counting bug") with the row left HALF-applied: Yellows already reduced
+            // by the threshold (the residual subtraction, which happens before the ban addition), ban
+            // untouched. Now DisciplineEntry.BanMatchesPlus refuses before that addition runs, so the
+            // WHOLE call is refused and neither field moves.
+            var state = new DisciplineState();
+            var rules = new DisciplineRules(state);
+            int p = PlayerId(0, 1);
+            int threshold = DisciplineConstants.YellowAccumulationThreshold;
+            state.Upsert(new DisciplineEntry(p, Competition, threshold - 1, int.MaxValue));
+
+            Assert.Throws<OverflowException>(() => rules.AddYellow(p, Competition));
+
+            DisciplineEntry entry = rules.State.EntryFor(p, Competition);
+            Assert.AreEqual(threshold - 1, entry.Yellows,
+                "the refused crossing must not have applied the residual subtraction either — the call "
+                + "is refused as a whole, not half-applied with Yellows already reduced.");
+            Assert.AreEqual(int.MaxValue, entry.BanMatchesRemaining,
+                "the refused addition must not have written a wrapped (or any other) value.");
         }
 
         // ── Bans stack additively from any source ──────────────────────────────────
@@ -422,7 +538,7 @@ namespace TacticalDirector.Discipline.Tests
             rules.AddBan(clubAPlayer, Competition, 2);
             rules.AddBan(clubBPlayer, Competition, 2);
 
-            rules.OnClubFixturePlayed(0, Array.Empty<int>());
+            rules.OnClubFixturePlayed(0, RosterOf(0), Array.Empty<int>());
 
             Assert.AreEqual(1, rules.State.EntryFor(clubAPlayer, Competition).BanMatchesRemaining,
                 "club 0's fixture serves club 0's ban");
@@ -437,10 +553,10 @@ namespace TacticalDirector.Discipline.Tests
             int p = PlayerId(0, 1);
             rules.AddBan(p, Competition, 1);
 
-            rules.OnClubFixturePlayed(0, Array.Empty<int>());   // 1 -> 0, drops the row
+            rules.OnClubFixturePlayed(0, RosterOf(0), Array.Empty<int>());   // 1 -> 0, drops the row
             // A second played fixture with no outstanding ban must not underflow — the row is gone,
             // so this call has nothing to touch, and must not throw or resurrect a negative row.
-            Assert.DoesNotThrow(() => rules.OnClubFixturePlayed(0, Array.Empty<int>()));
+            Assert.DoesNotThrow(() => rules.OnClubFixturePlayed(0, RosterOf(0), Array.Empty<int>()));
 
             Assert.IsFalse(rules.State.HasEntry(p, Competition));
         }
@@ -452,7 +568,7 @@ namespace TacticalDirector.Discipline.Tests
             int p = PlayerId(0, 1);
             rules.AddBan(p, Competition, 1);   // Yellows 0, ban 1 — serving this to 0 makes an all-zero row
 
-            rules.OnClubFixturePlayed(0, Array.Empty<int>());
+            rules.OnClubFixturePlayed(0, RosterOf(0), Array.Empty<int>());
 
             Assert.IsFalse(rules.State.HasEntry(p, Competition),
                 "FR-DC-017: a row that reaches (0,0) MID-SEASON must be dropped immediately");
@@ -463,7 +579,7 @@ namespace TacticalDirector.Discipline.Tests
         {
             DisciplineRules rules = NewRules();
             Assert.Throws<ArgumentOutOfRangeException>(
-                () => rules.OnClubFixturePlayed(-1, Array.Empty<int>()));
+                () => rules.OnClubFixturePlayed(-1, RosterOf(0), Array.Empty<int>()));
         }
 
         [Test]
@@ -481,7 +597,7 @@ namespace TacticalDirector.Discipline.Tests
             rules.AddBan(p1, Competition, 1);
             rules.AddBan(p2, Competition, 1);
 
-            rules.OnClubFixturePlayed(0, Array.Empty<int>());
+            rules.OnClubFixturePlayed(0, RosterOf(0), Array.Empty<int>());
 
             Assert.IsFalse(rules.State.HasEntry(p1, Competition), "p1's one-match ban must be served and the row dropped");
             Assert.IsFalse(rules.State.HasEntry(p2, Competition), "p2's one-match ban must ALSO be served in the same call");
@@ -503,7 +619,7 @@ namespace TacticalDirector.Discipline.Tests
             rules.AddBan(fielded, Competition, 2);
             rules.AddBan(notFielded, Competition, 2);
 
-            rules.OnClubFixturePlayed(0, new[] { fielded });
+            rules.OnClubFixturePlayed(0, RosterOf(0), new[] { fielded });
 
             Assert.AreEqual(2, rules.State.EntryFor(fielded, Competition).BanMatchesRemaining,
                 "a banned player who WAS fielded (the extremis back-fill) must not have his ban "
@@ -537,7 +653,7 @@ namespace TacticalDirector.Discipline.Tests
             rules.ApplyCard(fielded, Competition, DisciplineConstants.CardKindYellow);           // Yellows 1, ban 0
             rules.ApplyCard(notFieldedNoBan, Competition, DisciplineConstants.CardKindYellow);   // Yellows 1, ban 0
 
-            rules.OnClubFixturePlayed(0, new[] { fielded });
+            rules.OnClubFixturePlayed(0, RosterOf(0), new[] { fielded });
 
             DisciplineEntry fieldedEntry = rules.State.EntryFor(fielded, Competition);
             Assert.AreEqual(1, fieldedEntry.Yellows, "a fielded player's yellows-only row must survive untouched");
@@ -556,7 +672,78 @@ namespace TacticalDirector.Discipline.Tests
         public void OnClubFixturePlayed_NullFieldedPlayerIds_Throws()
         {
             DisciplineRules rules = NewRules();
-            Assert.Throws<ArgumentNullException>(() => rules.OnClubFixturePlayed(0, null));
+            Assert.Throws<ArgumentNullException>(() => rules.OnClubFixturePlayed(0, RosterOf(0), null));
+        }
+
+        // ── ERR-044-014: membership is the ROSTER, not the id packing ────────────────
+
+        [Test]
+        public void OnClubFixturePlayed_ServesByRosterMembership_NotByThePackedIdDerivation()
+        {
+            // THE lock for ERR-044-014. Both players' ids are deliberately packed into the WRONG
+            // club for the roster they are on, so the retired derivation and the landed presence
+            // match give opposite answers for both of them at once:
+            //   - servedByRoster's id derives to club 1, but he is on club 0's roster  -> MUST serve;
+            //   - ignoredByRoster's id derives to club 0, but he is NOT on the roster  -> MUST NOT.
+            // Under `entry.PlayerId / CLUB_SQUAD_SIZE == clubId` this test fails twice over. That is
+            // not a hypothetical id layout: it is exactly what a #31 transfer produces (a player at a
+            // new club carrying the id his old one packed) and what ERR-044-003 stage 3's id-space
+            // widening produces by construction, and nothing anywhere validated the packing —
+            // MigratePlayerId, the rule that was supposed to keep ids current, has no production
+            // caller at all.
+            DisciplineRules rules = NewRules();
+            int servedByRoster = PlayerId(1, 3);
+            int ignoredByRoster = PlayerId(0, 3);
+            rules.AddBan(servedByRoster, Competition, 2);
+            rules.AddBan(ignoredByRoster, Competition, 2);
+
+            rules.OnClubFixturePlayed(0, new[] { servedByRoster }, Array.Empty<int>());
+
+            Assert.AreEqual(1, rules.State.EntryFor(servedByRoster, Competition).BanMatchesRemaining,
+                "a player ON the club's roster must serve, whatever his id divides to — otherwise a "
+                + "transferred player's ban never decrements again and he is suspended forever, "
+                + "silently (ERR-044-014).");
+            Assert.AreEqual(2, rules.State.EntryFor(ignoredByRoster, Competition).BanMatchesRemaining,
+                "a player NOT on the club's roster must be untouched, whatever his id divides to — "
+                + "membership has exactly one source, the roster the removal half walks.");
+        }
+
+        [Test]
+        public void OnClubFixturePlayed_OverAPackedRoster_ServesExactlyWhatTheRetiredDerivationServed()
+        {
+            // The behaviour-preservation half: on today's id scheme, over a full packed roster, the
+            // roster match and the retired `PlayerId / CLUB_SQUAD_SIZE == clubId` derivation select
+            // the same set. Probed at both ends of club 0's range (local 0 and the last local) plus
+            // the neighbouring club's first id, which is the id one off the end of the range and the
+            // one an off-by-one in either rule would move.
+            DisciplineRules rules = NewRules();
+            int first = PlayerId(0, 0);
+            int last = PlayerId(0, PlayerDatabaseConstants.CLUB_SQUAD_SIZE - 1);
+            int nextClubsFirst = PlayerId(1, 0);
+            rules.AddBan(first, Competition, 2);
+            rules.AddBan(last, Competition, 2);
+            rules.AddBan(nextClubsFirst, Competition, 2);
+
+            rules.OnClubFixturePlayed(0, RosterOf(0), Array.Empty<int>());
+
+            Assert.AreEqual(1, rules.State.EntryFor(first, Competition).BanMatchesRemaining,
+                "local 0 is club 0's under both rules");
+            Assert.AreEqual(1, rules.State.EntryFor(last, Competition).BanMatchesRemaining,
+                "the last local is still club 0's under both rules");
+            Assert.AreEqual(2, rules.State.EntryFor(nextClubsFirst, Competition).BanMatchesRemaining,
+                "the next club's first id is outside both the range and the roster");
+        }
+
+        [Test]
+        public void OnClubFixturePlayed_NullClubPlayerIds_Throws()
+        {
+            // The same caller-contract posture as the null fielded eleven (F2, ERR-044-007): a caller
+            // who cannot name the roster cannot name whose ban this fixture served, and BOTH silent
+            // readings of the unknown case are wrong — "serve everybody" is the defect ERR-044-014
+            // closes, "serve nobody" is a permanently suspended squad.
+            DisciplineRules rules = NewRules();
+            Assert.Throws<ArgumentNullException>(
+                () => rules.OnClubFixturePlayed(0, null, Array.Empty<int>()));
         }
 
         [Test]
@@ -571,7 +758,7 @@ namespace TacticalDirector.Discipline.Tests
             int notFieldedOneMatch = PlayerId(0, 2);
             rules.AddBan(notFieldedOneMatch, Competition, 1);
 
-            rules.OnClubFixturePlayed(0, new[] { fieldedNoBan });
+            rules.OnClubFixturePlayed(0, RosterOf(0), new[] { fieldedNoBan });
 
             Assert.IsFalse(rules.State.HasEntry(notFieldedOneMatch, Competition),
                 "FR-DC-017: a row that reaches (0, 0) mid-season must still be dropped immediately — "
@@ -884,4 +1071,38 @@ namespace TacticalDirector.Discipline.Tests
 // | 1.7     | 2026-08-15, later | — | Reviewed findings pass, L4. Competition constant's              |
 // |         |            |        | DisciplineConstants reference renamed LEAGUE_COMPETITION_KEY ->  |
 // |         |            |        | LeagueCompetitionKey. No behaviour change.                        |
+// | 1.8     | 2026-08-16 | —      | ERR-044-014 (adversarial review, H1). New RosterOf(clubId)       |
+// |         |            |        | helper supplies the full packed roster to every existing         |
+// |         |            |        | OnClubFixturePlayed call site, so each keeps the behaviour it     |
+// |         |            |        | asserted. Three new tests: ...ServesByRosterMembership_NotByThe- |
+// |         |            |        | PackedIdDerivation, which puts BOTH its players' ids in the      |
+// |         |            |        | wrong club for the roster they are on and so fails twice under   |
+// |         |            |        | the retired derivation; ...OverAPackedRoster_ServesExactlyWhat-  |
+// |         |            |        | TheRetiredDerivationServed, the behaviour-preservation lock on   |
+// |         |            |        | today's ids probed at both ends of a club's range and one past   |
+// |         |            |        | it; and ...NullClubPlayerIds_Throws for the new F2-class guard.  |
+// | 1.9     | 2026-08-16, yet later | — | Final fixer pass — L2's second half wiring. New:         |
+// |         |            |        | AddYellow_AtIntMaxValue_ThrowsOverflowException_EntryUnmodified — |
+// |         |            |        | seeds a row at Yellows == int.MaxValue via the internal Upsert    |
+// |         |            |        | seam (the shape a decoded save could carry; not reachable through |
+// |         |            |        | ApplyCard/AddYellow's own +1-per-call arithmetic) and asserts the |
+// |         |            |        | next AddYellow throws OverflowException with the row completely   |
+// |         |            |        | untouched — DisciplineRules.cs v1.9 now routes AddYellow's        |
+// |         |            |        | `entry.Yellows + 1` through DisciplineEntry.YellowsPlusOne, which |
+// |         |            |        | refuses BEFORE the addition rather than letting it wrap negative  |
+// |         |            |        | and surface as a misleading "counting bug" range refusal.         |
+// | 1.10    | 2026-08-16, latest | — | Carried L2, re-rated Medium, closed in full. New:               |
+// |         |            |        | AddBan_NearIntMaxValue_ThrowsOverflowException_EntryUnmodified,   |
+// |         |            |        | mirroring v1.9's AddYellow_AtIntMaxValue lock for AddBan's own    |
+// |         |            |        | addition (already routed through BanMatchesPlus at v1.9, but with |
+// |         |            |        | no test of this shape until now). New:                            |
+// |         |            |        | AddYellow_CrossingThresholdWithBanNearIntMaxValue_                |
+// |         |            |        | ThrowsOverflowException_EntryUnmodified — the finding's own        |
+// |         |            |        | scenario: seeds BanMatchesRemaining == int.MaxValue and a row one |
+// |         |            |        | yellow below threshold, so the 5th yellow crosses and the SECOND, |
+// |         |            |        | previously-unrouted addition (the accumulation-ban `+=`) is the   |
+// |         |            |        | one that overflows. DisciplineRules.cs v1.10 now routes it through|
+// |         |            |        | DisciplineEntry.BanMatchesPlus, so the whole call is refused with |
+// |         |            |        | neither field moved, rather than leaving Yellows already reduced  |
+// |         |            |        | by the residual subtraction while the ban addition was lost.      |
 #endregion

@@ -1,6 +1,15 @@
 // File:     src/match-engine/SquadRating.cs
 // Created:  2026-07-26
-// Modified: 2026-08-15 (#44 AR round 5, M5 — the substitution-dependency note now names its
+// Modified: 2026-08-16, later (round-4 reviewed-findings pass over the ERR-030-046 landing — PlayerRating's
+//           "Why this seam exists" doc stated the falsified ERR-030-045 rationale ("the only key that
+//           behaves monotonically is the one the selector ranks last") in present tense. Rewritten to
+//           the ERR-030-046 role — a deterministic total order canonicalising the subset enumeration
+//           plus the beyond-cap greedy fallback — with the v1.5 rationale kept as an annotated,
+//           explicitly-falsified history paragraph rather than deleted — v1.6)
+// Prior-Modified: 2026-08-16 (ERR-030-045 — + PlayerRating, the per-player key LineupSelector itself ranks
+//           by, exposed so #30's back-fill can order its suspended tier by selector rank instead of
+//           growing a second rating formula in season-save)
+// Prior-Modified: 2026-08-15 (#44 AR round 5, M5 — the substitution-dependency note now names its
 //           SECOND consumer: #44's FR-DC-011 serving exemption, not just #41's appearance record)
 // Prior-Modified: 2026-08-07
 // Author:   —
@@ -97,6 +106,41 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
+        /// The rating <c>LineupSelector</c> itself ranks a player by: the arithmetic mean of his 31
+        /// <c>[1,20]</c> attributes (<c>WeakFootRating</c>'s <c>[1,5]</c> scale excluded, KD-L2).
+        /// <para>
+        /// <b>Why this seam exists.</b> #30's depleted-squad back-fill needs the selector's own
+        /// per-player key for two things ERR-030-046 settled: a <b>deterministic total order</b> that
+        /// canonicalises its exhaustive subset enumeration over the still-removed candidates — so
+        /// "canonically first" means the same thing on every call — and the weakest-first pick its
+        /// beyond-cap greedy fallback commits when the enumeration is refused outright. Computing a
+        /// mean in <c>season-save</c> instead would be a second rating formula silently agreeing with
+        /// this one until either moved: the parallel-surface trap this whole type exists to prevent
+        /// (league-bootstrap KD-7 / AR-4 M-1). One selector, now four read shapes — mean, viability,
+        /// ids, and the per-player key those three are built on.
+        /// </para>
+        /// <para>
+        /// <b>⚠️ CORRECTED (ERR-030-046, 2026-08-16) — the v1.5 rationale below is FALSIFIED and is kept
+        /// only as history, not as documentation of the current role.</b> "The only key that behaves
+        /// monotonically is the one the selector ranks last" was ERR-030-045's premise, and it was
+        /// wrong: <c>LineupSelector</c> selects PER POSITION, so a single global scalar — ascending
+        /// rank or any other — cannot express a per-position, set-valued completion constraint, and
+        /// pressing the weakest back first still starts a banned player whenever the fit squad is thin
+        /// at exactly his position. This seam's ordering no longer decides WHO is reinstated; it only
+        /// fixes what "canonically first" means for
+        /// <c>AvailabilityComposition.ChooseSuspendedCandidate</c>'s exhaustive search and its degraded
+        /// fallback. See that type's remarks for the rule that actually governs the choice today.
+        /// </para>
+        /// <para>
+        /// Pure, deterministic and allocating (the attribute array), like its siblings — boot / season
+        /// cadence only, never the 10 Hz or 60 Hz loops.
+        /// </para>
+        /// </summary>
+        /// <param name="attributes">The player's attribute block.</param>
+        public static float PlayerRating(in PlayerAttributes attributes) =>
+            LineupSelector.MeanAttribute(in attributes);
+
+        /// <summary>
         /// The <c>PlayerId</c>s of the starting eleven <c>LineupSelector</c> selects from
         /// <paramref name="squad"/> under the Stage-0 formation — the same eleven
         /// <see cref="StartingElevenMean"/> rates and <c>ConfigureSquads</c> fields.
@@ -186,4 +230,27 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | sharper case: a suspended player brought on as a SUB would  |
 // |         |            |        | serve his ban for a match he played, reintroducing exactly  |
 // |         |            |        | the free appearance stage 1 removed.                        |
+// | 1.5     | 2026-08-16 | —      | ERR-030-045: + PlayerRating(in PlayerAttributes), a straight |
+// |         |            |        | delegation to LineupSelector.MeanAttribute. #30's tier-2     |
+// |         |            |        | back-fill needs the selector's OWN per-player key to press   |
+// |         |            |        | the weakest banned player back first; season-save cannot     |
+// |         |            |        | reach the internal LineupSelector, and re-deriving the mean  |
+// |         |            |        | there would be the parallel-surface trap this type exists    |
+// |         |            |        | to prevent. No behaviour change to any existing read.        |
+// | 1.6     | 2026-08-16, later | — | ANNOTATION, not a correction of v1.5's CODE (round-4        |
+// |         |            |        | reviewed-findings pass, doc only, no behaviour change).      |
+// |         |            |        | PlayerRating's own delegation to LineupSelector.MeanAttribute|
+// |         |            |        | is unchanged and correct. Its "Why this seam exists" doc     |
+// |         |            |        | stated v1.5's rationale — "the only key that behaves         |
+// |         |            |        | monotonically is the one the selector ranks last" — in       |
+// |         |            |        | PRESENT tense, after ERR-030-046 (landed the same day)       |
+// |         |            |        | falsified exactly that premise: LineupSelector selects PER   |
+// |         |            |        | POSITION, so no global scalar key is safe. Rewritten to the  |
+// |         |            |        | ERR-030-046 role this method actually plays now — a          |
+// |         |            |        | deterministic total order canonicalising                     |
+// |         |            |        | AvailabilityComposition's exhaustive subset search, plus the |
+// |         |            |        | weakest-first pick its beyond-cap greedy fallback commits —  |
+// |         |            |        | with the v1.5 row above left as history, per FR-CS-056/057,  |
+// |         |            |        | and a new annotated paragraph marking it falsified rather    |
+// |         |            |        | than silently rewritten.                                     |
 #endregion

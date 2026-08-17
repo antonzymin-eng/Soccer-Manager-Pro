@@ -1,7 +1,11 @@
 # Discipline & Suspensions #44 — Section 9: Approval Checklist
 
 **Created:** July 24, 2026
-**Last Updated:** August 15, 2026, later (v0.5 — **ERR-044-006**, the round-5 High: **G6, G13 and G14
+**Last Updated:** August 16, 2026 (v0.6 — final fixer pass, M7: §9.2's G2-balance-pass follow-up
+renamed `YELLOW_ACCUMULATION_THRESHOLD` → `YellowAccumulationThreshold`, matching `DisciplineConstants.cs`
+and `src/CLAUDE.md` §3.2.3's PascalCase rule for `[GT]` constants (`ERR-044-017`). No gate re-checked;
+doc-only.)
+**Last Updated (prior):** August 15, 2026, later (v0.5 — **ERR-044-006**, the round-5 High: **G6, G13 and G14
 were each ratified on a `T-DC-*` test that does not exist.** `section-5.md` v0.5 withdrew
 T-DC-VIEW-001 (its only test deleted at C1/C2 AR round 1 as tautological, never replaced) and
 T-DC-INT-001 (neither half ever written), and corrected T-DC-VIEW-002, which had mandated the
@@ -29,7 +33,7 @@ pass.)
 ERR-030-009 back-prop entry annotated LIVE since T2, so it reads as the historical approval-time
 record it is)
 **Last Updated (prior):** July 24, 2026 (v0.2 — section-file AR PASS-1 (1M) → PASS-2 (2L) → CONVERGENCE; R-01..R-05 signed; APPROVED; prior v0.1 IN REVIEW)
-**Version:** 0.5
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -56,7 +60,7 @@ record it is)
 
 ## 9.2 Post-APPROVED follow-ups (non-blocking)
 
-- **G2 balance pass** — `YELLOW_ACCUMULATION_THRESHOLD` / the three ban lengths are illustrative;
+- **G2 balance pass** — `YellowAccumulationThreshold` / the three ban lengths are illustrative;
   pinned at the balance pass against real-competition rules (the #21 G2 precedent).
 - **T-phase back-props** — the #30 outer `SEASON_SAVE_FORMAT_VERSION` bump (T1); the hygiene-hook
   wiring as #31's FR-TX-022 build lands (T2); the #43 partition + #30 quick-sim synthesis
@@ -112,4 +116,5 @@ ERR-030-002/004/006/007 pattern, flow-side). **No #16 change** (read-only — no
 | 0.3 | 2026-08-13 | — | **L6** (adversarial review over the C1/C2 landing): §9.3's ERR-030-009 entry annotated LIVE since T2 — the "null seam until #44 T2" clause is the frozen approval-time back-prop text, not a claim about today's state. |
 | 0.4 | 2026-08-15 | — | **M25** (#44 adversarial-review round 4, `open-issues.md`): re-checked G14 against `section-5.md` v0.4's corrected test-plan table (that section had mandated a withdrawn fail-loud and lacked rows for F6/FR-DC-009/F2). G14 cites bare "§5.6", which now names all four gaps explicitly — left **✅** unchanged, since the checklist row itself was never wrong, only the table it pointed at. **⚠️ CORRECTED at v0.5 (ERR-044-006), annotated rather than rewritten:** "re-checked G14 against the corrected table" describes a check of the four rows M25 had just *added*, not of the table. Three pre-existing rows were defective at the moment of that re-certification and two requirements were traced by no row at all, so G14's ✅ was left standing on a verification that had not been performed. The claim "the checklist row itself was never wrong" is also withdrawn — G14's two-disposition wording was itself over-narrow, which is why v0.5 amends it. |
 | 0.5 | 2026-08-15 | — | **ERR-044-006** (#44 adversarial-review round 5, High): **G6, G13 and G14 were each ratified on a `T-DC-*` test that does not exist.** **G6** — evidence was bare `T-DC-VIEW-001`, withdrawn at `section-5.md` v0.5 (its only test, `AvailabilityTests.FilterAvailable_LeavesTheSourceSquadUntouched`, was deleted at C1/C2 AR round 1 as tautological per that file's v1.1 L4(a), and never replaced). The gate's "(byte-identity-locked)" parenthetical is **withdrawn** — the property holds by #27's construction, verified here against `src/player-database/Squad.cs` (sealed; `Array.Copy` in the constructor; `GetPlayer` returns `PlayerRecord` by value) — and the evidence re-cited to T-DC-VIEW-002/003 and §5.6's FR-DC-001 row. **G13** — evidence was bare `T-DC-INT-001`, of which **neither half was ever written** (`grep -n "typeof\|GetFields\|Reflection" src/discipline/tests/*.cs` returns nothing). Re-cited: the blob half to T-DC-SAV-001's exact-layout locks (a real failure mode), the integer half to a grep-verified construction argument explicitly labelled **audit, not enforcement**. The missing regression lock is a **new §9.2 follow-up** with what to write and why it was not written here — recorded as a gap, not absorbed into the citation. **G14** — its claim ("each traceable to a T-DC-* test or a §7 deferral") was false for FR-DC-001/019/020 and had never covered FR-DC-002 or FR-DC-022 at all. **Wording amended, and the amendment is recorded as an amendment:** a third disposition, *established by construction*, joins test and deferral, because a structural negative like FR-DC-019 ("registers **no** RNG stream") has no observable a test could assert — the posture **G3 has held since approval**, so this aligns G14 with an already-approved gate rather than inventing a softer bar. §5.6 now carries a per-FR map so the gate is re-derivable by grep instead of asserted. All three gates stay **✅**: every property they certify was verified to hold, and only their evidence was wrong. **R-05** annotated in place (§9.3's L6 precedent) where its sign-off text cites the same withdrawn lock; its substance is unaffected and the decision is not reopened. No other gate re-verified in this pass; G1–G5, G7–G12 and G15 are untouched and were not re-checked. |
+| 0.6 | 2026-08-16 | — | **Final fixer pass, M7 (doc-only).** §9.2's G2-balance-pass follow-up bullet renamed `YELLOW_ACCUMULATION_THRESHOLD` → `YellowAccumulationThreshold`, matching the rename already landed at `section-2.md`/`section-3.md`/`appendices.md`/`DisciplineConstants.cs`. See `spec-error-log.md` `ERR-044-017`. |
 #endregion

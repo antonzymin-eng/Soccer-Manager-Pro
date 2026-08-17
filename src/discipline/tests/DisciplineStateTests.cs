@@ -1,12 +1,18 @@
 // File:     src/discipline/tests/DisciplineStateTests.cs
 // Created:  2026-08-13
-// Modified: 2026-08-15 (reviewed-findings pass, L21 — v1.1)
+// Modified: 2026-08-16, later (round-4 reviewed-findings pass, L-F — v1.3: new
+//           EntryFor_NegativePlayerId_ReturnsTheAllZeroKey_NotTheRequestedOne, pinning that
+//           EntryFor(-1, 7) returns PlayerId 0/CompetitionId 0 (the all-zero default), not the
+//           requested key echoed back — the existing EntryFor(-1, 0) case could not distinguish the
+//           two shapes since 0/0 is both the requested key AND the default.)
+// Modified: 2026-08-16 (reviewed-findings pass, L1 — v1.2)
 // Author:   —
-// Spec:     Discipline & Suspensions #44 §2.2 (data structures) / FR-DC-012 / FR-DC-017 / FR-DC-020/021;
-//           §5 T-DC-SAV-002 / T-DC-DET-001; Code Standards #20
+// Spec:     Discipline & Suspensions #44 §2.2 (data structures) / §2.3 F2 / FR-DC-008 / FR-DC-012 /
+//           FR-DC-017 / FR-DC-020/021; §5 T-DC-SAV-002 / T-DC-DET-001; Code Standards #20
 // Purpose:  Unit tests for DisciplineState — the canonical ascending (PlayerId, CompetitionId) order,
-//           binary-search lookup, the FR-DC-017 empty-row drop on Upsert, and FromEntries' three
-//           restore-door refusals (non-ascending, duplicate, all-zero) plus its copy-not-borrow rule.
+//           binary-search lookup, the FR-DC-017 empty-row drop on Upsert, FromEntries' three
+//           restore-door refusals (non-ascending, duplicate, all-zero) plus its copy-not-borrow rule,
+//           and EntryFor's negative-playerId absent case (L1).
 
 using System;
 
@@ -103,6 +109,49 @@ namespace TacticalDirector.Discipline.Tests
             Assert.IsTrue(state.HasEntry(1, 0));
             Assert.IsFalse(state.HasEntry(1, 1), "same player, different competition — no row exists there");
             Assert.IsFalse(state.HasEntry(2, 0), "a different player entirely");
+        }
+
+        [Test]
+        public void EntryFor_NegativePlayerId_ReturnsTheZeroRow_WithoutThrowing()
+        {
+            // L1: EntryFor's doc says the absent case is not an error, and no row can ever exist for a
+            // negative playerId (the validating constructor refuses one on every write path) — so this
+            // must not route through that constructor and throw ArgumentOutOfRangeException.
+            var state = new DisciplineState();
+
+            DisciplineEntry entry = state.EntryFor(-1, 0);
+
+            Assert.AreEqual(0, entry.Yellows);
+            Assert.AreEqual(0, entry.BanMatchesRemaining);
+            Assert.IsTrue(entry.IsEmpty);
+            Assert.IsFalse(entry.IsSuspended);
+        }
+
+        [Test]
+        public void HasEntry_NegativePlayerId_ReturnsFalse()
+        {
+            // L1: must agree with EntryFor(-1, 0) not throwing — both read a negative key as absent.
+            var state = new DisciplineState();
+
+            Assert.IsFalse(state.HasEntry(-1, 0));
+        }
+
+        [Test]
+        public void EntryFor_NegativePlayerId_ReturnsTheAllZeroKey_NotTheRequestedOne()
+        {
+            // L-F: EntryFor(-1, 0) above uses competitionId 0, which cannot distinguish "the all-zero
+            // default" from "a row carrying the requested key" — both would read PlayerId 0,
+            // CompetitionId 0. This test passes a NON-zero competitionId so the two shapes diverge:
+            // the negative-key branch returns default(DisciplineEntry) (0, 0), not (-1, 7) — unlike the
+            // non-negative absent branch (see EntryFor_AbsentKey_ReturnsACleanZeroRow), which carries
+            // the requested key. The behavior is chosen, not accidental — this pins it.
+            var state = new DisciplineState();
+
+            DisciplineEntry entry = state.EntryFor(-1, 7);
+
+            Assert.AreEqual(0, entry.PlayerId, "the negative-key branch must return the ALL-ZERO key, not -1");
+            Assert.AreEqual(0, entry.CompetitionId, "the negative-key branch must return the ALL-ZERO key, not 7");
+            Assert.IsTrue(entry.IsEmpty);
         }
 
         // ── FR-DC-017: Upsert with an empty entry removes the row ────────────────────
@@ -258,4 +307,15 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | the caller's array. Annotated as documentation of the field/      |
 // |         |            |        | method choice rather than a reachable-failure guard; not deleted, |
 // |         |            |        | assertion unchanged.                                              |
+// | 1.2     | 2026-08-16 | —      | Reviewed-findings fix (L1): two new cases lock                    |
+// |         |            |        | DisciplineState.EntryFor(-1, 0) returning the zero row without    |
+// |         |            |        | throwing, and HasEntry(-1, 0) agreeing at false — the pairing the |
+// |         |            |        | production fix (DisciplineState.cs v1.1) restores.                |
+// | 1.3     | 2026-08-16, later | — | Round-4 reviewed-findings fix (L-F): new                       |
+// |         |            |        | EntryFor_NegativePlayerId_ReturnsTheAllZeroKey_NotTheRequestedOne  |
+// |         |            |        | drives EntryFor(-1, 7) — a non-zero competitionId, so the result   |
+// |         |            |        | can distinguish "the all-zero default" (0, 0) from "a row          |
+// |         |            |        | carrying the requested key" (-1, 7), which the existing            |
+// |         |            |        | EntryFor(-1, 0) case could not (both shapes read 0, 0 there).      |
+// |         |            |        | Pairs DisciplineState.cs v1.2's corrected doc.                     |
 #endregion

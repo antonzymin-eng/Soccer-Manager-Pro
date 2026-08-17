@@ -1,5 +1,21 @@
 // File:     src/discipline/DisciplineEntry.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16, latest (finding B, doc only — v1.4: the constructor's negative-PlayerId XML doc
+//           and runtime message justified the guard by "integer division would otherwise silently
+//           derive it to club 0's OnClubFixturePlayed loop" — machinery ERR-044-014 deleted the same
+//           day (DisciplineRules.cs v1.7). Restated on grounds that survive: a negative id is an
+//           unresolvable identity, MigratePlayerId refuses one as a migration target, and the save
+//           codec's/FromEntries' ordering invariant depends on non-negative ids. Also corrected the L2
+//           accumulator-arithmetic comment's stale "wiring is outside this file's ownership for this
+//           pass" — DisciplineRules.cs v1.10 wired it the same day, and the comment now states the
+//           surviving residual honestly: the guards make an overflow throw loud and correctly named,
+//           they do not make CardLedgerFold.Commit atomic against it. No behaviour change.)
+// Modified: 2026-08-16 (reviewed findings pass, L2 — v1.3: added YellowsPlusOne/BanMatchesPlus, guarded
+//           accumulator arithmetic that refuses BEFORE an addition would overflow int.MaxValue and wrap
+//           to a negative value the constructor's existing guard would then misreport as "a counting
+//           bug". DisciplineRules.AddYellow/AddBan are the intended callers; wiring them is outside this
+//           file's ownership for this pass — see CardLedgerFold.cs v1.8's L2 doc for the scoped claim
+//           this closes the gap under.)
 // Modified: 2026-08-15 (reviewed findings pass, L4 — v1.2: the CompetitionId doc's
 //           <see cref="DisciplineConstants.LEAGUE_COMPETITION_KEY"/> reference renamed for that
 //           constant's ALL_CAPS -> LeagueCompetitionKey rename (DisciplineConstants.cs v1.5). No
@@ -8,7 +24,8 @@
 // Spec:     Discipline & Suspensions #44 §2.2 (data structures) / §2.3 F2 / FR-DC-012 / FR-DC-017 /
 //           FR-DC-020; Code Standards #20
 // Purpose:  One player's discipline tally within one competition — the (PlayerId, CompetitionId) →
-//           (Yellows, BanMatchesRemaining) row DisciplineState stores and DisciplineSaveCodec writes.
+//           (Yellows, BanMatchesRemaining) row DisciplineState stores and DisciplineSaveCodec writes,
+//           plus the guarded arithmetic that grows those two fields without a silent overflow.
 
 using System;
 
@@ -53,10 +70,12 @@ namespace TacticalDirector.Discipline
 
         /// <summary>Builds a row.</summary>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="playerId"/> is negative — §2.3
-        /// <b>F2</b>, a player outside the resolvable universe. C# integer division truncates toward
-        /// zero, so every id in <c>[-CLUB_SQUAD_SIZE + 1, -1]</c> would otherwise derive to club 0 in
-        /// <see cref="DisciplineRules.OnClubFixturePlayed"/> — silently serving, decrementing and
-        /// migrating a ban that names no real player. <paramref name="yellows"/> or
+        /// <b>F2</b>, a player outside the resolvable universe: a negative id is an unresolvable
+        /// identity that names no real player, <see cref="DisciplineRules.MigratePlayerId"/> itself
+        /// refuses one as a migration target for the identical reason (its own F2 gate), and
+        /// <see cref="DisciplineSaveCodec"/>'s strictly-ascending <c>(PlayerId, CompetitionId)</c>
+        /// ordering invariant — <see cref="DisciplineState.FromEntries"/>'s own copy of the same rule —
+        /// depends on every key being non-negative. <paramref name="yellows"/> or
         /// <paramref name="banMatchesRemaining"/> is negative — a negative tally is a counting bug, and
         /// the codec refuses one on the way back in (F3), so it must never be constructible either.</exception>
         public DisciplineEntry(int playerId, int competitionId, int yellows, int banMatchesRemaining)
@@ -65,9 +84,11 @@ namespace TacticalDirector.Discipline
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(playerId), playerId,
-                    "DisciplineEntry: PlayerId must be >= 0 (§2.3 F2) — a negative id names no real " +
-                    "player, and integer division would otherwise silently derive it to club 0's " +
-                    "OnClubFixturePlayed loop.");
+                    "DisciplineEntry: PlayerId must be >= 0 (§2.3 F2) — a negative id is an " +
+                    "unresolvable identity: it names no real player, DisciplineRules.MigratePlayerId " +
+                    "refuses one as a migration target for the same reason, and the save codec's " +
+                    "strictly-ascending (PlayerId, CompetitionId) ordering invariant depends on every " +
+                    "key being non-negative.");
             }
             if (yellows < 0)
             {
@@ -119,6 +140,66 @@ namespace TacticalDirector.Discipline
                 return hash;
             }
         }
+
+        // ── L2 (reviewed findings pass, closed in full at DisciplineRules.cs v1.10): guarded
+        // accumulator arithmetic ──────────────────────────────────────────────────────────────────
+        //
+        // DisciplineRules.AddYellow/AddBan read a field off an existing entry, add to it, and construct
+        // a new DisciplineEntry from the result. At int.MaxValue that addition wraps silently to a
+        // negative number, and THIS type's own constructor guard then refuses it as "a negative tally
+        // is a counting bug" — true of the symptom, false of the cause: the tally was never negative
+        // until the wrap put it there. These two helpers are the guarded alternative — they check
+        // headroom BEFORE the addition, so the entry (and whichever caller reads it) never wraps in the
+        // first place. DisciplineRules.AddYellow (both its `+ 1` and its accumulation-ban `+=`) and
+        // AddBan now route through them (DisciplineRules.cs v1.10) — every accumulator addition in that
+        // file is guarded, not merely most of them. That does NOT make CardLedgerFold.Commit atomic
+        // against this class of throw: Commit still applies cards one at a time through
+        // DisciplineRules.ApplyCard, so a mid-list OverflowException — now loud and correctly named
+        // instead of a misleading "counting bug" — still leaves cards 0..k-1 already applied and
+        // _committed still false. The guards close the misattribution, not the partial-application
+        // residual; see CardLedgerFold.cs's own L2 doc for that scope.
+
+        /// <summary>
+        /// <paramref name="yellows"/> plus one, refusing BEFORE the addition if
+        /// <paramref name="yellows"/> is already <see cref="int.MaxValue"/> — the addition would
+        /// otherwise wrap silently to a negative value.
+        /// </summary>
+        /// <exception cref="OverflowException"><paramref name="yellows"/> is already
+        /// <see cref="int.MaxValue"/>.</exception>
+        internal static int YellowsPlusOne(int yellows)
+        {
+            if (yellows == int.MaxValue)
+            {
+                throw new OverflowException(
+                    "DisciplineEntry: Yellows is already int.MaxValue (" + int.MaxValue + "); adding " +
+                    "one more would overflow silently, wrapping to a negative value the constructor " +
+                    "would then misreport as a counting bug rather than what it actually is — an " +
+                    "accumulator overflow.");
+            }
+
+            return yellows + 1;
+        }
+
+        /// <summary>
+        /// <paramref name="banMatchesRemaining"/> plus <paramref name="matches"/>, refusing BEFORE the
+        /// addition if the sum would exceed <see cref="int.MaxValue"/>. Checked via subtraction
+        /// (<c>banMatchesRemaining &gt; int.MaxValue - matches</c>) rather than performing the addition
+        /// and inspecting the result, which would itself be the overflow this guard exists to catch.
+        /// </summary>
+        /// <exception cref="OverflowException">The sum would exceed <see cref="int.MaxValue"/>.</exception>
+        internal static int BanMatchesPlus(int banMatchesRemaining, int matches)
+        {
+            if (matches > 0 && banMatchesRemaining > int.MaxValue - matches)
+            {
+                throw new OverflowException(
+                    "DisciplineEntry: BanMatchesRemaining (" + banMatchesRemaining + ") + matches (" +
+                    matches + ") would overflow int.MaxValue (" + int.MaxValue + "), wrapping to a " +
+                    "negative value the constructor would then misreport as a counting bug rather " +
+                    "than what it actually is — an accumulator overflow.");
+            }
+
+            return banMatchesRemaining + matches;
+        }
     }
 }
 
@@ -138,4 +219,27 @@ namespace TacticalDirector.Discipline
 // | 1.2     | 2026-08-15 | —      | Reviewed findings pass, L4. The CompetitionId doc's <see        |
 // |         |            |        | cref="DisciplineConstants.LEAGUE_COMPETITION_KEY"/> reference     |
 // |         |            |        | renamed to LeagueCompetitionKey. No behaviour change.             |
+// | 1.3     | 2026-08-16 | —      | Reviewed findings pass, L2. Added internal static                 |
+// |         |            |        | YellowsPlusOne(int)/BanMatchesPlus(int,int): guarded arithmetic   |
+// |         |            |        | that throws OverflowException BEFORE an addition would wrap       |
+// |         |            |        | int.MaxValue to a negative value — the constructor's existing     |
+// |         |            |        | guard would otherwise refuse the wrapped result as "a negative    |
+// |         |            |        | tally is a counting bug", misnaming an overflow as a counting     |
+// |         |            |        | bug. DisciplineRules.AddYellow/AddBan are the intended callers;   |
+// |         |            |        | that wiring is outside this file's ownership for this pass.       |
+// | 1.4     | 2026-08-16, latest | — | Finding B, doc only. The constructor's negative-PlayerId       |
+// |         |            |        | XML doc and runtime message cited a packed-id integer-division    |
+// |         |            |        | derivation ERR-044-014 deleted from OnClubFixturePlayed the same  |
+// |         |            |        | day (DisciplineRules.cs v1.7) — a guard justified by retired      |
+// |         |            |        | machinery a future maintainer could delete believing it unneeded. |
+// |         |            |        | Restated on surviving grounds: unresolvable identity,             |
+// |         |            |        | MigratePlayerId's own F2 refusal of a negative migration target,  |
+// |         |            |        | and the save codec's/FromEntries' ordering invariant depending on |
+// |         |            |        | non-negative keys. The L2 accumulator-arithmetic comment's stale  |
+// |         |            |        | "wiring is outside this file's ownership" note is corrected —     |
+// |         |            |        | DisciplineRules.cs v1.10 wired both AddYellow additions and       |
+// |         |            |        | AddBan through these helpers the same day — with the surviving    |
+// |         |            |        | residual stated honestly: the guards make an overflow throw loud  |
+// |         |            |        | and correctly named, not CardLedgerFold.Commit atomic against it. |
+// |         |            |        | No behaviour change.                                               |
 #endregion

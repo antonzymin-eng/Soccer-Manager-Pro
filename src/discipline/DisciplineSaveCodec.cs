@@ -1,5 +1,11 @@
 // File:     src/discipline/DisciplineSaveCodec.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16, latest (finding B, doc/message only — v1.3: Decode's negative-PlayerId refusal
+//           message cited a packed-id integer-division derivation ERR-044-014 deleted from
+//           OnClubFixturePlayed the same day (DisciplineRules.cs v1.7) — a guard justified by retired
+//           machinery. Restated on surviving grounds: unresolvable identity, MigratePlayerId's own F2
+//           refusal of a negative migration target, and this decoder's own strictly-ascending ordering
+//           invariant depending on non-negative keys. No behaviour change.)
 // Modified: 2026-08-13 (#44 C1/C2 adversarial review round 5, L14 — Decode's doc corrected: it claimed
 //           the negative-PlayerId check ran BEFORE the ordering comparison; the ordering check is at
 //           :172, the negativity check at :186 — the reverse. Behaviour unchanged; message-only — v1.2)
@@ -193,8 +199,11 @@ namespace TacticalDirector.Discipline
                 {
                     throw new InvalidOperationException(
                         "Discipline save entry " + i + " has PlayerId = " + playerId + "; PlayerId " +
-                        "MUST be >= 0 (F3 / §2.3 F2). A negative id names no real player, and integer " +
-                        "division would silently derive it to club 0's OnClubFixturePlayed loop.");
+                        "MUST be >= 0 (F3 / §2.3 F2). A negative id is an unresolvable identity: it " +
+                        "names no real player, DisciplineRules.MigratePlayerId refuses one as a " +
+                        "migration target for the same reason, and this decoder's own strictly-" +
+                        "ascending (PlayerId, CompetitionId) ordering invariant depends on every key " +
+                        "being non-negative.");
                 }
 
                 if (yellows < 0 || banMatchesRemaining < 0)
@@ -245,4 +254,12 @@ namespace TacticalDirector.Discipline
 // |         |            |        | ordering first. Behaviour unchanged (both are F3 fail-loud, and   |
 // |         |            |        | for any entry but the first a negative id trips the ordering      |
 // |         |            |        | check anyway) — message-only fix, no code change.                 |
+// | 1.3     | 2026-08-16, latest | — | Finding B, doc/message only. Decode's negative-PlayerId        |
+// |         |            |        | refusal cited a packed-id integer-division derivation ERR-044-014 |
+// |         |            |        | deleted from OnClubFixturePlayed the same day (DisciplineRules.cs |
+// |         |            |        | v1.7) — a guard justified by retired machinery. Restated on       |
+// |         |            |        | surviving grounds: unresolvable identity, MigratePlayerId's own   |
+// |         |            |        | F2 refusal of a negative migration target, and this decoder's own |
+// |         |            |        | strictly-ascending ordering invariant depending on non-negative   |
+// |         |            |        | keys. No behaviour change.                                         |
 #endregion

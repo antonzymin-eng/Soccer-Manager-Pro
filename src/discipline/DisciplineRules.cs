@@ -1,5 +1,39 @@
 // File:     src/discipline/DisciplineRules.cs
 // Created:  2026-08-13
+// Modified: 2026-08-16, latest of all (round-4 reviewed-findings pass, L-E — v1.11: RequireBanLength's
+//           M2 remark still described the completeness lock as covering "every public static readonly
+//           field, of any type" — true of finding C's widening (any TYPE) but stale against M-A's later
+//           widening (any ACCESS LEVEL, via BindingFlags.NonPublic in
+//           DisciplineConfigCompletenessTests.cs v1.2), and "public static readonly" reads as excluding
+//           the internal fields the test now scans. Corrected to "static readonly, any type and any
+//           access level, not only public int". Doc only, no behaviour change. See CardLedgerFold.cs
+//           v1.12 for the sibling copy of this same remark.)
+// Modified: 2026-08-16, latest (carried L2 re-rated Medium, fully closed, plus finding C — v1.10:
+//           AddYellow's accumulation-ban addition (`ban += RequireBanLength(AccumBanMatches)`) was the
+//           one remaining unrouted accumulator addition in this file — v1.9 wired AddYellow's own
+//           `+ 1` and confirmed AddBan's `+ matches` was already routed, but missed this second
+//           addition one line below the increment it fixed. Now routes through
+//           DisciplineEntry.BanMatchesPlus, same as the other two. Doc-only elsewhere: the type
+//           remarks and CardLedgerFold.cs/DisciplineEntry.cs's stale "wiring is outside this file's
+//           ownership for this pass" trail is corrected to say the helpers ARE wired, with the
+//           surviving residual stated honestly — Commit still applies card-by-card, so a mid-list
+//           OverflowException still leaves 0..k-1 applied with _committed false; the guards make the
+//           failure loud and correctly named, they do not make Commit atomic against this class.
+//           Finding C: RequireBanLength's M2 remark now says the completeness lock covers every
+//           `public static readonly` field of ANY type, not only `int` — DisciplineConfigCompleteness-
+//           Tests.cs was widened the same day.)
+// Modified: 2026-08-16, yet later (final fixer pass — L2's second half: AddYellow's
+//           `entry.Yellows + 1` and AddBan's `entry.BanMatchesRemaining + matches` now route through
+//           DisciplineEntry.YellowsPlusOne/BanMatchesPlus, so an accumulator overflow throws
+//           OverflowException BEFORE any write instead of tripping the constructor's range guard with
+//           a misleading "counting bug" message mid-commit — v1.9)
+// Modified: 2026-08-16, later (adversarial-review M2, doc only — RequireBanLength and
+//           RequireYellowThreshold carry the pointer that adding a guarded [GT] is a five-site change,
+//           and name the completeness test that detects the drift — v1.8)
+// Modified: 2026-08-16 (ERR-044-014, adversarial-review H1 — OnClubFixturePlayed takes the club's
+//           roster ids and matches membership by presence, deleting the packed-id club derivation that
+//           nothing validated and that disagrees with the removal half the moment a transfer or an
+//           id-space widening lands — v1.7)
 // Modified: 2026-08-15, later (reviewed findings pass, L4 — v1.6: a prose reference to
 //           LEAGUE_COMPETITION_KEY renamed for that constant's ALL_CAPS -> LeagueCompetitionKey rename
 //           (DisciplineConstants.cs v1.5). Doc-only, no behaviour change.)
@@ -14,8 +48,6 @@
 
 using System;
 using System.Collections.Generic;
-
-using TacticalDirector.PlayerDatabase;
 
 namespace TacticalDirector.Discipline
 {
@@ -153,19 +185,30 @@ namespace TacticalDirector.Discipline
         /// <c>YellowAccumulationThreshold</c> below 1, at which point the residual subtraction cannot
         /// terminate a crossing and every single yellow bans, silently. The catalogue lock cannot see
         /// this — it runs config-unbound (ERR-041-003).</exception>
+        /// <exception cref="OverflowException"><paramref name="playerId"/>'s existing
+        /// <see cref="DisciplineEntry.Yellows"/> is already <see cref="int.MaxValue"/> — refused BEFORE
+        /// the increment via <see cref="DisciplineEntry.YellowsPlusOne"/>; or, on a crossing,
+        /// <paramref name="playerId"/>'s existing <see cref="DisciplineEntry.BanMatchesRemaining"/> plus
+        /// <see cref="DisciplineConstants.AccumBanMatches"/> would overflow — refused BEFORE the
+        /// addition via <see cref="DisciplineEntry.BanMatchesPlus"/>. Either way the entry is never
+        /// written with a value that silently wrapped negative and would otherwise surface here as a
+        /// misleading "counting bug" range refusal instead of what it actually is (L2, closed in full —
+        /// both additions this method performs are now guarded).</exception>
         public void AddYellow(int playerId, int competitionId)
         {
             int threshold = RequireYellowThreshold(DisciplineConstants.YellowAccumulationThreshold);
 
             DisciplineEntry entry = _state.EntryFor(playerId, competitionId);
-            int yellows = entry.Yellows + 1;
+            int yellows = DisciplineEntry.YellowsPlusOne(entry.Yellows);
             int ban = entry.BanMatchesRemaining;
 
             if (yellows >= threshold)
             {
                 yellows -= threshold;
-                ban += RequireBanLength(
-                    DisciplineConstants.AccumBanMatches, nameof(DisciplineConstants.AccumBanMatches));
+                ban = DisciplineEntry.BanMatchesPlus(
+                    ban,
+                    RequireBanLength(
+                        DisciplineConstants.AccumBanMatches, nameof(DisciplineConstants.AccumBanMatches)));
             }
 
             _state.Upsert(new DisciplineEntry(playerId, competitionId, yellows, ban));
@@ -176,6 +219,11 @@ namespace TacticalDirector.Discipline
         /// additively (FR-DC-007). A zero-length ban is legal and a no-op; a negative one is a caller bug.
         /// </summary>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="matches"/> is negative.</exception>
+        /// <exception cref="OverflowException"><paramref name="playerId"/>'s existing
+        /// <see cref="DisciplineEntry.BanMatchesRemaining"/> plus <paramref name="matches"/> would
+        /// exceed <see cref="int.MaxValue"/> — refused BEFORE the addition via
+        /// <see cref="DisciplineEntry.BanMatchesPlus"/>, for the identical reason
+        /// <see cref="AddYellow"/> is guarded (L2).</exception>
         public void AddBan(int playerId, int competitionId, int matches)
         {
             if (matches < 0)
@@ -188,7 +236,8 @@ namespace TacticalDirector.Discipline
 
             DisciplineEntry entry = _state.EntryFor(playerId, competitionId);
             _state.Upsert(new DisciplineEntry(
-                playerId, competitionId, entry.Yellows, entry.BanMatchesRemaining + matches));
+                playerId, competitionId, entry.Yellows,
+                DisciplineEntry.BanMatchesPlus(entry.BanMatchesRemaining, matches)));
         }
 
         /// <summary>
@@ -222,37 +271,68 @@ namespace TacticalDirector.Discipline
         /// league fixture should serve a league ban and leave a cup ban alone.
         /// </para>
         /// <para>
-        /// <b>Club membership is derived, not looked up:</b> <c>PlayerId / CLUB_SQUAD_SIZE == clubId</c>
-        /// is #27's club-scoped id formula, and FR-DC-013's migration rule keeps a transferred player's
-        /// id current — so no roster read is needed and the serving cannot disagree with a roster this
-        /// assembly is not allowed to hold. That derivation rests on #27 FR-SQ-010's global-uniqueness
-        /// promise as amended by <b>ERR-027-004</b>; before that amendment ids were unique only within
-        /// a club and this method would have served two clubs' bans at once (the ERR-041-019 class).
-        /// It ALSO rests on every stored <c>PlayerId</c> being non-negative — C# integer division
-        /// truncates toward zero, so a negative id would otherwise derive to club 0 regardless of
-        /// uniqueness. That half is enforced separately, at construction: <see cref="DisciplineEntry"/>
-        /// (M1, §2.3 F2) and <see cref="DisciplineSaveCodec.Decode"/> both refuse a negative
-        /// <c>PlayerId</c>, so no row this method reads can ever carry one.
+        /// <b>Club membership is LOOKED UP, not derived (ERR-044-014).</b> Whose ban this fixture
+        /// serves is decided by presence in <paramref name="clubPlayerIds"/> — the club's actual
+        /// roster, supplied by the caller that holds it — and by nothing else. Until August 16, 2026
+        /// this walk instead computed <c>entry.PlayerId / CLUB_SQUAD_SIZE == clubId</c>, #27's packed
+        /// club-scoped id formula, while the removal half of the same subsystem
+        /// (<see cref="Availability.MarkSuspended"/>) walked the real squad and read
+        /// <c>PlayerRecord.PlayerId</c>. Two notions of "is this player at this club" that agree only
+        /// while the packing holds: the moment they disagree — #31 transfers, or the ERR-044-003
+        /// stage 3 id-space widening that is already required — a banned player is removed from every
+        /// squad he is really in and his ban is never decremented, so he is suspended forever, with no
+        /// throw, no log and no test able to see it. Both the code and #44 §3.3 asserted the
+        /// precondition was held by FR-DC-013's migration rule; it is not, because
+        /// <see cref="MigratePlayerId"/> and <see cref="DropPlayer"/> have no production caller at all
+        /// (recorded at <c>src/season-save/SeasonLoop.cs</c>'s <c>RollToNextSeason</c> roster sync).
+        /// This is ERR-041-019's defect one subsystem over, and it is closed the same way: one notion
+        /// of membership, taken from the roster, enforced at the entry point.
+        /// </para>
+        /// <para>
+        /// <b><paramref name="clubId"/> is now identity and caller-contract only.</b> It names which
+        /// club's fixture this is — for the §2.3 <b>F2</b> gate below, for diagnostics, and for the
+        /// competition granularity #43 must eventually revisit — and it participates in no matching
+        /// decision. Deliberately not cross-checked against <paramref name="clubPlayerIds"/>: any such
+        /// check would have to re-derive a club from a player id, which is the second notion of
+        /// membership this change exists to delete.
         /// </para>
         /// <para>A row that reaches <c>(0, 0)</c> here is dropped immediately, mid-season, per FR-DC-017.</para>
         /// </summary>
-        /// <param name="clubId">The club that played the fixture.</param>
+        /// <param name="clubId">The club that played the fixture. Identity only — see above.</param>
+        /// <param name="clubPlayerIds">The club's roster: every player id currently at
+        /// <paramref name="clubId"/>, whether or not he was available for this fixture. Never null, for
+        /// the same reason <paramref name="fieldedPlayerIds"/> is not — a caller who cannot name the
+        /// roster cannot name whose ban a fixture served, and the two silent readings of the unknown
+        /// case ("serve everybody" / "serve nobody") are respectively this method's old defect and a
+        /// permanently-suspended squad.</param>
         /// <param name="fieldedPlayerIds">The eleven this club actually fielded. Never null: a caller
         /// that does not know who played cannot know whose ban was served either, and defaulting the
         /// unknown case to "serve everybody" is precisely the silent-loss shape this project has twice
         /// filed (the #44 H1/H4 chain) — so the ignorance is refused rather than absorbed.</param>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="clubId"/> is negative — <b>F2</b>,
-        /// a club outside the resolvable universe. No id divides to a negative club, so this would
-        /// otherwise be a silent no-op rather than the caller-contract bug it is.</exception>
-        /// <exception cref="ArgumentNullException"><paramref name="fieldedPlayerIds"/> is null.</exception>
-        public void OnClubFixturePlayed(int clubId, int[] fieldedPlayerIds)
+        /// a club outside the resolvable universe. Kept as a caller-contract gate now that no id is
+        /// divided into a club: a caller passing a negative club is wrong about something, and the
+        /// roster it passed alongside cannot be trusted to be the club it meant.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="clubPlayerIds"/> or
+        /// <paramref name="fieldedPlayerIds"/> is null.</exception>
+        public void OnClubFixturePlayed(int clubId, int[] clubPlayerIds, int[] fieldedPlayerIds)
         {
             if (clubId < 0)
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(clubId), clubId,
                     "DisciplineRules.OnClubFixturePlayed: clubId must be >= 0 (F2). A negative club " +
-                    "matches no player id, so serving would silently do nothing.");
+                    "is outside the resolvable universe, so the roster supplied beside it cannot be " +
+                    "the club the caller meant.");
+            }
+            if (clubPlayerIds == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(clubPlayerIds),
+                    "DisciplineRules.OnClubFixturePlayed: the club's roster is required (F2, "
+                    + "ERR-044-014). Membership is read from it, never derived from the id packing, "
+                    + "so a caller that cannot name the roster cannot name whose ban this fixture "
+                    + "served — and both silent readings of the unknown case are wrong.");
             }
             if (fieldedPlayerIds == null)
             {
@@ -272,8 +352,10 @@ namespace TacticalDirector.Discipline
                 {
                     continue;
                 }
-                if (entry.PlayerId / PlayerDatabaseConstants.CLUB_SQUAD_SIZE != clubId)
+                if (!IsOnClubRoster(entry.PlayerId, clubPlayerIds))
                 {
+                    // Not one of this club's players — the SAME question, asked the SAME way, as the
+                    // removal half asks of the same squad (ERR-044-014).
                     continue;
                 }
                 if (WasFielded(entry.PlayerId, fieldedPlayerIds))
@@ -408,11 +490,25 @@ namespace TacticalDirector.Discipline
         /// not the 60 Hz path — so the array stays an array rather than becoming a set the caller has
         /// to build and this assembly has to trust the contents of.
         /// </summary>
-        private static bool WasFielded(int playerId, int[] fieldedPlayerIds)
+        private static bool WasFielded(int playerId, int[] fieldedPlayerIds) =>
+            ContainsId(fieldedPlayerIds, playerId);
+
+        /// <summary>
+        /// Whether <paramref name="playerId"/> is on the club's roster — the one membership rule
+        /// (ERR-044-014), matched by presence exactly as <see cref="Availability.MarkSuspended"/>
+        /// matches the squad it walks. A linear scan over at most a squad's worth of ids, run only for
+        /// a row that already carries an outstanding ban, on the season path.
+        /// </summary>
+        private static bool IsOnClubRoster(int playerId, int[] clubPlayerIds) =>
+            ContainsId(clubPlayerIds, playerId);
+
+        /// <summary>The shared scan behind <see cref="WasFielded"/> and <see cref="IsOnClubRoster"/> —
+        /// one copy, so the two questions cannot drift into two different answers.</summary>
+        private static bool ContainsId(int[] ids, int playerId)
         {
-            for (int i = 0; i < fieldedPlayerIds.Length; i++)
+            for (int i = 0; i < ids.Length; i++)
             {
-                if (fieldedPlayerIds[i] == playerId)
+                if (ids[i] == playerId)
                 {
                     return true;
                 }
@@ -429,6 +525,11 @@ namespace TacticalDirector.Discipline
         /// <exception cref="InvalidOperationException"><paramref name="threshold"/> is below 1 — the
         /// residual subtraction can never terminate a crossing, so every single yellow would ban,
         /// silently.</exception>
+        /// <remarks>
+        /// M2: a <b>new</b> guarded <c>[GT]</c> needs a guard of this shape here AND an entry in both
+        /// <c>CardLedgerFold.RequireCommittableConfig</c> forms, <c>CommitWithExplicitConfig</c>'s
+        /// parameters and #44 §2.3 F6's list — see <see cref="RequireBanLength"/>'s remark.
+        /// </remarks>
         internal static int RequireYellowThreshold(int threshold)
         {
             if (threshold < 1)
@@ -457,6 +558,23 @@ namespace TacticalDirector.Discipline
         /// <see cref="RequireYellowThreshold"/>) directly reaches the identical guarded code with an
         /// explicit value instead — the cheapest honest seam that does not require a config-loader
         /// composition root this project does not have yet.
+        /// </para>
+        /// <para>
+        /// <b>M2 — adding a guarded <c>[GT]</c> is a five-site change.</b> A guard here is only half of
+        /// it: the constant must also reach both <c>CardLedgerFold.RequireCommittableConfig</c> forms
+        /// and <c>CommitWithExplicitConfig</c>'s parameter list (so the round-level pre-flight refuses
+        /// before anything is written), and #44 §2.3 F6's guard list in the spec. Nothing enforces that
+        /// mechanically, so <c>DisciplineConfigCompletenessTests</c> asserts the guarded set equals
+        /// <see cref="DisciplineConstants"/>' config-settable set — <c>static readonly</c>, any type and
+        /// any access level, not only <c>public int</c> (finding C, widened by finding M-A: the earlier
+        /// int-only filter would have silently dropped a future <c>Config.GetBool</c>/<c>GetFloat</c>/
+        /// <c>GetString</c> constant, and the earlier public-only filter would have silently dropped a
+        /// future <c>internal</c> one, from the very set this sentence claims is covered) — extend the
+        /// pre-flight and that test together,
+        /// or the new constant ships with the very silent-breach exposure this method exists to close.
+        /// The recorded eventual shape is one validated <c>DisciplineConfig</c> struct rather than a
+        /// chain of guards; it is gated on the <c>GameplayConfigHolder.Bind</c> composition-root pass,
+        /// which no production caller runs yet, so it buys nothing today.
         /// </para>
         /// </summary>
         /// <exception cref="InvalidOperationException"><paramref name="matches"/> is negative.</exception>
@@ -544,4 +662,67 @@ namespace TacticalDirector.Discipline
 // | 1.6     | 2026-08-15, later | — | Reviewed findings pass, L4. A prose LEAGUE_COMPETITION_KEY      |
 // |         |            |        | reference renamed to LeagueCompetitionKey. Doc-only, no            |
 // |         |            |        | behaviour change.                                                  |
+// | 1.7     | 2026-08-16 | —      | ERR-044-014 (adversarial review, H1). OnClubFixturePlayed gains  |
+// |         |            |        | a required int[] clubPlayerIds and decides membership by          |
+// |         |            |        | PRESENCE in it; the PlayerId / CLUB_SQUAD_SIZE == clubId          |
+// |         |            |        | derivation is deleted, and with it this file's dependency on      |
+// |         |            |        | TacticalDirector.PlayerDatabase. The derivation was a SECOND      |
+// |         |            |        | notion of club membership beside Availability.MarkSuspended's,    |
+// |         |            |        | which walks the real squad and reads PlayerRecord.PlayerId; the   |
+// |         |            |        | two agree only while #27's packing holds, and the moment they     |
+// |         |            |        | disagree (a #31 transfer, or the ERR-044-003 stage 3 id-space     |
+// |         |            |        | widening) a banned player is removed from every squad he is       |
+// |         |            |        | really in while his ban never decrements — suspended forever,     |
+// |         |            |        | silently. The precondition both this file and #44 §3.3 cited      |
+// |         |            |        | (FR-DC-013's migration rule keeping ids current) is not held:     |
+// |         |            |        | MigratePlayerId and DropPlayer have no production caller.         |
+// |         |            |        | clubId is retained for the F2 caller-contract gate and identity   |
+// |         |            |        | alone and is deliberately NOT cross-checked against the roster,   |
+// |         |            |        | since any such check re-derives the club from an id. Behaviour-   |
+// |         |            |        | identical on today's packed ids over a full roster, asserted by   |
+// |         |            |        | DisciplineRulesTests' agreement lock; the disagreement case is    |
+// |         |            |        | locked separately and follows the roster.                         |
+// | 1.8     | 2026-08-16, later | — | Adversarial review, M2 (minimal fix), doc only. The two [GT]     |
+// |         |            |        | guards now record that a NEW guarded constant is a five-site      |
+// |         |            |        | change — this guard, both CardLedgerFold.RequireCommittableConfig |
+// |         |            |        | forms, CommitWithExplicitConfig's parameters and #44 §2.3 F6's    |
+// |         |            |        | list — and name DisciplineConfigCompletenessTests, which asserts  |
+// |         |            |        | the guarded set still equals DisciplineConstants' config-settable |
+// |         |            |        | set. The DisciplineConfig struct restructure that would make the  |
+// |         |            |        | drift structurally impossible is recorded as the eventual owner-  |
+// |         |            |        | shape and gated on the GameplayConfigHolder.Bind composition-root |
+// |         |            |        | pass no production caller runs yet. No behaviour change.          |
+// | 1.9     | 2026-08-16, yet later | — | Final fixer pass — L2's second half. AddYellow's        |
+// |         |            |        | `entry.Yellows + 1` now reads DisciplineEntry.YellowsPlusOne(entry.Yellows); |
+// |         |            |        | AddBan's `entry.BanMatchesRemaining + matches` now reads          |
+// |         |            |        | DisciplineEntry.BanMatchesPlus(entry.BanMatchesRemaining, matches). Both    |
+// |         |            |        | guarded helpers landed at DisciplineEntry.cs v1.3 (L2, first half) but were |
+// |         |            |        | unwired pending this file's ownership. An accumulator at int.MaxValue now   |
+// |         |            |        | throws OverflowException before the write, entry unmodified, rather than    |
+// |         |            |        | silently wrapping negative and tripping the constructor's "counting bug"    |
+// |         |            |        | range guard on the wrapped result. No other call site of either addition   |
+// |         |            |        | shape exists in this file (AddYellow's separate `ban += RequireBanLength   |
+// |         |            |        | (AccumBanMatches)` line is a different addition, not in this pass's scope, |
+// |         |            |        | and was not named by the handoff).                                          |
+// | 1.10    | 2026-08-16, latest | — | Carried L2, re-rated Medium, closed in full; plus finding C.   |
+// |         |            |        | v1.9's own closing note above was WRONG: the AccumBanMatches addition it   |
+// |         |            |        | waved off as "a different addition, not in this pass's scope" is the SAME |
+// |         |            |        | accumulator shape one line below the fix — `ban += RequireBanLength       |
+// |         |            |        | (AccumBanMatches)` ran unguarded, so a player at BanMatchesRemaining ==    |
+// |         |            |        | int.MaxValue whose 5th yellow crossed the threshold still wrapped it       |
+// |         |            |        | negative and hit the constructor's misnamed "counting bug" guard, with     |
+// |         |            |        | the row left at yellows=4 (half-applied: the residual subtract landed,     |
+// |         |            |        | the ban add did not) and _committed still false. Now routes through        |
+// |         |            |        | DisciplineEntry.BanMatchesPlus, same as the other two accumulator sites.  |
+// |         |            |        | AddYellow's OverflowException doc extended to name both throw sources.    |
+// |         |            |        | Finding C, doc only: RequireBanLength's M2 remark now says the            |
+// |         |            |        | completeness lock covers every public static readonly field of ANY type,  |
+// |         |            |        | not only int, matching DisciplineConfigCompletenessTests.cs v1.1.         |
+// | 1.11    | 2026-08-16, latest of all | — | Round-4 reviewed-findings fix (L-E), doc only.    |
+// |         |            |        | RequireBanLength's M2 remark said "every public static readonly field, of |
+// |         |            |        | any type, not only int" — v1.10's finding-C fix widened TYPE but the      |
+// |         |            |        | wording still read as PUBLIC-only, while DisciplineConfigCompletenessTests|
+// |         |            |        | .cs v1.2 (M-A) had since widened the scan to BindingFlags.NonPublic too.  |
+// |         |            |        | Corrected to "static readonly, any type and any access level, not only    |
+// |         |            |        | public int". No behaviour change.                                          |
 #endregion

@@ -1,5 +1,17 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
+// Modified: 2026-08-16, latest (reviewed findings pass, findings A/B — v1.30: the CardLedgerFold
+//           construction site in PlayThroughEngine now passes the new required onPitchAgentIdCount
+//           parameter (ERR-044-022), MatchEngineConstants.SQUAD_SIZE — the same cross-assembly
+//           agreement SeasonLoopDisciplineTests already locks for NO_PLAYER_ID. Comment-only otherwise:
+//           states that this call site is where the ERR-044-023 boot-time precondition on the seed is
+//           satisfied (read immediately after BootFixtureEngine, before any tick can call
+//           SubstitutePlayer). No behaviour change beyond what the new constructor parameter itself
+//           enforces — a fresh boot-time seed still satisfies the new guard trivially.)
+// Modified: 2026-08-16 (ERR-044-014, adversarial-review H1 — IFixtureDisciplineDriver.OnClubFixture-
+//           Played takes the club's roster ids, derived at the resolve→filter→configure site from the
+//           UNFILTERED squad by the new RosterIds helper, so #44 no longer derives club membership
+//           from #27's id packing — v1.29)
 // Modified: 2026-08-15, later (reviewed findings pass, L4 — v1.28: DisciplineConstants.
 //           LEAGUE_COMPETITION_KEY reference renamed for that constant's ALL_CAPS -> LeagueCompetitionKey
 //           rename (DisciplineConstants.cs v1.5, src/CLAUDE.md reserves ALL_CAPS for [FIXED]). No
@@ -151,11 +163,14 @@ namespace TacticalDirector.SeasonSave
             void RequireCommittableConfig();
 
             /// <summary>
-            /// One club's FR-DC-011 ban-serving decrement for a played fixture, exempting the eleven
-            /// it fielded (ERR-044-003 stage 1 — a ban is served by the club playing WITHOUT the
-            /// banned player, and #30 §2.3 F9's back-fill can put him on the pitch in extremis).
+            /// One club's FR-DC-011 ban-serving decrement for a played fixture, over the club's own
+            /// roster (<paramref name="clubPlayerIds"/> — ERR-044-014: #44 no longer derives club
+            /// membership from #27's id packing, so the caller that resolved the roster supplies it)
+            /// and exempting the eleven it fielded (ERR-044-003 stage 1 — a ban is served by the club
+            /// playing WITHOUT the banned player, and #30 §2.3 F9's back-fill can put him on the pitch
+            /// in extremis).
             /// </summary>
-            void OnClubFixturePlayed(int clubId, int[] fieldedPlayerIds);
+            void OnClubFixturePlayed(int clubId, int[] clubPlayerIds, int[] fieldedPlayerIds);
 
             /// <summary>
             /// Commits this fixture's folded cards (FR-DC-010). <paramref name="foldOrNull"/> is null on
@@ -179,8 +194,8 @@ namespace TacticalDirector.SeasonSave
             public void RequireCommittableConfig() => CardLedgerFold.RequireCommittableConfig();
 
             /// <inheritdoc />
-            public void OnClubFixturePlayed(int clubId, int[] fieldedPlayerIds) =>
-                _rules.OnClubFixturePlayed(clubId, fieldedPlayerIds);
+            public void OnClubFixturePlayed(int clubId, int[] clubPlayerIds, int[] fieldedPlayerIds) =>
+                _rules.OnClubFixturePlayed(clubId, clubPlayerIds, fieldedPlayerIds);
 
             /// <inheritdoc />
             public void CommitFixtureCards(CardLedgerFold foldOrNull) => foldOrNull?.Commit(_rules);
@@ -876,7 +891,8 @@ namespace TacticalDirector.SeasonSave
                 Fixture fixture = _state.FixtureAt(indices[i]);
                 MatchResult result = ResolveFixture(
                     in fixture, squads, worldDay,
-                    out int[] homeXi, out int[] awayXi, out CardLedgerFold fold);
+                    out int[] homeXi, out int[] awayXi,
+                    out int[] homeRosterIds, out int[] awayRosterIds, out CardLedgerFold fold);
 
                 // ERR-041-010(b): the appearance record, written from the XIs the RESOLUTION ITSELF
                 // fielded — ResolveFixture hands back the ids it derived at its own filter+configure
@@ -912,16 +928,18 @@ namespace TacticalDirector.SeasonSave
                 // fallible under a bound config (DisciplineRules.AddYellow throws below
                 // YellowAccumulationThreshold < 1; RequireBanLength throws on a negative [GT] ban
                 // length). OnClubFixturePlayed itself is NOT (L9, EXTENDED at M1/ERR-030-040): it
-                // reads no [GT], and it has TWO guards — clubId < 0 (F2) and, since ERR-044-003
-                // stage 1, fieldedPlayerIds == null (ArgumentNullException) — neither of which can
+                // reads no [GT], and it has THREE guards — clubId < 0 (F2), fieldedPlayerIds == null
+                // (ERR-044-003 stage 1) and clubPlayerIds == null (ERR-044-014) — none of which can
                 // fire on this path. clubId < 0 is a caller-contract bug no real fixture can trigger,
-                // same as before. The null guard is excluded structurally, not by caller discipline:
-                // homeXi/awayXi are FieldedXi's output, and FieldedXi returns non-null exactly when
-                // _career != null || _disciplineDriver != null — the SAME condition this whole block
-                // already runs under (`if (_disciplineDriver != null)`, above). So whenever this call
-                // is reached, the array it is fed cannot be null. This is a distant invariant, not a
-                // local one: narrowing FieldedXi's gate, adding a third consumer, or a resolution mode
-                // whose XI derivation differs would each be enough to break it, and a post-mark
+                // same as before. Both null guards are excluded structurally, not by caller
+                // discipline: homeXi/awayXi are FieldedXi's output, which is non-null exactly when
+                // _career != null || _disciplineDriver != null, and homeRosterIds/awayRosterIds are
+                // RosterIds' output, which is non-null exactly when _disciplineDriver != null — the
+                // SAME condition this whole block already runs under (`if (_disciplineDriver != null)`,
+                // above). So whenever this call is reached, neither array it is fed can be null. This
+                // is a distant invariant, not a local one: narrowing FieldedXi's or RosterIds' gate,
+                // adding a third consumer, or a resolution mode whose XI derivation differs would each
+                // be enough to break it, and a post-mark
                 // ArgumentNullException here strands the round exactly as M17 describes below for
                 // fold.Commit. Placed BEFORE MarkFixturePlayed (as this block did before M6), a throw
                 // from fold.Commit here left the fixture UNPLAYED with both clubs' bans already
@@ -952,10 +970,19 @@ namespace TacticalDirector.SeasonSave
                 // F9's back-fill can field him in extremis; before this, that appearance also served
                 // his ban, so it cost him nothing. FieldedXi's gate is the union of both consumers,
                 // so these are non-null exactly when _disciplineDriver is.
+                //
+                // ERR-044-014: and each club's serving also takes the club's ROSTER, derived at the
+                // same site from the UNFILTERED squad — the one the filter itself walks, before any
+                // removal. #44 used to answer "is this player at this club?" by dividing his id by
+                // CLUB_SQUAD_SIZE, a second notion of membership beside the roster walk its own
+                // removal half performs; the two agree only while #27's packing holds. The roster
+                // must be the unfiltered one, since every id whose ban is being served is precisely
+                // an id the filter has removed. RosterIds' gate is _disciplineDriver alone — this
+                // block's own condition — so these are non-null exactly when they are read.
                 if (_disciplineDriver != null)
                 {
-                    _disciplineDriver.OnClubFixturePlayed(fixture.HomeClubId, homeXi);
-                    _disciplineDriver.OnClubFixturePlayed(fixture.AwayClubId, awayXi);
+                    _disciplineDriver.OnClubFixturePlayed(fixture.HomeClubId, homeRosterIds, homeXi);
+                    _disciplineDriver.OnClubFixturePlayed(fixture.AwayClubId, awayRosterIds, awayXi);
 
                     // ...and ONLY THEN this fixture's own cards (FR-DC-010). The order is the whole
                     // off-by-one contract and it is easy to get backwards: committing first would let
@@ -1375,14 +1402,16 @@ namespace TacticalDirector.SeasonSave
         /// </summary>
         private MatchResult ResolveFixture(
             in Fixture fixture, ISquadProvider squads, uint worldDay,
-            out int[] homeXi, out int[] awayXi, out CardLedgerFold foldOrNull)
+            out int[] homeXi, out int[] awayXi,
+            out int[] homeRosterIds, out int[] awayRosterIds, out CardLedgerFold foldOrNull)
         {
             bool managed = fixture.Involves(_state.ManagedClubId);
 
             if (ShouldPlayThroughEngine(Mode, managed))
             {
                 return PlayThroughEngine(
-                    in fixture, squads, worldDay, out homeXi, out awayXi, out foldOrNull);
+                    in fixture, squads, worldDay, out homeXi, out awayXi,
+                    out homeRosterIds, out awayRosterIds, out foldOrNull);
             }
 
             // The quick-sim synthesizes no cards at all (#44 §1.1 / §7.2 — card generation is
@@ -1391,10 +1420,17 @@ namespace TacticalDirector.SeasonSave
             // PlayNextRound, which is what FR-DC-011's "regardless of resolution path" requires.
             foldOrNull = null;
 
-            Squad home = SelectAvailable(ResolveSquad(squads, fixture.HomeClubId));
-            Squad away = SelectAvailable(ResolveSquad(squads, fixture.AwayClubId));
+            Squad homeRoster = ResolveSquad(squads, fixture.HomeClubId);
+            Squad awayRoster = ResolveSquad(squads, fixture.AwayClubId);
+            Squad home = SelectAvailable(homeRoster);
+            Squad away = SelectAvailable(awayRoster);
             homeXi = FieldedXi(home);
             awayXi = FieldedXi(away);
+
+            // ERR-044-014: the UNFILTERED rosters — see RosterIds for why serving cannot read the
+            // filtered squad, every id it serves being one the filter has just removed.
+            homeRosterIds = RosterIds(homeRoster);
+            awayRosterIds = RosterIds(awayRoster);
 
             // #29's match-entry fatigue is deliberately NOT an input here, unlike the availability
             // filter one line above. §3.4.1 keys this model on the rating differential alone, and the
@@ -1467,21 +1503,36 @@ namespace TacticalDirector.SeasonSave
         /// </summary>
         private MatchResult PlayThroughEngine(
             in Fixture fixture, ISquadProvider squads, uint worldDay,
-            out int[] homeXi, out int[] awayXi, out CardLedgerFold foldOrNull)
+            out int[] homeXi, out int[] awayXi,
+            out int[] homeRosterIds, out int[] awayRosterIds, out CardLedgerFold foldOrNull)
         {
             foldOrNull = null;
-            TacticalDirector.MatchEngine.MatchEngine engine =
-                BootFixtureEngine(in fixture, squads, out homeXi, out awayXi);
+            TacticalDirector.MatchEngine.MatchEngine engine = BootFixtureEngine(
+                in fixture, squads, out homeXi, out awayXi, out homeRosterIds, out awayRosterIds);
 
             // #44 T2 (FR-DC-002/005): the occupancy fold, seeded from the engine's OWN slot→player map
             // — not a second LineupSelector walk here, which is the parallel-surface trap SquadRating
             // exists to prevent and which #29/#41's T2 AR pass 2 filed when a fielded XI was re-derived.
             // Null when discipline is not wired, and then not a single tick does any extra work.
+            //
+            // ERR-044-022/-023 (reviewed findings pass): MatchEngineConstants.SQUAD_SIZE is the
+            // on-pitch/bench boundary CardLedgerFold's constructor now requires, and this call site is
+            // exactly where the ERR-044-023 boot-time precondition is satisfied — PlayerIdsByAgentId()
+            // is read here, immediately after BootFixtureEngine and before the tick loop below can ever
+            // call SubstitutePlayer, so the seed is the one moment the engine's map is one-to-one.
             CardLedgerFold fold = _disciplineRules == null
                 ? null
-                : new CardLedgerFold(engine.PlayerIdsByAgentId(), DisciplineConstants.LeagueCompetitionKey);
+                : new CardLedgerFold(
+                    engine.PlayerIdsByAgentId(), MatchEngineConstants.SQUAD_SIZE,
+                    DisciplineConstants.LeagueCompetitionKey);
             MatchEngineDisciplineTap tap = fold == null ? null : new MatchEngineDisciplineTap(engine);
 
+            // Recorded (L-5, adversarial review) — when the mid-match save seam reaches this path
+            // (MatchSession.TickOnce/CaptureSave/RestoreFrom, one assembly over; CardLedgerFold.cs's own
+            // type remarks track the same unreachability), THIS is the point where `fold`'s buffered,
+            // uncommitted pending list must be persisted alongside the engine snapshot, or the fixture
+            // refused outright — a mid-fixture restore today would rebuild an empty fold and silently
+            // lose every card issued before the save.
             _activeMatch = engine;
             try
             {
@@ -1542,7 +1593,7 @@ namespace TacticalDirector.SeasonSave
         internal TacticalDirector.MatchEngine.MatchEngine BootFixtureEngine(
             in Fixture fixture, ISquadProvider squads)
         {
-            return BootFixtureEngine(in fixture, squads, out _, out _);
+            return BootFixtureEngine(in fixture, squads, out _, out _, out _, out _);
         }
 
         /// <summary>
@@ -1558,20 +1609,33 @@ namespace TacticalDirector.SeasonSave
         /// <param name="homeXi">The home club's fielded starting eleven, or null with neither a career
         /// nor discipline wired — see <see cref="FieldedXi"/> for why both consumers gate it.</param>
         /// <param name="awayXi">The away club's fielded starting eleven, on the same terms.</param>
+        /// <param name="homeRosterIds">The home club's UNFILTERED roster ids, or null with discipline
+        /// unwired — see <see cref="RosterIds"/> (ERR-044-014).</param>
+        /// <param name="awayRosterIds">The away club's, on the same terms.</param>
         internal TacticalDirector.MatchEngine.MatchEngine BootFixtureEngine(
-            in Fixture fixture, ISquadProvider squads, out int[] homeXi, out int[] awayXi)
+            in Fixture fixture, ISquadProvider squads, out int[] homeXi, out int[] awayXi,
+            out int[] homeRosterIds, out int[] awayRosterIds)
         {
             // ── resolve → filter → configure (ERR-030-009). #44's suspension removals joined the
             //    filter at their own T2 (roadmap C2); the seam now composes #41 and #44 — see
             //    SelectAvailable and AvailabilityComposition. #36 call-ups are the next contributor. ──
-            Squad home = SelectAvailable(ResolveSquad(squads, fixture.HomeClubId));
-            Squad away = SelectAvailable(ResolveSquad(squads, fixture.AwayClubId));
+            Squad homeRoster = ResolveSquad(squads, fixture.HomeClubId);
+            Squad awayRoster = ResolveSquad(squads, fixture.AwayClubId);
+            Squad home = SelectAvailable(homeRoster);
+            Squad away = SelectAvailable(awayRoster);
 
             // The XI derivation sits against the squads ConfigureSquads consumes. Today both go
             // through the one LineupSelector walk (SquadRating is its public read); the colocation is
             // what makes a future explicit-XI seam edit this method, not a distant record site.
             homeXi = FieldedXi(home);
             awayXi = FieldedXi(away);
+
+            // #44's membership answer comes off the PRE-filter squad, at the same site, for the same
+            // reason (ERR-044-014): a second read of the provider in the caller would be the
+            // parallel-surface shape AR pass 2 filed, and the post-filter squad is precisely the one
+            // with the suspended players taken out of it.
+            homeRosterIds = RosterIds(homeRoster);
+            awayRosterIds = RosterIds(awayRoster);
 
             ulong matchSeed = RoundResolutionModel.MatchSeedFor(in fixture, _state.Seed, _state.SeasonNumber);
             var engine = new TacticalDirector.MatchEngine.MatchEngine(matchSeed);
@@ -1658,6 +1722,47 @@ namespace TacticalDirector.SeasonSave
             _career == null && _disciplineDriver == null
                 ? null
                 : SquadRating.StartingElevenPlayerIds(squad);
+
+        /// <summary>
+        /// Every player id on a club's roster, or <c>null</c> when nothing needs it — #44's answer to
+        /// "is this player at this club?" (ERR-044-014), and the reason it no longer has to compute one.
+        /// <para>
+        /// <b>The squad passed here MUST be the UNFILTERED one.</b> Serving walks the players whose
+        /// bans are outstanding, and those are exactly the players
+        /// <see cref="SelectAvailable"/> has just removed — feed it the filtered squad and every
+        /// suspension becomes unservable, which is the same permanently-suspended outcome the id
+        /// derivation this replaces would have produced after a transfer. Both call sites therefore
+        /// take it from <see cref="ResolveSquad"/>'s output, before the filter, one statement above the
+        /// filter that consumes the same instance.
+        /// </para>
+        /// <para>
+        /// Gated on <c>_disciplineDriver</c> alone — narrower than <see cref="FieldedXi"/>'s union,
+        /// because #44 is the only consumer — and that gate is the same condition
+        /// <see cref="PlayNextRound"/>'s serve+commit block runs under, so the array is non-null
+        /// exactly where it is read.
+        /// </para>
+        /// <para>
+        /// Allocates one <c>int[]</c> per club per fixture, the <see cref="FieldedXi"/> pattern: this
+        /// is the season path, not the 60 Hz one (§4.3), and a cached id array would be state this
+        /// loop would have to invalidate on every roster change — the argument
+        /// <see cref="ResolveFixture"/> already makes for re-rating a squad each matchday.
+        /// </para>
+        /// </summary>
+        private int[] RosterIds(Squad squad)
+        {
+            if (_disciplineDriver == null)
+            {
+                return null;
+            }
+
+            var ids = new int[squad.Count];
+            for (int i = 0; i < squad.Count; i++)
+            {
+                ids[i] = squad.GetPlayer(i).PlayerId;
+            }
+
+            return ids;
+        }
 
         /// <summary>
         /// #29's per-local-index match-entry fatigue for a squad about to be configured, or <c>null</c>
@@ -1999,4 +2104,28 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | LEAGUE_COMPETITION_KEY -> LeagueCompetitionKey rename           |
 // |         |            |        | (ALL_CAPS is reserved for [FIXED]; this constant is [CROSS]).   |
 // |         |            |        | Two call sites updated. No behaviour change.                    |
+// | 1.29    | 2026-08-16 | —      | ERR-044-014 (adversarial review, H1). IFixtureDisciplineDriver.|
+// |         |            |        | OnClubFixturePlayed and its production implementation take the  |
+// |         |            |        | club's roster ids beside the fielded eleven, because #44 no     |
+// |         |            |        | longer derives club membership from PlayerId / CLUB_SQUAD_SIZE. |
+// |         |            |        | New private RosterIds(Squad) mirrors FieldedXi, gated on        |
+// |         |            |        | _disciplineDriver alone (#44 is its only consumer), and is fed  |
+// |         |            |        | the UNFILTERED squad — the filtered one has exactly the         |
+// |         |            |        | suspended players removed from it, so serving off it would make |
+// |         |            |        | every ban unservable. ResolveFixture / PlayThroughEngine /      |
+// |         |            |        | BootFixtureEngine gain two out parameters so the ids are        |
+// |         |            |        | derived at the resolve→filter→configure site the XIs already    |
+// |         |            |        | come from (AR pass 2's parallel-surface rule), not by a second  |
+// |         |            |        | provider read in PlayNextRound. The M6 comment's guard          |
+// |         |            |        | inventory goes two -> three and records why the new null guard  |
+// |         |            |        | is structurally excluded too. No behaviour change on today's    |
+// |         |            |        | packed ids over a full roster.                                  |
+// | 1.30    | 2026-08-16, latest | — | Reviewed findings pass, findings A/B. PlayThroughEngine's   |
+// |         |            |        | CardLedgerFold construction passes the new required             |
+// |         |            |        | onPitchAgentIdCount parameter (ERR-044-022) —                   |
+// |         |            |        | MatchEngineConstants.SQUAD_SIZE, the same cross-assembly value  |
+// |         |            |        | SeasonLoopDisciplineTests already locks against                 |
+// |         |            |        | CardLedgerFold.NO_PLAYER via NO_PLAYER_ID. Comment added noting |
+// |         |            |        | this call site is where the ERR-044-023 boot-time precondition  |
+// |         |            |        | on the seed is satisfied. No behaviour change.                   |
 #endregion

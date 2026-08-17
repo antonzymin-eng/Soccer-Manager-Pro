@@ -1,16 +1,30 @@
 // File:     src/season-save/SeasonSaveConstants.cs
 // Created:  2026-07-22
-// Modified: 2026-08-13 (#44 T1, roadmap C1 — v1.8)
+// Modified: 2026-08-16, round 5 (docs-only annotation, M1 round-5 reviewed-findings pass — the v1.10
+//           row's "one of four sites" / "AvailabilityComposition.cs (both sites)" undercounts: that
+//           diff corrected THREE sites in AvailabilityComposition.cs, not two, and missed a ninth site
+//           entirely (AvailabilityCompositionExtremisTests.cs's CapFallbackExtremis comment). Real
+//           corrected-site total: NINE. Annotated in place — v1.11)
+// Prior-Modified: 2026-08-16, later (round-4 reviewed-findings pass over the ERR-030-046 landing — the
+//           EXTREMIS_SEARCH_CANDIDATE_CAP doc's "self-healing" sentence conflated the search
+//           resuming beyond the cap with the guarantee resuming; corrected to say the search resumes
+//           but a greedily committed candidate is never revisited, so the composition can remain
+//           above the minimum for that fixture — v1.10)
+// Prior-Modified: 2026-08-16 (ERR-030-046 — + EXTREMIS_SEARCH_CANDIDATE_CAP, the depleted-squad back-fill's
+//           exhaustive-search probe budget — v1.9)
+// Prior-Modified: 2026-08-13 (#44 T1, roadmap C1 — v1.8)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) KD-4; Discipline &
-//           Suspensions #44 Appendix B; Code Standards #20
+//           Suspensions #44 Appendix B; Season & Competition Loop #30 §3.4 (the depleted-squad
+//           back-fill's search bound — ERR-030-046); Code Standards #20
 // Purpose:  Constant catalogue for the season save-file frame. Holds the season-frame format version —
 //           distinct from every version the frame nests: WORLD_STORE_FORMAT_VERSION,
 //           SEASON_STATE_FORMAT_VERSION, TRAINING_SAVE_FORMAT_VERSION, MEDICAL_SAVE_FORMAT_VERSION,
 //           APPEARANCE_SAVE_FORMAT_VERSION, PROGRESSION_SAVE_FORMAT_VERSION and
 //           DISCIPLINE_SAVE_FORMAT_VERSION at the sub-blob level, MATCH_SAVE_FORMAT_VERSION for the
 //           optional match block, and — a level deeper still — the two snapshot schema versions nested
-//           inside the world and match blobs.
+//           inside the world and match blobs. Also holds the one non-format constant this assembly
+//           owns: the availability composition's exhaustive-search candidate cap.
 
 namespace TacticalDirector.SeasonSave
 {
@@ -99,6 +113,27 @@ namespace TacticalDirector.SeasonSave
         /// bound was previously a bare literal at the guard and in its catalogue lock, free to drift).
         /// </summary>
         public const int APPEARANCE_BITMASK_MAX_WINDOW_DAYS = 31;
+
+        /// <summary>
+        /// [FIXED] The largest number of still-removed suspended candidates
+        /// <c>AvailabilityComposition.ChooseSuspendedCandidate</c> will search exhaustively
+        /// (ERR-030-046). At or below this count the back-fill enumerates every subset of the
+        /// candidates and returns a choice that provably minimises how many reinstated-suspended
+        /// players end up in the starting eleven; above it, the pass degrades to the ascending-rank
+        /// greedy with no minimality claim. The exact search resumes once the candidate count falls
+        /// back within the bound, but the guarantee does not: a greedily committed candidate is not
+        /// revisited, so the composition can remain above the minimum for that fixture.
+        /// <para>
+        /// <b>This is an algorithmic budget, not a gameplay dial, and it is deliberately not
+        /// <c>[GT]</c>.</b> The subset enumeration is <c>O(2^m)</c>: the value bounds the probe count
+        /// at <c>m·2^(m+1)</c> selection walks (98,304 at the cap), which is the only thing it decides.
+        /// It changes no football outcome that the search itself does not already decide, so it is not
+        /// subject to KD-W1's calibration freeze and there is nothing for a balance pass to fit. Raise
+        /// it only against a measured probe-cost budget. Value: 12 — one below the 2^13 probe bound,
+        /// and far above the concurrent-suspension count any measured card rate produces.
+        /// </para>
+        /// </summary>
+        public const int EXTREMIS_SEARCH_CANDIDATE_CAP = 12;
         #endregion
     }
 }
@@ -134,4 +169,30 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | roster data, which retires roadmap A3's from-the-seed rebuild.  |
 // | 1.8     | 2026-08-13 | —      | #44 T1: SEASON_SAVE_FORMAT_VERSION 5 -> 6 for the mandatory DISC|
 // |         |            |        | sub-blob (roadmap C1).                                           |
+// | 1.9     | 2026-08-16 | —      | ERR-030-046: + [FIXED] EXTREMIS_SEARCH_CANDIDATE_CAP = 12, the  |
+// |         |            |        | probe budget for AvailabilityComposition's exhaustive           |
+// |         |            |        | clean-completion search. An algorithmic bound (2^13 probes),    |
+// |         |            |        | NOT a gameplay dial: it decides only how many subsets are       |
+// |         |            |        | enumerated before the pass degrades to ascending-rank greedy,   |
+// |         |            |        | so it is not [GT] and is not subject to KD-W1. First non-format |
+// |         |            |        | constant in this catalogue; the file Purpose says so.           |
+// | 1.10    | 2026-08-16, later | — | Round-4 reviewed-findings pass over the ERR-030-046 landing     |
+// |         |            |        | (Medium, one of four sites). EXTREMIS_SEARCH_CANDIDATE_CAP's    |
+// |         |            |        | doc said the beyond-cap greedy fallback "self-heals ... the     |
+// |         |            |        | count falls back within the bound" — true of the SEARCH, false  |
+// |         |            |        | of the OUTCOME: a candidate the greedy pass commits is never    |
+// |         |            |        | un-committed, so the composition can stay above the minimum for |
+// |         |            |        | that fixture even after the exact search resumes. Reworded; the |
+// |         |            |        | mirrored wording at AvailabilityComposition.cs (both sites),    |
+// |         |            |        | section-3.md §3.4, and discipline-suspensions/{section-2,       |
+// |         |            |        | section-7}.md corrected in the same pass.                       |
+// | 1.11    | 2026-08-16, round 5 | — | Docs-only annotation (M1, round-5 reviewed-findings pass).  |
+// |         |            |        | The v1.10 row's "one of four sites" / "AvailabilityComposi-     |
+// |         |            |        | tion.cs (both sites)" undercounts: that same round-4 diff       |
+// |         |            |        | corrected THREE sites in AvailabilityComposition.cs, not two,   |
+// |         |            |        | and missed a ninth site entirely (AvailabilityCompositionExtre- |
+// |         |            |        | misTests.cs's CapFallbackExtremis comment, fixed only now at    |
+// |         |            |        | that file's v1.4). Real corrected-site total: NINE. Annotated   |
+// |         |            |        | in place, not rewritten, here and at every other record of the  |
+// |         |            |        | undercount. No behaviour or normative text changed.              |
 #endregion

@@ -1,11 +1,14 @@
 // File:     src/discipline/IDisciplineTickLedgerTap.cs
 // Created:  2026-08-13
-// Modified: 2026-08-13
+// Modified: 2026-08-16 (reviewed findings pass, M3 — v1.1: added the CurrentTick accessor so
+//           CardLedgerFold.ObserveTick can enforce a lossless-consumption guard, mirroring #37
+//           MatchAnalyticsAggregator's F6. Spec sync (declaring this in #44 §2.2/§4.3) is ERR-044-020,
+//           reserved, handed to the spec fixer per this pass's OBLIGATIONS.)
 // Author:   —
 // Spec:     Discipline & Suspensions #44 §4.1/§4.3 (the tap read, KD-2) / FR-DC-002 / FR-DC-003;
 //           Match Analytics #37 FR-AN-002 (the pattern this mirrors); Code Standards #20 FR-CS-048
-// Purpose:  The read-only per-tick ledger tap CardLedgerFold consumes — three accessors over the
-//           records the engine captured for the tick just completed.
+// Purpose:  The read-only per-tick ledger tap CardLedgerFold consumes — the current tick plus three
+//           accessors over the records the engine captured for the tick just completed.
 
 namespace TacticalDirector.Discipline
 {
@@ -43,6 +46,15 @@ namespace TacticalDirector.Discipline
     /// </summary>
     public interface IDisciplineTickLedgerTap
     {
+        /// <summary>
+        /// The engine's current tick (M3, reviewed findings pass) — mirrors
+        /// <c>MatchEngineObservation.CurrentTick</c>, #37's identically-shaped tap. Lets
+        /// <c>CardLedgerFold.ObserveTick</c> enforce a lossless-consumption guard against the engine's
+        /// OWN clock rather than trusting a counter the composition root maintains separately and could
+        /// let skip or drift — the same reasoning <c>MatchAnalyticsAggregator</c>'s F6 documents.
+        /// </summary>
+        ulong CurrentTick { get; }
+
         /// <summary>Number of records captured for the tick just completed.</summary>
         int RecordCount { get; }
 
@@ -66,4 +78,9 @@ namespace TacticalDirector.Discipline
 // | 1.0     | 2026-08-13 | —      | Initial implementation (#44 T2, roadmap C2): the three-accessor  |
 // |         |            |        | tap shape, declared here because neither #44 nor season-save can |
 // |         |            |        | reach #37's identical one (§4.1's reference rule).               |
+// | 1.1     | 2026-08-16 | —      | Reviewed findings pass (M3): added CurrentTick, mirroring #37's  |
+// |         |            |        | MatchEngineObservation.CurrentTick, so CardLedgerFold.ObserveTick |
+// |         |            |        | can refuse a non-consecutive tick instead of silently losing a   |
+// |         |            |        | skipped tick's cards forever. Spec sync is ERR-044-020 (reserved,|
+// |         |            |        | handed off — see this pass's OBLIGATIONS).                        |
 #endregion

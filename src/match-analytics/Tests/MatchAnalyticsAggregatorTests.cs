@@ -1,5 +1,14 @@
 // File:     src/match-analytics/Tests/MatchAnalyticsAggregatorTests.cs
 // Created:  2026-07-27
+// Modified: 2026-08-16, later (L-6, adversarial review — new Cards_WithAnUnknownKind_ThrowsAndNamesThe-
+//           Kind: a CardKind outside {0, 1, 2} now fails loud instead of the old `else` branch silently
+//           counting it as a plain yellow. Mutation-verified: reverting the aggregator's fail-loud else
+//           to `_yellowCards[team]++` leaves this test the only red one in the suite.)
+// Modified: 2026-08-16 (reviewed-findings pass, M4/ERR-037-003 — added
+//           Cards_SecondYellowDismissal_CountsAsBothAYellowAndARed, a kind-2 case for the §3.2
+//           CardIssuedEvent row that fails against the pre-fix two-way `== red ? … : …` routing
+//           (RedCards stays 0). Cards_SplitYellowFromRedByCardKind is unchanged; it never exercised
+//           kind 2 and its own assertions still hold under the new three-way routing.)
 // Modified: 2026-08-15 (reviewed-findings pass, L2 — MatchAnalyticsConstants.CARD_KIND_RED renamed
 //           CardKindRed (PascalCase [CROSS]-mirror naming); call site updated. No behaviour change.)
 // Author:   —
@@ -172,6 +181,51 @@ namespace TacticalDirector.MatchAnalytics.Tests
             Assert.AreEqual(1, r.Home.YellowCards);
             Assert.AreEqual(0, r.Away.RedCards);
             Assert.AreEqual(1, r.Away.YellowCards);
+        }
+
+        /// <summary>ERR-037-003 (reviewed-findings pass M4): a kind-2 (second-yellow dismissal)
+        /// CardIssuedEvent is the engine's single event standing in for BOTH the second caution and the
+        /// dismissal (MatchEngine.ApplyCardAndCheckSentOff never emits a yellow-then-red pair), so it
+        /// must count toward BOTH YellowCards and RedCards — not fall into the yellow-only else branch
+        /// the pre-fix two-way `== red ? … : …` test used, which left RedCards at 0 for every match with
+        /// one. Recipient 18 already has a kind-0 yellow from the base test above (its own separate
+        /// event, published earlier in the match), so a kind-2 for the same player takes Away's
+        /// YellowCards from 1 to 2 and its RedCards from 0 to 1 — the 2-yellows-1-red box score a real
+        /// match report would show, and the discipline #44 precedent's "one yellow AND one dismissal".</summary>
+        [Test]
+        public void Cards_SecondYellowDismissal_CountsAsBothAYellowAndARed()
+        {
+            var agg = new MatchAnalyticsAggregator();
+            var tap = new FakeTap()
+                .Add(new CardIssuedEvent(recipient: 18, cardKind: 0, foulOrdinal: 0xFFFF))
+                .Add(new CardIssuedEvent(
+                    recipient: 18, cardKind: MatchAnalyticsConstants.CardKindSecondYellow, foulOrdinal: 0xFFFF));
+
+            Pump(agg, tap, new FakeSample(MidfieldBall), ticks: 1);
+            MatchAnalyticsResult r = agg.Build();
+
+            Assert.AreEqual(0, r.Home.RedCards);
+            Assert.AreEqual(0, r.Home.YellowCards);
+            Assert.AreEqual(1, r.Away.RedCards, "The kind-2 event must count toward RedCards.");
+            Assert.AreEqual(2, r.Away.YellowCards, "The kind-2 event's own caution must still count as a yellow.");
+        }
+
+        /// <summary>L-6 (reviewed findings pass): the §3.2 card mapping is exhaustive over #17's
+        /// three-value domain (0=Yellow, 1=Red, 2=SecondYellow) and states no fourth-value posture. A
+        /// value outside it must fail loud, naming the kind, rather than falling through the old `else`
+        /// branch and being silently counted as a plain yellow.</summary>
+        [Test]
+        public void Cards_WithAnUnknownKind_ThrowsAndNamesTheKind()
+        {
+            var agg = new MatchAnalyticsAggregator();
+            var tap = new FakeTap()
+                .Add(new CardIssuedEvent(recipient: 4, cardKind: 3, foulOrdinal: 0xFFFF));
+
+            ArgumentOutOfRangeException ex = Assert.Throws<ArgumentOutOfRangeException>(
+                () => Pump(agg, tap, new FakeSample(MidfieldBall), ticks: 1));
+
+            Assert.That(ex.Message, Does.Contain("CardKind"),
+                "the refusal must name the field it is refusing, not just the class");
         }
 
         [Test]
@@ -590,4 +644,14 @@ namespace TacticalDirector.MatchAnalytics.Tests
 // | 1.2     | 2026-08-15 | —      | Reviewed-findings pass (L2). CARD_KIND_RED reference updated   |
 // |         |            |        | to MatchAnalyticsConstants.CardKindRed (PascalCase rename of   |
 // |         |            |        | the [CROSS] mirror). No behaviour change.                      |
+// | 1.3     | 2026-08-16 | —      | Reviewed-findings pass (M4/ERR-037-003). Added                 |
+// |         |            |        | Cards_SecondYellowDismissal_CountsAsBothAYellowAndARed: a      |
+// |         |            |        | kind-2 CardIssuedEvent on a recipient who already has a kind-0 |
+// |         |            |        | yellow must take YellowCards 1→2 and RedCards 0→1. Fails       |
+// |         |            |        | against the pre-fix aggregator (RedCards stays 0).             |
+// | 1.4     | 2026-08-16, later | — | L-6 (adversarial review). Added Cards_WithAnUnknownKind_    |
+// |         |            |        | ThrowsAndNamesTheKind: cardKind 3 (outside #17's {0,1,2}       |
+// |         |            |        | domain) must throw ArgumentOutOfRangeException naming          |
+// |         |            |        | CardKind, not fall into the old else branch and silently count |
+// |         |            |        | as a yellow. Mutation-verified against the aggregator fix.     |
 #endregion

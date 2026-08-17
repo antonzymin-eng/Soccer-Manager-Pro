@@ -1,10 +1,11 @@
 // File:     src/deterministic-sim/SaveBlobFramingHelpers.cs
 // Created:  2026-08-06
-// Modified: 2026-08-08 (AR pass 12 L1: the third caller named — v1.2)
+// Modified: 2026-08-16 (reviewed-findings pass, L3: the fourth caller named — v1.3)
 // Author:   —
 // Spec:     Deterministic Simulation #16 §3.2.4.1 (CanonicalSerializer, which every method here builds
-//           on); Training System #29 §4.4, Injuries & Medical #41 §4.4, Season Loop #30 Appendix B.1
-//           (the three current callers — each a
+//           on); Training System #29 §4.4, Injuries & Medical #41 §4.4, Season Loop #30 Appendix B.1,
+//           Discipline & Suspensions #44 §4.4 + Appendix B
+//           (the four current callers — each a
 //           canonical-ordered, ascending-key, length-bounded sub-blob of `{ i32 key, u32 count, ... }`
 //           blocks); Code Standards #20
 // Purpose:  Shared framing helpers for a save sub-blob shaped as a canonical-ordered map keyed by one
@@ -13,7 +14,8 @@
 //           strictly ascending, bounding a length-prefixed element count against the bytes that remain,
 //           and the overflow-safe truncation guard both of those build on. Extracted from
 //           TrainingSaveCodec and MedicalSaveCodec; AppearanceSaveCodec joined at the balance pass (D2) (ERR-029-004 / ERR-041-008 landed them byte-layout-
-//           identical; nothing mechanical enforced that until this file existed). Does NOT extract
+//           identical; nothing mechanical enforced that until this file existed). DisciplineSaveCodec
+//           joined at the #44 C1/C2 landing (August 13, 2026). Does NOT extract
 //           `Require`/`ReadCount` from the older MatchSaveCodec / SeasonSaveCodec / SeasonStateCodec —
 //           that is a pre-existing, deliberately un-consolidated repo convention; this file is for new
 //           callers only.
@@ -25,8 +27,8 @@ namespace TacticalDirector.DeterministicSim
     /// <summary>
     /// Shared framing helpers for a canonical-ordered, ascending-key sub-blob codec. Every method is a
     /// pure function over the caller-supplied buffer/array plus a caller-supplied message prefix, so the
-    /// existing per-codec wording ("Training save …", "Medical save …", "Appearance save …") is preserved verbatim by the
-    /// caller's arguments rather than hard-coded here.
+    /// existing per-codec wording ("Training save …", "Medical save …", "Appearance save …",
+    /// "Discipline save …") is preserved verbatim by the caller's arguments rather than hard-coded here.
     /// </summary>
     public static class SaveBlobFramingHelpers
     {
@@ -82,7 +84,7 @@ namespace TacticalDirector.DeterministicSim
         /// <param name="previous">The previous key at this level, by reference; starts below
         /// <c>int.MinValue</c> and is advanced to <paramref name="value"/> on success.</param>
         /// <param name="subject">The message prefix, e.g. <c>"Training save"</c>,
-        /// <c>"Medical save"</c> or <c>"Appearance save"</c>.</param>
+        /// <c>"Medical save"</c>, <c>"Appearance save"</c> or <c>"Discipline save"</c>.</param>
         /// <param name="what">The key's name, e.g. <c>"club id"</c> or <c>"player id in club 7"</c>.</param>
         /// <param name="index">The zero-based position of this key within its level, for the message.</param>
         /// <exception cref="InvalidOperationException"><paramref name="value"/> does not exceed
@@ -114,7 +116,7 @@ namespace TacticalDirector.DeterministicSim
         /// <param name="total">The blob's total length.</param>
         /// <param name="bytesPerElement">The minimum byte width of one element at this level.</param>
         /// <param name="subject">The message prefix, e.g. <c>"Training save"</c>,
-        /// <c>"Medical save"</c> or <c>"Appearance save"</c>.</param>
+        /// <c>"Medical save"</c>, <c>"Appearance save"</c> or <c>"Discipline save"</c>.</param>
         /// <param name="what">The element's name, e.g. <c>"club"</c> or <c>"player"</c>.</param>
         /// <exception cref="InvalidOperationException">The blob is truncated reading the count prefix,
         /// or the declared count exceeds what the remaining bytes could hold.</exception>
@@ -146,7 +148,7 @@ namespace TacticalDirector.DeterministicSim
         /// <param name="need">The number of bytes the next read requires.</param>
         /// <param name="total">The blob's total length.</param>
         /// <param name="subject">The message prefix, e.g. <c>"Training save"</c>,
-        /// <c>"Medical save"</c> or <c>"Appearance save"</c>.</param>
+        /// <c>"Medical save"</c>, <c>"Appearance save"</c> or <c>"Discipline save"</c>.</param>
         /// <param name="what">The field being read, e.g. <c>"format magic"</c> or <c>"club id"</c>.</param>
         /// <exception cref="InvalidOperationException"><paramref name="need"/> is negative, or fewer than
         /// <paramref name="need"/> bytes remain at <paramref name="offset"/>.</exception>
@@ -175,4 +177,9 @@ namespace TacticalDirector.DeterministicSim
 // | 1.2     | 2026-08-08 | —      | Balance-pass AR pass 12 (L1, doc): the header and examples learn   |
 // |         |            |        | the THIRD caller — AppearanceSaveCodec has framed the APPR block   |
 // |         |            |        | through here since D2 while every list here said two.              |
+// | 1.3     | 2026-08-16 | —      | Reviewed-findings pass (L3, doc): the header and every per-        |
+// |         |            |        | parameter subject example learn the FOURTH caller —                |
+// |         |            |        | DisciplineSaveCodec has framed its block through here since the    |
+// |         |            |        | #44 C1/C2 landing (2026-08-13) while the enumeration still said    |
+// |         |            |        | three. No behaviour change.                                        |
 #endregion

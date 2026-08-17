@@ -1,7 +1,47 @@
 # Discipline & Suspensions #44 — Section 3: Core Algorithms
 
 **Created:** July 24, 2026
-**Last Updated:** August 15, 2026, yet later still (v0.11 — `ERR-044-010`, reviewed-findings pass:
+**Last Updated:** August 16, 2026, latest of all (v0.15 — reviewed-findings pass, finding L11: §3.2's
+worked example named the four `[GT]` threshold/ban constants as backticked ALL_CAPS abbreviations
+(`THRESHOLD`, `ACCUM`, `SECOND_YELLOW`, `STRAIGHT_RED`) that exist nowhere in code or in this spec's
+own §2.1/§2.2 — `ERR-044-017` (August 15, 2026) had already renamed these constants ALL_CAPS →
+PascalCase everywhere else. Corrected to `YellowAccumulationThreshold`/`AccumBanMatches`/
+`SecondYellowBanMatches`/`StraightRedBanMatches`, values and the illustrative tag unchanged.)
+**Last Updated (prior):** August 16, 2026, latest (v0.14 — reviewed findings pass, findings A/B. **`ERR-044-022`**
+(finding A): the `CardLedgerFold` constructor pseudocode gains a required `onPitchAgentIdCount`
+parameter and the `SubstitutionEvent` branch's `ApplySub` call gains an inline comment stating the two
+new refusals — `Incoming < onPitchAgentIdCount` (an on-pitch id cannot come on) and
+`Outgoing >= onPitchAgentIdCount` (only an on-pitch id can go off) — closing the gap the M1
+one-to-one check (v0.13) could not see on its own: it knows only player ids, never which agent ids are
+on-pitch versus bench. Matches `CardLedgerFold.cs` v1.10. **`ERR-044-023`** (finding B, doc only): the
+constructor line's own comment now states the boot-only precondition on `lineup` explicitly — it must
+be taken before any substitution, since the engine's slot→PlayerId map is one-to-one over non-sentinel
+entries only at that moment (bound in full at §4.3).)
+**Last Updated (prior):** August 16, 2026, later (v0.13 — final fixer pass over the reviewed-findings round.
+**`ERR-044-021`** (M1): §3.1's normative pseudocode stated the substitution swap as
+`occupancy.ApplySub(record.Outgoing, record.Incoming)` with no instruction to clear
+`record.Incoming`'s own slot afterward, and the constructor line's seed contract named only "F1 on
+any gap" with no one-to-one requirement — both the EXACT pre-fix shapes the reviewed findings pass
+closed in code (`CardLedgerFold.cs` v1.8, M1): an implementer following either verbatim would
+reproduce the dormant double-booking/duplicate-mapping hole. `ApplySub` now clears the vacated
+incoming slot and refuses `Outgoing == Incoming`; the constructor line states the one-to-one
+requirement alongside F1. **`ERR-044-020`** (M3): `ObserveTick`'s pseudocode gains the
+consecutive-tick refusal and the partial-application poison latch (`faulted`), mirroring
+`CardLedgerFold.cs`'s real `ObserveTick` exactly — spec-side sync of a code addition the prior text
+was silent on, not a contradiction of it. **M7**: the four `[GT]` constant names in this section's own
+pseudocode renamed ALL_CAPS → PascalCase (matching `section-2.md`'s and `DisciplineConstants.cs`'s
+naming); the two v0.7/v0.8 version-history rows quoting the OLD pseudocode by name are left as-is,
+describing the code's state at that landing (the `DisciplineConstants.cs` v1.5 / `appendices.md` v0.5
+L3 precedent for historical quotes).)
+**Last Updated (prior):** August 16, 2026 (v0.12 — `ERR-044-014`, adversarial-review H1: §3.3's
+`OnClubFixturePlayed` takes the club's roster ids and decides membership by PRESENCE in them. The
+retired text stated club membership was "DERIVABLE: `PlayerId / CLUB_SQUAD_SIZE == clubId` … no roster
+read is needed", which gave #44 two notions of membership — that derivation and the roster walk its own
+removal half performs — resting on a migration rule (FR-DC-013) that has no production caller. On the
+first disagreement a banned player is removed from every squad he is really in while his ban never
+decrements: suspended forever, silently. §2.2's signature, §2.3 F2 and §4.5's root contract updated in
+the same commit)
+**Last Updated (prior):** August 15, 2026, yet later still (v0.11 — `ERR-044-010`, reviewed-findings pass:
 §3.3's `OnClubFixturePlayed` pseudocode comment block gains a SUBSTITUTION DEPENDENCY paragraph — the
 `fieldedPlayerIds` the composition root supplies is the STARTING eleven (`SeasonLoop.FieldedXi`), not
 a record of who actually played, correct today only because no `MatchEngine.SubstitutePlayer` call
@@ -39,7 +79,7 @@ the prior text only implied by describing separate fixtures)
 ordering paragraph re-scoped to both resolution paths, and the `FilterAvailable` pseudocode comment
 points its viability rule at #30 §2.3 F9 instead of a withdrawn F5)
 **Last Updated (prior):** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.11
+**Version:** 0.15
 **Status:** APPROVED
 
 ---
@@ -58,22 +98,62 @@ validates every `[GT]` it could throw on **before** applying the first buffered 
 leaves the fold's buffer untouched and `DisciplineRules` unmodified — never applied-then-discarded.
 
 ```
-CardLedgerFold(lineup /* slot -> PlayerId, incl. bench identities */):
-    occupancy := lineup                                    # seeded by the root (F1 on any gap)
+CardLedgerFold(lineup /* slot -> PlayerId, incl. bench identities */, onPitchAgentIdCount):
+    # F1 on any gap; and ONE-TO-ONE (ERR-044-021) — no two agent ids may map to the same non-empty
+    # player id, or a card at EITHER id attributes to that one player while whichever OTHER player the
+    # seed actually intended for one of those ids is never attributed a card at all. Checked once here,
+    # at construction, over the whole seed — not left as a runtime property nothing enforces.
+    #
+    # onPitchAgentIdCount (ERR-044-022): 0 < onPitchAgentIdCount <= len(lineup) — the boundary between
+    # on-pitch agent ids [0, onPitchAgentIdCount) and the engine's synthetic bench ids
+    # [onPitchAgentIdCount, len(lineup)). The one-to-one check above cannot by itself tell a bench id
+    # from a pitch id — it only sees player ids — so ApplySub below uses this boundary directly.
+    #
+    # lineup MUST be taken AT BOOT, before any substitution (ERR-044-023, §4.3): the engine's own
+    # slot->PlayerId map is one-to-one over non-sentinel entries only at that moment.
+    occupancy := lineup
     pending := []                                           # buffered (PlayerId, CardKind) pairs
     committed := false                                       # Commit runs exactly once (FR-DC-010)
+    faulted := false                                          # ERR-044-020 — poisoned by a part-way tick
+    lastObservedTick := none                                  # ERR-044-020 — anchors on the first call
 
-    ObserveTick(records):                                   # per tick, canonical publish order
+    ObserveTick(tap):                                       # per tick, canonical publish order
         REQUIRE not committed
-        for each record in records:
+        REQUIRE not faulted        # ERR-044-020 — a prior part-way failure poisons every later call,
+                                    # even one that is otherwise perfectly consecutive (mirrors #37
+                                    # MatchAnalyticsAggregator's F6)
+        REQUIRE lastObservedTick is none OR tap.CurrentTick == lastObservedTick + 1   # ERR-044-020 —
+                                    # the very FIRST call anchors on whatever tick it is given (a
+                                    # fixture need not begin at tick 0); every later call must be
+                                    # exactly one more than the last
+        lastObservedTick := tap.CurrentTick
+        faulted := true            # set BEFORE the loop runs; cleared only once the WHOLE tick applies
+                                    # without throwing — a record partway through can still throw (F1/F4)
+        for each record in tap.records:
             switch record.ordinal:
                 0x08 SubstitutionEvent:
-                    occupancy.ApplySub(record.Outgoing, record.Incoming)  # occupant changes at this tick
+                    # ERR-044-021: ApplySub moves the outgoing slot's occupant to Incoming's identity
+                    # AND clears Incoming's own slot to NO_PLAYER — without the clear, the incoming
+                    # player would occupy TWO agent ids at once, and a later malformed record naming
+                    # the stale incoming id would silently attribute a second card to him instead of
+                    # failing loud (F1). Refuses Outgoing == Incoming (the write and the clear would
+                    # target the same index, and the clear would erase the write an instant later).
+                    #
+                    # ERR-044-022: ALSO refuses Incoming < onPitchAgentIdCount (an on-pitch agent id
+                    # cannot come ON) and Outgoing >= onPitchAgentIdCount (only an on-pitch agent id
+                    # can go OFF) — BEFORE the write/clear pair above runs. Without this, Incoming
+                    # naming an occupied ON-PITCH slot (the Appendix C "slot 19" family, ERR-044-001)
+                    # reached the write unchecked: the write silently destroyed the OUTGOING slot's
+                    # prior occupant's mapping and the clear then erased the (wrongly-named) Incoming
+                    # slot's own mapping too. The one-to-one check at construction cannot catch this —
+                    # it only ever sees player ids, never which agent ids are on-pitch versus bench.
+                    occupancy.ApplySub(record.Outgoing, record.Incoming)
                 0x06 CardIssuedEvent:
                     pid := occupancy.OccupantAt(record.Recipient)          # F1 if unmapped
                     RequireKnownCardKind(record.CardKind)                  # F4 outside {0,1,2}
                     pending.Add((pid, record.CardKind))                    # BUFFERED — not applied yet
                 else: ignore                                               # FR-DC-004 (unknown ordinals)
+        faulted := false           # reached only when every record in this tick applied cleanly
 
     Commit(rules):                                          # called ONCE, at fixture resolution
         REQUIRE not committed
@@ -83,12 +163,12 @@ CardLedgerFold(lineup /* slot -> PlayerId, incl. bench identities */):
         for each (pid, kind) in pending, in buffered (= publish) order:
             switch kind:
                 0: AddYellow(pid)                                  # first yellow (F6 inside, §3.2)
-                2: ban := RequireBanLength(SECOND_YELLOW_BAN_MATCHES)   # already validated by
+                2: ban := RequireBanLength(SecondYellowBanMatches)   # already validated by
                    AddYellow(pid); AddBan(pid, ban)                     # RequireCommittableConfig —
                                                                          # re-derived here only to name
                                                                          # the value applied (ONE event
                                                                          # — KD-5)
-                1: AddBan(pid, RequireBanLength(STRAIGHT_RED_BAN_MATCHES))   # straight red, no yellow
+                1: AddBan(pid, RequireBanLength(StraightRedBanMatches))   # straight red, no yellow
         committed := true
         return pending.Count
 ```
@@ -102,22 +182,23 @@ never read (the v1.33 substitution reset would lose a subbed-off player's cards)
 
 ```
 AddYellow(pid):
-    RequireYellowThreshold(YELLOW_ACCUMULATION_THRESHOLD)   # F6 — fail loud below 1: the residual
+    RequireYellowThreshold(YellowAccumulationThreshold)   # F6 — fail loud below 1: the residual
                                                               # subtraction below can never terminate
                                                               # a crossing otherwise, and every single
                                                               # yellow would ban, silently
     e := tally[pid, comp]; e.Yellows += 1
-    if e.Yellows >= YELLOW_ACCUMULATION_THRESHOLD:
-        e.Yellows -= YELLOW_ACCUMULATION_THRESHOLD         # residual kept
-        e.BanMatchesRemaining += RequireBanLength(ACCUM_BAN_MATCHES)   # F6 — fail loud if negative;
+    if e.Yellows >= YellowAccumulationThreshold:
+        e.Yellows -= YellowAccumulationThreshold         # residual kept
+        e.BanMatchesRemaining += RequireBanLength(AccumBanMatches)   # F6 — fail loud if negative;
                                                                          # stacks additively (FR-DC-007)
 
 AddBan(pid, matches):  tally[pid, comp].BanMatchesRemaining += matches   # matches < 0 is a CALLER bug
                                                                            # (F2-class), not a [GT] guard
 ```
 
-**Worked example** (`THRESHOLD = 5`, `ACCUM = 1`, `SECOND_YELLOW = 1`, `STRAIGHT_RED = 2` — all
-`[GT]` illustrative): a player on 4 yellows receives a kind-0 ⇒ `Yellows 5 → 0`, ban 1. A player
+**Worked example** (`YellowAccumulationThreshold = 5`, `AccumBanMatches = 1`,
+`SecondYellowBanMatches = 1`, `StraightRedBanMatches = 2` — all `[GT]` illustrative): a player on 4
+yellows receives a kind-0 ⇒ `Yellows 5 → 0`, ban 1. A player
 on 4 yellows receives a kind-2 ⇒ `Yellows 5 → 0` **and** the dismissal: ban `1 + 1 = 2` (the
 accumulation and the second-yellow bans stack). A kind-1 ⇒ ban +2, yellows untouched. All
 integer; same events ⇒ same tallies, always.
@@ -125,14 +206,37 @@ integer; same events ⇒ same tallies, always.
 ## 3.3 Serving & the availability filter (FR-DC-008..011)
 
 ```
-OnClubFixturePlayed(clubId, fieldedPlayerIds):             # called once per played fixture of the club
+OnClubFixturePlayed(clubId, clubPlayerIds, fieldedPlayerIds):   # once per played fixture of the club
+    REQUIRE clubPlayerIds is not null                      # F2 — see the note below
     REQUIRE fieldedPlayerIds is not null                   # F2 — see the note below
-    for each entry of a player currently at clubId with BanMatchesRemaining > 0:
+    for each entry with BanMatchesRemaining > 0 whose PlayerId is in clubPlayerIds:
         if entry.PlayerId in fieldedPlayerIds: continue    # he PLAYED — this fixture is not his ban
         entry.BanMatchesRemaining -= 1                     # either resolution path (KD-3)
-    # "currently at clubId" is DERIVABLE: PlayerId / CLUB_SQUAD_SIZE == clubId (#27's club-scoped
-    # id formula), and the KD-6 migration rule keeps the id current across transfers — no roster
-    # read is needed.
+    #
+    # ERR-044-014 (August 16, 2026). "Currently at clubId" is READ FROM THE ROSTER the caller
+    # resolved — presence in clubPlayerIds, matched exactly as MarkSuspended below matches the
+    # squad it walks — and is NOT derived. This paragraph previously read "DERIVABLE:
+    # PlayerId / CLUB_SQUAD_SIZE == clubId (#27's club-scoped id formula), and the KD-6 migration
+    # rule keeps the id current across transfers — no roster read is needed". Both halves were
+    # wrong to rely on. (a) It made #44 hold TWO notions of club membership — a derivation here and
+    # a roster walk in the removal half — which agree only while #27's packing holds and nothing
+    # anywhere checked that they did. (b) The migration rule that was supposed to keep them agreeing
+    # is not applied: MigratePlayerId and DropPlayer have no production caller (recorded at
+    # SeasonLoop.RollToNextSeason's roster-sync site). On the first disagreement — a #31 transfer, or
+    # the §7.2 / ERR-044-003 stage 3 id-space widening that is already required — a banned player is
+    # removed from every squad he is really in while his ban is never decremented: suspended
+    # forever, with no throw, no log, and no test able to observe it. This is ERR-041-019's defect
+    # one subsystem over, closed the same way: ONE notion of membership, taken from the roster,
+    # enforced at the entry point.
+    #
+    # clubId is retained for the F2 caller-contract gate and for identity/diagnostics only; it takes
+    # part in no matching decision, and it is deliberately NOT cross-checked against clubPlayerIds,
+    # since any such check would have to re-derive a club from a player id.
+    #
+    # The roster passed MUST be the UNFILTERED one. Every id whose ban is being served is precisely
+    # an id FilterAvailable / the composed seam has just removed, so serving against a filtered
+    # squad makes every suspension unservable — the same permanently-suspended outcome by the
+    # opposite route.
     #
     # ERR-044-003 stage 1 (August 15, 2026). The fielded-eleven exemption exists because a banned
     # player CAN reach the pitch: #30 §2.3 F9's depleted-squad back-fill presses removed players
@@ -224,4 +328,8 @@ preserve this order.
 | 0.9 | 2026-08-15 | — | **ERR-044-003 stage 1**, owner decision: §3.3's `OnClubFixturePlayed(clubId)` pseudocode becomes `OnClubFixturePlayed(clubId, fieldedPlayerIds)` — a played fixture the banned player himself appeared in (reachable only through #30 §2.3 F9's depleted-squad back-fill) no longer decrements his ban, with a new comment block explaining why the exemption exists, that it changes nothing outside the extremis tier, and its granularity relative to the FR-DC-012 competition key. Ordering paragraph and FR-DC-011 cross-reference updated to match. |
 | 0.10 | 2026-08-15 | — | **M27** (#44 adversarial-review round 4, `open-issues.md`): §3.1's normative fold pseudocode called `AddYellow`/`AddBan` straight from `OnTapRecord`, with no buffer and no `Commit` — verified against `src/discipline/CardLedgerFold.cs`, whose real shape is `ObserveTick` (buffers a `(PlayerId, CardKind)` pair per card, applying nothing) and a separate `Commit(rules)` (validates all four bound `[GT]`s via `RequireCommittableConfig` before the loop, then applies the whole buffered list, all-or-nothing — the M13 fix, v1.2). Rewritten to match: `ObserveTick`/`Commit` as two named steps, a `pending` list, and the F6 guard called once before any buffered card is applied. §0.7/§0.8's F6/kind-2-ordering fixes are preserved verbatim inside the new `Commit` body — this is a restructuring around them, not a second change to the guard logic. |
 | 0.11 | 2026-08-15 | — | **`ERR-044-010`**, reviewed-findings pass: §3.3's `OnClubFixturePlayed` comment block gains a SUBSTITUTION DEPENDENCY paragraph recording that `fieldedPlayerIds` is today's STARTING eleven, not a played-eleven record, and stays correct only while no `MatchEngine.SubstitutePlayer` call site exists on the season path (verified against `src/discipline/CardLedgerFold.cs`'s own "the substitution branch has no production driver" remark and `src/season-save/SeasonLoop.cs`'s `FieldedXi`, which derives from the pre-kickoff `LineupSelector` walk). See `spec-error-log.md` `ERR-044-010`. |
+| 0.12 | 2026-08-16 | — | **`ERR-044-014`** (adversarial review, H1): §3.3's `OnClubFixturePlayed` pseudocode becomes `OnClubFixturePlayed(clubId, clubPlayerIds, fieldedPlayerIds)`, matches club membership by presence in `clubPlayerIds`, and REQUIREs it non-null (F2). The retired "DERIVABLE: `PlayerId / CLUB_SQUAD_SIZE == clubId` … no roster read is needed" comment is replaced by the reason it was unsafe: it was a second notion of membership beside `MarkSuspended`'s roster walk, agreeing only while #27's packing holds, and its stated guarantee — FR-DC-013's migration rule keeping a transferred player's id current — is not in force, `MigratePlayerId`/`DropPlayer` having no production caller (verified in `src/season-save/SeasonLoop.cs`). Also states that `clubId` is now identity/F2 only and deliberately un-cross-checked, and that the roster passed MUST be the unfiltered one, since every id being served is one the filter has just removed. `src/discipline/DisciplineRules.cs` v1.7, `src/season-save/SeasonLoop.cs` v1.29, same commit. See `spec-error-log.md` `ERR-044-014`. |
+| 0.13 | 2026-08-16, later | — | **Final fixer pass, two findings.** **`ERR-044-021`** (M1): §3.1's `CardLedgerFold` constructor line gains the one-to-one seed requirement alongside "F1 on any gap"; the `SubstitutionEvent` branch's `ApplySub` call gains an inline comment stating it clears `record.Incoming`'s vacated slot and refuses `Outgoing == Incoming` — both were previously silent on the exact shapes the reviewed findings pass closed in code (`CardLedgerFold.cs` v1.8), so an implementer following the OLD text verbatim would have reproduced the dormant hole. **`ERR-044-020`** (M3): `ObserveTick`'s pseudocode gains `faulted`/`lastObservedTick` state and the consecutive-tick + poison-latch refusals, matching `CardLedgerFold.cs`'s real `ObserveTick` (v1.8) and `IDisciplineTickLedgerTap.CurrentTick` (declared at `section-2.md` v0.12 §2.2). Also renamed the four `[GT]` constants in this section's active pseudocode ALL_CAPS → PascalCase (M7) — the v0.7/v0.8 version rows below, which quote the pre-rename pseudocode by name, are left as historical quotes per the `DisciplineConstants.cs`/`appendices.md` L3 precedent. See `spec-error-log.md` `ERR-044-017`, `ERR-044-020`, `ERR-044-021`. |
+| 0.14 | 2026-08-16, latest | — | **Reviewed findings pass, findings A/B.** **`ERR-044-022`** (finding A): the `CardLedgerFold` constructor pseudocode's signature gains `onPitchAgentIdCount`, with a comment stating the on-pitch/bench boundary it marks and that the one-to-one check above it cannot by itself distinguish a bench id from a pitch id. The `SubstitutionEvent` branch's `ApplySub` call gains a second comment stating the two new refusals it now performs BEFORE the write/clear pair — `Incoming < onPitchAgentIdCount` and `Outgoing >= onPitchAgentIdCount` — and the exact pre-fix defect they close (an on-pitch `Incoming` reached the write unchecked, silently destroying the outgoing slot's prior occupant's mapping). Matches `CardLedgerFold.cs` v1.10. **`ERR-044-023`** (finding B, doc only): the constructor line's comment states the `lineup` boot-time precondition explicitly, cross-referencing §4.3 for the full statement. See `spec-error-log.md` `ERR-044-022`, `ERR-044-023`. |
+| 0.15 | 2026-08-16, latest of all | — | **Reviewed-findings pass, finding L11.** §3.2's worked example renamed its four illustrative `[GT]` constants from backticked ALL_CAPS abbreviations that exist nowhere in code (`THRESHOLD`, `ACCUM`, `SECOND_YELLOW`, `STRAIGHT_RED`) to the actual PascalCase names (`YellowAccumulationThreshold`, `AccumBanMatches`, `SecondYellowBanMatches`, `StraightRedBanMatches`) — `ERR-044-017` renamed the constants themselves the prior day; this was the one surviving worked-example reference to the retired spelling. Values and the illustrative tag unchanged. |
 #endregion

@@ -1,5 +1,16 @@
 // File:     src/season-save/PlayerCareerStates.cs
 // Created:  2026-08-06
+// Modified: 2026-08-16, later (adversarial-review Medium — SelectAvailable was production-dead (its
+//           stated reason for existing named a call site that does not exist) and five tests used it
+//           as the oracle for what the composed AvailabilityComposition.Compose seam produced, silently
+//           diverging the day a fixture wires discipline; DELETED, cref pointers repointed — v1.26)
+// Modified: 2026-08-16 (reviewed findings pass, M5 — SelectAvailable was still public: the exact
+//           injury-only, single-contributor parallel to the composed seam that shipped this landing's
+//           own H2. Made internal (season-save + TacticalDirector.SeasonSave.Tests via the existing
+//           InternalsVisibleTo, no other assembly ever called it) and its doc remarks rewritten to say
+//           explicitly what it is (the injury-only view, kept for the one structurally-discipline-less
+//           call site) and what it is not (the "what squad plays" authority, which is
+//           SeasonLoop.SelectAvailable). No behaviour change — v1.25)
 // Modified: 2026-08-15, later still (reviewed findings pass, L3 — SelectAvailable's doc still owned the
 //           depleted-squad/viability logic that moved to AvailabilityComposition.Compose at v1.19, and
 //           its ERR-030-009 line still called #44's suspension filter future tense after the 2026-08-13
@@ -147,9 +158,9 @@ namespace TacticalDirector.SeasonSave
         /// <para>
         /// Without it, a career built over a subset of the league constructs and advances days happily
         /// (the day steps iterate the career's clubs, not the season's) and then throws from
-        /// <see cref="SelectAvailable"/> on fixture 3 of 10 — after two results have already been
-        /// applied to the table and marked played. Better to refuse the pairing than to half-resolve a
-        /// round.
+        /// <see cref="AvailabilityComposition.Compose"/> on fixture 3 of 10 — after two results have
+        /// already been applied to the table and marked played. Better to refuse the pairing than to
+        /// half-resolve a round.
         /// </para>
         /// </summary>
         /// <param name="clubId">The club to look for.</param>
@@ -1188,7 +1199,8 @@ namespace TacticalDirector.SeasonSave
         /// <summary>
         /// The FR-MD-023 availability read, resolved through this career's state: <c>true</c> iff the
         /// player carries no active injury. #41 owns the predicate; #30 owns what to do about it, which
-        /// is <see cref="SelectAvailable"/>.
+        /// is <see cref="AvailabilityComposition.Compose"/> — see <see cref="SeasonLoop.SelectAvailable"/>
+        /// for the production caller that composes it with #44's suspension removals.
         /// </summary>
         /// <param name="clubId">The club.</param>
         /// <param name="playerId">The player.</param>
@@ -1198,56 +1210,6 @@ namespace TacticalDirector.SeasonSave
             RequireEntry(clubId, playerId, out int club, out int index);
             return MedicalStep.IsAvailable(in _injury[club][index]);
         }
-
-        /// <summary>
-        /// The squad-selection filter #30 applies between resolving a roster and configuring a match
-        /// (the ERR-030-009 resolve → filter → configure shape): returns the squad #30 will actually
-        /// field, via <see cref="AvailabilityComposition.Compose"/> composed here with
-        /// <c>discipline: null</c> — this call supplies only #41's contribution.
-        /// <see cref="SeasonLoop.SelectAvailable"/> is the composed seam that supplies both
-        /// contributors, #41's injury removals and #44's suspension removals, since the C1/C2 landing.
-        /// <para>
-        /// <b>Returns the same instance when nothing is filtered</b>, so a career with no injuries — every
-        /// career today, with the occurrence dial off — resolves through a reference-identical squad and
-        /// the match is byte-identical to the unfiltered path.
-        /// </para>
-        /// <para>
-        /// <b>The depleted-squad back-fill and the viability question it answers live in
-        /// <see cref="AvailabilityComposition.Compose"/></b> (moved there at #44 T2, ERR-030-029, so a
-        /// second contributor could compose with the removal instead of running after an already-applied
-        /// back-fill) — see that method's own doc for the tier order and the engine-selector viability
-        /// check. This method no longer owns either; it is a thin pass-through into the composition.
-        /// </para>
-        /// <para>
-        /// It is stated as a policy in #30 because FR-MD-023 puts selection on this side of the
-        /// seam — #41 answers only "is he fit".
-        /// </para>
-        /// <para>
-        /// <b>RECORDED, NOT FIXED (AR pass 5): fielding the injured is strictly FREE.</b> A player
-        /// pressed back in by this rule plays with unmodified attributes, CANNOT be re-injured (the
-        /// KD-6 entry gate — he was not available at entry, so the occurrence draw never evaluates
-        /// him), and his recovery is not extended. The balance pass armed the dial and deliberately
-        /// did not add the consequence: pricing diminished performance is #27/#28 attribute
-        /// territory and re-injury/extension is a #41 deep-tier rule, so the obligation lands with
-        /// whichever arrives first — not with #30's selection seam.
-        /// </para>
-        /// </summary>
-        /// <param name="squad">The resolved roster.</param>
-        /// <exception cref="ArgumentNullException"><paramref name="squad"/> is null.</exception>
-        /// <exception cref="ArgumentException">The squad's club or one of its players is not carried by this career.</exception>
-        /// <exception cref="InvalidOperationException">
-        /// Even the whole squad cannot field the formation. That is a roster problem — too few players,
-        /// or none of a required position — and no filter can repair it; the same roster would be
-        /// refused identically with no injuries at all.
-        /// </exception>
-        public Squad SelectAvailable(Squad squad) =>
-            // L8: competitionId is provably unread on this path — AvailabilityComposition.Compose
-            // only reads it inside its `discipline != null` branch, and this call always passes
-            // `discipline: null` (the #41-side surface has no discipline state to key against; #30's
-            // own SeasonLoop.SelectAvailable is the composed call site that supplies both). 0 rather
-            // than DisciplineConstants.LeagueCompetitionKey so this file needs no #44 import to name
-            // a value it never reads.
-            AvailabilityComposition.Compose(squad, this, discipline: null, competitionId: 0);
 
         /// <summary>
         /// #41's contribution to #30's composed availability seam (§3.4): marks every injured member of
@@ -1346,8 +1308,9 @@ namespace TacticalDirector.SeasonSave
         /// </para>
         /// <para>
         /// Indexed by the <b>local roster index of the squad passed in</b> — which after
-        /// <see cref="SelectAvailable"/> is a different squad with different indices, so this must be
-        /// called on the squad that is actually configured, not the one it was filtered from.
+        /// <see cref="AvailabilityComposition.Compose"/> is a different squad with different indices, so
+        /// this must be called on the squad that is actually configured, not the one it was filtered
+        /// from.
         /// </para>
         /// </summary>
         /// <param name="squad">The squad about to be configured.</param>
@@ -1793,4 +1756,37 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | future-tense line to name SeasonLoop.SelectAvailable as the     |
 // |         |            |        | composed seam supplying both #41's and #44's removals. No       |
 // |         |            |        | behaviour change.                                                |
+// | 1.25    | 2026-08-16 | —      | Reviewed findings pass, M5. SelectAvailable made internal —      |
+// |         |            |        | it was still public, the exact injury-only single-contributor   |
+// |         |            |        | parallel to AvailabilityComposition.Compose(discipline: both)   |
+// |         |            |        | that shipped this landing's own H2 (SeasonSaveManager called    |
+// |         |            |        | this method while SeasonLoop.BootFixtureEngine configured the   |
+// |         |            |        | match through the composed seam; that call site was fixed, the  |
+// |         |            |        | public surface was not). Verified: every caller in src/ is      |
+// |         |            |        | within this assembly or TacticalDirector.SeasonSave.Tests (the  |
+// |         |            |        | existing InternalsVisibleTo grant) — no external-assembly       |
+// |         |            |        | caller existed. Doc remarks rewritten to state plainly what the |
+// |         |            |        | method is (the injury-only view, kept for the one structurally  |
+// |         |            |        | discipline-less call site) and is not (the "what squad plays"   |
+// |         |            |        | authority — SeasonLoop.SelectAvailable is). No test file        |
+// |         |            |        | required a change (every caller was already inside the grant);  |
+// |         |            |        | PlayerCareerStatesTests.cs gained one new case asserting the    |
+// |         |            |        | method is not public via reflection, so a future revert is      |
+// |         |            |        | caught even though the compiler cannot see a same-assembly      |
+// |         |            |        | access-level regression. No behaviour change.                   |
+// | 1.26    | 2026-08-16, later | — | Adversarial-review Medium: v1.25's internal-ization did not     |
+// |         |            |        | close the parallel-surface trap it named — SelectAvailable was  |
+// |         |            |        | still production-dead (its "one call site inside this assembly  |
+// |         |            |        | needs the injury-only view" justification named a call site     |
+// |         |            |        | that does not exist: SeasonLoop.SelectAvailable and             |
+// |         |            |        | SeasonSaveManager.AvailabilityFilteredSquads both call           |
+// |         |            |        | AvailabilityComposition.Compose directly) and five tests used   |
+// |         |            |        | it as their oracle for what the composed production seam        |
+// |         |            |        | produced, diverging silently the day a fixture wires discipline.|
+// |         |            |        | DELETED. IsAvailable's and CarriesClub's <see cref> pointers    |
+// |         |            |        | (which named it) repointed to AvailabilityComposition.Compose / |
+// |         |            |        | SeasonLoop.SelectAvailable; MatchEntryFatigue's likewise. No     |
+// |         |            |        | production caller existed, so no behaviour change; the five     |
+// |         |            |        | test-file oracle call sites move with this fix (see those       |
+// |         |            |        | files' own version histories).                                  |
 #endregion

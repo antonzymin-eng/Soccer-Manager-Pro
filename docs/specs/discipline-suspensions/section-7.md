@@ -1,7 +1,54 @@
 # Discipline & Suspensions #44 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 24, 2026
-**Last Updated:** August 15, 2026, yet later still (v0.7 — `ERR-044-008`, reviewed-findings pass:
+**Last Updated:** August 16, 2026, round 5 (v0.12 — annotation only, M1 of a round-5 reviewed-findings
+pass. v0.11's "`AvailabilityComposition.cs` (two sites)" undercounts: the round-4 diff corrected THREE
+sites in that file, not two, and missed a NINTH entirely — `AvailabilityCompositionExtremisTests.cs`'s
+own `CapFallbackExtremis` comment, in a file that same commit edited. Real corrected-site total: nine
+(#30 `section-3.md` §3.4's Cap bullet + residual (ii); `AvailabilityComposition.cs` ×3;
+`SeasonSaveConstants.cs`; `section-2.md`; this file; the test comment). Annotated in place at every
+record of the undercount, not rewritten; the test file's stale comment itself reworded (its v1.4). No
+FR, staging, or guarantee text changed.)
+**Last Updated (prior):** August 16, 2026, even later still (v0.11 — round-4 reviewed-findings pass over the
+`ERR-030-046` landing at #30 `section-3.md` v2.10, residual wording only. The beyond-cap corner bullet
+said the fallback "self-heals as each commit lowers the count" — true of the SEARCH resuming, false of
+the GUARANTEE, since a greedily committed candidate is never revisited and the composition can remain
+above the minimum for that fixture. Reworded to say both halves; no FR, staging, or guarantee text
+changed. Mirrored the same pass at #30 `section-3.md` §3.4, `AvailabilityComposition.cs` (two sites) and
+`SeasonSaveConstants.cs`; §2.3's mirror corrected in the same commit (`section-2.md` v0.18).)
+**Last Updated (prior):** August 16, 2026, later still (v0.10 — **`ERR-044-019` EXTENDED, not re-filed**, by
+**`ERR-030-046`** (an ESCALATED High filed at #30 `section-3.md` v2.9, which owns the rule). §7.2's
+ban-serving-under-squad-shortfall bullet described #30's within-tier key as a **best-effort minimisation**
+of the forced-start residual. #30's rule is no longer an ordering key: two successive keys were defeated
+by the same class of defect — an element-wise greedy decision of a **set-valued**, per-position
+constraint — so the third attempt was ruled as a **capped exhaustive search** over subsets of the
+eligible candidates. The bullet now states the result as a guarantee: **a reinstated-suspended player
+starts only in a probe-verified forced start, every completing choice within the search bound starting at
+least as many**, so the composed eleven carries the MINIMUM achievable number of them and zero whenever
+any completing choice benches them all. The residual becomes a two-item list — forced starts, and a
+beyond-cap corner above `SeasonSaveConstants.EXTREMIS_SEARCH_CANDIDATE_CAP` = 12 — rather than an
+enumeration of routes into a forced start, that form having now been falsified twice. The staging below
+is unchanged and is still the only thing that deletes item (i). §2.3's mirror amended in the same commit
+(`section-2.md` v0.17).)
+**Last Updated (prior):** August 16, 2026, later (v0.9 — **`ERR-030-045`**, an adversarially-reviewed High
+continuing `ERR-030-044`'s, filed at #30 which owns the rule; back-propagated here. §7.2's
+ban-serving-under-squad-shortfall bullet, as amended at v0.8, named "the sole-goalkeeper case" as the
+forced-start case. It is only one of two: a club short by **more than one** player gets no useful probe
+on any reinstatement but the last (fieldability is monotone in adding players), so #30's amended pass-3
+key decides those blind and can only make them well — if every completing choice starts someone, someone
+starts. The bullet now states that the amended key is a **best-effort minimisation** of the residual, not
+a guarantee, and that a mass-suspension club is exactly the population that reaches it. The staging below
+is unchanged and is still the only thing that deletes the residual. §2.3's mirror amended in the same
+commit (`section-2.md` v0.13).)
+**Last Updated (prior):** August 16, 2026 (v0.8 — **`ERR-044-019`**, adversarial-review H2, cross-filed at #30
+as `ERR-030-044`: §7.2's ban-serving-under-squad-shortfall bullet described the extremis reinstatement
+as though its only outcome were a stalled ban. #30 §3.4's probe is the FULL selection walk (eleven
+starters PLUS the seven-slot bench), so the tier fires on bench depth too, and #30's amended within-tier
+key now prefers a candidate the selector would BENCH — which splits the outcome in two: benched, the ban
+advances normally; forced to start, the stage-1 exemption fires and only then does it stall. The bullet
+now states both cases and names the staging below as what deletes the residual. §2.3's mirror of the same
+claim corrected in the same commit (`section-2.md` v0.11))
+**Last Updated (prior):** August 15, 2026, yet later still (v0.7 — `ERR-044-008`, reviewed-findings pass:
 §7.3's `#37` seam-contract bullet still read "one per-tick tap feeds both consumers when both are
 built", a future condition that has already occurred — both #37 and #44 have had `src/` assemblies
 since July 27, 2026 — and turned out false: `src/discipline/IDisciplineTickLedgerTap.cs` records that
@@ -26,7 +73,7 @@ deferral bullet flagged as a now-LIVE owner decision — #30 §2.3 F9 makes a su
 reinstatable in extremis rather than an absolute bar — with the deferral queue recorded as the
 designed alternative)
 **Last Updated (prior):** July 24, 2026 (v0.2 — cross-set AR; prior v0.1 — initial)
-**Version:** 0.7
+**Version:** 0.12
 **Status:** APPROVED
 
 ---
@@ -68,6 +115,39 @@ designed alternative)
   the formation, never refusing until even the whole squad cannot. That means a suspended player **is**
   reinstatable in extremis — suspension is a stricter reinstatement tier than injury (pressed back
   only after every injured player), but not an absolute bar, which the Laws of the Game do not allow.
+  **`ERR-044-019` (August 16, 2026) corrects what "in extremis" means here, and what it costs.** The
+  probe #30 §3.4 uses is the FULL selection walk — eleven starters PLUS the seven-slot bench — so the
+  back-fill fires for **bench depth** as well, on a club that could field a legal XI; and the pre-fix
+  within-tier key (earliest roster position) then let the rating-greedy selector **start** the
+  reinstated man. #30's `ERR-030-044` amends that key to prefer a candidate the selector would BENCH,
+  which splits this bullet's outcome into two cases that must not be collapsed: **benched**, he is not
+  in the fielded eleven, so FR-DC-011's decrement is not exempted and **his ban advances normally**;
+  **forced to start** — no candidate choice avoids the eleven — he plays, the stage-1 exemption fires,
+  and **only then does his ban stall**. The staging below is what deletes that residual; it is not a
+  general licence to field banned players for free.
+  **`ERR-030-046` (August 16, 2026, ESCALATED) makes "forced to start" a GUARANTEE rather than a best
+  effort — superseding `ERR-030-045`'s widening of this same residual.** Two successive within-tier
+  ordering keys were landed at #30 §3.4 and both were defeated by the same class of defect: an
+  **element-wise greedy decision of a set-valued constraint**. A depleted club is completed by a *set*
+  of reinstatements; whether that set puts a banned player in the eleven is a property of the set; and
+  `LineupSelector` decides it **per position**, which is why the second key — ascending selector rating,
+  a global scalar — failed on a squad thin in the globally *weakest* banned player's position, pressing
+  back exactly the man no fit player could displace. The third attempt was ruled rather than iterated:
+  #30's rule is now a **capped exhaustive search** over subsets of the eligible candidates. What this
+  bullet costs is therefore: **a reinstated-suspended player starts only in a probe-verified forced
+  start — every completing choice within the search bound starts at least as many.** Equivalently the
+  composed eleven contains the **minimum achievable** number of them, **zero whenever any completing
+  choice benches them all**. The residual is exactly two items — **(i)** those forced starts, where the
+  minimum is positive (a banned sole goalkeeper is the smallest case, a `k ≥ 2` shortfall in which every
+  completing subset starts someone its generalisation), and **(ii)** a **beyond-cap corner** above
+  `SeasonSaveConstants.EXTREMIS_SEARCH_CANDIDATE_CAP` = 12 concurrent suspended candidates at one club,
+  unreachable at measured card rates, where the pass degrades to an ascending-rank greedy with no
+  minimality claim. The exact search resumes once the candidate count falls back inside the bound,
+  but the guarantee does not: a greedily committed candidate is not revisited, so the composition
+  can remain above the minimum for that fixture. Stated as a **list, not as an
+  enumeration of the routes into a forced start** — that form has now been falsified twice. A
+  mass-suspension club, the population this spec's own subject creates, is exactly the one that reaches
+  (i), and the staging below is still the only thing that deletes it.
   **The deferral queue this bullet used to record as the alternative (excess bans postpone serving
   until the squad can field 18, refusing the fixture rather than fielding a banned player) was NOT
   chosen.** The owner's decision (August 15, 2026) is a three-tier staging instead, of which the first
@@ -124,4 +204,9 @@ designed alternative)
 | 0.5 | 2026-08-15 | — | **ERR-044-003 stage 1**, owner decision: the ban-serving-under-squad-shortfall bullet resolved from "now a live decision" to RESOLVED — the deferral queue was NOT chosen; the chosen answer is a three-tier staging, of which tier 1 (exempt the extremis appearance from serving, FR-DC-011) is LANDED, and tiers 2 (youth call-ups) and 3 (generated cover) are recorded unbuilt with their blockers (#42 has no `src/` assembly; the packed `PlayerId` id space needs widening, #27 FR-SQ-010 / ERR-027-004). |
 | 0.6 | 2026-08-15 | — | **L21** (#44 adversarial-review round 4, `open-issues.md`): §7.1's T1 bullet filled in the "exact version TBD" placeholder with the actual landed bump (`SEASON_SAVE_FORMAT_VERSION` 5 → 6, ERR-030-035) — `section-4.md` §4.4 has carried this figure since its own v0.3 (August 13, 2026), so the placeholder had been stale for two days. |
 | 0.7 | 2026-08-15 | — | **`ERR-044-008`**, reviewed-findings pass: §7.3's `#37` bullet corrected — "one tap feeds both when built" is no longer a future condition (both assemblies exist) and was never going to become true under §4.1's reference rule, verified against `src/discipline/IDisciplineTickLedgerTap.cs`'s own recorded finding. Restated with the two-reads cost named. See `spec-error-log.md` `ERR-044-008`. |
+| 0.8 | 2026-08-16 | — | **`ERR-044-019`** (adversarial review, H2; cross-filed at #30 as `ERR-030-044`, which owns the rule). §7.2's ban-serving-under-squad-shortfall bullet treated the extremis reinstatement as having a single outcome — a suspended player on the pitch whose ban then stalls. Two corrections. The back-fill's TRIGGER is #30 §3.4's probe, the full selection walk (eleven starters PLUS the seven-slot bench), so it fires on **bench depth** at a club that could field a legal XI — "in extremis" was never as narrow as this bullet implied. And #30's amended within-tier key now prefers a candidate the selector would BENCH, which splits the outcome: benched ⇒ he is not in the fielded eleven ⇒ FR-DC-011's decrement is not exempted ⇒ **his ban advances normally**; forced to start ⇒ exempt ⇒ the ban stalls. Only the second case is the residual the staged tiers below exist to delete, and the bullet now says so rather than reading as a general licence. The staging itself (stage 1 LANDED; youth call-ups and generated cover both blocked) and the NOT-chosen deferral queue are unchanged. §2.3's mirror corrected in the same commit (`section-2.md` v0.11). |
+| 0.9 | 2026-08-16, later | — | **`ERR-030-045`** (an adversarially-reviewed High continuing `ERR-030-044`'s; cross-filed at #30 `section-3.md` v2.8, which owns the rule). §7.2's ban-serving-under-squad-shortfall bullet, as amended at v0.8, gave the forced-start case a single shape — "no candidate choice avoids the eleven, the sole-goalkeeper case". That is one of two. A club short by more than one player gets no usable probe on any reinstatement but the last (fieldability is monotone in adding players), so #30's amended pass-3 key decides those blind; it presses the weakest banned player back first, which makes the blind picks good but cannot make them safe — where every completing choice starts a suspended player, one starts. The bullet now records the key as a **best-effort minimisation** of the residual rather than a guarantee against it, and names the mass-suspension club as the population that reaches it — which is this spec's own subject. The staging (stage 1 LANDED; youth call-ups and generated cover both blocked) and the NOT-chosen deferral queue are unchanged, and remain the only thing that deletes the residual. §2.3's mirror amended in the same commit (`section-2.md` v0.13). |
+| 0.10 | 2026-08-16, later still | — | **`ERR-044-019` EXTENDED (annotated, not re-filed)** by **`ERR-030-046`**, an ESCALATED High filed at #30 `section-3.md` v2.9, which owns the rule. §7.2's ban-serving-under-squad-shortfall bullet carried `ERR-030-045`'s account: the forced-start residual reached two ways, and #30's within-tier key a **best-effort minimisation** of it. #30's rule is no longer an ordering key at all. Two successive keys — earliest roster position, then ascending selector rating — were defeated by the same class of defect: an **element-wise greedy decision of a set-valued constraint**, since a depleted club is completed by a SET of reinstatements, whether that set starts a banned player is a property of the SET, and `LineupSelector` decides it **per position**. The rating key failed on a squad thin in the globally *weakest* banned player's position — exactly the man it presses back first. Ruled rather than iterated (the no-third-identical-retry rule): a **capped exhaustive search** over subsets of the eligible candidates. The bullet now states the result as a **guarantee** — *a reinstated-suspended player starts only in a probe-verified forced start; every completing choice within the search bound starts at least as many* — i.e. the composed eleven carries the MINIMUM achievable number of them, zero whenever any completing choice benches them all. Residual restated as a two-item **list**: (i) forced starts, where the minimum is positive (banned sole goalkeeper the smallest case, a `k >= 2` every-completing-choice-starts-someone shortfall its generalisation); (ii) the **beyond-cap corner** above `[FIXED] SeasonSaveConstants.EXTREMIS_SEARCH_CANDIDATE_CAP` = 12 concurrent suspended candidates, unreachable at measured card rates, degrading to ascending-rank greedy with no minimality claim and self-healing as each commit lowers the count. Deliberately NOT an enumeration of routes into a forced start — that form has been falsified twice. The three-tier staging (stage 1 LANDED; youth call-ups and generated cover both blocked) and the NOT-chosen deferral queue are unchanged, and remain the only thing that deletes item (i). §2.3's mirror amended in the same commit (`section-2.md` v0.17). |
+| 0.11 | 2026-08-16, even later still | — | **Round-4 reviewed-findings pass over the `ERR-030-046` landing (Medium, residual wording only — per #30 `section-3.md` v2.10).** The beyond-cap corner bullet said the fallback "degrading to ascending-rank greedy with no minimality claim and self-healing as each commit lowers the count" — true only of the SEARCH resuming once `m` falls back inside the bound; false of the GUARANTEE, since a candidate this branch commits is never revisited, so the composition can remain above the minimum for that fixture even after the count recovers. Reworded to state both halves. No FR, staging, or guarantee text changed — this section states no rule of its own, only #44's mirror of #30's. Same wording fixed in the same pass at #30 `section-3.md` §3.4 (the Cap bullet and residual (ii)), `AvailabilityComposition.cs` (two sites) and `SeasonSaveConstants.cs`; §2.3's mirror corrected in the same commit (`section-2.md` v0.18). |
+| 0.12 | 2026-08-16, round 5 | — | **Annotation only (M1, round-5 reviewed-findings pass).** The row above's "`AvailabilityComposition.cs` (two sites)" undercounts the round-4 sweep: that diff corrected THREE sites in `AvailabilityComposition.cs` (~152, ~421, and the inline comment inside `ChooseSuspendedCandidate`'s Cap branch at ~528), not two, and missed a NINTH site entirely — `AvailabilityCompositionExtremisTests.cs`'s own `CapFallbackExtremis` comment still carried the pre-fix "self-heals" sentence in a file that same commit edited. Real corrected-site total: **nine** — #30 `section-3.md` §3.4's Cap bullet and residual (ii); `AvailabilityComposition.cs` ×3; `SeasonSaveConstants.cs`; `section-2.md`; this section; the test comment. Fixed at the test file (its v1.4) and annotated in place, not rewritten, at every other record of the undercount (`section-3.md` v2.11, `SeasonSaveConstants.cs` v1.11, `AvailabilityComposition.cs` v1.9, `section-2.md` v0.19, `spec-error-log.md`'s `ERR-030-046` annotation). No FR, staging, or guarantee text changed. |
 #endregion
