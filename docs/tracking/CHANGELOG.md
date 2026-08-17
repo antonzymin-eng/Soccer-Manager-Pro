@@ -12,7 +12,134 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 16, 2026 (rounds 10-12) — **#44/#30 adversarial-review ROUNDS 10-12, a
+> **Last Updated:** August 17, 2026 — **An owner decision pass over the seven decisions this project had
+> been carrying as advisory recommendations. Two shipped, five held, one found to rest on a false
+> premise. No `src/` code changed and no `.asmdef` moved, so no gate run is owed.**
+>
+> **The unifying reasoning, recorded because it is the reusable part:** every candidate for doing-it-now
+> except the two that shipped sits **upstream of a measured event** — the `GameplayConfigHolder.Bind`
+> pass, W2's arming, the youth/generated-cover ladder — that would force the work to be redone. So the
+> cheap, reversible items shipped and the expensive ones wait for their deciding measurement. Each hold
+> below names that measurement rather than a date, which is the difference between a hold and a stall.
+>
+> **SHIPPED (1) — `ERR-020-002` + `ERR-020-003` ADOPTED: the assembly layer taxonomy covers the whole
+> tree for the first time since it was written.** Spec #20 §3.5.2's three-gameplay-layer box placed 19
+> of 35 assembly folders and carried an empty `UI (Stage 1+ — not specified yet)` row; FR-CS-046
+> ("references flow one direction only") is decided relative to two layer memberships, so for ~46% of
+> the tree — including **every reference into or out of the composition root** — it decided nothing.
+> The August-2 ten-tier proposal is adopted, extended from the 31 folders it was drafted against to the
+> **35** now in `src/`: `training-system`, `injuries-medical` and `discipline` into **Management**,
+> `client-app` into **Client**, each placed from its `.asmdef` references rather than its name.
+> **Re-verified against the live graph at adoption, not carried over from the draft: 35/35 folders
+> placed, 0 upward references, 105 downward, 38 intra-tier, graph acyclic.** Adopting changed nothing
+> that compiles — it constrains only what is written next, which is the whole value and also why the
+> cost was zero. **Two rules were added that the proposal did not contain, both surfaced by the new
+> placements:** (a) **a tier is a ceiling, not a licence** — `discipline` sits in Management but #44's
+> own FRs forbid it `match-engine` and `season-save`, so without this sentence adoption would have read
+> as *widening* a constraint #44 deliberately took on; (b) **test assemblies are not members of the
+> order** — `event-system.Tests` references `decision-tree`, tier 0 to tier 4 and entirely legitimate,
+> so an adopted order silent on this would have made every test assembly a violation. `ERR-020-003`
+> closed with it: both files now **label** their arrow (`──►` "is available to" in #20, `←` "is
+> referenced by" in `src/CLAUDE.md`), so a reader checks the label rather than the arrowhead. Files:
+> #20 `section-2.md` **v1.1** (FR-CS-046 restated; **FR-CS-046a** registered as a sub-clause so the
+> FR-CS-046…055 span and the 73-FR count are unchanged; the published double negative "No assembly
+> **MUST NOT** reference…" repaired), `section-3.md` **v1.1** (§3.5.2 replaced), `section-5.md`
+> **v1.0.2** (§5.4.5 item 1), `src/CLAUDE.md` (taxonomy + Reference Direction rewritten, the ⚠️
+> 16-unlisted banner retired, the `code-standards` phantom infrastructure row struck,
+> `project-constants` stated as tier 0 rather than infrastructure). Three FR-CS-056/057 header defects
+> corrected in passing: those three section files each read `Status: DRAFT` against a SPEC_INDEX status
+> of APPROVED, two of them behind their own version history. **Deliberately not swept, and listed so a
+> later widening does not have to rediscover it:** `outline.md` / `outline-mid.md` /
+> `outline-detailed.md` still describe the three-layer chain — pre-authoring artifacts, not normative
+> text; every *normative* site was swept and no other hit exists in `docs/specs/`.
+>
+> **SHIPPED (2) — the injury/aging research-alignment supplement SIGNED OFF** (v0.5). All three
+> structural decisions accepted as written: the `Severe` tier + `RECOVERY_MAX` raise (R-5), the #41→#28
+> aftermath seam (R-6 / KD-R4, with v0.3's consumer-owns-the-seam-type correction), and the
+> deterministic-not-drawn PA reduction (KD-R4a). It was AR-converged and blocking only alignment work,
+> and a later revision costs one supplement edit — against the standing cost of a live-but-unsigned
+> design the next #41 landing has to read and guess at. §11 steps 1–2 complete; steps 3–5 (the
+> ERR-041-013..018 / ERR-028-002..004 back-props, the section patches, the two implementation tranches)
+> are unblocked and **unscheduled**. The standing caveat is unchanged and load-bearing: R-2's
+> under-exposure arm must re-fit *against* `BaselineDailyRisk` rather than beside it, and every `[GT]`
+> it moves is subject to KD-W1 — which is the same W2 dependency four of these seven items share.
+>
+> **HELD (3) — the two depleted-squad sub-questions, closed in the owning spec rather than only in a
+> tracking file** (#30 `section-3.md` **v2.12**). **(a) The back-fill trigger stays the eighteen-player
+> selection walk; the short-bench posture is NOT built** — the honest fix for a depleted club is cover,
+> not a shorter bench, so `ERR-044-003`'s stages 2–3 (youth call-ups, then generated low-attribute
+> cover) *retire* the eleven-vs-eighteen question rather than answer it, and a short-bench mechanism
+> built now would be thrown away when that ladder lands; it is also engine surgery, and narrowing the
+> probe without narrowing selection reproduces the divergence `LineupSelector.TrySelect` was collapsed
+> to one walk to prevent. `ERR-030-044`'s open half is CLOSED. **(b) The beyond-cap branch keeps
+> degrading to greedy; refusing the fixture is REJECTED** — refusal breaks the twice-affirmed "the
+> composed filter can never leave a club worse off than having no filter at all" invariant to buy a
+> corner (`m > 12` concurrently suspended in one squad) that is unreachable at measured card rates.
+> Both are written inline at the rules they govern, so a reader meets the decision where the question
+> was, and both name what would reopen them.
+>
+> **HELD (4) — the DisciplineConfig restructure stays deferred to the `GameplayConfigHolder.Bind`
+> composition-root pass, tree-wide.** The defect is future-conditional, the completeness tripwire
+> already converts it from silent to a red test, and a #44-only restructure would create precisely the
+> parallel-surface asymmetry this repo keeps filing — one subsystem on a validated readonly-struct
+> config while every sibling keeps the guard-and-pre-flight shape.
+>
+> **HELD (5) — KD-7a: neither adopt nor reject; decide after the post-W2-arming capture, exactly as its
+> own tripwire says** (`league-bootstrap-design.md` **v1.5**, new **S9**). The corpus that would
+> determine `α` predates tackle wiring, so S7 condition 4 fails on its own terms. **S7's condition 4
+> was also corrected in place:** it was written on August 12 as "no player has ever made a tackle",
+> which W2's landing *that same day* made false about the code while leaving it true about a shipped
+> match (`TackleContactRadiusM = 0`) — it now reads as **post-arming**, or the tripwire would fire
+> against a corpus statistically identical to the one it exists to reject.
+>
+> **HELD (6) — `pointQuality` stays parked until W1's rush geometry is MEASURED**
+> (`gk-conversion-at-contact-design.md` **v1.1**, new **KD-CC6a**). The §4 ladder's refusal was
+> measured against a keeper who never left his line; W1 moves the contact geometry the whole ladder is
+> a function of. **The unparking condition is a measurement, not a landing** — W1 landed August 4, 2026
+> and has never been executed. Until then the recorded refusal is a fact about the pre-rush keeper and
+> must not be quoted as a fact about the mechanism.
+>
+> **HELD (7) — the foul/card drift stays accepted: arm W2 first, then calibrate ONCE**
+> (`foul-discipline-balance-design.md` **v1.1**, new §7 item **2a**). That note's own item 2 said
+> `FoulCallProbability` must be re-measured if the contact stream changes; C1 changed it on August 8
+> and the fit drifted **~67%** unnoticed for five weeks. Applying the rule literally means *not*
+> landing an interim fit against a pre-tackle stream that W2's arming will change again. **Accepted
+> cost, stated plainly:** the card rate — and since #44 the suspension rate derived from it — stays
+> knowingly wrong meanwhile, with the acceptance bands (fouls ≤ 90, yellows ≤ 20, reds ≤ 5) reading
+> green throughout.
+>
+> **`match-engine-wiring-backlog.md` **v1.10** records the consequence none of these three holds could
+> see individually: W2's *arming* now gates three separate decisions** — the foul/card calibration,
+> KD-7a's successor distribution, and everything behind the un-isolated `sim_match_engine_inposs_gate`
+> stall whose leading candidate is W6. The path **W4 → W12 → W6** therefore unblocks three decisions,
+> not just the next wired subsystem, and `TackleContactRadiusM = 0` is doing far more holding-back than
+> its one-constant footprint suggests.
+>
+> **THE PREMISE THAT WAS FALSE — the approval tags.** The instruction was "push them; no downside", and
+> the attempt found the entry had been wrong for four months. **The eight annotated tag objects do not
+> exist anywhere**: `git tag` in a fresh clone returns nothing, `git ls-remote --tags origin` returns
+> nothing. They were created in the April/May 2026 authoring containers, never pushed, and are
+> unrecoverable — their messages, which recorded each original sign-off date and §9 checklist status,
+> are gone with them. Every session since has read "created locally, not yet pushed" as meaning they
+> were sitting somewhere ready to go. **The precondition check as written cannot run**, because all
+> three of its steps take a tag object as input; what it was really asking was answered without one —
+> `origin/main` uses true merge commits, so it is path (3), not the squash-merge path (2). **The 403 is
+> still live**, reproduced today from this session on both `--tags` and a single-tag push, with the
+> proxy healthy: the refusal is GitHub-side and this session's credentials push branches but not tags.
+> **Re-creation is possible and its targets are now resolved** — eight tags against four commits
+> (`caaf5cf0`, `a88dba03`, `bcf94199`, `7dbcf121`), each verified an ancestor of `origin/main`; the
+> recipe is recorded in the open-issues entry because tags created in this container die with it.
+> **One honesty point carried into the recipe:** #1/#3/#4 were signed off in February 2026, before any
+> spec text existed in git, so **no commit represents the moment of their approval** — `caaf5cf0` is
+> the earliest commit that *contains* them at APPROVED, and must be tagged as a containment claim, not
+> an approval claim. That is still better than what the originals did, which was to point all four
+> April-26 tags at one branch HEAD with no per-spec meaning at all.
+>
+> **Open issues: 20 → 18 active / 44 → 46 resolved**, both re-derived by direct count
+> (`grep -c '^- \*\*'`) rather than by arithmetic — this file has recorded three counts reached by
+> incrementing an unverified base, so the count is measured every time.
+
+> **Last Updated (prior):** August 16, 2026 (rounds 10-12) — **#44/#30 adversarial-review ROUNDS 10-12, a
 > continuation of the rounds-8-9 chain over the SAME `ERR-030-044`/`ERR-044-019` tier-2 reinstatement
 > landing.** Commits `a4a672b..d0f534a` (`ba2c574..HEAD`). **Round 10 (`a4a672b`, wave A) — M/L
 > findings, visibility/locks/text residues, no High:** the `DisciplineConfigCompletenessTests`

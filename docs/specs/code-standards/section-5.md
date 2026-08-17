@@ -6,8 +6,9 @@ threshold policy, paste-ready review-time checklist (§5.4), 73-row FR-to-verifi
 traceability table (§5.5), and the determinism verification handoff note.
 
 **Created:** May 7, 2026
-**Version:** 1.0.1
-**Status:** DRAFT
+**Modified:** August 17, 2026
+**Version:** 1.0.2
+**Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 5
 **Subsection target lengths:** §5.1 ~30 lines · §5.2 ~60 lines · §5.3 ~25 lines ·
@@ -270,8 +271,9 @@ resolves. FR-CS-009 is MAY-level; no pass/fail check required.
 ### 5.4.5 Dependencies & Interfaces (FR-CS-046–055)
 
 ```
-[ ] 1. Layer order — Assembly references flow Physics → Mechanics → AI → UI
-        only; no upward references? (FR-CS-046)
+[ ] 1. Layer order — Assembly references flow down the §3.5.2 ten-tier order
+        only; no upward references? Intra-tier references are permitted, but
+        the production reference graph stays acyclic. (FR-CS-046, FR-CS-046a)
 
 [ ] 2. Struct events — Cross-layer upward notifications dispatched as struct
         events, not class-based delegates? (FR-CS-047)
@@ -468,6 +470,7 @@ belongs to Spec #16 and Spec #19.
 |---|---|---|---|---|
 | 1.0 | May 7, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §SECTION 5. All 73 FRs covered in §5.5 traceability table; §5.4 paste-ready checklist in seven categories; §5.2 tool-selection table with analyzer-prefix reservation. | — |
 | 1.0.1 | May 11, 2026 | Claude Code | Adversarial review fix (audit finding L-B): §5.5 FR-CS-045 severity changed from `–` ("not analyzer-enforced", which read as "no enforcement") to `W (manual)` to signal "MUST-level rule, manual-review enforcement per PR" — aligned with FR-CS-063's existing `W` treatment. §5.5 footnote prose extended to explain the W-manual semantic. No change to the rule itself. | — |
+| 1.0.2 | August 17, 2026 | Claude Code | **`ERR-020-002` adopted.** §5.4.5 checklist item 1 restated against the §3.5.2 ten-tier order (it named the retired three-layer chain) and extended to cover FR-CS-046a's intra-tier acyclicity. The §5.5 traceability row for FR-CS-046 covers FR-CS-046a as a sub-clause of the same rule; the 73-row count is unchanged. Header corrected: `Status DRAFT` against a SPEC_INDEX status of APPROVED. | — |
 
 ---
 

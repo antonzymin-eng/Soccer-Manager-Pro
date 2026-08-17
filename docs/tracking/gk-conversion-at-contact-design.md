@@ -138,6 +138,18 @@ Why it is nonetheless **not** landed here: §3.
   geometry-aware form was implemented and run, and the calibration ladder refuses it at every `[GT]`
   value inside #11's own spec ranges. Landing a half-calibrated mechanism alongside KD-CC1 would
   also have made KD-CC1's measured result unattributable.
+- **KD-CC6a — PARKED, ratified by owner decision August 17, 2026: `pointQuality` stays out until W1's
+  rush geometry is measured.** The `[GT]` ladder in §4 refused the geometry-aware form at every value
+  inside #11's own spec ranges, and that refusal was measured against a keeper who **never left his
+  line**. Wiring-backlog **W1** landed August 4, 2026 and gives the keeper his first production rush
+  (`TryCommitRushIntents`), which moves the *contact geometry the whole ladder is a function of* — the
+  reach radius the divisor now uses, the angle a marginal contact is marginal at, and the distance at
+  which a catch is attempted at all. Re-fitting now would fit the dial to a geometry that is already
+  scheduled to change: KD-W1's mistake with the names swapped, and the §5.Z counter-example this project
+  has already paid for once. **What unparks it:** a measurement of the post-W1 contact geometry — not
+  W1's landing, which as of this date has never been executed (no gate run, no measurement). Until then
+  the recorded refusal stands as a fact about the *pre-rush* keeper and must not be quoted as a fact
+  about the mechanism.
 - **KD-CC7 — parry placement stays out.** It is a real defect (`ComputeParryVelocity` reverses the
   incoming velocity and rotates it by a deterministic ≤ 0.20 rad; nothing steers a parry away from
   the goal mouth), but it produced **zero goals** across the corpus in both the pre- and post-fix
@@ -304,4 +316,5 @@ assembly (three broke in §5.Z.22, one escaping to CI) — the full gate is what
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 1.0 | 2026-08-03 | — | Initial: implemented + measured. §1 the premise check; §2 the finding (a claim never stopped the ball — caught band 11.1 → 10.8 m/s, 7 of 10 catches conceding, against parry 10.8 → 0.0) and the quantified `pointQuality` inversion; §3 KD-CC1..CC7; §4 the probe that refused the geometry-aware form; §5 acceptance (2 of 3 predicates fail pre-fix by execution) with both predicate mis-specifications recorded; §6 measured result (goals 5.0 → 3.7/match); §7 the four recorded residuals, including the creation funnel re-localized to the final-third → penalty-area stage (6.5% vs football's ~40%). |
+| 1.1 | 2026-08-17 | — | **KD-CC6a added: the `pointQuality` park RATIFIED by owner decision, with its unparking condition named.** No design content changed and no `[GT]` moved. The §4 ladder's refusal is restated as what it is — a measurement of a keeper who never left his line — and the park now runs until **W1's rush geometry is measured**, not merely until W1 landed (W1 landed August 4, 2026 and has never been executed). Recorded because the refusal was starting to be cited as a property of the mechanism rather than of the pre-rush contact geometry it was measured against. |
 #endregion

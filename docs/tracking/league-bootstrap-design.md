@@ -379,6 +379,24 @@ an engine whose draw share should rise toward football as defensive behaviour wi
 argument the draw gap may be an engine defect rather than a model defect, and it is why S6 pins no
 successor for it.
 
+**S9 — Owner decision, August 17, 2026: HOLD. Adopt-or-reject after the W2 calibration capture,
+exactly as S7 says.** KD-7a stays pre-decided and unadopted. The reasoning recorded with the
+decision: the corpus that would settle `α` predates tackle wiring, so condition 4 fails on its own
+terms and conditions 1–3 would be re-tested against a replaced corpus anyway. Adopting now would
+pin a dispersion parameter fitted to a contact stream the next landing changes; rejecting now would
+discard a pre-decided successor for want of a measurement that is already scheduled. Neither is a
+decision, so neither is taken.
+
+**Condition 4's wording, corrected in place rather than quietly reinterpreted.** S7 was written on
+August 12 when the tackle challenge did not exist. It exists now: W2 landed August 12 (`ERR-014-006`)
+and **ships disabled** — `TackleContactRadiusM = 0`, held there because arming it collapsed
+`sim_match_engine_inposs_gate` to 0.501 against a 0.70 bound, an un-isolated stall whose leading
+candidate is W6. So "the corpus is produced by an engine in which *no player has ever made a tackle*"
+is now false about the **code** and still true about a **shipped match**. Condition 4 is therefore read
+as **post-*arming***, not post-building: the capture must come from an engine running a non-zero
+`TackleContactRadiusM`. Read the other way — treating W2's landing as satisfying condition 4 — the
+tripwire would fire against a corpus statistically identical to the one it was written to reject.
+
 ### KD-8 — Calibration methodology (A4a).
 
 The risk being managed is roadmap risk row 1: *"round-resolution model diverges from engine results;
@@ -805,3 +823,4 @@ Windows certification host.
 | 1.2 | 2026-07-25 | — | **AR-5** (hostile re-read of the whole landing, not the diff): 1H+4M+3L, all resolved. **H-1** the generation path is persistence-equivalent — rosters are regenerated from the world seed, not saved, so any change to it silently invalidates every save while self-referential determinism tests stay green; closed by new **KD-10** + a pinned golden vector, verified non-vacuous by perturbing `AttributeBaseMean`. **M-1** the world seed was write-only, so a saved career could not rebuild its `ISquadProvider` at all; closed by a `WorldStore.WorldSeed` accessor + the KD-9 resume recipe. **M-2** the league-size-independence claim was true only of the base roster; narrowed everywhere and the #43 consequence named. **M-3** `SquadPositionCounts` was a public mutable array gating squad validity. **M-4** the strength spread's sufficiency was unverified; discharged as KD-8 Step 0. Plus 3 L. Also corrected a claim made during the review itself: `AttributeBaseMean` is not config-overridable (`player-database` is carved out of the FR-CS-019 migration). |
 | 1.3 | 2026-07-25 | — | **AR-6** (over the AR-5 fixes): 0H+1M+0L. The new golden vector pinned only a 4-club league, leaving everything that varies with league size unguarded — the permutation length, the ramp denominator, name indexing, and the `delta == 0` branch that does not occur at N=4 at all. A second digest + delta row pinned at `DefaultClubCount`, guarded so a retuned default fails loudly rather than leaving the vector pinned to a size nobody generates. |
 | 1.4 | 2026-07-25 | — | **AR-7** (passes 4-6: the note as a *specification*, the test bodies vs their names, and governance): 1H+4M, all resolved. **H-1** KD-8 bucketed the calibration corpus on `dRating`, which includes the to-be-fitted `HomeAdvantageRating` — the harness was asked to record a value that cannot exist at capture time; axis re-based on the measured `dSquad`, `edge` separated model-side, pairs built by direct `ApplyStrength` rather than from league clubs. **M-1** `PoissonDraw` pinned to inverse-CDF and the float posture stated (the scoreline is persisted). **M-2** `League`-as-`ISquadProvider` now tested through a real save/restore. **M-3** three test names over-claimed (WeakFoot exclusion, delta permutation, roster-vs-seed divergence). **M-4** KD-6 claimed a back-prop that was never filed, against a spec that had since been promoted — filed as **ERR-027-002** against `docs/specs/squad-player-data/`. |
+| 1.5 | 2026-08-17 | — | **KD-7a HOLD ratified (owner decision) — S9 added; S7 condition 4 corrected in place.** No successor adopted and none rejected: the corpus that would determine `α` predates tackle wiring, so S7's own condition 4 fails and conditions 1–3 would be re-tested against a corpus KD-8's re-capture trigger replaces anyway. Condition 4's wording was written on August 12 when the tackle challenge did not exist; W2 landed that same day and **ships disabled** (`TackleContactRadiusM = 0`), so "no player has ever made a tackle" is now false about the code and still true about a shipped match — condition 4 is read as post-***arming***, not post-building, or the tripwire would fire against a corpus statistically identical to the one it exists to reject. **Rowless-edit note (FR-CS-057):** this table stopped at v1.4 (July 25) while the August 12 A4a calibration pass added the whole KD-7a section, S1–S8, and the `ERR-030-033`/`ERR-030-034` records. Those edits are left as found per the no-edit rule and are not retro-rowed; this row records that the gap exists so the next reader does not read v1.4 as the file's true state. |

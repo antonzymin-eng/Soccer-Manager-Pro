@@ -6,8 +6,9 @@ conformance levels, failure-to-comply modes, and the data-structures note for Sp
 This section is the authoritative FR catalogue; §3 and §6 provide rule mechanics.
 
 **Created:** May 7, 2026
-**Version:** 1.0
-**Status:** DRAFT
+**Modified:** August 17, 2026
+**Version:** 1.1
+**Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 2
 **Subsection target lengths:** §2.1 ~20 lines · §2.2 ~250 lines · §2.3 ~30 lines ·
@@ -151,7 +152,8 @@ deviation from a MUST or MUST NOT requirement. Format and lifecycle are defined 
 
 | ID | Statement | Level | Source | Mechanics § |
 |---|---|---|---|---|
-| FR-CS-046 | Assembly references **MUST** flow in the direction Physics → Mechanics → AI → UI. No assembly **MUST NOT** reference an assembly that is higher in this order (no upward references permitted). | MUST | §3.5.2 | §3.5.2 |
+| FR-CS-046 | Assembly references **MUST** flow in one direction only, along the ten-tier order defined in §3.5.2 (Foundation → Physics → Configuration → Mechanics → AI → Data → Composition → Management → Presentation → Client). A production assembly **MUST NOT** reference an assembly in a higher tier (no upward references permitted). Test assemblies are not members of the order and are outside this rule. | MUST | §3.5.2 | §3.5.2 |
+| FR-CS-046a | An assembly **MAY** reference another assembly in the same tier, but the production assembly reference graph as a whole **MUST** remain acyclic. | MUST | §3.5.2 | §3.5.2 |
 | FR-CS-047 | Cross-spec events that propagate upward through the layer order **MUST** be dispatched as struct-based events (not class-based delegates or `event Action<T>`). | MUST | §3.5.2 | §3.5.2 |
 | FR-CS-048 | An `interface` definition **MUST** reside in the same assembly as at least one specified consumer of that interface. | MUST | §3.5.3; root `CLAUDE.md` — "Interface Design Principle" | §3.5.3 |
 | FR-CS-049 | Phantom interface folders (directories containing `interface` definitions whose consumer side is unspecified or unwritten) **MUST NOT** be created. Cites ERR-001 and ERR-004 in `docs/tracking/spec-error-log.md`. | MUST NOT | §3.5.3; root `CLAUDE.md` — "Interface Design Principle" | §3.5.3 |
@@ -321,6 +323,7 @@ declarations, constant catalogue layout, namespace assignments — see §4.
 |---|---|---|---|---|
 | 1.0 | May 7, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §SECTION 2. All 73 FRs authored; FR-CS-008 carries deferred-activation language; FR-CS-040 and FR-CS-072 use MUST NOT + override-condition pattern per outline-detailed.md v1.3 self-critique. | — |
 | 1.0.1 | May 11, 2026 | Claude Code | Adversarial review fix (audit finding M-A): recast FR-CS-044 and FR-CS-045 footnotes from "Applies where applicable" to "Vacuously satisfied … no Mode 3 exception required for absence." Same normative content; clearer non-triggering semantics. No rule changes. | — |
+| 1.1 | August 17, 2026 | Claude Code | **`ERR-020-002` adopted by owner decision.** FR-CS-046 restated against the §3.5.2 ten-tier order (it named the retired three-layer `Physics → Mechanics → AI → UI` chain, which decided nothing about 16 of the 35 assembly folders) and its double negative repaired — the published text read “No assembly **MUST NOT** reference…”. Test assemblies stated out of scope explicitly. **FR-CS-046a** added as a sub-numbered clause of FR-CS-046 (intra-tier references permitted, intra-tier cycles not), so the FR-CS-046…055 span and the 73-FR count are unchanged. Header corrected: it read `Version 1.0 / Status DRAFT` against a §2.5 row at 1.0.1 and a SPEC_INDEX status of APPROVED. | — |
 
 ---
 
