@@ -35,19 +35,16 @@ src/
 `docs/specs/` but not always — see the assembly map in the root `CLAUDE.md`, and do
 not infer the spec mapping from a folder name.
 
-**One folder per spec. One `.asmdef` per folder. Folder names match `docs/specs/` exactly.**
-
-> **Note on `.asmdef` coverage:** Every spec folder listed above requires a
-> `.asmdef` file (e.g., `pressing-ai/pressing-ai.asmdef`). Only a subset is shown
-> in the tree for brevity. See each spec's `§4` (Architecture) file for the exact
-> `.asmdef` reference list. GUIDs are blocked on Unity project initialization (see
-> "WHAT IS NOT HERE YET").
+> **Note on `.asmdef` coverage:** Every assembly folder carries a production
+> `.asmdef` (e.g., `pressing-ai/pressing-ai.asmdef`). For the exact reference list of
+> any one of them, read that spec's `§4` (Architecture) file — or, for an assembly that
+> is not a numbered spec, its governing design supplement. GUIDs are blocked on Unity
+> project initialization (see "WHAT IS NOT HERE YET").
 >
-> **Test assemblies:** Every `tests/` subfolder requires its own `.asmdef` with
-> `testPlatforms: [EditMode]` (or as specified per Spec #19 §7.5 D2) and a reference
-> to the parent spec's `.asmdef`. Test assemblies are excluded from production builds
-> via platform filtering. Only the expanded spec folders in the tree above show the
-> `.asmdef` entry; all `tests/` subfolders follow the same pattern.
+> **Test assemblies:** Every `tests/` subfolder carries its own `.asmdef` with
+> `testPlatforms: [EditMode]` (or as specified per Spec #19 §7.5 D2) and a reference to
+> the parent assembly's `.asmdef`. Test assemblies are excluded from production builds
+> via platform filtering, and are **not members of the tier order** — see below.
 
 ### Assembly Layer Taxonomy
 
@@ -81,7 +78,8 @@ legitimately references upward — `event-system.Tests` references `decision-tre
 FR-CS-046 binds production assemblies only.
 
 The following assemblies are **infrastructure-only** and are NOT members of any
-tier. Game-layer code MUST NOT import them at runtime:
+tier. **No tier may reference them at runtime** — the prohibition is on every tier,
+Foundation through Client, not only on the gameplay tiers (Spec #20 §3.5.2):
 
 | Assembly | Role |
 |---|---|
@@ -109,15 +107,16 @@ Foundation  ←  Physics  ←  Configuration  ←  Mechanics  ←  AI  ←  Data
    ←  Composition  ←  Management  ←  Presentation  ←  Client
 ```
 
-`←` means "is referenced by" — `A ← B` means B depends on A (B imports from A). This
-arrow points from the provider to nothing; it points *at* the provider from its
-consumer. Spec #20 §3.5.2 draws the same rule with `──►` labelled "is available to",
-running the other way. Same rule, two notations, both labelled — check the label, never
+`←` means "is referenced by" — `A ← B` means B depends on A (B imports from A). The
+arrowhead sits on the **provider**: the consumer is at the tail, the provider at the
+head. Spec #20 §3.5.2 draws the same rule with `──►` labelled "is available to", which
+runs the other way. Same rule, two notations, both labelled — check the label, never
 the arrowhead (`ERR-020-003`).
 
-An assembly MUST NOT import from any tier above its own: a Physics assembly must not
-import from Mechanics or AI, a Mechanics assembly must not import from AI, and no
-gameplay tier may import from Data, Composition, Management, Presentation or Client.
+An assembly MUST NOT import from any tier above its own — that single rule is the
+whole prohibition. Worked instances: a Physics assembly must not import from Mechanics
+or AI, a Mechanics assembly must not import from AI, and none of Physics, Mechanics or
+AI may import from Data, Composition, Management, Presentation or Client.
 These prohibited import directions are enforced as build errors via `.asmdef` reference
 declarations (FR-CS-046).
 

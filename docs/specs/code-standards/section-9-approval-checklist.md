@@ -94,11 +94,16 @@ mechanics-section pointer.
 # 2119 keyword. This excludes the §2.2.9 partition-footer rows which use "FR-CS-NNN …
 # FR-CS-NNN" range notation rather than a single-FR cell, and would otherwise inflate
 # the count with false positives.
-grep -oP "\| FR-CS-\d{3} \|.*" docs/specs/code-standards/section-2.md \
+grep -oP "\| FR-CS-\d{3}[a-z]? \|.*" docs/specs/code-standards/section-2.md \
   | grep -v "MUST\|SHOULD\|MAY"
 # Expected: zero output (every FR row contains a RFC 2119 keyword).
 ```
 
+- [x] Re-verified August 17, 2026 — the regex gained an optional lower-case suffix
+  (`\d{3}[a-z]?`) so it also sees the sub-numbered clauses FR-CS-046a and FR-CS-046b,
+  which the three-digit form could not match: both are MUST-level rows and were
+  therefore silently untested by this check between their introduction and this
+  correction. Returns zero lines over all 75 rows (73 numbered FRs + 2 sub-clauses).
 - [x] Re-verified May 11, 2026 — proxy command rewritten to match single-FR rows only;
   returns zero lines. All 73 FR rows contain a conformance keyword. (Original May 8, 2026
   proxy was looser and matched §2.2.9 partition-footer rows as false positives; corrected

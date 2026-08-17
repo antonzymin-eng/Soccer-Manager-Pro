@@ -4,13 +4,22 @@
 > **Status:** DESIGN SUPPLEMENT — **✅ SIGNED OFF August 17, 2026 (owner decision).** All three structural
 > decisions accepted as written: the `Severe` tier + `RECOVERY_MAX` raise (R-5), the #41→#28 aftermath seam
 > (R-6 / KD-R4, with the v0.3 consumer-owns-the-seam-type correction), and the deterministic-not-drawn PA
-> reduction (KD-R4a). §11 steps 1–2 are complete; steps 3–5 are unblocked and unscheduled. **Not a new
+> reduction (KD-R4a). §11 steps 1–2 are complete; steps 3–5 are unblocked and unscheduled.
+> **v0.6 (August 17, 2026, post-sign-off): the sign-off's factual premise — KD-R1's "both specs are
+> pre-code, so the changes are free" — was re-verified after the fact and found EXPIRED** (#41 T0/T1/T2
+> landed August 5–7; #28 T1/T2a landed August 8; both version-1 sub-blobs are written by every save).
+> §1, §6, §10 and §11 are corrected below; the three structural decisions and the sign-off itself
+> are UNCHANGED. **Not a new
 > candidate spec** — this note proposes
 > corrections to the APPROVED text of **Injuries & Medical #41** and **Player Progression & Lifecycle #28**,
 > and records two deliberately-undesigned forward items.
 > **Candidate spec:** none · **FR prefix:** none of its own (proposes appends to FR-MD / FR-PG)
 > **Owner specs:** #41 (FR-MD-028..034 proposed) · #28 (FR-PG-025..028 proposed)
-> **Back-props proposed:** ERR-041-013..018 · ERR-028-002..004. **Zero** #30 / #29 / #27 / #16 changes.
+> **Back-props proposed:** ERR-041-013..018 · ERR-028-020..022 *(the #28 ids re-allocated at v0.6:
+> the originally proposed ERR-028-002..004 are ALL consumed — -002 was filed July 27, 2026 at #53's
+> approval and is published in #28 §1/§7; -003 and -004 were filed August 8, 2026 at the #28 T1/T2a
+> landing. The next free block after the highest id in use (ERR-028-019) is 020..022; mapping
+> -002→-020 (R-7), -003→-021 (R-8), -004→-022 (R-6 consumer + R-11))*. **Zero** #30 / #29 / #27 / #16 changes.
 > *(Id-map re-based August 7, 2026 at the balance pass: the originally proposed ERR-041-002 and
 > ERR-041-003 were both filed by other findings while this supplement awaited sign-off — -002 is the T0
 > `DrawKeyed` API defect, -003 the `InjuryRiskMax` `[CROSS]` retag — and 004..011 have since been either
@@ -21,8 +30,11 @@
 > rather than add beside it, per #41 Appendix A's note.)*
 > **Determinism impact:** none — no new RNG stream, no new domain tag, no new `SubsystemOrdinal`,
 > no `DETERMINISM_DIGEST_VERSION` bump (§5).
-> **Save impact:** none *today* — no format version bump, because neither owning spec has yet written a
-> byte (§6). This is the whole argument for doing it now.
+> **Save impact (corrected v0.6):** R-4's two `InjuryState` fields and R-6's `PlayerLifecycle` field are
+> now **format bumps with no migration path** — `MedicalSaveCodec` (August 5) and `ProgressionSaveCodec`
+> (August 8) write version-1 sub-blobs in #30's season frame (`SEASON_SAVE_FORMAT_VERSION` = 6), and
+> both codecs' F3 refuses Stage-0 cross-version loads (§6). The v0.1–v0.5 "no byte has ever been
+> written" argument is void; KD-R1's window has closed.
 
 ---
 
@@ -44,20 +56,22 @@ football-specific evidence does not support.
 **Explicitly not proposed:** any change to #29 Training, #30 Season Loop, #27 Squad Data, #16 Determinism,
 or #33 Personalities. Every finding below is containable inside #41 and #28.
 
-## 1. Why now — the cost argument (KD-R1)
+## 1. Why now — the cost argument (KD-R1) — **VOID at v0.6**
 
-The finding that governs this whole supplement is about **timing, not content**:
+The finding that governed this supplement's *timing* was about cost, not content. **Its factual premise
+expired between writing (July 26) and sign-off (August 17), and is corrected here** — re-verified against
+`src/` on August 17, 2026:
 
-| Owning spec | Implementation state (verified) | Cost of these changes today | Cost after its next T-phase |
-|---|---|---|---|
-| **#41 Injuries & Medical** | **No `src/` at all.** Spec-only since approval (July 23). | Spec text edits. Zero code, zero migration. | T1 writes the `MEDICAL_SAVE_FORMAT_VERSION` sub-blob → every `InjuryState` field change becomes a format bump with no migration path (KD-7 forbids Stage-0 migrations). |
-| **#28 Player Progression** | `src/player-progression/` T0 only — pure functions, **wired into nothing**. T1 (save codec) and T2 (`ProgressionEngine` + world-tick wiring) not built. | Constant-table edits + one signature change + unit-test expectation updates. No shipped behaviour exists to preserve. | T2 wires the world tick → the age bands and drain order become live career behaviour; T1 writes the lifecycle blob → `LastAftermathAppliedDay` becomes a format bump. |
+| Owning spec | Implementation state (**re-verified August 17, 2026**) | Cost of these changes today |
+|---|---|---|
+| **#41 Injuries & Medical** | **Built and live.** `src/injuries-medical/` landed T0 August 5, 2026; T1 the same wave — `MedicalSaveCodec.cs` writes `InjuryState` field-by-field (Severity, RecoveryRemaining, InjuryCount, LastAdvancedWorldDay) under `MEDICAL_SAVE_FORMAT_VERSION = 1` as a mandatory sub-blob of #30's season frame; T2 (August 6) wired the day step at `SeasonLoop` slot 4; the occurrence dial was ARMED at the August 7 balance pass (FR-MD-027). | R-1..R-3 modify a live daily step (`MedicalStep.AdvanceMedicalDay` runs at slot 4 for every club). R-4's two `InjuryState` fields are a `MEDICAL_SAVE_FORMAT_VERSION` 1 → 2 bump; `MedicalSaveCodec.Decode` refuses a version mismatch outright ("no cross-version migration at Stage 0 (F3)"), so existing saves are invalidated. R-5's `Severe` tier changes live severity classification. |
+| **#28 Player Progression** | **Built and live.** T0 (July) plus T1/T2a August 8, 2026 — `ProgressionSaveCodec.cs` writes `PlayerRecord` + `PlayerLifecycle` per player under `PROGRESSION_SAVE_FORMAT_VERSION = 1` (magic-led, ERR-028-004); `ProgressionEngine` is live at `SeasonLoop` slot 1 and the block is **the serialized career roster** (KD-4). | R-7/R-8 change live career behaviour exercised daily at slot 1, not just T0 test expectations. R-6's `PlayerLifecycle.LastAftermathAppliedDay` is a `PROGRESSION_SAVE_FORMAT_VERSION` 1 → 2 bump with the same F3 no-migration refusal — and because the block is the roster authority (KD-4), a refused load invalidates the whole career, not one subsystem's state. |
 
-So the #41-side changes (R-1..R-5 plus R-6's signal half) are **corrections before first code**, and the
-#28-side changes (R-6's consumer half, R-7, R-8, R-11) are **corrections before first consumer**. Both are
-free exactly once. This is the same argument the project has
-already accepted twice — #30 T1's `ERR-030-011` landed "before any file exists", and the league-bootstrap
-KD-6 position template was fixed at the root rather than after a season failed to start by seed.
+So the v0.1–v0.5 framing — "#41-side changes are corrections before first code, #28-side changes are
+corrections before first consumer, both free exactly once" — **is no longer true in any part**: both specs
+have code, both have production consumers, and both formats have written version-1 bytes. What survives is
+the *content* argument: a wrong-shaped model cannot be fixed by later fitting (§10), so the findings are
+still correct to land — at the price of a coordinated format bump per owning sub-blob rather than for free.
 
 ## 2. Evidence basis
 
@@ -189,8 +203,9 @@ RecurrenceRisk(s, worldDay):
 ```
 
 `InjuryState` gains two fields — `uint LastReturnWorldDay` and `InjurySeverity LastSeverity` — set when the
-recovery countdown reaches zero. Both are integer, both round-trip through the existing sub-blob layout, and
-**neither costs a format bump** because no `MEDICAL_SAVE_FORMAT_VERSION` file has been written (§6).
+recovery countdown reaches zero. Both are integer. **(Corrected v0.6:)** both now cost a
+`MEDICAL_SAVE_FORMAT_VERSION` 1 → 2 bump — `MedicalSaveCodec` has written version-1 files since
+August 5, 2026, and its `Decode` refuses a version mismatch with no Stage-0 migration path (F3) — see §6.
 
 This also gives E-5's "early return predicts second injury" a home at the deep tier, where a manager-forced
 early return would shorten `RecoveryRemaining` and raise the recurrence term for the same window.
@@ -227,7 +242,7 @@ The catalogue invariant becomes `Σ SEVERITY_*_PERMILLE ≤ SEVERITY_PERMILLE_DE
 
 ### R-6 (H) — a player returns from injury with byte-identical attributes
 
-**Evidence:** E-6. **Owner:** #41 §0 / #28 §3.1. **Back-prop:** ERR-041-018 *(re-based)* (signal) + ERR-028-004 (consumer).
+**Evidence:** E-6. **Owner:** #41 §0 / #28 §3.1. **Back-prop:** ERR-041-018 *(re-based)* (signal) + ERR-028-022 (consumer) *(re-allocated v0.6; originally -004, consumed August 8, 2026 at the #28 T1/T2a landing)*.
 
 #41 §0 puts "attribute decline from injury" out of scope and exposes "a read-only injury signal #28 *may*
 later read". #28 has no such reader. So the seam is **named on one side and built on neither**, and the shipped
@@ -300,7 +315,7 @@ ERR-030-002 precedent explicitly avoids. The #23 one-stride-stale contract is th
 ### R-7 (H) — age bands are position-blind, so all positions age identically
 
 **Evidence:** E-7. **Owner:** #28 §4.3 / Appendix A / `AbilityModel.ClassifyAgeBand`.
-**Back-prop:** ERR-028-002.
+**Back-prop:** ERR-028-020 *(re-allocated v0.6; originally -002, consumed July 27, 2026 at #53's approval)*.
 
 Verified in code: `AbilityModel.ClassifyAgeBand(int ageYears)` takes age alone and compares against the global
 scalars `GROWTH_AGE = 24` / `DECLINE_AGE = 30`. Every player in the game grows until 24, plateaus, and declines
@@ -324,7 +339,7 @@ bottom-of-graph data assembly). Recorded as deep-tier, **not** proposed here.
 
 ### R-8 (H) — decline sheds the wrong attributes, and is nearly invisible to CA
 
-**Evidence:** E-8. **Owner:** #28 §3.1 / `AbilityModel.DrainOnePoint`. **Back-prop:** ERR-028-003.
+**Evidence:** E-8. **Owner:** #28 §3.1 / `AbilityModel.DrainOnePoint`. **Back-prop:** ERR-028-021 *(re-allocated v0.6; originally -003, consumed August 8, 2026 at the #28 T1/T2a landing)*.
 
 Verified in code (`AbilityModel.cs`): `DrainOnePoint` walks `for (level = 0; level <= maxBias; level++)` —
 **lowest position-bias first**, documented as "a declining player sheds their least-emphasised attributes
@@ -412,14 +427,17 @@ note would invent a surface with no specified consumer, which is the FR-LW-031 t
 scale with recent match density (the same `ShortTurnaroundCount` R-3 introduces) and grow within the match
 rather than applying flat from kickoff.
 
-**Blocked upstream regardless.** ERR-030-014 means a production match never puts the ball in motion, so no
-coordination effect is observable end-to-end today.
+**Upstream state (corrected v0.6).** ERR-030-014 was **resolved July 26, 2026** (match-engine §5.Z
+Phase H — a production match develops play), so a coordination effect is no longer unobservable in
+principle. What still gates it is calibration fidelity, not playability: the engine's contact stream is
+pre-tackle until W2 arms (`TackleContactRadiusM` ships at 0), and KD-W1 defers `[GT]` calibration to the
+single post-W2 pass.
 
 ---
 
 ### R-11 (L) — retirement is a hard deterministic age gate
 
-**Evidence:** E-6 (career attrition), E-7. **Owner:** #28 §3.4. **Back-prop:** folded into ERR-028-004.
+**Evidence:** E-6 (career attrition), E-7. **Owner:** #28 §3.4. **Back-prop:** folded into ERR-028-022 *(re-allocated v0.6; originally -004, consumed August 8, 2026)*.
 
 `RETIREMENT_AGE = 36`, deterministic, no draw. Defensible as a minimal-tier rule, but E-6 puts career
 attrition squarely on injury history (65% still at top level three years post-ACL), and `InjuryCount` /
@@ -481,17 +499,21 @@ test that pins the pre-supplement behaviour under identity settings (§8).
   Save→restore reproduces it exactly with nothing to continue.
 - **No `DETERMINISM_DIGEST_VERSION` bump.** No #16 change of any kind is proposed.
 
-## 6. Save impact — no format version bump (KD-R1 corollary)
+## 6. Save impact — **two format bumps, no migration path (corrected v0.6)**
 
-| Block | Change | Version impact |
+| Block | Change | Version impact (**re-verified August 17, 2026**) |
 |---|---|---|
-| `MEDICAL_SAVE_FORMAT_VERSION` | `InjuryState` gains `LastReturnWorldDay` + `LastSeverity` | **None** — #41 T1 is unbuilt; no file has ever been written at version 1. |
-| `PROGRESSION_SAVE_FORMAT_VERSION` | `PlayerLifecycle` gains `LastAftermathAppliedDay` | **None** — #28 T1 is unbuilt; the constant is declared and unconsumed. |
-| `MatchLoad.ShortTurnaroundCount` | new field | **None** — caller-supplied per-day value, never serialized (FR-MD-010). |
+| `MEDICAL_SAVE_FORMAT_VERSION` | `InjuryState` gains `LastReturnWorldDay` + `LastSeverity` | **Bump 1 → 2.** `MedicalSaveCodec` (landed August 5, 2026) serializes `InjuryState` field-by-field at version 1, and `Decode` refuses a version mismatch — "no cross-version migration at Stage 0 (F3)" — so every existing save's medical block becomes unloadable at the bump. |
+| `PROGRESSION_SAVE_FORMAT_VERSION` | `PlayerLifecycle` gains `LastAftermathAppliedDay` | **Bump 1 → 2.** `ProgressionSaveCodec` (landed August 8, 2026) serializes `PlayerRecord` + `PlayerLifecycle` per player at version 1 with the same F3 refusal — and since #28's block is the serialized career roster (KD-4), a refused load invalidates the whole career. |
+| `MatchLoad.ShortTurnaroundCount` | new field | **None** — `MatchLoad` is still caller-supplied per day and never serialized (FR-MD-010); it is now *derived* at #30's composition root from the persisted `APPR` v1 appearance record, which already carries the per-day bitmask the count would be computed from. |
 | `InjuryAftermath` | new **#28-owned** value type (KD-R4) | **None** — projected from `InjuryState`'s public fields at #30's composition root; stores nothing. |
-| `SEASON_SAVE_FORMAT_VERSION` | — | **None** — no sub-blob is added or removed. |
+| `SEASON_SAVE_FORMAT_VERSION` | — | **None** — no sub-blob is added or removed (currently 6; sub-blob versions are interior to their own opaque payloads). |
 
-This is the entire timing argument in one table, and it expires at #41 T1.
+The v0.1–v0.5 version of this table read "**None**" in the first two rows because "no file has ever been
+written at version 1". That was true when written (July 26) and false by sign-off: #41 T1 landed
+August 5, 2026 and #28 T1 landed August 8, 2026, so the timing argument this table carried **expired at
+#41 T1 exactly as it predicted**. The cost of R-4 and R-6 is now a coordinated format bump per owning
+sub-blob, with KD-7/F3 forbidding any Stage-0 migration — old saves are refused, not converted.
 
 ## 7. Primary surfaces (proposed → pinned in the section files)
 
@@ -579,8 +601,11 @@ public static void DrainOnePoint(ref PlayerRecord rec, ref PlayerLifecycle life)
 5. **Import the contract-year effect** — recorded as a negative result for football (R-12).
 6. **Touch #29, #30, #27, #16, or #33** — every finding is containable in #41 and #28.
 7. **Fit any `[GT]` magnitude.** Every number above is illustrative pending each spec's balance pass; the
-   contract is the *shape*, the *sign*, and the integer discipline. Fitting them requires match data the
-   engine cannot currently produce (ERR-030-014).
+   contract is the *shape*, the *sign*, and the integer discipline. *(Corrected v0.6:)* the engine now
+   produces match data — ERR-030-014 was resolved July 26, 2026, and #41's own August 7 balance pass
+   fitted its occurrence `[GT]`s against season-scale measurement (`SeasonInjuryRealismTests`) — but
+   fitting the values *this supplement* adds waits on KD-W1: the contact stream is pre-tackle until W2
+   arms (`TackleContactRadiusM` = 0), and the owner's call is one calibration pass after arming.
 
 ## 10. Risks
 
@@ -596,12 +621,16 @@ public static void DrainOnePoint(ref PlayerRecord rec, ref PlayerLifecycle life)
 - **PA reduction is deterministic where the evidence is distributional (R-6).** Accepted to preserve #28's
   draw-free contract; the drawn version is recorded with a specific home (#41's existing stream) so it does
   not later arrive as a new #28 stream.
-- **The window is closing (KD-R1).** #41 T1 and #28 T1 both convert these from text edits into format bumps
-  with no migration path.
-- **Unverifiable against match data (ERR-030-014).** No proposed `[GT]` value can be validated end-to-end
-  until a production match can develop play. The findings are *directional* corrections grounded in external
-  evidence, not fitted parameters — and they are correct to land regardless, since a wrong-shaped model
-  cannot be fixed by later fitting.
+- **The window has closed (KD-R1 — corrected v0.6).** #41 T1 (August 5, 2026) and #28 T1 (August 8, 2026)
+  both landed before sign-off, so these are no longer text edits: R-4 and R-6 each cost a coordinated
+  format bump with no migration path (§6). The findings remain correct to land; only their price changed.
+- **`[GT]` fitting is deferred, not blocked (corrected v0.6 — was "unverifiable, ERR-030-014").**
+  ERR-030-014 was resolved July 26, 2026; production matches develop play, and #41's occurrence dial is
+  armed at measured, football-band rates. What remains true: every `[GT]` this supplement adds is subject
+  to KD-W1 — the tackle challenge feeding the contact stream ships disabled (`TackleContactRadiusM` = 0,
+  W2), so a fit landed before the post-W2 calibration capture would be re-fitted immediately. The findings
+  are *directional* corrections grounded in external evidence, not fitted parameters — and they are
+  correct to land regardless, since a wrong-shaped model cannot be fixed by later fitting.
 
 ## 11. Promotion pipeline
 
@@ -613,18 +642,31 @@ public static void DrainOnePoint(ref PlayerRecord rec, ref PlayerLifecycle life)
    supplement is AR-converged and was blocking only alignment work, and if a later measurement changes an
    answer the cost is one supplement edit — cheaper than the standing cost of a live-but-unsigned design
    that the next #41 landing would have to read and guess at.
-3. **File the back-props** — ERR-041-013..018 (re-based), ERR-028-002..004 (`spec-error-log.md`), each patching the named
+3. **File the back-props** — ERR-041-013..018 (re-based; re-verified still free August 17, 2026 — they
+   appear only in this supplement and in CHANGELOG references to it, never in `spec-error-log.md`) and
+   **ERR-028-020..022** (re-allocated v0.6: the originally named 002..004 are all consumed — see the
+   header block and Version History; 020..022 is the next free block after ERR-028-019) in
+   `spec-error-log.md`, each patching the named
    section files and appending FR-MD-028..034 / FR-PG-025..028.
 4. **Patch the section files** — #41 §2.2 / §3.1 / §3.2 / §3.4 / Appendix A; #28 §3.1 / §4.3 / Appendix A.
    No `SPEC_INDEX.md` row changes (both specs stay APPROVED; these are back-props, not re-approvals).
-5. **T-phase implementation, in two independent tranches.**
-   - **#28 R-7 + R-8 land immediately against T0** — they change `ClassifyAgeBand` / `DrainOnePoint`, which
-     are pure functions with existing T0 tests and no production caller. Cost is the constant tables plus the
-     T0 test expectations.
-   - **#28 R-6 + R-11 land with T2**, because the aftermath parameter needs a caller (`ProgressionEngine` at
-     #30's slot 1) to be anything but a defaulted `None`.
-   - **Every #41-side change lands with #41 T0**, which does not yet exist — so R-1..R-5 are spec text until
-     that phase opens. R-6's #41 side is only the §0 read contract plus the two `InjuryState` fields R-4
+5. **T-phase implementation, in two independent tranches (premises corrected v0.6 — both specs are now
+   built and wired, so every tranche lands against live code, not ahead of it).**
+   - **#28 R-7 + R-8 land against the live T2a assembly** — `ClassifyAgeBand` / `DrainOnePoint` are still
+     pure functions with existing tests, but they now HAVE a production caller: `ProgressionEngine` is
+     driven daily at #30's slot 1 (August 8, 2026), so these changes alter live career behaviour in every
+     running season, not just T0 test expectations. Cost is the constant tables, the test expectations,
+     and the behaviour change itself.
+   - **#28 R-6 + R-11's caller now exists** — the original wording ("land with T2, because the aftermath
+     parameter needs a caller") is satisfied: `ProgressionEngine` at #30's slot 1 is live (T2a), so these
+     land against it directly, plus the `PROGRESSION_SAVE_FORMAT_VERSION` bump for
+     `PlayerLifecycle.LastAftermathAppliedDay` (§6).
+   - **Every #41-side change lands against the live #41 assembly** — the v0.5 premise ("#41 T0 does not
+     yet exist, so R-1..R-5 are spec text until that phase opens") was false at sign-off: T0/T1/T2 landed
+     August 5–6, 2026 and the occurrence dial is armed. R-1..R-3 modify the live `MedicalStep` /
+     `AssembleRiskScore` chain at slot 4; R-4 carries the `MEDICAL_SAVE_FORMAT_VERSION` bump (§6); R-5
+     changes live severity classification. R-6's #41 side is only the §0 read contract plus the two
+     `InjuryState` fields R-4
      already adds; the `InjuryAftermath` type itself is #28-owned (KD-R4) and the projection is #30's.
 
 ## Version History
@@ -635,4 +677,5 @@ public static void DrainOnePoint(ref PlayerRecord rec, ref PlayerLifecycle life)
 | v0.2 | July 26, 2026 | — | **Self-AR pass 1 over the v0.1 draft: 0H + 4M + 2L, all fixed.** **M-1 (dangling anchors):** the doc cited KD-R5b/KD-R9 while defining only KD-R1/R2/R3/R5/R5a/R5b — KD-R4/R6/R7/R8 were never defined, so three citations resolved to nothing (the stale-cross-reference class the root `CLAUDE.md` names as the project's most recurring bug). Renumbered to the contiguous set actually used: KD-R1..R3, KD-R4/R4a/R4b (aftermath), KD-R5 (determinism); every citation re-pointed. **M-2 (zero-value trap in my own proposed surface):** `InjuryAftermath` documented `DaysSinceReturn = -1` as the absent sentinel while `None => default` yields `0`, so the identity value would have read as "returned today" — precisely the `MatchFrameView.Empty` / `MarkingOrientation` defect class. The discriminator is now `LastSeverity` (ordinal 0 = `None`), making `default` provably inert. **M-3 (back-prop ID collision):** ERR-041-002 was assigned to both R-1 and R-6; R-6's signal half moved to ERR-041-007 and the header range corrected 002..006 → 002..007. **M-4 (overstated magnitude claim):** R-8's second consequence claimed decline leaves CA "barely moved" — `ΔCA ∝ −w_i` supports the *sign and shape* (flatter-then-steeper) but not a magnitude, which depends on the unmeasured `PositionAttributeBias` spread; narrowed to the shape claim with the limitation stated, and the §8 test rewritten as a **comparative** lock (corrected order drains more CA per point than the current order) because the original "CA falls measurably" assertion passes against the defect. **L-1:** `RecoveryDaysForTier[Severe]` 300 → 350, since 300 sits below the E-6 ACL mean the tier exists to represent. **L-2:** §11 step 5 claimed all #28 findings need T2 — R-7/R-8 touch pure T0 functions with no production caller and land immediately; split into two tranches. |
 | v0.3 | July 26, 2026 | — | **Self-AR pass 2: 0H + 1M + 0L, fixed.** **M-1 (architectural — a reference-direction violation in my own proposal):** v0.2 defined `InjuryAftermath` as **#41-owned** while simultaneously claiming in KD-R4 that "neither assembly gains a reference to the other" — but #28's `AdvanceDayForPlayer` takes `in InjuryAftermath`, so naming that parameter type would have forced `player-progression.asmdef` to reference #41's assembly, which is exactly the coupling KD-R4 exists to prevent. The claim and the surface contradicted each other. Fixed by following the established precedent rather than inventing one: **the consumer owns the seam type** — `TrainingInput` is the #29 seam and lives in `src/player-progression/TrainingInput.cs` (#28 §4.5), so `InjuryAftermath` lives there too, and #30's composition root projects it from `InjuryState`'s public fields. Second-order consequence also fixed: the struct now carries an **integer `SeverityRank`** rather than #41's `InjurySeverity` enum, so no #41 type crosses the boundary at all (and since `InjurySeverity`'s ordinals ascend in severity, the projection is a plain cast that R-5's `Severe` append extends for free). The identity discriminator moved with it (`SeverityRank == 0`), preserving the v0.2 M-2 zero-value fix. §7 surfaces, §6 save table and §11 tranche wording re-pointed. |
 | v0.4 | August 8, 2026 | — | **Balance-pass AR pass 9 (M2)**: two lines still named "#41's existing `injuries.occurrence` stream" (KD-R4a's deep-tier routing and §5's determinism-impact bullet) — ERR-041-012 established that stream never existed and may not; both re-anchored to the keyed `DOMAIN_TAG_INJURIES_MEDICAL` derivation. Matters here because this supplement is LIVE (awaiting owner sign-off) and will drive #41's next landing. |
-| v0.5 | August 17, 2026 | — | **SIGNED OFF (owner decision).** No design content changed — the three structural decisions (R-5, R-6/KD-R4, KD-R4a) are accepted as written at v0.3/v0.4. Status header and §11 steps 1–2 updated to record it. What this unblocks: §11 step 3 (file ERR-041-013..018 and ERR-028-002..004, the soft-reserved ids re-verified free at the August-7 re-basing), step 4 (patch #41 §2.2/§3.1/§3.2/§3.4/Appendix A and #28 §3.1/§4.3/Appendix A, appending FR-MD-028..034 / FR-PG-025..028, with **no** `SPEC_INDEX.md` row change — both specs stay APPROVED, these are back-props), and step 5's two tranches. None of that is scheduled here. **Standing caveat, unchanged and load-bearing for step 5:** R-2's under-exposure arm must re-fit against `BaselineDailyRisk` (ERR-041-011) as the exposure-independent term rather than add beside it, and every `[GT]` this supplement moves is subject to KD-W1 — #41's occurrence dial is armed but the tackle challenge that feeds the contact stream ships at `TackleContactRadiusM = 0` (W2), so a fit landed before the W2 calibration capture would be re-fitted immediately. |
+| v0.5 | August 17, 2026 | — | **SIGNED OFF (owner decision).** No design content changed — the three structural decisions (R-5, R-6/KD-R4, KD-R4a) are accepted as written at v0.3/v0.4. Status header and §11 steps 1–2 updated to record it. What this unblocks: §11 step 3 (file ERR-041-013..018 and ERR-028-002..004, the soft-reserved ids re-verified free at the August-7 re-basing — **⚠️ CORRECTED at v0.6: false in its #28 half on its own date.** The August-7 re-basing only ever re-verified the **#41-side** block (013..018); the #28 ids were never re-checked, and ERR-028-002 had already been consumed July 27, 2026 at #53's approval — ten days before that re-basing — with -003/-004 consumed August 8 at the #28 T1/T2a landing. The #28 block is re-allocated to ERR-028-020..022 at v0.6), step 4 (patch #41 §2.2/§3.1/§3.2/§3.4/Appendix A and #28 §3.1/§4.3/Appendix A, appending FR-MD-028..034 / FR-PG-025..028, with **no** `SPEC_INDEX.md` row change — both specs stay APPROVED, these are back-props), and step 5's two tranches. None of that is scheduled here. **Standing caveat, unchanged and load-bearing for step 5:** R-2's under-exposure arm must re-fit against `BaselineDailyRisk` (ERR-041-011) as the exposure-independent term rather than add beside it, and every `[GT]` this supplement moves is subject to KD-W1 — #41's occurrence dial is armed but the tackle challenge that feeds the contact stream ships at `TackleContactRadiusM = 0` (W2), so a fit landed before the W2 calibration capture would be re-fitted immediately. |
+| v0.6 | August 17, 2026 | — | **Post-sign-off factual correction (reviewed adversarial-review findings H2 + H3). The sign-off's factual premise was re-verified after the fact and found EXPIRED; the owner's sign-off of the three structural decisions — R-5, R-6/KD-R4, KD-R4a — is UNCHANGED. What changed is the cost/timing argument (KD-R1), which is now VOID.** **H2 (five falsified sites):** §1's implementation-state table claimed #41 had "no `src/` at all" and #28's T1/T2 were unbuilt — false since August 5 and August 8, 2026 respectively (`src/injuries-medical/MedicalSaveCodec.cs` at `MEDICAL_SAVE_FORMAT_VERSION` = 1; `src/player-progression/ProgressionSaveCodec.cs` at `PROGRESSION_SAVE_FORMAT_VERSION` = 1; both mandatory sub-blobs of #30's frame, `SEASON_SAVE_FORMAT_VERSION` = 6; #28's `ProgressionEngine` live at slot 1, #41's `MedicalStep` at slot 4, occurrence dial armed). §1 re-verified and rewritten; §6's "None" save-impact cells for R-4/R-6 replaced with the real 1 → 2 format bumps under KD-7/F3's no-migration refusal; §10's "window is closing" restated as closed; §11 step 5's premises corrected (every tranche now lands against live, wired code); the header's save-impact line corrected; and R-4's "neither costs a format bump" corrected in place. Separately, the three ERR-030-014 live-blocker citations (§3 R-10, §9 item 7, §10) retired — that ERR was **resolved July 26, 2026** (same day this supplement was written), production matches develop play, and what actually gates validation today is KD-W1 (the contact stream is pre-tackle until W2 arms at `TackleContactRadiusM` = 0). **H3 (id collision):** all three #28-side back-prop ids the sign-off unblocked were already taken — ERR-028-002 filed July 27, 2026 at #53's approval (published in #28 §1/§7), ERR-028-003/-004 filed August 8, 2026 at the #28 T1/T2a landing; the v0.5 row's "re-verified free at the August-7 re-basing" claim was false on its own date and is annotated in place (that re-basing only re-verified the #41 side). **Re-allocated by repo-wide grep over `docs/` AND `src/`** (highest in use: ERR-028-019): **old → new mapping -002 → -020 (R-7), -003 → -021 (R-8), -004 → -022 (R-6 consumer + R-11)**; every citation re-pointed (header block, R-6/R-7/R-8/R-11 `Back-prop:` lines, §11 step 3). The ERR-041-013..018 block was re-verified by the same method and **is still free** (cited only by this supplement and CHANGELOG references to it; nothing in `spec-error-log.md`); it stands unchanged. No design content changed; the R-1..R-12 findings' substance is untouched. |

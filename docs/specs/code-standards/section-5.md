@@ -331,7 +331,8 @@ resolves. FR-CS-009 is MAY-level; no pass/fail check required.
 [ ] 1. Game-loop budget — Game-loop code produces zero managed-memory
         allocations per frame? (FR-CS-066)
 
-[ ] 2. UI budget — UI-layer code stays under 1 MB allocations per frame? (FR-CS-067)
+[ ] 2. UI budget — Presentation/Client-tier code (§3.5.2 tiers 8-9) stays under
+        1 MB allocations per frame? (FR-CS-067)
 
 [ ] 3. No virtual in inner loops — No virtual method calls inside per-frame
         inner loops; sealed or static dispatch used instead? (FR-CS-068)
@@ -347,7 +348,7 @@ resolves. FR-CS-009 is MAY-level; no pass/fail check required.
 
 ## 5.5 FR-to-Verification Traceability
 
-One row per FR. Stage 0 verification resolves to the §5.4 category a reviewer uses.
+One row per FR, plus one per sub-numbered clause. Stage 0 verification resolves to the §5.4 category a reviewer uses.
 Stage 1 columns are placeholders (intentional — baselines are deferred to D1; see
 §5.3). Analyzer IDs use the reserved prefixes from §5.2; concrete IDs assigned at
 Stage 0+1 transition.
@@ -402,6 +403,8 @@ Legend: **E** = Error (blocks build) · **W** = Warning · **–** = Not analyze
 | FR-CS-044 | Determinism — §5.4.4 item 6 | `CS20-DET-004` | W |
 | FR-CS-045 | Determinism — §5.4.4 item 7 | Manual review (Python tooling; not C# analyzer) | W (manual) |
 | FR-CS-046 | Dependencies & Interfaces — §5.4.5 item 1 | `.asmdef` reference graph check | E |
+| FR-CS-046a | Dependencies & Interfaces — §5.4.5 item 1 | `.asmdef` cycle → build error (Unity + `tools/dotnet-ci`); `tools/assembly-tier-check.py` | E |
+| FR-CS-046b | Dependencies & Interfaces — §5.4.5 item 1 | `tools/assembly-tier-check.py` (ordered-tier → Infrastructure reference) | E |
 | FR-CS-047 | Dependencies & Interfaces — §5.4.5 item 2 | `CS20-DEP-001` | E |
 | FR-CS-048 | Dependencies & Interfaces — §5.4.5 item 3 | `CS20-DEP-002` | E |
 | FR-CS-049 | Dependencies & Interfaces — §5.4.5 item 4 | `CS20-DEP-003` | E |
@@ -430,7 +433,7 @@ Legend: **E** = Error (blocks build) · **W** = Warning · **–** = Not analyze
 | FR-CS-072 | Determinism — §5.4.4 item 8 | `CS20-DET-006` | E |
 | FR-CS-073 | Determinism — §5.4.4 item 8 | `BannedSymbols.txt` (`decimal`) | E |
 
-**Traceability coverage:** All 73 FRs have a Stage 0 verification path. FR-CS-008 is
+**Traceability coverage:** All 73 numbered FRs have a Stage 0 verification path, as do the two sub-numbered clauses FR-CS-046a and FR-CS-046b — 75 rows in total. The sub-clauses are listed for traceability and are **outside the 73-FR count** (§2.2.9's partition Count column reports FR IDs, not rows). FR-CS-008 is
 marked INACTIVE with a defined activation condition. FR-CS-009, FR-CS-024, and
 FR-CS-035 are MAY-level; no enforcement row is needed. FR-CS-045 and FR-CS-063 are
 verified by manual review because their correctness depends on cross-document matching

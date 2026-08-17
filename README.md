@@ -912,18 +912,25 @@ Soccer-Manager-Pro/
 │       │   └── path-to-playable-roadmap.md       [Which code to land, in what order]
 │       ├── certification-platform.md   [Pinned host/engine tuple] + cert-run-runbook.md
 │       └── *-design.md                 [42 design supplements — see note below]
-├── src/                                [34 production assemblies — coding begun May 19, 2026]
+├── src/                                [35 production assemblies — coding begun May 19, 2026]
 │   ├── CLAUDE.md                       [Coding guide — read before writing code]
-│   ├── Physics:    ball-physics, agent-movement, collision-system, first-touch,
-│   │               pass-mechanics, shot-mechanics, heading-mechanics, goalkeeper-mechanics
-│   ├── Mechanics:  positioning-ai (+#23/#24/#25), pressing-ai, defensive-ai, attacking-ai
-│   ├── AI:         decision-tree, perception-system
-│   ├── Foundations: deterministic-sim, event-system, project-constants
-│   ├── Data/loop:  player-database (#27), player-progression (#28), season-save (#30),
-│   │               tactical-instructions (#21 + #26), living-world (#22), match-analytics (#37, T0)
-│   ├── Client:     ui-framework (#38), match-viewer, match-client-core, match-client-unity
-│   ├── Infra:      performance-optimization (#18), testing-strategy (#19)
-│   └── match-engine/                   [Composition root — not a numbered spec]
+│   │   Grouped by the ten-tier order of Spec #20 §3.5.2 (adopted August 17, 2026).
+│   │   The tier order is the authority; this is a reproduction — see src/CLAUDE.md.
+│   ├── 0 Foundation:    project-constants, deterministic-sim, event-system
+│   ├── 1 Physics:       ball-physics, agent-movement, collision-system, first-touch,
+│   │                    pass-mechanics, shot-mechanics, heading-mechanics, goalkeeper-mechanics
+│   ├── 2 Configuration: tactical-instructions (#21 + #26)
+│   ├── 3 Mechanics:     positioning-ai (+#23/#24/#25), pressing-ai, defensive-ai, attacking-ai
+│   ├── 4 AI:            decision-tree, perception-system
+│   ├── 5 Data:          player-database (#27)
+│   ├── 6 Composition:   match-engine                [not a numbered spec]
+│   ├── 7 Management:    living-world (#22), player-progression (#28), training-system (#29),
+│   │                    injuries-medical (#41), discipline (#44), season-save (#30)
+│   ├── 8 Presentation:  match-viewer, match-analytics (#37, T0)
+│   ├── 9 Client:        match-client-core, ui-framework (#38), client-app,
+│   │                    match-client-unity, match-client-web
+│   └── — Infrastructure: performance-optimization (#18), testing-strategy (#19)
+│                         [out of band: not members of the order]
 └── tools/
     ├── dotnet-ci/                      [Non-certifying Linux compile/test gate]
     ├── unity-ci/  perf-harness/  spec-stress/

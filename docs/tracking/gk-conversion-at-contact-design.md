@@ -146,9 +146,14 @@ Why it is nonetheless **not** landed here: §3.
   reach radius the divisor now uses, the angle a marginal contact is marginal at, and the distance at
   which a catch is attempted at all. Re-fitting now would fit the dial to a geometry that is already
   scheduled to change: KD-W1's mistake with the names swapped, and the §5.Z counter-example this project
-  has already paid for once. **What unparks it:** a measurement of the post-W1 contact geometry — not
-  W1's landing, which as of this date has never been executed (no gate run, no measurement). Until then
-  the recorded refusal stands as a fact about the *pre-rush* keeper and must not be quoted as a fact
+  has already paid for once. **What unparks it:** the close-range **conversion**
+  comparison on identical seeds that `gk-rush-trigger-design.md` §6 names as still owed — a pre/post
+  outcome pair, not W1's landing and not its rush anatomy. W1's rush ANATOMY was measured on
+  August 12, 2026 (`gk-rush-trigger-design.md` §6 / v1.5): **23–46 rush intents committed per match**
+  against a pre-W1 baseline of exactly 0 by construction, keepers reaching **9.1–14.1 m off their own
+  goal line**, and no `ERR-011-009` re-stall — but those are anatomy numbers, not an outcome
+  comparison, and no pre/post conversion pair exists on identical seeds. Until that pair exists the
+  recorded refusal stands as a fact about the *pre-rush* keeper and must not be quoted as a fact
   about the mechanism.
 - **KD-CC7 — parry placement stays out.** It is a real defect (`ComputeParryVelocity` reverses the
   incoming velocity and rotates it by a deterministic ≤ 0.20 rad; nothing steers a parry away from
@@ -317,4 +322,5 @@ assembly (three broke in §5.Z.22, one escaping to CI) — the full gate is what
 |---|---|---|---|
 | 1.0 | 2026-08-03 | — | Initial: implemented + measured. §1 the premise check; §2 the finding (a claim never stopped the ball — caught band 11.1 → 10.8 m/s, 7 of 10 catches conceding, against parry 10.8 → 0.0) and the quantified `pointQuality` inversion; §3 KD-CC1..CC7; §4 the probe that refused the geometry-aware form; §5 acceptance (2 of 3 predicates fail pre-fix by execution) with both predicate mis-specifications recorded; §6 measured result (goals 5.0 → 3.7/match); §7 the four recorded residuals, including the creation funnel re-localized to the final-third → penalty-area stage (6.5% vs football's ~40%). |
 | 1.1 | 2026-08-17 | — | **KD-CC6a added: the `pointQuality` park RATIFIED by owner decision, with its unparking condition named.** No design content changed and no `[GT]` moved. The §4 ladder's refusal is restated as what it is — a measurement of a keeper who never left his line — and the park now runs until **W1's rush geometry is measured**, not merely until W1 landed (W1 landed August 4, 2026 and has never been executed). Recorded because the refusal was starting to be cited as a property of the mechanism rather than of the pre-rush contact geometry it was measured against. |
+| 1.2 | 2026-08-17 | — | **CORRECTION (adversarial-review finding H6): v1.1's stated ground was FALSE.** v1.1 wrote — in KD-CC6a and in its own row above — that W1 "has never been executed (no gate run, no measurement)". W1's rush anatomy WAS measured on August 12, 2026, five days before v1.1 was written: 23–46 rush intents committed per match against a pre-W1 baseline of exactly 0 by construction, keepers reaching 9.1–14.1 m off their own goal line, no `ERR-011-009` re-stall (`gk-rush-trigger-design.md` §6 / v1.5; `match-engine-wiring-backlog.md` §5 row 1 records the same discharge). KD-CC6a's unparking condition is restated as the thing §6 actually still owes: the close-range **conversion** comparison on identical seeds — anatomy is measured, the outcome pair is not. **The park itself and its reasoning stand unchanged** (the §4 ladder's refusal was measured against a keeper who never left his line, and the contact geometry has since moved); only the false "never been executed" ground is replaced. v1.1's row is left as published per the no-silent-rewrite rule; this row is the correction. |
 #endregion

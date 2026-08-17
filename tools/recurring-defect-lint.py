@@ -365,7 +365,7 @@ def collect_md_version_rows(text):
     [(lineno, key, date, raw)] for the FIRST block found, plus a count of blocks.
     """
     blocks = []
-    for m in re.finditer(r"#region\s+VersionHistory(.*?)#endregion", text, re.S):
+    for m in re.finditer(r"^#region\s+VersionHistory(.*?)^#endregion", text, re.M | re.S):
         blocks.append((text[:m.start(1)].count("\n") + 1, m.group(1)))
     if not blocks:
         for m in VH_HEADING_RE.finditer(text):

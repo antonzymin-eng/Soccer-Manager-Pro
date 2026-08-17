@@ -456,6 +456,12 @@ throughout; `[GT]` landings are frozen per KD-W1 until the final pass.
 | 2 | ~~**C1** the `InPoss` gate~~ ✅ **FIXED Aug 8, 2026** (`ERR-012-011`) | Cheap, and the phase label was simply wrong. But the "unblocks #13/#14/#15" rationale was refuted before implementation — see the C1 entry: two of the three consumers are inert for reasons the gate does not touch. Re-measurement is the deliverable, not a creation gain. |
 | 3 | ~~**W2** tackles~~ ✅ **WIRED Aug 12, 2026** | **Four**-link chain, not three. Measured before building: the gate supplied ~4× football's tackle rate, so this was a RESOLUTION problem, not a producer one. Governance question resolved by `ERR-014-006`: new #14 §3.6.5 takes the outcome model back on the W1 precedent, a four-outcome (`MISSED`/`BALL_WON`/`BALL_LOOSE`/`FOUL`) abstract attribute duel, ten new `[GT]` un-calibrated per KD-W1. Surfaced **C9**, **C10**. **GATE PASSED for W2 (August 12, 2026):** whole-tree build 0 errors / 0 warnings, quarantine empty, 32 suites; `MatchEngine.Tests` **461 passed / 1 failed / 11 skipped** (38 m 2 s). The single failure is `sim_match_engine_close_chance`, the inherited owner-held-red predicate that also fails at the pre-change baseline `4b9271c` — so the branch is at its baseline red state and W2 adds no new failure. Baseline was 451/1/10; the +10 passed are W2 locks and the +1 skipped is the env-gated census instrument. — see the W2 entry above. |
 
+| 4 | **W4** keeper perception | Reuses tested occlusion. Upstream of all keeper behaviour, so it should precede any keeper calibration. **Next in sequence.** |
+| 5 | **W12** the gate-firing instrument | Before calibration, and before assuming Class B is only four items. |
+| 6 | **W5**, **W7**, **W6** | Small, independent, each self-contained. |
+| 7 | **W3** + AGENT_BALL fan-out | One dependency, two consumers. The largest single build in this document. |
+| 8 | **W8**, **W9**, **W10** | Fidelity items with working substitutes or a known rebaseline cost. |
+| — | **then** one calibration pass | Against the complete engine, using the §5.Z instruments and seeded-corpus method. |
 > **W2's ARMING now gates three separate held decisions — recorded August 17, 2026 with the owner's
 > decision pass.** This is a sequencing fact, not a new item, and it belongs in the sequence table's
 > line of sight because each holder cites W2 independently and none of them can see the others:
@@ -473,13 +479,6 @@ throughout; `[GT]` landings are frozen per KD-W1 until the final pass.
 > Read together, the practical consequence is that **W4 → W12 → W6 is the path to three unblocked
 > decisions**, not just to the next wired subsystem — and that `TackleContactRadiusM = 0` is doing more
 > holding-back than its one-constant footprint suggests.
-
-| 4 | **W4** keeper perception | Reuses tested occlusion. Upstream of all keeper behaviour, so it should precede any keeper calibration. **Next in sequence.** |
-| 5 | **W12** the gate-firing instrument | Before calibration, and before assuming Class B is only four items. |
-| 6 | **W5**, **W7**, **W6** | Small, independent, each self-contained. |
-| 7 | **W3** + AGENT_BALL fan-out | One dependency, two consumers. The largest single build in this document. |
-| 8 | **W8**, **W9**, **W10** | Fidelity items with working substitutes or a known rebaseline cost. |
-| — | **then** one calibration pass | Against the complete engine, using the §5.Z instruments and seeded-corpus method. |
 
 C2/C3/C4 are folded into whichever item touches their assembly; C4 in particular is the recorded
 next lever on close-chance creation and is large enough to want its own pass.

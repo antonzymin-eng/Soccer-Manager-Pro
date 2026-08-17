@@ -59,7 +59,7 @@ break it, and do not edit historical entries.
 > deterministic-not-drawn PA reduction (KD-R4a). It was AR-converged and blocking only alignment work,
 > and a later revision costs one supplement edit — against the standing cost of a live-but-unsigned
 > design the next #41 landing has to read and guess at. §11 steps 1–2 complete; steps 3–5 (the
-> ERR-041-013..018 / ERR-028-002..004 back-props, the section patches, the two implementation tranches)
+> ERR-041-013..018 / **ERR-028-020..022** back-props (re-allocated August 17, 2026 — the -002..-004 block named here was already consumed: -002 at #53's approval on July 27, -003/-004 at the #28 T1/T2a landing), the section patches, the two implementation tranches)
 > are unblocked and **unscheduled**. The standing caveat is unchanged and load-bearing: R-2's
 > under-exposure arm must re-fit *against* `BaselineDailyRisk` rather than beside it, and every `[GT]`
 > it moves is subject to KD-W1 — which is the same W2 dependency four of these seven items share.
@@ -96,13 +96,21 @@ break it, and do not edit historical entries.
 > (`gk-conversion-at-contact-design.md` **v1.1**, new **KD-CC6a**). The §4 ladder's refusal was
 > measured against a keeper who never left his line; W1 moves the contact geometry the whole ladder is
 > a function of. **The unparking condition is a measurement, not a landing** — W1 landed August 4, 2026
-> and has never been executed. Until then the recorded refusal is a fact about the pre-rush keeper and
+> and has never been executed. **⚠️ CORRECTED August 17, 2026, same day (adversarial-review finding
+> H6): the "never been executed" clause is FALSE and is annotated rather than deleted.** W1's rush
+> anatomy WAS measured on August 12, 2026 — 23–46 rush intents committed per match against a pre-W1
+> baseline of exactly 0 by construction, keepers reaching 9.1–14.1 m off their own goal line, no
+> `ERR-011-009` re-stall (`gk-rush-trigger-design.md` §6 / v1.5, and `match-engine-wiring-backlog.md`
+> §5 row 1: "Its owed measurement is discharged"). What remains unmeasured — and is the real
+> unparking condition, now stated in KD-CC6a (v1.2) — is the close-range **conversion** comparison on
+> identical seeds that §6 names as still owed. The park's conclusion survives on that ground. Until
+> that pair exists the recorded refusal is a fact about the pre-rush keeper and
 > must not be quoted as a fact about the mechanism.
 >
 > **HELD (7) — the foul/card drift stays accepted: arm W2 first, then calibrate ONCE**
 > (`foul-discipline-balance-design.md` **v1.1**, new §7 item **2a**). That note's own item 2 said
 > `FoulCallProbability` must be re-measured if the contact stream changes; C1 changed it on August 8
-> and the fit drifted **~67%** unnoticed for five weeks. Applying the rule literally means *not*
+> and the fit drifted **~67%** unnoticed for **five days** — August 8 to the August 13 re-measurement; eighteen days from the July-26 fit itself. *(Corrected August 17, 2026: this entry first said "five weeks", wrong by ~5× under every anchoring, and load-bearing, since the interval is the counter-example the hold is justified by.)* Applying the rule literally means *not*
 > landing an interim fit against a pre-tackle stream that W2's arming will change again. **Accepted
 > cost, stated plainly:** the card rate — and since #44 the suspension rate derived from it — stays
 > knowingly wrong meanwhile, with the acceptance bands (fouls ≤ 90, yellows ≤ 20, reds ≤ 5) reading
@@ -135,7 +143,7 @@ break it, and do not edit historical entries.
 > an approval claim. That is still better than what the originals did, which was to point all four
 > April-26 tags at one branch HEAD with no per-spec meaning at all.
 >
-> **Open issues: 20 → 18 active / 44 → 46 resolved**, both re-derived by direct count
+> **Open issues: 20 → 18 active / 44 → **47** resolved**, both re-derived by direct count
 > (`grep -c '^- \*\*'`) rather than by arithmetic — this file has recorded three counts reached by
 > incrementing an unverified base, so the count is measured every time.
 

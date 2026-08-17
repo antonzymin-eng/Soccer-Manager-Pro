@@ -9,7 +9,7 @@ API symbol lists; §3.3 and §3.4 cite it by category name only.
 
 **Created:** May 7, 2026
 **Modified:** August 17, 2026
-**Version:** 1.1
+**Version:** 1.2
 **Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 3
@@ -387,7 +387,7 @@ Additional required patterns:
 
 ### 3.3.4 UI / Non-Loop Allocation Budget
 
-Code in the UI layer is not on the 60 Hz game-loop path. Its allocation budget is
+Code in the **Presentation and Client tiers** (§3.5.2 tiers 8 and 9), plus the Unity host code outside the gate, is not on the 60 Hz game-loop path. Its allocation budget is
 **< 1 MB per frame** (FR-CS-067), sourced from
 `docs/planning/development-best-practices.md`. The "alloc-hot-path" bans (§3.3.2)
 are relaxed for UI code, except where a UI method directly calls into a game-loop
@@ -555,7 +555,7 @@ is a **ten-tier** order covering every assembly folder in `src/`:
 |---|---|---|
 | 0 **Foundation** | `project-constants`, `deterministic-sim`, `event-system` | Referenceable by everything; reference nothing but each other. |
 | 1 **Physics** | `ball-physics`, `agent-movement`, `collision-system`, `first-touch`, `pass-mechanics`, `shot-mechanics`, `heading-mechanics`, `goalkeeper-mechanics` | Ball, body and contact. Parameter-driven — no type enums (see root `CLAUDE.md`). |
-| 2 **Configuration** | `tactical-instructions` (#21) | Consumed by Mechanics (all four), AI (`decision-tree`) and everything above; references only `project-constants`. It cannot be a Mechanics member — `decision-tree` would then reference upward. **No Physics assembly references it**, so seating it above Physics keeps the physics tier parameter-only. |
+| 2 **Configuration** | `tactical-instructions` (#21) | Consumed by Mechanics (all four), AI (`decision-tree`) and everything above; references only `project-constants`. A separate tier below Mechanics states that one-way relationship outright rather than burying it in an intra-tier edge; seating it *inside* Mechanics would be legal (`decision-tree` → Mechanics is downward and already exists) but would make the four Mechanics assemblies' dependence on it invisible to the order. **No Physics assembly references it**, so seating it above Physics keeps the physics tier parameter-only. |
 | 3 **Mechanics** | `positioning-ai`, `pressing-ai`, `defensive-ai`, `attacking-ai` | Off-ball and on-ball behaviour over the physics primitives. |
 | 4 **AI** | `decision-tree`, `perception-system` | Choice and what a player can know. |
 | 5 **Data** | `player-database` (#27) | Referenced by `match-engine`, the Management tier and `match-client-core` — and by **no gameplay-tier assembly**. Seating it above AI preserves that: Physics, Mechanics and AI keep operating on struct parameters, not squad rows. |
@@ -594,12 +594,35 @@ references, and `tools/dotnet-ci/generate_projects.py` emits one `<ProjectRefere
 per `.asmdef` reference, so a cycle also fails the Linux compile gate. It is written
 down because a build error reports what broke, not why the constraint exists.
 
+**Placement rule for new assemblies.** A commit that adds a production
+`src/<folder>/<name>.asmdef` **MUST** place that folder in the table above in the
+same commit — the table enumerates, so an unamended table is stale the moment the
+folder lands. The tier is derived, not chosen: an assembly is seated at the **lowest
+tier strictly above every assembly it references**, unless a lower seating is stated
+in the table with its reason. An intra-tier seating under FR-CS-046a is such a lower
+seating and carries its reason the same way (`pressing-ai` → `positioning-ai` is the
+standing example). The two out-of-band **Infrastructure** assemblies are outside the
+derivation twice over: the references they source seat them in no tier, and a new
+assembly cannot acquire a tier through them — no ordered tier may reference them at
+runtime. This rule is enforced mechanically by `tools/assembly-tier-check.py`
+(`python3 tools/assembly-tier-check.py --repo .`), which re-parses the table above
+rather than carrying its own copy, enumerates every production
+`src/<folder>/<name>.asmdef`, and fails on a folder absent from the table, a table
+entry naming no existing folder, any upward reference, or any cycle — re-running the
+adoption verification below on every invocation instead of leaving it a one-off hand
+check.
+
 **Verification at adoption (August 17, 2026).** The order was derived from the
 `.asmdef` reference graph, not from folder names, and checked against it: all **35**
 production assembly folders in `src/` are placed, none is named that does not exist,
 and across every production `.asmdef` reference there are **zero upward references**.
-105 references are downward, 38 are intra-tier — all of them already present and the
-whole graph acyclic. Adopting the order therefore changed nothing that compiles; it
+The 148 production→production references partition as **105 downward, 38 intra-tier, and
+5 sourced by the two out-of-band Infrastructure assemblies** (`performance-optimization`
+→ `deterministic-sim`, `project-constants`; `testing-strategy` → `deterministic-sim`,
+`performance-optimization`, `project-constants`), which the order does not rank — all of
+them already present and the whole graph acyclic. Quoting 105 + 38 as if it were the
+whole is what makes the count unreconcilable for a reader who re-derives it: the total is
+148, and `tools/assembly-tier-check.py` prints all four figures for exactly that reason. Adopting the order therefore changed nothing that compiles; it
 constrains only what can be written next. Test assemblies (`src/*/[Tt]ests/`) are **not**
 members of the order and are excluded from the check: a test assembly legitimately
 references upward (`event-system.Tests` → `decision-tree`), which is why FR-CS-046 binds
@@ -829,8 +852,12 @@ These rules cite root `CLAUDE.md` — "When Writing Code" as their source.
 
 All continuous numeric quantities in game-logic code at Stage 0 use `float`
 (FR-CS-071). This includes positions, velocities, angles, forces, attribute values,
-and time deltas. The rule applies to every game-state assembly in the Physics,
-Mechanics, and AI layers.
+and time deltas. The rule applies to **every production assembly in the §3.5.2 tier order**,
+Foundation through Client — FR-CS-071 itself carries no narrower scoping, and the
+retired three-layer wording (*"the Physics, Mechanics, and AI layers"*) was near-vacuous
+under the four-layer taxonomy but under the ten-tier order would exclude six tiers,
+`deterministic-sim`, `player-database`, `match-engine`, `season-save`, `discipline` and
+`match-analytics` among them.
 
 The decision to use `float` at Stage 0 is owned by root `CLAUDE.md` — "When Writing
 Code": *"Stage 0 uses float. Fixed64 migration is a Stage 5+ concern."* Single-machine
@@ -1005,7 +1032,8 @@ Simulation #16), the per-tag region ordering defined in §3.2.3 and §4.2 applie
 |---|---|---|---|---|
 | 1.0 | May 7, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §SECTION 3. All eleven subsections present. Appendix D cited by category name in §3.3.2 and §3.4.2; no symbol lists duplicated. | — |
 | 1.0.1 | May 11, 2026 | Claude Code | Adversarial review fixes: (a) §3.2.1 [CROSS] tag-table row restored to verbatim CLAUDE.md text — missing phrase "without modification" added (closes audit finding H-01); (b) §3.9.4 added required marker for property-based / fuzz tests with non-deterministic seed source (closes L-04); (c) §3.9.5 added criterion #4 requiring benchmark `.csproj` to omit the `BannedApiAnalyzers` package reference (closes M-B — assembly-level isolation alone is insufficient). | — |
-| 1.1 | August 17, 2026 | Claude Code | **`ERR-020-002` + `ERR-020-003` adopted by owner decision.** §3.5.2 replaced: the three-gameplay-layer box (which placed 19 of the 35 assembly folders and left the stale empty `UI (Stage 1+ — not specified yet)` row) becomes the **ten-tier order** covering all 35, derived from the `.asmdef` reference graph and re-verified at adoption — 0 upward references, 105 downward, 38 intra-tier, graph acyclic. Adds **FR-CS-046a** (intra-layer references permitted, intra-layer cycles not), the tier-is-a-ceiling rule (#44 Discipline as the worked case), the explicit test-assembly exclusion, and — closing `ERR-020-003` — an arrow label (`──►` reads "is available to") plus the root `CLAUDE.md` sentence verbatim, so both files state one rule in one vocabulary. Header corrected: it read `Version 1.0 / Status DRAFT` against a §3.11 row at 1.0.1 and a SPEC_INDEX status of APPROVED. | — |
+| 1.1 | August 17, 2026 | Claude Code | **`ERR-020-002` + `ERR-020-003` adopted by owner decision.** §3.5.2 replaced: the three-gameplay-layer box (which placed 14 of the 35 assembly folders — leaving 21 undecided; figures re-derived August 17, 2026 by counting the retired box, see the 1.2 row — and left the stale empty `UI (Stage 1+ — not specified yet)` row) becomes the **ten-tier order** covering all 35, derived from the `.asmdef` reference graph and re-verified at adoption — 0 upward references, 105 downward, 38 intra-tier, graph acyclic. Adds **FR-CS-046a** (intra-layer references permitted, intra-layer cycles not), the tier-is-a-ceiling rule (#44 Discipline as the worked case), the explicit test-assembly exclusion, and — closing `ERR-020-003` — an arrow label (`──►` reads "is available to") plus the root `CLAUDE.md` sentence verbatim, so both files state one rule in one vocabulary. Header corrected: it read `Version 1.0 / Status DRAFT` against a §3.11 row at 1.0.1 and a SPEC_INDEX status of APPROVED. | — |
+| 1.2 | August 17, 2026 | Claude Code | **Adversarial-review findings H4 + H7.** H4: the 1.1 row above originally said the retired three-gameplay-layer box "placed 19 of the 35 assembly folders"; the true figure is **14** (8 Physics + 4 Mechanics + 2 AI, `UI` row empty), leaving 21 undecided — corrected in place, **re-derived by counting the retired box** (`git show 0e78d381~1`) rather than rescaled from the earlier 31-assembly error-log count, which is how the wrong 19 arose. H7: §3.5.2 gains the **placement rule for new assemblies** — a commit adding a production `.asmdef` MUST amend the table in the same commit, and a tier is derived (lowest tier strictly above every referenced assembly) unless a lower seating is stated with its reason — enforced mechanically by the new `tools/assembly-tier-check.py`, which parses the table rather than duplicating it and re-runs the adoption verification on every invocation. | — |
 
 ---
 
