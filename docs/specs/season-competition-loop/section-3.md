@@ -1,7 +1,14 @@
 # Season & Competition Loop Specification #30 — Section 3: Algorithms
 
 **Created:** July 22, 2026
-**Last Updated:** August 17, 2026, later (v2.13 — **H5 (High, reviewed adversarial-review finding): the
+**Last Updated:** August 17, 2026, later still (v2.14 — reviewed-findings pass, two Lows: **L4** prefixes
+the closed eleven-vs-eighteen `OPEN OWNER QUESTION` block with a `SUPERSEDED` marker so it reads as
+history rather than as an open question sitting above its own answer; **L14** softens the ✅ DECIDED
+block's "retires the eleven-vs-eighteen question **entirely**" to name precisely what the `ERR-044-003`
+cover ladder retires — the reinstatement of a banned player — versus what still turns on the trigger
+(whether a bench slot needs cover at all). Neither fix changes a decision, rule, algorithm, constant, or
+line of code.)
+**Last Updated (prior):** August 17, 2026, later (v2.13 — **H5 (High, reviewed adversarial-review finding): the
 §3.4 beyond-cap owner decision was justified by a detector that does not exist.** v2.12's closing
 sentence — "the branch is instrumented and locked, so that evidence arrives as a failing test, not as a
 surprise" — was FALSE: the beyond-cap branch in `AvailabilityComposition.ChooseSuspendedCandidate` is a
@@ -174,7 +181,7 @@ suspensions have joined, citing ERR-044-002/ERR-044-003 and the code sites; only
 **Last Updated (prior):** July 25, 2026 (v0.9 — ERR-030-010 §3.7 venue correction, found at #30 T0; prior v0.8 back-prop ERR-030-009 #44 availability-filter null seam in §3.4; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 25, 2026 (v0.8 — back-props ERR-030-008 board tick-order seam + ERR-030-009 JobSecurity derived band; prior v0.7 ERR-030-007 academy, v0.6 ERR-030-006 staff, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 27, 2026 (v1.0 — **ERR-030-015**: §3.5's boundary roll gains step (c′), the calendar rebuild it omitted, without which a rolled season is permanently unplayable; found at #30 T3. Also consolidates the TWO stale `Version` fields this header carried — the drift class `spec-error-log.md` v1.43 records. Prior v0.9 ERR-030-010 §3.7 venue correction; v0.8 back-props ERR-030-008/009; v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 2.13
+**Version:** 2.14
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -449,6 +456,8 @@ football outcome.
 > depth alone**, which is what made the within-tier defect below possible. The mechanism is
 > authoritative; the prose is corrected to it.
 >
+> **SUPERSEDED August 17, 2026 — closed by the ✅ DECIDED block immediately below; kept only as history, not as an open question.**
+>
 > **OPEN OWNER QUESTION, recorded not resolved: should the trigger be narrowed to the eleven?** A
 > short-bench posture — refuse to back-fill for bench slots and let a depleted club play with five
 > substitutes, or four, or none — is a defensible football answer and would make the extremis tier
@@ -465,8 +474,10 @@ football outcome.
 > for narrowing is real and should not have to be re-made from scratch: (1) the honest fix for a depleted
 > club is **cover, not a shorter bench** — youth call-ups and generated low-attribute cover
 > (`ERR-044-003` stages 2 and 3) put bodies on the bench ahead of any suspended or injured player, which
-> retires the eleven-vs-eighteen question entirely rather than answering it; a short-bench mechanism
-> built now would be thrown away when that ladder lands. (2) The change is engine surgery, not a
+> retires the **reinstatement** half of the eleven-vs-eighteen question — once generated cover exists, a
+> banned player is never pressed back to fill a bench slot — without retiring the trigger itself: the
+> eighteen-player selection walk still decides whether a bench slot counts as needing cover in the first
+> place, so a short-bench mechanism built now would be thrown away when that ladder lands. (2) The change is engine surgery, not a
 > predicate edit — `ConfigureSquads` and every consumer of `LineupPlan` assume a full bench, and
 > narrowing the probe without narrowing selection reproduces the exact divergence
 > `LineupSelector.TrySelect` was collapsed to one walk to prevent. `ERR-030-044`'s open half is closed
@@ -983,4 +994,5 @@ by ascending `ClubId` (FR-SN-007 final key) — a total order.
 | 2.11 | 2026-08-16, round 5 | — | **Round-5 reviewed-findings pass (two findings, both fixed).** **(M1, annotation only.)** The v2.10 row above's "`AvailabilityComposition.cs` (two sites)" undercounts: that round-4 diff corrected **THREE** sites in `AvailabilityComposition.cs` (~152, ~421, and the inline comment inside `ChooseSuspendedCandidate`'s Cap branch at ~528), not two, and missed a **ninth** site entirely — `AvailabilityCompositionExtremisTests.cs`'s own `CapFallbackExtremis` comment still carried the pre-fix "it self-heals … the exact search resumes for every later pass" sentence, in a file the same round-4 commit edited. The real corrected-site total across the whole sweep is **NINE**: this section's Cap bullet + residual (ii); `AvailabilityComposition.cs` ~152, ~421, ~528; `SeasonSaveConstants.cs` ~118; `discipline-suspensions/section-2.md`; `section-7.md`; and the test comment. Fixed at that file (v1.4) and annotated in place — not rewritten — here, at `SeasonSaveConstants.cs` (v1.11), `AvailabilityComposition.cs` (v1.9), `discipline-suspensions/section-2.md` (v0.19), `section-7.md` (v0.12), and `spec-error-log.md`'s `ERR-030-046` annotation. No behaviour, guarantee, or normative rule changed. **(L-t3.)** Two normative bullets in the Cap-search rule above carried review-severity labels — "Full-set probe first (Low)." and "Allocation, not just walk count (Low):" — left over from the round-4 finding list rather than stated as spec text. Labels dropped; the findings' severities remain recorded at v2.10's own row. No rule text changed. |
 | 2.12 | 2026-08-17 | — | **Two §3.4 OPEN OWNER QUESTIONS closed by owner decision — documentation only, no rule, algorithm, constant or code change.** (a) The back-fill **trigger stays the full eighteen-player selection walk**; the short-bench posture is refused and `ERR-030-044`'s open half is closed. (b) The **beyond-cap branch keeps degrading to greedy**; refusing the fixture is rejected as breaking the never-worse-off-than-no-filter invariant for an unreachable corner. Both decisions are written inline at the rules they govern rather than only in a tracking file, and both name what would reopen them (the `ERR-044-003` cover ladder; a card rate or squad rule that makes `m > 12` reachable). |
 | 2.13 | 2026-08-17, later | — | **H5 (High, reviewed adversarial-review finding) — the v2.12 beyond-cap decision's justification cited a detector that does not exist.** The Cap decision's closing sentence claimed "the branch is instrumented and locked, so that evidence arrives as a failing test, not as a surprise." Verified false against the code: `AvailabilityComposition.ChooseSuspendedCandidate`'s `EXTREMIS_SEARCH_CANDIDATE_CAP` comparison is a bare early return of the weakest candidate — no counter, no event, no log, no throw — and the only lock, `CapFallbackExtremis_BeyondTheCandidateCap_StillTerminatesAndFieldsASquad` (`AvailabilityCompositionExtremisTests.cs`), constructs its thirteen banned players inside the test, so it proves termination/fieldability/determinism of the fallback but cannot fire because a real season reached `m > 12`. Rewritten to state that beyond-cap entry is currently UNDETECTABLE in production, with the missing detector recorded-not-fixed: the owed work is a recorded counter or fail-loud diagnostic on the branch plus a test asserting the counter moves, urgent at the W2 arming / foul-and-card recalibration, which is expected to move the very card rate the revisit trigger watches (already measured ~67% drifted — `open-issues.md`, the foul/card entry). The owner decision itself (degrade-to-greedy stays; refusing the fixture rejected) is unchanged — only its stated justification. Documentation only; no rule, algorithm, constant, or code change. |
+| 2.14 | 2026-08-17, later still | — | **Reviewed-findings pass, two Lows, both fixed.** **L4:** the eleven-vs-eighteen `OPEN OWNER QUESTION` block that v2.12 closed was left standing below its own closure with no marker, so `grep "OPEN OWNER QUESTION"` found a question that reads open one line above its own "✅ DECIDED" answer. Prefixed in place with a `**SUPERSEDED August 17, 2026 …**` marker line, matching the `SquadRating.cs` "kept only as history" annotation convention (v2.10's row cites it) — the original question text is unchanged, not deleted. **L14:** the same ✅ DECIDED block claimed the `ERR-044-003` cover ladder "retires the eleven-vs-eighteen question **entirely**," which overstates it — generated cover retires the *reinstatement* of a banned player onto a depleted bench, but the eighteen-player selection walk still decides whether a bench slot counts as needing cover at all, so the trigger itself is not retired. Reworded to name exactly what retires (reinstatement) and what still turns on the trigger (whether cover is generated for a bench slot in the first place). Neither fix changes the decision, the rule, an algorithm, a constant, or code. |
 #endregion

@@ -9,7 +9,7 @@ API symbol lists; §3.3 and §3.4 cite it by category name only.
 
 **Created:** May 7, 2026
 **Modified:** August 17, 2026
-**Version:** 1.2
+**Version:** 1.3
 **Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 3
@@ -542,11 +542,11 @@ The interface design principle for this project is **owned by root `CLAUDE.md` �
 > *(root `CLAUDE.md` — "Interface Design Principle", retrieved May 7, 2026)*
 
 This subsection does not redefine the principle; it binds it to file-level placement
-rules (§3.5.3) and extends it with the layer-order and event-dispatch rules below.
+rules (§3.5.3) and extends it with the tier-order and event-dispatch rules below.
 
 ---
 
-### 3.5.2 Layer Order and Dependency Arrows
+### 3.5.2 Tier Order and Dependency Arrows
 
 Assembly references must flow in one direction only (FR-CS-046). The canonical order
 is a **ten-tier** order covering every assembly folder in `src/`:
@@ -555,10 +555,10 @@ is a **ten-tier** order covering every assembly folder in `src/`:
 |---|---|---|
 | 0 **Foundation** | `project-constants`, `deterministic-sim`, `event-system` | Referenceable by everything; reference nothing but each other. |
 | 1 **Physics** | `ball-physics`, `agent-movement`, `collision-system`, `first-touch`, `pass-mechanics`, `shot-mechanics`, `heading-mechanics`, `goalkeeper-mechanics` | Ball, body and contact. Parameter-driven — no type enums (see root `CLAUDE.md`). |
-| 2 **Configuration** | `tactical-instructions` (#21) | Consumed by Mechanics (all four), AI (`decision-tree`) and everything above; references only `project-constants`. A separate tier below Mechanics states that one-way relationship outright rather than burying it in an intra-tier edge; seating it *inside* Mechanics would be legal (`decision-tree` → Mechanics is downward and already exists) but would make the four Mechanics assemblies' dependence on it invisible to the order. **No Physics assembly references it**, so seating it above Physics keeps the physics tier parameter-only. |
+| 2 **Configuration** | `tactical-instructions` (#21) | May be referenced by Mechanics, AI, Data, Composition, Management, Presentation and Client — everything above; references only `project-constants`. Today's consumers are Mechanics (all four), AI's `decision-tree` (`perception-system` does not reference it), Composition's `match-engine`, and Client's `match-client-core`, `match-client-web` and `ui-framework` — no Data or Management or Presentation assembly, and neither `client-app` nor `match-client-unity`, references it yet. A separate tier below Mechanics states that one-way relationship outright rather than burying it in an intra-tier edge; seating it *inside* Mechanics would be legal (`decision-tree` → Mechanics is downward and already exists) but would make the four Mechanics assemblies' dependence on it invisible to the order. **No Physics assembly references it**, so seating it above Physics keeps the physics tier parameter-only. |
 | 3 **Mechanics** | `positioning-ai`, `pressing-ai`, `defensive-ai`, `attacking-ai` | Off-ball and on-ball behaviour over the physics primitives. |
 | 4 **AI** | `decision-tree`, `perception-system` | Choice and what a player can know. |
-| 5 **Data** | `player-database` (#27) | Referenced by `match-engine`, the Management tier and `match-client-core` — and by **no gameplay-tier assembly**. Seating it above AI preserves that: Physics, Mechanics and AI keep operating on struct parameters, not squad rows. |
+| 5 **Data** | `player-database` (#27) | May be referenced by Composition, Management, Presentation and Client — everything above; references only `deterministic-sim`. Today's consumers are Composition's `match-engine`, five of the six Management assemblies (`player-progression`, `training-system`, `injuries-medical`, `discipline`, `season-save` — not `living-world`) and Client's `match-client-core` — and by **no gameplay-tier assembly** (Physics, Mechanics, AI). Seating it above AI preserves that: Physics, Mechanics and AI keep operating on struct parameters, not squad rows. |
 | 6 **Composition** | `match-engine` | References all four gameplay tiers plus Data; the only assembly that does. Not a numbered spec — governed by `docs/tracking/match-engine-design.md`. |
 | 7 **Management** | `living-world` (#22), `player-progression` (#28), `training-system` (#29), `injuries-medical` (#41), `discipline` (#44), `season-save` (#30) | Long-horizon state above a single match. |
 | 8 **Presentation** | `match-viewer`, `match-analytics` (#37) | Derived from a played match. This tier is what keeps the root `CLAUDE.md` rule that **no sim assembly may reference `match-analytics`** true. |
@@ -586,8 +586,8 @@ tier order permits — #44 Discipline sits in Management but its FR-DC set forbi
 reference `match-engine` or `season-save`, and the composition root mediates instead.
 Where a spec is stricter, the spec wins.
 
-**Intra-layer references are permitted; intra-layer cycles are not.** An assembly MAY
-reference another assembly in the same layer (`pressing-ai` → `positioning-ai` is the
+**Intra-tier references are permitted; intra-tier cycles are not.** An assembly MAY
+reference another assembly in the same tier (`pressing-ai` → `positioning-ai` is the
 standing example), but the assembly reference graph as a whole MUST remain acyclic
 (FR-CS-046a). This is already enforced mechanically — Unity rejects circular `.asmdef`
 references, and `tools/dotnet-ci/generate_projects.py` emits one `<ProjectReference>`
@@ -629,7 +629,7 @@ references upward (`event-system.Tests` → `decision-tree`), which is why FR-CS
 production assemblies only.
 
 **Struct-event upward flow** (FR-CS-047): when an event must propagate upward through
-the layer order (e.g., a physics system notifying an AI system), it is dispatched as
+the tier order (e.g., a physics system notifying an AI system), it is dispatched as
 a `struct` via a pre-allocated event bus, not as a class-based `event Action<T>` or
 delegate. This keeps the physics assembly free of any reference to the AI assembly
 while preserving the event-notification pattern.
@@ -1034,6 +1034,7 @@ Simulation #16), the per-tag region ordering defined in §3.2.3 and §4.2 applie
 | 1.0.1 | May 11, 2026 | Claude Code | Adversarial review fixes: (a) §3.2.1 [CROSS] tag-table row restored to verbatim CLAUDE.md text — missing phrase "without modification" added (closes audit finding H-01); (b) §3.9.4 added required marker for property-based / fuzz tests with non-deterministic seed source (closes L-04); (c) §3.9.5 added criterion #4 requiring benchmark `.csproj` to omit the `BannedApiAnalyzers` package reference (closes M-B — assembly-level isolation alone is insufficient). | — |
 | 1.1 | August 17, 2026 | Claude Code | **`ERR-020-002` + `ERR-020-003` adopted by owner decision.** §3.5.2 replaced: the three-gameplay-layer box (which placed 14 of the 35 assembly folders — leaving 21 undecided; figures re-derived August 17, 2026 by counting the retired box, see the 1.2 row — and left the stale empty `UI (Stage 1+ — not specified yet)` row) becomes the **ten-tier order** covering all 35, derived from the `.asmdef` reference graph and re-verified at adoption — 0 upward references, 105 downward, 38 intra-tier, graph acyclic. Adds **FR-CS-046a** (intra-layer references permitted, intra-layer cycles not), the tier-is-a-ceiling rule (#44 Discipline as the worked case), the explicit test-assembly exclusion, and — closing `ERR-020-003` — an arrow label (`──►` reads "is available to") plus the root `CLAUDE.md` sentence verbatim, so both files state one rule in one vocabulary. Header corrected: it read `Version 1.0 / Status DRAFT` against a §3.11 row at 1.0.1 and a SPEC_INDEX status of APPROVED. | — |
 | 1.2 | August 17, 2026 | Claude Code | **Adversarial-review findings H4 + H7.** H4: the 1.1 row above originally said the retired three-gameplay-layer box "placed 19 of the 35 assembly folders"; the true figure is **14** (8 Physics + 4 Mechanics + 2 AI, `UI` row empty), leaving 21 undecided — corrected in place, **re-derived by counting the retired box** (`git show 0e78d381~1`) rather than rescaled from the earlier 31-assembly error-log count, which is how the wrong 19 arose. H7: §3.5.2 gains the **placement rule for new assemblies** — a commit adding a production `.asmdef` MUST amend the table in the same commit, and a tier is derived (lowest tier strictly above every referenced assembly) unless a lower seating is stated with its reason — enforced mechanically by the new `tools/assembly-tier-check.py`, which parses the table rather than duplicating it and re-runs the adoption verification on every invocation. | — |
+| 1.3 | August 17, 2026 | Claude Code | **Adversarial-review findings L1 + L2, both re-verified against the `.asmdef` reference graph.** L1: the tier-2 (`tactical-instructions`) and tier-5 (`player-database`) "Why this tier" cells stated their consumer sets as exhaustive facts that were false — eleven assemblies above tier 2 do not reference `tactical-instructions` (`player-database`, all six Management assemblies, both Presentation assemblies, `client-app`, `match-client-unity`) and `living-world` (Management) does not reference `player-database`. Both cells recast as permission ("may be referenced by … and everything above") plus a separately-stated today's-consumers list, so the two claims cannot drift apart again. L2: §3.5.2's heading ("Layer Order and Dependency Arrows" → **"Tier Order and Dependency Arrows"**), its §3.5.1 forward-reference ("layer-order … rules below" → "tier-order … rules below"), its intra-tier paragraph ("Intra-layer references are permitted; intra-layer cycles are not" → "Intra-tier"), and its FR-CS-047 sentence ("propagate upward through the layer order" → "tier order") standardised on **tier**, matching FR-CS-046a in §2.2.5 and §5.4.5 item 1, both of which already said "tier". `git grep -n '3.5.2 Layer Order'` found two prose citations of the old heading text in `docs/tracking/spec-error-log.md` (§4430, §4622) — neither is a markdown anchor link (no generated `#325-layer-order…` anchor is referenced anywhere in the tree), so nothing breaks; `spec-error-log.md` is outside this pass's owned-file list and is left for its own citation-refresh pass. The retired three-gameplay-layer wording quoted historically in §3.7.1 and in the 1.1/1.2 rows above is left as "layer" deliberately — it names the box this order replaced, not the current vocabulary. | — |
 
 ---
 

@@ -1,7 +1,16 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** August 15, 2026 (**A suspended player forced onto the pitch by an injury crisis
+**Last Updated:** August 17, 2026 (*One correction to the entry below, which is left as written per
+this file's no-edit rule: it says a suspended player is reinstated "only when the alternative is a
+club that cannot take the field at all." That is a single-case claim, and `discipline-suspensions/
+section-2.md` §2.3 states it as two: **benched**, the common case, where the reinstated player "is
+not in `fieldedPlayerIds`" and "his ban advances normally" regardless of the crisis that put him
+there; and **forced to start**, only when "no completing choice keeps every reinstated-suspended
+player out of the eleven" — and only then does the ban stall, exactly as the entry below already
+describes. The single-case wording undersold the game's own rule: most reinstatements do not stall
+anything at all. Prior entry below.)*
+**Last Updated (prior):** August 15, 2026 (**A suspended player forced onto the pitch by an injury crisis
 no longer serves his ban by playing.** When bans and injuries between them leave a club unable to
 field eleven players, the season code presses players back into selection until it can — injured
 ones first, and a suspended one only when the alternative is a club that cannot take the field at
