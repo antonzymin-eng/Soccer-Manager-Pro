@@ -1,8 +1,8 @@
 # Positional Rotations Specification #25 — Section 4: Architecture and File Layout
 
 **Created:** July 8, 2026
-**Last Updated:** July 8, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** July 8, 2026 (v0.2 — PASS-1 H-1: previous-tick targets are a controller-owned SERIALIZED `LastComposedTarget` cache — the v0.1 claim that `AgentPositioningData` stored them was false, and the v0.1 restore re-seed broke byte-identity.)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---

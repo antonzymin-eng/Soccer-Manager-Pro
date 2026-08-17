@@ -1,6 +1,6 @@
 // File:     src/match-engine/SquadRating.cs
 // Created:  2026-07-26
-// Modified: 2026-07-26
+// Modified: 2026-08-07
 // Author:   —
 // Spec:     League Bootstrap design supplement (docs/tracking/league-bootstrap-design.md) KD-7 +
 //           AR-4 M-1 (the named #30 T2 prerequisite); Season & Competition Loop #30 §3.4.1
@@ -93,6 +93,53 @@ namespace TacticalDirector.MatchEngine
 
             return LineupSelector.CanSelect(squad, MatchEngineConstants.STAGE0_FORMATION);
         }
+
+        /// <summary>
+        /// The <c>PlayerId</c>s of the starting eleven <c>LineupSelector</c> selects from
+        /// <paramref name="squad"/> under the Stage-0 formation — the same eleven
+        /// <see cref="StartingElevenMean"/> rates and <c>ConfigureSquads</c> fields.
+        /// <para>
+        /// <b>Why this seam exists (ERR-041-010(b)).</b> #30's appearance record (the FR-MD-010
+        /// <c>MatchLoad</c> input) needs to know WHO was fielded, on both resolution paths, and the
+        /// alternative — a second selection walk in <c>season-save</c> — is exactly the
+        /// parallel-surface trap the T2 AR collapsed <c>LineupSelector.CanSelect</c>'s hand-copied
+        /// walk to avoid. One selector, three read shapes (mean, viability, ids).
+        /// </para>
+        /// <para>
+        /// Pure, deterministic and allocating, like its siblings — boot / season cadence only. The
+        /// returned array is fresh per call; no caller can alias another's.
+        /// </para>
+        /// <para>
+        /// <b>Substitution dependency (recorded, not yet real):</b> this read equals "everyone who
+        /// took the pitch" only while Stage 0 fields a fixed eleven. When substitutions exist, the
+        /// appearance record's question ("who played?") and this method's ("who started?") diverge,
+        /// and the record must widen at its call sites — do not paper over that by redefining THIS
+        /// read, which <c>StartingElevenMean</c> and <c>ConfigureSquads</c> also key on.
+        /// </para>
+        /// </summary>
+        /// <param name="squad">A full club roster.</param>
+        /// <exception cref="System.ArgumentNullException"><paramref name="squad"/> is null.</exception>
+        /// <exception cref="System.ArgumentException">
+        /// The squad cannot field the Stage-0 formation (KD-L3) — same contract as
+        /// <see cref="StartingElevenMean"/>; probe with <see cref="CanFieldStartingEleven"/> first.
+        /// </exception>
+        public static int[] StartingElevenPlayerIds(Squad squad)
+        {
+            if (squad == null)
+            {
+                throw new System.ArgumentNullException(nameof(squad));
+            }
+
+            LineupPlan plan = LineupSelector.Select(squad, MatchEngineConstants.STAGE0_FORMATION);
+            int[] starters = plan.StarterLocalIndices;
+            var ids = new int[starters.Length];
+            for (int s = 0; s < starters.Length; s++)
+            {
+                ids[s] = squad.GetPlayer(starters[s]).PlayerId;
+            }
+
+            return ids;
+        }
     }
 }
 
@@ -107,4 +154,13 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | position-incomplete, at which point selection refuses and the      |
 // |         |            |        | season stops; the filter presses the least-injured back in until   |
 // |         |            |        | the club can play, which needs to ask rather than catch.           |
+// | 1.2     | 2026-08-07 | —      | Balance pass D2 (ERR-041-010(b)): + StartingElevenPlayerIds, the   |
+// |         |            |        | id-returning read #30's appearance record needs on both resolution |
+// |         |            |        | paths. Same single TrySelect walk — a second selection walk in     |
+// |         |            |        | season-save would be the parallel-surface trap CanSelect's own     |
+// |         |            |        | history warns about.                                               |
+// | 1.3     | 2026-08-07 | —      | Balance-pass AR pass 2 (L, doc only): StartingElevenPlayerIds     |
+// |         |            |        | records its substitution dependency — "who started" equals "who   |
+// |         |            |        | played" only while Stage 0 fields a fixed eleven; the divergence  |
+// |         |            |        | belongs to the appearance record's call sites, not to this read.  |
 #endregion

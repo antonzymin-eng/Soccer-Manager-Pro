@@ -1,6 +1,6 @@
 // File:     src/agent-movement/MovementCommand.cs
 // Created:  2026-05-22
-// Modified: 2026-06-09 (AR-12 fix pass)
+// Modified: 2026-07-20
 // Author:   —
 // Spec:     Agent Movement #2 §3.5.3, Code Standards #20
 // Purpose:  Command struct issued by the AI layer each tactical heartbeat (10 Hz).

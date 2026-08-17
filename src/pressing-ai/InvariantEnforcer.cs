@@ -1,6 +1,6 @@
 // File:     src/pressing-ai/InvariantEnforcer.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-15
 // Author:   —
 // Spec:     Pressing AI #13 §3.9, Code Standards #20
 // Purpose:  Pure static class: checks the three anti-chaos invariants post-assignment

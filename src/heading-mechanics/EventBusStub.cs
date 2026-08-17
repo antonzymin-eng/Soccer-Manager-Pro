@@ -1,6 +1,6 @@
 // File:     src/heading-mechanics/EventBusStub.cs
 // Created:  2026-05-28
-// Modified: 2026-05-30
+// Modified: 2026-06-12
 // Author:   —
 // Spec:     Heading Mechanics #10 §4.3, Event System #17 §3.2.1, Code Standards #20
 // Purpose:  Thin forwarding wrapper over EventBus. Replaces the Stage 0 no-op stub.

@@ -1,11 +1,14 @@
 // File:     src/player-progression/tests/RegenGeneratorTests.cs
 // Created:  2026-07-24
-// Modified: 2026-07-24
+// Modified: 2026-08-11 (AR pass 7 — the GrowthCursor construction-day-credit lock restated as a
+//           property — v1.2)
 // Author:   —
 // Spec:     Player Progression & Lifecycle #28 §3.3 / §4.3; Deterministic Simulation #16 (RNG); Code Standards #20
 // Purpose:  T-PG-REG-001/003 — regen determinism, the exact PROGRESSION_REGEN_FIELDS budget, generated
 //           bounds, and the "attrs below PA / room to grow" contract. Registers the regen stream under
-//           a documented test-local ordinal literal (KD-B — the production const lands at T2).
+//           a documented test-local ordinal literal (KD-B — the production const lands at T2). Also
+//           (M3, ERR-028-014 carryforward) that a generated regen never seeds the retired never-advanced
+//           sentinel and that a block built from one is accepted by ProgressionEngine.FromBlocks.
 
 using NUnit.Framework;
 
@@ -86,7 +89,24 @@ namespace TacticalDirector.PlayerProgression.Tests
             Assert.LessOrEqual(life.CurrentAbility, life.PotentialAbility, "a regen must have room to grow (§3.3).");
             Assert.GreaterOrEqual(life.PotentialAbility, PlayerProgressionConstants.PA_MIN);
             Assert.LessOrEqual(life.PotentialAbility, PlayerProgressionConstants.ABILITY_MAX);
-            Assert.AreEqual(0L, life.GrowthCursor);
+            // AR pass 7. This read `Assert.AreEqual(0L, life.GrowthCursor)` — a lock written against the
+            // OBSERVED value at a construction site ERR-028-018's fix never visited. When that fix was
+            // later applied here, this assertion went red and told the author the fix was the bug: the
+            // regression net had been extended to DEFEND the defect. Restated as the property, which is
+            // what the fix is actually about — a site that anchors LastAdvancedWorldDay at its own
+            // construction day must credit that day's band step, or the day is declared lived and
+            // accounted as nothing.
+            // Pinned to the literal, NOT re-derived through ClassifyAgeBand — routing the expectation
+            // through the same function the production code calls would agree with it however wrong
+            // either was. The precondition carries the reasoning instead: a regen is drawn in
+            // [REGEN_AGE_MIN, REGEN_AGE_MAX] and REGEN_AGE_MAX < GROWTH_AGE, so a regen is always in
+            // the Growth band, so its construction-day step is always GROWTH_DAILY_POINTS.
+            Assert.Less(PlayerProgressionConstants.REGEN_AGE_MAX, PlayerProgressionConstants.GROWTH_AGE,
+                "precondition: this lock's expected value only holds while every regen is Growth-band.");
+            Assert.AreEqual(
+                (long)PlayerProgressionConstants.GROWTH_DAILY_POINTS, life.GrowthCursor,
+                "a regen's cursor must carry its construction day's own band step (ERR-028-018), the "
+                + "same invariant SeedLifecycle applies — the anchor declares that day already lived.");
             Assert.IsFalse(life.RetirementFlag);
         }
 
@@ -116,6 +136,38 @@ namespace TacticalDirector.PlayerProgression.Tests
         }
 
         [Test]
+        public void GenerateRegen_LastAdvancedWorldDay_EqualsWorldDayPassedIn()
+        {
+            // M3 (ERR-028-014 carryforward): a regen must not seed the never-advanced sentinel — it was
+            // retired from the set of legal STORE states, and every store/codec boundary refuses it by
+            // name. A regen describes the roster as of worldDay, so that is its anchor, exactly like a
+            // seeded player.
+            var rng = NewRng(21UL, clubId: 5, out int idx);
+            (_, PlayerLifecycle life) = RegenGenerator.GenerateRegen(rng, idx, clubId: 5, newPlayerId: 21, WorldDay);
+
+            Assert.AreEqual(WorldDay, life.LastAdvancedWorldDay,
+                "a generated regen's cursor must anchor at the world day it was generated on.");
+            Assert.AreNotEqual(PlayerProgressionConstants.PROGRESSION_NOT_ADVANCED_SENTINEL, life.LastAdvancedWorldDay);
+        }
+
+        [Test]
+        public void GenerateRegen_BlockBuiltFromAGeneratedRegen_IsAcceptedByFromBlocks()
+        {
+            // The half of M3 that actually fails if the sentinel comes back: ProgressionEngine.FromBlocks
+            // refuses PROGRESSION_NOT_ADVANCED_SENTINEL as a store state (ERR-028-014) — a block built
+            // straight from GenerateRegen's output must pass that gate without a caller having to patch
+            // LastAdvancedWorldDay first.
+            var rng = NewRng(87UL, clubId: 9, out int idx);
+            (PlayerRecord rec, PlayerLifecycle life) = RegenGenerator.GenerateRegen(rng, idx, clubId: 9, newPlayerId: 500, WorldDay);
+
+            var block = new ClubCareerStates(9, new[] { rec }, new[] { life });
+
+            Assert.DoesNotThrow(
+                () => ProgressionEngine.FromBlocks(new[] { block }, nextPlayerId: 501),
+                "a block built straight from a generated regen must be a legal store state (ERR-028-014).");
+        }
+
+        [Test]
         public void GenerateRegen_NullRng_Throws()
         {
             Assert.Throws<System.ArgumentNullException>(
@@ -125,6 +177,19 @@ namespace TacticalDirector.PlayerProgression.Tests
 }
 
 #region VersionHistory
-// | Version | Date       | Author | Notes                   |
-// | 1.0     | 2026-07-24 | —      | Initial implementation. |
+// | Version | Date       | Author | Notes                                                          |
+// | 1.0     | 2026-07-24 | —      | Initial implementation.                                        |
+// | 1.1     | 2026-08-10 | —      | M3 lock (ERR-028-014 carryforward): GenerateRegen_LastAdvanced |
+// |         |            |        | WorldDay_EqualsWorldDayPassedIn + GenerateRegen_BlockBuiltFrom |
+// |         |            |        | AGeneratedRegen_IsAcceptedByFromBlocks, over RegenGenerator    |
+// |         |            |        | 1.4's fix (seed worldDay, not the retired sentinel).           |
+// | 1.2     | 2026-08-11 | —      | AR pass 7. GenerateRegen_CurrentAbilityIsBelowPotential_       |
+// |         |            |        | WithRoomToGrow's GrowthCursor assertion was AreEqual(0L, ...)  |
+// |         |            |        | — a lock written against the OBSERVED value at a construction  |
+// |         |            |        | site RegenGenerator 1.5's ERR-028-018 fix visits. Restated as  |
+// |         |            |        | the property (GROWTH_DAILY_POINTS, with the REGEN_AGE_MAX <    |
+// |         |            |        | GROWTH_AGE precondition asserted alongside it) over that fix,  |
+// |         |            |        | not re-derived through ClassifyAgeBand. This landing was       |
+// |         |            |        | recorded at 8556ddd with no version row (L-1) — this row and   |
+// |         |            |        | the corrected `Modified` header above backfill it.             |
 #endregion

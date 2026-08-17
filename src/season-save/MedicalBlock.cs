@@ -1,5 +1,6 @@
 // File:     src/season-save/MedicalBlock.cs
 // Created:  2026-08-06
+// Modified: 2026-08-08 (lint sweep: the block count — v1.2)
 // Author:   —
 // Spec:     Unified season save file (docs/tracking/unified-season-save-design.md) §3 layout / KD-2;
 //           Injuries & Medical #41 FR-MD-017; ERR-041-009; Code Standards #20
@@ -13,8 +14,8 @@ namespace TacticalDirector.SeasonSave
 {
     /// <summary>
     /// The #41 medical sub-blob, as bytes, at the point it enters the season frame. Opaque here — the
-    /// frame never parses it (KD-2). See <see cref="TrainingBlock"/> for why the two blocks are wrapped
-    /// rather than passed as bare <c>byte[]</c>.
+    /// frame never parses it (KD-2). See <see cref="TrainingBlock"/> for why the career blocks (three since
+    /// the appearance block joined at D2) are wrapped rather than passed as bare <c>byte[]</c>.
     /// </summary>
     public readonly struct MedicalBlock
     {
@@ -39,4 +40,9 @@ namespace TacticalDirector.SeasonSave
 // | 1.0     | 2026-08-06 | —      | ERR-041-009 (AR pass 1, H): the typed frame handle that makes a    |
 // |         |            |        | training/medical transposition a build error rather than a         |
 // |         |            |        | silently mis-decoded save.                                         |
+// | 1.1     | 2026-08-08 | —      | AR pass 12 L4 added the missing Modified: header field; AR pass    |
+// |         |            |        | 13 (L3) rows it — the addition had itself shipped rowless, the    |
+// |         |            |        | FR-CS-057 class recurring inside its own fix.                     |
+// | 1.2     | 2026-08-08 | —      | Lint sweep (stale-count class): "the two blocks" — three career    |
+// |         |            |        | blocks since D2.                                                   |
 #endregion

@@ -1,7 +1,7 @@
 # Heading Mechanics Specification #10 — Section 8: References, Citations, DOI Verification
 
 **Created:** May 16, 2026
-**Version:** 0.1
+**Version:** 0.3
 **Status:** DRAFT
 **Purpose:** Authoritative reference register for the spec.
 Project-document cites, upstream-spec cites, external academic /

@@ -1,7 +1,7 @@
 # Shot Outcome Distribution — Design Supplement
 
 > **Created:** July 27, 2026
-> **Version:** 1.0
+> **Version:** 1.1
 > **Status:** DESIGN SUPPLEMENT (class (b) — governs a cross-spec balance/correctness pass;
 > the owning specs are #6 Shot Mechanics, #1 Ball Physics, #3 Collision System, #8 Decision Tree,
 > and the match-engine composition root)

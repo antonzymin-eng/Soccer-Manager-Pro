@@ -269,7 +269,7 @@ drift is caught by `WorldStore.Restore` / the match decode path themselves. *(AR
 
 ---
 
-## 3. On-disk layout (v1)
+## 3. On-disk layout (v1 as designed; v4 current — see §3.1)
 
 All integers little-endian, via `CanonicalSerializer`. Each sub-blob is `u32 length + length raw bytes`.
 
@@ -291,6 +291,27 @@ be 0 or 1; each `*BlobLength` is checked against the remaining buffer before the
 throws, never `OverflowException`/OOM or a silent short read — the overflow-safe `Require(offset, need,
 total)` guard `MatchSaveCodec` uses); after the last declared block the read offset must equal the blob
 length exactly (trailing-byte guard). The match block is read **only when `matchPresent == 1`**.
+
+### 3.1 Layout amendments (v2–v4) — the frame as it exists in code
+
+The v1 sketch above is the frame as designed; three landings have since amended it, each a
+`SEASON_SAVE_FORMAT_VERSION` bump with no migration (KD-4):
+
+- **v2 (#30 T1, FR-SN-020):** the season-state sub-blob (`[len u32]season`) between the world and
+  match blocks.
+- **v3 (#29/#41 T1, FR-TR-018 / FR-MD-017):** the #29 training and #41 medical sub-blobs between the
+  season block and the optional match block — both **mandatory** (an empty career is a zero-club
+  block, not an absent one), both typed at the `Encode` seam (`TrainingBlock` / `MedicalBlock`) and
+  self-identified by a leading magic (ERR-029-005 / ERR-041-009).
+- **v4 (the #29/#41 balance pass, ERR-041-010(b)):** the #30 appearance sub-blob
+  (`AppearanceBlock`, magic `"APPR"`) after the medical block — the per-player fielded-XI record
+  supplying #41's FR-MD-010 `MatchLoad`, #30-owned because neither career sibling block may describe
+  the other's domain. Mandatory on the same grounds.
+
+Current frame: `version → matchPresent → [len]world → [len]season → [len]training → [len]medical →
+[len]appearance → ([len]match iff matchPresent)`. The optional match block stays last, where its
+presence flag can govern it. (#50's `SaveOriginStamp` and #47's conditional authored-db block remain
+future amendments — see #30 Appendix B.)
 
 ---
 

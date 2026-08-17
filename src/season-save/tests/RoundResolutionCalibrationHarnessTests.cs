@@ -2,6 +2,7 @@
 // Created:  2026-07-26
 // Modified: 2026-07-26
 // Modified: 2026-07-28 (Step 0 re-run PASSED post-§5.Z.20/§5.Z.21; LogAssert wrapper on both env-gated drivers — playing matches emit FM-08/FM-03 as ordinary events)
+// Modified: 2026-08-12 (A4a run: TD_CALIBRATION_SAMPLE_FROM + window tiling/slice locks)
 // Author:   —
 // Spec:     League Bootstrap design supplement KD-8 (calibration methodology + Step 0); path-to-playable
 //           roadmap A4a / C1a; Code Standards #20
@@ -176,6 +177,73 @@ namespace TacticalDirector.SeasonSave.Tests
                 () => RoundResolutionCalibrationHarness.BuildPlan(1, 0, 4));
             Assert.Throws<ArgumentOutOfRangeException>(
                 () => RoundResolutionCalibrationHarness.BuildPlan(6, 0, 0));
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => RoundResolutionCalibrationHarness.BuildPlan(6, 0, sampleFrom: -1, sampleCount: 4));
+        }
+
+        [Test]
+        public void BuildPlan_AWindowIsExactlyTheSliceOfTheContiguousPlan()
+        {
+            // THE property that makes a bucket splittable across processes: running samples [k, k+m) in
+            // their own process must produce the same rows the unsplit run would have produced at those
+            // indices. Both the seed AND the roster pairing are derived from the ABSOLUTE index for this
+            // reason — pairing off a window-local index would silently re-pair every split slice, and the
+            // corpus would still look perfectly well-formed.
+            CalibrationPlanEntry[] whole = RoundResolutionCalibrationHarness.BuildPlan(
+                RoundResolutionCalibrationHarness.BaseRosterCount, 0, 40);
+
+            for (int start = 0; start + 7 <= whole.Length; start += 7)
+            {
+                CalibrationPlanEntry[] window = RoundResolutionCalibrationHarness.BuildPlan(
+                    RoundResolutionCalibrationHarness.BaseRosterCount, 0, start, 7);
+
+                Assert.AreEqual(7, window.Length);
+                for (int i = 0; i < window.Length; i++)
+                {
+                    Assert.AreEqual(whole[start + i].MatchSeed, window[i].MatchSeed, $"seed at {start + i}");
+                    Assert.AreEqual(whole[start + i].HomeRosterIndex, window[i].HomeRosterIndex,
+                        $"home roster at {start + i}");
+                    Assert.AreEqual(whole[start + i].AwayRosterIndex, window[i].AwayRosterIndex,
+                        $"away roster at {start + i}");
+                    Assert.AreEqual(whole[start + i].HomeDelta, window[i].HomeDelta, $"homeDelta at {start + i}");
+                    Assert.AreEqual(whole[start + i].AwayDelta, window[i].AwayDelta, $"awayDelta at {start + i}");
+                }
+            }
+        }
+
+        [Test]
+        public void BuildPlan_AdjacentWindowsTileTheBucketWithoutOverlap()
+        {
+            // A split corpus must neither duplicate nor drop a sample: four windows that tile [0,80) must
+            // carry 80 distinct seeds, which is also what stops a deepened bucket double-counting rows.
+            var seeds = new HashSet<ulong>();
+            for (int start = 0; start < 80; start += 20)
+            {
+                foreach (CalibrationPlanEntry e in RoundResolutionCalibrationHarness.BuildPlan(
+                             RoundResolutionCalibrationHarness.BaseRosterCount, 0, start, 20))
+                {
+                    Assert.IsTrue(seeds.Add(e.MatchSeed), $"duplicate seed in window at {start}");
+                }
+            }
+
+            Assert.AreEqual(80, seeds.Count);
+        }
+
+        [Test]
+        public void BuildPlan_DefaultOverloadIsTheWindowStartingAtZero()
+        {
+            CalibrationPlanEntry[] implicitStart = RoundResolutionCalibrationHarness.BuildPlan(
+                RoundResolutionCalibrationHarness.BaseRosterCount, 3, 12);
+            CalibrationPlanEntry[] explicitStart = RoundResolutionCalibrationHarness.BuildPlan(
+                RoundResolutionCalibrationHarness.BaseRosterCount, 3, 0, 12);
+
+            Assert.AreEqual(implicitStart.Length, explicitStart.Length);
+            for (int i = 0; i < implicitStart.Length; i++)
+            {
+                Assert.AreEqual(implicitStart[i].MatchSeed, explicitStart[i].MatchSeed);
+                Assert.AreEqual(implicitStart[i].HomeRosterIndex, explicitStart[i].HomeRosterIndex);
+                Assert.AreEqual(implicitStart[i].AwayRosterIndex, explicitStart[i].AwayRosterIndex);
+            }
         }
 
         [Test]
@@ -262,6 +330,10 @@ namespace TacticalDirector.SeasonSave.Tests
             int samples = int.Parse(samplesRaw, CultureInfo.InvariantCulture);
             int from = EnvInt("TD_CALIBRATION_DELTA_FROM", -5);
             int to = EnvInt("TD_CALIBRATION_DELTA_TO", 5);
+
+            // The sample WINDOW start, so one bucket can be spread over several processes — which is what
+            // makes deepening the dSquad ~ 0 bucket (the one KD-8's W/D/L bar is evaluated at) affordable.
+            int sampleFrom = EnvInt("TD_CALIBRATION_SAMPLE_FROM", 0);
             string outPath = Environment.GetEnvironmentVariable("TD_CALIBRATION_OUT");
 
             // Same wrapper as the pilot: playing matches emit FM-08/FM-03 possession-race errors
@@ -274,10 +346,11 @@ namespace TacticalDirector.SeasonSave.Tests
             for (int target = from; target <= to; target++)
             {
                 List<CalibrationRow> bucket =
-                    RoundResolutionCalibrationHarness.RunBucket(rosters, target, samples);
+                    RoundResolutionCalibrationHarness.RunBucket(rosters, target, sampleFrom, samples);
                 rows.AddRange(bucket);
                 TestContext.WriteLine(
-                    $"bucket target={target}: n={bucket.Count} meanDSquad={MeanDSquad(bucket):F3} "
+                    $"bucket target={target}: samples [{sampleFrom},{sampleFrom + samples}) "
+                    + $"n={bucket.Count} meanDSquad={MeanDSquad(bucket):F3} "
                     + $"meanHome={MeanHome(bucket):F3} meanAway={MeanAway(bucket):F3}");
             }
 
@@ -364,4 +437,12 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | match events (§5.Z Phase H), and the shim's log watcher failed the   |
 // |         |            |        | first post-play pilot at teardown with every assertion green — this  |
 // |         |            |        | driver predates play developing.                                     |
+// | 1.2     | 2026-08-12 | —      | A4a corpus run: TD_CALIBRATION_SAMPLE_FROM threads the new sample  |
+// |         |            |        | window through the corpus driver, and three locks cover it — a     |
+// |         |            |        | window equals the contiguous plan's slice (seeds AND roster pairs),|
+// |         |            |        | adjacent windows tile a bucket with no overlap or gap, and the     |
+// |         |            |        | 3-arg overload is the window starting at zero. Step 0 re-run on    |
+// |         |            |        | this tree PASSED: margins +4.000 / -3.500 (was +7.100 / -4.700 on  |
+// |         |            |        | the July-28 tree), and the split-across-processes rows were        |
+// |         |            |        | verified byte-identical to this driver's own 20 pilot rows.        |
 #endregion

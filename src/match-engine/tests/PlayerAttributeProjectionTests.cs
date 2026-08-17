@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/PlayerAttributeProjectionTests.cs
 // Created:  2026-07-17
-// Modified: 2026-07-17
+// Modified: 2026-07-22
 // Author:   —
 // Spec:     Player-attribute projection design supplement §3/§4/§7/§9; Code Standards #20
 // Purpose:  Pure locks on PlayerAttributeProjection — per-field scale/copy behaviour with distinct

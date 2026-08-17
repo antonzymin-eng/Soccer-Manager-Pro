@@ -1,8 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineShotSpeedScenarios.cs
 // Created:  2026-07-28
-// Modified: 2026-07-28
-// Modified: 2026-07-28 (shot-volume pass: + mean-shot-distance-reaches-football-band predicate, ERR-008-017)
-// Modified: 2026-07-28 (keeper-contact pass: strike-time sampling via TestOnly_LastShotStrike*; 18 min/seed windows)
+// Modified: 2026-08-03
 // Author:   —
 // Spec:     Shot speed & physical woodwork design (docs/tracking/shot-speed-woodwork-design.md) §5;
 //           Match Engine design note §5.Z; Ball Physics #1 §3.1.10 (ERR-001-005);

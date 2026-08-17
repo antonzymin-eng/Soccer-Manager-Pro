@@ -1,6 +1,6 @@
 // File:     src/tactical-instructions/Tests/EnumOrdinalStabilityTests.cs
 // Created:  2026-06-21
-// Modified: 2026-07-07
+// Modified: 2026-07-10
 // Author:   —
 // Spec:     Tactical Instructions #21 FR-TI-007, §2.2.4, Code Standards #20
 // Purpose:  Mechanically locks the APPEND-only contract on all 17 instruction enums.

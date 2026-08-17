@@ -1,5 +1,6 @@
 // File:     src/tactical-instructions/Tests/BalancePassInvariantsTests.cs
 // Created:  2026-06-30
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Tactical Instructions #21 §3.2, §3.3, §3.4, §5.6, Appendix A, FR-TI-031, Code Standards #20
 // Purpose:  Locks the §5.6 / G2 balance-pass-PINNED [GT] magnitudes and the numerical-mirror invariants
@@ -127,3 +128,9 @@ namespace TacticalDirector.TacticalInstructions.Tests
         }
     }
 }
+
+#region VersionHistory
+// | Version | Date       | Author       | Notes                                                     |
+// | 1.0     | 2026-06-30 | —            | Initial file. |
+// | 1.1     | 2026-08-08 | Claude Code  | Added the required #region VersionHistory block (FR-CS-058; tools/recurring-defect-lint.py hygiene pass). |
+#endregion

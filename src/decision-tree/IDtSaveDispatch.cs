@@ -1,5 +1,6 @@
 // File:     src/decision-tree/IDtSaveDispatch.cs
 // Created:  2026-07-23
+// Modified: 2026-07-23
 // Author:   —
 // Spec:     Decision Tree #8 §3.5 (ERR-008-013), Goalkeeper Mechanics #11 §2.2.1, Code Standards #20
 // Purpose:  Dispatch boundary from the Decision Tree to the goalkeeper save sink. When a keeper's

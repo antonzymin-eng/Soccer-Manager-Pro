@@ -1,7 +1,7 @@
 # Heading Mechanics Specification #10 — Section 7: Future Extensions & Stage 1+ Deferrals
 
 **Created:** May 16, 2026
-**Version:** 0.1
+**Version:** 0.2
 **Status:** DRAFT
 **Purpose:** Catalogue Stage 1+ deferrals tied to specific KDs, plus
 forward-looking interface migrations that activate when upstream

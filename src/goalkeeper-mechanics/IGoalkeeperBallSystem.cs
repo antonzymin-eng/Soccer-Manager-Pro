@@ -1,6 +1,6 @@
 // File:     src/goalkeeper-mechanics/IGoalkeeperBallSystem.cs
 // Created:  2026-05-28
-// Modified: 2026-05-28
+// Modified: 2026-08-03
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §4.2 / §4.3, Ball Physics #1 §3.1.11.2, Code Standards #20
 // Purpose:  Goalkeeper Mechanics' read/write boundary to Ball Physics #1.

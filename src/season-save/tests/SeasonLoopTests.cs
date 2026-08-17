@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/SeasonLoopTests.cs
 // Created:  2026-07-26
-// Modified: 2026-07-26
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Season & Competition Loop #30 §5.4 (T-SN-CAL-001..006), §5.6 (T-SN-DET-001/002),
 //           FR-SN-010..013b / 016 / 024 / 026 / 030 / 032 / 033; path-to-playable A4; Code Standards #20
@@ -21,6 +21,7 @@ using NUnit.Framework;
 
 using TacticalDirector.InjuriesMedical;
 using TacticalDirector.LivingWorld;
+using TacticalDirector.PlayerProgression;
 using TacticalDirector.TrainingSystem;
 
 namespace TacticalDirector.SeasonSave.Tests
@@ -446,7 +447,8 @@ namespace TacticalDirector.SeasonSave.Tests
             try
             {
                 SeasonSaveManager.Save(firstWorld, first.State, null,
-                    path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>());
+                    path, Array.Empty<ClubTrainingStates>(), Array.Empty<ClubInjuryStates>(),
+                    Array.Empty<ClubAppearanceStates>(), ProgressionEngine.Empty);
                 SeasonSaveContents contents = SeasonSaveManager.Load(path, league);
                 var resumed = new SeasonLoop(
                     contents.World, contents.Season, RoundResolutionMode.QuickSimAll);
@@ -677,4 +679,9 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | completeness, quick-sim managed routing, order-independence,         |
 // |         |            |        | F4/F5/F6 gates, mid-sequence restore equality through a real file,   |
 // |         |            |        | two-run determinism, and a 20-club 380-fixture season.               |
+// | 1.1     | 2026-08-07 | —      | Balance pass D2: the Save call site carries the required (empty)   |
+// |         |            |        | appearance set — frame v4.                                         |
+// | 1.2     | 2026-08-08 | —      | #28 T1: call sites updated for SeasonSaveManager.Save's / Season-  |
+// |         |            |        | SaveCodec.Encode's new required progression-block parameter. No    |
+// |         |            |        | assertion or intent change.                                        |
 #endregion

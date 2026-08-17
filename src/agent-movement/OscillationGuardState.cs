@@ -1,5 +1,6 @@
 // File:     src/agent-movement/OscillationGuardState.cs
 // Created:  2026-06-16
+// Modified: 2026-06-16
 // Author:   —
 // Spec:     Agent Movement #2 §3.1.7; Match Engine design note §2.6 (Phase B step B0); Code Standards #20
 // Purpose:  Plain-data snapshot of an OscillationGuard's internal ring-buffer state, exposing the

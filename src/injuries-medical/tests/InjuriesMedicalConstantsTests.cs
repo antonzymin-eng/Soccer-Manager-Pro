@@ -1,10 +1,10 @@
 // File:     src/injuries-medical/tests/InjuriesMedicalConstantsTests.cs
 // Created:  2026-08-05
-// Modified: 2026-08-05
+// Modified: 2026-08-08 (AR pass 12 M3: the recovery-rate lock's two-layer note — v1.10)
 // Author:   —
 // Spec:     Injuries & Medical #41 Appendix A + §3.2/§3.4; Code Standards #20
 // Purpose:  Catalogue invariants — the per-mille split is well-formed, the tier table covers every
-//           severity ordinal, the draw denominator tracks the risk ceiling, and #29/#41 agree on the
+//           severity ordinal, the [FIXED] draw denominator bounds the [GT] risk ceiling, and #29/#41 agree on the
 //           risk scale they share.
 
 using System;
@@ -75,22 +75,54 @@ namespace TacticalDirector.InjuriesMedical.Tests
         [Test]
         public void SeverityPermilleSplit_IsWellFormed()
         {
+            // Design-time half of a two-layer invariant (AR pass 10 M1): this lock only ever sees
+            // the compile-time fallbacks because the gate runs config-unbound (ERR-041-003's class),
+            // so a shipped config summing past the denominator would sail through the suite. The
+            // runtime half lives in ClassifySeverityFromDraw, which fail-louds at the classifying
+            // site — the DrawOccurrence denominator-guard posture; like that guard, it is
+            // unreachable under the fallbacks and carries no reachability case by design. Since
+            // AR pass 11 (L3) the runtime half mirrors ALL THREE predicates below, with the
+            // positivity pair relaxed to non-negativity (zero = a deliberate no-Minor/no-Moderate
+            // config; negative = the same silent tier-deletion the sum guard stops).
             Assert.Greater(InjuriesMedicalConstants.SeverityMinorPermille, 0);
             Assert.Greater(InjuriesMedicalConstants.SeverityModeratePermille, 0);
-            Assert.LessOrEqual(
+            Assert.Less(
                 InjuriesMedicalConstants.SeverityMinorPermille + InjuriesMedicalConstants.SeverityModeratePermille,
                 InjuriesMedicalConstants.SEVERITY_PERMILLE_DENOM,
-                "Minor + Moderate must leave room for Serious — a sum over the denominator would make " +
-                "the Serious tier unreachable (the Appendix A catalogue invariant).");
+                "Minor + Moderate must leave room for Serious — STRICT (AR pass 9 L5): at a sum of " +
+                "exactly 1000 the §3.2 second bucket's bound is the method's own precondition, so " +
+                "Serious is unreachable with a ≤ invariant 'satisfied' (the Appendix A catalogue invariant).");
         }
 
         [Test]
-        public void DrawDenominator_TracksTheRiskCeiling()
+        public void DrawDenominator_IsFixed_AndBoundsTheRiskCeiling()
         {
-            Assert.AreEqual(InjuriesMedicalConstants.InjuryRiskMax, InjuriesMedicalConstants.OccurrenceDrawDenom,
-                "§3.4: the assembled risk is compared directly against the draw, so any gap between " +
-                "these two silently rescales every occurrence probability.");
-            Assert.Greater(InjuriesMedicalConstants.OccurrenceDrawDenom, 0);
+            // ERR-041-011 replaced the old DENOM == InjuryRiskMax identity: the draw is
+            // hash % denominator, so a config-tunable denominator re-rolls every career's draws.
+            // The denominator is now [FIXED] and the ceiling must sit at or below it — the invariant
+            // that keeps every daily probability <= 1, also enforced fail-loud at the draw site.
+            Assert.AreEqual(1_000_000, InjuriesMedicalConstants.OCCURRENCE_DRAW_DENOM,
+                "[FIXED]: changing this value re-rolls every keyed occurrence draw in every career — " +
+                "it is not a tuning dial (ERR-041-011).");
+            Assert.LessOrEqual(InjuriesMedicalConstants.InjuryRiskMax,
+                InjuriesMedicalConstants.OCCURRENCE_DRAW_DENOM,
+                "the [GT] risk ceiling must never exceed the [FIXED] draw denominator, or a clamped " +
+                "risk silently means 'certain and then some'.");
+        }
+
+        [Test]
+        public void AppearanceWindowDays_SitsInsideTheBitmaskItIsReadThrough()
+        {
+            // The other balance-pass [GT]'s catalogue invariant (AR pass 4 — its sibling above had
+            // this lock, this one did not): #30's AppearanceWindow reads the window through a u32
+            // bitmask whose structural ceiling is 31, and refuses an out-of-range value at RUNTIME,
+            // mid-season (InvalidOperationException). The catalogue must not be able to ship one.
+            // The 31 mirrors SeasonSaveConstants.APPEARANCE_BITMASK_MAX_WINDOW_DAYS — the [FIXED]
+            // bound the production guard reads. This assembly sits BELOW season-save, so the literal
+            // cannot be replaced by the constant here; AppearanceRecordTests locks the two together.
+            Assert.That(InjuriesMedicalConstants.AppearanceWindowDays, Is.InRange(1, 31),
+                "FR-MD-010 / ERR-041-010(b): the appearance window must fit the u32 day-bitmask — " +
+                "a value outside [1, 31] fails at the first windowed read of a live season.");
         }
 
         [Test]
@@ -110,6 +142,10 @@ namespace TacticalDirector.InjuriesMedical.Tests
         [Test]
         public void RecoveryRate_IsPositive_OrEveryInjuryIsPermanent()
         {
+            // Design-time half only (AR pass 12 M3): this reads the fallback in a config-unbound
+            // gate. The runtime half lives in AdvanceMedicalDay's countdown branch, which
+            // fail-louds on a non-positive rate — the DrawOccurrence posture, unreachable under
+            // the fallback by design.
             Assert.Greater(InjuriesMedicalConstants.RecoveryDaysPerTickBase, 0,
                 "a non-positive per-tick decrement means RecoveryRemaining never falls, so no injury " +
                 "ever ends and the career reaches a state nothing can recover from.");
@@ -176,4 +212,29 @@ namespace TacticalDirector.InjuriesMedical.Tests
 // | 1.2     | 2026-08-05 | —      | AR pass 4 (L): the fixture now states that it pins the design-time |
 // |         |            |        | fallbacks, not a bound config — the distinction ERR-041-003 turned |
 // |         |            |        | on, and unstated in a fixture whose whole subject is [GT] values.  |
+// | 1.3     | 2026-08-07 | —      | Balance pass D3 (ERR-041-011): the DENOM == InjuryRiskMax lock    |
+// |         |            |        | becomes the [FIXED]-denominator pin + the ceiling <= denominator  |
+// |         |            |        | invariant.                                                        |
+// | 1.4     | 2026-08-07 | —      | Balance-pass AR pass 1 (doc only, row added at pass 2): the       |
+// |         |            |        | header Purpose said the denominator "tracks" the ceiling — the    |
+// |         |            |        | pre-D3 coupling — reworded to "bounds" per ERR-041-011.           |
+// | 1.5     | 2026-08-08 | —      | Balance-pass AR pass 4 (L3): + the AppearanceWindowDays [1,31]    |
+// |         |            |        | catalogue invariant — the sibling of the denominator lock; an     |
+// |         |            |        | out-of-range window otherwise fails at the first windowed read of |
+// |         |            |        | a live season rather than in the catalogue suite.                 |
+// | 1.6     | 2026-08-08 | —      | Balance-pass AR pass 5 (L4, comment): the window lock's 31     |
+// |         |            |        | names its authority (SeasonSaveConstants' [FIXED] bound, which |
+// |         |            |        | this assembly sits below and cannot read).                     |
+// | 1.7     | 2026-08-08 | —      | Balance-pass AR pass 9 (L5): LessOrEqual -> Less — the lock's  |
+// |         |            |        | own message already argued strictness while asserting the     |
+// |         |            |        | weaker bound (at sum == 1000 Serious is unreachable).         |
+// | 1.8     | 2026-08-08 | —      | Balance-pass AR pass 10 (M1, comment): the split lock is the   |
+// |         |            |        | DESIGN-TIME half only — the runtime guard now lives at the     |
+// |         |            |        | classifying site, unreachable under fallbacks by design.      |
+// | 1.9     | 2026-08-08 | —      | Balance-pass AR pass 11 (L3, comment): the two-layer note no      |
+// |         |            |        | longer overstates — the runtime guard now mirrors all three       |
+// |         |            |        | predicates (non-negativity + strict sum).                         |
+// | 1.10    | 2026-08-08 | —      | Balance-pass AR pass 12 (M3, comment): the recovery-rate lock     |
+// |         |            |        | records its design-time-half-only scope now that the runtime      |
+// |         |            |        | guard exists at the countdown site.                               |
 #endregion

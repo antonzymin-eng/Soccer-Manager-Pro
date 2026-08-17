@@ -2,7 +2,7 @@
 
 **Created:** May 13, 2026
 **Last Updated:** May 13, 2026
-**Version:** 0.1 (initial section-file draft from `outline-detailed.md` v1.1)
+**Version:** 1.0.1
 **Status:** DRAFT — section-file authoring per `outline-detailed.md` v1.1.
 `SPEC_INDEX.md` row 17 = `IN PROGRESS`.
 **Companion documents:** `outline.md` (v1.0 + May 6 adversarial review),

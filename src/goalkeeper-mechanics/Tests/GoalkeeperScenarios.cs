@@ -1,7 +1,6 @@
 // File:     src/goalkeeper-mechanics/Tests/GoalkeeperScenarios.cs
 // Created:  2026-07-03
-// Modified: 2026-07-03
-// Modified: 2026-07-27 (§5.Z.17 / ERR-011-002: save-launch scenario re-anchored to a ball threatening the keeper's OWN goal)
+// Modified: 2026-08-03
 // Author:   —
 // Spec:     Goalkeeper Mechanics #11 §4.6.1 / §4.6.2 (10 Hz + 60 Hz orchestrator),
 //           Testing Strategy & Framework #19 §3.3.1 / §3.3.2 / Appendix A.1,

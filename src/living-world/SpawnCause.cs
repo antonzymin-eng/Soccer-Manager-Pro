@@ -1,6 +1,6 @@
 // File:     src/living-world/SpawnCause.cs
 // Created:  2026-06-21
-// Modified: 2026-06-21
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Living World System #22 §2.2.3, §3.6, KD-8, Code Standards #20
 // Purpose:  SpawnCause value type: provenance captured inline at arc creation (KD-8).
@@ -49,3 +49,9 @@ namespace TacticalDirector.LivingWorld
         }
     }
 }
+
+#region VersionHistory
+// | Version | Date       | Author       | Notes                                                     |
+// | 1.0     | 2026-06-21 | —            | Initial file. |
+// | 1.1     | 2026-08-08 | Claude Code  | Added the required #region VersionHistory block (FR-CS-058; tools/recurring-defect-lint.py hygiene pass). |
+#endregion

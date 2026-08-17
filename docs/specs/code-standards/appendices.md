@@ -7,7 +7,7 @@ Appendix D is the KD-6 single source of truth; §3.3, §3.4, §5.2, and §7.1 ci
 by category name and must not reproduce its symbol lists.
 
 **Created:** May 7, 2026
-**Version:** 1.0
+**Version:** 1.1
 **Status:** DRAFT
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §APPENDICES

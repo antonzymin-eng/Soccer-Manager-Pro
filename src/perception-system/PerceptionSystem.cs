@@ -1,6 +1,6 @@
 // File:     src/perception-system/PerceptionSystem.cs
 // Created:  2026-05-28
-// Modified: 2026-06-27 (Match Engine Phase D D4: CaptureState snapshot seam)
+// Modified: 2026-07-20
 // Author:   —
 // Spec:     Perception System #7 §3.0–§3.8, §4.1, §4.6, Code Standards #20
 // Purpose:  Main 10Hz orchestrator. Runs the full perception pipeline for all 22 agents

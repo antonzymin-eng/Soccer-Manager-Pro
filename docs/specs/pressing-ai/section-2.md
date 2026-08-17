@@ -1,8 +1,8 @@
 # Pressing AI Specification #13 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.2 PASS-1 adversarial-review fix pass)
-**Version:** 0.2
+**Last Updated:** May 18, 2026 (v0.3 — FAIL-4 fix (A-03): FR-PR-005 `[CROSS-PENDING]` promoted to `[CROSS: #16 §3.4]`; ERR-013-005 resolved.)
+**Version:** 0.3
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 

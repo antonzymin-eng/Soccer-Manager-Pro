@@ -1,6 +1,6 @@
 // File:     src/living-world/Tests/ArcTriggerTests.cs
 // Created:  2026-07-24
-// Modified: 2026-07-24 (arc-triggers Low-2: non-zero-cursor post-restore resume test)
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Living World System #22 §3.4, §6.2, FR-LW-016/017/018/020/021, arc-triggers-design §9 (tests
 //           1-4, 6-11), Testing Strategy #19 §3.1.4, Code Standards #20
@@ -387,3 +387,9 @@ namespace TacticalDirector.LivingWorld.Tests
         }
     }
 }
+
+#region VersionHistory
+// | Version | Date       | Author       | Notes                                                     |
+// | 1.0     | 2026-07-24 | —            | Initial file. |
+// | 1.1     | 2026-08-08 | Claude Code  | Added the required #region VersionHistory block (FR-CS-058; tools/recurring-defect-lint.py hygiene pass). |
+#endregion

@@ -1,9 +1,10 @@
 # Squad / Player Data Layer Specification #27 — Section 1: Introduction, Scope, Dependencies
 
 **Created:** July 22, 2026
-**Last Updated:** July 27, 2026 (v0.2 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
+**Last Updated:** August 8, 2026 (v0.3 — ERR-027-004 pointer on KD-3: the career-level global-uniqueness requirement lives on FR-SQ-010; KD-3 is the first thing a #42/#31 allocator author reads, so it points there — balance-pass AR pass 5 L3)
+**Last Updated (prior):** July 27, 2026 (v0.2 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
 **Last Updated (prior):** July 22, 2026 (v0.1)
-**Version:** 0.2
+**Version:** 0.3
 **Status:** APPROVED
 **Source:** `docs/tracking/squad-player-data-design.md` v0.6
 
@@ -83,7 +84,10 @@ the bottom of the reference graph, off-pitch band (§4).
   league-wide entity, independent of any match; match concepts (`SQUAD_SIZE = 22`,
   `PLAYERS_PER_TEAM = 11`, `teamId ∈ {0,1}`) are match-scoped. This layer keys on a caller-assigned
   `clubId`, never `teamId`. `PlayerId = clubId * CLUB_SQUAD_SIZE + localIndex` (generalises the engine's
-  `entityId = team * PLAYERS_PER_TEAM + slot` to an unbounded club count).
+  `entityId = team * PLAYERS_PER_TEAM + slot` to an unbounded club count). *A career carrying more than
+  one club additionally requires ids to be GLOBALLY unique across its clubs — see FR-SQ-010 as amended
+  by ERR-027-004 (#41's occurrence-draw key has no club term); today's formula satisfies it, and any
+  future allocator MUST preserve it.*
 - **KD-4 — `PlayerPosition` ≠ `RoleId`.** `PlayerPosition` (4 coarse values) is a squad-management
   classification for generation/display; positioning-ai's `RoleId` (13 granular formation-slot roles)
   is a different concept. No shared type, no cross-reference. A future `PlayerPosition → RoleId` mapping
@@ -127,4 +131,5 @@ snapshot roster reference, the distinct-squad restore re-projection, and proper 
 |---|---|---|---|
 | 0.1 | 2026-07-22 | — | Initial section from supplement v0.6; documents the built-and-wired layer in present tense; KD-1..KD-8 carried from supplement §2. |
 | 0.2 | 2026-07-27 | — | **ERR-027-003** (at #50's approval): new **§1.2.1** records that the generation contract is **save-visible without being saved** — rosters are regenerated from the world seed, so `RosterGenerator`'s draw order and field budget, `LeagueBootstrap`'s catalogue and its strength ramp are covered by `WORLD_GENERATION_VERSION`, and changing any post-ship needs a version bump plus a generation migration. The golden vector stays the CI guard against an *accidental* change; this is the **runtime** guard it never was. No #27 code, type or requirement change. |
+| 0.3 | 2026-08-08 | — | **ERR-027-004** (balance-pass AR pass 5, L3): KD-3 gains the one-sentence pointer to FR-SQ-010's career-level GLOBAL-uniqueness amendment — the FR carried the contract for one pass while the key decision every allocator author reads first said nothing. |
 #endregion

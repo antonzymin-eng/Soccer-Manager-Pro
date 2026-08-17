@@ -1,6 +1,7 @@
 // File:     src/season-save/tests/RoundResolutionCalibrationHarness.cs
 // Created:  2026-07-26
 // Modified: 2026-07-26
+// Modified: 2026-08-12 (A4a run: sample-window overload so ONE bucket can split across processes)
 // Author:   —
 // Spec:     League Bootstrap design supplement KD-8 (calibration methodology); Season & Competition Loop
 //           #30 §3.4.1; path-to-playable roadmap A4a (+ C1a's compute budget); Code Standards #20
@@ -210,6 +211,30 @@ namespace TacticalDirector.SeasonSave.Tests
         /// below 2 (a bucket needs two distinct base rosters to pair).</exception>
         internal static CalibrationPlanEntry[] BuildPlan(
             int rosterCount, int targetDelta, int samplesPerBucket)
+            => BuildPlan(rosterCount, targetDelta, sampleFrom: 0, samplesPerBucket);
+
+        /// <summary>
+        /// Builds the half-open sample window <c>[sampleFrom, sampleFrom + sampleCount)</c> of a bucket's
+        /// plan.
+        /// <para>
+        /// <b>Why a window exists (A4a, August 2026).</b> KD-8 calls the corpus run "parallelisable across
+        /// buckets", and it is — but the acceptance bar it names lives at a SINGLE bucket
+        /// (<c>dSquad ≈ 0</c>, where home advantage shows as an asymmetry), and a whole-bucket-per-process
+        /// driver cannot spread that one bucket over more than one core. Deepening the bucket the bar is
+        /// evaluated at was therefore serial-only, which is what made the bar expensive to measure rather
+        /// than merely expensive to pass.
+        /// </para>
+        /// <para>
+        /// Every entry is derived from its ABSOLUTE sample index — both the seed (already keyed, see
+        /// <see cref="SeedFor"/>) and the roster pairing — so a window is exactly the corresponding slice
+        /// of the contiguous plan, and a bucket split across N processes reconstructs the unsplit corpus
+        /// row for row.
+        /// </para>
+        /// </summary>
+        /// <exception cref="System.ArgumentOutOfRangeException">Negative window start, non-positive sample
+        /// count, or a roster count below 2 (a bucket needs two distinct base rosters to pair).</exception>
+        internal static CalibrationPlanEntry[] BuildPlan(
+            int rosterCount, int targetDelta, int sampleFrom, int sampleCount)
         {
             if (rosterCount < 2)
             {
@@ -217,10 +242,16 @@ namespace TacticalDirector.SeasonSave.Tests
                     nameof(rosterCount), rosterCount, "A bucket needs at least two base rosters to pair.");
             }
 
-            if (samplesPerBucket <= 0)
+            if (sampleCount <= 0)
             {
                 throw new System.ArgumentOutOfRangeException(
-                    nameof(samplesPerBucket), samplesPerBucket, "samplesPerBucket must be positive.");
+                    nameof(sampleCount), sampleCount, "sampleCount must be positive.");
+            }
+
+            if (sampleFrom < 0)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(sampleFrom), sampleFrom, "sampleFrom must not be negative.");
             }
 
             // Split the target across the two sides so neither is pushed against the [1,20] clamp harder
@@ -230,9 +261,10 @@ namespace TacticalDirector.SeasonSave.Tests
             int homeDelta = targetDelta / 2;
             int awayDelta = homeDelta - targetDelta;
 
-            var plan = new CalibrationPlanEntry[samplesPerBucket];
-            for (int s = 0; s < samplesPerBucket; s++)
+            var plan = new CalibrationPlanEntry[sampleCount];
+            for (int i = 0; i < sampleCount; i++)
             {
+                int s = sampleFrom + i;
                 int homeIdx = s % rosterCount;
 
                 // Step the partner by a stride that grows every full cycle, so successive cycles pair
@@ -247,7 +279,7 @@ namespace TacticalDirector.SeasonSave.Tests
                     awayIdx = (homeIdx + 1) % rosterCount;
                 }
 
-                plan[s] = new CalibrationPlanEntry(
+                plan[i] = new CalibrationPlanEntry(
                     homeIdx, awayIdx, homeDelta, awayDelta, SeedFor(targetDelta, s));
             }
 
@@ -257,8 +289,18 @@ namespace TacticalDirector.SeasonSave.Tests
         /// <summary>Executes a bucket's plan — one real match per entry.</summary>
         internal static List<CalibrationRow> RunBucket(
             Squad[] baseRosters, int targetDelta, int samplesPerBucket)
+            => RunBucket(baseRosters, targetDelta, sampleFrom: 0, samplesPerBucket);
+
+        /// <summary>
+        /// Executes the sample window <c>[sampleFrom, sampleFrom + sampleCount)</c> of a bucket's plan —
+        /// one real match per entry. See the <see cref="BuildPlan(int, int, int, int)"/> overload for why
+        /// a bucket is splittable.
+        /// </summary>
+        internal static List<CalibrationRow> RunBucket(
+            Squad[] baseRosters, int targetDelta, int sampleFrom, int sampleCount)
         {
-            CalibrationPlanEntry[] plan = BuildPlan(baseRosters.Length, targetDelta, samplesPerBucket);
+            CalibrationPlanEntry[] plan =
+                BuildPlan(baseRosters.Length, targetDelta, sampleFrom, sampleCount);
             var rows = new List<CalibrationRow>(plan.Length);
             for (int i = 0; i < plan.Length; i++)
             {
@@ -295,4 +337,12 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | direct-shift pair construction, one-match engine runner recording    |
 // |         |            |        | only capture-time-observable columns, keyed per-sample seeds so the  |
 // |         |            |        | grid can be split across processes, and CSV rendering.              |
+// | 1.1     | 2026-08-12 | —      | A4a corpus run: BuildPlan/RunBucket gain a sample-WINDOW overload  |
+// |         |            |        | so a single bucket can be split across processes. KD-8 called the  |
+// |         |            |        | run parallelisable across buckets, but its acceptance bar lives at |
+// |         |            |        | ONE bucket (dSquad ~ 0), which a whole-bucket-per-process driver   |
+// |         |            |        | could only deepen serially. Both the seed and the roster pairing   |
+// |         |            |        | derive from the ABSOLUTE sample index, so a window is exactly the  |
+// |         |            |        | slice of the contiguous plan — pairing off a window-local index    |
+// |         |            |        | would silently re-pair every split slice and still look well-formed.|
 #endregion

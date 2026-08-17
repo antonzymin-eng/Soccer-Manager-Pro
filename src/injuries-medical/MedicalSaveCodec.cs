@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/MedicalSaveCodec.cs
 // Created:  2026-08-06
-// Modified: 2026-08-06
+// Modified: 2026-08-08 (AR pass 15 L1: the asymmetry para un-nested — v1.4)
 // Author:   —
 // Spec:     Injuries & Medical #41 §2.2 (the persisted medical block), §4.2 / §4.4 (the sub-blob codec),
 //           FR-MD-017/018/019, F1/F3/F4/F5; ERR-041-008 (the §4.4 layout's missing club id) and
@@ -136,6 +136,7 @@ namespace TacticalDirector.InjuriesMedical
                     // validates on decode will happily write a state no decode of it could accept —
                     // and the failure then surfaces at load, one session away from the bug.
                     RequireDefinedSeverity(state.Severity, playerId);
+                    RequireNonNegativeCounters(state.RecoveryRemaining, state.InjuryCount, playerId);
                     RequireCoherent(state.Severity, state.RecoveryRemaining, playerId);
 
                     CanonicalSerializer.WriteI32(buf, ref o, playerId);
@@ -177,6 +178,14 @@ namespace TacticalDirector.InjuriesMedical
         /// otherwise make every existing save unloadable, turning a tuning edit into data loss. Only the
         /// structural floor (a day counter cannot be negative) and the F1 coherence rule are enforced
         /// here.
+        /// </para>
+        /// <para>
+        /// <b>The asymmetry with #29 (AR pass 14 L1):</b> #29's day step CLAMPS its ceilings, so a
+        /// loaded out-of-band counter self-heals; #41's does not — <c>MedicalStep.ValidateState</c>
+        /// REFUSES <c>RecoveryRemaining &gt; RecoveryMax</c> (F1). A save loaded cleanly here under a
+        /// lowered ceiling therefore throws at slot 4 on every later advance until the config is
+        /// restored: loud and config-reversible, but a career-halting edit, not a self-healing one.
+        /// Lowering <c>RecoveryMax</c> is career-compatible only when nothing outstanding exceeds it.
         /// </para>
         /// </summary>
         /// <param name="blob">The bytes to decode.</param>
@@ -249,21 +258,12 @@ namespace TacticalDirector.InjuriesMedical
                     RequireDefinedSeverity(severity, playerId);
 
                     int recoveryRemaining = CanonicalSerializer.ReadI32(blob, ref o);
-                    if (recoveryRemaining < 0)
-                    {
-                        throw new InvalidOperationException(
-                            "Medical save player " + playerId + " has recovery remaining " +
-                            recoveryRemaining + " — a day counter's floor is 0 (§2.2); corrupt save.");
-                    }
-
                     int injuryCount = CanonicalSerializer.ReadI32(blob, ref o);
-                    if (injuryCount < 0)
-                    {
-                        throw new InvalidOperationException(
-                            "Medical save player " + playerId + " has injury count " + injuryCount +
-                            " — a cumulative career count cannot be negative; corrupt save.");
-                    }
 
+                    // One owner, both directions (AR pass 5). These two floors were inline here and
+                    // absent at Encode; sharing them is what stops the pair drifting rather than merely
+                    // making them equal today.
+                    RequireNonNegativeCounters(recoveryRemaining, injuryCount, playerId);
                     RequireCoherent(severity, recoveryRemaining, playerId);
 
                     uint lastAdvancedWorldDay = CanonicalSerializer.ReadU32(blob, ref o);
@@ -321,6 +321,36 @@ namespace TacticalDirector.InjuriesMedical
             return club.PlayerIds;
         }
 
+        /// <summary>
+        /// The two counter floors, shared by <c>Encode</c> and <c>Decode</c>. They lived inline in
+        /// Decode only, under an Encode comment asserting that "the F1/F4 gates run on the WAY OUT as
+        /// well as the way in" — which was true of the two gates Encode called and false of these two.
+        /// <para>
+        /// <see cref="RequireCoherent"/> does NOT subsume them: it tests
+        /// <c>(recoveryRemaining &gt; 0) != injured</c>, and <c>-1 &gt; 0</c> is <c>false</c>, so an
+        /// UNINJURED player carrying <c>RecoveryRemaining = -1</c> satisfied it. Encode wrote the whole
+        /// season file and Decode then refused it, so the loss surfaced at load, one session away from
+        /// the bug (AR pass 5 — the same class fixed for #28's codec in the commit before this one, in
+        /// the sibling codec #28's was modelled on).
+        /// </para>
+        /// </summary>
+        private static void RequireNonNegativeCounters(int recoveryRemaining, int injuryCount, int playerId)
+        {
+            if (recoveryRemaining < 0)
+            {
+                throw new InvalidOperationException(
+                    "Medical save player " + playerId + " has recovery remaining " +
+                    recoveryRemaining + " — a day counter's floor is 0 (§2.2); corrupt save.");
+            }
+
+            if (injuryCount < 0)
+            {
+                throw new InvalidOperationException(
+                    "Medical save player " + playerId + " has injury count " + injuryCount +
+                    " — a cumulative career count cannot be negative; corrupt save.");
+            }
+        }
+
         private static void RequireDefinedSeverity(InjurySeverity severity, int playerId)
         {
             if (!InjuriesMedicalConstants.IsDefinedSeverity(severity))
@@ -366,4 +396,10 @@ namespace TacticalDirector.InjuriesMedical
 // |         |            |        | TacticalDirector.DeterministicSim.SaveBlobFramingHelpers — this    |
 // |         |            |        | file and TrainingSaveCodec were byte-identical duplicates of those |
 // |         |            |        | four helpers with nothing mechanical keeping them in sync.         |
+// | 1.3     | 2026-08-08 | —      | Balance-pass AR pass 14 (L1, doc): the non-gate rationale         |
+// |         |            |        | inherited #29's clamp claim — #41's day step REFUSES an           |
+// |         |            |        | out-of-band counter, so a lowered ceiling halts a career loudly   |
+// |         |            |        | rather than self-healing; the asymmetry stated.                   |
+// | 1.4     | 2026-08-08 | —      | Balance-pass AR pass 15 (L1): the v1.3 asymmetry block was nested |
+// |         |            |        | inside the preceding para instead of a sibling; tags rebalanced.  |
 #endregion

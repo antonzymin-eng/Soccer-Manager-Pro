@@ -1,6 +1,6 @@
 // File:     src/pressing-ai/TriggerEvaluator.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-15
 // Author:   —
 // Spec:     Pressing AI #13 §3.1–§3.2, Code Standards #20
 // Purpose:  Pure static class: evaluates all four raw press-trigger conditions and

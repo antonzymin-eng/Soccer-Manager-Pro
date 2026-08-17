@@ -1,6 +1,6 @@
 // File:     src/attacking-ai/Tests/AttackingAITests.cs
 // Created:  2026-05-31
-// Modified: 2026-07-13
+// Modified: 2026-06-30
 // Author:   —
 // Spec:     Attacking AI #15 §5, Code Standards #20
 // Purpose:  Unit tests for Attacking AI. T-AT-U unit tests from §5.

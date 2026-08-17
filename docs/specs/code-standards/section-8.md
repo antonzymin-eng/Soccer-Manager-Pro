@@ -4,7 +4,7 @@
 **Purpose:** Registers all sources cited by Spec #20, records verification status for
 every citation, audits cross-spec references, and summarises constant provenance.
 **Created:** May 8, 2026
-**Version:** 1.0
+**Version:** 1.1
 **Status:** DRAFT
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 8; `outline-mid.md` v1.2, §8.1–§8.4

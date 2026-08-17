@@ -1,8 +1,9 @@
 # National Teams & International Management #36 — Section 5: Test Plan
 
 **Created:** July 27, 2026
-**Last Updated:** July 27, 2026 (v0.1 — initial section-file set)
-**Version:** 0.1
+**Last Updated:** August 8, 2026 (v0.2 — ERR-030-029 back-prop: T-NT-I-005's open reference resolved to #30 §3.4's settled rule)
+**Last Updated (prior):** July 27, 2026 (v0.1 — initial section-file set)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---
@@ -67,7 +68,7 @@ passes everything else.
 | T-NT-I-002 | §3.8(m): **order-independence.** With #44 suspending `{3,7}` and #36 calling up `{7,11}`, the composed squad is identical in **both** orders — asserted by running both, not by arguing set theory. |
 | T-NT-I-003 | The overlap case is handled: a player both suspended **and** called up is removed once, and the result has no duplicate removal or double-count. |
 | T-NT-I-004 | §3.8(i)/FR-NT-018: `NT_MAX_CALLUPS_PER_CLUB` bounds **#36's own** contribution to any one club's reduction, in every window. |
-| T-NT-I-005 | **The empty-squad floor is observable but not #36's to resolve** (F7 / FR-NT-019): the test constructs a composition that reduces a squad below a fieldable eleven and asserts the **seam's** defined behaviour, whatever ERR-030-016 settles on — so #36's suite documents the shared obligation rather than inventing a private policy for it. |
+| T-NT-I-005 | **The empty-squad floor is observable but not #36's to resolve** (F7 / FR-NT-019): the test constructs a composition that reduces a squad below a fieldable eleven and asserts the **seam's** defined behaviour — **now settled (ERR-030-029): #30 §3.4's least-injured back-fill, terminal case fail-loud (#30 §2.3 F9)** — so #36's suite documents the shared obligation rather than inventing a private policy for it. |
 | T-NT-I-006 | A call-up is **returned** after the window closes: the same squad, on a later day, is field-identical to the pre-window squad. |
 
 ## 5.6 Integration — save / restore and the roster lifecycle
@@ -135,4 +136,5 @@ survive every unit test and still be wrong.
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 0.1 | 2026-07-27 | — | Initial §5. §5.1 leads with the two locks the spec exists for — the transfer lock (which a test asserting only *"a pin exists"* would pass against the F4 bug) and the golden-vector lock (asserted **inside #36's own suite**, so the cost of "just adding the field" is visible to whoever tries). T-NT-BOUND-002 is flagged as the assertion a deep-tier implementer breaks first, since implementing `ISquadProvider` is the natural move and the `League` precedent appears to endorse it. Status IN REVIEW. |
+| 0.2 | 2026-08-08 | — | **ERR-030-029 back-prop**: T-NT-I-005's "whatever ERR-030-016 settles on" resolved — the seam's behaviour is #30 §3.4's back-fill rule. |
 #endregion

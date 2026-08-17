@@ -1,6 +1,6 @@
 // File:     src/match-client-core/tests/MatchSessionTests.cs
 // Created:  2026-07-24
-// Modified: 2026-08-03
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P0/§5-P6/§6.3),
 //           Code Standards #20
@@ -208,3 +208,10 @@ namespace TacticalDirector.MatchClientCore.Tests
         }
     }
 }
+
+#region VersionHistory
+// | Version | Date       | Author       | Notes                                                     |
+// | 1.0     | 2026-07-24 | —            | Initial file. |
+// | 1.1     | 2026-08-03 | —            | Substantive edit; no version-history row was recorded for it at the time (FR-CS-058 gap, predates this hygiene pass). |
+// | 1.2     | 2026-08-08 | Claude Code  | Added the required #region VersionHistory block (FR-CS-058; tools/recurring-defect-lint.py hygiene pass). |
+#endregion

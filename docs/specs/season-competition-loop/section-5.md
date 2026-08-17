@@ -1,8 +1,9 @@
 # Season & Competition Loop Specification #30 — Section 5: Test Plan
 
 **Created:** July 22, 2026
-**Last Updated:** July 25, 2026 (v0.3 — ERR-030-010: T-SN-FIX-001 re-anchored + new T-SN-FIX-008)
-**Version:** 0.3
+**Last Updated:** August 8, 2026 (v0.4 — balance-pass AR pass 13 L5: T-SN-DET-004 names the depleted-squad locks; the ERR-030-029 back-prop reaches #30's own test plan)
+**Last Updated (prior):** July 25, 2026 (v0.3 — ERR-030-010: T-SN-FIX-001 re-anchored + new T-SN-FIX-008)
+**Version:** 0.4
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -68,6 +69,7 @@ a Simulation-layer `#19 ScenarioRunner` capstone. No 60 Hz hot-path perf gate ap
 | T-SN-DET-001 | **Mid-sequence restore (KD-2):** save@day-N mid-advance → restore → advance to N+K == an uninterrupted advance (world + season byte-identical). |
 | T-SN-DET-002 | **Two-run season:** the same seed + `ManagedClubId` drives a full simulated season (every round resolved via a fixed `ISquadProvider`, non-managed fixtures via the round-resolution model) to a byte-identical final table — every club's row populated (the KD-9 completeness lock at season scale). |
 | T-SN-DET-003 | Season-boundary roll (KD-6): `RollToNextSeason` is two-run deterministic and restartable (save mid-roll → restore → same continuation). |
+| T-SN-DET-004 | **The depleted-squad rule (ERR-030-029 / §3.4 / F9):** the composed availability filter presses the least-injured back in until the engine's own selector can field the formation (locked by `PlayerCareerStatesTests.SelectAvailable_BackfillsTheLeastInjuredRatherThanRefusingToFieldATeam`), and the terminal case — even the whole squad cannot field it — fails loud (`…WhenTheRosterItselfCannotFieldATeam_FailsLoud`). Ids assigned at AR pass 13 (L5): the locks predate their row — the F8 §5-id precedent (pass 10 L4), two passes late for #30's own F9. |
 
 ## 5.7 Capstone scenario (T2+, `#19 ScenarioRunner`)
 
@@ -76,7 +78,7 @@ B; path under `SCENARIO_PATH_CROSS_SPEC_PREFIX`): boot a `SeasonLoop`, play K fi
 schedule (advancing the world between them), and assert (a) the table reflects the played results,
 (b) a two-run same-seed digest match over the full season state, and (c) the KD-8 floor holds for
 every no-fixture day. The match-engine capstone (`match-engine-kickoff-multi-second`) precedent. Not
-required at the design stage; the natural §5 addition once T2 wires the loop.
+required at the design stage; T2 has since wired the loop, so this is now simply the outstanding §5 addition (noted at the lint sweep).
 
 ## 5.8 FR traceability
 
@@ -92,4 +94,5 @@ not by an execution test — nothing ticks there yet.
 | 0.1 | 2026-07-22 | — | Initial test plan: fixture / table / calendar / save / determinism / capstone + FR traceability. |
 | 0.2 | 2026-07-22 | — | Section-file PASS-1: whole-round resolution (KD-9 / FR-SN-012/013a/013b / §3.4 / ManagedClubId), API-name corrections (`RunTick`→`MatchEnded`, `ResolveByClubId`), `uint` world-day, KD-collision + label reconciliation. See section-9 §9.3. |
 | 0.3 | 2026-07-25 | — | **ERR-030-010**: T-SN-FIX-001 re-anchored to the corrected Appendix C table; new **T-SN-FIX-008** venue-balance regression lock (fails under the pre-correction rule). |
+| 0.4 | 2026-08-08 | — | **Balance-pass AR pass 13 (L5) + the lint sweep**: *(lint: §5.7's "once T2 wires the loop" tensed — T2 wired it.)* ERR-030-029's back-prop had reached #36's test plan and not #30's own — **T-SN-DET-004** names the two existing depleted-squad locks (back-fill + terminal refusal). |
 #endregion

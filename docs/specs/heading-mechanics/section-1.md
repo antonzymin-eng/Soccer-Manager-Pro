@@ -1,7 +1,7 @@
 # Heading Mechanics Specification #10 — Section 1: Purpose & Scope
 
 **Created:** May 16, 2026
-**Version:** 0.1
+**Version:** 0.3
 **Status:** DRAFT
 **Purpose:** Establish the scope of the Heading Mechanics specification,
 out-of-scope items, the eighteen pre-committed Key Design Decisions

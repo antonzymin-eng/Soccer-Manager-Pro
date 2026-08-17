@@ -1,6 +1,7 @@
 // File:     src/heading-mechanics/HeadingMechanicsConstants.cs
 // Created:  2026-05-28
-// Modified: 2026-05-28
+// Modified: 2026-08-09 (ERR-010-002 §3.5.1 constants, recorded retroactively at the AR over that landing;
+//           MaxRangeLaunchComponent retired in the same pass — see version history rows 1.4 and 1.5)
 // Author:   —
 // Spec:     Heading Mechanics #10 §3.1, KD-11, FR-HE-014, Code Standards #20
 // Purpose:  All numeric constants for the heading mechanics system. No magic literals in formula files.
@@ -64,6 +65,23 @@ namespace TacticalDirector.HeadingMechanics
         /// <summary>[FIXED] Half-coefficient in the kinematic equation s = v₀t + ½at². §3.3 KD-18 / §3.8.</summary>
         public const float KINEMATIC_HALF_COEFF = 0.5f;
 
+        /// <summary>
+        /// [FIXED] The 2 in the kinematic relation v² = u² + 2as, as it appears in §3.5.1's projectile
+        /// launch-angle discriminant v⁴ − g(gR² + 2·Δz·v²). Distinct from
+        /// <see cref="REFLECTION_FORMULA_COEFF"/>, which is the 2 of the reflection identity — same
+        /// number, unrelated derivations, so they do not share a name (FR-CS-016).
+        /// Heading Mechanics #10 §3.5.1 (ERR-010-002).
+        /// </summary>
+        public const float KINEMATIC_TWO_COEFF = 2.0f;
+
+        /// <summary>
+        /// [FIXED] The contact-quality scalar of a perfect contact, i.e. the top of §3.4's [0, 1] range.
+        /// §3.5.1 solves the aim at the speed a perfect contact would carry, because solving it at the
+        /// achieved speed would be circular — achieved speed follows from quality, and quality follows
+        /// from the error between the aim and what was achieved. Heading Mechanics #10 §3.5.1 (ERR-010-002).
+        /// </summary>
+        public const float PERFECT_CONTACT_QUALITY = 1.0f;
+
         #endregion
 
         #region Derived
@@ -89,6 +107,15 @@ namespace TacticalDirector.HeadingMechanics
         /// </summary>
         public static readonly int FramesPerTacticalTick =
             (int)(TickRatePhysicsHz / TickRateTacticalHz);
+
+        /// <summary>
+        /// [DERIVED] Linear-magnitude epsilon for degenerate-length guards (m).
+        /// Formula: sqrt(SURFACE_NORMAL_EPSILON_SQ). Heading Mechanics #10 §3.5.1 (ERR-010-002).
+        /// Source constants: SURFACE_NORMAL_EPSILON_SQ (Fixed const — always available).
+        /// Exists so §3.5.1's range and speed guards test the same threshold as §3.5's squared guards
+        /// rather than introducing a second, silently different epsilon.
+        /// </summary>
+        public static readonly float SurfaceNormalEpsilon = Mathf.Sqrt(SURFACE_NORMAL_EPSILON_SQ);
 
         /// <summary>
         /// [DERIVED] Half the FIFA goal width (m). Used for own-goal bounding box computation (§3.8).
@@ -356,4 +383,14 @@ namespace TacticalDirector.HeadingMechanics
 // |         |            |        | DuelFrameMatchToleranceS [GT] added. AR-2 M-2: MS_PER_SECOND [FIXED], FrameS [DERIVED];  |
 // |         |            |        | FrameMs formula uses MS_PER_SECOND. AR-2 M-3: PitchCentreYM [DERIVED].                  |
 // |         |            |        | AR-2 M-4: REFLECTION_FORMULA_COEFF [FIXED]. AR-2 M-6: KINEMATIC_HALF_COEFF [FIXED].     |
+// | 1.4     | 2026-08-09 | —      | ERR-010-002 (§3.5.1 aim realization): + KINEMATIC_TWO_COEFF, PERFECT_CONTACT_QUALITY     |
+// |         |            |        | [FIXED]; + SurfaceNormalEpsilon, MaxRangeLaunchComponent [DERIVED]. No new [GT], so      |
+// |         |            |        | inside the KD-W1 freeze. ROW ADDED RETROACTIVELY at the adversarial review over that     |
+// |         |            |        | landing — the landing itself shipped these four constants with no version row and no     |
+// |         |            |        | Modified: update, the sixth consecutive FR-CS-056/057 recurrence in this repo.           |
+// | 1.5     | 2026-08-09 | —      | AR over the ERR-010-002 landing: MaxRangeLaunchComponent RETIRED. sqrt(1/2) is the       |
+// |         |            |        | max-range launch component only for a target at contact height; a header contacts near   |
+// |         |            |        | 2.3 m and aims at the ground, so the constant asserted in its own name something that    |
+// |         |            |        | was false on essentially every real header. §3.5.1's unreachable-target branch now       |
+// |         |            |        | computes tan(theta) = v / sqrt(v^2 - 2*g*dz) inline; no constant replaces it.            |
 #endregion

@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.2 — PASS-1 adversarial review fix pass; H2/H4/M2/M3/M6 resolved)
-**Version:** 0.2
+**Last Updated:** August 12, 2026 (v0.3 — KD-6 revised (`ERR-014-006`, wiring backlog W2): §2.2.3 `TackleIntentRequest` "read by" clause corrected — #8/#3 dispatch is dead; new §2.2.8 `TackleDuelInputs` and §2.2.9 `TackleOutcome` structs added.)
+**Version:** 0.3
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0 (May 17, 2026)
 
@@ -113,9 +113,15 @@ stale.
 ### 2.2.3 `TackleIntentRequest` (Stage 1; spec'd at Stage 0)
 
 One instance per eligible agent per tick (only produced for agents within
-`TACKLE_ELIGIBLE_RADIUS_M [GT]` of their assigned opponent). Written by
-#14; read by #8, which translates it into an `AgentAction` dispatched
-to Collision System #3.
+`TACKLE_ELIGIBLE_RADIUS_M [GT]` of their assigned opponent). Written by #14.
+
+**Amended (KD-6 revised — `ERR-014-006`):** this struct's "read by" clause
+previously read "read by #8, which translates it into an `AgentAction`
+dispatched to Collision System #3" — that dispatch has no working delegate
+(§1.5 KD-6). A `COMMIT` intent that the composition root turns into a
+committed challenge is instead read by `TackleOutcomeResolver` (§2.2.8,
+§3.6.5), together with the new `TackleDuelInputs` (§2.2.9). #8 and #3 are
+no longer readers of this struct.
 
 ```
 readonly struct TackleIntentRequest
@@ -197,6 +203,55 @@ Stage 1) and for integration tests (§5). The snapshot carries the same fields
 as `MarkDirective` plus the full per-agent `MarkAssignment[]` slice.
 
 Channels are deferred — see §7.5, ERR-014-002, ERR-014-003.
+
+### 2.2.8 `TackleDuelInputs` (Stage 0; new — KD-6 revised, `ERR-014-006`)
+
+The inputs to one §3.6.5 tackle duel: the two players' relevant abilities,
+normalized to `[0.0, 1.0]`, plus the geometry of the challenge. Constructed
+by the composition root from the #7 perception snapshot and #14's own
+`TackleIntentRequest.approachAngle`; consumed by `TackleOutcomeResolver`
+(§2.2.9). Projected floats only — no roster or engine identity crosses
+this boundary (reference-direction rule: Player Database #27 sits above
+Mechanics).
+
+```
+readonly struct TackleDuelInputs
+{
+    float   tacklerTackling;    // [0,1] — tackler's Tackling attribute
+    float   tacklerAggression;  // [0,1] — tackler's Aggression attribute
+    float   carrierDribbling;   // [0,1] — carrier's Dribbling attribute
+    float   carrierBalance;     // [0,1] — carrier's Balance attribute
+    float   approachAngle;      // [0,π] rad — §2.2.3's approachAngle, reused
+    float   reachFraction;      // [0,1] — tackler-to-BALL separation as a
+                                 // fraction of the contact radius (§3.6.5.4)
+}
+```
+
+`Tackling` and `Aggression` are read from the tackler; `Dribbling` and
+`Balance` from the carrier (§3.6.5.6, doctrine §6 P3). `approachAngle` is
+not a from-behind indicator — see §3.6.5.6's note on `TackleIntentRequest`'s
+corrected XML doc.
+
+### 2.2.9 `TackleOutcome` (Stage 0; new — KD-6 revised, `ERR-014-006`)
+
+The result of one resolved tackle duel (§3.6.5.2). A four-value byte enum,
+produced by `TackleOutcomeResolver.Resolve(TackleDuelInputs, float uniform)`
+from a single caller-supplied uniform draw — the resolver holds no RNG
+service state and draws no second stream. Ordinals are stable and
+append-only: the outcome reaches match flow and is digest-visible.
+
+```
+enum TackleOutcome : byte
+{
+    Missed    = 0,   // challenge did not connect; possession unchanged; nothing emitted
+    BallWon   = 1,   // tackler takes the ball cleanly and becomes the holder
+    BallLoose = 2,   // carrier dispossessed; ball resolves via ordinary loose-ball paths
+    Foul      = 3,   // challenge is a foul on the tackler; match-flow discipline path owns the card
+}
+```
+
+Implemented in `src/defensive-ai/TackleDuelInputs.cs`, `TackleOutcome.cs`,
+and `TackleOutcomeResolver.cs` (wiring backlog W2, August 12, 2026).
 
 ## 2.3 Inputs (Read-Only at Tick Start)
 
@@ -306,3 +361,4 @@ and F6 in #13 §2.4). No special failure mode is required because the
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent (claude-sonnet-4-6 / draft-defensive-ai) | Initial draft from `outline-detailed.md` v1.0. §2.1 (37 FRs FR-DA-001..037), §2.2 (7 structs), §2.3 (inputs table), §2.4 (F1–F5 failure modes) authored. Data structure field definitions follow `pressing-ai/section-2.md` v0.2 readonly-struct convention. |
 | 0.2 | May 17, 2026 | AI agent | PASS-1 adversarial review fix pass. H2: `MarkAssignment` struct (§2.2.2) now declares `overriddenThisTick` and `isManuallyAssigned` fields that were used in §3 algorithms but absent from struct definition; `targetEntityId` comment clarified to "null for ZONAL and COVER_GK_ZONE". H4: `MarkHysteresisState` struct (§2.2.4) rewritten to four-field definition matching §3.11.2 (`dwellCounter`, `candidateMode`, `candidateTargetId`, `holdTicks`); v0.1 had only `currentMode` + `dwellCounter`. M2: `OffsideLineState` struct (§2.2.5) now declares `coverGkZoneActiveTicks` field used in §3.9.2/§3.13 but missing from struct. M3: §2.3 inputs table row "Per-agent FirstTouch" corrected to "Per-opponent FirstTouch" (#14 reads opponents, not own-team agents). M6: `Tackling` description in §2.3 clarified to "Declared for future tackle-quality use; not consumed by §3.6 algorithm at Stage 0". |
+| 0.3 | August 12, 2026 | AI agent (wiring backlog W2) | KD-6 revised (`ERR-014-006`): §2.2.3 `TackleIntentRequest`'s "read by #8, which translates it into an `AgentAction` dispatched to Collision System #3" clause corrected — that dispatch has no working delegate; a committed intent is now resolved by #14 itself. Added §2.2.8 `TackleDuelInputs` and §2.2.9 `TackleOutcome`, the two new public types backing §3.6.5's tackle-outcome resolution. Implemented in `src/defensive-ai/TackleDuelInputs.cs`, `TackleOutcome.cs`, `TackleOutcomeResolver.cs`. |

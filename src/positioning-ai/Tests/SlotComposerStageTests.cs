@@ -32,6 +32,8 @@ namespace TacticalDirector.PositioningAI.Tests
                 BallVxFiltered          = 0f,
                 PossessionOwnerEntityId = 6,      // CM1 carries the ball (own team in possession)
                 PossessionOwnerIsOwnTeam = true,
+                HasTeamPossession = true,         // ERR-012-011 — carrier ⇒ team possession
+                TeamPossessionIsOwnTeam = true,
                 ActiveOutfieldCount     = 10,
             };
             FormationSlotRecord[] f = PositioningAIConstants.Family442;

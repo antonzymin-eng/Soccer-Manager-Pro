@@ -1,7 +1,7 @@
 # Heading Mechanics Specification #10 — Section 9: Approval Checklist
 
 **Created:** May 16, 2026
-**Version:** 0.1
+**Version:** 0.3
 **Status:** DRAFT — checklist not yet exercised; pending pass-1
 adversarial review of the section files, then pass-2 fix cycle,
 then sign-offs.

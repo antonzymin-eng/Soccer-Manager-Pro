@@ -1,16 +1,18 @@
 // File:     src/season-save/PlayerCareerStates.cs
 // Created:  2026-08-06
-// Modified: 2026-08-07
+// Modified: 2026-08-11 (AR pass 6, M2(b) — RequireBirthWorldDayWithinClock — v1.18)
 // Author:   —
 // Spec:     Training System #29 §3.1/§3.3/§3.5, §4.3 (seam contracts), FR-TR-004/016/022/023/025;
 //           Injuries & Medical #41 §3.1/§3.5, §4.3, FR-MD-003/009/010/022/023/025/027;
 //           Season & Competition Loop #30 §3.3 (KD-2 slot order), §3.5 (the boundary), FR-SN-034;
+//           Player Progression #28 (ERR-028-014 — the progression cursor has NO sentinel exemption,
+//           unlike its #29/#41 siblings, because #28's fresh state derives age from BirthWorldDay);
 //           path-to-playable D2/D3 (T2); Code Standards #20
-// Purpose:  The #30-side owner of the per-club #29 training and #41 medical state — the thing that was
-//           missing at T1, when both codecs existed and nothing constructed a state set for them to
-//           encode. Holds both sets keyed by (ClubId, PlayerId), drives the two day steps at #30's
-//           slot-2 / slot-4, answers the availability question squad selection reads, projects
-//           match-entry fatigue, and keeps roster membership in lockstep (FR-TR-025 / FR-MD-025).
+// Purpose:  The #30-side owner of the per-club #29 training, #41 medical and #30 appearance state.
+//           Holds the three sets keyed by (ClubId, PlayerId), drives the two day steps at #30's
+//           slot-2 / slot-4, supplies the FR-MD-010 MatchLoad from the appearance record, answers the
+//           availability question squad selection reads, projects match-entry fatigue, and keeps
+//           roster membership in lockstep (FR-TR-025 / FR-MD-025).
 
 using System;
 using System.Collections.Generic;
@@ -18,6 +20,7 @@ using System.Collections.Generic;
 using TacticalDirector.InjuriesMedical;
 using TacticalDirector.MatchEngine;
 using TacticalDirector.PlayerDatabase;
+using TacticalDirector.PlayerProgression;
 using TacticalDirector.TrainingSystem;
 
 namespace TacticalDirector.SeasonSave
@@ -34,9 +37,10 @@ namespace TacticalDirector.SeasonSave
     /// key sets are checked to agree.
     /// </para>
     /// <para>
-    /// <b>#41's occurrence draw is OFF by default</b> (<see cref="InjuryOccurrenceEnabled"/>,
-    /// FR-MD-027). The wiring is what T2 delivers; arming it is the balance pass's, and the reason is
-    /// measured rather than cautious — see the property's own documentation.
+    /// <b>#41's occurrence draw is ARMED</b> (<see cref="InjuryOccurrenceEnabled"/>, FR-MD-027 as
+    /// revised at the balance pass): construction declares the dial's position explicitly, production
+    /// passes <c>true</c>, and the OFF position remains supported for isolation — see the property's
+    /// own documentation.
     /// </para>
     /// <para>
     /// <b>One-way composition.</b> #29 and #41 reference neither #30 nor each other's step; this type
@@ -57,10 +61,19 @@ namespace TacticalDirector.SeasonSave
         // Per club, parallel and ascending by ClubId. Each club's PlayerIds are ascending too, so a
         // lookup is a binary search and the codecs' canonical-order requirement is satisfied by
         // construction rather than by a sort at encode time.
+        //
+        // Three parallel state sets is the ceiling for this shape (AR pass 2). Every writer must
+        // already touch all of them in lockstep (SyncToRoster stages five arrays; FromBlocks
+        // coherence-checks three block sets pairwise), and each addition multiplies the
+        // wrong-pairing surface the T0 AR's SetFocus finding came from. A FOURTH per-player set
+        // (#44 suspensions is the likely candidate) collapses this into one per-player career
+        // struct per club — one array, one pairing, the codecs reading fields off it — rather than
+        // extending the parallel walk again.
         private readonly List<int> _clubIds = new List<int>();
         private readonly List<int[]> _playerIds = new List<int[]>();
         private readonly List<TrainingState[]> _training = new List<TrainingState[]>();
         private readonly List<InjuryState[]> _injury = new List<InjuryState[]>();
+        private readonly List<AppearanceState[]> _appearance = new List<AppearanceState[]>();
 
         private PlayerCareerStates(bool injuryOccurrenceEnabled)
         {
@@ -87,25 +100,23 @@ namespace TacticalDirector.SeasonSave
         public int RosterGeneration { get; private set; }
 
         /// <summary>
-        /// The #41 KD-8 dial (FR-MD-027). <b>Off by default, deliberately.</b>
+        /// The #41 KD-8 dial (FR-MD-027). <b>ARMED at the balance pass — a production career is
+        /// constructed with this ON</b>; the measured rates at the retuned constants sit in the
+        /// football band (league ~780 injuries/season over the 20-club bootstrap, starters ~2.1,
+        /// reserves ~1.1, squad unavailability ~9%, locked league-wide by the season-scale
+        /// instrument). The pre-pass absurdities the dial was shipped OFF for — 23%/day for a fresh
+        /// regen, 43%/day half-fatigued, exactly-0-forever on the default focus — are gone
+        /// (ERR-041-011; the characterization test carries the AFTER numbers).
         /// <para>
-        /// The fifth adversarial-review pass over #41's T0 landing measured the daily occurrence
-        /// probability through the real producer chain rather than through a forced risk, and it is two
-        /// to three orders of magnitude out at career inputs in both directions: a freshly inserted
-        /// player is ~23% likely to be injured on his first day (his conditioning starts
-        /// <c>ConditionMax − ConditionStart</c> below the ceiling and that shortfall carries weight 1 on
-        /// the very scale the draw denominator derives from), a half-fatigued player ~43% per day, and
-        /// the default <see cref="TrainingFocus.Balanced"/> focus converges on exactly 0 forever. Those
-        /// three numbers are locked by a characterization test in #41's own suite so the balance pass
-        /// leaves a visible diff, and KD-W1 forbids re-tuning a <c>[GT]</c> ahead of that pass.
+        /// <b>The argument is REQUIRED, not defaulted, deliberately:</b> a default — in either
+        /// position — changes behaviour at every omitting call site with no diff at those sites the
+        /// day it flips. Construction declares the position: production passes <c>true</c>; a test
+        /// isolating the recovery-only path passes <c>false</c>, which stays supported and locked
+        /// both ways (a dial-off season injures nobody; a dial-on season injures at the band).
         /// </para>
         /// <para>
-        /// So T2 wires the call path and leaves it disarmed: with the dial off, <c>AdvanceMedicalDay</c>
-        /// reduces to the recovery countdown with no draw at all, which for a career that has never
-        /// been injured is a no-op over the cursor. Everything downstream of an injury — the
-        /// availability filter, the depleted-squad back-fill, the view models — is live and tested
-        /// against directly-constructed injured states, so flipping this dial at the balance pass is a
-        /// one-argument change rather than a second wiring pass.
+        /// With the dial off, <c>AdvanceMedicalDay</c> reduces to the recovery countdown with no draw
+        /// at all — the FR-MD-027 identity.
         /// </para>
         /// </summary>
         public bool InjuryOccurrenceEnabled { get; }
@@ -156,7 +167,7 @@ namespace TacticalDirector.SeasonSave
         /// <exception cref="ArgumentNullException">A required argument is null.</exception>
         /// <exception cref="ArgumentException"><paramref name="clubIds"/> repeats a club, or a club cannot be resolved to a roster.</exception>
         public static PlayerCareerStates ForLeague(
-            ISquadProvider squads, int[] clubIds, bool injuryOccurrenceEnabled = false)
+            ISquadProvider squads, int[] clubIds, bool injuryOccurrenceEnabled)
         {
             if (squads == null)
             {
@@ -199,17 +210,58 @@ namespace TacticalDirector.SeasonSave
                 career._playerIds.Add(ids);
                 career._training.Add(training);
                 career._injury.Add(injury);
+                // default(AppearanceState) is the valid fresh state here — no day-0 trap, see the type.
+                career._appearance.Add(new AppearanceState[ids.Length]);
             }
+
+            RequireGloballyUniquePlayerIds(career._clubIds, career._playerIds, nameof(squads));
 
             return career;
         }
 
         /// <summary>
-        /// Rebuilds a career's state from the two decoded save blocks — the counterpart of
+        /// The #41 occurrence-draw key precondition, enforced at the one layer that spans clubs
+        /// (ERR-041-019, AR pass 3): the draw key is <c>(worldSeed, playerId, actionOrdinal = worldDay × RADIX + purpose)</c>
+        /// with NO club term (#41 §3.1.1), but #27 promises <c>PlayerId</c> uniqueness only WITHIN a
+        /// club — this very class is keyed <c>(ClubId, PlayerId)</c> on that premise. Two clubs
+        /// carrying the same id would draw bit-identical injury luck on every world day forever,
+        /// with matching severities whenever their risks are close: silent, total, and
+        /// indistinguishable from chance. Safe today only because <c>RosterGenerator</c> happens to
+        /// allocate <c>clubId × CLUB_SQUAD_SIZE + local</c>; the moment another allocator exists
+        /// (#42 youth intake, #31 transfers) that accident ends, so the precondition fails loud here
+        /// rather than surfacing as two players who are always injured together.
+        /// </summary>
+        internal static void RequireGloballyUniquePlayerIds(
+            IReadOnlyList<int> clubIds, IReadOnlyList<int[]> playerIds, string paramName)
+        {
+            var owner = new Dictionary<int, int>();
+            for (int c = 0; c < clubIds.Count; c++)
+            {
+                int[] ids = playerIds[c];
+                for (int i = 0; i < ids.Length; i++)
+                {
+                    if (owner.TryGetValue(ids[i], out int otherClub))
+                    {
+                        throw new ArgumentException(
+                            $"Player id {ids[i]} is carried by BOTH club {otherClub} and club "
+                            + $"{clubIds[c]}. #41's occurrence draw is keyed on (worldSeed, playerId, "
+                            + "actionOrdinal) with no club term (#41 §3.1.1), so two players sharing an id "
+                            + "would draw identical injury luck forever. Player ids must be globally "
+                            + "unique across the career (ERR-041-019).",
+                            paramName);
+                    }
+
+                    owner.Add(ids[i], clubIds[c]);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Rebuilds a career's state from the three decoded save blocks — the counterpart of
         /// <see cref="TrainingBlocks"/> / <see cref="MedicalBlocks"/>, and what
         /// <see cref="SeasonSaveContents"/> is fed into after a load.
         /// <para>
-        /// <b>This is the one place the two blocks are checked against each other</b>, and the only
+        /// <b>This is the one place the three blocks are checked against each other</b>, and the only
         /// layer that can be: each codec sees one block and is forbidden to read the other (#29 §4.4 /
         /// #41 §4.4 blob independence), so "the training block and the medical block describe the same
         /// squads" is a coherence rule with no other owner — the same argument that puts the KD-4 cursor
@@ -223,18 +275,23 @@ namespace TacticalDirector.SeasonSave
         /// hands in the very arrays <see cref="SeasonSaveManager.Load"/> returns inside
         /// <see cref="SeasonSaveContents"/> — sharing them would make every holder of those contents a
         /// second writer of #29/#41 state, which is precisely what <see cref="TrainingBlocks"/> being
-        /// <c>internal</c> prevents on the save side. The player-id arrays are shared; nothing mutates them.
+        /// <c>internal</c> prevents on the save side. The player-id arrays are copied for the same
+        /// reason (AR pass 3): they are the binary-search keys every lookup runs on, so an aliased
+        /// write to <c>contents.TrainingClubs[c].PlayerIds</c> would break the strictly-ascending
+        /// precondition this method just enforced.
         /// </para>
         /// </summary>
         /// <param name="training">The decoded #29 blocks.</param>
         /// <param name="medical">The decoded #41 blocks.</param>
+        /// <param name="appearance">The decoded #30 appearance blocks — required, never null-meaning-empty (the T1 AR's silent-empty-career rule).</param>
         /// <param name="injuryOccurrenceEnabled">The #41 KD-8 dial; see <see cref="InjuryOccurrenceEnabled"/>.</param>
-        /// <exception cref="ArgumentNullException">Either array is null.</exception>
-        /// <exception cref="ArgumentException">The two blocks disagree on the club set or on any club's player set.</exception>
+        /// <exception cref="ArgumentNullException">Any array is null.</exception>
+        /// <exception cref="ArgumentException">The blocks disagree on the club set or on any club's player set.</exception>
         public static PlayerCareerStates FromBlocks(
             ClubTrainingStates[] training,
             ClubInjuryStates[] medical,
-            bool injuryOccurrenceEnabled = false)
+            ClubAppearanceStates[] appearance,
+            bool injuryOccurrenceEnabled)
         {
             if (training == null)
             {
@@ -246,11 +303,17 @@ namespace TacticalDirector.SeasonSave
                 throw new ArgumentNullException(nameof(medical));
             }
 
-            if (training.Length != medical.Length)
+            if (appearance == null)
+            {
+                throw new ArgumentNullException(nameof(appearance));
+            }
+
+            if (training.Length != medical.Length || training.Length != appearance.Length)
             {
                 throw new ArgumentException(
-                    $"The training block carries {training.Length} clubs and the medical block "
-                    + $"{medical.Length}; the two describe the same career and must agree.",
+                    $"The training block carries {training.Length} clubs, the medical block "
+                    + $"{medical.Length} and the appearance block {appearance.Length}; the three "
+                    + "describe the same career and must agree.",
                     nameof(medical));
             }
 
@@ -260,6 +323,7 @@ namespace TacticalDirector.SeasonSave
             {
                 ClubTrainingStates t = training[c];
                 ClubInjuryStates m = medical[c];
+                ClubAppearanceStates a = appearance[c];
 
                 // A default-valued block: its constructor refuses nulls, so the only way to hold one is
                 // to have never constructed it (`new ClubTrainingStates[n]`). Caught here rather than
@@ -272,31 +336,40 @@ namespace TacticalDirector.SeasonSave
                         t.PlayerIds == null || t.States == null ? nameof(training) : nameof(medical));
                 }
 
-                if (t.ClubId != m.ClubId)
+                if (a.PlayerIds == null || a.States == null)
                 {
                     throw new ArgumentException(
-                        $"Block {c}: the training block is club {t.ClubId} and the medical block is "
-                        + $"club {m.ClubId}. Both codecs canonicalize to ascending ClubId, so this is a "
-                        + "mismatched pair, not a re-ordering.",
+                        $"Block {c} of the appearance set is a default value, not a constructed one.",
+                        nameof(appearance));
+                }
+
+                if (t.ClubId != m.ClubId || t.ClubId != a.ClubId)
+                {
+                    throw new ArgumentException(
+                        $"Block {c}: the training block is club {t.ClubId}, the medical block club "
+                        + $"{m.ClubId}, the appearance block club {a.ClubId}. All three codecs "
+                        + "canonicalize to ascending ClubId, so this is a mismatched set, not a "
+                        + "re-ordering.",
                         nameof(medical));
                 }
 
-                if (t.Count != m.Count)
+                if (t.Count != m.Count || t.Count != a.Count)
                 {
                     throw new ArgumentException(
-                        $"Club {t.ClubId}: the training block carries {t.Count} players and the medical "
-                        + $"block {m.Count}.",
-                        nameof(medical));
+                        $"Club {t.ClubId}: the training block carries {t.Count} players, the medical "
+                        + $"block {m.Count}, the appearance block {a.Count}.",
+                        t.Count != m.Count ? nameof(medical) : nameof(appearance));
                 }
 
                 for (int i = 0; i < t.Count; i++)
                 {
-                    if (t.PlayerIds[i] != m.PlayerIds[i])
+                    if (t.PlayerIds[i] != m.PlayerIds[i] || t.PlayerIds[i] != a.PlayerIds[i])
                     {
                         throw new ArgumentException(
                             $"Club {t.ClubId}, entry {i}: the training block holds player "
-                            + $"{t.PlayerIds[i]} and the medical block player {m.PlayerIds[i]}.",
-                            nameof(medical));
+                            + $"{t.PlayerIds[i]}, the medical block player {m.PlayerIds[i]}, the "
+                            + $"appearance block player {a.PlayerIds[i]}.",
+                            t.PlayerIds[i] != m.PlayerIds[i] ? nameof(medical) : nameof(appearance));
                     }
 
                     // EVERY lookup in this class is a binary search over these ids (IndexOfPlayer), so
@@ -324,8 +397,11 @@ namespace TacticalDirector.SeasonSave
                         nameof(training));
                 }
 
-                // The player-id arrays are shared: they are never mutated here, the two blocks agree
-                // on them by the check above, and both codecs already canonicalized them ascending.
+                // The id array is copied too (AR pass 3): "never mutated HERE" was true and beside
+                // the point — ClubTrainingStates.PlayerIds is a public field over a mutable array,
+                // and an aliased caller writing contents.TrainingClubs[c].PlayerIds[i] would break
+                // the strictly-ascending precondition enforced twenty lines above, reopening the
+                // pass-1 silent-overwrite High through the keys instead of the states.
                 //
                 // The STATE arrays are copied, and that is not a defensive habit — it is the single-
                 // writer contract (FR-TR-004 / FR-TR-023 / FR-MD-003). ClubTrainingStates.States is a
@@ -344,12 +420,19 @@ namespace TacticalDirector.SeasonSave
                 Array.Copy(t.States, trainingStates, t.Count);
                 var injuryStates = new InjuryState[m.Count];
                 Array.Copy(m.States, injuryStates, m.Count);
+                var appearanceStates = new AppearanceState[a.Count];
+                Array.Copy(a.States, appearanceStates, a.Count);
+                var playerIds = new int[t.Count];
+                Array.Copy(t.PlayerIds, playerIds, t.Count);
 
                 career._clubIds.Add(t.ClubId);
-                career._playerIds.Add(t.PlayerIds);
+                career._playerIds.Add(playerIds);
                 career._training.Add(trainingStates);
                 career._injury.Add(injuryStates);
+                career._appearance.Add(appearanceStates);
             }
+
+            RequireGloballyUniquePlayerIds(career._clubIds, career._playerIds, nameof(training));
 
             return career;
         }
@@ -394,6 +477,264 @@ namespace TacticalDirector.SeasonSave
             return blocks;
         }
 
+        /// <summary>The #30 appearance state as the per-club blocks <see cref="AppearanceSaveCodec.Encode"/> takes, <c>internal</c> on the same borrowing / single-writer terms as <see cref="TrainingBlocks"/>.</summary>
+        internal ClubAppearanceStates[] AppearanceBlocks()
+        {
+            var blocks = new ClubAppearanceStates[_clubIds.Count];
+            for (int c = 0; c < blocks.Length; c++)
+            {
+                blocks[c] = new ClubAppearanceStates(_clubIds[c], _playerIds[c], _appearance[c]);
+            }
+
+            return blocks;
+        }
+
+        /// <summary>
+        /// Records that <paramref name="fieldedPlayerIds"/> were fielded by <paramref name="clubId"/>
+        /// on <paramref name="worldDay"/> — the ERR-041-010(b) appearance record, written by
+        /// <see cref="SeasonLoop.AdvanceAndPlayNextRound"/> after each fixture resolves, on BOTH
+        /// resolution paths. <c>internal</c>: the season loop is the single production writer, the
+        /// same discipline as <see cref="SetMedicalState"/>.
+        /// <para>
+        /// Validate-all-then-write per club: every id is resolved before any bit is set, so an id the
+        /// career does not carry leaves the whole club's matchday unrecorded rather than half-recorded.
+        /// Re-recording the same day is idempotent (<see cref="AppearanceWindow.Record"/> is a bit-OR).
+        /// </para>
+        /// </summary>
+        /// <param name="clubId">The fielding club.</param>
+        /// <param name="fieldedPlayerIds">The fielded players — the starting XI the selector chose.</param>
+        /// <param name="worldDay">The fixture day.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="fieldedPlayerIds"/> is null.</exception>
+        /// <exception cref="ArgumentException">The club or a fielded player is not carried by this career, or the day precedes an already-recorded appearance.</exception>
+        internal void RecordAppearances(int clubId, int[] fieldedPlayerIds, uint worldDay)
+        {
+            int club;
+            int[] indices = ValidateAppearanceWrite(clubId, fieldedPlayerIds, worldDay, out club);
+            WriteAppearances(club, indices, worldDay);
+        }
+
+        /// <summary>
+        /// The cursor-vs-clock rule over the LIVE state (AR pass 6 M3) — the composition-boundary
+        /// twin of <c>SeasonSaveManager</c>'s block-level walk: a cursor AHEAD of the clock is
+        /// silently skipped by the F6 idempotency until the clock catches up; a cursor LAGGING by
+        /// two or more wedges the pairing permanently (F7 refuses the gap, and the day steps run
+        /// before the clock increment, so it can never close). The appearance anchor has no gap
+        /// contract and is ahead-checked only. Sentinels are exempt — a fresh state is coherent at
+        /// any clock.
+        /// </summary>
+        /// <param name="worldTick">The world clock the career is being paired with.</param>
+        /// <exception cref="InvalidOperationException">Any player's cursor is outside the coherent band.</exception>
+        internal void RequireCursorsWithinClock(uint worldTick)
+        {
+            for (int c = 0; c < _clubIds.Count; c++)
+            {
+                int[] ids = _playerIds[c];
+                TrainingState[] training = _training[c];
+                InjuryState[] injury = _injury[c];
+                AppearanceState[] appearance = _appearance[c];
+
+                for (int i = 0; i < ids.Length; i++)
+                {
+                    RequireTrainingCursorWithinClock(
+                        worldTick, _clubIds[c], ids[i],
+                        training[i].LastAdvancedWorldDay, "Career/world pairing");
+                    RequireMedicalCursorWithinClock(
+                        worldTick, _clubIds[c], ids[i],
+                        injury[i].LastAdvancedWorldDay, "Career/world pairing");
+                    RequireAppearanceAnchorWithinClock(
+                        worldTick, _clubIds[c], ids[i],
+                        appearance[i].BitsAsOfWorldDay, "Career/world pairing");
+                }
+            }
+        }
+
+        /// <summary>
+        /// The training-cursor predicate BOTH boundaries share (AR pass 9 M1) — the composition
+        /// walk above and <c>SeasonSaveManager</c>'s block-level walk both delegate here, the
+        /// <see cref="RequireGloballyUniquePlayerIds"/> shape: one rule, one owner, so the two
+        /// gates cannot drift apart. Bidirectional: AHEAD is silently skipped by the F6
+        /// idempotency until the clock catches up; a lag of two or more wedges the pairing
+        /// permanently (F7 refuses the gap, and the day steps run before the clock increment,
+        /// so it can never close). The sentinel is exempt — a fresh state is coherent at any clock.
+        /// </summary>
+        internal static void RequireTrainingCursorWithinClock(
+            uint worldTick, int clubId, int playerId, uint trainingDay, string boundary)
+        {
+            if (trainingDay != TrainingSystemConstants.TRAINING_NOT_ADVANCED_SENTINEL
+                && (trainingDay > worldTick || worldTick > trainingDay + 1))
+            {
+                throw new InvalidOperationException(
+                    $"{boundary} is incoherent: club {clubId} player {playerId}'s "
+                    + $"training cursor ({trainingDay}) is "
+                    + (trainingDay > worldTick ? "ahead of" : "more than one day behind")
+                    + $" the world clock ({worldTick}).");
+            }
+        }
+
+        /// <summary>The medical-cursor twin of <see cref="RequireTrainingCursorWithinClock"/> — same band, same sentinel exemption, one owner for both boundaries (AR pass 9 M1).</summary>
+        internal static void RequireMedicalCursorWithinClock(
+            uint worldTick, int clubId, int playerId, uint medicalDay, string boundary)
+        {
+            if (medicalDay != InjuriesMedicalConstants.MEDICAL_NOT_ADVANCED_SENTINEL
+                && (medicalDay > worldTick || worldTick > medicalDay + 1))
+            {
+                throw new InvalidOperationException(
+                    $"{boundary} is incoherent: club {clubId} player {playerId}'s "
+                    + $"medical cursor ({medicalDay}) is "
+                    + (medicalDay > worldTick ? "ahead of" : "more than one day behind")
+                    + $" the world clock ({worldTick}).");
+            }
+        }
+
+        /// <summary>
+        /// The #28 progression-cursor predicate — the FOURTH persisted per-player cursor, checked on
+        /// the same ahead/one-lag band as its #29/#41 siblings (ERR-028-007). Ahead of the clock silently
+        /// freezes growth until the clock catches up; lagging by two or more is WORSE here than for the
+        /// siblings, because <c>ProgressionEngine.AdvanceDay</c> REPLAYS a gap — a mispaired file would
+        /// bank N days of growth in one call from a single day's inputs, invisibly. Unlike its siblings,
+        /// the sentinel is NOT exempt here (ERR-028-014): #29's and #41's fresh states carry no
+        /// clock-anchored quantity, so "never advanced" means the same thing at every world day, but
+        /// #28's derives age from <c>BirthWorldDay</c>, so a never-advanced #28 state means something
+        /// different at every clock value — the premise the siblings' exemption rests on is false for
+        /// this one. One owner, all boundaries delegating (the AR pass-9 M1 shape).
+        /// </summary>
+        internal static void RequireProgressionCursorWithinClock(
+            uint worldTick, int clubId, int playerId, uint progressionDay, string boundary)
+        {
+            // ERR-028-014: NO sentinel exemption. That exemption was copied from the #29/#41 siblings,
+            // where it is sound — their fresh states (fatigue 0, no injuries) carry no clock-anchored
+            // quantity, so "never advanced" means the same thing on every world day. #28's fresh state
+            // is the only one of the four that DOES carry one: age is derived from BirthWorldDay, so a
+            // never-advanced #28 state means something different at every clock value. The premise the
+            // siblings' exemption rests on is false here, and inheriting it left the gate with a hole
+            // shaped exactly like the state every new game starts in.
+            if (progressionDay > worldTick || worldTick > progressionDay + 1)
+            {
+                throw new InvalidOperationException(
+                    $"{boundary} is incoherent: club {clubId} player {playerId}'s "
+                    + $"progression cursor ({progressionDay}) is "
+                    + (progressionDay > worldTick ? "ahead of" : "more than one day behind")
+                    + $" the world clock ({worldTick}).");
+            }
+        }
+
+        /// <summary>
+        /// The M2(b) sibling of <see cref="RequireProgressionCursorWithinClock"/>, checked at the same
+        /// two boundaries (this composition walk and <c>SeasonSaveManager</c>'s block-level walk): a
+        /// player's <c>BirthWorldDay</c> anchor must not sit AHEAD of the world clock.
+        /// <para>
+        /// <c>GrowthProjection</c> derives age as <c>(worldDay − BirthWorldDay) / DAYS_PER_YEAR</c>, and
+        /// <c>ProgressionSaveCodec.DescribeOutOfRangeValues</c> has no world day to bound the anchor's
+        /// upper end against — its own ceiling is <c>uint.MaxValue</c>, which rules out anchors that
+        /// cannot correspond to any reachable world day at all, not anchors ahead of THIS clock. A birth
+        /// day ahead of the day actually being advanced to is impossible for a real career (<c>SeedFrom</c>
+        /// anchors at the seed day; the clock only moves forward), and <c>GrowthProjection</c> now fails
+        /// loud on the resulting negative age-days (M2(a)) rather than silently deriving age 0 — but that
+        /// guard only fires once a day step reaches the player. This is the boundary that refuses the
+        /// pairing before it can, ahead-checked only (a birth day exactly on the clock is age 0, which is
+        /// ordinary — a player born today).
+        /// </para>
+        /// </summary>
+        internal static void RequireBirthWorldDayWithinClock(
+            uint worldTick, int clubId, int playerId, long birthWorldDay, string boundary)
+        {
+            if (birthWorldDay > worldTick)
+            {
+                throw new InvalidOperationException(
+                    $"{boundary} is incoherent: club {clubId} player {playerId}'s BirthWorldDay "
+                    + $"({birthWorldDay}) is ahead of the world clock ({worldTick}) — a future-dated "
+                    + "anchor is corrupt state; GrowthProjection would derive a negative age from it "
+                    + "(M2).");
+            }
+        }
+
+        /// <summary>
+        /// The appearance-anchor predicate, ahead-checked only — the anchor has no gap contract
+        /// (a lazily-shifted bitmask is coherent at any lag; shifting is the read's job). One
+        /// owner for both boundaries (AR pass 9 M1).
+        /// </summary>
+        internal static void RequireAppearanceAnchorWithinClock(
+            uint worldTick, int clubId, int playerId, uint appearanceAnchor, string boundary)
+        {
+            if (appearanceAnchor > worldTick)
+            {
+                throw new InvalidOperationException(
+                    $"{boundary} is incoherent: club {clubId} player {playerId}'s "
+                    + $"appearance anchor ({appearanceAnchor}) is ahead of the world clock "
+                    + $"({worldTick}) — with the occurrence dial armed, the slot-4 window read "
+                    + "throws on every later day and the world clock can never advance again "
+                    + "(the career wedges while saving cleanly).");
+            }
+        }
+
+        /// <summary>
+        /// The fixture-pair form (AR pass 3): BOTH clubs validated before EITHER is written — the
+        /// validate-all-then-write discipline <see cref="RecordAppearances"/> keeps within a club,
+        /// applied one level up. Without it, the away side's refusal landed after the home side's
+        /// write, leaving a home XI carrying an appearance for a fixture that was never applied,
+        /// emitted or marked played; the retry converges (the bit-OR is idempotent), but an
+        /// abandoned round kept the phantom.
+        /// </summary>
+        /// <param name="homeClubId">The home club.</param>
+        /// <param name="homeXi">The home fielded eleven.</param>
+        /// <param name="awayClubId">The away club.</param>
+        /// <param name="awayXi">The away fielded eleven.</param>
+        /// <param name="worldDay">The fixture day.</param>
+        /// <exception cref="ArgumentNullException">Either XI is null.</exception>
+        /// <exception cref="ArgumentException">Either club or any fielded player is not carried, or the day precedes an already-recorded appearance — in every case NOTHING has been written for EITHER club.</exception>
+        internal void RecordFixtureAppearances(
+            int homeClubId, int[] homeXi, int awayClubId, int[] awayXi, uint worldDay)
+        {
+            int home;
+            int[] homeIndices = ValidateAppearanceWrite(homeClubId, homeXi, worldDay, out home);
+            int away;
+            int[] awayIndices = ValidateAppearanceWrite(awayClubId, awayXi, worldDay, out away);
+
+            WriteAppearances(home, homeIndices, worldDay);
+            WriteAppearances(away, awayIndices, worldDay);
+        }
+
+        /// <summary>The validating half: resolves the club and every id, and pre-checks the day-regression refusal (AR pass 1 — <see cref="AppearanceWindow.Record"/> must not fire mid-write and leave a club half-recorded). Writes nothing.</summary>
+        private int[] ValidateAppearanceWrite(
+            int clubId, int[] fieldedPlayerIds, uint worldDay, out int club)
+        {
+            if (fieldedPlayerIds == null)
+            {
+                throw new ArgumentNullException(nameof(fieldedPlayerIds));
+            }
+
+            club = RequireClub(clubId);
+            int[] ids = _playerIds[club];
+            AppearanceState[] states = _appearance[club];
+
+            var indices = new int[fieldedPlayerIds.Length];
+            for (int i = 0; i < fieldedPlayerIds.Length; i++)
+            {
+                indices[i] = RequireIndexOfPlayer(ids, clubId, fieldedPlayerIds[i]);
+
+                if (worldDay < states[indices[i]].BitsAsOfWorldDay)
+                {
+                    throw new ArgumentException(
+                        $"Appearance for player {fieldedPlayerIds[i]} on day {worldDay} precedes the "
+                        + $"state's anchor day {states[indices[i]].BitsAsOfWorldDay} — a wrong-career "
+                        + "pairing or clock fault; nothing has been recorded.",
+                        nameof(worldDay));
+                }
+            }
+
+            return indices;
+        }
+
+        /// <summary>The writing half of the appearance record: cannot fail on validated indices.</summary>
+        private void WriteAppearances(int club, int[] indices, uint worldDay)
+        {
+            AppearanceState[] states = _appearance[club];
+            for (int i = 0; i < indices.Length; i++)
+            {
+                AppearanceWindow.Record(ref states[indices[i]], worldDay);
+            }
+        }
+
         /// <summary>
         /// #30's <b>slot-2</b> training seam (#29 §3.5 / FR-TR-004): one
         /// <c>TrainingStep.AdvanceTrainingDay</c> per player of every club, in ascending
@@ -420,12 +761,12 @@ namespace TacticalDirector.SeasonSave
         /// through this wiring is byte-identical to one booted without it until a focus is set.
         /// </para>
         /// </summary>
-        /// <param name="worldDay">The world day being advanced — #30's clock BEFORE its day-9 increment.</param>
+        /// <param name="worldDay">The world day being advanced — #30's clock BEFORE its step-12 increment.</param>
         /// <param name="squads">The rosters the attributes are read from; must match the state's roster (see <see cref="SyncToRoster"/>).</param>
         /// <param name="coach">The #34 staff seam; <see cref="CoachingModifier.Identity"/> until #34 lands.</param>
         /// <exception cref="ArgumentNullException"><paramref name="squads"/> is null.</exception>
         /// <exception cref="ArgumentException">A club or a held player id cannot be resolved against <paramref name="squads"/>, or #29 refuses the day.</exception>
-        public void AdvanceTrainingDay(uint worldDay, ISquadProvider squads, CoachingModifier coach)
+        internal void AdvanceTrainingDay(uint worldDay, ISquadProvider squads, CoachingModifier coach)
         {
             if (squads == null)
             {
@@ -449,6 +790,63 @@ namespace TacticalDirector.SeasonSave
         }
 
         /// <summary>
+        /// Gathers #30's <b>slot-1</b> growth-input batch (#29 §3.5 step 1 / #28 FR-PG-021): each
+        /// player's <c>ComputeTrainingInput</c>, keyed by player id, ready for
+        /// <c>ProgressionEngine.AdvanceDay</c>. This is the composition ERR-029-006 was filed against —
+        /// #29 specifies that #30 gathers the batch and hands it to #28, and until #28 exposed a batch
+        /// entry point there was nothing to hand it to.
+        /// <para>
+        /// <b>A read, never a mutation.</b> <c>ComputeTrainingInput</c> reads only <c>Focus</c>, the
+        /// player's attributes and the coach seam — fields <see cref="AdvanceTrainingDay"/> does not
+        /// write — which is the FR-TR-006 invariant that makes slot 1 and slot 2 order-independent. Call
+        /// this before or after slot 2 and the batch is identical.
+        /// </para>
+        /// <para>
+        /// <b>The ids travel with the inputs</b> so #28 can refuse a batch that does not describe the
+        /// players it is about to advance. That turns "#29's roster view and #28's have drifted apart"
+        /// from a silent mis-attribution of growth into a fail-loud at the seam.
+        /// </para>
+        /// </summary>
+        /// <param name="squads">The rosters the attributes are read from; must match the state's roster.</param>
+        /// <param name="coach">The #34 staff seam; <see cref="CoachingModifier.Identity"/> until #34 lands.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="squads"/> is null.</exception>
+        /// <exception cref="ArgumentException">A club or a held player id cannot be resolved against <paramref name="squads"/>.</exception>
+        internal ClubTrainingInputs[] GatherTrainingInputs(ISquadProvider squads, CoachingModifier coach)
+        {
+            if (squads == null)
+            {
+                throw new ArgumentNullException(nameof(squads));
+            }
+
+            var batch = new ClubTrainingInputs[_clubIds.Count];
+            for (int c = 0; c < _clubIds.Count; c++)
+            {
+                Squad squad = ResolveSquad(squads, _clubIds[c]);
+                int[] ids = _playerIds[c];
+                TrainingState[] states = _training[c];
+
+                var playerIds = new int[ids.Length];
+                var inputs = new TrainingInput[ids.Length];
+                for (int i = 0; i < ids.Length; i++)
+                {
+                    int local = RequireLocalIndex(squad, _clubIds[c], ids[i]);
+                    PlayerRecord record = squad.GetPlayer(local);
+                    playerIds[i] = ids[i];
+                    // deepTrainingEnabled is #29's OWN Stage-2/3 dial (FR-TR-007), independent of #28's
+                    // curveEnabled, and off at Stage 2 — so every input is Neutral today and the batch
+                    // is behaviour-neutral by construction, not by accident. The seam is what lands
+                    // here; the values arrive when #29 T3 turns its dial on.
+                    inputs[i] = TrainingStep.ComputeTrainingInput(
+                        in states[i], in record.Attributes, in coach, deepTrainingEnabled: false);
+                }
+
+                batch[c] = new ClubTrainingInputs(_clubIds[c], playerIds, inputs);
+            }
+
+            return batch;
+        }
+
+        /// <summary>
         /// #30's <b>slot-4</b> injuries seam (#41 §3.5 / FR-MD-022): the recovery countdown, then — when
         /// <see cref="InjuryOccurrenceEnabled"/> — the keyed occurrence draw, per player of every club.
         /// <para>
@@ -459,24 +857,21 @@ namespace TacticalDirector.SeasonSave
         /// throw — it would quietly price every injury off a one-day-stale training state.
         /// </para>
         /// <para>
-        /// <b><c>MatchLoad.None</c> is passed, and that is a recorded remainder rather than an
-        /// oversight.</b> FR-MD-010 makes the match-load term the caller's to supply, and an exact
-        /// per-player appearance record is #30-side state that neither #29's nor #41's save block may
-        /// carry (each is forbidden to describe the other's domain), so it needs a persisted home and a
-        /// format decision this landing does not make. Recomputing it from the fixture list instead is
-        /// not equivalent once the availability filter starts changing who actually played. The term is
-        /// inert while <see cref="InjuryOccurrenceEnabled"/> is off — <c>AssembleRiskScore</c> is not
-        /// even reached — so nothing today depends on it; it is due with the balance pass that arms the
-        /// dial.
+        /// <b>The FR-MD-010 match-load term is supplied from the #30 appearance record</b>
+        /// (ERR-041-010(b), closed at the balance pass): <see cref="RecordAppearances"/> writes each
+        /// fielded XI post-round, and this step reads the windowed count through
+        /// <see cref="AppearanceWindow.AppearanceDaysOn"/> — which never includes the current day, so
+        /// the pre-round draw (ERR-030-027) can never see a match that has not been played.
+        /// <c>HardContacts</c> stays 0 (deep-tier, KD-3).
         /// </para>
         /// </summary>
-        /// <param name="worldDay">The world day being advanced — #30's clock BEFORE its day-9 increment.</param>
+        /// <param name="worldDay">The world day being advanced — #30's clock BEFORE its step-12 increment.</param>
         /// <param name="worldSeed">The career's world seed (<c>WorldStore.WorldSeed</c>), the draw key's root — never a per-match seed.</param>
         /// <param name="squads">The rosters the attributes are read from; must match the state's roster.</param>
         /// <param name="medical">The #34 staff seam; <see cref="MedicalModifier.Identity"/> until #34 lands.</param>
         /// <exception cref="ArgumentNullException"><paramref name="squads"/> is null.</exception>
         /// <exception cref="ArgumentException">A club or a held player id cannot be resolved against <paramref name="squads"/>, or #41 refuses the day or the state.</exception>
-        public void AdvanceMedicalDay(
+        internal void AdvanceMedicalDay(
             uint worldDay, ulong worldSeed, ISquadProvider squads, MedicalModifier medical)
         {
             if (squads == null)
@@ -490,27 +885,59 @@ namespace TacticalDirector.SeasonSave
                 int[] ids = _playerIds[c];
                 TrainingState[] training = _training[c];
                 InjuryState[] injury = _injury[c];
+                AppearanceState[] appearance = _appearance[c];
 
                 for (int i = 0; i < ids.Length; i++)
                 {
                     int local = RequireLocalIndex(squad, _clubIds[c], ids[i]);
                     PlayerRecord record = squad.GetPlayer(local);
 
-                    // The risk is an occurrence-draw input and nothing else, so with the dial off it is
-                    // read by nobody: #41's step only reaches AssembleRiskScore inside the
-                    // `wasAvailableAtEntry && occurrenceEnabled` branch. Computing it anyway would be a
-                    // per-player-per-day cost on every career today for a value that is discarded — and,
-                    // worse to read, would suggest the recovery countdown depends on it.
-                    InjuryRiskContribution risk = InjuryOccurrenceEnabled
-                        ? TrainingStep.ComputeInjuryRisk(in training[i], in record.Attributes)
-                        : InjuryRiskContribution.None;
+                    // The risk and the match load are occurrence-draw inputs and nothing else, so with
+                    // the dial off they are read by nobody: #41's step only reaches AssembleRiskScore
+                    // inside the `wasAvailableAtEntry && occurrenceEnabled` branch. Computing them
+                    // anyway would be a per-player-per-day cost on every career today for values that
+                    // are discarded — and, worse to read, would suggest the recovery countdown depends
+                    // on them.
+                    // The second gate mirrors MedicalStep's own idempotency cursor (F6): a re-entered
+                    // day — the ERR-030-027 pre-round/next-advance pair — no-ops inside the step, so
+                    // its inputs must not be computed on the re-entry either. Not just thrift: the
+                    // re-entry runs AFTER the round recorded today's appearances, and reading the
+                    // window then would be the one call site where the anchor can equal the day with
+                    // today's match already in the bits — correct today (the window excludes bit 0 at
+                    // shift 0), but only this guard keeps that correctness out of the draw path's
+                    // dependencies. unchecked: the never-advanced sentinel is uint.MaxValue, so +1
+                    // wraps to 0 and a fresh state passes for every day (Spec #16 §3.4.4-style
+                    // deliberate wrap, though 32-bit here).
+                    //
+                    // INERT BY CONSTRUCTION today, so no test can fail if it is deleted (AR pass 4):
+                    // on the re-entered day the shift-0 exclusion makes the window read identical and
+                    // MedicalStep discards the inputs anyway. The guard's value is forward-looking —
+                    // it keeps that coincidence from ever becoming a load-bearing dependency — and
+                    // the pass-6 which-test-fails-if-reverted question has no answer here by design.
+                    bool willAdvance =
+                        worldDay >= unchecked(injury[i].LastAdvancedWorldDay + 1u);
+
+                    InjuryRiskContribution risk;
+                    MatchLoad load;
+                    if (InjuryOccurrenceEnabled && willAdvance)
+                    {
+                        risk = TrainingStep.ComputeInjuryRisk(in training[i], in record.Attributes);
+                        load = new MatchLoad(
+                            AppearanceWindow.AppearanceDaysOn(in appearance[i], worldDay),
+                            hardContacts: 0);
+                    }
+                    else
+                    {
+                        risk = InjuryRiskContribution.None;
+                        load = MatchLoad.None;
+                    }
 
                     MedicalStep.AdvanceMedicalDay(
                         ref injury[i],
                         ids[i],
                         in record.Attributes,
                         in risk,
-                        MatchLoad.None,
+                        in load,
                         in medical,
                         worldDay,
                         worldSeed,
@@ -550,7 +977,7 @@ namespace TacticalDirector.SeasonSave
         /// <param name="squads">The rosters to reconcile against.</param>
         /// <exception cref="ArgumentNullException"><paramref name="squads"/> is null.</exception>
         /// <exception cref="ArgumentException">A held club cannot be resolved to a roster.</exception>
-        public int SyncToRoster(ISquadProvider squads)
+        internal int SyncToRoster(ISquadProvider squads)
         {
             RosterSyncPlan plan = PrepareRosterSync(squads);
             return CommitRosterSync(in plan);
@@ -584,6 +1011,7 @@ namespace TacticalDirector.SeasonSave
             var nextIds = new int[clubs][];
             var nextTraining = new TrainingState[clubs][];
             var nextInjury = new InjuryState[clubs][];
+            var nextAppearance = new AppearanceState[clubs][];
             int churn = 0;
 
             for (int c = 0; c < clubs; c++)
@@ -594,11 +1022,22 @@ namespace TacticalDirector.SeasonSave
                 int[] heldIds = _playerIds[c];
                 TrainingState[] heldTraining = _training[c];
                 InjuryState[] heldInjury = _injury[c];
+                AppearanceState[] heldAppearance = _appearance[c];
 
                 var training = new TrainingState[rosterIds.Length];
                 var injury = new InjuryState[rosterIds.Length];
+                var appearance = new AppearanceState[rosterIds.Length];
                 int carried = 0;
 
+                // RECORDED, NOT FIXED (AR pass 4): this reconciliation is PER CLUB, so a player who
+                // MOVES between two carried clubs is a departure here and a Create() there — his
+                // conditioning, injury history and any ACTIVE injury silently reset; he arrives fit.
+                // That is worse than the club-term key change #41 §3.1.1 refuses on the grounds that
+                // "the player carries his medical identity" (FR-MD-006). Inert today — no allocator
+                // moves players between clubs — but ERR-041-019's global-id guarantee is exactly what
+                // makes cross-club carry implementable (one pre-pass building id → held state before
+                // this walk), and that carry is #31 Transfers' arrival obligation, not a change to
+                // sneak in here without its spec.
                 for (int i = 0; i < rosterIds.Length; i++)
                 {
                     int held = IndexOfPlayer(heldIds, rosterIds[i]);
@@ -606,11 +1045,13 @@ namespace TacticalDirector.SeasonSave
                     {
                         training[i] = heldTraining[held];
                         injury[i] = heldInjury[held];
+                        appearance[i] = heldAppearance[held];
                         carried++;
                     }
                     else
                     {
                         // A fresh id: Create, never default — the day-0 trap both specs name.
+                        // (AppearanceState's default IS its fresh state; the array element stays.)
                         training[i] = TrainingState.Create(TrainingFocus.Balanced);
                         injury[i] = InjuryState.Create();
                         churn++;
@@ -624,9 +1065,17 @@ namespace TacticalDirector.SeasonSave
                 nextIds[c] = rosterIds;
                 nextTraining[c] = training;
                 nextInjury[c] = injury;
+                nextAppearance[c] = appearance;
             }
 
-            return new RosterSyncPlan(RosterGeneration, nextIds, nextTraining, nextInjury, churn);
+            // The ERR-041-019 precondition is re-checked here because the sync is the third id
+            // entry point (after ForLeague and FromBlocks) — and the one #42's youth intake and
+            // #31's transfers will actually come through. In the validating half, deliberately:
+            // CommitRosterSync's contract is "cannot fail on a plan this career prepared".
+            RequireGloballyUniquePlayerIds(_clubIds, nextIds, nameof(squads));
+
+            return new RosterSyncPlan(
+                RosterGeneration, nextIds, nextTraining, nextInjury, nextAppearance, churn);
         }
 
         /// <summary>
@@ -659,6 +1108,7 @@ namespace TacticalDirector.SeasonSave
                 _playerIds[c] = plan.PlayerIds[c];
                 _training[c] = plan.Training[c];
                 _injury[c] = plan.Injury[c];
+                _appearance[c] = plan.Appearance[c];
             }
 
             // Bumped unconditionally, not only when churn > 0: the arrays are replaced either way, so a
@@ -689,6 +1139,9 @@ namespace TacticalDirector.SeasonSave
             /// <summary>Per club, the reconciled medical states.</summary>
             internal readonly InjuryState[][] Injury;
 
+            /// <summary>Per club, the reconciled appearance states.</summary>
+            internal readonly AppearanceState[][] Appearance;
+
             /// <summary>Entries inserted plus removed by this plan.</summary>
             internal readonly int Churn;
 
@@ -697,18 +1150,21 @@ namespace TacticalDirector.SeasonSave
             /// <param name="playerIds">Per-club reconciled player ids.</param>
             /// <param name="training">Per-club reconciled training states.</param>
             /// <param name="injury">Per-club reconciled medical states.</param>
+            /// <param name="appearance">Per-club reconciled appearance states.</param>
             /// <param name="churn">Entries inserted plus removed.</param>
             internal RosterSyncPlan(
                 int generation,
                 int[][] playerIds,
                 TrainingState[][] training,
                 InjuryState[][] injury,
+                AppearanceState[][] appearance,
                 int churn)
             {
                 Generation = generation;
                 PlayerIds = playerIds;
                 Training = training;
                 Injury = injury;
+                Appearance = appearance;
                 Churn = churn;
             }
         }
@@ -756,8 +1212,16 @@ namespace TacticalDirector.SeasonSave
         /// </para>
         /// <para>
         /// It is stated as a policy here, in #30, because FR-MD-023 puts selection on this side of the
-        /// seam — #41 answers only "is he fit". Playing a half-fit player carries no penalty yet; that
-        /// consequence belongs with the balance pass that arms the dial.
+        /// seam — #41 answers only "is he fit".
+        /// </para>
+        /// <para>
+        /// <b>RECORDED, NOT FIXED (AR pass 5): fielding the injured is strictly FREE.</b> A player
+        /// pressed back in by this rule plays with unmodified attributes, CANNOT be re-injured (the
+        /// KD-6 entry gate — he was not available at entry, so the occurrence draw never evaluates
+        /// him), and his recovery is not extended. The balance pass armed the dial and deliberately
+        /// did not add the consequence: pricing diminished performance is #27/#28 attribute
+        /// territory and re-injury/extension is a #41 deep-tier rule, so the obligation lands with
+        /// whichever arrives first — not with #30's selection seam.
         /// </para>
         /// </summary>
         /// <param name="squad">The resolved roster.</param>
@@ -796,7 +1260,7 @@ namespace TacticalDirector.SeasonSave
             if (availableCount == total)
             {
                 // Nothing to filter — hand back the same instance so the fit-squad path stays
-                // reference-identical, which is every club until the occurrence dial is armed.
+                // reference-identical, which is every fully-fit club (the common case; the dial has been ARMED since the balance pass).
                 return squad;
             }
 
@@ -967,8 +1431,8 @@ namespace TacticalDirector.SeasonSave
         /// Production has exactly one writer of <see cref="InjuryState"/> —
         /// <c>MedicalStep.AdvanceMedicalDay</c> (FR-MD-003) — and this is not it. It exists because
         /// everything downstream of an injury (the availability filter, the back-fill, the view) has to
-        /// be provable while <see cref="InjuryOccurrenceEnabled"/> is off, and the alternative is
-        /// asserting on a subsystem the balance pass has not yet armed. <c>internal</c> so no production
+        /// be provable while <see cref="InjuryOccurrenceEnabled"/> is off — the isolation posture tests
+        /// still use, and used exclusively before the balance pass armed production. <c>internal</c> so no production
         /// call site outside this assembly can become a second writer.
         /// </para>
         /// </summary>
@@ -1193,4 +1657,105 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | Behaviour is exactly what v1.2 described; it had simply never been |
 // |         |            |        | compiled, which is what every "NO GATE RUN" note on this landing   |
 // |         |            |        | was warning about.                                                 |
+// | 1.4     | 2026-08-07 | —      | Balance pass D2 (ERR-041-010(b)): the third state set. Owns the    |
+// |         |            |        | per-player AppearanceState (lazily-shifted bitmask, no KD-2 day    |
+// |         |            |        | slot), written by RecordAppearances (internal — SeasonLoop is the  |
+// |         |            |        | single production writer) and read into the FR-MD-010 MatchLoad at |
+// |         |            |        | slot 4, window-excluded from the current day per ERR-030-027.      |
+// |         |            |        | FromBlocks takes the third block set (required, coherence-checked, |
+// |         |            |        | states COPIED like its siblings); the roster sync carries          |
+// |         |            |        | appearance state with the same plan/commit staging.                |
+// | 1.5     | 2026-08-07 | —      | Balance pass D4: the dial is ARMED (FR-MD-027 as revised). The     |
+// |         |            |        | injuryOccurrenceEnabled argument becomes REQUIRED on ForLeague and |
+// |         |            |        | FromBlocks — a default in either position flips every omitting     |
+// |         |            |        | call site with no diff the day it changes; construction declares   |
+// |         |            |        | the position (production true; isolation tests false, both locked  |
+// |         |            |        | at season scale by SeasonInjuryRealismTests).                      |
+// | 1.6     | 2026-08-07 | —      | Balance-pass AR pass 1 (L): RecordAppearances pre-checks the day-  |
+// |         |            |        | regression refusal in its validate loop, so the write loop can no  |
+// |         |            |        | longer throw half-way and leave a club half-recorded — the         |
+// |         |            |        | validate-all-then-write promise its doc already made.              |
+// | 1.7     | 2026-08-07 | —      | Balance-pass AR pass 2 (2L): AdvanceMedicalDay computes the        |
+// |         |            |        | occurrence inputs only when the step will actually advance         |
+// |         |            |        | (mirrors MedicalStep's F6 cursor) — the ERR-030-027 re-entered day |
+// |         |            |        | no longer reads the appearance window with today's match already   |
+// |         |            |        | in the bits; + the three-parallel-state-sets ceiling note (a       |
+// |         |            |        | fourth set collapses this into a per-player career struct).        |
+// | 1.8     | 2026-08-08 | —      | Balance-pass AR pass 3 (H+M+L). H (ERR-041-019): cross-club        |
+// |         |            |        | PlayerId uniqueness enforced at all three id entry points          |
+// |         |            |        | (ForLeague, FromBlocks, PrepareRosterSync) — #41's occurrence      |
+// |         |            |        | draw has no club term, so a shared id means shared injury luck     |
+// |         |            |        | forever, and #27 only promises club-scoped uniqueness. M2:         |
+// |         |            |        | FromBlocks copies the ID arrays too (a public-field alias could    |
+// |         |            |        | break the ascending precondition just enforced). L6:               |
+// |         |            |        | RecordFixtureAppearances — both clubs validated before either is   |
+// |         |            |        | written, the per-club discipline one level up.                     |
+// | 1.9     | 2026-08-08 | —      | Balance-pass AR pass 4: the uniqueness guard goes internal so      |
+// |         |            |        | SeasonSaveManager's coherence gate shares the one walk (M1); the   |
+// |         |            |        | per-club roster reconciliation carries the RECORDED-NOT-FIXED      |
+// |         |            |        | transfer residual (M4 — a moved player's career state resets;      |
+// |         |            |        | #31's arrival obligation); the F6-mirror guard's comment states    |
+// |         |            |        | it is inert by construction and cannot be locked (L10).            |
+// | 1.10    | 2026-08-08 | —      | Balance-pass AR pass 5: FromBlocks' mismatch paramNames name   |
+// |         |            |        | the offending set (L10); the SelectAvailable doc carries the   |
+// |         |            |        | RECORDED-NOT-FIXED fielding-the-injured-is-free residual (M5 — |
+// |         |            |        | the dial is armed and the consequence was deliberately not     |
+// |         |            |        | added; #27/#28 attributes or #41 deep-tier own it); four       |
+// |         |            |        | stale dial-off sentences updated to the armed posture.         |
+// | 1.11    | 2026-08-08 | —      | Balance-pass AR pass 6 (M3): + RequireCursorsWithinClock — the |
+// |         |            |        | composition-boundary twin of the save root's walk, called by  |
+// |         |            |        | SeasonLoop's constructor; AdvanceTrainingDay/AdvanceMedicalDay |
+// |         |            |        | /SyncToRoster go internal (public bought nothing — the only   |
+// |         |            |        | callers are SeasonLoop and this assembly's tests — and handed |
+// |         |            |        | any Career holder the ability to drive the career off the     |
+// |         |            |        | world clock). Step-12 prose fixed (L1).                       |
+// | 1.12    | 2026-08-08 | —      | Balance-pass AR pass 9 (M1): the cursor-vs-clock rule collapses  |
+// |         |            |        | to ONE owner — RequireTraining/Medical/AppearanceAnchor-         |
+// |         |            |        | WithinClock internal statics here; the instance walk and         |
+// |         |            |        | SeasonSaveManager's block walk both delegate (the                |
+// |         |            |        | RequireGloballyUniquePlayerIds shape). The file-boundary copy    |
+// |         |            |        | had an UNLOCKED predicate (medical lag >= 2) — the parallel-     |
+// |         |            |        | surface class the T2 AR's H3 collapsed, recurring one gate over. |
+// | 1.13    | 2026-08-08 | —      | Balance-pass AR pass 11 (L4, doc): one draw key had three          |
+// |         |            |        | spellings across the uniqueness guard's doc, its throw message     |
+// |         |            |        | and #41 SS3.1.1; both local sites now name (worldSeed, playerId,   |
+// |         |            |        | actionOrdinal = worldDay x RADIX + purpose), matching the spec.    |
+// | 1.14    | 2026-08-08 | —      | Balance-pass AR pass 13 (L2, doc): FromBlocks' doc still counted   |
+// |         |            |        | "two" blocks — three since D2 (the pass-12-L1 stale-count class,  |
+// |         |            |        | one file over).                                                    |
+// | 1.15    | 2026-08-08 | —      | #28 T2a: + GatherTrainingInputs (#29 §3.5 step 1 — the slot-1  |
+// |         |            |        | batch #30 hands to #28, keyed by player id so a drift between  |
+// |         |            |        | the two roster views fails loud); + RequireProgressionCursor-  |
+// |         |            |        | WithinClock, the fourth per-player cursor's single owner, with |
+// |         |            |        | all three boundaries delegating to it (ERR-028-007).           |
+// | 1.16    | 2026-08-09 | —      | ERR-028-014: RequireProgressionCursorWithinClock drops the      |
+// |         |            |        | sentinel exemption. The #29/#41 exemption it was copied from   |
+// |         |            |        | is sound for them (their fresh states carry no clock-anchored  |
+// |         |            |        | quantity); #28's is the one of the four that does — age is     |
+// |         |            |        | derived from BirthWorldDay — so a never-advanced #28 state      |
+// |         |            |        | means something different at every clock value, and the        |
+// |         |            |        | exemption was a hole shaped exactly like every new game's       |
+// |         |            |        | starting state. Deleting the exemption is sufficient: the       |
+// |         |            |        | existing bidirectional lag predicate now refuses the pairing    |
+// |         |            |        | with no new gate, since #28's own ProgressionEngine no longer   |
+// |         |            |        | writes the sentinel (ProgressionEngine.cs v1.1).                |
+// | 1.17    | 2026-08-10 | —      | Doc-only: v1.16 fixed the logic but not the XML doc above       |
+// |         |            |        | RequireProgressionCursorWithinClock, which still read "The      |
+// |         |            |        | sentinel is exempt: a never-advanced career is coherent at any  |
+// |         |            |        | clock" — directly contradicting the method's own inline comment |
+// |         |            |        | and implementation since ERR-028-014. Corrected to state the    |
+// |         |            |        | opposite and carry the reason (the file header's own ERR-028-   |
+// |         |            |        | 014 citation corrected likewise): #29/#41 fresh states carry no |
+// |         |            |        | clock-anchored quantity, so "never advanced" means the same     |
+// |         |            |        | thing at every world day; #28's derives age from BirthWorldDay, |
+// |         |            |        | so it means something different at every clock value. No logic |
+// |         |            |        | change.                                                          |
+// | 1.18    | 2026-08-11 | —      | AR pass 6, M2(b). + RequireBirthWorldDayWithinClock, the        |
+// |         |            |        | sibling of RequireProgressionCursorWithinClock: refuses a       |
+// |         |            |        | player whose BirthWorldDay anchor sits ahead of the world       |
+// |         |            |        | clock. ProgressionSaveCodec's DescribeOutOfRangeValues cannot   |
+// |         |            |        | bound the anchor's top against a clock (it has none); this is   |
+// |         |            |        | the composition boundary that can. Called from SeasonLoop's     |
+// |         |            |        | per-player composition walk and SeasonSaveManager's block-level |
+// |         |            |        | walk, alongside RequireProgressionCursorWithinClock in both.    |
 #endregion

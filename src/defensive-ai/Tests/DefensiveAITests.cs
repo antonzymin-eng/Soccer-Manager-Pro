@@ -1,6 +1,6 @@
 // File:     src/defensive-ai/Tests/DefensiveAITests.cs
 // Created:  2026-05-31
-// Modified: 2026-06-12
+// Modified: 2026-06-30
 // Author:   —
 // Spec:     Defensive AI #14 §5, Code Standards #20
 // Purpose:  Unit tests for Defensive AI. T-DA unit tests from §5.

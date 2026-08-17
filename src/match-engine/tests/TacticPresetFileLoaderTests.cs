@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/TacticPresetFileLoaderTests.cs
 // Created:  2026-07-24
+// Modified: 2026-07-24
 // Author:   —
 // Spec:     Tactical Presets #26 §2.2.2 / §4.4 (FR-TP-002/013/017), KD-6; Code Standards #20
 // Purpose:  WS-1 loader tests — the canonical five-preset file round-trips DEEP-EQUAL to the default

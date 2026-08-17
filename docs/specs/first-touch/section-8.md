@@ -521,5 +521,5 @@ Honest `[GT]` flags are preferable to fabricated or unverified citations. The ~4
 | Version | Date | Author | Notes |
 |---------|------|--------|-------|
 | 1.0 | February 19, 2026, 9:00 PM PST | Claude (AI) / Anton | Initial draft. 9 academic sources. DOI verification pending for all sources. |
-| 1.2 | March 25, 2026 | Claude (AI) / Anton | MOD-06 audit fix: [BOUCHETAL-2014] resolution — citation unverified; PRESSURE_SATURATION re-classified [GT]. Cross-reference verification table updated. |
 | 1.1 | February 26, 2026 | Claude (AI) / Anton | Cross-spec correction from Perception System §8 v1.2 DOI verification. [BEILOCK-2010] corrected to [BEILOCK-2007]: year corrected from 2010 to 2007; DOI corrected from 10.1002/9781118270011.ch20 to 10.1002/9781118270011.ch19. All occurrences updated (citation block §8.1.2, citation summary ×2, audit §8.6.3 ×2, cross-reference table). |
+| 1.2 | March 25, 2026 | Claude (AI) / Anton | MOD-06 audit fix: [BOUCHETAL-2014] resolution — citation unverified; PRESSURE_SATURATION re-classified [GT]. Cross-reference verification table updated. |

@@ -1,5 +1,6 @@
 // File:     src/decision-tree/DecisionTreeState.cs
 // Created:  2026-06-22
+// Modified: 2026-06-22
 // Author:   —
 // Spec:     Decision Tree #8 §3.7; Match Engine design note §2.6 (Phase D step D0); Code Standards #20
 // Purpose:  Plain-data snapshot of a DecisionTree's cross-tick state-machine state, exposing it so the

@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineCapstonePerfHarnessTests.cs
 // Created:  2026-07-13
+// Modified: 2026-07-13
 // Author:   —
 // Spec:     Performance Optimization Strategy #18 §3.3.5 / FR-PO-052,
 //           Match Engine design note §5 Phase F, cert-run-runbook.md (Step 2),

@@ -7,7 +7,7 @@ relationships to adjacent systems, and dependency contracts required before Sect
 can be drafted.
 
 **Created:** February 22, 2026, 10:30 PM PST
-**Version:** 1.1
+**Version:** 1.2
 **Status:** DRAFT — Awaiting Lead Developer Review
 **Specification Number:** 6 of 20 (Stage 0 — Physics Foundation)
 **Author:** Claude (AI) with Anton (Lead Developer)

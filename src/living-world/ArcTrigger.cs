@@ -1,6 +1,6 @@
 // File:     src/living-world/ArcTrigger.cs
 // Created:  2026-07-24
-// Modified: 2026-07-24
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Living World System #22 §3.4, §6.2, FR-LW-016/017/028, arc-triggers-design KD-3/KD-7, Code Standards #20
 // Purpose:  One arc-trigger catalogue row: the target arc kind, the canon signal it thresholds on, its
@@ -49,3 +49,9 @@ namespace TacticalDirector.LivingWorld
         }
     }
 }
+
+#region VersionHistory
+// | Version | Date       | Author       | Notes                                                     |
+// | 1.0     | 2026-07-24 | —            | Initial file. |
+// | 1.1     | 2026-08-08 | Claude Code  | Added the required #region VersionHistory block (FR-CS-058; tools/recurring-defect-lint.py hygiene pass). |
+#endregion

@@ -6,7 +6,7 @@ threshold policy, paste-ready review-time checklist (§5.4), 73-row FR-to-verifi
 traceability table (§5.5), and the determinism verification handoff note.
 
 **Created:** May 7, 2026
-**Version:** 1.0
+**Version:** 1.0.1
 **Status:** DRAFT
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 5

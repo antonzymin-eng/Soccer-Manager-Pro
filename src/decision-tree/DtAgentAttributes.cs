@@ -1,6 +1,6 @@
 // File:     src/decision-tree/DtAgentAttributes.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-11
 // Author:   —
 // Spec:     Decision Tree #8 §3.1 (attribute dependency flags), §3.2 (utility formulas),
 //           Code Standards #20

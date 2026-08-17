@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/LeagueBootstrapTests.cs
 // Created:  2026-07-25
-// Modified: 2026-07-25
+// Modified: 2026-08-08 (#28 T1/T2a + AR pass 1 — v1.1)
 // Author:   —
 // Spec:     League Bootstrap design supplement (docs/tracking/league-bootstrap-design.md) §3
 //           (determinism contract), §4 (F1..F6), KD-2/KD-3/KD-5/KD-6/KD-9; path-to-playable A3
@@ -523,12 +523,23 @@ namespace TacticalDirector.SeasonSave.Tests
         }
 
         [Test]
-        public void SavedWorldSeed_RebuildsTheSameLeague()
+        public void SavedWorldSeed_RebuildsTheSameDay0League()
         {
-            // The career-resume path (KD-9 / AR-5 M-1). Squads are not persisted: a save carries club
-            // IDs, and the ISquadProvider is rebuilt by re-running the bootstrap. The ONLY value a save
-            // file holds that makes that possible is the world seed inside the world blob — so if this
-            // breaks, a saved career cannot be reopened at all.
+            // ── This test's scope NARROWED at #28 T2a (August 8, 2026). Read this before extending it.
+            //
+            // It used to be the career-resume path, on the rule "squads are not persisted; the
+            // ISquadProvider is rebuilt by re-running the bootstrap". That rule is RETIRED. #28 KD-4
+            // makes the career-state block the serialized roster, because the [1,20] attributes now
+            // EVOLVE under GrowthProjection and a seed-rebuilt squad carries day-0 values forever. A
+            // resumed career whose provider came from here would silently read pre-growth attributes on
+            // every slot, with every gate green — which is the defect the projection exists to prevent.
+            //
+            // What survives, and is what this test now asserts, is narrower and still load-bearing:
+            // bootstrap GENERATION is a pure function of the world seed. That is what makes a new game
+            // reproducible and what ProgressionEngine.SeedFrom is seeded from — it is simply no longer
+            // how an EXISTING career gets its rosters back. The resume path is locked by
+            // SeasonSaveManagerTests' progression round-trip and by
+            // ProgressionEngineTests.SquadFor_ReflectsBankedGrowth_NotTheSeededRoster.
             const ulong worldSeed = 0xC0FFEE5EA50117UL;
             League original = LeagueBootstrap.Generate(worldSeed, 6);
             SeasonState season = original.CreateSeason(managedClubId: 2);
@@ -542,6 +553,8 @@ namespace TacticalDirector.SeasonSave.Tests
             League rebuilt = LeagueBootstrap.Generate(restoredWorld.WorldSeed, season.ClubCount);
             Assert.AreEqual(original.ClubCount, rebuilt.ClubCount);
             Assert.AreEqual(original.SeasonSeed, rebuilt.SeasonSeed);
+            // Day-0 generation only: these squads are the SEED for ProgressionEngine.SeedFrom, never
+            // the roster a running career reads (#28 KD-4).
             for (int c = 0; c < original.ClubCount; c++)
             {
                 Assert.AreEqual(original.ClubAt(c).Name, rebuilt.ClubAt(c).Name);
@@ -628,4 +641,9 @@ namespace TacticalDirector.SeasonSave.Tests
 #region VersionHistory
 // | Version | Date       | Author | Notes                                                              |
 // | 1.0     | 2026-07-25 | —      | Initial suite (roadmap A3).                                        |
+// | 1.1     | 2026-08-08 | —      | #28 T2a: SavedWorldSeed_RebuildsTheSameLeague NARROWED to      |
+// |         |            |        | SavedWorldSeed_RebuildsTheSameDay0League. #28 KD-4 retires the |
+// |         |            |        | rule it asserted (squads are not persisted; the provider is    |
+// |         |            |        | rebuilt from the seed) — generation stays seed-pure, but an    |
+// |         |            |        | existing career's rosters now come from the save file.         |
 #endregion

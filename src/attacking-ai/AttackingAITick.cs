@@ -1,6 +1,6 @@
 // File:     src/attacking-ai/AttackingAITick.cs
 // Created:  2026-05-29
-// Modified: 2026-06-29 (#21 FR-TI-021: route FocusPlay flank preference into OverloadDetector)
+// Modified: 2026-07-20
 // Author:   —
 // Spec:     Attacking AI #15 §3.13, §4.1–§4.3, FR-AT-001–FR-AT-027, Code Standards #20; Tactical Instructions #21 §3.3
 // Purpose:  10 Hz attacking AI orchestrator for one team. Runs the §3.13 pipeline:

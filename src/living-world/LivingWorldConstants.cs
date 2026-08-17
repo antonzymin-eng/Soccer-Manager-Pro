@@ -3,7 +3,7 @@
 // Modified: 2026-07-24 (arc-triggers Slice 1/E1: Fixed region gains the world.arcs stream ids, the
 //           world-scoped entity-id sentinel block, the ARC_BOARD_SCOPE_KEY latch sentinel, and the
 //           arc-trigger signal keys; GT region gains the per-trigger thresholds + per-kind lifetimes)
-// Modified: 2026-07-02 (slice 3: Fixed region — world.text stream ids + snapshot format version;
+// Modified: 2026-08-08
 //           Cross region gains the DomainTagLivingWorld mirror; region order now Fixed→Cross→GT)
 // Author:   —
 // Spec:     Living World System #22 Appendix A, §3.3, §4.4, §4.6, Code Standards #20
@@ -215,3 +215,10 @@ namespace TacticalDirector.LivingWorld
         #endregion
     }
 }
+
+#region VersionHistory
+// | Version | Date       | Author       | Notes                                                     |
+// | 1.0     | 2026-06-21 | —            | Initial file. |
+// | 1.1     | 2026-07-02 | —            | Substantive edit; no version-history row was recorded for it at the time (FR-CS-058 gap, predates this hygiene pass). |
+// | 1.2     | 2026-08-08 | Claude Code  | Added the required #region VersionHistory block (FR-CS-058; tools/recurring-defect-lint.py hygiene pass). |
+#endregion

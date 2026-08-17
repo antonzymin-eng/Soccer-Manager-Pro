@@ -1,8 +1,9 @@
 # Training System #29 — Outline
 
 **Created:** July 23, 2026
-**Last Updated:** July 23, 2026 (v0.2 — PASS-1 → AR-2 → AR-3; APPROVED)
-**Version:** 0.2
+**Last Updated:** August 8, 2026 (v0.3 — balance-pass AR pass 10 L3: the §2 row's ranges were two landings stale; corrected to FR-TR-001..026 / F1..F8)
+**Last Updated (prior):** July 23, 2026 (v0.2 — PASS-1 → AR-2 → AR-3; APPROVED)
+**Version:** 0.3
 **Status:** APPROVED
 **Source:** `docs/tracking/training-system-design.md` v0.4
 **FR prefix:** FR-TR · **Wave:** 2 · **Master-plan home:** §4.4
@@ -21,7 +22,7 @@ write. Fully deterministic; no RNG stream.
 | Section | Content |
 |---|---|
 | 1 | Introduction, scope, dependencies, key decisions KD-1..KD-8 |
-| 2 | Functional requirements FR-TR-001..024, data structures, failure modes F1..F6 |
+| 2 | Functional requirements FR-TR-001..026, data structures, failure modes F1..F8 |
 | 3 | Algorithms — the daily step, the fatigue projection, the growth-input contribution |
 | 4 | Architecture, assembly, file layout, reference direction |
 | 5 | Test plan (T-TR-*) |
@@ -53,4 +54,5 @@ write. Fully deterministic; no RNG stream.
 |---|---|---|---|
 | 0.1 | 2026-07-23 | — | Initial outline from the converged design supplement. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | PASS-1 → AR-2 → AR-3 convergence; APPROVED. |
+| 0.3 | 2026-08-08 | — | **Balance-pass AR pass 10 (L3)**: the §2 row was TWO rows behind — stale since F7/FR-TR-025/026 landed at §2 v0.3 (July 2026), and pass 9's F8 made it three; corrected to FR-TR-001..026 / F1..F8. |
 #endregion

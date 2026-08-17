@@ -1,7 +1,7 @@
 # Goalkeeper Mechanics Specification #11 — Section 6: Performance Analysis & Budgets
 
 **Created:** May 16, 2026
-**Version:** 0.1
+**Version:** 0.2
 **Status:** DRAFT
 **Purpose:** Per Performance Optimization #18 KD-2
 (ratify-not-override authority), publish the per-tick cost budgets,

@@ -1,8 +1,8 @@
 # Positioning AI Specification #12 — Section 7: Future Extensions
 
 **Created:** May 15, 2026
-**Last Updated:** May 17, 2026 (v0.3 — ERR-013-001 back-prop: §7.3 PressOverride contract language updated; #13 APPROVED)
-**Version:** 0.3
+**Last Updated:** July 7, 2026 (v0.4 — Cheap-item addition: new §7.13 (Rest-Defense Coverage Check — LANDED) appended below.)
+**Version:** 0.4
 **Status:** DRAFT
 
 ---

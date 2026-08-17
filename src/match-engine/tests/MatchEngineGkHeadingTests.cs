@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineGkHeadingTests.cs
 // Created:  2026-07-22
+// Modified: 2026-07-23
 // Author:   —
 // Spec:     GK/Heading engine-integration design supplement
 //           (docs/tracking/gk-heading-engine-integration-design.md) §7, Phase 1; Code Standards #20

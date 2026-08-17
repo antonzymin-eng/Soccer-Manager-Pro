@@ -6,7 +6,15 @@
 > and records two deliberately-undesigned forward items.
 > **Candidate spec:** none · **FR prefix:** none of its own (proposes appends to FR-MD / FR-PG)
 > **Owner specs:** #41 (FR-MD-028..034 proposed) · #28 (FR-PG-025..028 proposed)
-> **Back-props proposed:** ERR-041-002..007 · ERR-028-002..004. **Zero** #30 / #29 / #27 / #16 changes.
+> **Back-props proposed:** ERR-041-013..018 · ERR-028-002..004. **Zero** #30 / #29 / #27 / #16 changes.
+> *(Id-map re-based August 7, 2026 at the balance pass: the originally proposed ERR-041-002 and
+> ERR-041-003 were both filed by other findings while this supplement awaited sign-off — -002 is the T0
+> `DrawKeyed` API defect, -003 the `InjuryRiskMax` `[CROSS]` retag — and 004..011 have since been either
+> consumed or superseded (the T1/T2/balance-pass chain runs to ERR-041-012). The soft-reservation
+> convention stands: 013..018 are reserved for this supplement's six #41-side findings, re-verified free
+> at re-basing; every `Back-prop:` line below is re-pointed. Note for R-2: `BASELINE_DAILY_RISK`
+> (ERR-041-011) is now the exposure-INDEPENDENT term — R-2's under-exposure arm must re-fit against it
+> rather than add beside it, per #41 Appendix A's note.)*
 > **Determinism impact:** none — no new RNG stream, no new domain tag, no new `SubsystemOrdinal`,
 > no `DETERMINISM_DIGEST_VERSION` bump (§5).
 > **Save impact:** none *today* — no format version bump, because neither owning spec has yet written a
@@ -75,7 +83,7 @@ outright *and* the fix is structural; **M** = a missing modulator or input; **L*
 
 ### R-1 (H) — `AssembleRiskScore` has no age term at all
 
-**Evidence:** E-4. **Owner:** #41 §3.4 / Appendix A. **Back-prop:** ERR-041-002.
+**Evidence:** E-4. **Owner:** #41 §3.4 / Appendix A. **Back-prop:** ERR-041-013 *(re-based; originally -002, since taken)*.
 
 `AssembleRiskScore(trainingRisk, load, attributes, medical)` (#41 §3.4) assembles risk from training fatigue,
 appearance load, a robustness term derived from `Strength`/`Stamina`/`Balance`, and the staff modifier.
@@ -114,7 +122,7 @@ precedent (a value type, not an interface; FR-LW-031). The reference DAG is unch
 
 ### R-2 (M) — match-load risk is monotone; the evidence is U-shaped
 
-**Evidence:** E-2. **Owner:** #41 §3.4 / Appendix A. **Back-prop:** ERR-041-003.
+**Evidence:** E-2. **Owner:** #41 §3.4 / Appendix A. **Back-prop:** ERR-041-014 *(re-based; originally -003, since taken)*.
 
 `APPEARANCE_LOAD_WEIGHT * load.AppearanceDays` rises linearly and without bound, so under the current model an
 **unused player is maximally safe**. The rugby cohort puts both tails at elevated risk, and the football
@@ -141,7 +149,7 @@ over-weighting** of the left tail, which is a balance-pass concern (both terms a
 
 ### R-3 (M) — no representation of recovery interval, the best-evidenced effect
 
-**Evidence:** E-3. **Owner:** #41 §2.2 (`MatchLoad`) / §3.4. **Back-prop:** ERR-041-004.
+**Evidence:** E-3. **Owner:** #41 §2.2 (`MatchLoad`) / §3.4. **Back-prop:** ERR-041-015 *(re-based)*.
 
 `MatchLoad` carries `AppearanceDays` (a count) and `HardContacts` (deep-tier). Nothing encodes **spacing**,
 yet ≤3-day vs 6–10-day turnaround is the strongest single quantified effect in the corpus (~20%). Two players
@@ -159,7 +167,7 @@ state and nothing new to serialize. `MatchLoad.None` (all-zero) remains the neut
 
 ### R-4 (M) — recurrence is deferred to Stage 3, but its input is already serialized
 
-**Evidence:** E-5. **Owner:** #41 §3.1 / §7 KD-4. **Back-prop:** ERR-041-005.
+**Evidence:** E-5. **Owner:** #41 §3.1 / §7 KD-4. **Back-prop:** ERR-041-016 *(re-based)*.
 
 `InjuryState.InjuryCount` is serialized and, at Stage 2, **read by nothing**. Re-injury (~15–20%) is among the
 most robust numbers in the literature and, unlike most deep-tier items, its producer already exists.
@@ -187,7 +195,7 @@ early return would shorten `RecoveryRemaining` and raise the recurrence term for
 
 ### R-5 (H) — the severity model cannot represent the injury class that shapes careers
 
-**Evidence:** E-6. **Owner:** #41 §2.2 / §3.2 / Appendix A. **Back-prop:** ERR-041-006.
+**Evidence:** E-6. **Owner:** #41 §2.2 / §3.2 / Appendix A. **Back-prop:** ERR-041-017 *(re-based)*.
 
 Appendix A pins `RecoveryDaysForTier` at Minor 7 / Moderate 21 / **Serious 60** and `RECOVERY_MAX` at 240.
 The ACL mean return-to-play is **~11.6 months (~350 days)** — longer than the model's ceiling, let alone its
@@ -215,7 +223,7 @@ The catalogue invariant becomes `Σ SEVERITY_*_PERMILLE ≤ SEVERITY_PERMILLE_DE
 
 ### R-6 (H) — a player returns from injury with byte-identical attributes
 
-**Evidence:** E-6. **Owner:** #41 §0 / #28 §3.1. **Back-prop:** ERR-041-007 (signal) + ERR-028-004 (consumer).
+**Evidence:** E-6. **Owner:** #41 §0 / #28 §3.1. **Back-prop:** ERR-041-018 *(re-based)* (signal) + ERR-028-004 (consumer).
 
 #41 §0 puts "attribute decline from injury" out of scope and exposes "a read-only injury signal #28 *may*
 later read". #28 has no such reader. So the seam is **named on one side and built on neither**, and the shipped
@@ -271,8 +279,9 @@ distinct effects, matching the two distinct findings in E-6:
 But #28 is **draw-free by contract** (FR-PG-002), and adding a stream to it would allocate the reserved
 `_RESERVED_0x21_`-class row this project has repeatedly refused to allocate without a genuine draw site. The
 deterministic age-scaled reduction is proposed instead; the distributional version is recorded as a deep-tier
-item that, if ever built, belongs on **#41's existing `injuries.occurrence` stream** (drawn at injury time,
-carried on the aftermath value) rather than as a new #28 stream. This keeps #28's draw-free contract intact
+item that, if ever built, belongs on **#41's existing keyed occurrence derivation** (the
+`DOMAIN_TAG_INJURIES_MEDICAL` SplitMix64 derivation — no registered stream, ERR-041-012; drawn at injury
+time, carried on the aftermath value) rather than as a new #28 stream. This keeps #28's draw-free contract intact
 either way.
 
 **One-day staleness (KD-R4b), and why it is correct.** #30's pinned tick order is
@@ -456,7 +465,8 @@ test that pins the pre-supplement behaviour under identity settings (§8).
 ## 5. Determinism impact — none (KD-R5)
 
 - **No new RNG stream, domain tag, or `SubsystemOrdinal`.** Every proposed term is a *deterministic integer
-  modulator* on inputs to the existing single `injuries.occurrence` keyed draw. The `Severe` tier reuses that
+  modulator* on inputs to the existing single keyed occurrence draw (the `DOMAIN_TAG_INJURIES_MEDICAL`
+  SplitMix64 derivation — no registered stream, ERR-041-012). The `Severe` tier reuses that
   same draw through the §3.2 bucketing (still no second draw). Recurrence and aftermath are multipliers and
   countdowns. #28 remains draw-free (FR-PG-002).
 - **The keyed-draw property is preserved.** #41 KD-1 keys on `(playerId, worldDay, purpose)` with a fixed
@@ -594,7 +604,7 @@ public static void DrainOnePoint(ref PlayerRecord rec, ref PlayerLifecycle life)
 1. **AR to convergence on this supplement** (started — see Version History).
 2. **Owner sign-off** on the three structural decisions: the `Severe` tier + `RECOVERY_MAX` raise (R-5), the
    #41→#28 aftermath seam (R-6/KD-R4), and the deterministic-not-drawn PA reduction (KD-R4a).
-3. **File the back-props** — ERR-041-002..007, ERR-028-002..004 (`spec-error-log.md`), each patching the named
+3. **File the back-props** — ERR-041-013..018 (re-based), ERR-028-002..004 (`spec-error-log.md`), each patching the named
    section files and appending FR-MD-028..034 / FR-PG-025..028.
 4. **Patch the section files** — #41 §2.2 / §3.1 / §3.2 / §3.4 / Appendix A; #28 §3.1 / §4.3 / Appendix A.
    No `SPEC_INDEX.md` row changes (both specs stay APPROVED; these are back-props, not re-approvals).
@@ -613,5 +623,6 @@ public static void DrainOnePoint(ref PlayerRecord rec, ref PlayerLifecycle life)
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | v0.1 | July 26, 2026 | — | Initial supplement. 12 findings (5H + 5M + 2L) from the research cross-reference: R-1 age term absent, R-2 monotone load, R-3 no recovery-interval input, R-4 recurrence deferred with its input already serialized, R-5 severity model cannot represent an ACL, R-6 no post-injury consequence, R-7 position-blind age bands, R-8 decline order inverted + CA-inefficient, R-9 form (recorded), R-10 congestion→coordination (recorded), R-11 retirement gate, R-12 contract-year (recorded as a negative result). All code claims verified against source: `AbilityModel.ClassifyAgeBand` position-blind; `AbilityModel.DrainOnePoint` lowest-bias-first; `AbilityModel.ComputeCAFromArray` weights by `1 + bias`; `GrowthProjection.DailyPoints` already takes position and discards it; `#41` has no `src/`; `#28` T0 wired into nothing. KD-R1 (cost/timing) … KD-R5 (zero determinism impact). |
-| v0.3 | July 26, 2026 | — | **Self-AR pass 2: 0H + 1M + 0L, fixed.** **M-1 (architectural — a reference-direction violation in my own proposal):** v0.2 defined `InjuryAftermath` as **#41-owned** while simultaneously claiming in KD-R4 that "neither assembly gains a reference to the other" — but #28's `AdvanceDayForPlayer` takes `in InjuryAftermath`, so naming that parameter type would have forced `player-progression.asmdef` to reference #41's assembly, which is exactly the coupling KD-R4 exists to prevent. The claim and the surface contradicted each other. Fixed by following the established precedent rather than inventing one: **the consumer owns the seam type** — `TrainingInput` is the #29 seam and lives in `src/player-progression/TrainingInput.cs` (#28 §4.5), so `InjuryAftermath` lives there too, and #30's composition root projects it from `InjuryState`'s public fields. Second-order consequence also fixed: the struct now carries an **integer `SeverityRank`** rather than #41's `InjurySeverity` enum, so no #41 type crosses the boundary at all (and since `InjurySeverity`'s ordinals ascend in severity, the projection is a plain cast that R-5's `Severe` append extends for free). The identity discriminator moved with it (`SeverityRank == 0`), preserving the v0.2 M-2 zero-value fix. §7 surfaces, §6 save table and §11 tranche wording re-pointed. |
 | v0.2 | July 26, 2026 | — | **Self-AR pass 1 over the v0.1 draft: 0H + 4M + 2L, all fixed.** **M-1 (dangling anchors):** the doc cited KD-R5b/KD-R9 while defining only KD-R1/R2/R3/R5/R5a/R5b — KD-R4/R6/R7/R8 were never defined, so three citations resolved to nothing (the stale-cross-reference class the root `CLAUDE.md` names as the project's most recurring bug). Renumbered to the contiguous set actually used: KD-R1..R3, KD-R4/R4a/R4b (aftermath), KD-R5 (determinism); every citation re-pointed. **M-2 (zero-value trap in my own proposed surface):** `InjuryAftermath` documented `DaysSinceReturn = -1` as the absent sentinel while `None => default` yields `0`, so the identity value would have read as "returned today" — precisely the `MatchFrameView.Empty` / `MarkingOrientation` defect class. The discriminator is now `LastSeverity` (ordinal 0 = `None`), making `default` provably inert. **M-3 (back-prop ID collision):** ERR-041-002 was assigned to both R-1 and R-6; R-6's signal half moved to ERR-041-007 and the header range corrected 002..006 → 002..007. **M-4 (overstated magnitude claim):** R-8's second consequence claimed decline leaves CA "barely moved" — `ΔCA ∝ −w_i` supports the *sign and shape* (flatter-then-steeper) but not a magnitude, which depends on the unmeasured `PositionAttributeBias` spread; narrowed to the shape claim with the limitation stated, and the §8 test rewritten as a **comparative** lock (corrected order drains more CA per point than the current order) because the original "CA falls measurably" assertion passes against the defect. **L-1:** `RecoveryDaysForTier[Severe]` 300 → 350, since 300 sits below the E-6 ACL mean the tier exists to represent. **L-2:** §11 step 5 claimed all #28 findings need T2 — R-7/R-8 touch pure T0 functions with no production caller and land immediately; split into two tranches. |
+| v0.3 | July 26, 2026 | — | **Self-AR pass 2: 0H + 1M + 0L, fixed.** **M-1 (architectural — a reference-direction violation in my own proposal):** v0.2 defined `InjuryAftermath` as **#41-owned** while simultaneously claiming in KD-R4 that "neither assembly gains a reference to the other" — but #28's `AdvanceDayForPlayer` takes `in InjuryAftermath`, so naming that parameter type would have forced `player-progression.asmdef` to reference #41's assembly, which is exactly the coupling KD-R4 exists to prevent. The claim and the surface contradicted each other. Fixed by following the established precedent rather than inventing one: **the consumer owns the seam type** — `TrainingInput` is the #29 seam and lives in `src/player-progression/TrainingInput.cs` (#28 §4.5), so `InjuryAftermath` lives there too, and #30's composition root projects it from `InjuryState`'s public fields. Second-order consequence also fixed: the struct now carries an **integer `SeverityRank`** rather than #41's `InjurySeverity` enum, so no #41 type crosses the boundary at all (and since `InjurySeverity`'s ordinals ascend in severity, the projection is a plain cast that R-5's `Severe` append extends for free). The identity discriminator moved with it (`SeverityRank == 0`), preserving the v0.2 M-2 zero-value fix. §7 surfaces, §6 save table and §11 tranche wording re-pointed. |
+| v0.4 | August 8, 2026 | — | **Balance-pass AR pass 9 (M2)**: two lines still named "#41's existing `injuries.occurrence` stream" (KD-R4a's deep-tier routing and §5's determinism-impact bullet) — ERR-041-012 established that stream never existed and may not; both re-anchored to the keyed `DOMAIN_TAG_INJURIES_MEDICAL` derivation. Matters here because this supplement is LIVE (awaiting owner sign-off) and will drive #41's next landing. |

@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/PlayerTacticConfigTests.cs
 // Created:  2026-06-30
+// Modified: 2026-06-30
 // Author:   —
 // Spec:     Tactical Instructions #21 §3.3 (per-agent tactic config surface), FR-TI-027/031; Match Engine design note §5; Code Standards #20
 // Purpose:  Tests the in-code PlayerTactic config source + boot applier: ForAgent mapping, the Identity

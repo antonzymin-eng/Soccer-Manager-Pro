@@ -5,7 +5,7 @@
 complexity targets that code written under Spec #20 must satisfy. §3.3 defines *how* to
 write zero-allocation code; §6 defines *what rate* the resulting code is measured against.
 **Created:** May 8, 2026
-**Version:** 1.0
+**Version:** 1.0.1
 **Status:** DRAFT
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 6; `outline-mid.md` v1.2, §6.1–§6.5

@@ -1,8 +1,8 @@
 # Positioning AI Specification #12 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** May 15, 2026
-**Last Updated:** May 16, 2026 (v0.2 — PASS-1 adversarial fix pass)
-**Version:** 0.2
+**Last Updated:** August 8, 2026 (v0.4 — ERR-012-011: FR-PA-022 restated in terms of TEAM possession and given its football definition; §2.3 splits the possession input into #7's on-ball carrier (consumed by §3.3 dismarking only) and the orchestrator-supplied team in possession (the §3.0 input).)
+**Version:** 0.4
 **Status:** DRAFT
 
 ---
@@ -37,7 +37,7 @@ a KD in §1.5 or a downstream section in this spec.
 | FR-PA-019 | Anchor formula: `anchor = (pitchLengthM * formationOffset[role].x, pitchWidthM * formationOffset[role].y)`. | MUST | §3.1 |
 | FR-PA-020 | Ball-relative offset is piecewise-linear in `ball.x` and `ball.y` with three break-points per axis. | MUST | §3.2 |
 | FR-PA-021 | Pull-toward-ball strength is a per-role-per-phase `[GT]` lookup. | MUST | §3.2 |
-| FR-PA-022 | Phase is computed locally from possession state and filtered ball longitudinal velocity. | MUST | KD-10 / §3.0 |
+| FR-PA-022 | Phase is computed locally from TEAM possession and filtered ball longitudinal velocity. A team is in possession while one of its players is on the ball, AND while a ball it deliberately played is still travelling to a team-mate; a ball played to no one — a shot, or a ball no longer going to its intended receiver — is not possession. The on-ball carrier alone is NOT the input (ERR-012-011). | MUST | KD-10 / §3.0 |
 | FR-PA-023 | Phase transitions are hysteretic over `PHASE_HYSTERESIS_TICKS`. | MUST | §3.0 |
 | FR-PA-024 | Line partition is a stable k=3 longitudinal partition (GK excluded). | MUST | §3.3 |
 | FR-PA-025 | Lane partition is a 5-bin lateral classification. | MUST | §3.4 |
@@ -158,7 +158,8 @@ spec reaches `IN REVIEW`.
 |---|---|---|---|
 | #7 Perception §3.7 | per-agent positions | `Vector2[22]` | EntityId-keyed |
 | #7 Perception §3.7 | ball position | `Vector3` | Z component ignored at Stage 0 |
-| #7 Perception §3.7 | possession owner | `EntityId?` | `null` for loose ball |
+| #7 Perception §3.7 | possession owner (on-ball carrier) | `EntityId?` | `null` whenever no player is ON the ball — including the entire flight of every pass. Consumed by §3.3 dismarking's carrier exclusion (FR-DM-007), **not** by §3.0 |
+| Orchestrator | team in possession | `TeamId?` | `null` when no team is in possession. The §3.0 input. Composed by the orchestrator as the union of the on-ball carrier's team and the intended receiver of a pass in flight — #7 cannot supply it, because a pass's intended receiver is an intent held by the executing #5 pass, not a perceived fact (ERR-012-011) |
 | #7 Perception §3.7 | ball velocity (longitudinal) | `float` | for phase classification §3.0 |
 | Orchestrator | `ContextModifierInputs` | struct | computed by match orchestrator |
 | #12-internal | prior `HysteresisState` | struct | from previous tick |
@@ -193,3 +194,4 @@ final on-pitch slot from before the substitution / red card).
 | 0.1 | May 15, 2026 | AI agent (claude/draft-positional-ai-specs-MOejb) | Initial section-file draft from `outline-detailed.md` v1.2. 48 FRs enumerated; FR-PA-034 marked DELETED. |
 | 0.2 | May 16, 2026 | AI agent (claude/review-positional-ai-specs-v4rmD) | PASS-1 adversarial fix pass. AR-S1-04 FR-PA-002 rewritten: orchestrator writes `TacticalContext.FormationSlot` field directly, not via `Stage0Default()` factory; AR-S1-07 substituted/red-carded agents emit `SENTINEL_NO_SLOT = Vector2.NegativeInfinity`, not `(NaN, NaN)`; AR-S1-19 FR-PA-034 footnote retained original wording. |
 | 0.3 | May 18, 2026 | AI agent (adversarial-specs-review-run2-AFrm4) | FAIL-4 fix (A-03): FR-PA-005 `[CROSS-PENDING]` promoted to `[CROSS: #16 §3.4]`; ERR-012-001 resolved. |
+| 0.4 | August 8, 2026 | AI agent (wiring-backlog C1) | ERR-012-011: FR-PA-022 restated in terms of TEAM possession, with the football definition made normative — a team is in possession while a player is on the ball AND while a ball it played is travelling to a team-mate; a ball played to no one is not possession. §2.3's single possession row split in two: #7's on-ball carrier (`null` for the whole flight of every pass; consumed by §3.3 dismarking's FR-DM-007 exclusion only) and the orchestrator-supplied team in possession (the §3.0 input). #7 cannot supply the latter — a pass's intended receiver is an intent held by the executing #5 pass, not a perceived fact. |

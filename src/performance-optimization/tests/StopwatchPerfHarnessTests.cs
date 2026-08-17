@@ -1,5 +1,6 @@
 // File:     src/performance-optimization/tests/StopwatchPerfHarnessTests.cs
 // Created:  2026-07-13
+// Modified: 2026-07-13
 // Author:   —
 // Spec:     Performance Optimization Strategy #18 §3.3.5 / §3.3.2 / §4.3.1,
 //           Deterministic Simulation #16 §4.8 (EnvironmentFingerprint),

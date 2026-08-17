@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineTacticTests.cs
 // Created:  2026-06-28
-// Modified: 2026-07-07
+// Modified: 2026-07-11
 // Author:   —
 // Spec:     Tactical Instructions #21 §3.1/§3.2/§3.4/§4.6 (FR-TI-017/027/031/033); Match Engine design note §5; Code Standards #20
 // Purpose:  #21 T2 runtime-activation tests — SetTeamTactic routes a live TeamTactic into each
@@ -632,11 +632,11 @@ namespace TacticalDirector.MatchEngine
 // | 1.3     | 2026-06-29 | —      | #12 Phase-D writer: Width / DefensiveWidth per-team routing + Standard-default cases. |
 // | 1.4     | 2026-06-30 | —      | #21 §3.3 per-agent PlayerTactic config (SetPlayerTactic routing / stride-gating / |
 // |         |            |        | invalid-agent / identity behaviour-neutrality) + §3.4 DefensiveLine depth recompute. |
+// | 1.4.1   | 2026-07-07 | —      | Cheap-item addition: #14 MarkingOrientation per-team routing + Balanced-default case. |
+// | 1.4.2   | 2026-07-07 | —      | Reverted after user review: the half-spaces AgentLane routing smoke test is |
+// |         |            |        | REMOVED (half-spaces need tactical/player instructions, not a flat bonus).  |
 // | 1.5     | 2026-07-11 | —      | #23/#24/#25 wiring: dial routing per team (snapshot + TacticalContext), identity   |
 // |         |            |        | defaults + identity bindings, FM-BU-03 team-regain arming (first-settle / counter- |
 // |         |            |        | attack / hold-shape / per-heartbeat decrement), marking-dwell coherence, and the   |
 // |         |            |        | non-identity-dial determinism chain.                                               |
-// | 1.5     | 2026-07-07 | —      | Cheap-item addition: #14 MarkingOrientation per-team routing + Balanced-default case. |
-// | 1.6     | 2026-07-07 | —      | Reverted after user review: the half-spaces AgentLane routing smoke test is |
-// |         |            |        | REMOVED (half-spaces need tactical/player instructions, not a flat bonus).  |
 #endregion

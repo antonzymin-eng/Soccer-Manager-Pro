@@ -1,6 +1,6 @@
 // File:     src/decision-tree/Tests/DecisionTreeIntegrationTests.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-11
 // Author:   —
 // Spec:     Decision Tree #8 §3.6, §3.7, §4.1–4.3, Code Standards #20
 // Purpose:  Integration tests for the full 6-step Decision Tree pipeline via the public

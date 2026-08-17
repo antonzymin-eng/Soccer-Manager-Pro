@@ -1,6 +1,6 @@
 // File:     src/shot-mechanics/ShotPlacementResolver.cs
 // Created:  2026-05-27
-// Modified: 2026-05-28
+// Modified: 2026-07-27
 // Author:   —
 // Spec:     Shot Mechanics #6 §3.5, Code Standards #20
 // Purpose:  Translates goal-relative PlacementTarget (u, v) into a world-space aim

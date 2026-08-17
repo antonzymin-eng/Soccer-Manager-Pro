@@ -1,9 +1,10 @@
 # Training System #29 — Section 4: Architecture
 
 **Created:** July 23, 2026
-**Last Updated:** August 6, 2026 (v0.5 — ERR-029-005: §4.4.1's layout gains the leading
+**Last Updated:** August 8, 2026 (v0.6 — ERR-029-008: the file-layout comment stops calling TrainingSchedule read-only)
+**Last Updated (prior):** August 6, 2026 (v0.5 — ERR-029-005: §4.4.1's layout gains the leading
 TRAINING_SAVE_MAGIC, without which the #41 block decodes here silently; AR pass 1)
-**Version:** 0.5
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -33,7 +34,7 @@ src/training-system/
 ├── training-system.asmdef
 ├── TrainingFocus.cs                  // the focus enum
 ├── TrainingState.cs                  // the #29-owned per-player state (serialized)
-├── TrainingSchedule.cs               // read-only VIEW over per-player TrainingState.Focus (not serialized)
+├── TrainingSchedule.cs               // club-scoped focus handle: PlayerId→Focus view + the FR-TR-023 TrySetFocus write (not serialized; ERR-029-008)
 ├── CoachingModifier.cs               // KD-3 identity routing seam
 ├── TrainingStep.cs                   // AdvanceTrainingDay + ComputeTrainingInput + ProjectMatchEntryFatigue
 ├── InjuryRiskContribution.cs         // KD-5 output
@@ -138,6 +139,7 @@ Four properties the layout carries, each of which is a MUST:
 | 0.1 | 2026-07-23 | — | Initial architecture. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | APPROVED. |
 | 0.3 | 2026-07-23 | — | PASS-2: §4.3 cites #28's batch `AdvanceDay` + curveEnabled coupling; `TrainingSchedule.cs` file comment = derived view (not serialized). |
-| 0.5 | 2026-08-06 | — | **ERR-029-005** (AR pass 1 over the T1 landing): §4.4.1's layout gains a leading `TRAINING_SAVE_MAGIC`, and decode MUST refuse a block without it. v0.4 relied on the version field to gate the block, but every sub-blob format in the save stack is at version 1 — a version gate separates generations of one format, never one format from another. v0.4 had just made this block #41's exact byte shape, so each codec decoded the other's bytes completely and silently: injury tiers read back as training focuses, recovery counters as conditioning cursors, every gate green. Also corrects the `ClubId` bullet's `KD-7 blob independence` citation to `KD-2`. |
 | 0.4 | 2026-08-06 | — | **ERR-029-004** (at #29 T1): new **§4.4.1** pins the `TRAINING_SAVE_FORMAT_VERSION` byte layout, which v0.3 never wrote down. Adds the `ClubId` field (club identity must not be positional), the canonical ascending-key rule (order is not state), and the explicit non-gate on `[GT]` bands at decode. |
+| 0.5 | 2026-08-06 | — | **ERR-029-005** (AR pass 1 over the T1 landing): §4.4.1's layout gains a leading `TRAINING_SAVE_MAGIC`, and decode MUST refuse a block without it. v0.4 relied on the version field to gate the block, but every sub-blob format in the save stack is at version 1 — a version gate separates generations of one format, never one format from another. v0.4 had just made this block #41's exact byte shape, so each codec decoded the other's bytes completely and silently: injury tiers read back as training focuses, recovery counters as conditioning cursors, every gate green. Also corrects the `ClubId` bullet's `KD-7 blob independence` citation to `KD-2`. |
+| 0.6 | 2026-08-08 | — | **ERR-029-008 (balance-pass AR pass 13, M2)**: the layout comment still read "read-only VIEW" — the pre-T0-AR shape; restated as the club-scoped handle owning the FR-TR-023 write. |
 #endregion

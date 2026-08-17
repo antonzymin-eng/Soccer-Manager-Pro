@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEnginePhysicsTests.cs
 // Created:  2026-06-16
+// Modified: 2026-06-22
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §5 Phase B (B2), Code Standards #20
 // Purpose:  Phase B step B2 tests — proves the Physics phase drives the real Ball Physics (#1) and

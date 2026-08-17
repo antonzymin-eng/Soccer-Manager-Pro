@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineMatchFlowTests.cs
 // Created:  2026-07-14
-// Modified: 2026-07-26 (§5.Z.10: kickoff keeper-placement locks — a keeper never moves at Stage 0, so boot placement is its position for the whole match)
+// Modified: 2026-07-26
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-flow-completion-design.md) §7, Code Standards #20
 // Purpose:  Locks the half-time (ball reset, fires once) and full-time (gameplay freeze, fires once)
@@ -204,4 +204,7 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        |   also assert the new public MatchEnded property mirrors       |
 // |         |            |        |   TestOnly_MatchEnded (the observation-surface consumer         |
 // |         |            |        |   contract the live viewer's auto-pause depends on).            |
+// | 1.2     | 2026-07-26 | —      | §5.Z.10: kickoff keeper-placement locks — a keeper never moves  |
+// |         |            |        |   at Stage 0, so boot placement is its position for the whole  |
+// |         |            |        |   match.                                                        |
 #endregion

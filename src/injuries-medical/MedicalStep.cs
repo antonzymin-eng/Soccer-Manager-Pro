@@ -1,6 +1,6 @@
 // File:     src/injuries-medical/MedicalStep.cs
 // Created:  2026-08-05
-// Modified: 2026-08-05
+// Modified: 2026-08-08 (AR pass 15 M1: the draw branch made atomic — fallible call before writes — v1.12)
 // Author:   —
 // Spec:     Injuries & Medical #41 §3.1–§3.4 + Appendices A/B (FR-MD-003..016, FR-MD-023),
 //           F1/F4/F6/F7; Code Standards #20
@@ -70,8 +70,13 @@ namespace TacticalDirector.InjuriesMedical
         /// last-advanced day (F7) or is itself the never-advanced sentinel.
         /// </exception>
         /// <exception cref="InvalidOperationException">
-        /// The draw denominator is not positive — propagated from <see cref="DrawOccurrence"/>; a
-        /// catalogue integrity failure, not a caller error.
+        /// A catalogue/config integrity failure, not a caller error — one of the four consuming-site
+        /// guards fired: <see cref="InjuriesMedicalConstants.InjuryRiskMax"/> outside
+        /// <c>(0, OCCURRENCE_DRAW_DENOM]</c> (from <see cref="DrawOccurrence"/>);
+        /// <see cref="InjuriesMedicalConstants.RecoveryDaysPerTickBase"/> non-positive or
+        /// <see cref="InjuriesMedicalConstants.RecoveryMax"/> below 1 (the countdown site); or the
+        /// severity split negative / summing past the denominator (from
+        /// <see cref="ClassifySeverityFromDraw"/>).
         /// </exception>
         public static void AdvanceMedicalDay(
             ref InjuryState state,
@@ -90,7 +95,7 @@ namespace TacticalDirector.InjuriesMedical
             if (worldDay == InjuriesMedicalConstants.MEDICAL_NOT_ADVANCED_SENTINEL)
             {
                 throw new ArgumentException(
-                    "worldDay must not be the never-advanced sentinel; storing it would re-arm the day-0 trap (F6).",
+                    "worldDay must not be the never-advanced sentinel; storing it would re-arm the day-0 trap (F8).",
                     nameof(worldDay));
             }
 
@@ -118,6 +123,24 @@ namespace TacticalDirector.InjuriesMedical
             //    tier-days once at injury time instead (§3.3 / FR-MD-014).
             if (state.Severity != InjurySeverity.None)
             {
+                // The recovery-rate invariant, enforced at the one site that counts down (AR pass 12
+                // M3 — the DrawOccurrence guard posture, fourth instance): RecoveryDaysPerTickBase is
+                // a [GT] config key and the catalogue lock only sees the fallback, so a shipped
+                // config at 0 (or negative) would otherwise make EVERY injury permanent, silently —
+                // the countdown never falls, Severity never returns to None, and the only symptom is
+                // the depleted-squad back-fill quietly fielding whole squads.
+                // (The RecoveryMax half of the pass-13 guard moved to AssignRecoveryDays at AR
+                // pass 14 M1 — HERE it was provably dead: ValidateState has already refused any
+                // injured state with RecoveryRemaining > RecoveryMax, and Severity != None forces
+                // RecoveryRemaining >= 1, so RecoveryMax < 1 cannot reach this branch under ANY
+                // config; the breach it names happens on the mutually exclusive draw branch.)
+                if (InjuriesMedicalConstants.RecoveryDaysPerTickBase <= 0)
+                {
+                    throw new InvalidOperationException(
+                        "RecoveryDaysPerTickBase must be positive — a non-positive decrement makes "
+                        + "every injury permanent; catalogue/config integrity failure (§3.1, Appendix A).");
+                }
+
                 state.RecoveryRemaining = Clamp(
                     state.RecoveryRemaining - InjuriesMedicalConstants.RecoveryDaysPerTickBase,
                     0,
@@ -142,8 +165,16 @@ namespace TacticalDirector.InjuriesMedical
                     // consumes exactly one draw per occurrence-eligible day, never two.
                     InjurySeverity severity = ClassifySeverityFromDraw(draw, risk);
 
+                    // Fallible call FIRST, writes after (AR pass 15 M1): AssignRecoveryDays carries
+                    // the RecoveryMax guard, and with Severity already written its throw would leave
+                    // RecoveryRemaining == 0 beside a fresh severity IN THE LIVE CAREER — the exact
+                    // breach being refused, surfacing a day later as a state-blaming refusal. A
+                    // refused advance mutates nothing (the F7 standard); this branch was the one
+                    // exception.
+                    int recoveryDays = AssignRecoveryDays(severity, medical);
+
                     state.Severity = severity;
-                    state.RecoveryRemaining = AssignRecoveryDays(severity, medical);
+                    state.RecoveryRemaining = recoveryDays;
                     state.InjuryCount++;
                 }
             }
@@ -161,13 +192,22 @@ namespace TacticalDirector.InjuriesMedical
         public static bool IsAvailable(in InjuryState state) => state.Severity == InjurySeverity.None;
 
         /// <summary>
-        /// The occurrence-risk assembly (§3.4) — pure, integer, and clamped to
-        /// <c>[0, InjuriesMedicalConstants.InjuryRiskMax]</c>, the same scale the draw is taken on, so
-        /// §3.1 compares the two directly with no scale factor between them.
+        /// The occurrence-risk assembly (§3.4, as revised by ERR-041-011) — pure, integer, and clamped
+        /// to <c>[0, InjuriesMedicalConstants.InjuryRiskMax]</c>. The draw is uniform in
+        /// <c>[0, OCCURRENCE_DRAW_DENOM)</c> and §3.1 tests <c>draw &lt; risk</c>, so the result IS the
+        /// daily probability numerator on the per-million scale, capped at the
+        /// <c>InjuryRiskMax / OCCURRENCE_DRAW_DENOM</c> ceiling (1.6% at today's values).
         /// <para>
         /// The training term is #29's <b>already-published</b> scalar, read-only: #41 never reads or
         /// mutates #29's training-fatigue accumulator or the match engine's <c>AerobicPool</c>, so no
         /// counter is shared and a double count is not representable (KD-2 / FR-MD-009).
+        /// </para>
+        /// <para>
+        /// <b><c>BaselineDailyRisk</c> sits BEFORE the mitigation, normatively</b> (§3.4 /
+        /// ERR-041-011): the exposure-independent floor is discriminated by robustness — a frail
+        /// player's quiet week is riskier than an iron man's — which an after-the-clamp addition
+        /// could not be. It is also what keeps a fit player on the default focus from being
+        /// injury-proof forever, the third absurdity the fifth AR pass measured.
         /// </para>
         /// </summary>
         /// <param name="trainingRisk">#29's risk contribution.</param>
@@ -186,6 +226,7 @@ namespace TacticalDirector.InjuriesMedical
             long risk = (long)InjuriesMedicalConstants.TrainingRiskPassthroughWeight * trainingRisk.RiskScore
                         + (long)InjuriesMedicalConstants.AppearanceLoadWeight * load.AppearanceDays
                         + (long)InjuriesMedicalConstants.HardContactWeight * load.HardContacts
+                        + InjuriesMedicalConstants.BaselineDailyRisk
                         - RobustnessMitigation(attributes);
 
             risk = risk * medical.OccurrenceRiskMillMult / InjuriesMedicalConstants.MEDICAL_MODIFIER_IDENTITY_PERMILLE;
@@ -212,12 +253,46 @@ namespace TacticalDirector.InjuriesMedical
         /// so there is no tier to classify. Without this the method answers <c>Serious</c> for any
         /// draw at <c>risk == 0</c>, which is a plausible-looking wrong answer rather than a refusal.
         /// </exception>
+        /// <exception cref="InvalidOperationException">
+        /// The <c>[GT]</c> severity numerators sum to <see cref="InjuriesMedicalConstants.SEVERITY_PERMILLE_DENOM"/>
+        /// or past it — the <c>Serious</c> tier would be unreachable; a catalogue/config integrity
+        /// failure rather than a bad argument (the <see cref="DrawOccurrence"/> guard posture).
+        /// </exception>
         public static InjurySeverity ClassifySeverityFromDraw(int draw, int risk)
         {
             if (draw >= risk)
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(draw), draw, "Severity is classified only for a CONFIRMED occurrence (draw < risk, §3.2).");
+            }
+
+            // The split invariant, enforced at the one site that classifies (the DrawOccurrence
+            // denominator-guard posture, AR pass 10 M1; completed AR pass 11 L3): both numerators
+            // are [GT] config-tunable and the catalogue suite only ever sees the fallbacks (the gate
+            // runs config-unbound — ERR-041-003's class), so a shipped config summing to the
+            // denominator or past it would otherwise delete the Serious tier silently — at a sum of
+            // exactly 1000 the second bucket's bound IS this method's own precondition. Strict, per
+            // Appendix A. The runtime guard mirrors ALL of the design-time lock's predicates, with
+            // positivity relaxed to non-negativity — a zero tier is an expressible config intent,
+            // but a NEGATIVE numerator makes its whole tier unreachable through the same silent
+            // mechanism the sum guard exists to stop (Minor at -100 reads as a 0/20/80 split).
+            if (InjuriesMedicalConstants.SeverityMinorPermille < 0
+                || InjuriesMedicalConstants.SeverityModeratePermille < 0)
+            {
+                throw new InvalidOperationException(
+                    "SeverityMinorPermille and SeverityModeratePermille must be non-negative — a "
+                    + "negative numerator silently deletes its tier; catalogue/config integrity "
+                    + "failure (§3.2, Appendix A).");
+            }
+
+            if (InjuriesMedicalConstants.SeverityMinorPermille
+                + InjuriesMedicalConstants.SeverityModeratePermille
+                >= InjuriesMedicalConstants.SEVERITY_PERMILLE_DENOM)
+            {
+                throw new InvalidOperationException(
+                    "SeverityMinorPermille + SeverityModeratePermille must be strictly below "
+                    + "SEVERITY_PERMILLE_DENOM — at or above it the Serious tier is unreachable; "
+                    + "catalogue/config integrity failure (§3.2, Appendix A).");
             }
 
             long scaledDraw = (long)draw * InjuriesMedicalConstants.SEVERITY_PERMILLE_DENOM;
@@ -255,7 +330,7 @@ namespace TacticalDirector.InjuriesMedical
         }
 
         /// <summary>
-        /// The keyed occurrence draw: a uniform in <c>[0, OccurrenceDrawDenom)</c> derived from
+        /// The keyed occurrence draw: a uniform in <c>[0, OCCURRENCE_DRAW_DENOM)</c> derived from
         /// <c>(worldSeed, playerId, actionOrdinal)</c> with the #41 domain tag folded in first, so
         /// #41's draws are domain-separated from every other subsystem's.
         /// <para>
@@ -274,27 +349,33 @@ namespace TacticalDirector.InjuriesMedical
         /// <param name="playerId">The player being evaluated.</param>
         /// <param name="actionOrdinal">The <c>(worldDay, purpose)</c> ordinal from <see cref="DeriveActionOrdinal"/>.</param>
         /// <exception cref="InvalidOperationException">
-        /// <see cref="InjuriesMedicalConstants.OccurrenceDrawDenom"/> is not positive — a catalogue
-        /// integrity failure rather than a bad argument, and one only a config override can produce.
+        /// The <c>[GT]</c> <see cref="InjuriesMedicalConstants.InjuryRiskMax"/> ceiling exceeds
+        /// <see cref="InjuriesMedicalConstants.OCCURRENCE_DRAW_DENOM"/> — a catalogue/config integrity
+        /// failure rather than a bad argument (ERR-041-011: the invariant that keeps every daily
+        /// probability ≤ 1, checked at the one site that draws).
         /// </exception>
         internal static int DrawOccurrence(ulong worldSeed, int playerId, ulong actionOrdinal)
         {
-            // The denominator is a [GT]-derived value and this is the one place it divides. Zero would
-            // throw on its own, but a NEGATIVE ceiling would not: the ulong cast turns it into ~2^64,
-            // the modulo becomes a no-op, and the int narrowing yields a signed garbage draw that the
-            // comparison downstream still happily classifies. #29 guards its own divisor for the same
-            // class of reason (§3.3), so refuse here rather than compute a plausible-looking wrong draw.
-            if (InjuriesMedicalConstants.OccurrenceDrawDenom <= 0)
+            // The denominator is [FIXED] and positive by construction (ERR-041-011 retired the
+            // [GT]-derived form whose negative-config trap the old guard existed for). What a config
+            // CAN still break are the two invariants on the [GT] ceiling (AR pass 13 M1 widened the
+            // guard to both sides): raised past the denominator, a clamped risk means "certain and
+            // then some"; at zero or negative, every score clamps to 0 and the ARMED dial injures
+            // nobody, forever, silently. One comparison pair at the one drawing site.
+            if (InjuriesMedicalConstants.InjuryRiskMax <= 0
+                || InjuriesMedicalConstants.InjuryRiskMax > InjuriesMedicalConstants.OCCURRENCE_DRAW_DENOM)
             {
                 throw new InvalidOperationException(
-                    "OccurrenceDrawDenom must be positive; it derives from the [GT] InjuryRiskMax ceiling (§3.4).");
+                    "InjuryRiskMax must be positive and no greater than OCCURRENCE_DRAW_DENOM — " +
+                    "non-positive, the armed dial injures nobody forever; past the denominator, the " +
+                    "probability ceiling passes 1; catalogue/config integrity failure (ERR-041-011, §3.4).");
             }
 
             ulong h = Mix((ulong)InjuriesMedicalConstants.DomainTagInjuriesMedical ^ worldSeed);
             h = Mix(h ^ (ulong)(uint)playerId);
             h = Mix(h ^ actionOrdinal);
 
-            return (int)(h % (ulong)InjuriesMedicalConstants.OccurrenceDrawDenom);
+            return (int)(h % (ulong)InjuriesMedicalConstants.OCCURRENCE_DRAW_DENOM);
         }
 
         /// <summary>
@@ -308,10 +389,13 @@ namespace TacticalDirector.InjuriesMedical
         /// publishing the scalar <see cref="AssembleRiskScore"/> passes through, so a robust player is
         /// priced down twice and the two <c>[GT]</c> tables cannot be tuned independently. Both specs
         /// mandate their term, so this is the contract rather than a defect — but it has a consequence
-        /// worth knowing before tuning: because #27 attributes floor at 1, this term is never zero, so
-        /// a risk score saturated at #29's ceiling still lands strictly below
-        /// <see cref="InjuriesMedicalConstants.OccurrenceDrawDenom"/> and no player is ever certain to
-        /// be injured. Recorded under ERR-041-003 for the balance pass.
+        /// worth knowing before tuning: because #27 attributes floor at 1, this term is never zero.
+        /// It no longer keeps the worst case below the clamp, though — since the balance pass's AR
+        /// raised the ceiling for discrimination headroom, a worst-case assembly (saturated #29 risk
+        /// + baseline + a full appearance window) SATURATES at the
+        /// <see cref="InjuriesMedicalConstants.InjuryRiskMax"/> clamp — and the clamp itself sits at
+        /// 1.6% of <see cref="InjuriesMedicalConstants.OCCURRENCE_DRAW_DENOM"/> — so no player is ever
+        /// remotely certain to be injured. Recorded under ERR-041-003; scale decoupled at ERR-041-011.
         /// </para>
         /// </summary>
         /// <param name="attributes">The player's #27 attributes.</param>
@@ -346,6 +430,21 @@ namespace TacticalDirector.InjuriesMedical
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(severity), severity, "Recovery days are assigned only for a confirmed injury (F1).");
+            }
+
+            // The RecoveryMax >= 1 invariant, enforced at the one site whose clamp could breach it
+            // (AR pass 14 M1 — pass 13 placed this on the countdown branch, where ValidateState
+            // makes it unsatisfiable; with RecoveryMax < 1, ClampLong's value > max arm would
+            // return RecoveryMax, an F1-breaching assignment). The caller sequences this call
+            // BEFORE any state write (AR pass 15 M1), so the refusal leaves the career untouched
+            // rather than half-injured — prevention is the ORDERING's property, not this guard's;
+            // the guard alone only made the breach loud.
+            if (InjuriesMedicalConstants.RecoveryMax < 1)
+            {
+                throw new InvalidOperationException(
+                    "RecoveryMax must be at least 1 — below it the assignment clamp would produce "
+                    + "RecoveryRemaining == 0 for a confirmed injury; catalogue/config integrity "
+                    + "failure (§3.3, Appendix A).");
             }
 
             long scaled = (long)InjuriesMedicalConstants.RecoveryDaysFor(severity)
@@ -483,4 +582,52 @@ namespace TacticalDirector.InjuriesMedical
 // |         |            |        | Also repairs a REGRESSION shipped in v1.2: that pass appended a     |
 // |         |            |        | <para> to RobustnessMitigation's doc and dropped the closing        |
 // |         |            |        | </summary>, leaving malformed XML (CS1570 under a doc-file build).  |
+// | 1.4     | 2026-08-07 | —      | Balance pass D3 (ERR-041-011): AssembleRiskScore gains the         |
+// |         |            |        | BaselineDailyRisk term BEFORE the mitigation (position normative);  |
+// |         |            |        | the draw reduces into the [FIXED] OCCURRENCE_DRAW_DENOM instead of  |
+// |         |            |        | the [GT]-derived OccurrenceDrawDenom, and the draw-site guard      |
+// |         |            |        | becomes the new invariant InjuryRiskMax <= DENOM (the old negative- |
+// |         |            |        | denominator trap is unrepresentable against a const).              |
+// | 1.5     | 2026-08-07 | —      | Balance-pass AR passes 1+2 (doc only): the RobustnessMitigation     |
+// |         |            |        | tuning note claimed the worst case "lands strictly below the       |
+// |         |            |        | InjuryRiskMax clamp" at "1%" — false since the M3 headroom raise   |
+// |         |            |        | (the worst-case assembly now SATURATES the clamp; ceiling 1.6%).   |
+// |         |            |        | Pass 1's one-line doc edit here also shipped rowless; both under   |
+// |         |            |        | this row.                                                          |
+// | 1.6     | 2026-08-08 | —      | Balance-pass AR pass 9 (L4, message only): the sentinel-as-        |
+// |         |            |        | worldDay refusal had NO normative source — #41 SS2.3 gains F8 and  |
+// |         |            |        | SS3.1's pseudocode the guard line; the message cites F8, not F6.   |
+// | 1.7     | 2026-08-08 | —      | Balance-pass AR pass 10 (M1): the severity-split invariant gains   |
+// |         |            |        | its RUNTIME half — ClassifySeverityFromDraw fail-louds when the    |
+// |         |            |        | [GT] numerators sum to the denominator or past it (the             |
+// |         |            |        | DrawOccurrence guard posture; the catalogue lock only sees the     |
+// |         |            |        | fallbacks, ERR-041-003's class).                                   |
+// | 1.8     | 2026-08-08 | —      | Balance-pass AR pass 11 (L3): the runtime guard mirrors ALL the    |
+// |         |            |        | design-time lock's predicates — a NEGATIVE [GT] numerator passed   |
+// |         |            |        | the sum guard and silently deleted its own tier (Minor at -100 =   |
+// |         |            |        | a 0/20/80 split); positivity relaxed to non-negativity, a zero     |
+// |         |            |        | tier being an expressible intent.                                  |
+// | 1.9     | 2026-08-08 | —      | Balance-pass AR pass 12 (M3): RecoveryDaysPerTickBase gains its    |
+// |         |            |        | runtime guard at the countdown site — the one [GT] in the landing |
+// |         |            |        | whose lock had no runtime mirror; at 0 every injury was permanent |
+// |         |            |        | silently (the DrawOccurrence posture, fourth instance).            |
+// | 1.10    | 2026-08-08 | —      | Balance-pass AR pass 13 (M1 + L6): the guard class COMPLETED —     |
+// |         |            |        | RecoveryMax < 1 joins the countdown guard (a degenerate clamp     |
+// |         |            |        | wrote RecoveryRemaining == 0 while injured — the F1 breach the    |
+// |         |            |        | floor's own doc names) and DrawOccurrence refuses a non-positive  |
+// |         |            |        | ceiling (armed dial injures nobody, forever, silently); the       |
+// |         |            |        | entry point's exception doc names the four real guards, not the   |
+// |         |            |        | retired denominator one.                                          |
+// | 1.11    | 2026-08-08 | —      | Balance-pass AR pass 14 (M1): the pass-13 RecoveryMax guard was    |
+// |         |            |        | PROVABLY DEAD where it sat — ValidateState makes RecoveryMax < 1  |
+// |         |            |        | unsatisfiable on the countdown branch under any config, while the |
+// |         |            |        | breach it names happens on the mutually exclusive draw branch     |
+// |         |            |        | (demonstrated by model). Moved to AssignRecoveryDays, the one     |
+// |         |            |        | site whose clamp can write the breach.                            |
+// | 1.12    | 2026-08-08 | —      | Balance-pass AR pass 15 (M1): the pass-14 guard fired AFTER       |
+// |         |            |        | Severity was written — the draw branch was the step's one         |
+// |         |            |        | partial-write throw site, leaving the live career F1-incoherent   |
+// |         |            |        | behind the very refusal (demonstrated by model). AssignRecovery-  |
+// |         |            |        | Days now runs before any write; the branch is atomic; the guard's |
+// |         |            |        | message stops claiming the prevention the ordering provides.      |
 #endregion

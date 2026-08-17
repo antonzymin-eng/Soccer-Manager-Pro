@@ -1,6 +1,6 @@
 // File: src/positioning-ai/PositioningAIConstants.cs
 // Created:  2026-05-29
-// Modified: 2026-07-28 (ERR-012-010: GK_LATERAL_FACTOR retired -> GK_LATERAL_CLAMP_M, the ball-line lateral clamp)
+// Modified: 2026-07-28
 // Author:   —
 // Spec: #12 Positioning AI §6.1, Appendix B, new §3.5/§7.13 rest-defense coverage (cheap-item addition)
 // Purpose: Single constant catalogue for Spec #12. All scalars, formation tables, and lookup arrays.
@@ -550,4 +550,6 @@ namespace TacticalDirector.PositioningAI
 // |         |            |        |   hysteresis/offset-bound/suppress window, rotation advantage/    |
 // |         |            |        |   scalars/dwell/hold/per-tick cap. Magnitudes illustrative        |
 // |         |            |        |   pending each spec's balance pass (#21 G2 precedent).            |
+// | 1.3     | 2026-07-28 | —      | ERR-012-010: GK_LATERAL_FACTOR retired -> GK_LATERAL_CLAMP_M,     |
+// |         |            |        |   the ball-line lateral clamp.                                     |
 #endregion

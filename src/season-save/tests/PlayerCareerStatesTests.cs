@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/PlayerCareerStatesTests.cs
 // Created:  2026-08-06
-// Modified: 2026-08-06
+// Modified: 2026-08-08 (AR pass 12 L3: the draw-key spelling in the roll-test comment)
 // Author:   —
 // Spec:     Training System #29 §3.1/§3.3/§3.5, FR-TR-004/016/023/025/026, F6/F7;
 //           Injuries & Medical #41 §3.1/§3.5, FR-MD-003/004/022/023/025/027, F2/F6/F7;
@@ -92,7 +92,7 @@ namespace TacticalDirector.SeasonSave.Tests
             // Hand the clubs in descending order; the blocks must still come back ascending, which is
             // what both codecs require of their input.
             PlayerCareerStates career =
-                PlayerCareerStates.ForLeague(provider, new[] { 1, 0 });
+                PlayerCareerStates.ForLeague(provider, new[] { 1, 0 }, injuryOccurrenceEnabled: false);
 
             ClubTrainingStates[] blocks = career.TrainingBlocks();
             Assert.AreEqual(0, blocks[0].ClubId);
@@ -108,7 +108,7 @@ namespace TacticalDirector.SeasonSave.Tests
         {
             CareerTestRoster.MutableSquadProvider provider = TwoClubProvider();
             Assert.Throws<System.ArgumentException>(() =>
-                PlayerCareerStates.ForLeague(provider, new[] { 0, 0 }));
+                PlayerCareerStates.ForLeague(provider, new[] { 0, 0 }, injuryOccurrenceEnabled: false));
         }
 
         [Test]
@@ -116,7 +116,7 @@ namespace TacticalDirector.SeasonSave.Tests
         {
             CareerTestRoster.MutableSquadProvider provider = TwoClubProvider();
             Assert.Throws<System.ArgumentException>(() =>
-                PlayerCareerStates.ForLeague(provider, new[] { 0, 7 }));
+                PlayerCareerStates.ForLeague(provider, new[] { 0, 7 }, injuryOccurrenceEnabled: false));
         }
 
         // ── persistence ────────────────────────────────────────────────────────────────────
@@ -144,9 +144,13 @@ namespace TacticalDirector.SeasonSave.Tests
 
             byte[] trainingBlob = TrainingSaveCodec.Encode(career.TrainingBlocks());
             byte[] medicalBlob = MedicalSaveCodec.Encode(career.MedicalBlocks());
+            byte[] appearanceBlob = AppearanceSaveCodec.Encode(career.AppearanceBlocks());
 
             PlayerCareerStates restored = PlayerCareerStates.FromBlocks(
-                TrainingSaveCodec.Decode(trainingBlob), MedicalSaveCodec.Decode(medicalBlob));
+                TrainingSaveCodec.Decode(trainingBlob),
+                MedicalSaveCodec.Decode(medicalBlob),
+                AppearanceSaveCodec.Decode(appearanceBlob),
+                injuryOccurrenceEnabled: false);
 
             Assert.AreEqual(career.ClubCount, restored.ClubCount);
             for (int c = 0; c < career.ClubCount; c++)
@@ -197,7 +201,8 @@ namespace TacticalDirector.SeasonSave.Tests
 
             Assert.Throws<System.ArgumentException>(() =>
                 PlayerCareerStates.FromBlocks(
-                    career.TrainingBlocks(), new[] { medical[0] }));
+                    career.TrainingBlocks(), new[] { medical[0] }, career.AppearanceBlocks(),
+                    injuryOccurrenceEnabled: false));
         }
 
         [Test]
@@ -211,7 +216,9 @@ namespace TacticalDirector.SeasonSave.Tests
             var swapped = new[] { medical[1], medical[0] };
 
             Assert.Throws<System.ArgumentException>(() =>
-                PlayerCareerStates.FromBlocks(career.TrainingBlocks(), swapped));
+                PlayerCareerStates.FromBlocks(
+                    career.TrainingBlocks(), swapped, career.AppearanceBlocks(),
+                    injuryOccurrenceEnabled: false));
         }
 
         [Test]
@@ -232,7 +239,8 @@ namespace TacticalDirector.SeasonSave.Tests
             };
 
             Assert.Throws<System.ArgumentException>(() =>
-                PlayerCareerStates.FromBlocks(training, shortened));
+                PlayerCareerStates.FromBlocks(
+                    training, shortened, career.AppearanceBlocks(), injuryOccurrenceEnabled: false));
         }
 
         [Test]
@@ -263,9 +271,14 @@ namespace TacticalDirector.SeasonSave.Tests
                     ids,
                     new[] { InjuryState.Create(), InjuryState.Create(), InjuryState.Create() }),
             };
+            var appearance = new[]
+            {
+                new ClubAppearanceStates(0, ids, new AppearanceState[3]),
+            };
 
             Assert.Throws<System.ArgumentException>(
-                () => PlayerCareerStates.FromBlocks(training, medical));
+                () => PlayerCareerStates.FromBlocks(
+                    training, medical, appearance, injuryOccurrenceEnabled: false));
         }
 
         [Test]
@@ -283,8 +296,10 @@ namespace TacticalDirector.SeasonSave.Tests
             PlayerCareerStates source = Fresh(provider);
             ClubTrainingStates[] training = source.TrainingBlocks();
             ClubInjuryStates[] medical = source.MedicalBlocks();
+            ClubAppearanceStates[] appearance = source.AppearanceBlocks();
 
-            PlayerCareerStates career = PlayerCareerStates.FromBlocks(training, medical);
+            PlayerCareerStates career = PlayerCareerStates.FromBlocks(
+                training, medical, appearance, injuryOccurrenceEnabled: false);
             int playerId = training[0].PlayerIds[0];
             int condition = career.TrainingView(0, playerId).Condition;
 
@@ -302,6 +317,74 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.IsTrue(career.IsAvailable(0, playerId),
                 "…and the same on the #41 side: a borrowed array would let an outside holder install "
                 + "an injury without MedicalStep ever running (FR-MD-003).");
+
+            // AR pass 3 (M2): the ID array is the worse back door — it holds the binary-search keys,
+            // so an aliased write breaks the strictly-ascending precondition FromBlocks just enforced
+            // and re-opens the pass-1 silent-overwrite High through the keys instead of the states.
+            training[0].PlayerIds[0] = int.MaxValue;
+            Assert.AreEqual(condition, career.TrainingView(0, playerId).Condition,
+                "FromBlocks must COPY the id arrays too: the original id must still resolve after a "
+                + "mutation through the handed-in block.");
+        }
+
+        [Test]
+        public void ACrossClubDuplicatePlayerId_IsRefusedAtEveryIdEntryPoint()
+        {
+            // ERR-041-019 (AR pass 3, the High): #41's armed occurrence draw is keyed on
+            // (worldSeed, playerId, actionOrdinal = worldDay x RADIX + purpose) with NO club term, so two clubs carrying one id would
+            // draw bit-identical injury luck on every world day forever — and #27 promises id
+            // uniqueness only WITHIN a club. Today's generator formula is globally unique by
+            // accident of one allocator; this locks the precondition loud at all three id entry
+            // points, so the first allocator that breaks it (#42 intake, #31 transfers) fails at
+            // construction/sync instead of shipping two players who are always injured together.
+            var colliding = new int[PlayerDatabaseConstants.CLUB_SQUAD_SIZE];
+            for (int k = 0; k < colliding.Length; k++)
+            {
+                colliding[k] = k;
+            }
+
+            // Club 0, suffix CLUB_SQUAD_SIZE ⇒ id 0×N+N == club 1's first id (1×N+0).
+            colliding[colliding.Length - 1] = PlayerDatabaseConstants.CLUB_SQUAD_SIZE;
+
+            var provider = new CareerTestRoster.MutableSquadProvider();
+            provider.Set(CareerTestRoster.Build(
+                0, PlayerDatabaseConstants.CLUB_SQUAD_SIZE, colliding));
+            provider.Set(CareerTestRoster.Build(1, PlayerDatabaseConstants.CLUB_SQUAD_SIZE));
+
+            Assert.Throws<System.ArgumentException>(
+                () => PlayerCareerStates.ForLeague(provider, TwoClubs, injuryOccurrenceEnabled: false),
+                "construction must refuse a cross-club duplicate id");
+
+            CareerTestRoster.MutableSquadProvider clean = TwoClubProvider();
+            PlayerCareerStates career = Fresh(clean);
+            clean.Set(CareerTestRoster.Build(
+                0, PlayerDatabaseConstants.CLUB_SQUAD_SIZE, colliding));
+            Assert.Throws<System.ArgumentException>(
+                () => career.SyncToRoster(clean),
+                "the roster sync — the entry point a future allocator actually comes through — "
+                + "must refuse it too, in the validating half");
+
+            int sharedId = PlayerDatabaseConstants.CLUB_SQUAD_SIZE;
+            var training = new[]
+            {
+                new ClubTrainingStates(0, new[] { sharedId }, new[] { TrainingState.Create(TrainingFocus.Balanced) }),
+                new ClubTrainingStates(1, new[] { sharedId }, new[] { TrainingState.Create(TrainingFocus.Balanced) }),
+            };
+            var medical = new[]
+            {
+                new ClubInjuryStates(0, new[] { sharedId }, new[] { InjuryState.Create() }),
+                new ClubInjuryStates(1, new[] { sharedId }, new[] { InjuryState.Create() }),
+            };
+            var appearance = new[]
+            {
+                new ClubAppearanceStates(0, new[] { sharedId }, new AppearanceState[1]),
+                new ClubAppearanceStates(1, new[] { sharedId }, new AppearanceState[1]),
+            };
+
+            Assert.Throws<System.ArgumentException>(
+                () => PlayerCareerStates.FromBlocks(
+                    training, medical, appearance, injuryOccurrenceEnabled: false),
+                "the restore path must refuse a hand-edited or mispaired save the same way");
         }
 
         // ── the slot-2 training step ───────────────────────────────────────────────────────
@@ -404,9 +487,10 @@ namespace TacticalDirector.SeasonSave.Tests
         [Test]
         public void AdvanceMedicalDay_WithTheDialOff_NeverInjuresAnyone()
         {
-            // FR-MD-027's identity, and the reason T2 ships disarmed: at today's illustrative [GT]s the
-            // producer chain injures a fresh player with ~23% probability on his FIRST day, which is
-            // two orders of magnitude out and is the balance pass's to fix (KD-W1).
+            // FR-MD-027's identity — the dial-off half of the contract, still supported and locked
+            // after the balance pass ARMED the production posture (the 23%-first-day absurdity this
+            // comment used to cite is fixed: the fitted chain reads 0.63%/day for a regen, and the
+            // characterization suite in injuries-medical carries the full AFTER table).
             CareerTestRoster.MutableSquadProvider provider = TwoClubProvider();
             PlayerCareerStates career = Fresh(provider, occurrence: false);
 
@@ -615,7 +699,8 @@ namespace TacticalDirector.SeasonSave.Tests
         {
             var provider = new CareerTestRoster.MutableSquadProvider();
             provider.Set(CareerTestRoster.Build(0, 12));
-            PlayerCareerStates career = PlayerCareerStates.ForLeague(provider, new[] { 0 });
+            PlayerCareerStates career = PlayerCareerStates.ForLeague(
+                provider, new[] { 0 }, injuryOccurrenceEnabled: false);
             Squad squad = provider.ResolveByClubId(0);
 
             // With nobody injured the filter returns the squad untouched and the engine's own gate
@@ -838,4 +923,13 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | suite green. Eleven of the twelve pass-3-5 fixes had an enforcing  |
 // |         |            |        | test; this was the twelfth, and it guards the same silent-overwrite|
 // |         |            |        | class as pass 1's ascending-ids High.                              |
+// | 1.3     | 2026-08-07 | —      | Balance pass D2/D4: FromBlocks call sites carry the third          |
+// |         |            |        | (appearance) block set and the now-required dial argument; the     |
+// |         |            |        | round trip covers the APPR codec; the copy lock keeps its shape.   |
+// | 1.4     | 2026-08-08 | —      | Balance-pass AR pass 3: + ACrossClubDuplicatePlayerId lock over    |
+// |         |            |        | all three id entry points (ERR-041-019); the FromBlocks copy lock  |
+// |         |            |        | extends to the ID arrays (M2); the dial-off comment no longer      |
+// |         |            |        | cites the fixed 23%-first-day absurdity as current (L5).           |
+// | 1.5     | 2026-08-08 | —      | Balance-pass AR pass 12 (L3, comment): the ERR-041-019 key spelled |
+// |         |            |        | per #41 SS3.1.1 in the roll-test comment.                          |
 #endregion

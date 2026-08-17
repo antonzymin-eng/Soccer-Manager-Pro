@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 7: Future Extensions
 
 **Created:** May 17, 2026
-**Last Updated:** May 17, 2026 (v0.1 initial draft)
-**Version:** 0.1
+**Last Updated:** August 12, 2026 (v0.2 — KD-6 revised (`ERR-014-006`, wiring backlog W2): §7.1 gains a scoped amendment noting §3.6.5's tackle outcome resolution ships as Stage-0 runtime code, independent of the three Stage-1-activation preconditions.)
+**Version:** 0.2
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0 (May 17, 2026)
 
@@ -20,6 +20,17 @@ Statement in §1.8 and KD-16.
 The entire §3 algorithm and §4 file structure are Stage 0 specification
 deliverables. Runtime code activates at Stage 1. Three preconditions gate
 Stage 1 activation (FR-DA-037):
+
+**Amended (KD-6 revised — `ERR-014-006`, wiring backlog W2, August 12,
+2026):** §3.6.5's tackle outcome resolution (`TackleOutcomeResolver.cs`)
+is a scoped exception — it ships as runtime code alongside this revision,
+independent of the three preconditions below, because the delegation it
+replaces (#8 mediates dispatch to #3) was never satisfiable and gating it
+behind the same three preconditions would have kept it permanently dead
+for a reason unrelated to any of them. The three preconditions below still
+gate the rest of #14's coordinated-assignment runtime (`MarkDirective`,
+`MarkAssignment`, hysteresis, offside trap); this amendment does not
+re-derive their status.
 
 **(a) ERR-014-001 ratified:** `TacticalContext.MarkDirective?` nullable field
 added to #8 §2.2.6 (Decision Tree). Option B selected at spec-draft time;
@@ -254,3 +265,4 @@ stage. If any of these become requirements, they belong in a new separate spec.
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 0.1 | May 17, 2026 | AI agent | Initial draft. §7.1 Stage 1 gate conditions (three preconditions per FR-DA-037). §7.2 man-marking instructions overlay blocked on coach-UI. §7.3 event channels (KD-15 / ERR-014-002..003) deferred to Stage 1 first commit. §7.4 #15 emergency signal declaration (KD-8 / FR-DA-036). §7.5 set-piece defensive wall (KD-7 / #11 FR-GK-016) blocked on Stage 2+ set-piece infrastructure. §7.6 named defensive styles blocked on team-instruction UI. §7.7 2D Euclidean proximity upgrade noted as Stage 2+ enhancement. §7.8 per-archetype profiles blocked on formation-archetype metadata. §7.9 ML tuning deferred to Stage 2+. §7.10–§7.11 Fixed64 / cross-platform binding per #9 Stage 5+. §7.12 permanent exclusions table (7 items). |
+| 0.2 | August 12, 2026 | AI agent (wiring backlog W2) | KD-6 revised (`ERR-014-006`): §7.1 gains a scoped amendment — §3.6.5's tackle outcome resolution ships as Stage-0 runtime code (`TackleOutcomeResolver.cs`) independent of the three FR-DA-037 preconditions, because the delegation it replaces (#8 mediates, #3 owns contact) was never satisfiable. The three preconditions are otherwise untouched and still gate the rest of #14's runtime. |

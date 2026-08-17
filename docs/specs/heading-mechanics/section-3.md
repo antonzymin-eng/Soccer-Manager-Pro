@@ -1,7 +1,7 @@
 # Heading Mechanics Specification #10 — Section 3: Core Formulas, Algorithms, Pseudocode
 
 **Created:** May 16, 2026
-**Version:** 0.1
+**Version:** 0.8
 **Status:** DRAFT
 **Purpose:** Define every formula, predicate, and algorithm that the
 Heading Mechanics pipeline executes — eligibility, jump kinematics,
@@ -375,10 +375,205 @@ launchAngle   = asin(reflectedDir.z / ||reflectedDir||)
 ```
 
 The intended launch direction (toward `targetIntent`) is realized
-by the upstream choice of `contactPointIntent`: Decision Tree #8
-selects a contact point on the head surface such that the
-reflected vector points at the target. `pointError` (§3.4)
-captures deviation from that geometric ideal.
+by §3.5.1, which derives the contact point that reflects the ball
+at the target. `pointError` (§3.4) captures deviation from that
+geometric ideal.
+
+> **ERR-010-002 (August 9, 2026) — the aim had no owner.** This
+> paragraph previously read: *"the upstream choice of
+> `contactPointIntent`: Decision Tree #8 selects a contact point on
+> the head surface such that the reflected vector points at the
+> target."* Decision Tree #8 **cannot emit a header at all** —
+> `ActionType` ordinal 8 overflows the 3-bit composure-noise field
+> (wiring backlog W9), so the header producer is, and for the whole
+> of Stage 0 has been, the match-engine proximity trigger. It
+> supplied `contactPointIntent = 0` and a fixed `targetIntent`, and
+> §3.5's reflection read neither, so **every header was a passive
+> mirror**: the ball left the head along the reflection of its own
+> incoming path and the player had no influence on where it went.
+> This is the `ERR-011-010` shape — a decision delegated to a system
+> that structurally cannot make it, and therefore made by nobody.
+> §3.5.1 takes the derivation back into #10. Two further defects
+> were fixed with it, both recorded in the error log: the contact
+> point was recomputed independently in two places from ball-vs-head
+> geometry (a parallel surface that agreed only by coincidence), and
+> the world-space contact point was rebuilt from its **2-D**
+> head-local projection, pinning `contactPointActual.z` to the head
+> centre — so the reflection normal was permanently horizontal,
+> `reflected.z = v̂_in.z`, and **a descending ball was headed further
+> down**. No header could lift the ball.
+
+### 3.5.1 Aim Realization (ERR-010-002)
+
+The aim is realized in three steps, all pure, all free of new
+`[GT]` constants — the Heading attribute is itself the dial, so
+this stays inside the KD-W1 freeze while heading is unwired.
+
+**Step 1 — the launch direction.** A `targetIntent` is a
+*destination*, reached by an arc, not a straight line: aiming
+along the straight line to a distant ground-level point sends the
+ball into the turf a few metres away. Solve the gravity-only
+projectile launch toward it, at the outgoing speed a perfect
+contact would carry (`contactQualityScalar = 1`; solving at the
+achieved speed would be circular, since achieved speed follows
+from quality and quality follows from the aim error):
+
+```
+# Degenerate entry (MUST): a non-finite input, a target directly above or below
+# the contact point (R ~ 0), or no outgoing speed has no launch direction at all.
+# Return zero — Step 2 is specified to propagate that zero, and without this guard
+# the low-root divide below is by g·R = 0 and every downstream vector is NaN.
+if any of contactPoint, targetIntent, v is non-finite:  aimDir = 0; stop
+R           = ||targetIntent.xy - contactPoint.xy||
+if R < ε or v < ε:                                      aimDir = 0; stop
+
+flat        = (targetIntent.xy - contactPoint.xy) / R   # unit horizontal direction, contact → target
+dz          = targetIntent.z - contactPoint.z
+disc        = v⁴ - g·(g·R² + 2·dz·v²)
+
+if disc >= 0:
+    tanθ    = (v² - sqrt(disc)) / (g·R)          # low root
+    aimDir  = normalize(flat·1 + ẑ·tanθ)
+else:
+    # Out of ballistic range at this speed: degrade to the
+    # maximum-range launch toward the target — the angle at which
+    # disc vanishes — rather than failing (P1, continuous never a
+    # cliff).
+    radicand = v² - 2·g·dz
+    if radicand <= ε²:
+        aimDir  = ẑ            # unreachable at ANY angle; straight up is the closest approach
+    else:
+        tanθ    = v / sqrt(radicand)
+        aimDir  = normalize(flat·1 + ẑ·tanθ)
+```
+
+The **low** root is taken: a header is a driven contact, not a
+lob, and the flat solution also spends least time in the air.
+`disc < 0` means the target is beyond ballistic range at this
+speed; the direction then degrades continuously to the true
+maximum-range launch angle toward it, `tanθ = v / sqrt(v² −
+2·g·dz)`, rather than failing — P1, continuous never a cliff. That
+angle equals 45° **only when `dz == 0`.** A header contacts near
+2.3 m and its targets sit on the ground, so `dz < 0` on essentially
+every real header, and this branch is the ordinary case for a
+defensive clearance — it is what makes one long and high. An
+earlier draft of this step used a flat 45° unconditionally, which
+put a discontinuous step at the reachability boundary rather than
+the P1 continuity this branch claims: measured, the step was 9.98°
+across a 4 cm change in target distance at the boundary, and 4.38°
+at the production nominal speed of 11.2 m/s. Fixed in the same
+adversarial-review pass as Step 2 below, `HeadingAim.ComputeAimDirection`
+v1.1. When even the true maximum-range angle cannot bring the ball
+nearer the target — it sits higher than this speed reaches at any
+launch angle, `radicand <= ε²` — `aimDir` is straight up (`+ẑ`, this
+project's up axis per Ball Physics #1 §1.2, not Unity's `+Y`): the
+closest approach available, and the honest answer rather than a
+degenerate direction.
+
+**Step 2 — the normal that realizes it.** Inverting the §3.5
+reflection gives the half-vector exactly:
+
+```
+aimNormal = normalize(incident + aimDir)
+```
+
+with **no hemisphere bound** — and that is deliberate, not an
+omission. An earlier draft of this step carried one ("the struck
+surface must face the oncoming ball, or it is the back of the
+player's skull, so project onto that boundary"), and it was
+removed before implementation because it can never fire. For unit
+vectors, `dot(incident + aimDir, incident) = 1 + dot(aimDir,
+incident) ≥ 0`: the half-vector is always in the forward
+hemisphere already, for every choice of `aimDir`. Equivalently,
+from the reflected side: with `c = dot(incident, normal) ∈ [0, 1]`
+the reflected direction satisfies `dot(reflected, incident) = 2c²
+− 1`, which sweeps the whole of `[−1, 1]` — every outgoing
+direction is producible off the front of the head, so no aim ever
+needs the back of the skull. This is this project's "guard on an
+unreachable branch" defect class (root `CLAUDE.md` Traps table):
+a check that reads as a safety bound but is provably dead ships
+green precisely because nothing can exercise it, so it is recorded
+here as a proof rather than left as unreachable code.
+
+The one genuinely degenerate input is `aimDir` exactly opposite
+`incident` — the ball would have to pass through the head
+unchanged, which no reflection off a sphere produces — and that
+case returns no solution (`Vector3.zero`), handled by the caller
+the same way any other degenerate aim is (Step 3 falls back to the
+geometric normal). What actually bounds the aim is not geometry
+but the player: how far he can steer toward it, which is Step 3's
+attribute-graded blend.
+
+**Step 3 — what the player actually achieves.**
+
+```
+achievedNormal = normalize(geometricNormal
+                 + Heading_norm · (aimNormal - geometricNormal))
+```
+
+**Degenerate contact (recorded, NOT fixed; corrected AR pass 4, L-4).**
+When the ball arrives within ~0.1 mm of the head centre, `ballPosition
+− headCentre` is zero, `geometricNormal` is zero, and this step's
+degenerate guard returns that zero unchanged — so the aim is silently
+discarded and two targets at opposite ends of the pitch produce the
+identical outgoing vector. What makes this reachable at all is not the
+crossing speed: the crossing is of the RELATIVE head–ball displacement,
+and a sprinting agent plus the jump's own rise supplies most of the
+~10.8 m/s a single-frame crossing of the `HEAD_CONTACT_VOLUME_RADIUS_M`
+envelope needs — routine on a real header, not rare. The genuine
+improbability is landing within 1e-4 m of the head CENTRE specifically,
+inside that one 16.7 ms frame. Today that really is the only door in:
+`HEAD_CONTACT_VOLUME_HEIGHT_M` (0.22 m, `[GT]`, config-overridable)
+exceeds `HEAD_CONTACT_VOLUME_RADIUS_M` (0.18 m), so the vertical gate
+can never independently reject a frame the radial gate already
+accepted, and the radial crossing is the whole story. A configured
+`HEAD_CONTACT_VOLUME_HEIGHT_M` BELOW the radius would make the
+vertical gate the binding one instead, reopening a slower, non-crossing
+path — the ball dwelling within the narrower height band near the
+centre across several frames rather than passing through it in one —
+that this paragraph's single-frame-crossing framing does not cover.
+§3.5's own degenerate fallback still plays the contact, so it is
+recorded rather than fixed. The natural fix, if it is ever wanted, is
+to fall back to the AIM normal there —
+it is well defined precisely when the geometric one is not.
+
+`geometricNormal` is `normalize(ballPosition − headCentre)`, the
+pre-ERR-010-002 model, so **steer authority 0 is exactly the old
+behaviour** and authority 1 places the ball. `Heading_norm` spans
+the whole attribute range with no plateau at either end (raw 1 →
+0.05, raw 20 → 1.00), which is the FULL-RANGE ramp shape settled
+at `ERR-008-019`: the aim is skill (P2), not a switch.
+
+`contactPointActual = headCentre + achievedNormal · r`, where `r`
+is the radial magnitude of the geometric contact, clamped to
+`HEAD_CONTACT_VOLUME_RADIUS_M` — preserved from the geometric
+contact so §3.6's axial-offset input and §3.4's error scale keep
+their existing footing and this change moves one thing.
+`contactPointIntent` is `headCentre + aimNormal · r`, so §3.4's
+`pointError` becomes, for the first time, a genuine **execution**
+error: it was previously the distance between a hardcoded zero and
+a geometric fact. A header steered hard away from its natural
+rebound is therefore weaker as well as less accurate, which is the
+football.
+
+**`contactPointActual` is 3-D.** The head-local `Vector2`
+(Appendix D: +x facing-forward, +y agent-left) is the frame §3.4
+and §3.6 are defined over, and remains so — but it is a
+*projection*, and the reflection MUST take its normal from the
+full 3-D point. Reconstructing the world point from the 2-D
+projection is the defect ERR-010-002 removed.
+
+**Who chooses `targetIntent`.** #10 realizes an aim; it does not
+choose one. The producer does — the match engine today
+(`GkHeadingIntentSource.HeaderAimTarget`, governed by
+`match-engine-design.md`), Decision Tree #8 when W9 lands. This is
+the same split `ERR-011-010` settled for the keeper's rush: the
+engine owns *when* and *at what*, #11/#10 own the
+attribute-driven *how*. `contactPointIntent` remains on
+`HeaderIntent` as the DT-supplied override for W9 and is **not
+read by Stage-0 geometry** — the half-vector that realizes an aim
+depends on the incoming velocity at contact, which no producer can
+know at commit time, and KD-4 locks the intent at commit.
 
 ### Worked Example
 
@@ -656,6 +851,10 @@ for evt in contactEvents:
 | Version | Date         | Author  | Notes |
 |---------|--------------|---------|-------|
 | 0.1     | May 16, 2026 | drafter | Initial section draft from outline-detailed v1.1 |
-| 0.3     | May 16, 2026 | drafter | APPROVAL. §3.1 `DOMAIN_TAG_HEADING` promoted `[CROSS-PENDING] → [CROSS]` post #16 §3.5 v1.0.2 patch (ERR-010-001 RESOLVED). New `HEADING_CONTACT_BUFFER_CAPACITY [GT]` row added for §4.2.1 collision-event consumer buffer (OI-005). |
 | 0.2     | May 16, 2026 | drafter | v0.2 PASS-1 adversarial-review fix pass (21 findings: 5 H / 9 M / 7 L). H-1 §3.6 spin double-reversal removed; H-2 §3.4 `headingAttrScale` semantics realigned (errors divided by scale); H-3 §3.2 worked example off-by-one fixed (T+14 → T+16); H-4 §3.7 step 4 `disturbanceFactor` formula added + `DUEL_DISTURBANCE_GAP_SATURATION [GT]` row added to §3.1; H-5 §3.5 `ANGULAR_COEFF` removed (Stage 0 reflection-only launch angle, deferred to §7.12); M-2 `EligibilityPredicate` split into pure predicate + caller; M-3 `jumpStartFrame` source defined in §3.3; M-5 §3.7 step 5 2-way/3-way loser semantics aligned; M-8 frame-tolerance `ceil` rounding policy pinned in §3.2; M-9 `timingJitterMs` semantics paragraph added in §3.4; L-3 `JUMP_APEX_FRACTION` tag rationale moved to footnote. |
-
+| 0.3     | May 16, 2026 | drafter | APPROVAL. §3.1 `DOMAIN_TAG_HEADING` promoted `[CROSS-PENDING] → [CROSS]` post #16 §3.5 v1.0.2 patch (ERR-010-001 RESOLVED). New `HEADING_CONTACT_BUFFER_CAPACITY [GT]` row added for §4.2.1 collision-event consumer buffer (OI-005). |
+| 0.4     | August 9, 2026 | — | **ERR-010-002 — the header aim had no owner.** §3.5's realization paragraph delegated the aim to Decision Tree #8 ("selects a contact point on the head surface such that the reflected vector points at the target"); #8 cannot emit a header at all (`ActionType` ordinal 8 overflows the 3-bit composure-noise field — wiring backlog W9), so the producer has always been the match-engine proximity trigger, which supplied `contactPointIntent = 0` and a fixed `targetIntent`, and §3.5 read neither: **every header was a passive mirror.** The `ERR-011-010` shape. New **§3.5.1** takes the derivation back into #10 — ballistic launch solve to the target at the perfect-contact speed (low root; 45° max-range fallback out of range, P1 continuous), the reflecting half-vector bounded to the physically reachable hemisphere, and an achieved normal blended from the geometric normal by normalised Heading (FULL-RANGE ramp, `ERR-008-019` shape; authority 0 ≡ pre-fix behaviour). No new `[GT]` — the attribute is the dial, so this stays inside the KD-W1 freeze. `pointError` becomes a genuine execution error rather than the distance between a hardcoded zero and a geometric fact. §3.5.1 also pins that `contactPointActual` is 3-D (the 2-D head-local frame is §3.4/§3.6's definition domain and a projection of it) and states the producer/realizer split: the engine chooses `targetIntent`, #10 realizes it. **This row's "bounded to the physically reachable hemisphere" claim is corrected at v0.5 below — the shipped code never carried that bound; see the adversarial review of the landing.** |
+| 0.5     | August 9, 2026 | — | **Adversarial review of the ERR-010-002 landing, Finding 1 (High).** §3.5.1 Step 2's normative text claimed the half-vector was "bounded to the hemisphere the ball can physically reach," projected onto that boundary when it fell outside. `HeadingAim.ComputeAimNormal` (the shipped implementation) carries no such bound and its XML doc proves one can never be needed: for unit vectors `dot(incident + aimDir, incident) = 1 + dot(aimDir, incident) ≥ 0`, so the half-vector is always in the forward hemisphere already — a "guard on an unreachable branch," this project's own recorded defect class. The spec was stale, not the code: Step 2 rewritten to state the no-bound design directly, carry the proof, and name the one genuinely degenerate input (`aimDir` exactly opposite `incident`, which returns no solution). No behaviour change — the code was already correct. |
+| 0.6     | August 9, 2026 | — | **Adversarial review pass 2 over the ERR-010-002 landing, Finding H-1.** Step 1's normative text still claimed the out-of-range branch "degrades continuously to the 45° maximum-range launch," and the pseudocode carried neither the out-of-range formula nor the unreachable-height guard — commit `d93e0c8` had already replaced the hardcoded 45° with the true `dz`-dependent maximum-range angle, `tanθ = v / sqrt(v² − 2·g·dz)` (45° only when `dz == 0`; a header contacts near 2.3 m aiming at the ground, so `dz < 0` on essentially every real header — measured step 9.98° across a 4 cm boundary change, 4.38° at the 11.2 m/s production nominal speed), plus a guard returning a vertical launch when the target is unreachable at any angle. `48977fa` (the documentation half of this same review pass) landed before `d93e0c8` and was never back-propagated — this project's spec-and-code-same-commit doctrine failing inside the very review pass that exists to enforce it (the `ERR-041-012` shape). Fixed: prose corrected to name the true formula and the `dz == 0` special case, and both branches (out-of-range solve, unreachable-height guard) added to the pseudocode, matching `HeadingAim.ComputeAimDirection` v1.1's out-of-range branches exactly `[NARROWED at v0.7 — the BRANCHES matched; the METHOD did not. This row's original wording implied the whole pseudocode matched the code, and it omitted the degenerate-entry guard. AR pass 3, M-2]`. No behaviour change — the code was already correct; only the spec was stale. |
+| 0.7     | August 9, 2026 | — | **Adversarial review pass 3, Findings M-2 and L-2.** M-2: Step 1's pseudocode carried neither the finiteness guard nor the degenerate guard the shipped `HeadingAim.ComputeAimDirection` has at its entry (`range < ε || speed < ε → zero`), so an implementer following this spec literally divides by `g·R = 0` for a target directly above or below the contact point and sends NaN into every downstream vector. Worse, Step 2 is specified to PROPAGATE that zero (v0.5 above) — the spec documented a handler for an input it never said how to generate. Guard added to the pseudocode as a MUST; the v0.6 row's "matching v1.1 exactly" claim is narrowed in place, since the branches matched and the method did not (the falsified-hand-verification class this project keeps filing). L-2: the dead-centre degeneracy is now recorded here — when the ball arrives within ~0.1 mm of the head centre the geometric normal is zero, Step 3's degenerate guard returns that zero, and the aim is silently discarded. Reachable only if the ball crosses from outside the 0.18 m contact volume to within 1e-4 m of the centre in one 16.7 ms frame; §3.5's own degenerate fallback still plays the contact. Recorded, NOT fixed. |
+| 0.8     | August 9, 2026 | — | **Adversarial review pass 4, Findings L-3 and L-4.** L-3: Step 1's pseudocode used `flat` at both branch tails (`normalize(flat·1 + ẑ·tanθ)`) without ever defining it — added as `flat = (targetIntent.xy − contactPoint.xy) / R`, placed after the `R`/`v` degenerate-entry guard so it reads correctly in both branches, matching `HeadingAim.ComputeAimDirection`'s own ordering. L-4: the dead-centre paragraph's conclusion (recorded, NOT fixed) stands, but two of its details were imprecise. (a) The paragraph read as if the single-frame crossing itself were the improbable part; it is not — the crossing is of the RELATIVE head–ball displacement, and a sprinting agent plus the jump's own rise supplies most of the ~10.8 m/s closing speed, which is routine on a real header. The genuine improbability is landing within 1e-4 m of the head CENTRE specifically, which the paragraph now leads with. (b) The paragraph presented the single-frame-crossing path as the only door in without saying why: `HEAD_CONTACT_VOLUME_HEIGHT_M` (0.22 m) is `[GT]` and config-overridable, and today it exceeds `HEAD_CONTACT_VOLUME_RADIUS_M` (0.18 m), which is what closes off the alternative — a configured value below the radius would make the vertical gate binding instead and could reopen a slower, non-crossing dwell path the paragraph's framing does not cover. Both now stated; no formula or code changed. |

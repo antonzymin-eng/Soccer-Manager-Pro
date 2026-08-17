@@ -1,6 +1,6 @@
 // File:     src/pressing-ai/Tests/TacticTranslationTests.cs
 // Created:  2026-06-28
-// Modified: 2026-06-28
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Tactical Instructions #21 §3.4, FR-TI-017 / FR-TI-031; Pressing AI #13 §3.3; Code Standards #20
 // Purpose:  Locks the #21 → #13 T2 consumer seam: LineOfEngagement → press-trigger-radius
@@ -68,3 +68,9 @@ namespace TacticalDirector.PressingAI.Tests
         }
     }
 }
+
+#region VersionHistory
+// | Version | Date       | Author       | Notes                                                     |
+// | 1.0     | 2026-06-28 | —            | Initial file. |
+// | 1.1     | 2026-08-08 | Claude Code  | Added the required #region VersionHistory block (FR-CS-058; tools/recurring-defect-lint.py hygiene pass). |
+#endregion

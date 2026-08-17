@@ -1,9 +1,13 @@
 # Training System #29 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** July 23, 2026
-**Last Updated:** August 6, 2026 (v0.5 — ERR-029-004: §2.3 F3's exception type corrected to match the posture it cites)
+**Last Updated:** August 8, 2026, final entry of the day (v0.9 — AR pass 14 L2: the ERR-029-008 sweep completed — the §2.2 field comment and F2 stop naming the deleted free command)
+**Last Updated (prior):** August 8, 2026, last entry of the day (v0.8 — ERR-029-008 at balance-pass AR pass 13 M2: FR-TR-003/FR-TR-023/§2.2 stop publishing the pre-T0-AR unsafe shape)
+**Last Updated (prior):** August 8, 2026, later same day (v0.7 — pass-10 L5's row reorder rowed at pass 11 L1)
+**Last Updated (prior):** August 8, 2026 (v0.6 — balance-pass AR pass 9 L4: new F8 — the sentinel itself is not a day; the refusal the code has always enforced gets its normative row)
+**Last Updated (prior):** August 6, 2026 (v0.5 — ERR-029-004: §2.3 F3's exception type corrected to match the posture it cites)
 **Last Updated (prior):** July 27, 2026 (v0.4 — back-prop landed atomically with the ten-spec approval wave; see the version-history row)
-**Version:** 0.5
+**Version:** 0.9
 **Status:** APPROVED
 
 ---
@@ -16,9 +20,13 @@
 - **FR-TR-002** — Per-player `TrainingState` (focus, conditioning, training-fatigue, last-advanced day) is
   #29-owned state, serialized under #29's sub-blob (KD-7).
 - **FR-TR-003** — Focus is a **persistent per-player field** living on `TrainingState.Focus` — the **single
-  source of truth**, changed only by the weekly `SetFocus` command (FR-TR-023). `TrainingSchedule` is a
-  **read-only view / iteration** over the per-player `TrainingState.Focus` values; it MUST NOT store focus
-  separately (no duplicate, drift-prone copy) and is NOT independently serialized.
+  source of truth**, changed only by the FR-TR-023 command. `TrainingSchedule` is the **club-scoped
+  handle over the per-player `TrainingState.Focus` values, and it OWNS the FR-TR-023 write** — the club's
+  ids and states are bound as a pair at its construction, so the command provably cannot pair one club's
+  ids with another's states *(restated at ERR-029-008 — the T0 AR's H2 moved the writer here from the
+  two-array `TrainingStep.SetFocus`, and this FR kept describing the pre-fix read-only view for three
+  months)*; it MUST NOT store focus separately (no duplicate, drift-prone copy) and is NOT independently
+  serialized.
 - **FR-TR-004** — #29 exposes a **pure** `ComputeTrainingInput` (feeds #28 at #30's slot-1 seam) and a
   **mutating** `AdvanceTrainingDay` (the slot-2 world-day step); the two MUST be distinct entry points.
 
@@ -82,8 +90,13 @@
 - **FR-TR-021** — An out-of-contract focus or `TrainingInput` MUST **fail loud** at the consuming seam (the
   #27 `SquadFileLoader` / #28 F4 precedent) — not silently clamped.
 - **FR-TR-022** — A read-only `TrainingViewModel` (value copies) MUST be exposed for #31/#38 (KD-7).
-- **FR-TR-023** — `SetFocus(club, playerId, focus)` MUST validate the focus enum and refuse an out-of-range
-  value or an unknown player (F2/F4).
+- **FR-TR-023** — `TrainingSchedule.TrySetFocus(playerId, focus)` MUST validate the focus enum and refuse
+  an out-of-range value or an unknown player (F2/F4). It lives on the club-scoped handle — NOT a free
+  `SetFocus(club, playerId, focus)` command *(the shape this FR specified until ERR-029-008: the free
+  command's two-array form let one club's ids be silently paired with another club's states — same
+  length, no guard, the wrong club's player written; the T0 AR deleted it and the spec kept publishing
+  it)* — because binding ids and states once at construction is what makes the mispair structurally
+  impossible rather than merely unvalidated.
 - **FR-TR-024** — The reference direction MUST stay one-way: `#30 → #29 → #28 → {#27,#16}`; #28's assembly
   stays schema-untouched.
 
@@ -116,7 +129,7 @@ public enum TrainingFocus : byte
 // #29-owned per-player world-tick training state (serialized, KD-7).
 public struct TrainingState
 {
-    public TrainingFocus Focus;         // persistent; set by SetFocus (KD-4)
+    public TrainingFocus Focus;         // persistent; set by TrainingSchedule.TrySetFocus (KD-4)
     public int Condition;               // ONE conditioning cursor [CONDITION_MIN, CONDITION_MAX]
     public int TrainingFatigue;         // world-tick accumulator [0, TRAINING_FATIGUE_MAX] (NOT match fatigue)
     public uint LastAdvancedWorldDay;   // idempotency cursor (F6); NOT_ADVANCED sentinel = never advanced
@@ -129,9 +142,11 @@ public struct TrainingState
                 LastAdvancedWorldDay = TRAINING_NOT_ADVANCED_SENTINEL };
 }
 
-// A read-only VIEW over the per-club players' TrainingState.Focus (FR-TR-003) — NOT a stored copy and
-// NOT separately serialized. Focus lives only on TrainingState.Focus (single source of truth).
-public readonly struct TrainingSchedule { /* iterates PlayerId → state.Focus over the club's states */ }
+// The club-scoped focus handle (FR-TR-003/FR-TR-023, as restated at ERR-029-008): iterates
+// PlayerId → state.Focus AND owns the one write, TrySetFocus — ids and states bound as a pair at
+// construction. NOT a stored copy and NOT separately serialized (focus lives only on
+// TrainingState.Focus, single source of truth).
+public readonly struct TrainingSchedule { /* PlayerId → Focus view + TrySetFocus(playerId, focus) */ }
 
 // KD-3 coaching routing seam — identity until #34 lands.
 public readonly struct CoachingModifier { public static CoachingModifier Identity => default; }
@@ -157,12 +172,13 @@ the latter accrues `Condition` + `TrainingFatigue`. See §3.
 | ID | Condition | Handling |
 |---|---|---|
 | **F1** | A daily delta would push `Condition`/`TrainingFatigue` past its bound | Clamped at the bound, deterministic (the #28 F1 ceiling precedent). |
-| **F2** | `SetFocus` targets a player not in the club roster | Refused / no-op (bounded — the roster is authoritative). |
+| **F2** | `TrainingSchedule.TrySetFocus` targets a player not in the club roster | Refused / no-op (bounded — the roster is authoritative). |
 | **F3** | `TRAINING_SAVE_FORMAT_VERSION` mismatch on restore | **Fail loud** (`InvalidOperationException`), the `MatchSaveCodec` posture — corrected from `ArgumentException` at #29 T1 (ERR-029-004): the cited posture throws `InvalidOperationException`, which is not an `ArgumentException`, so the two halves of this row contradicted each other. Framing corruption is a state fault in the bytes, not a bad argument. |
 | **F4** | An out-of-contract `TrainingFocus` / `TrainingInput` reaches a consuming seam | **Fail loud** — an invalid value is a bug, not silently clamped (FR-TR-021). |
 | **F5** | Corrupt length prefix (out-of-bounds) or trailing bytes in the block | **Fail loud** (overflow-safe bound; the `WorldStateSerializer.ReadCount` posture). |
 | **F6** | `AdvanceTrainingDay` invoked twice for one world day (`worldDay <= LastAdvanced`) | Idempotent no-op guarded by `LastAdvancedWorldDay` — a mid-week save→restore→re-run does not double-accrue. |
 | **F7** | `AdvanceTrainingDay` called with a **day gap** (`worldDay > LastAdvanced + 1`, post-sentinel), or a player with no `TrainingState` (a regen never inserted per FR-TR-025) | **Fail loud** (`ArgumentException`) — a gap silently under-accrues and a missing state is a lifecycle bug (the day-0 hazard); neither is clamped or defaulted. |
+| **F8** | `AdvanceTrainingDay` invoked with `worldDay == TRAINING_NOT_ADVANCED_SENTINEL` itself | **Fail loud** (`ArgumentException`) — the sentinel is a reserved value, not a day; stored, the cursor would read back "never advanced" and re-arm the day-0 double-accrual trap F6 closes. |
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -170,6 +186,10 @@ the latter accrues `Condition` + `TrainingFatigue`. See §3.
 | 0.1 | 2026-07-23 | — | Initial FR set (FR-TR-001..024), data structures, F1..F6. Status IN REVIEW. |
 | 0.2 | 2026-07-23 | — | PASS-1 M-1 (single `Condition` cursor) / M-2 (no stream) folded from the supplement; AR-2/AR-3 clean; APPROVED. |
 | 0.3 | 2026-07-23 | — | PASS-2: +FR-TR-025 (regen/retire lifecycle) / FR-TR-026 (day-gap fail-loud); FR-TR-003 (focus single-source, schedule = derived view) / 006 (field-independence invariant) / 007 (#29-owned `deepTrainingEnabled`) / 019 (schedule not serialized); +F7. |
-| 0.5 | 2026-08-06 | — | **ERR-029-004** (at #29 T1): §2.3 **F3** said `ArgumentException` while citing the `MatchSaveCodec` posture, which throws `InvalidOperationException` — the row contradicted itself, and an implementer honouring the type would have diverged from every sibling codec. Corrected to `InvalidOperationException`. |
 | 0.4 | 2026-07-27 | — | **ERR-029-003** (at #53's approval): new **FR-TR-005a** — `ComputeTrainingInput` accepts #53's training-ground term as a **second root-assembled input**, alongside #34's `CoachingModifier`. Explicitly **not** delivered as a #53-returned `TrainingInput`, which FR-TR-005 forbids (#29 is that type's sole writer). Behaviour-neutral at neutral facilities; ◑ parameter at #29's Stage-3 tier. |
+| 0.5 | 2026-08-06 | — | **ERR-029-004** (at #29 T1): §2.3 **F3** said `ArgumentException` while citing the `MatchSaveCodec` posture, which throws `InvalidOperationException` — the row contradicted itself, and an implementer honouring the type would have diverged from every sibling codec. Corrected to `InvalidOperationException`. |
+| 0.6 | 2026-08-08 | — | **Balance-pass AR pass 9 (L4)**: new **F8** — `AdvanceTrainingDay` invoked with the never-advanced sentinel as `worldDay` itself fails loud; enforced in code since T0 with no F-row. §3.1's pseudocode gains the guard in the same commit; found at the #41 sibling, fixed at both. |
+| 0.7 | 2026-08-08 | — | **Balance-pass AR pass 10 (L5) — rowed at pass 11 (L1)**: the version table's rows reordered ascending (0.4 had sat below 0.5/0.6); the reorder shipped rowless. |
+| 0.8 | 2026-08-08 | — | **ERR-029-008 (balance-pass AR pass 13, M2)** *("all three restated" was three of seven — the §2.2 field comment, F2, §3 and §5 still said `SetFocus`; completed at pass 14 L2)*: FR-TR-003 still called `TrainingSchedule` a read-only view and FR-TR-023 still specified the free `SetFocus(club, playerId, focus)` — the exact two-array shape the T0 AR's High DELETED (one club's ids silently paired with another's states) — twelve passes after the fix; the §2.2 sketch matched. All three restated to the club-scoped handle that owns the write; the code needed no change. |
+| 0.9 | 2026-08-08 | — | **Balance-pass AR pass 14 (L2)**: ERR-029-008's sweep had left four bare `SetFocus` sites, two INSIDE the section it rewrote (the §2.2 field comment, F2) — the grep-boundary class without even a file boundary; corrected here + §3/§5. |
 #endregion

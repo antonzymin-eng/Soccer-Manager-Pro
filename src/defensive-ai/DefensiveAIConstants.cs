@@ -1,6 +1,6 @@
 // File:     src/defensive-ai/DefensiveAIConstants.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-08-12 (wiring backlog W2 / ERR-014-006 — the §3.6.5 tackle-outcome constants: 10 [GT] + 1 [FIXED])
 // Author:   —
 // Spec:     Defensive AI #14 §6.1, FR-DA-007, Code Standards #20 §4.2 FR-CS-025
 // Purpose:  Single constant catalogue for Spec #14. Contains all assignment thresholds,
@@ -20,6 +20,20 @@ namespace TacticalDirector.DefensiveAI
     /// </summary>
     public static class DefensiveAIConstants
     {
+        #region Fixed
+
+        /// <summary>
+        /// [FIXED] Ceiling on the §3.6.5 foul share. Not a football judgment and not tunable: the
+        /// resolver's second inverse transform divides by <c>(1 − foulShare)</c>, so a share of exactly
+        /// 1 would divide by zero and make <c>BallWon</c>/<c>BallLoose</c> unreachable rather than
+        /// unlikely. It is a numerical guarantee about the mapping, which is why it is `[FIXED]` while
+        /// every other §3.6.5 constant is `[GT]` — a config file must not be able to reach it.
+        /// Defensive AI #14 §3.6.5.
+        /// </summary>
+        public const float TACKLE_FOUL_SHARE_CEILING = 0.95f;
+
+        #endregion
+
         #region Cross
 
         // ── Cross-spec geometry constants ──────────────────────────────────────
@@ -186,6 +200,78 @@ namespace TacticalDirector.DefensiveAI
         /// </summary>
         public static readonly float CoverageDepthCorridorM = Config.GetFloat("defensive-ai", "CoverageDepthCorridorM", 5.0f);
 
+        // ── Tackle Outcome Resolution (§3.6.5 — wiring backlog W2, ERR-014-006) ─
+        //
+        // ALL TEN ARE UN-CALIBRATED. They are first plausible values for a surface that has never
+        // existed — no player in this engine has ever made a tackle — so there was no prior behaviour
+        // to preserve and nothing here was fitted against anything. KD-W1 (the [GT] freeze) permits
+        // new dials on a dead surface and forbids tuning them here; they are the calibration pass's
+        // input, not its output. The census that sized them is in tackle-wiring-design.md §3.0.
+
+        /// <summary>
+        /// [GT] Base P(a committed challenge connects at all), before commitment and proximity
+        /// (§3.6.5). Defensive AI #14 §6.1. UN-CALIBRATED.
+        /// </summary>
+        public static readonly float TackleEngageBase = Config.GetFloat("defensive-ai", "TackleEngageBase", 0.10f);
+
+        /// <summary>
+        /// [GT] Added to the engage probability per unit of movement commitment, <c>cos(approachAngle)</c>
+        /// clamped at 0 (§3.6.5). The dominant term: a tackle is a committed act, and a defender drifting
+        /// across his man is not making one. Defensive AI #14 §6.1. UN-CALIBRATED.
+        /// </summary>
+        public static readonly float TackleEngageCommitmentK = Config.GetFloat("defensive-ai", "TackleEngageCommitmentK", 0.25f);
+
+        /// <summary>
+        /// [GT] Added to the engage probability per unit of proximity to the BALL, where 1 = on top of
+        /// it and 0 = at the edge of the contact radius (§3.6.5). Defensive AI #14 §6.1. UN-CALIBRATED.
+        /// </summary>
+        public static readonly float TackleEngageProximityK = Config.GetFloat("defensive-ai", "TackleEngageProximityK", 0.20f);
+
+        /// <summary>
+        /// [GT] Base share of connecting challenges that are fouls, before the Aggression and Tackling
+        /// terms (§3.6.5). Defensive AI #14 §6.1. UN-CALIBRATED.
+        /// </summary>
+        public static readonly float TackleFoulShareBase = Config.GetFloat("defensive-ai", "TackleFoulShareBase", 0.14f);
+
+        /// <summary>
+        /// [GT] Added to the foul share per unit of normalized tackler Aggression (§3.6.5).
+        /// Defensive AI #14 §6.1. UN-CALIBRATED.
+        /// </summary>
+        public static readonly float TackleFoulShareAggressionK = Config.GetFloat("defensive-ai", "TackleFoulShareAggressionK", 0.12f);
+
+        /// <summary>
+        /// [GT] Subtracted from the foul share per unit of normalized tackler Tackling (§3.6.5) — the
+        /// same challenge is a foul when it is mistimed, and timing is what Tackling measures.
+        /// Defensive AI #14 §6.1. UN-CALIBRATED.
+        /// </summary>
+        public static readonly float TackleFoulShareTacklingK = Config.GetFloat("defensive-ai", "TackleFoulShareTacklingK", 0.10f);
+
+        /// <summary>
+        /// [GT] Base share of non-foul connecting challenges won CLEANLY rather than knocked loose
+        /// (§3.6.5). Deliberately well below a half: a defender who merely matches his man mostly puts
+        /// the ball out of play for both of them, and taking it off him requires an edge.
+        /// Defensive AI #14 §6.1. UN-CALIBRATED.
+        /// </summary>
+        public static readonly float TackleCleanShareBase = Config.GetFloat("defensive-ai", "TackleCleanShareBase", 0.30f);
+
+        /// <summary>
+        /// [GT] Added to the clean-win share per unit of the tackler's ability edge over the carrier
+        /// (§3.6.5). Defensive AI #14 §6.1. UN-CALIBRATED.
+        /// </summary>
+        public static readonly float TackleCleanShareEdgeK = Config.GetFloat("defensive-ai", "TackleCleanShareEdgeK", 0.60f);
+
+        /// <summary>
+        /// [GT] Weight of the carrier's Dribbling in his ability to retain the ball through a challenge
+        /// (§3.6.5). Defensive AI #14 §6.1. UN-CALIBRATED.
+        /// </summary>
+        public static readonly float TackleRetainDribblingWeight = Config.GetFloat("defensive-ai", "TackleRetainDribblingWeight", 0.65f);
+
+        /// <summary>
+        /// [GT] Weight of the carrier's Balance in the same retain term (§3.6.5). Defensive AI #14 §6.1.
+        /// UN-CALIBRATED.
+        /// </summary>
+        public static readonly float TackleRetainBalanceWeight = Config.GetFloat("defensive-ai", "TackleRetainBalanceWeight", 0.35f);
+
         // ── Anti-Chaos Invariants (§3.10) ──────────────────────────────────────
 
         /// <summary>
@@ -242,4 +328,10 @@ namespace TacticalDirector.DefensiveAI
 // | 1.2     | 2026-06-30 | —      | #21 §5.6 / G2: OffsideTrapRequestedDwellTicks (FR-TI-022) PINNED — illustrative →    |
 // |         |            |        |   pinned at 1 with the numerical-mirror invariant 1 ≤ value ≤ OffsideTrapDwellTicks  |
 // |         |            |        |   documented; locked by OffsideTrapControllerTests.RequestedDwell_InvariantPinned.   |
+// | 1.3     | 2026-08-12 | —      | Wiring backlog W2 / ERR-014-006: + the §3.6.5 tackle-outcome block —   |
+// |         |            |        | ten [GT] (engage / foul-share / clean-share / retain terms) and one    |
+// |         |            |        | [FIXED] TACKLE_FOUL_SHARE_CEILING, which is [FIXED] because it is a   |
+// |         |            |        | numerical guarantee that the second inverse transform never divides   |
+// |         |            |        | by zero, not a football judgment a config may reach. First [FIXED]    |
+// |         |            |        | region in this catalogue. ALL TEN [GT] UN-CALIBRATED per KD-W1.       |
 #endregion

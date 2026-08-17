@@ -1,6 +1,6 @@
 // File:     src/living-world/LivingWorldMath.cs
 // Created:  2026-06-21
-// Modified: 2026-07-02 (AR-3 L-1 doc-notes: declared-but-unconsumed pointers)
+// Modified: 2026-08-08
 // Author:   —
 // Spec:     Living World System #22 §3.1, §3.2, §4.4, Code Standards #20
 // Purpose:  Pure deterministic helpers for the living-world layer: the §3.1 layer update/decay rule
@@ -60,3 +60,10 @@ namespace TacticalDirector.LivingWorld
         }
     }
 }
+
+#region VersionHistory
+// | Version | Date       | Author       | Notes                                                     |
+// | 1.0     | 2026-06-21 | —            | Initial file. |
+// | 1.1     | 2026-07-02 | —            | Substantive edit; no version-history row was recorded for it at the time (FR-CS-058 gap, predates this hygiene pass). |
+// | 1.2     | 2026-08-08 | Claude Code  | Added the required #region VersionHistory block (FR-CS-058; tools/recurring-defect-lint.py hygiene pass). |
+#endregion

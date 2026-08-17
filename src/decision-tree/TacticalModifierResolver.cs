@@ -1,6 +1,6 @@
 // File:     src/decision-tree/TacticalModifierResolver.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-11
 // Author:   —
 // Spec:     Decision Tree #8 §3.4, Code Standards #20
 // Purpose:  Translates TacticalContext instructions into utility multipliers applied

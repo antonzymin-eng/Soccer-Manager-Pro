@@ -1,5 +1,6 @@
 // File:     src/shot-mechanics/ShotExecutorState.cs
 // Created:  2026-06-19
+// Modified: 2026-06-19
 // Author:   —
 // Spec:     Shot Mechanics #6 §3.9; Match Engine design note §2.6 (Phase C step C0); Code Standards #20
 // Purpose:  Plain-data snapshot of a ShotExecutor's cross-tick state-machine + in-flight fields,

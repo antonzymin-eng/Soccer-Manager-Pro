@@ -1,6 +1,6 @@
 // File:     src/pressing-ai/RoleHysteresis.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-15
 // Author:   —
 // Spec:     Pressing AI #13 §3.6, Code Standards #20
 // Purpose:  Pure static class: applies role-dwell hysteresis to candidate role

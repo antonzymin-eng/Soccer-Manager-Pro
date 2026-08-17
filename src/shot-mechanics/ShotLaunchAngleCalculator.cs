@@ -1,6 +1,6 @@
 // File:     src/shot-mechanics/ShotLaunchAngleCalculator.cs
 // Created:  2026-05-27
-// Modified: 2026-05-27
+// Modified: 2026-05-28
 // Author:   —
 // Spec:     Shot Mechanics #6 §3.3, Code Standards #20
 // Purpose:  Computes vertical launch angle (degrees) from ContactZone base angle,

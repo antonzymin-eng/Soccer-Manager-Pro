@@ -1,7 +1,55 @@
 # Tactical Director: Football Management Simulation
 
 **Created:** December 30, 2025, 11:50 AM PST
-**Last Updated:** August 7, 2026, evening (**The screens work was fully build-and-test verified the
+**Last Updated:** August 8, 2026 (**Players calmly passing the ball around were being read by the
+positioning system as a team in chaos.** The AI that decides where every outfield player should
+stand watches one signal to know what's happening right now: is my team in possession, is the
+other team, or is the ball loose in a scramble? That signal was being read at exactly the wrong
+moment. The match engine drops its notion of "who has the ball" the instant a player kicks it,
+and only re-establishes it once someone actually receives the ball — correct for tracking the
+ball itself, but the positioning system was reusing that same on/off flag to decide which team
+has the ball. The result: for the whole time a pass was travelling through the air or rolling
+across the grass, the positioning system believed nobody had the ball and treated a team calmly
+knocking it around as though it were scrambling to reorganize after losing it. Measured over six
+seeds of a full match, the share of time near the opponent's goal correctly read as settled
+possession jumped from about a quarter to essentially all of it (24% → 97%), while the mistaken
+"scrambling" reading collapsed from 59% to 3%. Fixed by teaching the system to track which TEAM
+has the ball — the carrier's team, or, while a pass is in the air, the team of the player it's
+headed to — rather than which single player is touching it this instant. As expected going in,
+one part of the team's shape got measurably worse once the correct signal took over: the settled
+formation this system already uses sits deeper than the "push forward, we're attacking" reading
+it was replacing, so the front line now holds a couple of metres further back and fewer players
+reach the penalty box — a known, predicted side effect rather than a new bug, and next in line to
+address. Two more places where the engine already tracks information nobody reads yet were logged
+for later work. `SNAPSHOT_SCHEMA_VERSION` 19 → 20. **The full test run finished RED, and the two
+failures are this change's own doing.** Everything builds and every other suite passes, but two
+long-standing match checks now fail: one measuring whether players dribble toward the goal rather
+than away from it, and one that simply asks whether a fast ball ever deflected off a body during a
+match — which now reads zero. Both pass on the code as it stood before this change, confirmed by
+re-running them against it, so the cause is not in doubt. Neither threshold has been quietly
+loosened to make the run green: the first has already been relaxed twice in the last fortnight and
+a check relaxed a third time has stopped checking anything, and the second is not a threshold at
+all but a "does this ever happen" test that has stopped happening. Both are left failing, with the
+cause written down, for a human to decide. Prior entry below.)
+
+**Last Updated (prior):** August 7, 2026, later same day (**Players now get injured — at realistic rates.**
+The injury system built over the last three days had been wired but deliberately switched off,
+because measurement showed its first-guess numbers were absurd: a new player had a 23% chance of
+getting hurt on his first day, while a player on the default training regime could literally never
+be injured at all. This landing is the balance pass that fixes and arms it. Three things changed.
+First, match days now run in the right order: a player whose recovery ends on match day plays that
+match instead of missing one extra game, and the injury check happens on match-day morning. Second,
+the game now remembers who actually played: each club's starting eleven is recorded per fixture
+(and saved), so playing matches genuinely raises injury risk in the following week — match load is
+the dominant real-world driver. Third, the probabilities were refitted and then measured over eight
+full simulated 20-club seasons: roughly 780 injuries per league season (about 39 per club, squarely
+in the real-world 30–55 range), starters getting hurt about twice a season and reserves about once,
+and around 9% of players unavailable at any given match day. Those numbers are now locked by tests
+so they cannot silently drift. A design hazard was also closed along the way: the random draw's
+denominator was previously a tunable value, meaning a config tweak would have silently re-rolled
+every career's injury luck — it is now pinned. Prior entry below.)
+
+**Last Updated (prior):** August 7, 2026, evening (**The screens work was fully build-and-test verified the
 same day — and the check-up found two unrelated, pre-existing test failures on the main branch.**
 For weeks, work in this environment could not be compiled locally because the .NET installer's
 download sites are blocked; it turns out the standard Ubuntu package archive serves the same
@@ -595,7 +643,7 @@ Analytics gained a `src/match-analytics/` T0 assembly on July 27, 2026 — value
 `XgLocationModel`; no engine wiring yet.) The specification frontier now runs well ahead of the code;
 `docs/tracking/path-to-playable-roadmap.md` sequences the shortest path to closing it.
 
-**Current versions:** `SNAPSHOT_SCHEMA_VERSION` **19** · `SEASON_SAVE_FORMAT_VERSION` 2 ·
+**Current versions:** `SNAPSHOT_SCHEMA_VERSION` **20** · `SEASON_SAVE_FORMAT_VERSION` 2 ·
 `SEASON_STATE_FORMAT_VERSION` 1 · `MATCH_SAVE_FORMAT_VERSION` 1 · `WORLD_STORE_FORMAT_VERSION` 3.
 Unity target **6000.4.9f1 / DX11**, recertified July 19, 2026 (`certification-platform.md` v1.4
 `✅ PINNED` — both the determinism-KAT run and the FR-PO-052 perf baseline executed on the pinned

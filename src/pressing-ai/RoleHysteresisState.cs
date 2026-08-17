@@ -1,6 +1,6 @@
 // File:     src/pressing-ai/RoleHysteresisState.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-15
 // Author:   —
 // Spec:     Pressing AI #13 §3.6, Code Standards #20
 // Purpose:  Allocated-once-per-match container for per-agent role hysteresis state.

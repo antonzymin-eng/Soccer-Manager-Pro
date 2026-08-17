@@ -1,8 +1,8 @@
 # Dismarking & Marker-Awareness AI Specification #23 — Section 4: Architecture and File Layout
 
 **Created:** July 8, 2026
-**Last Updated:** July 8, 2026 (v0.1)
-**Version:** 0.1
+**Last Updated:** July 8, 2026 (v0.2 — PASS-1: combined #23/#24 stage order cross-cited (L-3); §4.4 records the one-stride staleness routing (M-1).)
+**Version:** 0.2
 **Status:** APPROVED
 
 ---

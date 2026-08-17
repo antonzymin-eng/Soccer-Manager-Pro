@@ -1,6 +1,6 @@
 // File:     src/defensive-ai/InvariantEnforcer.cs
 // Created:  2026-05-29
-// Modified: 2026-05-29
+// Modified: 2026-06-15
 // Author:   —
 // Spec:     Defensive AI #14 §3.10, §4.3, FR-DA-024–028, Code Standards #20
 // Purpose:  Pure static module: enforces the three anti-chaos invariants (§3.10 / KD-17)
