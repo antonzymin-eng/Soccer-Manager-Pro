@@ -811,19 +811,21 @@ back-props filed atomically at the flip; **none has an assembly**):
 - ✅ Approved
 - 🔒 Locked (implementation begun)
 
-**Locked (implementation begun) — 29 of 53 approved specs:** #1–#8, #10–#19, #21–#28, #30, #37, #38.
-That is the full Stage-0 physics/AI/systems stack, the tactical layer (#21, #23–#26), the living world
-(#22), the squad data layer (#27), progression (#28, T0), the season loop (#30, T0–T2), match analytics
-(#37, T0), and the UI framework substrate (#38, T0).
+**Locked (implementation begun) — 32 of 53 approved specs:** #1–#8, #10–#19, #21–#30, #37, #38,
+#41, #44. That is the full Stage-0 physics/AI/systems stack, the tactical layer (#21, #23–#26), the
+living world (#22), the squad data layer (#27), progression (#28, T0–T2a), training (#29, T0–T2),
+the season loop (#30, T0–T2), match analytics (#37, T0), the UI framework substrate (#38, T0),
+injuries & medical (#41, T0–T2), and discipline (#44, T0–T2).
 
 **Not implemented by design:** Fixed64 Math Library #9 (deferred to Stage 5+ per §8.1) and Code
 Standards #20 (a style guide, not a coded subsystem).
 
-**Approved but not implemented — 12 specs:** #29, #31, #32, #33, #34, #40, #41, #42, #43, #44, #45, #49.
-No assembly exists for any of them.
+**Approved but not implemented — 19 specs:** #31–#36, #39, #40, #42, #43, #45–#51, #53, #54.
+No assembly exists for any of them (the same 19 the root `CLAUDE.md` lists).
 
-**Plus five unnumbered assemblies** (governed by design supplements, not specs): `match-engine`
-(the composition root), `match-viewer`, `match-client-core`, `match-client-unity`, `project-constants`.
+**Plus seven unnumbered assemblies** (governed by design supplements, not specs): `match-engine`
+(the composition root), `match-viewer`, `match-client-core`, `match-client-unity`, `match-client-web`,
+`client-app`, `project-constants`.
 
 **For detailed progress tracking, see:** [docs/tracking/PROGRESS.md](docs/tracking/PROGRESS.md)
 **For file inventory, see:** [docs/tracking/file-manifest.md](docs/tracking/file-manifest.md)
@@ -944,7 +946,8 @@ Soccer-Manager-Pro/
 └── tools/
     ├── dotnet-ci/                      [Non-certifying Linux compile/test gate]
     ├── unity-ci/  perf-harness/  spec-stress/
-    └── budget-auditor.py, select-seed.py, round-resolution-fit.py, run-perf-local.sh
+    └── budget-auditor.py, select-seed.py, round-resolution-fit.py, run-perf-local.sh,
+        recurring-defect-lint.py, assembly-tier-check.py, doc-consistency-check.py
 ```
 
 **Assembly names do not reliably match spec folder names.** #27 lives in `player-database`, #28 in

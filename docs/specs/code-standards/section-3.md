@@ -628,8 +628,12 @@ failure of the mechanical check below — this constraint was previously enforce
 the tool but written nowhere.
 
 This rule is enforced mechanically by `tools/assembly-tier-check.py`
-(`python3 tools/assembly-tier-check.py --repo .`), **run on every push and pull
-request by the `Spec hygiene checks` job in `.github/workflows/ci.yml`**. The tool
+(`python3 tools/assembly-tier-check.py --repo .`), **run by the `Spec hygiene
+checks` job in `.github/workflows/ci.yml` on every push to `main` and every pull
+request targeting `main`** — that workflow's triggers are `main`-scoped, so a push
+to a topic branch runs nothing and the gate binds at the merge point. *(Corrected
+August 18, 2026: this sentence read "on every push and pull request", which
+overstates the workflow's actual triggers.)* The tool
 re-parses the table above rather than carrying its own copy, enumerates every
 production `src/<folder>/<name>.asmdef`, and fails on a folder absent from the
 table, a table entry naming no existing folder, a top-level folder holding more

@@ -121,7 +121,7 @@ break it, and do not edit historical entries.
 > geometry is MEASURED" — a condition satisfied August 12, 2026, five days before this hold was
 > written; the rush ANATOMY is measured, and the conversion pair is what `gk-rush-trigger-design.md`
 > §6 still owes — see the ⚠️ H6 correction in the body below)*
-> (`gk-conversion-at-contact-design.md` **v1.1** *(since v1.2)*, new **KD-CC6a**). The §4 ladder's refusal was
+> (`gk-conversion-at-contact-design.md` **v1.1** *(since v1.3 — the currency pointer here read "since v1.2" and was itself overtaken when the KD-CC6a heading was corrected on August 18, 2026)*, new **KD-CC6a**). The §4 ladder's refusal was
 > measured against a keeper who never left his line; W1 moves the contact geometry the whole ladder is
 > a function of. **The unparking condition is a measurement, not a landing** — W1 landed August 4, 2026
 > and has never been executed. **⚠️ CORRECTED August 17, 2026, same day (adversarial-review finding
@@ -144,7 +144,7 @@ break it, and do not edit historical entries.
 > knowingly wrong meanwhile, with the acceptance bands (fouls ≤ 90, yellows ≤ 20, reds ≤ 5) reading
 > green throughout.
 >
-> **`match-engine-wiring-backlog.md` **v1.10** records the consequence none of these three holds could
+> **`match-engine-wiring-backlog.md` **v1.10** *(since v1.13)* records the consequence none of these three holds could
 > see individually: W2's *arming* now gates three separate decisions** — the foul/card calibration,
 > KD-7a's successor distribution, and everything behind the un-isolated `sim_match_engine_inposs_gate`
 > stall whose leading candidate is W6. The path **W4 → W12 → W6** therefore unblocks three decisions,
@@ -154,7 +154,7 @@ break it, and do not edit historical entries.
 > FALSE — W2's arming gates **two** held decisions (the foul/card calibration and KD-7a's successor
 > distribution); the third item, the un-isolated `sim_match_engine_inposs_gate` stall, is what BLOCKS
 > arming, not something arming unblocks, so it does not belong beside them. The citation above is
-> re-pointed: `match-engine-wiring-backlog.md` is at **v1.11**, whose §5 note carries the corrected
+> re-pointed: `match-engine-wiring-backlog.md` is at **v1.11** *(since v1.13)*, whose §5 note carries the corrected
 > two-plus-the-blocker form; the W4 → W12 → W6 path aims to clear the blocker and thereby unblock
 > the two.
 >

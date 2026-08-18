@@ -22,6 +22,15 @@
 #              of docs/specs/code-standards/section-2.md, the authority, so
 #              reseating that row into the ordered tiers cannot silently
 #              disable the FR-CS-046b checks),
+#            * the ordered tier rows failing to be exactly ten, numbered 0..9
+#              contiguously and ascending in table order, with each row's
+#              (number, name) pair matching FR-CS-046's stated sequence
+#              (parsed from the FR-CS-046 row of section-2.md, the authority —
+#              previously swapping two tier numbers in the table PASSED),
+#            * any production assembly referencing a TEST assembly (§3.5.2's
+#              exclusion is test→production; the reverse is enforced here),
+#            * any reference naming an assembly that resolves to nothing
+#              under src/ (an unresolvable name must fail, not be ignored),
 #            * any upward reference (FR-CS-046),
 #            * any ordered-tier reference into an out-of-band Infrastructure
 #              assembly ("no tier may reference them at runtime", FR-CS-046b
@@ -34,7 +43,9 @@
 #          upward / Infrastructure-sourced) so §3.5.2's adoption verification
 #          re-runs on every invocation instead of being a one-off hand check.
 #          Wired into CI: the `Spec hygiene checks` job in
-#          .github/workflows/ci.yml runs this on every push and pull request.
+#          .github/workflows/ci.yml runs this on pushes to `main` and on pull
+#          requests targeting `main` (those are ci.yml's only triggers — a
+#          push to any other branch runs no CI, an owner call about CI cost).
 #
 # Usage:  python3 tools/assembly-tier-check.py --repo .
 # Exit:   0 on pass, 1 on any failure, 2 on inability to parse inputs.
@@ -55,8 +66,11 @@ SECTION_HEADING = "### 3.5.2"
 def parse_tier_table(spec_text):
     """Parse the §3.5.2 tier table.
 
-    Returns (tier_of_folder, ordered_tiers, infra_folders, errors) where
-    tier_of_folder maps folder name -> int tier or the string "infra".
+    Returns (tier_of_folder, ordered_rows, infra_folders, errors) where
+    tier_of_folder maps folder name -> int tier or the string "infra", and
+    ordered_rows is [(tier_number, tier_name)] for the numbered rows in
+    TABLE ORDER (so main() can assert the numbering is 0..9, contiguous,
+    ascending, and name-matched against FR-CS-046's stated sequence).
     """
     errors = []
     idx = spec_text.find(SECTION_HEADING)
@@ -67,6 +81,7 @@ def parse_tier_table(spec_text):
     section = spec_text[idx: idx + len(SECTION_HEADING) + (m.start() if m else len(spec_text))]
 
     tier_of = {}
+    ordered_rows = []
     duplicate_errors = []
     in_table = False
     saw_table = False
@@ -91,6 +106,14 @@ def parse_tier_table(spec_text):
         num = re.match(r"^(\d+)\b", tier_cell)
         if num:
             tier = int(num.group(1))
+            name_m = re.search(r"\*\*([^*]+)\*\*", tier_cell)
+            ordered_rows.append(
+                (tier, name_m.group(1).strip() if name_m else ""))
+            if not name_m:
+                errors.append(
+                    "ordered tier row %r carries no bold **name** — the "
+                    "(number, name) pair cannot be checked against FR-CS-046"
+                    % tier_cell)
         elif tier_cell.startswith(("—", "--", "-")):
             tier = "infra"
         else:
@@ -114,9 +137,40 @@ def parse_tier_table(spec_text):
     if not saw_table:
         errors.append("no '| Tier | Assemblies |' table found under %s" % SECTION_HEADING)
     errors.extend(duplicate_errors)
-    ordered = sorted({t for t in tier_of.values() if t != "infra"})
     infra = sorted(f for f, t in tier_of.items() if t == "infra")
-    return tier_of, ordered, infra, errors
+    return tier_of, ordered_rows, infra, errors
+
+
+def parse_tier_sequence(section2_text):
+    """Extract the ten tier names FR-CS-046 states, in order.
+
+    The FR-CS-046 row of section-2.md §2.2.5 spells the order out in a
+    parenthesis ("(Foundation → Physics → … → Client)"). Parsing it by name —
+    the same technique parse_infra_binding uses for FR-CS-046b — gives the
+    §3.5.2 table's numbering an authority to be checked against: previously
+    NOTHING checked the tier numbers were 0..9, contiguous, ten in count,
+    ascending, or paired with the right names, so swapping two rows' numbers
+    PASSED.
+
+    Returns (names, error) — error is a string on any parse failure.
+    """
+    m = re.search(r"^\|\s*FR-CS-046\s*\|(.*)$", section2_text, re.MULTILINE)
+    if not m:
+        return [], "cannot find the FR-CS-046 row in %s" % SECTION2_PATH
+    paren = re.search(
+        r"ten-tier order defined in §3\.5\.2\s*\(([^)]*)\)", m.group(1))
+    if not paren:
+        return [], (
+            "the FR-CS-046 row in %s no longer states its tier sequence in "
+            "the expected shape (\"ten-tier order defined in §3.5.2 "
+            "(A → B → …)\")" % SECTION2_PATH)
+    names = [n.strip() for n in paren.group(1).split("→")]
+    names = [n for n in names if n]
+    if len(names) != 10:
+        return [], (
+            "the FR-CS-046 parenthesis in %s names %d tiers; the ten-tier "
+            "order requires exactly 10" % (SECTION2_PATH, len(names)))
+    return names, None
 
 
 def parse_infra_binding(section2_text):
@@ -171,15 +225,23 @@ def load_production_asmdefs(repo):
     message names both paths and says which one was dropped; the run's other
     figures must not be trusted while that failure stands.
 
-    Returns (folder_of_name, name_of_folder, refs, errors) where refs maps
-    assembly name -> list of referenced assembly names and errors is a list
-    of parse-failure strings.
+    TEST assemblies (any asmdef under a [Tt]ests path segment) are enumerated
+    too — not to seat them (they are outside the order) but so a PRODUCTION
+    assembly referencing one can FAIL: §3.5.2's exclusion is test→production
+    only, and "ignore any target that is not a production assembly" also
+    swallowed production→test, the worst direction available.
+
+    Returns (folder_of_name, name_of_folder, refs, test_names, errors) where
+    refs maps assembly name -> list of referenced assembly names, test_names
+    is the set of test assembly names, and errors is a list of parse-failure
+    strings.
     """
     src = repo / "src"
     folder_of_name = {}
     name_of_folder = {}
     path_of_folder = {}
     refs = {}
+    test_names = set()
     errors = []
     for asmdef in sorted(src.glob("**/*.asmdef")):
         rel_parts = asmdef.relative_to(src).parts
@@ -187,7 +249,16 @@ def load_production_asmdefs(repo):
             continue  # stray file directly under src/, not inside any folder
         folder = rel_parts[0]
         if any(re.fullmatch(r"[Tt]ests", part) for part in rel_parts[1:-1]):
-            continue  # excluded: a [Tt]ests path segment, per §3.5.2
+            # A test assembly, per §3.5.2 — record its NAME so production→test
+            # references can be failed, then keep it out of the seated graph.
+            try:
+                tname = json.loads(asmdef.read_text(encoding="utf-8")).get("name")
+            except (OSError, ValueError) as exc:
+                errors.append("cannot parse %s: %s" % (asmdef, exc))
+                continue
+            if tname:
+                test_names.add(tname)
+            continue
         try:
             data = json.loads(asmdef.read_text(encoding="utf-8"))
         except (OSError, ValueError) as exc:
@@ -209,7 +280,7 @@ def load_production_asmdefs(repo):
         name_of_folder[folder] = name
         path_of_folder[folder] = asmdef
         refs[name] = [r for r in data.get("references", [])]
-    return folder_of_name, name_of_folder, refs, errors
+    return folder_of_name, name_of_folder, refs, test_names, errors
 
 
 def find_cycle(graph):
@@ -259,18 +330,39 @@ def main():
         print("FATAL: %s not found (is --repo the repository root?)" % section2_file)
         return 2
 
-    tier_of, ordered_tiers, infra_folders, parse_errors = parse_tier_table(
+    section2_text = section2_file.read_text(encoding="utf-8")
+    tier_of, ordered_rows, infra_folders, parse_errors = parse_tier_table(
         spec_file.read_text(encoding="utf-8"))
-    bound_infra, infra_err = parse_infra_binding(
-        section2_file.read_text(encoding="utf-8"))
+    bound_infra, infra_err = parse_infra_binding(section2_text)
     if infra_err:
         print("FATAL: %s" % infra_err)
         return 2
-    folder_of_name, name_of_folder, refs, asmdef_errors = load_production_asmdefs(repo)
+    bound_sequence, seq_err = parse_tier_sequence(section2_text)
+    if seq_err:
+        print("FATAL: %s" % seq_err)
+        return 2
+    folder_of_name, name_of_folder, refs, test_names, asmdef_errors = \
+        load_production_asmdefs(repo)
 
     failures = list(parse_errors) + list(asmdef_errors)
     if not name_of_folder:
         failures.append("no production .asmdef found under %s" % (repo / "src"))
+
+    # 0a. The table's numbered rows must be exactly the ten tiers FR-CS-046
+    #     states, numbered 0..9 contiguously, ascending in table order, with
+    #     each row's (number, name) pair matching the authority's sequence.
+    #     Without this, swapping two rows' tier numbers (or renumbering,
+    #     dropping or duplicating a tier) still PASSED.
+    expected = list(enumerate(bound_sequence))
+    if ordered_rows != expected:
+        failures.append(
+            "the §3.5.2 numbered tier rows do not match FR-CS-046's stated "
+            "ten-tier sequence: table has [%s] but FR-CS-046 (%s) requires "
+            "[%s] — numbering must be 0..9, contiguous, ascending in table "
+            "order, with matching names"
+            % (", ".join("%s %s" % (t, n) for t, n in ordered_rows),
+               SECTION2_PATH,
+               ", ".join("%s %s" % (t, n) for t, n in expected)))
 
     # 0. The table's out-of-band Infrastructure set must be exactly the pair
     #    FR-CS-046b binds BY NAME. Membership above is derived only from the
@@ -303,15 +395,29 @@ def main():
                 "§3.5.2 tier table names '%s' but src/%s/ holds no production "
                 ".asmdef" % (folder, folder))
 
-    # 3. Classify every production->production reference.
-    downward = intra = upward = infra_sourced = external = 0
+    # 3. Classify every production-sourced reference. A reference into a TEST
+    #    assembly or to a name resolving to nothing under src/ is a FAILURE,
+    #    not an ignorable external: "ignore any non-production target" also
+    #    swallowed production→test (the worst direction available) and typos.
+    downward = intra = upward = infra_sourced = 0
     total = 0
     for name in sorted(refs):
         src_folder = folder_of_name[name]
         src_tier = tier_of.get(src_folder)
         for ref in refs[name]:
+            if ref in test_names:
+                failures.append(
+                    "production assembly 'src/%s/' references TEST assembly "
+                    "'%s' — §3.5.2's exclusion is test→production only; a "
+                    "production→test reference is upward out of the order "
+                    "entirely" % (src_folder, ref))
+                continue
             if ref not in folder_of_name:
-                external += 1  # not a production assembly (e.g. Unity/test) — out of scope
+                failures.append(
+                    "production assembly 'src/%s/' references '%s', which "
+                    "resolves to no production or test assembly under src/ — "
+                    "an unresolvable reference name must fail, not be "
+                    "silently ignored" % (src_folder, ref))
                 continue
             total += 1
             dst_folder = folder_of_name[ref]
@@ -367,8 +473,7 @@ def main():
     print("    intra-tier                           : %d" % intra)
     print("    upward                               : %d" % upward)
     print("    sourced by out-of-band Infrastructure: %d" % infra_sourced)
-    if external:
-        print("  references to non-production assemblies (ignored): %d" % external)
+    print("  test assemblies enumerated (outside the order): %d" % len(test_names))
 
     if failures:
         print()
@@ -409,3 +514,17 @@ if __name__ == "__main__":
 # |         |            |             | dropped; docstring's nested-asmdef claim     |
 # |         |            |             | corrected to the enforced one-per-folder     |
 # |         |            |             | rule; header gains Modified + this block.    |
+# | 1.3     | 2026-08-18 | Claude Code | Reviewed-findings pass (G1 + G2): the ten    |
+# |         |            |             | numbered tier rows are now asserted against  |
+# |         |            |             | FR-CS-046's stated sequence, parsed from     |
+# |         |            |             | section-2.md — 0..9, contiguous, ascending   |
+# |         |            |             | in table order, (number, name) pairs matched |
+# |         |            |             | (swapping two tier numbers previously        |
+# |         |            |             | PASSED); test assemblies are enumerated and  |
+# |         |            |             | a production→test reference now FAILS, as    |
+# |         |            |             | does any reference naming an assembly that   |
+# |         |            |             | resolves to nothing under src/ (both were    |
+# |         |            |             | previously "ignored as external");           |
+# |         |            |             | docstring's CI claim corrected to ci.yml's   |
+# |         |            |             | real triggers (pushes to main + PRs into     |
+# |         |            |             | main — NOT "every push").                    |
