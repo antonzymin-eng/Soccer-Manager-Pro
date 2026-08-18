@@ -276,6 +276,15 @@ def load_production_asmdefs(repo):
                 "of its references from the graph"
                 % (folder, path_of_folder[folder], asmdef))
             continue
+        if name in folder_of_name:
+            errors.append(
+                "assembly name '%s' is declared by two production .asmdef "
+                "files — src/%s/ and %s; names are the graph's node keys, so "
+                "the second would silently REPLACE the first's reference list "
+                "and drop a whole assembly's edges from the tier and cycle "
+                "checks while the folder count still reads complete"
+                % (name, folder_of_name[name], asmdef))
+            continue
         folder_of_name[name] = folder
         name_of_folder[folder] = name
         path_of_folder[folder] = asmdef
@@ -528,3 +537,19 @@ if __name__ == "__main__":
 # |         |            |             | docstring's CI claim corrected to ci.yml's   |
 # |         |            |             | real triggers (pushes to main + PRs into     |
 # |         |            |             | main — NOT "every push").                    |
+# | 1.4     | 2026-08-18 | Claude Code | AR round 6 (M6): a DUPLICATE assembly `name` |
+# |         |            |             | across two production .asmdef files now      |
+# |         |            |             | FAILS. Folder collisions were already        |
+# |         |            |             | caught; name collisions were not, and names  |
+# |         |            |             | are the graph's node keys — the second       |
+# |         |            |             | declaration silently REPLACED the first's    |
+# |         |            |             | reference list, dropping a whole assembly's  |
+# |         |            |             | edges from the tier and cycle checks while   |
+# |         |            |             | the folder count still read complete.        |
+# |         |            |             | Mutation-proven: naming ball-physics         |
+# |         |            |             | TacticalDirector.AgentMovement now reports   |
+# |         |            |             | the collision by name as the first error     |
+# |         |            |             | (previously it surfaced only indirectly, as  |
+# |         |            |             | downstream unresolvable references — and a   |
+# |         |            |             | duplicate naming an unreferenced assembly    |
+# |         |            |             | would have PASSED silently).                 |
