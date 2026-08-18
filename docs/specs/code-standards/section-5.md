@@ -7,7 +7,7 @@ traceability table (§5.5), and the determinism verification handoff note.
 
 **Created:** May 7, 2026
 **Modified:** August 18, 2026
-**Version:** 1.2
+**Version:** 1.3
 **Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 5
@@ -34,11 +34,13 @@ This section was authored (May 2026) when `src/` held no source code and no stat
 analysis tool was configured. Both premises have since expired — coding began
 May 19, 2026, and as of August 18, 2026 the tree holds 35 production assemblies and
 947 `.cs` files (re-derive: `ls -d src/*/ | wc -l`; `find src -name '*.cs' | wc -l`),
-with two of §5.2's tools live in CI (`.github/workflows/ci.yml`): `dotnet format
+with one of §5.2's six tools live in CI (`.github/workflows/ci.yml`): `dotnet format
 whitespace --verify-no-changes` runs on every push to `main` and every PR targeting `main`, over a synthetic project (advisory —
-a failure emits a warning and exits 0, "non-blocking until repo opts in"), and
+a failure emits a warning and exits 0, "non-blocking until repo opts in"). Alongside it,
 `tools/dotnet-ci/run-gate.sh` compiles the entire tree and runs every NUnit suite
-(blocking; non-certifying Linux shim). The **custom Spec #20 Roslyn analyzer set,
+(blocking; non-certifying Linux shim) — this is the whole-tree compile/test gate, not
+one of §5.2's named tools (round-7 finding M4: it appears nowhere in the table above).
+The **custom Spec #20 Roslyn analyzer set,
 `.editorconfig`, and `BannedSymbols.txt` from §5.2's tool table remain unbuilt** —
 none exists anywhere in the repository — so for the FRs those tools would enforce,
 conformance verification remains **manual review** against the FRs in §2.2, using the
@@ -212,9 +214,10 @@ resolves. FR-CS-009 is MAY-level; no pass/fail check required.
 [ ] 7. No magic numbers — No unqualified numeric literals in formula/system/
         struct code (permitted exceptions per FR-CS-024 checked)? (FR-CS-023)
 
-[ ] 8. Catalogue naming & region order — File named <SpecName>Constants.cs;
-        regions ordered [FIXED]→[DERIVED]→[CROSS]→[CROSS-PENDING]→[GT]→[EST]?
-        (FR-CS-025)
+[ ] 8. Catalogue naming & region order — File named <SpecName>Constants.cs
+        (FR-CS-025); regions ordered [FIXED]→[DERIVED]→[CROSS]→[CROSS-PENDING]→
+        [GT]→[EST] (§4.2/§3.2.3 — round-7 finding M5: FR-CS-025 governs file
+        naming only, not region ordering)?
 ```
 
 ---
@@ -400,7 +403,7 @@ Legend: **E** = Error (blocks build) · **W** = Warning · **–** = Not analyze
 | FR-CS-022 | Constants & Tagging — §5.4.2 item 6 | `CS20-CONST-007` | E |
 | FR-CS-023 | Constants & Tagging — §5.4.2 item 7 | `CS20-CONST-008` | E |
 | FR-CS-024 | MAY — no pass/fail check | N/A | – |
-| FR-CS-025 | Constants & Tagging — §5.4.2 item 8 | `CS20-CONST-009` | E |
+| FR-CS-025 | Constants & Tagging — §5.4.2 item 8 (naming half only; the item's region-order half traces to §4.2/§3.2.3, not this FR — round-7 finding M5) | `CS20-CONST-009` | E |
 | FR-CS-026 | Allocation — §5.4.3 item 1 | Unity alloc analyzer (game-loop path) | E |
 | FR-CS-027 | Allocation — §5.4.3 item 2 | `CS-ALLOC-001` | E |
 | FR-CS-028 | Allocation — §5.4.3 item 3 | `CS-ALLOC-002` | E |
@@ -496,6 +499,7 @@ belongs to Spec #16 and Spec #19.
 | 1.0.3 | August 18, 2026 | Claude Code | **Adversarial-review findings, reviewed round (Mediums).** (1) Versions the previously unversioned edit annotated in the 1.0.2 row above: §5.5 gained dedicated traceability rows for FR-CS-046a and FR-CS-046b, and the coverage note was rewritten to "75 rows in total" with the sub-clauses stated outside the 73-FR count. (2) Header Purpose line "73-row" → "75-row" to match the table the file actually holds. (3) §5.4.5 item 1 extended to cover **FR-CS-046b** — §5.5's FR-CS-046b row routed its checklist path to "§5.4.5 item 1", but item 1 cited only FR-CS-046/046a and never mentioned Infrastructure; it now checks both FR-CS-046b clauses (no ordered-tier → Infrastructure reference; Infrastructure references only tier 0 and its peer) — and its title standardised "Layer order" → "Tier order" per the §3.5.2 vocabulary. | — |
 | 1.1 | August 18, 2026 | Claude Code | **Adversarial-review round-6 finding H5.** §5.1's opening ("At Stage 0 no source code exists; all static analysis tools are therefore untriggered") and its "No tooling required at Stage 0" paragraph both asserted a state fifteen months stale — and the opening contradicted the §5.1 process list two lines below it, which legislates for PRs "that introduce or modify `.cs` files under `src/`". Restated against the live tree, every figure re-derived August 18, 2026: 35 production assemblies (`ls -d src/*/ | wc -l`), 947 `.cs` files (`find src -name '*.cs' | wc -l`), `dotnet format whitespace --verify-no-changes` advisory on every push and `tools/dotnet-ci/run-gate.sh` blocking on every push (both in `.github/workflows/ci.yml`). What genuinely remains missing is stated without overreach: the custom Spec #20 Roslyn analyzer set, `.editorconfig`, and `BannedSymbols.txt` exist nowhere in the repository, so those FRs remain manually reviewed and the KD-4/D1 threshold deferral stands (no profiled baseline yet). Consequential to round-6 H6 (see section-3.md v1.6): §5.4.2's checklist items 2, 6 and 8 extended to the six-tag vocabulary and the six-slot region order. | — |
 | 1.2 | August 18, 2026 | Claude Code | **Adversarial-review round-7 finding H3.** §5.1's "runs on every push" overstated `ci.yml`'s triggers (`branches: [main]` on both `push` and `pull_request`); a push to a topic branch — including every review branch this series has run on — triggers nothing. Corrected to "every push to `main` and every PR targeting `main`", matching §3.5.2's same-phrase correction. The v1.1 row above is left as written per the do-not-rewrite-history convention and carries the same overstatement as a record of what was written. | — |
+| 1.3 | August 18, 2026 | Claude Code | **Adversarial-review round-7 findings M4 + M5.** M4: §5.1 counted `tools/dotnet-ci/run-gate.sh` as one of "two of §5.2's tools live in CI" — `run-gate.sh` is the whole-tree compile/test gate, not a row in §5.2's six-tool table; restated as one §5.2 tool (`dotnet format`) live in CI, alongside the separately-named compile/test gate. M5: three sites cited `FR-CS-025` as the authority for per-tag `#region` ordering; verified against §2.2.2 that FR-CS-025 governs catalogue file naming only. §5.4.2 checklist item 8 re-cited (naming → FR-CS-025, region order → §4.2/§3.2.3); the §5.5 traceability row for FR-CS-025 annotated to scope its `CS20-CONST-009` mapping to the naming half of item 8 only. | — |
 
 ---
 

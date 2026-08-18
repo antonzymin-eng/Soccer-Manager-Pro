@@ -9,7 +9,7 @@ API symbol lists; §3.3 and §3.4 cite it by category name only.
 
 **Created:** May 7, 2026
 **Modified:** August 18, 2026
-**Version:** 1.7
+**Version:** 1.8
 **Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 3
@@ -226,14 +226,22 @@ is authoritative.
 | `[CROSS-PENDING]` | Cross-spec constant blocked on an upstream `IN PROGRESS` spec | Used when a spec consumes a constant that will be `[CROSS]` once the upstream authority spec reaches `APPROVED`, but the numeric value is not yet allocated. Citation must name the authoritative spec, section, and the `spec-error-log.md` back-prop ID tracking the allocation. Promoted to `[CROSS]` atomically with upstream approval. Use sparingly — every `[CROSS-PENDING]` tag is an outstanding cross-spec dependency that gates the consuming spec's own `APPROVED` transition. |
 
 *(Source: root `CLAUDE.md` — "Constant Tags", retrieved May 7, 2026; the `[CROSS-PENDING]`
-row re-retrieved verbatim August 18, 2026 — round-6 finding H6: the root table holds SIX
-tags and this citation had reproduced five, so every constant carrying the tag was
-formally outside FR-CS-017's closed enumeration — a MUST-level violation of an
-APPROVED spec — while the tag stood at 218 occurrences under `docs/specs/`
-(`grep -rn 'CROSS-PENDING' docs/specs/ | wc -l`, August 18, 2026) and the
+row re-retrieved verbatim August 18, 2026 — round-6 finding H6, filed as `ERR-020-006`:
+the root table holds SIX tags and this citation had reproduced five, so every constant
+carrying the tag was formally outside FR-CS-017's closed enumeration — a MUST-level
+violation of an APPROVED spec — while the tag stood at **218** occurrences under
+`docs/specs/` immediately BEFORE this fix (`git grep -c 'CROSS-PENDING' 9b841d1^ --
+docs/specs | awk -F: '{s+=$NF} END {print s}'`, re-verified August 18, 2026; the plain
+`grep -rn 'CROSS-PENDING' docs/specs/ | wc -l` no longer returns 218 — later same-day
+passes, this one included, keep adding citations of the tag itself and the count keeps
+climbing, so a live command is not stable proof of a historical figure) and the
 `.github/workflows/ci.yml` tag lint accepted it throughout.
 §9.4 re-approval trigger 1 required this table to track any root-table tag addition and
-was not honoured when the tag was added; honoured now.)*
+was not honoured when the tag was added on August 10, 2026; the table update landed with
+this fix, but the trigger's FULL mandate — re-verification of every §9.1/§9.2 checklist
+item — was not actually run until round-7 finding M2 (August 18, 2026, later; see
+`section-9-approval-checklist.md` §9.4's re-verification record), which is when the
+trigger was genuinely honoured.)*
 
 ---
 
@@ -272,10 +280,12 @@ public void ApplyGravity(ref BallState state, float dt)
 | `[GT]` | `public static readonly` | PascalCase | Tag + config-key reference | Loaded from tunable config at boot; not a `const` (FR-CS-019) |
 | `[EST]` | `public static readonly` | PascalCase | Tag + validation requirement | `// TODO: validate` on declaration line; `spec-error-log.md` entry required (FR-CS-020) |
 | `[DERIVED]` | `public static readonly` | PascalCase | Tag + formula + source constants | Formula derivation cited in summary; never set independently (FR-CS-021) |
-| `[CROSS]` | `public static readonly` | PascalCase | Tag + authoritative spec & section | Mirror of source-of-truth; never modified here (FR-CS-022). Const-mirror carve-out below |
+| `[CROSS]` | `public static readonly` | PascalCase (see const-mirror carve-out) | Tag + authoritative spec & section | Mirror of source-of-truth; never modified here (FR-CS-022). Const-mirror carve-out below |
 | `[CROSS-PENDING]` | `public static readonly` | PascalCase | Tag + authoritative spec & section + the `spec-error-log.md` back-prop ID tracking the allocation | Transitional pre-state of `[CROSS]`: the upstream value is not yet allocated, so the tag normally lives in the consuming SPEC rather than in code; a code-level declaration follows `[CROSS]`'s storage class and is re-tagged `[CROSS]` atomically with upstream approval (root `CLAUDE.md` — "Constant Tags"; FR-CS-017) |
 
-Per-tag region ordering within a catalogue file (FR-CS-025, §4.2):
+Per-tag region ordering within a catalogue file (§4.2; round-7 finding M5 — FR-CS-025
+governs catalogue file NAMING only, not per-tag region ordering, so the authority cited
+here is §4.2 directly rather than that FR):
 `[FIXED]` → `[DERIVED]` → `[CROSS]` → `[CROSS-PENDING]` → `[GT]` → `[EST]`
 
 Rationale: most-immutable to most-mutable. `[FIXED]` constants never change; `[EST]`
@@ -286,7 +296,7 @@ one-region move; Appendix C's exemplar predates the tag and demonstrates the oth
 five.)
 
 **Const-mirror carve-out (extends ERR-020-004; added August 18, 2026, round-6 finding
-H7).** A `[CROSS]` mirror whose initializer is a compile-time constant expression
+H7, filed as `ERR-020-007`).** A `[CROSS]` mirror whose initializer is a compile-time constant expression
 referencing the owning catalogue's own `public const` (or enum-member) declaration —
 e.g. `public const byte CardKindYellow = EventSystemConstants.CARD_KIND_YELLOW;` —
 **MAY** be declared `public const` instead of `public static readonly`. Reasoning: the
@@ -1127,6 +1137,7 @@ Simulation #16), the per-tag region ordering defined in §3.2.3 and §4.2 applie
 | 1.5 | August 18, 2026 | Claude Code | **Reviewed-findings pass H1 + M1 (+ four Lows), spec halves.** H1: §3.5.2's "enforced mechanically" sentence claimed an enforcement that did not exist — nothing ran `tools/assembly-tier-check.py` (no CI step, not in `run-gate.sh`, no hook), so an unamended table stayed green, exactly the `ERR-020-002` drift condition. The tool is now WIRED: the `Spec hygiene checks` job in `.github/workflows/ci.yml` runs it on every push and pull request, and the sentence now states that, enumerates the checks the tool actually performs (including the new ones below), and scopes what stays review — same-commit atomicity (CI sees trees, not commits) and the *adequacy* of a *Why this tier* justification (the tool checks the cell is non-empty only, closing the half-mechanical overclaim). M1 (tool v1.2, spec side): the out-of-band Infrastructure set is now asserted **by name** against FR-CS-046b's own list in §2.2.5 — previously one character of drift in the tier cell ("—" → "0" or "10") emptied the infra set and PASSED with both FR-CS-046b checks silently disabled (mutation-proved); the §3.5.2 preamble now also states the row is covered-not-ordered and must never be folded into the numbered order, retiring the wording that invited exactly that. Lows: the one-production-`.asmdef`-per-top-level-folder constraint the tool enforced but no spec stated is written into the placement rule; **gameplay tiers** defined once in the preamble (tiers 1–4 — the tier-5 cell had parenthesised it as three tiers while the tier-6 cell counted four) and the tier-5 cell recast on the defined term; §3.5.4's decision tree de-"layer"ed ("cross-tier notification", "producer in a lower tier", "Intra-tier or downward call" — "layer order" is undefined since v1.3); §3.3.4's heading renamed "UI / Non-Loop Allocation Budget" → "Presentation / Client (Non-Loop) Allocation Budget", matching the body FR-CS-067 rescoped at v1.2, and its trailing "UI code / UI method" phrasing aligned. | — |
 | 1.6 | August 18, 2026 | Claude Code | **Adversarial-review round-6 findings H6 + H7.** H6: §3.2.1 — introduced as reproducing root `CLAUDE.md`'s tag table "verbatim as a citation" — had five rows against the root table's six: `[CROSS-PENDING]` (root `CLAUDE.md` line 128, verified August 18, 2026) was missing, and with it the tag was unknown to #20 anywhere, making all 218 `docs/specs/` occurrences formal FR-CS-017 violations of an APPROVED spec. The row is now reproduced verbatim; the source note records the re-retrieval and the un-honoured §9.4 re-approval trigger 1; §3.2.3 gains the storage-class row (transitional pre-state of `[CROSS]` — normally a spec-side tag; a code declaration follows `[CROSS]`'s storage class); the §3.2.3 region-ordering line and §3.10's own vacuous-tag enumeration extended to six. H7: §3.2.3 gains the **const-mirror carve-out** (extends ERR-020-004) — the base `[CROSS]` → `public static readonly` rule forbade the compiler-enforced `public const` mirror shape that §4.2's ERR-020-004 carve-out cites as compliant (`DisciplineConstants.CardKindYellow` et al., 19 declarations tree-wide, re-derived August 18, 2026 from the `[CROSS]`-tagged `public const` declarations whose initializers reference the owning catalogue's symbol), so #20 certified as compliant a declaration its own MUST forbade. Resolved in the spec: symbol-referencing compile-time-constant mirrors MAY be `public const` (value identity is compiler-enforced; no divergence risk), literal-initialized mirrors never qualify (the five TODO-tick-rate declarations and `DisciplineConstants.LeagueCompetitionKey` remain non-conformant), and naming MAY keep either PascalCase or the source's ALL_CAPS identifier (both live in the tree: 10 PascalCase / 9 ALL_CAPS among the 19). FR-CS-022's row in section-2.md v1.4 carries the same carve-out. | — |
 | 1.7 | August 18, 2026 | Claude Code | **Adversarial-review round-7 finding H1.** §3.2.3's `[CROSS]` const-mirror carve-out (landed at v1.6) stated its naming arm as "keep PascalCase **or** reuse the source's `ALL_CAPS` identifier unchanged", and cited "10 PascalCase / 9 ALL_CAPS among the 19" as evidence that all 19 conform. Only **three** of the nine reuse the source name (`TEAM_COUNT`, `ATTRIBUTE_MIN`, `ATTRIBUTE_MAX`); the other six RENAME — `MatchAnalyticsConstants.PITCH_LENGTH_M`/`PITCH_WIDTH_M`/`GOAL_WIDTH_M` add the unit suffix their `BallPhysicsConstants.Pitch` sources lack, and `RESTART_KIND_THROW_IN`/`_GOAL_KICK`/`_CORNER` mirror `RestartType` enum members, whose identifiers are not `ALL_CAPS` at all and so could not be reused unchanged even in principle. Under the rule as written those six remained FR-CS-022 violations while the carve-out's own count called them conforming — the overclaim shape v1.6 filed H7 against, reproduced one revision later. Naming arm restated as "PascalCase, **or** an `ALL_CAPS` identifier consistent with the owning catalogue's `[FIXED]` convention", with the three/six split written out so the rule and its evidence agree. | — |
+| 1.8 | August 18, 2026 | Claude Code | **Adversarial-review round-7 findings M1 + M5 + M6, and L4.** M1: `ERR-020-006` and `ERR-020-007` were cited nowhere in the spec they patch — every prior #20 ERR is cited at its fix site, but round-6's text said only "round-6 finding H6/H7". Both ids now cited in place: §3.2.1's source note (`ERR-020-006`) and the §3.2.3 const-mirror carve-out heading (`ERR-020-007`). M5: §3.2.3's per-tag region-ordering line cited `FR-CS-025` as its authority; verified against §2.2.2 (`grep -n 'FR-CS-025 |' section-2.md`) that FR-CS-025 governs catalogue file NAMING only (`<SpecName>Constants.cs`) and says nothing about region ordering — re-cited to §4.2 directly. M6: the §3.2.1 source note offered "the tag stood at 218 occurrences (`grep -rn 'CROSS-PENDING' docs/specs/ \| wc -l`, August 18, 2026)" as proof of a figure that command no longer reproduces (245 today; every subsequent citation of the tag, including this row, keeps raising it) — re-derived against the pre-fix commit instead (`git grep -c 'CROSS-PENDING' 9b841d1^ -- docs/specs \| awk -F: '{s+=$NF} END {print s}'` → 218) and labelled explicitly as the pre-fix figure; the note's "honoured now" claim about §9.4 trigger 1 is corrected to name when the trigger's full re-verification mandate was actually run (round-7 M2, `section-9-approval-checklist.md`). L4: the `[CROSS]` row's Naming cell read a bare "PascalCase" while the carve-out qualifying it was signalled only in the Notes cell — Naming cell now reads "PascalCase (see const-mirror carve-out)". | — |
 
 ---
 

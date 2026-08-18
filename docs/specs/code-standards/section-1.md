@@ -6,7 +6,7 @@ dependency contracts for Spec #20. Authoritative reference for what this specifi
 owns, what it cites, and what is out of scope.
 
 **Created:** May 7, 2026
-**Version:** 1.0.3
+**Version:** 1.0.4
 **Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 1
@@ -105,7 +105,7 @@ the Tactical Director project. Consult it before adding a rule to any document.
 |---|---|---|
 | Coordinate system (X/Y/Z axes, corner origin) | Ball Physics Spec #1 §1.2 and Appendix C; root `CLAUDE.md` | Cite; do not restate |
 | Fatigue convention (0.0 = rested, 1.0 = fatigued) | Root `CLAUDE.md` — "Fatigue Convention" | Cite; do not restate |
-| Constant tags (`[GT]` / `[EST]` / `[FIXED]` / `[DERIVED]` / `[CROSS]`) | Root `CLAUDE.md` — "Constant Tags" | Cite tag definitions; add code-level binding rules (§3.2) |
+| Constant tags (`[GT]` / `[EST]` / `[FIXED]` / `[DERIVED]` / `[CROSS]` / `[CROSS-PENDING]`) | Root `CLAUDE.md` — "Constant Tags" | Cite tag definitions; add code-level binding rules (§3.2) |
 | Interface principle ("write interfaces only when both sides are specified") | Root `CLAUDE.md` — "Interface Design Principle" | Cite principle; add file-level placement rules (§3.5) |
 | Determinism rules (no `System.Random`, no `DateTime.Now`, SplitMix64, masking) | Root `CLAUDE.md` — "When Writing Code" | Cite rules; provide enforceable code-level formulation (§3.4) |
 | Stage 0 numeric type (`float`) | Root `CLAUDE.md` — "When Writing Code"; Spec #9 | Cite; do not restate |
@@ -281,6 +281,7 @@ are both gated on Stage 1 first-real-code milestone, not on this spec's approval
 | 1.0.1 | May 11, 2026 | Claude Code | Adversarial review fix (audit finding M-04): KD-1 statement softened from absolute "never restates" to "never paraphrases or redeclares; verbatim reproduction permitted only with explicit attribution + authoritative-source disclaimer + literal-diff discipline on every change." The carve-out matches the §3.2.1 actual practice (constant-tag table reproduced verbatim) and adds a diff-not-presence-check requirement directly motivated by audit finding H-01, where Q-01's presence check missed a one-phrase drift. Non-behavioural: codifies existing practice and tightens the audit method around it. | — |
 | 1.0.2 | August 18, 2026 | Claude Code | **Header correction only — no content change.** `**Status:**` read `DRAFT` against `SPEC_INDEX.md`'s record of #20 as **APPROVED (May 11, 2026)**. Corrected as part of the sweep the `ERR-020-002` adoption began: that pass fixed the three section files it touched and left six siblings at DRAFT, which turned a uniform folder-wide staleness into a misleading distinction — six of ten sections reading as not-approved. The FR-CS-056/057 class. Dated August 18, 2026 (commit `98662909`, author date 2026-08-18T03:01 UTC) — a same-session continuation of work that began August 17, 2026 UTC and crossed midnight before landing. | — |
 | 1.0.3 | August 18, 2026 | Claude Code | **Adversarial-review round-6 finding H6 (consequential).** §1's scope list said "the five tag types defined in root `CLAUDE.md`"; the root table holds six (`[CROSS-PENDING]` — see section-3.md v1.6 for the primary fix). Enumeration corrected to six; no other content change. | — |
+| 1.0.4 | August 18, 2026 | Claude Code | **Adversarial-review round-7 finding M3.** The 1.0.3 row above fixed §1's prose scope list but missed the §1.3 Authority Matrix row two sections later, which still enumerated five tags (`[GT]`/`[EST]`/`[FIXED]`/`[DERIVED]`/`[CROSS]`) — the same six-vs-five gap the 1.0.3 row exists to close, left standing in a second table. `[CROSS-PENDING]` added to the Authority Matrix row; no other content change. | — |
 
 ---
 
