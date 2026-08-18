@@ -590,9 +590,10 @@ The definitive 10-year roadmap. All development decisions reference this documen
 **Current stage:** Stage 0 / Stage 0+1 — Physics Foundation (Year 1), with the management-layer
 specification set (#27–#49) authored ahead of its implementation
 **Current phase:** Implementation. Stage-0 specs all APPROVED May 18, 2026; coding began May 19, 2026;
-AR-hardening sweep complete June 7, 2026; 43 specs APPROVED as of July 25, 2026. The active frontier
-is `docs/tracking/path-to-playable-roadmap.md` — closing the gap between 43 approved specs and 28
-implemented ones.
+AR-hardening sweep complete June 7, 2026; 43 specs APPROVED as of July 25, 2026, all 53 by
+July 27, 2026. The active frontier is `docs/tracking/path-to-playable-roadmap.md` — closing the gap
+between the 53 approved specs and the 35 production assemblies in `src/` (19 approved specs still
+have no assembly at all).
 
 ---
 
@@ -706,15 +707,19 @@ which landed T0 assemblies August 5, 2026): **#31 Transfers, #32 Scouting, #33 P
 #34 Staff, #40 Finances, #42 Youth, #43 Competition Structure, #45 Board, #49 Localization — plus
 the ten approved on July 27, 2026: #35, #36, #39, #46, #47, #48, #50, #51, #53, #54.** (#44
 Discipline left the list August 13, 2026 — `src/discipline/` landed T0+T1+T2, suspensions live end
-to end. #37 Match Analytics left it July 27, 2026 — `src/match-analytics/` T0, value types + the
-`XgLocationModel`; no engine wiring yet.) The specification frontier now runs well ahead of the code;
+to end. #37 Match Analytics left it July 27, 2026 — `src/match-analytics/` T0–T1, value types + the
+`XgLocationModel`, plus `MatchAnalyticsAggregator` and the `ITickLedgerTap`/`MatchEngineObservation`
+seam, driven only from `match-client-web`; no sim-side driver.) The specification frontier now
+runs well ahead of the code;
 `docs/tracking/path-to-playable-roadmap.md` sequences the shortest path to closing it.
 
-**Current versions:** `SNAPSHOT_SCHEMA_VERSION` **20** · `SEASON_SAVE_FORMAT_VERSION` 2 ·
+**Current versions:** `SNAPSHOT_SCHEMA_VERSION` **21** · `SEASON_SAVE_FORMAT_VERSION` 6 ·
 `SEASON_STATE_FORMAT_VERSION` 1 · `MATCH_SAVE_FORMAT_VERSION` 1 · `WORLD_STORE_FORMAT_VERSION` 3.
 Unity target **6000.4.9f1 / DX11**, recertified July 19, 2026 (`certification-platform.md` v1.4
 `✅ PINNED` — both the determinism-KAT run and the FR-PO-052 perf baseline executed on the pinned
-host). `src/CLAUDE.md` (v2.44) governs all C# authoring.
+host). `src/CLAUDE.md` governs all C# authoring; its version lives in
+`docs/tracking/CHANGELOG-src.md` (its VERSION HISTORY table), which is the authority — not restated
+here, since a number written here would only drift again.
 
 **Total specification output:** ~5 MB+ across 400+ files (see `file-manifest.md`)
 
@@ -766,20 +771,20 @@ host). `src/CLAUDE.md` (v2.44) governs all C# authoring.
 | # | Specification | Approved | Implementation |
 |---|---------------|----------|----------------|
 | 27 | Squad / Player Data Layer | Jul 22 | 🔒 `src/player-database/` |
-| 28 | Player Progression & Lifecycle | Jul 23 | 🔒 `src/player-progression/` — **T0 only** (draw-free core, not engine-wired) |
-| 29 | Training System | Jul 23 | ⏳ none |
+| 28 | Player Progression & Lifecycle | Jul 23 | 🔒 `src/player-progression/` — T0 + T1/T2a landed Aug 8, 2026 (`ProgressionEngine` wired at `SeasonLoop` slot 1; owns the career roster; season boundary + regen stream still open) |
+| 29 | Training System | Jul 23 | 🔒 `src/training-system/` — T0–T2 landed Aug 5, 2026 (day step wired at `SeasonLoop` slot 2; draw-free by design) |
 | 30 | Season & Competition Loop | Jul 22 | 🔒 `src/season-save/` — T0–T2 landed; T3 season roll open |
 | 31 | Transfers, Contracts & Negotiation | Jul 23 | ⏳ none |
 | 32 | Scouting & Player Knowledge | Jul 24 | ⏳ none |
 | 33 | Personalities, Morale & Squad Dynamics | Jul 23 | ⏳ none |
 | 34 | Staff & Backroom | Jul 23 | ⏳ none |
-| 37 | Match Analytics & Statistics | Jul 22 | 🔒 `src/match-analytics/` — **T0 only** (value types + `XgLocationModel`; no engine wiring, no aggregator) |
+| 37 | Match Analytics & Statistics | Jul 22 | 🔒 `src/match-analytics/` — T0–T1 (value types + `XgLocationModel`, plus `MatchAnalyticsAggregator` over the `ITickLedgerTap`/`MatchEngineObservation` seam — driven only from `match-client-web`; no sim-side driver) |
 | 38 | UI / Client Framework | Jul 22 | 🔒 `src/ui-framework/` — **T0 substrate only** (no screens, no UGUI binding) |
 | 40 | Club Finances & Economy | Jul 23 | ⏳ none |
-| 41 | Injuries & Medical | Jul 23 | ⏳ none |
+| 41 | Injuries & Medical | Jul 23 | 🔒 `src/injuries-medical/` — T0–T2 landed Aug 5, 2026 (day step wired at `SeasonLoop` slot 4; FR-MD-027 occurrence dial **ARMED** Aug 7, 2026) |
 | 42 | Youth Academy & Intake | Jul 24 | ⏳ none |
 | 43 | Competition Structure | Jul 24 | ⏳ none |
-| 44 | Discipline & Suspensions | Jul 24 | ⏳ none |
+| 44 | Discipline & Suspensions | Jul 24 | 🔒 `src/discipline/` — T0–T2 landed Aug 13, 2026 (suspensions live end to end; T3 quick-sim card synthesis open) |
 | 45 | Board & Ownership Dynamics | Jul 25 | ⏳ none |
 | 49 | Localization & Accessibility (seam + template contract) | Jul 23 | ⏳ none |
 
@@ -814,7 +819,7 @@ back-props filed atomically at the flip; **none has an assembly**):
 **Locked (implementation begun) — 32 of 53 approved specs:** #1–#8, #10–#19, #21–#30, #37, #38,
 #41, #44. That is the full Stage-0 physics/AI/systems stack, the tactical layer (#21, #23–#26), the
 living world (#22), the squad data layer (#27), progression (#28, T0–T2a), training (#29, T0–T2),
-the season loop (#30, T0–T2), match analytics (#37, T0), the UI framework substrate (#38, T0),
+the season loop (#30, T0–T2), match analytics (#37, T0–T1), the UI framework substrate (#38, T0),
 injuries & medical (#41, T0–T2), and discipline (#44, T0–T2).
 
 **Not implemented by design:** Fixed64 Math Library #9 (deferred to Stage 5+ per §8.1) and Code
@@ -1184,6 +1189,24 @@ git push --tags
 ---
 
 ## VERSION HISTORY
+
+**v1.38 — August 18, 2026**
+- **Adversarial-review round 6 HIGH findings — seven stale live-status claims corrected in this file**
+  (H1–H7; docs only, no code, no gate run): the current-versions line's `SNAPSHOT_SCHEMA_VERSION`
+  20 → **21** and `SEASON_SAVE_FORMAT_VERSION` 2 → **6** (both re-verified against their constant
+  catalogues; the other three constants on the line checked and correct); the `src/CLAUDE.md`
+  "(v2.44)" citation — `spec-error-log.md`'s version, a cross-bound number, against an actual
+  v2.124 — replaced with a pointer to `docs/tracking/CHANGELOG-src.md` per the `file-manifest.md`
+  precedent (commit `9a73ca7`); the management-layer implementation table brought to the tree —
+  #29, #41 (FR-MD-027 dial ARMED) and #44 moved off "⏳ none" to their locked assemblies (they had
+  contradicted this file's own Locked summary), #28 advanced to T0 + T1/T2a wired at `SeasonLoop`
+  slot 1, #37 corrected to T0–T1 (`MatchAnalyticsAggregator` + the
+  `ITickLedgerTap`/`MatchEngineObservation` seam exist and are driven only from `match-client-web`;
+  stale since the July 27 B3 landing); and the "Current phase" line's present-tense "43 approved /
+  28 implemented" gap corrected to 53 approved / 35 assemblies.
+- **This table itself had gone stale**: newest row v1.37 (July 27, 2026) while the header chain
+  above runs to August 17, 2026. The July 28 – August 17 landings are recorded in the header chain
+  and `docs/tracking/CHANGELOG.md`; they are not retro-rowed here.
 
 **v1.37 — July 27, 2026 (later same day)**
 - **All ten specs advanced `IN REVIEW → APPROVED`.** Lead-developer R-01..R-05 sign-off granted; the
