@@ -54,38 +54,42 @@ is a stronger constraint than tidiness.
 
 ## Step 2 — Write the entry in the log's shape
 
-**The log has two surfaces per entry, and both must be updated.** Missing the first is easy, because
-the file is long enough that you land in the detail section and never scroll back:
+**Every entry gets a row in the `## Error Index` table near the top — `| ID | Title | Severity |
+Files Affected | Status |`. That row is the entry.** A separate `## ERR-NNN-NNN` body further down
+is *not* mandatory: measured against the live log (`grep -c '^| ERR-'` vs `grep -c '^## ERR-'`), the
+large majority of entries — including the standing pattern for everything filed in the last several
+adversarial-review rounds (`ERR-020-006`, `ERR-020-007`, `ERR-030-047`, `ERR-030-048`, and roughly a
+hundred before them back past `ERR-030-030`) — carry only the index row, with the full account packed
+into the Title and Status cells. The log says as much of itself in one entry's own Status cell:
+*"which IS the entry, no separate body exists"* (`ERR-030-034`). Older entries with unusually long
+worked-example or derivation content (e.g. `ERR-008-017`, `ERR-020-002`) do carry a separate body, and
+that is still the right call when the content genuinely does not fit a table cell — but writing an
+empty or token separate section purely to satisfy a "both surfaces" rule is not what this log does,
+and re-verify against the live file before assuming otherwise; this note describes practice as of
+August 2026 and the log can move again.
 
-1. **A summary row in the `## Error Index` table near the top** — `| ID | Title | Severity | Files
-   Affected | Status |`. Severity is Major / Moderate / Medium; Status is a short phrase
-   (`Closed — fixed in …`, `Open — low priority`, or `◑` for spec-text-first entries whose code half
-   is deferred).
-2. **The full entry further down.** Append it and follow the existing template exactly (copy
-   `ERR-008-017` as the model):
+Whichever shape you use, the row (or the row + body) must carry the same content:
 
-```markdown
-## ERR-NNN-NNN: <Spec name> #N §X.Y — <one-line statement of the defect>
+- **Title cell** — the defect statement plus **how it was found**: the measurement or review that
+  surfaced it, with numbers, and the cause verified against source (name the file and the expression).
+  An entry that says *what* was wrong without *how it was measured* cannot be re-checked, and several
+  entries here were only believable because they carried the numbers (dive-early 456–2000 ms with
+  dive-late exactly zero; mean shot distance 30–34 m against football's ~17).
+- **Severity cell** — Major / Moderate / Medium / High / Low (both scales appear in the live log;
+  match whichever the surrounding rows use).
+- **Files Affected cell** — a count, or the short list itself for a small one.
+- **Status cell** — `✅ RESOLVED <date>, same commit` (or `Open — <priority>` / `◑` for a
+  spec-text-first entry whose code half is deferred) followed by **the fix**: what the spec section
+  now says, what stays unchanged and why, what the worked examples become, and the **determinism
+  impact** (schema / RNG stream / domain tag / draw site / draw order — usually "none", then what
+  locks it, with the pre-fix failure verified by execution).
 
-**Filed:** <date> — <what pass surfaced it>. **Status: RESOLVED** (same commit) | **OPEN**.
-Owner design supplement: `docs/tracking/<topic>-design.md`.
-
-**How found.** <the measurement or review that surfaced it, with numbers; then the cause verified
-against source — name the file and the expression>
-
-**Fix (spec + code, same commit).** <what the spec section now says, what stays unchanged and why,
-what the worked examples become>
-
-**Determinism impact:** <schema / RNG stream / domain tag / draw site / draw order — usually "none";
-then what locks it, with the pre-fix failure verified by execution>
-
----
-```
-
-The "How found" section is the part that pays off later. An entry that says *what* was wrong without
-*how it was measured* cannot be re-checked, and several entries here were only believable because they
-carried the numbers (dive-early 456–2000 ms with dive-late exactly zero; mean shot distance 30–34 m
-against football's ~17).
+If you do add a separate `## ERR-NNN-NNN` body — because the derivation is long enough that packing
+it into two table cells would make the index unreadable — follow the existing template (copy
+`ERR-008-017` as the model): `**Filed:**` / `**How found.**` / `**Fix (spec + code, same commit).**` /
+`**Determinism impact:**`, terminated with `---`. Either way, do not leave the index row as a bare
+one-line title with the substance parked in a body nobody wrote yet — that is the actual failure mode
+here (a row promising detail that was never filed), not the choice of surface.
 
 Then update the file header: bump `**Version:**`, rewrite `**Updated:**` with a prose summary of this
 revision, and relabel the previous summary so the chain reads `Prior update below.`

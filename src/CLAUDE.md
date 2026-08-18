@@ -224,7 +224,7 @@ This command requires a Unity host — it is **not** runnable from the Linux gat
 | Private instance fields | `_camelCase` | `_clock`, `_agentCount` |
 | Private static fields | `s_camelCase` | `s_updateMarker`, `s_runTickMarker` |
 | `[FIXED]` constants | `ALL_CAPS` | `BALL_RADIUS`, `DRAG_COEFFICIENT` |
-| All other constants (`[GT]`, `[EST]`, `[DERIVED]`, `[CROSS]`) | PascalCase | `MaxSubsteps`, `TerminalVelocity` |
+| All other constants (`[GT]`, `[EST]`, `[DERIVED]`, `[CROSS]`, `[CROSS-PENDING]`) | PascalCase | `MaxSubsteps`, `TerminalVelocity` |
 | Interfaces | `I` prefix + PascalCase | `IEventBus`, `ICollisionConsumer` |
 | Assembly names / namespaces | `TacticalDirector.<SpecName>` | `TacticalDirector.BallPhysics` |
 
@@ -296,16 +296,19 @@ Every constant lives in `<SpecName>Constants.cs`. No literals in formula or syst
 **Region order inside every catalogue (most-immutable first):**
 
 ```csharp
-#region Fixed      // [FIXED]   → public const float BALL_RADIUS = 0.11f;
-#region Derived    // [DERIVED] → public static readonly float TerminalVelocity = Mathf.Sqrt(GRAVITY / DRAG_COEFFICIENT);
-#region Cross      // [CROSS]   → public static readonly float PhysicsTickHz = ProjectConstants.PHYSICS_TICK_HZ;
-#region GT         // [GT]      → public static readonly int MaxSubsteps = 8; // TODO: replace with config loader (Stage 1)
-#region EST        // [EST]     → public static readonly float LiftCoefficient = 0.35f; // TODO: validate
+#region Fixed        // [FIXED]         → public const float BALL_RADIUS = 0.11f;
+#region Derived      // [DERIVED]       → public static readonly float TerminalVelocity = Mathf.Sqrt(GRAVITY / DRAG_COEFFICIENT);
+#region Cross        // [CROSS]         → public static readonly float PhysicsTickHz = ProjectConstants.PHYSICS_TICK_HZ;
+#region CrossPending // [CROSS-PENDING] → public static readonly float PendingXgWeight = 0.42f; // transitional; promotes into #region Cross atomically with upstream approval
+#region GT           // [GT]            → public static readonly int MaxSubsteps = 8; // TODO: replace with config loader (Stage 1)
+#region EST          // [EST]           → public static readonly float LiftCoefficient = 0.35f; // TODO: validate
 ```
 
 Omit a region entirely if the spec has no constants with that tag. Empty regions are prohibited.
 
-**Region name convention:** The first three region names use Title Case (`Fixed`, `Derived`, `Cross`). `GT` and `EST` match their tag names exactly since those are already **all-caps abbreviations**. Do not use ALL_CAPS (`FIXED`) or lowercase for region names.
+**Region name convention:** The first four region names use Title Case (`Fixed`, `Derived`, `Cross`, `CrossPending`). `GT` and `EST` match their tag names exactly since those are already **all-caps abbreviations**. Do not use ALL_CAPS (`FIXED`) or lowercase for region names.
+
+**`[CROSS-PENDING]` constants:** Transitional pre-state of `[CROSS]` — the upstream spec's value is not yet allocated, so the tag normally lives in the consuming *spec* rather than in code (root `CLAUDE.md` — "Constant Tags"). A code-level declaration follows `[CROSS]`'s storage class (`public static readonly`, PascalCase) and sits in its own `#region CrossPending`, directly after `#region Cross` — the region it promotes into, so promotion is a one-region move. Re-tag `[CROSS]` and relocate to `#region Cross` atomically with the upstream spec's approval. (Spec #20 §3.2.3/§4.2; no `[CROSS-PENDING]` declarations exist in `src/` today — the tag is latent in code, live only in spec prose.)
 
 **`[DERIVED]` constants:** The XML doc must include the tag, the formula, and the source constants (FR-CS-021). Substitute actual formula references (FM-NNN, §x.y) from the implementing spec:
 
