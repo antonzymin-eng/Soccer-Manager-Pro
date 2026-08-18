@@ -537,9 +537,15 @@ HISTORY v2.1 entry for the record of this update.
   *is the subsystem this touches fully wired? If not, this is a wiring task, not a realism pass.*
 - **OPEN ISSUES** — W3/W9/W10 restate items already filed under the GK/Heading entry; W6 restates
   §5.Z.23 item (c); C1–C4 restate §5.Z.24's remainder. They are consolidated here rather than
-  re-filed. The §5.Z.23 `pointQuality` owner decision is **parked**, not resolved: W1 changes the
-  contact geometry that decision turns on, so deciding it now risks paying for a fix to a problem
-  about to change shape.
+  re-filed. The §5.Z.23 `pointQuality` owner decision is **parked**, not resolved — and the parking
+  condition is the close-range **conversion** comparison on identical seeds that
+  `gk-rush-trigger-design.md` §6 still owes (owner decision ratified August 17, 2026, KD-CC6a),
+  NOT W1's landing or its rush anatomy: W1 landed August 4 and its anatomy WAS measured
+  August 12, 2026, but the §4 ladder's refusal was measured against a keeper who never left his
+  line, so re-deciding before the conversion pair exists risks paying for a fix to a problem that
+  has already changed shape. *(Corrected August 18, 2026, reviewed finding H-B — as written at 1.0
+  this read, present-tense, "W1 changes the contact geometry that decision turns on … a problem
+  about to change shape", which published an already-satisfied release condition.)*
 
 ---
 
@@ -547,6 +553,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.13 | 2026-08-18, later | — | **Reviewed-findings pass, part of one High (H-B), documentation only.** §6's `pointQuality` note corrected: it still framed the parking condition present-tense as W1 changing the contact geometry ("a problem about to change shape"), which published an already-satisfied release condition — W1 landed August 4 and its rush anatomy was measured August 12, 2026. The note now states the surviving condition: parked until the close-range CONVERSION comparison on identical seeds exists (`gk-rush-trigger-design.md` §6's still-owed pre/post pair), per the August 17, 2026 owner decision (KD-CC6a). The same H-B fixed the twin stale framings at `open-issues.md`'s owning record headline and `CLAUDE.md`'s index bullet. |
 | 1.12 | 2026-08-18 | — | **Reviewed-findings pass, one Low (L2), documentation only.** §5's "attack the ball" note (added at 1.4, rewritten at 1.5, both 2026-08-09) was headed "Note (Aug 10, 2026; updated 2026-08-09)" — a date this file's own version history does not support: the note's content (the §10.7 → §10.8 → §10.10 sequence) matches v1.5's description exactly, and both the note's first appearance (v1.4) and its rewrite (v1.5) are dated 2026-08-09; no version row anywhere in this file, and no dated correction in `close-chance-creation-design.md`'s own version history, touches this note on August 10. Corrected to a single "Note (2026-08-09)." No sequence changed, no `[GT]` moved, no code changed, no gate run. |
 | 1.11 | 2026-08-17, later | — | **Reviewed-findings pass, two Lows, both fixed.** **L6:** the 1.10 row below had been inserted BELOW 1.9 in this newest-first table (the sequence ran 1.9, 1.10, 1.8, 1.7 …); moved above 1.9, where it belongs by date and by version order. **L11:** the 1.10 row and the §5 blockquote note it added both claimed W2's arming "gates three separate held decisions … each cite W2 independently" — false of item 3, the un-isolated `sim_match_engine_inposs_gate` collapse to 0.501 against its 0.70 bound: that finding is the reason arming is BLOCKED, not something arming unblocks. Both corrected in place to state two held decisions gated on arming (foul/card calibration, KD-7a) with the inposs stall named separately as arming's own blocker (leading candidate W6). No sequence changed, no `[GT]` moved, no code changed, no gate run — documentation only. |
 | 1.10 | 2026-08-17 | — | **§5 gains a note recording that W2's ARMING gates two separate held decisions, and is itself blocked by a third, un-isolated finding.** ⚠️ Corrected 2026-08-17, later (1.11, L11) — this row originally said arming "gates three separate held decisions … each cite W2 independently", which was false of item 3. As corrected: no item added, no sequence changed. The foul/card calibration (held Aug 15) and KD-7a's successor distribution (held Aug 17 — `league-bootstrap-design.md` S7 condition 4 requires a post-arming capture) both wait ON arming. Separately, arming itself is blocked: the un-isolated `sim_match_engine_inposs_gate` stall (leading candidate W6, sequence position 6) is why `TackleContactRadiusM` still ships at 0, not a third thing arming gates. Recorded so the path W4 → W12 → W6 is read as unblocking both held decisions rather than as the next wiring chore. |
