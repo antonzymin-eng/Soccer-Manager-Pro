@@ -41,7 +41,7 @@ entry below, which is left as written per this file's no-edit rule: it opens "Ma
 suspended for their bookings". It is **players** who are suspended, not managers; nothing in the
 discipline module touches managers.)* Prior entry below.)
 
-**Last Updated:** August 13, 2026 (**Managers can now be suspended for their bookings — the game has
+**Last Updated (prior):** August 13, 2026 (**Managers can now be suspended for their bookings — the game has
 discipline and suspensions for the first time.** A new "discipline" module (`src/discipline/`, the
 35th part of the game's codebase) watches every yellow and red card as a match is played and keeps
 a running ledger per player, exactly the way the #37 match-statistics module already watches shots.
@@ -683,9 +683,11 @@ specs #40–#45, #49), plus the **ten promoted on July 27, 2026** (#53, #35, #46
 and runs the full NUnit suite on every push; the quarantine list is empty.
 
 **Note the direction of travel — it is now the project's dominant fact.** The ten approvals add
-specification, not code, so **22 of the 53 APPROVED specs have no `src/` assembly at all**. *"The spec is
-APPROVED"* now says nothing whatsoever about whether code exists, and that is true of **~42% of the
-registry**. What remains is implementation: see `path-to-playable-roadmap.md`.
+specification, not code, so **19 of the 53 APPROVED specs have no `src/` assembly at all** (22 until
+#29 Training and #41 Injuries & Medical landed T0 assemblies on August 5, 2026 and #44 Discipline
+landed T0/T1/T2 on August 13, 2026). *"The spec is APPROVED"* now says nothing whatsoever about
+whether code exists, and that is true of **~36% of the registry**. What remains is implementation:
+see `path-to-playable-roadmap.md`.
 
 **A production match now plays.** Until July 26, 2026 every match finished 0–0 with the ball
 *identically motionless for the full 90 minutes* — a closed deadlock (no motion ⇒ no reception ⇒ no
@@ -697,16 +699,14 @@ ticks (was 0%) and changing hands **262–298 times** (was 0), with the ball rea
 areas and goals scored. Locked by the `match-engine-play-develops` acceptance scenario — every
 predicate of which fails on the pre-fix engine.
 
-**The live gap: 11 of the specs previously listed here still have no assembly at all** — **#44
-Discipline landed its `src/discipline/` assembly August 13, 2026 (C1 T0+T1 + C2 T2, suspensions
-live end to end)** and is removed from this list accordingly. Remaining: #29 Training, #31
-Transfers, #32 Scouting, #33 Personalities/Morale, #34 Staff, #40 Finances, #41 Injuries, #42
-Youth, #43 Competition Structure, #45 Board, #49 Localization. **This list and the "22 of 53" figure
-below it are otherwise stale for reasons unrelated to this pass** — #29 Training and #41 Injuries &
-Medical both gained T0 assemblies August 5, 2026 and are still named above; this landing corrects
-only the #44 removal it is directly responsible for, per the root `CLAUDE.md`, which is the
-authoritative and current count (19 with no assembly as of August 13, 2026). (#37 Match
-Analytics gained a `src/match-analytics/` T0 assembly on July 27, 2026 — value types + the
+**The live gap: 19 of the 53 APPROVED specs have no assembly at all** (list re-derived August 18,
+2026 against the root `CLAUDE.md` assembly map, the authoritative index — this paragraph had been
+carrying an 11-spec list that wrongly included #29 Training and #41 Injuries & Medical, both of
+which landed T0 assemblies August 5, 2026): **#31 Transfers, #32 Scouting, #33 Personalities/Morale,
+#34 Staff, #40 Finances, #42 Youth, #43 Competition Structure, #45 Board, #49 Localization — plus
+the ten approved on July 27, 2026: #35, #36, #39, #46, #47, #48, #50, #51, #53, #54.** (#44
+Discipline left the list August 13, 2026 — `src/discipline/` landed T0+T1+T2, suspensions live end
+to end. #37 Match Analytics left it July 27, 2026 — `src/match-analytics/` T0, value types + the
 `XgLocationModel`; no engine wiring yet.) The specification frontier now runs well ahead of the code;
 `docs/tracking/path-to-playable-roadmap.md` sequences the shortest path to closing it.
 
@@ -920,7 +920,8 @@ Soccer-Manager-Pro/
 │       │   ├── management-layer-spec-roadmap.md  [Which specs to author, in what order]
 │       │   └── path-to-playable-roadmap.md       [Which code to land, in what order]
 │       ├── certification-platform.md   [Pinned host/engine tuple] + cert-run-runbook.md
-│       └── *-design.md                 [42 design supplements — see note below]
+│       └── *-design.md                 [60 design supplements — re-derive with
+│                                        `ls docs/tracking/*-design.md | wc -l`; see note below]
 ├── src/                                [35 production assemblies — coding begun May 19, 2026]
 │   ├── CLAUDE.md                       [Coding guide — read before writing code]
 │   │   Grouped by the ten-tier order of Spec #20 §3.5.2 (adopted August 17, 2026).
@@ -971,7 +972,7 @@ the same day, with sign-off granted and its 23 back-props filed atomically. The 
 spec is **#52** (Multiplayer Transport), deliberately deferred behind the Stage-5 Fixed64 migration.
 
 **Nothing on the specification side is outstanding. Everything outstanding is implementation** — and the
-gap is large: 22 of the 53 approved specs have no assembly.
+gap is large: 19 of the 53 approved specs have no assembly (per the root `CLAUDE.md` assembly map).
 
 **The critical path is now `path-to-playable-roadmap.md`** — the shortest route to a build a person can
 sit down and play, against the PM-1 (playable match) / **PM-2 (playable season — the objective)** /
@@ -982,25 +983,40 @@ PM-3 (playable career) ladder. Phase A (season spine) is in progress:
    model (a 380-fixture season resolves in milliseconds against the ≥ 16 h the real engine would need).
 2. ✅ **A4b landed Jul 26** — the possession bootstrap. **This is the item that unblocked PM-1:** it
    closed ERR-030-014, under which a production match had never once put the ball in motion.
-3. ⏳ **A4a — round-resolution calibration corpus.** Unblocked by A4b but not yet run: re-run the
-   ~33-minute Step-0 pilot, then (only if the squad-strength extremes separate) the ~1.4 h corpus and
-   the parameter fit. The three `[GT]` round-resolution parameters currently ship **provisional and
-   explicitly not fitted** — football-plausible rather than engine-matched.
+3. ✅ **A4a — round-resolution calibration RAN August 12, 2026.** Step 0 passed (the squad-strength
+   extremes separate), the 198-match corpus is committed under `docs/tracking/corpus-data/`, and the
+   three `[GT]` round-resolution parameters were fitted by least squares — `QuickSimBaseGoals`
+   1.35 → 1.2325, `QuickSimGoalRatingSlope` 0.35 → 0.2162, `QuickSimHomeAdvantageRating`
+   0.30 → 0.4996 — retiring their "provisional, not fitted" warning. The KD-8 verdict is split:
+   **mean agreement PASS** (worst |z| = 2.06, pooled χ² = 16.0 on 19 dof vs 30.1, under the
+   re-specified bar of `ERR-030-033`) and **distribution shape FAIL** (`ERR-030-034` — the engine is
+   over-dispersed at z = +5.40 and produces far fewer draws, 19.2% vs the Poisson model's 26.8%; the
+   NB2 successor is pre-decided as `league-bootstrap-design.md` KD-7a and deliberately held pending a
+   post-W2-arming capture). See the A4a entry in `docs/tracking/open-issues.md`.
 4. ⏳ **A5 — #30 T3 season boundary roll.** Phase A's exit is PM-2-sim: a full 38-round season
    simulating headlessly, saving and resuming byte-identically, and rolling into a second season.
-5. ⏳ **The 13 unimplemented approved specs** (#29, #31–#34, #37, #40–#45, #49) — ~30–60k lines of
-   unwritten code at this project's realised spec→code ratios.
+5. ⏳ **The 19 assembly-less approved specs** (#31–#36, #39, #40, #42, #43, #45–#51, #53, #54 —
+   re-derived August 18, 2026 against the root `CLAUDE.md` assembly map; the "13" list previously
+   here named #29, #37, #41 and #44, all of which have `src/` assemblies) — tens of thousands of
+   lines of unwritten code at this project's realised spec→code ratios.
 
 **Known behavioural defect (not blocking play):**
-6. ⏳ **The foul heuristic issues ~7 red cards per 9 minutes** — every player would be dismissed well
-   inside a full match. Invisible until Phase H made matches actually play. Deliberately not fixed
-   inside a correctness pass: the levers are `[GT]` and setting them needs a stated foul-rate target
-   and a measurement pass. **The most visible remaining unrealism in a played match.**
+6. ⏳ **Foul and card rates drifted ~67% above their calibrated values and are knowingly held there.**
+   The "~7 red cards per 9 minutes" figure that stood here was resolved July 26, 2026 by the
+   foul-discipline balance pass (480 → 21.0 fouls, 147 → 3.0 yellows, 75 → 1.0 reds per 90;
+   `docs/tracking/foul-discipline-balance-design.md`). Re-measured August 13, 2026: **35.0 fouls /
+   5.0 yellows / 1.00 reds per 90** against football's ~22 / ~3.5 / ~0.25 — C1's phase-classification
+   change (Aug 8) moved the contact stream the July fit was calibrated against, and reds remain 4×
+   football. **Owner sequencing decision (taken August 15, ratified in the August 17 decision pass):
+   hold the drift — arm W2 (tackling) first, then calibrate once** — a fit landed today would be
+   re-fitted immediately once ~47 challenges per team per 90 join the same foul-candidate stream.
+   See the foul/card entry in `docs/tracking/open-issues.md` for the accepted cost.
 
 **Client / presentation (Track C — can run in parallel, must not block Phase A):**
 7. ⏳ **UI screens.** #38's T0 substrate exists; no screens and no UGUI binding. Of the screens the
    July-25 mockups cover, only Tactics and Squad have built data behind them — the rest are gated on
-   #29/#31/#32/#34/#40, none of which have any `src/`.
+   #29/#31/#32/#34/#40; of those only #29 has any `src/` (the training-system assembly, landed
+   August 5, 2026), and #31/#32/#34/#40 have none at all.
 8. ⏳ **Interactive Unity client — now the shipping UI, and the next thing to build.** Roadmap B6 was
    reversed by owner decision on Aug 3, 2026: the product ships the full Unity client, not the
    web-hosted viewer. The browser client (`src/match-client-web/`) is retained as the **host-free
@@ -1014,8 +1030,13 @@ PM-3 (playable career) ladder. Phase A (season spine) is in progress:
    `docs/tracking/interactive-unity-client-design.md` §12.
 
 **Operations / housekeeping:**
-9. ⏳ Push the approval tags (HTTP 403 branch-protection); run the squash-merge precondition check in
-   `CLAUDE.md` OPEN ISSUES before `git push --tags`.
+9. ⏳ Approval tags: verified August 17, 2026 that the eight tag objects no longer exist anywhere
+   (never pushed; the authoring containers are gone) and the tag-push HTTP 403 is still live. The old
+   squash-merge precondition check cannot run — all three of its steps take a tag object as input —
+   and its question is already answered: `origin/main` uses true merge commits (path 3). What remains
+   is re-creating the tags with the eight guarded `git tag -a` commands recorded in the approval-tags
+   entry in `docs/tracking/open-issues.md` (targets resolved and ancestry-verified), then a push with
+   privileged credentials.
 10. ⏳ Re-verify the `tools/dotnet-ci` shim's `netstandard2.1` / `LangVersion 9.0` claims against a real
     Unity 6000.4.9f1 install (documented behaviour says they hold; confirming needs the install).
 

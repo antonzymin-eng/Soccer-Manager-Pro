@@ -469,7 +469,7 @@ throughout; `[GT]` landings are frozen per KD-W1 until the final pass.
 > them as a third thing arming gates:
 >
 > 1. **Foul/card calibration** — held since August 15; today's 35.0 fouls / 5.0 yellows / 1.00 reds per
->    90 measure a pre-tackle contact stream (`foul-discipline-balance-design.md` §7 item 2a). Since #44,
+>    90 measure a pre-tackle contact stream (`foul-discipline-balance-design.md` §7 item 3 — renumbered from `2a` at that file's v1.2, `2a.` not being a valid ordered-list marker). Since #44,
 >    the suspension rate is derived from that number.
 > 2. **KD-7a, the round-resolution successor distribution** — `league-bootstrap-design.md` S7 condition
 >    4 requires a **post-arming** capture, because the second moment of scorelines is exactly the

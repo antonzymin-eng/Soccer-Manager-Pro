@@ -19,7 +19,11 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 > `### Assembly Layer Taxonomy` replaced — the three-layer table that named 19 of the tree's 35 assembly
 > folders (plus the ⚠️ staleness banner naming the other 16, and the `code-standards` phantom row in the
 > infrastructure table) becomes the ten-tier order covering all 35, reproduced verbatim from the newly
-> amended Spec #20 §3.5.2. `### Reference Direction` rewritten over the full order, with the arrow-notation
+> amended Spec #20 §3.5.2. *(⚠️ Corrected August 18, 2026, reviewed finding H11: "named 19 … the
+> other 16" is the FORMER `src/CLAUDE.md` accounting — 14 layer rows + 3 infrastructure rows + 2
+> cross-cutting assemblies in prose — a way of counting #20 v1.2 explicitly rejected. Spec #20
+> §3.5.2, the authority on membership, placed only **14** of the 35 — 8 Physics + 4 Mechanics +
+> 2 AI, the `UI` row empty — leaving **21** undecided; source: #20 `section-3.md` v1.2.)* `### Reference Direction` rewritten over the full order, with the arrow-notation
 > conflict closed (`ERR-020-003`): both files now label their arrow, so a reader checks the label rather
 > than the arrowhead. Two rules added that the old table could not express — **a tier is a ceiling, not a
 > licence** (#44 `discipline` sits in Management but its FRs forbid it `match-engine`/`season-save`; the

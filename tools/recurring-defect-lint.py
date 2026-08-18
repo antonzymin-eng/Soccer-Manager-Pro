@@ -2,7 +2,7 @@
 # ============================================================================
 # File:     tools/recurring-defect-lint.py
 # Created:  2026-08-08
-# Modified: 2026-08-08
+# Modified: 2026-08-17
 # Author:   Claude Code
 # Purpose:  Mechanically detects the recurring defect classes that thirteen
 #           consecutive adversarial-review passes over the #29/#41 balance-pass
@@ -357,12 +357,15 @@ def strip_fences(text):
 
 
 def collect_md_version_rows(text):
-    """All version rows from every version-history block in a markdown file.
+    """All version-history blocks in a markdown file.
 
     Two shapes exist in this repo: a '#region VersionHistory' block (spec section
     files, mirroring the .cs convention) and a '## Version History' heading
-    followed by a markdown table (design supplements). Returns
-    [(lineno, key, date, raw)] for the FIRST block found, plus a count of blocks.
+    followed by a markdown table (design supplements). If any '#region
+    VersionHistory' blocks are found, every one of them is returned; otherwise
+    every heading-shaped block is returned. Returns [(lineno, body)] -- the
+    1-based line number the block starts at, and its raw body text -- for
+    every block found.
     """
     blocks = []
     for m in re.finditer(r"^#region\s+VersionHistory(.*?)^#endregion", text, re.M | re.S):
@@ -938,3 +941,9 @@ if __name__ == "__main__":
 # | 1.0     | 2026-08-08 | Claude Code | Initial: seven mechanically-detectable       |
 # |         |            |             | recurring defect classes from the 13-pass    |
 # |         |            |             | #29/#41 balance-pass review record.          |
+# | 1.1     | 2026-08-17 | Claude Code | Anchored the version-history region/heading  |
+# |         |            |             | regex to line starts so a prose-quoted marker|
+# |         |            |             | mid-line no longer shadows a file's real     |
+# |         |            |             | table (code-standards/section-2.md,          |
+# |         |            |             | section-3.md, outline-detailed.md). Repo-wide|
+# |         |            |             | WARN 125 -> 122.                             |

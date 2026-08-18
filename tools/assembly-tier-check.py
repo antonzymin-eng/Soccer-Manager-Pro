@@ -12,7 +12,11 @@
 #            * any folder seated in more than one tier,
 #            * any upward reference (FR-CS-046),
 #            * any ordered-tier reference into an out-of-band Infrastructure
-#              assembly ("no tier may reference them at runtime"),
+#              assembly ("no tier may reference them at runtime", FR-CS-046b
+#              clause 1),
+#            * any Infrastructure-sourced reference whose target is not tier 0
+#              (Foundation) and not the other Infrastructure assembly
+#              (FR-CS-046b clause 2),
 #            * any cycle in the production reference graph (FR-CS-046a).
 #          Prints the recomputed reference breakdown (downward / intra-tier /
 #          upward / Infrastructure-sourced) so §3.5.2's adoption verification
@@ -96,18 +100,33 @@ def parse_tier_table(spec_text):
 
 
 def load_production_asmdefs(repo):
-    """Enumerate production asmdefs: src/<folder>/<name>.asmdef (tests are deeper).
+    """Enumerate production asmdefs under src/, recursively.
 
-    Returns (folder_of_name, name_of_folder, refs) where refs maps
-    assembly name -> list of referenced assembly names.
+    docs/specs/code-standards/section-3.md §3.5.2 states the exclusion rule
+    as: test assemblies live in src/<folder>/[Tt]ests/. So a production
+    asmdef is any src/**/*.asmdef whose path (below the top-level src/<folder>/
+    it lives in) does not pass through a path segment matching [Tt]ests --
+    depth alone is not the rule. A nested production asmdef (e.g.
+    src/foo/editor/foo-editor.asmdef) is keyed to its TOP-LEVEL src/<folder>/
+    name ('foo'), not to its own subdirectory, so the folder->assembly
+    mapping used throughout this tool is unaffected by nesting depth.
+
+    Returns (folder_of_name, name_of_folder, refs, errors) where refs maps
+    assembly name -> list of referenced assembly names and errors is a list
+    of parse-failure strings.
     """
     src = repo / "src"
     folder_of_name = {}
     name_of_folder = {}
     refs = {}
     errors = []
-    for asmdef in sorted(src.glob("*/*.asmdef")):
-        folder = asmdef.parent.name
+    for asmdef in sorted(src.glob("**/*.asmdef")):
+        rel_parts = asmdef.relative_to(src).parts
+        if len(rel_parts) < 2:
+            continue  # stray file directly under src/, not inside any folder
+        folder = rel_parts[0]
+        if any(re.fullmatch(r"[Tt]ests", part) for part in rel_parts[1:-1]):
+            continue  # excluded: a [Tt]ests path segment, per §3.5.2
         try:
             data = json.loads(asmdef.read_text(encoding="utf-8"))
         except (OSError, ValueError) as exc:
@@ -208,7 +227,16 @@ def main():
             if src_tier is None or dst_tier is None:
                 continue  # already failed above as absent-from-table
             if src_tier == "infra":
-                infra_sourced += 1  # out of band by definition, whatever the target
+                infra_sourced += 1
+                # FR-CS-046b clause 2: an Infrastructure assembly may reference
+                # only tier-0 (Foundation) assemblies and the other
+                # Infrastructure assembly — nothing else.
+                if dst_tier != "infra" and dst_tier != 0:
+                    failures.append(
+                        "Infrastructure assembly 'src/%s/' references 'src/%s/' "
+                        "(tier %s) — FR-CS-046b: an Infrastructure assembly MUST "
+                        "NOT reference any ordered-tier assembly other than "
+                        "tier 0 (Foundation)" % (src_folder, dst_folder, dst_tier))
                 continue
             if dst_tier == "infra":
                 failures.append(
@@ -237,7 +265,7 @@ def main():
     placed = sum(1 for f in tier_of if f in name_of_folder)
     print("assembly-tier-check: §3.5.2 table vs production .asmdef graph")
     print("  production assembly folders under src/ : %d" % len(name_of_folder))
-    print("  folders placed in the tier table       : %d  (%d ordered tiers + "
+    print("  folders placed in the tier table       : %d  (%d in ordered tiers + "
           "%d out-of-band Infrastructure)" % (
               placed, sum(1 for f in tier_of
                           if f in name_of_folder and tier_of[f] != "infra"),

@@ -92,6 +92,13 @@ is no `src/code-standards/`, and it must not be listed as one.
 
 > **Adopted August 17, 2026** by owner decision on `ERR-020-002`, after fourteen months
 > in which the table named 19 of the tree's assemblies and the rest were placed nowhere.
+> ⚠️ Corrected August 18, 2026 (reviewed adversarial-review finding H11; source: #20
+> `section-3.md` v1.2, which corrected the same figure in its own 1.1 row): the "19"
+> above is true only of THIS file's FORMER accounting — 14 layer rows plus 3
+> infrastructure rows plus 2 cross-cutting assemblies named in prose — a way of
+> counting #20 v1.2 explicitly rejected. Spec #20 §3.5.2, the authority on membership,
+> placed only **14** of the 35 (8 Physics + 4 Mechanics + 2 AI; the `UI` row empty),
+> leaving **21** placed nowhere — 60% of the tree.
 > The order was derived from the `.asmdef` reference graph and re-verified at adoption:
 > 35/35 folders placed, **0 upward references**, 105 downward, 38 intra-tier, graph
 > acyclic. It changed nothing that compiles; it constrains what can be written next.

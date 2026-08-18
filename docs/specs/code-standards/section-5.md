@@ -2,12 +2,12 @@
 
 **File:** `docs/specs/code-standards/section-5.md`
 **Purpose:** Defines the Stage 0 manual-review model, Stage 0+1 tool-selection plan,
-threshold policy, paste-ready review-time checklist (§5.4), 73-row FR-to-verification
+threshold policy, paste-ready review-time checklist (§5.4), 75-row FR-to-verification
 traceability table (§5.5), and the determinism verification handoff note.
 
 **Created:** May 7, 2026
-**Modified:** August 17, 2026
-**Version:** 1.0.2
+**Modified:** August 18, 2026
+**Version:** 1.0.3
 **Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 5
@@ -271,9 +271,13 @@ resolves. FR-CS-009 is MAY-level; no pass/fail check required.
 ### 5.4.5 Dependencies & Interfaces (FR-CS-046–055)
 
 ```
-[ ] 1. Layer order — Assembly references flow down the §3.5.2 ten-tier order
+[ ] 1. Tier order — Assembly references flow down the §3.5.2 ten-tier order
         only; no upward references? Intra-tier references are permitted, but
-        the production reference graph stays acyclic. (FR-CS-046, FR-CS-046a)
+        the production reference graph stays acyclic. No ordered-tier assembly
+        references an out-of-band Infrastructure assembly
+        (performance-optimization, testing-strategy), and each Infrastructure
+        assembly references only tier-0 (Foundation) assemblies and its
+        Infrastructure peer? (FR-CS-046, FR-CS-046a, FR-CS-046b)
 
 [ ] 2. Struct events — Cross-layer upward notifications dispatched as struct
         events, not class-based delegates? (FR-CS-047)
@@ -473,7 +477,8 @@ belongs to Spec #16 and Spec #19.
 |---|---|---|---|---|
 | 1.0 | May 7, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §SECTION 5. All 73 FRs covered in §5.5 traceability table; §5.4 paste-ready checklist in seven categories; §5.2 tool-selection table with analyzer-prefix reservation. | — |
 | 1.0.1 | May 11, 2026 | Claude Code | Adversarial review fix (audit finding L-B): §5.5 FR-CS-045 severity changed from `–` ("not analyzer-enforced", which read as "no enforcement") to `W (manual)` to signal "MUST-level rule, manual-review enforcement per PR" — aligned with FR-CS-063's existing `W` treatment. §5.5 footnote prose extended to explain the W-manual semantic. No change to the rule itself. | — |
-| 1.0.2 | August 17, 2026 | Claude Code | **`ERR-020-002` adopted.** §5.4.5 checklist item 1 restated against the §3.5.2 ten-tier order (it named the retired three-layer chain) and extended to cover FR-CS-046a's intra-tier acyclicity. The §5.5 traceability row for FR-CS-046 covers FR-CS-046a as a sub-clause of the same rule; the 73-row count is unchanged. Header corrected: `Status DRAFT` against a SPEC_INDEX status of APPROVED. | — |
+| 1.0.2 | August 17, 2026 | Claude Code | **`ERR-020-002` adopted.** §5.4.5 checklist item 1 restated against the §3.5.2 ten-tier order (it named the retired three-layer chain) and extended to cover FR-CS-046a's intra-tier acyclicity. The §5.5 traceability row for FR-CS-046 covers FR-CS-046a as a sub-clause of the same rule; the 73-row count is unchanged. Header corrected: `Status DRAFT` against a SPEC_INDEX status of APPROVED. **⚠️ ANNOTATED (v1.0.3, August 18, 2026): this row's description is now FALSE of its own file** — a later, unversioned edit added dedicated §5.5 traceability rows for FR-CS-046a and FR-CS-046b (75 rows total) and rewrote the coverage note to say so, superseding both the "covers FR-CS-046a as a sub-clause of the same rule" mechanism and the "73-row count is unchanged" claim, while the header stayed at 1.0.2 and the file's Purpose line still advertised a "73-row" table. The unversioned edit is versioned by the 1.0.3 row below; this row is left in place per the annotate-don't-rewrite convention. | — |
+| 1.0.3 | August 18, 2026 | Claude Code | **Adversarial-review findings, reviewed round (Mediums).** (1) Versions the previously unversioned edit annotated in the 1.0.2 row above: §5.5 gained dedicated traceability rows for FR-CS-046a and FR-CS-046b, and the coverage note was rewritten to "75 rows in total" with the sub-clauses stated outside the 73-FR count. (2) Header Purpose line "73-row" → "75-row" to match the table the file actually holds. (3) §5.4.5 item 1 extended to cover **FR-CS-046b** — §5.5's FR-CS-046b row routed its checklist path to "§5.4.5 item 1", but item 1 cited only FR-CS-046/046a and never mentioned Infrastructure; it now checks both FR-CS-046b clauses (no ordered-tier → Infrastructure reference; Infrastructure references only tier 0 and its peer) — and its title standardised "Layer order" → "Tier order" per the §3.5.2 vocabulary. | — |
 
 ---
 

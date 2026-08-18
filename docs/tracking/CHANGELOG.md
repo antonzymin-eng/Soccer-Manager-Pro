@@ -21,12 +21,26 @@ break it, and do not edit historical entries.
 > pass, W2's arming, the youth/generated-cover ladder — that would force the work to be redone. So the
 > cheap, reversible items shipped and the expensive ones wait for their deciding measurement. Each hold
 > below names that measurement rather than a date, which is the difference between a hold and a stall.
+> ⚠️ CORRECTED August 18, 2026 (reviewed adversarial-review finding H16): the last sentence overclaims
+> by one, and the `Bind` pass does not belong in the measured-event list above. **Four of the five
+> holds name a deciding measurement**; the fifth — the DisciplineConfig restructure, HELD (4) — does
+> not, because "the `GameplayConfigHolder.Bind` pass" is an unscheduled intention that appears on no
+> roadmap and in no backlog (`open-issues.md`'s own entry, rewritten after review the same day, says
+> so in terms and says it should not be counted among the measured-event holds). Its checkable release
+> condition is instead **`DisciplineConfigCompletenessTests` going red** — the tripwire firing when a
+> non-`int` `[GT]` is added to `DisciplineConstants`.
 >
 > **SHIPPED (1) — `ERR-020-002` + `ERR-020-003` ADOPTED: the assembly layer taxonomy covers the whole
 > tree for the first time since it was written.** Spec #20 §3.5.2's three-gameplay-layer box placed 19
 > of 35 assembly folders and carried an empty `UI (Stage 1+ — not specified yet)` row; FR-CS-046
 > ("references flow one direction only") is decided relative to two layer memberships, so for ~46% of
 > the tree — including **every reference into or out of the composition root** — it decided nothing.
+> ⚠️ CORRECTED August 18, 2026 (reviewed finding H11; source: #20 `section-3.md` v1.2, which corrected
+> the same figure in its own 1.1 row): the retired box placed **14** of 35, not 19 — 8 Physics +
+> 4 Mechanics + 2 AI, the `UI` row empty — leaving **21** undecided, i.e. **60%** of the tree, not
+> ~46%. The 19 was the FORMER `src/CLAUDE.md` accounting (14 layer rows + 3 infrastructure rows +
+> 2 cross-cutting assemblies in prose), a way of counting #20 v1.2 explicitly rejected; v1.2
+> re-derived the 14 by counting the retired box itself (`git show 0e78d381~1`).
 > The August-2 ten-tier proposal is adopted, extended from the 31 folders it was drafted against to the
 > **35** now in `src/`: `training-system`, `injuries-medical` and `discipline` into **Management**,
 > `client-app` into **Client**, each placed from its `.asmdef` references rather than its name.
@@ -41,9 +55,9 @@ break it, and do not edit historical entries.
 > so an adopted order silent on this would have made every test assembly a violation. `ERR-020-003`
 > closed with it: both files now **label** their arrow (`──►` "is available to" in #20, `←` "is
 > referenced by" in `src/CLAUDE.md`), so a reader checks the label rather than the arrowhead. Files:
-> #20 `section-2.md` **v1.1** (FR-CS-046 restated; **FR-CS-046a** registered as a sub-clause so the
+> #20 `section-2.md` **v1.1** *(since v1.2, the same-day reviewed-findings pass)* (FR-CS-046 restated; **FR-CS-046a** registered as a sub-clause so the
 > FR-CS-046…055 span and the 73-FR count are unchanged; the published double negative "No assembly
-> **MUST NOT** reference…" repaired), `section-3.md` **v1.1** (§3.5.2 replaced), `section-5.md`
+> **MUST NOT** reference…" repaired), `section-3.md` **v1.1** *(since v1.3)* (§3.5.2 replaced), `section-5.md`
 > **v1.0.2** (§5.4.5 item 1), `src/CLAUDE.md` (taxonomy + Reference Direction rewritten, the ⚠️
 > 16-unlisted banner retired, the `code-standards` phantom infrastructure row struck,
 > `project-constants` stated as tier 0 rather than infrastructure). Three FR-CS-056/057 header defects
@@ -53,7 +67,8 @@ break it, and do not edit historical entries.
 > `outline-detailed.md` still describe the three-layer chain — pre-authoring artifacts, not normative
 > text; every *normative* site was swept and no other hit exists in `docs/specs/`.
 >
-> **SHIPPED (2) — the injury/aging research-alignment supplement SIGNED OFF** (v0.5). All three
+> **SHIPPED (2) — the injury/aging research-alignment supplement SIGNED OFF** (v0.5; the file is now
+> at **v0.6** — see the ⚠️ correction at the end of this block). All three
 > structural decisions accepted as written: the `Severe` tier + `RECOVERY_MAX` raise (R-5), the #41→#28
 > aftermath seam (R-6 / KD-R4, with v0.3's consumer-owns-the-seam-type correction), and the
 > deterministic-not-drawn PA reduction (KD-R4a). It was AR-converged and blocking only alignment work,
@@ -63,9 +78,18 @@ break it, and do not edit historical entries.
 > are unblocked and **unscheduled**. The standing caveat is unchanged and load-bearing: R-2's
 > under-exposure arm must re-fit *against* `BaselineDailyRisk` rather than beside it, and every `[GT]`
 > it moves is subject to KD-W1 — which is the same W2 dependency four of these seven items share.
+> ⚠️ CORRECTED August 18, 2026 (propagating the supplement's own v0.6 post-sign-off correction,
+> reviewed findings H2 + H3): this block recorded the id re-allocation but not the finding that
+> mattered — the sign-off's factual premise **KD-R1, "both specs are pre-code so the changes are
+> free", was re-verified after the fact and found VOID.** #41 and #28 both have live save codecs
+> (`MedicalSaveCodec` since August 5, `ProgressionSaveCodec` since August 8, both mandatory sub-blobs
+> of #30's frame), so **R-4 and R-6 now cost a `MEDICAL_SAVE_FORMAT_VERSION` 1 → 2 and a
+> `PROGRESSION_SAVE_FORMAT_VERSION` 1 → 2 bump with no migration path** (the KD-7/F3 no-migration
+> refusal). The owner's sign-off of the three structural decisions (R-5, R-6/KD-R4, KD-R4a) is
+> unchanged; the cost/timing argument is not.
 >
 > **HELD (3) — the two depleted-squad sub-questions, closed in the owning spec rather than only in a
-> tracking file** (#30 `section-3.md` **v2.12**). **(a) The back-fill trigger stays the eighteen-player
+> tracking file** (#30 `section-3.md` **v2.12** *(since v2.14)*). **(a) The back-fill trigger stays the eighteen-player
 > selection walk; the short-bench posture is NOT built** — the honest fix for a depleted club is cover,
 > not a shorter bench, so `ERR-044-003`'s stages 2–3 (youth call-ups, then generated low-attribute
 > cover) *retire* the eleven-vs-eighteen question rather than answer it, and a short-bench mechanism
@@ -85,15 +109,19 @@ break it, and do not edit historical entries.
 > config while every sibling keeps the guard-and-pre-flight shape.
 >
 > **HELD (5) — KD-7a: neither adopt nor reject; decide after the post-W2-arming capture, exactly as its
-> own tripwire says** (`league-bootstrap-design.md` **v1.5**, new **S9**). The corpus that would
+> own tripwire says** (`league-bootstrap-design.md` **v1.5** *(since v1.6)*, new **S9**). The corpus that would
 > determine `α` predates tackle wiring, so S7 condition 4 fails on its own terms. **S7's condition 4
 > was also corrected in place:** it was written on August 12 as "no player has ever made a tackle",
 > which W2's landing *that same day* made false about the code while leaving it true about a shipped
 > match (`TackleContactRadiusM = 0`) — it now reads as **post-arming**, or the tripwire would fire
 > against a corpus statistically identical to the one it exists to reject.
 >
-> **HELD (6) — `pointQuality` stays parked until W1's rush geometry is MEASURED**
-> (`gk-conversion-at-contact-design.md` **v1.1**, new **KD-CC6a**). The §4 ladder's refusal was
+> **HELD (6) — `pointQuality` stays parked until the close-range CONVERSION comparison on identical
+> seeds exists** *(heading corrected August 18, 2026, reviewed finding H13: it read "until W1's rush
+> geometry is MEASURED" — a condition satisfied August 12, 2026, five days before this hold was
+> written; the rush ANATOMY is measured, and the conversion pair is what `gk-rush-trigger-design.md`
+> §6 still owes — see the ⚠️ H6 correction in the body below)*
+> (`gk-conversion-at-contact-design.md` **v1.1** *(since v1.2)*, new **KD-CC6a**). The §4 ladder's refusal was
 > measured against a keeper who never left his line; W1 moves the contact geometry the whole ladder is
 > a function of. **The unparking condition is a measurement, not a landing** — W1 landed August 4, 2026
 > and has never been executed. **⚠️ CORRECTED August 17, 2026, same day (adversarial-review finding
@@ -108,7 +136,7 @@ break it, and do not edit historical entries.
 > must not be quoted as a fact about the mechanism.
 >
 > **HELD (7) — the foul/card drift stays accepted: arm W2 first, then calibrate ONCE**
-> (`foul-discipline-balance-design.md` **v1.1**, new §7 item **2a**). That note's own item 2 said
+> (`foul-discipline-balance-design.md` **v1.1** *(since v1.2)*, new §7 item **2a** *(renumbered to item **3** at v1.2 — `2a.` is not a valid list marker)*). That note's own item 2 said
 > `FoulCallProbability` must be re-measured if the contact stream changes; C1 changed it on August 8
 > and the fit drifted **~67%** unnoticed for **five days** — August 8 to the August 13 re-measurement; eighteen days from the July-26 fit itself. *(Corrected August 17, 2026: this entry first said "five weeks", wrong by ~5× under every anchoring, and load-bearing, since the interval is the counter-example the hold is justified by.)* Applying the rule literally means *not*
 > landing an interim fit against a pre-tackle stream that W2's arming will change again. **Accepted
@@ -122,6 +150,13 @@ break it, and do not edit historical entries.
 > stall whose leading candidate is W6. The path **W4 → W12 → W6** therefore unblocks three decisions,
 > not just the next wired subsystem, and `TackleContactRadiusM = 0` is doing far more holding-back than
 > its one-constant footprint suggests.
+> ⚠️ CORRECTED August 18, 2026 (propagating the backlog's own v1.11 L11 correction): "gates three" is
+> FALSE — W2's arming gates **two** held decisions (the foul/card calibration and KD-7a's successor
+> distribution); the third item, the un-isolated `sim_match_engine_inposs_gate` stall, is what BLOCKS
+> arming, not something arming unblocks, so it does not belong beside them. The citation above is
+> re-pointed: `match-engine-wiring-backlog.md` is at **v1.11**, whose §5 note carries the corrected
+> two-plus-the-blocker form; the W4 → W12 → W6 path aims to clear the blocker and thereby unblock
+> the two.
 >
 > **THE PREMISE THAT WAS FALSE — the approval tags.** The instruction was "push them; no downside", and
 > the attempt found the entry had been wrong for four months. **The eight annotated tag objects do not
