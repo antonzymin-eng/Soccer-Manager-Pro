@@ -503,7 +503,7 @@ The Linux run is stamped non-certifying; a certified number still needs pinned-h
 updated to the Unity-6 tuple string.)
 **Last Updated (prior):** July 13, 2026 (**Unity engine version bumped: 2022.3.62f1 → Unity
 6000.4.9f1, graphics API pinned DX11 — documentation-only, no recertification performed.**
-`certification-platform.md` → v1.3, Status reverted `✅ PINNED` → `⏳ RECERT REQUIRED` per its own
+`certification-platform.md` → v1.3, now v1.4, Status reverted `✅ PINNED` → `⏳ RECERT REQUIRED` per its own
 Maintenance Rule; every downstream unblocker it previously closed (`FR-DS-009-GATE`, `FR-PO-052`,
 the §7.5 D1 test-runner pin, `EnvironmentFingerprint`) is blocked again until a real cert run
 executes against the new tuple. Historical `Unity 2022.3` citations inside already-`APPROVED`
@@ -908,8 +908,8 @@ Soccer-Manager-Pro/
 │   ├── planning/                       [Master volumes I–IV, master development plan, best practices]
 │   ├── design/ui-mockups/              [Non-normative UI visual reference — not on any build path]
 │   ├── specs/
-│   │   ├── SPEC_INDEX.md               [Canonical registry — 43 spec folders, all APPROVED]
-│   │   └── <43 spec folders>/          [See SPEC_INDEX.md for the number ↔ folder map]
+│   │   ├── SPEC_INDEX.md               [Canonical registry — 53 spec folders, all APPROVED]
+│   │   └── <53 spec folders>/          [See SPEC_INDEX.md for the number ↔ folder map]
 │   └── tracking/
 │       ├── PROGRESS.md                 [Schedule and milestone tracking]
 │       ├── SPEC_INDEX-adjacent logs:
@@ -1217,7 +1217,7 @@ git push --tags
 - Restated the gap in its new form: **23 of the 53 specs with a folder have no `src/` assembly at all**
   (the 13 APPROVED ones plus all ten new), so a spec existing still says nothing about a consumer
   existing.
-- `management-layer-spec-roadmap.md` → v0.7: header status note only; the wave blocks were **left
+- `management-layer-spec-roadmap.md` → v0.7, now v0.8: header status note only; the wave blocks were **left
   intact** as the record of why each spec sits where it does.
 
 **v1.35 — July 26, 2026**
@@ -1234,7 +1234,7 @@ git push --tags
 - NEXT IMMEDIATE STEPS re-based on `path-to-playable-roadmap.md`; added the known ~7-red-cards-per-
   9-minutes foul-heuristic defect.
 
-**v1.0 — December 30, 2025**
+**v1.0, now v0.21 — December 30, 2025**
 - Initial README creation
 - Documentation hierarchy established
 - Stage 0 specification schedule defined

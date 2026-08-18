@@ -9,7 +9,7 @@ API symbol lists; §3.3 and §3.4 cite it by category name only.
 
 **Created:** May 7, 2026
 **Modified:** August 18, 2026
-**Version:** 1.4
+**Version:** 1.5
 **Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 3
@@ -385,13 +385,13 @@ Additional required patterns:
 
 ---
 
-### 3.3.4 UI / Non-Loop Allocation Budget
+### 3.3.4 Presentation / Client (Non-Loop) Allocation Budget
 
 Code in the **Presentation and Client tiers** (§3.5.2 tiers 8 and 9), plus the Unity host code outside the gate, is not on the 60 Hz game-loop path. Its allocation budget is
 **< 1 MB per frame** (FR-CS-067), sourced from
 `docs/planning/development-best-practices.md`. The "alloc-hot-path" bans (§3.3.2)
-are relaxed for UI code, except where a UI method directly calls into a game-loop
-system.
+are relaxed for code in these tiers, except where a method there directly calls
+into a game-loop system.
 
 ---
 
@@ -549,7 +549,13 @@ rules (§3.5.3) and extends it with the tier-order and event-dispatch rules belo
 ### 3.5.2 Tier Order and Dependency Arrows
 
 Assembly references must flow in one direction only (FR-CS-046). The canonical order
-is a **ten-tier** order covering every assembly folder in `src/`:
+is a **ten-tier** order covering every assembly folder in `src/`. Two terms used by
+the table are fixed here so every row means the same thing by them: the **gameplay
+tiers** are tiers 1–4 — Physics, Configuration, Mechanics and AI, the tiers that
+decide what happens on the pitch — and the table *covers* the two
+**Infrastructure** assemblies without *ordering* them: their row is out of band
+(FR-CS-046b binds them by name), and it must never be folded into the numbered
+order:
 
 | Tier | Assemblies | Why this tier |
 |---|---|---|
@@ -558,7 +564,7 @@ is a **ten-tier** order covering every assembly folder in `src/`:
 | 2 **Configuration** | `tactical-instructions` (#21) | May be referenced by Mechanics, AI, Data, Composition, Management, Presentation and Client — everything above; references only `project-constants`. Today's consumers are Mechanics (all four), AI's `decision-tree` (`perception-system` does not reference it), Composition's `match-engine`, and Client's `match-client-core`, `match-client-web` and `ui-framework` — no Data or Management or Presentation assembly, and neither `client-app` nor `match-client-unity`, references it yet. A separate tier below Mechanics states that one-way relationship outright rather than burying it in an intra-tier edge; seating it *inside* Mechanics would be legal (`decision-tree` → Mechanics is downward and already exists) but would make the four Mechanics assemblies' dependence on it invisible to the order. **No Physics assembly references it**, so seating it above Physics keeps the physics tier parameter-only. |
 | 3 **Mechanics** | `positioning-ai`, `pressing-ai`, `defensive-ai`, `attacking-ai` | Off-ball and on-ball behaviour over the physics primitives. |
 | 4 **AI** | `decision-tree`, `perception-system` | Choice and what a player can know. |
-| 5 **Data** | `player-database` (#27) | May be referenced by Composition, Management, Presentation and Client — everything above; references only `deterministic-sim`. Today's consumers are Composition's `match-engine`, five of the six Management assemblies (`player-progression`, `training-system`, `injuries-medical`, `discipline`, `season-save` — not `living-world`) and Client's `match-client-core` — and by **no gameplay-tier assembly** (Physics, Mechanics, AI). Seating it above AI preserves that: Physics, Mechanics and AI keep operating on struct parameters, not squad rows. |
+| 5 **Data** | `player-database` (#27) | May be referenced by Composition, Management, Presentation and Client — everything above; references only `deterministic-sim`. Today's consumers are Composition's `match-engine`, five of the six Management assemblies (`player-progression`, `training-system`, `injuries-medical`, `discipline`, `season-save` — not `living-world`) and Client's `match-client-core` — and by **no gameplay-tier assembly**. Seating it above AI preserves that: the gameplay tiers keep operating on struct parameters, not squad rows. |
 | 6 **Composition** | `match-engine` | References all four gameplay tiers plus Data; the only assembly that does. Not a numbered spec — governed by `docs/tracking/match-engine-design.md`. |
 | 7 **Management** | `living-world` (#22), `player-progression` (#28), `training-system` (#29), `injuries-medical` (#41), `discipline` (#44), `season-save` (#30) | Long-horizon state above a single match. |
 | 8 **Presentation** | `match-viewer`, `match-analytics` (#37) | Derived from a played match. This tier is what keeps the root `CLAUDE.md` rule that **no sim assembly may reference `match-analytics`** true. |
@@ -615,16 +621,32 @@ reference is tier 9; restated as the bound at v1.4.)* The two out-of-band
 **Infrastructure** assemblies are outside the seating rule twice over: the
 references they source seat them in no tier — FR-CS-046b binds them instead — and a
 new assembly cannot acquire a tier through them, since no ordered tier may reference
-them at runtime. This rule is enforced mechanically by `tools/assembly-tier-check.py`
-(`python3 tools/assembly-tier-check.py --repo .`), which re-parses the table above
-rather than carrying its own copy, enumerates every production
-`src/<folder>/<name>.asmdef`, and fails on a folder absent from the table, a table
-entry naming no existing folder, any upward reference, any reference that breaks
-FR-CS-046b in either direction (an ordered-tier assembly referencing Infrastructure,
-or an Infrastructure assembly referencing anything other than tier 0 or its
-Infrastructure peer), or any cycle — re-running the
-adoption verification below on every invocation instead of leaving it a one-off hand
-check.
+them at runtime. Because the table is **folder-keyed**, a top-level `src/<folder>/`
+**MUST** hold exactly one production `.asmdef`: a second one under the same folder
+(at any nesting depth outside `[Tt]ests/`) has no seat of its own and is a hard
+failure of the mechanical check below — this constraint was previously enforced by
+the tool but written nowhere.
+
+This rule is enforced mechanically by `tools/assembly-tier-check.py`
+(`python3 tools/assembly-tier-check.py --repo .`), **run on every push and pull
+request by the `Spec hygiene checks` job in `.github/workflows/ci.yml`**. The tool
+re-parses the table above rather than carrying its own copy, enumerates every
+production `src/<folder>/<name>.asmdef`, and fails on a folder absent from the
+table, a table entry naming no existing folder, a top-level folder holding more
+than one production `.asmdef`, a tier row whose *Why this tier* cell is empty, any
+upward reference, any reference that breaks FR-CS-046b in either direction (an
+ordered-tier assembly referencing Infrastructure, or an Infrastructure assembly
+referencing anything other than tier 0 or its Infrastructure peer), any cycle, or
+an Infrastructure row that no longer names exactly the assemblies FR-CS-046b binds
+— membership in the out-of-band set is asserted **by name** against FR-CS-046b's
+own list in §2.2.5 (parsed, not duplicated), so reseating that row into the
+numbered order cannot silently disable the FR-CS-046b checks — re-running the
+adoption verification below on every invocation instead of leaving it a one-off
+hand check. Two halves of the placement rule remain review matters, not mechanical
+ones: whether the table was amended *in the same commit* as the `.asmdef` (CI sees
+only the resulting tree, so a stale table fails the next run, whichever commit
+caused it), and whether a *Why this tier* justification is *adequate* — the tool
+verifies only that the cell is non-empty.
 
 **Verification at adoption (August 17, 2026).** The order was derived from the
 `.asmdef` reference graph, not from folder names, and checked against it: all **35**
@@ -699,15 +721,15 @@ Cross-assembly communication needed?
                       ├─ YES ─► Interface (FR-CS-048).
                       │          Place in consumer's assembly.
                       │
-                      └─ NO ──► Is this a cross-layer notification
-                                 (producer is lower layer than consumer)?
+                      └─ NO ──► Is this a cross-tier notification
+                                 (producer in a lower tier than consumer)?
                                  │
                                  ├─ YES ─► Struct event on event bus
                                  │          (FR-CS-047). Zero-alloc;
                                  │          no upward assembly reference.
                                  │
                                  └─ NO ──► Direct method call.
-                                            (Same-layer or downward call.)
+                                            (Intra-tier or downward call.)
 ```
 
 ---
@@ -1052,6 +1074,7 @@ Simulation #16), the per-tag region ordering defined in §3.2.3 and §4.2 applie
 | 1.2 | August 17, 2026 | Claude Code | **Adversarial-review findings H4 + H7.** H4: the 1.1 row above originally said the retired three-gameplay-layer box "placed 19 of the 35 assembly folders"; the true figure is **14** (8 Physics + 4 Mechanics + 2 AI, `UI` row empty), leaving 21 undecided — corrected in place, **re-derived by counting the retired box** (`git show 0e78d381~1`) rather than rescaled from the earlier 31-assembly error-log count, which is how the wrong 19 arose. H7: §3.5.2 gains the **placement rule for new assemblies** — a commit adding a production `.asmdef` MUST amend the table in the same commit, and a tier is derived (lowest tier strictly above every referenced assembly) unless a lower seating is stated with its reason — enforced mechanically by the new `tools/assembly-tier-check.py`, which parses the table rather than duplicating it and re-runs the adoption verification on every invocation. **⚠️ ANNOTATED (v1.4, August 18, 2026): this row is INCOMPLETE of its own commit** — the same commit also rescoped §3.3.4 from "the UI layer" to the Presentation and Client tiers (FR-CS-067's mechanics), rewrote §3.7.1's scoping sentence off the retired three-layer wording, rewrote the §3.5.2 adoption-verification paragraph (the 105 + 38 partition became 105/38/5 of 148, naming the five Infrastructure-sourced references), and changed the tier-2 *Why this tier* cell's rationale; none was recorded until this annotation and the 1.4 row below. Left in place per the annotate-don't-rewrite convention. | — |
 | 1.3 | August 17, 2026 | Claude Code | **Adversarial-review findings L1 + L2, both re-verified against the `.asmdef` reference graph.** L1: the tier-2 (`tactical-instructions`) and tier-5 (`player-database`) "Why this tier" cells stated their consumer sets as exhaustive facts that were false — eleven assemblies above tier 2 do not reference `tactical-instructions` (`player-database`, all six Management assemblies, both Presentation assemblies, `client-app`, `match-client-unity`) and `living-world` (Management) does not reference `player-database`. Both cells recast as permission ("may be referenced by … and everything above") plus a separately-stated today's-consumers list, so the two claims cannot drift apart again. L2: §3.5.2's heading ("Layer Order and Dependency Arrows" → **"Tier Order and Dependency Arrows"**), its §3.5.1 forward-reference ("layer-order … rules below" → "tier-order … rules below"), its intra-tier paragraph ("Intra-layer references are permitted; intra-layer cycles are not" → "Intra-tier"), and its FR-CS-047 sentence ("propagate upward through the layer order" → "tier order") standardised on **tier**, matching FR-CS-046a in §2.2.5 and §5.4.5 item 1, both of which already said "tier" *(⚠️ CORRECTED at v1.4, August 18, 2026: the §5.4.5 half of this claim was FALSE — item 1's checkbox title still read "**Layer order** —" until section-5.md v1.0.3 standardised it; §2.2.5's FR-CS-046a did already say "tier")*. `git grep -n '3.5.2 Layer Order'` found two prose citations of the old heading text in `docs/tracking/spec-error-log.md` (§4430, §4622) — neither is a markdown anchor link (no generated `#325-layer-order…` anchor is referenced anywhere in the tree), so nothing breaks; `spec-error-log.md` is outside this pass's owned-file list and is left for its own citation-refresh pass. The retired three-gameplay-layer wording quoted historically in §3.7.1 and in the 1.1/1.2 rows above is left as "layer" deliberately — it names the box this order replaced, not the current vocabulary. | — |
 | 1.4 | August 18, 2026 | Claude Code | **Adversarial-review findings H8 + H10 (reviewed round), plus one Medium.** H8: §3.5.2's placement rule **contradicted the table it governs for 27 of the 33 ordered seatings** — "the tier is derived, not chosen: … the lowest tier strictly above every assembly it references, unless a lower seating is stated in the table with its reason" mandated 8 seatings HIGHER than any exception covered (e.g. `player-database` derives to 1, seated 5; a new Management assembly reading only `player-database` would have been mandated into Composition), allowed the 19 seated LOWER only via a "stated … with its reason" clause that only tier 0's cell satisfied, and was **unsatisfiable** for the four assemblies whose highest reference is tier 9 (derived tier 10 does not exist). Restated as a **bound plus a justified choice**: seating at or below a referenced assembly's tier is forbidden (intra-tier permitted per FR-CS-046a), and within that bound the tier is a design choice justified in the *Why this tier* cell — verified against all 35 seatings (0 upward references, 38 intra-tier, every row's third cell non-empty). The rule's tool-enumeration sentence now also names the FR-CS-046b checks `tools/assembly-tier-check.py` gained the same day (it previously skipped every Infrastructure-sourced reference unchecked — reviewed finding H9, whose spec half lands in section-2.md v1.3). H10 (this file's half): the 1.2 row is annotated in place as incomplete of its own commit (four unrecorded changes, enumerated there), and the 1.3 row's false "§5.4.5 … already said 'tier'" claim is corrected in place. Medium: §3.7.1 rescoped from "every production assembly in the §3.5.2 tier order" — which excluded the two Infrastructure assemblies, since FR-CS-046 says they acquire no tier — to "every production assembly under `src/`", Infrastructure included. | — |
+| 1.5 | August 18, 2026 | Claude Code | **Reviewed-findings pass H1 + M1 (+ four Lows), spec halves.** H1: §3.5.2's "enforced mechanically" sentence claimed an enforcement that did not exist — nothing ran `tools/assembly-tier-check.py` (no CI step, not in `run-gate.sh`, no hook), so an unamended table stayed green, exactly the `ERR-020-002` drift condition. The tool is now WIRED: the `Spec hygiene checks` job in `.github/workflows/ci.yml` runs it on every push and pull request, and the sentence now states that, enumerates the checks the tool actually performs (including the new ones below), and scopes what stays review — same-commit atomicity (CI sees trees, not commits) and the *adequacy* of a *Why this tier* justification (the tool checks the cell is non-empty only, closing the half-mechanical overclaim). M1 (tool v1.2, spec side): the out-of-band Infrastructure set is now asserted **by name** against FR-CS-046b's own list in §2.2.5 — previously one character of drift in the tier cell ("—" → "0" or "10") emptied the infra set and PASSED with both FR-CS-046b checks silently disabled (mutation-proved); the §3.5.2 preamble now also states the row is covered-not-ordered and must never be folded into the numbered order, retiring the wording that invited exactly that. Lows: the one-production-`.asmdef`-per-top-level-folder constraint the tool enforced but no spec stated is written into the placement rule; **gameplay tiers** defined once in the preamble (tiers 1–4 — the tier-5 cell had parenthesised it as three tiers while the tier-6 cell counted four) and the tier-5 cell recast on the defined term; §3.5.4's decision tree de-"layer"ed ("cross-tier notification", "producer in a lower tier", "Intra-tier or downward call" — "layer order" is undefined since v1.3); §3.3.4's heading renamed "UI / Non-Loop Allocation Budget" → "Presentation / Client (Non-Loop) Allocation Budget", matching the body FR-CS-067 rescoped at v1.2, and its trailing "UI code / UI method" phrasing aligned. | — |
 
 ---
 

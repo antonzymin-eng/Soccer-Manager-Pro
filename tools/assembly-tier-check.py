@@ -1,15 +1,27 @@
 #!/usr/bin/env python3
 # File: tools/assembly-tier-check.py
 # Created: August 17, 2026
+# Modified: August 18, 2026
 # Purpose: Mechanical guard for the Spec #20 §3.5.2 ten-tier assembly order
-#          (FR-CS-046 / FR-CS-046a). Parses the tier table OUT OF the spec —
-#          docs/specs/code-standards/section-3.md §3.5.2 — rather than carrying
-#          its own copy (a hard-coded duplicate would be a second surface to
-#          keep in sync, the recurring defect class this repo keeps filing),
-#          enumerates every production src/<folder>/<name>.asmdef, and fails on:
+#          (FR-CS-046 / FR-CS-046a / FR-CS-046b). Parses the tier table OUT OF
+#          the spec — docs/specs/code-standards/section-3.md §3.5.2 — rather
+#          than carrying its own copy (a hard-coded duplicate would be a second
+#          surface to keep in sync, the recurring defect class this repo keeps
+#          filing), enumerates every production src/<folder>/<name>.asmdef, and
+#          fails on:
 #            * any production folder absent from the table,
 #            * any table entry naming a folder that does not exist,
 #            * any folder seated in more than one tier,
+#            * any tier row with an empty "Why this tier" cell (the §3.5.2
+#              placement rule requires the seating be justified there; this
+#              tool checks presence, not adequacy),
+#            * a top-level src/<folder>/ holding more than one production
+#              .asmdef (the table is folder-keyed; there is no seat for two),
+#            * the table's out-of-band Infrastructure set differing BY NAME
+#              from the pair FR-CS-046b binds (parsed from the FR-CS-046b row
+#              of docs/specs/code-standards/section-2.md, the authority, so
+#              reseating that row into the ordered tiers cannot silently
+#              disable the FR-CS-046b checks),
 #            * any upward reference (FR-CS-046),
 #            * any ordered-tier reference into an out-of-band Infrastructure
 #              assembly ("no tier may reference them at runtime", FR-CS-046b
@@ -21,6 +33,8 @@
 #          Prints the recomputed reference breakdown (downward / intra-tier /
 #          upward / Infrastructure-sourced) so §3.5.2's adoption verification
 #          re-runs on every invocation instead of being a one-off hand check.
+#          Wired into CI: the `Spec hygiene checks` job in
+#          .github/workflows/ci.yml runs this on every push and pull request.
 #
 # Usage:  python3 tools/assembly-tier-check.py --repo .
 # Exit:   0 on pass, 1 on any failure, 2 on inability to parse inputs.
@@ -34,6 +48,7 @@ import sys
 from pathlib import Path
 
 SPEC_PATH = Path("docs") / "specs" / "code-standards" / "section-3.md"
+SECTION2_PATH = Path("docs") / "specs" / "code-standards" / "section-2.md"
 SECTION_HEADING = "### 3.5.2"
 
 
@@ -84,6 +99,11 @@ def parse_tier_table(spec_text):
         folders = re.findall(r"`([^`]+)`", asm_cell)
         if not folders:
             errors.append("tier row %r names no backticked assembly folders" % tier_cell)
+        if not cells[2]:
+            errors.append(
+                "tier row %r has an empty 'Why this tier' cell — the §3.5.2 "
+                "placement rule requires the seating be justified there "
+                "(this check verifies presence only; adequacy is review)" % tier_cell)
         for folder in folders:
             if folder in tier_of:
                 duplicate_errors.append(
@@ -99,6 +119,40 @@ def parse_tier_table(spec_text):
     return tier_of, ordered, infra, errors
 
 
+def parse_infra_binding(section2_text):
+    """Extract the Infrastructure assembly names FR-CS-046b binds.
+
+    FR-CS-046 and FR-CS-046b bind the two out-of-band Infrastructure
+    assemblies BY NAME, while the §3.5.2 table marks Infrastructure
+    membership only by its tier cell's leading glyph ("—"). One character of
+    drift in that cell (e.g. rewriting the row as tier 0 or tier 10) would
+    otherwise empty the infra set silently and disable every FR-CS-046b
+    check while the run still reports PASS. So the names are read out of the
+    authority — the FR-CS-046b row of section-2.md §2.2.5 — rather than
+    hard-coded here (no second copy to drift), and main() asserts the
+    table's out-of-band set equals them exactly.
+
+    Returns (sorted_names, error) — error is a string on any parse failure.
+    """
+    m = re.search(r"^\|\s*FR-CS-046b\s*\|(.*)$", section2_text, re.MULTILINE)
+    if not m:
+        return [], "cannot find the FR-CS-046b row in %s" % SECTION2_PATH
+    paren = re.search(
+        r"out-of-band \*\*Infrastructure\*\* assembly \(([^)]*)\)", m.group(1))
+    if not paren:
+        return [], (
+            "the FR-CS-046b row in %s no longer names its Infrastructure "
+            "assemblies in the expected shape "
+            "(\"out-of-band **Infrastructure** assembly (`…`, `…`)\")"
+            % SECTION2_PATH)
+    names = re.findall(r"`([^`]+)`", paren.group(1))
+    if not names:
+        return [], (
+            "the FR-CS-046b parenthesis in %s contains no backticked "
+            "assembly names" % SECTION2_PATH)
+    return sorted(set(names)), None
+
+
 def load_production_asmdefs(repo):
     """Enumerate production asmdefs under src/, recursively.
 
@@ -106,10 +160,16 @@ def load_production_asmdefs(repo):
     as: test assemblies live in src/<folder>/[Tt]ests/. So a production
     asmdef is any src/**/*.asmdef whose path (below the top-level src/<folder>/
     it lives in) does not pass through a path segment matching [Tt]ests --
-    depth alone is not the rule. A nested production asmdef (e.g.
-    src/foo/editor/foo-editor.asmdef) is keyed to its TOP-LEVEL src/<folder>/
-    name ('foo'), not to its own subdirectory, so the folder->assembly
-    mapping used throughout this tool is unaffected by nesting depth.
+    depth alone is not the rule.
+
+    The §3.5.2 tier table is FOLDER-keyed, so exactly ONE production .asmdef
+    may exist per top-level src/<folder>/ (the §3.5.2 placement rule). A
+    second one — nested or not, e.g. src/foo/editor/foo-editor.asmdef beside
+    src/foo/foo.asmdef — is a HARD FAILURE: there is no rule for seating two
+    assemblies under one folder key. Which of the two survives into the graph
+    is an accident of path sort order (the first wins), so the failure
+    message names both paths and says which one was dropped; the run's other
+    figures must not be trusted while that failure stands.
 
     Returns (folder_of_name, name_of_folder, refs, errors) where refs maps
     assembly name -> list of referenced assembly names and errors is a list
@@ -118,6 +178,7 @@ def load_production_asmdefs(repo):
     src = repo / "src"
     folder_of_name = {}
     name_of_folder = {}
+    path_of_folder = {}
     refs = {}
     errors = []
     for asmdef in sorted(src.glob("**/*.asmdef")):
@@ -137,10 +198,16 @@ def load_production_asmdefs(repo):
             errors.append("%s has no 'name' field" % asmdef)
             continue
         if folder in name_of_folder:
-            errors.append("folder src/%s/ holds more than one production .asmdef" % folder)
+            errors.append(
+                "folder src/%s/ holds more than one production .asmdef — the "
+                "§3.5.2 tier table is folder-keyed, exactly one is allowed; "
+                "kept '%s' (first in path sort order), DROPPED '%s' and all "
+                "of its references from the graph"
+                % (folder, path_of_folder[folder], asmdef))
             continue
         folder_of_name[name] = folder
         name_of_folder[folder] = name
+        path_of_folder[folder] = asmdef
         refs[name] = [r for r in data.get("references", [])]
     return folder_of_name, name_of_folder, refs, errors
 
@@ -187,14 +254,39 @@ def main():
     if not spec_file.is_file():
         print("FATAL: %s not found (is --repo the repository root?)" % spec_file)
         return 2
+    section2_file = repo / SECTION2_PATH
+    if not section2_file.is_file():
+        print("FATAL: %s not found (is --repo the repository root?)" % section2_file)
+        return 2
 
     tier_of, ordered_tiers, infra_folders, parse_errors = parse_tier_table(
         spec_file.read_text(encoding="utf-8"))
+    bound_infra, infra_err = parse_infra_binding(
+        section2_file.read_text(encoding="utf-8"))
+    if infra_err:
+        print("FATAL: %s" % infra_err)
+        return 2
     folder_of_name, name_of_folder, refs, asmdef_errors = load_production_asmdefs(repo)
 
     failures = list(parse_errors) + list(asmdef_errors)
     if not name_of_folder:
         failures.append("no production .asmdef found under %s" % (repo / "src"))
+
+    # 0. The table's out-of-band Infrastructure set must be exactly the pair
+    #    FR-CS-046b binds BY NAME. Membership above is derived only from the
+    #    tier cell's leading glyph, so one character of drift (an ordered
+    #    number where "—" stood) would otherwise empty this set silently and
+    #    disable every FR-CS-046b check while the run still passes.
+    if set(infra_folders) != set(bound_infra):
+        failures.append(
+            "the §3.5.2 Infrastructure row no longer names the assemblies "
+            "FR-CS-046b binds: the table's out-of-band set is {%s} but "
+            "FR-CS-046b (%s) binds {%s} — Infrastructure membership is bound "
+            "BY NAME, and folding that row into the ordered tiers (or "
+            "renaming its assemblies) would silently disable the FR-CS-046b "
+            "checks, so it MUST fail here"
+            % (", ".join(infra_folders) or "empty",
+               SECTION2_PATH, ", ".join(bound_infra)))
 
     # 1. Every production folder must appear in the table.
     for folder in sorted(name_of_folder):
@@ -290,3 +382,30 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
+
+# Version History
+# | Version | Date       | Author      | Notes                                        |
+# | 1.0     | 2026-08-17 | Claude Code | Initial: §3.5.2 tier-table vs production     |
+# |         |            |             | .asmdef graph — absent/ghost/duplicate       |
+# |         |            |             | seatings, upward references (FR-CS-046),     |
+# |         |            |             | ordered-tier->Infrastructure references,     |
+# |         |            |             | cycles (FR-CS-046a).                         |
+# | 1.1     | 2026-08-18 | Claude Code | AR round 2 (H9): recursive enumeration with  |
+# |         |            |             | the [Tt]ests path-segment exclusion replaces |
+# |         |            |             | depth-1 glob; FR-CS-046b clause 2 now        |
+# |         |            |             | ENFORCED (Infrastructure-sourced references  |
+# |         |            |             | were previously counted but never checked —  |
+# |         |            |             | a verdict-semantics change).                 |
+# | 1.2     | 2026-08-18 | Claude Code | Reviewed-findings pass (M1 + Lows): the      |
+# |         |            |             | out-of-band Infrastructure set is asserted   |
+# |         |            |             | BY NAME against the pair FR-CS-046b binds,   |
+# |         |            |             | parsed from section-2.md's FR-CS-046b row    |
+# |         |            |             | (reseating the "—" row to an ordered tier    |
+# |         |            |             | previously PASSED and silently disabled both |
+# |         |            |             | FR-CS-046b checks — a verdict-semantics      |
+# |         |            |             | change); empty "Why this tier" cells now     |
+# |         |            |             | fail; the one-production-.asmdef-per-folder  |
+# |         |            |             | failure names both paths and which was       |
+# |         |            |             | dropped; docstring's nested-asmdef claim     |
+# |         |            |             | corrected to the enforced one-per-folder     |
+# |         |            |             | rule; header gains Modified + this block.    |

@@ -110,5 +110,5 @@ At approval (once G3 is granted): flip every file in the folder to `Status: APPR
 
 Then run `landing-close-out`. One thing to carry into the root `CLAUDE.md` entry: state whether the
 newly approved spec has a `src/` assembly. "APPROVED" says nothing about whether code exists — it is
-currently untrue of roughly 42% of the registry, and that gap is the single most misread fact about
+currently untrue of roughly 36% of the registry (19 of 53, re-derived August 18, 2026), and that gap is the single most misread fact about
 this project's state.

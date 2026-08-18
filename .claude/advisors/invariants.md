@@ -90,7 +90,7 @@ Linux gate closes that now — but layering violations still compile fine.
 | Filing a new `ERR-` id | Verified free against `docs/tracking/spec-error-log.md` **now**? | The July-27 promotion wave: three supplements proposed ids already filed. A proposed id is a suggestion, never a reservation |
 | A spec number appears in prose | Checked against `SPEC_INDEX.md`? | Renumbering cascades are this project's single most recurring bug class |
 | A cross-spec obligation discovered | Does it need a back-prop, and does that land atomically? | #30 §3.3.1; the July-27 wave, where landing 23 back-props together exposed a defect no single filing could have |
-| "The spec is APPROVED" used as evidence | APPROVED says nothing about whether code exists — 22 of 53 specs have no assembly | Root `CLAUDE.md` PROJECT IDENTITY. **Check `src/` first** |
+| "The spec is APPROVED" used as evidence | APPROVED says nothing about whether code exists — 19 of 53 specs have no assembly (re-derived August 18, 2026) | Root `CLAUDE.md` PROJECT IDENTITY. **Check `src/` first** |
 | A `[GT]` magnitude introduced | Illustrative pending a balance pass, or actually fitted? Say which | #21 G2 precedent |
 
 ---

@@ -39,14 +39,16 @@ it back to your caller. Never pretend to have run it.
 ## Verify against source — never narrate from memory
 
 This repo's own convention is that a claim is *verified against source* or it is not made. The root
-`CLAUDE.md` is 395 KB of history and much of it describes states that have since changed; treat it as
+`CLAUDE.md` is ~86 KB of history (`wc -c CLAUDE.md` — 85,558 bytes on August 18, 2026; re-measure
+rather than trust this figure, which read "395 KB" for two weeks after the July-31 split and the
+August-17 archival had shrunk the file 4.7×) and much of it describes states that have since changed; treat it as
 a record of what was true when written, not as the current tree.
 
 So, concretely, before asserting that something is or is not the case:
 
 - **Read the file.** Not the summary of the file in `CLAUDE.md`.
-- **Check `src/` for a consumer** before saying one exists. 22 of 53 approved specs have no assembly
-  at all, and folder names do not map to spec numbers (#27 lives in `player-database`, #30 in
+- **Check `src/` for a consumer** before saying one exists. 19 of 53 approved specs have no assembly
+  at all (re-derived August 18, 2026), and folder names do not map to spec numbers (#27 lives in `player-database`, #30 in
   `season-save`, #38 in `ui-framework`).
 - **Grep for the actual call sites.** This project has repeatedly shipped surfaces with zero
   production callers — `OnShotExecutedEvent`, `NotifyActionComplete`, `ApplyGoalPostCollision`,
