@@ -1,12 +1,15 @@
 // File:     src/match-client-core/PitchMarkings.cs
 // Created:  2026-08-03
-// Modified: 2026-08-03
+// Modified: 2026-08-15
 // Author:   —
-// Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4a, §7
-//           "Reuse the geometry that already exists"), Ball Physics #1 §1.2 (corner-origin frame),
+// Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4a, §5-P4b,
+//           §7 "Reuse the geometry that already exists"), Ball Physics #1 §1.2 (corner-origin frame),
 //           Code Standards #20
 // Purpose:  Builds the pitch-marking catalogue the render skin draws, in corner-origin metres, from
-//           the same MatchViewerConstants [FIXED] IFAB values the browser viewer already uses.
+//           the same MatchViewerConstants [FIXED] IFAB values the browser viewer already uses, and
+//           the one-primitive-per-shape form of that catalogue a render binding instantiates from.
+
+using System;
 
 using UnityEngine;
 
@@ -43,11 +46,30 @@ namespace TacticalDirector.MatchClientCore
         /// </summary>
         public const int MARKING_COUNT = WHOLE_PITCH_COUNT + PER_END_COUNT * MatchEngineConstants.TEAM_COUNT;
 
+        /// <summary>
+        /// Number of shapes <see cref="BuildDrawables"/> returns: every marking, with each rectangle
+        /// replaced by the four lines that close it. Written as the formula for the same reason
+        /// <see cref="MARKING_COUNT"/> is — so the count and the decomposition cannot disagree.
+        /// </summary>
+        public const int DRAWABLE_COUNT =
+            MARKING_COUNT + RECTANGLE_COUNT * (RECTANGLE_EDGE_COUNT - 1);
+
         /// <summary>Markings that belong to the pitch rather than to an end.</summary>
         private const int WHOLE_PITCH_COUNT = 4;
 
         /// <summary>End-specific markings: penalty area, goal area, penalty spot, goal mouth.</summary>
         private const int PER_END_COUNT = 4;
+
+        /// <summary>
+        /// Rectangles <see cref="Build"/> emits: the pitch boundary, plus a penalty area and a goal
+        /// area at each end. Checked against the catalogue at every <see cref="BuildDrawables"/> call
+        /// rather than trusted, so adding a rectangle to <see cref="Build"/> and forgetting this
+        /// number fails loud with its own message instead of running off the end of an array.
+        /// </summary>
+        private const int RECTANGLE_COUNT = 1 + 2 * MatchEngineConstants.TEAM_COUNT;
+
+        /// <summary>Lines an axis-aligned rectangle outline decomposes into.</summary>
+        private const int RECTANGLE_EDGE_COUNT = 4;
 
         /// <summary>
         /// Builds the marking catalogue in corner-origin pitch metres, in a fixed order: boundary,
@@ -104,6 +126,81 @@ namespace TacticalDirector.MatchClientCore
 
             return markings;
         }
+
+        /// <summary>
+        /// Builds the catalogue in the form a render binding instantiates <b>one drawing primitive
+        /// per entry</b> from: <see cref="Build"/>'s output with every
+        /// <see cref="PitchMarkingKind.Rectangle"/> replaced, in place, by the four
+        /// <see cref="PitchMarkingKind.Line"/> edges that close it. No rectangle survives, so a
+        /// binding needs no rectangle case and no corner arithmetic at all.
+        ///
+        /// <para><b>Why the decomposition lives here.</b> Synthesising a rectangle's two missing
+        /// corners is corner geometry, and corner geometry in the render skin is what the P4a/P4b
+        /// split — and the corner-normalisation of <see cref="PitchMarking.Rectangle"/> before it —
+        /// exists to keep out. A transposed <c>A.y</c>/<c>B.y</c> draws a bow-tie rather than a box,
+        /// and in a <c>MonoBehaviour</c> that mistake is invisible: the CI gate cannot compile that
+        /// file, let alone test it. Here it is four lines of arithmetic under the gate.</para>
+        ///
+        /// <para><b>Order extends <see cref="Build"/>'s contract rather than replacing it.</b>
+        /// Markings keep their relative order, and a rectangle's four edges appear consecutively at
+        /// its position, walking the outline counter-clockwise from the min corner: bottom (min Y),
+        /// right (max X), top (max Y), left (min X). Each edge starts where the previous one ended
+        /// and the fourth returns to the first's start, so the four close the loop — which is the
+        /// property a binding's index-to-material correspondence and the tests both rely on.</para>
+        ///
+        /// <para>Allocation: a scene-boot call like <see cref="Build"/>, not a render-path one.</para>
+        /// </summary>
+        /// <exception cref="InvalidOperationException"><see cref="Build"/> emitted a number of
+        /// rectangles <see cref="DRAWABLE_COUNT"/> is not sized for.</exception>
+        public static PitchMarking[] BuildDrawables()
+        {
+            PitchMarking[] markings = Build();
+
+            int rectangles = 0;
+
+            for (int i = 0; i < markings.Length; i++)
+            {
+                if (markings[i].Kind == PitchMarkingKind.Rectangle)
+                {
+                    rectangles++;
+                }
+            }
+
+            if (rectangles != RECTANGLE_COUNT)
+            {
+                throw new InvalidOperationException(
+                    "PitchMarkings.Build() emitted " + rectangles + " rectangles, but DRAWABLE_COUNT " +
+                    "is sized for " + RECTANGLE_COUNT + ". Update RECTANGLE_COUNT alongside the catalogue.");
+            }
+
+            var drawables = new PitchMarking[DRAWABLE_COUNT];
+            int n = 0;
+
+            for (int i = 0; i < markings.Length; i++)
+            {
+                PitchMarking marking = markings[i];
+
+                if (marking.Kind != PitchMarkingKind.Rectangle)
+                {
+                    drawables[n++] = marking;
+                    continue;
+                }
+
+                // A.x <= B.x and A.y <= B.y are guaranteed by PitchMarking.Rectangle, so these are
+                // the min and max corners and the two synthesised ones are the remaining diagonal.
+                Vector2 min = marking.A;
+                Vector2 max = marking.B;
+                Vector2 maxXminY = new Vector2(max.x, min.y);
+                Vector2 minXmaxY = new Vector2(min.x, max.y);
+
+                drawables[n++] = PitchMarking.Line(min, maxXminY);
+                drawables[n++] = PitchMarking.Line(maxXminY, max);
+                drawables[n++] = PitchMarking.Line(max, minXmaxY);
+                drawables[n++] = PitchMarking.Line(minXmaxY, min);
+            }
+
+            return drawables;
+        }
     }
 }
 
@@ -115,4 +212,13 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | absent — neither has a constant in the [FIXED] catalogue and    |
 // |         |            |        | the browser viewer draws neither, so adding them would mean     |
 // |         |            |        | inventing geometry here and diverging the two Views.            |
+// | 1.1     | 2026-08-15 | —      | P4b AR pass H-1: + BuildDrawables()/DRAWABLE_COUNT — the        |
+// |         |            |        | one-primitive-per-entry catalogue, with each rectangle          |
+// |         |            |        | decomposed into the four lines that close it. The P4b binding   |
+// |         |            |        | had been synthesising the two missing corners itself, inside a  |
+// |         |            |        | MonoBehaviour: corner geometry back in the file AR-P4a-H1's     |
+// |         |            |        | corner normalisation removed it from, where a transposed        |
+// |         |            |        | A.y/B.y draws a bow-tie and nothing compiles it. It also broke  |
+// |         |            |        | Build()'s index-correspondence ordering, which this restores by |
+// |         |            |        | keeping the edges consecutive at their marking's position.      |
 #endregion

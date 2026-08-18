@@ -361,12 +361,18 @@ evidence. The two that need a review step invoke `adversarial-review` rather tha
   §5-P0 note requiring `MaxLiveSpeedMultiplier ≥ 10` had nothing enforcing it, and because
   `SetSpeedMultiplier` fail-louds rather than clamping, a cap below a step would have shipped a 10×
   button that throws mid-match while 1×/3×/5× worked — now a load-time cross-catalogue pairing check.
-  REMAINDER: **P4b/P5b and the on-host half of P6** — the Unity binding, the UGUI shell,
-  scene boot, 60 FPS, live tactical input through a screen, and the FR-PO-052-class render-loop perf
-  capture. All need the pinned host; the host block itself cleared July 19, 2026, so the gap is
-  unwritten code, not access. **P5b's one open layering decision was resolved August 7, 2026** — the
-  four screens' `ScreenId` catalogue and navigation graph landed in the new `src/client-app/`
-  assembly (see the #38 entry above); nothing but the host is now ahead of P4b/P5b.
+  REMAINDER: **P5b and the on-host half of P4b/P6** — P4b's Unity binding landed as code
+  August 15, 2026 (`src/match-client-unity/MatchClientBehaviour.cs`; landed across 5 AR
+  rounds — see `src/match-client-unity/README.md`; no commit count is stated, deliberately:
+  four consecutive rounds found one stale, since it goes stale the moment any commit lands),
+  but `match-client-unity` is excluded from the CI
+  gate by design (§12 rule 1) and has never compiled or run, so its host verification is still
+  outstanding, alongside P5b's UGUI shell, scene boot, 60 FPS, live tactical input through a screen,
+  and the FR-PO-052-class render-loop perf capture. All need the pinned host; the host block itself
+  cleared July 19, 2026, so the gap is host verification, not unwritten code. **P5b's one open
+  layering decision was resolved August 7, 2026** — the four screens' `ScreenId` catalogue and
+  navigation graph landed in the new `src/client-app/` assembly (see the #38 entry above); nothing
+  but the host is now ahead of P4b/P5b's host verification.
   **ESCALATED August 3, 2026 — owner reversed roadmap B6: the product ships this Unity client, not the
   web-hosted viewer, so P4 is now the critical path rather than a later native target.** Two standing
   rules, recorded in `interactive-unity-client-design.md` §12 and `path-to-playable-roadmap.md` §7/C2:

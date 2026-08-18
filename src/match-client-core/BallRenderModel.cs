@@ -1,6 +1,7 @@
 // File:     src/match-client-core/BallRenderModel.cs
 // Created:  2026-08-03
-// Modified: 2026-08-04
+// Modified: 2026-08-16 (P4b AR round 5, M23: WorldPosition/ShadowPosition docs restated for the
+//           raised floor — radius plus the topmost M12/M16 ground layer, not the radius alone)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4a
 //           "ball (+ ground shadow)"), Ball Physics #1 §1.2, Code Standards #20
@@ -32,14 +33,33 @@ namespace TacticalDirector.MatchClientCore
     public readonly struct BallRenderModel
     {
         /// <summary>
-        /// Where the ball is drawn, in world space — the pitch point it is over, lifted by its
-        /// height along +Y.
+        /// Where the ball is drawn, in world space — the pitch point it is over, lifted along +Y by
+        /// its height, THEN floored so the drawn sphere clears everything drawn on the turf (M17,
+        /// raised at M23): <c>Y == max(HeightM sanitised to non-negative, Radius +
+        /// MatchClientConstants.AgentMarkerLayerHeightM)</c>. <see cref="Radius"/> is a legibility
+        /// figure (0.35 m by default), not the engine's own ~0.11 m ball, and the prefab draws a
+        /// genuine sphere of that radius centred here — so below that floor, this is NOT the raw
+        /// physics height: it is the lowest Y at which a sphere of that size can sit without its
+        /// underside sinking through the ground.
+        ///
+        /// <para>M23: the added term is the HIGHEST of the four ordered M12/M16 ground layers. M17
+        /// floored on <see cref="Radius"/> alone, which clears the bare ground PLANE but not the
+        /// layers drawn above it — and round 4's M19 rescaled those layers from millimetres to
+        /// centimetres, putting the ball's own shadow (0.08 m), the possession ring (0.081 m) and the
+        /// agent marker (0.082 m) all INSIDE a 0.35 m sphere floored at 0.35 m.</para>
         /// </summary>
         public readonly Vector3 WorldPosition;
 
         /// <summary>
-        /// Where the shadow is drawn: the same pitch point, on the ground plane (world Y = 0). Equal
-        /// to <see cref="WorldPosition"/> when the ball is on the turf.
+        /// Where the shadow is drawn: the same pitch point, on the ground plane (world Y = 0) — the
+        /// TRUE ground point the ball is over, unaffected by <see cref="WorldPosition"/>'s M17/M23
+        /// floor. No longer equal to <see cref="WorldPosition"/> even when the ball is on the turf
+        /// (whenever <see cref="Radius"/> is positive, as every configured default is): at rest the
+        /// floor keeps <see cref="WorldPosition"/>'s Y at 0.432 m (0.35 m radius + the 0.082 m agent-
+        /// marker layer, at the shipped defaults) while this stays at 0 — the gap between the two IS
+        /// the visual cue that the ball is sitting on the ground, not floating at its drawn size's
+        /// natural centre height. The renderer lifts the shadow onto its OWN ground layer
+        /// (<c>BallShadowLayerHeightM</c>) when it places it; this field is the unlifted ground point.
         /// </summary>
         public readonly Vector3 ShadowPosition;
 
@@ -88,4 +108,23 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | remains is a world position, a ground shadow (which perspective |
 // |         |            |        | cannot supply and which marks where the ball actually is), and  |
 // |         |            |        | two constant radii.                                             |
+// | 1.3     | 2026-08-16 | —      | P4b AR round 4, M21: doc-only. Round 3's M17 (see               |
+// |         |            |        | MatchRenderProjection.ProjectBall) floored WorldPosition.Y on   |
+// |         |            |        | Radius instead of the raw height, but this file's XML docs were |
+// |         |            |        | never updated to match — ShadowPosition still claimed to equal  |
+// |         |            |        | WorldPosition "when the ball is on the turf" (now never true:   |
+// |         |            |        | WorldPosition.Y sits at Radius, ShadowPosition.Y stays 0), and   |
+// |         |            |        | WorldPosition's own doc still said only "lifted by its height"  |
+// |         |            |        | with no mention of the floor. Both corrected to state the exact |
+// |         |            |        | Y == max(sanitised HeightM, Radius) relationship.                |
+// | 1.4     | 2026-08-16 | —      | P4b AR round 5, M23: doc-only, tracking the raised floor in     |
+// |         |            |        | MatchRenderProjection.ProjectBall. The v1.3 rows above stated   |
+// |         |            |        | max(sanitised HeightM, Radius), which cleared only the bare     |
+// |         |            |        | ground plane; round 4's M19 rescaled the four M12/M16 ground    |
+// |         |            |        | layers to centimetres, so the formula is now max(sanitised      |
+// |         |            |        | HeightM, Radius + AgentMarkerLayerHeightM) — 0.432 m at rest on |
+// |         |            |        | the shipped defaults, not 0.35 m. ShadowPosition's doc also now |
+// |         |            |        | says explicitly that the renderer lifts the shadow onto         |
+// |         |            |        | BallShadowLayerHeightM itself; this field stays the unlifted    |
+// |         |            |        | true ground point.                                              |
 #endregion

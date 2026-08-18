@@ -122,6 +122,23 @@ namespace TacticalDirector.MatchViewer.Tests
         }
 
         [Test]
+        public void EffectiveTicksPerSecond_IsTicksPerSecondTimesSpeedMultiplier()
+        {
+            // Locks the exact product PacingLoop divides into (M-5) — including that a NON-default
+            // ticksPerSecond is honoured, which the interactive Unity client's earlier bug (reading
+            // DeterministicSimConstants.PHYSICS_TICK_HZ directly, the ctor's DEFAULT only) would have
+            // silently missed.
+            var streamer = new LiveMatchStreamer(new MatchEngine.MatchEngine(Seed), ticksPerSecond: 30);
+            Assert.AreEqual(30f, streamer.EffectiveTicksPerSecond, 1e-6f, "1x, default speed");
+
+            streamer.SetSpeedMultiplier(5f);
+            Assert.AreEqual(150f, streamer.EffectiveTicksPerSecond, 1e-6f, "5x speed");
+
+            streamer.SetSpeedMultiplier(1f);
+            Assert.AreEqual(30f, streamer.EffectiveTicksPerSecond, 1e-6f, "back to 1x");
+        }
+
+        [Test]
         public void RosterAccessors_MirrorEngine_AndGuardFailLoud()
         {
             var engine = new MatchEngine.MatchEngine(Seed);
@@ -185,4 +202,8 @@ namespace TacticalDirector.MatchViewer.Tests
 // |         |            |        | fields, and the score assertions read frame.Score.Home /       |
 // |         |            |        | .Away off the Scoreline carrier. Cue and restart-latch         |
 // |         |            |        | coverage lives in LiveMatchFrameCueTests.                      |
+// | 1.2     | 2026-08-15 | —      | P4b AR pass M-5: + EffectiveTicksPerSecond_* locking the       |
+// |         |            |        | ticksPerSecond x SpeedMultiplier product against a NON-default |
+// |         |            |        | ticksPerSecond, which the client's earlier direct-constant     |
+// |         |            |        | recomputation would have missed.                               |
 #endregion

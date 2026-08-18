@@ -1,6 +1,8 @@
 // File:     src/match-client-core/MatchRenderProjection.cs
 // Created:  2026-08-03
-// Modified: 2026-08-04
+// Modified: 2026-08-16 (P4b AR round 5, M23: ProjectBall's M17 floor is raised from the drawn radius
+//           to the drawn radius plus the topmost M12/M16 ground layer, which round 4's M19 rescale
+//           had left passing through the ball)
 // Author:   —
 // Spec:     Interactive Unity client (docs/tracking/interactive-unity-client-design.md §5-P4a, §7,
 //           §12 rule 1), Ball Physics #1 §1.2 (corner-origin frame), Code Standards #20
@@ -139,6 +141,31 @@ namespace TacticalDirector.MatchClientCore
         /// ball is" left to draw — so it is refused fail-loud, the same gate
         /// <c>MatchFrameView</c>'s constructor applies on the screen-facing path.</para>
         ///
+        /// <para><b>M17/M23: the drawn ball's world Y is floored on its DRAWN radius PLUS the topmost
+        /// ground layer, not on its raw height.</b> <see cref="BallRenderModel.Radius"/> is
+        /// <c>MatchClientConstants.BallMarkerRadiusM</c> — a legibility figure (0.35 m by default), not
+        /// the engine's physical ball radius (0.11 m at rest, Ball Physics #1 §1.2/Appendix C) — and the
+        /// prefab contract scales the ball uniformly on all three axes by that radius
+        /// (<c>src/match-client-unity/README.md</c> §1 clause 2b), so it
+        /// is drawn as a genuine sphere of that size centred on
+        /// <see cref="BallRenderModel.WorldPosition"/>. Centring that sphere on the engine's raw,
+        /// physically-correct height sinks its lower hemisphere below the turf whenever the raw height
+        /// is under the drawn radius — which is most of a match, including its single most common state,
+        /// resting on the ground at 0.11 m.</para>
+        ///
+        /// <para>The exact formula is
+        /// <c>Y == max(HeightM sanitised to non-negative, Radius + MatchClientConstants.AgentMarkerLayerHeightM)</c>.
+        /// M17 originally floored on <c>Radius</c> alone, which cleared the bare ground PLANE — but the
+        /// M12/M16 ground layers do not sit on that plane, and round 4's M19 rescaled all four of them
+        /// from millimetres to centimetres (marking band base 0 m, ball shadow 0.08 m, possession ring
+        /// 0.081 m, agent marker 0.082 m by default). A floor of <c>Radius</c> alone leaves the drawn
+        /// sphere's underside at world Y = 0 while the shadow it casts is drawn at 0.08 m and the agent
+        /// marker at 0.082 m — i.e. every one of those layers passes visibly THROUGH the ball at rest.
+        /// Adding <see cref="MatchClientConstants.AgentMarkerLayerHeightM"/>, the HIGHEST of the four
+        /// ordered layers, floors the ball's CENTRE high enough that its lowest point clears all of them,
+        /// not merely the turf. It is added to the floor only — a ball genuinely above that height rides
+        /// on its own physics height untouched.</para>
+        ///
         /// <para>No size or offset cue is computed here. The camera is tilted
         /// (<see cref="PitchCameraRig"/>), so height is a real world axis and perspective conveys it;
         /// the shadow supplies the one thing perspective cannot, which is the pitch point the ball is
@@ -156,11 +183,23 @@ namespace TacticalDirector.MatchClientCore
 
             Vector3 shadow = PitchViewProjection.ToWorldGround(pitchBallPosition);
 
-            float rawHeight = pitchBallPosition.z;
-            float height    = float.IsFinite(rawHeight) && rawHeight > 0f ? rawHeight : 0f;
+            float rawHeight       = pitchBallPosition.z;
+            float sanitizedHeight = float.IsFinite(rawHeight) && rawHeight > 0f ? rawHeight : 0f;
+            float radius          = MatchClientConstants.BallMarkerRadiusM;
 
-            var world  = new Vector3(shadow.x, height, shadow.z);
-            float radius = MatchClientConstants.BallMarkerRadiusM;
+            // M17/M23: floored on the DRAWN radius PLUS the topmost ground layer (not zero, and not
+            // the radius alone), so a sphere of that radius centred at world Y never dips below the
+            // highest thing drawn on the turf. Its lowest point is worldY - radius, which this makes
+            // >= AgentMarkerLayerHeightM unconditionally.
+            //
+            // M17 floored on the radius alone, which cleared the bare ground PLANE. That was already
+            // only just enough when the four M12 ground layers were millimetre-scale, and M19 (round 4)
+            // rescaled them to centimetres — the shadow now sits at 0.08 m and the agent marker at
+            // 0.082 m by default, both INSIDE a 0.35 m-radius sphere whose centre is floored at 0.35 m.
+            // AgentMarkerLayerHeightM is the highest of the four, so clearing it clears all of them.
+            float worldY = Mathf.Max(sanitizedHeight, radius + MatchClientConstants.AgentMarkerLayerHeightM);
+
+            var world = new Vector3(shadow.x, worldY, shadow.z);
 
             return new BallRenderModel(world, shadow, rawHeight, radius, radius);
         }
@@ -228,4 +267,27 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | (Row written 2026-08-04 in the following AR pass — the v1.2     |
 // |         |            |        | edit landed without one, leaving v1.1 as the newest row while   |
 // |         |            |        | describing a HeightScale the file no longer had.)               |
+// | 1.3     | 2026-08-16 | —      | P4b AR round 3, M17: ProjectBall's world Y is now floored on    |
+// |         |            |        | the DRAWN radius (BallMarkerRadiusM, a legibility figure) via   |
+// |         |            |        | Mathf.Max, not on zero. BallRenderModel.Radius is 0.35 m by     |
+// |         |            |        | default, not the engine's physical 0.11 m rest height, and the  |
+// |         |            |        | prefab contract scales the ball uniformly by that radius (clause|
+// |         |            |        | 2b) — so a sphere of that radius centred on the RAW physics     |
+// |         |            |        | height had its lower hemisphere below the turf at every height  |
+// |         |            |        | under the radius, including rest, its single most common state, |
+// |         |            |        | visibly sinking through the ground/markings/M12 layers and       |
+// |         |            |        | swallowing its own shadow. HeightM and ShadowPosition are        |
+// |         |            |        | untouched — HeightM stays the engine's raw unsanitised height,   |
+// |         |            |        | ShadowPosition stays the true ground point.                      |
+// | 1.4     | 2026-08-16 | —      | P4b AR round 5, M23: the M17 floor above cleared only the bare   |
+// |         |            |        | ground PLANE, and round 4's M19 rescaled the four M12/M16 ground |
+// |         |            |        | layers from millimetres to centimetres (shadow 0.08 m,           |
+// |         |            |        | possession ring 0.081 m, agent marker 0.082 m) without moving    |
+// |         |            |        | the ball's floor with them — so at rest a 0.35 m sphere centred  |
+// |         |            |        | at 0.35 m had its own shadow, the agent marker and the marking   |
+// |         |            |        | band all passing visibly THROUGH it. The floor is now            |
+// |         |            |        | radius + AgentMarkerLayerHeightM (the HIGHEST of the four        |
+// |         |            |        | layers, so clearing it clears all of them). Floor only — a ball  |
+// |         |            |        | genuinely above that height still rides on its raw physics       |
+// |         |            |        | height, and HeightM/ShadowPosition are again untouched.          |
 #endregion
