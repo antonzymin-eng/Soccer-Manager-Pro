@@ -64,7 +64,7 @@ not just what it would forget.
 
 | Trigger | Question | Authority |
 |---|---|---|
-| A new assembly reference | Does it run AI → Mechanics → Physics, never the reverse? | `src/CLAUDE.md` layer taxonomy |
+| A new assembly reference | Does it run **downward in the ten-tier order** (Foundation → Physics → Configuration → Mechanics → AI → Data → Composition → Management → Presentation → Client)? Intra-tier is permitted, cycles are not (FR-CS-046a). A tier is a **ceiling, not a licence** — a spec may forbid a reference the tier allows (#44 `discipline` must not reference `match-engine` or `season-save`). | **Spec #20 §3.5.2** owns tier membership — `src/CLAUDE.md` reproduces it and is NOT the authority. Mechanically: `python3 tools/assembly-tier-check.py` |
 | Two assemblies that must not see each other | Is a root **above both** composing them, rather than one referencing the other? | FR-LW-003; the `season-save` precedent above `match-engine` + `living-world` |
 | A reference into `match-analytics` or `ui-framework` | Is the consumer sanctioned? No sim assembly may reference either | The mechanical layer-guard tests (allow-list **plus** explicit never-reference list) |
 | A rule implemented in a second place | Is this a parallel surface? Move it to the type that owns the concept | `BoardState.EvaluateAtSeasonEnd` (the fix); `TrainingInput` (the seam-ownership precedent) |

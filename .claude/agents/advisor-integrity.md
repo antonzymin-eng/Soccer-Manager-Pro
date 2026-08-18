@@ -86,7 +86,7 @@ Rules for that output:
   precedent is what makes the warning credible rather than nagging. If you cannot name one, you are
   probably speculating — say so or drop it.
 - **`stop` is a real verdict.** Use it when the change as described cannot be made correctly — a
-  recorded blocker invalidates it, or it requires a reference the layer taxonomy forbids. Do not
+  recorded blocker invalidates it, or it requires a reference the ten-tier order (Spec #20 §3.5.2) forbids. Do not
   soften `stop` into `reconsider` to be agreeable.
 - **Empty sections are a result.** "Obligations: none" is useful information. Do not manufacture
   obligations to look thorough.

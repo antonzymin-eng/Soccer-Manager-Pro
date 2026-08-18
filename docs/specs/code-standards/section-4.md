@@ -8,8 +8,8 @@ and `src/CLAUDE.md` (concrete paths). Spec #20 does not publish a runtime interf
 
 **Created:** May 7, 2026
 **Last Updated:** August 15, 2026, later
-**Version:** 1.0.3
-**Status:** DRAFT
+**Version:** 1.0.4
+**Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 4
 **Subsection target lengths:** §4.1 ~50 lines · §4.2 ~40 lines · §4.3 ~70 lines ·
@@ -322,6 +322,7 @@ concretises, establishing the Spec #20 ↔ `src/CLAUDE.md` cite-chain.
 | 1.0.1 | May 22, 2026 | — | ERR-020-001: §4.2 `[CROSS]` mirror example field name corrected `PHYSICS_TICK_HZ` (ALL_CAPS) → `PhysicsTickHz` (PascalCase) per §3.2.3 authoritative rule; XML doc updated to include spec+section citation and value per FR-CS-022. | — |
 | 1.0.2 | August 15, 2026 | Claude Code | ERR-020-004 (reviewed-findings pass, M4/owner decision 2): §4.2's `[CROSS]` routing rule stated only a two-way split (multi-consumer → `ProjectConstants.cs`; single-consumer → local) with no accommodation for a constant that has ≥ 2 consumers but a single owning spec's catalogue to mirror from. New "Owning-catalogue carve-out" paragraph: such a constant mirrors from its owning spec's catalogue directly regardless of consumer count (the `CardIssuedEvent.CardKind` / `EventSystemConstants` example, mirrored by three downstream catalogues with none routed through `ProjectConstants.cs`). Found because `src/discipline/DisciplineConstants.cs`'s compliant mirror had invented a false "single consumer" justification for want of a rule that fit its actual shape. `src/CLAUDE.md`'s `[CROSS]` mirrors section gains the identical carve-out. | — |
 | 1.0.3 | August 15, 2026, later | Claude Code | ERR-020-005 (extends ERR-020-004; reviewed-findings pass): the "`ProjectConstants.cs` — Cross-Spec Source of Truth" subsection's opening sentence still stated the pre-carve-out two-way split unqualified, 25 lines below the carve-out paragraph that had already narrowed it — the heading a reader looks under for the routing rule, restating the rule the carve-out exists to correct. Qualified in place: the primary declaration for a singly-owned constant is that spec's own catalogue (the carve-out), and `ProjectConstants.cs` is primary only for a constant with no single owning catalogue — the worked example immediately below (`PHYSICS_TICK_HZ`) is exactly that case, so the example is now internally consistent with the rule text above it. | — |
+| 1.0.4 | August 17, 2026 | Claude Code | **Header correction only — no content change.** `**Status:**` read `DRAFT` against `SPEC_INDEX.md`'s record of #20 as **APPROVED (May 11, 2026)**. Corrected as part of the sweep the `ERR-020-002` adoption began: that pass fixed the three section files it touched and left six siblings at DRAFT, which turned a uniform folder-wide staleness into a misleading distinction — six of ten sections reading as not-approved. The FR-CS-056/057 class. | — |
 
 ---
 

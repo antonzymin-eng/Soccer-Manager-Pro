@@ -7,8 +7,8 @@ Appendix D is the KD-6 single source of truth; §3.3, §3.4, §5.2, and §7.1 ci
 by category name and must not reproduce its symbol lists.
 
 **Created:** May 7, 2026
-**Version:** 1.1
-**Status:** DRAFT
+**Version:** 1.1.1
+**Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §APPENDICES
 **Appendix target lengths:** A ~50 lines · B ~30 lines · C ~150 lines ·
@@ -456,6 +456,7 @@ redefined.
 |---|---|---|---|---|
 | 1.0 | May 7, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §APPENDICES. Appendix D authored to KD-6 single-source-of-truth standard. All five appendices present. | — |
 | 1.1 | May 11, 2026 | Claude Code | Adversarial review fixes (audit findings H-04 demoted to M, L-03): Appendix D §D.1 expanded to include FR-CS-010's remaining banned constructs — `async`/`await` for game-state work (CS-DET-014 placeholder) and `unsafe` without sign-off (CS-DET-015 placeholder). Closes the KD-6 enforcement gap whereby FR-CS-010's rule text banned these constructs but Appendix D's BannedSymbols seed listed only `dynamic`. §D.1 header text expanded to make the dual rationale (determinism + compile-time safety) explicit. Appendix E "Per-frame path" glossary entry tightened to point to "Game-loop method" rather than restating loop-rate scope, eliminating the prior overlap. Minor version (additive — new rows, new wording; no removals or rule changes). | — |
+| 1.1.1 | August 17, 2026 | Claude Code | **Header correction only — no content change.** `**Status:**` read `DRAFT` against `SPEC_INDEX.md`'s record of #20 as **APPROVED (May 11, 2026)**. Corrected as part of the sweep the `ERR-020-002` adoption began: that pass fixed the three section files it touched and left six siblings at DRAFT, which turned a uniform folder-wide staleness into a misleading distinction — six of ten sections reading as not-approved. The FR-CS-056/057 class. | — |
 
 ---
 

@@ -6,8 +6,8 @@ dependency contracts for Spec #20. Authoritative reference for what this specifi
 owns, what it cites, and what is out of scope.
 
 **Created:** May 7, 2026
-**Version:** 1.0.1
-**Status:** DRAFT
+**Version:** 1.0.2
+**Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 1
 **Subsection target lengths:** §1.1 ~40 lines · §1.2 ~30 lines · §1.3 ~80 lines ·
@@ -279,6 +279,7 @@ are both gated on Stage 1 first-real-code milestone, not on this spec's approval
 |---|---|---|---|---|
 | 1.0 | May 7, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §SECTION 1. | — |
 | 1.0.1 | May 11, 2026 | Claude Code | Adversarial review fix (audit finding M-04): KD-1 statement softened from absolute "never restates" to "never paraphrases or redeclares; verbatim reproduction permitted only with explicit attribution + authoritative-source disclaimer + literal-diff discipline on every change." The carve-out matches the §3.2.1 actual practice (constant-tag table reproduced verbatim) and adds a diff-not-presence-check requirement directly motivated by audit finding H-01, where Q-01's presence check missed a one-phrase drift. Non-behavioural: codifies existing practice and tightens the audit method around it. | — |
+| 1.0.2 | August 17, 2026 | Claude Code | **Header correction only — no content change.** `**Status:**` read `DRAFT` against `SPEC_INDEX.md`'s record of #20 as **APPROVED (May 11, 2026)**. Corrected as part of the sweep the `ERR-020-002` adoption began: that pass fixed the three section files it touched and left six siblings at DRAFT, which turned a uniform folder-wide staleness into a misleading distinction — six of ten sections reading as not-approved. The FR-CS-056/057 class. | — |
 
 ---
 

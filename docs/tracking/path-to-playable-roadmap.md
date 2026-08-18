@@ -220,9 +220,16 @@ byte-identically, and rolls into a second season. **No UI yet, no Unity, no exte
 >
 > **What that does and does not claim.** PM-2-sim is a statement about the *loop*, not about the quality of
 > what the loop simulates. Two things sit on top of it, both tracked and neither blocking it: the
-> round-resolution quick-sim's three parameters are still **provisional, not fitted** (A4a, whose corpus
-> cannot be trusted while the engine's goal rate runs several times football's — see
-> `match-engine-design.md` §5.Z.15 and **§5.Z.17**), and the managed fixture, though it now genuinely
+> round-resolution quick-sim's three parameters were **fitted on August 12, 2026** — `QuickSimBaseGoals`
+> 1.35 → 1.2325, `QuickSimGoalRatingSlope` 0.35 → 0.2162, `QuickSimHomeAdvantageRating` 0.30 → 0.4996 —
+> and the "provisional, not fitted" warning was removed from their declarations. KD-8's verdict is
+> **split**: mean agreement PASS (after `ERR-030-033` re-specified the bar), distribution shape FAIL
+> (`ERR-030-034`, over-dispersion at z = +5.40) — the surviving half of roadmap risk row 1, with KD-7a's
+> successor HELD pending a post-W2-arming capture. *(Corrected August 17, 2026: this paragraph said the
+> parameters were "still provisional, not fitted" and that the corpus "cannot be trusted while the
+> engine's goal rate runs several times football's" — both false since August 12; the goal-rate premise
+> was itself retracted by the same pass, which measured balanced fixtures at 2.70 ± 0.13 against
+> football's ~2.7.)* The managed fixture, though it now genuinely
 > plays (A4b), is not yet worth watching for the same reason. A season is *playable and correct*; making
 > it *convincing* is the next question.
 >
@@ -322,11 +329,14 @@ that does not exist, and in each case a **design note is sufficient** — the pr
 all of which govern shipped code with no numbered spec:
 
 1. ✅ **A3 League bootstrap + A4a calibration corpus** → `docs/tracking/league-bootstrap-design.md`
-   (v1.1, AR-1..AR-3 converged, AR-4 over the shipped code). Resolves all five required questions:
+   (**v1.6**, AR-1..AR-3 converged, AR-4 over the shipped code). Resolves all five required questions:
    club count/identity/naming (KD-2/KD-3), strength distribution (KD-5), world-seed derivation
    (KD-4), the round-resolution model's shape (KD-7), and the calibration methodology (KD-8).
    Explicitly *not* #47 — it authors no editor and defines no new data format (it consumes #27's).
-   **A3 is landed; A4a's run is still outstanding.**
+   **A3 is landed; A4a RAN August 12, 2026** — 198 real 90-minute matches captured and committed under
+   `docs/tracking/corpus-data/`, all three `[GT]`s re-fitted, KD-8 recording mean agreement PASS and
+   distribution shape FAIL. *(Corrected August 17, 2026: this line read "A4a's run is still outstanding",
+   contradicting the ✅ RAN row in this same document's item table.)*
 2. **C3 Season/squad screens** → extend `interactive-unity-client-design.md` with a P7 (management
    screens) rather than authoring the Wave-7 #38 screens spec. #38 §7.1 already gates each screen on
    its data spec; #30 and #27 are APPROVED, so the gate is satisfied and the screens add no framework

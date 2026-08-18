@@ -5,8 +5,8 @@
 begins, Stage 5+ rule extensions, permanent exclusions (style debates this spec refuses to
 relitigate), and the deferred-decisions tracker (D1–D5).
 **Created:** May 8, 2026
-**Version:** 1.0.1
-**Status:** DRAFT
+**Version:** 1.0.2
+**Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 7; `outline-mid.md` v1.2, §7.1–§7.5
 
@@ -183,6 +183,7 @@ statement, the trigger that allows (or requires) the decision to be made, and th
 |---|---|---|---|---|
 | 1.0 | May 8, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §SECTION 7 and `outline-mid.md` v1.2 §7.1–§7.5. | — |
 | 1.0.1 | May 11, 2026 | Claude Code | Adversarial review fixes (audit finding H-02): corrected three stale FR-CS-### identifiers — §7.3 `double` cite FR-CS-039 → FR-CS-072; §7.3 `unsafe` cite FR-CS-042 → FR-CS-010; §7.3 FMA paragraph clarified that FR-CS-040 is active at Stage 0 and only its override pathway is gated on the platform pin. §7.1 D1-artifact and §7.5 D1 rewordings: D1 deferral is governed by KD-5 (no Stage 0 code to baseline against), with FR-CS-008 activation as a precondition, not the source of the threshold values themselves. | — |
+| 1.0.2 | August 17, 2026 | Claude Code | **Header correction only — no content change.** `**Status:**` read `DRAFT` against `SPEC_INDEX.md`'s record of #20 as **APPROVED (May 11, 2026)**. Corrected as part of the sweep the `ERR-020-002` adoption began: that pass fixed the three section files it touched and left six siblings at DRAFT, which turned a uniform folder-wide staleness into a misleading distinction — six of ten sections reading as not-approved. The FR-CS-056/057 class. | — |
 
 ---
 
