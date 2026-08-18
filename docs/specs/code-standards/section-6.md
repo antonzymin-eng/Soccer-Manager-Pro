@@ -5,8 +5,8 @@
 complexity targets that code written under Spec #20 must satisfy. §3.3 defines *how* to
 write zero-allocation code; §6 defines *what rate* the resulting code is measured against.
 **Created:** May 8, 2026
-**Version:** 1.0.1
-**Status:** DRAFT
+**Version:** 1.0.2
+**Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 6; `outline-mid.md` v1.2, §6.1–§6.5
 
@@ -272,6 +272,7 @@ and supply the implementation detail that the FR row itself cannot fit.
 |---|---|---|---|---|
 | 1.0 | May 8, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §SECTION 6 and `outline-mid.md` v1.2 §6.1–§6.5. | — |
 | 1.0.1 | May 11, 2026 | Claude Code | Adversarial review fix (audit finding L-A): §6.4 "N = 22 bound source" prose corrected — original read "22 outfield players + 2 goalkeepers" (24 total), but association football is 11 per side × 2 sides = 22 with the keepers included. Wording rewritten to make this explicit; substitutes off-pitch noted as excluded from N. No change to the N = 22 numeric bound. | — |
+| 1.0.2 | August 18, 2026 | Claude Code | **Header correction only — no content change.** `**Status:**` read `DRAFT` against `SPEC_INDEX.md`'s record of #20 as **APPROVED (May 11, 2026)**. Corrected as part of the sweep the `ERR-020-002` adoption began: that pass fixed the three section files it touched and left six siblings at DRAFT, which turned a uniform folder-wide staleness into a misleading distinction — six of ten sections reading as not-approved. The FR-CS-056/057 class. Dated August 18, 2026 (commit `98662909`, author date 2026-08-18T03:01 UTC) — a same-session continuation of work that began August 17, 2026 UTC and crossed midnight before landing. | — |
 
 ---
 

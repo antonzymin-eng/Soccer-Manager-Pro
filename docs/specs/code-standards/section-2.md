@@ -6,8 +6,9 @@ conformance levels, failure-to-comply modes, and the data-structures note for Sp
 This section is the authoritative FR catalogue; §3 and §6 provide rule mechanics.
 
 **Created:** May 7, 2026
-**Version:** 1.0
-**Status:** DRAFT
+**Modified:** August 18, 2026
+**Version:** 1.3
+**Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 2
 **Subsection target lengths:** §2.1 ~20 lines · §2.2 ~250 lines · §2.3 ~30 lines ·
@@ -151,8 +152,10 @@ deviation from a MUST or MUST NOT requirement. Format and lifecycle are defined 
 
 | ID | Statement | Level | Source | Mechanics § |
 |---|---|---|---|---|
-| FR-CS-046 | Assembly references **MUST** flow in the direction Physics → Mechanics → AI → UI. No assembly **MUST NOT** reference an assembly that is higher in this order (no upward references permitted). | MUST | §3.5.2 | §3.5.2 |
-| FR-CS-047 | Cross-spec events that propagate upward through the layer order **MUST** be dispatched as struct-based events (not class-based delegates or `event Action<T>`). | MUST | §3.5.2 | §3.5.2 |
+| FR-CS-046 | Assembly references **MUST** flow in one direction only, along the ten-tier order defined in §3.5.2 (Foundation → Physics → Configuration → Mechanics → AI → Data → Composition → Management → Presentation → Client). A production assembly **MUST NOT** reference an assembly in a higher tier (no upward references permitted). Test assemblies are not members of the order and are outside this rule, as are the two out-of-band **Infrastructure** assemblies named in §3.5.2 (`performance-optimization`, `testing-strategy`), which acquire no tier and are instead bound by FR-CS-046b. | MUST | §3.5.2 | §3.5.2 |
+| FR-CS-046a | An assembly **MAY** reference another assembly in the same tier, but the production assembly reference graph as a whole **MUST** remain acyclic. | MUST | §3.5.2 | §3.5.2 |
+| FR-CS-046b | An assembly seated in the ten-tier order **MUST NOT** reference an out-of-band **Infrastructure** assembly (`performance-optimization`, `testing-strategy`) at runtime; an Infrastructure assembly **MUST NOT** reference any ordered-tier assembly other than the tier-0 (Foundation) assemblies — it **MAY** reference the other Infrastructure assembly (`testing-strategy` → `performance-optimization` is the standing example), subject to FR-CS-046a's acyclicity. | MUST | §3.5.2 | §3.5.2 |
+| FR-CS-047 | Cross-spec events that propagate upward through the tier order **MUST** be dispatched as struct-based events (not class-based delegates or `event Action<T>`). | MUST | §3.5.2 | §3.5.2 |
 | FR-CS-048 | An `interface` definition **MUST** reside in the same assembly as at least one specified consumer of that interface. | MUST | §3.5.3; root `CLAUDE.md` — "Interface Design Principle" | §3.5.3 |
 | FR-CS-049 | Phantom interface folders (directories containing `interface` definitions whose consumer side is unspecified or unwritten) **MUST NOT** be created. Cites ERR-001 and ERR-004 in `docs/tracking/spec-error-log.md`. | MUST NOT | §3.5.3; root `CLAUDE.md` — "Interface Design Principle" | §3.5.3 |
 | FR-CS-050 | The event-vs-interface decision tree (§3.5.4) **MUST** be applied when choosing a cross-boundary communication mechanism, and the chosen mechanism **MUST** be documented in the file header's purpose field. | MUST | §3.5.4 | §3.5.4 |
@@ -186,7 +189,7 @@ deviation from a MUST or MUST NOT requirement. Format and lifecycle are defined 
 | ID | Statement | Level | Source | Mechanics § |
 |---|---|---|---|---|
 | FR-CS-066 | Game-loop code **MUST** produce zero managed-memory allocations per frame. | MUST | §6.1; `docs/planning/development-best-practices.md` | §6.1 |
-| FR-CS-067 | UI-layer code **MUST** produce fewer than 1 MB of managed-memory allocations per frame. | MUST | §6.1; `docs/planning/development-best-practices.md` | §6.1 |
+| FR-CS-067 | Code in the **Presentation and Client tiers** (§3.5.2 tiers 8 and 9), plus the Unity host code outside the gate, **MUST** produce fewer than 1 MB of managed-memory allocations per frame. | MUST | §6.1; `docs/planning/development-best-practices.md` | §6.1 |
 | FR-CS-068 | Virtual method calls **MUST NOT** appear inside per-frame inner loops. Use `sealed` classes or static dispatch instead. | MUST NOT | §6.2 | §6.2 |
 | FR-CS-069 | `try`/`catch` blocks **MUST NOT** appear inside per-frame inner loops. Exception handling **MUST** be placed at system or frame boundaries. | MUST NOT | §6.2 | §6.2 |
 | FR-CS-070 | Every system-level Update method **MUST** be enclosed in a `ProfilerMarker.Auto()` scope (or `ProfilerMarker.Begin()` / `ProfilerMarker.End()` pair) named `<SpecName>.<MethodName>`. | MUST | §6.3 | §6.3 |
@@ -214,7 +217,7 @@ partitions:
 | Constant Declaration & Tagging | FR-CS-016 … FR-CS-025 | 10 |
 | Allocation Discipline | FR-CS-026 … FR-CS-035 | 10 |
 | Determinism | FR-CS-036 … FR-CS-045 | 10 |
-| Dependency Direction & Interfaces | FR-CS-046 … FR-CS-055 | 10 |
+| Dependency Direction & Interfaces | FR-CS-046 … FR-CS-055 | 10 (+2 sub-clauses: FR-CS-046a, FR-CS-046b) |
 | Documentation | FR-CS-056 … FR-CS-065 | 10 |
 | Code Performance Rules | FR-CS-066 … FR-CS-070 | 5 |
 | Numeric Type Discipline | FR-CS-071 … FR-CS-073 | 3 |
@@ -321,6 +324,9 @@ declarations, constant catalogue layout, namespace assignments — see §4.
 |---|---|---|---|---|
 | 1.0 | May 7, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §SECTION 2. All 73 FRs authored; FR-CS-008 carries deferred-activation language; FR-CS-040 and FR-CS-072 use MUST NOT + override-condition pattern per outline-detailed.md v1.3 self-critique. | — |
 | 1.0.1 | May 11, 2026 | Claude Code | Adversarial review fix (audit finding M-A): recast FR-CS-044 and FR-CS-045 footnotes from "Applies where applicable" to "Vacuously satisfied … no Mode 3 exception required for absence." Same normative content; clearer non-triggering semantics. No rule changes. | — |
+| 1.1 | August 17, 2026 | Claude Code | **`ERR-020-002` adopted by owner decision.** FR-CS-046 restated against the §3.5.2 ten-tier order (it named the retired three-layer `Physics → Mechanics → AI → UI` chain, which decided nothing about 21 of the 35 assembly folders — figure re-derived August 17, 2026 by counting the retired box, see the 1.2 row) and its double negative repaired — the published text read “No assembly **MUST NOT** reference…”. Test assemblies stated out of scope explicitly. **FR-CS-046a** added as a sub-numbered clause of FR-CS-046 (intra-tier references permitted, intra-tier cycles not), so the FR-CS-046…055 span and the 73-FR count are unchanged. Header corrected: it read `Version 1.0 / Status DRAFT` against a §2.5 row at 1.0.1 and a SPEC_INDEX status of APPROVED. | — |
+| 1.2 | August 17, 2026 | Claude Code | **Adversarial-review finding H4.** The 1.1 row above originally said the retired taxonomy "decided nothing about 16 of the 35 assembly folders"; the true figure is **21** (corrected in place). The retired §3.5.2 box places exactly **14** folders — 8 Physics + 4 Mechanics + 2 AI, with the `UI` row empty — so 35 − 14 = 21 were undecided. The 14/21 figures were **re-derived by counting the retired box** (`git show 0e78d381~1`) rather than rescaled from the earlier 31-assembly error-log count, which is how the wrong 16 arose. No rule change. **⚠️ ANNOTATED (v1.3, August 18, 2026): the closing "No rule change" claim is FALSE of the commit this row versions** — the same commit ALSO added **FR-CS-046b** (a new MUST NOT), restated **FR-CS-046** with the Infrastructure exclusion, rescoped **FR-CS-067** from "UI-layer code" to the Presentation/Client tiers, and changed §2.2.9's Count row; none of those appeared in any version-history row until the 1.3 row below enumerated them. Left in place per the annotate-don't-rewrite convention. | — |
+| 1.3 | August 18, 2026 | Claude Code | **Adversarial-review findings H9 + H10 (reviewed round).** H10: the 1.2 row's version history is completed — the v1.2 commit made **four normative changes it never recorded**: (1) **FR-CS-046b added** (Infrastructure assemblies bound: ordered tiers may not reference them at runtime, and they may not reference above Foundation); (2) **FR-CS-046 restated** to exclude the two out-of-band Infrastructure assemblies from the tier order and delegate them to FR-CS-046b; (3) **FR-CS-067 rescoped** from "UI-layer code" to the Presentation and Client tiers (§3.5.2 tiers 8 and 9) plus Unity host code; (4) **§2.2.9's Count row changed** ("10" → "10 (+2 sub-clauses: FR-CS-046a, FR-CS-046b)"). The 1.2 row's "No rule change" is annotated in place as false. H9: **FR-CS-046b clause 2 reworded** — "MUST NOT reference any assembly above tier 0" was ambiguous against the live tree (`testing-strategy` → `performance-optimization` exists, and Infrastructure assemblies acquire no tier, so "above tier 0" had two readings); now states exactly what is permitted — only tier-0 (Foundation) assemblies and the other Infrastructure assembly, acyclic per FR-CS-046a — resolving the ambiguity in favour of what the tree does, and `tools/assembly-tier-check.py` now enforces both clauses (it previously skipped every Infrastructure-sourced reference unchecked). Also: FR-CS-047 "layer order" → "tier order", standardising on the §3.5.2 vocabulary (the term "layer order" is no longer defined there). | — |
 
 ---
 
