@@ -12,7 +12,63 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 17, 2026 — **An owner decision pass over the seven decisions this project had
+> **Last Updated:** August 18, 2026 — **Adversarial-review rounds 4–7 over the documentation estate: two
+> checker tools built and CI-wired, two APPROVED specs corrected, four ERR ids filed. No `src/` code changed,
+> no `.cs` or `.asmdef` touched anywhere on the branch, so no gate run is owed.**
+>
+> **What the series was actually for, recorded because it is the reusable part:** this project's rules files
+> and tracking documents had become large enough that their claims drifted faster than anyone re-derived them,
+> and the drift was invisible because every check was a human reading prose. Rounds 4–5 built the two tools
+> that make it mechanical — `tools/assembly-tier-check.py` (the §3.5.2 tier order against the real `.asmdef`
+> graph) and `tools/doc-consistency-check.py` (cross-document version citations and cardinalities) — and wired
+> both into `ci.yml`'s `Spec hygiene checks` job. **Both tools were found INVERTED by the review that
+> followed them**, twice: round 5 found the citation checker registering this repo's phrase for stating the
+> CURRENT version as a marker meaning "superseded", and round 6 found a guard meant for version-history rows
+> exempting **every** markdown table row — 27% of all citations, including the manifest inventory, which is
+> the exact surface round 3's headline defect lived on. A checker that reports green over the class it exists
+> to catch is worse than no checker, and it took an adversarial pass to see it each time.
+>
+> **Round 6 — 19 High / 24 Medium / 19 Low across four lanes.** The load-bearing ones: **`ERR-030-047`**, #30
+> §3.4's normative pseudocode specifying a two-argument `OnClubFixturePlayed` that `ERR-044-014` had changed
+> two days earlier, together with the unfiltered-roster precondition it never propagated — an implementer
+> following the spec makes **every suspension permanent, silently**. **`ERR-020-006`**, Spec #20's constant-tag
+> list forbidding `[CROSS-PENDING]`, one of root `CLAUDE.md`'s six mandated tags, making all 218 uses in
+> `docs/specs/` MUST-level violations of an APPROVED spec. **`ERR-020-007`**, the `[CROSS]` const-mirror
+> carve-out, filed because #20 certified as compliant a declaration its own FR-CS-022 forbade. Plus README
+> reporting four wired subsystems as unimplemented and running four format-versions stale on
+> `SEASON_SAVE_FORMAT_VERSION`, and the A4a home/away correlation published at two mutually exclusive values
+> in files that carried both at once.
+>
+> **Round 7 — 8 High / 17 Medium / 6 Low.** Notable because **three of its Highs were introduced or preserved
+> by round 6's own fix pass**: §4.1 asserting an upward `.asmdef` reference is "a build error" (it compiles
+> cleanly — that is why the drift lasted fourteen months and why the tier checker had to be written); four new
+> "on every push" claims written the same day §3.5.2 corrected that exact phrase about that exact tool; and
+> **`ERR-030-048`**, the loud twin of `ERR-030-047` — the serve pair left UNGATED in the very block -047
+> rewrote, with a comment justifying its null-safety by citing a gate that did not exist. Implemented verbatim
+> it throws on the first fixture of any career without discipline wired. **The fix pass wrote the false
+> justification.** That is the finding worth keeping from this series: a correction round is itself a
+> high-defect-rate activity, and the only thing that caught these was re-reviewing the fixes as hostilely as
+> the original.
+>
+> **The checker's scope gap, closed at round 7.** With both inversions fixed the tool reported 37 findings,
+> essentially all false: it could not distinguish a **currency claim** ("X is at v1.5") from a **dated record**
+> ("filed against X v1.5"), and the tracking estate is mostly dated records. Closed with three mechanisms,
+> structure first and phrasing last — record REGIONS (`open-issues-resolved.md` whole-file; `spec-error-log.md`
+> from the Error Index to EOF), CHRONICLE targets (citations of the three append-only logs, where a version is
+> a timestamp), and four narrow record phrasings — under a **currency-reassertion override that pierces all
+> three**, so "now v1.6" is still reported inside a frozen region. That override is what stops the fix becoming
+> the blindness it replaced. Every excusal is **counted and printed**, never silent: 37 → 2, each mechanism
+> mutation-proven in both directions, and the two survivors were real. The tool then caught four stale currency
+> chains created by this pass's own version bumps, which is the first time it has policed its own author.
+>
+> **Files:** Spec #20 (all ten files), #30 `section-3.md` v2.18, `spec-error-log.md` v2.47, root `CLAUDE.md`,
+> `src/CLAUDE.md`, `README.md` v1.38, `file-manifest.md`, `open-issues.md`, `open-issues-resolved.md`,
+> `path-to-playable-roadmap.md` v0.23, `league-bootstrap-design.md` v1.7, `.claude/skills/**`, and the two
+> tools. **Deliberately NOT done:** the 37-residual doctrine question is answered in the tool, not by editing
+> the records it excuses — a dated record that names a superseded version is correct as history, and
+> "fixing" one to satisfy a checker falsifies the thing the record exists for.
+
+> **Last Updated (prior):** August 17, 2026 — **An owner decision pass over the seven decisions this project had
 > been carrying as advisory recommendations. Two shipped, five held, one found to rest on a false
 > premise. No `src/` code changed and no `.asmdef` moved, so no gate run is owed.**
 >
