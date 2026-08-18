@@ -242,9 +242,11 @@ When the defect is structural — the top-weighted architecture / maintainabilit
 Everything above is general review practice. This section is specific to Tactical Director, and it
 is the step most easily missed: **in this repo a defect found in APPROVED spec text is not resolved
 by fixing the code.** The spec is the contract, `SPEC_INDEX.md` says so, and a code fix that leaves
-the approved text wrong has moved the contradiction rather than closed it. 209 `ERR-` entries exist
-(re-derived August 18, 2026: `grep -c '^| ERR-' docs/tracking/spec-error-log.md`)
-because that rule has been enforced; skip it once and the log stops being trustworthy.
+the approved text wrong has moved the contradiction rather than closed it. `docs/tracking/spec-error-log.md`
+carries a growing `ERR-` Error Index — re-derive the current row count with
+`grep -c '^| ERR-' docs/tracking/spec-error-log.md` rather than trusting a number written here, since
+it drifts on every landing — because that rule has been enforced; skip it once and the log stops
+being trustworthy.
 
 **When it applies.** The finding contradicts, or is contradicted by, text in an APPROVED spec under
 `docs/specs/`. It does *not* apply to a defect wholly inside implementation detail the spec never

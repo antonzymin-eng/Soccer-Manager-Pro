@@ -15,7 +15,7 @@ invented: the counts below are from the last 200 commits.
 |---|---|---|
 | `match-realism-pass` | **wiring gate** (backlog → chain → 6 checks) → measure → localize → fix → calibrate *(gate-permitting; frozen under KD-W1)* → re-measure → lock | 8 passes (§5.Z.17–§5.Z.24) in 9 days; 2 of the 8 (§5.Z.17, §5.Z.23) arrived as quality briefs over a stage that was missing |
 | `snapshot-schema-bump` | the cross-tick decision + serializer/reader/test checklist | 19 schema bumps, 2 of them fixing earlier omissions |
-| `err-file-and-backprop` | ERR id allocation, entry shape, spec-patch-same-commit | `spec-error-log.md` — see its own `**Version:**` header (v2.45, 210 Error Index rows, re-derived August 18, 2026); id-collision recurrence per the skill's own examples (a design-supplement id reused before authoring finished, a branch-vs-main collision, a stale proposed range) — no live duplicate-id count re-verified as of this pass |
+| `err-file-and-backprop` | ERR id allocation, entry shape, spec-patch-same-commit | `spec-error-log.md` — see its own `**Version:**` header; id-collision recurrence per the skill's own examples (a design-supplement id reused before authoring finished, a branch-vs-main collision, a stale proposed range) — no live duplicate-id count re-verified as of this pass |
 | `landing-close-out` | the six-document sync at the end of a landing | every landing; one whole reconciliation pass caused by skipping it |
 | `spec-promotion` | supplement → 11-file spec set → the three gates | 11 promotions, 10 in one day |
 | `dotnet-gate` | running and reporting the Linux compile/test gate | every landing |
