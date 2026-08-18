@@ -262,6 +262,16 @@ CHRONICLE_TARGETS = {"spec-error-log.md", "CHANGELOG.md", "CHANGELOG-src.md"}
 # does NOT — inside a record context it is the natural notation for the bump
 # an event made ("v1.0.1 → v1.1" in a changed-files table), not a claim that
 # vNEW is current today.
+REASSERT_LOOKAHEAD = 160
+# A currency REASSERTION, tight enough not to fire on a landing record whose
+# following prose merely contains the word "since". The shape this repo actually
+# uses is version -> currency word -> version: "v2.11 -> v2.12, since advanced to
+# **v2.18**", "v1.5, now v1.6", "*(since v1.3)*". A bare "-> **v0.5**" followed by
+# 100 characters of prose is a landing record and must NOT be pierced.
+REASSERT_SHAPE = re.compile(
+    r"^[^`\n]{0,80}?\**v\d[\d.]*\**[^`\n]{0,40}?"
+    r"\b(?:now|currently|since)\b[^`\n]{0,40}?\**v\d[\d.]*",
+    re.I)
 CURRENCY_WORD = re.compile(r"\b(?:now|currently|since)\b", re.I)
 
 
@@ -365,8 +375,46 @@ def blank_frozen_history(text):
     if m:
         nxt = HEADING_RE.search(text, m.start())
         end = nxt.start() if nxt else len(text)
-        frozen += end - m.start()
-        text = _blank(text, m.start(), end)
+        # ROUND 7 FOLLOW-UP: the chain is frozen, but a CURRENCY REASSERTION in it
+        # is not. This repo maintains "vA -> vB, since advanced to **vC**" pointers
+        # inside header entries, and "since advanced to" is its phrase for stating
+        # the CURRENT version (round 5's headline finding). Those pointers keep
+        # being maintained after their entry scrolls below the (prior) marker, so
+        # blanking the whole span made them unmaintainable AND unchecked at once:
+        # adding one new head entry silently retired four live claims, which is how
+        # this was found. Blank the span line by line, KEEPING any line that carries
+        # both a .md citation and a currency word — the same override that pierces
+        # the round-7 record regions, applied to the one frozen span that can hold a
+        # present-tense claim. Version-history sections below stay fully frozen: a
+        # VH row is a dated record of its own revision and states no currency.
+        # Pierce per CITATION, not per line: these entries are single 20,000-char
+        # lines, so a line-level keep un-freezes a whole entry and resurfaces dozens
+        # of genuine historical citations. Keep only the narrow window around a
+        # citation whose own trailing annotation reasserts currency.
+        seg_start, seg = m.start(), text[m.start():end]
+        keep = []
+        for fm in FILE_TOKEN.finditer(seg):
+            look = seg[fm.end():fm.end() + REASSERT_LOOKAHEAD]
+            cut = look.find("`")            # stop at the next citation
+            if cut != -1:
+                look = look[:cut]
+            if REASSERT_SHAPE.match(look):
+                keep.append((fm.start(), fm.end() + len(look)))
+        merged = []
+        for a, b in keep:
+            if merged and a <= merged[-1][1]:
+                merged[-1] = (merged[-1][0], max(merged[-1][1], b))
+            else:
+                merged.append((a, b))
+        out, cur = [], 0
+        for a, b in merged + [(len(seg), len(seg))]:
+            blanked = seg[cur:a]
+            out.append("\n" * blanked.count("\n"))
+            frozen += len(blanked) - blanked.count("\n")
+            if b > a:
+                out.append(seg[a:b])
+            cur = b
+        text = text[:seg_start] + "".join(out) + text[end:]
     # Own version-history sections (heading form; RDL's authoritative regex).
     spans = []
     for vh in RDL.VH_HEADING_RE.finditer(text):
@@ -995,3 +1043,42 @@ if __name__ == "__main__":
 # |         |            |             | still reports); the 35 dated records + one   |
 # |         |            |             | planted per mechanism are excused with       |
 # |         |            |             | counters moving 25/4/8 accordingly.          |
+# | 1.4     | 2026-08-18 | Claude Code | **Round-7 follow-up: the currency     |
+# |         |            |             | override now pierces the FROZEN       |
+# |         |            |             | HEADER CHAIN too, not just the v1.3   |
+# |         |            |             | record regions.** Found by its own    |
+# |         |            |             | miss: adding one new head entry to    |
+# |         |            |             | file-manifest.md pushed the entry     |
+# |         |            |             | carrying four maintained "since       |
+# |         |            |             | advanced to vN" pointers below the    |
+# |         |            |             | (prior) marker, and blank_frozen_     |
+# |         |            |             | history blanked the whole span — so   |
+# |         |            |             | four live currency claims became      |
+# |         |            |             | unmaintainable AND unchecked in one   |
+# |         |            |             | edit, while the tool reported PASS.   |
+# |         |            |             | "since advanced to" is this repo's    |
+# |         |            |             | phrase for the CURRENT version (round |
+# |         |            |             | 5's headline finding), so it is a     |
+# |         |            |             | present-tense claim wherever it sits. |
+# |         |            |             | Pierced per CITATION, not per line:   |
+# |         |            |             | these entries are single 20,000-char  |
+# |         |            |             | lines, and a line-level keep un-froze |
+# |         |            |             | a whole entry and resurfaced dozens   |
+# |         |            |             | of genuine historical citations (that |
+# |         |            |             | was the first attempt). REASSERT_     |
+# |         |            |             | SHAPE requires version -> currency    |
+# |         |            |             | word -> version within 160 chars of   |
+# |         |            |             | the citation and stops at the next    |
+# |         |            |             | backtick, so a bare "-> **v0.5**"     |
+# |         |            |             | followed by prose containing "since"  |
+# |         |            |             | is NOT pierced (that was the second   |
+# |         |            |             | attempt's false positive). Version-   |
+# |         |            |             | history sections stay fully frozen: a |
+# |         |            |             | VH row is a dated record of its own   |
+# |         |            |             | revision and asserts no currency.     |
+# |         |            |             | Mutation-proven both ways: a stale    |
+# |         |            |             | chain in a frozen entry FAILS; a      |
+# |         |            |             | stale landing record in the same      |
+# |         |            |             | entry stays excused. Excusal totals   |
+# |         |            |             | unchanged at 37. Surfaced 5 real      |
+# |         |            |             | stale chains, all fixed same commit.  |
