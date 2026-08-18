@@ -8,7 +8,7 @@ and `src/CLAUDE.md` (concrete paths). Spec #20 does not publish a runtime interf
 
 **Created:** May 7, 2026
 **Last Updated:** August 15, 2026, later
-**Version:** 1.0.4
+**Version:** 1.1
 **Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 4
@@ -75,26 +75,31 @@ src/
 │   └── …
 │
 └── code-standards/                   ← Spec #20 (no runtime code; governance only)
-    └── (empty at Stage 0 — this spec produces no source files)
+    └── (this spec produces no source files — no src/code-standards/ folder exists
+        in the live tree, and none ever will; the leaf appears here only to
+        complete the one-folder-per-spec map)
 ```
 
 ### Dependency graph shape
 
-Assembly references follow the layer order established in §3.5.2. The `src/` folder
-tree reflects this: a Physics-layer folder's `.asmdef` references only other
-Physics-layer `.asmdef` files or lower; it never references a Mechanics-, AI-, or
-UI-layer `.asmdef`. This makes illegal dependencies a build error, not just a review
-finding.
-
-```
-project-constants  ◄── (referenced by all assemblies read-only)
-       ▲
-  ball-physics  ◄──── agent-movement  ◄──── collision-system  ◄──── …
-       ▲
-  pass-mechanics ──► shot-mechanics ──► first-touch ──► …     (Mechanics layer)
-       ▲
-  decision-tree ──► perception-system ──► …                   (AI layer)
-```
+Assembly references follow the ten-tier order established in §3.5.2, and **§3.5.2's
+table is the single rendering of the dependency graph** — this section deliberately
+carries no second drawing. (A retired ASCII rendering here mixed `◄──` and `──►`
+arrows with no label — the exact ambiguity `ERR-020-003` was filed against, and which
+both §3.5.2 and `src/CLAUDE.md` were amended to remove — labelled
+`pass-mechanics`/`shot-mechanics`/`first-touch` a "Mechanics layer" where §3.5.2 seats
+all three in tier 1 Physics, and asserted three edges the `.asmdef` reference graph
+contains in NEITHER direction: `agent-movement`↔`ball-physics` (`agent-movement`
+references only `project-constants`), `pass-mechanics`↔`shot-mechanics`, and
+`shot-mechanics`↔`first-touch` — re-verified against `src/*/[a-z]*.asmdef` on
+August 18, 2026 and deleted at v1.1, round-6 finding H3.) The rule the drawing existed
+to illustrate is stated by FR-CS-046 and FR-CS-046a: an assembly **MUST NOT** reference
+any assembly seated in a higher tier — the upward-reference ban, across all ten tiers,
+Foundation through Client — and intra-tier references are permitted provided the
+intra-tier graph stays acyclic. Because the reference graph is encoded in `.asmdef`
+files, an illegal dependency is a build error, not just a review finding, and
+`tools/assembly-tier-check.py` (wired into `.github/workflows/ci.yml`) verifies every
+reference against the §3.5.2 table on every push.
 
 ---
 
@@ -141,17 +146,33 @@ this gap because a compliant mirror — `DisciplineConstants.CardKindYellow` —
 justify itself with a false "single consumer" claim for want of a rule that fit the
 actual shape.)
 
+**Storage-class note (round-6 finding H7, August 18, 2026).** The mirrors this
+carve-out describes are declared `public const` (e.g.
+`public const byte CardKindYellow = EventSystemConstants.CARD_KIND_YELLOW;`), which
+the base FR-CS-022 / §3.2.3 rule — `[CROSS]` → `public static readonly`, PascalCase —
+did not permit: as first written, this paragraph certified as "compliant" a declaration
+its own spec's MUST forbade. Resolved by the **const-mirror carve-out** in §3.2.3
+(carried by FR-CS-022 since section-2.md v1.4): a `[CROSS]` mirror whose initializer
+references the owning catalogue's own compile-time constant MAY itself be
+`public const`, because the compiler enforces value identity on every build and the
+divergence risk the `static readonly` default guards against cannot arise;
+literal-initialized mirrors never qualify and stay on the default. `CardKindYellow`
+above is now a conforming example of that carve-out, not an exception to FR-CS-022.
+
 ### Per-Tag Region Ordering
 
 Constants within a catalogue file are grouped in `#region` blocks in the following
 order (most-immutable to most-mutable):
 
 ```
-1. #region Fixed       — [FIXED]   → public const; ALL_CAPS
-2. #region Derived     — [DERIVED] → public static readonly; PascalCase
-3. #region Cross       — [CROSS]   → public static readonly; PascalCase
-4. #region GT          — [GT]      → public static readonly; PascalCase
-5. #region EST         — [EST]     → public static readonly; PascalCase + TODO
+1. #region Fixed        — [FIXED]         → public const; ALL_CAPS
+2. #region Derived      — [DERIVED]       → public static readonly; PascalCase
+3. #region Cross        — [CROSS]         → public static readonly; PascalCase
+                                            (const-mirror carve-out: §3.2.3)
+4. #region CrossPending — [CROSS-PENDING] → public static readonly; PascalCase
+                                            (transitional; promotes into #region Cross)
+5. #region GT           — [GT]            → public static readonly; PascalCase
+6. #region EST          — [EST]           → public static readonly; PascalCase + TODO
 ```
 
 **Rationale:** Physical constants (`[FIXED]`) never change; estimated placeholders
@@ -323,6 +344,7 @@ concretises, establishing the Spec #20 ↔ `src/CLAUDE.md` cite-chain.
 | 1.0.2 | August 15, 2026 | Claude Code | ERR-020-004 (reviewed-findings pass, M4/owner decision 2): §4.2's `[CROSS]` routing rule stated only a two-way split (multi-consumer → `ProjectConstants.cs`; single-consumer → local) with no accommodation for a constant that has ≥ 2 consumers but a single owning spec's catalogue to mirror from. New "Owning-catalogue carve-out" paragraph: such a constant mirrors from its owning spec's catalogue directly regardless of consumer count (the `CardIssuedEvent.CardKind` / `EventSystemConstants` example, mirrored by three downstream catalogues with none routed through `ProjectConstants.cs`). Found because `src/discipline/DisciplineConstants.cs`'s compliant mirror had invented a false "single consumer" justification for want of a rule that fit its actual shape. `src/CLAUDE.md`'s `[CROSS]` mirrors section gains the identical carve-out. | — |
 | 1.0.3 | August 15, 2026, later | Claude Code | ERR-020-005 (extends ERR-020-004; reviewed-findings pass): the "`ProjectConstants.cs` — Cross-Spec Source of Truth" subsection's opening sentence still stated the pre-carve-out two-way split unqualified, 25 lines below the carve-out paragraph that had already narrowed it — the heading a reader looks under for the routing rule, restating the rule the carve-out exists to correct. Qualified in place: the primary declaration for a singly-owned constant is that spec's own catalogue (the carve-out), and `ProjectConstants.cs` is primary only for a constant with no single owning catalogue — the worked example immediately below (`PHYSICS_TICK_HZ`) is exactly that case, so the example is now internally consistent with the rule text above it. | — |
 | 1.0.4 | August 18, 2026 | Claude Code | **Header correction only — no content change.** `**Status:**` read `DRAFT` against `SPEC_INDEX.md`'s record of #20 as **APPROVED (May 11, 2026)**. Corrected as part of the sweep the `ERR-020-002` adoption began: that pass fixed the three section files it touched and left six siblings at DRAFT, which turned a uniform folder-wide staleness into a misleading distinction — six of ten sections reading as not-approved. The FR-CS-056/057 class. Dated August 18, 2026 (commit `98662909`, author date 2026-08-18T03:01 UTC) — a same-session continuation of work that began August 17, 2026 UTC and crossed midnight before landing. | — |
+| 1.1 | August 18, 2026 | Claude Code | **Adversarial-review round-6 findings H3 + H5 + H6 + H7.** H3: §4.1's "Dependency graph shape" ASCII block DELETED — a retired rendering with three edges the `.asmdef` graph contains in neither direction (`agent-movement`↔`ball-physics`, `pass-mechanics`↔`shot-mechanics`, `shot-mechanics`↔`first-touch`; re-verified August 18, 2026 by reading `src/*/[a-z]*.asmdef` references), a "(Mechanics layer)" label on three assemblies §3.5.2 seats in tier 1 Physics, unlabelled mixed `◄──`/`──►` arrows (the `ERR-020-003` ambiguity), and prose that under-scoped the ban to "Mechanics-, AI-, or UI-layer" — six tiers short. §3.5.2 is named the single rendering; the prose restated as the FR-CS-046 upward-reference ban + FR-CS-046a intra-tier permission, with `tools/assembly-tier-check.py` (CI-wired) named as the mechanical check. H5: the tree's `code-standards/` leaf no longer claims "empty at Stage 0" — no `src/code-standards/` folder exists at all (verified: `ls -d src/code-standards` fails), and the leaf now says so. H6: the §4.2 per-tag `#region` ordering gains the `[CROSS-PENDING]` slot (position 4, directly after the `Cross` region it promotes into — a promotion is a one-region move), extending the list 5 → 6. H7: the ERR-020-004 carve-out gains the Storage-class note — it had cited `DisciplineConstants.CardKindYellow` (a `public const byte`) as "a compliant mirror" while FR-CS-022/§3.2.3 required `public static readonly`; the §3.2.3 const-mirror carve-out resolves the contradiction in the spec and the paragraph now cites it. | — |
 
 ---
 

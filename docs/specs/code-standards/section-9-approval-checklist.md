@@ -5,7 +5,7 @@
 from `IN REVIEW` to `APPROVED` in `SPEC_INDEX.md`. Items are programmatically verifiable
 against source files unless marked `[manual]`.
 **Created:** May 8, 2026
-**Version:** 1.1
+**Version:** 1.1.1
 **Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 9; `outline-mid.md` v1.2, §9.1–§9.4
@@ -137,7 +137,13 @@ grep "^## Appendix" docs/specs/code-standards/appendices.md
 ---
 
 **C-07** — Exemplar pair (`ExemplarConstants.cs` and `ExemplarStruct.cs`) is present in
-Appendix C. `[manual]` — compilation check is manual at Stage 0 (no `src/` toolchain).
+Appendix C. `[manual]` — the compilation check is manual because the pair lives in a
+spec appendix as fenced markdown, which no toolchain compiles. *(Premise corrected
+August 18, 2026, round-6 finding H5: the original "(no `src/` toolchain)" grounds are
+stale — `tools/dotnet-ci/run-gate.sh` has compiled the entire `src/` tree on every push
+since the gate landed (`.github/workflows/ci.yml`); it does not, and cannot, compile
+markdown code blocks, so the manual marker stands on the corrected grounds. The
+May 8, 2026 verification record below is untouched history.)*
 
 ```bash
 grep -c "ExemplarConstants\|ExemplarStruct" docs/specs/code-standards/appendices.md
@@ -191,8 +197,10 @@ done
 ## 9.2 Quality Checklist
 
 **Q-01** — Cite-not-redefine audit: the constant tag definitions (GT/EST/FIXED/DERIVED/
-CROSS) are reproduced in §3.2.1 with explicit attribution to root `CLAUDE.md`, and no
-other section restates the definitions.
+CROSS/CROSS-PENDING) are reproduced in §3.2.1 with explicit attribution to root
+`CLAUDE.md`, and no other section restates the definitions. *(Enumeration extended to
+six tags August 18, 2026, round-6 finding H6; the May 8, 2026 verification below
+predates the sixth tag.)*
 
 ```bash
 # Count "CLAUDE.md" attribution lines adjacent to the tag table in §3.
@@ -200,7 +208,7 @@ grep -n "CLAUDE.md" docs/specs/code-standards/section-3.md | head -5
 # Expected: at least one attribution in §3.2.1 naming CLAUDE.md as source.
 
 # Confirm the tag definitions do not appear in §2, §4, §5, §6 as fresh definitions.
-grep "\[GT\]\|\[EST\]\|\[FIXED\]\|\[DERIVED\]\|\[CROSS\]" \
+grep "\[GT\]\|\[EST\]\|\[FIXED\]\|\[DERIVED\]\|\[CROSS\]\|\[CROSS-PENDING\]" \
      docs/specs/code-standards/section-2.md \
      docs/specs/code-standards/section-4.md \
      docs/specs/code-standards/section-6.md | grep -v "FR-CS-\|§3.2"
@@ -483,6 +491,7 @@ re-verification of all §9.1 and §9.2 checklist items:
 | 1.0 | May 8, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §SECTION 9. All §9.1 and §9.2 items verified on drafting date; §9.3 items pending lead-developer review. | — |
 | 1.0.1 | May 11, 2026 | Claude Code | Adversarial review fixes (audit finding H-03 — fabricated expected values; M-02; L-02): re-ran every §9.1/§9.2 verification command and replaced unrun expected counts with actual outputs — C-02 (2 → 3), C-04 (proxy regex tightened to single-FR rows only), C-05 (2 → 1), C-08 (1 → 1 for nine files, 2 for this file with documented self-reference rationale), Q-04 (added ERR-016 to expected list), Q-08 (line 862 correctly identified as a §3.8 table cell, not a code block). Q-07 partition table rebuilt from 6 synthetic rows to 7 rows matching §5.4.1–§5.4.7 actual subsection structure. No content changes to §9.3 review items. | — |
 | 1.1 | May 11, 2026 | Lead Developer | §9.3 review items R-01 through R-05 all ticked; §9.4 Decision flipped from DRAFT to APPROVED. R-01 cross-spec drift review clean; R-02 lead-developer sign-off captured; R-03 spec-error-log.md intersection check returned no matches; R-04 file-manifest.md convention recognised as folder-level (not per-file); R-05 SPEC_INDEX.md advanced from NOT STARTED directly to APPROVED (intermediate IN REVIEW elided since R-01..R-04 resolved in same cycle as draft). Approval Evidence table populated with May 11, 2026 re-run results. Status field at top of file updated from DRAFT to APPROVED. | Lead Developer |
+| 1.1.1 | August 18, 2026 | Claude Code | **Adversarial-review round-6 finding H5 (this file's site).** C-07's `[manual]` justification read "(no `src/` toolchain)" — false since the `tools/dotnet-ci` gate began compiling the whole `src/` tree on every push. The item's conclusion survives on corrected grounds (the exemplar pair is fenced markdown in a spec appendix; no toolchain compiles that), so the marker stays `[manual]` and the May 8, 2026 verification record is untouched. Wording-only patch; no checklist outcome, count, or §9.4 decision changed. Consequential to round-6 H6: Q-01's tag enumeration and grep pattern extended to the six-tag vocabulary (the sixth tag postdates the May 8, 2026 verification, which is noted in place and left standing). | — |
 
 ---
 

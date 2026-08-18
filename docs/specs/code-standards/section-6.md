@@ -5,7 +5,7 @@
 complexity targets that code written under Spec #20 must satisfy. §3.3 defines *how* to
 write zero-allocation code; §6 defines *what rate* the resulting code is measured against.
 **Created:** May 8, 2026
-**Version:** 1.0.2
+**Version:** 1.1
 **Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 6; `outline-mid.md` v1.2, §6.1–§6.5
@@ -31,7 +31,7 @@ write zero-allocation code; §6 defines *what rate* the resulting code is measur
 
 ## 6.1 Allocation Budget Rules
 
-*Implements:* FR-CS-066 (game-loop budget), FR-CS-067 (UI budget).
+*Implements:* FR-CS-066 (game-loop budget), FR-CS-067 (Presentation/Client-tier budget).
 
 ### Discipline-vs-Budget Split
 
@@ -48,20 +48,24 @@ Stage 1 review.
 
 ### Budgets
 
-| Layer | Allocation limit | Enforcement point | FR |
+| Tier | Allocation limit | Enforcement point | FR |
 |---|---|---|---|
 | Game loop (60 Hz physics path) | **0 bytes / frame** | Unity Profiler / managed-heap snapshot | FR-CS-066 |
-| UI layer (menus, HUD, overlays) | **< 1 MB / frame** | Unity Profiler allocation tracker | FR-CS-067 |
+| Presentation and Client tiers (§3.5.2 tiers 8–9), plus Unity host code outside the gate | **< 1 MB / frame** | Unity Profiler allocation tracker | FR-CS-067 |
 
 **Game-loop budget rationale:** The 60 Hz physics path is the most time-critical path in the
 engine. Any managed allocation on this path risks GC pauses during match simulation.
 Zero-allocation is the only target that eliminates GC jitter entirely; any non-zero budget
 would require case-by-case negotiation and GC tuning.
 
-**UI budget rationale:** UI code does not run on every physics frame and tolerates GC pauses
-that are invisible to the user at inter-frame intervals. The 1 MB/frame ceiling is a
+**Presentation/Client budget rationale:** Presentation- and Client-tier code — screens,
+HUD, overlays, render projections; per §3.5.2 that is tier 8 (`match-viewer`,
+`match-analytics`) and tier 9 (`match-client-core`, `ui-framework`, `client-app`,
+`match-client-unity`, `match-client-web`), plus the Unity host code the gate cannot
+compile — does not run on every physics frame and tolerates GC pauses that are
+invisible to the user at inter-frame intervals. The 1 MB/frame ceiling is a
 conservative limit drawn from `docs/planning/development-best-practices.md`; it prevents
-runaway UI allocations from interfering with the game-loop heap.
+runaway presentation-side allocations from interfering with the game-loop heap.
 
 **Stage 0 status:** Both budgets are *normative rules* at Stage 0. Profiler measurement is a
 Stage 1 enforcement artifact. Stage 0 review verifies the budget numbers are declared and
@@ -76,7 +80,8 @@ cited; it does not run a profiler.
 
 "Per-frame inner loop" means any code that executes once or more per physics frame (60 Hz)
 on every active game entity. The rules in this section apply to all game-loop and
-physics-layer assemblies. They do not apply to editor tooling, test fixtures, or UI code.
+physics-layer assemblies. They do not apply to editor tooling, test fixtures, or
+Presentation/Client-tier code (which carries the FR-CS-067 budget instead, §6.1).
 
 ### FR-CS-068 — Virtual Dispatch Prohibition
 
@@ -259,7 +264,7 @@ and supply the implementation detail that the FR row itself cannot fit.
 | FR | §2.2.7 statement (summary) | Codified in |
 |---|---|---|
 | FR-CS-066 | Game-loop allocation budget = 0 bytes/frame | §6.1 |
-| FR-CS-067 | UI allocation budget < 1 MB/frame | §6.1 |
+| FR-CS-067 | Presentation/Client-tier allocation budget < 1 MB/frame | §6.1 |
 | FR-CS-068 | No virtual calls in per-frame inner loops | §6.2 |
 | FR-CS-069 | No `try/catch` inside per-frame inner loops | §6.2 |
 | FR-CS-070 | All system-level Update methods wrapped in `ProfilerMarker.Auto()` | §6.3 |
@@ -273,6 +278,7 @@ and supply the implementation detail that the FR row itself cannot fit.
 | 1.0 | May 8, 2026 | Claude Code | Initial authoring from `outline-detailed.md` v1.3 §SECTION 6 and `outline-mid.md` v1.2 §6.1–§6.5. | — |
 | 1.0.1 | May 11, 2026 | Claude Code | Adversarial review fix (audit finding L-A): §6.4 "N = 22 bound source" prose corrected — original read "22 outfield players + 2 goalkeepers" (24 total), but association football is 11 per side × 2 sides = 22 with the keepers included. Wording rewritten to make this explicit; substitutes off-pitch noted as excluded from N. No change to the N = 22 numeric bound. | — |
 | 1.0.2 | August 18, 2026 | Claude Code | **Header correction only — no content change.** `**Status:**` read `DRAFT` against `SPEC_INDEX.md`'s record of #20 as **APPROVED (May 11, 2026)**. Corrected as part of the sweep the `ERR-020-002` adoption began: that pass fixed the three section files it touched and left six siblings at DRAFT, which turned a uniform folder-wide staleness into a misleading distinction — six of ten sections reading as not-approved. The FR-CS-056/057 class. Dated August 18, 2026 (commit `98662909`, author date 2026-08-18T03:01 UTC) — a same-session continuation of work that began August 17, 2026 UTC and crossed midnight before landing. | — |
+| 1.1 | August 18, 2026 | Claude Code | **Adversarial-review round-6 finding H4.** §6.1 was the one section still scoping FR-CS-067 to the retired "UI layer (menus, HUD, overlays)" after section-2.md v1.2 rescoped the FR to the Presentation and Client tiers (§3.5.2 tiers 8–9) plus Unity host code outside the gate — the FR's Mechanics-§ column routes readers HERE, so the stale wording read `match-viewer`, `match-analytics`, `match-client-core`, `ui-framework`, `client-app`, `match-client-unity` and `match-client-web` out of the budget. Fixed: the §6.1 budget-table row and its "Layer" column header (→ "Tier", per the v1.3 vocabulary standardisation), the budget rationale paragraph (now enumerating the tier-8/9 assemblies from §3.5.2's table), the §6.5 summary row, the §6.1 *Implements* line, and §6.2's scope sentence ("do not apply to … UI code" → Presentation/Client-tier code, which carries the FR-CS-067 budget instead). No budget value changed — 0 bytes/frame and < 1 MB/frame stand as approved. | — |
 
 ---
 

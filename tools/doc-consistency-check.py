@@ -37,7 +37,9 @@
 # to `main` and pull requests targeting `main` — that workflow's only triggers, so a
 # topic-branch push runs nothing and the gate binds at the merge point. It was wired
 # once green on the tree; a gate that is red on defects a PR did not introduce fails
-# every PR, so keep it green.
+# every PR, so keep it green. NOTE (round 6): the rebuild below un-masks REAL stale
+# citations that were live while the tool read PASS — the tree is red until the
+# owning documents fix them, which is the rebuild's point, not a tool defect.
 #
 # NOT a spell-checker for prose. It only compares a stated number against a number
 # it can derive from the repo (or against the same figure on other surfaces), and it
@@ -46,6 +48,38 @@
 # not read as defects. The window is the sentence, not ±320 chars: the wide window
 # was mutation-proved to let a NEIGHBOURING sentence's "corrected" suppress a
 # genuinely stale citation.
+#
+# ROUND 6 REBUILD (2026-08-18) — two more inverted heuristics found passing over
+# the exact class this tool exists to catch:
+#   H1  The "version-history row" guard exempted EVERY line starting with '|' —
+#       27% of all citations (CLAUDE.md's assembly map, file-manifest.md's
+#       inventory, the roadmap's item tables), three of them live-stale — while
+#       its stated rationale was already served by blank_frozen_history(). It is
+#       narrowed: only rows of a table whose HEADER row's first cell starts with
+#       "version" are exempt (see _version_history_table_row).
+#   H2  A target whose version lives in a `**Version:**` HEADER field (not a
+#       history table) resolved to None and its citations were silently dropped
+#       — 22 of 107, 15 of them to spec-error-log.md, the most-cited document in
+#       the corpus, two live-stale. newest_version() now falls back to RDL's own
+#       VERSION_FIELD_RE (the delegation was half-applied), and citations whose
+#       target STILL cannot be resolved are counted per surface and printed as
+#       "N citations skipped (target version unresolvable)" instead of silently
+#       continued — the same surface-contributes-nothing-must-be-visible rule
+#       the coverage stats already apply, one level down.
+#   Co-landed because H1/H2 un-mask them: a dated-pointer guard (see / full
+#   account / per / cf. immediately BEFORE the filename is a pointer to the
+#   revision documenting an event, not a currency claim — no trailing "at"
+#   required); currency-escape forms for en/em-dash ranges ("v0.17–v0.18"),
+#   ", now at vN", ", currently vN" and "(since advanced to vN)" (M3);
+#   GAP_LIMIT 130 → 60 with ANY-newline rejection and a markup-tolerant
+#   sentence boundary, so a version on the next line or after ".**" never binds
+#   (M4); failure messages that name the run's LAST version, a column offset
+#   and a ±40-char excerpt, because file:line does not locate a citation on
+#   this repo's ~4,000-char lines (M1); and scope extended to
+#   spec-error-log.md, open-issues-resolved.md and docs/tracking/*-design.md
+#   (M5). Landing this rebuild surfaces REAL findings on the live tree — those
+#   are defects for the owning documents' editors, not reasons to re-widen the
+#   guards.
 
 import argparse
 import importlib.util
@@ -91,6 +125,11 @@ HISTORICAL_MARKERS = tuple(re.compile(p, re.I) for p in (
     r"\bretired\b",
     r"table stops at",
     r"ahead of the record",
+    # A figure the sentence itself corrects in place ("its 'all 20 spec
+    # folders' figure is the May-2026 registry — there are now 53") is a
+    # deliberate record of a superseded value with the current one attached —
+    # the cardinality analogue of the ", now vN" citation chain (round 6).
+    r"there (?:are|is) now",
 ))
 
 
@@ -165,6 +204,8 @@ CURRENT_STATE = (
     "src/CLAUDE.md",
     "README.md",
     "docs/tracking/open-issues.md",
+    "docs/tracking/open-issues-resolved.md",
+    "docs/tracking/spec-error-log.md",
     "docs/tracking/CHANGELOG.md",
     "docs/tracking/CHANGELOG-src.md",
     "docs/tracking/file-manifest.md",
@@ -173,6 +214,12 @@ CURRENT_STATE = (
     ".claude/advisors/invariants.md",
     ".claude/agents/advisor-integrity.md",
 )
+# Round 6 (M5): spec-error-log.md (named authoritative in root CLAUDE.md's
+# TRACKING DOCUMENTS table) and open-issues-resolved.md joined the named list
+# above, and every docs/tracking/*-design.md supplement is globbed like
+# .claude/**/*.md — the design supplements are where real staleness was living
+# while the scope omitted them. Their frozen regions (prior-entry chains, own
+# VERSION HISTORY sections) are blanked exactly like every other surface's.
 
 # Line-anchored (blockquote prefix allowed): CHANGELOG-src.md's preamble MENTIONS
 # the marker mid-sentence in its update instructions, and matching that mention
@@ -212,21 +259,33 @@ def current_state_sources(repo, findings):
     """[(path, rel, text, frozen_bytes)] for every in-scope surface.
 
     Named surfaces that do not exist are reported as findings (FN-4: a missing
-    surface must never silently shrink the scope). .claude/**/*.md is globbed in
-    addition; the two .claude files also on the named list are deduplicated.
+    surface must never silently shrink the scope). .claude/**/*.md and
+    docs/tracking/*-design.md (round 6, M5) are globbed in addition; files also
+    on the named list are deduplicated. An EMPTY glob is a finding for the same
+    FN-4 reason: both globs matched dozens of files when they were added.
     """
     out = []
     seen = set()
+
+    def add(p, rel):
+        text, frozen = blank_frozen_history(
+            p.read_text(encoding="utf-8", errors="replace"))
+        out.append((p, rel, text, frozen))
+        seen.add(p.resolve())
+
     for rel in CURRENT_STATE:
         p = repo / rel
         if not p.is_file():
             findings.append((rel, "named CURRENT_STATE surface is MISSING — "
                                   "refusing to treat an absent surface as clean"))
             continue
-        text, frozen = blank_frozen_history(
-            p.read_text(encoding="utf-8", errors="replace"))
-        out.append((p, rel, text, frozen))
-        seen.add(p.resolve())
+        add(p, rel)
+    design_files = sorted((repo / "docs" / "tracking").glob("*-design.md"))
+    if not design_files:
+        findings.append(("docs/tracking/*-design.md",
+                         "no design supplements found — 60 existed when this "
+                         "scope was added (round 6, M5); an empty glob means "
+                         "the scope silently shrank"))
     claude_dir = repo / ".claude"
     claude_files = sorted(claude_dir.glob("**/*.md")) if claude_dir.is_dir() else []
     if not claude_files:
@@ -234,13 +293,10 @@ def current_state_sources(repo, findings):
                          "no .claude markdown files found — the agent-config scan "
                          "is part of this tool's stated scope; an empty glob means "
                          "the scope silently shrank"))
-    for p in claude_files:
+    for p in design_files + claude_files:
         if p.resolve() in seen:
             continue
-        rel = str(p.relative_to(repo))
-        text, frozen = blank_frozen_history(
-            p.read_text(encoding="utf-8", errors="replace"))
-        out.append((p, rel, text, frozen))
+        add(p, str(p.relative_to(repo)))
     return out
 
 
@@ -277,14 +333,20 @@ def _colon_vh_rows(text):
 
 
 def newest_version(path):
-    """Newest version in a file's version-history block(s), or None.
+    """Newest version a file claims for itself, or None.
 
     Delegates to recurring-defect-lint.py's parser: fences stripped (so a
     template inside ```csharp``` is not read as history), and only rows inside
     a VH_HEADING_RE / '#region VersionHistory' block count — a data table whose
     first cell is a dotted decimal (perception-system appendix-b.md's "20.0")
     is not a version row. Falls back to the colon-form heading parser above
-    only when RDL's authoritative parser finds no block at all.
+    when RDL's authoritative parser finds no block at all, and then — round 6,
+    H2 — to RDL.VERSION_FIELD_RE, because most tracking documents carry no
+    version-history table at all: their version lives in a `**Version:**`
+    header field (spec-error-log.md, the most-cited target in the corpus).
+    That is the same authority the table path already delegates to; the
+    delegation was half-applied, which silently dropped every citation of a
+    header-form target.
     """
     try:
         text = RDL.strip_fences(RDL.read(str(path)))
@@ -296,14 +358,56 @@ def newest_version(path):
     if not rows:
         rows = _colon_vh_rows(text)
     keys = [key for (_ln, key, _date, _raw) in rows if key]
-    if not keys:
-        return None
-    return RDL.vstr(max(keys))
+    if keys:
+        return RDL.vstr(max(keys))
+    m = RDL.VERSION_FIELD_RE.search(text)
+    if m:
+        vm = re.match(r"v?(\d+(?:\.\d+)+)\b", m.group(1))
+        if vm:
+            return vm.group(1)
+    return None
 
 
 FILE_TOKEN = re.compile(r"`([A-Za-z0-9_./-]+\.md)`")
 VER_TOKEN = re.compile(r"\**v(\d+(?:\.\d+)+)")
-GAP_LIMIT = 130  # chars after the filename within which a version token binds to it
+# Chars after the filename within which a version token binds to it. Round 6
+# (M4): 130 → 60 — at 130 a version 115 chars away, belonging to a different
+# subject entirely, still bound ("`src/CLAUDE.md` … a way of counting #20 v1.2"
+# read as src/CLAUDE.md-at-v1.2). Any newline in the gap now also refuses the
+# binding (see scan_version_citations).
+GAP_LIMIT = 60
+
+
+def _version_history_table_row(text, line_start):
+    """True when the table row starting at line_start belongs to a table whose
+    HEADER row's first cell starts with "version" — i.e. a genuine
+    version-history table, whose rows are dated records of past revisions.
+
+    Round 6 (H1): the previous guard exempted EVERY line starting with '|',
+    which silently exempted every ordinary current-state table — 27% of all
+    citations could never be reported, three of them live-stale. Heading-form
+    history is already blanked by blank_frozen_history(); this narrowed guard
+    covers only the colon-form / headerless-heading tables that blanking cannot
+    see, by walking back through the contiguous run of '|' lines to the table's
+    first row and requiring its first cell to start with "version".
+    """
+    if text[line_start:line_start + 1] != "|":
+        return False
+    header_start = line_start
+    pos = line_start
+    while pos > 0:
+        prev_start = text.rfind("\n", 0, pos - 1) + 1
+        if text[prev_start:prev_start + 1] != "|":
+            break
+        header_start = prev_start
+        if prev_start == 0:
+            break
+        pos = prev_start
+    header_end = text.find("\n", header_start)
+    if header_end == -1:
+        header_end = len(text)
+    first_cell = text[header_start:header_end].strip().strip("|").split("|", 1)[0]
+    return first_cell.strip(" *`_").lower().startswith("version")
 
 
 def scan_version_citations(repo, sources, findings, stats):
@@ -338,11 +442,42 @@ def scan_version_citations(repo, sources, findings, stats):
                 continue  # this filename cites no version; the NEXT filename
                           # is still evaluated from its own position
             gap = text[m.end():vm.start()]
-            # A sentence boundary or blank line between the filename and the
-            # version token means the token belongs to the NEXT sentence, not
-            # to this filename ("`x.md`. Section files authored (v0.1)…" cites
-            # nothing) — refuse the binding rather than invent a citation.
-            if re.search(r"[.!?](?:\s|$)\s*[A-Z0-9`(]|\n\s*\n", gap):
+            # ANY newline between the filename and the version token refuses
+            # the binding (round 6, M4): on this repo's ~4,000-char table rows
+            # and wrapped prose, a version on the next line usually belongs to
+            # a neighbouring claim ("`src/CLAUDE.md` … <newline> … a way of
+            # counting #20 v1.2" bound spec #20's version to src/CLAUDE.md).
+            if "\n" in gap:
+                continue
+            # A sentence boundary between the filename and the version token
+            # means the token belongs to the NEXT sentence, not to this
+            # filename ("`x.md`. Section files authored (v0.1)…" cites
+            # nothing). The boundary class tolerates closing markup between
+            # the punctuation and the whitespace ("`x.md`.** Bump …" is a
+            # boundary too — round 6, M4).
+            if re.search(r"[.!?][*_)\]\"']*(?:\s|$)\s*[A-Z0-9`(]", gap):
+                continue
+            line_start = text.rfind("\n", 0, m.start()) + 1
+            # Dated-pointer phrasing immediately BEFORE the filename — "Full
+            # account: `spec-error-log.md` v2.17", "per `x-design.md` §6 /
+            # v1.5", "see `y.md` v1.2", "**Source plan:** `spec-plans/….md`
+            # v0.1" — names the revision that DOCUMENTS an event, not the
+            # version the target is at now. The verb-at guard below cannot see
+            # these (the pointer word precedes the filename, not the version),
+            # and no trailing "at" is required (round 6, H2 co-fix; header-form
+            # targets attract exactly this phrasing). The window is unwrapped
+            # (a pointer wraps: "Full\naccount: `…`", "See `CHANGELOG.md` and\n
+            # > `spec-error-log.md` v2.43") and the phrase may point at a LIST
+            # ("see `A.md`, `B.md` v2.42" — up to three chained filenames, each
+            # optionally §-qualified). The $ anchor keeps it adjacent: only
+            # filler/filenames may stand between the pointer word and the
+            # citation, so a "see" about something else cannot suppress.
+            pre = re.sub(r"\s*\n>?\s*", " ", text[max(0, m.start() - 110):m.start()])
+            if re.search(r"\b(?:see|full\s+account(?:\s+in)?|per|cf\.|"
+                         r"promoted\s+from|source\s+plan|tracked\s+in)"
+                         r"[\s*:]*(?:the\s+(?:[\w-]+\s+){0,2})?"
+                         r"(?:`[A-Za-z0-9_./-]+`(?:\s*§[\w.]+)?\s*(?:,|and|\+|;)\s*){0,3}$",
+                         pre, re.I):
                 continue
             # A version reached through "corrected there AT v1.2", "landed at v0.3",
             # "OPENED … v0.1" names the REVISION IN WHICH something happened. That is
@@ -367,51 +502,77 @@ def scan_version_citations(repo, sources, findings, stats):
                     continue  # ambiguous or unknown basename: refuse the guess
             if pathlib.Path(target).resolve() == src.resolve():
                 continue
-            stats[rel]["citations"] += 1
+            # A citation inside a VERSION-HISTORY table row is a dated record
+            # of what was true at that revision. Round 6 (H1): only rows of a
+            # genuine version-history table are exempt — see the helper.
+            if _version_history_table_row(text, line_start):
+                continue
             actual = newest_version(target)
             if actual is None:
+                # Round 6 (H2): visible, not silent — the silent `continue`
+                # here dropped 22 of 107 citations with no output. They are
+                # counted per surface and totalled in the output instead.
+                stats[rel]["unresolvable"] += 1
                 continue
+            stats[rel]["citations"] += 1
             cited = vm.group(1)
-            if cited == actual:
-                continue
-            # This repo annotates rather than rewrites, so a superseded citation
-            # is kept and the current version appended: "v0.17, now v0.18" — a
-            # transition record reads "vOLD → vNEW" — and the CHANGELOG head
-            # entry writes "**v1.5** *(since v1.6)*". Any of the three satisfies
-            # the check when the appended version IS the current one; an
-            # annotation naming a NON-current version is itself stale and still
-            # fails. (?!\d|\.\d) — NOT (?![0-9.]) — so a sentence-final period
-            # after the version does not defeat the escape.
             # This repo annotates rather than rewrites, and its currency notes CHAIN:
             # "v1.0.1 → v1.1, since advanced to v1.3" names three versions, and what
             # makes the claim current is the LAST one. So scan the annotation run that
             # follows the citation and accept when the final version named is current.
-            # An annotation naming a non-current version is itself stale and still fails.
+            # An annotation naming a non-current version is itself stale and still
+            # fails. Round 6 (M3): the connector alternation gains en/em-dash ranges
+            # ("v0.17–v0.18"), "now at", "currently", and the paren branch tolerates
+            # "(since advanced to vN)" — all live annotation forms the previous
+            # regex rejected.
             tail = text[vm.end():vm.end() + 96]
             run = re.match(
-                r"(?:\s*(?:\*\*)?\s*(?:,?\s*now\s+|→\s*|->\s*|\*?\(\s*(?:since|now)\s+"
+                r"(?:\s*(?:\*\*)?\s*(?:,?\s*now\s+(?:at\s+)?|,?\s*currently\s+"
+                r"|→\s*|->\s*|[–—]\s*"
+                r"|\*?\(\s*(?:since|now)\s+(?:advanced\s+to\s+)?"
                 r"|,?\s*since\s+advanced\s+to\s*)(?:\*\*)?\s*v\d+(?:\.\d+)+"
                 r"(?:\*\*)?\s*\)?\*?)+", tail)
+            effective, cite_end = cited, vm.end()
             if run:
                 named = re.findall(r"v(\d+(?:\.\d+)+)", run.group(0))
-                if named and named[-1] == actual:
-                    continue
+                if named:
+                    effective = named[-1]
+                    cite_end = vm.end() + run.end()
+            if cited == actual or effective == actual:
+                continue
+            # "all fixed (`spec-error-log.md` v1.81)", "withdrawn
+            # (`spec-error-log.md` v1.75)", "landed atomically (`….md` v1.30:
+            # ERR-…)" — an event verb followed by a PARENTHESIZED citation is
+            # this repo's idiom for "documented in that revision of the log":
+            # a dated record, the verb-at guard's shape with the verb before
+            # the filename and "(" in place of "at". Suppressed ONLY when no
+            # currency chain follows (a trailing ", now vN" reasserts currency
+            # and is checked above like any other chain — so "recorded … (`x`
+            # v1.5, now v1.6)" still fails when the target moved to v1.7).
+            if effective == cited and re.search(
+                    r"(?:corrected|fixed|landed|recorded|resolved|opened|added|"
+                    r"filed|amended|revised|withdrawn|converged|captured)"
+                    r"\b[^`()\n]{0,40}?\(\s*$", pre, re.I):
+                continue
             # Same-prefix coarser citation (v1.2 cited, target at v1.2.1) is
             # coarse but not wrong.
-            if actual.startswith(cited + "."):
-                continue
-            # A citation inside a version-history ROW is a dated record of what
-            # was true at that revision. Those rows start with `|`.
-            line_start = text.rfind("\n", 0, m.start()) + 1
-            if text[line_start:line_start + 1] == "|":
+            if actual.startswith(cited + ".") or actual.startswith(effective + "."):
                 continue
             if historically_marked(text, m.start(), vm.end()):
                 continue
+            # Round 6 (M1): on this repo's ~4,000-char lines, file:line does not
+            # locate a citation — report the column too, name the run's LAST
+            # version when a chained annotation matched (the defect is the final
+            # claim, not the first token), and quote a ±40-char excerpt.
             line = text.count("\n", 0, m.start()) + 1
+            col = m.start() - line_start + 1
+            excerpt = text[max(0, m.start() - 40):min(len(text), cite_end + 40)]
+            excerpt = excerpt.replace("\n", " ")
+            chained = f" (chained from v{cited})" if effective != cited else ""
             findings.append(
-                (f"{rel}:{line}",
-                 f"cites `{name}` at v{cited}; that file's newest "
-                 f"version-history row is v{actual}"))
+                (f"{rel}:{line}:{col}",
+                 f"cites `{name}` at v{effective}{chained}; that file's newest "
+                 f"recorded version is v{actual} — “…{excerpt}…”"))
 
 
 def scan_cardinalities(repo, sources, findings, stats):
@@ -520,7 +681,8 @@ def main():
 
     findings = []
     sources = current_state_sources(repo, findings)
-    stats = {rel: {"citations": 0, "cardinalities": 0, "agreement figures": 0}
+    stats = {rel: {"citations": 0, "cardinalities": 0, "agreement figures": 0,
+                   "unresolvable": 0}
              for _p, rel, _t, _f in sources}
 
     scan_version_citations(repo, sources, findings, stats)
@@ -542,14 +704,20 @@ def main():
                          "surface — the cardinality scan is not reaching its inputs"))
 
     if not args.quiet:
-        print("coverage (surface: in-scope bytes / citations / cardinality "
-              "claims / agreement figures):")
+        print("coverage (surface: in-scope bytes / citations checked / "
+              "cardinality claims / agreement figures / citations skipped):")
         for _p, rel, text, frozen in sources:
             s = stats[rel]
             note = f"  [{frozen} chars frozen history excluded]" if frozen else ""
             in_scope = sum(len(ln) for ln in text.splitlines() if ln.strip())
             print(f"  {rel}: {in_scope} chars in scope / {s['citations']} / "
-                  f"{s['cardinalities']} / {s['agreement figures']}{note}")
+                  f"{s['cardinalities']} / {s['agreement figures']} / "
+                  f"{s['unresolvable']}{note}")
+    # Round 6 (H2): a citation whose target's version cannot be resolved is
+    # SKIPPED, never silently — "a surface contributing nothing is visible
+    # rather than assumed", one level down. Always printed, even with --quiet.
+    skipped = sum(s["unresolvable"] for s in stats.values())
+    print(f"{skipped} citation(s) skipped (target version unresolvable)")
     print("measured:", ", ".join(f"{k}={v}" for k, v in sorted(measured.items())))
     if not findings:
         print("PASS — no stale cross-document version citation or cardinality "
@@ -599,3 +767,25 @@ if __name__ == "__main__":
 # |         |            |             | spec files use them; RDL's regex does not    |
 # |         |            |             | match the colon inside the bold). Header     |
 # |         |            |             | gains Author + this block.                   |
+# | 1.2     | 2026-08-18 | Claude Code | AR round-6 rebuild (2 High + 4 co-required): |
+# |         |            |             | H1 — the every-'|'-line exemption narrowed   |
+# |         |            |             | to rows whose table HEADER's first cell      |
+# |         |            |             | starts with "version" (27% of citations had  |
+# |         |            |             | been unreportable, 3 live-stale); H2 —       |
+# |         |            |             | newest_version falls back to                 |
+# |         |            |             | RDL.VERSION_FIELD_RE for header-form targets |
+# |         |            |             | (22 silently dropped citations, 2 live-      |
+# |         |            |             | stale), still-unresolvable citations counted |
+# |         |            |             | + printed, dated-pointer pre-guard           |
+# |         |            |             | (see/full account/per/cf., no "at"           |
+# |         |            |             | required); M3 — currency escapes gain        |
+# |         |            |             | en/em-dash ranges, "now at", "currently",    |
+# |         |            |             | "(since advanced to vN)"; M4 — GAP_LIMIT     |
+# |         |            |             | 130→60, any-newline gap rejection, markup-   |
+# |         |            |             | tolerant sentence boundary; M1 — findings    |
+# |         |            |             | name the run's LAST version + column +       |
+# |         |            |             | ±40-char excerpt; M5 — scope gains           |
+# |         |            |             | spec-error-log.md, open-issues-resolved.md,  |
+# |         |            |             | docs/tracking/*-design.md (empty glob =      |
+# |         |            |             | finding). Real findings on the live tree are |
+# |         |            |             | expected output, owned by the documents.     |

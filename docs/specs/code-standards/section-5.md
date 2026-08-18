@@ -7,7 +7,7 @@ traceability table (§5.5), and the determinism verification handoff note.
 
 **Created:** May 7, 2026
 **Modified:** August 18, 2026
-**Version:** 1.0.3
+**Version:** 1.1
 **Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 5
@@ -30,9 +30,19 @@ traceability table (§5.5), and the determinism verification handoff note.
 
 ## 5.1 Stage 0 Verification Model
 
-At Stage 0 no source code exists; all static analysis tools are therefore untriggered
-and unCalibrated. Conformance verification is **manual review** against the FRs in
-§2.2, using the reviewer checklist in §5.4.
+This section was authored (May 2026) when `src/` held no source code and no static
+analysis tool was configured. Both premises have since expired — coding began
+May 19, 2026, and as of August 18, 2026 the tree holds 35 production assemblies and
+947 `.cs` files (re-derive: `ls -d src/*/ | wc -l`; `find src -name '*.cs' | wc -l`),
+with two of §5.2's tools live in CI (`.github/workflows/ci.yml`): `dotnet format
+whitespace --verify-no-changes` runs on every push over a synthetic project (advisory —
+a failure emits a warning and exits 0, "non-blocking until repo opts in"), and
+`tools/dotnet-ci/run-gate.sh` compiles the entire tree and runs every NUnit suite
+(blocking; non-certifying Linux shim). The **custom Spec #20 Roslyn analyzer set,
+`.editorconfig`, and `BannedSymbols.txt` from §5.2's tool table remain unbuilt** —
+none exists anywhere in the repository — so for the FRs those tools would enforce,
+conformance verification remains **manual review** against the FRs in §2.2, using the
+reviewer checklist in §5.4.
 
 **Process:**
 
@@ -44,10 +54,13 @@ and unCalibrated. Conformance verification is **manual review** against the FRs 
    this file", "editor-only code — §3.9.3 carve-out applies").
 4. The completed checklist is preserved in the PR review trail for audit purposes.
 
-**No tooling required at Stage 0.** The absence of tooling is intentional (KD-4 in
-§1.3): empirical lint baselines cannot be established against non-existent code, and
-committing to configuration files now would produce arbitrary thresholds. The Stage 0+1
-transition (§5.2) is the correct moment to activate tooling.
+**Tooling status.** The Stage 0 absence of tooling was intentional (KD-4 in §1.3):
+empirical lint baselines cannot be established against non-existent code, and
+committing to configuration files then would have produced arbitrary thresholds. The
+Stage 0+1 transition (§5.2) — the designated moment to activate tooling — has since
+arrived: the format check and the whole-tree compile/test gate are wired (see above),
+while the analyzer-backed remainder of §5.2's tool table is still owed and the D1
+numeric thresholds remain deferred (§7.5) pending a profiled baseline.
 
 **Scope of manual review:** All MUST and MUST NOT FRs are subject to review. SHOULD
 FRs are reviewed with the understanding that documented deviation is acceptable
@@ -181,8 +194,8 @@ resolves. FR-CS-009 is MAY-level; no pass/fail check required.
         in formula/system/struct code? (FR-CS-016)
 
 [ ] 2. Tag in doc comment — Every constant carries its CLAUDE.md tag
-        ([GT]/[EST]/[FIXED]/[DERIVED]/[CROSS]) in the immediately
-        preceding XML doc comment? (FR-CS-017)
+        ([GT]/[EST]/[FIXED]/[DERIVED]/[CROSS]/[CROSS-PENDING]) in the
+        immediately preceding XML doc comment? (FR-CS-017)
 
 [ ] 3. [FIXED] storage — [FIXED] constants are public const with ALL_CAPS? (FR-CS-018)
 
@@ -193,13 +206,15 @@ resolves. FR-CS-009 is MAY-level; no pass/fail check required.
         spec-error-log.md entry? (FR-CS-020)
 
 [ ] 6. [DERIVED]/[CROSS] — [DERIVED] constants carry formula doc comment;
-        [CROSS] constants cite authoritative spec & section? (FR-CS-021–022)
+        [CROSS] constants cite authoritative spec & section ([CROSS-PENDING]
+        additionally the spec-error-log back-prop ID — §3.2.3)? (FR-CS-021–022)
 
 [ ] 7. No magic numbers — No unqualified numeric literals in formula/system/
         struct code (permitted exceptions per FR-CS-024 checked)? (FR-CS-023)
 
 [ ] 8. Catalogue naming & region order — File named <SpecName>Constants.cs;
-        regions ordered [FIXED]→[DERIVED]→[CROSS]→[GT]→[EST]? (FR-CS-025)
+        regions ordered [FIXED]→[DERIVED]→[CROSS]→[CROSS-PENDING]→[GT]→[EST]?
+        (FR-CS-025)
 ```
 
 ---
@@ -479,6 +494,7 @@ belongs to Spec #16 and Spec #19.
 | 1.0.1 | May 11, 2026 | Claude Code | Adversarial review fix (audit finding L-B): §5.5 FR-CS-045 severity changed from `–` ("not analyzer-enforced", which read as "no enforcement") to `W (manual)` to signal "MUST-level rule, manual-review enforcement per PR" — aligned with FR-CS-063's existing `W` treatment. §5.5 footnote prose extended to explain the W-manual semantic. No change to the rule itself. | — |
 | 1.0.2 | August 17, 2026 | Claude Code | **`ERR-020-002` adopted.** §5.4.5 checklist item 1 restated against the §3.5.2 ten-tier order (it named the retired three-layer chain) and extended to cover FR-CS-046a's intra-tier acyclicity. The §5.5 traceability row for FR-CS-046 covers FR-CS-046a as a sub-clause of the same rule; the 73-row count is unchanged. Header corrected: `Status DRAFT` against a SPEC_INDEX status of APPROVED. **⚠️ ANNOTATED (v1.0.3, August 18, 2026): this row's description is now FALSE of its own file** — a later, unversioned edit added dedicated §5.5 traceability rows for FR-CS-046a and FR-CS-046b (75 rows total) and rewrote the coverage note to say so, superseding both the "covers FR-CS-046a as a sub-clause of the same rule" mechanism and the "73-row count is unchanged" claim, while the header stayed at 1.0.2 and the file's Purpose line still advertised a "73-row" table. The unversioned edit is versioned by the 1.0.3 row below; this row is left in place per the annotate-don't-rewrite convention. | — |
 | 1.0.3 | August 18, 2026 | Claude Code | **Adversarial-review findings, reviewed round (Mediums).** (1) Versions the previously unversioned edit annotated in the 1.0.2 row above: §5.5 gained dedicated traceability rows for FR-CS-046a and FR-CS-046b, and the coverage note was rewritten to "75 rows in total" with the sub-clauses stated outside the 73-FR count. (2) Header Purpose line "73-row" → "75-row" to match the table the file actually holds. (3) §5.4.5 item 1 extended to cover **FR-CS-046b** — §5.5's FR-CS-046b row routed its checklist path to "§5.4.5 item 1", but item 1 cited only FR-CS-046/046a and never mentioned Infrastructure; it now checks both FR-CS-046b clauses (no ordered-tier → Infrastructure reference; Infrastructure references only tier 0 and its peer) — and its title standardised "Layer order" → "Tier order" per the §3.5.2 vocabulary. | — |
+| 1.1 | August 18, 2026 | Claude Code | **Adversarial-review round-6 finding H5.** §5.1's opening ("At Stage 0 no source code exists; all static analysis tools are therefore untriggered") and its "No tooling required at Stage 0" paragraph both asserted a state fifteen months stale — and the opening contradicted the §5.1 process list two lines below it, which legislates for PRs "that introduce or modify `.cs` files under `src/`". Restated against the live tree, every figure re-derived August 18, 2026: 35 production assemblies (`ls -d src/*/ | wc -l`), 947 `.cs` files (`find src -name '*.cs' | wc -l`), `dotnet format whitespace --verify-no-changes` advisory on every push and `tools/dotnet-ci/run-gate.sh` blocking on every push (both in `.github/workflows/ci.yml`). What genuinely remains missing is stated without overreach: the custom Spec #20 Roslyn analyzer set, `.editorconfig`, and `BannedSymbols.txt` exist nowhere in the repository, so those FRs remain manually reviewed and the KD-4/D1 threshold deferral stands (no profiled baseline yet). Consequential to round-6 H6 (see section-3.md v1.6): §5.4.2's checklist items 2, 6 and 8 extended to the six-tag vocabulary and the six-slot region order. | — |
 
 ---
 
