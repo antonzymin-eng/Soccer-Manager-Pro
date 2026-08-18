@@ -7,6 +7,10 @@
 > **The creation gap itself is NOT closed.** §7 item 1 named what owns it; **§10 (August 9, 2026)
 > retracts that ranking on re-measurement** and puts two bounds ahead of it — read §10 first, and
 > treat every figure in §2, §4 and §8 as pre-C1 unless §10.1 restates it.
+> **§11 (bisect, August 10 2026; recorded August 17)** settles who owns the failing
+> `sim_match_engine_close_chance` bound: **not** the -021/-022/-023 shot-lane chain, whose directional
+> effect over 18 paired seeds is −0.027 ± 0.039, but **C1 / `ERR-012-011`** at −0.189 ± 0.038, 16 of
+> 18 seeds down. It confirms §10.9 independently. Every §11 figure predates the W2 tackle wiring.
 > **Owner pass:** §5.Z.24. Predecessor: `gk-conversion-at-contact-design.md` §7 item 4 (§5.Z.23),
 > which re-localized §5.Z.21's "possession churn" residual to this stage.
 > **Instrument:** `src/match-engine/tests/CloseChanceDiagnosticTests.cs` (env-gated,
@@ -905,6 +909,199 @@ instrument's own report output for both §10.6 and §10.8 and was never read. Th
 instrument, which was correct both times; it was reading only the tables that addressed the
 hypothesis already held.
 
+---
+
+## 11. The shot-lane regression, bisected — and the regression that is actually live
+
+> **Measured August 10, 2026; recorded here August 17, 2026.** Instrument: a per-seed probe carrying
+> `MatchEngineCloseChanceScenarios.PlayOne` verbatim and reporting **per seed** instead of pooling.
+> It reproduces the recorded figures exactly — seed `0xD1A6D05E` at post-chain main reads
+> n = 192 / meanCos = −0.2320 / share = 0.3854 against the Acceptance-3 row's 192 / −0.232 / 0.385,
+> and the tree it was measured at reads −0.1647 on the scenario pair against that tree's gate
+> reading of −0.165. That agreement is what licenses every other number in this section.
+> **Corpus:** the six close-chance seeds plus twelve fresh ones, 90 minutes each — 18 seeds × 6
+> variants, 108 full matches.
+>
+> **CURRENCY — read before quoting any figure below.** Every tree in this section predates the **W2
+> tackle wiring** (`ERR-014-006`, merged `ba40114`). The comparisons are controlled — within each
+> table only the named files vary — so the *attributions* stand. The *absolute* per-seed values are
+> not what this metric reads at today's `main`, and restating them needs a re-run on a post-W2 tree.
+> The gate figures quoted below (`MatchEngine.Tests` 447 passed / 1 failed / 10 skipped, 49 m 4 s,
+> `sim_match_engine_close_chance` at `meanCosine = −0.165` / `goalwardShare = 0.407`) are that
+> pre-W2 tree's, not a claim about main today.
+>
+> **Relationship to §10.9.** §10.9 reached the same verdict from the other direction — measuring the
+> `DRIBBLE_GOAL_DIR_MIN_MODIFIER` falsifier at post-C1 HEAD, it found the locked mechanism intact and
+> concluded the band moved because its **population** changed, and the owner confirmed "hold red, do
+> not rebaseline a third time" on August 11. This section is the independent confirmation from the
+> pre-C1 side: it bisects *which* commit moved the population and prices C1's cost directly. The two
+> agree, and neither was derived from the other.
+
+**Why this section exists.** The Acceptance-3 row (§9) recorded the cosine regression as
+seed-asymmetric, named the chain's own P5 residuals as the suspects — "the withdrawn -021
+population-preserving claim, -022's uncalibrated added blockers" — and handed the pull-back to the
+KD-W1 calibration pass. All three statements are now measured. **The first is right, the second is
+wrong, the third has nothing to act on — and the regression that was failing the gate is a
+different change entirely.**
+
+### 11.1 The bisect
+
+The three changes touch only `OptionGenerator.cs`, `UtilityWeights.cs` and `DecisionTreeConstants.cs`
+(plus their suite). Rather than checking out four historical trees — which would confound the shot
+lane with #41 T2, the `LineupSelector.TrySelect` collapse and the `MatchEngine.ConfigureSquads`
+overload, all landing in the same window — **the tree is held at `64513e4` and only those files are
+swapped** across the four states. All four build clean. Mean final-third dribble cosine:
+
+| seed | P `03688be` (pre-chain) | A `8f9fd6f` (−021) | B `a2987be` (+ −022) | C `64513e4` (+ −023) |
+|---|---|---|---|---|
+| 0x0F1E…78 | +0.0743 | +0.0743 | **+0.2700** | +0.0776 |
+| 0x1A2B…81 | −0.1908 | −0.1908 | −0.1908 | −0.2076 |
+| 0x5EED…03 | −0.0326 | −0.0326 | −0.0326 | **+0.2278** |
+| 0x5EED…04 | −0.1097 | −0.1097 | −0.0540 | −0.0799 |
+| **0xD1A6D05E** | **+0.1168** | **+0.1168** | **+0.1168** | **−0.2320** |
+| 0xD1A6D05F | +0.1253 | +0.1282 | +0.0657 | +0.0565 |
+| *6-seed pooled* | *+0.0048* | *+0.0041* | *+0.0257* | *−0.0272* |
+| *the scenario's 2 seeds, pooled* | *+0.0977* | *+0.0977* | *+0.1911* | *−0.1192* |
+
+**Seed `0xD1A6D05E` is bit-identical at P, A and B** — the same 156 dribbles and the same +0.1168 at
+all three — **and moves only at C. The regression is ERR-008-023, alone.** Neither −021 nor −022
+touches that seed.
+
+Read the bottom row too: on the scenario's own pair, −022 moved the pooled figure *up* to +0.1911,
+better than pre-chain. **Both recorded suspects are refuted** — the one that was supposedly
+population-preserving is, and the one accused of an uncalibrated regression improved the metric.
+
+### 11.2 The coupling is population, not mechanism
+
+No code path lets the shot lane reach this metric directly. `UtilityScorer.ScoreDribble` has no
+`GoalOpeningScore` term — it is zone × dribbling × agility × pressure × `DirectionQuality_DRIBBLE` —
+and the direction comes from `OptionGenerator.GenerateDribbleCandidate`'s 8-sector space scan, whose
+ties resolve to sector 0, which is `AgentFacingDirection` by construction (the ERR-008-024 defect,
+recorded at that method). **In the common case the measured cosine is where the carrier already
+happened to be facing, not a decision at all.**
+
+`ComputeGoalOpeningScore` reaches it only by gating whether a SHOOT option exists
+(`MIN_GOAL_VISIBILITY`) and by setting `PowerIntent`. Move either and the match takes a different
+path, so the population of final-third dribbles is a different population. On `0xD1A6D05E` the whole
+−0.349 swing rides on **four extra final-third shots** — `ft3Shoot` 15 → 19 — which also carried the
+dribble count 156 → 192.
+
+### 11.3 −021 was measurably inert, which confirms −022's diagnosis by another route
+
+−021 leaves **five of six seeds bit-identical** (the sixth moves +0.0029). For a change that rescales
+every blocker's occlusion continuously, that is only possible if there were almost no surviving
+blockers to rescale — which is exactly what ERR-008-022 found independently: the goal-centre-plane
+bound discarded the far-post blocker on 20,213 of 20,213 sampled off-centre shooters and dropped a
+goal-line keeper for every shooter position.
+
+So −021's "population-preserving" claim held in the live engine — but not for the reason it gave (the
+rectangle/trapezoid integral identity, which −022 withdrew). It held because the bound above it was
+throwing the geometry away. **−021 did nothing at all until −022 gave it blockers to price.**
+
+*(Naming note: `ERR-008-021` throughout this section means the write-up whose form SHIPPED — the
+August 5 near-post entry landed as `accc941`. The second `## ERR-008-021` in `spec-error-log.md`,
+from PR #305, is marked SUPERSEDED by the `ERR-028-019` reconciliation and its implementation was
+discarded at merge `14d0796`; nothing here refers to it.)*
+
+### 11.4 Over 18 seeds the chain has no directional effect
+
+Twelve fresh seeds added to the six, measured at P and at C, paired:
+
+| set | k | per-seed Δ mean | sd | se | t | 95% CI | sign |
+|---|---|---|---|---|---|---|---|
+| corpus | 6 | −0.0235 | 0.196 | 0.080 | −0.29 | [−0.191, +0.144] | 3 up / 3 down |
+| fresh | 12 | −0.0294 | 0.160 | 0.046 | −0.64 | [−0.126, +0.068] | 5 up / 7 down |
+| **all** | **18** | **−0.0274** | **0.167** | **0.039** | **−0.70** | **[−0.110, +0.055]** | **8 up / 10 down** |
+
+−023 alone spans −0.349 to +0.260 per seed — both signs, six of six seeds moved. The between-seed
+spread of the metric is sd ≈ 0.15–0.18 at both ends of the chain. **Any change that perturbs the
+trajectory moves a single seed's mean cosine with sd ≈ 0.17, and the shot-lane chain's directional
+effect is −0.03 ± 0.04.**
+
+This is not a claim that the metric is bad — §11.5 is the counter-example. What is inadequate is a
+**two-seed pooled estimator of a difference**. Across all 153 pairs drawn from these 18 seeds, the
+two-seed pooled P→C shift has sd = 0.110 and ranges −0.387 to +0.225; the scenario pair's observed
+−0.217 sits at the **4.6th percentile** — a one-in-twenty draw. Two further facts about the bound:
+**4 of 18 seeds already sit below −0.16 at P**, before any of the chain landed (5 of 18 at C); and
+the scenario's pair was selected — correctly, and it says so — for maximum pre/post separation on
+**ERR-008-018**. Reading a later, unrelated change off the same pair is selection on the outcome
+variable.
+
+### 11.5 The regression that is actually live is C1, and it *is* a mechanism
+
+The same 18 seeds, measured at four more points along main:
+
+| tree | what it adds | 18-seed pooled | per-seed Δ vs previous | sign |
+|---|---|---|---|---|
+| `64513e4` | the shot-lane chain (= C above) | −0.0190 | — | — |
+| `ba4e194` | #29/#41 balance pass, B9c, lint hygiene | −0.0190 | **0.0000 — bit-identical on all 18** | — |
+| `e1480ee` | **C1 / ERR-012-011** (#12 phase from TEAM possession) | **−0.2225** | **−0.1894 ± 0.0375, t = −5.05** | **2 up / 16 down** |
+| `15f4ffd` | the ERR-008-024 refusal, the instruments, docs | −0.2225 | **0.0000 — bit-identical on all 18** | — |
+
+The two zero rows are not filler. `ba4e194` matching `64513e4` on every seed says the whole #29/#41
+balance pass, B9c and the 275-error lint sweep are inert on the match engine, which they should be.
+`15f4ffd` matching `e1480ee` on every seed **verifies by execution** the ERR-008-024 refusal's
+behaviour-neutrality claim — until now supported only by "`git diff` has zero non-comment lines",
+which is an argument about the diff, not about the engine. **C1 accounts for the entire shift,
+exactly and alone.**
+
+**17 of 18 seeds are negative at `15f4ffd` and 15 of them sit below the −0.16 bound.** The scenario
+pair pools to −0.1647, which is the gate reading recorded against C1 in the wiring backlog (−0.165).
+
+**That is what a mechanism looks like in this instrument, and it is the positive control the shot-lane
+comparison needs.** ERR-008-018 flipped six seeds of six; C1 moves sixteen of eighteen one way at
+t = −5.05; the shot-lane chain splits 8/10 at t = −0.70. The metric discriminates real mechanisms
+perfectly well — it is the two-seed estimator of a *difference* that cannot.
+
+C1 also has a mechanism already written down, in this document. §10 recorded that C1's `InPoss`
+`PullFactor` column is **less** advanced than the `TransToAtk` column it replaced, moving the deepest
+composed slot 23.0 → 25.7 m from goal. Support slots that pull players away from goal turn the
+carrier's facing away from goal, and the carrier's facing is what this metric reads (§11.2). The
+`n` column agrees that the population changed wholesale: mean dribbles per seed 181 → 328, consistent
+with final-third possession-phase share going 24.2% → 96.8%.
+
+### 11.6 What follows
+
+- **There is nothing here for the KD-W1 calibration pass to pull back on the shot lane.** The
+  Acceptance-3 row hands it a regression to recover; the chain moved the population by −0.03 ± 0.04.
+  Re-tuning a shot-lane `[GT]` to recover 0.35 of cosine on one seed would be fitting a dial to a
+  resample — a sharper version of the mistake KD-W1 exists to prevent.
+- **The −0.16 rebaseline was fitted to a tail draw**, and it is nonetheless still doing its job: it
+  refuses the pre-fix world (pooled ≈ −0.29). Nothing here argues for moving it again — which is the
+  same disposition §10.9 item 6 records the owner confirming on August 11, reached independently.
+- **The live failure is C1's and belongs to C1's owner.** It is a real, directional, 16-of-18
+  regression with a documented mechanism (the `InPoss` column's depth), and it is the thing to fix if
+  the bound is to pass honestly. The wiring backlog already records C1's value as "a correct label
+  plus a first-time-exercisable `InPoss` column for the calibration pass"; this measurement prices
+  what that column costs.
+- **Seed count is an owner call, not this pass's to take.** Widening the scenario from 2 seeds to 6
+  adds four 90-minute matches to a suite that already runs ~23 minutes. The cheaper alternative —
+  leave it at 2 and treat the predicate as a floor rather than an estimator — is what the corrected
+  scenario comments now say.
+- **The tie-break fix (§7 item 6 / ERR-008-024) was not touched**, per §10.5: it stalls
+  `sim_match_engine_play_develops` at tick 18465 with zero goals, and sending the ball goalward stays
+  blocked behind §10.2's box geometry and §10.3's aerial reception. The bisect adds a second reason
+  not to chase this bound with a dribble-direction change — the bound moved for reasons no
+  dribble-direction change caused.
+
+### 11.7 Recorded, not fixed
+
+- **The scenario's two-seed pool is a floor, not an estimator.** Comments corrected; seed count
+  unchanged.
+- **`ft3Shoot` dispersion widened sharply at −023** — 14 to 95 final-third SHOOT decisions per 90
+  minutes across the twelve fresh seeds, against 12 to 39 at P. −023 raised the shot count and its
+  spread a long way. That is a shot-rate observation the §5.Z chain owns; it is recorded here only
+  because the bisect surfaced it.
+- **Every figure in this section is pre-W2.** Re-running the 18-seed corpus on a post-`ba40114` tree
+  would restate the absolute values and re-price C1's cost against a build where tackles exist. Not
+  done here; the attributions do not depend on it.
+- **`ERR-008-023` had no body entry**, and was cited from `CLAUDE.md`, `open-issues.md`, this
+  document and `OptionGenerator.cs` while living only in the changelog. Written in the same pass that
+  recorded this section (`spec-error-log.md` v2.17). *(The separate `## ERR-008-021` double-allocation
+  this bisect also surfaced was reconciled independently on `main` at `ERR-028-019` / v2.13, which
+  supersedes the resolution drafted alongside the measurement; the id was deliberately not
+  renumbered either way.)*
+
 #region VersionHistory
 | Version | Date | Author | Notes |
 |---|---|---|---|
@@ -921,4 +1118,5 @@ hypothesis already held.
 | 2.0 | 2026-08-09 | — | **AR pass 2, Finding L-3.** §10.9's "factor of seven from the collapse case (a delta ≈ 0.035)" cited a number derived nowhere in this document, and read as reverse-engineered to produce "seven". Provenance recorded: the advisory read that specified this falsifier predicted term-off ≈ −0.20 for a collapsed mechanism, and −0.165 − (−0.20) = 0.035 — a prediction registered BEFORE the run, not a figure fitted after it, but a prediction rather than a derivation, and the ratio is only as meaningful as it. Also noted: the intact-case "≈ −0.45" is that read's own approximation; computed exactly from its stated +0.30 it is −0.465. No measured number changes and no conclusion moves. |
 | 2.1 | 2026-08-09 | — | **§10.10 added: Report C5d (the cross landing-point census), measured in §10.8's own run and not read until now, WITHDRAWS §10.8's "attack the ball" re-ranking a second time.** At a Cross's first ground contact an attacker is within 5 m in ~96–99% of episodes (home n=79, 30.8 m from goal, 1.10 attackers within 5 m, 82% exactly one; away n=91, 32.2 m, 1.07, 91% exactly one) — the opposite of §10.8's headline. §10.8's Series 1 pooled 1,081 episodes against only 392 aerial final-third passes under a gate that closes on every ground touch or end change, and its distribution is bimodal (30–37% of episodes carry a defender within 0.5–1.5 m, with a long tail dragging the mean to 4–6 m); §10.8 item 2 read the Series 1b contamination signal (ball at 0.59 m, on the 0.50 m gate floor) correctly and ranked on the same population anyway. The mechanism §10.8 proposed to build already exists and is live — `OptionGenerator.cs:822` `GenerateInterceptCandidate` (#8 §3.1.9 INTERCEPT), `U_BASE_INTERCEPT = 0.55`, every off-ball agent every stride — so §10.6's and §10.8's shared "nothing moves a player to where the ball is going" claim is FALSE; what is true is narrower — the projection is Z-blind (`FilteredView.BallPerceivedPosition` is `Vector2`, a #7 surface), its horizon `MAX_INTERCEPT_TIME` = 1.5 s is frozen under KD-W1 against a measured 2.83 s mean time-to-rest, and no instrument reports off-ball action mix at all. The real signal is the 30.8/32.2 m landing distance itself — crosses land at roughly twice the 16.5 m box depth from goal — which points at the delivery (C4, already in the wiring backlog), not at pursuit. No new lever ranked; what an honest ranking needs is recorded (per-delivery reachability + a provenance tag on the aerial census), along with the fact that this project has no football reference figure for nearest-agent separation anywhere, which is what let 4–6 m read as a finding. Fourth retraction in this chain; the lesson recorded is that the deciding number was in the instrument's own output for both §10.6 and §10.8 and was never read — the instrument was correct both times, only the reading was selective. §10.8 conclusion 3 struck through and marked WITHDRAWN AGAIN, pointing here; its Series 1/1b/2/3 measurements are unchanged. Cross-referenced from `match-engine-wiring-backlog.md` §5 (this file's v2.1). |
 | 2.2 | 2026-08-11 | — | **§10.9 item 6 added: owner call CONFIRMS item 4's recommendation as a decision.** `sim_match_engine_close_chance` stays failing and its bound is NOT rebaselined a third time (a predicate already moved once at §9 Acceptance-3 and already deleted once at §9 Acceptance-1 under the same rule does not get a second rebaseline); the failure is queued for the KD-W1 calibration pass rather than fitted around today. Closes the close-chance half of the owner call `match-engine-wiring-backlog.md`'s C1 entry was left awaiting — the `sim_match_engine_shot_outcomes` `fast-balls-deflect-off-bodies` predicate in that same note is unrelated and stays open. No `[GT]` moved, no code changed, no gate run — documentation only. |
+| 2.3 | 2026-08-17 | — | **§11 added: the shot-lane chain BISECTED, and the live regression re-localized.** Measured August 10, 2026 on `claude/shot-lane-regression-bisect-vflxc2`, which never merged; ported here against `main`, with the numbering collision it would have caused recorded rather than repeated (it allocated `v1.6`, which `main` had independently used). 18 seeds × 6 trees, 108 full matches, tree held fixed and only the three shot-lane files swapped so the chain is not confounded with #41 T2 / `LineupSelector` / `ConfigureSquads`. **Seed 0xD1A6D05E is bit-identical at pre-chain, after -021 and after -022, and moves only at -023** — the Acceptance-3 regression is that one commit. **But it is a trajectory resample, not a mechanism**: no DRIBBLE path reads `GoalOpeningScore`, the 8-sector scan's tie resolves to `AgentFacingDirection`, and the whole −0.349 swing rides on four extra final-third shots. Over 18 paired seeds the chain's directional effect is **−0.027 ± 0.039** (t = −0.70, 8 up / 10 down) against a between-seed sd of ≈ 0.17; the Acceptance-3 pooled −0.119 sits at the **4.6th percentile** of the two-seed pooled estimator over all 153 pairs. **-021 is inert on 5 of 6 seeds**, which confirms ERR-008-022's own diagnosis by another route — the goal-centre-plane bound was discarding the blockers -021 existed to weight. Acceptance-3's two named suspects are refuted and its KD-W1 hand-off has nothing to act on. **The regression failing the bound is `ERR-012-011` (wiring-backlog C1), and that one IS a mechanism** — 16 of 18 seeds down, **−0.189 ± 0.038, t = −5.05** — with the mechanism already recorded in §10 (C1's `InPoss` `PullFactor` column is less advanced than the `TransToAtk` column it replaced). **This CONFIRMS §10.9/v2.2 from the opposite direction** and was reached independently: §10.9 measured the falsifier at post-C1 HEAD and found the mechanism intact with the population moved; §11 bisects which commit moved it. Two bit-identical control rows fall out: everything between `64513e4` and `ba4e194` is inert on the engine, and the ERR-008-024 refusal's behaviour-neutrality is now verified by **execution** rather than by diff inspection. **CURRENCY: every tree measured predates the W2 tackle wiring (`ERR-014-006`, `ba40114`)** — the controlled attributions stand, the absolute figures are not today's `main`, and that is recorded in §11.7 rather than left implicit. Nothing re-tuned (KD-W1); the tie-break fix deliberately not re-attempted (§10.5). `MatchEngineCloseChanceScenarios.cs` → v1.2, comments only: the KD-W1 hand-off withdrawn and both bounds restated as FLOORS rather than estimators, with the limit written at the predicate; no predicate, bound or seed changed, seed count left at 2 as an owner call. `spec-error-log.md` v2.17 carries `ERR-008-023`'s body entry, written in the same pass. **Gate run at the port (August 17, 2026): build 0 errors, 32 suites, quarantine unchanged, `MatchEngine.Tests` 461/1/11 — identical to main's W2 baseline, so this pass adds no new failure; the one failure is the held-red `sim_match_engine_close_chance` itself.** |
 #endregion
