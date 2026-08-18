@@ -1,7 +1,15 @@
 # Season & Competition Loop Specification #30 — Section 3: Algorithms
 
 **Created:** July 22, 2026
-**Last Updated:** August 17, 2026, later still (v2.14 — reviewed-findings pass, two Lows: **L4** prefixes
+**Last Updated:** August 18, 2026 (v2.15 — reviewed-findings pass, one Low (**L5**): the monotonicity
+lemma's headline sentence quantified over every `|R*| ≥ 2` winner while its own premise proved only the
+narrower claim, supersets of the one completing singleton `{c}` the search happens to find. The missing
+step is added — a completing singleton pins the squad's whole shortfall to one position class, which
+(a) forces `|F| ≥ 17` and (b) means any completing set of any size must itself contain a member of that
+class, i.e. a completing singleton of its own — so the unrestricted conclusion now follows from the
+section's own definitions rather than outrunning them. No algorithm, constant, or code changed; the
+proof step was missing, not the result.)
+**Last Updated (prior):** August 17, 2026, later still (v2.14 — reviewed-findings pass, two Lows: **L4** prefixes
 the closed eleven-vs-eighteen `OPEN OWNER QUESTION` block with a `SUPERSEDED` marker so it reads as
 history rather than as an open question sitting above its own answer; **L14** softens the ✅ DECIDED
 block's "retires the eleven-vs-eighteen question **entirely**" to name precisely what the `ERR-044-003`
@@ -181,7 +189,7 @@ suspensions have joined, citing ERR-044-002/ERR-044-003 and the code sites; only
 **Last Updated (prior):** July 25, 2026 (v0.9 — ERR-030-010 §3.7 venue correction, found at #30 T0; prior v0.8 back-prop ERR-030-009 #44 availability-filter null seam in §3.4; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 25, 2026 (v0.8 — back-props ERR-030-008 board tick-order seam + ERR-030-009 JobSecurity derived band; prior v0.7 ERR-030-007 academy, v0.6 ERR-030-006 staff, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 27, 2026 (v1.0 — **ERR-030-015**: §3.5's boundary roll gains step (c′), the calendar rebuild it omitted, without which a rolled season is permanently unplayable; found at #30 T3. Also consolidates the TWO stale `Version` fields this header carried — the drift class `spec-error-log.md` v1.43 records. Prior v0.9 ERR-030-010 §3.7 venue correction; v0.8 back-props ERR-030-008/009; v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 2.14
+**Version:** 2.15
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -589,10 +597,21 @@ back at all; the ordering key only ranks players *within* the eligible tier. As 
 >   to any squad can therefore only DISPLACE a same-class player, never change which other classes are
 >   satisfied. So `dirty(R)` is monotone **non-decreasing** in `R` under adding candidates, and a
 >   completing singleton `{c}` is already the GLOBAL minimum over every completing superset containing
->   `c` — no `|R| ≥ 2` set built on top of it can do better. The search evaluates every singleton at
+>   `c` — no `|R| ≥ 2` set built on top of it can do better. **This extends from supersets of `c` to
+>   every completing set, by the same per-class independence the paragraph above already states.** A
+>   completing singleton exists only when `F`'s entire shortfall sits in one position class — `c`'s own
+>   — since adding `c` cannot change whether any OTHER class is satisfied, so every other class must
+>   already have been satisfied by `F` alone. `F`'s slot classes sum to the eighteen
+>   `CanFieldStartingEleven` requires, so a shortfall confined to one class of size one pins
+>   `|F| ≥ 17`. Because a candidate can only close its own class's shortfall, ANY completing set `R` —
+>   whatever its size — must contain at least one member of that same class, and that member alone
+>   already closes the sole deficit: `R` therefore always contains a completing singleton, not
+>   necessarily `{c}` itself but one of the same class, and by the monotonicity already established its
+>   `dirty` is a floor `R` cannot beat. The search evaluates every singleton at
 >   `s == 1` before any larger size, so a completing singleton is found, and committed as the minimum,
 >   before a `|R*| ≥ 2` winner is ever reached: **a completing singleton cannot coexist with a strictly
->   better `|R*| ≥ 2` winner while this holds.** The premise is `LineupSelector`'s per-position top-`k`
+>   better `|R*| ≥ 2` winner while this holds** — not only among supersets of the one the search happens
+>   to find, but against every completing set. The premise is `LineupSelector`'s per-position top-`k`
 >   selection specifically — verified over 6,858 generated oracle cases (`thirdBranchReachable = 0`;
 >   collapsing the whole commit rule to `order[bestSubset[0]]` is behaviour-identical over 3,966 further
 >   cases and 11/11 tests) — and a Stage-1 role-weighted or cross-class selection rule would invalidate it
@@ -995,4 +1014,5 @@ by ascending `ClubId` (FR-SN-007 final key) — a total order.
 | 2.12 | 2026-08-17 | — | **Two §3.4 OPEN OWNER QUESTIONS closed by owner decision — documentation only, no rule, algorithm, constant or code change.** (a) The back-fill **trigger stays the full eighteen-player selection walk**; the short-bench posture is refused and `ERR-030-044`'s open half is closed. (b) The **beyond-cap branch keeps degrading to greedy**; refusing the fixture is rejected as breaking the never-worse-off-than-no-filter invariant for an unreachable corner. Both decisions are written inline at the rules they govern rather than only in a tracking file, and both name what would reopen them (the `ERR-044-003` cover ladder; a card rate or squad rule that makes `m > 12` reachable). |
 | 2.13 | 2026-08-17, later | — | **H5 (High, reviewed adversarial-review finding) — the v2.12 beyond-cap decision's justification cited a detector that does not exist.** The Cap decision's closing sentence claimed "the branch is instrumented and locked, so that evidence arrives as a failing test, not as a surprise." Verified false against the code: `AvailabilityComposition.ChooseSuspendedCandidate`'s `EXTREMIS_SEARCH_CANDIDATE_CAP` comparison is a bare early return of the weakest candidate — no counter, no event, no log, no throw — and the only lock, `CapFallbackExtremis_BeyondTheCandidateCap_StillTerminatesAndFieldsASquad` (`AvailabilityCompositionExtremisTests.cs`), constructs its thirteen banned players inside the test, so it proves termination/fieldability/determinism of the fallback but cannot fire because a real season reached `m > 12`. Rewritten to state that beyond-cap entry is currently UNDETECTABLE in production, with the missing detector recorded-not-fixed: the owed work is a recorded counter or fail-loud diagnostic on the branch plus a test asserting the counter moves, urgent at the W2 arming / foul-and-card recalibration, which is expected to move the very card rate the revisit trigger watches (already measured ~67% drifted — `open-issues.md`, the foul/card entry). The owner decision itself (degrade-to-greedy stays; refusing the fixture rejected) is unchanged — only its stated justification. Documentation only; no rule, algorithm, constant, or code change. |
 | 2.14 | 2026-08-17, later still | — | **Reviewed-findings pass, two Lows, both fixed.** **L4:** the eleven-vs-eighteen `OPEN OWNER QUESTION` block that v2.12 closed was left standing below its own closure with no marker, so `grep "OPEN OWNER QUESTION"` found a question that reads open one line above its own "✅ DECIDED" answer. Prefixed in place with a `**SUPERSEDED August 17, 2026 …**` marker line, matching the `SquadRating.cs` "kept only as history" annotation convention (v2.10's row cites it) — the original question text is unchanged, not deleted. **L14:** the same ✅ DECIDED block claimed the `ERR-044-003` cover ladder "retires the eleven-vs-eighteen question **entirely**," which overstates it — generated cover retires the *reinstatement* of a banned player onto a depleted bench, but the eighteen-player selection walk still decides whether a bench slot counts as needing cover at all, so the trigger itself is not retired. Reworded to name exactly what retires (reinstatement) and what still turns on the trigger (whether cover is generated for a bench slot in the first place). Neither fix changes the decision, the rule, an algorithm, a constant, or code. |
+| 2.15 | 2026-08-18 | — | **Reviewed-findings pass, one Low (L5), documentation only.** The monotonicity lemma's headline sentence — "a completing singleton cannot coexist with a strictly better `|R* | ≥ 2` winner" — quantified over every `|R*| ≥ 2` winner, but the sentence immediately before it proved only the narrower claim: a completing singleton `{c}` is the global minimum over completing SUPERSETS of `c`, which says nothing about a completing `R*` that omits `c` entirely. Fixed by adding the missing step rather than weakening the claim: the same per-class independence the lemma already states (adding a candidate can only affect its own class, never another's) means a completing singleton exists only when the squad's whole shortfall sits in one class, which (a) pins `|F| ≥ 17` — the eighteen `CanFieldStartingEleven` requires, minus the one slot `c` fills — and (b) means ANY completing set, of any size, must itself contain a member of that same class, which alone already closes the sole deficit; so every completing `R*` contains a completing singleton (not necessarily `{c}`, but one of the same class) and the search's monotonicity bounds it below `R*`'s own `dirty`. The unrestricted conclusion now follows from definitions already stated in this section rather than outrunning them. No algorithm, constant, guarantee, or code changed — the search, the cap, the tier order, and `Compose`'s FR-DC-018 fast path are all untouched; this closes a proof gap the load-bearing use (superset monotonicity alone) never actually depended on. |
 #endregion
