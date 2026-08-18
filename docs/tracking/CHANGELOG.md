@@ -109,7 +109,7 @@ break it, and do not edit historical entries.
 > config while every sibling keeps the guard-and-pre-flight shape.
 >
 > **HELD (5) — KD-7a: neither adopt nor reject; decide after the post-W2-arming capture, exactly as its
-> own tripwire says** (`league-bootstrap-design.md` **v1.5** *(since v1.6)*, new **S9**). The corpus that would
+> own tripwire says** (`league-bootstrap-design.md` **v1.5** *(since v1.7)*, new **S9**). The corpus that would
 > determine `α` predates tackle wiring, so S7 condition 4 fails on its own terms. **S7's condition 4
 > was also corrected in place:** it was written on August 12 as "no player has ever made a tackle",
 > which W2's landing *that same day* made false about the code while leaving it true about a shipped
@@ -779,8 +779,19 @@ break it, and do not edit historical entries.
 > 26.8% — it closes ~0.5 pp of 7.6. So dispersion and the draw deficit are **substantially independent
 > findings**, and the textbook answer to the one does nothing for the other. The only mixed-Poisson
 > mechanism that cuts draws materially is a shared antithetic swing, which implies negative home/away
-> correlation — and the corpus refutes it: pooled within-bucket correlation **+0.004 ± 0.052** (n=378),
-> ~4σ from the ≈ −0.20 such a family predicts. **The draw deficit's mechanism is therefore NOT
+> correlation — and the corpus refutes it: pooled within-bucket correlation **+0.044 ± 0.073** (n=198),
+> ~3σ from the ≈ −0.20 such a family predicts.
+> ⚠️ CORRECTED August 18, 2026 (reviewed adversarial-review round-7 finding H1): this clause read
+> **+0.004 ± 0.052 (n=378), ~4σ**. That figure is reproducible only by pooling the 180 W/D/L depth
+> rows into the fit corpus — not the sanctioned invocation `round-resolution-corpus.md` §0.a records —
+> and that pooling also flips the α verdict to DETERMINED, contradicting the α figures (0.0773 /
+> 0.1552, 36% single-cell leverage) quoted in this same entry. It is therefore decision-relevant to
+> KD-7a, not a rounding difference. The sanctioned run prints `pooled within-bucket home/away
+> corr = +0.044 +/- 0.073 (n=198)`. The August-18 round-6 pass corrected the same clause in
+> `league-bootstrap-design.md`, `open-issues.md`, the roadmap and root `CLAUDE.md` and missed this
+> site, which left this file contradicting itself — line 745 above already carries +0.044 ± 0.073.
+> The refutation itself is unaffected: both values are far from −0.20, so the shared-swing family
+> stays refuted and the draw deficit's mechanism stays unestablished. **The draw deficit's mechanism is therefore NOT
 > established.** The over-dispersion half stands and is NOT a pooling artifact — the hostile question
 > asked at filing has a clean negative answer, within-bucket `dSquad` spread contributing ≤ 0.005 of
 > the ~0.4 excess — but it is better specified as `var = μ(1+αμ)` with α ≈ 0.15–0.25 than as the

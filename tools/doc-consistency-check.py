@@ -80,6 +80,52 @@
 #   (M5). Landing this rebuild surfaces REAL findings on the live tree — those
 #   are defects for the owning documents' editors, not reasons to re-widen the
 #   guards.
+#
+# ROUND 7 (2026-08-18) — DATED RECORDS vs CURRENCY CLAIMS. The v1.2 tool could
+# not tell "X is at v1.5" (a currency claim, checkable) from "filed against X
+# v1.5" / "the row that SATISFIED the gate was v1.1" (a dated record, correct
+# forever). 35 of its 37 live-tree findings were dated records. The model now:
+#
+#   EVERY citation is still evaluated — nothing is blanked or skipped up front.
+#   A citation that LOOKS stale is then EXCUSED — counted per surface and
+#   totalled in the output, never silent — when its context marks it a dated
+#   record, UNLESS it carries an explicit currency reassertion ("now vN",
+#   "currently vN", "(since … vN)"), which is reported like any other stale
+#   claim. Three excusal mechanisms, strongest signal first:
+#
+#   (R) RECORD REGIONS — structural. open-issues-resolved.md whole-file (its
+#       own header: "Nothing here is live"), and spec-error-log.md from its
+#       `## Error Index` heading to EOF (the Error Index rows and every
+#       `## ERR-…` entry body are the log's chronicle; the head above stays
+#       fully checked). Cardinalities and agreement figures in a region are
+#       excused the same way. DELIBERATE COST, stated: an OPEN ERR entry CAN
+#       carry a live pointer ("the current design is `x.md` v1.2") — without
+#       a "now"/"currently" reassertion that goes unreported here. Accepted
+#       because the log's convention is dated filing records, the excusal
+#       count is printed for audit, and the same pointer almost always also
+#       lives on a fully-checked surface (open-issues.md / CLAUDE.md).
+#   (C) CHRONICLE TARGETS — citations OF the three append-only logs
+#       (spec-error-log.md, CHANGELOG.md, CHANGELOG-src.md, per the TRACKING
+#       DOCUMENTS table). Their version is a timestamp: "filed; `spec-error-
+#       log.md` v1.39" dates the filing. Nobody needs a currency claim about
+#       a log's version, and one that insists ("now v2.40") is still checked.
+#   (P) RECORD PHRASING — the FRAGILE part, four small shapes, kept last so
+#       the structural mechanisms absorb everything they can: a parenthetical
+#       consisting only of file-vN citations (± ≤3 filler words) after any
+#       claim ("SATISFIED (golden-vector files `x.md` v1.1, …)", "exist
+#       (`a.md` v1.4, `B.cs` v1.30)"); a "(vN" revision apposition directly
+#       after the filename ("`x-design.md` (v0.5, AR-1..AR-4 CONVERGED)");
+#       a gap naming an artifact IN the revision ("§7 supersede note, v0.11");
+#       and a record verb right after the version ("v1.6 both record its …").
+#       Each is defeatable: the currency-reassertion override pierces all
+#       four, and a plain "X is at vN" claim matches none of them.
+#
+#   Mutation-proved both ways on a scratch mirror (see the v1.3 history row):
+#   a planted stale CURRENCY claim inside each excused region/shape is still
+#   reported; the dated records each mechanism exists to excuse are not.
+#   Live tree: 37 findings → 2, and both survivors are judged REAL (the
+#   "`league-bootstrap-design.md` v1.5, now v1.6" chains in open-issues.md
+#   and CHANGELOG.md's head entry — the file is at v1.7).
 
 import argparse
 import importlib.util
@@ -171,6 +217,83 @@ def historically_marked(text, start, end):
     hi = min(sent_start + len(window), end + MARKER_RADIUS)
     clipped = text[lo:hi]
     return any(rx.search(clipped) for rx in HISTORICAL_MARKERS)
+
+
+# ---------------------------------------------------------------------------
+# DATED-RECORD MODEL (round 7 — see the header). Claims are always EVALUATED;
+# a mismatch is EXCUSED (counted, printed, never silent) when context marks it
+# a dated record, unless an explicit currency reassertion pierces the excusal.
+# ---------------------------------------------------------------------------
+
+# (R) Record regions — structural.
+RECORD_ARCHIVE_FILES = {"docs/tracking/open-issues-resolved.md"}
+LOG_BODY_FILES = {"docs/tracking/spec-error-log.md"}
+LOG_BODY_HEADING = re.compile(r"^## (?:Error Index|ERR-)", re.M)
+
+
+def record_regions(rel, text):
+    """[(start, end)] spans of TEXT that are dated records by structure.
+
+    Computed on the same (frozen-history-blanked) text the scans read, so the
+    offsets agree. Fail-open: if spec-error-log.md ever loses its `## Error
+    Index` / `## ERR-` headings, no region is claimed and every citation gets
+    full reporting — the safe direction.
+    """
+    if rel in RECORD_ARCHIVE_FILES:
+        return ((0, len(text)),)
+    if rel in LOG_BODY_FILES:
+        m = LOG_BODY_HEADING.search(text)
+        if m:
+            return ((m.start(), len(text)),)
+    return ()
+
+
+def _in_region(regions, pos):
+    return any(s <= pos < e for s, e in regions)
+
+
+# (C) Chronicle targets: the repo's append-only logs (TRACKING DOCUMENTS
+# table). A citation of one names the revision at which something was filed.
+CHRONICLE_TARGETS = {"spec-error-log.md", "CHANGELOG.md", "CHANGELOG-src.md"}
+
+# The override that pierces every excusal: an annotation run containing one of
+# these words REASSERTS currency ("v1.5, now v1.6", "(since v1.6)"), so the
+# claim is checked and reported normally. A bare "vOLD → vNEW" arrow chain
+# does NOT — inside a record context it is the natural notation for the bump
+# an event made ("v1.0.1 → v1.1" in a changed-files table), not a claim that
+# vNEW is current today.
+CURRENCY_WORD = re.compile(r"\b(?:now|currently|since)\b", re.I)
+
+
+def _unwrap(s):
+    return re.sub(r"\s*\n>?\s*", " ", s)
+
+
+# (P) Record phrasing — the fragile, deliberately small part (header, round 7).
+_CITE_ITEM = r"`[^`\n]{1,80}`\s*\**v\d+(?:\.\d+)*\**"
+# A parenthetical consisting only of file-vN citations (± ≤3 leading filler
+# words): "(golden-vector files `x.md` v1.1, `y.md` v1.1, `z.md` v1.0)",
+# "(`certification-platform.md` v1.2)", "(`a.md` v1.4, `B.cs` v1.30)".
+PAREN_CITELIST_PRE = re.compile(
+    r"\(\s*(?:[\w-]+\s+){0,3}(?:" + _CITE_ITEM + r"\s*[,;]\s*){0,4}$")
+PAREN_CITELIST_POST = re.compile(
+    r"^(?:\s*[,;]\s*" + _CITE_ITEM + r"){0,4}\s*\)")
+# "`x-design.md` (v0.5, AR-1..AR-4 CONVERGED)" — a version OPENING a
+# parenthetical directly after the filename is a revision apposition: it names
+# the revision being described, not the file's version today.
+REV_APPOSITION_GAP = re.compile(r"^\s*\(\s*$")
+# "`path-to-playable-roadmap.md` §7 supersede note, v0.11" — the gap names an
+# artifact IN the target (a note/row/entry), so the version dates the artifact.
+ARTIFACT_NOUN_GAP = re.compile(
+    r"(?:§[\w.]+[\s/,–—-]*)?(?:[\w-]+\s+){0,2}"
+    r"(?:notes?|rows?|entr(?:y|ies))\s*[,:]?\s*$", re.I)
+# "`match-engine-wiring-backlog.md` v1.6 both record its … predicate" — a
+# record verb right after the version cites that revision as the SOURCE of a
+# statement.
+POST_RECORD_VERB = re.compile(
+    r"^\s*(?:both\s+|which\s+|already\s+)?"
+    r"(?:record(?:s|ed)?|document(?:s|ed)?|captur(?:es|ed)|"
+    r"state(?:s|d)?|says?|said)\b", re.I)
 
 
 # ---------------------------------------------------------------------------
@@ -410,7 +533,7 @@ def _version_history_table_row(text, line_start):
     return first_cell.strip(" *`_").lower().startswith("version")
 
 
-def scan_version_citations(repo, sources, findings, stats):
+def scan_version_citations(repo, sources, findings, stats, regions):
     """Find `<name>.md` … v<N> citations and compare against the target's own table.
 
     Enumerates the backticked FILENAMES first and forward-searches each one's own
@@ -558,6 +681,27 @@ def scan_version_citations(repo, sources, findings, stats):
             # coarse but not wrong.
             if actual.startswith(cited + ".") or actual.startswith(effective + "."):
                 continue
+            # ---- Dated-record excusal (round 7, see header). The claim WAS
+            # evaluated and looks stale; it is excused — counted per surface,
+            # totalled in the output — when context marks it a dated record.
+            # An explicit currency reassertion ("now vN"/"currently vN"/
+            # "(since … vN)") pierces every excusal and is reported normally.
+            currency = bool(run and CURRENCY_WORD.search(run.group(0)))
+            if not currency:
+                if _in_region(regions.get(rel, ()), m.start()):
+                    stats[rel]["excused_region"] += 1
+                    continue
+                if pathlib.Path(name).name in CHRONICLE_TARGETS:
+                    stats[rel]["excused_chronicle"] += 1
+                    continue
+                post = _unwrap(text[cite_end:cite_end + 200])
+                if ((PAREN_CITELIST_PRE.search(pre)
+                     and PAREN_CITELIST_POST.match(post))
+                        or REV_APPOSITION_GAP.match(gap)
+                        or ARTIFACT_NOUN_GAP.search(gap)
+                        or POST_RECORD_VERB.match(post)):
+                    stats[rel]["excused_phrase"] += 1
+                    continue
             if historically_marked(text, m.start(), vm.end()):
                 continue
             # Round 6 (M1): on this repo's ~4,000-char lines, file:line does not
@@ -575,7 +719,7 @@ def scan_version_citations(repo, sources, findings, stats):
                  f"recorded version is v{actual} — “…{excerpt}…”"))
 
 
-def scan_cardinalities(repo, sources, findings, stats):
+def scan_cardinalities(repo, sources, findings, stats, regions):
     """Compare hard-coded counts against the thing they count."""
     measured = {
         "design supplements": len(list((repo / "docs/tracking").glob("*-design.md"))),
@@ -615,6 +759,12 @@ def scan_cardinalities(repo, sources, findings, stats):
                 stated = int(m.group(1))
                 if stated == measured.get(key):
                     continue
+                # A mismatched count inside a record region is a dated record
+                # of what the figure was ("all 20 spec folders" in an archived
+                # 2026-05 entry) — excused, counted (round 7).
+                if _in_region(regions.get(rel, ()), m.start()):
+                    stats[rel]["excused_region"] += 1
+                    continue
                 if historically_marked(text, m.start(), m.end()):
                     continue
                 line = text.count("\n", 0, m.start()) + 1
@@ -642,7 +792,7 @@ AGREEMENT_GROUPS = (
 )
 
 
-def scan_agreements(sources, findings, stats):
+def scan_agreements(sources, findings, stats, regions):
     for label, pat, ctx in AGREEMENT_GROUPS:
         sites = {}
         for src, rel, text, _frozen in sources:
@@ -651,6 +801,12 @@ def scan_agreements(sources, findings, stats):
                     window = text[max(0, m.start() - 80):m.end() + 120]
                     if not ctx.search(window):
                         continue
+                # A figure inside a record region is what the figure WAS at
+                # that dated entry; pooling it manufactures cross-file
+                # disagreement out of history — excused, counted (round 7).
+                if _in_region(regions.get(rel, ()), m.start()):
+                    stats[rel]["excused_region"] += 1
+                    continue
                 if historically_marked(text, m.start(), m.end()):
                     continue
                 stats[rel]["agreement figures"] += 1
@@ -682,12 +838,15 @@ def main():
     findings = []
     sources = current_state_sources(repo, findings)
     stats = {rel: {"citations": 0, "cardinalities": 0, "agreement figures": 0,
-                   "unresolvable": 0}
+                   "unresolvable": 0, "excused_region": 0,
+                   "excused_chronicle": 0, "excused_phrase": 0}
              for _p, rel, _t, _f in sources}
+    regions = {rel: record_regions(rel, text)
+               for _p, rel, text, _f in sources}
 
-    scan_version_citations(repo, sources, findings, stats)
-    measured = scan_cardinalities(repo, sources, findings, stats)
-    scan_agreements(sources, findings, stats)
+    scan_version_citations(repo, sources, findings, stats, regions)
+    measured = scan_cardinalities(repo, sources, findings, stats, regions)
+    scan_agreements(sources, findings, stats, regions)
 
     # Self-check: a scan that evaluated NOTHING is a broken scan, not a clean
     # tree (the vacuous-pass class: with every surface moved aside or a regex
@@ -709,6 +868,11 @@ def main():
         for _p, rel, text, frozen in sources:
             s = stats[rel]
             note = f"  [{frozen} chars frozen history excluded]" if frozen else ""
+            exc = (s["excused_region"], s["excused_chronicle"],
+                   s["excused_phrase"])
+            if any(exc):
+                note += (f"  [excused as dated records: {exc[0]} region / "
+                         f"{exc[1]} chronicle / {exc[2]} phrasing]")
             in_scope = sum(len(ln) for ln in text.splitlines() if ln.strip())
             print(f"  {rel}: {in_scope} chars in scope / {s['citations']} / "
                   f"{s['cardinalities']} / {s['agreement figures']} / "
@@ -718,6 +882,16 @@ def main():
     # rather than assumed", one level down. Always printed, even with --quiet.
     skipped = sum(s["unresolvable"] for s in stats.values())
     print(f"{skipped} citation(s) skipped (target version unresolvable)")
+    # Round 7: every dated-record excusal is a MISMATCH the tool declined to
+    # report. Counted and always printed — even with --quiet — so the next
+    # reviewer can see what was not checked and audit it when the counts move.
+    ex_r = sum(s["excused_region"] for s in stats.values())
+    ex_c = sum(s["excused_chronicle"] for s in stats.values())
+    ex_p = sum(s["excused_phrase"] for s in stats.values())
+    print(f"{ex_r + ex_c + ex_p} stale-looking claim(s) excused as dated "
+          f"records ({ex_r} in archive/log-body record regions, {ex_c} citing "
+          f"append-only chronicles, {ex_p} by record phrasing) — excusals are "
+          f"counted, never silent; audit them when these counts move")
     print("measured:", ", ".join(f"{k}={v}" for k, v in sorted(measured.items())))
     if not findings:
         print("PASS — no stale cross-document version citation or cardinality "
@@ -789,3 +963,35 @@ if __name__ == "__main__":
 # |         |            |             | docs/tracking/*-design.md (empty glob =      |
 # |         |            |             | finding). Real findings on the live tree are |
 # |         |            |             | expected output, owned by the documents.     |
+# | 1.3     | 2026-08-18 | Claude Code | Dated-record model (round 7): 35 of the 37   |
+# |         |            |             | live findings were dated records ("filed at  |
+# |         |            |             | X vN"), not currency claims ("X is at vN").  |
+# |         |            |             | Every claim is still EVALUATED; a mismatch   |
+# |         |            |             | is EXCUSED — counted per surface + totalled  |
+# |         |            |             | in output, never silent — via (R) record     |
+# |         |            |             | regions (open-issues-resolved.md whole-file  |
+# |         |            |             | per its "Nothing here is live" header;       |
+# |         |            |             | spec-error-log.md from `## Error Index` to   |
+# |         |            |             | EOF — head stays fully checked, fail-open if |
+# |         |            |             | headings vanish; cardinalities + agreement   |
+# |         |            |             | figures excused likewise), (C) chronicle     |
+# |         |            |             | targets (citations OF spec-error-log.md /    |
+# |         |            |             | CHANGELOG(-src).md date a filing), (P) four  |
+# |         |            |             | record-phrasing shapes — the fragile part:   |
+# |         |            |             | paren citation-list, "(vN" apposition,       |
+# |         |            |             | note/row/entry gap, post-version record      |
+# |         |            |             | verb. A "now vN"/"currently vN"/"(since …    |
+# |         |            |             | vN)" reassertion PIERCES every excusal (a    |
+# |         |            |             | bare "vOLD → vNEW" does not — it records a   |
+# |         |            |             | bump). Measured: 37 findings → 2, both       |
+# |         |            |             | judged REAL (the league-bootstrap "now       |
+# |         |            |             | v1.6" chains vs its v1.7). Mutation-proved   |
+# |         |            |             | both ways on a scratch mirror: planted stale |
+# |         |            |             | currency claims inside archive, ERR body,    |
+# |         |            |             | chronicle citation and all four phrase       |
+# |         |            |             | shapes each still FAIL (via the currency     |
+# |         |            |             | override; plain "is the authority" control   |
+# |         |            |             | too, and the log head above Error Index      |
+# |         |            |             | still reports); the 35 dated records + one   |
+# |         |            |             | planted per mechanism are excused with       |
+# |         |            |             | counters moving 25/4/8 accordingly.          |

@@ -8,7 +8,7 @@ and `src/CLAUDE.md` (concrete paths). Spec #20 does not publish a runtime interf
 
 **Created:** May 7, 2026
 **Last Updated:** August 15, 2026, later
-**Version:** 1.1
+**Version:** 1.2
 **Status:** APPROVED (May 11, 2026)
 **Specification Number:** 20 of 20 (Stage 0 — Physics Foundation)
 **Authoring spec:** `outline-detailed.md` v1.3, §SECTION 4
@@ -97,9 +97,12 @@ to illustrate is stated by FR-CS-046 and FR-CS-046a: an assembly **MUST NOT** re
 any assembly seated in a higher tier — the upward-reference ban, across all ten tiers,
 Foundation through Client — and intra-tier references are permitted provided the
 intra-tier graph stays acyclic. Because the reference graph is encoded in `.asmdef`
-files, an illegal dependency is a build error, not just a review finding, and
-`tools/assembly-tier-check.py` (wired into `.github/workflows/ci.yml`) verifies every
-reference against the §3.5.2 table on every push.
+files, `tools/assembly-tier-check.py` (wired into `.github/workflows/ci.yml`) verifies
+every reference against the §3.5.2 table on every push to `main` and every pull request
+targeting `main`. Note what the compiler does and does not do here: Unity rejects a
+reference **cycle** outright, but a non-cyclic *upward* reference compiles cleanly, so
+the tier order is enforced by that check and by review — not by the build. §3.5.2 says
+the same thing from the other side: adopting the order "changed nothing that compiles".
 
 ---
 
@@ -345,6 +348,7 @@ concretises, establishing the Spec #20 ↔ `src/CLAUDE.md` cite-chain.
 | 1.0.3 | August 15, 2026, later | Claude Code | ERR-020-005 (extends ERR-020-004; reviewed-findings pass): the "`ProjectConstants.cs` — Cross-Spec Source of Truth" subsection's opening sentence still stated the pre-carve-out two-way split unqualified, 25 lines below the carve-out paragraph that had already narrowed it — the heading a reader looks under for the routing rule, restating the rule the carve-out exists to correct. Qualified in place: the primary declaration for a singly-owned constant is that spec's own catalogue (the carve-out), and `ProjectConstants.cs` is primary only for a constant with no single owning catalogue — the worked example immediately below (`PHYSICS_TICK_HZ`) is exactly that case, so the example is now internally consistent with the rule text above it. | — |
 | 1.0.4 | August 18, 2026 | Claude Code | **Header correction only — no content change.** `**Status:**` read `DRAFT` against `SPEC_INDEX.md`'s record of #20 as **APPROVED (May 11, 2026)**. Corrected as part of the sweep the `ERR-020-002` adoption began: that pass fixed the three section files it touched and left six siblings at DRAFT, which turned a uniform folder-wide staleness into a misleading distinction — six of ten sections reading as not-approved. The FR-CS-056/057 class. Dated August 18, 2026 (commit `98662909`, author date 2026-08-18T03:01 UTC) — a same-session continuation of work that began August 17, 2026 UTC and crossed midnight before landing. | — |
 | 1.1 | August 18, 2026 | Claude Code | **Adversarial-review round-6 findings H3 + H5 + H6 + H7.** H3: §4.1's "Dependency graph shape" ASCII block DELETED — a retired rendering with three edges the `.asmdef` graph contains in neither direction (`agent-movement`↔`ball-physics`, `pass-mechanics`↔`shot-mechanics`, `shot-mechanics`↔`first-touch`; re-verified August 18, 2026 by reading `src/*/[a-z]*.asmdef` references), a "(Mechanics layer)" label on three assemblies §3.5.2 seats in tier 1 Physics, unlabelled mixed `◄──`/`──►` arrows (the `ERR-020-003` ambiguity), and prose that under-scoped the ban to "Mechanics-, AI-, or UI-layer" — six tiers short. §3.5.2 is named the single rendering; the prose restated as the FR-CS-046 upward-reference ban + FR-CS-046a intra-tier permission, with `tools/assembly-tier-check.py` (CI-wired) named as the mechanical check. H5: the tree's `code-standards/` leaf no longer claims "empty at Stage 0" — no `src/code-standards/` folder exists at all (verified: `ls -d src/code-standards` fails), and the leaf now says so. H6: the §4.2 per-tag `#region` ordering gains the `[CROSS-PENDING]` slot (position 4, directly after the `Cross` region it promotes into — a promotion is a one-region move), extending the list 5 → 6. H7: the ERR-020-004 carve-out gains the Storage-class note — it had cited `DisciplineConstants.CardKindYellow` (a `public const byte`) as "a compliant mirror" while FR-CS-022/§3.2.3 required `public static readonly`; the §3.2.3 const-mirror carve-out resolves the contradiction in the spec and the paragraph now cites it. | — |
+| 1.2 | August 18, 2026 | Claude Code | **Adversarial-review round-7 findings H2 + H3.** H2: §4.1 asserted "an illegal dependency is a build error, not just a review finding" — false, and contradicting §3.5.2's "adopting the order changed nothing that compiles", written the same day. Unity rejects a reference CYCLE, but a non-cyclic UPWARD reference compiles cleanly — which is exactly why `ERR-020-002` drifted for fourteen months and why `tools/assembly-tier-check.py` had to be written and CI-wired. The clause is deleted, the real enforcement stated (the tool, plus Unity's cycle rejection), and §3.5.2 cross-referenced so the two now agree. H3: "on every push" corrected to `ci.yml`'s real triggers — `branches: [main]` on both `push` and `pull_request`, so a push to a topic branch runs nothing. §3.5.2 had corrected the identical phrase about the identical tool the previous day. | — |
 
 ---
 

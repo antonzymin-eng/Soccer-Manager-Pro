@@ -588,7 +588,7 @@ The definitive 10-year roadmap. All development decisions reference this documen
 - Risk mitigation strategies
 
 **Current stage:** Stage 0 / Stage 0+1 — Physics Foundation (Year 1), with the management-layer
-specification set (#27–#49) authored ahead of its implementation
+specification set (#27–#54) authored ahead of its implementation
 **Current phase:** Implementation. Stage-0 specs all APPROVED May 18, 2026; coding began May 19, 2026;
 AR-hardening sweep complete June 7, 2026; 43 specs APPROVED as of July 25, 2026, all 53 by
 July 27, 2026. The active frontier is `docs/tracking/path-to-playable-roadmap.md` — closing the gap

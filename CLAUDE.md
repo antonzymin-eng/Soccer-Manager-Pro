@@ -264,7 +264,7 @@ pass-mechanics/
 
 | Document | Answers |
 |----------|---------|
-| `management-layer-spec-roadmap.md` | *Which specs to author, in what order* — the #27–#51 management/off-pitch set, dependency graph, authoring waves |
+| `management-layer-spec-roadmap.md` | *Which specs to author, in what order* — the #27–#54 management/off-pitch set, dependency graph, authoring waves |
 | `path-to-playable-roadmap.md` | *Which code to land, in what order, to reach a playable build* — Track S (simulation) vs Track C (client), and the quantified constraints that ordering must respect |
 | `match-engine-wiring-backlog.md` | *Which already-built match-engine code has no production caller* — the dormant-capability inventory (Aug 4, 2026), its wire-order, and **KD-W1** below. Match engine only; the 19 assembly-less specs stay with the roadmap above |
 
@@ -302,7 +302,11 @@ the boundary table in `.claude/README.md`.
 `match-realism-pass`, `snapshot-schema-bump`, `err-file-and-backprop`, `landing-close-out`,
 `spec-promotion`, `dotnet-gate`. Each was derived from measured repetition in the last 200 commits
 and carries the traps this project has actually hit; `.claude/skills/README.md` records that
-evidence. The two that need a review step invoke `adversarial-review` rather than restating it.
+evidence. The one that needs a review step (`spec-promotion`) invokes `adversarial-review` rather
+than restating it *(corrected August 18, 2026, reviewed finding H2: this read "the two";
+`grep -ci adversarial-review .claude/skills/*/SKILL.md` is non-zero for `spec-promotion`
+alone. `.claude/skills/README.md` was corrected in the same round and this site was left,
+so the rules file and the file it cites for that evidence disagreed).*
 
 `orientation` is account-level, not in this repo.
 
