@@ -12,7 +12,53 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 12, 2026, later still (**Wiring backlog W2 LANDED — a player in control
+> **Last Updated:** August 17, 2026 (**The shot-lane chain is REFUTED as the cause of the held-red
+> close-chance band, C1's cost is priced, and `ERR-008-023` finally has a body entry.**) A salvage
+> of `claude/shot-lane-regression-bisect-vflxc2`, a branch that measured all this on August 10 and
+> never merged; ported onto `main` selectively, and what was dropped in the port matters as much as
+> what was kept. **Kept — the bisect (`close-chance-creation-design.md` §11, v2.3).** 18 seeds × 90
+> minutes × 6 trees, 108 full matches, the tree held at `64513e4` with only the three shot-lane
+> files swapped so the chain is not confounded with #41 T2, the `LineupSelector` collapse or the
+> `ConfigureSquads` overload. Seed `0xD1A6D05E` is **bit-identical** before `ERR-008-021`, after it,
+> and after `ERR-008-022`, moving only at `-023` — so the Acceptance-3 regression is one commit. But
+> it is a **trajectory resample, not a mechanism**: no DRIBBLE path reads `GoalOpeningScore`, the
+> 8-sector scan's tie resolves to `AgentFacingDirection`, and the whole −0.349 swing rides on four
+> extra final-third shots. Over 18 paired seeds the chain's directional effect is **−0.027 ± 0.039**
+> (t = −0.70, 8 up / 10 down) against a between-seed sd ≈ 0.17; the −0.119 that drove the August 7
+> rebaseline sits at the **4.6th percentile** of that pair's own estimator across all 153 pairs, and
+> 4 of the 18 seeds are already below −0.16 with none of the chain applied. **So Acceptance-3's two
+> named suspects are refuted and its KD-W1 hand-off has nothing to act on.** `-021` is inert on 5 of
+> 6 seeds, which confirms `ERR-008-022`'s own diagnosis by another route — the goal-centre-plane
+> bound was discarding the very blockers `-021` existed to weight. **The regression that is actually
+> live is `ERR-012-011` (wiring-backlog C1), and that one IS a mechanism** — **−0.189 ± 0.038,
+> t = −5.05, 16 of 18 seeds down** — which is exactly the "further from goal" cost this project
+> predicted from C1's `InPoss` `PullFactor` column and never measured. **This independently confirms
+> §10.9**, which reached the same verdict from the post-C1 side and was owner-confirmed August 11;
+> neither was derived from the other. Two bit-identical control rows fall out: everything between
+> `64513e4` and `ba4e194` is inert on the engine, and the `ERR-008-024` refusal's behaviour-neutrality
+> is now verified **by execution** rather than by reading its diff. **Kept — `ERR-008-023`'s body
+> entry** (`spec-error-log.md` v2.17), missing since the August 7 landing while the id was cited from
+> `CLAUDE.md`, `open-issues.md`, the design supplement and an `OptionGenerator.cs` comment; written
+> from those existing records alone, nothing new asserted about the landing. **DROPPED in the port,
+> deliberately: the branch's `ERR-008-021` (a)/(b) retitle.** `main` had already reconciled that
+> double-allocation at `ERR-028-019` (v2.13) — and the branch's accompanying claim that "both
+> landings are live in `ComputeGoalOpeningScore`" is **false**: `git log -S PerceivedBlockAbility`
+> returns exactly one commit, `accc941`, and the merge `14d0796` states outright that PR #305's form
+> was discarded. Porting it would have overwritten a correct annotation with an incorrect one. The
+> ported entry therefore cites the SHIPPED `-021` throughout and says so explicitly. **Two hygiene
+> catches from the port itself**, both this project's recurring classes: the branch allocated
+> `close-chance-creation-design.md` **v1.6**, which `main` had independently used (renumbered to
+> **v2.3** here — the same concurrent-branch collision that produced the `ERR-008-021` mess in the
+> first place); and every figure in §11 **predates the W2 tackle wiring** (`ERR-014-006`, `ba40114`),
+> so the controlled attributions stand but the absolute values are not today's `main` — recorded as
+> a currency caveat at four sites rather than left implicit. **Code:** comments only —
+> `MatchEngineCloseChanceScenarios.cs` → v1.2, the KD-W1 hand-off withdrawn and both bounds restated
+> as **floors, not estimators**, with the limit written at the predicate instead of widened away. **No
+> predicate, bound, seed or `[GT]` changed; nothing re-tuned (KD-W1); the `ERR-008-024` tie-break fix
+> deliberately not re-attempted (§10.5).** The held-red `sim_match_engine_close_chance` stays red and
+> stays C1's to answer. **GATE RUN (whole tree, locally, August 17, 2026): FAILED — and that is the baseline red state, not this landing's.** Build **0 errors**, 32 suites, quarantine unchanged; `MatchEngine.Tests` **461 passed / 1 failed / 11 skipped** (55 m 11 s). The single failure is `sim_match_engine_close_chance` (2 of 3 predicates), the owner-held-red predicate this pass re-attributes and deliberately does not fix — and the counts are **identical to main's W2 baseline of 461/1/11**, so the change adds no new failure. The `.cs` edit was independently proven comment-only by stripping comment lines from its own diff: **zero non-comment lines remain**.
+>
+> **Last Updated (prior):** August 12, 2026, later still (**Wiring backlog W2 LANDED — a player in control
 > can now be dispossessed for the first time in this engine, and `ERR-014-006` closes the tackle
 > outcome model's governance question.**) New #14 §3.6.5 "Tackle Outcome Resolution" takes the
 > tackle outcome decision back into the spec that owns the players, on the W1 precedent (#11 §3.7.0
