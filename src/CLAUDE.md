@@ -100,8 +100,11 @@ is no `src/code-standards/`, and it must not be listed as one.
 > placed only **14** of the 35 (8 Physics + 4 Mechanics + 2 AI; the `UI` row empty),
 > leaving **21** placed nowhere — 60% of the tree.
 > The order was derived from the `.asmdef` reference graph and re-verified at adoption:
-> 35/35 folders placed, **0 upward references**, 105 downward, 38 intra-tier, graph
-> acyclic. It changed nothing that compiles; it constrains what can be written next.
+> 35/35 folders placed, **0 upward references**, 105 downward, 38 intra-tier + 5 sourced
+> by the two out-of-band Infrastructure assemblies, **148 total** (re-derived August 18,
+> 2026 by `python3 tools/assembly-tier-check.py --repo .`, which prints all four figures;
+> #20 §3.5.2: quoting 105 + 38 as if it were the whole is what makes the count
+> unreconcilable), graph acyclic. It changed nothing that compiles; it constrains what can be written next.
 > When a new assembly lands, place it in this table and in #20 §3.5.2 in the same commit
 > — the fourteen-month drift began with a landing that did not.
 

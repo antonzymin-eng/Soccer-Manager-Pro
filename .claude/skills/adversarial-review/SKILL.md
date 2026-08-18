@@ -242,7 +242,8 @@ When the defect is structural — the top-weighted architecture / maintainabilit
 Everything above is general review practice. This section is specific to Tactical Director, and it
 is the step most easily missed: **in this repo a defect found in APPROVED spec text is not resolved
 by fixing the code.** The spec is the contract, `SPEC_INDEX.md` says so, and a code fix that leaves
-the approved text wrong has moved the contradiction rather than closed it. 161 `ERR-` entries exist
+the approved text wrong has moved the contradiction rather than closed it. 209 `ERR-` entries exist
+(re-derived August 18, 2026: `grep -c '^| ERR-' docs/tracking/spec-error-log.md`)
 because that rule has been enforced; skip it once and the log stops being trustworthy.
 
 **When it applies.** The finding contradicts, or is contradicted by, text in an APPROVED spec under
@@ -278,8 +279,8 @@ re-verify, never a reservation.
 proposes work does not perform it.
 
 **On convergence:** this skill terminates when a full pass returns only Low findings or none, which
-is the same bar as this repo's "an L-only round closes the cycle" convention used across 52 design
-supplements. Report the round count as `AR-N` so it matches the surrounding documents.
+is the same bar as this repo's "an L-only round closes the cycle" convention used across 60 design
+supplements (re-derived August 18, 2026: `ls docs/tracking/*-design.md | wc -l`). Report the round count as `AR-N` so it matches the surrounding documents.
 
 ## Staying honest
 

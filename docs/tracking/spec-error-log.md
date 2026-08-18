@@ -6,12 +6,16 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 2.43
-**Updated:** August 17, 2026 (v2.43 — **`ERR-020-002` and `ERR-020-003` both RESOLVED by owner decision.**
+**Version:** 2.44
+**Updated:** August 18, 2026 (v2.44 — **the version row this file had gone without through the adversarial-review rounds 1–3 over the owner-decision pass, plus this reviewed-findings pass's own corrections** (reviewed finding M-B: the file changed materially after the v2.43 note was written — 124 insertions / 17 deletions against the pre-review state (`git diff 71455b54..601a8117 --stat`) — with no new version row, while nine spec files in the same commits carefully dated themselves August 18). What changed, per commit: **(a)** AR round 1 (`12eba7d4`, August 17, 22:14 UTC) extended the v2.43 note below in place — the two `ERR-020-*` index-row repairs (six-cell rows GFM rendered as still-Open), `ERR-020-002`'s Files Affected 2 → 5, and the 19-of-31 annotations. **(b)** AR round 2 (`98662909`, August 18, 03:01 UTC) repaired six more over-split five-column index rows (`ERR-018-018` and `ERR-030-039` were actively misrendering their Status), re-escaping pipes so all 209 `ERR-` rows carry exactly 5 cells; corrected `ERR-020-002`'s Files Affected **5 → 8** and `ERR-020-003`'s 2 → 3 ("both renderings" → "all three"); and annotated the retracted 19-of-31 arithmetic at the entry heading AND Problem paragraph. AR round 3 did not touch this file. **(c)** This pass (August 18): the **8-vs-5 Files-Affected contradiction reconciled** by a dated addendum after `ERR-020-002`'s Files-changed table — the table keeps the adoption commit's 5; the addendum names the three remediation files beyond it (`README.md`, `tools/assembly-tier-check.py`, `docs/specs/code-standards/section-9-approval-checklist.md`'s FR-row regex widening), which the round-2 commit message had claimed the body already named when it named only two (M-B); the **105 + 38 verification quotes completed to "+ 5 sourced by the two out-of-band Infrastructure assemblies, 148 total"** at the v2.43 note below and at the entry's adoption-verification paragraph, re-derived by `tools/assembly-tier-check.py` — quoting 105 + 38 as the whole is the exact unreconcilable form #20 §3.5.2 warns against (M-D; `src/CLAUDE.md`'s taxonomy note corrected the same way in the same pass); and both `ERR-020-*` entries' `**Section:**` fields re-titled to §3.5.2's current heading, "Tier Order and Dependency Arrows" — section-3.md v1.3's rename had deferred exactly these two citations to this file's own pass (L-A). No entry filed, none resolved; no id moved.)
+**Updated (prior):** August 17, 2026 (v2.43 — **`ERR-020-002` and `ERR-020-003` both RESOLVED by owner decision.**
 The ten-tier assembly order proposed on August 2 is adopted into Spec #20 §3.5.2 and reproduced in
 `src/CLAUDE.md`, with the four assemblies added since the proposal (`training-system`, `injuries-medical`,
 `discipline`, `client-app`) placed with it — **35/35 folders placed, 0 upward references, 105 downward,
-38 intra-tier, graph acyclic**, re-verified against the live `.asmdef` graph rather than carried over from
+38 intra-tier + 5 sourced by the two out-of-band Infrastructure assemblies, 148 total, graph acyclic**
+*(the "+ 5 … 148 total" completion added August 18, 2026, reviewed finding M-D — quoting 105 + 38 as if it
+were the whole is the exact unreconcilable shape #20 §3.5.2 names; `python3 tools/assembly-tier-check.py
+--repo .` prints all four figures)*, re-verified against the live `.asmdef` graph rather than carried over from
 the draft. FR-CS-046 restated and **FR-CS-046a** registered; the arrow-notation conflict closed by labelling
 both renderings. No `src/` code or `.asmdef` changed. Two rules added that the proposal did not contain:
 a tier is a ceiling, not a licence, and test assemblies are not members of the order. Same day, a reviewed-findings pass repaired the two Error Index rows this entry resolved: commit 0e78d381 had appended each resolution as a SIXTH cell past the five-column header and dropped the trailing pipe — GFM discards cells beyond the header count, so the rendered index still showed both as Open — now folded into each row’s Status cell with the trailing pipe restored; `ERR-020-002`’s Files Affected corrected 2 → 5 (section-2/3/5.md, `src/CLAUDE.md`, root `CLAUDE.md`); and the same row’s "19 of 31 placed / 12 unplaced" claim — the origin of the wrong figure the adoption’s version rows corrected — annotated in place: the retired box placed 14 of 31, leaving 17 unplaced. Also this day: `ERR-030-044`'s open half — the eleven-vs-eighteen back-fill trigger — CLOSED by owner decision (keep the eighteen), recorded in its index row; and the two `ERR-020-*` index rows repaired from six-cell rows that rendered as still-open.)
@@ -4427,7 +4431,7 @@ rising crossing misread as a goal kick).
 ## ERR-020-002: Code Standards #20 §3.5.2 layer taxonomy places 19 of 31 assemblies *[Annotation, August 17, 2026 (reviewed-findings pass): the "19 of 31" in this heading and in the Problem paragraph below is WRONG and is annotated rather than rewritten. The retired §3.5.2 box named exactly 14 folders (8 Physics + 4 Mechanics + 2 AI; the `UI` row is empty and `goalkeeper-…` is truncated in the source, which is why a naive grep undercounts to 13). Against the 31 folders of August 2 it placed **14**, leaving **17** unplaced — not 19 and 12; the original count silently treated the 3 Foundation and 2 Infrastructure folders as placed. Against today's 35 the figures are 14 placed / 21 undecided. Corrected at the adoption's version rows in #20 section-2.md v1.2 and section-3.md v1.2.]* — FR-CS-046 is unenforceable for the composition root, the management layer and every client assembly
 
 **Spec:** Code Standards #20
-**Section:** §3.5.2 Layer Order and Dependency Arrows (FR-CS-046, FR-CS-047)
+**Section:** §3.5.2 Tier Order and Dependency Arrows (FR-CS-046, FR-CS-047) *(re-titled August 18, 2026, reviewed finding L-A — section-3.md v1.3 renamed the heading "Layer Order" → "Tier Order" and deferred these two citations to this pass)*
 **Severity:** Medium
 **Detected During:** the `src/CLAUDE.md` split (August 2, 2026) — the taxonomy is reproduced there, and reproducing it required checking it against `src/`.
 **Status:** ✅ **RESOLVED August 17, 2026 — the proposal below was ADOPTED by owner decision**, extended
@@ -4553,7 +4557,10 @@ not their names:
 
 **Verification at adoption**, re-run against the live tree rather than carried over from the
 August-2 draft: **35/35 folders placed**, none named that does not exist, **0 upward references**,
-105 downward, **38 intra-tier**, and the production reference graph **acyclic**. Adopting the order
+105 downward, **38 intra-tier**, **+ 5 sourced by the two out-of-band Infrastructure assemblies —
+148 production→production references total** *(completion added August 18, 2026, reviewed finding M-D,
+re-derived by `python3 tools/assembly-tier-check.py --repo .`; #20 §3.5.2 names 105 + 38 quoted without
+the total as the unreconcilable form)* — and the production reference graph **acyclic**. Adopting the order
 changed nothing that compiles — no `.cs` file, no `.asmdef` — so no gate run is owed; the order was
 derived from what the tree already does and binds only what is written next.
 
@@ -4577,6 +4584,21 @@ derived from what the tree already does and binds only what is written next.
 | `docs/specs/code-standards/section-5.md` v1.0.1 → **v1.0.2** | §5.4.5 checklist item 1 restated against the tier order |
 | `src/CLAUDE.md` | `### Assembly Layer Taxonomy` + `### Reference Direction` rewritten; the ⚠️ staleness banner retired; the `code-standards` phantom infrastructure row struck; `project-constants` stated as tier 0, not infrastructure |
 | `CLAUDE.md` (root) | The rules-list taxonomy pointer restated against the ten-tier order, carrying the tier-is-a-ceiling rule and the test-assembly exclusion into the index; its own reference-direction arrow labelled (`ERR-020-003`) |
+
+*[Reconciliation addendum, August 18, 2026 (reviewed finding M-B) — three surfaces carried three
+different Files-Affected counts for this entry: the Error Index row read **8** (corrected 2 → 5 on
+August 17 and 5 → 8 in commit `98662909`), the table above enumerates the adoption commit's **5**,
+and this entry's later paragraphs name only two more (README.md and the checker), i.e. 7. The
+correction commit's own message claimed "the same entry's body names README.md, the new checker and
+the checklist regex widening", but the checklist regex widening was named nowhere in this body until
+this addendum. The three files beyond the table, each part of this entry's remediation chain, are:
+`README.md` (its assembly tree regrouped to the ten-tier order, August 17 — the sweep-method
+correction below), `tools/assembly-tier-check.py` (CREATED August 17 — the mechanical enumeration
+cited below and in §3.5.2/§5.4.5), and `docs/specs/code-standards/section-9-approval-checklist.md`
+(the FR-row RFC-2119 proxy regex widened with an optional `[a-z]?` suffix so the sub-numbered
+FR-CS-046a/046b rows are actually checked — both had been silently untested by the three-digit
+form; re-verified over all 75 rows). Table's 5 + these 3 = the index row's **8**; the table itself is left as the
+adoption commit's record, per the annotate-don't-rewrite convention.]*
 
 Three header defects were corrected in passing: `section-2.md`, `section-3.md` and `section-5.md`
 each carried `**Status:** DRAFT` and, in two cases, a `**Version:**` field behind their own version
@@ -4619,7 +4641,7 @@ mechanical for the authority table itself.
 ## ERR-020-003: Code Standards #20 §3.5.2 and the root `CLAUDE.md` draw the reference-direction rule with arrows pointing opposite ways
 
 **Spec:** Code Standards #20
-**Section:** §3.5.2 Layer Order and Dependency Arrows (FR-CS-046)
+**Section:** §3.5.2 Tier Order and Dependency Arrows (FR-CS-046) *(re-titled August 18, 2026, reviewed finding L-A — section-3.md v1.3 renamed the heading "Layer Order" → "Tier Order" and deferred these two citations to this pass)*
 **Severity:** Low
 **Detected During:** ERR-020-002's graph verification (August 2, 2026) — checking references against the diagram required deciding which way its arrows point.
 **Status:** ✅ **RESOLVED August 17, 2026**, with ERR-020-002's adoption and in the same commit. The
@@ -4675,6 +4697,6 @@ correctly bottom-up and several specs cite it in that orientation.
 
 ---
 
-*End of Spec Error Log v2.43 — August 17, 2026.*
+*End of Spec Error Log v2.44 — August 18, 2026.*
 
 
