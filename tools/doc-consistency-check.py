@@ -33,9 +33,11 @@
 # Usage: python3 tools/doc-consistency-check.py [--repo .]
 # Exit:  0 = clean, 1 = findings, 2 = usage error.
 #
-# NOT wired into CI. Wire it into the `spec-hygiene` job of .github/workflows/ci.yml
-# only once it is green on the tree — a red-by-default gate fails every PR on
-# defects that PR did not introduce.
+# WIRED: run by the `Spec hygiene checks` job in .github/workflows/ci.yml, on pushes
+# to `main` and pull requests targeting `main` — that workflow's only triggers, so a
+# topic-branch push runs nothing and the gate binds at the merge point. It was wired
+# once green on the tree; a gate that is red on defects a PR did not introduce fails
+# every PR, so keep it green.
 #
 # NOT a spell-checker for prose. It only compares a stated number against a number
 # it can derive from the repo (or against the same figure on other surfaces), and it
@@ -76,7 +78,6 @@ RDL = _load_lint()
 # citations ("was v" matched "was verified"; bare "⚠️" and bare "corrected" fire
 # on unrelated annotations two clauses away).
 HISTORICAL_MARKERS = tuple(re.compile(p, re.I) for p in (
-    r"since advanced to",
     r"⚠️?\s*\**\s*(?:corrected|qualified|superseded|annotated)",
     r"\*\(\s*(?:\w+\s+)?corrected",          # *(Corrected … / *(bullet corrected …
     r"corrected\s+(?:in place\s+)?(?:here\s+)?"
@@ -110,9 +111,27 @@ def sentence_window(text, start, end):
     return text[a:b]
 
 
+# A marker suppresses a citation only if it is genuinely ADJACENT to it. This repo's
+# "sentences" are not sentences: measured over the live tree, 54 of 154 candidate
+# windows exceed 320 chars, median 233, p90 965, max 4,140. At that length an
+# annotation about something else entirely — the orphan-counting methodology, a
+# neighbouring correction — silently suppresses a real stale claim several hundred
+# characters away. So the window is the sentence INTERSECTED with a tight radius.
+MARKER_RADIUS = 110
+
+
 def historically_marked(text, start, end):
     window = sentence_window(text, start, end)
-    return any(rx.search(window) for rx in HISTORICAL_MARKERS)
+    # Clip to a tight radius around the citation itself, expressed in the same
+    # coordinates as the sentence so the two genuinely intersect.
+    a = text.rfind("\n", 0, start) + 1
+    sent_start = text.find(window, a) if window else start
+    if sent_start == -1:
+        sent_start = a
+    lo = max(sent_start, start - MARKER_RADIUS)
+    hi = min(sent_start + len(window), end + MARKER_RADIUS)
+    clipped = text[lo:hi]
+    return any(rx.search(clipped) for rx in HISTORICAL_MARKERS)
 
 
 # ---------------------------------------------------------------------------
@@ -325,6 +344,14 @@ def scan_version_citations(repo, sources, findings, stats):
             # nothing) — refuse the binding rather than invent a citation.
             if re.search(r"[.!?](?:\s|$)\s*[A-Z0-9`(]|\n\s*\n", gap):
                 continue
+            # A version reached through "corrected there AT v1.2", "landed at v0.3",
+            # "OPENED … v0.1" names the REVISION IN WHICH something happened. That is
+            # a dated historical fact, not a claim about what is current, and updating
+            # it would falsify the record. Distinguish it from a currency pointer.
+            if re.search(r"(?:corrected|fixed|landed|recorded|resolved|opened|added|"
+                         r"filed|amended|revised)\b[^`\n]{0,40}?\bat\s*$",
+                         gap, re.I) or re.search(r"\b(?:OPENED|opened)\b[^`\n]{0,30}$", gap):
+                continue
             # "…its VERSION HISTORY v2.1 entry" names a specific row in the
             # target's history, not the target's current version.
             if re.search(r"VERSION\s+HISTORY|version[- ]history", gap, re.I):
@@ -355,11 +382,20 @@ def scan_version_citations(repo, sources, findings, stats):
             # annotation naming a NON-current version is itself stale and still
             # fails. (?!\d|\.\d) — NOT (?![0-9.]) — so a sentence-final period
             # after the version does not defeat the escape.
-            tail = text[vm.end():vm.end() + 40]
-            if re.match(r"\s*(?:\*\*)?\s*(?:,\s*now\s+|→\s*(?:\*\*)?\s*"
-                        r"|\*?\(\s*since\s+)v"
-                        + re.escape(actual) + r"(?!\d|\.\d)", tail):
-                continue
+            # This repo annotates rather than rewrites, and its currency notes CHAIN:
+            # "v1.0.1 → v1.1, since advanced to v1.3" names three versions, and what
+            # makes the claim current is the LAST one. So scan the annotation run that
+            # follows the citation and accept when the final version named is current.
+            # An annotation naming a non-current version is itself stale and still fails.
+            tail = text[vm.end():vm.end() + 96]
+            run = re.match(
+                r"(?:\s*(?:\*\*)?\s*(?:,?\s*now\s+|→\s*|->\s*|\*?\(\s*(?:since|now)\s+"
+                r"|,?\s*since\s+advanced\s+to\s*)(?:\*\*)?\s*v\d+(?:\.\d+)+"
+                r"(?:\*\*)?\s*\)?\*?)+", tail)
+            if run:
+                named = re.findall(r"v(\d+(?:\.\d+)+)", run.group(0))
+                if named and named[-1] == actual:
+                    continue
             # Same-prefix coarser citation (v1.2 cited, target at v1.2.1) is
             # coarse but not wrong.
             if actual.startswith(cited + "."):
