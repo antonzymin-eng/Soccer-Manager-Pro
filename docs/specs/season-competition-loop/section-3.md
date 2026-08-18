@@ -1,7 +1,25 @@
 # Season & Competition Loop Specification #30 — Section 3: Algorithms
 
 **Created:** July 22, 2026
-**Last Updated:** August 18, 2026, later (v2.16 — reviewed-findings pass, one High (**H-A**): the proof
+**Last Updated:** August 18, 2026, later still (v2.17 — **ERR-030-047** (adversarial-review round 6, H1,
+spec-text only — no code change; the code was already correct): §3.4's normative pseudocode was never
+updated when `ERR-044-014` (August 16, 2026) changed the call it specifies. The serve step still read the
+two-argument `OnClubFixturePlayed(f.HomeClubId, homeXi)` / `(f.AwayClubId, awayXi)` and the fallibility
+comment still said the method "has TWO guards", while the real signature has been
+`OnClubFixturePlayed(int clubId, int[] clubPlayerIds, int[] fieldedPlayerIds)` with THREE guards —
+`clubId < 0` (F2), `clubPlayerIds == null` (the ERR-044-014 addition) and `fieldedPlayerIds == null`
+(ERR-044-003 stage 1) — and the **unfiltered-roster precondition ERR-044-014 introduced appeared NOWHERE
+in this spec**: serving MUST read the UNFILTERED roster, because every id whose ban is being served is
+precisely an id the availability filter has just removed, so a filtered roster makes every suspension
+unservable — permanent, silently, no throw. Fixed on BOTH resolution paths: `PlayThroughEngine` resolves
+`homeRoster`/`awayRoster` explicitly and derives `homeRosterIds := RosterIds(homeRoster)` /
+`awayRosterIds := RosterIds(awayRoster)` off the unfiltered instances, returning the pair;
+`ResolveRound(f, squads)` outputs the same pair from its own resolve → filter site; the serve step passes
+`(clubId, roster, xi)` and carries the precondition as a normative MUST; the guard comment names all
+three; §3.4.1 states both paths output the pair. Verified against `src/discipline/DisciplineRules.cs`
+(lines 318–345, the three guards) and `src/season-save/SeasonLoop.cs` (lines 984–985, the three-argument
+calls; `RosterIds` and both derivation sites) before writing.)
+**Last Updated (prior):** August 18, 2026, later (v2.16 — reviewed-findings pass, one High (**H-A**): the proof
 step v2.15 added to the §3.4 monotonicity lemma was itself UNSOUND in the very case this section names
 as its headline — the `ERR-030-044` bench-depth case, where tier 2 is reached with a position-complete
 XI and a completing singleton exists with NO position class short at all, refuting the step's "only
@@ -199,7 +217,7 @@ suspensions have joined, citing ERR-044-002/ERR-044-003 and the code sites; only
 **Last Updated (prior):** July 25, 2026 (v0.9 — ERR-030-010 §3.7 venue correction, found at #30 T0; prior v0.8 back-prop ERR-030-009 #44 availability-filter null seam in §3.4; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 25, 2026 (v0.8 — back-props ERR-030-008 board tick-order seam + ERR-030-009 JobSecurity derived band; prior v0.7 ERR-030-007 academy, v0.6 ERR-030-006 staff, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 27, 2026 (v1.0 — **ERR-030-015**: §3.5's boundary roll gains step (c′), the calendar rebuild it omitted, without which a rolled season is permanently unplayable; found at #30 T3. Also consolidates the TWO stale `Version` fields this header carried — the drift class `spec-error-log.md` v1.43 records. Prior v0.9 ERR-030-010 §3.7 venue correction; v0.8 back-props ERR-030-008/009; v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 2.16
+**Version:** 2.17
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -749,14 +767,23 @@ AdvanceAndPlayNextRound(squads: ISquadProvider):
                                                 # advance a cursor (§3.3.2 / ERR-030-027)
     for f in roundFixtures:                    # ALL N/2 fixtures (FR-SN-012)
         if f.HomeClubId == ManagedClubId or f.AwayClubId == ManagedClubId:
-            result, homeXi, awayXi, fold := PlayThroughEngine(f, squads)  # managed fixture — full engine
+            result, homeXi, awayXi, homeRosterIds, awayRosterIds, fold := PlayThroughEngine(f, squads)
+                                                # managed fixture — full engine
         else:
-            result, homeXi, awayXi := ResolveRound(f)                # §3.4.1 — deterministic (FR-SN-013a)
+            result, homeXi, awayXi, homeRosterIds, awayRosterIds := ResolveRound(f, squads)
+                                                # §3.4.1 — deterministic (FR-SN-013a). ERR-030-047:
+                                                # the quick-sim branch derives its XIs AND its
+                                                # UNFILTERED roster ids at its own resolve → filter
+                                                # site, mirroring PlayThroughEngine below — ban
+                                                # serving below runs on BOTH paths, so both paths
+                                                # must output the roster serving reads
             fold := null                        # quick-sim synthesizes no cards (#44 §1.1/§7.2) —
                                                 # ban SERVING below still runs; only card GENERATION
                                                 # is engine-only at minimal
-        # The fielded XIs come OUT of the resolution itself (ERR-041-010(b), balance-pass AR pass 2:
-        # a second selection walk here was an unenforced agreement with the configuration), and the
+        # The fielded XIs — and, since ERR-044-014, the UNFILTERED roster ids beside them — come OUT
+        # of the resolution itself (ERR-041-010(b), balance-pass AR pass 2: a second selection walk
+        # here was an unenforced agreement with the configuration, and a second provider read here
+        # would be the same parallel-surface shape), and the
         # appearance record is written BEFORE the pinned apply/emit/mark sequence — it is the only
         # fallible call placed BEFORE `f.Played := true` in this block (M6, ERR-030-037 — see below).
         # Both clubs are validated before either is written (pair-atomic, AR pass 3).
@@ -775,13 +802,17 @@ AdvanceAndPlayNextRound(squads: ISquadProvider):
         # `f.Played := true`, deliberately (M6, ERR-030-037):
         # fold.Commit IS fallible under a bound config (a threshold or ban length below its floor
         # throws) — OnClubFixturePlayed itself reads no [GT] and cannot throw under any bound config
-        # (L9, EXTENDED at M1/ERR-030-040): it has TWO guards — clubId < 0, a caller-contract bug never
-        # reachable from a real fixture, and, since ERR-044-003 stage 1, fieldedPlayerIds == null
-        # (ArgumentNullException). The null case is excluded STRUCTURALLY, not by caller discipline:
-        # homeXi/awayXi are FieldedXi's output, which is non-null exactly when discipline is wired — the
-        # same condition this whole block already runs under. That is a distant invariant (FieldedXi's
-        # own gate, not a local one) and holds only until that gate is narrowed, a third FieldedXi
-        # consumer is added, or a resolution mode derives its XI differently — and serving+committing is
+        # (L9, EXTENDED at M1/ERR-030-040, then at ERR-030-047): it has THREE guards — clubId < 0
+        # (F2), a caller-contract bug never reachable from a real fixture; clubPlayerIds == null
+        # (ArgumentNullException, ERR-044-014 — membership is read from the roster by presence, never
+        # re-derived from #27's id packing); and fieldedPlayerIds == null (ArgumentNullException,
+        # ERR-044-003 stage 1). Both null cases are excluded STRUCTURALLY, not by caller discipline:
+        # homeXi/awayXi are FieldedXi's output (non-null exactly when a career OR discipline is
+        # wired) and homeRosterIds/awayRosterIds are RosterIds' output (non-null exactly when
+        # discipline is wired — the same condition this whole block already runs under), so neither
+        # array can be null where these calls are reached. Those are distant invariants (each
+        # helper's own gate, not a local one) and hold only until either gate is narrowed, a third
+        # consumer is added, or a resolution mode derives its XI or roster differently — and serving+committing is
         # independent of
         # Table.ApplyResult/EmitMatchOutcome/`f.Played := true` — so running the pair after the
         # fixture is marked played means a throw from fold.Commit here cannot leave the fixture
@@ -798,14 +829,26 @@ AdvanceAndPlayNextRound(squads: ISquadProvider):
         # neither completable nor rollable. Neither position escapes both hazards, so the ordering
         # stands and the CAUSE is removed instead: RequireCommittableConfig above refuses the config
         # that would throw here while nothing has been written at all.
-        OnClubFixturePlayed(f.HomeClubId, homeXi)
-        OnClubFixturePlayed(f.AwayClubId, awayXi)
+        OnClubFixturePlayed(f.HomeClubId, homeRosterIds, homeXi)
+        OnClubFixturePlayed(f.AwayClubId, awayRosterIds, awayXi)
         # ERR-044-003 stage 1 (August 15, 2026): OnClubFixturePlayed now takes the club's fielded
         # eleven and does NOT decrement a player who appears in it. Ordinarily this changes nothing —
         # the filter has already removed every suspended player before selection, so no banned id can
         # be in homeXi/awayXi. It matters only in the extremis tier (§3.4's depleted-squad back-fill,
         # #44 §2.3 F5 vs #30 §2.3 F9), where a suspended player CAN reach the pitch: without the
         # exemption that appearance also served his ban, making it free.
+        # ERR-044-014 (August 16, 2026), back-propagated here at ERR-030-047: OnClubFixturePlayed
+        # ALSO takes the club's roster (clubPlayerIds) — membership is decided by PRESENCE in it,
+        # never re-derived from #27's packed-id formula, so #44 holds ONE notion of "is this player
+        # at this club", the same one its removal half walks. NORMATIVE PRECONDITION — the roster
+        # passed here MUST be the UNFILTERED squad's ids: squads.ResolveByClubId(...)'s output
+        # BEFORE SelectAvailable runs, resolved one statement above the filter that consumes the
+        # same instance (see PlayThroughEngine below; the quick-sim path derives its pair the same
+        # way at its own site). Serving walks exactly the players whose bans are outstanding, and
+        # those are exactly the players the filter has just REMOVED — feed the FILTERED roster in
+        # and no suspended player is ever a member, so no ban ever decrements and every suspension
+        # is PERMANENT, silently: no throw, no log, the same permanently-suspended outcome
+        # ERR-044-014's retired id-division produced after a transfer, by the opposite route.
         # ...and ONLY THEN this fixture's OWN cards (FR-DC-010, ERR-030-037/#44 §3.3): serving
         # decrements the bans that were outstanding at KICKOFF; the fold adds the ones earned during
         # the fixture just played. Reversing the two would let a player sent off in fixture N serve
@@ -815,11 +858,19 @@ AdvanceAndPlayNextRound(squads: ISquadProvider):
 
 PlayThroughEngine(f, squads):
     engine := new MatchEngine(...)             # SeasonLoop._activeMatch — restart-visible for save
-    home := SelectAvailable(squads.ResolveByClubId(f.HomeClubId))   # resolve → FILTER (FR-MD-023 +
-    away := SelectAvailable(squads.ResolveByClubId(f.AwayClubId))   # FR-DC-010) → configure; F6 fail-loud
+    homeRoster := squads.ResolveByClubId(f.HomeClubId)   # resolve (F6 fail-loud) →
+    awayRoster := squads.ResolveByClubId(f.AwayClubId)
+    home := SelectAvailable(homeRoster)        # → FILTER (FR-MD-023 + FR-DC-010) → configure
+    away := SelectAvailable(awayRoster)        #   (the ERR-030-009 seam)
     homeXi := StartingElevenPlayerIds(home)    # the ids derived at the configuration site itself,
     awayXi := StartingElevenPlayerIds(away)    # one statement from the ConfigureSquads consuming
                                                # the same squad instances (AR pass 2)
+    homeRosterIds := RosterIds(homeRoster)     # ERR-044-014 — #44's membership answer, off the
+    awayRosterIds := RosterIds(awayRoster)     # UNFILTERED roster, resolved one statement above the
+                                               # filter that consumes the same instance: the filtered
+                                               # squad is precisely the one with every suspended
+                                               # player taken OUT (see the MUST at the serve step
+                                               # above)
     engine.ConfigureSquads(home, away,
                            MatchEntryFatigue(home), MatchEntryFatigue(away))   # #29 §3.3 projection
     fold := new CardLedgerFold(engine.PlayerIdsByAgentId(), LEAGUE_COMPETITION_KEY)  # #44 T2, FR-DC-002/005
@@ -831,7 +882,8 @@ PlayThroughEngine(f, squads):
     # fold returns UNCOMMITTED — PlayNextRound sequences the commit AFTER this fixture's own
     # ban-serving decrement (M6, above)
     return MatchResult{ f.HomeClubId, f.AwayClubId, engine.HomeScore, engine.AwayScore,
-                        f.RoundIndex, WorldStore.CurrentWorldTick }, homeXi, awayXi, fold
+                        f.RoundIndex, WorldStore.CurrentWorldTick },
+           homeXi, awayXi, homeRosterIds, awayRosterIds, fold
 ```
 
 The match runs on the 10 Hz/60 Hz loops (`MatchEngine.RunTick` to `MatchEnded` — the real engine
@@ -847,7 +899,10 @@ matches per season. The **quick-sim deepening** resolves a non-managed fixture t
 result model — a scoreline drawn from the `DOMAIN_TAG_SEASON_LOOP` sub-stream (FR-SN-027), keyed on
 `(seed, seasonNumber, roundIndex, homeClubId, awayClubId)` so it is replay-stable and independent of
 draw order — giving the reserved RNG sub-stream its concrete consumer. Both produce a `MatchResult`
-applied to the table identically (FR-SN-012); the choice is a `SeasonState`/config dial, not a
+applied to the table identically (FR-SN-012), and both output the fielded XIs and the UNFILTERED
+roster ids the serve step consumes (ERR-041-010(b) / ERR-044-014 / ERR-030-047): ban serving runs on
+BOTH resolution paths, so each path derives the pair at its own resolve → filter site rather than a
+caller re-reading the provider. The choice is a `SeasonState`/config dial, not a
 rewrite, and a later spec may upgrade quick-sim to a fuller AI-vs-AI simulation. **Determinism note:**
 because the managed fixture consumes the match RNG (its own streams) and non-managed fixtures consume
 the season sub-stream by *key* (not by cursor position), the two are order-independent — the same
@@ -1035,4 +1090,5 @@ by ascending `ClubId` (FR-SN-007 final key) — a total order.
 | 2.14 | 2026-08-17, later still | — | **Reviewed-findings pass, two Lows, both fixed.** **L4:** the eleven-vs-eighteen `OPEN OWNER QUESTION` block that v2.12 closed was left standing below its own closure with no marker, so `grep "OPEN OWNER QUESTION"` found a question that reads open one line above its own "✅ DECIDED" answer. Prefixed in place with a `**SUPERSEDED August 17, 2026 …**` marker line, matching the `SquadRating.cs` "kept only as history" annotation convention (v2.10's row cites it) — the original question text is unchanged, not deleted. **L14:** the same ✅ DECIDED block claimed the `ERR-044-003` cover ladder "retires the eleven-vs-eighteen question **entirely**," which overstates it — generated cover retires the *reinstatement* of a banned player onto a depleted bench, but the eighteen-player selection walk still decides whether a bench slot counts as needing cover at all, so the trigger itself is not retired. Reworded to name exactly what retires (reinstatement) and what still turns on the trigger (whether cover is generated for a bench slot in the first place). Neither fix changes the decision, the rule, an algorithm, a constant, or code. |
 | 2.15 | 2026-08-18 | — | **Reviewed-findings pass, one Low (L5), documentation only.** The monotonicity lemma's headline sentence — "a completing singleton cannot coexist with a strictly better `|R* | ≥ 2` winner" — quantified over every `|R*| ≥ 2` winner, but the sentence immediately before it proved only the narrower claim: a completing singleton `{c}` is the global minimum over completing SUPERSETS of `c`, which says nothing about a completing `R*` that omits `c` entirely. Fixed by adding the missing step rather than weakening the claim: the same per-class independence the lemma already states (adding a candidate can only affect its own class, never another's) means a completing singleton exists only when the squad's whole shortfall sits in one class, which (a) pins `|F| ≥ 17` — the eighteen `CanFieldStartingEleven` requires, minus the one slot `c` fills — and (b) means ANY completing set, of any size, must itself contain a member of that same class, which alone already closes the sole deficit; so every completing `R*` contains a completing singleton (not necessarily `{c}`, but one of the same class) and the search's monotonicity bounds it below `R*`'s own `dirty`. The unrestricted conclusion now follows from definitions already stated in this section rather than outrunning them. No algorithm, constant, guarantee, or code changed — the search, the cap, the tier order, and `Compose`'s FR-DC-018 fast path are all untouched; this closes a proof gap the load-bearing use (superset monotonicity alone) never actually depended on. **⚠️ CORRECTED August 18, 2026 (v2.16): the step this row added was itself UNSOUND in the very case this section names as its headline** — both halves of its class-partition derivation fail (the "only when" and the `|F| ≥ 17` inference); see v2.16, which replaces the derivation. The row is kept as history, not as the current proof. |
 | 2.16 | 2026-08-18 | — | **Reviewed-findings pass, one High (H-A), documentation only — the v2.15 proof step REPLACED; it was unsound in the `ERR-030-044` bench-depth case.** v2.15's derivation asserted (i) "a completing singleton exists **only when** `F`'s entire shortfall sits in one position class — `c`'s own", and (ii) "`F`'s slot classes sum to the eighteen `CanFieldStartingEleven` requires", deriving `|F| ≥ 17` from (ii). Both halves fail against this section's own definitions: `CanFieldStartingEleven` is eleven position-matched starters PLUS a seven-slot bench that is **not class-typed** (the `ERR-030-044` clarification three blocks above the lemma), so in the bench-depth case — tier 2 reached with a position-complete XI, needing only an eighteenth body — a completing singleton exists, EVERY singleton completes, and **no position class is short at all**, refuting (i)'s "only when" and leaving its follow-on ("any completing `R` must contain a member of that same class") with no class to name; and (ii) is not a fact about `F` at all — `F` may hold 25 players and still lack a goalkeeper — so `|F| ≥ 17` did not follow from it. Replaced with the direct derivation the review verified: `{c}` completing ⇒ `|F| + 1 ≥ 18` ⇒ `|F| ≥ 17` (straight from the probe requiring eighteen distinct players); then, fieldability being pure counting (per class for starters, total for the bench), case (a) `F`'s XI position-complete ⇒ the shortfall is pure count and every singleton completes; case (b) otherwise ⇒ per-class independence confines the deficit to `c`'s class `X`, every completing `R` contains an `X`-member `d`, and `F ∪ {d}` matches `F ∪ {c}` in every per-class count at `|F| + 1 ≥ 18`, so `{d}` completes. Either way `R` contains a completing singleton and monotonicity bounds `dirty(R)` below by it — same conclusion, no false premise. Each step was checked against `LineupSelector.TrySelect` (the per-class starter walk, the untyped bench loop, the pure-counting failure conditions) and this section's own `ERR-030-044` trigger-clarification block before writing. The CONCLUSION was never false (the review enumerated the cases and found no counterexample), and the theorem, the search, the cap, the commit rule and the code are all unaffected — but this block exists specifically because two weaker claims were falsified within two days (v2.7 → v2.9), and a proof step false in the section's own headline case does not meet that bar. v2.15's row is annotated in place, not rewritten. |
+| 2.17 | 2026-08-18 | — | **ERR-030-047** (adversarial-review round 6, H1 — spec-text only, no code change; the code was already correct): §3.4's normative pseudocode was never updated when `ERR-044-014` (August 16, 2026) changed the call it specifies. The serve step still read the two-argument `OnClubFixturePlayed(f.HomeClubId, homeXi)` / `OnClubFixturePlayed(f.AwayClubId, awayXi)` (the v2.4 form) and the fallibility comment still said the method "has TWO guards" (the v2.5 count), while the real signature has been `OnClubFixturePlayed(int clubId, int[] clubPlayerIds, int[] fieldedPlayerIds)` with THREE guards — `clubId < 0` (F2), `clubPlayerIds == null` (ArgumentNullException, the ERR-044-014 addition) and `fieldedPlayerIds == null` (ArgumentNullException, ERR-044-003 stage 1) — since `src/discipline/DisciplineRules.cs` v1.7 / `src/season-save/SeasonLoop.cs` v1.29. Worse than the stale signature, **the unfiltered-roster precondition ERR-044-014 introduced appeared nowhere in this spec**: serving MUST read the UNFILTERED roster (every id whose ban is being served is precisely an id the availability filter has just removed), so an implementer wiring the serve step off the filtered squad — the only squad the pre-fix pseudocode ever bound — would make every suspension unservable: bans never decrement, every suspension is permanent, silently, no throw and no log. Fixed on BOTH resolution paths: `PlayThroughEngine`'s pseudocode resolves `homeRoster`/`awayRoster` explicitly, derives `homeRosterIds := RosterIds(homeRoster)` / `awayRosterIds := RosterIds(awayRoster)` off the UNFILTERED `squads.ResolveByClubId(...)` output — resolved one statement above the `SelectAvailable` filter that consumes the same instance — and returns the pair; `ResolveRound(f, squads)` outputs the same pair from its own resolve → filter site (ban serving runs on both paths, now also stated in §3.4.1); the serve step becomes `OnClubFixturePlayed(f.HomeClubId, homeRosterIds, homeXi)` / `(f.AwayClubId, awayRosterIds, awayXi)` with the precondition carried as a normative MUST comment; and the guard comment names all THREE guards with both structural null-exclusions (`FieldedXi`'s and `RosterIds`' gates). Verified against `DisciplineRules.cs:318-345` and `SeasonLoop.cs:984-985`/`1622-1638` before writing. Filed at `spec-error-log.md` v2.45. |
 #endregion

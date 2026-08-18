@@ -14,7 +14,7 @@ description: >-
 # File an ERR and Back-Prop
 
 `docs/tracking/spec-error-log.md` — check its own `**Version:**` header for the current revision
-rather than trusting a number restated here (it was v2.44 with 209 Error Index rows, re-derived
+rather than trusting a number restated here (it was v2.45 with 210 Error Index rows, re-derived
 August 18, 2026 by `grep -n '^\*\*Version:\*\*'` and by counting `^| ERR-` rows in the Error Index
 table). It is the authoritative remediation backlog, and its value depends on two things being
 reliably true: ids are unique, and an entry describes the *spec* defect rather than only the code fix.
