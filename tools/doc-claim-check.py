@@ -618,18 +618,17 @@ def scan(repo, quiet=False):
         for m in CLAIM.finditer(text):
             cmd = m.group("cmd").strip()
             stated = int(m.group("value").replace(",", ""))
-            if NEGATOR.search(m.group("gap")) or NEGATOR.search(
-                    m.group(0)[m.end("gap") - m.start():]):
-                declined["negated"] += 1
-                declined_list.append(
-                    (rel, text.count("\n", 0, m.start()) + 1, cmd,
-                     "claim is NEGATED or historical — states what the command "
-                     "does not / no longer return"))
-                continue
             # A command must look like one: start with an allowed binary.
             # Round 9 (L1): a backticked run of whitespace matches CLAIM and
             # used to crash here on `"".split()[0]`.
             head = cmd.split()[0] if cmd.split() else ""
+            # Round 10: the negation test used to run BEFORE this one, so a
+            # backticked IDENTIFIER near a negation ("`SeasonSaveContents` …
+            # was not 4") was counted and printed as a declined CLAIM. Five of
+            # the eight "negated-or-historical" declines were of that kind —
+            # never claims, so counting them overstated how much real coverage
+            # the tool was giving up, in the very figure that exists to state
+            # that honestly. The command test now gates the negation test.
             if head not in ALLOWED_CMDS:
                 # Round 9 (M1): this `continue` was the tool's THIRD decline
                 # path and the only silent one, while its header and its
@@ -648,6 +647,14 @@ def scan(repo, quiet=False):
                     declined_list.append(
                         (rel, text.count("\n", 0, m.start()) + 1, cmd,
                          "`%s` is not an allow-listed read-only binary" % head))
+                continue
+            if NEGATOR.search(m.group("gap")) or NEGATOR.search(
+                    m.group(0)[m.end("gap") - m.start():]):
+                declined["negated"] += 1
+                declined_list.append(
+                    (rel, text.count("\n", 0, m.start()) + 1, cmd,
+                     "claim is NEGATED or historical — states what the command "
+                     "does not / no longer return"))
                 continue
             segments, why = parse_pipeline(cmd)
             if segments is None:
@@ -834,7 +841,14 @@ if __name__ == "__main__":
 # |         |            |             | read-only pipeline". Live tree unchanged at |
 # |         |            |             | 2 executed / PASS; declines 21 → 30, the    |
 # |         |            |             | 9 new ones being the previously-silent      |
-# |         |            |             | class. Verified on a scratch mirror: 10     |
+# |         |            |             | class (later 21 -> 25 at round 10: five     |
+# |         |            |             | "negated" declines were backticked          |
+# |         |            |             | IDENTIFIERS beside a negation, never        |
+# |         |            |             | claims, so counting them overstated the     |
+# |         |            |             | coverage being given up in the very figure  |
+# |         |            |             | that exists to state it honestly; the       |
+# |         |            |             | command test now gates the negation test).  |
+# |         |            |             | Verified on a scratch mirror: 10            |
 # |         |            |             | hatch attempts all refused with the canary  |
 # |         |            |             | file intact and no file created, and the    |
 # |         |            |             | complement — the same quoted-glob command   |

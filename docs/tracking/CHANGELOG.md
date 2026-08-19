@@ -15,8 +15,14 @@ break it, and do not edit historical entries.
 > **Last Updated:** August 19, 2026 — **Adversarial-review round 9: the tool round 8 built to end the
 > recurring defect class shipped WITH that class in it — three High findings in
 > `tools/doc-claim-check.py`, every one proven by reproduction before the fix and re-proven in both
-> directions after.** Documentation and tooling only; no `.cs` and no `.asmdef` changed anywhere on
-> the branch, so no gate run is owed.
+> directions after.** Documentation and tooling only: no `.cs` and no `.asmdef` has changed anywhere
+> in this adversarial-review series — verified over `12eba7d~1..HEAD`, where the only `src/` path
+> touched is `src/CLAUDE.md`, the coding guide — so no gate run is owed. *(That range is stated
+> because the looser phrasing this entry first used, "anywhere on the branch", is FALSE and was
+> inherited from the round-7 and rounds-4–7 entries below: the branch also carries the merged #44
+> discipline work from PR #322, which is 60-odd `.cs` files. Caught in the round-10 pass over this
+> entry, by re-deriving the claim instead of re-reading it — which is the whole method this series
+> exists to install, applied to the entry announcing it.)*
 >
 > **Why this round existed, and what it confirms.** Round 8's own diagnosis was that a correction pass
 > is itself a high-defect-rate activity — nine of its ten Highs had been introduced or missed by the
@@ -83,7 +89,11 @@ break it, and do not edit historical entries.
 > contradicts APPROVED spec TEXT; these are tool defects, and the duplicate version row is a hygiene
 > slip the lint already reports mechanically — the August 8, 2026 pass over 275 such ERRORs fixed them
 > without filing ids, and that precedent is the right one. **Verification:** `doc-claim-check` PASS,
-> 2 executed (unchanged), declines 21 → 30 with the 9 new ones being the previously-silent class;
+> 2 executed (unchanged), declines 21 → **25** (+9 previously-silent unlisted-binary, −5 identifier
+> pseudo-claims dropped in the round-10 pass — a backticked IDENTIFIER beside a negation was being
+> counted and printed as a declined CLAIM, overstating the coverage the tool was giving up in the very
+> figure that exists to state it honestly — and the rest recategorised), every remaining line naming a
+> real command;
 > `doc-consistency-check` PASS, 34 excusals (23 region / 4 chronicle / 7 phrasing / 0 marker), 15
 > unresolvable; `recurring-defect-lint` 0 ERROR; `assembly-tier-check` PASS. The security fixes were
 > verified on a scratch mirror in both directions: ten hatch attempts all refused with the canary file
