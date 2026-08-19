@@ -55,7 +55,10 @@ Soccer-Manager-Pro/
 └── tools/
     ├── dotnet-ci/                  ← Non-certifying Linux compile/test gate (asmdef→csproj + Unity shim)
     ├── unity-ci/ perf-harness/ spec-stress/
-    └── *.py, run-perf-local.sh     ← Budget auditor, seed selection, round-resolution fitter
+    └── *.py, run-perf-local.sh     ← 8 scripts (`ls tools/*.py`): assembly-tier-check,
+                                      budget-auditor, chat-review, doc-claim-check,
+                                      doc-consistency-check, recurring-defect-lint,
+                                      round-resolution-fit, select-seed
 ```
 
 **`src/` assembly map.** Most assemblies are named for their spec folder, but not all — several specs are

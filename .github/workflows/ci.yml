@@ -108,6 +108,7 @@ jobs:
         # both directions, graph acyclic (FR-CS-046a), and the out-of-band
         # Infrastructure row pinned BY NAME to the pair FR-CS-046b binds.
         # Pure stdlib Python — no dependencies, runs in under a second.
+        if: always()
         run: python3 tools/assembly-tier-check.py --repo .
       - name: Cross-document consistency (stale version citations and cardinalities)
         # Catches the defect class four adversarial-review rounds surfaced more than
@@ -118,7 +119,26 @@ jobs:
         # `vOLD, now vNEW` / `*(since vNEW)*` annotation), and a hard-coded cardinality
         # must equal what it counts — with cross-file AGREEMENT standing in where no
         # ground truth exists. Pure stdlib Python.
+        if: always()
         run: python3 tools/doc-consistency-check.py --repo .
+      - name: Executable claims and spec-fence identifiers
+        # Round-8 diagnosis: the recurring defect in this project's documents is
+        # that VERIFICATION PROSE IS NEVER ITSELF VERIFIED. Root CLAUDE.md cited a
+        # grep that refutes its own claim; §9.2 Q-04 ratified "three IDs" against
+        # six; §9.1 C-02's recorded value broke inside the commit that claimed to
+        # have re-run every checklist command. Each survived several hostile review
+        # rounds, because checking them by hand means running seventeen commands and
+        # a reviewer reads the number instead.
+        # This step runs them. It also resolves `Type.MEMBER` references inside
+        # csharp spec fences against the same file's own declarations — the class
+        # that let ERR-020-001's rename dangle in the appendix for three months and
+        # let round 7's own rename dangle one section below the line it fixed.
+        # Both checks name every claim they DECLINE, because a silent skip is where
+        # the previous four checker defects hid.
+        # `if: always()` so a failure here and in the two steps above are all
+        # reported in one push instead of one per round-trip.
+        if: always()
+        run: python3 tools/doc-claim-check.py --repo .
       - name: Constants must carry source tag in spec text
         run: |
           set -e

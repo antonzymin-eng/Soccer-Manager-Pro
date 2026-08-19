@@ -12,7 +12,52 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 18, 2026 — **Adversarial-review rounds 4–7 over the documentation estate: two
+> **Last Updated:** August 18, 2026, later — **Adversarial-review round 8, and the conclusion drawn from
+> five rounds of it: `tools/doc-claim-check.py` CREATED, because the recurring defect could not be closed
+> by reviewing harder.** Documentation only; no `src/` code changed, so no gate run is owed.
+>
+> **The diagnosis, which is the part worth reusing.** Rounds 5–8 kept surfacing the same three shapes, and
+> round 8 found that **nine of its ten High findings were introduced or missed by the previous FIX pass**,
+> most of them by mine. (1) **Fixes enumerate instances; defects are classes** — `ERR-020-001` renamed a
+> constant in §4.2 but not the appendix; round 7 renamed §C.1 but not §C.2 one section below; "on every
+> push" was corrected at Spec #20's four sites and left at three more. (2) **Verification prose is never
+> itself verified** — root `CLAUDE.md` cites a grep that refutes its own claim, §9.2 Q-04 ratified "three
+> IDs" against six, §9.1 C-02's recorded value broke *inside* the commit that claimed to re-run every
+> checklist command. (3) **The detector inherits the author's blind spot** — a comment justifying the code
+> beside it, a checker heuristic tuned on its motivating example. `ERR-030-048` is the pure case: a comment
+> asserting a gate that did not exist, written by the pass fixing the defect whose own comment asserted a
+> gate that did not exist.
+>
+> **Root cause: prose has no compiler.** In `src/` a missed rename is a build error and a dangling
+> reference will not link. In specs and tracking documents nothing binds, so the same classes fail
+> silently — which is why the defects cluster in the FIX passes rather than the original work.
+>
+> **So the answer was a tool, not another round.** `doc-claim-check.py` runs two oracle-free checks.
+> (1) It **executes the verification commands the documents quote** and diffs the stated value — this repo
+> writes claims in machine-checkable form constantly and nothing ever re-ran them. (2) It **resolves
+> `Type.MEMBER` references inside csharp spec fences** against the same file's own declarations, the class
+> that let `ERR-020-001` dangle in Appendix C for three months. On first run it found one live dangling
+> reference (`BallPhysicsConstants.MAX_SUBSTEPS`, round 7's own rename) and one un-annotated stale proof
+> (`ERR-020-006`'s live command offered as evidence for a historical 218, now 251; and 218 counts LINES,
+> not occurrences — the real figure is 235). Both fixed here.
+>
+> **What it deliberately does not do, recorded because overclaiming is the failure mode this series is
+> about:** it verifies only claims whose command prints a single integer, and resolves identifiers only
+> within one file. **Every claim it declines is counted AND NAMED** — 2 unsafe, 5 not-self-contained,
+> 6 not-a-single-integer, 7 negated-or-historical against 2 executed — because rounds 5 and 6 both found
+> this project's checkers hiding real defects behind silent skips. Commands are untrusted document text:
+> allow-listed read-only binaries, no shell, globs expanded in-process.
+>
+> **Its own first run produced two false positives, both fixed and both instructive**: `grep -c '^- \*\*'`
+> quoted without its file operand reads empty stdin and returns 0 (declined as not-runnable-as-written,
+> not reported as a mismatch), and "the plain `grep …` **no longer returns 218**" was read as an assertion
+> that it does (negation detection added). Tuning a matcher on the instances that motivated it and never
+> on their complement is defect shape (3), committed by the tool written to catch it.
+>
+> Also landed: the three hygiene checkers now carry `if: always()` in `ci.yml`, so one failure no longer
+> masks the others (round-8 tooling M3) — a reviewer had been learning one problem per push.
+
+> **Last Updated (prior):** August 18, 2026 — **Adversarial-review rounds 4–7 over the documentation estate: two
 > checker tools built and CI-wired, two APPROVED specs corrected, four ERR ids filed. No `src/` code changed,
 > no `.cs` or `.asmdef` touched anywhere on the branch, so no gate run is owed.**
 >
