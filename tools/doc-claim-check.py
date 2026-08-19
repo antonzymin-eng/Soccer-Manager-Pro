@@ -164,6 +164,7 @@ def command_shaped(cmd, head):
     return ("/" in head or head.endswith((".py", ".sh"))
             or head in _KNOWN_BINARIES)
 
+
 TIMEOUT_S = 60
 
 # A NEGATED claim states what the command does NOT return — this repo writes
@@ -203,9 +204,6 @@ CLAIM = re.compile(
     r"[^0-9`\n]{0,18}"
     r"\*{0,2}(?P<value>\d[\d,]*)\*{0,2}",
     re.I)
-
-
-SEP = object()   # unquoted `|` — a pipeline separator, never part of a token
 
 
 def tokenize(cmd):
