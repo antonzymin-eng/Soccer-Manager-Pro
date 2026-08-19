@@ -2,7 +2,7 @@
 # ============================================================================
 # File:     tools/doc-consistency-check.py
 # Created:  2026-08-18
-# Modified: 2026-08-18
+# Modified: 2026-08-19
 # Author:   Claude Code
 # ============================================================================
 # Purpose: Catch the two defect classes that three consecutive adversarial-review
@@ -126,6 +126,83 @@
 #   Live tree: 37 findings → 2, and both survivors are judged REAL (the
 #   "`league-bootstrap-design.md` v1.5, now v1.6" chains in open-issues.md
 #   and CHANGELOG.md's head entry — the file is at v1.7).
+#
+# ROUND 8 (2026-08-19) — THE MAINTAINED-POINTER MODEL. Round 8's diagnosis of
+# rounds 4–7: every fix was a heuristic tuned on the instances that motivated
+# it and never tested on the complement. Five Highs, all fixed by replacing
+# prose pattern-matching with ONE explicit currency predicate:
+#
+#   H1  The pierce (REASSERT_SHAPE, 80 chars of slack) and the binder
+#       (GAP_LIMIT = 60) disagreed, so a pierced chain whose filename→version
+#       gap was 61–80 chars was un-frozen and then silently DROPPED — a live
+#       stale claim (file-manifest.md:5, `spec-error-log.md` at v2.46 vs an
+#       actual v2.47, gap 78) sat on the tree under a printed PASS. Fixed
+#       structurally, not by aligning two numbers: the pierce itself now
+#       captures the claimed version (CURRENCY_POINTER's own capture group),
+#       so there is NO second binding step to disagree with — a pierced
+#       citation is evaluated by construction, and its resolution failure is
+#       counted (unresolvable), never silent. The same shape on an UNFROZEN
+#       surface (the complement nobody tested) is covered by the pointer
+#       fallback: when the gap refuses to bind, a maintained pointer in the
+#       citation's own bounded window is evaluated directly.
+#   H2  blank_frozen_history glued non-adjacent kept windows together
+#       (newlines kept, every other character DROPPED), so context regexes
+#       ran on text that does not exist in the file — a marker from a
+#       DIFFERENT citation could land inside MARKER_RADIUS — and reported
+#       columns downstream of any blanked span were wrong. All blanking is
+#       now space-per-character (offset-preserving), and pierced claims
+#       carry their own excerpts from the original text. Columns are now
+#       REAL file columns in CHARACTERS (verified against the file by
+#       1-based char index; byte-counting awk drifts on em-dashes).
+#   H3  A version bound across an intervening backticked token, FAILING
+#       correct prose ("`league-bootstrap-design.md` KD-8;
+#       `RoundResolutionFitLockTests` v1.1 corrects its now-stale FAIL
+#       comments" read as league-bootstrap-at-v1.1). Any backtick in the gap
+#       now refuses the binding. Region excusals 25 → 23 (the two
+#       spec-error-log mis-bindings the excusal had been hiding).
+#   H4  REASSERT_SHAPE (version → currency word → version) was wrong in both
+#       directions — see CURRENCY_POINTER's comment for the six missed claim
+#       shapes and the two dated-record false positives. The model is now:
+#       pierce ONLY on an explicit marker ("since advanced to" / "now at" /
+#       "currently" / "now" / a parenthetical opening "(since vN"), each
+#       followed by the claimed version; a bare vOLD → vNEW arrow chain
+#       never pierces, whatever surrounds it. All eight shapes were planted
+#       in a scratch mirror's frozen chain and verified: six misses
+#       REPORTED, two false positives excused, arrow-chain control silent.
+#   H5  Two disagreeing currency definitions (the pierce regex vs
+#       CURRENCY_WORD over the annotation run) let a pierced-looking claim
+#       be re-swallowed by the v1.3 excusals. currency is now decided by the
+#       ONE predicate at every call site, a pierced/pointer claim never
+#       reaches the excusals or the historical-marker suppression, and when
+#       the pointer is present ITS version is the effective claim ("…,
+#       currently the log stands at **v2.45**" is reported at v2.45).
+#
+# WHAT THE ROUND-8 MECHANISMS STILL DO NOT CATCH, stated so the next round
+# does not have to rediscover it:
+#   - The marker set is CLOSED. A maintained pointer phrased any other way
+#     ("the current revision is v1.6", "stands at v1.6" with no "currently")
+#     is not recognised: in a frozen chain it is blanked unevaluated; on a
+#     normal surface it is at best an unparsed annotation. That is the deal
+#     H4 makes — the repo can be REQUIRED to use the marker forms.
+#   - Marker-BEFORE-citation claims ("now at **v1.5**: `x.md` …") are
+#     recognised only inside the frozen chain (lookbehind), and only across
+#     whitespace/colon/markup adjacency — not comma, semicolon or dash,
+#     which would let the next filename steal the previous citation's
+#     pointer (found by constructing the complement). On normal surfaces
+#     the scanner still binds forward only.
+#   - The pointer window is bounded (160 chars, next citation, line end,
+#     sentence boundary): a reassertion beyond any of those is invisible.
+#   - Bare "now"/"currently" + version within ~30 chars is treated as a
+#     claim wherever it appears in the window; "now reads **v2.42 …**" is
+#     therefore read as one, and only last-match-wins keeps the H1 chain
+#     reporting v2.46 rather than v2.42. Zero false positives on today's
+#     tree, but it is a heuristic, not a parse.
+#   - A citation consumed by the dated-pointer pre-guard ("see/per/full
+#     account") or the verb-at guard is skipped before the pointer check,
+#     so a currency pointer inside such a construction goes unevaluated.
+#   - Bare "since vN" without "advanced to" and without the "(since"
+#     adjacency is never a marker — deliberate (H4's false positives), and
+#     it means a pointer written "since v1.6" alone is unrecognised.
 
 import argparse
 import importlib.util
@@ -256,23 +333,79 @@ def _in_region(regions, pos):
 # table). A citation of one names the revision at which something was filed.
 CHRONICLE_TARGETS = {"spec-error-log.md", "CHANGELOG.md", "CHANGELOG-src.md"}
 
-# The override that pierces every excusal: an annotation run containing one of
-# these words REASSERTS currency ("v1.5, now v1.6", "(since v1.6)"), so the
-# claim is checked and reported normally. A bare "vOLD → vNEW" arrow chain
-# does NOT — inside a record context it is the natural notation for the bump
-# an event made ("v1.0.1 → v1.1" in a changed-files table), not a claim that
-# vNEW is current today.
-REASSERT_LOOKAHEAD = 160
-# A currency REASSERTION, tight enough not to fire on a landing record whose
-# following prose merely contains the word "since". The shape this repo actually
-# uses is version -> currency word -> version: "v2.11 -> v2.12, since advanced to
-# **v2.18**", "v1.5, now v1.6", "*(since v1.3)*". A bare "-> **v0.5**" followed by
-# 100 characters of prose is a landing record and must NOT be pierced.
-REASSERT_SHAPE = re.compile(
-    r"^[^`\n]{0,80}?\**v\d[\d.]*\**[^`\n]{0,40}?"
-    r"\b(?:now|currently|since)\b[^`\n]{0,40}?\**v\d[\d.]*",
-    re.I)
-CURRENCY_WORD = re.compile(r"\b(?:now|currently|since)\b", re.I)
+# The override that pierces every excusal: a MAINTAINED POINTER — an explicit
+# marker this repo can be REQUIRED to use for a present-tense version claim —
+# reasserts currency, so the claim is checked and reported normally wherever it
+# sits. A bare "vOLD → vNEW" arrow chain does NOT, regardless of intervening
+# words — inside a record context it is the natural notation for the bump an
+# event made ("v1.0.1 → v1.1" in a changed-files table), not a claim that vNEW
+# is current today.
+POINTER_LOOKAHEAD = 160
+POINTER_LOOKBEHIND = 120
+# THE currency predicate (round 8, H5: ONE definition, used by every call site
+# — the frozen-chain pierce, the scanner's currency determination, and the
+# pointer-fallback evaluation; the retired v1.3/v1.4 model had TWO — the pierce
+# regex and the annotation-run word test — and anything matching the first but
+# not the second was un-frozen and then re-swallowed by the excusals). A
+# marker word — "since advanced to" (round 5's headline phrase), "now at",
+# "currently", "now" — followed within a few words by the version it asserts.
+# Round 8 (H4): the retired REASSERT_SHAPE pattern-matched prose
+# (version → currency word → version) and was wrong in BOTH directions: it
+# missed single-version claims ("is now at **v1.5**"), claims whose arrow
+# chain sat >40 chars back, claims behind a backticked identifier (`KD-7a`),
+# and marker-first claims ("now at **v1.5**: `x.md` …"), while PIERCING dated
+# records whose prose merely ran version…since…version ("unchanged since
+# **v1.2**", "(its first row since **v1.0**)") — a landing record naturally
+# names a second version. Bare "since" is therefore NOT a marker — the two
+# accepted "since" forms are the full "since advanced to" and the
+# parenthetical pointer that OPENS with it, "(since vN" (CHANGELOG's chain
+# maintains eight live pointers in that idiom — "`league-bootstrap-design.md`
+# **v1.5** *(since v1.7)*" — and refusing the form would leave them
+# unmaintained AND unchecked at once, the exact failure v1.4's header
+# records; both H4 false positives lack the adjacency, "unchanged since"
+# having no paren and "(its first row since" not opening with it). The
+# word-marker→version gap tolerates a few words ("currently the log stands
+# at **v2.45**") but no backtick and no newline, so a marker can never claim
+# a version across an intervening citation; the "(since" branch requires the
+# version IMMEDIATELY ("(since the v1.2 landing" is temporal prose, not a
+# pointer).
+CURRENCY_POINTER = re.compile(
+    r"(?:\b(?:since\s+advanced\s+to|now\s+at|currently|now)\b[^`\n]{0,30}?"
+    r"|\(\s*since\s+)"
+    r"\**v(\d+(?:\.\d+)+)", re.I)
+# Markup-tolerant sentence boundary (round 6, M4), shared by the gap check and
+# the pointer-window bound: a version or marker beyond one belongs to the next
+# sentence, not to this citation.
+SENTENCE_BOUNDARY = re.compile(r"[.!?][*_)\]\"']*(?:\s|$)\s*[A-Z0-9`(]")
+
+
+def currency_pointer(text, start, stop):
+    """Last CURRENCY_POINTER match in text[start:stop], or None.
+
+    Last, not first: a chained annotation names the current version LAST
+    ("… now reads **v2.42 → v2.43**, since advanced to **v2.46**" claims
+    v2.46, not v2.42)."""
+    last = None
+    for pm in CURRENCY_POINTER.finditer(text, start, stop):
+        last = pm
+    return last
+
+
+def _pointer_stop(text, start, hard_stop):
+    """Window end for a pointer search starting at `start`: the lookahead cap,
+    the caller's hard stop (the NEXT `FILE_TOKEN` — deliberately not the next
+    bare backtick, which is round 8 H4's dangerous miss: this repo puts
+    backticked identifiers (`KD-7a`) inside these annotations, and truncating
+    at one hid the reassertion behind it), the line end, or a sentence
+    boundary — whichever comes first."""
+    stop = min(start + POINTER_LOOKAHEAD, hard_stop, len(text))
+    nl = text.find("\n", start, stop)
+    if nl != -1:
+        stop = nl
+    sb = SENTENCE_BOUNDARY.search(text, start, stop)
+    if sb:
+        stop = sb.start()
+    return stop
 
 
 def _unwrap(s):
@@ -362,72 +495,99 @@ HEADING_RE = re.compile(r"^#{1,6} ", re.M)
 
 
 def _blank(text, start, end):
-    """Replace text[start:end] with newlines, preserving line numbering."""
-    return text[:start] + "\n" * text.count("\n", start, end) + text[end:]
+    """Replace text[start:end] with whitespace — a space per character, a
+    newline per newline — preserving BOTH line numbering and every character
+    offset. Round 8 (H2): the previous form dropped every non-newline
+    character, which glued non-adjacent survivors together so context regexes
+    ran on text that does not exist in the file (a marker belonging to a
+    DIFFERENT citation landed inside MARKER_RADIUS of this one) and made every
+    reported column downstream of a blanked span wrong (1661 reported where
+    the real column was 9491)."""
+    seg = text[start:end]
+    return (text[:start]
+            + "".join("\n" if c == "\n" else " " for c in seg)
+            + text[end:])
 
 
 def blank_frozen_history(text):
     """Blank the header chain below its head entry, and own VERSION HISTORY
-    sections. Returns (text, frozen_chars) — frozen_chars is the number of
-    characters excluded from scanning (all counts in characters, one unit)."""
+    sections. Returns (text, frozen_chars, pierced): frozen_chars is the
+    number of non-newline characters excluded from scanning, and pierced is
+    a list of (offset, filename, claimed_version, excerpt) — one entry per
+    citation in the frozen chain that carries a MAINTAINED POINTER
+    (CURRENCY_POINTER), extracted here and evaluated directly by
+    scan_version_citations.
+
+    ROUND 7 FOLLOW-UP: the chain is frozen, but a CURRENCY REASSERTION in it
+    is not. This repo maintains "vA -> vB, since advanced to **vC**" pointers
+    inside header entries, and "since advanced to" is its phrase for stating
+    the CURRENT version (round 5's headline finding). Those pointers keep
+    being maintained after their entry scrolls below the (prior) marker, so
+    blanking the whole span made them unmaintainable AND unchecked at once.
+
+    ROUND 8 (H1): the v1.4 fix kept a text window around each pierced
+    citation and re-scanned it, so the pierce (REASSERT_SHAPE, 80 chars of
+    slack before the first version) and the binder (GAP_LIMIT = 60) could
+    DISAGREE — a pierced chain whose filename→version gap was 61–80 chars
+    was un-frozen and then silently dropped, which put a live stale claim on
+    the tree under a printed PASS. Now the pierce itself extracts the claimed
+    version (the pointer's own version capture), so there is no second
+    binding step to disagree with: a pierced citation is evaluated by
+    construction, never re-bound and never re-excused (H5). Version-history
+    sections below stay fully frozen: a VH row is a dated record of its own
+    revision and states no currency."""
     frozen = 0
+    pierced = []
     m = PRIOR_MARKER.search(text)
     if m:
         nxt = HEADING_RE.search(text, m.start())
         end = nxt.start() if nxt else len(text)
-        # ROUND 7 FOLLOW-UP: the chain is frozen, but a CURRENCY REASSERTION in it
-        # is not. This repo maintains "vA -> vB, since advanced to **vC**" pointers
-        # inside header entries, and "since advanced to" is its phrase for stating
-        # the CURRENT version (round 5's headline finding). Those pointers keep
-        # being maintained after their entry scrolls below the (prior) marker, so
-        # blanking the whole span made them unmaintainable AND unchecked at once:
-        # adding one new head entry silently retired four live claims, which is how
-        # this was found. Blank the span line by line, KEEPING any line that carries
-        # both a .md citation and a currency word — the same override that pierces
-        # the round-7 record regions, applied to the one frozen span that can hold a
-        # present-tense claim. Version-history sections below stay fully frozen: a
-        # VH row is a dated record of its own revision and states no currency.
-        # Pierce per CITATION, not per line: these entries are single 20,000-char
-        # lines, so a line-level keep un-freezes a whole entry and resurfaces dozens
-        # of genuine historical citations. Keep only the narrow window around a
-        # citation whose own trailing annotation reasserts currency.
         seg_start, seg = m.start(), text[m.start():end]
-        keep = []
-        for fm in FILE_TOKEN.finditer(seg):
-            look = seg[fm.end():fm.end() + REASSERT_LOOKAHEAD]
-            cut = look.find("`")            # stop at the next citation
-            if cut != -1:
-                look = look[:cut]
-            if REASSERT_SHAPE.match(look):
-                keep.append((fm.start(), fm.end() + len(look)))
-        merged = []
-        for a, b in keep:
-            if merged and a <= merged[-1][1]:
-                merged[-1] = (merged[-1][0], max(merged[-1][1], b))
-            else:
-                merged.append((a, b))
-        out, cur = [], 0
-        for a, b in merged + [(len(seg), len(seg))]:
-            blanked = seg[cur:a]
-            out.append("\n" * blanked.count("\n"))
-            frozen += len(blanked) - blanked.count("\n")
-            if b > a:
-                out.append(seg[a:b])
-            cur = b
-        text = text[:seg_start] + "".join(out) + text[end:]
+        fmatches = list(FILE_TOKEN.finditer(seg))
+        for idx, fm in enumerate(fmatches):
+            hard = (fmatches[idx + 1].start() if idx + 1 < len(fmatches)
+                    else len(seg))
+            pm = currency_pointer(seg, fm.end(),
+                                  _pointer_stop(seg, fm.end(), hard))
+            hi = pm.end() if pm else fm.end()
+            if pm is None:
+                # Marker-first claim: "now at **v1.5**: `x.md` carries …"
+                # (round 8, H4). The pointer must be ADJACENT — nothing but
+                # whitespace, a colon, or closing markup between its version
+                # and the filename. Deliberately NOT comma/semicolon/dash:
+                # "… since advanced to **v1.6**; `b.md` carries …" is the
+                # PREVIOUS citation's pointer followed by a new subject, and
+                # admitting those separators let the next filename steal it
+                # (found by constructing the complement, not by an instance).
+                lo = max(fm.start() - POINTER_LOOKBEHIND, 0,
+                         seg.rfind("\n", 0, fm.start()) + 1)
+                if idx > 0:
+                    lo = max(lo, fmatches[idx - 1].end())
+                pm = currency_pointer(seg, lo, fm.start())
+                if pm and not re.fullmatch(r"[\s:*_]{0,12}",
+                                           seg[pm.end():fm.start()]):
+                    pm = None
+            if pm:
+                a = max(0, min(fm.start(), pm.start()) - 40)
+                b = min(len(seg), max(hi, fm.end()) + 40)
+                pierced.append((seg_start + fm.start(), fm.group(1),
+                                pm.group(1),
+                                seg[a:b].replace("\n", " ")))
+        frozen += len(seg) - seg.count("\n")
+        text = _blank(text, seg_start, end)
     # Own version-history sections (heading form; RDL's authoritative regex).
     spans = []
     for vh in RDL.VH_HEADING_RE.finditer(text):
         nxt = re.compile(r"^#{1,4}\s+\S", re.M).search(text, vh.end())
         spans.append((vh.start(), nxt.start() if nxt else len(text)))
     for start, end in reversed(spans):
-        frozen += end - start
+        frozen += (end - start) - text.count("\n", start, end)
         text = _blank(text, start, end)
-    return text, frozen
+    return text, frozen, pierced
 
 
 def current_state_sources(repo, findings):
-    """[(path, rel, text, frozen_bytes)] for every in-scope surface.
+    """[(path, rel, text, frozen_chars, pierced)] for every in-scope surface.
 
     Named surfaces that do not exist are reported as findings (FN-4: a missing
     surface must never silently shrink the scope). .claude/**/*.md and
@@ -439,9 +599,9 @@ def current_state_sources(repo, findings):
     seen = set()
 
     def add(p, rel):
-        text, frozen = blank_frozen_history(
+        text, frozen, pierced = blank_frozen_history(
             p.read_text(encoding="utf-8", errors="replace"))
-        out.append((p, rel, text, frozen))
+        out.append((p, rel, text, frozen, pierced))
         seen.add(p.resolve())
 
     for rel in CURRENT_STATE:
@@ -602,31 +762,79 @@ def scan_version_citations(repo, sources, findings, stats, regions):
     targets = {name: next(iter(paths))
                for name, paths in seen.items() if len(paths) == 1}
 
-    for src, rel, text, _frozen in sources:
+    for src, rel, text, _frozen, pierced in sources:
+
+        def _resolve(name):
+            """Target path for a cited name, or None (broken path, or a
+            basename that is ambiguous/unknown repo-wide)."""
+            if "/" in name:
+                t = repo / name
+                return t if t.is_file() else None
+            return targets.get(name)
+
+        def _evaluate_pointer_claim(off, name, claimed, excerpt, note):
+            """Evaluate one maintained-pointer claim directly (round 8, H1 +
+            H5): the pointer itself carries the claimed version, so there is
+            no gap-binding step that can silently drop it, and — being an
+            explicit currency reassertion — it never reaches the dated-record
+            excusals or the historical-marker suppression. Every claim ends
+            in exactly one of: accepted, reported, or counted unresolvable
+            (which covers the ambiguous-basename refusal too — in this path
+            a refusal must stay visible, not silent)."""
+            target = _resolve(name)
+            if target is not None and pathlib.Path(target).resolve() == src.resolve():
+                return
+            actual = newest_version(target) if target is not None else None
+            if actual is None:
+                stats[rel]["unresolvable"] += 1
+                return
+            stats[rel]["citations"] += 1
+            if claimed == actual or actual.startswith(claimed + "."):
+                return
+            line = text.count("\n", 0, off) + 1
+            col = off - (text.rfind("\n", 0, off) + 1) + 1
+            findings.append(
+                (f"{rel}:{line}:{col}",
+                 f"cites `{name}` at v{claimed}{note}; that file's newest "
+                 f"recorded version is v{actual} — “…{excerpt}…”"))
+
         fmatches = list(FILE_TOKEN.finditer(text))
         for i, m in enumerate(fmatches):
-            gap_end = m.end() + GAP_LIMIT
-            if i + 1 < len(fmatches):
-                gap_end = min(gap_end, fmatches[i + 1].start())
-            vm = VER_TOKEN.search(text, m.end(), gap_end)
-            if not vm:
-                continue  # this filename cites no version; the NEXT filename
-                          # is still evaluated from its own position
-            gap = text[m.end():vm.start()]
-            # ANY newline between the filename and the version token refuses
-            # the binding (round 6, M4): on this repo's ~4,000-char table rows
-            # and wrapped prose, a version on the next line usually belongs to
-            # a neighbouring claim ("`src/CLAUDE.md` … <newline> … a way of
-            # counting #20 v1.2" bound spec #20's version to src/CLAUDE.md).
-            if "\n" in gap:
-                continue
-            # A sentence boundary between the filename and the version token
-            # means the token belongs to the NEXT sentence, not to this
-            # filename ("`x.md`. Section files authored (v0.1)…" cites
-            # nothing). The boundary class tolerates closing markup between
-            # the punctuation and the whitespace ("`x.md`.** Bump …" is a
-            # boundary too — round 6, M4).
-            if re.search(r"[.!?][*_)\]\"']*(?:\s|$)\s*[A-Z0-9`(]", gap):
+            hard = (fmatches[i + 1].start() if i + 1 < len(fmatches)
+                    else len(text))
+            vm = VER_TOKEN.search(text, m.end(), min(m.end() + GAP_LIMIT, hard))
+            gap = text[m.end():vm.start()] if vm else ""
+            # A version binds to this filename only across a CLEAN gap:
+            #  - no newline (round 6, M4): on this repo's ~4,000-char table
+            #    rows and wrapped prose, a version on the next line usually
+            #    belongs to a neighbouring claim;
+            #  - no backtick (round 8, H3): an intervening backticked token
+            #    means the version belongs to IT, not to this filename
+            #    ("`league-bootstrap-design.md` KD-8; `RoundResolutionFit-
+            #    LockTests` v1.1 corrects…" states the TEST file's version,
+            #    and binding it to the .md target fails correct prose);
+            #  - no sentence boundary (round 6, M4): "`x.md`. Section files
+            #    authored (v0.1)…" cites nothing; the boundary class
+            #    tolerates closing markup ("`x.md`.** Bump …").
+            bound = (vm is not None and "\n" not in gap and "`" not in gap
+                     and not SENTENCE_BOUNDARY.search(gap))
+            if not bound:
+                # No version binds — but a MAINTAINED POINTER in this
+                # citation's own annotation window is still a present-tense
+                # claim and is evaluated directly (round 8, H1's complement:
+                # the same pointer shape whose 61–80-char gap defeated the
+                # binder inside the frozen chain also defeats it here, on an
+                # unfrozen surface — same fix at both sites, the pointer's
+                # own version capture in place of a second binding step).
+                pm = currency_pointer(text, m.end(),
+                                      _pointer_stop(text, m.end(), hard))
+                if pm is not None and not _version_history_table_row(
+                        text, text.rfind("\n", 0, m.start()) + 1):
+                    excerpt = text[max(0, m.start() - 40):pm.end() + 40]
+                    _evaluate_pointer_claim(
+                        m.start(), m.group(1), pm.group(1),
+                        excerpt.replace("\n", " "),
+                        " (via its maintained pointer)")
                 continue
             line_start = text.rfind("\n", 0, m.start()) + 1
             # Dated-pointer phrasing immediately BEFORE the filename — "Full
@@ -663,14 +871,10 @@ def scan_version_citations(repo, sources, findings, stats, regions):
             if re.search(r"VERSION\s+HISTORY|version[- ]history", gap, re.I):
                 continue
             name = m.group(1)
-            if "/" in name:
-                target = repo / name
-                if not target.is_file():
-                    continue  # a broken path is link-check territory, not ours
-            else:
-                target = targets.get(name)
-                if target is None:
-                    continue  # ambiguous or unknown basename: refuse the guess
+            target = _resolve(name)
+            if target is None:
+                continue  # broken path (link-check territory) or an
+                          # ambiguous/unknown basename: refuse the guess
             if pathlib.Path(target).resolve() == src.resolve():
                 continue
             # A citation inside a VERSION-HISTORY table row is a dated record
@@ -709,6 +913,22 @@ def scan_version_citations(repo, sources, findings, stats, regions):
                 if named:
                     effective = named[-1]
                     cite_end = vm.end() + run.end()
+            # Round 8 (H5): currency is decided by THE one predicate
+            # (CURRENCY_POINTER), the same one the frozen-chain pierce uses —
+            # the v1.3/v1.4 pair (REASSERT_SHAPE there, CURRENCY_WORD over
+            # the annotation run here) disagreed, and anything matching the
+            # first but not the second was un-frozen and then re-swallowed by
+            # the excusals ("…, currently the log stands at **v2.45**" —
+            # too wordy for the run regex — was excused as a chronicle while
+            # "since advanced to **v2.45**" on the same line was reported).
+            # When a pointer is present, ITS version is the effective claim
+            # (the run regex only parses tightly-chained forms).
+            pm = currency_pointer(text, m.end(),
+                                  _pointer_stop(text, m.end(), hard))
+            currency = pm is not None
+            if pm is not None:
+                effective = pm.group(1)
+                cite_end = max(cite_end, pm.end())
             if cited == actual or effective == actual:
                 continue
             # "all fixed (`spec-error-log.md` v1.81)", "withdrawn
@@ -720,7 +940,7 @@ def scan_version_citations(repo, sources, findings, stats, regions):
             # currency chain follows (a trailing ", now vN" reasserts currency
             # and is checked above like any other chain — so "recorded … (`x`
             # v1.5, now v1.6)" still fails when the target moved to v1.7).
-            if effective == cited and re.search(
+            if not currency and effective == cited and re.search(
                     r"(?:corrected|fixed|landed|recorded|resolved|opened|added|"
                     r"filed|amended|revised|withdrawn|converged|captured)"
                     r"\b[^`()\n]{0,40}?\(\s*$", pre, re.I):
@@ -732,9 +952,11 @@ def scan_version_citations(repo, sources, findings, stats, regions):
             # ---- Dated-record excusal (round 7, see header). The claim WAS
             # evaluated and looks stale; it is excused — counted per surface,
             # totalled in the output — when context marks it a dated record.
-            # An explicit currency reassertion ("now vN"/"currently vN"/
-            # "(since … vN)") pierces every excusal and is reported normally.
-            currency = bool(run and CURRENCY_WORD.search(run.group(0)))
+            # A maintained pointer (CURRENCY_POINTER, computed above) pierces
+            # every excusal — including the historical-marker suppression:
+            # "…(the KD-7a hold, S7 condition 4 corrected), since advanced to
+            # **v1.5**" is a present-tense claim, and the word "corrected" in
+            # the parenthetical must not swallow it (round 8, H4).
             if not currency:
                 if _in_region(regions.get(rel, ()), m.start()):
                     stats[rel]["excused_region"] += 1
@@ -750,8 +972,8 @@ def scan_version_citations(repo, sources, findings, stats, regions):
                         or POST_RECORD_VERB.match(post)):
                     stats[rel]["excused_phrase"] += 1
                     continue
-            if historically_marked(text, m.start(), vm.end()):
-                continue
+                if historically_marked(text, m.start(), vm.end()):
+                    continue
             # Round 6 (M1): on this repo's ~4,000-char lines, file:line does not
             # locate a citation — report the column too, name the run's LAST
             # version when a chained annotation matched (the defect is the final
@@ -765,6 +987,14 @@ def scan_version_citations(repo, sources, findings, stats, regions):
                 (f"{rel}:{line}:{col}",
                  f"cites `{name}` at v{effective}{chained}; that file's newest "
                  f"recorded version is v{actual} — “…{excerpt}…”"))
+        # Maintained pointers extracted from this surface's frozen header
+        # chain (round 8, H1): evaluated directly — the pierce captured the
+        # claimed version itself, so there is no binder to disagree with and
+        # no excusal path to re-swallow the claim (H5).
+        for off, name, claimed, excerpt in pierced:
+            _evaluate_pointer_claim(
+                off, name, claimed, excerpt,
+                " (maintained pointer in the frozen header chain)")
 
 
 def scan_cardinalities(repo, sources, findings, stats, regions):
@@ -800,7 +1030,7 @@ def scan_cardinalities(repo, sources, findings, stats, regions):
         (re.compile(r"(\d+)\s+`?ERR-`?\s+entries"), "ERR- index rows"),
     )
 
-    for src, rel, text, _frozen in sources:
+    for src, rel, text, _frozen, _pierced in sources:
         for pattern, key in checks:
             for m in pattern.finditer(text):
                 stats[rel]["cardinalities"] += 1
@@ -843,7 +1073,7 @@ AGREEMENT_GROUPS = (
 def scan_agreements(sources, findings, stats, regions):
     for label, pat, ctx in AGREEMENT_GROUPS:
         sites = {}
-        for src, rel, text, _frozen in sources:
+        for src, rel, text, _frozen, _pierced in sources:
             for m in pat.finditer(text):
                 if ctx is not None:
                     window = text[max(0, m.start() - 80):m.end() + 120]
@@ -888,9 +1118,9 @@ def main():
     stats = {rel: {"citations": 0, "cardinalities": 0, "agreement figures": 0,
                    "unresolvable": 0, "excused_region": 0,
                    "excused_chronicle": 0, "excused_phrase": 0}
-             for _p, rel, _t, _f in sources}
+             for _p, rel, _t, _f, _pc in sources}
     regions = {rel: record_regions(rel, text)
-               for _p, rel, text, _f in sources}
+               for _p, rel, text, _f, _pc in sources}
 
     scan_version_citations(repo, sources, findings, stats, regions)
     measured = scan_cardinalities(repo, sources, findings, stats, regions)
@@ -913,7 +1143,7 @@ def main():
     if not args.quiet:
         print("coverage (surface: in-scope bytes / citations checked / "
               "cardinality claims / agreement figures / citations skipped):")
-        for _p, rel, text, frozen in sources:
+        for _p, rel, text, frozen, _pc in sources:
             s = stats[rel]
             note = f"  [{frozen} chars frozen history excluded]" if frozen else ""
             exc = (s["excused_region"], s["excused_chronicle"],
@@ -1082,3 +1312,72 @@ if __name__ == "__main__":
 # |         |            |             | entry stays excused. Excusal totals   |
 # |         |            |             | unchanged at 37. Surfaced 5 real      |
 # |         |            |             | stale chains, all fixed same commit.  |
+# | 1.5     | 2026-08-19 | Claude Code | AR round-8 rebuild (5 High) — the     |
+# |         |            |             | maintained-pointer model. H1: pierce  |
+# |         |            |             | (80) vs binder (60) disagreement      |
+# |         |            |             | silently dropped a pierced 61–80-char |
+# |         |            |             | chain; the live proof (file-manifest  |
+# |         |            |             | :5, spec-error-log v2.46 vs v2.47,    |
+# |         |            |             | gap 78) was invisible under PASS and  |
+# |         |            |             | is REPORTED at 5:9495 on the pre-fix  |
+# |         |            |             | doc. Fixed structurally: the pierce   |
+# |         |            |             | captures the claimed version itself,  |
+# |         |            |             | so no second binding exists to        |
+# |         |            |             | disagree; unresolved pierced claims   |
+# |         |            |             | are counted, never silent. Same shape |
+# |         |            |             | unfrozen: pointer fallback when the   |
+# |         |            |             | gap refuses to bind. H2: all blanking |
+# |         |            |             | space-per-char (offset-preserving);   |
+# |         |            |             | no more glued windows feeding context |
+# |         |            |             | regexes text the file does not        |
+# |         |            |             | contain; columns are real char        |
+# |         |            |             | columns, verified by 1-based index    |
+# |         |            |             | (awk counts bytes and drifts on       |
+# |         |            |             | em-dashes). H3: backtick in the gap   |
+# |         |            |             | refuses the binding (the RoundResolu- |
+# |         |            |             | tionFitLockTests sentence no longer   |
+# |         |            |             | fails correct prose); region excusals |
+# |         |            |             | 25→23 (spec-error-log:929 + one of    |
+# |         |            |             | 1477/1478). H4: REASSERT_SHAPE        |
+# |         |            |             | retired for CURRENCY_POINTER —        |
+# |         |            |             | explicit markers only ("since         |
+# |         |            |             | advanced to" / "now at" / "currently" |
+# |         |            |             | / "now" / "(since vN"); bare arrow    |
+# |         |            |             | chains never pierce; bare "since"     |
+# |         |            |             | never a marker. All 6 planted misses  |
+# |         |            |             | REPORTED (incl. the backticked-       |
+# |         |            |             | identifier and marker-first shapes),  |
+# |         |            |             | both planted dated-record FPs         |
+# |         |            |             | excused, arrow control silent —       |
+# |         |            |             | evidence run on a scratch mirror,     |
+# |         |            |             | both directions. H5: ONE currency     |
+# |         |            |             | predicate at every call site; a       |
+# |         |            |             | pierced/pointer claim never reaches   |
+# |         |            |             | the excusals or historical markers;   |
+# |         |            |             | "currently the log stands at v2.45"   |
+# |         |            |             | now REPORTED (was excused-as-         |
+# |         |            |             | chronicle). Totals on the pristine    |
+# |         |            |             | tree: findings 0 (the H1 doc was      |
+# |         |            |             | fixed upstream in c426cb6; on the     |
+# |         |            |             | pre-fix doc, exactly 1 = H1);         |
+# |         |            |             | excusals 37→34 (region 25→23 = H3;    |
+# |         |            |             | phrasing 8→7 = open-issues ui-        |
+# |         |            |             | framework-t0, now decided by its own  |
+# |         |            |             | trailing "now v0.2" == actual instead |
+# |         |            |             | of phrase-excused; chronicle 4        |
+# |         |            |             | unchanged); unresolvable 14→15 (+3    |
+# |         |            |             | CHANGELOG chain pointers on ambiguous |
+# |         |            |             | basenames now VISIBLE, -1 SPEC_INDEX  |
+# |         |            |             | and -1 section-3-5 backtick           |
+# |         |            |             | refusals). CHANGELOG's eight live     |
+# |         |            |             | "*(since vN)*" pointers verified      |
+# |         |            |             | still recognised, as are all 13       |
+# |         |            |             | "since advanced to" sites. NOT        |
+# |         |            |             | caught, stated in the header: closed  |
+# |         |            |             | marker set; marker-first only in the  |
+# |         |            |             | frozen chain and only across          |
+# |         |            |             | colon/space adjacency; bounded        |
+# |         |            |             | pointer window; "now"+version is a    |
+# |         |            |             | heuristic, not a parse; pre-guard/    |
+# |         |            |             | verb-at still precede the pointer     |
+# |         |            |             | check; bare "since vN" unrecognised.  |
