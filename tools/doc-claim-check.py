@@ -36,13 +36,32 @@
 # skipped — the round-5/6 lesson is that a checker's silent skips are where the
 # next defect hides, so every claim this tool declines to check is printed.
 #
+# It also recognises only ONE claim SHAPE: the command first, then the stated
+# value ("`cmd` → 18", "`cmd` returns 18"). The value-first form root CLAUDE.md
+# also uses — "8 scripts (`ls tools/*.py`)" — is not matched at all, and so is
+# not counted among the declines either. Stated here because round 9 found the
+# omission published nowhere: an unrecognised shape is invisible, and invisible
+# is the property this tool's whole design is meant to deny itself.
+#
 # SAFETY
 # ------
-# Commands come from documents, so they are untrusted input. Every pipeline
-# segment must match ALLOWED_CMDS; anything with redirection, command
-# substitution, chaining, or an unlisted binary is refused and counted. Execution
-# is read-only by construction (no writing command is on the list), runs with a
-# timeout, and never uses a shell for the outer invocation.
+# Commands come from documents, so they are untrusted input, and `ci.yml` runs
+# this tool on `pull_request` — so document text reaches a CI runner. Every
+# pipeline segment must match ALLOWED_CMDS; anything with redirection, command
+# substitution, chaining, or an unlisted binary is refused and counted, the
+# invocation never goes through a shell, and it runs under a timeout.
+#
+# Being on ALLOWED_CMDS is NOT by itself the safety property, and round 9 (H1)
+# found the header claiming it was: "read-only by construction (no writing
+# command is on the list)" was false, demonstrated by `sed -i` rewriting a file
+# in the working tree while the tool printed PASS. Several genuinely read-only
+# tools carry a write or execute escape hatch — `sed -i`, `find -delete` /
+# `-exec`, `python3 -c`, `sort -o`, `rg --pre`, `git -c`, `awk 'BEGIN{system()}'`,
+# `uniq IN OUT`. The property now rests on three things together: the allow-list,
+# DENIED_FLAGS/DENIED_FLAG_PREFIXES refusing those hatches by name, and dropping
+# the one binary whose escape lives in its SCRIPT rather than a flag (`sed`).
+# `python3` survives restricted to running a `.py` file the checkout already
+# contains — CI runs those anyway — never `-c`/`-m`.
 #
 # Exit codes: 0 = every checkable claim reproduced, 1 = at least one mismatch,
 #             2 = usage error.
@@ -50,7 +69,6 @@
 import argparse
 import pathlib
 import re
-import shlex
 import subprocess
 import sys
 
@@ -58,15 +76,93 @@ import sys
 # argv[0] is here. `git` is further restricted below to read-only subcommands.
 ALLOWED_CMDS = {
     "grep", "egrep", "fgrep", "rg", "ls", "find", "wc", "cat", "head", "tail",
-    "sort", "uniq", "sed", "awk", "cut", "tr", "python3", "git", "basename",
+    "sort", "uniq", "awk", "cut", "tr", "python3", "git", "basename",
     "dirname", "echo", "printf", "stat", "diff",
 }
 GIT_READONLY = {
     "log", "grep", "show", "ls-files", "diff", "rev-parse", "rev-list",
-    "cat-file", "describe", "status", "branch", "tag", "archive", "blame",
+    "cat-file", "describe", "status", "branch", "tag", "blame",
 }
 # Shell metacharacters that make a string more than a simple pipeline.
 FORBIDDEN = re.compile(r"[;&><`\n]|\$\(|\|\|")
+
+# ---------------------------------------------------------------------------
+# Round 9, H1: allow-listing argv[0] is NOT sufficient, and the header used to
+# claim it was ("read-only by construction — no writing command is on the
+# list"). Several read-only tools carry a write or execute ESCAPE HATCH behind
+# a flag, and `sed -i` was demonstrated rewriting a file in the working tree
+# while this tool printed PASS. The commands come from documents; on a
+# `pull_request` CI trigger that is untrusted input reaching a runner.
+#
+# Two mechanisms, because the hatches are of two kinds:
+#   (1) FLAG hatches — refusable exactly, by name. Listed per binary below.
+#   (2) SCRIPT hatches — the argument IS a language, so no flag list can
+#       contain them. `sed` (`w file`, `s///w file`) is therefore DROPPED from
+#       the allow-list entirely; it has no use anywhere in the corpus, and a
+#       future sed claim is DECLINED AND NAMED, which is the safe direction.
+#       `awk` is kept because both of this repo's only two executable claims
+#       use it, so dropping it would take the tool to zero verified claims —
+#       a vacuous pass, the failure class this project files as High. Its two
+#       reachable hatches are refused by name instead (`system`, `getline` —
+#       every redirection form is already refused by FORBIDDEN, which rejects
+#       `>` `<` `` ` `` `;` `&` anywhere in the string, quoted or not).
+DENIED_FLAGS = {
+    # exact flags
+    "python3": {"-c", "-m", "-"},
+    "find": {"-exec", "-execdir", "-ok", "-okdir", "-delete", "-fprint",
+             "-fprint0", "-fprintf", "-fls"},
+    "sort": {"-o", "--output"},
+    "uniq": set(),           # guarded by operand count below (uniq IN OUT writes)
+    "awk": {"-f", "--file", "--source", "--exec"},
+    "head": {"-f", "--follow"},
+    "tail": {"-f", "-F", "--follow"},
+    "rg": {"--pre", "--pre-glob", "--hostname-bin", "--generate"},
+    # `git` is split in two: see GIT_GLOBAL_DENIED. A flag denied ANYWHERE goes
+    # here — `git grep -O <cmd>` hands the match list to a command.
+    "git": {"-O", "--open-files-in-pager"},
+}
+# Denied only BEFORE the subcommand, where git parses its own global options.
+# The same spellings after it belong to the subcommand and are harmless — and
+# refusing them there broke both of this repo's only executable claims, whose
+# command is `git grep -c …` (round 9: caught because the fix was re-measured
+# against the live corpus rather than accepted on its own reasoning).
+GIT_GLOBAL_DENIED = {"-c", "-C", "--exec-path", "--upload-pack"}
+# Prefix forms of the same hatches: `--output=x`, `--pre=x`, `-c=x`.
+DENIED_FLAG_PREFIXES = {
+    "sort": ("--output=",),
+    "rg": ("--pre=", "--pre-glob=", "--hostname-bin="),
+    "git": ("--exec-path=", "--upload-pack="),
+    "awk": ("--source=", "--file="),
+}
+# awk program text that escapes the process. FORBIDDEN already removes every
+# redirection character, so these two are what is left.
+AWK_ESCAPES = re.compile(r"\b(?:system|getline)\b")
+
+# Round 9 (M1). CLAIM deliberately matches any backticked span before an arrow,
+# because that is how this repo writes a count claim; most such spans are
+# IDENTIFIERS, not commands (`SEASON_SAVE_FORMAT_VERSION` **5 → 6**). This
+# separates the two so an unrunnable COMMAND is named while a version bump is
+# not mistaken for one: command-shaped means "has arguments, and its head token
+# is a path or a plausible binary name".
+_HEAD_SHAPE = re.compile(r"(?:\.{1,2}/)?[A-Za-z0-9_][A-Za-z0-9_.-]*"
+                         r"(?:/[A-Za-z0-9_.-]+)*\Z")
+_KNOWN_BINARIES = frozenset((
+    "dotnet", "curl", "wget", "ps", "bash", "sh", "zsh", "make", "npm", "npx",
+    "node", "python", "pip", "docker", "jq", "tee", "xargs", "sed", "unity",
+    "dos2unix", "pwsh", "powershell",
+))
+
+
+def command_shaped(cmd, head):
+    """True when this backticked span reads as a shell command rather than an
+    identifier — the discriminator that lets an unlisted BINARY be named
+    without also naming every version-bump arrow in the corpus."""
+    if " " not in cmd.strip():
+        return False
+    if not _HEAD_SHAPE.match(head):
+        return False
+    return ("/" in head or head.endswith((".py", ".sh"))
+            or head in _KNOWN_BINARIES)
 
 TIMEOUT_S = 60
 
@@ -109,55 +205,213 @@ CLAIM = re.compile(
     re.I)
 
 
-def parse_pipeline(cmd):
-    """Return list of argv lists, or None if the command is not a safe pipeline."""
-    # Markdown escapes a literal pipe as `\|` inside table cells, and a large
-    # share of this repo's quoted commands live in tables. Unescape it before
-    # parsing, or every piped command in a table row is declined as unparseable
-    # — which would silently hide exactly the count claims this tool is for.
-    # Only `\|` is unescaped: `\*` and friends are real regex inside grep
-    # patterns and must survive untouched.
-    cmd = cmd.replace("\\|", "|")
-    if FORBIDDEN.search(cmd):
+SEP = object()   # unquoted `|` — a pipeline separator, never part of a token
+
+
+def tokenize(cmd):
+    """Split `cmd` into segments of (text, has_unquoted_glob) tokens.
+
+    Round 9 (H2): `shlex.split` DISCARDS the quoting, and expand_globs then
+    treated a QUOTED regex pattern as a shell glob — `find . -name '*.md' |
+    wc -l` became `find . -name CLAUDE.md doc.md`, which errors, prints
+    nothing, and (with H3's unchecked exit status) was reported as "document
+    says 12; command returns 0" against a perfectly correct document. A
+    checker that fabricates a failing finding out of a correct claim is the
+    exact defect this tool exists to catch, so the quoting is now carried
+    through to the expansion decision.
+
+    Splitting on `|` also happens HERE rather than by `cmd.split("|")`, so a
+    pipe inside quotes (`grep -c 'a|b' file`) is a literal character instead
+    of an unbalanced-quote parse failure.
+
+    Returns None when the string does not tokenize (unterminated quote,
+    trailing backslash) — the caller declines it.
+    """
+    segments, cur_seg, cur = [], [], []
+    started = False
+    quote = None
+    i, n = 0, len(cmd)
+    while i < n:
+        c = cmd[i]
+        if quote is None:
+            if c.isspace():
+                if started:
+                    cur_seg.append(cur); cur = []; started = False
+                i += 1; continue
+            if c == "|":
+                if started:
+                    cur_seg.append(cur); cur = []; started = False
+                segments.append(cur_seg); cur_seg = []
+                i += 1; continue
+            # Markdown escapes a literal pipe as `\|` inside a table cell, and a
+            # large share of this repo's quoted commands live in tables — both
+            # of its executable claims among them. OUTSIDE quotes that is a
+            # pipeline separator. INSIDE quotes it is left alone, because there
+            # `\|` is far more likely to be BRE alternation
+            # (`grep -n "typeof\|GetFields\|Reflection" …` is live in
+            # spec-error-log.md) and rewriting it to a literal `|` would run a
+            # DIFFERENT regex and report its count as the document's.
+            if c == "\\" and i + 1 < n and cmd[i + 1] == "|":
+                if started:
+                    cur_seg.append(cur); cur = []; started = False
+                segments.append(cur_seg); cur_seg = []
+                i += 2; continue
+            if c in "'\"":
+                quote = c; started = True; i += 1; continue
+            if c == "\\":
+                if i + 1 >= n:
+                    return None
+                cur.append((cmd[i + 1], True)); started = True; i += 2; continue
+            cur.append((c, False)); started = True; i += 1; continue
+        if c == quote:
+            quote = None; i += 1; continue
+        if quote == '"' and c == "\\" and i + 1 < n and cmd[i + 1] in '"\\$`':
+            cur.append((cmd[i + 1], True)); i += 2; continue
+        cur.append((c, True)); i += 1
+    if quote is not None:
         return None
+    if started:
+        cur_seg.append(cur)
+    segments.append(cur_seg)
+    out = []
+    for seg in segments:
+        toks = []
+        for t in seg:
+            text = "".join(ch for ch, _q in t)
+            # Expandable only when EVERY glob character in the token is
+            # unquoted — bash expands a mixed token too, but declining to is
+            # the conservative direction and it never invents a command.
+            globs = [q for ch, q in t if GLOB_CH.match(ch)]
+            toks.append((text, bool(globs) and not any(globs)))
+        out.append(toks)
+    return out
+
+
+def denied_flag(argv):
+    """The write/execute escape hatch this argv reaches for, or None.
+
+    Round 9 (H1). Read-only-by-allow-list was false: `sed -i`, `find -delete`,
+    `python3 -c`, `sort -o`, `rg --pre` and `git -c` all execute or write from
+    a binary the list called read-only."""
+    name = argv[0]
+    exact = DENIED_FLAGS.get(name, ())
+    prefixes = DENIED_FLAG_PREFIXES.get(name, ())
+    for a in argv[1:]:
+        if a in exact:
+            return a
+        if any(a.startswith(pfx) for pfx in prefixes):
+            return a
+    if name == "git":
+        for a in argv[1:]:
+            if not a.startswith("-"):
+                break            # the subcommand: globals end here
+            if a in GIT_GLOBAL_DENIED or a.startswith(("--exec-path=",
+                                                       "--upload-pack=")):
+                return a
+    if name == "awk":
+        script = next((a for a in argv[1:] if not a.startswith("-")), "")
+        if AWK_ESCAPES.search(script):
+            return "awk program calling system()/getline"
+    if name == "python3":
+        # Only an in-repo script may run: `-c`/`-m` are refused above, and a
+        # path that is not a repo `.py` file is refused here, so a document
+        # can at most re-run code the checkout already contains.
+        operands = [a for a in argv[1:] if not a.startswith("-")]
+        if (not operands or not operands[0].endswith(".py")
+                or operands[0].startswith("/")
+                or ".." in pathlib.PurePosixPath(operands[0]).parts):
+            return "python3 without an in-repo .py script"
+    if name == "uniq" and len([a for a in argv[1:] if not a.startswith("-")]) >= 2:
+        return "uniq with an OUTPUT operand"
+    return None
+
+
+def parse_pipeline(cmd):
+    """Return (segments, None), or (None, reason) when the command is not a
+    safe pipeline.
+
+    The reason is NAMED rather than generic: this tool's contract is that a
+    declined claim is counted AND named, and "not an allow-listed read-only
+    pipeline" does not tell a reader whether their command was refused for a
+    stray backtick or for `sort -o`."""
+    # `\|` is handled inside tokenize(), quote-aware — see the note there. It
+    # used to be unescaped by a blind `cmd.replace("\\|", "|")` before parsing,
+    # which was harmless only because a quoted `\|` then broke the parse; with
+    # the tokenizer keeping such a command runnable, blind unescaping would have
+    # started SILENTLY REWRITING regexes instead (round 9, found reviewing this
+    # round's own fix).
+    bad = FORBIDDEN.search(cmd)
+    if bad:
+        return None, ("contains the shell metacharacter %r — redirection, "
+                      "substitution and chaining are refused"
+                      % bad.group(0))
+    parsed = tokenize(cmd)
+    if parsed is None:
+        return None, "does not tokenize (unterminated quote or trailing \\)"
     segments = []
-    for part in cmd.split("|"):
-        part = part.strip()
-        if not part:
-            return None
-        try:
-            argv = shlex.split(part)
-        except ValueError:
-            return None
-        if not argv:
-            return None
+    for toks in parsed:
+        if not toks:
+            return None, "empty pipeline segment"
+        argv = [text for text, _g in toks]
         if argv[0] not in ALLOWED_CMDS:
-            return None
+            return None, ("`%s` is not an allow-listed read-only binary"
+                          % argv[0])
         if argv[0] == "git":
             sub = next((a for a in argv[1:] if not a.startswith("-")), None)
             if sub not in GIT_READONLY:
-                return None
-        segments.append(argv)
-    return segments or None
+                return None, ("`git %s` is not a read-only subcommand"
+                              % (sub if sub else "<none>"))
+        hatch = denied_flag(argv)
+        if hatch is not None:
+            return None, ("`%s` reaches a write/execute escape hatch (%s)"
+                          % (argv[0], hatch))
+        segments.append(toks)
+    if not segments:
+        return None, "empty pipeline"
+    return segments, None
+
+
+# Exit codes that are a RESULT, not a failure: grep-family 1 = "no match",
+# diff 1 = "files differ". Everything else non-zero means the command did not
+# run as written (bad path, bad flag, missing file), and its output is not an
+# answer to anything.
+BENIGN_NONZERO = {"grep": {1}, "egrep": {1}, "fgrep": {1}, "rg": {1},
+                  "diff": {1}, "git": {1}}
 
 
 def run_pipeline(segments, cwd):
-    """Run a validated pipeline, return stdout text or None on failure."""
+    """Run a validated pipeline.
+
+    Returns (stdout_text, None) on success, or (None, reason) when the
+    pipeline did not run as written.
+
+    Round 9 (H3): the previous form ignored every segment's exit status, so a
+    FAILING segment's empty output flowed into the next one and the pipeline
+    still produced a confident number — `grep -rn 'X' nosuchdir/ | wc -l`
+    printed `0`, which was then reported as "document says 218; command
+    returns 0" against a document that was not wrong about anything. The tool
+    exists to stop fabricated verification; manufacturing a mismatch out of a
+    broken command is the same defect wearing the other sign. A failed
+    pipeline is now DECLINED and named, never compared."""
     data = b""
-    for i, argv in enumerate(segments):
+    for argv in segments:
         try:
             proc = subprocess.run(
                 argv, cwd=cwd, input=data, stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL, timeout=TIMEOUT_S)
+        except subprocess.TimeoutExpired:
+            return None, "command timed out after %ds" % TIMEOUT_S
         except (OSError, subprocess.SubprocessError):
-            return None
+            return None, "command could not be executed (%s)" % argv[0]
+        if proc.returncode != 0 and proc.returncode not in BENIGN_NONZERO.get(
+                argv[0], ()):
+            return None, ("`%s` exited %d — its output is not treated as an "
+                          "answer" % (argv[0], proc.returncode))
         data = proc.stdout
-        # grep/find legitimately exit non-zero on "no match"; a later segment
-        # still gets the empty input, which is the right answer.
     try:
-        return data.decode("utf-8", "replace")
+        return data.decode("utf-8", "replace"), None
     except Exception:                                    # pragma: no cover
-        return None
+        return None, "output is not decodable text"
 
 
 def single_integer(out):
@@ -201,21 +455,35 @@ def self_contained(segments):
 
 
 def expand_globs(segments, repo):
-    """Expand glob tokens exactly as a shell would: sorted matches relative to
+    """Expand UNQUOTED glob tokens as a shell would: sorted matches relative to
     the repo root, or the literal token when nothing matches (bash default).
-    Done here rather than by handing the string to a shell, so the command stays
-    a validated argv list and never re-enters a shell parser."""
+
+    Returns (segments, None) or (None, reason).
+
+    Round 9 (H2): a QUOTED token is never expanded, because it is not a glob —
+    it is a regex the document wrote inside quotes. Every glob character in
+    this corpus is of that kind (7 of 7: `'^- \*\*'`, `'public readonly
+    byte\[\]'`), and expanding them rewrote the command into a different one.
+    `tokenize` carries the quoting through so the decision can be made here.
+
+    Round 9 (M2): an unquoted ABSOLUTE pattern raises NotImplementedError out
+    of pathlib rather than expanding; document text must not be able to crash
+    the checker, so it is declined by name instead."""
     out = []
-    for argv in segments:
-        new = [argv[0]]
-        for tok in argv[1:]:
-            if GLOB_CH.search(tok):
-                hits = sorted(str(q.relative_to(repo)) for q in repo.glob(tok))
-                new.extend(hits if hits else [tok])
-            else:
-                new.append(tok)
+    for toks in segments:
+        new = [toks[0][0]]
+        for text, expandable in toks[1:]:
+            if not expandable:
+                new.append(text)
+                continue
+            try:
+                hits = sorted(str(q.relative_to(repo)) for q in repo.glob(text))
+            except (NotImplementedError, ValueError, OSError) as exc:
+                return None, ("glob `%s` is not expandable from the repo root "
+                              "(%s)" % (text, type(exc).__name__))
+            new.extend(hits if hits else [text])
         out.append(new)
-    return out
+    return out, None
 
 
 
@@ -341,7 +609,7 @@ def scan(repo, quiet=False):
 
     checked = mismatches = 0
     declined = {"unsafe": 0, "not-self-contained": 0, "not-single-int": 0,
-                "negated": 0}
+                "negated": 0, "unlisted-binary": 0, "did-not-run": 0}
     declined_list = []
     findings = []
 
@@ -359,23 +627,52 @@ def scan(repo, quiet=False):
                      "does not / no longer return"))
                 continue
             # A command must look like one: start with an allowed binary.
-            if cmd.split()[0] not in ALLOWED_CMDS:
+            # Round 9 (L1): a backticked run of whitespace matches CLAIM and
+            # used to crash here on `"".split()[0]`.
+            head = cmd.split()[0] if cmd.split() else ""
+            if head not in ALLOWED_CMDS:
+                # Round 9 (M1): this `continue` was the tool's THIRD decline
+                # path and the only silent one, while its header and its
+                # file-manifest row both published "every declined claim is
+                # counted AND named". Most of what lands here is not a command
+                # at all — CLAIM also matches a backticked IDENTIFIER before an
+                # arrow (`SEASON_SAVE_FORMAT_VERSION` **5 → 6**), ~1,100 of
+                # them — so counting all of it would drown the real signal.
+                # Only genuinely command-SHAPED text is counted and named: a
+                # head token that is a path or a known binary. Measured on the
+                # live tree when this was added: 10, all real (7 ×
+                # `tools/recurring-defect-lint.py`, `curl`, `ps … | grep`,
+                # `dotnet test --filter`).
+                if command_shaped(cmd, head):
+                    declined["unlisted-binary"] += 1
+                    declined_list.append(
+                        (rel, text.count("\n", 0, m.start()) + 1, cmd,
+                         "`%s` is not an allow-listed read-only binary" % head))
                 continue
-            segments = parse_pipeline(cmd)
+            segments, why = parse_pipeline(cmd)
             if segments is None:
                 declined["unsafe"] += 1
-                declined_list.append((rel, text.count("\n", 0, m.start()) + 1, cmd,
-                                      "not an allow-listed read-only pipeline"))
+                declined_list.append((rel, text.count("\n", 0, m.start()) + 1,
+                                      cmd, why))
                 continue
             line = text.count("\n", 0, m.start()) + 1
-            segments = expand_globs(segments, repo)
+            segments, why = expand_globs(segments, repo)
+            if segments is None:
+                declined["unsafe"] += 1
+                declined_list.append((rel, line, cmd, why))
+                continue
             if not self_contained(segments):
                 declined["not-self-contained"] += 1
                 declined_list.append((rel, line, cmd,
                                       "operand missing from the quoted text — "
                                       "not runnable as written"))
                 continue
-            got = single_integer(run_pipeline(segments, str(repo)))
+            out, why = run_pipeline(segments, str(repo))
+            if out is None:
+                declined["did-not-run"] += 1
+                declined_list.append((rel, line, cmd, why))
+                continue
+            got = single_integer(out)
             if got is None:
                 declined["not-single-int"] += 1
                 declined_list.append((rel, line, cmd, "output is not a single integer"))
@@ -389,9 +686,11 @@ def scan(repo, quiet=False):
         print("doc-claim-check — executing the verification commands the documents quote")
         print("  surfaces scanned              : %d" % len(files))
         print("  claims executed and compared  : %d" % checked)
-        print("  claims DECLINED (each named)   : %d unsafe / %d not-self-contained /"
-              " %d not-a-single-integer / %d negated-or-historical"
-              % (declined["unsafe"], declined["not-self-contained"],
+        print("  claims DECLINED (each named)   : %d unsafe / %d unlisted-binary /"
+              " %d not-self-contained / %d did-not-run / %d not-a-single-integer /"
+              " %d negated-or-historical"
+              % (declined["unsafe"], declined["unlisted-binary"],
+                 declined["not-self-contained"], declined["did-not-run"],
                  declined["not-single-int"], declined["negated"]))
         for rel, line, cmd, why in declined_list:
             print("      - %s:%d  %s  [%s]" % (rel, line, cmd[:70], why))
@@ -466,3 +765,94 @@ if __name__ == "__main__":
 # |         |            |             | approximated — a guessed reproduction would  |
 # |         |            |             | be a fabricated verification, which is the   |
 # |         |            |             | defect this tool exists to catch.            |
+# | 1.1     | 2026-08-19 | Claude Code | AR round-9 (3 High, 3 Medium, 2 Low), all   |
+# |         |            |             | proven by reproduction before the fix and   |
+# |         |            |             | re-proven in BOTH directions after. **H1:**  |
+# |         |            |             | "read-only by construction (no writing      |
+# |         |            |             | command is on the list)" was FALSE — the    |
+# |         |            |             | allow-list gates argv[0] only, and `sed -i` |
+# |         |            |             | was demonstrated rewriting a file in the    |
+# |         |            |             | working tree while this tool printed PASS.  |
+# |         |            |             | `python3 -c`, `find -delete`/`-exec`,       |
+# |         |            |             | `sort -o`, `rg --pre`, `git -c`, `uniq IN   |
+# |         |            |             | OUT` and `awk 'BEGIN{system()}'` were all   |
+# |         |            |             | reachable, and ci.yml runs this on          |
+# |         |            |             | pull_request, so document text reaches a    |
+# |         |            |             | runner. Fixed by naming the hatches:        |
+# |         |            |             | DENIED_FLAGS / DENIED_FLAG_PREFIXES, git    |
+# |         |            |             | globals scoped to BEFORE the subcommand     |
+# |         |            |             | (refusing them after it broke `git grep -c` |
+# |         |            |             | — both live executable claims — caught by   |
+# |         |            |             | re-measuring rather than by reasoning),     |
+# |         |            |             | `sed` DROPPED (its write lives in its       |
+# |         |            |             | script, not a flag), `awk` KEPT but with    |
+# |         |            |             | system()/getline refused, because both      |
+# |         |            |             | executable claims in the corpus use it and  |
+# |         |            |             | dropping it would have made every run a     |
+# |         |            |             | vacuous pass. **H2:** `shlex.split` discards |
+# |         |            |             | quoting, so expand_globs treated a QUOTED   |
+# |         |            |             | regex as a shell glob: `find . -name        |
+# |         |            |             | '*.md' \| wc -l` ran as `find . -name       |
+# |         |            |             | CLAUDE.md doc.md`. New quote-preserving     |
+# |         |            |             | tokenize(); only tokens whose glob chars    |
+# |         |            |             | are ALL unquoted expand. All 7 glob-char    |
+# |         |            |             | tokens in the live corpus are quoted regex. |
+# |         |            |             | It also splits pipelines on UNQUOTED `\|`   |
+# |         |            |             | only, so `grep -c 'a\|b' f` stops being a   |
+# |         |            |             | parse failure. **H3:** segment exit status  |
+# |         |            |             | was never checked, so a FAILED segment's    |
+# |         |            |             | empty output flowed downstream and `grep    |
+# |         |            |             | -rn X nosuchdir/ \| wc -l` printed 0, which |
+# |         |            |             | was reported as "document says 218; command |
+# |         |            |             | returns 0" against a document that was not  |
+# |         |            |             | wrong — the tool fabricating the finding it |
+# |         |            |             | exists to prevent. Non-zero now DECLINES,   |
+# |         |            |             | with grep/rg/diff/git 1 (no match / differ) |
+# |         |            |             | as the named benign case. **M1:** the       |
+# |         |            |             | unlisted-binary `continue` was a THIRD, and |
+# |         |            |             | the only silent, decline path, while the    |
+# |         |            |             | header and the file-manifest row both       |
+# |         |            |             | published "every declined claim is counted  |
+# |         |            |             | AND named". Counted and named now, behind a |
+# |         |            |             | command-SHAPE discriminator so the ~1,100   |
+# |         |            |             | backticked identifiers CLAIM also matches   |
+# |         |            |             | (`SNAPSHOT_SCHEMA_VERSION` **20 → 21**) do  |
+# |         |            |             | not drown it: 9 named, all real. **M2:** an |
+# |         |            |             | absolute glob (`ls /etc/*.conf`) crashed    |
+# |         |            |             | the tool with an uncaught                   |
+# |         |            |             | NotImplementedError out of pathlib —        |
+# |         |            |             | document text must not be able to crash the |
+# |         |            |             | checker; declined by name instead. **L1:**  |
+# |         |            |             | a backticked run of whitespace matches      |
+# |         |            |             | CLAIM and crashed on `"".split()[0]`.       |
+# |         |            |             | **L2:** the header never stated that only   |
+# |         |            |             | the command-then-value SHAPE is recognised, |
+# |         |            |             | so root CLAUDE.md's "8 scripts (`ls         |
+# |         |            |             | tools/*.py`)" is invisible AND uncounted;   |
+# |         |            |             | stated now. Also: every refusal now NAMES   |
+# |         |            |             | the hatch instead of "not an allow-listed   |
+# |         |            |             | read-only pipeline". Live tree unchanged at |
+# |         |            |             | 2 executed / PASS; declines 21 → 30, the    |
+# |         |            |             | 9 new ones being the previously-silent      |
+# |         |            |             | class. Verified on a scratch mirror: 10     |
+# |         |            |             | hatch attempts all refused with the canary  |
+# |         |            |             | file intact and no file created, and the    |
+# |         |            |             | complement — the same quoted-glob command   |
+# |         |            |             | with its TRUE value stated — passes.        |
+# |         |            |             | Two further defects were found in THIS      |
+# |         |            |             | round's own fix, by re-reviewing it as      |
+# |         |            |             | hostilely as the original (round 8's        |
+# |         |            |             | lesson, applied to round 9): the blind      |
+# |         |            |             | `\|` unescape was harmless only while a     |
+# |         |            |             | quoted pipe broke the parse — once the      |
+# |         |            |             | tokenizer kept such a command runnable it   |
+# |         |            |             | would have silently rewritten BRE           |
+# |         |            |             | alternation (`grep -n "typeof\|GetFields"`, |
+# |         |            |             | live in spec-error-log.md) into a literal   |
+# |         |            |             | pipe and reported the wrong regex's count;  |
+# |         |            |             | it is now quote-aware. And python3's script |
+# |         |            |             | operand was checked for a `.py` suffix but  |
+# |         |            |             | not for staying inside the repo, so         |
+# |         |            |             | `python3 ../../evil.py` satisfied the       |
+# |         |            |             | "in-repo script" rule its own comment       |
+# |         |            |             | claimed to enforce.                         |

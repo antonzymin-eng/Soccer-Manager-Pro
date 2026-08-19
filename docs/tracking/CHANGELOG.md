@@ -12,7 +12,85 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 18, 2026, later — **Adversarial-review round 8, and the conclusion drawn from
+> **Last Updated:** August 19, 2026 — **Adversarial-review round 9: the tool round 8 built to end the
+> recurring defect class shipped WITH that class in it — three High findings in
+> `tools/doc-claim-check.py`, every one proven by reproduction before the fix and re-proven in both
+> directions after.** Documentation and tooling only; no `.cs` and no `.asmdef` changed anywhere on
+> the branch, so no gate run is owed.
+>
+> **Why this round existed, and what it confirms.** Round 8's own diagnosis was that a correction pass
+> is itself a high-defect-rate activity — nine of its ten Highs had been introduced or missed by the
+> previous fix pass — and its answer was to stop reviewing harder and build a checker. Round 9 is the
+> fresh pass over that answer. The checker is real and it works; it also arrived with a silent decline
+> path and a header asserting a safety property it did not have. **The lesson is not "the tool was
+> bad" — it is that building the detector does not exempt the detector from the class.** The three
+> Highs below were all invisible to reading and obvious to running.
+>
+> **H1 — "read-only by construction (no writing command is on the list)" was false, and the tool
+> executes untrusted document text in CI.** The allow-list gates `argv[0]` only, and several genuinely
+> read-only binaries carry a write or execute escape hatch behind a flag. Demonstrated: a document
+> containing ``sed -i s/canary/PWNED/ victim.txt`` → 0 REWROTE the file while the tool printed **PASS**.
+> `python3 -c`, `find -delete`/`-exec`, `sort -o`, `rg --pre`, `git -c`, `uniq IN OUT` and
+> `awk 'BEGIN{system()}'` were reachable the same way, and `ci.yml` runs this step on `pull_request`,
+> so the input is a PR's own markdown. Fixed by naming the hatches per binary rather than trusting the
+> list: `DENIED_FLAGS`/`DENIED_FLAG_PREFIXES`, git globals scoped to before the subcommand, `sed`
+> dropped outright (its write lives in its script, where no flag list can reach it), `awk` KEPT with
+> `system`/`getline` refused — because both of the repo's only two executable claims use `awk` and
+> dropping it would have made every run a vacuous pass. **The git-global scoping is the part worth
+> keeping:** refusing `-c` anywhere broke `git grep -c`, i.e. both live claims, taking the tool to
+> zero verified claims. Nothing in the reasoning showed that; re-measuring against the corpus did.
+>
+> **H2 — quoted regex patterns were glob-expanded into filenames, silently changing the command.**
+> `shlex.split` discards quoting, so `find . -name '*.md' \| wc -l` ran as
+> `find . -name CLAUDE.md doc.md`. All 7 glob-character tokens in the live corpus are quoted regex,
+> not shell globs. Replaced with a quote-preserving tokenizer; only tokens whose glob characters are
+> all unquoted expand. It also splits pipelines on unquoted `|` alone, so `grep -c 'a|b' f` stops
+> being a parse failure.
+>
+> **H3 — pipeline exit status was never checked, so the tool fabricated a mismatch against a correct
+> document.** A failing segment's empty output flowed downstream: `grep -rn 'X' nosuchdir/ | wc -l`
+> printed `0`, reported as "document says 218; command returns 0". Combined with H2 that is a complete
+> false-failure path on correct prose — the defect this tool exists to catch, wearing the other sign,
+> in a step wired to fail CI. A non-zero exit now DECLINES the claim, with grep/rg/diff/git `1` (no
+> match / files differ) as the named benign case.
+>
+> **M1 — the third, silent decline path.** An unlisted binary was dropped by a bare `continue`,
+> counted nowhere and named nowhere, while the header, the file-manifest row and the round-8 entry all
+> published "every declined claim is counted AND NAMED". 9 live instances, all real
+> (`tools/recurring-defect-lint.py` at seven sites, `curl`, `ps … | grep`). Counted and named now,
+> behind a command-SHAPE discriminator, because `CLAIM` also matches ~1,100 backticked IDENTIFIERS
+> (`SNAPSHOT_SCHEMA_VERSION` **20 → 21**) that are not commands and would drown the signal.
+> **M2** — an absolute glob (`ls /etc/*.conf`) crashed the tool with an uncaught `NotImplementedError`;
+> document text must not be able to crash the checker. **M3/M4, in `doc-consistency-check.py`** — the
+> historical-marker suppression was the one excusal path incrementing no counter, while every run
+> printed "excusals are counted, never silent" (0 live, so latent — and it is the most heuristic of the
+> four mechanisms, so the one whose silence costs most); and the oracle-less agreement group hard-coded
+> the registry size 53, so on the day the registry reaches 54 it silently checks nothing, with no
+> zero-self-check to catch that. Both mutation-proved in both directions. **L1** — a backticked run of
+> whitespace crashed on `"".split()[0]`. **L2** — the header never stated that only the
+> command-then-value claim SHAPE is recognised, so root `CLAUDE.md`'s "8 scripts (`ls tools/*.py`)" is
+> invisible AND uncounted.
+>
+> **Two findings outside the tools.** `docs/specs/code-standards/appendices.md` carried **two rows
+> numbered v1.4** — round 8's own fix pass took a number round 7's had already used — which
+> `recurring-defect-lint.py` reported as the tree's ONLY ERROR while root `CLAUDE.md` still recorded
+> "0 ERROR tree-wide". Renumbered ascending (round-7 L3 keeps 1.4, round-8 H1 becomes 1.5, header
+> follows) → `docs/specs/code-standards/appendices.md` **v1.5**, and the lint is back to 0 ERROR /
+> 122 WARN / 27 INFO. And the round-8 entry below published "7 negated-or-historical" where its own
+> tool, run at its own commit, prints 8 — annotated in place rather than rewritten.
+>
+> **Deliberately NOT done: no `ERR-` id was filed.** The repo obligation covers a finding that
+> contradicts APPROVED spec TEXT; these are tool defects, and the duplicate version row is a hygiene
+> slip the lint already reports mechanically — the August 8, 2026 pass over 275 such ERRORs fixed them
+> without filing ids, and that precedent is the right one. **Verification:** `doc-claim-check` PASS,
+> 2 executed (unchanged), declines 21 → 30 with the 9 new ones being the previously-silent class;
+> `doc-consistency-check` PASS, 34 excusals (23 region / 4 chronicle / 7 phrasing / 0 marker), 15
+> unresolvable; `recurring-defect-lint` 0 ERROR; `assembly-tier-check` PASS. The security fixes were
+> verified on a scratch mirror in both directions: ten hatch attempts all refused with the canary file
+> intact and no file created, and the complement — the same quoted-glob command with its TRUE value
+> stated — passes.
+
+> **Last Updated (prior):** August 18, 2026, later — **Adversarial-review round 8, and the conclusion drawn from
 > five rounds of it: `tools/doc-claim-check.py` CREATED, because the recurring defect could not be closed
 > by reviewing harder.** Documentation only; no `src/` code changed, so no gate run is owed.
 >
@@ -44,7 +122,14 @@ break it, and do not edit historical entries.
 > **What it deliberately does not do, recorded because overclaiming is the failure mode this series is
 > about:** it verifies only claims whose command prints a single integer, and resolves identifiers only
 > within one file. **Every claim it declines is counted AND NAMED** — 2 unsafe, 5 not-self-contained,
-> 6 not-a-single-integer, 7 negated-or-historical against 2 executed — because rounds 5 and 6 both found
+> 6 not-a-single-integer, 7 negated-or-historical against 2 executed —
+> *(⚠️ both halves corrected August 19, 2026, adversarial-review round 9. The FIGURE: run at
+> this entry's own commit `f23f480`, the tool prints **8** negated-or-historical, not 7 — a
+> count published in the entry announcing the tool built because this project kept publishing
+> verification figures nobody re-ran, and one its own checker cannot catch, since the value
+> comes from a multi-line report rather than a single-integer command. The CLAIM: "every
+> declined claim is counted AND NAMED" was false as written — an unlisted BINARY was dropped
+> by a third, silent `continue`, 9 live instances, now counted and named.)* — because rounds 5 and 6 both found
 > this project's checkers hiding real defects behind silent skips. Commands are untrusted document text:
 > allow-listed read-only binaries, no shell, globs expanded in-process.
 >

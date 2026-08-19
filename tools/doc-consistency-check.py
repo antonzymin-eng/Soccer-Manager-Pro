@@ -973,6 +973,13 @@ def scan_version_citations(repo, sources, findings, stats, regions):
                     stats[rel]["excused_phrase"] += 1
                     continue
                 if historically_marked(text, m.start(), vm.end()):
+                    # Round 9 (M3): counted. This was the ONE excusal path
+                    # that incremented nothing, while every run printed
+                    # "excusals are counted, never silent". It is also the
+                    # most heuristic of the four (bare "superseded",
+                    # "historical", "retired" anywhere within MARKER_RADIUS),
+                    # so it is the one whose silence costs most.
+                    stats[rel]["excused_marker"] += 1
                     continue
             # Round 6 (M1): on this repo's ~4,000-char lines, file:line does not
             # locate a citation — report the column too, name the run's LAST
@@ -1044,6 +1051,7 @@ def scan_cardinalities(repo, sources, findings, stats, regions):
                     stats[rel]["excused_region"] += 1
                     continue
                 if historically_marked(text, m.start(), m.end()):
+                    stats[rel]["excused_marker"] += 1       # round 9, M3
                     continue
                 line = text.count("\n", 0, m.start()) + 1
                 findings.append(
@@ -1055,9 +1063,20 @@ def scan_cardinalities(repo, sources, findings, stats, regions):
 # Figures with no derivable oracle, checked for cross-file AGREEMENT: every
 # scanned surface stating the figure must state the same value. The context
 # regex keeps unrelated "N of 53" phrasings (none known today) out of the set.
-AGREEMENT_GROUPS = (
-    ("assembly-less approved specs (\"N of 53\")",
-     re.compile(r"(\d+)\s+of\s+(?:the\s+)?53\b"),
+def agreement_groups(spec_folders):
+    """The oracle-less figures, built against the MEASURED registry size.
+
+    Round 9 (M4): the "N of 53" pattern hard-coded 53. The registry grows —
+    it has been 20, and #52 is the one candidate still without a spec — and on
+    the day it becomes 54 this group silently matches nothing while the tool
+    goes on printing PASS. Unlike the citation and cardinality scans there is
+    no zero-self-check to catch that, so the number is derived from the same
+    measurement the cardinality scan already makes, and a group that matches
+    nothing tree-wide is now printed rather than inferred from a 0 column.
+    """
+    return (
+    ("assembly-less approved specs (\"N of %d\")" % spec_folders,
+     re.compile(r"(\d+)\s+of\s+(?:the\s+)?%d\b" % spec_folders),
      # The context must say what the figure MEANS ("…have no assembly", "…of the
      # registry"), not merely mention specs — "29 of 53 approved specs" in the
      # implementation-begun sense is a different figure and must not be pooled
@@ -1067,11 +1086,12 @@ AGREEMENT_GROUPS = (
     ("registry share (\"N% of the registry\")",
      re.compile(r"(\d+)%\s+of\s+the\s+registry"),
      None),
-)
+    )
 
 
-def scan_agreements(sources, findings, stats, regions):
-    for label, pat, ctx in AGREEMENT_GROUPS:
+def scan_agreements(sources, findings, stats, regions, spec_folders):
+    empty_groups = []
+    for label, pat, ctx in agreement_groups(spec_folders):
         sites = {}
         for src, rel, text, _frozen, _pierced in sources:
             for m in pat.finditer(text):
@@ -1086,10 +1106,13 @@ def scan_agreements(sources, findings, stats, regions):
                     stats[rel]["excused_region"] += 1
                     continue
                 if historically_marked(text, m.start(), m.end()):
+                    stats[rel]["excused_marker"] += 1       # round 9, M3
                     continue
                 stats[rel]["agreement figures"] += 1
                 line = text.count("\n", 0, m.start()) + 1
                 sites.setdefault(int(m.group(1)), []).append(f"{rel}:{line}")
+        if not sites:
+            empty_groups.append(label)
         if len(sites) > 1:
             detail = "; ".join(
                 f"{v} at {', '.join(where)}" for v, where in sorted(sites.items()))
@@ -1098,6 +1121,7 @@ def scan_agreements(sources, findings, stats, regions):
                  f"the {label} figure disagrees across scanned surfaces "
                  f"(no oracle exists for this figure, so agreement IS the "
                  f"check): {detail}"))
+    return empty_groups
 
 
 def main():
@@ -1117,14 +1141,16 @@ def main():
     sources = current_state_sources(repo, findings)
     stats = {rel: {"citations": 0, "cardinalities": 0, "agreement figures": 0,
                    "unresolvable": 0, "excused_region": 0,
-                   "excused_chronicle": 0, "excused_phrase": 0}
+                   "excused_chronicle": 0, "excused_phrase": 0,
+                   "excused_marker": 0}
              for _p, rel, _t, _f, _pc in sources}
     regions = {rel: record_regions(rel, text)
                for _p, rel, text, _f, _pc in sources}
 
     scan_version_citations(repo, sources, findings, stats, regions)
     measured = scan_cardinalities(repo, sources, findings, stats, regions)
-    scan_agreements(sources, findings, stats, regions)
+    empty_groups = scan_agreements(sources, findings, stats, regions,
+                                   measured["spec folders"])
 
     # Self-check: a scan that evaluated NOTHING is a broken scan, not a clean
     # tree (the vacuous-pass class: with every surface moved aside or a regex
@@ -1147,10 +1173,11 @@ def main():
             s = stats[rel]
             note = f"  [{frozen} chars frozen history excluded]" if frozen else ""
             exc = (s["excused_region"], s["excused_chronicle"],
-                   s["excused_phrase"])
+                   s["excused_phrase"], s["excused_marker"])
             if any(exc):
                 note += (f"  [excused as dated records: {exc[0]} region / "
-                         f"{exc[1]} chronicle / {exc[2]} phrasing]")
+                         f"{exc[1]} chronicle / {exc[2]} phrasing / "
+                         f"{exc[3]} historical marker]")
             in_scope = sum(len(ln) for ln in text.splitlines() if ln.strip())
             print(f"  {rel}: {in_scope} chars in scope / {s['citations']} / "
                   f"{s['cardinalities']} / {s['agreement figures']} / "
@@ -1166,10 +1193,18 @@ def main():
     ex_r = sum(s["excused_region"] for s in stats.values())
     ex_c = sum(s["excused_chronicle"] for s in stats.values())
     ex_p = sum(s["excused_phrase"] for s in stats.values())
-    print(f"{ex_r + ex_c + ex_p} stale-looking claim(s) excused as dated "
+    ex_m = sum(s["excused_marker"] for s in stats.values())
+    print(f"{ex_r + ex_c + ex_p + ex_m} stale-looking claim(s) excused as dated "
           f"records ({ex_r} in archive/log-body record regions, {ex_c} citing "
-          f"append-only chronicles, {ex_p} by record phrasing) — excusals are "
-          f"counted, never silent; audit them when these counts move")
+          f"append-only chronicles, {ex_p} by record phrasing, {ex_m} by "
+          f"historical marker) — excusals are counted, never silent; audit "
+          f"them when these counts move")
+    # Round 9 (M4): an agreement group whose pattern matches nothing tree-wide
+    # is checking nothing. Said out loud, because the citation and cardinality
+    # scans self-check for exactly this and the agreement scan did not.
+    for label in empty_groups:
+        print(f"NOTE: the {label} agreement group matched no surface — it is "
+              f"currently checking nothing")
     print("measured:", ", ".join(f"{k}={v}" for k, v in sorted(measured.items())))
     if not findings:
         print("PASS — no stale cross-document version citation or cardinality "
@@ -1381,3 +1416,44 @@ if __name__ == "__main__":
 # |         |            |             | heuristic, not a parse; pre-guard/    |
 # |         |            |             | verb-at still precede the pointer     |
 # |         |            |             | check; bare "since vN" unrecognised.  |
+# | 1.6     | 2026-08-19 | Claude Code | AR round 9 (2 Medium). **M3** — the   |
+# |         |            |             | historical-marker suppression was the |
+# |         |            |             | ONE excusal path incrementing no      |
+# |         |            |             | counter, while every run printed      |
+# |         |            |             | "excusals are counted, never silent"  |
+# |         |            |             | and the round-7 header made that      |
+# |         |            |             | completeness its answer to rounds 5-6 |
+# |         |            |             | (both of which filed a High against   |
+# |         |            |             | this project's checkers hiding real   |
+# |         |            |             | defects behind silent skips). It is   |
+# |         |            |             | also the most heuristic of the four   |
+# |         |            |             | mechanisms — bare "superseded",       |
+# |         |            |             | "historical", "retired" anywhere      |
+# |         |            |             | within MARKER_RADIUS — so its silence |
+# |         |            |             | cost the most. Counted at all three   |
+# |         |            |             | call sites (citations, cardinalities, |
+# |         |            |             | agreements) and printed as a fourth   |
+# |         |            |             | excusal class. 0 on today's tree, so  |
+# |         |            |             | latent, not live; mutation-proved     |
+# |         |            |             | both ways — a stale citation whose    |
+# |         |            |             | window carries "superseded" is        |
+# |         |            |             | excused AND counted 1, the identical  |
+# |         |            |             | citation without the marker is        |
+# |         |            |             | reported. **M4** — AGREEMENT_GROUPS   |
+# |         |            |             | hard-coded the registry size ("N of   |
+# |         |            |             | 53"). The registry grows (it has been |
+# |         |            |             | 20; #52 is still specless), and on    |
+# |         |            |             | the day it reaches 54 the group       |
+# |         |            |             | matches nothing while the tool goes   |
+# |         |            |             | on printing PASS — and unlike the     |
+# |         |            |             | citation and cardinality scans there  |
+# |         |            |             | is no zero-self-check to catch it.    |
+# |         |            |             | The size is now DERIVED from the same |
+# |         |            |             | measurement the cardinality scan      |
+# |         |            |             | already makes, and a group matching   |
+# |         |            |             | no surface prints a NOTE. Proved both |
+# |         |            |             | ways: at 54 the group reports itself  |
+# |         |            |             | empty (previously silent); at today's |
+# |         |            |             | 53 nothing changes. Live tree         |
+# |         |            |             | unchanged: PASS, 34 excusals          |
+# |         |            |             | (23/4/7/0), 15 unresolvable.          |
