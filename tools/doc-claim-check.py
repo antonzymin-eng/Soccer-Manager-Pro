@@ -67,10 +67,32 @@
 #             2 = usage error.
 
 import argparse
+import importlib.util
 import pathlib
 import re
 import subprocess
 import sys
+
+
+def _load_consistency():
+    """Import tools/doc-consistency-check.py (hyphenated name, so via importlib).
+
+    Round 13: this tool needs the SAME answer to "which bytes of this document
+    are a dated record?" that the citation checker already computes. Importing
+    it rather than restating it is deliberate — two tools disagreeing about
+    where the frozen header chain ends would mean one excusing a record the
+    other reports, and a second copy of a definition is the duplicate-claim
+    defect this repo keeps filing. The cost is a hard dependency between the
+    two checkers; both are steps of the same CI job, so a break in either
+    already fails that job."""
+    q = pathlib.Path(__file__).with_name("doc-consistency-check.py")
+    spec = importlib.util.spec_from_file_location("doc_consistency_check", q)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+DCC = _load_consistency()
 
 # Read-only binaries only. A command is refused unless EVERY pipeline segment's
 # argv[0] is here. `git` is further restricted below to read-only subcommands.
@@ -177,6 +199,51 @@ TIMEOUT_S = 60
 NEGATOR = re.compile(
     r"\b(?:no longer|not|never|n't|instead of|rather than|superseded|was|used to|"
     r"previously|before this|pre-fix)\b", re.I)
+
+# ---------------------------------------------------------------------------
+# DATED RECORDS (round 13). A claim in an APPEND-ONLY record states what a
+# command returned AT THE TIME. When the underlying figure later moves, the
+# record is still correct and the tool must not fail CI on it.
+#
+# This is not hypothetical and it is not someone else's mistake: at round 12
+# the pass writing the CHANGELOG entry quoted Spec #20's own drift-prone
+# example verbatim, with its value, INTO the chain — which would have failed
+# this gate on a correct historical entry the day the 36th assembly landed. It
+# was caught and the example was described instead of quoted, but "remember not
+# to write that" is not a mechanism.
+#
+# The model is `doc-consistency-check.py`'s, ported rather than reinvented, and
+# kept to its two load-bearing properties:
+#   * a mismatch inside a record region is EXCUSED, not skipped — the claim is
+#     still executed, and the excusal is COUNTED AND PRINTED, so "this
+#     historical figure no longer reproduces" stays visible without gating;
+#   * an explicit CURRENCY ASSERTION pierces the excusal. A record that says
+#     the command returns N *now* is making a present-tense claim wherever it
+#     sits, and is reported like any other.
+# Regions come from that module (frozen header chain, log body, archive) so the
+# two tools cannot disagree about which bytes are frozen.
+CURRENCY_ASSERTION = re.compile(
+    r"\b(?:now|currently|today|at\s+HEAD|as\s+of\s+(?:today|HEAD))\b", re.I)
+CURRENCY_RADIUS = 120
+
+
+def dated_record_regions(rel, text):
+    """Spans of `text` that are dated records by structure."""
+    spans = list(DCC.record_regions(rel, text))
+    chain = DCC.frozen_chain_span(text)
+    if chain:
+        spans.append(chain)
+    return tuple(spans)
+
+
+def currency_asserted(text, start, end):
+    """True when the claim reasserts that the value is current — bounded to its
+    own line so a marker from a neighbouring sentence cannot pierce for it."""
+    lo = max(text.rfind("\n", 0, start) + 1, start - CURRENCY_RADIUS)
+    nl = text.find("\n", end)
+    hi = min(nl if nl != -1 else len(text), end + CURRENCY_RADIUS)
+    return bool(CURRENCY_ASSERTION.search(text[lo:hi]))
+
 
 # Surfaces scanned. Kept explicit rather than globbed: this tool executes what it
 # finds, so the scanned set is a security boundary and must be a decision.
@@ -624,9 +691,11 @@ def scan(repo, quiet=False):
                 "negated": 0, "unlisted-binary": 0, "did-not-run": 0}
     declined_list = []
     findings = []
+    excused = []
 
     for rel, path in files:
         text = path.read_text(encoding="utf-8", errors="replace")
+        regions = dated_record_regions(rel, text)
         # Both claim shapes, deduplicated by the position of the command they
         # quote: a span matched by both is one claim, not two.
         matches, claimed_at = [], set()
@@ -721,6 +790,10 @@ def scan(repo, quiet=False):
                 continue
             checked += 1
             if got != stated:
+                if (any(a <= m.start() < b for a, b in regions)
+                        and not currency_asserted(text, m.start(), m.end())):
+                    excused.append((rel, line, cmd, stated, got))
+                    continue
                 mismatches += 1
                 findings.append((rel, line, cmd, stated, got))
 
@@ -738,6 +811,16 @@ def scan(repo, quiet=False):
             print("      - %s:%d  %s  [%s]" % (rel, line, cmd[:70], why))
         print("  (a declined claim is UNVERIFIED, not passed — the count is the honest"
               " statement of this tool's coverage)")
+    # Always printed, --quiet included: an excusal is a mismatch the tool chose
+    # not to report, and the round-5/6 lesson is that those must never be
+    # silent. Counted and NAMED, same rule as the declines.
+    print("  %d mismatch(es) EXCUSED as dated records in append-only regions "
+          "(a claim there records what the command returned AT THE TIME; an "
+          "explicit \"now\"/\"currently\"/\"today\" pierces the excusal and is "
+          "reported)" % len(excused))
+    for rel, line, cmd, stated, got in excused:
+        print("      - %s:%d  %s  [record says %d; command now returns %d]"
+              % (rel, line, cmd[:60], stated, got))
 
     if findings:
         print("\nFAIL — %d stated value(s) the command does not reproduce:" % len(findings))
@@ -932,3 +1015,37 @@ if __name__ == "__main__":
 # |         |            |             | in #33's appendices) is not announced as a  |
 # |         |            |             | rejected binary — the mirror of the noise   |
 # |         |            |             | command_shaped exists to suppress.          |
+# | 1.3     | 2026-08-19 | Claude Code | AR round 13 — the DATED-RECORD model,       |
+# |         |            |             | ported from doc-consistency-check rather    |
+# |         |            |             | than reinvented. A claim in an append-only  |
+# |         |            |             | record states what a command returned AT    |
+# |         |            |             | THE TIME; when the figure later moves the   |
+# |         |            |             | record is still correct, and this gate      |
+# |         |            |             | would have failed CI on it. Not             |
+# |         |            |             | hypothetical: at round 12 the pass writing  |
+# |         |            |             | the CHANGELOG quoted Spec #20's own         |
+# |         |            |             | drift-prone example verbatim INTO the       |
+# |         |            |             | chain, which fails the day the 36th         |
+# |         |            |             | assembly lands. It was caught and reworded, |
+# |         |            |             | but "remember not to write that" is not a   |
+# |         |            |             | mechanism. Regions come from                |
+# |         |            |             | doc-consistency-check (frozen header chain  |
+# |         |            |             | via the new shared frozen_chain_span, log   |
+# |         |            |             | body, archive) so the two tools cannot      |
+# |         |            |             | disagree about which bytes are frozen. Both |
+# |         |            |             | of that model's load-bearing properties are |
+# |         |            |             | kept: the claim is still EXECUTED and the   |
+# |         |            |             | mismatch EXCUSED — counted and NAMED, never |
+# |         |            |             | skipped, so "this historical figure no      |
+# |         |            |             | longer reproduces" stays visible without    |
+# |         |            |             | gating — and an explicit "now"/"currently"/ |
+# |         |            |             | "today" PIERCES the excusal, because a      |
+# |         |            |             | record asserting a value is current is a    |
+# |         |            |             | present-tense claim wherever it sits.       |
+# |         |            |             | 0 excusals on today's tree: prophylactic,   |
+# |         |            |             | stated as such. Proved four ways on a       |
+# |         |            |             | scratch mirror, in both region kinds        |
+# |         |            |             | (frozen chain and log body): the head entry |
+# |         |            |             | above the marker is REPORTED, a plain       |
+# |         |            |             | record below it is EXCUSED and named, and a |
+# |         |            |             | reasserted one below it is REPORTED.        |

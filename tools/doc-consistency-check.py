@@ -509,6 +509,23 @@ def _blank(text, start, end):
             + text[end:])
 
 
+def frozen_chain_span(text):
+    """(start, end) of the append-only header chain below its head entry, or
+    None. Everything from the first `**Last Updated (prior):**` marker to the
+    next markdown heading (or EOF) is a dated record of a past pass.
+
+    Extracted as its own function at round 13 so `tools/doc-claim-check.py` can
+    reuse THIS definition rather than carry a second copy: two tools disagreeing
+    about which bytes are frozen history is the duplicate-claim defect this repo
+    files repeatedly, and it would show up as one tool excusing a record the
+    other reports."""
+    m = PRIOR_MARKER.search(text)
+    if not m:
+        return None
+    nxt = HEADING_RE.search(text, m.start())
+    return (m.start(), nxt.start() if nxt else len(text))
+
+
 def blank_frozen_history(text):
     """Blank the header chain below its head entry, and own VERSION HISTORY
     sections. Returns (text, frozen_chars, pierced): frozen_chars is the
@@ -538,11 +555,10 @@ def blank_frozen_history(text):
     revision and states no currency."""
     frozen = 0
     pierced = []
-    m = PRIOR_MARKER.search(text)
-    if m:
-        nxt = HEADING_RE.search(text, m.start())
-        end = nxt.start() if nxt else len(text)
-        seg_start, seg = m.start(), text[m.start():end]
+    span = frozen_chain_span(text)
+    if span:
+        end = span[1]
+        seg_start, seg = span[0], text[span[0]:end]
         fmatches = list(FILE_TOKEN.finditer(seg))
         for idx, fm in enumerate(fmatches):
             hard = (fmatches[idx + 1].start() if idx + 1 < len(fmatches)
@@ -1457,3 +1473,18 @@ if __name__ == "__main__":
 # |         |            |             | 53 nothing changes. Live tree         |
 # |         |            |             | unchanged: PASS, 34 excusals          |
 # |         |            |             | (23/4/7/0), 15 unresolvable.          |
+# | 1.7     | 2026-08-19 | Claude Code | AR round 13 — no behaviour change.    |
+# |         |            |             | The frozen-header-chain span is       |
+# |         |            |             | extracted from blank_frozen_history   |
+# |         |            |             | into frozen_chain_span() so           |
+# |         |            |             | doc-claim-check can reuse THIS        |
+# |         |            |             | definition for its new dated-record   |
+# |         |            |             | model instead of carrying a second    |
+# |         |            |             | copy. Two tools disagreeing about     |
+# |         |            |             | which bytes are frozen history would  |
+# |         |            |             | mean one excusing a record the other  |
+# |         |            |             | reports — the duplicate-claim defect  |
+# |         |            |             | this repo files repeatedly. Verified  |
+# |         |            |             | identical output before and after:    |
+# |         |            |             | PASS, 34 excusals (23/4/7/0), 15      |
+# |         |            |             | unresolvable.                         |

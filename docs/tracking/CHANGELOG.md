@@ -12,7 +12,41 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 19, 2026, later — **Adversarial-review rounds 10–12, and a premature
+> **Last Updated:** August 19, 2026, later still — **Round 13: `doc-claim-check.py` gains the
+> dated-record model, ported from the citation checker rather than reinvented.** Tooling and
+> documentation only; no `.cs` and no `.asmdef` changed over `12eba7d~1..HEAD`, so no gate run is owed.
+>
+> **The hazard, and why a mechanism rather than a resolution.** A claim written into an append-only
+> record states what a command returned AT THE TIME. When the underlying figure later moves, the record
+> is still correct — and this gate would fail CI on it. That is not hypothetical and it was not someone
+> else's mistake: **at round 12 the pass writing the CHANGELOG entry quoted Spec #20's own drift-prone
+> example verbatim, with its value, into the chain**, which fails the day the 36th assembly lands. It
+> was caught before landing and the example is now described rather than quoted — but "remember not to
+> write that" is not a mechanism, and this series exists because relying on remembering is what failed.
+>
+> **Ported, not reinvented.** The regions come from `doc-consistency-check.py` — its
+> `record_regions` plus a new `frozen_chain_span()` extracted out of `blank_frozen_history` for the
+> purpose — so the two checkers cannot disagree about which bytes are frozen history. A second copy of
+> that definition would show up as one tool excusing a record the other reports, which is the
+> duplicate-claim defect this repo files repeatedly. Both of the model's load-bearing properties are
+> kept: the claim is still **executed** and the mismatch **excused rather than skipped**, counted and
+> named so "this historical figure no longer reproduces" stays visible without gating; and an explicit
+> **"now" / "currently" / "today" pierces** the excusal, because a record asserting a value is current
+> is a present-tense claim wherever it sits.
+>
+> **0 excusals on today's tree — this is prophylactic, and is stated as such rather than dressed up as
+> a fix.** Proved four ways on a scratch mirror, in both region kinds (frozen header chain and log
+> body): the head entry above the marker is REPORTED, a plain record below it is EXCUSED and named, a
+> reasserted record below it is REPORTED. `doc-consistency-check` output verified byte-identical either
+> side of the extraction.
+>
+> **Verification:** `doc-claim-check` PASS (3 executed, 30 declined, 0 excused); `doc-consistency-check`
+> PASS (34 excusals 23/4/7/0, 15 unresolvable); `recurring-defect-lint` 0 ERROR / 122 WARN / 27 INFO;
+> `assembly-tier-check` PASS. **Still owed, unchanged:** a DELEGATED review pass over
+> `tools/doc-claim-check.py` — every round from 9 on ran single-handed, so the fresh-eyes property was
+> never obtained on code whose author was also its reviewer.
+
+> **Last Updated (prior):** August 19, 2026, later — **Adversarial-review rounds 10–12, and a premature
 > closure withdrawn.** Documentation and tooling only; no `.cs` and no `.asmdef` changed (verified over
 > `12eba7d~1..HEAD`, where the only `src/` path touched is `src/CLAUDE.md`, the coding guide), so no
 > gate run is owed.
