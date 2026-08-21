@@ -12,7 +12,245 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 18, 2026, later — **Adversarial-review round 8, and the conclusion drawn from
+> **Last Updated:** August 19, 2026, evening — **Round 14: an EXTERNAL reviewer found two exploitable
+> holes in round 9's own security fix, and both were confirmed by execution before being fixed.** This is
+> the first round of this series with fresh eyes on it, and it immediately found what four single-handed
+> rounds did not. Tooling and documentation only; no `.cs` and no `.asmdef` changed, so no gate run is
+> owed.
+>
+> **The finding that matters is not either bug — it is that both have one root error.** Round 9's H1 fix
+> validated a *shape* rather than the argv that actually executes. Everything downstream of that was
+> sound reasoning about the wrong object.
+>
+> **P1(a) — `awk -v` walked straight past the program.** The program was located as "the first operand
+> that does not start with `-`", but `-v` and `-F` take a SEPARATE argument, so
+> `awk -v x=1 'BEGIN{system("touch /tmp/pwn")}END{print 1}' CLAUDE.md` handed the escape check `x=1`,
+> never examined the program, ran `system()`, and returned the claimed integer under a printed **PASS**.
+> Reproduced here before fixing: the artefact was created. Fixed by scanning EVERY token rather than the
+> one guessed to be the program — that needs no awk option grammar and cannot be outflanked by adding
+> one, since `system`/`getline` must appear literally to be called. The same heuristic was wrong for
+> `python3` (`-X foo.py bar.py` executes `bar.py`), so the script must now be `argv[1]` with no
+> interpreter flags at all.
+>
+> **P1(b) — the flag check ran before glob expansion.** With a repo file named `--output=canary`, the
+> validated command `sort * \| wc -l` expanded to `sort --output=canary …` and **wrote that file**.
+> Reproduced here before fixing. Both halves closed: an expanded filename that would be read as an
+> option is refused by name, and the entire escape-hatch check re-runs on the post-expansion argv.
+>
+> **P2 — the derived denominator was still baked into the pattern.** Round 9 derived the registry size
+> instead of hard-coding 53, but the pattern still searched only for the CURRENT size, so on the day the
+> registry grows the group matches nothing, prints a NOTE, and CI passes — leaving the "19 of the 53"
+> prose stale and unreported, which is the exact transition that fix existed to catch. Measured: at
+> `spec_folders=54` against today's prose, the old form raised **0** findings. The denominator is now
+> matched and checked against the measured count, naming each stale site directly; at 54 that is **9**
+> findings, at today's 53 it is clean. A stale-denominator site is no longer pooled into the agreement
+> numerator either, since a figure whose denominator moved cannot be compared with one whose did not.
+>
+> **What this costs the record.** The standing caveat in the three entries below — that delegation was
+> unavailable and the fresh-eyes property was never obtained — was not a formality. Two exploitable
+> holes sat in a security fix through rounds 10, 11, 12 and 13, all of which re-read that file, and none
+> of which found them, because the reviewer and the author were the same. **A delegated pass over
+> `tools/doc-claim-check.py` is no longer "worth the tokens"; it is the demonstrated gap**, and it
+> remains owed even after this round.
+>
+> **Verification:** `doc-claim-check` PASS (3 executed, unchanged; the two exploit commands are declined
+> and NAMED, and neither artefact is created); `doc-consistency-check` PASS (34 excusals 23/4/7/0,
+> 16 unresolvable); `recurring-defect-lint` 0 ERROR / 122 WARN / 27 INFO;
+> `assembly-tier-check` PASS. Figures measured AFTER this entry was written, per the correction
+> annotated on the round-13 entry below.
+
+> **Last Updated (prior):** August 19, 2026, later still — **Round 13: `doc-claim-check.py` gains the
+> dated-record model, ported from the citation checker rather than reinvented.** Tooling and
+> documentation only; no `.cs` and no `.asmdef` changed over `12eba7d~1..HEAD`, so no gate run is owed.
+>
+> **The hazard, and why a mechanism rather than a resolution.** A claim written into an append-only
+> record states what a command returned AT THE TIME. When the underlying figure later moves, the record
+> is still correct — and this gate would fail CI on it. That is not hypothetical and it was not someone
+> else's mistake: **at round 12 the pass writing the CHANGELOG entry quoted Spec #20's own drift-prone
+> example verbatim, with its value, into the chain**, which fails the day the 36th assembly lands. It
+> was caught before landing and the example is now described rather than quoted — but "remember not to
+> write that" is not a mechanism, and this series exists because relying on remembering is what failed.
+>
+> **Ported, not reinvented.** The regions come from `doc-consistency-check.py` — its
+> `record_regions` plus a new `frozen_chain_span()` extracted out of `blank_frozen_history` for the
+> purpose — so the two checkers cannot disagree about which bytes are frozen history. A second copy of
+> that definition would show up as one tool excusing a record the other reports, which is the
+> duplicate-claim defect this repo files repeatedly. Both of the model's load-bearing properties are
+> kept: the claim is still **executed** and the mismatch **excused rather than skipped**, counted and
+> named so "this historical figure no longer reproduces" stays visible without gating; and an explicit
+> **"now" / "currently" / "today" pierces** the excusal, because a record asserting a value is current
+> is a present-tense claim wherever it sits.
+>
+> **0 excusals on today's tree — this is prophylactic, and is stated as such rather than dressed up as
+> a fix.** Proved four ways on a scratch mirror, in both region kinds (frozen header chain and log
+> body): the head entry above the marker is REPORTED, a plain record below it is EXCUSED and named, a
+> reasserted record below it is REPORTED. `doc-consistency-check` output verified byte-identical either
+> side of the extraction.
+>
+> **Verification:** `doc-claim-check` PASS (3 executed, 30 declined, 0 excused); `doc-consistency-check`
+> PASS (34 excusals 23/4/7/0, 15 unresolvable *(⚠️ corrected August 19, 2026, round 14: **16**. The figure was measured before this entry was written, and WRITING it moved the number — a new head entry pushes the previous one below the `(prior)` marker, which changes what the citation scan reads. So this checker's own coverage figures cannot be measured before the entry that quotes them. Third recorded instance of "a count taken mid-pass does not survive the pass", and the first where the act of recording is itself what invalidated it.)*); `recurring-defect-lint` 0 ERROR / 122 WARN / 27 INFO;
+> `assembly-tier-check` PASS. **Still owed, unchanged:** a DELEGATED review pass over
+> `tools/doc-claim-check.py` — every round from 9 on ran single-handed, so the fresh-eyes property was
+> never obtained on code whose author was also its reviewer.
+
+> **Last Updated (prior):** August 19, 2026, later — **Adversarial-review rounds 10–12, and a premature
+> closure withdrawn.** Documentation and tooling only; no `.cs` and no `.asmdef` changed (verified over
+> `12eba7d~1..HEAD`, where the only `src/` path touched is `src/CLAUDE.md`, the coding guide), so no
+> gate run is owed.
+>
+> **The withdrawal first, because it is the finding about the process rather than the code.** The
+> round-11 commit declared the cycle converged on an L-only round. That claim does not hold: this
+> skill's termination rule is a **full fresh review over the entire scope** returning only Lows, and
+> round 11 read ONE FILE. An L-only sweep of the file you just edited is not a clean pass over the
+> estate — it is the narrowest possible reading of the bar, made by the author of the code under
+> review. Withdrawn, and the loop continued. **This is the round-8 diagnosis one level up:** rounds
+> 5–8 kept finding fixes that enumerated instances where the defect was a class; round 11 declared
+> convergence on a scope that was a fraction of the artifact.
+>
+> **Round 10 — 1 Medium, 1 Low, both in round 9's own output.** The Medium was in the RECORD: round 9's
+> entry claimed "no `.cs` and no `.asmdef` changed anywhere on the branch", which is false — the branch
+> carries the merged #44 discipline work from PR #322, some 60 `.cs` files. The phrasing was inherited
+> verbatim from the round-7 and rounds-4–7 entries, so **three consecutive entries asserted a scope none
+> of them measured**. Corrected to the range that is true, and stated AS a range. The Low was in the
+> tool: the negation test ran before the is-this-a-command test, so a backticked IDENTIFIER standing
+> near a negation was counted and printed as a declined CLAIM — five of eight "negated" declines were
+> of that kind, overstating the coverage being given up in the one figure whose purpose is to state it
+> honestly. Declines 30 → 25, every remaining line naming a real command.
+>
+> **Round 11 — 2 Low.** `SEP = object()` was dead the moment round 9 wrote it: a pipeline-separator
+> sentinel standing beside a tokenizer that appends segments directly, with a comment describing a
+> mechanism that does not exist. Plus one blank line.
+>
+> **Round 12 — the coverage gap round 9 named and did not close.** Round 9 filed the unrecognised
+> VALUE-FIRST claim shape — a count stated before the command that checks it — as a Low and stated it
+> in the header. Stating
+> a gap is not closing one, and the live instances are the drift-prone kind: **Spec #20 §5.4.5 states
+> the `src/` assembly count in that shape, in APPROVED text, and it goes stale the day the 36th
+> assembly lands.** The pre-fix sweep found seven live instances, of which **six** quote a real command (the
+> seventh, `permille/1000f > 0.6f`, is an expression that merely looks path-shaped); every one was
+> evaluated by hand first and all are currently TRUE, so this adds coverage rather than findings —
+> executed claims 2 → **3**, and the #20 figure is now under the checker. *(Two things the first draft
+> of this entry got wrong, recorded because both are the trap the rounds-4–7 entry below already named.
+> **(1)** It said "seven claims, all real": that count was taken before the discriminator was tightened,
+> and it then went stale the moment this pass kept writing — a count taken mid-pass does not survive the
+> pass. **(2)** The draft restated Spec #20's example HERE, verbatim with its value, which put a live
+> drift-prone claim inside an append-only chronicle: `doc-claim-check` has no dated-record model, so the
+> day the 36th assembly lands it would have failed CI on a correct historical record. The example is now
+> DESCRIBED rather than quoted, here and in the manifest row. One authoritative site per claim — the
+> spec's — is the whole point of checking it.)* **The complement test caught a defect in the addition
+> before it landed**: in this shape the negator PRECEDES the number ("no longer 3 files (`cmd`)"), so
+> reusing the forward shape's forward-looking gap reported a correctly-negated claim as a mismatch. The
+> window now looks back, bounded to the line. That is the third time in this series that constructing
+> the complement, rather than testing the motivating instance, is what found the defect.
+>
+> **Also checked and clean, so that the next round does not re-derive it:** the delegated version-history
+> parser in `recurring-defect-lint.py` — which `doc-consistency-check.py` depends on for every citation
+> it resolves — was swept for disagreement between a file's `**Version:**` header and its parsed table
+> across every markdown file in `docs/`, root and `.claude/`. One disagreement exists
+> (`ui-framework-t0-implementation-plan.md`, header 0.3 vs table 0.2) and it is already documented and
+> handled in `open-issues.md` as an unversioned edit, with the citing text carrying a "now v0.2" pointer
+> the checker accepts. No parser defect.
+>
+> **Standing caveat, restated because it bounds every round above:** delegation was unavailable in this
+> session, so all four passes ran single-handed rather than through fresh reviewer subagents. The
+> fresh-eyes property this loop normally buys was NOT obtained, and it matters most exactly where
+> rounds 10–12 operated — on code whose author was the reviewer. A delegated pass over
+> `tools/doc-claim-check.py` remains worth the tokens.
+>
+> **Verification:** `doc-claim-check` PASS (3 executed, 30 declined, each named); `doc-consistency-check`
+> PASS (34 excusals 23/4/7/0, 15 unresolvable); `recurring-defect-lint` 0 ERROR / 122 WARN / 27 INFO;
+> `assembly-tier-check` PASS. Value-first coverage proved in all three directions on a scratch mirror:
+> a correct claim is silent, a wrong one is reported, a negated one is declined and named.
+
+> **Last Updated (prior):** August 19, 2026 — **Adversarial-review round 9: the tool round 8 built to end the
+> recurring defect class shipped WITH that class in it — three High findings in
+> `tools/doc-claim-check.py`, every one proven by reproduction before the fix and re-proven in both
+> directions after.** Documentation and tooling only: no `.cs` and no `.asmdef` has changed anywhere
+> in this adversarial-review series — verified over `12eba7d~1..HEAD`, where the only `src/` path
+> touched is `src/CLAUDE.md`, the coding guide — so no gate run is owed. *(That range is stated
+> because the looser phrasing this entry first used, "anywhere on the branch", is FALSE and was
+> inherited from the round-7 and rounds-4–7 entries below: the branch also carries the merged #44
+> discipline work from PR #322, which is 60-odd `.cs` files. Caught in the round-10 pass over this
+> entry, by re-deriving the claim instead of re-reading it — which is the whole method this series
+> exists to install, applied to the entry announcing it.)*
+>
+> **Why this round existed, and what it confirms.** Round 8's own diagnosis was that a correction pass
+> is itself a high-defect-rate activity — nine of its ten Highs had been introduced or missed by the
+> previous fix pass — and its answer was to stop reviewing harder and build a checker. Round 9 is the
+> fresh pass over that answer. The checker is real and it works; it also arrived with a silent decline
+> path and a header asserting a safety property it did not have. **The lesson is not "the tool was
+> bad" — it is that building the detector does not exempt the detector from the class.** The three
+> Highs below were all invisible to reading and obvious to running.
+>
+> **H1 — "read-only by construction (no writing command is on the list)" was false, and the tool
+> executes untrusted document text in CI.** The allow-list gates `argv[0]` only, and several genuinely
+> read-only binaries carry a write or execute escape hatch behind a flag. Demonstrated: a document
+> containing ``sed -i s/canary/PWNED/ victim.txt`` → 0 REWROTE the file while the tool printed **PASS**.
+> `python3 -c`, `find -delete`/`-exec`, `sort -o`, `rg --pre`, `git -c`, `uniq IN OUT` and
+> `awk 'BEGIN{system()}'` were reachable the same way, and `ci.yml` runs this step on `pull_request`,
+> so the input is a PR's own markdown. Fixed by naming the hatches per binary rather than trusting the
+> list: `DENIED_FLAGS`/`DENIED_FLAG_PREFIXES`, git globals scoped to before the subcommand, `sed`
+> dropped outright (its write lives in its script, where no flag list can reach it), `awk` KEPT with
+> `system`/`getline` refused — because both of the repo's only two executable claims use `awk` and
+> dropping it would have made every run a vacuous pass. **The git-global scoping is the part worth
+> keeping:** refusing `-c` anywhere broke `git grep -c`, i.e. both live claims, taking the tool to
+> zero verified claims. Nothing in the reasoning showed that; re-measuring against the corpus did.
+>
+> **H2 — quoted regex patterns were glob-expanded into filenames, silently changing the command.**
+> `shlex.split` discards quoting, so `find . -name '*.md' \| wc -l` ran as
+> `find . -name CLAUDE.md doc.md`. All 7 glob-character tokens in the live corpus are quoted regex,
+> not shell globs. Replaced with a quote-preserving tokenizer; only tokens whose glob characters are
+> all unquoted expand. It also splits pipelines on unquoted `|` alone, so `grep -c 'a|b' f` stops
+> being a parse failure.
+>
+> **H3 — pipeline exit status was never checked, so the tool fabricated a mismatch against a correct
+> document.** A failing segment's empty output flowed downstream: `grep -rn 'X' nosuchdir/ | wc -l`
+> printed `0`, reported as "document says 218; command returns 0". Combined with H2 that is a complete
+> false-failure path on correct prose — the defect this tool exists to catch, wearing the other sign,
+> in a step wired to fail CI. A non-zero exit now DECLINES the claim, with grep/rg/diff/git `1` (no
+> match / files differ) as the named benign case.
+>
+> **M1 — the third, silent decline path.** An unlisted binary was dropped by a bare `continue`,
+> counted nowhere and named nowhere, while the header, the file-manifest row and the round-8 entry all
+> published "every declined claim is counted AND NAMED". 9 live instances, all real
+> (`tools/recurring-defect-lint.py` at seven sites, `curl`, `ps … | grep`). Counted and named now,
+> behind a command-SHAPE discriminator, because `CLAIM` also matches ~1,100 backticked IDENTIFIERS
+> (`SNAPSHOT_SCHEMA_VERSION` **20 → 21**) that are not commands and would drown the signal.
+> **M2** — an absolute glob (`ls /etc/*.conf`) crashed the tool with an uncaught `NotImplementedError`;
+> document text must not be able to crash the checker. **M3/M4, in `doc-consistency-check.py`** — the
+> historical-marker suppression was the one excusal path incrementing no counter, while every run
+> printed "excusals are counted, never silent" (0 live, so latent — and it is the most heuristic of the
+> four mechanisms, so the one whose silence costs most); and the oracle-less agreement group hard-coded
+> the registry size 53, so on the day the registry reaches 54 it silently checks nothing, with no
+> zero-self-check to catch that. Both mutation-proved in both directions. **L1** — a backticked run of
+> whitespace crashed on `"".split()[0]`. **L2** — the header never stated that only the
+> command-then-value claim SHAPE is recognised, so root `CLAUDE.md`'s "8 scripts (`ls tools/*.py`)" is
+> invisible AND uncounted.
+>
+> **Two findings outside the tools.** `docs/specs/code-standards/appendices.md` carried **two rows
+> numbered v1.4** — round 8's own fix pass took a number round 7's had already used — which
+> `recurring-defect-lint.py` reported as the tree's ONLY ERROR while root `CLAUDE.md` still recorded
+> "0 ERROR tree-wide". Renumbered ascending (round-7 L3 keeps 1.4, round-8 H1 becomes 1.5, header
+> follows) → `docs/specs/code-standards/appendices.md` **v1.5**, and the lint is back to 0 ERROR /
+> 122 WARN / 27 INFO. And the round-8 entry below published "7 negated-or-historical" where its own
+> tool, run at its own commit, prints 8 — annotated in place rather than rewritten.
+>
+> **Deliberately NOT done: no `ERR-` id was filed.** The repo obligation covers a finding that
+> contradicts APPROVED spec TEXT; these are tool defects, and the duplicate version row is a hygiene
+> slip the lint already reports mechanically — the August 8, 2026 pass over 275 such ERRORs fixed them
+> without filing ids, and that precedent is the right one. **Verification:** `doc-claim-check` PASS,
+> 2 executed (unchanged), declines 21 → **25** (+9 previously-silent unlisted-binary, −5 identifier
+> pseudo-claims dropped in the round-10 pass — a backticked IDENTIFIER beside a negation was being
+> counted and printed as a declined CLAIM, overstating the coverage the tool was giving up in the very
+> figure that exists to state it honestly — and the rest recategorised), every remaining line naming a
+> real command;
+> `doc-consistency-check` PASS, 34 excusals (23 region / 4 chronicle / 7 phrasing / 0 marker), 15
+> unresolvable; `recurring-defect-lint` 0 ERROR; `assembly-tier-check` PASS. The security fixes were
+> verified on a scratch mirror in both directions: ten hatch attempts all refused with the canary file
+> intact and no file created, and the complement — the same quoted-glob command with its TRUE value
+> stated — passes.
+
+> **Last Updated (prior):** August 18, 2026, later — **Adversarial-review round 8, and the conclusion drawn from
 > five rounds of it: `tools/doc-claim-check.py` CREATED, because the recurring defect could not be closed
 > by reviewing harder.** Documentation only; no `src/` code changed, so no gate run is owed.
 >
@@ -44,7 +282,14 @@ break it, and do not edit historical entries.
 > **What it deliberately does not do, recorded because overclaiming is the failure mode this series is
 > about:** it verifies only claims whose command prints a single integer, and resolves identifiers only
 > within one file. **Every claim it declines is counted AND NAMED** — 2 unsafe, 5 not-self-contained,
-> 6 not-a-single-integer, 7 negated-or-historical against 2 executed — because rounds 5 and 6 both found
+> 6 not-a-single-integer, 7 negated-or-historical against 2 executed —
+> *(⚠️ both halves corrected August 19, 2026, adversarial-review round 9. The FIGURE: run at
+> this entry's own commit `f23f480`, the tool prints **8** negated-or-historical, not 7 — a
+> count published in the entry announcing the tool built because this project kept publishing
+> verification figures nobody re-ran, and one its own checker cannot catch, since the value
+> comes from a multi-line report rather than a single-integer command. The CLAIM: "every
+> declined claim is counted AND NAMED" was false as written — an unlisted BINARY was dropped
+> by a third, silent `continue`, 9 live instances, now counted and named.)* — because rounds 5 and 6 both found
 > this project's checkers hiding real defects behind silent skips. Commands are untrusted document text:
 > allow-listed read-only binaries, no shell, globs expanded in-process.
 >
