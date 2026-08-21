@@ -6,6 +6,17 @@
 # Purpose: close the defect class adversarial-review rounds 6-8 kept finding and
 #          could not stop finding by review alone.
 #
+# TWO CHECKS RUN, not one, and both gate:
+#   CHECK 1 — the claim checker. Find every claim of the form "this command
+#             returns N", run the command, compare. This is the bulk of the
+#             file and everything above the CHECK 2 banner belongs to it.
+#   CHECK 2 — dangling identifier references inside spec code fences. In src/ a
+#             missed rename is a build error; in a spec's worked example nothing
+#             binds, so it dangles silently. See its own banner further down for
+#             why it is deliberately narrow. It shares this file because it
+#             shares the surface set and the exit code, and because a second
+#             script would be a second thing to remember to run.
+#
 # WHY THIS EXISTS
 # ---------------
 # Rounds 4-8 diagnosed one recurring shape: **verification prose is never itself
@@ -36,12 +47,31 @@
 # skipped — the round-5/6 lesson is that a checker's silent skips are where the
 # next defect hides, so every claim this tool declines to check is printed.
 #
-# It also recognises only ONE claim SHAPE: the command first, then the stated
-# value ("`cmd` → 18", "`cmd` returns 18"). The value-first form root CLAUDE.md
-# also uses — "8 scripts (`ls tools/*.py`)" — is not matched at all, and so is
-# not counted among the declines either. Stated here because round 9 found the
-# omission published nowhere: an unrecognised shape is invisible, and invisible
-# is the property this tool's whole design is meant to deny itself.
+# It recognises FOUR claim SHAPES, listed in CLAIM_SHAPES and printed by every
+# run so the reader never has to trust this comment:
+#   1. command, then the value       "`cmd` → 18", "`cmd` returned 218"
+#   2. command, colon, value         "`cmd`: **0**"
+#   3. value, then the command in parentheses    "8 scripts (`ls tools/*.py`)"
+#   4. value, an attribution clause, the command
+#                                    "60 files — re-derived by `ls … \| wc -l`"
+#                                    "35 assemblies via `ls -d src/*/ \| wc -l`"
+#
+# THE RESIDUAL BLIND SPOT IS THE POINT OF THIS PARAGRAPH, and it is no longer
+# described by naming instances someone happened to notice. Rounds 9 and 12
+# each published a blind spot as prose, and the prose then drifted: round 12
+# added shape 3 and left this section saying it "is not matched at all, and so
+# is not counted among the declines either", which the very next run refuted by
+# printing that exact claim in the declined list. So the blind spot is DERIVED
+# now, not written down: every backticked span that reads as a command, has an
+# integer near it on the same line, and binds to NO shape is counted and named
+# in the `unrecognised-shape` decline bucket. Read that bucket, not this
+# comment, for what the tool cannot see — and if a claim shape is worth
+# learning, it will be sitting in that list under its own file and line.
+#
+# The same rule governs the answer side. ANSWER_KINDS holds exactly one entry,
+# and the single-integer floor above is real; a claim whose command prints
+# prose, a table or a multi-line report lands in `not-a-single-integer`, which
+# is a count of what a second answer kind would be worth.
 #
 # SAFETY
 # ------
@@ -99,8 +129,21 @@
 # is not politeness: a silent refusal is indistinguishable from a pass, which
 # is the defect this whole tool exists to deny itself.
 #
-# Exit codes: 0 = every checkable claim reproduced, 1 = at least one mismatch,
-#             2 = usage error.
+# Exit codes. Two kinds of non-zero, and the distinction is load-bearing:
+#   0 = every executable claim reproduced its stated value, no dangling
+#       identifier, and the run actually looked at what it is supposed to.
+#   1 = A FINDING ABOUT A DOCUMENT. Either at least one stated value does not
+#       reproduce (CHECK 1) or at least one spec code fence references an
+#       identifier its own file does not declare (CHECK 2). The old exit table
+#       named only the first, while the dangling-identifier path had returned 1
+#       since the day it was written.
+#   2 = THIS TOOL COULD NOT DO ITS JOB, so its result is not a verdict on any
+#       document: a usage error, a named surface missing from the tree, a
+#       surface glob matching no file, or fewer claims executed than
+#       MIN_EXECUTED_CLAIMS. It outranks 1, because with the surface set broken
+#       the mismatches that were found are not the mismatches that exist.
+#       Before this existed, deleting 8 of the 9 named surfaces printed eight
+#       MISSING SURFACE lines, checked one claim, and exited 0 with PASS.
 
 import argparse
 import importlib.util
@@ -297,9 +340,38 @@ TIMEOUT_S = 60
 # tool's own first run against the live tree, which is the complement-testing
 # lesson rounds 5-8 kept re-learning: a matcher tuned on the instances that
 # motivated it will misread their opposite.
+#
+# Round 16 (M5): the alternation used to include the BARE words `not`, `was`,
+# `never` and `n't`, and an excusal is the one outcome that costs coverage
+# silently — the claim is never run at all. Those words saturate this repo's
+# prose, and the window is 40 raw characters either side, so the excusal fired
+# on sentences that negate something else entirely. Proven before the fix:
+#
+#     This was decided by the owner and is not in dispute: 99 assemblies
+#     (`ls -d src/*/ | wc -l`)
+#
+# — a present-tense claim wrong by a factor of 33 — was declined as
+# negated-or-historical, 0 claims executed, PASS. The alternation is now
+# restricted to phrases that can only be negating THE CLAIM: a bare `not` may
+# negate anything in the sentence, but `no longer returns` cannot negate
+# anything else. Every verb-bound form is spelled out rather than left to a
+# bare adverb, so widening this list is a deliberate act.
+# `pre-fix` is deliberately NOT in the bare alternation, and that is a
+# correction to this round's own first draft, made on evidence. It fails M5's
+# own test — "phrases that can only negate a claim" — because in this corpus it
+# is a noun modifier: #20 §3's v1.4 row reads "re-derived against the pre-fix
+# commit instead (`git grep -c 'CROSS-PENDING' 9b841d1^ …` → 218)", a LIVE
+# claim pinned to an immutable revision, and with bare `pre-fix` on the list
+# the new look-back window (M4) excused it — silently costing a quarter of
+# every executed claim on the tree. Kept only where it modifies a measurement.
 NEGATOR = re.compile(
-    r"\b(?:no longer|not|never|n't|instead of|rather than|superseded|was|used to|"
-    r"previously|before this|pre-fix)\b", re.I)
+    r"\b(?:no longer|superseded|instead of|rather than|before this fix|"
+    r"pre-fix\s+(?:figure|value|count|number|reading|measurement|baseline)|"
+    r"(?:never|used to|previously|no longer|did not|does not|didn't|doesn't)\s+"
+    r"(?:return(?:s|ed)?|report(?:s|ed)?|print(?:s|ed)?|yield(?:s|ed)?|"
+    r"give(?:s|n)?|gave|show(?:s|ed|n)?|output(?:s|ted)?|emit(?:s|ted)?|"
+    r"count(?:s|ed)?|find(?:s)?|found|read(?:s)?|was|is|be)"
+    r")\b", re.I)
 
 # ---------------------------------------------------------------------------
 # DATED RECORDS (round 13). A claim in an APPEND-ONLY record states what a
@@ -362,20 +434,266 @@ SURFACES = (
 SURFACE_GLOBS = ("docs/specs/*/section-*.md", "docs/specs/*/appendices.md",
                  "docs/specs/*/section-9-approval-checklist.md")
 
-# A claim: a backticked command, then within a short gap a stated integer,
-# introduced by an arrow or a reporting verb. The gap is deliberately tight —
-# round 8's H4 showed that a loose lookahead binds across unrelated clauses.
+# ---------------------------------------------------------------------------
+# COVERAGE FLOOR (round 16, H9).
+#
+# A run that checked NOTHING used to print PASS and exit 0. MISSING SURFACE was
+# a print statement: it incremented no counter and gated nothing, proven with 8
+# of the 9 named surfaces deleted — 1 claim executed, PASS, exit 0. The globbed
+# half had no missing concept at all, and every executed claim on this tree
+# comes from ONE globbed folder, so renaming that folder would have taken the
+# executed count to zero with not one line of output changed. The imported
+# sibling states the opposite rule for itself in terms ("a named surface
+# MISSING from the tree is an ERROR, not a skip"), and this file's own header
+# calls a vacuous pass "the failure class this project files as High".
+#
+# Two gates, because a surface list and a claim count fail differently: a
+# surface can vanish while the count holds up, and the count can collapse
+# (a matcher regression, a document rewritten) while every surface is present.
+#
+# HOW MIN_EXECUTED_CLAIMS IS DERIVED — it is not a magic number, it is a
+# measurement, and it is re-derived by running the tool:
+#
+#     python3 tools/doc-claim-check.py --repo .
+#
+# and reading the "claims executed and compared" line. The floor is set BELOW
+# that figure by MIN_EXECUTED_SLACK, so that ordinary document edits — a
+# sentence rephrased, a claim deleted with the paragraph it lived in — do not
+# turn a green tree red, while a matcher regression or a renamed surface
+# folder, which take the count to zero or near it, do.
+#
+# WHEN IT LEGITIMATELY CHANGES: coverage GROWING is the normal case (a new
+# shape, a new allow-listed binary, a new claim written) — re-derive and raise
+# the floor in the same commit, so the new coverage is protected too. Coverage
+# SHRINKING is the case that must not be waved through: lower this number only
+# with the reason recorded in the Version History row beside it, because
+# lowering it silently is how the vacuous-pass failure class comes back.
+MIN_EXECUTED_SLACK = 2
+# Re-derived 2026-08-21 by the invocation above: 6 executed and compared.
+MIN_EXECUTED_CLAIMS = 6 - MIN_EXECUTED_SLACK
+
+# ---------------------------------------------------------------------------
+# SEAM 1 — ANSWER KINDS (round 16, H11).
+#
+# "The command prints a single integer" used to be hard-wired at six separate
+# sites inside scan(): the value sub-pattern, the `int(...)` conversion, the
+# single_integer() read-back, the `not-single-int` decline bucket, the `!=`
+# comparison and the FAIL text. A second answer kind — a pair, a version
+# string, "prints nothing" — therefore meant editing all six, which is how a
+# floor becomes permanent. It is ONE object now: add a class here, name it on
+# a claim shape, and nothing in scan() changes.
+#
+# An answer kind owns four things:
+#   parse(text, start, end) -> (value, None) | (None, (bucket, reason))
+#       the STATED value, read out of the document. It may DECLINE — see the
+#       approximate-or-range rule below, which is a property of what a stated
+#       integer means, not of any particular claim shape.
+#   read(output) -> value | None          the command's own answer
+#   matches(stated, got) -> bool          the comparison
+#   describe(stated, got) -> str          the FAIL line
+# ---------------------------------------------------------------------------
+
+# Round 16 (H8). A number is not a stated value merely by being an integer near
+# a command. Two classes are refused OUTRIGHT rather than compared, because in
+# both the document is right and a comparison could only fabricate a finding:
+#   * a RANGE endpoint — "→ 2-4" against a true 3 is a correct sentence, and
+#     binding the 2 fails it;
+#   * an APPROXIMATION — "~30 files (`ls … | wc -l`)" is deliberately not an
+#     exact claim, and this repo writes ~ and ≈ constantly.
+# Both are DECLINED AND NAMED (`approximate-or-range`), never silently dropped:
+# a claim this tool cannot compare is part of the coverage statement.
+RANGE_BEFORE = re.compile(r"\d\s*(?:-|–|—|to)\s*$")
+RANGE_AFTER = re.compile(r"\s*(?:-|–|—)\s*\d")
+APPROX_BEFORE = re.compile(
+    r"(?:[~≈≥≤]\s*|\b(?:about|roughly|approximately|approx|circa|around|"
+    r"nearly|almost|at least|at most|up to|no more than|no fewer than)\s+)$",
+    re.I)
+
+
+class SingleIntegerAnswer:
+    """The one answer kind this tool has ever had: the command prints exactly
+    one integer, and the document states it.
+
+    That floor is deliberate and is stated in the header: it is the class that
+    has actually bitten here (counts, tallies, cardinalities) and the class
+    where "what the stated value should be" is unambiguous."""
+
+    name = "single-integer"
+    bucket = "not-single-int"
+    unreadable = "output is not a single integer"
+
+    def parse(self, text, start, end):
+        before = text[max(0, start - 24):start]
+        after = text[end:end + 8]
+        if RANGE_BEFORE.search(before) or RANGE_AFTER.match(after):
+            return None, ("approximate-or-range",
+                          "stated value is one endpoint of a RANGE — a range "
+                          "is not a single stated value and comparing an "
+                          "endpoint would fabricate a finding")
+        if APPROX_BEFORE.search(before):
+            return None, ("approximate-or-range",
+                          "stated value carries an approximation marker "
+                          "(~ / ≈ / about / roughly) — the document is not "
+                          "claiming an exact figure")
+        return int(text[start:end].replace(",", "")), None
+
+    def read(self, out):
+        return single_integer(out)
+
+    def matches(self, stated, got):
+        return stated == got
+
+    def describe(self, stated, got):
+        return "document says %d; command returns %d" % (stated, got)
+
+
+SINGLE_INTEGER = SingleIntegerAnswer()
+ANSWER_KINDS = (SINGLE_INTEGER,)
+
+
+# ---------------------------------------------------------------------------
+# SEAM 2 — CLAIM SHAPES (round 16, H11).
+#
+# A shape is one recognised way of WRITING a claim. Each entry owns its own
+# regex, its own negation window and its own "this match is not a claim at all"
+# rule, so the next shape is one more entry in CLAIM_SHAPES rather than one
+# more inline branch in scan(). That is not tidiness: the two shapes that existed
+# before this round needed incompatible negation logic, it was expressed as two
+# hand-written loops, and one of them was silently left un-updated for a whole
+# round — round 16's M4, and the reason the seam is shaped this way.
+#
+# CLAIM_SHAPES order is a PRECEDENCE order: a command span is one claim,
+# whichever shape binds it first.
+# ---------------------------------------------------------------------------
+
+# How far a negation window looks back from the start of a match, bounded to
+# the claim's own line so a negator from a neighbouring sentence cannot excuse.
+NEGATION_LOOKBACK = 40
+
+
+class ClaimShape:
+    """One recognised claim shape."""
+
+    def __init__(self, name, regex, answer=SINGLE_INTEGER):
+        self.name = name
+        self.regex = regex
+        self.answer = answer
+
+    def find(self, text):
+        return self.regex.finditer(text)
+
+    def negation_window(self, text, m):
+        """The text a NEGATOR may appear in to mark this claim historical.
+
+        Round 16 (M4). This is ONE implementation shared by every shape,
+        deliberately. The look-back was added at round 12 to the value-first
+        shape only, because that was the shape whose negator demonstrably
+        precedes the match; the forward shape kept passing the text AFTER its
+        gap, which can only ever contain the arrow and the digits, so that
+        argument was dead code and a forward-shape claim whose negator sits
+        BEFORE the backtick was never recognised as historical. Proven, same
+        document and same negator: "before this fix, `grep -c … f` → 4" was
+        reported as a MISMATCH while the value-first phrasing of the identical
+        sentence correctly declined.
+
+        Both directions are covered by looking back from the start of the
+        match (bounded to the line) and adding the shape's own gap — which for
+        a forward shape is the text between the command and the arrow, and for
+        a leading-value shape is the text between the value and the command.
+        A shape needing something else overrides this method; sharing it by
+        default is what stops the asymmetry being reintroduced silently."""
+        back = max(text.rfind("\n", 0, m.start()) + 1,
+                   m.start() - NEGATION_LOOKBACK)
+        return text[back:m.start()] + m.group("gap")
+
+    def rejects(self, text, m):
+        """A reason this match is NOT a claim, or None.
+
+        Distinct from a decline: a decline says "this claim exists and I could
+        not check it" and is counted. This says "there is no claim here"."""
+        return None
+
+
+class LeadingValueShape(ClaimShape):
+    """A shape whose stated value is written BEFORE the command.
+
+    Round 16 (H8): this direction can bind a number that is not a stated value
+    at all, because the prose to the left of a command is where this repo
+    writes its dates. `August 18, 2026 (`cmd`)` parsed as stated value 2026,
+    and a correct sentence produced "document says 2026; command returns 3",
+    exit 1 — the tool fabricating the finding it exists to prevent. The live
+    tree already extracts value=2026 in two places; they escape only because
+    those backticked spans hold ERR ids rather than runnable commands, which is
+    luck, not a rule.
+
+    A date is refused rather than declined: there is no claim in
+    "August 18, 2026", so counting one would overstate what was given up."""
+
+    def rejects(self, text, m):
+        before = text[max(0, m.start("value") - 32):m.start("value")]
+        if DATE_YEAR_BEFORE.search(before):
+            return "the integer is the YEAR of a date, not a stated value"
+        if DATE_DAY_BEFORE.search(before):
+            return "the integer is the DAY of a date, not a stated value"
+        return None
+
+
+_MONTH = (r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|"
+          r"Jul(?:y)?|Aug(?:ust)?|Sep(?:t|tember)?|Oct(?:ober)?|Nov(?:ember)?|"
+          r"Dec(?:ember)?)")
+# "August 18, 2026 (`cmd`)" — the comma-space form H8 names. The month name is
+# required, so a genuine "18, 2026" list of counts is untouched.
+DATE_YEAR_BEFORE = re.compile(
+    _MONTH + r"\s+\d{1,2}(?:st|nd|rd|th)?\s*,\s*$", re.I)
+# "August 18 (`cmd`)" — the same date with the year elided.
+DATE_DAY_BEFORE = re.compile(_MONTH + r"\s+$", re.I)
+
+# Verbs that introduce a command's own answer. Round 16 (H7): this list used to
+# be `returns?|reports?|prints?|yields?|gives?` — five present-tense forms with
+# a `\b` after each, which makes "returned", "reported" and "printed"
+# UNMATCHABLE. This repo records measurements in the past tense constantly
+# ("`git grep -c … \| awk …` returned **218**"), so the omission was not a
+# corner: those spans bound to no shape and were counted in no bucket.
+#
+# The complement was tested as well as the widening, and it removed a verb the
+# first draft included. `read` is NOT a reporting verb in this repo: it is how
+# this corpus describes what a DOCUMENT said, almost always the refuted value —
+# root CLAUDE.md's own design-supplement sentence is "…(60 files — re-derived
+# by `ls docs/tracking/*-design.md \| wc -l`…); this literal read \"42\" while
+# the true count was 60". With `read` on the list, shape 1 bound the 42, beat
+# shape 4's correct binding of the 60 on precedence, and FAILED a sentence
+# whose entire subject is that 42 is wrong. A widened matcher that starts
+# reporting a correct document is worse than the gap it closed.
+_REPORT_VERB = (
+    r"returns?|returned|reports?|reported|prints?|printed|yields?|yielded|"
+    r"gives?|gave|shows?|showed|outputs?|emits?|emitted|finds?|found|"
+    r"counts?|counted")
+
+# SHAPE 1 — command, then the stated value: "`cmd` → 18", "`cmd` returned 218".
+# The gap is deliberately tight — round 8's H4 showed that a loose lookahead
+# binds across unrelated clauses.
 CLAIM = re.compile(
     r"`(?P<cmd>[^`\n]{4,200})`"          # the command
     r"(?P<gap>[^`\n]{0,40}?)"            # short gap, no intervening code span
-    r"(?:→|->|\b(?:returns?|reports?|prints?|yields?|gives?)\b)"
+    r"(?:→|->|\b(?:" + _REPORT_VERB + r")\b)"
     r"[^0-9`\n]{0,18}"
     r"\*{0,2}(?P<value>\d[\d,]*)\*{0,2}",
     re.I)
 
-# The VALUE-FIRST shape: "8 scripts (`ls tools/*.py`)", "35 (`ls -d src/*/ \| wc
-# -l`)". Round 9 (L2) named this as unrecognised AND uncounted and stopped
-# there; round 12 closes it, because the live instances are exactly the
+# SHAPE 2 — command, then a COLON, then the stated value:
+# "`python3 tools/recurring-defect-lint.py --repo .`: **0 ERROR**".
+# Round 16 (H7). The colon must be adjacent to the closing backtick — a colon
+# anywhere inside shape 1's 40-character gap would bind across an unrelated
+# clause, which is the defect round 8 filed. Adjacency makes the form
+# unambiguous, and it is the form this repo's gate lines actually use.
+CLAIM_COLON = re.compile(
+    r"`(?P<cmd>[^`\n]{4,200})`(?P<gap>\s*:\s*)"
+    r"\*{0,2}(?P<value>\d[\d,]*)\*{0,2}",
+    re.I)
+
+# SHAPE 3 — the VALUE-FIRST shape: "8 scripts (`ls tools/*.py`)", "35 (`ls -d
+# src/*/ \| wc -l`)". Round 9 (L2) named this as unrecognised AND uncounted and
+# stopped there; round 12 closed it, because the live instances are exactly the
 # drift-prone kind — Spec #20 §5.4.5 states the assembly count this way, in
 # APPROVED text, and it goes stale the day the 36th assembly lands. The
 # parenthesis is required: it is this repo's idiom for "and here is how to
@@ -386,6 +704,194 @@ CLAIM_VALUE_FIRST = re.compile(
     r"(?P<gap>(?:\s+[A-Za-z][\w./-]*){0,4}\s*)"
     r"\(\s*`(?P<cmd>[^`\n]{4,200})`\s*\)",
     re.I)
+
+# SHAPE 4 — the value, then an ATTRIBUTION CLAUSE, then the command:
+#   "(60 files — re-derived by `ls docs/tracking/*-design.md \| wc -l` …)"
+#   "**148 total** (re-derived August 18, 2026 by `python3 tools/…`)"
+# Round 16 (H7). Both are live, and the first is the flagship miss: root
+# CLAUDE.md's design-supplement count, whose own sentence records that it read
+# 42 while the truth was 60 and that nobody noticed. Neither binds shape 3,
+# because the parenthesis opens before the VALUE, not before the command.
+#
+# The gap here is much looser than shape 3's, so it is anchored twice instead:
+# it must contain a MEASUREMENT VERB and end on a connective ("by", "via",
+# "per", "using", "from"). Prose that merely mentions a number near a command
+# has neither. The character budgets below and the one-newline rule in
+# rejects() keep it from reaching across a paragraph — this repo hard-wraps
+# mid-sentence, so refusing every newline would have missed the second example
+# above, and allowing any number of them would bind across bullets.
+_ATTRIBUTION_VERB = (
+    r"(?:re-)?(?:derived|measured|counted|verified|confirmed|computed|"
+    r"checked|produced|reproduced|obtained|generated|re-run|rerun)")
+# The two halves of the gap, and their budgets. Both were tightened after the
+# first draft FAILED a correct document, which is round 8's H4 recurring in a
+# new shape: with 80 characters before the verb, #20 §7.2's version-history row
+#
+#     …§7.2's "Stage 0 status" paragraph rewritten …, every figure re-derived
+#     August 18, 2026 (35 assemblies via `ls -d src/*/ \| wc -l`, …)
+#
+# bound the 0 of "Stage 0 status" — 71 characters away, across a quotation and
+# two clauses — and reported "document says 0; command returns 35" against a
+# row whose own stated value, 35, is correct. 24 characters is what the live
+# instances actually need (" files — ", " total (") and is short enough that
+# the value and the verb must belong to the same clause. Sentence and quote
+# marks are excluded outright for the same reason. The POST half may cross the
+# one hard wrap rejects() allows; the PRE half may not.
+# Both halves are single CHARACTER CLASSES, never an alternation of "ordinary
+# char" and "newline plus indent": the alternation form `(?:[^`\n]|\n[ \t>]*)`
+# is ambiguous — "\n> " can be consumed by either branch — and under two
+# bounded repetitions that is catastrophic backtracking. Measured on the first
+# draft: the whole scan went from 1.5 s to no result in 120 s. The newline
+# BUDGET is enforced in rejects() instead, where it is a two-line rule rather
+# than a regex nobody can reason about.
+_ATTR_PRE = r"[^`;\"'.\n]{0,24}?"
+_ATTR_POST = r"[^`;\"'.]{0,40}?"
+# The second route to the same shape, and the reason the connectives are split
+# in two: `via` and `per` introduce a METHOD and essentially nothing else,
+# while `by`, `from` and `using` are ordinary English. So `via`/`per` may stand
+# alone after a short plain noun phrase — "35 assemblies via `ls -d src/*/ \|
+# wc -l`", #20 §7.2's own version-history row — whereas `by`/`from`/`using`
+# must be earned by a measurement verb. The bare-connective gap is restricted
+# to letters, spaces and hyphens, so it cannot cross a clause the way the
+# 80-character draft did.
+_ATTR_BARE = r"[A-Za-z \t-]{0,24}?"
+CLAIM_ATTRIBUTED = re.compile(
+    r"\*{0,2}(?P<value>\d[\d,]*)\*{0,2}"
+    r"(?P<gap>(?:" + _ATTR_PRE + r"\b" + _ATTRIBUTION_VERB + r"\b"
+    + _ATTR_POST + r"\b(?:by|via|per|using|from)"
+    r"|" + _ATTR_BARE + r"\b(?:via|per)"
+    r")\s+)"
+    r"`(?P<cmd>[^`\n]{4,200})`",
+    re.I)
+
+
+class AttributedShape(LeadingValueShape):
+    """Shape 4's gap may cross ONE hard-wrap and no more."""
+
+    def rejects(self, text, m):
+        why = LeadingValueShape.rejects(self, text, m)
+        if why is not None:
+            return why
+        if m.group("gap").count("\n") > 1:
+            return "the attribution clause spans more than one wrapped line"
+        return None
+
+
+CLAIM_SHAPES = (
+    ClaimShape("command-then-value", CLAIM),
+    ClaimShape("command-colon-value", CLAIM_COLON),
+    LeadingValueShape("value-then-parenthesised-command", CLAIM_VALUE_FIRST),
+    AttributedShape("value-then-attributed-command", CLAIM_ATTRIBUTED),
+)
+
+# Every backticked span, for the unrecognised-shape census below.
+COMMAND_SPAN = re.compile(r"`(?P<cmd>[^`\n]{4,200})`")
+# How near an integer must be, on the SAME line, for a command-shaped span that
+# binds to no shape to be reported as a possible claim this tool cannot read.
+# Bounding to the line is what stops a census entry being manufactured out of
+# the next bullet's numbers, and 200 characters is where the census effectively
+# SATURATES: measured on this tree at 86 / 117 / 138 / 143 / 145 / 145 for
+# radii 40 / 60 / 120 / 200 / 400 / unbounded-within-the-line. Past 200 a wider
+# window buys two entries; below it the census starts missing spans on this
+# repo's very long bullet lines. Re-measure this curve if the corpus changes
+# shape — it is the only thing that justifies the number.
+UNRECOGNISED_RADIUS = 200
+
+
+class Claim:
+    """One recognised claim: the quoted command, the stated value, and where
+    both came from. The value type H11 asked for — before it, scan() carried
+    the same seven facts as loose locals threaded through 155 lines."""
+
+    __slots__ = ("rel", "text", "shape", "cmd", "cmd_start", "start", "end",
+                 "value_start", "value_end", "negation_window", "line")
+
+    def __init__(self, rel, text, shape, m):
+        self.rel = rel
+        self.text = text
+        self.shape = shape
+        self.cmd = m.group("cmd").strip()
+        self.cmd_start = m.start("cmd")
+        self.start, self.end = m.start(), m.end()
+        self.value_start, self.value_end = m.start("value"), m.end("value")
+        self.negation_window = shape.negation_window(text, m)
+        self.line = text.count("\n", 0, m.start()) + 1
+
+    @property
+    def head(self):
+        parts = self.cmd.split()
+        return parts[0] if parts else ""
+
+    @property
+    def answer(self):
+        return self.shape.answer
+
+
+def collect_claims(rel, text):
+    """Every claim any shape recognises in `text`, in document order.
+
+    Deduplicated by the position of the COMMAND a claim quotes: a span two
+    shapes both match is one claim, not two. A match a shape REJECTS (a date,
+    a gap spanning two wraps) is not a claim and does not reserve its command
+    span — another shape may still bind it, and if none does, the census below
+    reports the span rather than letting it disappear."""
+    claims, bound = [], set()
+    for shape in CLAIM_SHAPES:
+        for m in shape.find(text):
+            if m.start("cmd") in bound:
+                continue
+            if shape.rejects(text, m) is not None:
+                continue
+            bound.add(m.start("cmd"))
+            claims.append(Claim(rel, text, shape, m))
+    claims.sort(key=lambda c: c.start)
+    return claims
+
+
+def unrecognised_spans(text, bound):
+    """Command-shaped backticked spans with an integer nearby that NO shape
+    bound — yields (line, cmd).
+
+    Round 16 (H7). This is the half of that finding that matters more than the
+    widened matchers. Before it, a claim written in a shape none of the regexes
+    knew was invisible AND uncounted: it appeared in no bucket, so the printed
+    coverage statement was false by omission, and the tool's own header could
+    describe a blind spot only by naming instances someone had happened to
+    notice. Three wrong claims in unrecognised shapes produced all six decline
+    buckets at 0 and exit 0.
+
+    A shape gap is now SELF-REPORTING. The census is deliberately cruder than
+    the shapes — same line, an integer within UNRECOGNISED_RADIUS characters —
+    because its job is to over-report: everything it names is either a claim a
+    shape should learn, or prose that happens to sit near a number, and both
+    are better in the printed list than in nobody's."""
+    for s in COMMAND_SPAN.finditer(text):
+        if s.start("cmd") in bound:
+            continue
+        cmd = s.group("cmd").strip()
+        parts = cmd.split()
+        head = parts[0] if parts else ""
+        # command_shaped() alone is NOT the right test here, and the complement
+        # case caught it: that predicate exists to tell an UNLISTED binary from
+        # a backticked identifier, so its head test is "a path, a script, or a
+        # known-but-unrunnable binary" — which excludes every binary this tool
+        # can actually RUN. `35 assemblies. The gate runs `ls -d src/*/ \| wc
+        # -l` nightly.` was therefore missing from the census: a runnable
+        # command in a shape no matcher knows, the single most valuable thing
+        # this bucket can report, and the one class it was blind to.
+        if FORBIDDEN.search(cmd):
+            continue
+        if not (command_shaped(cmd, head)
+                or (head in ALLOWED_CMDS and " " in cmd)):
+            continue
+        ls = text.rfind("\n", 0, s.start()) + 1
+        le = text.find("\n", s.end())
+        le = len(text) if le == -1 else le
+        near = (text[max(ls, s.start() - UNRECOGNISED_RADIUS):s.start()]
+                + text[s.end():min(le, s.end() + UNRECOGNISED_RADIUS)])
+        if not re.search(r"\d", near):
+            continue
+        yield text.count("\n", 0, s.start()) + 1, cmd
 
 
 def tokenize(cmd):
@@ -953,21 +1459,121 @@ def scan_fence_identifiers(repo, quiet=False):
     return findings
 
 
-def scan(repo, quiet=False):
-    files = []
+# ---------------------------------------------------------------------------
+# Round 16 (H11): scan() used to be a 155-line monolith. One function did
+# surface collection, missing-surface reporting, region computation, matching
+# for two shapes with two bespoke and mutually inconsistent negation windows,
+# per-claim validate/expand/run/compare/excuse, six-bucket counting, four print
+# blocks, an unrelated check and exit-code composition. "Single integer" was
+# hard-wired at six sites inside it. It is now three functions: collect_claims()
+# (seam 2), check_claim() below (which knows nothing about printing), and a
+# scan() that iterates and reports.
+# ---------------------------------------------------------------------------
+
+# Every decline bucket, in print order. A bucket is a promise: a claim landing
+# in one is UNVERIFIED, counted and named — never silently passed. Adding a
+# decline path means adding it here, which is the point of the list existing.
+DECLINE_BUCKETS = (
+    ("unsafe", "unsafe"),
+    ("unlisted-binary", "unlisted-binary"),
+    ("not-self-contained", "not-self-contained"),
+    ("did-not-run", "did-not-run"),
+    ("not-single-int", "not-a-single-integer"),
+    ("approximate-or-range", "approximate-or-range"),
+    ("negated", "negated-or-historical"),
+    ("unrecognised-shape", "unrecognised-shape"),
+)
+
+
+def check_claim(claim, repo, regions):
+    """Validate, run and compare ONE claim. Returns (outcome, payload):
+
+        ("ignored",    None)            not a command at all — no claim here
+        ("declined",   (bucket, why))   counted and named; UNVERIFIED
+        ("reproduced", (stated, got))   the document is right
+        ("excused",    (stated, got))   wrong, but inside a dated record
+        ("mismatch",   (stated, got))   wrong, and gating
+
+    Knows nothing about printing, counters or exit codes; scan() owns those."""
+    answer = claim.answer
+    if claim.head not in ALLOWED_CMDS:
+        # Round 9 (M1): this path was the tool's THIRD decline route and the
+        # only silent one, while its header and its file-manifest row both
+        # published "every declined claim is counted AND named". Most of what
+        # lands here is not a command at all — the shapes also match a
+        # backticked IDENTIFIER before an arrow (`SEASON_SAVE_FORMAT_VERSION`
+        # **5 → 6**), ~1,100 of them — so counting all of it would drown the
+        # real signal. Only genuinely command-SHAPED text is counted and named.
+        # FORBIDDEN gates it too, so a backticked EXPRESSION that merely looks
+        # path-shaped (`permille/1000f > 0.6f`, live in #33's appendices) is
+        # not announced as a rejected binary. It was never a command; naming it
+        # would be the mirror of the noise command_shaped exists to suppress.
+        if command_shaped(claim.cmd, claim.head) and not FORBIDDEN.search(claim.cmd):
+            return "declined", ("unlisted-binary",
+                                "`%s` is not an allow-listed read-only binary"
+                                % claim.head)
+        return "ignored", None
+    # Round 10: the negation test used to run BEFORE the command test, so a
+    # backticked IDENTIFIER near a negation ("`SeasonSaveContents` … was not
+    # 4") was counted and printed as a declined CLAIM. Five of the eight
+    # "negated-or-historical" declines were of that kind — never claims, so
+    # counting them overstated how much real coverage the tool was giving up,
+    # in the very figure that exists to state that honestly.
+    if NEGATOR.search(claim.negation_window):
+        return "declined", ("negated",
+                            "claim is NEGATED or historical — states what the "
+                            "command does not / no longer return")
+    stated, why = answer.parse(claim.text, claim.value_start, claim.value_end)
+    if stated is None:
+        return "declined", why
+    segments, why = parse_pipeline(claim.cmd)
+    if segments is None:
+        return "declined", ("unsafe", why)
+    segments, why = expand_globs(segments, repo)
+    if segments is None:
+        return "declined", ("unsafe", why)
+    if not self_contained(segments):
+        return "declined", ("not-self-contained",
+                            "operand missing from the quoted text — not "
+                            "runnable as written")
+    out, why = run_pipeline(segments, str(repo))
+    if out is None:
+        return "declined", ("did-not-run", why)
+    got = answer.read(out)
+    if got is None:
+        return "declined", (answer.bucket, answer.unreadable)
+    if answer.matches(stated, got):
+        return "reproduced", (stated, got)
+    if (any(a <= claim.start < b for a, b in regions)
+            and not currency_asserted(claim.text, claim.start, claim.end)):
+        return "excused", (stated, got)
+    return "mismatch", (stated, got)
+
+
+def collect_surfaces(repo):
+    """(files, missing). A named surface that is not in the tree, and a glob
+    that matches nothing, are both MISSING — see the COVERAGE FLOOR note."""
+    files, missing = [], []
     for rel in SURFACES:
         p = repo / rel
         if p.exists():
             files.append((rel, p))
         else:
-            print("  MISSING SURFACE: %s" % rel)
+            missing.append("named surface `%s` is not in the tree" % rel)
     for pat in SURFACE_GLOBS:
-        for p in sorted(repo.glob(pat)):
+        hits = sorted(repo.glob(pat))
+        if not hits:
+            missing.append("surface glob `%s` matches no file" % pat)
+        for p in hits:
             files.append((str(p.relative_to(repo)), p))
+    return files, missing
 
-    checked = mismatches = 0
-    declined = {"unsafe": 0, "not-self-contained": 0, "not-single-int": 0,
-                "negated": 0, "unlisted-binary": 0, "did-not-run": 0}
+
+def scan(repo, quiet=False):
+    files, missing = collect_surfaces(repo)
+
+    checked = 0
+    declined = {bucket: 0 for bucket, _label in DECLINE_BUCKETS}
     declined_list = []
     findings = []
     excused = []
@@ -975,117 +1581,44 @@ def scan(repo, quiet=False):
     for rel, path in files:
         text = path.read_text(encoding="utf-8", errors="replace")
         regions = dated_record_regions(rel, text)
-        # Both claim shapes, deduplicated by the position of the command they
-        # quote: a span matched by both is one claim, not two.
-        matches, claimed_at = [], set()
-        for m in CLAIM.finditer(text):
-            matches.append((m, m.group(0)[m.end("gap") - m.start():]))
-            claimed_at.add(m.start("cmd"))
-        for m in CLAIM_VALUE_FIRST.finditer(text):
-            if m.start("cmd") not in claimed_at:
-                # The negation window must LOOK BACK here, not forward: in this
-                # shape the number comes first, so "no longer 3 files (`cmd`)"
-                # puts the negator BEFORE the match, where the gap cannot see
-                # it. Reusing the forward shape's gap reported such a claim as
-                # a mismatch — found by constructing the complement rather than
-                # by an instance, which is the check this tool's own header
-                # says every matcher here has to survive. Bounded to the line.
-                back = max(text.rfind("\n", 0, m.start()) + 1, m.start() - 40)
-                matches.append((m, text[back:m.end("gap")]))
-        matches.sort(key=lambda pair: pair[0].start())
-        for m, negation_window in matches:
-            cmd = m.group("cmd").strip()
-            stated = int(m.group("value").replace(",", ""))
-            # A command must look like one: start with an allowed binary.
-            # Round 9 (L1): a backticked run of whitespace matches CLAIM and
-            # used to crash here on `"".split()[0]`.
-            head = cmd.split()[0] if cmd.split() else ""
-            # Round 10: the negation test used to run BEFORE this one, so a
-            # backticked IDENTIFIER near a negation ("`SeasonSaveContents` …
-            # was not 4") was counted and printed as a declined CLAIM. Five of
-            # the eight "negated-or-historical" declines were of that kind —
-            # never claims, so counting them overstated how much real coverage
-            # the tool was giving up, in the very figure that exists to state
-            # that honestly. The command test now gates the negation test.
-            if head not in ALLOWED_CMDS:
-                # Round 9 (M1): this `continue` was the tool's THIRD decline
-                # path and the only silent one, while its header and its
-                # file-manifest row both published "every declined claim is
-                # counted AND named". Most of what lands here is not a command
-                # at all — CLAIM also matches a backticked IDENTIFIER before an
-                # arrow (`SEASON_SAVE_FORMAT_VERSION` **5 → 6**), ~1,100 of
-                # them — so counting all of it would drown the real signal.
-                # Only genuinely command-SHAPED text is counted and named: a
-                # head token that is a path or a known binary. Measured on the
-                # live tree when this was added: 10, all real (7 ×
-                # `tools/recurring-defect-lint.py`, `curl`, `ps … | grep`,
-                # `dotnet test --filter`).
-                # FORBIDDEN here too, so a backticked EXPRESSION that merely
-                # looks path-shaped (`permille/1000f > 0.6f`, live in #33's
-                # appendices) is not announced as a rejected binary. It was
-                # never a command; naming it would be the mirror of the noise
-                # command_shaped exists to suppress.
-                if command_shaped(cmd, head) and not FORBIDDEN.search(cmd):
-                    declined["unlisted-binary"] += 1
-                    declined_list.append(
-                        (rel, text.count("\n", 0, m.start()) + 1, cmd,
-                         "`%s` is not an allow-listed read-only binary" % head))
+        claims = collect_claims(rel, text)
+        for claim in claims:
+            outcome, payload = check_claim(claim, repo, regions)
+            if outcome == "ignored":
                 continue
-            if NEGATOR.search(m.group("gap")) or NEGATOR.search(
-                    negation_window):
-                declined["negated"] += 1
-                declined_list.append(
-                    (rel, text.count("\n", 0, m.start()) + 1, cmd,
-                     "claim is NEGATED or historical — states what the command "
-                     "does not / no longer return"))
-                continue
-            segments, why = parse_pipeline(cmd)
-            if segments is None:
-                declined["unsafe"] += 1
-                declined_list.append((rel, text.count("\n", 0, m.start()) + 1,
-                                      cmd, why))
-                continue
-            line = text.count("\n", 0, m.start()) + 1
-            segments, why = expand_globs(segments, repo)
-            if segments is None:
-                declined["unsafe"] += 1
-                declined_list.append((rel, line, cmd, why))
-                continue
-            if not self_contained(segments):
-                declined["not-self-contained"] += 1
-                declined_list.append((rel, line, cmd,
-                                      "operand missing from the quoted text — "
-                                      "not runnable as written"))
-                continue
-            out, why = run_pipeline(segments, str(repo))
-            if out is None:
-                declined["did-not-run"] += 1
-                declined_list.append((rel, line, cmd, why))
-                continue
-            got = single_integer(out)
-            if got is None:
-                declined["not-single-int"] += 1
-                declined_list.append((rel, line, cmd, "output is not a single integer"))
+            if outcome == "declined":
+                bucket, why = payload
+                declined[bucket] += 1
+                declined_list.append((rel, claim.line, claim.cmd, why))
                 continue
             checked += 1
-            if got != stated:
-                if (any(a <= m.start() < b for a, b in regions)
-                        and not currency_asserted(text, m.start(), m.end())):
-                    excused.append((rel, line, cmd, stated, got))
-                    continue
-                mismatches += 1
-                findings.append((rel, line, cmd, stated, got))
+            stated, got = payload
+            if outcome == "excused":
+                excused.append((rel, claim.line, claim.cmd, stated, got))
+            elif outcome == "mismatch":
+                findings.append((rel, claim.line, claim.cmd,
+                                 claim.answer.describe(stated, got)))
+        # The census of shapes NOBODY recognised — H7's self-reporting half.
+        bound = {c.cmd_start for c in claims}
+        for line, cmd in unrecognised_spans(text, bound):
+            declined["unrecognised-shape"] += 1
+            declined_list.append(
+                (rel, line, cmd,
+                 "command-shaped, an integer is nearby, and NO claim shape "
+                 "binds it — this tool cannot read the claim, if it is one"))
 
     if not quiet:
         print("doc-claim-check — executing the verification commands the documents quote")
         print("  surfaces scanned              : %d" % len(files))
-        print("  claims executed and compared  : %d" % checked)
-        print("  claims DECLINED (each named)   : %d unsafe / %d unlisted-binary /"
-              " %d not-self-contained / %d did-not-run / %d not-a-single-integer /"
-              " %d negated-or-historical"
-              % (declined["unsafe"], declined["unlisted-binary"],
-                 declined["not-self-contained"], declined["did-not-run"],
-                 declined["not-single-int"], declined["negated"]))
+        print("  claim shapes recognised       : %d (%s)"
+              % (len(CLAIM_SHAPES), ", ".join(s.name for s in CLAIM_SHAPES)))
+        print("  answer kinds recognised       : %d (%s)"
+              % (len(ANSWER_KINDS), ", ".join(a.name for a in ANSWER_KINDS)))
+        print("  claims executed and compared  : %d  (floor %d)"
+              % (checked, MIN_EXECUTED_CLAIMS))
+        print("  claims DECLINED (each named)   : %s"
+              % " / ".join("%d %s" % (declined[b], label)
+                           for b, label in DECLINE_BUCKETS))
         for rel, line, cmd, why in declined_list:
             print("      - %s:%d  %s  [%s]" % (rel, line, cmd[:70], why))
         print("  (a declined claim is UNVERIFIED, not passed — the count is the honest"
@@ -1103,10 +1636,10 @@ def scan(repo, quiet=False):
 
     if findings:
         print("\nFAIL — %d stated value(s) the command does not reproduce:" % len(findings))
-        for rel, line, cmd, stated, got in findings:
+        for rel, line, cmd, what in findings:
             print("  %s:%d" % (rel, line))
             print("      command : %s" % cmd)
-            print("      document says %d; command returns %d" % (stated, got))
+            print("      %s" % what)
 
     dangling = scan_fence_identifiers(repo, quiet)
     if dangling:
@@ -1117,8 +1650,30 @@ def scan(repo, quiet=False):
             print("      `%s.%s` — the file declares `%s` but no member `%s`%s"
                   % (typ, mem, typ, mem,
                      ("; did you mean `%s`?" % near[0]) if near else ""))
-        return 1
-    if findings:
+
+    # Round 16 (H9). A run that looked at nothing must not be able to report
+    # success, and neither missing surfaces nor a collapsed claim count used to
+    # gate anything at all. These are exit 2, not 1: exit 1 means "a document
+    # is wrong", which is a finding this tool made; exit 2 means "this tool
+    # could not do its job", which is not a verdict on any document and must
+    # never be readable as one. It therefore also OUTRANKS a mismatch — with
+    # the surface set broken, the mismatches that were found are not the
+    # mismatches that exist.
+    blocked = list(missing)
+    if checked < MIN_EXECUTED_CLAIMS:
+        blocked.append(
+            "only %d claim(s) executed and compared, below the floor of %d — "
+            "see the COVERAGE FLOOR note beside SURFACE_GLOBS for how the "
+            "floor is re-derived and when it may be changed"
+            % (checked, MIN_EXECUTED_CLAIMS))
+    if blocked:
+        print("\nERROR — this run could not verify what it is supposed to "
+              "verify, so its result is not a verdict on any document:")
+        for why in blocked:
+            print("  * %s" % why)
+        return 2
+
+    if findings or dangling:
         return 1
 
     print("\nPASS — every executable claim reproduced its stated value, and no"
@@ -1453,3 +2008,116 @@ if __name__ == "__main__":
 # |         |            |             | declines — the only movement is two python3 |
 # |         |            |             | claims changing decline REASON. Siblings    |
 # |         |            |             | re-run green.                               |
+# | 1.6     | 2026-08-21 | Claude Code | AR round 16 (4 High, 2 Medium) — the         |
+# |         |            |             | through-line is that this tool's whole value |
+# |         |            |             | is not lying about its own coverage, and it  |
+# |         |            |             | was lying in its header, in its buckets and  |
+# |         |            |             | in its verdict. **H11 (landed first, so the  |
+# |         |            |             | rest sit on the seam):** scan() was a        |
+# |         |            |             | 155-line monolith doing surface collection,  |
+# |         |            |             | matching for two shapes with two hand-       |
+# |         |            |             | written and mutually inconsistent negation   |
+# |         |            |             | windows, per-claim                           |
+# |         |            |             | validate/run/compare/excuse, six-bucket      |
+# |         |            |             | counting, four print blocks, an unrelated    |
+# |         |            |             | check and exit composition, with "single     |
+# |         |            |             | integer" hard-wired at six sites. Three      |
+# |         |            |             | seams extracted — a Claim value type,        |
+# |         |            |             | CLAIM_SHAPES whose entries own their find()  |
+# |         |            |             | and negation_window(), ANSWER_KINDS owning   |
+# |         |            |             | parse/read/compare/describe — leaving scan() |
+# |         |            |             | to iterate and report. M4 existed BECAUSE    |
+# |         |            |             | there was no seam. **H7:** the coverage      |
+# |         |            |             | statement was false by omission.             |
+# |         |            |             | Instrumented over its own surfaces, 2 of the |
+# |         |            |             | 3 executed claims were the same command      |
+# |         |            |             | pinned to an immutable revision, so live     |
+# |         |            |             | drift-catching coverage was ONE claim, while |
+# |         |            |             | command-shaped spans with a nearby integer   |
+# |         |            |             | bound to neither regex and appeared in NO    |
+# |         |            |             | bucket — including root CLAUDE.md's design-  |
+# |         |            |             | supplement count, the flagship case whose    |
+# |         |            |             | own sentence records that it drifted 42 ->   |
+# |         |            |             | 60 undetected. Past-tense verbs were         |
+# |         |            |             | unmatchable (the \b after `returns?` kills   |
+# |         |            |             | "returned"), the colon form was unknown, and |
+# |         |            |             | an attribution clause broke the value-first  |
+# |         |            |             | gap. Two shapes added (colon; value +        |
+# |         |            |             | attribution clause) and the verb list        |
+# |         |            |             | widened — and, the half that matters more,   |
+# |         |            |             | an `unrecognised-shape` bucket now COUNTS    |
+# |         |            |             | AND NAMES every command-shaped span with an  |
+# |         |            |             | integer near it that no shape binds (143 on  |
+# |         |            |             | this tree), so a shape gap is self-reporting |
+# |         |            |             | instead of self-concealing. **H8:** the      |
+# |         |            |             | value-first extractor bound a date year or a |
+# |         |            |             | range endpoint as the stated value — "August |
+# |         |            |             | 18, 2026 (`cmd`)" parsed as 2026 and FAILED  |
+# |         |            |             | a correct sentence, and the live tree        |
+# |         |            |             | already extracts 2026 twice, escaping only   |
+# |         |            |             | because those spans hold ERR ids rather than |
+# |         |            |             | runnable commands. Dates are refused (no     |
+# |         |            |             | claim exists there); ranges and              |
+# |         |            |             | approximation markers are DECLINED AND NAMED |
+# |         |            |             | as `approximate-or-range` rather than        |
+# |         |            |             | compared. **H9:** a run that checked nothing |
+# |         |            |             | printed PASS. MISSING SURFACE incremented no |
+# |         |            |             | counter and gated nothing — proven with 8 of |
+# |         |            |             | 9 surfaces deleted: 1 claim executed, PASS,  |
+# |         |            |             | exit 0 — and the globbed half had no missing |
+# |         |            |             | concept at all, so renaming one folder took  |
+# |         |            |             | executed to 0 with no output line changed. A |
+# |         |            |             | missing named surface, a glob matching no    |
+# |         |            |             | file, and a claim count below                |
+# |         |            |             | MIN_EXECUTED_CLAIMS are now exit 2, a class  |
+# |         |            |             | that outranks exit 1 because it is not a     |
+# |         |            |             | verdict on any document. The floor is re-    |
+# |         |            |             | derived by running the tool, not typed.      |
+# |         |            |             | **M4:** the look-back negation window was    |
+# |         |            |             | added to only one of the two shapes; the     |
+# |         |            |             | forward shape still searched the text AFTER  |
+# |         |            |             | its gap, which can only hold the arrow and   |
+# |         |            |             | the digits, so "before this fix, `grep -c …  |
+# |         |            |             | f` -> 4" was reported as a mismatch while    |
+# |         |            |             | the value-first phrasing of the same         |
+# |         |            |             | sentence correctly declined. One shared      |
+# |         |            |             | negation_window() now, on the seam. **M5:**  |
+# |         |            |             | NEGATOR held bare `not`/`was`/`never`, which |
+# |         |            |             | saturate this repo's prose, and an excusal   |
+# |         |            |             | costs coverage silently: "…is not in         |
+# |         |            |             | dispute: 99 assemblies (`ls -d src/*/ \| wc  |
+# |         |            |             | -l`)" — wrong by a factor of 33 — was        |
+# |         |            |             | declined as historical, 0 executed, PASS.    |
+# |         |            |             | Restricted to verb-bound phrases that can    |
+# |         |            |             | only negate a claim. **H6 (landed last, on   |
+# |         |            |             | purpose):** the header said the value-first  |
+# |         |            |             | shape "is not matched at all" while the      |
+# |         |            |             | baseline run printed that exact claim in its |
+# |         |            |             | declined list, the exit table named one of   |
+# |         |            |             | two ways to return 1, and CHECK 2 was        |
+# |         |            |             | documented nowhere. Rewritten, and the blind |
+# |         |            |             | spot is now DERIVED from the unrecognised-   |
+# |         |            |             | shape bucket rather than restated as prose   |
+# |         |            |             | that drifts. EVERY matcher change was proved |
+# |         |            |             | in BOTH directions — 46 cases, each a claim  |
+# |         |            |             | that must now bind and its complement that   |
+# |         |            |             | must not — and the complement caught three   |
+# |         |            |             | defects in this round's own work before they |
+# |         |            |             | landed: `read` on the verb list bound the    |
+# |         |            |             | refuted 42 and FAILED root CLAUDE.md; an     |
+# |         |            |             | 80-character attribution gap bound the 0 of  |
+# |         |            |             | "Stage 0 status" 71 characters away and      |
+# |         |            |             | FAILED #20 §7.2; and the census's            |
+# |         |            |             | command_shaped() test excluded every ALLOW-  |
+# |         |            |             | LISTED binary, so a runnable command in an   |
+# |         |            |             | unknown shape — the most valuable thing that |
+# |         |            |             | bucket can report — was the one class it     |
+# |         |            |             | could not see. Bare `pre-fix` was dropped    |
+# |         |            |             | from NEGATOR on the same evidence: it is a   |
+# |         |            |             | noun modifier here ("the pre-fix commit"),   |
+# |         |            |             | and with M4's new look-back it excused a     |
+# |         |            |             | live claim pinned to an immutable revision.  |
+# |         |            |             | Live tree: 3 executed -> 6, PASS, exit 0;    |
+# |         |            |             | declines 30 -> 40 named plus the 143-entry   |
+# |         |            |             | census, every delta accounted for. Siblings  |
+# |         |            |             | re-run green.                                |
