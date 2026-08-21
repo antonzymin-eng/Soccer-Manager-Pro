@@ -57,21 +57,60 @@
 # in the working tree while the tool printed PASS. Several genuinely read-only
 # tools carry a write or execute escape hatch — `sed -i`, `find -delete` /
 # `-exec`, `python3 -c`, `sort -o`, `rg --pre`, `git -c`, `awk 'BEGIN{system()}'`,
-# `uniq IN OUT`. The property now rests on three things together: the allow-list,
-# DENIED_FLAGS/DENIED_FLAG_PREFIXES refusing those hatches by name, and dropping
-# the one binary whose escape lives in its SCRIPT rather than a flag (`sed`).
-# `python3` survives restricted to running a `.py` file the checkout already
-# contains — CI runs those anyway — never `-c`/`-m`.
+# `uniq IN OUT`.
+#
+# Rounds 9, 14 and 15 each falsified this section's then-current safety claim by
+# reproduction, so state the recurring root error before the rules: **an escape
+# hatch enumerated by name, on an argument that is itself a language, is a list
+# of the hatches someone happened to think of.** Round 9 named `system` and
+# `getline` for awk; round 15 executed `awk 'BEGIN{print "touch X" | "sh"}'`,
+# which uses neither. Round 14 put it as "the validation ran on a SHAPE, not on
+# the argv that actually executes"; round 15 adds its sibling — the validation
+# ran on the SPELLING, not on the option (`sort -o` was denied while
+# `sort -oFILE` wrote the file).
+#
+# The property therefore rests on five things together, in this order of
+# importance:
+#   1. ALLOW-LISTS WHEREVER THE ARGUMENT IS A LANGUAGE. `sed` (round 9) and
+#      `python3` (round 15, H2) are DROPPED — for python3 the old rationale
+#      ("a `.py` file the checkout already contains — CI runs those anyway")
+#      was simply false: CI runs four NAMED scripts, and on `pull_request` the
+#      checkout IS the pull request's head, so a PR that adds `tools/pwn.py`
+#      and a claim quoting it had arbitrary code executed with write access.
+#      `awk` is kept — 2 of the 3 claims this tool executes are awk — with its
+#      program allow-listed (AWK_ALLOWED_CALLS) rather than blacklisted, plus a
+#      flat refusal of `|` and `@` in any awk token.
+#   2. DENIED_FLAGS / DENIED_FLAG_PREFIXES compared on the option CORE, so an
+#      attached value (`-oFILE`, `-O./p.sh`) or an un-enumerated `--long=value`
+#      cannot respell a denied hatch past the check (round 15, H3).
+#   3. GIT_READONLY holding only subcommands that cannot destroy anything —
+#      `branch` and `tag` are gone, because `-D`/`-d` delete refs (round 15,
+#      H4), and `--output` is denied because a diff writes a file with it.
+#   4. PATH CONFINEMENT on every operand, checked after glob expansion: a
+#      command may read the checkout and nothing else. Without it, `grep -c .
+#      /etc/passwd` was a one-integer read oracle over the host (round 15, M3).
+#   5. RESOURCE BOUNDS: no shell, a wall-clock timeout AND a hard cap on how
+#      much a segment may print, because a timeout does not bound memory —
+#      one document line drove the checker to 587 MB and `cat /dev/zero` would
+#      OOM-kill the runner first (round 15, M1). NUL is refused up front and
+#      ValueError caught, so document text cannot abort the scan (M2).
+#
+# Every one of those refusals is COUNTED AND NAMED in the printed output. That
+# is not politeness: a silent refusal is indistinguishable from a pass, which
+# is the defect this whole tool exists to deny itself.
 #
 # Exit codes: 0 = every checkable claim reproduced, 1 = at least one mismatch,
 #             2 = usage error.
 
 import argparse
 import importlib.util
+import os
 import pathlib
 import re
 import subprocess
 import sys
+import tempfile
+import threading
 
 
 def _load_consistency():
@@ -98,15 +137,27 @@ DCC = _load_consistency()
 # argv[0] is here. `git` is further restricted below to read-only subcommands.
 ALLOWED_CMDS = {
     "grep", "egrep", "fgrep", "rg", "ls", "find", "wc", "cat", "head", "tail",
-    "sort", "uniq", "awk", "cut", "tr", "python3", "git", "basename",
+    "sort", "uniq", "awk", "cut", "tr", "git", "basename",
     "dirname", "echo", "printf", "stat", "diff",
 }
+# Round 15 (H4): `branch` and `tag` were on this list as READ subcommands, and
+# `git branch -D x` / `git tag -d x` DESTROY a ref — both proven here deleting
+# a ref in a fixture repo under a printed PASS. The argument-less read forms
+# (`git branch`, `git tag`) are not worth that surface, and nothing in this
+# corpus quotes one, so both are gone: a future claim quoting them is DECLINED
+# AND NAMED, which is the safe direction.
 GIT_READONLY = {
     "log", "grep", "show", "ls-files", "diff", "rev-parse", "rev-list",
-    "cat-file", "describe", "status", "branch", "tag", "blame",
+    "cat-file", "describe", "status", "blame",
 }
-# Shell metacharacters that make a string more than a simple pipeline.
-FORBIDDEN = re.compile(r"[;&><`\n]|\$\(|\|\|")
+# Shell metacharacters that make a string more than a simple pipeline. `\x00`
+# is here for a different reason from the rest (round 15, M2): subprocess
+# raises ValueError on a NUL in argv, which is not a SubprocessError, so an
+# embedded NUL in a backticked span aborted the ENTIRE scan with a traceback —
+# every later claim and the whole dangling-identifier check silently never ran.
+# Refused up front here; ValueError is also caught in run_pipeline as a
+# backstop, because a crash is the one outcome that hides defects wholesale.
+FORBIDDEN = re.compile(r"[;&><`\n\x00]|\$\(|\|\|")
 
 # ---------------------------------------------------------------------------
 # Round 9, H1: allow-listing argv[0] is NOT sufficient, and the header used to
@@ -122,26 +173,44 @@ FORBIDDEN = re.compile(r"[;&><`\n]|\$\(|\|\|")
 #       contain them. `sed` (`w file`, `s///w file`) is therefore DROPPED from
 #       the allow-list entirely; it has no use anywhere in the corpus, and a
 #       future sed claim is DECLINED AND NAMED, which is the safe direction.
-#       `awk` is kept because both of this repo's only two executable claims
-#       use it, so dropping it would take the tool to zero verified claims —
-#       a vacuous pass, the failure class this project files as High. Its two
-#       reachable hatches are refused by name instead (`system`, `getline` —
-#       every redirection form is already refused by FORBIDDEN, which rejects
-#       `>` `<` `` ` `` `;` `&` anywhere in the string, quoted or not).
+#       `awk` is a language too, and round 15 (H1) proved the consequence:
+#       `awk 'BEGIN{print "touch X" | "sh"}'` executes a shell command using
+#       NEITHER of the two words this file blacklisted, and FORBIDDEN does not
+#       reject a single `|` because that is the pipeline separator. awk is
+#       nonetheless KEPT — 2 of the 3 claims this tool actually executes are
+#       awk, so dropping it would surrender two thirds of the live coverage —
+#       and its program is ALLOW-listed instead of escape-blacklisted: see
+#       AWK_ALLOWED_CALLS below. `python3` is DROPPED (H2) for the same reason
+#       as sed: its argument is a language too, and "the script must be an
+#       in-repo .py file" is not a restriction at all when the checkout under
+#       test is a pull request's own head — the PR simply adds the .py file.
+#
+# Round 15 also generalised HOW a flag is matched: see _option_cores(). A
+# deny-list keyed on the exact spelling an option happened to be written in
+# misses the same option carrying an attached value (`sort -oFILE`,
+# `git grep -O./p.sh`), which is not a new hatch but the same one respelled.
 DENIED_FLAGS = {
     # exact flags
-    "python3": {"-c", "-m", "-"},
     "find": {"-exec", "-execdir", "-ok", "-okdir", "-delete", "-fprint",
              "-fprint0", "-fprintf", "-fls"},
-    "sort": {"-o", "--output"},
+    # `--compress-program` (round 15, H5) runs an arbitrary program whenever a
+    # sort spills to disk, which `-S 1` forces; proven creating a canary here.
+    "sort": {"-o", "--output", "--compress-program"},
     "uniq": set(),           # guarded by operand count below (uniq IN OUT writes)
-    "awk": {"-f", "--file", "--source", "--exec"},
+    # `-l`/`--load`, `-i`/`--include` and `-E`/`--exec` are gawk's extension
+    # and source-loading flags — the same class as `-f`, added in H5's
+    # one-pass audit of every remaining allow-listed binary rather than one
+    # report at a time.
+    "awk": {"-f", "--file", "--source", "--exec", "-l", "--load", "-i",
+            "--include", "-E"},
     "head": {"-f", "--follow"},
     "tail": {"-f", "-F", "--follow"},
     "rg": {"--pre", "--pre-glob", "--hostname-bin", "--generate"},
     # `git` is split in two: see GIT_GLOBAL_DENIED. A flag denied ANYWHERE goes
-    # here — `git grep -O <cmd>` hands the match list to a command.
-    "git": {"-O", "--open-files-in-pager"},
+    # here — `git grep -O <cmd>` hands the match list to a command, and
+    # `--output` (a diff option `log`/`diff`/`show` all accept) WRITES a file:
+    # `git diff --output=WROTE_THIS HEAD` created it here under a printed PASS.
+    "git": {"-O", "--open-files-in-pager", "--output"},
 }
 # Denied only BEFORE the subcommand, where git parses its own global options.
 # The same spellings after it belong to the subcommand and are harmless — and
@@ -151,14 +220,40 @@ DENIED_FLAGS = {
 GIT_GLOBAL_DENIED = {"-c", "-C", "--exec-path", "--upload-pack"}
 # Prefix forms of the same hatches: `--output=x`, `--pre=x`, `-c=x`.
 DENIED_FLAG_PREFIXES = {
-    "sort": ("--output=",),
+    "sort": ("--output=", "--compress-program="),
     "rg": ("--pre=", "--pre-glob=", "--hostname-bin="),
-    "git": ("--exec-path=", "--upload-pack="),
-    "awk": ("--source=", "--file="),
+    "git": ("--exec-path=", "--upload-pack=", "--output="),
+    "awk": ("--source=", "--file=", "--load=", "--include="),
 }
 # awk program text that escapes the process. FORBIDDEN already removes every
-# redirection character, so these two are what is left.
+# redirection character, so these two are what is left OF THE NAMED FORMS —
+# and round 15 (H1) proved that naming forms is the wrong shape of rule for a
+# language: `print x | "sh"` is arbitrary command execution containing neither
+# word. Kept as a backstop only; the load-bearing rule is now the allow-list
+# below.
 AWK_ESCAPES = re.compile(r"\b(?:system|getline)\b")
+
+# ALLOW-LIST for awk program text (round 15, H1). Every FUNCTION CALL an awk
+# token makes must be named here; an unknown name is DECLINED AND NAMED, so a
+# gawk builtin nobody on this project has heard of cannot become the next
+# hatch the way `system` was. Paired with two flat refusals that no allow-list
+# of call names can express:
+#   * `|` anywhere in an awk token — the output pipe `print x | "cmd"` and the
+#     input pipe `"cmd" | getline` are BOTH command execution, and tokenize()
+#     deliberately keeps a QUOTED `|` literal so it reaches the program intact
+#     (an unquoted one is a pipeline separator and never lands in a token).
+#   * `@` anywhere in an awk token — gawk's `@load` / `@include`.
+# What is left after those, plus FORBIDDEN's refusal of `>` `<` `` ` `` `;`
+# `&` anywhere in the string, is arithmetic and printing.
+AWK_CALL = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)\s*\(")
+AWK_ALLOWED_CALLS = frozenset((
+    # keywords that take a parenthesised clause
+    "if", "while", "for", "do", "else", "return", "function", "func",
+    # string / math builtins that cannot leave the process
+    "length", "substr", "index", "split", "sub", "gsub", "match", "sprintf",
+    "printf", "print", "int", "sqrt", "exp", "log", "sin", "cos", "atan2",
+    "rand", "srand", "tolower", "toupper",
+))
 
 # Round 9 (M1). CLAIM deliberately matches any backticked span before an arrow,
 # because that is how this repo writes a count claim; most such spans are
@@ -168,10 +263,16 @@ AWK_ESCAPES = re.compile(r"\b(?:system|getline)\b")
 # is a path or a plausible binary name".
 _HEAD_SHAPE = re.compile(r"(?:\.{1,2}/)?[A-Za-z0-9_][A-Za-z0-9_.-]*"
                          r"(?:/[A-Za-z0-9_.-]+)*\Z")
+# Binaries this tool does NOT run but must still RECOGNISE, so that a claim
+# quoting one is counted and named instead of silently skipped. `python3` and
+# `sed` are here because they were dropped from ALLOWED_CMDS (rounds 15 and 9):
+# dropping a binary without adding it here would move its claims from a NAMED
+# decline to an invisible one, which is the decline contract failing in the
+# direction this file calls its worst.
 _KNOWN_BINARIES = frozenset((
     "dotnet", "curl", "wget", "ps", "bash", "sh", "zsh", "make", "npm", "npx",
-    "node", "python", "pip", "docker", "jq", "tee", "xargs", "sed", "unity",
-    "dos2unix", "pwsh", "powershell",
+    "node", "python", "python3", "pip", "docker", "jq", "tee", "xargs", "sed",
+    "unity", "dos2unix", "pwsh", "powershell",
 ))
 
 
@@ -366,6 +467,31 @@ def tokenize(cmd):
     return out
 
 
+def _option_cores(tok):
+    """Every option spelling `tok` could carry, for deny-list comparison.
+
+    Round 15 (H3). The deny-list tested `a in exact`, which sees `-o` and (via
+    the prefix set) the `=` forms someone enumerated by hand — but NOT the same
+    option with its value attached. Proven: `sort -oSORT_CANARY data.txt` WROTE
+    the canary and `git grep -O./p.sh MATCHME` EXECUTED the script, both under
+    a printed PASS, while `-o` and `-O` sat in the deny-list the whole time.
+    That is not a new hatch; it is a denied hatch respelled, and the same
+    respelling exists for every denied short option that takes a value and
+    every long option whose `=` form nobody thought to list.
+
+    So the option CORE is compared instead of the spelling: a single-dash token
+    is decomposed into its whole cluster (`-no FILE` is `-n` then `-o`, and an
+    attached value cannot hide the letter that precedes it), and a long token
+    is split on `=`. Over-refusal is the safe direction — a cluster letter that
+    coincides with a denied option is DECLINED AND NAMED, never run."""
+    if not tok.startswith("-") or tok in ("-", "--"):
+        return ()
+    if tok.startswith("--"):
+        core = tok.split("=", 1)[0]
+        return (tok,) if core == tok else (tok, core)
+    return (tok,) + tuple("-" + ch for ch in tok[1:])
+
+
 def denied_flag(argv):
     """The write/execute escape hatch this argv reaches for, or None.
 
@@ -376,17 +502,22 @@ def denied_flag(argv):
     exact = DENIED_FLAGS.get(name, ())
     prefixes = DENIED_FLAG_PREFIXES.get(name, ())
     for a in argv[1:]:
-        if a in exact:
-            return a
+        for core in _option_cores(a):
+            if core in exact:
+                return a if core == a else "%s, attached as `%s`" % (core, a)
+            if any(pfx == core + "=" for pfx in prefixes):
+                return a
         if any(a.startswith(pfx) for pfx in prefixes):
             return a
     if name == "git":
         for a in argv[1:]:
             if not a.startswith("-"):
                 break            # the subcommand: globals end here
-            if a in GIT_GLOBAL_DENIED or a.startswith(("--exec-path=",
-                                                       "--upload-pack=")):
-                return a
+            for core in _option_cores(a):
+                if core in GIT_GLOBAL_DENIED or core in ("--exec-path",
+                                                         "--upload-pack"):
+                    return a if core == a else ("%s, attached as `%s`"
+                                                % (core, a))
     if name == "awk":
         # Round 14 (external review, P1): scan EVERY token, never the token
         # GUESSED to be the program. `-v` and `-F` take a SEPARATE argument, so
@@ -398,21 +529,27 @@ def denied_flag(argv):
         # grammar and cannot be outflanked by adding one: `system`/`getline`
         # must appear literally to be called, and a FILENAME containing either
         # word is merely declined-and-named, which is the safe direction.
+        #
+        # Round 15 (H1): scanning every token for two BLACKLISTED words was
+        # still the wrong shape of rule, because awk's escape lives in its
+        # SCRIPT and a script is a language, not a vocabulary.
+        # `awk 'BEGIN{print "touch X" | "sh"} END{print 1}' CLAUDE.md` created
+        # the file and returned the claimed 1 under a printed PASS, using
+        # neither `system` nor `getline`. The rule is inverted: what the
+        # program may CALL is allow-listed, and the two pipe characters that no
+        # call-name list can describe are refused outright.
         for a in argv[1:]:
+            if "|" in a:
+                return ("awk token containing `|` — `print x | \"cmd\"` and "
+                        "`\"cmd\" | getline` both run a shell command")
+            if "@" in a:
+                return "awk token containing `@` — gawk @load/@include"
+            for call in AWK_CALL.findall(a):
+                if call not in AWK_ALLOWED_CALLS:
+                    return ("awk program calling `%s(`, which is not on the "
+                            "allow-list of awk functions" % call)
             if AWK_ESCAPES.search(a):
                 return "awk program calling system()/getline"
-    if name == "python3":
-        # The script must be the FIRST argument — no interpreter flags at all.
-        # Same defect as the awk case: `-X`/`-W` take a separate value, so
-        # "first operand not starting with -" can name a different file from
-        # the one python actually executes (`python3 -X foo.py bar.py` runs
-        # bar.py). Every real claim in this corpus is `python3 <script> …`, so
-        # requiring that costs nothing and removes the grammar question.
-        script = argv[1] if len(argv) > 1 else ""
-        if (not script.endswith(".py") or script.startswith("/")
-                or ".." in pathlib.PurePosixPath(script).parts):
-            return ("python3 without an in-repo .py script as its first "
-                    "argument")
     if name == "uniq" and len([a for a in argv[1:] if not a.startswith("-")]) >= 2:
         return "uniq with an OUTPUT operand"
     return None
@@ -471,6 +608,36 @@ BENIGN_NONZERO = {"grep": {1}, "egrep": {1}, "fgrep": {1}, "rg": {1},
                   "diff": {1}, "git": {1}}
 
 
+# A hard ceiling on how much a single pipeline segment may print. The answers
+# this tool compares are single integers, so any legitimate segment is orders
+# of magnitude below this; the cap exists because TIMEOUT_S bounds wall time
+# and nothing bounded MEMORY (round 15, M1).
+OUTPUT_CAP_BYTES = 8 * 1024 * 1024
+
+
+def _read_capped(stream, box):
+    """Drain `stream` into `box["data"]`, giving up at OUTPUT_CAP_BYTES.
+
+    Runs on its own thread so the caller can enforce TIMEOUT_S and kill a child
+    that is still writing. `read1` is deliberate: it is ONE read syscall, so
+    the cap is enforced per chunk rather than after a buffered reader has
+    already accumulated the whole stream."""
+    chunks, total = [], 0
+    try:
+        while True:
+            chunk = stream.read1(65536)
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > OUTPUT_CAP_BYTES:
+                box["overflow"] = True
+                break
+            chunks.append(chunk)
+    except (OSError, ValueError):                        # killed mid-read
+        pass
+    box["data"] = b"".join(chunks)
+
+
 def run_pipeline(segments, cwd):
     """Run a validated pipeline.
 
@@ -484,22 +651,67 @@ def run_pipeline(segments, cwd):
     returns 0" against a document that was not wrong about anything. The tool
     exists to stop fabricated verification; manufacturing a mismatch out of a
     broken command is the same defect wearing the other sign. A failed
-    pipeline is now DECLINED and named, never compared."""
+    pipeline is now DECLINED and named, never compared.
+
+    Round 15 (M1): each segment's output used to be buffered whole, with no
+    limit — TIMEOUT_S bounds WALL TIME, which is not the resource a document
+    line can exhaust. `printf %300000000d 1 \\| wc -c` drove the checker to
+    587 MB RSS here and still printed PASS; `cat /dev/zero` OOM-kills the
+    runner long before 60 s elapse. Output is now read INCREMENTALLY against a
+    hard byte cap set far above any legitimate single-integer answer, the child
+    is killed on overflow, and the claim is declined and NAMED like every other
+    refusal. Input is staged through a temporary file rather than a pipe so a
+    capped reader can never deadlock against an unread stdin.
+
+    Round 15 (M2): ValueError was not caught, and subprocess raises it — not a
+    SubprocessError — on a NUL in argv, so one backticked span with an embedded
+    NUL ended the whole scan in a traceback: every later claim AND the entire
+    dangling-identifier check never ran, with a real defect elsewhere masked
+    behind a crash. FORBIDDEN now refuses NUL up front; this catch is the
+    backstop, because "the checker died" is the one result that hides
+    everything."""
     data = b""
     for argv in segments:
-        try:
-            proc = subprocess.run(
-                argv, cwd=cwd, input=data, stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL, timeout=TIMEOUT_S)
-        except subprocess.TimeoutExpired:
-            return None, "command timed out after %ds" % TIMEOUT_S
-        except (OSError, subprocess.SubprocessError):
-            return None, "command could not be executed (%s)" % argv[0]
-        if proc.returncode != 0 and proc.returncode not in BENIGN_NONZERO.get(
-                argv[0], ()):
+        with tempfile.TemporaryFile() as sin:
+            sin.write(data)
+            sin.seek(0)
+            try:
+                proc = subprocess.Popen(
+                    argv, cwd=cwd, stdin=sin, stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL)
+            except ValueError as exc:
+                return None, ("`%s` cannot be executed as written (%s)"
+                              % (argv[0], exc))
+            except (OSError, subprocess.SubprocessError):
+                return None, "command could not be executed (%s)" % argv[0]
+            box = {"overflow": False, "data": b""}
+            reader = threading.Thread(target=_read_capped,
+                                      args=(proc.stdout, box), daemon=True)
+            reader.start()
+            reader.join(TIMEOUT_S)
+            timed_out = reader.is_alive()
+            if timed_out or box["overflow"]:
+                proc.kill()
+                proc.wait()
+                reader.join(5)
+                proc.stdout.close()
+                if timed_out:
+                    return None, "command timed out after %ds" % TIMEOUT_S
+                return None, ("`%s` output exceeded %d bytes — the child was "
+                              "killed and its output is not treated as an "
+                              "answer" % (argv[0], OUTPUT_CAP_BYTES))
+            try:
+                rc = proc.wait(timeout=TIMEOUT_S)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
+                return None, "command timed out after %ds" % TIMEOUT_S
+            finally:
+                proc.stdout.close()
+        if rc != 0 and rc not in BENIGN_NONZERO.get(argv[0], ()):
             return None, ("`%s` exited %d — its output is not treated as an "
-                          "answer" % (argv[0], proc.returncode))
-        data = proc.stdout
+                          "answer" % (argv[0], rc))
+        data = box["data"]
     try:
         return data.decode("utf-8", "replace"), None
     except Exception:                                    # pragma: no cover
@@ -544,6 +756,33 @@ def self_contained(segments):
         return True
     operands = [a for a in argv[1:] if not a.startswith("-")]
     return len(operands) >= need
+
+
+def escaping_operand(argv, repo):
+    """The first non-option operand whose realpath leaves the repo, or None.
+
+    Round 15 (M3). cwd was the repo and nothing else confined anything: a
+    document line could read any file on the host and have the number COMPARED.
+    Proven — `grep -c . /etc/passwd` was executed and compared, a one-integer
+    read oracle over host files, and `cat ../OUTSIDE.txt \\| wc -l` reproduced
+    its stated value under a printed PASS. It is also the half of the
+    output-size problem that admits `/dev/zero` and `find /`.
+
+    The rule generalises the one python3's script operand used to carry alone,
+    and is applied AFTER glob expansion for the round-14 reason: validating a
+    shape rather than the argv that executes is this file's recurring root
+    error. A pattern operand that happens to read as an escaping path
+    (`grep -c '..' f`) is declined and NAMED rather than run — over-refusal is
+    the safe direction, and containment is the property that becomes
+    load-bearing the moment the execution hatches are closed."""
+    root = os.path.realpath(str(repo))
+    for a in argv[1:]:
+        if a.startswith("-"):
+            continue
+        real = os.path.realpath(os.path.join(root, a))
+        if real != root and not real.startswith(root + os.sep):
+            return a
+    return None
 
 
 def expand_globs(segments, repo):
@@ -597,6 +836,11 @@ def expand_globs(segments, repo):
         if hatch is not None:
             return None, ("after glob expansion, `%s` reaches a write/execute "
                           "escape hatch (%s)" % (argv[0], hatch))
+        outside = escaping_operand(argv, repo)
+        if outside is not None:
+            return None, ("operand `%s` resolves outside the repository root — "
+                          "this tool reads the checkout, not the host"
+                          % outside)
     return out, None
 
 
@@ -1115,3 +1359,97 @@ if __name__ == "__main__":
 # |         |            |             | two exploits are declined and named,        |
 # |         |            |             | neither artefact is created, and the live   |
 # |         |            |             | claims still execute (3, unchanged).        |
+# | 1.5     | 2026-08-21 | Claude Code | AR round 15 (5 High, 3 Medium) — the third  |
+# |         |            |             | consecutive round to falsify this header's  |
+# |         |            |             | read-only claim by reproduction, so the ROOT|
+# |         |            |             | error is now stated in the SAFETY section   |
+# |         |            |             | rather than the instances: an escape hatch  |
+# |         |            |             | enumerated BY NAME, on an argument that is  |
+# |         |            |             | itself a language, is a list of the hatches |
+# |         |            |             | someone happened to think of. Round 14      |
+# |         |            |             | called it "the validation ran on a SHAPE,   |
+# |         |            |             | not on the argv that actually executes";    |
+# |         |            |             | this round adds its sibling — the validation|
+# |         |            |             | ran on the SPELLING, not on the option.     |
+# |         |            |             | Every finding was reproduced BEFORE the fix |
+# |         |            |             | and re-proved three ways after: exploit     |
+# |         |            |             | DECLINED AND NAMED, no canary created and no|
+# |         |            |             | ref destroyed, and a legitimate command of  |
+# |         |            |             | the same shape still executed. **H1:** `awk |
+# |         |            |             | 'BEGIN{print "touch X" | "sh"}'` is         |
+# |         |            |             | arbitrary command execution using NEITHER   |
+# |         |            |             | blacklisted word, and FORBIDDEN does not    |
+# |         |            |             | reject a single `|` (tokenize keeps a quoted|
+# |         |            |             | one literal, so it reaches the program      |
+# |         |            |             | intact) — the canary was created under a    |
+# |         |            |             | printed PASS. awk is KEPT, because the      |
+# |         |            |             | header's old reason for keeping it          |
+# |         |            |             | ("dropping it would take the tool to zero   |
+# |         |            |             | verified claims") is STALE but its          |
+# |         |            |             | conclusion is not: re-measured, 2 of the 3  |
+# |         |            |             | executed claims are awk, so dropping it     |
+# |         |            |             | costs two thirds of the live coverage, not  |
+# |         |            |             | all of it. Its program is now ALLOW-listed  |
+# |         |            |             | (AWK_ALLOWED_CALLS — an unknown call name is|
+# |         |            |             | declined and named, so the next gawk builtin|
+# |         |            |             | cannot be the next hatch) with `|` and `@`  |
+# |         |            |             | refused outright. **H2:** `python3 <any     |
+# |         |            |             | in-repo .py>` executed attacker-added code —|
+# |         |            |             | on `pull_request` the checkout IS the PR    |
+# |         |            |             | head, so a PR adding tools/pwn.py plus a    |
+# |         |            |             | claim quoting it got arbitrary code run with|
+# |         |            |             | write access; canary written, PASS, exit 0. |
+# |         |            |             | The rationale in the header ("CI runs those |
+# |         |            |             | anyway") was false: CI runs four NAMED      |
+# |         |            |             | scripts. DROPPED, at zero coverage cost —   |
+# |         |            |             | re-measured, no python3 claim has ever      |
+# |         |            |             | executed (all decline as                    |
+# |         |            |             | not-a-single-integer) — and added to        |
+# |         |            |             | _KNOWN_BINARIES in the same change, or its  |
+# |         |            |             | claims would have moved from a NAMED decline|
+# |         |            |             | to an invisible one, which is the decline   |
+# |         |            |             | contract failing in the direction this file |
+# |         |            |             | calls its worst. **H3:** the deny-list      |
+# |         |            |             | compared the SPELLING, so `sort             |
+# |         |            |             | -oSORT_CANARY` wrote the file and `git grep |
+# |         |            |             | -O./p.sh` executed the script while `-o` and|
+# |         |            |             | `-O` sat in the list; the option CORE is    |
+# |         |            |             | compared now, whatever attaches to it (new  |
+# |         |            |             | _option_cores: a short token is decomposed  |
+# |         |            |             | into its whole cluster, a long one split on |
+# |         |            |             | `=`). **H4:** GIT_READONLY listed `branch`  |
+# |         |            |             | and `tag`, which DELETE refs — both proven  |
+# |         |            |             | destroying a ref in a fixture repo — and    |
+# |         |            |             | `git diff --output=` wrote a file. Both     |
+# |         |            |             | subcommands dropped, `--output` denied.     |
+# |         |            |             | **H5:** `sort --compress-program=` runs an  |
+# |         |            |             | arbitrary program whenever a sort spills,   |
+# |         |            |             | which `-S 1` forces; denied, and every      |
+# |         |            |             | remaining allow-listed binary audited in the|
+# |         |            |             | same pass (gawk's -l/-i/-E added). **M1:**  |
+# |         |            |             | output was buffered whole with no cap —     |
+# |         |            |             | TIMEOUT_S bounds wall time, not memory: one |
+# |         |            |             | document line drove the checker to 587.6 MB |
+# |         |            |             | (measured, own peak RSS), and `cat          |
+# |         |            |             | /dev/zero` OOM-kills the runner before 60 s |
+# |         |            |             | elapse. Read incrementally against an 8 MiB |
+# |         |            |             | cap, child killed, declined and named; same |
+# |         |            |             | line now peaks at 31.0 MB. **M2:** an       |
+# |         |            |             | embedded NUL raised an uncaught ValueError  |
+# |         |            |             | (subprocess raises it, and it is not a      |
+# |         |            |             | SubprocessError), aborting the WHOLE scan in|
+# |         |            |             | a traceback — every later claim and the     |
+# |         |            |             | entire dangling-identifier check never ran, |
+# |         |            |             | masking any real defect behind a crash. NUL |
+# |         |            |             | added to FORBIDDEN, ValueError caught as the|
+# |         |            |             | backstop. **M3:** nothing confined the      |
+# |         |            |             | OPERANDS, so `grep -c . /etc/passwd` was a  |
+# |         |            |             | one-integer read oracle over the host and   |
+# |         |            |             | `cat ../OUTSIDE.txt` reproduced its value   |
+# |         |            |             | under PASS; every non-option operand must   |
+# |         |            |             | now realpath inside the repo, checked AFTER |
+# |         |            |             | expansion. Live tree unchanged: PASS, exit  |
+# |         |            |             | 0, 3 executed (the same 3, by name), 30     |
+# |         |            |             | declines — the only movement is two python3 |
+# |         |            |             | claims changing decline REASON. Siblings    |
+# |         |            |             | re-run green.                               |
