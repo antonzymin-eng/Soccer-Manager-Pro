@@ -205,6 +205,20 @@ CLAIM = re.compile(
     r"\*{0,2}(?P<value>\d[\d,]*)\*{0,2}",
     re.I)
 
+# The VALUE-FIRST shape: "8 scripts (`ls tools/*.py`)", "35 (`ls -d src/*/ \| wc
+# -l`)". Round 9 (L2) named this as unrecognised AND uncounted and stopped
+# there; round 12 closes it, because the live instances are exactly the
+# drift-prone kind — Spec #20 §5.4.5 states the assembly count this way, in
+# APPROVED text, and it goes stale the day the 36th assembly lands. The
+# parenthesis is required: it is this repo's idiom for "and here is how to
+# check it", and without it the pattern would bind any number near any
+# backtick.
+CLAIM_VALUE_FIRST = re.compile(
+    r"\*{0,2}(?P<value>\d[\d,]*)\*{0,2}"
+    r"(?P<gap>(?:\s+[A-Za-z][\w./-]*){0,4}\s*)"
+    r"\(\s*`(?P<cmd>[^`\n]{4,200})`\s*\)",
+    re.I)
+
 
 def tokenize(cmd):
     """Split `cmd` into segments of (text, has_unquoted_glob) tokens.
@@ -613,7 +627,25 @@ def scan(repo, quiet=False):
 
     for rel, path in files:
         text = path.read_text(encoding="utf-8", errors="replace")
+        # Both claim shapes, deduplicated by the position of the command they
+        # quote: a span matched by both is one claim, not two.
+        matches, claimed_at = [], set()
         for m in CLAIM.finditer(text):
+            matches.append((m, m.group(0)[m.end("gap") - m.start():]))
+            claimed_at.add(m.start("cmd"))
+        for m in CLAIM_VALUE_FIRST.finditer(text):
+            if m.start("cmd") not in claimed_at:
+                # The negation window must LOOK BACK here, not forward: in this
+                # shape the number comes first, so "no longer 3 files (`cmd`)"
+                # puts the negator BEFORE the match, where the gap cannot see
+                # it. Reusing the forward shape's gap reported such a claim as
+                # a mismatch — found by constructing the complement rather than
+                # by an instance, which is the check this tool's own header
+                # says every matcher here has to survive. Bounded to the line.
+                back = max(text.rfind("\n", 0, m.start()) + 1, m.start() - 40)
+                matches.append((m, text[back:m.end("gap")]))
+        matches.sort(key=lambda pair: pair[0].start())
+        for m, negation_window in matches:
             cmd = m.group("cmd").strip()
             stated = int(m.group("value").replace(",", ""))
             # A command must look like one: start with an allowed binary.
@@ -640,14 +672,19 @@ def scan(repo, quiet=False):
                 # live tree when this was added: 10, all real (7 ×
                 # `tools/recurring-defect-lint.py`, `curl`, `ps … | grep`,
                 # `dotnet test --filter`).
-                if command_shaped(cmd, head):
+                # FORBIDDEN here too, so a backticked EXPRESSION that merely
+                # looks path-shaped (`permille/1000f > 0.6f`, live in #33's
+                # appendices) is not announced as a rejected binary. It was
+                # never a command; naming it would be the mirror of the noise
+                # command_shaped exists to suppress.
+                if command_shaped(cmd, head) and not FORBIDDEN.search(cmd):
                     declined["unlisted-binary"] += 1
                     declined_list.append(
                         (rel, text.count("\n", 0, m.start()) + 1, cmd,
                          "`%s` is not an allow-listed read-only binary" % head))
                 continue
             if NEGATOR.search(m.group("gap")) or NEGATOR.search(
-                    m.group(0)[m.end("gap") - m.start():]):
+                    negation_window):
                 declined["negated"] += 1
                 declined_list.append(
                     (rel, text.count("\n", 0, m.start()) + 1, cmd,
@@ -868,3 +905,30 @@ if __name__ == "__main__":
 # |         |            |             | `python3 ../../evil.py` satisfied the       |
 # |         |            |             | "in-repo script" rule its own comment       |
 # |         |            |             | claimed to enforce.                         |
+# | 1.2     | 2026-08-19 | Claude Code | AR round 12 — the VALUE-FIRST claim shape.  |
+# |         |            |             | Round 9 (L2) named it unrecognised AND      |
+# |         |            |             | uncounted and stopped at naming it; this    |
+# |         |            |             | closes it, because the live instances are   |
+# |         |            |             | the drift-prone kind: Spec #20 §5.4.5       |
+# |         |            |             | states the assembly count as "35 (`ls -d    |
+# |         |            |             | src/*/ \| wc -l`)" in APPROVED text, which   |
+# |         |            |             | goes stale the day the 36th assembly lands  |
+# |         |            |             | and which nothing watched. Seven live       |
+# |         |            |             | value-first claims quote a real command;    |
+# |         |            |             | all seven were verified by hand first and   |
+# |         |            |             | all are currently TRUE, so this adds        |
+# |         |            |             | coverage, not findings. Executed 2 -> 3.    |
+# |         |            |             | The complement test caught a defect in the  |
+# |         |            |             | addition itself before it landed: in this   |
+# |         |            |             | shape the NEGATOR precedes the number ("no  |
+# |         |            |             | longer 3 files (`cmd`)"), so reusing the    |
+# |         |            |             | forward shape's forward-looking gap         |
+# |         |            |             | reported a correctly-negated claim as a     |
+# |         |            |             | mismatch. The window now looks back,        |
+# |         |            |             | bounded to the line. Also: FORBIDDEN now    |
+# |         |            |             | gates the unlisted-binary naming, so a      |
+# |         |            |             | backticked EXPRESSION that merely looks     |
+# |         |            |             | path-shaped (`permille/1000f > 0.6f`, live  |
+# |         |            |             | in #33's appendices) is not announced as a  |
+# |         |            |             | rejected binary — the mirror of the noise   |
+# |         |            |             | command_shaped exists to suppress.          |

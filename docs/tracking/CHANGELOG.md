@@ -12,7 +12,76 @@ break it, and do not edit historical entries.
 
 ---
 
-> **Last Updated:** August 19, 2026 — **Adversarial-review round 9: the tool round 8 built to end the
+> **Last Updated:** August 19, 2026, later — **Adversarial-review rounds 10–12, and a premature
+> closure withdrawn.** Documentation and tooling only; no `.cs` and no `.asmdef` changed (verified over
+> `12eba7d~1..HEAD`, where the only `src/` path touched is `src/CLAUDE.md`, the coding guide), so no
+> gate run is owed.
+>
+> **The withdrawal first, because it is the finding about the process rather than the code.** The
+> round-11 commit declared the cycle converged on an L-only round. That claim does not hold: this
+> skill's termination rule is a **full fresh review over the entire scope** returning only Lows, and
+> round 11 read ONE FILE. An L-only sweep of the file you just edited is not a clean pass over the
+> estate — it is the narrowest possible reading of the bar, made by the author of the code under
+> review. Withdrawn, and the loop continued. **This is the round-8 diagnosis one level up:** rounds
+> 5–8 kept finding fixes that enumerated instances where the defect was a class; round 11 declared
+> convergence on a scope that was a fraction of the artifact.
+>
+> **Round 10 — 1 Medium, 1 Low, both in round 9's own output.** The Medium was in the RECORD: round 9's
+> entry claimed "no `.cs` and no `.asmdef` changed anywhere on the branch", which is false — the branch
+> carries the merged #44 discipline work from PR #322, some 60 `.cs` files. The phrasing was inherited
+> verbatim from the round-7 and rounds-4–7 entries, so **three consecutive entries asserted a scope none
+> of them measured**. Corrected to the range that is true, and stated AS a range. The Low was in the
+> tool: the negation test ran before the is-this-a-command test, so a backticked IDENTIFIER standing
+> near a negation was counted and printed as a declined CLAIM — five of eight "negated" declines were
+> of that kind, overstating the coverage being given up in the one figure whose purpose is to state it
+> honestly. Declines 30 → 25, every remaining line naming a real command.
+>
+> **Round 11 — 2 Low.** `SEP = object()` was dead the moment round 9 wrote it: a pipeline-separator
+> sentinel standing beside a tokenizer that appends segments directly, with a comment describing a
+> mechanism that does not exist. Plus one blank line.
+>
+> **Round 12 — the coverage gap round 9 named and did not close.** Round 9 filed the unrecognised
+> VALUE-FIRST claim shape — a count stated before the command that checks it — as a Low and stated it
+> in the header. Stating
+> a gap is not closing one, and the live instances are the drift-prone kind: **Spec #20 §5.4.5 states
+> the `src/` assembly count in that shape, in APPROVED text, and it goes stale the day the 36th
+> assembly lands.** The pre-fix sweep found seven live instances, of which **six** quote a real command (the
+> seventh, `permille/1000f > 0.6f`, is an expression that merely looks path-shaped); every one was
+> evaluated by hand first and all are currently TRUE, so this adds coverage rather than findings —
+> executed claims 2 → **3**, and the #20 figure is now under the checker. *(Two things the first draft
+> of this entry got wrong, recorded because both are the trap the rounds-4–7 entry below already named.
+> **(1)** It said "seven claims, all real": that count was taken before the discriminator was tightened,
+> and it then went stale the moment this pass kept writing — a count taken mid-pass does not survive the
+> pass. **(2)** The draft restated Spec #20's example HERE, verbatim with its value, which put a live
+> drift-prone claim inside an append-only chronicle: `doc-claim-check` has no dated-record model, so the
+> day the 36th assembly lands it would have failed CI on a correct historical record. The example is now
+> DESCRIBED rather than quoted, here and in the manifest row. One authoritative site per claim — the
+> spec's — is the whole point of checking it.)* **The complement test caught a defect in the addition
+> before it landed**: in this shape the negator PRECEDES the number ("no longer 3 files (`cmd`)"), so
+> reusing the forward shape's forward-looking gap reported a correctly-negated claim as a mismatch. The
+> window now looks back, bounded to the line. That is the third time in this series that constructing
+> the complement, rather than testing the motivating instance, is what found the defect.
+>
+> **Also checked and clean, so that the next round does not re-derive it:** the delegated version-history
+> parser in `recurring-defect-lint.py` — which `doc-consistency-check.py` depends on for every citation
+> it resolves — was swept for disagreement between a file's `**Version:**` header and its parsed table
+> across every markdown file in `docs/`, root and `.claude/`. One disagreement exists
+> (`ui-framework-t0-implementation-plan.md`, header 0.3 vs table 0.2) and it is already documented and
+> handled in `open-issues.md` as an unversioned edit, with the citing text carrying a "now v0.2" pointer
+> the checker accepts. No parser defect.
+>
+> **Standing caveat, restated because it bounds every round above:** delegation was unavailable in this
+> session, so all four passes ran single-handed rather than through fresh reviewer subagents. The
+> fresh-eyes property this loop normally buys was NOT obtained, and it matters most exactly where
+> rounds 10–12 operated — on code whose author was the reviewer. A delegated pass over
+> `tools/doc-claim-check.py` remains worth the tokens.
+>
+> **Verification:** `doc-claim-check` PASS (3 executed, 30 declined, each named); `doc-consistency-check`
+> PASS (34 excusals 23/4/7/0, 15 unresolvable); `recurring-defect-lint` 0 ERROR / 122 WARN / 27 INFO;
+> `assembly-tier-check` PASS. Value-first coverage proved in all three directions on a scratch mirror:
+> a correct claim is silent, a wrong one is reported, a negated one is declined and named.
+
+> **Last Updated (prior):** August 19, 2026 — **Adversarial-review round 9: the tool round 8 built to end the
 > recurring defect class shipped WITH that class in it — three High findings in
 > `tools/doc-claim-check.py`, every one proven by reproduction before the fix and re-proven in both
 > directions after.** Documentation and tooling only: no `.cs` and no `.asmdef` has changed anywhere
